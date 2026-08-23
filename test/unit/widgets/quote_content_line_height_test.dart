@@ -49,7 +49,7 @@ void main() {
   TextStyle bodyLargeFor(ThemeStyle style) {
     final form = style.form;
     return TextStyle(
-      fontSize: 16 * form.bodyFontScale,
+      fontSize: 16 * form.readingFontScale,
       height: form.bodyLineHeight,
     );
   }

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 是否使用追踪数据进行跨应用/网站追踪 -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	
+	<!-- 追踪域名列表 -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	
+	<!-- 声明访问的受限系统 API 及其合法理由 (Required Reason APIs) -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!-- 1. UserDefaults: 用于存储本地偏好设置、主题与应用配置 -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<!-- 2. File Timestamp: 用于笔记文件的创建/修改时间记录与备份同步 -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<!-- 3. System Boot Time: 用于相对时间计算、定时提醒与内部时序计算 -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>35F4.1</string>
+			</array>
+		</dict>
+		<!-- 4. Disk Space: 用于在导出备份和保存附件前检测设备剩余磁盘空间 -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
+	
+	<!-- 收集的数据类型列表（本项目完全本地优先，无任何用户数据上传） -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+</dict>
+</plist>

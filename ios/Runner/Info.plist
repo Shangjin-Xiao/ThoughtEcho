@@ -48,15 +48,15 @@
 	
 	<!-- 权限描述 -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>需要访问相册以保存和选择图片</string>
+	<string>用于在笔记中插入相册中的照片、视频与实况照片，或将笔记卡片保存到相册</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>需要访问相册以保存图片</string>
+	<string>用于将生成的笔记长图或精美卡片保存至您的系统相册</string>
 	<key>NSCameraUsageDescription</key>
-	<string>需要访问相机以拍摄照片</string>
+	<string>用于在编写笔记时拍摄照片或视频并直接插入作为附件</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>需要访问麦克风以录制音频</string>
+	<string>用于在笔记中录制语音备忘和音频附件</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>需要访问位置以记录地理信息</string>
+	<string>用于在创建笔记时自动记录当前所在的地理位置与天气状况</string>
 	<!-- 蓝牙权限描述：智能推送会把笔记通过 BLE 同步到墨水屏硬件。
 	     iOS 13+ 只要初始化 CBCentralManager 就会校验此键，缺失会被系统直接终止进程。 -->
 	<key>NSBluetoothAlwaysUsageDescription</key>
@@ -65,7 +65,7 @@
 	<string>需要使用蓝牙，将推送的笔记同步到配套的墨水屏设备</string>
 	<!-- Face ID：local_auth 在 Face ID 机型上缺此键无法完成生物识别 -->
 	<key>NSFaceIDUsageDescription</key>
-	<string>需要使用面容 ID 验证身份，以解锁隐藏的笔记</string>
+	<string>用于使用面容 ID 验证身份，以解锁加密保护的私密笔记</string>
 	
 	<!-- 文件访问权限 - 禁止在系统文件 App 中暴露应用文档 -->
 	<key>UIFileSharingEnabled</key>

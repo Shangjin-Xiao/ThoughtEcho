@@ -143,10 +143,17 @@ class AppTheme with ChangeNotifier {
   ///
   /// - `display*` / `headline*`（24–57sp）：只换字体族。这个尺寸上衬线的横画怎么都
   ///   落在整像素以上，不需要补偿，再加重反而笨。
-  /// - `title*` / `body*`（11–22sp）：换字体族 + 抬到 [ThemeStyleForm.readingWeightFloor]。
-  ///   横画掉进半像素是「衬线读起来比黑体虚」的物理原因，字重是直接的补偿手段。
-  ///   抬下限而不是加增量：M3 的 `titleMedium` / `titleSmall` 本来就是 w500，
-  ///   加增量会把它们顶成粗体。`body*` 另外还吃字号缩放和行高缩放。
+  /// - `title*` / `body*`（11–23sp）：换字体族 + 按 [ThemeStyleForm.readingFontScale]
+  ///   放大 + 抬字重。横画掉进半像素是「衬线读起来比黑体虚」的物理原因，
+  ///   字号和字重是两个直接的补偿手段。
+  ///
+  ///   **两档下限不是重复：[ThemeStyleForm.titleWeightFloor] 比
+  ///   [ThemeStyleForm.bodyWeightFloor] 高一档，标题和正文的层级全靠这一档。**
+  ///   M3 本来用「同字号 + 差一档字重」区分它们，而构建期 M3 的字重还是 null
+  ///   （几何要到 build 时才补），一个下限会把六级一起钉成同一个字重——
+  ///   小节标题和列表正文就分不出主次了。
+  ///
+  ///   `body*` 另外还吃行高缩放；标题的行高交给几何。
   ///
   ///   **这里刻意只写 `fontWeight`，不写 `fontVariations`。** 随包衬线是可变字体，
   ///   直接指定 wght 轴看着更「精确」，但 `fontVariations` 会盖过 `fontWeight`——
@@ -173,12 +180,12 @@ class AppTheme with ChangeNotifier {
     final fallback = form.fontFamilyFallback;
     final heightScale =
         form.bodyLineHeight / ThemeStyleForm.material.bodyLineHeight;
-    final sizeScale = form.bodyFontScale;
-    final weightFloor = form.readingWeightFloor;
+    final sizeScale = form.readingFontScale;
     if (family == null &&
         heightScale == 1 &&
         sizeScale == 1 &&
-        weightFloor == 0) {
+        form.titleWeightFloor == 0 &&
+        form.bodyWeightFloor == 0) {
       return base;
     }
 
@@ -187,26 +194,47 @@ class AppTheme with ChangeNotifier {
         ? style
         : style?.copyWith(fontFamily: family, fontFamilyFallback: fallback);
 
-    // 阅读用小字：换族之外还要把字重抬到下限。M3 没给字重的按 w400 算。
-    // 已经达标的（titleMedium / titleSmall 是 w500）原样放过。
-    TextStyle? reading(TextStyle? style) {
+    /// 阅读级：换族 + 抬字重 + 按 [ThemeStyleForm.readingFontScale] 放大。
+    ///
+    /// [m3Size] / [m3Height] 是 base 没带对应值时的兜底，而**它基本上都用得上**：
+    /// 主题构建期这两项通常是 null（由 `ThemeData.localize` 在 build 时用字形几何
+    /// 补齐），想在这里做缩放就只能自己拿 M3 的取值来乘。中日韩几何
+    /// （`Typography.dense2021`）这六级的字号和英文完全一致，所以按英文取值算不丢东西。
+    ///
+    /// [m3Height] 传 null 表示这一级不缩行高——标题用的是紧排，
+    /// 跟着正文放松会显得散，交给几何即可。
+    TextStyle? reading(
+      TextStyle? style,
+      int weightFloor,
+      double m3Size, [
+      double? m3Height,
+    ]) {
       final styled = display(style);
-      if (weightFloor == 0 || styled == null) return styled;
-      final current = styled.fontWeight ?? FontWeight.w400;
-      final floored = form.readingWeight(current);
-      return floored == current ? styled : styled.copyWith(fontWeight: floored);
-    }
-
-    // 正文：再加上字号与行高缩放。两个 m3 参数是 base 没带对应值时的兜底。
-    TextStyle? body(TextStyle? style, double m3Size, double m3Height) {
-      final styled = reading(style);
-      if (styled == null || (sizeScale == 1 && heightScale == 1)) return styled;
+      if (styled == null) return null;
+      // M3 没给字重的按 w400 算：**构建期它就是 null**，几何要到 build 时才补上，
+      // 所以这里对 title* 和 body* 看到的都是 w400，六级最终由各自的下限决定。
+      // 下限为 0 的风格要原样把 null 传回去（copyWith 的 null 是「保持原值」），
+      // 钉成 w400 会把几何补给 titleMedium / titleSmall 的 w500 顶掉。
+      final weight = weightFloor == 0
+          ? styled.fontWeight
+          : ThemeStyleForm.weightAtLeast(
+              styled.fontWeight ?? FontWeight.w400,
+              weightFloor,
+            );
       return styled.copyWith(
-        fontSize: (styled.fontSize ?? m3Size) * sizeScale,
-        height: (styled.height ?? m3Height) * heightScale,
+        fontWeight: weight,
+        // copyWith 的 null 是「保持原值」，所以缩放比例为 1 时原样传回去即可。
+        fontSize: sizeScale == 1
+            ? styled.fontSize
+            : (styled.fontSize ?? m3Size) * sizeScale,
+        height: m3Height == null || heightScale == 1
+            ? styled.height
+            : (styled.height ?? m3Height) * heightScale,
       );
     }
 
+    final titleFloor = form.titleWeightFloor;
+    final bodyFloor = form.bodyWeightFloor;
     return base.copyWith(
       displayLarge: display(base.displayLarge),
       displayMedium: display(base.displayMedium),
@@ -214,12 +242,12 @@ class AppTheme with ChangeNotifier {
       headlineLarge: display(base.headlineLarge),
       headlineMedium: display(base.headlineMedium),
       headlineSmall: display(base.headlineSmall),
-      titleLarge: reading(base.titleLarge),
-      titleMedium: reading(base.titleMedium),
-      titleSmall: reading(base.titleSmall),
-      bodyLarge: body(base.bodyLarge, 16, 24 / 16),
-      bodyMedium: body(base.bodyMedium, 14, 20 / 14),
-      bodySmall: body(base.bodySmall, 12, 16 / 12),
+      titleLarge: reading(base.titleLarge, titleFloor, 22),
+      titleMedium: reading(base.titleMedium, titleFloor, 16),
+      titleSmall: reading(base.titleSmall, titleFloor, 14),
+      bodyLarge: reading(base.bodyLarge, bodyFloor, 16, 24 / 16),
+      bodyMedium: reading(base.bodyMedium, bodyFloor, 14, 20 / 14),
+      bodySmall: reading(base.bodySmall, bodyFloor, 12, 16 / 12),
       // label* 刻意不动，见方法注释。
     );
   }
@@ -289,7 +317,13 @@ class AppTheme with ChangeNotifier {
   static const String _themeModeKey = 'theme_mode';
   static const String _useDynamicColorKey = 'use_dynamic_color'; // 添加动态取色设置键
   static const String _themeStyleKey = 'theme_style';
-  static const String _themeAccentKey = 'theme_accent';
+
+  /// 墨色的持久化键前缀，**每套风格一条**（`theme_accent_paper` …）。
+  /// 见 [accentFor]：墨色跟着风格走，不是全局一支。
+  static const String _themeAccentKeyPrefix = 'theme_accent_';
+
+  /// 墨色还是「全局一支」时用的那个键。只在迁移时读一次，读完就删。
+  static const String _legacyThemeAccentKey = 'theme_accent';
 
   SafeMMKV? _storage;
   Color? _customColor;
@@ -300,9 +334,11 @@ class AppTheme with ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   ThemeStyle _themeStyle = ThemeStyle.defaultStyle;
 
-  /// null = 用户没选过墨色，跟随风格默认（见 [accentFor]）。
-  /// **不要在这里填默认值**：填了之后「跟随风格」就没法表达，切到素笺还会拿到赭石。
-  ThemeAccent? _themeAccent;
+  /// 用户在**某套风格下**选过的墨色。没有这一项 = 没选过，跟随该风格的默认支
+  /// （见 [accentFor]）。**不要给缺省项填值**：填了之后「跟随风格」就没法表达，
+  /// 切到素笺还会拿到赭石。
+  final Map<ThemeStyle, ThemeAccent> _themeAccents =
+      <ThemeStyle, ThemeAccent>{};
   bool _hasInitialized = false; // 添加标记，用于追踪是否已初始化
 
   // 全局圆角和阴影参数
@@ -420,12 +456,17 @@ class AppTheme with ChangeNotifier {
     return _generatedColorScheme(brightness);
   }
 
-  /// 某套风格当前生效的墨色：用户选过就用用户选的，没选过用这套风格的默认支。
+  /// 某套风格当前生效的墨色：**在这套风格下**选过就用选过的，没选过用它的默认支。
   ///
-  /// 墨色是**跨风格共享的一个设置**：在纸墨下选了靛蓝，切到素笺仍然是靛蓝。
-  /// 两套纸各自的容器色会自动贴合自己的底色，不需要按风格分开记。
+  /// 墨色**按风格分开记**。曾经是跨风格共享的一支：只要在纸与墨下点过赭石，
+  /// 切到素笺也是赭石，素笺的黛青绿从此再也看不到——而 [ThemeStyle.defaultAccent]
+  /// 给每套风格配默认墨的意义就在于「这套纸配这支墨最好看」，一次全局选择把它
+  /// 永久盖掉，等于那份配置只在全新安装的头一次生效。
+  ///
+  /// 分开记之后：没在某套风格下选过墨，切过去就是那套风格自己的默认支；
+  /// 选过的那套仍然记得自己选的，切回来原样恢复。
   ThemeAccent accentFor(ThemeStyle style) =>
-      _themeAccent ?? style.defaultAccent;
+      _themeAccents[style] ?? style.defaultAccent;
 
   /// 当前风格生效的墨色，供设置页显示选中态。
   ThemeAccent get themeAccent => accentFor(_themeStyle);
@@ -498,9 +539,9 @@ class AppTheme with ChangeNotifier {
       await _storage!.initialize();
       _loadCustomColor();
       _loadThemeMode();
-      // 墨色的兜底解析要用到已加载的风格，顺序不能调换。
+      // 墨色按风格分开存，加载和旧值迁移都要用到已加载的风格，顺序不能调换。
       _loadThemeStyle();
-      _loadThemeAccent();
+      await _loadThemeAccents();
 
       // 首次运行时，不读取存储的设置，保持默认开启
       if (_storage!.containsKey(_useDynamicColorKey)) {
@@ -529,7 +570,7 @@ class AppTheme with ChangeNotifier {
       _useDynamicColor = true;
       _themeMode = ThemeMode.system;
       _themeStyle = ThemeStyle.defaultStyle;
-      _themeAccent = null;
+      _themeAccents.clear();
     }
   }
 
@@ -658,14 +699,16 @@ class AppTheme with ChangeNotifier {
     }
   }
 
-  /// 设置墨色（手工风格的强调色）。
+  /// 设置**当前风格**的墨色（手工风格的强调色）。
   ///
   /// 和 [setThemeStyle] 并列的一个维度：只换强调族，纸色、字体、圆角、纹理全不动。
+  /// 只落在当前风格头上，别的风格该跟随默认的继续跟随——见 [accentFor]。
   /// material 风格下这个设置不生效（它走取色算法），但会照常记住，
-  /// 切回手工风格时原样恢复——和动态取色在手工风格下的处理是对称的。
+  /// 切回来原样恢复——和动态取色在手工风格下的处理是对称的。
   Future<void> setThemeAccent(ThemeAccent accent) async {
-    if (_themeAccent == accent) return;
-    _themeAccent = accent;
+    final style = _themeStyle;
+    if (_themeAccents[style] == accent) return;
+    _themeAccents[style] = accent;
     _clearThemeCache();
     // 与 setThemeMode 一致：先刷新 UI，再落盘。
     notifyListeners();
@@ -674,7 +717,7 @@ class AppTheme with ChangeNotifier {
     if (storage == null) return;
     try {
       await storage
-          .setString(_themeAccentKey, accent.name)
+          .setString(_accentKeyFor(style), accent.name)
           .timeout(const Duration(seconds: 2));
     } catch (e) {
       logWarning('保存墨色失败: $e', source: 'AppTheme');
@@ -755,15 +798,22 @@ class AppTheme with ChangeNotifier {
     }
   }
 
-  // 从持久化存储加载墨色
-  void _loadThemeAccent() {
+  String _accentKeyFor(ThemeStyle style) =>
+      '$_themeAccentKeyPrefix${style.name}';
+
+  // 从持久化存储加载各风格的墨色
+  Future<void> _loadThemeAccents() async {
+    _themeAccents.clear();
     try {
-      // 没存过、或者存的是认不出的坏值，都保持 null（跟随风格默认）。
-      // 兜底到某一支具体的墨会把「跟随风格」这个状态永久抹掉：之后切到另一套
-      // 风格，拿到的还是上一套的默认墨。
-      _themeAccent = ThemeAccent.tryFromName(_storage?.getString(
-        _themeAccentKey,
-      ));
+      for (final style in ThemeStyle.values) {
+        // 没存过、或者存的是认不出的坏值，都不往表里放（跟随该风格的默认墨）。
+        // 兜底到某一支具体的墨会把「跟随风格」这个状态永久抹掉。
+        final accent = ThemeAccent.tryFromName(
+          _storage?.getString(_accentKeyFor(style)),
+        );
+        if (accent != null) _themeAccents[style] = accent;
+      }
+      await _migrateLegacyThemeAccent();
     } catch (e, stack) {
       logError(
         '加载墨色失败',
@@ -771,7 +821,62 @@ class AppTheme with ChangeNotifier {
         stackTrace: stack,
         source: 'AppTheme',
       );
-      _themeAccent = null;
+      _themeAccents.clear();
+    }
+  }
+
+  /// 把「全局一支墨」的旧取值迁到**当前风格**名下。
+  ///
+  /// 归到当前风格是唯一不改变用户所见的落法：那支墨此刻正显示在这套风格上。
+  /// 归给全部风格等于把旧行为原样留下（素笺永远见不到自己的默认墨），
+  /// 直接丢掉又会让用户升级后眼前的颜色自己变掉。
+  ///
+  /// **只在一条按风格存的墨色都还没有时才迁。** 判据不是「当前风格有没有」而是
+  /// 「一条都没有」，这是幂等性所在：迁移写成功之后删旧键是可能失败的（
+  /// [_removeLegacyThemeAccent] 只记警告），旧键就留了下来。若下次启动时用户已经
+  /// 换到另一套没单独选过墨的风格，按「当前风格有没有」判就会把同一支旧墨**再迁一次**，
+  /// 于是两套风格又是同一支墨——这个 PR 要修的跨风格串色原样回来了。
+  ///
+  /// 有任何一条按风格的取值，就说明新方案至少跑过一轮（迁移写成功过，或者用户自己
+  /// 选过），这时旧键只是没删掉的残留，清掉即可，不再当作待迁移的数据。
+  ///
+  /// 写盘失败时**不删旧键**：内存里的取值已经对了，下次启动还能再迁一次。
+  Future<void> _migrateLegacyThemeAccent() async {
+    final storage = _storage;
+    if (storage == null) return;
+    final legacy = ThemeAccent.tryFromName(
+      storage.getString(_legacyThemeAccentKey),
+    );
+    if (legacy == null) {
+      // 坏值也要清掉，否则每次启动都白读一次。
+      if (storage.containsKey(_legacyThemeAccentKey)) {
+        await _removeLegacyThemeAccent(storage);
+      }
+      return;
+    }
+    if (_themeAccents.isEmpty) {
+      final style = _themeStyle;
+      _themeAccents[style] = legacy;
+      try {
+        await storage
+            .setString(_accentKeyFor(style), legacy.name)
+            .timeout(const Duration(seconds: 2));
+      } catch (e) {
+        // 落盘失败就别删旧键，下次启动再迁一次。内存里的取值已经对了。
+        logWarning('迁移墨色失败: $e', source: 'AppTheme');
+        return;
+      }
+    }
+    await _removeLegacyThemeAccent(storage);
+  }
+
+  Future<void> _removeLegacyThemeAccent(SafeMMKV storage) async {
+    try {
+      await storage
+          .remove(_legacyThemeAccentKey)
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logWarning('清理旧墨色键失败: $e', source: 'AppTheme');
     }
   }
 
@@ -905,9 +1010,9 @@ class AppTheme with ChangeNotifier {
           color: colorScheme.onSurface,
           fontFamily: form.fontFamily,
           fontFamilyFallback: form.fontFamilyFallback,
-          // M3 titleLarge 默认 w400，再过一遍风格的字重下限：
+          // M3 titleLarge 默认 w400，再过一遍风格的**标题**字重下限：
           // material 下下限是 0，原样还是 w400，一个像素不变。
-          fontWeight: form.readingWeight(FontWeight.w400),
+          fontWeight: form.titleWeight(FontWeight.w400),
           fontSize: 20,
         ),
       ),

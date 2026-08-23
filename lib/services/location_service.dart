@@ -635,6 +635,30 @@ class LocationService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 清理地理编码服务返回的多语言/多变体混杂文本（例如 "纽约;紐約" -> "纽约", "韩国 / 南韓" -> "韩国", "东京都/東京都" -> "东京都"）
+  static String cleanGeocodingText(String? raw, {String? targetLocale}) {
+    if (raw == null) return '';
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+
+    // 如果不含变体分隔符，直接返回
+    if (!trimmed.contains(';') && !trimmed.contains('/')) {
+      return trimmed;
+    }
+
+    // 分割所有候选变体
+    final parts = trimmed
+        .split(RegExp(r'\s*[;/]\s*'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return trimmed;
+    if (parts.length == 1) return parts.first;
+
+    return parts.first;
+  }
+
   /// Nominatim 在线反向地理编码，返回地址 Map 或 null
   Future<Map<String, String?>?> _reverseGeocodeWithNominatim(
     double latitude,
@@ -667,8 +691,16 @@ class LocationService extends ChangeNotifier {
       final address = decoded['address'];
       if (address is! Map) return null;
 
-      String? s(dynamic v) =>
-          (v is String && v.trim().isNotEmpty) ? v.trim() : null;
+      String? s(dynamic v) {
+        if (v is String && v.trim().isNotEmpty) {
+          final cleaned = cleanGeocodingText(
+            v,
+            targetLocale: _apiLanguageParam,
+          );
+          return cleaned.isNotEmpty ? cleaned : null;
+        }
+        return null;
+      }
 
       final country = s(address['country']);
       final province = s(
@@ -703,12 +735,20 @@ class LocationService extends ChangeNotifier {
             address['neighbourhood'],
       );
 
-      final parts = [
+      // 构建 formattedAddress 时去除相邻重复项（如避免 "日本, 东京都, 东京都"）
+      final rawParts = [
         country,
         province,
         city,
         district,
       ].whereType<String>().toList();
+
+      final parts = <String>[];
+      for (final p in rawParts) {
+        if (parts.isEmpty || parts.last != p) {
+          parts.add(p);
+        }
+      }
       final formattedAddress = parts.isNotEmpty ? parts.join(', ') : null;
 
       return <String, String?>{
@@ -757,15 +797,21 @@ class LocationService extends ChangeNotifier {
   // 带超时的城市搜索
   Future<List<CityInfo>> _searchCityWithTimeout(String query) async {
     try {
-      final bool isChinese = _containsChinese(query);
+      final trimmedQuery = query.trim();
+      if (trimmedQuery.isEmpty) return <CityInfo>[];
 
-      if (isChinese) {
-        // 中文搜索：优先使用Nominatim API（对中文支持更好）
-        logDebug('检测到中文输入，优先使用Nominatim API');
+      // 判断查询词是否包含非 ASCII 字符（中文、日文假名/汉字、韩文谚文、西里尔字母、阿拉伯文等）
+      // 非 ASCII 字符在 OpenStreetMap Nominatim 中具有完备的全球多语言地名索引与翻译；
+      // 纯 ASCII 字符（如英文/拉丁拼音）在 OpenMeteo 中查询更轻量并支持按人口热度排序。
+      final bool isNonAscii = _containsNonAscii(trimmedQuery);
+
+      if (isNonAscii) {
+        // 非ASCII输入：优先使用Nominatim API（对全球多语言/非拉丁文字支持完备）
+        logDebug('检测到非ASCII输入，优先使用Nominatim API');
 
         final nominatimResults = await _searchCityWithNominatim(
-          query,
-        ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+          trimmedQuery,
+        ).timeout(const Duration(seconds: 6), onTimeout: () => <CityInfo>[]);
 
         if (nominatimResults.isNotEmpty) {
           return nominatimResults;
@@ -774,24 +820,25 @@ class LocationService extends ChangeNotifier {
         // 如果Nominatim没有结果，回退到OpenMeteo
         logDebug('Nominatim无结果，尝试OpenMeteo');
         return await _searchCityWithOpenMeteo(
-          query,
-        ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+          trimmedQuery,
+        ).timeout(const Duration(seconds: 6), onTimeout: () => <CityInfo>[]);
       } else {
-        // 英文/拼音搜索：优先使用OpenMeteo API
-        logDebug('检测到非中文输入，优先使用OpenMeteo API');
+        // ASCII输入（如英文/拼音）：优先使用OpenMeteo API
+        logDebug('检测到ASCII输入，优先使用OpenMeteo API');
 
         final results = await _searchCityWithOpenMeteo(
-          query,
-        ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+          trimmedQuery,
+        ).timeout(const Duration(seconds: 6), onTimeout: () => <CityInfo>[]);
 
         if (results.isNotEmpty) {
           return results;
         }
 
         // 如果OpenMeteo没有结果，尝试使用Nominatim API
+        logDebug('OpenMeteo无结果，尝试Nominatim');
         return await _searchCityWithNominatim(
-          query,
-        ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+          trimmedQuery,
+        ).timeout(const Duration(seconds: 6), onTimeout: () => <CityInfo>[]);
       }
     } catch (e) {
       logDebug('城市搜索异常: $e');
@@ -799,15 +846,9 @@ class LocationService extends ChangeNotifier {
     }
   }
 
-  // 检测字符串是否主要包含中文字符
-  bool _containsChinese(String text) {
-    // Unicode范围：CJK统一汉字 + Extension A + 兼容汉字 + 部首
-    // CJK Unified: 0x4E00-0x9FFF, Extension A: 0x3400-0x4DBF
-    // CJK Compat Ideographs: 0xF900-0xFAFF, Radicals: 0x2E80-0x2FFF
-    final chineseRegex = RegExp(
-      r'[\u2e80-\u2fff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]',
-    );
-    return chineseRegex.hasMatch(text);
+  // 检测字符串是否包含非 ASCII 字符（如中文、日文、韩文、西里尔文、阿拉伯文、带重音符号的拉丁字母等）
+  bool _containsNonAscii(String text) {
+    return RegExp(r'[^\x00-\x7F]').hasMatch(text);
   }
 
   // 使用OpenMeteo的地理编码API搜索城市
@@ -816,10 +857,7 @@ class LocationService extends ChangeNotifier {
       // 对查询字符串进行URL编码
       final encodedQuery = Uri.encodeComponent(query.trim());
 
-      // 根据输入语言和用户语言设置选择合适的语言参数
-      // 如果输入包含中文，使用中文结果；否则根据用户语言设置
-      final String languageParam =
-          _containsChinese(query) ? 'zh' : _apiLanguageParam;
+      final String languageParam = _apiLanguageParam;
 
       // OpenMeteo地理编码API - 使用URL编码的查询参数
       final url =
@@ -829,7 +867,7 @@ class LocationService extends ChangeNotifier {
 
       final response = await NetworkService.instance.get(
         url,
-        timeoutSeconds: 10,
+        timeoutSeconds: 8,
       );
 
       if (response.statusCode == 200) {
@@ -841,28 +879,48 @@ class LocationService extends ChangeNotifier {
             data['results'].isNotEmpty) {
           final List<dynamic> results = data['results'];
 
-          return results.map((item) {
-            // 提取地点信息
-            final String name = item['name'] ?? '';
-            final String country = item['country'] ?? '';
-            final String admin1 = item['admin1'] ?? ''; // 省/州级行政区
+          return results
+              .map((item) {
+                // 提取地点信息并清洗变体分隔符
+                final String name = cleanGeocodingText(
+                  item['name'] as String?,
+                  targetLocale: _apiLanguageParam,
+                );
+                final String country = cleanGeocodingText(
+                  item['country'] as String?,
+                  targetLocale: _apiLanguageParam,
+                );
+                final String admin1 = cleanGeocodingText(
+                  item['admin1'] as String?,
+                  targetLocale: _apiLanguageParam,
+                ); // 省/州级行政区
 
-            // 构建完整地址
-            final String fullName = [
-              country,
-              admin1,
-              name,
-            ].where((part) => part.isNotEmpty).join(', ');
+                // 构建完整地址并去重相邻层级
+                final rawParts = [
+                  country,
+                  admin1,
+                  name,
+                ].where((part) => part.isNotEmpty).toList();
 
-            return CityInfo(
-              name: name,
-              fullName: fullName,
-              lat: item['latitude'] ?? 0.0,
-              lon: item['longitude'] ?? 0.0,
-              country: country,
-              province: admin1,
-            );
-          }).toList();
+                final parts = <String>[];
+                for (final p in rawParts) {
+                  if (parts.isEmpty || parts.last != p) {
+                    parts.add(p);
+                  }
+                }
+                final String fullName = parts.join(', ');
+
+                return CityInfo(
+                  name: name,
+                  fullName: fullName,
+                  lat: (item['latitude'] as num?)?.toDouble() ?? 0.0,
+                  lon: (item['longitude'] as num?)?.toDouble() ?? 0.0,
+                  country: country,
+                  province: admin1,
+                );
+              })
+              .where((city) => city.name.isNotEmpty)
+              .toList();
         }
       }
 
@@ -880,7 +938,7 @@ class LocationService extends ChangeNotifier {
       // 对查询字符串进行URL编码
       final encodedQuery = Uri.encodeComponent(query.trim());
 
-      // 使用Nominatim API - 对中文搜索支持更好
+      // 使用Nominatim API - 对全球多语言搜索支持更好
       final url =
           'https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&addressdetails=1&limit=15';
 
@@ -898,7 +956,7 @@ class LocationService extends ChangeNotifier {
           'User-Agent':
               'ThoughtEcho/3.4 (https://github.com/Shangjin-Xiao/ThoughtEcho)',
         },
-        timeoutSeconds: 15,
+        timeoutSeconds: 8,
       );
 
       if (response.statusCode == 200) {
@@ -946,18 +1004,28 @@ class LocationService extends ChangeNotifier {
             }
           }
 
-          // 更灵活地处理地点名称
-          String placeName = item['name'] ?? '';
-          String cityName = address['city'] ??
-              address['town'] ??
-              address['village'] ??
-              address['municipality'] ??
-              placeName;
-          String country = address['country'] ?? '';
-          String state = address['state'] ??
-              address['province'] ??
-              address['county'] ??
-              '';
+          // 更灵活地处理地点名称并清洗变体分隔符
+          final String placeName = cleanGeocodingText(
+            item['name'] as String?,
+            targetLocale: _apiLanguageParam,
+          );
+          String cityName = cleanGeocodingText(
+            (address['city'] ??
+                address['town'] ??
+                address['village'] ??
+                address['municipality'] ??
+                placeName) as String?,
+            targetLocale: _apiLanguageParam,
+          );
+          final String country = cleanGeocodingText(
+            address['country'] as String?,
+            targetLocale: _apiLanguageParam,
+          );
+          final String state = cleanGeocodingText(
+            (address['state'] ?? address['province'] ?? address['county'] ?? '')
+                as String?,
+            targetLocale: _apiLanguageParam,
+          );
 
           // 对于一些大城市，可能直接作为顶级地点返回
           if (address.isEmpty && placeName.isNotEmpty) {
@@ -974,21 +1042,36 @@ class LocationService extends ChangeNotifier {
           }
           seenLocations.add(locationKey);
 
-          // 构建完整地址 - 国家, 省/州, 城市
-          final String fullName = [
+          // 构建完整地址并去重相邻相同项 (例如避免 "日本, 东京都, 东京都" 或 "新加坡, 新加坡")
+          final rawParts = [
             country,
             state,
             cityName,
-          ].where((part) => part.isNotEmpty).join(', ');
+          ].where((part) => part.isNotEmpty).toList();
+
+          final parts = <String>[];
+          for (final p in rawParts) {
+            if (parts.isEmpty || parts.last != p) {
+              parts.add(p);
+            }
+          }
+          final String fullName = parts.join(', ');
 
           logDebug('Nominatim结果: $placeName -> $cityName, $country, $state');
+
+          final latVal = (item['lat'] as num?)?.toDouble() ??
+              double.tryParse(item['lat'].toString()) ??
+              0.0;
+          final lonVal = (item['lon'] as num?)?.toDouble() ??
+              double.tryParse(item['lon'].toString()) ??
+              0.0;
 
           results.add(
             CityInfo(
               name: cityName,
               fullName: fullName,
-              lat: double.parse(item['lat'].toString()),
-              lon: double.parse(item['lon'].toString()),
+              lat: latVal,
+              lon: lonVal,
               country: country,
               province: state,
             ),
@@ -1028,18 +1111,29 @@ class LocationService extends ChangeNotifier {
     final oldPosition = _currentPosition;
 
     try {
+      final cleanCityName = cleanGeocodingText(city.name);
+      final cleanCountry = cleanGeocodingText(city.country);
+      final cleanProvince = cleanGeocodingText(city.province);
+
       // 手动设置位置组件
-      _country = city.country;
-      _province = city.province;
-      _city = city.name;
+      _country = cleanCountry.isNotEmpty ? cleanCountry : null;
+      _province = cleanProvince.isNotEmpty ? cleanProvince : null;
+      _city = cleanCityName;
       _district = null;
 
-      // 更新地址字符串
-      List<String> addressParts = [
-        city.country,
-        city.province,
-        city.name,
-      ].where((part) => part.isNotEmpty).toList();
+      // 更新地址字符串（去除相邻重复项）
+      final rawParts = [
+        _country,
+        _province,
+        _city,
+      ].whereType<String>().where((p) => p.isNotEmpty).toList();
+
+      final addressParts = <String>[];
+      for (final p in rawParts) {
+        if (addressParts.isEmpty || addressParts.last != p) {
+          addressParts.add(p);
+        }
+      }
       _currentAddress = addressParts.join(', ');
 
       // 验证经纬度的有效性
@@ -1104,12 +1198,13 @@ class LocationService extends ChangeNotifier {
     }
 
     final parts = locationString.split(',');
-    if (parts.length < 3) return locationString;
+    if (parts.length < 3) return cleanGeocodingText(locationString);
 
-    final country = parts[0].trim();
-    final province = parts[1].trim();
-    final city = parts[2].trim();
-    final district = parts.length > 3 ? parts[3].trim() : '';
+    final country = cleanGeocodingText(parts[0]).trim();
+    final province = cleanGeocodingText(parts[1]).trim();
+    final city = cleanGeocodingText(parts[2]).trim();
+    final district =
+        parts.length > 3 ? cleanGeocodingText(parts[3]).trim() : '';
 
     if (city.isNotEmpty) {
       if (district.isNotEmpty) {
@@ -1181,7 +1276,7 @@ class LocationService extends ChangeNotifier {
   static final _latinOrDigitRegex = RegExp(r'[A-Za-z0-9]');
 
   /// 中文城市显示格式化：仅在明确是“城市名”时补全“市”后缀
-  /// 避免把“新宿区”“Naka ward”这类行政区/英文名称错误显示成“新宿区市”“Naka ward市”
+  /// 避免把“新宿区”“东京都”“京都府”“北海道”“Naka ward”这类行政区/英文名称错误显示成“新宿区市”“东京都市”“Naka ward市”
   bool _containsLatinOrDigit(String text) {
     return _latinOrDigitRegex.hasMatch(text);
   }
@@ -1198,11 +1293,24 @@ class LocationService extends ChangeNotifier {
       '乡',
       '鄉',
       '村',
+      '庄',
+      '莊',
       '里',
       '盟',
       '旗',
       '郡',
       '町',
+      '都',
+      '府',
+      '道',
+      '州',
+      '邦',
+      '省',
+      '特别行政区',
+      '特別行政區',
+      '自治州',
+      '地区',
+      '地區',
     };
 
     final trimmed = text.trim();
@@ -1210,7 +1318,7 @@ class LocationService extends ChangeNotifier {
   }
 
   String _formatChineseCityDisplay(String city) {
-    final trimmed = city.trim();
+    final trimmed = cleanGeocodingText(city).trim();
     if (trimmed.isEmpty) return trimmed;
 
     if (_isChineseAdminDivision(trimmed)) {
@@ -1340,8 +1448,8 @@ class LocationService extends ChangeNotifier {
     final parts = locationString.split(',');
     if (parts.length >= 3) {
       String? normalizePart(String? value) {
-        final trimmed = value?.trim();
-        return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+        final cleaned = cleanGeocodingText(value).trim();
+        return cleaned.isEmpty ? null : cleaned;
       }
 
       _country = normalizePart(parts[0]);
@@ -1349,12 +1457,19 @@ class LocationService extends ChangeNotifier {
       _city = normalizePart(parts[2]);
       _district = parts.length >= 4 ? normalizePart(parts[3]) : null;
 
-      final addressParts = <String?>[
+      final rawParts = <String?>[
         _country,
         _province,
         _city,
         _district,
-      ].whereType<String>().toList();
+      ].whereType<String>().where((p) => p.isNotEmpty).toList();
+
+      final addressParts = <String>[];
+      for (final p in rawParts) {
+        if (addressParts.isEmpty || addressParts.last != p) {
+          addressParts.add(p);
+        }
+      }
 
       _currentAddress =
           addressParts.isNotEmpty ? addressParts.join(', ') : null;
