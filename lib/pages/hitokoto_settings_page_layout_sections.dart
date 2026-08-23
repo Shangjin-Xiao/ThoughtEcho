@@ -11,20 +11,17 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // 实色 + 描边，不用渐变：渐变那一头是和页面底色混出来的，手工色板下
+    // primaryContainer 与底纸本就接近，混完右下角几乎看不见边。
+    // 与偏好设置页的头部卡同一处理，两页并排时才是一套东西。
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colorScheme.primaryContainer,
-            colorScheme.primaryContainer.withAlpha(200),
-          ],
-        ),
+        color: colorScheme.primaryContainer,
         borderRadius:
             BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: AppShapeTokens.of(context).lowShadow,
       ),
       child: Column(
@@ -62,7 +59,7 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
                           ? l10n.selectedCount(selectedTypeCount)
                           : providerLabel,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onPrimaryContainer.withAlpha(180),
+                        color: colorScheme.onPrimaryContainer,
                       ),
                     ),
                   ],
@@ -76,7 +73,7 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
                 ? l10n.hitokotoTypeDesc
                 : l10n.dailyQuoteApiDesc,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onPrimaryContainer.withAlpha(180),
+              color: colorScheme.onPrimaryContainer,
               height: 1.5,
             ),
           ),

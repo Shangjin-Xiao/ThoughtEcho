@@ -606,6 +606,54 @@ void main() {
       }
     });
 
+    test('加粗永远比正文重 300 档，三套风格看到的加粗一样明显', () {
+      // 「这几个字更重要」这件事由**加粗和正文的字重差**表达，M3 的差是 300 档
+      // （w400 正文对 w700 加粗）。正文两头都被动过——衬线抬到 w500、Android 黑体
+      // 压到 350——加粗若还钉在 w700，差就变成 200 / 350，同一个加粗在三套风格里
+      // 轻重不一，衬线下几乎看不出标过。
+      for (final style in ThemeStyle.values) {
+        final form = style.form;
+        for (final compensated in const [false, true]) {
+          final body = ThemeStyleForm.resolvedBodyWeight(
+            bodyWeightFloor: form.bodyWeightFloor,
+            variableWeightCompensation: form.variableWeightCompensation,
+            compensated: compensated,
+          );
+          final bold = form.emphasisWeight(compensated: compensated);
+          expect(
+            bold.value - body.value,
+            ThemeStyleForm.emphasisWeightDelta,
+            reason: '${style.name} 的加粗与正文的字重差不是 300 档'
+                '（compensated=$compensated）',
+          );
+          // 随包衬线的字重轴是 400–900，超出去引擎只能夹到边界。
+          expect(bold.value, lessThanOrEqualTo(FontWeight.w900.value));
+        }
+      }
+
+      // material 在不跑 Android 减重的平台上必须**正好**是 w700：
+      // 这条路是 M3 的默认行为，像素一点不能变。
+      expect(
+        ThemeStyleForm.material.emphasisWeight(compensated: false),
+        FontWeight.bold,
+      );
+      // 衬线正文 w500 → 加粗 w800，可变字重轴上精确落位。
+      expect(
+        ThemeStyleForm.paper.emphasisWeight(compensated: false),
+        FontWeight.w800,
+      );
+      // 令牌下发的那份和 form 自己算的必须一致，富文本才和 textTheme 对得上。
+      for (final style in ThemeStyle.values) {
+        final tokens = AppTypographyTokens.fromForm(style.form);
+        for (final compensated in const [false, true]) {
+          expect(
+            tokens.emphasisWeight(compensated: compensated),
+            style.form.emphasisWeight(compensated: compensated),
+          );
+        }
+      }
+    });
+
     test('阅读文本放大幅度有上限，不能靠字号硬堆可读性', () {
       // 字号是最好使的一根杠杆，也最容易滥用：正文一旦超过 Material 的 1.15 倍，
       // 列表密度、设置项、卡片折叠阈值全要跟着崩。

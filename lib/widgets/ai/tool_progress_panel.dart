@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../theme/theme_style.dart';
+import '../app_loading_view.dart';
 
 /// 工具调用进度状态
 enum ToolProgressStatus {
@@ -111,15 +112,9 @@ Widget _statusIcon(BuildContext context, ToolProgressStatus status) {
         color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
       );
     case ToolProgressStatus.running:
-      return SizedBox(
-        width: 14,
-        height: 14,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor:
-              AlwaysStoppedAnimation<Color>(theme.colorScheme.onSurfaceVariant),
-        ),
-      );
+      // 14 而不是默认的 16：这一列的另外三个状态图标都是 16 的字形，
+      // 而字形本身带内边距，圈画到 16 会比它们粗一圈。
+      return const AppInlineLoadingIndicator(size: 14);
     case ToolProgressStatus.completed:
       return Icon(
         Icons.check,
@@ -204,17 +199,7 @@ class _ToolProgressSheetBody extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (data.inProgress)
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
+                  if (data.inProgress) const AppInlineLoadingIndicator(),
                 ],
               ),
               const SizedBox(height: 8),
@@ -509,9 +494,11 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
 
     // 底色和整宽都撤掉：工具调用是过程不是内容，它在对话流里应该是一行
     // 顺着正文左边缘走的状态文字，而不是一块和回答抢注意力的卡片。
-    final foreground = theme.colorScheme.onSurfaceVariant.withValues(
-      alpha: 0.85,
-    );
+    //
+    // 但"退到背景"不等于"看不清"：onSurfaceVariant 这支墨是按 7:1 验过的，
+    // 再乘 0.85 就把验算作废了——衬线体下这一行会糊成一片灰。
+    // 弱化交给字号和位置，不要交给透明度。
+    final foreground = theme.colorScheme.onSurfaceVariant;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -524,20 +511,15 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 转圈按图标的尺寸走（16），不再缩到 12。12 的圈在高 DPI 屏上
+              // 只有几个物理像素宽，1.8 的线宽抗锯齿后剩不下什么——它不像
+              // "在转"，像正文前面多了一个小黑点。
               SizedBox(
-                width: 16,
-                height: 16,
+                width: 18,
+                height: 18,
                 child: Center(
                   child: widget.inProgress
-                      ? SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.8,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(foreground),
-                          ),
-                        )
+                      ? AppInlineLoadingIndicator(color: foreground)
                       : Icon(
                           // 只思考没调工具的那轮不打勾：勾是"做完了几件事"的
                           // 收条，而这一轮什么都没做，只是想了想。
@@ -545,7 +527,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
                               (widget.items.isEmpty
                                   ? Icons.lightbulb_outline
                                   : Icons.check),
-                          size: 15,
+                          size: 16,
                           color: foreground,
                         ),
                 ),

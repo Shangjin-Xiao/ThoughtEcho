@@ -306,16 +306,26 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     // 更精细的屏幕尺寸判断
-    final isSmallScreen = screenHeight < 600;
     final isVerySmallScreen = screenHeight < 550;
 
     return Container(
       // 去掉固定高度，让容器适应父组件的尺寸
       width: double.infinity,
-      margin: EdgeInsets.symmetric(
-        horizontal: screenWidth > 600 ? 10.0 : 2.0, // 调整外边距使总间距与今日思考一致
-        vertical:
-            isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0), // 动态调整垂直边距
+      // 外边距**照抄下面那张「今日思考」**（`HomeDailyPromptPanel` 的 margin）。
+      //
+      // 首页只有这两张卡，它们的左右边缘必须落在同一条线上。之前对不齐：
+      // 这里给 2，`SlidingCard` 自己又在外面垫了 24，合计 26，而「今日思考」
+      // 是 12——上面这张整整窄了一圈，看着像缩水了，正是"一言框能不能大一点"
+      // 说的那件事。`SlidingCard` 的那层外垫已经撤掉，卡片多大只由这里决定。
+      //
+      // 垂直方向同样收紧：这块区域本来就是 `Expanded` 撑满的，留白该收在卡片
+      // **内部**（`SlidingCard` 的 cardPadding），而不是让卡片先缩小一圈、
+      // 再在外面留一圈空。
+      margin: EdgeInsets.fromLTRB(
+        screenWidth > 600 ? 16.0 : (isVerySmallScreen ? 8.0 : 12.0),
+        isVerySmallScreen ? 4.0 : 8.0,
+        screenWidth > 600 ? 16.0 : (isVerySmallScreen ? 8.0 : 12.0),
+        isVerySmallScreen ? 4.0 : 8.0,
       ),
       child: SlidingCard(
         // 单击整个卡片区域复制内容

@@ -487,7 +487,9 @@ class _OnboardingPageState extends State<OnboardingPage>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
+          // 卡片色，不是页面底色：这条栏浮在引导页内容之上，而 `surface` 正是
+          // 它背后那张纸——同色的话「浮起来」这件事全压在描边上。
+          color: AppSurfaceTokens.of(context).card,
           borderRadius: BorderRadius.circular(shape.cardRadius),
           border: Border.all(
             color: theme.colorScheme.outlineVariant,

@@ -369,6 +369,62 @@ class ThemeStyleForm {
   static FontWeight weightAtLeast(FontWeight weight, int floor) =>
       weight.value >= floor ? weight : FontWeight(floor);
 
+  /// 用户在正文里标的**加粗**比正文本身重多少档。
+  ///
+  /// M3 的关系是 w400 正文对 w700 加粗，差 300 档——「这几个字更重要」这件事
+  /// 全靠这个差表达。而正文字重两头都被动过：[bodyWeightFloor] 把衬线正文抬到
+  /// w500，[variableWeightCompensation] 把 Android 黑体压到 350。**加粗如果还钉在
+  /// w700 这个绝对值，差就从 300 变成 200（衬线）或 350（黑体），同一个「加粗」
+  /// 在三套风格里轻重不一，衬线下更是几乎看不出标过。**
+  ///
+  /// 所以加粗不是绝对值，是「正文字重 + 这个差」：正文往哪走它跟到哪，
+  /// 三套风格看到的加粗强度一致。material 非 Android 下算出来正好是 w700，
+  /// 像素不变。
+  static const int emphasisWeightDelta = 300;
+
+  /// 正文**实际落到屏幕上**的字重：M3 的 w400 先吃 Android 减重，再抬到下限。
+  ///
+  /// [compensated] 表示当前平台跑不跑那套减重（只有 Android 跑，判断在调用方，
+  /// 这里不碰 `dart:io`）。两个杠杆方向相反但从不同时生效——设了下限的风格
+  /// 补偿强度是 0，反之亦然——顺序因此不影响结果。
+  ///
+  /// 参数化成静态方法而不是只读实例字段，是因为**富文本那条路拿不到 form**：
+  /// widget 手上只有 `AppTypographyTokens` 下发的两个令牌取值，规则得让它也能算。
+  static FontWeight resolvedBodyWeight({
+    required int bodyWeightFloor,
+    required double variableWeightCompensation,
+    required bool compensated,
+  }) {
+    final compensation = compensated
+        ? (50 * variableWeightCompensation.clamp(0.0, 1.0)).round()
+        : 0;
+    return weightAtLeast(FontWeight(400 - compensation), bodyWeightFloor);
+  }
+
+  /// 富文本里那段加粗该用的字重 = [resolvedBodyWeight] + [emphasisWeightDelta]，
+  /// 封顶 w900（可变字重轴的顶，也是 [FontWeight] 的最大档）。
+  static FontWeight emphasisWeightFor({
+    required int bodyWeightFloor,
+    required double variableWeightCompensation,
+    required bool compensated,
+  }) =>
+      FontWeight(
+        (resolvedBodyWeight(
+                  bodyWeightFloor: bodyWeightFloor,
+                  variableWeightCompensation: variableWeightCompensation,
+                  compensated: compensated,
+                ).value +
+                emphasisWeightDelta)
+            .clamp(100, 900),
+      );
+
+  /// 本风格下的加粗字重，[emphasisWeightFor] 绑定到自己这组令牌上的包装。
+  FontWeight emphasisWeight({required bool compensated}) => emphasisWeightFor(
+        bodyWeightFloor: bodyWeightFloor,
+        variableWeightCompensation: variableWeightCompensation,
+        compensated: compensated,
+      );
+
   /// 随包分发的中文衬线体族名，必须和 `pubspec.yaml` 的 `fonts: - family:` 一致。
   ///
   /// **为什么不再用系统字体。** 这里曾经写通用族名 `serif`，靠 AOSP 从 Android 9
@@ -772,12 +828,14 @@ class AppTypographyTokens extends ThemeExtension<AppTypographyTokens> {
   const AppTypographyTokens({
     required this.variableWeightCompensation,
     required this.readingFontFamily,
+    required this.bodyWeightFloor,
   });
 
   factory AppTypographyTokens.fromForm(ThemeStyleForm form) =>
       AppTypographyTokens(
         variableWeightCompensation: form.variableWeightCompensation,
         readingFontFamily: form.fontFamily,
+        bodyWeightFloor: form.bodyWeightFloor,
       );
 
   /// 见 [ThemeStyleForm.variableWeightCompensation]。
@@ -795,6 +853,24 @@ class AppTypographyTokens extends ThemeExtension<AppTypographyTokens> {
   /// （见 `PdfFontService.loadFontSet`）。
   final String? readingFontFamily;
 
+  /// 见 [ThemeStyleForm.bodyWeightFloor]。
+  ///
+  /// 富文本里的用法只有一个：算 [emphasisWeight]。加粗要比正文重一个固定的差，
+  /// 而正文重多少正是这个下限说了算——脱离 `textTheme` 自己拼样式的那条路
+  /// 拿不到已经算好的字重，只能把下限带过去重算一遍。
+  final int bodyWeightFloor;
+
+  /// 用户标的加粗该用的字重，规则见 [ThemeStyleForm.emphasisWeight]。
+  ///
+  /// [compensated] = 当前平台跑不跑 Android 那套黑体减重，由调用方判断
+  /// （`kIsWeb || !Platform.isAndroid` 时为 false）。
+  FontWeight emphasisWeight({required bool compensated}) =>
+      ThemeStyleForm.emphasisWeightFor(
+        bodyWeightFloor: bodyWeightFloor,
+        variableWeightCompensation: variableWeightCompensation,
+        compensated: compensated,
+      );
+
   static AppTypographyTokens of(BuildContext context) =>
       Theme.of(context).extension<AppTypographyTokens>() ??
       AppTypographyTokens.fromForm(ThemeStyleForm.material);
@@ -803,11 +879,13 @@ class AppTypographyTokens extends ThemeExtension<AppTypographyTokens> {
   AppTypographyTokens copyWith({
     double? variableWeightCompensation,
     String? readingFontFamily,
+    int? bodyWeightFloor,
   }) =>
       AppTypographyTokens(
         variableWeightCompensation:
             variableWeightCompensation ?? this.variableWeightCompensation,
         readingFontFamily: readingFontFamily ?? this.readingFontFamily,
+        bodyWeightFloor: bodyWeightFloor ?? this.bodyWeightFloor,
       );
 
   @override

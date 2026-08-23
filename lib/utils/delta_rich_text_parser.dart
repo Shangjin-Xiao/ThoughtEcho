@@ -89,9 +89,9 @@ class RichTextRun {
   ///
   /// 斜体在这里是**忠实呈现用户手动标记的富文本格式**，不是 UI 自己的装饰选择，
   /// 属于项目里明确保留斜体的那一类（见 AGENTS.md 的例外说明）。
-  /// [boldWeight] 是「粗体」实际用哪一档字重。Android + material 风格下 quill 会把
-  /// 加粗降到 w500（`_buildCustomStyles` 里的可变字重补偿），折叠预览必须跟着降，
-  /// 否则同一条笔记折叠时的粗体比展开后更重。
+  /// [boldWeight] 是「粗体」实际用哪一档字重：正文字重被令牌抬高或压低之后，
+  /// 加粗要跟着走才能保住 M3 那 300 档的差（见 `QuillThemeTypography.boldWeight`）。
+  /// 折叠预览必须和展开态取同一个值，否则同一条笔记折叠时和展开后不一样粗。
   TextStyle styleOn(
     TextStyle? base, {
     TextStyle? inlineCodeStyle,
