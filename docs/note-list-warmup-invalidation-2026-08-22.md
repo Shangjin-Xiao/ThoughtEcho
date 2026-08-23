@@ -70,6 +70,46 @@ imageCache，正好解释 31 → 15）。而 `_resetIdleLayoutWarmup()` 只在**
   `rewarm=`。`items` 只数循环转了几圈，转空圈时它照样很好看；这两个增量才是
   「预热真的落地了」的证据。
 
+---
+
+## 2026-08-23 复验：修的两处都生效，露出了下一层
+
+用户在 120Hz 机器上跑了两组：(a) 冷启动直接滑，(b) 切后台再回来滑。
+
+**(a) 冷启动**：`warmup={...,expand=114,plan=68,gen=0,rewarm=0}`，滑动全程
+`planMiss+0 / expandMiss+0`，`expand=121/300`、`ir=40/200` —— 预热确实把整张列表
+暖好了，卡片滑进来一次测量都不用做。（也反过来确认了 08-22 那份日志是切过后台的：
+同样的位置那时是 `expand=59`。）
+
+**(b) 切后台回来**：`gen=3, rewarm=3` —— 重暖机制按设计触发了。但同一段里仍然
+`planMiss+33 / expandMiss+28`，因为 `cursor=23/121`：**重暖是从第 0 条开始的，
+而用户停在第 45~72 条**。功夫全花在屏幕外面，滑到的每一张还是现算。
+用户同时看到「原本加载过的图片又变灰重新加载」（`imageCache img=18, Δimg+18`）。
+
+新指标把「卡在哪」也指出来了：
+
+| session | dataΔ | worstVsync | worstSpan | frameJank | avgBuild | dropped |
+|---|---|---|---|---|---|---|
+| scroll-1 | 1 | 52.5ms | 55.5ms | 12 | 1.2ms | 119 |
+| scroll-2 | 1 | 110.5ms | 118.8ms | 15 | 1.4ms | 96 |
+| scroll-3 | **0** | **1.4ms** | 16.1ms | 11 | 1.2ms | 61 |
+
+`avgBuild` 一直只有 1.2ms，掉帧却成片 —— **成本不在 build/raster，在 vsync 到
+build 之间那段**，而它和 `dataΔ` 高度相关：有数据事件的两段 worstVsync 是
+52ms / 110ms，没有的那段是 1.4ms。
+
+### 这一轮又改了什么
+
+- **进后台不再清测量缓存**，改挂 `didHaveMemoryPressure`。日志证明 pause 清掉的
+  几乎全是小对象（`doc=0/120`、`ctrl=0/50` 本来就是空的），换来的却是每次回前台
+  第一次滑动必然重算。系统真缺内存时（含后台 trim）照样会清。
+- **预热改成从视口向两边扩散**（`lib/utils/spread_from_anchor_cursor.dart`），
+  锚点在「这一轮第一条都还没暖」的时候取 `_estimatedScrollCenterIndex()`。
+  日志里的 `cursor=` 后面跟上了 `@anchor`。
+- **回前台重走一轮预热并清掉 precache 去重集合**：Flutter 自己的 imageCache 会被
+  引擎清空（那是「图片变灰」的来源，和 App 的缓存无关），测量这时全是命中，
+  这一轮基本只花 precache 的钱，而且视口里的图先回来。
+
 ## 下一轮该看什么
 
 拿到新日志先看三个数：
@@ -82,6 +122,14 @@ imageCache，正好解释 31 → 15）。而 `_resetIdleLayoutWarmup()` 只在**
   和光栅线程排队去找。
 
 还没做、按优先级排：
+
+0. **数据事件把整列表的记忆化打穿。** `_QuoteItemMemo.matches` 里 `quote` 是按
+   `identical` 比的，而数据流每次事件都从数据库拿一批**新的** `Quote` 实例，
+   `_isSameQuoteInstances` 同样按身份比 —— 于是 08-23 的 scroll-14 出现
+   `itemMemo={size=121,hit+0,miss+113}`、`worstBuild=74.9ms`：一个滚动帧里重建了
+   113 张卡。要么让数据层对内容没变的行复用旧实例，要么把这两处的判据从身份改成
+   内容指纹。这多半也是上表里 `dataΔ=1` 那两段 worstVsync 高达 52ms / 110ms 的
+   来源，优先级已经排到排版封顶前面。
 
 1. **排版量封顶。** `planWorstUs=15486`（单条笔记一次 plan 15.5ms）、首个
    rich-image 卡片 `itemLayout 18.3ms`。`_computePlan` 和渲染侧的 `Text.rich`

@@ -18,6 +18,7 @@ import '../services/database_service.dart';
 import '../utils/delta_media_extractor.dart';
 import '../utils/icon_utils.dart';
 import '../utils/frame_timing_stats.dart';
+import '../utils/spread_from_anchor_cursor.dart';
 import '../utils/jank_detector.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
@@ -253,7 +254,11 @@ class NoteListViewState extends State<NoteListView>
   // 空闲预热：趁列表静止把「卡片首次布局才做」的测量提前算好，见
   // note_list/note_list_warmup.dart。
   Timer? _idleWarmupTimer;
-  int _idleWarmupCursor = 0;
+
+  /// 这一轮从视口所在那条向两边扩散地暖，而不是从索引 0 一路往下。
+  /// 2026-08-23 的日志里用户停在第 45~72 条，预热的进度却是 `23/121` ——
+  /// 功夫全花在了屏幕外面。
+  final SpreadFromAnchorCursor _idleWarmupPass = SpreadFromAnchorCursor();
 
   /// 连续「什么都没暖成」的轮次。宽度一直取不到、或列表一直在滚时，
   /// 预热不能无限改期下去：那会留下一个永远不结束的定时器
@@ -800,8 +805,14 @@ class NoteListViewState extends State<NoteListView>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state != AppLifecycleState.resumed) return;
-    // 缓存代号变没变由 `_runIdleWarmupTick` 自己比对：这里只负责排一轮，
-    // 没被清过的话那一轮查表全命中，几乎不花时间。
+    // 回前台时 Flutter 自己的 imageCache 往往已经被引擎清空（Android 的后台内存
+    // 回收），卡片上本来已经出图的照片会重新变灰、再解一次 —— 用户直接看得见。
+    // 测量缓存这时多半还在（`main.dart` 只在真的内存压力下才清），所以重走一遍
+    // 预热几乎只花 precache 的钱，而且现在是从视口开始走的：正看着的那几张先回来。
+    //
+    // 去重集合必须一起清，否则「暖过了」的记号会让这些图永远等不到第二次预解码。
+    _idleWarmupPrecachedSources.clear();
+    _restartIdleLayoutWarmupPass();
     _scheduleIdleLayoutWarmup();
   }
 

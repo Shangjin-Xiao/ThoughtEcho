@@ -326,7 +326,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     // 键对不上、或者缓存被清空后没重暖时，`items` 照样很好看而这两个是 0。
     // `gen` 跟着 [QuoteContent.cacheGeneration] 走，`rewarm` 数被清了几次。
     final warmupStats = 'items=$_idleWarmupWarmedItems,'
-        'cursor=$_idleWarmupCursor/${_quotes.length},'
+        'cursor=${_idleWarmupPass.emitted}/${_quotes.length}'
+        '@${_idleWarmupPass.anchor},'
         'img=$_idleWarmupPrecachedImages,'
         'expand=$_idleWarmupExpandMisses,'
         'plan=$_idleWarmupPlanMisses,'
