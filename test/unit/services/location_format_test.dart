@@ -120,7 +120,7 @@ void main() {
       expect(service.getDisplayLocation(), '东莞市·南城区');
     });
 
-    test('Chinese locale does not append 市 to 都/府/道/州 suffixes', () {
+    test('Chinese locale does not append 市 to 都/府/道/自治州 suffixes', () {
       final service = LocationService();
       service.currentLocaleCode = 'zh';
 
@@ -135,6 +135,15 @@ void main() {
 
       service.parseLocationString('美国,纽约州,纽约,');
       expect(service.getDisplayLocation(), '纽约州·纽约市');
+
+      service.parseLocationString('中国,浙江省,杭州,');
+      expect(service.getDisplayLocation(), '浙江省·杭州市');
+
+      service.parseLocationString('中国,广东省,广州,');
+      expect(service.getDisplayLocation(), '广东省·广州市');
+
+      service.parseLocationString('中国,四川省,凉山彝族自治州,');
+      expect(service.getDisplayLocation(), '四川省·凉山彝族自治州');
     });
 
     test('sanitizes Nominatim multi-variant delimiter strings', () {

@@ -1303,7 +1303,6 @@ class LocationService extends ChangeNotifier {
       '都',
       '府',
       '道',
-      '州',
       '邦',
       '省',
       '特别行政区',
