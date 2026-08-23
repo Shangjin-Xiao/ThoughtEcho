@@ -13,7 +13,7 @@ import 'package:thoughtecho/utils/theme_style_labels.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/theme_style_preview.dart';
 
-/// 更新说明页：紧凑精巧的一页式设计，信息一目了然。
+/// 更新说明页：精致美观的一页式设计，信息清晰、排版通透。
 ///
 /// 升级路径上它取代了两个一次性弹窗（默认外观变更提示、Sentry 隐私披露）。
 /// 弹窗只能回答「弹过没有」，装不下内容，也没法在用户跨几个版本升级时把中间
@@ -100,31 +100,31 @@ class ReleaseNotesPage extends StatelessWidget {
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
                   _HeroHeader(
                     headlineVersion: _headlineVersion,
                     isUpgrade: _isUpgrade,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                   for (final version in versions) ...[
                     if (showVersionLabels) ...[
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: 10),
                         child: _VersionPill(version: version),
                       ),
                     ],
                     for (final entry
                         in features.where((e) => e.version == version)) ...[
                       _HighlightCard(entry: entry),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 14),
                     ],
                   ],
                   for (final footnote in footnotes) ...[
                     _FootnoteCard(footnote: footnote),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 10),
                   ],
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   const _GitHubReleaseButton(),
                 ],
               ),
@@ -143,7 +143,7 @@ class ReleaseNotesPage extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                 child: SizedBox(
                   width: double.infinity,
-                  height: 44,
+                  height: 46,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -151,8 +151,11 @@ class ReleaseNotesPage extends StatelessWidget {
                       ),
                     ),
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                    label: Text(l10n.releaseNotesGetStarted),
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                    label: Text(
+                      l10n.releaseNotesGetStarted,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               ),
@@ -163,7 +166,7 @@ class ReleaseNotesPage extends StatelessWidget {
   }
 }
 
-/// 紧凑精炼的页头 Hero 区域：展示版本指示、应用名与导语。
+/// 优雅大气的页头 Hero 区域：展示版本指示、应用名与导语。
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader({
     required this.headlineVersion,
@@ -178,34 +181,34 @@ class _HeroHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final shape = AppShapeTokens.of(context);
+    final iconRadius = (shape.buttonRadius - 2).clamp(6.0, 12.0);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(shape.cardRadius),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
           width: 0.8,
         ),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(
-                (shape.buttonRadius - 2).clamp(4.0, 10.0),
-              ),
+              borderRadius: BorderRadius.circular(iconRadius),
             ),
             child: Icon(
-              Icons.lightbulb_rounded,
-              size: 20,
+              Icons.auto_awesome_rounded,
+              size: 22,
               color: theme.colorScheme.primary,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,15 +222,15 @@ class _HeroHeader extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
+                        horizontal: 7,
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.secondaryContainer
-                            .withValues(alpha: 0.8),
+                            .withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(
                           (shape.buttonRadius - 4).clamp(4.0, 8.0),
                         ),
@@ -242,12 +245,12 @@ class _HeroHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   isUpgrade
                       ? l10n.releaseNotesUpgradeLede
                       : l10n.releaseNotesCurrentLede,
-                  style: theme.textTheme.bodySmall?.copyWith(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -274,7 +277,7 @@ class _VersionPill extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(shape.buttonRadius),
@@ -284,10 +287,10 @@ class _VersionPill extends StatelessWidget {
             children: [
               Icon(
                 Icons.history_rounded,
-                size: 13,
+                size: 14,
                 color: theme.colorScheme.primary,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 5),
               Text(
                 version,
                 style: theme.textTheme.labelSmall?.copyWith(
@@ -303,7 +306,7 @@ class _VersionPill extends StatelessWidget {
   }
 }
 
-/// 一条更新功能卡片：图标、标题、导语、「核心亮点」紧凑分条，以及可选的行内交互。
+/// 一条更新功能卡片：图标、标题、导语、「核心亮点」通透分条，以及可选的行内交互。
 class _HighlightCard extends StatelessWidget {
   const _HighlightCard({required this.entry});
 
@@ -314,6 +317,7 @@ class _HighlightCard extends StatelessWidget {
     final theme = Theme.of(context);
     final shape = AppShapeTokens.of(context);
     final title = entry.title;
+    final iconRadius = (shape.buttonRadius - 2).clamp(6.0, 10.0);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -325,32 +329,30 @@ class _HighlightCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (entry.icon != null) ...[
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primaryContainer
-                          .withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(
-                        (shape.buttonRadius - 2).clamp(4.0, 10.0),
-                      ),
+                          .withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(iconRadius),
                     ),
                     child: Icon(
                       entry.icon,
-                      size: 18,
+                      size: 20,
                       color: theme.colorScheme.primary,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                 ],
                 Expanded(
                   child: Column(
@@ -364,11 +366,13 @@ class _HighlightCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const SizedBox(height: 2),
                       ],
                       Text(
                         entry.lede,
-                        style: theme.textTheme.bodySmall?.copyWith(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
+                          height: 1.35,
                         ),
                       ),
                     ],
@@ -377,14 +381,19 @@ class _HighlightCard extends StatelessWidget {
               ],
             ),
             if (entry.points.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Divider(
+                height: 1,
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+              ),
               const SizedBox(height: 10),
               for (var i = 0; i < entry.points.length; i++) ...[
-                if (i > 0) const SizedBox(height: 6),
+                if (i > 0) const SizedBox(height: 10),
                 _PointTile(point: entry.points[i]),
               ],
             ],
             if (entry.action == ReleaseHighlightAction.themeStyle) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
               const _ThemeStylePicker(),
             ],
           ],
@@ -394,7 +403,7 @@ class _HighlightCard extends StatelessWidget {
   }
 }
 
-/// 单个核心亮点条目：专属微图标、标题与紧凑说明。
+/// 单个核心亮点条目：轻量图标、标题与简明说明。
 class _PointTile extends StatelessWidget {
   const _PointTile({required this.point});
 
@@ -404,56 +413,51 @@ class _PointTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final shape = AppShapeTokens.of(context);
-    final pointRadius = (shape.cardRadius - 4).clamp(4.0, 12.0);
+    final iconRadius = (shape.buttonRadius - 4).clamp(4.0, 8.0);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(pointRadius),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-          width: 0.7,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (point.icon != null) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(
-                point.icon,
-                size: 15,
-                color: theme.colorScheme.primary,
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (point.icon != null) ...[
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(iconRadius),
             ),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  point.title,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  point.description,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+            child: Icon(
+              point.icon,
+              size: 15,
+              color: theme.colorScheme.primary,
             ),
           ),
+          const SizedBox(width: 10),
         ],
-      ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                point.title,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                point.description,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -518,8 +522,9 @@ class _ThemeStyleOptionTile extends StatelessWidget {
       child: InkWell(
         onTap: onSelected,
         borderRadius: BorderRadius.circular(tileRadius),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
           decoration: BoxDecoration(
             color: selected
                 ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
@@ -528,8 +533,8 @@ class _ThemeStyleOptionTile extends StatelessWidget {
             border: Border.all(
               color: selected
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-              width: selected ? 1.5 : 0.8,
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+              width: selected ? 1.8 : 0.8,
             ),
           ),
           child: Column(
@@ -543,7 +548,7 @@ class _ThemeStyleOptionTile extends StatelessWidget {
                   colorScheme: targetScheme,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
@@ -592,12 +597,12 @@ class _FootnoteCard extends StatelessWidget {
     final shape = AppShapeTokens.of(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.4),
+        color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(shape.cardRadius),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
           width: 0.8,
         ),
       ),
@@ -609,12 +614,13 @@ class _FootnoteCard extends StatelessWidget {
             size: 16,
             color: theme.colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               footnote.lede,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
+                height: 1.35,
               ),
             ),
           ),
@@ -624,7 +630,7 @@ class _FootnoteCard extends StatelessWidget {
   }
 }
 
-/// 跳转 GitHub Release 查看详细更新内容的按钮。
+/// 跳转 GitHub Release 查看详细更新内容的行动卡片。
 class _GitHubReleaseButton extends StatelessWidget {
   const _GitHubReleaseButton();
 
@@ -653,26 +659,67 @@ class _GitHubReleaseButton extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final shape = AppShapeTokens.of(context);
+    final iconRadius = (shape.buttonRadius - 2).clamp(4.0, 10.0);
 
-    return Center(
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(shape.buttonRadius),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openGitHub(context),
+        borderRadius: BorderRadius.circular(shape.cardRadius),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(shape.cardRadius),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+              width: 0.8,
+            ),
           ),
-          side: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-            width: 0.8,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        ),
-        onPressed: () => _openGitHub(context),
-        icon: const Icon(Icons.open_in_new_rounded, size: 16),
-        label: Text(
-          l10n.releaseNotesViewDetailedChangelog,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer
+                      .withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(iconRadius),
+                ),
+                child: Icon(
+                  Icons.description_outlined,
+                  size: 18,
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.releaseNotesViewDetailedChangelog,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'github.com/Shangjin-Xiao/ThoughtEcho',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.open_in_new_rounded,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+            ],
           ),
         ),
       ),
