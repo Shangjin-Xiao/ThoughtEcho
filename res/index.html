@@ -199,6 +199,12 @@
             >
           </li>
           <li>
+            <a href="thoughter/index.html"
+              ><span class="content-zh">Thoughter 伴写</span
+              ><span class="content-en">Thoughter AI</span></a
+            >
+          </li>
+          <li>
             <a href="user-guide.html"
               ><span class="content-zh">用户指南</span
               ><span class="content-en">User Guide</span></a
@@ -584,6 +590,12 @@
                   ><span class="content-en">Multi-AI provider support</span>
                 </li>
               </ul>
+              <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--line-color);">
+                <a href="thoughter/index.html" style="font-size: 0.88rem; font-weight: 600; color: var(--accent-brown); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  <span class="content-zh">深入了解 Thoughter 灵感伴侣 →</span>
+                  <span class="content-en">Learn more about Thoughter →</span>
+                </a>
+              </div>
             </div>
 
             <div class="sticky-note">
@@ -1226,25 +1238,25 @@
         aria-hidden="true"
         aria-label="图片预览 / Image preview"
       >
+        <button
+          type="button"
+          class="modal-close"
+          id="modalCloseBtn"
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <button
+          type="button"
+          class="modal-nav modal-prev"
+          aria-label="Previous"
+        >
+          &#10094;
+        </button>
+        <button type="button" class="modal-nav modal-next" aria-label="Next">
+          &#10095;
+        </button>
         <div class="modal-content">
-          <button
-            type="button"
-            class="modal-close"
-            id="modalCloseBtn"
-            aria-label="Close"
-          >
-            ×
-          </button>
-          <button
-            type="button"
-            class="modal-nav modal-prev"
-            aria-label="Previous"
-          >
-            &#10094;
-          </button>
-          <button type="button" class="modal-nav modal-next" aria-label="Next">
-            &#10095;
-          </button>
           <img id="modalImage" src="" alt="" decoding="async" />
           <div class="modal-caption" id="modalCaption"></div>
         </div>
