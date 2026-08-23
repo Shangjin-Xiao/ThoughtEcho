@@ -111,4 +111,30 @@ void main() {
     expect(appTheme.accentFor(ThemeStyle.plain), ThemeAccent.indigo);
     expect(storage.getString('theme_accent'), isNull);
   });
+
+  test('全新安装时，默认加载心迹/信笺主题（ThemeStyle.paper）', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+    await storage.remove('theme_style');
+    await storage.remove('app_installed_v2');
+    await storage.remove('app_settings');
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    expect(appTheme.themeStyle, ThemeStyle.paper);
+    expect(storage.getString('theme_style'), ThemeStyle.paper.name);
+  });
+
+  test('旧用户（已安装/已有设置）未配置风格时保留在 material', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+    await storage.remove('theme_style');
+    await storage.setBool('app_installed_v2', true);
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    expect(appTheme.themeStyle, ThemeStyle.material);
+  });
 }

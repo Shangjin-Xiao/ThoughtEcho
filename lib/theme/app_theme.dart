@@ -786,7 +786,21 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载主题风格
   void _loadThemeStyle() {
     try {
-      _themeStyle = ThemeStyle.fromName(_storage?.getString(_themeStyleKey));
+      final styleName = _storage?.getString(_themeStyleKey);
+      if (styleName != null) {
+        _themeStyle = ThemeStyle.fromName(styleName);
+      } else {
+        // 未显式配置过主题风格
+        // 检查是否为全新安装（即未标记 app_installed_v2 且未存过 app_settings）
+        final isNewInstallation = (_storage?.getBool('app_installed_v2') != true) &&
+            !(_storage?.containsKey('app_settings') ?? false);
+        if (isNewInstallation) {
+          _themeStyle = ThemeStyle.paper;
+          _storage?.setString(_themeStyleKey, ThemeStyle.paper.name);
+        } else {
+          _themeStyle = ThemeStyle.defaultStyle;
+        }
+      }
     } catch (e, stack) {
       logError(
         '加载主题风格失败',

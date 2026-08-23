@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
+import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
@@ -417,6 +418,35 @@ void main() {
 
       expect(settingsService.aiSettings.apiKey, isEmpty);
       expect(settingsService.aiSettings.model, equals('gpt-4o'));
+    });
+
+    test('新用户配置有效 AI 服务时应自动开启相关 AI 功能', () async {
+      // 确保初始状态下未完成引导
+      await settingsService.setHasCompletedOnboarding(false);
+      // 恢复默认的 appSettings（关闭周期洞察）
+      await settingsService.setReportInsightsUseAI(false);
+
+      expect(settingsService.reportInsightsUseAI, isFalse);
+
+      // 保存一个新的配置了有效的 AI 服务
+      final multiSettings = settingsService.multiAISettings.copyWith(
+        providers: [
+          ...settingsService.multiAISettings.providers,
+          const AIProviderSettings(
+            id: 'test_provider',
+            name: 'Test AI',
+            apiUrl: 'https://api.openai.com/v1',
+            model: 'gpt-4o',
+            isEnabled: true,
+          ),
+        ],
+      );
+
+      await settingsService.saveMultiAISettings(multiSettings);
+
+      expect(settingsService.reportInsightsUseAI, isTrue);
+      expect(settingsService.todayThoughtsUseAI, isTrue);
+      expect(settingsService.aiCardGenerationEnabled, isTrue);
     });
   });
 }

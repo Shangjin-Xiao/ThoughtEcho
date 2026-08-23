@@ -1104,6 +1104,22 @@ class SettingsService extends ChangeNotifier {
   Future<void> saveMultiAISettings(MultiAISettings settings) async {
     _multiAISettings = settings;
 
+    // 如果新用户配置了有效的 AI 服务，帮他开启 AI 生成周期洞察、每日提示/今日思考和 AI 生成卡片
+    final hasActiveAi = settings.providers.any(
+      (p) => p.isEnabled && p.apiUrl.trim().isNotEmpty,
+    );
+    if (!hasCompletedOnboarding() && hasActiveAi) {
+      _appSettings = _appSettings.copyWith(
+        reportInsightsUseAI: true,
+        todayThoughtsUseAI: true,
+        aiCardGenerationEnabled: true,
+      );
+      await _mmkv.setString(
+        _appSettingsKey,
+        json.encode(_appSettings.toJson()),
+      );
+    }
+
     // 保存到MMKV存储
     await _mmkv.setString(_multiAiSettingsKey, json.encode(settings.toJson()));
 
