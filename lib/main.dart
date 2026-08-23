@@ -729,8 +729,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     logDebug('收到系统内存压力通知，清理富文本缓存', source: 'AppLifecycle');
     try {
       QuoteContent.resetCaches();
-    } catch (e) {
-      logError('清理缓存失败: $e', error: e, source: 'AppLifecycle');
+    } catch (e, stackTrace) {
+      logError(
+        '清理缓存失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AppLifecycle',
+      );
     }
   }
 

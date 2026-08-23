@@ -35,7 +35,10 @@ class SpreadFromAnchorCursor {
     final backwardValid = backwardIndex >= 0;
     if (!forwardValid && !backwardValid) return null;
 
-    if (forwardValid && (!backwardValid || _forward <= _backward)) {
+    // 同距离时优先向下：下一个向下候选离锚点 `_forward`，向上候选离锚点
+    // `_backward + 1`，所以判据是 `_forward <= _backward + 1` 而不是
+    // `_forward <= _backward` —— 后者会在距离相同时先给上面那条。
+    if (forwardValid && (!backwardValid || _forward <= _backward + 1)) {
       _forward++;
       _emitted++;
       return forwardIndex;

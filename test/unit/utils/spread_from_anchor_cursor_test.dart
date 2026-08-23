@@ -15,7 +15,7 @@ void main() {
   group('SpreadFromAnchorCursor', () {
     test('从锚点向两边交替扩散，同距离时先向下', () {
       final cursor = SpreadFromAnchorCursor()..restart(anchor: 5, length: 10);
-      expect(_drain(cursor, 10, take: 6), [5, 4, 6, 3, 7, 2]);
+      expect(_drain(cursor, 10, take: 6), [5, 6, 4, 7, 3, 8]);
     });
 
     test('一轮把每个下标不重不漏地走一遍', () {
@@ -28,7 +28,7 @@ void main() {
 
     test('一头先到边界后，剩下的全从另一头继续', () {
       final cursor = SpreadFromAnchorCursor()..restart(anchor: 1, length: 6);
-      expect(_drain(cursor, 6), [1, 0, 2, 3, 4, 5]);
+      expect(_drain(cursor, 6), [1, 2, 0, 3, 4, 5]);
     });
 
     test('预热途中追加了新页，接着往下走而不用重来', () {
