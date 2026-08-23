@@ -14,7 +14,8 @@ import '../../test_harness.dart';
 ///
 /// 存储只在这一个文件里碰：`SafeMMKV` 是单例，`SharedPrefsAdapter` 还会把
 /// `SharedPreferences` 实例缓存下来，同一个 isolate 里换一套 mock 值是不生效的。
-/// 所以迁移只测一次，其余用例一律走「没有存储」的内存路径。
+/// 所以 mock 初值只在 `setUpAll` 给一次，后面两个用到存储的用例**按顺序共用同一份
+/// 存储**（后一个接着前一个留下的状态往下写），其余用例一律走「没有存储」的内存路径。
 void main() {
   setUpAll(() async {
     await TestHarness.initialize();
@@ -71,5 +72,27 @@ void main() {
       ThemeAccent.cinnabar.name,
     );
     expect(appTheme.accentFor(ThemeStyle.plain), ThemeAccent.indigo);
+  });
+
+  test('旧键没删掉的残留不会被再迁一次，否则又是跨风格串色', () async {
+    // 迁移写盘成功、删旧键失败，是会发生的：_removeLegacyThemeAccent 只记警告。
+    // 这时存储里同时留着「按风格的墨色」和「旧的全局键」——正是这里造出来的状态
+    // （接着上一个用例：theme_accent_plain 已经是靛蓝）。
+    final storage = SafeMMKV();
+    await storage.setString('theme_accent', ThemeAccent.indigo.name);
+    // 用户之后切到了纸墨，而纸墨没有单独选过墨。
+    await storage.setString('theme_style', ThemeStyle.paper.name);
+    await storage.remove('theme_accent_paper');
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    // 按「当前风格有没有」判就会把靛蓝再迁到纸墨上，两套风格又是同一支墨——
+    // 这个改动要修的串色原样回来。判据必须是「一条按风格的取值都没有」。
+    expect(appTheme.themeStyle, ThemeStyle.paper);
+    expect(appTheme.accentFor(ThemeStyle.paper), ThemeAccent.umber);
+    // 素笺自己那支不受影响，残留的旧键清掉。
+    expect(appTheme.accentFor(ThemeStyle.plain), ThemeAccent.indigo);
+    expect(storage.getString('theme_accent'), isNull);
   });
 }

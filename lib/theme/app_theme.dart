@@ -831,8 +831,16 @@ class AppTheme with ChangeNotifier {
   /// 归给全部风格等于把旧行为原样留下（素笺永远见不到自己的默认墨），
   /// 直接丢掉又会让用户升级后眼前的颜色自己变掉。
   ///
-  /// 迁完就删旧键：留着它，下次启动会按那时的风格再迁一遍。
-  /// 当前风格已经有自己的取值时（不该发生，除非降级又升级过）以新键为准。
+  /// **只在一条按风格存的墨色都还没有时才迁。** 判据不是「当前风格有没有」而是
+  /// 「一条都没有」，这是幂等性所在：迁移写成功之后删旧键是可能失败的（
+  /// [_removeLegacyThemeAccent] 只记警告），旧键就留了下来。若下次启动时用户已经
+  /// 换到另一套没单独选过墨的风格，按「当前风格有没有」判就会把同一支旧墨**再迁一次**，
+  /// 于是两套风格又是同一支墨——这个 PR 要修的跨风格串色原样回来了。
+  ///
+  /// 有任何一条按风格的取值，就说明新方案至少跑过一轮（迁移写成功过，或者用户自己
+  /// 选过），这时旧键只是没删掉的残留，清掉即可，不再当作待迁移的数据。
+  ///
+  /// 写盘失败时**不删旧键**：内存里的取值已经对了，下次启动还能再迁一次。
   Future<void> _migrateLegacyThemeAccent() async {
     final storage = _storage;
     if (storage == null) return;
@@ -846,8 +854,8 @@ class AppTheme with ChangeNotifier {
       }
       return;
     }
-    final style = _themeStyle;
-    if (!_themeAccents.containsKey(style)) {
+    if (_themeAccents.isEmpty) {
+      final style = _themeStyle;
       _themeAccents[style] = legacy;
       try {
         await storage
