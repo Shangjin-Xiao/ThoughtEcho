@@ -364,5 +364,21 @@ void main() {
         expect(list.first.content, equals('matching both'));
       });
     });
+
+    group('getTagsByIds oversized batch test', () {
+      test('should retrieve all tags when id list exceeds SQLite batch limit (> 900 items)', () async {
+        const totalTags = 1050;
+        for (int i = 0; i < totalTags; i++) {
+          await service.addTagWithId('tag-id-$i', 'Tag Name $i');
+        }
+
+        final allIds = List.generate(totalTags, (i) => 'tag-id-$i');
+        final tagMap = await service.getTagsByIds(allIds);
+
+        expect(tagMap.length, equals(totalTags));
+        expect(tagMap['tag-id-0']?.name, equals('Tag Name 0'));
+        expect(tagMap['tag-id-1049']?.name, equals('Tag Name 1049'));
+      });
+    });
   });
 }

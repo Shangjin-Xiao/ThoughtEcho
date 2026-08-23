@@ -508,17 +508,25 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
 
     try {
       final db = database;
-      final placeholders = List.filled(idList.length, '?').join(',');
-      final maps = await db.query(
-        'categories',
-        where: 'id IN ($placeholders)',
-        whereArgs: idList,
-      );
-
       final result = <String, NoteTag>{};
-      for (final map in maps) {
-        final tag = NoteTag.fromMap(map);
-        result[tag.id] = tag;
+
+      const batchSize = 900;
+      for (int i = 0; i < idList.length; i += batchSize) {
+        final chunk = idList.sublist(
+          i,
+          i + batchSize > idList.length ? idList.length : i + batchSize,
+        );
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final maps = await db.query(
+          'categories',
+          where: 'id IN ($placeholders)',
+          whereArgs: chunk,
+        );
+
+        for (final map in maps) {
+          final tag = NoteTag.fromMap(map);
+          result[tag.id] = tag;
+        }
       }
       return result;
     } catch (e) {
