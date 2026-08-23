@@ -137,4 +137,17 @@ void main() {
 
     expect(appTheme.themeStyle, ThemeStyle.material);
   });
+
+  test('app_settings 单独存在时的非全新安装分支，未配置风格时保留在 material', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+    await storage.remove('theme_style');
+    await storage.remove('app_installed_v2');
+    await storage.setString('app_settings', '{}');
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    expect(appTheme.themeStyle, ThemeStyle.material);
+  });
 }

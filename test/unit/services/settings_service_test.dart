@@ -421,14 +421,16 @@ void main() {
     });
 
     test('新用户配置有效 AI 服务时应自动开启相关 AI 功能', () async {
-      // 确保初始状态下未完成引导
+      // Arrange
       await settingsService.setHasCompletedOnboarding(false);
-      // 恢复默认的 appSettings（关闭周期洞察）
       await settingsService.setReportInsightsUseAI(false);
+      await settingsService.setTodayThoughtsUseAI(false);
+      await settingsService.setAICardGenerationEnabled(false);
 
       expect(settingsService.reportInsightsUseAI, isFalse);
+      expect(settingsService.todayThoughtsUseAI, isFalse);
+      expect(settingsService.aiCardGenerationEnabled, isFalse);
 
-      // 保存一个新的配置了有效的 AI 服务
       final multiSettings = settingsService.multiAISettings.copyWith(
         providers: [
           ...settingsService.multiAISettings.providers,
@@ -442,11 +444,18 @@ void main() {
         ],
       );
 
+      // Act
       await settingsService.saveMultiAISettings(multiSettings);
 
+      // Assert
       expect(settingsService.reportInsightsUseAI, isTrue);
       expect(settingsService.todayThoughtsUseAI, isTrue);
       expect(settingsService.aiCardGenerationEnabled, isTrue);
+
+      final rebuiltService = await SettingsService.create();
+      expect(rebuiltService.reportInsightsUseAI, isTrue);
+      expect(rebuiltService.todayThoughtsUseAI, isTrue);
+      expect(rebuiltService.aiCardGenerationEnabled, isTrue);
     });
   });
 }

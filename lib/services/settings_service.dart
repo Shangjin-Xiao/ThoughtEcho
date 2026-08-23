@@ -1102,28 +1102,58 @@ class SettingsService extends ChangeNotifier {
 
   /// 保存多provider AI设置
   Future<void> saveMultiAISettings(MultiAISettings settings) async {
-    _multiAISettings = settings;
-
     // 如果新用户配置了有效的 AI 服务，帮他开启 AI 生成周期洞察、每日提示/今日思考和 AI 生成卡片
     final hasActiveAi = settings.providers.any(
       (p) => p.isEnabled && p.apiUrl.trim().isNotEmpty,
     );
-    if (!hasCompletedOnboarding() && hasActiveAi) {
-      _appSettings = _appSettings.copyWith(
-        reportInsightsUseAI: true,
-        todayThoughtsUseAI: true,
-        aiCardGenerationEnabled: true,
+    final candidateAppSettings = (!hasCompletedOnboarding() && hasActiveAi)
+        ? _appSettings.copyWith(
+            reportInsightsUseAI: true,
+            todayThoughtsUseAI: true,
+            aiCardGenerationEnabled: true,
+          )
+        : null;
+
+    final multiJson = json.encode(settings.toJson());
+    final appJson = candidateAppSettings != null
+        ? json.encode(candidateAppSettings.toJson())
+        : null;
+
+    try {
+      if (appJson != null) {
+        final successApp = await _mmkv.setString(_appSettingsKey, appJson);
+        if (!successApp) {
+          AppLogger.e(
+            '保存应用设置失败：MMKV setString 返回 false（key=$_appSettingsKey）',
+            source: 'SettingsService',
+          );
+          throw StateError('保存应用设置失败');
+        }
+      }
+      final successMulti =
+          await _mmkv.setString(_multiAiSettingsKey, multiJson);
+      if (!successMulti) {
+        AppLogger.e(
+          '保存多provider AI设置失败：MMKV setString 返回 false（key=$_multiAiSettingsKey）',
+          source: 'SettingsService',
+        );
+        throw StateError('保存多provider AI设置失败');
+      }
+
+      _multiAISettings = settings;
+      if (candidateAppSettings != null) {
+        _appSettings = candidateAppSettings;
+      }
+      notifyListeners();
+    } catch (e, s) {
+      AppLogger.e(
+        '保存多provider AI设置异常',
+        error: e,
+        stackTrace: s,
+        source: 'SettingsService',
       );
-      await _mmkv.setString(
-        _appSettingsKey,
-        json.encode(_appSettings.toJson()),
-      );
+      rethrow;
     }
-
-    // 保存到MMKV存储
-    await _mmkv.setString(_multiAiSettingsKey, json.encode(settings.toJson()));
-
-    notifyListeners();
   }
 
   /// 更新多provider AI设置
