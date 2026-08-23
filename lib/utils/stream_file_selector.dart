@@ -53,9 +53,11 @@ class StreamFileSelector {
             ),
           ]);
         }
-        // 移动端（Android & iOS）：
-        // - 使用系统媒体选择器（ImagePicker -> 相册/图库）
-        if (Platform.isAndroid || Platform.isIOS) {
+      } else {
+        // 移动端：
+        // - Android 使用系统媒体选择器（ImagePicker -> Gallery）
+        // - iOS 保持使用 file_picker（更稳定的文件路径获取）
+        if (Platform.isAndroid) {
           final picker = ImagePicker();
           final XFile? file = await picker.pickVideo(
             source: ImageSource.gallery,
@@ -155,8 +157,8 @@ class StreamFileSelector {
           ]);
         }
       } else {
-        if (Platform.isAndroid || Platform.isIOS) {
-          // 移动端（Android & iOS）使用系统媒体选择器（相册/图库）
+        if (Platform.isAndroid) {
+          // Android 使用系统媒体选择器（图库）
           final picker = ImagePicker();
           final XFile? file = await picker.pickImage(
             source: ImageSource.gallery,
@@ -173,7 +175,7 @@ class StreamFileSelector {
             ]);
           }
         } else {
-          // 桌面端或其它环境保持 file_picker
+          // iOS 等其他移动端保持 file_picker
           result = await FilePicker.platform.pickFiles(
             type: FileType.custom,
             allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],

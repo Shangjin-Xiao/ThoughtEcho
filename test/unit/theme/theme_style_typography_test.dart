@@ -64,7 +64,7 @@ void main() {
     final form = style.form;
 
     group('${style.name} 的排版', () {
-      test('正文换衬线、按 readingFontScale 放大、字重抬到正文下限', () async {
+      test('正文换衬线、按 bodyFontScale 放大、字重抬到下限', () async {
         final text = (await themeFor(style)).textTheme;
 
         // M3 的字号/行高：几何里给的值，风格在它上面做缩放。
@@ -82,8 +82,8 @@ void main() {
           );
           expect(
             resolved?.fontSize,
-            closeTo(m3Size * form.readingFontScale, 0.001),
-            reason: '$name 没跟上 readingFontScale',
+            closeTo(m3Size * form.bodyFontScale, 0.001),
+            reason: '$name 没跟上 bodyFontScale',
           );
           expect(
             resolved?.height,
@@ -97,8 +97,8 @@ void main() {
           );
           expect(
             resolved?.fontWeight,
-            FontWeight(form.bodyWeightFloor),
-            reason: '$name 没抬到正文字重下限',
+            FontWeight.w500,
+            reason: '$name 没抬到字重下限',
           );
         });
 
@@ -111,33 +111,14 @@ void main() {
         }
       });
 
-      test('标题换衬线、和正文同幅放大、字重比正文高一档；大字只换族', () async {
+      test('标题换衬线且抬字重，字号仍交给几何；大字只换族', () async {
         final text = (await themeFor(style)).textTheme;
-        final titleWeight = FontWeight(form.titleWeightFloor);
-        final titles = <String, (TextStyle?, double)>{
-          'titleLarge': (text.titleLarge, 22),
-          'titleMedium': (text.titleMedium, 16),
-          'titleSmall': (text.titleSmall, 14),
-        };
-        titles.forEach((name, spec) {
-          final (resolved, m3Size) = spec;
-          expect(resolved?.fontFamily, ThemeStyleForm.bundledSerif,
-              reason: '$name 没换字体族');
-          // **标题必须和正文同幅放大**：只放大 body* 的话 bodyLarge(17) 会比它
-          // 上面一级的 titleMedium(16) 还大，M3 的层级在衬线风格下是倒着的。
-          expect(
-            resolved?.fontSize,
-            closeTo(m3Size * form.readingFontScale, 0.001),
-            reason: '$name 没跟上 readingFontScale',
-          );
-          expect(resolved?.fontWeight, titleWeight, reason: '$name 没抬到标题字重下限');
-        });
-        // 层级的两条硬关系：标题比同级正文重一档，且不比它小。
-        expect(text.titleMedium!.fontWeight!.value,
-            greaterThan(text.bodyLarge!.fontWeight!.value));
-        expect(text.titleMedium!.fontSize, text.bodyLarge!.fontSize);
-        expect(text.titleSmall!.fontSize, text.bodyMedium!.fontSize);
-        // 标题的行高不跟着正文放松——紧排是标题该有的样子，交给几何。
+        expect(text.titleLarge?.fontFamily, ThemeStyleForm.bundledSerif);
+        expect(text.titleLarge?.fontWeight, FontWeight.w500);
+        expect(text.titleMedium?.fontWeight, FontWeight.w500);
+        expect(text.titleSmall?.fontWeight, FontWeight.w500);
+        // 标题不吃字号缩放——本来就在横画不失真的区间，钉住了反而会压掉几何。
+        expect(text.titleMedium?.fontSize, isNull);
         expect(text.titleMedium?.height, isNull);
         // display / headline 只换族，字重留给几何，否则大标题会显得笨重。
         expect(text.headlineSmall?.fontFamily, ThemeStyleForm.bundledSerif);
@@ -166,7 +147,7 @@ void main() {
       test('AppBar 标题跟上字体族和字重', () async {
         final title = appBarTitleStyle(await themeFor(style));
         expect(title?.fontFamily, ThemeStyleForm.bundledSerif);
-        expect(title?.fontWeight, FontWeight(form.titleWeightFloor));
+        expect(title?.fontWeight, FontWeight.w500);
       });
 
       test('排版令牌注册进了主题，富文本的加粗降档会整段跳过', () async {

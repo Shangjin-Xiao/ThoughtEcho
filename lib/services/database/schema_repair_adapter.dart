@@ -64,7 +64,49 @@ class SchemaRepairAdapter {
   Future<void> repair(Database database) async {
     try {
       await database.transaction((transaction) async {
-        await ensureCurrentStructure(transaction);
+        final tables = await _definitions.tableNames(transaction);
+        final missingBaseTables =
+            <String>{'quotes', 'categories'}.difference(tables);
+        if (missingBaseTables.isNotEmpty) {
+          throw StateError('无法修复缺少基础表的数据库: $missingBaseTables');
+        }
+
+        final quoteColumns =
+            await _definitions.columnNames(transaction, 'quotes');
+        for (final entry
+            in DatabaseSchemaDefinitions.repairableQuoteColumns.entries) {
+          if (!quoteColumns.contains(entry.key)) {
+            final colName = entry.key;
+            final colDef = entry.value;
+            // colDef 不是标识符且不可参数化，用白名单校验后拼入 DDL
+            if (!RegExp(
+                    r"^[a-zA-Z0-9_ ]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$")
+                .hasMatch(colDef)) {
+              throw StateError('不安全的列定义: $colDef');
+            }
+            final safeColName = _quoteIdentifier(colName);
+            final query = 'ALTER TABLE quotes ADD COLUMN $safeColName $colDef';
+            await transaction.execute(query);
+            logDebug('数据库repair添加 quotes.$colName');
+          }
+        }
+
+        final categoryColumns =
+            await _definitions.columnNames(transaction, 'categories');
+        if (!categoryColumns.contains('icon_name')) {
+          await transaction
+              .execute('ALTER TABLE categories ADD COLUMN icon_name TEXT');
+        }
+        if (!categoryColumns.contains('last_modified')) {
+          await transaction.execute(
+            'ALTER TABLE categories ADD COLUMN last_modified TEXT',
+          );
+        }
+
+        await _definitions.ensureCurrentIndexes(transaction);
+        await _definitions.ensureQuoteTagsTable(transaction);
+        await _definitions.ensureQuoteTombstonesTable(transaction);
+        await _definitions.ensureMediaReferencesTable(transaction);
         await _validation.validateTransaction(transaction);
       });
     } catch (error, stackTrace) {
@@ -76,59 +118,6 @@ class SchemaRepairAdapter {
       );
       rethrow;
     }
-  }
-
-  /// Brings any database that already holds the base tables up to the full
-  /// current structure.
-  ///
-  /// Every statement is either guarded by an existence check or uses
-  /// `IF NOT EXISTS`, so this is idempotent and safe to run both from startup
-  /// repair and at the tail of an upgrade. Version adapters only cover the
-  /// steps between two versions; a legacy database whose recorded version is
-  /// newer than its actual structure (an interrupted upgrade, a database
-  /// created by an older build, a restored backup) is only healed here.
-  Future<void> ensureCurrentStructure(DatabaseExecutor executor) async {
-    final tables = await _definitions.tableNames(executor);
-    final missingBaseTables =
-        <String>{'quotes', 'categories'}.difference(tables);
-    if (missingBaseTables.isNotEmpty) {
-      throw StateError('无法修复缺少基础表的数据库: $missingBaseTables');
-    }
-
-    final quoteColumns = await _definitions.columnNames(executor, 'quotes');
-    for (final entry
-        in DatabaseSchemaDefinitions.repairableQuoteColumns.entries) {
-      if (!quoteColumns.contains(entry.key)) {
-        final colName = entry.key;
-        final colDef = entry.value;
-        // colDef 不是标识符且不可参数化，用白名单校验后拼入 DDL
-        if (!RegExp(r"^[a-zA-Z0-9_ ]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$")
-            .hasMatch(colDef)) {
-          throw StateError('不安全的列定义: $colDef');
-        }
-        final safeColName = _quoteIdentifier(colName);
-        final query = 'ALTER TABLE quotes ADD COLUMN $safeColName $colDef';
-        await executor.execute(query);
-        logDebug('数据库结构补齐 quotes.$colName');
-      }
-    }
-
-    final categoryColumns =
-        await _definitions.columnNames(executor, 'categories');
-    if (!categoryColumns.contains('icon_name')) {
-      await executor
-          .execute('ALTER TABLE categories ADD COLUMN icon_name TEXT');
-    }
-    if (!categoryColumns.contains('last_modified')) {
-      await executor.execute(
-        'ALTER TABLE categories ADD COLUMN last_modified TEXT',
-      );
-    }
-
-    await _definitions.ensureCurrentIndexes(executor);
-    await _definitions.ensureQuoteTagsTable(executor);
-    await _definitions.ensureQuoteTombstonesTable(executor);
-    await _definitions.ensureMediaReferencesTable(executor);
   }
 }
 

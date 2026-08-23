@@ -17,18 +17,6 @@ class FakeUnifiedLogService implements UnifiedLogService {
 }
 
 void main() {
-  testWidgets('卡顿阈值跟着屏幕刷新率走，而不是写死 60Hz', (WidgetTester tester) async {
-    // 原来写死 32ms 并注明「基于 60fps」。120Hz 屏一帧只有 8.3ms，那个阈值等于
-    // 连丢四帧才报一次 —— 日志里一片安静，人却明显觉得卡。
-    addTearDown(tester.view.display.resetRefreshRate);
-
-    tester.view.display.refreshRate = 60;
-    expect(JankDetector.jankThresholdMicros, 33334);
-
-    tester.view.display.refreshRate = 120;
-    expect(JankDetector.jankThresholdMicros, 16666);
-  });
-
   testWidgets('JankDetector normal, jank, throttle and session tests',
       (WidgetTester tester) async {
     final fakeLogService = FakeUnifiedLogService();
@@ -39,7 +27,7 @@ void main() {
     // init 再次调用，应该直接返回 (由于 _initialized)
     JankDetector.init();
 
-    // Normal frame: build 16ms, raster 16ms（60Hz 下一帧 16.7ms，两帧 33.3ms）
+    // Normal frame: build 16ms, raster 16ms (under 32ms)
     tester.binding.platformDispatcher.onReportTimings?.call([
       FrameTiming(
         vsyncStart: 0,
@@ -54,7 +42,7 @@ void main() {
     expect(fakeLogService.warnings.isEmpty, isTrue,
         reason: 'Normal frame should not trigger log');
 
-    // Jank frame: build 40ms, raster 10ms（超过两帧）
+    // Jank frame: build 40ms, raster 10ms (build > 32ms)
     tester.binding.platformDispatcher.onReportTimings?.call([
       FrameTiming(
         vsyncStart: 0,
@@ -123,15 +111,13 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 2100));
     });
 
-    // Jank frame again, should log with session 456。
-    // 用 36ms 而不是 33ms：阈值现在按屏幕刷新率算（60Hz 下是两帧 33.3ms），
-    // 33ms 在 60Hz 上本来就不到两帧，那个取值只对旧的写死 32ms 成立。
+    // Jank frame again, should log with session 456
     tester.binding.platformDispatcher.onReportTimings?.call([
       FrameTiming(
         vsyncStart: 0,
         buildStart: 0,
-        buildFinish: 36000,
-        rasterStart: 36000,
+        buildFinish: 33000,
+        rasterStart: 33000,
         rasterFinish: 40000,
         rasterFinishWallTime: 40000,
       )

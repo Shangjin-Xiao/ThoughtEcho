@@ -70,12 +70,6 @@ class DatabaseSchemaLifecycle {
           fromVersion: oldVersion,
           toVersion: newVersion,
         );
-        if (newVersion == DatabaseSchemaDefinitions.schemaVersion) {
-          // 版本适配器只覆盖两个版本之间的增量。若旧库记录的版本号高于它实际
-          // 的结构（升级中断、旧构建建库、恢复的备份），缺失的索引/附属表不在
-          // 任何适配器的区间内，只能在这里按当前定义补齐，否则校验会直接失败。
-          await _repair.ensureCurrentStructure(transaction);
-        }
         await _validation.validateTransaction(transaction);
       });
       logDebug('数据库升级成功完成');

@@ -783,19 +783,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
   /// 标签胶囊的文字样式。估宽和渲染**必须共用这一处**：两边样式差一点，
   /// 估出来的宽度就不是真实宽度，放不下也会被判成放得下。
-  ///
-  /// 基准是 `labelSmall`（11sp 黑体）而不是 `bodySmall`。胶囊是界面标签，
-  /// 按 `AppTheme._applyStyleTypography` 定的全局规则，11–14sp 的功能性文字一律
-  /// 留在黑体上——原来拿 `bodySmall` 再写死 11sp，等于在衬线风格下把中文宋体
-  /// 缩到 11sp 去渲染，正是那条规则要避开的字号区间，标签糊成一团。
-  /// 顺带也不用再写死字号：`labelSmall` 本来就是 11。
   TextStyle? _tagChipTextStyle(
     ThemeData theme,
     Color secondaryTextColor, {
     required bool isFilteredTag,
   }) {
-    return theme.textTheme.labelSmall?.copyWith(
+    return theme.textTheme.bodySmall?.copyWith(
       color: secondaryTextColor,
+      fontSize: 11,
       fontWeight: isFilteredTag ? FontWeight.w600 : FontWeight.w500,
     );
   }
@@ -1222,13 +1217,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           color: secondaryTextColor,
         ) ??
         TextStyle(color: secondaryTextColor);
-    // 和上面的日期同一级：写死 12 会让它比同一行的日期小半档——衬线风格给 body*
-    // 加了 6% 的字号补偿（ThemeStyleForm.readingFontScale），日期跟上了，
-    // 写死的这项没有。同一行两个字号，看着就是没对齐。
     final TextStyle headerMetaStyle = theme.textTheme.bodySmall?.copyWith(
           color: secondaryTextColor,
+          fontSize: 12,
         ) ??
-        TextStyle(color: secondaryTextColor);
+        TextStyle(color: secondaryTextColor, fontSize: 12);
     final visualEffectsDisabled =
         QuoteItemWidget.disableVisualEffectsForTesting;
     final cardShadowsDisabled = visualEffectsDisabled ||
@@ -1443,10 +1436,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
               child: Text(
                 formattedEditedAt,
-                // labelSmall（11sp 黑体）而不是 bodySmall 再压到 10：10sp 的中文
-                // 宋体只剩一团灰。它是时间戳，不承担任何风格识别。
-                style: theme.textTheme.labelSmall?.copyWith(
+                style: theme.textTheme.bodySmall?.copyWith(
                   color: secondaryTextColor.withValues(alpha: 0.82),
+                  fontSize: 10,
                 ),
               ),
             ),

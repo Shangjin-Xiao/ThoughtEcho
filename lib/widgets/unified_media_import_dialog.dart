@@ -622,7 +622,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   String _filePickTitle() {
     final typeName = _getMediaTypeName(widget.mediaType);
     if (!kIsWeb &&
-        (Platform.isAndroid || Platform.isIOS) &&
+        Platform.isAndroid &&
         (widget.mediaType == 'image' || widget.mediaType == 'video')) {
       return l10n.selectFromGallery(typeName);
     }
