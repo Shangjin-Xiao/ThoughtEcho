@@ -687,8 +687,12 @@ frameJank 显著低于 22。连续滑动时每个 session 摘要都应输出。
 
 **决策者**: 上晋 + Claude
 **类型**: 诊断 / 实施
-**产出**: PR #507（分支 `claude/note-list-scroll-perf-nnvopq`）、
-`docs/note-list-warmup-invalidation-2026-08-22.md`
+**产出**: PR #507（第一、二条）+ PR #510（第三、四、五条），同一分支
+`claude/note-list-scroll-perf-nnvopq`；`docs/note-list-warmup-invalidation-2026-08-22.md`
+
+> 流程教训：#507 合并后我又往同一分支推了两个 commit —— 已合并的 PR 不会因此重开，
+> 那两个 commit 等于挂在无人认领的历史上，还顺手把已合并 PR 的描述改成了未合并的内容。
+> **PR 合并后的后续工作一律从最新 main 重开分支、另开 PR**，推之前先确认目标 PR 还开着。
 
 接 #487（空闲预热 + 缓存区预建）。上晋反馈「不是冷启动也卡，虽然好了很多」，
 给了四段 release 日志。这一轮的价值主要在**读日志的方法**，三个问题都是从
