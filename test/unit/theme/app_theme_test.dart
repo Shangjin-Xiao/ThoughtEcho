@@ -14,8 +14,16 @@ import '../../test_harness.dart';
 ///
 /// 存储只在这一个文件里碰：`SafeMMKV` 是单例，`SharedPrefsAdapter` 还会把
 /// `SharedPreferences` 实例缓存下来，同一个 isolate 里换一套 mock 值是不生效的。
-/// 所以 mock 初值只在 `setUpAll` 给一次，后面两个用到存储的用例**按顺序共用同一份
-/// 存储**（后一个接着前一个留下的状态往下写），其余用例一律走「没有存储」的内存路径。
+/// 所以 mock 初值只在 `setUpAll` 给一次。
+///
+/// **但用到存储的用例必须各自把前置状态写全，不能接着上一个用例留下的状态往下写。**
+/// CI 是分片跑的（`flutter test --shard-index/--total-shards`），同一个文件里的用例
+/// 会落到不同进程，「上一个用例已经 initialize 过存储」这个假设在那边不成立——
+/// 之前就是这么挂的：单跑第三个用例时 `SafeMMKV` 还没初始化，直接抛
+/// `Bad state: SafeMMKV 尚未初始化`。所以下面每个碰存储的用例都自己
+/// `SafeMMKV().initialize()`（幂等）并把要用到的键逐个写定。
+///
+/// 其余用例一律走「没有存储」的内存路径。
 void main() {
   setUpAll(() async {
     await TestHarness.initialize();
@@ -76,13 +84,21 @@ void main() {
 
   test('旧键没删掉的残留不会被再迁一次，否则又是跨风格串色', () async {
     // 迁移写盘成功、删旧键失败，是会发生的：_removeLegacyThemeAccent 只记警告。
-    // 这时存储里同时留着「按风格的墨色」和「旧的全局键」——正是这里造出来的状态
-    // （接着上一个用例：theme_accent_plain 已经是靛蓝）。
+    // 这时存储里同时留着「按风格的墨色」和「旧的全局键」——下面把这个状态**写全**，
+    // 不依赖上一个用例（分片时它可能根本不在这个进程里跑，见文件头注释）。
     final storage = SafeMMKV();
+    await storage.initialize();
+    // 素笺上一轮迁移成功了。
+    await storage.setString(
+      'theme_accent_${ThemeStyle.plain.name}',
+      ThemeAccent.indigo.name,
+    );
+    // 旧的全局键没删掉，留了下来。
     await storage.setString('theme_accent', ThemeAccent.indigo.name);
-    // 用户之后切到了纸墨，而纸墨没有单独选过墨。
+    // 用户之后切到了纸墨，而纸墨（以及 material）没有单独选过墨。
     await storage.setString('theme_style', ThemeStyle.paper.name);
-    await storage.remove('theme_accent_paper');
+    await storage.remove('theme_accent_${ThemeStyle.paper.name}');
+    await storage.remove('theme_accent_${ThemeStyle.material.name}');
 
     final appTheme = AppTheme();
     await appTheme.initialize();
