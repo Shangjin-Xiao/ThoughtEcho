@@ -749,6 +749,10 @@ class CollapsedRichTextPlanCache {
     return existing;
   }
 
+  /// 未命中次数。空闲预热拿它给自己记账（见 `note_list_warmup.dart`）：
+  /// 读一个 int 就够了，不必为此建一张 [stats] map。
+  static int get missCount => _missCount;
+
   static void _recordMiss(int workMicros) {
     _missCount++;
     _workMicros += workMicros;

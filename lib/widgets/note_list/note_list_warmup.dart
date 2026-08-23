@@ -66,12 +66,32 @@ extension _NoteListWarmupExtension on NoteListViewState {
     // 宽度或版式变了（旋屏、分屏、切换媒体版式）说明此前暖的键全作废，从头再来。
     // 图片的去重集合也要一起清：`imageProviderFor` 的解码尺寸就是按这两样算的，
     // 只按 source 记「暖过了」的话，换了尺寸的那张永远等不到预热。
-    if (_idleWarmupWidth != width || _idleWarmupMediaStyle != mediaStyle) {
+    //
+    // **缓存代号变了也一样要重来**。App 进后台时 `main.dart` 会把测量缓存整排清掉，
+    // 而游标停在列表末尾 —— 只看宽度和版式的话，回到前台后这一轮直接判定「暖完了」
+    // 然后去撑缓存区，缓存却是空的：接下来每张卡片滑进来都要现算折叠判定和折叠排版，
+    // 也就是「不是冷启动也卡」。Flutter 自己的 imageCache 在后台同样会被清，
+    // 所以 precache 的去重集合跟着一起清，否则那些图永远等不到第二次预解码。
+    final cacheGeneration = QuoteContent.cacheGeneration;
+    if (_idleWarmupWidth != width ||
+        _idleWarmupMediaStyle != mediaStyle ||
+        _idleWarmupCacheGeneration != cacheGeneration) {
+      if (_idleWarmupCacheGeneration != cacheGeneration &&
+          _idleWarmupCacheGeneration != null) {
+        _idleWarmupRewarms++;
+      }
       _idleWarmupWidth = width;
       _idleWarmupMediaStyle = mediaStyle;
+      _idleWarmupCacheGeneration = cacheGeneration;
       _idleWarmupCursor = 0;
       _idleWarmupPrecachedSources.clear();
     }
+
+    // 预热**自己**做掉了多少测量，按这一轮的未命中增量记账。`items` 只数循环转了
+    // 几圈，键对不上时它照样涨得很好看 —— 这两个增量才是「预热真的算过东西」的
+    // 证据，也是这一轮定位问题时最想要却没有的那个数。
+    final expandMissesBefore = QuoteContent.debugExpansionMissCount;
+    final planMissesBefore = CollapsedRichTextPlanCache.missCount;
 
     final stopwatch = Stopwatch()..start();
     while (_idleWarmupCursor < quotes.length &&
@@ -92,6 +112,11 @@ extension _NoteListWarmupExtension on NoteListViewState {
       );
       _idleWarmupWarmedItems++;
     }
+
+    _idleWarmupExpandMisses +=
+        QuoteContent.debugExpansionMissCount - expandMissesBefore;
+    _idleWarmupPlanMisses +=
+        CollapsedRichTextPlanCache.missCount - planMissesBefore;
 
     if (_idleWarmupCursor < quotes.length) {
       _scheduleIdleLayoutWarmup(
