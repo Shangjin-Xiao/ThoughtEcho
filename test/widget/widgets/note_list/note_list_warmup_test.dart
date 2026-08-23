@@ -280,6 +280,97 @@ void main() {
     await databaseService.disposeStream();
   });
 
+  testWidgets('缓存清空后先暖视口附近的，而不是从第 0 条开始', (tester) async {
+    // 2026-08-23 的日志：用户停在第 45~72 条往回滑，预热进度却是 `cursor=23/121`
+    // —— 功夫全花在了屏幕外面的头 23 条，滑到的每一张还是要现算。
+    final databaseService = _StreamingFakeDatabaseService();
+    final quotes = [
+      for (var i = 0; i < 120; i++)
+        Quote(
+          id: 'order-$i',
+          content: '预热顺序测试笔记 $i',
+          date: DateTime(2026, 8, 23, 9)
+              .subtract(Duration(minutes: i))
+              .toIso8601String(),
+          editSource: 'inline',
+          dayPeriod: 'morning',
+        ),
+    ];
+
+    await tester.pumpWidget(
+      _TestApp(
+        databaseService: databaseService,
+        settingsService: _FakeSettingsService(),
+      ),
+    );
+    await tester.pump();
+    databaseService.emit(quotes, hasMore: false);
+    await tester.pump();
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    // 滚到列表中段，让视口锚点明确地离 0 很远。
+    final position = tester
+        .state<ScrollableState>(
+          find
+              .ancestor(
+                of: find.byType(QuoteItemWidget).first,
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        )
+        .position;
+    position.jumpTo(position.maxScrollExtent / 2);
+    await tester.pump();
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(
+      find.text('预热顺序测试笔记 0'),
+      findsNothing,
+      reason: '列表要真的滚离开头，否则这个用例什么都没验证',
+    );
+
+    final context = tester.element(find.byType(QuoteItemWidget).first);
+    final width = QuoteItemWidget.lastCollapsedContentWidth!;
+    int missesWhenWarming(Quote quote) {
+      final before = _expansionMisses();
+      QuoteItemWidget.warmCollapsedMeasurements(
+        context: context,
+        quote: quote,
+        contentMaxWidth: width,
+        mediaStyle: NoteCardMediaStyle.thumbnail,
+        prioritizeBoldContent: false,
+      );
+      return _expansionMisses() - before;
+    }
+
+    // 模拟系统内存压力清掉全部测量缓存，然后只放一轮预热过去。
+    QuoteContent.resetCaches();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(milliseconds: 420));
+
+    // 屏幕上这一条必须已经暖好；列表最开头那条这一轮还轮不到。
+    final visibleQuote = quotes.firstWhere(
+      (quote) => find.text(quote.content).evaluate().isNotEmpty,
+    );
+    expect(
+      missesWhenWarming(visibleQuote),
+      0,
+      reason: '视口里的这一条应当在第一轮就暖好',
+    );
+    expect(
+      missesWhenWarming(quotes.first),
+      1,
+      reason: '预热还在从第 0 条开始往下走，屏幕上的卡片要等它走完才轮得到',
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
+    await databaseService.disposeStream();
+  });
+
   testWidgets('静止期把缓存区一级一级撑大，提前建出下一屏的卡片', (tester) async {
     final databaseService = _StreamingFakeDatabaseService();
     final quotes = [

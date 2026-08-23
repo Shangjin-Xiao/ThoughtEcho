@@ -713,23 +713,35 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// 只在系统真的要内存时才清测量缓存。
+  ///
+  /// 原来是一进后台（`AppLifecycleState.paused`）就清。省下来的内存很有限 ——
+  /// 2026-08-23 的日志里，折叠列表跑起来时最占地方的 `doc=0/120`、`ctrl=0/50`
+  /// 本来就是空的，被清掉的全是折叠判定、折叠排版这类小对象。代价却是每次回到
+  /// 前台的第一次滑动必然重算一遍：那份日志里 `rewarm=3`、`planMiss+33`、
+  /// `expandMiss+53`，正是用户说的「不是冷启动也卡」。
+  ///
+  /// `didHaveMemoryPressure` 才是这件事该挂的地方：系统缺内存时（包括后台被
+  /// trim）会调到这里，那时候释放是划算的；不缺的时候就把几 MB 留着。
+  @override
+  void didHaveMemoryPressure() {
+    super.didHaveMemoryPressure();
+    logDebug('收到系统内存压力通知，清理富文本缓存', source: 'AppLifecycle');
+    try {
+      QuoteContent.resetCaches();
+    } catch (e, stackTrace) {
+      logError(
+        '清理缓存失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AppLifecycle',
+      );
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-
-    // 修复问题3：应用进入后台时清理缓存，释放内存
-    if (state == AppLifecycleState.paused) {
-      logDebug('应用进入后台，清理富文本缓存', source: 'AppLifecycle');
-      // 使用 Future.microtask 避免在生命周期回调中执行耗时操作
-      Future.microtask(() {
-        try {
-          QuoteContent.resetCaches();
-          logDebug('富文本缓存已清理', source: 'AppLifecycle');
-        } catch (e) {
-          logError('清理缓存失败: $e', error: e, source: 'AppLifecycle');
-        }
-      });
-    }
 
     // 应用回到前台时自动同步 WebDAV
     if (state == AppLifecycleState.resumed) {

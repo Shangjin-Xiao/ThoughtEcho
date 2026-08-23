@@ -232,6 +232,49 @@ void main() {
     );
 
     testWidgets(
+      '推来内容相同的新实例时不重建列表项',
+      (tester) async {
+        // 数据库一旦重新查询（回前台刷新、重新订阅），就会造出一批全新的 Quote
+        // 对象。内容一个字没改，身份却全变了 —— 按 identical 判断的卡片记忆化
+        // 于是整屏失效。2026-08-23 的日志：itemMemo hit+0 / miss+113、
+        // worstBuild=74.9ms，113 张卡片在一个滚动帧里重建完。
+        final databaseService = _StreamingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+
+        databaseService.emit(_makeQuotes(12), hasMore: true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final itemBefore = _firstItemMotion(tester);
+
+        // 同样的内容、全新的对象。
+        final requeried = _makeQuotes(12);
+        expect(identical(requeried.first, _firstItem(tester).quote), isFalse);
+        databaseService.emit(requeried, hasMore: true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          identical(_firstItemMotion(tester), itemBefore),
+          isTrue,
+          reason: '内容没变的行应当沿用旧实例，卡片记忆化才不会整屏落空',
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
       '推来新的笔记实例时照常重建列表项',
       (tester) async {
         final databaseService = _StreamingFakeDatabaseService();

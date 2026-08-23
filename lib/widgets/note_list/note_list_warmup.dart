@@ -28,11 +28,17 @@ extension _NoteListWarmupExtension on NoteListViewState {
     _idleWarmupTimer = Timer(delay, _runIdleWarmupTick);
   }
 
-  /// 列表内容整体换过（搜索、筛选、排序）时把游标拨回开头。
+  /// 列表内容整体换过（搜索、筛选、排序）时重开一轮。
   ///
-  /// 追加分页不需要调用它：游标停在旧长度上，下一轮自然接着暖新来的那几条。
+  /// 追加分页不需要调用它：游标记的是「暖过几条」，长度一变长，下一轮自然接着
+  /// 暖新来的那几条（见 [SpreadFromAnchorCursor.next]）。
   void _resetIdleLayoutWarmup() {
-    _idleWarmupCursor = 0;
+    _restartIdleLayoutWarmupPass();
+  }
+
+  /// 重开一轮预热，锚点等到真的开始暖的时候再取 —— 那时候的滚动位置才是准的。
+  void _restartIdleLayoutWarmupPass() {
+    _idleWarmupPass.restart(anchor: 0, length: 0);
   }
 
   void _runIdleWarmupTick() {
@@ -83,8 +89,17 @@ extension _NoteListWarmupExtension on NoteListViewState {
       _idleWarmupWidth = width;
       _idleWarmupMediaStyle = mediaStyle;
       _idleWarmupCacheGeneration = cacheGeneration;
-      _idleWarmupCursor = 0;
+      _restartIdleLayoutWarmupPass();
       _idleWarmupPrecachedSources.clear();
+    }
+
+    // 锚点在「这一轮第一条都还没暖」的时候取：此刻列表是静止的，视口就是用户
+    // 正看着的地方。中途取会被分页追加带偏，太早取（重开那一刻）又可能还没滚到位。
+    if (_idleWarmupPass.emitted == 0) {
+      _idleWarmupPass.restart(
+        anchor: _estimatedScrollCenterIndex(),
+        length: quotes.length,
+      );
     }
 
     // 预热**自己**做掉了多少测量，按这一轮的未命中增量记账。`items` 只数循环转了
@@ -94,10 +109,11 @@ extension _NoteListWarmupExtension on NoteListViewState {
     final planMissesBefore = CollapsedRichTextPlanCache.missCount;
 
     final stopwatch = Stopwatch()..start();
-    while (_idleWarmupCursor < quotes.length &&
-        stopwatch.elapsedMicroseconds <
-            NoteListViewState._idleWarmupBudgetMicros) {
-      final quote = quotes[_idleWarmupCursor++];
+    while (stopwatch.elapsedMicroseconds <
+        NoteListViewState._idleWarmupBudgetMicros) {
+      final index = _idleWarmupPass.next(quotes.length);
+      if (index == null) break;
+      final quote = quotes[index];
       QuoteItemWidget.warmCollapsedMeasurements(
         context: context,
         quote: quote,
@@ -118,7 +134,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
     _idleWarmupPlanMisses +=
         CollapsedRichTextPlanCache.missCount - planMissesBefore;
 
-    if (_idleWarmupCursor < quotes.length) {
+    if (_idleWarmupPass.emitted < quotes.length) {
       _scheduleIdleLayoutWarmup(
         delay: const Duration(milliseconds: 16),
       );

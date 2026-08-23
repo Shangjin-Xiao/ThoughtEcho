@@ -70,6 +70,66 @@ imageCache，正好解释 31 → 15）。而 `_resetIdleLayoutWarmup()` 只在**
   `rewarm=`。`items` 只数循环转了几圈，转空圈时它照样很好看；这两个增量才是
   「预热真的落地了」的证据。
 
+---
+
+## 2026-08-23 复验：修的两处都生效，露出了下一层
+
+用户在 120Hz 机器上跑了两组：(a) 冷启动直接滑，(b) 切后台再回来滑。
+
+**(a) 冷启动**：`warmup={...,expand=114,plan=68,gen=0,rewarm=0}`，滑动全程
+`planMiss+0 / expandMiss+0`，`expand=121/300`、`ir=40/200` —— 预热确实把整张列表
+暖好了，卡片滑进来一次测量都不用做。（也反过来确认了 08-22 那份日志是切过后台的：
+同样的位置那时是 `expand=59`。）
+
+**(b) 切后台回来**：`gen=3, rewarm=3` —— 重暖机制按设计触发了。但同一段里仍然
+`planMiss+33 / expandMiss+28`，因为 `cursor=23/121`：**重暖是从第 0 条开始的，
+而用户停在第 45~72 条**。功夫全花在屏幕外面，滑到的每一张还是现算。
+用户同时看到「原本加载过的图片又变灰重新加载」（`imageCache img=18, Δimg+18`）。
+
+新指标把「卡在哪」也指出来了：
+
+| session | dataΔ | worstVsync | worstSpan | frameJank | avgBuild | dropped |
+|---|---|---|---|---|---|---|
+| scroll-1 | 1 | 52.5ms | 55.5ms | 12 | 1.2ms | 119 |
+| scroll-2 | 1 | 110.5ms | 118.8ms | 15 | 1.4ms | 96 |
+| scroll-3 | **0** | **1.4ms** | 16.1ms | 11 | 1.2ms | 61 |
+
+`avgBuild` 一直只有 1.2ms，掉帧却成片 —— **成本不在 build/raster，在 vsync 到
+build 之间那段**，而它和 `dataΔ` 高度相关：有数据事件的两段 worstVsync 是
+52ms / 110ms，没有的那段是 1.4ms。
+
+### 这一轮又改了什么
+
+- **进后台不再清测量缓存**，改挂 `didHaveMemoryPressure`。日志证明 pause 清掉的
+  几乎全是小对象（`doc=0/120`、`ctrl=0/50` 本来就是空的），换来的却是每次回前台
+  第一次滑动必然重算。系统真缺内存时（含后台 trim）照样会清。
+- **预热改成从视口向两边扩散**（`lib/utils/spread_from_anchor_cursor.dart`），
+  锚点在「这一轮第一条都还没暖」的时候取 `_estimatedScrollCenterIndex()`。
+  日志里的 `cursor=` 后面跟上了 `@anchor`。
+- **回前台重走一轮预热并清掉 precache 去重集合**：Flutter 自己的 imageCache 会被
+  引擎清空（那是「图片变灰」的来源，和 App 的缓存无关），测量这时全是命中，
+  这一轮基本只花 precache 的钱，而且视口里的图先回来。
+
+### 再一轮：一次数据事件重建 113 张卡
+
+复验日志的 scroll-14：`itemMemo={size=121,hit+0,miss+113}`、`worstBuild=74.9ms`
+—— 一个滚动帧里把 113 张卡片全部重建，而内容一条都没变。
+
+`_QuoteItemMemo.matches` 和 `_isSameQuoteInstances` 都按 `identical` 判断。那本身
+是对的（`Quote` 全字段 final，同一实例就意味着内容没变），问题出在上游：数据库
+一旦重新查询（回前台刷新、换页、重新订阅），就会造出一批全新的 `Quote` 对象 ——
+内容一个字没改，身份却全变了，这道防线整条失效。
+
+改法是让数据事件里内容没变的行**沿用旧实例**（`_reuseUnchangedQuoteInstances`），
+判据是新加的 `Quote.hasSameContentAs`：`toJson()`（quotes 表那一行）+ `tagIds`
+（走关联表、不在 toJson 里）。
+
+**不能用 `==`**：那个只比 `id`，会把「同一条笔记被改过内容」也判成没变，卡片就
+永远停在旧内容上。用 `toJson()` 而不是手写一份字段清单，是为了让「新增持久化
+字段」按 AGENTS.md 同步 toJson 时自动纳入判据。
+
+日志的 `activity={}` 里新增 `reuseΔ=`：这一段滑动中有多少行是沿用旧实例的。
+
 ## 下一轮该看什么
 
 拿到新日志先看三个数：
@@ -80,6 +140,9 @@ imageCache，正好解释 31 → 15）。而 `_resetIdleLayoutWarmup()` 只在**
 - `dropped=` 和 `frameJank=`。如果 `frameJank` 仍然接近 0 而 `dropped` 很大，
   说明成本不在 build/raster 里，要往 UI 线程的非帧工作（定时器、平台通道、GC）
   和光栅线程排队去找。
+- `itemMemo` 的 `hit+`/`miss+` 和 `activity` 里的 `reuseΔ=`。有 `dataΔ=1` 的
+  会话里 `miss+` 应该塌下去、`reuseΔ` 顶上来；`worstVsync` 是不是跟着 `dataΔ`
+  一起消失，是判断「52ms/110ms 到底是不是整列表重建造成的」的关键一眼。
 
 还没做、按优先级排：
 

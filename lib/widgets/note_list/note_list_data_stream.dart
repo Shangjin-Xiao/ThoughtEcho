@@ -12,6 +12,48 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   /// 这件事值得比：照旧整表替换的话，一个空事件就是一轮整列表 setState。实测
   /// 首滑期间两个这样的事件重建了 241 次卡片（`built=155` + `built=86`），
   /// 而列表内容一条都没变。
+  /// 数据事件里内容没变的行，复用**旧实例**。
+  ///
+  /// 卡片记忆化（`_QuoteItemMemo.matches`）和 [_isSameQuoteInstances] 都按
+  /// `identical` 判断 —— 那是最快也最保险的判据，[Quote] 全字段 final，同一实例
+  /// 就意味着内容一定没变。问题出在上游：数据库一旦重新查询（回前台刷新、换页、
+  /// 重新订阅），就会造出一批全新的 [Quote] 对象，内容一个字没改身份却全变了，
+  /// 这道防线于是整条失效 —— 一次数据事件把整屏卡片全部重建。
+  ///
+  /// 2026-08-23 的日志里 `itemMemo={size=121,hit+0,miss+113}`、
+  /// `worstBuild=74.9ms`：113 张卡片在一个滚动帧里重建完，而内容一条都没变。
+  ///
+  /// 判据用 [Quote.hasSameContentAs]（持久化字段 + 标签），**不能用 `==`**：
+  /// 那个只比 id，会把「同一条笔记被改过内容」也当成没变，卡片就永远停在旧内容上。
+  ///
+  /// 没有一条能复用时原样返回，不产生任何拷贝。
+  List<Quote> _reuseUnchangedQuoteInstances(List<Quote> incoming) {
+    if (_quotes.isEmpty || incoming.isEmpty) return incoming;
+
+    final previousById = <String, Quote>{};
+    for (final quote in _quotes) {
+      final id = quote.id;
+      if (id != null) previousById[id] = quote;
+    }
+    if (previousById.isEmpty) return incoming;
+
+    List<Quote>? reconciled;
+    for (var i = 0; i < incoming.length; i++) {
+      final quote = incoming[i];
+      final id = quote.id;
+      if (id == null) continue;
+      final previous = previousById[id];
+      // 已经是同一实例的不必比内容，那是最常见的情况（服务层增量维护
+      // `_currentQuotes`，没被重新查询的行本来就还是原对象）。
+      if (previous == null || identical(previous, quote)) continue;
+      if (!previous.hasSameContentAs(quote)) continue;
+      reconciled ??= List<Quote>.of(incoming);
+      reconciled[i] = previous;
+      _quoteInstanceReuseCount++;
+    }
+    return reconciled ?? incoming;
+  }
+
   bool _isSameQuoteInstances(List<Quote> list) {
     if (list.length != _quotes.length) return false;
     for (var i = 0; i < list.length; i++) {
@@ -91,9 +133,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           : null,
     )
         .listen(
-      (list) {
+      (rawList) {
         if (mounted) {
           _dataStreamEventCount++;
+          final list = _reuseUnchangedQuoteInstances(rawList);
           final isLoadMorePage = _loadMoreAwaitingPage &&
               (list.length > _loadMoreRequestStartCount ||
                   list.length < NoteListViewState._pageSize);
@@ -423,9 +466,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           : null,
     )
         .listen(
-      (list) {
+      (rawList) {
         if (mounted) {
           _dataStreamEventCount++;
+          final list = _reuseUnchangedQuoteInstances(rawList);
           final isLoadMorePage = _loadMoreAwaitingPage &&
               (list.length > _loadMoreRequestStartCount ||
                   list.length < NoteListViewState._pageSize);
