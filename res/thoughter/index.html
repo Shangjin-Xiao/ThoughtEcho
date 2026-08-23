@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thoughter · 住在摘录本里的灵感伴侣 | 心迹 ThoughtEcho</title>
+  <meta name="description" content="心迹 ThoughtEcho 专属 AI 伴写伙伴 Thoughter。住在摘录本里的灵感伴侣。它懂你的文风与习惯，为你打捞旧日笔记、提炼长文总结、推敲润色字句，也随时带来今日思考与灵感解答。">
+  <meta name="keywords" content="Thoughter, 心迹, ThoughtEcho, AI笔记助手, 灵感伴侣, 摘录AI, 本地优先, 专属记忆, 建议卡片, 智能伴写, 开源笔记, 写作助手">
+  <meta name="author" content="Shangjin Xiao">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:title" content="Thoughter · 住在摘录本里的灵感伴侣 | 心迹 ThoughtEcho">
+  <meta property="og:description" content="住在摘录本里的灵感伴侣。它懂你的文风与习惯，为你打捞旧日笔记、提炼长文总结、推敲润色字句，也随时带来今日思考与灵感解答。">
+  <meta property="og:image" content="https://note.shangjinyun.cn/readme-banner.png">
+  <meta property="og:url" content="https://note.shangjinyun.cn/thoughter/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Thoughter · 住在摘录本里的灵感伴侣 | 心迹 ThoughtEcho">
+  <meta name="twitter:description" content="住在摘录本里的灵感伴侣。它懂你的文风与习惯，为你打捞旧日笔记、提炼长文总结、推敲润色字句，也随时带来今日思考与灵感解答。">
+  <meta name="twitter:image" content="https://note.shangjinyun.cn/readme-banner.png">
+
+  <!-- Schema.org JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Thoughter AI 灵感伴侣",
+    "alternateName": "Thoughter AI Companion",
+    "applicationCategory": "ProductivityApplication",
+    "applicationSubCategory": "AI Writing & Note Companion",
+    "operatingSystem": "Windows, Android",
+    "url": "https://note.shangjinyun.cn/thoughter/",
+    "isAccessibleForFree": true,
+    "inLanguage": ["zh-CN", "en"],
+    "description": "心迹 ThoughtEcho 专属 AI 伴写伙伴。基于本地 SQLite 笔记库智能打捞、提案卡片式安全协作、专属记忆偏好记录、支持主流 OpenAI 兼容协议与本地离线模型。",
+    "featureList": [
+      "基于本地笔记的智能探索与旧笔打捞",
+      "建议卡片确认制，自由采纳与细修",
+      "专属偏好记忆，懂你文风习惯",
+      "支持 DeepSeek、OpenAI、通义千问、Ollama 本地模型等多模型自由连接"
+    ],
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+
+  <!-- Favicon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+
+  <!-- Fonts: Newsreader, Noto Serif SC, Plus Jakarta Sans, Noto Sans SC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,600&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Immediate Theme & Language Initializer (Prevents FOUC) -->
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem('thoughtecho_theme') || localStorage.getItem('theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+
+        var savedLang = localStorage.getItem('lang') || 'zh';
+        if (savedLang === 'en') {
+          document.documentElement.setAttribute('lang', 'en');
+        } else {
+          document.documentElement.setAttribute('lang', 'zh-CN');
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <style>
+    /* ==========================================================================
+       CSS Variables & Design Tokens (Paper & Ink Stationery System)
+       ========================================================================== */
+    :root {
+      --bg: #F7F5EE;
+      --bg-subtle: #EFECE1;
+      --card-bg: #FFFFFF;
+      --card-inner: #FAF8F2;
+      --ink: #1C232B;
+      --ink-secondary: #4A5665;
+      --ink-muted: #7D8C9D;
+      --ink-faint: #BAC5D0;
+      
+      --teal: #0D746B;
+      --teal-hover: #085952;
+      --teal-light: #E6F4F2;
+      --teal-border: #A3D8D3;
+
+      --amber: #B45309;
+      --amber-hover: #92400E;
+      --amber-light: #FEF3C7;
+      --amber-border: #FDE68A;
+
+      --coral: #BE123C;
+      --coral-light: #FFE4E6;
+      
+      --rule: #E5DFC9;
+      --rule-light: #EFEBDC;
+      --shadow-sm: 0 2px 8px rgba(28, 35, 43, 0.04);
+      --shadow-md: 0 8px 24px rgba(28, 35, 43, 0.06);
+      --shadow-lg: 0 16px 40px rgba(28, 35, 43, 0.08);
+
+      --font-serif: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg: #181D24;
+      --bg-subtle: #202731;
+      --card-bg: #232B36;
+      --card-inner: #1C232D;
+      --ink: #EAF0F6;
+      --ink-secondary: #A8B7C7;
+      --ink-muted: #738497;
+      --ink-faint: #3F4D5E;
+      
+      --teal: #14B8A6;
+      --teal-hover: #2DD4BF;
+      --teal-light: #133334;
+      --teal-border: #1E5556;
+
+      --amber: #F59E0B;
+      --amber-hover: #FBBF24;
+      --amber-light: #3D2D12;
+      --amber-border: #6B4E17;
+
+      --coral: #F43F5E;
+      --coral-light: #3E1822;
+      
+      --rule: #2E3846;
+      --rule-light: #252F3C;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    /* ==========================================================================
+       Reset & Base Styles
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-serif);
+      font-size: 17px;
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      overflow-x: hidden;
+    }
+
+    /* Stationery Ruled Dots Background */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(var(--rule) 0.75px, transparent 0.75px);
+      background-size: 24px 24px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Bilingual Visibility Control */
+    body.lang-zh .content-en {
+      display: none !important;
+    }
+    body.lang-en .content-zh {
+      display: none !important;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* ==========================================================================
+       Navigation Bar
+       ========================================================================== */
+    .nav-header {
+      position: sticky;
+      top: 0;
+      background: rgba(247, 245, 238, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--rule);
+      z-index: 100;
+      transition: background 0.3s ease;
+    }
+    [data-theme="dark"] .nav-header {
+      background: rgba(24, 29, 36, 0.92);
+    }
+
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      gap: 12px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .brand-badge {
+      font-family: var(--font-sans);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--teal);
+      background: var(--teal-light);
+      border: 1px solid var(--teal-border);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--ink-secondary);
+      list-style: none;
+    }
+
+    .nav-menu a {
+      transition: color 0.15s;
+      white-space: nowrap;
+    }
+    .nav-menu a:hover {
+      color: var(--teal);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .theme-toggle-btn, .lang-toggle-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      color: var(--ink-secondary);
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: var(--transition);
+    }
+    .theme-toggle-btn {
+      width: 36px;
+      font-size: 1.05rem;
+    }
+    .lang-toggle-btn {
+      padding: 0 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .theme-toggle-btn:hover, .lang-toggle-btn:hover {
+      border-color: var(--ink);
+      color: var(--ink);
+    }
+
+    .btn-nav-primary {
+      font-family: var(--font-sans);
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #FFFFFF;
+      background: var(--teal);
+      padding: 7px 16px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      box-shadow: 0 2px 6px rgba(13, 116, 107, 0.2);
+      white-space: nowrap;
+    }
+    .btn-nav-primary:hover {
+      background: var(--teal-hover);
+      transform: translateY(-1px);
+    }
+
+    /* ==========================================================================
+       Hero Section
+       ========================================================================== */
+    .hero-section {
+      padding: 64px 0 44px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--amber);
+      background: var(--amber-light);
+      border: 1px solid var(--amber-border);
+      padding: 4px 14px;
+      border-radius: 20px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+
+    .hero-eyebrow-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: pulse 2s infinite;
+    }
+
+    .typewriter-stage {
+      min-height: 105px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+
+    .hero-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 4.4vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.28;
+      color: var(--ink);
+      letter-spacing: -0.015em;
+      text-wrap: balance;
+      max-width: 860px;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 3.5px;
+      height: 1.15em;
+      background: var(--teal);
+      vertical-align: middle;
+      margin-left: 4px;
+      animation: blink 1s infinite;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--ink-secondary);
+      line-height: 1.85;
+      max-width: 720px;
+      margin: 0 auto 34px;
+      text-wrap: balance;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+    }
+
+    .btn-hero-main {
+      font-family: var(--font-sans);
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #FFFFFF;
+      background: var(--teal);
+      padding: 12px 26px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+      box-shadow: 0 4px 14px rgba(13, 116, 107, 0.25);
+    }
+    .btn-hero-main:hover {
+      background: var(--teal-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(13, 116, 107, 0.35);
+    }
+
+    .btn-hero-secondary {
+      font-family: var(--font-sans);
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: var(--ink);
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      padding: 12px 22px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+    }
+    .btn-hero-secondary:hover {
+      border-color: var(--ink-secondary);
+      background: var(--card-inner);
+      transform: translateY(-1px);
+    }
+
+    .hero-trust-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      font-family: var(--font-sans);
+      font-size: 0.84rem;
+      color: var(--ink-muted);
+      border-top: 1px dashed var(--rule);
+      max-width: 760px;
+      margin: 0 auto;
+      padding-top: 18px;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .trust-item svg {
+      color: var(--teal);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       Scenarios Section (3 Clean Stationery Cards)
+       ========================================================================== */
+    .scenarios-section {
+      padding: 50px 0 70px;
+    }
+
+    .scenarios-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .scenario-card {
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: var(--transition);
+    }
+    .scenario-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--teal-border);
+    }
+
+    .scenario-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-sans);
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--teal);
+      background: var(--teal-light);
+      border: 1px solid var(--teal-border);
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 14px;
+      width: fit-content;
+    }
+
+    .scenario-title {
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+
+    .scenario-desc {
+      font-size: 0.92rem;
+      color: var(--ink-secondary);
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+
+    .scenario-preview {
+      background: var(--card-inner);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+
+    .preview-quote-box {
+      background: var(--card-bg);
+      border: 1px solid var(--rule-light);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-top: 8px;
+      font-size: 0.84rem;
+      color: var(--ink-secondary);
+    }
+    .preview-quote-meta {
+      font-family: var(--font-sans);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--amber);
+      margin-bottom: 4px;
+    }
+
+    .preview-card-shell {
+      border: 1.5px solid var(--teal-border);
+      border-radius: var(--radius-sm);
+      background: var(--card-bg);
+      padding: 12px;
+      margin-top: 8px;
+    }
+    .preview-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-family: var(--font-sans);
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--teal);
+    }
+    .preview-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--rule-light);
+    }
+    .preview-btn {
+      font-family: var(--font-sans);
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 3px;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .preview-btn-primary {
+      background: var(--teal);
+      color: #FFFFFF;
+    }
+    .preview-btn-secondary {
+      background: var(--card-inner);
+      color: var(--ink-secondary);
+      border: 1px solid var(--rule);
+    }
+
+    .preview-tags {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .preview-tag {
+      font-family: var(--font-sans);
+      font-size: 0.7rem;
+      background: var(--teal-light);
+      color: var(--teal);
+      border: 1px solid var(--teal-border);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* ==========================================================================
+       Four Core Pillars Section
+       ========================================================================== */
+    .pillars-section {
+      padding: 70px 0;
+      border-top: 1px solid var(--rule);
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 50px;
+    }
+
+    .section-eyebrow {
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--teal);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.75rem, 3.4vw, 2.3rem);
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.3;
+      margin-bottom: 14px;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--ink-secondary);
+      line-height: 1.8;
+    }
+
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .pillar-box {
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      padding: 32px 26px;
+      transition: var(--transition);
+      position: relative;
+    }
+    .pillar-box:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--ink-secondary);
+    }
+
+    .pillar-num {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--amber);
+      margin-bottom: 12px;
+      font-style: italic;
+    }
+
+    .pillar-box-title {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+
+    .pillar-box-text {
+      font-size: 0.96rem;
+      color: var(--ink-secondary);
+      line-height: 1.75;
+      margin-bottom: 16px;
+    }
+
+    .pillar-feature-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      color: var(--teal);
+      background: var(--teal-light);
+      border: 1px solid var(--teal-border);
+      padding: 3px 9px;
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+    }
+
+    /* ==========================================================================
+       Comparison Matrix (Objective Design Differences)
+       ========================================================================== */
+    .compare-section {
+      padding: 70px 0;
+      border-top: 1px solid var(--rule);
+      background: var(--card-inner);
+    }
+
+    .compare-table-wrap {
+      overflow-x: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.92rem;
+      min-width: 600px;
+    }
+
+    .compare-table th, .compare-table td {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .compare-table th {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    .compare-table th.highlight, .compare-table td.highlight {
+      background: var(--teal-light);
+      color: var(--ink);
+      font-weight: 600;
+      border-left: 2px solid var(--teal);
+      border-right: 2px solid var(--teal);
+    }
+
+    .compare-table th.highlight {
+      border-top: 2px solid var(--teal);
+      color: var(--teal);
+      font-size: 0.95rem;
+    }
+    .compare-table tr:last-child td.highlight {
+      border-bottom: 2px solid var(--teal);
+    }
+
+    /* ==========================================================================
+       Supported Models & Open Compatibility
+       ========================================================================== */
+    .models-section {
+      padding: 70px 0;
+      border-top: 1px solid var(--rule);
+    }
+
+    .models-badges-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      max-width: 860px;
+      margin: 0 auto 28px;
+    }
+
+    .model-badge-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--ink);
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+    .model-badge-pill:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+      transform: translateY(-2px);
+    }
+    .model-badge-icon {
+      font-size: 1.15rem;
+    }
+
+    .models-footer-note {
+      text-align: center;
+      margin-top: 20px;
+      font-family: var(--font-sans);
+      font-size: 0.86rem;
+      color: var(--ink-secondary);
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ==========================================================================
+       FAQ Section
+       ========================================================================== */
+    .faq-section {
+      padding: 70px 0;
+      border-top: 1px solid var(--rule);
+      background: var(--card-inner);
+    }
+
+    .faq-list {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .faq-item {
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .faq-question {
+      padding: 18px 22px;
+      font-family: var(--font-serif);
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: var(--ink);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .faq-question:hover {
+      color: var(--teal);
+    }
+
+    .faq-icon {
+      font-family: var(--font-sans);
+      font-size: 1.2rem;
+      color: var(--ink-muted);
+      transition: transform 0.2s ease;
+      margin-left: 12px;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-icon {
+      transform: rotate(45deg);
+      color: var(--teal);
+    }
+
+    .faq-answer {
+      display: none;
+      padding: 0 22px 20px;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: var(--ink-secondary);
+      border-top: 1px solid var(--rule-light);
+      padding-top: 14px;
+    }
+    .faq-item.open .faq-answer {
+      display: block;
+    }
+
+    /* ==========================================================================
+       Conversion Footer / CTA Section
+       ========================================================================== */
+    .cta-section {
+      padding: 80px 0;
+      text-align: center;
+      border-top: 1px solid var(--rule);
+      position: relative;
+    }
+
+    .cta-card {
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-lg);
+      padding: 50px 32px;
+      max-width: 820px;
+      margin: 0 auto;
+      box-shadow: var(--shadow-md);
+    }
+
+    .cta-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.85rem, 3.6vw, 2.6rem);
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 14px;
+    }
+
+    .cta-subtitle {
+      font-size: 1.12rem;
+      color: var(--ink-secondary);
+      max-width: 600px;
+      margin: 0 auto 32px;
+      text-wrap: balance;
+    }
+
+    .footer-bar {
+      border-top: 1px solid var(--rule);
+      padding: 32px 0;
+      text-align: center;
+      font-family: var(--font-sans);
+      font-size: 0.84rem;
+      color: var(--ink-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      color: var(--ink-secondary);
+      transition: color 0.15s;
+    }
+    .footer-links a:hover {
+      color: var(--teal);
+    }
+
+    /* ==========================================================================
+       Animations & Responsive Styles
+       ========================================================================== */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 880px) {
+      .scenarios-grid { grid-template-columns: 1fr; }
+      .pillars-grid { grid-template-columns: 1fr; }
+      .nav-menu { display: none; }
+      .typewriter-stage { min-height: 85px; }
+    }
+
+    @media (max-width: 600px) {
+      .cta-card { padding: 32px 18px; }
+      .brand-badge { display: none; }
+      .brand-title { font-size: 1.12rem; }
+      .hero-trust-bar { gap: 14px; }
+    }
+  </style>
+</head>
+<body class="lang-zh">
+
+  <!-- Navigation -->
+  <header class="nav-header">
+    <div class="container nav-inner">
+      <a href="../index.html" class="brand-wrap">
+        <span class="brand-title">
+          <span class="content-zh">心迹 · Thoughter</span>
+          <span class="content-en">ThoughtEcho · Thoughter</span>
+        </span>
+        <span class="brand-badge">
+          <span class="content-zh">灵感伴侣</span>
+          <span class="content-en">AI Companion</span>
+        </span>
+      </a>
+
+      <ul class="nav-menu">
+        <li>
+          <a href="#scenarios">
+            <span class="content-zh">伴写场景</span>
+            <span class="content-en">Scenarios</span>
+          </a>
+        </li>
+        <li>
+          <a href="#pillars">
+            <span class="content-zh">核心价值</span>
+            <span class="content-en">Principles</span>
+          </a>
+        </li>
+        <li>
+          <a href="#compare">
+            <span class="content-zh">特性对比</span>
+            <span class="content-en">Comparison</span>
+          </a>
+        </li>
+        <li>
+          <a href="#models">
+            <span class="content-zh">模型接入</span>
+            <span class="content-en">Models</span>
+          </a>
+        </li>
+        <li>
+          <a href="#faq">
+            <span class="content-zh">常见问答</span>
+            <span class="content-en">FAQ</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="nav-actions">
+        <button id="themeToggle" class="theme-toggle-btn" title="切换深浅主题" aria-label="Toggle theme">
+          🌙
+        </button>
+        <button id="langToggle" class="lang-toggle-btn" title="切换语言" aria-label="Switch language">
+          <span id="langText">EN</span>
+        </button>
+        <a href="../dl.html" class="btn-nav-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span class="content-zh">下载体验</span>
+          <span class="content-en">Download</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container">
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        THOUGHTECHO · AI INSPIRATION COMPANION
+      </div>
+
+      <div class="typewriter-stage">
+        <h1 class="hero-title"><span id="typewriterText">翻阅旧日片羽，聊聊当下所想。</span><span class="cursor"></span></h1>
+      </div>
+
+      <p class="hero-subtitle">
+        <span class="content-zh">住在摘录本里的灵感伴侣。它懂你的文风与习惯，为你打捞旧日笔记、提炼长文总结、推敲润色字句，也随时带来今日思考与灵感解答。</span>
+        <span class="content-en">An AI companion living inside your notebook. It understands your voice, retrieves forgotten thoughts, refines your writing, and brings daily clarity to your thinking.</span>
+      </p>
+
+      <div class="hero-cta-group">
+        <a href="../dl.html" class="btn-hero-main">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span class="content-zh">立即下载心迹体验</span>
+          <span class="content-en">Download ThoughtEcho</span>
+        </a>
+        <a href="#scenarios" class="btn-hero-secondary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span class="content-zh">探索伴写场景</span>
+          <span class="content-en">Explore Scenarios</span>
+        </a>
+      </div>
+
+      <div class="hero-trust-bar">
+        <div class="trust-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span class="content-zh">本地优先 · 数据在手</span>
+          <span class="content-en">Local-First · Full Ownership</span>
+        </div>
+        <div class="trust-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span class="content-zh">建议卡片 · 自由采纳</span>
+          <span class="content-en">Proposal Cards · You Decide</span>
+        </div>
+        <div class="trust-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <span class="content-zh">专属记忆 · 懂你偏好</span>
+          <span class="content-en">Personal Memory · Learns Your Voice</span>
+        </div>
+        <div class="trust-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span class="content-zh">开放兼容 · 支持本地模型</span>
+          <span class="content-en">Open API · Offline Model Support</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scenarios Section (3 Clean Stationery Cards) -->
+  <section class="scenarios-section" id="scenarios">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">DAILY COMPANIONSHIP</div>
+        <h2 class="section-title">
+          <span class="content-zh">贴合日常记录的伴写场景</span>
+          <span class="content-en">Everyday Companion Scenarios</span>
+        </h2>
+        <p class="section-desc">
+          <span class="content-zh">不是漂浮在空中的通用聊天，而是扎根在你个人笔记土壤中的思考延伸。</span>
+          <span class="content-en">Not detached generic chat, but a natural extension rooted in your personal notebook.</span>
+        </p>
+      </div>
+
+      <div class="scenarios-grid">
+        <!-- Scenario 1 -->
+        <div class="scenario-card">
+          <div>
+            <span class="scenario-badge">
+              <span class="content-zh">🔍 场景一 · 灵感打捞</span>
+              <span class="content-en">🔍 Scenario 1 · Note Retrieval</span>
+            </span>
+            <h3 class="scenario-title">
+              <span class="content-zh">打捞旧札记 · 与过去的思考重逢</span>
+              <span class="content-en">Retrieve Past Notes · Reconnect with Ideas</span>
+            </h3>
+            <p class="scenario-desc">
+              <span class="content-zh">当你写下一段随笔时，Thoughter 会在本地笔记库中翻阅相关旧记录，将数月前的名言摘录或晨间随笔呈现在你面前，帮你发现思想的脉络。</span>
+              <span class="content-en">When you write a note, Thoughter browses your notebook to surface related thoughts from months ago, helping you trace patterns across time.</span>
+            </p>
+          </div>
+          <div class="scenario-preview">
+            <div style="font-size: 0.8rem; color: var(--ink-muted); margin-bottom: 6px;">
+              <span class="content-zh">💬 探讨：“时间与遗忘”</span>
+              <span class="content-en">💬 Topic: "Time & Memory"</span>
+            </div>
+            <p style="color: var(--ink-secondary); font-style: italic;">
+              <span class="content-zh">“为你打捞到你在 3 月和 5 月留下的两处闪念：”</span>
+              <span class="content-en">"Surfaced two notes from March and May:"</span>
+            </p>
+            <div class="preview-quote-box">
+              <div class="preview-quote-meta">
+                <span class="content-zh">📅 03-12 · 卡尔维诺《隐形的城市》</span>
+                <span class="content-en">📅 03-12 · Italo Calvino, Invisible Cities</span>
+              </div>
+              <p>
+                <span class="content-zh">“记忆中的形象一旦被词语固定住，就给抹掉了。”</span>
+                <span class="content-en">"Images of memory, once fixed in words, are erased."</span>
+              </p>
+            </div>
+            <div class="preview-quote-box" style="margin-top: 6px;">
+              <div class="preview-quote-meta" style="color: var(--teal);">
+                <span class="content-zh">📅 05-18 · 晨间随笔</span>
+                <span class="content-en">📅 05-18 · Morning Journal</span>
+              </div>
+              <p>
+                <span class="content-zh">“遗忘不是消失，而是我们暂时失去了找寻钥匙的耐心。”</span>
+                <span class="content-en">"Forgetting isn't disappearing; we merely lost patience to find the key."</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scenario 2 -->
+        <div class="scenario-card">
+          <div>
+            <span class="scenario-badge">
+              <span class="content-zh">📝 场景二 · 建议卡片</span>
+              <span class="content-en">📝 Scenario 2 · Proposal Cards</span>
+            </span>
+            <h3 class="scenario-title">
+              <span class="content-zh">建议卡片 · 自由采纳与细修</span>
+              <span class="content-en">Proposal Cards · Review & Refine</span>
+            </h3>
+            <p class="scenario-desc">
+              <span class="content-zh">无论是润色语句还是重构段落，Thoughter 都会生成一张清晰完整的建议卡片。你可以一键采纳保存，也能随时进入编辑器二次细修，绝不后台直接覆盖原笔记。</span>
+              <span class="content-en">Whether polishing sentences or restructuring ideas, suggestions arrive as structured cards. Accept with one click or open in the editor to fine-tune — your notes are never overwritten.</span>
+            </p>
+          </div>
+          <div class="scenario-preview">
+            <div class="preview-card-shell">
+              <div class="preview-card-header">
+                <span class="content-zh">修改建议提案</span>
+                <span class="content-en">Edit Proposal</span>
+                <span style="font-size: 0.7rem; color: var(--teal);">
+                  <span class="content-zh">待确认</span>
+                  <span class="content-en">Pending</span>
+                </span>
+              </div>
+              <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">
+                <span class="content-zh">《关于深度阅读的片羽思考》</span>
+                <span class="content-en">"Reflections on Deep Reading"</span>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--ink-secondary); line-height: 1.6;">
+                <span class="content-zh">“正如水流穿过竹筛，虽然水带不走，但竹筛已被涤荡得格外洁净……”</span>
+                <span class="content-en">"Like water through a bamboo sieve: water passes through, yet the sieve is left pristine..."</span>
+              </p>
+              <div class="preview-tags">
+                <span class="preview-tag">
+                  <span class="content-zh">#深度阅读</span>
+                  <span class="content-en">#DeepReading</span>
+                </span>
+                <span class="preview-tag">
+                  <span class="content-zh">#阅读感悟</span>
+                  <span class="content-en">#Reflections</span>
+                </span>
+              </div>
+              <div class="preview-actions">
+                <button class="preview-btn preview-btn-secondary">
+                  <span class="content-zh">在编辑器中修改</span>
+                  <span class="content-en">Edit in Editor</span>
+                </button>
+                <button class="preview-btn preview-btn-primary">
+                  <span class="content-zh">采纳建议</span>
+                  <span class="content-en">Accept</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scenario 3 -->
+        <div class="scenario-card">
+          <div>
+            <span class="scenario-badge">
+              <span class="content-zh">💡 场景三 · 灵感沉淀</span>
+              <span class="content-en">💡 Scenario 3 · Capturing Insights</span>
+            </span>
+            <h3 class="scenario-title">
+              <span class="content-zh">灵感沉淀 · 零碎感悟一键归库</span>
+              <span class="content-en">Capture Insights · Save with One Tap</span>
+            </h3>
+            <p class="scenario-desc">
+              <span class="content-zh">在与 Thoughter 探讨中产生的思想火花，可以一键整理为包含标题、正文与推荐标签的新笔记卡片，轻松归入你的本地主笔记库。</span>
+              <span class="content-en">Sparks from conversations can be captured into structured note proposals complete with titles and tags, saved seamlessly to your notebook.</span>
+            </p>
+          </div>
+          <div class="scenario-preview">
+            <div class="preview-card-shell" style="border-color: var(--amber-border);">
+              <div class="preview-card-header" style="color: var(--amber);">
+                <span class="content-zh">新建笔记提案</span>
+                <span class="content-en">New Note Proposal</span>
+                <span style="font-size: 0.7rem; color: var(--amber);">
+                  <span class="content-zh">草稿就绪</span>
+                  <span class="content-en">Draft Ready</span>
+                </span>
+              </div>
+              <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">
+                <span class="content-zh">《在时间的间隙中打捞灵感》</span>
+                <span class="content-en">"Gathering Sparks in Quiet Moments"</span>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--ink-secondary); line-height: 1.6;">
+                <span class="content-zh">“我们在白昼的缝隙中打捞偶得的闪念，让散落的文字沉淀为清醒的回响。”</span>
+                <span class="content-en">"We gather fleeting thoughts from everyday margins, letting scattered words settle into quiet resonance."</span>
+              </p>
+              <div class="preview-tags">
+                <span class="preview-tag" style="background: var(--amber-light); color: var(--amber); border-color: var(--amber-border);">
+                  <span class="content-zh">#思考与沉淀</span>
+                  <span class="content-en">#Reflection</span>
+                </span>
+                <span class="preview-tag" style="background: var(--amber-light); color: var(--amber); border-color: var(--amber-border);">
+                  <span class="content-zh">#灵感微光</span>
+                  <span class="content-en">#Inspiration</span>
+                </span>
+              </div>
+              <div class="preview-actions">
+                <button class="preview-btn preview-btn-primary" style="background: var(--amber);">
+                  <span class="content-zh">保存为新笔记</span>
+                  <span class="content-en">Save Note</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Four Core Pillars Section -->
+  <section class="pillars-section" id="pillars">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">CORE DESIGN PHILOSOPHY</div>
+        <h2 class="section-title">
+          <span class="content-zh">为什么 Thoughter 与众不同？</span>
+          <span class="content-en">Why Thoughter Stands Apart</span>
+        </h2>
+        <p class="section-desc">
+          <span class="content-zh">专注个人思考沉淀，坚守创作主权与数据掌控。</span>
+          <span class="content-en">Dedicated to personal reflection, creative sovereignty, and data ownership.</span>
+        </p>
+      </div>
+
+      <div class="pillars-grid">
+        <div class="pillar-box">
+          <div class="pillar-num">
+            <span class="content-zh">01 / 重逢</span>
+            <span class="content-en">01 / RETRIEVE</span>
+          </div>
+          <h3 class="pillar-box-title">
+            <span class="content-zh">打捞旧札记，串联新想法</span>
+            <span class="content-en">Retrieve Past Notes, Connect New Ideas</span>
+          </h3>
+          <p class="pillar-box-text">
+            <span class="content-zh">Thoughter 会在你的本地笔记库中翻找相关的旧日札记，将过去的思考与当下的灵感串联起来，唤醒曾经写下的文字。</span>
+            <span class="content-en">Thoughter searches your notebook to connect past entries with current thoughts, bringing previous reflections back to life.</span>
+          </p>
+          <span class="pillar-feature-tag">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span class="content-zh">本地笔记智能探索</span>
+            <span class="content-en">Smart Note Exploration</span>
+          </span>
+        </div>
+
+        <div class="pillar-box">
+          <div class="pillar-num">
+            <span class="content-zh">02 / 主权</span>
+            <span class="content-en">02 / SOVEREIGNTY</span>
+          </div>
+          <h3 class="pillar-box-title">
+            <span class="content-zh">提案卡片制，笔握在自己手里</span>
+            <span class="content-en">Proposal Cards, You Hold the Pen</span>
+          </h3>
+          <p class="pillar-box-text">
+            <span class="content-zh">Thoughter 将每一次润色与灵感整理都沉淀为独立的建议卡片，你可以直接保存，也能随时进入编辑器细修。</span>
+            <span class="content-en">Every revision and drafted thought is presented as an independent proposal card. You can accept it directly or edit it further in the editor.</span>
+          </p>
+          <span class="pillar-feature-tag">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            <span class="content-zh">建议卡片确认机制</span>
+            <span class="content-en">Proposal & Review System</span>
+          </span>
+        </div>
+
+        <div class="pillar-box">
+          <div class="pillar-num">
+            <span class="content-zh">03 / 默契</span>
+            <span class="content-en">03 / RAPPORT</span>
+          </div>
+          <h3 class="pillar-box-title">
+            <span class="content-zh">专属记忆，懂你文风偏好</span>
+            <span class="content-en">Personal Memory, Learns Your Voice</span>
+          </h3>
+          <p class="pillar-box-text">
+            <span class="content-zh">Thoughter 拥有专属的偏好记忆，记录你的文风习惯与沟通偏好。它在日常伴写中不断熟悉你的表达风格，越用越有默契；偏好随时可在设置中一键清空重置。</span>
+            <span class="content-en">Thoughter remembers your phrasing preferences and habits across chats. Over time it adapts to your voice, and you can review or clear memories in Settings at any time.</span>
+          </p>
+          <span class="pillar-feature-tag">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span class="content-zh">专属偏好记忆</span>
+            <span class="content-en">Personalized Preferences</span>
+          </span>
+        </div>
+
+        <div class="pillar-box">
+          <div class="pillar-num">
+            <span class="content-zh">04 / 自由</span>
+            <span class="content-en">04 / FREEDOM</span>
+          </div>
+          <h3 class="pillar-box-title">
+            <span class="content-zh">开放兼容，支持本地模型</span>
+            <span class="content-en">Open & Compatible, Runs Local Models</span>
+          </h3>
+          <p class="pillar-box-text">
+            <span class="content-zh">支持标准 OpenAI 兼容接口，可灵活接入 DeepSeek、OpenAI、通义千问等主流云端服务；亦支持连接 Ollama、LM Studio 等本地运行的离线模型，自带 Key 或本地部署皆可使用。</span>
+            <span class="content-en">Supports standard OpenAI-compatible endpoints including DeepSeek, OpenAI, and Qwen, as well as local offline models via Ollama and LM Studio. Use your own key or run locally.</span>
+          </p>
+          <span class="pillar-feature-tag">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="12 8 8 12 12 16 16 12 12 8"></polygon></svg>
+            <span class="content-zh">标准协议 & 本地离线兼容</span>
+            <span class="content-en">Standard Protocol & Offline Support</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Section -->
+  <section class="compare-section" id="compare">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">DESIGN DIFFERENCES</div>
+        <h2 class="section-title">
+          <span class="content-zh">特性与设计差异</span>
+          <span class="content-en">Key Design Differences</span>
+        </h2>
+        <p class="section-desc">
+          <span class="content-zh">客观了解 Thoughter 与其他 AI 交互方式的定位差异。</span>
+          <span class="content-en">An objective look at how Thoughter differs from generic chat bots and cloud notes.</span>
+        </p>
+      </div>
+
+      <div class="compare-table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th style="width: 25%;">
+                <span class="content-zh">对比维度</span>
+                <span class="content-en">Feature / Dimension</span>
+              </th>
+              <th class="highlight" style="width: 30%;">
+                <span class="content-zh">心迹 Thoughter</span>
+                <span class="content-en">ThoughtEcho Thoughter</span>
+              </th>
+              <th style="width: 22%;">
+                <span class="content-zh">网页通用聊天 AI</span>
+                <span class="content-en">Generic Web AI Chat</span>
+              </th>
+              <th style="width: 23%;">
+                <span class="content-zh">传统云端笔记 AI</span>
+                <span class="content-en">Traditional Cloud Note AI</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <strong>
+                  <span class="content-zh">笔记库融合</span>
+                  <span class="content-en">Notebook Integration</span>
+                </strong>
+              </td>
+              <td class="highlight">
+                <span class="content-zh">深入本地笔记库探索与打捞相关札记</span>
+                <span class="content-en">Deeply explores and retrieves relevant notes from your notebook</span>
+              </td>
+              <td>
+                <span class="content-zh">上下文割裂，需手动复制粘贴</span>
+                <span class="content-en">Disconnected context; requires manual copy-pasting</span>
+              </td>
+              <td>
+                <span class="content-zh">依赖全库集中云端搜索</span>
+                <span class="content-en">Relies on centralized cloud-side index search</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>
+                  <span class="content-zh">建议呈现机制</span>
+                  <span class="content-en">Suggestion Presentation</span>
+                </strong>
+              </td>
+              <td class="highlight">
+                <span class="content-zh">独立建议卡片，支持直接采纳或进编辑器细修</span>
+                <span class="content-en">Independent proposal cards; accept directly or fine-tune in editor</span>
+              </td>
+              <td>
+                <span class="content-zh">仅在对话流中输出文本</span>
+                <span class="content-en">Plain text output inside the chat stream only</span>
+              </td>
+              <td>
+                <span class="content-zh">常见直接覆盖替换原稿</span>
+                <span class="content-en">Often directly overwrites original notes</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>
+                  <span class="content-zh">偏好记忆管理</span>
+                  <span class="content-en">Preference & Memory</span>
+                </strong>
+              </td>
+              <td class="highlight">
+                <span class="content-zh">专属偏好记录，越用越懂，支持按需重置</span>
+                <span class="content-en">Learns your voice across chats; clearable and manageable anytime</span>
+              </td>
+              <td>
+                <span class="content-zh">对话与偏好沉淀在官方云端</span>
+                <span class="content-en">Prompts and profiles stored on vendor cloud</span>
+              </td>
+              <td>
+                <span class="content-zh">笔记与偏好深度绑定其商业云账号</span>
+                <span class="content-en">Deeply locked into proprietary cloud ecosystem</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>
+                  <span class="content-zh">模型接入方式</span>
+                  <span class="content-en">Model Connectivity</span>
+                </strong>
+              </td>
+              <td class="highlight">
+                <span class="content-zh">支持标准 OpenAI 兼容协议 + Ollama 本地模型</span>
+                <span class="content-en">Standard OpenAI protocol + local offline models via Ollama</span>
+              </td>
+              <td>
+                <span class="content-zh">绑定单一官方平台</span>
+                <span class="content-en">Locked to a single provider</span>
+              </td>
+              <td>
+                <span class="content-zh">平台封闭模型，无法自由切换</span>
+                <span class="content-en">Closed models with no BYOK or provider choice</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Supported Models Section (Compact Capsules) -->
+  <section class="models-section" id="models">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">MODEL COMPATIBILITY</div>
+        <h2 class="section-title">
+          <span class="content-zh">开放兼容，连接你习惯的模型</span>
+          <span class="content-en">Open & Flexible Model Support</span>
+        </h2>
+        <p class="section-desc">
+          <span class="content-zh">心迹采用标准的 OpenAI 兼容协议（/chat/completions）。你可以连接任何支持该规范的云端大模型服务，也可以使用 Ollama 或 LM Studio 在本地离线运行，无需强制绑定。</span>
+          <span class="content-en">ThoughtEcho uses standard OpenAI-compatible endpoints (/chat/completions). Connect to any compatible cloud provider or run fully offline using Ollama or LM Studio.</span>
+        </p>
+      </div>
+
+      <div class="models-badges-wrap">
+        <div class="model-badge-pill">
+          <span class="model-badge-icon">🐋</span>
+          <span>DeepSeek</span>
+        </div>
+        <div class="model-badge-pill">
+          <span class="model-badge-icon">🧠</span>
+          <span>OpenAI</span>
+        </div>
+        <div class="model-badge-pill">
+          <span class="model-badge-icon">🦙</span>
+          <span>
+            <span class="content-zh">Ollama (本地离线)</span>
+            <span class="content-en">Ollama (Local Offline)</span>
+          </span>
+        </div>
+        <div class="model-badge-pill">
+          <span class="model-badge-icon">💻</span>
+          <span>LM Studio</span>
+        </div>
+        <div class="model-badge-pill">
+          <span class="model-badge-icon">⚡</span>
+          <span>
+            <span class="content-zh">SiliconFlow 硅基流动</span>
+            <span class="content-en">SiliconFlow</span>
+          </span>
+        </div>
+        <div class="model-badge-pill">
+          <span class="model-badge-icon">☁️</span>
+          <span>
+            <span class="content-zh">通义千问 Qwen</span>
+            <span class="content-en">Qwen</span>
+          </span>
+        </div>
+        <div class="model-badge-pill">
+          <span class="model-badge-icon">🌙</span>
+          <span>Moonshot Kimi</span>
+        </div>
+        <div class="model-badge-pill">
+          <span class="model-badge-icon">🔌</span>
+          <span>
+            <span class="content-zh">自定义 OpenAI 兼容接口</span>
+            <span class="content-en">Custom OpenAI Endpoint</span>
+          </span>
+        </div>
+      </div>
+
+      <p class="models-footer-note">
+        <span class="content-zh">💡 提示：心迹支持密钥系统级安全加密存储，不配置 API Key 亦不影响离线记事、摘录与 WebDAV 同步等基础功能。</span>
+        <span class="content-en">💡 Note: API keys are securely encrypted on your device. Core features like clipping, rich editing, and WebDAV sync work fully without AI configuration.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="faq-section" id="faq">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">QUESTIONS & ANSWERS</div>
+        <h2 class="section-title">
+          <span class="content-zh">常见问题解答</span>
+          <span class="content-en">Frequently Asked Questions</span>
+        </h2>
+        <p class="section-desc">
+          <span class="content-zh">关于数据安全、计费方式与使用技巧的真实解答。</span>
+          <span class="content-en">Clear, honest answers about privacy, billing, and offline use.</span>
+        </p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item open">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>
+              <span class="content-zh">Thoughter 会把我的全部笔记上传到云端大模型吗？</span>
+              <span class="content-en">Does Thoughter upload all my notes to AI servers?</span>
+            </span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <div class="content-zh">
+              <strong>不会。</strong> 你的全部笔记默认存储在本地 SQLite 数据库中。只有当你向 Thoughter 发起提问、或要求它整理某篇笔记时，心迹才会将当前必要的上下文片段发送给你配置的模型服务商。数据传输采用端到端 HTTPS 加密，心迹官方没有任何中间服务器收集你的笔记。
+            </div>
+            <div class="content-en">
+              <strong>No.</strong> Your notes are stored locally in your SQLite database. Only when you ask Thoughter a question or request a note summary does ThoughtEcho send relevant context snippets directly to your configured provider over HTTPS. ThoughtEcho operates no intermediate server and collects no note data.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>
+              <span class="content-zh">使用 Thoughter 需要付费吗？</span>
+              <span class="content-en">Is Thoughter free to use?</span>
+            </span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <div class="content-zh">
+              心迹应用本身完全免费且开源，没有任何内置广告或强制内购。使用 Thoughter 需要使用你自己的 AI 服务商 API Key（如 DeepSeek 或 OpenAI），调用费用直接由服务商按实际用量结算。若使用 Ollama 或 LM Studio 本地模型，则完全无需费用。
+            </div>
+            <div class="content-en">
+              ThoughtEcho itself is completely free and open-source with no ads or subscriptions. Using Thoughter requires your own API key (e.g. DeepSeek or OpenAI), billed directly by the provider based on token usage. Running local models via Ollama or LM Studio is entirely free.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>
+              <span class="content-zh">为什么 Thoughter 提议修改笔记时不会直接覆盖？</span>
+              <span class="content-en">Why doesn't Thoughter overwrite notes directly?</span>
+            </span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <div class="content-zh">
+              这是心迹的核心设计原则——<strong>“创作主权永远归属于你”</strong>。Thoughter 产生的所有修改与新建均封装为结构化的建议卡片，由你审阅、进入编辑器调整或手动确认采纳，笔记才会发生改变。
+            </div>
+            <div class="content-en">
+              This is a core design principle: <strong>"Creative sovereignty always belongs to you."</strong> All creations and revisions arrive as structured proposal cards that require your review and confirmation before applying to your notebook.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>
+              <span class="content-zh">记忆系统是如何运作的？</span>
+              <span class="content-en">How does the memory system work?</span>
+            </span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <div class="content-zh">
+              Thoughter 拥有专属的偏好记忆，用于记录你的文风偏好与沟通习惯。它在日常对话中逐渐了解你该如何称呼、喜欢怎样的表达风格。如果你想清空记忆，随时可在「心迹设置 → AI 设置」中一键清空重置。
+            </div>
+            <div class="content-en">
+              Thoughter maintains a dedicated memory profile for your writing style and phrasing preferences across chats. You can ask Thoughter to forget any detail or clear all memories anytime in Settings › AI Settings.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>
+              <span class="content-zh">在没有网络的情况下可以使用 Thoughter 吗？</span>
+              <span class="content-en">Can I use Thoughter offline without internet?</span>
+            </span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <div class="content-zh">
+              可以。心迹支持配置本地大模型接口（如 Ollama / LM Studio）。只要你在电脑上运行了本地模型，心迹即可在完全断网的环境下与 Thoughter 进行灵感对谈与笔记打捞。
+            </div>
+            <div class="content-en">
+              Yes. ThoughtEcho supports local model endpoints like Ollama and LM Studio. With a local model running on your machine, you can chat with Thoughter and explore your notes completely offline.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-card">
+        <h2 class="cta-title">
+          <span class="content-zh">让思考在时光中慢慢发酵</span>
+          <span class="content-en">Let Thoughts Settle and Resonate</span>
+        </h2>
+        <p class="cta-subtitle">
+          <span class="content-zh">免费、开源、无广告。现在就下载心迹 ThoughtEcho，遇见住在你摘录本里的灵感伴侣。</span>
+          <span class="content-en">Free, open-source, and private. Download ThoughtEcho today and meet the companion inside your notebook.</span>
+        </p>
+
+        <div class="hero-cta-group" style="margin-bottom: 0;">
+          <a href="../dl.html" class="btn-hero-main">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span class="content-zh">下载心迹 (Windows / Android)</span>
+            <span class="content-en">Download ThoughtEcho (Win / Android)</span>
+          </a>
+          <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" rel="noopener noreferrer" class="btn-hero-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            <span class="content-zh">GitHub 开源仓库</span>
+            <span class="content-en">GitHub Repository</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer-bar">
+    <div class="container">
+      <div class="footer-links">
+        <a href="../index.html">
+          <span class="content-zh">返回心迹官网</span>
+          <span class="content-en">Home</span>
+        </a>
+        <span>·</span>
+        <a href="../user-guide.html">
+          <span class="content-zh">用户手册</span>
+          <span class="content-en">User Guide</span>
+        </a>
+        <span>·</span>
+        <a href="../privacy.html">
+          <span class="content-zh">隐私政策</span>
+          <span class="content-en">Privacy</span>
+        </a>
+        <span>·</span>
+        <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
+      <p>
+        <span class="content-zh">© 2026 心迹 ThoughtEcho · 免费开源，本地优先，心向自然。</span>
+        <span class="content-en">© 2026 ThoughtEcho · Free, open-source, local-first.</span>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Scripts: Typewriter, FAQ Toggle, Theme Toggle, Language Toggle -->
+  <script>
+    // 1. Bilingual Typewriter Phrases
+    const phrasesZh = [
+      "翻阅旧日片羽，聊聊当下所想。",
+      "让散落的随笔，在时光中慢慢发酵。",
+      "只提温润建议，笔永远握在自己手里。",
+      "在写下新字句时，与过去的思考重逢。"
+    ];
+
+    const phrasesEn = [
+      "Reflect on past notes, explore present thoughts.",
+      "Let scattered musings mature with time.",
+      "Gentle suggestions; the pen is always yours.",
+      "Reconnect with past ideas as you write anew."
+    ];
+
+    let pIdx = 0;
+    let cIdx = 0;
+    let deleting = false;
+    const typewriterElem = document.getElementById('typewriterText');
+    let typewriterTimer = null;
+
+    function getPhrases() {
+      const isEn = document.body.classList.contains('lang-en');
+      return isEn ? phrasesEn : phrasesZh;
+    }
+
+    function runTypewriter() {
+      if (!typewriterElem) return;
+      const list = getPhrases();
+      const currentPhrase = list[pIdx % list.length];
+
+      if (deleting) {
+        typewriterElem.textContent = currentPhrase.substring(0, Math.max(0, cIdx - 1));
+        cIdx--;
+      } else {
+        typewriterElem.textContent = currentPhrase.substring(0, cIdx + 1);
+        cIdx++;
+      }
+
+      let speed = deleting ? 28 : 60;
+
+      if (!deleting && cIdx >= currentPhrase.length) {
+        speed = 2600; // Pause at full phrase
+        deleting = true;
+      } else if (deleting && cIdx <= 0) {
+        deleting = false;
+        pIdx = (pIdx + 1) % list.length;
+        speed = 400;
+      }
+
+      clearTimeout(typewriterTimer);
+      typewriterTimer = setTimeout(runTypewriter, speed);
+    }
+
+    function resetTypewriter() {
+      clearTimeout(typewriterTimer);
+      const list = getPhrases();
+      pIdx = 0;
+      cIdx = list[0].length;
+      deleting = true;
+      if (typewriterElem) {
+        typewriterElem.textContent = list[0];
+      }
+      typewriterTimer = setTimeout(runTypewriter, 2600);
+    }
+
+    // 2. FAQ Accordion Toggle
+    function toggleFaq(headerElem) {
+      const item = headerElem.parentElement;
+      const isOpen = item.classList.contains('open');
+      
+      document.querySelectorAll('.faq-item').forEach(el => {
+        el.classList.remove('open');
+      });
+
+      if (!isOpen) {
+        item.classList.add('open');
+      }
+    }
+
+    // 3. Theme Toggle
+    const themeToggleBtn = document.getElementById('themeToggle');
+
+    function updateThemeBtnIcon() {
+      if (!themeToggleBtn) return;
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeToggleBtn.textContent = isDark ? '☀️' : '🌙';
+    }
+
+    if (themeToggleBtn) {
+      updateThemeBtnIcon();
+      themeToggleBtn.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('thoughtecho_theme', 'light');
+          localStorage.setItem('theme', 'light');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('thoughtecho_theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+        }
+        updateThemeBtnIcon();
+      });
+    }
+
+    // 4. Language Toggle
+    const langToggleBtn = document.getElementById('langToggle');
+    const langText = document.getElementById('langText');
+
+    function applyLanguage(lang) {
+      const normalized = lang === 'en' ? 'en' : 'zh';
+      document.body.classList.remove('lang-zh', 'lang-en');
+      document.body.classList.add('lang-' + normalized);
+      if (langText) {
+        langText.textContent = normalized === 'zh' ? 'EN' : '中文';
+      }
+      document.documentElement.setAttribute('lang', normalized === 'zh' ? 'zh-CN' : 'en');
+      localStorage.setItem('lang', normalized);
+      resetTypewriter();
+    }
+
+    if (langToggleBtn) {
+      const savedLang = localStorage.getItem('lang') || 'zh';
+      applyLanguage(savedLang);
+
+      langToggleBtn.addEventListener('click', () => {
+        const currentLang = document.body.classList.contains('lang-en') ? 'en' : 'zh';
+        applyLanguage(currentLang === 'zh' ? 'en' : 'zh');
+      });
+    } else {
+      resetTypewriter();
+    }
+  </script>
+</body>
+</html>

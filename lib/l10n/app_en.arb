@@ -1886,8 +1886,8 @@
   "thinkingInProgress": "Thinking...",
   "aiMisunderstoodQuestion": "Sorry, I couldn't understand this question. Please try asking in a different way.",
   "aiResponseError": "Sorry, an error occurred while responding: {error}",
-  "agentErrorNoProvider": "Select an AI provider and try again.",
-  "agentErrorMissingApiKey": "Configure an API key for {providerName}, then try again.",
+  "agentErrorNoProvider": "Please select an AI provider and try again.",
+  "agentErrorMissingApiKey": "Please configure an API key for {providerName} and try again.",
   "@agentErrorMissingApiKey": {
     "placeholders": {
       "providerName": {
@@ -1896,9 +1896,9 @@
     }
   },
   "agentErrorUnsupportedProvider": "The current AI provider does not support Thoughter chat. Please switch providers and try again.",
-  "agentErrorTimeout": "The request timed out. Check your connection and try again.",
-  "agentErrorCancelled": "This request was stopped.",
-  "agentErrorGeneric": "The request could not be completed. Please try again later.",
+  "agentErrorTimeout": "Request timed out. Please check your connection and try again.",
+  "agentErrorCancelled": "Request stopped.",
+  "agentErrorGeneric": "Could not complete the request. Please try again later.",
   "apiKeyDiagnosticsTitle": "API Key Diagnostics",
   "apiKeyDiagnosticsTool": "API Key Diagnostics Tool",
   "apiKeyDiagnosticsDesc": "Check API key configuration and storage status to troubleshoot authentication issues.",
@@ -4142,7 +4142,7 @@
   "aiPromptContinue": "Please continue writing this text",
   "aiPromptDeepAnalysis": "Please provide a deep analysis of this note",
   "aiPromptSourceAnalysis": "Please analyze the source of this text and identify the possible author and work",
-  "aiAssistantInputHint": "Enter question...",
+  "aiAssistantInputHint": "Ask a question...",
   "aiAssistantExploreWelcome": "{summary}",
   "@aiAssistantExploreWelcome": {
     "placeholders": {
@@ -4165,12 +4165,12 @@
   "aiModeAgent": "Agent Mode",
   "aiAgent": "AI Agent",
   "agentThinking": "Thinking...",
-  "agentReachedMaxRounds": "Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
+  "agentReachedMaxRounds": "Reached the step limit for this run. The answer above is based on the information gathered so far. You can ask again with a more specific request.",
   "agentSearchingNotes": "Searching notes...",
   "agentAnalyzingData": "Analyzing data...",
   "agentWebSearching": "Searching the web...",
   "agentReviewingRecentNotes": "Browsing notes...",
-  "agentSearchingNotesForQuery": "Looking for notes about \"{query}\"...",
+  "agentSearchingNotesForQuery": "Searching notes for \"{query}\"...",
   "@agentSearchingNotesForQuery": {
     "placeholders": {
       "query": {
@@ -4199,11 +4199,11 @@
       }
     }
   },
-  "agentReadingWebPage": "Fetching webpage...",
-  "agentPreparingNewNoteSuggestion": "Preparing a new note suggestion...",
-  "agentPreparingEditSuggestion": "Preparing an edit suggestion...",
-  "agentFoundNoMatchingNotes": "No matching notes found",
-  "agentFoundMatchingNotes": "Found {count} related notes",
+  "agentReadingWebPage": "Reading webpage...",
+  "agentPreparingNewNoteSuggestion": "Preparing new note suggestion...",
+  "agentPreparingEditSuggestion": "Preparing edit suggestion...",
+  "agentFoundNoMatchingNotes": "No related notes found",
+  "agentFoundMatchingNotes": "Found {count, plural, =1{1 related note} other{{count} related notes}}",
   "@agentFoundMatchingNotes": {
     "placeholders": {
       "count": {
@@ -4211,7 +4211,7 @@
       }
     }
   },
-  "agentFoundMatchingNotesWithMore": "Found {count} related notes, more available",
+  "agentFoundMatchingNotesWithMore": "Found {count, plural, =1{1 related note} other{{count} related notes}}, more available",
   "@agentFoundMatchingNotesWithMore": {
     "placeholders": {
       "count": {
@@ -4219,7 +4219,7 @@
       }
     }
   },
-  "agentPreparedTagChoices": "Found {count} tags",
+  "agentPreparedTagChoices": "Found {count, plural, =1{1 available tag} other{{count} available tags}}",
   "@agentPreparedTagChoices": {
     "placeholders": {
       "count": {
@@ -4239,7 +4239,7 @@
       }
     }
   },
-  "agentFoundWebSources": "Found {count} web sources",
+  "agentFoundWebSources": "Found {count, plural, =1{1 web source} other{{count} web sources}}",
   "@agentFoundWebSources": {
     "placeholders": {
       "count": {
@@ -4247,7 +4247,7 @@
       }
     }
   },
-  "agentReadWebPageSummary": "Fetched webpage, about {count} chars",
+  "agentReadWebPageSummary": "Read webpage, about {count} characters",
   "@agentReadWebPageSummary": {
     "placeholders": {
       "count": {
@@ -4264,8 +4264,8 @@
     }
   },
   "agentPreparedSuggestionCard": "Suggestion ready",
-  "agentToolStepFinished": "Done",
-  "agentToolStepDidNotFinish": "Failed",
+  "agentToolStepFinished": "Completed",
+  "agentToolStepDidNotFinish": "Incomplete",
   "agentMemorySaved": "Memory saved",
   "agentMemoryDeleted": "Memory deleted",
   "agentRecalledFacts": "Found {count, plural, =1{1 related memory} other{{count} related memories}}",
@@ -4281,9 +4281,9 @@
   "thinkingMode": "Deep Thinking",
   "showThinking": "Show thinking",
   "hideThinking": "Hide thinking",
-  "toolExecutionProgress": "Working...",
-  "toolExecutionCompleted": "Done",
-  "executedNOperations": "{count} operations done",
+  "toolExecutionProgress": "In progress...",
+  "toolExecutionCompleted": "Completed",
+  "executedNOperations": "{count, plural, =1{1 operation completed} other{{count} operations completed}}",
   "@executedNOperations": {
     "placeholders": {
       "count": {
@@ -4391,7 +4391,7 @@
   "noteProposalEdit": "Edit",
   "noteProposalPlain": "Plain note",
   "noteProposalRich": "Rich text note",
-  "noteProposalChangeCount": "{count} changes",
+  "noteProposalChangeCount": "{count, plural, =1{1 change} other{{count} changes}}",
   "@noteProposalChangeCount": {
     "placeholders": {
       "count": {
@@ -4419,7 +4419,7 @@
   "aiCardEditContentHint": "Edit content",
   "experimentalTag": "Beta",
   "agentExperimentalNoticeTitle": "Thoughter Experimental Feature Notice",
-  "agentExperimentalNoticeIntro": "Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
+  "agentExperimentalNoticeIntro": "Thoughter is an AI assistant currently in testing. Please review the following before proceeding:",
   "agentExperimentalNoticePoint1": "AI may generate incorrect or inaccurate responses. Please review all content critically.",
   "agentExperimentalNoticePoint2": "AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
   "agentExperimentalNoticePoint3": "This feature is in active testing and refinement, and may encounter instability or bugs.",
@@ -4510,15 +4510,15 @@
   "aiConfigHelpLink": "Not sure what to fill in? Read the setup guide",
   "openLinkFailed": "Could not open the link",
   "testBeforeSaveHint": "You can test as soon as URL, key and model are filled in — no need to save first.",
-  "agentMemorySectionTitle": "Thoughter memory",
-  "agentMemoryEnableTitle": "Long-term memory",
-  "agentMemoryEnableDesc": "Remember your preferences across chats (stored locally only)",
+  "agentMemorySectionTitle": "Thoughter Memory",
+  "agentMemoryEnableTitle": "Long-Term Memory",
+  "agentMemoryEnableDesc": "Remember your preferences and writing habits across chats",
   "agentMemoryNicknameTitle": "Nickname",
   "agentMemoryNicknameHint": "How should Thoughter address you?",
   "agentMemoryNicknameDesc": "How Thoughter should address you (leave empty to skip)",
   "agentMemoryNicknameSaveFailed": "Couldn't save your nickname. Please try again.",
   "agentMemoryNicknameDisabled": "Enabled when long-term memory is turned on",
-  "agentMemoryClearTitle": "Clear memory",
+  "agentMemoryClearTitle": "Clear Memory",
   "agentMemoryClearSummary": "Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
   "@agentMemoryClearSummary": {
     "placeholders": {
@@ -4537,8 +4537,8 @@
   "agentMemoryCleared": "Thoughter's memory has been cleared",
   "agentMemoryClearFailed": "Failed to clear memory",
   "agentMemoryNoticeTitle": "Thoughter will remember you",
-  "agentMemoryNoticeBody": "So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
-  "agentMemoryNoticeHint": "You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
+  "agentMemoryNoticeBody": "To keep conversations seamless, Thoughter remembers who you are and your phrasing preferences, applying them to future chats, daily prompts, and periodic insights.",
+  "agentMemoryNoticeHint": "You can ask Thoughter to update or forget any memory at any time, or turn memory off and clear it in AI settings.",
   "agentMemoryNoticeGotIt": "Got it",
   "agentMemoryNoticeDisable": "Don't remember",
   "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
@@ -4558,7 +4558,7 @@
   "releaseThoughterSingleNoteTitle": "Single-Note Chat",
   "releaseThoughterSingleNoteDesc": "Chat, polish, or continue a note directly from the editor.",
   "releaseThoughterMemoryTitle": "Long-Term Memory",
-  "releaseThoughterMemoryDesc": "Remembers preferences across chats; stored locally and clearable.",
+  "releaseThoughterMemoryDesc": "Remembers preferences and nickname across chats; can be cleared at any time.",
   "releaseThoughterInsightTitle": "Periodic Insights",
   "releaseThoughterInsightDesc": "Generates insights shown on the redesigned Explore page.",
   "releaseThemeTitle": "New Theme Styles",
