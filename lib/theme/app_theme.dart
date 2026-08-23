@@ -792,8 +792,9 @@ class AppTheme with ChangeNotifier {
       } else {
         // 未显式配置过主题风格
         // 检查是否为全新安装（即未标记 app_installed_v2 且未存过 app_settings）
-        final isNewInstallation = (_storage?.getBool('app_installed_v2') != true) &&
-            !(_storage?.containsKey('app_settings') ?? false);
+        final isNewInstallation =
+            (_storage?.getBool('app_installed_v2') != true) &&
+                !(_storage?.containsKey('app_settings') ?? false);
         if (isNewInstallation) {
           _themeStyle = ThemeStyle.paper;
           _storage?.setString(_themeStyleKey, ThemeStyle.paper.name);
