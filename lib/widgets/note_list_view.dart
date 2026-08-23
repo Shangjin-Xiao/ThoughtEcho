@@ -17,10 +17,12 @@ import '../models/note_tag.dart';
 import '../services/database_service.dart';
 import '../utils/delta_media_extractor.dart';
 import '../utils/icon_utils.dart';
+import '../utils/frame_timing_stats.dart';
 import '../utils/jank_detector.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
 import 'note_list/collapsed_media_banner.dart';
+import 'note_list/collapsed_rich_text.dart';
 import 'note_list/collapsed_media_thumbnail.dart';
 import '../widgets/quote_content_widget.dart';
 import '../widgets/app_loading_view.dart';
@@ -131,7 +133,8 @@ class NoteListView extends StatefulWidget {
   }
 }
 
-class NoteListViewState extends State<NoteListView> {
+class NoteListViewState extends State<NoteListView>
+    with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode(); // 添加焦点节点管理
   final ScrollController _scrollController = ScrollController(); // 添加滚动控制器
@@ -259,8 +262,20 @@ class NoteListViewState extends State<NoteListView> {
   static const int _maxIdleWarmupDeferrals = 20;
   double? _idleWarmupWidth;
   String? _idleWarmupMediaStyle;
+
+  /// 上一轮预热是在哪一「代」测量缓存上跑的，见 [QuoteContent.cacheGeneration]。
+  int? _idleWarmupCacheGeneration;
+
+  /// 因为缓存被清空而重新暖过几轮。进后台再回来一次就 +1；一直是 0 说明
+  /// 缓存没被动过，滑动时还在 `planMiss+` 就得去别处找原因。
+  int _idleWarmupRewarms = 0;
   int _idleWarmupWarmedItems = 0;
   int _idleWarmupPrecachedImages = 0;
+
+  /// 预热**自己**做掉的测量量。这两个数是预热是否真的落地的唯一证据：
+  /// `items` 只说明循环转了多少圈，转空圈时它照样涨。
+  int _idleWarmupExpandMisses = 0;
+  int _idleWarmupPlanMisses = 0;
   final Set<String> _idleWarmupPrecachedSources = <String>{};
 
   /// 单轮预热的时间预算。一次暖满整张列表会在空闲帧里堆出一个上百毫秒的长任务，
@@ -514,6 +529,11 @@ class NoteListViewState extends State<NoteListView> {
     _isLoading = true; // 修复：保持为 true，避免闪现"无笔记"
     _isInitializing = true;
     _waitingForServices = true; // 初始等待服务初始化
+
+    // 进后台会把测量缓存整排清掉（见 main.dart 的 didChangeAppLifecycleState），
+    // 回前台得有人把空闲预热重新点着，否则缓存空着、游标满着，下一次滑动每张卡片
+    // 都要重算一遍。
+    WidgetsBinding.instance.addObserver(this);
 
     // 添加焦点节点监听器，用于Web平台的焦点管理
     _searchFocusNode.addListener(_onFocusChanged);
@@ -777,7 +797,17 @@ class NoteListViewState extends State<NoteListView> {
   // 移除重复的 _areListsEqual 定义
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state != AppLifecycleState.resumed) return;
+    // 缓存代号变没变由 `_runIdleWarmupTick` 自己比对：这里只负责排一轮，
+    // 没被清过的话那一轮查表全命中，几乎不花时间。
+    _scheduleIdleLayoutWarmup();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     // 修复：安全清理所有资源
     try {
       _quotesSub?.cancel();
