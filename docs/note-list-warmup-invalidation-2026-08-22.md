@@ -110,6 +110,26 @@ build 之间那段**，而它和 `dataΔ` 高度相关：有数据事件的两�
   引擎清空（那是「图片变灰」的来源，和 App 的缓存无关），测量这时全是命中，
   这一轮基本只花 precache 的钱，而且视口里的图先回来。
 
+### 再一轮：一次数据事件重建 113 张卡
+
+复验日志的 scroll-14：`itemMemo={size=121,hit+0,miss+113}`、`worstBuild=74.9ms`
+—— 一个滚动帧里把 113 张卡片全部重建，而内容一条都没变。
+
+`_QuoteItemMemo.matches` 和 `_isSameQuoteInstances` 都按 `identical` 判断。那本身
+是对的（`Quote` 全字段 final，同一实例就意味着内容没变），问题出在上游：数据库
+一旦重新查询（回前台刷新、换页、重新订阅），就会造出一批全新的 `Quote` 对象 ——
+内容一个字没改，身份却全变了，这道防线整条失效。
+
+改法是让数据事件里内容没变的行**沿用旧实例**（`_reuseUnchangedQuoteInstances`），
+判据是新加的 `Quote.hasSameContentAs`：`toJson()`（quotes 表那一行）+ `tagIds`
+（走关联表、不在 toJson 里）。
+
+**不能用 `==`**：那个只比 `id`，会把「同一条笔记被改过内容」也判成没变，卡片就
+永远停在旧内容上。用 `toJson()` 而不是手写一份字段清单，是为了让「新增持久化
+字段」按 AGENTS.md 同步 toJson 时自动纳入判据。
+
+日志的 `activity={}` 里新增 `reuseΔ=`：这一段滑动中有多少行是沿用旧实例的。
+
 ## 下一轮该看什么
 
 拿到新日志先看三个数：
@@ -120,16 +140,11 @@ build 之间那段**，而它和 `dataΔ` 高度相关：有数据事件的两�
 - `dropped=` 和 `frameJank=`。如果 `frameJank` 仍然接近 0 而 `dropped` 很大，
   说明成本不在 build/raster 里，要往 UI 线程的非帧工作（定时器、平台通道、GC）
   和光栅线程排队去找。
+- `itemMemo` 的 `hit+`/`miss+` 和 `activity` 里的 `reuseΔ=`。有 `dataΔ=1` 的
+  会话里 `miss+` 应该塌下去、`reuseΔ` 顶上来；`worstVsync` 是不是跟着 `dataΔ`
+  一起消失，是判断「52ms/110ms 到底是不是整列表重建造成的」的关键一眼。
 
 还没做、按优先级排：
-
-0. **数据事件把整列表的记忆化打穿。** `_QuoteItemMemo.matches` 里 `quote` 是按
-   `identical` 比的，而数据流每次事件都从数据库拿一批**新的** `Quote` 实例，
-   `_isSameQuoteInstances` 同样按身份比 —— 于是 08-23 的 scroll-14 出现
-   `itemMemo={size=121,hit+0,miss+113}`、`worstBuild=74.9ms`：一个滚动帧里重建了
-   113 张卡。要么让数据层对内容没变的行复用旧实例，要么把这两处的判据从身份改成
-   内容指纹。这多半也是上表里 `dataΔ=1` 那两段 worstVsync 高达 52ms / 110ms 的
-   来源，优先级已经排到排版封顶前面。
 
 1. **排版量封顶。** `planWorstUs=15486`（单条笔记一次 plan 15.5ms）、首个
    rich-image 卡片 `itemLayout 18.3ms`。`_computePlan` 和渲染侧的 `Text.rich`

@@ -526,6 +526,31 @@ class Quote {
     }
   }
 
+  /// 这一行的**内容**是否和 [other] 完全一致。
+  ///
+  /// [operator ==] 只比 `id`（笔记的身份），回答不了「这一行变了没有」。列表侧
+  /// 需要后者：数据库每次重新查询都会造一批全新的 [Quote] 对象，内容一个字没改
+  /// 身份却全变了，按 `identical` 判断的卡片记忆化于是整屏失效。
+  ///
+  /// 判据是「持久化的全部字段」：[toJson] 覆盖 quotes 表那一行，[tagIds] 补上走
+  /// 关联表、因而不在 [toJson] 里的标签。新增持久化字段时本来就要同步 [toJson]
+  /// （见 AGENTS.md），这里跟着自动生效 —— 不再单列一份会漏掉新字段的清单。
+  bool hasSameContentAs(Quote other) {
+    if (identical(this, other)) return true;
+    if (other.id != id) return false;
+    if (other.tagIds.length != tagIds.length) return false;
+    for (var i = 0; i < tagIds.length; i++) {
+      if (other.tagIds[i] != tagIds[i]) return false;
+    }
+    final mine = toJson();
+    final theirs = other.toJson();
+    if (mine.length != theirs.length) return false;
+    for (final entry in mine.entries) {
+      if (theirs[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

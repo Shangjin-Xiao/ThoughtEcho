@@ -164,6 +164,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionStartNoteListBuildCount = _noteListBuildCount;
     _scrollSessionStartDidUpdateWidgetCount = _didUpdateWidgetCount;
     _scrollSessionStartDependenciesChangedCount = _dependenciesChangedCount;
+    _scrollSessionStartQuoteReuseCount = _quoteInstanceReuseCount;
     _scrollSessionStartLoadMoreAttemptCount = _loadMoreAttemptCount;
     _scrollSessionStartLoadMoreStartCount = _loadMoreStartCount;
     _scrollSessionStartLoadMoreSkipCount = _loadMoreSkipCount;
@@ -350,6 +351,7 @@ extension _NoteListScrollExtension on NoteListViewState {
         'widgetΔ=${_didUpdateWidgetCount - _scrollSessionStartDidUpdateWidgetCount},'
         'depsΔ=${_dependenciesChangedCount - _scrollSessionStartDependenciesChangedCount},'
         'dataΔ=${_dataStreamEventCount - _scrollSessionStartDataEventCount},'
+        'reuseΔ=${_quoteInstanceReuseCount - _scrollSessionStartQuoteReuseCount},'
         'loadMoreAttemptΔ=${_loadMoreAttemptCount - _scrollSessionStartLoadMoreAttemptCount},'
         'loadMoreStartΔ=${_loadMoreStartCount - _scrollSessionStartLoadMoreStartCount},'
         'loadMoreSkipΔ=${_loadMoreSkipCount - _scrollSessionStartLoadMoreSkipCount},'

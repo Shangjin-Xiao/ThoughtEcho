@@ -680,3 +680,90 @@ frameJank 显著低于 22。连续滑动时每个 session 摘要都应输出。
 明确没采纳：把 `ImageProvider` 全线改成 `ImageProvider<Object>`（跨平台实现的
 大范围重构，与本轮无关）；把标签胶囊和收藏角标里的 `fontSize` 字面量换成 textTheme
 （那两处是原样搬过来的，改了就是改像素，属于排版专项）。
+
+---
+
+## 2026-08-23: 记录页「不是冷启动也卡」—— 预热在空转、尺子按 60Hz、数据事件打穿记忆化
+
+**决策者**: 上晋 + Claude
+**类型**: 诊断 / 实施
+**产出**: PR #507（分支 `claude/note-list-scroll-perf-nnvopq`）、
+`docs/note-list-warmup-invalidation-2026-08-22.md`
+
+接 #487（空闲预热 + 缓存区预建）。上晋反馈「不是冷启动也卡，虽然好了很多」，
+给了四段 release 日志。这一轮的价值主要在**读日志的方法**，三个问题都是从
+「日志里两个数互相矛盾」查出来的，不是猜出来的。
+
+### 一、预热在空转：`items=121` 很好看，缓存里一条都没有
+
+`warmup={items=121,cursor=121/121,img=31}` 说预热跑完了，可同一行里
+`expand=59`、`ir=20`（rich 有 40）、`imageCache.img=15`（precache 发了 31 次）
+全部对不上，而且 `expand=59` **恰好等于** `tracked=59`（一共建出来过几张卡）。
+三个缓存上限 300/200/300 都远没到，不是被挤掉的 —— 缓存里没有一条是预热的份。
+
+根因在 `main.dart`：进后台 `QuoteContent.resetCaches()` 把七个测量缓存整排清掉，
+而 `_resetIdleLayoutWarmup()` 只在**列表内容变化**时才调用。宽度和版式都没变，
+游标就停在 `121/121`：回前台后 tick 一进去直接判定「暖完了」，转头去撑缓存区，
+缓存却是空的。
+
+**教训**：`items` 这类「循环转了几圈」的计数器不能当作「工作真的做了」的证据。
+新加的 `expand=`/`plan=`（预热自己做掉的未命中增量）才是。以后加进度指标，
+一并加一个「产出」指标。
+
+### 二、日志的尺子是 60Hz 的，而用户的屏是 120Hz
+
+`frameJank` 阈值三处各写死一遍 `16600` —— 那是 60Hz 的一帧，在 120Hz 上等于
+「连丢两帧才算一次」。于是 `frameJank=0` 和「明显觉得卡」可以同时成立。
+`JankDetector` 的 32ms 更是四帧。
+
+更要命的是 `buildDuration + rasterDuration` 只覆盖引擎真的开工那两段：vsync 到
+build 之间的等待不进账，**整帧被跳过更不会留下任何 FrameTiming**。补上
+`dropped=`（按相邻两帧 vsync 间隔折算）之后，复验日志立刻给出答案：
+`avgBuild=1.2ms` 而 `dropped=119`、`worstVsync=52.5ms` —— 成本根本不在
+build/raster 里。
+
+**教训**：性能阈值不要写常量，按 `display.refreshRate` 算，并且只此一处。
+
+### 三、一次数据事件重建 113 张卡
+
+复验日志的 scroll-14：`itemMemo={size=121,hit+0,miss+113}`、`worstBuild=74.9ms`。
+`_QuoteItemMemo.matches` 和 `_isSameQuoteInstances` 都按 `identical` 判断 —— 那
+本身是对的（`Quote` 全字段 final），但数据库每次重新查询都会造一批全新对象：
+内容一个字没改，身份却全变了，这道防线整条失效。
+
+改法是让数据事件里内容没变的行**沿用旧实例**。判据必须是新加的
+`Quote.hasSameContentAs`（`toJson()` + `tagIds`），**不能用 `==`** —— 那个只比
+`id`，会把「同一条笔记被改过内容」也当成没变，卡片就永远停在旧内容上。
+用 `toJson()` 而不是手写字段清单，是为了让「新增持久化字段」自动纳入判据。
+
+### 四、顺带否掉的一个旧决定：进后台清缓存
+
+原来一进 `paused` 就 `resetCaches()`。日志证明这笔买卖不划算：折叠列表跑起来时
+最占地方的 `doc=0/120`、`ctrl=0/50` **本来就是空的**，清掉的全是折叠判定、折叠
+排版这类小对象，换来的却是每次回前台第一次滑动必然重算一遍。改挂
+`didHaveMemoryPressure` —— 系统真缺内存时（含后台 trim）照样清。
+
+同时发现「切后台回来图片变灰重新加载」是 Flutter 自己的 imageCache 被引擎清空
+（Android 后台内存回收，和 App 缓存无关），而预热的 precache 去重集合记着
+「暖过了」，那些图永远等不到第二次预解码。
+
+### 五、预热顺序：从视口向两边扩散
+
+复验日志 `cursor=23/121` 而用户停在第 45~72 条 —— 重暖是从第 0 条开始的，
+功夫全花在屏幕外面。抽出 `SpreadFromAnchorCursor`（同距离先向下），锚点在
+「这一轮第一条都还没暖」时取 `_estimatedScrollCenterIndex()`。
+
+### 还没做
+
+1. `worstVsync=52.5ms / 110.5ms` 只在 `dataΔ=1` 的会话里出现，第三条改完要复验
+   它是不是跟着消失；没消失就得上 Sentry profiling（仅 iOS/macOS，上晋有侧载包）。
+2. 折叠排版量封顶：`planWorstUs=15486`、rich-image 首布局 18.3ms。`_computePlan`
+   和渲染侧的 `Text.rich` 都把整块正文交给引擎，`maxLines` 只限制保留几行、
+   断行仍然跑全文 —— 折叠盒只有 160px，成本却随笔记长度线性增长。
+3. 分页别落在惯性里。
+
+### 工具链备忘
+
+Flutter 3.47.x + 锁定的 flutter_quill 11.5.0 需要先跑 `scripts/patch_flutter_quill.sh`
+（`TextInputClient.onFocusReceived`），否则任何 widget 测试都编译不过。CI 里那一步
+就是干这个的，本地新环境容易漏。

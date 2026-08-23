@@ -244,6 +244,10 @@ class NoteListViewState extends State<NoteListView>
   bool _hasMore = true;
   static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;
+
+  /// 数据事件里「内容没变、于是沿用旧实例」的行数，
+  /// 见 `_reuseUnchangedQuoteInstances`。日志里的 `reuse=`。
+  int _quoteInstanceReuseCount = 0;
   static const int _plainKeepAliveWindowRadius = 18;
 
   // 空闲预取：首屏就绪后趁列表静止把后续几页提前取好，
@@ -379,6 +383,7 @@ class NoteListViewState extends State<NoteListView>
   int _scrollSessionStartLoadMoreStartCount = 0;
   int _scrollSessionStartLoadMoreSkipCount = 0;
   int _scrollSessionStartDataEventCount = 0;
+  int _scrollSessionStartQuoteReuseCount = 0;
   int _scrollSessionNotificationStarts = 0;
   int _scrollSessionNotificationUpdates = 0;
   int _scrollSessionNotificationEnds = 0;
