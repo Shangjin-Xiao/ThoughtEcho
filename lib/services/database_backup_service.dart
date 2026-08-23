@@ -24,8 +24,13 @@ class DatabaseBackupService {
     bool clearExisting = true,
   }) async {
     try {
+      final actualData = (data.containsKey('notes') && data['notes'] is Map)
+          ? Map<String, dynamic>.from(data['notes'] as Map)
+          : data;
+
       // 验证数据格式
-      if (!data.containsKey('categories') || !data.containsKey('quotes')) {
+      if (!actualData.containsKey('categories') ||
+          !actualData.containsKey('quotes')) {
         throw Exception('备份数据格式无效，缺少 "categories" 或 "quotes" 键');
       }
 
@@ -40,7 +45,7 @@ class DatabaseBackupService {
         }
 
         // 恢复分类数据（优化：使用batch批量插入）
-        final categories = data['categories'] as List;
+        final categories = actualData['categories'] as List;
         final categoryBatch = txn.batch();
         final processedCategories = <Map<String, dynamic>>[];
 
@@ -53,6 +58,7 @@ class DatabaseBackupService {
           final categoryFieldMappings = {
             'isDefault': 'is_default',
             'iconName': 'icon_name',
+            'icon': 'icon_name',
           };
 
           for (final mapping in categoryFieldMappings.entries) {
@@ -103,7 +109,7 @@ class DatabaseBackupService {
         }
 
         // 恢复笔记数据（优化：使用batch批量插入）
-        final quotes = data['quotes'] as List;
+        final quotes = actualData['quotes'] as List;
         final quoteBatch = txn.batch();
         final tagRelations = <Map<String, String>>[];
         final processedQuotes = <Map<String, dynamic>>[];
@@ -114,15 +120,43 @@ class DatabaseBackupService {
           );
 
           // 修复：处理旧版笔记数据字段名兼容性
-          String? tagIdsString;
+          List<String> parsedTagIds = [];
 
-          // 处理tag_ids字段的各种可能格式
+          // 处理tag_ids字段的各种可能格式（逗号分隔字符串或数组）
           if (quoteData.containsKey('tag_ids')) {
-            tagIdsString = quoteData['tag_ids'] as String?;
+            final raw = quoteData['tag_ids'];
+            if (raw is String) {
+              parsedTagIds = raw
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toSet()
+                  .toList();
+            } else if (raw is List) {
+              parsedTagIds = raw
+                  .map((e) => e.toString().trim())
+                  .where((e) => e.isNotEmpty)
+                  .toSet()
+                  .toList();
+            }
             quoteData.remove('tag_ids');
           } else if (quoteData.containsKey('taglds')) {
             // 处理错误的字段名 taglds -> tag_ids
-            tagIdsString = quoteData['taglds'] as String?;
+            final raw = quoteData['taglds'];
+            if (raw is String) {
+              parsedTagIds = raw
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toSet()
+                  .toList();
+            } else if (raw is List) {
+              parsedTagIds = raw
+                  .map((e) => e.toString().trim())
+                  .where((e) => e.isNotEmpty)
+                  .toSet()
+                  .toList();
+            }
             quoteData.remove('taglds');
           }
 
@@ -171,22 +205,10 @@ class DatabaseBackupService {
           }
 
           // 收集标签信息（稍后批量插入）
-          if (tagIdsString != null && tagIdsString.isNotEmpty) {
+          if (parsedTagIds.isNotEmpty) {
             final quoteId = quoteData['id'] as String;
-            int startIndex = 0;
-            while (startIndex < tagIdsString.length) {
-              final commaIndex = tagIdsString.indexOf(',', startIndex);
-              final tagId = commaIndex == -1
-                  ? tagIdsString.substring(startIndex)
-                  : tagIdsString.substring(startIndex, commaIndex);
-
-              final trimmedTagId = tagId.trim();
-              if (trimmedTagId.isNotEmpty) {
-                tagRelations.add({'quote_id': quoteId, 'tag_id': trimmedTagId});
-              }
-
-              if (commaIndex == -1) break;
-              startIndex = commaIndex + 1;
+            for (final tagId in parsedTagIds) {
+              tagRelations.add({'quote_id': quoteId, 'tag_id': tagId});
             }
           }
 
@@ -443,52 +465,47 @@ class DatabaseBackupService {
       // 使用流式JSON解析避免大文件OOM
       final data = await LargeFileManager.decodeJsonFromFileStreaming(file);
 
-      // --- 修改处 ---
-      // 验证基本结构，应与 exportAllData 导出的结构一致
-      final requiredKeys = {'metadata', 'categories', 'quotes'};
-      if (!requiredKeys.every((key) => data.containsKey(key))) {
-        // 提供更详细的错误信息，指出缺少哪些键
-        final missingKeys = requiredKeys.difference(data.keys.toSet());
+      // 支持两种顶层结构：
+      // 1. 标准结构：顶层包含 "notes" 对象，内部包含 "categories" 和/或 "quotes"
+      // 2. 扁平/旧版结构：顶层直接包含 "categories" 和/或 "quotes"（可选包含 "metadata"）
+      final Map<String, dynamic> notesData;
+      if (data.containsKey('notes') && data['notes'] is Map) {
+        notesData = Map<String, dynamic>.from(data['notes'] as Map);
+      } else if (data.containsKey('categories') || data.containsKey('quotes')) {
+        notesData = data;
+      } else {
         throw Exception(
-          '备份文件格式无效，缺少必要的顶层数据结构 (需要: metadata, categories, quotes; 缺少: ${missingKeys.join(', ')})',
+          '备份文件格式无效，缺少必要的笔记数据结构 (需要包含 "notes" 对象或 "categories"/"quotes" 列表)',
         );
       }
-      // --- 修改结束 ---
 
-      // 可选：进一步验证内部结构，例如 metadata 是否包含 version
-      if (data['metadata'] is! Map ||
-          !(data['metadata'] as Map).containsKey('version')) {
-        logDebug('警告：备份文件元数据 (metadata) 格式不正确或缺少版本信息');
-        // 可以选择是否在这里抛出异常，取决于是否强制要求版本信息
+      // 验证内部结构
+      if (notesData.containsKey('categories') &&
+          notesData['categories'] is! List) {
+        throw Exception('备份文件中的 "categories" 必须是一个列表');
+      }
+      if (notesData.containsKey('quotes') && notesData['quotes'] is! List) {
+        throw Exception('备份文件中的 "quotes" 必须是一个列表');
       }
 
-      // 可选：检查 categories 和 quotes 是否为列表类型
-      if (data['categories'] is! List) {
-        throw Exception('备份文件中的 \'categories\' 必须是一个列表');
-      }
-      if (data['quotes'] is! List) {
-        throw Exception('备份文件中的 \'quotes\' 必须是一个列表');
+      // 检查至少需要有 quotes 或 categories (空备份也允许但需键存在)
+      if (!notesData.containsKey('categories') &&
+          !notesData.containsKey('quotes')) {
+        throw Exception('备份文件缺少 "categories" 或 "quotes" 数据');
       }
 
-      // 检查至少需要有quotes或categories (可选，空备份也可能有效)
-      final quotes = data['quotes'] as List?;
-      final categories = data['categories'] as List?;
+      final quotes = notesData['quotes'] as List?;
+      final categories = notesData['categories'] as List?;
 
       if ((quotes == null || quotes.isEmpty) &&
           (categories == null || categories.isEmpty)) {
         logDebug('警告：备份文件不包含任何分类或笔记数据');
-        // 空备份也是有效的，但可以记录警告
       }
 
       logDebug('备份文件验证通过: $filePath');
-      return true; // 如果所有检查都通过，返回 true
+      return true;
     } catch (e) {
       logDebug('验证备份文件失败: $e');
-      // 重新抛出更具体的错误信息给上层调用者
-      // 保留原始异常类型，以便上层可以根据需要区分处理
-      // 例如: throw FormatException('备份文件JSON格式错误');
-      // 或: throw FileSystemException('无法读取备份文件', filePath);
-      // 这里统一抛出 Exception，包含原始错误信息
       throw Exception('无法验证备份文件： $e');
     }
   }
@@ -509,8 +526,13 @@ class DatabaseBackupService {
     final mediaCleanupCandidates = <String>{};
 
     try {
+      final actualData = (data.containsKey('notes') && data['notes'] is Map)
+          ? Map<String, dynamic>.from(data['notes'] as Map)
+          : data;
+
       // 验证数据格式
-      if (!data.containsKey('categories') || !data.containsKey('quotes')) {
+      if (!actualData.containsKey('categories') ||
+          !actualData.containsKey('quotes')) {
         reportBuilder.addError('备份数据格式无效，缺少 "categories" 或 "quotes" 键');
         return reportBuilder.build();
       }
@@ -518,18 +540,18 @@ class DatabaseBackupService {
       await db.transaction((txn) async {
         await _mergeCategories(
           txn,
-          data['categories'] as List,
+          actualData['categories'] as List,
           reportBuilder,
           categoryIdRemap,
         );
         await _mergeQuotes(
           txn,
-          data['quotes'] as List,
+          actualData['quotes'] as List,
           reportBuilder,
           categoryIdRemap,
         );
 
-        final tombstones = data['tombstones'];
+        final tombstones = actualData['tombstones'];
         if (tombstones is List) {
           await _applyTombstones(
             txn,
@@ -605,6 +627,7 @@ class DatabaseBackupService {
         const categoryFieldMappings = {
           'isDefault': 'is_default',
           'iconName': 'icon_name',
+          'icon': 'icon_name',
         };
         for (final mapping in categoryFieldMappings.entries) {
           if (categoryData.containsKey(mapping.key)) {
@@ -730,6 +753,7 @@ class DatabaseBackupService {
     'location',
     'latitude',
     'longitude',
+    'poi_name',
     'weather',
     'temperature',
     'edit_source',

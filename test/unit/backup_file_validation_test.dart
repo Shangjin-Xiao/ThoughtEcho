@@ -1,8 +1,11 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/services/streaming_backup_processor.dart';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:archive/archive.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:thoughtecho/services/database_backup_service.dart';
+import 'package:thoughtecho/services/streaming_backup_processor.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -187,6 +190,66 @@ void main() {
         zipPath,
       );
       expect(isValid, isTrue);
+    });
+
+    group('DatabaseBackupService 验证测试', () {
+      final dbBackupService = DatabaseBackupService();
+
+      test('应该能够验证标准包裹 notes 的备份 JSON 文件', () async {
+        final jsonPath = '${tempDir.path}/standard_notes_backup.json';
+        final backupData = {
+          'version': '1.2.0',
+          'createdAt': DateTime.now().toIso8601String(),
+          'device_id': 'test-device',
+          'notes': {
+            'categories': [
+              {'id': 'cat-1', 'name': '分类1', 'icon': 'book'},
+            ],
+            'quotes': [
+              {
+                'id': 'quote-1',
+                'content': '笔记内容1',
+                'date': '2026-08-22T08:00:00.000Z',
+                'tag_ids': 'cat-1',
+                'delta_content': '[{"insert":"笔记内容1\\n"}]',
+              },
+            ],
+          },
+          'settings': {},
+          'ai_analysis': [],
+        };
+        await File(jsonPath).writeAsString(json.encode(backupData));
+        final isValid = await dbBackupService.validateBackupFile(jsonPath);
+        expect(isValid, isTrue);
+      });
+
+      test('应该能够验证扁平根目录包含 categories/quotes 的 JSON 文件', () async {
+        final jsonPath = '${tempDir.path}/flat_backup.json';
+        final backupData = {
+          'categories': [
+            {'id': 'cat-1', 'name': '分类1'},
+          ],
+          'quotes': [
+            {'id': 'quote-1', 'content': '笔记内容1'},
+          ],
+        };
+        await File(jsonPath).writeAsString(json.encode(backupData));
+        final isValid = await dbBackupService.validateBackupFile(jsonPath);
+        expect(isValid, isTrue);
+      });
+
+      test('应该拒绝缺少 notes/categories/quotes 结构的无效 JSON 文件', () async {
+        final jsonPath = '${tempDir.path}/invalid_structure.json';
+        final backupData = {
+          'version': '1.2.0',
+          'user': {'name': 'test'},
+        };
+        await File(jsonPath).writeAsString(json.encode(backupData));
+        expect(
+          () => dbBackupService.validateBackupFile(jsonPath),
+          throwsException,
+        );
+      });
     });
   });
 }

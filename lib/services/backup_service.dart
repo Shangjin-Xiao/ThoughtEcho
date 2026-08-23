@@ -609,9 +609,13 @@ class BackupService {
       // 验证新的 zip 格式：一次性检查 ZIP 结构与必需文件
       if (path.extension(filePath).toLowerCase() == '.zip') {
         return await ZipStreamProcessor.containsFile(
-          filePath,
-          _backupDataFile,
-        );
+              filePath,
+              _backupDataFile,
+            ) ||
+            await ZipStreamProcessor.containsFile(
+              filePath,
+              'data.json',
+            );
       }
 
       // 验证旧的 json 格式
