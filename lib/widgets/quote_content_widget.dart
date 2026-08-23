@@ -45,16 +45,24 @@ class QuoteContent extends StatelessWidget {
   /// `DefaultTextStyle`，paragraph 整体替换后缺 color 会在暗色模式下渲染成黑字。
   /// 所以那个方法是「拿到等效 base 再 copyWith」，不是凭空构造。
   ///
-  /// [weightCompensation] 来自 `AppTypographyTokens`，为 0 时下面那套加粗降档
-  /// **必须整段跳过**：降档是给黑体做的，而系统中文衬线体常常只有 Regular / Bold
-  /// 两档，把 w700 降到 w500 会匹配回 Regular——用户标的粗体直接消失。
+  /// [weightCompensation] 来自 `AppTypographyTokens`，为 0 时下面那套**标题**降档
+  /// 整段跳过：降档是给黑体在 Impeller 下偏粗做的，衬线体不吃这一套。
+  ///
+  /// [boldWeight] 则**两条路都要给**。它不是「降不降档」的开关，而是「加粗比正文
+  /// 重多少」这条关系的落值（见 [ThemeStyleForm.emphasisWeight]）：正文被令牌抬到
+  /// w500（衬线）或压到 350（Android 黑体）之后，quill 钉死的 w700 与正文的差就
+  /// 不再是 M3 的 300 档——衬线下只剩 200 档，用户标了加粗几乎看不出来。
   static quill.DefaultStyles _buildCustomStyles(
     TextStyle paragraphStyle,
     double weightCompensation,
+    FontWeight boldWeight,
   ) {
-    // Android 之外、以及不做黑体减重的风格，只需要段落这一项。
+    // Android 之外、以及不做黑体减重的风格，只需要段落和加粗这两项。
     if (kIsWeb || !Platform.isAndroid || weightCompensation <= 0) {
-      return QuillThemeTypography.paragraphOnly(paragraphStyle);
+      return QuillThemeTypography.paragraphOnly(
+        paragraphStyle,
+        boldWeight: boldWeight,
+      );
     }
     final paragraph = quill.DefaultTextBlockStyle(
       paragraphStyle,
@@ -63,12 +71,12 @@ class QuoteContent extends StatelessWidget {
       quill.VerticalSpacing.zero,
       null,
     );
-    // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
-    // 渲染明显偏粗。在 Android 上注入 customStyles 将 bold 降为 w600，
-    // 标题按比例降档，使视觉接近升级前效果。
+    // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下字重整体偏粗，标题按比例
+    // 降档，使视觉接近升级前效果。加粗不在这套降档里——它由 [boldWeight] 按
+    // 「正文字重 + 300 档」算出来，两条路共用同一个值。
     return quill.DefaultStyles(
       paragraph: paragraph,
-      bold: const TextStyle(fontWeight: FontWeight.w500),
+      bold: TextStyle(fontWeight: boldWeight),
       h1: quill.DefaultTextBlockStyle(
         TextStyle(
           fontSize: QuillThemeTypography.headerFontSize1,
@@ -132,23 +140,31 @@ class QuoteContent extends StatelessWidget {
   // 字重补偿也要进 memo 的比较，否则切换主题风格后会拿到上一套风格的加粗规则。
   static TextStyle? _memoParagraphStyle;
   static double? _memoWeightCompensation;
+  static FontWeight? _memoBoldWeight;
   static quill.QuillEditorConfig? _memoEditorConfig;
 
   static quill.QuillEditorConfig _editorConfigFor(
     TextStyle paragraphStyle,
     double weightCompensation,
+    FontWeight boldWeight,
   ) {
     final cached = _memoEditorConfig;
     if (cached != null &&
         _memoParagraphStyle == paragraphStyle &&
-        _memoWeightCompensation == weightCompensation) {
+        _memoWeightCompensation == weightCompensation &&
+        _memoBoldWeight == boldWeight) {
       return cached;
     }
     final config = _staticEditorConfig.copyWith(
-      customStyles: _buildCustomStyles(paragraphStyle, weightCompensation),
+      customStyles: _buildCustomStyles(
+        paragraphStyle,
+        weightCompensation,
+        boldWeight,
+      ),
     );
     _memoParagraphStyle = paragraphStyle;
     _memoWeightCompensation = weightCompensation;
+    _memoBoldWeight = boldWeight;
     _memoEditorConfig = config;
     return config;
   }
@@ -810,9 +826,8 @@ class QuoteContent extends StatelessWidget {
     }
 
     final baseStyle = QuillThemeTypography.paragraphStyle(context, base: style);
-    // 折叠预览的加粗必须和展开态用同一档字重，见 `_buildCustomStyles`：
-    // Android + material 下 quill 把 bold 降到 w500，这里不跟着降的话，
-    // 同一条笔记折叠时比展开后更粗。
+    // 折叠预览的加粗必须和展开态用同一档字重：两边都从
+    // `QuillThemeTypography.boldWeight` 取，否则同一条笔记折叠时和展开后不一样粗。
     final boldWeight = collapsedBoldWeight(context);
 
     // 容器窄到放不下「缩略图 + 一段能读的正文」时**整个不画缩略图**。
@@ -1144,17 +1159,13 @@ class QuoteContent extends StatelessWidget {
     return plainText;
   }
 
-  /// 折叠预览里「粗体」该用哪一档字重，规则与 [_buildCustomStyles] 一致。
+  /// 折叠预览里「粗体」该用哪一档字重。
   ///
+  /// 规则本身在 [QuillThemeTypography.boldWeight]——折叠态、展开态、全屏编辑器
+  /// 三条路都从那一处取，同一段加粗才不会在展开的那一刻变粗细。
   /// 判定侧（`quote_item_widget`）也要拿它，好和渲染侧量同一件事。
-  static FontWeight collapsedBoldWeight(BuildContext context) {
-    final weightCompensation =
-        AppTypographyTokens.of(context).variableWeightCompensation;
-    if (kIsWeb || !Platform.isAndroid || weightCompensation <= 0) {
-      return FontWeight.bold;
-    }
-    return FontWeight.w500;
-  }
+  static FontWeight collapsedBoldWeight(BuildContext context) =>
+      QuillThemeTypography.boldWeight(context);
 
   /// 点击折叠卡片上的媒体：打开首图的大图预览。
   ///
@@ -1215,6 +1226,7 @@ class QuoteContent extends StatelessWidget {
       config: _editorConfigFor(
         paragraphStyle,
         AppTypographyTokens.of(context).variableWeightCompensation,
+        QuillThemeTypography.boldWeight(context),
       ),
     );
 

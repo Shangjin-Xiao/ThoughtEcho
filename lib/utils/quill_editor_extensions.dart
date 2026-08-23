@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -156,11 +157,35 @@ class QuillThemeTypography {
     );
   }
 
-  /// 只替换段落样式、其余沿用 quill 默认的 [quill.DefaultStyles]。
+  /// 当前平台跑不跑 Android 那套黑体减重。
   ///
-  /// 卡片正文那条路还要额外处理 Android 的加粗降档，所以自己拼 `DefaultStyles`；
-  /// 编辑器只需要这一项。
-  static quill.DefaultStyles paragraphOnly(TextStyle paragraphStyle) {
+  /// 用 [defaultTargetPlatform] 而不是 `Platform.isAndroid`：这个文件要能在 web
+  /// 上编译，`dart:io` 进不来。两者在真机上等价。
+  static bool get androidWeightCompensationApplies =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  /// 用户在正文里标的加粗，在当前风格 + 当前平台下该用的字重。
+  ///
+  /// **所有渲染富文本的地方都从这里取**：折叠预览排的是 `Text.rich`、展开态走
+  /// `QuillEditor`、全屏编辑器又是另一个 `QuillEditor`，三条路各写各的字面量，
+  /// 同一段加粗就会在展开的那一刻变一次粗细。
+  static FontWeight boldWeight(BuildContext context) =>
+      AppTypographyTokens.of(context)
+          .emphasisWeight(compensated: androidWeightCompensationApplies);
+
+  /// 只替换段落样式与加粗字重、其余沿用 quill 默认的 [quill.DefaultStyles]。
+  ///
+  /// 卡片正文那条路还要额外处理标题降档，所以自己拼 `DefaultStyles`；
+  /// 编辑器只需要这两项。
+  ///
+  /// [boldWeight] 传 null 表示沿用 quill 自己的 w700。**能给就给**：正文字重被
+  /// 令牌抬高（衬线 w500）或压低（Android 黑体 350）之后，钉死的 w700 与正文的
+  /// 差就不再是 M3 的 300 档，衬线下「标过加粗」几乎看不出来。规则见
+  /// [ThemeStyleForm.emphasisWeight]。
+  static quill.DefaultStyles paragraphOnly(
+    TextStyle paragraphStyle, {
+    FontWeight? boldWeight,
+  }) {
     return quill.DefaultStyles(
       paragraph: quill.DefaultTextBlockStyle(
         paragraphStyle,
@@ -169,6 +194,7 @@ class QuillThemeTypography {
         quill.VerticalSpacing.zero,
         null,
       ),
+      bold: boldWeight == null ? null : TextStyle(fontWeight: boldWeight),
     );
   }
 }

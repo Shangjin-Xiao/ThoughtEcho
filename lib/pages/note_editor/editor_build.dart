@@ -230,6 +230,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                           // 「读的时候」行距不一样。两边共用同一套令牌纠正。
                           customStyles: QuillThemeTypography.paragraphOnly(
                             QuillThemeTypography.paragraphStyle(context),
+                            boldWeight:
+                                QuillThemeTypography.boldWeight(context),
                           ),
                           embedBuilders: kIsWeb
                               ? FlutterQuillEmbeds.editorWebBuilders()

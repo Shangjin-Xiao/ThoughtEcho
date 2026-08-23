@@ -509,9 +509,11 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
 
     // 底色和整宽都撤掉：工具调用是过程不是内容，它在对话流里应该是一行
     // 顺着正文左边缘走的状态文字，而不是一块和回答抢注意力的卡片。
-    final foreground = theme.colorScheme.onSurfaceVariant.withValues(
-      alpha: 0.85,
-    );
+    //
+    // 但"退到背景"不等于"看不清"：onSurfaceVariant 这支墨是按 7:1 验过的，
+    // 再乘 0.85 就把验算作废了——衬线体下这一行会糊成一片灰。
+    // 弱化交给字号和位置，不要交给透明度。
+    final foreground = theme.colorScheme.onSurfaceVariant;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -524,16 +526,19 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 转圈按图标的尺寸走（16），不再缩到 12。12 的圈在高 DPI 屏上
+              // 只有几个物理像素宽，1.8 的线宽抗锯齿后剩不下什么——它不像
+              // "在转"，像正文前面多了一个小黑点。
               SizedBox(
-                width: 16,
-                height: 16,
+                width: 18,
+                height: 18,
                 child: Center(
                   child: widget.inProgress
                       ? SizedBox(
-                          width: 12,
-                          height: 12,
+                          width: 16,
+                          height: 16,
                           child: CircularProgressIndicator(
-                            strokeWidth: 1.8,
+                            strokeWidth: 2,
                             valueColor:
                                 AlwaysStoppedAnimation<Color>(foreground),
                           ),
@@ -545,7 +550,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
                               (widget.items.isEmpty
                                   ? Icons.lightbulb_outline
                                   : Icons.check),
-                          size: 15,
+                          size: 16,
                           color: foreground,
                         ),
                 ),

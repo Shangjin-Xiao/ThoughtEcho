@@ -66,21 +66,21 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 头部说明
+            // 头部说明。
+            //
+            // 原来这里是 primaryContainer → 同色 80% 透明的对角渐变。两个问题：
+            // 渐变本身是 DESIGN.md 明令排除的装饰手段；而且 80% 那一头是**和页面
+            // 底色混出来的**，纸墨风格下 primaryContainer 与底纸本来就只差一点，
+            // 混完右下角几乎就是底色，整块卡片看着像没画完。实色 + 一道描边，
+            // 层次由「块和纸的边界」给，不由光晕给。
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colorScheme.primaryContainer,
-                    colorScheme.primaryContainer.withValues(alpha: 0.8),
-                  ],
-                ),
+                color: colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(
                     AppShapeTokens.of(context).cardRadius),
+                border: Border.all(color: colorScheme.outlineVariant),
                 boxShadow: AppShapeTokens.of(context).restShadow,
               ),
               child: Row(
@@ -109,12 +109,13 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                               ?.copyWith(color: colorScheme.onPrimaryContainer),
                         ),
                         const SizedBox(height: 4),
+                        // 不压透明度：onPrimaryContainer 的取值是按「落在
+                        // primaryContainer 上」验过对比度的，乘 0.8 等于把验算结果
+                        // 作废，而层级已经由字号（titleMedium / bodyMedium）给了。
                         Text(
                           l10n.personalizationSettingsDesc,
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onPrimaryContainer.withValues(
-                              alpha: 0.8,
-                            ),
+                            color: colorScheme.onPrimaryContainer,
                           ),
                         ),
                       ],
@@ -258,7 +259,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   subtitle: Text(
                     l10n.exportFormatDesc,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   trailing: DropdownButtonHideUnderline(
@@ -405,7 +406,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   subtitle: Text(l10n.moreAiSettingsDesc),
                   trailing: Icon(
                     Icons.chevron_right,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                   onTap: () => Navigator.push(
                     context,
@@ -494,29 +495,23 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     );
   }
 
+  /// 分组卡。**必须是 `Card`，不能是自绘 `Container`。**
+  ///
+  /// 原来这里是 `Container(color: colorScheme.surface)` —— 而 `surface` 正是
+  /// 页面底色（`Scaffold` 用的就是它），两套手工色板里 `card` 比 `surface` 亮
+  /// 一档才是「纸叠在纸上」。也就是说这些卡和底纸**同色**，全靠一道 20% 的描边
+  /// 撑边界，真机上等于没有：整页设置项直接摊在底纸上，就是那个「对比度太低」。
+  ///
+  /// `Card` 从 `cardTheme` 拿底色、圆角、描边和投影，material 用投影分层、
+  /// 手工风格用发丝边框分层，两条路都不用这里操心（见 `AppTheme._styleCardTheme`）。
   Widget _buildPreferenceCard(
     BuildContext context, {
     required List<Widget> children,
   }) {
-    final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.2),
-        ),
-        boxShadow: AppShapeTokens.of(context).lowShadow,
-      ),
-      child: ClipRRect(
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Column(children: children),
-        ),
-      ),
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: children),
     );
   }
 
@@ -553,14 +548,19 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         style: theme.textTheme.titleSmall?.copyWith(
           color: isEnabled
               ? null
-              : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              : theme.colorScheme.onSurface.withValues(alpha: 0.38),
         ),
       ),
+      // 次要文字走 onSurfaceVariant，不要 onSurface 乘个透明度：那支墨是按
+      // 「在纸和卡片两种底色上都到 7:1」验过的（见 ThemeStyleColors.inkMuted），
+      // 而随手乘 0.7 得到的灰没人验算过，衬线体下尤其发虚。
+      // 禁用态才用透明度——那是 M3 表达「不可用」的标准手段，取值也是它的 0.38。
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface
-              .withValues(alpha: isEnabled ? 0.7 : 0.4),
+          color: isEnabled
+              ? theme.colorScheme.onSurfaceVariant
+              : theme.colorScheme.onSurface.withValues(alpha: 0.38),
         ),
       ),
       trailing: Switch(
@@ -591,9 +591,12 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Material(
+          // 未选中项取卡片色：它落在**下沉的分组底**上，比底更亮才读得出
+          // 「这是一个可以点的选项」。原来取 surfaceContainerLow，
+          // 那时候分组底是卡片色，两者几乎同色。
           color: isSelected
               ? theme.colorScheme.secondaryContainer
-              : theme.colorScheme.surfaceContainerLow,
+              : theme.colorScheme.surfaceContainerLowest,
           borderRadius:
               BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
           child: InkWell(
@@ -622,15 +625,19 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      // 「仅展示本地记录 + 无网络时展示什么」是一组联动设置，所以它在卡片里
+      // 再下沉一层。**方向必须是下沉**：原来这块取 surfaceContainerLowest，
+      // 那是卡片自己的底色——分组卡改回卡片色之后它就完全同色了；而在改之前，
+      // 卡片是页面底色，这一块反而是整页唯一的纯白块，突兀得像贴错了地方
+      // （用户截图里就是它）。surfaceContainerHigh 比卡片暗一档，
+      // 读起来是「嵌进卡片的一格」。
       child: Container(
         padding: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerLowest,
+          color: theme.colorScheme.surfaceContainerHigh,
           borderRadius:
               BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-          ),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
         ),
         child: Material(
           type: MaterialType.transparency,
@@ -645,7 +652,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                 subtitle: Text(
                   l10n.useLocalNotesOnlyDesc,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 secondary: Icon(
@@ -678,8 +685,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                     Text(
                       l10n.offlineQuoteSourceDesc,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: theme.colorScheme.onSurfaceVariant,
                         height: 1.35,
                       ),
                     ),
@@ -755,7 +761,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         style: theme.textTheme.bodySmall?.copyWith(
           color: hasValue
               ? theme.colorScheme.primary
-              : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              : theme.colorScheme.onSurfaceVariant,
           fontWeight: hasValue ? FontWeight.w500 : null,
         ),
         maxLines: 1,
@@ -763,7 +769,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       ),
       trailing: Icon(
         Icons.chevron_right,
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+        color: theme.colorScheme.onSurfaceVariant,
       ),
       onTap: () => _showTextEditDialog(
         context: context,
@@ -880,13 +886,13 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         style: theme.textTheme.bodySmall?.copyWith(
           color: hasValue
               ? theme.colorScheme.primary
-              : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              : theme.colorScheme.onSurfaceVariant,
           fontWeight: hasValue ? FontWeight.w500 : null,
         ),
       ),
       trailing: Icon(
         Icons.chevron_right,
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+        color: theme.colorScheme.onSurfaceVariant,
       ),
       onTap: () => _showTagSelectionDialog(context, settings, l10n),
     );

@@ -16,7 +16,7 @@ class ThinkingWidget extends StatefulWidget {
   /// 思考过程文本内容
   final String thinkingText;
 
-  /// 是否正在思考中（进行中自动展开且显示脉冲）
+  /// 是否正在思考中（进行中自动展开并显示转圈）
   final bool inProgress;
 
   /// 可选的强调色（用于竖线和图标）
@@ -37,10 +37,9 @@ class ThinkingWidget extends StatefulWidget {
 }
 
 class _ThinkingWidgetState extends State<ThinkingWidget>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late bool _isExpanded;
   late AnimationController _rotationController;
-  late AnimationController _pulseController;
 
   @override
   void initState() {
@@ -56,15 +55,6 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
     if (_isExpanded) {
       _rotationController.value = 1.0;
     }
-
-    // 脉冲动画（仅在进行中时显示）
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-    if (widget.inProgress) {
-      _pulseController.repeat();
-    }
   }
 
   @override
@@ -74,13 +64,11 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
     // 如果进度状态改变，自动折叠/展开
     if (oldWidget.inProgress != widget.inProgress) {
       if (widget.inProgress) {
-        _pulseController.repeat();
         if (!_isExpanded) {
           _isExpanded = true;
           _rotationController.forward();
         }
       } else {
-        _pulseController.stop();
         if (_isExpanded) {
           _isExpanded = false;
           _rotationController.reverse();
@@ -92,7 +80,6 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
   @override
   void dispose() {
     _rotationController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
@@ -140,32 +127,31 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 进行中是脉冲圆点，结束后换成静态图标
-                      if (widget.inProgress)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ScaleTransition(
-                            scale: Tween<double>(begin: 1.0, end: 1.2)
-                                .animate(_pulseController),
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Icon(
-                            Icons.lightbulb_outline,
-                            size: 16,
-                            color: muted,
-                          ),
+                      // 进行中是转圈，结束后换成静态图标。
+                      //
+                      // 这里原来是一颗 8px 的脉冲圆点。8px 在高 DPI 屏上就是
+                      // 正文前面的一个小点，1.0→1.2 的缩放幅度也小到看不出在
+                      // 动——读起来不是"正在进行"，是"这行前面有个 bullet"。
+                      // 圈的直径跟完成态的图标对齐（16），换状态时这一列不跳。
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: widget.inProgress
+                              ? CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    theme.colorScheme.primary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.lightbulb_outline,
+                                  size: 16,
+                                  color: muted,
+                                ),
                         ),
+                      ),
                       // 标题文本。收起时是个名词标签（「思考」），不是
                       // showThinking（「查看思考过程」）那种祈使句——它读起来
                       // 像用户在对自己下指令。

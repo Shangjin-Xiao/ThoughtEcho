@@ -799,97 +799,125 @@ class SettingsPageState extends State<SettingsPage> {
                     showDialog(
                       context: context,
                       builder: (dialogContext) => AlertDialog(
-                        title: Text(l10n.settingsAbout),
-                        content: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              GestureDetector(
-                                onTap: _handleLogoTap,
-                                child: Image.asset(
-                                  'assets/icon.png',
-                                  width: 64,
-                                  height: 64,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 64,
-                                      height: 64,
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary,
-                                        borderRadius: BorderRadius.circular(
-                                          AppShapeTokens.of(context)
-                                              .buttonRadius,
+                        // **不给 title。** 「关于 心迹 (ThoughtEcho)」在对话框那点
+                        // 宽度里必然折行，折出来的第二行是孤零零一个
+                        // 「(ThoughtEcho)」压在图标上方。应用名本来就该在图标
+                        // 底下——那是关于页的读法，也不用再重复一遍「关于」。
+                        contentPadding: const EdgeInsets.only(top: 28),
+                        content: SizedBox(
+                          width: double.maxFinite,
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                GestureDetector(
+                                  onTap: _handleLogoTap,
+                                  child: Image.asset(
+                                    'assets/icon.png',
+                                    width: 64,
+                                    height: 64,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 64,
+                                        height: 64,
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                          borderRadius: BorderRadius.circular(
+                                            AppShapeTokens.of(context)
+                                                .buttonRadius,
+                                          ),
                                         ),
-                                      ),
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.apps,
-                                          color: Colors.white,
-                                          size: 36,
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.apps,
+                                            color: Colors.white,
+                                            size: 36,
+                                          ),
                                         ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  l10n.appTitle,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  l10n.settingsAboutSlogan,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                // 五个入口过去是五颗等宽的实心主按钮，从上到下
+                                // 摞成一堵棕色的墙：全都长得像「主操作」，等于
+                                // 一个都不是，对话框也被撑得比屏幕还高。
+                                // 它们本来就是导航项，按导航项排——一行一条，
+                                // 图标 + 文字 + 去向指示。
+                                Divider(
+                                  height: 1,
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                                _buildAboutEntry(
+                                  context: context,
+                                  icon: Icons.language_outlined,
+                                  text: l10n.settingsVisitWebsite,
+                                  onTap: () => _launchUrl(_websiteUrl),
+                                  isExternal: true,
+                                ),
+                                _buildAboutEntry(
+                                  context: context,
+                                  icon: Icons.code_outlined,
+                                  text: l10n.settingsViewSource,
+                                  onTap: () => _launchUrl(_projectUrl),
+                                  isExternal: true,
+                                ),
+                                _buildAboutEntry(
+                                  context: context,
+                                  icon: Icons.help_outline,
+                                  text: l10n.userGuide,
+                                  onTap: () {
+                                    Navigator.pop(dialogContext);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const UserGuidePage(),
                                       ),
                                     );
                                   },
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(l10n.settingsAboutSlogan),
-                              const SizedBox(height: 20),
-                              _buildAboutLink(
-                                context: context,
-                                icon: Icons.language_outlined,
-                                text: l10n.settingsVisitWebsite,
-                                url: _websiteUrl,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildAboutLink(
-                                context: context,
-                                icon: Icons.code_outlined,
-                                text: l10n.settingsViewSource,
-                                url: _projectUrl,
-                              ),
-                              const SizedBox(height: 8),
-                              FilledButton.icon(
-                                onPressed: () {
-                                  Navigator.pop(dialogContext);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const UserGuidePage(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.help_outline),
-                                label: Text(l10n.userGuide),
-                                style: _primaryButtonStyle(context),
-                              ),
-                              const SizedBox(height: 8),
-                              FilledButton.icon(
-                                onPressed: () {
-                                  Navigator.pop(dialogContext);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const license.LicensePage(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.article_outlined),
-                                label: Text(l10n.settingsViewLicenses),
-                                style: _primaryButtonStyle(context),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildAboutLink(
-                                context: context,
-                                icon: Icons.privacy_tip_outlined,
-                                text: l10n.settingsPrivacyPolicy,
-                                url: _privacyUrl,
-                              ),
-                            ],
+                                _buildAboutEntry(
+                                  context: context,
+                                  icon: Icons.article_outlined,
+                                  text: l10n.settingsViewLicenses,
+                                  onTap: () {
+                                    Navigator.pop(dialogContext);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const license.LicensePage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                _buildAboutEntry(
+                                  context: context,
+                                  icon: Icons.privacy_tip_outlined,
+                                  text: l10n.settingsPrivacyPolicy,
+                                  onTap: () => _launchUrl(_privacyUrl),
+                                  isExternal: true,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         actions: [
@@ -1335,33 +1363,36 @@ class SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  // --- 新增：构建关于对话框中链接的辅助方法 ---
-  Widget _buildAboutLink({
+  /// 关于对话框里的一条入口。
+  ///
+  /// [isExternal] 为 true 表示这一条会离开应用（浏览器），尾部图标因此是
+  /// 「新窗口打开」而不是「进入下一页」——两种去向不该长一个样。
+  Widget _buildAboutEntry({
     required BuildContext context,
     required IconData icon,
     required String text,
-    required String url,
+    required VoidCallback onTap,
+    bool isExternal = false,
   }) {
-    return Center(
-      child: FilledButton.icon(
-        style: _primaryButtonStyle(context),
-        onPressed: () => _launchUrl(url),
-        icon: Icon(icon, size: 18),
-        label: Text(text),
-      ),
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+          leading: Icon(icon, color: theme.colorScheme.primary),
+          title: Text(text, style: theme.textTheme.bodyLarge),
+          trailing: Icon(
+            isExternal ? Icons.open_in_new : Icons.chevron_right,
+            size: 18,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          onTap: onTap,
+        ),
+        Divider(height: 1, color: theme.colorScheme.outlineVariant),
+      ],
     );
   }
-  // --- 辅助方法结束 ---
-
-  // 统一按钮样式方法，作为类的私有工具方法，便于在文件内复用
-  ButtonStyle _primaryButtonStyle(BuildContext context) =>
-      FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(44),
-        shape: RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
-        ),
-      );
 
   ButtonStyle _textButtonStyle(BuildContext context) =>
       TextButton.styleFrom(minimumSize: const Size.fromHeight(44));
