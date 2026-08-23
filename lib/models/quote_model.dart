@@ -497,7 +497,11 @@ class Quote {
         final result = <Map<String, dynamic>>[];
         for (final item in opsList) {
           if (item is Map) {
-            result.add(Map<String, dynamic>.from(item));
+            result.add(
+              item.map(
+                (k, v) => MapEntry(k.toString(), v),
+              ),
+            );
           }
         }
         if (result.isNotEmpty) return result;

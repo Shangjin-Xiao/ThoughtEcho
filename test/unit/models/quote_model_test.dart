@@ -244,6 +244,32 @@ void main() {
       expect(Quote.isValidColorHex('#ZZ0000'), isFalse);
     });
 
+    test('safeDeltaOps should handle malformed and non-Map delta items gracefully without throwing TypeError', () {
+      final quote = Quote(
+        id: 'test-malformed-delta',
+        content: '回退文本内容\n',
+        date: '2026-08-23T09:00:00.000',
+        deltaContent: '[123, null, "invalid string", {"insert": "正常文本\\n"}]',
+      );
+
+      final ops = quote.safeDeltaOps;
+      expect(ops, isNotEmpty);
+      expect(ops.first['insert'], equals('正常文本\n'));
+    });
+
+    test('safeDeltaOps should handle non-string keys in delta JSON maps', () {
+      final quote = Quote(
+        id: 'test-non-string-key',
+        content: '回退文本\n',
+        date: '2026-08-23T09:00:00.000',
+        deltaContent: '[{"insert": "测试\\n"}]',
+      );
+
+      final ops = quote.safeDeltaOps;
+      expect(ops, isNotEmpty);
+      expect(ops.first['insert'], equals('测试\n'));
+    });
+
     test('should handle edge cases in fromJson', () {
       // 测试空tag_ids
       final json1 = {
