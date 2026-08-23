@@ -1185,7 +1185,7 @@ class QuoteContent extends StatelessWidget {
 
     // quill 把段落的 fontSize/height 硬写成 16 / 1.15，两样都得按主题令牌纠正。
     // 字号原本也硬写 16：material 下 bodyLarge 正好是 16 所以看不出问题，
-    // 衬线风格把正文放大到 17（ThemeStyleForm.bodyFontScale）之后就露馅了——
+    // 衬线风格把正文放大到 17（ThemeStyleForm.readingFontScale）之后就露馅了——
     // 同一个列表里富文本笔记比纯文本笔记小一号，纸张横线也只跟纯文本对齐。
     // 纠正规则和全屏编辑器共用一处，见 QuillThemeTypography。
     final paragraphStyle =
