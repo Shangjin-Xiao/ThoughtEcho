@@ -88,7 +88,8 @@ void main() {
 
     final quotesToMerge = List.generate(quoteCount, (i) {
       // Generate 5 tags for each quote
-      final tags = List.generate(5, (t) => 'cat_${(i + t) % categoryCount}').join(',');
+      final tags =
+          List.generate(5, (t) => 'cat_${(i + t) % categoryCount}').join(',');
       return {
         'id': 'quote_$i',
         'content': 'Updated Content $i',
