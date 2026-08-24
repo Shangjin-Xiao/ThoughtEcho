@@ -456,16 +456,24 @@ extension _ThoughterSession on _ThoughterPageState {
       //
       // 原来是 getUserQuotes() 不带参数——而它的默认 limit 是 10，所以拿到的
       // 既不是全量也不是本周，是「最近 10 条」，却按这 10 条去算 activeDays /
-      // noteCount / totalWords 再标上「本周」。改成按日期范围查：不分页，
-      // 那段时间多少条就是多少条。周期由入口决定（[_insightPeriod] /
-      // [_insightDate]），周界与探索页共用 ReportPeriodUtils（周一到周日）。
+      // noteCount / totalWords 再标上「本周」。周期由入口决定
+      // （[_insightPeriod] / [_insightDate]）。
+      //
+      // 用 getQuotesForPeriod 而不是带 limit 的 getUserQuotes：它不分页，
+      // 且只取周期报告需要的那几列。之前那版写死 limit: 500，注释理由是
+      // 「一周不可能有这么多条」——而这条路径现在可以是月、可以是年，
+      // 一年上千条很正常，统计会被悄悄削掉一截却仍标着「本年」，正是这个
+      // 改动要消灭的那类错位。
+      //
+      // 后面再按创建时间过滤一次：这个查询为了统计「本期被点心的旧笔记」，
+      // 会把 last_modified 落在范围内的旧笔记也带回来，而这里要的是
+      // 「这段时间写了什么」。与探索页同一套（见 _filterQuotesByPeriod）。
       final range = ReportPeriodUtils.dateRange(_insightPeriod, _insightDate);
       if (range == null) return;
-      final quotes = await databaseService.getUserQuotes(
-        dateStart: range.start.toIso8601String(),
-        dateEnd: range.end.toIso8601String(),
-        // 一周不可能有这么多条，给足冗余，别让分页把统计削掉一截。
-        limit: 500,
+      final quotes = ReportPeriodUtils.filterByCreatedPeriod(
+        await databaseService.getQuotesForPeriod(range.start, range.end),
+        selectedPeriod: _insightPeriod,
+        selectedDate: _insightDate,
       );
       if (!mounted) return;
       // 这段时间一条都没有，也要有一句开场白。
