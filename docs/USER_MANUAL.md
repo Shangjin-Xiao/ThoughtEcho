@@ -51,6 +51,8 @@
 
 **访问路径**：设置 → AI 设置
 
+- 💡 **自动开启**：如果您是新用户，首次成功配置并保存任意 AI 服务后，应用会自动为您开启「每日提示」、「今日思考」与「AI 生成卡片」功能。
+
 ### 推荐：Ollama 云端（新手首选）
 
 Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**，是第一次配置 AI 的
@@ -69,21 +71,21 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 
 心迹的 AI 接入统一走 **OpenAI 兼容接口**，内置了以下服务商模板：
 
-| 服务商 | 说明 |
-| --- | --- |
-| Ollama 云端 | 免费额度充足，推荐新手 |
-| OpenAI | 官方接口，需要海外支付方式 |
-| OpenRouter | 一个 Key 调用 Claude、Gemini 等上百个模型 |
-| DeepSeek | 国内直连，价格低，中文表现好 |
-| 硅基流动 | 国内聚合平台，部分小模型免费 |
-| 智谱 GLM | 国内直连，glm-4-flash 免费 |
-| 月之暗面 Kimi | 国内直连，长上下文表现好 |
-| 阿里云百炼 | 通义千问系列的 OpenAI 兼容接口 |
-| 火山方舟 | 豆包系列，模型名填推理接入点 ID |
-| Google Gemini | Gemini 官方的 OpenAI 兼容接口，有免费额度 |
-| Ollama（本地） | 连接本机 Ollama，不联网、不需要密钥 |
-| LM Studio | 连接本机 LM Studio，不联网、不需要密钥 |
-| 自定义 | 任何 OpenAI 兼容接口，地址和模型手填 |
+| 服务商         | 说明                                      |
+| -------------- | ----------------------------------------- |
+| Ollama 云端    | 免费额度充足，推荐新手                    |
+| OpenAI         | 官方接口，需要海外支付方式                |
+| OpenRouter     | 一个 Key 调用 Claude、Gemini 等上百个模型 |
+| DeepSeek       | 国内直连，价格低，中文表现好              |
+| 硅基流动       | 国内聚合平台，部分小模型免费              |
+| 智谱 GLM       | 国内直连，glm-4-flash 免费                |
+| 月之暗面 Kimi  | 国内直连，长上下文表现好                  |
+| 阿里云百炼     | 通义千问系列的 OpenAI 兼容接口            |
+| 火山方舟       | 豆包系列，模型名填推理接入点 ID           |
+| Google Gemini  | Gemini 官方的 OpenAI 兼容接口，有免费额度 |
+| Ollama（本地） | 连接本机 Ollama，不联网、不需要密钥       |
+| LM Studio      | 连接本机 LM Studio，不联网、不需要密钥    |
+| 自定义         | 任何 OpenAI 兼容接口，地址和模型手填      |
 
 > 💡 **想用 Claude？** 选 OpenRouter，模型填 `anthropic/claude-sonnet-4.5`。
 > Anthropic 官方的 `/v1/messages` 协议与 OpenAI 格式不兼容，心迹暂未支持直连。
@@ -272,14 +274,14 @@ Agent 会在工具调用后继续处理结果，并将完整回答保留为最�
 
 #### 主要操作
 
-| 操作         | 方式               | 说明                       |
-| ------------ | ------------------ | -------------------------- |
-| **编辑**     | 菜单 → 编辑        | 打开富文本编辑器           |
-| **问 AI**    | 菜单 → 问 AI       | 与 AI 对话讨论笔记         |
-| **生成卡片** | 菜单 → 生成卡片    | AI 生成精美分享卡片        |
+| 操作         | 方式                       | 说明                                     |
+| ------------ | -------------------------- | ---------------------------------------- |
+| **编辑**     | 菜单 → 编辑                | 打开富文本编辑器                         |
+| **问 AI**    | 菜单 → 问 AI               | 与 AI 对话讨论笔记                       |
+| **生成卡片** | 菜单 → 生成卡片            | AI 生成精美分享卡片                      |
 | **导出 PDF** | 菜单 / 批量选择 → 导出 PDF | 生成标准 A4 尺寸富文本 PDF，支持打印预览 |
-| **删除**     | 菜单 → 删除 / 左滑 | 删除笔记                   |
-| **收藏**     | 点击 ❤️            | 增加喜爱度（最高显示 99+） |
+| **删除**     | 菜单 → 删除 / 左滑         | 删除笔记                                 |
+| **收藏**     | 点击 ❤️                    | 增加喜爱度（最高显示 99+）               |
 
 ### AI 卡片生成（20 种模板）
 
@@ -328,26 +330,26 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 
 **三种对话模式**：
 
-| 模式 | 说明 |
-| ---- | ---- |
+| 模式           | 说明                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------- |
 | **Agent 模式** | 默认模式。Thoughter 可主动调用工具搜索、分析笔记并提出创建/编辑建议，适合开放性探索与创作任务 |
-| **问笔记** | 绑定到特定笔记，Thoughter 基于该笔记内容回答问题，不会随意扩展 |
-| **自由对话** | 纯对话模式，不绑定笔记内容 |
+| **问笔记**     | 绑定到特定笔记，Thoughter 基于该笔记内容回答问题，不会随意扩展                                |
+| **自由对话**   | 纯对话模式，不绑定笔记内容                                                                    |
 
 **Agent 工具能力**：
 
 在 Agent 模式下，Thoughter 可以调用以下工具，工具调用过程会实时展示在对话界面：
 
-| 工具 | 说明 |
-| ---- | ---- |
-| **搜索笔记** | 按关键词、标签、日期、天气、时段等条件检索您的笔记 |
-| **获取笔记详情** | 读取特定笔记的完整内容及元数据 |
-| **获取标签列表** | 查询您已有的全部标签 |
-| **获取位置和天气** | 获取当前位置与天气信息 |
-| **联网搜索** | 通过搜索引擎检索实时信息（只读） |
-| **抓取网页** | 读取指定网址的页面内容（只读） |
-| **提议新建笔记** | 生成新笔记草稿，由您确认后保存 |
-| **提议编辑笔记** | 对已有笔记提出局部或全文修改建议，由您确认后应用 |
+| 工具               | 说明                                               |
+| ------------------ | -------------------------------------------------- |
+| **搜索笔记**       | 按关键词、标签、日期、天气、时段等条件检索您的笔记 |
+| **获取笔记详情**   | 读取特定笔记的完整内容及元数据                     |
+| **获取标签列表**   | 查询您已有的全部标签                               |
+| **获取位置和天气** | 获取当前位置与天气信息                             |
+| **联网搜索**       | 通过搜索引擎检索实时信息（只读）                   |
+| **抓取网页**       | 读取指定网址的页面内容（只读）                     |
+| **提议新建笔记**   | 生成新笔记草稿，由您确认后保存                     |
+| **提议编辑笔记**   | 对已有笔记提出局部或全文修改建议，由您确认后应用   |
 
 **笔记提案卡片**：
 
@@ -450,6 +452,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 ### WebDAV 云端同步 (Beta)
 
 心迹支持使用 WebDAV 协议进行安全可靠的云端同步：
+
 - **配置路径**：设置 → WebDAV 同步
 - **安全与流量控制**：支持强制 HTTPS 加密传输，并可限制移动网络下同步以节省流量。
 - **冲突隔离**：在多端云同步时，如果发生笔记内容冲突将被妥善隔离，避免您的数据遭到意外覆盖。
@@ -485,11 +488,11 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ### 支持平台
 
-| 平台    | 支持情况    | 说明 |
-| ------- | ----------- | ---- |
-| Android | ✅ 完整支持 | 原生应用支持（支持 APK 安装） |
+| 平台    | 支持情况    | 说明                             |
+| ------- | ----------- | -------------------------------- |
+| Android | ✅ 完整支持 | 原生应用支持（支持 APK 安装）    |
 | Windows | ✅ 完整支持 | 原生应用支持（支持微软商店安装） |
-| iOS     | ✅ 完整支持 | 原生应用支持 |
+| iOS     | ✅ 完整支持 | 原生应用支持                     |
 
 > 💡 **跨平台互通**：在局域网同步中，心迹基于标准协议运作，同 WiFi 下可与运行了 LocalSend 客户端的其他设备（包含 macOS、Linux）直接发现并互相传输笔记。
 
@@ -507,8 +510,6 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 - 图片、视频、音频等媒体文件
 
 旧版本的 JSON 格式备份也可以导入，应用会自动识别和转换。
-
-
 
 ### 恢复模式
 
@@ -566,11 +567,11 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 心迹提供了三种独特的设计风格：
 
-| 风格 | 说明 | 特点 |
-| --- | --- | --- |
-| 🎨 **Material** | 标准 Material 3 风格（默认） | 支持 Material You 动态壁纸取色或自定义主题色 |
-| 📜 **纸与墨** | 温暖典雅的手工质感 | 暖白纸张色调、衬线字体、对齐的横线纹理与微阴影 |
-| 📄 **素笺** | 冷峻极简的现代纸感 | 冷灰纸面、深青色墨、硬朗无横线极简边框 |
+| 风格            | 说明                               | 特点                                           |
+| --------------- | ---------------------------------- | ---------------------------------------------- |
+| 🎨 **Material** | 标准 Material 3 风格               | 支持 Material You 动态壁纸取色或自定义主题色   |
+| 📜 **纸与墨**   | 温暖典雅的手工质感（全新安装默认） | 暖白纸张色调、衬线字体、对齐的横线纹理与微阴影 |
+| 📄 **素笺**     | 冷峻极简的现代纸感                 | 冷灰纸面、深青色墨、硬朗无横线极简边框         |
 
 #### 墨色定制（Theme Accent）
 
@@ -828,6 +829,8 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 
 **Access Path**: Settings → AI Settings
 
+- 💡 **Auto-Enable**: For new users, successfully configuring and saving any AI service for the first time will automatically enable "Daily Prompt", "Today's Thoughts", and "AI Card Generation" features.
+
 ### Recommended: Ollama Cloud (best first choice)
 
 Ollama Cloud works right after sign-up, has a generous free tier and **requires no
@@ -848,21 +851,21 @@ Other cloud models include `gpt-oss:120b-cloud`, `gpt-oss:20b-cloud` and `minima
 All AI access goes through the **OpenAI-compatible protocol**. These provider
 templates are built in:
 
-| Provider | Notes |
-| --- | --- |
-| Ollama Cloud | Generous free tier, recommended |
-| OpenAI | Official API, needs an international payment method |
-| OpenRouter | One key for hundreds of models, incl. Claude and Gemini |
-| DeepSeek | Low cost, strong Chinese performance |
-| SiliconFlow | Aggregator; some small models are free |
-| Zhipu GLM | glm-4-flash is free |
-| Moonshot Kimi | Strong long-context performance |
-| Alibaba Bailian | OpenAI-compatible endpoint for the Qwen family |
-| Volcengine Ark | Doubao models; use the endpoint ID as model name |
-| Google Gemini | Gemini's OpenAI-compatible endpoint, has a free tier |
-| Ollama (local) | Local Ollama, offline, no key needed |
-| LM Studio | Local LM Studio, offline, no key needed |
-| Custom | Any OpenAI-compatible endpoint, filled in by hand |
+| Provider        | Notes                                                   |
+| --------------- | ------------------------------------------------------- |
+| Ollama Cloud    | Generous free tier, recommended                         |
+| OpenAI          | Official API, needs an international payment method     |
+| OpenRouter      | One key for hundreds of models, incl. Claude and Gemini |
+| DeepSeek        | Low cost, strong Chinese performance                    |
+| SiliconFlow     | Aggregator; some small models are free                  |
+| Zhipu GLM       | glm-4-flash is free                                     |
+| Moonshot Kimi   | Strong long-context performance                         |
+| Alibaba Bailian | OpenAI-compatible endpoint for the Qwen family          |
+| Volcengine Ark  | Doubao models; use the endpoint ID as model name        |
+| Google Gemini   | Gemini's OpenAI-compatible endpoint, has a free tier    |
+| Ollama (local)  | Local Ollama, offline, no key needed                    |
+| LM Studio       | Local LM Studio, offline, no key needed                 |
+| Custom          | Any OpenAI-compatible endpoint, filled in by hand       |
 
 > 💡 **Want Claude?** Pick OpenRouter and use the model
 > `anthropic/claude-sonnet-4.5`. Anthropic's official `/v1/messages` protocol is
@@ -1053,14 +1056,14 @@ All filters can be combined and reset.
 
 #### Main Operations
 
-| Action            | Method                     | Description                               |
-| ----------------- | -------------------------- | ----------------------------------------- |
-| **Edit**          | Menu → Edit                | Open rich text editor                     |
-| **Ask AI**        | Menu → Ask AI              | Chat with AI about note                   |
-| **Generate Card** | Menu → Generate Card       | AI creates beautiful share card           |
+| Action            | Method                              | Description                                                |
+| ----------------- | ----------------------------------- | ---------------------------------------------------------- |
+| **Edit**          | Menu → Edit                         | Open rich text editor                                      |
+| **Ask AI**        | Menu → Ask AI                       | Chat with AI about note                                    |
+| **Generate Card** | Menu → Generate Card                | AI creates beautiful share card                            |
 | **Export PDF**    | Menu / Batch Selection → Export PDF | Export standard A4 rich-text PDF with native print preview |
-| **Delete**        | Menu → Delete / Swipe left | Delete note                               |
-| **Favorite**      | Tap ❤️                     | Increase favorite count (max display 99+) |
+| **Delete**        | Menu → Delete / Swipe left          | Delete note                                                |
+| **Favorite**      | Tap ❤️                              | Increase favorite count (max display 99+)                  |
 
 ### AI Card Generation (20 Templates)
 
@@ -1109,26 +1112,26 @@ Thoughter is ThoughtEcho's built-in AI conversation assistant. It supports natur
 
 **Three Conversation Modes**:
 
-| Mode | Description |
-| ---- | ----------- |
+| Mode           | Description                                                                                                                                                    |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Agent Mode** | Default mode. Thoughter proactively uses tools to search, analyze notes, and propose create/edit actions. Ideal for open-ended exploration and creative tasks. |
-| **Ask Note** | Bound to a specific note. Thoughter answers questions based solely on that note's content. |
-| **Free Chat** | Pure conversation mode, not bound to any note content. |
+| **Ask Note**   | Bound to a specific note. Thoughter answers questions based solely on that note's content.                                                                     |
+| **Free Chat**  | Pure conversation mode, not bound to any note content.                                                                                                         |
 
 **Agent Tool Capabilities**:
 
 In Agent mode, Thoughter can invoke the following tools. Tool calls are shown in real time in the conversation:
 
-| Tool | Description |
-| ---- | ----------- |
-| **Explore Notes** | Search notes by keyword, tag, date, weather, time period, and more |
-| **Get Note Detail** | Read the full content and metadata of a specific note |
-| **Get Tags** | Retrieve your complete tag list |
-| **Get Location & Weather** | Fetch current location and weather information |
-| **Web Search** | Search for real-time information via a search engine (read-only) |
-| **Web Fetch** | Read the content of a specific URL (read-only) |
-| **Propose New Note** | Generate a new note draft for you to review and save |
-| **Propose Note Edit** | Suggest partial or full edits to an existing note for you to review and apply |
+| Tool                       | Description                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| **Explore Notes**          | Search notes by keyword, tag, date, weather, time period, and more            |
+| **Get Note Detail**        | Read the full content and metadata of a specific note                         |
+| **Get Tags**               | Retrieve your complete tag list                                               |
+| **Get Location & Weather** | Fetch current location and weather information                                |
+| **Web Search**             | Search for real-time information via a search engine (read-only)              |
+| **Web Fetch**              | Read the content of a specific URL (read-only)                                |
+| **Propose New Note**       | Generate a new note draft for you to review and save                          |
+| **Propose Note Edit**      | Suggest partial or full edits to an existing note for you to review and apply |
 
 **Note Proposal Cards**:
 
@@ -1231,6 +1234,7 @@ Chat with AI about specific note content.
 ### WebDAV Cloud Sync (Beta)
 
 ThoughtEcho supports secure cloud synchronization via the WebDAV protocol:
+
 - **Path**: Settings → WebDAV Sync
 - **Security & Data Control**: Enforces HTTPS encryption and allows restricting sync over cellular networks.
 - **Conflict Isolation**: Notes modified simultaneously on different devices are isolated safely to prevent data loss.
@@ -1266,11 +1270,11 @@ After sync completes, shows:
 
 ### Supported Platforms
 
-| Platform | Support         | Notes |
-| -------- | --------------- | ----- |
-| Android  | ✅ Full Support | Native app support (APK package available) |
+| Platform | Support         | Notes                                          |
+| -------- | --------------- | ---------------------------------------------- |
+| Android  | ✅ Full Support | Native app support (APK package available)     |
 | Windows  | ✅ Full Support | Native app support (Microsoft Store available) |
-| iOS      | ✅ Full Support | Native app support |
+| iOS      | ✅ Full Support | Native app support                             |
 
 > 💡 **Cross-Platform Interoperability**: For local network sync, ThoughtEcho uses a standard protocol that can discover and transfer notes with other devices on the same WiFi running LocalSend clients (including macOS and Linux).
 
@@ -1345,11 +1349,11 @@ The app supports multiple languages including Chinese, English, Japanese, Korean
 
 ThoughtEcho offers three distinctive design aesthetics:
 
-| Style | Description | Highlights |
-| --- | --- | --- |
-| 🎨 **Material** | Standard Material 3 style (Default) | Supports Material You dynamic wallpaper color or custom seed color |
-| 📜 **Paper & Ink** | Warm, handcrafted tactile feel | Warm paper tones, serif typography, aligned ruling lines & subtle shadows |
-| 📄 **Plain** | Minimalist cool paper aesthetic | Cool paper surface, deep teal ink, clean border styling without ruling lines |
+| Style              | Description                                               | Highlights                                                                   |
+| ------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 🎨 **Material**    | Standard Material 3 style                                 | Supports Material You dynamic wallpaper color or custom seed color           |
+| 📜 **Paper & Ink** | Warm, handcrafted tactile feel (Default for new installs) | Warm paper tones, serif typography, aligned ruling lines & subtle shadows    |
+| 📄 **Plain**       | Minimalist cool paper aesthetic                           | Cool paper surface, deep teal ink, clean border styling without ruling lines |
 
 #### Custom Ink Accents (Theme Accent)
 
