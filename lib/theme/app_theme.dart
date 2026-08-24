@@ -540,7 +540,7 @@ class AppTheme with ChangeNotifier {
       _loadCustomColor();
       _loadThemeMode();
       // 墨色按风格分开存，加载和旧值迁移都要用到已加载的风格，顺序不能调换。
-      _loadThemeStyle();
+      await _loadThemeStyle();
       await _loadThemeAccents();
 
       // 首次运行时，不读取存储的设置，保持默认开启
@@ -784,7 +784,7 @@ class AppTheme with ChangeNotifier {
   }
 
   // 从持久化存储加载主题风格
-  void _loadThemeStyle() {
+  Future<void> _loadThemeStyle() async {
     try {
       final styleName = _storage?.getString(_themeStyleKey);
       if (styleName != null) {
@@ -797,7 +797,7 @@ class AppTheme with ChangeNotifier {
                 !(_storage?.containsKey('app_settings') ?? false);
         if (isNewInstallation) {
           _themeStyle = ThemeStyle.paper;
-          _storage?.setString(_themeStyleKey, ThemeStyle.paper.name);
+          await _storage?.setString(_themeStyleKey, ThemeStyle.paper.name);
         } else {
           _themeStyle = ThemeStyle.defaultStyle;
         }

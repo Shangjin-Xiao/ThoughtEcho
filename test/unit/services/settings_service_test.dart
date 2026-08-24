@@ -492,5 +492,35 @@ void main() {
       expect(settingsService.todayThoughtsUseAI, isFalse);
       expect(settingsService.aiCardGenerationEnabled, isFalse);
     });
+
+    test('并发 saveMultiAISettings 和 setHasCompletedOnboarding 应保持状态一致',
+        () async {
+      // Arrange
+      await settingsService.setHasCompletedOnboarding(false);
+      await settingsService.setReportInsightsUseAI(false);
+
+      final multiSettings = settingsService.multiAISettings.copyWith(
+        providers: [
+          ...settingsService.multiAISettings.providers,
+          const AIProviderSettings(
+            id: 'test_provider_concurrent',
+            name: 'Test AI Concurrent',
+            apiUrl: 'https://api.openai.com/v1',
+            model: 'gpt-4o',
+            isEnabled: true,
+          ),
+        ],
+      );
+
+      // Act: 并发触发
+      final future1 = settingsService.saveMultiAISettings(multiSettings);
+      final future2 = settingsService.setHasCompletedOnboarding(true);
+
+      await Future.wait([future1, future2]);
+
+      // Assert: 重建后确认内存与持久化保持最终调用的正确状态
+      final rebuiltService = await SettingsService.create();
+      expect(rebuiltService.hasCompletedOnboarding(), isTrue);
+    });
   });
 }

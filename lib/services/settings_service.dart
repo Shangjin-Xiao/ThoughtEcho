@@ -1053,9 +1053,30 @@ class SettingsService extends ChangeNotifier {
 
   // 设置用户是否完成了引导流程
   Future<void> setHasCompletedOnboarding(bool completed) async {
-    _appSettings = _appSettings.copyWith(hasCompletedOnboarding: completed);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
+    while (_saveMultiAiLock != null) {
+      await _saveMultiAiLock!.future;
+    }
+    final completer = Completer<void>();
+    _saveMultiAiLock = completer;
+
+    try {
+      _appSettings = _appSettings.copyWith(hasCompletedOnboarding: completed);
+      final success = await _mmkv.setString(
+        _appSettingsKey,
+        json.encode(_appSettings.toJson()),
+      );
+      if (!success) {
+        AppLogger.e(
+          '保存引导完成状态失败：MMKV setString 返回 false（key=$_appSettingsKey）',
+          source: 'SettingsService',
+        );
+        throw StateError('保存引导完成状态失败');
+      }
+      notifyListeners();
+    } finally {
+      _saveMultiAiLock = null;
+      completer.complete();
+    }
   }
 
   // 获取AI卡片生成功能是否启用
