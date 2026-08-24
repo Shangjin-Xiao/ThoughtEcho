@@ -1148,6 +1148,10 @@ class SettingsService extends ChangeNotifier {
           ? json.encode(candidateAppSettings.toJson())
           : null;
 
+      final previousAppJson = candidateAppSettings != null
+          ? _mmkv.getString(_appSettingsKey)
+          : null;
+
       if (appJson != null) {
         final successApp = await _mmkv.setString(_appSettingsKey, appJson);
         if (!successApp) {
@@ -1158,6 +1162,7 @@ class SettingsService extends ChangeNotifier {
           throw StateError('保存应用设置失败');
         }
       }
+
       final successMulti =
           await _mmkv.setString(_multiAiSettingsKey, multiJson);
       if (!successMulti) {
@@ -1165,6 +1170,23 @@ class SettingsService extends ChangeNotifier {
           '保存多provider AI设置失败：MMKV setString 返回 false（key=$_multiAiSettingsKey）',
           source: 'SettingsService',
         );
+        // 回滚已写入的 _appSettingsKey
+        if (candidateAppSettings != null) {
+          try {
+            if (previousAppJson != null) {
+              await _mmkv.setString(_appSettingsKey, previousAppJson);
+            } else {
+              await _mmkv.remove(_appSettingsKey);
+            }
+          } catch (rollbackError, rollbackStack) {
+            AppLogger.e(
+              '回滚应用设置失败',
+              error: rollbackError,
+              stackTrace: rollbackStack,
+              source: 'SettingsService',
+            );
+          }
+        }
         throw StateError('保存多provider AI设置失败');
       }
 

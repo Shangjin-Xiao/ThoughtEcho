@@ -797,7 +797,18 @@ class AppTheme with ChangeNotifier {
                 !(_storage?.containsKey('app_settings') ?? false);
         if (isNewInstallation) {
           _themeStyle = ThemeStyle.paper;
-          await _storage?.setString(_themeStyleKey, ThemeStyle.paper.name);
+          try {
+            await _storage
+                ?.setString(_themeStyleKey, ThemeStyle.paper.name)
+                .timeout(const Duration(seconds: 2));
+          } catch (e, s) {
+            logError(
+              '写入默认主题风格 ThemeStyle.paper 失败',
+              error: e,
+              stackTrace: s,
+              source: 'AppTheme',
+            );
+          }
         } else {
           _themeStyle = ThemeStyle.defaultStyle;
         }
