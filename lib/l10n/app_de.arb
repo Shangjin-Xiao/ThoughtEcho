@@ -100,5 +100,7 @@
   "themeAccentIndigo": "Indigo",
   "themeAccentCinnabar": "Zinnober",
   "exploreSummarizeRange": "{period} zusammenfassen",
+  "generatingInsightsForRange": "Einblicke für {period} werden erstellt ...",
+  "noNotesInRange": "Keine Notizen für {period}",
   "exploreSummarizeRangePrompt": "Fasse meine Notizen aus {period} zusammen — was fällt auf?"
 }

@@ -4550,7 +4550,7 @@
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
   "settingsReleaseNotes": "What's New",
   "settingsReleaseNotesDesc": "See what this version adds",
-  "generatingInsightsForRange": "Génération d'insights pour {period}...",
+  "generatingInsightsForRange": "Génération d'aperçus pour {period}...",
   "exploreSummarizeRange": "Résumer {period}",
   "exploreSummarizeRangePrompt": "Résume mes notes de {period} — quels sont les points marquants ?",
   "noNotesInRange": "Aucune note pour {period}"

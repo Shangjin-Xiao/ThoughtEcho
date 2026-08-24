@@ -581,11 +581,12 @@ extension _ThoughterSession on _ThoughterPageState {
     }
     if (!mounted) return;
 
-    int? daysSinceLastNote;
-    if (lastNoteDate != null && lastNoteDate.isBefore(range.start)) {
-      final days = DateTime.now().difference(lastNoteDate).inDays;
-      if (days >= 1) daysSinceLastNote = days;
-    }
+    final daysSinceLastNote = emptyPeriodGapDays(
+      lastNoteDate: lastNoteDate,
+      range: range,
+      period: _insightPeriod,
+      date: _insightDate,
+    );
 
     final l10n = AppLocalizations.of(context);
     final text = _aiService.buildLocalEmptyPeriodInsight(

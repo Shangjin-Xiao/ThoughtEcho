@@ -81,7 +81,13 @@ class AIPromptManager {
     );
 
     if (rangeStart != null && rangeEnd != null) {
-      final days = rangeEnd.difference(rangeStart).inDays + 1;
+      // 按日历日算，不按经过的小时算：跨夏令时切换时本地
+      // `difference` 会少一小时，inDays 随之少一天——3 月 1 日到 3 月 31 日
+      // 会报成「共 30 天」。归一到 UTC 零点之后两端都不带时区，差值就是天数。
+      final startDate =
+          DateTime.utc(rangeStart.year, rangeStart.month, rangeStart.day);
+      final endDate = DateTime.utc(rangeEnd.year, rangeEnd.month, rangeEnd.day);
+      final days = endDate.difference(startDate).inDays + 1;
       final trimmedLabel = periodLabel?.trim() ?? '';
       final label = trimmedLabel.isEmpty ? '' : '，用户管它叫「$trimmedLabel」';
       buffer.writeln(

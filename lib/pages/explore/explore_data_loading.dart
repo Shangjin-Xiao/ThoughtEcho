@@ -502,13 +502,12 @@ extension _ExploreDataLoading on _ExplorePageState {
     }
     if (!mounted) return;
 
-    int? daysSinceLastNote;
-    if (lastNoteDate != null &&
-        range != null &&
-        lastNoteDate.isBefore(range.start)) {
-      daysSinceLastNote = now.difference(lastNoteDate).inDays;
-      if (daysSinceLastNote < 1) daysSinceLastNote = null;
-    }
+    final daysSinceLastNote = emptyPeriodGapDays(
+      lastNoteDate: lastNoteDate,
+      range: range,
+      period: _selectedPeriod,
+      date: _selectedDate,
+    );
 
     String localFallback() =>
         context.read<AIService>().buildLocalEmptyPeriodInsight(

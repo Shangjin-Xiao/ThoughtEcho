@@ -77,11 +77,13 @@ class GetNoteDetailTool extends AgentTool {
 
       final response = <String, Object?>{
         'id': q.id,
+        // 和 explore_notes 对齐：`excerpt` / `original`。必须排在 content
+        // 前面——排在后面等于让模型读完整段摘录才发现它不是用户写的，
+        // 那时它已经把这段当自白读进去了。
+        'type': q.attributionKind,
         // 笔记正文是用户数据：包裹 <note> 标签并在序列化前完成转义。
         'content': wrapNoteContent(q.content, noteId: q.id),
         'date': q.date,
-        // 和 explore_notes 对齐：`excerpt` / `original`，读正文之前先看它。
-        'type': q.attributionKind,
         'content_length': q.content.length,
         'document_kind': ProposeNoteEditTool.kindForQuote(q).name,
         'document_revision': ProposeNoteEditTool.revisionForQuote(q),

@@ -29,6 +29,26 @@ void main() {
       expect(text, contains('不要替用户补叙'));
     });
 
+    // 闭区间天数按日历日算。跨夏令时切换时本地 difference 会少一小时，
+    // inDays 随之少一天——3 月 1 日到 3 月 31 日会报成「共 30 天」。
+    test('counts calendar days across a daylight-saving transition', () {
+      final text = AIPromptManager.buildAnalysisTimeContext(
+        now: DateTime(2026, 4, 1, 9),
+        rangeStart: DateTime(2026, 3, 1),
+        rangeEnd: DateTime(2026, 3, 31),
+      );
+      expect(text, contains('共 31 天'));
+    });
+
+    test('a single-day range counts as one day', () {
+      final text = AIPromptManager.buildAnalysisTimeContext(
+        now: DateTime(2026, 8, 24, 9),
+        rangeStart: DateTime(2026, 8, 24),
+        rangeEnd: DateTime(2026, 8, 24),
+      );
+      expect(text, contains('共 1 天'));
+    });
+
     test('omits the range section when no range is given', () {
       final text = AIPromptManager.buildAnalysisTimeContext(
         now: DateTime(2026, 8, 24, 9, 5),

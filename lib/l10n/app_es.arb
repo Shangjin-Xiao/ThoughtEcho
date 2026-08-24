@@ -100,5 +100,7 @@
   "themeAccentIndigo": "Índigo",
   "themeAccentCinnabar": "Cinabrio",
   "exploreSummarizeRange": "Resumir {period}",
+  "generatingInsightsForRange": "Generando ideas para {period}...",
+  "noNotesInRange": "Sin notas en {period}",
   "exploreSummarizeRangePrompt": "Resume mis notas de {period}: ¿qué destaca?"
 }

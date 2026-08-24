@@ -62,3 +62,38 @@ class ReportPeriodLabels {
     }
   }
 }
+
+/// 空周期文案里「上一次落笔是 N 天前」的那个 N，算不出来就返回 null。
+///
+/// 这句话里的"天前"是相对**现在**说的，所以它只在「现在这个周期」和「刚过去
+/// 的那个周期」上成立。用户翻到一年前的某个空周期时，这个数字讲的是今天，
+/// 而他看的是一年前那一页——两边对不上，与其给一个读者对不上号的数字，不如
+/// 不提（模板里本来就有不带数字的那一版）。
+///
+/// [lastNoteDate] 是整库最近一条笔记的时间。它落在 [range] 之后时同样不提：
+/// 那说明用户在往回翻，"上一次"根本不在这个周期之前。
+int? emptyPeriodGapDays({
+  required DateTime? lastNoteDate,
+  required ({DateTime start, DateTime end})? range,
+  required String period,
+  required DateTime date,
+  DateTime? now,
+}) {
+  if (lastNoteDate == null || range == null) return null;
+  if (!lastNoteDate.isBefore(range.start)) return null;
+
+  final offset = ReportPeriodUtils.offsetFromNow(period, date, now: now);
+  if (offset == ReportPeriodOffset.other) return null;
+
+  // 和 buildAnalysisTimeContext 一样按日历日算：跨夏令时时本地 difference
+  // 会少一小时，inDays 随之少一天。
+  final today = now ?? DateTime.now();
+  final from = DateTime.utc(today.year, today.month, today.day);
+  final to = DateTime.utc(
+    lastNoteDate.year,
+    lastNoteDate.month,
+    lastNoteDate.day,
+  );
+  final days = from.difference(to).inDays;
+  return days >= 1 ? days : null;
+}

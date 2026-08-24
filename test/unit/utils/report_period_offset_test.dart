@@ -18,17 +18,44 @@ void main() {
       );
     });
 
-    test('previous week is previous, week before that is other', () {
+    test('previous week is previous', () {
       final now = DateTime(2026, 8, 24); // 周一
       expect(
         ReportPeriodUtils.offsetFromNow('week', DateTime(2026, 8, 20),
             now: now),
         ReportPeriodOffset.previous,
       );
+    });
+
+    test('the week before last is other', () {
+      final now = DateTime(2026, 8, 24); // 周一
       expect(
         ReportPeriodUtils.offsetFromNow('week', DateTime(2026, 8, 13),
             now: now),
         ReportPeriodOffset.other,
+      );
+    });
+
+    // offsetFromNow 专门绕开了 `subtract(7 天)`：夏令时切换的那一周里，减 7 天
+    // 会落到前一天 23:00，和 dateRange 算出的 00:00 比不相等，"上周"就会被误判
+    // 成"更早"。测试机的时区未必有夏令时，所以两个方向都钉一遍——在有夏令时的
+    // 时区上它才是真正的回归测试，在没有的地方它也不会假过。
+    test('previous week survives the spring-forward week', () {
+      // 美国 2026-03-08 入夏令时，那一周的周一是 3 月 2 日。
+      final now = DateTime(2026, 3, 9); // 切换之后的周一
+      expect(
+        ReportPeriodUtils.offsetFromNow('week', DateTime(2026, 3, 4), now: now),
+        ReportPeriodOffset.previous,
+      );
+    });
+
+    test('previous week survives the fall-back week', () {
+      // 美国 2026-11-01 出夏令时，那一周的周一是 10 月 26 日。
+      final now = DateTime(2026, 11, 2); // 切换之后的周一
+      expect(
+        ReportPeriodUtils.offsetFromNow('week', DateTime(2026, 10, 28),
+            now: now),
+        ReportPeriodOffset.previous,
       );
     });
 
