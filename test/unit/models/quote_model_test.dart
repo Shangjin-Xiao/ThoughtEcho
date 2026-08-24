@@ -245,6 +245,21 @@ void main() {
     });
 
     test(
+        'safeDeltaOps should fallback to content when delta contains no valid Map items',
+        () {
+      final quote = Quote(
+        id: 'test-all-invalid-delta',
+        content: '回退文本内容\n',
+        date: '2026-08-23T09:00:00.000',
+        deltaContent: '[123, null, "invalid string"]',
+      );
+
+      final ops = quote.safeDeltaOps;
+      expect(ops, isNotEmpty);
+      expect(ops.first['insert'], equals('回退文本内容\n'));
+    });
+
+    test(
         'safeDeltaOps should handle malformed and non-Map delta items gracefully without throwing TypeError',
         () {
       final quote = Quote(
@@ -259,9 +274,10 @@ void main() {
       expect(ops.first['insert'], equals('正常文本\n'));
     });
 
-    test('safeDeltaOps should handle non-string keys in delta JSON maps', () {
+    test('safeDeltaOps should parse standard JSON delta operations correctly',
+        () {
       final quote = Quote(
-        id: 'test-non-string-key',
+        id: 'test-standard-delta',
         content: '回退文本\n',
         date: '2026-08-23T09:00:00.000',
         deltaContent: '[{"insert": "测试\\n"}]',
