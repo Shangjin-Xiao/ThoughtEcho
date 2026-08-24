@@ -468,6 +468,24 @@ class Quote {
   bool get hasTags => tagIds.isNotEmpty;
   bool get hasKeywords => keywords != null && keywords!.isNotEmpty;
 
+  /// 这条笔记带没带归属标注（作者 / 出处 / 旧数据里未拆分的来源串）。
+  bool get hasAttribution =>
+      (sourceAuthor?.trim().isNotEmpty ?? false) ||
+      (sourceWork?.trim().isNotEmpty ?? false) ||
+      (_source?.trim().isNotEmpty ?? false);
+
+  /// 喂给模型时用的归属类型：`excerpt`（摘录）/ `original`（用户原创）。
+  ///
+  /// 模型反复把摘录当成用户的自白——「我看到了这段文字，却在分析时把它当成了
+  /// 你的自白」是它自己的原话。根因是它只拿到 author / source 两个字段，
+  /// 得自己推断这条是谁写的，而推断在长上下文里第一个失效。这里替它把结论
+  /// 算好：有归属标注就是摘录。
+  ///
+  /// 判断依据只有标注，所以不是绝对的——用户也可能给自己的原创署名。那种
+  /// 情况由提示词里的例外条款兜底（署的是用户自己的称呼时按原创对待），
+  /// 而不是在这里猜。
+  String get attributionKind => hasAttribution ? 'excerpt' : 'original';
+
   /// 获取情感分析的中文标签
   String? get sentimentLabel =>
       sentiment != null ? sentimentKeyToLabel[sentiment] : null;

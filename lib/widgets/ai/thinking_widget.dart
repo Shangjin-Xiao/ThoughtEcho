@@ -133,21 +133,28 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                       // 这里原来是一颗 8px 的脉冲圆点。8px 在高 DPI 屏上就是
                       // 正文前面的一个小点，1.0→1.2 的缩放幅度也小到看不出在
                       // 动——读起来不是"正在进行"，是"这行前面有个 bullet"。
-                      // 圈的直径跟完成态的图标对齐（16），换状态时这一列不跳。
+                      // 圈的重量跟完成态的 16 号图标对齐（尺寸由
+                      // AppInlineLoadingIndicator 的默认值定），换状态时这一列不跳。
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: SizedBox(
                           width: 16,
                           height: 16,
-                          child: widget.inProgress
-                              ? AppInlineLoadingIndicator(
-                                  color: theme.colorScheme.primary,
-                                )
-                              : Icon(
-                                  Icons.lightbulb_outline,
-                                  size: 16,
-                                  color: muted,
-                                ),
+                          // Center 是必须的：外面这只 SizedBox 给的是紧约束，
+                          // 直接塞进去的话转圈会被撑到 16，
+                          // AppInlineLoadingIndicator 那个"比图标小一号才等重"
+                          // 的默认尺寸就被作废了。
+                          child: Center(
+                            child: widget.inProgress
+                                ? AppInlineLoadingIndicator(
+                                    color: theme.colorScheme.primary,
+                                  )
+                                : Icon(
+                                    Icons.lightbulb_outline,
+                                    size: 16,
+                                    color: muted,
+                                  ),
+                          ),
                         ),
                       ),
                       // 标题文本。收起时是个名词标签（「思考」），不是
@@ -206,7 +213,10 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                           : SingleChildScrollView(
                               child: MarkdownBody(
                                 data: widget.thinkingText,
-                                selectable: true,
+                                // 推理还在流的时候不开可选：selectable 会给每
+                                // 个块套 SelectableText，而这段文字每来一批
+                                // token 就整篇重建一次，越想越贵。想完就恢复。
+                                selectable: !widget.inProgress,
                                 onTapLink: (text, href, title) async {
                                   if (href == null || href.isEmpty) return;
                                   try {

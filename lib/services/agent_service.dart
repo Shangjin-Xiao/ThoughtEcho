@@ -9,6 +9,7 @@ import '../models/chat_message.dart' as app_chat;
 import '../models/note_proposal_artifact.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
+import '../utils/report_period_utils.dart';
 import '../utils/untrusted_text.dart';
 import 'agent_memory_service.dart';
 import 'agent_tool.dart';
@@ -1153,6 +1154,7 @@ class AgentService extends ChangeNotifier {
 
     final now = DateTime.now();
     final nowDescription = describeNow(now);
+    final periodBounds = describePeriodBounds(now);
     final historyGap =
         lastHistoryAt == null ? null : describeHistoryGap(lastHistoryAt, now);
     final memoryGuidance = memoryEnabled ? _memorySection : '';
@@ -1162,6 +1164,8 @@ class AgentService extends ChangeNotifier {
 
 ## 当前运行环境
 - 现在是 $nowDescription。涉及"今天""最近""上周""去年"等相对时间时，以此为基准换算成具体日期再调用工具，不要向用户反问今天几号。
+- 周期边界：$periodBounds。用户说"本周""这个月""今年"时照抄这里的日期填 `date_start` / `date_end`，别自己数周一是哪天，也别用"最近 N 条"代替日期筛选——它们不是一回事。
+- 一个周期里查不到笔记，结论就是"这段时间没写"。不要退而拿相邻周期的笔记来充数，更不要把上周的笔记说成本周的；直接说这段时间没有记录，再问他要不要看别的时间。
 - 你运行在用户自己的笔记应用里，能看到的只有工具返回的内容。${historyGap == null ? '' : '\n- $historyGap'}
 
 ## 决策顺序
@@ -1189,9 +1193,11 @@ class AgentService extends ChangeNotifier {
 - 拿不准就不加。宁缺勿滥，但"用户没明说"本身不是不加的理由——提案卡片上这些字段用户都能改。
 
 ## 区分"他写的"和"他摘的"
-笔记的 author/source 是归属标注，不等于"摘录"标记：填的是他人名字或作品名，这条是摘录；填的是用户自己的名字，是他给原创署了名；都没填时按正文语境判断。用户的称呼见 <user_profile> 或对话本身，拿它和 author 比对后再下结论。
+检索结果里每条笔记都带 `type`：`excerpt` 是他摘抄的别人的话，`original` 是他自己写的。这个字段是按有没有归属标注算出来的，读正文之前先看它——等读完再回头改口就晚了，那时你已经把一段摘录当成他的自白读进去了。
 
-- 分析"用户自己怎么想、写过什么"时以原创笔记为依据。摘录只能作为"这段话击中过他"的共鸣证据，转述时要说明它是摘录，不能当成用户的自述或自白。
+- `type` 只按标注判断，有一个例外要你自己认：`author` 填的是用户自己的称呼时，那是他给原创署了名，按 `original` 对待。用户的称呼见 <user_profile> 或对话本身。
+- 转述摘录必须点明它是摘录（"你抄下的那句…""你收藏的那段…"），绝不能写成"你说过…""你写道…""你提到自己…"。一条摘录旁边如果有他自己写的按语，那部分才是他的声音。
+- 分析"用户自己怎么想、写过什么"时以原创笔记为依据。摘录只能作为"这段话击中过他"的共鸣证据，不能当成用户的自述或自白。
 - 下"你从没写过 X"这类全称结论前，先核对检索结果里的 author、source、tags——正文关键词没命中不等于没写过，线索也可能在元数据里。拿不准就说拿不准。
 - `explore_notes` 的 query 是子串匹配，不认同义词也不认主题。换过一两个词还是零命中时，别再堆同义词，改成去掉 query、按日期范围或标签浏览一遍自己判断——用户写的说法和你问的词往往对不上。
 
@@ -1249,7 +1255,6 @@ $memoryGuidance## 应用特性（避免重复劳动）
   /// 输出的 key 可直接用作 `explore_notes` 的 `day_periods` 取值。
   @visibleForTesting
   static String describeNow(DateTime now) {
-    const weekdayLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
     final hour = now.hour;
     final (periodKey, periodLabel) = switch (hour) {
       >= 5 && < 8 => ('dawn', '晨曦'),
@@ -1259,11 +1264,59 @@ $memoryGuidance## 应用特性（避免重复劳动）
       >= 20 && < 23 => ('evening', '夜晚'),
       _ => ('midnight', '深夜'),
     };
-    final date = '${now.year}-${_twoDigits(now.month)}-${_twoDigits(now.day)}';
     final time = '${_twoDigits(now.hour)}:${_twoDigits(now.minute)}';
-    return '$date（${weekdayLabels[now.weekday - 1]}）$time，'
+    return '${_ymd(now)}（${_weekdayLabels[now.weekday - 1]}）$time，'
         '当前时段 $periodKey（$periodLabel），设备本地时间';
   }
+
+  /// 「本周 / 上周 / 本月 / 上月 / 今年 / 去年」各自是哪一段日期。
+  ///
+  /// 只给一个日期还不够。模型知道今天是几号，却仍然要自己算周一是哪天——
+  /// 而它算错的代价很具体：周一点「总结本周」、本周还没写过东西时，它不查
+  /// 日期范围，直接把手上最近的那几条（上周的）当成本周的说。边界写死在
+  /// 提示里，它就只需要把这段照抄进 `date_start` / `date_end`。
+  ///
+  /// 上一档也一起给：探索页可以翻到上周，快捷追问带进来的就是「总结上周」，
+  /// 留给模型自己减 7 天是白留一步会算错的。
+  ///
+  /// 周界与探索页共用 [ReportPeriodUtils]（周一到周日），两处口径别各说各话。
+  @visibleForTesting
+  static String describePeriodBounds(DateTime now) {
+    String render(String period, DateTime at) {
+      final range = ReportPeriodUtils.dateRange(period, at);
+      if (range == null) return '';
+      return '${_ymd(range.start)} ~ ${_ymd(range.end)}';
+    }
+
+    // 上一档的锚点同样交给 dateRange 定边界，不自己减天数：夏令时下
+    // `subtract(7 天)` 会落到前一天 23:00。
+    final thisWeek = ReportPeriodUtils.dateRange('week', now);
+    final lastWeekAnchor = thisWeek == null
+        ? now
+        : thisWeek.start.subtract(const Duration(days: 3));
+    final lastMonthAnchor = DateTime(now.year, now.month, 0);
+    final lastYearAnchor = DateTime(now.year - 1, 6, 15);
+
+    return '本周（周一起算）${render('week', now)}｜'
+        '上周 ${render('week', lastWeekAnchor)}｜'
+        '本月 ${render('month', now)}｜'
+        '上月 ${render('month', lastMonthAnchor)}｜'
+        '今年 ${render('year', now)}｜'
+        '去年 ${render('year', lastYearAnchor)}';
+  }
+
+  static String _ymd(DateTime date) =>
+      '${date.year}-${_twoDigits(date.month)}-${_twoDigits(date.day)}';
+
+  static const List<String> _weekdayLabels = [
+    '周一',
+    '周二',
+    '周三',
+    '周四',
+    '周五',
+    '周六',
+    '周日',
+  ];
 
   /// 旧会话被重新打开时，说明"上面那些话不是刚刚说的"。
   ///

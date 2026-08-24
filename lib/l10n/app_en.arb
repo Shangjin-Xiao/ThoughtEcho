@@ -1733,6 +1733,9 @@
   "thisWeek": "This Week",
   "thisMonth": "This Month",
   "thisYear": "This Year",
+  "lastWeek": "Last Week",
+  "lastMonth": "Last Month",
+  "lastYear": "Last Year",
   "noteCount": "Note Count",
   "notesUnitPlain": "notes",
   "totalWordCount": "Total Words",
@@ -1745,25 +1748,9 @@
   "noDataYet": "N/A",
   "commonWeather": "Common Weather",
   "commonTag": "Common Tag",
-  "generatingInsightsForPeriod": "Generating insights for this {period}...",
-  "@generatingInsightsForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "noFavoritesInPeriod": "No favorites in this period. Go give some love to your notes!",
   "mostFavoritedInPeriod": "Most Favorited This Period",
   "recentNotes": "Recent Notes",
-  "noNotesInPeriodForPeriod": "No notes in this {period}",
-  "@noNotesInPeriodForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "startRecordingThoughts": "Start recording your thoughts",
   "totalCards": "{count} cards in total",
   "@totalCards": {
@@ -4454,8 +4441,6 @@
   "noteInsertAnimationNone": "No animation",
   "exploreAskAboutInsight": "Ask about this",
   "exploreAskAboutInsightPrompt": "Could you expand on that?",
-  "exploreSummarizePeriod": "Summarize this {period}",
-  "exploreSummarizePeriodPrompt": "Summarize my notes from this {period} — what stands out?",
   "exploreFreeChat": "Just chat",
   "exploreRecentChats": "Recent chats",
   "exploreViewAllChats": "All",
@@ -4571,5 +4556,9 @@
   "releaseThemeSwitchDesc": "Material stays the default. Try a style right here or change it in Settings.",
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when errors occur. No note content is included. Manage in Settings › Feedback & Contact.",
   "settingsReleaseNotes": "What's New",
-  "settingsReleaseNotesDesc": "See what this version adds"
+  "settingsReleaseNotesDesc": "See what this version adds",
+  "generatingInsightsForRange": "Generating insights for {period}...",
+  "exploreSummarizeRange": "Summarize {period}",
+  "exploreSummarizeRangePrompt": "Summarize my notes from {period} — what stands out?",
+  "noNotesInRange": "No notes in {period}"
 }

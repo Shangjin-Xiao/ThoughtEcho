@@ -323,7 +323,7 @@ extension _ExploreOverview on _ExplorePageState {
                   // 等待首个响应时显示加载提示
                   if (isWaitingFirstResponse) ...[
                     Text(
-                      l10n.generatingInsightsForPeriod(_getPeriodName(l10n)),
+                      l10n.generatingInsightsForRange(_getPeriodLabel(l10n)),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,

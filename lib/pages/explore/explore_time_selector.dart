@@ -56,7 +56,9 @@ extension _ExploreTimeSelector on _ExplorePageState {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _getPeriodName(l10n),
+                  // 说全了：翻到上周就写「上周」，翻到更早就写日期范围。
+                  // 只写「周」时，选没选过具体日期从这枚 chip 上看不出来。
+                  _getPeriodLabel(l10n),
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: theme.colorScheme.onSecondaryContainer,
                   ),
@@ -110,9 +112,18 @@ extension _ExploreTimeSelector on _ExplorePageState {
           ? Icon(Icons.check, size: 18, color: theme.colorScheme.primary)
           : null,
       onPressed: () {
-        if (value == _selectedPeriod) return;
+        // 菜单里写的就是「本周 / 本月 / 本年」，那它就该真的回到"本"。
+        // 原来只换 period 不动 _selectedDate：用户先挑了上周某天，再点
+        // 「本周」，选中的仍是上周——菜单说一套、页面做另一套。回到今天
+        // 之后，"翻到过去"只由下面那条「选择具体日期」负责。
+        final now = DateTime.now();
+        final alreadyCurrent = value == _selectedPeriod &&
+            ReportPeriodUtils.offsetFromNow(value, _selectedDate, now: now) ==
+                ReportPeriodOffset.current;
+        if (alreadyCurrent) return;
         _updateState(() {
           _selectedPeriod = value;
+          _selectedDate = now;
         });
         _loadPeriodData();
       },

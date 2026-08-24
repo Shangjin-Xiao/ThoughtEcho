@@ -64,14 +64,21 @@ class AppLoadingView extends StatelessWidget {
 class AppInlineLoadingIndicator extends StatelessWidget {
   const AppInlineLoadingIndicator({
     super.key,
-    this.size = 16,
-    this.strokeWidth = 2,
+    this.size = 14,
+    this.strokeWidth = 1.8,
     this.color,
   });
 
-  /// 圈的直径。默认和行内图标（16）同径。
+  /// 圈的直径。默认 14，配的是 16 的行内图标。
+  ///
+  /// 不是 16——那是"外框同宽"，不是"看着一样大"。Material 图标的字形自带
+  /// 内边距，`Icons.check` 画到 16 的盒子里，实际那一笔只占 12 出头；同一个
+  /// 盒子里画一个满 16 的圆环，换状态时这一列就会胖一圈。14 的圆环和 16 的
+  /// 勾是同一个视觉重量，转圈变成勾时那一行不跳。
   final double size;
 
+  /// 线宽。默认 1.8，取的是 16 号图标字形的笔画粗细——2 在 14 的圆环上
+  /// 已经比勾重了。
   final double strokeWidth;
 
   /// 默认 `onSurfaceVariant`——状态文字用的就是这支墨，圈和字同色才是一行东西。
@@ -79,14 +86,29 @@ class AppInlineLoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolved = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
     return SizedBox(
       width: size,
       height: size,
       child: CircularProgressIndicator(
         strokeWidth: strokeWidth,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          color ?? Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
+        valueColor: AlwaysStoppedAnimation<Color>(resolved),
+        // 下面四个都是在退掉 M3「表现力」版转圈的默认造型（主题里
+        // year2023: false）。那套默认值是给 40 点的独立转圈设计的，缩到
+        // 16 点、挤在一行状态文字前面时全都变成噪声：
+        //
+        // - backgroundColor：默认会画一圈 primary 淡色轨道。这颗圈的前景是
+        //   onSurfaceVariant（跟着状态文字走），轨道却是主题色——一行里两支
+        //   墨，读起来像个彩色小甜甜圈，而不是"正在进行"。
+        // - trackGap：轨道和圆弧之间还留一道缺口，16 点上那道缺口和线宽同级。
+        // - padding：M3 默认在转圈外面再垫 4 点。塞进 16 的盒子里只剩 8 点的
+        //   圆弧——旁边完成态的 Icons.check 是 16 的字形，两者一换就跳一下，
+        //   这正是"转圈和 √ 不匹配"的来源。
+        // - strokeCap：圆头，和图标字形的收笔是一路的。
+        backgroundColor: Colors.transparent,
+        trackGap: 0,
+        padding: EdgeInsets.zero,
+        strokeCap: StrokeCap.round,
       ),
     );
   }

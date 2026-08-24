@@ -72,12 +72,12 @@ extension _ExploreThoughterEntry on _ExplorePageState {
         // 前后对不上。手上有 AI 洞察就一律用它开场。
         _buildQuickAskChip(
           icon: Icons.summarize_outlined,
-          label: l10n.exploreSummarizePeriod(_getPeriodName(l10n)),
+          label: l10n.exploreSummarizeRange(_getPeriodLabel(l10n)),
           emphasized: !hasInsight,
           onTap: () => _openThoughter(
             openingMessage: hasInsight ? insight : null,
             initialQuestion:
-                l10n.exploreSummarizePeriodPrompt(_getPeriodName(l10n)),
+                l10n.exploreSummarizeRangePrompt(_getPeriodLabel(l10n)),
           ),
         ),
         _buildQuickAskChip(
@@ -267,6 +267,11 @@ extension _ExploreThoughterEntry on _ExplorePageState {
           session: session,
           initialQuestion: initialQuestion,
           openingMessage: session == null ? openingMessage : null,
+          // 用户在这一页翻到哪个周期，助手页的洞察就总结哪个周期。不传的话
+          // 助手页一律按「本周 + 今天」跑，chip 上写着「总结上周」、进去
+          // 读到的却是本周。
+          insightPeriod: _selectedPeriod,
+          insightDate: _selectedDate,
         ),
       ),
     );

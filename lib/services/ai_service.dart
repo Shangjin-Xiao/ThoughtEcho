@@ -463,6 +463,8 @@ class AIService extends ChangeNotifier {
     String? notesPreview,
     String? fullNotesContent, // 新增：完整笔记内容用于深度分析
     String? previousInsights, // 新增：历史洞察上下文
+    DateTime? rangeStart, // 这批笔记的时间范围（闭区间），用于给模型定位"现在"
+    DateTime? rangeEnd,
   }) async* {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
@@ -486,10 +488,68 @@ class AIService extends ChangeNotifier {
       languageCode: languageCode,
     );
 
+    // 时间坐标顶在最前面。periodLabel（"本周"）对模型只是个词，它既不知道
+    // 今天几号也不知道今天星期几，于是周一点「本周」时会拿上周的笔记当本周说。
+    final timeContext = AIPromptManager.buildAnalysisTimeContext(
+      now: DateTime.now(),
+      rangeStart: rangeStart,
+      rangeEnd: rangeEnd,
+      periodLabel: periodLabel,
+    );
+
     yield* _streamViaOpenAI(
       systemPrompt: prompt,
-      userMessage: user,
+      userMessage: '$timeContext\n\n$user',
       profileBlock: profileBlock,
+    );
+  }
+
+  /// 流式生成「这段时间一条都没写」时的那一句话。
+  ///
+  /// 空周期原来什么都不生成，界面上留一句灰色的「暂无洞察」。可最需要被
+  /// 说一句的时刻恰恰是这一刻：翻开这一周，什么都没有。这条路径不喂笔记
+  /// （没有可喂的），只喂时间坐标和"距上次多久"，剩下的靠提示词把"不许
+  /// 编造"钉死。
+  Stream<String> streamEmptyPeriodInsight({
+    required String periodLabel,
+    required DateTime now,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+    int? daysSinceLastNote,
+    bool everWroteAnything = true,
+  }) async* {
+    final languageCode = _settingsService.localeCode;
+    final profileBlock = await _userProfileContext();
+
+    yield* _streamViaOpenAI(
+      systemPrompt: _promptManager.getEmptyPeriodInsightSystemPrompt(
+        languageCode: languageCode,
+      ),
+      userMessage: _promptManager.buildEmptyPeriodInsightUserMessage(
+        periodLabel: periodLabel,
+        now: now,
+        rangeStart: rangeStart,
+        rangeEnd: rangeEnd,
+        daysSinceLastNote: daysSinceLastNote,
+        everWroteAnything: everWroteAnything,
+      ),
+      profileBlock: profileBlock,
+      // 一句话而已，别让模型有空间写成一段。
+      maxTokens: 200,
+    );
+  }
+
+  /// 空周期洞察的本地兜底（没开 AI、或 AI 失败时）。
+  String buildLocalEmptyPeriodInsight({
+    required String periodLabel,
+    int? daysSinceLastNote,
+    bool everWroteAnything = true,
+  }) {
+    return _promptManager.formatLocalEmptyPeriodInsight(
+      periodLabel: periodLabel,
+      daysSinceLastNote: daysSinceLastNote,
+      everWroteAnything: everWroteAnything,
+      languageCode: _settingsService.localeCode,
     );
   }
 
@@ -642,11 +702,23 @@ class AIService extends ChangeNotifier {
 
   // 流式生成洞察
   /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
+  ///
+  /// [rangeStart] / [rangeEnd] / [periodLabel] 是这批笔记的时间范围。调用方
+  /// 本来就是按范围查出来的 [quotes]，把范围一起说清楚，模型才不用从正文
+  /// 反推"这是哪一周"（它推不出来，见 [AIPromptManager.buildAnalysisTimeContext]）。
+  ///
+  /// [onThinking] 不传的话，推理模型那段思考会被整个丢掉——用户盯着"正在
+  /// 生成…"等上几十秒，正文才突然出现一大段。传进来就能边想边显示。
   Stream<String> streamGenerateInsights(
     List<Quote> quotes, {
     String analysisType = 'comprehensive',
     String analysisStyle = 'professional',
     String? customPrompt,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+    String? periodLabel,
+    bool? enableThinking,
+    void Function(String thinkingContent)? onThinking,
   }) {
     // 将笔记数据转换为JSON格式
     final jsonData = _requestHelper.convertQuotesToJson(
@@ -670,12 +742,25 @@ class AIService extends ChangeNotifier {
       );
     }
 
-    final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
+    // 时间坐标和字段约定走用户消息，不走系统提示：customPrompt 可以整个替换
+    // 掉系统提示，而"今天几号""哪条是摘录"这两件事在任何提示词下都得成立。
+    final userMessage = [
+      AIPromptManager.buildAnalysisTimeContext(
+        now: DateTime.now(),
+        rangeStart: rangeStart,
+        rangeEnd: rangeEnd,
+        periodLabel: periodLabel,
+      ),
+      AIPromptManager.analysisDataContract,
+      '请分析以下结构化的笔记数据：\n\n$quotesText',
+    ].join('\n\n');
 
     return _streamViaOpenAI(
       systemPrompt: systemPrompt,
       userMessage: userMessage,
       maxTokens: 2500,
+      enableThinking: enableThinking,
+      onThinking: onThinking,
     );
   }
 

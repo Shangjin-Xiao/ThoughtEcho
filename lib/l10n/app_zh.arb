@@ -1733,6 +1733,9 @@
   "thisWeek": "本周",
   "thisMonth": "本月",
   "thisYear": "本年",
+  "lastWeek": "上周",
+  "lastMonth": "上月",
+  "lastYear": "去年",
   "noteCount": "笔记数量",
   "notesUnitPlain": "条",
   "totalWordCount": "总字数",
@@ -1745,25 +1748,9 @@
   "noDataYet": "暂无",
   "commonWeather": "常见天气",
   "commonTag": "常用标签",
-  "generatingInsightsForPeriod": "正在生成本{period}洞察…",
-  "@generatingInsightsForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "noFavoritesInPeriod": "本周期暂无喜爱记录，去给喜欢的笔记点个心吧！",
   "mostFavoritedInPeriod": "本周期珍藏数最多",
   "recentNotes": "最近笔记",
-  "noNotesInPeriodForPeriod": "本{period}暂无笔记",
-  "@noNotesInPeriodForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "startRecordingThoughts": "开始记录您的思考吧",
   "totalCards": "共 {count} 张卡片",
   "@totalCards": {
@@ -4454,22 +4441,6 @@
   "noteInsertAnimationNone": "无动画",
   "exploreAskAboutInsight": "追问这条",
   "exploreAskAboutInsightPrompt": "能就这段再展开讲讲吗？",
-  "exploreSummarizePeriod": "总结本{period}",
-  "@exploreSummarizePeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
-  "exploreSummarizePeriodPrompt": "帮我总结一下本{period}的记录，有哪些值得注意的地方？",
-  "@exploreSummarizePeriodPrompt": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "exploreFreeChat": "随便聊聊",
   "exploreRecentChats": "最近对话",
   "exploreViewAllChats": "全部",
@@ -4585,5 +4556,37 @@
   "releaseThemeSwitchDesc": "默认仍是 Material，可在此试用或在设置中随时调整。",
   "releaseDiagnosticsNotice": "自 3.7.0 起，心迹支持匿名错误诊断上报以定位问题，不含笔记内容。可在「设置 › 反馈与联系」中关闭。",
   "settingsReleaseNotes": "更新内容",
-  "settingsReleaseNotesDesc": "查看本版本新增的功能"
+  "settingsReleaseNotesDesc": "查看本版本新增的功能",
+  "generatingInsightsForRange": "正在生成{period}洞察…",
+  "@generatingInsightsForRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSummarizeRange": "总结{period}",
+  "@exploreSummarizeRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSummarizeRangePrompt": "帮我总结一下{period}的记录，有哪些值得注意的地方？",
+  "@exploreSummarizeRangePrompt": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noNotesInRange": "{period}暂无笔记",
+  "@noNotesInRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  }
 }

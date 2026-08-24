@@ -24,6 +24,87 @@ class AIPromptManager {
     return '【Language Requirement】Please respond in the language corresponding to locale code: $languageCode.';
   }
 
+  /// 笔记数据的字段约定，随笔记 JSON 一起发给模型。
+  ///
+  /// 模型反复把摘录读成用户的自白——「我看到了这段文字，却在分析时把它当成了
+  /// 你的自白，而忽略了它其实是一段摘录」是它自己的复盘原话。它拿到的只有
+  /// author / source 两个可能为空的字段，"这条是谁写的"要靠它自己推断，而
+  /// 推断是长上下文里第一个失效的东西。所以 `type` 直接把结论算好给它
+  /// （见 `Quote.attributionKind`），这里只讲怎么用。
+  static const String analysisDataContract = '''
+<data_notes>
+每条笔记都带一个 `type` 字段，动笔前先分清这条是谁写的：
+- `type: "original"`：用户自己写的。谈"他怎么想、经历了什么、心情如何"只能以这类为依据。
+- `type: "excerpt"`：他摘抄的别人的话，`sourceAuthor` / `sourceWork` 是出处。它只说明"这段话击中过他"，不是他的经历、心情或原话。
+  转述摘录时必须点明它是摘录（"你抄下的那句…""你收藏的那段…"），绝不能写成"你说过…""你写道…""你提到自己…"。
+  例外：`sourceAuthor` 填的是用户自己的称呼时，那是他给原创署了名，按 original 对待。
+- 一条摘录旁边如果有用户自己写的按语或感想，那部分才是他的声音，摘录本身不是。
+
+其余字段：`date` 是记录时间（ISO 8601），`location` / `weather` / `dayPeriod` 是写下它时的情境。
+谈"最近""那天""周末"一律以 `date` 为准，不要凭正文语气推测时间。
+</data_notes>''';
+
+  static const List<String> _weekdayLabels = [
+    '周一',
+    '周二',
+    '周三',
+    '周四',
+    '周五',
+    '周六',
+    '周日',
+  ];
+
+  static String _ymd(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  /// 分析请求的时间坐标。
+  ///
+  /// 模型不知道今天几号，更不知道今天星期几，于是"本周"对它只是个词。周一
+  /// 点「总结本周」而本周还没写过东西时，它会抓着手上最近的那几条——上周的
+  /// ——当成本周的说。这里把三件事写死：现在是什么时候、这次分析的闭区间是
+  /// 哪一段、区间内没笔记意味着什么。
+  ///
+  /// [rangeStart] / [rangeEnd] 是闭区间的两端（按天）。给不出范围时只报当前
+  /// 时间，不编一个。
+  static String buildAnalysisTimeContext({
+    required DateTime now,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+    String? periodLabel,
+  }) {
+    final buffer = StringBuffer('<time_context>\n');
+    buffer.writeln(
+      '当前时间：${_ymd(now)}（${_weekdayLabels[now.weekday - 1]}）'
+      '${now.hour.toString().padLeft(2, '0')}:'
+      '${now.minute.toString().padLeft(2, '0')}，设备本地时间。',
+    );
+
+    if (rangeStart != null && rangeEnd != null) {
+      final days = rangeEnd.difference(rangeStart).inDays + 1;
+      final trimmedLabel = periodLabel?.trim() ?? '';
+      final label = trimmedLabel.isEmpty ? '' : '，用户管它叫「$trimmedLabel」';
+      buffer.writeln(
+        '本次分析的时间范围：'
+        '${_ymd(rangeStart)}（${_weekdayLabels[rangeStart.weekday - 1]}）'
+        '至 ${_ymd(rangeEnd)}（${_weekdayLabels[rangeEnd.weekday - 1]}），'
+        '共 $days 天$label。',
+      );
+      buffer.writeln('- 下面给出的笔记已经按这个范围筛过，范围之外的笔记一条都没有。');
+      buffer.writeln(
+        '- 范围内某些天可能一条笔记都没有，那是"这几天没写"，'
+        '不是"这几天没发生事"，不要替用户补叙。',
+      );
+    }
+
+    buffer.writeln(
+      '- "本周""这个月""今天""最近"一律以上面的当前时间换算，'
+      '不要从笔记内容反推今天是哪天、星期几。',
+    );
+    buffer.write('</time_context>');
+    return buffer.toString();
+  }
+
   /// 个人成长导师提示词（最常用的基础提示词）
   static const String personalGrowthCoachPrompt = '''
 <context>
@@ -1286,6 +1367,116 @@ $closing''';
   @visibleForTesting
   String cleanEnglishPeriodLabel(String periodLabel) =>
       _cleanEnglishPeriodLabel(periodLabel);
+
+  // ===================== 空周期洞察（这段时间一条都没写） =====================
+  /// 一条笔记都没有时的洞察提示词。
+  ///
+  /// 空着的时候原来是一句灰色的「暂无洞察」——最需要一句话的时刻，恰恰是
+  /// 页面最沉默的时刻。这条路径上模型手里一份内容都没有，所以约束的重点
+  /// 不是"写得好"，而是"不许编"：没有笔记就没有可分析的经历，任何具体
+  /// 内容都是杜撰。
+  String getEmptyPeriodInsightSystemPrompt({String? languageCode}) {
+    const base = '''
+<context>
+你是 ThoughtEcho（心迹）的「周期洞察写作助手」。这一次用户在所选周期里一条笔记都没有，你手上没有任何内容可分析。
+</context>
+
+<task>
+写一句话，说给一个这段时间没有留下记录的人听。
+</task>
+
+<constraints>
+- 只写一句，中文 20–40 字；英文 12–25 words。不分段、不列点、不加引号或表情。
+- 用第二人称「你」。
+- 严禁编造：你没有任何笔记可依据，任何关于他做了什么、想了什么、心情如何的具体内容都是杜撰。
+- 不催促、不评判、不说教。不要"坚持就是胜利""别放弃""快来记录吧"这类口号，不要问句，不要给建议清单。
+- 可以承认这段时间是空的；数据里给了"距上次记录多久"才可以提，没给就别提。
+- 语气克制，留一个轻的邀请就够——空白本身也是一种状态，不是过错。
+</constraints>
+
+<output_format>
+单句纯文本。
+</output_format>
+''';
+    return '$base\n\n${_getLanguageDirective(languageCode)}';
+  }
+
+  /// 空周期洞察的用户消息：只给时间坐标，不给内容——因为没有内容。
+  String buildEmptyPeriodInsightUserMessage({
+    required String periodLabel,
+    required DateTime now,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+    int? daysSinceLastNote,
+    bool everWroteAnything = true,
+  }) {
+    final facts = <String>[
+      '周期：$periodLabel',
+      '这个周期内的笔记数量：0',
+      if (!everWroteAnything) '用户还没有写过任何笔记（这是他第一次面对空白）',
+      if (daysSinceLastNote != null) '距离上一次记录：$daysSinceLastNote 天',
+    ].join('｜');
+
+    final timeContext = buildAnalysisTimeContext(
+      now: now,
+      rangeStart: rangeStart,
+      rangeEnd: rangeEnd,
+      periodLabel: periodLabel,
+    );
+
+    return '$timeContext\n\n【已知事实】\n$facts\n\n请按约束写那一句话。';
+  }
+
+  /// 空周期洞察的本地兜底（没开 AI、或 AI 失败时）。
+  ///
+  /// 和 [formatLocalReportInsight] 一样按语言选模板、随机挑一条，
+  /// 差别只在于这里一个统计数字都没有可写。
+  String formatLocalEmptyPeriodInsight({
+    required String periodLabel,
+    int? daysSinceLastNote,
+    bool everWroteAnything = true,
+    String? languageCode,
+    @visibleForTesting int? seed,
+  }) {
+    final isEnglish = languageCode != null && languageCode.startsWith('en');
+    final label =
+        isEnglish ? _cleanEnglishPeriodLabel(periodLabel) : periodLabel;
+    final rng = seed != null ? math.Random(seed) : math.Random();
+
+    if (isEnglish) {
+      final templates = !everWroteAnything
+          ? <String>[
+              'Nothing written for $label yet — the first line is still waiting, and it can wait as long as you need.',
+              'This $label is still blank. Whenever a thought is worth keeping, it will have somewhere to go.',
+            ]
+          : daysSinceLastNote != null
+              ? <String>[
+                  'No entries for $label; your last note was $daysSinceLastNote days ago. Quiet stretches are part of the record too.',
+                  '$label is empty — it has been $daysSinceLastNote days since you last wrote. The page is still here when you come back.',
+                ]
+              : <String>[
+                  'No entries for $label. A blank stretch is still a stretch, and the page keeps your place.',
+                  'Nothing written for $label this time. Some weeks are lived rather than written down.',
+                ];
+      return templates[rng.nextInt(templates.length)];
+    }
+
+    final templates = !everWroteAnything
+        ? <String>[
+            '$label还是一页空白，第一句话什么时候来都不算晚。',
+            '$label还没有落笔。想留下点什么的时候，这里一直都在。',
+          ]
+        : daysSinceLastNote != null
+            ? <String>[
+                '$label没有留下记录，上一次落笔是 $daysSinceLastNote 天前。空着的日子也是日子。',
+                '$label是空的，距离上次写下点什么已经 $daysSinceLastNote 天。回来时它还在原处等你。',
+              ]
+            : <String>[
+                '$label没有落笔。空白也是一种状态，不必急着填满它。',
+                '$label这一页是空的。有些日子是过完的，不是写下的。',
+              ];
+    return templates[rng.nextInt(templates.length)];
+  }
 
   /// 清洗英文的周期标签，避免出现 "This This Week" 等语法语病
   String _cleanEnglishPeriodLabel(String periodLabel) {

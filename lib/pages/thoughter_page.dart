@@ -48,6 +48,7 @@ import '../utils/app_logger.dart';
 import '../utils/note_proposal_applier.dart';
 import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';
+import '../utils/report_period_labels.dart';
 import '../utils/report_period_utils.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
@@ -85,6 +86,15 @@ class ThoughterPage extends StatefulWidget {
   /// 生成，模型也确实知道开场说了什么。
   final String? openingMessage;
 
+  /// 洞察工作流要总结哪一段时间：周期（`week` / `month` / `year`）和落在
+  /// 那个周期里的任意一天。
+  ///
+  /// 探索页可以翻到别的周、别的月，翻到哪里就该总结哪里。之前助手页把这
+  /// 两个值当成不存在，一律按「本周 + 今天」跑——用户在探索页翻到上周再
+  /// 点进来，读到的还是本周。不传时保持原样：本周期 + 今天。
+  final String? insightPeriod;
+  final DateTime? insightDate;
+
   const ThoughterPage({
     super.key,
     this.quote,
@@ -93,6 +103,8 @@ class ThoughterPage extends StatefulWidget {
     this.entrySource,
     this.exploreGuideSummary,
     this.openingMessage,
+    this.insightPeriod,
+    this.insightDate,
   });
 
   @override
@@ -138,6 +150,10 @@ class _ThoughterPageState extends State<ThoughterPage>
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';
 
+  /// 洞察工作流的时间范围，见 [ThoughterPage.insightPeriod]。
+  late final String _insightPeriod = widget.insightPeriod ?? 'week';
+  late final DateTime _insightDate = widget.insightDate ?? DateTime.now();
+
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
 
   bool _isInputFocused = false;
@@ -160,7 +176,9 @@ class _ThoughterPageState extends State<ThoughterPage>
   StreamSubscription<AgentEvent>? _agentEventSubscription;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
-  /// 限制流式文本 UI 刷新频率（每 50ms 最多一次），避免逐字符 setState 导致全页重建
+  /// 流式文本 UI 的刷新间隔上限：一个窗口内最多落地一次。
+  static const Duration _kStreamThrottleInterval = Duration(milliseconds: 50);
+
   Timer? _streamThrottleTimer;
   String? _pendingUpdateId;
   String _pendingContent = '';
@@ -169,6 +187,12 @@ class _ThoughterPageState extends State<ThoughterPage>
   app_chat.MessageState? _pendingState;
   List<String>? _pendingThinkingChunks;
 
+  /// 节流写入流式正文。
+  ///
+  /// 前沿立即落地、后沿按窗口收：原来是纯后沿节流，第一个 token 到手也要
+  /// 再等满 50ms 才上屏，而它正是用户唯一在等的那一下——占位的"正在生成…"
+  /// 换成真正的第一句。后面的 chunk 仍然每 50ms 才合并落地一次，刷新频率
+  /// 没有变高。
   void _scheduleStreamUpdate(
     String id,
     String content, {
@@ -184,10 +208,21 @@ class _ThoughterPageState extends State<ThoughterPage>
     _pendingState = state;
     _pendingThinkingChunks = thinkingChunks;
 
+    // 窗口里：攒着，等窗口到点一起落地
     if (_streamThrottleTimer?.isActive ?? false) return;
 
-    _streamThrottleTimer = Timer(const Duration(milliseconds: 50), () {
+    _flushStreamUpdate();
+    _armStreamThrottleWindow();
+  }
+
+  /// 开一个节流窗口。窗口到点时若期间攒下了新内容就落地并续一个窗口，
+  /// 没有就自然停下——流结束后不会留着一个空转的定时器。
+  void _armStreamThrottleWindow() {
+    _streamThrottleTimer = Timer(_kStreamThrottleInterval, () {
+      _streamThrottleTimer = null;
+      if (_pendingUpdateId == null) return;
       _flushStreamUpdate();
+      _armStreamThrottleWindow();
     });
   }
 

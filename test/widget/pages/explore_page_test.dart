@@ -166,7 +166,7 @@ void main() {
     // 旧的独立「与 Thoughter 对话」卡片已被洞察卡下方的快捷追问取代
     expect(find.text(l10n.aiChat), findsNothing);
     expect(
-      find.text(l10n.exploreSummarizePeriod(l10n.periodWeek)),
+      find.text(l10n.exploreSummarizeRange(l10n.thisWeek)),
       findsOneWidget,
     );
     expect(find.text(l10n.exploreFreeChat), findsOneWidget);
@@ -175,7 +175,7 @@ void main() {
     // 但三个「暂无」chip 不再出现——空状态文案已经说过一次了
     expect(find.text(l10n.noDataYet), findsNothing);
     expect(
-      find.text(l10n.noNotesInPeriodForPeriod(l10n.periodWeek)),
+      find.text(l10n.noNotesInRange(l10n.thisWeek)),
       findsOneWidget,
     );
   });
