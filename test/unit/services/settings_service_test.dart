@@ -457,5 +457,40 @@ void main() {
       expect(rebuiltService.todayThoughtsUseAI, isTrue);
       expect(rebuiltService.aiCardGenerationEnabled, isTrue);
     });
+
+    test('无效或禁用的 AI 服务不应触发自动开启 AI 功能', () async {
+      // Arrange
+      await settingsService.setHasCompletedOnboarding(false);
+      await settingsService.setReportInsightsUseAI(false);
+      await settingsService.setTodayThoughtsUseAI(false);
+      await settingsService.setAICardGenerationEnabled(false);
+
+      final disabledOrEmptySettings = settingsService.multiAISettings.copyWith(
+        providers: [
+          const AIProviderSettings(
+            id: 'disabled_provider',
+            name: 'Disabled AI',
+            apiUrl: 'https://api.openai.com/v1',
+            model: 'gpt-4o',
+            isEnabled: false,
+          ),
+          const AIProviderSettings(
+            id: 'empty_url_provider',
+            name: 'Empty URL AI',
+            apiUrl: '   ',
+            model: 'gpt-4o',
+            isEnabled: true,
+          ),
+        ],
+      );
+
+      // Act
+      await settingsService.saveMultiAISettings(disabledOrEmptySettings);
+
+      // Assert
+      expect(settingsService.reportInsightsUseAI, isFalse);
+      expect(settingsService.todayThoughtsUseAI, isFalse);
+      expect(settingsService.aiCardGenerationEnabled, isFalse);
+    });
   });
 }

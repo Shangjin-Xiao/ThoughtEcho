@@ -44,6 +44,7 @@ class SettingsService extends ChangeNotifier {
   static const String _appUpgradedKey = 'app_upgraded_v2';
   final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
+  Completer<void>? _saveMultiAiLock;
   late AISettings _aiSettings;
   late AppSettings _appSettings;
   late ThemeMode _themeMode;
@@ -1102,24 +1103,30 @@ class SettingsService extends ChangeNotifier {
 
   /// 保存多provider AI设置
   Future<void> saveMultiAISettings(MultiAISettings settings) async {
-    // 如果新用户配置了有效的 AI 服务，帮他开启 AI 生成周期洞察、每日提示/今日思考和 AI 生成卡片
-    final hasActiveAi = settings.providers.any(
-      (p) => p.isEnabled && p.apiUrl.trim().isNotEmpty,
-    );
-    final candidateAppSettings = (!hasCompletedOnboarding() && hasActiveAi)
-        ? _appSettings.copyWith(
-            reportInsightsUseAI: true,
-            todayThoughtsUseAI: true,
-            aiCardGenerationEnabled: true,
-          )
-        : null;
-
-    final multiJson = json.encode(settings.toJson());
-    final appJson = candidateAppSettings != null
-        ? json.encode(candidateAppSettings.toJson())
-        : null;
+    while (_saveMultiAiLock != null) {
+      await _saveMultiAiLock!.future;
+    }
+    final completer = Completer<void>();
+    _saveMultiAiLock = completer;
 
     try {
+      // 在互斥锁内部基于最新的 _appSettings 构建 candidateAppSettings，防止并发下的覆盖
+      final hasActiveAi = settings.providers.any(
+        (p) => p.isEnabled && p.apiUrl.trim().isNotEmpty,
+      );
+      final candidateAppSettings = (!hasCompletedOnboarding() && hasActiveAi)
+          ? _appSettings.copyWith(
+              reportInsightsUseAI: true,
+              todayThoughtsUseAI: true,
+              aiCardGenerationEnabled: true,
+            )
+          : null;
+
+      final multiJson = json.encode(settings.toJson());
+      final appJson = candidateAppSettings != null
+          ? json.encode(candidateAppSettings.toJson())
+          : null;
+
       if (appJson != null) {
         final successApp = await _mmkv.setString(_appSettingsKey, appJson);
         if (!successApp) {
@@ -1153,6 +1160,9 @@ class SettingsService extends ChangeNotifier {
         source: 'SettingsService',
       );
       rethrow;
+    } finally {
+      _saveMultiAiLock = null;
+      completer.complete();
     }
   }
 
