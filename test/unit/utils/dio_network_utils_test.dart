@@ -43,8 +43,11 @@ class FakeDio extends Fake implements Dio {
 
 void main() {
   group("RetryInterceptor", () {
-    test("shouldRetry evaluates true for 502 and next is NOT called immediately (triggers retry)", () async {
-      final dio = FakeDio(fetchResponse: Response(requestOptions: RequestOptions(path: "/")));
+    test(
+        "shouldRetry evaluates true for 502 and next is NOT called immediately (triggers retry)",
+        () async {
+      final dio = FakeDio(
+          fetchResponse: Response(requestOptions: RequestOptions(path: "/")));
       final interceptor = RetryInterceptor(
         dio: dio,
         retries: 1,
@@ -83,7 +86,9 @@ void main() {
       expect(handler.nextCalled.length, 1);
     });
 
-    test("shouldRetry evaluates false for 500 with 'model not found' and next is called", () async {
+    test(
+        "shouldRetry evaluates false for 500 with 'model not found' and next is called",
+        () async {
       final dio = FakeDio();
       final interceptor = RetryInterceptor(dio: dio, retries: 1);
       final handler = FakeErrorInterceptorHandler();
