@@ -3946,7 +3946,7 @@
   "webdavPassword": "App Password / Token",
   "webdavTestConnection": "Test Connection",
   "webdavTestSuccess": "Connection successful!",
-  "webdavTestFailed": "Connection failed. Please check your settings and password",
+  "webdavTestFailed": "Unable to connect. Please verify your network connection, server URL, and app password.",
   "webdavAutoSyncLaunch": "Auto-sync on open or foreground",
   "webdavAutoSyncLaunchSubtitle": "Merge with cloud when app opens or returns to foreground",
   "webdavAutoSyncChange": "Auto-sync on note changes",
