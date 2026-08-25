@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 /// 记录页分页（load more）一次的分段耗时。
 ///
 /// 2026-08-25 的日志里，唯一带 `dataΔ=1` 的那段滑动出现 `worstVsync=77.1ms`、
@@ -9,6 +11,12 @@
 /// 这些段落横跨 service 和 widget 两层，所以用一个静态累加器串起来，最后由滚动性能
 /// 日志的 `loadMore={}` 一行打出来。**记的是最近一次分页**，不是增量 —— 要看的是
 /// 「那一下 77ms 花在哪」，把多次平均掉反而看不见。
+///
+/// 它是进程级的静态累加器，没有请求令牌：`getUserQuotes` 埋得太深，为一个诊断把
+/// token 一路穿到数据库层不划算。代价是 [begin] 之后、日志打出来之前，别的查询或
+/// 数据事件（搜索、筛选刷新、回填分块）也会记进来。所以**采样次数一并打出来**：
+/// `q=1` 且 `ev=1` 才说明这份拆分干净，大于 1 就是混进了别的东西，别照着它下结论。
+/// 这比静悄悄给出一份可能是错的拆分要诚实。
 class NoteListLoadMoreProfile {
   NoteListLoadMoreProfile._();
 
@@ -19,6 +27,14 @@ class NoteListLoadMoreProfile {
   static int _serviceMicros = 0;
   static int _reuseMicros = 0;
   static int _applyMicros = 0;
+
+  /// 这一轮窗口里 [recordQuery] / [recordReuse] + [recordApply] 各被调用了几次。
+  /// 大于 1 就说明有别的查询或数据事件混进来了，见类文档。
+  static int _queryCount = 0;
+  static int _eventCount = 0;
+
+  /// 累计完成过几次分页 —— **这个不随 [begin] 清零**：下面那些分段描述的是第几次
+  /// 分页，这个数就是它的序号。清零的话它永远是 1，什么也说明不了。
   static int _completedCount = 0;
 
   /// 一次分页开始：把上一轮的分段清零，避免两次分页的数字混在一起。
@@ -30,12 +46,14 @@ class NoteListLoadMoreProfile {
     _serviceMicros = 0;
     _reuseMicros = 0;
     _applyMicros = 0;
+    _queryCount = 0;
+    _eventCount = 0;
   }
 
   /// 查询层的三段，由 `getUserQuotes` 写入。
   ///
-  /// 分页之外的查询（搜索、筛选、导出）也会走同一个方法，这里照记不误：
-  /// 它们不在 [begin] 与日志之间，不会污染分页那一次的读数。
+  /// 分页之外的查询（搜索、筛选、导出）也走同一个方法，落在窗口里就会一起记进来 ——
+  /// 靠 `q=` 暴露，见类文档。
   static void recordQuery({
     required int sqlMicros,
     required int tagsMicros,
@@ -46,6 +64,7 @@ class NoteListLoadMoreProfile {
     _tagsMicros += tagsMicros;
     _parseMicros += parseMicros;
     _rowCount += rowCount;
+    _queryCount++;
   }
 
   /// `db.loadMoreQuotes()` 这个 await 一共花了多久（含上面三段）。
@@ -55,7 +74,10 @@ class NoteListLoadMoreProfile {
   }
 
   /// 数据事件送到列表之后：内容比较复用的耗时。
-  static void recordReuse(int micros) => _reuseMicros += micros;
+  static void recordReuse(int micros) {
+    _reuseMicros += micros;
+    _eventCount++;
+  }
 
   /// 把新列表落进 state 的那一下（clear/addAll/清理展开控制器）。
   ///
@@ -64,9 +86,22 @@ class NoteListLoadMoreProfile {
   /// `state`，就是为了不让人把这个数当成「整列表重建花了多久」。
   static void recordApply(int micros) => _applyMicros += micros;
 
+  @visibleForTesting
+  static void resetForTesting() {
+    begin();
+    _completedCount = 0;
+  }
+
+  @visibleForTesting
+  static int get debugQueryCount => _queryCount;
+
+  @visibleForTesting
+  static int get debugEventCount => _eventCount;
+
   static String toCompactText() {
     String ms(int micros) => (micros / 1000.0).toStringAsFixed(1);
-    return 'n=$_completedCount,rows=$_rowCount,'
+    return 'seq=$_completedCount,q=$_queryCount,ev=$_eventCount,'
+        'rows=$_rowCount,'
         'service=${ms(_serviceMicros)}ms,'
         'sql=${ms(_sqlMicros)}ms,tags=${ms(_tagsMicros)}ms,'
         'parse=${ms(_parseMicros)}ms,'
