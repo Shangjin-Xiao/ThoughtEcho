@@ -143,9 +143,9 @@ class AppTheme with ChangeNotifier {
   ///
   /// - `display*` / `headline*`（24–57sp）：只换字体族。这个尺寸上衬线的横画怎么都
   ///   落在整像素以上，不需要补偿，再加重反而笨。
-  /// - `title*` / `body*`（11–23sp）：换字体族 + 按 [ThemeStyleForm.readingFontScale]
-  ///   放大 + 抬字重。横画掉进半像素是「衬线读起来比黑体虚」的物理原因，
-  ///   字号和字重是两个直接的补偿手段。
+  /// - `title*` / `bodyLarge` / `bodyMedium`（14–23sp）：换字体族 + 按
+  ///   [ThemeStyleForm.readingFontScale] 放大 + 抬字重。横画掉进半像素是
+  ///   「衬线读起来比黑体虚」的物理原因，字号和字重是两个直接的补偿手段。
   ///
   ///   **两档下限不是重复：[ThemeStyleForm.titleWeightFloor] 比
   ///   [ThemeStyleForm.bodyWeightFloor] 高一档，标题和正文的层级全靠这一档。**
@@ -153,21 +153,33 @@ class AppTheme with ChangeNotifier {
   ///   （几何要到 build 时才补），一个下限会把六级一起钉成同一个字重——
   ///   小节标题和列表正文就分不出主次了。
   ///
-  ///   `body*` 另外还吃行高缩放；标题的行高交给几何。
+  ///   这两级正文另外还吃行高缩放；标题的行高交给几何。
   ///
   ///   **这里刻意只写 `fontWeight`，不写 `fontVariations`。** 随包衬线是可变字体，
   ///   直接指定 wght 轴看着更「精确」，但 `fontVariations` 会盖过 `fontWeight`——
   ///   下游任何一处 `style.copyWith(fontWeight: FontWeight.bold)`（全项目上百处，
   ///   包括富文本的加粗）都会静默失效。交给引擎按 `fontWeight` 映射 wght 轴，
   ///   现有代码一行不用改。
-  /// - `label*`：**什么都不改，保持系统黑体**。按钮、胶囊、导航栏标签是 11–14sp
-  ///   的功能性文字，中文衬线在这个尺寸下糊成一团，而它们又不承担任何风格识别——
-  ///   没有人从一个按钮标签上看出「这是纸墨风格」。这是全局排版规则，
+  /// - `label*` 和 `bodySmall`：**什么都不改，保持系统黑体**。按钮、胶囊、导航栏标签
+  ///   是 11–14sp 的功能性文字，中文衬线在这个尺寸下糊成一团，而它们又不承担任何
+  ///   风格识别——没有人从一个按钮标签上看出「这是纸墨风格」。这是全局排版规则，
   ///   不是某套风格的选择，所以直接写在这里而不是做成令牌。
   ///
-  /// 行高只改 `body*` 三级——标题用的是紧排，跟着放松会显得散。
-  /// `bodyLarge` 直接取 [ThemeStyleForm.bodyLineHeight]，另外两级按同一比例缩放
-  /// 各自的 M3 默认值，避免三级正文被压成同一个行高。
+  ///   **`bodySmall`（12sp）和 `label*` 是同一档光学尺寸，判据也该是同一条。**
+  ///   它过去被算进「阅读级」，代价有两层：一是 12×1.0625≈12.75sp 的中文衬线，
+  ///   横画只有半个多像素，抗锯齿完是一层灰绒；二是它跟着吃
+  ///   [ThemeStyleForm.bodyWeightFloor] 抬到 w500，和正文一样重——而 `bodySmall`
+  ///   在这个应用里几乎全是元信息（笔记卡的日期/位置/天气、设置项说明、日志、
+  ///   时间戳），它们本来要靠「小一档 + 淡一档 + **轻一档**」退到背景里。字重那一档
+  ///   被抹平之后，一张笔记卡上四段衬线全是 w500，眼睛找不到落点——首页只有一句话
+  ///   所以显得有分量，记录页一张卡五段文字就成了没有主次。
+  ///
+  ///   所以这一级回到系统黑体、回到 M3 原生 w400：**元信息退后，正文不用动一个像素
+  ///   就浮出来了**。这也是 `36a78da`「小字不再用宋体」那条规则漏掉的一级。
+  ///
+  /// 行高只改 `bodyLarge` / `bodyMedium`——标题用的是紧排，跟着放松会显得散。
+  /// `bodyLarge` 直接取 [ThemeStyleForm.bodyLineHeight]，`bodyMedium` 按同一比例缩放
+  /// 自己的 M3 默认值，避免两级正文被压成同一个行高。
   ///
   /// material 风格四项全是恒等取值（`fontFamily` 为 null、字号/行高比例为 1、
   /// 字重下限为 0），像素不变。
@@ -247,8 +259,8 @@ class AppTheme with ChangeNotifier {
       titleSmall: reading(base.titleSmall, titleFloor, 14),
       bodyLarge: reading(base.bodyLarge, bodyFloor, 16, 24 / 16),
       bodyMedium: reading(base.bodyMedium, bodyFloor, 14, 20 / 14),
-      bodySmall: reading(base.bodySmall, bodyFloor, 12, 16 / 12),
-      // label* 刻意不动，见方法注释。
+      // bodySmall 和 label* 一样刻意不动，见方法注释：12sp 是功能性小字的光学
+      // 尺寸，换衬线会糊，抬字重会把元信息和正文拉平。
     );
   }
 

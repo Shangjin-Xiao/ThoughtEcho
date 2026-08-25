@@ -529,7 +529,12 @@ class ThemeStyleForm {
     // 0.55 是横线只画在正文块之前的取值。那时横线铺满整张卡（穿过日期行、图片、
     // 标签胶囊和按钮行），画得淡一点也压不住乱；现在横线只画在正文那一块里，
     // 反而要收着画——它是纸的底纹，不是表格线。
-    ruleOpacity: 0.4,
+    //
+    // 0.4 仍然太实：`outlineVariant`(#DFD3C2) 按 0.4 混到卡片色上约等于 #F2ECE4，
+    // 和页面底色 #F3EEE4 几乎同一个明度——也就是每一行字底下都垫着一道「和背景
+    // 一样重」的横线。底纹不该有这个分量，它在和文字抢横向注意力，扫读列表时
+    // 尤其明显。0.24 混出来约 #F7F3ED，还看得出格子纸，但不再压着字。
+    ruleOpacity: 0.24,
     fontFamily: bundledSerif,
     fontFamilyFallback: _systemSerifFallback,
     bodyLineHeight: _paperLineHeight,

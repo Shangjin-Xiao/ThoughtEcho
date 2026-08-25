@@ -1222,9 +1222,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           color: secondaryTextColor,
         ) ??
         TextStyle(color: secondaryTextColor);
-    // 和上面的日期同一级：写死 12 会让它比同一行的日期小半档——衬线风格给 body*
-    // 加了 6% 的字号补偿（ThemeStyleForm.readingFontScale），日期跟上了，
-    // 写死的这项没有。同一行两个字号，看着就是没对齐。
+    // 和上面的日期同一级，必须取同一个 token：写死 12 就等于把这一项从排版体系里
+    // 摘出去，风格一旦动了 bodySmall（曾经加过 6% 字号补偿，现在改成整级不动），
+    // 日期跟着走而它不跟，同一行两个字号，看着就是没对齐。
     final TextStyle headerMetaStyle = theme.textTheme.bodySmall?.copyWith(
           color: secondaryTextColor,
         ) ??
