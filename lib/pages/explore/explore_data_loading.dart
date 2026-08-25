@@ -260,7 +260,15 @@ extension _ExploreDataLoading on _ExplorePageState {
     final l10n = AppLocalizations.of(context);
     final settings = context.read<SettingsService>();
     final useAI = settings.reportInsightsUseAI;
-    final periodLabel = l10n.thisPeriod(_getPeriodName(l10n));
+    // 用户翻到上周就说「上周」，翻到更早就报日期范围。原来是
+    // thisPeriod(周) —— 永远的「本周」，和实际查询的日期范围对不上。
+    final periodLabel = ReportPeriodLabels.label(
+      l10n,
+      _selectedPeriod,
+      _selectedDate,
+    );
+    final periodRange =
+        ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
     final activeDays = _getActiveDays();
     final noteCount = _periodQuotes.length;
 
@@ -285,14 +293,18 @@ extension _ExploreDataLoading on _ExplorePageState {
       return;
     }
 
-    // 如果没有数据，不进行生成
+    // 这个周期一条笔记都没有。
+    //
+    // 原来这里直接把 _insightText 清空返回，界面留一句灰色的「暂无洞察」——
+    // 最需要被说一句话的时刻，恰恰是页面最沉默的时刻。改成照样生成一句：
+    // 开了 AI 就流式写一句（提示词里钉死"没有笔记可依据，不许编造经历"），
+    // 没开或失败就退回本地模板。
     if (noteCount == 0) {
-      if (mounted) {
-        _updateState(() {
-          _insightText = '';
-          _insightLoading = false;
-        });
-      }
+      await _generateEmptyPeriodInsight(
+        l10n,
+        periodLabel: periodLabel,
+        useAI: useAI,
+      );
       return;
     }
 
@@ -375,6 +387,8 @@ extension _ExploreDataLoading on _ExplorePageState {
         notesPreview: _notesPreview,
         fullNotesContent: boundedNotesContent, // 已按条数/字数上限收过
         previousInsights: previousInsights, // 传递历史上下文
+        rangeStart: periodRange?.start,
+        rangeEnd: periodRange?.end,
       )
           .listen(
         (chunk) {
@@ -455,6 +469,114 @@ extension _ExploreDataLoading on _ExplorePageState {
       // 根据用户需求，这里我们不保存本地生成的洞察到带signature的缓存中，
       // 因为用户明确说 "只有调用ai生成的才保存"
     }
+  }
+
+  /// 这个周期一条笔记都没有时的那一句话。
+  ///
+  /// 没有笔记就没有统计口径，[AIService.streamReportInsight] 那一套用不上；
+  /// 这里只把"哪一段时间""上次落笔多久前"交出去，剩下的靠提示词管住不编造。
+  /// AI 关着、报错、或者一个字都没吐出来时，一律退回本地模板——这一格不该
+  /// 因为网络抖一下就退回沉默。
+  Future<void> _generateEmptyPeriodInsight(
+    AppLocalizations l10n, {
+    required String periodLabel,
+    required bool useAI,
+  }) async {
+    final now = DateTime.now();
+    final range = ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
+
+    // "上一次落笔是多久前"——只有当最近那条确实早于本周期时才提。用户翻到
+    // 一个更早的空周期时，最近那条可能在它之后，那时说"距上次 N 天"是错的。
+    DateTime? lastNoteDate;
+    var everWroteAnything = false;
+    try {
+      final recent = await context.read<DatabaseService>().getUserQuotes(
+            limit: 1,
+          );
+      if (recent.isNotEmpty) {
+        everWroteAnything = true;
+        lastNoteDate = DateTime.tryParse(recent.first.date);
+      }
+    } catch (e) {
+      AppLogger.d('Failed to look up last note for empty insight: $e');
+    }
+    if (!mounted) return;
+
+    final daysSinceLastNote = emptyPeriodGapDays(
+      lastNoteDate: lastNoteDate,
+      range: range,
+      period: _selectedPeriod,
+      date: _selectedDate,
+    );
+
+    String localFallback() =>
+        context.read<AIService>().buildLocalEmptyPeriodInsight(
+              periodLabel: periodLabel,
+              daysSinceLastNote: daysSinceLastNote,
+              everWroteAnything: everWroteAnything,
+            );
+
+    if (!useAI) {
+      _updateState(() {
+        _insightText = localFallback();
+        _insightLoading = false;
+      });
+      return;
+    }
+
+    _updateState(() {
+      _insightText = '';
+      _insightLoading = true;
+    });
+
+    _insightSub = context
+        .read<AIService>()
+        .streamEmptyPeriodInsight(
+          periodLabel: periodLabel,
+          now: now,
+          rangeStart: range?.start,
+          rangeEnd: range?.end,
+          daysSinceLastNote: daysSinceLastNote,
+          everWroteAnything: everWroteAnything,
+        )
+        .listen(
+      (chunk) {
+        if (!mounted) return;
+        _insightPending += chunk;
+        _insightFlushTimer ??=
+            Timer(_ExplorePageState._insightFlushInterval, _flushInsight);
+      },
+      onError: (_) {
+        if (!mounted) return;
+        _insightFlushTimer?.cancel();
+        _insightFlushTimer = null;
+        _insightPending = '';
+        _updateState(() {
+          _insightText = localFallback();
+          _insightLoading = false;
+        });
+        // 同 AI 洞察的兜底：清掉签名，下次刷新重新试 AI，不要被本地模板钉死。
+        _insightSignature = null;
+      },
+      onDone: () {
+        if (!mounted) return;
+        _insightFlushTimer?.cancel();
+        _insightFlushTimer = null;
+        final tail = _insightPending;
+        _insightPending = '';
+        _updateState(() {
+          if (tail.isNotEmpty) _insightText += tail;
+          if (_insightText.trim().isEmpty) {
+            // 一个字都没吐出来（模型把整段当成思考、或被过滤空了）也要有话说。
+            _insightText = localFallback();
+            _insightSignature = null;
+          }
+          _insightLoading = false;
+        });
+        // 空周期的这句话不进洞察历史：它不是对内容的洞察，留在历史里
+        // 只会给下一次生成塞进一串"你这周没写"的噪声。
+      },
+    );
   }
 
   /// 把节流缓冲里的流式文本刷进 UI

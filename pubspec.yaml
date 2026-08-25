@@ -5,7 +5,9 @@ version: 4.0.0+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
-  flutter: '>=3.24.0'
+  # 3.29：CircularProgressIndicator 的 trackGap / padding 从这一版才有，
+  # 行内转圈靠它们退掉 M3 默认造型（见 AppInlineLoadingIndicator）。
+  flutter: '>=3.29.0'
 
 dependencies:
   flutter:

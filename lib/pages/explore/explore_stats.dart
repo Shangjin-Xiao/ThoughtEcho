@@ -214,7 +214,7 @@ extension _ExploreStats on _ExplorePageState {
             ),
             const SizedBox(height: 16),
             Text(
-              l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
+              l10n.noNotesInRange(_getPeriodLabel(l10n)),
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,

@@ -1637,6 +1637,9 @@
   "thisWeek": "Cette semaine",
   "thisMonth": "Ce mois-ci",
   "thisYear": "Cette année",
+  "lastWeek": "La semaine dernière",
+  "lastMonth": "Le mois dernier",
+  "lastYear": "L'an dernier",
   "noteCount": "Nombre de notes",
   "notesUnitPlain": "remarques",
   "totalWordCount": "Total des mots",
@@ -1649,25 +1652,9 @@
   "noDataYet": "N / A",
   "commonWeather": "Météo commune",
   "commonTag": "Balise commune",
-  "generatingInsightsForPeriod": "Génération d'insights pour ce {period}...",
-  "@generatingInsightsForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "noFavoritesInPeriod": "Pas de favoris sur cette période. Allez donner un peu d'amour à vos notes !",
   "mostFavoritedInPeriod": "Les plus favoris cette période",
   "recentNotes": "Notes récentes",
-  "noNotesInPeriodForPeriod": "Aucune note dans ce {period}",
-  "@noNotesInPeriodForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "startRecordingThoughts": "Commencez à enregistrer vos pensées",
   "totalCards": "{count} cartes au total",
   "@totalCards": {
@@ -3599,8 +3586,6 @@
   "typeSlashToSeeCommands": "Tapez / pour voir les commandes",
   "exploreAskAboutInsight": "En savoir plus",
   "exploreAskAboutInsightPrompt": "Peux-tu développer ce point ?",
-  "exploreSummarizePeriod": "Résumer cette {period}",
-  "exploreSummarizePeriodPrompt": "Résume mes notes de cette {period} — quels sont les points marquants ?",
   "exploreFreeChat": "Discuter librement",
   "exploreRecentChats": "Conversations récentes",
   "exploreViewAllChats": "Tout",
@@ -4564,5 +4549,9 @@
   "releaseThemeSwitchDesc": "Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
   "settingsReleaseNotes": "What's New",
-  "settingsReleaseNotesDesc": "See what this version adds"
+  "settingsReleaseNotesDesc": "See what this version adds",
+  "generatingInsightsForRange": "Génération d'aperçus pour {period}...",
+  "exploreSummarizeRange": "Résumer {period}",
+  "exploreSummarizeRangePrompt": "Résume mes notes de {period} — quels sont les points marquants ?",
+  "noNotesInRange": "Aucune note pour {period}"
 }

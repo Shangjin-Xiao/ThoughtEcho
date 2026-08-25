@@ -222,6 +222,11 @@ class _FakeAIService extends AIService {
     String analysisType = 'comprehensive',
     String analysisStyle = 'professional',
     String? customPrompt,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+    String? periodLabel,
+    bool? enableThinking,
+    void Function(String thinkingContent)? onThinking,
   }) =>
       Stream.value('智能洞察结果');
 

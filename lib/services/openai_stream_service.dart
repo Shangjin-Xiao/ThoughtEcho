@@ -655,6 +655,21 @@ class OpenAIStreamService extends ChangeNotifier {
         provider.apiUrl.contains('127.0.0.1:11434');
   }
 
+  /// 这条链路决定 Ollama 那边注不注入 `think: true`。
+  ///
+  /// 关键在最后那个兜底：调用方不表态（null）时落到 `supportsThinking`，而它
+  /// 对 gemma4 / qwen3 这类混合思考模型返回 true。所以内容生成那几条路径
+  /// （每日提示、周期洞察、空周期洞察）必须**显式**传 false，留 null 等于默认开着。
+  @visibleForTesting
+  static bool resolveThinkingEnabled({
+    required AIProviderSettings provider,
+    bool? enableThinking,
+  }) =>
+      _resolveThinkingEnabled(
+        provider: provider,
+        enableThinking: enableThinking,
+      );
+
   static bool _resolveThinkingEnabled({
     required AIProviderSettings provider,
     bool? enableThinking,

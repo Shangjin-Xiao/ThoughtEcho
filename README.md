@@ -21,7 +21,7 @@
       <img src="https://img.shields.io/badge/Microsoft_Store-0078D7?style=flat-square&logo=windows&logoColor=white" alt="Microsoft Store">
     </a>
     <a href="https://flutter.dev/">
-      <img src="https://img.shields.io/badge/Flutter-3.24+-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter 3.24+">
+      <img src="https://img.shields.io/badge/Flutter-3.29+-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter 3.29+">
     </a>
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">
       <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20%7C%20iOS-informational?style=flat-square" alt="Platform: Windows | Android | iOS">
@@ -171,7 +171,7 @@
 
 1. **Prerequisites**
    
-   Ensure Flutter 3.24+ and Dart 3.5+ are installed. Run `flutter doctor` to verify your environment:
+   Ensure Flutter 3.29+ and Dart 3.5+ are installed. Run `flutter doctor` to verify your environment:
    ```bash
    flutter doctor
    ```

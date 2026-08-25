@@ -433,21 +433,34 @@ class AIRequestHelper {
         'analysisStyle': analysisStyle,
         'totalQuotes': quotes.length,
         'includedQuotes': selected.length,
+        // 摘录 / 原创的条数摆在开头：一组里九成是摘录时，"这个人这周在想
+        // 什么"根本无从谈起，模型得先知道自己手上是什么，而不是读完全部
+        // 再回头改口。
+        'originalCount':
+            selected.where((quote) => !quote.hasAttribution).length,
+        'excerptCount': selected.where((quote) => quote.hasAttribution).length,
         'truncated': truncated,
         if (truncated) 'truncationNote': '内容有截断：只含最近的部分笔记，超长笔记的正文也被截短',
       },
       'quotes': selected.map((quote) {
         return {
           // 不送 id：36 个字符的 UUID 对分析毫无信息量，只是在烧 token。
+          //
+          // type 放在第一位：模型得先知道这段是谁写的，再读正文。放在
+          // sourceAuthor 后面等于让它读完整段才发现"哦这是摘录"——而它
+          // 那时已经把这段当成用户的自白读进去了。
+          'type': quote.attributionKind,
           'content': clampQuoteContent(quote.content),
           'date': quote.date,
           'source': quote.source,
           'sourceAuthor': quote.sourceAuthor,
+          'sourceWork': quote.sourceWork,
           'tagIds': quote.tagIds,
           'categoryId': quote.categoryId,
           'location': quote.location,
           'weather': quote.weather,
           'temperature': quote.temperature,
+          'dayPeriod': quote.dayPeriod,
         };
       }).toList(),
     };

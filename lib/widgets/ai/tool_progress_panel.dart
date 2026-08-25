@@ -112,9 +112,9 @@ Widget _statusIcon(BuildContext context, ToolProgressStatus status) {
         color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
       );
     case ToolProgressStatus.running:
-      // 14 而不是默认的 16：这一列的另外三个状态图标都是 16 的字形，
-      // 而字形本身带内边距，圈画到 16 会比它们粗一圈。
-      return const AppInlineLoadingIndicator(size: 14);
+      // 尺寸走 AppInlineLoadingIndicator 的默认值：那个默认值（14）本来就是
+      // 按"和 16 的图标字形同重"定的，这一列另外三个状态正是 16 的字形。
+      return const AppInlineLoadingIndicator();
     case ToolProgressStatus.completed:
       return Icon(
         Icons.check,
@@ -511,8 +511,9 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 转圈按图标的尺寸走（16），不再缩到 12。12 的圈在高 DPI 屏上
-              // 只有几个物理像素宽，1.8 的线宽抗锯齿后剩不下什么——它不像
+              // 转圈和完成态的勾占同一格，尺寸交给 AppInlineLoadingIndicator
+              // 的默认值定——它就是按"和 16 的图标字形同重"调的。这里曾经
+              // 缩到 12：那么小的圈在高 DPI 屏上只有几个物理像素宽，看着不像
               // "在转"，像正文前面多了一个小黑点。
               SizedBox(
                 width: 18,

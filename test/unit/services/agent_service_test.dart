@@ -133,4 +133,45 @@ void main() {
       );
     });
   });
+
+  // 知道今天几号还不够：模型仍要自己算周一是哪天，而它算错的代价是
+  // 周一点「总结本周」时拿上周的笔记充数。边界直接写在提示里。
+  group('AgentService describePeriodBounds', () {
+    test('spells out this week, this month and this year', () {
+      // 2026-08-24 是周一。
+      final text = AgentService.describePeriodBounds(DateTime(2026, 8, 24, 9));
+
+      expect(text, contains('2026-08-24 ~ 2026-08-30'));
+      expect(text, contains('2026-08-01 ~ 2026-08-31'));
+      expect(text, contains('2026-01-01 ~ 2026-12-31'));
+    });
+
+    // 探索页能翻到上周，快捷追问带进来的就是「总结上周」——上一档的边界
+    // 也得给现成的，别留一步减法让模型自己算。
+    test('spells out last week, last month and last year too', () {
+      final text = AgentService.describePeriodBounds(DateTime(2026, 8, 24, 9));
+
+      expect(text, contains('上周 2026-08-17 ~ 2026-08-23'));
+      expect(text, contains('上月 2026-07-01 ~ 2026-07-31'));
+      expect(text, contains('去年 2025-01-01 ~ 2025-12-31'));
+    });
+
+    test('last month rolls back across the year boundary', () {
+      final text = AgentService.describePeriodBounds(DateTime(2026, 1, 15));
+      expect(text, contains('上月 2025-12-01 ~ 2025-12-31'));
+    });
+
+    test('week starts on Monday even mid-week', () {
+      // 2026-08-27 是周四，本周仍然是 24 到 30。
+      final text = AgentService.describePeriodBounds(DateTime(2026, 8, 27, 22));
+      expect(text, contains('2026-08-24 ~ 2026-08-30'));
+    });
+
+    test('a week spanning a month boundary keeps both ends', () {
+      // 2026-09-01 是周二，本周从 8-31 跨到 9-6。
+      final text = AgentService.describePeriodBounds(DateTime(2026, 9, 1));
+      expect(text, contains('2026-08-31 ~ 2026-09-06'));
+      expect(text, contains('2026-09-01 ~ 2026-09-30'));
+    });
+  });
 }

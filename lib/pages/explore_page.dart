@@ -20,6 +20,7 @@ import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
+import '../utils/report_period_labels.dart';
 import '../utils/report_period_utils.dart';
 import '../utils/string_utils.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
@@ -135,38 +136,14 @@ class _ExplorePageState extends State<ExplorePage> {
     super.dispose();
   }
 
-  String _getPeriodName(AppLocalizations l10n) {
-    switch (_selectedPeriod) {
-      case 'week':
-        return l10n.periodWeek;
-      case 'month':
-        return l10n.periodMonth;
-      case 'year':
-        return l10n.periodYear;
-      default:
-        return l10n.periodDuring;
-    }
-  }
+  /// 周期的日期范围文案。周界交给 [ReportPeriodUtils]，别在这里再算一遍——
+  /// 两处各算各的时，同一个"周"在标题和查询里可以差出一天。
+  String _getDateRangeText(AppLocalizations l10n) =>
+      ReportPeriodLabels.rangeText(l10n, _selectedPeriod, _selectedDate);
 
-  String _getDateRangeText(AppLocalizations l10n) {
-    final now = _selectedDate;
-    switch (_selectedPeriod) {
-      case 'week':
-        final weekday = now.weekday;
-        final startDate = now.subtract(Duration(days: weekday - 1));
-        final endDate = startDate.add(const Duration(days: 6));
-        return l10n.dateRange(
-          l10n.formattedDate(startDate.month, startDate.day),
-          l10n.formattedDate(endDate.month, endDate.day),
-        );
-      case 'month':
-        return l10n.yearMonth(now.year, now.month);
-      case 'year':
-        return l10n.yearOnly(now.year);
-      default:
-        return '';
-    }
-  }
+  /// 完整的周期标签：本周 / 上周 / 8月10日 - 8月16日。
+  String _getPeriodLabel(AppLocalizations l10n) =>
+      ReportPeriodLabels.label(l10n, _selectedPeriod, _selectedDate);
 
   /// 获取活跃天数
   int _getActiveDays() {

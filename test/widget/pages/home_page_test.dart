@@ -160,6 +160,17 @@ class MockConnectivityService extends ChangeNotifier
 class MockAIService extends ChangeNotifier implements AIService {
   @override
   bool hasValidApiKey() => false;
+
+  // 探索页在所选周期一条笔记都没有时也要说一句话，没开 AI 就走这条本地模板。
+  // 首页把探索页挂在一个标签页里，测试数据里又没有笔记，所以这条必然被走到。
+  @override
+  String buildLocalEmptyPeriodInsight({
+    required String periodLabel,
+    int? daysSinceLastNote,
+    bool everWroteAnything = true,
+  }) =>
+      '$periodLabel还没有落笔。';
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

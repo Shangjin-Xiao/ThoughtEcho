@@ -452,23 +452,39 @@ extension _ThoughterSession on _ThoughterPageState {
     if (databaseService == null) return;
 
     try {
-      // 这条开场洞察打的是「本周」的标签，统计口径就得真是本周。
+      // 这条开场洞察打的是哪一段时间的标签，统计口径就得真是那一段。
       //
       // 原来是 getUserQuotes() 不带参数——而它的默认 limit 是 10，所以拿到的
       // 既不是全量也不是本周，是「最近 10 条」，却按这 10 条去算 activeDays /
-      // noteCount / totalWords 再标上「本周」。改用 getQuotesForPeriod 按日期
-      // 范围查：不分页，本周多少条就是多少条。周界与探索页共用
-      // ReportPeriodUtils（周一到周日），两处口径别再各说各话。
-      final week = ReportPeriodUtils.dateRange('week', DateTime.now());
-      if (week == null) return;
-      final quotes = await databaseService.getUserQuotes(
-        dateStart: week.start.toIso8601String(),
-        dateEnd: week.end.toIso8601String(),
-        // 一周不可能有这么多条，给足冗余，别让分页把统计削掉一截。
-        limit: 500,
+      // noteCount / totalWords 再标上「本周」。周期由入口决定
+      // （[_insightPeriod] / [_insightDate]）。
+      //
+      // 用 getQuotesForPeriod 而不是带 limit 的 getUserQuotes：它不分页，
+      // 且只取周期报告需要的那几列。之前那版写死 limit: 500，注释理由是
+      // 「一周不可能有这么多条」——而这条路径现在可以是月、可以是年，
+      // 一年上千条很正常，统计会被悄悄削掉一截却仍标着「本年」，正是这个
+      // 改动要消灭的那类错位。
+      //
+      // 后面再按创建时间过滤一次：这个查询为了统计「本期被点心的旧笔记」，
+      // 会把 last_modified 落在范围内的旧笔记也带回来，而这里要的是
+      // 「这段时间写了什么」。与探索页同一套（见 _filterQuotesByPeriod）。
+      final range = ReportPeriodUtils.dateRange(_insightPeriod, _insightDate);
+      if (range == null) return;
+      final quotes = ReportPeriodUtils.filterByCreatedPeriod(
+        await databaseService.getQuotesForPeriod(range.start, range.end),
+        selectedPeriod: _insightPeriod,
+        selectedDate: _insightDate,
       );
-      // 本周一条都没有就不开场：与其硬凑一句全是「—」的洞察，不如不说。
-      if (quotes.isEmpty) return;
+      if (!mounted) return;
+      // 这段时间一条都没有，也要有一句开场白。
+      //
+      // 原来是直接 return——翻开一个空周期，Thoughter 一言不发。空白本身
+      // 就是这一刻要说的事，只是不能拿统计模板去凑（那会拼出一句全是「—」
+      // 的洞察），所以走的是不吃统计的空周期文案。
+      if (quotes.isEmpty) {
+        await _showEmptyPeriodOpening(databaseService, range);
+        return;
+      }
 
       final noteCount = quotes.length;
       var totalWords = 0;
@@ -523,7 +539,8 @@ extension _ThoughterSession on _ThoughterPageState {
       // SettingsService.localeCode 选模板语言并翻译时段/天气。抢先用界面
       // l10n 翻一遍，界面语言和语言偏好不一致时标签会和模板语言对不上。
       final insightText = _aiService.buildLocalReportInsight(
-        periodLabel: l10n.thisWeek,
+        periodLabel:
+            ReportPeriodLabels.label(l10n, _insightPeriod, _insightDate),
         mostTimePeriod: topPeriod,
         mostWeather: topWeather,
         topTag: topTag,
@@ -546,6 +563,58 @@ extension _ThoughterSession on _ThoughterPageState {
     } catch (e) {
       AppLogger.d('Failed to generate dynamic insight: $e');
     }
+  }
+
+  /// 所选周期一条笔记都没有时的开场白。
+  ///
+  /// 用本地模板而不是流式调 AI：这是页面刚打开时的一句引子，不是用户点了
+  /// 「生成洞察」——为一句话先转两秒圈，比直接说出来更打断人。用户真想要
+  /// AI 写的那句，点洞察工作流即可（见 `_runInsightsWorkflow`）。
+  Future<void> _showEmptyPeriodOpening(
+    DatabaseService databaseService,
+    ({DateTime start, DateTime end}) range,
+  ) async {
+    // "上一次落笔多久前"：只有最近那条确实早于这个周期时才提得上。用户翻到
+    // 一个更早的空周期时，最近那条可能在它之后，说"距上次 N 天"就是错的。
+    DateTime? lastNoteDate;
+    var everWroteAnything = false;
+    try {
+      final recent = await databaseService.getUserQuotes(limit: 1);
+      if (recent.isNotEmpty) {
+        everWroteAnything = true;
+        lastNoteDate = DateTime.tryParse(recent.first.date);
+      }
+    } catch (e) {
+      AppLogger.d('Failed to look up last note for empty opening: $e');
+    }
+    if (!mounted) return;
+
+    final daysSinceLastNote = emptyPeriodGapDays(
+      lastNoteDate: lastNoteDate,
+      range: range,
+      period: _insightPeriod,
+      date: _insightDate,
+    );
+
+    final l10n = AppLocalizations.of(context);
+    final text = _aiService.buildLocalEmptyPeriodInsight(
+      periodLabel: ReportPeriodLabels.label(l10n, _insightPeriod, _insightDate),
+      daysSinceLastNote: daysSinceLastNote,
+      everWroteAnything: everWroteAnything,
+    );
+    if (text.isEmpty) return;
+
+    _appendMessage(
+      app_chat.ChatMessage(
+        id: _uuid.v4(),
+        content: text,
+        isUser: false,
+        role: 'system',
+        timestamp: DateTime.now(),
+        includedInContext: false,
+      ),
+      persist: false,
+    );
   }
 
   Future<void> _startNewChat() async {

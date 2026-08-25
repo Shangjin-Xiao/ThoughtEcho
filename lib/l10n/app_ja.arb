@@ -1644,6 +1644,9 @@
   "thisWeek": "今週",
   "thisMonth": "今月",
   "thisYear": "今年",
+  "lastWeek": "先週",
+  "lastMonth": "先月",
+  "lastYear": "昨年",
   "noteCount": "ノート数",
   "notesUnitPlain": "件",
   "totalWordCount": "総文字数",
@@ -1656,25 +1659,9 @@
   "noDataYet": "N/A",
   "commonWeather": "よくある天気",
   "commonTag": "よく使うタグ",
-  "generatingInsightsForPeriod": "この{period}のインサイトを生成中...",
-  "@generatingInsightsForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "noFavoritesInPeriod": "お気に入りはありません",
   "mostFavoritedInPeriod": "最もお気に入り",
   "recentNotes": "最近のノート",
-  "noNotesInPeriodForPeriod": "この{period}にはメモがありません",
-  "@noNotesInPeriodForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "startRecordingThoughts": "記録を始めましょう",
   "totalCards": "合計 {count} 枚のカード",
   "@totalCards": {
@@ -3617,8 +3604,6 @@
   "typeSlashToSeeCommands": "/ を入力してコマンドを表示",
   "exploreAskAboutInsight": "これについて聞く",
   "exploreAskAboutInsightPrompt": "これについてもう少し詳しく教えてください。",
-  "exploreSummarizePeriod": "この{period}をまとめる",
-  "exploreSummarizePeriodPrompt": "この{period}の記録をまとめてください。注目すべき点はありますか？",
   "exploreFreeChat": "雑談する",
   "exploreRecentChats": "最近の会話",
   "exploreViewAllChats": "すべて",
@@ -4571,5 +4556,9 @@
   "releaseThemeSwitchDesc": "Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
   "settingsReleaseNotes": "What's New",
-  "settingsReleaseNotesDesc": "See what this version adds"
+  "settingsReleaseNotesDesc": "See what this version adds",
+  "generatingInsightsForRange": "{period}のインサイトを生成中...",
+  "exploreSummarizeRange": "{period}をまとめる",
+  "exploreSummarizeRangePrompt": "{period}の記録をまとめてください。注目すべき点はありますか？",
+  "noNotesInRange": "{period}の記録はまだありません"
 }

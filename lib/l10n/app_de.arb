@@ -82,8 +82,6 @@
   "typeSlashToSeeCommands": "Tippen Sie /, um Befehle zu sehen",
   "exploreAskAboutInsight": "Dazu nachfragen",
   "exploreAskAboutInsightPrompt": "Kannst du das näher ausführen?",
-  "exploreSummarizePeriod": "Diese {period} zusammenfassen",
-  "exploreSummarizePeriodPrompt": "Fasse meine Notizen aus dieser {period} zusammen — was fällt auf?",
   "exploreFreeChat": "Einfach plaudern",
   "exploreRecentChats": "Letzte Chats",
   "exploreViewAllChats": "Alle",
@@ -100,5 +98,9 @@
   "themeAccentUmber": "Umbra",
   "themeAccentCeladon": "Seladon",
   "themeAccentIndigo": "Indigo",
-  "themeAccentCinnabar": "Zinnober"
+  "themeAccentCinnabar": "Zinnober",
+  "exploreSummarizeRange": "{period} zusammenfassen",
+  "generatingInsightsForRange": "Einblicke für {period} werden erstellt ...",
+  "noNotesInRange": "Keine Notizen für {period}",
+  "exploreSummarizeRangePrompt": "Fasse meine Notizen aus {period} zusammen — was fällt auf?"
 }

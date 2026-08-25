@@ -463,6 +463,8 @@ class AIService extends ChangeNotifier {
     String? notesPreview,
     String? fullNotesContent, // 新增：完整笔记内容用于深度分析
     String? previousInsights, // 新增：历史洞察上下文
+    DateTime? rangeStart, // 这批笔记的时间范围（闭区间），用于给模型定位"现在"
+    DateTime? rangeEnd,
   }) async* {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
@@ -486,10 +488,81 @@ class AIService extends ChangeNotifier {
       languageCode: languageCode,
     );
 
+    // 时间坐标顶在最前面。periodLabel（"本周"）对模型只是个词，它既不知道
+    // 今天几号也不知道今天星期几，于是周一点「本周」时会拿上周的笔记当本周说。
+    final timeContext = AIPromptManager.buildAnalysisTimeContext(
+      now: DateTime.now(),
+      rangeStart: rangeStart,
+      rangeEnd: rangeEnd,
+      periodLabel: periodLabel,
+    );
+
     yield* _streamViaOpenAI(
       systemPrompt: prompt,
-      userMessage: user,
+      userMessage: '$timeContext\n\n$user',
       profileBlock: profileBlock,
+      // 内容生成不开思考。
+      //
+      // 这几条都是一次性、短输出的成品文案，不是对话：混合思考模型（gemma4、
+      // qwen3、deepseek-v3.1 这些）上开着思考，只是把一句话的生成拖成几十秒、
+      // 多花一倍 token，产出还一样。而且这里没有 onThinking，推理吐出来也是
+      // 被 processStreamToText 直接丢掉——纯亏。
+      //
+      // 必须显式传 false，不能留 null：null 会一路落到
+      // `_resolveThinkingEnabled` 的 `provider.supportsThinking`，而它对
+      // gemma4 这类模型返回 true，Ollama 那条路就会注入 `think: true`。
+      enableThinking: false,
+    );
+  }
+
+  /// 流式生成「这段时间一条都没写」时的那一句话。
+  ///
+  /// 空周期原来什么都不生成，界面上留一句灰色的「暂无洞察」。可最需要被
+  /// 说一句的时刻恰恰是这一刻：翻开这一周，什么都没有。这条路径不喂笔记
+  /// （没有可喂的），只喂时间坐标和"距上次多久"，剩下的靠提示词把"不许
+  /// 编造"钉死。
+  Stream<String> streamEmptyPeriodInsight({
+    required String periodLabel,
+    required DateTime now,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+    int? daysSinceLastNote,
+    bool everWroteAnything = true,
+  }) async* {
+    final languageCode = _settingsService.localeCode;
+    final profileBlock = await _userProfileContext();
+
+    yield* _streamViaOpenAI(
+      systemPrompt: _promptManager.getEmptyPeriodInsightSystemPrompt(
+        languageCode: languageCode,
+      ),
+      userMessage: _promptManager.buildEmptyPeriodInsightUserMessage(
+        periodLabel: periodLabel,
+        now: now,
+        rangeStart: rangeStart,
+        rangeEnd: rangeEnd,
+        daysSinceLastNote: daysSinceLastNote,
+        everWroteAnything: everWroteAnything,
+      ),
+      profileBlock: profileBlock,
+      // 一句话而已，别让模型有空间写成一段。
+      maxTokens: 200,
+      // 同 streamReportInsight：一次性短文案不开思考。
+      enableThinking: false,
+    );
+  }
+
+  /// 空周期洞察的本地兜底（没开 AI、或 AI 失败时）。
+  String buildLocalEmptyPeriodInsight({
+    required String periodLabel,
+    int? daysSinceLastNote,
+    bool everWroteAnything = true,
+  }) {
+    return _promptManager.formatLocalEmptyPeriodInsight(
+      periodLabel: periodLabel,
+      daysSinceLastNote: daysSinceLastNote,
+      everWroteAnything: everWroteAnything,
+      languageCode: _settingsService.localeCode,
     );
   }
 
@@ -580,6 +653,9 @@ class AIService extends ChangeNotifier {
           // 不再需要用空 onThinking 丢弃 reasoning：processStreamToText 现在
           // 只在整条流一个字正文都没有时才把 reasoning 当兜底输出。空回调反而
           // 会让 reasoning-only 模型的每日提示彻底变空、退回默认模板。
+          //
+          // 同 streamReportInsight：一句话的每日提示不开思考。
+          enableThinking: false,
         )) {
           if (controller.isClosed) break;
           controller.add(chunk);
@@ -642,11 +718,20 @@ class AIService extends ChangeNotifier {
 
   // 流式生成洞察
   /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
+  ///
+  /// [rangeStart] / [rangeEnd] / [periodLabel] 是这批笔记的时间范围。调用方
+  /// 本来就是按范围查出来的 [quotes]，把范围一起说清楚，模型才不用从正文
+  /// 反推"这是哪一周"（它推不出来，见 [AIPromptManager.buildAnalysisTimeContext]）。
+  ///
+  /// 和其它几条洞察路径一样不开思考（理由见 [streamReportInsight]）。
   Stream<String> streamGenerateInsights(
     List<Quote> quotes, {
     String analysisType = 'comprehensive',
     String analysisStyle = 'professional',
     String? customPrompt,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+    String? periodLabel,
   }) {
     // 将笔记数据转换为JSON格式
     final jsonData = _requestHelper.convertQuotesToJson(
@@ -670,12 +755,24 @@ class AIService extends ChangeNotifier {
       );
     }
 
-    final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
+    // 时间坐标和字段约定走用户消息，不走系统提示：customPrompt 可以整个替换
+    // 掉系统提示，而"今天几号""哪条是摘录"这两件事在任何提示词下都得成立。
+    final userMessage = [
+      AIPromptManager.buildAnalysisTimeContext(
+        now: DateTime.now(),
+        rangeStart: rangeStart,
+        rangeEnd: rangeEnd,
+        periodLabel: periodLabel,
+      ),
+      AIPromptManager.analysisDataContract,
+      '请分析以下结构化的笔记数据：\n\n$quotesText',
+    ].join('\n\n');
 
     return _streamViaOpenAI(
       systemPrompt: systemPrompt,
       userMessage: userMessage,
       maxTokens: 2500,
+      enableThinking: false,
     );
   }
 

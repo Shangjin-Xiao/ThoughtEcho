@@ -1644,6 +1644,9 @@
   "thisWeek": "이번 주",
   "thisMonth": "이번 달",
   "thisYear": "올해",
+  "lastWeek": "지난주",
+  "lastMonth": "지난달",
+  "lastYear": "작년",
   "noteCount": "노트 수",
   "notesUnitPlain": "메모",
   "totalWordCount": "총 단어",
@@ -1656,25 +1659,9 @@
   "noDataYet": "해당 없음",
   "commonWeather": "일반적인 날씨",
   "commonTag": "공통 태그",
-  "generatingInsightsForPeriod": "이번 {period} 인사이트 생성 중...",
-  "@generatingInsightsForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "noFavoritesInPeriod": "이 기간에는 즐겨찾기가 없습니다. 가서 노트에 사랑을 더해보세요!",
   "mostFavoritedInPeriod": "이 기간에 가장 좋아하는 것",
   "recentNotes": "최근 메모",
-  "noNotesInPeriodForPeriod": "이번 {period}에 작성된 노특가 없습니다",
-  "@noNotesInPeriodForPeriod": {
-    "placeholders": {
-      "period": {
-        "type": "String"
-      }
-    }
-  },
   "startRecordingThoughts": "당신의 생각을 기록하기 시작하세요",
   "totalCards": "총 {count}장의 카드",
   "@totalCards": {
@@ -3613,8 +3600,6 @@
   "typeSlashToSeeCommands": "/를 입력하여 명령 보기",
   "exploreAskAboutInsight": "이것에 대해 묻기",
   "exploreAskAboutInsightPrompt": "이에 대해 더 자세히 설명해 주시겠어요?",
-  "exploreSummarizePeriod": "이번 {period} 요약",
-  "exploreSummarizePeriodPrompt": "이번 {period}의 기록을 요약해 주세요. 눈에 띄는 점이 있나요?",
   "exploreFreeChat": "자유롭게 대화",
   "exploreRecentChats": "최근 대화",
   "exploreViewAllChats": "전체",
@@ -4571,5 +4556,9 @@
   "releaseThemeSwitchDesc": "Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
   "settingsReleaseNotes": "What's New",
-  "settingsReleaseNotesDesc": "See what this version adds"
+  "settingsReleaseNotesDesc": "See what this version adds",
+  "generatingInsightsForRange": "{period} 인사이트 생성 중...",
+  "exploreSummarizeRange": "{period} 요약",
+  "exploreSummarizeRangePrompt": "{period}의 기록을 요약해 주세요. 눈에 띄는 점이 있나요?",
+  "noNotesInRange": "{period}에 기록이 없습니다"
 }
