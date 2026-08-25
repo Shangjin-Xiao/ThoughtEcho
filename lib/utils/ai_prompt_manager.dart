@@ -1444,21 +1444,30 @@ $closing''';
     String? languageCode,
     @visibleForTesting int? seed,
   }) {
-    final isEnglish = languageCode != null && languageCode.startsWith('en');
-    final label =
-        isEnglish ? _cleanEnglishPeriodLabel(periodLabel) : periodLabel;
+    // 中文只给 zh（和"跟随系统"这个默认），其余一律走英文。
+    //
+    // 原来是"en 走英文，其他全落中文"——照抄了 formatLocalReportInsight 的写法，
+    // 于是 ja / ko / fr / es / de 的用户在 AI 关掉或失败时会收到一句中文。
+    // 这几种语言没有本地模板可选，那就退到应用自己声明的兜底语言：
+    // `AppLocalizations.supportedLocales.first` 就是 en。
+    final isChinese = languageCode == null || languageCode.startsWith('zh');
     final rng = seed != null ? math.Random(seed) : math.Random();
 
-    if (isEnglish) {
+    if (!isChinese) {
+      // 这里要的是能嵌进句子的完整短语（this week / last week），不是
+      // _cleanEnglishPeriodLabel 那种剥掉 "this " 的裸词——它是给
+      // "This $period" 那类模板用的，套到这里会拼出 "No entries for week"。
+      final label = periodLabel.trim().toLowerCase();
+      final dayWord = daysSinceLastNote == 1 ? 'day' : 'days';
       final templates = !everWroteAnything
           ? <String>[
               'Nothing written for $label yet — the first line is still waiting, and it can wait as long as you need.',
-              'This $label is still blank. Whenever a thought is worth keeping, it will have somewhere to go.',
+              '$label is still blank. Whenever a thought is worth keeping, it will have somewhere to go.',
             ]
           : daysSinceLastNote != null
               ? <String>[
-                  'No entries for $label; your last note was $daysSinceLastNote days ago. Quiet stretches are part of the record too.',
-                  '$label is empty — it has been $daysSinceLastNote days since you last wrote. The page is still here when you come back.',
+                  'No entries for $label; your last note was $daysSinceLastNote $dayWord ago. Quiet stretches are part of the record too.',
+                  '$label is empty — it has been $daysSinceLastNote $dayWord since you last wrote. The page is still here when you come back.',
                 ]
               : <String>[
                   'No entries for $label. A blank stretch is still a stretch, and the page keeps your place.',
@@ -1466,6 +1475,8 @@ $closing''';
                 ];
       return templates[rng.nextInt(templates.length)];
     }
+
+    final label = periodLabel;
 
     final templates = !everWroteAnything
         ? <String>[

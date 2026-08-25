@@ -90,17 +90,19 @@ void main() {
       );
     });
 
-    test('a gap under a day is not worth saying', () {
-      final lastWeek = DateTime(2026, 8, 20);
+    // 最贴边的情形：笔记就写在周期开始前的那个晚上。这是 emptyPeriodGapDays
+    // 能返回的最小值——不可能是 0，因为守卫已经要求这条笔记早于 range.start
+    // （恒为某天 00:00），它必然落在更早的一个日历日上。
+    test('a note written the evening before the period reports one day', () {
       expect(
         emptyPeriodGapDays(
-          lastNoteDate: DateTime(2026, 8, 24, 1),
-          range: rangeFor('week', lastWeek),
+          lastNoteDate: DateTime(2026, 8, 23, 23),
+          range: rangeFor('week', now), // 本周：8-24 ~ 8-30
           period: 'week',
-          date: lastWeek,
+          date: now,
           now: now,
         ),
-        isNull,
+        1,
       );
     });
   });

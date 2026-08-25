@@ -87,6 +87,10 @@ int? emptyPeriodGapDays({
 
   // 和 buildAnalysisTimeContext 一样按日历日算：跨夏令时时本地 difference
   // 会少一小时，inDays 随之少一天。
+  //
+  // 结果必然 >= 1，不需要再兜一次底：range.start 恒是某天的 00:00，上面的守卫
+  // 又要求 lastNoteDate 早于它，所以那条笔记落在 range.start 之前的某个日历日；
+  // 而 offset 为 current / previous 意味着今天不早于 range.start 那天。
   final today = now ?? DateTime.now();
   final from = DateTime.utc(today.year, today.month, today.day);
   final to = DateTime.utc(
@@ -94,6 +98,5 @@ int? emptyPeriodGapDays({
     lastNoteDate.month,
     lastNoteDate.day,
   );
-  final days = from.difference(to).inDays;
-  return days >= 1 ? days : null;
+  return from.difference(to).inDays;
 }
