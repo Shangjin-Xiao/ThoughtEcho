@@ -771,3 +771,51 @@ build/raster 里。
 Flutter 3.47.x + 锁定的 flutter_quill 11.5.0 需要先跑 `scripts/patch_flutter_quill.sh`
 （`TextInputClient.onFocusReceived`），否则任何 widget 测试都编译不过。CI 里那一步
 就是干这个的，本地新环境容易漏。
+
+---
+
+## 2026-08-25: 记录页复验 —— 列表本身已经不花钱了，剩下的是分页和「第一次」
+
+**决策者**: 上晋 + Claude
+**类型**: 复验 / 实施
+**产出**: 见 `docs/note-list-warmup-invalidation-2026-08-22.md` 末节
+
+#510 之后的两组日志确认三处改动全部生效，其中最有说服力的是 scroll-10：
+`built=0`、`frameJank=0`、`avgFrame=2.4ms`、`worstVsync=1.5ms` —— **全是老卡片时，
+列表本身已经几乎不花钱**。这条基线很重要：以后再有人说「记录页卡」，先看这一段，
+它干净就说明问题不在卡片本身。
+
+剩下的成本集中在两处：分页（scroll-3 `worstVsync=77.1ms`、`worstGap=357.5ms`，而
+`avgBuild` 只有 1.3ms）和冷启动首屏光栅（scroll-1 只建了 2 张卡却
+`worstRaster=36.0ms`、`frameJank=26/45`）。
+
+### 这一轮选择先量再改
+
+77ms 落在帧之外的 UI 线程，但**具体在哪一段没有证据**：SQL 等待、标签批查、
+一页 50 条反序列化、还是送到列表之后的复用比较，四种改法完全不同。查过不是 N+1
+（标签查询早就 batch 过了），所以没有一眼可见的答案。
+
+按前几轮同样的方法：先加分段计时（`NoteListLoadMoreProfile`，横跨 service 和
+widget 两层的静态累加器），让下一份日志直接回答，再决定动时机还是动实现。
+**这个顺序在这条线上已经连着对了三次**，不要因为「看起来很明显」就跳过。
+
+一个刻意的命名选择：落库那一段叫 `apply=` 而不是 `state=`，因为 `setState` 只是
+排一帧，卡片真正重建的成本在下一帧里（由 `built=`/`itemMemo`/`worstBuild` 反映）。
+叫 `state` 会让人把它当成「整列表重建花了多久」。
+
+### 顺手做掉：头部测宽进预热
+
+08-19 那条记的是「头部测宽（0.5ms/卡）没进预热，plumbing 比收益多」。折叠测量都暖好
+之后它排到了第二/三位（`headerMiss+48 / 13.1ms`、`+62 / 16.8ms`），**这个判断该翻了**。
+
+做法沿用折叠排版的教训：把头部三段文字和样式抽成
+`QuoteItemWidget.resolveHeaderTexts`，`build` 和 `warmCollapsedMeasurements` 共用同
+一处。两边各写一份格式化逻辑的话，预热会变成静悄悄的空转 —— 这个坑这条线上已经踩过
+一次（`expand=59` 恰好等于建过的卡片数那次）。测试里把「预热之后建卡片不再产生
+headerMiss」钉住了。
+
+### 排版量封顶：降级
+
+scroll-2/3 `planMiss+0`，预热已经把它全吃掉了；只有冷启动 scroll-1 有 `+5 / 5.6ms`。
+`planWorstUs=18913` 是历史最坏值，不是这几段产生的。**排在分页和首屏光栅之后。**
+

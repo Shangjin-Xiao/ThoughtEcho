@@ -355,6 +355,7 @@ extension _NoteListScrollExtension on NoteListViewState {
         'loadMoreAttemptΔ=${_loadMoreAttemptCount - _scrollSessionStartLoadMoreAttemptCount},'
         'loadMoreStartΔ=${_loadMoreStartCount - _scrollSessionStartLoadMoreStartCount},'
         'loadMoreSkipΔ=${_loadMoreSkipCount - _scrollSessionStartLoadMoreSkipCount},'
+        'loadMore={${NoteListLoadMoreProfile.toCompactText()}},'
         'notif=$_scrollSessionNotificationStarts/$_scrollSessionNotificationUpdates/$_scrollSessionNotificationEnds,'
         'built=$_scrollSessionItemBuildCount@$builtRange,'
         'builtKind=p$_scrollSessionBuiltPlain/r$_scrollSessionBuiltRich/m$_scrollSessionBuiltMedia';
@@ -1126,7 +1127,15 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     try {
       logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
+      // 分段计时，见 [NoteListLoadMoreProfile]：这一个 await 里包着 SQL、标签批查和
+      // 整页反序列化，而它落在惯性帧的缝里。
+      NoteListLoadMoreProfile.begin();
+      final serviceStopwatch = Stopwatch()..start();
       await db.loadMoreQuotes();
+      serviceStopwatch.stop();
+      NoteListLoadMoreProfile.recordServiceCall(
+        serviceStopwatch.elapsedMicroseconds,
+      );
       // 成功路径由 watchQuotes 的流回调统一更新 _quotes/_hasMore/_isLoading，
       // 避免在流事件送达前把 _isLoading 提前置回 false，导致滚动惯性期间
       // 再次触发 loadMore，一次追加两页数据。

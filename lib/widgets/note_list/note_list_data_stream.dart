@@ -29,6 +29,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   /// 没有一条能复用时原样返回，不产生任何拷贝。
   List<Quote> _reuseUnchangedQuoteInstances(List<Quote> incoming) {
     if (_quotes.isEmpty || incoming.isEmpty) return incoming;
+    final stopwatch = Stopwatch()..start();
 
     final previousById = <String, Quote>{};
     for (final quote in _quotes) {
@@ -51,6 +52,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       reconciled[i] = previous;
       _quoteInstanceReuseCount++;
     }
+    stopwatch.stop();
+    NoteListLoadMoreProfile.recordReuse(stopwatch.elapsedMicroseconds);
     return reconciled ?? incoming;
   }
 
@@ -183,6 +186,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (quotesUnchanged) {
             _isLoading = isLoadMorePage;
           } else {
+            final applyStopwatch = Stopwatch()..start();
             _updateState(() {
               _quotes
                 ..clear()
@@ -196,6 +200,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               // 创建从偏移量 0 开始的新 ListView，导致列表跳回顶部。
               // 搜索/筛选切换动画由 _updateStreamSubscription 的首个数据事件负责递增。
             });
+            applyStopwatch.stop();
+            NoteListLoadMoreProfile.recordApply(
+              applyStopwatch.elapsedMicroseconds,
+            );
           }
           // 没换过列表就没有新的夹紧可记；传 null 让它只重试挂起的还原。
           _guardScrollAnchorAfterDataEvent(
@@ -485,6 +493,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (quotesUnchanged) {
             _isLoading = isLoadMorePage;
           } else {
+            final applyStopwatch = Stopwatch()..start();
             _updateState(() {
               _quotes
                 ..clear()
@@ -493,6 +502,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               _isLoading = isLoadMorePage;
               _pruneExpansionControllers();
             });
+            applyStopwatch.stop();
+            NoteListLoadMoreProfile.recordApply(
+              applyStopwatch.elapsedMicroseconds,
+            );
           }
 
           // 筛选条件变化：新结果的第一次事件到达后回到顶部。

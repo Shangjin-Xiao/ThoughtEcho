@@ -29,6 +29,7 @@ import 'database_schema_manager.dart';
 import 'database_backup_service.dart';
 import 'database_health_service.dart';
 import 'data_directory_service.dart';
+import '../utils/note_list_load_more_profile.dart';
 
 part 'database/database_cache_mixin.dart';
 part 'database/database_query_mixin.dart';

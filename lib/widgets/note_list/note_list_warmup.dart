@@ -68,6 +68,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
     if (settings == null) return;
     final mediaStyle = settings.noteCardMediaStyle;
     final prioritizeBoldContent = settings.prioritizeBoldContentInCollapse;
+    final showExactTime = settings.showExactTime;
 
     // 宽度或版式变了（旋屏、分屏、切换媒体版式）说明此前暖的键全作废，从头再来。
     // 图片的去重集合也要一起清：`imageProviderFor` 的解码尺寸就是按这两样算的，
@@ -120,6 +121,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
         contentMaxWidth: width,
         mediaStyle: mediaStyle,
         prioritizeBoldContent: prioritizeBoldContent,
+        showExactTime: showExactTime,
       );
       _warmCollapsedMediaImage(
         quote: quote,

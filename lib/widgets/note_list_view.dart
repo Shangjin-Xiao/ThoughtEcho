@@ -18,6 +18,7 @@ import '../services/database_service.dart';
 import '../utils/delta_media_extractor.dart';
 import '../utils/icon_utils.dart';
 import '../utils/frame_timing_stats.dart';
+import '../utils/note_list_load_more_profile.dart';
 import '../utils/spread_from_anchor_cursor.dart';
 import '../utils/jank_detector.dart';
 import '../utils/lottie_animation_manager.dart';

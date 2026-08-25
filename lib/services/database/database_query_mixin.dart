@@ -420,6 +420,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     );
     stopwatch.stop();
 
+    final sqlMicros = stopwatch.elapsedMicroseconds;
     final queryTime = stopwatch.elapsedMilliseconds;
 
     // 记录查询统计（用于性能分析）
@@ -446,12 +447,21 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 更新性能统计
     _updateQueryStats('getUserQuotes', queryTime);
 
-    if (maps.isEmpty) return [];
+    if (maps.isEmpty) {
+      NoteListLoadMoreProfile.recordQuery(
+        sqlMicros: sqlMicros,
+        tagsMicros: 0,
+        parseMicros: 0,
+        rowCount: 0,
+      );
+      return [];
+    }
 
     // Fetch tags for the retrieved quotes
     final quoteIds = maps.map((m) => m['id'] as String).toList();
 
     final tagsByQuoteId = <String, List<String>>{};
+    final tagsStopwatch = Stopwatch()..start();
 
     // ⚡ Bolt: 使用 batch 批量执行查询，减少数据库往返和 N+1 开销
     final batch = db.batch();
@@ -482,13 +492,28 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       }
     }
 
-    return maps.map((map) {
+    tagsStopwatch.stop();
+
+    // 反序列化单独计时：一页 50 条带完整 delta_content，这一段是纯 UI 线程工作，
+    // 和 SQL 等待完全不同性质，混在一起就分不出该优化哪一头。
+    final parseStopwatch = Stopwatch()..start();
+    final quotes = maps.map((map) {
       final quoteId = map['id'] as String;
       final tags = tagsByQuoteId[quoteId] ?? [];
       final mutableMap = Map<String, dynamic>.from(map);
       mutableMap['tag_ids'] = tags.join(',');
       return Quote.fromJson(mutableMap);
     }).toList();
+    parseStopwatch.stop();
+
+    NoteListLoadMoreProfile.recordQuery(
+      sqlMicros: sqlMicros,
+      tagsMicros: tagsStopwatch.elapsedMicroseconds,
+      parseMicros: parseStopwatch.elapsedMicroseconds,
+      rowCount: quotes.length,
+    );
+
+    return quotes;
   }
 
   /// 修复：更新查询性能统计

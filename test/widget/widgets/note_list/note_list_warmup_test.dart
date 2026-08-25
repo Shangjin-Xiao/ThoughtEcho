@@ -78,6 +78,8 @@ Quote _plainQuote() => Quote(
       dayPeriod: 'morning',
     );
 
+/// 带位置和天气：卡片头部三段文字（日期 / 位置 / 天气）全都要测宽，
+/// 只有日期的话，位置和天气那两段的键对不对得上就没人验。
 Quote _richQuote() => Quote(
       id: 'rich-1',
       content: List.filled(8, _longChunk).join('\n'),
@@ -87,6 +89,11 @@ Quote _richQuote() => Quote(
       date: DateTime(2025, 6, 21, 9).toIso8601String(),
       editSource: 'fullscreen',
       dayPeriod: 'morning',
+      location: '浙江省 杭州市 西湖区',
+      latitude: 30.2,
+      longitude: 120.1,
+      weather: 'clear',
+      temperature: '21°C',
     );
 
 int _planMisses() => (QuoteContent.debugCacheStats()['plan']
@@ -97,6 +104,11 @@ int _expansionMisses() => (QuoteContent.debugCacheStats()['expansion']
 
 int _expansionCacheSize() => (QuoteContent.debugCacheStats()['expansion']
     as Map<String, dynamic>)['cacheSize'] as int;
+
+/// 头部测宽（日期 / 位置 / 天气）的未命中次数。标签估宽走同一张缓存表但
+/// `countAsHeader: false`，不会混进这个数。
+int _headerMisses() =>
+    QuoteItemWidget.getHeaderTextWidthCacheStats()['cacheMisses']!;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -174,10 +186,17 @@ void main() {
         contentMaxWidth: width!,
         mediaStyle: NoteCardMediaStyle.thumbnail,
         prioritizeBoldContent: false,
+        showExactTime: false,
       );
 
       final planMissesAfterWarmup = _planMisses();
       final expansionMissesAfterWarmup = _expansionMisses();
+      final headerMissesAfterWarmup = _headerMisses();
+      expect(
+        headerMissesAfterWarmup,
+        greaterThan(0),
+        reason: '预热必须真的量过头部那几段文字',
+      );
       expect(
         expansionMissesAfterWarmup,
         greaterThan(0),
@@ -203,6 +222,11 @@ void main() {
         _planMisses(),
         planMissesAfterWarmup,
         reason: '折叠排版的键和预热对不上',
+      );
+      expect(
+        _headerMisses(),
+        headerMissesAfterWarmup,
+        reason: '头部测宽的键和预热对不上',
       );
     });
   }
@@ -342,6 +366,7 @@ void main() {
         contentMaxWidth: width,
         mediaStyle: NoteCardMediaStyle.thumbnail,
         prioritizeBoldContent: false,
+        showExactTime: false,
       );
       return _expansionMisses() - before;
     }
