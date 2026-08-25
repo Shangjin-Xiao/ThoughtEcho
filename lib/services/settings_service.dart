@@ -1131,6 +1131,22 @@ class SettingsService extends ChangeNotifier {
     _saveMultiAiLock = completer;
 
     try {
+      final appKeyExisted = candidateAppSettingsKeyExists();
+      String? previousAppJson;
+      if (appKeyExisted) {
+        try {
+          previousAppJson = _mmkv.getString(_appSettingsKey);
+        } catch (e, s) {
+          AppLogger.e(
+            '读取原有应用设置失败，放弃写操作',
+            error: e,
+            stackTrace: s,
+            source: 'SettingsService',
+          );
+          throw StateError('读取原有应用设置失败');
+        }
+      }
+
       // 在互斥锁内部基于最新的 _appSettings 构建 candidateAppSettings，防止并发下的覆盖
       final hasActiveAi = settings.providers.any(
         (p) => p.isEnabled && p.apiUrl.trim().isNotEmpty,
@@ -1146,10 +1162,6 @@ class SettingsService extends ChangeNotifier {
       final multiJson = json.encode(settings.toJson());
       final appJson = candidateAppSettings != null
           ? json.encode(candidateAppSettings.toJson())
-          : null;
-
-      final previousAppJson = candidateAppSettings != null
-          ? _mmkv.getString(_appSettingsKey)
           : null;
 
       if (appJson != null) {
@@ -1173,9 +1185,9 @@ class SettingsService extends ChangeNotifier {
         // 回滚已写入的 _appSettingsKey
         if (candidateAppSettings != null) {
           try {
-            if (previousAppJson != null) {
+            if (appKeyExisted && previousAppJson != null) {
               await _mmkv.setString(_appSettingsKey, previousAppJson);
-            } else {
+            } else if (!appKeyExisted) {
               await _mmkv.remove(_appSettingsKey);
             }
           } catch (rollbackError, rollbackStack) {
@@ -1208,6 +1220,9 @@ class SettingsService extends ChangeNotifier {
       completer.complete();
     }
   }
+
+  @visibleForTesting
+  bool candidateAppSettingsKeyExists() => _mmkv.containsKey(_appSettingsKey);
 
   /// 更新多provider AI设置
   Future<void> updateMultiAISettings(MultiAISettings settings) async {

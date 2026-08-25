@@ -798,9 +798,15 @@ class AppTheme with ChangeNotifier {
         if (isNewInstallation) {
           _themeStyle = ThemeStyle.paper;
           try {
-            await _storage
+            final success = await _storage
                 ?.setString(_themeStyleKey, ThemeStyle.paper.name)
                 .timeout(const Duration(seconds: 2));
+            if (success == false) {
+              logError(
+                '写入默认主题风格 ThemeStyle.paper 返回 false',
+                source: 'AppTheme',
+              );
+            }
           } catch (e, s) {
             logError(
               '写入默认主题风格 ThemeStyle.paper 失败',
