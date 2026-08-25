@@ -314,12 +314,18 @@ class QuoteItemWidget extends StatefulWidget {
       maxLines: 1,
       textDirection: textDirection,
       textScaler: textScaler,
-    )..layout();
+    );
 
-    final width = textPainter.width;
-    // 量完就放：`TextPainter` 背后是一个原生 paragraph，不 dispose 要等 GC 才还。
-    // 预热一轮会把这个方法调用三倍于卡片数的次数，攒起来不是小数。
-    textPainter.dispose();
+    // 量完就放，而且走 `finally`：`TextPainter` 背后是一个原生 paragraph，不 dispose
+    // 要等 GC 才还，而 `layout()` 抛异常时更没人还。预热一轮会把这个方法调用三倍于
+    // 卡片数的次数，攒起来不是小数。
+    final double width;
+    try {
+      textPainter.layout();
+      width = textPainter.width;
+    } finally {
+      textPainter.dispose();
+    }
     stopwatch.stop();
     if (countAsHeader) {
       _headerTextWidthWorkMicros += stopwatch.elapsedMicroseconds;

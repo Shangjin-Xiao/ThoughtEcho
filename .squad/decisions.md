@@ -780,7 +780,7 @@ Flutter 3.47.x + 锁定的 flutter_quill 11.5.0 需要先跑 `scripts/patch_flut
 **类型**: 复验 / 实施
 **产出**: 见 `docs/note-list-warmup-invalidation-2026-08-22.md` 末节
 
-#510 之后的两组日志确认三处改动全部生效，其中最有说服力的是 scroll-10：
+PR `#510` 之后的两组日志确认三处改动全部生效，其中最有说服力的是 scroll-10：
 `built=0`、`frameJank=0`、`avgFrame=2.4ms`、`worstVsync=1.5ms` —— **全是老卡片时，
 列表本身已经几乎不花钱**。这条基线很重要：以后再有人说「记录页卡」，先看这一段，
 它干净就说明问题不在卡片本身。

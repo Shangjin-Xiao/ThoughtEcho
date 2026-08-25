@@ -12,10 +12,13 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 /// 日志的 `loadMore={}` 一行打出来。**记的是最近一次分页**，不是增量 —— 要看的是
 /// 「那一下 77ms 花在哪」，把多次平均掉反而看不见。
 ///
-/// 它是进程级的静态累加器，没有请求令牌：`getUserQuotes` 埋得太深，为一个诊断把
-/// token 一路穿到数据库层不划算。代价是 [begin] 之后、日志打出来之前，别的查询或
-/// 数据事件（搜索、筛选刷新、回填分块）也会记进来。所以**采样次数一并打出来**：
-/// `q=1` 且 `ev=1` 才说明这份拆分干净，大于 1 就是混进了别的东西，别照着它下结论。
+/// widget 那半边（`reuse` / `apply`）只在确认是分页带来的那次数据事件时才记账，
+/// 搜索、筛选刷新、回填分块都进不来。
+///
+/// 查询那半边（`sql` / `tags` / `parse` / `rows`）做不到同样干净：`getUserQuotes`
+/// 埋得太深，为一个诊断把请求 token 一路穿到数据库层不划算。代价是 [begin] 之后、
+/// `loadMoreQuotes` 返回之前，别的查询也会记进来。所以**采样次数一并打出来**：
+/// `q=1` 才说明这份查询拆分干净，大于 1 就是混进了别的查询，别照着它下结论。
 /// 这比静悄悄给出一份可能是错的拆分要诚实。
 class NoteListLoadMoreProfile {
   NoteListLoadMoreProfile._();
@@ -29,7 +32,8 @@ class NoteListLoadMoreProfile {
   static int _applyMicros = 0;
 
   /// 这一轮窗口里 [recordQuery] / [recordReuse] + [recordApply] 各被调用了几次。
-  /// 大于 1 就说明有别的查询或数据事件混进来了，见类文档。
+  /// `q` 大于 1 说明有别的查询混进来了；`ev` 已经按分页事件过滤，正常就是 1，
+  /// 是 0 说明那次分页的数据事件还没到（或者根本没触发），见类文档。
   static int _queryCount = 0;
   static int _eventCount = 0;
 
