@@ -496,7 +496,11 @@ void main() {
       // 横线曾经铺满整张笔记卡（穿过日期行、图片、标签胶囊和按钮行），
       // 那时 0.55 的浓度看着就是一张糊在卡片上的格子图。现在它只画在正文块里
       // （见 quote_item_widget 的 _buildQuoteContentSection），要收着画。
-      expect(ThemeStyleForm.paper.ruleOpacity, lessThanOrEqualTo(0.45));
+      //
+      // 上限从 0.45 收到 0.3：0.4 混到卡片色上约 #F2ECE4，和页面底色 #F3EEE4
+      // 几乎同一个明度，等于每行字底下都垫着一道和背景一样重的线，在和文字抢
+      // 横向注意力。底纹要看得见，不能有分量。
+      expect(ThemeStyleForm.paper.ruleOpacity, lessThanOrEqualTo(0.3));
     });
 
     test('纹理开关是令牌取值，只有纸与墨画横线', () {

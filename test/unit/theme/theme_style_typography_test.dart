@@ -68,10 +68,10 @@ void main() {
         final text = (await themeFor(style)).textTheme;
 
         // M3 的字号/行高：几何里给的值，风格在它上面做缩放。
+        // bodySmall 不在这里：12sp 归功能性小字，见下面那条 label* 的用例。
         final levels = <String, (TextStyle?, double, double)>{
           'bodyLarge': (text.bodyLarge, 16, 24 / 16),
           'bodyMedium': (text.bodyMedium, 14, 20 / 14),
-          'bodySmall': (text.bodySmall, 12, 16 / 12),
         };
         levels.forEach((name, spec) {
           final (resolved, m3Size, m3Height) = spec;
@@ -146,14 +146,20 @@ void main() {
         expect(text.displaySmall?.fontWeight, isNull);
       });
 
-      test('label* 一项都不改，保持系统黑体', () async {
+      test('label* 和 bodySmall 一项都不改，保持系统黑体', () async {
         final text = (await themeFor(style)).textTheme;
         // 按钮、胶囊、导航栏标签是 11–14sp 的功能性文字，中文衬线在这个尺寸下
         // 糊成一团，又不承担任何风格识别。换了才是 bug。
+        //
+        // bodySmall（12sp）同一档光学尺寸，判据也是同一条：它在这个应用里几乎全是
+        // 元信息（笔记卡的日期/位置/天气、设置项说明、时间戳）。它一旦被算进阅读级，
+        // 就会跟着抬到 bodyWeightFloor，和正文一样重——一张笔记卡上四段衬线全是
+        // w500，主次就没了。这一级回黑体、回 w400 才是元信息该有的样子。
         for (final entry in {
           'labelLarge': text.labelLarge,
           'labelMedium': text.labelMedium,
           'labelSmall': text.labelSmall,
+          'bodySmall': text.bodySmall,
         }.entries) {
           expect(entry.value?.fontFamily, 'Roboto',
               reason: '${entry.key} 被换成衬线了');
@@ -161,6 +167,15 @@ void main() {
           expect(entry.value?.fontWeight, isNull,
               reason: '${entry.key} 字重被钉住了');
         }
+        // 行高也不该被钉——bodySmall 曾经跟着 bodyLineHeight 放松，那是阅读级
+        // 才需要的呼吸感，元信息跟着放松只会把卡片撑高。
+        expect(text.bodySmall?.height, isNull, reason: 'bodySmall 行高被钉住了');
+        // 层级的硬关系：元信息必须比正文轻一档，否则「小一档 + 淡一档 + 轻一档」
+        // 三重退后只剩两重，卡片上所有文字一样重。
+        expect(
+          (text.bodySmall?.fontWeight ?? FontWeight.w400).value,
+          lessThan(text.bodyLarge!.fontWeight!.value),
+        );
       });
 
       test('AppBar 标题跟上字体族和字重', () async {
