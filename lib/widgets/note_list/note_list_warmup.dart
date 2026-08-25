@@ -28,6 +28,29 @@ extension _NoteListWarmupExtension on NoteListViewState {
     _idleWarmupTimer = Timer(delay, _runIdleWarmupTick);
   }
 
+  /// 设置里有三项参与预热算出来的缓存键：媒体版式、加粗优先、精确时间。改了任何
+  /// 一项，此前暖的键就全作废。
+  ///
+  /// 光把它们放进失效判据不够 —— **还得有人把那一轮 tick 触发起来**。第一轮走完
+  /// 之后定时器链就停了；不挂这个监听的话，用户改完设置要等到下一次数据事件或者
+  /// 滚动停止才会重暖，中间滑过去的每张卡片都要现算。列表自己没有 `select` 这三项，
+  /// `didChangeDependencies` 不会因它们触发，所以直接挂监听。
+  ///
+  /// 无关设置（主题、AI 配置）也会把 tick 排起来，但那一轮进去发现设置没变、游标也
+  /// 满着，几乎不花钱。
+  void _attachSettingsWarmupListener() {
+    final settings = _readSettingsServiceOrNull();
+    if (identical(settings, _warmupSettingsSource)) return;
+    _warmupSettingsSource?.removeListener(_onWarmupSettingsChanged);
+    _warmupSettingsSource = settings;
+    settings?.addListener(_onWarmupSettingsChanged);
+  }
+
+  void _onWarmupSettingsChanged() {
+    if (!mounted) return;
+    _scheduleIdleLayoutWarmup();
+  }
+
   /// 列表内容整体换过（搜索、筛选、排序）时重开一轮。
   ///
   /// 追加分页不需要调用它：游标记的是「暖过几条」，长度一变长，下一轮自然接着
@@ -70,7 +93,8 @@ extension _NoteListWarmupExtension on NoteListViewState {
     final prioritizeBoldContent = settings.prioritizeBoldContentInCollapse;
     final showExactTime = settings.showExactTime;
 
-    // 宽度或版式变了（旋屏、分屏、切换媒体版式）说明此前暖的键全作废，从头再来。
+    // 宽度或**任何参与缓存键的设置**变了（旋屏、分屏、切换媒体版式、改加粗优先、
+    // 改精确时间显示）说明此前暖的键全作废，从头再来。
     // 图片的去重集合也要一起清：`imageProviderFor` 的解码尺寸就是按这两样算的，
     // 只按 source 记「暖过了」的话，换了尺寸的那张永远等不到预热。
     //
@@ -80,15 +104,20 @@ extension _NoteListWarmupExtension on NoteListViewState {
     // 也就是「不是冷启动也卡」。Flutter 自己的 imageCache 在后台同样会被清，
     // 所以 precache 的去重集合跟着一起清，否则那些图永远等不到第二次预解码。
     final cacheGeneration = QuoteContent.cacheGeneration;
+    final settingsKey = (
+      mediaStyle: mediaStyle,
+      prioritizeBoldContent: prioritizeBoldContent,
+      showExactTime: showExactTime,
+    );
     if (_idleWarmupWidth != width ||
-        _idleWarmupMediaStyle != mediaStyle ||
+        _idleWarmupSettings != settingsKey ||
         _idleWarmupCacheGeneration != cacheGeneration) {
       if (_idleWarmupCacheGeneration != cacheGeneration &&
           _idleWarmupCacheGeneration != null) {
         _idleWarmupRewarms++;
       }
       _idleWarmupWidth = width;
-      _idleWarmupMediaStyle = mediaStyle;
+      _idleWarmupSettings = settingsKey;
       _idleWarmupCacheGeneration = cacheGeneration;
       _restartIdleLayoutWarmupPass();
       _idleWarmupPrecachedSources.clear();

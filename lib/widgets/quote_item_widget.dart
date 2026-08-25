@@ -317,6 +317,9 @@ class QuoteItemWidget extends StatefulWidget {
     )..layout();
 
     final width = textPainter.width;
+    // 量完就放：`TextPainter` 背后是一个原生 paragraph，不 dispose 要等 GC 才还。
+    // 预热一轮会把这个方法调用三倍于卡片数的次数，攒起来不是小数。
+    textPainter.dispose();
     stopwatch.stop();
     if (countAsHeader) {
       _headerTextWidthWorkMicros += stopwatch.elapsedMicroseconds;

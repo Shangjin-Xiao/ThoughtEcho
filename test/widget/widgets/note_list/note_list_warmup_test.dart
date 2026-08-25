@@ -45,8 +45,15 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   @override
   bool get prioritizeBoldContentInCollapse => false;
 
+  bool _showExactTime = false;
+
   @override
-  bool get showExactTime => false;
+  bool get showExactTime => _showExactTime;
+
+  set showExactTime(bool value) {
+    _showExactTime = value;
+    notifyListeners();
+  }
 
   @override
   bool get showNoteEditTime => false;
@@ -297,6 +304,90 @@ void main() {
       greaterThanOrEqualTo(quotes.length),
       reason: '缓存被清空后预热没有重跑：游标停在列表末尾，'
           '下一次滑动每张卡片都要重算一遍折叠判定',
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
+    await databaseService.disposeStream();
+  });
+
+  testWidgets('改了参与缓存键的设置，预热必须从头重来', (tester) async {
+    // 媒体版式、加粗优先、精确时间三个设置都参与预热算出来的缓存键。少放一个进
+    // 失效判据，用户改了它之后预热就会判定「暖完了」而键全对不上 —— 那正是这条线
+    // 一开始那个 bug 的形状。这里用「精确时间」这一项守住整条规则。
+    final settingsService = _FakeSettingsService();
+    final databaseService = _StreamingFakeDatabaseService();
+    final quotes = [
+      for (var i = 0; i < 30; i++)
+        Quote(
+          id: 'setting-$i',
+          content: '设置变化重暖测试笔记 $i',
+          date: DateTime(2026, 8, 25, 9)
+              .subtract(Duration(minutes: i))
+              .toIso8601String(),
+          editSource: 'inline',
+          dayPeriod: 'morning',
+        ),
+    ];
+
+    await tester.pumpWidget(
+      _TestApp(
+        databaseService: databaseService,
+        settingsService: settingsService,
+      ),
+    );
+    await tester.pump();
+    databaseService.emit(quotes, hasMore: false);
+    await tester.pump();
+    Future<void> settleIdleWork() async {
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    await settleIdleWork();
+    expect(_headerMisses(), greaterThan(0), reason: '第一轮预热要真的量过');
+
+    // 探的是**没建出来**的最后一条：改设置会触发重建，可见卡片自己就会产生
+    // headerMiss，只看总数分不出「预热重跑了」还是「卡片自己现算了」。
+    final offscreenQuote = quotes.last;
+    expect(
+      find.text(offscreenQuote.content),
+      findsNothing,
+      reason: '这一条必须在屏幕外，否则探针探的是卡片自己的测量',
+    );
+
+    final context = tester.element(find.byType(QuoteItemWidget).first);
+    final width = QuoteItemWidget.lastCollapsedContentWidth!;
+    int missesWhenWarming({required bool showExactTime}) {
+      final before = _headerMisses();
+      QuoteItemWidget.warmCollapsedMeasurements(
+        context: context,
+        quote: offscreenQuote,
+        contentMaxWidth: width,
+        mediaStyle: NoteCardMediaStyle.thumbnail,
+        prioritizeBoldContent: false,
+        showExactTime: showExactTime,
+      );
+      return _headerMisses() - before;
+    }
+
+    expect(
+      missesWhenWarming(showExactTime: false),
+      0,
+      reason: '第一轮预热应当已经覆盖到屏幕外的这一条',
+    );
+
+    // 改「精确时间」——日期文案变了，此前暖的头部键全部作废。
+    settingsService.showExactTime = true;
+    await tester.pump();
+    await settleIdleWork();
+
+    expect(
+      missesWhenWarming(showExactTime: true),
+      0,
+      reason: '设置参与缓存键却不参与失效判据：预热判定「暖完了」，'
+          '屏幕外的条目永远等不到按新文案重暖',
     );
 
     await tester.pumpWidget(const SizedBox.shrink());
