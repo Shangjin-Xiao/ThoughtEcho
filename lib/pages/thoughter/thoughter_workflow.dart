@@ -43,8 +43,7 @@ extension _ThoughterWorkflow on _ThoughterPageState {
   Future<void> _runMarkdownWorkflow({
     required String title,
     required String loadingText,
-    required Stream<String> Function(void Function(String) onThinking)
-        buildStream,
+    required Stream<String> stream,
   }) async {
     final l10n = AppLocalizations.of(context);
     final aiMsgId = _uuid.v4();
@@ -60,24 +59,10 @@ extension _ThoughterWorkflow on _ThoughterPageState {
     );
 
     String fullResponse = '';
-    final thinkingChunks = <String>[];
 
-    void onThinking(String chunk) {
-      if (chunk.isEmpty) return;
-      thinkingChunks.add(chunk);
-      // 正文一旦开始，思考面板就固定下来不再刷新：这时候在动的是正文，
-      // 每来一段推理再整体重写一次消息只是白花一次重建。
-      if (fullResponse.isNotEmpty) return;
-      _scheduleStreamUpdate(
-        aiMsgId,
-        loadingText,
-        isLoading: true,
-        state: app_chat.MessageState.thinking,
-        thinkingChunks: List<String>.of(thinkingChunks),
-      );
-    }
-
-    final stream = buildStream(onThinking);
+    // 这里不接 onThinking：洞察是一段成品文案，不是对话，模型的草稿对读者
+    // 没有意义。而且这条路径本来就不开思考（见 AIService 那几处
+    // `enableThinking: false`），压根不会有推理内容可显示。
     _streamSubscription?.cancel();
     _streamSubscription = stream.listen(
       (chunk) {
@@ -87,8 +72,6 @@ extension _ThoughterWorkflow on _ThoughterPageState {
           fullResponse,
           isLoading: true,
           state: app_chat.MessageState.responding,
-          thinkingChunks:
-              thinkingChunks.isEmpty ? null : List<String>.of(thinkingChunks),
         );
       },
       onDone: () {
@@ -168,15 +151,13 @@ extension _ThoughterWorkflow on _ThoughterPageState {
     await _runMarkdownWorkflow(
       title: l10n.commandInsight,
       loadingText: l10n.generatingInsightsForRange(periodLabel),
-      buildStream: (onThinking) => _aiService.streamGenerateInsights(
+      stream: _aiService.streamGenerateInsights(
         quotes,
         analysisType: _selectedInsightType,
         analysisStyle: _selectedInsightStyle,
         rangeStart: range?.start,
         rangeEnd: range?.end,
         periodLabel: periodLabel,
-        enableThinking: _enableThinking,
-        onThinking: onThinking,
       ),
     );
   }
@@ -216,7 +197,7 @@ extension _ThoughterWorkflow on _ThoughterPageState {
     await _runMarkdownWorkflow(
       title: l10n.commandInsight,
       loadingText: l10n.generatingInsightsForRange(periodLabel),
-      buildStream: (_) => _aiService.streamEmptyPeriodInsight(
+      stream: _aiService.streamEmptyPeriodInsight(
         periodLabel: periodLabel,
         now: now,
         rangeStart: range?.start,

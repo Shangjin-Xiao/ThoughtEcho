@@ -501,6 +501,17 @@ class AIService extends ChangeNotifier {
       systemPrompt: prompt,
       userMessage: '$timeContext\n\n$user',
       profileBlock: profileBlock,
+      // 内容生成不开思考。
+      //
+      // 这几条都是一次性、短输出的成品文案，不是对话：混合思考模型（gemma4、
+      // qwen3、deepseek-v3.1 这些）上开着思考，只是把一句话的生成拖成几十秒、
+      // 多花一倍 token，产出还一样。而且这里没有 onThinking，推理吐出来也是
+      // 被 processStreamToText 直接丢掉——纯亏。
+      //
+      // 必须显式传 false，不能留 null：null 会一路落到
+      // `_resolveThinkingEnabled` 的 `provider.supportsThinking`，而它对
+      // gemma4 这类模型返回 true，Ollama 那条路就会注入 `think: true`。
+      enableThinking: false,
     );
   }
 
@@ -536,6 +547,8 @@ class AIService extends ChangeNotifier {
       profileBlock: profileBlock,
       // 一句话而已，别让模型有空间写成一段。
       maxTokens: 200,
+      // 同 streamReportInsight：一次性短文案不开思考。
+      enableThinking: false,
     );
   }
 
@@ -640,6 +653,9 @@ class AIService extends ChangeNotifier {
           // 不再需要用空 onThinking 丢弃 reasoning：processStreamToText 现在
           // 只在整条流一个字正文都没有时才把 reasoning 当兜底输出。空回调反而
           // 会让 reasoning-only 模型的每日提示彻底变空、退回默认模板。
+          //
+          // 同 streamReportInsight：一句话的每日提示不开思考。
+          enableThinking: false,
         )) {
           if (controller.isClosed) break;
           controller.add(chunk);
@@ -707,8 +723,7 @@ class AIService extends ChangeNotifier {
   /// 本来就是按范围查出来的 [quotes]，把范围一起说清楚，模型才不用从正文
   /// 反推"这是哪一周"（它推不出来，见 [AIPromptManager.buildAnalysisTimeContext]）。
   ///
-  /// [onThinking] 不传的话，推理模型那段思考会被整个丢掉——用户盯着"正在
-  /// 生成…"等上几十秒，正文才突然出现一大段。传进来就能边想边显示。
+  /// 和其它几条洞察路径一样不开思考（理由见 [streamReportInsight]）。
   Stream<String> streamGenerateInsights(
     List<Quote> quotes, {
     String analysisType = 'comprehensive',
@@ -717,8 +732,6 @@ class AIService extends ChangeNotifier {
     DateTime? rangeStart,
     DateTime? rangeEnd,
     String? periodLabel,
-    bool? enableThinking,
-    void Function(String thinkingContent)? onThinking,
   }) {
     // 将笔记数据转换为JSON格式
     final jsonData = _requestHelper.convertQuotesToJson(
@@ -759,8 +772,7 @@ class AIService extends ChangeNotifier {
       systemPrompt: systemPrompt,
       userMessage: userMessage,
       maxTokens: 2500,
-      enableThinking: enableThinking,
-      onThinking: onThinking,
+      enableThinking: false,
     );
   }
 

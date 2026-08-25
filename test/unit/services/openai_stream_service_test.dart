@@ -210,6 +210,68 @@ void main() {
       });
     });
 
+    // 内容生成（每日提示 / 周期洞察 / 空周期洞察）不该开思考：那是一次性的
+    // 短文案，混合思考模型上开着只是拖慢、多花钱，推理内容还会被丢掉。
+    // 这一组钉的是"必须显式传 false"——留 null 在 gemma4 这类模型上等于默认开着。
+    group('thinking resolution for content generation', () {
+      const gemmaOnOllama = AIProviderSettings(
+        id: 'ollama',
+        name: 'Ollama',
+        apiKey: '',
+        apiUrl: 'http://localhost:11434/v1',
+        model: 'gemma4:31b',
+      );
+
+      test('gemma4 counts as a hybrid thinking model', () {
+        expect(gemmaOnOllama.supportsThinking, isTrue);
+      });
+
+      test('leaving it unset falls back to supportsThinking (thinking ON)', () {
+        expect(
+          OpenAIStreamService.resolveThinkingEnabled(
+            provider: gemmaOnOllama,
+            enableThinking: null,
+          ),
+          isTrue,
+        );
+      });
+
+      test('passing false actually turns it off', () {
+        expect(
+          OpenAIStreamService.resolveThinkingEnabled(
+            provider: gemmaOnOllama,
+            enableThinking: false,
+          ),
+          isFalse,
+        );
+      });
+
+      test('OpenRouter gets reasoning excluded when thinking is off', () {
+        const gemmaOnOpenRouter = AIProviderSettings(
+          id: 'openrouter',
+          name: 'OpenRouter',
+          apiKey: 'sk-test',
+          apiUrl: 'https://openrouter.ai/api/v1',
+          model: 'google/gemma4-31b',
+        );
+
+        final off = OpenAIStreamService.buildChatRequest(
+          provider: gemmaOnOpenRouter,
+          messages: [openai.ChatMessage.user('Hello!')],
+          enableThinking: false,
+        );
+        expect(off.openRouterReasoning?.effort, 'none');
+        expect(off.openRouterReasoning?.exclude, isTrue);
+
+        final on = OpenAIStreamService.buildChatRequest(
+          provider: gemmaOnOpenRouter,
+          messages: [openai.ChatMessage.user('Hello!')],
+          enableThinking: true,
+        );
+        expect(on.openRouterReasoning?.effort, 'high');
+      });
+    });
+
     group('processStreamToText', () {
       test('receives text deltas from stream events', () async {
         final events = [
