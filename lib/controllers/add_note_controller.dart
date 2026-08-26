@@ -324,8 +324,13 @@ class AddNoteController extends ChangeNotifier {
         notifyListeners();
         onLocationFetchEmpty?.call();
       }
-    } catch (e) {
-      logDebug('获取位置失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '获取位置失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AddNoteController',
+      );
       if (_isDisposed) return;
       includeLocation = false;
       _clearNewLocation();
@@ -380,8 +385,13 @@ class AddNoteController extends ChangeNotifier {
 
       isFetchingWeather = false;
       notifyListeners();
-    } catch (e) {
-      logDebug('获取天气失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '获取天气失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AddNoteController',
+      );
       if (_isDisposed) return;
       includeWeather = false;
       isFetchingWeather = false;
@@ -488,8 +498,13 @@ class AddNoteController extends ChangeNotifier {
         selectedCategory = category;
         onCategoryUpdated(category);
       }
-    } catch (e) {
-      logDebug('添加默认标签失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '添加默认标签失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AddNoteController',
+      );
     } finally {
       if (!_isDisposed) {
         isLoadingHitokotoTags = false;
@@ -543,8 +558,13 @@ class AddNoteController extends ChangeNotifier {
           if (_isDisposed) return null;
           allCategoriesCache = null;
           return fixedId;
-        } catch (e) {
-          logDebug('使用固定ID创建标签失败: $e');
+        } catch (e, stackTrace) {
+          logError(
+            '使用固定ID创建标签失败',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'AddNoteController',
+          );
           if (_isDisposed) return null;
           await db.addTag(name, iconName: iconName);
           if (_isDisposed) return null;
@@ -563,8 +583,13 @@ class AddNoteController extends ChangeNotifier {
       );
 
       return newTag.id.isNotEmpty ? newTag.id : null;
-    } catch (e) {
-      logDebug('确保标签"$name"存在时出错: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '确保标签"$name"存在时出错',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AddNoteController',
+      );
       return null;
     }
   }

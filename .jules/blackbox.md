@@ -50,3 +50,6 @@
 ## 2025-10-25 - 🗃️ 黑匣: [完善 ThoughtEchoDiscoveryService 模块的结构化日志]
 **异常:** [ThoughtEchoDiscoveryService 模块在启动服务、绑定UDP组播套接字、发送公告、解析组播消息等多个环节发生错误时，仅使用了 `debugPrint` 或者缺少统一标准地使用了不带完整参数的 `logError` / `logDebug` 进行异常捕获和打印。这不仅隐藏了关键错误堆栈信息 (stackTrace)，还使得跨端协同中设备发现相关的网络异常溯源变得困难。]
 **拦截:** [已将上述所有流程中的相关 `catch (e)` 升级为 `catch (e, stack)`，并统一替换为带有 `error: e`, `stackTrace: stack`, `source: 'ThoughtEchoDiscoveryService'` 参数的 `logError` (部分预期内的底层网络报错使用了 `logWarning`)。确认新的 logError 调用不会有意记录明文形式的用户交互数据。]
+## 2024-05-24 - [完善 AddNoteController 中的结构化日志]
+**异常:** [在 `lib/controllers/add_note_controller.dart` 中，发现了多处使用 `catch (e)` 的空捕获或粗糙的 `logDebug('xxx失败: $e')` 打印，这些异常捕获不仅吞噬了关键的异常堆栈（StackTrace），并且严重依赖字符串拼接，未能利用已有的结构化日志系统，使得定位位置获取、天气抓取及标签创建等关键业务失败原因变得困难。]
+**拦截:** [将 `catch (e)` 改写为 `catch (e, stackTrace)`，并引入全局的 `logError`，传入 error、stackTrace，并指明 source: 'AddNoteController'，将原有的粗糙拼接替换为带有上下文的规范日志上报。]
