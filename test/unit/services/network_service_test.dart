@@ -184,4 +184,57 @@ void main() {
           'Bearer test-openai-key'); // Uses provider key
     });
   });
+
+  group('NetworkService Security Validation Tests', () {
+    late NetworkService networkService;
+
+    setUp(() async {
+      networkService = NetworkService.instance;
+      await networkService.init();
+    });
+
+    test('aiRequest should throw exception when URL is not HTTPS', () async {
+      expect(
+        () => networkService.aiRequest(
+          url: 'http://api.openai.com/v1/chat/completions',
+          data: {},
+        ),
+        throwsA(isA<Exception>().having(
+          (e) => e.toString(),
+          'description',
+          contains('非安全URL: 所有请求必须使用HTTPS'),
+        )),
+      );
+    });
+
+    test('aiRequest should allow uppercase HTTPS URL scheme', () async {
+      try {
+        await networkService.aiRequest(
+          url: 'HTTPS://api.openai.com/v1/chat/completions',
+          data: {},
+        );
+      } catch (e) {
+        expect(e.toString(), isNot(contains('非安全URL: 所有请求必须使用HTTPS')));
+      }
+    });
+
+    test('aiStreamRequest should call onError when URL is not HTTPS', () async {
+      Exception? capturedError;
+      await networkService.aiStreamRequest(
+        url: 'http://api.openai.com/v1/chat/completions',
+        data: {},
+        onData: (_) {},
+        onComplete: (_) {},
+        onError: (err) {
+          capturedError = err;
+        },
+      );
+
+      expect(capturedError, isNotNull);
+      expect(
+        capturedError.toString(),
+        contains('非安全URL: 所有请求必须使用HTTPS'),
+      );
+    });
+  });
 }

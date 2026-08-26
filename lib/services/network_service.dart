@@ -182,6 +182,11 @@ class NetworkService {
     _ensureInitialized();
 
     try {
+      final uri = Uri.parse(url);
+      if (uri.scheme.toLowerCase() != 'https') {
+        throw Exception('非安全URL: 所有请求必须使用HTTPS');
+      }
+
       final headers = _buildAIHeaders(provider, legacySettings);
       final adjustedData = _adjustAIData(data, provider, legacySettings);
 
@@ -222,6 +227,11 @@ class NetworkService {
     _ensureInitialized();
 
     try {
+      final uri = Uri.parse(url);
+      if (uri.scheme.toLowerCase() != 'https') {
+        throw Exception('非安全URL: 所有请求必须使用HTTPS');
+      }
+
       final headers = _buildAIHeaders(provider, legacySettings);
       final adjustedData = _adjustAIData(data, provider, legacySettings);
       adjustedData['stream'] = true; // 确保是流式请求
