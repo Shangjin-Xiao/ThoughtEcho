@@ -5,12 +5,12 @@
   
   # ThoughtEcho (心迹)
   
-  <p>
-    <b>📝 Your Personal AI-Powered Inspiration Notebook</b><br>
-    <b>Jot it down, clip what you read — let AI sort out the rest.</b>
+  <p align="center">
+    <b>📝 你的专属 AI 灵感摘录本 · 想到就记，读到就摘，剩下的交给 AI。</b><br>
+    <b>Your Personal AI-Powered Inspiration Notebook — Jot it down, clip what you read, let AI sort out the rest.</b>
   </p>
 
-  <p>
+  <p align="center">
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
       <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=3cb371" alt="Latest Release">
     </a>
@@ -18,7 +18,13 @@
       <img src="https://img.shields.io/github/downloads/Shangjin-Xiao/ThoughtEcho/total?style=flat-square&color=0078D7" alt="Total Downloads">
     </a>
     <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC">
-      <img src="https://img.shields.io/badge/Microsoft-Store-0078D7?style=flat-square&logo=windows&logoColor=white" alt="Microsoft Store">
+      <img src="https://img.shields.io/badge/Microsoft_Store-0078D7?style=flat-square&logo=windows&logoColor=white" alt="Microsoft Store">
+    </a>
+    <a href="https://flutter.dev/">
+      <img src="https://img.shields.io/badge/Flutter-3.24+-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter 3.24+">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">
+      <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20%7C%20iOS-informational?style=flat-square" alt="Platform: Windows | Android | iOS">
     </a>
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
       <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=FFD700" alt="GitHub Stars">
@@ -28,7 +34,7 @@
     </a>
   </p>
 
-  <p>
+  <p align="center">
     <a href="README.md"><b>English</b></a> • 
     <a href="README_CN.md"><b>简体中文</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>Official Website</b></a> •
@@ -36,29 +42,31 @@
     <a href="https://shangjin-xiao.github.io/ThoughtEcho/user-guide.html"><b>Web Guide</b></a>
   </p>
 
-  <h3>📥 Download Channels</h3>
-  <p>
-    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="Get from Microsoft Store"></a>
-    &nbsp;&nbsp;&nbsp;
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest"><img src="https://img.shields.io/badge/Android_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK"></a>
+  <h3>📥 Download</h3>
+  <p align="center">
+    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="160" alt="Get from Microsoft Store"></a>
   </p>
 
-  <p><sub>Windows: Recommended from Microsoft Store (auto-update) · Android: Download 64-bit APK</sub></p>
+  <p><sub>Windows: Recommended from Microsoft Store (auto-update) · Android: Download APK from <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">GitHub Releases</a></sub></p>
   <p><sub>🌍 <b>Localization:</b> Full support for <b>English</b>, <b>简体中文</b>, <b>日本語</b>, and <b>한국어</b> (German, Spanish, French in progress)</sub></p>
   
 </div>
 
 ---
 
+> **ThoughtEcho（心迹）** 是一款优雅、本地优先、AI 赋能的跨平台灵感笔记与知识摘录应用。  
+> **ThoughtEcho** is an elegant, local-first, AI-powered cross-platform inspiration and quote notebook designed to capture fleeting thoughts, organize reading excerpts, and unlock deeper creative potential.
+
+---
+
 ## 🌟 Why ThoughtEcho?
 
-**ThoughtEcho is your personal inspiration notebook.** It helps you:
-
-- 📝 **Capture Everywhere**: Rich text, multimedia attachments (images, audio, video), and fleeting thoughts
-- ✨ **Understand Deeper**: AI-powered Q&A, rewriting, and summarization to extract more value from your notes
-- 📊 **Discover Thinking Patterns**: Intelligent periodic insights and annual reports to track your creative journey
-- 🔄 **Seamless Multi-Device Sync**: High-speed local transfer via LocalSend & flexible cloud backup via WebDAV
-- 🔒 **Own Your Privacy**: Local-first storage with optional hidden notes protected by biometric authentication
+- 🔒 **Local-First & Privacy**: 100% data ownership stored locally with SQLite and MMKV. Sensitive notes can be hidden and protected by biometric authentication (Fingerprint / Face ID). No tracking, no forced cloud lock-in.
+- 🧠 **Thoughter AI Agent & Long-Term Memory**: Multi-provider AI architecture (OpenAI, DeepSeek, Ollama, Gemini, Claude, OpenRouter, SiliconFlow, etc.). Features an autonomous Thoughter agent with cross-session long-term memory that understands your writing personality.
+- ✍️ **Rich Multimedia & Context Capture**: Quill rich formatting with multimedia attachments (images, audio, video). Automatically captures geocoding location, weather, and time-of-day inspiration context.
+- 📊 **Periodic Insights & Card Generation**: Automated weekly and monthly reflection insights, annual review reports, thinking pattern analysis, and one-click AI quote share card generation.
+- 🔄 **Zero-Config Multi-Device Sync**: High-speed LocalSend LAN direct sync (mDNS discovery & encrypted transfer) plus flexible WebDAV cloud backup and restore.
+- 🎨 **Artistic Themes & Typography**: Signature handcrafted "Paper & Ink" and "Plain" styles with specialized reading typography, plus dynamic Material 3 color palettes.
 
 <br>
 
@@ -67,24 +75,24 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Quill rich formatting, multimedia attachments, plain text & rich format dual storage</td>
-      <td align="center" width="33%"><b>✨ Thoughter (AI Assistant)</b><br>Agent tool calling, cross-session long-term memory & creative assistant</td>
-      <td align="center" width="33%"><b>📊 Insights & Reports</b><br>AI periodic insights, annual reports, writing trend analysis</td>
+      <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Quill rich formatting, multimedia attachments (images/audio/video), plain & rich dual storage</td>
+      <td align="center" width="33%"><b>✨ Thoughter AI Agent</b><br>Agent tool calling, dedicated long-term memory database, interactive creative assistant</td>
+      <td align="center" width="33%"><b>📊 Insights & Reports</b><br>AI periodic insights, annual review reports, creative rhythm & writing trend analysis</td>
     </tr>
     <tr>
-      <td align="center"><b>🏷️ Tags & Search</b><br>Multi-tag filters, smart sorting, fast local full-text search</td>
-      <td align="center"><b>🎯 AI Card Generation</b><br>Convert notes into beautiful, customizable shareable cards</td>
-      <td align="center"><b>📦 Media & Backup Hub</b><br>Large file streaming, full ZIP export/import, incremental sync</td>
+      <td align="center"><b>🏷️ Tags & Search</b><br>Multi-tag filters, intelligent sorting, fast local SQLite full-text search</td>
+      <td align="center"><b>🎯 AI Card Generation</b><br>Convert notes into beautiful, customizable shareable cards with artistic templates</td>
+      <td align="center"><b>📦 Media & Backup Hub</b><br>Streaming chunked large-file processing, full ZIP import/export, incremental sync</td>
     </tr>
     <tr>
-      <td align="center"><b>🌍 Context Capture</b><br>Auto-save location, weather, and time-of-day inspiration context</td>
-      <td align="center"><b>🙈 Privacy Protection</b><br>Hidden tags + biometric (Fingerprint/Face ID) unlock</td>
-      <td align="center"><b>💾 Auto-Save Drafts</b><br>Real-time draft preservation; no content lost on exit/crash</td>
+      <td align="center"><b>🌍 Context Sensing</b><br>Auto-captures location, weather, and time-of-day inspiration context</td>
+      <td align="center"><b>🙈 Privacy Protection</b><br>Hidden tags + biometric (Fingerprint / Face ID / Windows Hello) unlock</td>
+      <td align="center"><b>💾 Auto-Save Drafts</b><br>Real-time draft auto-saving with instant crash recovery; never lose a thought</td>
     </tr>
     <tr>
-      <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, daily quotes, and AI-assisted daily prompts</td>
-      <td align="center"><b>🎨 Theme Styles</b><br>Paper & Ink, Plain, and Material 3 dynamic color tokens</td>
-      <td align="center"><b>🔄 Multi-Device Sync</b><br>LocalSend LAN high-speed transfer + WebDAV cloud backup</td>
+      <td align="center"><b>⚡ Quick Capture</b><br>Smart clipboard watcher, daily quotes (Hitokoto / ZenQuotes / etc.), AI writing prompts</td>
+      <td align="center"><b>🎨 Handcrafted Themes</b><br>Paper & Ink, Plain, and Material 3 dynamic color tokens</td>
+      <td align="center"><b>🔄 Multi-Device Sync</b><br>LocalSend LAN high-speed direct transfer + WebDAV cloud backup & restore</td>
     </tr>
   </table>
 </div>
@@ -122,35 +130,35 @@
   <table>
     <tr>
       <td align="center"><b>Framework</b></td>
-      <td>Flutter (Dart) - Cross-platform modern reactive UI framework</td>
+      <td>Flutter (Dart) - Modern reactive cross-platform framework</td>
     </tr>
     <tr>
       <td align="center"><b>State Management</b></td>
-      <td>Provider, GetIt - Dependency injection and reactive orchestration</td>
+      <td>Provider, GetIt - Reactive orchestration & dependency injection</td>
     </tr>
     <tr>
       <td align="center"><b>Local Database</b></td>
-      <td>sqflite (Mobile), sqflite_common_ffi (Desktop SQLite FFI)</td>
+      <td>sqflite (Mobile) & sqflite_common_ffi (Desktop SQLite FFI)</td>
     </tr>
     <tr>
-      <td align="center"><b>Rich Text Editor</b></td>
-      <td>flutter_quill - Rich formatting with image, audio, and video attachments</td>
+      <td align="center"><b>Rich Text Engine</b></td>
+      <td>flutter_quill - Rich typography with images, audio, and video embeds</td>
     </tr>
     <tr>
-      <td align="center"><b>AI Integration</b></td>
-      <td>OpenAI-compatible protocol architecture (Presets: Ollama, OpenAI, DeepSeek, Gemini, OpenRouter, etc.)</td>
+      <td align="center"><b>AI Architecture</b></td>
+      <td>OpenAI-compatible protocol architecture (Presets: Ollama, OpenAI, DeepSeek, Gemini, Claude, OpenRouter, SiliconFlow)</td>
     </tr>
     <tr>
       <td align="center"><b>Storage & Security</b></td>
-      <td>MMKV (high-performance KV storage), flutter_secure_storage (encrypted API keys)</td>
+      <td>MMKV (High-performance KV caching) + flutter_secure_storage (Encrypted API keys)</td>
     </tr>
     <tr>
       <td align="center"><b>Multi-Device Sync</b></td>
-      <td>LocalSend (LAN mDNS discovery & encrypted transfer) + WebDAV cloud sync</td>
+      <td>LocalSend (LAN mDNS discovery & encrypted TLS transfer) + WebDAV cloud sync</td>
     </tr>
     <tr>
       <td align="center"><b>Media Processing</b></td>
-      <td>Streaming chunked processing for large files, smart memory caching, compression</td>
+      <td>Streaming chunked processing for large files, smart caching, compression</td>
     </tr>
     <tr>
       <td align="center"><b>Supported Platforms</b></td>
@@ -161,14 +169,14 @@
 
 ## 🚀 Quick Start
 
-1. **Prerequisites** 
+1. **Prerequisites**
    
-   Ensure Flutter 3.24+ / Dart 3.5+ is installed. Run `flutter doctor` to check your setup:
+   Ensure Flutter 3.24+ and Dart 3.5+ are installed. Run `flutter doctor` to verify your environment:
    ```bash
    flutter doctor
    ```
 
-2. **Get the Code**
+2. **Clone the Repository**
    ```bash
    git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
    cd ThoughtEcho
@@ -184,9 +192,9 @@
    flutter run
    ```
 
-5. **Configure AI Services** (Optional)
+5. **Configure AI Services (Optional)**
    
-   Navigate to **Settings → AI Settings**, choose an AI provider preset (e.g., Ollama Cloud, DeepSeek, OpenAI), paste your API Key, and start using AI Q&A, Thoughter agent, and periodic insights.
+   Navigate to **Settings → AI Settings**, choose an AI provider preset (e.g., DeepSeek, Ollama, OpenAI), paste your API Key, and start using AI Q&A, Thoughter agent, and periodic insights.
 
 ## 🗺️ Development Roadmap
 
@@ -208,7 +216,7 @@
         • Smart geocoding search & automatic weather logging<br>
         • Smart clipboard detection & quick capture on launch<br>
         • Periodic intelligent insights & annual reports<br>
-        • Hidden notes with biometric (Fingerprint/Face) protection<br>
+        • Hidden notes with biometric (Fingerprint/Face ID) protection<br>
         • Real-time auto-saving drafts & crash recovery<br>
         • Multilingual support (Full EN/ZH/JA/KO; fallback to EN)<br>
         • Windows desktop application (MSIX installer)<br>
@@ -226,7 +234,7 @@
         • Knowledge graph linking & topic clustering<br>
         • Map location picker & memory footprints<br><br>
         <b>✨ On-Device AI Exploration</b><br>
-        • On-device lightweight offline inference<br>
+        • On-device lightweight offline LLM inference<br>
         • Local offline OCR & offline speech-to-text<br>
         • More third-party note import/export formats
       </td>
@@ -241,7 +249,7 @@
 We welcome contributions of all kinds! Here's how you can get involved:
 
 1. **Report Issues or Suggestions**: Open an issue on [GitHub Issues](https://github.com/Shangjin-Xiao/ThoughtEcho/issues)
-2. **Help with Localization** 🌍:
+2. **Help with Localization 🌍**:
    - Help complete and refine translation strings (German, Spanish, French, etc.)
    - Review and improve existing translations (English, Chinese, Japanese, Korean)
 3. **Contribute Code**:

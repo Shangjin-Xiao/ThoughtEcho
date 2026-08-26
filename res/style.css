@@ -437,52 +437,56 @@
 
         .hero-buttons {
             display: flex;
-            gap: 1.25rem;
+            gap: 1rem;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .btn-primary {
-            padding: 1rem 2.5rem;
+            padding: 0.9rem 1.8rem;
             background: var(--accent-brown);
             color: var(--paper-white);
             border: none;
             border-radius: 10px;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            box-shadow: 5px 5px 0 var(--shadow-hard);
+            gap: 0.5rem;
+            box-shadow: 4px 4px 0 var(--shadow-hard);
             transition: all 0.2s ease;
         }
 
         .btn-primary:hover {
             transform: translate(2px, 2px);
-            box-shadow: 3px 3px 0 var(--shadow-hard);
+            box-shadow: 2px 2px 0 var(--shadow-hard);
         }
 
         .btn-secondary {
-            padding: 1rem 2.5rem;
-            background: transparent;
+            padding: 0.85rem 1.6rem;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             color: var(--accent-brown);
             border: 2px solid var(--accent-brown);
             border-radius: 10px;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            transition: all 0.3s ease;
+            gap: 0.5rem;
+            transition: all 0.25s ease;
         }
 
         .btn-secondary:hover {
             background: var(--accent-brown);
             color: var(--paper-white);
-            transform: translateY(-3px);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-soft);
         }
 
         .hero-notebook {
@@ -892,18 +896,19 @@
             gap: 3.5rem;
             align-items: center;
             max-width: 1000px;
-            margin: 0 auto 3rem;
+            margin: 0.75rem auto 2rem;
             padding: 2.5rem 3rem;
             background: var(--paper-white);
             border-radius: 18px;
             border: 2px solid var(--line-color);
-            box-shadow: 0 4px 20px var(--shadow-soft);
-            transition: all 0.4s ease;
+            box-shadow: 0 6px 24px var(--shadow-soft);
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s ease, border-color 0.3s ease;
+            position: relative;
         }
 
         .screenshot-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 32px var(--shadow-medium);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 36px var(--shadow-medium);
             border-color: var(--accent-brown);
         }
 
@@ -916,22 +921,26 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            border-radius: 20px;
+            padding: 6px;
+            background: var(--paper-cream);
+            border: 1.5px solid var(--line-color);
+            box-shadow: 0 12px 28px rgba(44, 36, 27, 0.14), 0 2px 6px rgba(44, 36, 27, 0.08);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
         }
 
         .screenshot-image img {
             width: 100%;
             height: auto;
-            max-height: 540px;
-            object-fit: contain;
-            border-radius: 16px;
-            box-shadow: 0 10px 28px rgba(44, 36, 27, 0.16), 0 0 0 1px rgba(44, 36, 27, 0.08);
-            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+            max-height: 520px;
+            object-fit: cover;
+            border-radius: 14px;
             display: block;
         }
 
-        .screenshot-image:hover img {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 16px 36px rgba(44, 36, 27, 0.22), 0 0 0 1px rgba(44, 36, 27, 0.12);
+        .screenshot-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 18px 36px rgba(44, 36, 27, 0.2), 0 4px 10px rgba(44, 36, 27, 0.1);
         }
 
         .screenshot-content {
@@ -1051,12 +1060,14 @@
             max-width: 1400px;
             margin: 0 auto;
             position: relative;
-            padding: 0 3.5rem;
+            padding: 1rem 3.5rem 2rem;
         }
 
         .carousel-track-container {
             overflow: hidden;
-            border-radius: 18px;
+            border-radius: 20px;
+            padding: 1.25rem 0.5rem;
+            margin: -1.25rem -0.5rem;
         }
 
         .carousel-track {
@@ -1069,7 +1080,7 @@
         }
 
         .carousel-slide {
-            padding: 0 0.75rem;
+            padding: 0.5rem 1rem;
             flex-shrink: 0;
             width: 100%; /* Ensure slide doesn't shrink */
         }
@@ -2101,14 +2112,14 @@
                 font-size: 1.5rem;
             }
             /* 移动端轮播适配：隐藏按钮，优化空间，统一布局顺序 */
-            .carousel-container { padding: 0; }
+            .carousel-container { padding: 0.5rem 0.75rem 1.5rem; }
             .carousel-btn { display: none; }
-            .carousel-slide { padding: 0; }
+            .carousel-slide { padding: 0.25rem 0.5rem; }
             .screenshot-item {
                 grid-template-columns: 1fr;
                 gap: 1.25rem;
                 max-width: 100%;
-                margin: 0 auto 2rem;
+                margin: 0.25rem auto 1.5rem;
                 padding: 1.5rem 1.25rem;
             }
             .screenshot-image {
@@ -2427,9 +2438,7 @@ p { font-size: 1.125rem; line-height: 1.8; color: var(--ink-secondary); margin-b
 
 /* 4. Screenshot Carousel Refinements */
 .screenshot-item {
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    border-radius: 12px;
-    overflow: hidden;
+    border-radius: 18px;
 }
 
 /* 5. Feature Icons */
