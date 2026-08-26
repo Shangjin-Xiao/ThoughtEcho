@@ -3946,7 +3946,7 @@
   "webdavPassword": "应用密码/Token",
   "webdavTestConnection": "测试连接",
   "webdavTestSuccess": "连接测试成功！",
-  "webdavTestFailed": "连接失败，请检查配置和密码",
+  "webdavTestFailed": "无法连接服务器，请检查网络连接、地址或应用密码是否正确",
   "webdavAutoSyncLaunch": "打开或回前台时自动同步",
   "webdavAutoSyncLaunchSubtitle": "打开应用或从后台切回前台时，自动与云端合并最新内容",
   "webdavAutoSyncChange": "修改笔记后自动后台同步",
