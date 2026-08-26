@@ -156,3 +156,56 @@ build 之间那段**，而它和 `dataΔ` 高度相关：有数据事件的两�
 3. **iOS 的 Sentry profiling。** `profilesSampleRate` 目前是 null（仅 iOS/macOS
    支持）。打开它并把滚动会话包成一个 transaction，才能拿到函数级的火焰图 ——
    profiling 只在有活跃 transaction 时采样，而滑动本身不产生 transaction。
+
+---
+
+## 2026-08-25 复验：列表本身已经基本没成本了
+
+用户在同一台 120Hz 机器上跑了冷启动滑 + 滑到底再来回滑两组。
+
+**上一轮（#510）的改动全部生效**：
+
+- 实例复用：唯一带 `dataΔ=1` 的 scroll-3 是 `reuseΔ=121`、`itemMemo hit+58/miss+31`、
+  `worstBuild=13.3ms`。上一版同类会话是 `hit+0/miss+113`、`worstBuild=74.9ms`。
+- 重暖锚点：回滑那组 `gen=2, rewarm=1`（系统真报过一次内存压力，现在只有这条路会清
+  缓存），重暖从 `@37` 开始，正是视口位置。
+- **最干净的一段 scroll-10（`built=0`，全是老卡片）**：`frameJank=0`、
+  `avgFrame=2.4ms`、`worstVsync=1.5ms`、`itemMount=0`。列表本身已经几乎不花钱了。
+
+剩下的成本全部集中在「第一次」和「分页」：
+
+| 来源 | 证据 |
+|---|---|
+| 分页 | scroll-3 `loadMoreStartΔ=1` + `worstVsync=77.1ms`、`worstGap=357.5ms`、`dropped=90`，而 `avgBuild` 只有 1.3ms |
+| 冷启动首屏光栅 | scroll-1 只滑了 331px、`built=2`，却 `frameJank=26/45`、`worstRaster=36.0ms`、`avgRaster=5.5ms`（后面几段只有 1.9–2.5ms） |
+| 头部测宽 | scroll-2 `headerMiss+48 / 13.1ms`、scroll-3 `+62 / 16.8ms` |
+
+**折叠排版封顶降级**：scroll-2/3 `planMiss+0`，预热已经全吃掉了；只有冷启动
+scroll-1 有 `+5 / 5.6ms`。`planWorstUs=18913` 只是历史最坏值，不是这几段产生的。
+
+### 这一轮做了什么
+
+1. **给分页加分段计时**（`lib/utils/note_list_load_more_profile.dart`）。77ms 落在
+   vsync 到 build 之间，也就是帧之外的 UI 线程；查过不是 N+1（标签查询已经 batch），
+   所以嫌疑在「SQL 等待 / 标签批查 / 一页 50 条 `Quote.fromJson` / 送到列表之后的
+   复用比较和落库」这四段里。日志新增
+   `loadMore={n=,rows=,service=,sql=,tags=,parse=,reuse=,apply=}`，记的是**最近一次**
+   分页而不是增量 —— 要看的是「那一下 77ms 花在哪」，平均掉就看不见了。
+   `apply=` 只包含把新列表落进 state 的那一下，**不含随后的重建**（`setState` 只是
+   排一帧），名字特意不叫 `state`。
+2. **头部测宽进预热**。日期逐条不同、按文本做键，必然是每张新卡片一次未命中。
+   把头部三段文字和样式抽成 `QuoteItemWidget.resolveHeaderTexts`，`build` 和
+   `warmCollapsedMeasurements` 共用同一处 —— 和折叠排版当初同一个理由：两边各写一份
+   格式化逻辑的话，预热会变成静悄悄的空转。
+
+### 下一轮该看什么
+
+先看 `loadMore={}` 那一行，77ms 落在哪一段：
+
+- `parse=` 占大头 → 反序列化在 UI 线程，改时机（滑动期间不发起分页，靠空闲预取提前
+  备好）或者分片解析。
+- `sql=`/`tags=` 占大头 → 是数据库/通道往返，减小页大小或提前取。
+- `reuse=`/`apply=` 占大头 → 是我们自己在 widget 侧的开销，那就直接优化那两处。
+
+还没做：冷启动首屏光栅（scroll-1 的 `worstRaster=36ms`，只建了两张卡，成本在着色器
+编译 / 首批纹理上传 / 首次图层合成，和卡片优化无关）。

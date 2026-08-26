@@ -18,6 +18,7 @@ import '../services/database_service.dart';
 import '../utils/delta_media_extractor.dart';
 import '../utils/icon_utils.dart';
 import '../utils/frame_timing_stats.dart';
+import '../utils/note_list_load_more_profile.dart';
 import '../utils/spread_from_anchor_cursor.dart';
 import '../utils/jank_detector.dart';
 import '../utils/lottie_animation_manager.dart';
@@ -270,7 +271,21 @@ class NoteListViewState extends State<NoteListView>
   int _idleWarmupDeferrals = 0;
   static const int _maxIdleWarmupDeferrals = 20;
   double? _idleWarmupWidth;
-  String? _idleWarmupMediaStyle;
+
+  /// 上一轮预热是在哪一组设置下跑的。
+  ///
+  /// **凡是参与预热缓存键的设置都必须在这里**：媒体版式决定缩略图预留宽和图片解码
+  /// 尺寸，加粗优先决定折叠排版的块序，精确时间决定头部日期那段文字。少放一个，
+  /// 用户改了那个设置之后预热就会判定「暖完了」而键全对不上 —— 那正是这条线一开始
+  /// 那个 bug 的形状（`expand=` 恰好等于建过的卡片数）。
+  ({
+    String mediaStyle,
+    bool prioritizeBoldContent,
+    bool showExactTime
+  })? _idleWarmupSettings;
+
+  /// 已经挂上重暖监听的那个 SettingsService，见 `_attachSettingsWarmupListener`。
+  SettingsService? _warmupSettingsSource;
 
   /// 上一轮预热是在哪一「代」测量缓存上跑的，见 [QuoteContent.cacheGeneration]。
   int? _idleWarmupCacheGeneration;
@@ -713,6 +728,7 @@ class NoteListViewState extends State<NoteListView>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _dependenciesChangedCount++;
+    _attachSettingsWarmupListener();
   }
 
   @override
@@ -824,6 +840,8 @@ class NoteListViewState extends State<NoteListView>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _warmupSettingsSource?.removeListener(_onWarmupSettingsChanged);
+    _warmupSettingsSource = null;
     // 修复：安全清理所有资源
     try {
       _quotesSub?.cancel();

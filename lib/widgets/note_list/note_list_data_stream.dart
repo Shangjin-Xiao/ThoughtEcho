@@ -27,8 +27,12 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   /// 那个只比 id，会把「同一条笔记被改过内容」也当成没变，卡片就永远停在旧内容上。
   ///
   /// 没有一条能复用时原样返回，不产生任何拷贝。
-  List<Quote> _reuseUnchangedQuoteInstances(List<Quote> incoming) {
+  List<Quote> _reuseUnchangedQuoteInstances(
+    List<Quote> incoming, {
+    required bool recordProfile,
+  }) {
     if (_quotes.isEmpty || incoming.isEmpty) return incoming;
+    final stopwatch = Stopwatch()..start();
 
     final previousById = <String, Quote>{};
     for (final quote in _quotes) {
@@ -50,6 +54,12 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       reconciled ??= List<Quote>.of(incoming);
       reconciled[i] = previous;
       _quoteInstanceReuseCount++;
+    }
+    stopwatch.stop();
+    // 只有确认是分页带来的那一次数据事件才记账：搜索、筛选刷新、回填分块也会走这里，
+    // 混进去的话 `loadMore={}` 描述的就不是那一次分页了。
+    if (recordProfile) {
+      NoteListLoadMoreProfile.recordReuse(stopwatch.elapsedMicroseconds);
     }
     return reconciled ?? incoming;
   }
@@ -136,10 +146,15 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       (rawList) {
         if (mounted) {
           _dataStreamEventCount++;
-          final list = _reuseUnchangedQuoteInstances(rawList);
+          // `isLoadMorePage` 先算：复用和落库要靠它决定记不记进分页的分段计时，
+          // 而它只看长度，复用不会改变长度。
           final isLoadMorePage = _loadMoreAwaitingPage &&
-              (list.length > _loadMoreRequestStartCount ||
-                  list.length < NoteListViewState._pageSize);
+              (rawList.length > _loadMoreRequestStartCount ||
+                  rawList.length < NoteListViewState._pageSize);
+          final list = _reuseUnchangedQuoteInstances(
+            rawList,
+            recordProfile: isLoadMorePage,
+          );
           final isPlaceholderInitialEmission =
               isFirstLoad && list.isEmpty && db.hasMoreQuotes;
 
@@ -183,6 +198,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (quotesUnchanged) {
             _isLoading = isLoadMorePage;
           } else {
+            final applyStopwatch = Stopwatch()..start();
             _updateState(() {
               _quotes
                 ..clear()
@@ -196,6 +212,12 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               // 创建从偏移量 0 开始的新 ListView，导致列表跳回顶部。
               // 搜索/筛选切换动画由 _updateStreamSubscription 的首个数据事件负责递增。
             });
+            applyStopwatch.stop();
+            if (isLoadMorePage) {
+              NoteListLoadMoreProfile.recordApply(
+                applyStopwatch.elapsedMicroseconds,
+              );
+            }
           }
           // 没换过列表就没有新的夹紧可记；传 null 让它只重试挂起的还原。
           _guardScrollAnchorAfterDataEvent(
@@ -469,10 +491,13 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       (rawList) {
         if (mounted) {
           _dataStreamEventCount++;
-          final list = _reuseUnchangedQuoteInstances(rawList);
           final isLoadMorePage = _loadMoreAwaitingPage &&
-              (list.length > _loadMoreRequestStartCount ||
-                  list.length < NoteListViewState._pageSize);
+              (rawList.length > _loadMoreRequestStartCount ||
+                  rawList.length < NoteListViewState._pageSize);
+          final list = _reuseUnchangedQuoteInstances(
+            rawList,
+            recordProfile: isLoadMorePage,
+          );
           final bool dbHasMore = db.hasMoreQuotes;
           final double? offsetBeforeUpdate =
               pendingScrollToTop ? null : _safeScrollOffset;
@@ -485,6 +510,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (quotesUnchanged) {
             _isLoading = isLoadMorePage;
           } else {
+            final applyStopwatch = Stopwatch()..start();
             _updateState(() {
               _quotes
                 ..clear()
@@ -493,6 +519,12 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               _isLoading = isLoadMorePage;
               _pruneExpansionControllers();
             });
+            applyStopwatch.stop();
+            if (isLoadMorePage) {
+              NoteListLoadMoreProfile.recordApply(
+                applyStopwatch.elapsedMicroseconds,
+              );
+            }
           }
 
           // 筛选条件变化：新结果的第一次事件到达后回到顶部。

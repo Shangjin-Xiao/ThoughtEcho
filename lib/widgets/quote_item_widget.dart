@@ -221,14 +221,161 @@ class QuoteItemWidget extends StatefulWidget {
   ///
   /// 预热本身不建任何 widget，也不碰 element 树；纯粹是往几张按内容指纹做键的
   /// LRU 缓存里填结果，卡片建出来时照旧走自己的那条路，只是查表命中。
+  /// 卡片头部那一行要测宽的三段文字，以及它们的样式。
+  ///
+  /// [build] 和 [warmCollapsedMeasurements] **共用这一处**。测宽缓存是按文本做键
+  /// 的，两边各写一份格式化逻辑的话，预热就变成静悄悄的空转 —— 折叠排版那次已经
+  /// 吃过一模一样的亏（见 `QuoteContent._resolveCollapsedLayout` 的说明）。
+  static QuoteHeaderTexts resolveHeaderTexts({
+    required BuildContext context,
+    required Quote quote,
+    required bool showExactTime,
+  }) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final colors = QuoteCardColors.fromHex(quote.colorHex, theme.colorScheme);
+    final secondaryTextColor = colors.secondaryTextColor;
+
+    final formattedDate = TimeUtils.formatQuoteDateLocalized(
+      context,
+      DateTime.parse(quote.date),
+      dayPeriod: quote.dayPeriod,
+      showExactTime: showExactTime,
+    );
+    final locationText = quote.hasLocation
+        ? ((quote.location != null &&
+                LocationService.formatLocationForDisplay(
+                  quote.location,
+                ).isNotEmpty)
+            ? LocationService.formatLocationForDisplay(quote.location)
+            : LocationService.formatCoordinates(
+                quote.latitude,
+                quote.longitude,
+              ))
+        : null;
+    final weatherText = quote.weather != null
+        ? '${WeatherService.getLocalizedWeatherDescription(l10n, quote.weather!)}'
+            '${quote.temperature != null ? ' ${quote.temperature}' : ''}'
+        : null;
+
+    final headerStyle = theme.textTheme.bodySmall?.copyWith(
+          color: secondaryTextColor,
+        ) ??
+        TextStyle(color: secondaryTextColor);
+
+    return QuoteHeaderTexts(
+      formattedDate: formattedDate,
+      locationText: locationText,
+      weatherText: weatherText,
+      // 日期和元信息取的是同一个 token，见 build 里的说明：写死或各取各的，
+      // 同一行就会出现两个字号。
+      dateStyle: headerStyle,
+      metaStyle: headerStyle,
+    );
+  }
+
+  /// 单行文字测宽（带缓存）。
+  ///
+  /// [countAsHeader] 决定这次测量算不算进 `headerWorkUs` / `headerMiss` 这两个
+  /// 性能计数器。它们的口径是「日期/位置/天气」那三段。标签估宽复用同一张缓存表
+  /// 没问题，但**不能混进同一组计数器**，否则下一轮复测会对着一个变了口径的数字
+  /// 下结论。
+  static double measureSingleLineTextWidth(
+    BuildContext context,
+    String text,
+    TextStyle style, {
+    bool countAsHeader = true,
+  }) {
+    final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final locale = Localizations.maybeLocaleOf(context);
+    final cacheKey = _HeaderTextWidthCacheKey(
+      text: text,
+      styleHash: style.hashCode,
+      textDirection: textDirection,
+      textScalerHash: textScaler.hashCode,
+      localeTag: locale?.toLanguageTag(),
+    );
+    final cached = _headerTextWidthCache.remove(cacheKey);
+    if (cached != null) {
+      if (countAsHeader) {
+        _headerTextWidthCacheHits++;
+      }
+      _headerTextWidthCache[cacheKey] = cached;
+      return cached;
+    }
+
+    if (countAsHeader) {
+      _headerTextWidthCacheMisses++;
+    }
+    final stopwatch = Stopwatch()..start();
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: textDirection,
+      textScaler: textScaler,
+    );
+
+    // 量完就放，而且走 `finally`：`TextPainter` 背后是一个原生 paragraph，不 dispose
+    // 要等 GC 才还，而 `layout()` 抛异常时更没人还。预热一轮会把这个方法调用三倍于
+    // 卡片数的次数，攒起来不是小数。
+    final double width;
+    try {
+      textPainter.layout();
+      width = textPainter.width;
+    } finally {
+      textPainter.dispose();
+    }
+    stopwatch.stop();
+    if (countAsHeader) {
+      _headerTextWidthWorkMicros += stopwatch.elapsedMicroseconds;
+      if (stopwatch.elapsedMicroseconds > _headerTextWidthWorstWorkMicros) {
+        _headerTextWidthWorstWorkMicros = stopwatch.elapsedMicroseconds;
+      }
+    }
+    if (_headerTextWidthCache.length >= _maxHeaderTextWidthCacheSize) {
+      final keysToRemove = _headerTextWidthCache.keys
+          .take(_headerTextWidthPruneBatchSize)
+          .toList();
+      for (final key in keysToRemove) {
+        _headerTextWidthCache.remove(key);
+      }
+    }
+    _headerTextWidthCache[cacheKey] = width;
+    return width;
+  }
+
   static void warmCollapsedMeasurements({
     required BuildContext context,
     required Quote quote,
     required double contentMaxWidth,
     required String mediaStyle,
     required bool prioritizeBoldContent,
+    required bool showExactTime,
   }) {
     if (!contentMaxWidth.isFinite || contentMaxWidth <= 0) return;
+
+    // 头部测宽：日期逐条不同，按文本做键必然是每张新卡片一次未命中。
+    // 2026-08-25 的日志里它是 `headerMiss+48 / 13.1ms`、`+62 / 16.8ms`，
+    // 是折叠测量都暖好之后仅剩的一块「第一次才做」的工作。
+    final header = resolveHeaderTexts(
+      context: context,
+      quote: quote,
+      showExactTime: showExactTime,
+    );
+    measureSingleLineTextWidth(
+      context,
+      header.formattedDate,
+      header.dateStyle,
+    );
+    final locationText = header.locationText;
+    if (locationText != null) {
+      measureSingleLineTextWidth(context, locationText, header.metaStyle);
+    }
+    final weatherText = header.weatherText;
+    if (weatherText != null) {
+      measureSingleLineTextWidth(context, weatherText, header.metaStyle);
+    }
 
     final theme = Theme.of(context);
     final colors = QuoteCardColors.fromHex(quote.colorHex, theme.colorScheme);
@@ -403,71 +550,19 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
 
-  /// 单行文字测宽（带缓存）。
-  ///
-  /// [countAsHeader] 决定这次测量算不算进 `headerWorkUs` / `headerMiss` 这两个
-  /// 性能计数器。它们的口径是「日期/位置/天气」那三段 —— 日志里按这个口径写着
-  /// 「头部测宽 0.5ms/卡」，也是下一轮预热的目标。标签估宽复用同一张缓存表没问题，
-  /// 但**不能混进同一组计数器**，否则下一轮复测会对着一个变了口径的数字下结论。
+  /// 转发到 [QuoteItemWidget.measureSingleLineTextWidth]，测量与预热共用一处。
   double _measureSingleLineTextWidth(
     BuildContext context,
     String text,
     TextStyle style, {
     bool countAsHeader = true,
-  }) {
-    final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
-    final textScaler = MediaQuery.textScalerOf(context);
-    final locale = Localizations.maybeLocaleOf(context);
-    final cacheKey = _HeaderTextWidthCacheKey(
-      text: text,
-      styleHash: style.hashCode,
-      textDirection: textDirection,
-      textScalerHash: textScaler.hashCode,
-      localeTag: locale?.toLanguageTag(),
-    );
-    final cached = QuoteItemWidget._headerTextWidthCache.remove(cacheKey);
-    if (cached != null) {
-      if (countAsHeader) {
-        QuoteItemWidget._headerTextWidthCacheHits++;
-      }
-      QuoteItemWidget._headerTextWidthCache[cacheKey] = cached;
-      return cached;
-    }
-
-    if (countAsHeader) {
-      QuoteItemWidget._headerTextWidthCacheMisses++;
-    }
-    final stopwatch = Stopwatch()..start();
-    final textPainter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      maxLines: 1,
-      textDirection: textDirection,
-      textScaler: textScaler,
-    )..layout();
-
-    final width = textPainter.width;
-    stopwatch.stop();
-    if (countAsHeader) {
-      QuoteItemWidget._headerTextWidthWorkMicros +=
-          stopwatch.elapsedMicroseconds;
-      if (stopwatch.elapsedMicroseconds >
-          QuoteItemWidget._headerTextWidthWorstWorkMicros) {
-        QuoteItemWidget._headerTextWidthWorstWorkMicros =
-            stopwatch.elapsedMicroseconds;
-      }
-    }
-    if (QuoteItemWidget._headerTextWidthCache.length >=
-        QuoteItemWidget._maxHeaderTextWidthCacheSize) {
-      final keysToRemove = QuoteItemWidget._headerTextWidthCache.keys
-          .take(QuoteItemWidget._headerTextWidthPruneBatchSize)
-          .toList();
-      for (final key in keysToRemove) {
-        QuoteItemWidget._headerTextWidthCache.remove(key);
-      }
-    }
-    QuoteItemWidget._headerTextWidthCache[cacheKey] = width;
-    return width;
-  }
+  }) =>
+      QuoteItemWidget.measureSingleLineTextWidth(
+        context,
+        text,
+        style,
+        countAsHeader: countAsHeader,
+      );
 
   void _handleDoubleTap(bool isExpanded, {required bool canExpand}) {
     if (!canExpand) {
@@ -1183,12 +1278,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final disableCardShadows = context.select<SettingsService, bool>(
       (s) => s.noteListDisableCardShadows,
     );
-    final String formattedDate = TimeUtils.formatQuoteDateLocalized(
-      context,
-      quoteDate,
-      dayPeriod: quote.dayPeriod,
+    final headerTexts = QuoteItemWidget.resolveHeaderTexts(
+      context: context,
+      quote: quote,
       showExactTime: showExactTime,
     );
+    final String formattedDate = headerTexts.formattedDate;
     final DateTime? lastModified = quote.lastModified != null
         ? DateTime.tryParse(quote.lastModified!)
         : null;
@@ -1204,31 +1299,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             ),
           )
         : null;
-    final String? locationText = quote.hasLocation
-        ? ((quote.location != null &&
-                LocationService.formatLocationForDisplay(
-                  quote.location,
-                ).isNotEmpty)
-            ? LocationService.formatLocationForDisplay(quote.location)
-            : LocationService.formatCoordinates(
-                quote.latitude,
-                quote.longitude,
-              ))
-        : null;
-    final String? weatherText = quote.weather != null
-        ? '${WeatherService.getLocalizedWeatherDescription(l10n, quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}'
-        : null;
-    final TextStyle headerDateStyle = theme.textTheme.bodySmall?.copyWith(
-          color: secondaryTextColor,
-        ) ??
-        TextStyle(color: secondaryTextColor);
-    // 和上面的日期同一级，必须取同一个 token：写死 12 就等于把这一项从排版体系里
-    // 摘出去，风格一旦动了 bodySmall（曾经加过 6% 字号补偿，现在改成整级不动），
-    // 日期跟着走而它不跟，同一行两个字号，看着就是没对齐。
-    final TextStyle headerMetaStyle = theme.textTheme.bodySmall?.copyWith(
-          color: secondaryTextColor,
-        ) ??
-        TextStyle(color: secondaryTextColor);
+    final String? locationText = headerTexts.locationText;
+    final String? weatherText = headerTexts.weatherText;
+    // 日期和元信息取的是同一个 token（见 resolveHeaderTexts）：写死 12 就等于把
+    // 这一项从排版体系里摘出去，风格一旦动了 bodySmall（曾经加过 6% 字号补偿，
+    // 现在改成整级不动），日期跟着走而它不跟，同一行两个字号，看着就是没对齐。
+    final TextStyle headerDateStyle = headerTexts.dateStyle;
+    final TextStyle headerMetaStyle = headerTexts.metaStyle;
     final visualEffectsDisabled =
         QuoteItemWidget.disableVisualEffectsForTesting;
     final cardShadowsDisabled = visualEffectsDisabled ||
@@ -1684,6 +1761,25 @@ class _CardActionButton extends StatelessWidget {
 }
 
 @immutable
+
+/// 卡片头部那一行要测宽的三段文字与样式，见 [QuoteItemWidget.resolveHeaderTexts]。
+@immutable
+class QuoteHeaderTexts {
+  const QuoteHeaderTexts({
+    required this.formattedDate,
+    required this.locationText,
+    required this.weatherText,
+    required this.dateStyle,
+    required this.metaStyle,
+  });
+
+  final String formattedDate;
+  final String? locationText;
+  final String? weatherText;
+  final TextStyle dateStyle;
+  final TextStyle metaStyle;
+}
+
 class _HeaderTextWidthCacheKey {
   const _HeaderTextWidthCacheKey({
     required this.text,
