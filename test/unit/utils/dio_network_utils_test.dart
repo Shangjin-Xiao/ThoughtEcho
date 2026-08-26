@@ -1,3 +1,4 @@
+import 'dart:async';
 import "package:dio/dio.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:thoughtecho/utils/dio_network_utils.dart";
@@ -6,6 +7,7 @@ class FakeErrorInterceptorHandler extends ErrorInterceptorHandler {
   final List<DioException> nextCalled = [];
   final List<Response> resolveCalled = [];
   final List<DioException> rejectCalled = [];
+  final Completer<Response> resolveCompleter = Completer<Response>();
 
   @override
   void next(DioException err) {
@@ -15,6 +17,9 @@ class FakeErrorInterceptorHandler extends ErrorInterceptorHandler {
   @override
   void resolve(Response response) {
     resolveCalled.add(response);
+    if (!resolveCompleter.isCompleted) {
+      resolveCompleter.complete(response);
+    }
   }
 
   @override
@@ -24,18 +29,29 @@ class FakeErrorInterceptorHandler extends ErrorInterceptorHandler {
 }
 
 class FakeDio extends Fake implements Dio {
-  final Response? fetchResponse;
+  final Response<dynamic>? fetchResponse;
   final DioException? fetchError;
+  int fetchCalledCount = 0;
 
   FakeDio({this.fetchResponse, this.fetchError});
 
   @override
   Future<Response<T>> fetch<T>(RequestOptions requestOptions) async {
+    fetchCalledCount++;
     if (fetchError != null) {
       throw fetchError!;
     }
     if (fetchResponse != null) {
-      return fetchResponse as Response<T>;
+      return Response<T>(
+        requestOptions: fetchResponse!.requestOptions,
+        data: fetchResponse!.data as T?,
+        statusCode: fetchResponse!.statusCode,
+        statusMessage: fetchResponse!.statusMessage,
+        isRedirect: fetchResponse!.isRedirect,
+        redirects: fetchResponse!.redirects,
+        extra: fetchResponse!.extra,
+        headers: fetchResponse!.headers,
+      );
     }
     return Response<T>(requestOptions: requestOptions);
   }
@@ -66,8 +82,8 @@ void main() {
       // Verify that next was not called immediately, meaning a retry is scheduled
       expect(handler.nextCalled, isEmpty);
 
-      // wait for the delay and fetch
-      await Future.delayed(const Duration(milliseconds: 10));
+      // wait for the delay and fetch via completer
+      await handler.resolveCompleter.future;
       expect(handler.resolveCalled.length, 1);
     });
 
@@ -84,6 +100,7 @@ void main() {
       interceptor.onError(error, handler);
 
       expect(handler.nextCalled.length, 1);
+      expect(dio.fetchCalledCount, 0);
     });
 
     test(
