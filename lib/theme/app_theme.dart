@@ -1076,7 +1076,6 @@ class AppTheme with ChangeNotifier {
 
       // 配置进度指示器颜色与 M3 新版造型
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        year2023: false,
         color: colorScheme.primary,
         circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),
@@ -1312,7 +1311,6 @@ class AppTheme with ChangeNotifier {
       ),
       // 配置进度指示器颜色与 M3 新版造型
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        year2023: false,
         color: colorScheme.primary,
         circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),

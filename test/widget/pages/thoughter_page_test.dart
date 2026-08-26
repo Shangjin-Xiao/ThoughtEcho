@@ -33,7 +33,7 @@ Quote _buildQuote() => Quote(
       date: DateTime(2026, 4, 5).toIso8601String(),
     );
 
-/// 结果卡片的 key 绑定了消息 ID（ai_workflow_result_smart_result_<id>），
+/// 结果卡片的 key 绑定了消息 ID（ai_workflow_result_smart_result_{id}），
 /// 用前缀匹配定位，避免测试依赖具体消息 ID。
 Finder _smartResultCardKey() => find.byWidgetPredicate(
       (widget) =>
@@ -43,7 +43,7 @@ Finder _smartResultCardKey() => find.byWidgetPredicate(
               .startsWith('ai_workflow_result_smart_result'),
     );
 
-/// 提案卡片同理（ai_workflow_result_note_proposal_<id>）。
+/// 提案卡片同理（ai_workflow_result_note_proposal_{id}）。
 Finder _noteProposalCardKey() => find.byWidgetPredicate(
       (widget) =>
           widget.key is ValueKey<String> &&
