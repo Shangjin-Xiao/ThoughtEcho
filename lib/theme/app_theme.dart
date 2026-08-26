@@ -583,7 +583,7 @@ class AppTheme with ChangeNotifier {
       _loadCustomColor();
       _loadThemeMode();
       // 墨色按风格分开存，加载和旧值迁移都要用到已加载的风格，顺序不能调换。
-      _loadThemeStyle();
+      await _loadThemeStyle();
       await _loadThemeAccents();
 
       // 首次运行时，不读取存储的设置，保持默认开启
@@ -827,9 +827,41 @@ class AppTheme with ChangeNotifier {
   }
 
   // 从持久化存储加载主题风格
-  void _loadThemeStyle() {
+  Future<void> _loadThemeStyle() async {
     try {
-      _themeStyle = ThemeStyle.fromName(_storage?.getString(_themeStyleKey));
+      final styleName = _storage?.getString(_themeStyleKey);
+      if (styleName != null) {
+        _themeStyle = ThemeStyle.fromName(styleName);
+      } else {
+        // 未显式配置过主题风格
+        // 检查是否为全新安装（即未标记 app_installed_v2 且未存过 app_settings）
+        final isNewInstallation =
+            (_storage?.getBool('app_installed_v2') != true) &&
+                !(_storage?.containsKey('app_settings') ?? false);
+        if (isNewInstallation) {
+          _themeStyle = ThemeStyle.paper;
+          try {
+            final success = await _storage
+                ?.setString(_themeStyleKey, ThemeStyle.paper.name)
+                .timeout(const Duration(seconds: 2));
+            if (success == false) {
+              logError(
+                '写入默认主题风格 ThemeStyle.paper 返回 false',
+                source: 'AppTheme',
+              );
+            }
+          } catch (e, s) {
+            logError(
+              '写入默认主题风格 ThemeStyle.paper 失败',
+              error: e,
+              stackTrace: s,
+              source: 'AppTheme',
+            );
+          }
+        } else {
+          _themeStyle = ThemeStyle.defaultStyle;
+        }
+      }
     } catch (e, stack) {
       logError(
         '加载主题风格失败',
@@ -1087,7 +1119,6 @@ class AppTheme with ChangeNotifier {
 
       // 配置进度指示器颜色与 M3 新版造型
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        year2023: false,
         color: colorScheme.primary,
         circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),
@@ -1323,7 +1354,6 @@ class AppTheme with ChangeNotifier {
       ),
       // 配置进度指示器颜色与 M3 新版造型
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        year2023: false,
         color: colorScheme.primary,
         circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),

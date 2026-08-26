@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
+import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
@@ -417,6 +418,109 @@ void main() {
 
       expect(settingsService.aiSettings.apiKey, isEmpty);
       expect(settingsService.aiSettings.model, equals('gpt-4o'));
+    });
+
+    test('新用户配置有效 AI 服务时应自动开启相关 AI 功能', () async {
+      // Arrange
+      await settingsService.setHasCompletedOnboarding(false);
+      await settingsService.setReportInsightsUseAI(false);
+      await settingsService.setTodayThoughtsUseAI(false);
+      await settingsService.setAICardGenerationEnabled(false);
+
+      expect(settingsService.reportInsightsUseAI, isFalse);
+      expect(settingsService.todayThoughtsUseAI, isFalse);
+      expect(settingsService.aiCardGenerationEnabled, isFalse);
+
+      final multiSettings = settingsService.multiAISettings.copyWith(
+        providers: [
+          ...settingsService.multiAISettings.providers,
+          const AIProviderSettings(
+            id: 'test_provider',
+            name: 'Test AI',
+            apiUrl: 'https://api.openai.com/v1',
+            model: 'gpt-4o',
+            isEnabled: true,
+          ),
+        ],
+      );
+
+      // Act
+      await settingsService.saveMultiAISettings(multiSettings);
+
+      // Assert
+      expect(settingsService.reportInsightsUseAI, isTrue);
+      expect(settingsService.todayThoughtsUseAI, isTrue);
+      expect(settingsService.aiCardGenerationEnabled, isTrue);
+
+      final rebuiltService = await SettingsService.create();
+      expect(rebuiltService.reportInsightsUseAI, isTrue);
+      expect(rebuiltService.todayThoughtsUseAI, isTrue);
+      expect(rebuiltService.aiCardGenerationEnabled, isTrue);
+    });
+
+    test('无效或禁用的 AI 服务不应触发自动开启 AI 功能', () async {
+      // Arrange
+      await settingsService.setHasCompletedOnboarding(false);
+      await settingsService.setReportInsightsUseAI(false);
+      await settingsService.setTodayThoughtsUseAI(false);
+      await settingsService.setAICardGenerationEnabled(false);
+
+      final disabledOrEmptySettings = settingsService.multiAISettings.copyWith(
+        providers: [
+          const AIProviderSettings(
+            id: 'disabled_provider',
+            name: 'Disabled AI',
+            apiUrl: 'https://api.openai.com/v1',
+            model: 'gpt-4o',
+            isEnabled: false,
+          ),
+          const AIProviderSettings(
+            id: 'empty_url_provider',
+            name: 'Empty URL AI',
+            apiUrl: '   ',
+            model: 'gpt-4o',
+            isEnabled: true,
+          ),
+        ],
+      );
+
+      // Act
+      await settingsService.saveMultiAISettings(disabledOrEmptySettings);
+
+      // Assert
+      expect(settingsService.reportInsightsUseAI, isFalse);
+      expect(settingsService.todayThoughtsUseAI, isFalse);
+      expect(settingsService.aiCardGenerationEnabled, isFalse);
+    });
+
+    test('并发 saveMultiAISettings 和 setHasCompletedOnboarding 应保持状态一致',
+        () async {
+      // Arrange
+      await settingsService.setHasCompletedOnboarding(false);
+      await settingsService.setReportInsightsUseAI(false);
+
+      final multiSettings = settingsService.multiAISettings.copyWith(
+        providers: [
+          ...settingsService.multiAISettings.providers,
+          const AIProviderSettings(
+            id: 'test_provider_concurrent',
+            name: 'Test AI Concurrent',
+            apiUrl: 'https://api.openai.com/v1',
+            model: 'gpt-4o',
+            isEnabled: true,
+          ),
+        ],
+      );
+
+      // Act: 并发触发
+      final future1 = settingsService.saveMultiAISettings(multiSettings);
+      final future2 = settingsService.setHasCompletedOnboarding(true);
+
+      await Future.wait([future1, future2]);
+
+      // Assert: 重建后确认内存与持久化保持最终调用的正确状态
+      final rebuiltService = await SettingsService.create();
+      expect(rebuiltService.hasCompletedOnboarding(), isTrue);
     });
   });
 }

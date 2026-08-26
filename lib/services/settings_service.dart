@@ -44,6 +44,7 @@ class SettingsService extends ChangeNotifier {
   static const String _appUpgradedKey = 'app_upgraded_v2';
   final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
+  Completer<void>? _saveMultiAiLock;
   late AISettings _aiSettings;
   late AppSettings _appSettings;
   late ThemeMode _themeMode;
@@ -1052,9 +1053,40 @@ class SettingsService extends ChangeNotifier {
 
   // 设置用户是否完成了引导流程
   Future<void> setHasCompletedOnboarding(bool completed) async {
-    _appSettings = _appSettings.copyWith(hasCompletedOnboarding: completed);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
+    while (_saveMultiAiLock != null) {
+      await _saveMultiAiLock!.future;
+    }
+    final completer = Completer<void>();
+    _saveMultiAiLock = completer;
+
+    try {
+      final candidateSettings =
+          _appSettings.copyWith(hasCompletedOnboarding: completed);
+      final success = await _mmkv.setString(
+        _appSettingsKey,
+        json.encode(candidateSettings.toJson()),
+      );
+      if (!success) {
+        AppLogger.e(
+          '保存引导完成状态失败：MMKV setString 返回 false（key=$_appSettingsKey）',
+          source: 'SettingsService',
+        );
+        throw StateError('保存引导完成状态失败');
+      }
+      _appSettings = candidateSettings;
+      notifyListeners();
+    } catch (e, s) {
+      AppLogger.e(
+        '保存引导完成状态异常',
+        error: e,
+        stackTrace: s,
+        source: 'SettingsService',
+      );
+      rethrow;
+    } finally {
+      _saveMultiAiLock = null;
+      completer.complete();
+    }
   }
 
   // 获取AI卡片生成功能是否启用
@@ -1102,13 +1134,135 @@ class SettingsService extends ChangeNotifier {
 
   /// 保存多provider AI设置
   Future<void> saveMultiAISettings(MultiAISettings settings) async {
-    _multiAISettings = settings;
+    while (_saveMultiAiLock != null) {
+      await _saveMultiAiLock!.future;
+    }
+    final completer = Completer<void>();
+    _saveMultiAiLock = completer;
 
-    // 保存到MMKV存储
-    await _mmkv.setString(_multiAiSettingsKey, json.encode(settings.toJson()));
+    bool appSettingsWritten = false;
+    final appKeyExisted = candidateAppSettingsKeyExists();
+    String? previousAppJson;
 
-    notifyListeners();
+    Future<void> rollbackAppSettings() async {
+      if (!appSettingsWritten) return;
+      appSettingsWritten = false;
+      try {
+        if (appKeyExisted && previousAppJson != null) {
+          final rollbackOk =
+              await _mmkv.setString(_appSettingsKey, previousAppJson);
+          if (!rollbackOk) {
+            AppLogger.e(
+              '回滚应用设置失败：MMKV setString 返回 false',
+              source: 'SettingsService',
+            );
+          }
+        } else if (!appKeyExisted) {
+          final rollbackOk = await _mmkv.remove(_appSettingsKey);
+          if (!rollbackOk) {
+            AppLogger.e(
+              '回滚应用设置失败：MMKV remove 返回 false',
+              source: 'SettingsService',
+            );
+          }
+        }
+      } catch (rollbackError, rollbackStack) {
+        AppLogger.e(
+          '回滚应用设置异常',
+          error: rollbackError,
+          stackTrace: rollbackStack,
+          source: 'SettingsService',
+        );
+      }
+    }
+
+    try {
+      if (appKeyExisted) {
+        try {
+          previousAppJson = _mmkv.getString(_appSettingsKey);
+        } catch (e, s) {
+          AppLogger.e(
+            '读取原有应用设置失败，放弃写操作',
+            error: e,
+            stackTrace: s,
+            source: 'SettingsService',
+          );
+          throw StateError('读取原有应用设置失败');
+        }
+      }
+
+      // 在互斥锁内部基于最新的 _appSettings 构建 candidateAppSettings，防止并发下的覆盖
+      final hasActiveAi = settings.providers.any(
+        (p) => p.isEnabled && p.apiUrl.trim().isNotEmpty,
+      );
+      final candidateAppSettings = (!hasCompletedOnboarding() && hasActiveAi)
+          ? _appSettings.copyWith(
+              reportInsightsUseAI: true,
+              todayThoughtsUseAI: true,
+              aiCardGenerationEnabled: true,
+            )
+          : null;
+
+      if (candidateAppSettings != null &&
+          appKeyExisted &&
+          previousAppJson == null) {
+        AppLogger.e(
+          '应用设置键存在但读取值为 null，中止保存以防数据丢失',
+          source: 'SettingsService',
+        );
+        throw StateError('读取原有应用设置失败');
+      }
+
+      final multiJson = json.encode(settings.toJson());
+      final appJson = candidateAppSettings != null
+          ? json.encode(candidateAppSettings.toJson())
+          : null;
+
+      if (appJson != null) {
+        final successApp = await _mmkv.setString(_appSettingsKey, appJson);
+        if (!successApp) {
+          AppLogger.e(
+            '保存应用设置失败：MMKV setString 返回 false（key=$_appSettingsKey）',
+            source: 'SettingsService',
+          );
+          throw StateError('保存应用设置失败');
+        }
+        appSettingsWritten = true;
+      }
+
+      final successMulti =
+          await _mmkv.setString(_multiAiSettingsKey, multiJson);
+      if (!successMulti) {
+        AppLogger.e(
+          '保存多provider AI设置失败：MMKV setString 返回 false（key=$_multiAiSettingsKey）',
+          source: 'SettingsService',
+        );
+        await rollbackAppSettings();
+        throw StateError('保存多provider AI设置失败');
+      }
+
+      _multiAISettings = settings;
+      if (candidateAppSettings != null) {
+        _appSettings = candidateAppSettings;
+      }
+      notifyListeners();
+    } catch (e, s) {
+      await rollbackAppSettings();
+      AppLogger.e(
+        '保存多provider AI设置异常',
+        error: e,
+        stackTrace: s,
+        source: 'SettingsService',
+      );
+      rethrow;
+    } finally {
+      _saveMultiAiLock = null;
+      completer.complete();
+    }
   }
+
+  @visibleForTesting
+  bool candidateAppSettingsKeyExists() => _mmkv.containsKey(_appSettingsKey);
 
   /// 更新多provider AI设置
   Future<void> updateMultiAISettings(MultiAISettings settings) async {
