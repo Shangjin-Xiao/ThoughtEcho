@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:io';
-import 'dart:ui' show FrameTiming;
+import 'dart:ui' show FrameTiming, PlatformDispatcher;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -409,6 +409,17 @@ class NoteListViewState extends State<NoteListView>
   int _scrollSessionBuiltRich = 0;
   int _scrollSessionBuiltMedia = 0;
   final List<int> _scrollSessionUpdateMicros = <int>[];
+
+  /// 每次滚动通知时的偏移，和 [_scrollSessionUpdateMicros] 一一对应。
+  /// 用来把「列表没动」的间隔从 `eventJank` 里剔掉。
+  final List<double> _scrollSessionUpdateOffsets = <double>[];
+
+  /// 帧号 → 那一帧列表的偏移，见 `_recordFrameOffset`。
+  final Map<int, double> _scrollSessionFrameOffsets = <int, double>{};
+  static const int _maxTrackedFrameOffsets = 900;
+
+  /// 小于这个位移就当作「没动」。亚像素抖动不该被算成一次滚动。
+  static const double _frameOffsetMovedEpsilon = 0.5;
   final List<FrameTiming> _scrollSessionFrameTimings = <FrameTiming>[];
   Timer? _scrollSessionPerfStopTimer;
   Timer? _scrollEndSettleTimer;
@@ -672,7 +683,35 @@ class NoteListViewState extends State<NoteListView>
       return;
     }
     WidgetsBinding.instance.addTimingsCallback(_collectFrameTimings);
+    WidgetsBinding.instance.addPersistentFrameCallback(_recordFrameOffset);
     _perfTimingsCallbackAttached = true;
+  }
+
+  /// 逐帧记下「这一帧列表在哪」，用来把「没出帧」和「不该出帧」分开。
+  ///
+  /// [FrameTiming] 的时间戳走引擎时钟，和滚动通知用的 `DateTime.now()` 不是同一个
+  /// 时间轴，没法直接对齐；而 `frameNumber` 两边是同一个计数器，所以按帧号索引。
+  /// 持久帧回调没法移除，靠 [_scrollSessionPerfRecording] 早退，静止时几乎不花钱。
+  void _recordFrameOffset(Duration _) {
+    if (!_scrollSessionPerfRecording) return;
+    final position = _safeScrollPosition;
+    if (position == null || !position.hasPixels) return;
+    final frameNumber = PlatformDispatcher.instance.frameData.frameNumber;
+    if (frameNumber < 0) return;
+    _scrollSessionFrameOffsets[frameNumber] = position.pixels;
+    // 一次滑动最多几百帧，超出就丢最旧的，防止长会话把这张表撑大。
+    if (_scrollSessionFrameOffsets.length > _maxTrackedFrameOffsets) {
+      _scrollSessionFrameOffsets.remove(_scrollSessionFrameOffsets.keys.first);
+    }
+  }
+
+  /// 两帧之间列表挪过没有。取不到任一帧的偏移时按「挪过」算 —— 宁可多报丢帧，
+  /// 也不要把真的卡顿悄悄抹掉。
+  bool _movedBetweenFrames(int previousFrameNumber, int frameNumber) {
+    final before = _scrollSessionFrameOffsets[previousFrameNumber];
+    final after = _scrollSessionFrameOffsets[frameNumber];
+    if (before == null || after == null) return true;
+    return (after - before).abs() >= _frameOffsetMovedEpsilon;
   }
 
   void _releasePerfTimingsCallbackIfIdle() {

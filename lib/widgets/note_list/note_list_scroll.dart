@@ -179,6 +179,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionBuiltRich = 0;
     _scrollSessionBuiltMedia = 0;
     _scrollSessionUpdateMicros.clear();
+    _scrollSessionUpdateOffsets.clear();
+    _scrollSessionFrameOffsets.clear();
     _scrollSessionFrameTimings.clear();
     _scrollSessionItemLayoutCount = 0;
     _scrollSessionItemLayoutMicros = 0;
@@ -209,6 +211,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
 
     _scrollSessionUpdateMicros.add(DateTime.now().microsecondsSinceEpoch);
+    _scrollSessionUpdateOffsets.add(metrics.pixels);
     _scrollSessionNotificationUpdates++;
     _scrollSessionLastOffset = metrics.pixels;
     if (metrics.pixels < _scrollSessionMinOffset) {
@@ -283,7 +286,14 @@ extension _NoteListScrollExtension on NoteListViewState {
       }
       // 事件间隔的阈值也跟着预算走：原来写死 20ms，在 120Hz 上等于「连丢两帧半
       // 才算一次」，正好把这块屏最常见的丢一帧漏掉。
-      if (interval > eventJankThresholdMicros) {
+      //
+      // **列表没动的间隔不算**：手指按着不放时通知照来而内容没变，那不是卡顿。
+      // 2026-08-26 的日志里有一段 `dist=-53` 却报 `eventJank=48`。
+      final moved = i >= _scrollSessionUpdateOffsets.length ||
+          (_scrollSessionUpdateOffsets[i] - _scrollSessionUpdateOffsets[i - 1])
+                  .abs() >=
+              NoteListViewState._frameOffsetMovedEpsilon;
+      if (moved && interval > eventJankThresholdMicros) {
         jankyIntervals++;
       }
     }
@@ -291,6 +301,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     final frameStats = FrameTimingStats.of(
       _scrollSessionFrameTimings,
       budgetMicros: budgetMicros,
+      movedBetweenFrames: _movedBetweenFrames,
     );
 
     final intervalSamples =
@@ -684,6 +695,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
 
     _loadMoreAwaitingPage = false;
+    // 分页那次数据事件已经处理完，关掉分段计时的事件窗口。
+    NoteListLoadMoreProfile.endEventWindow();
     _loadMoreSettleTimer?.cancel();
     _loadMoreSettleTimer = Timer(
       const Duration(milliseconds: 320),
@@ -779,6 +792,7 @@ extension _NoteListScrollExtension on NoteListViewState {
 
   void _resetLoadMoreGate() {
     _loadMoreAwaitingPage = false;
+    NoteListLoadMoreProfile.endEventWindow();
     _loadMoreSettleTimer?.cancel();
     _loadMoreSettleTimer = null;
   }

@@ -53,6 +53,49 @@ void main() {
     expect(NoteListLoadMoreProfile.toCompactText(), contains('q=1,ev=1'));
   });
 
+  test('service 调用一返回就关查询窗口，之后的查询不再计入', () {
+    // 2026-08-26 的日志：`q=4,rows=410,sql=131.5ms` 而 `service=127.4ms` ——
+    // `sql` 比包着它的 `service` 还大，因为窗口一直开到日志打印。
+    NoteListLoadMoreProfile.begin();
+    NoteListLoadMoreProfile.recordQuery(
+      sqlMicros: 1000,
+      tagsMicros: 0,
+      parseMicros: 0,
+      rowCount: 50,
+    );
+    NoteListLoadMoreProfile.recordServiceCall(2000);
+    expect(NoteListLoadMoreProfile.debugQueryWindowOpen, isFalse);
+
+    // 分页之后的查询（搜索、筛选、导出）不该再进来。
+    NoteListLoadMoreProfile.recordQuery(
+      sqlMicros: 90000,
+      tagsMicros: 0,
+      parseMicros: 0,
+      rowCount: 360,
+    );
+
+    final text = NoteListLoadMoreProfile.toCompactText();
+    expect(text, contains('q=1'));
+    expect(text, contains('rows=50'));
+    expect(text, contains('sql=1.0ms'));
+  });
+
+  test('分页那次数据事件处理完就关事件窗口', () {
+    NoteListLoadMoreProfile.begin();
+    NoteListLoadMoreProfile.recordReuse(1000);
+    NoteListLoadMoreProfile.recordApply(1000);
+    NoteListLoadMoreProfile.endEventWindow();
+    expect(NoteListLoadMoreProfile.debugEventWindowOpen, isFalse);
+
+    NoteListLoadMoreProfile.recordReuse(50000);
+    NoteListLoadMoreProfile.recordApply(50000);
+
+    final text = NoteListLoadMoreProfile.toCompactText();
+    expect(text, contains('ev=1'));
+    expect(text, contains('reuse=1.0ms'));
+    expect(text, contains('apply=1.0ms'));
+  });
+
   test('窗口里混进别的查询和数据事件时，采样次数把它暴露出来', () {
     NoteListLoadMoreProfile.begin();
     // 分页自己的那次查询。

@@ -146,14 +146,20 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       (rawList) {
         if (mounted) {
           _dataStreamEventCount++;
-          // `isLoadMorePage` 先算：复用和落库要靠它决定记不记进分页的分段计时，
-          // 而它只看长度，复用不会改变长度。
+          // `isLoadMorePage` 先算：它决定 _isLoading 何时归位，判据是「这一批到底
+          // 是不是新页」，所以要看长度。
           final isLoadMorePage = _loadMoreAwaitingPage &&
               (rawList.length > _loadMoreRequestStartCount ||
                   rawList.length < NoteListViewState._pageSize);
+          // 分段计时的门控用的是 `_loadMoreAwaitingPage` 而**不是** isLoadMorePage：
+          // 分页查到「没有更多了」时列表不变长、长度也不小于一页，isLoadMorePage 为
+          // 假，可那次数据事件仍然是分页带来的。2026-08-26 的日志里就是这样：
+          // `reuseΔ=117` 明明做了 117 行的内容比较，`loadMore` 里却是 `ev=0`、
+          // `reuse=0.0ms` —— 门控太严，把要量的那一次漏掉了。
+          final profilesLoadMore = _loadMoreAwaitingPage;
           final list = _reuseUnchangedQuoteInstances(
             rawList,
-            recordProfile: isLoadMorePage,
+            recordProfile: profilesLoadMore,
           );
           final isPlaceholderInitialEmission =
               isFirstLoad && list.isEmpty && db.hasMoreQuotes;
@@ -213,7 +219,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               // 搜索/筛选切换动画由 _updateStreamSubscription 的首个数据事件负责递增。
             });
             applyStopwatch.stop();
-            if (isLoadMorePage) {
+            if (profilesLoadMore) {
               NoteListLoadMoreProfile.recordApply(
                 applyStopwatch.elapsedMicroseconds,
               );
@@ -494,9 +500,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           final isLoadMorePage = _loadMoreAwaitingPage &&
               (rawList.length > _loadMoreRequestStartCount ||
                   rawList.length < NoteListViewState._pageSize);
+          // 门控用 `_loadMoreAwaitingPage`，理由同上面那条 listen。
+          final profilesLoadMore = _loadMoreAwaitingPage;
           final list = _reuseUnchangedQuoteInstances(
             rawList,
-            recordProfile: isLoadMorePage,
+            recordProfile: profilesLoadMore,
           );
           final bool dbHasMore = db.hasMoreQuotes;
           final double? offsetBeforeUpdate =
@@ -520,7 +528,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               _pruneExpansionControllers();
             });
             applyStopwatch.stop();
-            if (isLoadMorePage) {
+            if (profilesLoadMore) {
               NoteListLoadMoreProfile.recordApply(
                 applyStopwatch.elapsedMicroseconds,
               );

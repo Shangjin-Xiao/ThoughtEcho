@@ -20,6 +20,11 @@ int frameBudgetMicrosForRefreshRate(double refreshRate) {
 /// 整帧被跳过更不会留下任何 [FrameTiming]。只有拿相邻两帧的 vsync 时间戳去除以
 /// 一帧的预算，才数得出中间空掉了几帧 —— 而那正是「build+raster 都只有 3ms，
 /// 滑动却明显不跟手」时唯一有用的那个数。
+///
+/// **但「没出帧」不等于「丢帧」**：列表停着不动时 Flutter 本来就不产出帧，那段
+/// 空档是省电不是卡顿。2026-08-26 的日志里有一段 `dist=-53`（手指按着几乎没挪）
+/// 却报 `dropped=179`，读的人会以为卡成一片。所以要靠 [movedBetweenFrames] 逐对
+/// 甄别：只有相邻两帧之间列表真的挪过，中间的空档才算丢帧。
 class FrameTimingStats {
   const FrameTimingStats({
     required this.budgetMicros,
@@ -36,15 +41,20 @@ class FrameTimingStats {
     required this.worstSpanMs,
     required this.worstVsyncOverheadMs,
     required this.worstGapMs,
+    required this.idleGaps,
   });
 
   /// 手指停住、惯性走完都会在时间戳上留下一段很长的空档，那不是卡顿而是「没在滑」。
   /// 超过这个长度的间隔只记进 [worstGapMs]，不折算成丢帧。
   static const int maxCountedGapMicros = 200000;
 
+  /// [movedBetweenFrames] 回答「这两帧之间列表挪过没有」，参数是两帧的
+  /// `frameNumber`。传 null 就退回旧口径（一律算丢帧），只有拿不到逐帧偏移的
+  /// 调用方才该这么用。
   factory FrameTimingStats.of(
     List<FrameTiming> timings, {
     required int budgetMicros,
+    bool Function(int previousFrameNumber, int frameNumber)? movedBetweenFrames,
   }) {
     var jank = 0;
     var dropped = 0;
@@ -58,7 +68,9 @@ class FrameTimingStats {
     var worstSpan = 0;
     var worstVsyncOverhead = 0;
     var worstGap = 0;
+    var idleGaps = 0;
     int? previousVsync;
+    int? previousFrameNumber;
 
     for (final timing in timings) {
       final build = timing.buildDuration.inMicroseconds;
@@ -82,15 +94,26 @@ class FrameTimingStats {
 
       final vsync = timing.timestampInMicroseconds(FramePhase.vsyncStart);
       final previous = previousVsync;
+      final previousNumber = previousFrameNumber;
       if (previous != null) {
         final gap = vsync - previous;
         if (gap > worstGap) worstGap = gap;
         if (gap > 0 && gap < maxCountedGapMicros) {
           final skipped = (gap / budgetMicros).round() - 1;
-          if (skipped > 0) dropped += skipped;
+          if (skipped > 0) {
+            final moved = movedBetweenFrames == null ||
+                previousNumber == null ||
+                movedBetweenFrames(previousNumber, timing.frameNumber);
+            if (moved) {
+              dropped += skipped;
+            } else {
+              idleGaps += skipped;
+            }
+          }
         }
       }
       previousVsync = vsync;
+      previousFrameNumber = timing.frameNumber;
     }
 
     final count = timings.length;
@@ -111,6 +134,7 @@ class FrameTimingStats {
       worstSpanMs: worstSpan / 1000.0,
       worstVsyncOverheadMs: worstVsyncOverhead / 1000.0,
       worstGapMs: worstGap / 1000.0,
+      idleGaps: idleGaps,
     );
   }
 
@@ -135,9 +159,13 @@ class FrameTimingStats {
   final double worstVsyncOverheadMs;
   final double worstGapMs;
 
+  /// 空档里「列表没动、本来就不该出帧」的那部分，不计进 [dropped]。
+  /// 它大而 [dropped] 小，说明这一段用户基本没在滑。
+  final int idleGaps;
+
   String toCompactText() {
     return 'budget=${(budgetMicros / 1000.0).toStringAsFixed(1)}ms, '
-        'frames=$frames, frameJank=$jank, dropped=$dropped, '
+        'frames=$frames, frameJank=$jank, dropped=$dropped, idle=$idleGaps, '
         'avgFrame=${avgFrameMs.toStringAsFixed(1)}ms, '
         'worstFrame=${worstFrameMs.toStringAsFixed(1)}ms, '
         'avgBuild=${avgBuildMs.toStringAsFixed(1)}ms, '

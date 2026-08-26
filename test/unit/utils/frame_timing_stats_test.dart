@@ -12,6 +12,7 @@ FrameTiming _timing({
   int vsyncOverheadMicros = 500,
   int buildMicros = 2000,
   int rasterMicros = 1000,
+  int frameNumber = -1,
 }) {
   final buildStart = vsyncStart + vsyncOverheadMicros;
   final buildFinish = buildStart + buildMicros;
@@ -24,6 +25,7 @@ FrameTiming _timing({
     rasterStart: rasterStart,
     rasterFinish: rasterFinish,
     rasterFinishWallTime: rasterFinish,
+    frameNumber: frameNumber,
   );
 }
 
@@ -84,6 +86,49 @@ void main() {
       expect(stats.jank, 0, reason: 'build+raster 都在预算内');
       expect(stats.dropped, 2, reason: '中间空掉的两帧只有 vsync 间隔看得见');
       expect(stats.worstGapMs, closeTo(budget * 3 / 1000.0, 0.01));
+    });
+
+    test('列表没动的空档不算丢帧，单独记进 idle', () {
+      // 手指按着不放时 Flutter 本来就不产出帧，那段空档是省电不是卡顿。
+      const budget = 8333;
+      final timings = [
+        _timing(vsyncStart: 0, frameNumber: 1),
+        _timing(vsyncStart: budget * 4, frameNumber: 2),
+      ];
+
+      final moving = FrameTimingStats.of(
+        timings,
+        budgetMicros: budget,
+        movedBetweenFrames: (_, __) => true,
+      );
+      expect(moving.dropped, 3);
+      expect(moving.idleGaps, 0);
+
+      final still = FrameTimingStats.of(
+        timings,
+        budgetMicros: budget,
+        movedBetweenFrames: (_, __) => false,
+      );
+      expect(still.dropped, 0, reason: '列表没动，这段空档不是卡顿');
+      expect(still.idleGaps, 3, reason: '但要记下来，否则读的人不知道它去哪了');
+      expect(
+        still.worstGapMs,
+        moving.worstGapMs,
+        reason: 'worstGap 照记不误，它描述的是事实而不是判断',
+      );
+    });
+
+    test('拿不到逐帧偏移时按「动过」算，宁可多报也不抹掉真卡顿', () {
+      const budget = 8333;
+      final stats = FrameTimingStats.of(
+        [
+          _timing(vsyncStart: 0, frameNumber: 1),
+          _timing(vsyncStart: budget * 3, frameNumber: 2),
+        ],
+        budgetMicros: budget,
+      );
+      expect(stats.dropped, 2);
+      expect(stats.idleGaps, 0);
     });
 
     test('手指停住留下的长空档不算丢帧，但仍记进 worstGap', () {

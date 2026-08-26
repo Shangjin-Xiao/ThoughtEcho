@@ -15,11 +15,15 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 /// widget 那半边（`reuse` / `apply`）只在确认是分页带来的那次数据事件时才记账，
 /// 搜索、筛选刷新、回填分块都进不来。
 ///
-/// 查询那半边（`sql` / `tags` / `parse` / `rows`）做不到同样干净：`getUserQuotes`
-/// 埋得太深，为一个诊断把请求 token 一路穿到数据库层不划算。代价是 [begin] 之后、
-/// `loadMoreQuotes` 返回之前，别的查询也会记进来。所以**采样次数一并打出来**：
-/// `q=1` 才说明这份查询拆分干净，大于 1 就是混进了别的查询，别照着它下结论。
-/// 这比静悄悄给出一份可能是错的拆分要诚实。
+/// 查询那半边（`sql` / `tags` / `parse` / `rows`）没有请求 token：`getUserQuotes`
+/// 埋得太深，为一个诊断一路穿下去不划算。改成**把窗口关严**：[begin] 开窗，
+/// `loadMoreQuotes` 一返回就 [recordServiceCall] 关窗，之后的查询一律不计。
+/// 窗口内仍可能挤进并发查询，所以采样次数一并打出来 —— `q=1` 才说明这份查询拆分
+/// 干净，大于 1 就是混进了别的查询，别照着它下结论。
+///
+/// 2026-08-26 的日志证明了关窗的必要：冷启动那段 `q=4,rows=410,sql=131.5ms`，
+/// 而 `service` 只有 127.4ms —— `sql` 竟然比包着它的 `service` 还大，因为窗口一直
+/// 开到日志打印，把分页之后的查询全算了进来。
 class NoteListLoadMoreProfile {
   NoteListLoadMoreProfile._();
 
@@ -37,6 +41,11 @@ class NoteListLoadMoreProfile {
   static int _queryCount = 0;
   static int _eventCount = 0;
 
+  /// 采样窗口是否还开着。分开两个：查询窗口在 `loadMoreQuotes` 返回时就关，
+  /// 而分页带来的数据事件往往晚于它到达，所以事件窗口要多留一会儿。
+  static bool _queryWindowOpen = false;
+  static bool _eventWindowOpen = false;
+
   /// 累计完成过几次分页 —— **这个不随 [begin] 清零**：下面那些分段描述的是第几次
   /// 分页，这个数就是它的序号。清零的话它永远是 1，什么也说明不了。
   static int _completedCount = 0;
@@ -52,6 +61,8 @@ class NoteListLoadMoreProfile {
     _applyMicros = 0;
     _queryCount = 0;
     _eventCount = 0;
+    _queryWindowOpen = true;
+    _eventWindowOpen = true;
   }
 
   /// 查询层的三段，由 `getUserQuotes` 写入。
@@ -64,6 +75,7 @@ class NoteListLoadMoreProfile {
     required int parseMicros,
     required int rowCount,
   }) {
+    if (!_queryWindowOpen) return;
     _sqlMicros += sqlMicros;
     _tagsMicros += tagsMicros;
     _parseMicros += parseMicros;
@@ -75,10 +87,13 @@ class NoteListLoadMoreProfile {
   static void recordServiceCall(int micros) {
     _serviceMicros = micros;
     _completedCount++;
+    // 查询已经做完了，关窗：再往后记就是别人的查询。
+    _queryWindowOpen = false;
   }
 
   /// 数据事件送到列表之后：内容比较复用的耗时。
   static void recordReuse(int micros) {
+    if (!_eventWindowOpen) return;
     _reuseMicros += micros;
     _eventCount++;
   }
@@ -88,13 +103,25 @@ class NoteListLoadMoreProfile {
   /// **不包含随后的重建**：`setState` 只是排一帧，卡片真正重建的成本在下一帧里，
   /// 由日志的 `built=`、`itemMemo` 和 `worstBuild` 反映。名字叫 `apply` 而不是
   /// `state`，就是为了不让人把这个数当成「整列表重建花了多久」。
-  static void recordApply(int micros) => _applyMicros += micros;
+  static void recordApply(int micros) {
+    if (!_eventWindowOpen) return;
+    _applyMicros += micros;
+  }
+
+  /// 分页带来的那个数据事件处理完了，关掉事件窗口。
+  static void endEventWindow() => _eventWindowOpen = false;
 
   @visibleForTesting
   static void resetForTesting() {
     begin();
     _completedCount = 0;
   }
+
+  @visibleForTesting
+  static bool get debugQueryWindowOpen => _queryWindowOpen;
+
+  @visibleForTesting
+  static bool get debugEventWindowOpen => _eventWindowOpen;
 
   @visibleForTesting
   static int get debugQueryCount => _queryCount;

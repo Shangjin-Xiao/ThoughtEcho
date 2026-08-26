@@ -209,3 +209,66 @@ scroll-1 有 `+5 / 5.6ms`。`planWorstUs=18913` 只是历史最坏值，不是�
 
 还没做：冷启动首屏光栅（scroll-1 的 `worstRaster=36ms`，只建了两张卡，成本在着色器
 编译 / 首批纹理上传 / 首次图层合成，和卡片优化无关）。
+
+---
+
+## 2026-08-26 复验：分页被证伪，成本跟着「建卡片」走
+
+PR #520 的分段计时到手，结论和之前的推断**相反**。
+
+### 分页不是瓶颈
+
+scroll-2 是唯一真发生分页的会话（`loadMoreStartΔ=1`）：
+
+```
+loadMore={seq=3,q=1,ev=0,rows=0,service=13.6ms,sql=13.3ms,tags=0.0ms,parse=0.0ms}
+```
+
+`q=1` 说明这份拆分干净，而 `service` 只有 **13.6ms**，`rows=0`（那次查到「没有更多了」）。
+之前推测的「一页 50 条 `Quote.fromJson` 占掉 77ms」完全不成立 —— 同一段的
+`worstVsync` 是 **185.0ms**。**先量再改这一步省掉了一整轮走错方向的优化。**
+
+### 成本和「建了几张卡」完美相关
+
+| session | built | worstVsync |
+|---|---|---|
+| scroll-1 | 32 | 41.2ms |
+| scroll-2 | 89 | **185.0ms** |
+| scroll-13 | 23 | 49.4ms |
+| scroll-40 | **0** | 7.2ms |
+| scroll-44 | **0** | 1.5ms |
+| scroll-47 | **0** | 1.2ms |
+
+`built=0` 的三段 `worstVsync` 都在 1~7ms，`built>0` 的三段是 41~185ms。**帧外那段
+UI 线程开销跟着新卡片走**，而卡片自己的 build/layout 都在预算内（`avgBuild` 1.1ms、
+`itemLayout worst` 5.7ms）—— 所以它不在 build 阶段里，而在建卡片**引出的**异步工作上
+（图片文件读取、解码完成回调这一类落在帧与帧之间的东西）。
+
+再猜就是重蹈覆辙。下一步该上函数级采样：Sentry profiling（`profilesSampleRate`，
+仅 iOS/macOS，上晋有侧载包），把滚动会话包成一个 transaction —— 起止钩子
+（`_startScrollSessionPerfCapture` / `_finalizeScrollSessionPerfCapture`）现成。
+
+### 这一轮修的三个指标缺陷
+
+日志本身有三处会把下一轮带偏，先修掉：
+
+1. **`dropped` 在列表不动时虚高。** scroll-40 `dist=-53`（手指按着几乎没挪）却报
+   `dropped=179`。列表停着时 Flutter 本来就不产出帧，那是省电不是卡顿。改成逐帧记
+   偏移（帧号 → `position.pixels`，靠 `FrameTiming.frameNumber` 对齐，因为帧时间戳
+   走引擎时钟、和滚动通知的 `DateTime.now()` 不是同一条时间轴），只有相邻两帧之间
+   真的挪过才折算丢帧；没挪的那部分单独记进新的 `idle=`。`eventJank` 同理。
+2. **采样窗口一直开着。** 冷启动那段 `q=4,rows=410,sql=131.5ms` 而 `service=127.4ms`
+   —— `sql` 比包着它的 `service` 还大。改成 `loadMoreQuotes` 一返回就关查询窗口、
+   分页数据事件处理完就关事件窗口。
+3. **门控太严，把要量的那一次漏掉了。** scroll-2 `reuseΔ=117` 明明做了 117 行内容
+   比较，`loadMore` 里却是 `ev=0`、`reuse=0.0ms`：分页查到「没有更多」时列表不变长、
+   长度也不小于一页，`isLoadMorePage` 为假。分段计时的门控改用
+   `_loadMoreAwaitingPage`（「正在等分页的数据事件」），`isLoadMorePage` 继续管它自己
+   那件事（`_isLoading` 何时归位）。
+
+### 顺带记下
+
+- `headerWorstUs=14004` —— 头部测宽的历史最坏值是 14ms（预热期间的第一次，字体
+  shaping 冷启动）。所有会话 `headerMiss+0`，预热在正常工作。
+- 冷启动首屏光栅那条（scroll-1 `worstRaster=19.2ms`）仍然挂着，未动。
+
