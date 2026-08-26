@@ -6,6 +6,15 @@
 /// 对单个自由文本字段调用 [escapeUntrustedText]。
 library;
 
+// 预编译正则表达式以优化高频转义时的性能
+final RegExp _systemTagRegex = RegExp(r'\[SYSTEM\]', caseSensitive: false);
+final RegExp _assistantTagRegex =
+    RegExp(r'\[ASSISTANT\]', caseSensitive: false);
+final RegExp _userTagRegex = RegExp(r'\[USER\]', caseSensitive: false);
+final RegExp _imStartRegex = RegExp(r'<\|im_start\|>', caseSensitive: false);
+final RegExp _imEndRegex = RegExp(r'<\|im_end\|>', caseSensitive: false);
+final RegExp _multipleNewlinesRegex = RegExp(r'\n{3,}');
+
 /// 转义不可信的外部内容，防止提示注入攻击。
 ///
 /// 处理策略：
@@ -19,19 +28,14 @@ String escapeUntrustedText(String content) {
   escaped = escaped.replaceAll('```', '\\`\\`\\`');
 
   // 移除可能被解析为角色切换的标记
-  escaped = escaped.replaceAll(
-      RegExp(r'\[SYSTEM\]', caseSensitive: false), '[SYS_TEM]');
-  escaped = escaped.replaceAll(
-      RegExp(r'\[ASSISTANT\]', caseSensitive: false), '[ASSIS_TANT]');
-  escaped =
-      escaped.replaceAll(RegExp(r'\[USER\]', caseSensitive: false), '[US_ER]');
-  escaped = escaped.replaceAll(
-      RegExp(r'<\|im_start\|>', caseSensitive: false), '<|im\\_start|>');
-  escaped = escaped.replaceAll(
-      RegExp(r'<\|im_end\|>', caseSensitive: false), '<|im\\_end|>');
+  escaped = escaped.replaceAll(_systemTagRegex, '[SYS_TEM]');
+  escaped = escaped.replaceAll(_assistantTagRegex, '[ASSIS_TANT]');
+  escaped = escaped.replaceAll(_userTagRegex, '[US_ER]');
+  escaped = escaped.replaceAll(_imStartRegex, '<|im\\_start|>');
+  escaped = escaped.replaceAll(_imEndRegex, '<|im\\_end|>');
 
   // 限制连续换行（最多 2 个）
-  escaped = escaped.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+  escaped = escaped.replaceAll(_multipleNewlinesRegex, '\n\n');
 
   return escaped;
 }
