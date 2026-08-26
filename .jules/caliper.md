@@ -59,3 +59,6 @@
 ## 2026-08-18 - [补充 StringUtils.forEachLine 测试]
 **盲点:** `StringUtils.forEachLine` 作为核心底层工具方法之一，用于替代 `split('\n')` 以减少 GC 压力，但缺乏相应的测试覆盖，可能在某些边界条件（如末尾换行、连续换行、空字符串）下存在断裂风险。
 **对策:** 在 `test/unit/utils/string_utils_test.dart` 中增加 `forEachLine` 组，补充了空字符串、单行、多行、末尾带换行符、连续换行等场景用例，以确保该纯函数边界严谨，不引入隐患。
+## 2026-08-25 - [补充 dio_network_utils 重试逻辑的测试]
+**盲点:** `dio_network_utils.dart` 中的 `RetryInterceptor` 包含了对特定网络错误和服务器响应 (`_shouldRetry`) 的重试判断逻辑，这一纯逻辑处理长期缺乏测试覆盖，在调整重试条件时极易引入回归问题。
+**对策:** 通过编写针对 `RetryInterceptor` 处理流程 (`onError`) 的单元测试，利用伪造的 `Dio` 和 `ErrorInterceptorHandler`，验证其针对各种 HTTP 状态码（500、502）以及“model not found”等具体错误负载的决策是否准确，确保其不会阻拦正常的客户端错误返回。
