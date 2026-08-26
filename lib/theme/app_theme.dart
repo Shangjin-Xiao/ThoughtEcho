@@ -153,6 +153,20 @@ class AppTheme with ChangeNotifier {
   ///   （几何要到 build 时才补），一个下限会把六级一起钉成同一个字重——
   ///   小节标题和列表正文就分不出主次了。
   ///
+  ///   **两档下限展开成四级阶梯**，因为「标题」和「正文」各自内部也有主次：
+  ///
+  ///   | 级别 | 角色 | 纸墨/素笺下的字重 |
+  ///   |---|---|---|
+  ///   | titleMedium / titleSmall | 小节标题 | titleWeightFloor（700） |
+  ///   | titleLarge | 首页一言（23sp） | 低一档（600） |
+  ///   | bodyLarge | 笔记正文、设置项标题 | bodyWeightFloor（600） |
+  ///   | bodyMedium | 来源、设置项副标题 | 低一档（500） |
+  ///   | bodySmall / `label*` | 元信息、控件文字 | 不动（黑体 400） |
+  ///
+  ///   两处「低一档」各有各的理由，写在下面各自的赋值上，不要合并成一条规则：
+  ///   titleLarge 是**字号已经够大**所以不用再加重，bodyMedium 是**角色本来就
+  ///   该退后**所以必须比正文轻。
+  ///
   ///   这两级正文另外还吃行高缩放；标题的行高交给几何。
   ///
   ///   **这里刻意只写 `fontWeight`，不写 `fontVariations`。** 随包衬线是可变字体，
@@ -254,15 +268,32 @@ class AppTheme with ChangeNotifier {
       headlineLarge: display(base.headlineLarge),
       headlineMedium: display(base.headlineMedium),
       headlineSmall: display(base.headlineSmall),
-      titleLarge: reading(base.titleLarge, titleFloor, 22),
+      // titleLarge 停在标题档**下面一级**。它是 22×1.0625≈23sp——首页那句一言
+      // 用的就是它，而 23sp 的衬线横画已经落在整像素以上，加重只会变笨（同一条
+      // 理由让 display*/headline* 连字重都不碰）。它和 titleMedium 的层级由字号
+      // 拉开（23 对 17），不需要再多要一档字重。
+      titleLarge: reading(base.titleLarge, _stepDown(titleFloor), 22),
       titleMedium: reading(base.titleMedium, titleFloor, 16),
       titleSmall: reading(base.titleSmall, titleFloor, 14),
       bodyLarge: reading(base.bodyLarge, bodyFloor, 16, 24 / 16),
-      bodyMedium: reading(base.bodyMedium, bodyFloor, 14, 20 / 14),
+      // bodyMedium 停在正文档**下面一级**。这一级在本应用里是正文的副手——
+      // 笔记卡的来源行、设置项的副标题、各种次要说明——它和 bodyLarge
+      // 同为一个字重时，卡片和设置项每一行都是两句一样重的话，主次就没了。
+      bodyMedium: reading(base.bodyMedium, _stepDown(bodyFloor), 14, 20 / 14),
       // bodySmall 和 label* 一样刻意不动，见方法注释：12sp 是功能性小字的光学
       // 尺寸，换衬线会糊，抬字重会把元信息和正文拉平。
     );
   }
+
+  /// M3 字重的一档。四级阶梯里「低一级」就是减这么多。
+  static const _weightStep = 100;
+
+  /// 退一档，但 0 保持 0。
+  ///
+  /// 0 在 [ThemeStyleForm.titleWeightFloor] / [ThemeStyleForm.bodyWeightFloor]
+  /// 里表示「这一级不设下限、原样交给字形几何」，是开关不是数值——
+  /// 减成 -100 会让 material 的那几级被钉成负字重。
+  static int _stepDown(int floor) => floor == 0 ? 0 : floor - _weightStep;
 
   /// 三层排版加工的固定顺序，亮暗两套主题共用。
   ///

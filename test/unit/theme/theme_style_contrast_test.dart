@@ -598,9 +598,9 @@ void main() {
 
       // 抬字重的规则只有这一处实现，textTheme 和 AppBar 都走它。
       const paper = ThemeStyleForm.paper;
-      expect(paper.titleWeight(FontWeight.w400), FontWeight.w600); // 抬到标题档
-      expect(paper.bodyWeight(FontWeight.w400), FontWeight.w500); // 抬到正文档
-      expect(paper.bodyWeight(FontWeight.w500), FontWeight.w500); // 不动
+      expect(paper.titleWeight(FontWeight.w400), FontWeight.w700); // 抬到标题档
+      expect(paper.bodyWeight(FontWeight.w400), FontWeight.w600); // 抬到正文档
+      expect(paper.bodyWeight(FontWeight.w600), FontWeight.w600); // 不动
       expect(paper.bodyWeight(FontWeight.w700), FontWeight.w700); // 不降
       // material 没有下限，任何输入原样返回——AppBar 标题一个像素不变。
       const material = ThemeStyleForm.material;
@@ -641,10 +641,14 @@ void main() {
         ThemeStyleForm.material.emphasisWeight(compensated: false),
         FontWeight.bold,
       );
-      // 衬线正文 w500 → 加粗 w800，可变字重轴上精确落位。
+      // 衬线正文 w600 → 加粗 w900，正好落在可变字重轴的顶端。
+      //
+      // **这也意味着正文字重已经没有上方余量了**：正文再抬一档，加粗会被
+      // clamp 在 w900，差就从 300 掉到 200，上面那条循环断言会红。真要再抬正文，
+      // 得先决定加粗怎么表达（换色、换底纹，或者接受更小的差），别直接改常量。
       expect(
         ThemeStyleForm.paper.emphasisWeight(compensated: false),
-        FontWeight.w800,
+        FontWeight.w900,
       );
       // 令牌下发的那份和 form 自己算的必须一致，富文本才和 textTheme 对得上。
       for (final style in ThemeStyle.values) {

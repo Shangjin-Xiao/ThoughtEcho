@@ -500,9 +500,27 @@ class ThemeStyleForm {
   /// 衬线风格共用的排版补偿。两套风格的字体族相同，笔画细的问题也就相同，
   /// 补偿量没有理由不同——风格差异由行高、圆角、纹理、色板承担。
   static const _serifFontScale = 1.0625; // 16 → 17，标题同乘（22 → 23.375）
-  // 标题比正文重一档，M3 的「同字号差一档字重」在衬线风格下就还在。
-  static const _serifTitleWeightFloor = 600;
-  static const _serifBodyWeightFloor = 500;
+
+  /// 两档字重下限，落地成四级阶梯（展开规则见
+  /// `AppTheme._applyStyleTypography`，每一级为什么在那一格也写在那里）：
+  ///
+  /// | 级别 | 角色 | 字重 |
+  /// |---|---|---|
+  /// | titleMedium / titleSmall | 小节标题 | 700 |
+  /// | titleLarge | 首页一言（23sp） | 600 |
+  /// | bodyLarge | 笔记正文、列表主行 | 600 |
+  /// | bodyMedium | 来源、设置项副标题 | 500 |
+  /// | bodySmall / label\* | 元信息、控件文字 | 400（黑体，不动） |
+  ///
+  /// **两档一起从 500/600 抬到 600/700，是因为「正文和它的副手一样重」。**
+  /// 抬之前 bodyLarge 和 bodyMedium 同为 w500：笔记卡上正文和它下面那行来源一样重，
+  /// 设置页每一行的标题和副标题也一样重，一屏下来没有落点。现在正文独占 600，
+  /// 次要文字留在 500，加上 #519 让元信息回到黑体 w400，主次终于是三档。
+  ///
+  /// 顺带解决了中文衬线在 17sp 上「比黑体虚」的老问题：w500 的横画仍然细，
+  /// w600 才真的压得住——这也是用户反复说的「还是字体的问题」。
+  static const _serifTitleWeightFloor = 700;
+  static const _serifBodyWeightFloor = 600;
 
   static const _paperLineHeight = 1.75;
 

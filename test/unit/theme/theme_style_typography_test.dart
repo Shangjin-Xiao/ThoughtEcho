@@ -69,12 +69,21 @@ void main() {
 
         // M3 的字号/行高：几何里给的值，风格在它上面做缩放。
         // bodySmall 不在这里：12sp 归功能性小字，见下面那条 label* 的用例。
-        final levels = <String, (TextStyle?, double, double)>{
-          'bodyLarge': (text.bodyLarge, 16, 24 / 16),
-          'bodyMedium': (text.bodyMedium, 14, 20 / 14),
+        //
+        // 第四项是这一级该落到的字重：**bodyMedium 比 bodyLarge 轻一档**。
+        // 它是正文的副手（笔记卡的来源行、设置项副标题），和正文一样重
+        // 就等于每一行都是两句同样响的话。
+        final levels = <String, (TextStyle?, double, double, int)>{
+          'bodyLarge': (text.bodyLarge, 16, 24 / 16, form.bodyWeightFloor),
+          'bodyMedium': (
+            text.bodyMedium,
+            14,
+            20 / 14,
+            form.bodyWeightFloor - 100
+          ),
         };
         levels.forEach((name, spec) {
-          final (resolved, m3Size, m3Height) = spec;
+          final (resolved, m3Size, m3Height, weight) = spec;
           expect(
             resolved?.fontFamily,
             ThemeStyleForm.bundledSerif,
@@ -97,10 +106,13 @@ void main() {
           );
           expect(
             resolved?.fontWeight,
-            FontWeight(form.bodyWeightFloor),
-            reason: '$name 没抬到正文字重下限',
+            FontWeight(weight),
+            reason: '$name 的字重不对',
           );
         });
+        // 阶梯的这一档不能塌：正文比它的副手重一档。
+        expect(text.bodyLarge!.fontWeight!.value,
+            greaterThan(text.bodyMedium!.fontWeight!.value));
 
         // bodyLarge 的「字号 × 行高」就是纸张横线间距，两边必须严格相等，
         // 否则文字会逐行相对横线漂移。
@@ -113,14 +125,16 @@ void main() {
 
       test('标题换衬线、和正文同幅放大、字重比正文高一档；大字只换族', () async {
         final text = (await themeFor(style)).textTheme;
-        final titleWeight = FontWeight(form.titleWeightFloor);
-        final titles = <String, (TextStyle?, double)>{
-          'titleLarge': (text.titleLarge, 22),
-          'titleMedium': (text.titleMedium, 16),
-          'titleSmall': (text.titleSmall, 14),
+        // titleLarge 停在标题档下面一级：23sp 上衬线的横画已经落在整像素以上，
+        // 再加重只会变笨，它和 titleMedium 的层级由 23 对 17 的字号拉开。
+        // 首页那句一言用的就是这一级——抬它等于动用户唯一说「看着舒服」的地方。
+        final titles = <String, (TextStyle?, double, int)>{
+          'titleLarge': (text.titleLarge, 22, form.titleWeightFloor - 100),
+          'titleMedium': (text.titleMedium, 16, form.titleWeightFloor),
+          'titleSmall': (text.titleSmall, 14, form.titleWeightFloor),
         };
         titles.forEach((name, spec) {
-          final (resolved, m3Size) = spec;
+          final (resolved, m3Size, weight) = spec;
           expect(resolved?.fontFamily, ThemeStyleForm.bundledSerif,
               reason: '$name 没换字体族');
           // **标题必须和正文同幅放大**：只放大 body* 的话 bodyLarge(17) 会比它
@@ -130,7 +144,8 @@ void main() {
             closeTo(m3Size * form.readingFontScale, 0.001),
             reason: '$name 没跟上 readingFontScale',
           );
-          expect(resolved?.fontWeight, titleWeight, reason: '$name 没抬到标题字重下限');
+          expect(resolved?.fontWeight, FontWeight(weight),
+              reason: '$name 的字重不对');
         });
         // 层级的两条硬关系：标题比同级正文重一档，且不比它小。
         expect(text.titleMedium!.fontWeight!.value,
@@ -181,7 +196,9 @@ void main() {
       test('AppBar 标题跟上字体族和字重', () async {
         final title = appBarTitleStyle(await themeFor(style));
         expect(title?.fontFamily, ThemeStyleForm.bundledSerif);
-        expect(title?.fontWeight, FontWeight(form.titleWeightFloor));
+        // AppBar 回落到 titleLarge，所以拿到的是标题档**下面一级**，
+        // 不是 titleWeightFloor 本身。见上面那条用例里的理由。
+        expect(title?.fontWeight, FontWeight(form.titleWeightFloor - 100));
       });
 
       test('排版令牌注册进了主题，富文本的加粗降档会整段跳过', () async {
