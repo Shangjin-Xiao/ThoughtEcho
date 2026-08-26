@@ -1060,10 +1060,11 @@ class SettingsService extends ChangeNotifier {
     _saveMultiAiLock = completer;
 
     try {
-      _appSettings = _appSettings.copyWith(hasCompletedOnboarding: completed);
+      final candidateSettings =
+          _appSettings.copyWith(hasCompletedOnboarding: completed);
       final success = await _mmkv.setString(
         _appSettingsKey,
-        json.encode(_appSettings.toJson()),
+        json.encode(candidateSettings.toJson()),
       );
       if (!success) {
         AppLogger.e(
@@ -1072,7 +1073,16 @@ class SettingsService extends ChangeNotifier {
         );
         throw StateError('保存引导完成状态失败');
       }
+      _appSettings = candidateSettings;
       notifyListeners();
+    } catch (e, s) {
+      AppLogger.e(
+        '保存引导完成状态异常',
+        error: e,
+        stackTrace: s,
+        source: 'SettingsService',
+      );
+      rethrow;
     } finally {
       _saveMultiAiLock = null;
       completer.complete();
@@ -1130,9 +1140,43 @@ class SettingsService extends ChangeNotifier {
     final completer = Completer<void>();
     _saveMultiAiLock = completer;
 
+    bool appSettingsWritten = false;
+    final appKeyExisted = candidateAppSettingsKeyExists();
+    String? previousAppJson;
+
+    Future<void> rollbackAppSettings() async {
+      if (!appSettingsWritten) return;
+      appSettingsWritten = false;
+      try {
+        if (appKeyExisted && previousAppJson != null) {
+          final rollbackOk =
+              await _mmkv.setString(_appSettingsKey, previousAppJson);
+          if (!rollbackOk) {
+            AppLogger.e(
+              '回滚应用设置失败：MMKV setString 返回 false',
+              source: 'SettingsService',
+            );
+          }
+        } else if (!appKeyExisted) {
+          final rollbackOk = await _mmkv.remove(_appSettingsKey);
+          if (!rollbackOk) {
+            AppLogger.e(
+              '回滚应用设置失败：MMKV remove 返回 false',
+              source: 'SettingsService',
+            );
+          }
+        }
+      } catch (rollbackError, rollbackStack) {
+        AppLogger.e(
+          '回滚应用设置异常',
+          error: rollbackError,
+          stackTrace: rollbackStack,
+          source: 'SettingsService',
+        );
+      }
+    }
+
     try {
-      final appKeyExisted = candidateAppSettingsKeyExists();
-      String? previousAppJson;
       if (appKeyExisted) {
         try {
           previousAppJson = _mmkv.getString(_appSettingsKey);
@@ -1159,6 +1203,16 @@ class SettingsService extends ChangeNotifier {
             )
           : null;
 
+      if (candidateAppSettings != null &&
+          appKeyExisted &&
+          previousAppJson == null) {
+        AppLogger.e(
+          '应用设置键存在但读取值为 null，中止保存以防数据丢失',
+          source: 'SettingsService',
+        );
+        throw StateError('读取原有应用设置失败');
+      }
+
       final multiJson = json.encode(settings.toJson());
       final appJson = candidateAppSettings != null
           ? json.encode(candidateAppSettings.toJson())
@@ -1173,6 +1227,7 @@ class SettingsService extends ChangeNotifier {
           );
           throw StateError('保存应用设置失败');
         }
+        appSettingsWritten = true;
       }
 
       final successMulti =
@@ -1182,23 +1237,7 @@ class SettingsService extends ChangeNotifier {
           '保存多provider AI设置失败：MMKV setString 返回 false（key=$_multiAiSettingsKey）',
           source: 'SettingsService',
         );
-        // 回滚已写入的 _appSettingsKey
-        if (candidateAppSettings != null) {
-          try {
-            if (appKeyExisted && previousAppJson != null) {
-              await _mmkv.setString(_appSettingsKey, previousAppJson);
-            } else if (!appKeyExisted) {
-              await _mmkv.remove(_appSettingsKey);
-            }
-          } catch (rollbackError, rollbackStack) {
-            AppLogger.e(
-              '回滚应用设置失败',
-              error: rollbackError,
-              stackTrace: rollbackStack,
-              source: 'SettingsService',
-            );
-          }
-        }
+        await rollbackAppSettings();
         throw StateError('保存多provider AI设置失败');
       }
 
@@ -1208,6 +1247,7 @@ class SettingsService extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e, s) {
+      await rollbackAppSettings();
       AppLogger.e(
         '保存多provider AI设置异常',
         error: e,
