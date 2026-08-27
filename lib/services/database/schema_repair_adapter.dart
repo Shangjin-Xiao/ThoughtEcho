@@ -155,11 +155,15 @@ class SchemaDataBackfillAdapter {
 
     try {
       await _validation.validate(database);
+      // 遗留列清理必须排在所有会建快照列的迁移**之前**：它靠重建 quotes 表来去掉
+      // tag_ids，而重建用的是写死的列清单（见 _removeTagIdsColumn），里面没有任何
+      // *_backup 列。排在后面的话，前脚存下的原值后脚就被整张表抹掉——三个
+      // migrate/repair 的后悔药会同时失效。
+      await cleanupLegacyTagIdsColumn(database);
       await _checkAndMigrateWeatherData(database);
       await _checkAndMigrateDayPeriodData(database);
       await patchQuotesDayPeriod(database);
       await repairOutOfDomainSentiment(database);
-      await cleanupLegacyTagIdsColumn(database);
       logDebug('所有数据迁移完成');
     } catch (error, stackTrace) {
       logError(
@@ -298,11 +302,14 @@ class SchemaDataBackfillAdapter {
 
         final batch = transaction.batch();
         for (final entry in replacements.entries) {
-          batch.update(
-            'quotes',
-            {'sentiment': entry.value},
-            where: 'sentiment = ?',
-            whereArgs: [entry.key],
+          // 原值和新值必须写在**同一条** UPDATE 里。_ensureBackupColumn 只在建列
+          // 那一次整列快照，列已存在就直接返回——只靠它的话，第二次导入带进来的
+          // 越界值就没有任何地方留底了。
+          batch.rawUpdate(
+            'UPDATE quotes '
+            'SET sentiment_backup = sentiment, sentiment = ? '
+            'WHERE sentiment = ?',
+            [entry.value, entry.key],
           );
         }
         final results = await batch.commit();
@@ -313,7 +320,7 @@ class SchemaDataBackfillAdapter {
 
       logWarning(
         'sentiment 字段修复完成：$repairedCount 条笔记的越界值已处理 '
-        '(${replacements.keys.join(', ')})，这些值不是本应用产生的；'
+        '(${_logSample(replacements.keys)})，这些值不是本应用产生的；'
         '原值已快照到 sentiment_backup 列',
         source: 'DatabaseDataBackfill',
       );
@@ -326,6 +333,24 @@ class SchemaDataBackfillAdapter {
       );
       rethrow;
     }
+  }
+
+  /// 把外来值裁成能安全进日志的样本：限条数、限长度、去掉控制字符。
+  ///
+  /// 这些值来自导入文件，长度和内容都不受本应用控制。原样 join 进日志既可能刷屏，
+  /// 也可能把换行/控制字符混进日志行里。完整原值在 `sentiment_backup` 列里，
+  /// 日志只需要够认出「大概是什么东西」。
+  static String _logSample(Iterable<String> values) {
+    const maxSamples = 5;
+    const maxValueLength = 32;
+    final samples = values.take(maxSamples).map((value) {
+      final cleaned = value.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), ' ').trim();
+      return cleaned.length > maxValueLength
+          ? '${cleaned.substring(0, maxValueLength)}…'
+          : cleaned;
+    }).join(', ');
+    final omitted = values.length - maxSamples;
+    return omitted > 0 ? '$samples …另有 $omitted 种' : samples;
   }
 
   Future<void> migrateDayPeriodToKey(Database? database) async {

@@ -24,6 +24,7 @@ import 'media_reference_service.dart';
 import 'mmkv_service.dart';
 import 'unified_log_service.dart';
 import 'location_service.dart';
+import '../models/import_cleanup_stats.dart';
 import '../models/merge_report.dart';
 import 'database_schema_manager.dart';
 import 'database_backup_service.dart';
@@ -206,11 +207,14 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     bool suppressNotify = false,
   });
 
-  Future<void> importDataFromMap(
+  Future<ImportCleanupStats> importDataFromMap(
     Map<String, dynamic> data, {
     bool clearExisting = true,
   });
-  Future<void> importData(String filePath, {bool clearExisting = true});
+  Future<ImportCleanupStats> importData(
+    String filePath, {
+    bool clearExisting = true,
+  });
   Future<bool> checkCanExport();
   Future<bool> validateBackupFile(String filePath);
   Future<MergeReport> importDataWithLWWMerge(

@@ -38,19 +38,21 @@ class AIConnectionTester {
             apiKey: await APIKeyManager().getProviderApiKey(provider.id),
           );
 
-    return await OpenAIStreamService()
-        .chatCompletion(
-          provider: resolved,
-          messages: [
-            openai.ChatMessage.system(systemPrompt),
-            openai.ChatMessage.user(userMessage),
-          ],
-          temperature: 0.1,
-          maxTokens: _testMaxTokens,
-          // 思考模型会把 token 预算全花在推理上、正文返回空，测试没必要为此付钱等待。
-          enableThinking: false,
-        )
-        .timeout(timeout);
+    // 超时交给 client 自己：`Future.timeout` 只让等待方提前返回，底层请求会继续
+    // 跑到底，`chatCompletion` 里的 `client.close()` 也要等它跑完才执行——用户
+    // 连点几次「测试连接」就会攒下一批在飞的连接。
+    return await OpenAIStreamService().chatCompletion(
+      provider: resolved,
+      messages: [
+        openai.ChatMessage.system(systemPrompt),
+        openai.ChatMessage.user(userMessage),
+      ],
+      temperature: 0.1,
+      maxTokens: _testMaxTokens,
+      // 思考模型会把 token 预算全花在推理上、正文返回空，测试没必要为此付钱等待。
+      enableThinking: false,
+      timeout: timeout,
+    );
   }
 
   /// 测试请求的 token 上限。只要能回一句话就够，给推理模型留一点余量。

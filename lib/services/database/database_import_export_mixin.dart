@@ -4,11 +4,11 @@ part of '../database_service.dart';
 mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   /// 从Map对象导入数据
   @override
-  Future<void> importDataFromMap(
+  Future<ImportCleanupStats> importDataFromMap(
     Map<String, dynamic> data, {
     bool clearExisting = true,
   }) async {
-    await _backupService.importDataFromMap(
+    final stats = await _backupService.importDataFromMap(
       database,
       data,
       clearExisting: clearExisting,
@@ -18,6 +18,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
     clearAllCacheForParts();
     notifyListeners();
     refreshQuotesStreamForParts();
+    return stats;
   }
 
   /// 从 JSON 文件导入数据
@@ -25,7 +26,10 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   /// [filePath] - 导入文件的路径
   /// [clearExisting] - 是否清空现有数据，默认为 true
   @override
-  Future<void> importData(String filePath, {bool clearExisting = true}) async {
+  Future<ImportCleanupStats> importData(
+    String filePath, {
+    bool clearExisting = true,
+  }) async {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
@@ -35,7 +39,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
       final data = await LargeFileManager.decodeJsonFromFileStreaming(file);
 
       // 调用新的核心导入逻辑
-      await importDataFromMap(data, clearExisting: clearExisting);
+      return await importDataFromMap(data, clearExisting: clearExisting);
     } catch (e) {
       logDebug('数据导入失败: $e');
       rethrow;

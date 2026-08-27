@@ -196,7 +196,14 @@ class OpenAIStreamService extends ChangeNotifier {
   /// 从 AIProviderSettings 构建 OpenAIConfig
   ///
   /// 为每个请求构建独立的 client 配置，支持多 provider 切换。
-  static openai.OpenAIConfig buildOpenAIConfig(AIProviderSettings provider) {
+  ///
+  /// [timeout] 是**客户端自己的**请求超时。调用方不要用 `Future.timeout` 去截
+  /// 请求——那只让等待方提前返回，底层请求继续跑，`chatCompletion` 的
+  /// `client.close()` 也要等它真跑完才执行，连点几次就会攒下一批在飞的连接。
+  static openai.OpenAIConfig buildOpenAIConfig(
+    AIProviderSettings provider, {
+    Duration timeout = const Duration(minutes: 3),
+  }) {
     final normalizedUrl = normalizeOpenAIBaseUrl(provider.apiUrl);
 
     // 构建请求头（排除 Content-Type，由 http 包自动处理）
@@ -216,7 +223,7 @@ class OpenAIStreamService extends ChangeNotifier {
           ? openai.ApiKeyProvider(provider.apiKey)
           : null,
       defaultHeaders: headers,
-      timeout: const Duration(minutes: 3),
+      timeout: timeout,
       retryPolicy: const openai.RetryPolicy(maxRetries: 2),
     );
   }
@@ -323,8 +330,11 @@ class OpenAIStreamService extends ChangeNotifier {
     double? temperature,
     int? maxTokens,
     bool? enableThinking,
+    Duration? timeout,
   }) async {
-    final config = buildOpenAIConfig(provider);
+    final config = timeout != null
+        ? buildOpenAIConfig(provider, timeout: timeout)
+        : buildOpenAIConfig(provider);
     final client = openai.OpenAIClient(config: config);
 
     try {

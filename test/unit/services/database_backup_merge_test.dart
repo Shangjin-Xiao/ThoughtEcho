@@ -207,7 +207,9 @@ void main() {
       });
 
       expect(report.insertedQuotes, 0);
-      expect(report.skippedQuotes, 1);
+      // 单独数：这不是 LWW 判定「本地更新」的正常跳过，是数据有问题进不来。
+      expect(report.skippedEmptyQuotes, 1);
+      expect(report.skippedQuotes, 0);
       expect(await db.query('quotes'), isEmpty);
     });
 
@@ -259,6 +261,31 @@ void main() {
       expect(await sentimentOf('legacy-label'), 'positive'); // 中文标签 → 收成 key
     });
 
+    test('覆盖导入把清洗统计交回调用方，还原页才有东西可展示', () async {
+      final stats = await service.importDataFromMap(db, {
+        'categories': [],
+        'quotes': [
+          demoQuote(),
+          {...demoQuote(), 'id': 'empty-one', 'content': '', 'sentiment': null},
+        ],
+      });
+
+      expect(stats.sanitizedFields, 1); // demo-quote-zh-001 的 thoughtful
+      expect(stats.skippedEmptyQuotes, 1);
+      expect(stats.isClean, isFalse);
+    });
+
+    test('干净的备份不产生任何清洗统计', () async {
+      final stats = await service.importDataFromMap(db, {
+        'categories': [],
+        'quotes': [
+          {...demoQuote(), 'sentiment': 'positive'},
+        ],
+      });
+
+      expect(stats.isClean, isTrue);
+    });
+
     test('修复是不可逆写入，改列之前必须先把原值快照下来', () async {
       await db.insert('quotes', {
         'id': 'demo-quote-zh-001',
@@ -276,6 +303,34 @@ void main() {
           .first;
       expect(row['sentiment'], isNull);
       expect(row['sentiment_backup'], 'thoughtful');
+    });
+
+    test('第二次修复也要留底：快照列已存在不能让新的越界值无处可寻', () async {
+      // _ensureBackupColumn 只在建列那一次整列快照，列已存在就直接返回。原值必须
+      // 由修复本身那条 UPDATE 写入，否则第二份坏备份导进来就再也找不回原值了。
+      await db.insert('quotes', {
+        'id': 'first-round',
+        'content': '第一批',
+        'date': '2026-08-22T17:40:00.000Z',
+        'sentiment': 'thoughtful',
+      });
+      await DatabaseSchemaManager().repairOutOfDomainSentiment(db);
+
+      // 第二轮：快照列此时已经存在。
+      await db.insert('quotes', {
+        'id': 'second-round',
+        'content': '第二批',
+        'date': '2026-08-22T17:40:00.000Z',
+        'sentiment': 'inspirational',
+      });
+      await DatabaseSchemaManager().repairOutOfDomainSentiment(db);
+
+      Future<Object?> backupOf(String id) async =>
+          (await db.query('quotes', where: 'id = ?', whereArgs: [id]))
+              .first['sentiment_backup'];
+
+      expect(await backupOf('first-round'), 'thoughtful');
+      expect(await backupOf('second-round'), 'inspirational');
     });
   });
 }

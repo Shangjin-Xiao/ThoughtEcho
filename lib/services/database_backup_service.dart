@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/import_cleanup_stats.dart';
 import '../models/merge_report.dart';
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
@@ -18,8 +19,8 @@ class DatabaseBackupService {
 
   DatabaseBackupService({Uuid? uuid}) : _uuid = uuid ?? const Uuid();
 
-  /// 从Map对象导入数据
-  Future<void> importDataFromMap(
+  /// 从Map对象导入数据，返回本次入库前被清洗/跳过的统计。
+  Future<ImportCleanupStats> importDataFromMap(
     Database db,
     Map<String, dynamic> data, {
     bool clearExisting = true,
@@ -34,6 +35,10 @@ class DatabaseBackupService {
           !actualData.containsKey('quotes')) {
         throw Exception('备份数据格式无效，缺少 "categories" 或 "quotes" 键');
       }
+
+      // 计数在事务外声明：入库前清洗了什么要能报给调用方，最终由还原页展示。
+      final sanitizedDetails = <String>[];
+      final unusableQuoteIds = <String>[];
 
       // 开始事务
       await db.transaction((txn) async {
@@ -114,8 +119,6 @@ class DatabaseBackupService {
         final quoteBatch = txn.batch();
         final tagRelations = <Map<String, String>>[];
         final processedQuotes = <Map<String, dynamic>>[];
-        final sanitizedDetails = <String>[];
-        final unusableQuoteIds = <String>[];
 
         for (final q in quotes) {
           final quoteData = Map<String, dynamic>.from(
@@ -449,6 +452,11 @@ class DatabaseBackupService {
           }
         }
       });
+
+      return ImportCleanupStats(
+        sanitizedFields: sanitizedDetails.length,
+        skippedEmptyQuotes: unusableQuoteIds.length,
+      );
     } catch (e) {
       logDebug('从Map导入数据失败: $e');
       rethrow;
@@ -459,7 +467,7 @@ class DatabaseBackupService {
   ///
   /// [filePath] - 导入文件的路径
   /// [clearExisting] - 是否清空现有数据，默认为 true
-  Future<void> importData(
+  Future<ImportCleanupStats> importData(
     Database db,
     String filePath, {
     bool clearExisting = true,
@@ -473,7 +481,7 @@ class DatabaseBackupService {
       final data = await LargeFileManager.decodeJsonFromFileStreaming(file);
 
       // 调用新的核心导入逻辑
-      await importDataFromMap(db, data, clearExisting: clearExisting);
+      return await importDataFromMap(db, data, clearExisting: clearExisting);
     } catch (e) {
       logDebug('数据导入失败: $e');
       rethrow;
@@ -899,15 +907,31 @@ class DatabaseBackupService {
   }
 
   /// 把一行的清洗结果拼成可读的一条记录。
+  ///
+  /// 原值来自导入文件，长度和内容都不受本应用控制，所以进日志前要裁短并去掉控制
+  /// 字符——否则一个超长或带换行的字段值就能把日志刷乱。
   static String? _describeSanitized(
     Object? quoteId,
     Map<String, Object?> replaced,
   ) {
     if (replaced.isEmpty) return null;
-    final fields =
-        replaced.entries.map((e) => '${e.key}=${e.value}').join(', ');
-    return '$quoteId($fields)';
+    final fields = replaced.entries
+        .map((e) => '${e.key}=${_logSafeValue(e.value)}')
+        .join(', ');
+    return '${_logSafeValue(quoteId)}($fields)';
   }
+
+  /// 单个外来值的日志安全形式：去控制字符 + 限长。
+  static String _logSafeValue(Object? value) {
+    const maxLength = 32;
+    final cleaned =
+        (value?.toString() ?? 'null').replaceAll(_controlChars, ' ').trim();
+    return cleaned.length > maxLength
+        ? '${cleaned.substring(0, maxLength)}…'
+        : cleaned;
+  }
+
+  static final RegExp _controlChars = RegExp(r'[\x00-\x1F\x7F]');
 
   /// 收敛颜色值到 `#RRGGBB`，认不出来返回 null。
   ///
@@ -1081,8 +1105,8 @@ class DatabaseBackupService {
         final recoveredContent = _recoverContent(quoteData);
         if (recoveredContent.isEmpty) {
           // 正文为空的行读出来就会抛异常，连累整页笔记加载失败，不能入库。
-          reportBuilder.addError('跳过正文为空的笔记: $quoteId');
-          reportBuilder.addSkippedQuote();
+          reportBuilder.addError('跳过正文为空的笔记: ${_logSafeValue(quoteId)}');
+          reportBuilder.addSkippedEmptyQuote();
           continue;
         }
         quoteData['content'] = recoveredContent;
