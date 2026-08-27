@@ -860,3 +860,96 @@ delta + 排除了 N+1），如果直接照着改时机或分片解析，会花�
 给出一个看起来合理、其实是错的数」。这三条全都属于后者 —— 数字不是坏的，是**会被误读
 的**。
 
+---
+
+## 2026-08-27: 切后台不等于缺内存 —— 用应用自己的 WidgetsBinding 分流
+
+**决策者**: 上晋（提出问题）+ Claude（定位与实现）
+**类型**: 缺陷根因 / 实施
+**产出**: `lib/utils/app_widgets_binding.dart`、`test/unit/utils/app_widgets_binding_test.dart`
+
+**背景**：用户第二次反馈「应用切到后台再回来，之前显示过的图片变灰要重新加载」。
+
+### 根因
+
+Android 在应用退到后台时就会用 `TRIM_MEMORY_UI_HIDDEN` 调 `onTrimMemory`，Flutter
+引擎把它和真正的低内存警告转成同一条 `memoryPressure` 消息 —— Dart 侧无法区分。框架
+对这条消息的默认反应是当成缺内存：清空整个 `imageCache`，再把
+`didHaveMemoryPressure()` 广播给所有观察者（本仓库那个会清富文本测量缓存）。
+
+2026-08-27 的性能日志坐实了这一点：切后台再回来之后 `warmup gen=2, rewarm=1`，用户
+除了切个后台什么也没做。
+
+**这同时推翻了 2026-08-23 的一个判断**：当时把 `resetCaches()` 从
+`AppLifecycleState.paused` 改挂到 `didHaveMemoryPressure`，以为这样就只在真缺内存时
+触发。实际上后台 trim 照样会走到那里。
+
+### 决定
+
+新增 `AppWidgetsBinding`（`lib/utils/app_widgets_binding.dart`），在 `main()` 里代替
+`WidgetsFlutterBinding.ensureInitialized()`，按 `lifecycleState` 分流：
+
+| 来源 | 判据 | 处理 |
+|---|---|---|
+| 前台真缺内存 | `resumed` / `inactive` / 状态未知 | 照旧走 `super`，全清 |
+| 后台例行 trim | `hidden` / `paused` / `detached` | 卸 asset bundle；`imageCache` **淘汰**到 8MB；测量缓存不动 |
+
+「淘汰而不清空」靠 `ImageCache.maximumSizeBytes` 的 setter：它会立刻按 LRU 淘汰到新
+额度，调低再调回去就只留下最近用过的那几张，额度不受影响。
+
+判据对齐**例行 trim 实际送达的时机**：`TRIM_MEMORY_UI_HIDDEN` 是 `onStop` 之后、界面
+完全不可见时才发的。**`inactive` 不算**（Sourcery 第二轮审查提出，成立）—— 它是「还在
+屏幕上但没有输入焦点」：权限弹窗、系统浮层、下拉通知栏、来电横幅、任务切换器。这些
+时候进程完全在前台，例行 trim 还没发生，收到的压力是真的缺内存，必须整清；归进 trim
+分支等于在最该释放的时候少释放一次，还照样可能被杀。
+
+状态未知时同样按「真缺内存」处理 —— 宁可多释放一次，也不要在真缺内存时装看不见。
+判据写成穷举 `switch` 而不是「非 `resumed` 即 trim」：SDK 以后新增一档生命周期状态时
+会编译不过，而不是悄悄落进某一边。
+
+### 代价与边界
+
+- 例行 trim 这条路不再广播 `didHaveMemoryPressure()`。本仓库唯一的消费者就是
+  `_MyAppState`，它正是我们要跳过的那个；如果将来有别的观察者需要在后台释放资源，
+  要在那条分支里显式处理，不能指望这个广播。
+- 后台仍会留 8MB 解码图。相较于触发系统杀进程的内存门槛，这个额度可以忽略不计；
+  即使进程真的被杀掉，那也只是一次冷启动，本来就不吃这份缓存。
+- 8MB 之外的图还是掉了，用户回前台往回滑越过那条线仍会看到一次重解 ——
+  `NoteListViewState.didChangeAppLifecycleState` 里重走预热的那条路因此保留。
+
+## 2026-08-27: 滚动会话开 CPU profiling，但只上报真卡过的那几段
+
+**决策者**: 上晋（要求）+ Claude（实现）
+**类型**: 观测能力 / 实施
+**产出**: `lib/utils/sentry_helper.dart`、`lib/utils/app_tracer.dart`
+
+`profilesSampleRate` 从 `null` 改为 `1.0`。它是架在 `tracesSampleRate` 之上的第二层，
+配合现有的 1.0 等于「每条上报的事务都带一份采样式 CPU profile」。SDK 自己判平台
+（`SentryNativeProfilerFactory.attachTo` 只在 iOS/macOS 启动 profiler），所以代码里
+不再写一层重复的平台分支。
+
+配套：`beforeSendTransaction` 里按滚动会话收尾地标的帧统计筛选，只留
+`frameJank > 0` 或最坏一帧到了两帧预算的会话。理由是记录页每滑一次就是一个事务，
+随手翻一分钟几十条，全量上报既淹面板也白烧流量。拿不到收尾地标的一律保留 —— 那是
+会话没走到正常收尾的异常路径，最不该被筛选吃掉。
+
+判据里**不用 `dropped`**：它在可变刷新率屏幕上会把「面板降到 60Hz」误记成丢帧
+（见 `docs/note-list-warmup-invalidation-2026-08-22.md` 2026-08-27 一节），拿一个不
+可靠的数当筛选依据等于随机丢样本。
+
+### 两个必须说清的边界（Sourcery 审查提出，均已核实）
+
+**一、滚动会话必须是根事务。** `AppTracer.start` 原来在作用域上已有 span 时会挂成
+子 span。CPU profile 和 `beforeSendTransaction` **都只认根事务**，所以那种情况下滚动
+会话既不会被独立采样也筛不到。而它恰好会撞上最想看的那一段 —— 冷启动进记录页时
+`SentryNavigatorObserver` 的路由事务还开着并绑在作用域上。已加 `forceRootTransaction`
+参数（默认 false，其余调用点行为不变），并且强开时 `bindToScope: currentSpan == null`
+—— 作用域上已经绑着别人就不抢，否则滚动会话结束时会把 `scope.span` 置空，路由事务
+剩下的子 span 全挂不上去。有回归测试覆盖这两点。
+
+**二、`profilesSampleRate = 1.0` 的代价是采样，不是上传。** SDK 没有按事务名开关
+profiler 的钩子（`SentryTracesSampler.sampleProfiling` 只看全局采样率），所以
+iOS/macOS 上路由事务、分页和每一次「其实不卡」的滚动都会被采样，采样线程的 CPU 和
+电量实打实要付；上面那层筛选省的只是上传。**明知如此仍然取 1.0**：Sentry 默认关闭、
+由用户主动打开来查这一个问题，而调低采样率会按概率漏掉真卡的那几段 —— 那正是唯一
+要看的样本。这个问题排完就该把它调回 `null`。

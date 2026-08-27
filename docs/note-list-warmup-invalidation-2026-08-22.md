@@ -272,3 +272,111 @@ UI 线程开销跟着新卡片走**，而卡片自己的 build/layout 都在预�
   shaping 冷启动）。所有会话 `headerMiss+0`，预热在正常工作。
 - 冷启动首屏光栅那条（scroll-1 `worstRaster=19.2ms`）仍然挂着，未动。
 
+
+---
+
+## 2026-08-27 复验：热态已经打平，剩下的两条线是「回前台」和「整列表重建」
+
+PR #526 的指标修正到手后的第一份日志。这一轮**不是**又一轮指标返工 —— 热态滚动
+已经达标，可以开始处理用户直接看得见的那件事了。
+
+### 热态滚动打平了
+
+滑到底之后来回滑的四段（scroll-24~27）：
+
+| session | frames | frameJank | avgFrame | worstFrame | built |
+|---|---|---|---|---|---|
+| scroll-24 | 265 | **0** | 2.4ms | 5.5ms | 0 |
+| scroll-25 | 209 | **0** | 2.4ms | 6.5ms | 0 |
+| scroll-26 | 184 | **0** | 2.2ms | 4.8ms | 0 |
+| scroll-27 | 269 | 2 | 2.7ms | 35.8ms | **121** |
+
+前三段一帧都没超预算。第四段那两次 jank 是下面第三节的事。
+
+冷启动首滑仍然掉帧（scroll-1~3 的 `frameJank` 是 11/9/10），但也在收敛：scroll-4
+（当轮第四段，缓存都暖上了）只剩 `frameJank=4`、`worstVsync=0.9ms`。
+
+### 「切后台回来图片变灰」的根因：切后台被当成缺内存
+
+用户第二次反馈这件事了。根因不在预热，在生命周期：
+
+- **Android 每次切后台都会发 `memoryPressure`。** 系统的 `onTrimMemory` 在应用退到
+  后台时就会带着 `TRIM_MEMORY_UI_HIDDEN` 打过来，Flutter 引擎把它和真正的低内存
+  警告转成同一条消息，Dart 侧完全分不出来。
+- 框架对这条消息的默认反应是**当成缺内存**：`PaintingBinding.handleMemoryPressure`
+  直接 `imageCache.clear()`，`WidgetsBinding` 再把 `didHaveMemoryPressure()` 广播给
+  所有观察者 —— 本仓库那个观察者会 `QuoteContent.resetCaches()`。
+
+日志对上了：scroll-4（14:18:34）时 `warmup gen=0`，两分钟后的 scroll-24 是
+`gen=2, rewarm=1`。中间用户只是把应用切出去又切回来，测量缓存却被整排清了两次。
+于是「之前显示过的图片变灰重新加载」和「回前台第一次滑动要重算折叠排版」是同一个
+原因的两个症状。
+
+**修法**：`AppWidgetsBinding`（`lib/utils/app_widgets_binding.dart`）按生命周期状态
+分流这条消息。判据对齐例行 trim 实际送达的时机 —— `TRIM_MEMORY_UI_HIDDEN` 是
+`onStop` 之后、界面完全不可见时才发的，对应 `hidden` / `paused` / `detached`。
+
+- 前台真缺内存（`resumed`、`inactive`）：照旧走 `super`，全清。
+- 后台例行 trim（`hidden`、`paused`、`detached`）：卸掉 asset bundle，把 `imageCache`
+  **淘汰**到 8MB 而不是清空（`maximumSizeBytes` 的 setter 会立刻按 LRU 淘汰到新额度，
+  调低再调回去即可），测量缓存一个不动 —— 它装的是折叠判定和折叠排版这类小对象，
+  省不下多少内存，重算却整整落在回到前台的第一次滑动里。
+
+`inactive` 归在前台一侧是有意的：它是「还在屏幕上但没有输入焦点」（权限弹窗、系统
+浮层、下拉通知栏、来电横幅、任务切换器），这时进程完全在前台，例行 trim 还没发生，
+收到的压力是真缺内存。拿不到状态时同样按「真缺内存」处理：宁可多释放一次，也不要在
+真缺内存时装看不见。
+
+回前台那条重走预热的路（`didChangeAppLifecycleState`）保留：8MB 额度之外的图还是掉了，
+用户往回滑越过那条线仍然会看到一次重解。
+
+### Sentry profiling 开了，只留真卡过的那几段
+
+上一轮的结论是「再猜就是重蹈覆辙，该上函数级采样」。这一轮把它接上：
+
+- `profilesSampleRate = 1.0`。它是架在 `tracesSampleRate` 之上的第二层，配合现有的
+  1.0 等于「每条上报的事务都带一份采样式 CPU profile」。SDK 自己判平台（见
+  `SentryNativeProfilerFactory.attachTo`），只有 iOS/macOS 真正启动 profiler，
+  所以这里没再重复写一层平台分支 —— 上晋有 iOS 侧载包。
+- 滚动会话的 transaction 本来就有（`AppTracer.start(scrollSessionTraceName)`，起止
+  钩子就是 `_startScrollSessionPerfCapture` / `_finalizeScrollSessionPerfCapture`），
+  这次只是把收尾地标里的帧统计**保持成数值类型**，并在 `beforeSendTransaction` 里
+  按它筛：只留 `frameJank > 0`，或者最坏一帧到了两帧预算的会话。
+
+  随手翻一分钟就是几十个滚动事务，全量上报既淹没面板也白烧流量，在 iOS 上还每条都
+  附一份 profile。按这一轮的数据，scroll-24~26 会被丢掉，scroll-1~4 和 scroll-27
+  留下 —— 正好是想看的那几段。拿不到收尾地标的一律保留：那说明会话没走到正常收尾，
+  异常路径最不该被筛选悄悄吃掉。
+
+  判据里**故意没有 `dropped`**，理由见下一节。
+
+- 滚动会话要用 `AppTracer.start(..., forceRootTransaction: true)`。CPU profile 和
+  `beforeSendTransaction` 都只认根事务，而冷启动进页面时路由事务还绑在作用域上 ——
+  不强制的话，「冷启动几秒后的第一次滑动」这一段会挂成路由事务的子 span，profile
+  和筛选两样都拿不到。强开时只在作用域没人绑的时候才绑，免得把路由事务顶掉。
+
+- 采样开销要说清：SDK 没有按事务名开关 profiler 的钩子，iOS/macOS 上每条事务都会被
+  采样，筛选省的是上传不是采样。这个问题排完应当把 `profilesSampleRate` 调回 `null`。
+
+### 挂起来的两个疑点
+
+**一、`dropped` 在可变刷新率屏幕上可能仍然虚高。** scroll-24 是
+`frames=265, elapsed=2199ms, budget=8.3ms`：2199 / 8.3 ≈ 264，等于每个 vsync 都出了
+帧，`dropped` 该接近 0，日志却报 **54**。算术上说不通，最像的解释是 LTPO 面板在静止
+期把刷新率降到 60Hz，那时的 vsync 间隔是 16.7ms，除以 8.3ms 的固定预算每一帧都会被
+记成「跳了一帧」。这一轮**没有动它** —— 前三轮的教训是不要在没有证据的时候改指标，
+而且 `frameJank`（不依赖间隔）已经足够判断这几段。下一轮要么拿到刷新率随时间变化的
+证据，要么改用会话内观测到的 vsync 间隔中位数做除数。
+
+**二、一次依赖变化重建整个列表。** scroll-27 是唯一有 jank 的热态会话：
+`depsΔ=1, widgetΔ=1, buildΔ=1` 带出 `built=121@0-120`，`worstBuild=31.6ms`。
+`itemMemo hit+119/miss+2` 说明记忆化基本全中（真正重建的只有 2 张），那 31.6ms 是
+`SliverChildBuilderDelegate` 把 121 个 builder 跑一遍加 `Element.updateChild` 的钱。
+先得知道那次 `didChangeDependencies` 是被什么触发的，才谈得上收窄。
+
+### 顺带记下
+
+- `loadMore` 出现过第二次 `rows=0` 的空查询（scroll-24 的 `seq=4`），`sql=13.8ms`。
+  已经翻到底之后还会再查一次空页，说明 `_watchHasMore` 在中途被复位过。没查根因。
+- 冷启动首屏光栅那条（scroll-1 `worstRaster=7.0ms`，比上一轮的 19.2ms 又降了）
+  仍然挂着，未动。
