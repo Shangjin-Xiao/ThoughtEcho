@@ -91,6 +91,9 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
       await patchQuotesDayPeriod();
       await migrateWeatherToKey();
       await migrateDayPeriodToKey();
+      // 导入侧已在入库前收敛值域，这一步兜住两种情况：旧版本导入遗留的越界值，
+      // 以及绕过导入直接落库的路径（例如老备份恢复出来的库文件）。
+      await repairOutOfDomainSentiment();
       await MediaReferenceService.migrateExistingQuotes();
       logDebug('恢复/合并后数据迁移触发完成', source: 'DatabaseService');
     } catch (e, stackTrace) {

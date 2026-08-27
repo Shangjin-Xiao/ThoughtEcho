@@ -391,6 +391,88 @@ void main() {
       expect(_quote().hasSameContentAs(edited), isFalse);
     });
   });
+
+  group('导入进来的越界值不能把笔记变成只读的砖', () {
+    // 起因：一份手写的 demo JSON 里 `"sentiment": "thoughtful"`，导入后笔记显示
+    // 正常，一保存就抛「笔记数据无效」。根因是读和写两把尺子不一样 ——
+    // fromJson 不查 sentiment，validationError 查。
+
+    test('fromJson 读得出来的笔记，必须能通过写库校验', () {
+      final quote = Quote.fromJson({
+        'id': 'demo-quote-zh-001',
+        'content': '我常以为是丑女造就了美人。',
+        'date': '2026-08-22T17:40:00.000Z',
+        'sentiment': 'positive',
+        'color_hex': '#7A5530',
+      });
+
+      expect(quote.validationError, isNull);
+      expect(quote.isValid, isTrue);
+    });
+
+    test('越界的 sentiment 让写库校验失败，且报错指名道姓', () {
+      final quote = Quote(
+        id: 'demo-quote-zh-001',
+        content: '我常以为是丑女造就了美人。',
+        date: '2026-08-22T17:40:00.000Z',
+        sentiment: 'thoughtful',
+      );
+
+      // 报错必须点出是哪个字段、什么值：原来那句「请检查内容、日期和其他字段」
+      // 三个都不是真凶，用户和日志都看不出该修哪里。
+      expect(quote.validationError, contains('情感'));
+      expect(quote.validationError, contains('thoughtful'));
+    });
+
+    test('normalizeSentiment 认 key、认中文标签，认不出来的归 null', () {
+      expect(Quote.normalizeSentiment('positive'), 'positive');
+      expect(Quote.normalizeSentiment('Positive'), 'positive');
+      expect(Quote.normalizeSentiment('  neutral  '), 'neutral');
+      expect(Quote.normalizeSentiment('积极'), 'positive');
+      expect(Quote.normalizeSentiment('thoughtful'), isNull);
+      expect(Quote.normalizeSentiment('peaceful'), isNull);
+      expect(Quote.normalizeSentiment(''), isNull);
+      expect(Quote.normalizeSentiment(null), isNull);
+    });
+
+    test('fromJson 不做收敛：读的时候悄悄洗会把库里的雷永远藏着', () {
+      final quote = Quote.fromJson({
+        'id': 'demo-quote-zh-001',
+        'content': '正文',
+        'date': '2026-08-22T17:40:00.000Z',
+        'sentiment': 'thoughtful',
+      });
+
+      expect(quote.sentiment, 'thoughtful');
+      expect(quote.isValid, isFalse);
+    });
+
+    test('超长正文不再卡住保存：长度是输入层策略，不是持久化不变量', () {
+      // 全屏 Quill 编辑器不限字数，content 列是 TEXT 也没有限制。把已经写好的
+      // 内容卡在保存这一步，丢的是用户的字。
+      final quote = Quote(
+        id: 'long',
+        content: 'x' * (Quote.maxContentLengthForInput + 1),
+        date: '2026-08-22T17:40:00.000Z',
+      );
+
+      expect(quote.validationError, isNull);
+      // 新建入口仍然按输入层策略限制。
+      expect(Quote.isValidContent(quote.content), isFalse);
+    });
+
+    test('空正文和坏日期仍然拦下来，这两样读的时候就会炸', () {
+      expect(
+        Quote(id: 'a', content: '', date: '2026-08-22T17:40:00.000Z')
+            .validationError,
+        contains('内容'),
+      );
+      expect(
+        Quote(id: 'b', content: '正文', date: '不是日期').validationError,
+        contains('日期'),
+      );
+    });
+  });
 }
 
 /// `Quote.operator ==` 只比 id，回答不了「这一行变了没有」。列表侧靠

@@ -221,6 +221,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<void> patchQuotesDayPeriod();
   Future<void> migrateDayPeriodToKey();
   Future<void> migrateWeatherToKey();
+  Future<void> repairOutOfDomainSentiment();
   Future<Map<String, dynamic>> checkTagDataConsistency();
   Future<bool> cleanupTagDataInconsistencies();
   Future<List<int>> getHourDistributionForSmartPush();

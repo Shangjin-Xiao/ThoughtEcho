@@ -23,6 +23,12 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
     );
   }
 
+  /// 修复导入进来的越界 `sentiment` 值（认得的收成 key，认不出来的置空）
+  @override
+  Future<void> repairOutOfDomainSentiment() async {
+    await _schemaLifecycle.repairOutOfDomainSentiment(database);
+  }
+
   /// 修复：标签数据一致性检查
   @override
   Future<Map<String, dynamic>> checkTagDataConsistency() async {

@@ -158,6 +158,7 @@ class SchemaDataBackfillAdapter {
       await _checkAndMigrateWeatherData(database);
       await _checkAndMigrateDayPeriodData(database);
       await patchQuotesDayPeriod(database);
+      await repairOutOfDomainSentiment(database);
       await cleanupLegacyTagIdsColumn(database);
       logDebug('所有数据迁移完成');
     } catch (error, stackTrace) {
@@ -238,6 +239,77 @@ class SchemaDataBackfillAdapter {
     } catch (error, stackTrace) {
       logError(
         '补全 day_period 字段失败: $error',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'DatabaseDataBackfill',
+      );
+      rethrow;
+    }
+  }
+
+  /// 把 `sentiment` 列里应用词汇表之外的值修回来：认得的收成 key，认不出来的置空。
+  ///
+  /// 导入侧现在会在入库前收敛这些值，但**已经写进库的行只能靠这一次修复**——删导入
+  /// 代码不会让它们变回可编辑。中招的笔记表现为「打开正常、一保存就报错」：
+  /// [Quote.fromJson] 不查 `sentiment`，[Quote.validationError] 查。
+  ///
+  /// 干净的库（应用自身从不写这个字段，所以绝大多数库里它整列都是 NULL）在第一条
+  /// 查询就返回，不产生任何写入。
+  Future<void> repairOutOfDomainSentiment(Database? database) async {
+    if (kIsWeb) {
+      return;
+    }
+    if (database == null) {
+      throw StateError('数据库未初始化，无法执行 sentiment 字段修复');
+    }
+
+    try {
+      final rows = await database.rawQuery(
+        "SELECT DISTINCT sentiment FROM quotes "
+        "WHERE sentiment IS NOT NULL AND sentiment != ''",
+      );
+      if (rows.isEmpty) {
+        return;
+      }
+
+      final replacements = <String, String?>{};
+      for (final row in rows) {
+        final raw = row['sentiment']?.toString();
+        if (raw == null || raw.isEmpty) continue;
+        final normalized = Quote.normalizeSentiment(raw);
+        if (normalized != raw) {
+          replacements[raw] = normalized;
+        }
+      }
+      if (replacements.isEmpty) {
+        return;
+      }
+
+      var repairedCount = 0;
+      await database.transaction((transaction) async {
+        final batch = transaction.batch();
+        for (final entry in replacements.entries) {
+          batch.update(
+            'quotes',
+            {'sentiment': entry.value},
+            where: 'sentiment = ?',
+            whereArgs: [entry.key],
+          );
+        }
+        final results = await batch.commit();
+        for (final result in results) {
+          repairedCount += (result as int?) ?? 0;
+        }
+      });
+
+      logWarning(
+        'sentiment 字段修复完成：$repairedCount 条笔记的越界值已处理 '
+        '(${replacements.keys.join(', ')})，这些值不是本应用产生的',
+        source: 'DatabaseDataBackfill',
+      );
+    } catch (error, stackTrace) {
+      logError(
+        '修复 sentiment 字段失败: $error',
         error: error,
         stackTrace: stackTrace,
         source: 'DatabaseDataBackfill',
