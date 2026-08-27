@@ -345,7 +345,9 @@ class QuoteItemWidget extends StatefulWidget {
     return width;
   }
 
-  static void warmCollapsedMeasurements({
+  /// 返回这条笔记的右侧缩略图这次会画多大，不画时为 null。调用方要按这个尺寸
+  /// 预解码，见 [QuoteContent.warmCollapsedLayout]。
+  static double? warmCollapsedMeasurements({
     required BuildContext context,
     required Quote quote,
     required double contentMaxWidth,
@@ -353,7 +355,7 @@ class QuoteItemWidget extends StatefulWidget {
     required bool prioritizeBoldContent,
     required bool showExactTime,
   }) {
-    if (!contentMaxWidth.isFinite || contentMaxWidth <= 0) return;
+    if (!contentMaxWidth.isFinite || contentMaxWidth <= 0) return null;
 
     // 头部测宽：日期逐条不同，按文本做键必然是每张新卡片一次未命中。
     // 2026-08-25 的日志里它是 `headerMiss+48 / 13.1ms`、`+62 / 16.8ms`，
@@ -395,7 +397,7 @@ class QuoteItemWidget extends StatefulWidget {
       ),
     );
 
-    QuoteContent.warmCollapsedLayout(
+    return QuoteContent.warmCollapsedLayout(
       context: context,
       quote: quote,
       style: style,

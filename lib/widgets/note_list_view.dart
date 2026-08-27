@@ -300,7 +300,10 @@ class NoteListViewState extends State<NoteListView>
   /// `items` 只说明循环转了多少圈，转空圈时它照样涨。
   int _idleWarmupExpandMisses = 0;
   int _idleWarmupPlanMisses = 0;
-  final Set<String> _idleWarmupPrecachedSources = <String>{};
+
+  /// 已经预解过的图片，键是「解码尺寸 + 来源」：缩略图的边长按正文高度分档，
+  /// 只按来源记的话，同一张图的另一档永远等不到预热。
+  final Set<String> _idleWarmupPrecachedKeys = <String>{};
 
   /// 单轮预热的时间预算。一次暖满整张列表会在空闲帧里堆出一个上百毫秒的长任务，
   /// 用户正好这时开始滑就白优化了；分成小片，随时能让路。
@@ -871,7 +874,7 @@ class NoteListViewState extends State<NoteListView>
     // 几乎只花 precache 的钱，而且是从视口开始走的：正看着的那几张先回来。
     //
     // 去重集合必须一起清，否则「暖过了」的记号会让这些图永远等不到第二次预解码。
-    _idleWarmupPrecachedSources.clear();
+    _idleWarmupPrecachedKeys.clear();
     _restartIdleLayoutWarmupPass();
     _scheduleIdleLayoutWarmup();
   }

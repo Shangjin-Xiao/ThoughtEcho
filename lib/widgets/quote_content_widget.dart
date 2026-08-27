@@ -870,28 +870,33 @@ class QuoteContent extends StatelessWidget {
     var plan = planFor(textMaxWidth);
     var thumbnailSize = CollapsedMediaThumbnail.defaultSize;
 
-    // 正文只有一两行时，右边那张 72 见方的小图撑不满卡片，左边一大块空着。
-    // 这种卡片把图放大到 96：多出来的高度全给了照片，卡片反而不空。
+    // 缩略图的边长**跟着正文高度走**：取不超过正文高度的那一档
+    // （[CollapsedMediaThumbnail.sizeForContentHeight]）。并排的两列里图不比字
+    // 高，卡片就不会为了容下照片而多撑出一截谁也填不满的空白。
     //
-    // 放大要**重新排一次版**：图宽了正文列就窄了，沿用按 72 算出来的行数会让最后
-    // 一行悄悄少几个字——版式必须和测量同宽。重排后仍然短、仍然不截断才真的放大。
+    // 换档要**重新排一次版**：图宽了正文列就窄了，沿用按 72 算出来的行数会让最后
+    // 一行悄悄少几个字——版式必须和测量同宽。重排一次就够，不会来回摆：换小档时
+    // 正文变宽、高度只会更矮，仍然落在最小档；换大档时正文变窄、高度只会更高，
+    // 仍然落在最大档。
     //
     // 这一段留在这里而不是放到 build 里，是因为空闲预热（[warmCollapsedLayout]）
-    // 走的也是这个函数：两次排版都得在预热时跑热，否则短笔记卡片滑进来时还要现算
-    // 第二次。
-    if (reserved > 0 &&
-        !plan.truncated &&
-        plan.height <= CollapsedMediaThumbnail.shortNoteSize) {
-      final double enlargedTextWidth = maxWidth -
-          CollapsedMediaThumbnail.reservedWidth(
-            size: CollapsedMediaThumbnail.shortNoteSize,
-          );
-      if (enlargedTextWidth > 0) {
-        final enlargedPlan = planFor(enlargedTextWidth);
-        if (!enlargedPlan.truncated &&
-            enlargedPlan.height <= CollapsedMediaThumbnail.shortNoteSize) {
-          plan = enlargedPlan;
-          thumbnailSize = CollapsedMediaThumbnail.shortNoteSize;
+    // 走的也是这个函数：两趟排版都得在预热时跑热，否则卡片滑进来时还要现算第二趟。
+    if (reserved > 0) {
+      if (plan.isEmpty || plan.height <= 0) {
+        // 一个字都没有的纯图笔记不和正文并排，整行都归照片，用更大的方图。
+        // 判定放在这里而不是 build 里：预热要按同一个尺寸解码，两处各写一份就会
+        // 解出两张尺寸不同的图，谁也命不中谁。
+        thumbnailSize = CollapsedMediaThumbnail.soloMediaSize;
+      } else {
+        final double fitted =
+            CollapsedMediaThumbnail.sizeForContentHeight(plan.height);
+        if (fitted != thumbnailSize) {
+          final double fittedTextWidth =
+              maxWidth - CollapsedMediaThumbnail.reservedWidth(size: fitted);
+          if (fittedTextWidth > 0) {
+            plan = planFor(fittedTextWidth);
+            thumbnailSize = fitted;
+          }
         }
       }
     }
@@ -911,7 +916,11 @@ class QuoteContent extends StatelessWidget {
   /// 首滑卡顿里有一块是每张新卡片首次布局时才第一次做折叠排版（日志里的
   /// `planMiss+`、`planWorkUs+`）。结果只跟内容和布局宽度有关，完全可以在列表
   /// 静止时提前算好；等卡片真的滑进来时全是命中。
-  static void warmCollapsedLayout({
+  ///
+  /// 返回这条笔记的右侧缩略图这次会画多大，不画缩略图时为 null。**预热解码必须
+  /// 用这个尺寸**：边长按正文高度分档，按默认档解出来的那张和渲染要的不是同一个
+  /// `imageCache` 键，卡片滑进来照旧现解一次。
+  static double? warmCollapsedLayout({
     required BuildContext context,
     required Quote quote,
     required TextStyle? style,
@@ -919,11 +928,12 @@ class QuoteContent extends StatelessWidget {
     required String mediaStyle,
     required bool prioritizeBoldContent,
   }) {
-    if (quote.deltaContent == null || quote.editSource != 'fullscreen') return;
-    if (!maxWidth.isFinite || maxWidth <= 0) return;
+    if (quote.deltaContent == null || quote.editSource != 'fullscreen') {
+      return null;
+    }
+    if (!maxWidth.isFinite || maxWidth <= 0) return null;
 
-    // 结果只为把缓存跑热，本身丢掉即可。
-    _resolveCollapsedLayout(
+    final layout = _resolveCollapsedLayout(
       context: context,
       quote: quote,
       style: style,
@@ -931,6 +941,9 @@ class QuoteContent extends StatelessWidget {
       mediaStyle: mediaStyle,
       prioritizeBoldContent: prioritizeBoldContent,
     );
+    // `thumbnailInset > 0` 和 build 里决定画不画缩略图的是同一个判据。
+    if (layout == null || layout.thumbnailInset <= 0) return null;
+    return layout.thumbnailSize;
   }
 
   @override
@@ -1055,7 +1068,8 @@ class QuoteContent extends StatelessWidget {
             }
 
             // 一个字都没有的纯图笔记，右侧小图会把整张卡片的左边空成一块白。
-            // 照片就是这条笔记的全部内容，给它一张更大的方图，居中放。
+            // 照片就是这条笔记的全部内容，给它一张更大的方图（尺寸由
+            // `_resolveCollapsedLayout` 挑好），居中放。
             //
             // **刻意不铺成通栏**：通栏是定高的，`cover` 会把竖版照片裁成顶部
             // 一条横带（人像只剩半个头），而手机照片竖版居多；解码开销也要贵
@@ -1067,7 +1081,7 @@ class QuoteContent extends StatelessWidget {
                 child: CollapsedMediaThumbnail(
                   media: media,
                   onTap: onMediaTap,
-                  size: CollapsedMediaThumbnail.soloMediaSize,
+                  size: thumbnailSize,
                 ),
               );
             }
@@ -1265,7 +1279,8 @@ class _CollapsedLayout {
   final CollapsedRichTextPlan plan;
   final double thumbnailInset;
 
-  /// 右侧缩略图这次画多大。正文短到撑不满时会放大，见 `_resolveCollapsedLayout`。
+  /// 右侧缩略图这次画多大。按正文高度分档，纯图笔记另有一档，
+  /// 见 `_resolveCollapsedLayout`。
   final double thumbnailSize;
 
   final DeltaMediaSummary media;
