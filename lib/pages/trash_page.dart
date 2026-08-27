@@ -8,6 +8,7 @@ import '../models/note_tag.dart'; // Added
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
+import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 import '../widgets/trash_quote_card.dart';
