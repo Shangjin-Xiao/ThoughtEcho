@@ -891,13 +891,21 @@ Android 在应用退到后台时就会用 `TRIM_MEMORY_UI_HIDDEN` 调 `onTrimMem
 
 | 来源 | 判据 | 处理 |
 |---|---|---|
-| 前台真缺内存 | `resumed` 或状态未知 | 照旧走 `super`，全清 |
-| 后台例行 trim | 其余状态 | 卸 asset bundle；`imageCache` **淘汰**到 8MB；测量缓存不动 |
+| 前台真缺内存 | `resumed` / `inactive` / 状态未知 | 照旧走 `super`，全清 |
+| 后台例行 trim | `hidden` / `paused` / `detached` | 卸 asset bundle；`imageCache` **淘汰**到 8MB；测量缓存不动 |
 
 「淘汰而不清空」靠 `ImageCache.maximumSizeBytes` 的 setter：它会立刻按 LRU 淘汰到新
 额度，调低再调回去就只留下最近用过的那几张，额度不受影响。
 
-状态未知时按「真缺内存」处理 —— 宁可多释放一次，也不要在真缺内存时装看不见。
+判据对齐**例行 trim 实际送达的时机**：`TRIM_MEMORY_UI_HIDDEN` 是 `onStop` 之后、界面
+完全不可见时才发的。**`inactive` 不算**（Sourcery 第二轮审查提出，成立）—— 它是「还在
+屏幕上但没有输入焦点」：权限弹窗、系统浮层、下拉通知栏、来电横幅、任务切换器。这些
+时候进程完全在前台，例行 trim 还没发生，收到的压力是真的缺内存，必须整清；归进 trim
+分支等于在最该释放的时候少释放一次，还照样可能被杀。
+
+状态未知时同样按「真缺内存」处理 —— 宁可多释放一次，也不要在真缺内存时装看不见。
+判据写成穷举 `switch` 而不是「非 `resumed` 即 trim」：SDK 以后新增一档生命周期状态时
+会编译不过，而不是悄悄落进某一边。
 
 ### 代价与边界
 

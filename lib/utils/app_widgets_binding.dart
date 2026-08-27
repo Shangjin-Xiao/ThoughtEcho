@@ -6,7 +6,7 @@ enum MemoryPressureKind {
   /// 前台真的缺内存。该放的都放掉，掉帧也好过被系统杀掉。
   scarcity,
 
-  /// 只是切到后台被系统例行 trim。
+  /// 只是界面完全不可见之后被系统例行 trim。
   ///
   /// Android 在应用进入后台时会发 `TRIM_MEMORY_UI_HIDDEN`，Flutter 引擎把它和
   /// 真正的低内存警告一起转成同一个 `memoryPressure` 消息。于是「切出去看一眼
@@ -17,14 +17,30 @@ enum MemoryPressureKind {
 
 /// 靠生命周期状态区分这次内存压力是哪一种。
 ///
-/// 例行 trim 是在 `onStop` 之后送达的，那时候生命周期已经不是 `resumed`；前台真
-/// 缺内存时应用还在 `resumed`。拿不到状态（`null`，binding 还没收到过生命周期
-/// 通知）时按 [MemoryPressureKind.scarcity] 处理：宁可多释放一次，也不要在真缺
-/// 内存时装作没看见。
+/// 判据要对齐**例行 trim 实际送达的时机**：`TRIM_MEMORY_UI_HIDDEN` 是在 `onStop`
+/// 之后、界面完全不可见时才发的，对应 Flutter 的 `hidden` / `paused` / `detached`。
+///
+/// `inactive` 不算 —— 它是「还在屏幕上但没有输入焦点」：权限弹窗、系统浮层、下拉
+/// 通知栏、来电横幅、任务切换器。这些时候进程完全在前台，例行 trim 根本还没发生，
+/// 这时收到的压力是真的缺内存，必须整清。把它归进 trim 分支等于在最该释放的时候
+/// 少释放一次，还照样可能被系统杀掉。
+///
+/// 拿不到状态（`null`，binding 还没收到过生命周期通知）时按
+/// [MemoryPressureKind.scarcity] 处理：宁可多释放一次，也不要在真缺内存时装看不见。
+///
+/// 用穷举 switch 而不是「非 resumed 即 trim」：SDK 以后新增一档生命周期状态时，
+/// 这里会编译不过，而不是悄悄落进某一边。
 MemoryPressureKind memoryPressureKindFor(AppLifecycleState? lifecycleState) {
-  return lifecycleState == AppLifecycleState.resumed || lifecycleState == null
-      ? MemoryPressureKind.scarcity
-      : MemoryPressureKind.backgroundTrim;
+  if (lifecycleState == null) return MemoryPressureKind.scarcity;
+  switch (lifecycleState) {
+    case AppLifecycleState.resumed:
+    case AppLifecycleState.inactive:
+      return MemoryPressureKind.scarcity;
+    case AppLifecycleState.hidden:
+    case AppLifecycleState.paused:
+    case AppLifecycleState.detached:
+      return MemoryPressureKind.backgroundTrim;
+  }
 }
 
 /// 后台期给解码图留的额度。

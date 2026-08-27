@@ -313,16 +313,19 @@ PR #526 的指标修正到手后的第一份日志。这一轮**不是**又一�
 原因的两个症状。
 
 **修法**：`AppWidgetsBinding`（`lib/utils/app_widgets_binding.dart`）按生命周期状态
-分流这条消息 —— 例行 trim 是在 `onStop` 之后送达的，那时候已经不是 `resumed`；
-前台真缺内存时应用还在 `resumed`。
+分流这条消息。判据对齐例行 trim 实际送达的时机 —— `TRIM_MEMORY_UI_HIDDEN` 是
+`onStop` 之后、界面完全不可见时才发的，对应 `hidden` / `paused` / `detached`。
 
-- 前台真缺内存：照旧走 `super`，全清。
-- 后台例行 trim：卸掉 asset bundle，把 `imageCache` **淘汰**到 8MB 而不是清空
-  （`maximumSizeBytes` 的 setter 会立刻按 LRU 淘汰到新额度，调低再调回去即可），
-  测量缓存一个不动 —— 它装的是折叠判定和折叠排版这类小对象，省不下多少内存，重算
-  却整整落在回到前台的第一次滑动里。
+- 前台真缺内存（`resumed`、`inactive`）：照旧走 `super`，全清。
+- 后台例行 trim（`hidden`、`paused`、`detached`）：卸掉 asset bundle，把 `imageCache`
+  **淘汰**到 8MB 而不是清空（`maximumSizeBytes` 的 setter 会立刻按 LRU 淘汰到新额度，
+  调低再调回去即可），测量缓存一个不动 —— 它装的是折叠判定和折叠排版这类小对象，
+  省不下多少内存，重算却整整落在回到前台的第一次滑动里。
 
-拿不到生命周期状态时按「真缺内存」处理：宁可多释放一次，也不要在真缺内存时装看不见。
+`inactive` 归在前台一侧是有意的：它是「还在屏幕上但没有输入焦点」（权限弹窗、系统
+浮层、下拉通知栏、来电横幅、任务切换器），这时进程完全在前台，例行 trim 还没发生，
+收到的压力是真缺内存。拿不到状态时同样按「真缺内存」处理：宁可多释放一次，也不要在
+真缺内存时装看不见。
 
 回前台那条重走预热的路（`didChangeAppLifecycleState`）保留：8MB 额度之外的图还是掉了，
 用户往回滑越过那条线仍然会看到一次重解。

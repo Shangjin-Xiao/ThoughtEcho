@@ -34,10 +34,9 @@ void main() {
       expect(memoryPressureKindFor(null), MemoryPressureKind.scarcity);
     });
 
-    test('不在前台时收到的压力都是例行 trim', () {
-      // Android 每次切后台都会发 memoryPressure，这几档全都不该清空缓存。
+    test('界面完全不可见之后收到的压力才是例行 trim', () {
+      // TRIM_MEMORY_UI_HIDDEN 在 onStop 之后才发，对应这三档，都不该清空缓存。
       for (final state in <AppLifecycleState>[
-        AppLifecycleState.inactive,
         AppLifecycleState.hidden,
         AppLifecycleState.paused,
         AppLifecycleState.detached,
@@ -48,6 +47,15 @@ void main() {
           reason: '$state 应当被当成例行 trim',
         );
       }
+    });
+
+    test('inactive 仍然算真缺内存', () {
+      // 权限弹窗、系统浮层、下拉通知栏时进程完全在前台，例行 trim 还没发生，
+      // 这时收到的压力必须整清 —— 少释放一次并不能免于被杀。
+      expect(
+        memoryPressureKindFor(AppLifecycleState.inactive),
+        MemoryPressureKind.scarcity,
+      );
     });
   });
 
