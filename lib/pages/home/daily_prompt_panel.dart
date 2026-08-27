@@ -240,13 +240,19 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     final theme = Theme.of(context);
     final shape = AppShapeTokens.of(context);
     final l10n = AppLocalizations.of(context);
-    // 提问是这张卡的正文，就该用正文那一级。极小屏退回 `bodyMedium` 而不是写死
-    // 一个字号：**降级也走类型级别**，这样它照样跟着 `readingFontScale` 缩放。
-    // 取成局部变量是为了让下面的 `color` 也读到**同一级**——分别写两次的话，
-    // 极小屏会出现「样式取 bodyMedium、颜色取 bodyLarge」的错配。
-    final promptStyle = widget.isVerySmallScreen
-        ? theme.textTheme.bodyMedium
-        : theme.textTheme.bodyLarge;
+    // 提问用 `bodyMedium`，不是 `bodyLarge`。
+    //
+    // 上一轮为了把标签压下去，两头都动了：标签降到 `labelLarge`，提问抬到
+    // `bodyLarge`。**抬过头了**——衬线 17px w600 在这张卡里会撑成两行、把整张卡
+    // 顶高，跟上面那张一言卡抢分量。真正起作用的是降标签那一半：标签一旦是黑体
+    // `labelLarge`，提问只要还是衬线、还比它深，主次就已经正过来了，不需要再放大。
+    //
+    // 所有屏幕尺寸都用这一级，不再按屏分档；随屏变的只剩 `maxLines`。
+    //
+    // 仍然取成局部变量而不是两处各写一遍 `theme.textTheme.bodyMedium`：样式和
+    // 颜色必须读同一级，写成两处就等着将来改了一处漏另一处——#529 那版正是
+    // 样式取 `bodyMedium`、颜色却取 `bodyLarge`，在极小屏上错配。
+    final promptStyle = theme.textTheme.bodyMedium;
     final aiService = context.watch<AIService>();
     final settingsService = context.watch<SettingsService>();
     // 以多 provider 设置为准：生成链路读的是 multiAISettings.currentProvider，

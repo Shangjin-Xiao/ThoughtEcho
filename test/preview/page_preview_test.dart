@@ -271,6 +271,10 @@ void main() {
     /// null 表示留在默认的首页——首页那个 destination 已经是选中态，
     /// 未选中图标 `home_outlined` 根本不在树里，点不到。
     required IconData? navIcon,
+
+    /// 亮暗两套都要出图：手工风格的字重/字号在暗色下压在深底上，观感和亮色
+    /// 不是一回事，只渲亮色等于半边没看。
+    Brightness brightness = Brightness.light,
     required String name,
   }) async {
     tester.view.physicalSize = const Size(786, 1746);
@@ -324,7 +328,9 @@ void main() {
             locale: const Locale('zh'),
             theme: appTheme.createLightThemeData(),
             darkTheme: appTheme.createDarkThemeData(),
-            themeMode: ThemeMode.light,
+            themeMode: brightness == Brightness.dark
+                ? ThemeMode.dark
+                : ThemeMode.light,
             home: const HomePage(),
           ),
         ),
@@ -358,7 +364,8 @@ void main() {
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
       final dir = Directory(outDir)..createSync(recursive: true);
-      File('${dir.path}/${tag}_$name.png')
+      final suffix = brightness == Brightness.dark ? '_dark' : '';
+      File('${dir.path}/${tag}_$name$suffix.png')
           .writeAsBytesSync(png!.buffer.asUint8List());
     });
   }
@@ -394,6 +401,28 @@ void main() {
         accent: accent,
         navIcon: null,
         name: 'home_$styleName',
+      );
+    }, skip: fontDir == null);
+
+    testWidgets('记录页 · $styleName · 暗色', (tester) async {
+      await renderTab(
+        tester,
+        style: style,
+        accent: accent,
+        navIcon: Icons.book_outlined,
+        name: 'notes_$styleName',
+        brightness: Brightness.dark,
+      );
+    }, skip: fontDir == null);
+
+    testWidgets('首页 · $styleName · 暗色', (tester) async {
+      await renderTab(
+        tester,
+        style: style,
+        accent: accent,
+        navIcon: null,
+        name: 'home_$styleName',
+        brightness: Brightness.dark,
       );
     }, skip: fontDir == null);
   }
