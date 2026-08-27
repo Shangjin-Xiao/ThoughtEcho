@@ -1118,14 +1118,20 @@ class DatabaseBackupService {
         final quoteId = quoteData['id'] ??= _uuid.v4();
         quoteData['content'] ??= '';
         quoteData['date'] ??= DateTime.now().toIso8601String();
-        quoteData['last_modified'] ??=
-            (quoteData['date'] as String? ?? DateTime.now().toIso8601String());
         quoteData['is_deleted'] = _parseDeletedFlag(quoteData['is_deleted']);
         quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
 
         // 值域收敛。同步（局域网 / WebDAV）和「合并导入」共用这一段，所以对端版本
         // 比本机新、写了本机词汇表里还没有的值时，这里只收敛不拒收——整份拒收会
         // 让两台设备直接同步不了，代价远大于丢一个可选字段。
+        //
+        // 必须排在推导 last_modified **之前**：那一步原来写的是
+        // `quoteData['last_modified'] ??= quoteData['date'] as String?`，
+        // 有两个坑都发生在收敛之前——
+        // - date 不是字符串时（对端把它写成了数字），那句硬转直接抛类型错误，
+        //   被外层 catch 吞成「跳过这条笔记」，收敛根本没机会跑；
+        // - date 是非法字符串时，非法值会先被抄进 last_modified，收敛只修 date，
+        //   非法的 last_modified 照样写进库——而 LWW 比较用的正是它。
         final replaced = _sanitizeQuoteValues(quoteData);
         if (replaced.isNotEmpty) {
           reportBuilder.addSanitizedField(replaced.length);
@@ -1135,6 +1141,16 @@ class DatabaseBackupService {
             sanitizedPreview.add(detail);
           }
         }
+
+        // last_modified 从**已收敛**的 date 推导，自带的值也要过一遍合法性检查：
+        // 它是 LWW 比较的依据，留一个解析不了的值在库里，之后每一次合并都会拿它
+        // 做判断。分类那一侧早就是这么处理的（见 _mergeCategories），笔记这侧
+        // 一直还是裸 `as String?`。
+        final rawLastModified = quoteData['last_modified']?.toString();
+        quoteData['last_modified'] =
+            (rawLastModified != null && Quote.isValidDate(rawLastModified))
+                ? LWWUtils.normalizeTimestamp(rawLastModified)
+                : quoteData['date'];
 
         final recoveredContent = _recoverContent(quoteData);
         if (recoveredContent.isEmpty) {

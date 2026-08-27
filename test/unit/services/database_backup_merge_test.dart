@@ -198,6 +198,45 @@ void main() {
       expect(Quote.isValidDate(quote.date), isTrue);
     });
 
+    test('date 不是字符串且缺 last_modified：笔记要进得来，不能被类型错误吞掉', () async {
+      // 原来这里是 `quoteData['last_modified'] ??= quoteData['date'] as String?`，
+      // date 是数字时那句直接抛类型错误，被外层 catch 吞成「跳过这条笔记」——
+      // 收敛逻辑压根没机会跑。
+      final quote = demoQuote()
+        ..['sentiment'] = 'positive'
+        ..['date'] = 20260822
+        ..remove('last_modified');
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [quote],
+      });
+
+      expect(report.insertedQuotes, 1);
+      expect(report.errors, isEmpty);
+
+      final stored = await readBackFirstQuote();
+      expect(Quote.isValidDate(stored.date), isTrue);
+    });
+
+    test('date 非法且缺 last_modified：不能把非法值抄进 last_modified', () async {
+      // last_modified 是 LWW 比较的依据，留一个解析不了的值在库里，之后每一次
+      // 合并都会拿它做判断。
+      final quote = demoQuote()
+        ..['sentiment'] = 'positive'
+        ..['date'] = '不是日期'
+        ..remove('last_modified');
+
+      await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [quote],
+      });
+
+      final row = (await db.query('quotes')).first;
+      expect(Quote.isValidDate(row['date'] as String), isTrue);
+      expect(Quote.isValidDate(row['last_modified'] as String), isTrue);
+    });
+
     test('正文为空的笔记不入库：这种行读出来会炸掉整页', () async {
       final report = await service.importDataWithLWWMerge(db, {
         'categories': [],
