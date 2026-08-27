@@ -60,23 +60,9 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
             color: theme.colorScheme.surface,
             child: Column(
               children: [
-                // 拖拽条
-                Padding(
-                  padding: const EdgeInsets.only(top: 10, bottom: 4),
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-
                 // 标题栏
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
                   child: Row(
                     children: [
                       Text(

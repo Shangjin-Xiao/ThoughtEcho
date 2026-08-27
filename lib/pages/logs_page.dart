@@ -770,7 +770,6 @@ class _LogsPageState extends State<LogsPage> {
   void _showFilterDialog() {
     showModalBottomSheet(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
