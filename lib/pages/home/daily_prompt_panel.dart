@@ -240,6 +240,13 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     final theme = Theme.of(context);
     final shape = AppShapeTokens.of(context);
     final l10n = AppLocalizations.of(context);
+    // 提问是这张卡的正文，就该用正文那一级。极小屏退回 `bodyMedium` 而不是写死
+    // 一个字号：**降级也走类型级别**，这样它照样跟着 `readingFontScale` 缩放。
+    // 取成局部变量是为了让下面的 `color` 也读到**同一级**——分别写两次的话，
+    // 极小屏会出现「样式取 bodyMedium、颜色取 bodyLarge」的错配。
+    final promptStyle = widget.isVerySmallScreen
+        ? theme.textTheme.bodyMedium
+        : theme.textTheme.bodyLarge;
     final aiService = context.watch<AIService>();
     final settingsService = context.watch<SettingsService>();
     // 以多 provider 设置为准：生成链路读的是 multiAISettings.currentProvider，
@@ -351,21 +358,14 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
                   : (isAiConfigured
                       ? l10n.waitingForTodayThoughts
                       : l10n.noTodayThoughts),
-              // 提问是这张卡的正文，就该用正文那一级：`bodyLarge` 拿到的是
-              // 正文字重（衬线风格 w600）和跟随风格缩放的字号，标签退到
-              // `labelLarge` 之后，主次才正过来。
-              //
-              // 极小屏退回 `bodyMedium` 而不是写死一个 12：**降级也走类型级别**，
-              // 这样它照样跟着风格缩放，不会又变成一处脱离体系的硬编码。
-              style: (widget.isVerySmallScreen
-                      ? theme.textTheme.bodyMedium
-                      : theme.textTheme.bodyLarge)
-                  ?.copyWith(
+              style: promptStyle?.copyWith(
                 // 这张卡是紧排的两三行居中提问，不跟正文行高（纸墨 1.75）走，
                 // 否则卡片会显著变高、把上面那张一言卡挤扁。
                 height: 1.4,
+                // 颜色要读**实际选中的那一级**：极小屏用的是 bodyMedium，
+                // 却去取 bodyLarge 的颜色，一旦主题给两级配了不同颜色就会错。
                 color: _accumulatedPromptText.isNotEmpty
-                    ? theme.textTheme.bodyLarge?.color
+                    ? promptStyle.color
                     : theme.colorScheme.onSurface.withAlpha(120),
               ),
               textAlign: TextAlign.center,

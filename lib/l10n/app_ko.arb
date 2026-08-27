@@ -1382,7 +1382,7 @@
   },
   "apiUrlField": "API URL",
   "apiUrlHint": "예: https://api.xxx.com/v1/chat/completions",
-  "apiUrlHelper": "http/https URL이어야 합니다",
+  "apiUrlHelper": "HTTPS URL이어야 합니다. localhost나 로컬 네트워크는 HTTP도 가능합니다",
   "apiKeyField": "API Key",
   "apiKeyHint": "서비스에 필요한 키 (공란일 수 있음)",
   "show": "표시",

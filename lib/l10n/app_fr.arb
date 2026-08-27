@@ -1375,7 +1375,7 @@
   },
   "apiUrlField": "URL de l'API",
   "apiUrlHint": "par ex., https://api.xxx.com/v1/chat/completions",
-  "apiUrlHelper": "Doit être une URL http/https",
+  "apiUrlHelper": "URL HTTPS, ou HTTP uniquement pour localhost ou le réseau local",
   "apiKeyField": "Clé API",
   "apiKeyHint": "La clé requise pour le service (peut être laissée vide)",
   "show": "Afficher",

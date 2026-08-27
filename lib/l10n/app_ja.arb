@@ -1382,7 +1382,7 @@
   },
   "apiUrlField": "API URL",
   "apiUrlHint": "例: https://api.xxx.com/v1/chat/completions",
-  "apiUrlHelper": "http/https URL",
+  "apiUrlHelper": "HTTPS の URL。localhost やローカルネットワークに限り HTTP も可",
   "apiKeyField": "APIキー",
   "apiKeyHint": "必要な場合（空欄可）",
   "show": "表示",
