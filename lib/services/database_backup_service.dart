@@ -114,7 +114,7 @@ class DatabaseBackupService {
         final quoteBatch = txn.batch();
         final tagRelations = <Map<String, String>>[];
         final processedQuotes = <Map<String, dynamic>>[];
-        var sanitizedFields = 0;
+        final sanitizedDetails = <String>[];
         final unusableQuoteIds = <String>[];
 
         for (final q in quotes) {
@@ -209,7 +209,9 @@ class DatabaseBackupService {
 
           // 值域收敛：外来数据里应用词汇表之外的值必须在入库前处理掉，否则这条
           // 笔记要么存不回去、要么连整页都读不出来（见 [_sanitizeQuoteValues]）。
-          sanitizedFields += _sanitizeQuoteValues(quoteData);
+          final replaced = _sanitizeQuoteValues(quoteData);
+          final detail = _describeSanitized(quoteData['id'], replaced);
+          if (detail != null) sanitizedDetails.add(detail);
 
           final recoveredContent = _recoverContent(quoteData);
           if (recoveredContent.isEmpty) {
@@ -239,12 +241,7 @@ class DatabaseBackupService {
           );
         }
 
-        if (sanitizedFields > 0) {
-          logWarning(
-            '导入时忽略了 $sanitizedFields 处无法识别的字段值（非本应用产生的数据）',
-            source: 'BackupRestore',
-          );
-        }
+        _logSanitizedValues(sanitizedDetails, source: 'BackupRestore');
         if (unusableQuoteIds.isNotEmpty) {
           logWarning(
             '导入时跳过 ${unusableQuoteIds.length} 条正文为空的笔记: '
@@ -809,6 +806,7 @@ class DatabaseBackupService {
     'last_modified',
     'weather_backup',
     'day_period_backup',
+    'sentiment_backup',
     'favorite_count',
     'is_deleted',
     'deleted_at',
@@ -843,15 +841,18 @@ class DatabaseBackupService {
   ///
   /// 所以洗在这里——数据进门这一次，洗完由调用方把计数报给用户（[MergeReport]
   /// 的 `sanitizedFields`）。读的时候不洗：那等于把库里的雷永远藏着。
-  static int _sanitizeQuoteValues(Map<String, dynamic> quoteData) {
-    var sanitized = 0;
+  /// 返回「字段名 → 被替换掉的原值」，空 Map 表示这一行原样通过。
+  static Map<String, Object?> _sanitizeQuoteValues(
+    Map<String, dynamic> quoteData,
+  ) {
+    final replaced = <String, Object?>{};
 
     final rawSentiment = quoteData['sentiment'];
     if (rawSentiment != null) {
       final normalized = Quote.normalizeSentiment(rawSentiment);
       if (normalized != rawSentiment) {
         quoteData['sentiment'] = normalized;
-        sanitized++;
+        replaced['sentiment'] = rawSentiment;
       }
     }
 
@@ -860,7 +861,7 @@ class DatabaseBackupService {
       final normalized = _normalizeColorHex(rawColor);
       if (normalized != rawColor) {
         quoteData['color_hex'] = normalized;
-        sanitized++;
+        replaced['color_hex'] = rawColor;
       }
     }
 
@@ -871,10 +872,41 @@ class DatabaseBackupService {
           (lastModified != null && Quote.isValidDate(lastModified))
               ? lastModified
               : DateTime.now().toIso8601String();
-      sanitized++;
+      replaced['date'] = rawDate;
     }
 
-    return sanitized;
+    return replaced;
+  }
+
+  /// 把被替换掉的原值写进日志，让「清洗」这件事在导入之后还查得到。
+  ///
+  /// 收敛是不可逆写入，源文件还在用户手里、同步时对端也还留着自己那份，但库内
+  /// 得有个能追溯的落点。只记字段名和这三个字段的原值（都不是笔记内容），并且
+  /// 限量，免得一份上万条的备份把日志刷爆。
+  static void _logSanitizedValues(
+    List<String> details, {
+    required String source,
+  }) {
+    if (details.isEmpty) return;
+    const maxLogged = 20;
+    final shown = details.take(maxLogged).join('; ');
+    final omitted = details.length - maxLogged;
+    logWarning(
+      '导入时忽略了 ${details.length} 处无法识别的字段值（非本应用产生的数据）：'
+      '$shown${omitted > 0 ? ' …另有 $omitted 处' : ''}',
+      source: source,
+    );
+  }
+
+  /// 把一行的清洗结果拼成可读的一条记录。
+  static String? _describeSanitized(
+    Object? quoteId,
+    Map<String, Object?> replaced,
+  ) {
+    if (replaced.isEmpty) return null;
+    final fields =
+        replaced.entries.map((e) => '${e.key}=${e.value}').join(', ');
+    return '$quoteId($fields)';
   }
 
   /// 收敛颜色值到 `#RRGGBB`，认不出来返回 null。
@@ -958,6 +990,7 @@ class DatabaseBackupService {
     };
 
     final batch = txn.batch();
+    final sanitizedDetails = <String>[];
 
     for (final q in quotes) {
       try {
@@ -1038,7 +1071,12 @@ class DatabaseBackupService {
         // 值域收敛。同步（局域网 / WebDAV）和「合并导入」共用这一段，所以对端版本
         // 比本机新、写了本机词汇表里还没有的值时，这里只收敛不拒收——整份拒收会
         // 让两台设备直接同步不了，代价远大于丢一个可选字段。
-        reportBuilder.addSanitizedField(_sanitizeQuoteValues(quoteData));
+        final replaced = _sanitizeQuoteValues(quoteData);
+        if (replaced.isNotEmpty) {
+          reportBuilder.addSanitizedField(replaced.length);
+          final detail = _describeSanitized(quoteId, replaced);
+          if (detail != null) sanitizedDetails.add(detail);
+        }
 
         final recoveredContent = _recoverContent(quoteData);
         if (recoveredContent.isEmpty) {
@@ -1164,6 +1202,8 @@ class DatabaseBackupService {
         reportBuilder.addError('处理笔记失败: $e');
       }
     }
+
+    _logSanitizedValues(sanitizedDetails, source: 'BackupRestore');
 
     await batch.commit(noResult: true);
   }

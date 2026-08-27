@@ -287,6 +287,15 @@ class SchemaDataBackfillAdapter {
 
       var repairedCount = 0;
       await database.transaction((transaction) async {
+        // 先把整列快照下来再改。这是不可逆写入：越界值置空之后，光把代码回滚
+        // 是找不回原值的。weather / day_period 那两个同类迁移都是这么做的，
+        // 快照列同在备份白名单里，跟着备份和同步一起走。
+        await _ensureBackupColumn(
+          transaction,
+          columnName: 'sentiment_backup',
+          sourceColumn: 'sentiment',
+        );
+
         final batch = transaction.batch();
         for (final entry in replacements.entries) {
           batch.update(
@@ -304,7 +313,8 @@ class SchemaDataBackfillAdapter {
 
       logWarning(
         'sentiment 字段修复完成：$repairedCount 条笔记的越界值已处理 '
-        '(${replacements.keys.join(', ')})，这些值不是本应用产生的',
+        '(${replacements.keys.join(', ')})，这些值不是本应用产生的；'
+        '原值已快照到 sentiment_backup 列',
         source: 'DatabaseDataBackfill',
       );
     } catch (error, stackTrace) {

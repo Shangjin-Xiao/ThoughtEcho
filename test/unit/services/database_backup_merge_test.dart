@@ -258,5 +258,24 @@ void main() {
       expect(await sentimentOf('demo-quote-zh-006'), 'positive'); // 合法 → 不动
       expect(await sentimentOf('legacy-label'), 'positive'); // 中文标签 → 收成 key
     });
+
+    test('修复是不可逆写入，改列之前必须先把原值快照下来', () async {
+      await db.insert('quotes', {
+        'id': 'demo-quote-zh-001',
+        'content': '我常以为是丑女造就了美人。',
+        'date': '2026-08-22T17:40:00.000Z',
+        'sentiment': 'thoughtful',
+      });
+
+      await DatabaseSchemaManager().repairOutOfDomainSentiment(db);
+
+      // 光把代码回滚是找不回原值的，所以原值要留在 sentiment_backup 里
+      // （weather / day_period 那两个同类迁移是同一个规矩）。
+      final row = (await db.query('quotes',
+              where: 'id = ?', whereArgs: ['demo-quote-zh-001']))
+          .first;
+      expect(row['sentiment'], isNull);
+      expect(row['sentiment_backup'], 'thoughtful');
+    });
   });
 }
