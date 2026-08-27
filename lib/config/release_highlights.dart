@@ -70,6 +70,12 @@ class ReleaseHighlights {
           action: ReleaseHighlightAction.themeStyle,
         ),
         ReleaseHighlight(
+          version: '4.0.0',
+          title: l10n.releaseMediaDisplayTitle,
+          lede: l10n.releaseMediaDisplayLede,
+          icon: Icons.photo_size_select_actual_outlined,
+        ),
+        ReleaseHighlight(
           version: sentryDisclosureVersion,
           lede: l10n.releaseDiagnosticsNotice,
           icon: Icons.shield_outlined,
