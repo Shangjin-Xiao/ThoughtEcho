@@ -37,8 +37,13 @@ class DatabaseBackupService {
       }
 
       // 计数在事务外声明：入库前清洗了什么要能报给调用方，最终由还原页展示。
-      final sanitizedDetails = <String>[];
-      final unusableQuoteIds = <String>[];
+      //
+      // 只累计**数量** + 固定长度的日志预览。一份上万条的坏备份如果每条都留一个
+      // 字符串，光是这些详情就能顶出一片内存，最后还要 join 成一个巨大的日志行。
+      var sanitizedFieldCount = 0;
+      var skippedEmptyQuoteCount = 0;
+      final sanitizedPreview = <String>[];
+      final skippedPreview = <String>[];
 
       // 开始事务
       await db.transaction((txn) async {
@@ -213,13 +218,21 @@ class DatabaseBackupService {
           // 值域收敛：外来数据里应用词汇表之外的值必须在入库前处理掉，否则这条
           // 笔记要么存不回去、要么连整页都读不出来（见 [_sanitizeQuoteValues]）。
           final replaced = _sanitizeQuoteValues(quoteData);
+          // 计的是**字段数**而不是笔记数：同一条笔记的 sentiment、color_hex、date
+          // 可能一起被清洗，报成 1 会瞒掉另外两处。合并路径用的也是 replaced.length。
+          sanitizedFieldCount += replaced.length;
           final detail = _describeSanitized(quoteData['id'], replaced);
-          if (detail != null) sanitizedDetails.add(detail);
+          if (detail != null && sanitizedPreview.length < _logPreviewLimit) {
+            sanitizedPreview.add(detail);
+          }
 
           final recoveredContent = _recoverContent(quoteData);
           if (recoveredContent.isEmpty) {
             // 正文为空的行读出来就会抛异常，连累整页笔记加载失败，不能入库。
-            unusableQuoteIds.add(quoteData['id'].toString());
+            skippedEmptyQuoteCount++;
+            if (skippedPreview.length < _logPreviewLimit) {
+              skippedPreview.add(_logSafeValue(quoteData['id']));
+            }
             continue;
           }
           quoteData['content'] = recoveredContent;
@@ -244,11 +257,15 @@ class DatabaseBackupService {
           );
         }
 
-        _logSanitizedValues(sanitizedDetails, source: 'BackupRestore');
-        if (unusableQuoteIds.isNotEmpty) {
+        _logSanitizedValues(
+          sanitizedPreview,
+          total: sanitizedFieldCount,
+          source: 'BackupRestore',
+        );
+        if (skippedEmptyQuoteCount > 0) {
           logWarning(
-            '导入时跳过 ${unusableQuoteIds.length} 条正文为空的笔记: '
-            '${unusableQuoteIds.join(', ')}',
+            '导入时跳过 $skippedEmptyQuoteCount 条正文为空的笔记: '
+            '${_previewLine(skippedPreview, skippedEmptyQuoteCount)}',
             source: 'BackupRestore',
           );
         }
@@ -454,8 +471,8 @@ class DatabaseBackupService {
       });
 
       return ImportCleanupStats(
-        sanitizedFields: sanitizedDetails.length,
-        skippedEmptyQuotes: unusableQuoteIds.length,
+        sanitizedFields: sanitizedFieldCount,
+        skippedEmptyQuotes: skippedEmptyQuoteCount,
       );
     } catch (e) {
       logDebug('从Map导入数据失败: $e');
@@ -888,23 +905,35 @@ class DatabaseBackupService {
 
   /// 把被替换掉的原值写进日志，让「清洗」这件事在导入之后还查得到。
   ///
+  /// [preview] 是已经限量攒下的样本，[total] 是真实总数——两者分开，才能既报准
+  /// 数量又不为此保留 O(n) 个字符串。
+  ///
   /// 收敛是不可逆写入，源文件还在用户手里、同步时对端也还留着自己那份，但库内
   /// 得有个能追溯的落点。只记字段名和这三个字段的原值（都不是笔记内容），并且
   /// 限量，免得一份上万条的备份把日志刷爆。
   static void _logSanitizedValues(
-    List<String> details, {
+    List<String> preview, {
+    required int total,
     required String source,
   }) {
-    if (details.isEmpty) return;
-    const maxLogged = 20;
-    final shown = details.take(maxLogged).join('; ');
-    final omitted = details.length - maxLogged;
+    if (total == 0) return;
     logWarning(
-      '导入时忽略了 ${details.length} 处无法识别的字段值（非本应用产生的数据）：'
-      '$shown${omitted > 0 ? ' …另有 $omitted 处' : ''}',
+      '导入时忽略了 $total 处无法识别的字段值（非本应用产生的数据）：'
+      '${_previewLine(preview, total)}',
       source: source,
     );
   }
+
+  /// 预览行：只展示已经攒下的那几条，剩下的报数量。
+  static String _previewLine(List<String> preview, int total) {
+    final omitted = total - preview.length;
+    final shown = preview.join('; ');
+    return omitted > 0 ? '$shown …另有 $omitted 处' : shown;
+  }
+
+  /// 日志预览最多留几条。攒下的字符串数量必须有上限，否则一份很大的坏备份会把
+  /// 详情本身变成内存压力。
+  static const int _logPreviewLimit = 20;
 
   /// 把一行的清洗结果拼成可读的一条记录。
   ///
@@ -1014,7 +1043,9 @@ class DatabaseBackupService {
     };
 
     final batch = txn.batch();
-    final sanitizedDetails = <String>[];
+    // 同上：只留固定长度的日志预览，总数走 reportBuilder。
+    var sanitizedFieldCount = 0;
+    final sanitizedPreview = <String>[];
 
     for (final q in quotes) {
       try {
@@ -1098,8 +1129,11 @@ class DatabaseBackupService {
         final replaced = _sanitizeQuoteValues(quoteData);
         if (replaced.isNotEmpty) {
           reportBuilder.addSanitizedField(replaced.length);
+          sanitizedFieldCount += replaced.length;
           final detail = _describeSanitized(quoteId, replaced);
-          if (detail != null) sanitizedDetails.add(detail);
+          if (detail != null && sanitizedPreview.length < _logPreviewLimit) {
+            sanitizedPreview.add(detail);
+          }
         }
 
         final recoveredContent = _recoverContent(quoteData);
@@ -1227,7 +1261,11 @@ class DatabaseBackupService {
       }
     }
 
-    _logSanitizedValues(sanitizedDetails, source: 'BackupRestore');
+    _logSanitizedValues(
+      sanitizedPreview,
+      total: sanitizedFieldCount,
+      source: 'BackupRestore',
+    );
 
     await batch.commit(noResult: true);
   }

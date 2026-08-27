@@ -275,6 +275,24 @@ void main() {
       expect(stats.isClean, isFalse);
     });
 
+    test('一条笔记清洗了三个字段就要报 3，不是 1', () async {
+      // sanitizedFields 的口径是**字段数**。按笔记数报会瞒掉同一条笔记里另外两处
+      // 被动过的地方，而合并路径用的是 replaced.length，两条路径口径必须一致。
+      final stats = await service.importDataFromMap(db, {
+        'categories': [],
+        'quotes': [
+          {
+            ...demoQuote(),
+            'sentiment': 'thoughtful', // 认不出来 → 归空
+            'color_hex': '不是颜色', // 格式不对 → 归空
+            'date': '不是日期', // 无法解析 → 回落
+          },
+        ],
+      });
+
+      expect(stats.sanitizedFields, 3);
+    });
+
     test('干净的备份不产生任何清洗统计', () async {
       final stats = await service.importDataFromMap(db, {
         'categories': [],
