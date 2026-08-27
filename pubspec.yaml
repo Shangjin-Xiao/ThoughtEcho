@@ -165,7 +165,7 @@ msix_config:
   capabilities: internetClient
   
   # 支持的语言
-  languages: zh-CN, en-US
+  languages: zh-CN, en-US, ja-JP, ko-KR
   
   # 输出文件名（不含 .msix 扩展名）
   output_name: ThoughtEcho-Setup
