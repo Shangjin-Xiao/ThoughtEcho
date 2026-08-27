@@ -152,13 +152,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       }
     }
 
-    return maps.map((map) {
-      final quoteId = map['id'] as String;
-      final tags = tagsByQuoteId[quoteId] ?? [];
-      final mutableMap = Map<String, dynamic>.from(map);
-      mutableMap['tag_ids'] = tags.join(',');
-      return Quote.fromJson(mutableMap);
-    }).toList();
+    return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
   }
 
   @override

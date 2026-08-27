@@ -149,7 +149,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       final mutableMap = Map<String, dynamic>.from(maps.first);
       mutableMap['tag_ids'] = tags.join(',');
 
-      return Quote.fromJson(mutableMap);
+      return _tryParseQuoteRow(mutableMap);
     } catch (e) {
       logDebug('获取指定ID笔记失败: $e');
       return null;
@@ -244,13 +244,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         }
       }
 
-      return maps.map((map) {
-        final quoteId = map['id'] as String;
-        final tags = tagsByQuoteId[quoteId] ?? [];
-        final mutableMap = Map<String, dynamic>.from(map);
-        mutableMap['tag_ids'] = tags.join(',');
-        return Quote.fromJson(mutableMap);
-      }).toList();
+      return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
     } catch (e) {
       logDebug('获取所有笔记失败: $e');
       return [];
@@ -374,13 +368,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         }
       }
 
-      return maps.map((map) {
-        final quoteId = map['id'] as String;
-        final tags = tagsByQuoteId[quoteId] ?? [];
-        final mutableMap = Map<String, dynamic>.from(map);
-        mutableMap['tag_ids'] = tags.join(',');
-        return Quote.fromJson(mutableMap);
-      }).toList();
+      return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
     } catch (e, stackTrace) {
       logError(
         '获取周期内笔记失败',
@@ -578,7 +566,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       whereArgs: ['%$query%'],
     );
 
-    return results.map((map) => Quote.fromJson(map)).toList();
+    return _parseQuoteRows(results);
   }
 
   /// 修复：更新笔记内容，增加数据验证和并发控制

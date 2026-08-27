@@ -497,13 +497,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 反序列化单独计时：一页 50 条带完整 delta_content，这一段是纯 UI 线程工作，
     // 和 SQL 等待完全不同性质，混在一起就分不出该优化哪一头。
     final parseStopwatch = Stopwatch()..start();
-    final quotes = maps.map((map) {
-      final quoteId = map['id'] as String;
-      final tags = tagsByQuoteId[quoteId] ?? [];
-      final mutableMap = Map<String, dynamic>.from(map);
-      mutableMap['tag_ids'] = tags.join(',');
-      return Quote.fromJson(mutableMap);
-    }).toList();
+    final quotes = _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
     parseStopwatch.stop();
 
     NoteListLoadMoreProfile.recordQuery(

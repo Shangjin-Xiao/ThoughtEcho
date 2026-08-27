@@ -156,24 +156,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       }
     }
 
-    final quotes = <Quote>[];
-
-    for (final map in maps) {
-      try {
-        final quoteId = map['id'] as String;
-        final tagIds = tagsByQuoteId[quoteId] ?? [];
-
-        final quoteData = Map<String, dynamic>.from(map);
-        quoteData['tag_ids'] = tagIds.join(',');
-
-        final quote = Quote.fromJson(quoteData);
-        quotes.add(quote);
-      } catch (e) {
-        logDebug('解析笔记数据失败: $e, 数据: $map');
-      }
-    }
-
-    return quotes;
+    return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
   }
 
   /// 检查并修复数据库结构，确保所有必要的列都存在
@@ -263,7 +246,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         limit: limit,
       );
 
-      return maps.map((m) => Quote.fromJson(m)).toList();
+      return _parseQuoteRows(maps);
     } catch (e) {
       logError(
         'getQuotesForSmartPush 失败: $e',
