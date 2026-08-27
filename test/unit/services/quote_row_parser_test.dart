@@ -21,6 +21,9 @@ void main() {
     await TestHarness.initialize();
     DatabaseService.clearTestDatabase();
     service = DatabaseService();
+    // DatabaseService 是单例，_isInitialized 会跨用例留下来，后面的 init() 就成了
+    // 空操作，而 db 每个用例都是新的内存库。reinitialize() 把这层状态清干净。
+    service.reinitialize();
 
     db = await databaseFactory.openDatabase(inMemoryDatabasePath);
     await _createQuoteTables(db);
@@ -32,6 +35,7 @@ void main() {
   tearDown(() async {
     DatabaseService.clearTestDatabase();
     await db.close();
+    service.reinitialize();
   });
 
   Future<void> insertRow(String id, String content, String date) async {
@@ -110,6 +114,26 @@ void main() {
     final quotes = await service.getUserQuotes();
 
     expect(quotes.map((q) => q.id), contains('good-1'));
+  });
+
+  test('不带标签那一路也过 id 类型检查：BLOB id 不能被转成一串乱码混进结果', () async {
+    // fromJson 对 id 用的是 `?.toString()`，BLOB 不会抛异常，会被转成没意义的
+    // 字符串——那一行不是「解析失败」，而是悄悄带着假 id 进了结果。
+    await insertRow('good-1', '找得到的笔记', '2026-08-22T17:40:00.000Z');
+    await db.rawInsert(
+      "INSERT INTO quotes (id, content, date, last_modified) "
+      "VALUES (x'DEADBEEF', ?, ?, ?)",
+      [
+        '找得到的笔记但 id 是 BLOB',
+        '2026-08-21T17:40:00.000Z',
+        '2026-08-21T17:40:00.000Z'
+      ],
+    );
+
+    // searchQuotesByContent 走的是不带 tagsByQuoteId 的那条路径。
+    final results = await service.searchQuotesByContent('找得到的笔记');
+
+    expect(results.map((q) => q.id), ['good-1']);
   });
 
   test('按内容搜索也走同一个兜底', () async {

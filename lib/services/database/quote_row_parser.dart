@@ -29,7 +29,11 @@ List<Quote> _parseQuoteRows(
     try {
       quote = _tryParseQuoteRow(map, tagsByQuoteId: tagsByQuoteId);
     } catch (e) {
-      firstReason ??= _logSafeText(e.toString());
+      // 只记异常**类型**，绝不记 e.toString()：Quote.fromJson 的兜底分支抛的是
+      // `FormatException('解析Quote JSON失败: $e, JSON: $json')`，那个 $json 是
+      // 整行数据——content 和 delta_content 都在里面。把它写进日志等于把用户的
+      // 笔记正文抄进日志库，截断也只是少抄一点。
+      firstReason ??= e.runtimeType.toString();
       quote = null;
     }
 
@@ -66,14 +70,18 @@ Quote? _tryParseQuoteRow(
   Map<String, Object?> map, {
   Map<String, List<String>>? tagsByQuoteId,
 }) {
-  if (tagsByQuoteId == null) {
-    return Quote.fromJson(Map<String, dynamic>.from(map));
-  }
-  // id 缺失或不是字符串时不能硬转，那本身就是一行坏数据。
+  // id 的类型检查对**所有**路径生效：不带标签那一路（按内容搜索、智能推送、
+  // 收藏列表）原来直接进 fromJson，而 fromJson 对 id 用的是 `?.toString()`——
+  // 一个 BLOB id 不会抛异常，会被转成一串没意义的字符，坏行就这么混进结果里了。
   final quoteId = map['id'];
   if (quoteId is! String) {
     return null;
   }
+
+  if (tagsByQuoteId == null) {
+    return Quote.fromJson(Map<String, dynamic>.from(map));
+  }
+
   final mutableMap = Map<String, dynamic>.from(map);
   mutableMap['tag_ids'] = (tagsByQuoteId[quoteId] ?? const <String>[]).join(
     ',',
@@ -83,15 +91,6 @@ Quote? _tryParseQuoteRow(
 
 /// 汇总日志里最多列几个行 id。
 const int _skippedPreviewLimit = 10;
-
-/// 异常文本的日志安全形式：去控制字符 + 限长（里面会带上原始的非法字段值）。
-String _logSafeText(String text) {
-  const maxLength = 120;
-  final cleaned = text.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), ' ').trim();
-  return cleaned.length > maxLength
-      ? '${cleaned.substring(0, maxLength)}…'
-      : cleaned;
-}
 
 /// 行 id 的日志安全形式：id 也可能来自外来数据，限长并去掉控制字符。
 String _shortRowId(Object? id) {
