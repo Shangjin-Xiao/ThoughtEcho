@@ -29,14 +29,35 @@ class CollapsedMediaThumbnail extends StatelessWidget {
     this.size = defaultSize,
   });
 
-  /// 缩略图边长。折叠正文区高 160px，72 既能看清内容又不挤占文字宽度。
+  /// 缩略图的三档边长，从小到大。
+  ///
+  /// 版式规则是**图不比正文高**：并排的两列里，谁也不该撑出对方够不着的空白。
+  /// 正文只有一两行时用最小档，正文排满折叠盒（160px）时才用最大档，由
+  /// [sizeForContentHeight] 按实测正文高度挑。
+  ///
+  /// 只有三档、而不是连续贴合正文高度：解码尺寸就是 `imageCache` 的键，每多一种
+  /// 尺寸就多一份解码和一份常驻内存。
+  static const List<double> sizeLadder = <double>[
+    compactSize,
+    defaultSize,
+    tallNoteSize,
+  ];
+
+  /// 最小档，正文只有一两行时用。
+  ///
+  /// 同时是下限：正文比它还矮也停在这里，再小就看不出是张什么照片了。剩下的
+  /// 高度差由 Row 的居中对齐平分到上下，不会堆成一整块空白。
+  static const double compactSize = 56.0;
+
+  /// 中间档，也是**测量与预热的参照尺寸**：[reservedWidth] 的默认值、折叠排版的
+  /// 第一趟测量都用它。
   static const double defaultSize = 72.0;
 
-  /// 正文短到撑不满缩略图时用的放大尺寸。
+  /// 最大档，正文排满折叠盒时用。
   ///
-  /// 正文只有一两行时，72 的方图撑不满卡片，左边一大块空着。放大到 96 把多出来
-  /// 的高度让给照片，卡片反而不空。再大就会把正文列挤窄到要多折一行。
-  static const double shortNoteSize = 96.0;
+  /// 上限压在 96：再大就要从正文列里割走一大块宽度，长笔记每行少排两三个字，
+  /// 折叠预览能给的信息反而变少。
+  static const double tallNoteSize = 96.0;
 
   /// 一个字都没有的纯图笔记用的尺寸。
   ///
@@ -47,10 +68,24 @@ class CollapsedMediaThumbnail extends StatelessWidget {
   /// 缩略图与正文之间的间距。
   static const double gap = 12.0;
 
+  /// 按实测正文高度挑一档：取**不超过正文高度的最大档**，比最小档还矮就停在
+  /// [compactSize]。
+  ///
+  /// 方向不能反过来（正文越短图越大）——那正是「一行字的卡片上下各空一大截」的
+  /// 来源：空白是图撑出来的，正文再怎么排都填不满。
+  static double sizeForContentHeight(double contentHeight) {
+    var size = sizeLadder.first;
+    for (final candidate in sizeLadder) {
+      if (contentHeight >= candidate) size = candidate;
+    }
+    return size;
+  }
+
   /// 折叠卡片为缩略图预留的总宽度（含间距）。布局侧据此收窄文字宽度。
   static double reservedWidth({double size = defaultSize}) => size + gap;
 
-  /// 缩略图的图片 provider。渲染与空闲预热**共用这一处**。
+  /// 缩略图的图片 provider。渲染与空闲预热**共用这一处**，[size] 也必须是同一个：
+  /// 边长按正文高度分档，预热按默认档解、渲染要另一档的话，两张图各占一个键。
   ///
   /// `imageCache` 是按 provider 相等性做键的（`ResizeImage` 与 `FileImage` 都实现
   /// 了 `==`），解码尺寸差一点就是另一个键：预热解出来的那张永远等不到人来取，
@@ -63,6 +98,7 @@ class CollapsedMediaThumbnail extends StatelessWidget {
     final source = media.firstImageSource;
     if (source == null || source.isEmpty) return null;
     // 72pt × dpr2 = 144px，单张约 83KB；相比按卡片全宽解码的 ~1.2MB 小一个量级。
+    // 最大的那一档（96pt）也只有约 147KB，仍然小一个量级。
     final decodeSize = decodeSizeFor(
       size,
       MediaQuery.devicePixelRatioOf(context)

@@ -120,7 +120,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
       _idleWarmupSettings = settingsKey;
       _idleWarmupCacheGeneration = cacheGeneration;
       _restartIdleLayoutWarmupPass();
-      _idleWarmupPrecachedSources.clear();
+      _idleWarmupPrecachedKeys.clear();
     }
 
     // 锚点在「这一轮第一条都还没暖」的时候取：此刻列表是静止的，视口就是用户
@@ -144,7 +144,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
       final index = _idleWarmupPass.next(quotes.length);
       if (index == null) break;
       final quote = quotes[index];
-      QuoteItemWidget.warmCollapsedMeasurements(
+      final double? thumbnailSize = QuoteItemWidget.warmCollapsedMeasurements(
         context: context,
         quote: quote,
         contentMaxWidth: width,
@@ -156,6 +156,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
         quote: quote,
         mediaStyle: mediaStyle,
         contentMaxWidth: width,
+        thumbnailSize: thumbnailSize,
       );
       _idleWarmupWarmedItems++;
     }
@@ -234,32 +235,45 @@ extension _NoteListWarmupExtension on NoteListViewState {
   /// 「命中即同步解析、不延迟」的路径直接出图。
   ///
   /// 解码尺寸必须和渲染侧一致，所以 provider 由两种版式各自的
-  /// `imageProviderFor` 给，见那两处的说明。
+  /// `imageProviderFor` 给，见那两处的说明。缩略图的边长按正文高度分档，
+  /// [thumbnailSize] 就是刚才那趟折叠排版算出来的那一档；为 null 说明这条笔记
+  /// 根本不画缩略图，那就没什么可预解的。
   void _warmCollapsedMediaImage({
     required Quote quote,
     required String mediaStyle,
     required double contentMaxWidth,
+    required double? thumbnailSize,
   }) {
     if (mediaStyle == NoteCardMediaStyle.inline) return;
     if (quote.deltaContent == null || quote.editSource != 'fullscreen') return;
 
+    final bool isBanner = mediaStyle == NoteCardMediaStyle.banner;
+    if (!isBanner && thumbnailSize == null) return;
+
     final media = DeltaMediaCache.of(quote.deltaContent);
     final source = media.firstImageSource;
     if (source == null || source.isEmpty) return;
-    if (!_idleWarmupPrecachedSources.add(source)) return;
+    // 去重键要**带上解码尺寸**：同一张图出现在两条长短不同的笔记里，就是两个
+    // imageCache 键；只按 source 记「暖过了」的话，另一档永远等不到预热。
+    final String precacheKey = isBanner ? source : '$thumbnailSize|$source';
+    if (!_idleWarmupPrecachedKeys.add(precacheKey)) return;
     // 上限只是防止长列表把这个集合撑大；imageCache 自己有 LRU 兜底。
-    if (_idleWarmupPrecachedSources.length >
+    if (_idleWarmupPrecachedKeys.length >
         NoteListViewState._idleWarmupPrecacheTrackLimit) {
-      _idleWarmupPrecachedSources.remove(_idleWarmupPrecachedSources.first);
+      _idleWarmupPrecachedKeys.remove(_idleWarmupPrecachedKeys.first);
     }
 
-    final provider = mediaStyle == NoteCardMediaStyle.banner
+    final provider = isBanner
         ? CollapsedMediaBanner.imageProviderFor(
             context,
             media,
             width: contentMaxWidth,
           )
-        : CollapsedMediaThumbnail.imageProviderFor(context, media);
+        : CollapsedMediaThumbnail.imageProviderFor(
+            context,
+            media,
+            size: thumbnailSize!,
+          );
     if (provider == null) return;
 
     // 失败静默：文件可能已被删除或路径失效，卡片自己的 errorBuilder 会处理。

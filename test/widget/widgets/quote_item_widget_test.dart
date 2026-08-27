@@ -421,7 +421,7 @@ void main() {
       expect(hintRect.top, greaterThanOrEqualTo(bodyRect.bottom - 1.0));
     });
 
-    // 右侧缩略图按正文长短换尺寸：短笔记放大到 96，长笔记维持 72，
+    // 右侧缩略图按正文高度分档：短笔记收到 56，正文排满折叠盒的长笔记放到 96，
     // 一个字都没有的纯图笔记用 132 的居中方图。三条各测一种，共用这份夹具。
     Future<CollapsedMediaThumbnail> pumpMediaCard(
       WidgetTester tester, {
@@ -480,28 +480,46 @@ void main() {
       );
     }
 
-    testWidgets('正文只有一行时右侧缩略图放大，且不显示折叠提示', (tester) async {
-      // 带媒体的笔记一律可展开，但正文一个字都没少——这种卡片不该有提示，
-      // 空出来的高度让给照片。
+    testWidgets('正文只有一行时右侧缩略图收到最小档，且不显示折叠提示', (tester) async {
+      // 带媒体的笔记一律可展开，但正文一个字都没少——这种卡片不该有提示。
+      // 图也不该反过来撑高卡片：一行字配一张大方图，上下各空一截谁也填不满。
       final thumbnail = await pumpMediaCard(
         tester,
         id: 'short-with-image',
-        text: '大澳还是完全不同的感觉呢',
+        text: '只有一行字的笔记',
       );
 
-      expect(thumbnail.size, CollapsedMediaThumbnail.shortNoteSize);
+      expect(thumbnail.size, CollapsedMediaThumbnail.compactSize);
       expect(find.text('双击查看全文'), findsNothing);
     });
 
-    testWidgets('正文被截断时缩略图维持原尺寸，并显示折叠提示', (tester) async {
+    testWidgets('正文排满折叠盒时缩略图用最大档，并显示折叠提示', (tester) async {
       final thumbnail = await pumpMediaCard(
         tester,
         id: 'long-with-image',
         text: List.filled(6, _longContentChunk).join(),
       );
 
-      expect(thumbnail.size, CollapsedMediaThumbnail.defaultSize);
+      expect(thumbnail.size, CollapsedMediaThumbnail.tallNoteSize);
       expect(find.text('双击查看全文'), findsOneWidget);
+    });
+
+    testWidgets('正文越长缩略图越大，不会倒过来', (tester) async {
+      // 这一条守的是方向本身：正文短的那张卡片，缩略图不能比正文长的那张还大。
+      // 旧版式正好相反（短笔记 96、长笔记 72），卡片列表看上去就是「越没内容的
+      // 笔记占的地方越大」。
+      final short = await pumpMediaCard(
+        tester,
+        id: 'direction-short',
+        text: '只有一行字的笔记',
+      );
+      final long = await pumpMediaCard(
+        tester,
+        id: 'direction-long',
+        text: List.filled(6, _longContentChunk).join(),
+      );
+
+      expect(short.size, lessThan(long.size));
     });
 
     testWidgets('一个字都没有的纯图笔记用更大的方图', (tester) async {

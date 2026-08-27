@@ -236,6 +236,63 @@ void main() {
     expect(find.byType(Image), findsNothing);
   });
 
+  group('尺寸分档', () {
+    test('取不超过正文高度的最大档', () {
+      expect(
+        CollapsedMediaThumbnail.sizeForContentHeight(0),
+        CollapsedMediaThumbnail.compactSize,
+      );
+      // 一两行正文：比最小档还矮也停在最小档，再小就看不清是什么照片了。
+      expect(
+        CollapsedMediaThumbnail.sizeForContentHeight(24),
+        CollapsedMediaThumbnail.compactSize,
+      );
+      expect(
+        CollapsedMediaThumbnail.sizeForContentHeight(
+          CollapsedMediaThumbnail.defaultSize - 0.5,
+        ),
+        CollapsedMediaThumbnail.compactSize,
+      );
+      // 边界取等号：正好够一档就用那一档，图和正文齐平。
+      expect(
+        CollapsedMediaThumbnail.sizeForContentHeight(
+          CollapsedMediaThumbnail.defaultSize,
+        ),
+        CollapsedMediaThumbnail.defaultSize,
+      );
+      expect(
+        CollapsedMediaThumbnail.sizeForContentHeight(
+          CollapsedMediaThumbnail.tallNoteSize,
+        ),
+        CollapsedMediaThumbnail.tallNoteSize,
+      );
+      // 正文排满折叠盒（160）也不再往上走：上限就是最大档。
+      expect(
+        CollapsedMediaThumbnail.sizeForContentHeight(160),
+        CollapsedMediaThumbnail.tallNoteSize,
+      );
+    });
+
+    test('档位递增，且挑出来的档永远不高于正文（最小档除外）', () {
+      // 这两条不变量是「图不比字高」的全部依据：档位乱序或多出一个大于
+      // 160 的档，都会让长笔记的图重新撑出卡片。
+      for (var i = 1; i < CollapsedMediaThumbnail.sizeLadder.length; i++) {
+        expect(
+          CollapsedMediaThumbnail.sizeLadder[i],
+          greaterThan(CollapsedMediaThumbnail.sizeLadder[i - 1]),
+        );
+      }
+      for (var height = CollapsedMediaThumbnail.compactSize;
+          height <= 200;
+          height += 4) {
+        expect(
+          CollapsedMediaThumbnail.sizeForContentHeight(height),
+          lessThanOrEqualTo(height),
+        );
+      }
+    });
+  });
+
   testWidgets('缩略图尺寸固定，占位与成图不改变布局', (tester) async {
     final media = _mediaWithImage(pngPath);
 
