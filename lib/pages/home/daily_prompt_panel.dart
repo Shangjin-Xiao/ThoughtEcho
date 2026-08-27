@@ -310,11 +310,17 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
                         l10n.todayThoughts,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        // 「今日思考」是这张卡的**标签**，不是它的标题——真正的
+                        // 内容是下面那句提问。用 `titleMedium` 会让它吃到标题
+                        // 字重下限（衬线风格下 w700），再叠上强调色和比正文还大
+                        // 的字号，chrome 就压过了 content：眼睛先读到这四个字，
+                        // 而不是那个问题。`labelLarge` 才是它的角色——和按钮、
+                        // 胶囊、导航栏标签同一档功能性文字。
+                        //
+                        // 顺带去掉写死的字号：写死等于把这张卡从
+                        // `ThemeStyleForm.readingFontScale` 体系里摘出去。
+                        style: theme.textTheme.labelLarge?.copyWith(
                           color: theme.colorScheme.primary,
-                          fontSize: widget.screenWidth > 600
-                              ? 16
-                              : (widget.isVerySmallScreen ? 13 : 15),
                         ),
                       ),
                     ),
@@ -345,13 +351,21 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
                   : (isAiConfigured
                       ? l10n.waitingForTodayThoughts
                       : l10n.noTodayThoughts),
-              style: theme.textTheme.bodyMedium?.copyWith(
+              // 提问是这张卡的正文，就该用正文那一级：`bodyLarge` 拿到的是
+              // 正文字重（衬线风格 w600）和跟随风格缩放的字号，标签退到
+              // `labelLarge` 之后，主次才正过来。
+              //
+              // 极小屏退回 `bodyMedium` 而不是写死一个 12：**降级也走类型级别**，
+              // 这样它照样跟着风格缩放，不会又变成一处脱离体系的硬编码。
+              style: (widget.isVerySmallScreen
+                      ? theme.textTheme.bodyMedium
+                      : theme.textTheme.bodyLarge)
+                  ?.copyWith(
+                // 这张卡是紧排的两三行居中提问，不跟正文行高（纸墨 1.75）走，
+                // 否则卡片会显著变高、把上面那张一言卡挤扁。
                 height: 1.4,
-                fontSize: widget.screenWidth > 600
-                    ? 15
-                    : (widget.isVerySmallScreen ? 12 : 14),
                 color: _accumulatedPromptText.isNotEmpty
-                    ? theme.textTheme.bodyMedium?.color
+                    ? theme.textTheme.bodyLarge?.color
                     : theme.colorScheme.onSurface.withAlpha(120),
               ),
               textAlign: TextAlign.center,

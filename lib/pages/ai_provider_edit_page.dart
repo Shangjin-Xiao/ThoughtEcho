@@ -8,6 +8,7 @@ import '../models/ai_provider_settings.dart';
 import '../models/ai_settings.dart';
 import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
+import '../utils/ai_endpoint_security.dart';
 import '../utils/ai_network_manager.dart';
 import '../utils/app_logger.dart';
 import '../widgets/app_snackbar.dart';
@@ -121,7 +122,12 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     final l10n = AppLocalizations.of(context);
     if (value == null || value.trim().isEmpty) return l10n.apiUrlRequired;
     final uri = Uri.tryParse(value.trim());
-    if (uri == null || !uri.hasScheme || !uri.scheme.startsWith('http')) {
+    // 判据和运行时那三处**必须是同一条**（[isSecureAiEndpoint]），否则又会出现
+    // 「表单放行、发请求时才炸、报错还指不回是哪个设置项」的裂缝——原来这里写的
+    // 是 `startsWith('http')`，对 `http` 和 `https` 都成立，正是那道裂缝。
+    //
+    // 校验属于输入这一层：在能解释、能指着输入框说话的地方拦住它。
+    if (uri == null || !uri.hasScheme || !isSecureAiEndpoint(uri)) {
       return l10n.invalidUrl;
     }
     return null;

@@ -324,11 +324,12 @@ class AddNoteController extends ChangeNotifier {
         notifyListeners();
         onLocationFetchEmpty?.call();
       }
-    } catch (e, stackTrace) {
-      logError(
-        '获取位置失败',
-        error: e,
-        stackTrace: stackTrace,
+    } catch (e) {
+      // 定位/天气在正常使用中本来就会失败：没给权限、离线、超时。
+      // 记成 error 会把日志页刷满预期内的失败，真正的异常反而淹掉。
+      // 也不用带 stackTrace：这一档失败看的是「为什么没拿到」，不是调用栈。
+      logWarning(
+        '获取位置失败: $e',
         source: 'AddNoteController',
       );
       if (_isDisposed) return;
@@ -385,11 +386,12 @@ class AddNoteController extends ChangeNotifier {
 
       isFetchingWeather = false;
       notifyListeners();
-    } catch (e, stackTrace) {
-      logError(
-        '获取天气失败',
-        error: e,
-        stackTrace: stackTrace,
+    } catch (e) {
+      // 定位/天气在正常使用中本来就会失败：没给权限、离线、超时。
+      // 记成 error 会把日志页刷满预期内的失败，真正的异常反而淹掉。
+      // 也不用带 stackTrace：这一档失败看的是「为什么没拿到」，不是调用栈。
+      logWarning(
+        '获取天气失败: $e',
         source: 'AddNoteController',
       );
       if (_isDisposed) return;

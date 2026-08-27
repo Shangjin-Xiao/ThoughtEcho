@@ -1395,7 +1395,7 @@
   "todayThoughtsUseAi": "Utiliser l'IA pour les Pensées du jour",
   "todayThoughtsUseAiDesc": "Si activé, l'IA sera utilisée pour générer des invites pour les Pensées du jour. Si désactivé, la génération locale sera utilisée.",
   "apiUrlRequired": "L'URL de l'API ne peut pas être vide",
-  "invalidUrl": "Veuillez saisir une URL HTTP/HTTPS valide",
+  "invalidUrl": "Saisissez une URL HTTPS, ou une adresse HTTP sur localhost ou votre réseau local",
   "fieldRequired": "Ce champ est obligatoire",
   "mediaManagementTitle": "Gestion des fichiers multimédias",
   "loadStatsError": "Échec du chargement des statistiques : {error}",
