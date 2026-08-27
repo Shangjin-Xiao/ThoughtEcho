@@ -2,6 +2,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:thoughtecho/utils/app_tracer.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 
 import '../../test_harness.dart';
@@ -20,13 +21,22 @@ void main() {
       expect(options.sendDefaultPii, isFalse);
       expect(options.attachScreenshot, isFalse);
       expect(options.attachViewHierarchy, isFalse);
-      expect(options.profilesSampleRate, isNull);
       expect(options.enableAutoSessionTracking, isFalse);
       expect(options.enablePrintBreadcrumbs, isFalse);
       expect(options.enableUserInteractionBreadcrumbs, isFalse);
       expect(options.enableUserInteractionTracing, isFalse);
       expect(options.enableAutoPerformanceTracing, isTrue);
       expect(options.tracesSampleRate, equals(1.0));
+    });
+
+    test('enables CPU profiling for sampled transactions', () {
+      final options = SentryFlutterOptions();
+
+      configureSentryOptions(options);
+
+      // SDK 只在 iOS/macOS 真正启动 profiler，这里只保证采样率开着 ——
+      // 关掉它记录页滚动就再也拿不到 CPU profile。
+      expect(options.profilesSampleRate, equals(1.0));
     });
   });
 
@@ -132,6 +142,72 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       }
     });
 
+    test('drops smooth scroll sessions but keeps janky ones', () async {
+      final mockTransport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://public@example.com/1';
+        options.transport = mockTransport;
+        options.tracesSampleRate = 1.0;
+        options.beforeSendTransaction = sanitizeSentryTransaction;
+      });
+
+      try {
+        await _finishScrollSession(frameJank: 0, worstFrameMs: 5.5);
+        await _finishScrollSession(frameJank: 2, worstFrameMs: 35.8);
+        // 只坏了一帧，但坏到两帧预算以上，同样要留。
+        await _finishScrollSession(frameJank: 0, worstFrameMs: 24.1);
+
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+
+        final worstFrames = mockTransport.envelopes
+            .expand((envelope) => envelope.items)
+            .map((item) => item.originalObject)
+            .whereType<SentryTransaction>()
+            .where((transaction) =>
+                transaction.transaction == scrollSessionTraceName)
+            .map((transaction) => transaction.spans
+                .singleWhere((span) =>
+                    span.context.description == scrollSessionFinalizeTraceName)
+                .data['worstFrameMs'])
+            .toList();
+
+        expect(worstFrames, unorderedEquals(<Object?>[35.8, 24.1]));
+      } finally {
+        await Sentry.close();
+      }
+    });
+
+    test('keeps a scroll session that never reached its finalize mark',
+        () async {
+      final mockTransport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://public@example.com/1';
+        options.transport = mockTransport;
+        options.tracesSampleRate = 1.0;
+        options.beforeSendTransaction = sanitizeSentryTransaction;
+      });
+
+      try {
+        // 没有收尾地标 = 会话被下一次滚动顶掉或页面被销毁，异常路径要看得见。
+        final transaction =
+            Sentry.startTransaction(scrollSessionTraceName, 'ui.scroll');
+        await transaction.finish();
+
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+
+        expect(
+          mockTransport.envelopes
+              .expand((envelope) => envelope.items)
+              .map((item) => item.originalObject)
+              .whereType<SentryTransaction>()
+              .where((t) => t.transaction == scrollSessionTraceName),
+          hasLength(1),
+        );
+      } finally {
+        await Sentry.close();
+      }
+    });
+
     test('removes local paths from database breadcrumbs', () {
       const privatePath = '/Users/private/Documents/ThoughtEcho/quotes.db';
       final breadcrumb = Breadcrumb(
@@ -181,6 +257,25 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sanitized?.request?.headers, isEmpty);
     });
   });
+}
+
+/// 造一个和 `note_list_scroll.dart` 收尾时形状一致的滚动会话事务。
+Future<void> _finishScrollSession({
+  required int frameJank,
+  required double worstFrameMs,
+}) async {
+  final transaction =
+      Sentry.startTransaction(scrollSessionTraceName, 'ui.scroll');
+  final mark = transaction.startChild(
+    'mark',
+    description: scrollSessionFinalizeTraceName,
+  );
+  mark
+    ..setData('frameJank', frameJank)
+    ..setData('budgetMs', 8.333)
+    ..setData('worstFrameMs', worstFrameMs);
+  await mark.finish();
+  await transaction.finish();
 }
 
 class _MockSentryTransport implements Transport {

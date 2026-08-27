@@ -53,3 +53,16 @@
   一条时间轴，不能直接对齐。要把帧和滚动状态关联，走 `FrameTiming.frameNumber` 和
   `PlatformDispatcher.instance.frameData.frameNumber`（同一个计数器）。
 
+- 2026-08-27: **Android 每次切后台都会发 `memoryPressure`**（`onTrimMemory` 带
+  `TRIM_MEMORY_UI_HIDDEN`），Flutter 把它和真正的低内存警告转成同一条消息，Dart 侧分不
+  出来；框架默认反应是清空 `imageCache` 并广播 `didHaveMemoryPressure()`。所以 08-23 那条
+  「改挂 `didHaveMemoryPressure` 就不会被后台触发」是**错的**，日志里 `gen=2, rewarm=1`
+  就是证据。现在靠 `AppWidgetsBinding` 按生命周期状态分流（例行 trim 只把图片缓存淘汰到
+  8MB，不清测量缓存）。用户报的「切后台回来图片变灰」和「回前台第一次滑动卡」是同一件事。
+- 2026-08-27: 记录页热态滚动已经打平（连着三段 `frameJank=0`）。再收到「记录页卡」的反馈，
+  先分清是冷启动首滑、回前台首滑，还是整列表重建（`depsΔ`/`built=全部`）—— 这三条现在是
+  互相独立的线，别再当成一个问题一起查。
+- 2026-08-27: `dropped` 在可变刷新率（LTPO）屏幕上仍然可能虚高：固定的 8.3ms 预算做除数，
+  面板降到 60Hz 时每一帧都会被记成「跳了一帧」。scroll-24 `frames=265 / elapsed=2199ms`
+  已经是满帧率，却报 `dropped=54`，算术上说不通。没有证据前不动它，但**任何筛选、判据都
+  不要用这个数**。

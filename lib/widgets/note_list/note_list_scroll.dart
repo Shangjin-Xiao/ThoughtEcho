@@ -199,9 +199,10 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionStartImageCount = imageCache.currentSize;
     _scrollSessionStartImageBytes = imageCache.currentSizeBytes;
     _scrollSessionTracer?.finish();
-    _scrollSessionTracer = AppTracer.start(
-        'ThoughtEcho.NoteListView.scrollSession',
-        operation: 'ui.scroll');
+    // 事务从这里一直开到收尾，iOS/macOS 上 Sentry 的 CPU profile 就采这一段。
+    // 不卡的那些会话在上报前被筛掉，见 `sentry_helper.dart`。
+    _scrollSessionTracer =
+        AppTracer.start(scrollSessionTraceName, operation: 'ui.scroll');
     _ensurePerfTimingsCallback();
   }
 
@@ -397,15 +398,17 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionStartQuoteContentStats = null;
     _scrollSessionStartQuoteItemStats = null;
     _scrollSessionStartImageEmbedStats = null;
-    _scrollSessionTracer?.instant(
-        'ThoughtEcho.NoteListView.scrollSession.finalize',
-        arguments: {
-          'frames': frameStats.frames,
-          'frameJank': frameStats.jank,
-          'droppedFrames': frameStats.dropped,
-          'worstFrameMs': frameStats.worstFrameMs.toStringAsFixed(1),
-          'avgFrameMs': frameStats.avgFrameMs.toStringAsFixed(1),
-        });
+    // 这几个数要**保持数值类型**：`sentry_helper.dart` 靠 frameJank / worstFrameMs /
+    // budgetMs 决定这条事务（连同它的 CPU profile）要不要上报，格式化成字符串就筛不动了。
+    _scrollSessionTracer?.instant(scrollSessionFinalizeTraceName, arguments: {
+      'frames': frameStats.frames,
+      'frameJank': frameStats.jank,
+      'droppedFrames': frameStats.dropped,
+      'budgetMs': budgetMicros / 1000.0,
+      'worstFrameMs': frameStats.worstFrameMs,
+      'avgFrameMs': frameStats.avgFrameMs,
+      'worstVsyncMs': frameStats.worstVsyncOverheadMs,
+    });
     _scrollSessionTracer?.finish();
     _scrollSessionTracer = null;
     final sessionId = _scrollSessionId;

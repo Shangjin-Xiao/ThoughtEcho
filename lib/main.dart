@@ -48,6 +48,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'utils/app_logger.dart';
 import 'utils/app_navigator_key.dart';
+import 'utils/app_widgets_binding.dart';
 import 'utils/deferred_error_buffer.dart';
 import 'services/database_platform_bootstrap.dart';
 import 'utils/global_exception_handler.dart';
@@ -92,7 +93,9 @@ Future<void> main() async {
 
   await runZonedGuarded<Future<void>>(
     () async {
-      WidgetsFlutterBinding.ensureInitialized();
+      // 用应用自己的 binding：它把「切后台被例行 trim」和「真的缺内存」分开，
+      // 见 [AppWidgetsBinding]。必须是进程里第一个初始化的 binding。
+      AppWidgetsBinding.ensureInitialized();
 
       _configureImageCache();
 
@@ -721,8 +724,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   /// 前台的第一次滑动必然重算一遍：那份日志里 `rewarm=3`、`planMiss+33`、
   /// `expandMiss+53`，正是用户说的「不是冷启动也卡」。
   ///
-  /// `didHaveMemoryPressure` 才是这件事该挂的地方：系统缺内存时（包括后台被
-  /// trim）会调到这里，那时候释放是划算的；不缺的时候就把几 MB 留着。
+  /// 改挂到 `didHaveMemoryPressure` 之后还是会被后台 trim 触发 —— Android 每次切
+  /// 后台都发这条消息，2026-08-27 的日志里 `rewarm=1` 就是这么来的。真正的分流在
+  /// [AppWidgetsBinding]：例行 trim 根本不会走到这个回调，能进来的都是前台真缺
+  /// 内存，那时候释放是划算的。
   @override
   void didHaveMemoryPressure() {
     super.didHaveMemoryPressure();

@@ -1,6 +1,16 @@
 import 'dart:developer' as developer;
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+/// 记录页一次滚动会话的事务名。
+///
+/// 在两处用到，所以放在这里而不是各写一遍字面量：`note_list_scroll.dart` 起事务，
+/// `sentry_helper.dart` 的 [sanitizeSentryTransaction] 按它筛掉不卡的那些会话。
+const String scrollSessionTraceName = 'ThoughtEcho.NoteListView.scrollSession';
+
+/// 滚动会话收尾地标的名字，帧统计以 span data 的形式挂在它上面。
+const String scrollSessionFinalizeTraceName =
+    '$scrollSessionTraceName.finalize';
+
 /// 统一的性能监控追踪器
 ///
 /// 封装了底层的 [developer.TimelineTask] (用于本地 DevTools 和 Firebase Test Lab 测试)

@@ -11,6 +11,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/app_tracer.dart';
 
 const _databaseDescriptionPrefixes = <String>[
   'Open DB:',
@@ -24,9 +25,18 @@ void configureSentryOptions(SentryFlutterOptions options) {
   // 既然数据收集默认关闭，开启用户的意愿较强，将链路采样率设为 1.0 获取充足性能样本
   options.tracesSampleRate = 1.0;
 
-  // CPU Profiling 深度性能剖析 (目前仅支持 iOS/macOS)
-  // TODO: 当前无 iOS 发行版暂不开启，后续发布 iOS 版时可将其设为 1.0 或 0.5 开启深度剖析
-  options.profilesSampleRate = null;
+  // CPU Profiling 深度性能剖析。
+  //
+  // 这个采样率是**架在已采样事务之上的第二层**：配合上面的 tracesSampleRate = 1.0，
+  // 1.0 等于「每条上报的事务都带一份采样式 CPU profile」。SDK 自己会判平台，只在
+  // iOS/macOS 真正启动 profiler（见 SentryNativeProfilerFactory.attachTo），Android
+  // 和 Windows 上设了也不会有任何开销，所以这里不再重复写一层平台分支。
+  //
+  // 记录页滚动的掉帧一直卡在「build 只有 1ms，整帧却拖到 40ms 以上」这种形状 ——
+  // vsyncOverhead 说明时间花在帧与帧之间，逐帧计数器再怎么加也指不到具体函数。
+  // 这一份 profile 就是为它开的；对应的取样只留下真卡过的那几段，见
+  // [sanitizeSentryTransaction]。
+  options.profilesSampleRate = 1.0;
 
   // 开启 TTFD (完全渲染时间监控)
   // 在异步数据加载完成的页面手动调用 SentryFlutter.currentDisplay()?.reportFullyDisplayed();
@@ -176,10 +186,44 @@ Breadcrumb? sanitizeSentryBreadcrumb(Breadcrumb? breadcrumb, Hint hint) {
   return breadcrumb;
 }
 
+/// 一段滚动会话值不值得上报。
+///
+/// 记录页每滑一次就是一个事务，随手翻一分钟就是几十条：全量上报会把面板淹掉，
+/// 在 iOS 上还给每条都附一份 CPU profile，白烧用户的流量。判据取收尾地标里已经
+/// 算好的帧统计（见 `FrameTimingStats`），只留两种：这一段里有帧超了预算，或者
+/// 最坏的一帧到了两帧预算 —— 后者兜住「只坏了一帧但坏得很厉害」那种。
+///
+/// **拿不到收尾地标时一律保留**。那说明会话没走到正常收尾（被下一次滚动顶掉、
+/// 页面被销毁），异常路径正是最该看见的，不能被这层筛选悄悄吃掉。
+///
+/// `dropped` 故意没参与判据 —— 它在可变刷新率的屏幕上会把「面板降到 60Hz」误记成
+/// 丢帧（见 `docs/note-list-warmup-invalidation-2026-08-22.md` 2026-08-27 一节），
+/// 拿一个不可靠的数当筛选依据等于随机丢样本。
+bool _isScrollSessionWorthReporting(SentryTransaction transaction) {
+  for (final span in transaction.spans) {
+    if (span.context.description != scrollSessionFinalizeTraceName) {
+      continue;
+    }
+    final jank = span.data['frameJank'];
+    if (jank is num && jank > 0) return true;
+    final worstFrameMs = span.data['worstFrameMs'];
+    final budgetMs = span.data['budgetMs'];
+    if (worstFrameMs is num && budgetMs is num && budgetMs > 0) {
+      return worstFrameMs >= budgetMs * 2;
+    }
+    return false;
+  }
+  return true;
+}
+
 SentryTransaction? sanitizeSentryTransaction(
   SentryTransaction transaction,
   Hint hint,
 ) {
+  if (transaction.transaction == scrollSessionTraceName &&
+      !_isScrollSessionWorthReporting(transaction)) {
+    return null;
+  }
   _sanitizeSentryRequest(transaction);
   for (final span in transaction.spans) {
     final url = span.data['url'];
