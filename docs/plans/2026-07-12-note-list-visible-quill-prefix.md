@@ -46,8 +46,8 @@
 ### Task 4: Record and verify
 
 **Files:**
-- Modify: `.squad/decisions.md`
-- Create: `.squad/note_list_visible_quill_prefix_handoff_2026-07-12.md`
+- Modify: `docs/decisions.md`
+- Create: `docs/note-list-visible-quill-prefix-handoff-2026-07-12.md`
 
 1. Record the July 12 device evidence and why image decode deferral did not address Quill layout.
 2. Record the selected same-renderer visible-prefix design, validation commands, and remaining device-measurement gate.

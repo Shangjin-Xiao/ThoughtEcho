@@ -359,22 +359,20 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 ### 历史记录去哪里找
 
-动手改一块**已经被优化过或返工过**的代码之前，先翻这两处，别从零推一遍别人踩过的坑：
+动手改一块**已经被优化过或返工过**的代码之前，先翻阅历史沉淀，别从零推一遍别人踩过的坑：
 
-- `docs/` —— 按主题的交接与审计文档，文件名带日期。性能、主题、同步、Thoughter
-  各有一串，例如 `docs/note-list-perf-handoff-2026-08-12.md` →
-  `docs/note-list-perf-analysis-2026-08-13.md` 是同一条线的连续两份。
-- `.squad/` —— **AI 团队的过程记录**，比 `docs/` 更细也更早：
-  - `.squad/decisions.md`：所有重要决策的权威记录，带日期和决策人；
-  - `.squad/*_handoff.md`：单轮任务的交接（字体重构、记录页冷启动、
-    新增笔记弹窗性能等）；
-  - `.squad/agents/<name>/history.md`：各角色的工作历史；
-  - `.squad/log/`、`.squad/casting/`：会话日志与角色分派记录。
+- 📚 **全局知识库与历史索引**：查阅 [`docs/INDEX.md`](docs/INDEX.md)（已按性能、主题、Thoughter 记忆、同步等分类整理了所有 30+ 份审计、方案与交接文档）。
+- `docs/` —— 按主题的技术审计、专项方案、性能分析与交接文档（详细索引见 `docs/INDEX.md`）。例如：
+  - 性能排查链：`docs/note-list-perf-handoff-2026-08-12.md` → `docs/note-list-perf-analysis-2026-08-13.md` → `docs/note-list-first-paint-cost-2026-08-19.md`
+  - 主题事实源：`docs/paper-ink-theme-handoff-2026-07-31.md`
+  - Thoughter 记忆事实源：`docs/agent-memory-research-2026-08-08.md`
+  - 架构决议真源：`docs/decisions.md`（所有重要决策的权威记录，带日期和决策人）。
+- `docs/squad/` —— **AI 团队的历史过程档案**（团队分工 `team.md`、角色历史 `agents/<name>/history.md`、会话日志 `log/` 与分派 `casting/`）。
 
   这些是**过程档案**，不是规范，也不能直接当实现依据——里面有大量后来被推翻的中间
-  判断。只用来追溯「为什么当初这么做」，那个信息基本只在 `.squad/` 里写着。
+  判断。只用来追溯「为什么当初这么做」，那个信息基本只在历史记录里写着。
   与当前代码、本文件或 `docs/` 下的最终交接文档冲突时，一律以当前实现和最终交接
-  文档为准（`.squad/decisions.md` 说的「权威」是指它在 `.squad/` 内部权威）。
+  文档为准（`docs/decisions.md` 说的「权威」是指它在团队决策演进内部权威）。
 
 ## Git、隐私与提交
 
