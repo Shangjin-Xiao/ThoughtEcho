@@ -3,33 +3,35 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i10;
-import 'dart:io' as _i24;
-import 'dart:ui' as _i15;
+import 'dart:async' as _i5;
+import 'dart:io' as _i27;
+import 'dart:ui' as _i16;
 
-import 'package:flutter/material.dart' as _i19;
+import 'package:flutter/material.dart' as _i20;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i13;
+import 'package:mockito/src/dummies.dart' as _i14;
 import 'package:sqflite/sqflite.dart' as _i3;
-import 'package:thoughtecho/models/ai_analysis_model.dart' as _i8;
-import 'package:thoughtecho/models/thoughter_entry.dart' as _i20;
-import 'package:thoughtecho/models/ai_settings.dart' as _i4;
-import 'package:thoughtecho/models/app_settings.dart' as _i5;
-import 'package:thoughtecho/models/local_ai_settings.dart' as _i7;
+import 'package:thoughtecho/models/ai_analysis_model.dart' as _i10;
+import 'package:thoughtecho/models/ai_settings.dart' as _i6;
+import 'package:thoughtecho/models/anniversary_participation.dart' as _i23;
+import 'package:thoughtecho/models/app_settings.dart' as _i7;
+import 'package:thoughtecho/models/import_cleanup_stats.dart' as _i4;
+import 'package:thoughtecho/models/local_ai_settings.dart' as _i9;
 import 'package:thoughtecho/models/merge_report.dart' as _i2;
-import 'package:thoughtecho/models/multi_ai_settings.dart' as _i6;
-import 'package:thoughtecho/models/note_tag.dart' as _i17;
-import 'package:thoughtecho/models/quote_model.dart' as _i16;
-import 'package:thoughtecho/services/ai_analysis_database_service.dart' as _i21;
-import 'package:thoughtecho/services/backup_service.dart' as _i9;
-import 'package:thoughtecho/services/database_service.dart' as _i14;
-import 'package:thoughtecho/services/large_file_manager.dart' as _i12;
+import 'package:thoughtecho/models/multi_ai_settings.dart' as _i8;
+import 'package:thoughtecho/models/note_tag.dart' as _i18;
+import 'package:thoughtecho/models/quote_model.dart' as _i17;
+import 'package:thoughtecho/models/thoughter_entry.dart' as _i22;
+import 'package:thoughtecho/services/ai_analysis_database_service.dart' as _i24;
+import 'package:thoughtecho/services/backup_service.dart' as _i11;
+import 'package:thoughtecho/services/database_service.dart' as _i15;
+import 'package:thoughtecho/services/large_file_manager.dart' as _i13;
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart'
-    as _i22;
-import 'package:thoughtecho/services/localsend/models/device.dart' as _i23;
-import 'package:thoughtecho/services/media_sync_manifest.dart' as _i11;
-import 'package:thoughtecho/models/anniversary_participation.dart' as _i25;
-import 'package:thoughtecho/services/settings_service.dart' as _i18;
+    as _i25;
+import 'package:thoughtecho/services/localsend/models/device.dart' as _i26;
+import 'package:thoughtecho/services/location_service.dart' as _i21;
+import 'package:thoughtecho/services/media_sync_manifest.dart' as _i12;
+import 'package:thoughtecho/services/settings_service.dart' as _i19;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -66,8 +68,9 @@ class _FakeDatabase_1 extends _i1.SmartFake implements _i3.Database {
         );
 }
 
-class _FakeAISettings_2 extends _i1.SmartFake implements _i4.AISettings {
-  _FakeAISettings_2(
+class _FakeImportCleanupStats_2 extends _i1.SmartFake
+    implements _i4.ImportCleanupStats {
+  _FakeImportCleanupStats_2(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -76,8 +79,8 @@ class _FakeAISettings_2 extends _i1.SmartFake implements _i4.AISettings {
         );
 }
 
-class _FakeAppSettings_3 extends _i1.SmartFake implements _i5.AppSettings {
-  _FakeAppSettings_3(
+class _FakeFuture_3<T1> extends _i1.SmartFake implements _i5.Future<T1> {
+  _FakeFuture_3(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -86,9 +89,8 @@ class _FakeAppSettings_3 extends _i1.SmartFake implements _i5.AppSettings {
         );
 }
 
-class _FakeMultiAISettings_4 extends _i1.SmartFake
-    implements _i6.MultiAISettings {
-  _FakeMultiAISettings_4(
+class _FakeAISettings_4 extends _i1.SmartFake implements _i6.AISettings {
+  _FakeAISettings_4(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -97,9 +99,8 @@ class _FakeMultiAISettings_4 extends _i1.SmartFake
         );
 }
 
-class _FakeLocalAISettings_5 extends _i1.SmartFake
-    implements _i7.LocalAISettings {
-  _FakeLocalAISettings_5(
+class _FakeAppSettings_5 extends _i1.SmartFake implements _i7.AppSettings {
+  _FakeAppSettings_5(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -108,8 +109,30 @@ class _FakeLocalAISettings_5 extends _i1.SmartFake
         );
 }
 
-class _FakeAIAnalysis_6 extends _i1.SmartFake implements _i8.AIAnalysis {
-  _FakeAIAnalysis_6(
+class _FakeMultiAISettings_6 extends _i1.SmartFake
+    implements _i8.MultiAISettings {
+  _FakeMultiAISettings_6(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeLocalAISettings_7 extends _i1.SmartFake
+    implements _i9.LocalAISettings {
+  _FakeLocalAISettings_7(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeAIAnalysis_8 extends _i1.SmartFake implements _i10.AIAnalysis {
+  _FakeAIAnalysis_8(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -121,21 +144,27 @@ class _FakeAIAnalysis_6 extends _i1.SmartFake implements _i8.AIAnalysis {
 /// A class which mocks [BackupService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockBackupService extends _i1.Mock implements _i9.BackupService {
+class MockBackupService extends _i1.Mock implements _i11.BackupService {
   MockBackupService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i10.Future<String> exportAllData({
+  List<String> get lastExportDeltaConversionFailures => (super.noSuchMethod(
+        Invocation.getter(#lastExportDeltaConversionFailures),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  _i5.Future<String> exportAllData({
     required bool? includeMediaFiles,
-    _i11.MediaSyncManifest? receiverMediaManifest,
+    _i12.MediaSyncManifest? receiverMediaManifest,
     String? customPath,
     dynamic Function(
       int,
       int,
     )? onProgress,
-    _i12.CancelToken? cancelToken,
+    _i13.CancelToken? cancelToken,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -149,7 +178,7 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
             #cancelToken: cancelToken,
           },
         ),
-        returnValue: _i10.Future<String>.value(_i13.dummyValue<String>(
+        returnValue: _i5.Future<String>.value(_i14.dummyValue<String>(
           this,
           Invocation.method(
             #exportAllData,
@@ -163,10 +192,10 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
             },
           ),
         )),
-      ) as _i10.Future<String>);
+      ) as _i5.Future<String>);
 
   @override
-  _i10.Future<_i2.MergeReport?> importData(
+  _i5.Future<_i2.MergeReport?> importData(
     String? filePath, {
     bool? clearExisting = true,
     bool? merge = false,
@@ -174,7 +203,7 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
       int,
       int,
     )? onProgress,
-    _i12.CancelToken? cancelToken,
+    _i13.CancelToken? cancelToken,
     String? sourceDevice,
   }) =>
       (super.noSuchMethod(
@@ -189,26 +218,26 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
             #sourceDevice: sourceDevice,
           },
         ),
-        returnValue: _i10.Future<_i2.MergeReport?>.value(),
-      ) as _i10.Future<_i2.MergeReport?>);
+        returnValue: _i5.Future<_i2.MergeReport?>.value(),
+      ) as _i5.Future<_i2.MergeReport?>);
 
   @override
-  _i10.Future<bool> validateBackupFile(String? filePath) => (super.noSuchMethod(
+  _i5.Future<bool> validateBackupFile(String? filePath) => (super.noSuchMethod(
         Invocation.method(
           #validateBackupFile,
           [filePath],
         ),
-        returnValue: _i10.Future<bool>.value(false),
-      ) as _i10.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 
   @override
-  _i10.Future<_i2.MergeReport> importDataWithLWWMerge(
+  _i5.Future<_i2.MergeReport> importDataWithLWWMerge(
     String? filePath, {
     dynamic Function(
       int,
       int,
     )? onProgress,
-    _i12.CancelToken? cancelToken,
+    _i13.CancelToken? cancelToken,
     String? sourceDevice,
   }) =>
       (super.noSuchMethod(
@@ -221,7 +250,7 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
             #sourceDevice: sourceDevice,
           },
         ),
-        returnValue: _i10.Future<_i2.MergeReport>.value(_FakeMergeReport_0(
+        returnValue: _i5.Future<_i2.MergeReport>.value(_FakeMergeReport_0(
           this,
           Invocation.method(
             #importDataWithLWWMerge,
@@ -233,13 +262,13 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
             },
           ),
         )),
-      ) as _i10.Future<_i2.MergeReport>);
+      ) as _i5.Future<_i2.MergeReport>);
 }
 
 /// A class which mocks [DatabaseService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
+class MockDatabaseService extends _i1.Mock implements _i15.DatabaseService {
   MockDatabaseService() {
     _i1.throwOnMissingStub(this);
   }
@@ -266,16 +295,16 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i3.Database);
 
   @override
-  _i10.Future<_i3.Database> get safeDatabase => (super.noSuchMethod(
+  _i5.Future<_i3.Database> get safeDatabase => (super.noSuchMethod(
         Invocation.getter(#safeDatabase),
-        returnValue: _i10.Future<_i3.Database>.value(_FakeDatabase_1(
+        returnValue: _i5.Future<_i3.Database>.value(_FakeDatabase_1(
           this,
           Invocation.getter(#safeDatabase),
         )),
-      ) as _i10.Future<_i3.Database>);
+      ) as _i5.Future<_i3.Database>);
 
   @override
-  set onLocalDataChanged(_i15.VoidCallback? value) => super.noSuchMethod(
+  set onLocalDataChanged(_i16.VoidCallback? value) => super.noSuchMethod(
         Invocation.setter(
           #onLocalDataChanged,
           value,
@@ -290,17 +319,17 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as bool);
 
   @override
-  _i10.Future<void> addQuote(_i16.Quote? quote) => (super.noSuchMethod(
+  _i5.Future<void> addQuote(_i17.Quote? quote) => (super.noSuchMethod(
         Invocation.method(
           #addQuote,
           [quote],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<_i16.Quote?> getQuoteById(
+  _i5.Future<_i17.Quote?> getQuoteById(
     String? id, {
     bool? includeDeleted = false,
   }) =>
@@ -310,11 +339,11 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [id],
           {#includeDeleted: includeDeleted},
         ),
-        returnValue: _i10.Future<_i16.Quote?>.value(),
-      ) as _i10.Future<_i16.Quote?>);
+        returnValue: _i5.Future<_i17.Quote?>.value(),
+      ) as _i5.Future<_i17.Quote?>);
 
   @override
-  _i10.Future<List<_i16.Quote>> getAllQuotes({
+  _i5.Future<List<_i17.Quote>> getAllQuotes({
     bool? excludeHiddenNotes = true,
     bool? includeDeleted = false,
   }) =>
@@ -327,11 +356,11 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
-      ) as _i10.Future<List<_i16.Quote>>);
+        returnValue: _i5.Future<List<_i17.Quote>>.value(<_i17.Quote>[]),
+      ) as _i5.Future<List<_i17.Quote>>);
 
   @override
-  _i10.Future<List<_i16.Quote>> getQuotesForPeriod(
+  _i5.Future<List<_i17.Quote>> getQuotesForPeriod(
     DateTime? start,
     DateTime? end, {
     bool? excludeHiddenNotes = true,
@@ -349,21 +378,21 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
-      ) as _i10.Future<List<_i16.Quote>>);
+        returnValue: _i5.Future<List<_i17.Quote>>.value(<_i17.Quote>[]),
+      ) as _i5.Future<List<_i17.Quote>>);
 
   @override
-  _i10.Future<void> deleteQuote(String? id) => (super.noSuchMethod(
+  _i5.Future<void> deleteQuote(String? id) => (super.noSuchMethod(
         Invocation.method(
           #deleteQuote,
           [id],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<List<_i16.Quote>> searchQuotesByContent(
+  _i5.Future<List<_i17.Quote>> searchQuotesByContent(
     String? query, {
     bool? includeDeleted = false,
   }) =>
@@ -373,22 +402,22 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [query],
           {#includeDeleted: includeDeleted},
         ),
-        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
-      ) as _i10.Future<List<_i16.Quote>>);
+        returnValue: _i5.Future<List<_i17.Quote>>.value(<_i17.Quote>[]),
+      ) as _i5.Future<List<_i17.Quote>>);
 
   @override
-  _i10.Future<_i14.QuoteUpdateResult> updateQuote(_i16.Quote? quote) =>
+  _i5.Future<_i15.QuoteUpdateResult> updateQuote(_i17.Quote? quote) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateQuote,
           [quote],
         ),
-        returnValue: _i10.Future<_i14.QuoteUpdateResult>.value(
-            _i14.QuoteUpdateResult.updated),
-      ) as _i10.Future<_i14.QuoteUpdateResult>);
+        returnValue: _i5.Future<_i15.QuoteUpdateResult>.value(
+            _i15.QuoteUpdateResult.updated),
+      ) as _i5.Future<_i15.QuoteUpdateResult>);
 
   @override
-  _i10.Future<int> batchUpdatePendingLocations({
+  _i5.Future<int> batchUpdatePendingLocations({
     required String? resolvedAddress,
     int? hours = 24,
   }) =>
@@ -401,11 +430,11 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #hours: hours,
           },
         ),
-        returnValue: _i10.Future<int>.value(0),
-      ) as _i10.Future<int>);
+        returnValue: _i5.Future<int>.value(0),
+      ) as _i5.Future<int>);
 
   @override
-  _i10.Future<List<_i16.Quote>> getUserQuotes({
+  _i5.Future<List<_i17.Quote>> getUserQuotes({
     List<String>? tagIds,
     String? categoryId,
     int? offset = 0,
@@ -438,11 +467,11 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
-      ) as _i10.Future<List<_i16.Quote>>);
+        returnValue: _i5.Future<List<_i17.Quote>>.value(<_i17.Quote>[]),
+      ) as _i5.Future<List<_i17.Quote>>);
 
   @override
-  _i10.Future<List<_i16.Quote>> getQuotesForSmartPush({
+  _i5.Future<List<_i17.Quote>> getQuotesForSmartPush({
     int? limit = 200,
     String? orderBy = 'q.date DESC',
     bool? includeDeleted = false,
@@ -457,11 +486,11 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
-      ) as _i10.Future<List<_i16.Quote>>);
+        returnValue: _i5.Future<List<_i17.Quote>>.value(<_i17.Quote>[]),
+      ) as _i5.Future<List<_i17.Quote>>);
 
   @override
-  _i10.Future<int> getQuotesCount({
+  _i5.Future<int> getQuotesCount({
     List<String>? tagIds,
     String? categoryId,
     String? searchQuery,
@@ -488,11 +517,11 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<int>.value(0),
-      ) as _i10.Future<int>);
+        returnValue: _i5.Future<int>.value(0),
+      ) as _i5.Future<int>);
 
   @override
-  _i10.Future<List<_i16.Quote>> getDeletedQuotes({
+  _i5.Future<List<_i17.Quote>> getDeletedQuotes({
     int? offset = 0,
     int? limit = 20,
     String? orderBy = 'deleted_at DESC',
@@ -507,93 +536,93 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #orderBy: orderBy,
           },
         ),
-        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
-      ) as _i10.Future<List<_i16.Quote>>);
+        returnValue: _i5.Future<List<_i17.Quote>>.value(<_i17.Quote>[]),
+      ) as _i5.Future<List<_i17.Quote>>);
 
   @override
-  _i10.Future<int> getDeletedQuotesCount() => (super.noSuchMethod(
+  _i5.Future<int> getDeletedQuotesCount() => (super.noSuchMethod(
         Invocation.method(
           #getDeletedQuotesCount,
           [],
         ),
-        returnValue: _i10.Future<int>.value(0),
-      ) as _i10.Future<int>);
+        returnValue: _i5.Future<int>.value(0),
+      ) as _i5.Future<int>);
 
   @override
-  _i10.Future<List<Map<String, dynamic>>> getTombstonesForBackup() =>
+  _i5.Future<List<Map<String, dynamic>>> getTombstonesForBackup() =>
       (super.noSuchMethod(
         Invocation.method(
           #getTombstonesForBackup,
           [],
         ),
-        returnValue: _i10.Future<List<Map<String, dynamic>>>.value(
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
             <Map<String, dynamic>>[]),
-      ) as _i10.Future<List<Map<String, dynamic>>>);
+      ) as _i5.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i10.Future<void> restoreQuote(String? id) => (super.noSuchMethod(
+  _i5.Future<void> restoreQuote(String? id) => (super.noSuchMethod(
         Invocation.method(
           #restoreQuote,
           [id],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> permanentlyDeleteQuote(String? id) => (super.noSuchMethod(
+  _i5.Future<void> permanentlyDeleteQuote(String? id) => (super.noSuchMethod(
         Invocation.method(
           #permanentlyDeleteQuote,
           [id],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> emptyTrash() => (super.noSuchMethod(
+  _i5.Future<void> emptyTrash() => (super.noSuchMethod(
         Invocation.method(
           #emptyTrash,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<int> autoCleanupExpiredTrash({required int? retentionDays}) =>
+  _i5.Future<int> autoCleanupExpiredTrash({required int? retentionDays}) =>
       (super.noSuchMethod(
         Invocation.method(
           #autoCleanupExpiredTrash,
           [],
           {#retentionDays: retentionDays},
         ),
-        returnValue: _i10.Future<int>.value(0),
-      ) as _i10.Future<int>);
+        returnValue: _i5.Future<int>.value(0),
+      ) as _i5.Future<int>);
 
   @override
-  _i10.Future<void> incrementFavoriteCount(String? quoteId) =>
+  _i5.Future<void> incrementFavoriteCount(String? quoteId) =>
       (super.noSuchMethod(
         Invocation.method(
           #incrementFavoriteCount,
           [quoteId],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> resetFavoriteCount(String? quoteId) => (super.noSuchMethod(
+  _i5.Future<void> resetFavoriteCount(String? quoteId) => (super.noSuchMethod(
         Invocation.method(
           #resetFavoriteCount,
           [quoteId],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<List<_i16.Quote>> getMostFavoritedQuotesThisWeek(
+  _i5.Future<List<_i17.Quote>> getMostFavoritedQuotesThisWeek(
           {int? limit = 5}) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -601,31 +630,30 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [],
           {#limit: limit},
         ),
-        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
-      ) as _i10.Future<List<_i16.Quote>>);
+        returnValue: _i5.Future<List<_i17.Quote>>.value(<_i17.Quote>[]),
+      ) as _i5.Future<List<_i17.Quote>>);
 
   @override
-  _i10.Future<List<Map<String, dynamic>>> getAllTagMaps() =>
-      (super.noSuchMethod(
+  _i5.Future<List<Map<String, dynamic>>> getAllTagMaps() => (super.noSuchMethod(
         Invocation.method(
           #getAllTagMaps,
           [],
         ),
-        returnValue: _i10.Future<List<Map<String, dynamic>>>.value(
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
             <Map<String, dynamic>>[]),
-      ) as _i10.Future<List<Map<String, dynamic>>>);
+      ) as _i5.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i10.Future<List<_i17.NoteTag>> getTags() => (super.noSuchMethod(
+  _i5.Future<List<_i18.NoteTag>> getTags() => (super.noSuchMethod(
         Invocation.method(
           #getTags,
           [],
         ),
-        returnValue: _i10.Future<List<_i17.NoteTag>>.value(<_i17.NoteTag>[]),
-      ) as _i10.Future<List<_i17.NoteTag>>);
+        returnValue: _i5.Future<List<_i18.NoteTag>>.value(<_i18.NoteTag>[]),
+      ) as _i5.Future<List<_i18.NoteTag>>);
 
   @override
-  _i10.Future<void> addTag(
+  _i5.Future<void> addTag(
     String? name, {
     String? iconName,
   }) =>
@@ -635,12 +663,12 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [name],
           {#iconName: iconName},
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> addTagWithId(
+  _i5.Future<void> addTagWithId(
     String? id,
     String? name, {
     String? iconName,
@@ -654,31 +682,31 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           ],
           {#iconName: iconName},
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Stream<List<_i17.NoteTag>> watchTags() => (super.noSuchMethod(
+  _i5.Stream<List<_i18.NoteTag>> watchTags() => (super.noSuchMethod(
         Invocation.method(
           #watchTags,
           [],
         ),
-        returnValue: _i10.Stream<List<_i17.NoteTag>>.empty(),
-      ) as _i10.Stream<List<_i17.NoteTag>>);
+        returnValue: _i5.Stream<List<_i18.NoteTag>>.empty(),
+      ) as _i5.Stream<List<_i18.NoteTag>>);
 
   @override
-  _i10.Future<void> deleteTag(String? id) => (super.noSuchMethod(
+  _i5.Future<void> deleteTag(String? id) => (super.noSuchMethod(
         Invocation.method(
           #deleteTag,
           [id],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> updateTag(
+  _i5.Future<void> updateTag(
     String? id,
     String? name, {
     String? iconName,
@@ -692,37 +720,48 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           ],
           {#iconName: iconName},
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<_i17.NoteTag?> getTagById(String? id) => (super.noSuchMethod(
+  _i5.Future<_i18.NoteTag?> getTagById(String? id) => (super.noSuchMethod(
         Invocation.method(
           #getTagById,
           [id],
         ),
-        returnValue: _i10.Future<_i17.NoteTag?>.value(),
-      ) as _i10.Future<_i17.NoteTag?>);
+        returnValue: _i5.Future<_i18.NoteTag?>.value(),
+      ) as _i5.Future<_i18.NoteTag?>);
 
   @override
-  _i10.Future<void> initDefaultHitokotoTags() => (super.noSuchMethod(
+  _i5.Future<Map<String, _i18.NoteTag>> getTagsByIds(Iterable<String>? ids) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getTagsByIds,
+          [ids],
+        ),
+        returnValue: _i5.Future<Map<String, _i18.NoteTag>>.value(
+            <String, _i18.NoteTag>{}),
+      ) as _i5.Future<Map<String, _i18.NoteTag>>);
+
+  @override
+  _i5.Future<void> initDefaultHitokotoTags() => (super.noSuchMethod(
         Invocation.method(
           #initDefaultHitokotoTags,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<_i17.NoteTag?> getOrCreateHiddenTag() => (super.noSuchMethod(
+  _i5.Future<_i18.NoteTag?> getOrCreateHiddenTag() => (super.noSuchMethod(
         Invocation.method(
           #getOrCreateHiddenTag,
           [],
         ),
-        returnValue: _i10.Future<_i17.NoteTag?>.value(),
-      ) as _i10.Future<_i17.NoteTag?>);
+        returnValue: _i5.Future<_i18.NoteTag?>.value(),
+      ) as _i5.Future<_i18.NoteTag?>);
 
   @override
   bool isHiddenTag(String? tagId) => (super.noSuchMethod(
@@ -734,32 +773,32 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as bool);
 
   @override
-  _i10.Future<void> removeHiddenTag() => (super.noSuchMethod(
+  _i5.Future<void> removeHiddenTag() => (super.noSuchMethod(
         Invocation.method(
           #removeHiddenTag,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<bool> isQuoteHidden(String? quoteId) => (super.noSuchMethod(
+  _i5.Future<bool> isQuoteHidden(String? quoteId) => (super.noSuchMethod(
         Invocation.method(
           #isQuoteHidden,
           [quoteId],
         ),
-        returnValue: _i10.Future<bool>.value(false),
-      ) as _i10.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 
   @override
-  _i10.Future<List<String>> getHiddenQuoteIds() => (super.noSuchMethod(
+  _i5.Future<List<String>> getHiddenQuoteIds() => (super.noSuchMethod(
         Invocation.method(
           #getHiddenQuoteIds,
           [],
         ),
-        returnValue: _i10.Future<List<String>>.value(<String>[]),
-      ) as _i10.Future<List<String>>);
+        returnValue: _i5.Future<List<String>>.value(<String>[]),
+      ) as _i5.Future<List<String>>);
 
   @override
   void refreshQuotes() => super.noSuchMethod(
@@ -771,7 +810,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       );
 
   @override
-  _i10.Stream<List<_i16.Quote>> watchQuotes({
+  _i5.Stream<List<_i17.Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
     int? limit = 20,
@@ -796,11 +835,11 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Stream<List<_i16.Quote>>.empty(),
-      ) as _i10.Stream<List<_i16.Quote>>);
+        returnValue: _i5.Stream<List<_i17.Quote>>.empty(),
+      ) as _i5.Stream<List<_i17.Quote>>);
 
   @override
-  _i10.Future<void> loadMoreQuotes({
+  _i5.Future<void> loadMoreQuotes({
     List<String>? tagIds,
     String? categoryId,
     String? searchQuery,
@@ -808,7 +847,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
     int? refillCount,
-    bool? suppressNotify,
+    bool? suppressNotify = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -825,12 +864,12 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #suppressNotify: suppressNotify,
           },
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> importDataFromMap(
+  _i5.Future<_i4.ImportCleanupStats> importDataFromMap(
     Map<String, dynamic>? data, {
     bool? clearExisting = true,
   }) =>
@@ -840,12 +879,19 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [data],
           {#clearExisting: clearExisting},
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue:
+            _i5.Future<_i4.ImportCleanupStats>.value(_FakeImportCleanupStats_2(
+          this,
+          Invocation.method(
+            #importDataFromMap,
+            [data],
+            {#clearExisting: clearExisting},
+          ),
+        )),
+      ) as _i5.Future<_i4.ImportCleanupStats>);
 
   @override
-  _i10.Future<void> importData(
+  _i5.Future<_i4.ImportCleanupStats> importData(
     String? filePath, {
     bool? clearExisting = true,
   }) =>
@@ -855,30 +901,37 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [filePath],
           {#clearExisting: clearExisting},
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue:
+            _i5.Future<_i4.ImportCleanupStats>.value(_FakeImportCleanupStats_2(
+          this,
+          Invocation.method(
+            #importData,
+            [filePath],
+            {#clearExisting: clearExisting},
+          ),
+        )),
+      ) as _i5.Future<_i4.ImportCleanupStats>);
 
   @override
-  _i10.Future<bool> checkCanExport() => (super.noSuchMethod(
+  _i5.Future<bool> checkCanExport() => (super.noSuchMethod(
         Invocation.method(
           #checkCanExport,
           [],
         ),
-        returnValue: _i10.Future<bool>.value(false),
-      ) as _i10.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 
   @override
-  _i10.Future<bool> validateBackupFile(String? filePath) => (super.noSuchMethod(
+  _i5.Future<bool> validateBackupFile(String? filePath) => (super.noSuchMethod(
         Invocation.method(
           #validateBackupFile,
           [filePath],
         ),
-        returnValue: _i10.Future<bool>.value(false),
-      ) as _i10.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 
   @override
-  _i10.Future<_i2.MergeReport> importDataWithLWWMerge(
+  _i5.Future<_i2.MergeReport> importDataWithLWWMerge(
     Map<String, dynamic>? data, {
     String? sourceDevice,
   }) =>
@@ -888,7 +941,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [data],
           {#sourceDevice: sourceDevice},
         ),
-        returnValue: _i10.Future<_i2.MergeReport>.value(_FakeMergeReport_0(
+        returnValue: _i5.Future<_i2.MergeReport>.value(_FakeMergeReport_0(
           this,
           Invocation.method(
             #importDataWithLWWMerge,
@@ -896,67 +949,77 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             {#sourceDevice: sourceDevice},
           ),
         )),
-      ) as _i10.Future<_i2.MergeReport>);
+      ) as _i5.Future<_i2.MergeReport>);
 
   @override
-  _i10.Future<void> patchQuotesDayPeriod() => (super.noSuchMethod(
+  _i5.Future<void> patchQuotesDayPeriod() => (super.noSuchMethod(
         Invocation.method(
           #patchQuotesDayPeriod,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> migrateDayPeriodToKey() => (super.noSuchMethod(
+  _i5.Future<void> migrateDayPeriodToKey() => (super.noSuchMethod(
         Invocation.method(
           #migrateDayPeriodToKey,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> migrateWeatherToKey() => (super.noSuchMethod(
+  _i5.Future<void> migrateWeatherToKey() => (super.noSuchMethod(
         Invocation.method(
           #migrateWeatherToKey,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<Map<String, dynamic>> checkTagDataConsistency() =>
+  _i5.Future<void> repairOutOfDomainSentiment() => (super.noSuchMethod(
+        Invocation.method(
+          #repairOutOfDomainSentiment,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> checkTagDataConsistency() =>
       (super.noSuchMethod(
         Invocation.method(
           #checkTagDataConsistency,
           [],
         ),
         returnValue:
-            _i10.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
-      ) as _i10.Future<Map<String, dynamic>>);
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
 
   @override
-  _i10.Future<bool> cleanupTagDataInconsistencies() => (super.noSuchMethod(
+  _i5.Future<bool> cleanupTagDataInconsistencies() => (super.noSuchMethod(
         Invocation.method(
           #cleanupTagDataInconsistencies,
           [],
         ),
-        returnValue: _i10.Future<bool>.value(false),
-      ) as _i10.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 
   @override
-  _i10.Future<List<int>> getHourDistributionForSmartPush() =>
+  _i5.Future<List<int>> getHourDistributionForSmartPush() =>
       (super.noSuchMethod(
         Invocation.method(
           #getHourDistributionForSmartPush,
           [],
         ),
-        returnValue: _i10.Future<List<int>>.value(<int>[]),
-      ) as _i10.Future<List<int>>);
+        returnValue: _i5.Future<List<int>>.value(<int>[]),
+      ) as _i5.Future<List<int>>);
 
   @override
   Map<String, dynamic> getQueryPerformanceReport() => (super.noSuchMethod(
@@ -968,7 +1031,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as Map<String, dynamic>);
 
   @override
-  _i10.Future<Map<String, dynamic>?> getLocalDailyQuote(
+  _i5.Future<Map<String, dynamic>?> getLocalDailyQuote(
           {String? offlineQuoteSource = 'tagOnly'}) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -976,11 +1039,11 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [],
           {#offlineQuoteSource: offlineQuoteSource},
         ),
-        returnValue: _i10.Future<Map<String, dynamic>?>.value(),
-      ) as _i10.Future<Map<String, dynamic>?>);
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
 
   @override
-  _i10.Future<Map<String, dynamic>> performDatabaseMaintenance(
+  _i5.Future<Map<String, dynamic>> performDatabaseMaintenance(
           {dynamic Function(String)? onProgress}) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -989,19 +1052,19 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           {#onProgress: onProgress},
         ),
         returnValue:
-            _i10.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
-      ) as _i10.Future<Map<String, dynamic>>);
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
 
   @override
-  _i10.Future<Map<String, dynamic>> getDatabaseHealthInfo() =>
+  _i5.Future<Map<String, dynamic>> getDatabaseHealthInfo() =>
       (super.noSuchMethod(
         Invocation.method(
           #getDatabaseHealthInfo,
           [],
         ),
         returnValue:
-            _i10.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
-      ) as _i10.Future<Map<String, dynamic>>);
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
 
   @override
   String sanitizeOrderBy(
@@ -1014,7 +1077,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           [orderBy],
           {#prefix: prefix},
         ),
-        returnValue: _i13.dummyValue<String>(
+        returnValue: _i14.dummyValue<String>(
           this,
           Invocation.method(
             #sanitizeOrderBy,
@@ -1052,14 +1115,14 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       );
 
   @override
-  _i10.Future<void> updateTagsStreamForParts() => (super.noSuchMethod(
+  _i5.Future<void> updateTagsStreamForParts() => (super.noSuchMethod(
         Invocation.method(
           #updateTagsStreamForParts,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
   void safeNotifyQuotesStreamForParts() => super.noSuchMethod(
@@ -1071,34 +1134,34 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       );
 
   @override
-  _i10.Future<void> init() => (super.noSuchMethod(
+  _i5.Future<void> init() => (super.noSuchMethod(
         Invocation.method(
           #init,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> initForBackgroundReadOnly() => (super.noSuchMethod(
+  _i5.Future<void> initForBackgroundReadOnly() => (super.noSuchMethod(
         Invocation.method(
           #initForBackgroundReadOnly,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> initializeNewDatabase() => (super.noSuchMethod(
+  _i5.Future<void> initializeNewDatabase() => (super.noSuchMethod(
         Invocation.method(
           #initializeNewDatabase,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
   void refreshAllData() => super.noSuchMethod(
@@ -1137,7 +1200,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       );
 
   @override
-  void addListener(_i15.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i16.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -1146,7 +1209,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       );
 
   @override
-  void removeListener(_i15.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i16.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],
@@ -1162,57 +1225,84 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
         ),
         returnValueForMissingStub: null,
       );
+
+  @override
+  _i5.Future<T> runWithSnapshotTransaction<T>(
+          _i5.Future<T> Function(_i3.Transaction)? action) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #runWithSnapshotTransaction,
+          [action],
+        ),
+        returnValue: _i14.ifNotNull(
+              _i14.dummyValueOrNull<T>(
+                this,
+                Invocation.method(
+                  #runWithSnapshotTransaction,
+                  [action],
+                ),
+              ),
+              (T v) => _i5.Future<T>.value(v),
+            ) ??
+            _FakeFuture_3<T>(
+              this,
+              Invocation.method(
+                #runWithSnapshotTransaction,
+                [action],
+              ),
+            ),
+      ) as _i5.Future<T>);
 }
 
 /// A class which mocks [SettingsService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
+class MockSettingsService extends _i1.Mock implements _i19.SettingsService {
   MockSettingsService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.AISettings get aiSettings => (super.noSuchMethod(
+  _i6.AISettings get aiSettings => (super.noSuchMethod(
         Invocation.getter(#aiSettings),
-        returnValue: _FakeAISettings_2(
+        returnValue: _FakeAISettings_4(
           this,
           Invocation.getter(#aiSettings),
         ),
-      ) as _i4.AISettings);
+      ) as _i6.AISettings);
 
   @override
-  _i5.AppSettings get appSettings => (super.noSuchMethod(
+  _i7.AppSettings get appSettings => (super.noSuchMethod(
         Invocation.getter(#appSettings),
-        returnValue: _FakeAppSettings_3(
+        returnValue: _FakeAppSettings_5(
           this,
           Invocation.getter(#appSettings),
         ),
-      ) as _i5.AppSettings);
+      ) as _i7.AppSettings);
 
   @override
-  _i19.ThemeMode get themeMode => (super.noSuchMethod(
+  _i20.ThemeMode get themeMode => (super.noSuchMethod(
         Invocation.getter(#themeMode),
-        returnValue: _i19.ThemeMode.system,
-      ) as _i19.ThemeMode);
+        returnValue: _i20.ThemeMode.system,
+      ) as _i20.ThemeMode);
 
   @override
-  _i6.MultiAISettings get multiAISettings => (super.noSuchMethod(
+  _i8.MultiAISettings get multiAISettings => (super.noSuchMethod(
         Invocation.getter(#multiAISettings),
-        returnValue: _FakeMultiAISettings_4(
+        returnValue: _FakeMultiAISettings_6(
           this,
           Invocation.getter(#multiAISettings),
         ),
-      ) as _i6.MultiAISettings);
+      ) as _i8.MultiAISettings);
 
   @override
-  _i7.LocalAISettings get localAISettings => (super.noSuchMethod(
+  _i9.LocalAISettings get localAISettings => (super.noSuchMethod(
         Invocation.getter(#localAISettings),
-        returnValue: _FakeLocalAISettings_5(
+        returnValue: _FakeLocalAISettings_7(
           this,
           Invocation.getter(#localAISettings),
         ),
-      ) as _i7.LocalAISettings);
+      ) as _i9.LocalAISettings);
 
   @override
   bool get syncSkipConfirm => (super.noSuchMethod(
@@ -1227,16 +1317,58 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as bool);
 
   @override
-  _i20.ThoughterPageMode get exploreAiAssistantMode => (super.noSuchMethod(
-        Invocation.getter(#exploreAiAssistantMode),
-        returnValue: _i20.ThoughterPageMode.chat,
-      ) as _i20.ThoughterPageMode);
+  bool get dontShowAgentExperimentalNotice => (super.noSuchMethod(
+        Invocation.getter(#dontShowAgentExperimentalNotice),
+        returnValue: false,
+      ) as bool);
 
   @override
-  _i20.ThoughterPageMode get noteAiAssistantMode => (super.noSuchMethod(
+  bool get agentMemoryEnabled => (super.noSuchMethod(
+        Invocation.getter(#agentMemoryEnabled),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  String get userNickname => (super.noSuchMethod(
+        Invocation.getter(#userNickname),
+        returnValue: _i14.dummyValue<String>(
+          this,
+          Invocation.getter(#userNickname),
+        ),
+      ) as String);
+
+  @override
+  bool get agentMemoryNoticeShown => (super.noSuchMethod(
+        Invocation.getter(#agentMemoryNoticeShown),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  List<_i21.CityInfo> get recentCities => (super.noSuchMethod(
+        Invocation.getter(#recentCities),
+        returnValue: <_i21.CityInfo>[],
+      ) as List<_i21.CityInfo>);
+
+  @override
+  String get lastSeenReleaseVersion => (super.noSuchMethod(
+        Invocation.getter(#lastSeenReleaseVersion),
+        returnValue: _i14.dummyValue<String>(
+          this,
+          Invocation.getter(#lastSeenReleaseVersion),
+        ),
+      ) as String);
+
+  @override
+  _i22.ThoughterPageMode get exploreAiAssistantMode => (super.noSuchMethod(
+        Invocation.getter(#exploreAiAssistantMode),
+        returnValue: _i22.ThoughterPageMode.chat,
+      ) as _i22.ThoughterPageMode);
+
+  @override
+  _i22.ThoughterPageMode get noteAiAssistantMode => (super.noSuchMethod(
         Invocation.getter(#noteAiAssistantMode),
-        returnValue: _i20.ThoughterPageMode.chat,
-      ) as _i20.ThoughterPageMode);
+        returnValue: _i22.ThoughterPageMode.chat,
+      ) as _i22.ThoughterPageMode);
 
   @override
   bool get reportInsightsUseAI => (super.noSuchMethod(
@@ -1289,7 +1421,7 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
   @override
   String get dailyQuoteProvider => (super.noSuchMethod(
         Invocation.getter(#dailyQuoteProvider),
-        returnValue: _i13.dummyValue<String>(
+        returnValue: _i14.dummyValue<String>(
           this,
           Invocation.getter(#dailyQuoteProvider),
         ),
@@ -1310,7 +1442,7 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
   @override
   String get offlineQuoteSource => (super.noSuchMethod(
         Invocation.getter(#offlineQuoteSource),
-        returnValue: _i13.dummyValue<String>(
+        returnValue: _i14.dummyValue<String>(
           this,
           Invocation.getter(#offlineQuoteSource),
         ),
@@ -1355,9 +1487,18 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
   @override
   String get noteInsertAnimationType => (super.noSuchMethod(
         Invocation.getter(#noteInsertAnimationType),
-        returnValue: _i13.dummyValue<String>(
+        returnValue: _i14.dummyValue<String>(
           this,
           Invocation.getter(#noteInsertAnimationType),
+        ),
+      ) as String);
+
+  @override
+  String get noteCardMediaStyle => (super.noSuchMethod(
+        Invocation.getter(#noteCardMediaStyle),
+        returnValue: _i14.dummyValue<String>(
+          this,
+          Invocation.getter(#noteCardMediaStyle),
         ),
       ) as String);
 
@@ -1398,11 +1539,11 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as List<String>);
 
   @override
-  List<_i25.AnniversaryParticipation> get anniversaryParticipation =>
+  List<_i23.AnniversaryParticipation> get anniversaryParticipation =>
       (super.noSuchMethod(
         Invocation.getter(#anniversaryParticipation),
-        returnValue: <_i25.AnniversaryParticipation>[],
-      ) as List<_i25.AnniversaryParticipation>);
+        returnValue: <_i23.AnniversaryParticipation>[],
+      ) as List<_i23.AnniversaryParticipation>);
 
   @override
   List<int> get anniversaryShownYears => (super.noSuchMethod(
@@ -1431,7 +1572,7 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
   @override
   String get exportFormat => (super.noSuchMethod(
         Invocation.getter(#exportFormat),
-        returnValue: _i13.dummyValue<String>(
+        returnValue: _i14.dummyValue<String>(
           this,
           Invocation.getter(#exportFormat),
         ),
@@ -1450,71 +1591,152 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as bool);
 
   @override
-  _i10.Future<void> setReportInsightsUseAI(bool? enabled) =>
+  _i5.Future<void> setDontShowAgentExperimentalNotice(bool? value) =>
       (super.noSuchMethod(
+        Invocation.method(
+          #setDontShowAgentExperimentalNotice,
+          [value],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setAgentMemoryEnabled(bool? value) => (super.noSuchMethod(
+        Invocation.method(
+          #setAgentMemoryEnabled,
+          [value],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setUserNickname(String? value) => (super.noSuchMethod(
+        Invocation.method(
+          #setUserNickname,
+          [value],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setAgentMemoryNoticeShown(bool? value) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setAgentMemoryNoticeShown,
+          [value],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> addRecentCity(_i21.CityInfo? city) => (super.noSuchMethod(
+        Invocation.method(
+          #addRecentCity,
+          [city],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> removeRecentCity(_i21.CityInfo? city) => (super.noSuchMethod(
+        Invocation.method(
+          #removeRecentCity,
+          [city],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> clearRecentCities() => (super.noSuchMethod(
+        Invocation.method(
+          #clearRecentCities,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setLastSeenReleaseVersion(String? version) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setLastSeenReleaseVersion,
+          [version],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setReportInsightsUseAI(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setReportInsightsUseAI,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setTodayThoughtsUseAI(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setTodayThoughtsUseAI(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setTodayThoughtsUseAI,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setExploreAiAssistantMode(_i20.ThoughterPageMode? mode) =>
+  _i5.Future<void> setExploreAiAssistantMode(_i22.ThoughterPageMode? mode) =>
       (super.noSuchMethod(
         Invocation.method(
           #setExploreAiAssistantMode,
           [mode],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setNoteAiAssistantMode(_i20.ThoughterPageMode? mode) =>
+  _i5.Future<void> setNoteAiAssistantMode(_i22.ThoughterPageMode? mode) =>
       (super.noSuchMethod(
         Invocation.method(
           #setNoteAiAssistantMode,
           [mode],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setSentryEnabled(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setSentryEnabled(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setSentryEnabled,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setSentryDisclosureShown(bool? shown) =>
-      (super.noSuchMethod(
+  _i5.Future<void> setSentryDisclosureShown(bool? shown) => (super.noSuchMethod(
         Invocation.method(
           #setSentryDisclosureShown,
           [shown],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setTrashRetentionDays(
+  _i5.Future<void> setTrashRetentionDays(
     int? days, {
     DateTime? modifiedAt,
   }) =>
@@ -1524,266 +1746,274 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
           [days],
           {#modifiedAt: modifiedAt},
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<bool> applyIncomingTrashSettings(
-          Map<String, dynamic>? incoming) =>
+  _i5.Future<bool> applyIncomingTrashSettings(Map<String, dynamic>? incoming) =>
       (super.noSuchMethod(
         Invocation.method(
           #applyIncomingTrashSettings,
           [incoming],
         ),
-        returnValue: _i10.Future<bool>.value(false),
-      ) as _i10.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 
   @override
-  _i10.Future<void> setPrioritizeBoldContentInCollapse(bool? enabled) =>
+  _i5.Future<void> setPrioritizeBoldContentInCollapse(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setPrioritizeBoldContentInCollapse,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setShowFavoriteButton(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setShowFavoriteButton(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setShowFavoriteButton,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setUseLocalQuotesOnly(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setUseLocalQuotesOnly(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setUseLocalQuotesOnly,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setDailyQuoteProvider(String? provider) =>
+  _i5.Future<void> setDailyQuoteProvider(String? provider) =>
       (super.noSuchMethod(
         Invocation.method(
           #setDailyQuoteProvider,
           [provider],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setApiNinjasCategories(List<String>? categories) =>
+  _i5.Future<void> setApiNinjasCategories(List<String>? categories) =>
       (super.noSuchMethod(
         Invocation.method(
           #setApiNinjasCategories,
           [categories],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setShowNoteEditTime(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setShowNoteEditTime(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setShowNoteEditTime,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setOfflineQuoteSource(String? source) =>
-      (super.noSuchMethod(
+  _i5.Future<void> setOfflineQuoteSource(String? source) => (super.noSuchMethod(
         Invocation.method(
           #setOfflineQuoteSource,
           [source],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setShowExactTime(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setShowExactTime(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setShowExactTime,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setEnableFirstOpenScrollPerfMonitor(bool? enabled) =>
+  _i5.Future<void> setEnableFirstOpenScrollPerfMonitor(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setEnableFirstOpenScrollPerfMonitor,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setNoteListDisableCardShadows(bool? enabled) =>
+  _i5.Future<void> setNoteListDisableCardShadows(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setNoteListDisableCardShadows,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setNoteListDisableBackdropBlur(bool? enabled) =>
+  _i5.Future<void> setNoteListDisableBackdropBlur(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setNoteListDisableBackdropBlur,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAddNoteDialogAutoFocus(bool? enabled) =>
+  _i5.Future<void> setAddNoteDialogAutoFocus(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setAddNoteDialogAutoFocus,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAddNoteDialogDeferAutoMetadata(bool? enabled) =>
+  _i5.Future<void> setAddNoteDialogDeferAutoMetadata(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setAddNoteDialogDeferAutoMetadata,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setNoteInsertAnimationType(String? type) =>
+  _i5.Future<void> setNoteInsertAnimationType(String? type) =>
       (super.noSuchMethod(
         Invocation.method(
           #setNoteInsertAnimationType,
           [type],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setLocale(String? localeCode) => (super.noSuchMethod(
+  _i5.Future<void> setNoteCardMediaStyle(String? style) => (super.noSuchMethod(
+        Invocation.method(
+          #setNoteCardMediaStyle,
+          [style],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setLocale(String? localeCode) => (super.noSuchMethod(
         Invocation.method(
           #setLocale,
           [localeCode],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setEnableHiddenNotes(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setEnableHiddenNotes(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setEnableHiddenNotes,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setRequireBiometricForHidden(bool? enabled) =>
+  _i5.Future<void> setRequireBiometricForHidden(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setRequireBiometricForHidden,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAutoAttachLocation(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setAutoAttachLocation(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setAutoAttachLocation,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAutoAttachWeather(bool? enabled) => (super.noSuchMethod(
+  _i5.Future<void> setAutoAttachWeather(bool? enabled) => (super.noSuchMethod(
         Invocation.method(
           #setAutoAttachWeather,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setExcerptIntentEnabled(bool? enabled) =>
+  _i5.Future<void> setExcerptIntentEnabled(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setExcerptIntentEnabled,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setDefaultAuthor(String? author) => (super.noSuchMethod(
+  _i5.Future<void> setDefaultAuthor(String? author) => (super.noSuchMethod(
         Invocation.method(
           #setDefaultAuthor,
           [author],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setDefaultSource(String? source) => (super.noSuchMethod(
+  _i5.Future<void> setDefaultSource(String? source) => (super.noSuchMethod(
         Invocation.method(
           #setDefaultSource,
           [source],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setDefaultTagIds(List<String>? tagIds) =>
+  _i5.Future<void> setDefaultTagIds(List<String>? tagIds) =>
       (super.noSuchMethod(
         Invocation.method(
           #setDefaultTagIds,
           [tagIds],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> markAnniversaryShown(
+  _i5.Future<void> markAnniversaryShown(
     int? year, {
     DateTime? seenAt,
     String? appVersion,
@@ -1797,147 +2027,161 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
             #appVersion: appVersion,
           },
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAnniversaryAnimationEnabled(bool? enabled) =>
+  _i5.Future<void> setAnniversaryAnimationEnabled(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setAnniversaryAnimationEnabled,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAnniversarySimulatedYear(int? year) =>
+  _i5.Future<void> setAnniversarySimulatedYear(int? year) =>
       (super.noSuchMethod(
         Invocation.method(
           #setAnniversarySimulatedYear,
           [year],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> resetAnniversaryParticipation() => (super.noSuchMethod(
+  _i5.Future<void> setAnniversarySimulationEnabled(
+    bool? enabled, {
+    required int? year,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setAnniversarySimulationEnabled,
+          [enabled],
+          {#year: year},
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> resetAnniversaryParticipation() => (super.noSuchMethod(
         Invocation.method(
           #resetAnniversaryParticipation,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setSkipNonFullscreenEditor(bool? enabled) =>
+  _i5.Future<void> setSkipNonFullscreenEditor(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setSkipNonFullscreenEditor,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setExportFormat(String? format) => (super.noSuchMethod(
+  _i5.Future<void> setExportFormat(String? format) => (super.noSuchMethod(
         Invocation.method(
           #setExportFormat,
           [format],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setSyncSkipConfirm(bool? value) => (super.noSuchMethod(
+  _i5.Future<void> setSyncSkipConfirm(bool? value) => (super.noSuchMethod(
         Invocation.method(
           #setSyncSkipConfirm,
           [value],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setSyncDefaultIncludeMedia(bool? value) =>
+  _i5.Future<void> setSyncDefaultIncludeMedia(bool? value) =>
       (super.noSuchMethod(
         Invocation.method(
           #setSyncDefaultIncludeMedia,
           [value],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> updateAISettings(_i4.AISettings? settings) =>
+  _i5.Future<void> updateAISettings(_i6.AISettings? settings) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateAISettings,
           [settings],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> updateAppSettings(_i5.AppSettings? settings) =>
+  _i5.Future<void> updateAppSettings(_i7.AppSettings? settings) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateAppSettings,
           [settings],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> updateHitokotoType(String? type) => (super.noSuchMethod(
+  _i5.Future<void> updateHitokotoType(String? type) => (super.noSuchMethod(
         Invocation.method(
           #updateHitokotoType,
           [type],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> updateThemeMode(_i19.ThemeMode? mode) =>
-      (super.noSuchMethod(
+  _i5.Future<void> updateThemeMode(_i20.ThemeMode? mode) => (super.noSuchMethod(
         Invocation.method(
           #updateThemeMode,
           [mode],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAppUpgraded() => (super.noSuchMethod(
+  _i5.Future<void> setAppUpgraded() => (super.noSuchMethod(
         Invocation.method(
           #setAppUpgraded,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setInitialDatabaseSetupComplete(bool? isComplete) =>
+  _i5.Future<void> setInitialDatabaseSetupComplete(bool? isComplete) =>
       (super.noSuchMethod(
         Invocation.method(
           #setInitialDatabaseSetupComplete,
           [isComplete],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
   bool isInitialDatabaseSetupComplete() => (super.noSuchMethod(
@@ -1949,15 +2193,15 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as bool);
 
   @override
-  _i10.Future<void> setDatabaseMigrationComplete(bool? isComplete) =>
+  _i5.Future<void> setDatabaseMigrationComplete(bool? isComplete) =>
       (super.noSuchMethod(
         Invocation.method(
           #setDatabaseMigrationComplete,
           [isComplete],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
   bool isDatabaseMigrationComplete() => (super.noSuchMethod(
@@ -1978,80 +2222,89 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as bool);
 
   @override
-  _i10.Future<void> setHasCompletedOnboarding(bool? completed) =>
+  _i5.Future<void> setHasCompletedOnboarding(bool? completed) =>
       (super.noSuchMethod(
         Invocation.method(
           #setHasCompletedOnboarding,
           [completed],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAICardGenerationEnabled(bool? enabled) =>
+  _i5.Future<void> setAICardGenerationEnabled(bool? enabled) =>
       (super.noSuchMethod(
         Invocation.method(
           #setAICardGenerationEnabled,
           [enabled],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> setAppVersion(String? version) => (super.noSuchMethod(
+  _i5.Future<void> setAppVersion(String? version) => (super.noSuchMethod(
         Invocation.method(
           #setAppVersion,
           [version],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> saveMultiAISettings(_i6.MultiAISettings? settings) =>
+  _i5.Future<void> saveMultiAISettings(_i8.MultiAISettings? settings) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveMultiAISettings,
           [settings],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> updateMultiAISettings(_i6.MultiAISettings? settings) =>
+  bool candidateAppSettingsKeyExists() => (super.noSuchMethod(
+        Invocation.method(
+          #candidateAppSettingsKeyExists,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i5.Future<void> updateMultiAISettings(_i8.MultiAISettings? settings) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateMultiAISettings,
           [settings],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> saveLocalAISettings(_i7.LocalAISettings? settings) =>
+  _i5.Future<void> saveLocalAISettings(_i9.LocalAISettings? settings) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveLocalAISettings,
           [settings],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> updateLocalAISettings(_i7.LocalAISettings? settings) =>
+  _i5.Future<void> updateLocalAISettings(_i9.LocalAISettings? settings) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateLocalAISettings,
           [settings],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
   Map<String, dynamic> getAllSettingsForBackup() => (super.noSuchMethod(
@@ -2063,16 +2316,16 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as Map<String, dynamic>);
 
   @override
-  _i10.Future<void> restoreAllSettingsFromBackup(
+  _i5.Future<void> restoreAllSettingsFromBackup(
           Map<String, dynamic>? backupData) =>
       (super.noSuchMethod(
         Invocation.method(
           #restoreAllSettingsFromBackup,
           [backupData],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
   String getOrCreateDeviceId() => (super.noSuchMethod(
@@ -2080,7 +2333,7 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
           #getOrCreateDeviceId,
           [],
         ),
-        returnValue: _i13.dummyValue<String>(
+        returnValue: _i14.dummyValue<String>(
           this,
           Invocation.method(
             #getOrCreateDeviceId,
@@ -2090,16 +2343,16 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as String);
 
   @override
-  _i10.Future<String?> getCustomString(String? key) => (super.noSuchMethod(
+  _i5.Future<String?> getCustomString(String? key) => (super.noSuchMethod(
         Invocation.method(
           #getCustomString,
           [key],
         ),
-        returnValue: _i10.Future<String?>.value(),
-      ) as _i10.Future<String?>);
+        returnValue: _i5.Future<String?>.value(),
+      ) as _i5.Future<String?>);
 
   @override
-  _i10.Future<void> setCustomString(
+  _i5.Future<void> setCustomString(
     String? key,
     String? value,
   ) =>
@@ -2111,12 +2364,12 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
             value,
           ],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  void addListener(_i15.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i16.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -2125,7 +2378,7 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       );
 
   @override
-  void removeListener(_i15.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i16.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],
@@ -2156,25 +2409,25 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAIAnalysisDatabaseService extends _i1.Mock
-    implements _i21.AIAnalysisDatabaseService {
+    implements _i24.AIAnalysisDatabaseService {
   MockAIAnalysisDatabaseService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i10.Future<_i3.Database> get database => (super.noSuchMethod(
+  _i5.Future<_i3.Database> get database => (super.noSuchMethod(
         Invocation.getter(#database),
-        returnValue: _i10.Future<_i3.Database>.value(_FakeDatabase_1(
+        returnValue: _i5.Future<_i3.Database>.value(_FakeDatabase_1(
           this,
           Invocation.getter(#database),
         )),
-      ) as _i10.Future<_i3.Database>);
+      ) as _i5.Future<_i3.Database>);
 
   @override
-  _i10.Stream<List<_i8.AIAnalysis>> get analysesStream => (super.noSuchMethod(
+  _i5.Stream<List<_i10.AIAnalysis>> get analysesStream => (super.noSuchMethod(
         Invocation.getter(#analysesStream),
-        returnValue: _i10.Stream<List<_i8.AIAnalysis>>.empty(),
-      ) as _i10.Stream<List<_i8.AIAnalysis>>);
+        returnValue: _i5.Stream<List<_i10.AIAnalysis>>.empty(),
+      ) as _i5.Stream<List<_i10.AIAnalysis>>);
 
   @override
   bool get hasListeners => (super.noSuchMethod(
@@ -2183,81 +2436,81 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
       ) as bool);
 
   @override
-  _i10.Future<void> init() => (super.noSuchMethod(
+  _i5.Future<void> init() => (super.noSuchMethod(
         Invocation.method(
           #init,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<void> closeDatabase() => (super.noSuchMethod(
+  _i5.Future<void> closeDatabase() => (super.noSuchMethod(
         Invocation.method(
           #closeDatabase,
           [],
         ),
-        returnValue: _i10.Future<void>.value(),
-        returnValueForMissingStub: _i10.Future<void>.value(),
-      ) as _i10.Future<void>);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
-  _i10.Future<_i8.AIAnalysis> saveAnalysis(_i8.AIAnalysis? analysis) =>
+  _i5.Future<_i10.AIAnalysis> saveAnalysis(_i10.AIAnalysis? analysis) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveAnalysis,
           [analysis],
         ),
-        returnValue: _i10.Future<_i8.AIAnalysis>.value(_FakeAIAnalysis_6(
+        returnValue: _i5.Future<_i10.AIAnalysis>.value(_FakeAIAnalysis_8(
           this,
           Invocation.method(
             #saveAnalysis,
             [analysis],
           ),
         )),
-      ) as _i10.Future<_i8.AIAnalysis>);
+      ) as _i5.Future<_i10.AIAnalysis>);
 
   @override
-  _i10.Future<List<_i8.AIAnalysis>> getAllAnalyses() => (super.noSuchMethod(
+  _i5.Future<List<_i10.AIAnalysis>> getAllAnalyses() => (super.noSuchMethod(
         Invocation.method(
           #getAllAnalyses,
           [],
         ),
         returnValue:
-            _i10.Future<List<_i8.AIAnalysis>>.value(<_i8.AIAnalysis>[]),
-      ) as _i10.Future<List<_i8.AIAnalysis>>);
+            _i5.Future<List<_i10.AIAnalysis>>.value(<_i10.AIAnalysis>[]),
+      ) as _i5.Future<List<_i10.AIAnalysis>>);
 
   @override
-  _i10.Future<_i8.AIAnalysis?> getAnalysisById(String? id) =>
+  _i5.Future<_i10.AIAnalysis?> getAnalysisById(String? id) =>
       (super.noSuchMethod(
         Invocation.method(
           #getAnalysisById,
           [id],
         ),
-        returnValue: _i10.Future<_i8.AIAnalysis?>.value(),
-      ) as _i10.Future<_i8.AIAnalysis?>);
+        returnValue: _i5.Future<_i10.AIAnalysis?>.value(),
+      ) as _i5.Future<_i10.AIAnalysis?>);
 
   @override
-  _i10.Future<bool> deleteAnalysis(String? id) => (super.noSuchMethod(
+  _i5.Future<bool> deleteAnalysis(String? id) => (super.noSuchMethod(
         Invocation.method(
           #deleteAnalysis,
           [id],
         ),
-        returnValue: _i10.Future<bool>.value(false),
-      ) as _i10.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 
   @override
-  _i10.Future<bool> deleteAllAnalyses() => (super.noSuchMethod(
+  _i5.Future<bool> deleteAllAnalyses() => (super.noSuchMethod(
         Invocation.method(
           #deleteAllAnalyses,
           [],
         ),
-        returnValue: _i10.Future<bool>.value(false),
-      ) as _i10.Future<bool>);
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
 
   @override
-  _i10.Future<List<_i8.AIAnalysis>> searchAnalysesByType(
+  _i5.Future<List<_i10.AIAnalysis>> searchAnalysesByType(
           String? analysisType) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -2265,57 +2518,57 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
           [analysisType],
         ),
         returnValue:
-            _i10.Future<List<_i8.AIAnalysis>>.value(<_i8.AIAnalysis>[]),
-      ) as _i10.Future<List<_i8.AIAnalysis>>);
+            _i5.Future<List<_i10.AIAnalysis>>.value(<_i10.AIAnalysis>[]),
+      ) as _i5.Future<List<_i10.AIAnalysis>>);
 
   @override
-  _i10.Future<List<_i8.AIAnalysis>> searchAnalyses(String? query) =>
+  _i5.Future<List<_i10.AIAnalysis>> searchAnalyses(String? query) =>
       (super.noSuchMethod(
         Invocation.method(
           #searchAnalyses,
           [query],
         ),
         returnValue:
-            _i10.Future<List<_i8.AIAnalysis>>.value(<_i8.AIAnalysis>[]),
-      ) as _i10.Future<List<_i8.AIAnalysis>>);
+            _i5.Future<List<_i10.AIAnalysis>>.value(<_i10.AIAnalysis>[]),
+      ) as _i5.Future<List<_i10.AIAnalysis>>);
 
   @override
-  _i10.Future<int> restoreFromJson(String? jsonStr) => (super.noSuchMethod(
+  _i5.Future<int> restoreFromJson(String? jsonStr) => (super.noSuchMethod(
         Invocation.method(
           #restoreFromJson,
           [jsonStr],
         ),
-        returnValue: _i10.Future<int>.value(0),
-      ) as _i10.Future<int>);
+        returnValue: _i5.Future<int>.value(0),
+      ) as _i5.Future<int>);
 
   @override
-  _i10.Future<String> exportToJson() => (super.noSuchMethod(
+  _i5.Future<String> exportToJson() => (super.noSuchMethod(
         Invocation.method(
           #exportToJson,
           [],
         ),
-        returnValue: _i10.Future<String>.value(_i13.dummyValue<String>(
+        returnValue: _i5.Future<String>.value(_i14.dummyValue<String>(
           this,
           Invocation.method(
             #exportToJson,
             [],
           ),
         )),
-      ) as _i10.Future<String>);
+      ) as _i5.Future<String>);
 
   @override
-  _i10.Future<List<Map<String, dynamic>>> exportAnalysesAsList() =>
+  _i5.Future<List<Map<String, dynamic>>> exportAnalysesAsList() =>
       (super.noSuchMethod(
         Invocation.method(
           #exportAnalysesAsList,
           [],
         ),
-        returnValue: _i10.Future<List<Map<String, dynamic>>>.value(
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
             <Map<String, dynamic>>[]),
-      ) as _i10.Future<List<Map<String, dynamic>>>);
+      ) as _i5.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i10.Future<List<Map<String, dynamic>>> exportAnalysesPage(
+  _i5.Future<List<Map<String, dynamic>>> exportAnalysesPage(
     int? offset,
     int? limit,
   ) =>
@@ -2327,20 +2580,20 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
             limit,
           ],
         ),
-        returnValue: _i10.Future<List<Map<String, dynamic>>>.value(
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
             <Map<String, dynamic>>[]),
-      ) as _i10.Future<List<Map<String, dynamic>>>);
+      ) as _i5.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i10.Future<int> importAnalysesFromList(
+  _i5.Future<int> importAnalysesFromList(
           List<Map<String, dynamic>>? analyses) =>
       (super.noSuchMethod(
         Invocation.method(
           #importAnalysesFromList,
           [analyses],
         ),
-        returnValue: _i10.Future<int>.value(0),
-      ) as _i10.Future<int>);
+        returnValue: _i5.Future<int>.value(0),
+      ) as _i5.Future<int>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -2352,7 +2605,7 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
       );
 
   @override
-  void addListener(_i15.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i16.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -2361,7 +2614,7 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
       );
 
   @override
-  void removeListener(_i15.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i16.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],
@@ -2382,21 +2635,21 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
 /// A class which mocks [LocalSendProvider].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLocalSendProvider extends _i1.Mock implements _i22.LocalSendProvider {
+class MockLocalSendProvider extends _i1.Mock implements _i25.LocalSendProvider {
   MockLocalSendProvider() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  Map<String, _i22.SendSession> get sessions => (super.noSuchMethod(
+  Map<String, _i25.SendSession> get sessions => (super.noSuchMethod(
         Invocation.getter(#sessions),
-        returnValue: <String, _i22.SendSession>{},
-      ) as Map<String, _i22.SendSession>);
+        returnValue: <String, _i25.SendSession>{},
+      ) as Map<String, _i25.SendSession>);
 
   @override
-  _i10.Future<String> startSession({
-    required _i23.Device? target,
-    required List<_i24.File>? files,
+  _i5.Future<String> startSession({
+    required _i26.Device? target,
+    required List<_i27.File>? files,
     bool? background = true,
     void Function(
       int,
@@ -2416,7 +2669,7 @@ class MockLocalSendProvider extends _i1.Mock implements _i22.LocalSendProvider {
             #onSessionCreated: onSessionCreated,
           },
         ),
-        returnValue: _i10.Future<String>.value(_i13.dummyValue<String>(
+        returnValue: _i5.Future<String>.value(_i14.dummyValue<String>(
           this,
           Invocation.method(
             #startSession,
@@ -2430,14 +2683,14 @@ class MockLocalSendProvider extends _i1.Mock implements _i22.LocalSendProvider {
             },
           ),
         )),
-      ) as _i10.Future<String>);
+      ) as _i5.Future<String>);
 
   @override
-  _i22.SendSession? getSession(String? sessionId) =>
+  _i25.SendSession? getSession(String? sessionId) =>
       (super.noSuchMethod(Invocation.method(
         #getSession,
         [sessionId],
-      )) as _i22.SendSession?);
+      )) as _i25.SendSession?);
 
   @override
   void cancelSession(String? sessionId) => super.noSuchMethod(
