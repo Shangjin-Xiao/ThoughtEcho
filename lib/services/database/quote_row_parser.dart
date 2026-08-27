@@ -18,22 +18,39 @@ List<Quote> _parseQuoteRows(
   Map<String, List<String>>? tagsByQuoteId,
 }) {
   final quotes = <Quote>[];
-  final skipped = <String>[];
+  // 只留固定长度的预览 + 计数：一批全是坏行时，逐行打日志会把「限量」这件事本身
+  // 架空，异常文本里还带着原始的非法字段值。
+  final skippedPreview = <String>[];
+  var skippedCount = 0;
+  String? firstReason;
 
   for (final map in maps) {
-    final quote = _tryParseQuoteRow(map, tagsByQuoteId: tagsByQuoteId);
+    Quote? quote;
+    try {
+      quote = _tryParseQuoteRow(map, tagsByQuoteId: tagsByQuoteId);
+    } catch (e) {
+      firstReason ??= _logSafeText(e.toString());
+      quote = null;
+    }
+
     if (quote != null) {
       quotes.add(quote);
-    } else {
-      skipped.add(_shortRowId(map['id']));
+      continue;
+    }
+
+    skippedCount++;
+    if (skippedPreview.length < _skippedPreviewLimit) {
+      skippedPreview.add(_shortRowId(map['id']));
     }
   }
 
-  if (skipped.isNotEmpty) {
+  if (skippedCount > 0) {
+    final omitted = skippedCount - skippedPreview.length;
     logWarning(
-      '跳过 ${skipped.length} 条无法解析的笔记（数据不符合本应用的字段要求）: '
-      '${skipped.take(10).join(', ')}'
-      '${skipped.length > 10 ? ' …另有 ${skipped.length - 10} 条' : ''}',
+      '跳过 $skippedCount 条无法解析的笔记（数据不符合本应用的字段要求）: '
+      '${skippedPreview.join(', ')}'
+      '${omitted > 0 ? ' …另有 $omitted 条' : ''}'
+      '${firstReason != null ? '；首个原因: $firstReason' : ''}',
       source: 'QuoteRowParser',
     );
   }
@@ -41,29 +58,39 @@ List<Quote> _parseQuoteRows(
   return quotes;
 }
 
-/// 单行反序列化；失败返回 null 由调用方决定怎么处理。
+/// 单行反序列化；解析不了就抛给调用方，由 [_parseQuoteRows] 统一计数和记录。
+///
+/// 这里**不打日志**：一行一条的话，几千行坏数据就能把日志刷爆，而异常文本里还带着
+/// 原始的非法字段值。原因只在汇总那一条里报一次。
 Quote? _tryParseQuoteRow(
   Map<String, Object?> map, {
   Map<String, List<String>>? tagsByQuoteId,
 }) {
-  try {
-    if (tagsByQuoteId == null) {
-      return Quote.fromJson(Map<String, dynamic>.from(map));
-    }
-    // id 缺失或不是字符串时不能硬转，那本身就是一行坏数据。
-    final quoteId = map['id'];
-    if (quoteId is! String) {
-      return null;
-    }
-    final mutableMap = Map<String, dynamic>.from(map);
-    mutableMap['tag_ids'] = (tagsByQuoteId[quoteId] ?? const <String>[]).join(
-      ',',
-    );
-    return Quote.fromJson(mutableMap);
-  } catch (e) {
-    logDebug('笔记行解析失败，已跳过: $e', source: 'QuoteRowParser');
+  if (tagsByQuoteId == null) {
+    return Quote.fromJson(Map<String, dynamic>.from(map));
+  }
+  // id 缺失或不是字符串时不能硬转，那本身就是一行坏数据。
+  final quoteId = map['id'];
+  if (quoteId is! String) {
     return null;
   }
+  final mutableMap = Map<String, dynamic>.from(map);
+  mutableMap['tag_ids'] = (tagsByQuoteId[quoteId] ?? const <String>[]).join(
+    ',',
+  );
+  return Quote.fromJson(mutableMap);
+}
+
+/// 汇总日志里最多列几个行 id。
+const int _skippedPreviewLimit = 10;
+
+/// 异常文本的日志安全形式：去控制字符 + 限长（里面会带上原始的非法字段值）。
+String _logSafeText(String text) {
+  const maxLength = 120;
+  final cleaned = text.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), ' ').trim();
+  return cleaned.length > maxLength
+      ? '${cleaned.substring(0, maxLength)}…'
+      : cleaned;
 }
 
 /// 行 id 的日志安全形式：id 也可能来自外来数据，限长并去掉控制字符。

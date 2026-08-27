@@ -75,6 +75,43 @@ void main() {
     expect(await service.getUserQuotes(), isEmpty);
   });
 
+  test('id 是 BLOB 的行也只丢自己：预处理阶段的强转不能绕过逐行兜底', () async {
+    // 构建 quoteIds / 标签映射那几步原来硬转 `as String`，会在 _parseQuoteRows
+    // 还没轮到之前就抛出来，把整批查询带走。
+    //
+    // 必须用 BLOB 才复现得了：TEXT 列有 TEXT 亲和性，塞进去的整数会被 SQLite 转成
+    // 字符串读回来，只有 BLOB 原样保留（读出来是 Uint8List）。
+    await insertRow('good-1', '正常的笔记', '2026-08-22T17:40:00.000Z');
+    await db.rawInsert(
+      "INSERT INTO quotes (id, content, date, last_modified) "
+      "VALUES (x'DEADBEEF', ?, ?, ?)",
+      [
+        '这一行的 id 是 BLOB',
+        '2026-08-21T17:40:00.000Z',
+        '2026-08-21T17:40:00.000Z',
+      ],
+    );
+
+    final quotes = await service.getUserQuotes();
+
+    expect(quotes.map((q) => q.id), contains('good-1'));
+  });
+
+  test('关联表里的坏 tag_id 同样不能带走整批查询', () async {
+    // 坏的 quote_id 会被 `IN (...)` 直接筛掉，真正能进到映射构建里的是「quote_id
+    // 正常、tag_id 是 BLOB」这种行——原来那句 `tagMap['tag_id'] as String` 会在
+    // 这里抛出来。
+    await insertRow('good-1', '正常的笔记', '2026-08-22T17:40:00.000Z');
+    await db.rawInsert(
+      "INSERT INTO quote_tags (quote_id, tag_id) VALUES (?, x'DEADBEEF')",
+      ['good-1'],
+    );
+
+    final quotes = await service.getUserQuotes();
+
+    expect(quotes.map((q) => q.id), contains('good-1'));
+  });
+
   test('按内容搜索也走同一个兜底', () async {
     await insertRow('good-1', '找得到的笔记', '2026-08-22T17:40:00.000Z');
     await insertRow('bad-date', '找得到的笔记但日期坏了', '不是日期');
