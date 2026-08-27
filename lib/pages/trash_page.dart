@@ -214,6 +214,12 @@ class _TrashPageState extends State<TrashPage> {
     try {
       final selected = await showModalBottomSheet<int>(
         context: context,
+        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
+          ),
+        ),
         builder: (context) => SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -223,12 +229,27 @@ class _TrashPageState extends State<TrashPage> {
               children: [
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: Text(
-                    l10n.trashRetentionPeriod,
-                    style: theme.textTheme.titleLarge,
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.trashRetentionPeriod,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        tooltip: MaterialLocalizations.of(context)
+                            .closeButtonTooltip,
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 8),
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
                   leading: const Icon(Icons.history_toggle_off_rounded),

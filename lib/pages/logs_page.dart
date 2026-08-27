@@ -837,6 +837,12 @@ class _LogsPageState extends State<LogsPage> {
                       },
                       child: Text(AppLocalizations.of(context).logFilterReset),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      tooltip:
+                          MaterialLocalizations.of(context).closeButtonTooltip,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ],
                 ),
               ),
