@@ -1098,6 +1098,13 @@ class AppTheme with ChangeNotifier {
       ),
 
       // 浮动操作按钮使用主题色系
+      // 占位符降一档，理由见暗色那份同名注释。
+      //
+      // **亮色这条原本整个没有 `inputDecorationTheme`**（只有暗色有），
+      // 所以这里是新加的一整项，不是 copyWith 追加。两条路径本来就不对称，
+      // 加的时候别只改一边。
+      inputDecorationTheme: baseTheme.inputDecorationTheme
+          .copyWith(hintStyle: textTheme.bodyMedium),
       floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
@@ -1189,6 +1196,9 @@ class AppTheme with ChangeNotifier {
     );
 
     // 返回主题，确保使用原始的colorScheme，并额外配置控件主题
+    // 和亮色那条对齐：排版加工只做一次，`textTheme` 和 `hintStyle` 读同一份，
+    // 免得两处各算一次、将来改了一处漏另一处。
+    final darkTextTheme = _styledTextTheme(form, baseTheme.textTheme);
     return _cachedDarkThemeData = baseTheme.copyWith(
       colorScheme: colorScheme, // 重新应用原始colorScheme，确保自定义颜色不被修改
       // 显式配置 Switch 主题，确保使用自定义主题色
@@ -1346,6 +1356,15 @@ class AppTheme with ChangeNotifier {
       ),
       // 配置输入框装饰主题
       inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
+        // **占位符降一档，全局一处。**
+        //
+        // `TextField` 的 hint 默认跟输入文字同一级（`bodyLarge`），衬线风格下就是
+        // 17px w600——和笔记正文一模一样的分量。可占位符是 chrome，不是内容：
+        // 记录页那个「搜索笔记…」看着和它下面的笔记正文一样重，读起来像标题。
+        //
+        // 写在主题里而不是逐个 `hintStyle:`：全仓库有二十多处 `hintText` 没给样式，
+        // 逐点改既漏又会漂。输入文字本身不动——那是用户敲进去的内容，该有内容的分量。
+        hintStyle: darkTextTheme.bodyMedium,
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputRadius),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
@@ -1372,7 +1391,7 @@ class AppTheme with ChangeNotifier {
       extensions: _extensionsFor(form, colorScheme, Brightness.dark),
 
       // Windows 平台字体优化
-      textTheme: _styledTextTheme(form, baseTheme.textTheme),
+      textTheme: darkTextTheme,
       primaryTextTheme: _styledTextTheme(form, baseTheme.primaryTextTheme),
     );
   }
