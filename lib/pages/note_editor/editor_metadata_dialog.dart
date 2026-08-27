@@ -7,7 +7,6 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
     final l10n = AppLocalizations.of(context);
     await showModalBottomSheet(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: theme.colorScheme.surface,

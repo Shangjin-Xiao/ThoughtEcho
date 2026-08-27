@@ -109,16 +109,16 @@
       
       --rule: #E5DFC9;
       --rule-light: #EFEBDC;
-      --shadow-sm: 0 2px 8px rgba(28, 35, 43, 0.04);
-      --shadow-md: 0 8px 24px rgba(28, 35, 43, 0.06);
-      --shadow-lg: 0 16px 40px rgba(28, 35, 43, 0.08);
+      --shadow-sm: 0 1px 3px rgba(28, 35, 43, 0.04);
+      --shadow-md: 0 4px 16px rgba(28, 35, 43, 0.06);
+      --shadow-lg: 0 12px 32px rgba(28, 35, 43, 0.08);
 
       --font-serif: 'Newsreader', 'Noto Serif SC', Georgia, serif;
       --font-sans: 'Plus Jakarta Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
       --radius-sm: 4px;
       --radius-md: 8px;
       --radius-lg: 12px;
-      --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     [data-theme="dark"] {
@@ -146,9 +146,9 @@
       
       --rule: #2E3846;
       --rule-light: #252F3C;
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
-      --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
+      --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
     }
 
     /* ==========================================================================
@@ -173,18 +173,18 @@
       line-height: 1.8;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      transition: background-color 0.3s ease, color 0.3s ease;
+      transition: background-color 0.25s ease, color 0.25s ease;
       overflow-x: hidden;
     }
 
-    /* Stationery Ruled Dots Background */
+    /* Subtle Paper Grid */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
-      background-image: radial-gradient(var(--rule) 0.75px, transparent 0.75px);
+      background-image: radial-gradient(var(--rule) 0.65px, transparent 0.65px);
       background-size: 24px 24px;
-      opacity: 0.4;
+      opacity: 0.35;
       pointer-events: none;
       z-index: 0;
     }
@@ -199,7 +199,7 @@
 
     .container {
       width: 100%;
-      max-width: 1080px;
+      max-width: 1040px;
       margin: 0 auto;
       padding: 0 24px;
       position: relative;
@@ -217,15 +217,15 @@
     .nav-header {
       position: sticky;
       top: 0;
-      background: rgba(247, 245, 238, 0.92);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: rgba(247, 245, 238, 0.94);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--rule);
       z-index: 100;
-      transition: background 0.3s ease;
+      transition: background 0.25s ease;
     }
     [data-theme="dark"] .nav-header {
-      background: rgba(24, 29, 36, 0.92);
+      background: rgba(24, 29, 36, 0.94);
     }
 
     .nav-inner {
@@ -255,20 +255,20 @@
     .brand-badge {
       font-family: var(--font-sans);
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--teal);
       background: var(--teal-light);
       border: 1px solid var(--teal-border);
       padding: 2px 6px;
       border-radius: var(--radius-sm);
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
       white-space: nowrap;
     }
 
     .nav-menu {
       display: flex;
       align-items: center;
-      gap: 22px;
+      gap: 24px;
       font-family: var(--font-sans);
       font-size: 0.88rem;
       font-weight: 500;
@@ -306,16 +306,20 @@
     }
     .theme-toggle-btn {
       width: 36px;
-      font-size: 1.05rem;
+      padding: 0;
+    }
+    .theme-toggle-btn svg {
+      width: 17px;
+      height: 17px;
     }
     .lang-toggle-btn {
       padding: 0 10px;
       font-size: 0.82rem;
-      font-weight: 700;
+      font-weight: 600;
       letter-spacing: 0.02em;
     }
     .theme-toggle-btn:hover, .lang-toggle-btn:hover {
-      border-color: var(--ink);
+      border-color: var(--ink-secondary);
       color: var(--ink);
     }
 
@@ -331,7 +335,7 @@
       align-items: center;
       gap: 6px;
       transition: var(--transition);
-      box-shadow: 0 2px 6px rgba(13, 116, 107, 0.2);
+      box-shadow: 0 2px 6px rgba(13, 116, 107, 0.18);
       white-space: nowrap;
     }
     .btn-nav-primary:hover {
@@ -350,30 +354,20 @@
     .hero-eyebrow {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
       font-family: var(--font-sans);
-      font-size: 0.8rem;
-      font-weight: 700;
+      font-size: 0.78rem;
+      font-weight: 600;
       color: var(--amber);
       background: var(--amber-light);
       border: 1px solid var(--amber-border);
-      padding: 4px 14px;
-      border-radius: 20px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      padding: 3px 12px;
+      border-radius: 16px;
+      letter-spacing: 0.06em;
       margin-bottom: 22px;
     }
 
-    .hero-eyebrow-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--amber);
-      animation: pulse 2s infinite;
-    }
-
     .typewriter-stage {
-      min-height: 105px;
+      min-height: 96px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -382,18 +376,19 @@
 
     .hero-title {
       font-family: var(--font-serif);
-      font-size: clamp(2rem, 4.4vw, 3.4rem);
+      font-size: clamp(2.1rem, 4.5vw, 3.2rem);
       font-weight: 700;
       line-height: 1.28;
       color: var(--ink);
       letter-spacing: -0.015em;
       text-wrap: balance;
-      max-width: 860px;
+      max-width: 840px;
+      margin: 0 auto;
     }
 
     .cursor {
       display: inline-block;
-      width: 3.5px;
+      width: 3px;
       height: 1.15em;
       background: var(--teal);
       vertical-align: middle;
@@ -401,11 +396,16 @@
       animation: blink 1s infinite;
     }
 
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
     .hero-subtitle {
-      font-size: 1.15rem;
+      font-size: 1.12rem;
       color: var(--ink-secondary);
       line-height: 1.85;
-      max-width: 720px;
+      max-width: 680px;
       margin: 0 auto 34px;
       text-wrap: balance;
     }
@@ -414,39 +414,39 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
       flex-wrap: wrap;
-      margin-bottom: 36px;
+      margin-bottom: 38px;
     }
 
     .btn-hero-main {
       font-family: var(--font-sans);
-      font-size: 0.98rem;
+      font-size: 0.95rem;
       font-weight: 600;
       color: #FFFFFF;
       background: var(--teal);
-      padding: 12px 26px;
+      padding: 11px 24px;
       border-radius: var(--radius-sm);
       display: inline-flex;
       align-items: center;
       gap: 8px;
       transition: var(--transition);
-      box-shadow: 0 4px 14px rgba(13, 116, 107, 0.25);
+      box-shadow: 0 3px 10px rgba(13, 116, 107, 0.2);
     }
     .btn-hero-main:hover {
       background: var(--teal-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(13, 116, 107, 0.35);
+      transform: translateY(-1px);
+      box-shadow: 0 5px 16px rgba(13, 116, 107, 0.28);
     }
 
     .btn-hero-secondary {
       font-family: var(--font-sans);
-      font-size: 0.98rem;
+      font-size: 0.95rem;
       font-weight: 600;
       color: var(--ink);
       background: var(--card-bg);
       border: 1px solid var(--rule);
-      padding: 12px 22px;
+      padding: 11px 20px;
       border-radius: var(--radius-sm);
       display: inline-flex;
       align-items: center;
@@ -469,9 +469,9 @@
       font-size: 0.84rem;
       color: var(--ink-muted);
       border-top: 1px dashed var(--rule);
-      max-width: 760px;
+      max-width: 740px;
       margin: 0 auto;
-      padding-top: 18px;
+      padding-top: 20px;
     }
 
     .trust-item {
@@ -490,13 +490,13 @@
        Scenarios Section (3 Clean Stationery Cards)
        ========================================================================== */
     .scenarios-section {
-      padding: 50px 0 70px;
+      padding: 56px 0 68px;
     }
 
     .scenarios-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
+      gap: 22px;
     }
 
     .scenario-card {
@@ -511,7 +511,7 @@
       transition: var(--transition);
     }
     .scenario-card:hover {
-      transform: translateY(-3px);
+      transform: translateY(-2px);
       box-shadow: var(--shadow-md);
       border-color: var(--teal-border);
     }
@@ -519,17 +519,17 @@
     .scenario-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
       font-family: var(--font-sans);
       font-size: 0.74rem;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--teal);
       background: var(--teal-light);
       border: 1px solid var(--teal-border);
-      padding: 3px 8px;
+      padding: 2px 8px;
       border-radius: var(--radius-sm);
       margin-bottom: 14px;
       width: fit-content;
+      letter-spacing: 0.02em;
     }
 
     .scenario-title {
@@ -538,6 +538,7 @@
       font-weight: 700;
       color: var(--ink);
       margin-bottom: 10px;
+      line-height: 1.35;
     }
 
     .scenario-desc {
@@ -554,6 +555,13 @@
       padding: 14px;
       font-size: 0.88rem;
       line-height: 1.65;
+    }
+
+    .preview-topic-meta {
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+      margin-bottom: 6px;
     }
 
     .preview-quote-box {
@@ -574,7 +582,7 @@
     }
 
     .preview-card-shell {
-      border: 1.5px solid var(--teal-border);
+      border: 1px solid var(--teal-border);
       border-radius: var(--radius-sm);
       background: var(--card-bg);
       padding: 12px;
@@ -587,7 +595,7 @@
       margin-bottom: 6px;
       font-family: var(--font-sans);
       font-size: 0.76rem;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--teal);
     }
     .preview-actions {
@@ -638,20 +646,20 @@
        Four Core Pillars Section
        ========================================================================== */
     .pillars-section {
-      padding: 70px 0;
+      padding: 68px 0;
       border-top: 1px solid var(--rule);
     }
 
     .section-header {
       text-align: center;
-      max-width: 680px;
-      margin: 0 auto 50px;
+      max-width: 660px;
+      margin: 0 auto 46px;
     }
 
     .section-eyebrow {
       font-family: var(--font-sans);
-      font-size: 0.8rem;
-      font-weight: 700;
+      font-size: 0.78rem;
+      font-weight: 600;
       color: var(--teal);
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -660,61 +668,61 @@
 
     .section-title {
       font-family: var(--font-serif);
-      font-size: clamp(1.75rem, 3.4vw, 2.3rem);
+      font-size: clamp(1.7rem, 3.2vw, 2.2rem);
       font-weight: 700;
       color: var(--ink);
       line-height: 1.3;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .section-desc {
-      font-size: 1.05rem;
+      font-size: 1.02rem;
       color: var(--ink-secondary);
-      line-height: 1.8;
+      line-height: 1.75;
     }
 
     .pillars-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
+      gap: 22px;
     }
 
     .pillar-box {
       background: var(--card-bg);
       border: 1px solid var(--rule);
       border-radius: var(--radius-md);
-      padding: 32px 26px;
+      padding: 28px 24px;
       transition: var(--transition);
       position: relative;
     }
     .pillar-box:hover {
-      transform: translateY(-3px);
+      transform: translateY(-2px);
       box-shadow: var(--shadow-md);
       border-color: var(--ink-secondary);
     }
 
-    .pillar-num {
-      font-family: var(--font-serif);
-      font-size: 1.3rem;
-      font-weight: 700;
+    .pillar-tagline {
+      font-family: var(--font-sans);
+      font-size: 0.76rem;
+      font-weight: 600;
       color: var(--amber);
-      margin-bottom: 12px;
-      font-style: italic;
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
     }
 
     .pillar-box-title {
       font-family: var(--font-serif);
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: var(--ink);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .pillar-box-text {
-      font-size: 0.96rem;
+      font-size: 0.94rem;
       color: var(--ink-secondary);
       line-height: 1.75;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .pillar-feature-tag {
@@ -722,11 +730,11 @@
       align-items: center;
       gap: 6px;
       font-family: var(--font-sans);
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: var(--teal);
       background: var(--teal-light);
       border: 1px solid var(--teal-border);
-      padding: 3px 9px;
+      padding: 2px 8px;
       border-radius: var(--radius-sm);
       font-weight: 500;
     }
@@ -735,7 +743,7 @@
        Comparison Matrix (Objective Design Differences)
        ========================================================================== */
     .compare-section {
-      padding: 70px 0;
+      padding: 68px 0;
       border-top: 1px solid var(--rule);
       background: var(--card-inner);
     }
@@ -758,14 +766,14 @@
     }
 
     .compare-table th, .compare-table td {
-      padding: 16px 18px;
+      padding: 15px 18px;
       border-bottom: 1px solid var(--rule);
     }
 
     .compare-table th {
       font-family: var(--font-sans);
-      font-size: 0.85rem;
-      font-weight: 700;
+      font-size: 0.84rem;
+      font-weight: 600;
       background: var(--bg);
       color: var(--ink);
     }
@@ -781,17 +789,17 @@
     .compare-table th.highlight {
       border-top: 2px solid var(--teal);
       color: var(--teal);
-      font-size: 0.95rem;
+      font-size: 0.92rem;
     }
     .compare-table tr:last-child td.highlight {
       border-bottom: 2px solid var(--teal);
     }
 
     /* ==========================================================================
-       Supported Models & Open Compatibility
+       Supported Models (Minimalist Typographic Badges)
        ========================================================================== */
     .models-section {
-      padding: 70px 0;
+      padding: 68px 0;
       border-top: 1px solid var(--rule);
     }
 
@@ -799,22 +807,21 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 12px;
-      max-width: 860px;
-      margin: 0 auto 28px;
+      gap: 10px;
+      max-width: 820px;
+      margin: 0 auto 24px;
     }
 
     .model-badge-pill {
       background: var(--card-bg);
       border: 1px solid var(--rule);
       border-radius: var(--radius-sm);
-      padding: 10px 18px;
+      padding: 8px 16px;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
       font-family: var(--font-sans);
-      font-size: 0.9rem;
-      font-weight: 600;
+      font-size: 0.88rem;
+      font-weight: 500;
       color: var(--ink);
       transition: var(--transition);
       box-shadow: var(--shadow-sm);
@@ -822,38 +829,36 @@
     .model-badge-pill:hover {
       border-color: var(--teal);
       color: var(--teal);
-      transform: translateY(-2px);
-    }
-    .model-badge-icon {
-      font-size: 1.15rem;
+      transform: translateY(-1px);
     }
 
     .models-footer-note {
       text-align: center;
-      margin-top: 20px;
+      margin-top: 16px;
       font-family: var(--font-sans);
-      font-size: 0.86rem;
+      font-size: 0.84rem;
       color: var(--ink-secondary);
-      max-width: 680px;
+      max-width: 660px;
       margin-left: auto;
       margin-right: auto;
+      line-height: 1.6;
     }
 
     /* ==========================================================================
        FAQ Section
        ========================================================================== */
     .faq-section {
-      padding: 70px 0;
+      padding: 68px 0;
       border-top: 1px solid var(--rule);
       background: var(--card-inner);
     }
 
     .faq-list {
-      max-width: 820px;
+      max-width: 800px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .faq-item {
@@ -865,10 +870,10 @@
     }
 
     .faq-question {
-      padding: 18px 22px;
+      padding: 16px 20px;
       font-family: var(--font-serif);
-      font-size: 1.08rem;
-      font-weight: 700;
+      font-size: 1.05rem;
+      font-weight: 600;
       color: var(--ink);
       cursor: pointer;
       display: flex;
@@ -883,7 +888,7 @@
 
     .faq-icon {
       font-family: var(--font-sans);
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       color: var(--ink-muted);
       transition: transform 0.2s ease;
       margin-left: 12px;
@@ -896,12 +901,12 @@
 
     .faq-answer {
       display: none;
-      padding: 0 22px 20px;
-      font-size: 0.95rem;
-      line-height: 1.8;
+      padding: 0 20px 18px;
+      font-size: 0.94rem;
+      line-height: 1.75;
       color: var(--ink-secondary);
       border-top: 1px solid var(--rule-light);
-      padding-top: 14px;
+      padding-top: 12px;
     }
     .faq-item.open .faq-answer {
       display: block;
@@ -911,7 +916,7 @@
        Conversion Footer / CTA Section
        ========================================================================== */
     .cta-section {
-      padding: 80px 0;
+      padding: 72px 0;
       text-align: center;
       border-top: 1px solid var(--rule);
       position: relative;
@@ -921,31 +926,31 @@
       background: var(--card-bg);
       border: 1px solid var(--rule);
       border-radius: var(--radius-lg);
-      padding: 50px 32px;
-      max-width: 820px;
+      padding: 46px 28px;
+      max-width: 780px;
       margin: 0 auto;
       box-shadow: var(--shadow-md);
     }
 
     .cta-title {
       font-family: var(--font-serif);
-      font-size: clamp(1.85rem, 3.6vw, 2.6rem);
+      font-size: clamp(1.75rem, 3.4vw, 2.4rem);
       font-weight: 700;
       color: var(--ink);
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .cta-subtitle {
-      font-size: 1.12rem;
+      font-size: 1.08rem;
       color: var(--ink-secondary);
-      max-width: 600px;
-      margin: 0 auto 32px;
+      max-width: 560px;
+      margin: 0 auto 28px;
       text-wrap: balance;
     }
 
     .footer-bar {
       border-top: 1px solid var(--rule);
-      padding: 32px 0;
+      padding: 28px 0;
       text-align: center;
       font-family: var(--font-sans);
       font-size: 0.84rem;
@@ -955,8 +960,8 @@
     .footer-links {
       display: flex;
       justify-content: center;
-      gap: 18px;
-      margin-bottom: 10px;
+      gap: 16px;
+      margin-bottom: 8px;
       flex-wrap: wrap;
     }
     .footer-links a {
@@ -968,35 +973,20 @@
     }
 
     /* ==========================================================================
-       Animations & Responsive Styles
+       Responsive Styles
        ========================================================================== */
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.3); opacity: 0.7; }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     @media (max-width: 880px) {
       .scenarios-grid { grid-template-columns: 1fr; }
       .pillars-grid { grid-template-columns: 1fr; }
       .nav-menu { display: none; }
-      .typewriter-stage { min-height: 85px; }
+      .typewriter-stage { min-height: 80px; }
     }
 
     @media (max-width: 600px) {
-      .cta-card { padding: 32px 18px; }
+      .cta-card { padding: 30px 16px; }
       .brand-badge { display: none; }
       .brand-title { font-size: 1.12rem; }
-      .hero-trust-bar { gap: 14px; }
+      .hero-trust-bar { gap: 12px; }
     }
   </style>
 </head>
@@ -1025,7 +1015,7 @@
         </li>
         <li>
           <a href="#pillars">
-            <span class="content-zh">核心价值</span>
+            <span class="content-zh">核心原则</span>
             <span class="content-en">Principles</span>
           </a>
         </li>
@@ -1051,7 +1041,10 @@
 
       <div class="nav-actions">
         <button id="themeToggle" class="theme-toggle-btn" title="切换深浅主题" aria-label="Toggle theme">
-          🌙
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <!-- Moon Icon (shown in light mode) -->
+          <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
         </button>
         <button id="langToggle" class="lang-toggle-btn" title="切换语言" aria-label="Switch language">
           <span id="langText">EN</span>
@@ -1068,6 +1061,11 @@
   <!-- Hero Section -->
   <section class="hero-section">
     <div class="container">
+      <div class="hero-eyebrow">
+        <span class="content-zh">心迹专属 AI 伴写伙伴</span>
+        <span class="content-en">AI WRITING COMPANION</span>
+      </div>
+
       <div class="typewriter-stage">
         <h1 class="hero-title"><span id="typewriterText">翻阅旧日片羽，聊聊当下所想。</span><span class="cursor"></span></h1>
       </div>
@@ -1135,8 +1133,8 @@
         <div class="scenario-card">
           <div>
             <span class="scenario-badge">
-              <span class="content-zh">🔍 场景一 · 灵感打捞</span>
-              <span class="content-en">🔍 Scenario 1 · Note Retrieval</span>
+              <span class="content-zh">场景一 · 灵感打捞</span>
+              <span class="content-en">Scenario 1 · Note Retrieval</span>
             </span>
             <h3 class="scenario-title">
               <span class="content-zh">打捞旧札记 · 与过去的思考重逢</span>
@@ -1148,18 +1146,18 @@
             </p>
           </div>
           <div class="scenario-preview">
-            <div style="font-size: 0.8rem; color: var(--ink-muted); margin-bottom: 6px;">
-              <span class="content-zh">💬 探讨：“时间与遗忘”</span>
-              <span class="content-en">💬 Topic: "Time & Memory"</span>
+            <div class="preview-topic-meta">
+              <span class="content-zh">探讨：“时间与遗忘”</span>
+              <span class="content-en">Topic: "Time & Memory"</span>
             </div>
-            <p style="color: var(--ink-secondary); font-style: italic;">
+            <p style="color: var(--ink-secondary); font-style: italic; margin-bottom: 6px;">
               <span class="content-zh">“为你打捞到你在 3 月和 5 月留下的两处闪念：”</span>
               <span class="content-en">"Surfaced two notes from March and May:"</span>
             </p>
             <div class="preview-quote-box">
               <div class="preview-quote-meta">
-                <span class="content-zh">📅 03-12 · 卡尔维诺《隐形的城市》</span>
-                <span class="content-en">📅 03-12 · Italo Calvino, Invisible Cities</span>
+                <span class="content-zh">03-12 · 卡尔维诺《隐形的城市》</span>
+                <span class="content-en">03-12 · Italo Calvino, Invisible Cities</span>
               </div>
               <p>
                 <span class="content-zh">“记忆中的形象一旦被词语固定住，就给抹掉了。”</span>
@@ -1168,8 +1166,8 @@
             </div>
             <div class="preview-quote-box" style="margin-top: 6px;">
               <div class="preview-quote-meta" style="color: var(--teal);">
-                <span class="content-zh">📅 05-18 · 晨间随笔</span>
-                <span class="content-en">📅 05-18 · Morning Journal</span>
+                <span class="content-zh">05-18 · 晨间随笔</span>
+                <span class="content-en">05-18 · Morning Journal</span>
               </div>
               <p>
                 <span class="content-zh">“遗忘不是消失，而是我们暂时失去了找寻钥匙的耐心。”</span>
@@ -1183,8 +1181,8 @@
         <div class="scenario-card">
           <div>
             <span class="scenario-badge">
-              <span class="content-zh">📝 场景二 · 建议卡片</span>
-              <span class="content-en">📝 Scenario 2 · Proposal Cards</span>
+              <span class="content-zh">场景二 · 建议卡片</span>
+              <span class="content-en">Scenario 2 · Proposal Cards</span>
             </span>
             <h3 class="scenario-title">
               <span class="content-zh">建议卡片 · 自由采纳与细修</span>
@@ -1241,8 +1239,8 @@
         <div class="scenario-card">
           <div>
             <span class="scenario-badge">
-              <span class="content-zh">💡 场景三 · 灵感沉淀</span>
-              <span class="content-en">💡 Scenario 3 · Capturing Insights</span>
+              <span class="content-zh">场景三 · 灵感沉淀</span>
+              <span class="content-en">Scenario 3 · Capturing Insights</span>
             </span>
             <h3 class="scenario-title">
               <span class="content-zh">灵感沉淀 · 零碎感悟一键归库</span>
@@ -1311,9 +1309,9 @@
 
       <div class="pillars-grid">
         <div class="pillar-box">
-          <div class="pillar-num">
-            <span class="content-zh">01 / 重逢</span>
-            <span class="content-en">01 / RETRIEVE</span>
+          <div class="pillar-tagline">
+            <span class="content-zh">重逢 · RETRIEVE</span>
+            <span class="content-en">RETRIEVE</span>
           </div>
           <h3 class="pillar-box-title">
             <span class="content-zh">打捞旧札记，串联新想法</span>
@@ -1331,9 +1329,9 @@
         </div>
 
         <div class="pillar-box">
-          <div class="pillar-num">
-            <span class="content-zh">02 / 主权</span>
-            <span class="content-en">02 / SOVEREIGNTY</span>
+          <div class="pillar-tagline">
+            <span class="content-zh">主权 · SOVEREIGNTY</span>
+            <span class="content-en">SOVEREIGNTY</span>
           </div>
           <h3 class="pillar-box-title">
             <span class="content-zh">提案卡片制，笔握在自己手里</span>
@@ -1351,9 +1349,9 @@
         </div>
 
         <div class="pillar-box">
-          <div class="pillar-num">
-            <span class="content-zh">03 / 默契</span>
-            <span class="content-en">03 / RAPPORT</span>
+          <div class="pillar-tagline">
+            <span class="content-zh">默契 · RAPPORT</span>
+            <span class="content-en">RAPPORT</span>
           </div>
           <h3 class="pillar-box-title">
             <span class="content-zh">专属记忆，懂你文风偏好</span>
@@ -1371,9 +1369,9 @@
         </div>
 
         <div class="pillar-box">
-          <div class="pillar-num">
-            <span class="content-zh">04 / 自由</span>
-            <span class="content-en">04 / FREEDOM</span>
+          <div class="pillar-tagline">
+            <span class="content-zh">自由 · FREEDOM</span>
+            <span class="content-en">FREEDOM</span>
           </div>
           <h3 class="pillar-box-title">
             <span class="content-zh">开放兼容，支持本地模型</span>
@@ -1517,7 +1515,7 @@
     </div>
   </section>
 
-  <!-- Supported Models Section (Compact Capsules) -->
+  <!-- Supported Models Section (Clean Typographic Badges, No Emojis) -->
   <section class="models-section" id="models">
     <div class="container">
       <div class="section-header">
@@ -1534,44 +1532,36 @@
 
       <div class="models-badges-wrap">
         <div class="model-badge-pill">
-          <span class="model-badge-icon">🐋</span>
           <span>DeepSeek</span>
         </div>
         <div class="model-badge-pill">
-          <span class="model-badge-icon">🧠</span>
           <span>OpenAI</span>
         </div>
         <div class="model-badge-pill">
-          <span class="model-badge-icon">🦙</span>
           <span>
             <span class="content-zh">Ollama (本地离线)</span>
             <span class="content-en">Ollama (Local Offline)</span>
           </span>
         </div>
         <div class="model-badge-pill">
-          <span class="model-badge-icon">💻</span>
           <span>LM Studio</span>
         </div>
         <div class="model-badge-pill">
-          <span class="model-badge-icon">⚡</span>
           <span>
             <span class="content-zh">SiliconFlow 硅基流动</span>
             <span class="content-en">SiliconFlow</span>
           </span>
         </div>
         <div class="model-badge-pill">
-          <span class="model-badge-icon">☁️</span>
           <span>
             <span class="content-zh">通义千问 Qwen</span>
             <span class="content-en">Qwen</span>
           </span>
         </div>
         <div class="model-badge-pill">
-          <span class="model-badge-icon">🌙</span>
           <span>Moonshot Kimi</span>
         </div>
         <div class="model-badge-pill">
-          <span class="model-badge-icon">🔌</span>
           <span>
             <span class="content-zh">自定义 OpenAI 兼容接口</span>
             <span class="content-en">Custom OpenAI Endpoint</span>
@@ -1580,8 +1570,8 @@
       </div>
 
       <p class="models-footer-note">
-        <span class="content-zh">💡 提示：心迹支持密钥系统级安全加密存储，不配置 API Key 亦不影响离线记事、摘录与 WebDAV 同步等基础功能。</span>
-        <span class="content-en">💡 Note: API keys are securely encrypted on your device. Core features like clipping, rich editing, and WebDAV sync work fully without AI configuration.</span>
+        <span class="content-zh">提示：心迹支持密钥系统级安全加密存储，不配置 API Key 亦不影响离线记事、摘录与 WebDAV 同步等基础功能。</span>
+        <span class="content-en">Note: API keys are securely encrypted on your device. Core features like clipping, rich editing, and WebDAV sync work fully without AI configuration.</span>
       </p>
     </div>
   </section>
@@ -1836,11 +1826,14 @@
 
     // 3. Theme Toggle
     const themeToggleBtn = document.getElementById('themeToggle');
+    const themeIconSun = document.getElementById('themeIconSun');
+    const themeIconMoon = document.getElementById('themeIconMoon');
 
     function updateThemeBtnIcon() {
-      if (!themeToggleBtn) return;
+      if (!themeIconSun || !themeIconMoon) return;
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      themeToggleBtn.textContent = isDark ? '☀️' : '🌙';
+      themeIconSun.style.display = isDark ? 'block' : 'none';
+      themeIconMoon.style.display = isDark ? 'none' : 'block';
     }
 
     if (themeToggleBtn) {

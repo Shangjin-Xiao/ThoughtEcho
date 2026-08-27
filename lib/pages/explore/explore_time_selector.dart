@@ -79,7 +79,7 @@ extension _ExploreTimeSelector on _ExplorePageState {
         _buildPeriodMenuItem(
             'month', l10n.thisMonth, Icons.calendar_view_month),
         _buildPeriodMenuItem('year', l10n.thisYear, Icons.today),
-        const Divider(),
+        const Divider(height: 8),
         MenuItemButton(
           leadingIcon: Icon(
             Icons.calendar_today,

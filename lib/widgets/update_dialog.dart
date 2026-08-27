@@ -503,7 +503,6 @@ class UpdateBottomSheet extends StatelessWidget {
     if (!versionInfo.hasUpdate && showNoUpdateMessage) {
       return showModalBottomSheet<void>(
         context: context,
-        showDragHandle: true,
         isScrollControlled: true,
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(
@@ -572,7 +571,6 @@ class UpdateBottomSheet extends StatelessWidget {
 
     return showModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
