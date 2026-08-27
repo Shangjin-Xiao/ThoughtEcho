@@ -201,8 +201,15 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionTracer?.finish();
     // 事务从这里一直开到收尾，iOS/macOS 上 Sentry 的 CPU profile 就采这一段。
     // 不卡的那些会话在上报前被筛掉，见 `sentry_helper.dart`。
-    _scrollSessionTracer =
-        AppTracer.start(scrollSessionTraceName, operation: 'ui.scroll');
+    //
+    // `forceRootTransaction` 不能省：冷启动进页面时路由事务还开着并绑在作用域上，
+    // 不强制的话这一段会挂成它的子 span —— profile 和筛选都只认根事务，而「冷启动
+    // 几秒后的第一次滑动」正是最想看的那一段。
+    _scrollSessionTracer = AppTracer.start(
+      scrollSessionTraceName,
+      operation: 'ui.scroll',
+      forceRootTransaction: true,
+    );
     _ensurePerfTimingsCallback();
   }
 

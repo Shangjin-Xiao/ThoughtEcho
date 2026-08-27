@@ -27,15 +27,20 @@ void configureSentryOptions(SentryFlutterOptions options) {
 
   // CPU Profiling 深度性能剖析。
   //
-  // 这个采样率是**架在已采样事务之上的第二层**：配合上面的 tracesSampleRate = 1.0，
-  // 1.0 等于「每条上报的事务都带一份采样式 CPU profile」。SDK 自己会判平台，只在
-  // iOS/macOS 真正启动 profiler（见 SentryNativeProfilerFactory.attachTo），Android
-  // 和 Windows 上设了也不会有任何开销，所以这里不再重复写一层平台分支。
-  //
   // 记录页滚动的掉帧一直卡在「build 只有 1ms，整帧却拖到 40ms 以上」这种形状 ——
   // vsyncOverhead 说明时间花在帧与帧之间，逐帧计数器再怎么加也指不到具体函数。
-  // 这一份 profile 就是为它开的；对应的取样只留下真卡过的那几段，见
-  // [sanitizeSentryTransaction]。
+  // 这一份 profile 就是为它开的。
+  //
+  // 采样率是**架在已采样事务之上的第二层**（见 SentryTracesSampler.sampleProfiling），
+  // 配合上面的 tracesSampleRate = 1.0，1.0 等于「每一条事务都开 profiler」。平台由
+  // SDK 自己判（SentryNativeProfilerFactory.attachTo 只在 iOS/macOS 启动 profiler），
+  // 所以这里不重复写一层平台分支；Android 和 Windows 上设了不会有开销。
+  //
+  // **说清代价**：SDK 没有按事务名开关 profiler 的钩子，所以 iOS/macOS 上路由事务、
+  // 分页、以及每一次「其实不卡」的滚动都会被采样，采样线程的 CPU 和电量是实打实要
+  // 付的。下面 [sanitizeSentryTransaction] 那层筛选省的是**上传**，不是采样开销。
+  // 明知如此仍然取 1.0：Sentry 默认关闭、由用户主动打开来查这一个问题，而调低采样率
+  // 会按概率漏掉真卡的那几段 —— 那正是唯一要看的样本。
   options.profilesSampleRate = 1.0;
 
   // 开启 TTFD (完全渲染时间监控)

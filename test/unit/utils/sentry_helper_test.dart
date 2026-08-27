@@ -208,6 +208,66 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       }
     });
 
+    test('scroll session stays a root transaction under an open route trace',
+        () async {
+      final mockTransport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://public@example.com/1';
+        options.transport = mockTransport;
+        options.tracesSampleRate = 1.0;
+        options.beforeSendTransaction = sanitizeSentryTransaction;
+      });
+
+      try {
+        // 冷启动进记录页时 SentryNavigatorObserver 的路由事务还开着并绑在作用域上。
+        final route = Sentry.startTransaction(
+          'route /notes',
+          'ui.load',
+          bindToScope: true,
+        );
+
+        final scroll = AppTracer.start(
+          scrollSessionTraceName,
+          operation: 'ui.scroll',
+          forceRootTransaction: true,
+        );
+        scroll.instant(scrollSessionFinalizeTraceName, arguments: {
+          'frameJank': 3,
+          'budgetMs': 8.333,
+          'worstFrameMs': 35.8,
+        });
+        scroll.finish();
+
+        // 强开根事务不能把路由事务的作用域绑定顶掉，否则它剩下的子 span 挂不上去。
+        expect(Sentry.getSpan(), same(route));
+        final afterScroll = route.startChild('db', description: 'SELECT');
+        await afterScroll.finish();
+        await route.finish();
+
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+
+        final transactions = mockTransport.envelopes
+            .expand((envelope) => envelope.items)
+            .map((item) => item.originalObject)
+            .whereType<SentryTransaction>()
+            .toList();
+
+        // 滚动会话必须是**自己**的一条事务，否则 CPU profile 和卡顿筛选都拿不到它。
+        expect(
+          transactions.where((t) => t.transaction == scrollSessionTraceName),
+          hasLength(1),
+        );
+        final routeTransaction =
+            transactions.singleWhere((t) => t.transaction == 'route /notes');
+        expect(
+          routeTransaction.spans.map((span) => span.context.operation),
+          contains('db'),
+        );
+      } finally {
+        await Sentry.close();
+      }
+    });
+
     test('removes local paths from database breadcrumbs', () {
       const privatePath = '/Users/private/Documents/ThoughtEcho/quotes.db';
       final breadcrumb = Breadcrumb(

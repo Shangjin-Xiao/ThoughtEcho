@@ -347,6 +347,14 @@ PR #526 的指标修正到手后的第一份日志。这一轮**不是**又一�
 
   判据里**故意没有 `dropped`**，理由见下一节。
 
+- 滚动会话要用 `AppTracer.start(..., forceRootTransaction: true)`。CPU profile 和
+  `beforeSendTransaction` 都只认根事务，而冷启动进页面时路由事务还绑在作用域上 ——
+  不强制的话，「冷启动几秒后的第一次滑动」这一段会挂成路由事务的子 span，profile
+  和筛选两样都拿不到。强开时只在作用域没人绑的时候才绑，免得把路由事务顶掉。
+
+- 采样开销要说清：SDK 没有按事务名开关 profiler 的钩子，iOS/macOS 上每条事务都会被
+  采样，筛选省的是上传不是采样。这个问题排完应当把 `profilesSampleRate` 调回 `null`。
+
 ### 挂起来的两个疑点
 
 **一、`dropped` 在可变刷新率屏幕上可能仍然虚高。** scroll-24 是

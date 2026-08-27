@@ -928,3 +928,20 @@ Android 在应用退到后台时就会用 `TRIM_MEMORY_UI_HIDDEN` 调 `onTrimMem
 判据里**不用 `dropped`**：它在可变刷新率屏幕上会把「面板降到 60Hz」误记成丢帧
 （见 `docs/note-list-warmup-invalidation-2026-08-22.md` 2026-08-27 一节），拿一个不
 可靠的数当筛选依据等于随机丢样本。
+
+### 两个必须说清的边界（Sourcery 审查提出，均已核实）
+
+**一、滚动会话必须是根事务。** `AppTracer.start` 原来在作用域上已有 span 时会挂成
+子 span。CPU profile 和 `beforeSendTransaction` **都只认根事务**，所以那种情况下滚动
+会话既不会被独立采样也筛不到。而它恰好会撞上最想看的那一段 —— 冷启动进记录页时
+`SentryNavigatorObserver` 的路由事务还开着并绑在作用域上。已加 `forceRootTransaction`
+参数（默认 false，其余调用点行为不变），并且强开时 `bindToScope: currentSpan == null`
+—— 作用域上已经绑着别人就不抢，否则滚动会话结束时会把 `scope.span` 置空，路由事务
+剩下的子 span 全挂不上去。有回归测试覆盖这两点。
+
+**二、`profilesSampleRate = 1.0` 的代价是采样，不是上传。** SDK 没有按事务名开关
+profiler 的钩子（`SentryTracesSampler.sampleProfiling` 只看全局采样率），所以
+iOS/macOS 上路由事务、分页和每一次「其实不卡」的滚动都会被采样，采样线程的 CPU 和
+电量实打实要付；上面那层筛选省的只是上传。**明知如此仍然取 1.0**：Sentry 默认关闭、
+由用户主动打开来查这一个问题，而调低采样率会按概率漏掉真卡的那几段 —— 那正是唯一
+要看的样本。这个问题排完就该把它调回 `null`。

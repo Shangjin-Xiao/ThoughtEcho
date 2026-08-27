@@ -25,11 +25,18 @@ class AppTracer {
   ///
   /// [name] Timeline 和 Sentry 的统一事件名，例如 'ThoughtEcho.NoteListView.loadMore'
   /// [operation] Sentry 专用的分类标记，默认为 'ui.action'。对于加载动作建议用 'ui.load'
+  ///
+  /// [forceRootTransaction] 强制起一个根事务，哪怕作用域上已经绑着别的 span。
+  /// 需要它的场合是「这段要能被独立采样和筛选」：Sentry 的 CPU profile 和
+  /// `beforeSendTransaction` 都只认根事务，挂成子 span 就两样都拿不到。滚动会话
+  /// 正好会撞上这种情况 —— 冷启动进页面时 `SentryNavigatorObserver` 的路由事务
+  /// 还开着并绑在作用域上，而「冷启动几秒后的第一次滑动」恰恰是最想看的那一段。
   static AppTracer start(
     String name, {
     String? operation,
     String? description,
     Map<String, Object?>? arguments,
+    bool forceRootTransaction = false,
   }) {
     // 1. 启动本地 Timeline (供 Firebase 和 DevTools 抓取)
     final timeline = developer.TimelineTask(filterKey: 'ThoughtEcho')
@@ -40,7 +47,7 @@ class AppTracer {
     final currentSpan = Sentry.getSpan();
 
     ISentrySpan? span;
-    if (currentSpan != null) {
+    if (currentSpan != null && !forceRootTransaction) {
       // 如果当前上下文中已经有 Transaction，作为其子 Span 挂载
       span = currentSpan.startChild(sentryOp, description: name);
     } else {
@@ -49,7 +56,11 @@ class AppTracer {
         name,
         sentryOp,
         description: description,
-        bindToScope: true, // 绑定到作用域，方便后续发生的 Error 自动关联到该事务
+        // 绑定到作用域，方便后续发生的 Error 自动关联到该事务。但**只在没人绑过
+        // 的时候绑**：强开根事务时作用域上往往正绑着别的事务（路由事务），这里再
+        // 绑会把它顶掉，而且我们结束时会把 `scope.span` 置空 —— 它剩下的子 span
+        // 就全挂不上去了。
+        bindToScope: currentSpan == null,
       );
     }
 
