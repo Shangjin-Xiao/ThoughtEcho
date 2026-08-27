@@ -426,23 +426,7 @@ class _LogsPageState extends State<LogsPage> {
 
   // 获取日志级别对应的颜色
   Color _getLogLevelColor(UnifiedLogLevel level, ThemeData theme) {
-    switch (level) {
-      case UnifiedLogLevel.verbose:
-        return theme.colorScheme.onSurfaceVariant;
-      case UnifiedLogLevel.debug:
-        return theme.colorScheme.tertiary;
-      case UnifiedLogLevel.info:
-        return theme.colorScheme.primary;
-      case UnifiedLogLevel.warning:
-        return theme.extension<AppSemanticColors>()?.warning ??
-            (theme.brightness == Brightness.dark
-                ? AppSemanticColors.dark.warning
-                : AppSemanticColors.light.warning);
-      case UnifiedLogLevel.error:
-        return theme.colorScheme.error;
-      case UnifiedLogLevel.none:
-        return theme.colorScheme.onSurface;
-    }
+    return _LogEntryItem._getLogLevelColor(level, theme);
   }
 
   // 构建过滤器横幅
@@ -1142,16 +1126,17 @@ class _LogEntryItem extends StatelessWidget {
 
   // 获取日志级别对应的颜色
   static Color _getLogLevelColor(UnifiedLogLevel level, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     switch (level) {
       case UnifiedLogLevel.verbose:
         return theme.colorScheme.onSurfaceVariant;
       case UnifiedLogLevel.debug:
-        return theme.colorScheme.tertiary;
+        return isDark ? const Color(0xFF4DD0E1) : const Color(0xFF00838F);
       case UnifiedLogLevel.info:
-        return theme.colorScheme.primary;
+        return isDark ? const Color(0xFF64B5F6) : const Color(0xFF1976D2);
       case UnifiedLogLevel.warning:
         return theme.extension<AppSemanticColors>()?.warning ??
-            (theme.brightness == Brightness.dark
+            (isDark
                 ? AppSemanticColors.dark.warning
                 : AppSemanticColors.light.warning);
       case UnifiedLogLevel.error:
