@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:thoughtecho/utils/dio_performance_interceptor.dart';
 import 'package:flutter/foundation.dart';
+import 'ai_endpoint_security.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart' as multi_ai;
@@ -123,9 +124,10 @@ class AINetworkManager {
         throw Exception('请求数据JSON编码失败: $e');
       }
 
+      // 判据见 [isSecureAiEndpoint]，和设置页的校验器、NetworkService 同一条。
       final uri = Uri.parse(finalUrl);
-      if (uri.scheme.toLowerCase() != 'https') {
-        throw Exception('非安全URL: 所有请求必须使用HTTPS');
+      if (!isSecureAiEndpoint(uri)) {
+        throw Exception('非安全URL: 公网请求必须使用 HTTPS');
       }
 
       final response = await _dio.post(

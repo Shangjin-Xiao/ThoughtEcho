@@ -240,6 +240,13 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     final theme = Theme.of(context);
     final shape = AppShapeTokens.of(context);
     final l10n = AppLocalizations.of(context);
+    // 提问是这张卡的正文，就该用正文那一级。极小屏退回 `bodyMedium` 而不是写死
+    // 一个字号：**降级也走类型级别**，这样它照样跟着 `readingFontScale` 缩放。
+    // 取成局部变量是为了让下面的 `color` 也读到**同一级**——分别写两次的话，
+    // 极小屏会出现「样式取 bodyMedium、颜色取 bodyLarge」的错配。
+    final promptStyle = widget.isVerySmallScreen
+        ? theme.textTheme.bodyMedium
+        : theme.textTheme.bodyLarge;
     final aiService = context.watch<AIService>();
     final settingsService = context.watch<SettingsService>();
     // 以多 provider 设置为准：生成链路读的是 multiAISettings.currentProvider，
@@ -310,11 +317,17 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
                         l10n.todayThoughts,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        // 「今日思考」是这张卡的**标签**，不是它的标题——真正的
+                        // 内容是下面那句提问。用 `titleMedium` 会让它吃到标题
+                        // 字重下限（衬线风格下 w700），再叠上强调色和比正文还大
+                        // 的字号，chrome 就压过了 content：眼睛先读到这四个字，
+                        // 而不是那个问题。`labelLarge` 才是它的角色——和按钮、
+                        // 胶囊、导航栏标签同一档功能性文字。
+                        //
+                        // 顺带去掉写死的字号：写死等于把这张卡从
+                        // `ThemeStyleForm.readingFontScale` 体系里摘出去。
+                        style: theme.textTheme.labelLarge?.copyWith(
                           color: theme.colorScheme.primary,
-                          fontSize: widget.screenWidth > 600
-                              ? 16
-                              : (widget.isVerySmallScreen ? 13 : 15),
                         ),
                       ),
                     ),
@@ -345,13 +358,14 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
                   : (isAiConfigured
                       ? l10n.waitingForTodayThoughts
                       : l10n.noTodayThoughts),
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: promptStyle?.copyWith(
+                // 这张卡是紧排的两三行居中提问，不跟正文行高（纸墨 1.75）走，
+                // 否则卡片会显著变高、把上面那张一言卡挤扁。
                 height: 1.4,
-                fontSize: widget.screenWidth > 600
-                    ? 15
-                    : (widget.isVerySmallScreen ? 12 : 14),
+                // 颜色要读**实际选中的那一级**：极小屏用的是 bodyMedium，
+                // 却去取 bodyLarge 的颜色，一旦主题给两级配了不同颜色就会错。
                 color: _accumulatedPromptText.isNotEmpty
-                    ? theme.textTheme.bodyMedium?.color
+                    ? promptStyle.color
                     : theme.colorScheme.onSurface.withAlpha(120),
               ),
               textAlign: TextAlign.center,

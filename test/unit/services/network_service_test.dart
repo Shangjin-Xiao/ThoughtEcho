@@ -202,10 +202,15 @@ void main() {
         throwsA(isA<Exception>().having(
           (e) => e.toString(),
           'description',
-          contains('非安全URL: 所有请求必须使用HTTPS'),
+          contains('非安全URL'),
         )),
       );
     });
+
+    // 「本地明文端点要放行」不在这里断言：判据一旦放行，`aiRequest` 就会真的去连
+    // http://127.0.0.1:1234，撞上重试退避直接把用例拖超时。那条规则由
+    // `test/unit/utils/ai_endpoint_security_test.dart` 覆盖（纯函数，不碰网络），
+    // 接线由下面这条「公网明文被拦」和设置页那条 localhost 夹具用例共同证明。
 
     test('aiRequest should allow uppercase HTTPS URL scheme', () async {
       try {
@@ -214,7 +219,7 @@ void main() {
           data: {},
         );
       } catch (e) {
-        expect(e.toString(), isNot(contains('非安全URL: 所有请求必须使用HTTPS')));
+        expect(e.toString(), isNot(contains('非安全URL')));
       }
     });
 
@@ -233,7 +238,7 @@ void main() {
       expect(capturedError, isNotNull);
       expect(
         capturedError.toString(),
-        contains('非安全URL: 所有请求必须使用HTTPS'),
+        contains('非安全URL'),
       );
     });
   });

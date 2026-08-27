@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../utils/ai_endpoint_security.dart';
 import '../utils/http_response.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
@@ -182,9 +183,12 @@ class NetworkService {
     _ensureInitialized();
 
     try {
+      // 判据见 [isSecureAiEndpoint]：公网必须 https，环回/私有网段的明文放行。
+      // 一刀切 https-only 会把本地模型（Ollama / LM Studio，只监听
+      // `http://127.0.0.1:<port>`）整个功能判死。
       final uri = Uri.parse(url);
-      if (uri.scheme.toLowerCase() != 'https') {
-        throw Exception('非安全URL: 所有请求必须使用HTTPS');
+      if (!isSecureAiEndpoint(uri)) {
+        throw Exception('非安全URL: 公网请求必须使用 HTTPS');
       }
 
       final headers = _buildAIHeaders(provider, legacySettings);
@@ -227,9 +231,12 @@ class NetworkService {
     _ensureInitialized();
 
     try {
+      // 判据见 [isSecureAiEndpoint]：公网必须 https，环回/私有网段的明文放行。
+      // 一刀切 https-only 会把本地模型（Ollama / LM Studio，只监听
+      // `http://127.0.0.1:<port>`）整个功能判死。
       final uri = Uri.parse(url);
-      if (uri.scheme.toLowerCase() != 'https') {
-        throw Exception('非安全URL: 所有请求必须使用HTTPS');
+      if (!isSecureAiEndpoint(uri)) {
+        throw Exception('非安全URL: 公网请求必须使用 HTTPS');
       }
 
       final headers = _buildAIHeaders(provider, legacySettings);

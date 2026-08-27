@@ -325,12 +325,29 @@ class AddNoteController extends ChangeNotifier {
         onLocationFetchEmpty?.call();
       }
     } catch (e, stackTrace) {
-      logError(
-        '获取位置失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'AddNoteController',
-      );
+      // 定位/天气在正常使用中本来就会失败：没给权限、离线、超时。这一档记成
+      // error 会把日志页刷满预期内的失败，真正的异常反而被淹掉——所以降 warning，
+      // 也不需要调用栈：要看的是「为什么没拿到」，不是栈。
+      //
+      // **但 `Error` 不在这一档里。** 这两个 catch 罩着的范围不小（权限检查、
+      // 服务调用、状态改写），`NoSuchMethodError` / `TypeError` / `StateError`
+      // 这类编程错误一旦落进来，降成 warning 又丢掉调用栈就等于把 bug 藏起来。
+      // Dart 的 `Error` / `Exception` 之分正好是「程序写错了」和「预期内失败」，
+      // 比按消息串匹配可靠——这两个服务抛的都是泛型 `Exception('…')`，
+      // 按消息分类必然脆。
+      if (e is Error) {
+        logError(
+          '获取位置失败（非预期错误）',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'AddNoteController',
+        );
+      } else {
+        logWarning(
+          '获取位置失败: $e',
+          source: 'AddNoteController',
+        );
+      }
       if (_isDisposed) return;
       includeLocation = false;
       _clearNewLocation();
@@ -386,12 +403,29 @@ class AddNoteController extends ChangeNotifier {
       isFetchingWeather = false;
       notifyListeners();
     } catch (e, stackTrace) {
-      logError(
-        '获取天气失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'AddNoteController',
-      );
+      // 定位/天气在正常使用中本来就会失败：没给权限、离线、超时。这一档记成
+      // error 会把日志页刷满预期内的失败，真正的异常反而被淹掉——所以降 warning，
+      // 也不需要调用栈：要看的是「为什么没拿到」，不是栈。
+      //
+      // **但 `Error` 不在这一档里。** 这两个 catch 罩着的范围不小（权限检查、
+      // 服务调用、状态改写），`NoSuchMethodError` / `TypeError` / `StateError`
+      // 这类编程错误一旦落进来，降成 warning 又丢掉调用栈就等于把 bug 藏起来。
+      // Dart 的 `Error` / `Exception` 之分正好是「程序写错了」和「预期内失败」，
+      // 比按消息串匹配可靠——这两个服务抛的都是泛型 `Exception('…')`，
+      // 按消息分类必然脆。
+      if (e is Error) {
+        logError(
+          '获取天气失败（非预期错误）',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'AddNoteController',
+        );
+      } else {
+        logWarning(
+          '获取天气失败: $e',
+          source: 'AddNoteController',
+        );
+      }
       if (_isDisposed) return;
       includeWeather = false;
       isFetchingWeather = false;
