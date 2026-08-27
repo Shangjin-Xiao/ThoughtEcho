@@ -31,6 +31,16 @@ void main() {
       expect(isSecureAiEndpointUrl('http://[fd00::1]:11434/v1'), isTrue);
     });
 
+    test('scheme 对但没有主机的一律不安全', () {
+      // `Uri.parse` 对这些照样给出 scheme=https、host=''：scheme 判对了不等于
+      // 这是个端点。放行的话，用户在设置页填 `https:foo` 会一路保存成功，
+      // 直到发请求时才由 Dio 报「无效地址」。
+      expect(isSecureAiEndpointUrl('https:foo'), isFalse);
+      expect(isSecureAiEndpointUrl('https:///'), isFalse);
+      expect(isSecureAiEndpointUrl('https://'), isFalse);
+      expect(isSecureAiEndpointUrl('http:///v1'), isFalse);
+    });
+
     test('其它 scheme 和解析不了的一律不安全', () {
       expect(isSecureAiEndpointUrl('ftp://example.com/x'), isFalse);
       expect(isSecureAiEndpointUrl('ws://localhost:1234'), isFalse);

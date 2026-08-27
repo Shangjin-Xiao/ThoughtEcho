@@ -17,7 +17,13 @@ import 'dart:io' show InternetAddress, InternetAddressType;
 /// - `https` → 永远安全。
 /// - `http` → 只有目标在**环回或私有网段**时才安全（包没有离开本机或本地网络）。
 /// - 其它 scheme（含拼错的、空的）→ 一律不安全。
+/// - 主机为空（`https:foo`、`https:///`）→ 一律不安全，scheme 对也不行。
 bool isSecureAiEndpoint(Uri uri) {
+  // **没有主机的绝对 URI 一律不安全**，哪怕 scheme 写着 https：
+  // `Uri.parse('https:foo')` 和 `https:///` 的 `host` 都是空串，它们 scheme 对
+  // 但根本不是一个端点。放行等于把「这地址无效」推迟到发请求时才由 Dio 报错，
+  // 而这个判据存在的理由正是「在输入这一层拦住、在能解释的地方说话」。
+  if (uri.host.isEmpty) return false;
   final scheme = uri.scheme.toLowerCase();
   if (scheme == 'https') return true;
   if (scheme != 'http') return false;
