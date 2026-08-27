@@ -566,7 +566,7 @@ class NoteListViewState extends State<NoteListView>
     _isInitializing = true;
     _waitingForServices = true; // 初始等待服务初始化
 
-    // 进后台会把测量缓存整排清掉（见 main.dart 的 didChangeAppLifecycleState），
+    // 前台真缺内存时测量缓存会被整排清掉（见 main.dart 的 didHaveMemoryPressure），
     // 回前台得有人把空闲预热重新点着，否则缓存空着、游标满着，下一次滑动每张卡片
     // 都要重算一遍。
     WidgetsBinding.instance.addObserver(this);
@@ -865,10 +865,10 @@ class NoteListViewState extends State<NoteListView>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state != AppLifecycleState.resumed) return;
-    // 回前台时 Flutter 自己的 imageCache 往往已经被引擎清空（Android 的后台内存
-    // 回收），卡片上本来已经出图的照片会重新变灰、再解一次 —— 用户直接看得见。
-    // 测量缓存这时多半还在（`main.dart` 只在真的内存压力下才清），所以重走一遍
-    // 预热几乎只花 precache 的钱，而且现在是从视口开始走的：正看着的那几张先回来。
+    // 后台例行 trim 现在只把 imageCache **淘汰**到一个小额度而不是清空
+    // （见 [AppWidgetsBinding]），但额度之外的那些还是掉了；用户回来往回滑，
+    // 越过那条线的照片照样会变灰重解一次。测量缓存这时是完整的，所以重走一遍预热
+    // 几乎只花 precache 的钱，而且是从视口开始走的：正看着的那几张先回来。
     //
     // 去重集合必须一起清，否则「暖过了」的记号会让这些图永远等不到第二次预解码。
     _idleWarmupPrecachedSources.clear();

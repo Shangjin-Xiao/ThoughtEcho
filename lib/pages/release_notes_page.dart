@@ -100,13 +100,13 @@ class ReleaseNotesPage extends StatelessWidget {
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
                   _HeroHeader(
                     headlineVersion: _headlineVersion,
                     isUpgrade: _isUpgrade,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   for (final version in versions) ...[
                     if (showVersionLabels) ...[
                       Padding(
@@ -122,9 +122,9 @@ class ReleaseNotesPage extends StatelessWidget {
                   ],
                   for (final footnote in footnotes) ...[
                     _FootnoteCard(footnote: footnote),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 6),
                   ],
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   const _GitHubReleaseButton(),
                 ],
               ),
@@ -183,21 +183,13 @@ class _HeroHeader extends StatelessWidget {
     final shape = AppShapeTokens.of(context);
     final iconRadius = (shape.buttonRadius - 2).clamp(6.0, 12.0);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(shape.cardRadius),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-          width: 0.8,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 2),
       child: Row(
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(iconRadius),
@@ -382,15 +374,7 @@ class _HighlightCard extends StatelessWidget {
             ),
             if (entry.points.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Divider(
-                height: 1,
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-              ),
-              const SizedBox(height: 10),
-              for (var i = 0; i < entry.points.length; i++) ...[
-                if (i > 0) const SizedBox(height: 10),
-                _PointTile(point: entry.points[i]),
-              ],
+              _PointsRow(points: entry.points),
             ],
             if (entry.action == ReleaseHighlightAction.themeStyle) ...[
               const SizedBox(height: 14),
@@ -403,62 +387,379 @@ class _HighlightCard extends StatelessWidget {
   }
 }
 
-/// 单个核心亮点条目：轻量图标、标题与简明说明。
-class _PointTile extends StatelessWidget {
-  const _PointTile({required this.point});
+/// 横向排列的亮点图标按键行：紧凑展示图标与标题，点击弹出指向型气泡展示详细说明。
+class _PointsRow extends StatelessWidget {
+  const _PointsRow({required this.points});
+
+  final List<ReleaseHighlightPoint> points;
+
+  void _showBubble(BuildContext context, ReleaseHighlightPoint point) {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final offset = renderBox.localToGlobal(Offset.zero);
+    final targetRect = offset & renderBox.size;
+    final theme = Theme.of(context);
+    final shape = AppShapeTokens.of(context);
+
+    Navigator.of(context).push(
+      _BubbleRoute<void>(
+        targetRect: targetRect,
+        point: point,
+        theme: theme,
+        shape: shape,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (var i = 0; i < points.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: _PointItemButton(
+              point: points[i],
+              onTap: (buttonContext) => _showBubble(buttonContext, points[i]),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// 单个亮点图标胶囊按键。
+class _PointItemButton extends StatelessWidget {
+  const _PointItemButton({
+    required this.point,
+    required this.onTap,
+  });
 
   final ReleaseHighlightPoint point;
+  final void Function(BuildContext buttonContext) onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final shape = AppShapeTokens.of(context);
-    final iconRadius = (shape.buttonRadius - 4).clamp(4.0, 8.0);
+    final itemRadius = (shape.buttonRadius - 2).clamp(4.0, 10.0);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (point.icon != null) ...[
-          Container(
-            padding: const EdgeInsets.all(6),
+    return Builder(
+      builder: (buttonContext) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onTap(buttonContext),
+          borderRadius: BorderRadius.circular(itemRadius),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(iconRadius),
+                  .withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(itemRadius),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                width: 0.8,
+              ),
             ),
-            child: Icon(
-              point.icon,
-              size: 15,
-              color: theme.colorScheme.primary,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (point.icon != null) ...[
+                  Icon(
+                    point.icon,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(height: 4),
+                ],
+                Text(
+                  point.title,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 10),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                point.title,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
+        ),
+      ),
+    );
+  }
+}
+
+/// 弹出指向型气泡路由。
+class _BubbleRoute<T> extends PopupRoute<T> {
+  _BubbleRoute({
+    required this.targetRect,
+    required this.point,
+    required this.theme,
+    required this.shape,
+  });
+
+  final Rect targetRect;
+  final ReleaseHighlightPoint point;
+  final ThemeData theme;
+  final AppShapeTokens shape;
+
+  @override
+  Color? get barrierColor => Colors.black.withValues(alpha: 0.12);
+
+  @override
+  bool get barrierDismissible => true;
+
+  @override
+  String? get barrierLabel => 'Dismiss';
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 160);
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return _BubblePopupContent(
+      targetRect: targetRect,
+      point: point,
+      theme: theme,
+      shape: shape,
+      animation: animation,
+    );
+  }
+}
+
+/// 气泡浮层内容与绝对定位计算。
+class _BubblePopupContent extends StatelessWidget {
+  const _BubblePopupContent({
+    required this.targetRect,
+    required this.point,
+    required this.theme,
+    required this.shape,
+    required this.animation,
+  });
+
+  final Rect targetRect;
+  final ReleaseHighlightPoint point;
+  final ThemeData theme;
+  final AppShapeTokens shape;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenSize = mediaQuery.size;
+    final padding = mediaQuery.padding;
+    final anchorCenterX = targetRect.center.dx;
+    final anchorBottomY = targetRect.bottom;
+    final anchorTopY = targetRect.top;
+
+    final bool showBelow =
+        anchorBottomY + 160 < screenSize.height - padding.bottom;
+
+    final bubbleWidth = (screenSize.width - 40).clamp(220.0, 320.0);
+    final bubbleLeft = (anchorCenterX - bubbleWidth / 2)
+        .clamp(16.0, screenSize.width - bubbleWidth - 16.0);
+    final arrowRelativeX =
+        (anchorCenterX - bubbleLeft).clamp(20.0, bubbleWidth - 20.0);
+
+    final topPosition = showBelow ? anchorBottomY + 4.0 : null;
+    final bottomPosition =
+        showBelow ? null : (screenSize.height - anchorTopY + 4.0);
+
+    final normalizedAlignmentX = (arrowRelativeX / bubbleWidth) * 2 - 1;
+
+    return Stack(
+      children: [
+        Positioned(
+          left: bubbleLeft,
+          top: topPosition,
+          bottom: bottomPosition,
+          width: bubbleWidth,
+          child: FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            ),
+            child: ScaleTransition(
+              scale: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+              alignment: Alignment(
+                normalizedAlignmentX,
+                showBelow ? -1.0 : 1.0,
+              ),
+              child: CustomPaint(
+                painter: _BubbleArrowPainter(
+                  arrowX: arrowRelativeX,
+                  arrowHeight: 7.0,
+                  arrowWidth: 14.0,
+                  isArrowTop: showBelow,
+                  color: theme.colorScheme.surfaceContainerHigh,
+                  borderColor:
+                      theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                  borderRadius: shape.cardRadius,
+                  borderWidth: 0.8,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: showBelow ? 16.0 : 10.0,
+                    bottom: showBelow ? 10.0 : 16.0,
+                    left: 14.0,
+                    right: 14.0,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (point.icon != null) ...[
+                              Icon(
+                                point.icon,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            Text(
+                              point.title,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          point.description,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 1),
-              Text(
-                point.description,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  height: 1.35,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ],
     );
+  }
+}
+
+/// 绘制带尖角的平滑气泡背景与边框。
+class _BubbleArrowPainter extends CustomPainter {
+  const _BubbleArrowPainter({
+    required this.arrowX,
+    required this.arrowHeight,
+    required this.arrowWidth,
+    required this.isArrowTop,
+    required this.color,
+    required this.borderColor,
+    required this.borderRadius,
+    required this.borderWidth,
+  });
+
+  final double arrowX;
+  final double arrowHeight;
+  final double arrowWidth;
+  final bool isArrowTop;
+  final Color color;
+  final Color borderColor;
+  final double borderRadius;
+  final double borderWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path();
+    final r = borderRadius.clamp(0.0, (size.height - arrowHeight) / 2);
+    final left = 0.0;
+    final right = size.width;
+
+    if (isArrowTop) {
+      final top = arrowHeight;
+      final bottom = size.height;
+      final safeArrowX =
+          arrowX.clamp(r + arrowWidth / 2, right - r - arrowWidth / 2);
+
+      path.moveTo(left + r, top);
+      path.lineTo(safeArrowX - arrowWidth / 2, top);
+      path.lineTo(safeArrowX, 0);
+      path.lineTo(safeArrowX + arrowWidth / 2, top);
+      path.lineTo(right - r, top);
+      path.arcToPoint(Offset(right, top + r), radius: Radius.circular(r));
+      path.lineTo(right, bottom - r);
+      path.arcToPoint(Offset(right - r, bottom), radius: Radius.circular(r));
+      path.lineTo(left + r, bottom);
+      path.arcToPoint(Offset(left, bottom - r), radius: Radius.circular(r));
+      path.lineTo(left, top + r);
+      path.arcToPoint(Offset(left + r, top), radius: Radius.circular(r));
+    } else {
+      final top = 0.0;
+      final bottom = size.height - arrowHeight;
+      final safeArrowX =
+          arrowX.clamp(r + arrowWidth / 2, right - r - arrowWidth / 2);
+
+      path.moveTo(left + r, top);
+      path.lineTo(right - r, top);
+      path.arcToPoint(Offset(right, top + r), radius: Radius.circular(r));
+      path.lineTo(right, bottom - r);
+      path.arcToPoint(Offset(right - r, bottom), radius: Radius.circular(r));
+      path.lineTo(safeArrowX + arrowWidth / 2, bottom);
+      path.lineTo(safeArrowX, size.height);
+      path.lineTo(safeArrowX - arrowWidth / 2, bottom);
+      path.lineTo(left + r, bottom);
+      path.arcToPoint(Offset(left, bottom - r), radius: Radius.circular(r));
+      path.lineTo(left, top + r);
+      path.arcToPoint(Offset(left + r, top), radius: Radius.circular(r));
+    }
+    path.close();
+
+    canvas.drawShadow(
+      path,
+      Colors.black.withValues(alpha: 0.15),
+      6.0,
+      true,
+    );
+
+    final fillPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, fillPaint);
+
+    if (borderWidth > 0) {
+      final strokePaint = Paint()
+        ..color = borderColor
+        ..strokeWidth = borderWidth
+        ..style = PaintingStyle.stroke;
+      canvas.drawPath(path, strokePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BubbleArrowPainter oldDelegate) {
+    return oldDelegate.arrowX != arrowX ||
+        oldDelegate.arrowHeight != arrowHeight ||
+        oldDelegate.arrowWidth != arrowWidth ||
+        oldDelegate.isArrowTop != isArrowTop ||
+        oldDelegate.color != color ||
+        oldDelegate.borderColor != borderColor ||
+        oldDelegate.borderRadius != borderRadius ||
+        oldDelegate.borderWidth != borderWidth;
   }
 }
 
@@ -585,7 +886,7 @@ class _ThemeStyleOptionTile extends StatelessWidget {
   }
 }
 
-/// 脚注型说明卡片（如 Sentry 崩溃诊断隐私披露）。
+/// 脚注型说明文本（如 Sentry 崩溃诊断隐私披露）。
 class _FootnoteCard extends StatelessWidget {
   const _FootnoteCard({required this.footnote});
 
@@ -594,32 +895,27 @@ class _FootnoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shape = AppShapeTokens.of(context);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(shape.cardRadius),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-          width: 0.8,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            footnote.icon ?? Icons.shield_outlined,
-            size: 16,
-            color: theme.colorScheme.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              footnote.icon ?? Icons.shield_outlined,
+              size: 14,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               footnote.lede,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color:
+                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
                 height: 1.35,
               ),
             ),
@@ -630,7 +926,7 @@ class _FootnoteCard extends StatelessWidget {
   }
 }
 
-/// 跳转 GitHub Release 查看详细更新内容的行动卡片。
+/// 跳转 GitHub Releases 查看更多优化详情的轻量行动按钮。
 class _GitHubReleaseButton extends StatelessWidget {
   const _GitHubReleaseButton();
 
@@ -659,67 +955,26 @@ class _GitHubReleaseButton extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final shape = AppShapeTokens.of(context);
-    final iconRadius = (shape.buttonRadius - 2).clamp(4.0, 10.0);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _openGitHub(context),
-        borderRadius: BorderRadius.circular(shape.cardRadius),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(shape.cardRadius),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-              width: 0.8,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6, bottom: 4),
+        child: TextButton.icon(
+          style: TextButton.styleFrom(
+            foregroundColor: theme.colorScheme.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(shape.buttonRadius),
             ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer
-                      .withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(iconRadius),
-                ),
-                child: Icon(
-                  Icons.description_outlined,
-                  size: 18,
-                  color: theme.colorScheme.onSecondaryContainer,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.releaseNotesViewDetailedChangelog,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      'github.com/Shangjin-Xiao/ThoughtEcho',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.open_in_new_rounded,
-                size: 16,
-                color: theme.colorScheme.primary,
-              ),
-            ],
+          onPressed: () => _openGitHub(context),
+          icon: const Icon(Icons.open_in_new_rounded, size: 15),
+          label: Text(
+            l10n.releaseNotesViewDetailedChangelog,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

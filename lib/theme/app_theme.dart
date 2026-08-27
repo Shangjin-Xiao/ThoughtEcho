@@ -1124,10 +1124,9 @@ class AppTheme with ChangeNotifier {
         ),
       ),
 
-      // 配置进度指示器颜色与 M3 新版造型
+      // 配置进度指示器颜色
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: colorScheme.primary,
-        circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),
       ),
 
@@ -1371,10 +1370,9 @@ class AppTheme with ChangeNotifier {
         ),
         floatingLabelStyle: TextStyle(color: colorScheme.primary),
       ),
-      // 配置进度指示器颜色与 M3 新版造型
+      // 配置进度指示器颜色
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: colorScheme.primary,
-        circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),
       ),
 
