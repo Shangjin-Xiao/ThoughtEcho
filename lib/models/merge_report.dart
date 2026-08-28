@@ -26,6 +26,19 @@ class MergeReport {
   final int updatedCategories; // 更新的分类
   final int skippedCategories; // 跳过的分类
 
+  /// 被清洗掉的字段值个数：外来数据里超出本应用词汇表的值（例如
+  /// `sentiment: "thoughtful"`），入库前已归为空。
+  ///
+  /// 单独统计而不是并进 [errors]，是因为它既不是错误也不该沉默：这类值只可能来自
+  /// 非本应用产生的数据，用户有权知道自己导入的文件被动过哪里、动了多少。
+  final int sanitizedFields;
+
+  /// 因正文为空而没有导入的笔记条数。
+  ///
+  /// 和 [skippedQuotes] 分开数：那个是 LWW 判定「本地更新」的正常跳过，属于合并
+  /// 结果；这个是数据有问题进不来，需要让用户看见。
+  final int skippedEmptyQuotes;
+
   /// 处理过程中的错误列表（前 N 条，外部可限制长度）
   final List<String> errors;
 
@@ -50,6 +63,8 @@ class MergeReport {
     this.insertedCategories = 0,
     this.updatedCategories = 0,
     this.skippedCategories = 0,
+    this.sanitizedFields = 0,
+    this.skippedEmptyQuotes = 0,
     this.errors = const [],
     required this.startTime,
     this.endTime,
@@ -127,6 +142,16 @@ class MergeReport {
     return copyWith(skippedCategories: skippedCategories + 1);
   }
 
+  /// 添加：被清洗的字段值
+  MergeReport addSanitizedField() {
+    return copyWith(sanitizedFields: sanitizedFields + 1);
+  }
+
+  /// 添加：因正文为空而没有导入的笔记
+  MergeReport addSkippedEmptyQuote() {
+    return copyWith(skippedEmptyQuotes: skippedEmptyQuotes + 1);
+  }
+
   /// 添加错误信息
   MergeReport addError(String error) {
     return copyWith(errors: [...errors, error]);
@@ -147,6 +172,8 @@ class MergeReport {
     int? insertedCategories,
     int? updatedCategories,
     int? skippedCategories,
+    int? sanitizedFields,
+    int? skippedEmptyQuotes,
     List<String>? errors,
     DateTime? startTime,
     DateTime? endTime,
@@ -166,6 +193,8 @@ class MergeReport {
       insertedCategories: insertedCategories ?? this.insertedCategories,
       updatedCategories: updatedCategories ?? this.updatedCategories,
       skippedCategories: skippedCategories ?? this.skippedCategories,
+      sanitizedFields: sanitizedFields ?? this.sanitizedFields,
+      skippedEmptyQuotes: skippedEmptyQuotes ?? this.skippedEmptyQuotes,
       errors: errors ?? this.errors,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
@@ -218,6 +247,12 @@ class MergeReport {
     if (appliedCategories > 0) {
       parts.add('应用 $appliedCategories 个分类');
     }
+    if (sanitizedFields > 0) {
+      parts.add('忽略 $sanitizedFields 处无法识别的字段值');
+    }
+    if (skippedEmptyQuotes > 0) {
+      parts.add('跳过 $skippedEmptyQuotes 条正文为空的笔记');
+    }
     if (hasErrors) {
       parts.add('${errors.length} 个错误');
     }
@@ -258,6 +293,15 @@ class MergeReport {
     buffer.writeln('  跳过: $skippedCategories');
     buffer.writeln('');
 
+    if (sanitizedFields > 0) {
+      buffer.writeln('已忽略 $sanitizedFields 处无法识别的字段值（非本应用产生的数据）');
+      buffer.writeln('');
+    }
+    if (skippedEmptyQuotes > 0) {
+      buffer.writeln('已跳过 $skippedEmptyQuotes 条正文为空的笔记');
+      buffer.writeln('');
+    }
+
     if (hasErrors) {
       buffer.writeln('错误列表:');
       for (int i = 0; i < errors.length; i++) {
@@ -287,6 +331,8 @@ class MergeReport {
       'insertedCategories': insertedCategories,
       'updatedCategories': updatedCategories,
       'skippedCategories': skippedCategories,
+      'sanitizedFields': sanitizedFields,
+      'skippedEmptyQuotes': skippedEmptyQuotes,
       'errors': errors,
       'startTime': startTime.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
@@ -312,6 +358,8 @@ class MergeReportBuilder {
   int _insertedCategories = 0;
   int _updatedCategories = 0;
   int _skippedCategories = 0;
+  int _sanitizedFields = 0;
+  int _skippedEmptyQuotes = 0;
   final List<String> _errors = [];
 
   final DateTime _startTime;
@@ -358,6 +406,12 @@ class MergeReportBuilder {
 
   void addSkippedCategory() => _skippedCategories++;
 
+  /// 记一次被清洗的字段值（越界的 `sentiment`、非 `#RRGGBB` 的颜色等）
+  void addSanitizedField([int count = 1]) => _sanitizedFields += count;
+
+  /// 记一条因正文为空而没能导入的笔记
+  void addSkippedEmptyQuote() => _skippedEmptyQuotes++;
+
   // 添加错误
   void addError(String error) => _errors.add(error);
 
@@ -375,6 +429,8 @@ class MergeReportBuilder {
       insertedCategories: _insertedCategories,
       updatedCategories: _updatedCategories,
       skippedCategories: _skippedCategories,
+      sanitizedFields: _sanitizedFields,
+      skippedEmptyQuotes: _skippedEmptyQuotes,
       errors: List.unmodifiable(_errors),
       startTime: _startTime,
       endTime: DateTime.now(),

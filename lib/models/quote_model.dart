@@ -94,8 +94,39 @@ class Quote {
     return regex.hasMatch(colorHex);
   }
 
+  /// 新建笔记时的内容长度上限。
+  ///
+  /// 这是**输入层**的策略（非全屏对话框的 `maxLength` 用的是同一个数），不是持久化
+  /// 不变量：`content` 列是 TEXT 没有长度限制，全屏 Quill 编辑器也不限字数。所以
+  /// [validationError] 不查这一条——把已经写好、已经在库里的内容卡在保存这一步，
+  /// 丢的是用户的字。
+  static const int maxContentLengthForInput = 10000;
+
   static bool isValidContent(String content) {
-    return content.isNotEmpty && content.length <= 10000;
+    return content.isNotEmpty && content.length <= maxContentLengthForInput;
+  }
+
+  /// 把任意来源的情感值收敛成 [sentimentKeyToLabel] 的键，认不出来的返回 null。
+  ///
+  /// **只在导入边界使用**（[Quote.fromJson] 故意不调用它）：读的时候悄悄洗，库里那
+  /// 颗雷就永远藏着，谁也不知道自己存着一条存不回去的笔记。洗要洗在数据进门的
+  /// 那一次，而且要有人数得清洗了多少条。
+  ///
+  /// 应用自身一处都不写 `sentiment`，所以越界值只可能来自外部数据（手写备份 JSON、
+  /// 第三方导出、更新版本的对端设备）。原样入库的后果是这条笔记再也保存不了：
+  /// [fromJson] 放行读，[validationError] 拦住写。
+  static String? normalizeSentiment(Object? raw) {
+    if (raw == null) return null;
+    final text = raw.toString().trim();
+    if (text.isEmpty) return null;
+    final key = text.toLowerCase();
+    if (sentimentKeyToLabel.containsKey(key)) return key;
+    // 也认中文标签：weather / day_period 都有过「存的是展示文案而不是 key」的历史
+    // 数据（见 schema_repair_adapter 的两个 migrate*ToKey），这里照同样的规矩收。
+    for (final entry in sentimentKeyToLabel.entries) {
+      if (entry.value == text) return entry.key;
+    }
+    return null;
   }
 
   /// 修复：创建验证过的Quote实例
@@ -535,18 +566,30 @@ class Quote {
     return DeltaBuilder.deltaToJson(safeDeltaOps);
   }
 
-  /// 验证Quote对象的完整性
-
-  bool get isValid {
-    try {
-      return isValidContent(content) &&
-          isValidDate(date) &&
-          isValidColorHex(colorHex) &&
-          (sentiment == null || sentimentKeyToLabel.containsKey(sentiment!));
-    } catch (e) {
-      return false;
+  /// 这条笔记为什么不能持久化；没问题时返回 null。
+  ///
+  /// 存在的理由是**报错要指名道姓**：原来写库失败只抛一句「请检查内容、日期和其他
+  /// 字段」，而真凶往往是没被提到的第四个字段（导入进来的越界 `sentiment`），
+  /// 用户和日志都看不出该修哪里。
+  ///
+  /// 判据要和 [fromJson] 对齐：**读得出来的行必须写得回去**。两边尺子不一样的那道
+  /// 缝里，笔记会变成只能看、不能改的砖。所以这里不查内容长度上限——那是输入层的
+  /// 策略（见 [maxContentLengthForInput]），`fromJson` 也不查它。
+  String? get validationError {
+    if (content.isEmpty) return '笔记内容不能为空';
+    if (!isValidDate(date)) return '日期格式无效：$date';
+    if (!isValidColorHex(colorHex)) {
+      return '颜色格式无效：$colorHex，应为 #RRGGBB 格式';
     }
+    final s = sentiment;
+    if (s != null && !sentimentKeyToLabel.containsKey(s)) {
+      return '情感分析值无效：$s，应为 ${sentimentKeyToLabel.keys.join(' / ')} 之一';
+    }
+    return null;
   }
+
+  /// 验证Quote对象的完整性
+  bool get isValid => validationError == null;
 
   /// 这一行的**内容**是否和 [other] 完全一致。
   ///

@@ -64,6 +64,9 @@ class DatabaseSchemaManager {
   Future<void> migrateDayPeriodToKey(Database? database) =>
       _lifecycle.migrateDayPeriodToKey(database);
 
+  Future<void> repairOutOfDomainSentiment(Database? database) =>
+      _lifecycle.repairOutOfDomainSentiment(database);
+
   Future<void> migrateWeatherToKey(
     Database? database, {
     List<Quote> memoryStore = const <Quote>[],

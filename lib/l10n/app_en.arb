@@ -2104,6 +2104,14 @@
   "mergeImport": "Merge Import (LWW strategy)",
   "mergeImportDesc": "Keep existing data and merge with backup data by update time",
   "restoreSuccess": "Data restored successfully! All data has been updated.",
+  "importCleanupNotice": "Import finished, but {sanitized} field value(s) were unrecognized and ignored, and {skipped} note(s) with empty content were not imported. This data did not come from ThoughtEcho.",
+  "@importCleanupNotice": {
+    "description": "Shown after an import when the backup file contained values this app cannot recognize or empty notes",
+    "placeholders": {
+      "sanitized": { "type": "int" },
+      "skipped": { "type": "int" }
+    }
+  },
   "mergeImportHint": "This operation will keep current data and merge with backup data:",
   "mergeImportReversible": "This operation is reversible: you can import overwrite backup or continue merging again.",
   "confirmRestoreBtn": "Confirm Restore",

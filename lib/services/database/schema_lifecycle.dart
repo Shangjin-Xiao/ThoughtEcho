@@ -108,6 +108,9 @@ class DatabaseSchemaLifecycle {
   }) =>
       _backfill.migrateWeatherToKey(database, memoryStore: memoryStore);
 
+  Future<void> repairOutOfDomainSentiment(Database? database) =>
+      _backfill.repairOutOfDomainSentiment(database);
+
   Future<void> cleanupLegacyTagIdsColumn(Database database) =>
       _backfill.cleanupLegacyTagIdsColumn(database);
 

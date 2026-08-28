@@ -9,8 +9,9 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
   @override
   Future<void> addQuote(Quote quote) async {
     // 修复：添加数据验证
-    if (!quote.isValid) {
-      throw ArgumentError('笔记数据无效，请检查内容、日期和其他字段');
+    final validationError = quote.validationError;
+    if (validationError != null) {
+      throw ArgumentError('笔记数据无效：$validationError');
     }
 
     if (kIsWeb) {
@@ -589,8 +590,9 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       throw ArgumentError('更新笔记时ID不能为空');
     }
 
-    if (!quote.isValid) {
-      throw ArgumentError('笔记数据无效，请检查内容、日期和其他字段');
+    final validationError = quote.validationError;
+    if (validationError != null) {
+      throw ArgumentError('笔记数据无效：$validationError');
     }
 
     if (kIsWeb) {

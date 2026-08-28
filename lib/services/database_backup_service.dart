@@ -5,10 +5,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/import_cleanup_stats.dart';
 import '../models/merge_report.dart';
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
 import '../utils/lww_utils.dart';
+import '../utils/quill_delta_builder.dart';
 import 'media_reference_service.dart';
 import 'large_file_manager.dart';
 
@@ -17,8 +19,8 @@ class DatabaseBackupService {
 
   DatabaseBackupService({Uuid? uuid}) : _uuid = uuid ?? const Uuid();
 
-  /// 从Map对象导入数据
-  Future<void> importDataFromMap(
+  /// 从Map对象导入数据，返回本次入库前被清洗/跳过的统计。
+  Future<ImportCleanupStats> importDataFromMap(
     Database db,
     Map<String, dynamic> data, {
     bool clearExisting = true,
@@ -33,6 +35,15 @@ class DatabaseBackupService {
           !actualData.containsKey('quotes')) {
         throw Exception('备份数据格式无效，缺少 "categories" 或 "quotes" 键');
       }
+
+      // 计数在事务外声明：入库前清洗了什么要能报给调用方，最终由还原页展示。
+      //
+      // 只累计**数量** + 固定长度的日志预览。一份上万条的坏备份如果每条都留一个
+      // 字符串，光是这些详情就能顶出一片内存，最后还要 join 成一个巨大的日志行。
+      var sanitizedFieldCount = 0;
+      var skippedEmptyQuoteCount = 0;
+      final sanitizedPreview = <String>[];
+      final skippedPreview = <String>[];
 
       // 开始事务
       await db.transaction((txn) async {
@@ -204,6 +215,28 @@ class DatabaseBackupService {
                     : DateTime.now().toUtc().toIso8601String();
           }
 
+          // 值域收敛：外来数据里应用词汇表之外的值必须在入库前处理掉，否则这条
+          // 笔记要么存不回去、要么连整页都读不出来（见 [_sanitizeQuoteValues]）。
+          final replaced = _sanitizeQuoteValues(quoteData);
+          // 计的是**字段数**而不是笔记数：同一条笔记的 sentiment、color_hex、date
+          // 可能一起被清洗，报成 1 会瞒掉另外两处。合并路径用的也是 replaced.length。
+          sanitizedFieldCount += replaced.length;
+          final detail = _describeSanitized(quoteData['id'], replaced);
+          if (detail != null && sanitizedPreview.length < _logPreviewLimit) {
+            sanitizedPreview.add(detail);
+          }
+
+          final recoveredContent = _recoverContent(quoteData);
+          if (recoveredContent.isEmpty) {
+            // 正文为空的行读出来就会抛异常，连累整页笔记加载失败，不能入库。
+            skippedEmptyQuoteCount++;
+            if (skippedPreview.length < _logPreviewLimit) {
+              skippedPreview.add(_logSafeValue(quoteData['id']));
+            }
+            continue;
+          }
+          quoteData['content'] = recoveredContent;
+
           // 收集标签信息（稍后批量插入）
           if (parsedTagIds.isNotEmpty) {
             final quoteId = quoteData['id'] as String;
@@ -224,10 +257,23 @@ class DatabaseBackupService {
           );
         }
 
+        _logSanitizedValues(
+          sanitizedPreview,
+          total: sanitizedFieldCount,
+          source: 'BackupRestore',
+        );
+        if (skippedEmptyQuoteCount > 0) {
+          logWarning(
+            '导入时跳过 $skippedEmptyQuoteCount 条正文为空的笔记: '
+            '${_previewLine(skippedPreview, skippedEmptyQuoteCount)}',
+            source: 'BackupRestore',
+          );
+        }
+
         // 批量提交笔记数据（性能提升5-10倍）
         try {
           await quoteBatch.commit(noResult: true);
-          logDebug('批量插入${quotes.length}条笔记成功');
+          logDebug('批量插入${processedQuotes.length}条笔记成功');
         } catch (e) {
           logError('批量插入笔记失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
           final fallbackQuoteBatch = txn.batch();
@@ -423,6 +469,11 @@ class DatabaseBackupService {
           }
         }
       });
+
+      return ImportCleanupStats(
+        sanitizedFields: sanitizedFieldCount,
+        skippedEmptyQuotes: skippedEmptyQuoteCount,
+      );
     } catch (e) {
       logDebug('从Map导入数据失败: $e');
       rethrow;
@@ -433,7 +484,7 @@ class DatabaseBackupService {
   ///
   /// [filePath] - 导入文件的路径
   /// [clearExisting] - 是否清空现有数据，默认为 true
-  Future<void> importData(
+  Future<ImportCleanupStats> importData(
     Database db,
     String filePath, {
     bool clearExisting = true,
@@ -447,7 +498,7 @@ class DatabaseBackupService {
       final data = await LargeFileManager.decodeJsonFromFileStreaming(file);
 
       // 调用新的核心导入逻辑
-      await importDataFromMap(db, data, clearExisting: clearExisting);
+      return await importDataFromMap(db, data, clearExisting: clearExisting);
     } catch (e) {
       logDebug('数据导入失败: $e');
       rethrow;
@@ -780,6 +831,7 @@ class DatabaseBackupService {
     'last_modified',
     'weather_backup',
     'day_period_backup',
+    'sentiment_backup',
     'favorite_count',
     'is_deleted',
     'deleted_at',
@@ -800,6 +852,145 @@ class DatabaseBackupService {
     return Map.fromEntries(
       categoryData.entries.where((e) => _knownCategoryColumns.contains(e.key)),
     );
+  }
+
+  /// 把一行外来笔记数据收敛到本地模型认得的值域，返回被清洗的字段个数。
+  ///
+  /// 导入侧原来只过滤不认识的**列**（[_filterKnownQuoteColumns]），从不看**值**。
+  /// 于是外来数据里的越界值原样落库，而读和写对值域的要求并不一致，后果分两档：
+  ///
+  /// - `sentiment` 这种「读不查、写才查」的：笔记显示正常，一保存就被
+  ///   [Quote.validationError] 拦下，变成只能看不能改的砖；
+  /// - `date` / `content` 这种读就要查的：[Quote.fromJson] 直接抛异常，而
+  ///   `database_query_mixin` 的反序列化没有逐行兜底，**整页笔记加载失败**。
+  ///
+  /// 所以洗在这里——数据进门这一次，洗完由调用方把计数报给用户（[MergeReport]
+  /// 的 `sanitizedFields`）。读的时候不洗：那等于把库里的雷永远藏着。
+  /// 返回「字段名 → 被替换掉的原值」，空 Map 表示这一行原样通过。
+  static Map<String, Object?> _sanitizeQuoteValues(
+    Map<String, dynamic> quoteData,
+  ) {
+    final replaced = <String, Object?>{};
+
+    final rawSentiment = quoteData['sentiment'];
+    if (rawSentiment != null) {
+      final normalized = Quote.normalizeSentiment(rawSentiment);
+      if (normalized != rawSentiment) {
+        quoteData['sentiment'] = normalized;
+        replaced['sentiment'] = rawSentiment;
+      }
+    }
+
+    final rawColor = quoteData['color_hex'];
+    if (rawColor != null) {
+      final normalized = _normalizeColorHex(rawColor);
+      if (normalized != rawColor) {
+        quoteData['color_hex'] = normalized;
+        replaced['color_hex'] = rawColor;
+      }
+    }
+
+    final rawDate = quoteData['date']?.toString();
+    if (rawDate == null || !Quote.isValidDate(rawDate)) {
+      final lastModified = quoteData['last_modified']?.toString();
+      quoteData['date'] =
+          (lastModified != null && Quote.isValidDate(lastModified))
+              ? lastModified
+              : DateTime.now().toIso8601String();
+      replaced['date'] = rawDate;
+    }
+
+    return replaced;
+  }
+
+  /// 把被替换掉的原值写进日志，让「清洗」这件事在导入之后还查得到。
+  ///
+  /// [preview] 是已经限量攒下的样本，[total] 是真实总数——两者分开，才能既报准
+  /// 数量又不为此保留 O(n) 个字符串。
+  ///
+  /// 收敛是不可逆写入，源文件还在用户手里、同步时对端也还留着自己那份，但库内
+  /// 得有个能追溯的落点。只记字段名和这三个字段的原值（都不是笔记内容），并且
+  /// 限量，免得一份上万条的备份把日志刷爆。
+  static void _logSanitizedValues(
+    List<String> preview, {
+    required int total,
+    required String source,
+  }) {
+    if (total == 0) return;
+    logWarning(
+      '导入时忽略了 $total 处无法识别的字段值（非本应用产生的数据）：'
+      '${_previewLine(preview, total)}',
+      source: source,
+    );
+  }
+
+  /// 预览行：只展示已经攒下的那几条，剩下的报数量。
+  static String _previewLine(List<String> preview, int total) {
+    final omitted = total - preview.length;
+    final shown = preview.join('; ');
+    return omitted > 0 ? '$shown …另有 $omitted 处' : shown;
+  }
+
+  /// 日志预览最多留几条。攒下的字符串数量必须有上限，否则一份很大的坏备份会把
+  /// 详情本身变成内存压力。
+  static const int _logPreviewLimit = 20;
+
+  /// 把一行的清洗结果拼成可读的一条记录。
+  ///
+  /// 原值来自导入文件，长度和内容都不受本应用控制，所以进日志前要裁短并去掉控制
+  /// 字符——否则一个超长或带换行的字段值就能把日志刷乱。
+  static String? _describeSanitized(
+    Object? quoteId,
+    Map<String, Object?> replaced,
+  ) {
+    if (replaced.isEmpty) return null;
+    final fields = replaced.entries
+        .map((e) => '${e.key}=${_logSafeValue(e.value)}')
+        .join(', ');
+    return '${_logSafeValue(quoteId)}($fields)';
+  }
+
+  /// 单个外来值的日志安全形式：去控制字符 + 限长。
+  static String _logSafeValue(Object? value) {
+    const maxLength = 32;
+    final cleaned =
+        (value?.toString() ?? 'null').replaceAll(_controlChars, ' ').trim();
+    return cleaned.length > maxLength
+        ? '${cleaned.substring(0, maxLength)}…'
+        : cleaned;
+  }
+
+  static final RegExp _controlChars = RegExp(r'[\x00-\x1F\x7F]');
+
+  /// 收敛颜色值到 `#RRGGBB`，认不出来返回 null。
+  ///
+  /// 认 `RRGGBB`（缺 `#`）、`0xRRGGBB` 和 `#RGB` 缩写。**带 alpha 的 8 位一律丢弃**：
+  /// `#RRGGBBAA` 和 `#AARRGGBB` 从字面上分不出来，猜错会把颜色改成另一个颜色，
+  /// 比不上色更糟。
+  static String? _normalizeColorHex(Object? raw) {
+    var text = raw?.toString().trim() ?? '';
+    if (text.isEmpty) return null;
+    if (text.startsWith('0x') || text.startsWith('0X')) {
+      text = text.substring(2);
+    }
+    if (!text.startsWith('#')) {
+      text = '#$text';
+    }
+    if (RegExp(r'^#[0-9A-Fa-f]{3}$').hasMatch(text)) {
+      text = '#${text[1]}${text[1]}${text[2]}${text[2]}${text[3]}${text[3]}';
+    }
+    return Quote.isValidColorHex(text) ? text : null;
+  }
+
+  /// 笔记正文为空时补一次：`content` 空字符串会让 [Quote.fromJson] 抛异常，
+  /// 而那条异常会带着整页查询一起失败。能从 Delta 里捞回正文就捞，捞不回来的
+  /// 交给调用方决定（当前是不导入这一条并记进报告）。
+  static String _recoverContent(Map<String, dynamic> quoteData) {
+    final content = quoteData['content']?.toString() ?? '';
+    if (content.trim().isNotEmpty) return content;
+    return DeltaBuilder.extractTextFromDelta(
+      quoteData['delta_content']?.toString(),
+    ).trim();
   }
 
   /// 过滤掉 quoteData 中本地 schema 不认识的字段，
@@ -852,6 +1043,9 @@ class DatabaseBackupService {
     };
 
     final batch = txn.batch();
+    // 同上：只留固定长度的日志预览，总数走 reportBuilder。
+    var sanitizedFieldCount = 0;
+    final sanitizedPreview = <String>[];
 
     for (final q in quotes) {
       try {
@@ -924,10 +1118,48 @@ class DatabaseBackupService {
         final quoteId = quoteData['id'] ??= _uuid.v4();
         quoteData['content'] ??= '';
         quoteData['date'] ??= DateTime.now().toIso8601String();
-        quoteData['last_modified'] ??=
-            (quoteData['date'] as String? ?? DateTime.now().toIso8601String());
         quoteData['is_deleted'] = _parseDeletedFlag(quoteData['is_deleted']);
         quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
+
+        // 值域收敛。同步（局域网 / WebDAV）和「合并导入」共用这一段，所以对端版本
+        // 比本机新、写了本机词汇表里还没有的值时，这里只收敛不拒收——整份拒收会
+        // 让两台设备直接同步不了，代价远大于丢一个可选字段。
+        //
+        // 必须排在推导 last_modified **之前**：那一步原来写的是
+        // `quoteData['last_modified'] ??= quoteData['date'] as String?`，
+        // 有两个坑都发生在收敛之前——
+        // - date 不是字符串时（对端把它写成了数字），那句硬转直接抛类型错误，
+        //   被外层 catch 吞成「跳过这条笔记」，收敛根本没机会跑；
+        // - date 是非法字符串时，非法值会先被抄进 last_modified，收敛只修 date，
+        //   非法的 last_modified 照样写进库——而 LWW 比较用的正是它。
+        final replaced = _sanitizeQuoteValues(quoteData);
+        if (replaced.isNotEmpty) {
+          reportBuilder.addSanitizedField(replaced.length);
+          sanitizedFieldCount += replaced.length;
+          final detail = _describeSanitized(quoteId, replaced);
+          if (detail != null && sanitizedPreview.length < _logPreviewLimit) {
+            sanitizedPreview.add(detail);
+          }
+        }
+
+        // last_modified 从**已收敛**的 date 推导，自带的值也要过一遍合法性检查：
+        // 它是 LWW 比较的依据，留一个解析不了的值在库里，之后每一次合并都会拿它
+        // 做判断。分类那一侧早就是这么处理的（见 _mergeCategories），笔记这侧
+        // 一直还是裸 `as String?`。
+        final rawLastModified = quoteData['last_modified']?.toString();
+        quoteData['last_modified'] =
+            (rawLastModified != null && Quote.isValidDate(rawLastModified))
+                ? LWWUtils.normalizeTimestamp(rawLastModified)
+                : quoteData['date'];
+
+        final recoveredContent = _recoverContent(quoteData);
+        if (recoveredContent.isEmpty) {
+          // 正文为空的行读出来就会抛异常，连累整页笔记加载失败，不能入库。
+          reportBuilder.addError('跳过正文为空的笔记: ${_logSafeValue(quoteId)}');
+          reportBuilder.addSkippedEmptyQuote();
+          continue;
+        }
+        quoteData['content'] = recoveredContent;
 
         final localTombstone = localTombstoneMap[quoteId];
         if (localTombstone != null) {
@@ -1044,6 +1276,12 @@ class DatabaseBackupService {
         reportBuilder.addError('处理笔记失败: $e');
       }
     }
+
+    _logSanitizedValues(
+      sanitizedPreview,
+      total: sanitizedFieldCount,
+      source: 'BackupRestore',
+    );
 
     await batch.commit(noResult: true);
   }

@@ -11,6 +11,7 @@ import 'package:thoughtecho/utils/zip_stream_processor.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/path_security_utils.dart';
 import 'package:thoughtecho/utils/device_memory_manager.dart';
+import 'package:thoughtecho/models/import_cleanup_stats.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'package:thoughtecho/services/media_sync_manifest.dart';
 import 'streaming_backup_processor.dart';
@@ -452,7 +453,7 @@ class BackupService {
         sourceDevice: sourceDevice,
       );
     } else {
-      await LargeFileManager.executeWithMemoryProtection(
+      final stats = await LargeFileManager.executeWithMemoryProtection(
         () async => _performImportWithProtection(
           filePath,
           clearExisting: clearExisting,
@@ -466,12 +467,20 @@ class BackupService {
       } catch (e) {
         logWarning('导入后刷新数据库失败: $e', source: 'BackupService');
       }
-      return null; // 旧模式无 MergeReport
+      // 覆盖导入不是合并，没有 LWW 统计；但入库前清洗/跳过了什么必须报上去，
+      // 否则「不静默」只停在日志里，用户不主动翻日志页就等于没说。
+      return stats == null || stats.isClean
+          ? null
+          : MergeReport.start().copyWith(
+              sanitizedFields: stats.sanitizedFields,
+              skippedEmptyQuotes: stats.skippedEmptyQuotes,
+              endTime: DateTime.now(),
+            );
     }
   }
 
   /// 执行受保护的导入操作。
-  Future<void> _performImportWithProtection(
+  Future<ImportCleanupStats> _performImportWithProtection(
     String filePath, {
     bool clearExisting = true,
     Function(int current, int total)? onProgress,
@@ -524,12 +533,17 @@ class BackupService {
 
     // 处理导入数据
     onProgress?.call(60, 100);
-    await _processImportData(backupData, clearExisting, cancelToken);
+    final stats = await _processImportData(
+      backupData,
+      clearExisting,
+      cancelToken,
+    );
     onProgress?.call(100, 100);
+    return stats;
   }
 
   /// 处理已解析的导入数据。
-  Future<void> _processImportData(
+  Future<ImportCleanupStats> _processImportData(
     Map<String, dynamic> backupData,
     bool clearExisting,
     CancelToken? cancelToken,
@@ -554,6 +568,7 @@ class BackupService {
         };
       }
 
+      var cleanupStats = const ImportCleanupStats();
       if (notesData != null) {
         logDebug('恢复笔记数据...');
 
@@ -563,7 +578,7 @@ class BackupService {
           notesData = await _convertMediaPathsInNotesForRestore(notesData);
         }
 
-        await _databaseService.importDataFromMap(
+        cleanupStats = await _databaseService.importDataFromMap(
           notesData,
           clearExisting: clearExisting,
         );
@@ -594,6 +609,7 @@ class BackupService {
       }
 
       logDebug('导入数据处理完成');
+      return cleanupStats;
     } catch (e) {
       logDebug('导入数据处理失败: $e');
       rethrow;

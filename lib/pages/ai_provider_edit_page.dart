@@ -8,8 +8,8 @@ import '../models/ai_provider_settings.dart';
 import '../models/ai_settings.dart';
 import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
+import '../utils/ai_connection_tester.dart';
 import '../utils/ai_endpoint_security.dart';
-import '../utils/ai_network_manager.dart';
 import '../utils/app_logger.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
@@ -172,31 +172,17 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
 
     setState(() => _isTesting = true);
     try {
-      final response = await AINetworkManager.makeRequest(
-        url: '',
-        data: {
-          'messages': [
-            {'role': 'system', 'content': l10n.connectionTestSystemMessage},
-            {'role': 'user', 'content': l10n.connectionTestUserMessage},
-          ],
-          'temperature': 0.1,
-          'max_tokens': 50,
-        },
+      // 走和真正聊天完全相同的链路，测试结论才等于实际可用性。请求正常返回即算
+      // 通过：正文可能是空的（思考模型会把预算花在推理上），但能走到这一步就说明
+      // URL、密钥和模型三样都对。
+      await AIConnectionTester.test(
         provider: _buildDraftProvider(),
-        timeout: const Duration(seconds: 30),
+        systemPrompt: l10n.connectionTestSystemMessage,
+        userMessage: l10n.connectionTestUserMessage,
       );
 
       if (!mounted) return;
-      final data = response.data;
-      final ok = response.statusCode == 200 &&
-          data is Map &&
-          data['choices'] is List &&
-          (data['choices'] as List).isNotEmpty;
-      if (ok) {
-        AppSnackBar.success(context, l10n.connectionTestSuccess);
-      } else {
-        AppSnackBar.error(context, l10n.responseFormatError);
-      }
+      AppSnackBar.success(context, l10n.connectionTestSuccess);
     } catch (e) {
       if (!mounted) return;
       AppSnackBar.error(context, l10n.connectionTestFailed(e.toString()));

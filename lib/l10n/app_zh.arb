@@ -2110,6 +2110,14 @@
   "mergeImport": "合并导入 (LWW策略)",
   "mergeImportDesc": "保留现有数据，与备份数据按更新时间合并",
   "restoreSuccess": "数据还原成功！所有数据已更新。",
+  "importCleanupNotice": "导入完成，但有 {sanitized} 处字段值无法识别、已忽略；{skipped} 条正文为空的笔记未导入。这些数据不是心迹产生的。",
+  "@importCleanupNotice": {
+    "description": "导入后提示：备份文件里含有本应用无法识别的字段值或空笔记",
+    "placeholders": {
+      "sanitized": { "type": "int" },
+      "skipped": { "type": "int" }
+    }
+  },
   "mergeImportHint": "此操作将保留当前数据，并与备份数据进行合并：",
   "mergeImportReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
   "confirmRestoreBtn": "确认还原",

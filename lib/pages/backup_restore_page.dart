@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../models/merge_report.dart';
 import '../services/backup_service.dart';
 import '../services/large_file_manager.dart';
 import '../utils/app_logger.dart';
@@ -582,8 +583,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       // 执行导入
       _backupProgressUpdateGate.reset();
       _cancelToken = CancelToken();
+      MergeReport? report;
       if (useMerge) {
-        final report = await backupService.importData(
+        report = await backupService.importData(
           file.path!,
           clearExisting: false,
           merge: true,
@@ -594,7 +596,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         );
         debugPrint('合并导入完成: ${report?.summary}');
       } else {
-        await backupService.importData(
+        report = await backupService.importData(
           file.path!,
           clearExisting: true,
           onProgress: (current, total) {
@@ -606,10 +608,27 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        // 还原成功，回到主页并显示成功消息
-        Navigator.of(context).popUntil((route) => route.isFirst);
 
-        AppSnackBar.success(context, l10n.restoreSuccess);
+        // 提示必须在 popUntil **之前**发：AppSnackBar 的 success/warning 会先读
+        // AppSemanticColors.of(context)（即 Theme.of），而那发生在 show() 内部的
+        // mounted 检查之前——页面已经被弹掉的话，这里拿的是一个已卸载的 context。
+        // SnackBar 挂在 MaterialApp 那一层的 ScaffoldMessenger 上，本页弹出后它
+        // 仍然显示得出来。
+        final sanitized = report?.sanitizedFields ?? 0;
+        final skippedEmpty = report?.skippedEmptyQuotes ?? 0;
+        if (sanitized > 0 || skippedEmpty > 0) {
+          // 备份里有本应用认不出的字段值、或有正文为空进不来的笔记时，必须让用户
+          // 看见一眼——这类数据只可能来自非心迹产生的文件，只写日志等于没说。
+          AppSnackBar.warning(
+            context,
+            l10n.importCleanupNotice(sanitized, skippedEmpty),
+          );
+        } else {
+          AppSnackBar.success(context, l10n.restoreSuccess);
+        }
+
+        // 还原成功，回到主页
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       if (mounted) {
