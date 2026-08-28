@@ -78,6 +78,27 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   static const String hiddenTagId = 'system_hidden_tag';
   static const String hiddenTagIconName = '🔒';
 
+  /// 所有内置系统标签的固定 ID。
+  /// 系统标签不可被用户删除；任何按固定 ID 重建标签的路径（默认标签初始化、
+  /// 一言标签补建、导入后修复）都必须据此把 is_default 写回 1，
+  /// 否则“清空并导入”后重建出来的同名标签会退化成普通标签。
+  static const Set<String> systemTagIds = {
+    defaultTagIdHitokoto,
+    defaultTagIdAnime,
+    defaultTagIdComic,
+    defaultTagIdGame,
+    defaultTagIdNovel,
+    defaultTagIdOriginal,
+    defaultTagIdInternet,
+    defaultTagIdOther,
+    defaultTagIdMovie,
+    defaultTagIdPoem,
+    defaultTagIdMusic,
+    defaultTagIdPhilosophy,
+    defaultTagIdJoke,
+    hiddenTagId,
+  };
+
   Future<void> addQuote(Quote quote);
   Future<Quote?> getQuoteById(String id, {bool includeDeleted = false});
   Future<List<Quote>> getAllQuotes({
@@ -1287,6 +1308,27 @@ class DatabaseService extends _DatabaseServiceBase
   static const String defaultTagIdJoke = 'default_joke';
   static const String hiddenTagId = 'system_hidden_tag';
   static const String hiddenTagIconName = '🔒';
+
+  /// 所有内置系统标签的固定 ID。
+  /// 系统标签不可被用户删除；任何按固定 ID 重建标签的路径（默认标签初始化、
+  /// 一言标签补建、导入后修复）都必须据此把 is_default 写回 1，
+  /// 否则“清空并导入”后重建出来的同名标签会退化成普通标签。
+  static const Set<String> systemTagIds = {
+    defaultTagIdHitokoto,
+    defaultTagIdAnime,
+    defaultTagIdComic,
+    defaultTagIdGame,
+    defaultTagIdNovel,
+    defaultTagIdOriginal,
+    defaultTagIdInternet,
+    defaultTagIdOther,
+    defaultTagIdMovie,
+    defaultTagIdPoem,
+    defaultTagIdMusic,
+    defaultTagIdPhilosophy,
+    defaultTagIdJoke,
+    hiddenTagId,
+  };
 
   static const int databaseVersion = DatabaseSchemaManager.schemaVersion;
 

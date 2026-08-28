@@ -88,6 +88,10 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   Future<void> _triggerPostRestoreMigrations() async {
     logDebug('开始触发恢复/合并后数据迁移与修补任务...', source: 'DatabaseService');
     try {
+      // "清空并导入"会删掉全部 categories：备份若不含系统标签（例如从别处
+      // 生成的演示数据），系统标签就此消失，之后按固定 ID 重建的标签也不再是
+      // 系统标签。这里先把内置标签补回来，并修复被降级的系统标签属性。
+      await initDefaultHitokotoTags();
       // 必须先把合并进来的媒体绝对路径重定基到本机，再重建引用：
       // 引用表按修复前的外来路径建立的话，WebDAV 会认为云端附件无人引用而不下载。
       // 放在最前面是因为它自带兜底、不会抛出，不该被后面的迁移失败带走。

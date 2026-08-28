@@ -15,6 +15,18 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           _tagStore.add(category);
         }
       }
+      // 修复被降级为普通标签的系统标签（同数据库分支的处理）
+      for (var i = 0; i < _tagStore.length; i++) {
+        final tag = _tagStore[i];
+        if (tag.isDefault) continue;
+        if (!_DatabaseServiceBase.systemTagIds.contains(tag.id)) continue;
+        _tagStore[i] = NoteTag(
+          id: tag.id,
+          name: tag.name,
+          isDefault: true,
+          iconName: tag.iconName,
+        );
+      }
       // 确保流更新
       if (!_tagsController.isClosed) {
         _tagsController.add(List.unmodifiable(_tagStore));
@@ -45,7 +57,7 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
       // 1. 一次性查询所有现有标签名称（小写）
       final existingCategories = await db.query(
         'categories',
-        columns: ['name', 'id'],
+        columns: ['name', 'id', 'is_default'],
       );
       final existingNamesLower = existingCategories
           .map((row) => (row['name'] as String?)?.toLowerCase())
@@ -75,8 +87,35 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           idsToUpdate[category.id] = category.name;
         }
       }
+      // 3.5 修复被降级为普通标签的系统标签。
+      // "清空并导入"会删除全部 categories，随后按固定 ID 重建的标签曾被写成
+      // is_default=0，导致系统标签变得可删可改；这里按固定 ID 统一回补。
+      final idsToMarkDefault = <String>[];
+      for (final row in existingCategories) {
+        final rowId = row['id'] as String?;
+        if (rowId == null) continue;
+        if (!_DatabaseServiceBase.systemTagIds.contains(rowId)) continue;
+        if (idsToUpdate.containsKey(rowId)) continue; // 已在上面的更新中带上
+        final isDefault = row['is_default'];
+        if (isDefault == 1 || isDefault == true) continue;
+        idsToMarkDefault.add(rowId);
+      }
+
       // 4. 如果有需要添加的标签，则使用批处理插入
       final batch = db.batch();
+
+      for (final rowId in idsToMarkDefault) {
+        batch.update(
+          'categories',
+          {
+            'is_default': 1,
+            'last_modified': DateTime.now().toUtc().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [rowId],
+        );
+        logDebug('修复系统标签属性: $rowId');
+      }
 
       // 先处理更新
       for (final entry in idsToUpdate.entries) {
@@ -107,10 +146,13 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
       }
 
       // 提交批处理
-      if (categoriesToAdd.isNotEmpty || idsToUpdate.isNotEmpty) {
+      if (categoriesToAdd.isNotEmpty ||
+          idsToUpdate.isNotEmpty ||
+          idsToMarkDefault.isNotEmpty) {
         await batch.commit(noResult: true);
         logDebug(
-          '批量处理了 ${categoriesToAdd.length} 个新标签和 ${idsToUpdate.length} 个更新',
+          '批量处理了 ${categoriesToAdd.length} 个新标签、${idsToUpdate.length} 个更新和 '
+          '${idsToMarkDefault.length} 个系统标签属性修复',
         );
       } else {
         logDebug('所有默认标签已存在，无需添加');

@@ -161,7 +161,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
           _tagStore[index] = NoteTag(
             id: id,
             name: name,
-            isDefault: _tagStore[index].isDefault,
+            isDefault: _tagStore[index].isDefault ||
+                _DatabaseServiceBase.systemTagIds.contains(id),
             iconName: iconName ?? _tagStore[index].iconName,
           );
         }
@@ -170,7 +171,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         final newCategory = NoteTag(
           id: id,
           name: name,
-          isDefault: false,
+          // 固定 ID 属于内置系统标签时必须保留系统属性，否则重建出来的标签可删可改
+          isDefault: _DatabaseServiceBase.systemTagIds.contains(id),
           iconName: iconName ?? "",
         );
         _tagStore.add(newCategory);
@@ -225,6 +227,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
             'name': name,
             'icon_name': iconName ?? "",
             'last_modified': DateTime.now().toUtc().toIso8601String(),
+            // 内置系统标签即使此前被写成普通标签，也在这里修回系统属性
+            if (_DatabaseServiceBase.systemTagIds.contains(id)) 'is_default': 1,
           };
           await txn.update(
             'categories',
@@ -238,7 +242,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
           final categoryMap = {
             'id': id,
             'name': name,
-            'is_default': 0,
+            'is_default':
+                _DatabaseServiceBase.systemTagIds.contains(id) ? 1 : 0,
             'icon_name': iconName ?? "",
             'last_modified': DateTime.now().toUtc().toIso8601String(),
           };
@@ -262,7 +267,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         final categoryMap = {
           'id': id,
           'name': name,
-          'is_default': 0,
+          'is_default':
+              _DatabaseServiceBase.systemTagIds.contains(id) ? 1 : 0,
           'icon_name': iconName ?? "",
           'last_modified': DateTime.now().toUtc().toIso8601String(),
         };
