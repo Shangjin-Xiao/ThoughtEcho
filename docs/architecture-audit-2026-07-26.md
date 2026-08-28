@@ -1,4 +1,17 @@
-# ThoughtEcho 架构与代码质量审查报告
+# ThoughtEcho 架构与代码质量审查报告 [已归档 / 历史审计]
+
+> [!NOTE]
+> ### 📦 本历史架构审查报告已归档 (Archived / Historical Audit)
+> - **整改核销状态**：本文档提出的全部 P0 缺陷与 P1 架构硬伤已在后续重构中 **100% 修复与核销**：
+>   - **P0.1 (WebDAV 媒体失败)**：已增加 `mediaFailureCount` 追踪并在媒体失败时阻断同步状态前推；
+>   - **P0.2 (时间戳统一)**：全库时间戳统一为 UTC ISO-8601，冲突判定统一使用 `LWWUtils`；
+>   - **P0.3 (备份路径安全)**：接入 `PathSecurityUtils` 与相对路径转换，杜绝路径穿越；
+>   - **P0.4 (编辑器颜色选择器)**：`editor_color_and_media.dart` 空回调已修复；
+>   - **P1.1 (循环依赖)**：Services 反向 import `main.dart` / UI 已全部清零；
+>   - **P1.2-P1.4 (模块化与测试替身)**：通过接口下沉与测试抽象完成解耦。
+> - **归档时间**：2026-07-31
+> - **当前生效事实源**：[`docs/codebase-architecture-and-tasks-audit-2026-08-23.md`](codebase-architecture-and-tasks-audit-2026-08-23.md) 与 [`docs/decisions.md`](decisions.md)
+> - **保留目的**：本文仅供架构演进历史、历史缺陷根因剖析及重构基线对比参考。
 
 > 审查日期：2026-07-26
 > 范围：lib/ 415 个 Dart 文件（约 5.7 万行，不含 gen_l10n）、test/、pubspec.yaml、CI 配置

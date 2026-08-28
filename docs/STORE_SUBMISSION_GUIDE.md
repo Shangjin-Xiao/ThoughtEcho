@@ -85,19 +85,19 @@
 ## 📝 三、应用商店文案速查 (Store Listing Quick Reference)
 
 ### 🇨🇳 简体中文
-* **应用标题**: 心迹 - 你的专属灵感摘录本
+* **应用标题**: 心迹 - 灵感摘录与思考笔记
 * **副标题 / 短标题**: 想到就记，读到就摘，剩下的交给 AI
 * **简短描述 (80字以内)**:
   ```text
-  想到就记，读到就摘，剩下的交给 AI。本地优先的高颜值灵感笔记，手工排版、离线可用、Thoughter AI 伴侣与全平台私密同步。
+  想到就记，读到就摘。本地优先的灵感与思考笔记，支持纸墨排版、离线记录、Thoughter AI 伴侣与私密同步。
   ```
 
 ### 🇺🇸 English
-* **Title**: ThoughtEcho - Personal Inspiration Notebook
+* **Title**: ThoughtEcho - Inspiration & Thought Journal
 * **Subtitle / Short Title**: Jot it down, clip what you read
 * **Short Description (under 80 words)**:
   ```text
-  Jot it down, clip what you read — let AI sort out the rest. Local-first smart journal with rich media, artisan themes & AI insights.
+  Jot it down, clip what you read. A local-first inspiration journal with artisan typography, offline capture, Thoughter AI companion & private sync.
   ```
 
 ---

@@ -1,4 +1,11 @@
-# 字体变粗问题 — 交接文档
+# 字体变粗问题 — 交接文档 [已归档]
+
+> [!NOTE]
+> ### 📦 本文档已归档 (Archived)
+> - **归档原因**：本文档记录 Flutter 3.35→3.44 升级后 Android 字体变粗的初期根因定位。后续重构（296 处 inline FontWeight 收敛）与 Android 可变字重补偿机制已在后续方案中闭环。
+> - **归档时间**：2026-07-25
+> - **当前生效事实源**：[`docs/paper-ink-theme-handoff-2026-07-31.md`](paper-ink-theme-handoff-2026-07-31.md) 与 [`docs/font-refactor-handoff-2026-07-25.md`](font-refactor-handoff-2026-07-25.md)
+> - **保留目的**：本文仅供排查 Flutter 引擎字重映射与 Impeller 渲染行为差异溯源参考。
 
 ## 问题
 Flutter 3.35→3.44 升级后，Android 上字体全局变粗。

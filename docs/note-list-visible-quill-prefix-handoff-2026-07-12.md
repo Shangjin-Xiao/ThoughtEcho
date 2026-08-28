@@ -1,4 +1,11 @@
-# 记录页折叠 Quill 可见前缀交接（2026-07-12）
+# 记录页折叠 Quill 可见前缀交接（2026-07-12） [已归档 / 已被取代]
+
+> [!WARNING]
+> ### 📦 本交接方案已归档 / 已被取代 (Archived / Superseded)
+> - **取代原因**：本文档记录的「二分法裁剪 Quill Delta 可见前缀并送入 QuillEditor」属于优化过渡期方案。2026-08-12 起折叠态卡片已彻底移除 `QuillEditor`，全面改用纯函数 `Text.rich`（`CollapsedRichText` 与 `delta_rich_text_parser.dart`），从根源上消除了 Quill 布局开销。
+> - **归档时间**：2026-08-12
+> - **当前生效事实源**：[`docs/note-list-warmup-invalidation-2026-08-22.md`](note-list-warmup-invalidation-2026-08-22.md) 与 [`lib/widgets/note_list/collapsed_rich_text.dart`](../lib/widgets/note_list/collapsed_rich_text.dart)
+> - **保留目的**：本文仅供折叠富文本可见高度预算与历史优化思路复盘参考，**禁止作为当前折叠卡片实现的依据**。
 
 ## 问题
 

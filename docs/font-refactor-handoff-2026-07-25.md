@@ -1,4 +1,11 @@
-# FontWeight 重构完成交接文档
+# FontWeight 重构完成交接文档 [已归档]
+
+> [!NOTE]
+> ### 📦 本交接文档已归档 (Archived)
+> - **落实状态**：全项目 ~296 处 inline FontWeight 已成功重构并收口至 `Theme.of(context).textTheme`。后续在纸墨主题（2026-07-31）中进一步演进为由 `ThemeStyleForm` 驱动的 `variableWeightCompensation`、`titleWeightFloor` 与 `bodyWeightFloor` 令牌化精细控制。
+> - **归档时间**：2026-07-25
+> - **当前生效事实源**：[`docs/paper-ink-theme-handoff-2026-07-31.md`](paper-ink-theme-handoff-2026-07-31.md)
+> - **保留目的**：本文仅供字重映射语义规则及特殊场景（无 BuildContext / Canvas / PDF）处理原则追溯参考。
 
 ## 概述
 已将项目中大约 296 处 inline FontWeight 用法成功重构为 `Theme.of(context).textTheme` 的引用。此项工作有效解决了 Flutter 升级到 3.41+ 之后，由于 variable font `wght` 轴精准映射和 Impeller 引擎切换带来的 Android 端字体全局变粗问题。现在，应用中的所有字重已统一收口到 `AppTheme` 集中管理。

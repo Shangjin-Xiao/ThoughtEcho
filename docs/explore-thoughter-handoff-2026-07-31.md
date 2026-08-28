@@ -1,4 +1,11 @@
-# 探索页 → Thoughter 改造交接（2026-07-31）
+# 探索页 → Thoughter 改造交接（2026-07-31） [已归档 / 阶段交接]
+
+> [!NOTE]
+> ### 📦 本阶段交接文档已归档 (Archived / Milestone Handoff)
+> - **落实状态**：探索页闪烁修复、摘要带视觉重构、快捷追问与最近对话入口等已全部完成并合并。历史代码中的 `AIAssistantPage` 及其 parts 已在后续重构中统一命名为 `ThoughterPage`（`lib/pages/thoughter_page.dart` 与 `lib/pages/thoughter/`）。
+> - **归档时间**：2026-07-31
+> - **当前生效事实源**：[`lib/pages/explore/`](../lib/pages/explore/) 与 [`lib/pages/thoughter_page.dart`](../lib/pages/thoughter_page.dart)
+> - **保留目的**：本文仅供探索页去闪防抖机制、数据概览视觉演进及 Thoughter 入口交互设计参考。
 
 这一轮从「进入探索页会来回闪」的 bug 开始，最后变成探索页的重新设计 +
 Thoughter 入口的重做。下面按「已完成」「关键发现」「待决项」「下一步」四段写。
@@ -36,7 +43,7 @@ Thoughter 入口的重做。下面按「已完成」「关键发现」「待决�
 
 洞察卡下方接三个快捷追问（追问这条 / 总结本周 / 随便聊聊），替掉原来那张独立的
 「与 Thoughter 对话」卡；新增「最近对话」区（`getAgentSessions()` +
-`getSessionOverviews()`，列最近两条，点击 `AIAssistantPage(session:)` 深链回去，
+`getSessionOverviews()`，列最近两条，点击 `ThoughterPage(session:)`（原 `AIAssistantPage`）深链回去，
 「全部」通往 `SessionHistoryPage(noteId: '')`）。
 
 ### 3. 日期选择器重做
@@ -61,15 +68,15 @@ Thoughter 入口的重做。下面按「已完成」「关键发现」「待决�
 ### `includedInContext` 是个坑
 
 `ai_service.dart:1208` / `:1254` 构造模型上下文时按 `m.includedInContext` 过滤。
-而 `AIAssistantPage` 的几处欢迎消息（`ai_assistant_page_session.dart:250/272/385`、
-`ai_assistant_page_agent.dart:327`、`ai_assistant_page.dart:280`）都是
+而 `ThoughterPage`（原 `AIAssistantPage`）的几处欢迎消息（`thoughter_page_session.dart`、
+`thoughter_agent.dart`、`thoughter_page.dart` 等）都是
 `includedInContext: false`。
 
 **后果**：探索页原本通过 `exploreGuideSummary` 把洞察传过去，以为 agent 拿到了
 上下文——实际那段文字只是显示给用户看的装饰，模型从来没收到过。所以第一版
 「追问这条」发出去，agent 不知道「这条」是什么。
 
-**解法**：新增 `AIAssistantPage.openingMessage`——作为 Thoughter 的第一句显示，
+**解法**：新增 `ThoughterPage.openingMessage`（原 `AIAssistantPage.openingMessage`）——作为 Thoughter 的第一句显示，
 `role: 'assistant'`，**`includedInContext` 用默认的 true**。调用方手上已有现成
 正文（每日提示、周期洞察）时用它，既不用再花一次生成，模型也确实知道开场说了什么。
 
@@ -102,9 +109,9 @@ explore 分支直接落到「留空，首条消息时再建」。所以从探索
 
 ### 现成可复用的 API（省得再翻一遍）
 
-- `AIAssistantPage.initialQuestion` — **会自动发送**（`_initServicesAndLoad` 里
+- `ThoughterPage.initialQuestion`（原 `AIAssistantPage.initialQuestion`） — **会自动发送**（`_initServicesAndLoad` 里
   直接 `_handleSubmitted`），传进去等于替用户问出第一句
-- `AIAssistantPage.session` — 深链回某次会话
+- `ThoughterPage.session`（原 `AIAssistantPage.session`） — 深链回某次会话
 - `SessionHistoryPage` — 独立页，`noteId: ''` 时走 `getAgentSessions()`，
   可以直接 push，不必绕经助手页
 - `ChatSessionService.getAgentSessions()` / `getSessionOverviews()`
@@ -170,7 +177,7 @@ Scaffold 的 `bottomNavigationBar` 上即可，不用碰毛玻璃；但 FAB 冲�
 
 ### AI 页（Thoughter）设计
 
-**尚未开始讨论。** 建议从干净的上下文开始——`AIAssistantPage` + 5 个 part 文件 +
+**尚未开始讨论。** 建议从干净的上下文开始——`ThoughterPage`（原 `AIAssistantPage`） + 5 个 part 文件 +
 agent 工作流，比探索页大得多。已知的相关背景：
 
 - `THOUGHTER_ISSUES_REPORT.md`（仓库根，未跟踪）**已过期**：2026-07-31 用户确认

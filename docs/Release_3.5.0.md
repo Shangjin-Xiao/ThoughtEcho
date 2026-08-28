@@ -1,4 +1,11 @@
-# ThoughtEcho v3.5.0 一周年纪念版 发布说明 / 1st Anniversary Edition Release Notes
+# ThoughtEcho v3.5.0 一周年纪念版 发布说明 / 1st Anniversary Edition Release Notes [已发布 / 历史归档]
+
+> [!NOTE]
+> ### 📦 历史版本发布记录 (Release Archive)
+> - **版本状态**：已正式发布上线。
+> - **文档索引**：[`docs/INDEX.md`](INDEX.md)
+> - **保留目的**：本文记录 ThoughtEcho v3.5.0 历史版本的发布特性与更新日志，供版本演进与变更追溯参考。
+
 > 📖用户指南/User Guide: https://note.shangjinyun.cn/user-guide.html
 
 > 🎉 **本版本为心迹一周年特别版，包含重大功能更新和底层架构升级，建议立即更新。**

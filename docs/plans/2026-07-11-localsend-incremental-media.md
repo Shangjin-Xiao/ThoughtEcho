@@ -1,4 +1,9 @@
-# LocalSend Incremental Media Implementation Plan
+# LocalSend Incremental Media Implementation Plan [已实现]
+
+> 📦 **历史方案归档 [已实现]**
+> 本实施计划的所有 Task（Manifest 模型与扫描、审批后清单协商、备份 ZIP 增量过滤）已全部完成并合入主线。
+> **代码实现**：[`lib/services/media_sync_manifest.dart`](../../lib/services/media_sync_manifest.dart)、[`lib/utils/backup_media_processor.dart`](../../lib/utils/backup_media_processor.dart)、[`lib/services/localsend/localsend_server.dart`](../../lib/services/localsend/localsend_server.dart)。
+> **设计原案**：[`docs/plans/2026-07-11-localsend-incremental-media-design.md`](2026-07-11-localsend-incremental-media-design.md)。
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

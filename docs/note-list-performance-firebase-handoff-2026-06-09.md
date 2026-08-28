@@ -1,4 +1,11 @@
-# NoteListView Performance Firebase Handoff - 2026-06-09
+# NoteListView Performance Firebase Handoff - 2026-06-09 [已归档]
+
+> [!NOTE]
+> ### 📦 本阶段性能交接已归档 (Archived)
+> - **归档原因**：本文档为 2026-06-09 针对 NoteListView 在 Firebase Test Lab 上的首轮性能基准测试与 keepAlive 窗口化排查记录。列表性能机制后续经历了 6 阶段重大演进（包括折叠态彻底剔除 QuillEditor、卡片 Element 树精简 38%、空闲预热与 120Hz 动态预算等）。
+> - **归档时间**：2026-06-09
+> - **当前生效事实源**：[`docs/note-list-warmup-invalidation-2026-08-22.md`](note-list-warmup-invalidation-2026-08-22.md) 与 [`docs/decisions.md`](decisions.md)
+> - **保留目的**：本文仅供 Firebase 测试环境基线数据与早期 keepAlive 优化尝试溯源参考。
 
 ## Current Main Commits
 

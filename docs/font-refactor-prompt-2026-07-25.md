@@ -1,4 +1,11 @@
-# FontWeight 重构任务 Prompt
+# FontWeight 重构任务 Prompt [已归档]
+
+> [!NOTE]
+> ### 📦 本任务提示词已归档 (Archived)
+> - **归档原因**：本文档为 2026-07-25 驱动子代理执行 FontWeight 全量重构的过程性 Prompt 指南。任务已彻底完成，相关重构成果已合并。
+> - **归档时间**：2026-07-25
+> - **当前生效事实源**：[`docs/paper-ink-theme-handoff-2026-07-31.md`](paper-ink-theme-handoff-2026-07-31.md)
+> - **保留目的**：本文仅供过程性任务编排与历史 prompt 设计参考。
 
 你需要把这个 Flutter 项目中大约 296 处 inline FontWeight 用法重构为 Theme.of(context).textTheme 引用。
 

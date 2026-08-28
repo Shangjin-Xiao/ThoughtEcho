@@ -1,4 +1,8 @@
-# Smart Result Card UX Implementation Plan
+# Smart Result Card UX Implementation Plan [已实现]
+
+> 📦 **历史方案归档 [已实现]**
+> 本方案规划的 AI 智能结果卡片三态元数据裁决、单状态指示与去内联编辑已在代码中完整落地，随后在 Thoughter 智能体体系中进一步演进统一为 `NoteProposalCard`。
+> **代码实现**：[`lib/utils/ai_smart_result_utils.dart`](../../lib/utils/ai_smart_result_utils.dart)、[`lib/widgets/ai/note_proposal_card.dart`](../../lib/widgets/ai/note_proposal_card.dart)。
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

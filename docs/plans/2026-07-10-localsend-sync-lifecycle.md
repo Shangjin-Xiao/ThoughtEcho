@@ -1,4 +1,9 @@
-# LocalSend Sync Lifecycle Implementation Plan
+# LocalSend Sync Lifecycle Implementation Plan [已实现]
+
+> 📦 **历史方案归档 [已实现]**
+> 本方案规划的 LocalSend 同步生命周期控制（严格审批门禁、级联取消传播、动态服务器端口广播及 PopScope 拦截）已完整实现并合并。
+> **代码实现**：[`lib/services/note_sync_service.dart`](../../lib/services/note_sync_service.dart)、[`lib/services/thoughtecho_discovery_service.dart`](../../lib/services/thoughtecho_discovery_service.dart)、[`lib/pages/note_sync_page.dart`](../../lib/pages/note_sync_page.dart)。
+> **综合审计参考**：[`docs/WebDAV_LocalSend_Backup_Code_Audit_and_Refactoring_Report.md`](../WebDAV_LocalSend_Backup_Code_Audit_and_Refactoring_Report.md)。
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

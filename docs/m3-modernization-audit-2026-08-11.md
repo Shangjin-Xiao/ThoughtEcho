@@ -1,4 +1,14 @@
-# Material 3 现代化审计（2026-08-11）
+# Material 3 现代化审计（2026-08-11） [已归档 / 历史审计]
+
+> [!NOTE]
+> ### 📦 本审计已全部落实并归档 (Audit Resolved & Archived)
+> - **落实状态**：本文档指出的 3 项核心 Material 3 规范与系统集成问题已 **100% 在代码库中修复**：
+>   - **第 1 项 (AppBar scrolledUnder 反馈失效)**：`lib/theme/app_theme.dart` 已移除 `surfaceTintColor: Colors.transparent` 并正确配置 `colorScheme.surface`，全局滚动变色反馈已恢复；
+>   - **第 2 项 (Android 预测式返回失效)**：`android/app/src/main/AndroidManifest.xml` 已声明 `android:enableOnBackInvokedCallback="true"`；
+>   - **第 3 项 (浅深色 Divider 规范不一致)**：`lib/theme/app_theme.dart` 浅深色主题已统一为 `useM2StyleDividerInM3: false`。
+> - **归档时间**：2026-08-11
+> - **当前生效事实源**：[`lib/theme/app_theme.dart`](../lib/theme/app_theme.dart) 与 [`android/app/src/main/AndroidManifest.xml`](../android/app/src/main/AndroidManifest.xml)
+> - **保留目的**：本文仅供 Material 3 规范排查背景与主题配置细节溯源参考。
 
 这份审计的由来：改 Thoughter 对话页时发现顶栏没有任何"内容滚到底下"的反馈，
 往下追发现是主题里把 M3 的一整套机制关掉了。顺手把全项目扫了一遍，记在这里，

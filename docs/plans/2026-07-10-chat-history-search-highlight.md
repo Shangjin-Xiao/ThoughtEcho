@@ -1,4 +1,9 @@
-# AI助手对话历史搜索高亮突出显示设计方案
+# AI助手对话历史搜索高亮突出显示设计方案 [已实现]
+
+> 📦 **历史方案归档 [已实现]**
+> 本文档所规划的“对话历史搜索关键字高亮”功能已于 2026 年 7 月完整实现并合并入主线。
+> **代码实现**：[`lib/pages/thoughter/session_history_page_content.dart`](../../lib/pages/thoughter/session_history_page_content.dart)（`_buildHighlightedText` 及 `_buildHighlightedTextByRange`）。
+> 本文档保留作为功能设计与测试用例推导的历史参考。
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

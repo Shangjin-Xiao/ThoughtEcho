@@ -1,4 +1,11 @@
-# Thoughter Agent 工作交接（2026-07-31）
+# Thoughter Agent 工作交接（2026-07-31） [已归档]
+
+> [!NOTE]
+> ### 📦 本交接文档已归档 (Archived)
+> - **落实状态**：文档中记录的 Thoughter Agent 各项工作（API Key 格式校验修复、会话历史工具轨迹构建器 `AgentHistoryBuilder`、`propose_note_edit_tool` 嵌套参数递归校验等）均已合并进主分支 `main`。
+> - **归档时间**：2026-07-31
+> - **当前生效事实源**：[`docs/agent-memory-research-2026-08-08.md`](agent-memory-research-2026-08-08.md) 与 [`lib/pages/thoughter/`](../lib/pages/thoughter/)
+> - **保留目的**：本文仅供 Thoughter Agent 工具调用轨迹构建与测试执行历程溯源参考。
 
 > 给接手的下一位：先读 `AGENTS.md`，再读本文。本文只讲 agent 这条线。
 

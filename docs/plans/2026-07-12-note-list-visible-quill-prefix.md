@@ -1,4 +1,9 @@
-# Note List Visible Quill Prefix Implementation Plan
+# Note List Visible Quill Prefix Implementation Plan [已归档 / 已被取代]
+
+> 📦 **历史方案归档 [已被取代]**
+> 本计划提出的“为折叠卡片的 Quill 裁剪可见前缀”方案在 2026 年 7 月曾作为过渡方案落地，但随后在 2026 年 8 月的列表渲染性能重构中被更彻底的方案取代（折叠卡片完全废除 QuillEditor，改由轻量级 `CollapsedRichText` 纯原生自绘渲染）。
+> **最新事实源**：[`docs/note-list-warmup-invalidation-2026-08-22.md`](../note-list-warmup-invalidation-2026-08-22.md)（🔒 唯一事实源）、[`docs/note-list-first-paint-cost-2026-08-19.md`](../note-list-first-paint-cost-2026-08-19.md)。
+> **代码实现**：[`lib/widgets/note_list/collapsed_rich_text.dart`](../../lib/widgets/note_list/collapsed_rich_text.dart)。
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

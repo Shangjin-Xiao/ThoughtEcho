@@ -1,4 +1,11 @@
-# Project Summary
+# Project Summary [已归档]
+
+> [!NOTE]
+> ### 📦 本文档已归档 (Archived)
+> - **归档原因**：本文档为 2026 年 6 月初整合零散规划与报告的阶段性汇总文档。后续已被系统化的项目综合文档与权威架构决议记录全面替代。
+> - **归档时间**：2026-07-31
+> - **当前生效事实源**：[`docs/project-overview.md`](project-overview.md) 与 [`docs/decisions.md`](decisions.md)
+> - **保留目的**：本文仅供早期功能规划整合与历史演化背景参考。
 
 This file replaces the scattered plan/report/checklist markdown files in the
 repo. It keeps the useful conclusions and implementation notes in one place.

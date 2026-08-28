@@ -1,4 +1,11 @@
-# UI 清理工作交接（2026-07-31）
+# UI 清理工作交接（2026-07-31） [已归档]
+
+> [!NOTE]
+> ### 📦 本交接文档已归档 (Archived)
+> - **落实状态**：文档记录的 UI 清理任务（`AppSemanticColors` 注入、SnackBar 统一为 `AppSnackBar`、装饰性中文斜体清理、1400+ 行死代码清理等）已全部合并进主分支 `main`。
+> - **归档时间**：2026-07-31
+> - **当前生效事实源**：[`docs/paper-ink-theme-handoff-2026-07-31.md`](paper-ink-theme-handoff-2026-07-31.md) 与 [`AGENTS.md`](../AGENTS.md)
+> - **保留目的**：本文仅供 UI 清理历程、Commit 记录及踩坑经验溯源参考。
 
 > 承接 2026-07-30 的全项目 UI 审查。本文档记录已完成、未完成、以及接手时必须知道的坑。
 > 主分支：`main`（所有已完成工作都已推送到 `origin/main`）。

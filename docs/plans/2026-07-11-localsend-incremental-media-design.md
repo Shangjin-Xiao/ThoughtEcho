@@ -1,4 +1,9 @@
-# LocalSend 增量媒体同步设计
+# LocalSend 增量媒体同步设计 [已实现]
+
+> 📦 **历史方案归档 [已实现]**
+> 本设计方案（基于用户审批后协商 MediaSyncManifest 清单的增量多媒体同步机制）已完整实现并投入生产。
+> **代码实现**：[`lib/services/media_sync_manifest.dart`](../../lib/services/media_sync_manifest.dart)、[`lib/utils/backup_media_processor.dart`](../../lib/utils/backup_media_processor.dart)、[`lib/services/localsend/localsend_server.dart`](../../lib/services/localsend/localsend_server.dart)。
+> **实施计划参考**：[`docs/plans/2026-07-11-localsend-incremental-media.md`](2026-07-11-localsend-incremental-media.md)。
 
 ## 目标
 

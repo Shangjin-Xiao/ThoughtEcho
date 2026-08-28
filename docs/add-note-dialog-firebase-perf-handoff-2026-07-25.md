@@ -1,4 +1,11 @@
-# AddNoteDialog Firebase 性能定位交接
+# AddNoteDialog Firebase 性能定位交接 [已归档]
+
+> [!NOTE]
+> ### 📦 本交接文档已归档 (Archived)
+> - **归档原因**：本文档记录 2026-07-25 针对 `AddNoteDialog` 在 Firebase 虚拟设备上打开掉帧与输入法键盘弹起的性能日志分析与排查。
+> - **归档时间**：2026-07-25
+> - **当前生效事实源**：[`docs/USER_MANUAL.md`](USER_MANUAL.md) 与 [`lib/widgets/add_note_dialog.dart`](../lib/widgets/add_note_dialog.dart)
+> - **保留目的**：本文仅供弹窗挂载开销、自动聚焦键盘联动及 Firebase 性能日志分析溯源参考。
 
 ## 背景
 

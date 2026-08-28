@@ -1,4 +1,8 @@
-# Reliable Agent and Rich-Text Editing Implementation Plan
+# Reliable Agent and Rich-Text Editing Implementation Plan [已实现]
+
+> 📦 **历史方案归档 [已实现]**
+> 本方案规划的 Agent 原生富文本结构化编辑模块（基于 Quill Delta 结构化操作，支持 SHA-256 版本冲突检测与零 Markdown 损耗）已完整实现并合并。
+> **代码实现**：[`lib/models/rich_text_edit.dart`](../../lib/models/rich_text_edit.dart)、[`lib/utils/quill_structured_edit.dart`](../../lib/utils/quill_structured_edit.dart)、[`lib/services/agent_tools/propose_note_edit_tool.dart`](../../lib/services/agent_tools/propose_note_edit_tool.dart)。
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

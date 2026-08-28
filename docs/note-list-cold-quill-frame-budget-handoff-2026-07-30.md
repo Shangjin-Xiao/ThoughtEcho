@@ -1,4 +1,11 @@
-# 记录页冷 Quill 每帧额度交接（2026-07-30）
+# 记录页冷 Quill 每帧额度交接（2026-07-30） [已归档]
+
+> [!NOTE]
+> ### 📦 本阶段性能交接已归档 (Archived)
+> - **归档原因**：本文档记录 2026-07-30 引入的 `_ColdCollapsedQuillFrameBudget` 每帧额度限制机制。该机制随着 2026-08-12 折叠态彻底剔除 QuillEditor 并删除 `quote_content_deferred.dart` 而退役。
+> - **归档时间**：2026-08-12
+> - **当前生效事实源**：[`docs/note-list-warmup-invalidation-2026-08-22.md`](note-list-warmup-invalidation-2026-08-22.md) 与 [`lib/widgets/note_list/`](../lib/widgets/note_list/)
+> - **保留目的**：本文仅供首屏与屏幕外预构建卡片帧预算演化分析参考。
 
 ## 为什么 f2f2ca51 之后真机仍卡
 

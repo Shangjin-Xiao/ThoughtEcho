@@ -12,17 +12,17 @@
 
 | Name | Role | Charter | Status |
 |------|------|---------|--------|
-| WALL·E | 产品顾问 | .squad/agents/wall-e/charter.md | 🟢 Active |
-| GOPHER | 项目经理 | .squad/agents/gopher/charter.md | 🟢 Active |
-| EVE | UI/UX 设计师 | .squad/agents/eve/charter.md | 🟢 Active |
-| AUTO | 技术主管 | .squad/agents/auto/charter.md | 🟢 Active |
-| GO-4 | 代码审查员 | .squad/agents/go-4/charter.md | 🟡 按需 |
-| M-O | 测试工程师 | .squad/agents/m-o/charter.md | 🟢 Active |
-| BURN-E | 营销专家 | .squad/agents/burn-e/charter.md | 🟢 Active |
-| HAN-S | 内容策划 | .squad/agents/han-s/charter.md | 🟢 Active |
-| VN-GO | 用户研究员 | .squad/agents/vn-go/charter.md | 🟢 Active |
-| PR-T | 商店运营 | .squad/agents/pr-t/charter.md | 🟢 Active |
-| Scribe | 记录员 | .squad/agents/scribe/charter.md | 📋 静默 |
+| WALL·E | 产品顾问 | agents/wall-e/charter.md | 🟢 Active |
+| GOPHER | 项目经理 | agents/gopher/charter.md | 🟢 Active |
+| EVE | UI/UX 设计师 | agents/eve/charter.md | 🟢 Active |
+| AUTO | 技术主管 | agents/auto/charter.md | 🟢 Active |
+| GO-4 | 代码审查员 | agents/go-4/charter.md | 🟡 按需 |
+| M-O | 测试工程师 | agents/m-o/charter.md | 🟢 Active |
+| BURN-E | 营销专家 | agents/burn-e/charter.md | 🟢 Active |
+| HAN-S | 内容策划 | agents/han-s/charter.md | 🟢 Active |
+| VN-GO | 用户研究员 | agents/vn-go/charter.md | 🟢 Active |
+| PR-T | 商店运营 | agents/pr-t/charter.md | 🟢 Active |
+| Scribe | 记录员 | agents/scribe/charter.md | 📋 静默 |
 | Ralph | 工作监控 | — | 🔄 监控 |
 
 ## Project Context

@@ -1040,3 +1040,146 @@ iOS/macOS 上路由事务、分页和每一次「其实不卡」的滚动都会�
 电量实打实要付；上面那层筛选省的只是上传。**明知如此仍然取 1.0**：Sentry 默认关闭、
 由用户主动打开来查这一个问题，而调低采样率会按概率漏掉真卡的那几段 —— 那正是唯一
 要看的样本。这个问题排完就该把它调回 `null`。
+
+---
+
+## 2026-07-24: WebDAV 与 LocalSend 同步并发控制与数据安全架构定案
+
+**决策者**: 上晋 + Multi-Agent Audit Team  
+**类型**: 核心架构 / 网络同步与数据安全  
+**权威事实源文档**: [`docs/WebDAV_LocalSend_Backup_Code_Audit_and_Refactoring_Report.md`](WebDAV_LocalSend_Backup_Code_Audit_and_Refactoring_Report.md)
+
+### 背景与风险剖析
+
+随着 ThoughtEcho 在 Windows、Android、iOS 三端无缝流转能力的深化，WebDAV 云端同步、LocalSend 局域网 P2P 传输及 SQLite 数据库备份还原成为了应用的核心支柱。在 2026-07-24 的专项安全与代码审计中，暴露出多项高危并发与数据安全隐患：
+1. **WebDAV 并发冲突无锁覆盖**：当第三方 WebDAV 服务端（如坚果云、Nextcloud）未返回 ETag 或 ETag 变更时，客户端 `PUT` 请求缺少条件头，导致多设备同时同步时后上传设备静默覆盖先上传数据。
+2. **导出打包非事务脏读**：在切片查询数据库生成临时 JSON 时缺少 SQLite 读事务快照，同步导出过程中若用户并发增删改笔记或标签，会导致导出的关系映射错位。
+3. **路径穿越与明文凭据**：解压 Zip 备份包时若未做文件名净化容易受到 Zip Slip 攻击；明文凭据与非脱敏网络报错存在隐私泄露风险。
+
+### 核心架构决策
+
+1. **WebDAV ETag 预检与 If-Match 条件并发锁**：
+   - 客户端上传前必须先通过 `PROPFIND` 获取远程元数据中的 `ETag` 与 `Last-Modified`，并与本地记录的 `sync_time` 比对。
+   - `PUT` 上传请求强制附带 `If-Match: <ETag>` 请求头。若服务端不支持 ETag 或返回 `412 Precondition Failed`，立即中断上传并提示用户存在冲突，严禁无条件覆盖。
+2. **SQLite 导出统一读事务快照**：
+   - 废弃分页边查边写的松散机制，强制在统一的 SQLite `READ` 事务快照内（`db.transaction`）原子性提取 `quotes`、`tags`、`quote_tags` 数据并流式写入，彻底杜绝导出过程中的并发脏读。
+3. **凭据安全隔离与脱敏**：
+   - WebDAV 密码等核心敏感凭据统一交由 `FlutterSecureStorage`（底层接入 iOS Keychain / Android KeyStore / Windows DPAPI）加密保存；URL 与用户名存入本地 MMKV。
+   - 异常日志与 UI 错误展示全面经过 `_sanitizeSyncError` 过滤脱敏，禁止向用户裸露服务器内部路径或网络堆栈。
+4. **解包安全白名单校验**：
+   - 备份还原与同步包解包前，全量经过 `PathSecurityUtils.validateExtractionPath` 进行规范化与路径白名单检查，全面阻断 `../` 恶意 Zip Slip 路径穿越；并自动适配 Windows/POSIX 路径分隔符。
+
+### 结论与收益
+
+本决议确立了 ThoughtEcho 在弱网与多端并发场景下的数据强一致性与隐私安全基准，杜绝了数据静默丢失与跨设备覆盖风险。
+
+---
+
+## 2026-07-31: 三套独立主题风格与 AppShapeTokens 令牌体系架构定案
+
+**决策者**: 上晋 + EVE (UI/UX) + AUTO  
+**类型**: UI 架构 / 主题体系  
+**权威事实源文档**: [`docs/paper-ink-theme-handoff-2026-07-31.md`](paper-ink-theme-handoff-2026-07-31.md)
+
+### 背景与痛点
+
+为了给用户提供差异化的书写与阅读体验，应用需要同时支持三种视觉风格：`material`（Material 3 动态取色）、`paper`（纸与墨，暖色手账）与 `plain`（素笺，冷色硬朗）。
+既往很多 Flutter 项目（如参考案例 Komi Store）因在 UI 控件中随意编写 `if (style == ThemeStyle.paper)`，导致近百处风格条件分支散落在 150+ 个文件中，极易引发维护灾难和视觉不一致。
+
+### 核心架构决策
+
+1. **三维独立主题维度与默认值锁定**：
+   - 主题风格（Theme Style）确立为与亮暗模式（Light/Dark）、动态取色（Dynamic Color）并列的独立第三维度。
+   - **默认风格严格锁定为 `material`**（定义于 `ThemeStyle.defaultStyle` 一处）。禁止随意修改默认值，避免升级后未手动配置的老用户外观突变。
+2. **严格禁止在 Widget 内部编写风格分支**：
+   - 🔒 **绝不在 widget 里写 `if (style == ThemeStyle.paper)`**。所有品牌风格差异 100% 通过 `ThemeStyleForm` 派发的 `AppShapeTokens`（ThemeExtension）令牌表达。
+   - 组件仅依赖 `AppShapeTokens.of(context)` 提供的抽象令牌（如 `cardRadius`、`buttonRadius`、`dialogRadius`、`borderWidth`、`ruleSpacing` 等）。
+3. **基于「取值」而非「身份」的驱动机制**：
+   - 渲染行为由令牌数值决定：例如通过 `form.borderWidth > 0` 决定使用发丝边框还是投影，通过 `form.ruleSpacing > 0` 决定是否绘制纸张横线。
+   - 新增第四套主题风格只需在 `ThemeStylePalette` 与 `ThemeStyleForm` 登记一组常量，构建管线与全库所有 Widget **零改动**。
+4. **排版层级与行高强约束**：
+   - 纸墨风格的横线间距严格从「正文字号 × 行高」推导，禁止在组件内部随意 `copyWith(fontSize/height)` 破坏对齐。
+   - `title*` 与 `body*` 同乘 `readingFontScale` 确保层级不颠倒；`label*`（按钮、胶囊、导航）永久锁定系统黑体且不缩放。
+
+### 结论与收益
+
+彻底解耦了视觉风格与组件实现，使得主题系统的扩展性与可维护性达到工业级水准，杜绝了硬编码圆角与散落分支的架构腐化。
+
+---
+
+## 2026-08-08: Thoughter 长期记忆独立库 `agent_memory.db` 物理隔离架构定案
+
+**决策者**: 上晋 + AUTO (Tech Lead) + Thoughter Agent 团队  
+**类型**: AI 架构 / 数据隐私与长期记忆系统  
+**权威事实源文档**: [`docs/agent-memory-research-2026-08-08.md`](agent-memory-research-2026-08-08.md)
+
+### 背景与冲突推翻
+
+Thoughter 智能助理需要具备记住用户偏好、身份与长期交互习惯的能力。在 2026-07-31 的早期构想中，曾计划在主数据库中建立 `user_signals` 表并纳入常规备份与同步。
+但在深入研究用户隐私主权、端侧数据敏感性及业界最佳实践（Gemini CLI、Claude Code、OpenClaw、Hermes Agent 等）后，该设想被彻底推翻。
+
+### 核心架构决策
+
+1. **物理隔离独立数据库（`agent_memory.db`）**：
+   - 记忆系统物理存放在独立的 `agent_memory.db` 文件中，**与应用主数据库 `thoughtecho.db` 彻底物理隔离**，拥有独立的 SQLite `schemaVersion` 与表结构。
+2. **三大物理级铁律**：
+   - **不进备份**：用户在导出数据备份或快照时，`agent_memory.db` 绝对不被打包。
+   - **不跨端同步**：WebDAV 与 LocalSend 局域网同步绝对不传输记忆库，避免端侧 AI 偏好跨设备污染。
+   - **支持一键物理销毁**：用户可在设置中一键物理删除数据库文件，重置所有记忆资产。
+3. **用户画像安全包裹与注入机制**：
+   - 画像信息（身份、表达风格、交互纠偏）通过独立的 `user` 数据消息经 `wrapUserProfile` 安全包裹后送入上下文，**严禁拼接进 System Prompt**，防止提示词注入与越狱。
+4. **原位 Supersede 与单源活跃状态**：
+   - 用户的偏好变更采用原位标记 `status: superseded`，数据库内任何时刻不允许两条相互冲突的 `active` 画像条目共存。
+5. **轻量检索与职责边界**：
+   - 事实记忆采用轻量 `LIKE` + Dart 打分算法检索，不依赖复杂的外部 FTS5 插件。
+   - 严格区分「长期记忆（偏好与纠偏）」与「笔记内容探索（`explore_notes`）」的职责边界，防止双重检索引起模型幻觉与混乱。
+
+### 结论与收益
+
+实现了端侧 AI 助理“有温度、懂习惯”的同时，将用户数据隐私与主权保护提升到了物理级最高标准。
+
+---
+
+## 2026-08-22: 随包分发 GB2312 衬线字体子集（推翻零字节字体路线）
+
+**决策者**: 上晋 + EVE (UI/UX) + 核心团队  
+**类型**: 主题排版 / 字体分发架构  
+**权威事实源文档**: [`docs/paper-ink-theme-handoff-2026-07-31.md`](paper-ink-theme-handoff-2026-07-31.md)
+
+### 背景与盲区暴露
+
+在 2026-07-31 纸墨主题初期定案时，曾规划了“零字节系统字体回退路线”（即正文声明通用族名 `serif`，不打包字体文件以保持零安装包增量）。
+在 Android 真机上该方案表现良好，但在 2026-08-22 的跨平台深度核验中发现：**该路线在 iOS 上彻底失效**。
+iOS 的 CoreText 排版引擎根本不解析通用族名 `serif`，当首选族解析不到时，CJK 字符会直接回退到系统默认的苹方黑体；而 `fontFamilyFallback` 只有在首选族有字形但缺少某字时才会触发，导致排在后面的 `Songti SC` 永远无法被查询。两套手工主题在 iOS 上长期退化为黑体，字体层次完全丢失。
+
+### 核心架构决策
+
+1. **随包分发 5.17MB GB2312 衬线字体子集**：
+   - 使用 `scripts/fonts/build_serif_subset.py` 生成思源宋体可变字重子集文件 `assets/fonts/NotoSerifSC-Subset.ttf`（5.17MB，涵盖 GB2312 全量 6763 汉字、完整 ASCII 及常见标点，SIL OFL 1.1 开源协议），族名为 `ThemeStyleForm.bundledSerif`。
+2. **彻底推翻零字节路线**：
+   - 正式废弃三端依赖系统 `serif` 的设想，确立 Windows / Android / iOS 三端统一使用随包衬线子集的架构路线。
+3. **精确字重轴控制**：
+   - 随包可变字体使得 `readingWeightFloor` 从“听凭系统设备下限”转为**精确连续数值控制**（w400~w900 轴精确可控），彻底解决了衬线字体横画发虚与字重失控的问题。
+4. **PDF 导出引擎同步适配**：
+   - PDF 导出排版引擎独立于 Flutter `textTheme`，通过将 `AppTypographyTokens.readingFontFamily` 传递给 `PdfFontService.loadFontSet`，在族名匹配 `bundledSerif` 时自动同步使用随包宋体，并保留下载黑体作为兜底安全回退。
+
+### 结论与收益
+
+以极具性价比的包体积增量彻底消除了 iOS 平台的排版盲区，实现了三端一致的高品质纸墨阅读与排版体验。
+
+---
+
+## 历史上被后续决议推翻/修正的决策总账 (Overturned / Revised Decisions Index)
+
+为了便于开发者追溯架构演进脉络，防止重复踩坑或重新引入已被证伪的旧方案，下表汇总了 ThoughtEcho 历史上被后续 ADR 或实测结论推翻/修正的 7 项重大决策：
+
+| # | 历史原决策 / 方案设想 | 推翻/修正时间与 ADR 来源 | 最终生效的新决议与原因 |
+|:---:|---|---|---|
+| **1** | **进入后台清空所有测量缓存**<br>`AppLifecycleState.paused` 时直接调用 `QuoteContent.resetCaches()` | 2026-08-23 ADR 及<br>2026-08-27 ADR | **推翻**。Android 后台例行 `TRIM_MEMORY_UI_HIDDEN` 会误触发清空，导致切回前台首滑必然卡顿。最终通过 `AppWidgetsBinding` 分流：后台例行 trim 仅将 `imageCache` 淘汰至 8MB，富文本测量缓存完整保留。 |
+| **2** | **头部测宽不进入空闲预热**<br>认为“头部测宽（0.5ms/卡）plumbing 比收益多” | 2026-08-25 ADR | **推翻**。折叠排版暖好后，头部测宽成为列表第一大未命中热点（13~16ms）。抽取 `QuoteItemWidget.resolveHeaderTexts` 将头部日期/位置/天气测宽全量纳入空闲预热。 |
+| **3** | **列表项无条件 KeepAlive / 固定窗口 KeepAlive**<br>全量保活以防止重复 layout | 2026-06-13 ADR 及<br>2026-07-02 ADR | **推翻/取消**。全量保活无法消除首次 layout，且会导致 Element 和内存无上限增长。实测回滑 `frameJank=0`，证明现有媒体/动态窗口策略已达标，取消固定保活策略以防回归。 |
+| **4** | **零字节系统字体回退路线**<br>正文依赖系统通用 `serif`，不随包分发字体 | 2026-08-22 ADR | **推翻**。iOS CoreText 无法解析通用族名 `serif`，导致 iOS 端手工主题全部 fallback 苹方黑体。最终改为随包分发 5.17MB `NotoSerifSC-Subset.ttf`，保证三端排版一致。 |
+| **5** | **Gemma4 判定为不吐思考过程的非思考模型**<br>默认不分配思考预算 | 2026-08-04 ADR | **推翻**。实测证明 Gemma4 是思考模型，但需要显式传递 `reasoning_effort=medium` 参数。在 `AgentService` 中针对静默思考模型定向补全参数。 |
+| **6** | **推测分页 50 条笔记反序列化是首滑掉帧主因**<br>准备花整轮重构反序列化分片 | 2026-08-26 ADR | **推翻**。通过 `NoteListLoadMoreProfile` 分段计时实测，分页 service 仅耗时 13.6ms，证实掉帧主因是卡片新建引出的异步 IO 与图片解码，而非反序列化。省去了一整轮错误重构。 |
+| **7** | **用户画像记忆存入主库 `user_signals` 表并进入备份**<br>2026-07-31 共享记忆系统早期构想 | 2026-08-08 ADR | **推翻**。早期构想被推翻，最终定案为独立数据库 `agent_memory.db`，物理隔离，不进备份、不跨端同步、支持一键物理销毁。 |
+

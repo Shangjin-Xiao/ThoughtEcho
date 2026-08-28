@@ -1,4 +1,11 @@
-# 记录页冷 Quill 延后物化交接（2026-07-15）
+# 记录页冷 Quill 延后物化交接（2026-07-15） [已归档]
+
+> [!NOTE]
+> ### 📦 本阶段性能交接已归档 (Archived)
+> - **归档原因**：本文档记录 2026-07-15 探索的「高速滚动冷 Quill 延后物化与队列分帧恢复」过渡方案。后续（2026-08-12）折叠态已彻底剔除 QuillEditor 采用 `Text.rich`，冷 Quill 物化队列相关代码已删除。
+> - **归档时间**：2026-08-12
+> - **当前生效事实源**：[`docs/note-list-warmup-invalidation-2026-08-22.md`](note-list-warmup-invalidation-2026-08-22.md) 与 [`lib/widgets/note_list/`](../lib/widgets/note_list/)
+> - **保留目的**：本文仅供列表滚动与分帧物化机制演进历史溯源参考。
 
 ## 为什么上一轮仍卡
 

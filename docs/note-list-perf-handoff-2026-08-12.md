@@ -1,4 +1,11 @@
-# 记录页性能 —— 交接（2026-08-12）
+# 记录页性能 —— 交接（2026-08-12） [已归档 / 阶段交接]
+
+> [!NOTE]
+> ### 📦 本阶段性能交接已归档 (Archived / Milestone Handoff)
+> - **落实状态**：折叠态卡片彻底移除 `QuillEditor` 并全面改用 `Text.rich`（`CollapsedRichText` 与 `delta_rich_text_parser.dart`）已 100% 落地。列表渲染性能在此基础上继续推进了「Element 树瘦身 38%」与「生命周期预热与 120Hz 动态预算」。
+> - **归档时间**：2026-08-12
+> - **当前生效事实源**：[`docs/note-list-warmup-invalidation-2026-08-22.md`](note-list-warmup-invalidation-2026-08-22.md) 与 [`docs/decisions.md`](decisions.md)
+> - **保留目的**：本文仅供折叠卡片剔除 Quill、引入 Delta IR 解析器与 `Text.rich` 渲染架构转折点溯源参考。
 
 接着 2026-08-08 那份交接往下写。上一份定位了卡顿的两个来源并规划了「阶段 D」，
 这份记录 **D 做完了什么、行为变了哪些、下一步测什么**。

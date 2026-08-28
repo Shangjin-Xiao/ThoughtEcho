@@ -1,6 +1,10 @@
-# 编辑器 AI 功能迁移至 Thoughter 实施方案
+# 编辑器 AI 功能迁移至 Thoughter 实施方案 [已实现 / 历史归档]
 
-## 背景
+> [!NOTE]
+> ### 📦 本方案已全量实现并归档 (Implemented & Archived)
+> - **落地状态**：方案中的各项变更已 100% 落地。编辑器及 `AddNoteDialog` 的 AI 功能均已统一路由跳转 `ThoughterPage`（斜杠命令驱动），旧版 `StreamingTextDialog` 弹窗已彻底废弃。
+> - **实现代码位置**：[`lib/pages/note_editor/editor_ai_features.dart`](../lib/pages/note_editor/editor_ai_features.dart) 与 [`lib/widgets/add_note_ai_menu.dart`](../lib/widgets/add_note_ai_menu.dart)
+> - **保留目的**：本文仅供方案设计背景与斜杠命令流转机制溯源参考。
 
 当前编辑器（`NoteFullEditorPage`）和新建笔记对话框（`AddNoteDialog`）中的 AI 功能有两套实现：
 - **直接调用 AIService**：「分析来源」和「深度分析」通过 `AIService.analyzeSource()` / `AIService.streamSummarizeNote()` 直接与 AI 通信
