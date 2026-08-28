@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1200, initial-scale=1.0">
+    <title>ThoughtEcho - English Banner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        paperCream: '#f9f6f0',
+                        inkDark: '#2c2416',
+                        inkMedium: '#5a4a3a',
+                        lineColor: '#d4c5b9',
+                        accentBrown: '#a67c52',
+                        accentOrange: '#d4895b'
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        cn: ['"ZCOOL XiaoWei"', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .screenshot-card {
+            background: white;
+            border: 3px solid #a67c52;
+            border-radius: 16px;
+            box-shadow: 8px 8px 0px #fff9e6, 8px 8px 0px 3px #a67c52, 12px 12px 25px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="relative w-[1200px] h-[600px] bg-paperCream flex shadow-2xl rounded-lg border border-lineColor/40 overflow-hidden">
+        
+        <!-- Background: Paper texture with notebook rules -->
+        <div class="absolute inset-0 pointer-events-none opacity-[0.35] z-0" 
+             style="background-image: repeating-linear-gradient(0deg, transparent, transparent 32px, #d4c5b9 32px, #d4c5b9 33px), url('data:image/svg+xml,%3Csvg viewBox=\%220 0 400 400\%22 xmlns=\%22http://www.w3.org/2000/svg\%22%3E%3Cfilter id=\%22noise\%22%3E%3CfeTurbulence type=\%22fractalNoise\%22 baseFrequency=\%220.9\%22 numOctaves=\%224\%22 stitchTiles=\%22stitch\%22/%3E%3C/filter%3E%3Crect width=\%22100%25\%22 height=\%22100%25\%22 filter=\%22url(%23noise)\%22 opacity=\%220.03\%22/%3E%3C/svg%3E');">
+        </div>
+
+        <!-- Left: Logo, Heading & Slogan -->
+        <div class="relative z-10 w-[48%] h-full flex flex-col justify-center px-[72px]">
+            
+            <div class="mb-7 group flex items-center gap-4">
+                <img src="./icon.png" alt="ThoughtEcho Logo" class="w-24 h-24 rounded-[22px] shadow-[4px_4px_12px_rgba(0,0,0,0.1),inset_0_0_0_1px_rgba(212,197,185,0.5)] transform -rotate-[3deg]">
+                <div class="flex flex-col">
+                    <span class="text-[22px] font-bold text-inkDark tracking-wider">ThoughtEcho</span>
+                    <span class="text-[14px] text-accentBrown font-cn tracking-widest font-medium">心迹 · 纸墨之间</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2 relative">
+                <!-- Underline accent -->
+                <div class="absolute left-0 bottom-[-14px] w-[110px] h-[5px] bg-accentOrange/40 rounded-full"></div>
+                
+                <h1 class="text-[50px] font-extrabold text-inkDark leading-[1.12] font-serif tracking-tight">
+                    Your Personal<br><span class="italic text-accentBrown font-normal font-serif">Inspiration</span> Notebook
+                </h1>
+                
+                <h2 class="text-[17px] font-medium text-inkMedium leading-[1.4] mt-2">
+                    Jot it down, clip what you read —<br>let AI sort out the rest.
+                </h2>
+            </div>
+            
+            <div class="mt-10 flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-accentOrange"></div>
+                <div class="text-[#8b7355] font-semibold tracking-[0.2em] text-[13px] uppercase">
+                    Windows · Android · iOS
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Layered screenshot showcase -->
+        <div class="absolute right-0 top-0 w-[52%] h-full z-10 pointer-events-none flex items-center justify-center">
+            
+            <!-- Left back layer: Note list -->
+            <div class="absolute right-[290px] top-[90px] w-[250px] h-[500px] screenshot-card z-10 transform rotate-[-8deg] opacity-95">
+                <img src="./screenshot/l10n/en/note_list_view.jpg" class="w-full h-full object-cover" alt="Note List">
+            </div>
+
+            <!-- Right back layer: Report / Insights -->
+            <div class="absolute right-[30px] top-[110px] w-[240px] h-[480px] screenshot-card z-[15] transform rotate-[6deg] opacity-90">
+                <img src="./screenshot/l10n/en/period_report.jpg" class="w-full h-full object-cover" alt="Periodic Insights">
+            </div>
+
+            <!-- Center foreground: Home page -->
+            <div class="absolute right-[140px] top-[50px] w-[275px] h-[550px] screenshot-card z-20 transform rotate-[-1deg]"
+                 style="box-shadow: 8px 8px 0px #d4895b, 8px 8px 0px 3px #a67c52, 15px 15px 30px rgba(0,0,0,0.18);">
+                <img src="./screenshot/l10n/en/home_page.jpg" class="w-full h-full object-cover" alt="Home Page">
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

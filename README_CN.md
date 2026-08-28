@@ -112,9 +112,9 @@
 | ![主题设置](res/screenshot/theme_settings_page.jpg) | ![一言设置](res/screenshot/hitokoto_settings_page.jpg) | ![偏好设置](res/screenshot/preferences_detail_page.jpg) |
 
 ### 存储与备份
-| 备份与恢复 | 存储管理 |
-|:---:|:---:|
-| ![备份恢复](res/screenshot/backup_restore_page.jpg) | ![存储管理](res/screenshot/storage_management_page.jpg) |
+| 备份与恢复 | 存储管理 | WebDAV 云同步 |
+|:---:|:---:|:---:|
+| ![备份恢复](res/screenshot/backup_restore_page.jpg) | ![存储管理](res/screenshot/storage_management_page.jpg) | ![WebDAV 云同步](res/screenshot/webdav_sync_page.jpg) |
 
 ## 🛠️ 技术栈
 

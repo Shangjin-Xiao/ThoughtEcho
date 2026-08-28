@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://note.shangjinyun.cn/">
-    <img src="res/readme-banner.png" alt="ThoughtEcho 心迹 - AI-Powered Inspiration Notebook" width="100%">
+    <img src="res/readme-banner-en.png" alt="ThoughtEcho - AI-Powered Inspiration Notebook" width="100%">
   </a>
   
   # ThoughtEcho (心迹)
@@ -102,27 +102,27 @@
 ### Core Features
 | Homepage | Note List |
 |:---:|:---:|
-| ![Homepage](res/screenshot/home_page.jpg) | ![Note List](res/screenshot/note_list_view.jpg) |
+| ![Homepage](res/screenshot/l10n/en/home_page.jpg) | ![Note List](res/screenshot/l10n/en/note_list_view.jpg) |
 
 ### Editing & AI Features
 | Rich Text Editor | AI Q&A Chat | Filter & Sort |
 |:---:|:---:|:---:|
-| ![Rich Text Editor](res/screenshot/note_full_editor_page.jpg) | ![AI Q&A Chat](res/screenshot/note_qa_chat_page.jpg) | ![Filter & Sort](res/screenshot/note_filter_sort_sheet.jpg) |
+| ![Rich Text Editor](res/screenshot/l10n/en/note_full_editor_page.jpg) | ![AI Q&A Chat](res/screenshot/l10n/en/note_qa_chat_page.jpg) | ![Filter & Sort](res/screenshot/note_filter_sort_sheet.jpg) |
 
 ### Insights & Reports
 | Insights Analysis | Period Report | Device Sync |
 |:---:|:---:|:---:|
-| ![Insights Analysis](res/screenshot/insights_page.jpg) | ![Period Report](res/screenshot/period_report.jpg) | ![Device Sync](res/screenshot/note_sync.jpg) |
+| ![Insights Analysis](res/screenshot/l10n/en/insights_page.jpg) | ![Period Report](res/screenshot/l10n/en/period_report.jpg) | ![Device Sync](res/screenshot/note_sync.jpg) |
 
 ### Settings & Management
 | Theme Settings | Daily Quote Settings | Preferences |
 |:---:|:---:|:---:|
-| ![Theme Settings](res/screenshot/theme_settings_page.jpg) | ![Hitokoto Settings](res/screenshot/hitokoto_settings_page.jpg) | ![Preferences](res/screenshot/preferences_detail_page.jpg) |
+| ![Theme Settings](res/screenshot/l10n/en/theme_settings_page.jpg) | ![Daily Quote Settings](res/screenshot/l10n/en/hitokoto_settings_page.jpg) | ![Preferences](res/screenshot/l10n/en/preferences_detail_page.jpg) |
 
 ### Storage & Backup
-| Backup & Restore | Storage Management |
-|:---:|:---:|
-| ![Backup & Restore](res/screenshot/backup_restore_page.jpg) | ![Storage Management](res/screenshot/storage_management_page.jpg) |
+| Backup & Restore | Storage Management | WebDAV Sync |
+|:---:|:---:|:---:|
+| ![Backup & Restore](res/screenshot/backup_restore_page.jpg) | ![Storage Management](res/screenshot/storage_management_page.jpg) | ![WebDAV Sync](res/screenshot/l10n/en/webdav_sync_page.jpg) |
 
 ## 🛠️ Tech Stack
 
