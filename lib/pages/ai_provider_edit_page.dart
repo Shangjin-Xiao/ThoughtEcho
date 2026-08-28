@@ -144,8 +144,8 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
 
   /// 用表单当前内容拼一个临时配置，供「测试连接」使用。
   ///
-  /// 这里显式带上输入框里的 Key，[AINetworkManager] 会优先用它，因此不需要
-  /// 先保存就能测。
+  /// 这里显式带上输入框里的 Key，[AIConnectionTester] 会优先用它（为空才回落到
+  /// [APIKeyManager]），因此不需要先保存就能测。
   AIProviderSettings _buildDraftProvider() {
     final base = widget.provider;
     return AIProviderSettings(

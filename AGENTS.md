@@ -272,6 +272,24 @@ pwsh ./scripts/build_msix_ci.ps1
 - 大文件和大 JSON 使用流式工具（如 `LargeFileManager`），不要用一次性
   `File.writeAsString` / 全量内存编码。
 - 删除 SQL 查询字段前全局检查模型、UI、导入导出和同步依赖，避免运行期缺列或类型错误。
+- 🔒 **读和写两侧的校验必须对齐**：`Quote.fromJson` 放行的行，`Quote.validationError` 必须
+  也放行。两边尺子不一样的那道缝里，笔记会变成**能显示、不能保存**的砖，报错还指不回是哪个
+  字段。长度上限这类**输入层策略**不要塞进持久化校验——卡在保存那一步丢的是用户已经写好的字。
+- 🔒 **外来数据的值域收敛只做在导入边界**（`DatabaseBackupService`），读的时候不洗：读时悄悄
+  修正等于把库里的坏行永远藏着。清洗过什么要能报给用户（`MergeReport.sanitizedFields` /
+  `ImportCleanupStats`），不能只写日志。已经入库的坏行只能靠启动迁移修，删导入代码救不回来。
+- 🔒 **不可逆写入前先把整列快照到 `<列名>_backup`**，并在修复自己那条 UPDATE 里写原值——
+  `_ensureBackupColumn` 只在建列那一次整列复制，列已存在就早退，二次修复不写就没有留底。
+  **遗留列清理必须排在所有建快照列的迁移之前**：`_removeTagIdsColumn` 重建 `quotes` 用的是
+  写死的列清单，不含任何 `*_backup` 列，排在后面会把三剂后悔药一起抹掉。
+- 🔒 **逐行反序列化必须有兜底**：查询结果统一走 `_parseQuoteRows` / `_tryParseQuoteRow`，
+  坏行跳过并计数。裸 `maps.map((m) => Quote.fromJson(m))` 会让一条坏行带走整页笔记，用户
+  看到的是列表整个打不开。批处理阶段的 `as String` 强转同样要改成 `whereType<String>()`——
+  它跑在逐行兜底**之前**，抛出来一样是整批阵亡。
+- 🔒 **外来值进日志要限量、限长、去控制字符，并且绝不写 `e.toString()`**：
+  `Quote.fromJson` 的兜底分支抛的是 `FormatException('…, JSON: $json')`，那个 `$json` 是整行
+  数据，`content` 和 `delta_content` 都在里面——写进日志等于把用户笔记正文抄进日志库。
+  只记异常类型。
 - `categories` 表、`category_id` 列和备份 JSON 的 `categories` 键存的是**标签**
   （`quote_tags.tag_id REFERENCES categories(id)`）。Dart 侧一律 `NoteTag` / `getTags()`，
   只有 SQL 和备份键保留旧名 —— 改它们要写迁移且破坏同步兼容，不要"顺手统一"。
@@ -294,6 +312,13 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 - 支持的预设以 `AIProviderSettings.getPresetProviders()` 为准，不在文档中复制易过期的名单。
 - 使用现有流式 API。已删除的 `AIService.generateDailyPrompt` 不得恢复，使用
   `streamGenerateDailyPrompt`。
+- 🔒 **「测试连接」必须和真正聊天走同一条链路**（`AIConnectionTester` → `OpenAIStreamService`
+  → openai_dart）。两条链路一旦分家，测试结论就不代表可用性：老实现自己 POST 用户填的
+  `apiUrl`，而用户填的通常是 base URL（`…/v1`），服务端回 **405**——能正常聊天的配置被测试
+  按钮判死。URL 拼接交给 openai_dart，不要手写。
+- 🔒 **超时要下沉给 client 自己**（`buildOpenAIConfig` / `chatCompletion` 的 `timeout`），
+  不要用 `Future.timeout` 去截：那只让等待方提前返回，底层请求继续跑到底，`client.close()`
+  也要等它跑完才执行，连点几次就攒下一批在飞的连接。
 
 ### Thoughter 长期记忆（`AgentMemoryService`）
 
