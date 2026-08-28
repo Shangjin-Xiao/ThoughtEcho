@@ -32,6 +32,7 @@ import '../services/agent_tools/propose_note_create_tool.dart';
 import '../services/agent_tools/propose_note_edit_tool.dart';
 import '../services/agent_tools/recall_tool.dart';
 import '../services/agent_tools/remember_tool.dart';
+import '../services/agent_tools/session_search_tool.dart';
 import '../services/agent_tools/web_fetch_tool.dart';
 import '../services/agent_tools/web_search_tool.dart';
 import '../services/web_fetch_service.dart';
@@ -43,6 +44,7 @@ List<AgentTool> _buildAgentTools(
   LocationService locationService,
   WeatherService weatherService,
   AgentMemoryService memoryService,
+  ChatSessionService chatSessionService,
 ) {
   return [
     ExploreNotesTool(db),
@@ -59,6 +61,7 @@ List<AgentTool> _buildAgentTools(
     ProposeNoteEditTool(db),
     RememberTool(memoryService),
     RecallTool(memoryService),
+    SessionSearchTool(chatSessionService),
   ];
 }
 
@@ -68,6 +71,7 @@ AgentService _createAgentService(
   LocationService locationService,
   WeatherService weatherService,
   AgentMemoryService memoryService,
+  ChatSessionService chatSessionService,
 ) {
   return AgentService(
     settingsService: settingsService,
@@ -78,6 +82,7 @@ AgentService _createAgentService(
       locationService,
       weatherService,
       memoryService,
+      chatSessionService,
     ),
   );
 }
@@ -132,10 +137,18 @@ List<SingleChildWidget> buildAppProviders({
         context.read<LocationService>(),
         context.read<WeatherService>(),
         context.read<AgentMemoryService>(),
+        chatSessionService,
       ),
       update: (context, settings, db, location, weather, memory, previous) =>
           previous ??
-          _createAgentService(settings, db, location, weather, memory),
+          _createAgentService(
+            settings,
+            db,
+            location,
+            weather,
+            memory,
+            chatSessionService,
+          ),
     ),
     ChangeNotifierProvider(create: (_) => NoteSearchController()),
     ChangeNotifierProvider(create: (_) => WebDAVSyncService()),
