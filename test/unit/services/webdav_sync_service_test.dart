@@ -223,13 +223,15 @@ void main() {
       ),
       isFalse,
     );
+    // 远端存在但没报出大小时无从比较，必须按「可能不一致」重传，
+    // 否则服务端不返回 getcontentlength 的场景下媒体文件会永远漏同步。
     expect(
       WebDAVSyncService.shouldUploadMediaFileForTesting(
         'videos/no_size.mp4',
         2048,
         remoteMediaFiles,
       ),
-      isFalse,
+      isTrue,
     );
     expect(
       WebDAVSyncService.shouldUploadMediaFileForTesting(

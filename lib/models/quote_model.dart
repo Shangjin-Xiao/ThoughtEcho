@@ -309,7 +309,13 @@ class Quote {
     } on ArgumentError {
       rethrow;
     } catch (e) {
-      throw FormatException('解析Quote JSON失败: $e, JSON: $json');
+      // 这里绝不能把 $json 拼进异常信息：它含 content 与 delta_content
+      // （用户笔记正文与富文本），而调用方普遍把 e 直接喂给日志服务，
+      // 会把笔记明文落进本地日志文件。只暴露定位所需的 id 与字段名。
+      throw FormatException(
+        '解析Quote JSON失败: $e, id: ${json['id']}, '
+        'fields: ${json.keys.join(',')}',
+      );
     }
   }
 

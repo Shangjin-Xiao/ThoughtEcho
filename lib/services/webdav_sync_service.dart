@@ -1532,10 +1532,14 @@ class WebDAVSyncService extends ChangeNotifier {
     if (!remoteMediaFiles.containsKey(stdPath)) return true;
 
     final remoteSize = remoteMediaFiles[stdPath];
+    // 远端没报出大小（PROPFIND 未返回 getcontentlength）时无从比较，
+    // 按「可能不一致」处理并重传，宁可多传一次也不留下漏同步的媒体文件。
+    if (remoteSize == null) return true;
+
     // TODO(media-sync): 当前仅以文件大小作为差异判断依据（历史设计）。
     // 文件大小相同但内容不同的媒体文件（如相同尺寸的不同图片）会漏同步。
     // 后续可引入 MD5/SHA1 内容哈希或 ETag 校验作为更精确的对比手段。
-    return remoteSize != null && remoteSize != localSize;
+    return remoteSize != localSize;
   }
 
   static String? _mediaFolderFromRelativePath(String stdPath) {
