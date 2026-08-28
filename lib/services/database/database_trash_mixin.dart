@@ -119,7 +119,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
     if (maps.isEmpty) return [];
 
-    final quoteIds = maps.map((m) => m['id'] as String).toList();
+    final quoteIds = maps.map((m) => m['id']).whereType<String>().toList();
 
     final tagsByQuoteId = <String, List<String>>{};
 
@@ -145,20 +145,17 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     for (final result in allTagMaps) {
       final tagMaps = result as List;
       for (final item in tagMaps) {
-        final tagMap = item as Map<String, dynamic>;
-        final quoteId = tagMap['quote_id'] as String;
-        final tagId = tagMap['tag_id'] as String;
+        // 关联表的值同样不能硬转：一个坏值抛出来会连累整批查询，而逐行兜底
+        // （_parseQuoteRows）根本还没轮到运行。
+        if (item is! Map) continue;
+        final quoteId = item['quote_id'];
+        final tagId = item['tag_id'];
+        if (quoteId is! String || tagId is! String) continue;
         tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
       }
     }
 
-    return maps.map((map) {
-      final quoteId = map['id'] as String;
-      final tags = tagsByQuoteId[quoteId] ?? [];
-      final mutableMap = Map<String, dynamic>.from(map);
-      mutableMap['tag_ids'] = tags.join(',');
-      return Quote.fromJson(mutableMap);
-    }).toList();
+    return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
   }
 
   @override

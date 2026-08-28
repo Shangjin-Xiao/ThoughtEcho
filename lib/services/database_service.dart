@@ -33,6 +33,7 @@ import 'data_directory_service.dart';
 import '../utils/note_list_load_more_profile.dart';
 
 part 'database/database_cache_mixin.dart';
+part 'database/quote_row_parser.dart';
 part 'database/database_query_mixin.dart';
 part 'database/database_query_helpers_mixin.dart';
 part 'database/database_quote_crud_mixin.dart';

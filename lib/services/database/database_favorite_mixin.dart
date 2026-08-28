@@ -271,7 +271,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
         limit: limit,
       );
 
-      return results.map((map) => Quote.fromJson(map)).toList();
+      return _parseQuoteRows(results);
     } catch (e) {
       logError('获取本周最受喜爱笔记时出错: $e', error: e, source: 'GetMostFavorited');
       return [];

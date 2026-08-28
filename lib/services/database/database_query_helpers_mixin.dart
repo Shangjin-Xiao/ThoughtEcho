@@ -124,7 +124,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     if (maps.isEmpty) return [];
 
-    final quoteIds = maps.map((m) => m['id'] as String).toList();
+    final quoteIds = maps.map((m) => m['id']).whereType<String>().toList();
 
     final tagsByQuoteId = <String, List<String>>{};
 
@@ -149,31 +149,17 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     for (final result in allTagMaps) {
       final tagMaps = result as List;
       for (final item in tagMaps) {
-        final tagMap = item as Map<String, dynamic>;
-        final quoteId = tagMap['quote_id'] as String;
-        final tagId = tagMap['tag_id'] as String;
+        // 关联表的值同样不能硬转：一个坏值抛出来会连累整批查询，而逐行兜底
+        // （_parseQuoteRows）根本还没轮到运行。
+        if (item is! Map) continue;
+        final quoteId = item['quote_id'];
+        final tagId = item['tag_id'];
+        if (quoteId is! String || tagId is! String) continue;
         tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
       }
     }
 
-    final quotes = <Quote>[];
-
-    for (final map in maps) {
-      try {
-        final quoteId = map['id'] as String;
-        final tagIds = tagsByQuoteId[quoteId] ?? [];
-
-        final quoteData = Map<String, dynamic>.from(map);
-        quoteData['tag_ids'] = tagIds.join(',');
-
-        final quote = Quote.fromJson(quoteData);
-        quotes.add(quote);
-      } catch (e) {
-        logDebug('解析笔记数据失败: $e, 数据: $map');
-      }
-    }
-
-    return quotes;
+    return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
   }
 
   /// 检查并修复数据库结构，确保所有必要的列都存在
@@ -263,7 +249,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         limit: limit,
       );
 
-      return maps.map((m) => Quote.fromJson(m)).toList();
+      return _parseQuoteRows(maps);
     } catch (e) {
       logError(
         'getQuotesForSmartPush 失败: $e',
