@@ -58,13 +58,17 @@ abstract class PlaceSearchService {
 /// 见 https://operations.osmfoundation.org/policies/nominatim/。
 /// 这里按 [_minRequestInterval] 串行节流；调用方（选点页）另有输入防抖。
 class NominatimPlaceSearchService implements PlaceSearchService {
-  NominatimPlaceSearchService({NetworkService? networkService})
-      : _networkService = networkService;
+  NominatimPlaceSearchService({
+    NetworkService? networkService,
+    Duration? minRequestInterval,
+  })  : _networkService = networkService,
+        _minRequestInterval = minRequestInterval ?? _defaultMinRequestInterval;
 
   static const String _searchUrl = 'https://nominatim.openstreetmap.org/search';
   static const String _userAgent =
       'ThoughtEcho/3.4 (https://github.com/Shangjin-Xiao/ThoughtEcho)';
-  static const Duration _minRequestInterval = Duration(milliseconds: 1100);
+  static const Duration _defaultMinRequestInterval =
+      Duration(milliseconds: 1100);
 
   /// 搜索框限定在参考点周围这么多度的方框内，约 ±11 公里。
   ///
@@ -73,7 +77,18 @@ class NominatimPlaceSearchService implements PlaceSearchService {
 
   final NetworkService? _networkService;
 
+  /// 两次请求之间的最小间隔。测试里调小，免得每个用例真等一秒多。
+  final Duration _minRequestInterval;
+
   DateTime _lastRequestAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// 把限流排成一条队。
+  ///
+  /// 只判断「距上次请求过了多久」是不够的：两个并发调用会读到同一个
+  /// [_lastRequestAt]、等同样长的时间，然后一起发出去——正好违反这个类
+  /// 声称的 1 请求/秒。挂在同一条链上，后来者要等前一个把自己的间隔占满
+  /// 才轮到它记时间戳。
+  Future<void> _throttleQueue = Future<void>.value();
 
   NetworkService get _network => _networkService ?? NetworkService.instance;
 
@@ -151,12 +166,17 @@ class NominatimPlaceSearchService implements PlaceSearchService {
   }
 
   /// 距上次请求不足 [_minRequestInterval] 时补足等待，满足 Nominatim 的限流。
-  Future<void> _throttle() async {
-    final elapsed = DateTime.now().difference(_lastRequestAt);
-    if (elapsed < _minRequestInterval) {
-      await Future<void>.delayed(_minRequestInterval - elapsed);
-    }
-    _lastRequestAt = DateTime.now();
+  Future<void> _throttle() {
+    final reserved = _throttleQueue.then((_) async {
+      final elapsed = DateTime.now().difference(_lastRequestAt);
+      if (elapsed < _minRequestInterval) {
+        await Future<void>.delayed(_minRequestInterval - elapsed);
+      }
+      _lastRequestAt = DateTime.now();
+    });
+    // 队尾吞掉异常，否则一次失败会把后面所有请求一起带崩
+    _throttleQueue = reserved.catchError((Object _) {});
+    return reserved;
   }
 
   PlaceInfo? _toPlace(

@@ -83,14 +83,9 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
       final tags = await database.getTags();
 
       // 一条坐标笔记都没有时才去问设备位置——有足迹的话地图按足迹取景，
-      // 多要一次定位权限没有意义。
-      LatLng? deviceCenter;
-      if (points.isEmpty) {
-        final position = locationService.currentPosition;
-        if (position != null) {
-          deviceCenter = LatLng(position.latitude, position.longitude);
-        }
-      }
+      // 多问一次没有意义。
+      final deviceCenter =
+          points.isEmpty ? await _resolveDeviceCenter(locationService) : null;
 
       if (!mounted) return;
       setState(() {
@@ -111,6 +106,26 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
         _loading = false;
         _failed = true;
       });
+    }
+  }
+
+  /// 空状态下地图落在哪儿。
+  ///
+  /// 缓存里没有位置时补取一次：[LocationService.getCurrentLocation] 只
+  /// `checkPermission` 不 `requestPermission`，所以这里不会凭空弹权限框，
+  /// 没授权就返回 null，落到兜底中心。
+  ///
+  /// 取不到位置不算这一页加载失败——地图照样能看，所以异常在这里就地咽下，
+  /// 不往上抛去触发错误态。
+  Future<LatLng?> _resolveDeviceCenter(LocationService locationService) async {
+    try {
+      final position = locationService.currentPosition ??
+          await locationService.getCurrentLocation(highAccuracy: false);
+      if (position == null) return null;
+      return LatLng(position.latitude, position.longitude);
+    } catch (e) {
+      logDebug('地图空状态取设备位置失败: $e', source: 'MapMemoryPage');
+      return null;
     }
   }
 

@@ -31,6 +31,27 @@ class _FakeNetworkService implements NetworkService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// 记下每次请求发出的时刻，用来验证限流。
+class _RecordingNetworkService implements NetworkService {
+  _RecordingNetworkService(this.response);
+
+  final HttpResponse response;
+  final List<DateTime> timestamps = [];
+
+  @override
+  Future<HttpResponse> get(
+    String url, {
+    Map<String, String>? headers,
+    int? timeoutSeconds,
+  }) async {
+    timestamps.add(DateTime.now());
+    return response;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 HttpResponse _jsonResponse(Object body, {int statusCode = 200}) =>
     HttpResponse(json.encode(body), statusCode, headers: const {});
 
@@ -136,6 +157,26 @@ void main() {
       expect(params['viewbox'], isNotNull);
       expect(network.lastHeaders!['User-Agent'], contains('ThoughtEcho'));
       expect(network.lastHeaders!['Accept-Language'], startsWith('zh-CN'));
+    });
+  });
+
+  group('NominatimPlaceSearchService 限流', () {
+    test('并发搜索被排成队，两次请求间隔不小于限流窗口', () async {
+      final network = _RecordingNetworkService(_jsonResponse(const []));
+      final service = NominatimPlaceSearchService(
+        networkService: network,
+        minRequestInterval: const Duration(milliseconds: 120),
+      );
+
+      // 防抖搜索还在飞、用户又按了回车，就是这个场景
+      await Future.wait([
+        service.searchNearby(refLat, refLon, query: '咖啡馆'),
+        service.searchNearby(refLat, refLon, query: '公园'),
+      ]);
+
+      expect(network.timestamps, hasLength(2));
+      final gap = network.timestamps[1].difference(network.timestamps[0]);
+      expect(gap, greaterThanOrEqualTo(const Duration(milliseconds: 120)));
     });
   });
 

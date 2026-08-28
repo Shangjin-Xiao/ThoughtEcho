@@ -280,6 +280,11 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
   /// 所以这里只取 marker 用得上的四列，不走 [Quote]：`delta_content` 一列就
   /// 可能有几十 KB，上千条笔记全读进来足以让页面卡住。点开某个 marker 时再
   /// 用 [getQuoteById] 取那一条的完整内容。
+  ///
+  /// 失败时**抛出**而不是返回空列表：调用方靠「空」判断「这个人还没记过带
+  /// 位置的笔记」并给出引导文案，把查询失败也压成空，用户看到的就是一张
+  /// 加载成功的空地图，数据库故障被藏了起来。地图页有自己的错误态。
+  /// Web 上没有这张表，异常会照样冒出去——那正是「本平台不支持」的实情。
   @override
   Future<List<QuoteMapPoint>> getQuotesWithCoordinates() async {
     try {
@@ -334,7 +339,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         stackTrace: stack,
         source: 'DatabaseService',
       );
-      return [];
+      rethrow;
     }
   }
 

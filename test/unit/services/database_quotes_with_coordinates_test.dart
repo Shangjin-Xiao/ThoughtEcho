@@ -166,6 +166,17 @@ void main() {
       expect(points.map((p) => p.id), ['visible']);
     });
 
+    test('查询失败时抛出，不把故障压成「还没有带位置的笔记」', () async {
+      // 地图页靠「空列表」判断该显示引导文案。把失败也压成空，用户看到的
+      // 就是一张加载成功的空地图，数据库故障被藏起来了。
+      await db.close();
+
+      expect(
+        () => service.getQuotesWithCoordinates(),
+        throwsA(isA<Object>()),
+      );
+    });
+
     test('按时间倒序返回', () async {
       await service.addQuote(
         Quote(
