@@ -93,7 +93,8 @@
 
 | 文档名称 | 路径 | 日期 | 状态 | 核心内容 / 结论 |
 |---|---|---|:---:|---|
-| **代码库架构深化与待办核销审计报告** | [`codebase-architecture-and-tasks-audit-2026-08-23.md`](codebase-architecture-and-tasks-audit-2026-08-23.md) | 2026-08-23 | 🟢 **最新事实源** | 模块解耦、大文件与复杂文件监控、依赖反转钩子解耦与技术债核销总清单 |
+| **研发知识库全景审计与全维度存活待办报告** | [`codebase-roadmap-and-issues-2026-08-28.md`](codebase-roadmap-and-issues-2026-08-28.md) | 2026-08-28 | 🟢 **最新事实源** | 全库 76 篇文档全景分类、隐私审计、历史 31 项核销证据、4 大 ADR 与 16 项存活待办路线图 |
+| **代码库架构深化与待办核销审计报告** | [`codebase-architecture-and-tasks-audit-2026-08-23.md`](codebase-architecture-and-tasks-audit-2026-08-23.md) | 2026-08-23 | 🟢 事实源 | 模块解耦、大文件与复杂文件监控、依赖反转钩子解耦与技术债核销总清单 |
 | **WebDAV、LocalSend 与备份模块审计重构报告** | [`WebDAV_LocalSend_Backup_Code_Audit_and_Refactoring_Report.md`](WebDAV_LocalSend_Backup_Code_Audit_and_Refactoring_Report.md) | 2026-07-25 | 🟢 事实源 | ETag 并发控制、If-Match 安全锁、凭据加密存储、Zip Slip 防御与 SQLite 读快照重构报告 |
 | **早期代码库深度架构与质量审计报告 [已归档]** | [`architecture-audit-2026-07-26.md`](architecture-audit-2026-07-26.md) | 2026-07-26 | 📦 历史参考 | 早期分层结构、代码异味与服务层解耦审计（P0/P1 已全量清零） |
 | **增长与产品路线规划** | [`growth-and-product-direction-2026-07-26.md`](growth-and-product-direction-2026-07-26.md) | 2026-07-26 | 🟢 参考 | 产品定位、用户增长策略、跨平台分发与核心功能路线 |
