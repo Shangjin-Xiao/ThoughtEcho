@@ -15,18 +15,6 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           _tagStore.add(category);
         }
       }
-      // 修复被降级为普通标签的系统标签（同数据库分支的处理）
-      for (var i = 0; i < _tagStore.length; i++) {
-        final tag = _tagStore[i];
-        if (tag.isDefault) continue;
-        if (!_DatabaseServiceBase.systemTagIds.contains(tag.id)) continue;
-        _tagStore[i] = NoteTag(
-          id: tag.id,
-          name: tag.name,
-          isDefault: true,
-          iconName: tag.iconName,
-        );
-      }
       // 确保流更新
       if (!_tagsController.isClosed) {
         _tagsController.add(List.unmodifiable(_tagStore));
@@ -60,55 +48,69 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
         'categories',
         columns: ['id', 'name', 'is_default', 'icon_name'],
       );
+      // sqflite 返回的是只读 map，这里复制一份，后续可就地更新以反映修复结果
       final idToRow = <String, Map<String, dynamic>>{
-        for (final row in existingCategories) row['id'] as String: row,
+        for (final row in existingCategories)
+          row['id'] as String: Map<String, dynamic>.from(row),
       };
-      final nameLowerToRow = <String, Map<String, dynamic>>{};
-      for (final row in existingCategories) {
-        final key = (row['name'] as String? ?? '').toLowerCase();
-        nameLowerToRow.putIfAbsent(key, () => row);
-      }
-
       var inserted = 0;
       var repaired = 0;
       var adopted = 0;
 
       await db.transaction((txn) async {
+        // 第一轮：按固定 ID 修复已存在的系统标签（名称 + is_default）。
+        // 必须先于按名称的收编，否则一个系统标签顶着另一个系统标签的名字时
+        // （例如 default_anime 的名称被写成"每日一言"），会被当成占位行收编掉，
+        // 它原有的笔记归类就跟着迁走了。
         for (final category in defaultCategories) {
+          final existingById = idToRow[category.id];
+          if (existingById == null) continue;
+
+          final currentName = existingById['name'] as String? ?? '';
+          final isDefault = existingById['is_default'];
+          final needNameFix =
+              currentName.toLowerCase() != category.name.toLowerCase();
+          final needDefaultFix = !(isDefault == 1 || isDefault == true);
+          if (!needNameFix && !needDefaultFix) continue;
+
+          await txn.update(
+            'categories',
+            {
+              'name': category.name,
+              'is_default': 1,
+              // last_modified 必须前进，否则这次修复会在下一轮 LWW 合并里被旧值盖回去
+              'last_modified': DateTime.now().toUtc().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [category.id],
+          );
+          existingById['name'] = category.name;
+          existingById['is_default'] = 1;
+          repaired++;
+          logDebug('修复系统标签 ${category.id}: name=${category.name}');
+        }
+
+        // 名称索引按第一轮之后的状态重建：改过名的系统标签不该再占着别人的名字。
+        final nameLowerToRow = <String, Map<String, dynamic>>{};
+        for (final row in idToRow.values) {
+          final key = (row['name'] as String? ?? '').toLowerCase();
+          nameLowerToRow.putIfAbsent(key, () => row);
+        }
+
+        // 第二轮：补建仍然缺失的系统标签。
+        for (final category in defaultCategories) {
+          if (idToRow.containsKey(category.id)) continue;
           final nowUtc = DateTime.now().toUtc().toIso8601String();
           final nameKey = category.name.toLowerCase();
 
-          // 1. 固定 ID 已存在：只修名称与系统属性，不动其它字段。
-          final existingById = idToRow[category.id];
-          if (existingById != null) {
-            final currentName = existingById['name'] as String? ?? '';
-            final isDefault = existingById['is_default'];
-            final needNameFix = currentName.toLowerCase() != nameKey;
-            final needDefaultFix = !(isDefault == 1 || isDefault == true);
-            if (needNameFix || needDefaultFix) {
-              await txn.update(
-                'categories',
-                {
-                  'name': category.name,
-                  'is_default': 1,
-                  // last_modified 必须前进，否则这次修复会在下一轮 LWW 合并里被旧值盖回去
-                  'last_modified': nowUtc,
-                },
-                where: 'id = ?',
-                whereArgs: [category.id],
-              );
-              repaired++;
-              logDebug('修复系统标签 ${category.id}: name=${category.name}');
-            }
-            continue;
-          }
-
-          // 2. 固定 ID 缺失但同名标签被别的 ID 占着（导入数据带进来的普通标签）。
-          // 只按名称跳过的话，系统标签会永远建不出来，所以这里把占位的行收编：
-          // 迁移它的笔记关联后再删掉，笔记不会掉标签。
+          // 同名标签被别的 ID 占着（导入数据带进来的普通标签）。只按名称跳过的话，
+          // 系统标签会永远建不出来，所以把占位行收编：迁移笔记关联后再删掉。
+          // 占位行本身是系统标签时不能收编——那是另一个系统标签的数据，
+          // 它的名称已在第一轮修回，这里直接新建即可。
           final impostor = nameLowerToRow[nameKey];
-          if (impostor != null) {
-            final impostorId = impostor['id'] as String;
+          final impostorId = impostor?['id'] as String?;
+          if (impostorId != null &&
+              !_DatabaseServiceBase.systemTagIds.contains(impostorId)) {
             await _adoptTagAsSystemTag(
               txn,
               oldId: impostorId,
@@ -129,7 +131,6 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
             continue;
           }
 
-          // 3. 全新的系统标签，直接插入。
           final newRow = <String, dynamic>{
             'id': category.id,
             'name': category.name,
@@ -143,12 +144,12 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
           idToRow[category.id] = newRow;
-          nameLowerToRow[nameKey] = newRow;
+          nameLowerToRow.putIfAbsent(nameKey, () => newRow);
           inserted++;
           logDebug('添加默认一言标签: ${category.name}');
         }
 
-        // 4. 兜底：默认列表之外的系统标签（隐藏标签等）若被写成普通标签，一并修回。
+        // 兜底：默认列表之外的系统标签（隐藏标签等）若被写成普通标签，一并修回。
         for (final row in idToRow.values.toList()) {
           final rowId = row['id'] as String;
           if (!_DatabaseServiceBase.systemTagIds.contains(rowId)) continue;

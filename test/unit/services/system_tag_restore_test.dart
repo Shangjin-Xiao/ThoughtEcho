@@ -4,7 +4,7 @@ import 'package:thoughtecho/services/database_service.dart';
 
 /// 回归测试：清空并导入后系统标签必须能自愈
 ///
-/// 覆盖 initDefaultHitokotoTags 的三条路径：
+/// 覆盖 initDefaultHitokotoTags 的各条路径：
 /// - 固定 ID 缺失且无同名占位 -> 新建系统标签
 /// - 固定 ID 存在但被写成普通标签 -> 修回 is_default=1
 /// - 固定 ID 缺失但同名普通标签占位 -> 收编，并迁移笔记关联
@@ -181,6 +181,50 @@ void main() {
         whereArgs: ['quote-1'],
       );
       expect(quote.first['category_id'], DatabaseService.defaultTagIdHitokoto);
+    });
+
+    test('系统标签顶着另一个系统标签的名字时，不应被收编走笔记', () async {
+      await db.delete('categories');
+      await db.delete('quote_tags');
+      // default_anime 的名称被写坏成"每日一言"，而 default_hitokoto 缺失
+      await db.insert('categories', {
+        'id': DatabaseService.defaultTagIdAnime,
+        'name': '每日一言',
+        'is_default': 1,
+        'icon_name': '🎬',
+        'last_modified': '2020-01-01T00:00:00.000Z',
+      });
+      await db.insert('quotes', {
+        'id': 'quote-anime',
+        'content': '一条动画笔记',
+        'date': DateTime.now().toUtc().toIso8601String(),
+        'category_id': DatabaseService.defaultTagIdAnime,
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'quote-anime',
+        'tag_id': DatabaseService.defaultTagIdAnime,
+      });
+
+      await service.initDefaultHitokotoTags();
+
+      // 动画标签被改回正确名称，且没有被删除
+      final anime = await categoryById(DatabaseService.defaultTagIdAnime);
+      expect(anime, isNotNull);
+      expect(anime!['name'], '动画');
+
+      // 笔记仍然归在动画标签下，没有被迁到"每日一言"
+      final relations = await db.query(
+        'quote_tags',
+        where: 'quote_id = ?',
+        whereArgs: ['quote-anime'],
+      );
+      expect(relations.length, 1);
+      expect(relations.first['tag_id'], DatabaseService.defaultTagIdAnime);
+
+      // 每日一言以自己的固定 ID 另行建出
+      final hitokoto = await categoryById(DatabaseService.defaultTagIdHitokoto);
+      expect(hitokoto, isNotNull);
+      expect(hitokoto!['name'], '每日一言');
     });
 
     test('按固定 ID 重建的一言标签应是系统标签', () async {
