@@ -147,6 +147,11 @@ jobs:
     uses: ./.github/workflows/ios-build.yml
     secrets:
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      # 没配这几个 secret 时上传步骤会自己跳过，不会让发版构建失败。
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SENTRY_URL: ${{ secrets.SENTRY_URL }}
     with:
       # iOS 只接受三段式数字版本，预发布后缀会破坏 --build-name
       version_name: ${{ needs.prepare.outputs.ios_version }}

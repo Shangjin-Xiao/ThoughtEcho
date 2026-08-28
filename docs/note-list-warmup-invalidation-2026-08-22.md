@@ -380,3 +380,100 @@ PR #526 的指标修正到手后的第一份日志。这一轮**不是**又一�
   已经翻到底之后还会再查一次空页，说明 `_watchHasMore` 在中途被复位过。没查根因。
 - 冷启动首屏光栅那条（scroll-1 `worstRaster=7.0ms`，比上一轮的 19.2ms 又降了）
   仍然挂着，未动。
+
+---
+
+## 2026-08-28 iOS 复验：profile 拿到了，但符号没传，等于白拿
+
+上晋在 iPad Air 4（`iPad13,1`，60Hz 面板）上装了含 PR #531 的包
+（release `4.0.0+56`），并接了 Sentry MCP。直接查了线上数据。
+
+### iPad 不卡，但同一个缺陷在
+
+`budget=16.7ms`（真 60Hz，不是取不到刷新率的回退：`CADisableMinimumFrameDurationOnPhone`
+是 true，ProMotion 没被挡，这台机器本来就没有）。
+
+scroll-45：274 帧里 `frameJank=2`、`dropped=5`、`avgFrame=2.5ms`、`worstVsync=3.2ms`
+—— 流畅是真的。但同一段里 `dataΔ=2 → built=234@13-120`、`worstBuild=36.2ms`、
+`worstFrame=49.7ms`，而 `itemMemo hit+234 / miss+0`，记忆化一条没漏。
+
+**36ms 在 60Hz 上掉 2 帧（看不出），在 120Hz 上掉 4~5 帧（就是用户说的卡）。**
+不是代码路径的设备差异，是预算的设备差异。
+
+### 这份日志把两条线拆开了
+
+| | built | itemMount | worstVsync |
+|---|---|---|---|
+| iPad scroll-45 | 234 | **0** | 3.2ms |
+| Android scroll-27 | 121 | **0** | 2.8ms |
+| Android scroll-1/2/3 | 33/178/30 | **33/31/30** | 44.6 / **143.6** / 27.3ms |
+
+**帧与帧之间那笔开销跟着「挂载新卡片」走，不跟着「重建」走。** 重建的钱全在 build
+阶段。所以之前混在一起的那条线索现在是两条：
+
+1. 挂载引出的帧外异步工作 —— 需要函数级证据
+2. 整列表重建的 36ms —— 已定位在 sliver 层，不需要 profile
+
+### profile 是空的：符号没传
+
+查了三个 profile（`root /` 13.1s / scrollSession 454ms / 冷启动那次 349ms）：
+
+- 采样完全正常：13.1s 那个 7629 个样本、17 条线程，`io.flutter.1.raster`、
+  `DartWorker`、`dart:io EventHandler` 都在，3587 个栈帧。
+- Apple 系统库的帧**有名字**（`_CFRunLoopRunSpecificWithOptions`、
+  `__CFRunLoopDoTimers`、`start_wqthread`）。
+- **我们自己二进制的帧全是 `unknown`。**
+
+原因：仓库里**没有任何地方上传调试符号**（`sentry-cli` / `debug-files` /
+`sentry_dart_plugin` / `upload-dif` 在 `.github/workflows/`、`scripts/`、
+`pubspec.yaml`、`ios/` 里一个都没有）。
+
+这是上一轮的疏漏：只开了 `profilesSampleRate`，没把符号上传一起做掉，结果拿到一堆
+有形状没名字的栈。已在 `ios-build.yml` 里补上（见下）。
+
+**但要说清这条路的上限**：补符号之后能读出来的是 Flutter 引擎（C++）和 Runner
+（ObjC）两层；**Dart 代码的帧大概率仍然打不开** —— AOT 机器码不是靠 DWARF 描述的，
+原生 profiler 一般只能把它看成一整块。对「图片文件读取 / 解码完成回调落在帧与帧
+之间」这个假设来说引擎帧就够用，但别指望看到 `QuoteItemWidget.build`。
+
+### 还有一个更硬的约束
+
+刚才那次冷启动，整条 trace 里**只有一个滚动会话通过了筛选**（382ms）。也就是说
+iPad Air 4 上连冷启动首滑都不卡。
+
+**能 profile 的设备不卡，卡的设备（120Hz LTPO Android）不能 profile。**
+所以 iOS 符号上传是「让这个工具将来能用」，不是「这次就能定位」。
+
+### 这一轮做了什么
+
+1. **`collapsedImage={}` 分段计时**（`NoteListImageProfile`）。不靠 profiler，两个
+   平台都能用，直接冲着上面第 1 条线索去：记录每段滚动里图片的
+   `resolve/sync/async/pending` 和 `avgWait`/`worstWait`。判据写在类注释里 ——
+   `async` 跟着 `built` 涨且 `worstWait` 和 `worstVsync` 一个量级就是坐实；
+   `async=0` 而 `worstVsync` 照样一两百毫秒就是**证伪**，省掉一整轮错方向的优化。
+   挂在 `CollapsedMediaImage` 的 `frameBuilder` 上（`wasSynchronouslyLoaded` 天然
+   就是「imageCache 命中、零异步工作」的信号），**没有包装 provider** —— `imageCache`
+   按 provider 相等性做键，包一层会把缓存键改掉。
+2. **iOS 符号上传**（`ios-build.yml` + `release.yml`）。开关是
+   `SENTRY_AUTH_TOKEN` 这个 secret 在不在，`workflow_dispatch` 上另有一个默认勾上的
+   `upload_symbols`。刻意**不加** `--split-debug-info`：它会把 Dart 调试信息剥离，
+   应用内日志里的异常堆栈退化成裸地址，而整个排查流程靠的就是用户直接贴可读日志。
+3. **`excerpt_intent` 按平台守卫**。channel 只在 `MainActivity.kt` 注册，iOS 每次进
+   主页撞一次 `MissingPluginException` 并按 ERROR 记录、上报 Sentry（一条 trace 里
+   6 条）。平台判断做成可注入，两条分支都有测试。
+
+### 没做的：翻到底后的空查询
+
+查清楚了，但**决定不动**。
+
+根因在 `_refillAfterRefresh`：刷新会把 `_watchHasMore` 置回 true 再分块回填原有条数，
+最后一块的 `requestLimit` 是个余数，而 `_watchHasMore = quotes.length >= requestLimit`
+对余数来说**说明不了后面还有没有** —— 于是刷新后总是 true，用户滑到底再查一次空页。
+
+不修的理由：任何「刷新后沿用旧的 `hasMore`」的写法都会在**刷新期间真的新增了笔记**时
+把末尾的笔记藏掉（新笔记排在最前，回填同样条数会把最老的挤出去，那时 `true` 是对的）。
+要精确判定得在最后一块多取一条，而这会改动回填目标的语义，进而扰动滚动位置 ——
+这个文件的注释里记着这块为「列表突然飞走」返过好几次工。
+
+代价是一次 5~20ms 的 SQL，还在后台线程上。**为它冒动回填机制的风险不划算**，
+现在这个偏保守的行为（宁可多查一次，也不藏笔记）是两害相权的那个轻的。

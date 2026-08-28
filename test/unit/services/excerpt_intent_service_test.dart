@@ -36,7 +36,9 @@ void main() {
   });
 
   group('ExcerptIntentService', () {
-    const service = ExcerptIntentService();
+    // 显式声明「这是支持的平台」：默认判据是 Platform.isAndroid，而测试跑在
+    // 宿主机上，不注入的话下面每条都会走提前返回、一个 channel 调用都发不出去。
+    const service = ExcerptIntentService(supported: true);
 
     test('returns pending excerpt text and drains native queue', () async {
       pendingText = '摘录内容';
@@ -76,6 +78,43 @@ void main() {
           'setExcerptEntryEnabled:false',
         ]),
       );
+    });
+  });
+
+  group('不支持的平台一个 channel 调用都不发', () {
+    // 「摘录到心迹」的原生实现只在 MainActivity.kt 里，iOS 的 AppDelegate.swift
+    // 没有注册这个 channel。不判平台的话，iOS 每次进主页都会撞一次
+    // MissingPluginException 并按 ERROR 记进日志、上报到 Sentry ——
+    // 2026-08-28 的 iPad 日志里一条 trace 就带了 6 条。
+    const service = ExcerptIntentService(supported: false);
+
+    test('consumePendingExcerptText 直接返回 null', () async {
+      pendingText = '不该被读到';
+
+      expect(await service.consumePendingExcerptText(), isNull);
+      expect(calls, isEmpty);
+    });
+
+    test('syncEntryPointEnabled 静默跳过', () async {
+      await service.syncEntryPointEnabled(true);
+
+      expect(calls, isEmpty);
+    });
+  });
+
+  group('原生实现缺失时不当成错误', () {
+    const service = ExcerptIntentService(supported: true);
+
+    setUp(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    test('两个方法都吞掉 MissingPluginException 而不是抛出去', () async {
+      // 平台判断之后还撞上，说明是 Android 侧注册时机的问题（例如引擎重建）。
+      // 仍然要能安全降级：调用方不该因此崩，也不该被当成错误上报。
+      expect(await service.consumePendingExcerptText(), isNull);
+      await expectLater(service.syncEntryPointEnabled(true), completes);
     });
   });
 }

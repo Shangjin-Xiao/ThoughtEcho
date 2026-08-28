@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
+import '../../utils/note_list_image_profile.dart';
 import '../../utils/optimized_image_loader.dart';
 
 /// 折叠卡片里媒体图片的统一渲染实现，[CollapsedMediaThumbnail] 与
@@ -45,6 +46,13 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
   int? _providerCacheWidth;
   int? _providerCacheHeight;
 
+  /// 这张 provider 开始解析的时间戳，用来量「解析 → 第一帧」的等待。
+  /// 见 [NoteListImageProfile]：不在滚动会话记录期时它是 null，整条记账跳过。
+  int? _resolveStartMicros;
+
+  /// 第一帧只记一次：`frameBuilder` 在出图之后每次重建都会被调到。
+  bool _recordedFirstFrame = false;
+
   @override
   void didUpdateWidget(covariant CollapsedMediaImage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -59,6 +67,8 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
       _providerSource = null;
       _providerCacheWidth = null;
       _providerCacheHeight = null;
+      _resolveStartMicros = null;
+      _recordedFirstFrame = false;
     }
   }
 
@@ -80,6 +90,10 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
     _providerSource = widget.source;
     _providerCacheWidth = widget.cacheWidth;
     _providerCacheHeight = widget.cacheHeight;
+    // 计时起点放在这里而不是 build 开头：这一段只在**真的换了 provider** 时走到，
+    // 正好对应「这张图要重新解析一次」。命中上面那三个字段的重建不该重新计时。
+    _recordedFirstFrame = false;
+    _resolveStartMicros = NoteListImageProfile.markResolveStart();
     return provider;
   }
 
@@ -124,6 +138,15 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
         gaplessPlayback: true,
         frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
           if (wasSynchronouslyLoaded || frame != null) {
+            // `wasSynchronouslyLoaded` 就是 imageCache 命中、一点异步工作都没有
+            // 的那条路 —— 预热要达到的正是这个状态。
+            if (!_recordedFirstFrame) {
+              _recordedFirstFrame = true;
+              NoteListImageProfile.markFirstFrame(
+                startMicros: _resolveStartMicros,
+                synchronous: wasSynchronouslyLoaded,
+              );
+            }
             return child;
           }
           return CollapsedMediaPlaceholder(

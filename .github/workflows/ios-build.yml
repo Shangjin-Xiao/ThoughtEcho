@@ -7,6 +7,11 @@ on:
         description: '版本名称 (例如: 1.0.0)'
         required: true
         default: '1.0.0'
+      upload_symbols:
+        description: '上传调试符号到 Sentry（没配 SENTRY_AUTH_TOKEN 时自动跳过）'
+        required: false
+        type: boolean
+        default: true
 
   # 供 release.yml 复用
   workflow_call:
@@ -15,8 +20,24 @@ on:
         description: '版本名称 (例如: 1.0.0)，三段式数字版本'
         required: true
         type: string
+      upload_symbols:
+        # 默认开着，release.yml 不用传。发版忘了传符号是不可逆的：
+        # dSYM 随 runner 一起销毁，事后补不回来，那个版本的 profile 和原生崩溃栈
+        # 就永远只有地址没有函数名。
+        description: '上传调试符号到 Sentry'
+        required: false
+        type: boolean
+        default: true
     secrets:
       SENTRY_DSN:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+      SENTRY_ORG:
+        required: false
+      SENTRY_PROJECT:
+        required: false
+      SENTRY_URL:
         required: false
 
 jobs:
@@ -66,6 +87,58 @@ jobs:
             --build-name="$VERSION_NAME" \
             --dart-define=SENTRY_DSN="$SENTRY_DSN"
         
+      - name: 上传调试符号到 Sentry
+        # 这一步只在 CI 上跑，不改二进制、不进 IPA，对应用运行时零影响。
+        #
+        # 为什么需要：2026-08-28 的 iPad profile 里，Apple 系统库的帧都有名字
+        # （_CFRunLoopRunSpecificWithOptions 等），我们自己二进制的帧**全是
+        # `unknown`** —— 栈抓到了、符号没传。补上之后至少 Flutter 引擎（C++）和
+        # Runner（ObjC）这两层能读出来，而「图片文件读取 / 解码完成回调落在帧与帧
+        # 之间」这个待验证的假设，主要就发生在引擎侧。
+        #
+        # Dart 代码的帧大概率仍然打不开：AOT 机器码不是靠 DWARF 描述的，原生
+        # profiler 一般只能把它看成一整块。这是已知上限，不是配置没做对。
+        #
+        # 刻意**不加** `--split-debug-info`：它会把 Dart 调试信息从二进制里剥走，
+        # 应用内日志里的 Dart 异常堆栈就退化成裸地址，而排查记录页性能全靠用户
+        # 直接贴可读的 release 日志。`--obfuscate` 同理，绝对不加。
+        continue-on-error: true
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          # 非美国区的组织要指到自己那个 region（例如 https://de.sentry.io）。
+          # 新版组织令牌（sntrys_ 开头）自带 region 信息，可以不配。
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
+          UPLOAD_SYMBOLS: ${{ inputs.upload_symbols }}
+        run: |
+          set -euo pipefail
+
+          if [ "${UPLOAD_SYMBOLS}" != "true" ]; then
+            echo "本次构建选择了不上传符号，跳过。"
+            exit 0
+          fi
+          if [ -z "${SENTRY_AUTH_TOKEN:-}" ] || [ -z "${SENTRY_ORG:-}" ] || \
+             [ -z "${SENTRY_PROJECT:-}" ]; then
+            echo "未配置 SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT，跳过符号上传。"
+            echo "配置这三个 secret 后，Sentry 上的 profile 和原生崩溃栈才会显示函数名。"
+            exit 0
+          fi
+
+          # 不锁版本：这一步只是把文件传上去，用最新的 CLI 反而少踩老版本的坑；
+          # 真出问题也只是这一步 continue-on-error 掉，不影响 IPA。
+          curl -sL https://sentry.io/get-cli/ | bash
+
+          # 路径不写死：Flutter / Xcode 换版本时 dSYM 的产出位置变过。先列出来，
+          # 日志里留一份「这次到底传了什么」，下次对不上号时好查。
+          echo "本次构建产出的 dSYM："
+          find build/ios -maxdepth 4 -name '*.dSYM' -print || true
+
+          sentry-cli debug-files upload \
+            --org "$SENTRY_ORG" \
+            --project "$SENTRY_PROJECT" \
+            build/ios
+
       - name: 创建未签名的 IPA
         run: |
           mkdir -p build/ipa/Payload
