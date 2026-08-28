@@ -216,6 +216,41 @@ void main() {
       );
       expect(marker, isEmpty);
     });
+
+    test('遗留列清理排在建快照列的迁移之前，快照不会被表重建抹掉', () async {
+      // performAllDataMigrations 是真实入口。它里面 cleanupLegacyTagIdsColumn 会靠
+      // **重建 quotes 表**来去掉遗留的 tag_ids 列，而重建用的是写死的列清单，不含任何
+      // *_backup 列。所以只要它排在 repairOutOfDomainSentiment 后面，前脚存下的原值
+      // 后脚就被整张表抹掉——修复变成了不可逆的删除。
+      final manager = DatabaseSchemaManager();
+      await manager.createTables(database);
+
+      // 造一个还带着遗留 tag_ids 列的库，触发那次表重建。
+      await database.execute('ALTER TABLE quotes ADD COLUMN tag_ids TEXT');
+      await database.insert('quotes', {
+        'id': 'demo-quote-zh-001',
+        'content': '我常以为是丑女造就了美人。',
+        'date': '2026-08-22T17:40:00.000Z',
+        'sentiment': 'thoughtful', // 不在词汇表里，会被修复置空
+      });
+
+      await manager.performAllDataMigrations(database);
+
+      final columns = (await database.rawQuery('PRAGMA table_info(quotes)'))
+          .map((column) => column['name'] as String)
+          .toSet();
+      expect(columns, isNot(contains('tag_ids')), reason: '遗留列清理应当执行过');
+      expect(columns, contains('sentiment_backup'), reason: '快照列不能被表重建抹掉');
+
+      final row = (await database.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['demo-quote-zh-001'],
+      ))
+          .first;
+      expect(row['sentiment'], isNull);
+      expect(row['sentiment_backup'], 'thoughtful');
+    });
   });
 }
 
