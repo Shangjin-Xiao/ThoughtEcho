@@ -105,24 +105,28 @@
 | ![Homepage](res/screenshot/l10n/en/home_page.jpg) | ![Note List](res/screenshot/l10n/en/note_list_view.jpg) |
 
 ### Editing & AI Features
-| Rich Text Editor | AI Q&A Chat | Filter & Sort |
-|:---:|:---:|:---:|
-| ![Rich Text Editor](res/screenshot/l10n/en/note_full_editor_page.jpg) | ![AI Q&A Chat](res/screenshot/l10n/en/note_qa_chat_page.jpg) | ![Filter & Sort](res/screenshot/note_filter_sort_sheet.jpg) |
+| Rich Text Editor | AI Q&A Chat |
+|:---:|:---:|
+| ![Rich Text Editor](res/screenshot/l10n/en/note_full_editor_page.jpg) | ![AI Q&A Chat](res/screenshot/l10n/en/note_qa_chat_page.jpg) |
 
 ### Insights & Reports
-| Insights Analysis | Period Report | Device Sync |
-|:---:|:---:|:---:|
-| ![Insights Analysis](res/screenshot/l10n/en/insights_page.jpg) | ![Period Report](res/screenshot/l10n/en/period_report.jpg) | ![Device Sync](res/screenshot/note_sync.jpg) |
+| Insights Analysis | Period Report |
+|:---:|:---:|
+| ![Insights Analysis](res/screenshot/l10n/en/insights_page.jpg) | ![Period Report](res/screenshot/l10n/en/period_report.jpg) |
 
 ### Settings & Management
-| Theme Settings | Daily Quote Settings | Preferences |
+| Theme Settings | AI Provider Settings | Daily Quote Settings |
 |:---:|:---:|:---:|
-| ![Theme Settings](res/screenshot/l10n/en/theme_settings_page.jpg) | ![Daily Quote Settings](res/screenshot/l10n/en/hitokoto_settings_page.jpg) | ![Preferences](res/screenshot/l10n/en/preferences_detail_page.jpg) |
+| ![Theme Settings](res/screenshot/l10n/en/theme_settings_page.jpg) | ![AI Provider Settings](res/screenshot/l10n/en/ai_settings_page.jpg) | ![Daily Quote Settings](res/screenshot/l10n/en/hitokoto_settings_page.jpg) |
+
+| Preferences | Smart Push Settings |
+|:---:|:---:|
+| ![Preferences](res/screenshot/l10n/en/preferences_detail_page.jpg) | ![Smart Push](res/screenshot/l10n/en/smart_push_settings_page.jpg) |
 
 ### Storage & Backup
-| Backup & Restore | Storage Management | WebDAV Sync |
-|:---:|:---:|:---:|
-| ![Backup & Restore](res/screenshot/backup_restore_page.jpg) | ![Storage Management](res/screenshot/storage_management_page.jpg) | ![WebDAV Sync](res/screenshot/l10n/en/webdav_sync_page.jpg) |
+| WebDAV Cloud Sync | Recycle Bin |
+|:---:|:---:|
+| ![WebDAV Sync](res/screenshot/l10n/en/webdav_sync_page.jpg) | ![Recycle Bin](res/screenshot/l10n/en/recycle_bin_page.jpg) |
 
 ## 🛠️ Tech Stack
 

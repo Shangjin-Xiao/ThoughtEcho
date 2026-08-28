@@ -819,7 +819,7 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
   - Long press: Voice input
 - **Clipboard Detection**: Auto-detects clipboard content when returning to app
 
-![Home Interface](../res/screenshot/home_page.jpg)
+![Home Interface](../res/screenshot/l10n/en/home_page.jpg)
 
 ---
 
@@ -922,7 +922,7 @@ ThoughtEcho can keep several AI configurations at once:
 
 ## 3. Rich Text Editor
 
-![Rich Text Editor](../res/screenshot/note_full_editor_page.jpg)
+![Rich Text Editor](../res/screenshot/l10n/en/note_full_editor_page.jpg)
 
 ### Toolbar Features
 
@@ -1010,7 +1010,7 @@ ThoughtEcho provides several ways to capture inspiration quickly:
 
 ## 4. Note Management
 
-![Note List](../res/screenshot/note_list_view.jpg)
+![Note List](../res/screenshot/l10n/en/note_list_view.jpg)
 
 ### Sorting Options (3 Types)
 
@@ -1028,8 +1028,6 @@ Each supports ascending/descending toggle.
 - Configurable retention periods (7/30/90 days) with automatic cleanup.
 
 ### Filter Options (3 Categories)
-
-![Filter & Sort](../res/screenshot/note_filter_sort_sheet.jpg)
 
 #### Tag Filtering
 
@@ -1188,7 +1186,7 @@ AI generates personalized writing prompts based on time, weather, and location.
 
 ### AI Insight Analysis
 
-![Insights](../res/screenshot/insights_page.jpg)
+![Insights](../res/screenshot/l10n/en/insights_page.jpg)
 
 **Access Path**: Insights → AI Insights
 
@@ -1214,7 +1212,7 @@ Analysis results are presented in a clear structure with insights, evidence, sug
 
 ### Note Q&A Chat
 
-![AI Q&A](../res/screenshot/note_qa_chat_page.jpg)
+![AI Q&A](../res/screenshot/l10n/en/note_qa_chat_page.jpg)
 
 Chat with AI about specific note content.
 
@@ -1228,8 +1226,6 @@ Chat with AI about specific note content.
 ---
 
 ## 6. Device Sync
-
-![Device Sync](../res/screenshot/note_sync.jpg)
 
 ### WebDAV Cloud Sync (Beta)
 
@@ -1282,8 +1278,6 @@ After sync completes, shows:
 
 ## 7. Backup & Restore
 
-![Backup & Restore](../res/screenshot/backup_restore_page.jpg)
-
 ### Backup Formats
 
 ThoughtEcho backup files are in ZIP format, containing:
@@ -1325,7 +1319,7 @@ When importing a backup, you can choose from three modes:
 
 ## 8. Settings Guide
 
-![Settings](../res/screenshot/preferences_detail_page.jpg)
+![Settings](../res/screenshot/l10n/en/preferences_detail_page.jpg)
 
 ### Location & Weather
 
@@ -1343,7 +1337,7 @@ The app supports multiple languages including Chinese, English, Japanese, Korean
 
 ### Theme Settings
 
-![Theme Settings](../res/screenshot/theme_settings_page.jpg)
+![Theme Settings](../res/screenshot/l10n/en/theme_settings_page.jpg)
 
 #### Theme Styles (3 Types)
 
