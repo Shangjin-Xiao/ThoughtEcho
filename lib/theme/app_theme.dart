@@ -359,7 +359,7 @@ class AppTheme with ChangeNotifier {
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
   static const String _useDynamicColorKey = 'use_dynamic_color'; // 添加动态取色设置键
-  static const String _themeStyleKey = 'theme_style';
+  static const String _themeStyleKey = ThemeStyle.storageKey;
 
   /// 墨色的持久化键前缀，**每套风格一条**（`theme_accent_paper` …）。
   /// 见 [accentFor]：墨色跟着风格走，不是全局一支。
@@ -833,26 +833,32 @@ class AppTheme with ChangeNotifier {
       if (styleName != null) {
         _themeStyle = ThemeStyle.fromName(styleName);
       } else {
-        // 未显式配置过主题风格
-        // 检查是否为全新安装（即未标记 app_installed_v2 且未存过 app_settings）
+        // 没存过风格。正常路径下全新安装的默认值（信笺）已经由
+        // SettingsService 在识别到首次安装的那一刻种进同一个键了，
+        // 所以走到这里的基本都是老用户——他们继续拿 defaultStyle，外观不动。
+        //
+        // 下面这段只是兜底：主题层先于设置层起来（测试、或者将来启动顺序变了）时，
+        // 首次安装的标记还没写，这里仍然认得出全新安装。判据必须同时看
+        // app_installed_v2 和 app_settings：SettingsService 一旦跑过就两个都有，
+        // 那时反推出来的一定是「老用户」，兜底自然让位给种下的值。
         final isNewInstallation =
             (_storage?.getBool('app_installed_v2') != true) &&
                 !(_storage?.containsKey('app_settings') ?? false);
         if (isNewInstallation) {
-          _themeStyle = ThemeStyle.paper;
+          _themeStyle = ThemeStyle.freshInstallStyle;
           try {
             final success = await _storage
-                ?.setString(_themeStyleKey, ThemeStyle.paper.name)
+                ?.setString(_themeStyleKey, ThemeStyle.freshInstallStyle.name)
                 .timeout(const Duration(seconds: 2));
             if (success == false) {
               logError(
-                '写入默认主题风格 ThemeStyle.paper 返回 false',
+                '写入默认主题风格 ${ThemeStyle.freshInstallStyle.name} 返回 false',
                 source: 'AppTheme',
               );
             }
           } catch (e, s) {
             logError(
-              '写入默认主题风格 ThemeStyle.paper 失败',
+              '写入默认主题风格 ${ThemeStyle.freshInstallStyle.name} 失败',
               error: e,
               stackTrace: s,
               source: 'AppTheme',

@@ -9,6 +9,8 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
+import 'package:thoughtecho/theme/theme_style.dart';
 import '../../test_harness.dart';
 
 void main() {
@@ -340,6 +342,51 @@ void main() {
       expect(rebuiltService.sentryDisclosureShown, isTrue);
       expect(rebuiltService.appSettings.sentryEnabled, isTrue);
       expect(rebuiltService.appSettings.sentryDisclosureShown, isTrue);
+    });
+
+    group('全新安装默认主题风格', () {
+      test('首次安装种下信笺', () async {
+        // setUp 里的 create() 走的正是首次安装分支。
+        expect(
+          MMKVService().getString(ThemeStyle.storageKey),
+          ThemeStyle.freshInstallStyle.name,
+        );
+        expect(ThemeStyle.freshInstallStyle, ThemeStyle.paper);
+      });
+
+      test('随后初始化的 AppTheme 读到的就是信笺', () async {
+        // #513 的默认值一直没生效就败在这个顺序上：SettingsService 先跑，
+        // app_installed_v2 / app_settings 已经写好，主题层再反推「是不是全新安装」
+        // 只会推成老用户，于是新装用户看到的还是 material。
+        final appTheme = AppTheme();
+        await appTheme.initialize();
+        expect(appTheme.themeStyle, ThemeStyle.paper);
+      });
+
+      test('老用户不会被种上风格', () async {
+        await MMKVService().remove(ThemeStyle.storageKey);
+        await MMKVService().setBool('app_installed_v2', true);
+
+        await SettingsService.create();
+
+        expect(MMKVService().getString(ThemeStyle.storageKey), isNull);
+      });
+
+      test('已经有风格取值时不覆盖', () async {
+        // 从备份恢复出来的取值也是用户自己选的，覆盖掉就是替他改外观。
+        await MMKVService().setString(
+          ThemeStyle.storageKey,
+          ThemeStyle.plain.name,
+        );
+        await MMKVService().remove('app_installed_v2');
+
+        await SettingsService.create();
+
+        expect(
+          MMKVService().getString(ThemeStyle.storageKey),
+          ThemeStyle.plain.name,
+        );
+      });
     });
 
     group('更新说明已读版本', () {

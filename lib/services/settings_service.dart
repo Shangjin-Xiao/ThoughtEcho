@@ -18,6 +18,7 @@ import 'package:thoughtecho/utils/sentry_network_tracing.dart';
 import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
+import '../theme/theme_style.dart';
 import 'excerpt_intent_service.dart';
 import 'location_service.dart';
 
@@ -760,6 +761,12 @@ class SettingsService extends ChangeNotifier {
       // 不值得让整个设置加载失败。
       await _writeLastSeenReleaseVersion(ReleaseHighlights.latestVersion);
 
+      // 全新安装的默认主题风格是信笺，种在这里而不是主题层：
+      // AppTheme.initialize() 跑在 SettingsService.create() 之后，那时
+      // app_installed_v2 和 app_settings 都已写好，主题层再反推「是不是全新安装」
+      // 只会推成老用户——#513 的默认值一直没生效就是这个原因。
+      await _seedFreshInstallThemeStyle();
+
       // 首次安装时，载入应用默认设置
       _loadAppSettings();
       _appSettings = _appSettings.copyWith(
@@ -801,6 +808,35 @@ class SettingsService extends ChangeNotifier {
     await _syncExcerptIntentEntryPoint();
 
     notifyListeners();
+  }
+
+  /// 首次安装时把默认主题风格（[ThemeStyle.freshInstallStyle]，信笺）种进存储。
+  ///
+  /// **只在键还空着时写。** 从备份恢复、或者主题层因为某些路径先跑了一步，
+  /// 都可能已经有取值，覆盖掉就是替用户改外观。
+  ///
+  /// 写失败只记日志：拿不到品牌默认外观是可以接受的降级，让整个设置加载失败不是。
+  Future<void> _seedFreshInstallThemeStyle() async {
+    try {
+      if (_mmkv.containsKey(ThemeStyle.storageKey)) return;
+      final success = await _mmkv.setString(
+        ThemeStyle.storageKey,
+        ThemeStyle.freshInstallStyle.name,
+      );
+      if (!success) {
+        logError(
+          '写入全新安装默认主题风格 ${ThemeStyle.freshInstallStyle.name} 返回 false',
+          source: 'SettingsService',
+        );
+      }
+    } catch (e, stack) {
+      logError(
+        '写入全新安装默认主题风格失败',
+        error: e,
+        stackTrace: stack,
+        source: 'SettingsService',
+      );
+    }
   }
 
   Future<void> _syncExcerptIntentEntryPoint() async {

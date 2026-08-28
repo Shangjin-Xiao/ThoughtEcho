@@ -66,6 +66,21 @@ enum ThemeStyle {
   /// 默认值只写在这里一处，其它地方（字段初值、异常兜底）都引用它。
   static const ThemeStyle defaultStyle = ThemeStyle.material;
 
+  /// 全新安装拿到的风格：信笺（[ThemeStyle.paper]）。
+  ///
+  /// 和 [defaultStyle] 分开是刻意的：老用户（升级、以及任何存过设置的安装）继续走
+  /// [defaultStyle]，外观不因升级自己变掉；只有**首次安装**这一次会种下信笺。
+  ///
+  /// 种默认值的时机在 `SettingsService._loadSettings()` 识别到首次安装的那一刻，
+  /// 不在 `AppTheme`：`AppTheme.initialize()` 跑在 `SettingsService.create()` 之后，
+  /// 那时首次安装的标记（`app_installed_v2`）和 `app_settings` 都已写好，主题层再去
+  /// 反推「是不是全新安装」永远会推成老用户——#513 的默认值没生效就是这个原因。
+  static const ThemeStyle freshInstallStyle = ThemeStyle.paper;
+
+  /// 主题风格的持久化键。主题层和设置层都要读写它（见 [freshInstallStyle]），
+  /// 所以键写在这一处，两边引用，不各自写字面量。
+  static const String storageKey = 'theme_style';
+
   static ThemeStyle fromName(String? name) {
     if (name == null) return defaultStyle;
     for (final style in ThemeStyle.values) {
