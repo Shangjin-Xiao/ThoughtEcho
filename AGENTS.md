@@ -283,12 +283,9 @@ pwsh ./scripts/build_msix_ci.ps1
   就早退，二次修复不写就没有留底。
   **遗留列清理必须排在所有建快照列的迁移之前**：`_removeTagIdsColumn` 重建 `quotes` 用的是
   写死的列清单，不含任何 `*_backup` 列，排在后面会把三剂后悔药一起抹掉。
-  - ⚠️ **已知缺口**：目前只有 `repairOutOfDomainSentiment` 满足前半条。
-    `migrateWeatherToKey` / `migrateDayPeriodToKey` 的 UPDATE 只写规范化值，靠
-    `_ensureBackupColumn` 那一次整列快照兜着；而它们由 `_checkAndMigrateWeatherData` /
-    `_checkAndMigrateDayPeriodData` 每次启动重查，**只要之后再有标签形态的值进来就会
-    重跑**（同步/导入都可能带进来），那一轮的原值就没有留底了。**不要把这两个当参考实现**，
-    照 `repairOutOfDomainSentiment` 写；这两处待单独修复。
+  - 这条规则一度被 `migrateWeatherToKey` / `migrateDayPeriodToKey` 违反着：它们的 UPDATE
+    只写规范化值，只靠 `_ensureBackupColumn` 建列那一次快照兜着，第二轮再跑时原值就没了。
+    已在 PR #538 补齐，三处现在写法一致，都可以照着抄。
 - 🔒 **逐行反序列化必须有兜底**：查询结果统一走 `_parseQuoteRows` / `_tryParseQuoteRow`，
   坏行跳过并计数。裸 `maps.map((m) => Quote.fromJson(m))` 会让一条坏行带走整页笔记，用户
   看到的是列表整个打不开。批处理阶段的 `as String` 强转同样要改成 `whereType<String>()`——
