@@ -44,6 +44,58 @@ void main() {
           ]));
     });
 
+    test('weather / day_period 的二次迁移也要留底，不能只靠建列那一次快照', () async {
+      // _ensureBackupColumn 只在建列那一次整列快照，列已存在就早退。而这两个迁移
+      // 是可以再跑的（同步/导入之后又带进标签形态的值），只靠它的话，第二轮的原值
+      // 就没有任何地方留底——原值一旦被覆盖，回滚代码也找不回来。
+      //
+      // 这里直接调迁移本身而不走 performAllDataMigrations：触发它的
+      // _checkAndMigrateWeatherData 只用 `limit: 1` 抽一行做判断，抽到的那行已经是
+      // key 时整体跳过（那是另一个独立问题），会让这条用例测不到想测的东西。
+      final manager = DatabaseSchemaManager();
+      await manager.createTables(database);
+
+      Future<void> insert(String id, String weather, String dayPeriod) async {
+        await database.insert('quotes', {
+          'id': id,
+          'content': '正文 $id',
+          'date': '2026-08-22T17:40:00.000Z',
+          'weather': weather,
+          'day_period': dayPeriod,
+        });
+      }
+
+      Future<void> runMigrations() async {
+        await manager.migrateWeatherToKey(database);
+        await manager.migrateDayPeriodToKey(database);
+      }
+
+      // 第一轮：建快照列的那一次。
+      await insert('first-round', '晴', '晨曦');
+      await runMigrations();
+
+      // 第二轮：快照列此时已经存在，_ensureBackupColumn 的早退分支生效。
+      await insert('second-round', '多云', '黄昏');
+      await runMigrations();
+
+      Future<Map<String, Object?>> rowOf(String id) async =>
+          (await database.query('quotes', where: 'id = ?', whereArgs: [id]))
+              .first;
+
+      final first = await rowOf('first-round');
+      expect(first['weather'], 'clear');
+      expect(first['day_period'], 'dawn');
+      expect(first['weather_backup'], '晴');
+      expect(first['day_period_backup'], '晨曦');
+
+      final second = await rowOf('second-round');
+      expect(second['weather'], 'cloudy');
+      expect(second['day_period'], 'dusk');
+      // 回归点：第二轮的原值同样要留得下来。
+      expect(second['weather_backup'], '多云');
+      expect(second['day_period_backup'], '黄昏');
+    });
+
     test('upgrades a version 11 database through every remaining adapter',
         () async {
       await _createVersion11Schema(database);
