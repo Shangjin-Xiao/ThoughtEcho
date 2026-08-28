@@ -313,38 +313,28 @@
         }
 
         .lang-toggle {
+            width: 44px;
             height: 44px;
-            padding: 0 0.75rem;
             border: 2px solid var(--accent-blue);
             background: var(--paper-blue);
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.88rem;
-            font-weight: 600;
+            font-size: 1.3rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
             transition: all 0.3s ease;
             box-shadow: 2px 2px 4px var(--shadow-soft);
             color: var(--accent-blue);
+            padding: 0;
         }
 
         .lang-toggle:hover,
         .lang-toggle[aria-expanded="true"] {
-            transform: scale(1.03);
+            transform: scale(1.05);
             box-shadow: 3px 3px 8px var(--shadow-medium);
             background: var(--accent-blue);
             color: var(--paper-white);
-        }
-
-        .lang-arrow {
-            font-size: 0.7rem;
-            transition: transform 0.2s ease;
-        }
-
-        .lang-toggle[aria-expanded="true"] .lang-arrow {
-            transform: rotate(180deg);
         }
 
         .lang-dropdown {
@@ -401,6 +391,12 @@
             background: var(--paper-yellow);
             color: var(--accent-brown);
             font-weight: 700;
+        }
+
+        .lang-option.active::after {
+            content: '✓';
+            font-weight: 700;
+            color: var(--accent-brown);
         }
 
         .btn-notebook {
@@ -2091,7 +2087,57 @@
             transition: transform 0.3s ease;
         }
 
-        /* 移动端响应式 */
+        /* ---- 平板及中等屏幕：导航链接收进汉堡菜单 ---- */
+        @media (max-width: 1200px) {
+            .nav-links {
+                display: none;
+                position: fixed;
+                top: var(--mobile-nav-h, 62px);
+                left: 0;
+                right: 0;
+                background: var(--paper-white);
+                flex-direction: column;
+                padding: 1.5rem;
+                gap: 0;
+                border-bottom: 3px solid var(--accent-brown);
+                box-shadow: 0 4px 12px var(--shadow-medium);
+                z-index: 999;
+            }
+            .nav-links.active {
+                display: flex;
+            }
+            .nav-links a {
+                padding: 1rem;
+                border-bottom: 1px solid var(--line-color);
+                display: block;
+            }
+            .nav-links a::after {
+                content: none;
+            }
+            .mobile-menu-btn {
+                display: flex;
+            }
+            .mobile-menu-overlay {
+                display: block;
+                position: fixed;
+                top: var(--mobile-nav-h, 62px);
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(44, 36, 22, 0.4);
+                backdrop-filter: blur(4px);
+                z-index: 998;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            .mobile-menu-overlay.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
+
+        /* ---- 小屏手机：缩小导航栏元素 ---- */
         @media (max-width: 768px) {
             .nav-container {
                 padding: 0.8rem 1rem;
@@ -2113,8 +2159,8 @@
             }
 
             .nav-actions {
-            position: relative;
-            z-index: 1001;
+                position: relative;
+                z-index: 1001;
                 gap: 0.4rem;
             }
 
@@ -2125,10 +2171,9 @@
             }
 
             .lang-toggle {
+                width: 36px;
                 height: 36px;
-                padding: 0 0.5rem;
-                font-size: 0.8rem;
-                gap: 3px;
+                font-size: 1rem;
             }
 
             .lang-dropdown {
@@ -2152,53 +2197,6 @@
                 width: 36px;
                 height: 36px;
                 font-size: 1.2rem;
-            }
-
-            .nav-links {
-                display: none;
-                position: fixed;
-                top: var(--mobile-nav-h, 62px);
-                left: 0;
-                right: 0;
-                background: var(--paper-white);
-                flex-direction: column;
-                padding: 1.5rem;
-                gap: 0;
-                border-bottom: 3px solid var(--accent-brown);
-                box-shadow: 0 4px 12px var(--shadow-medium);
-                z-index: 999;
-            }
-            .mobile-menu-overlay {
-                display: block;
-                position: fixed;
-                top: var(--mobile-nav-h, 62px);
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(44, 36, 22, 0.4);
-                backdrop-filter: blur(4px);
-                z-index: 998;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity 0.3s ease;
-            }
-            .mobile-menu-overlay.active {
-                opacity: 1;
-                pointer-events: auto;
-            }
-            .nav-links.active {
-                display: flex;
-            }
-            .nav-links a {
-                padding: 1rem;
-                border-bottom: 1px solid var(--line-color);
-                display: block; /* Full width on mobile */
-            }
-            .nav-links a::after {
-                content: none; /* Disable hover underline on mobile */
-            }
-            .mobile-menu-btn {
-                display: flex;
             }
             .hero {
                 padding: 5.5rem 1.5rem 3rem;

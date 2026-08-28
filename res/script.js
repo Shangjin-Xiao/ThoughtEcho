@@ -560,16 +560,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ==================== 语言切换（支持 中文/English/日本語/한국어） ====================
     const langToggle = document.getElementById('langToggle');
-    const langText = document.getElementById('langText');
     const langDropdown = document.getElementById('langDropdown');
     const langOptions = document.querySelectorAll('.lang-option');
 
-    const langDisplayNames = {
-        zh: '简体中文',
-        en: 'English',
-        ja: '日本語',
-        ko: '한국어'
-    };
+    const supported = ['zh', 'en', 'ja', 'ko'];
 
     function getCurrentLang() {
         if (body.classList.contains('lang-en')) return 'en';
@@ -578,16 +572,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'zh';
     }
 
+    /** 根据浏览器/系统语言推断最佳匹配 */
+    function detectBrowserLang() {
+        const langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+        for (const tag of langs) {
+            const lower = tag.toLowerCase();
+            if (lower.startsWith('zh')) return 'zh';
+            if (lower.startsWith('ja')) return 'ja';
+            if (lower.startsWith('ko')) return 'ko';
+            if (lower.startsWith('en')) return 'en';
+        }
+        return 'zh'; // 默认中文
+    }
+
     function applyLanguage(lang) {
-        const supported = ['zh', 'en', 'ja', 'ko'];
         const normalized = supported.includes(lang) ? lang : 'zh';
 
         body.classList.remove('lang-zh', 'lang-en', 'lang-ja', 'lang-ko');
         body.classList.add(`lang-${normalized}`);
-
-        if (langText) {
-            langText.textContent = langDisplayNames[normalized];
-        }
 
         const htmlLangMap = {
             zh: 'zh-CN',
@@ -622,9 +624,9 @@ document.addEventListener('DOMContentLoaded', () => {
         syncNavHeightVar();
     }
 
-    // 初始化语言
-    const savedLang = localStorage.getItem('lang') || 'zh';
-    applyLanguage(savedLang);
+    // 初始化语言：优先用户保存的偏好，否则自动检测浏览器语言
+    const savedLang = localStorage.getItem('lang');
+    applyLanguage(savedLang || detectBrowserLang());
 
     // 下拉菜单事件处理
     if (langToggle && langDropdown) {
