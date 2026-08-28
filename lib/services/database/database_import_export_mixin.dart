@@ -92,6 +92,8 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
       // 生成的演示数据），系统标签就此消失，之后按固定 ID 重建的标签也不再是
       // 系统标签。这里先把内置标签补回来，并修复被降级的系统标签属性。
       await initDefaultHitokotoTags();
+      // 隐藏标签同样是系统标签，且不在默认一言标签列表里，需要单独补建
+      await getOrCreateHiddenTag();
       // 必须先把合并进来的媒体绝对路径重定基到本机，再重建引用：
       // 引用表按修复前的外来路径建立的话，WebDAV 会认为云端附件无人引用而不下载。
       // 放在最前面是因为它自带兜底、不会抛出，不该被后面的迁移失败带走。

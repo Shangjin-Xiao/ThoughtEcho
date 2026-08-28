@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,10 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+
 import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import '../models/app_settings.dart';
+
 import 'package:uuid/uuid.dart';
+
 import '../utils/app_logger.dart';
 import '../utils/database_platform_init.dart';
 import '../utils/expiring_cache.dart';
@@ -46,11 +50,7 @@ part 'database/database_pagination_mixin.dart';
 part 'database/database_import_export_mixin.dart';
 part 'database/database_migration_mixin.dart';
 
-enum QuoteUpdateResult {
-  updated,
-  skippedDeleted,
-  notFound,
-}
+enum QuoteUpdateResult { updated, skippedDeleted, notFound }
 
 abstract class _DatabaseServiceBase extends ChangeNotifier {
   _DatabaseServiceBase._internal();
@@ -255,9 +255,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<bool> cleanupTagDataInconsistencies();
   Future<List<int>> getHourDistributionForSmartPush();
   Map<String, dynamic> getQueryPerformanceReport();
-  Future<Map<String, dynamic>?> getLocalDailyQuote({
-    String offlineQuoteSource,
-  });
+  Future<Map<String, dynamic>?> getLocalDailyQuote({String offlineQuoteSource});
   Future<Map<String, dynamic>> performDatabaseMaintenance({
     Function(String)? onProgress,
   });
@@ -500,8 +498,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   final Set<String> _currentQuoteIds = {};
 
   Timer? _startupBackgroundMaintenanceTimer;
-  static const Duration _startupBackgroundMaintenanceDelay =
-      Duration(seconds: 12);
+  static const Duration _startupBackgroundMaintenanceDelay = Duration(
+    seconds: 12,
+  );
 
   @protected
   void clearAllCacheForParts() => _clearAllCache();
@@ -751,8 +750,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         if (!_isDisposed) notifyListeners();
       });
     } catch (e, stackTrace) {
-      AppLogger.e('数据库初始化失败',
-          error: e, stackTrace: stackTrace, source: 'DatabaseService');
+      AppLogger.e(
+        '数据库初始化失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
       await _clearFailedInitializationConnection();
       _isInitializing = false;
       if (_initCompleter != null && !_initCompleter!.isCompleted) {
@@ -841,10 +844,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       }
       _initCompleter = null;
 
-      logInfo(
-        '后台推送只读数据库初始化完成',
-        source: 'DatabaseService',
-      );
+      logInfo('后台推送只读数据库初始化完成', source: 'DatabaseService');
     } catch (e, stackTrace) {
       _isInitializing = false;
       if (_initCompleter != null && !_initCompleter!.isCompleted) {
@@ -961,8 +961,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       });
       logDebug('成功初始化新数据库');
     } catch (e, stackTrace) {
-      AppLogger.e('初始化新数据库失败',
-          error: e, stackTrace: stackTrace, source: 'DatabaseService');
+      AppLogger.e(
+        '初始化新数据库失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
       rethrow;
     }
   }
@@ -1015,8 +1019,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         logDebug('预加载完成，获取到 ${quotes.length} 条笔记，已通知UI更新');
       }
     } catch (e, stackTrace) {
-      AppLogger.e('预加载笔记时出错',
-          error: e, stackTrace: stackTrace, source: 'DatabaseService');
+      AppLogger.e(
+        '预加载笔记时出错',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
       // 确保状态一致
       _currentQuotes = [];
       _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
@@ -1080,9 +1088,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     await _schemaLifecycle.performAllDataMigrations(database);
     // 文档目录变化（iOS 重装或从系统备份恢复会更换容器 UUID）会让笔记里记录的
     // 媒体绝对路径整体失效，必须在首屏读取笔记之前重定基。
-    await MediaPathRepairService.repairIfBaseDirChanged(
-      database: database,
-    );
+    await MediaPathRepairService.repairIfBaseDirChanged(database: database);
   }
 
   /// 外部调用的统一刷新入口（同步/恢复后使用）
@@ -1187,8 +1193,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
       logDebug('数据库恢复措施已执行');
     } catch (e, stackTrace) {
-      AppLogger.e('数据库恢复失败',
-          error: e, stackTrace: stackTrace, source: 'DatabaseService');
+      AppLogger.e(
+        '数据库恢复失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
       rethrow;
     }
   }
@@ -1201,14 +1211,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       try {
         final retentionDays = await _resolveTrashRetentionDays();
         if (retentionDays == null) {
-          logWarning(
-            '读取回收站保留期失败，跳过启动自动清理',
-            source: 'DatabaseService',
-          );
+          logWarning('读取回收站保留期失败，跳过启动自动清理', source: 'DatabaseService');
           return;
         }
-        final cleanedCount =
-            await autoCleanupExpiredTrash(retentionDays: retentionDays);
+        final cleanedCount = await autoCleanupExpiredTrash(
+          retentionDays: retentionDays,
+        );
         if (cleanedCount > 0) {
           logInfo(
             '回收站自动清理完成: 删除 $cleanedCount 条过期笔记 (保留 $retentionDays 天)',

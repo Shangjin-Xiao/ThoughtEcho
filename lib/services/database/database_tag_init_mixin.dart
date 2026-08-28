@@ -54,108 +54,124 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
       final db = database;
       final defaultCategories = _getDefaultHitokotoTags();
 
-      // 1. 一次性查询所有现有标签名称（小写）
+      // 一次性读出现有标签，按 ID 和名称(小写)建索引。
+      // 固定 ID 是系统标签的唯一判据：名称可以被导入数据占用，ID 不会。
       final existingCategories = await db.query(
         'categories',
-        columns: ['name', 'id', 'is_default'],
+        columns: ['id', 'name', 'is_default', 'icon_name'],
       );
-      final existingNamesLower = existingCategories
-          .map((row) => (row['name'] as String?)?.toLowerCase())
-          .where((name) => name != null)
-          .toSet();
-
-      // 同时创建ID到名称的映射，用于检查默认ID是否已被其它名称使用
-      final existingIdToName = {
-        for (var row in existingCategories)
-          row['id'] as String: row['name'] as String,
+      final idToRow = <String, Map<String, dynamic>>{
+        for (final row in existingCategories) row['id'] as String: row,
       };
-      // 2. 筛选出数据库中尚不存在的默认标签
-      final categoriesToAdd = defaultCategories
-          .where(
-            (category) =>
-                !existingNamesLower.contains(category.name.toLowerCase()),
-          )
-          .toList();
-
-      // 3. 检查默认ID是否已被其他名称使用，如果是，需要更新名称
-      final idsToUpdate = <String, String>{};
-      for (final category in defaultCategories) {
-        if (existingIdToName.containsKey(category.id) &&
-            existingIdToName[category.id]!.toLowerCase() !=
-                category.name.toLowerCase()) {
-          // 已存在此ID但名称不同，需要更新
-          idsToUpdate[category.id] = category.name;
-        }
-      }
-      // 3.5 修复被降级为普通标签的系统标签。
-      // "清空并导入"会删除全部 categories，随后按固定 ID 重建的标签曾被写成
-      // is_default=0，导致系统标签变得可删可改；这里按固定 ID 统一回补。
-      final idsToMarkDefault = <String>[];
+      final nameLowerToRow = <String, Map<String, dynamic>>{};
       for (final row in existingCategories) {
-        final rowId = row['id'] as String?;
-        if (rowId == null) continue;
-        if (!_DatabaseServiceBase.systemTagIds.contains(rowId)) continue;
-        if (idsToUpdate.containsKey(rowId)) continue; // 已在上面的更新中带上
-        final isDefault = row['is_default'];
-        if (isDefault == 1 || isDefault == true) continue;
-        idsToMarkDefault.add(rowId);
+        final key = (row['name'] as String? ?? '').toLowerCase();
+        nameLowerToRow.putIfAbsent(key, () => row);
       }
 
-      // 4. 如果有需要添加的标签，则使用批处理插入
-      final batch = db.batch();
+      var inserted = 0;
+      var repaired = 0;
+      var adopted = 0;
 
-      for (final rowId in idsToMarkDefault) {
-        batch.update(
-          'categories',
-          {
-            'is_default': 1,
-            'last_modified': DateTime.now().toUtc().toIso8601String(),
-          },
-          where: 'id = ?',
-          whereArgs: [rowId],
-        );
-        logDebug('修复系统标签属性: $rowId');
-      }
+      await db.transaction((txn) async {
+        for (final category in defaultCategories) {
+          final nowUtc = DateTime.now().toUtc().toIso8601String();
+          final nameKey = category.name.toLowerCase();
 
-      // 先处理更新
-      for (final entry in idsToUpdate.entries) {
-        batch.update(
-          'categories',
-          {'name': entry.value, 'is_default': 1},
-          where: 'id = ?',
-          whereArgs: [entry.key],
-        );
-        logDebug('更新ID为${entry.key}的标签名称为: ${entry.value}');
-      }
-      // 再处理新增
-      for (final category in categoriesToAdd) {
-        // 跳过ID已经存在但名称不同的情况（已在上面处理）
-        if (idsToUpdate.containsKey(category.id)) {
-          continue;
-        }
-        batch.insert(
-            'categories',
-            {
+          // 1. 固定 ID 已存在：只修名称与系统属性，不动其它字段。
+          final existingById = idToRow[category.id];
+          if (existingById != null) {
+            final currentName = existingById['name'] as String? ?? '';
+            final isDefault = existingById['is_default'];
+            final needNameFix = currentName.toLowerCase() != nameKey;
+            final needDefaultFix = !(isDefault == 1 || isDefault == true);
+            if (needNameFix || needDefaultFix) {
+              await txn.update(
+                'categories',
+                {
+                  'name': category.name,
+                  'is_default': 1,
+                  // last_modified 必须前进，否则这次修复会在下一轮 LWW 合并里被旧值盖回去
+                  'last_modified': nowUtc,
+                },
+                where: 'id = ?',
+                whereArgs: [category.id],
+              );
+              repaired++;
+              logDebug('修复系统标签 ${category.id}: name=${category.name}');
+            }
+            continue;
+          }
+
+          // 2. 固定 ID 缺失但同名标签被别的 ID 占着（导入数据带进来的普通标签）。
+          // 只按名称跳过的话，系统标签会永远建不出来，所以这里把占位的行收编：
+          // 迁移它的笔记关联后再删掉，笔记不会掉标签。
+          final impostor = nameLowerToRow[nameKey];
+          if (impostor != null) {
+            final impostorId = impostor['id'] as String;
+            await _adoptTagAsSystemTag(
+              txn,
+              oldId: impostorId,
+              category: category,
+              timestamp: nowUtc,
+            );
+            idToRow.remove(impostorId);
+            final adoptedRow = <String, dynamic>{
               'id': category.id,
               'name': category.name,
-              'is_default': category.isDefault ? 1 : 0,
+              'is_default': 1,
               'icon_name': category.iconName,
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore);
-        logDebug('添加默认一言标签: ${category.name}');
-      }
+            };
+            idToRow[category.id] = adoptedRow;
+            nameLowerToRow[nameKey] = adoptedRow;
+            adopted++;
+            logDebug('同名普通标签 $impostorId 已收编为系统标签 ${category.id}');
+            continue;
+          }
 
-      // 提交批处理
-      if (categoriesToAdd.isNotEmpty ||
-          idsToUpdate.isNotEmpty ||
-          idsToMarkDefault.isNotEmpty) {
-        await batch.commit(noResult: true);
-        logDebug(
-          '批量处理了 ${categoriesToAdd.length} 个新标签、${idsToUpdate.length} 个更新和 '
-          '${idsToMarkDefault.length} 个系统标签属性修复',
-        );
+          // 3. 全新的系统标签，直接插入。
+          final newRow = <String, dynamic>{
+            'id': category.id,
+            'name': category.name,
+            'is_default': 1,
+            'icon_name': category.iconName,
+            'last_modified': nowUtc,
+          };
+          await txn.insert(
+            'categories',
+            newRow,
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+          idToRow[category.id] = newRow;
+          nameLowerToRow[nameKey] = newRow;
+          inserted++;
+          logDebug('添加默认一言标签: ${category.name}');
+        }
+
+        // 4. 兜底：默认列表之外的系统标签（隐藏标签等）若被写成普通标签，一并修回。
+        for (final row in idToRow.values.toList()) {
+          final rowId = row['id'] as String;
+          if (!_DatabaseServiceBase.systemTagIds.contains(rowId)) continue;
+          final isDefault = row['is_default'];
+          if (isDefault == 1 || isDefault == true) continue;
+          await txn.update(
+            'categories',
+            {
+              'is_default': 1,
+              'last_modified': DateTime.now().toUtc().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [rowId],
+          );
+          repaired++;
+          logDebug('修复系统标签属性: $rowId');
+        }
+      });
+
+      if (inserted > 0 || repaired > 0 || adopted > 0) {
+        logDebug('系统标签处理完成：新增 $inserted，修复 $repaired，收编 $adopted');
       } else {
-        logDebug('所有默认标签已存在，无需添加');
+        logDebug('所有默认标签已存在，无需处理');
       }
 
       // 更新标签流
@@ -163,6 +179,45 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
     } catch (e) {
       logDebug('初始化默认一言标签出错: $e');
     }
+  }
+
+  /// 把占用了系统标签名称的普通标签收编为系统标签。
+  ///
+  /// categories.id 是主键且被 quote_tags / quotes 引用，不能直接改 ID，
+  /// 所以先建出固定 ID 的行、把引用迁过去，最后删掉占位行。
+  Future<void> _adoptTagAsSystemTag(
+    Transaction txn, {
+    required String oldId,
+    required NoteTag category,
+    required String timestamp,
+  }) async {
+    if (oldId == category.id) return;
+
+    await txn.insert(
+        'categories',
+        {
+          'id': category.id,
+          'name': category.name,
+          'is_default': 1,
+          'icon_name': category.iconName,
+          'last_modified': timestamp,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
+
+    // 笔记可能同时挂着新旧两个标签，用 OR IGNORE 避开主键冲突
+    await txn.rawInsert(
+      'INSERT OR IGNORE INTO quote_tags(quote_id, tag_id) '
+      'SELECT quote_id, ? FROM quote_tags WHERE tag_id = ?',
+      [category.id, oldId],
+    );
+    await txn.delete('quote_tags', where: 'tag_id = ?', whereArgs: [oldId]);
+    await txn.update(
+      'quotes',
+      {'category_id': category.id},
+      where: 'category_id = ?',
+      whereArgs: [oldId],
+    );
+    await txn.delete('categories', where: 'id = ?', whereArgs: [oldId]);
   }
 
   /// 获取默认一言标签列表
@@ -239,6 +294,12 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
         name: '哲学',
         isDefault: true,
         iconName: '🤔',
+      ),
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdJoke, // 使用固定 ID
+        name: '抖机灵',
+        isDefault: true,
+        iconName: '😜',
       ),
     ];
   }
