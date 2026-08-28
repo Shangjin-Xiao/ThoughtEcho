@@ -345,7 +345,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('一条测试笔记'));
+    // 概览比测试视口高（洞察、最近会话、地图入口都在预览上面），不先滚进来
+    // 点击会落在空处。这一条验证的是点击接到了 smartPush，不是预览的位置。
+    final preview = find.text('一条测试笔记');
+    await tester.ensureVisible(preview);
+    await tester.pumpAndSettle();
+
+    await tester.tap(preview);
     await tester.pumpAndSettle();
 
     expect(smartPush.requestedNoteId, 'q1');
