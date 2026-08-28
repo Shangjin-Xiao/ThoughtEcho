@@ -695,16 +695,16 @@ class SvgToImageService {
     if (lower.startsWith('#')) {
       final hex = lower.substring(1);
 
-      String expand(String s) => s.split('').map((c) => '$c$c').join();
-
       try {
         if (hex.length == 3) {
-          final rrggbb = expand(hex);
+          final rrggbb =
+              '${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}';
           return Color(int.parse('ff$rrggbb', radix: 16));
         }
         if (hex.length == 4) {
-          final rrggbb = expand(hex.substring(0, 3));
-          final aa = expand(hex.substring(3, 4));
+          final rrggbb =
+              '${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}';
+          final aa = '${hex[3]}${hex[3]}';
           return Color(int.parse('$aa$rrggbb', radix: 16));
         }
         if (hex.length == 6) {

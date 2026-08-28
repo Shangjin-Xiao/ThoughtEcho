@@ -460,7 +460,8 @@ int? _parseHexColor(String hex) {
   var value = hex;
   if (value.length == 3) {
     // #abc → #aabbcc
-    value = value.split('').map((char) => '$char$char').join();
+    value =
+        '${value[0]}${value[0]}${value[1]}${value[1]}${value[2]}${value[2]}';
   }
   if (value.length == 6) {
     value = 'ff$value';
