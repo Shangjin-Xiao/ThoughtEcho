@@ -240,40 +240,34 @@ void main() {
     test('取不超过正文高度的最大档', () {
       expect(
         CollapsedMediaThumbnail.sizeForContentHeight(0),
-        CollapsedMediaThumbnail.compactSize,
+        CollapsedMediaThumbnail.defaultSize,
       );
-      // 一两行正文：比最小档还矮也停在最小档，再小就看不清是什么照片了。
+      // 一两行正文：比小档还矮也停在小档，再小就看不清是什么照片了。
       expect(
         CollapsedMediaThumbnail.sizeForContentHeight(24),
-        CollapsedMediaThumbnail.compactSize,
+        CollapsedMediaThumbnail.defaultSize,
       );
       expect(
         CollapsedMediaThumbnail.sizeForContentHeight(
-          CollapsedMediaThumbnail.defaultSize - 0.5,
-        ),
-        CollapsedMediaThumbnail.compactSize,
-      );
-      // 边界取等号：正好够一档就用那一档，图和正文齐平。
-      expect(
-        CollapsedMediaThumbnail.sizeForContentHeight(
-          CollapsedMediaThumbnail.defaultSize,
+          CollapsedMediaThumbnail.tallNoteSize - 0.5,
         ),
         CollapsedMediaThumbnail.defaultSize,
       );
+      // 边界取等号：正好够一档就用那一档，图和正文齐平。
       expect(
         CollapsedMediaThumbnail.sizeForContentHeight(
           CollapsedMediaThumbnail.tallNoteSize,
         ),
         CollapsedMediaThumbnail.tallNoteSize,
       );
-      // 正文排满折叠盒（160）也不再往上走：上限就是最大档。
+      // 正文排满折叠盒（160）也不再往上走：上限就是大档。
       expect(
         CollapsedMediaThumbnail.sizeForContentHeight(160),
         CollapsedMediaThumbnail.tallNoteSize,
       );
     });
 
-    test('档位递增，且挑出来的档永远不高于正文（最小档除外）', () {
+    test('档位递增，且挑出来的档永远不高于正文（小档除外）', () {
       // 这两条不变量是「图不比字高」的全部依据：档位乱序或多出一个大于
       // 160 的档，都会让长笔记的图重新撑出卡片。
       for (var i = 1; i < CollapsedMediaThumbnail.sizeLadder.length; i++) {
@@ -282,7 +276,7 @@ void main() {
           greaterThan(CollapsedMediaThumbnail.sizeLadder[i - 1]),
         );
       }
-      for (var height = CollapsedMediaThumbnail.compactSize;
+      for (var height = CollapsedMediaThumbnail.defaultSize;
           height <= 200;
           height += 4) {
         expect(

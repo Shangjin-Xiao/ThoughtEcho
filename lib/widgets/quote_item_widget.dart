@@ -615,6 +615,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required Quote quote,
     required bool isExpanded,
     required Color primaryTextColor,
+    required Color secondaryTextColor,
     required bool paperRulesDisabled,
     required AppLocalizations l10n,
   }) {
@@ -659,12 +660,25 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           // 只算一次，同时喂给正文栈和动画层：两处一旦给出不同答案，
           // AnimatedSize 与 AnimatedSwitcher 的挂载就会错配。
           final bool canToggle = needsExpansion || isExpanded;
+
+          // 折叠提示优先**并进来源行**，不自己占一整行。
+          //
+          // 提示是右对齐的一小行灰字，来源行是左对齐的一行灰字，两者从来不会
+          // 争同一段横向空间；分成两行等于为了几个字多撑出一整行的高度，而这条
+          // 卡片本来就是「内容多到放不下」的那种，最不该再浪费纵向空间。
+          //
+          // 没有来源的笔记仍然走自己的提示行（`_buildQuoteContentStack` 里那条）：
+          // 硬凑一行空的来源出来，反而比提示自己占一行还高。
+          final String? sourceLine = _sourceLineFor(quote);
+          final bool showHint = textTruncated && !isExpanded;
+          final bool hintInSourceRow = showHint && sourceLine != null;
+
           final contentChild = _buildQuoteContentStack(
             canToggle: canToggle,
             quote: quote,
             showFullContent: showFullContent,
             needsExpansion: needsExpansion,
-            textTruncated: textTruncated,
+            textTruncated: textTruncated && !hintInSourceRow,
             isExpanded: isExpanded,
             contentStyle: contentStyle,
             innerTheme: innerTheme,
@@ -698,14 +712,87 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             // topInset + spacing 起画，而正文首行的行盒顶就是 y=0），后面每一条都
             // 落在行与行之间。圆角传 zero：这里已经在卡片的圆角裁切之内了。
             // 正文里的图片和展开蒙层都画在 painter 之上，会自然盖住横线。
-            child: paperRulesDisabled
-                ? animatedContent
-                : PaperRuleBackground(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 纸张横线只裹正文，不裹来源行：来源行的行高和正文不是一套，
+                // 横线接着往下画会和它错位。
+                if (paperRulesDisabled)
+                  animatedContent
+                else
+                  PaperRuleBackground(
                     borderRadius: BorderRadius.zero,
                     child: animatedContent,
                   ),
+                if (sourceLine != null || hintInSourceRow)
+                  _buildSourceRow(
+                    sourceLine: sourceLine,
+                    showHint: hintInSourceRow,
+                    innerTheme: innerTheme,
+                    secondaryTextColor: secondaryTextColor,
+                    l10n: l10n,
+                  ),
+              ],
+            ),
           );
         },
+      ),
+    );
+  }
+
+  /// 来源与出处那一行的文本；没有来源时为 null。
+  String? _sourceLineFor(Quote quote) {
+    final author = quote.sourceAuthor ?? '';
+    final work = quote.sourceWork ?? '';
+    if (author.isNotEmpty || work.isNotEmpty) {
+      return _formatSource(author, work);
+    }
+    final source = quote.source;
+    if (source != null && source.isNotEmpty) return source;
+    return null;
+  }
+
+  /// 来源行，右端可以搭一条折叠提示。
+  ///
+  /// 上边距 12 = 原来「正文区下内边距 8 + 来源行上内边距 4」，来源行搬进内容区
+  /// 之后这两段合成一处，卡片的间距和以前逐像素相同。
+  Widget _buildSourceRow({
+    required String? sourceLine,
+    required bool showHint,
+    required ThemeData innerTheme,
+    required Color secondaryTextColor,
+    required AppLocalizations l10n,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        // 来源长到要折行时，提示跟着落在最后一行，不吊在半空。
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Expanded 而不是 Flexible：来源短的时候也要把剩下的宽度吃掉，
+          // 否则提示会紧贴在来源右边，而不是卡片右缘。
+          Expanded(
+            child: sourceLine == null
+                ? const SizedBox.shrink()
+                : Text(
+                    sourceLine,
+                    style: innerTheme.textTheme.bodyMedium?.copyWith(
+                      color: secondaryTextColor,
+                    ),
+                  ),
+          ),
+          if (showHint) ...[
+            const SizedBox(width: 8),
+            Text(
+              l10n.doubleTapToViewFull,
+              style: innerTheme.textTheme.labelSmall?.copyWith(
+                color: innerTheme.colorScheme.onSurfaceVariant
+                    .withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1534,36 +1621,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             quote: quote,
             isExpanded: isExpanded,
             primaryTextColor: primaryTextColor,
+            secondaryTextColor: secondaryTextColor,
             paperRulesDisabled: visualEffectsDisabled,
             l10n: l10n,
           ),
 
-          // 来源信息（如果有）
-          if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
-              (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
-              child: Text(
-                _formatSource(
-                  quote.sourceAuthor ?? '',
-                  quote.sourceWork ?? '',
-                ),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: secondaryTextColor,
-                ),
-              ),
-            ),
-          ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
-              child: Text(
-                quote.source!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: secondaryTextColor,
-                ),
-              ),
-            ),
-          ],
+          // 来源行画在 `_buildQuoteContentSection` 里面，不在这里：折叠提示要和它
+          // 并成一行（见那边的说明），而「正文是否真的被截断」只有内容区的
+          // `LayoutBuilder` 里才量得出来。
 
           // 底部工具栏 - 标签、心形和更多按钮在同一行
           Padding(
