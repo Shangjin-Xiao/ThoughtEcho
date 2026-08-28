@@ -161,6 +161,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      discussions: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -274,6 +275,9 @@ jobs:
 
           if [[ "$PRERELEASE" == "true" ]]; then
             args+=(--prerelease)
+          else
+            # 正式版发布时自动在 Discussions 的 Announcements 分类开启对应讨论
+            args+=(--discussion-category "Announcements")
           fi
 
           # 手动触发时 tag 可能尚不存在，交给 gh 依据当前提交创建
