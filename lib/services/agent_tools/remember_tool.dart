@@ -69,7 +69,9 @@ class RememberTool extends AgentTool {
             'enum': <String>['identity', 'preference', 'style', 'feedback'],
             'description': 'profile 层的类别：identity 身份与长期在做的事，'
                 'preference 想聊/不想被提起什么，style 篇幅语气格式，'
-                'feedback 用户对你做法的纠正。默认 preference。',
+                'feedback 用户对你做法的纠正。默认 preference。\n'
+                '画像里还会出现「品味」和「文风」两类，那是后台定期通读笔记后'
+                '归纳的，不接受手动写入——你只看得到几条上下文，判断不如它准。',
           },
           'category': <String, Object?>{
             'type': 'string',
@@ -163,10 +165,16 @@ class RememberTool extends AgentTool {
       });
     }
 
+    final kind = AgentMemoryKindStorage.fromStorage(
+      call.getString('kind', defaultValue: 'preference').trim(),
+    );
+    final rejected = _rejectDreamingOwnedKind(call, kind);
+    if (rejected != null) {
+      return rejected;
+    }
+
     final entry = await _memory.rememberProfile(
-      kind: AgentMemoryKindStorage.fromStorage(
-        call.getString('kind', defaultValue: 'preference').trim(),
-      ),
+      kind: kind,
       directive: content,
     );
     return _ok(call, <String, Object?>{
@@ -217,12 +225,19 @@ class RememberTool extends AgentTool {
     }
 
     final kindArgument = call.getString('kind').trim();
+    final requestedKind = kindArgument.isEmpty
+        ? null
+        : AgentMemoryKindStorage.fromStorage(kindArgument);
+    if (requestedKind != null) {
+      final rejected = _rejectDreamingOwnedKind(call, requestedKind);
+      if (rejected != null) {
+        return rejected;
+      }
+    }
     final updated = await _memory.editProfileDirective(
       id: id,
       directive: content,
-      kind: kindArgument.isEmpty
-          ? null
-          : AgentMemoryKindStorage.fromStorage(kindArgument),
+      kind: requestedKind,
     );
     if (!updated) {
       return _invalid(call, '没有找到 id 为 $id 的画像条目');
@@ -260,6 +275,25 @@ class RememberTool extends AgentTool {
         toolCallId: call.id,
         content: jsonEncode(<String, Object?>{'ok': true, ...payload}),
       );
+
+  /// `taste` / `voice` 归后台归纳所有，模型不能写。
+  ///
+  /// schema 里的 `enum` 挡不住：不是每家 provider 都强制校验枚举，而
+  /// `AgentMemoryKindStorage.fromStorage` 现在认得这两个名字，模型直接传字符串
+  /// 就能写进去。这两类结论要扫一整个周期的笔记才归纳得准，在线对话里模型
+  /// 只看得到几条上下文，写出来的必然更差，还会把 Dreaming 归纳的那条挤掉
+  /// （画像预算是零和的）。
+  ToolResult? _rejectDreamingOwnedKind(ToolCall call, AgentMemoryKind kind) {
+    if (kind != AgentMemoryKind.taste && kind != AgentMemoryKind.voice) {
+      return null;
+    }
+    return _invalid(
+      call,
+      '${kind.storageValue} 类记忆由后台定期归纳整个周期的笔记后写入，不接受手动写入。'
+      '用户的文风或摘录品味需要调整时，改用 style 记录他对你表达方式的要求，'
+      '或把具体那次纠正记成 feedback。',
+    );
+  }
 
   ToolResult _invalid(ToolCall call, String message) => ToolResult(
         toolCallId: call.id,

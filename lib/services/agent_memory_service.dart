@@ -19,8 +19,9 @@ import 'settings_service.dart';
 /// - **画像层**（`agent_memory_profile`）：身份与表达偏好，每次对话注入，有硬预算；
 /// - **事实层**（`agent_memory_facts`）：细节，不注入，靠 `recall` 工具按需检索。
 ///
-/// 边界：记忆只存**从笔记里推导不出来**的东西。用户写过什么归 `explore_notes`，
-/// 两套检索各管一摊，否则模型会在两个来源之间反复横跳。
+/// 边界：记忆**存结论，不存原文**。文风、品味这类结论要扫很多篇笔记才归纳得出，
+/// 缓存进记忆才划算；笔记正文本身归 `explore_notes`，对话原文归 `session_search`。
+/// 三套检索各管一摊，否则模型会在几个来源之间反复横跳。
 ///
 /// **独立数据库文件 `agent_memory.db`**，和聊天记录、日志、AI 分析一样不进主库：
 /// 记忆是对用户的行为画像，物理隔离让"不进备份、不跨设备同步、一键清干净"变成
@@ -52,14 +53,33 @@ class AgentMemoryService extends ChangeNotifier {
   static const String databaseFileName = 'agent_memory.db';
 
   /// 记忆库自己的 schema 版本，与主库的 `schemaVersion` 无关。
-  static const int schemaVersion = 1;
+  ///
+  /// v2：画像层加 `source_note_ids`（Dreaming 的来源归因），并新增近况切片表。
+  static const int schemaVersion = 2;
 
   static const String profileTable = 'agent_memory_profile';
   static const String factsTable = 'agent_memory_facts';
+  static const String recentSliceTable = 'agent_memory_recent_slice';
 
   /// 画像层注入预算。超出时按「最近观察优先」截断注入副本，**不删库里的条目**。
   static const int profileInjectionMaxEntries = 24;
   static const int profileInjectionMaxChars = 1200;
+
+  /// 生成类链路（每日提示、周期洞察）可以注入的 kind。
+  ///
+  /// 比全集少一个 [AgentMemoryKind.taste]，这是**在注入层执行**的约束，不是
+  /// 提示词里的一句话：品味只可用于共鸣与推荐，绝不可用于评价，而洞察和每日
+  /// 提示恰恰是最容易写出评价口吻的两条链路。不注入，就无从误用。
+  ///
+  /// 对话链路走全集（[AgentMemoryKind.values]）——共鸣和推荐正是它的正当用途。
+  static const Set<AgentMemoryKind> profileKindsForGeneration =
+      <AgentMemoryKind>{
+    AgentMemoryKind.identity,
+    AgentMemoryKind.preference,
+    AgentMemoryKind.style,
+    AgentMemoryKind.feedback,
+    AgentMemoryKind.voice,
+  };
 
   /// 单条指令长度上限，防止模型把一整段对话当成一条偏好塞进来。
   static const int directiveMaxChars = 200;
@@ -181,7 +201,8 @@ class AgentMemoryService extends ChangeNotifier {
         observed_at TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'active',
         superseded_by TEXT,
-        source TEXT
+        source TEXT,
+        source_note_ids TEXT
       )
     ''');
     // 事实层：不默认注入，由 `recall` 按需检索。
@@ -201,6 +222,19 @@ class AgentMemoryService extends ChangeNotifier {
         embedding BLOB
       )
     ''');
+    // 近况切片：单行覆盖式写入，带过期时间，不占画像层预算。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $recentSliceTable(
+        id TEXT PRIMARY KEY,
+        content TEXT NOT NULL,
+        observed_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        source_note_ids TEXT
+      )
+    ''');
+    // v1 → v2 的加列。建表语句里已经有这一列，所以只有升级路径会真的加上；
+    // 重复执行由下面的吞异常兜底，和整套 schema 的自愈策略保持一致。
+    await _addColumnIfMissing(db, profileTable, 'source_note_ids TEXT');
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_agent_memory_profile_status '
       'ON $profileTable(status)',
@@ -213,6 +247,23 @@ class AgentMemoryService extends ChangeNotifier {
       'CREATE INDEX IF NOT EXISTS idx_agent_memory_facts_created_at '
       'ON $factsTable(created_at)',
     );
+  }
+
+  /// 加列，列已存在时静默跳过。
+  ///
+  /// SQLite 没有 `ADD COLUMN IF NOT EXISTS`，而 [_ensureSchema] 在 onCreate /
+  /// onUpgrade / onOpen 三条路径上都会跑——全新安装时建表语句已经带上这一列，
+  /// 再执行加列必然报 duplicate column。吞掉异常是这里的正常路径，不是兜底。
+  static Future<void> _addColumnIfMissing(
+    DatabaseExecutor db,
+    String table,
+    String columnDefinition,
+  ) async {
+    try {
+      await db.execute('ALTER TABLE $table ADD COLUMN $columnDefinition');
+    } catch (_) {
+      // 列已存在。其它 DDL 失败会在后续读写时暴露，不在这里吞成静默损坏。
+    }
   }
 
   @override
@@ -254,12 +305,16 @@ class AgentMemoryService extends ChangeNotifier {
   ///
   /// [replacesId] 非空时把旧条目原位 supersede——偏好变了就替换，绝不让两条
   /// 互相矛盾的 active 指令同时存在（模型会随机挑一条遵守）。
+  ///
+  /// [sourceNoteIds] 只有后台归纳会填，用来向用户交代这条结论的依据；
+  /// `remember` 手动写入留空（手动记下的东西本就没有笔记来源）。
   Future<AgentMemoryProfileEntry> rememberProfile({
     required AgentMemoryKind kind,
     required String directive,
     String? replacesId,
     String source = 'thoughter',
     DateTime? observedAt,
+    List<String> sourceNoteIds = const <String>[],
   }) async {
     final normalized = _normalizeDirective(directive);
     if (normalized.isEmpty) {
@@ -273,6 +328,7 @@ class AgentMemoryService extends ChangeNotifier {
       directive: normalized,
       observedAt: observedAt ?? DateTime.now(),
       source: source,
+      sourceNoteIds: sourceNoteIds,
     );
 
     await db.transaction((txn) async {
@@ -346,19 +402,30 @@ class AgentMemoryService extends ChangeNotifier {
   ///
   /// 输出是一条独立的用户数据消息，不进系统提示——和绑定笔记的做法一致，
   /// 避免把「用户偏好」和「行为准则」混成同一层权限。
-  Future<String?> buildProfileBlock() async {
+  ///
+  /// [kinds] 限定注入哪些类别，默认全集。生成类链路应传
+  /// [profileKindsForGeneration]（见该常量的说明）。
+  Future<String?> buildProfileBlock({
+    Set<AgentMemoryKind> kinds = const <AgentMemoryKind>{},
+  }) async {
     if (!isEnabled) {
       return null;
     }
-    final entries = await activeProfile();
+    final allowed = kinds.isEmpty ? AgentMemoryKind.values.toSet() : kinds;
+    final entries = (await activeProfile())
+        .where((entry) => allowed.contains(entry.kind))
+        .toList(growable: false);
     final nickname = _settingsService.userNickname;
-    if (entries.isEmpty && nickname.trim().isEmpty) {
+    final now = DateTime.now();
+    final slice = await _readRecentSlice(now);
+    if (entries.isEmpty && nickname.trim().isEmpty && slice == null) {
       return null;
     }
     return renderProfileBlock(
       entries,
-      now: DateTime.now(),
+      now: now,
       userNickname: nickname,
+      recentSlice: slice,
     );
   }
 
@@ -366,9 +433,12 @@ class AgentMemoryService extends ChangeNotifier {
   ///
   /// Agent 和每日提示/洞察都走这一个入口——记忆是增益，一次数据库异常不能把
   /// 整轮对话或每日提示打掉；降级策略只有一份，以后要加缓存或限流也只改这里。
-  Future<String?> safeProfileBlock({required String source}) async {
+  Future<String?> safeProfileBlock({
+    required String source,
+    Set<AgentMemoryKind> kinds = const <AgentMemoryKind>{},
+  }) async {
     try {
-      return await buildProfileBlock();
+      return await buildProfileBlock(kinds: kinds);
     } catch (error, stackTrace) {
       logError(
         '读取用户画像失败，本次不注入记忆',
@@ -380,6 +450,87 @@ class AgentMemoryService extends ChangeNotifier {
     }
   }
 
+  // ======================== 近况切片 ========================
+
+  /// 当前未过期的近况切片；没有、已过期或内容为空时返回 null。
+  Future<AgentMemoryRecentSlice?> currentRecentSlice() async {
+    if (!isEnabled) {
+      return null;
+    }
+    return _readRecentSlice(DateTime.now());
+  }
+
+  /// 覆盖写入近况切片。全库只有一条，写入即替换。
+  ///
+  /// [ttl] 默认 [AgentMemoryRecentSlice.defaultTtl]。内容超长按上限截断而不是
+  /// 拒绝——归纳出来的东西长了一点就整轮丢掉，代价不对等。
+  Future<AgentMemoryRecentSlice?> saveRecentSlice({
+    required String content,
+    List<String> sourceNoteIds = const <String>[],
+    Duration ttl = AgentMemoryRecentSlice.defaultTtl,
+    DateTime? observedAt,
+  }) async {
+    final normalized = normalizeMemoryText(
+      content,
+      AgentMemoryRecentSlice.maxChars,
+    );
+    if (normalized.isEmpty) {
+      return null;
+    }
+    final now = observedAt ?? DateTime.now();
+    final slice = AgentMemoryRecentSlice(
+      content: normalized,
+      observedAt: now,
+      expiresAt: now.add(ttl),
+      sourceNoteIds: sourceNoteIds,
+    );
+    final db = await _db;
+    await db.insert(
+      recentSliceTable,
+      slice.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    notifyListeners();
+    return slice;
+  }
+
+  /// 删除近况切片。用户在记忆管理里清掉近况时走这里。
+  Future<bool> clearRecentSlice() async {
+    final db = await _db;
+    final deleted = await db.delete(
+      recentSliceTable,
+      where: 'id = ?',
+      whereArgs: <Object?>[AgentMemoryRecentSlice.singletonId],
+    );
+    if (deleted > 0) {
+      notifyListeners();
+    }
+    return deleted > 0;
+  }
+
+  /// 读取切片并按 [now] 判过期。
+  ///
+  /// 过期的行**不在这里删**：读路径做写操作会让每日提示这种高频只读调用
+  /// 平白多一次写事务，而一条过期的行本来就不会被注入，留着也不占什么。
+  /// 下一次 Dreaming 覆盖写入时自然被替换。
+  Future<AgentMemoryRecentSlice?> _readRecentSlice(DateTime now) async {
+    final db = await _db;
+    final rows = await db.query(
+      recentSliceTable,
+      where: 'id = ?',
+      whereArgs: <Object?>[AgentMemoryRecentSlice.singletonId],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    final slice = AgentMemoryRecentSlice.fromMap(rows.first);
+    if (slice.content.isEmpty || slice.isExpiredAt(now)) {
+      return null;
+    }
+    return slice;
+  }
+
   /// 纯函数形式的画像块渲染，便于测试预算与时效标注。
   ///
   /// [userNickname] 是用户在设置里填的称呼，钉在画像块最前：它是用户显式
@@ -389,6 +540,7 @@ class AgentMemoryService extends ChangeNotifier {
     List<AgentMemoryProfileEntry> entries, {
     required DateTime now,
     String? userNickname,
+    AgentMemoryRecentSlice? recentSlice,
   }) {
     final sorted = List<AgentMemoryProfileEntry>.of(entries)
       ..sort((left, right) => right.observedAt.compareTo(left.observedAt));
@@ -416,6 +568,21 @@ class AgentMemoryService extends ChangeNotifier {
       }
       lines.add(line);
       usedChars += line.length;
+    }
+
+    // 近况切片不参与上面的预算核算：它替代不了任何一条画像，挤掉一条长期
+    // 有效的偏好去放一句两周后就过期的近况，是纯亏。它自己有 200 字上限。
+    if (recentSlice != null && !recentSlice.isExpiredAt(now)) {
+      final content = normalizeMemoryText(
+        recentSlice.content,
+        AgentMemoryRecentSlice.maxChars,
+      );
+      if (content.isNotEmpty) {
+        lines.add(
+          '- [近况·${describeAge(recentSlice.observedAt, now)}] '
+          '${escapeUntrustedText(content)}',
+        );
+      }
     }
 
     if (lines.isEmpty) {
@@ -829,6 +996,8 @@ class AgentMemoryService extends ChangeNotifier {
       AgentMemoryKind.preference => '偏好',
       AgentMemoryKind.style => '表达',
       AgentMemoryKind.feedback => '纠正',
+      AgentMemoryKind.taste => '品味',
+      AgentMemoryKind.voice => '文风',
     };
   }
 }

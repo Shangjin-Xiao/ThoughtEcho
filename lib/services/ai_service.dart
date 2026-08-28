@@ -44,8 +44,16 @@ class AIService extends ChangeNotifier {
   })  : _settingsService = settingsService,
         _memoryService = memoryService;
 
+  /// 生成类链路的画像块。
+  ///
+  /// 传 [AgentMemoryService.profileKindsForGeneration] 而不是全集：品味
+  /// （`taste`）只可用于共鸣与推荐，不可用于评价，而每日提示和周期洞察正是
+  /// 最容易写出评价口吻的两条链路。在这里挡掉，它们就拿不到，也就无从误用。
   Future<String?> _userProfileContext() async =>
-      _memoryService?.safeProfileBlock(source: 'AIService');
+      _memoryService?.safeProfileBlock(
+        source: 'AIService',
+        kinds: AgentMemoryService.profileKindsForGeneration,
+      );
 
   /// 每日提示的输出上限（token）。
   ///
