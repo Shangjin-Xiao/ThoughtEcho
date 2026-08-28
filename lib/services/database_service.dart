@@ -142,6 +142,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   /// 获取回收站中已删除笔记的总数
   Future<int> getDeletedQuotesCount();
 
+  /// 获取指定分类下未删除笔记的总数（用于同步冲突笔记计数等场景）
+  Future<int> getNotesCountByCategory(String categoryId);
+
   /// 获取墓碑记录用于备份同步（永久删除的笔记 ID 列表）
   Future<List<Map<String, dynamic>>> getTombstonesForBackup();
 

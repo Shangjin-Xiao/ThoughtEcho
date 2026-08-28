@@ -29,10 +29,9 @@ List<Quote> _parseQuoteRows(
     try {
       quote = _tryParseQuoteRow(map, tagsByQuoteId: tagsByQuoteId);
     } catch (e) {
-      // 只记异常**类型**，绝不记 e.toString()：Quote.fromJson 的兜底分支抛的是
-      // `FormatException('解析Quote JSON失败: $e, JSON: $json')`，那个 $json 是
-      // 整行数据——content 和 delta_content 都在里面。把它写进日志等于把用户的
-      // 笔记正文抄进日志库，截断也只是少抄一点。
+      // 只记异常**类型**，绝不记 e.toString()。Quote.fromJson 的兜底分支已不再
+      // 拼入整行 JSON（历史上拼过，content 和 delta_content 都在里面），但内层
+      // 异常 $e 仍可能带出字段值，这里保持只记类型作为第二道防线。
       firstReason ??= e.runtimeType.toString();
       quote = null;
     }

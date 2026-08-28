@@ -345,6 +345,27 @@ void main() {
         throwsA(isA<ArgumentError>()),
       );
     });
+
+    test('反序列化类型异常时 FormatException 绝不泄露正文或原始字段值', () {
+      try {
+        Quote.fromJson({
+          'id': 'test-id-123',
+          'content': '秘密敏感笔记正文内容',
+          'date': '2024-01-01T00:00:00.000Z',
+          'delta_content': '{"ops":[{"insert":"富文本敏感内容"}]}',
+          'latitude': 'invalid_string_not_a_num',
+        });
+        fail('应当抛出 FormatException');
+      } catch (e) {
+        expect(e, isA<FormatException>());
+        final message = (e as FormatException).message;
+        expect(message, contains('id: test-id-123'));
+        expect(message, contains('fields:'));
+        expect(message, isNot(contains('秘密敏感笔记正文内容')));
+        expect(message, isNot(contains('富文本敏感内容')));
+        expect(message, isNot(contains('invalid_string_not_a_num')));
+      }
+    });
   });
 
   group('Quote.hasSameContentAs', () {

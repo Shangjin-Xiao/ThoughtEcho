@@ -513,6 +513,26 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     return quotes;
   }
 
+  /// 获取指定分类下未删除笔记的总数（用于同步冲突笔记计数等场景）
+  ///
+  /// 直接用 SQL 聚合计数，避免调用方把整张表的行捞回内存再 `.length`。
+  @override
+  Future<int> getNotesCountByCategory(String categoryId) async {
+    if (kIsWeb) {
+      return _memoryStore
+          .where((quote) => quote.categoryId == categoryId && !quote.isDeleted)
+          .length;
+    }
+
+    final db = await safeDatabase;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM quotes '
+      'WHERE category_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)',
+      [categoryId],
+    );
+    return (result.first['count'] as int?) ?? 0;
+  }
+
   /// 修复：更新查询性能统计
   void _updateQueryStats(String queryType, int timeMs) {
     _healthService.recordQueryStats(queryType, timeMs);

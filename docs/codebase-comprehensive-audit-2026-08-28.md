@@ -1,5 +1,9 @@
 # ThoughtEcho 全代码库深度审计与问题分析报告 (2026-08-28)
 
+> ⚠️ **核验批注（2026-08-28 发版前）**：本报告的代码快照早于当日提交 `b0b32ca`(#538)，其中 **2.2 已被该提交修复**、**2.4 严重度显著高估**。逐条核验结论与处置排期见
+> [`codebase-roadmap-and-issues-2026-08-28.md` §6.0.1](codebase-roadmap-and-issues-2026-08-28.md#601-对-codebase-comprehensive-audit-2026-08-28md-的交叉核验)。
+> 引用本报告任一条目前，请先与 HEAD 比对。
+
 ## 1. 总体评估概览 (Executive Summary)
 
 **ThoughtEcho（心迹）** 作为一个基于 Flutter 3.x 开发的跨平台笔记与情绪追踪应用，在整体架构设计上具备了非常优秀的工程水准：
@@ -13,7 +17,7 @@
 
 ## 2. P0: 核心安全、隐私与数据完整性 (Security & Data Integrity)
 
-### 2.1 `Quote.fromJson` 异常信息直接泄露用户笔记明文
+### 2.1 `Quote.fromJson` 异常信息直接泄露用户笔记明文 ✅ 已修复（2026-08-28）
 - **定位**：[`lib/models/quote_model.dart:L312`](../lib/models/quote_model.dart#L312)
 - **现象**：
   ```dart
@@ -28,7 +32,7 @@
 
 ---
 
-### 2.2 数据库迁移原值覆盖缺乏快照留底 (天气与时间段迁移)
+### 2.2 数据库迁移原值覆盖缺乏快照留底 (天气与时间段迁移) ⚠️ 已过时：`b0b32ca`(#538) 已按本条建议修复
 - **定位**：[`lib/services/database/schema_repair_adapter.dart:L375-L380`](../lib/services/database/schema_repair_adapter.dart#L375-L380)、[`lib/services/database/schema_repair_adapter.dart:L446-L453`](../lib/services/database/schema_repair_adapter.dart#L446-L453)
 - **现象**：
   在 `migrateDayPeriodToKey` 和 `migrateWeatherToKey` 中：
@@ -64,7 +68,7 @@
 
 ---
 
-### 2.4 读与写两侧的数据校验规则存在口径差异 (Validation Discrepancy)
+### 2.4 读与写两侧的数据校验规则存在口径差异 (Validation Discrepancy) ⚠️ 严重度高估，降级 P2
 - **定位**：[`lib/models/quote_model.dart:L161-L176`](../lib/models/quote_model.dart#L161-L176) vs [`lib/models/quote_model.dart:L253-L275`](../lib/models/quote_model.dart#L253-L275)
 - **现象**：
   - `Quote.validated` 强制要求 `content.length <= 10000`，且强制要求 `sentiment` 必须命中白名单 `sentimentKeyToLabel.containsKey(sentiment)`；
@@ -73,6 +77,7 @@
   这会导致从数据库或导入文件加载进来的长笔记（或带旧情绪标签的笔记）能够正常展示，但一旦用户在编辑页进行微调并保存时，会在 `Quote.validated` 处被判定为非法并抛出 `ArgumentError`，造成“能读却无法保存”的严重阻塞。
 - **整改建议**：
   将长度上限作为 UI 输入层的提示策略，而非底层持久化实体的硬阻断校验；或将清洗/收敛统一置于导入边界。
+- **核验修正（2026-08-28）**：所述「能读却无法保存」的阻塞场景**不成立**。`Quote.validated` 全库仅有 `lib/pages/thoughter/thoughter_ui.dart:1663` 一处调用（Thoughter AI 提案建新笔记），常规编辑保存路径并不经过它。实际影响面仅限「AI 提案生成超 10000 字笔记」，且在该场景下拦截本身是合理行为。故降级为 P2 观察项。
 
 ---
 
@@ -104,7 +109,7 @@
 
 ---
 
-### 3.3 回收站清理媒体提取中的异常日志裸传 `error: e`
+### 3.3 回收站清理媒体提取中的异常日志裸传 `error: e` ✅ 随 2.1 闭环
 - **定位**：[`lib/services/database/database_trash_mixin.dart:L438-L450`](../lib/services/database/database_trash_mixin.dart#L438-L450)
 - **现象**：
   ```dart

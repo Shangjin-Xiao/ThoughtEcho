@@ -1,6 +1,6 @@
 # ThoughtEcho 研发知识库全景审计与全维度存活待办报告
 
-> **生成日期**：2026-08-28  
+> **生成日期**：2026-08-28（2026-08-28 二次核验修订，见 [§6.0](#60-2026-08-28-发版前逐条核验修订)）  
 > **审计范围**：`docs/` 目录下全部 76 篇文档、`lib/` 源码库（400+ Dart 文件）、历史已核销记录与决策总账  
 > **权威状态**：🟢 活跃事实源（对齐 2026-08-28 最新代码库现状）  
 > **关联网页看板**：`res/issues-report.html` (Tailscale: `http://100.106.0.43:8000/issues-report.html`)
@@ -34,7 +34,7 @@
 | **已归档/废弃/已实现 (📦)** | **54 篇** | 标题均已添加 `[已归档/已废弃/已实现]` 标识与头部引用警示块 |
 | **隐私安全违规** | **0 项** | 全库无真实 API Key、密码、私有邮箱、手机号或内网敏感信息 |
 | **历史问题核销率** | **31 / 32 项 (96.9%)** | 早期报告声称的缺陷 31 项已在代码中闭环，仅留 1 项 Thinking 待办 |
-| **当前真实存活待办** | **16 项** | 拆分为 P0 (4 项)、P1 (5 项)、P2 (4 项)、P3 (3 项) |
+| **当前真实存活待办** | **16 项**（08-28 核验后修正为 **13 项**） | P0 原 4 项中 2 项已闭环、1 项描述有误已部分完成；P2 第 10 项流水线实为已就绪 |
 
 ---
 
@@ -115,32 +115,78 @@
 
 ### 6.1 P0：即时缺陷修复与代码清理 (4 项)
 
-#### 1. Thinking 思考链与消息状态 SQLite 持久化
-- **现状与问题**：`ChatMessage.toJson/fromJson` 已支持 `thinkingChunks` 与 `state`，但 `ChatMessage.fromMap/toMap` 遗漏了 SQLite 字段映射。
-- **代码位置**：[`lib/models/chat_message.dart:66-95`](../lib/models/chat_message.dart#L66-L95)
-- **修复方案**：在 `chat_messages` 表增加 `thinking_chunks` 与 `state` 字段并完善映射。
+#### 1. Thinking 思考链与消息状态 SQLite 持久化 ⏳ 待办（已核验属实）
+
+- **核验结论（2026-08-28）**：✅ 属实，定位准确。
+  - `chat_session_service.dart:342` 的 `chat_messages` 建表语句只有 `id / session_id / role / content / created_at / included_in_context / meta_json / content_format / delta_json`，确无 `thinking_chunks` 与 `state` 列。
+  - `chat_message.dart:66-95` 的 `fromMap/toMap` 与建表一致；而 `toJson/fromJson`（备份链路）已含这两个字段 —— 两条链路确实不对称。
+  - 影响链闭合：`chat_session_service.dart:888` 用 `ChatMessage.fromMap` 读历史 → `thoughter_ui.dart:661` 依赖 `message.thinkingChunks.isNotEmpty` 渲染折叠块 → 重开会话思考块必然消失。
+- **严重度修正**：原报告列为 P0 偏高。丢失的只是思考过程这一副产物，正文、工具卡与 Delta 富文本均完整保留，不构成数据损坏；`state` 重载时回落 `complete` 反而是期望行为（不会卡在「思考中」）。
+- **修复方案**：`addColumnIfMissing` 增加 `thinking_chunks TEXT` 与 `state TEXT`，并补全 `toMap/fromMap`。
+- **排期决策**：**推迟至 4.0.1**。这是本批唯一涉及 schema 迁移的改动，风险最高而收益仅为体验补全，不宜在发版日执行。
 - **工时预估**：0.2 天
 
-#### 2. 删除 3 个重构残留的零引用死代码文件 (~1000 行)
-- **现状与问题**：项目已全面切换到 `UnifiedLogService`，早期遗留文件全库 0 引用。
-- **涉及文件**：
-  - `lib/models/merge_report_simple.dart` (234 行)
-  - `lib/services/log_service.dart` (589 行)
-  - `lib/services/log_service_adapter.dart` (174 行)
-- **修复方案**：遵循 AGENTS.md 废弃即删原则，直接执行 `git rm`。
-- **工时预估**：0.1 天
+#### 2. 删除重构残留的零引用死代码文件 ⚠️ 原描述有误，已部分完成
 
-#### 3. 封装 WebDAV 同步页面中的裸 SQL 穿透
-- **现状与问题**：UI 页面直接获取 `DatabaseService().database` 句柄拼装 SQL 查询冲突笔记。
-- **代码位置**：[`lib/pages/webdav_sync_page.dart:121-127`](../lib/pages/webdav_sync_page.dart#L121-L127)
-- **修复方案**：下沉为 `DatabaseService.getConflictedNotesCount()` 方法。
-- **工时预估**：0.2 天
+- **核验结论（2026-08-28）**：❌ 「3 个文件全库 0 引用、可直接 `git rm`」不成立，照此执行会当场编译失败。
+  | 文件 | 行数 | 真实引用情况 | 处置 |
+  |---|---|---|---|
+  | `lib/models/merge_report_simple.dart` | 234 | 全库 0 引用 ✅ | **本次已删除** |
+  | `lib/services/log_service.dart` | 589 | **非 0 引用**：`unified_log_service.dart:8` import 之，并在约 10 处依赖其 `LogLevel` / `LogEntry` 类型（`toOldLogLevel`、`fromOldLogEntry`、`queryOldLogs`、`setOldLogLevel` 等兼容层） | 保留，见下 |
+  | `lib/services/log_service_adapter.dart` | 174 | `lib/` 内 0 引用，但 `test/unit/services/log_service_adapter_test.dart` 仍在测它 | 保留，见下 |
+- **后续方案**：先将 `unified_log_service` 中的 `LogLevel` / `LogEntry` 兼容层内联，再删除这两个文件及对应测试。
+- **工时预估修正**：原估 0.1 天严重偏低，实际约 **0.5 天**（含兼容层内联与测试调整）。
 
-#### 4. WebDAV 媒体同步从单一文件大小比对升级为 SHA-256 校验和
-- **现状与问题**：当前仅以文件大小作为增量媒体文件差异比对依据，替换同名同大小图片时存在同步漏传风险。
-- **代码位置**：[`lib/services/webdav_sync_service.dart:1535`](../lib/services/webdav_sync_service.dart#L1535)
-- **修复方案**：引入基于 Manifest 的 SHA-256 哈希比对。
+#### 3. 封装 WebDAV 同步页面中的裸 SQL 穿透 ✅ 已完成（2026-08-28）
+
+- **核验结论**：✅ 属实。`lib/pages/webdav_sync_page.dart:121-127` 确实直接取 `DatabaseService().database` 拼装 SQL。
+- **补充发现（原报告未提）**：
+  1. 这是 `lib/pages` + `lib/widgets` **全域唯一一处**裸 SQL，分层整体是干净的，不存在系统性穿透。
+  2. 原实现 `columns: ['id']` 全量捞行后在 Dart 侧 `.length` 计数，冲突笔记多时白拉一遍数据。
+  3. 原 `where` 用 `is_deleted = 0`，与全库约定的 `(is_deleted = 0 OR is_deleted IS NULL)` 不一致，历史迁移行 `is_deleted` 为 NULL 时会漏计。
+- **已落地修复**：新增 `DatabaseService.getNotesCountByCategory(String categoryId)`（`database_query_mixin.dart`，抽象声明于 `database_service.dart`），改用 `COUNT(*)` 聚合、补齐 `IS NULL` 分支并提供 `kIsWeb` 内存分支；页面改为单次调用。
+
+#### 4. WebDAV 媒体同步差异比对 ✅ 空值漏传已修复 / ⏳ SHA-256 待办
+
+- **核验结论**：✅ 属实。`webdav_sync_service.dart` 的 `_shouldUploadMediaFile` TODO 原文在，确实仅以文件大小判定差异。
+- **原报告漏掉的隐性缺陷（更易触发）**：原实现 `return remoteSize != null && remoteSize != localSize;` 在 `remoteSize == null`（服务端 PROPFIND 未返回 `getcontentlength`）时返回 `false`，即**大小未知直接跳过上传**，该场景下媒体文件会永远漏同步。这比「同名同大小图片」更容易踩到。
+- **已落地修复（2026-08-28）**：`remoteSize == null` 改为按「可能不一致」重传（`return true`），零协议变更、零风险。同步修正 `webdav_sync_service_test.dart` 中锁定旧错误行为的断言。
+- **仍待办**：基于 Manifest 的 SHA-256 内容哈希比对，解决同名同大小内容不同的漏传。`sha256` 已在同文件 1458 行用于备份校验，crypto 依赖现成。
+- **排期决策**：**推迟至 4.0.1 之后**。该改动需变更远端清单格式并处理新旧客户端互操作，属协议级变更，不适合发版日执行。
 - **工时预估**：0.3 天
+
+---
+
+### 6.0 2026-08-28 发版前逐条核验修订
+
+在 4.0.0 发版前对 §6.1 P0 四项逐条穿透核验，结论汇总：
+
+| 条目 | 原报告结论 | 核验结果 | 4.0.0 发版前处置 |
+|---|---|---|---|
+| 1. Thinking 持久化 | P0 缺陷 | ✅ 属实，但严重度偏高（体验缺失而非数据损坏） | 推迟 4.0.1（唯一涉及 schema 迁移） |
+| 2. 删 3 个零引用死文件 | 3 个均 0 引用 | ❌ 仅 1 个 0 引用，另 2 个删了会编译失败 | 已删 `merge_report_simple.dart`，余两个转 4.0.1 |
+| 3. 裸 SQL 穿透 | P0 规范 | ✅ 属实（且为全域唯一一处，另含 `IS NULL` 漏计） | ✅ 已修复 |
+| 4. 媒体同步比对 | 仅大小比对 | ✅ 属实，且另有更易触发的空值漏传缺陷 | ✅ 空值漏传已修；SHA-256 转 4.0.1 之后 |
+
+**发版前处置原则**：只做编译器可验证或零协议变更的改动；凡涉及 schema 迁移与远端格式变更的一律推迟。
+
+#### 6.0.1 对 `codebase-comprehensive-audit-2026-08-28.md` 的交叉核验
+
+同日新增的 [`codebase-comprehensive-audit-2026-08-28.md`](codebase-comprehensive-audit-2026-08-28.md)（提交 `df0b9a17`）就 P0/P1 提出 7 项，逐条核验如下：
+
+| 条目 | 核验结果 | 处置 |
+|---|---|---|
+| 2.1 `Quote.fromJson` 异常拼入 `$json` 泄露笔记明文 | ✅ **属实** | ✅ **本次已修复** |
+| 2.2 天气/时间段迁移缺快照留底 | ⚠️ **已过时**：提交 `b0b32ca`(#538) 已按该建议改为 `SET weather_backup = weather, weather = ?` 原子写入 | 无需处理 |
+| 2.3 `_removeTagIdsColumn` 重建表抹除 `*_backup` 列 | ✅ 属实（硬编码列清单确无 `*_backup`），但代码已用**执行顺序**兜底：`cleanupLegacyTagIdsColumn` 排在三个 migrate/repair 之前，且 `tag_ids` 不存在时直接 return，实际只在「同时带 `tag_ids` 与备份列的旧库」这一窄场景触发 | 转 4.0.1 |
+| 2.4 读写校验口径差异导致「能读却无法保存」 | ⚠️ **严重度显著高估**：`Quote.validated` 全库仅 `thoughter_ui.dart:1663` 一处调用（AI 提案建新笔记），**常规编辑保存路径不走 `validated`**，所谓「长笔记读得出存不回」的阻塞场景不成立 | 降级 P2 观察 |
+| 3.1 `AddNoteController` 冗余持有 `BuildContext` | ✅ 属实：`context` 仅在 14 行声明、161 行赋值，全类无使用 | 转 4.0.1（需同步改 1 处调用方与 6 处测试） |
+| 3.2 `ApkDownloadService` 混入 UI 弹窗 | ✅ 属实 | 转 P1 排期 |
+| 3.3 回收站媒体提取裸传 `error: e` 泄露正文 | ✅ 属实，但**根因即 2.1**；2.1 修复后该路径不再泄露正文。另 `quote_row_parser.dart` 早已只记 `e.runtimeType` 作为第二道防线（本次同步订正其注释） | 随 2.1 闭环 |
+
+**核验提示**：该报告的 2.2 条描述的是 `b0b32ca` 之前的代码，说明其生成快照早于当日最新提交；引用其结论前需先与 HEAD 比对。
+
+
 
 ---
 
@@ -180,11 +226,12 @@
 
 ### 6.3 P2：商业化渠道、分发与增长漏斗 (4 项)
 
-#### 10. 打通 Tag Push 自动触发 GitHub Release 多端构建
-- **现状与问题**：目前构建依赖手动 `workflow_dispatch`，代码已至 4.0.0 但 tag 停在 3.7.0。
-- **涉及位置**：`.github/workflows/` 与 `scripts/build_msix_ci.ps1`
-- **目标**：打 Tag 即自动产出全平台安装包并生成 GitHub Release。
-- **工时预估**：0.5 天
+#### 10. 打通 Tag Push 自动触发 GitHub Release 多端构建 ✅ 已具备（原报告过时）
+
+- **核验结论（2026-08-28）**：❌ 「目前构建依赖手动 `workflow_dispatch`」已过时。`.github/workflows/release.yml` 早已配置
+  `on: push: tags: ['[0-9]+.[0-9]+.[0-9]+', ...]`，打 tag 即触发三平台构建 → 收集产物 → 生成发布说明 → 创建 Release，同时保留 `workflow_dispatch` 作为手动兜底。
+- **实际待办**：仅剩「tag 停在 3.7.0，而 `pubspec.yaml` 已是 `4.0.0+1`」这一事实差。执行 `git tag 4.0.0 && git push origin 4.0.0` 即可发版；带连字符的 tag（如 `4.0.0-test`）会被标记为预发布，可用于安全试跑整条流水线。
+- **工时预估修正**：0.5 天 → **0 天**（流水线已就绪）。
 
 #### 11. 推进 Google Play、国内酷安与 Windows Store 上架
 - **现状与问题**：缺少主流商店存在感，90% 潜在用户无法触达。
@@ -230,7 +277,9 @@
 1. **知识库维护原则**：
    - 涉及主题、Thoughter 记忆或架构选型时，必须优先遵从三份🔒唯一事实源。
    - 所有已落地的方案与过时审计，严格保持 `[已归档/已废弃/已实现]` 标注，杜绝“历史问题重复提”。
-2. **待办落地建议**：
-   - 第一周：集中完成 P0 的 4 项即时修复与死代码清理（总计约 0.8 天）。
-   - 第二周：打通 P2 的 GitHub Actions 自动发版流水线与商店文案准备。
-   - 后续轮次：稳步推进 P1 深度模块重构（`NotePresentationEngine` 与 `DataArchiveEngine`）。
+2. **待办落地建议（2026-08-28 核验后修订）**：
+   - **4.0.0 发版前（已完成）**：媒体同步空值漏传修复、裸 SQL 下沉、删除 `merge_report_simple.dart`。三项均为编译器可验证或零协议变更。
+   - **4.0.1（本周）**：Thinking 链 schema 迁移与持久化；清理日志兼容层后删除 `log_service.dart` / `log_service_adapter.dart` 及对应测试（约 0.5 天）。
+   - **4.0.1 之后**：媒体同步 SHA-256 Manifest 比对（协议级变更，需处理新旧客户端互操作）。
+   - **后续轮次**：稳步推进 P1 深度模块重构（`NotePresentationEngine` 与 `DataArchiveEngine`）。`add_note_dialog.dart`(2921 行) 与 `ai_service.dart`(1610 行) 优先级下调 —— 单文件体量本身不是缺陷，在无对应缺陷记录前不主动重构。
+3. **核验纪律**：本次发现原报告存在「零引用」误判与流水线状态过时两类问题。后续审计报告中凡声称「0 引用可直接删除」的条目，必须附上 `grep` 证据并确认测试目录，不得仅凭 `lib/` 单目录扫描下结论。

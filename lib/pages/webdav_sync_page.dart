@@ -118,17 +118,13 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
   /// 检查是否有冲突笔记，用于动态显示“查看冲突”按钮
   Future<void> _checkConflictNotes() async {
     try {
-      final db = DatabaseService().database;
-      final result = await db.query(
-        'quotes',
-        columns: ['id'],
-        where: 'category_id = ? AND is_deleted = 0',
-        whereArgs: [WebDAVSyncService.conflictCategoryId],
+      final count = await DatabaseService().getNotesCountByCategory(
+        WebDAVSyncService.conflictCategoryId,
       );
       if (mounted) {
         setState(() {
-          _conflictNotesCount = result.length;
-          _hasConflicts = result.isNotEmpty;
+          _conflictNotesCount = count;
+          _hasConflicts = count > 0;
         });
       }
     } catch (e, stackTrace) {
