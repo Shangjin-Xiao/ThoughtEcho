@@ -190,10 +190,13 @@
     }
 
     /* Bilingual Visibility Control */
-    body.lang-zh .content-en {
-      display: none !important;
-    }
-    body.lang-en .content-zh {
+    html.lang-zh .content-en, html.lang-zh .content-ja, html.lang-zh .content-ko,
+    html.lang-en .content-zh, html.lang-en .content-ja, html.lang-en .content-ko,
+    body.lang-zh .content-en, body.lang-zh .content-ja, body.lang-zh .content-ko,
+    body.lang-en .content-zh, body.lang-en .content-ja, body.lang-en .content-ko,
+    body:not([class*="lang-"]) .content-en,
+    body:not([class*="lang-"]) .content-ja,
+    body:not([class*="lang-"]) .content-ko {
       display: none !important;
     }
 
@@ -201,7 +204,7 @@
       width: 100%;
       max-width: 1040px;
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 0 clamp(12px, 3vw, 24px);
       position: relative;
       z-index: 1;
     }
@@ -232,8 +235,9 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 0;
-      gap: 12px;
+      padding: 12px 0;
+      gap: 8px;
+      min-width: 0;
     }
 
     .brand-wrap {
@@ -241,15 +245,18 @@
       align-items: center;
       gap: 8px;
       text-decoration: none;
-      flex-shrink: 0;
+      min-width: 0;
+      flex-shrink: 1;
     }
 
     .brand-title {
       font-family: var(--font-serif);
-      font-size: 1.25rem;
+      font-size: clamp(1rem, 2.8vw, 1.25rem);
       font-weight: 700;
       color: var(--ink);
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .brand-badge {
@@ -1870,12 +1877,14 @@
     }
 
     if (langToggleBtn) {
-      const savedLang = localStorage.getItem('lang') || 'zh';
+      var savedLang = 'zh';
+      try { savedLang = localStorage.getItem('lang') || 'zh'; } catch(e) {}
       applyLanguage(savedLang);
 
       langToggleBtn.addEventListener('click', () => {
         const currentLang = document.body.classList.contains('lang-en') ? 'en' : 'zh';
         applyLanguage(currentLang === 'zh' ? 'en' : 'zh');
+        try { localStorage.setItem('lang', currentLang === 'zh' ? 'en' : 'zh'); } catch(e) {}
       });
     } else {
       resetTypewriter();

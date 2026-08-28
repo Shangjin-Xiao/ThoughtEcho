@@ -1,4 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // ==================== 安全存储辅助函数 (防止 Android/私密浏览抛错) ====================
+    function getSafeStorage(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function setSafeStorage(key, val) {
+        try {
+            localStorage.setItem(key, val);
+        } catch (e) {}
+    }
+
     // ==================== 主题切换 ====================
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.getElementById('themeIcon');
@@ -8,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // 从本地存储加载主题
-    const currentTheme = localStorage.getItem('theme') || 'light';
+    const currentTheme = getSafeStorage('thoughtecho_theme') || getSafeStorage('theme') || 'light';
     if (currentTheme === 'dark') {
         html.setAttribute('data-theme', 'dark');
         if (themeIcon) themeIcon.innerHTML = '&#9728;&#65039;';
@@ -22,11 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isDark) {
                 html.setAttribute('data-theme', 'light');
                 if (themeIcon) themeIcon.innerHTML = '&#127769;';
-                localStorage.setItem('theme', 'light');
+                setSafeStorage('theme', 'light');
+                setSafeStorage('thoughtecho_theme', 'light');
             } else {
                 html.setAttribute('data-theme', 'dark');
                 if (themeIcon) themeIcon.innerHTML = '&#9728;&#65039;';
-                localStorage.setItem('theme', 'dark');
+                setSafeStorage('theme', 'dark');
+                setSafeStorage('thoughtecho_theme', 'dark');
             }
         });
     }
@@ -591,6 +608,9 @@ document.addEventListener('DOMContentLoaded', () => {
         body.classList.remove('lang-zh', 'lang-en', 'lang-ja', 'lang-ko');
         body.classList.add(`lang-${normalized}`);
 
+        html.classList.remove('lang-zh', 'lang-en', 'lang-ja', 'lang-ko');
+        html.classList.add(`lang-${normalized}`);
+
         const htmlLangMap = {
             zh: 'zh-CN',
             en: 'en',
@@ -619,13 +639,13 @@ document.addEventListener('DOMContentLoaded', () => {
             opt.setAttribute('aria-selected', String(isMatch));
         });
 
-        localStorage.setItem('lang', normalized);
+        setSafeStorage('lang', normalized);
         renderScreenshots(normalized);
         syncNavHeightVar();
     }
 
     // 初始化语言：优先用户保存的偏好，否则自动检测浏览器语言
-    const savedLang = localStorage.getItem('lang');
+    const savedLang = getSafeStorage('lang');
     applyLanguage(savedLang || detectBrowserLang());
 
     // 下拉菜单事件处理

@@ -60,6 +60,52 @@
       src="https://get.microsoft.com/badge/ms-store-badge.bundled.js"
     ></script>
 
+    <!-- Critical Anti-FOUC & Language Isolation Rules -->
+    <style>
+      html.lang-zh .content-en, html.lang-zh .content-ja, html.lang-zh .content-ko,
+      html.lang-en .content-zh, html.lang-en .content-ja, html.lang-en .content-ko,
+      html.lang-ja .content-zh, html.lang-ja .content-en, html.lang-ja .content-ko,
+      html.lang-ko .content-zh, html.lang-ko .content-en, html.lang-ko .content-ja,
+      body.lang-zh .content-en, body.lang-zh .content-ja, body.lang-zh .content-ko,
+      body.lang-en .content-zh, body.lang-en .content-ja, body.lang-en .content-ko,
+      body.lang-ja .content-zh, body.lang-ja .content-en, body.lang-ja .content-ko,
+      body.lang-ko .content-zh, body.lang-ko .content-en, body.lang-ko .content-ja,
+      body:not([class*="lang-"]) .content-en,
+      body:not([class*="lang-"]) .content-ja,
+      body:not([class*="lang-"]) .content-ko {
+        display: none !important;
+      }
+    </style>
+
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('thoughtecho_theme') || localStorage.getItem('theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+          var savedLang = localStorage.getItem('lang');
+          var lang = savedLang;
+          if (!lang) {
+            var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+            for (var i = 0; i < langs.length; i++) {
+              var lower = (langs[i] || '').toLowerCase();
+              if (lower.startsWith('zh')) { lang = 'zh'; break; }
+              if (lower.startsWith('ja')) { lang = 'ja'; break; }
+              if (lower.startsWith('ko')) { lang = 'ko'; break; }
+              if (lower.startsWith('en')) { lang = 'en'; break; }
+            }
+          }
+          if (lang && ['zh', 'en', 'ja', 'ko'].indexOf(lang) !== -1) {
+            document.documentElement.classList.add('lang-' + lang);
+          } else {
+            document.documentElement.classList.add('lang-zh');
+          }
+        } catch(e) {}
+      })();
+    </script>
+
     <link rel="stylesheet" href="style.css" />
     <script type="application/ld+json">
       {

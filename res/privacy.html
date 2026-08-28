@@ -93,43 +93,53 @@
         .nav-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0.8rem 2rem;
+            padding: 0.75rem clamp(0.75rem, 2.5vw, 2rem);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
         }
 
         .nav-brand {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             text-decoration: none;
             color: var(--ink-dark);
             font-family: 'ZCOOL XiaoWei', serif;
-            font-size: 1.5rem;
+            font-size: clamp(1rem, 2.8vw, 1.4rem);
+            min-width: 0;
+            flex-shrink: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .nav-logo {
-            width: 38px;
-            height: 38px;
+            width: clamp(28px, 3.5vw, 38px);
+            height: clamp(28px, 3.5vw, 38px);
+            flex-shrink: 0;
         }
 
         .nav-actions {
             display: flex;
-            gap: 0.8rem;
+            gap: clamp(0.35rem, 1.5vw, 0.8rem);
             align-items: center;
+            flex-shrink: 0;
         }
 
         .btn-toggle {
             background: var(--paper-yellow);
             border: 2px solid var(--accent-brown);
             color: var(--accent-brown);
-            padding: 0.4rem 0.8rem;
+            padding: 0.35rem clamp(0.45rem, 1.2vw, 0.8rem);
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: clamp(0.75rem, 2vw, 0.85rem);
             font-weight: 600;
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         .btn-toggle:hover {
@@ -141,12 +151,13 @@
             background: var(--accent-brown);
             color: white;
             border: none;
-            padding: 0.4rem 1.2rem;
+            padding: 0.35rem clamp(0.5rem, 1.5vw, 1.2rem);
             border-radius: 6px;
             text-decoration: none;
-            font-size: 0.85rem;
+            font-size: clamp(0.75rem, 2vw, 0.85rem);
             font-weight: 600;
             box-shadow: 3px 3px 0 rgba(0,0,0,0.1);
+            white-space: nowrap;
         }
 
         .container {
@@ -244,8 +255,15 @@
         }
 
         /* Language Switching */
-        body.lang-zh .content-en { display: none; }
-        body.lang-en .content-zh { display: none; }
+        html.lang-zh .content-en, html.lang-zh .content-ja, html.lang-zh .content-ko,
+        html.lang-en .content-zh, html.lang-en .content-ja, html.lang-en .content-ko,
+        body.lang-zh .content-en, body.lang-zh .content-ja, body.lang-zh .content-ko,
+        body.lang-en .content-zh, body.lang-en .content-ja, body.lang-en .content-ko,
+        body:not([class*="lang-"]) .content-en,
+        body:not([class*="lang-"]) .content-ja,
+        body:not([class*="lang-"]) .content-ko {
+            display: none !important;
+        }
 
         @media (max-width: 768px) {
             .container { padding-top: 7rem; }
@@ -438,28 +456,38 @@
         // Theme logic
         const html = document.documentElement;
         const themeBtn = document.getElementById('themeToggle');
-        let currentTheme = localStorage.getItem('theme') || 'light';
+        let currentTheme = 'light';
+        try { currentTheme = localStorage.getItem('thoughtecho_theme') || localStorage.getItem('theme') || 'light'; } catch(e) {}
         html.setAttribute('data-theme', currentTheme);
 
-        themeBtn.addEventListener('click', () => {
-            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-theme', currentTheme);
-            localStorage.setItem('theme', currentTheme);
-        });
+        if (themeBtn) {
+            themeBtn.addEventListener('click', () => {
+                currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', currentTheme);
+                try {
+                    localStorage.setItem('theme', currentTheme);
+                    localStorage.setItem('thoughtecho_theme', currentTheme);
+                } catch(e) {}
+            });
+        }
 
         // Language logic
         const body = document.body;
         const langBtn = document.getElementById('langToggle');
-        let currentLang = localStorage.getItem('lang') || 'zh';
+        let currentLang = 'zh';
+        try { currentLang = localStorage.getItem('lang') || 'zh'; } catch(e) {}
         body.className = `lang-${currentLang}`;
-        langBtn.textContent = currentLang === 'zh' ? 'English' : '中文';
-
-        langBtn.addEventListener('click', () => {
-            currentLang = currentLang === 'zh' ? 'en' : 'zh';
-            body.className = `lang-${currentLang}`;
+        html.className = `lang-${currentLang}`;
+        if (langBtn) {
             langBtn.textContent = currentLang === 'zh' ? 'English' : '中文';
-            localStorage.setItem('lang', currentLang);
-        });
+            langBtn.addEventListener('click', () => {
+                currentLang = currentLang === 'zh' ? 'en' : 'zh';
+                body.className = `lang-${currentLang}`;
+                html.className = `lang-${currentLang}`;
+                langBtn.textContent = currentLang === 'zh' ? 'English' : '中文';
+                try { localStorage.setItem('lang', currentLang); } catch(e) {}
+            });
+        }
     </script>
 </body>
 </html>
