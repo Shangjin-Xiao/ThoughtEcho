@@ -194,6 +194,9 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
   }) async {
     if (oldId == category.id) return;
 
+    // 这里绝不能用 ConflictAlgorithm.replace：SQLite 的 REPLACE 是 DELETE+INSERT，
+    // 若规范行已被另一条恢复/启动路径抢先建出，删除会经 quote_tags 的
+    // ON DELETE CASCADE 连带清掉它已有的笔记关联。改为 ignore + 显式 update。
     await txn.insert(
         'categories',
         {
@@ -203,7 +206,18 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           'icon_name': category.iconName,
           'last_modified': timestamp,
         },
-        conflictAlgorithm: ConflictAlgorithm.replace);
+        conflictAlgorithm: ConflictAlgorithm.ignore);
+    await txn.update(
+      'categories',
+      {
+        'name': category.name,
+        'is_default': 1,
+        'icon_name': category.iconName,
+        'last_modified': timestamp,
+      },
+      where: 'id = ?',
+      whereArgs: [category.id],
+    );
 
     // 笔记可能同时挂着新旧两个标签，用 OR IGNORE 避开主键冲突
     await txn.rawInsert(
@@ -214,7 +228,12 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
     await txn.delete('quote_tags', where: 'tag_id = ?', whereArgs: [oldId]);
     await txn.update(
       'quotes',
-      {'category_id': category.id},
+      {
+        'category_id': category.id,
+        // last_modified 参与笔记的 LWW 比较：不推进的话，下一次合并会用带旧
+        // category_id 的远端行把这次迁移盖回去
+        'last_modified': timestamp,
+      },
       where: 'category_id = ?',
       whereArgs: [oldId],
     );

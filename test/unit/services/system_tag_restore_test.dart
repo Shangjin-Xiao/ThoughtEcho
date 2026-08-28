@@ -56,13 +56,18 @@ void main() {
             last_modified TEXT
           )
         ''');
+      // 外键与生产 schema 保持一致：收编逻辑里若误用 REPLACE，
+      // 级联删除会真的发生，这条测试才能拦住回归
       await db.execute('''
           CREATE TABLE quote_tags(
             quote_id TEXT NOT NULL,
             tag_id TEXT NOT NULL,
-            PRIMARY KEY (quote_id, tag_id)
+            PRIMARY KEY (quote_id, tag_id),
+            FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
           )
         ''');
+      await db.execute('PRAGMA foreign_keys = ON');
       await db.execute('''
           CREATE TABLE media_references (
             id TEXT PRIMARY KEY,
@@ -152,6 +157,7 @@ void main() {
         'content': '导入进来的笔记',
         'date': DateTime.now().toUtc().toIso8601String(),
         'category_id': impostorId,
+        'last_modified': '2020-01-01T00:00:00.000Z',
       });
       await db.insert('quote_tags', {
         'quote_id': 'quote-1',
@@ -181,6 +187,13 @@ void main() {
         whereArgs: ['quote-1'],
       );
       expect(quote.first['category_id'], DatabaseService.defaultTagIdHitokoto);
+      // 笔记的 last_modified 必须一起前进，否则下一次 LWW 合并会用带旧
+      // category_id 的远端行把迁移盖回去
+      expect(
+        DateTime.parse(quote.first['last_modified'] as String)
+            .isAfter(DateTime.parse('2020-01-01T00:00:00.000Z')),
+        isTrue,
+      );
     });
 
     test('系统标签顶着另一个系统标签的名字时，不应被收编走笔记', () async {
