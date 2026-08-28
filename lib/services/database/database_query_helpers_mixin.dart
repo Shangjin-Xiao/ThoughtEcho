@@ -274,6 +274,70 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     }
   }
 
+  /// 地图回忆页的坐标点。
+  ///
+  /// 地图不分页——它一次要摆下用户的全部足迹，缩小时靠聚合而不是靠少查。
+  /// 所以这里只取 marker 用得上的四列，不走 [Quote]：`delta_content` 一列就
+  /// 可能有几十 KB，上千条笔记全读进来足以让页面卡住。点开某个 marker 时再
+  /// 用 [getQuoteById] 取那一条的完整内容。
+  @override
+  Future<List<QuoteMapPoint>> getQuotesWithCoordinates() async {
+    try {
+      if (!_isInitialized) {
+        if (_isInitializing && _initCompleter != null) {
+          await _initCompleter!.future;
+        } else {
+          await init();
+        }
+      }
+
+      final db = await safeDatabase;
+
+      final maps = await db.query(
+        'quotes q',
+        columns: ['q.id', 'q.date', 'q.latitude', 'q.longitude'],
+        where: '''
+          q.latitude IS NOT NULL
+          AND q.longitude IS NOT NULL
+          AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
+          AND NOT EXISTS (
+            SELECT 1 FROM quote_tags qt_hidden
+            WHERE qt_hidden.quote_id = q.id
+            AND qt_hidden.tag_id = ?
+          )
+        ''',
+        whereArgs: [_DatabaseServiceBase.hiddenTagId],
+        orderBy: 'q.date DESC',
+      );
+
+      final points = <QuoteMapPoint>[];
+      for (final map in maps) {
+        final latitude = (map['latitude'] as num?)?.toDouble();
+        final longitude = (map['longitude'] as num?)?.toDouble();
+        final id = map['id']?.toString();
+        if (latitude == null || longitude == null || id == null) continue;
+
+        points.add(
+          QuoteMapPoint(
+            id: id,
+            date: map['date']?.toString() ?? '',
+            latitude: latitude,
+            longitude: longitude,
+          ),
+        );
+      }
+      return points;
+    } catch (e, stack) {
+      logError(
+        'getQuotesWithCoordinates 失败: $e',
+        error: e,
+        stackTrace: stack,
+        source: 'DatabaseService',
+      );
+      return [];
+    }
+  }
+
   /// 获取笔记总数，用于分页
   /// [excludeHiddenNotes] 是否排除隐藏笔记，默认为 true
   @override

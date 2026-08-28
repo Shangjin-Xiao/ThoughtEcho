@@ -180,4 +180,107 @@ void main() {
       expect(LocationService.cleanGeocodingText(null), '');
     });
   });
+
+  group('LocationService.formatPoiForDisplay', () {
+    test('拼上最细一级行政区，区县在前地点名在后', () {
+      expect(
+        LocationService.formatPoiForDisplay('芝公园', '日本,东京都,,港区'),
+        '港区·芝公园',
+      );
+    });
+
+    test('没有区县时退到城市', () {
+      expect(
+        LocationService.formatPoiForDisplay('西湖音乐喷泉', '中国,浙江省,杭州市,'),
+        '杭州市·西湖音乐喷泉',
+      );
+    });
+
+    test('地点名和行政区同名时不重复', () {
+      expect(
+        LocationService.formatPoiForDisplay('港区', '日本,东京都,,港区'),
+        '港区',
+      );
+    });
+
+    test('没有地址时只显示地点名', () {
+      expect(LocationService.formatPoiForDisplay('故宫博物院', null), '故宫博物院');
+      expect(LocationService.formatPoiForDisplay('故宫博物院', ''), '故宫博物院');
+    });
+
+    test('地址是待解析/解析失败标记时只显示地点名', () {
+      expect(
+        LocationService.formatPoiForDisplay(
+          '故宫博物院',
+          LocationService.kAddressPending,
+        ),
+        '故宫博物院',
+      );
+      expect(
+        LocationService.formatPoiForDisplay(
+          '故宫博物院',
+          LocationService.kAddressFailed,
+        ),
+        '故宫博物院',
+      );
+    });
+
+    test('没有地点名时退回行政区显示，老笔记显示不变', () {
+      expect(
+        LocationService.formatPoiForDisplay(
+            null, 'China,Beijing,Beijing,Chaoyang'),
+        'Beijing·Chaoyang',
+      );
+      expect(
+        LocationService.formatPoiForDisplay(
+            '   ', 'China,Beijing,Beijing,Chaoyang'),
+        'Beijing·Chaoyang',
+      );
+    });
+  });
+
+  group('LocationService.buildStorageLocation', () {
+    test('拼成逗号分隔的入库格式，而不是给人看的 formatted_address', () {
+      final address = <String, String?>{
+        'country': 'China',
+        'province': 'Beijing',
+        'city': 'Beijing',
+        'district': 'Chaoyang',
+        'formatted_address': 'China, Beijing, Beijing, Chaoyang',
+      };
+
+      final stored = LocationService.buildStorageLocation(address);
+
+      expect(stored, 'China,Beijing,Beijing,Chaoyang');
+      // 拼出来的串必须能被展示函数解析回去
+      expect(
+          LocationService.formatLocationForDisplay(stored), 'Beijing·Chaoyang');
+    });
+
+    test('缺区县时留空位，段数不变', () {
+      expect(
+        LocationService.buildStorageLocation(<String, String?>{
+          'country': '中国',
+          'province': '浙江省',
+          'city': '杭州市',
+        }),
+        '中国,浙江省,杭州市,',
+      );
+    });
+
+    test('没有任何行政区时返回 null，让调用方退回坐标', () {
+      expect(LocationService.buildStorageLocation(null), isNull);
+      expect(LocationService.buildStorageLocation(const <String, String?>{}),
+          isNull);
+      expect(
+        LocationService.buildStorageLocation(<String, String?>{
+          'country': '',
+          'province': '',
+          'city': '',
+          'district': '朝阳区',
+        }),
+        isNull,
+      );
+    });
+  });
 }

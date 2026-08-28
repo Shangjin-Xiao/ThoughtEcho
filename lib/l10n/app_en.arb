@@ -4291,6 +4291,45 @@
   "mapPickerConfirm": "Confirm Location",
   "poiNameLabel": "Place Name",
   "longPressForMapPicker": "Long press to open map picker",
+  "mapPickerSearchHint": "Search nearby places",
+  "mapPickerSearchResults": "Search results",
+  "mapPickerSearching": "Searching…",
+  "mapPickerNoResults": "No matching places found",
+  "mapPickerSelectedPoint": "Selected point",
+  "mapPickerResolvingPoint": "Identifying this place…",
+  "mapPickerUnnamedPoint": "Unnamed place",
+  "mapPickerLocateMe": "Back to my location",
+  "mapPickerCurrentLocationSubtitle": "Records the city and district only, not a specific place",
+  "mapPickerDistanceMeters": "{distance} m",
+  "@mapPickerDistanceMeters": {
+    "description": "Distance in metres between a search result and the selected point",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerDistanceKilometers": "{distance} km",
+  "@mapPickerDistanceKilometers": {
+    "description": "Distance in kilometres between a search result and the selected point",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapMemoryEmptyHint": "No notes with a location yet. Long press the location button in the editor to tag a note with a place.",
+  "mapMemoryLoadFailed": "Failed to load map data",
+  "mapMemoryResetView": "Show all places",
+  "mapMemoryPlaceCount": "{count} notes with a location",
+  "@mapMemoryPlaceCount": {
+    "description": "Number of notes with coordinates shown on the map memory page",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "attachFile": "Attach file",
   "yesterday": "Yesterday",
   "openInEditor": "Open in Editor",

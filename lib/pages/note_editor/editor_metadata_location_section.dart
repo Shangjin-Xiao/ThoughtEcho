@@ -51,63 +51,73 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
               RepaintBoundary(
                 child: Row(
                   children: [
-                    // 位置信息按钮
+                    // 位置信息按钮：单击开关自动定位，长按进地图选一个精确地点
                     Expanded(
                       child: Stack(
                         children: [
-                          FilterChip(
-                            key: const ValueKey('full_editor_location_chip'),
-                            avatar: Icon(
-                              Icons.location_on,
-                              color: _metadataState.showLocation
-                                  ? theme.colorScheme.primary
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                              size: 18,
-                            ),
-                            label: Text(l10n.locationLabel),
-                            selected: _metadataState.showLocation,
-                            onSelected: (value) async {
-                              // 编辑模式下统一提示只读
-                              if (widget.initialQuote?.id != null) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          l10n.editModeMetadataReadOnlyHint),
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                                return;
-                              }
-                              // 新建模式
-                              if (value &&
-                                  _metadataState.location == null &&
-                                  _metadataState.latitude == null) {
-                                // 先设置为选中，获取失败后会在回调中取消
-                                _updateState(() {
-                                  _metadataState.showLocation = true;
-                                });
-                                setDialogState(() {});
-                                await _fetchLocationForNewNoteWithFailCallback(
-                                  () {
-                                    // 失败回调：取消选中
+                          Tooltip(
+                            message: l10n.longPressForMapPicker,
+                            child: GestureDetector(
+                              onLongPress: () =>
+                                  _openMapLocationPicker(setDialogState),
+                              child: FilterChip(
+                                key:
+                                    const ValueKey('full_editor_location_chip'),
+                                avatar: Icon(
+                                  Icons.location_on,
+                                  color: _metadataState.showLocation
+                                      ? theme.colorScheme.primary
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                  size: 18,
+                                ),
+                                label: Text(l10n.locationLabel),
+                                selected: _metadataState.showLocation,
+                                onSelected: (value) async {
+                                  // 编辑模式下统一提示只读
+                                  if (widget.initialQuote?.id != null) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(l10n
+                                              .editModeMetadataReadOnlyHint),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                  // 新建模式
+                                  if (value &&
+                                      _metadataState.location == null &&
+                                      _metadataState.latitude == null) {
+                                    // 先设置为选中，获取失败后会在回调中取消
                                     _updateState(() {
-                                      _metadataState.showLocation = false;
+                                      _metadataState.showLocation = true;
                                     });
                                     setDialogState(() {});
-                                  },
-                                );
-                              } else {
-                                _updateState(() {
-                                  _metadataState.showLocation = value;
-                                });
-                                setDialogState(() {});
-                              }
-                            },
-                            selectedColor: theme.colorScheme.primaryContainer,
+                                    await _fetchLocationForNewNoteWithFailCallback(
+                                      () {
+                                        // 失败回调：取消选中
+                                        _updateState(() {
+                                          _metadataState.showLocation = false;
+                                        });
+                                        setDialogState(() {});
+                                      },
+                                    );
+                                  } else {
+                                    _updateState(() {
+                                      _metadataState.showLocation = value;
+                                    });
+                                    setDialogState(() {});
+                                  }
+                                },
+                                selectedColor:
+                                    theme.colorScheme.primaryContainer,
+                              ),
+                            ),
                           ),
                           // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
                           if (widget.initialQuote?.id != null &&
@@ -282,15 +292,13 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
   }
 
   String _buildLocationDisplayText(AppLocalizations l10n) {
-    if (_metadataState.poiName != null &&
-        _metadataState.poiName!.trim().isNotEmpty) {
-      return _metadataState.poiName!.trim();
-    }
-
-    final formattedLocation =
-        LocationService.formatLocationForDisplay(_metadataState.location);
-    if (formattedLocation.isNotEmpty) {
-      return formattedLocation;
+    // 和笔记卡片同一套优先级：地点名（拼上行政区）> 行政区 > 坐标
+    final display = LocationService.formatPoiForDisplay(
+      _metadataState.poiName,
+      _metadataState.location,
+    );
+    if (display.isNotEmpty) {
+      return display;
     }
 
     if (_metadataState.latitude != null && _metadataState.longitude != null) {

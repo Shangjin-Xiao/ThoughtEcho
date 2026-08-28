@@ -43,6 +43,7 @@ import '../services/settings_service.dart';
 import '../controllers/note_editor_states.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
+import 'map_location_picker_page.dart';
 
 part 'note_editor/editor_document_init.dart';
 part 'note_editor/editor_save_and_draft.dart';
@@ -52,6 +53,7 @@ part 'note_editor/editor_build.dart';
 part 'note_editor/editor_color_and_media.dart';
 part 'note_editor/editor_metadata_dialog.dart';
 part 'note_editor/editor_metadata_location_section.dart';
+part 'note_editor/editor_map_picker.dart';
 part 'note_editor/editor_metadata_ai_section.dart';
 part 'note_editor/editor_ai_features.dart';
 

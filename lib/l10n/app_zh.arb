@@ -4291,6 +4291,45 @@
   "mapPickerConfirm": "确认位置",
   "poiNameLabel": "地点名称",
   "longPressForMapPicker": "长按打开地图选点",
+  "mapPickerSearchHint": "搜索附近地点",
+  "mapPickerSearchResults": "搜索结果",
+  "mapPickerSearching": "正在搜索…",
+  "mapPickerNoResults": "没有找到相关地点",
+  "mapPickerSelectedPoint": "地图上的选点",
+  "mapPickerResolvingPoint": "正在识别这个位置…",
+  "mapPickerUnnamedPoint": "未命名的地点",
+  "mapPickerLocateMe": "回到当前位置",
+  "mapPickerCurrentLocationSubtitle": "只记城市和区县，不记具体地点",
+  "mapPickerDistanceMeters": "{distance} 米",
+  "@mapPickerDistanceMeters": {
+    "description": "地图选点页搜索结果与选点之间的距离（米）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerDistanceKilometers": "{distance} 公里",
+  "@mapPickerDistanceKilometers": {
+    "description": "地图选点页搜索结果与选点之间的距离（公里）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapMemoryEmptyHint": "还没有带位置的笔记。在编辑器里长按位置按钮，就能给笔记标一个地点。",
+  "mapMemoryLoadFailed": "地图数据加载失败",
+  "mapMemoryResetView": "看全部足迹",
+  "mapMemoryPlaceCount": "{count} 条带位置的笔记",
+  "@mapMemoryPlaceCount": {
+    "description": "地图回忆页顶部提示里带坐标的笔记条数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "attachFile": "附加文件",
   "yesterday": "昨天",
   "openInEditor": "打开编辑器",
