@@ -43,6 +43,16 @@ class SettingsService extends ChangeNotifier {
   // 使用应用安装标记替代版本号
   static const String _appInstalledKey = 'app_installed_v2';
   static const String _appUpgradedKey = 'app_upgraded_v2';
+
+  /// 「这台设备还欠一次 AI 功能自动开启」。首次安装时种下，真正自动开启之后清掉。
+  ///
+  /// 判据不能只看 `hasCompletedOnboarding()`：新用户很多是走完引导、之后才去
+  /// 设置页配 AI 服务的，那时引导已经完成，自动开启就再也轮不到他。用一次性标记
+  /// 记住「这台设备是新装且还没自动开过」，配好 AI 的那一刻不管在哪都能生效。
+  ///
+  /// 只在首次安装时种：老用户没有这个键，行为完全不变——尤其不会把他自己关掉的
+  /// 周期报告 AI 洞察在下次保存 AI 设置时又打开。
+  static const String _aiAutoEnablePendingKey = 'ai_auto_enable_pending_v1';
   final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
   Completer<void>? _saveMultiAiLock;
@@ -767,6 +777,9 @@ class SettingsService extends ChangeNotifier {
       // 只会推成老用户——#513 的默认值一直没生效就是这个原因。
       await _seedFreshInstallThemeStyle();
 
+      // 新装用户配好 AI 服务后自动开启相关 AI 功能，见 _aiAutoEnablePendingKey。
+      await _mmkv.setBool(_aiAutoEnablePendingKey, true);
+
       // 首次安装时，载入应用默认设置
       _loadAppSettings();
       _appSettings = _appSettings.copyWith(
@@ -1231,7 +1244,7 @@ class SettingsService extends ChangeNotifier {
       final hasActiveAi = settings.providers.any(
         (p) => p.isEnabled && p.apiUrl.trim().isNotEmpty,
       );
-      final candidateAppSettings = (!hasCompletedOnboarding() && hasActiveAi)
+      final candidateAppSettings = (_aiAutoEnablePending && hasActiveAi)
           ? _appSettings.copyWith(
               reportInsightsUseAI: true,
               todayThoughtsUseAI: true,
@@ -1280,6 +1293,9 @@ class SettingsService extends ChangeNotifier {
       _multiAISettings = settings;
       if (candidateAppSettings != null) {
         _appSettings = candidateAppSettings;
+        // 自动开启是一次性的：清掉标记，之后用户自己关掉哪个就是哪个。
+        // 清不掉只会多自动开一次，不值得让整个保存失败，所以只记日志。
+        await _clearAiAutoEnablePending();
       }
       notifyListeners();
     } catch (e, s) {
@@ -1294,6 +1310,46 @@ class SettingsService extends ChangeNotifier {
     } finally {
       _saveMultiAiLock = null;
       completer.complete();
+    }
+  }
+
+  /// 这台设备是否还欠一次 AI 功能自动开启，见 [_aiAutoEnablePendingKey]。
+  /// false 表示已经自动开过一次，null（键不存在）才走下面的旧判据。
+  ///
+  /// 读不到标记时回退到旧判据（引导没走完就算新用户）：这个版本之前装的用户
+  /// 没有这个键，不该因为升级就丢掉引导期间的自动开启。
+  bool get _aiAutoEnablePending {
+    try {
+      return _mmkv.getBool(_aiAutoEnablePendingKey) ??
+          !hasCompletedOnboarding();
+    } catch (e) {
+      logDebug('读取 AI 自动开启标记失败: $e');
+      return !hasCompletedOnboarding();
+    }
+  }
+
+  /// 标记「这次自动开启已经做过了」。
+  ///
+  /// 写 false 而不是删键：删掉之后 [_aiAutoEnablePending] 会退回旧判据
+  /// （引导没走完就算新用户），于是引导期间每存一次 AI 设置都会把用户刚关掉的
+  /// 开关再打开一遍。false 是明确的「做过了」，和「老用户，从来没有过这个键」
+  /// （null）是两回事。
+  Future<void> _clearAiAutoEnablePending() async {
+    try {
+      final ok = await _mmkv.setBool(_aiAutoEnablePendingKey, false);
+      if (!ok) {
+        AppLogger.e(
+          '清除 AI 自动开启标记失败：MMKV setBool 返回 false',
+          source: 'SettingsService',
+        );
+      }
+    } catch (e, s) {
+      AppLogger.e(
+        '清除 AI 自动开启标记异常',
+        error: e,
+        stackTrace: s,
+        source: 'SettingsService',
+      );
     }
   }
 

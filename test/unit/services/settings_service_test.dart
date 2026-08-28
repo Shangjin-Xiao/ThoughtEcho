@@ -505,6 +505,68 @@ void main() {
       expect(rebuiltService.aiCardGenerationEnabled, isTrue);
     });
 
+    test('新用户走完引导之后才配置 AI，同样自动开启相关 AI 功能', () async {
+      // 新用户很多是先跳过 AI、走完引导，之后才去设置页配服务的。
+      // 旧判据只看 hasCompletedOnboarding，这条路径上自动开启永远轮不到他。
+      //
+      // 存储在同一个 isolate 里是复用的，setUp 的 create() 未必再走首次安装分支，
+      // 所以这里把安装标记清掉重建一次，拿到一个真正「全新安装」的服务。
+      await MMKVService().remove('app_installed_v2');
+      final service = await SettingsService.create();
+
+      await service.setHasCompletedOnboarding(true);
+      await service.setReportInsightsUseAI(false);
+      await service.setTodayThoughtsUseAI(false);
+      await service.setAICardGenerationEnabled(false);
+
+      await service.saveMultiAISettings(
+        service.multiAISettings.copyWith(
+          providers: [
+            const AIProviderSettings(
+              id: 'late_provider',
+              name: 'Late AI',
+              apiUrl: 'https://api.openai.com/v1',
+              model: 'gpt-4o',
+              isEnabled: true,
+            ),
+          ],
+        ),
+      );
+
+      expect(service.reportInsightsUseAI, isTrue);
+      expect(service.todayThoughtsUseAI, isTrue);
+      expect(service.aiCardGenerationEnabled, isTrue);
+    });
+
+    test('自动开启只做一次，用户自己关掉后不会被再打开', () async {
+      await MMKVService().remove('app_installed_v2');
+      final service = await SettingsService.create();
+      await service.setHasCompletedOnboarding(false);
+
+      final providers = [
+        const AIProviderSettings(
+          id: 'once_provider',
+          name: 'Once AI',
+          apiUrl: 'https://api.openai.com/v1',
+          model: 'gpt-4o',
+          isEnabled: true,
+        ),
+      ];
+
+      await service.saveMultiAISettings(
+        service.multiAISettings.copyWith(providers: providers),
+      );
+      expect(service.reportInsightsUseAI, isTrue);
+
+      // 用户看过之后自己把周期报告的 AI 洞察关了——再改 AI 服务不该把它又打开。
+      await service.setReportInsightsUseAI(false);
+      await service.saveMultiAISettings(
+        service.multiAISettings.copyWith(providers: providers),
+      );
+
+      expect(service.reportInsightsUseAI, isFalse);
+    });
+
     test('无效或禁用的 AI 服务不应触发自动开启 AI 功能', () async {
       // Arrange
       await settingsService.setHasCompletedOnboarding(false);
