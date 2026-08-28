@@ -9,6 +9,8 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
+import 'package:thoughtecho/theme/theme_style.dart';
 import '../../test_harness.dart';
 
 void main() {
@@ -342,6 +344,51 @@ void main() {
       expect(rebuiltService.appSettings.sentryDisclosureShown, isTrue);
     });
 
+    group('全新安装默认主题风格', () {
+      test('首次安装种下信笺', () async {
+        // setUp 里的 create() 走的正是首次安装分支。
+        expect(
+          MMKVService().getString(ThemeStyle.storageKey),
+          ThemeStyle.freshInstallStyle.name,
+        );
+        expect(ThemeStyle.freshInstallStyle, ThemeStyle.paper);
+      });
+
+      test('随后初始化的 AppTheme 读到的就是信笺', () async {
+        // #513 的默认值一直没生效就败在这个顺序上：SettingsService 先跑，
+        // app_installed_v2 / app_settings 已经写好，主题层再反推「是不是全新安装」
+        // 只会推成老用户，于是新装用户看到的还是 material。
+        final appTheme = AppTheme();
+        await appTheme.initialize();
+        expect(appTheme.themeStyle, ThemeStyle.paper);
+      });
+
+      test('老用户不会被种上风格', () async {
+        await MMKVService().remove(ThemeStyle.storageKey);
+        await MMKVService().setBool('app_installed_v2', true);
+
+        await SettingsService.create();
+
+        expect(MMKVService().getString(ThemeStyle.storageKey), isNull);
+      });
+
+      test('已经有风格取值时不覆盖', () async {
+        // 从备份恢复出来的取值也是用户自己选的，覆盖掉就是替他改外观。
+        await MMKVService().setString(
+          ThemeStyle.storageKey,
+          ThemeStyle.plain.name,
+        );
+        await MMKVService().remove('app_installed_v2');
+
+        await SettingsService.create();
+
+        expect(
+          MMKVService().getString(ThemeStyle.storageKey),
+          ThemeStyle.plain.name,
+        );
+      });
+    });
+
     group('更新说明已读版本', () {
       // 存储键的字面量：这里就是要钉住它。改键名等于把所有老用户的已读记录清零，
       // 让他们重看一遍更新说明——不该悄悄发生。
@@ -456,6 +503,68 @@ void main() {
       expect(rebuiltService.reportInsightsUseAI, isTrue);
       expect(rebuiltService.todayThoughtsUseAI, isTrue);
       expect(rebuiltService.aiCardGenerationEnabled, isTrue);
+    });
+
+    test('新用户走完引导之后才配置 AI，同样自动开启相关 AI 功能', () async {
+      // 新用户很多是先跳过 AI、走完引导，之后才去设置页配服务的。
+      // 旧判据只看 hasCompletedOnboarding，这条路径上自动开启永远轮不到他。
+      //
+      // 存储在同一个 isolate 里是复用的，setUp 的 create() 未必再走首次安装分支，
+      // 所以这里把安装标记清掉重建一次，拿到一个真正「全新安装」的服务。
+      await MMKVService().remove('app_installed_v2');
+      final service = await SettingsService.create();
+
+      await service.setHasCompletedOnboarding(true);
+      await service.setReportInsightsUseAI(false);
+      await service.setTodayThoughtsUseAI(false);
+      await service.setAICardGenerationEnabled(false);
+
+      await service.saveMultiAISettings(
+        service.multiAISettings.copyWith(
+          providers: [
+            const AIProviderSettings(
+              id: 'late_provider',
+              name: 'Late AI',
+              apiUrl: 'https://api.openai.com/v1',
+              model: 'gpt-4o',
+              isEnabled: true,
+            ),
+          ],
+        ),
+      );
+
+      expect(service.reportInsightsUseAI, isTrue);
+      expect(service.todayThoughtsUseAI, isTrue);
+      expect(service.aiCardGenerationEnabled, isTrue);
+    });
+
+    test('自动开启只做一次，用户自己关掉后不会被再打开', () async {
+      await MMKVService().remove('app_installed_v2');
+      final service = await SettingsService.create();
+      await service.setHasCompletedOnboarding(false);
+
+      final providers = [
+        const AIProviderSettings(
+          id: 'once_provider',
+          name: 'Once AI',
+          apiUrl: 'https://api.openai.com/v1',
+          model: 'gpt-4o',
+          isEnabled: true,
+        ),
+      ];
+
+      await service.saveMultiAISettings(
+        service.multiAISettings.copyWith(providers: providers),
+      );
+      expect(service.reportInsightsUseAI, isTrue);
+
+      // 用户看过之后自己把周期报告的 AI 洞察关了——再改 AI 服务不该把它又打开。
+      await service.setReportInsightsUseAI(false);
+      await service.saveMultiAISettings(
+        service.multiAISettings.copyWith(providers: providers),
+      );
+
+      expect(service.reportInsightsUseAI, isFalse);
     });
 
     test('无效或禁用的 AI 服务不应触发自动开启 AI 功能', () async {

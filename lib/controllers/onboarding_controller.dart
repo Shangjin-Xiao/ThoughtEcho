@@ -285,12 +285,7 @@ class OnboardingController extends ChangeNotifier {
         logInfo('位置服务已启用');
       }
 
-      // AI相关快捷开关
-      final todayAI = _state.getPreference<bool>('todayThoughtsUseAI') ?? false;
-      await _settingsService.setTodayThoughtsUseAI(todayAI);
-      final reportAI =
-          _state.getPreference<bool>('reportInsightsUseAI') ?? false;
-      await _settingsService.setReportInsightsUseAI(reportAI);
+      await applyAiTogglePreferences(_settingsService);
 
       // 保存 Sentry 开关设置
       final sentryEnabled =
@@ -301,6 +296,29 @@ class OnboardingController extends ChangeNotifier {
     } catch (e) {
       logError('保存用户偏好设置失败', error: e, source: 'OnboardingController');
       // 不抛出异常，避免阻塞引导流程
+    }
+  }
+
+  /// 把引导页里的 AI 快捷开关落到设置。
+  ///
+  /// **引导页里没有这两个开关**，所以这里读到的几乎总是 null，而 null 只能表示
+  /// 「用户没在引导里表过态」，不能当成「用户要关」。
+  ///
+  /// 曾经是 `?? false`，于是引导一走完就把两个开关无条件写成 false，一次性抹掉
+  /// 两件事：[AppSettings.todayThoughtsUseAI] 的默认开启，以及用户配好 AI 服务时
+  /// [SettingsService.saveMultiAISettings] 做的自动开启。新用户装完什么都没开、
+  /// 只有 AI 卡片生成还在（它兜底写的是 `?? true`）——就是那两行造成的。
+  ///
+  /// 没表过态就别写：保留当前取值（默认值，或自动开启的结果）。
+  @visibleForTesting
+  Future<void> applyAiTogglePreferences(SettingsService settingsService) async {
+    final todayAI = _state.getPreference<bool>('todayThoughtsUseAI');
+    if (todayAI != null) {
+      await settingsService.setTodayThoughtsUseAI(todayAI);
+    }
+    final reportAI = _state.getPreference<bool>('reportInsightsUseAI');
+    if (reportAI != null) {
+      await settingsService.setReportInsightsUseAI(reportAI);
     }
   }
 
