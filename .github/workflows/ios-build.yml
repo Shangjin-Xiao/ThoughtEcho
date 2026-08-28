@@ -87,6 +87,22 @@ jobs:
             --build-name="$VERSION_NAME" \
             --dart-define=SENTRY_DSN="$SENTRY_DSN"
         
+      - name: 安装 sentry-cli
+        # 单独一步，**环境里没有任何凭据**：装 CLI 和用 CLI 分开，装的时候就算
+        # 装错了东西也拿不到 token。锁版本同理，不用 `curl | bash` 拉未固定的
+        # 安装脚本。
+        continue-on-error: true
+        env:
+          UPLOAD_SYMBOLS: ${{ inputs.upload_symbols }}
+        run: |
+          set -euo pipefail
+          if [ "${UPLOAD_SYMBOLS}" != "true" ]; then
+            echo "本次构建选择了不上传符号，跳过安装。"
+            exit 0
+          fi
+          npm install -g @sentry/cli@3.7.0
+          sentry-cli --version
+
       - name: 上传调试符号到 Sentry
         # 这一步只在 CI 上跑，不改二进制、不进 IPA，对应用运行时零影响。
         #
@@ -102,6 +118,9 @@ jobs:
         # 刻意**不加** `--split-debug-info`：它会把 Dart 调试信息从二进制里剥走，
         # 应用内日志里的 Dart 异常堆栈就退化成裸地址，而排查记录页性能全靠用户
         # 直接贴可读的 release 日志。`--obfuscate` 同理，绝对不加。
+        #
+        # 凭据只出现在这一步。CLI 在上一步装好，那一步的环境里没有 token ——
+        # 装和用分开，装的时候拿不到凭据。
         continue-on-error: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -125,9 +144,10 @@ jobs:
             exit 0
           fi
 
-          # 不锁版本：这一步只是把文件传上去，用最新的 CLI 反而少踩老版本的坑；
-          # 真出问题也只是这一步 continue-on-error 掉，不影响 IPA。
-          curl -sL https://sentry.io/get-cli/ | bash
+          if ! command -v sentry-cli >/dev/null 2>&1; then
+            echo "sentry-cli 没装上（见上一步），跳过符号上传。"
+            exit 0
+          fi
 
           # 路径不写死：Flutter / Xcode 换版本时 dSYM 的产出位置变过。先列出来，
           # 日志里留一份「这次到底传了什么」，下次对不上号时好查。

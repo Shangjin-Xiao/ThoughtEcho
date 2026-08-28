@@ -385,13 +385,14 @@ PR #526 的指标修正到手后的第一份日志。这一轮**不是**又一�
 
 ## 2026-08-28 iOS 复验：profile 拿到了，但符号没传，等于白拿
 
-上晋在 iPad Air 4（`iPad13,1`，60Hz 面板）上装了含 PR #531 的包
-（release `4.0.0+56`），并接了 Sentry MCP。直接查了线上数据。
+在一台 **60Hz 的 iPad** 上装了含 PR #531 的包，并接上 Sentry MCP，直接查了线上数据。
+（下文的「iPad」都指这台 60Hz 机器，「Android」指那台 120Hz LTPO 手机 —— 结论只跟
+刷新率有关，跟具体型号无关。）
 
 ### iPad 不卡，但同一个缺陷在
 
 `budget=16.7ms`（真 60Hz，不是取不到刷新率的回退：`CADisableMinimumFrameDurationOnPhone`
-是 true，ProMotion 没被挡，这台机器本来就没有）。
+是 true，ProMotion 没被挡，这台机器本来就没有高刷面板）。
 
 scroll-45：274 帧里 `frameJank=2`、`dropped=5`、`avgFrame=2.5ms`、`worstVsync=3.2ms`
 —— 流畅是真的。但同一段里 `dataΔ=2 → built=234@13-120`、`worstBuild=36.2ms`、
@@ -439,7 +440,7 @@ scroll-45：274 帧里 `frameJank=2`、`dropped=5`、`avgFrame=2.5ms`、`worstVs
 ### 还有一个更硬的约束
 
 刚才那次冷启动，整条 trace 里**只有一个滚动会话通过了筛选**（382ms）。也就是说
-iPad Air 4 上连冷启动首滑都不卡。
+这台 60Hz iPad 上连冷启动首滑都不卡。
 
 **能 profile 的设备不卡，卡的设备（120Hz LTPO Android）不能 profile。**
 所以 iOS 符号上传是「让这个工具将来能用」，不是「这次就能定位」。

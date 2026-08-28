@@ -34,17 +34,31 @@ class NoteListImageProfile {
   /// 只在滚动会话记录期间累计：平时一个字段都不碰，避免给正常路径加钱。
   static bool _recording = false;
 
+  /// 会话代号，每开一段自增。
+  ///
+  /// 解码可以跨会话：A 段里开始解析的图，第一帧可能在 B 段才到。没有这个代号的话
+  /// B 段会凭空多一个 `async`（没有对应的 `resolve`），等待时长还横跨两段 ——
+  /// 又一个「在边界上给出看起来合理、其实是错的数」。带上代号之后这类完成单独
+  /// 记进 `stale`，既不污染当段统计，本身也是个有用的信号：它大说明解码正在往后
+  /// 面的会话里堆。
+  static int _session = 0;
+
   static int _resolveCount = 0;
   static int _syncCount = 0;
   static int _asyncCount = 0;
+  static int _failedCount = 0;
+  static int _staleCount = 0;
   static int _asyncWaitMicros = 0;
   static int _worstWaitMicros = 0;
 
   static void beginSession() {
     _recording = true;
+    _session++;
     _resolveCount = 0;
     _syncCount = 0;
     _asyncCount = 0;
+    _failedCount = 0;
+    _staleCount = 0;
     _asyncWaitMicros = 0;
     _worstWaitMicros = 0;
   }
@@ -55,11 +69,14 @@ class NoteListImageProfile {
 
   static bool get isRecording => _recording;
 
-  /// 一张图开始解析。返回起点时间戳；不在记录期返回 null，调用方据此跳过记账。
-  static int? markResolveStart() {
+  /// 一张图开始解析。返回这次解析的凭据；不在记录期返回 null，调用方据此跳过记账。
+  static NoteListImageResolve? markResolveStart() {
     if (!_recording) return null;
     _resolveCount++;
-    return DateTime.now().microsecondsSinceEpoch;
+    return NoteListImageResolve(
+      session: _session,
+      startMicros: DateTime.now().microsecondsSinceEpoch,
+    );
   }
 
   /// 这张图出第一帧了。
@@ -67,30 +84,62 @@ class NoteListImageProfile {
   /// [synchronous] 为真表示 `imageCache` 直接命中、没有任何异步工作 —— 那正是
   /// 预热要达到的状态，它涨说明预热在起作用。
   static void markFirstFrame({
-    required int? startMicros,
+    required NoteListImageResolve? resolve,
     required bool synchronous,
   }) {
-    if (!_recording) return;
+    if (!_recording || resolve == null) return;
+    if (resolve.session != _session) {
+      _staleCount++;
+      return;
+    }
     if (synchronous) {
       _syncCount++;
       return;
     }
     _asyncCount++;
-    if (startMicros == null) return;
-    final waited = DateTime.now().microsecondsSinceEpoch - startMicros;
+    final waited = DateTime.now().microsecondsSinceEpoch - resolve.startMicros;
     if (waited <= 0) return;
     _asyncWaitMicros += waited;
     if (waited > _worstWaitMicros) _worstWaitMicros = waited;
   }
 
+  /// 这张图**加载或解码失败了**。
+  ///
+  /// 失败和出图一样是终态。不记的话它会一直躺在 `pending` 里，看起来像「解码排到
+  /// 了下一段」，把「延迟解码有多严重」这个判断整体夸大 —— 而那正是要拿来和
+  /// `worstVsync` 对相关性的那个数。
+  static void markFailed({required NoteListImageResolve? resolve}) {
+    if (!_recording || resolve == null) return;
+    if (resolve.session != _session) {
+      _staleCount++;
+      return;
+    }
+    _failedCount++;
+  }
+
   static String toCompactText() {
     final avgWaitMs =
         _asyncCount == 0 ? 0.0 : (_asyncWaitMicros / _asyncCount) / 1000.0;
-    // resolve 和 sync+async 对不上的差额是「这一段里还没出图的」：它大说明解码
-    // 排在了会话结束之后，那些成本会记到下一段去。
+    // pending = 解析了但这一段结束时既没出图也没失败的。它大说明解码排在了会话
+    // 结束之后，那些成本会记到下一段的 `stale` 里去。
+    final pending = _resolveCount - _syncCount - _asyncCount - _failedCount;
     return 'resolve=$_resolveCount,sync=$_syncCount,async=$_asyncCount,'
-        'pending=${_resolveCount - _syncCount - _asyncCount},'
+        'failed=$_failedCount,pending=$pending,stale=$_staleCount,'
         'avgWait=${avgWaitMs.toStringAsFixed(1)}ms,'
         'worstWait=${(_worstWaitMicros / 1000.0).toStringAsFixed(1)}ms';
   }
+}
+
+/// 一次图片解析的凭据：记着它是哪一段会话开的、什么时候开的。
+///
+/// 带会话代号是为了让跨会话完成的那些图不被算进错误的一段，见
+/// [NoteListImageProfile._session]。
+class NoteListImageResolve {
+  const NoteListImageResolve({
+    required this.session,
+    required this.startMicros,
+  });
+
+  final int session;
+  final int startMicros;
 }

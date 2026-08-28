@@ -46,12 +46,13 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
   int? _providerCacheWidth;
   int? _providerCacheHeight;
 
-  /// 这张 provider 开始解析的时间戳，用来量「解析 → 第一帧」的等待。
+  /// 这次解析的凭据（哪一段会话、什么时候开的），用来量「解析 → 第一帧」的等待。
   /// 见 [NoteListImageProfile]：不在滚动会话记录期时它是 null，整条记账跳过。
-  int? _resolveStartMicros;
+  NoteListImageResolve? _resolve;
 
-  /// 第一帧只记一次：`frameBuilder` 在出图之后每次重建都会被调到。
-  bool _recordedFirstFrame = false;
+  /// 终态只记一次。`frameBuilder` 和 `errorBuilder` 在到达终态之后每次重建都会
+  /// 被调到，而「出图」和「失败」都是终态，共用这一个标记。
+  bool _recordedOutcome = false;
 
   @override
   void didUpdateWidget(covariant CollapsedMediaImage oldWidget) {
@@ -67,8 +68,8 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
       _providerSource = null;
       _providerCacheWidth = null;
       _providerCacheHeight = null;
-      _resolveStartMicros = null;
-      _recordedFirstFrame = false;
+      _resolve = null;
+      _recordedOutcome = false;
     }
   }
 
@@ -92,8 +93,8 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
     _providerCacheHeight = widget.cacheHeight;
     // 计时起点放在这里而不是 build 开头：这一段只在**真的换了 provider** 时走到，
     // 正好对应「这张图要重新解析一次」。命中上面那三个字段的重建不该重新计时。
-    _recordedFirstFrame = false;
-    _resolveStartMicros = NoteListImageProfile.markResolveStart();
+    _recordedOutcome = false;
+    _resolve = NoteListImageProfile.markResolveStart();
     return provider;
   }
 
@@ -140,10 +141,10 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
           if (wasSynchronouslyLoaded || frame != null) {
             // `wasSynchronouslyLoaded` 就是 imageCache 命中、一点异步工作都没有
             // 的那条路 —— 预热要达到的正是这个状态。
-            if (!_recordedFirstFrame) {
-              _recordedFirstFrame = true;
+            if (!_recordedOutcome) {
+              _recordedOutcome = true;
               NoteListImageProfile.markFirstFrame(
-                startMicros: _resolveStartMicros,
+                resolve: _resolve,
                 synchronous: wasSynchronouslyLoaded,
               );
             }
@@ -155,6 +156,12 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
           );
         },
         errorBuilder: (context, error, stackTrace) {
+          // 失败也是终态：不记的话这张图会一直躺在 `pending` 里，看起来像
+          // 「解码排到了下一段」，把延迟解码的程度整体夸大。
+          if (!_recordedOutcome) {
+            _recordedOutcome = true;
+            NoteListImageProfile.markFailed(resolve: _resolve);
+          }
           if (!_hasError) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted &&
