@@ -161,22 +161,35 @@ void main() {
   });
 
   group('NominatimPlaceSearchService 限流', () {
-    test('并发搜索被排成队，两次请求间隔不小于限流窗口', () async {
+    test('限流窗口内并发来的两条被排成队，不会挤在一起发出去', () async {
+      const interval = Duration(milliseconds: 200);
       final network = _RecordingNetworkService(_jsonResponse(const []));
       final service = NominatimPlaceSearchService(
         networkService: network,
-        minRequestInterval: const Duration(milliseconds: 120),
+        minRequestInterval: interval,
       );
 
-      // 防抖搜索还在飞、用户又按了回车，就是这个场景
+      // 必须先发一次把窗口起点占上。冷启动时第一个调用不等待、且在让出
+      // 事件循环之前就写好了时间戳，第二个自然会等——那种情况下即使没有
+      // 串行化也看不出问题，测不到真正的竞态。
+      await service.searchNearby(refLat, refLon, query: '先来一次');
+
+      // 窗口还没过就并发来两条：不排队的话它们会读到同一个时间戳、算出同样
+      // 的剩余等待，然后一起发出去。
       await Future.wait([
         service.searchNearby(refLat, refLon, query: '咖啡馆'),
         service.searchNearby(refLat, refLon, query: '公园'),
       ]);
 
-      expect(network.timestamps, hasLength(2));
-      final gap = network.timestamps[1].difference(network.timestamps[0]);
-      expect(gap, greaterThanOrEqualTo(const Duration(milliseconds: 120)));
+      expect(network.timestamps, hasLength(3));
+      final firstGap = network.timestamps[1].difference(network.timestamps[0]);
+      final secondGap = network.timestamps[2].difference(network.timestamps[1]);
+
+      // 下限取 150 而不是整个 200：`Future.delayed` 会提前一两毫秒触发，
+      // 卡死在整个间隔上会让这条用例随机变红。而没串行时第二个间隔 ≈ 0，
+      // 和 150 差得很远，照样能抓住。
+      expect(firstGap, greaterThan(const Duration(milliseconds: 150)));
+      expect(secondGap, greaterThan(const Duration(milliseconds: 150)));
     });
   });
 
