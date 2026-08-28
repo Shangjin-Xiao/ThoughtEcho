@@ -41,3 +41,6 @@
 ## 2026-08-21 - [Add tooltip to FloatingActionButton]
 **Learning:** Found an instance where `FloatingActionButton.extended` lacked a `tooltip` property, which affects accessibility for screen readers. Even if a `label` property provides visual text, a dedicated `tooltip` ensures the action's intent is clearly communicated to assistive technologies.
 **Action:** Always verify that `FloatingActionButton.extended` components have a `tooltip` attribute containing localized strings from `AppLocalizations`.
+## 2026-08-28 - [Add tooltips to "More Options" IconButtons]
+**Learning:** Icon-only buttons representing "More Options" (`Icons.more_vert`) often lack the `tooltip` property. While visually universally understood, omitting the tooltip prevents screen readers from announcing their purpose, leading to poor accessibility.
+**Action:** Always add a localized `tooltip` (e.g., `AppLocalizations.of(context).moreOptions`) to all icon-only `IconButton` instances, particularly those serving as menus or secondary actions.

@@ -459,6 +459,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
               builder: (context, controller, child) {
                 return IconButton(
                   icon: const Icon(Icons.more_vert),
+                  tooltip: l10n.moreOptions,
                   onPressed: () {
                     if (controller.isOpen) {
                       controller.close();
