@@ -372,11 +372,15 @@ class SchemaDataBackfillAdapter {
         var migratedCount = 0;
         final batch = transaction.batch();
         for (final entry in labelToKey.entries) {
-          batch.update(
-            'quotes',
-            {'day_period': entry.value},
-            where: 'day_period = ?',
-            whereArgs: [entry.key],
+          // 原值和新值写在**同一条** UPDATE 里。_ensureBackupColumn 只在建列那一次
+          // 整列快照，列已存在就早退——而这个迁移是可重复触发的
+          // （_checkAndMigrateDayPeriodData 每次启动重查，之后再有标签形态的值经
+          // 同步/导入进来就会重跑），只靠它的话那一轮的原值就没有留底了。
+          batch.rawUpdate(
+            'UPDATE quotes '
+            'SET day_period_backup = day_period, day_period = ? '
+            'WHERE day_period = ?',
+            [entry.value, entry.key],
           );
         }
         final results = await batch.commit();
@@ -444,11 +448,12 @@ class SchemaDataBackfillAdapter {
         var migratedCount = 0;
         final batch = transaction.batch();
         for (final entry in WeatherService.legacyWeatherKeyToLabel.entries) {
-          batch.update(
-            'quotes',
-            {'weather': entry.key},
-            where: 'weather = ?',
-            whereArgs: [entry.value],
+          // 同 migrateDayPeriodToKey：可重复触发，原值必须在自己这条 UPDATE 里留底。
+          batch.rawUpdate(
+            'UPDATE quotes '
+            'SET weather_backup = weather, weather = ? '
+            'WHERE weather = ?',
+            [entry.key, entry.value],
           );
         }
         final results = await batch.commit();
