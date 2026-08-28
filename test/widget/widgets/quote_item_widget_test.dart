@@ -74,6 +74,7 @@ Quote _buildQuote({
   String editSource = 'fullscreen',
   String? date,
   String? lastModified,
+  String? sourceAuthor,
 }) {
   return Quote(
     id: id,
@@ -83,6 +84,7 @@ Quote _buildQuote({
     editSource: editSource,
     dayPeriod: 'morning',
     lastModified: lastModified,
+    sourceAuthor: sourceAuthor,
   );
 }
 
@@ -410,6 +412,126 @@ void main() {
       expect(hintRect.right, closeTo(contentRect.right, 8.0));
     });
 
+    testWidgets('有来源时折叠提示并进来源行，不再自己占一行', (tester) async {
+      // 提示是右对齐的一小行灰字，来源行是左对齐的一行灰字，两者从来不会争同一段
+      // 横向空间。分成两行等于为几个字多撑出一整行——而这种卡片本来就是「内容多到
+      // 放不下」的那类，最不该再浪费纵向空间。
+      final quote = _buildQuote(
+        id: 'truncated-with-source',
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+        sourceAuthor: '示例作者',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: Center(
+                child: SizedBox(
+                  width: 400,
+                  child: QuoteItemWidget(
+                    quote: quote,
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final hintRect = tester.getRect(find.text('双击查看全文'));
+      final sourceRect = tester.getRect(find.text('——示例作者'));
+
+      // 同一行：两个矩形在纵向上必须相交，而不是一上一下。
+      expect(hintRect.top, lessThan(sourceRect.bottom));
+      expect(sourceRect.top, lessThan(hintRect.bottom));
+      // 来源贴左、提示贴右，中间不重叠。
+      expect(sourceRect.right, lessThan(hintRect.left));
+    });
+
+    testWidgets('窄卡片配大字号缩放时来源行不溢出', (tester) async {
+      // 提示是 Row 里的非 flex 子项，会保留固有宽度：不给它封上界的话，窄卡片
+      // （分屏、Windows 小窗）碰上大字号缩放时它就能挤爆整行，Expanded 分到负
+      // 宽度，RenderFlex 当场溢出。这组参数实测就是临界点——去掉上界会得到
+      // 「overflowed by 23 pixels on the right」。
+      //
+      // 缩放停在 2.0 是有意的：3.0 会另外撞上卡片自己在极端字号下的纵向溢出，
+      // 那个在这次改动之前就有，不该由这条测试来盯。
+      final quote = _buildQuote(
+        id: 'narrow-overflow',
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+        sourceAuthor: '示例作者',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: MediaQuery(
+              data: const MediaQueryData(
+                textScaler: TextScaler.linear(2.0),
+              ),
+              child: Material(
+                child: Center(
+                  child: SizedBox(
+                    width: 180,
+                    child: QuoteItemWidget(
+                      quote: quote,
+                      tagMap: const {},
+                      isExpanded: false,
+                      onToggleExpanded: (_) {},
+                      onEdit: () {},
+                      onDelete: () {},
+                      onAskAI: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('双击查看全文'), findsOneWidget);
+      expect(find.text('——示例作者'), findsOneWidget);
+    });
+
+    testWidgets('没有来源的笔记，折叠提示仍然自己占一行', (tester) async {
+      // 硬凑一行空来源出来反而比提示自己占一行还高，所以这条路径要留着。
+      await pumpShortLineCard(tester);
+
+      expect(find.text('双击查看全文'), findsOneWidget);
+      expect(find.textContaining('——'), findsNothing);
+    });
+
     testWidgets('折叠提示画在正文下方，不压在正文上', (tester) async {
       // 这一条守的是这次改动的核心：提示不再是盖在正文最后一行上的浮层。
       // 只断言「不在内容区上方」是不够的——压在正文上同样满足那个条件。
@@ -421,7 +543,7 @@ void main() {
       expect(hintRect.top, greaterThanOrEqualTo(bodyRect.bottom - 1.0));
     });
 
-    // 右侧缩略图按正文高度分档：短笔记收到 56，正文排满折叠盒的长笔记放到 96，
+    // 右侧缩略图按正文高度分档：短笔记用小档 72，正文排满折叠盒的长笔记放到 96，
     // 一个字都没有的纯图笔记用 132 的居中方图。三条各测一种，共用这份夹具。
     Future<CollapsedMediaThumbnail> pumpMediaCard(
       WidgetTester tester, {
@@ -480,7 +602,7 @@ void main() {
       );
     }
 
-    testWidgets('正文只有一行时右侧缩略图收到最小档，且不显示折叠提示', (tester) async {
+    testWidgets('正文只有一行时右侧缩略图用小档，且不显示折叠提示', (tester) async {
       // 带媒体的笔记一律可展开，但正文一个字都没少——这种卡片不该有提示。
       // 图也不该反过来撑高卡片：一行字配一张大方图，上下各空一截谁也填不满。
       final thumbnail = await pumpMediaCard(
@@ -489,7 +611,7 @@ void main() {
         text: '只有一行字的笔记',
       );
 
-      expect(thumbnail.size, CollapsedMediaThumbnail.compactSize);
+      expect(thumbnail.size, CollapsedMediaThumbnail.defaultSize);
       expect(find.text('双击查看全文'), findsNothing);
     });
 
@@ -506,8 +628,8 @@ void main() {
 
     testWidgets('正文越长缩略图越大，不会倒过来', (tester) async {
       // 这一条守的是方向本身：正文短的那张卡片，缩略图不能比正文长的那张还大。
-      // 旧版式正好相反（短笔记 96、长笔记 72），卡片列表看上去就是「越没内容的
-      // 笔记占的地方越大」。
+      // 最早的版式正好相反（短笔记 96、长笔记 72），卡片列表看上去就是「越没内容
+      // 的笔记占的地方越大」。
       final short = await pumpMediaCard(
         tester,
         id: 'direction-short',

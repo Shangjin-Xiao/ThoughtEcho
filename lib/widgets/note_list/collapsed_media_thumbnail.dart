@@ -29,31 +29,25 @@ class CollapsedMediaThumbnail extends StatelessWidget {
     this.size = defaultSize,
   });
 
-  /// 缩略图的三档边长，从小到大。
+  /// 缩略图的两档边长，从小到大。
   ///
   /// 版式规则是**图不比正文高**：并排的两列里，谁也不该撑出对方够不着的空白。
-  /// 正文只有一两行时用最小档，正文排满折叠盒（160px）时才用最大档，由
-  /// [sizeForContentHeight] 按实测正文高度挑。
+  /// 正文排满折叠盒（160px）时用大档，其余用小档，由 [sizeForContentHeight] 按
+  /// 实测正文高度挑。
   ///
-  /// 只有三档、而不是连续贴合正文高度：解码尺寸就是 `imageCache` 的键，每多一种
+  /// 只有两档、而不是连续贴合正文高度：解码尺寸就是 `imageCache` 的键，每多一种
   /// 尺寸就多一份解码和一份常驻内存。
-  static const List<double> sizeLadder = <double>[
-    compactSize,
-    defaultSize,
-    tallNoteSize,
-  ];
+  static const List<double> sizeLadder = <double>[defaultSize, tallNoteSize];
 
-  /// 最小档，正文只有一两行时用。
+  /// 小档，同时是**下限**和**测量与预热的参照尺寸**（[reservedWidth] 的默认值、
+  /// 折叠排版的第一趟测量都用它）。
   ///
-  /// 同时是下限：正文比它还矮也停在这里，再小就看不出是张什么照片了。剩下的
+  /// 正文比它还矮也停在这里。试过更小的 56：一行字的卡片确实又矮了 16，但那张
+  /// 图小到看不出拍的是什么，而带图的笔记里照片往往才是内容本身。多出来的
   /// 高度差由 Row 的居中对齐平分到上下，不会堆成一整块空白。
-  static const double compactSize = 56.0;
-
-  /// 中间档，也是**测量与预热的参照尺寸**：[reservedWidth] 的默认值、折叠排版的
-  /// 第一趟测量都用它。
   static const double defaultSize = 72.0;
 
-  /// 最大档，正文排满折叠盒时用。
+  /// 大档，正文排满折叠盒时用。
   ///
   /// 上限压在 96：再大就要从正文列里割走一大块宽度，长笔记每行少排两三个字，
   /// 折叠预览能给的信息反而变少。
@@ -68,8 +62,8 @@ class CollapsedMediaThumbnail extends StatelessWidget {
   /// 缩略图与正文之间的间距。
   static const double gap = 12.0;
 
-  /// 按实测正文高度挑一档：取**不超过正文高度的最大档**，比最小档还矮就停在
-  /// [compactSize]。
+  /// 按实测正文高度挑一档：取**不超过正文高度的最大档**，比小档还矮就停在
+  /// [defaultSize]。
   ///
   /// 方向不能反过来（正文越短图越大）——那正是「一行字的卡片上下各空一大截」的
   /// 来源：空白是图撑出来的，正文再怎么排都填不满。
