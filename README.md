@@ -37,6 +37,8 @@
   <p align="center">
     <a href="README.md"><b>English</b></a> • 
     <a href="README_CN.md"><b>简体中文</b></a> •
+    <a href="README_JA.md"><b>日本語</b></a> •
+    <a href="README_KO.md"><b>한국어</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>Official Website</b></a> •
     <a href="docs/USER_MANUAL.md"><b>User Manual</b></a> •
     <a href="https://shangjin-xiao.github.io/ThoughtEcho/user-guide.html"><b>Web Guide</b></a>
