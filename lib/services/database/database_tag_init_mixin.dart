@@ -315,12 +315,6 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
         isDefault: true,
         iconName: '🤔',
       ),
-      NoteTag(
-        id: _DatabaseServiceBase.defaultTagIdJoke, // 使用固定 ID
-        name: '抖机灵',
-        isDefault: true,
-        iconName: '😜',
-      ),
     ];
   }
 }

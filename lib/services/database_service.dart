@@ -95,6 +95,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     defaultTagIdPoem,
     defaultTagIdMusic,
     defaultTagIdPhilosophy,
+    // 抖机灵不预建（见 _getDefaultHitokotoTags）：只在保存对应一言时按固定 ID
+    // 建出，但建出后仍是系统标签——本地化也按系统标签处理它
     defaultTagIdJoke,
     hiddenTagId,
   };
@@ -1334,6 +1336,8 @@ class DatabaseService extends _DatabaseServiceBase
     defaultTagIdPoem,
     defaultTagIdMusic,
     defaultTagIdPhilosophy,
+    // 抖机灵不预建（见 _getDefaultHitokotoTags）：只在保存对应一言时按固定 ID
+    // 建出，但建出后仍是系统标签——本地化也按系统标签处理它
     defaultTagIdJoke,
     hiddenTagId,
   };
