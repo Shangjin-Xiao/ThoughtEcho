@@ -466,6 +466,64 @@ void main() {
       expect(sourceRect.right, lessThan(hintRect.left));
     });
 
+    testWidgets('窄卡片配大字号缩放时来源行不溢出', (tester) async {
+      // 提示是 Row 里的非 flex 子项，会保留固有宽度：不给它封上界的话，窄卡片
+      // （分屏、Windows 小窗）碰上大字号缩放时它就能挤爆整行，Expanded 分到负
+      // 宽度，RenderFlex 当场溢出。这组参数实测就是临界点——去掉上界会得到
+      // 「overflowed by 23 pixels on the right」。
+      //
+      // 缩放停在 2.0 是有意的：3.0 会另外撞上卡片自己在极端字号下的纵向溢出，
+      // 那个在这次改动之前就有，不该由这条测试来盯。
+      final quote = _buildQuote(
+        id: 'narrow-overflow',
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+        sourceAuthor: '示例作者',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: MediaQuery(
+              data: const MediaQueryData(
+                textScaler: TextScaler.linear(2.0),
+              ),
+              child: Material(
+                child: Center(
+                  child: SizedBox(
+                    width: 180,
+                    child: QuoteItemWidget(
+                      quote: quote,
+                      tagMap: const {},
+                      isExpanded: false,
+                      onToggleExpanded: (_) {},
+                      onEdit: () {},
+                      onDelete: () {},
+                      onAskAI: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('双击查看全文'), findsOneWidget);
+      expect(find.text('——示例作者'), findsOneWidget);
+    });
+
     testWidgets('没有来源的笔记，折叠提示仍然自己占一行', (tester) async {
       // 硬凑一行空来源出来反而比提示自己占一行还高，所以这条路径要留着。
       await pumpShortLineCard(tester);

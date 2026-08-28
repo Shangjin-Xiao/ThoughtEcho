@@ -729,6 +729,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   _buildSourceRow(
                     sourceLine: sourceLine,
                     showHint: hintInSourceRow,
+                    rowMaxWidth: constraints.maxWidth,
                     innerTheme: innerTheme,
                     secondaryTextColor: secondaryTextColor,
                     l10n: l10n,
@@ -740,6 +741,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       ),
     );
   }
+
+  /// 来源行与右端折叠提示之间的间距。
+  static const double _sourceHintGap = 8.0;
 
   /// 来源与出处那一行的文本；没有来源时为 null。
   String? _sourceLineFor(Quote quote) {
@@ -760,10 +764,21 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   Widget _buildSourceRow({
     required String? sourceLine,
     required bool showHint,
+    required double rowMaxWidth,
     required ThemeData innerTheme,
     required Color secondaryTextColor,
     required AppLocalizations l10n,
   }) {
+    // 提示是 Row 里的非 flex 子项，会一直保留自己的固有宽度：窄卡片（分屏、
+    // Windows 小窗）碰上大字号缩放时，它加上 8 的间距就能超过整行，`Expanded`
+    // 分到负宽度，RenderFlex 当场溢出。所以给它封一个上界让它自己折行。
+    //
+    // 上界取半行：正常字号下提示只占六七十像素，离这条线远得很，版式一点不变；
+    // 只有极端缩放才会碰到，那时两边各折各的，谁也挤不掉谁。
+    final double halfRow = (rowMaxWidth - _sourceHintGap) / 2;
+    final double hintMaxWidth =
+        !rowMaxWidth.isFinite ? double.infinity : (halfRow > 0 ? halfRow : 0.0);
+
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Row(
@@ -783,12 +798,16 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   ),
           ),
           if (showHint) ...[
-            const SizedBox(width: 8),
-            Text(
-              l10n.doubleTapToViewFull,
-              style: innerTheme.textTheme.labelSmall?.copyWith(
-                color: innerTheme.colorScheme.onSurfaceVariant
-                    .withValues(alpha: 0.8),
+            const SizedBox(width: _sourceHintGap),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: hintMaxWidth),
+              child: Text(
+                l10n.doubleTapToViewFull,
+                textAlign: TextAlign.end,
+                style: innerTheme.textTheme.labelSmall?.copyWith(
+                  color: innerTheme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.8),
+                ),
               ),
             ),
           ],
