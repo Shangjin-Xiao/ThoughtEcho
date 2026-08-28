@@ -825,8 +825,12 @@ class SettingsService extends ChangeNotifier {
 
   /// 首次安装时把默认主题风格（[ThemeStyle.freshInstallStyle]，信笺）种进存储。
   ///
-  /// **只在键还空着时写。** 从备份恢复、或者主题层因为某些路径先跑了一步，
-  /// 都可能已经有取值，覆盖掉就是替用户改外观。
+  /// **只在键还空着时写。** 主题层因为某些路径先跑了一步就可能已经有取值，
+  /// 覆盖掉就是替用户改外观。
+  ///
+  /// 注意备份**目前不含**主题风格（[getAllSettingsForBackup] 只带 app_settings /
+  /// theme_mode 等几项），所以「换机恢复后风格回到自己选的那套」这件事这里兜不住，
+  /// 那是备份契约的既有缺口，要补也是补在备份那一侧。
   ///
   /// 写失败只记日志：拿不到品牌默认外观是可以接受的降级，让整个设置加载失败不是。
   Future<void> _seedFreshInstallThemeStyle() async {
