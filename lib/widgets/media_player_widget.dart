@@ -611,6 +611,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                         context,
                       ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
+                    tooltip: AppLocalizations.of(context).moreOptions,
                     onPressed: () {
                       if (controller.isOpen) {
                         controller.close();
