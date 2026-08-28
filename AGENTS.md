@@ -278,10 +278,17 @@ pwsh ./scripts/build_msix_ci.ps1
 - 🔒 **外来数据的值域收敛只做在导入边界**（`DatabaseBackupService`），读的时候不洗：读时悄悄
   修正等于把库里的坏行永远藏着。清洗过什么要能报给用户（`MergeReport.sanitizedFields` /
   `ImportCleanupStats`），不能只写日志。已经入库的坏行只能靠启动迁移修，删导入代码救不回来。
-- 🔒 **不可逆写入前先把整列快照到 `<列名>_backup`**，并在修复自己那条 UPDATE 里写原值——
-  `_ensureBackupColumn` 只在建列那一次整列复制，列已存在就早退，二次修复不写就没有留底。
+- 🔒 **不可逆写入前先把整列快照到 `<列名>_backup`**，并在修复自己那条 UPDATE 里写原值
+  （`SET x_backup = x, x = ?`）——`_ensureBackupColumn` 只在建列那一次整列复制，列已存在
+  就早退，二次修复不写就没有留底。
   **遗留列清理必须排在所有建快照列的迁移之前**：`_removeTagIdsColumn` 重建 `quotes` 用的是
   写死的列清单，不含任何 `*_backup` 列，排在后面会把三剂后悔药一起抹掉。
+  - ⚠️ **已知缺口**：目前只有 `repairOutOfDomainSentiment` 满足前半条。
+    `migrateWeatherToKey` / `migrateDayPeriodToKey` 的 UPDATE 只写规范化值，靠
+    `_ensureBackupColumn` 那一次整列快照兜着；而它们由 `_checkAndMigrateWeatherData` /
+    `_checkAndMigrateDayPeriodData` 每次启动重查，**只要之后再有标签形态的值进来就会
+    重跑**（同步/导入都可能带进来），那一轮的原值就没有留底了。**不要把这两个当参考实现**，
+    照 `repairOutOfDomainSentiment` 写；这两处待单独修复。
 - 🔒 **逐行反序列化必须有兜底**：查询结果统一走 `_parseQuoteRows` / `_tryParseQuoteRow`，
   坏行跳过并计数。裸 `maps.map((m) => Quote.fromJson(m))` 会让一条坏行带走整页笔记，用户
   看到的是列表整个打不开。批处理阶段的 `as String` 强转同样要改成 `whereType<String>()`——
