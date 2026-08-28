@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ThoughtEcho 研发知识库全景与全维度待办看板 | Comprehensive Docs & Issues Dashboard</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-surface: #161b22;
+      --bg-card: #1f242c;
+      --bg-hover: #262c36;
+      --border: #30363d;
+      --border-focus: #58a6ff;
+      --text: #f0f6fc;
+      --text-muted: #8b949e;
+      --text-dim: #6e7681;
+      --primary: #2f81f7;
+      --primary-light: #58a6ff;
+      --p0-bg: rgba(248, 81, 73, 0.15);
+      --p0-border: rgba(248, 81, 73, 0.4);
+      --p0-text: #ff7b72;
+      --p1-bg: rgba(210, 153, 34, 0.15);
+      --p1-border: rgba(210, 153, 34, 0.4);
+      --p1-text: #e3b341;
+      --p2-bg: rgba(56, 139, 253, 0.15);
+      --p2-border: rgba(56, 139, 253, 0.4);
+      --p2-text: #79c0ff;
+      --p3-bg: rgba(163, 113, 247, 0.15);
+      --p3-border: rgba(163, 113, 247, 0.4);
+      --p3-text: #d2a8ff;
+      --truth-bg: rgba(218, 54, 51, 0.2);
+      --truth-border: #f85149;
+      --truth-text: #ff7b72;
+      --active-bg: rgba(46, 160, 67, 0.15);
+      --active-border: rgba(46, 160, 67, 0.4);
+      --active-text: #3fb950;
+      --archived-bg: rgba(110, 118, 129, 0.2);
+      --archived-border: rgba(110, 118, 129, 0.4);
+      --archived-text: #8b949e;
+      --research-bg: rgba(163, 113, 247, 0.15);
+      --research-border: rgba(163, 113, 247, 0.4);
+      --research-text: #d2a8ff;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg: #f6f8fa;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --bg-hover: #f3f4f6;
+      --border: #d0d7de;
+      --border-focus: #0969da;
+      --text: #1f2328;
+      --text-muted: #656d76;
+      --text-dim: #8c959f;
+      --primary: #0969da;
+      --primary-light: #218bff;
+      --p0-bg: #ffebe9;
+      --p0-border: #ffc1ba;
+      --p0-text: #cf222e;
+      --p1-bg: #fff8c5;
+      --p1-border: #d4a72c;
+      --p1-text: #9a6700;
+      --p2-bg: #ddf4ff;
+      --p2-border: #54aeff;
+      --p2-text: #0969da;
+      --p3-bg: #fbefff;
+      --p3-border: #d8b9ff;
+      --p3-text: #8250df;
+      --truth-bg: #ffebe9;
+      --truth-border: #cf222e;
+      --truth-text: #cf222e;
+      --active-bg: #dafbe1;
+      --active-border: #4ac26b;
+      --active-text: #1a7f37;
+      --archived-bg: #f3f4f6;
+      --archived-border: #d0d7de;
+      --archived-text: #656d76;
+      --research-bg: #fbefff;
+      --research-border: #d8b9ff;
+      --research-text: #8250df;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 0 0 80px 0;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    header.topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      padding: 12px 24px;
+    }
+    .topbar-content {
+      max-width: 1380px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .brand img {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+    }
+    .brand-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+    }
+    .brand-badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s;
+    }
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--bg-hover);
+    }
+    .theme-toggle-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+
+    .container {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 28px 24px;
+    }
+
+    .hero {
+      margin-bottom: 24px;
+    }
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .hero-title {
+      font-size: 2.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .hero-desc {
+      color: var(--text-muted);
+      font-size: 1.02rem;
+      max-width: 960px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+    .metric-card.docs::before { background: var(--primary-light); }
+    .metric-card.truth::before { background: #f85149; }
+    .metric-card.p0::before { background: var(--p0-text); }
+    .metric-card.p1::before { background: var(--p1-text); }
+    .metric-card.p2::before { background: var(--p2-text); }
+    .metric-card.p3::before { background: var(--p3-text); }
+
+    .metric-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .metric-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      line-height: 1.1;
+    }
+    .metric-hint {
+      font-size: 0.76rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    .main-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .main-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .main-tab-btn:hover {
+      color: var(--text);
+      background: var(--bg-surface);
+    }
+    .main-tab-btn.active {
+      color: var(--primary-light);
+      border-bottom-color: var(--primary);
+      background: var(--bg-surface);
+    }
+    .tab-badge {
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      padding: 1px 7px;
+      border-radius: 99px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+    }
+    .main-tab-btn.active .tab-badge {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+
+    .toolbar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 280px;
+      position: relative;
+    }
+    .search-box input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      padding: 9px 14px 9px 38px;
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-box input:focus {
+      border-color: var(--border-focus);
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .filter-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      padding: 5px 12px;
+      border-radius: 99px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .filter-chip:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+    .filter-chip.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+    .badge-truth { background: var(--truth-bg); color: var(--truth-text); border: 1px solid var(--truth-border); }
+    .badge-active { background: var(--active-bg); color: var(--active-text); border: 1px solid var(--active-border); }
+    .badge-archived { background: var(--archived-bg); color: var(--archived-text); border: 1px solid var(--archived-border); }
+    .badge-research { background: var(--research-bg); color: var(--research-text); border: 1px solid var(--research-border); }
+    .badge-p0 { background: var(--p0-bg); color: var(--p0-text); border: 1px solid var(--p0-border); }
+    .badge-p1 { background: var(--p1-bg); color: var(--p1-text); border: 1px solid var(--p1-border); }
+    .badge-p2 { background: var(--p2-bg); color: var(--p2-text); border: 1px solid var(--p2-border); }
+    .badge-p3 { background: var(--p3-bg); color: var(--p3-text); border: 1px solid var(--p3-border); }
+
+    .doc-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .doc-section-header {
+      padding: 14px 20px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .doc-section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .doc-table th, .doc-table td {
+      padding: 11px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .doc-table th {
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+    .doc-table tr:last-child td {
+      border-bottom: none;
+    }
+    .doc-table tr:hover td {
+      background: var(--bg-hover);
+    }
+    .doc-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .doc-path {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--primary-light);
+      margin-top: 2px;
+    }
+    .doc-summary {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .task-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      transition: border-color 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .task-card:hover {
+      border-color: var(--border-focus);
+    }
+    .task-card.is-completed {
+      opacity: 0.65;
+      border-style: dashed;
+    }
+    .task-card.is-completed .task-title {
+      text-decoration: line-through;
+    }
+    .task-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .task-checkbox {
+      margin-top: 4px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+    .task-meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .task-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .task-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .evidence-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      overflow-x: auto;
+    }
+    .evidence-box code {
+      color: var(--primary-light);
+    }
+    .task-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--text-dim);
+    }
+
+    .decision-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .decision-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 12px;
+    }
+    .decision-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .decision-body {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .overturned-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin-top: 12px;
+    }
+    .overturned-table th, .overturned-table td {
+      padding: 11px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .overturned-table th {
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .overturned-old {
+      color: var(--p0-text);
+      font-weight: 600;
+    }
+    .overturned-new {
+      color: var(--active-text);
+      font-weight: 600;
+    }
+
+    footer {
+      margin-top: 50px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-content">
+      <a href="index.html" class="brand">
+        <img src="icon.png" alt="ThoughtEcho Logo">
+        <span class="brand-title">ThoughtEcho</span>
+        <span class="brand-badge">Knowledge Hub</span>
+      </a>
+      <div class="nav-actions">
+        <a href="index.html" class="nav-link">官网主页</a>
+        <a href="user-guide.html" class="nav-link">用户手册</a>
+        <a href="dl.html" class="nav-link">应用下载</a>
+        <button class="theme-toggle-btn" id="themeToggleBtn">🌓 切换主题</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    
+    <div class="hero">
+      <div class="hero-eyebrow">Comprehensive Knowledge Base & Codebase Roadmap</div>
+      <h1 class="hero-title">ThoughtEcho 研发知识库全景与全维度待办看板</h1>
+      <p class="hero-desc">
+        全景索引 <code>docs/</code> 目录下全部 76 篇研发资产，并结合 <code>lib/</code> 源码静态扫描（400+ Dart 文件）提取全量存活待办（P0 轻量缺陷/死代码、P1 深度模块重构/超大文件治理、P2 增长与商店渠道、P3 长线端侧 AI 与向量检索）。
+      </p>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card docs">
+        <div class="metric-label">
+          <span>全库技术文档资产</span>
+          <span>📚</span>
+        </div>
+        <div class="metric-value">76 篇</div>
+        <div class="metric-hint">100% 编目覆盖 · 0 死链 · 状态对齐</div>
+      </div>
+      <div class="metric-card truth">
+        <div class="metric-label">
+          <span>🔒 最高权威事实源</span>
+          <span>⚖️</span>
+        </div>
+        <div class="metric-value">3 篇</div>
+        <div class="metric-hint">纸墨主题 · Thoughter记忆库 · 决策总账</div>
+      </div>
+      <div class="metric-card p0">
+        <div class="metric-label">
+          <span>🚨 P0 存活缺陷/死代码</span>
+          <span>🛠️</span>
+        </div>
+        <div class="metric-value">4 项</div>
+        <div class="metric-hint">Thinking持久化 / 3个死文件 / WebDAV裸SQL / 媒体SHA256</div>
+      </div>
+      <div class="metric-card p1">
+        <div class="metric-label">
+          <span>🏛️ P1 架构深化与大文件</span>
+          <span>✨</span>
+        </div>
+        <div class="metric-value">5 处</div>
+        <div class="metric-hint">呈现引擎 / 归档引擎 / add_note拆解 / ai_service拆解</div>
+      </div>
+      <div class="metric-card p2">
+        <div class="metric-label">
+          <span>🚀 P2 商业化与渠道</span>
+          <span>🌐</span>
+        </div>
+        <div class="metric-value">4 项</div>
+        <div class="metric-hint">Tag自动流水线 / 商店上架 / SEO与水印 / 评分引导</div>
+      </div>
+      <div class="metric-card p3">
+        <div class="metric-label">
+          <span>🔮 P3 战略演进探索</span>
+          <span>🧠</span>
+        </div>
+        <div class="metric-value">3 项</div>
+        <div class="metric-hint">Thoughter二期 / 端侧LocalAI与OCR / 向量检索</div>
+      </div>
+    </div>
+
+    <div class="main-tabs">
+      <button class="main-tab-btn" data-tab="tab-docs">
+        <span>📚 全量文档知识库 (76 篇)</span>
+        <span class="tab-badge">76</span>
+      </button>
+      <button class="main-tab-btn active" data-tab="tab-issues">
+        <span>📋 全维度存活待办看板 (16 项)</span>
+        <span class="tab-badge">16</span>
+      </button>
+      <button class="main-tab-btn" data-tab="tab-decisions">
+        <span>⚖️ 架构决议与推翻总账</span>
+        <span class="tab-badge">7+4</span>
+      </button>
+      <button class="main-tab-btn" data-tab="tab-history">
+        <span>✅ 历史已核销台账</span>
+        <span class="tab-badge">31</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: ALL 76 DOCS MATRIX -->
+    <div class="tab-pane" id="tab-docs">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="docSearchInput" placeholder="全局搜索 76 篇文档标题、文件名、日期或核心结论...">
+        </div>
+        <div class="filter-group" id="docFilterGroup">
+          <div class="filter-chip active" data-doc-filter="all">全部 (76)</div>
+          <div class="filter-chip" data-doc-filter="truth">🔒 唯一事实源 (3)</div>
+          <div class="filter-chip" data-doc-filter="active">🟢 活跃/事实源 (12)</div>
+          <div class="filter-chip" data-doc-filter="archived">📦 归档/已废弃/已实现 (54)</div>
+          <div class="filter-chip" data-doc-filter="research">🔍 调研分析 (2)</div>
+        </div>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-header">
+          <div class="doc-section-title">
+            <span>一、核心规范与发布文档</span>
+          </div>
+        </div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width:28%">文档名称 / 路径</th>
+              <th style="width:16%">状态 / 属性</th>
+              <th>核心内容与当前结论</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">双语用户手册</div><div class="doc-path">docs/USER_MANUAL.md</div></td>
+              <td><span class="badge badge-active">🟢 活跃</span></td>
+              <td class="doc-summary">用户端双语完整使用指南（中文 + 英文），涵盖所有端侧功能与快捷操作</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">商店上架与合规指南</div><div class="doc-path">docs/STORE_SUBMISSION_GUIDE.md</div></td>
+              <td><span class="badge badge-active">🟢 活跃</span></td>
+              <td class="doc-summary">Windows Microsoft Store、Google Play 与 App Store 合规、文案与截图指南</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">设备与测试环境说明</div><div class="doc-path">docs/DEVICE_INFO.md</div></td>
+              <td><span class="badge badge-active">🟢 活跃</span></td>
+              <td class="doc-summary">本地测试设备、硬件资源、冷启动耗时与测试运行约束（由 `.gitignore` 忽略）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">项目全景综述与核心架构</div><div class="doc-path">docs/project-overview.md</div></td>
+              <td><span class="badge badge-active">🟢 活跃</span></td>
+              <td class="doc-summary">项目整体分层架构、核心服务分布、技术选型与多端支持全景概览</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">v4.0.0 发版说明</div><div class="doc-path">docs/Release_4.0.0.md</div></td>
+              <td><span class="badge badge-active">🟢 活跃</span></td>
+              <td class="doc-summary">v4.0.0 重大版本发布说明、Thoughter 思考搭档与全新纸墨素笺主题更新日志</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">项目摘要 [已归档]</div><div class="doc-path">docs/PROJECT_SUMMARY.md</div></td>
+              <td><span class="badge badge-archived">📦 归档</span></td>
+              <td class="doc-summary">早期项目概况与模块设计速查（包含早期架构与代码统计历史记录）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">v3.7.0 发版说明 [已归档]</div><div class="doc-path">docs/Release_3.7.0.md</div></td>
+              <td><span class="badge badge-archived">📦 归档</span></td>
+              <td class="doc-summary">v3.7.0 版本发布日志、重大特性清单与修复记录</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">v3.6.5 发版说明 [已归档]</div><div class="doc-path">docs/Release_3.6.5.md</div></td>
+              <td><span class="badge badge-archived">📦 归档</span></td>
+              <td class="doc-summary">v3.6.5 版本发布日志与变更清单</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">v3.6.0 发版说明 [已归档]</div><div class="doc-path">docs/Release_3.6.0.md</div></td>
+              <td><span class="badge badge-archived">📦 归档</span></td>
+              <td class="doc-summary">v3.6.0 版本发布日志与变更清单</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">v3.5.5 发版说明 [已归档]</div><div class="doc-path">docs/Release_3.5.5.md</div></td>
+              <td><span class="badge badge-archived">📦 归档</span></td>
+              <td class="doc-summary">v3.5.5 版本发布日志与变更清单</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">v3.5.0 发版说明 [已归档]</div><div class="doc-path">docs/Release_3.5.0.md</div></td>
+              <td><span class="badge badge-archived">📦 归档</span></td>
+              <td class="doc-summary">v3.5.0 版本发布日志与变更清单</td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-header">
+          <div class="doc-section-title">
+            <span>二、性能分析与优化演化链</span>
+          </div>
+        </div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width:28%">文档名称 / 路径</th>
+              <th style="width:16%">状态 / 属性</th>
+              <th>核心内容与当前结论</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">记录页：预热在空转与刷新率适配</div><div class="doc-path">docs/note-list-warmup-invalidation-2026-08-22.md</div></td>
+              <td><span class="badge badge-active">🟢 最新事实源</span></td>
+              <td class="doc-summary">列表预热空转根因分析、120Hz 动态刷新率适配、SpreadFromAnchorCursor 扩散预热与分段计时验证</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">首屏渲染成本剖析与卡片瘦身</div><div class="doc-path">docs/note-list-first-paint-cost-2026-08-19.md</div></td>
+              <td><span class="badge badge-active">🟢 事实源</span></td>
+              <td class="doc-summary">首屏构建帧开销、组件树挂载耗时剖析、卡片 Element 瘦身 38%（146→90）与空闲预热基准</td>
+            </tr>
+
+            <tr class="doc-row" data-status="research">
+              <td><div class="doc-name">列表深层性能分析</div><div class="doc-path">docs/note-list-perf-analysis-2026-08-13.md</div></td>
+              <td><span class="badge badge-research">🔍 调研分析</span></td>
+              <td class="doc-summary">列表滚动掉帧、重绘范围、CPU/GPU 瓶颈与 Layout 耗时深度追踪</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">列表优化阶段交接 [已归档]</div><div class="doc-path">docs/note-list-perf-handoff-2026-08-12.md</div></td>
+              <td><span class="badge badge-archived">📦 阶段交接</span></td>
+              <td class="doc-summary">列表卡顿治理、渲染预算控制与阶段性优化成果交接</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">冷启动帧预算优化交接 [已归档]</div><div class="doc-path">docs/note-list-cold-quill-frame-budget-handoff-2026-07-30.md</div></td>
+              <td><span class="badge badge-archived">📦 阶段交接</span></td>
+              <td class="doc-summary">Quill 冷启动帧开销切片、时间分片与帧预算平衡交接</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">Quill 延迟物化交接 [已归档]</div><div class="doc-path">docs/note-list-cold-quill-materialization-handoff-2026-07-15.md</div></td>
+              <td><span class="badge badge-archived">📦 阶段交接</span></td>
+              <td class="doc-summary">滚动期间延后冷 Quill 物化、停止后逐帧恢复策略交接</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">折叠态 Quill 宽度感知前缀交接 [已归档]</div><div class="doc-path">docs/note-list-visible-quill-prefix-handoff-2026-07-12.md</div></td>
+              <td><span class="badge badge-archived">📦 阶段交接</span></td>
+              <td class="doc-summary">截取宽度感知可见前缀减少 Delta 解析与首次布局开销交接</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">新增弹窗与 Firebase 性能优化交接 [已归档]</div><div class="doc-path">docs/add-note-dialog-firebase-perf-handoff-2026-07-25.md</div></td>
+              <td><span class="badge badge-archived">📦 阶段交接</span></td>
+              <td class="doc-summary">新增笔记弹窗渲染耗时优化与 Firebase 初始化解耦交接</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">早期列表滚动优化与 Firebase 交接 [已归档]</div><div class="doc-path">docs/note-list-performance-firebase-handoff-2026-06-09.md</div></td>
+              <td><span class="badge badge-archived">📦 阶段交接</span></td>
+              <td class="doc-summary">早期列表滑动手感优化、Firebase Test Lab A/B 实测与实验开关</td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-header">
+          <div class="doc-section-title">
+            <span>三、主题系统与 UI 现代化</span>
+          </div>
+        </div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width:28%">文档名称 / 路径</th>
+              <th style="width:16%">状态 / 属性</th>
+              <th>核心内容与当前结论</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr class="doc-row" data-status="truth">
+              <td><div class="doc-name">纸与墨主题实现交接</div><div class="doc-path">docs/paper-ink-theme-handoff-2026-07-31.md</div></td>
+              <td><span class="badge badge-truth">🔒 唯一事实源</span></td>
+              <td class="doc-summary">三套主题设计推导、`ThemeStyleForm` 与 `AppShapeTokens` 令牌下发机制、随包 GB2312 衬线字体子集定案与禁踩红线</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">纸墨主题规划方案 [已归档 / 方案原案]</div><div class="doc-path">docs/paper-ink-theme-plan-2026-07-30.md</div></td>
+              <td><span class="badge badge-archived">📦 方案原案</span></td>
+              <td class="doc-summary">纸与墨风格设计草案、色板选型推导过程与已否决设想记录</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">纸墨主题形状/阴影迁移审计 [已归档]</div><div class="doc-path">docs/theme-shape-migration-audit-2026-08-01.md</div></td>
+              <td><span class="badge badge-archived">📦 归档 / 审计记录</span></td>
+              <td class="doc-summary">`AppShapeTokens` 令牌重构全量组件排查清单（6 批迁移已全量合入，归档存档）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">Material 3 现代化改造审计 [已归档]</div><div class="doc-path">docs/m3-modernization-audit-2026-08-11.md</div></td>
+              <td><span class="badge badge-archived">📦 归档 / 历史审计</span></td>
+              <td class="doc-summary">M3 控件、无障碍色差、动态取色规范审计（预测式返回、MenuAnchor、SearchBar 等改造已落地）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">卡片重构进展记录 [已归档]</div><div class="doc-path">docs/card-redesign-progress-2026-07-28.md</div></td>
+              <td><span class="badge badge-archived">📦 过程记录</span></td>
+              <td class="doc-summary">AI 智能卡片视觉层级、边框与统一布局重构记录</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">UI 清理交接记录 [已归档]</div><div class="doc-path">docs/ui-cleanup-handoff-2026-07-31.md</div></td>
+              <td><span class="badge badge-archived">📦 阶段交接</span></td>
+              <td class="doc-summary">历史硬编码颜色、无用布局样式的统一清理交接</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">字体变粗问题交接 [已归档]</div><div class="doc-path">docs/font-issue-handoff-2026-07-25.md</div></td>
+              <td><span class="badge badge-archived">📦 过程记录</span></td>
+              <td class="doc-summary">平台字体缺失、衬线字体加载异常排查记录</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">FontWeight 重构完成交接 [已归档]</div><div class="doc-path">docs/font-refactor-handoff-2026-07-25.md</div></td>
+              <td><span class="badge badge-archived">📦 过程记录</span></td>
+              <td class="doc-summary">字重体系标准化与可变字重补偿交接</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">字体重构提示词与指令记录 [已归档]</div><div class="doc-path">docs/font-refactor-prompt-2026-07-25.md</div></td>
+              <td><span class="badge badge-archived">📦 过程记录</span></td>
+              <td class="doc-summary">字体重构期间的提示词设计与执行指令归档</td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-header">
+          <div class="doc-section-title">
+            <span>四、Thoughter 与 AI 记忆体系</span>
+          </div>
+        </div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width:28%">文档名称 / 路径</th>
+              <th style="width:16%">状态 / 属性</th>
+              <th>核心内容与当前结论</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr class="doc-row" data-status="truth">
+              <td><div class="doc-name">Thoughter 长期记忆系统深度调研与设计</div><div class="doc-path">docs/agent-memory-research-2026-08-08.md</div></td>
+              <td><span class="badge badge-truth">🔒 唯一事实源</span></td>
+              <td class="doc-summary">独立物理数据库 `agent_memory.db` 隔离机制、用户画像独立 user 消息包裹、原位 supersede 与事实层打分检索定案</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">共享记忆系统构想 [已废弃 / 已被取代]</div><div class="doc-path">docs/memory-system-plan-2026-07-31.md</div></td>
+              <td><span class="badge badge-archived">📦 归档 / 已废弃方案</span></td>
+              <td class="doc-summary">早期三层共享记忆构想原案（已被 08-08 独立库架构完全取代）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">探索页与 Thoughter 联动改造交接 [已归档]</div><div class="doc-path">docs/explore-thoughter-handoff-2026-07-31.md</div></td>
+              <td><span class="badge badge-archived">📦 归档 / 阶段交接</span></td>
+              <td class="doc-summary">探索页周期统计聚合与 Thoughter 交互入口改造交接（已完成合入）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">编辑器 AI 功能迁移至 Thoughter 方案 [已归档]</div><div class="doc-path">docs/editor-ai-to-thoughter-plan.md</div></td>
+              <td><span class="badge badge-archived">📦 归档 / 已完成方案</span></td>
+              <td class="doc-summary">编辑器独立 AI 功能全量统一跳转 Thoughter 实施方案（6 项改造已全量落地）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="research">
+              <td><div class="doc-name">Agent 模式参考与调研</div><div class="doc-path">docs/agent-reference-patterns-2026-07.md</div></td>
+              <td><span class="badge badge-research">🔍 调研参考</span></td>
+              <td class="doc-summary">多智能体上下文管理、ReAct 工具链与流式生成模式调研</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">Thoughter Agent 问题探查报告 [已归档]</div><div class="doc-path">docs/thoughter-agent-issues-report-2026-07-26.md</div></td>
+              <td><span class="badge badge-archived">📦 归档 / 问题核销</span></td>
+              <td class="doc-summary">早期 Agent 循环、卡片协议与错误恢复探查（32 项中 31 项已闭环，1 项 Thinking 待办）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">Thoughter Agent 工作交接 [已归档]</div><div class="doc-path">docs/agent-handoff-2026-07-31.md</div></td>
+              <td><span class="badge badge-archived">📦 阶段交接</span></td>
+              <td class="doc-summary">Thoughter 会话上下文流转、工具链调度与测试密钥配置交接</td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-header">
+          <div class="doc-section-title">
+            <span>五、同步、网络与核心架构</span>
+          </div>
+        </div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width:28%">文档名称 / 路径</th>
+              <th style="width:16%">状态 / 属性</th>
+              <th>核心内容与当前结论</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">研发知识库全景审计与全维度存活待办报告</div><div class="doc-path">docs/codebase-roadmap-and-issues-2026-08-28.md</div></td>
+              <td><span class="badge badge-active">🟢 最新事实源</span></td>
+              <td class="doc-summary">全库 76 篇文档全景分类、隐私审计、历史 31 项核销证据、4 大 ADR 与 16 项存活待办路线图</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">代码库架构深化与待办核销审计报告</div><div class="doc-path">docs/codebase-architecture-and-tasks-audit-2026-08-23.md</div></td>
+              <td><span class="badge badge-active">🟢 事实源</span></td>
+              <td class="doc-summary">模块解耦、大文件与复杂文件监控、依赖反转钩子解耦与技术债核销总清单</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">WebDAV、LocalSend 与备份模块审计重构报告</div><div class="doc-path">docs/WebDAV_LocalSend_Backup_Code_Audit_and_Refactoring_Report.md</div></td>
+              <td><span class="badge badge-active">🟢 事实源</span></td>
+              <td class="doc-summary">ETag 并发控制、If-Match 安全锁、凭据加密存储、Zip Slip 防御与 SQLite 读快照重构报告</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">早期代码库深度架构与质量审计报告 [已归档]</div><div class="doc-path">docs/architecture-audit-2026-07-26.md</div></td>
+              <td><span class="badge badge-archived">📦 历史参考</span></td>
+              <td class="doc-summary">早期分层结构、代码异味与服务层解耦审计（P0/P1 已全量清零）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">增长与产品路线规划</div><div class="doc-path">docs/growth-and-product-direction-2026-07-26.md</div></td>
+              <td><span class="badge badge-active">🟢 参考</span></td>
+              <td class="doc-summary">产品定位、用户增长策略、跨平台分发与核心功能路线</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">AI助手对话历史搜索高亮设计方案 [已实现]</div><div class="doc-path">plans/2026-07-10-chat-history-search-highlight.md</div></td>
+              <td><span class="badge badge-archived">📦 已完成方案</span></td>
+              <td class="doc-summary">对话历史搜索多关键字高亮匹配与展示方案（已在 `session_history_page_content.dart` 落地）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">LocalSend 同步生命周期控制实施计划 [已实现]</div><div class="doc-path">plans/2026-07-10-localsend-sync-lifecycle.md</div></td>
+              <td><span class="badge badge-archived">📦 已完成方案</span></td>
+              <td class="doc-summary">严格审批门禁、级联取消传播、动态端口广播与 PopScope 拦截生命周期方案</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">AI 智能结果卡片交互优化实施计划 [已实现]</div><div class="doc-path">plans/2026-07-10-smart-result-card-ux.md</div></td>
+              <td><span class="badge badge-archived">📦 已完成方案</span></td>
+              <td class="doc-summary">卡片三态元数据裁决、单状态指示与去内联编辑（已统一演进为 `NoteProposalCard`）</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">Agent 原生富文本结构化编辑实施计划 [已实现]</div><div class="doc-path">plans/2026-07-11-agent-rich-edit.md</div></td>
+              <td><span class="badge badge-archived">📦 已完成方案</span></td>
+              <td class="doc-summary">基于 Quill Delta 结构化操作、SHA-256 冲突检测与零 Markdown 损耗编辑方案</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">LocalSend 增量媒体同步设计 [已实现]</div><div class="doc-path">plans/2026-07-11-localsend-incremental-media-design.md</div></td>
+              <td><span class="badge badge-archived">📦 已完成方案</span></td>
+              <td class="doc-summary">仅传输缺失/大小变动的增量媒体清单设计与向前兼容方案</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">LocalSend 增量媒体同步实现计划 [已实现]</div><div class="doc-path">plans/2026-07-11-localsend-incremental-media.md</div></td>
+              <td><span class="badge badge-archived">📦 已完成方案</span></td>
+              <td class="doc-summary">增量媒体同步逐步实施清单与任务分解</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">列表折叠态 Quill 可见前缀提取方案 [已实现]</div><div class="doc-path">plans/2026-07-12-note-list-visible-quill-prefix.md</div></td>
+              <td><span class="badge badge-archived">📦 已完成方案</span></td>
+              <td class="doc-summary">宽度感知最小 Delta 前缀截取与 96px 安全余量实施计划</td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-header">
+          <div class="doc-section-title">
+            <span>六、架构决策总账与 AI 团队资产</span>
+          </div>
+        </div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width:28%">文档名称 / 路径</th>
+              <th style="width:16%">状态 / 属性</th>
+              <th>核心内容与当前结论</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">架构决策总账 (ADR)</div><div class="doc-path">docs/decisions.md</div></td>
+              <td><span class="badge badge-active">(decisions.md)</span></td>
+              <td class="doc-summary">🔒 **团队所有重大架构决议（ADR）权威真源**，完整记录 29+ 项决策的背景、选型、详细实施、生效事实源及已推翻历史决策总账</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">团队花名册与分工</div><div class="doc-path">squad/team.md</div></td>
+              <td><span class="badge badge-active">🟢 活跃</span></td>
+              <td class="doc-summary">11 个智能体角色定义、职责边界、模型偏好与指令总览</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">协作信号与路由表</div><div class="doc-path">squad/routing.md</div></td>
+              <td><span class="badge badge-active">🟢 活跃</span></td>
+              <td class="doc-summary">任务信号到对应 Agent 的自动路由、流转与跨角色审核规则</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">协作仪式配置</div><div class="doc-path">squad/ceremonies.md</div></td>
+              <td><span class="badge badge-active">🟢 活跃</span></td>
+              <td class="doc-summary">设计评审、发版检查、回顾会等团队协作仪式触发与执行规则</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">智能体花名注册表</div><div class="doc-path">squad/casting/registry.json</div></td>
+              <td><span class="badge badge-archived">📦 过程配置</span></td>
+              <td class="doc-summary">团队各角色代号、花名、职责与状态注册配置数据</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">角色分派策略配置</div><div class="doc-path">squad/casting/policy.json</div></td>
+              <td><span class="badge badge-archived">📦 过程配置</span></td>
+              <td class="doc-summary">团队角色分派规则、模型分派策略与权限控制配置</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">角色分派历史记录</div><div class="doc-path">squad/casting/history.json</div></td>
+              <td><span class="badge badge-archived">📦 过程数据</span></td>
+              <td class="doc-summary">历史任务分派追踪与角色执行记录数据</td>
+            </tr>
+
+            <tr class="doc-row" data-status="archived">
+              <td><div class="doc-name">列表语义裁剪性能修复日志 [已归档]</div><div class="doc-path">squad/log/2026-05-31-note-list-semantics-trimming.md</div></td>
+              <td><span class="badge badge-archived">📦 历史日志</span></td>
+              <td class="doc-summary">2026-05-31 列表无障碍语义树裁剪性能优化现场排查与实测日志</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">AUTO</div><div class="doc-path">docs/技术主管 (Tech Lead / Architecture)</div></td>
+              <td><span class="badge badge-active">(squad/agents/auto/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/auto/history.md`](squad/agents/auto/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">BURN-E</div><div class="doc-path">docs/市场营销与增长 (Marketing & Growth)</div></td>
+              <td><span class="badge badge-active">(squad/agents/burn-e/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/burn-e/history.md`](squad/agents/burn-e/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">EVE</div><div class="doc-path">docs/UI / UX 设计专家 (Design Lead)</div></td>
+              <td><span class="badge badge-active">(squad/agents/eve/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/eve/history.md`](squad/agents/eve/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">GO-4</div><div class="doc-path">docs/代码审查与规范 (Code Reviewer)</div></td>
+              <td><span class="badge badge-active">(squad/agents/go-4/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/go-4/history.md`](squad/agents/go-4/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">GOPHER</div><div class="doc-path">docs/产品经理 (Product Manager)</div></td>
+              <td><span class="badge badge-active">(squad/agents/gopher/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/gopher/history.md`](squad/agents/gopher/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">HAN-S</div><div class="doc-path">docs/内容策划与本地化 (Content & Localization)</div></td>
+              <td><span class="badge badge-active">(squad/agents/han-s/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/han-s/history.md`](squad/agents/han-s/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">M-O</div><div class="doc-path">docs/质量保证与测试 (QA Tester)</div></td>
+              <td><span class="badge badge-active">(squad/agents/m-o/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/m-o/history.md`](squad/agents/m-o/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">PR-T</div><div class="doc-path">docs/商店发布与运营 (Store Manager)</div></td>
+              <td><span class="badge badge-active">(squad/agents/pr-t/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/pr-t/history.md`](squad/agents/pr-t/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">Scribe</div><div class="doc-path">docs/记录员与文档维护 (Logger & Docs)</div></td>
+              <td><span class="badge badge-active">(squad/agents/scribe/charter.md)</span></td>
+              <td class="doc-summary">—</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">VN-GO</div><div class="doc-path">docs/用户体验研究员 (User Researcher)</div></td>
+              <td><span class="badge badge-active">(squad/agents/vn-go/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/vn-go/history.md`](squad/agents/vn-go/history.md)</td>
+            </tr>
+
+            <tr class="doc-row" data-status="active">
+              <td><div class="doc-name">WALL·E</div><div class="doc-path">docs/产品顾问 (Product Advisor)</div></td>
+              <td><span class="badge badge-active">(squad/agents/wall-e/charter.md)</span></td>
+              <td class="doc-summary">[`squad/agents/wall-e/history.md`](squad/agents/wall-e/history.md)</td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- TAB 2: LIVING ISSUES & ROADMAP (16) -->
+    <div class="tab-pane active" id="tab-issues">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="taskSearchInput" placeholder="全局搜索存活待办、源码文件或模块...">
+        </div>
+        <div class="filter-group" id="taskFilterGroup">
+          <div class="filter-chip active" data-task-filter="all">全部 (16)</div>
+          <div class="filter-chip" data-task-filter="p0">🚨 P0 缺陷/清理 (4)</div>
+          <div class="filter-chip" data-task-filter="p1">🏛️ P1 架构深化 (5)</div>
+          <div class="filter-chip" data-task-filter="p2">🚀 P2 商业化渠道 (4)</div>
+          <div class="filter-chip" data-task-filter="p3">🔮 P3 战略探索 (3)</div>
+        </div>
+      </div>
+
+      <div class="task-list" id="activeTaskList">
+        <!-- P0.1 Thinking SQLite -->
+        <div class="task-card" data-priority="p0" data-id="task-thinking-sqlite">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-thinking-sqlite">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p0">P0 缺陷</span>
+                <span class="badge badge-active">Thoughter / AI</span>
+                <span class="badge badge-archived">工时: 0.2 天</span>
+              </div>
+              <h3 class="task-title">Thinking 思考链与消息状态 SQLite 持久化</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            当前 <code>ChatMessage.toJson/fromJson</code> 中已包含 <code>thinkingChunks</code> 与 <code>state</code> 序列化，但在 <code>fromMap/toMap</code> 的 SQLite 映射中缺失对应字段，导致重新打开历史会话时 Thinking 过程无法持久化呈现。
+          </p>
+          <div class="evidence-box">
+            <strong>代码证据：</strong> <code>lib/models/chat_message.dart:66-95</code> 仅映射了 <code>id, content, isUser, role, created_at, included_in_context, meta_json, content_format, delta_json</code>，需在 <code>chat_messages</code> 表增列并完善映射。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：重开会话时完整复原思考折叠块</span>
+            <span>关联文档: thoughter-agent-issues-report</span>
+          </div>
+        </div>
+
+        <!-- P0.2 Dead Files -->
+        <div class="task-card" data-priority="p0" data-id="task-dead-files">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-dead-files">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p0">P0 清理</span>
+                <span class="badge badge-active">Code Hygiene</span>
+                <span class="badge badge-archived">工时: 0.1 天</span>
+              </div>
+              <h3 class="task-title">删除 3 个重构残留的零引用死代码文件 (~1000 行)</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            项目已全面迁移至 <code>UnifiedLogService</code>，早期遗留的日志模块与合并报告模型已完全无调用方，属于纯死重。
+          </p>
+          <div class="evidence-box">
+            <strong>涉及文件：</strong>
+            <br>1. <code>lib/models/merge_report_simple.dart</code> (234 行，全库 0 引用)
+            <br>2. <code>lib/services/log_service.dart</code> (589 行，已废弃)
+            <br>3. <code>lib/services/log_service_adapter.dart</code> (174 行，已废弃)
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：直接删除对应文件，消除维护负担与静态分析干扰</span>
+            <span>关联规范: AGENTS.md 废弃即删原则</span>
+          </div>
+        </div>
+
+        <!-- P0.3 WebDAV Raw SQL -->
+        <div class="task-card" data-priority="p0" data-id="task-webdav-sql">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-webdav-sql">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p0">P0 规范</span>
+                <span class="badge badge-active">WebDAV / DB</span>
+                <span class="badge badge-archived">工时: 0.2 天</span>
+              </div>
+              <h3 class="task-title">封装 WebDAV 同步页面中的裸 SQL 穿透</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            UI 页面直接获取 <code>DatabaseService().database</code> 原生句柄拼装 SQL 语句查询冲突笔记数量，破坏了 Service / UI 分层隔离。
+          </p>
+          <div class="evidence-box">
+            <strong>代码证据：</strong> <code>lib/pages/webdav_sync_page.dart:121-127</code> 直接裸写 <code>where: 'category_id = ? AND is_deleted = 0'</code>，应下沉至 <code>DatabaseService.getConflictedNotesCount()</code>。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：消灭 UI 层裸 SQL，保证数据访问 100% 走 Service</span>
+            <span>关联文档: architecture-audit-2026-07-26</span>
+          </div>
+        </div>
+
+        <!-- P0.4 Media Checksum -->
+        <div class="task-card" data-priority="p0" data-id="task-media-checksum">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-media-checksum">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p0">P0 数据安全</span>
+                <span class="badge badge-active">WebDAV / Sync</span>
+                <span class="badge badge-archived">工时: 0.3 天</span>
+              </div>
+              <h3 class="task-title">WebDAV 媒体同步从单一文件大小比对升级为 SHA-256 校验和</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            当前 <code>webdav_sync_service.dart</code> 仅以文件大小作为增量媒体文件差异比对依据，当同名同大小图片内容被替换时会发生同步漏传。
+          </p>
+          <div class="evidence-box">
+            <strong>代码证据：</strong> <code>lib/services/webdav_sync_service.dart:1535</code> 标注 <code>// TODO(media-sync): 当前仅以文件大小作为差异判断依据（历史设计）</code>。需引入 Manifest 哈希比对。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：杜绝媒体文件内容篡改/替换后的同步漏判</span>
+            <span>关联方案: plans/2026-07-11-localsend-incremental-media-design</span>
+          </div>
+        </div>
+
+        <!-- P1.1 NotePresentationEngine -->
+        <div class="task-card" data-priority="p1" data-id="task-note-engine">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-note-engine">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p1">P1 架构深化</span>
+                <span class="badge badge-active">UI Engine</span>
+                <span class="badge badge-archived">工时: 1~2 天</span>
+              </div>
+              <h3 class="task-title">统一笔记呈现引擎深化 (NotePresentationEngine)</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            <code>QuoteContent</code> 目前膨胀为塞满 15+ 静态 LRU 缓存、Quill Delta 截断、媒体图提取和字重补偿的 Monolithic 浅模块（1946 行）。调用方需要手动感知测量细节。
+          </p>
+          <div class="evidence-box">
+            <strong>深化方案：</strong> 抽取统一深模块 <code>NotePresentationEngine</code>。对外暴露单入参小接口（接收 <code>Quote</code> 与 <code>RenderConstraints</code>），输出不可变的 <code>PreparedNoteLayout</code> 与直接可渲染的 Widget。所有内部私有缓存与 prefix 编译全部隐藏在 Seam 背后。
+          </div>
+          <div class="task-footer">
+            <span>🎯 收益：测试表面极小化，排版与渲染实现 100% Locality</span>
+            <span>设计理念: codebase-design 深度模块原则</span>
+          </div>
+        </div>
+
+        <!-- P1.2 DataArchiveEngine -->
+        <div class="task-card" data-priority="p1" data-id="task-archive-engine">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-archive-engine">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p1">P1 架构深化</span>
+                <span class="badge badge-active">Sync / Archive</span>
+                <span class="badge badge-archived">工时: 1.5 天</span>
+              </div>
+              <h3 class="task-title">统一数据归档与原子事务引擎 (DataArchiveEngine)</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            WebDAV、LocalSend 与 Backup/Restore 各自实现了一套打包、POSIX 路径映射、Zip 读写与 LWW 合并。
+          </p>
+          <div class="evidence-box">
+            <strong>深化方案：</strong> 抽取单一的 <code>DataArchiveEngine</code> 核心处理原子事务、校验和与数据安全（Zip Slip 防护、SQLite 快照读锁），WebDAV 和 LocalSend 仅作为挂载在 Seam 上的纯 Transport Adapter。
+          </div>
+          <div class="task-footer">
+            <span>🎯 收益：消除三套打包/解包逻辑重复，杜绝并发媒体同步冲突</span>
+            <span>关联报告: WebDAV_LocalSend_Backup_Code_Audit</span>
+          </div>
+        </div>
+
+        <!-- P1.3 AddNoteDialog Refactor -->
+        <div class="task-card" data-priority="p1" data-id="task-add-note-dialog">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-add-note-dialog">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p1">P1 复杂度治理</span>
+                <span class="badge badge-active">Widgets</span>
+                <span class="badge badge-archived">工时: 1 天</span>
+              </div>
+              <h3 class="task-title">超大弹窗组件拆解：add_note_dialog.dart (2921 行)</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            新建笔记弹窗膨胀至 2921 行，内嵌了大量位置获取、天气查询、标签管理、富文本草稿及 AI 推荐逻辑。
+          </p>
+          <div class="evidence-box">
+            <strong>代码证据：</strong> <code>lib/widgets/add_note_dialog.dart:34</code> 明确标注 <code>// TODO(refactor): This file exceeds 2400 lines and contains redundant location/weather logic.</code> 应拆分为独立的 LocationPicker、TagSelector 与 DialogController。
+          </div>
+          <div class="task-footer">
+            <span>🎯 收益：单文件行数压至 500 行以内，消除重复位置天气查询</span>
+            <span>关联规范: AGENTS.md 复杂度热点规范</span>
+          </div>
+        </div>
+
+        <!-- P1.4 AIService Split -->
+        <div class="task-card" data-priority="p1" data-id="task-ai-service-split">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-ai-service-split">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p1">P1 复杂度治理</span>
+                <span class="badge badge-active">AI Services</span>
+                <span class="badge badge-archived">工时: 1 天</span>
+              </div>
+              <h3 class="task-title">AI 服务层拆解：ai_service.dart (1610 行) 与 prompt 管理</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            <code>ai_service.dart</code> 混杂了每日灵感生成、年度报告分析、自然语言搜索、流式协议处理与历史记录维护。
+          </p>
+          <div class="evidence-box">
+            <strong>代码证据：</strong> <code>lib/services/ai_service.dart:27</code> 标注 <code>// TODO(refactor): This file exceeds 1300 lines. Consider splitting AI functionalities</code>。应按职责拆解为 DailyInspirationService、InsightAnalysisService 与 SemanticSearchService。
+          </div>
+          <div class="task-footer">
+            <span>🎯 收益：AI 服务按职责清晰分流，与 Thoughter Agent 形成清晰边界</span>
+            <span>关联文档: editor-ai-to-thoughter-plan</span>
+          </div>
+        </div>
+
+        <!-- P1.5 Main Init Graph -->
+        <div class="task-card" data-priority="p1" data-id="task-main-init">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-main-init">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p1">P1 启动架构</span>
+                <span class="badge badge-active">App Lifecycle</span>
+                <span class="badge badge-archived">工时: 0.5 天</span>
+              </div>
+              <h3 class="task-title">主程序启动时序规范化与显式依赖图初始化</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            <code>lib/main.dart</code> 包含 500+ 行应用入口逻辑，冷启动阶段存在多处 <code>Future.delayed</code> 猜测异步初始化时序。
+          </p>
+          <div class="evidence-box">
+            <strong>架构建议：</strong> 引入有向无环图（DAG）显式声明 MMKV、Database、UnifiedLog、SecureStorage 与 Notification 的初始化先后依赖，消除隐式时序 race condition。
+          </div>
+          <div class="task-footer">
+            <span>🎯 收益：彻底消灭冷启动阶段偶发的 NullReference 与服务未就绪报错</span>
+            <span>关联文档: architecture-audit-2026-07-26</span>
+          </div>
+        </div>
+
+        <!-- P2.1 Tag Build Pipeline -->
+        <div class="task-card" data-priority="p2" data-id="task-tag-build">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-tag-build">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p2">P2 分发</span>
+                <span class="badge badge-active">CI / CD</span>
+                <span class="badge badge-archived">工时: 0.5 天</span>
+              </div>
+              <h3 class="task-title">打通 Tag Push 自动触发 GitHub Release 多端构建</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            目前发版依赖手动 <code>workflow_dispatch</code>，需在 GitHub Actions 中完善 <code>on: push: tags: 'v*'</code> 自动流，实现 Windows MSIX 与 Android APK 自动打包上传至 Release 附件。
+          </p>
+          <div class="evidence-box">
+            <strong>涉及脚本：</strong> <code>.github/workflows/</code> 构建流与 <code>scripts/build_msix_ci.ps1</code>。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：打 Tag 即自动产出全平台无签名/签名安装包</span>
+            <span>关联文档: STORE_SUBMISSION_GUIDE</span>
+          </div>
+        </div>
+
+        <!-- P2.2 Store Submissions -->
+        <div class="task-card" data-priority="p2" data-id="task-store-sub">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-store-sub">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p2">P2 渠道</span>
+                <span class="badge badge-active">App Store</span>
+                <span class="badge badge-archived">工时: 1 周</span>
+              </div>
+              <h3 class="task-title">推进 Google Play、国内酷安与 Windows Store 上架</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            合规配置已就绪，可利用现有的 <code>app-store-copy</code> 与 <code>msstore-cli</code> 技能快速生成各商店的多语言文案、合规说明与截图，完成提交审核。
+          </p>
+          <div class="evidence-box">
+            <strong>对应工具：</strong> <code>.agents/skills/app-store-copy</code> 与 <code>docs/STORE_SUBMISSION_GUIDE.md</code>。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：完成三大商店应用上架与版本同步</span>
+            <span>关联技能: msstore-cli, app-store-copy</span>
+          </div>
+        </div>
+
+        <!-- P2.3 Website SEO & Growth -->
+        <div class="task-card" data-priority="p2" data-id="task-seo-watermark">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-seo-watermark">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p2">P2 增长</span>
+                <span class="badge badge-active">Website / Growth</span>
+                <span class="badge badge-archived">工时: 0.3 天</span>
+              </div>
+              <h3 class="task-title">官网 SEO 爬虫可访问性核验与卡片分享增长水印</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            核验 <code>note.shangjinyun.cn</code> 在 Cloudflare WAF 下的爬虫访问与 LLM 检索（<code>llms.txt</code>）；笔记分享卡片导出时追加极简品牌水印。
+          </p>
+          <div class="evidence-box">
+            <strong>涉及资源：</strong> <code>res/llms.txt</code>, <code>res/sitemap.xml</code> 与 <code>lib/services/card_render_service.dart</code>。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：扩大自然搜索与社交裂变曝光</span>
+            <span>关联文档: growth-and-product-direction</span>
+          </div>
+        </div>
+
+        <!-- P2.4 In-App Review & Feedback -->
+        <div class="task-card" data-priority="p2" data-id="task-inapp-review">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-inapp-review">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p2">P2 口碑</span>
+                <span class="badge badge-active">User Feedback</span>
+                <span class="badge badge-archived">工时: 0.3 天</span>
+              </div>
+              <h3 class="task-title">应用内评价引导 (in_app_review) 与正向时刻触发机制</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            在用户连续成功同步、生成周期年度报告等“啊哈正向时刻”适时触发应用内好评弹窗，提升商店评分权重。
+          </p>
+          <div class="evidence-box">
+            <strong>建议依赖：</strong> <code>package:in_app_review</code>；结合用户使用天数与操作频次防打扰限流。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：建立自驱用户口碑与应用商店好评资产</span>
+            <span>关联分析: growth-and-product-direction 第 2.2 节</span>
+          </div>
+        </div>
+
+        <!-- P3.1 Thoughter Phase 2 -->
+        <div class="task-card" data-priority="p3" data-id="task-thoughter-phase2">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-thoughter-phase2">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p3">P3 战略演进</span>
+                <span class="badge badge-active">Thoughter AI</span>
+                <span class="badge badge-archived">工时: 2 周</span>
+              </div>
+              <h3 class="task-title">Thoughter 长期记忆二期：后台定期整理 (Dreaming) 与事实晋升</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            在设备充电或空闲时利用启发式打分与 LLM 批量提炼高频事实进用户画像，并提供可选的 <code>agent_memory.db</code> 独立快照备份与恢复出口。
+          </p>
+          <div class="evidence-box">
+            <strong>设计规划：</strong> 详见 <code>docs/agent-memory-research-2026-08-08.md</code> 第七节设计规划。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：让 Thoughter 越用越懂用户，实现低成本长期演化记忆</span>
+            <span>事实源文档: agent-memory-research-2026-08-08</span>
+          </div>
+        </div>
+
+        <!-- P3.2 On-Device Local AI & OCR -->
+        <div class="task-card" data-priority="p3" data-id="task-local-ai-ocr">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-local-ai-ocr">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p3">P3 端侧智能</span>
+                <span class="badge badge-active">On-Device AI</span>
+                <span class="badge badge-archived">工时: 3 周</span>
+              </div>
+              <h3 class="task-title">端侧本地智能：相机 OCR 实时识别与本地小模型纠错</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            打通 <code>lib/widgets/local_ai/</code> 下已预留的 OCR 相机捕获（<code>ocr_capture_page.dart</code>）与文本区域选择（<code>image_text_selector.dart</code>），接入端侧轻量模型实现 100% 离线隐私识别。
+          </p>
+          <div class="evidence-box">
+            <strong>代码预留：</strong> <code>lib/widgets/local_ai/ai_action_buttons.dart:48, 68</code> 预留了本地纠错与出处识别接口。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：实现完全不出网的端侧图文摘录与纠错体验</span>
+            <span>关联规划: growth-and-product-direction 战略机会</span>
+          </div>
+        </div>
+
+        <!-- P3.3 Vector Embeddings Search -->
+        <div class="task-card" data-priority="p3" data-id="task-vector-search">
+          <div class="task-header">
+            <input type="checkbox" class="task-checkbox" data-for="task-vector-search">
+            <div>
+              <div class="task-meta-line">
+                <span class="badge badge-p3">P3 语义检索</span>
+                <span class="badge badge-active">Vector Search</span>
+                <span class="badge badge-archived">工时: 2 周</span>
+              </div>
+              <h3 class="task-title">笔记向量化索引与语义自然语言搜索 (Vector Embeddings)</h3>
+            </div>
+          </div>
+          <p class="task-desc">
+            为笔记文本生成端侧向量嵌入并在 SQLite 中维护向量索引表，支持自然语言模糊语义搜索（如“上个月关于排版的想法”）。
+          </p>
+          <div class="evidence-box">
+            <strong>代码预留：</strong> <code>lib/services/database/database_quote_crud_mixin.dart:5</code> 明确预留 <code>/// TODO: 接入 tostore 向量索引 —— 在 addQuote / updateQuote / deleteQuote</code>。
+          </div>
+          <div class="task-footer">
+            <span>🎯 目标：超越传统关键字全文检索，提供真语义搜索能力</span>
+            <span>关联设计: decisions.md 产品现状分析</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 3: ADRS & OVERTURNED DECISIONS -->
+    <div class="tab-pane" id="tab-decisions">
+      <h2 style="font-size:1.3rem; margin-bottom:16px;">🏛️ 核心重大架构决议 (ADRs)</h2>
+      
+      <div class="decision-card">
+        <div class="decision-header">
+          <div class="decision-title">2026-07-24: WebDAV 与 LocalSend 数据安全与并发锁架构</div>
+          <span class="badge badge-truth">🔒 事实源定案</span>
+        </div>
+        <p class="decision-body">
+          确立 <code>If-Match: ETag</code> 条件并发锁，解决远程无锁覆盖风险；在统一的 SQLite <code>READ</code> 事务快照中流式打包，阻断并发脏读；凭据加密入 <code>FlutterSecureStorage</code>；全量解包经过 <code>PathSecurityUtils</code> 阻断 Zip Slip 路径穿越。
+        </p>
+      </div>
+
+      <div class="decision-card">
+        <div class="decision-header">
+          <div class="decision-title">2026-07-31: 三套独立主题风格与 AppShapeTokens 令牌架构</div>
+          <span class="badge badge-truth">🔒 事实源定案</span>
+        </div>
+        <p class="decision-body">
+          主题风格锁定为独立第三维度，默认 <code>material</code> 不得擅动；<strong>严格禁止在 Widget 内部编写 <code>if (style == ThemeStyle.paper)</code> 分支</strong>，全量由 <code>AppShapeTokens</code> 令牌派发；基于「取值」而非「身份」驱动渲染。
+        </p>
+      </div>
+
+      <div class="decision-card">
+        <div class="decision-header">
+          <div class="decision-title">2026-08-08: Thoughter 长期记忆独立库 agent_memory.db 物理隔离</div>
+          <span class="badge badge-truth">🔒 事实源定案</span>
+        </div>
+        <p class="decision-body">
+          推翻进主库与备份的旧方案，记忆库物理隔离为 <code>agent_memory.db</code>；<strong>三大铁律：不进备份、不跨端同步、支持一键物理销毁</strong>；画像独立 user 消息包裹，原位 supersede 覆盖冲突，轻量 Dart 打分检索。
+        </p>
+      </div>
+
+      <div class="decision-card">
+        <div class="decision-header">
+          <div class="decision-title">2026-08-22: 随包分发 5.17MB GB2312 衬线字体子集</div>
+          <span class="badge badge-truth">🔒 事实源定案</span>
+        </div>
+        <p class="decision-body">
+          推翻零字节系统字体回退路线（因 iOS CoreText 无法解析通用 serif 导致回退苹方黑体）；随包分发 <code>assets/fonts/NotoSerifSC-Subset.ttf</code>，三端精确连续字重控制，PDF 导出引擎同步适配。
+        </p>
+      </div>
+
+      <h2 style="font-size:1.3rem; margin:28px 0 14px 0;">🔄 历史上被后续决议推翻/修正的决策总账</h2>
+      <table class="overturned-table">
+        <thead>
+          <tr>
+            <th style="width:28%">历史原决策 / 方案设想</th>
+            <th style="width:20%">推翻时间与来源</th>
+            <th>最终生效的新决议与推翻原因</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="overturned-old">进入后台清空所有测量缓存<br><small>AppLifecycleState.paused 时 resetCaches()</small></td>
+            <td>2026-08-23 / 08-27 ADR</td>
+            <td class="overturned-new">推翻。Android 后台例行 trim 会误杀缓存致切回卡顿。改由 AppWidgetsBinding 分流，仅将 imageCache 淘汰至 8MB，保留排版缓存。</td>
+          </tr>
+          <tr>
+            <td class="overturned-old">头部测宽不进入空闲预热<br><small>认为测宽 0.5ms plumbing 比收益多</small></td>
+            <td>2026-08-25 ADR</td>
+            <td class="overturned-new">推翻。折叠排版暖好后头部测宽成为第一大未命中点（13~16ms）。已将日期/位置/天气测宽全量纳入空闲预热。</td>
+          </tr>
+          <tr>
+            <td class="overturned-old">列表项无条件 KeepAlive / 固定窗口<br><small>全量保活防重复 layout</small></td>
+            <td>2026-06-13 / 07-02 ADR</td>
+            <td class="overturned-new">推翻/取消。全量保活无法消除首次 layout 且内存暴涨。实测回滑 frameJank=0，维持媒体/动态窗口策略。</td>
+          </tr>
+          <tr>
+            <td class="overturned-old">零字节系统字体回退路线<br><small>正文依赖系统 serif，不打包字体</small></td>
+            <td>2026-08-22 ADR</td>
+            <td class="overturned-new">推翻。iOS 无法解析通用族名 serif 回退黑体。改为随包分发 5.17MB NotoSerifSC-Subset.ttf 保证三端一致。</td>
+          </tr>
+          <tr>
+            <td class="overturned-old">Gemma4 判定为不吐思考的非思考模型<br><small>默认不分配思考预算</small></td>
+            <td>2026-08-04 ADR</td>
+            <td class="overturned-new">推翻。实测证明需显式传 reasoning_effort=medium。在 AgentService 中针对静默模型定向补齐参数。</td>
+          </tr>
+          <tr>
+            <td class="overturned-old">推测分页反序列化是首滑掉帧主因<br><small>准备花整轮重构反序列化分片</small></td>
+            <td>2026-08-26 ADR</td>
+            <td class="overturned-new">推翻。实测分页仅 13.6ms，主因是卡片新建引出的异步 IO 与图片解码，避免了整轮错误重构。</td>
+          </tr>
+          <tr>
+            <td class="overturned-old">用户画像记忆存入主库 user_signals 表<br><small>2026-07-31 早期构想</small></td>
+            <td>2026-08-08 ADR</td>
+            <td class="overturned-new">推翻。定案为独立数据库 agent_memory.db，物理隔离，不进备份、不跨端同步、支持一键销毁。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TAB 4: 31 CLOSED HISTORICAL AUDIT ITEMS -->
+    <div class="tab-pane" id="tab-history">
+      <h2 style="font-size:1.3rem; margin-bottom:16px;">✅ 历史已核销闭环审计项 (31 项全部解决)</h2>
+      <table class="overturned-table">
+        <thead>
+          <tr>
+            <th style="width:25%">来源审计 / 文档</th>
+            <th style="width:35%">原始问题 / 声称待办</th>
+            <th style="width:30%">代码真实修复证据</th>
+            <th>核销状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>THOUGHTER_ISSUES_REPORT.md</code></td>
+            <td>工具报错整轮会话报废并误删已输出正文</td>
+            <td><code>agent_service.dart</code> 改为错误回喂自我纠正，保留流式正文</td>
+            <td><span class="badge badge-active">✔ 100% 已修复</span></td>
+          </tr>
+          <tr>
+            <td><code>THOUGHTER_ISSUES_REPORT.md</code></td>
+            <td>requestStop 假取消导致旧循环后台互踩</td>
+            <td><code>requestStop()</code> 增加 <code>_stopRequested</code> 并强关 StreamClient</td>
+            <td><span class="badge badge-active">✔ 100% 已修复</span></td>
+          </tr>
+          <tr>
+            <td><code>THOUGHTER_ISSUES_REPORT.md</code></td>
+            <td>3 个未注册死工具与双卡片协议冗余</td>
+            <td>清理死工具与 <code>smart_result_card</code>，统一至 <code>NoteProposalArtifact</code></td>
+            <td><span class="badge badge-active">✔ 100% 已修复</span></td>
+          </tr>
+          <tr>
+            <td><code>m3-modernization-audit.md</code></td>
+            <td>Android 预测式返回手势与 MenuAnchor 迁移</td>
+            <td>提交 <code>0b96c51</code> 完成 AndroidManifest 与全部菜单 M3 迁移</td>
+            <td><span class="badge badge-active">✔ 100% 已修复</span></td>
+          </tr>
+          <tr>
+            <td><code>architecture-audit-2026-07-26.md</code></td>
+            <td>Services 逆向 import main.dart 破坏分层</td>
+            <td>全库 services 逆向 import 为 0，引入 <code>onQuoteCacheInvalidate</code> 解耦</td>
+            <td><span class="badge badge-active">✔ 100% 已修复</span></td>
+          </tr>
+          <tr>
+            <td><code>architecture-audit-2026-07-26.md</code></td>
+            <td>WebDAV 媒体文件同步失败被静默吞错</td>
+            <td><code>webdav_sync_service.dart:455</code> 引入 <code>mediaFailureCount</code> 阻断状态前推</td>
+            <td><span class="badge badge-active">✔ 100% 已修复</span></td>
+          </tr>
+          <tr>
+            <td><code>plans/ (全 7 篇专项计划)</code></td>
+            <td>搜索高亮、LocalSend 生命周期、增量媒体 Manifest、Quill 可见前缀</td>
+            <td>7 份专项实施方案已 100% 全量合入 main 分支</td>
+            <td><span class="badge badge-active">✔ 100% 已修复</span></td>
+          </tr>
+          <tr>
+            <td><code>theme-shape-migration-audit.md</code></td>
+            <td>全 App 六批组件圆角与阴影收敛至 <code>AppShapeTokens</code></td>
+            <td>6 批迁移全部合入，彻底消除分散 <code>BorderRadius.circular</code></td>
+            <td><span class="badge badge-active">✔ 100% 已修复</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      ThoughtEcho (心迹) · 知识库与代码库实时治理系统 · 遵循 <code>docs/INDEX.md</code> 事实源规范 · 76 篇文档全景看板
+    </footer>
+
+  </main>
+
+  <script>
+    const themeBtn = document.getElementById('themeToggleBtn');
+    let currentTheme = localStorage.getItem('te_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      localStorage.setItem('te_theme', currentTheme);
+    });
+
+    const mainTabBtns = document.querySelectorAll('.main-tab-btn');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+
+    mainTabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetTab = btn.getAttribute('data-tab');
+        mainTabBtns.forEach(b => b.classList.remove('active'));
+        tabPanes.forEach(p => p.classList.remove('active'));
+
+        btn.classList.add('active');
+        document.getElementById(targetTab).classList.add('active');
+      });
+    });
+
+    const docSearchInput = document.getElementById('docSearchInput');
+    const docFilterChips = document.querySelectorAll('#docFilterGroup .filter-chip');
+    const docRows = document.querySelectorAll('.doc-row');
+    let activeDocFilter = 'all';
+
+    function applyDocFilterAndSearch() {
+      const q = docSearchInput.value.toLowerCase().trim();
+      docRows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        const text = row.innerText.toLowerCase();
+
+        const matchFilter = (activeDocFilter === 'all') ||
+          (activeDocFilter === 'truth' && status === 'truth') ||
+          (activeDocFilter === 'active' && (status === 'active' || status === 'truth')) ||
+          (activeDocFilter === 'archived' && status === 'archived') ||
+          (activeDocFilter === 'research' && status === 'research');
+
+        const matchQuery = (q === '') || text.includes(q);
+
+        if (matchFilter && matchQuery) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    docFilterChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        docFilterChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        activeDocFilter = chip.getAttribute('data-doc-filter');
+        applyDocFilterAndSearch();
+      });
+    });
+    docSearchInput.addEventListener('input', applyDocFilterAndSearch);
+
+    const taskSearchInput = document.getElementById('taskSearchInput');
+    const taskFilterChips = document.querySelectorAll('#taskFilterGroup .filter-chip');
+    const taskCards = document.querySelectorAll('.task-card');
+    let activeTaskFilter = 'all';
+
+    function applyTaskFilterAndSearch() {
+      const q = taskSearchInput.value.toLowerCase().trim();
+      taskCards.forEach(card => {
+        const p = card.getAttribute('data-priority');
+        const text = card.innerText.toLowerCase();
+
+        const matchFilter = (activeTaskFilter === 'all') || (p === activeTaskFilter);
+        const matchQuery = (q === '') || text.includes(q);
+
+        if (matchFilter && matchQuery) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    taskFilterChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        taskFilterChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        activeTaskFilter = chip.getAttribute('data-task-filter');
+        applyTaskFilterAndSearch();
+      });
+    });
+    taskSearchInput.addEventListener('input', applyTaskFilterAndSearch);
+
+    document.querySelectorAll('.task-checkbox').forEach(cb => {
+      const taskId = cb.getAttribute('data-for');
+      const saved = localStorage.getItem('task_done_' + taskId);
+      if (saved === 'true') {
+        cb.checked = true;
+        document.querySelector(`.task-card[data-id="${taskId}"]`).classList.add('is-completed');
+      }
+
+      cb.addEventListener('change', (e) => {
+        const card = document.querySelector(`.task-card[data-id="${taskId}"]`);
+        if (e.target.checked) {
+          card.classList.add('is-completed');
+          localStorage.setItem('task_done_' + taskId, 'true');
+        } else {
+          card.classList.remove('is-completed');
+          localStorage.setItem('task_done_' + taskId, 'false');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

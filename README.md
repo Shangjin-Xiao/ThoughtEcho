@@ -62,7 +62,7 @@
 ## 🌟 Why ThoughtEcho?
 
 - 🔒 **Local-First & Privacy**: 100% data ownership stored locally with SQLite and MMKV. Sensitive notes can be hidden and protected by biometric authentication (Fingerprint / Face ID). No tracking, no forced cloud lock-in.
-- 🧠 **Thoughter AI Agent & Long-Term Memory**: Multi-provider AI architecture (OpenAI, DeepSeek, Ollama, Gemini, Claude, OpenRouter, SiliconFlow, etc.). Features an autonomous Thoughter agent with cross-session long-term memory that understands your writing personality.
+- 💡 **Thoughter AI Agent & Long-Term Memory**: Multi-provider AI architecture (OpenAI, DeepSeek, Ollama, Gemini, Claude, OpenRouter, SiliconFlow, etc.). Features an autonomous Thoughter agent with cross-session long-term memory that understands your writing personality.
 - ✍️ **Rich Multimedia & Context Capture**: Quill rich formatting with multimedia attachments (images, audio, video). Automatically captures geocoding location, weather, and time-of-day inspiration context.
 - 📊 **Periodic Insights & Card Generation**: Automated weekly and monthly reflection insights, annual review reports, thinking pattern analysis, and one-click AI quote share card generation.
 - 🔄 **Zero-Config Multi-Device Sync**: High-speed LocalSend LAN direct sync (mDNS discovery & encrypted transfer) plus flexible WebDAV cloud backup and restore.

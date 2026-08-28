@@ -192,6 +192,12 @@ jobs:
             fi
           done
 
+          # 32 位兼容包重命名为 thoughtecho-v7a-arm32Compat-release.apk
+          # 确保字母序排在 standard64 后面，避免仅按字母序挑包的旧版客户端误抓 32 位包
+          if [[ -f dist/thoughtecho-arm32Compat-release.apk ]]; then
+            mv -v dist/thoughtecho-arm32Compat-release.apk dist/thoughtecho-v7a-arm32Compat-release.apk
+          fi
+
           # 兼容历史下载链接：官网 dl.html 与 README 长期使用 app-release.apk
           if [[ -f dist/thoughtecho-standard64-release.apk && ! -f dist/app-release.apk ]]; then
             cp -v dist/thoughtecho-standard64-release.apk dist/app-release.apk
@@ -236,7 +242,7 @@ jobs:
             echo "### 下载"
             echo ""
             echo "- **Windows**：建议从 [Microsoft Store](https://apps.microsoft.com/detail/9NC7GDG6KFMC) 安装，可自动更新"
-            echo "- **Android**：下载 \`thoughtecho-standard64-release.apk\`（64 位，绝大多数设备）；老设备用 \`thoughtecho-arm32Compat-release.apk\`"
+            echo "- **Android**：下载 \`thoughtecho-standard64-release.apk\`（64 位，绝大多数设备）；老设备用 \`thoughtecho-v7a-arm32Compat-release.apk\`"
             echo "- **iOS**：\`ThoughtEcho-unsigned.ipa\` 未签名，需自行签名侧载，尚未上架 App Store"
             echo ""
             echo "完整下载指引：https://note.shangjinyun.cn/dl"
