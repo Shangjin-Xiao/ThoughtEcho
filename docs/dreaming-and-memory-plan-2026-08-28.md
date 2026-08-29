@@ -1,6 +1,7 @@
 # Dreaming 与记忆系统二期方案（2026-08-28）
 
-> **状态**：🟡 设计方案，未实现。本文只定义目标、边界与分期，**不描述已落地的功能**。
+> **状态**：🟢 第 0–3 期已实现（2026-08-29），第七节的两项上线前置**尚未完成**。
+> 本文同时是设计依据与实现记录；标为「未实现」的部分不得当作已有功能引用。
 > **前置事实源**：[`agent-memory-research-2026-08-08.md`](agent-memory-research-2026-08-08.md)（🔒 唯一事实源，一期定案）
 > **对应路线图**：[`codebase-roadmap-and-issues-2026-08-28.md`](codebase-roadmap-and-issues-2026-08-28.md) 第 14 条
 
@@ -324,13 +325,19 @@
 
 ## 九、分期与验收
 
-| 期 | 内容 | 可独立合入 | 验收标准 |
+| 期 | 内容 | 状态 | 落点 |
 |---|---|:---:|---|
-| 0 | `session_search` 工具（第五节） | ✅ | 模型能回答"我们上次聊过什么"，且不与另两套检索混用 |
-| 1 | `taste` / `voice` 两类 + 近况切片表 + TTL + schema v2（`source_note_ids`） + kind 投影 | ❌ 需与 2 同期 | 单元测试覆盖 TTL 过期、同 kind 原位更新、预算不被切片占用、`taste` 不出现在洞察/每日提示的注入块里 |
-| 2 | dreaming 主流程 + 记忆管理列表 + 来源归因 | ❌ 需与 1 同期 | 门槛不满足时整轮跳过且无用户可见副作用；模型异常时原记忆不被破坏 |
-| 3 | 每日提示消费切片 + 提示词调整 | ✅ | 切片缺失/过期时行为与当前完全一致 |
-| 4 | models.dev 能力表 | ✅ | 与本方案无依赖，可任意时点插入 |
+| 0 | `session_search` 工具（第五节） | ✅ 已实现 | `lib/services/agent_tools/session_search_tool.dart` |
+| 1 | `taste` / `voice` 两类 + 近况切片表 + TTL + schema v2（`source_note_ids`） + kind 投影 | ✅ 已实现 | `lib/models/agent_memory.dart`、`lib/services/agent_memory_service.dart` |
+| 2 | dreaming 主流程 | ✅ 已实现 | `lib/services/dreaming_service.dart`，挂在 `InsightHistoryService.addInsight` |
+| 3 | 每日提示消费切片 + 提示词调整 | ✅ 已实现 | 切片随画像块一起注入；`AIService._userProfileContext` 传 kind 投影 |
+| — | **记忆管理列表 + 来源归因展示（第七节前置）** | ❌ **未实现** | 数据层已备好（`sourceNoteIds`、`clearRecentSlice`），缺设置页 UI |
+| 4 | models.dev 能力表 | ❌ 未实现 | 与本方案无依赖，可任意时点插入 |
+
+> [!WARNING]
+> **第七节的两项前置尚未交付。** 数据层已经能存来源、也能删条目，但用户还没有
+> 可视化的入口去看和删。在补上之前，Dreaming 处于"会静默写入但用户看不见"的
+> 状态——这正是 3.2 指出的信任风险。**面向用户发布前必须先补齐这一项。**
 
 第 1、2 期是一体的：只做 1 没有内容产生，只做 2 没有地方可写，且第七节的前置
 条件必须与 2 同时落地。

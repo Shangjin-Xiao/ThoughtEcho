@@ -75,7 +75,7 @@
 
 | 文档名称 | 路径 | 日期 | 状态 | 核心内容 / 结论 |
 |---|---|---|:---:|---|
-| **Dreaming 与记忆系统二期方案** | [`dreaming-and-memory-plan-2026-08-28.md`](dreaming-and-memory-plan-2026-08-28.md) | 2026-08-28 | 🟡 **设计方案 / 未实现** | 记忆内容供给二期：`taste` / `voice` 两类画像、带 TTL 的近况切片、周期洞察后触发的 Dreaming 归纳，及上线前置的记忆可见性要求 |
+| **Dreaming 与记忆系统二期方案** | [`dreaming-and-memory-plan-2026-08-28.md`](dreaming-and-memory-plan-2026-08-28.md) | 2026-08-28 | 🟢 **已实现（前置未完成）** | 记忆内容供给二期：`taste` / `voice` 两类画像、带 TTL 的近况切片、周期洞察后触发的 Dreaming 归纳，及上线前置的记忆可见性要求 |
 | **Thoughter 长期记忆系统深度调研与设计** | [`agent-memory-research-2026-08-08.md`](agent-memory-research-2026-08-08.md) | 2026-08-08 | 🔒 **唯一事实源** | 独立物理数据库 `agent_memory.db` 隔离机制、用户画像独立 user 消息包裹、原位 supersede 与事实层打分检索定案 |
 | **共享记忆系统构想 [已废弃 / 已被取代]** | [`memory-system-plan-2026-07-31.md`](memory-system-plan-2026-07-31.md) | 2026-07-31 | 📦 **归档 / 已废弃方案** | 早期三层共享记忆构想原案（已被 08-08 独立库架构完全取代） |
 | **探索页与 Thoughter 联动改造交接 [已归档]** | [`explore-thoughter-handoff-2026-07-31.md`](explore-thoughter-handoff-2026-07-31.md) | 2026-07-31 | 📦 **归档 / 阶段交接** | 探索页周期统计聚合与 Thoughter 交互入口改造交接（已完成合入） |
