@@ -255,8 +255,6 @@
         }
 
         /* Language Switching */
-        html.lang-zh .content-en, html.lang-zh .content-ja, html.lang-zh .content-ko,
-        html.lang-en .content-zh, html.lang-en .content-ja, html.lang-en .content-ko,
         body.lang-zh .content-en, body.lang-zh .content-ja, body.lang-zh .content-ko,
         body.lang-en .content-zh, body.lang-en .content-ja, body.lang-en .content-ko,
         body:not([class*="lang-"]) .content-en,
@@ -477,13 +475,13 @@
         let currentLang = 'zh';
         try { currentLang = localStorage.getItem('lang') || 'zh'; } catch(e) {}
         body.className = `lang-${currentLang}`;
-        html.className = `lang-${currentLang}`;
+        html.setAttribute('lang', currentLang === 'zh' ? 'zh-CN' : 'en');
         if (langBtn) {
             langBtn.textContent = currentLang === 'zh' ? 'English' : '中文';
             langBtn.addEventListener('click', () => {
                 currentLang = currentLang === 'zh' ? 'en' : 'zh';
                 body.className = `lang-${currentLang}`;
-                html.className = `lang-${currentLang}`;
+                html.setAttribute('lang', currentLang === 'zh' ? 'zh-CN' : 'en');
                 langBtn.textContent = currentLang === 'zh' ? 'English' : '中文';
                 try { localStorage.setItem('lang', currentLang); } catch(e) {}
             });

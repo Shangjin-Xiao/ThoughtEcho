@@ -608,9 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
         body.classList.remove('lang-zh', 'lang-en', 'lang-ja', 'lang-ko');
         body.classList.add(`lang-${normalized}`);
 
-        html.classList.remove('lang-zh', 'lang-en', 'lang-ja', 'lang-ko');
-        html.classList.add(`lang-${normalized}`);
-
         const htmlLangMap = {
             zh: 'zh-CN',
             en: 'en',
