@@ -169,7 +169,7 @@ jobs:
           fetch-depth: 0
 
       - name: 下载全部构建产物
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 

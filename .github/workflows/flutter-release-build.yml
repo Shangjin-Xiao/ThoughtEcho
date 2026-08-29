@@ -186,6 +186,26 @@ jobs:
           fi
           mkdir -p build/app/outputs/release-artifacts
 
+          # 解析 VERSION_NAME 计算安全的 Android versionCode (build-number)
+          # 规则：MAJOR * 100000 + MINOR * 1000 + PATCH * 10 + RUN_NUMBER
+          # 避免跨 workflow 触发时 run_number 重置导致 versionCode 倒退 (< 899)
+          major=0
+          minor=0
+          patch=0
+          if [[ "$VERSION_NAME" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
+          elif [[ "$VERSION_NAME" =~ ^([0-9]+)\.([0-9]+) ]]; then
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+          elif [[ "$VERSION_NAME" =~ ^([0-9]+) ]]; then
+            major="${BASH_REMATCH[1]}"
+          fi
+          base_code=$(( major * 100000 + minor * 1000 + patch * 10 ))
+          BUILD_NUMBER=$(( base_code + ${{ github.run_number }} ))
+          echo "计算得到 Android versionCode (build-number): $BUILD_NUMBER"
+
           build_flavor() {
             local FLAVOR="$1"
             local TARGET_PLATFORM="$2"
@@ -196,7 +216,7 @@ jobs:
               --flavor "$FLAVOR" \
               --target-platform="$TARGET_PLATFORM" \
               --android-project-arg=disable-abi-filtering=true \
-              --build-number="${{ github.run_number }}" \
+              --build-number="$BUILD_NUMBER" \
               --build-name="$VERSION_NAME" \
               --dart-define=SENTRY_DSN="$SENTRY_DSN"
 
@@ -228,12 +248,28 @@ jobs:
         run: |
           set -euo pipefail
 
+          major=0
+          minor=0
+          patch=0
+          if [[ "$VERSION_NAME" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
+          elif [[ "$VERSION_NAME" =~ ^([0-9]+)\.([0-9]+) ]]; then
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+          elif [[ "$VERSION_NAME" =~ ^([0-9]+) ]]; then
+            major="${BASH_REMATCH[1]}"
+          fi
+          base_code=$(( major * 100000 + minor * 1000 + patch * 10 ))
+          BUILD_NUMBER=$(( base_code + ${{ github.run_number }} ))
+
           # 与 APK 走同一套 flavor/签名/ABI 参数，只换产物格式
           flutter build appbundle --release \
             --flavor standard64 \
             --target-platform=android-arm64 \
             --android-project-arg=disable-abi-filtering=true \
-            --build-number="${{ github.run_number }}" \
+            --build-number="$BUILD_NUMBER" \
             --build-name="$VERSION_NAME" \
             --dart-define=SENTRY_DSN="$SENTRY_DSN"
 
@@ -258,6 +294,8 @@ jobs:
           name: app-${{ inputs.build_mode || 'release' }}-standard64-apk
           path: build/app/outputs/release-artifacts/thoughtecho-standard64-*.apk
           archive: false
+          if-no-files-found: error
+          retention-days: 30
 
       - name: 上传 APK (arm32Compat)
         if: ${{ (inputs.build_variant || 'both') != 'standard64' }}

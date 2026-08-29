@@ -357,14 +357,26 @@ jobs:
         }
       id: artifacts
       
-    - name: Upload Windows build artifacts
+    - name: Compress portable folder
+      shell: pwsh
+      run: |
+        $buildPath = "${{ steps.artifacts.outputs.build_path }}"
+        $version = "${{ steps.version.outputs.version }}"
+        $buildType = "${{ inputs.build_type || 'release' }}"
+        $zipPath = "thoughtecho-windows-x64-v$version-$buildType-portable.zip"
+        Compress-Archive -Path "$buildPath/*" -DestinationPath $zipPath -Force
+        "zip_path=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+      id: zip_portable
+
+    - name: Upload Windows portable zip
       uses: actions/upload-artifact@v7
       with:
-        name: thoughtecho-windows-${{ inputs.build_type || 'release' }}
-        path: ${{ steps.artifacts.outputs.build_path }}
+        name: thoughtecho-windows-${{ inputs.build_type || 'release' }}-portable
+        path: ${{ steps.zip_portable.outputs.zip_path }}
+        archive: false
         if-no-files-found: error
         retention-days: 90
-        
+
     - name: Upload MSIX installer
       if: steps.artifacts.outputs.has_msix == 'true'
       uses: actions/upload-artifact@v7
