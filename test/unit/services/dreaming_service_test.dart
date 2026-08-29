@@ -90,6 +90,27 @@ void main() {
         expect(await service.run(now: now), DreamingOutcome.skipped);
       });
 
+      test('归纳期间用户关掉记忆，结果被丢弃不写入', () async {
+        // 开头到写入之间隔着一次网络请求，用户完全可能在这几十秒里关掉开关。
+        // 写入层本身不认这个开关，所以必须在写之前再查一次。
+        final service = DreamingService(
+          settingsService: harness.settingsService,
+          memoryService: harness.memory,
+          loadNotes: ({required start, required end, required limit}) async =>
+              sampleNotes(),
+          complete: ({required systemPrompt, required userMessage}) async {
+            await harness.settingsService.setAgentMemoryEnabled(false);
+            return goodOutput;
+          },
+        );
+
+        expect(await service.run(), DreamingOutcome.skipped);
+
+        await harness.settingsService.setAgentMemoryEnabled(true);
+        expect(await harness.memory.activeProfile(), isEmpty);
+        expect(await harness.memory.currentRecentSlice(), isNull);
+      });
+
       test('设备时钟被调到过去时不放行', () async {
         final now = DateTime(2026, 8, 28);
         // 时间戳落在未来：不能因为 difference 是负数就当成"很久没跑"。

@@ -170,6 +170,15 @@ class DreamingService {
       return DreamingOutcome.failed;
     }
 
+    // 开头查过一次，这里必须再查一次：中间隔着一次网络请求，几秒到几十秒。
+    // 用户完全可能在这段时间里把记忆开关关掉，而写入层本身不认这个开关
+    // （交互式的 remember 由工具在调用点把关，够用；后台任务的窗口长得多）。
+    // 关掉记忆却仍被写入一条从笔记归纳出的画像，是拿隐私开关不当回事。
+    if (!_settings.agentMemoryEnabled) {
+      logDebug('Dreaming 归纳期间用户关闭了记忆，丢弃本轮结果');
+      return DreamingOutcome.skipped;
+    }
+
     final wrote = await _write(parsed, samples, now);
     if (!wrote) {
       return DreamingOutcome.failed;
