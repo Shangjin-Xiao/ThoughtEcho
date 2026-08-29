@@ -399,6 +399,27 @@ class AIService extends ChangeNotifier {
     );
   }
 
+  /// 后台归纳（Dreaming）专用的一次性请求。
+  ///
+  /// 单独开一个公开入口而不是把 [_chatCompletionViaOpenAI] 放开：后台任务的
+  /// 调用约束和交互式链路不一样——**不开思考**（归纳的是结构特征，推理 token
+  /// 只是白花钱，还会挤掉正文额度），温度压低（要的是稳定复现的结论，不是
+  /// 每周换个说法），且不做任何降级兜底（拿不到就整轮放弃，宁可不更新记忆
+  /// 也不能写坏）。
+  Future<String> completeForBackgroundSummary({
+    required String systemPrompt,
+    required String userMessage,
+    int maxTokens = 700,
+  }) {
+    return _chatCompletionViaOpenAI(
+      systemPrompt: systemPrompt,
+      userMessage: userMessage,
+      temperature: 0.2,
+      maxTokens: maxTokens,
+      enableThinking: false,
+    );
+  }
+
   Future<String> summarizeNote(Quote quote) async {
     // 使用异步验证确保API Key有效性
     if (!await hasValidApiKeyAsync()) {

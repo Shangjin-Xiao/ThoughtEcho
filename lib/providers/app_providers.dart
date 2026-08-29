@@ -33,6 +33,7 @@ import '../services/agent_tools/propose_note_edit_tool.dart';
 import '../services/agent_tools/recall_tool.dart';
 import '../services/agent_tools/remember_tool.dart';
 import '../services/agent_tools/session_search_tool.dart';
+import '../services/dreaming_service.dart';
 import '../services/agent_tools/web_fetch_tool.dart';
 import '../services/agent_tools/web_search_tool.dart';
 import '../services/web_fetch_service.dart';
@@ -173,6 +174,23 @@ List<SingleChildWidget> buildAppProviders({
       update: (context, settings, memory, previous) =>
           previous ??
           AIService(settingsService: settings, memoryService: memory),
+    ),
+    // 必须排在 AIService 与 InsightHistoryService 之后：它在 create 里读这两个。
+    // lazy: false 是必需的——没有任何页面会 read<DreamingService>()，
+    // 它存在的唯一目的就是把回调接到洞察历史上，惰性创建等于永远不创建。
+    Provider<DreamingService>(
+      lazy: false,
+      create: (context) {
+        final dreaming = DreamingService.fromServices(
+          settingsService: context.read<SettingsService>(),
+          memoryService: context.read<AgentMemoryService>(),
+          databaseService: context.read<DatabaseService>(),
+          aiService: context.read<AIService>(),
+        );
+        context.read<InsightHistoryService>().onAiInsightPersisted =
+            () => dreaming.run();
+        return dreaming;
+      },
     ),
     ProxyProvider3<DatabaseService, SettingsService, AIAnalysisDatabaseService,
         BackupService>(
