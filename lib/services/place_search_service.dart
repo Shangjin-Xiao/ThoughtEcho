@@ -61,8 +61,8 @@ class NominatimPlaceSearchService implements PlaceSearchService {
   NominatimPlaceSearchService({
     NetworkService? networkService,
     Duration? minRequestInterval,
-  }) : _networkService = networkService,
-       _minRequestInterval = minRequestInterval ?? _defaultMinRequestInterval;
+  })  : _networkService = networkService,
+        _minRequestInterval = minRequestInterval ?? _defaultMinRequestInterval;
 
   static const String _searchUrl = 'https://nominatim.openstreetmap.org/search';
   static const String _userAgent =
@@ -113,8 +113,7 @@ class NominatimPlaceSearchService implements PlaceSearchService {
           'format': 'json',
           'addressdetails': '1',
           'limit': '$limit',
-          'viewbox':
-              '${longitude - _viewboxDelta},'
+          'viewbox': '${longitude - _viewboxDelta},'
               '${latitude + _viewboxDelta},'
               '${longitude + _viewboxDelta},'
               '${latitude - _viewboxDelta}',
@@ -263,8 +262,7 @@ class NominatimPlaceSearchService implements PlaceSearchService {
 
     final dLat = toRadians(lat2 - lat1);
     final dLon = toRadians(lon2 - lon1);
-    final a =
-        math.sin(dLat / 2) * math.sin(dLat / 2) +
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
         math.cos(toRadians(lat1)) *
             math.cos(toRadians(lat2)) *
             math.sin(dLon / 2) *

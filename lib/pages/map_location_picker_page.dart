@@ -201,8 +201,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
     setState(() => _locating = true);
 
     try {
-      final position =
-          locationService.currentPosition ??
+      final position = locationService.currentPosition ??
           await locationService.getCurrentLocation(highAccuracy: false);
       if (!mounted) return;
 
@@ -319,9 +318,8 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
       if (!mounted) return;
 
       final address = _resolvedAddress;
-      final poiName = _cityLevelOnly
-          ? null
-          : (_pickedPlace?.name ?? address?['poi_name']);
+      final poiName =
+          _cityLevelOnly ? null : (_pickedPlace?.name ?? address?['poi_name']);
 
       Navigator.of(context).pop(
         MapPickerResult(
@@ -395,9 +393,8 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
             mapController: _mapController,
             options: MapOptions(
               initialCenter: _center,
-              initialZoom: widget.initialLatitude != null
-                  ? _pointZoom
-                  : _fallbackZoom,
+              initialZoom:
+                  widget.initialLatitude != null ? _pointZoom : _fallbackZoom,
               onPositionChanged: _onPositionChanged,
               backgroundColor: theme.colorScheme.surfaceContainerLow,
             ),
