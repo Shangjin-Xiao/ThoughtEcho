@@ -583,9 +583,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const supported = ['zh', 'en', 'ja', 'ko'];
 
     function getCurrentLang() {
-        if (body.classList.contains('lang-en')) return 'en';
-        if (body.classList.contains('lang-ja')) return 'ja';
-        if (body.classList.contains('lang-ko')) return 'ko';
+        if (html.classList.contains('lang-en') || body.classList.contains('lang-en')) return 'en';
+        if (html.classList.contains('lang-ja') || body.classList.contains('lang-ja')) return 'ja';
+        if (html.classList.contains('lang-ko') || body.classList.contains('lang-ko')) return 'ko';
         return 'zh';
     }
 
@@ -605,6 +605,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyLanguage(lang) {
         const normalized = supported.includes(lang) ? lang : 'zh';
 
+        html.classList.remove('lang-zh', 'lang-en', 'lang-ja', 'lang-ko');
+        html.classList.add(`lang-${normalized}`);
         body.classList.remove('lang-zh', 'lang-en', 'lang-ja', 'lang-ko');
         body.classList.add(`lang-${normalized}`);
 

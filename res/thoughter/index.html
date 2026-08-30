@@ -73,11 +73,9 @@
         }
 
         var savedLang = localStorage.getItem('lang') || 'zh';
-        if (savedLang === 'en') {
-          document.documentElement.setAttribute('lang', 'en');
-        } else {
-          document.documentElement.setAttribute('lang', 'zh-CN');
-        }
+        var normalized = savedLang === 'en' ? 'en' : 'zh';
+        document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + normalized;
+        document.documentElement.setAttribute('lang', normalized === 'en' ? 'en' : 'zh-CN');
       } catch(e) {}
     })();
   </script>
@@ -192,11 +190,13 @@
     }
 
     /* Bilingual Visibility Control */
+    html.lang-zh .content-en, html.lang-zh .content-ja, html.lang-zh .content-ko,
+    html.lang-en .content-zh, html.lang-en .content-ja, html.lang-en .content-ko,
     body.lang-zh .content-en, body.lang-zh .content-ja, body.lang-zh .content-ko,
     body.lang-en .content-zh, body.lang-en .content-ja, body.lang-en .content-ko,
-    body:not([class*="lang-"]) .content-en,
-    body:not([class*="lang-"]) .content-ja,
-    body:not([class*="lang-"]) .content-ko {
+    html:not([class*="lang-"]) body:not([class*="lang-"]) .content-en,
+    html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ja,
+    html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ko {
       display: none !important;
     }
 
@@ -982,10 +982,13 @@
     /* ==========================================================================
        Responsive Styles
        ========================================================================== */
+    @media (max-width: 1040px) {
+      .nav-menu { display: none; }
+    }
+
     @media (max-width: 880px) {
       .scenarios-grid { grid-template-columns: 1fr; }
       .pillars-grid { grid-template-columns: 1fr; }
-      .nav-menu { display: none; }
       .typewriter-stage { min-height: 80px; }
     }
 
@@ -994,10 +997,11 @@
       .brand-badge { display: none; }
       .brand-title { font-size: 1.12rem; }
       .hero-trust-bar { gap: 12px; }
+      .btn-nav-primary { padding: 6px 10px; font-size: 0.8rem; }
     }
   </style>
 </head>
-<body class="lang-zh">
+<body>
 
   <!-- Navigation -->
   <header class="nav-header">
@@ -1866,6 +1870,8 @@
 
     function applyLanguage(lang) {
       const normalized = lang === 'en' ? 'en' : 'zh';
+      document.documentElement.classList.remove('lang-zh', 'lang-en');
+      document.documentElement.classList.add('lang-' + normalized);
       document.body.classList.remove('lang-zh', 'lang-en');
       document.body.classList.add('lang-' + normalized);
       if (langText) {

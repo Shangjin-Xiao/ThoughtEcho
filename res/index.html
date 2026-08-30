@@ -63,13 +63,17 @@
 
     <!-- Critical Anti-FOUC & Language Isolation Rules -->
     <style>
+      html.lang-zh .content-en, html.lang-zh .content-ja, html.lang-zh .content-ko,
+      html.lang-en .content-zh, html.lang-en .content-ja, html.lang-en .content-ko,
+      html.lang-ja .content-zh, html.lang-ja .content-en, html.lang-ja .content-ko,
+      html.lang-ko .content-zh, html.lang-ko .content-en, html.lang-ko .content-ja,
       body.lang-zh .content-en, body.lang-zh .content-ja, body.lang-zh .content-ko,
       body.lang-en .content-zh, body.lang-en .content-ja, body.lang-en .content-ko,
       body.lang-ja .content-zh, body.lang-ja .content-en, body.lang-ja .content-ko,
       body.lang-ko .content-zh, body.lang-ko .content-en, body.lang-ko .content-ja,
-      body:not([class*="lang-"]) .content-en,
-      body:not([class*="lang-"]) .content-ja,
-      body:not([class*="lang-"]) .content-ko {
+      html:not([class*="lang-"]) body:not([class*="lang-"]) .content-en,
+      html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ja,
+      html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ko {
         display: none !important;
       }
     </style>
@@ -82,6 +86,25 @@
           if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
             document.documentElement.setAttribute('data-theme', 'dark');
           }
+
+          var supported = ['zh', 'en', 'ja', 'ko'];
+          var savedLang = localStorage.getItem('lang');
+          var targetLang = 'zh';
+          if (savedLang && supported.indexOf(savedLang) !== -1) {
+            targetLang = savedLang;
+          } else {
+            var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+            for (var i = 0; i < langs.length; i++) {
+              var lower = (langs[i] || '').toLowerCase();
+              if (lower.indexOf('zh') === 0) { targetLang = 'zh'; break; }
+              if (lower.indexOf('ja') === 0) { targetLang = 'ja'; break; }
+              if (lower.indexOf('ko') === 0) { targetLang = 'ko'; break; }
+              if (lower.indexOf('en') === 0) { targetLang = 'en'; break; }
+            }
+          }
+          document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + targetLang;
+          var htmlLangMap = { zh: 'zh-CN', en: 'en', ja: 'ja', ko: 'ko' };
+          document.documentElement.setAttribute('lang', htmlLangMap[targetLang] || 'zh-CN');
         } catch(e) {}
       })();
     </script>
@@ -184,7 +207,7 @@
       }
     </script>
   </head>
-  <body class="lang-zh" id="top">
+  <body id="top">
     <a class="skip-link" href="#main">
       <span class="content-zh">跳到主要内容</span>
       <span class="content-en">Skip to content</span>
@@ -260,6 +283,14 @@
               ><span class="content-en">Privacy</span
               ><span class="content-ja">プライバシー</span
               ><span class="content-ko">개인정보 처리방침</span></a
+            >
+          </li>
+          <li class="mobile-nav-dl">
+            <a href="dl.html"
+              ><span class="content-zh">📥 立即下载</span
+              ><span class="content-en">📥 Download App</span
+              ><span class="content-ja">📥 ダウンロード</span
+              ><span class="content-ko">📥 앱 다운로드</span></a
             >
           </li>
         </ul>

@@ -1,4 +1,16 @@
         /* ==================== 语言切换与防闪烁规则 ==================== */
+        html.lang-zh .content-en,
+        html.lang-zh .content-ja,
+        html.lang-zh .content-ko,
+        html.lang-en .content-zh,
+        html.lang-en .content-ja,
+        html.lang-en .content-ko,
+        html.lang-ja .content-zh,
+        html.lang-ja .content-en,
+        html.lang-ja .content-ko,
+        html.lang-ko .content-zh,
+        html.lang-ko .content-en,
+        html.lang-ko .content-ja,
         body.lang-zh .content-en,
         body.lang-zh .content-ja,
         body.lang-zh .content-ko,
@@ -11,9 +23,9 @@
         body.lang-ko .content-zh,
         body.lang-ko .content-en,
         body.lang-ko .content-ja,
-        body:not([class*="lang-"]) .content-en,
-        body:not([class*="lang-"]) .content-ja,
-        body:not([class*="lang-"]) .content-ko {
+        html:not([class*="lang-"]) body:not([class*="lang-"]) .content-en,
+        html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ja,
+        html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ko {
             display: none !important;
         }
 
@@ -139,23 +151,30 @@
             }
         }
 
+        html.lang-en body,
         body.lang-en {
             font-family: 'Noto Sans', 'Noto Sans SC', 'ZCOOL XiaoWei', serif;
         }
 
+        html.lang-ja body,
         body.lang-ja {
             font-family: 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans', sans-serif;
         }
 
+        html.lang-ko body,
         body.lang-ko {
             font-family: 'Noto Sans KR', 'Noto Sans SC', 'Noto Sans', sans-serif;
         }
 
+        html.lang-ja .hero h1,
+        html.lang-ja h2.section-title,
         body.lang-ja .hero h1,
         body.lang-ja h2.section-title {
             font-family: 'Noto Serif JP', 'Noto Serif SC', serif;
         }
 
+        html.lang-ko .hero h1,
+        html.lang-ko h2.section-title,
         body.lang-ko .hero h1,
         body.lang-ko h2.section-title {
             font-family: 'Noto Serif KR', 'Noto Serif SC', serif;
@@ -180,14 +199,17 @@
             font-family: 'Caveat', 'Long Cang', cursive;
         }
 
+        html.lang-en .handwriting,
         body.lang-en .handwriting {
             font-family: 'Caveat', cursive;
         }
 
+        html.lang-ja .handwriting,
         body.lang-ja .handwriting {
             font-family: 'Caveat', 'Noto Sans JP', cursive;
         }
 
+        html.lang-ko .handwriting,
         body.lang-ko .handwriting {
             font-family: 'Caveat', 'Noto Sans KR', cursive;
         }
@@ -318,8 +340,13 @@
             position: relative;
             z-index: 1001;
             display: flex;
-            gap: 1rem;
+            gap: clamp(0.4rem, 1vw, 0.85rem);
             align-items: center;
+            flex-shrink: 0;
+        }
+
+        .mobile-nav-dl {
+            display: none;
         }
 
         .theme-toggle {
@@ -2078,24 +2105,27 @@
         }
 
         /* 语言切换 */
+        html.lang-zh .content-en,
+        html.lang-zh .content-ja,
+        html.lang-zh .content-ko,
+        html.lang-en .content-zh,
+        html.lang-en .content-ja,
+        html.lang-en .content-ko,
+        html.lang-ja .content-zh,
+        html.lang-ja .content-en,
+        html.lang-ja .content-ko,
+        html.lang-ko .content-zh,
+        html.lang-ko .content-en,
+        html.lang-ko .content-ja,
         body.lang-zh .content-en,
         body.lang-zh .content-ja,
-        body.lang-zh .content-ko {
-            display: none !important;
-        }
-
+        body.lang-zh .content-ko,
         body.lang-en .content-zh,
         body.lang-en .content-ja,
-        body.lang-en .content-ko {
-            display: none !important;
-        }
-
+        body.lang-en .content-ko,
         body.lang-ja .content-zh,
         body.lang-ja .content-en,
-        body.lang-ja .content-ko {
-            display: none !important;
-        }
-
+        body.lang-ja .content-ko,
         body.lang-ko .content-zh,
         body.lang-ko .content-en,
         body.lang-ko .content-ja {
@@ -2123,7 +2153,7 @@
         }
 
         /* ---- 平板及中等屏幕：导航链接收进汉堡菜单 ---- */
-        @media (max-width: 1100px) {
+        @media (max-width: 1240px) {
             .nav-links {
                 display: none;
                 position: fixed;
@@ -2152,6 +2182,13 @@
             .nav-links a::after {
                 content: none;
             }
+            .mobile-nav-dl {
+                display: block;
+            }
+            .mobile-nav-dl a {
+                font-weight: 700;
+                color: var(--accent-brown) !important;
+            }
             .mobile-menu-btn {
                 display: flex;
             }
@@ -2173,6 +2210,17 @@
                 opacity: 1;
                 pointer-events: auto;
             }
+            .btn-notebook {
+                padding: 0.55rem 1.1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* 屏幕宽度 <= 880px 时隐藏顶部导航栏的独立下载按钮，避免与主题、语言、汉堡按钮堆叠挤出屏幕 */
+        @media (max-width: 880px) {
+            .nav-actions .btn-notebook {
+                display: none !important;
+            }
         }
 
         /* ---- 小屏手机：缩小导航栏元素 ---- */
@@ -2184,6 +2232,8 @@
 
             .nav-brand {
                 gap: 0.4rem;
+                min-width: 0;
+                flex-shrink: 1;
             }
 
             .nav-title {
@@ -2192,7 +2242,10 @@
 
             body.lang-en .nav-title,
             body.lang-ja .nav-title,
-            body.lang-ko .nav-title {
+            body.lang-ko .nav-title,
+            html.lang-en .nav-title,
+            html.lang-ja .nav-title,
+            html.lang-ko .nav-title {
                 font-size: clamp(0.95rem, 3.2vw, 1.15rem);
             }
 
@@ -2210,6 +2263,7 @@
                 position: relative;
                 z-index: 1001;
                 gap: 0.35rem;
+                flex-shrink: 0;
             }
 
             .theme-toggle {
@@ -2238,11 +2292,6 @@
                 font-size: 0.82rem;
             }
 
-            .btn-notebook {
-                padding: 0.45rem 0.8rem;
-                font-size: 0.82rem;
-            }
-
             .mobile-menu-btn {
                 width: 36px;
                 height: 36px;
@@ -2253,19 +2302,19 @@
 
         /* ---- 超窄屏手机进一步自适应 ---- */
         @media (max-width: 520px) {
-            .nav-actions .btn-notebook {
-                display: none !important;
-            }
             .nav-container {
-                padding: 0.5rem 0.75rem;
+                padding: 0.5rem 0.65rem;
             }
             .nav-title {
-                font-size: 1.15rem;
+                font-size: 1.12rem;
             }
             body.lang-en .nav-title,
             body.lang-ja .nav-title,
-            body.lang-ko .nav-title {
-                font-size: 1.05rem;
+            body.lang-ko .nav-title,
+            html.lang-en .nav-title,
+            html.lang-ja .nav-title,
+            html.lang-ko .nav-title {
+                font-size: 1.02rem;
             }
         }
 
@@ -2283,12 +2332,15 @@
                 height: 28px;
             }
             .nav-title {
-                font-size: 1rem;
+                font-size: 0.98rem;
             }
             body.lang-en .nav-title,
             body.lang-ja .nav-title,
-            body.lang-ko .nav-title {
-                font-size: 0.92rem;
+            body.lang-ko .nav-title,
+            html.lang-en .nav-title,
+            html.lang-ja .nav-title,
+            html.lang-ko .nav-title {
+                font-size: 0.88rem;
             }
             .theme-toggle,
             .lang-toggle,

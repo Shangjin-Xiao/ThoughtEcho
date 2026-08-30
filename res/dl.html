@@ -58,6 +58,22 @@
       }
     </script>
 
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('thoughtecho_theme') || localStorage.getItem('theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+          var savedLang = localStorage.getItem('lang') || 'zh';
+          var normalized = savedLang === 'en' ? 'en' : 'zh';
+          document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + normalized;
+          document.documentElement.setAttribute('lang', normalized === 'zh' ? 'zh-CN' : 'en');
+        } catch(e) {}
+      })();
+    </script>
+
     <style>
       :root {
         --paper: #f9f6f0;
@@ -109,11 +125,13 @@
       }
 
       /* Critical Language Isolation Rules */
+      html.lang-zh .content-en, html.lang-zh .content-ja, html.lang-zh .content-ko,
+      html.lang-en .content-zh, html.lang-en .content-ja, html.lang-en .content-ko,
       body.lang-zh .content-en, body.lang-zh .content-ja, body.lang-zh .content-ko,
       body.lang-en .content-zh, body.lang-en .content-ja, body.lang-en .content-ko,
-      body:not([class*="lang-"]) .content-en,
-      body:not([class*="lang-"]) .content-ja,
-      body:not([class*="lang-"]) .content-ko {
+      html:not([class*="lang-"]) body:not([class*="lang-"]) .content-en,
+      html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ja,
+      html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ko {
         display: none !important;
       }
 
@@ -540,7 +558,7 @@
       }
     </style>
   </head>
-  <body class="lang-zh">
+  <body>
     <!-- 顶部导航 -->
     <nav class="top-nav">
       <a href="./" class="nav-brand">
@@ -812,6 +830,8 @@
 
         function applyLanguage(lang) {
           var normalized = lang === "en" ? "en" : "zh";
+          document.documentElement.classList.remove("lang-zh", "lang-en");
+          document.documentElement.classList.add("lang-" + normalized);
           body.classList.remove("lang-zh", "lang-en");
           body.classList.add("lang-" + normalized);
           if (langToggle) {

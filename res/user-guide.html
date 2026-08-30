@@ -25,9 +25,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-    <!-- 防止字体加载导致的文字闪烁：先隐藏，字体就绪或超时后再显示 -->
+    <!-- 防止字体与语言加载闪烁：先初始化语言与可见性 -->
     <script>
         (function(){
+            try {
+                var savedLang = localStorage.getItem('lang') === 'en' ? 'en' : 'zh';
+                document.documentElement.setAttribute('data-lang', savedLang);
+                document.documentElement.setAttribute('lang', savedLang === 'en' ? 'en' : 'zh-CN');
+            } catch(e) {}
             document.documentElement.style.visibility = 'hidden';
             var reveal = function(){ document.documentElement.style.visibility = ''; };
             if (document.fonts && document.fonts.ready) {
@@ -348,8 +353,11 @@
         
         /* 语言切换 — 使用 data 属性避免 body 自身被 .lang-en 隐藏 */
         .lang-zh, .lang-en { display: none; }
+        html[data-lang="zh"] .lang-zh,
         body[data-lang="zh"] .lang-zh { display: block; }
+        html[data-lang="en"] .lang-en,
         body[data-lang="en"] .lang-en { display: block; }
+        html[data-lang="en"] body,
         body[data-lang="en"] { font-family: 'Noto Sans', sans-serif; }
         
         /* 响应式 */
@@ -404,14 +412,14 @@
             }
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 680px) {
             .nav-btn-dl {
                 display: none !important;
             }
         }
     </style>
 </head>
-<body data-lang="zh">
+<body>
     <!-- 导航栏 -->
     <nav>
         <div class="nav-container">
@@ -499,6 +507,7 @@
 
         // 语言状态管理：使用 data-lang 属性而非 class，避免 .lang-en 规则误隐藏 body
         function switchPageLang(targetLang) {
+            document.documentElement.setAttribute('data-lang', targetLang);
             document.body.dataset.lang = targetLang;
             document.documentElement.lang = targetLang === 'en' ? 'en' : 'zh-CN';
             try { localStorage.setItem('lang', targetLang); } catch(e) {}

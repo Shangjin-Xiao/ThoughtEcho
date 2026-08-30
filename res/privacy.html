@@ -24,7 +24,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-    
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('thoughtecho_theme') || localStorage.getItem('theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+          var savedLang = localStorage.getItem('lang') || 'zh';
+          var normalized = savedLang === 'en' ? 'en' : 'zh';
+          document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + normalized;
+          document.documentElement.setAttribute('lang', normalized === 'zh' ? 'zh-CN' : 'en');
+        } catch(e) {}
+      })();
+    </script>
+
     <style>
         :root {
             --paper-white: #fefdfb;
@@ -255,11 +270,13 @@
         }
 
         /* Language Switching */
+        html.lang-zh .content-en, html.lang-zh .content-ja, html.lang-zh .content-ko,
+        html.lang-en .content-zh, html.lang-en .content-ja, html.lang-en .content-ko,
         body.lang-zh .content-en, body.lang-zh .content-ja, body.lang-zh .content-ko,
         body.lang-en .content-zh, body.lang-en .content-ja, body.lang-en .content-ko,
-        body:not([class*="lang-"]) .content-en,
-        body:not([class*="lang-"]) .content-ja,
-        body:not([class*="lang-"]) .content-ko {
+        html:not([class*="lang-"]) body:not([class*="lang-"]) .content-en,
+        html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ja,
+        html:not([class*="lang-"]) body:not([class*="lang-"]) .content-ko {
             display: none !important;
         }
 
@@ -271,7 +288,7 @@
         }
     </style>
 </head>
-<body class="lang-zh">
+<body>
     <nav>
         <div class="nav-container">
             <a href="index.html" class="nav-brand">
@@ -474,12 +491,14 @@
         const langBtn = document.getElementById('langToggle');
         let currentLang = 'zh';
         try { currentLang = localStorage.getItem('lang') || 'zh'; } catch(e) {}
+        document.documentElement.className = `lang-${currentLang}`;
         body.className = `lang-${currentLang}`;
         html.setAttribute('lang', currentLang === 'zh' ? 'zh-CN' : 'en');
         if (langBtn) {
             langBtn.textContent = currentLang === 'zh' ? 'English' : '中文';
             langBtn.addEventListener('click', () => {
                 currentLang = currentLang === 'zh' ? 'en' : 'zh';
+                document.documentElement.className = `lang-${currentLang}`;
                 body.className = `lang-${currentLang}`;
                 html.setAttribute('lang', currentLang === 'zh' ? 'zh-CN' : 'en');
                 langBtn.textContent = currentLang === 'zh' ? 'English' : '中文';
