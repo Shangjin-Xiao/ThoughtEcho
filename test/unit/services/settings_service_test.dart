@@ -631,5 +631,37 @@ void main() {
       final rebuiltService = await SettingsService.create();
       expect(rebuiltService.hasCompletedOnboarding(), isTrue);
     });
+
+    group('restoreAllSettingsFromBackup 类型防护测试', () {
+      test('theme_mode 为 double 浮点数时安全转换不崩溃', () async {
+        await settingsService.updateThemeMode(ThemeMode.light);
+
+        await settingsService.restoreAllSettingsFromBackup({
+          'theme_mode': 2.0, // ThemeMode.dark 的索引是 2
+        });
+
+        expect(settingsService.themeMode, ThemeMode.dark);
+      });
+
+      test('theme_mode 为越界 int 时安全防范不崩溃并保留原有主题', () async {
+        await settingsService.updateThemeMode(ThemeMode.light);
+
+        await settingsService.restoreAllSettingsFromBackup({
+          'theme_mode': 99,
+        });
+
+        expect(settingsService.themeMode, ThemeMode.light);
+      });
+
+      test('theme_mode 为非法 String 时安全防范不崩溃', () async {
+        await settingsService.updateThemeMode(ThemeMode.light);
+
+        await settingsService.restoreAllSettingsFromBackup({
+          'theme_mode': 'invalid_theme_index',
+        });
+
+        expect(settingsService.themeMode, ThemeMode.light);
+      });
+    });
   });
 }

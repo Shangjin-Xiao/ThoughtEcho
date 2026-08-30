@@ -1449,9 +1449,16 @@ class SettingsService extends ChangeNotifier {
 
       // 恢复主题模式
       if (backupData.containsKey('theme_mode')) {
-        final themeModeIndex = backupData['theme_mode'] as int;
-        final themeMode = ThemeMode.values[themeModeIndex];
-        await updateThemeMode(themeMode);
+        final rawThemeMode = backupData['theme_mode'];
+        final themeModeIndex = (rawThemeMode is num)
+            ? rawThemeMode.toInt()
+            : int.tryParse(rawThemeMode?.toString() ?? '');
+        if (themeModeIndex != null &&
+            themeModeIndex >= 0 &&
+            themeModeIndex < ThemeMode.values.length) {
+          final themeMode = ThemeMode.values[themeModeIndex];
+          await updateThemeMode(themeMode);
+        }
       }
 
       // 恢复/记录 device_id（不覆盖本地已有，仅在本地不存在时写入，保持源ID可用于审计）
