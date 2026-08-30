@@ -358,6 +358,7 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 **跨会话长期记忆与个性化**：
 
 - **长期记忆**：Thoughter 支持跨会话记住您的写作偏好、表达习惯与个人背景，并在对话中自动保持一致。
+- **原创识别**：Thoughter 能根据您的个性化设置与自指习惯，准确区分您的原创笔记与外部摘录。
 - **隐私与物理隔离**：长期记忆存储于本地独立数据库，绝不上传云端，不进入多端同步与数据备份，保障您的绝对隐私。
 - **用户称呼**：支持在 Thoughter 中设置自定义昵称，让 AI 按照您喜欢的方式称呼您。
 - **记忆管理**：可在「设置」→「AI 设置」中随时查看当前已记录的画像条目或一键清空记忆。
@@ -1138,6 +1139,7 @@ When Thoughter proposes creating or editing a note, it displays the result as a 
 **Cross-Session Long-Term Memory & Personalization**:
 
 - **Long-Term Memory**: Thoughter remembers your writing style, preferences, and personal background across sessions, keeping its tone and assistance consistent over time.
+- **Originality Recognition**: Thoughter accurately distinguishes your original notes from external quotes based on your personalized settings and self-referential habits.
 - **Privacy & Physical Isolation**: Long-term memory is stored locally in a separate database, never uploaded to any cloud server, and excluded from multi-device sync and data backups for complete privacy.
 - **Custom Nickname**: Set your preferred name or nickname in Thoughter settings for a more natural conversation experience.
 - **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings".

@@ -244,7 +244,7 @@ pwsh ./scripts/build_msix_ci.ps1
 **组件复用**
 
 - ❌ 手写 `ScaffoldMessenger.of(context).showSnackBar(...)`。用 `AppSnackBar.info/success/
-  error/warning`（`lib/widgets/app_snackbar.dart`），它统一了时长、`context.mounted` 检查和
+error/warning`（`lib/widgets/app_snackbar.dart`），它统一了时长、`context.mounted` 检查和
   语义色。
 - ❌ 裸 `CircularProgressIndicator` / 自己拼「居中图标 + 文字」的空态和错误态。用
   `AppLoadingView`、`AppEmptyView`、`AppErrorView`（`lib/widgets/`）。
@@ -328,6 +328,7 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 - 独立数据库 `agent_memory.db`（同聊天记录、日志、AI 分析），**不在主库**，有自己的
   `schemaVersion`。物理隔离让"不进备份、不跨设备同步、能整个删掉"成为事实而非约定。
+- 🔒 **笔记归属判定**：向 AI 服务、Dreaming 或 Agent 笔记检索工具提供笔记数据时，必须调用接入了身份感知（基于用户设置及自指代词等）的归属判定逻辑，避免将用户个人署名笔记误判为外部摘录。
 - 只存**笔记里推导不出来**的东西（身份、表达偏好、对 Thoughter 的纠正）；用户写过什么
   归 `explore_notes`，两套检索职责重叠模型会反复横跳。
 - 画像走**独立 user 数据消息**并先过 `wrapUserProfile`，不得拼进 system prompt。
@@ -338,12 +339,12 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 ## 平台与文件组织
 
-| 平台 | 约定 |
-|---|---|
+| 平台    | 约定                                                                        |
+| ------- | --------------------------------------------------------------------------- |
 | Windows | SQLite 使用 FFI；数据目录逻辑由 `DataDirectoryService` 和现有初始化代码负责 |
-| Android | 使用 sqflite/MMKV；保留现有 32 位 ARM 回退策略 |
-| iOS | 使用 MMKV；无签名构建走 `scripts/build_ios_unsigned.sh` |
-| Web | 不支持；不得新增或扩展 Web 功能 |
+| Android | 使用 sqflite/MMKV；保留现有 32 位 ARM 回退策略                              |
+| iOS     | 使用 MMKV；无签名构建走 `scripts/build_ios_unsigned.sh`                     |
+| Web     | 不支持；不得新增或扩展 Web 功能                                             |
 
 - `.py`、`.sh`、`.bat`、`.ps1` 等维护脚本放在 `scripts/`，不要放仓库根目录。
 - 应用图标放 `assets/`，Lottie 放 `assets/lottie/`，SVG 放 `assets/svg/`，营销/网站资源放
@@ -356,20 +357,20 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 修改前先查找父文件的 `part` 声明、相关 mixin 和测试：
 
-| 区域 | 说明 |
-|---|---|
-| `lib/services/database_service.dart` + `services/database/` | 数据库接口、12 个 mixin、缓存与查询 |
-| `lib/services/database_schema_manager.dart` | 建表、版本升级、修复和迁移，数据风险高 |
-| `lib/pages/home_page.dart` | 主页面状态与多类交互 |
-| `lib/widgets/add_note_dialog.dart` | 超大新增笔记流程，另有 parts 文件 |
-| `lib/pages/settings_page.dart` | 设置入口与多 Service 交互 |
-| `lib/pages/note_sync_page.dart` | 设备发现、传输和合并状态 |
-| `lib/pages/explore_page.dart` + `pages/explore/` | 探索页：周期统计聚合与 Thoughter 入口 |
-| `lib/pages/note_full_editor_page.dart` + `pages/note_editor/` | Quill 编辑、媒体、元数据和草稿 |
-| `lib/pages/thoughter_page.dart` + `pages/thoughter/` | Agent 会话、工作流与流式 UI |
-| `lib/services/smart_push_service.dart` + `services/smart_push/` | 调度、权限、通知和内容选择 |
-| `lib/widgets/note_list_view.dart` + `widgets/note_list/` | 分页、过滤、滚动定位和条目构建 |
-| `lib/constants/card_templates.dart` | 大量卡片模板，改动需验证渲染与国际化 |
+| 区域                                                            | 说明                                   |
+| --------------------------------------------------------------- | -------------------------------------- |
+| `lib/services/database_service.dart` + `services/database/`     | 数据库接口、12 个 mixin、缓存与查询    |
+| `lib/services/database_schema_manager.dart`                     | 建表、版本升级、修复和迁移，数据风险高 |
+| `lib/pages/home_page.dart`                                      | 主页面状态与多类交互                   |
+| `lib/widgets/add_note_dialog.dart`                              | 超大新增笔记流程，另有 parts 文件      |
+| `lib/pages/settings_page.dart`                                  | 设置入口与多 Service 交互              |
+| `lib/pages/note_sync_page.dart`                                 | 设备发现、传输和合并状态               |
+| `lib/pages/explore_page.dart` + `pages/explore/`                | 探索页：周期统计聚合与 Thoughter 入口  |
+| `lib/pages/note_full_editor_page.dart` + `pages/note_editor/`   | Quill 编辑、媒体、元数据和草稿         |
+| `lib/pages/thoughter_page.dart` + `pages/thoughter/`            | Agent 会话、工作流与流式 UI            |
+| `lib/services/smart_push_service.dart` + `services/smart_push/` | 调度、权限、通知和内容选择             |
+| `lib/widgets/note_list_view.dart` + `widgets/note_list/`        | 分页、过滤、滚动定位和条目构建         |
+| `lib/constants/card_templates.dart`                             | 大量卡片模板，改动需验证渲染与国际化   |
 
 ## 已删除 API
 
