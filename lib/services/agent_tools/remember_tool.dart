@@ -241,10 +241,9 @@ class RememberTool extends AgentTool {
     if (existing == null) {
       return _invalid(call, '没有找到 id 为 $id 的画像条目');
     }
-    final targetKind = requestedKind ?? existing.kind;
-    final rejected = _rejectDreamingOwnedKind(call, targetKind);
-    if (rejected != null) {
-      return rejected;
+    final existingRejected = _rejectDreamingOwnedKind(call, existing.kind);
+    if (existingRejected != null) {
+      return existingRejected;
     }
 
     final updated = await _memory.editProfileDirective(
