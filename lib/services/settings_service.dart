@@ -162,15 +162,20 @@ class SettingsService extends ChangeNotifier {
   }
 
   /// 写入失败只记日志、不抛：它是一个节流用的时间戳，写丢了最坏结果是下次
-  /// 洞察时多跑一轮归纳，不值得把调用方的流程打断。
-  Future<void> setLastDreamingAt(DateTime value) async {
-    final success = await _mmkv.setInt(
-      _lastDreamingAtKey,
-      value.millisecondsSinceEpoch,
-    );
+  /// 洞察时多跑一轮归纳，不值得把调用方的流程打断。传入 null 表示重置/清除。
+  Future<void> setLastDreamingAt(DateTime? value) async {
+    final bool success;
+    if (value == null) {
+      success = await _mmkv.remove(_lastDreamingAtKey);
+    } else {
+      success = await _mmkv.setInt(
+        _lastDreamingAtKey,
+        value.millisecondsSinceEpoch,
+      );
+    }
     if (!success) {
       AppLogger.w(
-        'Dreaming 时间戳保存失败：MMKV setInt 返回 false',
+        'Dreaming 时间戳保存失败：MMKV 操作返回 false',
         source: 'SettingsService',
       );
       return;
