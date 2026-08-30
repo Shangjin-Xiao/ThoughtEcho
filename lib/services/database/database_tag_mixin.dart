@@ -20,9 +20,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
   @override
   Future<List<NoteTag>> getTags() async {
     if (kIsWeb) {
-      return _moveHiddenTagToBottom(
-        List<NoteTag>.from(_tagStore),
-      );
+      return _moveHiddenTagToBottom(List<NoteTag>.from(_tagStore));
     }
     try {
       final db = await safeDatabase;
@@ -35,9 +33,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
     }
   }
 
-  List<NoteTag> _moveHiddenTagToBottom(
-    List<NoteTag> categories,
-  ) {
+  List<NoteTag> _moveHiddenTagToBottom(List<NoteTag> categories) {
     final hiddenCategories = categories
         .where((category) => category.id == _DatabaseServiceBase.hiddenTagId)
         .toList();
@@ -130,11 +126,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
 
   /// 添加一条标签（使用指定ID）
   @override
-  Future<void> addTagWithId(
-    String id,
-    String name, {
-    String? iconName,
-  }) async {
+  Future<void> addTagWithId(String id, String name, {String? iconName}) async {
     // 检查参数
     if (name.trim().isEmpty) {
       throw Exception('标签名称不能为空');
@@ -161,7 +153,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
           _tagStore[index] = NoteTag(
             id: id,
             name: name,
-            isDefault: _tagStore[index].isDefault,
+            isDefault: _tagStore[index].isDefault ||
+                _DatabaseServiceBase.systemTagIds.contains(id),
             iconName: iconName ?? _tagStore[index].iconName,
           );
         }
@@ -170,7 +163,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         final newCategory = NoteTag(
           id: id,
           name: name,
-          isDefault: false,
+          // 固定 ID 属于内置系统标签时必须保留系统属性，否则重建出来的标签可删可改
+          isDefault: _DatabaseServiceBase.systemTagIds.contains(id),
           iconName: iconName ?? "",
         );
         _tagStore.add(newCategory);
@@ -225,6 +219,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
             'name': name,
             'icon_name': iconName ?? "",
             'last_modified': DateTime.now().toUtc().toIso8601String(),
+            // 内置系统标签即使此前被写成普通标签，也在这里修回系统属性
+            if (_DatabaseServiceBase.systemTagIds.contains(id)) 'is_default': 1,
           };
           await txn.update(
             'categories',
@@ -238,7 +234,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
           final categoryMap = {
             'id': id,
             'name': name,
-            'is_default': 0,
+            'is_default':
+                _DatabaseServiceBase.systemTagIds.contains(id) ? 1 : 0,
             'icon_name': iconName ?? "",
             'last_modified': DateTime.now().toUtc().toIso8601String(),
           };
@@ -262,7 +259,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         final categoryMap = {
           'id': id,
           'name': name,
-          'is_default': 0,
+          'is_default': _DatabaseServiceBase.systemTagIds.contains(id) ? 1 : 0,
           'icon_name': iconName ?? "",
           'last_modified': DateTime.now().toUtc().toIso8601String(),
         };
@@ -366,11 +363,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
 
   /// 更新标签信息
   @override
-  Future<void> updateTag(
-    String id,
-    String name, {
-    String? iconName,
-  }) async {
+  Future<void> updateTag(String id, String name, {String? iconName}) async {
     // 系统标签（如隐藏标签）不允许修改
     if (id == _DatabaseServiceBase.hiddenTagId) {
       throw Exception('系统标签不允许修改');
