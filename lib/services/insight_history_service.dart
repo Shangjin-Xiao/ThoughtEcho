@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
@@ -52,6 +53,13 @@ class InsightHistoryService extends ChangeNotifier {
 
   final SettingsService _settingsService;
   List<PeriodicInsight> _insights = [];
+
+  /// 一条 AI 洞察成功落库后触发的后台归纳。
+  ///
+  /// 用回调而不是直接依赖 DreamingService：洞察历史不该知道记忆库的存在，
+  /// 反过来注入也会绕成一个环（DreamingService 要 AIService，AIService 要
+  /// 记忆库）。由 Provider 装配时把这根线接上。
+  Future<void> Function()? onAiInsightPersisted;
 
   InsightHistoryService({required SettingsService settingsService})
       : _settingsService = settingsService {
@@ -119,10 +127,32 @@ class InsightHistoryService extends ChangeNotifier {
 
       await _saveInsights();
       notifyListeners();
+      _triggerBackgroundConsolidation();
     } catch (e, stack) {
       AppLogger.e('保存洞察失败',
           error: e, stackTrace: stack, source: 'InsightHistoryService');
     }
+  }
+
+  /// 触发后台归纳，**不等它跑完**。
+  ///
+  /// 这里是唯一正确的挂载点：它是服务不是页面 State，上面已经过滤掉
+  /// `isAiGenerated == false`（本地兜底文案不该触发归纳——那时模型根本没跑），
+  /// 且每条 AI 洞察成功落库恰好触发一次。
+  ///
+  /// 归纳失败一律吞掉：它是增益，绝不能让一次后台失败影响到洞察本身已经
+  /// 保存成功这件事，更不能冒泡成用户可见的错误。
+  void _triggerBackgroundConsolidation() {
+    final callback = onAiInsightPersisted;
+    if (callback == null) return;
+    unawaited(
+      callback().catchError((Object error, StackTrace stack) {
+        AppLogger.w(
+          '后台归纳触发失败（${error.runtimeType}），本轮跳过',
+          source: 'InsightHistoryService',
+        );
+      }),
+    );
   }
 
   /// 保存到存储

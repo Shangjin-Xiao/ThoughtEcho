@@ -65,6 +65,17 @@ String wrapNoteContent(String content, {String? noteId}) {
   return '<note$idAttribute>$escaped</note>';
 }
 
+/// 用 `<session>` 标签包裹历史对话摘要，声明其为对话记录而非指令。
+///
+/// 对话记录比笔记正文更危险：笔记是用户自己写的，而对话里**混着用户输入和助手
+/// 上一轮的输出**。一次没生效的提示注入如果留在了历史消息里，`session_search`
+/// 会把它原样捞回当前上下文——等于给了注入第二次机会。所以照样包裹加转义。
+String wrapSessionContent(String content, {String? sessionId}) {
+  final escaped = _neutralizeTag(escapeUntrustedText(content), 'session');
+  final idAttribute = sessionId == null ? '' : ' id="${_attribute(sessionId)}"';
+  return '<session$idAttribute>$escaped</session>';
+}
+
 /// 用 `<user_profile>` 标签包裹 Thoughter 记忆的画像层。
 ///
 /// 画像条目是模型自己从过往对话里提炼的，来源不比笔记正文可信——一条被"记住"的

@@ -139,6 +139,35 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 上次成功完成后台归纳（Dreaming）的时间，毫秒时间戳。
+  ///
+  /// 只在**成功写入记忆后**推进：失败不推进，下个周期自然重试；这样"最小间隔"
+  /// 限的是成功次数，而不是把一次网络抖动也算成一轮。
+  static const String _lastDreamingAtKey = 'agent_memory_last_dreaming_at';
+
+  DateTime? get lastDreamingAt {
+    final raw = _mmkv.getInt(_lastDreamingAtKey);
+    if (raw == null || raw <= 0) return null;
+    return DateTime.fromMillisecondsSinceEpoch(raw);
+  }
+
+  /// 写入失败只记日志、不抛：它是一个节流用的时间戳，写丢了最坏结果是下次
+  /// 洞察时多跑一轮归纳，不值得把调用方的流程打断。
+  Future<void> setLastDreamingAt(DateTime value) async {
+    final success = await _mmkv.setInt(
+      _lastDreamingAtKey,
+      value.millisecondsSinceEpoch,
+    );
+    if (!success) {
+      AppLogger.w(
+        'Dreaming 时间戳保存失败：MMKV setInt 返回 false',
+        source: 'SettingsService',
+      );
+      return;
+    }
+    notifyListeners();
+  }
+
   bool get agentMemoryNoticeShown =>
       _mmkv.getBool(_agentMemoryNoticeShownKey) ?? false;
 

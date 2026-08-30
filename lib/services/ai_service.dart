@@ -44,8 +44,16 @@ class AIService extends ChangeNotifier {
   })  : _settingsService = settingsService,
         _memoryService = memoryService;
 
+  /// 生成类链路的画像块。
+  ///
+  /// 传 [AgentMemoryService.profileKindsForGeneration] 而不是全集：品味
+  /// （`taste`）只可用于共鸣与推荐，不可用于评价，而每日提示和周期洞察正是
+  /// 最容易写出评价口吻的两条链路。在这里挡掉，它们就拿不到，也就无从误用。
   Future<String?> _userProfileContext() async =>
-      _memoryService?.safeProfileBlock(source: 'AIService');
+      _memoryService?.safeProfileBlock(
+        source: 'AIService',
+        kinds: AgentMemoryService.profileKindsForGeneration,
+      );
 
   /// 每日提示的输出上限（token）。
   ///
@@ -388,6 +396,27 @@ class AIService extends ChangeNotifier {
       maxTokens: maxTokens ??
           (resolvedProvider.maxTokens > 0 ? resolvedProvider.maxTokens : null),
       enableThinking: enableThinking,
+    );
+  }
+
+  /// 后台归纳（Dreaming）专用的一次性请求。
+  ///
+  /// 单独开一个公开入口而不是把 [_chatCompletionViaOpenAI] 放开：后台任务的
+  /// 调用约束和交互式链路不一样——**不开思考**（归纳的是结构特征，推理 token
+  /// 只是白花钱，还会挤掉正文额度），温度压低（要的是稳定复现的结论，不是
+  /// 每周换个说法），且不做任何降级兜底（拿不到就整轮放弃，宁可不更新记忆
+  /// 也不能写坏）。
+  Future<String> completeForBackgroundSummary({
+    required String systemPrompt,
+    required String userMessage,
+    int maxTokens = 700,
+  }) {
+    return _chatCompletionViaOpenAI(
+      systemPrompt: systemPrompt,
+      userMessage: userMessage,
+      temperature: 0.2,
+      maxTokens: maxTokens,
+      enableThinking: false,
     );
   }
 
