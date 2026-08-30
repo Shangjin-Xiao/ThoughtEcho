@@ -642,8 +642,9 @@ class Quote {
         return true;
       }
 
-      // 2.2 拆分「作者 - 出处」或「作者 —— 出处」格式
-      final parts = rawSource.split(RegExp(r'\s*[-—–：:]\s*'));
+      // 2.2 剥离可能存在的「作者：/ author: / ——」前缀后，拆分「作者 - 出处」或「作者：出处」格式
+      final normalizedSource = _stripAuthorPrefix(rawSource);
+      final parts = normalizedSource.split(RegExp(r'\s*[-—–：:]\s*'));
       if (parts.length >= 2) {
         final authorCandidate = parts.first.trim();
         if (isSelfAuthor(

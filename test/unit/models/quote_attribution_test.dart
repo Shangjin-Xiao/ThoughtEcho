@@ -188,11 +188,23 @@ void main() {
       test(
           'legacy composite source with external author is classified as excerpt',
           () {
-        final note = createNote(source: '鲁迅 - 狂人日记');
-        expect(note.isSelfAttributed(), isFalse);
-        expect(note.isExcerpt(), isTrue);
-        expect(note.isOriginal(), isFalse);
-        expect(note.attributionKind, 'excerpt');
+        final note1 = createNote(source: '鲁迅 - 狂人日记');
+        expect(note1.isSelfAttributed(), isFalse);
+        expect(note1.isExcerpt(), isTrue);
+        expect(note1.isOriginal(), isFalse);
+        expect(note1.attributionKind, 'excerpt');
+
+        final note2 = createNote(source: '作者：鲁迅 - 狂人日记');
+        expect(note2.isSelfAttributed(), isFalse);
+        expect(note2.isExcerpt(), isTrue);
+        expect(note2.isOriginal(), isFalse);
+        expect(note2.attributionKind, 'excerpt');
+
+        final note3 = createNote(source: 'author: Lu Xun - Diary of a Madman');
+        expect(note3.isSelfAttributed(), isFalse);
+        expect(note3.isExcerpt(), isTrue);
+        expect(note3.isOriginal(), isFalse);
+        expect(note3.attributionKind, 'excerpt');
       });
     });
   });
