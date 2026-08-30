@@ -195,18 +195,22 @@ class DreamingService {
       return false;
     }
     final last = _settings.lastDreamingAt;
-    if (last != null && now.difference(last) < minInterval) {
-      return false;
+    if (last == null) {
+      return true;
     }
     // 未来时间戳说明设备时钟被调过：
-    // 1. 若落在未来 30 天内：按「刚跑过」处理跳过本轮，防止时钟频繁微调导致每次洞察都跑。
-    // 2. 若超出未来 30 天：说明曾出现重大时钟跳跃且已修正回正常时间，若不自愈会导致
+    // 1. 若超出未来 30 天：说明曾出现重大时钟跳跃且已修正回正常时间，若不自愈会导致
     //    Dreaming 长期甚至永久死锁。此时重置记录并放行。
-    if (last != null && last.isAfter(now)) {
+    // 2. 若落在未来 30 天内：按「刚跑过」处理跳过本轮，防止时钟频繁微调导致每次洞察都跑。
+    if (last.isAfter(now)) {
       if (last.difference(now) > const Duration(days: 30)) {
         unawaited(_settings.setLastDreamingAt(null));
         return true;
       }
+      return false;
+    }
+    // 正常过去的时间戳：检查是否已过最小间隔
+    if (now.difference(last) < minInterval) {
       return false;
     }
     return true;
