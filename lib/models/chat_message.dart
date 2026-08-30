@@ -66,7 +66,7 @@ class ChatMessage {
   factory ChatMessage.fromMap(Map<String, dynamic> map) {
     final role = map['role'] as String? ?? 'user';
     return ChatMessage(
-      id: map['id'] as String,
+      id: map['id']?.toString() ?? '',
       content: map['content'] as String? ?? '',
       isUser: role == 'user',
       role: role,
@@ -129,7 +129,7 @@ class ChatMessage {
     }
 
     return ChatMessage(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       content: json['content'] as String? ?? '',
       isUser: role == 'user',
       role: role,
