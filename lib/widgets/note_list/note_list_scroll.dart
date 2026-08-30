@@ -198,6 +198,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     final imageCache = PaintingBinding.instance.imageCache;
     _scrollSessionStartImageCount = imageCache.currentSize;
     _scrollSessionStartImageBytes = imageCache.currentSizeBytes;
+    // 图片管线的分段计时按会话清零，见 [NoteListImageProfile]。
+    NoteListImageProfile.beginSession();
     _scrollSessionTracer?.finish();
     // 事务从这里一直开到收尾，iOS/macOS 上 Sentry 的 CPU profile 就采这一段。
     // 不卡的那些会话在上报前被筛掉，见 `sentry_helper.dart`。
@@ -332,6 +334,9 @@ extension _NoteListScrollExtension on NoteListViewState {
     final imageEmbedStats = QuillImageEmbedPerfStats.compact(
       baseline: _scrollSessionStartImageEmbedStats,
     );
+    // 读完就关：会话之外出的图不该记到任何一段里。
+    final collapsedImageStats = NoteListImageProfile.toCompactText();
+    NoteListImageProfile.endSession();
     final itemLayoutAvgMs = _scrollSessionItemLayoutCount == 0
         ? 0.0
         : (_scrollSessionItemLayoutMicros / _scrollSessionItemLayoutCount) /
@@ -393,6 +398,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       'quotes={${_quoteMixStatsText()}}, quoteContent={$quoteContentStats}, '
       'quoteItem={$quoteItemStats}, imageCache={$imageStats}, '
       'imageEmbed={$imageEmbedStats}, '
+      'collapsedImage={$collapsedImageStats}, '
       'extent={start=${_scrollSessionStartMaxExtent.round()},'
       'end=${_scrollSessionLastMaxExtent.round()},'
       'range=${_scrollSessionMinMaxExtent.round()}-${_scrollSessionMaxMaxExtent.round()},'
