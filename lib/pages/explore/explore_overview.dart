@@ -60,6 +60,10 @@ extension _ExploreOverview on _ExplorePageState {
             _buildRecentSessionsSection(),
             const SizedBox(height: 4),
 
+            // 按地点读笔记的入口，和上面按时间读的 Thoughter 并列
+            _buildMapMemoryEntry(),
+            const SizedBox(height: 20),
+
             if (_periodQuotes.isNotEmpty) ...[
               _buildPeriodTopFavoritesSection(),
               const SizedBox(height: 20),

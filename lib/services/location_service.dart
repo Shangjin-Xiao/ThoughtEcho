@@ -520,6 +520,29 @@ class LocationService extends ChangeNotifier {
     }
   }
 
+  /// 反查任意坐标的地址，**不改动**本服务持有的「当前位置」。
+  ///
+  /// [getAddressFromLatLng] 反查的是设备定位，顺手把 `_country`/`_city` 和
+  /// `_currentAddress` 一起写掉。地图选点要的是用户手指点的那个点，写进这些
+  /// 字段会让天气、每日一言这些按「当前城市」取数的地方跟着漂走。
+  ///
+  /// 走 Nominatim 而不是系统地理编码：系统地理编码只给行政区，给不出
+  /// `poi_name`（"芝公园"），而选点的意义正是那个地点名。Windows 上系统
+  /// 地理编码本来也不可用。
+  ///
+  /// 返回的键与在线反查一致，额外带 `poi_name`；失败返回 null。
+  Future<Map<String, String?>?> reverseGeocodePoint(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      return await _reverseGeocodeWithNominatim(latitude, longitude);
+    } catch (e) {
+      logDebug('反查选点地址失败: $e');
+      return null;
+    }
+  }
+
   /// 开发者模式：强制使用免费的在线反向地理编码（Nominatim）
   /// 返回 true 表示解析成功并更新了地址信息
   Future<bool> refreshAddressFromOnlineReverseGeocoding() async {
@@ -735,6 +758,18 @@ class LocationService extends ChangeNotifier {
             address['neighbourhood'],
       );
 
+      // 用户在地图上点的是一个具体地点，不是一片行政区。`name` 是 OSM 给这个
+      // 要素起的名字（"芝公园"）；address 里的 amenity/building 等是它的类型化
+      // 别名。两者都没有时说明这个坐标上只有街道或行政区，没有可命名的地点。
+      final poiName = s(decoded['name']) ??
+          s(address['amenity']) ??
+          s(address['building']) ??
+          s(address['shop']) ??
+          s(address['tourism']) ??
+          s(address['leisure']) ??
+          s(address['historic']) ??
+          s(address['office']);
+
       // 构建 formattedAddress 时去除相邻重复项（如避免 "日本, 东京都, 东京都"）
       final rawParts = [
         country,
@@ -756,6 +791,7 @@ class LocationService extends ChangeNotifier {
         'province': province,
         'city': city,
         'district': district,
+        'poi_name': poiName,
         'formatted_address': formattedAddress,
         'source': 'nominatim',
       };
@@ -1232,6 +1268,60 @@ class LocationService extends ChangeNotifier {
     }
 
     return '';
+  }
+
+  /// 卡片和编辑器上显示的位置文本：把用户选的地点名和它所在的行政区拼在一起。
+  ///
+  /// 只显示 [poiName]（"芝公园"）看不出在哪座城市，只显示行政区
+  /// （[formatLocationForDisplay] 给的"东京都·港区"）又丢掉了用户特意选的
+  /// 那个点。取行政区里最细的一级拼成"港区·芝公园"；地点名本身就是那一级
+  /// 行政区、或压根没有行政区时，只留地点名。
+  ///
+  /// [poiName] 为空时退回 [formatLocationForDisplay]，所以没选过点的老笔记
+  /// 显示不变。
+  static String formatPoiForDisplay(String? poiName, String? locationString) {
+    final poi = poiName?.trim() ?? '';
+    if (poi.isEmpty) return formatLocationForDisplay(locationString);
+
+    final area = _finestAdminArea(locationString);
+    if (area.isEmpty || area == poi) return poi;
+    return '$area·$poi';
+  }
+
+  /// 位置串里最细的一级行政区：区县 > 城市 > 省份 > 国家。
+  static String _finestAdminArea(String? locationString) {
+    if (locationString == null ||
+        locationString.isEmpty ||
+        isNonDisplayMarker(locationString)) {
+      return '';
+    }
+
+    final parts = locationString.split(',');
+    if (parts.length < 3) return cleanGeocodingText(locationString).trim();
+
+    for (final raw in parts.reversed) {
+      final value = cleanGeocodingText(raw).trim();
+      if (value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
+  /// 把反查结果拼成入库用的位置串 `国家,省份,城市,区县`。
+  ///
+  /// 不能直接存 `formatted_address`——那是给人看的带空格拼接，
+  /// [formatLocationForDisplay] 按逗号分段解析它会失败，卡片上就退回英文原文。
+  ///
+  /// 四级全空时返回 null，让调用方自己决定是留空还是退回坐标。
+  static String? buildStorageLocation(Map<String, String?>? address) {
+    if (address == null) return null;
+
+    final country = address['country']?.trim() ?? '';
+    final province = address['province']?.trim() ?? '';
+    final city = address['city']?.trim() ?? '';
+    final district = address['district']?.trim() ?? '';
+
+    if (country.isEmpty && province.isEmpty && city.isEmpty) return null;
+    return '$country,$province,$city,$district';
   }
 
   // 获取显示格式的位置，如"广州市·天河区"（中文）或 "Guangzhou · Tianhe"（英文）

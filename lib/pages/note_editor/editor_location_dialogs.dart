@@ -99,17 +99,9 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
-          // 使用 country,province,city,district 拼成标准存储格式，
-          // 而不是 formatted_address（带空格英文拼接），
-          // 避免 formatLocationForDisplay 解析失败导致显示英文。
-          final country = addressInfo['country'] ?? '';
-          final province = addressInfo['province'] ?? '';
-          final city = addressInfo['city'] ?? '';
-          final district = addressInfo['district'] ?? '';
-          final standardAddress = '$country,$province,$city,$district';
-          final hasAnyField =
-              country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
-          if (hasAnyField) {
+          final standardAddress =
+              LocationService.buildStorageLocation(addressInfo);
+          if (standardAddress != null) {
             _updateState(() {
               _metadataState.location = standardAddress;
               _metadataState.originalLocation = standardAddress;

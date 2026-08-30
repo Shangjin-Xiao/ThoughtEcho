@@ -242,17 +242,20 @@ class QuoteItemWidget extends StatefulWidget {
       dayPeriod: quote.dayPeriod,
       showExactTime: showExactTime,
     );
-    final locationText = quote.hasLocation
-        ? ((quote.location != null &&
-                LocationService.formatLocationForDisplay(
-                  quote.location,
-                ).isNotEmpty)
-            ? LocationService.formatLocationForDisplay(quote.location)
-            : LocationService.formatCoordinates(
+    // 显示优先级：地点名（拼上行政区）> 行政区 > 坐标。
+    // 用户在编辑器里特意选过"芝公园"，卡片上就不该只写"东京都·港区"。
+    final displayLocation = LocationService.formatPoiForDisplay(
+      quote.poiName,
+      quote.location,
+    );
+    final locationText = displayLocation.isNotEmpty
+        ? displayLocation
+        : (quote.hasCoordinates
+            ? LocationService.formatCoordinates(
                 quote.latitude,
                 quote.longitude,
-              ))
-        : null;
+              )
+            : null);
     final weatherText = quote.weather != null
         ? '${WeatherService.getLocalizedWeatherDescription(l10n, quote.weather!)}'
             '${quote.temperature != null ? ' ${quote.temperature}' : ''}'

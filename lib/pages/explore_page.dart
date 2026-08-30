@@ -28,6 +28,7 @@ import '../theme/app_semantic_colors.dart';
 import '../theme/theme_style.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../widgets/ai/experimental_badge.dart';
+import 'map_memory_page.dart';
 import 'thoughter_page.dart';
 import 'thoughter/session_history_page.dart';
 
@@ -36,6 +37,7 @@ part 'explore/explore_time_selector.dart';
 part 'explore/explore_overview.dart';
 part 'explore/explore_stats.dart';
 part 'explore/explore_thoughter_entry.dart';
+part 'explore/explore_map_entry.dart';
 
 /// 探索页：底部导航第三个 tab，聚合周期洞察与 Thoughter 入口。
 class ExplorePage extends StatefulWidget {

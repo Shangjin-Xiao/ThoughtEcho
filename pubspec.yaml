@@ -92,6 +92,10 @@ dependencies:
   ddgs: ^0.3.2
   html: ^0.15.4
   flutter_slidable: ^3.1.1
+  # 地图：OpenStreetMap 瓦片，免费无 API Key，和已有的 Nominatim 反查同一套生态。
+  flutter_map: ^8.3.1
+  latlong2: ^0.9.1 # flutter_map 的经纬度类型
+  flutter_map_marker_cluster: ^8.2.2 # 地图回忆页的标记聚合
 
 dev_dependencies:
   flutter_test:

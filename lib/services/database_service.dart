@@ -12,6 +12,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/note_tag.dart';
+import '../models/quote_map_point.dart';
 import '../models/quote_model.dart';
 import '../models/app_settings.dart';
 
@@ -145,6 +146,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String orderBy = 'q.date DESC',
     bool includeDeleted = false,
   });
+
+  /// 地图回忆页要用的全部坐标点，只取 marker 需要的四列。
+  Future<List<QuoteMapPoint>> getQuotesWithCoordinates();
   Future<int> getQuotesCount({
     List<String>? tagIds,
     String? categoryId,
