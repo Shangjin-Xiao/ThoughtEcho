@@ -44,10 +44,15 @@ void main() {
           kind: AgentMemoryKind.taste,
           directive: '摘录偏好凝练的短句',
         );
+        await harness.memory.rememberProfile(
+          kind: AgentMemoryKind.voice,
+          directive: '原创笔记多为第一人称碎句',
+        );
 
         final block = await harness.memory.buildProfileBlock();
 
         expect(block, contains('摘录偏好凝练的短句'));
+        expect(block, contains('原创笔记多为第一人称碎句'));
       });
 
       test('投影后没有条目也没有称呼时返回 null', () async {

@@ -75,8 +75,10 @@ class SessionSearchTool extends AgentTool {
       );
     }
 
-    final limit =
-        call.getInt('limit', defaultValue: defaultLimit).clamp(1, maxLimit);
+    final limit = call
+        .getInt('limit', defaultValue: defaultLimit)
+        .clamp(1, maxLimit)
+        .toInt();
 
     try {
       final now = DateTime.now();

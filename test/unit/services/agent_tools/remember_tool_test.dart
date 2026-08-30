@@ -106,5 +106,52 @@ void main() {
       expect(result.isError, isTrue);
       expect((await harness.memory.counts()).profileCount, 0);
     });
+
+    test('拒绝手动写入 taste / voice 类画像', () async {
+      final resultTaste = await remember.execute(toolCall('remember', {
+        'content': '偏好短句摘录',
+        'kind': 'taste',
+      }));
+      expect(resultTaste.isError, isTrue);
+      expect(resultTaste.content, contains('taste 类记忆由后台定期归纳'));
+
+      final resultVoice = await remember.execute(toolCall('remember', {
+        'content': '多用第一人称碎句',
+        'kind': 'voice',
+      }));
+      expect(resultVoice.isError, isTrue);
+      expect(resultVoice.content, contains('voice 类记忆由后台定期归纳'));
+    });
+
+    test('拒绝 update 属于 taste / voice 的既有条目', () async {
+      final entry = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.taste,
+        directive: '摘录偏好凝练的短句',
+        source: 'dreaming',
+      );
+
+      // 省略 kind 时拒绝
+      final updateWithoutKind = await remember.execute(toolCall('remember', {
+        'action': 'update',
+        'id': entry.id,
+        'content': '尝试修改 taste',
+      }));
+      expect(updateWithoutKind.isError, isTrue);
+      expect(updateWithoutKind.content, contains('taste 类记忆由后台定期归纳'));
+
+      // 传其它 kind 试图改类型时也拒绝
+      final updateWithOtherKind = await remember.execute(toolCall('remember', {
+        'action': 'update',
+        'id': entry.id,
+        'kind': 'style',
+        'content': '尝试换成 style',
+      }));
+      expect(updateWithOtherKind.isError, isTrue);
+
+      // 原始内容未被修改
+      final current = (await harness.memory.activeProfile())
+          .firstWhere((e) => e.id == entry.id);
+      expect(current.directive, '摘录偏好凝练的短句');
+    });
   });
 }
