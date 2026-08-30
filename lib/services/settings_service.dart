@@ -55,11 +55,12 @@ class SettingsService extends ChangeNotifier {
   static const String _aiAutoEnablePendingKey = 'ai_auto_enable_pending_v1';
   final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
-  AISettings _aiSettings = const AISettings();
-  AppSettings _appSettings = const AppSettings();
-  ThemeMode _themeMode = ThemeMode.system;
-  MultiAISettings _multiAISettings = const MultiAISettings(); // 新增多provider设置
-  LocalAISettings _localAISettings = const LocalAISettings(); // 新增本地AI设置
+  Completer<void>? _saveMultiAiLock;
+  late AISettings _aiSettings;
+  late AppSettings _appSettings;
+  late ThemeMode _themeMode;
+  late MultiAISettings _multiAISettings; // 新增多provider设置
+  late LocalAISettings _localAISettings; // 新增本地AI设置
 
   // 迁移标志，只执行一次数据迁移
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
@@ -649,7 +650,14 @@ class SettingsService extends ChangeNotifier {
   }
 
   // 默认作者（自动填充）
-  String? get defaultAuthor => _appSettings.defaultAuthor;
+  String? get defaultAuthor {
+    try {
+      return _appSettings.defaultAuthor;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> setDefaultAuthor(String? author) async {
     if (author == null || author.isEmpty) {
       _appSettings = _appSettings.copyWith(clearDefaultAuthor: true);
@@ -661,7 +669,14 @@ class SettingsService extends ChangeNotifier {
   }
 
   // 默认出处（自动填充）
-  String? get defaultSource => _appSettings.defaultSource;
+  String? get defaultSource {
+    try {
+      return _appSettings.defaultSource;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> setDefaultSource(String? source) async {
     if (source == null || source.isEmpty) {
       _appSettings = _appSettings.copyWith(clearDefaultSource: true);
