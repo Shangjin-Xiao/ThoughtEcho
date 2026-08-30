@@ -98,6 +98,7 @@ void main() {
       expect(result.isError, isFalse);
       final data = jsonDecode(result.content);
       expect(data['id'], 'note_123');
+      expect(data['type'], 'excerpt');
       // 笔记正文是用户数据：包裹 <note> 标签，声明为数据而非指令
       expect(
         data['content'],

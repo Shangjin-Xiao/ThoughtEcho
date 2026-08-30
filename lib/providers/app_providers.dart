@@ -48,14 +48,14 @@ List<AgentTool> _buildAgentTools(
   ChatSessionService chatSessionService,
 ) {
   return [
-    ExploreNotesTool(db),
+    ExploreNotesTool(db, settingsService),
     GetTagsTool(db),
     GetLocationWeatherTool(
       locationService: locationService,
       weatherService: weatherService,
       settingsService: settingsService,
     ),
-    GetNoteDetailTool(db),
+    GetNoteDetailTool(db, settingsService),
     WebSearchTool(settingsService),
     WebFetchTool(WebFetchService()),
     ProposeNoteCreateTool(db),

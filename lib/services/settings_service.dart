@@ -126,6 +126,16 @@ class SettingsService extends ChangeNotifier {
 
   String get userNickname => _mmkv.getString(_userNicknameKey) ?? '';
 
+  /// 获取代表用户自身的全部署名别名集合（包含用户称呼与默认作者）。
+  Set<String> get userAliases {
+    final aliases = <String>{};
+    final nick = userNickname.trim();
+    if (nick.isNotEmpty) aliases.add(nick);
+    final author = defaultAuthor?.trim();
+    if (author != null && author.isNotEmpty) aliases.add(author);
+    return aliases;
+  }
+
   /// 写入失败时抛出：静默失败会让用户以为称呼已生效，对话里却一直没有。
   Future<void> setUserNickname(String value) async {
     final success = await _mmkv.setString(_userNicknameKey, value.trim());

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
@@ -197,9 +198,15 @@ class DreamingService {
     if (last != null && now.difference(last) < minInterval) {
       return false;
     }
-    // 未来时间戳说明设备时钟被调过。按"刚跑过"处理而不是放行：放行会让
-    // 时钟乱跳的设备每次洞察都跑一轮。
+    // 未来时间戳说明设备时钟被调过：
+    // 1. 若落在未来 30 天内：按「刚跑过」处理跳过本轮，防止时钟频繁微调导致每次洞察都跑。
+    // 2. 若超出未来 30 天：说明曾出现重大时钟跳跃且已修正回正常时间，若不自愈会导致
+    //    Dreaming 长期甚至永久死锁。此时重置记录并放行。
     if (last != null && last.isAfter(now)) {
+      if (last.difference(now) > const Duration(days: 30)) {
+        unawaited(_settings.setLastDreamingAt(null));
+        return true;
+      }
       return false;
     }
     return true;
@@ -215,13 +222,23 @@ class DreamingService {
       return null;
     }
 
+    final userNickname = _settings.userNickname;
+    final defaultAuthor = _settings.defaultAuthor;
+    final defaultSource = _settings.defaultSource;
+    final userAliases = _settings.userAliases;
+
     final excerpts = <Quote>[];
     final originals = <Quote>[];
     for (final quote in quotes) {
       if (quote.content.trim().isEmpty) continue;
       // 摘录反映他向往的，原创反映他实际的。两组必须分开归纳，混在一起
       // 会让代笔时照着他摘的去写，产出完全不像他本人。
-      if (quote.attributionKind == 'excerpt') {
+      if (quote.isExcerpt(
+        userNickname: userNickname,
+        defaultAuthor: defaultAuthor,
+        defaultSource: defaultSource,
+        userAliases: userAliases,
+      )) {
         if (excerpts.length < maxSamplePerGroup) excerpts.add(quote);
       } else {
         if (originals.length < maxSamplePerGroup) originals.add(quote);

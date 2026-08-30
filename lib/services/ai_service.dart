@@ -722,6 +722,10 @@ class AIService extends ChangeNotifier {
           quotes,
           analysisType: analysisType,
           analysisStyle: analysisStyle,
+          userNickname: _settingsService.userNickname,
+          defaultAuthor: _settingsService.defaultAuthor,
+          defaultSource: _settingsService.defaultSource,
+          userAliases: _settingsService.userAliases,
         );
         final quotesText = _requestHelper.formatJsonData(jsonData);
 
@@ -767,6 +771,10 @@ class AIService extends ChangeNotifier {
       quotes,
       analysisType: analysisType,
       analysisStyle: analysisStyle,
+      userNickname: _settingsService.userNickname,
+      defaultAuthor: _settingsService.defaultAuthor,
+      defaultSource: _settingsService.defaultSource,
+      userAliases: _settingsService.userAliases,
     );
     jsonData['metadata']['customPromptUsed'] =
         (customPrompt != null && customPrompt.isNotEmpty).toString();
