@@ -304,8 +304,8 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         where: '''
           q.latitude IS NOT NULL
           AND q.longitude IS NOT NULL
-          AND q.latitude >= -90.0 AND q.latitude <= 90.0
-          AND q.longitude >= -180.0 AND q.longitude <= 180.0
+          AND q.latitude >= ? AND q.latitude <= ?
+          AND q.longitude >= ? AND q.longitude <= ?
           AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
           AND NOT EXISTS (
             SELECT 1 FROM quote_tags qt_hidden
@@ -313,7 +313,13 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
             AND qt_hidden.tag_id = ?
           )
         ''',
-        whereArgs: [_DatabaseServiceBase.hiddenTagId],
+        whereArgs: [
+          -90.0,
+          90.0,
+          -180.0,
+          180.0,
+          _DatabaseServiceBase.hiddenTagId,
+        ],
         orderBy: 'q.date DESC',
       );
 
