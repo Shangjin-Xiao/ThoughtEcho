@@ -56,11 +56,12 @@ class SettingsService extends ChangeNotifier {
   final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
   Completer<void>? _saveMultiAiLock;
-  late AISettings _aiSettings;
-  late AppSettings _appSettings;
-  late ThemeMode _themeMode;
-  late MultiAISettings _multiAISettings; // 新增多provider设置
-  late LocalAISettings _localAISettings; // 新增本地AI设置
+  AISettings _aiSettings = AISettings(apiKey: '');
+  AppSettings _appSettings = AppSettings.defaultSettings();
+  ThemeMode _themeMode = ThemeMode.system;
+  MultiAISettings _multiAISettings = const MultiAISettings(); // 新增多provider设置
+  LocalAISettings _localAISettings =
+      LocalAISettings.defaultSettings(); // 新增本地AI设置
 
   // 迁移标志，只执行一次数据迁移
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
