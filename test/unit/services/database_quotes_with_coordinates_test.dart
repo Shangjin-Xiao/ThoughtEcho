@@ -3,6 +3,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 
+import '../../test_harness.dart';
+
 /// 地图回忆页的取数：只要有坐标的、没被删也没被隐藏的笔记。
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +16,8 @@ void main() {
     late Database db;
 
     setUp(() async {
+      await TestHarness.initialize();
+      DatabaseService.clearTestDatabase();
       service = DatabaseService();
 
       db = await databaseFactory.openDatabase(inMemoryDatabasePath);
@@ -84,6 +88,7 @@ void main() {
     });
 
     tearDown(() async {
+      DatabaseService.clearTestDatabase();
       await db.close();
     });
 
@@ -171,10 +176,7 @@ void main() {
       // 就是一张加载成功的空地图，数据库故障被藏起来了。
       await db.close();
 
-      expect(
-        () => service.getQuotesWithCoordinates(),
-        throwsA(isA<Object>()),
-      );
+      expect(() => service.getQuotesWithCoordinates(), throwsA(isA<Object>()));
     });
 
     test('按时间倒序返回', () async {
@@ -200,6 +202,42 @@ void main() {
       final points = await service.getQuotesWithCoordinates();
 
       expect(points.map((p) => p.id), ['newer', 'older']);
+    });
+
+    test('越界坐标不上地图', () async {
+      await service.addQuote(
+        Quote(
+          id: 'out-of-bounds-lat',
+          content: '纬度超标',
+          date: '2026-08-01T10:00:00.000Z',
+          latitude: 91.0,
+          longitude: 120.0,
+        ),
+      );
+      await service.addQuote(
+        Quote(
+          id: 'out-of-bounds-lon',
+          content: '经度超标',
+          date: '2026-08-02T10:00:00.000Z',
+          latitude: 30.0,
+          longitude: -185.0,
+        ),
+      );
+      await service.addQuote(
+        Quote(
+          id: 'valid-bounds',
+          content: '合法边界',
+          date: '2026-08-03T10:00:00.000Z',
+          latitude: -90.0,
+          longitude: 180.0,
+        ),
+      );
+
+      final points = await service.getQuotesWithCoordinates();
+
+      expect(points.map((p) => p.id), ['valid-bounds']);
+      expect(points.single.latitude, -90.0);
+      expect(points.single.longitude, 180.0);
     });
   });
 }

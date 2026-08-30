@@ -104,8 +104,9 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders =
-          selectedDayPeriods.map((_) => '?').join(',');
+      final dayPeriodPlaceholders = selectedDayPeriods
+          .map((_) => '?')
+          .join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
@@ -304,6 +305,8 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         where: '''
           q.latitude IS NOT NULL
           AND q.longitude IS NOT NULL
+          AND q.latitude >= -90.0 AND q.latitude <= 90.0
+          AND q.longitude >= -180.0 AND q.longitude <= 180.0
           AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
           AND NOT EXISTS (
             SELECT 1 FROM quote_tags qt_hidden
@@ -321,6 +324,12 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         final longitude = (map['longitude'] as num?)?.toDouble();
         final id = map['id']?.toString();
         if (latitude == null || longitude == null || id == null) continue;
+        if (latitude < -90.0 ||
+            latitude > 90.0 ||
+            longitude < -180.0 ||
+            longitude > 180.0) {
+          continue;
+        }
 
         points.add(
           QuoteMapPoint(
@@ -498,8 +507,9 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodPlaceholders =
-            selectedDayPeriods.map((_) => '?').join(',');
+        final dayPeriodPlaceholders = selectedDayPeriods
+            .map((_) => '?')
+            .join(',');
         conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
       }

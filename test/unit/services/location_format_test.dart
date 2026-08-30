@@ -170,12 +170,11 @@ void main() {
       expect(LocationService.cleanGeocodingText('韩国 / 南韓'), '韩国');
       expect(LocationService.cleanGeocodingText('法国;法國'), '法国');
       expect(LocationService.cleanGeocodingText('澳大利亚;澳洲'), '澳大利亚');
+      expect(LocationService.cleanGeocodingText('法兰西岛大区 / 法蘭西島大區'), '法兰西岛大区');
       expect(
-        LocationService.cleanGeocodingText('法兰西岛大区 / 法蘭西島大區'),
-        '法兰西岛大区',
+        LocationService.cleanGeocodingText('Grand Londres'),
+        'Grand Londres',
       );
-      expect(
-          LocationService.cleanGeocodingText('Grand Londres'), 'Grand Londres');
       expect(LocationService.cleanGeocodingText(''), '');
       expect(LocationService.cleanGeocodingText(null), '');
     });
@@ -197,10 +196,7 @@ void main() {
     });
 
     test('地点名和行政区同名时不重复', () {
-      expect(
-        LocationService.formatPoiForDisplay('港区', '日本,东京都,,港区'),
-        '港区',
-      );
+      expect(LocationService.formatPoiForDisplay('港区', '日本,东京都,,港区'), '港区');
     });
 
     test('没有地址时只显示地点名', () {
@@ -228,12 +224,16 @@ void main() {
     test('没有地点名时退回行政区显示，老笔记显示不变', () {
       expect(
         LocationService.formatPoiForDisplay(
-            null, 'China,Beijing,Beijing,Chaoyang'),
+          null,
+          'China,Beijing,Beijing,Chaoyang',
+        ),
         'Beijing·Chaoyang',
       );
       expect(
         LocationService.formatPoiForDisplay(
-            '   ', 'China,Beijing,Beijing,Chaoyang'),
+          '   ',
+          'China,Beijing,Beijing,Chaoyang',
+        ),
         'Beijing·Chaoyang',
       );
     });
@@ -254,7 +254,9 @@ void main() {
       expect(stored, 'China,Beijing,Beijing,Chaoyang');
       // 拼出来的串必须能被展示函数解析回去
       expect(
-          LocationService.formatLocationForDisplay(stored), 'Beijing·Chaoyang');
+        LocationService.formatLocationForDisplay(stored),
+        'Beijing·Chaoyang',
+      );
     });
 
     test('缺区县时留空位，段数不变', () {
@@ -270,8 +272,10 @@ void main() {
 
     test('没有任何行政区时返回 null，让调用方退回坐标', () {
       expect(LocationService.buildStorageLocation(null), isNull);
-      expect(LocationService.buildStorageLocation(const <String, String?>{}),
-          isNull);
+      expect(
+        LocationService.buildStorageLocation(const <String, String?>{}),
+        isNull,
+      );
       expect(
         LocationService.buildStorageLocation(<String, String?>{
           'country': '',

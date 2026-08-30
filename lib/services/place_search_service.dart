@@ -61,14 +61,15 @@ class NominatimPlaceSearchService implements PlaceSearchService {
   NominatimPlaceSearchService({
     NetworkService? networkService,
     Duration? minRequestInterval,
-  })  : _networkService = networkService,
-        _minRequestInterval = minRequestInterval ?? _defaultMinRequestInterval;
+  }) : _networkService = networkService,
+       _minRequestInterval = minRequestInterval ?? _defaultMinRequestInterval;
 
   static const String _searchUrl = 'https://nominatim.openstreetmap.org/search';
   static const String _userAgent =
       'ThoughtEcho/3.4 (https://github.com/Shangjin-Xiao/ThoughtEcho)';
-  static const Duration _defaultMinRequestInterval =
-      Duration(milliseconds: 1100);
+  static const Duration _defaultMinRequestInterval = Duration(
+    milliseconds: 1100,
+  );
 
   /// 搜索框限定在参考点周围这么多度的方框内，约 ±11 公里。
   ///
@@ -112,7 +113,8 @@ class NominatimPlaceSearchService implements PlaceSearchService {
           'format': 'json',
           'addressdetails': '1',
           'limit': '$limit',
-          'viewbox': '${longitude - _viewboxDelta},'
+          'viewbox':
+              '${longitude - _viewboxDelta},'
               '${latitude + _viewboxDelta},'
               '${longitude + _viewboxDelta},'
               '${latitude - _viewboxDelta}',
@@ -150,8 +152,9 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       }
 
       places.sort(
-        (a, b) => (a.distanceMeters ?? double.infinity)
-            .compareTo(b.distanceMeters ?? double.infinity),
+        (a, b) => (a.distanceMeters ?? double.infinity).compareTo(
+          b.distanceMeters ?? double.infinity,
+        ),
       );
       return places;
     } catch (e, stack) {
@@ -180,7 +183,10 @@ class NominatimPlaceSearchService implements PlaceSearchService {
   }
 
   PlaceInfo? _toPlace(
-      Map<dynamic, dynamic> item, double refLat, double refLon) {
+    Map<dynamic, dynamic> item,
+    double refLat,
+    double refLon,
+  ) {
     final lat = double.tryParse(item['lat']?.toString() ?? '');
     final lon = double.tryParse(item['lon']?.toString() ?? '');
     if (lat == null || lon == null) return null;
@@ -257,7 +263,8 @@ class NominatimPlaceSearchService implements PlaceSearchService {
 
     final dLat = toRadians(lat2 - lat1);
     final dLon = toRadians(lon2 - lon1);
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
         math.cos(toRadians(lat1)) *
             math.cos(toRadians(lat2)) *
             math.sin(dLon / 2) *
