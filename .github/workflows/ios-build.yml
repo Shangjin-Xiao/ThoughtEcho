@@ -152,7 +152,7 @@ jobs:
           # 路径不写死：Flutter / Xcode 换版本时 dSYM 的产出位置变过。先列出来，
           # 日志里留一份「这次到底传了什么」，下次对不上号时好查。
           echo "本次构建产出的 dSYM："
-          find build/ios -maxdepth 4 -name '*.dSYM' -print || true
+          find build/ios -name '*.dSYM' -print || true
 
           sentry-cli debug-files upload \
             --org "$SENTRY_ORG" \

@@ -28,6 +28,9 @@
 ///
 /// **`wait` 是延迟，不是 UI 线程占用**：解码本身在 worker 线程。它大 ≠ 主线程被
 /// 占住那么久。要的是它和 `worstVsync` 的**相关性**，不是拿它当占用量直接读。
+///
+/// **仅限 UI Isolate（主线程）使用**：所有会话状态均为静态字段；Dart 中 Isolate
+/// 间内存独立，跨 Isolate 调用会落入独立副本而无法聚合统计。
 class NoteListImageProfile {
   NoteListImageProfile._();
 
