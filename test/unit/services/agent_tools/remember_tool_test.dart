@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/services/agent_tools/remember_tool.dart';
 
 import 'memory_tool_harness.dart';
