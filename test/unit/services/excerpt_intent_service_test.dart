@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/excerpt_intent_service.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -104,17 +106,146 @@ void main() {
 
   group('原生实现缺失时不当成错误', () {
     const service = ExcerptIntentService(supported: true);
+    late _RecordingLogService logService;
 
     setUp(() {
+      logService = _RecordingLogService();
+      AppLogger.serviceForTesting = logService;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);
     });
 
-    test('两个方法都吞掉 MissingPluginException 而不是抛出去', () async {
+    tearDown(() {
+      AppLogger.initialize();
+    });
+
+    test('两个方法都吞掉 MissingPluginException 并记录 debug 而不向 error 记录', () async {
       // 平台判断之后还撞上，说明是 Android 侧注册时机的问题（例如引擎重建）。
-      // 仍然要能安全降级：调用方不该因此崩，也不该被当成错误上报。
+      // 仍然要能安全降级：调用方不该因此崩，且只记 debug，不当作 error 上报 Sentry。
       expect(await service.consumePendingExcerptText(), isNull);
       await expectLater(service.syncEntryPointEnabled(true), completes);
+
+      final debugLogs = logService.records
+          .where((r) => r.level == UnifiedLogLevel.debug)
+          .toList();
+      final errorLogs = logService.records
+          .where((r) => r.level == UnifiedLogLevel.error)
+          .toList();
+
+      expect(errorLogs, isEmpty);
+      expect(debugLogs.length, 2);
+      expect(
+        debugLogs[0].message,
+        contains('ExcerptIntentService.consumePendingExcerptText 未找到原生实现'),
+      );
+      expect(
+        debugLogs[1].message,
+        contains('ExcerptIntentService.syncEntryPointEnabled 未找到原生实现'),
+      );
     });
   });
+}
+
+class _RecordingLogService implements UnifiedLogService {
+  final List<
+      ({
+        UnifiedLogLevel level,
+        String message,
+        String? source,
+        Object? error
+      })> records = [];
+
+  @override
+  void verbose(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.verbose,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void debug(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.debug,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void info(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.info,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void warning(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.warning,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void error(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.error,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void log(
+    UnifiedLogLevel level,
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    records.add((level: level, message: message, source: source, error: error));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

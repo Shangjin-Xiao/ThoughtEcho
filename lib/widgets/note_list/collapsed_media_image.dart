@@ -94,7 +94,8 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
     // 计时起点放在这里而不是 build 开头：这一段只在**真的换了 provider** 时走到，
     // 正好对应「这张图要重新解析一次」。命中上面那三个字段的重建不该重新计时。
     _recordedOutcome = false;
-    _resolve = NoteListImageProfile.markResolveStart();
+    _resolve =
+        provider == null ? null : NoteListImageProfile.markResolveStart();
     return provider;
   }
 

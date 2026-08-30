@@ -960,6 +960,9 @@ class NoteListViewState extends State<NoteListView>
       _perfTimingsCallbackAttached = false;
       _firstOpenScrollPerfRecording = false;
       _loadMorePerfRecording = false;
+      if (_scrollSessionPerfRecording) {
+        NoteListImageProfile.endSession();
+      }
       _scrollSessionPerfRecording = false;
       _scrollSessionPerfPendingFinalize = false;
     }
