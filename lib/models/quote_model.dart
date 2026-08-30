@@ -506,23 +506,247 @@ class Quote {
   bool get hasTags => tagIds.isNotEmpty;
   bool get hasKeywords => keywords != null && keywords!.isNotEmpty;
 
+  /// 内置的自指代作者关键词（全小写）。
+  static const Set<String> _builtinSelfAuthorKeywords = <String>{
+    '我',
+    '自己',
+    '本人',
+    '自作',
+    '自撰',
+    '原创',
+    '自述',
+    '笔者',
+    '作者',
+    'me',
+    'myself',
+    'i',
+    'self',
+    'author',
+    'original',
+  };
+
+  /// 内置的个人日记/随笔出处关键词（全小写）。
+  static const Set<String> _builtinSelfSourceKeywords = <String>{
+    '日记',
+    '随笔',
+    '随手记',
+    '我的日记',
+    '思考',
+    '随想',
+    '自留地',
+    'diary',
+    'journal',
+    'notes',
+    'memo',
+  };
+
+  static String _stripAuthorPrefix(String text) {
+    var trimmed = text.trim();
+    if (trimmed.startsWith('——') || trimmed.startsWith('—')) {
+      trimmed = trimmed.replaceFirst(RegExp(r'^[—–—]+\s*'), '').trim();
+    }
+    final lower = trimmed.toLowerCase();
+    if (lower.startsWith('作者：') || lower.startsWith('作者:')) {
+      return trimmed.substring(3).trim();
+    }
+    if (lower.startsWith('author:') || lower.startsWith('author：')) {
+      return trimmed.substring(7).trim();
+    }
+    if (lower.startsWith('by ') || lower.startsWith('by:')) {
+      return trimmed.substring(3).trim();
+    }
+    return trimmed;
+  }
+
+  /// 判断给定的作者字符串是否属于用户自身（自指代词或命中用户昵称/默认作者/别名）。
+  static bool isSelfAuthor(
+    String? author, {
+    String? userNickname,
+    String? defaultAuthor,
+    Iterable<String>? userAliases,
+  }) {
+    if (author == null) return false;
+    var trimmed = author.trim();
+    if (trimmed.isEmpty) return false;
+
+    trimmed = _stripAuthorPrefix(trimmed);
+    if (trimmed.isEmpty) return false;
+
+    final lower = trimmed.toLowerCase();
+
+    // 1. 检查内置自指代词
+    if (_builtinSelfAuthorKeywords.contains(lower)) {
+      return true;
+    }
+
+    // 2. 检查用户设置的昵称
+    if (userNickname != null && userNickname.trim().isNotEmpty) {
+      if (lower == userNickname.trim().toLowerCase()) {
+        return true;
+      }
+    }
+
+    // 3. 检查默认作者设置
+    if (defaultAuthor != null && defaultAuthor.trim().isNotEmpty) {
+      if (lower == defaultAuthor.trim().toLowerCase()) {
+        return true;
+      }
+    }
+
+    // 4. 检查额外别名列表
+    if (userAliases != null) {
+      for (final alias in userAliases) {
+        final a = alias.trim();
+        if (a.isNotEmpty && lower == a.toLowerCase()) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   /// 这条笔记带没带归属标注（作者 / 出处 / 旧数据里未拆分的来源串）。
   bool get hasAttribution =>
       (sourceAuthor?.trim().isNotEmpty ?? false) ||
       (sourceWork?.trim().isNotEmpty ?? false) ||
       (_source?.trim().isNotEmpty ?? false);
 
-  /// 喂给模型时用的归属类型：`excerpt`（摘录）/ `original`（用户原创）。
+  /// 判断该笔记的署名/出处是否为用户本人的原创标注（而非摘录外部作品）。
+  bool isSelfAttributed({
+    String? userNickname,
+    String? defaultAuthor,
+    String? defaultSource,
+    Iterable<String>? userAliases,
+  }) {
+    // 1. 若有明确的作者标注，以作者判定为主
+    if (sourceAuthor != null && sourceAuthor!.trim().isNotEmpty) {
+      return isSelfAuthor(
+        sourceAuthor,
+        userNickname: userNickname,
+        defaultAuthor: defaultAuthor,
+        userAliases: userAliases,
+      );
+    }
+
+    // 2. 若作者为空，检查旧数据中未拆分的 source / _source
+    final rawSource = _source?.trim();
+    if (rawSource != null && rawSource.isNotEmpty) {
+      // 2.1 整体命中自指代作者或用户别名
+      if (isSelfAuthor(
+        rawSource,
+        userNickname: userNickname,
+        defaultAuthor: defaultAuthor,
+        userAliases: userAliases,
+      )) {
+        return true;
+      }
+
+      // 2.2 剥离可能存在的「作者：/ author: / ——」前缀后，拆分「作者 - 出处」或「作者：出处」格式
+      final normalizedSource = _stripAuthorPrefix(rawSource);
+      final parts = normalizedSource.split(RegExp(r'\s*[-—–：:]\s*'));
+      if (parts.length >= 2) {
+        final authorCandidate = parts.first.trim();
+        if (isSelfAuthor(
+          authorCandidate,
+          userNickname: userNickname,
+          defaultAuthor: defaultAuthor,
+          userAliases: userAliases,
+        )) {
+          return true;
+        }
+      }
+
+      // 2.3 来源整体为日记/随笔类词汇或命中 defaultSource
+      final lowerSource = rawSource.toLowerCase();
+      if (_builtinSelfSourceKeywords.contains(lowerSource)) {
+        return true;
+      }
+      if (defaultSource != null &&
+          defaultSource.trim().isNotEmpty &&
+          lowerSource == defaultSource.trim().toLowerCase()) {
+        return true;
+      }
+    }
+
+    // 3. 若作者为空且无 rawSource，但有 sourceWork
+    final work = sourceWork?.trim();
+    if (work != null && work.isNotEmpty) {
+      final lowerWork = work.toLowerCase();
+      if (_builtinSelfSourceKeywords.contains(lowerWork)) {
+        return true;
+      }
+      if (defaultSource != null &&
+          defaultSource.trim().isNotEmpty &&
+          lowerWork == defaultSource.trim().toLowerCase()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// 判断该笔记是否为摘录（引用他人的文字）。
+  ///
+  /// 若笔记无任何归属标注，或标注属于用户本人的原创署名（如用户昵称、笔名、"我"、"自作"、"日记"等），
+  /// 则不属于摘录；只有标注了外部作者或外部作品时才判定为摘录。
+  bool isExcerpt({
+    String? userNickname,
+    String? defaultAuthor,
+    String? defaultSource,
+    Iterable<String>? userAliases,
+  }) {
+    if (!hasAttribution) {
+      return false;
+    }
+    if (isSelfAttributed(
+      userNickname: userNickname,
+      defaultAuthor: defaultAuthor,
+      defaultSource: defaultSource,
+      userAliases: userAliases,
+    )) {
+      return false;
+    }
+    return true;
+  }
+
+  /// 判断该笔记是否为用户原创。
+  bool isOriginal({
+    String? userNickname,
+    String? defaultAuthor,
+    String? defaultSource,
+    Iterable<String>? userAliases,
+  }) =>
+      !isExcerpt(
+        userNickname: userNickname,
+        defaultAuthor: defaultAuthor,
+        defaultSource: defaultSource,
+        userAliases: userAliases,
+      );
+
+  /// 解析归属类型字符串：`excerpt`（摘录）/ `original`（用户原创）。
   ///
   /// 模型反复把摘录当成用户的自白——「我看到了这段文字，却在分析时把它当成了
   /// 你的自白」是它自己的原话。根因是它只拿到 author / source 两个字段，
   /// 得自己推断这条是谁写的，而推断在长上下文里第一个失效。这里替它把结论
-  /// 算好：有归属标注就是摘录。
-  ///
-  /// 判断依据只有标注，所以不是绝对的——用户也可能给自己的原创署名。那种
-  /// 情况由提示词里的例外条款兜底（署的是用户自己的称呼时按原创对待），
-  /// 而不是在这里猜。
-  String get attributionKind => hasAttribution ? 'excerpt' : 'original';
+  /// 算好：外部归属为摘录，无标注或用户原创署名（含昵称、默认作者、自指代词）为原创。
+  String resolveAttributionKind({
+    String? userNickname,
+    String? defaultAuthor,
+    String? defaultSource,
+    Iterable<String>? userAliases,
+  }) =>
+      isExcerpt(
+        userNickname: userNickname,
+        defaultAuthor: defaultAuthor,
+        defaultSource: defaultSource,
+        userAliases: userAliases,
+      )
+          ? 'excerpt'
+          : 'original';
+
+  /// 喂给模型时用的归属类型：`excerpt`（摘录）/ `original`（用户原创）。
+  String get attributionKind => resolveAttributionKind();
 
   /// 获取情感分析的中文标签
   String? get sentimentLabel =>

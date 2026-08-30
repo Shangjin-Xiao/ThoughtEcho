@@ -3,6 +3,7 @@ import '../../utils/app_logger.dart';
 import '../../utils/untrusted_text.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
+import '../settings_service.dart';
 import 'tag_argument_resolver.dart';
 
 /// 探索笔记工具 - 支持多维筛选与分页
@@ -13,8 +14,9 @@ import 'tag_argument_resolver.dart';
 /// 3. 提供概览信息，让 AI 具备“主观能动性”去决定下一步动作
 class ExploreNotesTool extends AgentTool {
   final DatabaseService _db;
+  final SettingsService? _settingsService;
 
-  const ExploreNotesTool(this._db);
+  const ExploreNotesTool(this._db, [this._settingsService]);
 
   @override
   String get name => 'explore_notes';
@@ -188,8 +190,13 @@ class ExploreNotesTool extends AgentTool {
           'id': q.id,
           // type 排在正文前面：模型得先知道这段是谁写的再读它。放在末尾
           // 的 author / source 等于让它读完才发现"哦这是摘录"——那时它
-          // 已经把这段当成用户的自白读进去了（见 Quote.attributionKind）。
-          'type': q.attributionKind,
+          // 已经把这段当成用户的自白读进去了（见 Quote.resolveAttributionKind）。
+          'type': q.resolveAttributionKind(
+            userNickname: _settingsService?.userNickname,
+            defaultAuthor: _settingsService?.defaultAuthor,
+            defaultSource: _settingsService?.defaultSource,
+            userAliases: _settingsService?.userAliases,
+          ),
           // 笔记正文是用户数据：包裹 <note> 标签并在序列化前完成转义。
           'content_preview': wrapNoteContent(
             _truncate(q.content, 200),

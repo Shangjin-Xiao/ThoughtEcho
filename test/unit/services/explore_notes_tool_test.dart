@@ -232,15 +232,18 @@ void main() {
       };
 
       final excerpt = byId['excerpt']!;
+      expect(excerpt['type'], 'excerpt');
       expect(excerpt['author'], '作者甲');
       expect(excerpt['source'], '作品乙');
 
       // 只有合并 source 串的旧数据回退到 source，不重复填 author。
       final legacy = byId['legacy']!;
+      expect(legacy['type'], 'excerpt');
       expect(legacy['author'], isNull);
       expect(legacy['source'], '作者丙 - 作品丁');
 
       final plain = byId['plain']!;
+      expect(plain['type'], 'original');
       expect(plain.containsKey('author'), isFalse);
       expect(plain.containsKey('source'), isFalse);
     });

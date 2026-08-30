@@ -5,13 +5,15 @@ import '../../utils/agent_note_document_codec.dart';
 import '../../utils/untrusted_text.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
+import '../settings_service.dart';
 import 'propose_note_edit_tool.dart';
 
 /// 获取单篇笔记详情工具 - 允许 AI 获取笔记的完整正文和元数据
 class GetNoteDetailTool extends AgentTool {
   final DatabaseService _db;
+  final SettingsService? _settingsService;
 
-  const GetNoteDetailTool(this._db);
+  const GetNoteDetailTool(this._db, [this._settingsService]);
 
   @override
   String get name => 'get_note_detail';
@@ -80,7 +82,12 @@ class GetNoteDetailTool extends AgentTool {
         // 和 explore_notes 对齐：`excerpt` / `original`。必须排在 content
         // 前面——排在后面等于让模型读完整段摘录才发现它不是用户写的，
         // 那时它已经把这段当自白读进去了。
-        'type': q.attributionKind,
+        'type': q.resolveAttributionKind(
+          userNickname: _settingsService?.userNickname,
+          defaultAuthor: _settingsService?.defaultAuthor,
+          defaultSource: _settingsService?.defaultSource,
+          userAliases: _settingsService?.userAliases,
+        ),
         // 笔记正文是用户数据：包裹 <note> 标签并在序列化前完成转义。
         'content': wrapNoteContent(q.content, noteId: q.id),
         'date': q.date,
