@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'zh';
     }
 
-    /** 根据浏览器/系统语言推断最佳匹配 */
+    /** 根据浏览器/系统语言推断最佳匹配，无匹配时默认英语 */
     function detectBrowserLang() {
         const langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
         for (const tag of langs) {
@@ -599,11 +599,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lower.startsWith('ko')) return 'ko';
             if (lower.startsWith('en')) return 'en';
         }
-        return 'zh'; // 默认中文
+        return 'en'; // 默认英语
     }
 
     function applyLanguage(lang) {
-        const normalized = supported.includes(lang) ? lang : 'zh';
+        const normalized = supported.includes(lang) ? lang : 'en';
 
         html.classList.remove('lang-zh', 'lang-en', 'lang-ja', 'lang-ko');
         html.classList.add(`lang-${normalized}`);
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ja: 'ja',
             ko: 'ko'
         };
-        html.setAttribute('lang', htmlLangMap[normalized] || 'zh-CN');
+        html.setAttribute('lang', htmlLangMap[normalized] || 'en');
 
         // 微软徽章语言同步
         const storeBadge = document.querySelector('ms-store-badge');

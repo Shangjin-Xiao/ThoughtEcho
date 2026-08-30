@@ -32,10 +32,22 @@
           if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
             document.documentElement.setAttribute('data-theme', 'dark');
           }
-          var savedLang = localStorage.getItem('lang') || 'zh';
-          var normalized = savedLang === 'en' ? 'en' : 'zh';
-          document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + normalized;
-          document.documentElement.setAttribute('lang', normalized === 'zh' ? 'zh-CN' : 'en');
+          var savedLang = localStorage.getItem('lang');
+          var targetLang = 'en'; // 默认英语
+          if (savedLang === 'zh' || savedLang === 'en') {
+            targetLang = savedLang;
+          } else {
+            var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+            for (var i = 0; i < langs.length; i++) {
+              var lower = (langs[i] || '').toLowerCase();
+              if (lower.indexOf('zh') === 0) {
+                targetLang = 'zh';
+                break;
+              }
+            }
+          }
+          document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + targetLang;
+          document.documentElement.setAttribute('lang', targetLang === 'zh' ? 'zh-CN' : 'en');
         } catch(e) {}
       })();
     </script>
@@ -489,8 +501,24 @@
         // Language logic
         const body = document.body;
         const langBtn = document.getElementById('langToggle');
-        let currentLang = 'zh';
-        try { currentLang = localStorage.getItem('lang') || 'zh'; } catch(e) {}
+        
+        function getInitialLang() {
+            var saved = null;
+            try { saved = localStorage.getItem('lang'); } catch(e) {}
+            if (saved === 'zh' || saved === 'en') {
+                return saved;
+            }
+            var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+            for (var i = 0; i < langs.length; i++) {
+                var lower = (langs[i] || '').toLowerCase();
+                if (lower.indexOf('zh') === 0) {
+                    return 'zh';
+                }
+            }
+            return 'en'; // 默认英语
+        }
+
+        let currentLang = getInitialLang();
         document.documentElement.className = `lang-${currentLang}`;
         body.className = `lang-${currentLang}`;
         html.setAttribute('lang', currentLang === 'zh' ? 'zh-CN' : 'en');

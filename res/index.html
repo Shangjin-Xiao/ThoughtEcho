@@ -89,22 +89,26 @@
 
           var supported = ['zh', 'en', 'ja', 'ko'];
           var savedLang = localStorage.getItem('lang');
-          var targetLang = 'zh';
+          var targetLang = 'en'; // 默认英语
           if (savedLang && supported.indexOf(savedLang) !== -1) {
             targetLang = savedLang;
           } else {
             var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+            var matched = false;
             for (var i = 0; i < langs.length; i++) {
               var lower = (langs[i] || '').toLowerCase();
-              if (lower.indexOf('zh') === 0) { targetLang = 'zh'; break; }
-              if (lower.indexOf('ja') === 0) { targetLang = 'ja'; break; }
-              if (lower.indexOf('ko') === 0) { targetLang = 'ko'; break; }
-              if (lower.indexOf('en') === 0) { targetLang = 'en'; break; }
+              if (lower.indexOf('zh') === 0) { targetLang = 'zh'; matched = true; break; }
+              if (lower.indexOf('ja') === 0) { targetLang = 'ja'; matched = true; break; }
+              if (lower.indexOf('ko') === 0) { targetLang = 'ko'; matched = true; break; }
+              if (lower.indexOf('en') === 0) { targetLang = 'en'; matched = true; break; }
+            }
+            if (!matched) {
+              targetLang = 'en';
             }
           }
           document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + targetLang;
           var htmlLangMap = { zh: 'zh-CN', en: 'en', ja: 'ja', ko: 'ko' };
-          document.documentElement.setAttribute('lang', htmlLangMap[targetLang] || 'zh-CN');
+          document.documentElement.setAttribute('lang', htmlLangMap[targetLang] || 'en');
         } catch(e) {}
       })();
     </script>

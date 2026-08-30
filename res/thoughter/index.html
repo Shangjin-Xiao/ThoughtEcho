@@ -60,7 +60,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,600&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Immediate Theme & Language Initializer (Prevents FOUC) -->
+  <!-- Immediate Theme & Language Initializer (Prevents FOUC, Default: EN) -->
   <script>
     (function() {
       try {
@@ -72,10 +72,22 @@
           document.documentElement.removeAttribute('data-theme');
         }
 
-        var savedLang = localStorage.getItem('lang') || 'zh';
-        var normalized = savedLang === 'en' ? 'en' : 'zh';
-        document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + normalized;
-        document.documentElement.setAttribute('lang', normalized === 'en' ? 'en' : 'zh-CN');
+        var savedLang = localStorage.getItem('lang');
+        var targetLang = 'en'; // 默认英语
+        if (savedLang === 'zh' || savedLang === 'en') {
+          targetLang = savedLang;
+        } else {
+          var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+          for (var i = 0; i < langs.length; i++) {
+            var lower = (langs[i] || '').toLowerCase();
+            if (lower.indexOf('zh') === 0) {
+              targetLang = 'zh';
+              break;
+            }
+          }
+        }
+        document.documentElement.className = (document.documentElement.className ? document.documentElement.className + ' ' : '') + 'lang-' + targetLang;
+        document.documentElement.setAttribute('lang', targetLang === 'zh' ? 'zh-CN' : 'en');
       } catch(e) {}
     })();
   </script>
@@ -1869,7 +1881,7 @@
     const langText = document.getElementById('langText');
 
     function applyLanguage(lang) {
-      const normalized = lang === 'en' ? 'en' : 'zh';
+      const normalized = lang === 'zh' ? 'zh' : 'en';
       document.documentElement.classList.remove('lang-zh', 'lang-en');
       document.documentElement.classList.add('lang-' + normalized);
       document.body.classList.remove('lang-zh', 'lang-en');
@@ -1878,19 +1890,32 @@
         langText.textContent = normalized === 'zh' ? 'EN' : '中文';
       }
       document.documentElement.setAttribute('lang', normalized === 'zh' ? 'zh-CN' : 'en');
-      localStorage.setItem('lang', normalized);
+      try { localStorage.setItem('lang', normalized); } catch(e) {}
       resetTypewriter();
     }
 
+    function getInitialLanguage() {
+      var saved = null;
+      try { saved = localStorage.getItem('lang'); } catch(e) {}
+      if (saved === 'zh' || saved === 'en') {
+        return saved;
+      }
+      var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+      for (var i = 0; i < langs.length; i++) {
+        var lower = (langs[i] || '').toLowerCase();
+        if (lower.indexOf('zh') === 0) {
+          return 'zh';
+        }
+      }
+      return 'en'; // 默认英语
+    }
+
     if (langToggleBtn) {
-      var savedLang = 'zh';
-      try { savedLang = localStorage.getItem('lang') || 'zh'; } catch(e) {}
-      applyLanguage(savedLang);
+      applyLanguage(getInitialLanguage());
 
       langToggleBtn.addEventListener('click', () => {
-        const currentLang = document.body.classList.contains('lang-en') ? 'en' : 'zh';
+        const currentLang = document.body.classList.contains('lang-zh') ? 'zh' : 'en';
         applyLanguage(currentLang === 'zh' ? 'en' : 'zh');
-        try { localStorage.setItem('lang', currentLang === 'zh' ? 'en' : 'zh'); } catch(e) {}
       });
     } else {
       resetTypewriter();

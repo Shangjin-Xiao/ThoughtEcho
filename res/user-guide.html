@@ -29,9 +29,22 @@
     <script>
         (function(){
             try {
-                var savedLang = localStorage.getItem('lang') === 'en' ? 'en' : 'zh';
-                document.documentElement.setAttribute('data-lang', savedLang);
-                document.documentElement.setAttribute('lang', savedLang === 'en' ? 'en' : 'zh-CN');
+                var savedLang = localStorage.getItem('lang');
+                var targetLang = 'en'; // 默认英语
+                if (savedLang === 'zh' || savedLang === 'en') {
+                    targetLang = savedLang;
+                } else {
+                    var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+                    for (var i = 0; i < langs.length; i++) {
+                        var lower = (langs[i] || '').toLowerCase();
+                        if (lower.indexOf('zh') === 0) {
+                            targetLang = 'zh';
+                            break;
+                        }
+                    }
+                }
+                document.documentElement.setAttribute('data-lang', targetLang);
+                document.documentElement.setAttribute('lang', targetLang === 'en' ? 'en' : 'zh-CN');
             } catch(e) {}
             document.documentElement.style.visibility = 'hidden';
             var reveal = function(){ document.documentElement.style.visibility = ''; };
@@ -517,9 +530,23 @@
             syncNavHeightVar();
         }
 
-        // 恢复上次语言偏好，默认中文
-        var initialLang = 'zh';
-        try { initialLang = localStorage.getItem('lang') === 'en' ? 'en' : 'zh'; } catch(e) {}
+        // 恢复上次语言偏好或自动探测，无对应语言默认英语
+        function getInitialLang() {
+            var saved = null;
+            try { saved = localStorage.getItem('lang'); } catch(e) {}
+            if (saved === 'zh' || saved === 'en') {
+                return saved;
+            }
+            var langs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+            for (var i = 0; i < langs.length; i++) {
+                var lower = (langs[i] || '').toLowerCase();
+                if (lower.indexOf('zh') === 0) {
+                    return 'zh';
+                }
+            }
+            return 'en'; // 默认英语
+        }
+        var initialLang = getInitialLang();
         switchPageLang(initialLang);
 
         // 绑定切换按钮
