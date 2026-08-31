@@ -5,9 +5,12 @@ import '../extensions/note_tag_localization_extension.dart';
 import '../services/database_service.dart';
 import '../models/note_tag.dart';
 import '../utils/icon_utils.dart';
-import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
+import '../widgets/app_snackbar.dart';
+import '../widgets/app_loading_view.dart';
+import '../widgets/app_empty_view.dart';
+import '../widgets/app_error_view.dart';
 
 class TagSettingsPage extends StatefulWidget {
   const TagSettingsPage({super.key});
@@ -32,6 +35,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final shapeTokens = AppShapeTokens.of(context);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.tagManagement)),
@@ -46,177 +50,168 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
             ),
             const SizedBox(height: 16),
             // 输入与添加区域卡片化
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(
-                    AppShapeTokens.of(context).cardRadius),
-                border: Border.all(
+            Card(
+              elevation: 0,
+              margin: EdgeInsets.zero,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+                side: BorderSide(
                   color: Theme.of(context).colorScheme.outlineVariant,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _categoryController,
-                          maxLength: 50,
-                          decoration: InputDecoration(
-                            labelText: l10n.newTagName,
-                            hintText: l10n.enterTagNameHint,
-                            counterText: '',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                  AppShapeTokens.of(context).inputRadius),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Tooltip(
-                        message: l10n.selectIcon,
-                        child: InkWell(
-                          onTap: () => _showIconSelector(context),
-                          borderRadius: BorderRadius.circular(
-                            AppShapeTokens.of(context).cardRadius,
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.outlineVariant,
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                AppShapeTokens.of(context).cardRadius,
-                              ),
-                            ),
-                            child: _selectedIconName != null
-                                ? (IconUtils.isEmoji(_selectedIconName)
-                                    ? Text(
-                                        IconUtils.getDisplayIcon(
-                                          _selectedIconName!,
-                                        ),
-                                        style: const TextStyle(fontSize: 20),
-                                      )
-                                    : Icon(
-                                        IconUtils.getIconData(
-                                          _selectedIconName,
-                                        ),
-                                      ))
-                                : const Icon(Icons.add_circle_outline),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        icon: _isLoading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.check),
-                        label: Text(_isLoading ? l10n.adding : l10n.add),
-                        onPressed: _isLoading
-                            ? null
-                            : () async {
-                                final text = _categoryController.text.trim();
-                                if (text.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(l10n.pleaseEnterTagName),
-                                      duration:
-                                          AppConstants.snackBarDurationNormal,
-                                    ),
-                                  );
-                                  return;
-                                }
-                                final messenger = ScaffoldMessenger.of(context);
-                                setState(() => _isLoading = true);
-                                try {
-                                  final db = context.read<DatabaseService>();
-                                  await db.addTag(
-                                    text,
-                                    iconName: _selectedIconName,
-                                  );
-                                  if (mounted) {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(l10n.tagAddedSuccess),
-                                        duration:
-                                            AppConstants.snackBarDurationNormal,
-                                      ),
-                                    );
-                                    _categoryController.clear();
-                                    setState(() => _selectedIconName = null);
-                                  }
-                                } catch (e) {
-                                  if (mounted) {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          l10n.addTagFailed(e.toString()),
-                                        ),
-                                        duration:
-                                            AppConstants.snackBarDurationError,
-                                      ),
-                                    );
-                                  }
-                                } finally {
-                                  if (mounted) {
-                                    setState(() => _isLoading = false);
-                                  }
-                                }
-                              },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  AnimatedOpacity(
-                    opacity: _selectedIconName != null ? 1 : 0.6,
-                    duration: const Duration(milliseconds: 200),
-                    child: Row(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Icon(
-                          _selectedIconName != null &&
-                                  !IconUtils.isEmoji(_selectedIconName)
-                              ? IconUtils.getIconData(_selectedIconName)
-                              : Icons.info_outline,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 4),
                         Expanded(
-                          child: Text(
-                            _selectedIconName == null
-                                ? l10n.iconSelectionHint
-                                : l10n.iconSelected(_selectedIconName!),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
+                          child: TextField(
+                            controller: _categoryController,
+                            maxLength: 50,
+                            decoration: InputDecoration(
+                              labelText: l10n.newTagName,
+                              hintText: l10n.enterTagNameHint,
+                              counterText: '',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  shapeTokens.inputRadius,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                        if (_selectedIconName != null)
-                          TextButton(
-                            onPressed: () =>
-                                setState(() => _selectedIconName = null),
-                            child: Text(l10n.clear),
+                        const SizedBox(width: 8),
+                        Tooltip(
+                          message: l10n.selectIcon,
+                          child: InkWell(
+                            onTap: () => _showIconSelector(context),
+                            borderRadius: BorderRadius.circular(
+                              shapeTokens.cardRadius,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.outlineVariant,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  shapeTokens.cardRadius,
+                                ),
+                              ),
+                              child: _selectedIconName != null
+                                  ? (IconUtils.isEmoji(_selectedIconName)
+                                      ? Text(
+                                          IconUtils.getDisplayIcon(
+                                            _selectedIconName!,
+                                          ),
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                          ),
+                                        )
+                                      : Icon(
+                                          IconUtils.getIconData(
+                                            _selectedIconName,
+                                          ),
+                                        ))
+                                  : const Icon(Icons.add_circle_outline),
+                            ),
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          icon: _isLoading
+                              ? const AppInlineLoadingIndicator(
+                                  size: 16,
+                                  strokeWidth: 2,
+                                )
+                              : const Icon(Icons.check),
+                          label: Text(_isLoading ? l10n.adding : l10n.add),
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  final text = _categoryController.text.trim();
+                                  if (text.isEmpty) {
+                                    AppSnackBar.warning(
+                                      context,
+                                      l10n.pleaseEnterTagName,
+                                    );
+                                    return;
+                                  }
+                                  setState(() => _isLoading = true);
+                                  try {
+                                    final db = context.read<DatabaseService>();
+                                    await db.addTag(
+                                      text,
+                                      iconName: _selectedIconName,
+                                    );
+                                    if (context.mounted) {
+                                      AppSnackBar.success(
+                                        context,
+                                        l10n.tagAddedSuccess,
+                                      );
+                                      _categoryController.clear();
+                                      setState(() => _selectedIconName = null);
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      AppSnackBar.error(
+                                        context,
+                                        l10n.addTagFailed(e.toString()),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isLoading = false);
+                                    }
+                                  }
+                                },
+                        ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    AnimatedOpacity(
+                      opacity: _selectedIconName != null ? 1 : 0.6,
+                      duration: const Duration(milliseconds: 200),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _selectedIconName != null &&
+                                    !IconUtils.isEmoji(_selectedIconName)
+                                ? IconUtils.getIconData(_selectedIconName)
+                                : Icons.info_outline,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _selectedIconName == null
+                                  ? l10n.iconSelectionHint
+                                  : l10n.iconSelected(_selectedIconName!),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          if (_selectedIconName != null)
+                            TextButton(
+                              onPressed: () =>
+                                  setState(() => _selectedIconName = null),
+                              child: Text(l10n.clear),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -224,17 +219,17 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
               stream: context.read<DatabaseService>().watchTags(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const AppLoadingView(size: 60);
                 }
 
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Text(l10n.loadTagsFailed(snapshot.error.toString())),
+                  return AppErrorView(
+                    text: l10n.loadTagsFailed(snapshot.error.toString()),
                   );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text(l10n.noTags));
+                  return AppEmptyView(text: l10n.noTags);
                 }
 
                 final categories = snapshot.data!;
@@ -242,8 +237,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                   elevation: 0,
                   margin: EdgeInsets.zero,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                        AppShapeTokens.of(context).cardRadius),
+                    borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
                     side: BorderSide(
                       color: Theme.of(context).colorScheme.outlineVariant,
                     ),
@@ -279,6 +273,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
     final TextEditingController emojiSearchController = TextEditingController();
     String searchQuery = '';
     final l10n = AppLocalizations.of(context);
+    final shapeTokens = AppShapeTokens.of(context);
     Map<String, bool> expandedTags = {
       l10n.emotion: true,
       l10n.thinking: false,
@@ -294,31 +289,29 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          // 获取emoji分类
           final emojiCategories = IconUtils.getCategorizedEmojis();
 
-          // 过滤emoji
           Map<String, List<String>> filteredEmojis = {};
           if (searchQuery.isEmpty) {
             filteredEmojis = emojiCategories;
           } else {
-            // 简单过滤，实际应用中可能需要更复杂的过滤逻辑
             emojiCategories.forEach((category, emojis) {
               filteredEmojis[category] = emojis;
             });
           }
 
-          // Material图标列表，仅在搜索为空时显示
           final materialIcons = IconUtils.categoryIcons.entries.toList();
 
           return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+            ),
             title: Text(l10n.selectIcon),
             content: SizedBox(
               width: MediaQuery.of(context).size.width * 0.8,
               height: MediaQuery.of(context).size.height * 0.6,
               child: Column(
                 children: [
-                  // 搜索框和自定义emoji输入
                   TextField(
                     controller: emojiSearchController,
                     decoration: InputDecoration(
@@ -336,7 +329,8 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                           : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(
-                            AppShapeTokens.of(context).inputRadius),
+                          shapeTokens.inputRadius,
+                        ),
                       ),
                     ),
                     onChanged: (value) {
@@ -344,8 +338,6 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                     },
                   ),
                   const SizedBox(height: 8),
-
-                  // 显示用户输入的emoji (如果是单个字符)
                   if (emojiSearchController.text.isNotEmpty &&
                       emojiSearchController.text.characters.length == 1)
                     Padding(
@@ -372,15 +364,11 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                         ],
                       ),
                     ),
-
                   const SizedBox(height: 8),
-
-                  // emoji分类和系统图标列表
                   Expanded(
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
-                          // emoji分类列表
                           ...filteredEmojis.entries.map((entry) {
                             final category = entry.key;
                             final emojis = entry.value;
@@ -388,12 +376,12 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // 分类标题
                                 ListTile(
                                   title: Text(
                                     category,
-                                    style:
-                                        Theme.of(context).textTheme.titleSmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
                                   ),
                                   trailing: Icon(
                                     expandedTags[category] ?? false
@@ -407,8 +395,6 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                     });
                                   },
                                 ),
-
-                                // 分类内的 emoji
                                 if (expandedTags[category] ?? false)
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -427,6 +413,9 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                             );
                                             Navigator.of(context).pop();
                                           },
+                                          borderRadius: BorderRadius.circular(
+                                            shapeTokens.cardRadius,
+                                          ),
                                           child: Container(
                                             width: 48,
                                             height: 48,
@@ -438,8 +427,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppShapeTokens.of(context)
-                                                    .cardRadius,
+                                                shapeTokens.cardRadius,
                                               ),
                                               border: Border.all(
                                                 color: isSelected
@@ -465,13 +453,10 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                       }).toList(),
                                     ),
                                   ),
-
                                 const Divider(),
                               ],
                             );
                           }),
-
-                          // 系统图标部分
                           ListTile(
                             title: Text(
                               l10n.systemIcons,
@@ -489,7 +474,6 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                               });
                             },
                           ),
-
                           if (expandedTags[l10n.systemIcons] ?? false)
                             Padding(
                               padding: const EdgeInsets.symmetric(
@@ -514,6 +498,9 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                         );
                                         Navigator.of(context).pop();
                                       },
+                                      borderRadius: BorderRadius.circular(
+                                        shapeTokens.cardRadius,
+                                      ),
                                       child: Column(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
@@ -528,8 +515,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppShapeTokens.of(context)
-                                                    .cardRadius,
+                                                shapeTokens.cardRadius,
                                               ),
                                               border: Border.all(
                                                 color: isSelected
@@ -583,17 +569,28 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
     final nameController = TextEditingController(text: category.name);
     String? selectedIcon = category.iconName;
     final l10n = AppLocalizations.of(context);
+    final shapeTokens = AppShapeTokens.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+          ),
           title: Text(l10n.editTagTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: InputDecoration(labelText: l10n.tagNameLabel),
+                decoration: InputDecoration(
+                  labelText: l10n.tagNameLabel,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      shapeTokens.inputRadius,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -629,7 +626,6 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                 final newName = nameController.text.trim();
                 if (newName.isEmpty) return;
 
-                // 获取必要的context相关对象
                 final dbService = Provider.of<DatabaseService>(
                   context,
                   listen: false,
@@ -640,7 +636,6 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                   iconName: selectedIcon,
                 );
 
-                // 修复内存泄露：在异步操作后检查mounted状态
                 if (!mounted) return;
                 if (dialogContext.mounted) {
                   Navigator.pop(dialogContext);
@@ -657,7 +652,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
   Widget _buildCategoryItem(NoteTag category, int index, int total) {
     final isDefault = category.isDefault;
     final l10n = AppLocalizations.of(context);
-    // 检查是否是隐藏标签
+    final shapeTokens = AppShapeTokens.of(context);
     final bool isHiddenTag = category.id == DatabaseService.hiddenTagId;
     final String displayName = category.localizedName(l10n);
 
@@ -675,9 +670,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
               height: 40,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(
-                  AppShapeTokens.of(context).cardRadius,
-                ),
+                borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
               ),
               child: Center(
                 child: IconUtils.getCategoryIcon(category.iconName),
@@ -707,7 +700,9 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                             color: Theme.of(
                               context,
                             ).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(
+                              shapeTokens.buttonRadius,
+                            ),
                           ),
                           child: Text(
                             isHiddenTag ? l10n.systemTag : l10n.defaultTag,
@@ -761,9 +756,13 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
 
   void _deleteCategory(BuildContext context, NoteTag category) {
     final l10n = AppLocalizations.of(context);
+    final shapeTokens = AppShapeTokens.of(context);
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+        ),
         title: Text(l10n.confirmDelete),
         content: Text(l10n.deleteTagConfirmation(category.localizedName(l10n))),
         actions: [
@@ -783,26 +782,14 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
           final dbService = context.read<DatabaseService>();
           await dbService.deleteTag(category.id);
 
-          // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.tagDeletedSuccess),
-                duration: AppConstants.snackBarDurationNormal,
-              ),
-            );
+            AppSnackBar.success(context, l10n.tagDeletedSuccess);
           }
         } catch (e) {
-          // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.deleteTagFailed(e.toString())),
-                duration: AppConstants.snackBarDurationError,
-              ),
-            );
+            AppSnackBar.error(context, l10n.deleteTagFailed(e.toString()));
           }
         }
       }
@@ -849,6 +836,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final shapeTokens = AppShapeTokens.of(context);
     final emojiCategories = IconUtils.getCategorizedEmojis();
     final materialIcons = IconUtils.categoryIcons.entries.toList();
     Map<String, List<String>> filteredEmojis = {};
@@ -860,6 +848,9 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
       });
     }
     return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+      ),
       title: Text(l10n.selectIcon),
       content: SizedBox(
         width: MediaQuery.of(context).size.width * 0.8,
@@ -882,8 +873,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                       )
                     : null,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(
-                      AppShapeTokens.of(context).inputRadius),
+                  borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
                 ),
               ),
               onChanged: (value) {
@@ -955,6 +945,9 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                                     onTap: () {
                                       Navigator.of(context).pop(emoji);
                                     },
+                                    borderRadius: BorderRadius.circular(
+                                      shapeTokens.cardRadius,
+                                    ),
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
@@ -963,7 +956,9 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                                                 context,
                                               ).colorScheme.primaryContainer
                                             : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(
+                                          shapeTokens.cardRadius,
+                                        ),
                                         border: Border.all(
                                           color: isSelected
                                               ? Theme.of(
@@ -1020,6 +1015,9 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                                 onTap: () {
                                   Navigator.of(context).pop(iconName);
                                 },
+                                borderRadius: BorderRadius.circular(
+                                  shapeTokens.cardRadius,
+                                ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -1031,7 +1029,9 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                                                 context,
                                               ).colorScheme.primaryContainer
                                             : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(
+                                          shapeTokens.cardRadius,
+                                        ),
                                         border: Border.all(
                                           color: isSelected
                                               ? Theme.of(
