@@ -140,6 +140,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                       context,
                                       l10n.pleaseEnterTagName,
                                     );
+                                    setState(() => _selectedIconName = null);
                                     return;
                                   }
                                   setState(() => _isLoading = true);
@@ -219,7 +220,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
               stream: context.read<DatabaseService>().watchTags(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const AppLoadingView(size: 60);
+                  return const AppLoadingView(size: 80);
                 }
 
                 if (snapshot.hasError) {
@@ -304,7 +305,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
 
           return AlertDialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+              borderRadius: BorderRadius.circular(shapeTokens.dialogRadius),
             ),
             title: Text(l10n.selectIcon),
             content: SizedBox(
@@ -575,7 +576,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
       builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+            borderRadius: BorderRadius.circular(shapeTokens.dialogRadius),
           ),
           title: Text(l10n.editTagTitle),
           content: Column(
@@ -761,7 +762,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+          borderRadius: BorderRadius.circular(shapeTokens.dialogRadius),
         ),
         title: Text(l10n.confirmDelete),
         content: Text(l10n.deleteTagConfirmation(category.localizedName(l10n))),
@@ -849,7 +850,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
     }
     return AlertDialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+        borderRadius: BorderRadius.circular(shapeTokens.dialogRadius),
       ),
       title: Text(l10n.selectIcon),
       content: SizedBox(
