@@ -62,3 +62,6 @@
 ## 2026-08-25 - [补充 dio_network_utils 重试逻辑的测试]
 **盲点:** `dio_network_utils.dart` 中的 `RetryInterceptor` 包含了对特定网络错误和服务器响应 (`_shouldRetry`) 的重试判断逻辑，这一纯逻辑处理长期缺乏测试覆盖，在调整重试条件时极易引入回归问题。
 **对策:** 通过编写针对 `RetryInterceptor` 处理流程 (`onError`) 的单元测试，利用伪造的 `Dio` 和 `ErrorInterceptorHandler`，验证其针对各种 HTTP 状态码（500、502）以及“model not found”等具体错误负载的决策是否准确，确保其不会阻拦正常的客户端错误返回。
+## 2024-05-24 - 补充 StreamingUtils 流式响应解析核心测试
+**盲点:** StreamingUtils 中缺少解析流式响应内容(extractContentFromLine)和错误消息(parseErrorMessage)这部分核心纯函数的测试。
+**对策:** 将这两部分核心纯函数暴露为公共方法并增加 @visibleForTesting 标签，编写针对正确数据、边缘情况(如空数据、缺失字段)、及各种 HTTP status code 错误消息转换逻辑的详细用例。
