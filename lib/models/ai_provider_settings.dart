@@ -41,6 +41,18 @@ class AIProviderSettings implements AIConfig {
     'claude-3-5',
   ];
 
+  // 提取为静态成员，避免每次调用 supportsThinking 和 resolveRequestUrl 时重复编译正则表达式
+  static final RegExp _oSeriesRegex = RegExp(r'(^|[/\-_])(o1|o3|o4)\b');
+  static final RegExp _gpt5PlusRegex = RegExp(r'gpt-?[5-9]');
+  static final RegExp _gemini25PlusRegex =
+      RegExp(r'gemini[-_.]?(2[-.]5|[3-9])');
+  static final RegExp _deepseekV3Regex = RegExp(r'v3[-.][1-9]');
+  static final RegExp _qwen3PlusRegex = RegExp(r'qwen[-_]?[3-9]');
+  static final RegExp _gemma4PlusRegex = RegExp(r'gemma[-_.]?[4-9]');
+  static final RegExp _glm45PlusRegex = RegExp(r'glm-?(4[-.][5-9]|[5-9])');
+  static final RegExp _minimaxMRegex = RegExp(r'minimax[-_.]?m[1-9]');
+  static final RegExp _versionPathRegex = RegExp(r'^v\d+[a-z]*$');
+
   /// 判断当前模型是否支持思考/推理模式。
   ///
   /// 只用来决定「深度思考」开关是否出现、以及未显式配置时的默认值；
@@ -63,41 +75,40 @@ class AIProviderSettings implements AIConfig {
     }
 
     // OpenAI o 系列（允许 azure/o1、openai/o3 这类命名空间前缀）与 GPT-5 起的推理模型
-    if (RegExp(r'(^|[/\-_])(o1|o3|o4)\b').hasMatch(m)) {
+    if (_oSeriesRegex.hasMatch(m)) {
       return true;
     }
-    if (RegExp(r'gpt-?[5-9]').hasMatch(m)) {
+    if (_gpt5PlusRegex.hasMatch(m)) {
       return true;
     }
 
     // Gemini：2.5 起默认带 thinking，1.5/2.0 不带
-    if (m.contains('gemini') &&
-        RegExp(r'gemini[-_.]?(2[-.]5|[3-9])').hasMatch(m)) {
+    if (m.contains('gemini') && _gemini25PlusRegex.hasMatch(m)) {
       return true;
     }
 
     // DeepSeek：R1 / Reasoner，以及 V3.1 起的混合推理
     if (m.contains('deepseek') &&
-        (m.contains('r1') || RegExp(r'v3[-.][1-9]').hasMatch(m))) {
+        (m.contains('r1') || _deepseekV3Regex.hasMatch(m))) {
       return true;
     }
 
     // Qwen QwQ / Qwen3 起的推理系列
-    if (m.contains('qwq') || RegExp(r'qwen[-_]?[3-9]').hasMatch(m)) {
+    if (m.contains('qwq') || _qwen3PlusRegex.hasMatch(m)) {
       return true;
     }
 
     // Gemma 4 起带思考。它和上面几家不同：默认不吐 reasoning，要在请求里
     // 明确要（见 AgentService 的 reasoning_effort），所以更要认出来。
-    if (RegExp(r'gemma[-_.]?[4-9]').hasMatch(m)) {
+    if (_gemma4PlusRegex.hasMatch(m)) {
       return true;
     }
 
     // 智谱 GLM-4.5 起、MiniMax M 系列
-    if (RegExp(r'glm-?(4[-.][5-9]|[5-9])').hasMatch(m)) {
+    if (_glm45PlusRegex.hasMatch(m)) {
       return true;
     }
-    if (RegExp(r'minimax[-_.]?m[1-9]').hasMatch(m)) {
+    if (_minimaxMRegex.hasMatch(m)) {
       return true;
     }
 
@@ -186,7 +197,7 @@ class AIProviderSettings implements AIConfig {
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.isEmpty) return false;
     final last = segments.last.toLowerCase();
-    return last == 'openai' || RegExp(r'^v\d+[a-z]*$').hasMatch(last);
+    return last == 'openai' || _versionPathRegex.hasMatch(last);
   }
 
   Map<String, dynamic> toJson() {
