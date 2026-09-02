@@ -53,7 +53,8 @@ Future<Map<String, dynamic>?> _fetchFromHitokoto(
   try {
     data = json.decode(response.body);
   } catch (e, stackTrace) {
-    logError('一言API返回数据 JSON 解析失败: $e, 响应体: ${response.body}', error: e, stackTrace: stackTrace, source: 'ApiService');
+    logError('一言API返回数据 JSON 解析失败: $e, 响应体: ${response.body}',
+        error: e, stackTrace: stackTrace, source: 'ApiService');
     return null;
   }
   if (data is! Map<String, dynamic> || !data.containsKey('hitokoto')) {
@@ -86,7 +87,8 @@ Future<Map<String, dynamic>?> _fetchFromZenQuotes(
   try {
     data = json.decode(response.body);
   } catch (e, stackTrace) {
-    logError('ZenQuotes 返回数据 JSON 解析失败: $e, 响应体: ${response.body}', error: e, stackTrace: stackTrace, source: 'ApiService');
+    logError('ZenQuotes 返回数据 JSON 解析失败: $e, 响应体: ${response.body}',
+        error: e, stackTrace: stackTrace, source: 'ApiService');
     return null;
   }
   final quote = data is List && data.isNotEmpty ? data.first : data;
@@ -138,7 +140,8 @@ Future<Map<String, dynamic>?> _fetchFromApiNinjas(
   try {
     data = json.decode(response.body);
   } catch (e, stackTrace) {
-    logError('API Ninjas 返回数据 JSON 解析失败: $e, 响应体: ${response.body}', error: e, stackTrace: stackTrace, source: 'ApiService');
+    logError('API Ninjas 返回数据 JSON 解析失败: $e, 响应体: ${response.body}',
+        error: e, stackTrace: stackTrace, source: 'ApiService');
     return null;
   }
   final quote = data is List && data.isNotEmpty ? data.first : data;
@@ -176,7 +179,8 @@ Future<Map<String, dynamic>?> _fetchFromMeigen(
   try {
     data = json.decode(response.body);
   } catch (e, stackTrace) {
-    logError('名言教えるよ 返回数据 JSON 解析失败: $e, 响应体: ${response.body}', error: e, stackTrace: stackTrace, source: 'ApiService');
+    logError('名言教えるよ 返回数据 JSON 解析失败: $e, 响应体: ${response.body}',
+        error: e, stackTrace: stackTrace, source: 'ApiService');
     return null;
   }
   final quote = data is List && data.isNotEmpty ? data.first : data;
@@ -211,7 +215,8 @@ Future<Map<String, dynamic>?> _fetchFromKoreanAdvice(
   try {
     data = json.decode(response.body);
   } catch (e, stackTrace) {
-    logError('Korean Advice 返回数据 JSON 解析失败: $e, 响应体: ${response.body}', error: e, stackTrace: stackTrace, source: 'ApiService');
+    logError('Korean Advice 返回数据 JSON 解析失败: $e, 响应体: ${response.body}',
+        error: e, stackTrace: stackTrace, source: 'ApiService');
     return null;
   }
   if (data is! Map<String, dynamic>) {
