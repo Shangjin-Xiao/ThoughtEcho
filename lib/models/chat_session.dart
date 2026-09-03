@@ -78,9 +78,14 @@ class ChatSession {
     if (rawMessages is List) {
       for (final item in rawMessages) {
         if (item is Map) {
-          messages.add(
-            ChatMessage.fromJson(Map<String, dynamic>.from(item)),
-          );
+          try {
+            final stringKeyMap = item.map(
+              (k, v) => MapEntry(k.toString(), v),
+            );
+            messages.add(ChatMessage.fromJson(stringKeyMap));
+          } catch (_) {
+            // 静默跳过全损坏的单条消息对象
+          }
         }
       }
     }

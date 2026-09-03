@@ -4,13 +4,19 @@ import 'package:thoughtecho/models/chat_session.dart';
 
 void main() {
   group('ChatMessage 反序列化防御测试', () {
-    test('ChatMessage.fromJson 能容忍 id 为 int 类型或缺失', () {
+    test('ChatMessage.fromJson 能容忍 id 缺失、为 null 或为 int 类型', () {
+      final jsonOmitId = <String, dynamic>{
+        'content': 'omitted id',
+        'isUser': true,
+      };
+      final msgOmitted = ChatMessage.fromJson(jsonOmitId);
+      expect(msgOmitted.id, '');
+
       final jsonWithIntId = {
         'id': 12345,
         'content': 'hello',
         'isUser': true,
       };
-
       final msg = ChatMessage.fromJson(jsonWithIntId);
       expect(msg.id, '12345');
       expect(msg.content, 'hello');
@@ -23,21 +29,33 @@ void main() {
       expect(msgNull.id, '');
     });
 
-    test('ChatMessage.fromMap 能容忍 id 为 int 类型或 null', () {
+    test('ChatMessage.fromMap 支持 int 类型 id 转换，缺少/空 id 抛出 FormatException', () {
       final mapWithIntId = {
         'id': 999,
         'content': 'test',
         'role': 'user',
       };
-
       final msg = ChatMessage.fromMap(mapWithIntId);
       expect(msg.id, '999');
       expect(msg.content, 'test');
+
+      final mapWithNullId = <String, dynamic>{
+        'id': null,
+        'content': 'test',
+      };
+      expect(() => ChatMessage.fromMap(mapWithNullId), throwsFormatException);
+
+      final mapWithEmptyId = <String, dynamic>{
+        'id': '',
+        'content': 'test',
+      };
+      expect(() => ChatMessage.fromMap(mapWithEmptyId), throwsFormatException);
     });
   });
 
   group('ChatSession 反序列化防御测试', () {
-    test('ChatSession.fromJson 能容忍非 String 类型的 id 且能安全过滤非 Map 的 messages 元素',
+    test(
+        'ChatSession.fromJson 能容忍非 String 类型的 id 且能安全过滤非 Map 或全损坏的 messages 元素',
         () {
       final rawJson = {
         'id': 8888,

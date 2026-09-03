@@ -64,9 +64,13 @@ class ChatMessage {
 
   /// 从 SQLite 行映射构建
   factory ChatMessage.fromMap(Map<String, dynamic> map) {
+    final id = map['id']?.toString();
+    if (id == null || id.isEmpty) {
+      throw const FormatException('ChatMessage.fromMap: id 不能为空');
+    }
     final role = map['role'] as String? ?? 'user';
     return ChatMessage(
-      id: map['id']?.toString() ?? '',
+      id: id,
       content: map['content'] as String? ?? '',
       isUser: role == 'user',
       role: role,
