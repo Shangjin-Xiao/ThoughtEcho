@@ -276,7 +276,7 @@ class StreamingUtils {
         } else {
           errorBody = response.data?.toString() ?? '';
         }
-        final errorMessage = _parseErrorMessage(
+        final errorMessage = parseErrorMessage(
           response.statusCode!,
           errorBody,
         );
@@ -327,7 +327,7 @@ class StreamingUtils {
           errorBody = e.message ?? '未知错误';
         }
 
-        final errorMessage = _parseErrorMessage(
+        final errorMessage = parseErrorMessage(
           e.response?.statusCode ?? 0,
           errorBody.isEmpty ? (e.message ?? '未知错误') : errorBody,
         );
@@ -371,7 +371,7 @@ class StreamingUtils {
             return;
           }
 
-          final content = _extractContentFromLine(line);
+          final content = extractContentFromLine(line);
           if (content != null && content.isNotEmpty) {
             // 按块解码并立即回调，避免全量缓存
             onResponse(content);
@@ -391,7 +391,8 @@ class StreamingUtils {
   }
 
   /// 从SSE数据行中提取内容
-  static String? _extractContentFromLine(String line) {
+  @visibleForTesting
+  static String? extractContentFromLine(String line) {
     try {
       final jsonString = line.substring(6); // 移除 "data: " 前缀
       final data = json.decode(jsonString);
@@ -429,7 +430,8 @@ class StreamingUtils {
   }
 
   /// 解析错误消息
-  static String _parseErrorMessage(int statusCode, String errorBody) {
+  @visibleForTesting
+  static String parseErrorMessage(int statusCode, String errorBody) {
     logDebug('解析错误 - 状态码: $statusCode, 响应体: $errorBody');
 
     if (errorBody.contains('rate_limit_exceeded') ||
