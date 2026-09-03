@@ -140,7 +140,6 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                       context,
                                       l10n.pleaseEnterTagName,
                                     );
-                                    setState(() => _selectedIconName = null);
                                     return;
                                   }
                                   setState(() => _isLoading = true);
