@@ -101,10 +101,22 @@ void main() {
       expect(msg, contains('可能是模型不存在或不可用'));
     });
 
-    test('parses 502/503/504 gateway errors', () {
-      final msg502 = StreamingUtils.parseErrorMessage(502, 'Bad Gateway');
-      expect(msg502, contains('AI服务暂时不可用'));
-      expect(msg502, contains('502'));
+    test('parses 502 gateway error', () {
+      final msg = StreamingUtils.parseErrorMessage(502, 'Bad Gateway');
+      expect(msg, contains('AI服务暂时不可用'));
+      expect(msg, contains('502'));
+    });
+
+    test('parses 503 gateway error', () {
+      final msg = StreamingUtils.parseErrorMessage(503, 'Service Unavailable');
+      expect(msg, contains('AI服务暂时不可用'));
+      expect(msg, contains('503'));
+    });
+
+    test('parses 504 gateway error', () {
+      final msg = StreamingUtils.parseErrorMessage(504, 'Gateway Timeout');
+      expect(msg, contains('AI服务暂时不可用'));
+      expect(msg, contains('504'));
     });
 
     test('parses unknown error code', () {
