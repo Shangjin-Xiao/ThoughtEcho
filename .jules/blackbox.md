@@ -53,3 +53,6 @@
 ## 2024-05-24 - [完善 AddNoteController 中的结构化日志]
 **异常:** [在 `lib/controllers/add_note_controller.dart` 中，发现了多处使用 `catch (e)` 的空捕获或粗糙的 `logDebug('xxx失败: $e')` 打印，这些异常捕获不仅吞噬了关键的异常堆栈（StackTrace），并且严重依赖字符串拼接，未能利用已有的结构化日志系统，使得定位位置获取、天气抓取及标签创建等关键业务失败原因变得困难。]
 **拦截:** [将 `catch (e)` 改写为 `catch (e, stackTrace)`，并引入全局的 `logError`，传入 error、stackTrace，并指明 source: 'AddNoteController'，将原有的粗糙拼接替换为带有上下文的规范日志上报。]
+## 2026-09-02 - [完善 ApiService 远程请求异常日志]
+**异常:** `api_service_daily_quote_remote.dart` 中针对各种第三方 API（Hitokoto、ZenQuotes、API Ninjas 等）返回数据进行 `json.decode` 时的 `catch (e)` 块直接吞掉了报错堆栈，并且仅使用 `logDebug` 进行极其粗糙的记录，难以排查具体解析失败的原因。
+**拦截:** 修改所有第三方一言 API 请求方法的 `json.decode` 异常捕获块，使用 `catch (e, stackTrace)` 完整捕获异常及堆栈，并调用 `logError` 带上 `stackTrace` 和 `source: 'ApiService'` 参数上报结构化日志，确保发生响应结构变更或解析错误时留下完整的堆栈线索。
