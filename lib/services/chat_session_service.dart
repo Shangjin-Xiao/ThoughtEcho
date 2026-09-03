@@ -885,7 +885,19 @@ class ChatSessionService extends ChangeNotifier {
         whereArgs: [sessionId],
         orderBy: 'created_at ASC',
       );
-      return rows.map(ChatMessage.fromMap).toList();
+      final messages = <ChatMessage>[];
+      for (final row in rows) {
+        try {
+          messages.add(ChatMessage.fromMap(row));
+        } catch (e) {
+          logError(
+            '跳过损坏的聊天消息记录',
+            error: e,
+            source: 'ChatSessionService',
+          );
+        }
+      }
+      return messages;
     } catch (e) {
       logError(
         'ChatSessionService.getMessages 失败',

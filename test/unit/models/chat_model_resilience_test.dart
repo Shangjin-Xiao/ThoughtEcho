@@ -55,7 +55,7 @@ void main() {
 
   group('ChatSession 反序列化防御测试', () {
     test(
-        'ChatSession.fromJson 能容忍非 String 类型的 id 且能安全过滤非 Map 或全损坏的 messages 元素',
+        'ChatSession.fromJson 能容忍非 String 类型的 id 且能安全过滤非 Map 或引发 TypeError 的坏消息 Map',
         () {
       final rawJson = {
         'id': 8888,
@@ -69,6 +69,12 @@ void main() {
             'id': 'msg_1',
             'content': 'valid message',
             'role': 'user',
+          },
+          // 包含类型不匹配属性的 Map（role 为 int 导致 ChatMessage.fromJson 抛出 TypeError）
+          {
+            'id': 'msg_bad_role',
+            'content': 'bad role message',
+            'role': 123,
           },
           <dynamic, dynamic>{
             'id': 777,
