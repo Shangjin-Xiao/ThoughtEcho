@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/add_note_controller.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 
 class FakeBuildContext extends Fake implements BuildContext {}
@@ -98,4 +100,80 @@ void main() {
       expect(controller.isFetchingWeather, isFalse);
     });
   });
+
+  group(
+      'AddNoteController.addDefaultHitokotoTagsAsync performance & query count',
+      () {
+    test('addDefaultHitokotoTagsAsync adds tags correctly and batches DB reads',
+        () async {
+      final db = _CountingDatabaseService();
+      final controller = AddNoteController(
+        context: FakeBuildContext(),
+        hitokotoData: {
+          'type': 'a',
+          'provider': 'hitokoto',
+        },
+      )..updateServices(dbService: db);
+
+      NoteTag? updatedCategory;
+      final stopwatch = Stopwatch()..start();
+      await controller.addDefaultHitokotoTagsAsync((cat) {
+        updatedCategory = cat;
+      });
+      stopwatch.stop();
+
+      // Ensure correctness
+      expect(controller.selectedTagIds,
+          containsAll(['default_hitokoto', 'default_anime']));
+      expect(updatedCategory?.id, equals('default_anime'));
+      expect(controller.selectedCategory?.id, equals('default_anime'));
+
+      // Check query counts
+      // Under optimized implementation, db.getTagById should NOT be called N times in a loop.
+      expect(db.getTagByIdCallCount, equals(0),
+          reason:
+              'getTagById should not be called inside loop when cached/batched tags are used');
+      expect(db.getTagsCallCount, lessThanOrEqualTo(1),
+          reason: 'getTags should be called at most once to prefetch tags');
+    });
+  });
+}
+
+class _CountingDatabaseService extends DatabaseService {
+  _CountingDatabaseService() : super.forTesting();
+
+  int getTagByIdCallCount = 0;
+  int getTagsCallCount = 0;
+
+  final Map<String, NoteTag> _tags = {
+    'default_hitokoto':
+        NoteTag(id: 'default_hitokoto', name: '每日一言', iconName: '💭'),
+    'default_anime': NoteTag(id: 'default_anime', name: '动画', iconName: '🎬'),
+  };
+
+  @override
+  Future<NoteTag?> getTagById(String id) async {
+    getTagByIdCallCount++;
+    return _tags[id];
+  }
+
+  @override
+  Future<List<NoteTag>> getTags() async {
+    getTagsCallCount++;
+    return _tags.values.toList();
+  }
+
+  @override
+  Future<void> addTagWithId(String id, String name, {String? iconName}) async {
+    _tags[id] = NoteTag(id: id, name: name, iconName: iconName ?? '');
+  }
+
+  @override
+  Future<void> addTag(String name, {String? iconName}) async {
+    final id = name;
+    _tags[id] = NoteTag(id: id, name: name, iconName: iconName ?? '');
+  }
+
+  @override
+  bool get isInitialized => true;
 }

@@ -501,6 +501,12 @@ class AddNoteController extends ChangeNotifier {
         }
       }
 
+      if (allCategoriesCache == null) {
+        final fetchedCategories = await db.getTags();
+        if (_isDisposed) return;
+        allCategoriesCache = fetchedCategories;
+      }
+
       final List<String> tagIds = [];
       String? subtypeTagId;
       for (final tagInfo in tagsToEnsure) {
@@ -527,10 +533,19 @@ class AddNoteController extends ChangeNotifier {
       }
 
       if (subtypeTagId != null) {
-        final category = await db.getTagById(subtypeTagId);
+        final category = allCategoriesCache?.firstWhere(
+          (tag) => tag.id == subtypeTagId,
+          orElse: () => NoteTag(id: '', name: ''),
+        );
         if (_isDisposed) return;
-        selectedCategory = category;
-        onCategoryUpdated(category);
+        final selected = (category != null && category.id.isNotEmpty)
+            ? category
+            : await db.getTagById(subtypeTagId);
+        if (_isDisposed) return;
+        selectedCategory = selected;
+        if (selected != null) {
+          onCategoryUpdated(selected);
+        }
       }
     } catch (e, stackTrace) {
       logError(
@@ -562,14 +577,6 @@ class AddNoteController extends ChangeNotifier {
         }
       }
 
-      if (fixedId != null) {
-        final category = await db.getTagById(fixedId);
-        if (_isDisposed) return null;
-        if (category != null) {
-          return category.id;
-        }
-      }
-
       if (allCategoriesCache == null) {
         final fetchedCategories = await db.getTags();
         if (_isDisposed) return null;
@@ -577,20 +584,30 @@ class AddNoteController extends ChangeNotifier {
       }
       final categories = allCategoriesCache!;
 
-      final existingTag = categories.firstWhere(
+      if (fixedId != null) {
+        final existingTagById = categories.firstWhere(
+          (tag) => tag.id == fixedId,
+          orElse: () => NoteTag(id: '', name: ''),
+        );
+        if (existingTagById.id.isNotEmpty) {
+          return existingTagById.id;
+        }
+      }
+
+      final existingTagByName = categories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
         orElse: () => NoteTag(id: '', name: ''),
       );
 
-      if (existingTag.id.isNotEmpty) {
-        return existingTag.id;
+      if (existingTagByName.id.isNotEmpty) {
+        return existingTagByName.id;
       }
 
       if (fixedId != null) {
         try {
           await db.addTagWithId(fixedId, name, iconName: iconName);
           if (_isDisposed) return null;
-          allCategoriesCache = null;
+          allCategoriesCache = await db.getTags();
           return fixedId;
         } catch (e, stackTrace) {
           logError(
@@ -608,9 +625,9 @@ class AddNoteController extends ChangeNotifier {
         if (_isDisposed) return null;
       }
 
-      allCategoriesCache = null;
       final updatedCategories = await db.getTags();
       if (_isDisposed) return null;
+      allCategoriesCache = updatedCategories;
       final newTag = updatedCategories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
         orElse: () => NoteTag(id: '', name: ''),
