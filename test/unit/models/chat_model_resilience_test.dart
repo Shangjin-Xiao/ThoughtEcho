@@ -39,6 +39,11 @@ void main() {
       expect(msg.id, '999');
       expect(msg.content, 'test');
 
+      final mapOmitIdKey = <String, dynamic>{
+        'content': 'test without id key',
+      };
+      expect(() => ChatMessage.fromMap(mapOmitIdKey), throwsFormatException);
+
       final mapWithNullId = <String, dynamic>{
         'id': null,
         'content': 'test',
