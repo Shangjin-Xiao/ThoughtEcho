@@ -55,8 +55,13 @@ class NoteQueryHelper {
   /// 从内容提取标题
   static String _extractTitle(String content, {int maxLength = 50}) {
     if (content.isEmpty) return '';
-    final lines = content.split('\n');
-    final firstLine = lines.first.trim();
+
+    // 使用 indexOf 代替 split('\n') 以降低频繁创建 String 对象的内存与 GC 压力
+    final newlineIndex = content.indexOf('\n');
+    final firstLineRaw =
+        newlineIndex == -1 ? content : content.substring(0, newlineIndex);
+
+    final firstLine = firstLineRaw.trim();
     if (firstLine.length <= maxLength) {
       return firstLine;
     }
@@ -67,11 +72,19 @@ class NoteQueryHelper {
   static List<String> _parseKeywords(dynamic keywords) {
     if (keywords == null) return [];
     if (keywords is String) {
-      return keywords
-          .split(',')
-          .map((k) => k.trim())
-          .where((k) => k.isNotEmpty)
-          .toList();
+      final result = <String>[];
+      int start = 0;
+      while (start < keywords.length) {
+        final commaIndex = keywords.indexOf(',', start);
+        final endIndex = commaIndex == -1 ? keywords.length : commaIndex;
+        final keyword = keywords.substring(start, endIndex).trim();
+        if (keyword.isNotEmpty) {
+          result.add(keyword);
+        }
+        if (commaIndex == -1) break;
+        start = commaIndex + 1;
+      }
+      return result;
     }
     if (keywords is List) {
       return keywords.map((k) => k.toString().trim()).toList();

@@ -160,3 +160,6 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 ## 2024-11-20 - [Performance] 消除频繁使用的颜色字符串解析中不必要的垃圾回收
 **Learning:** 在高频调用的颜色解析函数中（如富文本转换 `_parseHexColor` 或 SVG 颜色提取），使用 `value.split('').map((char) => '$char$char').join()` 将简写的十六进制颜色代码（如 `#abc`）扩展至完整代码时，会产生大量一次性对象（列表、迭代器），极大增加垃圾回收的压力，造成约数倍的运行耗时差异。
 **Action:** 当目标字符串长度固定且极短（如 3 或 4 个字符的颜色代码）时，使用精确的字符串索引插值，例如 `'${value[0]}${value[0]}${value[1]}${value[1]}...'`，不仅更直接、执行速度更快（~135ms vs 481ms 在百万级循环测试下），而且完全消除了对 GC 的额外负担，这是热路径中的一个典型且高价值的微优化模式。
+## 2024-05-24 - 优化 AI 命令助手中字符串分割造成的 GC 压力
+**Learning:** 在字符串处理中，使用 `String.split('\n')` 或 `String.split(',')` 获取局部内容会创建不必要的中间 `List` 和 `String` 对象，从而增加内存消耗和垃圾回收（GC）压力。
+**Action:** 使用 `String.indexOf` 配合 `substring` 或在循环中逐步提取，可有效避免无谓的内存分配，特别是在高频调用的辅助函数中，此优化能在保持可读性的同时显著提升性能。
