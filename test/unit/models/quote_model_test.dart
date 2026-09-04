@@ -288,6 +288,89 @@ void main() {
       expect(ops.first['insert'], equals('测试\n'));
     });
 
+    test(
+        'safeDeltaOps and safeDeltaContent should fallback when deltaContent is null, empty, or whitespace',
+        () {
+      for (final delta in [null, '', '   ', '\n\t']) {
+        final quote = Quote(
+          id: 'test-empty-delta',
+          content: '纯文本内容\n',
+          date: '2026-08-23T09:00:00.000',
+          deltaContent: delta,
+        );
+
+        final ops = quote.safeDeltaOps;
+        expect(ops, isNotEmpty);
+        expect(ops.first['insert'], equals('纯文本内容\n'));
+
+        final safeJson = quote.safeDeltaContent;
+        expect(safeJson, contains('纯文本内容\\n'));
+      }
+    });
+
+    test(
+        'safeDeltaOps should fallback when deltaContent is malformed JSON syntax',
+        () {
+      final quote = Quote(
+        id: 'test-invalid-json-syntax',
+        content: '语法错误降级\n',
+        date: '2026-08-23T09:00:00.000',
+        deltaContent: '{"invalid": json syntax ...}',
+      );
+
+      final ops = quote.safeDeltaOps;
+      expect(ops, isNotEmpty);
+      expect(ops.first['insert'], equals('语法错误降级\n'));
+
+      final safeJson = quote.safeDeltaContent;
+      expect(safeJson, contains('语法错误降级\\n'));
+    });
+
+    test(
+        'safeDeltaOps should fallback when deltaContent decodes to primitive JSON values',
+        () {
+      for (final primitiveJson in ['123', 'true', '"a plain string"']) {
+        final quote = Quote(
+          id: 'test-primitive-json',
+          content: '标量JSON降级\n',
+          date: '2026-08-23T09:00:00.000',
+          deltaContent: primitiveJson,
+        );
+
+        final ops = quote.safeDeltaOps;
+        expect(ops, isNotEmpty);
+        expect(ops.first['insert'], equals('标量JSON降级\n'));
+      }
+    });
+
+    test(
+        'safeDeltaOps should handle Map deltaContent with missing or non-List ops field',
+        () {
+      final quote1 = Quote(
+        id: 'test-map-no-ops',
+        content: '无ops字段\n',
+        date: '2026-08-23T09:00:00.000',
+        deltaContent: '{"otherKey": 123}',
+      );
+      expect(quote1.safeDeltaOps.first['insert'], equals('无ops字段\n'));
+
+      final quote2 = Quote(
+        id: 'test-map-invalid-ops',
+        content: 'ops非List\n',
+        date: '2026-08-23T09:00:00.000',
+        deltaContent: '{"ops": "not_a_list"}',
+      );
+      expect(quote2.safeDeltaOps.first['insert'], equals('ops非List\n'));
+
+      final quote3 = Quote(
+        id: 'test-map-valid-ops',
+        content: '默认文本\n',
+        date: '2026-08-23T09:00:00.000',
+        deltaContent: '{"ops": [{"insert": "Map格式ops\\n"}]}',
+      );
+      expect(quote3.safeDeltaOps.first['insert'], equals('Map格式ops\n'));
+    });
+
     test('should handle edge cases in fromJson', () {
       // 测试空tag_ids
       final json1 = {
