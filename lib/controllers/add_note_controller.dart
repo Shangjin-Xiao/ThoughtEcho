@@ -507,6 +507,7 @@ class AddNoteController extends ChangeNotifier {
       if (allCategoriesCache == null) {
         final fetchedCategories = await db.getTags();
         if (_isDisposed) return;
+        if (databaseService != db) return;
         allCategoriesCache = fetchedCategories;
       }
 
@@ -586,6 +587,7 @@ class AddNoteController extends ChangeNotifier {
       if (allCategoriesCache == null) {
         final fetchedCategories = await db.getTags();
         if (_isDisposed) return null;
+        if (databaseService != db) return null;
         allCategoriesCache = fetchedCategories;
       }
       final categories = allCategoriesCache!;
@@ -630,7 +632,9 @@ class AddNoteController extends ChangeNotifier {
 
       final updatedCategories = await db.getTags();
       if (_isDisposed) return null;
-      allCategoriesCache = updatedCategories;
+      if (databaseService == db) {
+        allCategoriesCache = updatedCategories;
+      }
       for (final tag in updatedCategories) {
         if (tag.name.toLowerCase() == name.toLowerCase()) {
           return tag.id;

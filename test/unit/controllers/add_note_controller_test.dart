@@ -134,6 +134,28 @@ void main() {
       expect(db.getTagsCallCount, lessThanOrEqualTo(1),
           reason: 'getTags should be called at most once to prefetch tags');
     });
+
+    test(
+        'updateServices with a new dbService resets allCategoriesCache and reloads from new db',
+        () async {
+      final db1 = _CountingDatabaseService();
+      final db2 = _CountingDatabaseService();
+
+      final controller = AddNoteController(context: FakeBuildContext())
+        ..updateServices(dbService: db1);
+
+      await controller.ensureTagExists(db1, '每日一言', '💭');
+      expect(controller.allCategoriesCache, isNotNull);
+      expect(db1.getTagsCallCount, equals(1));
+
+      controller.updateServices(dbService: db2);
+      expect(controller.allCategoriesCache, isNull,
+          reason:
+              'allCategoriesCache should be reset when switching databaseService');
+
+      await controller.ensureTagExists(db2, '每日一言', '💭');
+      expect(db2.getTagsCallCount, equals(1));
+    });
   });
 }
 
