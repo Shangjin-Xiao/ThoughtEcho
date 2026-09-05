@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/utils/quill_delta_builder.dart';
 import '../../test_harness.dart';
 
 void main() {
@@ -299,12 +300,10 @@ void main() {
           deltaContent: delta,
         );
 
-        final ops = quote.safeDeltaOps;
-        expect(ops, isNotEmpty);
-        expect(ops.first['insert'], equals('纯文本内容\n'));
-
-        final safeJson = quote.safeDeltaContent;
-        expect(safeJson, contains('纯文本内容\\n'));
+        final expectedOps = DeltaBuilder.textToDelta(quote.content);
+        expect(quote.safeDeltaOps, equals(expectedOps));
+        expect(quote.safeDeltaContent,
+            equals(DeltaBuilder.deltaToJson(expectedOps)));
       }
     });
 
@@ -318,12 +317,10 @@ void main() {
         deltaContent: '{"invalid": json syntax ...}',
       );
 
-      final ops = quote.safeDeltaOps;
-      expect(ops, isNotEmpty);
-      expect(ops.first['insert'], equals('语法错误降级\n'));
-
-      final safeJson = quote.safeDeltaContent;
-      expect(safeJson, contains('语法错误降级\\n'));
+      final expectedOps = DeltaBuilder.textToDelta(quote.content);
+      expect(quote.safeDeltaOps, equals(expectedOps));
+      expect(quote.safeDeltaContent,
+          equals(DeltaBuilder.deltaToJson(expectedOps)));
     });
 
     test(
@@ -337,9 +334,10 @@ void main() {
           deltaContent: primitiveJson,
         );
 
-        final ops = quote.safeDeltaOps;
-        expect(ops, isNotEmpty);
-        expect(ops.first['insert'], equals('标量JSON降级\n'));
+        final expectedOps = DeltaBuilder.textToDelta(quote.content);
+        expect(quote.safeDeltaOps, equals(expectedOps));
+        expect(quote.safeDeltaContent,
+            equals(DeltaBuilder.deltaToJson(expectedOps)));
       }
     });
 
@@ -352,7 +350,8 @@ void main() {
         date: '2026-08-23T09:00:00.000',
         deltaContent: '{"otherKey": 123}',
       );
-      expect(quote1.safeDeltaOps.first['insert'], equals('无ops字段\n'));
+      final expectedOps1 = DeltaBuilder.textToDelta(quote1.content);
+      expect(quote1.safeDeltaOps, equals(expectedOps1));
 
       final quote2 = Quote(
         id: 'test-map-invalid-ops',
@@ -360,7 +359,8 @@ void main() {
         date: '2026-08-23T09:00:00.000',
         deltaContent: '{"ops": "not_a_list"}',
       );
-      expect(quote2.safeDeltaOps.first['insert'], equals('ops非List\n'));
+      final expectedOps2 = DeltaBuilder.textToDelta(quote2.content);
+      expect(quote2.safeDeltaOps, equals(expectedOps2));
 
       final quote3 = Quote(
         id: 'test-map-valid-ops',
@@ -368,7 +368,12 @@ void main() {
         date: '2026-08-23T09:00:00.000',
         deltaContent: '{"ops": [{"insert": "Map格式ops\\n"}]}',
       );
-      expect(quote3.safeDeltaOps.first['insert'], equals('Map格式ops\n'));
+      expect(
+        quote3.safeDeltaOps,
+        equals([
+          {'insert': 'Map格式ops\n'}
+        ]),
+      );
     });
 
     test('should handle edge cases in fromJson', () {
