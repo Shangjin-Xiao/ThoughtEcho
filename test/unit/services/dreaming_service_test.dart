@@ -111,16 +111,29 @@ void main() {
         expect(await harness.memory.currentRecentSlice(), isNull);
       });
 
-      test('设备时钟被调到过去时不放行', () async {
+      test('设备时钟落在近未来时跳过，防止时钟频繁微调导致每次都跑', () async {
         final now = DateTime(2026, 8, 28);
-        // 时间戳落在未来：不能因为 difference 是负数就当成"很久没跑"。
         await harness.settingsService.setLastDreamingAt(
-          now.add(const Duration(days: 30)),
+          now.add(const Duration(days: 10)),
         );
 
         final service = build(modelOutput: goodOutput);
 
         expect(await service.run(now: now), DreamingOutcome.skipped);
+      });
+
+      test('设备时钟曾远跳未来后修正回正常时间时自动重置并放行自愈', () async {
+        final now = DateTime(2026, 8, 28);
+        // 时间戳落在超过 30 天的远期未来：说明时钟曾被大幅拨快后调回。
+        await harness.settingsService.setLastDreamingAt(
+          now.add(const Duration(days: 60)),
+        );
+
+        final service = build(modelOutput: goodOutput);
+
+        expect(await service.run(now: now), DreamingOutcome.updated);
+        // 执行后时间戳推进到当前的 now
+        expect(harness.settingsService.lastDreamingAt, now);
       });
     });
 
@@ -146,6 +159,67 @@ void main() {
 
         final slice = await harness.memory.currentRecentSlice();
         expect(slice!.content, contains('搬家'));
+      });
+
+      test('用户署名自己的笔记（昵称/默认作者/自指词）正确归入原创组并用于 voice 归因', () async {
+        await harness.settingsService.setUserNickname('上晋');
+        await harness.settingsService.setDefaultAuthor('上晋');
+
+        final notes = <Quote>[
+          // 用户署名的原创笔记
+          Quote(
+            id: 'signed-1',
+            content: '今天写下了这篇日记',
+            date: DateTime(2026, 8, 20).toIso8601String(),
+            sourceAuthor: '上晋',
+          ),
+          Quote(
+            id: 'signed-2',
+            content: '我自己的思考和感悟',
+            date: DateTime(2026, 8, 21).toIso8601String(),
+            sourceAuthor: '我',
+          ),
+          Quote(
+            id: 'signed-3',
+            content: '随手记录的生活琐事',
+            date: DateTime(2026, 8, 22).toIso8601String(),
+            sourceWork: '日记',
+          ),
+          // 真正的外部摘录
+          ...List.generate(
+            7,
+            (i) => Quote(
+              id: 'excerpt-$i',
+              content: '摘抄名家第 $i 段文字',
+              date: DateTime(2026, 8, 10 + i).toIso8601String(),
+              sourceAuthor: '村上春树',
+              sourceWork: '挪威的森林',
+            ),
+          ),
+        ];
+
+        String? capturedUserMsg;
+        final service = build(
+          modelOutput: goodOutput,
+          notes: notes,
+          onComplete: (_, userMessage) => capturedUserMsg = userMessage,
+        );
+
+        expect(await service.run(), DreamingOutcome.updated);
+        expect(capturedUserMsg, isNotNull);
+        // 验证 message 中原创组包含署名笔记，摘录组包含外部笔记
+        expect(capturedUserMsg, contains('原创（3 条）'));
+        expect(capturedUserMsg, contains('摘录（7 条）'));
+
+        final profile = await harness.memory.activeProfile();
+        final voice =
+            profile.firstWhere((e) => e.kind == AgentMemoryKind.voice);
+        final taste =
+            profile.firstWhere((e) => e.kind == AgentMemoryKind.taste);
+        expect(voice.sourceNoteIds, contains('signed-1'));
+        expect(voice.sourceNoteIds, contains('signed-2'));
+        expect(voice.sourceNoteIds, contains('signed-3'));
+        expect(taste.sourceNoteIds, contains('excerpt-0'));
       });
 
       test('同 kind 原位更新，不追加第二条', () async {

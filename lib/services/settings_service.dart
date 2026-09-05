@@ -56,11 +56,12 @@ class SettingsService extends ChangeNotifier {
   final SharedPreferences _prefs; // 保留以支持数据迁移
   final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
   Completer<void>? _saveMultiAiLock;
-  late AISettings _aiSettings;
-  late AppSettings _appSettings;
-  late ThemeMode _themeMode;
-  late MultiAISettings _multiAISettings; // 新增多provider设置
-  late LocalAISettings _localAISettings; // 新增本地AI设置
+  AISettings _aiSettings = AISettings(apiKey: '');
+  AppSettings _appSettings = AppSettings.defaultSettings();
+  ThemeMode _themeMode = ThemeMode.system;
+  MultiAISettings _multiAISettings = const MultiAISettings(); // 新增多provider设置
+  LocalAISettings _localAISettings =
+      LocalAISettings.defaultSettings(); // 新增本地AI设置
 
   // 迁移标志，只执行一次数据迁移
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
@@ -126,6 +127,16 @@ class SettingsService extends ChangeNotifier {
 
   String get userNickname => _mmkv.getString(_userNicknameKey) ?? '';
 
+  /// 获取代表用户自身的全部署名别名集合（包含用户称呼与默认作者）。
+  Set<String> get userAliases {
+    final aliases = <String>{};
+    final nick = userNickname.trim();
+    if (nick.isNotEmpty) aliases.add(nick);
+    final author = defaultAuthor?.trim();
+    if (author != null && author.isNotEmpty) aliases.add(author);
+    return aliases;
+  }
+
   /// 写入失败时抛出：静默失败会让用户以为称呼已生效，对话里却一直没有。
   Future<void> setUserNickname(String value) async {
     final success = await _mmkv.setString(_userNicknameKey, value.trim());
@@ -152,15 +163,20 @@ class SettingsService extends ChangeNotifier {
   }
 
   /// 写入失败只记日志、不抛：它是一个节流用的时间戳，写丢了最坏结果是下次
-  /// 洞察时多跑一轮归纳，不值得把调用方的流程打断。
-  Future<void> setLastDreamingAt(DateTime value) async {
-    final success = await _mmkv.setInt(
-      _lastDreamingAtKey,
-      value.millisecondsSinceEpoch,
-    );
+  /// 洞察时多跑一轮归纳，不值得把调用方的流程打断。传入 null 表示重置/清除。
+  Future<void> setLastDreamingAt(DateTime? value) async {
+    final bool success;
+    if (value == null) {
+      success = await _mmkv.remove(_lastDreamingAtKey);
+    } else {
+      success = await _mmkv.setInt(
+        _lastDreamingAtKey,
+        value.millisecondsSinceEpoch,
+      );
+    }
     if (!success) {
       AppLogger.w(
-        'Dreaming 时间戳保存失败：MMKV setInt 返回 false',
+        'Dreaming 时间戳保存失败：MMKV 操作返回 false',
         source: 'SettingsService',
       );
       return;
@@ -635,7 +651,14 @@ class SettingsService extends ChangeNotifier {
   }
 
   // 默认作者（自动填充）
-  String? get defaultAuthor => _appSettings.defaultAuthor;
+  String? get defaultAuthor {
+    try {
+      return _appSettings.defaultAuthor;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> setDefaultAuthor(String? author) async {
     if (author == null || author.isEmpty) {
       _appSettings = _appSettings.copyWith(clearDefaultAuthor: true);
@@ -647,7 +670,14 @@ class SettingsService extends ChangeNotifier {
   }
 
   // 默认出处（自动填充）
-  String? get defaultSource => _appSettings.defaultSource;
+  String? get defaultSource {
+    try {
+      return _appSettings.defaultSource;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> setDefaultSource(String? source) async {
     if (source == null || source.isEmpty) {
       _appSettings = _appSettings.copyWith(clearDefaultSource: true);

@@ -78,7 +78,22 @@ void main() {
       expect(metadataOf(json)['excerptCount'], 0);
     });
 
-    test('an author or a work marks the note as an excerpt', () {
+    test('notes with self-author markers or userNickname are original', () {
+      final bySelf = helper.convertQuotesToJson([note(author: '我')]);
+      expect(quotesOf(bySelf).single['type'], 'original');
+      expect(metadataOf(bySelf)['originalCount'], 1);
+      expect(metadataOf(bySelf)['excerptCount'], 0);
+
+      final byNick = helper.convertQuotesToJson(
+        [note(author: '上晋')],
+        userNickname: '上晋',
+      );
+      expect(quotesOf(byNick).single['type'], 'original');
+      expect(metadataOf(byNick)['originalCount'], 1);
+      expect(metadataOf(byNick)['excerptCount'], 0);
+    });
+
+    test('an external author or work marks the note as an excerpt', () {
       final byAuthor = helper.convertQuotesToJson([note(author: '苏轼')]);
       expect(quotesOf(byAuthor).single['type'], 'excerpt');
 
@@ -101,8 +116,9 @@ void main() {
         note(),
         note(author: '加缪'),
         note(work: '局外人'),
+        note(author: '我'),
       ]);
-      expect(metadataOf(json)['originalCount'], 1);
+      expect(metadataOf(json)['originalCount'], 2);
       expect(metadataOf(json)['excerptCount'], 2);
     });
   });
