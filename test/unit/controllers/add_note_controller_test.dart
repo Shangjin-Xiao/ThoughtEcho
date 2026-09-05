@@ -116,11 +116,9 @@ void main() {
       )..updateServices(dbService: db);
 
       NoteTag? updatedCategory;
-      final stopwatch = Stopwatch()..start();
       await controller.addDefaultHitokotoTagsAsync((cat) {
         updatedCategory = cat;
       });
-      stopwatch.stop();
 
       // Ensure correctness
       expect(controller.selectedTagIds,

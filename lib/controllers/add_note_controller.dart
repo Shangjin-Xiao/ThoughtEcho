@@ -200,7 +200,10 @@ class AddNoteController extends ChangeNotifier {
   }) {
     locationService = locService ?? locationService;
     weatherService = weaService ?? weatherService;
-    databaseService = dbService ?? databaseService;
+    if (dbService != null && dbService != databaseService) {
+      databaseService = dbService;
+      allCategoriesCache = null;
+    }
   }
 
   void _clearNewLocation() {
@@ -533,14 +536,17 @@ class AddNoteController extends ChangeNotifier {
       }
 
       if (subtypeTagId != null) {
-        final category = allCategoriesCache?.firstWhere(
-          (tag) => tag.id == subtypeTagId,
-          orElse: () => NoteTag(id: '', name: ''),
-        );
+        NoteTag? category;
+        if (allCategoriesCache != null) {
+          for (final tag in allCategoriesCache!) {
+            if (tag.id == subtypeTagId) {
+              category = tag;
+              break;
+            }
+          }
+        }
         if (_isDisposed) return;
-        final selected = (category != null && category.id.isNotEmpty)
-            ? category
-            : await db.getTagById(subtypeTagId);
+        final selected = category ?? await db.getTagById(subtypeTagId);
         if (_isDisposed) return;
         selectedCategory = selected;
         if (selected != null) {
@@ -585,29 +591,26 @@ class AddNoteController extends ChangeNotifier {
       final categories = allCategoriesCache!;
 
       if (fixedId != null) {
-        final existingTagById = categories.firstWhere(
-          (tag) => tag.id == fixedId,
-          orElse: () => NoteTag(id: '', name: ''),
-        );
-        if (existingTagById.id.isNotEmpty) {
-          return existingTagById.id;
+        for (final tag in categories) {
+          if (tag.id == fixedId) {
+            return tag.id;
+          }
         }
       }
 
-      final existingTagByName = categories.firstWhere(
-        (tag) => tag.name.toLowerCase() == name.toLowerCase(),
-        orElse: () => NoteTag(id: '', name: ''),
-      );
-
-      if (existingTagByName.id.isNotEmpty) {
-        return existingTagByName.id;
+      for (final tag in categories) {
+        if (tag.name.toLowerCase() == name.toLowerCase()) {
+          return tag.id;
+        }
       }
 
       if (fixedId != null) {
         try {
           await db.addTagWithId(fixedId, name, iconName: iconName);
           if (_isDisposed) return null;
-          allCategoriesCache = await db.getTags();
+          final fetchedCategories = await db.getTags();
+          if (_isDisposed) return null;
+          allCategoriesCache = fetchedCategories;
           return fixedId;
         } catch (e, stackTrace) {
           logError(
@@ -628,12 +631,13 @@ class AddNoteController extends ChangeNotifier {
       final updatedCategories = await db.getTags();
       if (_isDisposed) return null;
       allCategoriesCache = updatedCategories;
-      final newTag = updatedCategories.firstWhere(
-        (tag) => tag.name.toLowerCase() == name.toLowerCase(),
-        orElse: () => NoteTag(id: '', name: ''),
-      );
+      for (final tag in updatedCategories) {
+        if (tag.name.toLowerCase() == name.toLowerCase()) {
+          return tag.id;
+        }
+      }
 
-      return newTag.id.isNotEmpty ? newTag.id : null;
+      return null;
     } catch (e, stackTrace) {
       logError(
         '确保标签"$name"存在时出错',
