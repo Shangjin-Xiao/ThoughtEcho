@@ -24,34 +24,56 @@ class AIAnalysis {
     this.quoteCount,
   });
 
-  // 从JSON构建AIAnalysis对象
+  // 从JSON构建AIAnalysis对象（增强容错：支持下划线/驼峰属性、隐式Null/类型不匹配保护）
   factory AIAnalysis.fromJson(Map<String, dynamic> json) {
     // 解析相关笔记ID（确保它们是字符串列表）
     List<String>? parseRelatedQuoteIds() {
-      if (json['related_quote_ids'] == null) return null;
-      if (json['related_quote_ids'] is String) {
-        final String idsStr = json['related_quote_ids'] as String;
-        if (idsStr.isEmpty) return null;
-        return idsStr.split(',');
-      }
-      if (json['related_quote_ids'] is List) {
-        return (json['related_quote_ids'] as List)
-            .map((e) => e.toString())
+      final raw = json['related_quote_ids'] ?? json['relatedQuoteIds'];
+      if (raw == null) return null;
+      if (raw is String) {
+        if (raw.isEmpty) return null;
+        final list = raw
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
             .toList();
+        return list.isEmpty ? null : list;
+      }
+      if (raw is List) {
+        final list = raw
+            .whereType<Object>()
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        return list.isEmpty ? null : list;
       }
       return null;
     }
 
+    final rawQuoteCount = json['quote_count'] ?? json['quoteCount'];
+    final int? quoteCount = rawQuoteCount is int
+        ? rawQuoteCount
+        : rawQuoteCount is double &&
+                rawQuoteCount.isFinite &&
+                rawQuoteCount == rawQuoteCount.truncateToDouble()
+            ? rawQuoteCount.toInt()
+            : int.tryParse(rawQuoteCount?.toString() ?? '');
+
     return AIAnalysis(
-      id: json['id'],
-      title: json['title'],
-      content: json['content'],
-      analysisType: json['analysis_type'],
-      analysisStyle: json['analysis_style'],
-      customPrompt: json['custom_prompt'],
-      createdAt: json['created_at'],
+      id: json['id']?.toString(),
+      title: json['title']?.toString() ?? '',
+      content: json['content']?.toString() ?? '',
+      analysisType:
+          (json['analysis_type'] ?? json['analysisType'])?.toString() ??
+              'comprehensive',
+      analysisStyle:
+          (json['analysis_style'] ?? json['analysisStyle'])?.toString() ??
+              'professional',
+      customPrompt: (json['custom_prompt'] ?? json['customPrompt'])?.toString(),
+      createdAt: (json['created_at'] ?? json['createdAt'])?.toString() ??
+          DateTime.now().toIso8601String(),
       relatedQuoteIds: parseRelatedQuoteIds(),
-      quoteCount: json['quote_count'],
+      quoteCount: quoteCount,
     );
   }
 
