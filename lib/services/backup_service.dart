@@ -603,9 +603,20 @@ class BackupService {
       // 恢复AI分析数据（使用现有的方法）
       if (backupData.containsKey('ai_analysis')) {
         logDebug('恢复AI分析数据...');
-        await _aiAnalysisDbService.importAnalysesFromList(
-          (backupData['ai_analysis'] as List).cast<Map<String, dynamic>>(),
-        );
+        final rawAiAnalysis = backupData['ai_analysis'];
+        if (rawAiAnalysis is List) {
+          final List<Map<String, dynamic>> aiList = [];
+          for (final item in rawAiAnalysis) {
+            if (item is Map) {
+              try {
+                aiList.add(item.map((k, v) => MapEntry(k.toString(), v)));
+              } catch (e) {
+                logWarning('跳过无法解析键的 AI 分析条目: $e', source: 'BackupService');
+              }
+            }
+          }
+          await _aiAnalysisDbService.importAnalysesFromList(aiList);
+        }
       }
 
       logDebug('导入数据处理完成');
