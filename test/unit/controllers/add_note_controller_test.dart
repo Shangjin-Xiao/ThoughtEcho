@@ -156,6 +156,20 @@ void main() {
       await controller.ensureTagExists(db2, '每日一言', '💭');
       expect(db2.getTagsCallCount, equals(1));
     });
+
+    test(
+        'ensureTagExists binds databaseService when initially null and returns existing tag',
+        () async {
+      final db = _CountingDatabaseService();
+      final controller = AddNoteController(context: FakeBuildContext());
+      expect(controller.databaseService, isNull);
+
+      final tagId = await controller.ensureTagExists(db, '每日一言', '💭');
+      expect(tagId, equals('default_hitokoto'));
+      expect(controller.databaseService, equals(db));
+      expect(controller.allCategoriesCache, isNotNull);
+      expect(db.getTagsCallCount, equals(1));
+    });
   });
 }
 
