@@ -3,7 +3,6 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/utils/quill_delta_builder.dart';
 import '../../test_harness.dart';
 
 void main() {
@@ -292,6 +291,13 @@ void main() {
     test(
         'safeDeltaOps and safeDeltaContent should fallback when deltaContent is null, empty, or whitespace',
         () {
+      const expectedFallbackOps = [
+        {'insert': '纯文本内容\n'},
+        {'insert': '\n'}
+      ];
+      const expectedFallbackJson =
+          '{"ops":[{"insert":"纯文本内容\\n"},{"insert":"\\n"}]}';
+
       for (final delta in [null, '', '   ', '\n\t']) {
         final quote = Quote(
           id: 'test-empty-delta',
@@ -300,10 +306,8 @@ void main() {
           deltaContent: delta,
         );
 
-        final expectedOps = DeltaBuilder.textToDelta(quote.content);
-        expect(quote.safeDeltaOps, equals(expectedOps));
-        expect(quote.safeDeltaContent,
-            equals(DeltaBuilder.deltaToJson(expectedOps)));
+        expect(quote.safeDeltaOps, equals(expectedFallbackOps));
+        expect(quote.safeDeltaContent, equals(expectedFallbackJson));
       }
     });
 
@@ -317,15 +321,29 @@ void main() {
         deltaContent: '{"invalid": json syntax ...}',
       );
 
-      final expectedOps = DeltaBuilder.textToDelta(quote.content);
-      expect(quote.safeDeltaOps, equals(expectedOps));
-      expect(quote.safeDeltaContent,
-          equals(DeltaBuilder.deltaToJson(expectedOps)));
+      expect(
+        quote.safeDeltaOps,
+        equals([
+          {'insert': '语法错误降级\n'},
+          {'insert': '\n'}
+        ]),
+      );
+      expect(
+        quote.safeDeltaContent,
+        equals('{"ops":[{"insert":"语法错误降级\\n"},{"insert":"\\n"}]}'),
+      );
     });
 
     test(
         'safeDeltaOps should fallback when deltaContent decodes to primitive JSON values',
         () {
+      const expectedOps = [
+        {'insert': '标量JSON降级\n'},
+        {'insert': '\n'}
+      ];
+      const expectedJson =
+          '{"ops":[{"insert":"标量JSON降级\\n"},{"insert":"\\n"}]}';
+
       for (final primitiveJson in ['123', 'true', '"a plain string"']) {
         final quote = Quote(
           id: 'test-primitive-json',
@@ -334,10 +352,8 @@ void main() {
           deltaContent: primitiveJson,
         );
 
-        final expectedOps = DeltaBuilder.textToDelta(quote.content);
         expect(quote.safeDeltaOps, equals(expectedOps));
-        expect(quote.safeDeltaContent,
-            equals(DeltaBuilder.deltaToJson(expectedOps)));
+        expect(quote.safeDeltaContent, equals(expectedJson));
       }
     });
 
@@ -350,8 +366,17 @@ void main() {
         date: '2026-08-23T09:00:00.000',
         deltaContent: '{"otherKey": 123}',
       );
-      final expectedOps1 = DeltaBuilder.textToDelta(quote1.content);
-      expect(quote1.safeDeltaOps, equals(expectedOps1));
+      expect(
+        quote1.safeDeltaOps,
+        equals([
+          {'insert': '无ops字段\n'},
+          {'insert': '\n'}
+        ]),
+      );
+      expect(
+        quote1.safeDeltaContent,
+        equals('{"ops":[{"insert":"无ops字段\\n"},{"insert":"\\n"}]}'),
+      );
 
       final quote2 = Quote(
         id: 'test-map-invalid-ops',
@@ -359,8 +384,17 @@ void main() {
         date: '2026-08-23T09:00:00.000',
         deltaContent: '{"ops": "not_a_list"}',
       );
-      final expectedOps2 = DeltaBuilder.textToDelta(quote2.content);
-      expect(quote2.safeDeltaOps, equals(expectedOps2));
+      expect(
+        quote2.safeDeltaOps,
+        equals([
+          {'insert': 'ops非List\n'},
+          {'insert': '\n'}
+        ]),
+      );
+      expect(
+        quote2.safeDeltaContent,
+        equals('{"ops":[{"insert":"ops非List\\n"},{"insert":"\\n"}]}'),
+      );
 
       final quote3 = Quote(
         id: 'test-map-valid-ops',
@@ -373,6 +407,10 @@ void main() {
         equals([
           {'insert': 'Map格式ops\n'}
         ]),
+      );
+      expect(
+        quote3.safeDeltaContent,
+        equals('{"ops":[{"insert":"Map格式ops\\n"}]}'),
       );
     });
 
