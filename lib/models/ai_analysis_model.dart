@@ -32,18 +32,32 @@ class AIAnalysis {
       if (raw == null) return null;
       if (raw is String) {
         if (raw.isEmpty) return null;
-        return raw.split(',');
+        final list = raw
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        return list.isEmpty ? null : list;
       }
       if (raw is List) {
-        return raw.map((e) => e.toString()).toList();
+        final list = raw
+            .whereType<Object>()
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        return list.isEmpty ? null : list;
       }
       return null;
     }
 
     final rawQuoteCount = json['quote_count'] ?? json['quoteCount'];
-    final int? quoteCount = rawQuoteCount is num
-        ? rawQuoteCount.toInt()
-        : int.tryParse(rawQuoteCount?.toString() ?? '');
+    final int? quoteCount = rawQuoteCount is int
+        ? rawQuoteCount
+        : rawQuoteCount is double &&
+                rawQuoteCount.isFinite &&
+                rawQuoteCount == rawQuoteCount.truncateToDouble()
+            ? rawQuoteCount.toInt()
+            : int.tryParse(rawQuoteCount?.toString() ?? '');
 
     return AIAnalysis(
       id: json['id']?.toString(),

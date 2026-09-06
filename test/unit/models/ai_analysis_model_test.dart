@@ -106,5 +106,60 @@ void main() {
       expect(analysis.relatedQuoteIds, null);
       expect(analysis.quoteCount, null);
     });
+
+    test('should reject fractional quoteCount and accept integral doubles', () {
+      final jsonFractionalNum = <String, dynamic>{
+        'title': '测试',
+        'content': '正文',
+        'quote_count': 2.9,
+      };
+      expect(AIAnalysis.fromJson(jsonFractionalNum).quoteCount, isNull);
+
+      final jsonFractionalStr = <String, dynamic>{
+        'title': '测试',
+        'content': '正文',
+        'quote_count': '2.9',
+      };
+      expect(AIAnalysis.fromJson(jsonFractionalStr).quoteCount, isNull);
+
+      final jsonIntegralDouble = <String, dynamic>{
+        'title': '测试',
+        'content': '正文',
+        'quote_count': 2.0,
+      };
+      expect(AIAnalysis.fromJson(jsonIntegralDouble).quoteCount, equals(2));
+
+      final jsonSpecialDoubles = <String, dynamic>{
+        'title': '测试',
+        'content': '正文',
+        'quote_count': double.infinity,
+      };
+      expect(AIAnalysis.fromJson(jsonSpecialDoubles).quoteCount, isNull);
+    });
+
+    test('should filter null and empty elements in relatedQuoteIds safely', () {
+      final jsonListWithNulls = <String, dynamic>{
+        'title': '测试',
+        'content': '正文',
+        'related_quote_ids': ['idA', null, '   ', 123],
+      };
+      final analysis = AIAnalysis.fromJson(jsonListWithNulls);
+      expect(analysis.relatedQuoteIds, equals(['idA', '123']));
+
+      final jsonStrWithSpaces = <String, dynamic>{
+        'title': '测试',
+        'content': '正文',
+        'related_quote_ids': 'idA,  , idB',
+      };
+      final analysis2 = AIAnalysis.fromJson(jsonStrWithSpaces);
+      expect(analysis2.relatedQuoteIds, equals(['idA', 'idB']));
+
+      final jsonAllEmpty = <String, dynamic>{
+        'title': '测试',
+        'content': '正文',
+        'related_quote_ids': [null, '', '   '],
+      };
+      expect(AIAnalysis.fromJson(jsonAllEmpty).relatedQuoteIds, isNull);
+    });
   });
 }
