@@ -161,5 +161,50 @@ void main() {
       };
       expect(AIAnalysis.fromJson(jsonAllEmpty).relatedQuoteIds, isNull);
     });
+
+    test('should reject negative quoteCount values', () {
+      expect(
+        AIAnalysis.fromJson({
+          'title': 't',
+          'content': 'c',
+          'quote_count': -1,
+        }).quoteCount,
+        isNull,
+      );
+
+      expect(
+        AIAnalysis.fromJson({
+          'title': 't',
+          'content': 'c',
+          'quote_count': -2.0,
+        }).quoteCount,
+        isNull,
+      );
+
+      expect(
+        AIAnalysis.fromJson({
+          'title': 't',
+          'content': 'c',
+          'quote_count': '-10',
+        }).quoteCount,
+        isNull,
+      );
+    });
+
+    test(
+        'should fallback empty string analysisType, analysisStyle, and createdAt',
+        () {
+      final analysis = AIAnalysis.fromJson({
+        'title': 't',
+        'content': 'c',
+        'analysis_type': '',
+        'analysis_style': '',
+        'created_at': '',
+      });
+
+      expect(analysis.analysisType, equals('comprehensive'));
+      expect(analysis.analysisStyle, equals('professional'));
+      expect(analysis.createdAt, isNotEmpty);
+    });
   });
 }

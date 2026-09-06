@@ -1,3 +1,5 @@
+import 'package:thoughtecho/utils/app_logger.dart';
+
 /// AI分析结果模型
 class AIAnalysis {
   final String? id;
@@ -50,28 +52,56 @@ class AIAnalysis {
       return null;
     }
 
+    final rawTitle = json['title'];
+    final rawContent = json['content'];
+    final title = rawTitle?.toString() ?? '';
+    final content = rawContent?.toString() ?? '';
+
+    if (rawTitle == null ||
+        title.trim().isEmpty ||
+        rawContent == null ||
+        content.trim().isEmpty) {
+      AppLogger.w(
+        'AIAnalysis.fromJson: 必填字段 title 或 content 缺失/为空，已触发降级处理 (id: ${json['id']})',
+        source: 'AIAnalysis',
+      );
+    }
+
+    final rawType = (json['analysis_type'] ?? json['analysisType'])?.toString();
+    final analysisType =
+        (rawType != null && rawType.isNotEmpty) ? rawType : 'comprehensive';
+
+    final rawStyle =
+        (json['analysis_style'] ?? json['analysisStyle'])?.toString();
+    final analysisStyle =
+        (rawStyle != null && rawStyle.isNotEmpty) ? rawStyle : 'professional';
+
+    final rawCreatedAt = (json['created_at'] ?? json['createdAt'])?.toString();
+    final createdAt = (rawCreatedAt != null && rawCreatedAt.isNotEmpty)
+        ? rawCreatedAt
+        : DateTime.now().toIso8601String();
+
     final rawQuoteCount = json['quote_count'] ?? json['quoteCount'];
     final int? quoteCount = rawQuoteCount is int
-        ? rawQuoteCount
+        ? (rawQuoteCount >= 0 ? rawQuoteCount : null)
         : rawQuoteCount is double &&
                 rawQuoteCount.isFinite &&
+                rawQuoteCount >= 0 &&
                 rawQuoteCount == rawQuoteCount.truncateToDouble()
             ? rawQuoteCount.toInt()
-            : int.tryParse(rawQuoteCount?.toString() ?? '');
+            : () {
+                final parsed = int.tryParse(rawQuoteCount?.toString() ?? '');
+                return (parsed != null && parsed >= 0) ? parsed : null;
+              }();
 
     return AIAnalysis(
       id: json['id']?.toString(),
-      title: json['title']?.toString() ?? '',
-      content: json['content']?.toString() ?? '',
-      analysisType:
-          (json['analysis_type'] ?? json['analysisType'])?.toString() ??
-              'comprehensive',
-      analysisStyle:
-          (json['analysis_style'] ?? json['analysisStyle'])?.toString() ??
-              'professional',
+      title: title,
+      content: content,
+      analysisType: analysisType,
+      analysisStyle: analysisStyle,
       customPrompt: (json['custom_prompt'] ?? json['customPrompt'])?.toString(),
-      createdAt: (json['created_at'] ?? json['createdAt'])?.toString() ??
-          DateTime.now().toIso8601String(),
+      createdAt: createdAt,
       relatedQuoteIds: parseRelatedQuoteIds(),
       quoteCount: quoteCount,
     );

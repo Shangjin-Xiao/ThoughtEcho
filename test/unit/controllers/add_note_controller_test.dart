@@ -170,6 +170,21 @@ void main() {
       expect(controller.allCategoriesCache, isNotNull);
       expect(db.getTagsCallCount, equals(1));
     });
+
+    test(
+        'ensureTagExists returns null when passed db does not match controller databaseService',
+        () async {
+      final db1 = _CountingDatabaseService();
+      final db2 = _CountingDatabaseService();
+      final controller = AddNoteController(context: FakeBuildContext())
+        ..updateServices(dbService: db1);
+
+      // 传入与 controller 绑定的 databaseService 不一致的 db2
+      final tagId = await controller.ensureTagExists(db2, '每日一言', '💭');
+      expect(tagId, isNull);
+      expect(controller.allCategoriesCache, isNull);
+      expect(db2.getTagsCallCount, equals(0));
+    });
   });
 }
 

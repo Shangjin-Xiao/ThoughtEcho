@@ -507,6 +507,8 @@ class AddNoteController extends ChangeNotifier {
       if (allCategoriesCache == null) {
         final fetchedCategories = await db.getTags();
         if (_isDisposed) return;
+        // 若在异步拉取期间数据库服务实例已切换，放弃在陈旧实例上的标签预载与附加操作，
+        // 避免跨数据库实例写入或状态污染。
         if (databaseService != db) return;
         allCategoriesCache = fetchedCategories;
       }
@@ -549,6 +551,7 @@ class AddNoteController extends ChangeNotifier {
         if (_isDisposed) return;
         final selected = category ?? await db.getTagById(subtypeTagId);
         if (_isDisposed) return;
+        if (databaseService != db) return;
         selectedCategory = selected;
         if (selected != null) {
           onCategoryUpdated(selected);
@@ -577,6 +580,13 @@ class AddNoteController extends ChangeNotifier {
     String? fixedId,
   }) async {
     try {
+      if (databaseService == null) {
+        databaseService = db;
+      } else if (databaseService != db) {
+        // 传入的 db 与当前控制器绑定的 databaseService 不一致，放弃操作以防跨实例脏写
+        return null;
+      }
+
       if (fixedId == null) {
         fixedId = hitokotoTagNameToCategoryIdMap[name];
         if (name == '每日一言') {
@@ -587,11 +597,7 @@ class AddNoteController extends ChangeNotifier {
       if (allCategoriesCache == null) {
         final fetchedCategories = await db.getTags();
         if (_isDisposed) return null;
-        if (databaseService == null) {
-          databaseService = db;
-        } else if (databaseService != db) {
-          return null;
-        }
+        if (databaseService != db) return null;
         allCategoriesCache = fetchedCategories;
       }
       final categories = allCategoriesCache!;
@@ -616,9 +622,8 @@ class AddNoteController extends ChangeNotifier {
           if (_isDisposed) return null;
           final fetchedCategories = await db.getTags();
           if (_isDisposed) return null;
-          if (databaseService == db) {
-            allCategoriesCache = fetchedCategories;
-          }
+          if (databaseService != db) return null;
+          allCategoriesCache = fetchedCategories;
           return fixedId;
         } catch (e, stackTrace) {
           logError(
@@ -628,6 +633,7 @@ class AddNoteController extends ChangeNotifier {
             source: 'AddNoteController',
           );
           if (_isDisposed) return null;
+          if (databaseService != db) return null;
           await db.addTag(name, iconName: iconName);
           if (_isDisposed) return null;
         }
@@ -638,9 +644,8 @@ class AddNoteController extends ChangeNotifier {
 
       final updatedCategories = await db.getTags();
       if (_isDisposed) return null;
-      if (databaseService == db) {
-        allCategoriesCache = updatedCategories;
-      }
+      if (databaseService != db) return null;
+      allCategoriesCache = updatedCategories;
       for (final tag in updatedCategories) {
         if (tag.name.toLowerCase() == name.toLowerCase()) {
           return tag.id;
