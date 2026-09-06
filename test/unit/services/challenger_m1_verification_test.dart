@@ -11,10 +11,10 @@ import 'package:flutter/foundation.dart';
 import '../../live/agent_probe.dart';
 
 class _MockSettingsService extends ChangeNotifier implements SettingsService {
-  _MockSettingsService({this.memoryEnabled = true, this.nickname = '阿澈'});
+  _MockSettingsService();
 
-  bool memoryEnabled;
-  String nickname;
+  bool memoryEnabled = true;
+  String nickname = '阿澈';
 
   @override
   bool get agentMemoryEnabled => memoryEnabled;

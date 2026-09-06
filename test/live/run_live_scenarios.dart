@@ -473,10 +473,10 @@ Future<void> main(List<String> args) async {
   await probe5.ask('最近医生建议我戒咖啡因，我现在完全不喝咖啡了，改喝普洱茶了。');
   await reportMemory(probe5, '翻转咖啡偏好为茶');
 
-  final facts5 = await probe5.memory.searchFacts('咖啡');
-  final activeCoffeeFacts =
-      facts5.where((f) => f.fact.supersededBy == null).toList();
-  print('💡 当前活跃的咖啡相关事实数: ${activeCoffeeFacts.length} (期望 0 或 1 条戒咖啡声明)');
+  final profiles5 = await probe5.memory.activeProfile();
+  final activeCoffeeProfiles =
+      profiles5.where((p) => p.directive.contains('咖啡')).toList();
+  print('💡 当前活跃的咖啡相关画像数: ${activeCoffeeProfiles.length} (期望 0 或 1 条戒咖啡声明)');
 
   final transcript5 = await probe5.finish();
   print('📁 场景 5 报告已生成: ${transcript5.path}');
