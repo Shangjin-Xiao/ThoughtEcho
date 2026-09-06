@@ -875,6 +875,31 @@ class ChatSessionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<ChatMessage> _parseMessagesFromRows(List<Map<String, dynamic>> rows) {
+    final messages = <ChatMessage>[];
+    var skippedCount = 0;
+    String? firstReason;
+
+    for (final row in rows) {
+      try {
+        messages.add(ChatMessage.fromMap(row));
+      } catch (e) {
+        firstReason ??= e.runtimeType.toString();
+        skippedCount++;
+      }
+    }
+
+    if (skippedCount > 0) {
+      logWarning(
+        'ChatSessionService.getMessages 跳过 $skippedCount 条无法解析的消息行'
+        '${firstReason != null ? '（首个原因: $firstReason）' : ''}',
+        source: 'ChatSessionService',
+      );
+    }
+
+    return messages;
+  }
+
   Future<List<ChatMessage>> getMessages(String sessionId) async {
     final db = await _getDatabaseForRead();
     if (db == null) return [];
@@ -885,7 +910,7 @@ class ChatSessionService extends ChangeNotifier {
         whereArgs: [sessionId],
         orderBy: 'created_at ASC',
       );
-      return rows.map(ChatMessage.fromMap).toList();
+      return _parseMessagesFromRows(rows);
     } catch (e) {
       logError(
         'ChatSessionService.getMessages 失败',

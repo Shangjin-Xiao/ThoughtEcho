@@ -73,8 +73,25 @@ class ChatSession {
 
   /// 从 JSON 反序列化（备份/同步）
   factory ChatSession.fromJson(Map<String, dynamic> json) {
+    final rawMessages = json['messages'];
+    final messages = <ChatMessage>[];
+    if (rawMessages is List) {
+      for (final item in rawMessages) {
+        if (item is Map) {
+          try {
+            final stringKeyMap = item.map(
+              (k, v) => MapEntry(k.toString(), v),
+            );
+            messages.add(ChatMessage.fromJson(stringKeyMap));
+          } catch (_) {
+            // 静默跳过全损坏的单条消息对象
+          }
+        }
+      }
+    }
+
     return ChatSession(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       sessionType: json['sessionType'] as String? ?? 'note',
       noteId: json['noteId'] as String?,
       title: json['title'] as String? ?? json['noteTitle'] as String? ?? '',
@@ -82,12 +99,7 @@ class ChatSession {
           DateTime.now(),
       lastActiveAt: DateTime.tryParse(json['lastActiveAt'] as String? ?? '') ??
           DateTime.now(),
-      messages: (json['messages'] as List?)
-              ?.map(
-                (m) => ChatMessage.fromJson(m as Map<String, dynamic>),
-              )
-              .toList() ??
-          const [],
+      messages: messages,
       isPinned: json['isPinned'] as bool? ?? false,
     );
   }

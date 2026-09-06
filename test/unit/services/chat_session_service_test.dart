@@ -261,6 +261,74 @@ void main() {
       await service.close();
     });
 
+    test(
+        'getMessages filters out corrupted message rows while returning valid ones',
+        () async {
+      final db = await openDatabase(databasePath);
+      await db.execute('''
+        CREATE TABLE chat_sessions(
+          id TEXT PRIMARY KEY,
+          session_type TEXT NOT NULL DEFAULT 'note',
+          note_id TEXT,
+          title TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          last_active_at TEXT NOT NULL,
+          is_pinned INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE chat_messages(
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'user',
+          content TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          included_in_context INTEGER NOT NULL DEFAULT 1,
+          meta_json TEXT,
+          content_format TEXT,
+          delta_json TEXT
+        )
+      ''');
+
+      final now = DateTime.now().toIso8601String();
+      await db.insert('chat_sessions', {
+        'id': 'session-1',
+        'session_type': 'agent',
+        'title': 'Mixed Row Session',
+        'created_at': now,
+        'last_active_at': now,
+        'is_pinned': 0,
+      });
+
+      // 插入一条合法记录
+      await db.insert('chat_messages', {
+        'id': 'valid-msg-1',
+        'session_id': 'session-1',
+        'role': 'user',
+        'content': 'valid message content',
+        'created_at': now,
+        'included_in_context': 1,
+      });
+      // 插入一条空 ID 的损坏记录
+      await db.insert('chat_messages', {
+        'id': '',
+        'session_id': 'session-1',
+        'role': 'assistant',
+        'content': 'corrupted message without id',
+        'created_at': now,
+        'included_in_context': 1,
+      });
+      await db.close();
+
+      final service = ChatSessionService(databasePath: databasePath);
+      final messages = await service.getMessages('session-1');
+      expect(messages, hasLength(1));
+      expect(messages.first.id, equals('valid-msg-1'));
+      expect(messages.first.content, equals('valid message content'));
+
+      await service.close();
+    });
+
     test('repairs legacy chat_messages missing rich content columns', () async {
       final legacyDb = await openDatabase(databasePath);
       await legacyDb.execute('''
