@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
+import '../app_empty_view.dart';
 
 /// 图片文字区域选择组件
 ///
@@ -48,28 +49,8 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
             child: Stack(
               children: [
                 // TODO: 显示图片 - 后端实现后添加
-                Center(
-                  child: Container(
-                    color: Colors.grey[300],
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.image,
-                          size: 64,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l10n.featureComingSoon,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                AppEmptyView(
+                  text: l10n.featureComingSoon,
                 ),
 
                 // TODO: 文字区域高亮 - 后端实现后添加
