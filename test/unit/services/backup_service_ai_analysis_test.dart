@@ -11,8 +11,9 @@ class _FakeAIAnalysisDatabaseService extends Fake
   bool deleteAllCalled = false;
 
   @override
-  Future<void> deleteAllAnalyses() async {
+  Future<bool> deleteAllAnalyses() async {
     deleteAllCalled = true;
+    return true;
   }
 
   @override
