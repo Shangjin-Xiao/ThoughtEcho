@@ -515,7 +515,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
             final content = converted['content']?.toString().trim() ?? '';
             if (title.isEmpty || content.isEmpty) {
               AppLogger.w(
-                'importAnalysesFromList: 跳过必填字段缺失或为空的条目 (title: "$title", content: "$content", id: ${converted['id']})',
+                'importAnalysesFromList: 跳过必填字段缺失或为空的条目 (id: ${converted['id']}, hasTitle: ${title.isNotEmpty}, hasContent: ${content.isNotEmpty})',
                 source: 'AIAnalysisDB',
               );
               continue;
