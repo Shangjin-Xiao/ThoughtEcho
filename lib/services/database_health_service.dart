@@ -170,30 +170,33 @@ class DatabaseHealthService {
           !_tableColumnCache.keys
               .any((t) => _requiredMainDatabaseTables.contains(t))) {
         try {
-          final placeholders =
-              _requiredMainDatabaseTables.map((_) => '?').join(',');
-          final args = _requiredMainDatabaseTables.toList();
+          final validTables =
+              _requiredMainDatabaseTables.where(_isValidIdentifier).toList();
 
-          final batchedResult = await db.rawQuery('''
-            SELECT m.name as table_name, p.name as column_name
-            FROM sqlite_master m, pragma_table_info(m.name) p
-            WHERE m.type = 'table' AND m.name IN ($placeholders)
-          ''', args);
+          if (validTables.isNotEmpty) {
+            final placeholders = List.filled(validTables.length, '?').join(',');
 
-          // Initialize cache for all main tables to empty sets
-          for (final table in _requiredMainDatabaseTables) {
-            _tableColumnCache[table] = <String>{};
-          }
+            final batchedResult = await db.rawQuery('''
+              SELECT m.name as table_name, p.name as column_name
+              FROM sqlite_master m, pragma_table_info(m.name) p
+              WHERE m.type = 'table' AND m.name IN ($placeholders)
+            ''', validTables);
 
-          // Populate cache with results
-          for (final row in batchedResult) {
-            final tName = row['table_name'] as String;
-            final cName = row['column_name'] as String;
-            _tableColumnCache[tName]?.add(cName);
-          }
+            // Initialize cache for all main tables to empty sets
+            for (final table in _requiredMainDatabaseTables) {
+              _tableColumnCache[table] = <String>{};
+            }
 
-          if (_tableColumnCache.containsKey(tableName)) {
-            return _tableColumnCache[tableName]!.contains(columnName);
+            // Populate cache with results
+            for (final row in batchedResult) {
+              final tName = row['table_name'] as String;
+              final cName = row['column_name'] as String;
+              _tableColumnCache[tName]?.add(cName);
+            }
+
+            if (_tableColumnCache.containsKey(tableName)) {
+              return _tableColumnCache[tableName]!.contains(columnName);
+            }
           }
         } catch (e) {
           logDebug('批量检查列失败，回退到单表查询: $e');
