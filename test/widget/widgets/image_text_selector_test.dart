@@ -43,7 +43,7 @@ void main() {
     expect(find.byType(FilledButton), findsNothing);
 
     // Tap on region
-    final regionFinder = find.byType(GestureDetector).first;
+    final regionFinder = find.byKey(const ValueKey('image_text_region_0'));
     await tester.tap(regionFinder);
     await tester.pumpAndSettle();
 

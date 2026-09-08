@@ -65,6 +65,7 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
                     width: region.width,
                     height: region.height,
                     child: GestureDetector(
+                      key: ValueKey('image_text_region_$index'),
                       onTap: () {
                         setState(() {
                           _selectedRegionIndex = index;
