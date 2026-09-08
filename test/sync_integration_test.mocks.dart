@@ -2585,8 +2585,7 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
       ) as _i5.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i5.Future<int> importAnalysesFromList(
-          List<Map<String, dynamic>>? analyses) =>
+  _i5.Future<int> importAnalysesFromList(List<dynamic>? analyses) =>
       (super.noSuchMethod(
         Invocation.method(
           #importAnalysesFromList,
