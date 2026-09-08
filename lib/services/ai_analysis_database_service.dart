@@ -418,10 +418,27 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Future<int> restoreFromJson(String jsonStr) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
-      final analyses = jsonList.whereType<Map<String, dynamic>>().toList();
+      final List<Map<String, dynamic>> analyses = [];
+      for (final item in jsonList) {
+        if (item is Map) {
+          analyses.add(
+            item.map((k, v) => MapEntry(k.toString(), v)),
+          );
+        } else {
+          AppLogger.w(
+            'restoreFromJson: 跳过非 Map 格式的 AI 分析条目: ${item.runtimeType}',
+            source: 'AIAnalysisDB',
+          );
+        }
+      }
       return await importAnalysesFromList(analyses);
-    } catch (e) {
-      AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '从JSON恢复AI分析失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AIAnalysisDB',
+      );
       return 0;
     }
   }
@@ -488,14 +505,38 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
   /// 从List<Map>导入AI分析数据
   Future<int> importAnalysesFromList(
-    List<Map<String, dynamic>> analyses,
+    List<dynamic> analyses,
   ) async {
     try {
       if (analyses.isEmpty) return 0;
 
+      // 1. 防御性类型转换与清洗
+      final List<Map<String, dynamic>> validAnalyses = [];
+      for (final rawItem in analyses) {
+        if (rawItem is Map) {
+          try {
+            validAnalyses.add(
+              rawItem.map((k, v) => MapEntry(k.toString(), v)),
+            );
+          } catch (e) {
+            AppLogger.w(
+              'importAnalysesFromList: 无法解析条目 Map: $e',
+              source: 'AIAnalysisDB',
+            );
+          }
+        } else {
+          AppLogger.w(
+            'importAnalysesFromList: 跳过非 Map 格式条目 (${rawItem.runtimeType})',
+            source: 'AIAnalysisDB',
+          );
+        }
+      }
+
+      if (validAnalyses.isEmpty) return 0;
+
       if (kIsWeb) {
         AppLogger.i(
-          '开始批量导入AI分析(Web)，共 ${analyses.length} 条',
+          '开始批量导入AI分析(Web)，共 ${validAnalyses.length} 条',
           source: 'AIAnalysisDB',
         );
 
@@ -506,7 +547,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         };
 
         int count = 0;
-        for (var item in analyses) {
+        for (var item in validAnalyses) {
           final analysis = AIAnalysis.fromJson(item);
           final newAnalysis = _prepareAnalysis(analysis);
           if (newAnalysis.id != null) {
@@ -526,29 +567,31 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         AppLogger.i('批量导入完成(Web)', source: 'AIAnalysisDB');
         return count;
       } else {
-        // 非Web平台使用Batch优化
+        // 非Web平台使用 显式事务 + Batch 优化
         AppLogger.i(
-          '开始批量导入AI分析，共 ${analyses.length} 条',
+          '开始批量导入AI分析，共 ${validAnalyses.length} 条',
           source: 'AIAnalysisDB',
         );
         final db = await database;
-        final batch = db.batch();
         int count = 0;
 
-        for (var item in analyses) {
-          final analysis = AIAnalysis.fromJson(item);
-          final newAnalysis = _prepareAnalysis(analysis);
+        await db.transaction((txn) async {
+          final batch = txn.batch();
+          for (var item in validAnalyses) {
+            final analysis = AIAnalysis.fromJson(item);
+            final newAnalysis = _prepareAnalysis(analysis);
 
-          final jsonData = newAnalysis.toJson();
-          batch.insert(
-            'ai_analyses',
-            jsonData,
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-          count++;
-        }
+            final jsonData = newAnalysis.toJson();
+            batch.insert(
+              'ai_analyses',
+              jsonData,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            count++;
+          }
+          await batch.commit(noResult: true);
+        });
 
-        await batch.commit(noResult: true);
         AppLogger.i('批量导入完成', source: 'AIAnalysisDB');
 
         // 批量操作完成后统一通知一次
@@ -557,8 +600,13 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
         return count;
       }
-    } catch (e) {
-      AppLogger.e('从List恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '从List恢复AI分析失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AIAnalysisDB',
+      );
       return 0;
     }
   }
