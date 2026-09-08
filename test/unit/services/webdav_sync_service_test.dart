@@ -209,6 +209,59 @@ void main() {
     expect(files, {'audios/valid.mp3': 456});
   });
 
+  test(
+      'mediaRelativePathFromHref should normalize paths and block path traversal',
+      () {
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/photo.png',
+      ),
+      'images/photo.png',
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/./photo.png',
+      ),
+      'images/photo.png',
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/sub/../photo.png',
+      ),
+      'images/photo.png',
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/../videos/photo.png',
+      ),
+      isNull,
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/../../etc/passwd',
+      ),
+      isNull,
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/photo.png\x00.zip',
+      ),
+      isNull,
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/..\\..\\secret.txt',
+      ),
+      isNull,
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/',
+      ),
+      isNull,
+    );
+  });
+
   test('WebDAV media upload decision should skip files already on remote', () {
     final remoteMediaFiles = {
       'images/existing.png': 1024,
