@@ -605,17 +605,12 @@ class BackupService {
         logDebug('恢复AI分析数据...');
         final rawAiAnalysis = backupData['ai_analysis'];
         if (rawAiAnalysis is List) {
-          final List<Map<String, dynamic>> aiList = [];
-          for (final item in rawAiAnalysis) {
-            if (item is Map) {
-              try {
-                aiList.add(item.map((k, v) => MapEntry(k.toString(), v)));
-              } catch (e) {
-                logWarning('跳过无法解析键的 AI 分析条目: $e', source: 'BackupService');
-              }
-            }
-          }
-          await _aiAnalysisDbService.importAnalysesFromList(aiList);
+          await _aiAnalysisDbService.importAnalysesFromList(rawAiAnalysis);
+        } else if (rawAiAnalysis != null) {
+          logWarning(
+            '跳过非 List 格式的 AI 分析节点 (${rawAiAnalysis.runtimeType})',
+            source: 'BackupService',
+          );
         }
       }
 
@@ -762,6 +757,14 @@ class BackupService {
 
     return processedData;
   }
+
+  @visibleForTesting
+  Future<ImportCleanupStats> testProcessImportData(
+    Map<String, dynamic> backupData, {
+    bool clearExisting = false,
+    CancelToken? cancelToken,
+  }) =>
+      _processImportData(backupData, clearExisting, cancelToken);
 
   @visibleForTesting
   static String? testResolveQuoteDeltaField(Map<String, dynamic> quote) {

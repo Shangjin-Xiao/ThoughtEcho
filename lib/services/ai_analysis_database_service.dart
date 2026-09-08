@@ -417,21 +417,16 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   /// 从导出的JSON文件中恢复分析数据
   Future<int> restoreFromJson(String jsonStr) async {
     try {
-      final List<dynamic> jsonList = json.decode(jsonStr);
-      final List<Map<String, dynamic>> analyses = [];
-      for (final item in jsonList) {
-        if (item is Map) {
-          analyses.add(
-            item.map((k, v) => MapEntry(k.toString(), v)),
-          );
-        } else {
-          AppLogger.w(
-            'restoreFromJson: 跳过非 Map 格式的 AI 分析条目: ${item.runtimeType}',
-            source: 'AIAnalysisDB',
-          );
-        }
+      final dynamic decoded = json.decode(jsonStr);
+      if (decoded is List) {
+        return await importAnalysesFromList(decoded);
+      } else {
+        AppLogger.w(
+          'restoreFromJson: 根节点非 List 格式: ${decoded.runtimeType}',
+          source: 'AIAnalysisDB',
+        );
+        return 0;
       }
-      return await importAnalysesFromList(analyses);
     } catch (e, stackTrace) {
       AppLogger.e(
         '从JSON恢复AI分析失败: $e',
@@ -515,9 +510,17 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       for (final rawItem in analyses) {
         if (rawItem is Map) {
           try {
-            validAnalyses.add(
-              rawItem.map((k, v) => MapEntry(k.toString(), v)),
-            );
+            final converted = rawItem.map((k, v) => MapEntry(k.toString(), v));
+            final title = converted['title']?.toString().trim() ?? '';
+            final content = converted['content']?.toString().trim() ?? '';
+            if (title.isEmpty || content.isEmpty) {
+              AppLogger.w(
+                'importAnalysesFromList: 跳过必填字段缺失或为空的条目 (title: "$title", content: "$content", id: ${converted['id']})',
+                source: 'AIAnalysisDB',
+              );
+              continue;
+            }
+            validAnalyses.add(converted);
           } catch (e) {
             AppLogger.w(
               'importAnalysesFromList: 无法解析条目 Map: $e',

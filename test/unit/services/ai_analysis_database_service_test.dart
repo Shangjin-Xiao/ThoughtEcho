@@ -13,30 +13,37 @@ import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 class FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
     implements PathProviderPlatform {
+  String tempPath = Directory.systemTemp.path;
+
   @override
   Future<String?> getApplicationDocumentsPath() async {
-    return Directory.systemTemp.path;
+    return tempPath;
   }
 
   @override
   Future<String?> getApplicationSupportPath() async {
-    return Directory.systemTemp.path;
+    return tempPath;
   }
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late FakePathProviderPlatform fakePlatform;
 
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    PathProviderPlatform.instance = FakePathProviderPlatform();
+    fakePlatform = FakePathProviderPlatform();
+    PathProviderPlatform.instance = fakePlatform;
   });
 
   group('AIAnalysisDatabaseService Tests', () {
     late AIAnalysisDatabaseService service;
+    late Directory tempDir;
 
     setUp(() async {
+      tempDir = Directory.systemTemp.createTempSync('ai_analysis_test_');
+      fakePlatform.tempPath = tempDir.path;
       service = AIAnalysisDatabaseService();
       await service.init();
     });
@@ -44,9 +51,22 @@ void main() {
     tearDown(() async {
       await service.deleteAllAnalyses();
       await service.closeDatabase();
-      final dbPath = p.join(Directory.systemTemp.path, 'ai_analyses.db');
-      if (File(dbPath).existsSync()) {
-        File(dbPath).deleteSync();
+
+      final docDbPath = p.join(tempDir.path, 'ai_analyses.db');
+      if (File(docDbPath).existsSync()) {
+        File(docDbPath).deleteSync();
+      }
+
+      try {
+        final sqfliteDbPath =
+            p.join(await getDatabasesPath(), 'ai_analyses.db');
+        if (File(sqfliteDbPath).existsSync()) {
+          File(sqfliteDbPath).deleteSync();
+        }
+      } catch (_) {}
+
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
       }
     });
 
@@ -83,6 +103,43 @@ void main() {
       expect(ids, containsAll(['test-1', 'test-2']));
     });
 
+    test('importAnalysesFromList skips items missing title or content',
+        () async {
+      final dataWithIncompletes = [
+        <String, dynamic>{
+          'id': 'valid-1',
+          'title': 'Valid Title',
+          'content': 'Valid Content',
+        },
+        <String, dynamic>{
+          'id': 'no-title',
+          'content': 'Content only',
+        },
+        <String, dynamic>{
+          'id': 'empty-title',
+          'title': '   ',
+          'content': 'Content only',
+        },
+        <String, dynamic>{
+          'id': 'no-content',
+          'title': 'Title only',
+        },
+        <String, dynamic>{
+          'id': 'empty-content',
+          'title': 'Title',
+          'content': '   ',
+        },
+        <dynamic, dynamic>{},
+      ];
+
+      final count = await service.importAnalysesFromList(dataWithIncompletes);
+      expect(count, equals(1));
+
+      final all = await service.getAllAnalyses();
+      expect(all.length, equals(1));
+      expect(all.first.id, equals('valid-1'));
+    });
+
     test('restoreFromJson safely parses JSON and filters invalid items',
         () async {
       final jsonList = [
@@ -96,6 +153,7 @@ void main() {
         },
         null,
         'invalid_string',
+        {'id': 'json-2', 'title': '', 'content': ''},
       ];
       final jsonStr = jsonEncode(jsonList);
 
@@ -105,6 +163,12 @@ void main() {
       final item = await service.getAnalysisById('json-1');
       expect(item, isNotNull);
       expect(item!.title, equals('JSON Analysis 1'));
+    });
+
+    test('restoreFromJson returns 0 for non-List JSON root without error',
+        () async {
+      final count = await service.restoreFromJson('{"error": "not a list"}');
+      expect(count, equals(0));
     });
   });
 }
