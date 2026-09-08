@@ -1620,9 +1620,11 @@ class WebDAVSyncService extends ChangeNotifier {
           // 批量查 tag 关联，避免逐条查询
           final ids = page.map((q) => q['id'] as String).toList();
           final placeholders = List.filled(ids.length, '?').join(',');
-          final tagRows = await txn.rawQuery(
-            'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
-            ids,
+          final tagRows = await txn.query(
+            'quote_tags',
+            columns: ['quote_id', 'tag_id'],
+            where: 'quote_id IN ($placeholders)',
+            whereArgs: ids,
           );
           final tagsByQuoteId = <String, List<String>>{};
           for (final t in tagRows) {
