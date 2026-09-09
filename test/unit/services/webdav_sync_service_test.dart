@@ -260,6 +260,51 @@ void main() {
       ),
       isNull,
     );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/photo.png?token=secret#section',
+      ),
+      'images/photo.png',
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        'https://example.com/dav/thoughtecho/media/images/photo.png?token=secret#section',
+      ),
+      'images/photo.png',
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/%252e%252e/secret.txt',
+      ),
+      isNull,
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/%252fetc/passwd',
+      ),
+      isNull,
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/%255csecret.txt',
+      ),
+      isNull,
+    );
+  });
+
+  test('encodeMediaPath should encode special characters in path segments', () {
+    expect(
+      WebDAVSyncService.encodeMediaPathForTesting(
+        'images/my photo #1?.jpg',
+      ),
+      'images/my%20photo%20%231%3F.jpg',
+    );
+    expect(
+      WebDAVSyncService.encodeMediaPathForTesting(
+        'audios/voice memo (1).mp3',
+      ),
+      'audios/voice%20memo%20(1).mp3',
+    );
   });
 
   test('WebDAV media upload decision should skip files already on remote', () {
