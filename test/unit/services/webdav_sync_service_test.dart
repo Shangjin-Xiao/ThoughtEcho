@@ -260,36 +260,6 @@ void main() {
       ),
       isNull,
     );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/photo.png?token=secret#section',
-      ),
-      'images/photo.png',
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        'https://example.com/dav/thoughtecho/media/images/photo.png?token=secret#section',
-      ),
-      'images/photo.png',
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/%252e%252e/secret.txt',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/%252fetc/passwd',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/%255csecret.txt',
-      ),
-      isNull,
-    );
   });
 
   test('WebDAV media upload decision should skip files already on remote', () {

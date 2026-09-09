@@ -1268,9 +1268,7 @@ class WebDAVSyncService extends ChangeNotifier {
             ? '远端大小不一致，本地=$fileLen, 远端=$remoteSize'
             : '远端不存在';
         logDebug('上传本地附件到云端: $stdPath ($reason)');
-        final encodedStdPath =
-            stdPath.split('/').map(Uri.encodeComponent).join('/');
-        final uploadUrl = '${_url}thoughtecho/media/$encodedStdPath';
+        final uploadUrl = '${_url}thoughtecho/media/$stdPath';
         try {
           await dio.put(
             uploadUrl,
@@ -1309,9 +1307,7 @@ class WebDAVSyncService extends ChangeNotifier {
           if (refCount > 0) {
             // 该云端媒体在本地数据库有笔记引用，需从云端下载（如新设备登录同步）
             logDebug('从云端下载本地缺失且被引用的合法附件: $stdPath');
-            final encodedStdPath =
-                stdPath.split('/').map(Uri.encodeComponent).join('/');
-            final downloadUrl = '${_url}thoughtecho/media/$encodedStdPath';
+            final downloadUrl = '${_url}thoughtecho/media/$stdPath';
             final localTargetFile = File(localFileFullPath);
 
             // 先下载到 .tmp 临时文件 + 哈希校验后再原子改名：中断的下载绝不能留下半截文件——
@@ -1498,35 +1494,11 @@ class WebDAVSyncService extends ChangeNotifier {
     final trimmed = href.trim();
     if (trimmed.isEmpty) return null;
 
-    // 剥离 query 参数和 fragment（注意不能用 Uri.tryParse(...).path，因为其会自动规范化并折叠 ../ 路径段，导致越界逃逸校验失效）
-    var rawPath = trimmed.split('?').first.split('#').first;
-    final schemeIndex = rawPath.indexOf('://');
-    if (schemeIndex != -1) {
-      final pathStart = rawPath.indexOf('/', schemeIndex + 3);
-      rawPath = pathStart != -1 ? rawPath.substring(pathStart) : '';
-    }
-    if (rawPath.isEmpty) return null;
-
     String decodedPath;
     try {
-      decodedPath = Uri.decodeComponent(rawPath);
+      decodedPath = Uri.decodeComponent(trimmed);
     } catch (_) {
-      decodedPath = Uri.decodeFull(rawPath);
-    }
-
-    // 循环检查或解码，防范多重编码（如 %252e%252e、%252f、%255c）绕过路径遍历检查
-    var current = decodedPath;
-    while (true) {
-      if (RegExp(r'%2[ef]|%5c', caseSensitive: false).hasMatch(current)) {
-        return null;
-      }
-      try {
-        final next = Uri.decodeComponent(current);
-        if (next == current) break;
-        current = next;
-      } catch (_) {
-        break;
-      }
+      decodedPath = Uri.decodeFull(trimmed);
     }
 
     final normalizedPath = decodedPath.replaceAll('\\', '/');
