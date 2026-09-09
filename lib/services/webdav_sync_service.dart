@@ -1498,8 +1498,15 @@ class WebDAVSyncService extends ChangeNotifier {
     final trimmed = href.trim();
     if (trimmed.isEmpty) return null;
 
-    final uri = Uri.tryParse(trimmed);
-    final rawPath = uri?.path ?? trimmed;
+    // 剥离 query 参数和 fragment（注意不能用 Uri.tryParse(...).path，因为其会自动规范化并折叠 ../ 路径段，导致越界逃逸校验失效）
+    var rawPath = trimmed.split('?').first.split('#').first;
+    final schemeIndex = rawPath.indexOf('://');
+    if (schemeIndex != -1) {
+      final pathStart = rawPath.indexOf('/', schemeIndex + 3);
+      rawPath = pathStart != -1 ? rawPath.substring(pathStart) : '';
+    }
+    if (rawPath.isEmpty) return null;
+
     String decodedPath;
     try {
       decodedPath = Uri.decodeComponent(rawPath);

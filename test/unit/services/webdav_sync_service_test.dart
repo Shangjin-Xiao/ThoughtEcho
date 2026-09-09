@@ -268,6 +268,12 @@ void main() {
     );
     expect(
       WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        'https://example.com/dav/thoughtecho/media/images/photo.png?token=secret#section',
+      ),
+      'images/photo.png',
+    );
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
         '/dav/thoughtecho/media/images/%252e%252e/secret.txt',
       ),
       isNull,
