@@ -65,3 +65,7 @@
 ## 2026-09-01 - 补充 StreamingUtils 流式响应解析核心测试
 **盲点:** StreamingUtils 中缺少解析流式响应内容(extractContentFromLine)和错误消息(parseErrorMessage)这部分核心纯函数的测试。
 **对策:** 将这两部分核心纯函数暴露为公共方法并增加 @visibleForTesting 标签，编写针对正确数据、边缘情况(如空数据、缺失字段)、及各种 HTTP status code 错误消息转换逻辑的详细用例。
+## 2026-09-08 - [补充 AnniversaryDigitGlyphs 的测试]
+**盲点:** `AnniversaryDigitGlyphs` 是 `anniversary_candle_svg.dart` 等生产组件所依赖的周年数字 SVG 字形定义与布局辅助工具，此前缺少直接的单元测试覆盖，无法保障字形路径映射、尺寸计算与格式化逻辑在后续迭代中的稳定性。
+**对策:** 为其编写独立的纯函数单元测试，覆盖 0-9 完整字形映射、无效输入回退至 0、尺寸与间距计算、以及 SVG 数值格式化（四舍五入保留两位小数及整除无小数）等边界条件，确保底层渲染字形与辅助函数的健壮性。
+
