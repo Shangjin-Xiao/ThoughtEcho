@@ -4,15 +4,17 @@ import 'package:thoughtecho/utils/anniversary_digit_glyphs.dart';
 void main() {
   group('AnniversaryDigitGlyphs', () {
     test('anniversaryDigitPath returns correct path for valid digits', () {
-      expect(anniversaryDigitPath('1'), anniversaryDigitPaths['1']);
-      expect(anniversaryDigitPath('5'), anniversaryDigitPaths['5']);
-      expect(anniversaryDigitPath('9'), anniversaryDigitPaths['9']);
+      for (var i = 0; i <= 9; i++) {
+        final digit = i.toString();
+        expect(anniversaryDigitPath(digit), anniversaryDigitPaths[digit]);
+      }
     });
 
     test('anniversaryDigitPath fallbacks to 0 for invalid input', () {
       expect(anniversaryDigitPath('a'), anniversaryDigitPaths['0']);
       expect(anniversaryDigitPath(''), anniversaryDigitPaths['0']);
       expect(anniversaryDigitPath('-1'), anniversaryDigitPaths['0']);
+      expect(anniversaryDigitPath('10'), anniversaryDigitPaths['0']);
     });
 
     test('anniversaryDigitsWidth calculates width correctly', () {
