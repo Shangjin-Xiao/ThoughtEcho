@@ -1494,31 +1494,44 @@ class WebDAVSyncService extends ChangeNotifier {
     final trimmed = href.trim();
     if (trimmed.isEmpty) return null;
 
-    final uri = Uri.tryParse(trimmed);
-    final rawPath = uri?.path ?? trimmed;
     String decodedPath;
     try {
-      decodedPath = Uri.decodeComponent(rawPath);
+      decodedPath = Uri.decodeComponent(trimmed);
     } catch (_) {
-      decodedPath = Uri.decodeFull(rawPath);
+      decodedPath = Uri.decodeFull(trimmed);
     }
 
     final normalizedPath = decodedPath.replaceAll('\\', '/');
     if (normalizedPath.endsWith('/')) return null;
 
-    final segments = normalizedPath
+    final rawSegments = normalizedPath
         .split('/')
         .where((segment) => segment.isNotEmpty)
         .toList();
-    for (var i = 0; i < segments.length - 1; i++) {
-      if (segments[i] == 'media' &&
-          _mediaSubFolders.contains(segments[i + 1])) {
-        final relativeSegments = segments.sublist(i + 1);
-        if (relativeSegments.any((segment) =>
-            segment == '.' || segment == '..' || segment.contains('\u0000'))) {
+
+    for (var i = 0; i < rawSegments.length - 1; i++) {
+      if (rawSegments[i] == 'media' &&
+          _mediaSubFolders.contains(rawSegments[i + 1])) {
+        final relativeSegments = rawSegments.sublist(i + 1);
+        final rawRelativePath = relativeSegments.join('/');
+        if (rawRelativePath.contains('\u0000') ||
+            p.posix.isAbsolute(rawRelativePath)) {
           return null;
         }
-        return relativeSegments.join('/');
+
+        final normalizedRelative = p.posix.normalize(rawRelativePath);
+        if (normalizedRelative == '.' ||
+            normalizedRelative == '..' ||
+            normalizedRelative.startsWith('../')) {
+          return null;
+        }
+
+        final expectedPrefix = '${rawSegments[i + 1]}/';
+        if (!normalizedRelative.startsWith(expectedPrefix)) {
+          return null;
+        }
+
+        return normalizedRelative;
       }
     }
     return null;
