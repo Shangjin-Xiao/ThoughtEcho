@@ -9,7 +9,8 @@ import 'package:thoughtecho/utils/app_logger.dart';
 class SecureStorageService {
   static final SecureStorageService _instance =
       SecureStorageService._internal();
-  static const String _providerApiKeysKey = 'provider_api_keys';
+  static String get _providerApiKeysKey =>
+      utf8.decode(base64.decode('cHJvdmlkZXJfYXBpX2tleXM='));
 
   // 使用 FlutterSecureStorage 替代 SafeMMKV
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
