@@ -773,18 +773,20 @@ class ChatSessionService extends ChangeNotifier {
 
       if (idsToDelete.isNotEmpty) {
         const chunkSize = 500;
+        final batch = db.batch();
         for (var i = 0; i < idsToDelete.length; i += chunkSize) {
           final end = (i + chunkSize < idsToDelete.length)
               ? i + chunkSize
               : idsToDelete.length;
           final chunk = idsToDelete.sublist(i, end);
           final placeholders = List.filled(chunk.length, '?').join(',');
-          await db.delete(
+          batch.delete(
             'chat_sessions',
             where: 'id IN ($placeholders)',
             whereArgs: chunk,
           );
         }
+        await batch.commit(noResult: true);
         logDebug('清理了 ${idsToDelete.length} 个空会话');
       }
       return true;

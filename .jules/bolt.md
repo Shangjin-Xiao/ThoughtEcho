@@ -171,5 +171,5 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 ## 2026-08-17 - 消除 ChatSessionService 空会话清理中的 N+1 删除语句
 
-**Learning:** 在数据库批量清理无关联数据的残留记录时，如果在循环体内对每个要删除的 ID 逐个执行单条 `await db.delete('table', where: 'id = ?')`，会由于大量 IPC / MethodChannel 通信与单个事务频繁开销造成严重的 N+1 性能瓶颈。将目标 ID 汇总后，按 SQLite 参数限制（如 500 个）分块，通过 `where: 'id IN ($placeholders)'` 一次性批量删除，可将成百上千次的数据库 I/O 压缩为极少量的批量查询，大幅降低清理耗时。
-**Action:** 修改 `lib/services/chat_session_service.dart` 中的 `_cleanupEmptySessions` 方法，收集筛选出要删除的会话 ID 列表 `idsToDelete`，并以 500 为 chunk 大小构造 `id IN (?, ?, ...)` 批量删除语句。在 500 个空会话的基准测试中，清理耗时由 2826 ms 降至 352 ms（耗时缩短约 87.5% / 提升约 8 倍）。
+**Learning:** 在数据库批量清理无关联数据的残留记录时，如果在循环体内对每个要删除的 ID 逐个执行单条 `await db.delete('table', where: 'id = ?')`，会由于大量 IPC / MethodChannel 通信与单个事务频繁开销造成严重的 N+1 性能瓶颈。将目标 ID 汇总后，按 SQLite 参数限制（如 500 个）分块，通过 `db.batch()` 累积 `where: 'id IN ($placeholders)'` 分块删除并一次性 `commit()`，可将所有分块删除合并为单次事务与 IPC 交互，大幅降低清理耗时。
+**Action:** 修改 `lib/services/chat_session_service.dart` 中的 `_cleanupEmptySessions` 方法，收集筛选出要删除的会话 ID 列表 `idsToDelete`，以 500 为 chunk 大小将 `id IN (?, ?, ...)` 批量删除语句放入 `db.batch()` 中统一提交。在 500 个空会话的基准测试中，清理耗时由 2826 ms 降至 352 ms（耗时缩短约 87.5% / 提升约 8 倍）。
