@@ -16,23 +16,23 @@ Never _usage() {
   exit(64);
 }
 
-void main(List<String> arguments) {
+Future<void> main(List<String> arguments) async {
   if (arguments.isEmpty) {
     _usage();
   }
 
   for (final path in arguments) {
-    _printReport(File(path));
+    await _printReport(File(path));
   }
 }
 
-void _printReport(File file) {
-  if (!file.existsSync()) {
+Future<void> _printReport(File file) async {
+  if (!await file.exists()) {
     stderr.writeln('Performance summary not found: ${file.path}');
     exit(66);
   }
 
-  final Object? decoded = jsonDecode(file.readAsStringSync());
+  final Object? decoded = jsonDecode(await file.readAsString());
   if (decoded is! Map<String, dynamic>) {
     stderr.writeln('Performance summary is not a JSON object: ${file.path}');
     exit(65);

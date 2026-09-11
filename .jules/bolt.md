@@ -181,3 +181,8 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Action:**
 将 `DeltaBuilder` 中的标题、列表、引用、行内 markdown 及行尾换行符匹配模式提取为类的 `static final RegExp` 静态成员，使其仅在类加载时编译一次，降低重复解析处理时的内存开销与 CPU 占用。
 
+## 2026-08-18 - [Convert Synchronous File I/O to Async in Performance Analysis Script]
+
+**Learning:** Synchronous file I/O operations like `readAsStringSync` and `existsSync` block Dart's event loop during execution. Converting file operations in analysis scripts to non-blocking asynchronous calls (`await file.exists()`, `await file.readAsString()`) prevents event loop thread blockage.
+**Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
+
