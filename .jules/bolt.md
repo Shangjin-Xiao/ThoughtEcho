@@ -168,3 +168,8 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Learning:** 在初始化或批量生成笔记标签（如添加一言默认标签）时，如果在循环体内逐个通过 `db.getTagById(fixedId)` 查询数据库，会造成 N+1 查询模式。将标签类别列表预先加载或更新至内存缓存（`allCategoriesCache`），并在内存中基于 `fixedId` 或 `name` 进行匹配，可消除循环内的数据库 I/O 交互。
 **Action:** 修改 `lib/controllers/add_note_controller.dart` 中 `ensureTagExists` 和 `addDefaultHitokotoTagsAsync`，在处理标签前统一使用 `db.getTags()` 填充 `allCategoriesCache`，并在内存中进行 ID/名称匹配和副分类 ID 获取，将 `getTagById` 查询次数降为 0。
+
+## 2026-08-18 - [Convert Synchronous File I/O to Async in Performance Analysis Script]
+
+**Learning:** Synchronous file I/O operations like `readAsStringSync` and `existsSync` block Dart's event loop during execution. Converting file operations in analysis scripts to non-blocking asynchronous calls (`await file.exists()`, `await file.readAsString()`) prevents event loop thread blockage.
+**Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
