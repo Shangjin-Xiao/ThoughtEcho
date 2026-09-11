@@ -109,6 +109,7 @@ class WebDAVSyncService extends ChangeNotifier {
   // 冲突分类固定ID
   static const String conflictCategoryId = 'system_sync_conflicts_category';
   static const Set<String> _mediaSubFolders = {'images', 'videos', 'audios'};
+  static const String _passwordStorageKey = 'webdav_password';
 
   /// 初始化设置，从 MMKV 中读取缓存配置
   void _initSettings() {
@@ -138,7 +139,7 @@ class WebDAVSyncService extends ChangeNotifier {
   /// 获取保存的安全密码/Token
   Future<String?> getPassword() async {
     try {
-      return await _secureStorage.read(key: 'webdav_password');
+      return await _secureStorage.read(key: _passwordStorageKey);
     } catch (e) {
       logError('读取 WebDAV 密码失败', error: e, source: 'WebDAVSyncService');
       return null;
@@ -184,7 +185,7 @@ class WebDAVSyncService extends ChangeNotifier {
 
     if (password != null) {
       await _secureStorage.write(
-        key: 'webdav_password',
+        key: _passwordStorageKey,
         value: password.trim(),
       );
     }
