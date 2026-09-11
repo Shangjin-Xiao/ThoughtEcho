@@ -5,6 +5,18 @@ import 'string_utils.dart';
 /// Quill Delta操作的构建工具类
 /// 用于AI修改笔记时，正确处理纯文本→Delta转换、并保留嵌入式内容（图片等）
 class DeltaBuilder {
+  static final RegExp _headingRegex = RegExp(r'^(#{1,6})\s+(.+)$');
+  static final RegExp _bulletRegex = RegExp(r'^\s*[-*+]\s+(.+)$');
+  static final RegExp _orderedRegex = RegExp(r'^\s*\d+[.)]\s+(.+)$');
+  static final RegExp _quoteRegex = RegExp(r'^\s*>\s?(.*)$');
+  static final RegExp _inlineMarkdownRegex = RegExp(
+    r'(\*\*|__)(.+?)\1|\*([^*\n]+)\*|`([^`\n]+)`|~~(.+?)~~|\[([^\]]+)\]\(([^)]+)\)',
+  );
+  static final RegExp _trailingNewlineRegex = RegExp(r'\n$');
+  static final RegExp _markdownFormattingRegex = RegExp(
+    r'(^|\n)\s*(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s|```)|\*\*|__|~~|`[^`]+`|\[[^\]]+\]\([^)]+\)',
+  );
+
   /// 将纯文本内容转换为基础的Delta操作数组
   static List<Map<String, dynamic>> textToDelta(String text) {
     if (text.isEmpty) {
@@ -29,10 +41,10 @@ class DeltaBuilder {
         inCodeBlock = !inCodeBlock;
         return;
       }
-      final heading = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(line);
-      final bullet = RegExp(r'^\s*[-*+]\s+(.+)$').firstMatch(line);
-      final ordered = RegExp(r'^\s*\d+[.)]\s+(.+)$').firstMatch(line);
-      final quote = RegExp(r'^\s*>\s?(.*)$').firstMatch(line);
+      final heading = _headingRegex.firstMatch(line);
+      final bullet = _bulletRegex.firstMatch(line);
+      final ordered = _orderedRegex.firstMatch(line);
+      final quote = _quoteRegex.firstMatch(line);
       final body = heading?.group(2) ??
           bullet?.group(1) ??
           ordered?.group(1) ??
@@ -58,11 +70,8 @@ class DeltaBuilder {
     List<Map<String, dynamic>> ops,
     String text,
   ) {
-    final pattern = RegExp(
-      r'(\*\*|__)(.+?)\1|\*([^*\n]+)\*|`([^`\n]+)`|~~(.+?)~~|\[([^\]]+)\]\(([^)]+)\)',
-    );
     var cursor = 0;
-    for (final match in pattern.allMatches(text)) {
+    for (final match in _inlineMarkdownRegex.allMatches(text)) {
       if (match.start > cursor) {
         ops.add({'insert': text.substring(cursor, match.start)});
       }
@@ -95,11 +104,10 @@ class DeltaBuilder {
           .map((op) => op['insert'])
           .whereType<String>()
           .join()
-          .replaceFirst(RegExp(r'\n$'), '');
+          .replaceFirst(_trailingNewlineRegex, '');
 
-  static bool hasMarkdownFormatting(String markdown) => RegExp(
-        r'(^|\n)\s*(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s|```)|\*\*|__|~~|`[^`]+`|\[[^\]]+\]\([^)]+\)',
-      ).hasMatch(markdown);
+  static bool hasMarkdownFormatting(String markdown) =>
+      _markdownFormattingRegex.hasMatch(markdown);
 
   static List<Map<String, dynamic>> appendMarkdownToDelta({
     required String? originalDeltaJson,

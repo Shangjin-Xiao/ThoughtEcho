@@ -753,7 +753,7 @@ class ChatSessionService extends ChangeNotifier {
       ''');
 
       final now = DateTime.now();
-      int deletedCount = 0;
+      final idsToDelete = <String>[];
 
       for (final row in emptySessions) {
         final id = row['id'] as String;
@@ -768,11 +768,26 @@ class ChatSessionService extends ChangeNotifier {
             }
           }
         }
-        await db.delete('chat_sessions', where: 'id = ?', whereArgs: [id]);
-        deletedCount++;
+        idsToDelete.add(id);
       }
-      if (deletedCount > 0) {
-        logDebug('清理了 $deletedCount 个空会话');
+
+      if (idsToDelete.isNotEmpty) {
+        const chunkSize = 500;
+        final batch = db.batch();
+        for (var i = 0; i < idsToDelete.length; i += chunkSize) {
+          final end = (i + chunkSize < idsToDelete.length)
+              ? i + chunkSize
+              : idsToDelete.length;
+          final chunk = idsToDelete.sublist(i, end);
+          final placeholders = List.filled(chunk.length, '?').join(',');
+          batch.delete(
+            'chat_sessions',
+            where: 'id IN ($placeholders)',
+            whereArgs: chunk,
+          );
+        }
+        await batch.commit(noResult: true);
+        logDebug('清理了 ${idsToDelete.length} 个空会话');
       }
       return true;
     } catch (e) {
