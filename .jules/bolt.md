@@ -168,3 +168,10 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Learning:** 在初始化或批量生成笔记标签（如添加一言默认标签）时，如果在循环体内逐个通过 `db.getTagById(fixedId)` 查询数据库，会造成 N+1 查询模式。将标签类别列表预先加载或更新至内存缓存（`allCategoriesCache`），并在内存中基于 `fixedId` 或 `name` 进行匹配，可消除循环内的数据库 I/O 交互。
 **Action:** 修改 `lib/controllers/add_note_controller.dart` 中 `ensureTagExists` 和 `addDefaultHitokotoTagsAsync`，在处理标签前统一使用 `db.getTags()` 填充 `allCategoriesCache`，并在内存中进行 ID/名称匹配和副分类 ID 获取，将 `getTagById` 查询次数降为 0。
+
+## 2026-08-18 - 优化 DeltaBuilder 中的正则表达式编译性能
+
+**Learning:**
+在 Markdown 转换 Delta 及解析行内 Formatting 的工具方法（如 `markdownToDelta`、`_appendInlineMarkdown`）中，内联或在循环中频繁实例化 `RegExp` 会导致重复的正则表达式分配与编译开销。
+**Action:**
+将 `DeltaBuilder` 中的标题、列表、引用、行内 markdown 及行尾换行符匹配模式提取为类的 `static final RegExp` 静态成员，使其仅在类加载时编译一次，降低重复解析处理时的内存开销与 CPU 占用。
