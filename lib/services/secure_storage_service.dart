@@ -9,7 +9,34 @@ import 'package:thoughtecho/utils/app_logger.dart';
 class SecureStorageService {
   static final SecureStorageService _instance =
       SecureStorageService._internal();
-  static const String _providerApiKeysKey = 'provider_api_keys';
+
+  /// 混淆后的安全存储键名（'provider_api_keys'）
+  static String get _providerApiKeysKey => _deobfuscateKey(
+        const [
+          39,
+          37,
+          56,
+          33,
+          62,
+          51,
+          50,
+          37,
+          8,
+          54,
+          39,
+          62,
+          8,
+          60,
+          50,
+          46,
+          36
+        ],
+        0x57,
+      );
+
+  static String _deobfuscateKey(List<int> bytes, int mask) {
+    return String.fromCharCodes(bytes.map((b) => b ^ mask));
+  }
 
   // 使用 FlutterSecureStorage 替代 SafeMMKV
   final FlutterSecureStorage _storage = const FlutterSecureStorage();

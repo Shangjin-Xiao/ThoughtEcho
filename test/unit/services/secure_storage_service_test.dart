@@ -122,4 +122,19 @@ void main() {
     // 4. Verify legacy data was still removed (cleanup)
     expect(safeMMKV.containsKey('provider_api_keys'), false);
   });
+
+  test('should correctly handle storage with obfuscated key', () async {
+    SharedPreferences.setMockInitialValues({});
+    final service = SecureStorageService();
+
+    await service.saveProviderApiKey('deepseek', 'sk-deepseek-secret');
+
+    // Key used in mock storage should match the deobfuscated key
+    expect(storage.containsKey('provider_api_keys'), true);
+    final storedVal = storage['provider_api_keys'];
+    expect(storedVal, contains('sk-deepseek-secret'));
+
+    final retrieved = await service.getProviderApiKey('deepseek');
+    expect(retrieved, 'sk-deepseek-secret');
+  });
 }
