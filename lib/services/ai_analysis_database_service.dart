@@ -180,7 +180,12 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   /// 保存AI分析结果
   Future<AIAnalysis> saveAnalysis(AIAnalysis analysis) async {
     try {
-      AppLogger.i('开始保存AI分析: ${analysis.title}', source: 'AIAnalysisDB');
+      AppLogger.i(
+        '开始保存AI分析 (id: ${analysis.id}, '
+        'hasTitle: ${analysis.title.isNotEmpty}, '
+        'hasContent: ${analysis.content.isNotEmpty})',
+        source: 'AIAnalysisDB',
+      );
 
       final newAnalysis = _prepareAnalysis(analysis);
 
@@ -523,7 +528,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
             validAnalyses.add(converted);
           } catch (e) {
             AppLogger.w(
-              'importAnalysesFromList: 无法解析条目 Map: $e',
+              'importAnalysesFromList: 无法解析条目 Map (${e.runtimeType})',
               source: 'AIAnalysisDB',
             );
           }
@@ -550,13 +555,24 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         };
 
         int count = 0;
+        var skippedCount = 0;
         for (var item in validAnalyses) {
-          final analysis = AIAnalysis.fromJson(item);
-          final newAnalysis = _prepareAnalysis(analysis);
-          if (newAnalysis.id != null) {
-            storeMap[newAnalysis.id!] = newAnalysis;
+          try {
+            final analysis = AIAnalysis.fromJson(item);
+            final newAnalysis = _prepareAnalysis(analysis);
+            if (newAnalysis.id != null) {
+              storeMap[newAnalysis.id!] = newAnalysis;
+            }
+            count++;
+          } catch (e) {
+            skippedCount++;
+            if (skippedCount == 1) {
+              AppLogger.w(
+                '批量导入(Web)跳过无法解析的条目 (${e.runtimeType})',
+                source: 'AIAnalysisDB',
+              );
+            }
           }
-          count++;
         }
 
         // 更新原始列表
@@ -577,23 +593,42 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         );
         final db = await database;
         int count = 0;
+        var skippedCount = 0;
 
         await db.transaction((txn) async {
           final batch = txn.batch();
           for (var item in validAnalyses) {
-            final analysis = AIAnalysis.fromJson(item);
-            final newAnalysis = _prepareAnalysis(analysis);
+            // 单条隔离：一条坏行只跳过自己，不让整个事务回滚导致本批全丢。
+            try {
+              final analysis = AIAnalysis.fromJson(item);
+              final newAnalysis = _prepareAnalysis(analysis);
 
-            final jsonData = newAnalysis.toJson();
-            batch.insert(
-              'ai_analyses',
-              jsonData,
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-            count++;
+              final jsonData = newAnalysis.toJson();
+              batch.insert(
+                'ai_analyses',
+                jsonData,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+              count++;
+            } catch (e) {
+              skippedCount++;
+              if (skippedCount == 1) {
+                AppLogger.w(
+                  '批量导入跳过无法解析的条目 (${e.runtimeType})',
+                  source: 'AIAnalysisDB',
+                );
+              }
+            }
           }
           await batch.commit(noResult: true);
         });
+
+        if (skippedCount > 0) {
+          AppLogger.w(
+            '批量导入跳过 $skippedCount 条无法解析的条目',
+            source: 'AIAnalysisDB',
+          );
+        }
 
         AppLogger.i('批量导入完成', source: 'AIAnalysisDB');
 

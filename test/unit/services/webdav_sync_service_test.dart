@@ -333,6 +333,13 @@ void main() {
       ),
       isNull,
     );
+    // 双重编码的无害字符应按解码终值处理，而非首次解码值。
+    expect(
+      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+        '/dav/thoughtecho/media/images/%2541.png',
+      ),
+      'images/A.png',
+    );
   });
 
   test('encodeMediaPath should encode special characters in path segments', () {

@@ -111,6 +111,13 @@ class WebDAVSyncService extends ChangeNotifier {
   static const Set<String> _mediaSubFolders = {'images', 'videos', 'audios'};
   static const String _passwordStorageKey = 'webdav_password';
 
+  /// 匹配残留的单次/多重编码路径遍历片段（%2e/%2f/%5c，大小写不敏感）。
+  /// 静态化避免在多重编码循环检测中每次重复构造。
+  static final RegExp _encodedTraversalPattern = RegExp(
+    r'%2[ef]|%5c',
+    caseSensitive: false,
+  );
+
   /// 初始化设置，从 MMKV 中读取缓存配置
   void _initSettings() {
     _enabled = _mmkv.getBool('webdav_enabled') ?? false;
@@ -1519,7 +1526,7 @@ class WebDAVSyncService extends ChangeNotifier {
     // 循环检查或解码，防范多重编码（如 %252e%252e、%252f、%255c）绕过路径遍历检查
     var current = decodedPath;
     while (true) {
-      if (RegExp(r'%2[ef]|%5c', caseSensitive: false).hasMatch(current)) {
+      if (_encodedTraversalPattern.hasMatch(current)) {
         return null;
       }
       try {
@@ -1531,7 +1538,10 @@ class WebDAVSyncService extends ChangeNotifier {
       }
     }
 
-    final normalizedPath = decodedPath.replaceAll('\\', '/');
+    // 用解码终值做规范化：循环中任何残留编码都会直接 return null，
+    // 因此 current 已是完全解码结果；若用首次解码值，双重编码的无害字符
+    //（如 %2541）会以编码形态参与分段，与后续处理口径不一致。
+    final normalizedPath = current.replaceAll('\\', '/');
     if (normalizedPath.endsWith('/')) return null;
 
     final rawSegments = normalizedPath
