@@ -16,18 +16,18 @@ String _format(dynamic value) {
   return '-';
 }
 
-void main(List<String> arguments) {
+Future<void> main(List<String> arguments) async {
   if (arguments.length != 1) {
     _usage();
   }
 
   final file = File(arguments.single);
-  if (!file.existsSync()) {
+  if (!await file.exists()) {
     stderr.writeln('Summary file not found: ${file.path}');
     exit(66);
   }
 
-  final decoded = jsonDecode(file.readAsStringSync());
+  final decoded = jsonDecode(await file.readAsString());
   if (decoded is! Map<String, dynamic> || decoded['scenarios'] is! List) {
     stderr.writeln('Invalid performance summary: ${file.path}');
     exit(65);
