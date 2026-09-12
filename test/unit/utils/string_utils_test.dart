@@ -75,6 +75,23 @@ void main() {
         expect(result[1], '');
         expect(result[0], '');
       });
+
+      test('should handle plain text without special source format', () {
+        final result = StringUtils.parseSource('Plain text string');
+        expect(result, ['', '']);
+      });
+
+      test('should handle empty book brackets 《》', () {
+        final result = StringUtils.parseSource('——Author 《》');
+        expect(result, ['Author', '']);
+      });
+
+      test('should extract the first matching book title when multiple exist',
+          () {
+        final result =
+            StringUtils.parseSource('——Author 《Book 1》 and 《Book 2》');
+        expect(result, ['Author', 'Book 1']);
+      });
     });
 
     group('parseSourceToControllers', () {
@@ -105,6 +122,20 @@ void main() {
         expect(authorController.text, '');
         expect(workController.text, '');
       });
+
+      test('should overwrite existing text in controllers', () {
+        final authorController = TextEditingController(text: 'Previous Author');
+        final workController = TextEditingController(text: 'Previous Work');
+
+        StringUtils.parseSourceToControllers(
+          '——New Author 《New Work》',
+          authorController,
+          workController,
+        );
+
+        expect(authorController.text, 'New Author');
+        expect(workController.text, 'New Work');
+      });
     });
 
     group('needsExpansion', () {
@@ -127,6 +158,14 @@ void main() {
         expect(StringUtils.needsExpansion('a' * 100), isFalse);
         expect(StringUtils.needsExpansion('a' * 101), isTrue);
       });
+
+      test('should return true when threshold is 0 and text is non-empty', () {
+        expect(StringUtils.needsExpansion('a', threshold: 0), isTrue);
+      });
+
+      test('should return false when threshold is 0 and text is empty', () {
+        expect(StringUtils.needsExpansion('', threshold: 0), isFalse);
+      });
     });
 
     group('truncateForPreview', () {
@@ -142,6 +181,30 @@ void main() {
 
       test('should remove rich-text object placeholders from previews', () {
         expect(StringUtils.truncateForPreview('珍藏\u{FFFC}😊', 20), '珍藏😊');
+      });
+
+      test('should throw ArgumentError when maxCharacters is negative', () {
+        expect(
+          () => StringUtils.truncateForPreview('Sample text', -1),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test(
+          'should return ellipsis when maxCharacters is 0 and text is non-empty',
+          () {
+        expect(StringUtils.truncateForPreview('Sample text', 0), '...');
+      });
+
+      test('should support custom ellipsis string', () {
+        expect(
+          StringUtils.truncateForPreview(
+            'Long sample text',
+            4,
+            ellipsis: ' [Read More]',
+          ),
+          'Long [Read More]',
+        );
       });
     });
 
@@ -229,6 +292,28 @@ void main() {
         });
         expect(lines, ['line 1', '', 'line 3']);
         expect(isLastFlags, [false, false, true]);
+      });
+
+      test('handles single newline character', () {
+        final List<String> lines = [];
+        final List<bool> isLastFlags = [];
+        StringUtils.forEachLine('\n', (line, isLast) {
+          lines.add(line);
+          isLastFlags.add(isLast);
+        });
+        expect(lines, ['', '']);
+        expect(isLastFlags, [false, true]);
+      });
+
+      test('handles carriage return and newline (\\r\\n)', () {
+        final List<String> lines = [];
+        final List<bool> isLastFlags = [];
+        StringUtils.forEachLine('line 1\r\nline 2', (line, isLast) {
+          lines.add(line);
+          isLastFlags.add(isLast);
+        });
+        expect(lines, ['line 1\r', 'line 2']);
+        expect(isLastFlags, [false, true]);
       });
     });
   });
