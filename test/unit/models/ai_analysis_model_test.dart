@@ -206,5 +206,117 @@ void main() {
       expect(analysis.analysisStyle, equals('professional'));
       expect(analysis.createdAt, isNotEmpty);
     });
+
+    test('should format toString() correctly', () {
+      final analysis = AIAnalysis(
+        id: '123',
+        title: '测试标题',
+        content: '测试内容',
+        analysisType: 'emotional',
+        analysisStyle: 'friendly',
+        createdAt: '2025-01-01T00:00:00Z',
+        quoteCount: 5,
+      );
+
+      expect(
+        analysis.toString(),
+        equals(
+          'AIAnalysis{id: 123, title: 测试标题, analysisType: emotional, createdAt: 2025-01-01T00:00:00Z, quoteCount: 5}',
+        ),
+      );
+    });
+
+    test('should copyWith all fields correctly when specified or defaulted',
+        () {
+      final original = AIAnalysis(
+        id: '1',
+        title: 'Title 1',
+        content: 'Content 1',
+        analysisType: 'comprehensive',
+        analysisStyle: 'professional',
+        customPrompt: 'Prompt 1',
+        createdAt: '2025-01-01T00:00:00Z',
+        relatedQuoteIds: const ['q1'],
+        quoteCount: 1,
+      );
+
+      final updated = original.copyWith(
+        id: '2',
+        title: 'Title 2',
+        content: 'Content 2',
+        analysisType: 'emotional',
+        analysisStyle: 'friendly',
+        customPrompt: 'Prompt 2',
+        createdAt: '2025-01-02T00:00:00Z',
+        relatedQuoteIds: const ['q2', 'q3'],
+        quoteCount: 2,
+      );
+
+      expect(updated.id, '2');
+      expect(updated.title, 'Title 2');
+      expect(updated.content, 'Content 2');
+      expect(updated.analysisType, 'emotional');
+      expect(updated.analysisStyle, 'friendly');
+      expect(updated.customPrompt, 'Prompt 2');
+      expect(updated.createdAt, '2025-01-02T00:00:00Z');
+      expect(updated.relatedQuoteIds, ['q2', 'q3']);
+      expect(updated.quoteCount, 2);
+
+      final unchanged = original.copyWith();
+      expect(unchanged.id, original.id);
+      expect(unchanged.title, original.title);
+      expect(unchanged.content, original.content);
+      expect(unchanged.analysisType, original.analysisType);
+      expect(unchanged.analysisStyle, original.analysisStyle);
+      expect(unchanged.customPrompt, original.customPrompt);
+      expect(unchanged.createdAt, original.createdAt);
+      expect(unchanged.relatedQuoteIds, original.relatedQuoteIds);
+      expect(unchanged.quoteCount, original.quoteCount);
+    });
+
+    test('should handle unexpected data types in parseRelatedQuoteIds safely',
+        () {
+      final jsonWithInt = {
+        'title': 't',
+        'content': 'c',
+        'related_quote_ids': 12345,
+      };
+      expect(AIAnalysis.fromJson(jsonWithInt).relatedQuoteIds, isNull);
+
+      final jsonWithBool = {
+        'title': 't',
+        'content': 'c',
+        'related_quote_ids': true,
+      };
+      expect(AIAnalysis.fromJson(jsonWithBool).relatedQuoteIds, isNull);
+
+      final jsonWithMap = {
+        'title': 't',
+        'content': 'c',
+        'related_quote_ids': {'key': 'val'},
+      };
+      expect(AIAnalysis.fromJson(jsonWithMap).relatedQuoteIds, isNull);
+    });
+
+    test('should convert to json with null/default fields correctly', () {
+      final analysis = AIAnalysis(
+        title: '无ID分析',
+        content: '无ID内容',
+        analysisType: 'comprehensive',
+        analysisStyle: 'professional',
+        createdAt: '2025-01-01T00:00:00Z',
+      );
+
+      final json = analysis.toJson();
+      expect(json['id'], isNull);
+      expect(json['title'], '无ID分析');
+      expect(json['content'], '无ID内容');
+      expect(json['analysis_type'], 'comprehensive');
+      expect(json['analysis_style'], 'professional');
+      expect(json['custom_prompt'], isNull);
+      expect(json['created_at'], '2025-01-01T00:00:00Z');
+      expect(json['related_quote_ids'], isNull);
+      expect(json['quote_count'], isNull);
+    });
   });
 }
