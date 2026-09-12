@@ -461,10 +461,9 @@ extension _ThoughterUI on _ThoughterPageState {
                 _pendingAskUserCompleter != null &&
                 !_pendingAskUserCompleter!.isCompleted &&
                 _pendingAskUserMessageId == message.id;
-            final effectiveCompleted =
-                isCompleted || (!isCurrentPending && !_isLoading);
-            final effectiveCancelled = isCancelled ||
-                (!isCompleted && !isCurrentPending && !_isLoading);
+            final effectiveCompleted = isCompleted || !isCurrentPending;
+            final effectiveCancelled =
+                isCancelled || (!isCompleted && !isCurrentPending);
 
             return Padding(
               padding: _kCardMessageInsets,

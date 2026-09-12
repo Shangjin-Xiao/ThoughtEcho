@@ -181,7 +181,8 @@ class AgentService extends ChangeNotifier {
 
   /// 模型返回完全空响应时原样重发的次数上限（超过才算整轮失败）。
   static const int _maxEmptyResponseRetries = 2;
-  static const Duration _singleToolTimeout = Duration(seconds: 45);
+  static const Duration defaultSingleToolTimeout = Duration(seconds: 45);
+  final Duration _singleToolTimeout;
 
   /// 运行状态
   bool _isRunning = false;
@@ -212,6 +213,7 @@ class AgentService extends ChangeNotifier {
     AgentCompletionRequester? completionRequester,
     AgentApiKeyResolver? apiKeyResolver,
     AgentRequestObserver? requestObserver,
+    Duration singleToolTimeout = defaultSingleToolTimeout,
   })  : _settingsService = settingsService,
         _tools = List<AgentTool>.unmodifiable(
           tools.map(_withTruncation),
@@ -219,7 +221,8 @@ class AgentService extends ChangeNotifier {
         _memoryService = memoryService,
         _completionRequester = completionRequester,
         _apiKeyResolver = apiKeyResolver,
-        _requestObserver = requestObserver;
+        _requestObserver = requestObserver,
+        _singleToolTimeout = singleToolTimeout;
 
   /// 请求停止当前 run。
   ///

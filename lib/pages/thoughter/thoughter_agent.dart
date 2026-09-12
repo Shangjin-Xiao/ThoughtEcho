@@ -788,7 +788,8 @@ extension _ThoughterAgent on _ThoughterPageState {
         }
       }
     });
-    if (_pendingAskUserCompleter != null &&
+    if (messageId == _pendingAskUserMessageId &&
+        _pendingAskUserCompleter != null &&
         !_pendingAskUserCompleter!.isCompleted) {
       _pendingAskUserCompleter!.complete(
         AskUserResponse(
@@ -797,8 +798,8 @@ extension _ThoughterAgent on _ThoughterPageState {
         ),
       );
       _pendingAskUserCompleter = null;
+      _pendingAskUserMessageId = null;
     }
-    _pendingAskUserMessageId = null;
   }
 
   void _handleAskUserCancel(String messageId, Map<String, dynamic> meta) {

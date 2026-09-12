@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
@@ -28,6 +29,26 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _SlowNonInteractiveTool extends AgentTool {
+  @override
+  String get name => 'slow_tool';
+
+  @override
+  String get description => 'A slow test tool';
+
+  @override
+  Map<String, dynamic> get parametersSchema => {
+        'type': 'object',
+        'properties': {},
+      };
+
+  @override
+  Future<ToolResult> execute(ToolCall call) async {
+    await Future<void>.delayed(const Duration(seconds: 10));
+    return ToolResult(toolCallId: call.id, content: '完成');
+  }
 }
 
 openai.ToolCall _rawToolCall({
@@ -180,50 +201,120 @@ void main() {
       expect(toolMsg.content, contains('用户选择了：工作复盘'));
     });
 
-    test('交互式工具不受 45 秒单工具超时拦截', () async {
-      final askTool = AskUserTool();
-      expect(askTool.isInteractive, isTrue);
+    test('非交互式工具受单工具超时限制并回喂超时错误', () {
+      fakeAsync((async) {
+        final slowTool = _SlowNonInteractiveTool();
+        var round = 0;
+        AgentResponse? response;
+        late List<openai.ChatMessage> secondRoundMessages;
 
-      final service = AgentService(
-        settingsService: _FakeSettingsService(provider),
-        tools: [askTool],
-        apiKeyResolver: (_) async => 'test-key',
-        completionRequester: ({
-          required provider,
-          required messages,
-          required tools,
-          required temperature,
-          required maxTokens,
-        }) async {
-          return _toolCallCompletion([
-            _rawToolCall(
-              callId: 'call_ask_2',
-              toolName: 'ask_user',
-              rawArguments: jsonEncode({
-                'question': '请选择分类',
-                'options': ['A', 'B'],
-              }),
-            ),
-          ]);
-        },
-      );
+        final service = AgentService(
+          settingsService: _FakeSettingsService(provider),
+          tools: [slowTool],
+          singleToolTimeout: const Duration(seconds: 5),
+          apiKeyResolver: (_) async => 'test-key',
+          completionRequester: ({
+            required provider,
+            required messages,
+            required tools,
+            required temperature,
+            required maxTokens,
+          }) async {
+            round++;
+            if (round == 1) {
+              return _toolCallCompletion([
+                _rawToolCall(
+                  callId: 'call_slow_1',
+                  toolName: 'slow_tool',
+                  rawArguments: '{}',
+                ),
+              ]);
+            } else {
+              secondRoundMessages = messages;
+              return _textCompletion('工具超时后正常恢复');
+            }
+          },
+        );
 
-      // 模拟耗时等待（在 fakeAsync 下推进时间）
-      service.setAskUserHandler((request) async {
-        return AskUserResponse.selected(['A']);
+        service.runAgent(userMessage: '执行慢任务').then((res) {
+          response = res;
+        });
+
+        // 推进 6 秒（超过 5 秒单工具超时）
+        async.elapse(const Duration(seconds: 6));
+
+        expect(response, isNotNull);
+        expect(response!.content, '工具超时后正常恢复');
+        expect(round, 2);
+        final toolMsg = secondRoundMessages.firstWhere(
+          (m) => m is openai.ToolMessage,
+        ) as openai.ToolMessage;
+        expect(toolMsg.content, contains('工具执行超时'));
       });
+    });
 
-      final toolResult = await askTool.execute(ToolCall(
-        id: 'call_ask_2',
-        name: 'ask_user',
-        arguments: {
-          'question': '请选择分类',
-          'options': ['A', 'B'],
-        },
-      ));
+    test('交互式工具不受单工具超时拦截并完成 runAgent 完整链路', () {
+      fakeAsync((async) {
+        final askTool = AskUserTool();
+        expect(askTool.isInteractive, isTrue);
+        var round = 0;
+        AgentResponse? response;
 
-      expect(toolResult.isError, isFalse);
-      expect(toolResult.content, '用户选择了：A');
+        final service = AgentService(
+          settingsService: _FakeSettingsService(provider),
+          tools: [askTool],
+          apiKeyResolver: (_) async => 'test-key',
+          completionRequester: ({
+            required provider,
+            required messages,
+            required tools,
+            required temperature,
+            required maxTokens,
+          }) async {
+            round++;
+            if (round == 1) {
+              return _toolCallCompletion([
+                _rawToolCall(
+                  callId: 'call_ask_2',
+                  toolName: 'ask_user',
+                  rawArguments: jsonEncode({
+                    'question': '请选择分类',
+                    'options': ['A', 'B'],
+                  }),
+                ),
+              ]);
+            } else {
+              return _textCompletion('已完成分类');
+            }
+          },
+        );
+
+        service.setAskUserHandler((request) async {
+          // 模拟用户思考 60 秒（超过 45 秒默认单工具超时限制）
+          await Future<void>.delayed(const Duration(seconds: 60));
+          return AskUserResponse.selected(['A']);
+        });
+
+        service.runAgent(userMessage: '请帮忙分类').then((res) {
+          response = res;
+        });
+
+        // 推进 65 秒（超过 45 秒单工具超时）
+        async.elapse(const Duration(seconds: 65));
+
+        expect(response, isNotNull);
+        expect(response!.content, '已完成分类');
+        expect(
+          response!.toolExecutions
+              .any((e) => e.call.name == 'ask_user' && !e.result.isError),
+          isTrue,
+        );
+        expect(
+          response!.toolExecutions.any((e) => e.result.isError),
+          isFalse,
+        );
+        expect(round, 2);
+      });
     });
 
     test('requestStop() 干净利落地取消正在挂起的交互式提问', () async {

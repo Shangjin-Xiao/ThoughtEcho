@@ -568,12 +568,16 @@ class _ThoughterPageState extends State<ThoughterPage>
         }
       });
     }
-    if (_pendingAskUserCompleter != null &&
-        !_pendingAskUserCompleter!.isCompleted) {
-      _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
+    final shouldClearCompleter =
+        targetMessageId == null || targetMessageId == _pendingAskUserMessageId;
+    if (shouldClearCompleter) {
+      if (_pendingAskUserCompleter != null &&
+          !_pendingAskUserCompleter!.isCompleted) {
+        _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
+      }
+      _pendingAskUserCompleter = null;
+      _pendingAskUserMessageId = null;
     }
-    _pendingAskUserCompleter = null;
-    _pendingAskUserMessageId = null;
   }
 
   /// Stop the current generation - cancels the stream subscription
