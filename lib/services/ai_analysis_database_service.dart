@@ -614,8 +614,15 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
               skippedCount++;
               if (!phase2Logged) {
                 phase2Logged = true;
+                // 此处实际只捕获 txn.insert 的本地库异常（fromJson 全字段
+                // 兜底不抛、_prepareAnalysis 为纯函数）：错误信息是引擎生成
+                // 的表名/约束名，不含用户正文，取首行并截断后记录以便定位。
+                final firstLine = e.toString().split('\n').first.trim();
+                final detail = firstLine.length > 200
+                    ? '${firstLine.substring(0, 200)}…'
+                    : firstLine;
                 AppLogger.w(
-                  '批量导入跳过无法解析的条目 (${e.runtimeType})',
+                  '批量导入跳过无法写入的条目 (${e.runtimeType}: $detail)',
                   source: 'AIAnalysisDB',
                 );
               }
