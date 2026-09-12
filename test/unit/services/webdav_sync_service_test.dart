@@ -2,7 +2,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 void main() {
@@ -54,27 +56,45 @@ void main() {
     );
   });
 
-  test('getPassword should return null gracefully when secure storage throws',
+  test(
+      'getPassword returns null without logging the raw exception on storage failure',
       () async {
-    final service = WebDAVSyncService();
+    final logService = _RecordingLogService();
+    AppLogger.serviceForTesting = logService;
+    try {
+      final service = WebDAVSyncService();
 
-    // Mock secureStorage to throw an exception on read
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      secureStorageChannel,
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'read') {
-          throw PlatformException(
-            code: 'READ_FAILED',
-            message: 'Failed to read from secure storage',
-          );
-        }
-        return null;
-      },
-    );
+      // Mock secureStorage to throw an exception on read
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        secureStorageChannel,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'read') {
+            throw PlatformException(
+              code: 'READ_FAILED',
+              message: 'Failed to read from secure storage',
+            );
+          }
+          return null;
+        },
+      );
 
-    final password = await service.getPassword();
-    expect(password, isNull);
+      final password = await service.getPassword();
+      expect(password, isNull);
+
+      // 安全回归：读取失败只记来源，不把原始异常对象写入日志。
+      // 若恢复 `error: e`，下面对 error 的断言会失败。
+      final errorLogs = logService.records
+          .where((r) => r.level == UnifiedLogLevel.error)
+          .toList();
+      expect(errorLogs, isNotEmpty);
+      for (final record in errorLogs) {
+        expect(record.message, contains('读取 WebDAV 密码失败'));
+        expect(record.error, isNull);
+      }
+    } finally {
+      AppLogger.initialize();
+    }
   });
 
   test('WebDAVSyncService should initialize and save settings correctly',
@@ -462,4 +482,111 @@ void main() {
       isFalse,
     );
   });
+}
+
+/// 记录型日志服务：只捕获日志调用，不落库、不上报。
+/// 未实现的 [UnifiedLogService] 成员走 [noSuchMethod]，与
+/// `excerpt_intent_service_test.dart` 中的记录器模式一致。
+class _RecordingLogService implements UnifiedLogService {
+  final List<
+      ({
+        UnifiedLogLevel level,
+        String message,
+        String? source,
+        Object? error,
+      })> records = [];
+
+  @override
+  void verbose(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.verbose,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void debug(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.debug,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void info(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.info,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void warning(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.warning,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void error(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.error,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void log(
+    UnifiedLogLevel level,
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    records.add((level: level, message: message, source: source, error: error));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
