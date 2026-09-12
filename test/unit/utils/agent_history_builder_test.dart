@@ -130,6 +130,80 @@ void main() {
       expect(history.single.content, '建议新建一条笔记：今天的手冲记录');
     });
 
+    test('保留其他带元数据卡片消息的正文', () {
+      final otherCard = ChatMessage(
+        id: 'other-card',
+        role: 'assistant',
+        isUser: false,
+        content: '其他卡片内容摘要',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({'type': 'other_card'}),
+      );
+
+      final history = AgentHistoryBuilder.build([otherCard]);
+
+      expect(history.single.content, '其他卡片内容摘要');
+    });
+
+    test('空正文的提案卡片能够解析 artifact 并在历史中保留待确认或已采纳摘要', () {
+      final unadoptedProposal = ChatMessage(
+        id: 'unadopted-proposal',
+        role: 'assistant',
+        isUser: false,
+        content: '',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'note_proposal',
+          'artifact': {
+            'action': 'create',
+            'title': '秋日西湖漫步随笔',
+            'content': '傍晚的凉风穿过街角的梧桐叶，手里握着刚冲好的耶加雪菲。',
+            'changes_summary': '起草一篇关于傍晚西湖散步的短句随笔',
+          }
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([unadoptedProposal]);
+
+      expect(history.length, 1);
+      final content = history.first.content;
+      expect(content, contains('[待确认的笔记提案]'));
+      expect(content, contains('秋日西湖漫步随笔'));
+      expect(content, contains('傍晚的凉风穿过街角的梧桐叶'));
+      expect(content, contains('起草一篇关于傍晚西湖散步的短句随笔'));
+    });
+
+    test('支持 NoteProposalArtifact 标准序列化键名 proposal_title 与 reason', () {
+      final realProposal = ChatMessage(
+        id: 'real-proposal',
+        role: 'assistant',
+        isUser: false,
+        content: '',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'note_proposal',
+          'artifact': {
+            'action': 'edit',
+            'proposal_title': '重构架构设计笔记',
+            'reason': '优化领域模型与持久化解耦',
+            'note_id': 'note-42',
+            'content': '本文档记录模型层与持久化层的边界设计。',
+          }
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([realProposal]);
+
+      expect(history.length, 1);
+      final content = history.first.content;
+      expect(content, contains('[待确认的笔记提案]'));
+      expect(content, contains('类型: 修改笔记'));
+      expect(content, contains('标题: 重构架构设计笔记'));
+      expect(content, contains('笔记 ID: note-42'));
+      expect(content, contains('修改说明: 优化领域模型与持久化解耦'));
+      expect(content, contains('提案内容预览: 本文档记录模型层与持久化层的边界设计。'));
+    });
+
     test('跳过 system 消息、加载中消息和空消息', () {
       final history = AgentHistoryBuilder.build([
         _text('system', '你是助手'),

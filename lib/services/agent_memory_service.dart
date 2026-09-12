@@ -38,7 +38,21 @@ class AgentMemoryService extends ChangeNotifier {
     required SettingsService settingsService,
     String? databasePath,
   })  : _settingsService = settingsService,
-        _databasePath = databasePath;
+        _databasePath = databasePath {
+    _settingsService.setIdentityAliasesProvider(() => _cachedIdentityAliases);
+    if (_databasePath != inMemoryDatabasePath) {
+      unawaited(_warmUpAliases());
+    }
+  }
+
+  Future<void> _warmUpAliases() async {
+    try {
+      await activeIdentityAliases();
+      _settingsService.refreshIdentityAliases();
+    } catch (_) {
+      // 忽略启动预热期异常（如单元测试未初始化 db factory 等情况）
+    }
+  }
 
   final SettingsService _settingsService;
   final String? _databasePath;
@@ -100,6 +114,10 @@ class AgentMemoryService extends ChangeNotifier {
   static const double _recencyHalfLifeDays = 30;
 
   List<AgentMemoryProfileEntry>? _activeProfileCache;
+  Set<String> _cachedIdentityAliases = const <String>{};
+
+  /// 获取当前内存中已缓存的活跃身份别名集合。
+  Set<String> get cachedIdentityAliases => _cachedIdentityAliases;
 
   bool get isEnabled => _settingsService.agentMemoryEnabled;
 
@@ -268,12 +286,102 @@ class AgentMemoryService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _settingsService.setIdentityAliasesProvider(null);
     _disposed = true;
     unawaited(_close());
     super.dispose();
   }
 
   // ======================== 画像层 ========================
+
+  static final RegExp _callMeRegex = RegExp(
+    r'''(?:称呼(?:用户|我)?|自称|名字|笔名|别名|叫我|我叫)\s*(?:为|是|叫|：|:)?\s*[「“"'《]?([^「」“”"'\s,，。；;！？!?《》\n]{1,30})[」”"'》]?''',
+  );
+
+  /// 从画像指令文本中提取出用户的称呼/笔名/别名。
+  ///
+  /// 仅在具备明确称呼/自称上下文时提取，杜绝盲目提取普通句子中用引号或书名号包裹的词汇。
+  static Set<String> extractAliasesFromDirective(String directive) {
+    final result = <String>{};
+    final trimmed = directive.trim();
+    if (trimmed.isEmpty) return result;
+
+    // 1. 匹配称呼句式（支持包裹引号或书名号），如 "称呼用户为「阿澈」"、"叫我“林晚”"、"笔名为《墨客》"
+    for (final match in _callMeRegex.allMatches(trimmed)) {
+      final name = match.group(1)?.trim();
+      if (name != null && name.isNotEmpty && name.length <= 30) {
+        result.add(name);
+      }
+    }
+
+    // 3. 若前两步未提取到且整句极简（1~15 字且无任何标点与结构词），整句可能是裸名字（如 "阿澈"）
+    if (result.isEmpty) {
+      final clean =
+          trimmed.replaceAll(RegExp(r'''^[「“"'《]+|[」”"'》]+$'''), '').trim();
+      if (clean.isNotEmpty &&
+          clean.length <= 15 &&
+          !clean.contains(RegExp(r'''[\s,，。；;！？!?\n「」“”"'《》]'''))) {
+        const structuralKeywords = [
+          '用户',
+          '称呼',
+          '自称',
+          '喜欢',
+          '职业',
+          '习惯',
+          '偏好',
+          '工作',
+          '笔名',
+          '名字',
+          '叫我',
+          '我叫',
+        ];
+        if (!structuralKeywords.any((k) => clean.contains(k))) {
+          result.add(clean);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  void _updateCachedIdentityAliases(List<AgentMemoryProfileEntry> entries) {
+    final aliases = <String>{};
+    for (final entry in entries) {
+      if (entry.kind == AgentMemoryKind.identity) {
+        aliases.addAll(extractAliasesFromDirective(entry.directive));
+      }
+    }
+    _cachedIdentityAliases = aliases;
+  }
+
+  /// 获取所有活跃的 identity 别名集合。
+  Future<Set<String>> activeIdentityAliases() async {
+    final entries = await activeProfile();
+    _updateCachedIdentityAliases(entries);
+    return _cachedIdentityAliases;
+  }
+
+  /// 将离线推断或对话中识别出的用户别名注册进长期记忆的 identity 画像层。
+  Future<bool> registerInferredAlias(
+    String alias, {
+    String source = 'dreaming',
+  }) async {
+    final trimmed = alias.trim();
+    if (trimmed.isEmpty) return false;
+
+    // 若已知别名中已包含该别名（大小写不敏感），则无需重复写入
+    final currentAliases = await activeIdentityAliases();
+    if (currentAliases.any((a) => a.toLowerCase() == trimmed.toLowerCase())) {
+      return false;
+    }
+
+    await rememberProfile(
+      kind: AgentMemoryKind.identity,
+      directive: '称呼用户为「$trimmed」',
+      source: source,
+    );
+    return true;
+  }
 
   /// 全部 active 画像条目，按观察时间倒序。
   Future<List<AgentMemoryProfileEntry>> activeProfile() async {
@@ -291,6 +399,7 @@ class AgentMemoryService extends ChangeNotifier {
     final entries =
         rows.map(AgentMemoryProfileEntry.fromMap).toList(growable: false);
     _activeProfileCache = entries;
+    _updateCachedIdentityAliases(entries);
     return entries;
   }
 
@@ -351,6 +460,12 @@ class AgentMemoryService extends ChangeNotifier {
     });
 
     _invalidateProfile();
+    if (kind == AgentMemoryKind.identity) {
+      final activeEntries = await activeProfile();
+      _updateCachedIdentityAliases(activeEntries);
+      _settingsService.refreshIdentityAliases();
+    }
+    notifyListeners();
     return entry;
   }
 
@@ -380,6 +495,9 @@ class AgentMemoryService extends ChangeNotifier {
     );
     if (updated > 0) {
       _invalidateProfile();
+      await activeIdentityAliases();
+      _settingsService.refreshIdentityAliases();
+      notifyListeners();
     }
     return updated > 0;
   }
@@ -394,10 +512,20 @@ class AgentMemoryService extends ChangeNotifier {
     );
     if (deleted > 0) {
       _invalidateProfile();
+      await activeIdentityAliases();
+      _settingsService.refreshIdentityAliases();
+      notifyListeners();
     }
     return deleted > 0;
   }
 
+  /// 渲染注入模型的画像块。记忆关闭，或没有条目且用户也未填写称呼时返回 null。
+  ///
+  /// 输出是一条独立的用户数据消息，不进系统提示——和绑定笔记的做法一致，
+  /// 避免把「用户偏好」和「行为准则」混成同一层权限。
+  ///
+  /// [kinds] 限定注入哪些类别，默认全集。生成类链路应传
+  /// [profileKindsForGeneration]（见该常量的说明）。
   /// 渲染注入模型的画像块。记忆关闭，或没有条目且用户也未填写称呼时返回 null。
   ///
   /// 输出是一条独立的用户数据消息，不进系统提示——和绑定笔记的做法一致，
@@ -417,15 +545,15 @@ class AgentMemoryService extends ChangeNotifier {
         .toList(growable: false);
     final nickname = _settingsService.userNickname;
     final now = DateTime.now();
-    final slice = await _readRecentSlice(now);
-    if (entries.isEmpty && nickname.trim().isEmpty && slice == null) {
+    final slices = await activeRecentSlices(now: now);
+    if (entries.isEmpty && nickname.trim().isEmpty && slices.isEmpty) {
       return null;
     }
     return renderProfileBlock(
       entries,
       now: now,
       userNickname: nickname,
-      recentSlice: slice,
+      recentSlices: slices,
     );
   }
 
@@ -452,20 +580,45 @@ class AgentMemoryService extends ChangeNotifier {
 
   // ======================== 近况切片 ========================
 
-  /// 当前未过期的近况切片；没有、已过期或内容为空时返回 null。
+  /// 当前未过期的最近一条近况切片；没有、已过期或内容为空时返回 null。
   Future<AgentMemoryRecentSlice?> currentRecentSlice() async {
     if (!isEnabled) {
       return null;
     }
-    return _readRecentSlice(DateTime.now());
+    final slices = await activeRecentSlices(limit: 1);
+    return slices.firstOrNull;
   }
 
-  /// 覆盖写入近况切片。全库只有一条，写入即替换。
+  /// 获取当前所有未过期的活跃近况切片（按观察时间倒序，最多 [limit] 条）。
+  Future<List<AgentMemoryRecentSlice>> activeRecentSlices({
+    DateTime? now,
+    int limit = AgentMemoryRecentSlice.maxRecentSlices,
+  }) async {
+    if (!isEnabled) {
+      return const <AgentMemoryRecentSlice>[];
+    }
+    final currentTime = now ?? DateTime.now();
+    final db = await _db;
+    final rows = await db.query(
+      recentSliceTable,
+      where: 'expires_at > ?',
+      whereArgs: <Object?>[currentTime.toIso8601String()],
+      orderBy: 'observed_at DESC',
+      limit: limit,
+    );
+    return rows
+        .map(AgentMemoryRecentSlice.fromMap)
+        .where((slice) => slice.content.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  /// 写入一条近况切片（支持多切片与自然时间衰减）。
   ///
   /// [ttl] 默认 [AgentMemoryRecentSlice.defaultTtl]。内容超长按上限截断而不是
   /// 拒绝——归纳出来的东西长了一点就整轮丢掉，代价不对等。
   Future<AgentMemoryRecentSlice?> saveRecentSlice({
     required String content,
+    String? id,
     List<String> sourceNoteIds = const <String>[],
     Duration ttl = AgentMemoryRecentSlice.defaultTtl,
     DateTime? observedAt,
@@ -479,6 +632,7 @@ class AgentMemoryService extends ChangeNotifier {
     }
     final now = observedAt ?? DateTime.now();
     final slice = AgentMemoryRecentSlice(
+      id: id ?? AgentMemoryRecentSlice.singletonId,
       content: normalized,
       observedAt: now,
       expiresAt: now.add(ttl),
@@ -490,17 +644,33 @@ class AgentMemoryService extends ChangeNotifier {
       slice.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    // 严格控制近况切片数量上限，避免切片长期积累膨胀
+    final countRows = await db.rawQuery(
+      'SELECT count(*) as count FROM $recentSliceTable WHERE expires_at > ?',
+      <Object?>[now.toIso8601String()],
+    );
+    final activeCount = (countRows.firstOrNull?['count'] as int?) ?? 0;
+    if (activeCount > AgentMemoryRecentSlice.maxRecentSlices * 2) {
+      await db.delete(
+        recentSliceTable,
+        where: 'id NOT IN (SELECT id FROM $recentSliceTable '
+            'ORDER BY observed_at DESC LIMIT ?)',
+        whereArgs: <Object?>[AgentMemoryRecentSlice.maxRecentSlices],
+      );
+    }
+
     notifyListeners();
     return slice;
   }
 
-  /// 删除近况切片。用户在记忆管理里清掉近况时走这里。
-  Future<bool> clearRecentSlice() async {
+  /// 删除近况切片。若传 [id] 则删除对应切片，否则清空全部切片。
+  Future<bool> clearRecentSlice({String? id}) async {
     final db = await _db;
     final deleted = await db.delete(
       recentSliceTable,
-      where: 'id = ?',
-      whereArgs: <Object?>[AgentMemoryRecentSlice.singletonId],
+      where: id != null ? 'id = ?' : null,
+      whereArgs: id != null ? <Object?>[id] : null,
     );
     if (deleted > 0) {
       notifyListeners();
@@ -508,39 +678,20 @@ class AgentMemoryService extends ChangeNotifier {
     return deleted > 0;
   }
 
-  /// 读取切片并按 [now] 判过期。
-  ///
-  /// 过期的行**不在这里删**：读路径做写操作会让每日提示这种高频只读调用
-  /// 平白多一次写事务，而一条过期的行本来就不会被注入，留着也不占什么。
-  /// 下一次 Dreaming 覆盖写入时自然被替换。
-  Future<AgentMemoryRecentSlice?> _readRecentSlice(DateTime now) async {
-    final db = await _db;
-    final rows = await db.query(
-      recentSliceTable,
-      where: 'id = ?',
-      whereArgs: <Object?>[AgentMemoryRecentSlice.singletonId],
-      limit: 1,
-    );
-    if (rows.isEmpty) {
-      return null;
-    }
-    final slice = AgentMemoryRecentSlice.fromMap(rows.first);
-    if (slice.content.isEmpty || slice.isExpiredAt(now)) {
-      return null;
-    }
-    return slice;
-  }
-
   /// 纯函数形式的画像块渲染，便于测试预算与时效标注。
   ///
   /// [userNickname] 是用户在设置里填的称呼，钉在画像块最前：它是用户显式
   /// 声明的身份，比模型观察出的条目更权威，不参加排序、也不能被预算挤掉。
+  ///
+  /// [recentSlices] 支持多切片及自然时间衰减显示（例如「刚刚」、「3 天前」）。
   @visibleForTesting
   static String? renderProfileBlock(
     List<AgentMemoryProfileEntry> entries, {
     required DateTime now,
     String? userNickname,
     AgentMemoryRecentSlice? recentSlice,
+    List<AgentMemoryRecentSlice> recentSlices =
+        const <AgentMemoryRecentSlice>[],
   }) {
     final sorted = List<AgentMemoryProfileEntry>.of(entries)
       ..sort((left, right) => right.observedAt.compareTo(left.observedAt));
@@ -570,18 +721,36 @@ class AgentMemoryService extends ChangeNotifier {
       usedChars += line.length;
     }
 
-    // 近况切片不参与上面的预算核算：它替代不了任何一条画像，挤掉一条长期
-    // 有效的偏好去放一句两周后就过期的近况，是纯亏。它自己有 200 字上限。
-    if (recentSlice != null && !recentSlice.isExpiredAt(now)) {
-      final content = normalizeMemoryText(
-        recentSlice.content,
-        AgentMemoryRecentSlice.maxChars,
-      );
-      if (content.isNotEmpty) {
-        lines.add(
-          '- [近况·${describeAge(recentSlice.observedAt, now)}] '
-          '${escapeUntrustedText(content)}',
+    // 合并近况切片候选：优先使用 recentSlices，若为空且 recentSlice != null 则退回单条（兼容旧测试）
+    final effectiveSlices = <AgentMemoryRecentSlice>[
+      if (recentSlices.isNotEmpty)
+        ...recentSlices
+      else if (recentSlice != null)
+        recentSlice,
+    ];
+
+    if (effectiveSlices.isNotEmpty) {
+      final unexpiredSlices = effectiveSlices
+          .where((s) => !s.isExpiredAt(now))
+          .toList()
+        ..sort((a, b) => b.observedAt.compareTo(a.observedAt));
+
+      var sliceChars = 0;
+      for (final slice
+          in unexpiredSlices.take(AgentMemoryRecentSlice.maxRecentSlices)) {
+        final content = normalizeMemoryText(
+          slice.content,
+          AgentMemoryRecentSlice.maxChars,
         );
+        if (content.isEmpty) continue;
+        final line = '- [近况·${describeAge(slice.observedAt, now)}] '
+            '${escapeUntrustedText(content)}';
+        if (sliceChars + line.length >
+            AgentMemoryRecentSlice.maxRecentTotalChars) {
+          break;
+        }
+        lines.add(line);
+        sliceChars += line.length;
       }
     }
 
@@ -871,6 +1040,7 @@ class AgentMemoryService extends ChangeNotifier {
       await db.transaction((txn) async {
         await txn.delete(profileTable);
         await txn.delete(factsTable);
+        await txn.delete(recentSliceTable);
       });
     } catch (error, stackTrace) {
       logError(
@@ -882,7 +1052,179 @@ class AgentMemoryService extends ChangeNotifier {
       rethrow;
     }
     _invalidateProfile();
+    _cachedIdentityAliases = const <String>{};
+    _settingsService.refreshIdentityAliases();
+    notifyListeners();
     logDebug('已清空 Thoughter 记忆', source: 'AgentMemoryService');
+  }
+
+  /// 周期性记忆库压缩与精简（基于 OpenClaw / Mem0 实践，严格控制噪音与记忆膨胀）。
+  ///
+  /// 执行内容：
+  /// 1. 清理已过期的近况切片（[expiresAt] <= now）；
+  /// 2. 清理过旧的已废弃画像（superseded 超过 30 天，且最多保留最新 10 条审计）；
+  /// 3. 淘汰衰减低价值事实（importance <= 3、recallCount == 0 且创建于 30 天之前）；
+  /// 4. 去除内容完全重复的 active 画像条目。
+  Future<MemoryCompactionStats> compactAndPrune({DateTime? now}) async {
+    final db = await _db;
+    final currentTime = now ?? DateTime.now();
+    final thirtyDaysAgo = currentTime.subtract(const Duration(days: 30));
+
+    var expiredSlices = 0;
+    var supersededProfiles = 0;
+    var decayedFacts = 0;
+    var duplicatesPruned = 0;
+
+    await db.transaction((txn) async {
+      // 1. 清理已过期的近况切片
+      expiredSlices = await txn.delete(
+        recentSliceTable,
+        where: 'expires_at <= ?',
+        whereArgs: <Object?>[currentTime.toIso8601String()],
+      );
+
+      // 2. 清理超过 30 天的 superseded 画像历史条目
+      supersededProfiles = await txn.delete(
+        profileTable,
+        where: "status = ? AND (observed_at < ? OR id NOT IN "
+            "(SELECT id FROM $profileTable WHERE status = ? ORDER BY observed_at DESC LIMIT 10))",
+        whereArgs: <Object?>[
+          AgentMemoryStatus.superseded.storageValue,
+          thirtyDaysAgo.toIso8601String(),
+          AgentMemoryStatus.superseded.storageValue,
+        ],
+      );
+
+      // 3. 淘汰低价值衰减事实：重要度 <= 3、从未召回过、且创建于 30 天之前
+      decayedFacts = await txn.delete(
+        factsTable,
+        where: 'importance <= 3 AND recall_count = 0 AND created_at < ?',
+        whereArgs: <Object?>[thirtyDaysAgo.toIso8601String()],
+      );
+
+      // 4. 单例画像唯一性与同 kind 重复活跃指令去重：
+      // (a) 对 taste, voice 这类单例 kind，若存在多条 active，仅保留最新一条
+      // (b) 对同 kind 且 directive 相同的 active 条目，仅保留最新一条
+      final activeRows = await txn.query(
+        profileTable,
+        where: 'status = ?',
+        whereArgs: <Object?>[AgentMemoryStatus.active.storageValue],
+        orderBy: 'observed_at DESC',
+      );
+      final singletonKinds = <String>{
+        AgentMemoryKind.taste.storageValue,
+        AgentMemoryKind.voice.storageValue,
+        AgentMemoryKind.style.storageValue,
+      };
+      final seenSingletonKinds = <String, String>{}; // kind -> id
+      final seenKindDirectives = <String, String>{}; // "$kind:$directive" -> id
+      final seenIdentityAliases = <String, String>{}; // lowerAlias -> id
+      String? seenGeneralIdentityId;
+
+      for (final row in activeRows) {
+        final id = row['id'] as String;
+        final rawKind = (row['kind'] as String? ?? '').trim();
+        final directive = (row['directive'] as String? ?? '').trim();
+        if (directive.isEmpty) continue;
+
+        var shouldSupersede = false;
+        String? supersededById;
+
+        if (singletonKinds.contains(rawKind)) {
+          if (seenSingletonKinds.containsKey(rawKind)) {
+            shouldSupersede = true;
+            supersededById = seenSingletonKinds[rawKind];
+          } else {
+            seenSingletonKinds[rawKind] = id;
+          }
+        }
+
+        // 对 identity 类别：
+        // 1) 若包含特定笔名/别名，同别名下仅保留最新一条活跃指令使矛盾指令收敛，不同别名（多画像）互不干扰
+        // 2) 若无特定别名（通用身份自述），仅保留最新一条，防止互相冲突的通用身份无限堆叠
+        if (!shouldSupersede &&
+            rawKind == AgentMemoryKind.identity.storageValue) {
+          final aliases = extractAliasesFromDirective(directive);
+          if (aliases.isNotEmpty) {
+            for (final alias in aliases) {
+              final lowerAlias = alias.toLowerCase();
+              if (seenIdentityAliases.containsKey(lowerAlias)) {
+                shouldSupersede = true;
+                supersededById = seenIdentityAliases[lowerAlias];
+                break;
+              }
+            }
+            if (!shouldSupersede) {
+              for (final alias in aliases) {
+                seenIdentityAliases[alias.toLowerCase()] = id;
+              }
+            }
+          } else {
+            if (seenGeneralIdentityId != null) {
+              shouldSupersede = true;
+              supersededById = seenGeneralIdentityId;
+            } else {
+              seenGeneralIdentityId = id;
+            }
+          }
+        }
+
+        final kindDirectiveKey = '$rawKind:$directive';
+        if (!shouldSupersede) {
+          if (seenKindDirectives.containsKey(kindDirectiveKey)) {
+            shouldSupersede = true;
+            supersededById = seenKindDirectives[kindDirectiveKey];
+          } else {
+            seenKindDirectives[kindDirectiveKey] = id;
+          }
+        }
+
+        if (shouldSupersede) {
+          // 重复或冲突条目原位标记为 superseded
+          await txn.update(
+            profileTable,
+            <String, Object?>{
+              'status': AgentMemoryStatus.superseded.storageValue,
+              'superseded_by': supersededById,
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[id],
+          );
+          duplicatesPruned++;
+        }
+      }
+
+      // 5. 修剪超出容量的过旧近况切片（仅保留最新的 maxRecentSlices 条活跃切片）
+      await txn.delete(
+        recentSliceTable,
+        where: 'id NOT IN (SELECT id FROM $recentSliceTable '
+            'ORDER BY observed_at DESC LIMIT ?)',
+        whereArgs: <Object?>[AgentMemoryRecentSlice.maxRecentSlices],
+      );
+    });
+
+    if (duplicatesPruned > 0) {
+      _invalidateProfile();
+      await activeIdentityAliases();
+      _settingsService.refreshIdentityAliases();
+    }
+
+    final stats = MemoryCompactionStats(
+      expiredSlicesPruned: expiredSlices,
+      supersededProfilesPruned: supersededProfiles,
+      decayedFactsPruned: decayedFacts,
+      duplicatesPruned: duplicatesPruned,
+    );
+
+    if (stats.totalPruned > 0) {
+      logDebug(
+        '记忆库完成压缩裁剪: 清理过期近况 $expiredSlices 条, 淘汰旧画像 $supersededProfiles 条, '
+        '修剪衰减事实 $decayedFacts 条, 去重 $duplicatesPruned 条',
+        source: 'AgentMemoryService',
+      );
+    }
+
+    return stats;
   }
 
   Future<({int profileCount, int factCount})> counts() async {

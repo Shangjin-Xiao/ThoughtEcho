@@ -217,8 +217,13 @@ class AIProviderPresets {
       id: 'gemini',
       apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
       kind: AIPresetKind.cloud,
-      defaultModel: 'gemini-2.5-flash',
-      suggestedModels: ['gemini-2.5-flash', 'gemini-2.5-pro'],
+      defaultModel: 'gemini-3.8-flash',
+      suggestedModels: [
+        'gemini-3.8-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-3.6-flash',
+        'gemini-2.5-flash',
+      ],
       consoleUrl: 'https://aistudio.google.com/apikey',
     ),
     AIProviderPreset(

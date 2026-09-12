@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
+import '../constants/ai_provider_presets.dart';
+import '../models/agent_memory.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/chat_message.dart' as app_chat;
 import '../models/note_proposal_artifact.dart';
@@ -203,6 +206,9 @@ class AgentService extends ChangeNotifier {
 
   String _currentStatusKey = '';
   String get currentStatusKey => _currentStatusKey;
+
+  /// 序列化后置记忆提取任务，防止并发会话导致竞态冲突
+  Future<void> _postTurnMemoryLock = Future.value();
 
   AgentService({
     required SettingsService settingsService,
@@ -406,6 +412,18 @@ class AgentService extends ChangeNotifier {
                 toolCalls: executedCalls,
               ),
               runId: runId);
+
+          if (memoryEnabled &&
+              _memoryService != null &&
+              !executedCalls.any((call) => call.name == 'remember') &&
+              hasMemorySignal(userMessage)) {
+            _schedulePostTurnMemory(
+              userMessage: userMessage,
+              assistantResponse: responseContent,
+              provider: provider,
+            );
+          }
+
           return AgentResponse(
             content: responseContent,
             toolCalls: executedCalls,
@@ -752,25 +770,63 @@ class AgentService extends ChangeNotifier {
       );
     }
 
-    final client = openai.OpenAIClient(
-      config: _buildOpenAIConfig(provider),
-    );
+    final models = _modelsToTryFor(provider);
+    Object? lastError;
 
-    try {
-      return await client.chat.completions.create(
-        openai.ChatCompletionCreateRequest(
-          model: provider.model,
-          messages: messages,
-          tools: tools.isEmpty ? null : tools,
-          toolChoice: tools.isEmpty ? openai.ToolChoice.none() : null,
-          parallelToolCalls: true,
-          temperature: temperature,
-          maxTokens: maxTokens,
-        ),
-      );
-    } finally {
-      client.close();
+    for (var i = 0; i < models.length; i++) {
+      final currentModel = models[i];
+      final currentProvider = provider.copyWith(model: currentModel);
+
+      var backoffMs = 1500;
+      for (var attempt = 0; attempt < 2; attempt++) {
+        await _paceGeminiRequestIfNeeded(currentProvider);
+
+        final client = openai.OpenAIClient(
+          config: _buildOpenAIConfig(currentProvider),
+        );
+
+        try {
+          return await client.chat.completions.create(
+            openai.ChatCompletionCreateRequest(
+              model: currentModel,
+              messages: messages,
+              tools: tools.isEmpty ? null : tools,
+              toolChoice: tools.isEmpty ? openai.ToolChoice.none() : null,
+              parallelToolCalls: true,
+              temperature: temperature,
+              maxTokens: maxTokens,
+            ),
+          );
+        } catch (e) {
+          lastError = e;
+          final errorStr = e.toString().toLowerCase();
+          final isRateLimit = errorStr.contains('429') ||
+              errorStr.contains('quota') ||
+              errorStr.contains('resource_exhausted') ||
+              errorStr.contains('503');
+
+          if (isRateLimit) {
+            logWarning(
+              'AgentService: $currentModel 遭遇频控/限额 (attempt ${attempt + 1}, errorType=${e.runtimeType})',
+              source: 'AgentService',
+            );
+            if (attempt < 1) {
+              await Future<void>.delayed(Duration(milliseconds: backoffMs));
+              backoffMs *= 2;
+              continue;
+            }
+          }
+          break;
+        } finally {
+          client.close();
+        }
+      }
     }
+
+    if (lastError != null) {
+      throw lastError;
+    }
+    throw const AgentRequestException(AgentFailureType.unknown);
   }
 
   /// 流式请求 AI 补全，逐 token 推送 [AgentTextDeltaEvent]
@@ -809,76 +865,160 @@ class AgentService extends ChangeNotifier {
       return _StreamCompletionResult(content: content, toolCalls: toolCalls);
     }
 
-    // 生产环境流式路径
-    final config = _buildOpenAIConfig(provider);
-    final client = openai.OpenAIClient(config: config);
-    // 暴露给 requestStop，使停止能立即中断底层 HTTP 流
-    _activeStreamClient = client;
+    // 生产环境流式路径（支持 Gemini 请求控速、指数退避与自动降级）
+    final models = _modelsToTryFor(provider);
+    Object? lastError;
 
-    try {
-      final request = openai.ChatCompletionCreateRequest(
-        model: provider.model,
-        messages: messages,
-        tools: tools.isEmpty ? null : tools,
-        toolChoice: tools.isEmpty ? openai.ToolChoice.none() : null,
-        parallelToolCalls: true,
-        temperature: temperature,
-        maxTokens: maxTokens,
-        reasoningEffort: _reasoningEffortFor(provider),
-      );
+    for (var i = 0; i < models.length; i++) {
+      final currentModel = models[i];
+      final currentProvider = provider.copyWith(model: currentModel);
 
-      final stream = client.chat.completions.createStream(request);
-      final accumulator = openai.ChatStreamAccumulator();
-      String? finishReason;
+      var backoffMs = 1500;
+      for (var attempt = 0; attempt < 2; attempt++) {
+        await _paceGeminiRequestIfNeeded(currentProvider);
 
-      try {
-        await for (final event in stream) {
-          if (!_shouldContinue(runId)) {
+        final config = _buildOpenAIConfig(currentProvider);
+        final client = openai.OpenAIClient(config: config);
+        _activeStreamClient = client;
+        final accumulator = openai.ChatStreamAccumulator();
+        String? finishReason;
+
+        try {
+          final request = openai.ChatCompletionCreateRequest(
+            model: currentModel,
+            messages: messages,
+            tools: tools.isEmpty ? null : tools,
+            toolChoice: tools.isEmpty ? openai.ToolChoice.none() : null,
+            parallelToolCalls: true,
+            temperature: temperature,
+            maxTokens: maxTokens,
+            reasoningEffort: _reasoningEffortFor(currentProvider),
+          );
+
+          final stream = client.chat.completions.createStream(request);
+
+          try {
+            await for (final event in stream) {
+              if (!_shouldContinue(runId)) {
+                break;
+              }
+              accumulator.add(event);
+
+              final choice = event.choices?.firstOrNull;
+              if (choice?.finishReason != null) {
+                finishReason = choice!.finishReason.toString();
+              }
+
+              final delta = choice?.delta;
+              final reasoningChunks = <String>[
+                if (delta?.reasoningContent?.isNotEmpty == true)
+                  delta!.reasoningContent!,
+                if (delta?.reasoning?.isNotEmpty == true) delta!.reasoning!,
+              ];
+              for (final reasoning in reasoningChunks) {
+                _emitEvent(AgentReasoningDeltaEvent(reasoning), runId: runId);
+              }
+
+              final textDelta = event.textDelta;
+              if (_shouldContinue(runId) &&
+                  textDelta != null &&
+                  textDelta.isNotEmpty) {
+                _emitEvent(AgentTextDeltaEvent(textDelta), runId: runId);
+              }
+            }
+          } catch (e) {
+            // 停止时主动关闭了客户端，由此产生的流异常属于预期，安静返回已收内容。
+            if (!_shouldContinue(runId)) {
+              logDebug('AgentService: 流式请求已因停止而中断: $e');
+              return _StreamCompletionResult(
+                content: accumulator.content,
+                toolCalls: accumulator.toolCalls,
+                finishReason: finishReason,
+              );
+            }
+            rethrow;
+          }
+
+          return _StreamCompletionResult(
+            content: accumulator.content,
+            toolCalls: accumulator.toolCalls,
+            finishReason: finishReason,
+          );
+        } catch (e) {
+          lastError = e;
+          final errorStr = e.toString().toLowerCase();
+          final isRateLimit = errorStr.contains('429') ||
+              errorStr.contains('quota') ||
+              errorStr.contains('resource_exhausted') ||
+              errorStr.contains('503');
+
+          final hasEmitted = accumulator.content.isNotEmpty ||
+              accumulator.toolCalls.isNotEmpty;
+
+          // 仅在瞬态限流且尚未向 UI 吐出任何文字或工具调用时允许重试与模型降级
+          if (isRateLimit && !hasEmitted) {
+            logWarning(
+              'AgentService 流式: $currentModel 遭遇频控/限额 (attempt ${attempt + 1}, errorType=${e.runtimeType})',
+              source: 'AgentService',
+            );
+            if (attempt < 1) {
+              await Future<void>.delayed(Duration(milliseconds: backoffMs));
+              backoffMs *= 2;
+              continue;
+            }
+            // 当前模型重试次数用尽，跳出当前模型循环，允许外层尝试下一个 fallback 模型
             break;
           }
-          accumulator.add(event);
 
-          final choice = event.choices?.firstOrNull;
-          if (choice?.finishReason != null) {
-            finishReason = choice!.finishReason.toString();
-          }
-
-          final delta = choice?.delta;
-          final reasoningChunks = <String>[
-            if (delta?.reasoningContent?.isNotEmpty == true)
-              delta!.reasoningContent!,
-            if (delta?.reasoning?.isNotEmpty == true) delta!.reasoning!,
-          ];
-          for (final reasoning in reasoningChunks) {
-            _emitEvent(AgentReasoningDeltaEvent(reasoning), runId: runId);
-          }
-
-          final textDelta = event.textDelta;
-          if (_shouldContinue(runId) &&
-              textDelta != null &&
-              textDelta.isNotEmpty) {
-            _emitEvent(AgentTextDeltaEvent(textDelta), runId: runId);
-          }
-        }
-      } catch (e) {
-        // 停止时主动关闭了客户端，由此产生的流异常属于预期，安静返回已收内容。
-        if (_shouldContinue(runId)) {
+          // 非瞬态限流错误（如 400/401），或已经向 UI 吐出过部分内容：
+          // 立即向上抛出，绝不向 UI 重复拼接部分已吐出的片段，也不对致命错误遍历后续 fallback 模型
           rethrow;
+        } finally {
+          if (identical(_activeStreamClient, client)) {
+            _activeStreamClient = null;
+          }
+          client.close();
         }
-        logDebug('AgentService: 流式请求已因停止而中断: $e');
       }
-
-      return _StreamCompletionResult(
-        content: accumulator.content,
-        toolCalls: accumulator.toolCalls,
-        finishReason: finishReason,
-      );
-    } finally {
-      if (identical(_activeStreamClient, client)) {
-        _activeStreamClient = null;
-      }
-      client.close();
     }
+
+    if (lastError != null) {
+      throw lastError;
+    }
+    throw const AgentRequestException(AgentFailureType.unknown);
+  }
+
+  DateTime _lastGeminiRequestTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+  Future<void> _paceGeminiRequestIfNeeded(AIProviderSettings provider) async {
+    final isGemini = provider.id == 'gemini' ||
+        provider.apiUrl.contains('generativelanguage.googleapis.com');
+    if (!isGemini) return;
+
+    final now = DateTime.now();
+    final elapsed = now.difference(_lastGeminiRequestTime).inMilliseconds;
+    if (elapsed < 2000) {
+      await Future<void>.delayed(Duration(milliseconds: 2000 - elapsed));
+    }
+    _lastGeminiRequestTime = DateTime.now();
+  }
+
+  List<String> _modelsToTryFor(AIProviderSettings provider) {
+    final isGemini = provider.id == 'gemini' ||
+        provider.apiUrl.contains('generativelanguage.googleapis.com');
+    if (!isGemini) {
+      return [provider.model];
+    }
+    final configured = provider.model.trim();
+    final geminiPreset =
+        AIProviderPresets.all.firstWhereOrNull((p) => p.id == 'gemini');
+    final presetModels = geminiPreset?.suggestedModels ?? const <String>[];
+    final candidates = <String>[
+      if (configured.isNotEmpty) configured,
+      ...presetModels,
+    ];
+    final seen = <String>{};
+    return candidates.where(seen.add).toList();
   }
 
   openai.OpenAIConfig _buildOpenAIConfig(AIProviderSettings provider) {
@@ -925,6 +1065,195 @@ class AgentService extends ChangeNotifier {
       throw const AgentRequestException(AgentFailureType.unknown);
     }
     return content;
+  }
+
+  /// 粗筛判断本轮用户输入中是否包含可能沉淀为长期记忆的强信号（纠偏、身份、稳定偏好等）。
+  ///
+  /// 极低成本的正则快速短路：普通打招呼、闲聊、或纯指令（如「写篇散文」）直接返回 false，
+  /// 绝不触发任何额外的后台 LLM 请求，严守零开销与信噪比门槛。
+  @visibleForTesting
+  static bool hasMemorySignal(String userMessage) {
+    final text = userMessage.trim();
+    if (text.length < 3 || text.length > 300) {
+      return false;
+    }
+    final pattern = RegExp(
+      r'(?:不要|别|以后|改正|记错|纠偏|纠正|太长了?|太短了?|不要太|别太|每次都|'
+      r'我是|我叫|称呼我|叫我|我的笔名|我是一名|我从事|我主要做|我的研究|我的专业|我主要研究|我关注|我住在|我定居|我平时|我日常|我经常|'
+      r'我转行|我改行|我换工作|我离职|我退休|我不再|我不做|我不干|我不学|我擅长|我的职业|我的工作|'
+      r'我喜欢|我更喜欢|我偏好|我倾向|我不喜欢|我爱读|我爱看|我爱喝|我爱吃|我爱写|我的文风|我的写作|我的文字|我的风格|我习惯|'
+      r'记住|牢记|帮我记一下|别忘了|请记住|'
+      r"call me|i am an?|my name is|i prefer|i like|i don't like|don't add|stop adding|always|never|remember that|please remember)",
+      caseSensitive: false,
+    );
+    return pattern.hasMatch(text);
+  }
+
+  /// 解析模型后置返回的记忆提取 JSON 结果。
+  @visibleForTesting
+  static ({
+    bool hasMemory,
+    AgentMemoryKind kind,
+    String directive,
+    double confidence
+  })? parsePostTurnMemoryJson(String raw) {
+    final start = raw.indexOf('{');
+    final end = raw.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try {
+      final decoded = jsonDecode(raw.substring(start, end + 1));
+      if (decoded is! Map) return null;
+      final hasMemory = decoded['has_memory'] == true;
+      if (!hasMemory) {
+        return (
+          hasMemory: false,
+          kind: AgentMemoryKind.preference,
+          directive: '',
+          confidence: 0.0,
+        );
+      }
+      final rawKind = decoded['kind']?.toString() ?? 'preference';
+      final kind = AgentMemoryKindStorage.fromStorage(rawKind);
+      final directive = decoded['directive']?.toString().trim() ?? '';
+      final confidence = (decoded['confidence'] is num)
+          ? (decoded['confidence'] as num).toDouble()
+          : 0.0;
+      return (
+        hasMemory: true,
+        kind: kind,
+        directive: directive,
+        confidence: confidence,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 会话后置异步记忆归纳（Post-turn capture）。
+  ///
+  /// 当模型在主要聊天流程中未显式调用 remember 工具、但用户确实给出了明确纠偏或身份/偏好信息时，
+  /// 在用户端回复已呈现后静默在后台尝试提炼一条高信噪比长期记忆。
+  ///
+  /// 严格准则：
+  /// - 严控噪音（记忆多了有害！）：严格要求 confidence >= 0.85，且坚决排除临时事务与寒暄琐事；
+  /// - 零阻塞：完全在 unawaited 后台异步执行，主对话延迟 0ms；
+  /// - 自动原位去重/覆盖：如果已有同内容或同 kind（taste/voice）条目，自动覆盖更新，绝不堆积膨胀。
+  Future<void> _maybeCaptureMemoryPostTurn({
+    required String userMessage,
+    required String assistantResponse,
+    required AIProviderSettings provider,
+  }) async {
+    final memoryService = _memoryService;
+    if (memoryService == null || !memoryService.isEnabled) return;
+
+    try {
+      const extractionPrompt = '''
+你是一个极其严格的长期记忆提取器。你的职责是从当前单轮对话中提取【高价值、长期稳定、跨会话有效】的用户偏好、身份或纠偏。
+
+【铁律（记忆多了有害！严格过滤噪音）】：
+1. 坚决不记：临时偶发事务（如"下午要开会"、"去便利店"）、短暂情绪发泄、常识、笔记正文或猜测。
+2. 只有当用户显式提供了以下几类信息且置信度 confidence >= 0.85 时才提取：
+   - 身份/长期职业/称呼 (identity)
+   - 表达偏好/格式语气要求 (style)
+   - 对助手的明确纠错或准则 (feedback)
+   - 阅读或摘录品味 (taste)
+   - 个人写作声音/文风 (voice)
+   - 稳定生活/饮食/技术栈偏好 (preference)
+3. 若无明确高价值长期偏好或置信度不足，必须输出: {"has_memory": false}
+4. 格式输出合法 JSON，禁止包含 markdown 代码块：
+{
+  "has_memory": true,
+  "kind": "identity" | "preference" | "style" | "feedback" | "taste" | "voice",
+  "directive": "精炼的一句话指令句，如：称呼用户为「林晚」或「阿澈」；文风偏好详实白描或极简短句；不要添加天气",
+  "confidence": 0.95
+}
+''';
+
+      final userDialogue = '用户输入：$userMessage\n助手回复：$assistantResponse';
+      final messages = [
+        openai.ChatMessage.system(extractionPrompt),
+        openai.ChatMessage.user(userDialogue),
+      ];
+
+      final completion = await _requestCompletion(
+        provider: provider,
+        messages: messages,
+        tools: const [],
+        temperature: 0.1,
+        maxTokens: 300,
+      );
+
+      final raw = completion.choices.firstOrNull?.message.content?.trim() ?? '';
+      final parsed = parsePostTurnMemoryJson(raw);
+      if (parsed == null || !parsed.hasMemory || parsed.confidence < 0.85) {
+        return;
+      }
+
+      final directive = AgentMemoryService.normalizeMemoryText(
+        parsed.directive,
+        AgentMemoryService.directiveMaxChars,
+      );
+      if (directive.isEmpty) return;
+
+      // 检查是否已有完全相同指令的 active 画像
+      final activeEntries = await memoryService.activeProfile();
+      if (activeEntries.any((entry) => entry.directive == directive)) {
+        return;
+      }
+
+      // 如果是 voice, taste, identity 或 style，查找是否有同 kind 条目原位覆盖
+      String? replacesId;
+      if (parsed.kind == AgentMemoryKind.taste ||
+          parsed.kind == AgentMemoryKind.voice ||
+          parsed.kind == AgentMemoryKind.identity ||
+          parsed.kind == AgentMemoryKind.style) {
+        final existingSameKind = activeEntries
+            .where((entry) => entry.kind == parsed.kind)
+            .firstOrNull;
+        if (existingSameKind != null) {
+          replacesId = existingSameKind.id;
+        }
+      }
+
+      await memoryService.rememberProfile(
+        kind: parsed.kind,
+        directive: directive,
+        replacesId: replacesId,
+        source: 'post_turn_reflection',
+      );
+      logDebug(
+        'Post-turn 提炼并保存长期记忆 (kind=${parsed.kind.name})',
+        source: 'AgentService',
+      );
+    } catch (error, stackTrace) {
+      logError(
+        'Post-turn 记忆提取异常（${error.runtimeType}）',
+        error: error.runtimeType,
+        stackTrace: stackTrace,
+        source: 'AgentService',
+      );
+    }
+  }
+
+  void _schedulePostTurnMemory({
+    required String userMessage,
+    required String assistantResponse,
+    required AIProviderSettings provider,
+  }) {
+    _postTurnMemoryLock = _postTurnMemoryLock.then((_) async {
+      await _maybeCaptureMemoryPostTurn(
+        userMessage: userMessage,
+        assistantResponse: assistantResponse,
+        provider: provider,
+      );
+    }).catchError((error, stackTrace) {
+      logError(
+        'Post-turn 记忆调度异常（${error.runtimeType}）',
+        error: error.runtimeType,
+        stackTrace: stackTrace,
+        source: 'AgentService',
+      );
+    });
   }
 
   List<openai.ChatMessage> _buildMessages({
@@ -1195,7 +1524,7 @@ class AgentService extends ChangeNotifier {
 ## 区分"他写的"和"他摘的"
 检索结果里每条笔记都带 `type`：`excerpt` 是他摘抄的别人的话，`original` 是他自己写的。这个字段是按有没有归属标注算出来的，读正文之前先看它——等读完再回头改口就晚了，那时你已经把一段摘录当成他的自白读进去了。
 
-- `type` 只按标注判断，有一个例外要你自己认：`author` 填的是用户自己的称呼或笔名时，那是他给原创署了名，按 `original` 对待。用户的称呼见 <user_profile>、对话本身；若 `<user_profile>` 未设称呼，但笔记无外部书名出处、且呈现明显的第一人称自述语气（如生活日记、夜跑、写给未来的自己）并带有落款时，应结合语境识别其为用户本人的署名随笔，按原创对待，切勿当成历史名家。
+- `type` 只按标注判断，有一个例外要你自己认：`author` 填的是用户自己的称呼或笔名时，那是他给原创署了名，按 `original` 对待。用户的称呼见 <user_profile>、对话本身；若 `<user_profile>` 未设称呼，但笔记无外部书名出处、且呈现明显的第一人称自述语气（如生活日记、田野调查、出行漫步、日常琐记、工作备忘、写给未来的自己等）并带有落款时，应结合语境识别其为用户本人的署名随笔，按原创对待，切勿当成历史名家。
 - 转述摘录必须点明它是摘录（"你抄下的那句…""你收藏的那段…"），绝不能写成"你说过…""你写道…""你提到自己…"。一条摘录旁边如果有他自己写的按语，那部分才是他的声音。
 - 分析"用户自己怎么想、写过什么"时以原创笔记为依据。摘录只能作为"这段话击中过他"的共鸣证据，不能当成用户的自述或自白。
 - 下"你从没写过 X"这类全称结论前，先核对检索结果里的 author、source、tags——正文关键词没命中不等于没写过，线索也可能在元数据里。拿不准就说拿不准。
@@ -1211,6 +1540,7 @@ $memoryGuidance## 应用特性（避免重复劳动）
 - 你不能直接保存或修改笔记。创建使用 `propose_note_create`，修改使用 `propose_note_edit`；提案必须等待用户确认，每轮最多一个。
 - 修改时原样使用 `get_note_detail` 返回的 `document_revision`。默认保持原编辑器模式；整篇重写使用 `replaceDocument`，局部修改使用能唯一匹配的文本锚点。普通替换传 `insert_text`，需要格式时传 `insert_blocks`；含媒体的笔记只做不跨越媒体的局部文本修改。
 - 新建笔记默认使用 plain 并传 `content`。只有用户明确要求格式，或正文确有标题、列表、引用、强调等结构时选择 rich 并传 `document_blocks`；不要写 Markdown 标记或自行生成 Quill Delta。
+- **跨轮次连续修改提案**：若用户对前一轮尚未采纳的草稿提出修改，直接依据历史提案内容重新发起 `propose_note_create`（未保存的草稿不可调用 `propose_note_edit`）；若用户对已采纳保存的提案继续调整，从系统提示给出的已采纳笔记 ID 出发，先调 `get_note_detail` 取最新 revision，再调 `propose_note_edit`。
 - 位置、天气、作者、出处都不得编造：位置天气只能来自 `get_location_weather`，作者出处只能来自用户提供或笔记原文本身。
 - 不要在文本回复中伪造工具调用、JSON/XML 调用标签或 `smart_result` 代码块。
 
@@ -1236,13 +1566,14 @@ $memoryGuidance## 应用特性（避免重复劳动）
   /// 问题上一会儿翻笔记一会儿翻记忆，还互相打架。
   static const String _memorySection = '''
 ## 长期记忆
-你能跨会话记住这个用户。`<user_profile>` 里是你此前记下的偏好，每轮自动带来；更细的内容用 `recall` 检索。
+你能跨会话记住这个用户。<user_profile> 里是你此前记下的偏好，每轮自动带来；更细的内容用 `recall` 检索。
 
-- **记什么**：身份与长期在做的事、表达偏好（篇幅、语气、格式）、用户对你做法的纠正、他反复提到的地点/项目/人。判据是"下次对话没有它，我会做得更差"。
-- **不记什么**：用户笔记里写过的**原文**——那是 `explore_notes` 的职责，记进记忆会变成两套互相打架的检索；对话里说过什么归 `session_search`；本轮的临时信息；你自己的推测；已经记过的同一件事。**不要给用户建档案**，只记能让你回应得更好的东西。
-- **纠正最优先，不要犹豫**：用户说"别写这么长""以后别加天气""这条你记错了"这类话时**立刻** `remember`，不要等他说第二遍，也不要因为拿不准是不是长期偏好就先放着。这是唯一一类后台归纳永远拿不到的记忆——它发生在对话里，笔记里没有，你不记就没人记。用户确认你做对了同样值得记，只记纠正会让你越做越保守。
-- **文风和品味不用你判断**：画像里的「文风」和「品味」两类由后台定期通读整个周期的笔记后归纳，你在对话里只看得到几条上下文，判断不如它准。不要用 `remember` 去写这两类（工具会拒绝），也不要把"他这条写得很短"这类单次观察记成表达偏好——除非那是用户**对你**提的要求，那属于纠正。
-- 偏好变了用 `remember` 的 `update` 改同一条，不要追加一条相反的。
+- **记什么**：身份与长期在做的事（identity）、表达偏好（style/preference）、用户对你做法的纠偏（feedback）、摘录品味（taste）、写作声音（voice）。判据是"下次对话没有它，我会做得更差"。
+- **严控噪音，拒绝琐事堆积（记忆多了也不好）**：记忆不是聊天记录备份，绝不可事无巨细给用户建档案！坚决不记：临时的偶发事务（"下午要开会"、"刚去便利店"）、短暂的情绪发泄、未经验证的臆测、重复事实。只有满足"高置信度、跨会话长期有效、对后续回应质感有决定性提升"的信息才值得记录。
+- **笔记原文归 explore_notes**：用户笔记里写过的原文归 `explore_notes` 现查，记忆只存推导后的高阶结论。严禁将笔记正文原样抄入记忆库，否则两套检索打架。
+- **纠偏与显式要求最优先，果断记录**：用户说"别写这么长""以后不要加天气""这条你记错了""我更偏好古建营造与乡土风物"（或"我更喜欢现代诗和加缪"）"我写笔记习惯详实白描"（或"我写随笔习惯极简短句"）这类显式指令时**立刻**调用 `remember`。这是唯一一类后台离线分析难以获取的即时认知。
+- **文风与品味的记录边界**：文风（voice）与摘录品味（taste）主要由后台离线通读整批笔记归纳；但若用户在对话中明确表述自己的写作风格或阅读品味，可调用 `remember` 记入对应的 voice 或 taste，工具会自动原位覆盖旧条目。严禁把"他这条写得很短"这类单次对话推测脑补成文风偏好。
+- **偏好变更原位覆盖**：偏好变了用 `remember`（`action: "update"` 或带 `replaces_id` 的 `add`）原位替换同一条，不要留存两条互相矛盾的活跃指令。
 - 画像条目标了观察时间，是当时的观察不是当前事实；与用户本轮所说冲突时以本轮为准，并顺手更新。
 - 标了「用户填写」的画像条目来自用户在设置里的填写，权威性最高；与你记下的条目冲突时以它为准，并顺手 update 你那条。
 - 画像里还没有身份信息、对话又自然涉及称呼时，可以问一次"怎么称呼你"并记为 identity——只问一次，别审问。

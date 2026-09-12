@@ -42,6 +42,10 @@ void main() {
       expect(roleOf(messages[1]), 'user');
       expect(contentOf(messages[1]), contains('user_profile'));
 
+      // 历史消息必须保持时间升序（旧在前、新在后）
+      expect(contentOf(messages[2]), contains('昨天聊了什么'));
+      expect(contentOf(messages[3]), contains('聊了咖啡馆'));
+
       expect(roleOf(messages.last), 'user');
       expect(contentOf(messages.last), contains('给我今天的提示'));
     });
