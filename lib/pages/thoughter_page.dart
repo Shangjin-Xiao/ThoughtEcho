@@ -538,6 +538,44 @@ class _ThoughterPageState extends State<ThoughterPage>
     return _cachedMarkdownStyleSheet!;
   }
 
+  void _cancelPendingAskUser({String? targetMessageId}) {
+    final msgId = targetMessageId ?? _pendingAskUserMessageId;
+    if (msgId != null) {
+      _setState(() {
+        final idx = _messages.indexWhere((m) => m.id == msgId);
+        if (idx != -1) {
+          final rawMeta = _messages[idx].metaJson;
+          Map<String, dynamic> meta = {};
+          if (rawMeta != null) {
+            try {
+              meta = Map<String, dynamic>.from(jsonDecode(rawMeta) as Map);
+            } catch (_) {}
+          }
+          final updatedMeta = {
+            ...meta,
+            'isCompleted': true,
+            'isCancelled': true,
+          };
+          final updated = _messages[idx].copyWith(
+            metaJson: jsonEncode(updatedMeta),
+          );
+          _messages[idx] = updated;
+          if (_currentSessionId != null) {
+            unawaited(
+              _chatSessionService.addMessage(_currentSessionId!, updated),
+            );
+          }
+        }
+      });
+    }
+    if (_pendingAskUserCompleter != null &&
+        !_pendingAskUserCompleter!.isCompleted) {
+      _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
+    }
+    _pendingAskUserCompleter = null;
+    _pendingAskUserMessageId = null;
+  }
+
   /// Stop the current generation - cancels the stream subscription
   void _stopGenerating() {
     _agentRequestGeneration++;
@@ -549,12 +587,7 @@ class _ThoughterPageState extends State<ThoughterPage>
     _cancelStreamUpdate();
     _cancelToolProgressUpdate();
     _agentStatusDismissTimer?.cancel();
-    if (_pendingAskUserCompleter != null &&
-        !_pendingAskUserCompleter!.isCompleted) {
-      _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
-      _pendingAskUserCompleter = null;
-    }
-    _pendingAskUserMessageId = null;
+    _cancelPendingAskUser();
     _finishLoading();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

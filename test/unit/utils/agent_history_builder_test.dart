@@ -228,5 +228,28 @@ void main() {
       final history = AgentHistoryBuilder.build([cancelled]);
       expect(history.single.content, contains('用户取消了选择'));
     });
+
+    test('ask_user 同时有选项选择和自定义补充回复时完整压缩两者', () {
+      final combined = ChatMessage(
+        id: 'ask-5',
+        role: 'assistant',
+        isUser: false,
+        content: '请选择分类',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'question': '请选择笔记分类',
+          'isCompleted': true,
+          'selectedOptions': ['读书笔记'],
+          'customText': '想专注在历史类书籍',
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([combined]);
+      expect(history.length, 1);
+      final msg = history.single;
+      expect(msg.content, contains('读书笔记'));
+      expect(msg.content, contains('想专注在历史类书籍'));
+    });
   });
 }

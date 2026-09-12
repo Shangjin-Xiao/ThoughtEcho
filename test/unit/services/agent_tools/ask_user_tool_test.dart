@@ -254,5 +254,96 @@ void main() {
       expect(result.isError, isTrue);
       expect(result.content, contains('用户交互处理异常'));
     });
+
+    test('用户同时提供选项选择与自定义补充回复时完整保留两者', () async {
+      final tool = AskUserTool(
+        promptHandler: (request) async {
+          return const AskUserResponse(
+            selectedOptions: ['读书随笔'],
+            customText: '关于《百年孤独》的随笔',
+          );
+        },
+      );
+
+      final result = await tool.execute(_toolCall({
+        'question': '请选择类型',
+        'options': ['生活随笔', '读书随笔'],
+      }));
+
+      expect(result.isError, isFalse);
+      expect(
+        result.content,
+        '用户选择了：读书随笔，并补充回复：关于《百年孤独》的随笔',
+      );
+    });
+
+    test('用户既未选择选项也未输入自定义内容且未取消时返回明确提示', () async {
+      final tool = AskUserTool(
+        promptHandler: (request) async {
+          return const AskUserResponse();
+        },
+      );
+
+      final result = await tool.execute(_toolCall({
+        'question': '请选择类型',
+        'options': ['生活随笔', '读书随笔'],
+      }));
+
+      expect(result.isError, isFalse);
+      expect(result.content, '用户未做出有效选择。');
+    });
+
+    test('parametersSchema 包含 minItems 和 maxItems 约束', () {
+      final tool = AskUserTool();
+      final optionsSchema = (tool.parametersSchema['properties']
+          as Map<String, dynamic>)['options'] as Map<String, dynamic>;
+
+      expect(optionsSchema['minItems'], 2);
+      expect(optionsSchema['maxItems'], 4);
+    });
+
+    test('AskUserRequest 与 AskUserResponse 值相等性与 toString 正常工作', () {
+      const req1 = AskUserRequest(
+        toolCallId: 'call-1',
+        question: 'Q',
+        options: ['A', 'B'],
+        header: 'H',
+        multiSelect: true,
+      );
+      const req2 = AskUserRequest(
+        toolCallId: 'call-1',
+        question: 'Q',
+        options: ['A', 'B'],
+        header: 'H',
+        multiSelect: true,
+      );
+      const req3 = AskUserRequest(
+        toolCallId: 'call-2',
+        question: 'Q',
+        options: ['A', 'B'],
+      );
+
+      expect(req1, equals(req2));
+      expect(req1.hashCode, equals(req2.hashCode));
+      expect(req1 == req3, isFalse);
+      expect(req1.toString(), contains('toolCallId: call-1'));
+
+      const resp1 = AskUserResponse(
+        selectedOptions: ['A'],
+        customText: 'C',
+        isCancelled: false,
+      );
+      const resp2 = AskUserResponse(
+        selectedOptions: ['A'],
+        customText: 'C',
+        isCancelled: false,
+      );
+      const resp3 = AskUserResponse(isCancelled: true);
+
+      expect(resp1, equals(resp2));
+      expect(resp1.hashCode, equals(resp2.hashCode));
+      expect(resp1 == resp3, isFalse);
+      expect(resp1.toString(), contains('selectedOptions: [A]'));
+    });
   });
 }

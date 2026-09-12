@@ -252,12 +252,16 @@ class AgentService extends ChangeNotifier {
 
   /// 查找已注册的具体工具类型（自动拆解装饰器）。
   T? findTool<T extends AgentTool>() {
-    for (final tool in _tools) {
-      if (tool is T) {
-        return tool;
-      }
-      if (tool is TruncatingAgentTool && tool.inner is T) {
-        return tool.inner as T;
+    for (var tool in _tools) {
+      while (true) {
+        if (tool is T) {
+          return tool;
+        }
+        if (tool is TruncatingAgentTool) {
+          tool = tool.inner;
+        } else {
+          break;
+        }
       }
     }
     return null;

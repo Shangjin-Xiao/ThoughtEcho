@@ -423,12 +423,7 @@ extension _ThoughterAgent on _ThoughterPageState {
       }
       if (mounted && requestGeneration == _agentRequestGeneration) {
         _agentService.setAskUserHandler(null);
-        if (_pendingAskUserCompleter != null &&
-            !_pendingAskUserCompleter!.isCompleted) {
-          _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
-          _pendingAskUserCompleter = null;
-        }
-        _pendingAskUserMessageId = null;
+        _cancelPendingAskUser();
         _cancelStreamUpdate();
         _cancelToolProgressUpdate();
         if (toolProgressMsgId != null) {
@@ -807,31 +802,7 @@ extension _ThoughterAgent on _ThoughterPageState {
   }
 
   void _handleAskUserCancel(String messageId, Map<String, dynamic> meta) {
-    final updatedMeta = {
-      ...meta,
-      'isCompleted': true,
-      'isCancelled': true,
-    };
-    _setState(() {
-      final idx = _messages.indexWhere((m) => m.id == messageId);
-      if (idx != -1) {
-        final updated = _messages[idx].copyWith(
-          metaJson: jsonEncode(updatedMeta),
-        );
-        _messages[idx] = updated;
-        if (_currentSessionId != null) {
-          unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, updated),
-          );
-        }
-      }
-    });
-    if (_pendingAskUserCompleter != null &&
-        !_pendingAskUserCompleter!.isCompleted) {
-      _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
-      _pendingAskUserCompleter = null;
-    }
-    _pendingAskUserMessageId = null;
+    _cancelPendingAskUser(targetMessageId: messageId);
   }
 
   /// 解析由成功的 Agent 工具调用生成的建议卡片。

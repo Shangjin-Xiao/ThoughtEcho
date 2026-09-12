@@ -2779,5 +2779,82 @@ void main() {
       await tester.pumpAndSettle();
       expect(focusNode.hasFocus, isFalse);
     });
+
+    testWidgets(
+        'ask_user message loaded into session renders AskUserCard correctly',
+        (tester) async {
+      final now = DateTime(2026, 7, 30, 9);
+      final session = ChatSession(
+        id: 'ask-session-1',
+        sessionType: 'agent',
+        title: '测试提问会话',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+
+      // 包含两个提问卡片：
+      // 1. 已完成并带有已选选项与自定义回复
+      // 2. 未完成的遗留提问（重新进入会话时应展示为已取消，而非已确认）
+      chatSessionService.seedSession(session, [
+        app_chat.ChatMessage(
+          id: 'ask-msg-1',
+          content: '请选择分类',
+          isUser: false,
+          role: 'assistant',
+          timestamp: now,
+          metaJson: jsonEncode({
+            'type': 'ask_user',
+            'question': '请选择分类',
+            'header': '分类确认',
+            'options': ['工作', '生活'],
+            'multiSelect': false,
+            'isCompleted': true,
+            'isCancelled': false,
+            'selectedOptions': ['工作'],
+            'customText': '下周规划',
+          }),
+        ),
+        app_chat.ChatMessage(
+          id: 'ask-msg-2',
+          content: '请确认是否发布',
+          isUser: false,
+          role: 'assistant',
+          timestamp: now,
+          metaJson: jsonEncode({
+            'type': 'ask_user',
+            'question': '请确认是否发布',
+            'options': ['发布', '草稿'],
+            'multiSelect': false,
+            'isCompleted': false,
+            'isCancelled': false,
+            'selectedOptions': <String>[],
+            'customText': null,
+          }),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: ThoughterPage(
+            key: const ValueKey('ask_user_history_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 验证第一个已完成卡片
+      expect(find.text('分类确认'), findsOneWidget);
+      expect(find.text('请选择分类'), findsOneWidget);
+      expect(find.text('工作'), findsOneWidget);
+      expect(find.text('自定义回复：下周规划'), findsOneWidget);
+
+      // 验证第二个未完成卡片在会话加载态下自动作为已取消态呈现，绝不呈现为已确认
+      expect(find.text('请确认是否发布'), findsOneWidget);
+      expect(find.text('已取消选择'), findsOneWidget);
+    });
   });
 }

@@ -42,12 +42,7 @@ extension _ThoughterSession on _ThoughterPageState {
     _agentStatusDismissTimer?.cancel();
     _agentEventSubscription?.cancel();
     _agentService.setAskUserHandler(null);
-    if (_pendingAskUserCompleter != null &&
-        !_pendingAskUserCompleter!.isCompleted) {
-      _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
-      _pendingAskUserCompleter = null;
-    }
-    _pendingAskUserMessageId = null;
+    _cancelPendingAskUser();
     if (_agentListenerAttached) {
       _agentService.requestStop();
       _agentService.removeListener(_onAgentServiceChanged);

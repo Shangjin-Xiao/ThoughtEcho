@@ -169,14 +169,19 @@ class AgentHistoryBuilder {
       buffer.write(' 针对「$question」');
     }
 
+    final hasCustom = customText != null && customText.isNotEmpty;
+    final hasOptions = selectedOptions.isNotEmpty;
+
     if (isCancelled) {
       buffer.write('，用户取消了选择。');
-    } else if (customText != null && customText.isNotEmpty) {
+    } else if (hasOptions && hasCustom) {
+      buffer.write('，用户选择了：${selectedOptions.join('、')}，并补充回复：$customText');
+    } else if (hasCustom) {
       buffer.write('，用户回复：$customText');
-    } else if (selectedOptions.isNotEmpty) {
+    } else if (hasOptions) {
       buffer.write('，用户选择了：${selectedOptions.join('、')}');
     } else {
-      buffer.write('，用户已确认。');
+      buffer.write('，用户取消了选择。');
     }
 
     return _truncate(buffer.toString(), cap);

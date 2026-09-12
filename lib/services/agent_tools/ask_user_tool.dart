@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../../utils/app_logger.dart';
 import '../agent_tool.dart';
 import 'tool_argument_validator.dart';
@@ -27,6 +29,29 @@ class AskUserRequest {
         'options': options,
         'multi_select': multiSelect,
       };
+
+  @override
+  String toString() =>
+      'AskUserRequest(toolCallId: $toolCallId, question: $question, header: $header, options: $options, multiSelect: $multiSelect)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AskUserRequest &&
+          other.toolCallId == toolCallId &&
+          other.question == question &&
+          other.header == header &&
+          other.multiSelect == multiSelect &&
+          listEquals(other.options, options);
+
+  @override
+  int get hashCode => Object.hash(
+        toolCallId,
+        question,
+        header,
+        multiSelect,
+        Object.hashAll(options),
+      );
 }
 
 /// 用户对提问的回复。
@@ -49,6 +74,25 @@ class AskUserResponse {
 
   factory AskUserResponse.custom(String text) =>
       AskUserResponse(customText: text);
+
+  @override
+  String toString() =>
+      'AskUserResponse(selectedOptions: $selectedOptions, customText: $customText, isCancelled: $isCancelled)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AskUserResponse &&
+          other.isCancelled == isCancelled &&
+          other.customText == customText &&
+          listEquals(other.selectedOptions, selectedOptions);
+
+  @override
+  int get hashCode => Object.hash(
+        isCancelled,
+        customText,
+        Object.hashAll(selectedOptions),
+      );
 }
 
 typedef AskUserPromptHandler = Future<AskUserResponse> Function(
@@ -115,6 +159,8 @@ class AskUserTool extends AgentTool {
           'options': {
             'type': 'array',
             'items': {'type': 'string'},
+            'minItems': 2,
+            'maxItems': 4,
             'description': '供用户选择的选项列表，必须包含 2 到 4 个有效选项。',
           },
           'multi_select': {
@@ -204,14 +250,24 @@ class AskUserTool extends AgentTool {
       }
 
       final custom = response.customText?.trim();
-      if (custom != null && custom.isNotEmpty) {
+      final hasCustom = custom != null && custom.isNotEmpty;
+      final hasOptions = response.selectedOptions.isNotEmpty;
+
+      if (hasOptions && hasCustom) {
+        return ToolResult(
+          toolCallId: call.id,
+          content: '用户选择了：${response.selectedOptions.join('、')}，并补充回复：$custom',
+        );
+      }
+
+      if (hasCustom) {
         return ToolResult(
           toolCallId: call.id,
           content: '用户输入了自定义回复：$custom',
         );
       }
 
-      if (response.selectedOptions.isNotEmpty) {
+      if (hasOptions) {
         return ToolResult(
           toolCallId: call.id,
           content: '用户选择了：${response.selectedOptions.join('、')}',
@@ -220,7 +276,7 @@ class AskUserTool extends AgentTool {
 
       return ToolResult(
         toolCallId: call.id,
-        content: '用户已确认，但未选择具体选项。',
+        content: '用户未做出有效选择。',
       );
     } catch (e, stack) {
       logError('AskUserTool 执行失败', error: e, stackTrace: stack);

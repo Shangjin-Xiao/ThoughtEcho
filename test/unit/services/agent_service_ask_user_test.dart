@@ -9,6 +9,7 @@ import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/ask_user_tool.dart';
+import 'package:thoughtecho/services/agent_tools/truncating_agent_tool.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
@@ -108,6 +109,22 @@ void main() {
       ));
 
       expect(handlerCalled, isTrue);
+    });
+
+    test('findTool 支持穿透多层装饰器嵌套获取目标工具', () {
+      final askTool = AskUserTool();
+      final doubleWrapped = TruncatingAgentTool(
+        askTool,
+        maxChars: 1000,
+      );
+      // AgentService 内部还会再包一层 TruncatingAgentTool，形成双层嵌套
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: [doubleWrapped],
+      );
+
+      expect(service.findTool<AskUserTool>(), isNotNull);
+      expect(identical(service.findTool<AskUserTool>(), askTool), isTrue);
     });
 
     test('Agent 循环中成功触发 ask_user 并将用户选项送入下一轮', () async {

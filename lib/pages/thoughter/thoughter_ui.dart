@@ -463,6 +463,8 @@ extension _ThoughterUI on _ThoughterPageState {
                 _pendingAskUserMessageId == message.id;
             final effectiveCompleted =
                 isCompleted || (!isCurrentPending && !_isLoading);
+            final effectiveCancelled = isCancelled ||
+                (!isCompleted && !isCurrentPending && !_isLoading);
 
             return Padding(
               padding: _kCardMessageInsets,
@@ -473,7 +475,7 @@ extension _ThoughterUI on _ThoughterPageState {
                 options: options,
                 multiSelect: multiSelect,
                 isCompleted: effectiveCompleted,
-                isCancelled: isCancelled,
+                isCancelled: effectiveCancelled,
                 selectedOptions: selectedOptions,
                 customText: customText,
                 onSubmit: ({required selectedOptions, customText}) {

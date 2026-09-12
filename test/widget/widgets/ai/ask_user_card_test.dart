@@ -210,5 +210,78 @@ void main() {
       expect(find.text('自定义回复：我想用深色素笺'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
     });
+
+    testWidgets('同时选择选项与输入自定义文本并提交', (tester) async {
+      List<String>? submittedOptions;
+      String? submittedCustom;
+
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          question: '请选择或补充',
+          options: const ['生活随笔', '读书笔记'],
+          onSubmit: ({required selectedOptions, customText}) {
+            submittedOptions = selectedOptions;
+            submittedCustom = customText;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('读书笔记'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '历史书单');
+      await tester.pumpAndSettle();
+
+      final confirmButtonFinder = find.widgetWithText(FilledButton, '确定');
+      await tester.tap(confirmButtonFinder);
+      await tester.pumpAndSettle();
+
+      expect(submittedOptions, ['读书笔记']);
+      expect(submittedCustom, '历史书单');
+    });
+
+    testWidgets('已完成但未选任何选项且无自定义回复时作为取消状态展示', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const AskUserCard(
+          question: '风格选择',
+          options: ['纸墨', '素笺'],
+          isCompleted: true,
+          selectedOptions: [],
+          customText: null,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // 应当展示取消态，而不是错误地展示绿勾与“确定”
+      expect(find.text('已取消选择'), findsOneWidget);
+      expect(find.text('确定'), findsNothing);
+    });
+
+    testWidgets('didUpdateWidget 正常同步外部属性变更', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const AskUserCard(
+          question: '测试变更',
+          options: ['A', 'B'],
+          selectedOptions: ['A'],
+          customText: '旧备注',
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('旧备注'), findsOneWidget);
+
+      await tester.pumpWidget(_buildTestApp(
+        const AskUserCard(
+          question: '测试变更',
+          options: ['A', 'B'],
+          selectedOptions: ['B'],
+          customText: '新备注',
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('新备注'), findsOneWidget);
+    });
   });
 }

@@ -56,6 +56,22 @@ class _AskUserCardState extends State<AskUserCard> {
   }
 
   @override
+  void didUpdateWidget(AskUserCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.isCompleted) {
+      if (oldWidget.customText != widget.customText &&
+          widget.customText != _customController.text) {
+        _customController.text = widget.customText ?? '';
+      }
+      if (oldWidget.selectedOptions != widget.selectedOptions) {
+        _selectedOptions
+          ..clear()
+          ..addAll(widget.selectedOptions);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _customController.dispose();
     super.dispose();
@@ -121,7 +137,7 @@ class _AskUserCardState extends State<AskUserCard> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildHeader(theme, l10n),
+            _buildHeader(theme, l10n, shapeTokens),
             const SizedBox(height: 12),
             Text(
               widget.question,
@@ -145,7 +161,11 @@ class _AskUserCardState extends State<AskUserCard> {
     );
   }
 
-  Widget _buildHeader(ThemeData theme, AppLocalizations l10n) {
+  Widget _buildHeader(
+    ThemeData theme,
+    AppLocalizations l10n,
+    AppShapeTokens shapeTokens,
+  ) {
     final title = widget.header?.trim().isNotEmpty == true
         ? widget.header!.trim()
         : l10n.agentAskUserTitle;
@@ -167,7 +187,6 @@ class _AskUserCardState extends State<AskUserCard> {
             title,
             style: theme.textTheme.titleSmall?.copyWith(
               color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -176,9 +195,14 @@ class _AskUserCardState extends State<AskUserCard> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(
-                AppShapeTokens.of(context).buttonRadius,
-              ),
+              borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+              border: shapeTokens.borderWidth > 0
+                  ? Border.all(
+                      color: theme.colorScheme.outlineVariant
+                          .withValues(alpha: 0.5),
+                      width: shapeTokens.borderWidth,
+                    )
+                  : null,
             ),
             child: Text(
               hintText,
@@ -204,6 +228,12 @@ class _AskUserCardState extends State<AskUserCard> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
           ),
+          side: BorderSide(
+            color: isSelected
+                ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            width: shapeTokens.borderWidth > 0 ? shapeTokens.borderWidth : 1.0,
+          ),
           showCheckmark: widget.multiSelect,
           selectedColor: theme.colorScheme.primaryContainer,
           backgroundColor:
@@ -223,6 +253,11 @@ class _AskUserCardState extends State<AskUserCard> {
     AppLocalizations l10n,
     AppShapeTokens shapeTokens,
   ) {
+    final outlineWidth =
+        shapeTokens.borderWidth > 0 ? shapeTokens.borderWidth : 1.0;
+    final focusedWidth =
+        shapeTokens.borderWidth > 0 ? shapeTokens.borderWidth : 1.5;
+
     return TextField(
       controller: _customController,
       onChanged: (_) => setState(() {}),
@@ -239,18 +274,21 @@ class _AskUserCardState extends State<AskUserCard> {
           borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
           borderSide: BorderSide(
             color: theme.colorScheme.outlineVariant,
+            width: outlineWidth,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
           borderSide: BorderSide(
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+            width: outlineWidth,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
           borderSide: BorderSide(
             color: theme.colorScheme.primary,
+            width: focusedWidth,
           ),
         ),
       ),
@@ -274,6 +312,8 @@ class _AskUserCardState extends State<AskUserCard> {
               ),
               side: BorderSide(
                 color: theme.colorScheme.outlineVariant,
+                width:
+                    shapeTokens.borderWidth > 0 ? shapeTokens.borderWidth : 1.0,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
@@ -313,13 +353,24 @@ class _AskUserCardState extends State<AskUserCard> {
     AppSemanticColors semanticColors,
     AppShapeTokens shapeTokens,
   ) {
-    if (widget.isCancelled) {
+    final custom = widget.customText?.trim();
+    final hasCustom = custom != null && custom.isNotEmpty;
+    final options = widget.selectedOptions;
+
+    if (widget.isCancelled || (options.isEmpty && !hasCustom)) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color:
               theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+          border: shapeTokens.borderWidth > 0
+              ? Border.all(
+                  color:
+                      theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  width: shapeTokens.borderWidth,
+                )
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -340,10 +391,6 @@ class _AskUserCardState extends State<AskUserCard> {
         ),
       );
     }
-
-    final custom = widget.customText?.trim();
-    final hasCustom = custom != null && custom.isNotEmpty;
-    final options = widget.selectedOptions;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,6 +424,13 @@ class _AskUserCardState extends State<AskUserCard> {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+                  border: shapeTokens.borderWidth > 0
+                      ? Border.all(
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.4),
+                          width: shapeTokens.borderWidth,
+                        )
+                      : null,
                 ),
                 child: Text(
                   opt,
@@ -410,23 +464,6 @@ class _AskUserCardState extends State<AskUserCard> {
             ],
           ),
         ],
-        if (options.isEmpty && !hasCustom)
-          Row(
-            children: [
-              Icon(
-                Icons.check_circle_outline_rounded,
-                size: 16,
-                color: semanticColors.success,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                l10n.confirm,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
       ],
     );
   }
