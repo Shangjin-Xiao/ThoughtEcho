@@ -54,6 +54,29 @@ void main() {
     );
   });
 
+  test('getPassword should return null gracefully when secure storage throws',
+      () async {
+    final service = WebDAVSyncService();
+
+    // Mock secureStorage to throw an exception on read
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      secureStorageChannel,
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'read') {
+          throw PlatformException(
+            code: 'READ_FAILED',
+            message: 'Failed to read from secure storage',
+          );
+        }
+        return null;
+      },
+    );
+
+    final password = await service.getPassword();
+    expect(password, isNull);
+  });
+
   test('WebDAVSyncService should initialize and save settings correctly',
       () async {
     final service = WebDAVSyncService();

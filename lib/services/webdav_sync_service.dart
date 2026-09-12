@@ -140,8 +140,8 @@ class WebDAVSyncService extends ChangeNotifier {
   Future<String?> getPassword() async {
     try {
       return await _secureStorage.read(key: _passwordStorageKey);
-    } catch (e) {
-      logError('读取 WebDAV 密码失败', error: e, source: 'WebDAVSyncService');
+    } catch (_) {
+      logError('读取 WebDAV 密码失败', source: 'WebDAVSyncService');
       return null;
     }
   }
