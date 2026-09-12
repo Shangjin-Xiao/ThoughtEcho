@@ -333,12 +333,13 @@ void main() {
       ),
       isNull,
     );
-    // 双重编码的无害字符应按解码终值处理，而非首次解码值。
+    // 双重编码的无害字符按单次解码还原，与 _encodeMediaPath 往返一致
+    //（本地 images/%41.png 上传为 images/%2541.png，解回仍是 %41.png）。
     expect(
       WebDAVSyncService.mediaRelativePathFromHrefForTesting(
         '/dav/thoughtecho/media/images/%2541.png',
       ),
-      'images/A.png',
+      'images/%41.png',
     );
   });
 

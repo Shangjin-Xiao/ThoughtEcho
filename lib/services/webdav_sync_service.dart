@@ -1538,10 +1538,12 @@ class WebDAVSyncService extends ChangeNotifier {
       }
     }
 
-    // 用解码终值做规范化：循环中任何残留编码都会直接 return null，
-    // 因此 current 已是完全解码结果；若用首次解码值，双重编码的无害字符
-    //（如 %2541）会以编码形态参与分段，与后续处理口径不一致。
-    final normalizedPath = current.replaceAll('\\', '/');
+    // 身份口径必须用单次解码值：_encodeMediaPath 会把文件名中的 '%' 编码为
+    // '%25'（如本地 images/%41.png 上传为 images/%2541.png），单次解码才能
+    // 还原出与本地一致的键；完全解码会得到 images/A.png，导致远端清单键与
+    // 本地键对不上而重复上传/下载失败。穿越防护不依赖此选择：上面的循环在
+    // 每次解码前都会检查残留的 %2e/%2f/%5c（含多重编码），有残留直接返回 null。
+    final normalizedPath = decodedPath.replaceAll('\\', '/');
     if (normalizedPath.endsWith('/')) return null;
 
     final rawSegments = normalizedPath
