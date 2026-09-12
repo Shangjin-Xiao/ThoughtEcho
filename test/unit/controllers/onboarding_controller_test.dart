@@ -1,6 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:thoughtecho/controllers/onboarding_controller.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/api_service.dart';
+import 'package:thoughtecho/services/clipboard_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
 import '../../test_harness.dart';
@@ -8,6 +15,71 @@ import '../../test_harness.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late OnboardingController sut;
+
+  group('OnboardingController initialize', () {
+    setUp(() async {
+      await TestHarness.initialize();
+      sut = OnboardingController();
+    });
+
+    tearDown(() {
+      sut.dispose();
+    });
+
+    testWidgets(
+        'throws and logs error when context.read fails during initialize',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              expect(() => sut.initialize(context),
+                  throwsA(isA<ProviderNotFoundException>()));
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+    });
+
+    testWidgets(
+        'initializes successfully when all required providers exist in context',
+        (tester) async {
+      final databaseService = DatabaseService();
+      final settingsService = await SettingsService.create();
+      final mmkvService = MMKVService();
+      final clipboardService = ClipboardService();
+      final aiAnalysisDbService = AIAnalysisDatabaseService();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DatabaseService>.value(
+                value: databaseService),
+            ChangeNotifierProvider<SettingsService>.value(
+                value: settingsService),
+            Provider<MMKVService>.value(value: mmkvService),
+            ChangeNotifierProvider<ClipboardService>.value(
+                value: clipboardService),
+            ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
+                value: aiAnalysisDbService),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                sut.initialize(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(sut.state.preferences, isNotEmpty);
+    });
+  });
 
   group('OnboardingController locale preference linkage', () {
     setUp(() async {
