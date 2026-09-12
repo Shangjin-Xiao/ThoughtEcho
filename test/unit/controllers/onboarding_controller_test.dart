@@ -78,6 +78,7 @@ void main() {
       );
 
       expect(sut.state.preferences, isNotEmpty);
+      await tester.pumpAndSettle();
     });
   });
 
