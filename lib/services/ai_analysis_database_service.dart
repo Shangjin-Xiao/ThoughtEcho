@@ -180,7 +180,12 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   /// 保存AI分析结果
   Future<AIAnalysis> saveAnalysis(AIAnalysis analysis) async {
     try {
-      AppLogger.i('开始保存AI分析: ${analysis.title}', source: 'AIAnalysisDB');
+      AppLogger.i(
+        '开始保存AI分析 (id: ${analysis.id}, '
+        'hasTitle: ${analysis.title.isNotEmpty}, '
+        'hasContent: ${analysis.content.isNotEmpty})',
+        source: 'AIAnalysisDB',
+      );
 
       final newAnalysis = _prepareAnalysis(analysis);
 
@@ -505,8 +510,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     try {
       if (analyses.isEmpty) return 0;
 
-      // 1. 防御性类型转换与清洗
+      // 1. 防御性类型转换与清洗（所有跳过路径共享 skippedCount，
+      //    便于批量结束时汇总实际丢弃条数）。
       final List<Map<String, dynamic>> validAnalyses = [];
+      var skippedCount = 0;
       for (final rawItem in analyses) {
         if (rawItem is Map) {
           try {
@@ -514,6 +521,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
             final title = converted['title']?.toString().trim() ?? '';
             final content = converted['content']?.toString().trim() ?? '';
             if (title.isEmpty || content.isEmpty) {
+              skippedCount++;
               AppLogger.w(
                 'importAnalysesFromList: 跳过必填字段缺失或为空的条目 (id: ${converted['id']}, hasTitle: ${title.isNotEmpty}, hasContent: ${content.isNotEmpty})',
                 source: 'AIAnalysisDB',
@@ -522,12 +530,14 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
             }
             validAnalyses.add(converted);
           } catch (e) {
+            skippedCount++;
             AppLogger.w(
-              'importAnalysesFromList: 无法解析条目 Map: $e',
+              'importAnalysesFromList: 无法解析条目 Map (${e.runtimeType})',
               source: 'AIAnalysisDB',
             );
           }
         } else {
+          skippedCount++;
           AppLogger.w(
             'importAnalysesFromList: 跳过非 Map 格式条目 (${rawItem.runtimeType})',
             source: 'AIAnalysisDB',
@@ -535,7 +545,15 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         }
       }
 
-      if (validAnalyses.isEmpty) return 0;
+      if (validAnalyses.isEmpty) {
+        if (skippedCount > 0) {
+          AppLogger.w(
+            '批量导入跳过 $skippedCount 条无法解析的条目',
+            source: 'AIAnalysisDB',
+          );
+        }
+        return 0;
+      }
 
       if (kIsWeb) {
         AppLogger.i(
@@ -570,30 +588,54 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         AppLogger.i('批量导入完成(Web)', source: 'AIAnalysisDB');
         return count;
       } else {
-        // 非Web平台使用 显式事务 + Batch 优化
+        // 非Web平台使用显式事务 + 逐行插入：batch 在 commit 时才执行，
+        // SQL 层错误会让整个事务回滚，故逐行 await insert 并各自捕获，
+        // 一条坏行只跳过自己（计入共享的 skippedCount）。
         AppLogger.i(
           '开始批量导入AI分析，共 ${validAnalyses.length} 条',
           source: 'AIAnalysisDB',
         );
         final db = await database;
         int count = 0;
+        var phase2Logged = false;
 
         await db.transaction((txn) async {
-          final batch = txn.batch();
           for (var item in validAnalyses) {
-            final analysis = AIAnalysis.fromJson(item);
-            final newAnalysis = _prepareAnalysis(analysis);
-
-            final jsonData = newAnalysis.toJson();
-            batch.insert(
-              'ai_analyses',
-              jsonData,
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-            count++;
+            try {
+              final analysis = AIAnalysis.fromJson(item);
+              final newAnalysis = _prepareAnalysis(analysis);
+              await txn.insert(
+                'ai_analyses',
+                newAnalysis.toJson(),
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+              count++;
+            } catch (e) {
+              skippedCount++;
+              if (!phase2Logged) {
+                phase2Logged = true;
+                // 此处实际只捕获 txn.insert 的本地库异常（fromJson 全字段
+                // 兜底不抛、_prepareAnalysis 为纯函数）：错误信息是引擎生成
+                // 的表名/约束名，不含用户正文，取首行并截断后记录以便定位。
+                final firstLine = e.toString().split('\n').first.trim();
+                final detail = firstLine.length > 200
+                    ? '${firstLine.substring(0, 200)}…'
+                    : firstLine;
+                AppLogger.w(
+                  '批量导入跳过无法写入的条目 (${e.runtimeType}: $detail)',
+                  source: 'AIAnalysisDB',
+                );
+              }
+            }
           }
-          await batch.commit(noResult: true);
         });
+
+        if (skippedCount > 0) {
+          AppLogger.w(
+            '批量导入跳过 $skippedCount 条无法解析的条目',
+            source: 'AIAnalysisDB',
+          );
+        }
 
         AppLogger.i('批量导入完成', source: 'AIAnalysisDB');
 

@@ -111,6 +111,13 @@ class WebDAVSyncService extends ChangeNotifier {
   static const Set<String> _mediaSubFolders = {'images', 'videos', 'audios'};
   static const String _passwordStorageKey = 'webdav_password';
 
+  /// 匹配残留的单次/多重编码路径遍历片段（%2e/%2f/%5c，大小写不敏感）。
+  /// 静态化避免在多重编码循环检测中每次重复构造。
+  static final RegExp _encodedTraversalPattern = RegExp(
+    r'%2[ef]|%5c',
+    caseSensitive: false,
+  );
+
   /// 初始化设置，从 MMKV 中读取缓存配置
   void _initSettings() {
     _enabled = _mmkv.getBool('webdav_enabled') ?? false;
@@ -1519,7 +1526,7 @@ class WebDAVSyncService extends ChangeNotifier {
     // 循环检查或解码，防范多重编码（如 %252e%252e、%252f、%255c）绕过路径遍历检查
     var current = decodedPath;
     while (true) {
-      if (RegExp(r'%2[ef]|%5c', caseSensitive: false).hasMatch(current)) {
+      if (_encodedTraversalPattern.hasMatch(current)) {
         return null;
       }
       try {
@@ -1531,6 +1538,11 @@ class WebDAVSyncService extends ChangeNotifier {
       }
     }
 
+    // 身份口径必须用单次解码值：_encodeMediaPath 会把文件名中的 '%' 编码为
+    // '%25'（如本地 images/%41.png 上传为 images/%2541.png），单次解码才能
+    // 还原出与本地一致的键；完全解码会得到 images/A.png，导致远端清单键与
+    // 本地键对不上而重复上传/下载失败。穿越防护不依赖此选择：上面的循环在
+    // 每次解码前都会检查残留的 %2e/%2f/%5c（含多重编码），有残留直接返回 null。
     final normalizedPath = decodedPath.replaceAll('\\', '/');
     if (normalizedPath.endsWith('/')) return null;
 
