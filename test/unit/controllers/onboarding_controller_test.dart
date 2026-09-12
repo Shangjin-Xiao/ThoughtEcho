@@ -168,9 +168,12 @@ void main() {
     late SettingsService settingsService;
     late MMKVService mmkvService;
     late ClipboardService clipboardService;
+    void Function<T>(T)? debugCheckInvalidValueTypeBeforeTest;
 
     setUp(() async {
       await TestHarness.initialize();
+      debugCheckInvalidValueTypeBeforeTest =
+          Provider.debugCheckInvalidValueType;
       Provider.debugCheckInvalidValueType = null;
       PackageInfo.setMockInitialValues(
         appName: 'ThoughtEcho',
@@ -186,6 +189,8 @@ void main() {
     });
 
     tearDown(() async {
+      Provider.debugCheckInvalidValueType =
+          debugCheckInvalidValueTypeBeforeTest;
       await TestHarness.tearDown();
     });
 
