@@ -213,7 +213,7 @@ void main() {
       await completer.future;
       tool.cancelActivePrompt();
 
-      final result = await futureResult;
+      final result = await futureResult.timeout(const Duration(seconds: 3));
       expect(result.content, '用户取消了本次选择。');
     });
 
@@ -235,7 +235,7 @@ void main() {
       await completer.future;
       tool.cancel();
 
-      final result = await futureResult;
+      final result = await futureResult.timeout(const Duration(seconds: 3));
       expect(result.content, '用户取消了本次选择。');
     });
 

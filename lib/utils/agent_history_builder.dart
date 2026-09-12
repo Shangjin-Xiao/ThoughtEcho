@@ -72,7 +72,7 @@ class AgentHistoryBuilder {
       if (meta['type'] == 'ask_user') {
         final summary = _summarizeAskUser(
           meta,
-          cap: toolResultCap,
+          cap: traceCap,
         );
         if (summary == null) continue;
         history.add(

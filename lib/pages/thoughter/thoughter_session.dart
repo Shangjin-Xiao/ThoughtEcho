@@ -41,9 +41,9 @@ extension _ThoughterSession on _ThoughterPageState {
     _agentRequestGeneration++;
     _agentStatusDismissTimer?.cancel();
     _agentEventSubscription?.cancel();
-    _agentService.setAskUserHandler(null);
     _cancelPendingAskUser();
     if (_agentListenerAttached) {
+      _agentService.setAskUserHandler(null);
       _agentService.requestStop();
       _agentService.removeListener(_onAgentServiceChanged);
     }
@@ -627,8 +627,10 @@ extension _ThoughterSession on _ThoughterPageState {
       _streamSubscription = null;
       await _agentEventSubscription?.cancel();
       _agentEventSubscription = null;
-      _agentService.requestStop();
+      _cancelPendingAskUser();
       if (_agentListenerAttached) {
+        _agentService.setAskUserHandler(null);
+        _agentService.requestStop();
         _agentService.removeListener(_onAgentServiceChanged);
         _agentListenerAttached = false;
       }

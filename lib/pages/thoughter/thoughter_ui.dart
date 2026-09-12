@@ -1753,7 +1753,7 @@ extension _ThoughterUI on _ThoughterPageState {
     final meta = message.parsedMeta;
     if (meta == null) return false;
     final type = meta['type']?.toString();
-    return type == NoteProposalArtifact.typeName;
+    return type == NoteProposalArtifact.typeName || type == 'ask_user';
   }
 }
 

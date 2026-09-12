@@ -103,7 +103,7 @@ void main() {
   );
 
   group('AgentService 与 AskUserTool 集成', () {
-    test('findTool 穿透截断装饰器正确获取 AskUserTool 并设置 handler', () {
+    test('findTool 穿透截断装饰器正确获取 AskUserTool 并设置 handler', () async {
       final askTool = AskUserTool();
       final service = AgentService(
         settingsService: _FakeSettingsService(provider),
@@ -120,7 +120,7 @@ void main() {
       });
 
       // 验证 handler 已成功挂载到底层 AskUserTool
-      askTool.execute(ToolCall(
+      final result = await askTool.execute(ToolCall(
         id: '1',
         name: 'ask_user',
         arguments: {
@@ -129,6 +129,7 @@ void main() {
         },
       ));
 
+      expect(result.isError, isFalse);
       expect(handlerCalled, isTrue);
     });
 
