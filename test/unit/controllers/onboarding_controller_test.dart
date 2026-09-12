@@ -27,19 +27,17 @@ void main() {
     });
 
     testWidgets(
-        'throws and logs error when context.read fails during initialize',
+        'throws ProviderNotFoundException when required providers are missing',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Builder(
-            builder: (context) {
-              expect(() => sut.initialize(context),
-                  throwsA(isA<ProviderNotFoundException>()));
-              return const SizedBox();
-            },
-          ),
+        const MaterialApp(
+          home: SizedBox(key: Key('init-host')),
         ),
       );
+
+      final context = tester.element(find.byKey(const Key('init-host')));
+      expect(() => sut.initialize(context),
+          throwsA(isA<ProviderNotFoundException>()));
     });
 
     testWidgets(
@@ -67,18 +65,21 @@ void main() {
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Builder(
-              builder: (context) {
-                sut.initialize(context);
-                return const SizedBox();
-              },
-            ),
+            home: const SizedBox(key: Key('init-host')),
           ),
         ),
       );
 
+      final context = tester.element(find.byKey(const Key('init-host')));
+      sut.initialize(context);
+
       expect(sut.state.preferences, isNotEmpty);
       await tester.pumpAndSettle();
+
+      databaseService.dispose();
+      settingsService.dispose();
+      clipboardService.dispose();
+      aiAnalysisDbService.dispose();
     });
   });
 
