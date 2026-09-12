@@ -296,7 +296,10 @@ void main() {
       expect(WeatherCodeMapper.getKeyByDescription('clear'), 'clear');
       expect(WeatherCodeMapper.getKeyByDescription('partly_cloudy'),
           'partly_cloudy');
+      expect(WeatherCodeMapper.getKeyByDescription('thunderstorm_heavy'),
+          'thunderstorm_heavy');
       expect(WeatherCodeMapper.getKeyByDescription('non_existent'), isNull);
+      expect(WeatherCodeMapper.getKeyByDescription(''), isNull);
     });
 
     test('getWeatherKey maps WMO weather codes correctly', () {
