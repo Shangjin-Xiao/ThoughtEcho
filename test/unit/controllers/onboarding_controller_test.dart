@@ -91,6 +91,73 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late OnboardingController sut;
 
+  group('OnboardingController initialize', () {
+    setUp(() async {
+      await TestHarness.initialize();
+      sut = OnboardingController();
+    });
+
+    tearDown(() {
+      sut.dispose();
+    });
+
+    testWidgets(
+        'throws ProviderNotFoundException when required providers are missing',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SizedBox(key: Key('init-host')),
+        ),
+      );
+
+      final context = tester.element(find.byKey(const Key('init-host')));
+      expect(() => sut.initialize(context),
+          throwsA(isA<ProviderNotFoundException>()));
+    });
+
+    testWidgets(
+        'initializes successfully when all required providers exist in context',
+        (tester) async {
+      final databaseService = DatabaseService();
+      final settingsService = await SettingsService.create();
+      final mmkvService = MMKVService();
+      final clipboardService = ClipboardService();
+      final aiAnalysisDbService = AIAnalysisDatabaseService();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DatabaseService>.value(
+                value: databaseService),
+            ChangeNotifierProvider<SettingsService>.value(
+                value: settingsService),
+            Provider<MMKVService>.value(value: mmkvService),
+            ChangeNotifierProvider<ClipboardService>.value(
+                value: clipboardService),
+            ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
+                value: aiAnalysisDbService),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const SizedBox(key: Key('init-host')),
+          ),
+        ),
+      );
+
+      final context = tester.element(find.byKey(const Key('init-host')));
+      sut.initialize(context);
+
+      expect(sut.state.preferences, isNotEmpty);
+      await tester.pumpAndSettle();
+
+      databaseService.dispose();
+      settingsService.dispose();
+      clipboardService.dispose();
+      aiAnalysisDbService.dispose();
+    });
+  });
+
   group('OnboardingController locale preference linkage', () {
     setUp(() async {
       await TestHarness.initialize();
