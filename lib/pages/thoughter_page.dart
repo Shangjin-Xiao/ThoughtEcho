@@ -35,6 +35,7 @@ import '../services/agent_tool.dart'
     show AgentFailureType, AgentRequestException, AgentResponse;
 import '../models/note_proposal_artifact.dart';
 import '../services/ai_service.dart';
+import '../services/agent_tools/ask_user_tool.dart';
 import '../services/agent_tools/propose_note_edit_tool.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
@@ -54,6 +55,7 @@ import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/ai/agent_memory_notice.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
+import '../widgets/ai/ask_user_card.dart';
 import '../widgets/ai/experimental_badge.dart';
 import '../widgets/ai/note_proposal_card.dart';
 import '../widgets/ai/thinking_widget.dart';
@@ -174,6 +176,8 @@ class _ThoughterPageState extends State<ThoughterPage>
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
   StreamSubscription<AgentEvent>? _agentEventSubscription;
+  Completer<AskUserResponse>? _pendingAskUserCompleter;
+  String? _pendingAskUserMessageId;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
   /// 流式文本 UI 的刷新间隔上限：一个窗口内最多落地一次。
@@ -545,6 +549,12 @@ class _ThoughterPageState extends State<ThoughterPage>
     _cancelStreamUpdate();
     _cancelToolProgressUpdate();
     _agentStatusDismissTimer?.cancel();
+    if (_pendingAskUserCompleter != null &&
+        !_pendingAskUserCompleter!.isCompleted) {
+      _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
+      _pendingAskUserCompleter = null;
+    }
+    _pendingAskUserMessageId = null;
     _finishLoading();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

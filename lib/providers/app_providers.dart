@@ -25,6 +25,7 @@ import '../services/openai_stream_service.dart';
 import '../services/agent_memory_service.dart';
 import '../services/agent_service.dart';
 import '../services/agent_tool.dart';
+import '../services/agent_tools/ask_user_tool.dart';
 import '../services/agent_tools/explore_notes_tool.dart';
 import '../services/agent_tools/get_app_context_tool.dart';
 import '../services/agent_tools/get_note_detail_tool.dart';
@@ -63,6 +64,7 @@ List<AgentTool> _buildAgentTools(
     RememberTool(memoryService),
     RecallTool(memoryService),
     SessionSearchTool(chatSessionService),
+    AskUserTool(),
   ];
 }
 

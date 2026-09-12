@@ -264,6 +264,46 @@ extension _ThoughterAgent on _ThoughterPageState {
       });
       _agentEventSubscription = eventSubscription;
 
+      _agentService.setAskUserHandler((request) async {
+        if (!mounted || requestGeneration != _agentRequestGeneration) {
+          return AskUserResponse.cancelled();
+        }
+        final completer = Completer<AskUserResponse>();
+        _pendingAskUserCompleter = completer;
+
+        final msgId = _uuid.v4();
+        _pendingAskUserMessageId = msgId;
+
+        final askMsg = app_chat.ChatMessage(
+          id: msgId,
+          role: 'assistant',
+          isUser: false,
+          content: request.question,
+          timestamp: DateTime.now(),
+          metaJson: jsonEncode({
+            'type': 'ask_user',
+            'toolCallId': request.toolCallId,
+            'question': request.question,
+            'header': request.header,
+            'options': request.options,
+            'multiSelect': request.multiSelect,
+            'isCompleted': false,
+            'isCancelled': false,
+            'selectedOptions': <String>[],
+            'customText': null,
+          }),
+        );
+
+        _setState(() => _messages.add(askMsg));
+        _scrollToBottom();
+
+        if (_currentSessionId != null) {
+          unawaited(_chatSessionService.addMessage(_currentSessionId!, askMsg));
+        }
+
+        return completer.future;
+      });
+
       final response = await _agentService.runAgent(
         userMessage: text,
         history: history,
@@ -382,6 +422,13 @@ extension _ThoughterAgent on _ThoughterPageState {
         _agentEventSubscription = null;
       }
       if (mounted && requestGeneration == _agentRequestGeneration) {
+        _agentService.setAskUserHandler(null);
+        if (_pendingAskUserCompleter != null &&
+            !_pendingAskUserCompleter!.isCompleted) {
+          _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
+          _pendingAskUserCompleter = null;
+        }
+        _pendingAskUserMessageId = null;
         _cancelStreamUpdate();
         _cancelToolProgressUpdate();
         if (toolProgressMsgId != null) {
@@ -488,6 +535,7 @@ extension _ThoughterAgent on _ThoughterPageState {
           ? l10n.agentWebSearching
           : l10n.agentSearchingWebForQuery(query),
       'web_fetch' => l10n.agentReadingWebPage,
+      'ask_user' => l10n.agentAskingUser,
       _ => l10n.agentToolCall(toolName),
     };
   }
@@ -497,6 +545,9 @@ extension _ThoughterAgent on _ThoughterPageState {
     String toolName,
     Map<String, Object?> args,
   ) {
+    if (toolName == 'ask_user') {
+      return args['question']?.toString() ?? '';
+    }
     if ((toolName == 'explore_notes' || toolName == 'search_notes') &&
         args.containsKey('query')) {
       return '';
@@ -574,6 +625,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         l10n.agentPreparedSuggestionCard,
       'remember' => _summarizeRememberResult(l10n, trimmed),
       'recall' => _summarizeRecallResult(l10n, trimmed),
+      'ask_user' => trimmed,
       _ => l10n.agentToolStepFinished,
     };
   }
@@ -712,6 +764,74 @@ extension _ThoughterAgent on _ThoughterPageState {
       content: AiSmartResultUtils.proposalAdoptionNotice(savedNoteId),
       timestamp: DateTime.now(),
     );
+  }
+
+  void _handleAskUserSubmit(
+    String messageId,
+    Map<String, dynamic> meta, {
+    required List<String> selectedOptions,
+    String? customText,
+  }) {
+    final updatedMeta = {
+      ...meta,
+      'isCompleted': true,
+      'isCancelled': false,
+      'selectedOptions': selectedOptions,
+      'customText': customText,
+    };
+    _setState(() {
+      final idx = _messages.indexWhere((m) => m.id == messageId);
+      if (idx != -1) {
+        final updated = _messages[idx].copyWith(
+          metaJson: jsonEncode(updatedMeta),
+        );
+        _messages[idx] = updated;
+        if (_currentSessionId != null) {
+          unawaited(
+            _chatSessionService.addMessage(_currentSessionId!, updated),
+          );
+        }
+      }
+    });
+    if (_pendingAskUserCompleter != null &&
+        !_pendingAskUserCompleter!.isCompleted) {
+      _pendingAskUserCompleter!.complete(
+        AskUserResponse(
+          selectedOptions: selectedOptions,
+          customText: customText,
+        ),
+      );
+      _pendingAskUserCompleter = null;
+    }
+    _pendingAskUserMessageId = null;
+  }
+
+  void _handleAskUserCancel(String messageId, Map<String, dynamic> meta) {
+    final updatedMeta = {
+      ...meta,
+      'isCompleted': true,
+      'isCancelled': true,
+    };
+    _setState(() {
+      final idx = _messages.indexWhere((m) => m.id == messageId);
+      if (idx != -1) {
+        final updated = _messages[idx].copyWith(
+          metaJson: jsonEncode(updatedMeta),
+        );
+        _messages[idx] = updated;
+        if (_currentSessionId != null) {
+          unawaited(
+            _chatSessionService.addMessage(_currentSessionId!, updated),
+          );
+        }
+      }
+    });
+    if (_pendingAskUserCompleter != null &&
+        !_pendingAskUserCompleter!.isCompleted) {
+      _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
+      _pendingAskUserCompleter = null;
+    }
+    _pendingAskUserMessageId = null;
   }
 
   /// 解析由成功的 Agent 工具调用生成的建议卡片。

@@ -17,6 +17,12 @@ abstract class AgentTool {
   /// 并发安全工具可在同一轮中与其他只读工具并发执行。
   bool get isConcurrencySafe => false;
 
+  /// 交互式工具需要等待用户输入，不适用常规单工具超时。
+  bool get isInteractive => false;
+
+  /// 取消当前正在执行的操作（如有挂起的交互式请求）。
+  void cancel() {}
+
   Map<String, Object?> get parametersSchema;
 
   Future<ToolResult> execute(ToolCall toolCall);

@@ -444,6 +444,51 @@ extension _ThoughterUI on _ThoughterPageState {
                 },
               ),
             );
+          case 'ask_user':
+            final question = meta['question'] as String? ?? '';
+            final header = meta['header'] as String?;
+            final rawOptions = meta['options'] as List<dynamic>? ?? [];
+            final options = rawOptions.map((e) => e.toString()).toList();
+            final multiSelect = meta['multiSelect'] as bool? ?? false;
+            final isCompleted = meta['isCompleted'] as bool? ?? false;
+            final isCancelled = meta['isCancelled'] as bool? ?? false;
+            final rawSelected = meta['selectedOptions'] as List<dynamic>? ?? [];
+            final selectedOptions =
+                rawSelected.map((e) => e.toString()).toList();
+            final customText = meta['customText'] as String?;
+
+            final isCurrentPending = !isCompleted &&
+                _pendingAskUserCompleter != null &&
+                !_pendingAskUserCompleter!.isCompleted &&
+                _pendingAskUserMessageId == message.id;
+            final effectiveCompleted =
+                isCompleted || (!isCurrentPending && !_isLoading);
+
+            return Padding(
+              padding: _kCardMessageInsets,
+              child: AskUserCard(
+                key: ValueKey('ask_user_${message.id}'),
+                question: question,
+                header: header,
+                options: options,
+                multiSelect: multiSelect,
+                isCompleted: effectiveCompleted,
+                isCancelled: isCancelled,
+                selectedOptions: selectedOptions,
+                customText: customText,
+                onSubmit: ({required selectedOptions, customText}) {
+                  _handleAskUserSubmit(
+                    message.id,
+                    meta,
+                    selectedOptions: selectedOptions,
+                    customText: customText,
+                  );
+                },
+                onCancel: () {
+                  _handleAskUserCancel(message.id, meta);
+                },
+              ),
+            );
           case 'notice':
             return Padding(
               padding: _kCardMessageInsets,
