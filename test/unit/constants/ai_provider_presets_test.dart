@@ -23,6 +23,20 @@ void main() {
       expect(preset.defaultModel, isNotEmpty);
     });
 
+    test('Gemini uses the current flash model and ordered fallbacks', () {
+      final preset = AIProviderPresets.byId('gemini')!;
+
+      expect(preset.defaultModel, 'gemini-3.8-flash');
+      expect(preset.suggestedModels, [
+        'gemini-3.8-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-3.6-flash',
+        'gemini-2.5-flash',
+      ]);
+      expect(preset.suggestedModels.first, preset.defaultModel);
+      expect(preset.suggestedModels.toSet(), hasLength(4));
+    });
+
     test('every cloud preset requires a key and links to its console', () {
       for (final preset in AIProviderPresets.ofKind(AIPresetKind.cloud)) {
         expect(preset.requiresApiKey, isTrue, reason: preset.id);

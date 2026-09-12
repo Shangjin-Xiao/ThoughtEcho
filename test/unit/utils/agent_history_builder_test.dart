@@ -204,6 +204,76 @@ void main() {
       expect(content, contains('提案内容预览: 本文档记录模型层与持久化层的边界设计。'));
     });
 
+    test('已保存但缺少 artifact 的提案仍保留采纳结果', () {
+      final savedProposal = ChatMessage(
+        id: 'saved-proposal',
+        role: 'assistant',
+        isUser: false,
+        content: '',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'note_proposal',
+          'saved_note_id': ' note-99 ',
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([savedProposal]);
+
+      expect(history, hasLength(1));
+      expect(history.single.id, 'saved-proposal_proposal');
+      expect(history.single.role, 'assistant');
+      expect(history.single.content, contains('笔记 ID 为 note-99'));
+    });
+
+    test('提案正文与已保存摘要同时保留并支持 camelCase 类型', () {
+      final savedProposal = ChatMessage(
+        id: 'saved-with-content',
+        role: 'assistant',
+        isUser: false,
+        content: '这是上一轮给用户的说明。',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'noteProposal',
+          'saved_note_id': 'note-100',
+          'artifact': {
+            'proposal_title': '保存后的标题',
+            'reason': '用户确认采用',
+          },
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([savedProposal]);
+
+      expect(
+        history.single.content,
+        startsWith('这是上一轮给用户的说明。\n\n[已采纳并保存的笔记提案]'),
+      );
+      expect(history.single.content, contains('笔记 ID: note-100'));
+      expect(history.single.content, contains('标题: 保存后的标题'));
+      expect(history.single.content, contains('说明: 用户确认采用'));
+    });
+
+    test('待确认提案预览最多保留 200 字符并标记截断', () {
+      final proposal = ChatMessage(
+        id: 'long-proposal',
+        role: 'assistant',
+        isUser: false,
+        content: '',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'note_proposal',
+          'artifact': {
+            'content': '${'预' * 200}不应出现',
+          },
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([proposal]);
+
+      expect(history.single.content, contains('提案内容预览: ${'预' * 200}...'));
+      expect(history.single.content, isNot(contains('不应出现')));
+    });
+
     test('跳过 system 消息、加载中消息和空消息', () {
       final history = AgentHistoryBuilder.build([
         _text('system', '你是助手'),
