@@ -1263,10 +1263,16 @@ class WebDAVSyncService extends ChangeNotifier {
         continue;
       }
 
-      if (_shouldUploadMediaFile(stdPath, fileLen, remoteMediaFiles)) {
+      if (await _shouldUploadMediaFile(
+        stdPath,
+        fileLen,
+        remoteMediaFiles,
+        file: file,
+        remoteEtag: remoteMediaEtags[stdPath],
+      )) {
         final remoteSize = remoteMediaFiles[stdPath];
         final reason = remoteMediaFiles.containsKey(stdPath)
-            ? '远端大小不一致，本地=$fileLen, 远端=$remoteSize'
+            ? '远端大小不一致或哈希不匹配，本地=$fileLen, 远端=$remoteSize'
             : '远端不存在';
         logDebug('上传本地附件到云端: $stdPath ($reason)');
         final uploadUrl =
@@ -1567,11 +1573,13 @@ class WebDAVSyncService extends ChangeNotifier {
     return null;
   }
 
-  static bool _shouldUploadMediaFile(
+  static Future<bool> _shouldUploadMediaFile(
     String stdPath,
     int localSize,
-    Map<String, int?> remoteMediaFiles,
-  ) {
+    Map<String, int?> remoteMediaFiles, {
+    File? file,
+    String? remoteEtag,
+  }) async {
     if (!remoteMediaFiles.containsKey(stdPath)) return true;
 
     final remoteSize = remoteMediaFiles[stdPath];
@@ -1579,10 +1587,27 @@ class WebDAVSyncService extends ChangeNotifier {
     // 按「可能不一致」处理并重传，宁可多传一次也不留下漏同步的媒体文件。
     if (remoteSize == null) return true;
 
-    // TODO(media-sync): 当前仅以文件大小作为差异判断依据（历史设计）。
-    // 文件大小相同但内容不同的媒体文件（如相同尺寸的不同图片）会漏同步。
-    // 后续可引入 MD5/SHA1 内容哈希或 ETag 校验作为更精确的对比手段。
-    return remoteSize != localSize;
+    if (remoteSize != localSize) return true;
+
+    // 文件大小相同时，若远端提供了 ETag/Hash，通过内容哈希进一步比对
+    final cleanEtag = _cleanHashString(remoteEtag)?.toLowerCase();
+    if (cleanEtag != null && file != null && await file.exists()) {
+      if (cleanEtag.length == 64 &&
+          RegExp(r'^[0-9a-f]{64}$').hasMatch(cleanEtag)) {
+        final digest = await sha256.bind(file.openRead()).first;
+        if (digest.toString().toLowerCase() != cleanEtag) return true;
+      } else if (cleanEtag.length == 40 &&
+          RegExp(r'^[0-9a-f]{40}$').hasMatch(cleanEtag)) {
+        final digest = await sha1.bind(file.openRead()).first;
+        if (digest.toString().toLowerCase() != cleanEtag) return true;
+      } else if (cleanEtag.length == 32 &&
+          RegExp(r'^[0-9a-f]{32}$').hasMatch(cleanEtag)) {
+        final digest = await md5.bind(file.openRead()).first;
+        if (digest.toString().toLowerCase() != cleanEtag) return true;
+      }
+    }
+
+    return false;
   }
 
   static String? _mediaFolderFromRelativePath(String stdPath) {
@@ -1615,12 +1640,20 @@ class WebDAVSyncService extends ChangeNotifier {
   }
 
   @visibleForTesting
-  static bool shouldUploadMediaFileForTesting(
+  static Future<bool> shouldUploadMediaFileForTesting(
     String stdPath,
     int localSize,
-    Map<String, int?> remoteMediaFiles,
-  ) {
-    return _shouldUploadMediaFile(stdPath, localSize, remoteMediaFiles);
+    Map<String, int?> remoteMediaFiles, {
+    File? file,
+    String? remoteEtag,
+  }) {
+    return _shouldUploadMediaFile(
+      stdPath,
+      localSize,
+      remoteMediaFiles,
+      file: file,
+      remoteEtag: remoteEtag,
+    );
   }
 
   @visibleForTesting

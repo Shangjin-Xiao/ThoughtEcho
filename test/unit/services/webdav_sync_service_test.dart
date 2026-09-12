@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -307,14 +309,15 @@ void main() {
     );
   });
 
-  test('WebDAV media upload decision should skip files already on remote', () {
+  test('WebDAV media upload decision should skip files already on remote',
+      () async {
     final remoteMediaFiles = {
       'images/existing.png': 1024,
       'videos/no_size.mp4': null,
     };
 
     expect(
-      WebDAVSyncService.shouldUploadMediaFileForTesting(
+      await WebDAVSyncService.shouldUploadMediaFileForTesting(
         'images/existing.png',
         1024,
         remoteMediaFiles,
@@ -324,7 +327,7 @@ void main() {
     // 远端存在但没报出大小时无从比较，必须按「可能不一致」重传，
     // 否则服务端不返回 getcontentlength 的场景下媒体文件会永远漏同步。
     expect(
-      WebDAVSyncService.shouldUploadMediaFileForTesting(
+      await WebDAVSyncService.shouldUploadMediaFileForTesting(
         'videos/no_size.mp4',
         2048,
         remoteMediaFiles,
@@ -332,7 +335,7 @@ void main() {
       isTrue,
     );
     expect(
-      WebDAVSyncService.shouldUploadMediaFileForTesting(
+      await WebDAVSyncService.shouldUploadMediaFileForTesting(
         'images/existing.png',
         512,
         remoteMediaFiles,
@@ -340,13 +343,85 @@ void main() {
       isTrue,
     );
     expect(
-      WebDAVSyncService.shouldUploadMediaFileForTesting(
+      await WebDAVSyncService.shouldUploadMediaFileForTesting(
         'audios/new.mp3',
         256,
         remoteMediaFiles,
       ),
       isTrue,
     );
+  });
+
+  test(
+      'WebDAV media upload decision should check content hash when size matches',
+      () async {
+    final tempDir = await Directory.systemTemp.createTemp('webdav_hash_test_');
+    try {
+      final file = File('${tempDir.path}/test_image.png');
+      await file.writeAsString('Hello World!'); // 12 bytes
+      final size = await file.length();
+
+      // MD5 of 'Hello World!' is ed076287532e86365e841e92bfc50d8c
+      const correctMd5 = 'ed076287532e86365e841e92bfc50d8c';
+      const wrongMd5 = '00000000000000000000000000000000';
+
+      final Map<String, int?> remoteMediaFiles = {
+        'images/test_image.png': size
+      };
+
+      // 1. MD5 匹配 -> 跳过上传 (false)
+      expect(
+        await WebDAVSyncService.shouldUploadMediaFileForTesting(
+          'images/test_image.png',
+          size,
+          remoteMediaFiles,
+          file: file,
+          remoteEtag: '"$correctMd5"',
+        ),
+        isFalse,
+      );
+
+      // 2. MD5 不匹配 -> 触发上传 (true)
+      expect(
+        await WebDAVSyncService.shouldUploadMediaFileForTesting(
+          'images/test_image.png',
+          size,
+          remoteMediaFiles,
+          file: file,
+          remoteEtag: wrongMd5,
+        ),
+        isTrue,
+      );
+
+      // 3. SHA-1 of 'Hello World!' is 2ef7bde608ce5404e97d5f042f95f89f1c232871
+      const correctSha1 = '2ef7bde608ce5404e97d5f042f95f89f1c232871';
+      expect(
+        await WebDAVSyncService.shouldUploadMediaFileForTesting(
+          'images/test_image.png',
+          size,
+          remoteMediaFiles,
+          file: file,
+          remoteEtag: correctSha1,
+        ),
+        isFalse,
+      );
+
+      // 4. SHA-256 of 'Hello World!' is 7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
+      const correctSha256 =
+          '7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069';
+      expect(
+        await WebDAVSyncService.shouldUploadMediaFileForTesting(
+          'images/test_image.png',
+          size,
+          remoteMediaFiles,
+          file: file,
+          remoteEtag: 'W/"$correctSha256"',
+        ),
+        isFalse,
+      );
+    } finally {
+      await tempDir.delete(recursive: true);
+    }
   });
 
   test('WebDAV media folder helper should only classify synced folders', () {
