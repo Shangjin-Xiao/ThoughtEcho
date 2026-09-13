@@ -103,6 +103,8 @@ class NominatimPlaceSearchService implements PlaceSearchService {
 
   NetworkService get _network => _networkService ?? NetworkService.instance;
 
+  final Set<String> _seenPlaceIds = <String>{};
+
   @override
   Future<List<PlaceInfo>> searchNearby(
     double latitude,
@@ -195,6 +197,10 @@ class NominatimPlaceSearchService implements PlaceSearchService {
     try {
       await _throttle();
 
+      if (offset == 0) {
+        _seenPlaceIds.clear();
+      }
+
       final queryParams = <String, String>{
         'format': 'json',
         'addressdetails': '1',
@@ -207,6 +213,9 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       };
       if (offset > 0) {
         queryParams['offset'] = '$offset';
+      }
+      if (_seenPlaceIds.isNotEmpty) {
+        queryParams['exclude_place_ids'] = _seenPlaceIds.join(',');
       }
 
       final trimmed = categoryOrKeyword?.trim() ?? '';
@@ -232,11 +241,11 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       );
 
       if (response.statusCode != 200) {
-        logDebug(
+        logWarning(
           'Nominatim 附近候选地点搜索返回 ${response.statusCode}',
           source: 'PlaceSearchService',
         );
-        return const [];
+        throw Exception('Nominatim 附近候选地点搜索失败 (HTTP ${response.statusCode})');
       }
 
       final decoded = json.decode(response.body);
@@ -245,6 +254,10 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       final places = <PlaceInfo>[];
       for (final item in decoded) {
         if (item is! Map) continue;
+        final placeId = item['place_id']?.toString();
+        if (placeId != null && placeId.isNotEmpty) {
+          _seenPlaceIds.add(placeId);
+        }
         final place = _toPlace(item, latitude, longitude);
         if (place != null && (place.distanceMeters ?? 0) <= 5000) {
           places.add(place);
@@ -257,14 +270,12 @@ class NominatimPlaceSearchService implements PlaceSearchService {
         ),
       );
       return places;
-    } catch (e, stack) {
-      logError(
-        '附近候选地点搜索失败',
-        error: e,
-        stackTrace: stack,
+    } catch (e) {
+      logWarning(
+        '附近候选地点搜索失败: $e',
         source: 'PlaceSearchService',
       );
-      return const [];
+      rethrow;
     }
   }
 

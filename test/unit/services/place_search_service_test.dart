@@ -263,14 +263,40 @@ void main() {
       expect(params['q'], '西湖区');
     });
 
-    test('请求失败时优雅降级为空列表，不向上抛出异常', () async {
+    test('请求失败时抛出异常，让调用方展示重试横幅', () async {
       final network = _FakeNetworkService(
         _jsonResponse(const [], statusCode: 500),
       );
       final service = NominatimPlaceSearchService(networkService: network);
 
-      final results = await service.getNearbyPlaces(refLat, refLon);
-      expect(results, isEmpty);
+      expect(
+        () => service.getNearbyPlaces(refLat, refLon),
+        throwsException,
+      );
+    });
+
+    test('分页时记录并传递 exclude_place_ids 避免重复返回第一页', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'place_id': 12345,
+            'name': '近处的书店',
+            'lat': '39.9142',
+            'lon': '116.4074',
+            'type': 'shop',
+            'address': {'shop': '近处的书店'},
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      // 第一页抓取
+      await service.getNearbyPlaces(refLat, refLon, offset: 0);
+
+      // 第二页抓取，应带上第一页的 place_id
+      await service.getNearbyPlaces(refLat, refLon, offset: 1);
+      final params = network.lastUri!.queryParameters;
+      expect(params['exclude_place_ids'], contains('12345'));
     });
   });
 }

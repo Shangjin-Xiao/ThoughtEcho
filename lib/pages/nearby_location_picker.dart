@@ -222,6 +222,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       }
     }
 
+    if (!mounted) return;
     _fetchNearbyPlaces(isLoadMore: false);
   }
 
@@ -237,6 +238,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   Future<void> _fetchNearbyPlaces({required bool isLoadMore}) async {
+    if (!mounted) return;
     if (_deviceLatitude == null || _deviceLongitude == null) return;
     if (isLoadMore) {
       if (_isLoadingMore || !_hasMore) return;
@@ -274,11 +276,12 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       final validPlaces =
           results.where((p) => (p.distanceMeters ?? 0) <= 5000).toList();
 
-      final existingNames = _places.map((p) => p.name).toSet();
+      String placeKey(PlaceInfo p) =>
+          '${p.name}|${p.latitude.toStringAsFixed(4)}|${p.longitude.toStringAsFixed(4)}';
+      final existingKeys = _places.map(placeKey).toSet();
       final List<PlaceInfo> newUnique = [];
       for (final p in validPlaces) {
-        if (!existingNames.contains(p.name)) {
-          existingNames.add(p.name);
+        if (existingKeys.add(placeKey(p))) {
           newUnique.add(p);
         }
       }
