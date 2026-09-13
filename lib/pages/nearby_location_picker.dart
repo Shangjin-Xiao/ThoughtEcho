@@ -76,6 +76,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   bool _isLocating = true;
   bool _locatingFailed = false;
 
+  bool _isConfirming = false;
+  int _confirmEpoch = 0;
+
   final List<PlaceInfo> _places = [];
   bool _isLoadingPlaces = false;
   bool _isLoadingMore = false;
@@ -327,83 +330,101 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   Future<void> _confirmSelection({PlaceInfo? place}) async {
-    if (_customSelectedPoiName != null &&
-        _customSelectedPoiName == widget.initialPoiName &&
-        (place == null ||
-            (place.name == widget.initialPoiName &&
-                place.latitude == widget.initialLatitude &&
-                place.longitude == widget.initialLongitude))) {
-      // 意图保留初始 POI（经纬度与名称均一致，或无明确点选列表项时点击确认）
-      Navigator.of(context).pop(
-        LocationPickerResult(
-          latitude: widget.initialLatitude ??
-              _customSelectedLatitude ??
-              _deviceLatitude!,
-          longitude: widget.initialLongitude ??
-              _customSelectedLongitude ??
-              _deviceLongitude!,
-          location: widget.initialLocation,
-          poiName: widget.initialPoiName,
-        ),
-      );
-    } else if (place != null) {
-      // 用户从列表中点选了候选 POI：
-      // 行政区必须为合规的四级结构串（国家,省份,城市,区县），不能直接保存街道门牌展示串。
-      // 若与设备定位同坐标，复用设备行政区串；否则若提供反查服务则尝试反查行政区，
-      // 无法反查时设为 null（保存退回坐标/地名），杜绝写入非标准格式。
-      String? adminLocation;
-      if (place.latitude == _deviceLatitude &&
-          place.longitude == _deviceLongitude) {
-        adminLocation = _deviceLocationString;
-      } else if (_locationService != null) {
-        try {
-          final rev = await _locationService!
-              .reverseGeocodePoint(place.latitude, place.longitude);
-          adminLocation = LocationService.buildStorageLocation(rev);
-        } catch (_) {
-          adminLocation = null;
+    if (_isConfirming) return;
+    final epoch = ++_confirmEpoch;
+    setState(() {
+      _isConfirming = true;
+    });
+
+    try {
+      if (_customSelectedPoiName != null &&
+          _customSelectedPoiName == widget.initialPoiName &&
+          (place == null ||
+              (place.name == widget.initialPoiName &&
+                  place.latitude == widget.initialLatitude &&
+                  place.longitude == widget.initialLongitude))) {
+        // 意图保留初始 POI（经纬度与名称均一致，或无明确点选列表项时点击确认）
+        if (!mounted || epoch != _confirmEpoch) return;
+        Navigator.of(context).pop(
+          LocationPickerResult(
+            latitude: widget.initialLatitude ??
+                _customSelectedLatitude ??
+                _deviceLatitude!,
+            longitude: widget.initialLongitude ??
+                _customSelectedLongitude ??
+                _deviceLongitude!,
+            location: widget.initialLocation,
+            poiName: widget.initialPoiName,
+          ),
+        );
+      } else if (place != null) {
+        // 用户从列表中点选了候选 POI：
+        // 行政区必须为合规的四级结构串（国家,省份,城市,区县），不能直接保存街道门牌展示串。
+        // 若与设备定位同坐标，复用设备行政区串；否则若提供反查服务则尝试反查行政区，
+        // 无法反查时设为 null（保存退回坐标/地名），杜绝写入非标准格式。
+        String? adminLocation;
+        if (place.latitude == _deviceLatitude &&
+            place.longitude == _deviceLongitude) {
+          adminLocation = _deviceLocationString;
+        } else if (_locationService != null) {
+          try {
+            final rev = await _locationService!
+                .reverseGeocodePoint(place.latitude, place.longitude);
+            adminLocation = LocationService.buildStorageLocation(rev);
+          } catch (_) {
+            adminLocation = null;
+          }
         }
+        if (!mounted || epoch != _confirmEpoch) return;
+        Navigator.of(context).pop(
+          LocationPickerResult(
+            latitude: place.latitude,
+            longitude: place.longitude,
+            location: adminLocation,
+            poiName: place.name,
+          ),
+        );
+      } else if (_systemSelected) {
+        // 选中当前设备位置（离线反查失败时保留精确经纬度）
+        if (!mounted || epoch != _confirmEpoch) return;
+        Navigator.of(context).pop(
+          LocationPickerResult(
+            latitude: _deviceLatitude!,
+            longitude: _deviceLongitude!,
+            location: _deviceLocationString,
+            poiName: _devicePoiName,
+          ),
+        );
+      } else if (_customSelectedPoiName != null &&
+          _customSelectedLatitude != null &&
+          _customSelectedLongitude != null) {
+        // 保留原本选中的候选 POI
+        if (!mounted || epoch != _confirmEpoch) return;
+        Navigator.of(context).pop(
+          LocationPickerResult(
+            latitude: _customSelectedLatitude!,
+            longitude: _customSelectedLongitude!,
+            location: widget.initialLocation,
+            poiName: _customSelectedPoiName,
+          ),
+        );
+      } else {
+        if (!mounted || epoch != _confirmEpoch) return;
+        Navigator.of(context).pop(
+          LocationPickerResult(
+            latitude: _deviceLatitude!,
+            longitude: _deviceLongitude!,
+            location: _deviceLocationString,
+            poiName: _devicePoiName,
+          ),
+        );
       }
-      if (!mounted) return;
-      Navigator.of(context).pop(
-        LocationPickerResult(
-          latitude: place.latitude,
-          longitude: place.longitude,
-          location: adminLocation,
-          poiName: place.name,
-        ),
-      );
-    } else if (_systemSelected) {
-      // 选中当前设备位置（离线反查失败时保留精确经纬度）
-      Navigator.of(context).pop(
-        LocationPickerResult(
-          latitude: _deviceLatitude!,
-          longitude: _deviceLongitude!,
-          location: _deviceLocationString,
-          poiName: _devicePoiName,
-        ),
-      );
-    } else if (_customSelectedPoiName != null &&
-        _customSelectedLatitude != null &&
-        _customSelectedLongitude != null) {
-      // 保留原本选中的候选 POI
-      Navigator.of(context).pop(
-        LocationPickerResult(
-          latitude: _customSelectedLatitude!,
-          longitude: _customSelectedLongitude!,
-          location: widget.initialLocation,
-          poiName: _customSelectedPoiName,
-        ),
-      );
-    } else {
-      Navigator.of(context).pop(
-        LocationPickerResult(
-          latitude: _deviceLatitude!,
-          longitude: _deviceLongitude!,
-          location: _deviceLocationString,
-          poiName: _devicePoiName,
-        ),
-      );
+    } finally {
+      if (mounted && epoch == _confirmEpoch) {
+        setState(() {
+          _isConfirming = false;
+        });
+      }
     }
   }
 
@@ -418,9 +439,17 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         actions: [
           IconButton(
             key: const ValueKey('nearby_picker_confirm_button'),
-            icon: const Icon(Icons.check),
+            icon: _isConfirming
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: AppInlineLoadingIndicator(size: 16),
+                  )
+                : const Icon(Icons.check),
             tooltip: l10n.mapPickerConfirm,
-            onPressed: (_deviceLatitude == null || _deviceLongitude == null)
+            onPressed: (_isConfirming ||
+                    _deviceLatitude == null ||
+                    _deviceLongitude == null)
                 ? null
                 : () => _confirmSelection(
                       place: _systemSelected ? null : _selectedPlace,
@@ -433,8 +462,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   Widget _buildBody(ThemeData theme, AppLocalizations l10n) {
+    final Widget content;
     if (_isLocating) {
-      return Center(
+      content = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -449,11 +479,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           ],
         ),
       );
-    }
-
-    if (_locatingFailed &&
+    } else if (_locatingFailed &&
         (_deviceLatitude == null || _deviceLongitude == null)) {
-      return Center(
+      content = Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -480,45 +508,51 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           ),
         ),
       );
+    } else {
+      content = ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: 1 +
+            (_placesError ? 1 : 0) +
+            _places.length +
+            (_isLoadingPlaces || _isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          // 第 0 项：设备当前系统定位，永远可用
+          if (index == 0) {
+            return _buildSystemLocationTile(theme, l10n);
+          }
+
+          var offsetIndex = index - 1;
+
+          // 在线服务错误提示条目（附轻量重试按钮）
+          if (_placesError) {
+            if (offsetIndex == 0) {
+              return _buildErrorBanner(theme, l10n);
+            }
+            offsetIndex--;
+          }
+
+          // 候选 POI 列表
+          if (offsetIndex < _places.length) {
+            final place = _places[offsetIndex];
+            return _buildPlaceTile(theme, l10n, place);
+          }
+
+          // 底部加载更多指示器
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(
+              child: AppInlineLoadingIndicator(),
+            ),
+          );
+        },
+      );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: 1 +
-          (_placesError ? 1 : 0) +
-          _places.length +
-          (_isLoadingPlaces || _isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        // 第 0 项：设备当前系统定位，永远可用
-        if (index == 0) {
-          return _buildSystemLocationTile(theme, l10n);
-        }
-
-        var offsetIndex = index - 1;
-
-        // 在线服务错误提示条目（附轻量重试按钮）
-        if (_placesError) {
-          if (offsetIndex == 0) {
-            return _buildErrorBanner(theme, l10n);
-          }
-          offsetIndex--;
-        }
-
-        // 候选 POI 列表
-        if (offsetIndex < _places.length) {
-          final place = _places[offsetIndex];
-          return _buildPlaceTile(theme, l10n, place);
-        }
-
-        // 底部加载更多指示器
-        return const Padding(
-          padding: EdgeInsets.all(16),
-          child: Center(
-            child: AppInlineLoadingIndicator(),
-          ),
-        );
-      },
+    return AbsorbPointer(
+      key: const ValueKey('nearby_picker_body_absorb_pointer'),
+      absorbing: _isConfirming,
+      child: content,
     );
   }
 
@@ -569,14 +603,16 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           ? Icon(Icons.check, color: theme.colorScheme.primary)
           : null,
       selected: _systemSelected,
-      onTap: () {
-        setState(() {
-          _systemSelected = true;
-          _selectedPlace = null;
-          _customSelectedPoiName = null;
-        });
-        _confirmSelection(place: null);
-      },
+      onTap: _isConfirming
+          ? null
+          : () {
+              setState(() {
+                _systemSelected = true;
+                _selectedPlace = null;
+                _customSelectedPoiName = null;
+              });
+              _confirmSelection(place: null);
+            },
     );
   }
 
@@ -607,7 +643,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
             ),
           ),
           TextButton(
-            onPressed: () => _fetchNearbyPlaces(isLoadMore: false),
+            onPressed: _isConfirming
+                ? null
+                : () => _fetchNearbyPlaces(isLoadMore: false),
             child: Text(l10n.retry),
           ),
         ],
@@ -662,16 +700,18 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         ],
       ),
       selected: selected,
-      onTap: () {
-        setState(() {
-          _systemSelected = false;
-          _selectedPlace = place;
-          _customSelectedPoiName = place.name;
-          _customSelectedLatitude = place.latitude;
-          _customSelectedLongitude = place.longitude;
-        });
-        _confirmSelection(place: place);
-      },
+      onTap: _isConfirming
+          ? null
+          : () {
+              setState(() {
+                _systemSelected = false;
+                _selectedPlace = place;
+                _customSelectedPoiName = place.name;
+                _customSelectedLatitude = place.latitude;
+                _customSelectedLongitude = place.longitude;
+              });
+              _confirmSelection(place: place);
+            },
     );
   }
 

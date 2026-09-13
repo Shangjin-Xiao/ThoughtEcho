@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
@@ -6,6 +8,7 @@ import 'package:thoughtecho/pages/nearby_location_picker.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/place_search_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/widgets/app_loading_view.dart';
 
 import '../../test_harness.dart';
 
@@ -67,12 +70,15 @@ class _FakeLocationService extends ChangeNotifier implements LocationService {
     this.formattedLocation = '中国,北京市,北京市,东城区',
     this.poiName = '故宫博物院',
     this.reverseResult,
+    this.onReverseGeocodePoint,
   }) : _position = position ?? _mockPosition();
 
   final Position? _position;
   final String formattedLocation;
   final String? poiName;
   final Map<String, String>? reverseResult;
+  final Future<Map<String, String>?> Function(
+      double latitude, double longitude)? onReverseGeocodePoint;
 
   @override
   Position? get currentPosition => _position;
@@ -100,8 +106,12 @@ class _FakeLocationService extends ChangeNotifier implements LocationService {
   Future<Map<String, String>?> reverseGeocodePoint(
     double latitude,
     double longitude,
-  ) async =>
-      reverseResult;
+  ) async {
+    if (onReverseGeocodePoint != null) {
+      return onReverseGeocodePoint!(latitude, longitude);
+    }
+    return reverseResult;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -635,5 +645,164 @@ void main() {
     expect(selectedResult!.location, isNot(equals('上海市黄浦区')));
     expect(selectedResult!.latitude, 39.9042);
     expect(selectedResult!.longitude, 116.4074);
+  });
+
+  testWidgets('候选 POI 反查未完成期间，锁定状态生效，并发二次点选或确认按钮被禁用',
+      (WidgetTester tester) async {
+    final reverseCompleter = Completer<Map<String, String>?>();
+    int reverseCallCount = 0;
+
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '中国,北京市,北京市,东城区',
+      onReverseGeocodePoint: (lat, lon) async {
+        reverseCallCount++;
+        return reverseCompleter.future;
+      },
+    );
+
+    const placeA = PlaceInfo(
+      name: '景山公园',
+      latitude: 39.9242,
+      longitude: 116.4014,
+      address: '景山西街44号',
+      distanceMeters: 800,
+    );
+    const placeB = PlaceInfo(
+      name: '北海公园',
+      latitude: 39.9280,
+      longitude: 116.3880,
+      address: '文津街1号',
+      distanceMeters: 1200,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [placeA, placeB]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 1. 点选候选地点 A，触发反查
+    await tester.tap(find.text('景山公园'));
+    // 渲染一帧使 setState 生效
+    await tester.pump();
+
+    // 验证反查被触发
+    expect(reverseCallCount, equals(1));
+
+    // 验证 _isConfirming 处于激活状态：
+    // - AbsorbPointer 处于 absorbing 状态
+    final absorbPointer = tester.widget<AbsorbPointer>(
+      find.byKey(const ValueKey('nearby_picker_body_absorb_pointer')),
+    );
+    expect(absorbPointer.absorbing, isTrue);
+
+    // - AppBar 确认按钮处于禁用状态，且展示 AppInlineLoadingIndicator
+    final confirmButton = tester.widget<IconButton>(
+      find.byKey(const ValueKey('nearby_picker_confirm_button')),
+    );
+    expect(confirmButton.onPressed, isNull);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('nearby_picker_confirm_button')),
+        matching: find.byType(AppInlineLoadingIndicator),
+      ),
+      findsOneWidget,
+    );
+
+    // 2. 在反查等待期间，尝试并发二次点选地点 B 和系统定位项，以及点击 AppBar 确认按钮
+    await tester.tap(find.text('北海公园'), warnIfMissed: false);
+    await tester.pump();
+
+    await tester.tap(find.textContaining('故宫博物院'), warnIfMissed: false);
+    await tester.pump();
+
+    await tester.tap(
+      find.byKey(const ValueKey('nearby_picker_confirm_button')),
+      warnIfMissed: false,
+    );
+    await tester.pump();
+
+    // 确认反查调用依然只有 1 次，没有发起新的并发反查
+    expect(reverseCallCount, equals(1));
+    // 页面尚未 pop
+    expect(selectedResult, isNull);
+
+    // 3. 完成首次反查
+    reverseCompleter.complete({
+      'country': '中国',
+      'province': '北京市',
+      'city': '北京市',
+      'district': '西城区',
+    });
+    await tester.pumpAndSettle();
+
+    // 4. 验证成功返回地点 A 的结果，没有被并发点选干扰
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, equals('景山公园'));
+    expect(selectedResult!.location, equals('中国,北京市,北京市,西城区'));
+    expect(selectedResult!.latitude, equals(placeA.latitude));
+    expect(selectedResult!.longitude, equals(placeA.longitude));
+  });
+
+  testWidgets('候选 POI 反查未完成期间，页面被主动关闭（unmount），反查完成时不抛出异常且不二次 pop',
+      (WidgetTester tester) async {
+    final reverseCompleter = Completer<Map<String, String>?>();
+
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '中国,北京市,北京市,东城区',
+      onReverseGeocodePoint: (lat, lon) async => reverseCompleter.future,
+    );
+
+    const placeA = PlaceInfo(
+      name: '景山公园',
+      latitude: 39.9242,
+      longitude: 116.4014,
+      address: '景山西街44号',
+      distanceMeters: 800,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [placeA]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 1. 点选候选地点 A，触发异步反查
+    await tester.tap(find.text('景山公园'));
+    await tester.pump();
+
+    // 2. 模拟用户直接点击系统返回键或导航关闭页面
+    Navigator.of(tester.element(find.byType(NearbyLocationPicker))).pop();
+    await tester.pumpAndSettle();
+
+    // 此时页面已关闭退出
+    expect(find.byType(NearbyLocationPicker), findsNothing);
+    expect(selectedResult, isNull);
+
+    // 3. 此时异步反查才返回结果，验证不会出现 unmounted setState 或对上一级路由二次 pop
+    reverseCompleter.complete({
+      'country': '中国',
+      'province': '北京市',
+      'city': '北京市',
+      'district': '西城区',
+    });
+    await tester.pumpAndSettle();
+
+    // 结果依然为 null，且无任何异常抛出
+    expect(selectedResult, isNull);
   });
 }
