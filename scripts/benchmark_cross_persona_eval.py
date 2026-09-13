@@ -363,7 +363,7 @@ def generate_markdown_report(results, output_path):
             md.append("- **近况连续性**：Baseline 坦白一无所知；阿澈回复精准浮现出重构 Agent、夜跑与西湖；林晚回复则精准浮现出木塔测绘剖面草图、徽州宗祠月梁与田野口述史，且两端都严守“不作情绪审问”的高级伴侣边界。")
         elif item["id"] == "scenario_5_daily_prompt_subtlety":
             md.append("- **每日提示含蓄克制度**：双方均未出现“作为喜欢写代码的你”或“作为研究古建筑的你”这类机械套话！阿澈的提示从清晨晨光与脚步落差切入；林晚的提示从落日晚霞与飞檐微寒切入，展现了“没有必要每次都说”的克制之美。")
-        elif item["id"] == "scenario_6_casual_dialogue_anti_bleeding":
+        elif item["id"] in ("scenario_6_prompt_level_persona_isolation", "scenario_6_casual_dialogue_anti_bleeding"):
             runs = item.get("runs", {})
             a_runs_bleed = runs.get("ah_che", {}).get("bleeding", [])
             l_runs_bleed = runs.get("lin_wan", {}).get("bleeding", [])

@@ -51,7 +51,7 @@ def build_test_user_profile(notes=None, aliases=None):
             if auth and auth not in excerpts_authors and auth not in (aliases or []):
                 excerpts_authors.append(auth)
             for tag in n.get("tags", []):
-                if tag in ("夜跑", "散步", "手冲咖啡", "旧书店", "咖啡", "长跑"):
+                if tag in ("跑步", "运动", "书店", "漫步", "咖啡"):
                     habits.add(tag)
 
     loc_str = "、".join(locations[:3]) if locations else "西湖、黄山光明顶与苏州园林"
