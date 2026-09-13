@@ -393,7 +393,7 @@ def run_richtext_media_tests():
     report.append(f"- **格式保持与文本替换**: {'✅' if c3_insert_poem else '❌'}")
     report.append(f"- **提案内容**: `{json.dumps(s3.proposals[0] if s3.proposals else {}, ensure_ascii=False)}`\n")
 
-    out_file = f"/home/azureuser/ThoughtEcho/build/agent-probe/00-富文本与媒体评测-{MODEL.replace(':', '_')}.md"
+    out_file = f"/workspaces/ThoughtEcho/build/agent-probe/00-富文本与媒体评测-{MODEL.replace(':', '_')}.md"
     with open(out_file, "w", encoding="utf-8") as f:
         f.write("\n".join(report))
     print(f"\n📄 富文本与媒体专项评测报告已生成: {out_file}")

@@ -191,6 +191,10 @@ List<SingleChildWidget> buildAppProviders({
         );
         context.read<InsightHistoryService>().onAiInsightPersisted =
             () => dreaming.run();
+        final settings = context.read<SettingsService>();
+        if (settings.agentMemoryEnabled && dreaming.passesGates()) {
+          dreaming.scheduleIdleRunOnStartup();
+        }
         return dreaming;
       },
     ),

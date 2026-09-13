@@ -5,13 +5,19 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
+import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/ask_user_tool.dart';
+import 'package:thoughtecho/services/agent_tools/remember_tool.dart';
 import 'package:thoughtecho/services/agent_tools/truncating_agent_tool.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+
+import 'agent_tools/memory_tool_harness.dart';
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   _FakeSettingsService(this._provider);
@@ -22,10 +28,22 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   String? get localeCode => 'zh';
 
   @override
+  bool get agentMemoryEnabled => true;
+
+  @override
+  String get userNickname => '';
+
+  @override
   MultiAISettings get multiAISettings => MultiAISettings(
         providers: [_provider],
         currentProviderId: _provider.id,
       );
+
+  @override
+  void setIdentityAliasesProvider(Set<String> Function()? provider) {}
+
+  @override
+  void refreshIdentityAliases() {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
@@ -95,6 +113,10 @@ openai.ChatCompletion _textCompletion(String content) {
 }
 
 void main() {
+  setUpAll(() {
+    MemoryToolHarness.initializeBinding();
+  });
+
   const provider = AIProviderSettings(
     id: 'openai',
     name: 'OpenAI',
@@ -370,6 +392,206 @@ void main() {
       final response = await agentFuture.timeout(const Duration(seconds: 3));
       expect(response, isNotNull);
       expect(service.isRunning, isFalse);
+    });
+  });
+
+  group('AgentService ask_user 与待确认笔名/称谓闭环', () {
+    late _FakeSettingsService settingsService;
+    late AgentMemoryService memory;
+
+    setUp(() async {
+      settingsService = _FakeSettingsService(provider);
+      memory = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: inMemoryDatabasePath,
+      );
+    });
+
+    tearDown(() async {
+      memory.dispose();
+    });
+
+    test('系统提示词包含存疑/待确认笔名通过 ask_user 核实与 remember 闭环的指导', () {
+      final askTool = AskUserTool();
+      final service = AgentService(
+        settingsService: settingsService,
+        tools: [askTool],
+        memoryService: memory,
+      );
+
+      final prompt = service.buildSystemPrompt(memoryEnabled: true);
+      expect(prompt, contains('待确认笔名'));
+      expect(prompt, contains('（存疑，待确认）'));
+      expect(prompt, contains('ask_user'));
+      expect(prompt, contains('replaces_id'));
+    });
+
+    test('Agent 流程检测到存疑笔名画像时，通过 ask_user 向用户核实并调用 remember 完成闭环更新', () async {
+      // 1. 初始化画像中的存疑待确认别名
+      final pendingEntry = await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '待确认笔名：阿澈（存疑，待确认）',
+      );
+      expect(pendingEntry, isNotNull);
+
+      final askTool = AskUserTool();
+      final rememberTool = RememberTool(memory);
+
+      var round = 0;
+      late List<openai.ChatMessage> firstRoundMessages;
+      late List<openai.ChatMessage> secondRoundMessages;
+
+      final service = AgentService(
+        settingsService: settingsService,
+        tools: [askTool, rememberTool],
+        memoryService: memory,
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          round++;
+          if (round == 1) {
+            firstRoundMessages = messages;
+            // 第一轮：模型根据存疑画像与提示词指导，调用 ask_user 发起核实
+            return _toolCallCompletion([
+              _rawToolCall(
+                callId: 'call_ask_alias',
+                toolName: 'ask_user',
+                rawArguments: jsonEncode({
+                  'question': '注意到您的笔记中经常署名阿澈，请问这是您的笔名或常用称谓吗？',
+                  'options': ['是的，这是我的笔名', '不是我的笔名'],
+                }),
+              ),
+            ]);
+          } else if (round == 2) {
+            secondRoundMessages = messages;
+            // 第二轮：收到确认选项后，调用 remember 传入 replaces_id 确认为正式笔名
+            return _toolCallCompletion([
+              _rawToolCall(
+                callId: 'call_remember_alias',
+                toolName: 'remember',
+                rawArguments: jsonEncode({
+                  'action': 'add',
+                  'layer': 'profile',
+                  'kind': 'identity',
+                  'content': '笔名为「阿澈」',
+                  'replaces_id': pendingEntry.id,
+                }),
+              ),
+            ]);
+          } else {
+            return _textCompletion('好的，已为您确认笔名为阿澈，后续交流我会以此称呼您。');
+          }
+        },
+      );
+
+      service.setAskUserHandler((request) async {
+        expect(request.question, contains('署名阿澈'));
+        expect(request.options, contains('是的，这是我的笔名'));
+        return AskUserResponse.selected(['是的，这是我的笔名']);
+      });
+
+      final response = await service.runAgent(userMessage: '你好，帮我看看最近的笔记');
+
+      expect(response.content, contains('已为您确认笔名为阿澈'));
+      expect(round, 3);
+
+      // 验证第一轮输入包含了系统提示词指导与存疑画像
+      final systemMsg = firstRoundMessages.first as openai.SystemMessage;
+      expect(systemMsg.content, contains('待确认笔名'));
+      expect(systemMsg.content, contains('ask_user'));
+      expect(
+        firstRoundMessages.any((m) =>
+            m is openai.UserMessage &&
+            m.content.toString().contains('待确认笔名：阿澈（存疑，待确认）')),
+        isTrue,
+      );
+
+      // 验证第二轮回喂了 ask_user 的选择结果
+      final askToolMsg = secondRoundMessages.firstWhere(
+        (m) => m is openai.ToolMessage && m.toolCallId == 'call_ask_alias',
+      ) as openai.ToolMessage;
+      expect(askToolMsg.content, contains('是的，这是我的笔名'));
+
+      // 验证最终记忆状态：存疑条目被正式笔名 supersede
+      final activeProfile = await memory.activeProfile();
+      expect(activeProfile.any((e) => e.directive == '笔名为「阿澈」'), isTrue);
+      expect(
+        activeProfile.any((e) => e.directive.contains('（存疑，待确认）')),
+        isFalse,
+      );
+    });
+
+    test('Agent 流程中用户否认存疑笔名时，通过 remember 清除该条目', () async {
+      final pendingEntry = await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '待确认笔名：阿澈（存疑，待确认）',
+      );
+      expect(pendingEntry, isNotNull);
+
+      final askTool = AskUserTool();
+      final rememberTool = RememberTool(memory);
+
+      var round = 0;
+      final service = AgentService(
+        settingsService: settingsService,
+        tools: [askTool, rememberTool],
+        memoryService: memory,
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          round++;
+          if (round == 1) {
+            return _toolCallCompletion([
+              _rawToolCall(
+                callId: 'call_ask_deny',
+                toolName: 'ask_user',
+                rawArguments: jsonEncode({
+                  'question': '注意到您的笔记中署名阿澈，请问这是您的笔名吗？',
+                  'options': ['是的，这是我的笔名', '不是我的笔名'],
+                }),
+              ),
+            ]);
+          } else if (round == 2) {
+            return _toolCallCompletion([
+              _rawToolCall(
+                callId: 'call_delete_alias',
+                toolName: 'remember',
+                rawArguments: jsonEncode({
+                  'action': 'delete',
+                  'id': pendingEntry.id,
+                }),
+              ),
+            ]);
+          } else {
+            return _textCompletion('好的，已清除该候选笔名，不会以此称呼您。');
+          }
+        },
+      );
+
+      service.setAskUserHandler((request) async {
+        return AskUserResponse.selected(['不是我的笔名']);
+      });
+
+      final response = await service.runAgent(userMessage: '你好');
+
+      expect(response.content, contains('已清除该候选笔名'));
+      expect(round, 3);
+
+      final activeProfile = await memory.activeProfile();
+      expect(
+        activeProfile.any((e) => e.directive.contains('阿澈')),
+        isFalse,
+      );
     });
   });
 }

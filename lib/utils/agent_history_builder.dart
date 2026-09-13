@@ -87,6 +87,25 @@ class AgentHistoryBuilder {
         continue;
       }
 
+      if (meta['type'] == 'note_proposal' || meta['type'] == 'noteProposal') {
+        final proposalSummary = _summarizeNoteProposal(meta);
+        if (proposalSummary != null) {
+          final effectiveContent = message.content.trim().isNotEmpty
+              ? '${message.content.trim()}\n\n$proposalSummary'
+              : proposalSummary;
+          history.add(
+            ChatMessage(
+              id: '${message.id}_proposal',
+              role: 'assistant',
+              isUser: false,
+              content: effectiveContent,
+              timestamp: message.timestamp,
+            ),
+          );
+          continue;
+        }
+      }
+
       // 提案卡片等：正文本身是模型上一轮的产出，丢掉会让它忘记自己提过什么。
       if (message.content.trim().isNotEmpty) {
         history.add(message);
@@ -94,6 +113,45 @@ class AgentHistoryBuilder {
     }
 
     return history;
+  }
+
+  /// 把建议卡片消息（包含待确认或已保存提案）压成清晰的摘要喂给模型。
+  static String? _summarizeNoteProposal(Map<String, dynamic> meta) {
+    final artifactMap = meta['artifact'];
+    final savedNoteId = meta['saved_note_id']?.toString().trim();
+    if (artifactMap is! Map) {
+      if (savedNoteId != null && savedNoteId.isNotEmpty) {
+        return '[系统提示：用户已采纳你此前生成的笔记建议并保存，笔记 ID 为 $savedNoteId。]';
+      }
+      return null;
+    }
+
+    final action = artifactMap['action']?.toString() ?? 'create';
+    final targetTitle = artifactMap['proposal_title']?.toString() ??
+        artifactMap['target_title']?.toString() ??
+        artifactMap['title']?.toString();
+    final targetNoteId = artifactMap['note_id']?.toString() ??
+        artifactMap['target_note_id']?.toString();
+    final content = artifactMap['content']?.toString() ?? '';
+    final changesSummary = artifactMap['reason']?.toString() ??
+        artifactMap['changes_summary']?.toString();
+
+    if (savedNoteId != null && savedNoteId.isNotEmpty) {
+      return '[已采纳并保存的笔记提案] '
+          '笔记 ID: $savedNoteId'
+          '${targetTitle != null && targetTitle.isNotEmpty ? '，标题: $targetTitle' : ''}'
+          '${changesSummary != null && changesSummary.isNotEmpty ? '，说明: $changesSummary' : ''}';
+    }
+
+    final preview =
+        content.length > 200 ? '${content.substring(0, 200)}...' : content;
+    final actionLabel = action == 'edit' ? '修改笔记' : '新建笔记';
+    return '[待确认的笔记提案] '
+        '类型: $actionLabel'
+        '${targetTitle != null && targetTitle.isNotEmpty ? '，标题: $targetTitle' : ''}'
+        '${targetNoteId != null && targetNoteId.isNotEmpty ? '，笔记 ID: $targetNoteId' : ''}'
+        '${changesSummary != null && changesSummary.isNotEmpty ? '，修改说明: $changesSummary' : ''}'
+        '${preview.isNotEmpty ? '\n提案内容预览: $preview' : ''}';
   }
 
   /// 把一条 `tool_progress` 元数据压成人类/模型都可读的一段轨迹。
