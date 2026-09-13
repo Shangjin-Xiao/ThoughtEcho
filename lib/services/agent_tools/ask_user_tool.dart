@@ -115,6 +115,9 @@ class AskUserTool extends AgentTool {
     _promptHandler = handler;
   }
 
+  bool get hasActivePrompt =>
+      _activeCompleter != null && !_activeCompleter!.isCompleted;
+
   void cancelActivePrompt() {
     if (_activeCompleter != null && !_activeCompleter!.isCompleted) {
       _activeCompleter!.complete(AskUserResponse.cancelled());
@@ -230,7 +233,7 @@ class AskUserTool extends AgentTool {
     final completer = Completer<AskUserResponse>();
     _activeCompleter = completer;
 
-    handler(request).then((response) {
+    Future.sync(() => handler(request)).then((response) {
       if (!completer.isCompleted) {
         completer.complete(response);
       }
@@ -247,6 +250,20 @@ class AskUserTool extends AgentTool {
           toolCallId: call.id,
           content: '用户取消了本次选择。',
         );
+      }
+
+      final validOptions = options.toSet();
+      final selectedSet = <String>{};
+      for (final opt in response.selectedOptions) {
+        if (!validOptions.contains(opt)) {
+          return _error(call, '选择结果包含无效选项：$opt');
+        }
+        if (!selectedSet.add(opt)) {
+          return _error(call, '选择结果包含重复选项：$opt');
+        }
+      }
+      if (!multiSelect && response.selectedOptions.length > 1) {
+        return _error(call, '单选模式下不能选择多个选项。');
       }
 
       final custom = response.customText?.trim();

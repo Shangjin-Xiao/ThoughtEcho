@@ -456,5 +456,88 @@ void main() {
       expect(cancelledResp1, equals(cancelledResp2));
       expect(cancelledResp1.hashCode, equals(cancelledResp2.hashCode));
     });
+
+    test('handler 同步抛错时能够被捕获并清理 _activeCompleter', () async {
+      final tool = AskUserTool();
+      tool.setPromptHandler((request) {
+        throw StateError('同步异常测试');
+      });
+
+      final call = ToolCall(
+        id: 'call-sync-err',
+        name: 'ask_user',
+        arguments: {
+          'question': '测试？',
+          'options': ['A', 'B'],
+        },
+      );
+
+      final result = await tool.execute(call);
+      expect(result.isError, isTrue);
+      expect(result.content, contains('用户交互处理异常'));
+      expect(tool.hasActivePrompt, isFalse);
+    });
+
+    test('外部 handler 返回非法选项时返回错误并拦截', () async {
+      final tool = AskUserTool();
+      tool.setPromptHandler((request) async => AskUserResponse(
+            selectedOptions: ['C'],
+          ));
+
+      final call = ToolCall(
+        id: 'call-invalid-opt',
+        name: 'ask_user',
+        arguments: {
+          'question': '测试？',
+          'options': ['A', 'B'],
+        },
+      );
+
+      final result = await tool.execute(call);
+      expect(result.isError, isTrue);
+      expect(result.content, contains('包含无效选项：C'));
+    });
+
+    test('外部 handler 返回重复选项时返回错误并拦截', () async {
+      final tool = AskUserTool();
+      tool.setPromptHandler((request) async => AskUserResponse(
+            selectedOptions: ['A', 'A'],
+          ));
+
+      final call = ToolCall(
+        id: 'call-dup-opt',
+        name: 'ask_user',
+        arguments: {
+          'question': '测试？',
+          'options': ['A', 'B'],
+          'multi_select': true,
+        },
+      );
+
+      final result = await tool.execute(call);
+      expect(result.isError, isTrue);
+      expect(result.content, contains('包含重复选项：A'));
+    });
+
+    test('单选模式下外部 handler 返回多个选项时返回错误并拦截', () async {
+      final tool = AskUserTool();
+      tool.setPromptHandler((request) async => AskUserResponse(
+            selectedOptions: ['A', 'B'],
+          ));
+
+      final call = ToolCall(
+        id: 'call-multi-err',
+        name: 'ask_user',
+        arguments: {
+          'question': '测试？',
+          'options': ['A', 'B'],
+          'multi_select': false,
+        },
+      );
+
+      final result = await tool.execute(call);
+      expect(result.isError, isTrue);
+      expect(result.content, contains('单选模式下不能选择多个选项'));
+    });
   });
 }

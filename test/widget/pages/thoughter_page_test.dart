@@ -2891,6 +2891,58 @@ void main() {
     });
 
     testWidgets(
+        'ask_user cards keep alive only when pending and release when completed or historical',
+        (tester) async {
+      final now = DateTime.now();
+      final session = ChatSession(
+        id: 'keepalive-session-1',
+        sessionType: 'agent',
+        title: 'KeepAlive 测试会话',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+
+      chatSessionService.seedSession(session, [
+        app_chat.ChatMessage(
+          id: 'completed_ask_user',
+          role: 'assistant',
+          isUser: false,
+          content: '',
+          timestamp: now,
+          metaJson: jsonEncode({
+            'type': 'ask_user',
+            'toolCallId': 'call_completed',
+            'question': '历史问题？',
+            'options': ['A', 'B'],
+            'multiSelect': false,
+            'isCompleted': true,
+            'isCancelled': false,
+            'selectedOptions': ['A'],
+          }),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: ThoughterPage(
+            key: const ValueKey('keepalive_test_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 历史/已完成的 ask_user 卡片不保持 keepAlive，节约离屏内存
+      final item = tester.widget<StatefulWidget>(
+        find.byKey(const ValueKey('msg_keepalive_completed_ask_user')),
+      );
+      expect((item as dynamic).keepAlive, isFalse);
+    });
+
+    testWidgets(
         'subsequent new chats and dispose continue to stop running agent even after first new chat',
         (tester) async {
       final agentService = _FakeAgentService(
