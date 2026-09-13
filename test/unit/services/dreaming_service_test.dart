@@ -544,6 +544,38 @@ void main() {
         expect(inferred, isNot(contains('李诫')));
       });
 
+      test('单字署名经多篇自建证据仍可统计推断为候选别名（弱信号路径）', () {
+        // 静态词表不再直接拍板「余」，但两篇以上个人出处+落款的
+        // 自建证据仍能把它推成高置信度候选，走用户确认闭环。
+        final quotes = [
+          Quote(
+            id: 'yu-1',
+            content: '今日过平遥南门，见城堞苍茫。记于平遥南门，余',
+            sourceAuthor: '余',
+            sourceWork: '日记',
+            date: DateTime.now().toIso8601String(),
+          ),
+          Quote(
+            id: 'yu-2',
+            content: '夜宿徽州老宅，梁架墨迹犹存。记于徽州，余',
+            sourceAuthor: '余',
+            sourceWork: '随笔',
+            date: DateTime.now().toIso8601String(),
+          ),
+          Quote(
+            id: 'q-li-1',
+            content: '凡造屋之制，先以材为祖。',
+            sourceAuthor: '李诫',
+            sourceWork: '营造法式',
+            date: DateTime.now().toIso8601String(),
+          ),
+        ];
+
+        final inferred = DreamingService.inferAliasesFromQuotes(quotes);
+        expect(inferred, contains('余'));
+        expect(inferred, isNot(contains('李诫')));
+      });
+
       test('正文结尾为「……——<author>」且填写了 sourceAuthor 属于标准摘录引用，不被识别为自签名', () {
         final quotes = [
           Quote(

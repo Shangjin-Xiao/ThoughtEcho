@@ -28,11 +28,14 @@ class _FakePlaceSearchService implements PlaceSearchService {
   _FakePlaceSearchService({
     this.places = const [],
     this.shouldThrow = false,
+    this.onGetNearbyPlaces,
   });
 
   List<PlaceInfo> places;
   bool shouldThrow;
   int callCount = 0;
+  final List<int> requestedOffsets = [];
+  Future<List<PlaceInfo>> Function(int offset, int limit)? onGetNearbyPlaces;
 
   @override
   Future<List<PlaceInfo>> getNearbyPlaces(
@@ -44,8 +47,12 @@ class _FakePlaceSearchService implements PlaceSearchService {
     int offset = 0,
   }) async {
     callCount++;
+    requestedOffsets.add(offset);
     if (shouldThrow) {
       throw Exception('Network connection failed');
+    }
+    if (onGetNearbyPlaces != null) {
+      return onGetNearbyPlaces!(offset, limit);
     }
     return places;
   }
@@ -111,6 +118,32 @@ Widget _wrapPicker({
   );
 }
 
+Future<void> _pumpPickerWithNavigation(
+  WidgetTester tester, {
+  required NearbyLocationPicker picker,
+  void Function(LocationPickerResult? result)? onResult,
+}) async {
+  await tester.pumpWidget(MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('zh'),
+    home: Builder(
+      builder: (context) => TextButton(
+        onPressed: () async {
+          final res = await Navigator.of(context).push<LocationPickerResult>(
+            MaterialPageRoute(builder: (_) => picker),
+          );
+          onResult?.call(res);
+        },
+        child: const Text('Open'),
+      ),
+    ),
+  ));
+
+  await tester.tap(find.text('Open'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -144,19 +177,14 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // 验证不包含地图组件和输入框
     expect(find.byType(TextField), findsNothing);
     expect(find.byType(TextFormField), findsNothing);
-
-    // 验证标题为"所在位置"
     expect(find.text('所在位置'), findsOneWidget);
 
-    // 验证第一项展示当前系统位置与勾选图标
     expect(find.textContaining('故宫博物院'), findsOneWidget);
     expect(find.text('只记城市和区县，不记具体地点'), findsOneWidget);
     expect(find.byIcon(Icons.check), findsWidgets);
 
-    // 验证候选地点展示在下方
     expect(find.text('景山公园'), findsOneWidget);
     expect(find.text('景山西街44号'), findsOneWidget);
     expect(find.text('800 米'), findsOneWidget);
@@ -175,36 +203,18 @@ void main() {
 
     LocationPickerResult? selectedResult;
 
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('zh'),
-      home: Builder(
-        builder: (context) => TextButton(
-          onPressed: () async {
-            final res = await Navigator.of(context).push<LocationPickerResult>(
-              MaterialPageRoute(
-                builder: (_) => NearbyLocationPicker(
-                  locationService: fakeLoc,
-                  placeSearchService: fakeSearch,
-                ),
-              ),
-            );
-            selectedResult = res;
-          },
-          child: const Text('Open'),
-        ),
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
       ),
-    ));
+      onResult: (res) => selectedResult = res,
+    );
 
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-
-    // 点击候选地点"天安门广场"
     await tester.tap(find.text('天安门广场'));
     await tester.pumpAndSettle();
 
-    // 确认结果已 pop 并包含选中的 POI 信息
     expect(selectedResult, isNotNull);
     expect(selectedResult!.poiName, '天安门广场');
     expect(selectedResult!.latitude, candidatePlace.latitude);
@@ -217,32 +227,15 @@ void main() {
 
     LocationPickerResult? selectedResult;
 
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('zh'),
-      home: Builder(
-        builder: (context) => TextButton(
-          onPressed: () async {
-            final res = await Navigator.of(context).push<LocationPickerResult>(
-              MaterialPageRoute(
-                builder: (_) => NearbyLocationPicker(
-                  locationService: fakeLoc,
-                  placeSearchService: fakeSearch,
-                ),
-              ),
-            );
-            selectedResult = res;
-          },
-          child: const Text('Open'),
-        ),
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
       ),
-    ));
+      onResult: (res) => selectedResult = res,
+    );
 
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-
-    // 点击系统位置"故宫博物院"
     await tester.tap(find.textContaining('故宫博物院'));
     await tester.pumpAndSettle();
 
@@ -258,36 +251,18 @@ void main() {
 
     LocationPickerResult? selectedResult;
 
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('zh'),
-      home: Builder(
-        builder: (context) => TextButton(
-          onPressed: () async {
-            final res = await Navigator.of(context).push<LocationPickerResult>(
-              MaterialPageRoute(
-                builder: (_) => NearbyLocationPicker(
-                  locationService: fakeLoc,
-                  placeSearchService: fakeSearch,
-                ),
-              ),
-            );
-            selectedResult = res;
-          },
-          child: const Text('Open'),
-        ),
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
       ),
-    ));
+      onResult: (res) => selectedResult = res,
+    );
 
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-
-    // 提示在线服务不可用
     expect(find.text('在线地点服务不可用'), findsOneWidget);
     expect(find.text('重试'), findsOneWidget);
 
-    // 第一项仍然可用并可点击
     expect(find.textContaining('故宫博物院'), findsOneWidget);
     await tester.tap(find.textContaining('故宫博物院'));
     await tester.pumpAndSettle();
@@ -313,9 +288,132 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // 第一项副标题为"离线坐标"
     expect(find.text('离线坐标'), findsOneWidget);
-    // 经纬度格式化为 39.9042°N, 116.4074°E
     expect(find.textContaining('39.9042°N'), findsOneWidget);
+  });
+
+  testWidgets('传入已有 initialPoiName 时，第一项仍保留真实系统定位且未被覆盖，可点击切回系统位置',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final candidatePlace = const PlaceInfo(
+      name: '天安门广场',
+      latitude: 39.9037,
+      longitude: 116.3976,
+      address: '东长安街',
+      distanceMeters: 450,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: candidatePlace.latitude,
+        initialLongitude: candidatePlace.longitude,
+        initialLocation: '中国,北京市,北京市,东城区',
+        initialPoiName: '天安门广场',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    expect(find.textContaining('故宫博物院'), findsOneWidget);
+    expect(find.text('天安门广场'), findsOneWidget);
+
+    await tester.tap(find.textContaining('故宫博物院'));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '故宫博物院');
+    expect(selectedResult!.latitude, 39.9042);
+    expect(selectedResult!.longitude, 116.4074);
+  });
+
+  testWidgets('滑动列表到底部触发 getNearbyPlaces 分页加载更多', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final page1 = List.generate(
+      20,
+      (i) => PlaceInfo(
+        name: '地点 $i',
+        latitude: 39.9000 + (i * 0.001),
+        longitude: 116.4000 + (i * 0.001),
+        address: '测试街道 $i 号',
+        distanceMeters: 100 + i * 10,
+      ),
+    );
+    final page2 = List.generate(
+      5,
+      (i) => PlaceInfo(
+        name: '次页地点 $i',
+        latitude: 39.9500 + (i * 0.001),
+        longitude: 116.4500 + (i * 0.001),
+        address: '次页街道 $i 号',
+        distanceMeters: 500 + i * 10,
+      ),
+    );
+
+    final fakeSearch = _FakePlaceSearchService(
+      onGetNearbyPlaces: (offset, limit) async {
+        if (offset == 0) return page1;
+        return page2;
+      },
+    );
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(fakeSearch.callCount, 1);
+    expect(fakeSearch.requestedOffsets, [0]);
+    expect(find.text('地点 0'), findsOneWidget);
+    expect(find.text('次页地点 0'), findsNothing);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -1500));
+    await tester.pumpAndSettle();
+
+    expect(fakeSearch.callCount, 2);
+    expect(fakeSearch.requestedOffsets, [0, 20]);
+    expect(find.text('次页地点 0'), findsOneWidget);
+  });
+
+  testWidgets('在线地点服务故障时点击错误横幅重试按钮重新拉取', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(shouldThrow: true);
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('在线地点服务不可用'), findsOneWidget);
+    expect(find.text('重试'), findsOneWidget);
+    expect(fakeSearch.callCount, 1);
+
+    fakeSearch.shouldThrow = false;
+    fakeSearch.places = [
+      const PlaceInfo(
+        name: '景山公园',
+        latitude: 39.9242,
+        longitude: 116.4014,
+        address: '景山西街44号',
+        distanceMeters: 800,
+      ),
+    ];
+
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+
+    expect(fakeSearch.callCount, 2);
+    expect(find.text('在线地点服务不可用'), findsNothing);
+    expect(find.text('景山公园'), findsOneWidget);
   });
 }

@@ -32,9 +32,7 @@ abstract final class OsmMapLayers {
         userAgentPackageName: _packageName,
         maxNativeZoom: _maxNativeZoom,
         tileProvider: NetworkTileProvider(
-          cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
-            overrideFreshAge: const Duration(days: 30),
-          ),
+          cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(),
         ),
       );
 

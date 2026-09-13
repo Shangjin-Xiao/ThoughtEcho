@@ -6,7 +6,7 @@
 # 1. 在云端环境（GitHub Codespaces / 容器 / 云主机）或本地系统中，
 #    通过定期心跳、网络探活、文件 I/O 与终端微量活动，保持系统与环境活跃，
 #    防止因长时间无输入而被宿主机或云平台判定为 Idle 超时挂起、休眠或自动关机。
-# 2. 具备 X11/桌面防休眠兼容（xset/gsettings 若存在则自动关闭显示休眠）。
+# 2. 具备 X11/桌面防休眠兼容（xset/gsettings 若存在则自动关闭显示休眠，退出时恢复）。
 # 3. 单脚本自包含：支持后台守护运行 (start)、停止 (stop)、状态 (status)、前台 (run)。
 #
 # 用法：
@@ -23,6 +23,8 @@ PID_FILE="/tmp/prevent_sleep.pid"
 LOG_FILE="/tmp/prevent_sleep.log"
 HEARTBEAT_FILE="/tmp/prevent_sleep.heartbeat"
 INTERVAL_SECONDS=30
+HEARTBEAT_URL="${HEARTBEAT_URL:-}"
+PREV_GSETTINGS_SLEEP=""
 
 _log() {
   local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
@@ -36,10 +38,43 @@ _setup_desktop_inhibit() {
     xset s off -dpms >/dev/null 2>&1 || true
   fi
 
-  # 若存在 gsettings 且有 session bus，尝试关闭休眠
+  # 若存在 gsettings 且有 session bus，记录原配置并尝试关闭休眠
   if command -v gsettings >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    PREV_GSETTINGS_SLEEP="$(gsettings get org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 2>/dev/null || true)"
     gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing' >/dev/null 2>&1 || true
   fi
+}
+
+_restore_desktop_inhibit() {
+  if [ -n "${PREV_GSETTINGS_SLEEP:-}" ] && command -v gsettings >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    local orig="${PREV_GSETTINGS_SLEEP//\'/}"
+    if [ -n "$orig" ]; then
+      gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type "$orig" >/dev/null 2>&1 || true
+    fi
+  fi
+  if command -v xset >/dev/null 2>&1 && [ -n "${DISPLAY:-}" ]; then
+    xset s on +dpms >/dev/null 2>&1 || true
+  fi
+}
+
+_is_running() {
+  local pid="$1"
+  if [ -z "$pid" ]; then
+    return 1
+  fi
+  if ! kill -0 "$pid" 2>/dev/null; then
+    return 1
+  fi
+  # 验证进程命令行，防止 PID 复用误判
+  if command -v ps >/dev/null 2>&1; then
+    local args
+    args="$(ps -p "$pid" -o args= 2>/dev/null || true)"
+    if echo "$args" | grep -q "prevent_sleep.sh run"; then
+      return 0
+    fi
+    return 1
+  fi
+  return 0
 }
 
 _do_heartbeat() {
@@ -55,9 +90,16 @@ _do_heartbeat() {
     # 1. 刷新心跳文件与时间戳 (触发文件系统活跃)
     echo "heartbeat: $ts, tick: $count, pid: $$" > "$HEARTBEAT_FILE"
 
-    # 2. 轻量网络探活，防止连接超时或网络栈挂起
-    if command -v curl >/dev/null 2>&1; then
-      curl -s --connect-timeout 3 --max-time 5 "https://1.1.1.1" >/dev/null 2>&1 || true
+    # 2. 轻量探活，防止连接超时或网络栈挂起
+    if [ -n "${HEARTBEAT_URL:-}" ]; then
+      if command -v curl >/dev/null 2>&1; then
+        curl -s --connect-timeout 3 --max-time 5 "$HEARTBEAT_URL" >/dev/null 2>&1 || true
+      fi
+    else
+      # 默认本地探活，无外部网络依赖
+      if [ -r /proc/net/dev ]; then
+        head -n 2 /proc/net/dev >/dev/null 2>&1 || true
+      fi
     fi
 
     # 3. 产生微量文件系统活跃与日志保活
@@ -77,7 +119,7 @@ start() {
   if [ -f "$PID_FILE" ]; then
     local pid
     pid="$(cat "$PID_FILE" 2>/dev/null || true)"
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    if [ -n "$pid" ] && _is_running "$pid"; then
       echo "防休眠保活守护进程已在运行中 (PID: $pid)。"
       return 0
     fi
@@ -98,7 +140,7 @@ start() {
     new_pid="$(cat "$PID_FILE")"
   fi
 
-  if kill -0 "$new_pid" 2>/dev/null; then
+  if _is_running "$new_pid"; then
     echo "✅ 防休眠保活守护进程已成功在后台启动 (PID: $new_pid)。"
     echo "心跳间隔: ${INTERVAL_SECONDS} 秒，日志记录在 $LOG_FILE"
   else
@@ -115,16 +157,16 @@ stop() {
 
   local pid
   pid="$(cat "$PID_FILE" 2>/dev/null || true)"
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+  if [ -n "$pid" ] && _is_running "$pid"; then
     echo "正在停止防休眠保活进程 (PID: $pid)..."
     kill "$pid" 2>/dev/null || true
     sleep 1
-    if kill -0 "$pid" 2>/dev/null; then
+    if _is_running "$pid"; then
       kill -9 "$pid" 2>/dev/null || true
     fi
     echo "✅ 已成功停止。"
   else
-    echo "进程已不存在。"
+    echo "进程已不存在或 PID 已被复用。"
   fi
   rm -f "$PID_FILE" "$HEARTBEAT_FILE"
 }
@@ -133,7 +175,7 @@ status() {
   if [ -f "$PID_FILE" ]; then
     local pid
     pid="$(cat "$PID_FILE" 2>/dev/null || true)"
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    if [ -n "$pid" ] && _is_running "$pid"; then
       echo "🟢 防休眠保活守护进程正在运行 (PID: $pid)"
       if [ -f "$HEARTBEAT_FILE" ]; then
         echo "最近心跳: $(cat "$HEARTBEAT_FILE")"
@@ -147,9 +189,20 @@ status() {
   return 1
 }
 
+_cleaned_up=0
+_cleanup() {
+  if [ "$_cleaned_up" -eq 1 ]; then
+    return 0
+  fi
+  _cleaned_up=1
+  _restore_desktop_inhibit
+  rm -f "$PID_FILE" "$HEARTBEAT_FILE"
+}
+
 run() {
   echo $$ > "$PID_FILE"
-  trap 'rm -f "$PID_FILE" "$HEARTBEAT_FILE"; exit 0' INT TERM
+  trap '_cleanup; exit 0' INT TERM
+  trap '_cleanup' EXIT
   trap '' HUP
   _do_heartbeat
 }

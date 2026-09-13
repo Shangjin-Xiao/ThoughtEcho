@@ -91,6 +91,22 @@ void main() {
         expect(Quote.isSelfAuthor(''), isFalse);
         expect(Quote.isSelfAuthor('   '), isFalse);
       });
+
+      test('单字文言代词作者不单独判定为本人，需用户配置的第二证据（别名/昵称）', () {
+        // 作者栏独一个「余/吾/愚」字时无法区分自署与摘录，静态词表不得拍板。
+        for (final word in ['余', '吾', '愚']) {
+          expect(Quote.isSelfAuthor(word), isFalse, reason: word);
+          expect(Quote.isSelfAuthor('——$word'), isFalse, reason: word);
+          // 用户明确配置为别名时仍可命中——动态事实优先于静态词表。
+          expect(Quote.isSelfAuthor(word, userAliases: [word]), isTrue,
+              reason: word);
+          expect(Quote.isSelfAuthor(word, userNickname: word), isTrue,
+              reason: word);
+        }
+        // 多字作者不受影响：余华不会因首字命中而被误判。
+        expect(Quote.isSelfAuthor('余华'), isFalse);
+        expect(Quote.isSelfAuthor('余华', userAliases: ['余']), isFalse);
+      });
     });
 
     group('isSelfAttributed, isExcerpt, isOriginal & resolveAttributionKind',
@@ -109,6 +125,16 @@ void main() {
         expect(note.isExcerpt(), isFalse);
         expect(note.isOriginal(), isTrue);
         expect(note.attributionKind, 'original');
+      });
+
+      test('单字文言代词署名无别名时判为摘录，配别名后才转原创', () {
+        final note = createNote(author: '余', content: '余过平遥南门，感念世代匠人劳苦。');
+        expect(note.isSelfAttributed(), isFalse);
+        expect(note.isExcerpt(), isTrue);
+        expect(note.resolveAttributionKind(), 'excerpt');
+        expect(note.isSelfAttributed(userAliases: ['余']), isTrue);
+        expect(note.isExcerpt(userAliases: ['余']), isFalse);
+        expect(note.resolveAttributionKind(userAliases: ['余']), 'original');
       });
 
       test('self-signed note with author and personal work is original', () {

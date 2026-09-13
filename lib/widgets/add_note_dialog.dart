@@ -167,6 +167,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   bool _autoAttachLocationPlanned = false;
   bool _autoAttachWeatherPlanned = false;
   bool _autoMetadataStarted = false;
+  bool _isOpeningNearbyPicker = false;
   Timer? _autoMetadataFallbackTimer;
   Timer? _databaseListenerTimer;
 
@@ -1314,28 +1315,48 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
   /// 长按打开附近地点选择器（朋友圈模式，不带地图瓦片）
   Future<void> _openNearbyLocationPicker() async {
-    final navigator = Navigator.of(context);
-    final result = await navigator.push<LocationPickerResult>(
-      MaterialPageRoute<LocationPickerResult>(
-        builder: (_) => NearbyLocationPicker(
-          initialLatitude: _controller.newLatitude,
-          initialLongitude: _controller.newLongitude,
-          initialPoiName: _controller.newPoiName,
+    if (_isOpeningNearbyPicker) return;
+    _isOpeningNearbyPicker = true;
+
+    try {
+      final navigator = Navigator.of(context);
+      final result = await navigator.push<LocationPickerResult>(
+        MaterialPageRoute<LocationPickerResult>(
+          builder: (_) => NearbyLocationPicker(
+            initialLatitude: _controller.newLatitude,
+            initialLongitude: _controller.newLongitude,
+            initialLocation: _controller.newLocation,
+            initialPoiName: _controller.newPoiName,
+          ),
         ),
-      ),
-    );
-
-    if (!mounted || result == null) return;
-
-    setState(() {
-      _controller.includeLocation = true;
-      _controller.setNewLocationData(
-        result.location,
-        result.latitude,
-        result.longitude,
-        poiName: result.poiName,
       );
-    });
+
+      if (!mounted || result == null) return;
+
+      // 用户主动在选择器中选取/确认了位置：作废尚未执行的自动定位抓取，
+      // 并清掉在途标志，防止后台延迟到达的自动定位结果覆盖用户选定的地点。
+      _cancelAutoAttachPlan(location: true);
+      _controller.clearPendingLocationFetch();
+
+      setState(() {
+        _controller.includeLocation = true;
+        _controller.setNewLocationData(
+          result.location,
+          result.latitude,
+          result.longitude,
+          poiName: result.poiName,
+        );
+      });
+
+      // 如果天气开关已打开且暂无天气数据，利用新选取的坐标触发抓取天气
+      if (_controller.includeWeather &&
+          !(_cachedWeatherService?.hasData ?? false)) {
+        _ensureMetadataServices();
+        _controller.fetchWeatherForNewNote();
+      }
+    } finally {
+      _isOpeningNearbyPicker = false;
+    }
   }
 
   /// 编辑模式下的位置对话框
@@ -1369,12 +1390,18 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     } else {
       // 有位置数据
       title = l10n.locationInfo;
+      final displayLocation = LocationService.formatPoiForDisplay(
+        _controller.originalPoiName,
+        _controller.originalLocation,
+      );
       content = hasOnlyCoordinates
           ? l10n.locationUpdateHint(LocationService.formatCoordinates(
               _controller.originalLatitude, _controller.originalLongitude))
           : l10n.locationRemoveHint(
-              LocationService.formatLocationForDisplay(
-                  _controller.originalLocation),
+              displayLocation.isNotEmpty
+                  ? displayLocation
+                  : LocationService.formatLocationForDisplay(
+                      _controller.originalLocation),
             );
       actions = [
         if (_controller.includeLocation)
@@ -1547,11 +1574,18 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       ];
     } else {
       title = l10n.locationInfo;
+      final displayLocation = LocationService.formatPoiForDisplay(
+        _controller.newPoiName,
+        _controller.newLocation,
+      );
       content = hasOnlyCoordinates
           ? l10n.locationUpdateHint(LocationService.formatCoordinates(
               _controller.newLatitude, _controller.newLongitude))
           : l10n.locationRemoveHint(
-              LocationService.formatLocationForDisplay(_controller.newLocation),
+              displayLocation.isNotEmpty
+                  ? displayLocation
+                  : LocationService.formatLocationForDisplay(
+                      _controller.newLocation),
             );
       actions = [
         TextButton(

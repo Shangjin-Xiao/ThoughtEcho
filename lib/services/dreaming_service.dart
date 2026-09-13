@@ -577,37 +577,7 @@ class DreamingService {
     final authorStats =
         <String, ({int count, int selfMarkerCount, int externalWorkCount})>{};
 
-    const personalWorkSuffixes = <String>[
-      '日记',
-      '随笔',
-      '手记',
-      '札记',
-      '笔记',
-      '杂记',
-      '杂感',
-      '随感',
-      '自述',
-      '自语',
-      '心迹',
-      '备忘',
-      '碎碎念',
-      '清单',
-      '复盘',
-      '手账',
-      '行记',
-      '游记',
-      '食记',
-      '采风录',
-      '日常',
-      '手稿',
-      '手绘',
-      '备忘录',
-      '打卡',
-      'diary',
-      'journal',
-      'notes',
-      'memo',
-    ];
+    // 个人类别词表以 Quote.hasPersonalWorkSuffix 为唯一来源，此处不另存一份。
 
     for (final quote in quotes) {
       final author = quote.sourceAuthor?.trim();
@@ -650,9 +620,10 @@ class DreamingService {
               content.contains('记于') ||
               content.contains('作于') ||
               content.contains('整理于') ||
-              content.contains('致') ||
               content.contains('——') ||
               content.contains('—'));
+      // 注：刻意不用裸「致」字做签名证据——致谢/所致/导致里遍地都是，
+      // 单个常见字不能当身份证据（与单字「余」同理）。题献场景由破折号落款覆盖。
 
       final hasPersonalArtifacts =
           quote.hasPersonalDeviceOrRichTextMarkers || content.contains('[图片:');
@@ -669,10 +640,13 @@ class DreamingService {
         if (Quote.isBuiltinPersonalWork(cleanWork,
             defaultSource: defaultSource)) {
           isPersonalWork = true;
-        } else if (lowerWork.contains(lowerAuthor)) {
-          // 作品名直接包含作者自身名称（如「阿澈随笔」「林晚田野笔记」）
+        } else if (lowerWork.contains(lowerAuthor) &&
+            (hasSignatureInContent || hasPersonalArtifacts)) {
+          // 作品名直接包含作者自身名称（如「阿澈随笔」「林晚田野笔记」），
+          // 但必须再有签名落款或个人附件作第二证据——否则「鲁迅随笔」这类
+          // 外部出版物也会把原作者推成用户别名。
           isPersonalWork = true;
-        } else if (personalWorkSuffixes.any(lowerWork.endsWith) &&
+        } else if (Quote.hasPersonalWorkSuffix(cleanWork) &&
             (hasSignatureInContent || hasPersonalArtifacts)) {
           // 作品名以个人记录分类为后缀，且正文包含作者签名或富文本附件证据（如「西湖日记」「田野手记」）
           isPersonalWork = true;

@@ -507,6 +507,11 @@ class Quote {
   bool get hasKeywords => keywords != null && keywords!.isNotEmpty;
 
   /// 内置的自指代作者关键词（全小写）。
+  ///
+  /// 只收多字自称与通用自指（我/自己/笔者等）。单字文言代词（余/吾/愚）刻意不收：
+  /// 它们同时是姓氏与常用字，作者栏独一个「余」字时无法区分自署与摘录——
+  /// 这类身份断言只能来自用户配置（昵称/默认作者/别名/已确认画像），
+  /// 或由 Dreaming 凭多篇自建证据统计推断，绝不能由静态词表一票拍板。
   static const Set<String> _builtinSelfAuthorKeywords = <String>{
     '我',
     '自己',
@@ -517,9 +522,6 @@ class Quote {
     '自述',
     '笔者',
     '作者',
-    '余',
-    '吾',
-    '愚',
     'me',
     'myself',
     'i',
@@ -556,11 +558,32 @@ class Quote {
     '食记',
     '采风录',
     '手稿',
+    '手绘',
+    '备忘录',
+    '打卡',
+    '日常',
     'diary',
     'journal',
     'notes',
     'memo',
   };
+
+  /// 出处名是否以个人记录类别词为后缀（如「西湖日记」「田野手记」）。
+  ///
+  /// 唯一的个人类别词表出处——Dreaming 的别名推断复用此处，不另存一份，
+  /// 避免两处词表漂移。注意：后缀形态本身不单独作为原创证据，
+  /// 调用方必须再要第二证据（签名落款、待办/图片等个人附件）。
+  static bool hasPersonalWorkSuffix(String work) {
+    final lower = work.trim().toLowerCase();
+    if (lower.isEmpty) return false;
+    for (final kw in _builtinSelfSourceKeywords) {
+      final lowerKw = kw.toLowerCase();
+      if (lower.endsWith(lowerKw) && lower.length > kw.length) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /// 剥除可能存在的作者前缀、破折号签名标识与外层包裹括号引号
   static String stripAuthorPrefix(String text) {

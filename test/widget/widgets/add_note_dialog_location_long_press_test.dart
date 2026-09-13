@@ -31,8 +31,10 @@ Position _mockPosition() => Position(
     );
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
+  _TestSettingsService({this.autoAttachLocation = false});
+
   @override
-  bool get autoAttachLocation => false;
+  final bool autoAttachLocation;
 
   @override
   bool get autoAttachWeather => false;
@@ -138,12 +140,13 @@ class _TestFeatureGuideService extends ChangeNotifier
 
 Widget _buildTestApp({
   Quote? initialQuote,
+  bool autoAttachLocation = false,
   void Function(Quote)? onSave,
 }) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<SettingsService>.value(
-        value: _TestSettingsService(),
+        value: _TestSettingsService(autoAttachLocation: autoAttachLocation),
       ),
       ChangeNotifierProvider<LocationService>.value(
         value: _TestLocationService(),
@@ -220,6 +223,8 @@ void main() {
     // 验证弹出的是只读提示对话框，而不是 NearbyLocationPicker
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('位置信息'), findsOneWidget);
+    // 弹窗提示内容包含格式化 POI 地名
+    expect(find.textContaining('东城区·故宫博物院'), findsOneWidget);
     expect(find.byType(NearbyLocationPicker), findsNothing);
 
     // 关闭对话框并清理
@@ -275,5 +280,70 @@ void main() {
     expect(savedQuote!.poiName, '故宫博物院');
     expect(savedQuote!.latitude, 39.9042);
     expect(savedQuote!.longitude, 116.4074);
+  });
+
+  testWidgets('新建模式且 autoAttachLocation 为 true 时：长按选取地点保存后，不会被自动抓取覆盖',
+      (WidgetTester tester) async {
+    Quote? savedQuote;
+
+    await tester.pumpWidget(_buildTestApp(
+      autoAttachLocation: true,
+      onSave: (quote) {
+        savedQuote = quote;
+      },
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final locationChip = find.byKey(const ValueKey('add_note_location_chip'));
+    expect(locationChip, findsOneWidget);
+
+    // 长按打开选择器
+    await tester.longPress(locationChip);
+    await tester.pumpAndSettle();
+
+    // 选择位置并返回
+    await tester.tap(find.textContaining('故宫博物院'));
+    await tester.pumpAndSettle();
+
+    // 点击保存
+    final saveButton = find.byType(FilledButton).last;
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(savedQuote, isNotNull);
+    expect(savedQuote!.poiName, '故宫博物院');
+    expect(savedQuote!.latitude, 39.9042);
+    expect(savedQuote!.longitude, 116.4074);
+  });
+
+  testWidgets('新建模式下已有 POI 时，单击位置按钮弹窗提示包含格式化 POI 地名',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(_buildTestApp());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final locationChip = find.byKey(const ValueKey('add_note_location_chip'));
+
+    // 先长按选点
+    await tester.longPress(locationChip);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('故宫博物院'));
+    await tester.pumpAndSettle();
+
+    // 单击位置按钮打开管理对话框
+    await tester.tap(locationChip);
+    await tester.pumpAndSettle();
+
+    // 验证弹窗内容包含格式化后的 POI 地名
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.textContaining('东城区·故宫博物院'), findsOneWidget);
+
+    // 点击取消关闭对话框
+    await tester.tap(find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.text('取消'),
+    ));
+    await tester.pumpAndSettle();
   });
 }

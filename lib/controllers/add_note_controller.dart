@@ -180,6 +180,7 @@ class AddNoteController extends ChangeNotifier {
           LocationService.isNonDisplayMarker(rawLoc) ? null : rawLoc;
       originalLatitude = initialQuote!.latitude;
       originalLongitude = initialQuote!.longitude;
+      originalPoiName = initialQuote!.poiName;
       originalWeather = initialQuote!.weather;
       originalTemperature = initialQuote!.temperature;
 
@@ -334,7 +335,11 @@ class AddNoteController extends ChangeNotifier {
         newLatitude = snapshot.position.latitude;
         newLongitude = snapshot.position.longitude;
         newLocation = snapshot.location.isNotEmpty ? snapshot.location : null;
-        newPoiName = locService.currentPoiName;
+        try {
+          newPoiName = locService.currentPoiName;
+        } catch (_) {
+          newPoiName = null;
+        }
         isFetchingLocation = false;
         notifyListeners();
         onLocationFetched?.call();

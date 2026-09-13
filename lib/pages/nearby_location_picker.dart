@@ -43,6 +43,7 @@ class NearbyLocationPicker extends StatefulWidget {
     super.key,
     this.initialLatitude,
     this.initialLongitude,
+    this.initialLocation,
     this.initialPoiName,
     this.placeSearchService,
     this.locationService,
@@ -50,6 +51,7 @@ class NearbyLocationPicker extends StatefulWidget {
 
   final double? initialLatitude;
   final double? initialLongitude;
+  final String? initialLocation;
   final String? initialPoiName;
   final PlaceSearchService? placeSearchService;
   final LocationService? locationService;
@@ -66,10 +68,10 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   late final PlaceSearchService _placeSearch;
   final ScrollController _scrollController = ScrollController();
 
-  double? _latitude;
-  double? _longitude;
-  String? _locationString;
-  String? _systemPoiName;
+  double? _deviceLatitude;
+  double? _deviceLongitude;
+  String? _deviceLocationString;
+  String? _devicePoiName;
 
   bool _isLocating = true;
   bool _locatingFailed = false;
@@ -83,14 +85,25 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   int _currentOffset = 0;
   static const int _pageSize = 20;
 
+  late bool _systemSelected;
   PlaceInfo? _selectedPlace;
-  bool _systemSelected = true;
+  String? _customSelectedPoiName;
+  double? _customSelectedLatitude;
+  double? _customSelectedLongitude;
 
   @override
   void initState() {
     super.initState();
     _placeSearch = widget.placeSearchService ?? NominatimPlaceSearchService();
     _scrollController.addListener(_onScroll);
+
+    final hasInitialPoi = widget.initialPoiName != null &&
+        widget.initialPoiName!.trim().isNotEmpty;
+    _systemSelected = !hasInitialPoi;
+    _customSelectedPoiName =
+        hasInitialPoi ? widget.initialPoiName!.trim() : null;
+    _customSelectedLatitude = widget.initialLatitude;
+    _customSelectedLongitude = widget.initialLongitude;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initServicesAndLoad();
@@ -113,16 +126,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       _locationService = widget.locationService ?? LocationService();
     }
 
-    if (widget.initialLatitude != null && widget.initialLongitude != null) {
-      _latitude = widget.initialLatitude;
-      _longitude = widget.initialLongitude;
-      _systemPoiName = widget.initialPoiName;
-      _isLocating = false;
-      setState(() {});
-      _resolveAddressAndFetchPlaces();
-    } else {
-      _locateDeviceAndFetchPlaces();
-    }
+    _locateDeviceAndFetchPlaces();
   }
 
   Future<void> _locateDeviceAndFetchPlaces() async {
@@ -134,10 +138,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     try {
       final locService = _locationService;
       if (locService == null) {
-        setState(() {
-          _isLocating = false;
-          _locatingFailed = true;
-        });
+        _handleLocatingFallback();
         return;
       }
 
@@ -145,52 +146,75 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       if (!mounted) return;
 
       if (pos != null) {
-        _latitude = pos.latitude;
-        _longitude = pos.longitude;
-        _systemPoiName = locService.currentPoiName;
-        _locationString = locService.getFormattedLocation();
-        _isLocating = false;
-        setState(() {});
-        _resolveAddressAndFetchPlaces();
+        _deviceLatitude = pos.latitude;
+        _deviceLongitude = pos.longitude;
+        _devicePoiName = locService.currentPoiName;
+        final fmt = locService.getFormattedLocation();
+        _deviceLocationString = fmt.isNotEmpty ? fmt : widget.initialLocation;
+        _onDeviceLocationAcquired();
       } else if (locService.currentPosition != null) {
         final cached = locService.currentPosition!;
-        _latitude = cached.latitude;
-        _longitude = cached.longitude;
-        _systemPoiName = locService.currentPoiName;
-        _locationString = locService.getFormattedLocation();
-        _isLocating = false;
-        setState(() {});
-        _resolveAddressAndFetchPlaces();
+        _deviceLatitude = cached.latitude;
+        _deviceLongitude = cached.longitude;
+        _devicePoiName = locService.currentPoiName;
+        final fmt = locService.getFormattedLocation();
+        _deviceLocationString = fmt.isNotEmpty ? fmt : widget.initialLocation;
+        _onDeviceLocationAcquired();
       } else {
-        _isLocating = false;
-        _locatingFailed = true;
-        setState(() {});
+        _handleLocatingFallback();
       }
     } catch (e) {
       logDebug('获取当前设备位置失败: $e', source: 'NearbyLocationPicker');
       if (mounted) {
-        setState(() {
-          _isLocating = false;
-          _locatingFailed = true;
-        });
+        _handleLocatingFallback();
       }
     }
   }
 
+  void _handleLocatingFallback() {
+    if (widget.initialLatitude != null && widget.initialLongitude != null) {
+      _deviceLatitude = widget.initialLatitude;
+      _deviceLongitude = widget.initialLongitude;
+      _deviceLocationString = widget.initialLocation;
+      if (_systemSelected) {
+        _devicePoiName = widget.initialPoiName;
+      }
+      _onDeviceLocationAcquired();
+    } else {
+      _isLocating = false;
+      _locatingFailed = true;
+      setState(() {});
+    }
+  }
+
+  void _onDeviceLocationAcquired() {
+    // 若用户传入的 initialPoiName 与设备当前 POI 相同，则视同选中系统当前位置
+    if (_customSelectedPoiName != null &&
+        _devicePoiName != null &&
+        _customSelectedPoiName == _devicePoiName) {
+      _systemSelected = true;
+      _customSelectedPoiName = null;
+    }
+
+    _isLocating = false;
+    setState(() {});
+    _resolveAddressAndFetchPlaces();
+  }
+
   Future<void> _resolveAddressAndFetchPlaces() async {
-    if (_latitude == null || _longitude == null) return;
+    if (_deviceLatitude == null || _deviceLongitude == null) return;
 
     // 若地址尚未就绪，尝试反查
-    if (_locationString == null || _locationString!.isEmpty) {
+    if (_deviceLocationString == null || _deviceLocationString!.isEmpty) {
       try {
         final rev = await _locationService?.reverseGeocodePoint(
-          _latitude!,
-          _longitude!,
+          _deviceLatitude!,
+          _deviceLongitude!,
         );
         if (mounted && rev != null) {
           setState(() {
-            _locationString = LocationService.buildStorageLocation(rev);
-            _systemPoiName ??= rev['poi_name'];
+            _deviceLocationString = LocationService.buildStorageLocation(rev);
+            _devicePoiName ??= rev['poi_name'];
           });
         }
       } catch (e) {
@@ -213,7 +237,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   Future<void> _fetchNearbyPlaces({required bool isLoadMore}) async {
-    if (_latitude == null || _longitude == null) return;
+    if (_deviceLatitude == null || _deviceLongitude == null) return;
     if (isLoadMore) {
       if (_isLoadingMore || !_hasMore) return;
       setState(() {
@@ -231,13 +255,13 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     try {
       final keyword = _locationService?.district ??
           _locationService?.city ??
-          _systemPoiName ??
+          _devicePoiName ??
           '';
       final localeCode = Localizations.localeOf(context).languageCode;
 
       final results = await _placeSearch.getNearbyPlaces(
-        _latitude!,
-        _longitude!,
+        _deviceLatitude!,
+        _deviceLongitude!,
         categoryOrKeyword: keyword.isNotEmpty ? keyword : null,
         localeCode: localeCode,
         limit: _pageSize,
@@ -256,6 +280,16 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         if (!existingNames.contains(p.name)) {
           existingNames.add(p.name);
           newUnique.add(p);
+        }
+      }
+
+      // 如果当前选中的是之前传入的 POI，在候选列表中定位对应条目
+      if (_customSelectedPoiName != null && _selectedPlace == null) {
+        for (final p in _places.followedBy(newUnique)) {
+          if (p.name == _customSelectedPoiName) {
+            _selectedPlace = p;
+            break;
+          }
         }
       }
 
@@ -295,18 +329,39 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         LocationPickerResult(
           latitude: place.latitude,
           longitude: place.longitude,
-          location: _locationString,
+          location: _deviceLocationString,
           poiName: place.name,
         ),
       );
-    } else {
+    } else if (_systemSelected) {
       // 选中当前设备位置（离线反查失败时保留精确经纬度）
       Navigator.of(context).pop(
         LocationPickerResult(
-          latitude: _latitude!,
-          longitude: _longitude!,
-          location: _locationString,
-          poiName: _systemPoiName,
+          latitude: _deviceLatitude!,
+          longitude: _deviceLongitude!,
+          location: _deviceLocationString,
+          poiName: _devicePoiName,
+        ),
+      );
+    } else if (_customSelectedPoiName != null &&
+        _customSelectedLatitude != null &&
+        _customSelectedLongitude != null) {
+      // 保留原本选中的候选 POI
+      Navigator.of(context).pop(
+        LocationPickerResult(
+          latitude: _customSelectedLatitude!,
+          longitude: _customSelectedLongitude!,
+          location: widget.initialLocation ?? _deviceLocationString,
+          poiName: _customSelectedPoiName,
+        ),
+      );
+    } else {
+      Navigator.of(context).pop(
+        LocationPickerResult(
+          latitude: _deviceLatitude!,
+          longitude: _deviceLongitude!,
+          location: _deviceLocationString,
+          poiName: _devicePoiName,
         ),
       );
     }
@@ -324,7 +379,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           IconButton(
             icon: const Icon(Icons.check),
             tooltip: l10n.mapPickerConfirm,
-            onPressed: (_latitude == null || _longitude == null)
+            onPressed: (_deviceLatitude == null || _deviceLongitude == null)
                 ? null
                 : () => _confirmSelection(
                       place: _systemSelected ? null : _selectedPlace,
@@ -355,7 +410,8 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       );
     }
 
-    if (_locatingFailed && (_latitude == null || _longitude == null)) {
+    if (_locatingFailed &&
+        (_deviceLatitude == null || _deviceLongitude == null)) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -428,23 +484,24 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   /// 第一项：设备当前系统定位
   Widget _buildSystemLocationTile(ThemeData theme, AppLocalizations l10n) {
     final String title;
-    if (_systemPoiName != null && _systemPoiName!.isNotEmpty) {
+    if (_devicePoiName != null && _devicePoiName!.isNotEmpty) {
       title = LocationService.formatPoiForDisplay(
-        _systemPoiName,
-        _locationString,
+        _devicePoiName,
+        _deviceLocationString,
       );
-    } else if (_locationString != null && _locationString!.isNotEmpty) {
-      title = LocationService.formatLocationForDisplay(_locationString);
+    } else if (_deviceLocationString != null &&
+        _deviceLocationString!.isNotEmpty) {
+      title = LocationService.formatLocationForDisplay(_deviceLocationString);
     } else {
       title = LocationService.formatCoordinates(
-        _latitude!,
-        _longitude!,
+        _deviceLatitude!,
+        _deviceLongitude!,
         precision: 4,
       );
     }
 
     final String subtitle;
-    if (_locationString != null && _locationString!.isNotEmpty) {
+    if (_deviceLocationString != null && _deviceLocationString!.isNotEmpty) {
       subtitle = l10n.mapPickerCurrentLocationSubtitle;
     } else {
       subtitle = l10n.offlineCoordinates;
@@ -478,6 +535,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         setState(() {
           _systemSelected = true;
           _selectedPlace = null;
+          _customSelectedPoiName = null;
         });
         _confirmSelection(place: null);
       },
@@ -525,7 +583,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     AppLocalizations l10n,
     PlaceInfo place,
   ) {
-    final selected = !_systemSelected && _selectedPlace == place;
+    final selected = !_systemSelected &&
+        (_selectedPlace == place ||
+            (_selectedPlace == null && place.name == _customSelectedPoiName));
     final distance = _formatDistance(l10n, place.distanceMeters);
 
     return ListTile(
@@ -571,6 +631,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         setState(() {
           _systemSelected = false;
           _selectedPlace = place;
+          _customSelectedPoiName = place.name;
+          _customSelectedLatitude = place.latitude;
+          _customSelectedLongitude = place.longitude;
         });
         _confirmSelection(place: place);
       },
