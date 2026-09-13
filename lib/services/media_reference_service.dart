@@ -1125,6 +1125,18 @@ class MediaReferenceService {
     }
   }
 
+  static Future<String> _getAppPathSafely(String? cachedAppPath) async {
+    if (cachedAppPath != null && cachedAppPath.isNotEmpty) {
+      return cachedAppPath;
+    }
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      return path.normalize(appDir.path);
+    } catch (_) {
+      return '';
+    }
+  }
+
   /// 同步笔记的媒体文件引用（事务内版本）
   static Future<bool> syncQuoteMediaReferencesWithTransaction(
     DatabaseExecutor txn,
@@ -1139,8 +1151,7 @@ class MediaReferenceService {
       }
 
       // 获取应用目录路径缓存，避免循环中多次获取
-      final appPath = cachedAppPath ??
-          path.normalize((await getApplicationDocumentsDirectory()).path);
+      final appPath = await _getAppPathSafely(cachedAppPath);
 
       // 先移除该笔记的所有现有引用
       await txn.delete(_tableName, where: 'quote_id = ?', whereArgs: [quoteId]);
@@ -1230,10 +1241,9 @@ class MediaReferenceService {
 
       sanitized = path.normalize(sanitized);
 
-      final appPath = cachedAppPath ??
-          path.normalize((await getApplicationDocumentsDirectory()).path);
+      final appPath = await _getAppPathSafely(cachedAppPath);
 
-      if (sanitized.startsWith(appPath)) {
+      if (appPath.isNotEmpty && sanitized.startsWith(appPath)) {
         return path.normalize(path.relative(sanitized, from: appPath));
       }
 
