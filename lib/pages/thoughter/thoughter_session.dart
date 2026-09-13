@@ -8,6 +8,7 @@ extension _ThoughterSession on _ThoughterPageState {
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScrollPositionChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       // 探索摘要不依赖数据库或 AI 服务，先显示，避免初始化异常吞掉首条消息。
       if (_messages.isEmpty &&
           widget.exploreGuideSummary?.trim().isNotEmpty == true) {
@@ -38,12 +39,19 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   void _disposeImpl() {
+    _isDisposed = true;
     _agentRequestGeneration++;
     _agentStatusDismissTimer?.cancel();
     _agentEventSubscription?.cancel();
-    if (_agentListenerAttached) {
-      _agentService.requestStop();
-      _agentService.removeListener(_onAgentServiceChanged);
+    _cancelPendingAskUser(updateUi: false);
+    final agentService = _agentService;
+    if (agentService != null) {
+      agentService.setAskUserHandler(null);
+      agentService.requestStop();
+      if (_agentListenerAttached) {
+        agentService.removeListener(_onAgentServiceChanged);
+        _agentListenerAttached = false;
+      }
     }
     _streamSubscription?.cancel();
     _tagSubscription?.cancel();
@@ -132,13 +140,14 @@ extension _ThoughterSession on _ThoughterPageState {
   Future<void> _initServicesAndLoad() async {
     try {
       _chatSessionService = context.read<ChatSessionService>();
-      _agentService = context.read<AgentService>();
+      final agentService = context.read<AgentService>();
+      _agentService = agentService;
       _aiService = context.read<AIService>();
       _settingsService = context.read<SettingsService>();
       await _chatSessionService.init(); // 确保数据库已初始化
       if (!mounted) return;
       if (!_agentListenerAttached) {
-        _agentService.addListener(_onAgentServiceChanged);
+        agentService.addListener(_onAgentServiceChanged);
         _agentListenerAttached = true;
       }
       _settingsReady = true;
@@ -621,15 +630,13 @@ extension _ThoughterSession on _ThoughterPageState {
     try {
       _agentRequestGeneration++;
       // Cancel any ongoing stream and Agent session before starting new chat
-      await _streamSubscription?.cancel();
+      _cancelPendingAskUser();
+      _agentService?.setAskUserHandler(null);
+      _agentService?.requestStop();
+      _streamSubscription?.cancel();
       _streamSubscription = null;
-      await _agentEventSubscription?.cancel();
+      _agentEventSubscription?.cancel();
       _agentEventSubscription = null;
-      _agentService.requestStop();
-      if (_agentListenerAttached) {
-        _agentService.removeListener(_onAgentServiceChanged);
-        _agentListenerAttached = false;
-      }
       _cancelStreamUpdate();
       _cancelToolProgressUpdate();
       _isLoading = false;

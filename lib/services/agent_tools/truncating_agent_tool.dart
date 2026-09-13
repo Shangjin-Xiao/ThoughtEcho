@@ -31,6 +31,12 @@ class TruncatingAgentTool extends AgentTool {
   bool get isConcurrencySafe => inner.isConcurrencySafe;
 
   @override
+  bool get isInteractive => inner.isInteractive;
+
+  @override
+  void cancel() => inner.cancel();
+
+  @override
   Map<String, Object?> get parametersSchema => inner.parametersSchema;
 
   @override

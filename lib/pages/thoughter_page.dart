@@ -35,6 +35,7 @@ import '../services/agent_tool.dart'
     show AgentFailureType, AgentRequestException, AgentResponse;
 import '../models/note_proposal_artifact.dart';
 import '../services/ai_service.dart';
+import '../services/agent_tools/ask_user_tool.dart';
 import '../services/agent_tools/propose_note_edit_tool.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
@@ -54,6 +55,7 @@ import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/ai/agent_memory_notice.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
+import '../widgets/ai/ask_user_card.dart';
 import '../widgets/ai/experimental_badge.dart';
 import '../widgets/ai/note_proposal_card.dart';
 import '../widgets/ai/thinking_widget.dart';
@@ -139,7 +141,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   final List<app_chat.ChatMessage> _pendingPersistMessages = [];
   StreamSubscription<String>? _streamSubscription;
   late ChatSessionService _chatSessionService;
-  late AgentService _agentService;
+  AgentService? _agentService;
   late AIService _aiService;
   late SettingsService _settingsService;
   bool _settingsReady = false;
@@ -170,10 +172,15 @@ class _ThoughterPageState extends State<ThoughterPage>
   /// 上一次布局时消息区的可用高度，用于识别键盘/输入框正在挤压列表
   /// （见 _onMessageViewportHeightChanged）。
   double _lastMessageViewportHeight = 0;
+  bool _isDisposed = false;
   bool _agentListenerAttached = false;
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
   StreamSubscription<AgentEvent>? _agentEventSubscription;
+  Completer<AskUserResponse>? _pendingAskUserCompleter;
+  String? _pendingAskUserMessageId;
+  String? _pendingAskUserSessionId;
+  app_chat.ChatMessage? _pendingAskUserMessage;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
   /// 流式文本 UI 的刷新间隔上限：一个窗口内最多落地一次。
@@ -408,6 +415,9 @@ class _ThoughterPageState extends State<ThoughterPage>
   Future<void> debugLoadSessionForTest(String sessionId) =>
       _loadSession(sessionId);
 
+  @visibleForTesting
+  void debugCancelPendingAskUserForTest() => _cancelPendingAskUser();
+
   void _appendMessage(app_chat.ChatMessage message, {bool persist = false}) {
     _setState(() {
       _messages.add(message);
@@ -468,6 +478,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   }
 
   void _setState(VoidCallback fn) {
+    if (!mounted || _isDisposed) return;
     setState(fn);
   }
 
@@ -534,10 +545,85 @@ class _ThoughterPageState extends State<ThoughterPage>
     return _cachedMarkdownStyleSheet!;
   }
 
+  void _cancelPendingAskUser({
+    String? targetMessageId,
+    String? targetSessionId,
+    bool updateUi = true,
+  }) {
+    final msgId = targetMessageId ?? _pendingAskUserMessageId;
+    final isTargetPending = msgId != null && msgId == _pendingAskUserMessageId;
+    app_chat.ChatMessage? updated;
+    if (msgId != null) {
+      final idx = _messages.indexWhere((m) => m.id == msgId);
+      if (idx != -1) {
+        final rawMeta = _messages[idx].metaJson;
+        Map<String, dynamic> meta = {};
+        if (rawMeta != null) {
+          try {
+            meta = Map<String, dynamic>.from(jsonDecode(rawMeta) as Map);
+          } catch (_) {}
+        }
+        final updatedMeta = {
+          ...meta,
+          'isCompleted': true,
+          'isCancelled': true,
+        };
+        updated = _messages[idx].copyWith(
+          metaJson: jsonEncode(updatedMeta),
+        );
+        _messages[idx] = updated;
+      } else if (isTargetPending && _pendingAskUserMessage != null) {
+        final rawMeta = _pendingAskUserMessage!.metaJson;
+        Map<String, dynamic> meta = {};
+        if (rawMeta != null) {
+          try {
+            meta = Map<String, dynamic>.from(jsonDecode(rawMeta) as Map);
+          } catch (_) {}
+        }
+        final updatedMeta = {
+          ...meta,
+          'isCompleted': true,
+          'isCancelled': true,
+        };
+        updated = _pendingAskUserMessage!.copyWith(
+          metaJson: jsonEncode(updatedMeta),
+        );
+      }
+    }
+
+    // 会话校验与消息持久化：与 UI 更新严格分开，校验所属会话防止串写
+    final effectiveSessionId = targetSessionId ??
+        (isTargetPending ? _pendingAskUserSessionId : null) ??
+        (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
+    if (effectiveSessionId != null && updated != null) {
+      unawaited(
+        _chatSessionService.addMessage(effectiveSessionId, updated),
+      );
+    }
+
+    final shouldClearCompleter =
+        targetMessageId == null || targetMessageId == _pendingAskUserMessageId;
+    if (shouldClearCompleter) {
+      if (_pendingAskUserCompleter != null &&
+          !_pendingAskUserCompleter!.isCompleted) {
+        _pendingAskUserCompleter!.complete(AskUserResponse.cancelled());
+      }
+      _pendingAskUserCompleter = null;
+      _pendingAskUserMessageId = null;
+      _pendingAskUserSessionId = null;
+      _pendingAskUserMessage = null;
+    }
+
+    // UI 更新：销毁路径或非挂载时安全跳过
+    if (updateUi && mounted && !_isDisposed && updated != null) {
+      _setState(() {});
+    }
+  }
+
   /// Stop the current generation - cancels the stream subscription
   void _stopGenerating() {
     _agentRequestGeneration++;
-    _agentService.requestStop();
+    _agentService?.requestStop();
     _agentEventSubscription?.cancel();
     _agentEventSubscription = null;
     _streamSubscription?.cancel();
@@ -545,6 +631,7 @@ class _ThoughterPageState extends State<ThoughterPage>
     _cancelStreamUpdate();
     _cancelToolProgressUpdate();
     _agentStatusDismissTimer?.cancel();
+    _cancelPendingAskUser();
     _finishLoading();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

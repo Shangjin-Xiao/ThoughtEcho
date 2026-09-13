@@ -21,6 +21,9 @@ class AgentHistoryBuilder {
   /// 工具轨迹摘要消息的前缀，UI 不展示，仅用于喂给模型。
   static const String traceHeader = '[已执行的工具轨迹]';
 
+  /// 用户选择摘要消息的前缀，用于历史上下文中表示用户对提问的回复。
+  static const String askUserHeader = '[用户选择]';
+
   /// 构建喂给 Agent 的历史消息列表。
   ///
   /// - 普通 user/assistant 文本消息原样保留；
@@ -60,6 +63,24 @@ class AgentHistoryBuilder {
             role: 'assistant',
             isUser: false,
             content: trace,
+            timestamp: message.timestamp,
+          ),
+        );
+        continue;
+      }
+
+      if (meta['type'] == 'ask_user') {
+        final summary = _summarizeAskUser(
+          meta,
+          cap: traceCap,
+        );
+        if (summary == null) continue;
+        history.add(
+          ChatMessage(
+            id: '${message.id}_selection',
+            role: 'user',
+            isUser: true,
+            content: summary,
             timestamp: message.timestamp,
           ),
         );
@@ -120,6 +141,50 @@ class AgentHistoryBuilder {
 
     final body = lines.join('\n');
     return '$traceHeader\n${_truncate(body, traceCap)}';
+  }
+
+  /// 把一条 `ask_user` 元数据压成一段代表用户选择的上下文。
+  ///
+  /// 返回 null 表示这条提问尚未完成或处于取消状态外且无可用回复。
+  static String? _summarizeAskUser(
+    Map<String, dynamic> meta, {
+    required int cap,
+  }) {
+    final isCompleted = meta['isCompleted'] == true;
+    if (!isCompleted) return null;
+
+    final question = meta['question']?.toString().trim() ?? '';
+    final isCancelled = meta['isCancelled'] == true;
+    final customText = meta['customText']?.toString().trim();
+    final rawOptions = meta['selectedOptions'];
+    final selectedOptions = rawOptions is List
+        ? rawOptions
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList()
+        : const <String>[];
+
+    final buffer = StringBuffer(askUserHeader);
+    if (question.isNotEmpty) {
+      buffer.write(' 针对「$question」');
+    }
+
+    final hasCustom = customText != null && customText.isNotEmpty;
+    final hasOptions = selectedOptions.isNotEmpty;
+
+    if (isCancelled) {
+      buffer.write('，用户取消了选择。');
+    } else if (hasOptions && hasCustom) {
+      buffer.write('，用户选择了：${selectedOptions.join('、')}，并补充回复：$customText');
+    } else if (hasCustom) {
+      buffer.write('，用户回复：$customText');
+    } else if (hasOptions) {
+      buffer.write('，用户选择了：${selectedOptions.join('、')}');
+    } else {
+      buffer.write('，用户取消了选择。');
+    }
+
+    return _truncate(buffer.toString(), cap);
   }
 
   static String _truncate(String text, int cap) {

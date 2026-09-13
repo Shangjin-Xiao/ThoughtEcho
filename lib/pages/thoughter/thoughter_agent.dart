@@ -2,6 +2,12 @@ part of '../thoughter_page.dart';
 
 extension _ThoughterAgent on _ThoughterPageState {
   Future<void> _askAgent(String text) async {
+    final agentService = _agentService;
+    if (agentService == null) {
+      _finishLoading();
+      return;
+    }
+
     final l10n = AppLocalizations.of(context);
     final requestGeneration = ++_agentRequestGeneration;
     StreamSubscription<AgentEvent>? eventSubscription;
@@ -110,7 +116,7 @@ extension _ThoughterAgent on _ThoughterPageState {
       if (!mounted || requestGeneration != _agentRequestGeneration) {
         return;
       }
-      eventSubscription = _agentService.events.listen((event) {
+      eventSubscription = agentService.events.listen((event) {
         if (!mounted || requestGeneration != _agentRequestGeneration) return;
         switch (event) {
           case AgentThinkingEvent():
@@ -264,7 +270,45 @@ extension _ThoughterAgent on _ThoughterPageState {
       });
       _agentEventSubscription = eventSubscription;
 
-      final response = await _agentService.runAgent(
+      agentService.setAskUserHandler((request) async {
+        if (!mounted || requestGeneration != _agentRequestGeneration) {
+          return AskUserResponse.cancelled();
+        }
+        final completer = Completer<AskUserResponse>();
+        _pendingAskUserCompleter = completer;
+
+        final msgId = _uuid.v4();
+        _pendingAskUserMessageId = msgId;
+        _pendingAskUserSessionId = _currentSessionId;
+
+        final askMsg = app_chat.ChatMessage(
+          id: msgId,
+          role: 'assistant',
+          isUser: false,
+          content: request.question,
+          timestamp: DateTime.now(),
+          metaJson: jsonEncode({
+            'type': 'ask_user',
+            'toolCallId': request.toolCallId,
+            'question': request.question,
+            'header': request.header,
+            'options': request.options,
+            'multiSelect': request.multiSelect,
+            'isCompleted': false,
+            'isCancelled': false,
+            'selectedOptions': <String>[],
+            'customText': null,
+          }),
+        );
+
+        _pendingAskUserMessage = askMsg;
+        _appendMessage(askMsg, persist: true);
+        _scrollToBottom();
+
+        return completer.future;
+      });
+
+      final response = await agentService.runAgent(
         userMessage: text,
         history: history,
         noteContext: _hasBoundNote
@@ -382,6 +426,8 @@ extension _ThoughterAgent on _ThoughterPageState {
         _agentEventSubscription = null;
       }
       if (mounted && requestGeneration == _agentRequestGeneration) {
+        agentService.setAskUserHandler(null);
+        _cancelPendingAskUser();
         _cancelStreamUpdate();
         _cancelToolProgressUpdate();
         if (toolProgressMsgId != null) {
@@ -488,6 +534,7 @@ extension _ThoughterAgent on _ThoughterPageState {
           ? l10n.agentWebSearching
           : l10n.agentSearchingWebForQuery(query),
       'web_fetch' => l10n.agentReadingWebPage,
+      'ask_user' => l10n.agentAskingUser,
       _ => l10n.agentToolCall(toolName),
     };
   }
@@ -497,6 +544,9 @@ extension _ThoughterAgent on _ThoughterPageState {
     String toolName,
     Map<String, Object?> args,
   ) {
+    if (toolName == 'ask_user') {
+      return args['question']?.toString() ?? '';
+    }
     if ((toolName == 'explore_notes' || toolName == 'search_notes') &&
         args.containsKey('query')) {
       return '';
@@ -574,6 +624,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         l10n.agentPreparedSuggestionCard,
       'remember' => _summarizeRememberResult(l10n, trimmed),
       'recall' => _summarizeRecallResult(l10n, trimmed),
+      'ask_user' => trimmed,
       _ => l10n.agentToolStepFinished,
     };
   }
@@ -711,6 +762,69 @@ extension _ThoughterAgent on _ThoughterPageState {
       isUser: false,
       content: AiSmartResultUtils.proposalAdoptionNotice(savedNoteId),
       timestamp: DateTime.now(),
+    );
+  }
+
+  void _handleAskUserSubmit(
+    String messageId,
+    Map<String, dynamic> meta, {
+    required List<String> selectedOptions,
+    String? customText,
+  }) {
+    final isPending = messageId == _pendingAskUserMessageId;
+    final updatedMeta = {
+      ...meta,
+      'isCompleted': true,
+      'isCancelled': false,
+      'selectedOptions': selectedOptions,
+      'customText': customText,
+    };
+    app_chat.ChatMessage? updated;
+    final idx = _messages.indexWhere((m) => m.id == messageId);
+    if (idx != -1) {
+      updated = _messages[idx].copyWith(
+        metaJson: jsonEncode(updatedMeta),
+      );
+      _messages[idx] = updated;
+    } else if (isPending && _pendingAskUserMessage != null) {
+      updated = _pendingAskUserMessage!.copyWith(
+        metaJson: jsonEncode(updatedMeta),
+      );
+    }
+    final effectiveSessionId = (isPending ? _pendingAskUserSessionId : null) ??
+        (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
+    if (effectiveSessionId != null && updated != null) {
+      unawaited(
+        _chatSessionService.addMessage(effectiveSessionId, updated),
+      );
+    }
+    if (mounted && !_isDisposed && updated != null) {
+      _setState(() {});
+    }
+    if (isPending &&
+        _pendingAskUserCompleter != null &&
+        !_pendingAskUserCompleter!.isCompleted) {
+      _pendingAskUserCompleter!.complete(
+        AskUserResponse(
+          selectedOptions: selectedOptions,
+          customText: customText,
+        ),
+      );
+      _pendingAskUserCompleter = null;
+      _pendingAskUserMessageId = null;
+      _pendingAskUserSessionId = null;
+      _pendingAskUserMessage = null;
+    }
+  }
+
+  void _handleAskUserCancel(String messageId, Map<String, dynamic> meta) {
+    _cancelPendingAskUser(
+      targetMessageId: messageId,
+      targetSessionId: messageId == _pendingAskUserMessageId
+          ? _pendingAskUserSessionId
+          : (_messagesSessionId == _currentSessionId
+              ? _currentSessionId
+              : null),
     );
   }
 

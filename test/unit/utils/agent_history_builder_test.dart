@@ -147,5 +147,109 @@ void main() {
 
       expect(history.map((m) => m.content), ['你好']);
     });
+
+    test('ask_user 未完成时不产生历史条目', () {
+      final incomplete = ChatMessage(
+        id: 'ask-1',
+        role: 'assistant',
+        isUser: false,
+        content: '请选择分类',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'question': '请选择分类',
+          'isCompleted': false,
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([incomplete]);
+      expect(history, isEmpty);
+    });
+
+    test('ask_user 完成选项选择后压缩成代表用户的选择摘要', () {
+      final completed = ChatMessage(
+        id: 'ask-2',
+        role: 'assistant',
+        isUser: false,
+        content: '请选择分类',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'question': '请选择笔记分类',
+          'isCompleted': true,
+          'selectedOptions': ['生活随笔', '读书笔记'],
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([completed]);
+      expect(history.length, 1);
+      final msg = history.single;
+      expect(msg.isUser, isTrue);
+      expect(msg.role, 'user');
+      expect(msg.content, startsWith(AgentHistoryBuilder.askUserHeader));
+      expect(msg.content, contains('请选择笔记分类'));
+      expect(msg.content, contains('生活随笔、读书笔记'));
+    });
+
+    test('ask_user 完成自定义输入后压缩成用户回复', () {
+      final completed = ChatMessage(
+        id: 'ask-3',
+        role: 'assistant',
+        isUser: false,
+        content: '请选择分类',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'question': '请选择分类',
+          'isCompleted': true,
+          'customText': '我想按项目分类',
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([completed]);
+      expect(history.single.content, contains('我想按项目分类'));
+    });
+
+    test('ask_user 取消选择后压缩成取消记录', () {
+      final cancelled = ChatMessage(
+        id: 'ask-4',
+        role: 'assistant',
+        isUser: false,
+        content: '请选择分类',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'question': '请选择分类',
+          'isCompleted': true,
+          'isCancelled': true,
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([cancelled]);
+      expect(history.single.content, contains('用户取消了选择'));
+    });
+
+    test('ask_user 同时有选项选择和自定义补充回复时完整压缩两者', () {
+      final combined = ChatMessage(
+        id: 'ask-5',
+        role: 'assistant',
+        isUser: false,
+        content: '请选择分类',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'question': '请选择笔记分类',
+          'isCompleted': true,
+          'selectedOptions': ['读书笔记'],
+          'customText': '想专注在历史类书籍',
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([combined]);
+      expect(history.length, 1);
+      final msg = history.single;
+      expect(msg.content, contains('读书笔记'));
+      expect(msg.content, contains('想专注在历史类书籍'));
+    });
   });
 }
