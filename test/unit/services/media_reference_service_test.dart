@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/media_reference_service.dart';
 
 /// `getReferenceCountForMediaRelativePath` 是 WebDAV 判断"云端附件是否仍被引用"
@@ -185,6 +186,62 @@ void main() {
         () => MediaReferenceService.getReferenceCount(
           '$iosContainer/media/images/a.jpg',
           cachedAppPath: iosContainer,
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  group('syncQuoteMediaReferences 事务原子性保护', () {
+    test('成功同步笔记媒体引用', () async {
+      final quote = Quote(
+        id: 'q1',
+        content: '图文笔记',
+        deltaContent:
+            '[{"insert":{"image":"images/new_img.jpg"}},{"insert":"\\n"}]',
+        date: '2026-08-21T00:00:00.000Z',
+      );
+
+      final success = await MediaReferenceService.syncQuoteMediaReferences(
+        quote,
+        cachedAppPath: iosContainer,
+      );
+      expect(success, isTrue);
+
+      final refs = await MediaReferenceService.getReferencedFiles('q1');
+      expect(refs, contains('images/new_img.jpg'));
+    });
+
+    test('同步过程中遇到数据库异常时优雅捕获并返回 false', () async {
+      await MediaReferenceService.addReference('images/old_img.jpg', 'q1');
+      await db.close();
+
+      final quote = Quote(
+        id: 'q1',
+        content: '尝试同步',
+        deltaContent:
+            '[{"insert":{"image":"images/new_img.jpg"}},{"insert":"\\n"}]',
+        date: '2026-08-21T00:00:00.000Z',
+      );
+
+      final success =
+          await MediaReferenceService.syncQuoteMediaReferences(quote);
+      expect(success, isFalse);
+    });
+
+    test('syncQuoteMediaReferencesWithTransaction 在发生异常时重新抛出以触发外层事务回滚',
+        () async {
+      await db.close();
+      final quote = Quote(
+        id: 'q1',
+        content: '测试重新抛出',
+        date: '2026-08-21T00:00:00.000Z',
+      );
+
+      expect(
+        () => MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
+          db,
+          quote,
         ),
         throwsA(isA<Exception>()),
       );

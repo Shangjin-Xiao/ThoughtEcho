@@ -89,12 +89,15 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             }
             await batch.commit(noResult: true);
           }
+
+          // 同步媒体文件引用，确保与新增笔记保持原子性
+          await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
+            txn,
+            quoteWithId,
+          );
         });
 
         logDebug('笔记已成功保存到数据库，ID: ${quoteWithId.id}');
-
-        // 同步媒体文件引用
-        await MediaReferenceService.syncQuoteMediaReferences(quoteWithId);
 
         // 优化：数据变更后清空缓存
         clearAllCacheForParts();

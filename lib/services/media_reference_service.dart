@@ -1106,45 +1106,21 @@ class MediaReferenceService {
         return false;
       }
 
-      // 获取应用目录路径缓存，避免循环中多次获取
-      final appPath = cachedAppPath ??
-          path.normalize((await getApplicationDocumentsDirectory()).path);
-
-      // 先移除该笔记的所有现有引用
-      await removeAllReferencesForQuote(quoteId);
-
-      // 从笔记内容中提取媒体文件路径
-      final mediaPaths = await extractMediaPathsFromQuote(
-        quote,
-        cachedAppPath: appPath,
-      );
-
-      // 添加新的引用
       final db = await database;
-      final batch = db.batch();
-      for (final mediaPath in mediaPaths) {
-        final normalizedPath = await _normalizeFilePath(
-          mediaPath,
-          cachedAppPath: appPath,
+      return await db.transaction((txn) async {
+        return syncQuoteMediaReferencesWithTransaction(
+          txn,
+          quote,
+          cachedAppPath: cachedAppPath,
         );
-        batch.insert(
-            _tableName,
-            {
-              'id': const Uuid().v4(),
-              'file_path': normalizedPath,
-              'quote_id': quoteId,
-              'created_at': DateTime.now().toIso8601String(),
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
-      if (mediaPaths.isNotEmpty) {
-        await batch.commit(noResult: true);
-      }
-
-      logDebug('同步笔记媒体文件引用完成: $quoteId, 共 ${mediaPaths.length} 个文件');
-      return true;
-    } catch (e) {
-      logDebug('同步笔记媒体文件引用失败: $e');
+      });
+    } catch (e, stackTrace) {
+      logError(
+        '同步笔记媒体文件引用失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
       return false;
     }
   }
@@ -1198,9 +1174,14 @@ class MediaReferenceService {
 
       logDebug('同步笔记媒体文件引用完成: $quoteId, 共 ${mediaPaths.length} 个文件');
       return true;
-    } catch (e) {
-      logDebug('同步笔记媒体文件引用失败: $e');
-      return false;
+    } catch (e, stackTrace) {
+      logError(
+        '同步笔记媒体文件引用失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
+      rethrow;
     }
   }
 
