@@ -35,12 +35,7 @@ class LocationWeatherHelper {
       return null;
     }
 
-    String? poiName;
-    try {
-      poiName = locationService.currentPoiName;
-    } catch (_) {
-      poiName = null;
-    }
+    final poiName = locationService.currentPoiName;
 
     return LocationSnapshot(
       position: position,

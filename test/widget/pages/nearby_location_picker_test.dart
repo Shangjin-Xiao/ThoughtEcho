@@ -446,7 +446,8 @@ void main() {
     );
 
     // 点击右上角确认按钮（此时天安门广场自动匹配为选中国项）
-    await tester.tap(find.byIcon(Icons.check).first);
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_confirm_button')));
     await tester.pumpAndSettle();
 
     expect(selectedResult, isNotNull);
@@ -476,7 +477,8 @@ void main() {
     );
 
     // 点击右上角确认按钮
-    await tester.tap(find.byIcon(Icons.check).first);
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_confirm_button')));
     await tester.pumpAndSettle();
 
     expect(selectedResult, isNotNull);
@@ -486,9 +488,52 @@ void main() {
     expect(selectedResult!.longitude, 116.3976);
   });
 
-  testWidgets('点选候选 POI 时 location 优先使用 place.address',
-      (WidgetTester tester) async {
-    final fakeLoc = _FakeLocationService();
+  testWidgets('点选候选 POI 时，若同坐标复用设备四级行政区', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '中国,北京市,北京市,东城区',
+    );
+    final candidatePlace = const PlaceInfo(
+      name: '故宫角楼',
+      latitude: 39.9042,
+      longitude: 116.4074,
+      address: '景山前街4号',
+      distanceMeters: 50,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    await tester.tap(find.text('故宫角楼'));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '故宫角楼');
+    expect(selectedResult!.location, '中国,北京市,北京市,东城区');
+    expect(selectedResult!.latitude, 39.9042);
+    expect(selectedResult!.longitude, 116.4074);
+  });
+
+  testWidgets('点选候选 POI 时，不同坐标尝试反查四级行政区（反查成功）', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '中国,北京市,北京市,东城区',
+      reverseResult: {
+        'country': '中国',
+        'province': '北京市',
+        'city': '北京市',
+        'district': '西城区',
+      },
+    );
     final candidatePlace = const PlaceInfo(
       name: '景山公园',
       latitude: 39.9242,
@@ -514,7 +559,45 @@ void main() {
 
     expect(selectedResult, isNotNull);
     expect(selectedResult!.poiName, '景山公园');
-    expect(selectedResult!.location, '景山西街44号');
+    expect(selectedResult!.location, '中国,北京市,北京市,西城区');
+    expect(selectedResult!.latitude, 39.9242);
+    expect(selectedResult!.longitude, 116.4014);
+  });
+
+  testWidgets('点选候选 POI 时，不同坐标反查失败返回 null，不写入非规范的街道门牌串',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '中国,北京市,北京市,东城区',
+      reverseResult: null,
+    );
+    final candidatePlace = const PlaceInfo(
+      name: '景山公园',
+      latitude: 39.9242,
+      longitude: 116.4014,
+      address: '景山西街44号',
+      distanceMeters: 800,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    await tester.tap(find.text('景山公园'));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '景山公园');
+    expect(selectedResult!.location, isNull,
+        reason: '反查失败返回 null，不写入非规范的街道门牌串 place.address');
     expect(selectedResult!.latitude, 39.9242);
     expect(selectedResult!.longitude, 116.4014);
   });

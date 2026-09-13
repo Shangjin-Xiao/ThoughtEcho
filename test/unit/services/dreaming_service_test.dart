@@ -810,6 +810,12 @@ void main() {
             sourceAuthor: '阿澈',
             date: '2026-08-22',
           ),
+          Quote(
+            id: 'q-thanks-lead',
+            content: '致谢阿澈：感谢在近期架构重构中给予的指导与支持。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-23',
+          ),
         ];
 
         final result = DreamingService.inferAliasesDetailed(quotes);

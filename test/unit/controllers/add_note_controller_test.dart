@@ -97,7 +97,13 @@ void main() {
         ..armAutoMetadataFetch(location: true, weather: true);
 
       controller.removeNewLocation();
+      expect(controller.includeLocation, isFalse);
       expect(controller.isFetchingLocation, isFalse);
+      expect(
+        controller.isFetchingWeather,
+        isTrue,
+        reason: 'removeNewLocation 不会意外影响在途天气状态',
+      );
 
       controller.removeNewWeather();
       expect(controller.includeWeather, isFalse);
@@ -187,8 +193,13 @@ void main() {
     test('在途天气抓取被取消并重新发起后，旧请求的迟到完成不会错误重置新抓取的在途标志', () async {
       final completer1 = Completer<void>();
       final completer2 = Completer<void>();
-      final weaService = _MockWeatherServiceForRace(completer1, completer2);
-      final controller = AddNoteController(context: FakeBuildContext())
+      final weaService =
+          _MockWeatherServiceForRace(completer1, completer2, false);
+      var emptyCallbackCount = 0;
+      final controller = AddNoteController(
+        context: FakeBuildContext(),
+        onWeatherFetchEmpty: () => emptyCallbackCount++,
+      )
         ..updateServices(weaService: weaService)
         ..includeWeather = true
         ..setNewLocationData(null, 39.9042, 116.4074);
@@ -200,31 +211,82 @@ void main() {
       // 2. 用户在弹窗中取消勾选天气，作废第一次抓取
       controller.removeNewWeather();
       expect(controller.includeWeather, isFalse);
-      expect(controller.isFetchingWeather, isFalse);
+      expect(
+        controller.isFetchingWeather,
+        isFalse,
+        reason: 'isFetchingWeather 在 removeNewWeather() 后立即为 false',
+      );
 
       // 3. 用户重新勾选天气并重新发起第二次抓取
       controller.includeWeather = true;
       final fetchFuture2 = controller.fetchWeatherForNewNote();
       expect(controller.isFetchingWeather, isTrue);
 
-      // 4. 旧的第一次天气请求延迟到达并完成
+      // 4. 旧的第一次天气请求延迟到达并完成 (hasData = false)
       completer1.complete();
       await fetchFuture1;
 
-      // 验证：旧请求返回因 epoch 不匹配直接退出，绝不会将第二次抓取的在途标志误设为 false
+      // 验证：旧请求返回因 epoch 不匹配直接退出，绝不会将第二次抓取的在途标志误设为 false，也不会触发错误回调
       expect(controller.isFetchingWeather, isTrue);
       expect(controller.includeWeather, isTrue);
+      expect(emptyCallbackCount, 0);
 
       // 5. 第二次天气请求完成
       completer2.complete();
       await fetchFuture2;
 
-      // 验证：第二次请求正常收尾
+      // 验证：第二次请求正常收尾（hasData 为 false 时置 includeWeather 为 false 并触发回调）
       expect(controller.isFetchingWeather, isFalse);
-      expect(controller.includeWeather, isTrue);
+      expect(controller.includeWeather, isFalse);
+      expect(emptyCallbackCount, 1);
     });
 
-    test('在途天气抓取因用户移除位置 (removeNewLocation) 作废后不会修改状态', () async {
+    test(
+        '在途天气抓取期间调用 removeNewWeather 立即置 false，旧请求迟到完成 (hasData = false) 不触发回调或改写状态',
+        () async {
+      final completer = Completer<void>();
+      final weaService = _MockWeatherServiceForRace(completer, null, false);
+      var emptyCallbackCalled = false;
+      final controller = AddNoteController(
+        context: FakeBuildContext(),
+        onWeatherFetchEmpty: () => emptyCallbackCalled = true,
+      )
+        ..updateServices(weaService: weaService)
+        ..includeWeather = true
+        ..setNewLocationData(null, 39.9042, 116.4074);
+
+      final fetchFuture = controller.fetchWeatherForNewNote();
+      expect(controller.isFetchingWeather, isTrue);
+
+      controller.removeNewWeather();
+      expect(controller.includeWeather, isFalse);
+      expect(
+        controller.isFetchingWeather,
+        isFalse,
+        reason: 'isFetchingWeather 在 removeNewWeather() 后立即为 false',
+      );
+
+      // 模拟用户后续重新开启 includeWeather
+      controller.includeWeather = true;
+
+      // 旧请求迟到完成 (hasData = false)
+      completer.complete();
+      await fetchFuture;
+
+      expect(
+        emptyCallbackCalled,
+        isFalse,
+        reason: '旧的迟到完成因 epoch 不匹配直接退出，绝不触发 onWeatherFetchEmpty',
+      );
+      expect(
+        controller.includeWeather,
+        isTrue,
+        reason: '旧的迟到完成不应改写用户的当前状态',
+      );
+      expect(controller.isFetchingWeather, isFalse);
+    });
+
+    test('在途天气抓取不会因用户移除位置 (removeNewLocation) 被意外中断或影响状态', () async {
       final completer = Completer<void>();
       final weaService = _MockWeatherServiceForRace(completer);
       final controller = AddNoteController(context: FakeBuildContext())
@@ -236,14 +298,21 @@ void main() {
       final fetchFuture = controller.fetchWeatherForNewNote();
       expect(controller.isFetchingWeather, isTrue);
 
-      // 用户主动移除位置，应当同时递增 _weatherFetchEpoch 使在途天气作废
+      // 用户主动移除位置：验证它将 includeLocation 置为 false，但不会意外影响在途天气状态
       controller.removeNewLocation();
       expect(controller.includeLocation, isFalse);
+      expect(
+        controller.isFetchingWeather,
+        isTrue,
+        reason: 'removeNewLocation 不会意外影响在途天气状态',
+      );
+      expect(controller.includeWeather, isTrue);
 
       completer.complete();
       await fetchFuture;
 
       expect(controller.isFetchingWeather, isFalse);
+      expect(controller.includeWeather, isTrue);
     });
   });
 
@@ -407,14 +476,17 @@ class _MockLocationServiceForRace extends ChangeNotifier
 
 class _MockWeatherServiceForRace extends ChangeNotifier
     implements WeatherService {
-  _MockWeatherServiceForRace(this.completer, [this.secondCompleter]);
+  _MockWeatherServiceForRace(
+    this.completer, [
+    this.secondCompleter,
+    this.hasData = true,
+  ]);
 
   final Completer<void> completer;
   final Completer<void>? secondCompleter;
-  int _callCount = 0;
-
   @override
-  bool get hasData => true;
+  final bool hasData;
+  int _callCount = 0;
 
   @override
   Future<void> getWeatherData(

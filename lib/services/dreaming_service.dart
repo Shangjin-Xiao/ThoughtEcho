@@ -612,11 +612,10 @@ class DreamingService {
             caseSensitive: false,
           ).hasMatch(trimmedContent);
 
-      final hasLetterSalutation = content.startsWith('致$cleanAuthor') ||
-          content.contains('致$cleanAuthor：') ||
-          content.contains('致$cleanAuthor:') ||
-          RegExp(r'^致[^\n:：]{0,20}' + RegExp.escape(cleanAuthor) + r'[：:]')
-              .hasMatch(content);
+      final hasLetterSalutation = cleanAuthor.runes.length > 1 &&
+          RegExp(
+            r'^致(?!谢|敬)[^\n:：]{0,20}?' + RegExp.escape(cleanAuthor) + r'[：:]',
+          ).hasMatch(trimmedContent);
 
       final hasSignatureInContent = !isExcerptCitation &&
           ((content.toLowerCase().contains(lowerAuthor) &&

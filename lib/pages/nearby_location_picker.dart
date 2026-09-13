@@ -326,11 +326,14 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     }
   }
 
-  void _confirmSelection({PlaceInfo? place}) {
+  Future<void> _confirmSelection({PlaceInfo? place}) async {
     if (_customSelectedPoiName != null &&
         _customSelectedPoiName == widget.initialPoiName &&
-        (place == null || place.name == widget.initialPoiName)) {
-      // 意图保留初始 POI（无论是否在附近列表中定位到对应条目，均统一走保留初始位置逻辑）
+        (place == null ||
+            (place.name == widget.initialPoiName &&
+                place.latitude == widget.initialLatitude &&
+                place.longitude == widget.initialLongitude))) {
+      // 意图保留初始 POI（经纬度与名称均一致，或无明确点选列表项时点击确认）
       Navigator.of(context).pop(
         LocationPickerResult(
           latitude: widget.initialLatitude ??
@@ -344,16 +347,29 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         ),
       );
     } else if (place != null) {
-      // 用户从列表中点选的 POI：优先使用 place.address，避免跨区县时误用 _deviceLocationString
-      final placeLoc =
-          (place.address != null && place.address!.trim().isNotEmpty)
-              ? place.address!.trim()
-              : null;
+      // 用户从列表中点选了候选 POI：
+      // 行政区必须为合规的四级结构串（国家,省份,城市,区县），不能直接保存街道门牌展示串。
+      // 若与设备定位同坐标，复用设备行政区串；否则若提供反查服务则尝试反查行政区，
+      // 无法反查时设为 null（保存退回坐标/地名），杜绝写入非标准格式。
+      String? adminLocation;
+      if (place.latitude == _deviceLatitude &&
+          place.longitude == _deviceLongitude) {
+        adminLocation = _deviceLocationString;
+      } else if (_locationService != null) {
+        try {
+          final rev = await _locationService!
+              .reverseGeocodePoint(place.latitude, place.longitude);
+          adminLocation = LocationService.buildStorageLocation(rev);
+        } catch (_) {
+          adminLocation = null;
+        }
+      }
+      if (!mounted) return;
       Navigator.of(context).pop(
         LocationPickerResult(
           latitude: place.latitude,
           longitude: place.longitude,
-          location: placeLoc,
+          location: adminLocation,
           poiName: place.name,
         ),
       );
@@ -401,6 +417,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         title: Text(l10n.nearbyLocationTitle),
         actions: [
           IconButton(
+            key: const ValueKey('nearby_picker_confirm_button'),
             icon: const Icon(Icons.check),
             tooltip: l10n.mapPickerConfirm,
             onPressed: (_deviceLatitude == null || _deviceLongitude == null)
