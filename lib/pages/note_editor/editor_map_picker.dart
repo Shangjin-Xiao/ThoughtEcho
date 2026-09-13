@@ -1,18 +1,19 @@
 part of '../note_full_editor_page.dart';
 
-/// 长按位置按钮打开地图选点，把选中的地点写回元数据状态。
+/// 长按位置按钮打开附近地点选择器，把选中的地点写回元数据状态。
 ///
 /// 复用现有的位置按钮而不是新加一个：单击仍然是「开关自动定位」，长按才进
-/// 地图——一个按钮管一件事（这条笔记记在哪儿），粗细两档精度。
+/// 附近地点列表——一个按钮管一件事（这条笔记记在哪儿），粗细两档精度。
 extension _NoteEditorMapPicker on _NoteFullEditorPageState {
-  Future<void> _openMapLocationPicker(StateSetter setDialogState) async {
+  Future<void> _openNearbyLocationPicker(StateSetter setDialogState) async {
     final navigator = Navigator.of(context);
 
-    final result = await navigator.push<MapPickerResult>(
-      MaterialPageRoute<MapPickerResult>(
-        builder: (_) => MapLocationPickerPage(
+    final result = await navigator.push<LocationPickerResult>(
+      MaterialPageRoute<LocationPickerResult>(
+        builder: (_) => NearbyLocationPicker(
           initialLatitude: _metadataState.latitude,
           initialLongitude: _metadataState.longitude,
+          initialPoiName: _metadataState.poiName,
         ),
       ),
     );

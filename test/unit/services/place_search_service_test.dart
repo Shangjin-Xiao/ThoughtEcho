@@ -213,4 +213,64 @@ void main() {
       expect(meters, closeTo(1113, 5));
     });
   });
+
+  group('NominatimPlaceSearchService.getNearbyPlaces', () {
+    test('严格限制在 5 公里半径内，过滤超出 5000 米的条目', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'name': '近处的书店',
+            'lat': '39.9142',
+            'lon': '116.4074',
+            'type': 'shop',
+            'address': {'shop': '近处的书店'},
+          },
+          {
+            'name': '6公里外的景点',
+            'lat': '39.9642',
+            'lon': '116.4074',
+            'type': 'tourism',
+            'address': {'tourism': '远处的景点'},
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.getNearbyPlaces(refLat, refLon);
+
+      expect(results.map((p) => p.name), ['近处的书店']);
+      expect(network.lastUri!.queryParameters['viewbox'], isNotNull);
+    });
+
+    test('支持 offset 分页参数并传递给 API', () async {
+      final network = _FakeNetworkService(_jsonResponse(const []));
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      await service.getNearbyPlaces(refLat, refLon, offset: 20, limit: 20);
+
+      final params = network.lastUri!.queryParameters;
+      expect(params['offset'], '20');
+      expect(params['limit'], '20');
+    });
+
+    test('传入 categoryOrKeyword 时将其设为 q 参数', () async {
+      final network = _FakeNetworkService(_jsonResponse(const []));
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      await service.getNearbyPlaces(refLat, refLon, categoryOrKeyword: '西湖区');
+
+      final params = network.lastUri!.queryParameters;
+      expect(params['q'], '西湖区');
+    });
+
+    test('请求失败时优雅降级为空列表，不向上抛出异常', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse(const [], statusCode: 500),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.getNearbyPlaces(refLat, refLon);
+      expect(results, isEmpty);
+    });
+  });
 }
