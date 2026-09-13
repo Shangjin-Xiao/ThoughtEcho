@@ -71,56 +71,36 @@ SCENARIOS = [
     {
         "id": "scenario_1_article_generation",
         "title": "场景 1: 生成文章 (Article Generation)",
-        "desc": "评估模型在用户请求协助撰写随笔起头时，能否根据用户文风自发调整语言节奏、视角与质感",
-        "prompts": {
-            "baseline": "傍晚在户外长椅上坐着，看着落叶与夕阳，想写几句随笔，帮我起个头并写出前两段。",
-            "ah_che": "傍晚跑完步在长椅上坐着，看着落叶，想写几句随笔，帮我起个头。",
-            "lin_wan": "刚完成佛光寺东大殿和应县木塔的现场测绘，想写一篇关于中国早期木构斗栱与梁架生命力的随笔，帮我起个头并写出前两段。"
-        },
+        "desc": "评估模型在用户请求协助撰写随笔起头时，能否根据用户画像文风自发调整语言节奏、视角与质感（严格控制变量：三组输入完全相同）",
+        "prompt": "傍晚在长椅上坐着，看着落叶与夕阳，想写几句随笔，帮我起个头并写出前两段。",
         "system_instruction": "你是心迹（ThoughtEcho）笔记应用的 Thoughter AI 伴侣。温和、真诚、有洞察力。自然融入用户设定文风。"
     },
     {
         "id": "scenario_2_text_polishing",
         "title": "场景 2: 文本润色 (Text Polishing)",
-        "desc": "评估文本润色时能否保护用户的原生声音 (Voice Preservation)，杜绝生硬替换成语或篡改行文结构",
-        "prompts": {
-            "baseline": "帮我润色这段深夜写的随笔，不要改得太花哨：'凌晨两点，终于把重构的服务跑通了。终端绿了。窗外下着雨，很安静。倒了一杯冷水喝。突然觉得，写代码也有某种对抗虚无的意义。'",
-            "ah_che": "帮我润色这段昨晚写代码后的随感，不要改得太花哨，保留我的短句：'凌晨两点，终于把重构的服务跑通了。终端绿了。窗外下着雨，很安静。倒了一杯冷水喝。突然觉得，写代码也有某种对抗虚无的意义。'",
-            "lin_wan": "帮我润色这段田野手记，不要破坏我的观察细节与白描：'今天在徽州呈坎看老木匠修祠堂，白果木雀替雕得很细，老张用推刨刮木头，薄薄的木花卷起来像丝绸，木香很好闻。老张说木头是有灵性的。'"
-        },
+        "desc": "评估文本润色时能否保护用户的原生声音 (Voice Preservation)，杜绝生硬替换成语或篡改行文结构（严格控制变量：三组输入完全相同）",
+        "prompt": "帮我润色这段今天写的随笔，不要改得太花哨，保留我的节奏与呼吸感：'傍晚忙完手头的事，整个人有点空。下楼去买了罐热饮，外面下着小雨，风吹在脸上挺舒服的。突然觉得就算有很多事还没做完，生活也就是这么回事，急不来。'",
         "system_instruction": "你是心迹（ThoughtEcho）笔记应用的 Thoughter AI 伴侣。温和、真诚、有洞察力。尊重用户原有语调与风格，严禁过度堆砌成语。"
     },
     {
         "id": "scenario_3_reading_recommendation",
         "title": "场景 3: 文学与阅读推荐 (Literature & Reading Recommendation)",
-        "desc": "评估模型推荐阅读作品时，能否精准共振用户底色品味，杜绝万能泛化通俗畅销书单",
-        "prompts": {
-            "baseline": "最近在思考人生的意义与独处，想读点能让人沉静、有韧性、不虚浮的书，有什么推荐吗？",
-            "ah_che": "最近在思考人生的意义与独处，想读点能让人沉静、有韧性、不虚浮的书，有什么推荐吗？",
-            "lin_wan": "最近田野跑得有些疲惫，想读点能让人沉静下来、探讨传统器物、乡村社会或建筑手艺的书，有什么好推荐吗？"
-        },
+        "desc": "评估模型推荐阅读作品时，能否精准共振用户底色品味，杜绝万能泛化通俗畅销书单（严格控制变量：三组输入完全相同）",
+        "prompt": "最近在思考人生的意义与独处，想读点能让人沉静、有韧性、不虚浮的书，有什么推荐吗？",
         "system_instruction": "你是心迹（ThoughtEcho）笔记应用的 Thoughter AI 伴侣。温和、真诚、有洞察力。推荐真正契合用户精神品味的作品，给出真诚具体的理由。"
     },
     {
         "id": "scenario_4_recent_state_awareness",
         "title": "场景 4: 对用户近期的了解 (Recent State Awareness)",
-        "desc": "评估跨会话近况感知力与“不做越界情绪审问”的克制边界",
-        "prompts": {
-            "baseline": "今天忙完有点累，你还记得我最近都在折腾些什么吗？",
-            "ah_che": "今天忙完有点累，你还记得我最近都在折腾些什么吗？",
-            "lin_wan": "今天忙完有点放空，你还记得我最近都在琢磨些什么吗？"
-        },
+        "desc": "评估跨会话近况感知力与“不做越界情绪审问”的克制边界（严格控制变量：三组输入完全相同）",
+        "prompt": "今天忙完有点累，你还记得我最近都在折腾些什么吗？",
         "system_instruction": "你是心迹（ThoughtEcho）笔记应用的 Thoughter AI 伴侣。温和、真诚、有洞察力。自然感知用户近况，绝不做居高临下的情绪审问。"
     },
     {
         "id": "scenario_5_daily_prompt_subtlety",
         "title": "场景 5: 每日提示含蓄克制度 (Daily Prompt Subtlety)",
-        "desc": "检验 Dreaming 每日提示在多用户场景下的自然含蓄性（严格遵守“当然也没有必要每次都说”的克制美学）",
-        "prompts": {
-            "baseline": "生成今日写作提示。上下文：杭州，晴，微风，清晨。",
-            "ah_che": "生成今日写作提示。上下文：杭州，晴，微风，清晨。",
-            "lin_wan": "生成今日写作提示。上下文：山西大同，多云微寒，黄昏，近古建群。"
-        },
+        "desc": "检验 Dreaming 每日提示在多用户场景下的自然含蓄性（严格遵守“当然也没有必要每次都说”的克制美学，严格控制变量：三组输入完全相同）",
+        "prompt": "生成今日写作提示。上下文：杭州，晴，微风，清晨。",
         "system_instruction": (
             "你是心迹（ThoughtEcho）的每日灵感提问助手。\n"
             "原则：生成一句极简、温和、引发记录冲动的问题（30字以内）。\n"
@@ -129,35 +109,34 @@ SCENARIOS = [
         )
     },
     {
-        "id": "scenario_6_casual_dialogue_anti_bleeding",
-        "title": "场景 6: 随意闲聊与防串味隔离性测试 (Casual Dialogue & Anti-Bleeding)",
+        "id": "scenario_6_prompt_level_persona_isolation",
+        "title": "场景 6: 提示词级别画像严格隔离与防串味测试 (Prompt-Level Persona Isolation)",
         "desc": "核心隔离性验证：输入完全相同的随意日常闲聊，验证两套记忆体系绝不发生画像串味、错位污染或混淆",
-        "prompts": {
-            "baseline": "今天天气不错，泡了一杯喝的，坐下来发呆。",
-            "ah_che": "今天天气不错，泡了一杯喝的，坐下来发呆。",
-            "lin_wan": "今天天气不错，泡了一杯喝的，坐下来发呆。"
-        },
+        "prompt": "今天天气不错，泡了一杯喝的，坐下来发呆。",
         "system_instruction": "你是心迹（ThoughtEcho）笔记应用的 Thoughter AI 伴侣。温和、真诚、像一位相识已久的老友般自然回应。绝不生硬念诵记忆清单。"
     }
 ]
 
 # -----------------------------------------------------------------------------
-# 串味检测规则（Anti-Bleeding Checkers）
+# 串味检测规则（Anti-Bleeding Checkers - 深度全画像标记差集）
 # -----------------------------------------------------------------------------
 def analyze_bleeding(persona_name, reply):
     """
     检查回复是否发生画像串味（Bleeding）
-    阿澈回复中严禁出现林晚专有标记（古建测绘、佛光寺、应县木塔、斗栱、大木作、榫卯、白果木、呈坎、岩茶、大红袍、林晚）
-    林晚回复中严禁出现阿澈专有标记（写代码、终端、重构、耶加雪菲、手冲咖啡、夜跑、加缪、阿澈、算法、Flutter）
+    阿澈回复中严禁出现林晚专有标记
+    林晚回复中严禁出现阿澈专有标记
+    Baseline 中严禁出现任何两者的专有标识
     """
     ah_che_markers = [
         "代码", "终端", "重构", "耶加雪菲", "手冲", "夜跑", "加缪", "阿澈",
         "架构服务", "塞涅卡", "史铁生", "北岛", "顾城", "光明顶", "单品咖啡",
+        "死锁", "并发", "bug", "算法", "程序", "开发", "黄山",
     ]
     lin_wan_markers = [
         "测绘", "木塔", "斗栱", "大木作", "榫卯", "白果木", "呈坎", "岩茶",
         "大红袍", "林晚", "营造法式", "梁思成", "林徽因", "李诫", "费孝通",
-        "柳宗悦", "肉桂", "田野考察", "雀替",
+        "柳宗悦", "肉桂", "田野考察", "雀替", "古建", "祠堂", "斗拱", "梁架",
+        "佛光寺", "大同",
     ]
 
     if not reply or not reply.strip():
@@ -170,6 +149,11 @@ def analyze_bleeding(persona_name, reply):
                 bleeding_detected.append(m)
     elif persona_name == "lin_wan":
         for m in ah_che_markers:
+            if m in reply:
+                bleeding_detected.append(m)
+    elif persona_name == "baseline":
+        baseline_bleed_markers = ["阿澈", "林晚", "耶加雪菲", "应县木塔", "佛光寺", "呈坎", "大木作"]
+        for m in baseline_bleed_markers:
             if m in reply:
                 bleeding_detected.append(m)
 
@@ -209,9 +193,11 @@ def run_cross_persona_eval():
             "runs": {}
         }
 
+        unified_prompt = sc["prompt"]
+
         # 1. 运行 Baseline (无记忆)
         print(f"   [1/3] 运行 Baseline (无记忆)...")
-        b_prompt = sc["prompts"]["baseline"]
+        b_prompt = unified_prompt
         b_msgs = [
             {"role": "system", "content": sc["system_instruction"]},
             {"role": "user", "content": b_prompt}
@@ -219,21 +205,28 @@ def run_cross_persona_eval():
         b_res = client.complete(b_msgs, temperature=0.3)
         b_reply = b_res["data"]["choices"][0]["message"]["content"] if b_res["data"] else ""
         b_failed = bool(b_res["error"] or not b_reply.strip())
+        b_bleeding = analyze_bleeding("baseline", b_reply) if not b_failed else []
         print(f"      🤖 Baseline ({b_res['model']} | {b_res['latency']:.2f}s): {b_reply[:90]}...")
         if b_failed:
             print(f"      ❌ 调用失败或回复为空: {b_res['error'] or 'Empty reply'} (CALL_FAILED)")
+        elif b_bleeding:
+            print(f"      ⚠️ 警告: Baseline 回复中检测到专有画像标记: {b_bleeding}")
+        else:
+            print(f"      ✅ 基线纯净检查: 通过 (0 处画像渗漏)")
+
         scenario_record["runs"]["baseline"] = {
             "prompt": b_prompt,
             "output": b_reply,
             "model": b_res["model"],
             "latency": round(b_res["latency"], 2),
+            "bleeding": b_bleeding,
             "error": b_res["error"],
             "status": "CALL_FAILED" if b_failed else "SUCCESS"
         }
 
         # 2. 运行 Persona A: 阿澈 (Ah Che)
         print(f"   [2/3] 运行 Persona A (阿澈 - 程序员/短句/存在主义/夜跑手冲)...")
-        a_prompt = sc["prompts"]["ah_che"]
+        a_prompt = unified_prompt
         a_msgs = [
             {"role": "system", "content": sc["system_instruction"]},
             {"role": "user", "content": ah_che_profile_block},
@@ -263,7 +256,7 @@ def run_cross_persona_eval():
 
         # 3. 运行 Persona B: 林晚 (Lin Wan)
         print(f"   [3/3] 运行 Persona B (林晚 - 古建人类学/详实白描/大木作榫卯与岩茶)...")
-        l_prompt = sc["prompts"]["lin_wan"]
+        l_prompt = unified_prompt
         l_msgs = [
             {"role": "system", "content": sc["system_instruction"]},
             {"role": "user", "content": lin_wan_profile_block},

@@ -305,20 +305,25 @@ def legacy_classify_attribution(note, nickname=""):
 
     return "excerpt"
 
-def is_builtin_personal_work(work):
+def is_builtin_personal_work(work, author=""):
     if not work:
         return False
     w = work.lstrip("—–-—―").replace("作者：", "").replace("作者:", "").strip().lower()
-    self_keywords = {
-        "日记", "随笔", "随手记", "我的日记", "思考", "随想", "自留地",
-        "diary", "journal", "notes", "memo", "手记", "札记", "杂记",
-        "杂感", "随感", "自述", "自语", "心迹", "备忘", "碎碎念", "清单", "复盘", "手账"
-    }
-    if w in self_keywords:
+    if not w:
+        return False
+    if author and author.lower() in w:
         return True
-    personal_prefixes = ["我的", "个人", "日常", "生活", "工作", "学习", "读书"]
+    self_suffixes = [
+        "日记", "随笔", "手记", "札记", "笔记", "杂记", "杂感", "随感", "自述", "自语",
+        "心迹", "备忘", "碎碎念", "清单", "复盘", "手账", "行记", "游记", "食记", "采风录",
+        "日常", "手稿", "手绘", "备忘录", "打卡", "记录", "口述史", "整理", "图谱", "规划",
+        "总结", "巡检", "规范", "调研", "学术笔记", "工作手记", "diary", "journal", "notes", "memo"
+    ]
+    if any(w.endswith(s) for s in self_suffixes):
+        return True
+    personal_prefixes = ["我的", "个人", "日常", "生活", "工作", "学习", "读书", "打卡", "复习"]
     for prefix in personal_prefixes:
-        if w.startswith(prefix) and w[len(prefix):] in self_keywords:
+        if w.startswith(prefix) and any(w[len(prefix):].endswith(s) for s in self_suffixes):
             return True
     return False
 
@@ -391,9 +396,18 @@ def infer_aliases_from_notes(notes, nickname=""):
             continue
 
         work = (n.get("source_work") or "").strip()
-        is_personal = bool(work and is_builtin_personal_work(work))
+        is_personal = bool(work and is_builtin_personal_work(work, clean))
         has_external_work = bool(work and not is_personal)
-        has_self_marker = has_personal_device_or_rich_text_markers(n) or is_personal
+        content = n.get("content", "")
+        has_signature = (
+            f"——{clean}" in content or
+            f"—{clean}" in content or
+            f"--{clean}" in content or
+            f"-{clean}" in content or
+            f"@{clean}" in content or
+            f"，{clean}" in content
+        )
+        has_self_marker = has_personal_device_or_rich_text_markers(n) or is_personal or has_signature
 
         stats = author_stats.setdefault(clean, {"count": 0, "self_markers": 0, "external_works": 0})
         stats["count"] += 1
@@ -551,7 +565,7 @@ def run_benchmark():
     opt_originals = [n for n in notes if optimized_classify_attribution(n, nickname="", inferred_aliases=inferred_aliases) == "original"]
     opt_excerpts = [n for n in notes if optimized_classify_attribution(n, nickname="", inferred_aliases=inferred_aliases) == "excerpt"]
 
-    lin_wan_in_taste = [n for n in opt_excerpts if "林晚" in (n.get("source_author") or "") or "林晚" in (n.get("source_work") or "")]
+    lin_wan_in_taste = [n for n in opt_excerpts if n.get("type_ground_truth") == "original"]
     print(f"📌 原创池总数: {len(opt_originals)} 篇 (全量保留为文风 Voice 归纳基准)")
     print(f"📌 摘录池总数: {len(opt_excerpts)} 篇 (全量保留为品味 Taste 归纳基准)")
     print(f"🛡️ 摘录品味池受「林晚」污染篇数: {len(lin_wan_in_taste)} 篇 (纯净度: {100.0 - len(lin_wan_in_taste)/len(opt_excerpts)*100:.1f}%)")

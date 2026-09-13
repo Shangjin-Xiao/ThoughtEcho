@@ -792,6 +792,7 @@ def run_benchmark():
         final_reply = ""
         active_model = client.models[client.active_model_idx]
 
+        tools_called_log = []
         while turns < max_turns:
             turns += 1
             res = client.complete(messages, tools=tools, temperature=0.2)
@@ -816,6 +817,7 @@ def run_benchmark():
                 fn_name = fn["name"]
                 fn_args = json.loads(fn.get("arguments", "{}"))
                 tools_called.append(fn_name)
+                tools_called_log.append((fn_name, fn_args))
                 print(f"   🔧 [工具调用] {fn_name}({json.dumps(fn_args, ensure_ascii=False)})")
 
                 tool_res = execute_mock_tool(fn_name, fn_args)
@@ -826,14 +828,15 @@ def run_benchmark():
                     "content": tool_res
                 })
 
-        # 验证场景期望
+        # 验证场景期望 (核验最终回复与工具调用入参)
         expected_items = sc.get("expect", [])
-        combined_text = final_reply + " " + " ".join(tools_called)
+        tool_details_str = " ".join(f"{fn} {json.dumps(args, ensure_ascii=False)}" for fn, args in tools_called_log)
+        combined_text = final_reply + " " + " ".join(tools_called) + " " + tool_details_str
         matched_items = [item for item in expected_items if item.lower() in combined_text.lower()]
         passed_expect = len(matched_items) >= max(1, int(len(expected_items) * 0.6))
         sc_success = bool(final_reply) and passed_expect
 
-        # 场景 3 专项核验：断言 stateful 字典中 voice 与 taste 均已成功持久化改写
+        # 场景 3 专项核验：断言 stateful 字典中 voice 与 taste 均已成功持久化改写 (必须两者皆满足)
         if "场景 3" in sc.get("title", ""):
             voice_val = memory_store["profile"].get("voice", "")
             taste_val = memory_store["profile"].get("taste", "")
@@ -843,9 +846,8 @@ def run_benchmark():
             if voice_ok and taste_ok:
                 print("   ✅ 真实状态化字典校验通过：voice 与 taste 均已成功持久化改写！\n")
             else:
-                print(f"   ⚠️ 真实状态化字典校验提示：voice_ok={voice_ok}, taste_ok={taste_ok}\n")
-                if not (voice_ok or taste_ok):
-                    sc_success = False
+                print(f"   ⚠️ 真实状态化字典校验未达标：voice_ok={voice_ok}, taste_ok={taste_ok}\n")
+                sc_success = False
 
         print(f"   🤖 [AI 回复 (Model: {active_model})]:\n{final_reply[:200]}...\n")
         print(f"   📋 [预期核验]: 匹配 {len(matched_items)}/{len(expected_items)} ({', '.join(matched_items)}) -> {'通过' if sc_success else '未达标'}\n")
@@ -860,6 +862,28 @@ def run_benchmark():
         })
 
     # -------------------------------------------------------------------------
+    # 消费真实单元测试执行退出码
+    # -------------------------------------------------------------------------
+    import subprocess
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    test_file = os.path.join(repo_root, "test/unit/services/agent_tools/remember_tool_test.dart")
+    test_result_msg = "未执行单元测试"
+    try:
+        proc = subprocess.run(
+            ["flutter", "test", "--reporter", "compact", test_file],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if proc.returncode == 0:
+            test_result_msg = "remember_tool_test.dart 单元测试运行通过 (Exit Code 0)"
+        else:
+            test_result_msg = f"remember_tool_test.dart 单元测试未通过 (Exit Code {proc.returncode})"
+    except Exception as e:
+        test_result_msg = f"执行单元测试发生异常: {e}"
+
+    # -------------------------------------------------------------------------
     # 综合汇报
     # -------------------------------------------------------------------------
     successful_llm = sum(1 for r in llm_results if r["success"])
@@ -872,7 +896,7 @@ def run_benchmark():
     print(f"1. 数据集覆盖度: 100 篇笔记 (足迹25 / 摘录25 / 琐记25 / 清单15 / 媒体10)")
     print(f"2. 归属辨析准确度: 从 {leg_acc:.1f}% 提升至 {opt_acc:.1f}% (+{opt_acc-leg_acc:.1f}%)")
     print(f"3. Dreaming采样纯度: 原创Voice池 {len(opt_originals)} 篇 (+{len(opt_originals)-len(leg_originals)})，摘录Taste池原创污染 {leg_pollution} -> {opt_pollution} 篇 (优化后纯净度: {opt_purity:.1f}%)")
-    print(f"4. 长期记忆机制: taste / voice 口语覆盖修改工具解除硬拦截，单测全绿")
+    print(f"4. 长期记忆机制: {test_result_msg}")
     print(f"5. Gemini模型调用: 主用 {client.models[client.active_model_idx]}，控速 2.5s，场景通过率 {successful_llm}/{total_scenarios} ({llm_success_rate:.1f}%)")
     print("=" * 80)
 

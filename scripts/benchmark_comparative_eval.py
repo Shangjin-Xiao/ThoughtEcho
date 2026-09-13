@@ -37,12 +37,33 @@ from benchmark_100_notes import (
 # -----------------------------------------------------------------------------
 def build_test_user_profile(notes=None, aliases=None):
     alias_display = "「" + "」与「".join(sorted(aliases)) + "」" if aliases else "「阿澈」"
+
+    # 动态从 notes 与 aliases 中提取品味与近况
+    locations = []
+    excerpts_authors = []
+    habits = set()
+    if notes:
+        for n in notes:
+            loc = n.get("location")
+            if loc and loc not in locations:
+                locations.append(loc)
+            auth = n.get("source_author")
+            if auth and auth not in excerpts_authors and auth not in (aliases or []):
+                excerpts_authors.append(auth)
+            for tag in n.get("tags", []):
+                if tag in ("夜跑", "散步", "手冲咖啡", "旧书店", "咖啡", "长跑"):
+                    habits.add(tag)
+
+    loc_str = "、".join(locations[:3]) if locations else "西湖、黄山光明顶与苏州园林"
+    author_str = "、".join(excerpts_authors[:3]) if excerpts_authors else "加缪、史铁生、塞涅卡"
+    habits_str = "、".join(list(habits)[:3]) if habits else "手冲单品咖啡（尤其耶加雪菲）、户外夜跑、散步与旧书店"
+
     profile_lines = [
         f"- [称呼·用户填写] 称呼用户为{alias_display}",
         "- [文风·3天前] 偏好第一人称生活散文和短句，克制内敛，多日常停顿与具体事物，避免宏大空洞说教与排比套话",
-        "- [品味·3天前] 偏好存在主义哲学（加缪、史铁生、塞涅卡）、现代诗（北岛、顾城）与豁达古诗词（苏轼），关注生命韧性、独处与真实",
-        "- [偏好·5天前] 喜欢手冲单品咖啡（尤其耶加雪菲）、户外夜跑、散步与旧书店，对微小具体的生活肌理敏感",
-        "- [近况·1天前] 最近在重构 Thoughter Agent 核心服务与解除记忆死锁，曾游览西湖、黄山光明顶与苏州园林，保持夜跑与手冲习惯",
+        f"- [品味·3天前] 偏好存在主义哲学与沉静文学（{author_str}），关注生命韧性、独处与真实",
+        f"- [偏好·5天前] 喜欢{habits_str}，对微小具体的生活肌理敏感",
+        f"- [近况·1天前] 最近在重构 Thoughter Agent 核心服务与解除记忆死锁，曾游览{loc_str}，保持夜跑与手冲习惯",
     ]
     
     raw_block = (
@@ -514,33 +535,36 @@ def generate_markdown_report(results, output_path):
                 md.append("- **含蓄克制之美**：特别验证了用户要求**“当然也没有必要每次都说”**！记忆后的每日提示绝不生硬念诵“阿澈你今天写代码了吗”，而是结合西湖清晨的微风与晴朗，用极具诗意与韵律的单句轻柔提问，润物细无声。")
             md.append("")
 
-    # 统计实测技术指标
-    total_calls = 0
-    err_calls = 0
+    # 统计实测技术指标（独立统计 Before 与 After）
+    total_calls_b = 0
+    total_calls_a = 0
+    err_calls_b = 0
+    err_calls_a = 0
     latencies_b = []
     latencies_a = []
     for item in results:
         if item.get("is_multiturn"):
             for t in item.get("before", []):
-                total_calls += 1
+                total_calls_b += 1
                 if t.get("error"):
-                    err_calls += 1
+                    err_calls_b += 1
                 lat = t.get("latency")
                 if isinstance(lat, (int, float)):
                     latencies_b.append(lat)
             for t in item.get("after", []):
-                total_calls += 1
+                total_calls_a += 1
                 if t.get("error"):
-                    err_calls += 1
+                    err_calls_a += 1
                 lat = t.get("latency")
                 if isinstance(lat, (int, float)):
                     latencies_a.append(lat)
         else:
-            total_calls += 2
+            total_calls_b += 1
+            total_calls_a += 1
             if item.get("before", {}).get("error"):
-                err_calls += 1
+                err_calls_b += 1
             if item.get("after", {}).get("error"):
-                err_calls += 1
+                err_calls_a += 1
             lat = item.get("before", {}).get("latency")
             if isinstance(lat, (int, float)):
                 latencies_b.append(lat)
@@ -554,7 +578,10 @@ def generate_markdown_report(results, output_path):
     p95_a = latencies_a[int(len(latencies_a) * 0.95)] if latencies_a else 0.0
     avg_b = sum(latencies_b) / len(latencies_b) if latencies_b else 0.0
     avg_a = sum(latencies_a) / len(latencies_a) if latencies_a else 0.0
-    success_rate = ((total_calls - err_calls) / total_calls * 100) if total_calls > 0 else 0.0
+    success_rate_b = ((total_calls_b - err_calls_b) / total_calls_b * 100) if total_calls_b > 0 else 0.0
+    success_rate_a = ((total_calls_a - err_calls_a) / total_calls_a * 100) if total_calls_a > 0 else 0.0
+    lat_diff = avg_a - avg_b
+    lat_analysis = f"耗时增加 {lat_diff:.2f}s（注入画像增加推理上下文）" if lat_diff > 0 else f"耗时变化 {lat_diff:.2f}s（网络正常波动范围）"
 
     md.append("---")
     md.append("")
@@ -562,9 +589,9 @@ def generate_markdown_report(results, output_path):
     md.append("")
     md.append("| 评测度量项 | 记忆前 (Before Memory) | 记忆后 (After Memory) | 结论与提升分析 |")
     md.append("|---|:---:|:---:|---|")
-    md.append(f"| **平均响应耗时 (Avg Latency)** | {avg_b:.2f}s | {avg_a:.2f}s | 仅增加画像上下文传输耗时 |")
+    md.append(f"| **平均响应耗时 (Avg Latency)** | {avg_b:.2f}s | {avg_a:.2f}s | {lat_analysis} |")
     md.append(f"| **P95 响应延迟 (P95 Latency)** | {p95_b:.2f}s | {p95_a:.2f}s | 整体交互保持流畅稳定 |")
-    md.append(f"| **调用成功率 (Success Rate)** | {success_rate:.1f}% | {success_rate:.1f}% | 2.5s 控速与重试保障高可用 |")
+    md.append(f"| **调用成功率 (Success Rate)** | {success_rate_b:.1f}% ({total_calls_b - err_calls_b}/{total_calls_b}) | {success_rate_a:.1f}% ({total_calls_a - err_calls_a}/{total_calls_a}) | 真实实机分别统计两组可用性 |")
     md.append("| **用户文风一致性 (Voice Match)** | 通用泛化表达 | 贴合个人散文短句 | 定性对比显著提升 |")
     md.append("| **个性化品味共鸣度 (Taste Resonance)** | 泛化畅销推荐 | 呼应存在主义与哲学偏好 | 达成精神契合 |")
     md.append("| **近况事实召回 (Recent Recall)** | 无感知（未记录） | 准确唤起近期活动与习惯 | 跨会话连续感知 |")
