@@ -4,8 +4,10 @@
 #   ./scripts/keepalive.sh &       # 后台启动
 #   ./scripts/keepalive.sh stop    # 停止心跳
 
-PID_FILE="/workspaces/ThoughtEcho/.worktrees/pr590/.keepalive.pid"
-LOG_FILE="/workspaces/ThoughtEcho/.worktrees/pr590/.keepalive.log"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || dirname "$SCRIPT_DIR")"
+PID_FILE="$REPO_ROOT/.keepalive.pid"
+LOG_FILE="$REPO_ROOT/.keepalive.log"
 
 if [ "$1" = "stop" ]; then
   if [ -f "$PID_FILE" ]; then
@@ -23,6 +25,12 @@ if [ "$1" = "stop" ]; then
   exit 0
 fi
 
+INTERVAL=${1:-60}
+if ! [[ "$INTERVAL" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[keepalive] 错误: INTERVAL 必须是大于 0 的正整数: $INTERVAL" >&2
+  exit 1
+fi
+
 if [ -f "$PID_FILE" ]; then
   OLD_PID=$(cat "$PID_FILE")
   if kill -0 "$OLD_PID" 2>/dev/null; then
@@ -32,7 +40,6 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 echo $$ > "$PID_FILE"
-INTERVAL=${1:-60}
 
 echo "[keepalive] 启动防止休眠心跳守护进程 (PID: $$, 间隔: ${INTERVAL}s)..." >> "$LOG_FILE"
 

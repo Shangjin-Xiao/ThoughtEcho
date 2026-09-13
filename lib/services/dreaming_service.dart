@@ -483,8 +483,12 @@ class DreamingService {
 
     final alias = result.userAlias;
     if (alias != null && alias.isNotEmpty) {
-      final cleanAlias =
-          alias.replaceAll(RegExp(r'''[「」“”"'《》\s]'''), '').trim();
+      final cleanAlias = alias
+          .replaceAll(
+            RegExp(r'''^[「」“”"'\s《》—\-\:\：]+|[「」“”"'\s《》—\-\:\：]+$'''),
+            '',
+          )
+          .trim();
       const nullish = {
         'null',
         'none',
@@ -590,9 +594,19 @@ class DreamingService {
       '清单',
       '复盘',
       '手账',
+      '行记',
+      '游记',
+      '食记',
+      '采风录',
+      '日常',
+      '手稿',
+      '手绘',
+      '备忘录',
+      '打卡',
       'diary',
       'journal',
       'notes',
+      'memo',
     ];
 
     for (final quote in quotes) {
@@ -634,7 +648,8 @@ class DreamingService {
               content.contains('录于') ||
               content.contains('摄于') ||
               content.contains('记于') ||
-              content.contains('致五年后') ||
+              content.contains('作于') ||
+              content.contains('整理于') ||
               content.contains('致') ||
               content.contains('——') ||
               content.contains('—'));
@@ -670,8 +685,7 @@ class DreamingService {
           quote.sourceWork!.trim().isNotEmpty &&
           !isPersonalWork;
 
-      final hasSelfMarker =
-          isPersonalWork || hasSignatureInContent || hasPersonalArtifacts;
+      final hasSelfMarker = isPersonalWork || hasSignatureInContent;
 
       authorStats[cleanAuthor] = (
         count: prev.count + 1,

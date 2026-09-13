@@ -403,5 +403,63 @@ void main() {
       expect(result.isError, isTrue);
       expect(result.content, contains('必须提供具体的 id'));
     });
+
+    test('add / update / delete 传入未知 kind 时严格报错拒绝，不默认降级为 preference', () async {
+      final addResult = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'invalid_kind_foo',
+        'content': '测试内容',
+      }));
+      expect(addResult.isError, isTrue);
+      expect(addResult.content, contains('未知的画像类别: invalid_kind_foo'));
+
+      final updateResult = await remember.execute(toolCall('remember', {
+        'action': 'update',
+        'layer': 'profile',
+        'kind': 'invalid_kind_bar',
+        'content': '测试内容',
+      }));
+      expect(updateResult.isError, isTrue);
+      expect(updateResult.content, contains('未知的画像类别: invalid_kind_bar'));
+
+      final deleteResult = await remember.execute(toolCall('remember', {
+        'action': 'delete',
+        'layer': 'profile',
+        'kind': 'invalid_kind_baz',
+      }));
+      expect(deleteResult.isError, isTrue);
+      expect(deleteResult.content, contains('未知的画像类别: invalid_kind_baz'));
+    });
+
+    test('add 传入不存在或已失效的 replaces_id 时报错拒绝', () async {
+      final result = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'style',
+        'content': '回复保持短句',
+        'replaces_id': 'non_existent_id_12345',
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content,
+          contains('replaces_id 对应的条目不存在或已失效: non_existent_id_12345'));
+    });
+
+    test('add 传入类别不匹配的 replaces_id 时报错拒绝', () async {
+      final identity = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+
+      final result = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'style',
+        'content': '回复保持短句',
+        'replaces_id': identity.id,
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('不匹配'));
+    });
   });
 }

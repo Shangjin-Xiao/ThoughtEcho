@@ -176,9 +176,12 @@ class RememberTool extends AgentTool {
       });
     }
 
-    final kind = AgentMemoryKindStorage.fromStorage(
-      call.getString('kind', defaultValue: 'preference').trim(),
-    );
+    final rawKind = call.getString('kind', defaultValue: 'preference').trim();
+    final effectiveKindStr = rawKind.isEmpty ? 'preference' : rawKind;
+    final kind = _parseKindStrict(effectiveKindStr);
+    if (kind == null) {
+      return _invalid(call, '未知的画像类别: $rawKind');
+    }
 
     final rawReplacesId = call.getString('replaces_id').trim().isEmpty
         ? call.getString('replacesId').trim()
@@ -189,7 +192,10 @@ class RememberTool extends AgentTool {
       final target = (await _memory.activeProfile())
           .where((entry) => entry.id == replacesId)
           .firstOrNull;
-      if (target != null && target.kind != kind) {
+      if (target == null) {
+        return _invalid(call, 'replaces_id 对应的条目不存在或已失效: $replacesId');
+      }
+      if (target.kind != kind) {
         return _invalid(
           call,
           'replaces_id 对应的条目类别 (${target.kind.name}) 与当前写入类别 (${kind.name}) 不匹配',
@@ -266,9 +272,13 @@ class RememberTool extends AgentTool {
     }
 
     final kindArgument = call.getString('kind').trim();
-    final requestedKind = kindArgument.isEmpty
-        ? null
-        : AgentMemoryKindStorage.fromStorage(kindArgument);
+    AgentMemoryKind? requestedKind;
+    if (kindArgument.isNotEmpty) {
+      requestedKind = _parseKindStrict(kindArgument);
+      if (requestedKind == null) {
+        return _invalid(call, '未知的画像类别: $kindArgument');
+      }
+    }
 
     AgentMemoryProfileEntry? existing;
     if (id.isNotEmpty) {
@@ -346,8 +356,10 @@ class RememberTool extends AgentTool {
       if (layer == 'profile') {
         final kindArgument = call.getString('kind').trim();
         if (kindArgument.isNotEmpty) {
-          final requestedKind =
-              AgentMemoryKindStorage.fromStorage(kindArgument);
+          final requestedKind = _parseKindStrict(kindArgument);
+          if (requestedKind == null) {
+            return _invalid(call, '未知的画像类别: $kindArgument');
+          }
           if (requestedKind == AgentMemoryKind.identity) {
             return _invalid(call, '删除 identity 画像条目必须提供具体的 id');
           }
@@ -402,5 +414,14 @@ class RememberTool extends AgentTool {
         .map((item) => item?.toString().trim() ?? '')
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
+  }
+
+  static AgentMemoryKind? _parseKindStrict(String raw) {
+    for (final kind in AgentMemoryKind.values) {
+      if (kind.name == raw) {
+        return kind;
+      }
+    }
+    return null;
   }
 }

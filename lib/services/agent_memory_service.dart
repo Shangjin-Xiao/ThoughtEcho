@@ -615,11 +615,11 @@ class AgentMemoryService extends ChangeNotifier {
   // ======================== 近况切片 ========================
 
   /// 当前未过期的最近一条近况切片；没有、已过期或内容为空时返回 null。
-  Future<AgentMemoryRecentSlice?> currentRecentSlice() async {
+  Future<AgentMemoryRecentSlice?> currentRecentSlice({DateTime? now}) async {
     if (!isEnabled) {
       return null;
     }
-    final slices = await activeRecentSlices(limit: 1);
+    final slices = await activeRecentSlices(now: now, limit: 1);
     return slices.firstOrNull;
   }
 
@@ -642,7 +642,8 @@ class AgentMemoryService extends ChangeNotifier {
     );
     return rows
         .map(AgentMemoryRecentSlice.fromMap)
-        .where((slice) => slice.content.isNotEmpty)
+        .where((slice) =>
+            slice.content.isNotEmpty && !slice.isExpiredAt(currentTime))
         .toList(growable: false);
   }
 

@@ -512,22 +512,27 @@ void main() {
 
     test('多切片近况支持自然时间衰减且受总字符预算约束', () {
       final now = DateTime(2026, 9, 6, 12, 0);
+      final padA = 'A' * 90;
+      final padB = 'B' * 90;
+      final longContent1 = '今天在重构 Agent 运行时架构并消除死锁。$padA';
+      final longContent2 = '三天前游览了西湖并徒步灵隐寺。$padB';
+      final overflowContent = '七天前去过黄山光明顶看日出（因总字符预算超限应被排除截断）' * 2;
       final slices = [
         AgentMemoryRecentSlice(
           id: 's1',
-          content: '今天在重构 Agent 运行时架构并消除死锁',
+          content: longContent1,
           observedAt: now.subtract(const Duration(hours: 2)),
           expiresAt: now.add(const Duration(days: 14)),
         ),
         AgentMemoryRecentSlice(
           id: 's2',
-          content: '三天前游览了西湖并徒步灵隐寺',
+          content: longContent2,
           observedAt: now.subtract(const Duration(days: 3)),
           expiresAt: now.add(const Duration(days: 11)),
         ),
         AgentMemoryRecentSlice(
-          id: 's3',
-          content: '七天前去过黄山光明顶看日出',
+          id: 's3_overflow',
+          content: overflowContent,
           observedAt: now.subtract(const Duration(days: 7)),
           expiresAt: now.add(const Duration(days: 7)),
         ),
@@ -549,8 +554,7 @@ void main() {
       expect(block, contains('今天在重构 Agent 运行时架构'));
       expect(block, contains('近况·3 天前'));
       expect(block, contains('三天前游览了西湖'));
-      expect(block, contains('近况·7 天前'));
-      expect(block, contains('七天前去过黄山光明顶'));
+      expect(block, isNot(contains(overflowContent)));
       expect(block, isNot(contains('已过期')));
     });
 
@@ -617,9 +621,14 @@ void main() {
       final stats = await memory.compactAndPrune(now: now);
 
       expect(stats.expiredSlicesPruned, 1);
+      expect(stats.supersededProfilesPruned, 1);
       expect(stats.decayedFactsPruned, 1);
       expect(stats.duplicatesPruned, 1);
-      expect(stats.totalPruned, greaterThanOrEqualTo(3));
+      expect(stats.totalPruned, greaterThanOrEqualTo(4));
+
+      // 验证超期 superseded 画像已被清理
+      final allProfiles = await memory.allProfileEntries();
+      expect(allProfiles.any((p) => p.id == oldSuperseded.id), isFalse);
 
       // 验证过期近况已被清理，活跃近况仍在
       final activeSlices = await memory.activeRecentSlices(now: now);
