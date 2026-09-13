@@ -66,12 +66,23 @@ class RememberTool extends AgentTool {
           },
           'kind': <String, Object?>{
             'type': 'string',
-            'enum': <String>['identity', 'preference', 'style', 'feedback'],
+            'enum': <String>[
+              'identity',
+              'preference',
+              'style',
+              'feedback',
+              'taste',
+              'voice',
+            ],
             'description': 'profile 层的类别：identity 身份与长期在做的事，'
                 'preference 想聊/不想被提起什么，style 篇幅语气格式，'
-                'feedback 用户对你做法的纠正。默认 preference。\n'
-                '画像里还会出现「品味」和「文风」两类，那是后台定期通读笔记后'
-                '归纳的，不接受手动写入——你只看得到几条上下文，判断不如它准。',
+                'feedback 用户对你做法的纠正，taste 摘录品味，'
+                'voice 文风写作声音。默认 preference。',
+          },
+          'replaces_id': <String, Object?>{
+            'type': 'string',
+            'description':
+                'add 时可选，传入被取代的旧条目 id。用于偏好变更时原位 supersede，不留两条打架的活跃条目。',
           },
           'category': <String, Object?>{
             'type': 'string',
@@ -165,17 +176,53 @@ class RememberTool extends AgentTool {
       });
     }
 
-    final kind = AgentMemoryKindStorage.fromStorage(
-      call.getString('kind', defaultValue: 'preference').trim(),
-    );
-    final rejected = _rejectDreamingOwnedKind(call, kind);
-    if (rejected != null) {
-      return rejected;
+    final rawKind = call.getString('kind', defaultValue: 'preference').trim();
+    final effectiveKindStr = rawKind.isEmpty ? 'preference' : rawKind;
+    final kind = _parseKindStrict(effectiveKindStr);
+    if (kind == null) {
+      return _invalid(call, '未知的画像类别: $rawKind');
+    }
+
+    final rawReplacesId = call.getString('replaces_id').trim().isEmpty
+        ? call.getString('replacesId').trim()
+        : call.getString('replaces_id').trim();
+    var replacesId = rawReplacesId.isEmpty ? null : rawReplacesId;
+
+    if (replacesId != null) {
+      final target = (await _memory.activeProfile())
+          .where((entry) => entry.id == replacesId)
+          .firstOrNull;
+      if (target == null) {
+        return _invalid(call, 'replaces_id 对应的条目不存在或已失效: $replacesId');
+      }
+      if (target.kind != kind) {
+        return _invalid(
+          call,
+          'replaces_id 对应的条目类别 (${target.kind.name}) 与当前写入类别 (${kind.name}) 不匹配',
+        );
+      }
+    }
+
+    // 当添加 taste, voice 或 style 且未显式指定 replaces_id 时，自动查出既有同 kind 条目原位 supersede，
+    // 防止堆积多条互相矛盾的文风/品味/表达风格画像。
+    // 注意：identity 类别支持多笔名/多画像并存（multi-persona），不在此自动覆盖既有身份；
+    // 仅在显式指定 replaces_id 时替换指定身份，或在后台 compactAndPrune 中同别名指令自动收敛。
+    if (replacesId == null &&
+        (kind == AgentMemoryKind.taste ||
+            kind == AgentMemoryKind.voice ||
+            kind == AgentMemoryKind.style)) {
+      final existing = (await _memory.activeProfile())
+          .where((entry) => entry.kind == kind)
+          .firstOrNull;
+      if (existing != null) {
+        replacesId = existing.id;
+      }
     }
 
     final entry = await _memory.rememberProfile(
       kind: kind,
       directive: content,
+      replacesId: replacesId,
     );
     return _ok(call, <String, Object?>{
       'action': 'add',
@@ -194,14 +241,14 @@ class RememberTool extends AgentTool {
     required String id,
     required String content,
   }) async {
-    if (id.isEmpty) {
-      return _invalid(call, 'update 需要 id，先用 recall 拿到要改的那条');
-    }
     if (content.isEmpty) {
       return _invalid(call, 'content 不能为空');
     }
 
     if (layer == 'fact') {
+      if (id.isEmpty) {
+        return _invalid(call, 'update 事实层需要 id，先用 recall 拿到要改的那条');
+      }
       // 事实层没有原位改写，内容变了就是另一条事实；但删旧和写新必须在一个
       // 事务里完成，否则写新失败会让旧事实凭空消失。
       final fact = await _memory.replaceFact(
@@ -225,41 +272,79 @@ class RememberTool extends AgentTool {
     }
 
     final kindArgument = call.getString('kind').trim();
-    final requestedKind = kindArgument.isEmpty
-        ? null
-        : AgentMemoryKindStorage.fromStorage(kindArgument);
-    if (requestedKind != null) {
-      final rejected = _rejectDreamingOwnedKind(call, requestedKind);
-      if (rejected != null) {
-        return rejected;
+    AgentMemoryKind? requestedKind;
+    if (kindArgument.isNotEmpty) {
+      requestedKind = _parseKindStrict(kindArgument);
+      if (requestedKind == null) {
+        return _invalid(call, '未知的画像类别: $kindArgument');
       }
     }
 
-    final existing = (await _memory.activeProfile())
-        .where((entry) => entry.id == id)
-        .firstOrNull;
-    if (existing == null) {
-      return _invalid(call, '没有找到 id 为 $id 的画像条目');
-    }
-    final existingRejected = _rejectDreamingOwnedKind(call, existing.kind);
-    if (existingRejected != null) {
-      return existingRejected;
+    AgentMemoryProfileEntry? existing;
+    if (id.isNotEmpty) {
+      existing = (await _memory.activeProfile())
+          .where((entry) => entry.id == id)
+          .firstOrNull;
+      if (existing == null) {
+        return _invalid(call, '没有找到 id 为 $id 的画像条目');
+      }
+    } else if (requestedKind != null) {
+      if (requestedKind == AgentMemoryKind.identity) {
+        return _invalid(call, '更新 identity 画像条目必须提供具体的 id');
+      }
+      existing = (await _memory.activeProfile())
+          .where((entry) => entry.kind == requestedKind)
+          .firstOrNull;
     }
 
-    final updated = await _memory.editProfileDirective(
-      id: id,
-      directive: content,
-      kind: requestedKind,
-    );
-    if (!updated) {
-      return _invalid(call, '没有找到 id 为 $id 的画像条目');
+    if (existing != null) {
+      if (requestedKind != null &&
+          requestedKind != existing.kind &&
+          (requestedKind == AgentMemoryKind.taste ||
+              requestedKind == AgentMemoryKind.voice ||
+              requestedKind == AgentMemoryKind.style)) {
+        final conflict = (await _memory.activeProfile())
+            .where((entry) =>
+                entry.kind == requestedKind && entry.id != existing!.id)
+            .firstOrNull;
+        if (conflict != null) {
+          await _memory.forgetProfile(conflict.id);
+        }
+      }
+
+      final updated = await _memory.editProfileDirective(
+        id: existing.id,
+        directive: content,
+        kind: requestedKind,
+      );
+      if (!updated) {
+        return _invalid(call, '更新画像条目失败');
+      }
+      return _ok(call, <String, Object?>{
+        'action': 'update',
+        'layer': 'profile',
+        'id': existing.id,
+        'kind': (requestedKind ?? existing.kind).storageValue,
+        'directive': escapeUntrustedText(content),
+      });
     }
-    return _ok(call, <String, Object?>{
-      'action': 'update',
-      'layer': 'profile',
-      'id': id,
-      'directive': escapeUntrustedText(content),
-    });
+
+    // 若未传 id 且活跃画像尚无该 kind 条目，则平滑新增该条目
+    if (requestedKind != null) {
+      final entry = await _memory.rememberProfile(
+        kind: requestedKind,
+        directive: content,
+      );
+      return _ok(call, <String, Object?>{
+        'action': 'update',
+        'layer': 'profile',
+        'id': entry.id,
+        'kind': entry.kind.storageValue,
+        'directive': escapeUntrustedText(entry.directive),
+      });
+    }
+
+    return _invalid(call, 'update 需要 id 或有效的 kind');
   }
 
   Future<ToolResult> _delete(
@@ -268,6 +353,33 @@ class RememberTool extends AgentTool {
     required String id,
   }) async {
     if (id.isEmpty) {
+      if (layer == 'profile') {
+        final kindArgument = call.getString('kind').trim();
+        if (kindArgument.isNotEmpty) {
+          final requestedKind = _parseKindStrict(kindArgument);
+          if (requestedKind == null) {
+            return _invalid(call, '未知的画像类别: $kindArgument');
+          }
+          if (requestedKind == AgentMemoryKind.identity) {
+            return _invalid(call, '删除 identity 画像条目必须提供具体的 id');
+          }
+          final existing = (await _memory.activeProfile())
+              .where((entry) => entry.kind == requestedKind)
+              .firstOrNull;
+          if (existing != null) {
+            final removed = await _memory.forgetProfile(existing.id);
+            if (removed) {
+              return _ok(call, <String, Object?>{
+                'action': 'delete',
+                'layer': 'profile',
+                'id': existing.id,
+                'kind': requestedKind.storageValue,
+              });
+            }
+          }
+          return _invalid(call, '未找到 kind 为 $kindArgument 的活跃画像条目');
+        }
+      }
       return _invalid(call, 'delete 需要 id，先用 recall 拿到要删的那条');
     }
     final removed = layer == 'fact'
@@ -288,25 +400,6 @@ class RememberTool extends AgentTool {
         content: jsonEncode(<String, Object?>{'ok': true, ...payload}),
       );
 
-  /// `taste` / `voice` 归后台归纳所有，模型不能写。
-  ///
-  /// schema 里的 `enum` 挡不住：不是每家 provider 都强制校验枚举，而
-  /// `AgentMemoryKindStorage.fromStorage` 现在认得这两个名字，模型直接传字符串
-  /// 就能写进去。这两类结论要扫一整个周期的笔记才归纳得准，在线对话里模型
-  /// 只看得到几条上下文，写出来的必然更差，还会把 Dreaming 归纳的那条挤掉
-  /// （画像预算是零和的）。
-  ToolResult? _rejectDreamingOwnedKind(ToolCall call, AgentMemoryKind kind) {
-    if (kind != AgentMemoryKind.taste && kind != AgentMemoryKind.voice) {
-      return null;
-    }
-    return _invalid(
-      call,
-      '${kind.storageValue} 类记忆由后台定期归纳整个周期的笔记后写入，不接受手动写入。'
-      '用户的文风或摘录品味需要调整时，改用 style 记录他对你表达方式的要求，'
-      '或把具体那次纠正记成 feedback。',
-    );
-  }
-
   ToolResult _invalid(ToolCall call, String message) => ToolResult(
         toolCallId: call.id,
         content: message,
@@ -321,5 +414,14 @@ class RememberTool extends AgentTool {
         .map((item) => item?.toString().trim() ?? '')
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
+  }
+
+  static AgentMemoryKind? _parseKindStrict(String raw) {
+    for (final kind in AgentMemoryKind.values) {
+      if (kind.name == raw) {
+        return kind;
+      }
+    }
+    return null;
   }
 }

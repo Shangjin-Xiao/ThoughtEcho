@@ -127,13 +127,32 @@ class SettingsService extends ChangeNotifier {
 
   String get userNickname => _mmkv.getString(_userNicknameKey) ?? '';
 
-  /// 获取代表用户自身的全部署名别名集合（包含用户称呼与默认作者）。
+  Set<String> Function()? _identityAliasesProvider;
+
+  /// 注册由长期记忆（AgentMemoryService）提供的活跃 identity 别名提供者。
+  void setIdentityAliasesProvider(Set<String> Function()? provider) {
+    _identityAliasesProvider = provider;
+    notifyListeners();
+  }
+
+  /// 长期记忆的别名集合变化后由 AgentMemoryService 调用，触发依赖 userAliases 的重建。
+  void refreshIdentityAliases() {
+    notifyListeners();
+  }
+
+  /// 获取代表用户自身的全部署名别名集合（包含用户称呼、默认作者与长期记忆画像中的活跃身份别名）。
   Set<String> get userAliases {
     final aliases = <String>{};
     final nick = userNickname.trim();
     if (nick.isNotEmpty) aliases.add(nick);
     final author = defaultAuthor?.trim();
     if (author != null && author.isNotEmpty) aliases.add(author);
+    if (agentMemoryEnabled) {
+      final memoryAliases = _identityAliasesProvider?.call();
+      if (memoryAliases != null && memoryAliases.isNotEmpty) {
+        aliases.addAll(memoryAliases);
+      }
+    }
     return aliases;
   }
 

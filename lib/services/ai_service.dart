@@ -279,6 +279,7 @@ class AIService extends ChangeNotifier {
       final budget = 6000 - userMessage.length;
       final singleMessageCap = 1200;
 
+      final selected = <openai.ChatMessage>[];
       for (int i = contextMessages.length - 1; i >= 0; i--) {
         String content = contextMessages[i].content;
         if (content.length > singleMessageCap) {
@@ -286,13 +287,14 @@ class AIService extends ChangeNotifier {
         }
         if (usedChars + content.length > budget) break;
         usedChars += content.length;
-        messages.insert(
-          messages.length,
+        selected.insert(
+          0,
           contextMessages[i].isUser
               ? openai.ChatMessage.user(content)
               : openai.ChatMessage.assistant(content: content),
         );
       }
+      messages.addAll(selected);
     }
 
     messages.add(openai.ChatMessage.user(userMessage));

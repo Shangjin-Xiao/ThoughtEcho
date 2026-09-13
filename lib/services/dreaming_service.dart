@@ -122,6 +122,32 @@ class DreamingService {
   static const Duration sampleWindow = Duration(days: 60);
 
   bool _running = false;
+  Timer? _idleStartupTimer;
+
+  /// 在应用启动空闲时尝试调度一轮 Dreaming。
+  ///
+  /// 仅在满足 [passesGates] 时（距离上次至少 7 天、笔记充足、记忆开启）才实际执行，
+  /// 且延迟 [idleDelay]（默认 5 秒）执行，绝不抢占首屏冷启动资源。
+  void scheduleIdleRunOnStartup({
+    Duration idleDelay = const Duration(seconds: 5),
+  }) {
+    if (!passesGates()) return;
+    _idleStartupTimer?.cancel();
+    _idleStartupTimer = Timer(idleDelay, () {
+      if (passesGates()) {
+        unawaited(run());
+      }
+    });
+  }
+
+  void cancelStartupSchedule() {
+    _idleStartupTimer?.cancel();
+    _idleStartupTimer = null;
+  }
+
+  void dispose() {
+    cancelStartupSchedule();
+  }
 
   /// 跑一轮。调用方不应 await 它去阻塞 UI。
   ///
@@ -151,8 +177,22 @@ class DreamingService {
   }
 
   Future<DreamingOutcome> _run(DateTime now) async {
-    if (!_passesGates(now)) {
+    if (!passesGates(now)) {
       return DreamingOutcome.skipped;
+    }
+
+    // 周期性压缩裁剪：首先清理过期近况切片与衰减无用事实，严控记忆库体积与信噪比
+    if (_settings.agentMemoryEnabled) {
+      try {
+        await _memory.compactAndPrune(now: now);
+      } catch (error, stackTrace) {
+        logError(
+          'Dreaming 记忆压缩裁剪异常（${error.runtimeType}）',
+          error: error.runtimeType,
+          stackTrace: stackTrace,
+          source: 'DreamingService',
+        );
+      }
     }
 
     final samples = await _sample(now);
@@ -190,7 +230,9 @@ class DreamingService {
     return DreamingOutcome.updated;
   }
 
-  bool _passesGates(DateTime now) {
+  /// 检查当前是否满足 Dreaming 的调度与执行门槛。
+  bool passesGates([DateTime? now]) {
+    final currentTime = now ?? DateTime.now();
     if (!_settings.agentMemoryEnabled) {
       return false;
     }
@@ -202,15 +244,15 @@ class DreamingService {
     // 1. 若超出未来 30 天：说明曾出现重大时钟跳跃且已修正回正常时间，若不自愈会导致
     //    Dreaming 长期甚至永久死锁。此时重置记录并放行。
     // 2. 若落在未来 30 天内：按「刚跑过」处理跳过本轮，防止时钟频繁微调导致每次洞察都跑。
-    if (last.isAfter(now)) {
-      if (last.difference(now) > const Duration(days: 30)) {
+    if (last.isAfter(currentTime)) {
+      if (last.difference(currentTime) > const Duration(days: 30)) {
         unawaited(_settings.setLastDreamingAt(null));
         return true;
       }
       return false;
     }
     // 正常过去的时间戳：检查是否已过最小间隔
-    if (now.difference(last) < minInterval) {
+    if (currentTime.difference(last) < minInterval) {
       return false;
     }
     return true;
@@ -231,6 +273,33 @@ class DreamingService {
     final defaultSource = _settings.defaultSource;
     final userAliases = _settings.userAliases;
 
+    // 扫描更广泛历史笔记（突破 60 天样本窗口限制），构建全量候选作者库与笔名推断
+    final candidateQuotes = await _loadNotes(
+      start: DateTime.fromMillisecondsSinceEpoch(0),
+      end: now,
+      limit: 500,
+    );
+
+    final candidateAuthors = <String>{
+      for (final q in [...candidateQuotes, ...quotes])
+        if (q.sourceAuthor != null && q.sourceAuthor!.trim().isNotEmpty)
+          Quote.stripAuthorPrefix(q.sourceAuthor!),
+    };
+
+    final detailedAliases = inferAliasesDetailed(
+      candidateQuotes.isNotEmpty ? candidateQuotes : quotes,
+      explicitAliases: userAliases,
+      userNickname: userNickname,
+      defaultAuthor: defaultAuthor,
+      defaultSource: defaultSource,
+    );
+    final newlyInferred = detailedAliases.highConfidence;
+    final moderateAliases = detailedAliases.moderateConfidence;
+    final effectiveAliases = <String>{
+      ...userAliases,
+      ...newlyInferred,
+    };
+
     final excerpts = <Quote>[];
     final originals = <Quote>[];
     for (final quote in quotes) {
@@ -241,7 +310,7 @@ class DreamingService {
         userNickname: userNickname,
         defaultAuthor: defaultAuthor,
         defaultSource: defaultSource,
-        userAliases: userAliases,
+        userAliases: effectiveAliases,
       )) {
         if (excerpts.length < maxSamplePerGroup) excerpts.add(quote);
       } else {
@@ -252,7 +321,13 @@ class DreamingService {
     if (excerpts.isEmpty && originals.isEmpty) {
       return null;
     }
-    return _DreamingSamples(excerpts: excerpts, originals: originals);
+    return _DreamingSamples(
+      excerpts: excerpts,
+      originals: originals,
+      inferredAliases: newlyInferred,
+      moderateConfidenceAliases: moderateAliases,
+      candidateAuthors: candidateAuthors,
+    );
   }
 
   static const String _systemPrompt = '''
@@ -267,11 +342,12 @@ class DreamingService {
 {
   "taste": "他摘录的类型、题材、调性，一句话，60 字以内",
   "voice": "他自己写作的篇幅、句式、人称、收尾习惯，一句话，60 字以内",
-  "recent": "他最近在做的事、去过的地方、反复提到的主题，一句话，100 字以内"
+  "recent": "他最近在做的事、去过的地方、反复提到的主题，一句话，100 字以内",
+  "user_alias": "若从原创笔记中明确识别出作者本人的固定署名或称呼（如'阿澈'、'林晚'），填入该名称，无把握填 null"
 }
 
 硬性要求：
-- 归纳**结构与语言特征**，不复述具体内容。应当写"多为 50-120 字的第一人称碎句"，而不是任何一条笔记里的实际事件或人名。
+- 归纳**结构与语言特征**，不复述具体内容。应当归纳其真实篇幅、句式节奏与表达调性（如"多为 100-300 字翔实白描与多重感官细节"或"多为 50-120 字第一人称生活短句"），而不是复述任何一条笔记里的具体事件或人名。
 - `recent` 只陈述事实，**不做情绪判断**，不写他心情如何、状态好坏。
 - **不评价**：不比较他摘的和他写的之间的高下或落差，不评判他写得好不好。
 - 样本不足以支撑某个结论时该字段填 null。宁可少一条，不可编一条。
@@ -350,6 +426,7 @@ class DreamingService {
       taste: field('taste', AgentMemoryService.directiveMaxChars),
       voice: field('voice', AgentMemoryService.directiveMaxChars),
       recent: field('recent', AgentMemoryRecentSlice.maxChars),
+      userAlias: field('user_alias', 20),
     );
     return result.isEmpty ? null : result;
   }
@@ -396,6 +473,7 @@ class DreamingService {
     final recent = result.recent;
     if (recent != null) {
       final slice = await _memory.saveRecentSlice(
+        id: 'dreaming_${now.toIso8601String().substring(0, 10)}',
         content: recent,
         observedAt: now,
         sourceNoteIds: samples.allIds,
@@ -403,7 +481,256 @@ class DreamingService {
       if (slice != null) wrote = true;
     }
 
+    final alias = result.userAlias;
+    if (alias != null && alias.isNotEmpty) {
+      final cleanAlias = alias
+          .replaceAll(
+            RegExp(r'''^[「」“”"'\s《》—\-\:\：]+|[「」“”"'\s《》—\-\:\：]+$'''),
+            '',
+          )
+          .trim();
+      const nullish = {
+        'null',
+        'none',
+        'n/a',
+        '无',
+        '未知',
+        '不确定',
+        '暂无',
+        '无把握',
+        '未提供',
+        '无署名',
+        '无别名',
+      };
+      final isStructuredCandidate = samples.candidateAuthors.isNotEmpty &&
+          samples.candidateAuthors.any(
+            (c) => c.toLowerCase() == cleanAlias.toLowerCase(),
+          );
+      if (cleanAlias.isNotEmpty &&
+          cleanAlias.length <= 20 &&
+          !nullish.contains(cleanAlias.toLowerCase()) &&
+          isStructuredCandidate) {
+        try {
+          final registered = await _memory.registerInferredAlias(
+            cleanAlias,
+            source: 'dreaming_ai',
+            unconfirmed: true,
+          );
+          if (registered) wrote = true;
+        } catch (e) {
+          AppLogger.w(
+            'Dreaming: 注册 AI 推断别名失败: errorType=${e.runtimeType}',
+            source: 'DreamingService',
+          );
+        }
+      }
+    }
+
+    for (final alias in samples.inferredAliases) {
+      try {
+        final registered = await _memory.registerInferredAlias(
+          alias,
+          source: 'dreaming',
+          unconfirmed: false,
+        );
+        if (registered) wrote = true;
+      } catch (e) {
+        AppLogger.w(
+          'Dreaming: 注册推断别名失败: errorType=${e.runtimeType}',
+          source: 'DreamingService',
+        );
+      }
+    }
+
+    for (final alias in samples.moderateConfidenceAliases) {
+      try {
+        final registered = await _memory.registerInferredAlias(
+          alias,
+          source: 'dreaming_statistical_moderate',
+          unconfirmed: true,
+        );
+        if (registered) wrote = true;
+      } catch (e) {
+        AppLogger.w(
+          'Dreaming: 注册中置信度推断别名失败: errorType=${e.runtimeType}',
+          source: 'DreamingService',
+        );
+      }
+    }
+
     return wrote;
+  }
+
+  /// 从笔记样本集合中统计推断用户的自签名笔名/别名，按置信度返回。
+  static ({Set<String> highConfidence, Set<String> moderateConfidence})
+      inferAliasesDetailed(
+    List<Quote> quotes, {
+    Iterable<String>? explicitAliases,
+    String? userNickname,
+    String? defaultAuthor,
+    String? defaultSource,
+  }) {
+    final result = <String>{
+      if (explicitAliases != null) ...explicitAliases,
+    };
+
+    final authorStats =
+        <String, ({int count, int selfMarkerCount, int externalWorkCount})>{};
+
+    const personalWorkSuffixes = <String>[
+      '日记',
+      '随笔',
+      '手记',
+      '札记',
+      '笔记',
+      '杂记',
+      '杂感',
+      '随感',
+      '自述',
+      '自语',
+      '心迹',
+      '备忘',
+      '碎碎念',
+      '清单',
+      '复盘',
+      '手账',
+      '行记',
+      '游记',
+      '食记',
+      '采风录',
+      '日常',
+      '手稿',
+      '手绘',
+      '备忘录',
+      '打卡',
+      'diary',
+      'journal',
+      'notes',
+      'memo',
+    ];
+
+    for (final quote in quotes) {
+      final author = quote.sourceAuthor?.trim();
+      if (author == null || author.isEmpty) continue;
+      final cleanAuthor = Quote.stripAuthorPrefix(author);
+      if (cleanAuthor.isEmpty) continue;
+
+      if (Quote.isSelfAuthor(
+        cleanAuthor,
+        userNickname: userNickname,
+        defaultAuthor: defaultAuthor,
+        userAliases: result,
+      )) {
+        continue;
+      }
+
+      final prev = authorStats[cleanAuthor] ??
+          (count: 0, selfMarkerCount: 0, externalWorkCount: 0);
+
+      final content = quote.content;
+      final lowerAuthor = cleanAuthor.toLowerCase();
+      final trimmedContent = content.trim();
+
+      // 当填写了 sourceAuthor 且正文末尾为「——<author>」或「……——<author>」等标准出处引用格式时，
+      // 属于外部名家名句摘录的规范引用格式，绝非用户个人自签名
+      final isExcerptCitation = (quote.sourceAuthor != null &&
+              quote.sourceAuthor!.trim().isNotEmpty) &&
+          RegExp(
+            r'(?:(?:……|…|\.{3,6})\s*)?[-—–—―]{1,2}\s*' +
+                RegExp.escape(cleanAuthor) +
+                r'\s*$',
+            caseSensitive: false,
+          ).hasMatch(trimmedContent);
+
+      final hasSignatureInContent = !isExcerptCitation &&
+          content.toLowerCase().contains(lowerAuthor) &&
+          (content.contains('写于') ||
+              content.contains('录于') ||
+              content.contains('摄于') ||
+              content.contains('记于') ||
+              content.contains('作于') ||
+              content.contains('整理于') ||
+              content.contains('致') ||
+              content.contains('——') ||
+              content.contains('—'));
+
+      final hasPersonalArtifacts =
+          quote.hasPersonalDeviceOrRichTextMarkers || content.contains('[图片:');
+
+      final cleanWork = quote.sourceWork != null
+          ? Quote.stripAuthorPrefix(quote.sourceWork!)
+          : null;
+
+      final bool isPersonalWork;
+      if (cleanWork == null || cleanWork.isEmpty) {
+        isPersonalWork = false;
+      } else {
+        final lowerWork = cleanWork.toLowerCase();
+        if (Quote.isBuiltinPersonalWork(cleanWork,
+            defaultSource: defaultSource)) {
+          isPersonalWork = true;
+        } else if (lowerWork.contains(lowerAuthor)) {
+          // 作品名直接包含作者自身名称（如「阿澈随笔」「林晚田野笔记」）
+          isPersonalWork = true;
+        } else if (personalWorkSuffixes.any(lowerWork.endsWith) &&
+            (hasSignatureInContent || hasPersonalArtifacts)) {
+          // 作品名以个人记录分类为后缀，且正文包含作者签名或富文本附件证据（如「西湖日记」「田野手记」）
+          isPersonalWork = true;
+        } else {
+          isPersonalWork = false;
+        }
+      }
+
+      final hasExternalWork = quote.sourceWork != null &&
+          quote.sourceWork!.trim().isNotEmpty &&
+          !isPersonalWork;
+
+      final hasSelfMarker = isPersonalWork || hasSignatureInContent;
+
+      authorStats[cleanAuthor] = (
+        count: prev.count + 1,
+        selfMarkerCount: prev.selfMarkerCount + (hasSelfMarker ? 1 : 0),
+        externalWorkCount: prev.externalWorkCount + (hasExternalWork ? 1 : 0),
+      );
+    }
+
+    final highConfidence = <String>{};
+    final moderateConfidence = <String>{};
+    for (final entry in authorStats.entries) {
+      final stats = entry.value;
+      // 判定规则（严格要求无任何外部正规出版书籍，杜绝外部经典作者被误收敛）：
+      // 1. 无外部出版书籍，且有至少 2 篇个人日记/随笔/自创作痕迹 -> 高置信度
+      // 2. 或无外部出版书籍，署名出现 >= 3 篇且至少 1 篇含有个人自建特征 -> 中置信度（存疑）
+      if (stats.selfMarkerCount >= 2 && stats.externalWorkCount == 0) {
+        highConfidence.add(entry.key);
+      } else if (stats.count >= 3 &&
+          stats.selfMarkerCount >= 1 &&
+          stats.externalWorkCount == 0) {
+        moderateConfidence.add(entry.key);
+      }
+    }
+
+    return (
+      highConfidence: highConfidence,
+      moderateConfidence: moderateConfidence,
+    );
+  }
+
+  /// 从笔记样本集合中统计推断用户的自签名笔名/别名（仅返回高置信度集合）。
+  static Set<String> inferAliasesFromQuotes(
+    List<Quote> quotes, {
+    Iterable<String>? explicitAliases,
+    String? userNickname,
+    String? defaultAuthor,
+    String? defaultSource,
+  }) {
+    return inferAliasesDetailed(
+      quotes,
+      explicitAliases: explicitAliases,
+      userNickname: userNickname,
+      defaultAuthor: defaultAuthor,
+      defaultSource: defaultSource,
+    ).highConfidence;
   }
 
   static List<String> _ids(List<Quote> quotes) => <String>[
@@ -413,10 +740,19 @@ class DreamingService {
 }
 
 class _DreamingSamples {
-  const _DreamingSamples({required this.excerpts, required this.originals});
+  const _DreamingSamples({
+    required this.excerpts,
+    required this.originals,
+    this.inferredAliases = const <String>{},
+    this.moderateConfidenceAliases = const <String>{},
+    this.candidateAuthors = const <String>{},
+  });
 
   final List<Quote> excerpts;
   final List<Quote> originals;
+  final Set<String> inferredAliases;
+  final Set<String> moderateConfidenceAliases;
+  final Set<String> candidateAuthors;
 
   List<String> get allIds => <String>[
         for (final quote in [...excerpts, ...originals])
@@ -425,11 +761,18 @@ class _DreamingSamples {
 }
 
 class _DreamingResult {
-  const _DreamingResult({this.taste, this.voice, this.recent});
+  const _DreamingResult({
+    this.taste,
+    this.voice,
+    this.recent,
+    this.userAlias,
+  });
 
   final String? taste;
   final String? voice;
   final String? recent;
+  final String? userAlias;
 
-  bool get isEmpty => taste == null && voice == null && recent == null;
+  bool get isEmpty =>
+      taste == null && voice == null && recent == null && userAlias == null;
 }

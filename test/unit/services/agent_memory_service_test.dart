@@ -206,6 +206,66 @@ void main() {
         greaterThan(0.2),
       );
     });
+
+    test('extractAliasesFromDirective 正确提取引号、称呼模式与极简自称中的名字且杜绝误捕获', () {
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('称呼用户为「阿澈」'),
+        equals({'阿澈'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('叫我“林晚”'),
+        equals({'林晚'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('称呼为阿澈'),
+        equals({'阿澈'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('自称为“野草”'),
+        equals({'野草'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('笔名为《墨客》'),
+        equals({'墨客'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('阿澈'),
+        equals({'阿澈'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('叫我阿澈'),
+        equals({'阿澈'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('我叫林晚'),
+        equals({'林晚'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('称呼我为阿澈'),
+        equals({'阿澈'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('自称阿澈'),
+        equals({'阿澈'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('笔名叫阿澈'),
+        equals({'阿澈'}),
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('用户一名古建筑学者'),
+        isEmpty,
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective('职业是建筑设计师'),
+        isEmpty,
+      );
+      expect(
+        AgentMemoryService.extractAliasesFromDirective(
+            '用户喜欢写随笔，平时工作繁忙。这是一段普通描述。'),
+        isEmpty,
+      );
+    });
   });
 
   group('AgentMemoryService 持久化', () {
@@ -448,6 +508,307 @@ void main() {
         ),
         throwsArgumentError,
       );
+    });
+
+    test('多切片近况支持自然时间衰减且受总字符预算约束', () {
+      final now = DateTime(2026, 9, 6, 12, 0);
+      final padA = 'A' * 90;
+      final padB = 'B' * 90;
+      final longContent1 = '今天在重构 Agent 运行时架构并消除死锁。$padA';
+      final longContent2 = '三天前游览了西湖并徒步灵隐寺。$padB';
+      final overflowContent = '七天前去过黄山光明顶看日出（因总字符预算超限应被排除截断）' * 2;
+      final slices = [
+        AgentMemoryRecentSlice(
+          id: 's1',
+          content: longContent1,
+          observedAt: now.subtract(const Duration(hours: 2)),
+          expiresAt: now.add(const Duration(days: 14)),
+        ),
+        AgentMemoryRecentSlice(
+          id: 's2',
+          content: longContent2,
+          observedAt: now.subtract(const Duration(days: 3)),
+          expiresAt: now.add(const Duration(days: 11)),
+        ),
+        AgentMemoryRecentSlice(
+          id: 's3_overflow',
+          content: overflowContent,
+          observedAt: now.subtract(const Duration(days: 7)),
+          expiresAt: now.add(const Duration(days: 7)),
+        ),
+        AgentMemoryRecentSlice(
+          id: 's4_expired',
+          content: '二十天前的旧近况（已过期）',
+          observedAt: now.subtract(const Duration(days: 20)),
+          expiresAt: now.subtract(const Duration(days: 6)),
+        ),
+      ];
+
+      final block = AgentMemoryService.renderProfileBlock(
+        const <AgentMemoryProfileEntry>[],
+        now: now,
+        recentSlices: slices,
+      )!;
+
+      expect(block, contains('近况·2 小时前'));
+      expect(block, contains('今天在重构 Agent 运行时架构'));
+      expect(block, contains('近况·3 天前'));
+      expect(block, contains('三天前游览了西湖'));
+      expect(block, isNot(contains(overflowContent)));
+      expect(block, isNot(contains('已过期')));
+    });
+
+    test('compactAndPrune 能够清理过期切片、衰减事实与超期历史画像', () async {
+      final now = DateTime(2026, 9, 6, 12, 0);
+
+      // 1. 写入未过期与已过期近况切片
+      await memory.saveRecentSlice(
+        id: 'slice-active',
+        content: '活跃近况',
+        observedAt: now.subtract(const Duration(days: 2)),
+        ttl: const Duration(days: 14),
+      );
+      await memory.saveRecentSlice(
+        id: 'slice-expired',
+        content: '过期近况',
+        observedAt: now.subtract(const Duration(days: 40)),
+        ttl: const Duration(days: 10), // 已过期
+      );
+
+      // 2. 写入衰减低价值事实与高价值/近期事实
+      await memory.addFact(
+        content: '低价值衰减事实（应被裁剪）',
+        importance: 2,
+        createdAt: now.subtract(const Duration(days: 35)),
+      );
+      await memory.addFact(
+        content: '高价值事实（应保留）',
+        importance: 8,
+        createdAt: now.subtract(const Duration(days: 35)),
+      );
+      await memory.addFact(
+        content: '新鲜低价值事实（不足30天，应保留）',
+        importance: 2,
+        createdAt: now.subtract(const Duration(days: 5)),
+      );
+
+      // 3. 写入过旧的 superseded 画像条目
+      final oldSuperseded = await memory.rememberProfile(
+        kind: AgentMemoryKind.style,
+        directive: '旧的回复风格（已被取代且超过30天）',
+        observedAt: now.subtract(const Duration(days: 50)),
+      );
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.style,
+        directive: '新的回复风格',
+        replacesId: oldSuperseded.id,
+        observedAt: now.subtract(const Duration(days: 1)),
+      );
+
+      // 4. 写入重复的 active 画像条目
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.preference,
+        directive: '只喝耶加雪菲手冲咖啡',
+        observedAt: now.subtract(const Duration(days: 10)),
+      );
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.preference,
+        directive: '只喝耶加雪菲手冲咖啡',
+        observedAt: now.subtract(const Duration(days: 2)),
+      );
+
+      // 执行压缩裁剪
+      final stats = await memory.compactAndPrune(now: now);
+
+      expect(stats.expiredSlicesPruned, 1);
+      expect(stats.supersededProfilesPruned, 1);
+      expect(stats.decayedFactsPruned, 1);
+      expect(stats.duplicatesPruned, 1);
+      expect(stats.totalPruned, greaterThanOrEqualTo(4));
+
+      // 验证超期 superseded 画像已被清理
+      final allProfiles = await memory.allProfileEntries();
+      expect(allProfiles.any((p) => p.id == oldSuperseded.id), isFalse);
+
+      // 验证过期近况已被清理，活跃近况仍在
+      final activeSlices = await memory.activeRecentSlices(now: now);
+      expect(activeSlices.any((s) => s.id == 'slice-active'), isTrue);
+      expect(activeSlices.any((s) => s.id == 'slice-expired'), isFalse);
+
+      // 验证重复画像去重，同一指令只保留最新一条 active
+      final activeProfile = await memory.activeProfile();
+      final coffeeEntries =
+          activeProfile.where((e) => e.directive == '只喝耶加雪菲手冲咖啡').toList();
+      expect(coffeeEntries, hasLength(1));
+    });
+
+    test('registerInferredAlias 注册别名并动态联动 SettingsService.userAliases',
+        () async {
+      expect(settingsService.userAliases, isNot(contains('阿澈')));
+
+      final added = await memory.registerInferredAlias('阿澈');
+      expect(added, isTrue);
+
+      final aliases = await memory.activeIdentityAliases();
+      expect(aliases, contains('阿澈'));
+      expect(settingsService.userAliases, contains('阿澈'));
+
+      // 重复注册应返回 false 且不重复写入
+      final addedAgain = await memory.registerInferredAlias('阿澈');
+      expect(addedAgain, isFalse);
+    });
+
+    test('rememberProfile/forgetProfile 动态联动更新 SettingsService.userAliases',
+        () async {
+      final entry = await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「林晚」',
+      );
+
+      expect(settingsService.userAliases, contains('林晚'));
+
+      // 忘记该画像条目后，别名应被清理
+      await memory.forgetProfile(entry.id);
+      await memory.activeIdentityAliases();
+      expect(settingsService.userAliases, isNot(contains('林晚')));
+    });
+
+    test('rememberProfile 使用 replacesId 原位替换身份时，旧别名被正确清除，新别名生效', () async {
+      final oldEntry = await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+      expect(settingsService.userAliases, contains('阿澈'));
+
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「林晚」',
+        replacesId: oldEntry.id,
+      );
+
+      expect(settingsService.userAliases, isNot(contains('阿澈')));
+      expect(settingsService.userAliases, contains('林晚'));
+
+      // 清理测试数据
+      await memory.clearAll();
+    });
+
+    test('clearAll 彻底重置 cachedIdentityAliases 并通知 SettingsService', () async {
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+      expect(settingsService.userAliases, contains('阿澈'));
+
+      await memory.clearAll();
+
+      expect(memory.cachedIdentityAliases, isEmpty);
+      expect(settingsService.userAliases, isNot(contains('阿澈')));
+    });
+
+    test('compactAndPrune 不会将不同内容的 identity 当作单例裁剪，支持多身份与多笔名共存', () async {
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「林晚」',
+      );
+
+      final stats = await memory.compactAndPrune();
+      expect(stats.duplicatesPruned, 0);
+
+      final active = await memory.activeProfile();
+      final identities =
+          active.where((e) => e.kind == AgentMemoryKind.identity).toList();
+      expect(identities, hasLength(2));
+
+      final aliases = await memory.activeIdentityAliases();
+      expect(aliases, contains('阿澈'));
+      expect(aliases, contains('林晚'));
+      expect(settingsService.userAliases, contains('阿澈'));
+      expect(settingsService.userAliases, contains('林晚'));
+
+      await memory.clearAll();
+    });
+
+    test('存疑别名（包含「存疑」或「待确认」）不会被激活为高置信度 userAliases', () async {
+      await memory.registerInferredAlias('阿澈', unconfirmed: true);
+
+      final profile = await memory.activeProfile();
+      expect(profile.first.directive, '待确认笔名：阿澈（存疑，待确认）');
+
+      final aliases = await memory.activeIdentityAliases();
+      expect(aliases, isNot(contains('阿澈')));
+      expect(settingsService.userAliases, isNot(contains('阿澈')));
+
+      // 用户确认后覆盖写入明确称呼，可正常激活
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+      final activeAliases = await memory.activeIdentityAliases();
+      expect(activeAliases, contains('阿澈'));
+      expect(settingsService.userAliases, contains('阿澈'));
+
+      await memory.clearAll();
+    });
+
+    test('compactAndPrune 不会将非别名身份（职业/经历等）作为单例裁剪，仅去重完全相同指令', () async {
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '用户是一名古建与营造学者',
+      );
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '用户长期居住在北京，经常去山西考察木构',
+      );
+      // 重复指令
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '用户是一名古建与营造学者',
+      );
+
+      final stats = await memory.compactAndPrune();
+      expect(stats.duplicatesPruned, 1);
+
+      final active = await memory.activeProfile();
+      final identities =
+          active.where((e) => e.kind == AgentMemoryKind.identity).toList();
+      expect(identities, hasLength(2));
+      expect(identities.map((e) => e.directive),
+          containsAll(['用户是一名古建与营造学者', '用户长期居住在北京，经常去山西考察木构']));
+
+      await memory.clearAll();
+    });
+
+    test('compactAndPrune 在存在已确认别名时自动淘汰对应的存疑别名', () async {
+      // 先写入已确认别名
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+      // 再写入存疑别名
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '待确认笔名：阿澈（存疑，待确认）',
+      );
+
+      final before = await memory.activeProfile();
+      expect(before.where((e) => e.kind == AgentMemoryKind.identity),
+          hasLength(2));
+
+      final stats = await memory.compactAndPrune();
+      expect(stats.duplicatesPruned, 1);
+
+      final active = await memory.activeProfile();
+      final identities =
+          active.where((e) => e.kind == AgentMemoryKind.identity).toList();
+      expect(identities, hasLength(1));
+      expect(identities.first.directive, '称呼用户为「阿澈」');
+
+      await memory.clearAll();
     });
   });
 }

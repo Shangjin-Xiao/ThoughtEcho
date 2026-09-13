@@ -109,51 +109,357 @@ void main() {
       expect((await harness.memory.counts()).profileCount, 0);
     });
 
-    test('拒绝手动写入 taste / voice 类画像', () async {
+    test('允许手动写入 taste / voice 类画像，并支持 replaces_id 覆盖', () async {
       final resultTaste = await remember.execute(toolCall('remember', {
         'content': '偏好短句摘录',
         'kind': 'taste',
       }));
-      expect(resultTaste.isError, isTrue);
-      expect(resultTaste.content, contains('taste 类记忆由后台定期归纳'));
+      expect(resultTaste.isError, isFalse);
+      final payloadTaste = decodeResult(resultTaste);
+      expect(payloadTaste['kind'], 'taste');
+
+      final profileAfterTaste = await harness.memory.activeProfile();
+      expect(profileAfterTaste.any((e) => e.directive == '偏好短句摘录'), isTrue);
+      final oldTasteId =
+          profileAfterTaste.firstWhere((e) => e.directive == '偏好短句摘录').id;
+
+      // 使用 replaces_id 原位覆盖
+      final resultSupersede = await remember.execute(toolCall('remember', {
+        'content': '偏好现代诗与哲学摘录',
+        'kind': 'taste',
+        'replaces_id': oldTasteId,
+      }));
+      expect(resultSupersede.isError, isFalse);
+
+      final activeAfterSupersede = await harness.memory.activeProfile();
+      expect(activeAfterSupersede.any((e) => e.id == oldTasteId), isFalse);
+      expect(
+          activeAfterSupersede.any((e) => e.directive == '偏好现代诗与哲学摘录'), isTrue);
 
       final resultVoice = await remember.execute(toolCall('remember', {
-        'content': '多用第一人称碎句',
+        'content': '多用第一人称碎句与生活感叹',
         'kind': 'voice',
       }));
-      expect(resultVoice.isError, isTrue);
-      expect(resultVoice.content, contains('voice 类记忆由后台定期归纳'));
+      expect(resultVoice.isError, isFalse);
+      final payloadVoice = decodeResult(resultVoice);
+      expect(payloadVoice['kind'], 'voice');
     });
 
-    test('拒绝 update 属于 taste / voice 的既有条目', () async {
+    test('允许 update 属于 taste / voice 的既有条目', () async {
       final entry = await harness.memory.rememberProfile(
         kind: AgentMemoryKind.taste,
         directive: '摘录偏好凝练的短句',
         source: 'dreaming',
       );
 
-      // 省略 kind 时拒绝
+      // 允许修改指令正文
       final updateWithoutKind = await remember.execute(toolCall('remember', {
         'action': 'update',
         'id': entry.id,
-        'content': '尝试修改 taste',
+        'content': '摘录偏好诗歌与散文',
       }));
-      expect(updateWithoutKind.isError, isTrue);
-      expect(updateWithoutKind.content, contains('taste 类记忆由后台定期归纳'));
+      expect(updateWithoutKind.isError, isFalse);
 
-      // 传其它 kind 试图改类型时也拒绝
-      final updateWithOtherKind = await remember.execute(toolCall('remember', {
-        'action': 'update',
-        'id': entry.id,
-        'kind': 'style',
-        'content': '尝试换成 style',
-      }));
-      expect(updateWithOtherKind.isError, isTrue);
-
-      // 原始内容未被修改
       final current = (await harness.memory.activeProfile())
           .firstWhere((e) => e.id == entry.id);
-      expect(current.directive, '摘录偏好凝练的短句');
+      expect(current.directive, '摘录偏好诗歌与散文');
+      expect(current.kind, AgentMemoryKind.taste);
+
+      // 允许 update voice
+      final voiceEntry = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.voice,
+        directive: '多用短句',
+        source: 'dreaming',
+      );
+      final updateVoice = await remember.execute(toolCall('remember', {
+        'action': 'update',
+        'id': voiceEntry.id,
+        'content': '多用散文诗般的意象语言',
+      }));
+      expect(updateVoice.isError, isFalse);
+
+      final currentVoice = (await harness.memory.activeProfile())
+          .firstWhere((e) => e.id == voiceEntry.id);
+      expect(currentVoice.directive, '多用散文诗般的意象语言');
+    });
+
+    test('口语化纠偏文风与品味：update 省略 id 时自动按 kind 查找既有活跃条目原位修改', () async {
+      final voice = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.voice,
+        directive: '多用短句',
+        source: 'dreaming',
+      );
+
+      final updateResult = await remember.execute(toolCall('remember', {
+        'action': 'update',
+        'layer': 'profile',
+        'kind': 'voice',
+        'content': '文风偏好第一人称生活散文和碎句',
+      }));
+      expect(updateResult.isError, isFalse);
+
+      final profile = await harness.memory.activeProfile();
+      final voices =
+          profile.where((e) => e.kind == AgentMemoryKind.voice).toList();
+      expect(voices.length, 1);
+      expect(voices.first.id, voice.id);
+      expect(voices.first.directive, '文风偏好第一人称生活散文和碎句');
+    });
+
+    test('add taste / voice 时未传 replaces_id 自动原位 supersede 既有条目，不留两条打架的活跃条目',
+        () async {
+      final taste = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.taste,
+        directive: '偏好古典文学',
+        source: 'dreaming',
+      );
+
+      final addResult = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'taste',
+        'content': '偏好存在主义与现代诗歌',
+      }));
+      expect(addResult.isError, isFalse);
+
+      final profile = await harness.memory.activeProfile();
+      final tastes =
+          profile.where((e) => e.kind == AgentMemoryKind.taste).toList();
+      expect(tastes.length, 1);
+      expect(tastes.first.directive, '偏好存在主义与现代诗歌');
+      expect(tastes.first.id, isNot(taste.id));
+    });
+
+    test(
+        'add identity 时未传 replaces_id 支持多身份共存（multi-persona），传 replaces_id 显式覆盖',
+        () async {
+      final oldIdentity = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+
+      // 未传 replaces_id 追加第二身份（例如笔名林晚），两者应当共存
+      final addSecond = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'identity',
+        'content': '笔名为「林晚」',
+      }));
+      expect(addSecond.isError, isFalse);
+
+      final profile = await harness.memory.activeProfile();
+      final identities =
+          profile.where((e) => e.kind == AgentMemoryKind.identity).toList();
+      expect(identities.length, 2);
+      expect(identities.any((e) => e.id == oldIdentity.id), isTrue);
+      expect(identities.any((e) => e.directive == '笔名为「林晚」'), isTrue);
+
+      // 显式传 replaces_id 进行身份覆盖
+      final replaceResult = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'identity',
+        'replaces_id': oldIdentity.id,
+        'content': '称呼用户为「阿澈（全栈工程师）」',
+      }));
+      expect(replaceResult.isError, isFalse);
+
+      final profileAfterReplace = await harness.memory.activeProfile();
+      final identitiesAfterReplace = profileAfterReplace
+          .where((e) => e.kind == AgentMemoryKind.identity)
+          .toList();
+      expect(identitiesAfterReplace.length, 2);
+      expect(
+          identitiesAfterReplace.any((e) => e.id == oldIdentity.id), isFalse);
+      expect(
+          identitiesAfterReplace.any((e) => e.directive == '称呼用户为「阿澈（全栈工程师）」'),
+          isTrue);
+    });
+
+    test('add style 时未传 replaces_id 自动原位 supersede 既有表达风格，不留两条打架的风格条目',
+        () async {
+      final oldStyle = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.style,
+        directive: '希望回答多用口语化语气',
+      );
+
+      final addResult = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'style',
+        'content': '偏好学术研究手札的严谨白描语调',
+      }));
+      expect(addResult.isError, isFalse);
+
+      final profile = await harness.memory.activeProfile();
+      final styles =
+          profile.where((e) => e.kind == AgentMemoryKind.style).toList();
+      expect(styles.length, 1);
+      expect(styles.first.directive, '偏好学术研究手札的严谨白描语调');
+      expect(styles.first.id, isNot(oldStyle.id));
+    });
+
+    test('delete profile 时未传 id 但传了 kind，自动按 kind 查找既有活跃条目删除', () async {
+      await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.taste,
+        directive: '偏好古建营造与金石拓片书籍',
+      );
+
+      final deleteResult = await remember.execute(toolCall('remember', {
+        'action': 'delete',
+        'layer': 'profile',
+        'kind': 'taste',
+      }));
+      expect(deleteResult.isError, isFalse);
+
+      final profile = await harness.memory.activeProfile();
+      final tastes =
+          profile.where((e) => e.kind == AgentMemoryKind.taste).toList();
+      expect(tastes, isEmpty);
+    });
+
+    test('delete profile 时未传 id 且该 kind 无活跃条目，返回未找到明确报错', () async {
+      final deleteResult = await remember.execute(toolCall('remember', {
+        'action': 'delete',
+        'layer': 'profile',
+        'kind': 'voice',
+      }));
+      expect(deleteResult.isError, isTrue);
+      expect(deleteResult.content, contains('未找到 kind 为 voice 的活跃画像条目'));
+    });
+
+    test('replaces_id 对应的条目类别与当前写入类别不一致时报错拒绝', () async {
+      final tasteEntry = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.taste,
+        directive: '偏好加缪存在主义文学',
+      );
+
+      final result = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'voice',
+        'replaces_id': tasteEntry.id,
+        'content': '写作声音为第一人称散文短句',
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('不匹配'));
+    });
+
+    test('update profile identity 时未传 id 报错拒绝，不使用 firstOrNull 盲目更新', () async {
+      await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+
+      final result = await remember.execute(toolCall('remember', {
+        'action': 'update',
+        'layer': 'profile',
+        'kind': 'identity',
+        'content': '称呼用户为「林晚」',
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('必须提供具体的 id'));
+    });
+
+    test('将其他类别条目编辑修改为 identity 时，绝不删除已有的 identity 条目', () async {
+      final existingIdentity = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+      final prefEntry = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.preference,
+        directive: '喜欢在安静的环境阅读',
+      );
+
+      final updateResult = await remember.execute(toolCall('remember', {
+        'action': 'update',
+        'layer': 'profile',
+        'id': prefEntry.id,
+        'kind': 'identity',
+        'content': '笔名为「林晚」',
+      }));
+      expect(updateResult.isError, isFalse);
+
+      final activeProfile = await harness.memory.activeProfile();
+      final identities = activeProfile
+          .where((e) => e.kind == AgentMemoryKind.identity)
+          .toList();
+      expect(identities.length, 2);
+      expect(identities.any((e) => e.id == existingIdentity.id), isTrue);
+      expect(identities.any((e) => e.id == prefEntry.id), isTrue);
+    });
+
+    test('delete profile identity 时未传 id 报错拒绝，不使用 firstOrNull 盲目删除', () async {
+      await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+
+      final result = await remember.execute(toolCall('remember', {
+        'action': 'delete',
+        'layer': 'profile',
+        'kind': 'identity',
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('必须提供具体的 id'));
+    });
+
+    test('add / update / delete 传入未知 kind 时严格报错拒绝，不默认降级为 preference', () async {
+      final addResult = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'invalid_kind_foo',
+        'content': '测试内容',
+      }));
+      expect(addResult.isError, isTrue);
+      expect(addResult.content, contains('未知的画像类别: invalid_kind_foo'));
+
+      final updateResult = await remember.execute(toolCall('remember', {
+        'action': 'update',
+        'layer': 'profile',
+        'kind': 'invalid_kind_bar',
+        'content': '测试内容',
+      }));
+      expect(updateResult.isError, isTrue);
+      expect(updateResult.content, contains('未知的画像类别: invalid_kind_bar'));
+
+      final deleteResult = await remember.execute(toolCall('remember', {
+        'action': 'delete',
+        'layer': 'profile',
+        'kind': 'invalid_kind_baz',
+      }));
+      expect(deleteResult.isError, isTrue);
+      expect(deleteResult.content, contains('未知的画像类别: invalid_kind_baz'));
+    });
+
+    test('add 传入不存在或已失效的 replaces_id 时报错拒绝', () async {
+      final result = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'style',
+        'content': '回复保持短句',
+        'replaces_id': 'non_existent_id_12345',
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content,
+          contains('replaces_id 对应的条目不存在或已失效: non_existent_id_12345'));
+    });
+
+    test('add 传入类别不匹配的 replaces_id 时报错拒绝', () async {
+      final identity = await harness.memory.rememberProfile(
+        kind: AgentMemoryKind.identity,
+        directive: '称呼用户为「阿澈」',
+      );
+
+      final result = await remember.execute(toolCall('remember', {
+        'action': 'add',
+        'layer': 'profile',
+        'kind': 'style',
+        'content': '回复保持短句',
+        'replaces_id': identity.id,
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('不匹配'));
     });
   });
 }
