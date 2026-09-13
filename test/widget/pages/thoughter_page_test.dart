@@ -194,6 +194,13 @@ class _InMemoryChatSessionService extends ChatSessionService {
   }
 }
 
+class _PendingInitChatSessionService extends _InMemoryChatSessionService {
+  final Completer<void> initCompleter = Completer<void>();
+
+  @override
+  Future<void> init() => initCompleter.future;
+}
+
 class _FakeAIService extends AIService {
   _FakeAIService({required super.settingsService});
 
@@ -3172,6 +3179,59 @@ void main() {
         }),
         isFalse,
       );
+    });
+
+    testWidgets(
+        'disposing ThoughterPage before initial post-frame initialization completes does not throw LateInitializationError',
+        (tester) async {
+      final agentService = _FakeAgentService(settingsService: settingsService);
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            key: ValueKey('dispose_before_post_frame_page'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+        phase: EnginePhase.build,
+      );
+
+      // 在首帧异步初始化/postFrameCallback 运行前立即销毁页面
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ThoughterPage), findsNothing);
+    });
+
+    testWidgets(
+        'disposing ThoughterPage while database initialization is pending does not throw LateInitializationError',
+        (tester) async {
+      final pendingChatService = _PendingInitChatSessionService();
+      final agentService = _FakeAgentService(settingsService: settingsService);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: pendingChatService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            key: ValueKey('dispose_while_db_init_pending_page'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+
+      // 首帧已完成渲染，但 _chatSessionService.init() 仍在挂起；此时立即销毁页面
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ThoughterPage), findsNothing);
+
+      // 释放 pending init，避免未完成的 Future 泄漏
+      pendingChatService.initCompleter.complete();
+      await tester.pump();
     });
   });
 }

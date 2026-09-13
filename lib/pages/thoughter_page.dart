@@ -141,7 +141,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   final List<app_chat.ChatMessage> _pendingPersistMessages = [];
   StreamSubscription<String>? _streamSubscription;
   late ChatSessionService _chatSessionService;
-  late AgentService _agentService;
+  AgentService? _agentService;
   late AIService _aiService;
   late SettingsService _settingsService;
   bool _settingsReady = false;
@@ -623,7 +623,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   /// Stop the current generation - cancels the stream subscription
   void _stopGenerating() {
     _agentRequestGeneration++;
-    _agentService.requestStop();
+    _agentService?.requestStop();
     _agentEventSubscription?.cancel();
     _agentEventSubscription = null;
     _streamSubscription?.cancel();

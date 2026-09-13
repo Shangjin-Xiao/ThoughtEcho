@@ -43,11 +43,14 @@ extension _ThoughterSession on _ThoughterPageState {
     _agentStatusDismissTimer?.cancel();
     _agentEventSubscription?.cancel();
     _cancelPendingAskUser(updateUi: false);
-    _agentService.setAskUserHandler(null);
-    _agentService.requestStop();
-    if (_agentListenerAttached) {
-      _agentService.removeListener(_onAgentServiceChanged);
-      _agentListenerAttached = false;
+    final agentService = _agentService;
+    if (agentService != null) {
+      agentService.setAskUserHandler(null);
+      agentService.requestStop();
+      if (_agentListenerAttached) {
+        agentService.removeListener(_onAgentServiceChanged);
+        _agentListenerAttached = false;
+      }
     }
     _streamSubscription?.cancel();
     _tagSubscription?.cancel();
@@ -136,13 +139,14 @@ extension _ThoughterSession on _ThoughterPageState {
   Future<void> _initServicesAndLoad() async {
     try {
       _chatSessionService = context.read<ChatSessionService>();
-      _agentService = context.read<AgentService>();
+      final agentService = context.read<AgentService>();
+      _agentService = agentService;
       _aiService = context.read<AIService>();
       _settingsService = context.read<SettingsService>();
       await _chatSessionService.init(); // 确保数据库已初始化
       if (!mounted) return;
       if (!_agentListenerAttached) {
-        _agentService.addListener(_onAgentServiceChanged);
+        agentService.addListener(_onAgentServiceChanged);
         _agentListenerAttached = true;
       }
       _settingsReady = true;
@@ -626,8 +630,8 @@ extension _ThoughterSession on _ThoughterPageState {
       _agentRequestGeneration++;
       // Cancel any ongoing stream and Agent session before starting new chat
       _cancelPendingAskUser();
-      _agentService.setAskUserHandler(null);
-      _agentService.requestStop();
+      _agentService?.setAskUserHandler(null);
+      _agentService?.requestStop();
       _streamSubscription?.cancel();
       _streamSubscription = null;
       _agentEventSubscription?.cancel();

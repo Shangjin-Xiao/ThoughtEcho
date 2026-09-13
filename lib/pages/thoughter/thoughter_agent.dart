@@ -2,6 +2,11 @@ part of '../thoughter_page.dart';
 
 extension _ThoughterAgent on _ThoughterPageState {
   Future<void> _askAgent(String text) async {
+    final agentService = _agentService;
+    if (agentService == null) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context);
     final requestGeneration = ++_agentRequestGeneration;
     StreamSubscription<AgentEvent>? eventSubscription;
@@ -110,7 +115,7 @@ extension _ThoughterAgent on _ThoughterPageState {
       if (!mounted || requestGeneration != _agentRequestGeneration) {
         return;
       }
-      eventSubscription = _agentService.events.listen((event) {
+      eventSubscription = agentService.events.listen((event) {
         if (!mounted || requestGeneration != _agentRequestGeneration) return;
         switch (event) {
           case AgentThinkingEvent():
@@ -264,7 +269,7 @@ extension _ThoughterAgent on _ThoughterPageState {
       });
       _agentEventSubscription = eventSubscription;
 
-      _agentService.setAskUserHandler((request) async {
+      agentService.setAskUserHandler((request) async {
         if (!mounted || requestGeneration != _agentRequestGeneration) {
           return AskUserResponse.cancelled();
         }
@@ -302,7 +307,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         return completer.future;
       });
 
-      final response = await _agentService.runAgent(
+      final response = await agentService.runAgent(
         userMessage: text,
         history: history,
         noteContext: _hasBoundNote
@@ -420,7 +425,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         _agentEventSubscription = null;
       }
       if (mounted && requestGeneration == _agentRequestGeneration) {
-        _agentService.setAskUserHandler(null);
+        agentService.setAskUserHandler(null);
         _cancelPendingAskUser();
         _cancelStreamUpdate();
         _cancelToolProgressUpdate();
