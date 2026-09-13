@@ -588,5 +588,67 @@ void main() {
             'excerpt');
       });
     });
+
+    group('Quote.hasPersonalWorkSuffix', () {
+      test('明确的个人记录体裁后缀返回 true', () {
+        const validWorks = [
+          '西湖日记',
+          '田野手记',
+          '阿澈随笔',
+          '开发备忘录',
+          '读书笔记',
+          '古建札记',
+          '生活杂感',
+          '旅行行记',
+          '京都游记',
+          '深夜碎碎念',
+          '每周复盘',
+          'Alice Notes',
+          'Personal Diary',
+        ];
+        for (final work in validWorks) {
+          expect(Quote.hasPersonalWorkSuffix(work), isTrue, reason: work);
+        }
+      });
+
+      test('通用出版物词汇（思考、随想、自留地）不作为个人体裁后缀', () {
+        const externalWorks = [
+          '深度思考',
+          '哲学思考',
+          '生活随想',
+          '思想随想',
+          '心灵自留地',
+          '自留地',
+          '思考',
+          '随想',
+        ];
+        for (final work in externalWorks) {
+          expect(Quote.hasPersonalWorkSuffix(work), isFalse, reason: work);
+        }
+      });
+
+      test('词汇本身（长度相等）不命中后缀判定，必须有前缀主体', () {
+        for (final kw in ['日记', '随笔', '手记', 'notes', 'memo']) {
+          expect(Quote.hasPersonalWorkSuffix(kw), isFalse, reason: kw);
+        }
+      });
+
+      test('支持 matchPrefix 回调验证剥离后的主体前缀', () {
+        expect(
+          Quote.hasPersonalWorkSuffix(
+            '阿澈随笔',
+            matchPrefix: (prefix) => prefix == '阿澈',
+          ),
+          isTrue,
+        );
+        expect(
+          Quote.hasPersonalWorkSuffix(
+            '鲁迅随笔',
+            matchPrefix: (prefix) => prefix == '阿澈',
+          ),
+          isFalse,
+        );
+      });
+    });
   });
 }

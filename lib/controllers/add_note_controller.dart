@@ -230,10 +230,12 @@ class AddNoteController extends ChangeNotifier {
 
   void removeNewLocation() {
     _locationFetchEpoch++;
+    _weatherFetchEpoch++;
     includeLocation = false;
     _clearNewLocation();
     // 用户主动移除，在途/预约的抓取就没有意义了，别让保存继续等它。
     isFetchingLocation = false;
+    isFetchingWeather = false;
     notifyListeners();
   }
 
@@ -346,11 +348,7 @@ class AddNoteController extends ChangeNotifier {
         newLatitude = snapshot.position.latitude;
         newLongitude = snapshot.position.longitude;
         newLocation = snapshot.location.isNotEmpty ? snapshot.location : null;
-        try {
-          newPoiName = locService.currentPoiName;
-        } catch (_) {
-          newPoiName = null;
-        }
+        newPoiName = snapshot.poiName;
         isFetchingLocation = false;
         notifyListeners();
         onLocationFetched?.call();

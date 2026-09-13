@@ -416,4 +416,141 @@ void main() {
     expect(find.text('在线地点服务不可用'), findsNothing);
     expect(find.text('景山公园'), findsOneWidget);
   });
+
+  testWidgets('保留初始 POI（无论是否在候选列表中）时，点击确认统一返回初始位置与坐标',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    // 候选列表包含 initialPoiName
+    final candidatePlace = const PlaceInfo(
+      name: '天安门广场',
+      latitude: 39.9037,
+      longitude: 116.3976,
+      address: '东长安街16号',
+      distanceMeters: 450,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: 39.9037,
+        initialLongitude: 116.3976,
+        initialLocation: '初始区县地址',
+        initialPoiName: '天安门广场',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 点击右上角确认按钮（此时天安门广场自动匹配为选中国项）
+    await tester.tap(find.byIcon(Icons.check).first);
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '天安门广场');
+    expect(selectedResult!.location, '初始区县地址');
+    expect(selectedResult!.latitude, 39.9037);
+    expect(selectedResult!.longitude, 116.3976);
+  });
+
+  testWidgets('候选地点未出现在列表中时，点击确认仍统一返回初始位置与坐标', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(places: []);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: 39.9037,
+        initialLongitude: 116.3976,
+        initialLocation: '初始区县地址',
+        initialPoiName: '天安门广场',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 点击右上角确认按钮
+    await tester.tap(find.byIcon(Icons.check).first);
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '天安门广场');
+    expect(selectedResult!.location, '初始区县地址');
+    expect(selectedResult!.latitude, 39.9037);
+    expect(selectedResult!.longitude, 116.3976);
+  });
+
+  testWidgets('点选候选 POI 时 location 优先使用 place.address',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final candidatePlace = const PlaceInfo(
+      name: '景山公园',
+      latitude: 39.9242,
+      longitude: 116.4014,
+      address: '景山西街44号',
+      distanceMeters: 800,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    await tester.tap(find.text('景山公园'));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '景山公园');
+    expect(selectedResult!.location, '景山西街44号');
+    expect(selectedResult!.latitude, 39.9242);
+    expect(selectedResult!.longitude, 116.4014);
+  });
+
+  testWidgets('实时定位反查失败时，不回退为 widget.initialLocation，避免绑定错误旧地址',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      formattedLocation: '',
+      poiName: null,
+      reverseResult: null,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: []);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: 31.2304,
+        initialLongitude: 121.4737,
+        initialLocation: '上海市黄浦区',
+        initialPoiName: '人民广场',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 点击系统位置项（北京坐标，反查为空）
+    await tester.tap(find.text('离线坐标'));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    // 应该使用设备定位结果，不应该回退为旧的「上海市黄浦区」
+    expect(selectedResult!.location, isNot(equals('上海市黄浦区')));
+    expect(selectedResult!.latitude, 39.9042);
+    expect(selectedResult!.longitude, 116.4074);
+  });
 }

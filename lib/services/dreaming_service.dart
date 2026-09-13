@@ -612,18 +612,25 @@ class DreamingService {
             caseSensitive: false,
           ).hasMatch(trimmedContent);
 
+      final hasLetterSalutation = content.startsWith('致$cleanAuthor') ||
+          content.contains('致$cleanAuthor：') ||
+          content.contains('致$cleanAuthor:') ||
+          RegExp(r'^致[^\n:：]{0,20}' + RegExp.escape(cleanAuthor) + r'[：:]')
+              .hasMatch(content);
+
       final hasSignatureInContent = !isExcerptCitation &&
-          content.toLowerCase().contains(lowerAuthor) &&
-          (content.contains('写于') ||
-              content.contains('录于') ||
-              content.contains('摄于') ||
-              content.contains('记于') ||
-              content.contains('作于') ||
-              content.contains('整理于') ||
-              content.contains('——') ||
-              content.contains('—'));
-      // 注：刻意不用裸「致」字做签名证据——致谢/所致/导致里遍地都是，
-      // 单个常见字不能当身份证据（与单字「余」同理）。题献场景由破折号落款覆盖。
+          ((content.toLowerCase().contains(lowerAuthor) &&
+                  (content.contains('写于') ||
+                      content.contains('录于') ||
+                      content.contains('摄于') ||
+                      content.contains('记于') ||
+                      content.contains('作于') ||
+                      content.contains('整理于') ||
+                      content.contains('——') ||
+                      content.contains('—'))) ||
+              hasLetterSalutation);
+      // 注：书信体签名采用定向精准匹配（「致<作者>」「致……<作者>：」），
+      // 既覆盖「致五年后的阿澈：」等书信体自签，又排除「致谢/导致/所致」等伪匹配。
 
       final hasPersonalArtifacts =
           quote.hasPersonalDeviceOrRichTextMarkers || content.contains('[图片:');

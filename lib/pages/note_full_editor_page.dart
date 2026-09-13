@@ -108,6 +108,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   // 新增：工具栏气泡引导 Key
   final GlobalKey _toolbarGuideKey = GlobalKey();
 
+  bool _isOpeningLocationPicker = false;
+
   void _updateState(VoidCallback fn) {
     if (!mounted) return;
     setState(fn);

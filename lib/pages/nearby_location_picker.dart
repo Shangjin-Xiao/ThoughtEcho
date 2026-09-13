@@ -150,7 +150,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         _deviceLongitude = pos.longitude;
         _devicePoiName = locService.currentPoiName;
         final fmt = locService.getFormattedLocation();
-        _deviceLocationString = fmt.isNotEmpty ? fmt : widget.initialLocation;
+        _deviceLocationString = fmt.isNotEmpty ? fmt : null;
         _onDeviceLocationAcquired();
       } else if (locService.currentPosition != null) {
         final cached = locService.currentPosition!;
@@ -158,7 +158,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         _deviceLongitude = cached.longitude;
         _devicePoiName = locService.currentPoiName;
         final fmt = locService.getFormattedLocation();
-        _deviceLocationString = fmt.isNotEmpty ? fmt : widget.initialLocation;
+        _deviceLocationString = fmt.isNotEmpty ? fmt : null;
         _onDeviceLocationAcquired();
       } else {
         _handleLocatingFallback();
@@ -324,12 +324,33 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   void _confirmSelection({PlaceInfo? place}) {
-    if (place != null) {
+    if (_customSelectedPoiName != null &&
+        _customSelectedPoiName == widget.initialPoiName &&
+        (place == null || place.name == widget.initialPoiName)) {
+      // 意图保留初始 POI（无论是否在附近列表中定位到对应条目，均统一走保留初始位置逻辑）
+      Navigator.of(context).pop(
+        LocationPickerResult(
+          latitude: widget.initialLatitude ??
+              _customSelectedLatitude ??
+              _deviceLatitude!,
+          longitude: widget.initialLongitude ??
+              _customSelectedLongitude ??
+              _deviceLongitude!,
+          location: widget.initialLocation,
+          poiName: widget.initialPoiName,
+        ),
+      );
+    } else if (place != null) {
+      // 用户从列表中点选的 POI：优先使用 place.address，避免跨区县时误用 _deviceLocationString
+      final placeLoc =
+          (place.address != null && place.address!.trim().isNotEmpty)
+              ? place.address!.trim()
+              : null;
       Navigator.of(context).pop(
         LocationPickerResult(
           latitude: place.latitude,
           longitude: place.longitude,
-          location: _deviceLocationString,
+          location: placeLoc,
           poiName: place.name,
         ),
       );
@@ -351,7 +372,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         LocationPickerResult(
           latitude: _customSelectedLatitude!,
           longitude: _customSelectedLongitude!,
-          location: widget.initialLocation ?? _deviceLocationString,
+          location: widget.initialLocation,
           poiName: _customSelectedPoiName,
         ),
       );

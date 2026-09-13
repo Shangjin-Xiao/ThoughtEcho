@@ -116,6 +116,9 @@ void main() {
       final fetchFuture = controller.fetchLocationForNewNote();
       expect(controller.isFetchingLocation, isTrue);
 
+      // 先让异步推进跨过权限检查，真正进入 getCurrentLocation 的 await
+      await pumpEventQueue();
+
       // 用户手动选择地点（例如通过 NearbyLocationPicker）
       controller.clearPendingLocationFetch();
       controller.setNewLocationData(
@@ -149,30 +152,97 @@ void main() {
       expect(controller.newLocation, '中国,北京市,北京市,东城区');
     });
 
-    test('在途天气抓取被 clearPendingWeatherFetch/removeNewWeather 作废后不会修改状态',
+    test('fetchLocationForNewNote 从 LocationSnapshot 严格同源获取坐标与 poiName',
         () async {
-      final completer = Completer<void>();
-      final weaService = _MockWeatherServiceForRace(completer);
+      final completer = Completer<Position?>();
+      final locService = _MockLocationServiceForRace(completer);
+      final controller = AddNoteController(context: FakeBuildContext())
+        ..updateServices(locService: locService)
+        ..includeLocation = true;
+
+      final fetchFuture = controller.fetchLocationForNewNote();
+      await pumpEventQueue();
+
+      completer.complete(Position(
+        latitude: 39.9042,
+        longitude: 116.4074,
+        timestamp: DateTime(2026),
+        accuracy: 0,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 0,
+        headingAccuracy: 0,
+        speed: 0,
+        speedAccuracy: 0,
+      ));
+      await fetchFuture;
+
+      expect(controller.newPoiName, '自动定位地名');
+      expect(controller.newLatitude, 39.9042);
+      expect(controller.newLongitude, 116.4074);
+      expect(controller.newLocation, '中国,北京市,北京市,海淀区');
+      expect(controller.isFetchingLocation, isFalse);
+    });
+
+    test('在途天气抓取被取消并重新发起后，旧请求的迟到完成不会错误重置新抓取的在途标志', () async {
+      final completer1 = Completer<void>();
+      final completer2 = Completer<void>();
+      final weaService = _MockWeatherServiceForRace(completer1, completer2);
       final controller = AddNoteController(context: FakeBuildContext())
         ..updateServices(weaService: weaService)
         ..includeWeather = true
         ..setNewLocationData(null, 39.9042, 116.4074);
 
-      // 启动在途异步天气抓取
-      final fetchFuture = controller.fetchWeatherForNewNote();
+      // 1. 启动第一次在途异步天气抓取
+      final fetchFuture1 = controller.fetchWeatherForNewNote();
       expect(controller.isFetchingWeather, isTrue);
 
-      // 用户主动移除天气
+      // 2. 用户在弹窗中取消勾选天气，作废第一次抓取
       controller.removeNewWeather();
       expect(controller.includeWeather, isFalse);
       expect(controller.isFetchingWeather, isFalse);
 
-      // 延迟的天气请求返回
+      // 3. 用户重新勾选天气并重新发起第二次抓取
+      controller.includeWeather = true;
+      final fetchFuture2 = controller.fetchWeatherForNewNote();
+      expect(controller.isFetchingWeather, isTrue);
+
+      // 4. 旧的第一次天气请求延迟到达并完成
+      completer1.complete();
+      await fetchFuture1;
+
+      // 验证：旧请求返回因 epoch 不匹配直接退出，绝不会将第二次抓取的在途标志误设为 false
+      expect(controller.isFetchingWeather, isTrue);
+      expect(controller.includeWeather, isTrue);
+
+      // 5. 第二次天气请求完成
+      completer2.complete();
+      await fetchFuture2;
+
+      // 验证：第二次请求正常收尾
+      expect(controller.isFetchingWeather, isFalse);
+      expect(controller.includeWeather, isTrue);
+    });
+
+    test('在途天气抓取因用户移除位置 (removeNewLocation) 作废后不会修改状态', () async {
+      final completer = Completer<void>();
+      final weaService = _MockWeatherServiceForRace(completer);
+      final controller = AddNoteController(context: FakeBuildContext())
+        ..updateServices(weaService: weaService)
+        ..includeWeather = true
+        ..includeLocation = true
+        ..setNewLocationData('北京市', 39.9042, 116.4074);
+
+      final fetchFuture = controller.fetchWeatherForNewNote();
+      expect(controller.isFetchingWeather, isTrue);
+
+      // 用户主动移除位置，应当同时递增 _weatherFetchEpoch 使在途天气作废
+      controller.removeNewLocation();
+      expect(controller.includeLocation, isFalse);
+
       completer.complete();
       await fetchFuture;
 
-      // 验证状态没有被滞后的完成回调改写
-      expect(controller.includeWeather, isFalse);
       expect(controller.isFetchingWeather, isFalse);
     });
   });
@@ -337,9 +407,11 @@ class _MockLocationServiceForRace extends ChangeNotifier
 
 class _MockWeatherServiceForRace extends ChangeNotifier
     implements WeatherService {
-  _MockWeatherServiceForRace(this.completer);
+  _MockWeatherServiceForRace(this.completer, [this.secondCompleter]);
 
   final Completer<void> completer;
+  final Completer<void>? secondCompleter;
+  int _callCount = 0;
 
   @override
   bool get hasData => true;
@@ -350,8 +422,13 @@ class _MockWeatherServiceForRace extends ChangeNotifier
     double longitude, {
     bool forceRefresh = false,
     Duration? timeout,
-  }) =>
-      completer.future;
+  }) {
+    _callCount++;
+    if (_callCount > 1 && secondCompleter != null) {
+      return secondCompleter!.future;
+    }
+    return completer.future;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

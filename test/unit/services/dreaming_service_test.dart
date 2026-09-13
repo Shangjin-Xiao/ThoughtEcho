@@ -768,5 +768,77 @@ void main() {
       expect(captured, isNotNull);
       expect(captured, isNot(contains('[SYSTEM]')));
     });
+
+    group('DreamingService.inferAliasesDetailed signature heuristics', () {
+      test('书信体「致五年后的阿澈：」与「致阿澈：」正确计入自签名标记', () {
+        final quotes = [
+          Quote(
+            id: 'q1',
+            content: '致五年后的阿澈：希望你依然对构建好产品保持好奇与热情。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-20',
+          ),
+          Quote(
+            id: 'q2',
+            content: '致阿澈：今天的工作已经全部完成，好好休息。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-21',
+          ),
+        ];
+
+        final result = DreamingService.inferAliasesDetailed(quotes);
+        expect(result.highConfidence, contains('阿澈'));
+      });
+
+      test('伪匹配（致谢、导致、所致）不计入自签名标记', () {
+        final quotes = [
+          Quote(
+            id: 'q1',
+            content: '在这里致谢阿澈在项目中的悉心指导与帮助。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-20',
+          ),
+          Quote(
+            id: 'q2',
+            content: '由于意外情况导致阿澈未能参加今日例会。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-21',
+          ),
+          Quote(
+            id: 'q3',
+            content: '本次疏漏系阿澈所致，需尽快整改。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-22',
+          ),
+        ];
+
+        final result = DreamingService.inferAliasesDetailed(quotes);
+        expect(result.highConfidence, isEmpty);
+        expect(result.moderateConfidence, isEmpty);
+      });
+
+      test('包含「思考」等通用外部出版物（如《深度思考》）即便带附件也不计为个人作品', () {
+        final quotes = [
+          Quote(
+            id: 'q1',
+            content: '思考的本质在于抓住核心矛盾。[图片:mindmap.png]',
+            sourceAuthor: '莫凡',
+            sourceWork: '深度思考',
+            date: '2026-08-20',
+          ),
+          Quote(
+            id: 'q2',
+            content: '框架思维帮助我们建立结构。[图片:diagram.png]',
+            sourceAuthor: '莫凡',
+            sourceWork: '深度思考',
+            date: '2026-08-21',
+          ),
+        ];
+
+        final result = DreamingService.inferAliasesDetailed(quotes);
+        // 《深度思考》不被判定为个人作品，从而计为 externalWork，杜绝外部出版物作者被推断为用户
+        expect(result.highConfidence, isEmpty);
+      });
+    });
   });
 }

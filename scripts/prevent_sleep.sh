@@ -200,12 +200,12 @@ stop() {
       kill -9 "$pid" 2>/dev/null || true
       sleep 0.2
     fi
-    _restore_desktop_inhibit
     echo "✅ 已成功停止。"
   else
     echo "进程已不存在或 PID 已被复用。"
   fi
-  rm -f "$PID_FILE" "$HEARTBEAT_FILE" "/tmp/prevent_sleep.prev_gsettings"
+  _restore_desktop_inhibit
+  rm -f "$PID_FILE" "$HEARTBEAT_FILE"
 }
 
 status() {
