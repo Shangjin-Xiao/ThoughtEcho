@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://note.shangjinyun.cn/">
-    <img src="res/readme-banner.png" alt="ThoughtEcho 心迹 - 你的专属灵感摘录本" width="100%">
+    <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner.png" alt="ThoughtEcho 心迹 - 你的专属灵感摘录本" width="100%">
   </a>
   
   # 心迹 (ThoughtEcho)
@@ -96,27 +96,27 @@
 ### 核心功能
 | 主页 | 笔记列表 |
 |:---:|:---:|
-| ![主页](res/screenshot/home_page.jpg) | ![笔记列表](res/screenshot/note_list_view.jpg) |
+| ![主页](https://img.shangjinyun.cn/projects/thoughtecho/home_page.jpg) | ![笔记列表](https://img.shangjinyun.cn/projects/thoughtecho/note_list_view.jpg) |
 
 ### 编辑与 AI 功能
 | 富文本编辑器 | AI 问答对话 | 筛选与排序 |
 |:---:|:---:|:---:|
-| ![富文本编辑器](res/screenshot/note_full_editor_page.jpg) | ![AI问答对话](res/screenshot/note_qa_chat_page.jpg) | ![筛选与排序](res/screenshot/note_filter_sort_sheet.jpg) |
+| ![富文本编辑器](https://img.shangjinyun.cn/projects/thoughtecho/note_full_editor_page.jpg) | ![AI问答对话](https://img.shangjinyun.cn/projects/thoughtecho/note_qa_chat_page.jpg) | ![筛选与排序](https://img.shangjinyun.cn/projects/thoughtecho/note_filter_sort_sheet.jpg) |
 
 ### 洞察与报告
 | 洞察分析 | 周期报告 | 设备同步 |
 |:---:|:---:|:---:|
-| ![洞察分析](res/screenshot/insights_page.jpg) | ![周期报告](res/screenshot/period_report.jpg) | ![设备同步](res/screenshot/note_sync.jpg) |
+| ![洞察分析](https://img.shangjinyun.cn/projects/thoughtecho/insights_page.jpg) | ![周期报告](https://img.shangjinyun.cn/projects/thoughtecho/period_report.jpg) | ![设备同步](https://img.shangjinyun.cn/projects/thoughtecho/note_sync.jpg) |
 
 ### 设置与管理
 | 主题风格设置 | 每日一言设置 | 偏好设置 |
 |:---:|:---:|:---:|
-| ![主题设置](res/screenshot/theme_settings_page.jpg) | ![一言设置](res/screenshot/hitokoto_settings_page.jpg) | ![偏好设置](res/screenshot/preferences_detail_page.jpg) |
+| ![主题设置](https://img.shangjinyun.cn/projects/thoughtecho/theme_settings_page.jpg) | ![一言设置](https://img.shangjinyun.cn/projects/thoughtecho/hitokoto_settings_page.jpg) | ![偏好设置](https://img.shangjinyun.cn/projects/thoughtecho/preferences_detail_page.jpg) |
 
 ### 存储与备份
 | 备份与恢复 | 存储管理 | WebDAV 云同步 |
 |:---:|:---:|:---:|
-| ![备份恢复](res/screenshot/backup_restore_page.jpg) | ![存储管理](res/screenshot/storage_management_page.jpg) | ![WebDAV 云同步](res/screenshot/webdav_sync_page.jpg) |
+| ![备份恢复](https://img.shangjinyun.cn/projects/thoughtecho/backup_restore_page.jpg) | ![存储管理](https://img.shangjinyun.cn/projects/thoughtecho/storage_management_page.jpg) | ![WebDAV 云同步](https://img.shangjinyun.cn/projects/thoughtecho/webdav_sync_page.jpg) |
 
 ## 🛠️ 技术栈
 

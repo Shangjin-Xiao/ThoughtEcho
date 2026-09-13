@@ -41,7 +41,7 @@
   - 长按：语音输入
 - **剪贴板检测**：切回应用时自动检测剪贴板内容并提示保存
 
-![主页界面](../res/screenshot/home_page.jpg)
+![主页界面](https://img.shangjinyun.cn/projects/thoughtecho/home_page.jpg)
 
 ---
 
@@ -140,7 +140,7 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 
 ## 3. 富文本编辑器
 
-![富文本编辑器](../res/screenshot/note_full_editor_page.jpg)
+![富文本编辑器](https://img.shangjinyun.cn/projects/thoughtecho/note_full_editor_page.jpg)
 
 ### 工具栏功能
 
@@ -228,7 +228,7 @@ Agent 会在工具调用后继续处理结果，并将完整回答保留为最�
 
 ## 4. 笔记管理
 
-![笔记列表](../res/screenshot/note_list_view.jpg)
+![笔记列表](https://img.shangjinyun.cn/projects/thoughtecho/note_list_view.jpg)
 
 ### 排序选项（3 种）
 
@@ -247,7 +247,7 @@ Agent 会在工具调用后继续处理结果，并将完整回答保留为最�
 
 ### 筛选选项（3 类）
 
-![筛选与排序](../res/screenshot/note_filter_sort_sheet.jpg)
+![筛选与排序](https://img.shangjinyun.cn/projects/thoughtecho/note_filter_sort_sheet.jpg)
 
 #### 标签筛选
 
@@ -406,7 +406,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ### AI 洞察分析
 
-![洞察分析](../res/screenshot/insights_page.jpg)
+![洞察分析](https://img.shangjinyun.cn/projects/thoughtecho/insights_page.jpg)
 
 **访问路径**：洞察 → AI 洞察
 
@@ -432,7 +432,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ### 问笔记聊天
 
-![AI 问答](../res/screenshot/note_qa_chat_page.jpg)
+![AI 问答](https://img.shangjinyun.cn/projects/thoughtecho/note_qa_chat_page.jpg)
 
 **功能说明**：针对特定笔记内容与 AI 进行对话。
 
@@ -447,7 +447,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ## 6. 设备同步
 
-![设备同步](../res/screenshot/note_sync.jpg)
+![设备同步](https://img.shangjinyun.cn/projects/thoughtecho/note_sync.jpg)
 
 ### WebDAV 云端同步 (Beta)
 
@@ -500,7 +500,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ## 7. 备份与恢复
 
-![备份与恢复](../res/screenshot/backup_restore_page.jpg)
+![备份与恢复](https://img.shangjinyun.cn/projects/thoughtecho/backup_restore_page.jpg)
 
 ### 备份格式
 
@@ -543,7 +543,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ## 8. 设置详解
 
-![设置界面](../res/screenshot/preferences_detail_page.jpg)
+![设置界面](https://img.shangjinyun.cn/projects/thoughtecho/preferences_detail_page.jpg)
 
 ### 位置与天气
 
@@ -561,7 +561,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ### 主题设置
 
-![主题设置](../res/screenshot/theme_settings_page.jpg)
+![主题设置](https://img.shangjinyun.cn/projects/thoughtecho/theme_settings_page.jpg)
 
 #### 主题风格（3 种）
 
@@ -819,7 +819,7 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
   - Long press: Voice input
 - **Clipboard Detection**: Auto-detects clipboard content when returning to app
 
-![Home Interface](../res/screenshot/l10n/en/home_page.jpg)
+![Home Interface](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/home_page.jpg)
 
 ---
 
@@ -922,7 +922,7 @@ ThoughtEcho can keep several AI configurations at once:
 
 ## 3. Rich Text Editor
 
-![Rich Text Editor](../res/screenshot/l10n/en/note_full_editor_page.jpg)
+![Rich Text Editor](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/note_full_editor_page.jpg)
 
 ### Toolbar Features
 
@@ -1010,7 +1010,7 @@ ThoughtEcho provides several ways to capture inspiration quickly:
 
 ## 4. Note Management
 
-![Note List](../res/screenshot/l10n/en/note_list_view.jpg)
+![Note List](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/note_list_view.jpg)
 
 ### Sorting Options (3 Types)
 
@@ -1186,7 +1186,7 @@ AI generates personalized writing prompts based on time, weather, and location.
 
 ### AI Insight Analysis
 
-![Insights](../res/screenshot/l10n/en/insights_page.jpg)
+![Insights](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/insights_page.jpg)
 
 **Access Path**: Insights → AI Insights
 
@@ -1212,7 +1212,7 @@ Analysis results are presented in a clear structure with insights, evidence, sug
 
 ### Note Q&A Chat
 
-![AI Q&A](../res/screenshot/l10n/en/note_qa_chat_page.jpg)
+![AI Q&A](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/note_qa_chat_page.jpg)
 
 Chat with AI about specific note content.
 
@@ -1319,7 +1319,7 @@ When importing a backup, you can choose from three modes:
 
 ## 8. Settings Guide
 
-![Settings](../res/screenshot/l10n/en/preferences_detail_page.jpg)
+![Settings](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/preferences_detail_page.jpg)
 
 ### Location & Weather
 
@@ -1337,7 +1337,7 @@ The app supports multiple languages including Chinese, English, Japanese, Korean
 
 ### Theme Settings
 
-![Theme Settings](../res/screenshot/l10n/en/theme_settings_page.jpg)
+![Theme Settings](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/theme_settings_page.jpg)
 
 #### Theme Styles (3 Types)
 
