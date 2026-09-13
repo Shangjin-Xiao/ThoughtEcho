@@ -3080,5 +3080,98 @@ void main() {
         isFalse,
       );
     });
+
+    testWidgets(
+        'cancelling ask_user after target session fully loaded still saves cancelled card to source session',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateAskUser: true,
+      );
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+
+      final sessionA = ChatSession(
+        id: 'session-A-loaded',
+        sessionType: 'agent',
+        title: '会话A已载入',
+        createdAt: DateTime(2026, 8, 1),
+        lastActiveAt: DateTime(2026, 8, 1),
+      );
+      final sessionB = ChatSession(
+        id: 'session-B-loaded',
+        sessionType: 'agent',
+        title: '会话B已载入',
+        createdAt: DateTime(2026, 8, 2),
+        lastActiveAt: DateTime(2026, 8, 2),
+      );
+
+      chatSessionService.seedSession(sessionA, []);
+      chatSessionService.seedSession(sessionB, [
+        app_chat.ChatMessage(
+          id: 'b-msg-loaded',
+          content: '会话B的已有内容',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime(2026, 8, 2),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: ThoughterPage(
+            key: const ValueKey('switch_session_post_loaded_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: sessionA,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 在会话 A 中发起提问
+      await _submitInput(tester, '在会话A中发起提问');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      expect(find.text('模拟提问：请选择'), findsOneWidget);
+
+      final state = tester.state(find.byType(ThoughterPage)) as dynamic;
+      // 会话 B 完全加载完成（此时 _messages 已经被清空并填入会话 B 的消息）
+      final loadBFuture =
+          state.debugLoadSessionForTest(sessionB.id) as Future<void>;
+      await tester.runAsync(() => loadBFuture);
+      await tester.pumpAndSettle();
+
+      expect(find.text('会话B的已有内容'), findsOneWidget);
+
+      // 在会话 B 已经完全加载完毕后取消旧提问
+      state.debugCancelPendingAskUserForTest();
+      await tester.pump();
+
+      // 验证：提问卡片依然通过 _pendingAskUserMessage 成功将取消状态写入会话 A
+      final messagesA = await chatSessionService.getMessages(sessionA.id);
+      expect(
+        messagesA.any((m) {
+          final meta = m.parsedMeta;
+          return meta != null &&
+              meta['type'] == 'ask_user' &&
+              meta['isCancelled'] == true;
+        }),
+        isTrue,
+      );
+
+      final messagesB = await chatSessionService.getMessages(sessionB.id);
+      expect(
+        messagesB.any((m) {
+          final meta = m.parsedMeta;
+          return meta != null && meta['type'] == 'ask_user';
+        }),
+        isFalse,
+      );
+    });
   });
 }

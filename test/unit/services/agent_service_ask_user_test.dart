@@ -137,14 +137,17 @@ void main() {
       final askTool = AskUserTool();
       final multiWrapped = TruncatingAgentTool(
         TruncatingAgentTool(
-          askTool,
+          TruncatingAgentTool(
+            askTool,
+            maxChars: 500,
+          ),
           maxChars: 1000,
         ),
         maxChars: 2000,
       );
       final service = AgentService(
         settingsService: _FakeSettingsService(provider),
-        tools: [multiWrapped],
+        tools: [_SlowNonInteractiveTool(), multiWrapped],
       );
 
       expect(service.findTool<AskUserTool>(), isNotNull);

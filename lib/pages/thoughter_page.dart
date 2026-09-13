@@ -180,6 +180,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   Completer<AskUserResponse>? _pendingAskUserCompleter;
   String? _pendingAskUserMessageId;
   String? _pendingAskUserSessionId;
+  app_chat.ChatMessage? _pendingAskUserMessage;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
   /// 流式文本 UI 的刷新间隔上限：一个窗口内最多落地一次。
@@ -550,6 +551,7 @@ class _ThoughterPageState extends State<ThoughterPage>
     bool updateUi = true,
   }) {
     final msgId = targetMessageId ?? _pendingAskUserMessageId;
+    final isTargetPending = msgId != null && msgId == _pendingAskUserMessageId;
     app_chat.ChatMessage? updated;
     if (msgId != null) {
       final idx = _messages.indexWhere((m) => m.id == msgId);
@@ -570,12 +572,28 @@ class _ThoughterPageState extends State<ThoughterPage>
           metaJson: jsonEncode(updatedMeta),
         );
         _messages[idx] = updated;
+      } else if (isTargetPending && _pendingAskUserMessage != null) {
+        final rawMeta = _pendingAskUserMessage!.metaJson;
+        Map<String, dynamic> meta = {};
+        if (rawMeta != null) {
+          try {
+            meta = Map<String, dynamic>.from(jsonDecode(rawMeta) as Map);
+          } catch (_) {}
+        }
+        final updatedMeta = {
+          ...meta,
+          'isCompleted': true,
+          'isCancelled': true,
+        };
+        updated = _pendingAskUserMessage!.copyWith(
+          metaJson: jsonEncode(updatedMeta),
+        );
       }
     }
 
     // 会话校验与消息持久化：与 UI 更新严格分开，校验所属会话防止串写
     final effectiveSessionId = targetSessionId ??
-        _pendingAskUserSessionId ??
+        (isTargetPending ? _pendingAskUserSessionId : null) ??
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
     if (effectiveSessionId != null && updated != null) {
       unawaited(
@@ -593,6 +611,7 @@ class _ThoughterPageState extends State<ThoughterPage>
       _pendingAskUserCompleter = null;
       _pendingAskUserMessageId = null;
       _pendingAskUserSessionId = null;
+      _pendingAskUserMessage = null;
     }
 
     // UI 更新：销毁路径或非挂载时安全跳过

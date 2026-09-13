@@ -380,6 +380,18 @@ void main() {
         isFalse,
       );
 
+      expect(
+        req1 ==
+            AskUserRequest(
+              toolCallId: 'call-1',
+              question: 'Q',
+              options: List<String>.from(['A', 'B']),
+              header: null,
+              multiSelect: true,
+            ),
+        isFalse,
+      );
+
       final resp1 = AskUserResponse(
         selectedOptions: List<String>.from(['A']),
         customText: 'C',
@@ -419,11 +431,30 @@ void main() {
         resp1 ==
             AskUserResponse(
               selectedOptions: List<String>.from(['A']),
+              customText: null,
+              isCancelled: false,
+            ),
+        isFalse,
+      );
+      expect(
+        resp1 ==
+            AskUserResponse(
+              selectedOptions: List<String>.from(['A']),
               customText: 'C',
               isCancelled: true,
             ),
         isFalse,
       );
+
+      // AskUserResponse.cancelled() 与独立构造实例相等性
+      final cancelledResp1 = AskUserResponse.cancelled();
+      final cancelledResp2 = AskUserResponse(
+        selectedOptions: List<String>.from([]),
+        customText: null,
+        isCancelled: true,
+      );
+      expect(cancelledResp1, equals(cancelledResp2));
+      expect(cancelledResp1.hashCode, equals(cancelledResp2.hashCode));
     });
   });
 }

@@ -295,12 +295,9 @@ extension _ThoughterAgent on _ThoughterPageState {
           }),
         );
 
-        _setState(() => _messages.add(askMsg));
+        _pendingAskUserMessage = askMsg;
+        _appendMessage(askMsg, persist: true);
         _scrollToBottom();
-
-        if (_currentSessionId != null) {
-          unawaited(_chatSessionService.addMessage(_currentSessionId!, askMsg));
-        }
 
         return completer.future;
       });
@@ -768,6 +765,7 @@ extension _ThoughterAgent on _ThoughterPageState {
     required List<String> selectedOptions,
     String? customText,
   }) {
+    final isPending = messageId == _pendingAskUserMessageId;
     final updatedMeta = {
       ...meta,
       'isCompleted': true,
@@ -782,8 +780,12 @@ extension _ThoughterAgent on _ThoughterPageState {
         metaJson: jsonEncode(updatedMeta),
       );
       _messages[idx] = updated;
+    } else if (isPending && _pendingAskUserMessage != null) {
+      updated = _pendingAskUserMessage!.copyWith(
+        metaJson: jsonEncode(updatedMeta),
+      );
     }
-    final effectiveSessionId = _pendingAskUserSessionId ??
+    final effectiveSessionId = (isPending ? _pendingAskUserSessionId : null) ??
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
     if (effectiveSessionId != null && updated != null) {
       unawaited(
@@ -793,7 +795,7 @@ extension _ThoughterAgent on _ThoughterPageState {
     if (mounted && !_isDisposed && updated != null) {
       _setState(() {});
     }
-    if (messageId == _pendingAskUserMessageId &&
+    if (isPending &&
         _pendingAskUserCompleter != null &&
         !_pendingAskUserCompleter!.isCompleted) {
       _pendingAskUserCompleter!.complete(
@@ -805,14 +807,18 @@ extension _ThoughterAgent on _ThoughterPageState {
       _pendingAskUserCompleter = null;
       _pendingAskUserMessageId = null;
       _pendingAskUserSessionId = null;
+      _pendingAskUserMessage = null;
     }
   }
 
   void _handleAskUserCancel(String messageId, Map<String, dynamic> meta) {
     _cancelPendingAskUser(
       targetMessageId: messageId,
-      targetSessionId: _pendingAskUserSessionId ??
-          (_messagesSessionId == _currentSessionId ? _currentSessionId : null),
+      targetSessionId: messageId == _pendingAskUserMessageId
+          ? _pendingAskUserSessionId
+          : (_messagesSessionId == _currentSessionId
+              ? _currentSessionId
+              : null),
     );
   }
 
