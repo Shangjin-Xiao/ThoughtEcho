@@ -39,7 +39,6 @@ ThoughtEcho/
 ├── test/                   # 单元、Widget、集成、性能测试
 ├── assets/                 # 应用图标、Lottie、SVG 等应用资源
 ├── docs/                   # 用户手册等项目文档
-├── res/                    # 网站、营销和展示资源
 ├── scripts/                # 构建及维护脚本
 ├── .github/workflows/      # CI 与发布流程
 └── android/ ios/ windows/  # 平台原生工程
@@ -346,8 +345,7 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 | Web | 不支持；不得新增或扩展 Web 功能 |
 
 - `.py`、`.sh`、`.bat`、`.ps1` 等维护脚本放在 `scripts/`，不要放仓库根目录。
-- 应用图标放 `assets/`，Lottie 放 `assets/lottie/`，SVG 放 `assets/svg/`，营销/网站资源放
-  `res/`。
+- 应用图标放 `assets/`，Lottie 放 `assets/lottie/`，SVG 放 `assets/svg/`。官网已完全独立迁移至 `thoughtecho-site` 仓库，演示截图与展示媒体统一托管于 `assets` 图床 CDN（`img.shangjinyun.cn`）。
 - 不提交 `.gradle/`、`.dart_tool/`、`build/`、`node_modules/`、`.metadata` 等生成物或本机状态。
 - 生成文件（`lib/gen_l10n/`、`*.mocks.dart`、平台插件注册文件）不得手动编辑；是否提交遵循
   当前 `.gitignore` 和仓库既有跟踪状态，不要一概删除或强行加入。

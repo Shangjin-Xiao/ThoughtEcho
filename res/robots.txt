@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://note.shangjinyun.cn/sitemap.xml
-
-# AI 检索说明文件
-# https://note.shangjinyun.cn/llms.txt
