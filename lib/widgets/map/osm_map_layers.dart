@@ -26,10 +26,16 @@ abstract final class OsmMapLayers {
       Uri.parse('https://www.openstreetmap.org/copyright');
 
   /// 瓦片层。作为 [FlutterMap] 的第一个 child。
+  /// 配置持久化磁盘瓦片缓存，缩放时优先读取本地缓存，避免重复向 OSM 发起网络请求。
   static TileLayer tiles() => TileLayer(
         urlTemplate: _tileUrlTemplate,
         userAgentPackageName: _packageName,
         maxNativeZoom: _maxNativeZoom,
+        tileProvider: NetworkTileProvider(
+          cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
+            overrideFreshAge: const Duration(days: 30),
+          ),
+        ),
       );
 
   /// 版权标注层。放在 [FlutterMap] 的最后一个 child，压在瓦片之上。

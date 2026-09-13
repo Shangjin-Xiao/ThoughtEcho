@@ -43,7 +43,7 @@ import '../services/settings_service.dart';
 import '../controllers/note_editor_states.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
-import 'map_location_picker_page.dart';
+import 'nearby_location_picker.dart';
 
 part 'note_editor/editor_document_init.dart';
 part 'note_editor/editor_save_and_draft.dart';

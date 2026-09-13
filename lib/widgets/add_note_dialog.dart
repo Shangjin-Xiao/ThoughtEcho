@@ -17,6 +17,7 @@ import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import '../pages/thoughter_page.dart';
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
+import '../pages/nearby_location_picker.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
@@ -1269,10 +1270,18 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     // 编辑模式：显示原始位置
     if (widget.initialQuote != null) {
+      if (_controller.originalPoiName != null &&
+          _controller.originalPoiName!.isNotEmpty) {
+        return LocationService.formatPoiForDisplay(
+          _controller.originalPoiName,
+          _controller.originalLocation,
+        );
+      }
       if (_controller.originalLocation != null &&
           _controller.originalLocation!.isNotEmpty) {
         return LocationService.formatLocationForDisplay(
-            _controller.originalLocation);
+          _controller.originalLocation,
+        );
       }
       if (_controller.originalLatitude != null &&
           _controller.originalLongitude != null) {
@@ -1284,7 +1293,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       return l10n.noLocationInfo;
     }
 
-    // 新建模式：只显示实时获取的位置
+    // 新建模式：优先 POI > 行政区 > 坐标
+    if (_controller.newPoiName != null && _controller.newPoiName!.isNotEmpty) {
+      return LocationService.formatPoiForDisplay(
+        _controller.newPoiName,
+        _controller.newLocation,
+      );
+    }
     if (_controller.newLocation != null &&
         _controller.newLocation!.isNotEmpty) {
       return LocationService.formatLocationForDisplay(_controller.newLocation);
@@ -1295,6 +1310,32 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     }
     // 未获取位置时显示"当前位置"提示
     return l10n.currentLocationLabel;
+  }
+
+  /// 长按打开附近地点选择器（朋友圈模式，不带地图瓦片）
+  Future<void> _openNearbyLocationPicker() async {
+    final navigator = Navigator.of(context);
+    final result = await navigator.push<LocationPickerResult>(
+      MaterialPageRoute<LocationPickerResult>(
+        builder: (_) => NearbyLocationPicker(
+          initialLatitude: _controller.newLatitude,
+          initialLongitude: _controller.newLongitude,
+          initialPoiName: _controller.newPoiName,
+        ),
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    setState(() {
+      _controller.includeLocation = true;
+      _controller.setNewLocationData(
+        result.location,
+        result.latitude,
+        result.longitude,
+        poiName: result.poiName,
+      );
+    });
   }
 
   /// 编辑模式下的位置对话框
@@ -1926,6 +1967,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                     return loc;
                   }())
             : null,
+        poiName: _controller.includeLocation
+            ? (isEditing ? _controller.originalPoiName : _controller.newPoiName)
+            : null,
         // 天气可临时使用坐标获取，但只有用户保留位置时才持久化坐标。
         latitude: _controller.includeLocation
             ? (isEditing
@@ -2274,6 +2318,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                         tagIds: _selectedTagIds,
                                         colorHex: _selectedColorHex,
                                         location: currentLocation,
+                                        poiName: _controller.includeLocation
+                                            ? (widget.initialQuote != null
+                                                ? _controller.originalPoiName
+                                                : _controller.newPoiName)
+                                            : null,
                                         latitude: _controller.includeLocation
                                             ? currentLat
                                             : null,
@@ -2423,64 +2472,85 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                               // 仅在需要显示 tooltip 时读取服务，避免每次 build 都触发
                               final locationService = _cachedLocationService;
                               return Tooltip(
-                                message: locationService != null
-                                    ? '${l10n.addLocationPrefix}: ${_getLocationTooltipText(context)}'
-                                    : l10n.locationServiceUnavailable,
+                                message: widget.initialQuote != null
+                                    ? (locationService != null
+                                        ? '${l10n.addLocationPrefix}: ${_getLocationTooltipText(context)}'
+                                        : l10n.locationServiceUnavailable)
+                                    : (locationService != null
+                                        ? '${l10n.addLocationPrefix}: ${_getLocationTooltipText(context)} (${l10n.longPressForNearbyPicker})'
+                                        : l10n.longPressForNearbyPicker),
                                 child: Stack(
                                   children: [
-                                    FilterChip(
-                                      key: const ValueKey(
-                                          'add_note_location_chip'),
-                                      showCheckmark: false,
-                                      avatar: Icon(
-                                        Icons.location_on,
-                                        color: _controller.includeLocation
-                                            ? theme.colorScheme.primary
-                                            : theme
-                                                .colorScheme.onSurfaceVariant,
-                                        size: 18,
-                                      ),
-                                      label: Text(l10n.location),
-                                      selected: _controller.includeLocation,
-                                      onSelected: (value) async {
-                                        if (!value) {
-                                          _cancelAutoAttachPlan(location: true);
-                                        }
-                                        // 编辑模式下统一弹对话框
+                                    GestureDetector(
+                                      onLongPress: () async {
+                                        // 编辑模式下长按表现与单击一致（只读/删除，不能选新地点）
                                         if (widget.initialQuote != null) {
                                           await _showLocationDialog(
                                               context, theme);
                                           return;
                                         }
-                                        // 新建模式：已有坐标/地址时弹对话框（查看/转换/移除）
-                                        if (_controller.includeLocation &&
-                                            (_controller.newLatitude != null ||
-                                                _controller.newLocation !=
-                                                    null)) {
-                                          await _showNewNoteLocationDialog(
-                                              context, theme);
-                                          return;
-                                        }
-                                        // 新建模式：首次勾选，获取位置
-                                        if (value) {
-                                          if (_controller.newLocation == null &&
-                                              _controller.newLatitude == null) {
-                                            _ensureMetadataServices();
-                                            _controller
-                                                .fetchLocationForNewNote();
-                                          }
-                                          setState(() {
-                                            _controller.includeLocation = true;
-                                          });
-                                          return;
-                                        }
-                                        // 取消勾选：走 removeNewLocation 一并放掉在途标志。
-                                        // 定位还没回来时（上面的弹窗分支进不去）只改勾选，
-                                        // 保存会继续等一个结果已经不要了的请求，最多转 5 秒。
-                                        _controller.removeNewLocation();
+                                        // 新建模式下长按：打开附近地点选择器
+                                        await _openNearbyLocationPicker();
                                       },
-                                      selectedColor:
-                                          theme.colorScheme.primaryContainer,
+                                      child: FilterChip(
+                                        key: const ValueKey(
+                                            'add_note_location_chip'),
+                                        showCheckmark: false,
+                                        avatar: Icon(
+                                          Icons.location_on,
+                                          color: _controller.includeLocation
+                                              ? theme.colorScheme.primary
+                                              : theme
+                                                  .colorScheme.onSurfaceVariant,
+                                          size: 18,
+                                        ),
+                                        label: Text(l10n.location),
+                                        selected: _controller.includeLocation,
+                                        onSelected: (value) async {
+                                          if (!value) {
+                                            _cancelAutoAttachPlan(
+                                                location: true);
+                                          }
+                                          // 编辑模式下统一弹对话框
+                                          if (widget.initialQuote != null) {
+                                            await _showLocationDialog(
+                                                context, theme);
+                                            return;
+                                          }
+                                          // 新建模式：已有坐标/地址时弹对话框（查看/转换/移除）
+                                          if (_controller.includeLocation &&
+                                              (_controller.newLatitude !=
+                                                      null ||
+                                                  _controller.newLocation !=
+                                                      null)) {
+                                            await _showNewNoteLocationDialog(
+                                                context, theme);
+                                            return;
+                                          }
+                                          // 新建模式：首次勾选，获取位置
+                                          if (value) {
+                                            if (_controller.newLocation ==
+                                                    null &&
+                                                _controller.newLatitude ==
+                                                    null) {
+                                              _ensureMetadataServices();
+                                              _controller
+                                                  .fetchLocationForNewNote();
+                                            }
+                                            setState(() {
+                                              _controller.includeLocation =
+                                                  true;
+                                            });
+                                            return;
+                                          }
+                                          // 取消勾选：走 removeNewLocation 一并放掉在途标志。
+                                          // 定位还没回来时（上面的弹窗分支进不去）只改勾选，
+                                          // 保存会继续等一个结果已经不要了的请求，最多转 5 秒。
+                                          _controller.removeNewLocation();
+                                        },
+                                        selectedColor:
+                                            theme.colorScheme.primaryContainer,
+                                      ),
                                     ),
                                     // 小红点：有坐标但没地址时提示可更新
                                     if (widget.initialQuote == null &&

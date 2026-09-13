@@ -27,6 +27,7 @@ class AddNoteController extends ChangeNotifier {
   String? originalLocation;
   double? originalLatitude;
   double? originalLongitude;
+  String? originalPoiName;
   String? originalWeather;
   String? originalTemperature;
 
@@ -34,6 +35,7 @@ class AddNoteController extends ChangeNotifier {
   String? newLocation;
   double? newLatitude;
   double? newLongitude;
+  String? newPoiName;
 
   // 位置/天气后台获取中状态（自动附加偏好触发）
   bool isFetchingLocation = false;
@@ -210,12 +212,14 @@ class AddNoteController extends ChangeNotifier {
     newLocation = null;
     newLatitude = null;
     newLongitude = null;
+    newPoiName = null;
   }
 
   void _clearOriginalLocation() {
     originalLocation = null;
     originalLatitude = null;
     originalLongitude = null;
+    originalPoiName = null;
   }
 
   void removeNewLocation() {
@@ -245,6 +249,7 @@ class AddNoteController extends ChangeNotifier {
         LocationService.isNonDisplayMarker(rawLoc) ? null : rawLoc;
     originalLatitude = quote.latitude;
     originalLongitude = quote.longitude;
+    originalPoiName = quote.poiName;
     originalWeather = quote.weather;
     originalTemperature = quote.temperature;
 
@@ -267,17 +272,29 @@ class AddNoteController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setNewLocationData(String? location, double? lat, double? lon) {
+  void setNewLocationData(
+    String? location,
+    double? lat,
+    double? lon, {
+    String? poiName,
+  }) {
     newLocation = location;
     newLatitude = lat;
     newLongitude = lon;
+    newPoiName = poiName;
     notifyListeners();
   }
 
-  void setOriginalLocationData(String? location, double? lat, double? lon) {
+  void setOriginalLocationData(
+    String? location,
+    double? lat,
+    double? lon, {
+    String? poiName,
+  }) {
     originalLocation = location;
     originalLatitude = lat;
     originalLongitude = lon;
+    originalPoiName = poiName;
     notifyListeners();
   }
 
@@ -317,6 +334,7 @@ class AddNoteController extends ChangeNotifier {
         newLatitude = snapshot.position.latitude;
         newLongitude = snapshot.position.longitude;
         newLocation = snapshot.location.isNotEmpty ? snapshot.location : null;
+        newPoiName = locService.currentPoiName;
         isFetchingLocation = false;
         notifyListeners();
         onLocationFetched?.call();
