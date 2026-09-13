@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
@@ -63,7 +64,7 @@ class _AskUserCardState extends State<AskUserCard> {
           widget.customText != _customController.text) {
         _customController.text = widget.customText ?? '';
       }
-      if (oldWidget.selectedOptions != widget.selectedOptions) {
+      if (!listEquals(oldWidget.selectedOptions, widget.selectedOptions)) {
         _selectedOptions
           ..clear()
           ..addAll(widget.selectedOptions);

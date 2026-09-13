@@ -172,12 +172,14 @@ class _ThoughterPageState extends State<ThoughterPage>
   /// 上一次布局时消息区的可用高度，用于识别键盘/输入框正在挤压列表
   /// （见 _onMessageViewportHeightChanged）。
   double _lastMessageViewportHeight = 0;
+  bool _isDisposed = false;
   bool _agentListenerAttached = false;
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
   StreamSubscription<AgentEvent>? _agentEventSubscription;
   Completer<AskUserResponse>? _pendingAskUserCompleter;
   String? _pendingAskUserMessageId;
+  String? _pendingAskUserSessionId;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
   /// 流式文本 UI 的刷新间隔上限：一个窗口内最多落地一次。
@@ -412,6 +414,9 @@ class _ThoughterPageState extends State<ThoughterPage>
   Future<void> debugLoadSessionForTest(String sessionId) =>
       _loadSession(sessionId);
 
+  @visibleForTesting
+  void debugCancelPendingAskUserForTest() => _cancelPendingAskUser();
+
   void _appendMessage(app_chat.ChatMessage message, {bool persist = false}) {
     _setState(() {
       _messages.add(message);
@@ -472,6 +477,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   }
 
   void _setState(VoidCallback fn) {
+    if (!mounted || _isDisposed) return;
     setState(fn);
   }
 
@@ -538,36 +544,45 @@ class _ThoughterPageState extends State<ThoughterPage>
     return _cachedMarkdownStyleSheet!;
   }
 
-  void _cancelPendingAskUser({String? targetMessageId}) {
+  void _cancelPendingAskUser({
+    String? targetMessageId,
+    String? targetSessionId,
+    bool updateUi = true,
+  }) {
     final msgId = targetMessageId ?? _pendingAskUserMessageId;
+    app_chat.ChatMessage? updated;
     if (msgId != null) {
-      _setState(() {
-        final idx = _messages.indexWhere((m) => m.id == msgId);
-        if (idx != -1) {
-          final rawMeta = _messages[idx].metaJson;
-          Map<String, dynamic> meta = {};
-          if (rawMeta != null) {
-            try {
-              meta = Map<String, dynamic>.from(jsonDecode(rawMeta) as Map);
-            } catch (_) {}
-          }
-          final updatedMeta = {
-            ...meta,
-            'isCompleted': true,
-            'isCancelled': true,
-          };
-          final updated = _messages[idx].copyWith(
-            metaJson: jsonEncode(updatedMeta),
-          );
-          _messages[idx] = updated;
-          if (_currentSessionId != null) {
-            unawaited(
-              _chatSessionService.addMessage(_currentSessionId!, updated),
-            );
-          }
+      final idx = _messages.indexWhere((m) => m.id == msgId);
+      if (idx != -1) {
+        final rawMeta = _messages[idx].metaJson;
+        Map<String, dynamic> meta = {};
+        if (rawMeta != null) {
+          try {
+            meta = Map<String, dynamic>.from(jsonDecode(rawMeta) as Map);
+          } catch (_) {}
         }
-      });
+        final updatedMeta = {
+          ...meta,
+          'isCompleted': true,
+          'isCancelled': true,
+        };
+        updated = _messages[idx].copyWith(
+          metaJson: jsonEncode(updatedMeta),
+        );
+        _messages[idx] = updated;
+      }
     }
+
+    // 会话校验与消息持久化：与 UI 更新严格分开，校验所属会话防止串写
+    final effectiveSessionId = targetSessionId ??
+        _pendingAskUserSessionId ??
+        (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
+    if (effectiveSessionId != null && updated != null) {
+      unawaited(
+        _chatSessionService.addMessage(effectiveSessionId, updated),
+      );
+    }
+
     final shouldClearCompleter =
         targetMessageId == null || targetMessageId == _pendingAskUserMessageId;
     if (shouldClearCompleter) {
@@ -577,6 +592,12 @@ class _ThoughterPageState extends State<ThoughterPage>
       }
       _pendingAskUserCompleter = null;
       _pendingAskUserMessageId = null;
+      _pendingAskUserSessionId = null;
+    }
+
+    // UI 更新：销毁路径或非挂载时安全跳过
+    if (updateUi && mounted && !_isDisposed && updated != null) {
+      _setState(() {});
     }
   }
 

@@ -270,6 +270,18 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('旧备注'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilterChip>(find.widgetWithText(FilterChip, 'A'))
+            .selected,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<FilterChip>(find.widgetWithText(FilterChip, 'B'))
+            .selected,
+        isFalse,
+      );
 
       await tester.pumpWidget(_buildTestApp(
         const AskUserCard(
@@ -282,6 +294,58 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('新备注'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilterChip>(find.widgetWithText(FilterChip, 'B'))
+            .selected,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<FilterChip>(find.widgetWithText(FilterChip, 'A'))
+            .selected,
+        isFalse,
+      );
+    });
+
+    testWidgets('重建提供内容相同但实例不同的新 selectedOptions 时保留内部用户选择', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          question: '测试保持选择',
+          options: const ['A', 'B'],
+          selectedOptions: List<String>.from(['A']),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // 用户在界面上点击了 B
+      await tester.tap(find.text('B'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<FilterChip>(find.widgetWithText(FilterChip, 'B'))
+            .selected,
+        isTrue,
+      );
+
+      // 外部因为滚动/重新构建传入了内容相同的全新 List 实例
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          question: '测试保持选择',
+          options: const ['A', 'B'],
+          selectedOptions: List<String>.from(['A']),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // 用户在界面上的选择 B 不应被清空回滚
+      expect(
+        tester
+            .widget<FilterChip>(find.widgetWithText(FilterChip, 'B'))
+            .selected,
+        isTrue,
+      );
     });
   });
 }

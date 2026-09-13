@@ -135,14 +135,16 @@ void main() {
 
     test('findTool 支持穿透多层装饰器嵌套获取目标工具', () {
       final askTool = AskUserTool();
-      final doubleWrapped = TruncatingAgentTool(
-        askTool,
-        maxChars: 1000,
+      final multiWrapped = TruncatingAgentTool(
+        TruncatingAgentTool(
+          askTool,
+          maxChars: 1000,
+        ),
+        maxChars: 2000,
       );
-      // AgentService 内部还会再包一层 TruncatingAgentTool，形成双层嵌套
       final service = AgentService(
         settingsService: _FakeSettingsService(provider),
-        tools: [doubleWrapped],
+        tools: [multiWrapped],
       );
 
       expect(service.findTool<AskUserTool>(), isNotNull);

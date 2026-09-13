@@ -273,6 +273,7 @@ extension _ThoughterAgent on _ThoughterPageState {
 
         final msgId = _uuid.v4();
         _pendingAskUserMessageId = msgId;
+        _pendingAskUserSessionId = _currentSessionId;
 
         final askMsg = app_chat.ChatMessage(
           id: msgId,
@@ -774,20 +775,24 @@ extension _ThoughterAgent on _ThoughterPageState {
       'selectedOptions': selectedOptions,
       'customText': customText,
     };
-    _setState(() {
-      final idx = _messages.indexWhere((m) => m.id == messageId);
-      if (idx != -1) {
-        final updated = _messages[idx].copyWith(
-          metaJson: jsonEncode(updatedMeta),
-        );
-        _messages[idx] = updated;
-        if (_currentSessionId != null) {
-          unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, updated),
-          );
-        }
-      }
-    });
+    app_chat.ChatMessage? updated;
+    final idx = _messages.indexWhere((m) => m.id == messageId);
+    if (idx != -1) {
+      updated = _messages[idx].copyWith(
+        metaJson: jsonEncode(updatedMeta),
+      );
+      _messages[idx] = updated;
+    }
+    final effectiveSessionId = _pendingAskUserSessionId ??
+        (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
+    if (effectiveSessionId != null && updated != null) {
+      unawaited(
+        _chatSessionService.addMessage(effectiveSessionId, updated),
+      );
+    }
+    if (mounted && !_isDisposed && updated != null) {
+      _setState(() {});
+    }
     if (messageId == _pendingAskUserMessageId &&
         _pendingAskUserCompleter != null &&
         !_pendingAskUserCompleter!.isCompleted) {
@@ -799,11 +804,16 @@ extension _ThoughterAgent on _ThoughterPageState {
       );
       _pendingAskUserCompleter = null;
       _pendingAskUserMessageId = null;
+      _pendingAskUserSessionId = null;
     }
   }
 
   void _handleAskUserCancel(String messageId, Map<String, dynamic> meta) {
-    _cancelPendingAskUser(targetMessageId: messageId);
+    _cancelPendingAskUser(
+      targetMessageId: messageId,
+      targetSessionId: _pendingAskUserSessionId ??
+          (_messagesSessionId == _currentSessionId ? _currentSessionId : null),
+    );
   }
 
   /// 解析由成功的 Agent 工具调用生成的建议卡片。

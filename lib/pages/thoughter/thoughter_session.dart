@@ -38,14 +38,16 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   void _disposeImpl() {
+    _isDisposed = true;
     _agentRequestGeneration++;
     _agentStatusDismissTimer?.cancel();
     _agentEventSubscription?.cancel();
-    _cancelPendingAskUser();
+    _cancelPendingAskUser(updateUi: false);
+    _agentService.setAskUserHandler(null);
+    _agentService.requestStop();
     if (_agentListenerAttached) {
-      _agentService.setAskUserHandler(null);
-      _agentService.requestStop();
       _agentService.removeListener(_onAgentServiceChanged);
+      _agentListenerAttached = false;
     }
     _streamSubscription?.cancel();
     _tagSubscription?.cancel();
@@ -623,17 +625,13 @@ extension _ThoughterSession on _ThoughterPageState {
     try {
       _agentRequestGeneration++;
       // Cancel any ongoing stream and Agent session before starting new chat
-      await _streamSubscription?.cancel();
-      _streamSubscription = null;
-      await _agentEventSubscription?.cancel();
-      _agentEventSubscription = null;
       _cancelPendingAskUser();
-      if (_agentListenerAttached) {
-        _agentService.setAskUserHandler(null);
-        _agentService.requestStop();
-        _agentService.removeListener(_onAgentServiceChanged);
-        _agentListenerAttached = false;
-      }
+      _agentService.setAskUserHandler(null);
+      _agentService.requestStop();
+      _streamSubscription?.cancel();
+      _streamSubscription = null;
+      _agentEventSubscription?.cancel();
+      _agentEventSubscription = null;
       _cancelStreamUpdate();
       _cancelToolProgressUpdate();
       _isLoading = false;

@@ -16,6 +16,7 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/thoughter_page.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
+import 'package:thoughtecho/services/agent_tools/ask_user_tool.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -259,6 +260,7 @@ class _FakeAgentService extends AgentService {
   _FakeAgentService({
     required super.settingsService,
     this.simulateToolProgress = false,
+    this.simulateAskUser = false,
     this.emitSmartResultCard = false,
     this.proposalMetadata = const <String, Object?>{},
     this.responseContent = 'Agent 响应',
@@ -280,8 +282,16 @@ class _FakeAgentService extends AgentService {
   final Map<String, Object?> effectiveToolArguments;
 
   int runCount = 0;
+  int stopRequestCount = 0;
   final bool simulateToolProgress;
+  final bool simulateAskUser;
   final bool emitSmartResultCard;
+  AskUserPromptHandler? askUserHandler;
+
+  @override
+  void setAskUserHandler(AskUserPromptHandler? handler) {
+    askUserHandler = handler;
+  }
 
   /// 提案 artifact 的 metadata，用来构造带标签的提案。
   final Map<String, Object?> proposalMetadata;
@@ -326,6 +336,7 @@ class _FakeAgentService extends AgentService {
 
   @override
   void requestStop() {
+    stopRequestCount++;
     stopRequested = true;
     _cancelPendingTimers();
     _setMockState(isRunning: false, statusKey: '');
@@ -375,6 +386,21 @@ class _FakeAgentService extends AgentService {
     if (error != null) {
       _setMockState(isRunning: false, statusKey: '');
       throw error!;
+    }
+
+    if (simulateAskUser && askUserHandler != null) {
+      final promptFuture = askUserHandler!(
+        const AskUserRequest(
+          toolCallId: 'call_ask_mock',
+          question: '模拟提问：请选择',
+          options: ['选项1', '选项2'],
+        ),
+      );
+      final response = await promptFuture;
+      if (stopRequested || response.isCancelled) {
+        _setMockState(isRunning: false, statusKey: '');
+        return AgentResponse(content: '提问已取消');
+      }
     }
 
     if (simulateToolProgress) {
@@ -2855,6 +2881,204 @@ void main() {
       // 验证第二个未完成卡片在会话加载态下自动作为已取消态呈现，绝不呈现为已确认
       expect(find.text('请确认是否发布'), findsOneWidget);
       expect(find.text('已取消选择'), findsOneWidget);
+    });
+
+    testWidgets(
+        'subsequent new chats and dispose continue to stop running agent even after first new chat',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        toolProgressDelay: const Duration(milliseconds: 300),
+      );
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            key: ValueKey('multi_new_chat_page'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      Future<void> sendQuery(String text) async {
+        await tester.enterText(find.byType(TextField), text);
+        await tester.pump();
+        final sendFinder =
+            find.byKey(const ValueKey('ai_assistant_send_button'));
+        tester.widget<IconButton>(sendFinder).onPressed?.call();
+        await tester.pump(const Duration(milliseconds: 40));
+      }
+
+      // 第一轮请求：启动运行中 Agent
+      await sendQuery('第一轮提问');
+
+      // 第一次新建对话：应触发 requestStop
+      await tester.tap(find.byIcon(Icons.add_comment_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+      expect(agentService.stopRequestCount, 1);
+
+      // 第二轮请求（新对话中）：验证 Agent 停止能力未失效
+      agentService.stopRequested = false;
+      await sendQuery('第二轮提问');
+
+      // 第二次新建对话：必须仍能触发 requestStop，绝不因 _agentListenerAttached 被置为 false 而跳过
+      await tester.tap(find.byIcon(Icons.add_comment_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+      expect(agentService.stopRequestCount, 2);
+
+      // 第三轮请求
+      agentService.stopRequested = false;
+      await sendQuery('第三轮提问');
+
+      // 退出/销毁页面：仍能正确调用 requestStop
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(agentService.stopRequestCount, 3);
+      await tester.pump(const Duration(milliseconds: 320));
+    });
+
+    testWidgets(
+        'disposing page during pending ask_user does not trigger setState after dispose',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateAskUser: true,
+      );
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            key: ValueKey('dispose_ask_user_page'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '请向我提问');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      expect(find.text('模拟提问：请选择'), findsOneWidget);
+
+      // 销毁页面，验证未抛出 setState() called after dispose 异常
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(tester.takeException(), isNull);
+      expect(agentService.stopRequested, isTrue);
+    });
+
+    testWidgets(
+        'switching sessions during pending ask_user saves card to source session instead of target session',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateAskUser: true,
+      );
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+
+      final sessionA = ChatSession(
+        id: 'session-A',
+        sessionType: 'agent',
+        title: '会话A',
+        createdAt: DateTime(2026, 8, 1),
+        lastActiveAt: DateTime(2026, 8, 1),
+      );
+      final sessionB = ChatSession(
+        id: 'session-B',
+        sessionType: 'agent',
+        title: '会话B',
+        createdAt: DateTime(2026, 8, 2),
+        lastActiveAt: DateTime(2026, 8, 2),
+      );
+
+      chatSessionService.seedSession(sessionA, []);
+      chatSessionService.seedSession(sessionB, [
+        app_chat.ChatMessage(
+          id: 'b-msg-1',
+          content: '会话B的消息',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime(2026, 8, 2),
+        ),
+      ]);
+
+      // 卡住 sessionB 的加载，让 _loadSession 停在读库阶段（_currentSessionId 换成 B，_messages 还是 A）
+      final gateB = Completer<void>();
+      chatSessionService.loadGates[sessionB.id] = gateB;
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: ThoughterPage(
+            key: const ValueKey('switch_session_ask_user_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: sessionA,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 在会话 A 中发起提问
+      await _submitInput(tester, '在会话A中提问');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      expect(find.text('模拟提问：请选择'), findsOneWidget);
+
+      // 开始切到会话 B，但因为 gateB 未放行，处于异步加载中
+      final state = tester.state(find.byType(ThoughterPage)) as dynamic;
+      final loadBFuture =
+          state.debugLoadSessionForTest(sessionB.id) as Future<void>;
+      await tester.pump();
+
+      // 在加载未完成的空档期，取消提问
+      state.debugCancelPendingAskUserForTest();
+      await tester.pump();
+
+      // 放行会话 B 加载并等待完成
+      gateB.complete();
+      await tester.runAsync(() => loadBFuture);
+      await tester.pumpAndSettle();
+
+      // 验证：提问卡片更新到了会话 A（所属会话），而不是被串写进会话 B
+      final messagesA = await chatSessionService.getMessages(sessionA.id);
+      expect(
+        messagesA.any((m) {
+          final meta = m.parsedMeta;
+          return meta != null &&
+              meta['type'] == 'ask_user' &&
+              meta['isCancelled'] == true;
+        }),
+        isTrue,
+      );
+
+      final messagesB = await chatSessionService.getMessages(sessionB.id);
+      expect(
+        messagesB.any((m) {
+          final meta = m.parsedMeta;
+          return meta != null && meta['type'] == 'ask_user';
+        }),
+        isFalse,
+      );
     });
   });
 }

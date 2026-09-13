@@ -303,47 +303,127 @@ void main() {
     });
 
     test('AskUserRequest 与 AskUserResponse 值相等性与 toString 正常工作', () {
-      const req1 = AskUserRequest(
+      final req1 = AskUserRequest(
         toolCallId: 'call-1',
         question: 'Q',
-        options: ['A', 'B'],
+        options: List<String>.from(['A', 'B']),
         header: 'H',
         multiSelect: true,
       );
-      const req2 = AskUserRequest(
+      final req2 = AskUserRequest(
         toolCallId: 'call-1',
         question: 'Q',
-        options: ['A', 'B'],
+        options: List<String>.from(['A', 'B']),
         header: 'H',
         multiSelect: true,
-      );
-      const req3 = AskUserRequest(
-        toolCallId: 'call-2',
-        question: 'Q',
-        options: ['A', 'B'],
       );
 
+      expect(identical(req1, req2), isFalse);
       expect(req1, equals(req2));
       expect(req1.hashCode, equals(req2.hashCode));
-      expect(req1 == req3, isFalse);
       expect(req1.toString(), contains('toolCallId: call-1'));
 
-      const resp1 = AskUserResponse(
-        selectedOptions: ['A'],
-        customText: 'C',
-        isCancelled: false,
+      // 差异字段的负向断言
+      expect(
+        req1 ==
+            AskUserRequest(
+              toolCallId: 'call-diff',
+              question: 'Q',
+              options: List<String>.from(['A', 'B']),
+              header: 'H',
+              multiSelect: true,
+            ),
+        isFalse,
       );
-      const resp2 = AskUserResponse(
-        selectedOptions: ['A'],
-        customText: 'C',
-        isCancelled: false,
+      expect(
+        req1 ==
+            AskUserRequest(
+              toolCallId: 'call-1',
+              question: 'Q-diff',
+              options: List<String>.from(['A', 'B']),
+              header: 'H',
+              multiSelect: true,
+            ),
+        isFalse,
       );
-      const resp3 = AskUserResponse(isCancelled: true);
+      expect(
+        req1 ==
+            AskUserRequest(
+              toolCallId: 'call-1',
+              question: 'Q',
+              options: List<String>.from(['A', 'C']),
+              header: 'H',
+              multiSelect: true,
+            ),
+        isFalse,
+      );
+      expect(
+        req1 ==
+            AskUserRequest(
+              toolCallId: 'call-1',
+              question: 'Q',
+              options: List<String>.from(['A', 'B']),
+              header: 'H-diff',
+              multiSelect: true,
+            ),
+        isFalse,
+      );
+      expect(
+        req1 ==
+            AskUserRequest(
+              toolCallId: 'call-1',
+              question: 'Q',
+              options: List<String>.from(['A', 'B']),
+              header: 'H',
+              multiSelect: false,
+            ),
+        isFalse,
+      );
 
+      final resp1 = AskUserResponse(
+        selectedOptions: List<String>.from(['A']),
+        customText: 'C',
+        isCancelled: false,
+      );
+      final resp2 = AskUserResponse(
+        selectedOptions: List<String>.from(['A']),
+        customText: 'C',
+        isCancelled: false,
+      );
+
+      expect(identical(resp1, resp2), isFalse);
       expect(resp1, equals(resp2));
       expect(resp1.hashCode, equals(resp2.hashCode));
-      expect(resp1 == resp3, isFalse);
       expect(resp1.toString(), contains('selectedOptions: [A]'));
+
+      // 差异字段负向断言
+      expect(
+        resp1 ==
+            AskUserResponse(
+              selectedOptions: List<String>.from(['B']),
+              customText: 'C',
+              isCancelled: false,
+            ),
+        isFalse,
+      );
+      expect(
+        resp1 ==
+            AskUserResponse(
+              selectedOptions: List<String>.from(['A']),
+              customText: 'C-diff',
+              isCancelled: false,
+            ),
+        isFalse,
+      );
+      expect(
+        resp1 ==
+            AskUserResponse(
+              selectedOptions: List<String>.from(['A']),
+              customText: 'C',
+              isCancelled: true,
+            ),
+        isFalse,
+      );
     });
   });
 }
