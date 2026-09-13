@@ -518,9 +518,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontWeight: _systemSelected ? FontWeight.w600 : FontWeight.normal,
-        ),
       ),
       subtitle: Text(
         subtitle,
@@ -599,9 +596,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         place.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-        ),
       ),
       subtitle: place.address != null
           ? Text(

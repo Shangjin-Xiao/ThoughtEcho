@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:thoughtecho/controllers/add_note_controller.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/weather_service.dart';
 
 class FakeBuildContext extends Fake implements BuildContext {}
 
@@ -96,6 +100,78 @@ void main() {
       expect(controller.isFetchingLocation, isFalse);
 
       controller.removeNewWeather();
+      expect(controller.includeWeather, isFalse);
+      expect(controller.isFetchingWeather, isFalse);
+    });
+
+    test('在途位置抓取被 clearPendingLocationFetch/setNewLocationData 作废后不会覆盖手动设置的位置',
+        () async {
+      final completer = Completer<Position?>();
+      final locService = _MockLocationServiceForRace(completer);
+      final controller = AddNoteController(context: FakeBuildContext())
+        ..updateServices(locService: locService)
+        ..includeLocation = true;
+
+      // 启动在途异步位置抓取
+      final fetchFuture = controller.fetchLocationForNewNote();
+      expect(controller.isFetchingLocation, isTrue);
+
+      // 用户手动选择地点（例如通过 NearbyLocationPicker）
+      controller.clearPendingLocationFetch();
+      controller.setNewLocationData(
+        '中国,北京市,北京市,东城区',
+        39.9042,
+        116.4074,
+        poiName: '故宫博物院',
+      );
+      expect(controller.isFetchingLocation, isFalse);
+      expect(controller.newPoiName, '故宫博物院');
+
+      // 此时延迟到达的自动抓取完成
+      completer.complete(Position(
+        latitude: 40.0,
+        longitude: 116.0,
+        timestamp: DateTime(2026),
+        accuracy: 0,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 0,
+        headingAccuracy: 0,
+        speed: 0,
+        speedAccuracy: 0,
+      ));
+      await fetchFuture;
+
+      // 验证手动设置的位置未被在途任务覆盖
+      expect(controller.newPoiName, '故宫博物院');
+      expect(controller.newLatitude, 39.9042);
+      expect(controller.newLongitude, 116.4074);
+      expect(controller.newLocation, '中国,北京市,北京市,东城区');
+    });
+
+    test('在途天气抓取被 clearPendingWeatherFetch/removeNewWeather 作废后不会修改状态',
+        () async {
+      final completer = Completer<void>();
+      final weaService = _MockWeatherServiceForRace(completer);
+      final controller = AddNoteController(context: FakeBuildContext())
+        ..updateServices(weaService: weaService)
+        ..includeWeather = true
+        ..setNewLocationData(null, 39.9042, 116.4074);
+
+      // 启动在途异步天气抓取
+      final fetchFuture = controller.fetchWeatherForNewNote();
+      expect(controller.isFetchingWeather, isTrue);
+
+      // 用户主动移除天气
+      controller.removeNewWeather();
+      expect(controller.includeWeather, isFalse);
+      expect(controller.isFetchingWeather, isFalse);
+
+      // 延迟的天气请求返回
+      completer.complete();
+      await fetchFuture;
+
+      // 验证状态没有被滞后的完成回调改写
       expect(controller.includeWeather, isFalse);
       expect(controller.isFetchingWeather, isFalse);
     });
@@ -225,4 +301,58 @@ class _CountingDatabaseService extends DatabaseService {
 
   @override
   bool get isInitialized => true;
+}
+
+class _MockLocationServiceForRace extends ChangeNotifier
+    implements LocationService {
+  _MockLocationServiceForRace(this.completer);
+
+  final Completer<Position?> completer;
+
+  @override
+  bool get hasLocationPermission => true;
+
+  @override
+  bool get isLocationServiceEnabled => true;
+
+  @override
+  Position? get currentPosition => null;
+
+  @override
+  String? get currentPoiName => '自动定位地名';
+
+  @override
+  String getFormattedLocation() => '中国,北京市,北京市,海淀区';
+
+  @override
+  Future<Position?> getCurrentLocation({
+    bool highAccuracy = false,
+    bool skipPermissionRequest = false,
+  }) =>
+      completer.future;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MockWeatherServiceForRace extends ChangeNotifier
+    implements WeatherService {
+  _MockWeatherServiceForRace(this.completer);
+
+  final Completer<void> completer;
+
+  @override
+  bool get hasData => true;
+
+  @override
+  Future<void> getWeatherData(
+    double latitude,
+    double longitude, {
+    bool forceRefresh = false,
+    Duration? timeout,
+  }) =>
+      completer.future;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

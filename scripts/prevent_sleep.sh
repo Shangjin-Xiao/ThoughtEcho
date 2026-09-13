@@ -41,17 +41,25 @@ _setup_desktop_inhibit() {
   # 若存在 gsettings 且有 session bus，记录原配置并尝试关闭休眠
   if command -v gsettings >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
     PREV_GSETTINGS_SLEEP="$(gsettings get org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 2>/dev/null || true)"
+    if [ -n "$PREV_GSETTINGS_SLEEP" ]; then
+      echo "$PREV_GSETTINGS_SLEEP" > "/tmp/prevent_sleep.prev_gsettings" 2>/dev/null || true
+    fi
     gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing' >/dev/null 2>&1 || true
   fi
 }
 
 _restore_desktop_inhibit() {
-  if [ -n "${PREV_GSETTINGS_SLEEP:-}" ] && command -v gsettings >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-    local orig="${PREV_GSETTINGS_SLEEP//\'/}"
+  local prev="${PREV_GSETTINGS_SLEEP:-}"
+  if [ -z "$prev" ] && [ -f "/tmp/prevent_sleep.prev_gsettings" ]; then
+    prev="$(cat "/tmp/prevent_sleep.prev_gsettings" 2>/dev/null || true)"
+  fi
+  if [ -n "$prev" ] && command -v gsettings >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    local orig="${prev//\'/}"
     if [ -n "$orig" ]; then
       gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type "$orig" >/dev/null 2>&1 || true
     fi
   fi
+  rm -f "/tmp/prevent_sleep.prev_gsettings" 2>/dev/null || true
   if command -v xset >/dev/null 2>&1 && [ -n "${DISPLAY:-}" ]; then
     xset s on +dpms >/dev/null 2>&1 || true
   fi
@@ -77,6 +85,8 @@ _is_running() {
   return 0
 }
 
+_sleep_pid=""
+
 _do_heartbeat() {
   local count=0
   _log "防休眠保活进程已就绪 (PID: $$, 间隔: ${INTERVAL_SECONDS}s)"
@@ -99,6 +109,10 @@ _do_heartbeat() {
       # 默认本地探活，无外部网络依赖
       if [ -r /proc/net/dev ]; then
         head -n 2 /proc/net/dev >/dev/null 2>&1 || true
+      elif command -v ifconfig >/dev/null 2>&1; then
+        ifconfig -a >/dev/null 2>&1 || true
+      elif command -v ip >/dev/null 2>&1; then
+        ip addr >/dev/null 2>&1 || true
       fi
     fi
 
@@ -111,7 +125,11 @@ _do_heartbeat() {
       _log "心跳正常运转中 (已累计运行 $count 次心跳)"
     fi
 
-    sleep "$INTERVAL_SECONDS"
+    # 使用可被信号即时中断的后台等待
+    sleep "$INTERVAL_SECONDS" &
+    _sleep_pid=$!
+    wait "$_sleep_pid" 2>/dev/null || true
+    _sleep_pid=""
   done
 }
 
@@ -126,18 +144,31 @@ start() {
   fi
 
   echo "正在启动防休眠保活守护进程..."
+  rm -f "$PID_FILE"
   if command -v setsid >/dev/null 2>&1; then
     setsid "$SCRIPT_PATH" run </dev/null >/dev/null 2>&1 &
   else
     nohup "$SCRIPT_PATH" run </dev/null >/dev/null 2>&1 &
   fi
-  local new_pid=$!
-  echo "$new_pid" > "$PID_FILE"
-  sleep 1
+  local bg_pid=$!
 
-  # 读取可能由 run() 更新的实际 PID
-  if [ -f "$PID_FILE" ]; then
-    new_pid="$(cat "$PID_FILE")"
+  # 等待后台守护进程自身就绪并写入真实 PID
+  local wait_count=0
+  local new_pid=""
+  while [ $wait_count -lt 20 ]; do
+    if [ -s "$PID_FILE" ]; then
+      new_pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+      if [ -n "$new_pid" ] && _is_running "$new_pid"; then
+        break
+      fi
+    fi
+    sleep 0.1
+    wait_count=$((wait_count + 1))
+  done
+
+  if [ -z "$new_pid" ]; then
+    new_pid="$bg_pid"
+    echo "$new_pid" > "$PID_FILE"
   fi
 
   if _is_running "$new_pid"; then
@@ -160,15 +191,21 @@ stop() {
   if [ -n "$pid" ] && _is_running "$pid"; then
     echo "正在停止防休眠保活进程 (PID: $pid)..."
     kill "$pid" 2>/dev/null || true
-    sleep 1
+    local wait_count=0
+    while _is_running "$pid" && [ $wait_count -lt 10 ]; do
+      sleep 0.2
+      wait_count=$((wait_count + 1))
+    done
     if _is_running "$pid"; then
       kill -9 "$pid" 2>/dev/null || true
+      sleep 0.2
     fi
+    _restore_desktop_inhibit
     echo "✅ 已成功停止。"
   else
     echo "进程已不存在或 PID 已被复用。"
   fi
-  rm -f "$PID_FILE" "$HEARTBEAT_FILE"
+  rm -f "$PID_FILE" "$HEARTBEAT_FILE" "/tmp/prevent_sleep.prev_gsettings"
 }
 
 status() {
@@ -195,8 +232,11 @@ _cleanup() {
     return 0
   fi
   _cleaned_up=1
+  if [ -n "${_sleep_pid:-}" ]; then
+    kill "$_sleep_pid" 2>/dev/null || true
+  fi
   _restore_desktop_inhibit
-  rm -f "$PID_FILE" "$HEARTBEAT_FILE"
+  rm -f "$PID_FILE" "$HEARTBEAT_FILE" "/tmp/prevent_sleep.prev_gsettings"
 }
 
 run() {
