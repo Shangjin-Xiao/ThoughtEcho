@@ -8,6 +8,7 @@ extension _ThoughterSession on _ThoughterPageState {
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScrollPositionChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       // 探索摘要不依赖数据库或 AI 服务，先显示，避免初始化异常吞掉首条消息。
       if (_messages.isEmpty &&
           widget.exploreGuideSummary?.trim().isNotEmpty == true) {

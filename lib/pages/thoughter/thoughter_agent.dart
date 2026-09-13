@@ -4,6 +4,7 @@ extension _ThoughterAgent on _ThoughterPageState {
   Future<void> _askAgent(String text) async {
     final agentService = _agentService;
     if (agentService == null) {
+      _finishLoading();
       return;
     }
 
