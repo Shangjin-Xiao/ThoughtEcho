@@ -214,5 +214,21 @@ void main() {
       expect(diagnostic.databaseVersion, 20);
       expect(diagnostic.isSuspicious, isFalse);
     });
+
+    test('getDatabaseHealthInfo 与 performStartupHealthCheck 能够安全处理数据库统计返回的数据类型',
+        () async {
+      await database.insert('categories', {'id': 'cat-1'});
+      await database
+          .insert('quote_tags', {'quote_id': 'quote-1', 'tag_id': 'cat-1'});
+
+      final info = await service.getDatabaseHealthInfo(database);
+      expect(info['category_count'], 1);
+      expect(info['tag_relation_count'], 1);
+
+      await expectLater(
+        service.performStartupHealthCheck(database, expectedPath: databasePath),
+        completes,
+      );
+    });
   });
 }
