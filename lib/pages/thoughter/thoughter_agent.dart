@@ -274,6 +274,9 @@ extension _ThoughterAgent on _ThoughterPageState {
         if (!mounted || requestGeneration != _agentRequestGeneration) {
           return AskUserResponse.cancelled();
         }
+        // 新提问顶掉旧提问时，先把旧卡片显式标为已取消并持久化，
+        // 避免旧 completer 被直接覆盖后悬置、旧卡片只靠派生状态兜底。
+        _cancelPendingAskUser();
         final completer = Completer<AskUserResponse>();
         _pendingAskUserCompleter = completer;
 

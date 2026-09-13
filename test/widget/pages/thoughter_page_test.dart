@@ -2943,6 +2943,85 @@ void main() {
     });
 
     testWidgets(
+        'second ask_user request explicitly cancels the first pending card',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateAskUser: true,
+      );
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+
+      final now = DateTime(2026, 8, 3);
+      final session = ChatSession(
+        id: 'ask-user-supersede-session',
+        sessionType: 'agent',
+        title: '提问顶替会话',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+      chatSessionService.seedSession(session, []);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: ThoughterPage(
+            key: const ValueKey('ask_user_supersede_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 第一轮提问进入 pending
+      await _submitInput(tester, '第一轮提问');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(find.text('模拟提问：请选择'), findsOneWidget);
+      expect(agentService.askUserHandler, isNotNull);
+
+      // 第二个提问到达并顶掉第一个：旧卡片必须显式取消并持久化，
+      // 而不是被覆盖后只靠 UI 派生状态兜底
+      final secondFuture = agentService.askUserHandler!(
+        const AskUserRequest(
+          toolCallId: 'call_ask_second',
+          question: '第二个提问：请选择',
+          options: ['选项A', '选项B'],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      expect(find.text('第二个提问：请选择'), findsOneWidget);
+      expect(find.text('已取消选择'), findsOneWidget);
+
+      final stored = await chatSessionService.getMessages(session.id);
+      expect(
+        stored.any((m) {
+          final meta = m.parsedMeta;
+          return meta != null &&
+              meta['type'] == 'ask_user' &&
+              meta['question'] == '模拟提问：请选择' &&
+              meta['isCompleted'] == true &&
+              meta['isCancelled'] == true;
+        }),
+        isTrue,
+      );
+
+      // 收尾：取消第二个提问，避免挂起的 completer 泄漏到后续用例
+      final state = tester.state(find.byType(ThoughterPage)) as dynamic;
+      state.debugCancelPendingAskUserForTest();
+      await tester.pump();
+      final secondResponse = await secondFuture;
+      expect(secondResponse.isCancelled, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
         'subsequent new chats and dispose continue to stop running agent even after first new chat',
         (tester) async {
       final agentService = _FakeAgentService(
