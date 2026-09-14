@@ -93,8 +93,19 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   String? _customSelectedPoiName;
   double? _customSelectedLatitude;
   double? _customSelectedLongitude;
-
   Animation<double>? _routeAnimation;
+
+  static bool _coordsMatch(
+    double? aLat,
+    double? aLng,
+    double? bLat,
+    double? bLng,
+  ) {
+    if (aLat == null || aLng == null || bLat == null || bLng == null) {
+      return false;
+    }
+    return (aLat - bLat).abs() < 0.0001 && (aLng - bLng).abs() < 0.0001;
+  }
 
   @override
   void initState() {
@@ -317,13 +328,13 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         }
       }
 
-      // 如果当前选中的是之前传入的 POI，在候选列表中定位对应条目（同时匹配名称与坐标，防止同名不同分店误选）
+      // 如果当前选中的是之前传入的 POI，在候选列表中定位对应条目（同时匹配名称与坐标容差，防止同名不同分店误选）
       if (_customSelectedPoiName != null && _selectedPlace == null) {
         for (final p in _places.followedBy(newUnique)) {
           final matchesCoords = _customSelectedLatitude == null ||
               _customSelectedLongitude == null ||
-              ((p.latitude - _customSelectedLatitude!).abs() < 0.0001 &&
-                  (p.longitude - _customSelectedLongitude!).abs() < 0.0001);
+              _coordsMatch(p.latitude, p.longitude, _customSelectedLatitude,
+                  _customSelectedLongitude);
           if (p.name == _customSelectedPoiName && matchesCoords) {
             _selectedPlace = p;
             break;
@@ -369,13 +380,17 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     });
 
     try {
+      final matchesInitialCoords = place == null ||
+          (place.name == widget.initialPoiName &&
+              (_coordsMatch(place.latitude, place.longitude,
+                      widget.initialLatitude, widget.initialLongitude) ||
+                  (widget.initialLatitude == null &&
+                      widget.initialLongitude == null)));
+
       if (_customSelectedPoiName != null &&
           _customSelectedPoiName == widget.initialPoiName &&
-          (place == null ||
-              (place.name == widget.initialPoiName &&
-                  place.latitude == widget.initialLatitude &&
-                  place.longitude == widget.initialLongitude))) {
-        // 意图保留初始 POI（经纬度与名称均一致，或无明确点选列表项时点击确认）
+          matchesInitialCoords) {
+        // 意图保留初始 POI（经纬度在容差内与名称均一致，或无明确点选列表项时点击确认）
         if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
           return;
         }
@@ -397,8 +412,8 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         // 若与设备定位同坐标，复用设备行政区串；否则若提供反查服务则尝试反查行政区，
         // 无法反查时设为 null（保存退回坐标/地名），杜绝写入非标准格式。
         String? adminLocation;
-        if (place.latitude == _deviceLatitude &&
-            place.longitude == _deviceLongitude) {
+        if (_coordsMatch(place.latitude, place.longitude, _deviceLatitude,
+            _deviceLongitude)) {
           adminLocation = _deviceLocationString;
         } else if (_locationService != null) {
           try {

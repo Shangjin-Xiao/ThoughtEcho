@@ -956,4 +956,44 @@ void main() {
     expect(selectedResult!.latitude, branchB.latitude);
     expect(selectedResult!.longitude, branchB.longitude);
   });
+
+  testWidgets('候选 POI 与初始坐标存在微小浮点误差（< 0.0001）时，确认保留原始行政区地址串',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    // 候选列表项与传入的初始坐标存在 0.00005 偏差
+    const candidatePlace = PlaceInfo(
+      name: '故宫博物院',
+      latitude: 39.91635,
+      longitude: 116.39715,
+      distanceMeters: 50,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: 39.9163,
+        initialLongitude: 116.3971,
+        initialLocation: '中国,北京市,北京市,东城区',
+        initialPoiName: '故宫博物院',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 点击右上角确认按钮
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '故宫博物院');
+    // 验证保留了原始行政区，没有被作为新地点重新反查为 null
+    expect(selectedResult!.location, '中国,北京市,北京市,东城区');
+    expect(selectedResult!.latitude, 39.9163);
+    expect(selectedResult!.longitude, 116.3971);
+  });
 }
