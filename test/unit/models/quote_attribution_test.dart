@@ -91,6 +91,22 @@ void main() {
         expect(Quote.isSelfAuthor(''), isFalse);
         expect(Quote.isSelfAuthor('   '), isFalse);
       });
+
+      test('单字文言代词作者不单独判定为本人，需用户配置的第二证据（别名/昵称）', () {
+        // 作者栏独一个「余/吾/愚」字时无法区分自署与摘录，静态词表不得拍板。
+        for (final word in ['余', '吾', '愚']) {
+          expect(Quote.isSelfAuthor(word), isFalse, reason: word);
+          expect(Quote.isSelfAuthor('——$word'), isFalse, reason: word);
+          // 用户明确配置为别名时仍可命中——动态事实优先于静态词表。
+          expect(Quote.isSelfAuthor(word, userAliases: [word]), isTrue,
+              reason: word);
+          expect(Quote.isSelfAuthor(word, userNickname: word), isTrue,
+              reason: word);
+        }
+        // 多字作者不受影响：余华不会因首字命中而被误判。
+        expect(Quote.isSelfAuthor('余华'), isFalse);
+        expect(Quote.isSelfAuthor('余华', userAliases: ['余']), isFalse);
+      });
     });
 
     group('isSelfAttributed, isExcerpt, isOriginal & resolveAttributionKind',
@@ -109,6 +125,16 @@ void main() {
         expect(note.isExcerpt(), isFalse);
         expect(note.isOriginal(), isTrue);
         expect(note.attributionKind, 'original');
+      });
+
+      test('单字文言代词署名无别名时判为摘录，配别名后才转原创', () {
+        final note = createNote(author: '余', content: '余过平遥南门，感念世代匠人劳苦。');
+        expect(note.isSelfAttributed(), isFalse);
+        expect(note.isExcerpt(), isTrue);
+        expect(note.resolveAttributionKind(), 'excerpt');
+        expect(note.isSelfAttributed(userAliases: ['余']), isTrue);
+        expect(note.isExcerpt(userAliases: ['余']), isFalse);
+        expect(note.resolveAttributionKind(userAliases: ['余']), 'original');
       });
 
       test('self-signed note with author and personal work is original', () {
@@ -560,6 +586,68 @@ void main() {
         expect(noteLuXunDiary.isExcerpt(userAliases: aliases), isTrue);
         expect(noteLuXunDiary.resolveAttributionKind(userAliases: aliases),
             'excerpt');
+      });
+    });
+
+    group('Quote.hasPersonalWorkSuffix', () {
+      test('明确的个人记录体裁后缀返回 true', () {
+        const validWorks = [
+          '西湖日记',
+          '田野手记',
+          '阿澈随笔',
+          '开发备忘录',
+          '读书笔记',
+          '古建札记',
+          '生活杂感',
+          '旅行行记',
+          '京都游记',
+          '深夜碎碎念',
+          '每周复盘',
+          'Alice Notes',
+          'Personal Diary',
+        ];
+        for (final work in validWorks) {
+          expect(Quote.hasPersonalWorkSuffix(work), isTrue, reason: work);
+        }
+      });
+
+      test('通用出版物词汇（思考、随想、自留地）不作为个人体裁后缀', () {
+        const externalWorks = [
+          '深度思考',
+          '哲学思考',
+          '生活随想',
+          '思想随想',
+          '心灵自留地',
+          '自留地',
+          '思考',
+          '随想',
+        ];
+        for (final work in externalWorks) {
+          expect(Quote.hasPersonalWorkSuffix(work), isFalse, reason: work);
+        }
+      });
+
+      test('词汇本身（长度相等）不命中后缀判定，必须有前缀主体', () {
+        for (final kw in ['日记', '随笔', '手记', 'notes', 'memo']) {
+          expect(Quote.hasPersonalWorkSuffix(kw), isFalse, reason: kw);
+        }
+      });
+
+      test('支持 matchPrefix 回调验证剥离后的主体前缀', () {
+        expect(
+          Quote.hasPersonalWorkSuffix(
+            '阿澈随笔',
+            matchPrefix: (prefix) => prefix == '阿澈',
+          ),
+          isTrue,
+        );
+        expect(
+          Quote.hasPersonalWorkSuffix(
+            '鲁迅随笔',
+            matchPrefix: (prefix) => prefix == '阿澈',
+          ),
+          isFalse,
+        );
       });
     });
   });

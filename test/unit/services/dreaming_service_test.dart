@@ -544,6 +544,38 @@ void main() {
         expect(inferred, isNot(contains('李诫')));
       });
 
+      test('单字署名经多篇自建证据仍可统计推断为候选别名（弱信号路径）', () {
+        // 静态词表不再直接拍板「余」，但两篇以上个人出处+落款的
+        // 自建证据仍能把它推成高置信度候选，走用户确认闭环。
+        final quotes = [
+          Quote(
+            id: 'yu-1',
+            content: '今日过平遥南门，见城堞苍茫。记于平遥南门，余',
+            sourceAuthor: '余',
+            sourceWork: '日记',
+            date: DateTime.now().toIso8601String(),
+          ),
+          Quote(
+            id: 'yu-2',
+            content: '夜宿徽州老宅，梁架墨迹犹存。记于徽州，余',
+            sourceAuthor: '余',
+            sourceWork: '随笔',
+            date: DateTime.now().toIso8601String(),
+          ),
+          Quote(
+            id: 'q-li-1',
+            content: '凡造屋之制，先以材为祖。',
+            sourceAuthor: '李诫',
+            sourceWork: '营造法式',
+            date: DateTime.now().toIso8601String(),
+          ),
+        ];
+
+        final inferred = DreamingService.inferAliasesFromQuotes(quotes);
+        expect(inferred, contains('余'));
+        expect(inferred, isNot(contains('李诫')));
+      });
+
       test('正文结尾为「……——<author>」且填写了 sourceAuthor 属于标准摘录引用，不被识别为自签名', () {
         final quotes = [
           Quote(
@@ -735,6 +767,84 @@ void main() {
 
       expect(captured, isNotNull);
       expect(captured, isNot(contains('[SYSTEM]')));
+    });
+
+    group('DreamingService.inferAliasesDetailed signature heuristics', () {
+      test('书信体「致五年后的阿澈：」与「致阿澈：」正确计入自签名标记', () {
+        final quotes = [
+          Quote(
+            id: 'q1',
+            content: '致五年后的阿澈：希望你依然对构建好产品保持好奇与热情。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-20',
+          ),
+          Quote(
+            id: 'q2',
+            content: '致阿澈：今天的工作已经全部完成，好好休息。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-21',
+          ),
+        ];
+
+        final result = DreamingService.inferAliasesDetailed(quotes);
+        expect(result.highConfidence, contains('阿澈'));
+      });
+
+      test('伪匹配（致谢、导致、所致）不计入自签名标记', () {
+        final quotes = [
+          Quote(
+            id: 'q1',
+            content: '在这里致谢阿澈在项目中的悉心指导与帮助。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-20',
+          ),
+          Quote(
+            id: 'q2',
+            content: '由于意外情况导致阿澈未能参加今日例会。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-21',
+          ),
+          Quote(
+            id: 'q3',
+            content: '本次疏漏系阿澈所致，需尽快整改。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-22',
+          ),
+          Quote(
+            id: 'q-thanks-lead',
+            content: '致谢阿澈：感谢在近期架构重构中给予的指导与支持。',
+            sourceAuthor: '阿澈',
+            date: '2026-08-23',
+          ),
+        ];
+
+        final result = DreamingService.inferAliasesDetailed(quotes);
+        expect(result.highConfidence, isEmpty);
+        expect(result.moderateConfidence, isEmpty);
+      });
+
+      test('包含「思考」等通用外部出版物（如《深度思考》）即便带附件也不计为个人作品', () {
+        final quotes = [
+          Quote(
+            id: 'q1',
+            content: '思考的本质在于抓住核心矛盾。[图片:mindmap.png]',
+            sourceAuthor: '莫凡',
+            sourceWork: '深度思考',
+            date: '2026-08-20',
+          ),
+          Quote(
+            id: 'q2',
+            content: '框架思维帮助我们建立结构。[图片:diagram.png]',
+            sourceAuthor: '莫凡',
+            sourceWork: '深度思考',
+            date: '2026-08-21',
+          ),
+        ];
+
+        final result = DreamingService.inferAliasesDetailed(quotes);
+        // 《深度思考》不被判定为个人作品，从而计为 externalWork，杜绝外部出版物作者被推断为用户
+        expect(result.highConfidence, isEmpty);
+      });
     });
   });
 }

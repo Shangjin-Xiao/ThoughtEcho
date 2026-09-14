@@ -202,6 +202,7 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
         if (hasPoints)
           MarkerClusterLayerWidget(
             options: MarkerClusterLayerOptions(
+              showPolygon: false,
               markers:
                   _points.map((point) => _buildMarker(theme, point)).toList(),
               size: const Size(44, 44),

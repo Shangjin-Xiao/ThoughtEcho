@@ -49,6 +49,7 @@ Spotlight-V100
 # Local environment & device info
 docs/DEVICE_INFO.md
 DEVICE_INFO.md
+scripts/prevent_sleep.sh
 
 # Generated localization files
 lib/gen_l10n/

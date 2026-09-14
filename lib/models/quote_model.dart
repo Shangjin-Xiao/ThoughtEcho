@@ -507,6 +507,11 @@ class Quote {
   bool get hasKeywords => keywords != null && keywords!.isNotEmpty;
 
   /// 内置的自指代作者关键词（全小写）。
+  ///
+  /// 只收多字自称与通用自指（我/自己/笔者等）。单字文言代词（余/吾/愚）刻意不收：
+  /// 它们同时是姓氏与常用字，作者栏独一个「余」字时无法区分自署与摘录——
+  /// 这类身份断言只能来自用户配置（昵称/默认作者/别名/已确认画像），
+  /// 或由 Dreaming 凭多篇自建证据统计推断，绝不能由静态词表一票拍板。
   static const Set<String> _builtinSelfAuthorKeywords = <String>{
     '我',
     '自己',
@@ -517,9 +522,6 @@ class Quote {
     '自述',
     '笔者',
     '作者',
-    '余',
-    '吾',
-    '愚',
     'me',
     'myself',
     'i',
@@ -556,11 +558,76 @@ class Quote {
     '食记',
     '采风录',
     '手稿',
+    '手绘',
+    '备忘录',
+    '打卡',
+    '日常',
     'diary',
     'journal',
     'notes',
     'memo',
   };
+
+  /// 明确的个人记录类体裁后缀关键词（全小写）。
+  ///
+  /// 限定为明确的记录类体裁，不包含「思考」「自留地」「随想」等可能出现在外部出版物书名中的通用词。
+  static const List<String> _personalWorkSuffixKeywords = <String>[
+    '备忘录',
+    '采风录',
+    '碎碎念',
+    'journal',
+    'diary',
+    'notes',
+    'memo',
+    '日记',
+    '随笔',
+    '手记',
+    '札记',
+    '笔记',
+    '杂记',
+    '杂感',
+    '随感',
+    '自述',
+    '自语',
+    '心迹',
+    '备忘',
+    '清单',
+    '复盘',
+    '手账',
+    '行记',
+    '游记',
+    '食记',
+    '日常',
+    '手稿',
+    '手绘',
+    '打卡',
+  ];
+
+  /// 出处名是否以个人记录类别词为后缀（如「西湖日记」「田野手记」）。
+  ///
+  /// 唯一的个人类别词表出处——Dreaming 的别名推断复用此处，不另存一份，
+  /// 避免两处词表漂移。限定为明确的记录类体裁，排除「思考」「随想」「自留地」等通用词以防误判外部出版物。
+  /// 注意：后缀形态本身不单独作为原创证据，调用方必须再要第二证据（签名落款、待办/图片等个人附件）。
+  ///
+  /// 支持传入 [matchPrefix] 对剥离后缀后的前缀进行回调判定（如判断前缀是否属于自身作者/别名）。
+  static bool hasPersonalWorkSuffix(
+    String work, {
+    bool Function(String prefix)? matchPrefix,
+  }) {
+    final trimmed = work.trim();
+    final lower = trimmed.toLowerCase();
+    if (lower.isEmpty) return false;
+    for (final kw in _personalWorkSuffixKeywords) {
+      final lowerKw = kw.toLowerCase();
+      if (lower.endsWith(lowerKw) && trimmed.length > kw.length) {
+        final prefix = trimmed.substring(0, trimmed.length - kw.length).trim();
+        if (matchPrefix == null || matchPrefix(prefix)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
   /// 剥除可能存在的作者前缀、破折号签名标识与外层包裹括号引号
   static String stripAuthorPrefix(String text) {
@@ -752,23 +819,16 @@ class Quote {
       }
 
       // 2.3 若未用破折号拆分，但形式为「[自身署名/别名][随笔/日记等]」（如「阿澈随笔」、「Alice Notes」）
-      final lowerNormalizedSource = normalizedSource.toLowerCase();
-      for (final kw in _builtinSelfSourceKeywords) {
-        final lowerKw = kw.toLowerCase();
-        if (lowerNormalizedSource.endsWith(lowerKw) &&
-            normalizedSource.length > kw.length) {
-          final prefix = normalizedSource
-              .substring(0, normalizedSource.length - kw.length)
-              .trim();
-          if (isSelfAuthor(
-            prefix,
-            userNickname: userNickname,
-            defaultAuthor: defaultAuthor,
-            userAliases: userAliases,
-          )) {
-            return true;
-          }
-        }
+      if (hasPersonalWorkSuffix(
+        normalizedSource,
+        matchPrefix: (prefix) => isSelfAuthor(
+          prefix,
+          userNickname: userNickname,
+          defaultAuthor: defaultAuthor,
+          userAliases: userAliases,
+        ),
+      )) {
+        return true;
       }
 
       // 2.4 来源整体为日记/随笔类词汇或命中 defaultSource
@@ -785,21 +845,16 @@ class Quote {
         return true;
       }
       final cleanWork = stripAuthorPrefix(work);
-      final lowerCleanWork = cleanWork.toLowerCase();
-      for (final kw in _builtinSelfSourceKeywords) {
-        final lowerKw = kw.toLowerCase();
-        if (lowerCleanWork.endsWith(lowerKw) && cleanWork.length > kw.length) {
-          final prefix =
-              cleanWork.substring(0, cleanWork.length - kw.length).trim();
-          if (isSelfAuthor(
-            prefix,
-            userNickname: userNickname,
-            defaultAuthor: defaultAuthor,
-            userAliases: userAliases,
-          )) {
-            return true;
-          }
-        }
+      if (hasPersonalWorkSuffix(
+        cleanWork,
+        matchPrefix: (prefix) => isSelfAuthor(
+          prefix,
+          userNickname: userNickname,
+          defaultAuthor: defaultAuthor,
+          userAliases: userAliases,
+        ),
+      )) {
+        return true;
       }
     }
 
