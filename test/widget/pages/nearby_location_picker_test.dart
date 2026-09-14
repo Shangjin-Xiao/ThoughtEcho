@@ -1084,6 +1084,7 @@ void main() {
   testWidgets('仅传入初始经度或纬度之一且与设备同名时，不误判定为系统当前位置', (WidgetTester tester) async {
     final fakeLoc = _FakeLocationService(
       position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '系统设备地址',
       poiName: '故宫博物院',
     );
     final fakeSearch = _FakePlaceSearchService(places: []);
@@ -1110,7 +1111,9 @@ void main() {
 
     expect(selectedResult, isNotNull);
     expect(selectedResult!.poiName, '故宫博物院');
-    // 保留原始初始地址，而不是被误判为系统位置
+    // 保留原始初始地址，而不是被误判为系统位置（系统地址为「系统设备地址」）
     expect(selectedResult!.location, '中国,北京市,北京市,东城区');
+    // 保留原本传入的经度，而不是被覆盖为系统设备经度 116.4074
+    expect(selectedResult!.longitude, 116.3971);
   });
 }
