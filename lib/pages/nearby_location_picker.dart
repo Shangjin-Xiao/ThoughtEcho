@@ -230,12 +230,17 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   void _onDeviceLocationAcquired() {
-    // 若用户传入的 initialPoiName 与设备当前 POI 相同，则视同选中系统当前位置
+    // 若用户传入的 initialPoiName 与设备当前 POI 相同且坐标一致（或未传入坐标），则视同选中系统当前位置
     if (_customSelectedPoiName != null &&
         _devicePoiName != null &&
         _customSelectedPoiName == _devicePoiName) {
-      _systemSelected = true;
-      _customSelectedPoiName = null;
+      final coordsMatchOrNull = _customSelectedLatitude == null ||
+          _coordsMatch(_customSelectedLatitude, _customSelectedLongitude,
+              _deviceLatitude, _deviceLongitude);
+      if (coordsMatchOrNull) {
+        _systemSelected = true;
+        _customSelectedPoiName = null;
+      }
     }
 
     _isLocating = false;
