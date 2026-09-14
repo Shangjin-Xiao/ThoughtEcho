@@ -956,36 +956,4 @@ void main() {
     expect(selectedResult!.latitude, branchB.latitude);
     expect(selectedResult!.longitude, branchB.longitude);
   });
-
-  testWidgets('返回条目不足以撑满视口时，自动拉取下一页直到数据耗尽', (WidgetTester tester) async {
-    final fakeLoc = _FakeLocationService();
-    const p1 = PlaceInfo(
-      name: '地点A',
-      latitude: 39.9042,
-      longitude: 116.4074,
-      distanceMeters: 200,
-    );
-
-    final fakeSearch = _FakePlaceSearchService(
-      onGetNearbyPlaces: (offset, limit) async {
-        if (offset == 0) {
-          return [p1]; // 仅 1 条，无法撑满 800x600 屏幕
-        }
-        return []; // 第二次返回空，翻页终止
-      },
-    );
-
-    await _pumpPickerWithNavigation(
-      tester,
-      picker: NearbyLocationPicker(
-        locationService: fakeLoc,
-        placeSearchService: fakeSearch,
-      ),
-    );
-
-    // 验证无需用户手动拖拽，自动发起了第二次拉取
-    expect(fakeSearch.callCount, 2);
-    expect(fakeSearch.requestedOffsets, [0, 1]);
-    expect(find.text('地点A'), findsOneWidget);
-  });
 }

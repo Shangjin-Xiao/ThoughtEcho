@@ -343,20 +343,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         _isLoadingPlaces = false;
         _isLoadingMore = false;
       });
-
-      // 若当前页条目较少尚未撑满视口（maxScrollExtent <= 0），且仍有后续候选数据，
-      // 在布局完成后自动拉取下一页，避免因无法滚动而无法触底加载更多。
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_hasMore &&
-            !_isLoadingPlaces &&
-            !_isLoadingMore &&
-            !_placesError &&
-            _scrollController.hasClients &&
-            _scrollController.position.maxScrollExtent <= 0) {
-          _fetchNearbyPlaces(isLoadMore: true);
-        }
-      });
     } catch (e, stack) {
       logError(
         '加载周边地点失败',
