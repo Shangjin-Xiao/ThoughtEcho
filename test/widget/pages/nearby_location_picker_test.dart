@@ -864,7 +864,7 @@ void main() {
     expect(selectedResult, isNull);
   });
 
-  testWidgets('返回候选地点少于 pageSize 但非空时，hasMore 保持为 true',
+  testWidgets('返回候选地点少于 pageSize 但非空时，hasMore 保持为 true；返回空列表后终止翻页',
       (WidgetTester tester) async {
     final fakeLoc = _FakeLocationService();
     final firstPage = List.generate(
@@ -897,12 +897,20 @@ void main() {
 
     expect(find.text('地点0'), findsOneWidget);
 
-    // 模拟触底滚动加载更多
+    // 1. 模拟触底滚动触发加载更多（验证 hasMore 保持为 true）
     final scrollFinder = find.byType(Scrollable).first;
     await tester.drag(scrollFinder, const Offset(0, -1000));
     await tester.pumpAndSettle();
 
-    // 验证发起了 offset > 0 的二次请求
-    expect(fakeSearch.callCount, greaterThanOrEqualTo(2));
+    // 验证第二次请求被发起，且 offset 准确递增为 15
+    expect(fakeSearch.callCount, 2);
+    expect(fakeSearch.requestedOffsets, [0, 15]);
+
+    // 2. 再次尝试触底滚动，验证因收到空列表导致 hasMore 翻为 false，不再发起第三次请求
+    await tester.drag(scrollFinder, const Offset(0, -1000));
+    await tester.pumpAndSettle();
+
+    expect(fakeSearch.callCount, 2);
+    expect(fakeSearch.requestedOffsets, [0, 15]);
   });
 }

@@ -458,7 +458,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         );
       }
     } finally {
-      if (mounted && epoch == _confirmEpoch && _isCurrentRouteActive) {
+      if (mounted && epoch == _confirmEpoch) {
         setState(() {
           _isConfirming = false;
         });
