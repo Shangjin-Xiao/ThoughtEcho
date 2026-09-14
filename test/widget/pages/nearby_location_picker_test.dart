@@ -913,4 +913,79 @@ void main() {
     expect(fakeSearch.callCount, 2);
     expect(fakeSearch.requestedOffsets, [0, 15]);
   });
+
+  testWidgets('候选列表中存在多个同名不同坐标 POI 时，初始选中项仅严格匹配同名且同坐标的候选地点',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    const branchA = PlaceInfo(
+      name: '星巴克',
+      latitude: 39.9100,
+      longitude: 116.4000,
+      distanceMeters: 200,
+    );
+    const branchB = PlaceInfo(
+      name: '星巴克',
+      latitude: 39.9200,
+      longitude: 116.4100,
+      distanceMeters: 800,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [branchA, branchB]);
+
+    LocationPickerResult? selectedResult;
+
+    // 传入的初始 POI 为 branchB 的坐标
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: branchB.latitude,
+        initialLongitude: branchB.longitude,
+        initialPoiName: '星巴克',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 点击右上角确认按钮
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '星巴克');
+    expect(selectedResult!.latitude, branchB.latitude);
+    expect(selectedResult!.longitude, branchB.longitude);
+  });
+
+  testWidgets('返回条目不足以撑满视口时，自动拉取下一页直到数据耗尽', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    const p1 = PlaceInfo(
+      name: '地点A',
+      latitude: 39.9042,
+      longitude: 116.4074,
+      distanceMeters: 200,
+    );
+
+    final fakeSearch = _FakePlaceSearchService(
+      onGetNearbyPlaces: (offset, limit) async {
+        if (offset == 0) {
+          return [p1]; // 仅 1 条，无法撑满 800x600 屏幕
+        }
+        return []; // 第二次返回空，翻页终止
+      },
+    );
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    );
+
+    // 验证无需用户手动拖拽，自动发起了第二次拉取
+    expect(fakeSearch.callCount, 2);
+    expect(fakeSearch.requestedOffsets, [0, 1]);
+    expect(find.text('地点A'), findsOneWidget);
+  });
 }

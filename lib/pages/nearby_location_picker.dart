@@ -317,10 +317,14 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         }
       }
 
-      // 如果当前选中的是之前传入的 POI，在候选列表中定位对应条目
+      // 如果当前选中的是之前传入的 POI，在候选列表中定位对应条目（同时匹配名称与坐标，防止同名不同分店误选）
       if (_customSelectedPoiName != null && _selectedPlace == null) {
         for (final p in _places.followedBy(newUnique)) {
-          if (p.name == _customSelectedPoiName) {
+          final matchesCoords = _customSelectedLatitude == null ||
+              _customSelectedLongitude == null ||
+              ((p.latitude - _customSelectedLatitude!).abs() < 0.0001 &&
+                  (p.longitude - _customSelectedLongitude!).abs() < 0.0001);
+          if (p.name == _customSelectedPoiName && matchesCoords) {
             _selectedPlace = p;
             break;
           }
@@ -338,6 +342,20 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         }
         _isLoadingPlaces = false;
         _isLoadingMore = false;
+      });
+
+      // 若当前页条目较少尚未撑满视口（maxScrollExtent <= 0），且仍有后续候选数据，
+      // 在布局完成后自动拉取下一页，避免因无法滚动而无法触底加载更多。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_hasMore &&
+            !_isLoadingPlaces &&
+            !_isLoadingMore &&
+            !_placesError &&
+            _scrollController.hasClients &&
+            _scrollController.position.maxScrollExtent <= 0) {
+          _fetchNearbyPlaces(isLoadMore: true);
+        }
       });
     } catch (e, stack) {
       logError(
