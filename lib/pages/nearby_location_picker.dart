@@ -94,6 +94,8 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   double? _customSelectedLatitude;
   double? _customSelectedLongitude;
 
+  Animation<double>? _routeAnimation;
+
   @override
   void initState() {
     super.initState();
@@ -114,7 +116,33 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final animation = ModalRoute.of(context)?.animation;
+    if (_routeAnimation != animation) {
+      _routeAnimation?.removeStatusListener(_onRouteAnimationStatusChanged);
+      _routeAnimation = animation;
+      _routeAnimation?.addStatusListener(_onRouteAnimationStatusChanged);
+    }
+  }
+
+  void _onRouteAnimationStatusChanged(AnimationStatus status) {
+    if (status == AnimationStatus.reverse ||
+        status == AnimationStatus.dismissed) {
+      _confirmEpoch++;
+    }
+  }
+
+  bool get _isCurrentRouteActive {
+    if (!mounted) return false;
+    final route = ModalRoute.of(context);
+    return route != null && route.isActive && route.isCurrent;
+  }
+
+  @override
   void dispose() {
+    _confirmEpoch++;
+    _routeAnimation?.removeStatusListener(_onRouteAnimationStatusChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -305,7 +333,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         }
         _places.addAll(newUnique);
         _currentOffset += results.length;
-        if (results.length < _pageSize) {
+        if (results.isEmpty) {
           _hasMore = false;
         }
         _isLoadingPlaces = false;
@@ -344,7 +372,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
                   place.latitude == widget.initialLatitude &&
                   place.longitude == widget.initialLongitude))) {
         // 意图保留初始 POI（经纬度与名称均一致，或无明确点选列表项时点击确认）
-        if (!mounted || epoch != _confirmEpoch) return;
+        if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
+          return;
+        }
         Navigator.of(context).pop(
           LocationPickerResult(
             latitude: widget.initialLatitude ??
@@ -375,7 +405,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
             adminLocation = null;
           }
         }
-        if (!mounted || epoch != _confirmEpoch) return;
+        if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
+          return;
+        }
         Navigator.of(context).pop(
           LocationPickerResult(
             latitude: place.latitude,
@@ -386,7 +418,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         );
       } else if (_systemSelected) {
         // 选中当前设备位置（离线反查失败时保留精确经纬度）
-        if (!mounted || epoch != _confirmEpoch) return;
+        if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
+          return;
+        }
         Navigator.of(context).pop(
           LocationPickerResult(
             latitude: _deviceLatitude!,
@@ -399,7 +433,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           _customSelectedLatitude != null &&
           _customSelectedLongitude != null) {
         // 保留原本选中的候选 POI
-        if (!mounted || epoch != _confirmEpoch) return;
+        if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
+          return;
+        }
         Navigator.of(context).pop(
           LocationPickerResult(
             latitude: _customSelectedLatitude!,
@@ -409,7 +445,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           ),
         );
       } else {
-        if (!mounted || epoch != _confirmEpoch) return;
+        if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
+          return;
+        }
         Navigator.of(context).pop(
           LocationPickerResult(
             latitude: _deviceLatitude!,
@@ -420,7 +458,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         );
       }
     } finally {
-      if (mounted && epoch == _confirmEpoch) {
+      if (mounted && epoch == _confirmEpoch && _isCurrentRouteActive) {
         setState(() {
           _isConfirming = false;
         });
@@ -433,31 +471,45 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.nearbyLocationTitle),
-        actions: [
-          IconButton(
-            key: const ValueKey('nearby_picker_confirm_button'),
-            icon: _isConfirming
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: AppInlineLoadingIndicator(size: 16),
-                  )
-                : const Icon(Icons.check),
-            tooltip: l10n.mapPickerConfirm,
-            onPressed: (_isConfirming ||
-                    _deviceLatitude == null ||
-                    _deviceLongitude == null)
-                ? null
-                : () => _confirmSelection(
-                      place: _systemSelected ? null : _selectedPlace,
-                    ),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          _confirmEpoch++;
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: BackButton(
+            onPressed: () {
+              _confirmEpoch++;
+              Navigator.maybePop(context);
+            },
           ),
-        ],
+          title: Text(l10n.nearbyLocationTitle),
+          actions: [
+            IconButton(
+              key: const ValueKey('nearby_picker_confirm_button'),
+              icon: _isConfirming
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: AppInlineLoadingIndicator(size: 16),
+                    )
+                  : const Icon(Icons.check),
+              tooltip: l10n.mapPickerConfirm,
+              onPressed: (_isConfirming ||
+                      _deviceLatitude == null ||
+                      _deviceLongitude == null)
+                  ? null
+                  : () => _confirmSelection(
+                        place: _systemSelected ? null : _selectedPlace,
+                      ),
+            ),
+          ],
+        ),
+        body: _buildBody(theme, l10n),
       ),
-      body: _buildBody(theme, l10n),
     );
   }
 

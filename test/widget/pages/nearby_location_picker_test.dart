@@ -805,4 +805,108 @@ void main() {
     // 结果依然为 null，且无任何异常抛出
     expect(selectedResult, isNull);
   });
+
+  testWidgets('候选 POI 反查未完成期间，路由开始退出（动画期间尚未完全 unmount），反查完成时不误 pop 上级路由',
+      (WidgetTester tester) async {
+    final reverseCompleter = Completer<Map<String, String>?>();
+
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '中国,北京市,北京市,东城区',
+      onReverseGeocodePoint: (lat, lon) async => reverseCompleter.future,
+    );
+
+    const placeA = PlaceInfo(
+      name: '景山公园',
+      latitude: 39.9242,
+      longitude: 116.4014,
+      address: '景山西街44号',
+      distanceMeters: 800,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [placeA]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 1. 点选候选地点 A，触发异步反查
+    await tester.tap(find.text('景山公园'));
+    await tester.pump();
+
+    // 2. 模拟用户点击返回键开始退出路由
+    await tester.tap(find.byType(BackButton));
+    // 渲染一帧使退出动画启动，此时路由正在退出，但 State 依然处于 mounted 状态
+    await tester.pump();
+    expect(find.byType(NearbyLocationPicker), findsOneWidget);
+
+    // 3. 在退出动画进行期间，反查才异步返回结果
+    reverseCompleter.complete({
+      'country': '中国',
+      'province': '北京市',
+      'city': '北京市',
+      'district': '西城区',
+    });
+    await tester.pump();
+
+    // 4. 等待动画完全结束，退出完成
+    await tester.pumpAndSettle();
+
+    // 验证选择器页面已退出，且父级页面（包含 Open 按钮）依然存在，没有被误 pop 掉
+    expect(find.byType(NearbyLocationPicker), findsNothing);
+    expect(find.text('Open'), findsOneWidget);
+    expect(selectedResult, isNull);
+  });
+
+  testWidgets('返回候选地点少于 pageSize 但非空时，hasMore 保持为 true',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    const place1 = PlaceInfo(
+      name: '地点1',
+      latitude: 39.9042,
+      longitude: 116.4074,
+      distanceMeters: 500,
+    );
+    const place2 = PlaceInfo(
+      name: '地点2',
+      latitude: 39.9050,
+      longitude: 116.4080,
+      distanceMeters: 600,
+    );
+
+    // 第一次调用返回 2 项（小于 pageSize 20），第二次调用返回空列表
+    final fakeSearch = _FakePlaceSearchService(
+      onGetNearbyPlaces: (offset, limit) async {
+        if (offset == 0) {
+          return [place1, place2];
+        }
+        return [];
+      },
+    );
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    );
+
+    expect(find.text('地点1'), findsOneWidget);
+    expect(find.text('地点2'), findsOneWidget);
+
+    // 模拟触底滚动加载更多
+    final scrollFinder = find.byType(Scrollable).first;
+    await tester.drag(scrollFinder, const Offset(0, -500));
+    await tester.pumpAndSettle();
+
+    // 验证发起了 offset > 0 的二次请求
+    expect(fakeSearch.callCount, greaterThanOrEqualTo(2));
+  });
 }
