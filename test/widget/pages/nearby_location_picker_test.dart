@@ -1080,4 +1080,37 @@ void main() {
     // 保留原始初始地址
     expect(selectedResult!.location, '中国,北京市,北京市,东城区');
   });
+
+  testWidgets('仅传入初始经度或纬度之一且与设备同名时，不误判定为系统当前位置', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      poiName: '故宫博物院',
+    );
+    final fakeSearch = _FakePlaceSearchService(places: []);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: null,
+        initialLongitude: 116.3971,
+        initialLocation: '中国,北京市,北京市,东城区',
+        initialPoiName: '故宫博物院',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 点击右上角确认按钮（未点选系统位置，保持原初始 POI）
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '故宫博物院');
+    // 保留原始初始地址，而不是被误判为系统位置
+    expect(selectedResult!.location, '中国,北京市,北京市,东城区');
+  });
 }

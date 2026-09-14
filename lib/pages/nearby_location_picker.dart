@@ -234,7 +234,8 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     if (_customSelectedPoiName != null &&
         _devicePoiName != null &&
         _customSelectedPoiName == _devicePoiName) {
-      final coordsMatchOrNull = _customSelectedLatitude == null ||
+      final coordsMatchOrNull = (_customSelectedLatitude == null &&
+              _customSelectedLongitude == null) ||
           _coordsMatch(_customSelectedLatitude, _customSelectedLongitude,
               _deviceLatitude, _deviceLongitude);
       if (coordsMatchOrNull) {
