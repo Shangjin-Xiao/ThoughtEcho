@@ -996,4 +996,88 @@ void main() {
     expect(selectedResult!.latitude, 39.9163);
     expect(selectedResult!.longitude, 116.3971);
   });
+
+  testWidgets('初始 POI 坐标为空时，点选列表中同名候选 POI 重新反查行政区而不复用旧地址',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      reverseResult: {
+        'country': '中国',
+        'province': '上海市',
+        'city': '上海市',
+        'district': '黄浦区',
+      },
+    );
+    const candidatePlace = PlaceInfo(
+      name: '同名地标',
+      latitude: 31.2304,
+      longitude: 121.4737,
+      distanceMeters: 100,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: null,
+        initialLongitude: null,
+        initialLocation: '中国,北京市,北京市,东城区',
+        initialPoiName: '同名地标',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 点击候选列表中的「同名地标」
+    await tester.tap(find.text('同名地标'));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '同名地标');
+    // 验证重新反查解析了上海市的行政区，而不是错误地复用旧的北京市东城区
+    expect(selectedResult!.location, '中国,上海市,上海市,黄浦区');
+    expect(selectedResult!.latitude, 31.2304);
+    expect(selectedResult!.longitude, 121.4737);
+  });
+
+  testWidgets('初始 POI 坐标为空时，未点选候选直接点击确认仍保留原始初始地址与 POI',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+    );
+    const candidatePlace = PlaceInfo(
+      name: '同名地标',
+      latitude: 31.2304,
+      longitude: 121.4737,
+      distanceMeters: 100,
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: null,
+        initialLongitude: null,
+        initialLocation: '中国,北京市,北京市,东城区',
+        initialPoiName: '同名地标',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 直接点击右上角确认按钮（未点选候选列表项）
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '同名地标');
+    // 保留原始初始地址
+    expect(selectedResult!.location, '中国,北京市,北京市,东城区');
+  });
 }

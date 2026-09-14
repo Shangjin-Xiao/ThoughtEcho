@@ -331,10 +331,8 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       // 如果当前选中的是之前传入的 POI，在候选列表中定位对应条目（同时匹配名称与坐标容差，防止同名不同分店误选）
       if (_customSelectedPoiName != null && _selectedPlace == null) {
         for (final p in _places.followedBy(newUnique)) {
-          final matchesCoords = _customSelectedLatitude == null ||
-              _customSelectedLongitude == null ||
-              _coordsMatch(p.latitude, p.longitude, _customSelectedLatitude,
-                  _customSelectedLongitude);
+          final matchesCoords = _coordsMatch(p.latitude, p.longitude,
+              _customSelectedLatitude, _customSelectedLongitude);
           if (p.name == _customSelectedPoiName && matchesCoords) {
             _selectedPlace = p;
             break;
@@ -380,16 +378,24 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     });
 
     try {
-      final matchesInitialCoords = place == null ||
-          (place.name == widget.initialPoiName &&
-              (_coordsMatch(place.latitude, place.longitude,
-                      widget.initialLatitude, widget.initialLongitude) ||
-                  (widget.initialLatitude == null &&
-                      widget.initialLongitude == null)));
+      final bool matchesInitial;
+      if (place == null) {
+        // 未点选候选列表项（例如直接点击右上角确认）：
+        // 只要未改变选中的 POI 名称，即可保留传入的初始值（包含无坐标场景）
+        matchesInitial = _customSelectedPoiName != null &&
+            _customSelectedPoiName == widget.initialPoiName;
+      } else {
+        // 用户点选了候选列表项（或已选中的候选地点）：
+        // 仅在名称一致且坐标在容差范围内一致时，才视为确认初始 POI；
+        // 若初始经纬度为空或坐标不匹配，候选点必须作为新选地点处理，重新解析行政区。
+        matchesInitial = _customSelectedPoiName != null &&
+            _customSelectedPoiName == widget.initialPoiName &&
+            place.name == widget.initialPoiName &&
+            _coordsMatch(place.latitude, place.longitude,
+                widget.initialLatitude, widget.initialLongitude);
+      }
 
-      if (_customSelectedPoiName != null &&
-          _customSelectedPoiName == widget.initialPoiName &&
-          matchesInitialCoords) {
+      if (matchesInitial) {
         // 意图保留初始 POI（经纬度在容差内与名称均一致，或无明确点选列表项时点击确认）
         if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
           return;
@@ -730,9 +736,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     AppLocalizations l10n,
     PlaceInfo place,
   ) {
-    final selected = !_systemSelected &&
-        (_selectedPlace == place ||
-            (_selectedPlace == null && place.name == _customSelectedPoiName));
+    final selected = !_systemSelected && _selectedPlace == place;
     final distance = _formatDistance(l10n, place.distanceMeters);
 
     return ListTile(
