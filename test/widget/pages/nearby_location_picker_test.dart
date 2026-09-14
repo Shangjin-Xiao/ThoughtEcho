@@ -867,24 +867,21 @@ void main() {
   testWidgets('返回候选地点少于 pageSize 但非空时，hasMore 保持为 true',
       (WidgetTester tester) async {
     final fakeLoc = _FakeLocationService();
-    const place1 = PlaceInfo(
-      name: '地点1',
-      latitude: 39.9042,
-      longitude: 116.4074,
-      distanceMeters: 500,
-    );
-    const place2 = PlaceInfo(
-      name: '地点2',
-      latitude: 39.9050,
-      longitude: 116.4080,
-      distanceMeters: 600,
+    final firstPage = List.generate(
+      15,
+      (i) => PlaceInfo(
+        name: '地点$i',
+        latitude: 39.9042 + i * 0.001,
+        longitude: 116.4074 + i * 0.001,
+        distanceMeters: 500 + i * 10,
+      ),
     );
 
-    // 第一次调用返回 2 项（小于 pageSize 20），第二次调用返回空列表
+    // 第一次调用返回 15 项（小于 pageSize 20，但内容产生足够滚动距离），第二次调用返回空列表
     final fakeSearch = _FakePlaceSearchService(
       onGetNearbyPlaces: (offset, limit) async {
         if (offset == 0) {
-          return [place1, place2];
+          return firstPage;
         }
         return [];
       },
@@ -898,12 +895,11 @@ void main() {
       ),
     );
 
-    expect(find.text('地点1'), findsOneWidget);
-    expect(find.text('地点2'), findsOneWidget);
+    expect(find.text('地点0'), findsOneWidget);
 
     // 模拟触底滚动加载更多
     final scrollFinder = find.byType(Scrollable).first;
-    await tester.drag(scrollFinder, const Offset(0, -500));
+    await tester.drag(scrollFinder, const Offset(0, -1000));
     await tester.pumpAndSettle();
 
     // 验证发起了 offset > 0 的二次请求
