@@ -69,3 +69,8 @@
 **盲点:** `AnniversaryDigitGlyphs` 是 `anniversary_candle_svg.dart` 等生产组件所依赖的周年数字 SVG 字形定义与布局辅助工具，此前缺少直接的单元测试覆盖，无法保障字形路径映射、尺寸计算与格式化逻辑在后续迭代中的稳定性。
 **对策:** 为其编写独立的纯函数单元测试，覆盖 0-9 完整字形映射、无效输入回退至 0、尺寸与间距计算、以及 SVG 数值格式化（四舍五入保留两位小数及整除无小数）等边界条件，确保底层渲染字形与辅助函数的健壮性。
 
+## 2026-09-15 - [补充 draft_restore_utils 与 theme_style_labels 的测试]
+**盲点:** `draft_restore_utils.dart` 中的 `buildRestoredDraftQuote` 负责将草稿数据恢复成完整的 `Quote` 对象，涉及大量字段的反序列化和默认值回退逻辑；`theme_style_labels.dart` 中的 `themeAccentLabel` 负责提供本地化的强调色名称，这些核心纯逻辑方法由于未能被现有的单元测试充分覆盖，导致在数据结构或主题枚举新增时极易产生空指针异常或未匹配的分支异常。
+**对策:**
+1. 为 `draft_restore_utils_test.dart` 补全字段恢复的单元测试，包含存在原始笔记与新建笔记的各种情况，特别验证了针对 null 值的安全 fallback 处理，确保转换逻辑稳固。
+2. 为 `theme_style_labels_test.dart` 补充缺失的 `themeAccentLabel` 测试组，提供定制化的 MockAppLocalizations 以模拟各类本地化枚举文本，完成了所有强调色枚举项的方法功能覆盖。这使得我们在保持极简无依赖单元测试的原则下，最大限度清除了代码库中的潜藏隐患。

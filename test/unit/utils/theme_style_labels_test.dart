@@ -17,6 +17,15 @@ class MockAppLocalizations implements AppLocalizations {
   @override
   String get themeStylePlainDesc => 'Plain Desc';
 
+  @override
+  String get themeAccentUmber => 'Umber';
+  @override
+  String get themeAccentCeladon => 'Celadon';
+  @override
+  String get themeAccentIndigo => 'Indigo';
+  @override
+  String get themeAccentCinnabar => 'Cinnabar';
+
   // ignore: noSuchMethod
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -43,6 +52,32 @@ void main() {
       final result = themeStyleLabel(l10n, ThemeStyle.plain);
       expect(result.$1, 'Plain');
       expect(result.$2, 'Plain Desc');
+    });
+  });
+
+  group('themeAccentLabel', () {
+    test('returns correct label for ThemeAccent.umber', () {
+      final l10n = MockAppLocalizations();
+      final result = themeAccentLabel(l10n, ThemeAccent.umber);
+      expect(result, 'Umber');
+    });
+
+    test('returns correct label for ThemeAccent.celadon', () {
+      final l10n = MockAppLocalizations();
+      final result = themeAccentLabel(l10n, ThemeAccent.celadon);
+      expect(result, 'Celadon');
+    });
+
+    test('returns correct label for ThemeAccent.indigo', () {
+      final l10n = MockAppLocalizations();
+      final result = themeAccentLabel(l10n, ThemeAccent.indigo);
+      expect(result, 'Indigo');
+    });
+
+    test('returns correct label for ThemeAccent.cinnabar', () {
+      final l10n = MockAppLocalizations();
+      final result = themeAccentLabel(l10n, ThemeAccent.cinnabar);
+      expect(result, 'Cinnabar');
     });
   });
 }
