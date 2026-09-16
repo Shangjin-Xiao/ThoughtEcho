@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://note.shangjinyun.cn/">
-    <img src="res/readme-banner-en.png" alt="ThoughtEcho - AI-Powered Inspiration Notebook" width="100%">
+    <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner-en.png" alt="ThoughtEcho - AI-Powered Inspiration Notebook" width="100%">
   </a>
   
   # ThoughtEcho (心迹)
@@ -104,31 +104,31 @@
 ### Core Features
 | Homepage | Note List |
 |:---:|:---:|
-| ![Homepage](res/screenshot/l10n/en/home_page.jpg) | ![Note List](res/screenshot/l10n/en/note_list_view.jpg) |
+| ![Homepage](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/home_page.jpg) | ![Note List](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/note_list_view.jpg) |
 
 ### Editing & AI Features
 | Rich Text Editor | AI Q&A Chat |
 |:---:|:---:|
-| ![Rich Text Editor](res/screenshot/l10n/en/note_full_editor_page.jpg) | ![AI Q&A Chat](res/screenshot/l10n/en/note_qa_chat_page.jpg) |
+| ![Rich Text Editor](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/note_full_editor_page.jpg) | ![AI Q&A Chat](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/note_qa_chat_page.jpg) |
 
 ### Insights & Reports
 | Insights Analysis | Period Report |
 |:---:|:---:|
-| ![Insights Analysis](res/screenshot/l10n/en/insights_page.jpg) | ![Period Report](res/screenshot/l10n/en/period_report.jpg) |
+| ![Insights Analysis](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/insights_page.jpg) | ![Period Report](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/period_report.jpg) |
 
 ### Settings & Management
 | Theme Settings | AI Provider Settings | Daily Quote Settings |
 |:---:|:---:|:---:|
-| ![Theme Settings](res/screenshot/l10n/en/theme_settings_page.jpg) | ![AI Provider Settings](res/screenshot/l10n/en/ai_settings_page.jpg) | ![Daily Quote Settings](res/screenshot/l10n/en/hitokoto_settings_page.jpg) |
+| ![Theme Settings](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/theme_settings_page.jpg) | ![AI Provider Settings](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/ai_settings_page.jpg) | ![Daily Quote Settings](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/hitokoto_settings_page.jpg) |
 
 | Preferences | Smart Push Settings |
 |:---:|:---:|
-| ![Preferences](res/screenshot/l10n/en/preferences_detail_page.jpg) | ![Smart Push](res/screenshot/l10n/en/smart_push_settings_page.jpg) |
+| ![Preferences](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/preferences_detail_page.jpg) | ![Smart Push](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/smart_push_settings_page.jpg) |
 
 ### Storage & Backup
 | WebDAV Cloud Sync | Recycle Bin |
 |:---:|:---:|
-| ![WebDAV Sync](res/screenshot/l10n/en/webdav_sync_page.jpg) | ![Recycle Bin](res/screenshot/l10n/en/recycle_bin_page.jpg) |
+| ![WebDAV Sync](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/webdav_sync_page.jpg) | ![Recycle Bin](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/recycle_bin_page.jpg) |
 
 ## 🛠️ Tech Stack
 

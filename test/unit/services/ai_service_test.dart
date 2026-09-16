@@ -42,6 +42,10 @@ void main() {
       expect(roleOf(messages[1]), 'user');
       expect(contentOf(messages[1]), contains('user_profile'));
 
+      // 历史消息必须保持时间升序（旧在前、新在后）
+      expect(contentOf(messages[2]), contains('昨天聊了什么'));
+      expect(contentOf(messages[3]), contains('聊了咖啡馆'));
+
       expect(roleOf(messages.last), 'user');
       expect(contentOf(messages.last), contains('给我今天的提示'));
     });
@@ -79,6 +83,31 @@ void main() {
       );
 
       expect(contentOf(messages[1]), contains('碎' * 1300));
+    });
+
+    test('历史超出预算时保留最近的连续消息并维持时间顺序', () {
+      final oldest = '旧' * 1000;
+      final middle = '中' * 1000;
+      final newest = '新' * 1000;
+      final messages = AIService.buildChatMessages(
+        systemPrompt: 'sys',
+        // 历史预算恰好只容纳两条 1000 字符消息。
+        userMessage: '问' * 4000,
+        history: [
+          message(oldest, isUser: true),
+          message(middle, isUser: false),
+          message(newest, isUser: true),
+        ],
+      );
+
+      expect(messages, hasLength(4));
+      expect(contentOf(messages[1]), contains(middle));
+      expect(contentOf(messages[2]), contains(newest));
+      expect(
+        messages.every((item) => !contentOf(item).contains(oldest)),
+        isTrue,
+      );
+      expect(roleOf(messages.last), 'user');
     });
   });
 }

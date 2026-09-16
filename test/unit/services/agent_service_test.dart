@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 
@@ -172,6 +174,102 @@ void main() {
       final text = AgentService.describePeriodBounds(DateTime(2026, 9, 1));
       expect(text, contains('2026-08-31 ~ 2026-09-06'));
       expect(text, contains('2026-09-01 ~ 2026-09-30'));
+    });
+  });
+
+  group('AgentService post-turn memory capture heuristics', () {
+    test(
+        'hasMemorySignal identifies corrections, identity, and explicit preferences',
+        () {
+      expect(AgentService.hasMemorySignal('以后回答简短一点，不要太长了'), isTrue);
+      expect(AgentService.hasMemorySignal('你刚才记错了，纠偏一下'), isTrue);
+      expect(AgentService.hasMemorySignal('不要每次都加上天气信息'), isTrue);
+      expect(AgentService.hasMemorySignal('我是阿澈，以后叫我阿澈就好'), isTrue);
+      expect(AgentService.hasMemorySignal('我是一名后端工程师，定居在杭州'), isTrue);
+      expect(AgentService.hasMemorySignal('我更喜欢极简风格的排版'), isTrue);
+      expect(AgentService.hasMemorySignal('我的文风偏向短句与白描'), isTrue);
+      expect(AgentService.hasMemorySignal('我爱读博尔赫斯与卡尔维诺'), isTrue);
+      expect(AgentService.hasMemorySignal('我主要做古建筑田野调查与营造法式研究'), isTrue);
+      expect(AgentService.hasMemorySignal('叫我林晚就好'), isTrue);
+      expect(AgentService.hasMemorySignal('我的笔名是林晚'), isTrue);
+      expect(AgentService.hasMemorySignal('我关注民间传统风物与地方饮食谱系'), isTrue);
+      expect(AgentService.hasMemorySignal('我的文字倾向于详实细腻的白描'), isTrue);
+      expect(AgentService.hasMemorySignal('我转行做游戏开发了'), isTrue);
+      expect(AgentService.hasMemorySignal('我改行了，现在做自由职业'), isTrue);
+      expect(AgentService.hasMemorySignal('我不再做古建研究了'), isTrue);
+      expect(AgentService.hasMemorySignal('我的职业是建筑修复师'), isTrue);
+      expect(AgentService.hasMemorySignal('我擅长榫卯结构测绘'), isTrue);
+      expect(AgentService.hasMemorySignal('请记住，我习惯早起写作'), isTrue);
+      expect(AgentService.hasMemorySignal('Call me Alex from now on'), isTrue);
+      expect(AgentService.hasMemorySignal("Don't add weather to my notes"),
+          isTrue);
+      expect(AgentService.hasMemorySignal('I prefer concise bullet points'),
+          isTrue);
+      expect(AgentService.hasMemorySignal('Please remember that I like poetry'),
+          isTrue);
+    });
+
+    test('hasMemorySignal filters out casual chat, queries, and short commands',
+        () {
+      expect(AgentService.hasMemorySignal('你好'), isFalse);
+      expect(AgentService.hasMemorySignal('在吗'), isFalse);
+      expect(AgentService.hasMemorySignal('今天天气怎么样？'), isFalse);
+      expect(AgentService.hasMemorySignal('帮我写一篇关于秋天的随笔'), isFalse);
+      expect(AgentService.hasMemorySignal('搜索一下上周关于架构的笔记'), isFalse);
+      expect(AgentService.hasMemorySignal('把这篇笔记导出为 PDF 文件'), isFalse);
+      expect(AgentService.hasMemorySignal('谢谢，这篇写得很好！'), isFalse);
+      expect(AgentService.hasMemorySignal('a' * 350),
+          isFalse); // over length limit
+    });
+
+    test('parsePostTurnMemoryJson parses valid high-confidence JSON payload',
+        () {
+      const validJson = '''
+      {
+        "has_memory": true,
+        "kind": "style",
+        "directive": "回答保持精炼短句，避免空话",
+        "confidence": 0.95
+      }
+      ''';
+      final result = AgentService.parsePostTurnMemoryJson(validJson);
+      expect(result, isNotNull);
+      expect(result!.hasMemory, isTrue);
+      expect(result.kind, equals(AgentMemoryKind.style));
+      expect(result.directive, equals('回答保持精炼短句，避免空话'));
+      expect(result.confidence, closeTo(0.95, 0.001));
+    });
+
+    test(
+        'parsePostTurnMemoryJson correctly parses JSON wrapped in markdown formatting',
+        () {
+      const wrappedJson = '''
+      ```json
+      {
+        "has_memory": true,
+        "kind": "identity",
+        "directive": "用户职业为后端架构师",
+        "confidence": 0.90
+      }
+      ```
+      ''';
+      final result = AgentService.parsePostTurnMemoryJson(wrappedJson);
+      expect(result, isNotNull);
+      expect(result!.hasMemory, isTrue);
+      expect(result.kind, equals(AgentMemoryKind.identity));
+      expect(result.directive, equals('用户职业为后端架构师'));
+      expect(result.confidence, closeTo(0.90, 0.001));
+    });
+
+    test('parsePostTurnMemoryJson handles has_memory false and invalid content',
+        () {
+      final noMemory =
+          AgentService.parsePostTurnMemoryJson('{"has_memory": false}');
+      expect(noMemory, isNotNull);
+      expect(noMemory!.hasMemory, isFalse);
+
+      expect(AgentService.parsePostTurnMemoryJson('这是一段普通文本没有JSON'), isNull);
+      expect(AgentService.parsePostTurnMemoryJson('{corrupted json'), isNull);
     });
   });
 }

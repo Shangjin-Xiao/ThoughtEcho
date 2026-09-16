@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://note.shangjinyun.cn/">
-    <img src="res/readme-banner-en.png" alt="ThoughtEcho - AI-Powered Inspiration Notebook" width="100%">
+    <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner-en.png" alt="ThoughtEcho - AI-Powered Inspiration Notebook" width="100%">
   </a>
   
   # ThoughtEcho (心迹)
@@ -105,7 +105,7 @@
 
 ### ホーム画面
 <div align="center">
-  <img src="res/screenshot/l10n/ja/home_page.jpg" alt="ホーム画面" width="400">
+  <img src="https://img.shangjinyun.cn/projects/thoughtecho/l10n/ja/home_page.jpg" alt="ホーム画面" width="400">
 </div>
 
 ## 🛠️ 技術スタック

@@ -284,7 +284,11 @@ void main() {
                 'Signed note ${note.id} has author so hasAttribution is true');
         expect(note.attributionKind, equals('excerpt'),
             reason:
-                'Signed note attributionKind evaluates to excerpt by default in model');
+                'Signed note without userAliases configured evaluates to excerpt by default');
+        expect(note.resolveAttributionKind(userAliases: const ['阿澈']),
+            equals('original'),
+            reason:
+                'Signed note with userAliases configured evaluates to original');
         expect(note.sourceAuthor, equals('阿澈'));
       }
     });

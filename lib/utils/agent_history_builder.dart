@@ -21,6 +21,9 @@ class AgentHistoryBuilder {
   /// 工具轨迹摘要消息的前缀，UI 不展示，仅用于喂给模型。
   static const String traceHeader = '[已执行的工具轨迹]';
 
+  /// 用户选择摘要消息的前缀，用于历史上下文中表示用户对提问的回复。
+  static const String askUserHeader = '[用户选择]';
+
   /// 构建喂给 Agent 的历史消息列表。
   ///
   /// - 普通 user/assistant 文本消息原样保留；
@@ -66,6 +69,43 @@ class AgentHistoryBuilder {
         continue;
       }
 
+      if (meta['type'] == 'ask_user') {
+        final summary = _summarizeAskUser(
+          meta,
+          cap: traceCap,
+        );
+        if (summary == null) continue;
+        history.add(
+          ChatMessage(
+            id: '${message.id}_selection',
+            role: 'user',
+            isUser: true,
+            content: summary,
+            timestamp: message.timestamp,
+          ),
+        );
+        continue;
+      }
+
+      if (meta['type'] == 'note_proposal' || meta['type'] == 'noteProposal') {
+        final proposalSummary = _summarizeNoteProposal(meta);
+        if (proposalSummary != null) {
+          final effectiveContent = message.content.trim().isNotEmpty
+              ? '${message.content.trim()}\n\n$proposalSummary'
+              : proposalSummary;
+          history.add(
+            ChatMessage(
+              id: '${message.id}_proposal',
+              role: 'assistant',
+              isUser: false,
+              content: effectiveContent,
+              timestamp: message.timestamp,
+            ),
+          );
+          continue;
+        }
+      }
+
       // 提案卡片等：正文本身是模型上一轮的产出，丢掉会让它忘记自己提过什么。
       if (message.content.trim().isNotEmpty) {
         history.add(message);
@@ -73,6 +113,45 @@ class AgentHistoryBuilder {
     }
 
     return history;
+  }
+
+  /// 把建议卡片消息（包含待确认或已保存提案）压成清晰的摘要喂给模型。
+  static String? _summarizeNoteProposal(Map<String, dynamic> meta) {
+    final artifactMap = meta['artifact'];
+    final savedNoteId = meta['saved_note_id']?.toString().trim();
+    if (artifactMap is! Map) {
+      if (savedNoteId != null && savedNoteId.isNotEmpty) {
+        return '[系统提示：用户已采纳你此前生成的笔记建议并保存，笔记 ID 为 $savedNoteId。]';
+      }
+      return null;
+    }
+
+    final action = artifactMap['action']?.toString() ?? 'create';
+    final targetTitle = artifactMap['proposal_title']?.toString() ??
+        artifactMap['target_title']?.toString() ??
+        artifactMap['title']?.toString();
+    final targetNoteId = artifactMap['note_id']?.toString() ??
+        artifactMap['target_note_id']?.toString();
+    final content = artifactMap['content']?.toString() ?? '';
+    final changesSummary = artifactMap['reason']?.toString() ??
+        artifactMap['changes_summary']?.toString();
+
+    if (savedNoteId != null && savedNoteId.isNotEmpty) {
+      return '[已采纳并保存的笔记提案] '
+          '笔记 ID: $savedNoteId'
+          '${targetTitle != null && targetTitle.isNotEmpty ? '，标题: $targetTitle' : ''}'
+          '${changesSummary != null && changesSummary.isNotEmpty ? '，说明: $changesSummary' : ''}';
+    }
+
+    final preview =
+        content.length > 200 ? '${content.substring(0, 200)}...' : content;
+    final actionLabel = action == 'edit' ? '修改笔记' : '新建笔记';
+    return '[待确认的笔记提案] '
+        '类型: $actionLabel'
+        '${targetTitle != null && targetTitle.isNotEmpty ? '，标题: $targetTitle' : ''}'
+        '${targetNoteId != null && targetNoteId.isNotEmpty ? '，笔记 ID: $targetNoteId' : ''}'
+        '${changesSummary != null && changesSummary.isNotEmpty ? '，修改说明: $changesSummary' : ''}'
+        '${preview.isNotEmpty ? '\n提案内容预览: $preview' : ''}';
   }
 
   /// 把一条 `tool_progress` 元数据压成人类/模型都可读的一段轨迹。
@@ -120,6 +199,50 @@ class AgentHistoryBuilder {
 
     final body = lines.join('\n');
     return '$traceHeader\n${_truncate(body, traceCap)}';
+  }
+
+  /// 把一条 `ask_user` 元数据压成一段代表用户选择的上下文。
+  ///
+  /// 返回 null 表示这条提问尚未完成或处于取消状态外且无可用回复。
+  static String? _summarizeAskUser(
+    Map<String, dynamic> meta, {
+    required int cap,
+  }) {
+    final isCompleted = meta['isCompleted'] == true;
+    if (!isCompleted) return null;
+
+    final question = meta['question']?.toString().trim() ?? '';
+    final isCancelled = meta['isCancelled'] == true;
+    final customText = meta['customText']?.toString().trim();
+    final rawOptions = meta['selectedOptions'];
+    final selectedOptions = rawOptions is List
+        ? rawOptions
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList()
+        : const <String>[];
+
+    final buffer = StringBuffer(askUserHeader);
+    if (question.isNotEmpty) {
+      buffer.write(' 针对「$question」');
+    }
+
+    final hasCustom = customText != null && customText.isNotEmpty;
+    final hasOptions = selectedOptions.isNotEmpty;
+
+    if (isCancelled) {
+      buffer.write('，用户取消了选择。');
+    } else if (hasOptions && hasCustom) {
+      buffer.write('，用户选择了：${selectedOptions.join('、')}，并补充回复：$customText');
+    } else if (hasCustom) {
+      buffer.write('，用户回复：$customText');
+    } else if (hasOptions) {
+      buffer.write('，用户选择了：${selectedOptions.join('、')}');
+    } else {
+      buffer.write('，用户取消了选择。');
+    }
+
+    return _truncate(buffer.toString(), cap);
   }
 
   static String _truncate(String text, int cap) {

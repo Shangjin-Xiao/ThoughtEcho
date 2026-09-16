@@ -507,6 +507,11 @@ class Quote {
   bool get hasKeywords => keywords != null && keywords!.isNotEmpty;
 
   /// 内置的自指代作者关键词（全小写）。
+  ///
+  /// 只收多字自称与通用自指（我/自己/笔者等）。单字文言代词（余/吾/愚）刻意不收：
+  /// 它们同时是姓氏与常用字，作者栏独一个「余」字时无法区分自署与摘录——
+  /// 这类身份断言只能来自用户配置（昵称/默认作者/别名/已确认画像），
+  /// 或由 Dreaming 凭多篇自建证据统计推断，绝不能由静态词表一票拍板。
   static const Set<String> _builtinSelfAuthorKeywords = <String>{
     '我',
     '自己',
@@ -534,28 +539,182 @@ class Quote {
     '思考',
     '随想',
     '自留地',
+    '备忘',
+    '碎碎念',
+    '清单',
+    '复盘',
+    '手账',
+    '手记',
+    '札记',
+    '笔记',
+    '杂记',
+    '杂感',
+    '随感',
+    '自述',
+    '自语',
+    '心迹',
+    '行记',
+    '游记',
+    '食记',
+    '采风录',
+    '手稿',
+    '手绘',
+    '备忘录',
+    '打卡',
+    '日常',
     'diary',
     'journal',
     'notes',
     'memo',
   };
 
-  static String _stripAuthorPrefix(String text) {
-    var trimmed = text.trim();
-    if (trimmed.startsWith('——') || trimmed.startsWith('—')) {
-      trimmed = trimmed.replaceFirst(RegExp(r'^[—–—]+\s*'), '').trim();
+  /// 明确的个人记录类体裁后缀关键词（全小写）。
+  ///
+  /// 限定为明确的记录类体裁，不包含「思考」「自留地」「随想」等可能出现在外部出版物书名中的通用词。
+  static const List<String> _personalWorkSuffixKeywords = <String>[
+    '备忘录',
+    '采风录',
+    '碎碎念',
+    'journal',
+    'diary',
+    'notes',
+    'memo',
+    '日记',
+    '随笔',
+    '手记',
+    '札记',
+    '笔记',
+    '杂记',
+    '杂感',
+    '随感',
+    '自述',
+    '自语',
+    '心迹',
+    '备忘',
+    '清单',
+    '复盘',
+    '手账',
+    '行记',
+    '游记',
+    '食记',
+    '日常',
+    '手稿',
+    '手绘',
+    '打卡',
+  ];
+
+  /// 出处名是否以个人记录类别词为后缀（如「西湖日记」「田野手记」）。
+  ///
+  /// 唯一的个人类别词表出处——Dreaming 的别名推断复用此处，不另存一份，
+  /// 避免两处词表漂移。限定为明确的记录类体裁，排除「思考」「随想」「自留地」等通用词以防误判外部出版物。
+  /// 注意：后缀形态本身不单独作为原创证据，调用方必须再要第二证据（签名落款、待办/图片等个人附件）。
+  ///
+  /// 支持传入 [matchPrefix] 对剥离后缀后的前缀进行回调判定（如判断前缀是否属于自身作者/别名）。
+  static bool hasPersonalWorkSuffix(
+    String work, {
+    bool Function(String prefix)? matchPrefix,
+  }) {
+    final trimmed = work.trim();
+    final lower = trimmed.toLowerCase();
+    if (lower.isEmpty) return false;
+    for (final kw in _personalWorkSuffixKeywords) {
+      final lowerKw = kw.toLowerCase();
+      if (lower.endsWith(lowerKw) && trimmed.length > kw.length) {
+        final prefix = trimmed.substring(0, trimmed.length - kw.length).trim();
+        if (matchPrefix == null || matchPrefix(prefix)) {
+          return true;
+        }
+      }
     }
+    return false;
+  }
+
+  /// 剥除可能存在的作者前缀、破折号签名标识与外层包裹括号引号
+  static String stripAuthorPrefix(String text) {
+    var trimmed = text.trim();
+    // 剥离全角、半角及长短破折号
+    trimmed = trimmed.replaceFirst(RegExp(r'^[-—–—―]+\s*'), '').trim();
     final lower = trimmed.toLowerCase();
     if (lower.startsWith('作者：') || lower.startsWith('作者:')) {
-      return trimmed.substring(3).trim();
+      trimmed = trimmed.substring(3).trim();
+    } else if (lower.startsWith('author:') || lower.startsWith('author：')) {
+      trimmed = trimmed.substring(7).trim();
+    } else if (lower.startsWith('by ') || lower.startsWith('by:')) {
+      trimmed = trimmed.substring(3).trim();
     }
-    if (lower.startsWith('author:') || lower.startsWith('author：')) {
-      return trimmed.substring(7).trim();
-    }
-    if (lower.startsWith('by ') || lower.startsWith('by:')) {
-      return trimmed.substring(3).trim();
-    }
+    // 剥离可能残存的破折号
+    trimmed = trimmed.replaceFirst(RegExp(r'^[-—–—―]+\s*'), '').trim();
+    // 剥离两端可能包裹的成对括号引号
+    trimmed =
+        trimmed.replaceAll(RegExp(r'''^[「“"'《【\[]+|[」”"'》】\]]+$'''), '').trim();
     return trimmed;
+  }
+
+  /// 判断出处作品名是否属于内置的个人日记/随笔类别。
+  ///
+  /// 支持传入用户设置的 [defaultSource]，当作品名命中默认出处时同样视为自撰。
+  static bool isBuiltinPersonalWork(String work, {String? defaultSource}) {
+    final trimmed = work.trim();
+    if (trimmed.isEmpty) return false;
+    final stripped = stripAuthorPrefix(trimmed);
+    if (stripped.isEmpty) return false;
+
+    final lower = stripped.toLowerCase();
+    // 0. 若完全命中用户配置的默认出处（无论是否包含破折号或冒号分隔符），确认为自撰出处
+    if (defaultSource != null && defaultSource.trim().isNotEmpty) {
+      final cleanDefault =
+          stripAuthorPrefix(defaultSource.trim()).toLowerCase();
+      if (lower == defaultSource.trim().toLowerCase() ||
+          lower == cleanDefault) {
+        return true;
+      }
+    }
+
+    // 如果剥离署名前缀后仍包含作者出处分隔符（如 "鲁迅 - 狂人日记"），不属于单一作品/类别名
+    if (stripped.contains(RegExp(r'\s*[-—–：:]\s*'))) {
+      return false;
+    }
+
+    if (_builtinSelfSourceKeywords.contains(lower)) return true;
+
+    // 仅当带有明确个人指代前缀（「我的」「个人」「日常」「生活」「工作」「学习」「读书」）并接续个人记录词时认可为自撰出处，
+    // 杜绝外部经典书名（如《狂人日记》《安妮日记》《徐霞客游记》）因单纯后缀命中而被误判为用户自撰
+    const personalPrefixes = <String>[
+      '我的',
+      '个人',
+      '日常',
+      '生活',
+      '工作',
+      '学习',
+      '读书',
+    ];
+    for (final prefix in personalPrefixes) {
+      if (lower.startsWith(prefix)) {
+        final rest = lower.substring(prefix.length);
+        if (_builtinSelfSourceKeywords.contains(rest)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// 检查该笔记是否具备待办互动清单等个人自建标记。
+  ///
+  /// 注意：设备传感器数据（经纬度/天气/地点）与普通富文本图片属于全应用通用元数据，
+  /// 外部摘录同样可在录入时附加，绝不可单独作为判定原创或作者归属的证据。
+  bool get hasPersonalDeviceOrRichTextMarkers {
+    // 富文本中含有待办复选框列表（用户个人清单）
+    if (content.contains('- [x]') || content.contains('- [ ]')) {
+      return true;
+    }
+    if (deltaContent != null) {
+      if (deltaContent!.contains('"list":"checked"') ||
+          deltaContent!.contains('"list":"unchecked"')) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// 判断给定的作者字符串是否属于用户自身（自指代词或命中用户昵称/默认作者/别名）。
@@ -569,7 +728,7 @@ class Quote {
     var trimmed = author.trim();
     if (trimmed.isEmpty) return false;
 
-    trimmed = _stripAuthorPrefix(trimmed);
+    trimmed = stripAuthorPrefix(trimmed);
     if (trimmed.isEmpty) return false;
 
     final lower = trimmed.toLowerCase();
@@ -613,13 +772,15 @@ class Quote {
       (_source?.trim().isNotEmpty ?? false);
 
   /// 判断该笔记的署名/出处是否为用户本人的原创标注（而非摘录外部作品）。
+  ///
+  /// 仅执行确定性的元数据与别名判定，不扫描正文文本。
   bool isSelfAttributed({
     String? userNickname,
     String? defaultAuthor,
     String? defaultSource,
     Iterable<String>? userAliases,
   }) {
-    // 1. 若有明确的作者标注，以作者判定为主
+    // 1. 若有明确的作者标注，以作者判定为主（严格元数据匹配）
     if (sourceAuthor != null && sourceAuthor!.trim().isNotEmpty) {
       return isSelfAuthor(
         sourceAuthor,
@@ -643,7 +804,7 @@ class Quote {
       }
 
       // 2.2 剥离可能存在的「作者：/ author: / ——」前缀后，拆分「作者 - 出处」或「作者：出处」格式
-      final normalizedSource = _stripAuthorPrefix(rawSource);
+      final normalizedSource = stripAuthorPrefix(rawSource);
       final parts = normalizedSource.split(RegExp(r'\s*[-—–：:]\s*'));
       if (parts.length >= 2) {
         final authorCandidate = parts.first.trim();
@@ -657,14 +818,22 @@ class Quote {
         }
       }
 
-      // 2.3 来源整体为日记/随笔类词汇或命中 defaultSource
-      final lowerSource = rawSource.toLowerCase();
-      if (_builtinSelfSourceKeywords.contains(lowerSource)) {
+      // 2.3 若未用破折号拆分，但形式为「[自身署名/别名][随笔/日记等]」（如「阿澈随笔」、「Alice Notes」）
+      if (hasPersonalWorkSuffix(
+        normalizedSource,
+        matchPrefix: (prefix) => isSelfAuthor(
+          prefix,
+          userNickname: userNickname,
+          defaultAuthor: defaultAuthor,
+          userAliases: userAliases,
+        ),
+      )) {
         return true;
       }
-      if (defaultSource != null &&
-          defaultSource.trim().isNotEmpty &&
-          lowerSource == defaultSource.trim().toLowerCase()) {
+
+      // 2.4 来源整体为日记/随笔类词汇或命中 defaultSource
+      final cleanRaw = stripAuthorPrefix(rawSource);
+      if (isBuiltinPersonalWork(cleanRaw, defaultSource: defaultSource)) {
         return true;
       }
     }
@@ -672,13 +841,19 @@ class Quote {
     // 3. 若作者为空且无 rawSource，但有 sourceWork
     final work = sourceWork?.trim();
     if (work != null && work.isNotEmpty) {
-      final lowerWork = work.toLowerCase();
-      if (_builtinSelfSourceKeywords.contains(lowerWork)) {
+      if (isBuiltinPersonalWork(work, defaultSource: defaultSource)) {
         return true;
       }
-      if (defaultSource != null &&
-          defaultSource.trim().isNotEmpty &&
-          lowerWork == defaultSource.trim().toLowerCase()) {
+      final cleanWork = stripAuthorPrefix(work);
+      if (hasPersonalWorkSuffix(
+        cleanWork,
+        matchPrefix: (prefix) => isSelfAuthor(
+          prefix,
+          userNickname: userNickname,
+          defaultAuthor: defaultAuthor,
+          userAliases: userAliases,
+        ),
+      )) {
         return true;
       }
     }

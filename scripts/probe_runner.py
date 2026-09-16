@@ -746,7 +746,7 @@ def run_all_scenarios():
     report_lines.append(f"- **最终活跃记忆**: `{json.dumps([m for m in session5.memory_store if m.get('active', True)], ensure_ascii=False)}`\n")
 
     # 输出 Markdown 报告
-    output_path = f"/home/azureuser/ThoughtEcho/build/agent-probe/00-综合评测-{MODEL.replace(':', '_')}.md"
+    output_path = f"/workspaces/ThoughtEcho/build/agent-probe/00-综合评测-{MODEL.replace(':', '_')}.md"
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(report_lines))
     print(f"\n📄 综合评测报告已生成: {output_path}")

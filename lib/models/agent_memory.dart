@@ -297,28 +297,42 @@ class AgentMemoryFactHit {
 /// 而考试早考完了，且没有任何机制会去撤掉它。所以单独存、带 [expiresAt]，
 /// 过期即不注入，不需要额外的清理任务。
 ///
-/// 全库只有一条，Dreaming 每次覆盖式重写，不追加。
+/// 近况切片：最近在做什么、去过哪里、反复提到什么。
+///
+/// **刻意不做成画像层条目。** 画像层装的是"数月尺度上不变"的结论，而近况必然
+/// 过期；把会过期的内容放进常驻注入，两周后每日提示还在说"你最近在准备考试"，
+/// 而考试早考完了，且没有任何机制会去撤掉它。所以单独存、带 [expiresAt]，
+/// 过期即不注入，不需要额外的清理任务。
+///
+/// 支持多切片（最多 3 条，带自然时间衰减），支持单例兼容。
 @immutable
 class AgentMemoryRecentSlice {
   const AgentMemoryRecentSlice({
+    this.id = singletonId,
     required this.content,
     required this.observedAt,
     required this.expiresAt,
     this.sourceNoteIds = const <String>[],
   });
 
-  /// 单行表的固定主键。近况只有"当前这一份"，用固定 id 让写入天然是覆盖。
+  /// 单行表的固定主键，用于向后兼容单例写入。
   static const String singletonId = 'current';
 
-  /// 内容长度上限。它只是每日提示里的一两句背景，不是周报。
+  /// 单条切片内容长度上限。它只是每日提示或对话里的一两句背景，不是周报。
   static const int maxChars = 200;
+
+  /// 最多同时注入的活跃切片数量（按新鲜度排序，配合自然衰减）。
+  static const int maxRecentSlices = 3;
+
+  /// 多个近况切片注入时的总字符上限，防止挤占正文上下文。
+  static const int maxRecentTotalChars = 300;
 
   /// 默认有效期。
   ///
   /// 周报周期是 7 天，14 天能跨过一个"这周没写"的空窗，又不至于陈旧到出错。
-  /// 初值，需要按实际数据校准。
   static const Duration defaultTtl = Duration(days: 14);
 
+  final String id;
   final String content;
   final DateTime observedAt;
   final DateTime expiresAt;
@@ -326,9 +340,25 @@ class AgentMemoryRecentSlice {
 
   bool isExpiredAt(DateTime now) => !now.isBefore(expiresAt);
 
+  AgentMemoryRecentSlice copyWith({
+    String? id,
+    String? content,
+    DateTime? observedAt,
+    DateTime? expiresAt,
+    List<String>? sourceNoteIds,
+  }) {
+    return AgentMemoryRecentSlice(
+      id: id ?? this.id,
+      content: content ?? this.content,
+      observedAt: observedAt ?? this.observedAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      sourceNoteIds: sourceNoteIds ?? this.sourceNoteIds,
+    );
+  }
+
   Map<String, Object?> toMap() {
     return <String, Object?>{
-      'id': singletonId,
+      'id': id,
       'content': content,
       'observed_at': observedAt.toIso8601String(),
       'expires_at': expiresAt.toIso8601String(),
@@ -343,6 +373,7 @@ class AgentMemoryRecentSlice {
     // 去跟用户讲他最近在干什么。
     final epoch = DateTime.fromMillisecondsSinceEpoch(0);
     return AgentMemoryRecentSlice(
+      id: (map['id'] as String?) ?? singletonId,
       content: (map['content'] as String?) ?? '',
       observedAt:
           DateTime.tryParse((map['observed_at'] as String?) ?? '') ?? epoch,
@@ -351,4 +382,26 @@ class AgentMemoryRecentSlice {
       sourceNoteIds: _decodeNoteIds(map['source_note_ids']),
     );
   }
+}
+
+/// 记忆库压缩与裁剪统计。
+@immutable
+class MemoryCompactionStats {
+  const MemoryCompactionStats({
+    this.expiredSlicesPruned = 0,
+    this.supersededProfilesPruned = 0,
+    this.decayedFactsPruned = 0,
+    this.duplicatesPruned = 0,
+  });
+
+  final int expiredSlicesPruned;
+  final int supersededProfilesPruned;
+  final int decayedFactsPruned;
+  final int duplicatesPruned;
+
+  int get totalPruned =>
+      expiredSlicesPruned +
+      supersededProfilesPruned +
+      decayedFactsPruned +
+      duplicatesPruned;
 }

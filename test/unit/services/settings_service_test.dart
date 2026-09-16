@@ -116,6 +116,38 @@ void main() {
       expect((await SettingsService.create()).userNickname, isEmpty);
     });
 
+    test('userAliases merges memory aliases only while memory is enabled',
+        () async {
+      var providerCalls = 0;
+      await settingsService.setUserNickname('  阿澈  ');
+      await settingsService.setDefaultAuthor('  林晚  ');
+      settingsService.setIdentityAliasesProvider(() {
+        providerCalls++;
+        return const {'墨客'};
+      });
+
+      expect(settingsService.userAliases, {'阿澈', '林晚', '墨客'});
+      expect(providerCalls, 1);
+
+      await settingsService.setAgentMemoryEnabled(false);
+
+      expect(settingsService.userAliases, {'阿澈', '林晚'});
+      expect(providerCalls, 1);
+    });
+
+    test('identity alias provider registration and refresh notify listeners',
+        () {
+      var notifications = 0;
+      settingsService.addListener(() => notifications++);
+
+      settingsService.setIdentityAliasesProvider(() => const {'临时别名'});
+      settingsService.refreshIdentityAliases();
+      settingsService.setIdentityAliasesProvider(null);
+
+      expect(notifications, 3);
+      expect(settingsService.userAliases, isNot(contains('临时别名')));
+    });
+
     test('should persist add note dialog experiment toggles', () async {
       expect(settingsService.addNoteDialogAutoFocus, isTrue);
       expect(settingsService.addNoteDialogDeferAutoMetadata, isFalse);

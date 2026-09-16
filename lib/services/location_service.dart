@@ -181,11 +181,13 @@ class LocationService extends ChangeNotifier {
   String? _province;
   String? _city;
   String? _district;
+  String? _currentPoiName;
 
   String? get country => _country;
   String? get province => _province;
   String? get city => _city;
   String? get district => _district;
+  String? get currentPoiName => _currentPoiName;
 
   /// 检查当前是否处于离线状态（有坐标但没有解析出地址）
   bool get isOfflineLocation =>
@@ -633,6 +635,7 @@ class LocationService extends ChangeNotifier {
       'city': city,
       'district': district,
       'street': street,
+      'poi_name': preferred['poi_name'] ?? fallback['poi_name'],
       'formatted_address': formattedAddress.isNotEmpty
           ? formattedAddress
           : pick('formatted_address'),
@@ -647,12 +650,14 @@ class LocationService extends ChangeNotifier {
       _province = result['province'];
       _city = result['city'];
       _district = result['district'];
+      _currentPoiName = result['poi_name'];
       _currentAddress = result['formatted_address'];
     } else {
       _country = null;
       _province = null;
       _city = null;
       _district = null;
+      _currentPoiName = null;
       _currentAddress = kAddressFailed;
     }
     notifyListeners();
@@ -1503,6 +1508,7 @@ class LocationService extends ChangeNotifier {
       _province = null;
       _city = null;
       _district = null;
+      _currentPoiName = null;
     }
 
     notifyListeners();
@@ -1530,6 +1536,7 @@ class LocationService extends ChangeNotifier {
       _province = null;
       _city = null;
       _district = null;
+      _currentPoiName = null;
       _currentAddress = null;
       return;
     }
