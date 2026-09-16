@@ -162,16 +162,22 @@ class MediaPathRepairService {
               // 引用表里存的是旧路径，必须按修复后的 Delta 重建，
               // 否则 WebDAV 仍会因为引用计数为 0 而跳过附件下载。
               for (final quote in repairedQuotes) {
-                final rebuilt = await MediaReferenceService
-                    .syncQuoteMediaReferencesWithTransaction(
-                  txn,
-                  quote,
-                  cachedAppPath: basePath,
-                );
-                // 引用重建失败必须让整页回滚：若保留已重定基的 Delta 而只丢掉引用，
-                // 下次重试时 rebaseDelta 会判定"无需改写"，这些引用将永远补不回来，
-                // WebDAV 也就永远不会下载对应附件。
-                if (!rebuilt) {
+                try {
+                  final rebuilt = await MediaReferenceService
+                      .syncQuoteMediaReferencesWithTransaction(
+                    txn,
+                    quote,
+                    cachedAppPath: basePath,
+                  );
+                  // 引用重建失败必须让整页回滚：若保留已重定基的 Delta 而只丢掉引用，
+                  // 下次重试时 rebaseDelta 会判定"无需改写"，这些引用将永远补不回来，
+                  // WebDAV 也就永远不会下载对应附件。
+                  if (!rebuilt) {
+                    throw _MediaReferenceRebuildFailure(quote.id ?? '(未知ID)');
+                  }
+                } on _MediaReferenceRebuildFailure {
+                  rethrow;
+                } catch (e) {
                   throw _MediaReferenceRebuildFailure(quote.id ?? '(未知ID)');
                 }
               }

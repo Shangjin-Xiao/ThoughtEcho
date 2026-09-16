@@ -212,9 +212,17 @@ void main() {
       expect(refs, contains('images/new_img.jpg'));
     });
 
-    test('同步过程中遇到数据库异常时优雅捕获并返回 false', () async {
+    test('同步过程中遇到插入异常时回滚且保留原有引用', () async {
       await MediaReferenceService.addReference('images/old_img.jpg', 'q1');
-      await db.close();
+
+      // 创建触发器使得向 media_references 的插入操作失败，模拟事务中途崩溃
+      await db.execute('''
+        CREATE TRIGGER fail_media_ref_insert
+        BEFORE INSERT ON media_references
+        BEGIN
+          SELECT RAISE(ABORT, 'forced insert failure');
+        END;
+      ''');
 
       final quote = Quote(
         id: 'q1',
@@ -224,27 +232,58 @@ void main() {
         date: '2026-08-21T00:00:00.000Z',
       );
 
-      final success =
-          await MediaReferenceService.syncQuoteMediaReferences(quote);
+      final success = await MediaReferenceService.syncQuoteMediaReferences(
+        quote,
+        cachedAppPath: iosContainer,
+      );
       expect(success, isFalse);
+
+      // 清除触发器，检查数据库中的引用
+      await db.execute('DROP TRIGGER fail_media_ref_insert');
+
+      // 验证事务发生回滚，旧引用未被删除
+      final refs = await MediaReferenceService.getReferencedFiles('q1');
+      expect(refs, contains('images/old_img.jpg'));
+      expect(refs, isNot(contains('images/new_img.jpg')));
     });
 
     test('syncQuoteMediaReferencesWithTransaction 在发生异常时重新抛出以触发外层事务回滚',
         () async {
-      await db.close();
+      await MediaReferenceService.addReference('images/old_img.jpg', 'q1');
+
+      await db.execute('''
+        CREATE TRIGGER fail_media_ref_insert_txn
+        BEFORE INSERT ON media_references
+        BEGIN
+          SELECT RAISE(ABORT, 'forced insert failure');
+        END;
+      ''');
+
       final quote = Quote(
         id: 'q1',
         content: '测试重新抛出',
+        deltaContent:
+            '[{"insert":{"image":"images/new_img.jpg"}},{"insert":"\\n"}]',
         date: '2026-08-21T00:00:00.000Z',
       );
 
-      expect(
-        () => MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
-          db,
-          quote,
-        ),
-        throwsA(isA<Exception>()),
+      await expectLater(
+        () => db.transaction((txn) async {
+          await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
+            txn,
+            quote,
+            cachedAppPath: iosContainer,
+          );
+        }),
+        throwsA(isA<DatabaseException>()),
       );
+
+      await db.execute('DROP TRIGGER fail_media_ref_insert_txn');
+
+      // 验证外层事务回滚，旧引用保持完好
+      final refs = await MediaReferenceService.getReferencedFiles('q1');
+      expect(refs, contains('images/old_img.jpg'));
+      expect(refs, isNot(contains('images/new_img.jpg')));
     });
   });
 }
