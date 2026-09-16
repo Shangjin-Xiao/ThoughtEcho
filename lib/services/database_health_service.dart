@@ -234,6 +234,10 @@ class DatabaseHealthService {
     return (row[key] as num?)?.toInt() ?? 0;
   }
 
+  @visibleForTesting
+  int readCountForTest(Map<String, Object?> row, String key) =>
+      _readCount(row, key);
+
   Future<({int total, int active, int deleted})> _getQuoteCounts(
     Database db,
   ) async {

@@ -230,5 +230,43 @@ void main() {
         completes,
       );
     });
+
+    test('getDatabaseHealthInfo 在 COUNT 返回非 int 数值类型时安全转换而不崩溃', () async {
+      final fakeDb = _NonIntCountDatabase();
+      final info = await service.getDatabaseHealthInfo(fakeDb);
+      expect(info['category_count'], 3);
+      expect(info['tag_relation_count'], 7);
+    });
+
+    test('readCountForTest 能安全解析各种数值和空值类型', () {
+      expect(service.readCountForTest({'count': 42}, 'count'), 42);
+      expect(service.readCountForTest({'count': 42.0}, 'count'), 42);
+      expect(service.readCountForTest({'count': 0}, 'count'), 0);
+      expect(service.readCountForTest({'count': null}, 'count'), 0);
+      expect(service.readCountForTest({}, 'count'), 0);
+    });
   });
+}
+
+class _NonIntCountDatabase implements Database {
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
+    if (sql.contains('FROM categories')) {
+      return [
+        {'count': 3.0}
+      ];
+    }
+    if (sql.contains('FROM quote_tags')) {
+      return [
+        {'count': 7.0}
+      ];
+    }
+    return [{}];
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
