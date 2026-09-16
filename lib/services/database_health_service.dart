@@ -234,6 +234,10 @@ class DatabaseHealthService {
     return (row[key] as num?)?.toInt() ?? 0;
   }
 
+  @visibleForTesting
+  int readCountForTest(Map<String, Object?> row, String key) =>
+      _readCount(row, key);
+
   Future<({int total, int active, int deleted})> _getQuoteCounts(
     Database db,
   ) async {
@@ -347,12 +351,13 @@ class DatabaseHealthService {
       final categoryCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM categories',
       );
-      final categoryCount = categoryCountResult.first['count'] as int;
+      final categoryCount = _readCount(categoryCountResult.first, 'count');
 
       final tagRelationCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM quote_tags',
       );
-      final tagRelationCount = tagRelationCountResult.first['count'] as int;
+      final tagRelationCount =
+          _readCount(tagRelationCountResult.first, 'count');
 
       // 4. 记录健康状态
       logDebug('''
@@ -706,12 +711,13 @@ class DatabaseHealthService {
       final categoryCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM categories',
       );
-      final categoryCount = categoryCountResult.first['count'] as int;
+      final categoryCount = _readCount(categoryCountResult.first, 'count');
 
       final tagRelationCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM quote_tags',
       );
-      final tagRelationCount = tagRelationCountResult.first['count'] as int;
+      final tagRelationCount =
+          _readCount(tagRelationCountResult.first, 'count');
 
       // 检查外键约束状态
       final foreignKeysResult = await db.rawQuery('PRAGMA foreign_keys');
