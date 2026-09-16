@@ -73,6 +73,15 @@ void main() {
       expect(find.text('1.1.0'), findsOneWidget);
       expect(find.text('忽略'), findsOneWidget);
       expect(find.text('立即更新'), findsOneWidget);
+
+      final badgeFinder = find.ancestor(
+        of: find.text('1.1.0'),
+        matching: find.byType(Container),
+      );
+      final container = tester.widget<Container>(badgeFinder.first);
+      final decoration = container.decoration as BoxDecoration;
+      final borderRadius = decoration.borderRadius as BorderRadius;
+      expect(borderRadius.topLeft.x, 12.0);
     });
 
     testWidgets('渲染已是最新版本的对话框', (WidgetTester tester) async {
@@ -102,6 +111,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(UpdateBottomSheet), findsOneWidget);
+
+      final badgeFinder = find.ancestor(
+        of: find.text('1.1.0'),
+        matching: find.byType(Container),
+      );
+      final container = tester.widget<Container>(badgeFinder.first);
+      final decoration = container.decoration as BoxDecoration;
+      final borderRadius = decoration.borderRadius as BorderRadius;
+      expect(borderRadius.topLeft.x, 4.0);
     });
   });
 }
