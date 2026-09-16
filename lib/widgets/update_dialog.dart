@@ -147,7 +147,9 @@ class UpdateBottomSheet extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: colorScheme.primary,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            AppShapeTokens.of(context).buttonRadius,
+                          ),
                         ),
                         child: Text(
                           versionInfo.latestVersion,
@@ -191,7 +193,7 @@ class UpdateBottomSheet extends StatelessWidget {
                   child: MarkdownBody(
                     data: versionInfo.releaseNotes,
                     selectable: true,
-                    styleSheet: _createUpdateMarkdownStyle(theme),
+                    styleSheet: _createUpdateMarkdownStyle(context),
                     onTapLink: (text, href, title) {
                       if (href != null) {
                         launchUrl(
@@ -393,9 +395,11 @@ class UpdateBottomSheet extends StatelessWidget {
   }
 
   /// 创建适合更新弹窗的Markdown样式表
-  MarkdownStyleSheet _createUpdateMarkdownStyle(ThemeData theme) {
+  MarkdownStyleSheet _createUpdateMarkdownStyle(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final baseColor = colorScheme.onSurface;
+    final shape = AppShapeTokens.of(context);
 
     return MarkdownStyleSheet(
       // 段落样式
@@ -444,7 +448,7 @@ class UpdateBottomSheet extends StatelessWidget {
       ),
       blockquoteDecoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(shape.inputRadius),
         border: Border(
           left: BorderSide(
             color: colorScheme.primary.withValues(alpha: 0.4),
@@ -468,7 +472,7 @@ class UpdateBottomSheet extends StatelessWidget {
       // 代码块样式
       codeblockDecoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(shape.inputRadius),
         border: Border.all(
           color: colorScheme.outline.withValues(alpha: 0.2),
           width: 1,
@@ -637,13 +641,9 @@ class UpdateBottomSheet extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).updateOpenStoreFailed(e.toString()),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
+        AppSnackBar.error(
+          context,
+          AppLocalizations.of(context).updateOpenStoreFailed(e.toString()),
         );
       }
     }
@@ -660,13 +660,9 @@ class UpdateBottomSheet extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).updateOpenLinkFailed(e.toString()),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
+        AppSnackBar.error(
+          context,
+          AppLocalizations.of(context).updateOpenLinkFailed(e.toString()),
         );
       }
     }
