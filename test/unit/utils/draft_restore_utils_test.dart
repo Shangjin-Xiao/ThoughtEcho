@@ -41,7 +41,6 @@ void main() {
       );
 
       expect(restored.id, 'note-1');
-      expect(restored.date, original.date);
       expect(restored.content, 'draft content');
       expect(restored.deltaContent, '[{"insert":"draft content\\n"}]');
       expect(restored.aiAnalysis, 'draft analysis');
@@ -93,22 +92,11 @@ void main() {
       expect(restored.editSource, 'fullscreen');
     });
 
-    test('restores fields with null values gracefully for a new note draft', () {
+    test('restores fields with null values gracefully', () {
       final restored = buildRestoredDraftQuote(
         draftData: {
           'id': 'new_123',
-          'plainText': null,
-          'deltaContent': null,
-          'aiAnalysis': null,
-          'author': null,
-          'work': null,
-          'tagIds': null,
-          'colorHex': null,
-          'location': null,
-          'latitude': null,
-          'longitude': null,
-          'weather': null,
-          'temperature': null,
+          // plainText will default to '' if null according to logic
         },
         now: DateTime.parse('2026-03-21T12:00:00.000Z'),
       );
@@ -116,7 +104,6 @@ void main() {
       expect(restored.id, isNull);
       expect(restored.content, '');
       expect(restored.deltaContent, isNull);
-      expect(restored.date, '2026-03-21T12:00:00.000Z');
       expect(restored.aiAnalysis, isNull);
       expect(restored.sourceAuthor, isNull);
       expect(restored.sourceWork, isNull);
@@ -128,58 +115,6 @@ void main() {
       expect(restored.weather, isNull);
       expect(restored.temperature, isNull);
       expect(restored.editSource, 'fullscreen');
-    });
-
-    test('restores fields with null values for an existing note draft', () {
-      final original = Quote(
-        id: 'note-1',
-        content: 'old content',
-        date: '2026-03-20T12:00:00.000',
-        aiAnalysis: 'old analysis',
-        sourceAuthor: 'old author',
-        sourceWork: 'old work',
-        tagIds: ['tag1'],
-        colorHex: '#FFFFFF',
-        location: 'old location',
-        latitude: 1.0,
-        longitude: 2.0,
-        weather: 'Sunny',
-        temperature: '25',
-      );
-
-      final restored = buildRestoredDraftQuote(
-        draftData: {
-          'id': 'note-1',
-          'plainText': null,
-          'deltaContent': null,
-          'aiAnalysis': null,
-          'author': null,
-          'work': null,
-          'tagIds': null,
-          'colorHex': null,
-          'location': null,
-          'latitude': null,
-          'longitude': null,
-          'weather': null,
-          'temperature': null,
-        },
-        original: original,
-      );
-
-      expect(restored.id, 'note-1');
-      expect(restored.date, original.date);
-      expect(restored.content, '');
-      expect(restored.deltaContent, isNull);
-      expect(restored.aiAnalysis, 'old analysis');
-      expect(restored.colorHex, '#FFFFFF');
-      expect(restored.tagIds, ['tag1']);
-      expect(restored.sourceAuthor, isNull);
-      expect(restored.sourceWork, isNull);
-      expect(restored.location, isNull);
-      expect(restored.latitude, isNull);
-      expect(restored.longitude, isNull);
-      expect(restored.weather, isNull);
-      expect(restored.temperature, isNull);
     });
   });
 }

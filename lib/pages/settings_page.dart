@@ -1465,27 +1465,27 @@ class SettingsPageState extends State<SettingsPage> {
                         value: 'zh',
                       ),
                       RadioListTile<String?>(
-                        title: Text(l10n.languageEnglish),
+                        title: const Text('English'),
                         value: 'en',
                       ),
                       RadioListTile<String?>(
-                        title: Text(l10n.languageJapanese),
+                        title: const Text('日本語'),
                         value: 'ja',
                       ),
                       RadioListTile<String?>(
-                        title: Text(l10n.languageKorean),
+                        title: const Text('한국어'),
                         value: 'ko',
                       ),
                       RadioListTile<String?>(
-                        title: Text(l10n.languageSpanish),
+                        title: const Text('Español'),
                         value: 'es',
                       ),
                       RadioListTile<String?>(
-                        title: Text(l10n.languageFrench),
+                        title: const Text('Français'),
                         value: 'fr',
                       ),
                       RadioListTile<String?>(
-                        title: Text(l10n.languageGerman),
+                        title: const Text('Deutsch'),
                         value: 'de',
                       ),
                     ],

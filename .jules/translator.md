@@ -58,7 +58,3 @@
 ## 2024-05-18 - [WebDAV 云同步状态]
 **发现:** '从未同步', '已启用', '(上次：$timeStr)' 等硬编码字符串。
 **规则:** 复用了已存在的 `webdavNeverSynced`, `webdavStatusEnabled`, `webdavLastSync` 等国际化键，确保多语言支持。
-
-## 2024-09-14 - [统一语言设置词条]
-**发现:** `lib/pages/settings_page.dart` 中在渲染语言选项时，使用了诸如 `const Text('English')`、`const Text('日本語')` 等硬编码字符串。虽然它们本身就是各国语言的原生写法，但 `AppLocalizations` 中其实已经定义好了相对应的国际化键值（如 `l10n.languageEnglish`、`l10n.languageJapanese`），且同一文件的 `getLanguageName` 方法已经在使用这些国际化变量。
-**规则:** 对于语言名称，即便它们的硬编码是语言原生的表现形式，也应使用已存在的国际化变量统一维护（如 `l10n.languageJapanese`），避免同一视图层混合使用硬编码和本地化变量，确保翻译源的一致性和可维护性。
