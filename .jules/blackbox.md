@@ -1,62 +1,84 @@
 ## YYYY-MM-DD - [标题]
+
 **异常:** [发现了何种隐蔽的错误抛出]
 **拦截:** [确立的该类错误的日志规范]
+
 ## 2025-05-18 - 🗃️ 黑匣: [完善 ApiKeyManager 模块的结构化日志]
+
 **异常:** [APIKeyManager 中获取和验证 API 密钥失败时，仅使用了 logDebug 进行了粗糙的打印，丢失了关键的错误堆栈信息 (stackTrace) 以及错误来源模块 (source) 等上下文，不利于排查安全存储获取失败的根因。]
 **拦截:** [已将 getProviderApiKey 和 hasValidProviderApiKey 方法中的错误捕获升级为结构化的 AppLogger.e 调用，注入了明确的错误对象、堆栈轨迹以及模块标识 'APIKeyManager'。同时确认了日志内容未包含任何用户密钥等敏感隐私数据，仅记录了 providerId。]
+
 ## 2025-05-18 - 🗃️ 黑匣: [完善 smart_push_analytics 模块的结构化日志]
+
 **异常:** [SmartPushAnalytics 模块在解析应用打开记录、分析内容得分、处理通知指标、计算冷却时间与疲劳预算时，遇到解析失败或取值异常等隐蔽错误仅使用 `catch (e)` 进行了返回默认值或粗糙的 `debugPrint`，丢失了错误来源、异常堆栈等关键上下文。这可能导致推送策略效果恶化而无法被排查。]
 **拦截:** [已将上述流程中的 `catch (e)` 替换为结构化的 `AppLogger.e`，注入了具体的报错信息、`error` 对象、`stackTrace` 以及 `source: 'SmartPushAnalytics'` 的模块标识。确认所有记录皆针对解析配置和统计信息失败，不包含任何推送正文或用户隐私等敏感数据。]
 
 ## 2025-10-24 - 🗃️ 黑匣: [完善 NetworkService 模块的结构化日志]
+
 **异常:** [NetworkService 模块在处理普通AI请求、流式AI请求以及解析流式响应JSON遇到异常时，仅使用了 logDebug 进行了粗糙的打印，丢失了错误堆栈信息以及明确的模块来源信息，不利于后续快速定位AI请求或者响应解析阶段发生的深层错误。]
 **拦截:** [已将上述处理环节中的 `catch (e)` 替换为结构化的 `AppLogger.e`，注入了对应的文字描述、具体的异常对象 `error: e`，以及指定了明确的日志来源模块 `source: 'NetworkService'`。确认了记录的内容皆为报错或解析异常，没有包含用户的敏感数据（如API Key、具体的聊天记录等）。]
 
 ## 2025-10-24 - 🗃️ 黑匣: [完善 NoteSyncPage 模块的结构化日志]
+
 **异常:** [NoteSyncPage 模块在初始化同步服务、设备发现、发送笔记以及异常停止等环节遇到错误时，仅使用了 `debugPrint` 进行了粗糙的打印。这不仅丢失了关键的异常堆栈信息，还缺少统一的日志来源（source）标记，使得排查同步相关故障时难以追溯上下文。]
 **拦截:** [已将上述流程中的 `debugPrint('...失败: $e')` 替换为结构化的 `AppLogger.e`，注入了对应的报错描述、具体的异常对象 `error: e`、堆栈轨迹 `stackTrace: stack`，以及指定了明确的日志来源模块 `source: 'NoteSyncPage'`。确认所有的错误记录仅涉及连接、通信与网络相关的异常对象自身，未包含任何同步的笔记内容文本、用户凭据等敏感隐私数据。]
 
 ## 2024-05-31 - [完善 NetworkService 模块的结构化日志]
+
 **异常:** NetworkService 的 GET 和 POST 方法在遇到 DioException 时，只返回了携带简短 error 信息的 HttpResponse，没有使用统一的 AppLogger 进行上报；AI 流式请求和重试拦截器中的错误捕获存在空捕获或缺失堆栈信息的情况，会导致线上排查困难且掩盖了重试中途的隐蔽错误。
 **拦截:** 修改所有拦截点，强制使用 `catch (e, stack)` 进行捕获，并使用 `AppLogger.e('...', error: e, stackTrace: stack, source: 'NetworkService')` 上报。所有日志中均仅记录 url、状态码和异常对象，绝不包含用户授权凭证、请求体或响应体内容。
 
 ## 2025-05-18 - 🗃️ 黑匣: [完善 mDNSDiscoveryService 模块的结构化日志]
+
 **异常:** [mDNSDiscoveryService 模块在启动服务和扫描时如果报错，缺少详细的堆栈信息和统一的 logError 格式。特别是 `_scanForService` 使用了 `debugPrint` 掩盖了潜在隐患。]
 **拦截:** [修改了该文件，在 catch 中统一添加 `stack` 捕获，并使用带有 error 和 stackTrace 参数的 `logError`，便于定位底层网络异常情况。]
 
 ## 2025-10-24 - 🗃️ 黑匣: [完善 InsightHistoryService 模块的结构化日志]
+
 **异常:** [InsightHistoryService 模块在解析和存储周期洞察（AI分析报告）历史时，如果遇到 JSON 解析错误或其他隐蔽异常，当前仅使用 catch (e) 进行了粗糙拦截，并依赖 debugPrint 输出，这会导致丢失关键的错误堆栈信息，且缺乏统一的模块标识。]
 **拦截:** [已将该模块中的异常捕获统一升级为 catch (e, stack)，并使用 AppLogger.e('...', error: e, stackTrace: stack, source: 'InsightHistoryService')。同时规范了 getInsightBySignature 中的控制流，避免使用 try...catch 进行预期内的查找。]
 
 ## 2025-05-18 - 🗃️ 黑匣: [完善 WebDAVSyncPage 模块的结构化日志]
+
 **异常:** [WebDAVSyncPage 模块在 `_checkConflictNotes` 检查冲突笔记时，遇到数据库查询错误仅使用了 `catch (_) {}` 进行了空捕获。这会隐藏潜在的数据库或表结构问题，导致用户无法发现并处理同步冲突。]
 **拦截:** [已将该空捕获替换为 `AppLogger.e`，注入了描述信息、具体的错误对象 `error: e`、堆栈轨迹 `stackTrace: stackTrace`，并指定了明确的日志来源模块 `source: 'WebDAVSyncPage'`。确认记录内容不包含任何笔记实体数据。]
 
 ## 2025-10-24 - 🗃️ 黑匣: [完善 DatabaseService 模块的结构化日志]
+
 **异常:** [DatabaseService 模块在数据库初始化失败、初始化新数据库失败、预加载笔记失败和数据库恢复失败时，仅使用了 logDebug 进行了粗糙的打印，丢失了关键的错误堆栈信息以及明确的模块来源信息，这使得排查数据库连接和读写故障十分困难。]
 **拦截:** [已将上述环节中的 catch (e) 替换为 catch (e, stackTrace)，并将 logDebug 替换为结构化的 AppLogger.e，注入了对应的报错描述、具体的异常对象 error: e、堆栈轨迹 stackTrace: stackTrace，并指定了来源模块 source: 'DatabaseService'。确认修改不超过 50 行，且未记录用户的任何隐私数据。]
 
 ## 2025-05-18 - 🗃️ 黑匣: [完善 MediaCleanupService 模块的结构化日志]
+
 **异常:** [MediaCleanupService 模块在初始化、清理、迁移和统计媒体文件等任务发生错误时，仅使用了 `logDebug` 进行粗糙的字符串拼接打印。这不仅掩盖了底层 `FileSystemException` 或 `StateError` 等导致错误的真实原因，还丢失了完整的异常堆栈轨迹 (stackTrace)，导致排查本地文件系统的读写异常极其困难。]
 **拦截:** [已将上述所有流程中的 `catch (e)` 替换为结构化的 `catch (e, stackTrace)`，并使用 `AppLogger.e` 进行记录。注入了描述信息、具体的错误对象 `error: e`、堆栈轨迹 `stackTrace: stackTrace`，并指定了明确的日志来源模块 `source: 'MediaCleanupService'`。确认所有的错误记录仅涉及本地存储系统与数据库交互时的 IO/状态异常，未记录任何用户笔记的正文或凭证数据。]
+
 ## 2025-10-25 - 🗃️ 黑匣: [完善 FeatureGuideService 模块的结构化日志]
+
 **异常:** [MMKV读取/写入抛出异常且只使用了粗糙的debugPrint记录，丢失了错误栈与模块上下文]
 **拦截:** [使用 catch (e, stackTrace) 和 logError 封装 MMKV 异常，附带 error, stackTrace 和 source: 'FeatureGuideService' 参数，保存完整的堆栈上下文信息。]
 
 ## 2025-10-25 - 🗃️ 黑匣: [完善 UI 及主题模块的结构化日志]
+
 **异常:** [HomePage 在恢复草稿和加载标签时、AppTheme 在加载各项持久化配置时、以及 ThoughterUI 在请求天气时遇到异常，仅使用了 catch (e) 进行了空捕获或粗糙的 logDebug，丢失了错误堆栈信息以及模块来源标识，使得排查相关功能失效的根因变得困难。]
 **拦截:** [已将上述流程中的 catch (e) 替换为 catch (e, stack)，并使用结构化的 AppLogger.e/logError 进行记录。注入了对应的描述信息、具体的错误对象 error: e、堆栈轨迹 stackTrace: stack，并指定了明确的日志来源模块 source (如 'HomePage', 'AppTheme', 'ThoughterUI')。确认不包含任何隐私数据。]
 
 ## 2025-10-25 - 🗃️ 黑匣: [完善 ThoughtEchoDiscoveryService 模块的结构化日志]
+
 **异常:** [ThoughtEchoDiscoveryService 模块在启动服务、绑定UDP组播套接字、发送公告、解析组播消息等多个环节发生错误时，仅使用了 `debugPrint` 或者缺少统一标准地使用了不带完整参数的 `logError` / `logDebug` 进行异常捕获和打印。这不仅隐藏了关键错误堆栈信息 (stackTrace)，还使得跨端协同中设备发现相关的网络异常溯源变得困难。]
 **拦截:** [已将上述所有流程中的相关 `catch (e)` 升级为 `catch (e, stack)`，并统一替换为带有 `error: e`, `stackTrace: stack`, `source: 'ThoughtEchoDiscoveryService'` 参数的 `logError` (部分预期内的底层网络报错使用了 `logWarning`)。确认新的 logError 调用不会有意记录明文形式的用户交互数据。]
+
 ## 2024-05-24 - [完善 AddNoteController 中的结构化日志]
+
 **异常:** [在 `lib/controllers/add_note_controller.dart` 中，发现了多处使用 `catch (e)` 的空捕获或粗糙的 `logDebug('xxx失败: $e')` 打印，这些异常捕获不仅吞噬了关键的异常堆栈（StackTrace），并且严重依赖字符串拼接，未能利用已有的结构化日志系统，使得定位位置获取、天气抓取及标签创建等关键业务失败原因变得困难。]
 **拦截:** [将 `catch (e)` 改写为 `catch (e, stackTrace)`，并引入全局的 `logError`，传入 error、stackTrace，并指明 source: 'AddNoteController'，将原有的粗糙拼接替换为带有上下文的规范日志上报。]
+
 ## 2026-09-02 - [完善 ApiService 远程请求异常日志]
+
 **异常:** `api_service_daily_quote_remote.dart` 中针对各种第三方 API（Hitokoto、ZenQuotes、API Ninjas 等）返回数据进行 `json.decode` 时的 `catch (e)` 块直接吞掉了报错堆栈，并且仅使用 `logDebug` 进行极其粗糙的记录，难以排查具体解析失败的原因。
 **拦截:** 修改所有第三方一言 API 请求方法的 `json.decode` 异常捕获块，使用 `catch (e, stackTrace)` 完整捕获异常及堆栈，并调用 `logError` 带上 `stackTrace` 和 `source: 'ApiService'` 参数上报结构化日志，确保发生响应结构变更或解析错误时留下完整的堆栈线索。
 
 ## 2025-10-25 - 🗃️ 黑匣: [完善 LocalSend 接收模块的结构化日志]
+
 **异常:** [ReceiveController 在处理 LocalSend 文件接收过程中，针对指纹初始化失败、创建会话回调失败、请求解析异常以及临时文件清理异常等环节，仅使用了 catch (e) 进行空捕获或通过 logDebug/logWarning 进行了粗糙打印。这导致关键的错误堆栈信息 (stackTrace) 丢失，严重阻碍了排查设备发现失败和文件接收异常的根因。]
 **拦截:** [已将上述流程中的 catch (e) 升级为 catch (e, stack)，并统一使用结构化的 logError 进行记录。日志中附带了对应的报错描述、具体的异常对象 error: e、堆栈轨迹 stackTrace: stack，并指定了明确的模块来源 source: 'LocalSend'。确认所有记录仅包含连接状态及系统抛出的异常信息，未记录任何用户传输的具体文件内容或敏感隐私数据。]
