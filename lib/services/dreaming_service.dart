@@ -577,7 +577,37 @@ class DreamingService {
     final authorStats =
         <String, ({int count, int selfMarkerCount, int externalWorkCount})>{};
 
-    // 个人类别词表以 Quote.hasPersonalWorkSuffix 为唯一来源，此处不另存一份。
+    const personalWorkSuffixes = <String>[
+      '日记',
+      '随笔',
+      '手记',
+      '札记',
+      '笔记',
+      '杂记',
+      '杂感',
+      '随感',
+      '自述',
+      '自语',
+      '心迹',
+      '备忘',
+      '碎碎念',
+      '清单',
+      '复盘',
+      '手账',
+      '行记',
+      '游记',
+      '食记',
+      '采风录',
+      '日常',
+      '手稿',
+      '手绘',
+      '备忘录',
+      '打卡',
+      'diary',
+      'journal',
+      'notes',
+      'memo',
+    ];
 
     for (final quote in quotes) {
       final author = quote.sourceAuthor?.trim();
@@ -612,24 +642,17 @@ class DreamingService {
             caseSensitive: false,
           ).hasMatch(trimmedContent);
 
-      final hasLetterSalutation = cleanAuthor.runes.length > 1 &&
-          RegExp(
-            r'^致(?!谢|敬)[^\n:：]{0,20}?' + RegExp.escape(cleanAuthor) + r'[：:]',
-          ).hasMatch(trimmedContent);
-
       final hasSignatureInContent = !isExcerptCitation &&
-          ((content.toLowerCase().contains(lowerAuthor) &&
-                  (content.contains('写于') ||
-                      content.contains('录于') ||
-                      content.contains('摄于') ||
-                      content.contains('记于') ||
-                      content.contains('作于') ||
-                      content.contains('整理于') ||
-                      content.contains('——') ||
-                      content.contains('—'))) ||
-              hasLetterSalutation);
-      // 注：书信体签名采用定向精准匹配（「致<作者>」「致……<作者>：」），
-      // 既覆盖「致五年后的阿澈：」等书信体自签，又排除「致谢/导致/所致」等伪匹配。
+          content.toLowerCase().contains(lowerAuthor) &&
+          (content.contains('写于') ||
+              content.contains('录于') ||
+              content.contains('摄于') ||
+              content.contains('记于') ||
+              content.contains('作于') ||
+              content.contains('整理于') ||
+              content.contains('致') ||
+              content.contains('——') ||
+              content.contains('—'));
 
       final hasPersonalArtifacts =
           quote.hasPersonalDeviceOrRichTextMarkers || content.contains('[图片:');
@@ -646,13 +669,10 @@ class DreamingService {
         if (Quote.isBuiltinPersonalWork(cleanWork,
             defaultSource: defaultSource)) {
           isPersonalWork = true;
-        } else if (lowerWork.contains(lowerAuthor) &&
-            (hasSignatureInContent || hasPersonalArtifacts)) {
-          // 作品名直接包含作者自身名称（如「阿澈随笔」「林晚田野笔记」），
-          // 但必须再有签名落款或个人附件作第二证据——否则「鲁迅随笔」这类
-          // 外部出版物也会把原作者推成用户别名。
+        } else if (lowerWork.contains(lowerAuthor)) {
+          // 作品名直接包含作者自身名称（如「阿澈随笔」「林晚田野笔记」）
           isPersonalWork = true;
-        } else if (Quote.hasPersonalWorkSuffix(cleanWork) &&
+        } else if (personalWorkSuffixes.any(lowerWork.endsWith) &&
             (hasSignatureInContent || hasPersonalArtifacts)) {
           // 作品名以个人记录分类为后缀，且正文包含作者签名或富文本附件证据（如「西湖日记」「田野手记」）
           isPersonalWork = true;

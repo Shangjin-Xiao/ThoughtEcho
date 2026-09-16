@@ -75,9 +75,6 @@ class _TestLocationService extends ChangeNotifier implements LocationService {
       );
 
   @override
-  String? get currentPoiName => null;
-
-  @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

@@ -6,12 +6,10 @@ class LocationSnapshot {
   const LocationSnapshot({
     required this.position,
     required this.location,
-    this.poiName,
   });
 
   final Position position;
   final String location;
-  final String? poiName;
 }
 
 class LocationWeatherHelper {
@@ -35,12 +33,9 @@ class LocationWeatherHelper {
       return null;
     }
 
-    final poiName = locationService.currentPoiName;
-
     return LocationSnapshot(
       position: position,
       location: locationService.getFormattedLocation(),
-      poiName: poiName,
     );
   }
 }

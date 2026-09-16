@@ -48,18 +48,6 @@ abstract class PlaceSearchService {
     required String query,
     String? localeCode,
     int limit = 20,
-    int offset = 0,
-  });
-
-  /// 获取坐标周围的候选地点列表（无需用户输入关键词），支持分页与无限加载。
-  /// 搜索半径严格限制在 5 公里内（±0.045°）。
-  Future<List<PlaceInfo>> getNearbyPlaces(
-    double latitude,
-    double longitude, {
-    String? categoryOrKeyword,
-    String? localeCode,
-    int limit = 20,
-    int offset = 0,
   });
 }
 
@@ -83,8 +71,10 @@ class NominatimPlaceSearchService implements PlaceSearchService {
     milliseconds: 1100,
   );
 
-  /// 搜索框限定在参考点周围这么多度的方框内，严格限制在 5 公里内（约 ±0.045°）。
-  static const double _viewboxDelta = 0.045;
+  /// 搜索框限定在参考点周围这么多度的方框内，约 ±11 公里。
+  ///
+  /// 不限定的话「星巴克」会搜出全球结果，前几条大概率不在用户所在的城市。
+  static const double _viewboxDelta = 0.1;
 
   final NetworkService? _networkService;
 
@@ -103,8 +93,6 @@ class NominatimPlaceSearchService implements PlaceSearchService {
 
   NetworkService get _network => _networkService ?? NetworkService.instance;
 
-  final Set<String> _seenPlaceIds = <String>{};
-
   @override
   Future<List<PlaceInfo>> searchNearby(
     double latitude,
@@ -112,7 +100,6 @@ class NominatimPlaceSearchService implements PlaceSearchService {
     required String query,
     String? localeCode,
     int limit = 20,
-    int offset = 0,
   }) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return const [];
@@ -120,23 +107,18 @@ class NominatimPlaceSearchService implements PlaceSearchService {
     try {
       await _throttle();
 
-      final queryParams = <String, String>{
-        'q': trimmed,
-        'format': 'json',
-        'addressdetails': '1',
-        'limit': '$limit',
-        'viewbox': '${longitude - _viewboxDelta},'
-            '${latitude + _viewboxDelta},'
-            '${longitude + _viewboxDelta},'
-            '${latitude - _viewboxDelta}',
-        'bounded': '1',
-      };
-      if (offset > 0) {
-        queryParams['offset'] = '$offset';
-      }
-
       final uri = Uri.parse(_searchUrl).replace(
-        queryParameters: queryParams,
+        queryParameters: <String, String>{
+          'q': trimmed,
+          'format': 'json',
+          'addressdetails': '1',
+          'limit': '$limit',
+          'viewbox': '${longitude - _viewboxDelta},'
+              '${latitude + _viewboxDelta},'
+              '${longitude + _viewboxDelta},'
+              '${latitude - _viewboxDelta}',
+          'bounded': '1',
+        },
       );
 
       final response = await _network.get(
@@ -182,100 +164,6 @@ class NominatimPlaceSearchService implements PlaceSearchService {
         source: 'PlaceSearchService',
       );
       return const [];
-    }
-  }
-
-  @override
-  Future<List<PlaceInfo>> getNearbyPlaces(
-    double latitude,
-    double longitude, {
-    String? categoryOrKeyword,
-    String? localeCode,
-    int limit = 20,
-    int offset = 0,
-  }) async {
-    try {
-      await _throttle();
-
-      if (offset == 0) {
-        _seenPlaceIds.clear();
-      }
-
-      final queryParams = <String, String>{
-        'format': 'json',
-        'addressdetails': '1',
-        'limit': '$limit',
-        'viewbox': '${longitude - _viewboxDelta},'
-            '${latitude + _viewboxDelta},'
-            '${longitude + _viewboxDelta},'
-            '${latitude - _viewboxDelta}',
-        'bounded': '1',
-      };
-      if (offset > 0) {
-        queryParams['offset'] = '$offset';
-      }
-      if (_seenPlaceIds.isNotEmpty) {
-        queryParams['exclude_place_ids'] = _seenPlaceIds.join(',');
-      }
-
-      final trimmed = categoryOrKeyword?.trim() ?? '';
-      if (trimmed.isNotEmpty) {
-        queryParams['q'] = trimmed;
-      } else {
-        queryParams['amenity'] = 'restaurant';
-      }
-
-      final uri = Uri.parse(_searchUrl).replace(
-        queryParameters: queryParams,
-      );
-
-      final response = await _network.get(
-        uri.toString(),
-        headers: {
-          'Accept-Language': I18nLanguage.buildAcceptLanguage(
-            I18nLanguage.appLanguageOrSystem(localeCode),
-          ),
-          'User-Agent': _userAgent,
-        },
-        timeoutSeconds: 10,
-      );
-
-      if (response.statusCode != 200) {
-        logWarning(
-          'Nominatim 附近候选地点搜索返回 ${response.statusCode}',
-          source: 'PlaceSearchService',
-        );
-        throw Exception('Nominatim 附近候选地点搜索失败 (HTTP ${response.statusCode})');
-      }
-
-      final decoded = json.decode(response.body);
-      if (decoded is! List) return const [];
-
-      final places = <PlaceInfo>[];
-      for (final item in decoded) {
-        if (item is! Map) continue;
-        final placeId = item['place_id']?.toString();
-        if (placeId != null && placeId.isNotEmpty) {
-          _seenPlaceIds.add(placeId);
-        }
-        final place = _toPlace(item, latitude, longitude);
-        if (place != null && (place.distanceMeters ?? 0) <= 5000) {
-          places.add(place);
-        }
-      }
-
-      places.sort(
-        (a, b) => (a.distanceMeters ?? double.infinity).compareTo(
-          b.distanceMeters ?? double.infinity,
-        ),
-      );
-      return places;
-    } catch (e) {
-      logWarning(
-        '附近候选地点搜索失败: $e',
-        source: 'PlaceSearchService',
-      );
-      rethrow;
     }
   }
 

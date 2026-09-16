@@ -27,7 +27,6 @@ class AddNoteController extends ChangeNotifier {
   String? originalLocation;
   double? originalLatitude;
   double? originalLongitude;
-  String? originalPoiName;
   String? originalWeather;
   String? originalTemperature;
 
@@ -35,7 +34,6 @@ class AddNoteController extends ChangeNotifier {
   String? newLocation;
   double? newLatitude;
   double? newLongitude;
-  String? newPoiName;
 
   // 位置/天气后台获取中状态（自动附加偏好触发）
   bool isFetchingLocation = false;
@@ -56,12 +54,8 @@ class AddNoteController extends ChangeNotifier {
     notifyListeners();
   }
 
-  int _locationFetchEpoch = 0;
-  int _weatherFetchEpoch = 0;
-
-  /// 预约的位置抓取不会发生了（服务缺失、用户移除、已手动选点），放掉标志并作废在途抓取。
+  /// 预约的位置抓取不会发生了（服务缺失、用户移除），放掉标志。
   void clearPendingLocationFetch() {
-    _locationFetchEpoch++;
     if (!isFetchingLocation) return;
     isFetchingLocation = false;
     notifyListeners();
@@ -70,7 +64,6 @@ class AddNoteController extends ChangeNotifier {
   /// 预约的天气抓取不会发生了（服务缺失、没有坐标、用户移除），放掉标志，
   /// 否则保存会一直转到超时。
   void clearPendingWeatherFetch() {
-    _weatherFetchEpoch++;
     if (!isFetchingWeather) return;
     isFetchingWeather = false;
     notifyListeners();
@@ -185,7 +178,6 @@ class AddNoteController extends ChangeNotifier {
           LocationService.isNonDisplayMarker(rawLoc) ? null : rawLoc;
       originalLatitude = initialQuote!.latitude;
       originalLongitude = initialQuote!.longitude;
-      originalPoiName = initialQuote!.poiName;
       originalWeather = initialQuote!.weather;
       originalTemperature = initialQuote!.temperature;
 
@@ -218,18 +210,15 @@ class AddNoteController extends ChangeNotifier {
     newLocation = null;
     newLatitude = null;
     newLongitude = null;
-    newPoiName = null;
   }
 
   void _clearOriginalLocation() {
     originalLocation = null;
     originalLatitude = null;
     originalLongitude = null;
-    originalPoiName = null;
   }
 
   void removeNewLocation() {
-    _locationFetchEpoch++;
     includeLocation = false;
     _clearNewLocation();
     // 用户主动移除，在途/预约的抓取就没有意义了，别让保存继续等它。
@@ -239,7 +228,6 @@ class AddNoteController extends ChangeNotifier {
 
   /// 新建笔记时用户主动移除天气。
   void removeNewWeather() {
-    _weatherFetchEpoch++;
     includeWeather = false;
     isFetchingWeather = false;
     notifyListeners();
@@ -257,7 +245,6 @@ class AddNoteController extends ChangeNotifier {
         LocationService.isNonDisplayMarker(rawLoc) ? null : rawLoc;
     originalLatitude = quote.latitude;
     originalLongitude = quote.longitude;
-    originalPoiName = quote.poiName;
     originalWeather = quote.weather;
     originalTemperature = quote.temperature;
 
@@ -268,7 +255,6 @@ class AddNoteController extends ChangeNotifier {
   }
 
   void setIncludeLocation(bool value) {
-    _locationFetchEpoch++;
     includeLocation = value;
     if (!value) {
       _clearNewLocation();
@@ -277,42 +263,27 @@ class AddNoteController extends ChangeNotifier {
   }
 
   void setIncludeWeather(bool value) {
-    _weatherFetchEpoch++;
     includeWeather = value;
     notifyListeners();
   }
 
-  void setNewLocationData(
-    String? location,
-    double? lat,
-    double? lon, {
-    String? poiName,
-  }) {
-    _locationFetchEpoch++;
+  void setNewLocationData(String? location, double? lat, double? lon) {
     newLocation = location;
     newLatitude = lat;
     newLongitude = lon;
-    newPoiName = poiName;
     notifyListeners();
   }
 
-  void setOriginalLocationData(
-    String? location,
-    double? lat,
-    double? lon, {
-    String? poiName,
-  }) {
+  void setOriginalLocationData(String? location, double? lat, double? lon) {
     originalLocation = location;
     originalLatitude = lat;
     originalLongitude = lon;
-    originalPoiName = poiName;
     notifyListeners();
   }
 
   /// 获取新建笔记的实时位置
   Future<void> fetchLocationForNewNote() async {
     final locService = locationService;
-    final epoch = ++_locationFetchEpoch;
     if (locService == null) {
       // 服务拿不到就抓不了，按失败处理：既放掉标志（保存正等着它），
       // 也取消这次附加，别让笔记带着「已附加位置」的勾却什么都没有。
@@ -329,7 +300,7 @@ class AddNoteController extends ChangeNotifier {
     // 检查并请求权限
     final hasPermission =
         await LocationWeatherHelper.ensureLocationPermission(locService);
-    if (_isDisposed || epoch != _locationFetchEpoch) return;
+    if (_isDisposed) return;
     if (!hasPermission) {
       includeLocation = false;
       _clearNewLocation();
@@ -341,12 +312,11 @@ class AddNoteController extends ChangeNotifier {
 
     try {
       final snapshot = await LocationWeatherHelper.fetchLocation(locService);
-      if (_isDisposed || epoch != _locationFetchEpoch) return;
+      if (_isDisposed) return;
       if (snapshot != null) {
         newLatitude = snapshot.position.latitude;
         newLongitude = snapshot.position.longitude;
         newLocation = snapshot.location.isNotEmpty ? snapshot.location : null;
-        newPoiName = snapshot.poiName;
         isFetchingLocation = false;
         notifyListeners();
         onLocationFetched?.call();
@@ -358,7 +328,6 @@ class AddNoteController extends ChangeNotifier {
         onLocationFetchEmpty?.call();
       }
     } catch (e, stackTrace) {
-      if (_isDisposed || epoch != _locationFetchEpoch) return;
       // 定位/天气在正常使用中本来就会失败：没给权限、离线、超时。这一档记成
       // error 会把日志页刷满预期内的失败，真正的异常反而被淹掉——所以降 warning，
       // 也不需要调用栈：要看的是「为什么没拿到」，不是栈。
@@ -382,6 +351,7 @@ class AddNoteController extends ChangeNotifier {
           source: 'AddNoteController',
         );
       }
+      if (_isDisposed) return;
       includeLocation = false;
       _clearNewLocation();
       isFetchingLocation = false;
@@ -394,7 +364,6 @@ class AddNoteController extends ChangeNotifier {
   Future<void> fetchWeatherForNewNote() async {
     final weaService = weatherService;
     final locService = locationService;
-    final epoch = ++_weatherFetchEpoch;
     if (weaService == null) {
       // 同上：抓不了就别让 WeatherService 的旧数据在保存时冒充这条笔记的天气。
       includeWeather = false;
@@ -416,7 +385,6 @@ class AddNoteController extends ChangeNotifier {
       }
 
       if (lat == null || lon == null) {
-        if (_isDisposed || epoch != _weatherFetchEpoch) return;
         includeWeather = false;
         isFetchingWeather = false;
         notifyListeners();
@@ -425,7 +393,7 @@ class AddNoteController extends ChangeNotifier {
       }
 
       await weaService.getWeatherData(lat, lon);
-      if (_isDisposed || epoch != _weatherFetchEpoch) return;
+      if (_isDisposed) return;
 
       if (!weaService.hasData) {
         includeWeather = false;
@@ -438,7 +406,6 @@ class AddNoteController extends ChangeNotifier {
       isFetchingWeather = false;
       notifyListeners();
     } catch (e, stackTrace) {
-      if (_isDisposed || epoch != _weatherFetchEpoch) return;
       // 定位/天气在正常使用中本来就会失败：没给权限、离线、超时。这一档记成
       // error 会把日志页刷满预期内的失败，真正的异常反而被淹掉——所以降 warning，
       // 也不需要调用栈：要看的是「为什么没拿到」，不是栈。
@@ -462,6 +429,7 @@ class AddNoteController extends ChangeNotifier {
           source: 'AddNoteController',
         );
       }
+      if (_isDisposed) return;
       includeWeather = false;
       isFetchingWeather = false;
       notifyListeners();

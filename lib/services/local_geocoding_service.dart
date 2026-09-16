@@ -139,26 +139,6 @@ class LocalGeocodingService {
           final placeSubAdminArea = place.subAdministrativeArea?.trim();
           final placeSubLocality = place.subLocality?.trim();
           final placeThoroughfare = place.thoroughfare?.trim();
-          final placeName = place.name?.trim();
-
-          // 提取真实 POI/地标与街道名称：
-          // 优先 place.name（地标/POI 如 "灵隐寺"、"西湖"），若为空或与上级行政区完全重复，
-          // 则使用 place.thoroughfare（街道如 "科苑南路"）。
-          String? poiName;
-          if (placeName != null &&
-              placeName.isNotEmpty &&
-              placeName != placeLocality &&
-              placeName != placeSubLocality &&
-              placeName != placeProvince &&
-              placeName != placeCountry) {
-            poiName = placeName;
-          } else if (placeThoroughfare != null &&
-              placeThoroughfare.isNotEmpty &&
-              placeThoroughfare != placeLocality &&
-              placeThoroughfare != placeSubLocality) {
-            poiName = placeThoroughfare;
-          }
-
           final addressInfo = <String, String?>{
             'country': (placeCountry != null && placeCountry.isNotEmpty)
                 ? placeCountry
@@ -179,7 +159,6 @@ class LocalGeocodingService {
                 (placeThoroughfare != null && placeThoroughfare.isNotEmpty)
                     ? placeThoroughfare
                     : null,
-            'poi_name': poiName,
             'formatted_address': _formatAddress(place),
             'source': 'system', // 标记数据来源
           };
@@ -267,7 +246,6 @@ class LocalGeocodingService {
                   'city': addressData['city'] as String?,
                   'district': addressData['district'] as String?,
                   'street': addressData['street'] as String?,
-                  'poi_name': addressData['poi_name'] as String?,
                   'formatted_address':
                       addressData['formatted_address'] as String?,
                   'source': addressData['source'] as String?,
