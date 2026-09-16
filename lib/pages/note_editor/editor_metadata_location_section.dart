@@ -56,10 +56,22 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                       child: Stack(
                         children: [
                           Tooltip(
-                            message: l10n.longPressForMapPicker,
+                            message: widget.initialQuote?.id != null
+                                ? l10n.recordedOnFirstSave
+                                : l10n.longPressForNearbyPicker,
                             child: GestureDetector(
-                              onLongPress: () =>
-                                  _openMapLocationPicker(setDialogState),
+                              onLongPress: () {
+                                if (widget.initialQuote?.id != null) {
+                                  if (context.mounted) {
+                                    AppSnackBar.info(
+                                      context,
+                                      l10n.editModeMetadataReadOnlyHint,
+                                    );
+                                  }
+                                  return;
+                                }
+                                _openNearbyLocationPicker(setDialogState);
+                              },
                               child: FilterChip(
                                 key:
                                     const ValueKey('full_editor_location_chip'),
@@ -78,13 +90,9 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                   // 编辑模式下统一提示只读
                                   if (widget.initialQuote?.id != null) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(l10n
-                                              .editModeMetadataReadOnlyHint),
-                                          duration: const Duration(seconds: 2),
-                                        ),
+                                      AppSnackBar.info(
+                                        context,
+                                        l10n.editModeMetadataReadOnlyHint,
                                       );
                                     }
                                     return;

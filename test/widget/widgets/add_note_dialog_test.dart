@@ -86,6 +86,9 @@ class _SlowLocationService extends ChangeNotifier implements LocationService {
   Position? get currentPosition => _position;
 
   @override
+  String? get currentPoiName => null;
+
+  @override
   Future<Position?> getCurrentLocation({
     bool highAccuracy = false,
     bool skipPermissionRequest = false,

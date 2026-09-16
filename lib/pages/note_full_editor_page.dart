@@ -43,7 +43,7 @@ import '../services/settings_service.dart';
 import '../controllers/note_editor_states.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
-import 'map_location_picker_page.dart';
+import 'nearby_location_picker.dart';
 
 part 'note_editor/editor_document_init.dart';
 part 'note_editor/editor_save_and_draft.dart';
@@ -107,6 +107,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   final GlobalKey _metadataButtonKey = GlobalKey();
   // 新增：工具栏气泡引导 Key
   final GlobalKey _toolbarGuideKey = GlobalKey();
+
+  bool _isOpeningLocationPicker = false;
 
   void _updateState(VoidCallback fn) {
     if (!mounted) return;
