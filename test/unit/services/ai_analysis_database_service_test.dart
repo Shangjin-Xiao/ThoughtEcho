@@ -170,5 +170,26 @@ void main() {
       final count = await service.restoreFromJson('{"error": "not a list"}');
       expect(count, equals(0));
     });
+
+    test('importAnalysesFromList performance benchmark', () async {
+      final largeList = List.generate(
+        500,
+        (i) => {
+          'id': 'perf-$i',
+          'title': 'Performance Test $i',
+          'content': 'Content for performance test item $i',
+          'analysis_type': 'comprehensive',
+          'analysis_style': 'professional',
+          'created_at': DateTime.now().toIso8601String(),
+        },
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final count = await service.importAnalysesFromList(largeList);
+      stopwatch.stop();
+
+      expect(count, equals(500));
+      print('Imported 500 records in ${stopwatch.elapsedMilliseconds} ms');
+    });
   });
 }
