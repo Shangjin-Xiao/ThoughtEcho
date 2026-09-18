@@ -173,14 +173,22 @@ class ApkDownloadService {
 
   /// 清理下载目录中的所有旧安装包
   static Future<void> cleanupApkFiles() async {
+    // 若当前正在进行下载，则直接跳过启动清理以防产生竞态冲突
+    if (_cancelToken != null && !_cancelToken!.isCancelled) {
+      return;
+    }
     try {
       final downloadDir = await _getDownloadDirectory();
       if (downloadDir == null) return;
 
       if (await downloadDir.exists()) {
-        final List<FileSystemEntity> files = downloadDir.listSync();
         // 清理目录下所有 APK 文件，因为这是应用私有下载目录，不应包含其他重要文件
-        for (var file in files) {
+        await for (final file in downloadDir.list()) {
+          // 清理过程中若开始新的下载，跳过当前下载目标
+          if (_cancelToken != null &&
+              file.path.toLowerCase().endsWith('thoughtecho_latest.apk')) {
+            continue;
+          }
           if (file is File && file.path.toLowerCase().endsWith('.apk')) {
             try {
               logDebug('启动清理旧安装包: ${file.path}');
