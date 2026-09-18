@@ -12,14 +12,16 @@ void main() {
 
   group('AIWorkflowId enum', () {
     test('contains expected values', () {
-      expect(AIWorkflowId.values, containsAll([
-        AIWorkflowId.polish,
-        AIWorkflowId.continueWriting,
-        AIWorkflowId.deepAnalysis,
-        AIWorkflowId.sourceAnalysis,
-        AIWorkflowId.insights,
-        AIWorkflowId.webFetch,
-      ]));
+      expect(
+          AIWorkflowId.values,
+          containsAll([
+            AIWorkflowId.polish,
+            AIWorkflowId.continueWriting,
+            AIWorkflowId.deepAnalysis,
+            AIWorkflowId.sourceAnalysis,
+            AIWorkflowId.insights,
+            AIWorkflowId.webFetch,
+          ]));
       expect(AIWorkflowId.values.length, 6);
     });
   });
