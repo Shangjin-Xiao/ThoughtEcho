@@ -594,7 +594,7 @@ class AINetworkManager {
       final apiKey = await apiKeyManager.getProviderApiKey(provider.id);
 
       logDebug(
-        '为Provider ${provider.name} 加载API Key: ${apiKey.isEmpty ? "未找到" : "${apiKey.length}字符"}',
+        '为Provider ${provider.name} 加载API Key: ${apiKey.isEmpty ? "未找到" : "已加载"}',
       );
 
       // 调试API Key请求时的状态
@@ -612,8 +612,12 @@ class AINetworkManager {
       // 验证构建的headers
       final headers = providerWithApiKey.buildHeaders();
       final authHeader = headers['Authorization'] ?? headers['x-api-key'] ?? '';
+      final rawKey = authHeader
+          .replaceAll('Bearer ', '')
+          .replaceAll('x-api-key ', '')
+          .trim();
       logDebug(
-        '构建的请求头中的API Key: ${authHeader.isEmpty ? "空" : "${authHeader.replaceAll('Bearer ', '').replaceAll('x-api-key ', '').length}字符"}',
+        '构建的请求头中的API Key: ${rawKey.isEmpty ? "空" : "已设置"}',
       );
 
       return providerWithApiKey;
