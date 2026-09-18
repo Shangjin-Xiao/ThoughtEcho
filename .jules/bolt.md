@@ -186,3 +186,8 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** Synchronous file I/O operations like `readAsStringSync` and `existsSync` block Dart's event loop during execution. Converting file operations in analysis scripts to non-blocking asynchronous calls (`await file.exists()`, `await file.readAsString()`) prevents event loop thread blockage.
 **Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
 
+
+## 2024-05-18 - [Optimize String splitting to avoid memory allocation for comma separated values]
+
+**Learning:** Frequent `String.split(',')` combined with `.map().where().toList()` chains generates multiple intermediate lists, iterators and strings, putting significant pressure on the Garbage Collector, especially when parsing large numbers of items like in `Quote.fromJson` and database backup loops.
+**Action:** Extracted manual parsing utilizing `String.indexOf(',')` and `String.substring` into a utility method `StringUtils.parseCommaSeparatedString` and used it to replace `split` chains in models and database backup services to reduce memory allocations and GC pauses.
