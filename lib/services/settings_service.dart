@@ -1641,7 +1641,8 @@ class SettingsService extends ChangeNotifier {
           providerId,
         );
         if (!hasSecureKey) {
-          await apiKeyManager.saveProviderApiKey(providerId, _aiSettings.apiKey);
+          await apiKeyManager.saveProviderApiKey(
+              providerId, _aiSettings.apiKey);
           logDebug(
             'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
           );
@@ -1715,7 +1716,8 @@ class SettingsService extends ChangeNotifier {
             }
           }
           await _mmkv.setString(_multiAiSettingsKey, json.encode(map));
-          logDebug('Scrubbed plaintext API keys from MMKV _multiAiSettingsKey.');
+          logDebug(
+              'Scrubbed plaintext API keys from MMKV _multiAiSettingsKey.');
         }
       } catch (e) {
         logWarning(

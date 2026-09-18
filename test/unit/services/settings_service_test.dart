@@ -501,7 +501,8 @@ void main() {
       expect(settingsService.aiSettings.model, equals('gpt-4o'));
     });
 
-    test('legacy multi-provider API keys in MMKV or SharedPreferences should migrate to APIKeyManager and scrub',
+    test(
+        'legacy multi-provider API keys in MMKV or SharedPreferences should migrate to APIKeyManager and scrub',
         () async {
       final mmkv = MMKVService();
       final prefs = await SharedPreferences.getInstance();
@@ -545,7 +546,8 @@ void main() {
       expect(rebuiltService.multiAISettings.providers.first.apiKey, isEmpty);
     });
 
-    test('restoreAllSettingsFromBackup should extract API keys into APIKeyManager and scrub stored settings',
+    test(
+        'restoreAllSettingsFromBackup should extract API keys into APIKeyManager and scrub stored settings',
         () async {
       final backupData = {
         'ai_settings': {
