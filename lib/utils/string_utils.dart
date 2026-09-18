@@ -97,6 +97,26 @@ class StringUtils {
     return text.replaceAll('\u{FFFC}', '');
   }
 
+  /// 解析逗号分隔的字符串并去除空白字符，避免 `split(',')` 链式调用产生多余对象。
+  static List<String> parseCommaSeparatedString(String text) {
+    if (text.isEmpty) return [];
+
+    final List<String> result = [];
+    int start = 0;
+    while (true) {
+      final int comma = text.indexOf(',', start);
+      if (comma == -1) {
+        final String t = text.substring(start).trim();
+        if (t.isNotEmpty) result.add(t);
+        break;
+      }
+      final String t = text.substring(start, comma).trim();
+      if (t.isNotEmpty) result.add(t);
+      start = comma + 1;
+    }
+    return result;
+  }
+
   /// 按换行符遍历文本行，避免 `split('\n')` 生成中间列表导致的 GC 压力。
   /// [action] 接收行内容 [line] 和指示是否为最后一段的布尔值 [isLast]。
   static void forEachLine(

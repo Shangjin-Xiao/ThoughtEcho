@@ -316,5 +316,42 @@ void main() {
         expect(isLastFlags, [false, true]);
       });
     });
+
+    group('parseCommaSeparatedString', () {
+      test('returns empty list for empty string', () {
+        expect(StringUtils.parseCommaSeparatedString(''), isEmpty);
+      });
+
+      test('returns single item for string without comma', () {
+        expect(StringUtils.parseCommaSeparatedString('single'), ['single']);
+        expect(StringUtils.parseCommaSeparatedString('  single  '), ['single']);
+      });
+
+      test('parses multiple comma-separated items and trims whitespace', () {
+        expect(
+          StringUtils.parseCommaSeparatedString('apple, banana, cherry'),
+          ['apple', 'banana', 'cherry'],
+        );
+      });
+
+      test('ignores empty tokens between consecutive commas', () {
+        expect(
+          StringUtils.parseCommaSeparatedString('apple,, banana, ,cherry'),
+          ['apple', 'banana', 'cherry'],
+        );
+      });
+
+      test('handles leading and trailing commas', () {
+        expect(
+          StringUtils.parseCommaSeparatedString(',apple, banana,'),
+          ['apple', 'banana'],
+        );
+      });
+
+      test('returns empty list for string with only commas and whitespace', () {
+        expect(StringUtils.parseCommaSeparatedString('   '), isEmpty);
+        expect(StringUtils.parseCommaSeparatedString(' , , , '), isEmpty);
+      });
+    });
   });
 }

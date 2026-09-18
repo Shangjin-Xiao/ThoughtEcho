@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../utils/quill_delta_builder.dart';
+import '../utils/string_utils.dart';
 
 class Quote {
   static const Object _noValue = Object();
@@ -211,13 +212,8 @@ class Quote {
       List<String> parseTagIds() {
         if (json['tag_ids'] == null) return [];
         if (json['tag_ids'] is String) {
-          final tagString = json['tag_ids'] as String;
-          if (tagString.isEmpty) return [];
-          return tagString
-              .split(',')
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
+          return StringUtils.parseCommaSeparatedString(
+              json['tag_ids'] as String);
         }
         if (json['tag_ids'] is List) {
           return (json['tag_ids'] as List)
@@ -234,11 +230,7 @@ class Quote {
         if (json['keywords'] is String) {
           final keywordString = json['keywords'] as String;
           if (keywordString.isEmpty) return null;
-          return keywordString
-              .split(',')
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
+          return StringUtils.parseCommaSeparatedString(keywordString);
         }
         if (json['keywords'] is List) {
           final keywords = (json['keywords'] as List)
