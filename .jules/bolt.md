@@ -188,5 +188,5 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 ## 2026-08-18 - Convert Synchronous File Existence Check to Async in ZipStreamProcessor
 
-**Learning:** Calling synchronous filesystem I/O methods like `existsSync` inside an asynchronous loop or isolate event loop blocks the thread during file existence checks. Replacing synchronous calls with non-blocking `await file.exists()` allows the Dart event loop to remain responsive during zip packaging and file operations.
-**Action:** Updated `_createZipInIsolate` in `lib/utils/zip_stream_processor.dart` to replace `file.existsSync()` with `await file.exists()`.
+**Learning:** Using asynchronous filesystem checks (`await file.exists()`) aligns file checking with the surrounding asynchronous isolate pipeline (`await encoder.addFile()`) in `ZipStreamProcessor`.
+**Action:** Updated `_createZipInIsolate` in `lib/utils/zip_stream_processor.dart` to replace `file.existsSync()` with `await file.exists()`, and added unit tests in `test/unit/utils/zip_stream_processor_test.dart` using `TestHarness` for streaming zip creation.

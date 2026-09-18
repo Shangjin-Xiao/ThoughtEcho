@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 
+import '../../test_harness.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -9,13 +11,11 @@ void main() {
     late Directory tempDir;
 
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('zip_processor_test_');
+      tempDir = await TestHarness.createTempDirectory('zip_processor_test_');
     });
 
     tearDown(() async {
-      if (await tempDir.exists()) {
-        await tempDir.delete(recursive: true);
-      }
+      await TestHarness.deleteTempDirectory(tempDir);
     });
 
     test('createZipStreaming creates zip file skipping non-existent files',
