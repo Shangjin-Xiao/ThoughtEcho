@@ -1244,7 +1244,8 @@ class SettingsService extends ChangeNotifier {
 
   // 加载多provider AI设置
   Future<void> _loadMultiAISettings() async {
-    final String? multiAiSettingsJson = _mmkv.getString(_multiAiSettingsKey);
+    final String? multiAiSettingsJson = _mmkv.getString(_multiAiSettingsKey) ??
+        _prefs.getString(_multiAiSettingsKey);
 
     if (multiAiSettingsJson != null) {
       try {
@@ -1494,32 +1495,16 @@ class SettingsService extends ChangeNotifier {
   ) async {
     try {
       final apiKeyManager = APIKeyManager();
+      final Set<String> restoredProviderIds = {};
 
-      // 恢复AI设置
-      if (backupData.containsKey('ai_settings')) {
-        final aiSettingsJson =
-            backupData['ai_settings'] as Map<String, dynamic>;
-        final rawApiKey = aiSettingsJson['apiKey'] as String?;
-        if (rawApiKey != null && rawApiKey.trim().isNotEmpty) {
-          final providerId = backupData.containsKey('multi_ai_settings') &&
-                  backupData['multi_ai_settings'] is Map<String, dynamic>
-              ? (backupData['multi_ai_settings']['currentProviderId']
-                      as String? ??
-                  'openai')
-              : 'openai';
-          await apiKeyManager.saveProviderApiKey(providerId, rawApiKey.trim());
-        }
-        final aiSettings = AISettings.fromJson(aiSettingsJson);
-        await updateAISettings(aiSettings);
-      }
-
-      // 恢复多provider AI设置
+      // 优先恢复多provider AI设置
       if (backupData.containsKey('multi_ai_settings')) {
         final multiAiSettingsJson =
             backupData['multi_ai_settings'] as Map<String, dynamic>;
-        if (multiAiSettingsJson['providers'] is List) {
-          final providersList = multiAiSettingsJson['providers'] as List;
-          for (final item in providersList) {
+        final rawProviders = multiAiSettingsJson['providers'] ??
+            multiAiSettingsJson['availableProviders'];
+        if (rawProviders is List) {
+          for (final item in rawProviders) {
             if (item is Map<String, dynamic>) {
               final id = item['id'] as String?;
               final rawKey = (item['apiKey'] ?? item['api_key']) as String?;
@@ -1528,12 +1513,32 @@ class SettingsService extends ChangeNotifier {
                   rawKey != null &&
                   rawKey.trim().isNotEmpty) {
                 await apiKeyManager.saveProviderApiKey(id, rawKey.trim());
+                restoredProviderIds.add(id);
               }
             }
           }
         }
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
         await saveMultiAISettings(multiAiSettings);
+      }
+
+      // 恢复单provider遗留AI设置（仅当对应provider未被multi_ai覆盖时）
+      if (backupData.containsKey('ai_settings')) {
+        final aiSettingsJson =
+            backupData['ai_settings'] as Map<String, dynamic>;
+        final rawApiKey =
+            (aiSettingsJson['apiKey'] ?? aiSettingsJson['api_key']) as String?;
+        if (rawApiKey != null && rawApiKey.trim().isNotEmpty) {
+          const defaultProviderId = 'openai';
+          if (!restoredProviderIds.contains(defaultProviderId)) {
+            await apiKeyManager.saveProviderApiKey(
+              defaultProviderId,
+              rawApiKey.trim(),
+            );
+          }
+        }
+        final aiSettings = AISettings.fromJson(aiSettingsJson);
+        await updateAISettings(aiSettings);
       }
 
       // 恢复本地AI设置
@@ -1674,22 +1679,25 @@ class SettingsService extends ChangeNotifier {
       if (rawJson == null || rawJson.isEmpty) continue;
       try {
         final decoded = json.decode(rawJson);
-        if (decoded is Map<String, dynamic> && decoded['providers'] is List) {
-          final providersList = decoded['providers'] as List;
-          for (final item in providersList) {
-            if (item is Map<String, dynamic>) {
-              final id = item['id'] as String?;
-              final rawKey = (item['apiKey'] ?? item['api_key']) as String?;
-              if (id != null &&
-                  id.isNotEmpty &&
-                  rawKey != null &&
-                  rawKey.trim().isNotEmpty) {
-                final hasKey = await apiKeyManager.hasValidProviderApiKey(id);
-                if (!hasKey) {
-                  await apiKeyManager.saveProviderApiKey(id, rawKey.trim());
-                  logDebug(
-                    'Migrated legacy multi-AI API key for provider: $id',
-                  );
+        if (decoded is Map<String, dynamic>) {
+          final rawProviders =
+              decoded['providers'] ?? decoded['availableProviders'];
+          if (rawProviders is List) {
+            for (final item in rawProviders) {
+              if (item is Map<String, dynamic>) {
+                final id = item['id'] as String?;
+                final rawKey = (item['apiKey'] ?? item['api_key']) as String?;
+                if (id != null &&
+                    id.isNotEmpty &&
+                    rawKey != null &&
+                    rawKey.trim().isNotEmpty) {
+                  final hasKey = await apiKeyManager.hasValidProviderApiKey(id);
+                  if (!hasKey) {
+                    await apiKeyManager.saveProviderApiKey(id, rawKey.trim());
+                    logDebug(
+                      'Migrated legacy multi-AI API key for provider: $id',
+                    );
+                  }
                 }
               }
             }
@@ -1708,16 +1716,26 @@ class SettingsService extends ChangeNotifier {
         (rawMmkv.contains('"apiKey"') || rawMmkv.contains('"api_key"'))) {
       try {
         final Map<String, dynamic> map = json.decode(rawMmkv);
-        if (map['providers'] is List) {
-          for (final p in map['providers']) {
+        final rawProviders = map['providers'] ?? map['availableProviders'];
+        if (rawProviders is List) {
+          for (final p in rawProviders) {
             if (p is Map<String, dynamic>) {
               p.remove('apiKey');
               p.remove('api_key');
             }
           }
-          await _mmkv.setString(_multiAiSettingsKey, json.encode(map));
-          logDebug(
-              'Scrubbed plaintext API keys from MMKV _multiAiSettingsKey.');
+          final success =
+              await _mmkv.setString(_multiAiSettingsKey, json.encode(map));
+          if (success) {
+            logDebug(
+              'Scrubbed plaintext API keys from MMKV _multiAiSettingsKey.',
+            );
+          } else {
+            logWarning(
+              'Failed to write scrubbed multi-AI settings to MMKV: setString returned false',
+              source: 'SettingsService',
+            );
+          }
         }
       } catch (e) {
         logWarning(
@@ -1728,18 +1746,29 @@ class SettingsService extends ChangeNotifier {
     }
 
     // 从 SharedPreferences 中清理 multi_ai_settings 明文 Key
-    if (rawPrefs != null) {
+    if (rawPrefs != null &&
+        (rawPrefs.contains('"apiKey"') || rawPrefs.contains('"api_key"'))) {
       try {
-        if (rawPrefs.contains('"apiKey"') || rawPrefs.contains('"api_key"')) {
-          final Map<String, dynamic> map = json.decode(rawPrefs);
-          if (map['providers'] is List) {
-            for (final p in map['providers']) {
-              if (p is Map<String, dynamic>) {
-                p.remove('apiKey');
-                p.remove('api_key');
-              }
+        final Map<String, dynamic> map = json.decode(rawPrefs);
+        final rawProviders = map['providers'] ?? map['availableProviders'];
+        if (rawProviders is List) {
+          for (final p in rawProviders) {
+            if (p is Map<String, dynamic>) {
+              p.remove('apiKey');
+              p.remove('api_key');
             }
-            await _prefs.setString(_multiAiSettingsKey, json.encode(map));
+          }
+          final success =
+              await _prefs.setString(_multiAiSettingsKey, json.encode(map));
+          if (success) {
+            logDebug(
+              'Scrubbed plaintext API keys from SharedPreferences _multiAiSettingsKey.',
+            );
+          } else {
+            logWarning(
+              'Failed to write scrubbed multi-AI settings to SharedPreferences: setString returned false',
+              source: 'SettingsService',
+            );
           }
         }
       } catch (e) {
@@ -1756,15 +1785,32 @@ class SettingsService extends ChangeNotifier {
     String storageKey,
     String targetField,
   ) async {
+    final fieldsToScrub =
+        targetField == 'apiKey' ? ['apiKey', 'api_key'] : [targetField];
+
     // MMKV
     try {
       final rawMmkv = _mmkv.getString(storageKey);
-      if (rawMmkv != null && rawMmkv.contains('"$targetField"')) {
+      if (rawMmkv != null &&
+          fieldsToScrub.any((f) => rawMmkv.contains('"$f"'))) {
         final Map<String, dynamic> map = json.decode(rawMmkv);
-        if (map.containsKey(targetField)) {
-          map.remove(targetField);
-          await _mmkv.setString(storageKey, json.encode(map));
-          logDebug('Scrubbed $targetField from MMKV key $storageKey');
+        bool changed = false;
+        for (final field in fieldsToScrub) {
+          if (map.containsKey(field)) {
+            map.remove(field);
+            changed = true;
+          }
+        }
+        if (changed) {
+          final success = await _mmkv.setString(storageKey, json.encode(map));
+          if (success) {
+            logDebug('Scrubbed $fieldsToScrub from MMKV key $storageKey');
+          } else {
+            logWarning(
+              'Failed to scrub $fieldsToScrub from MMKV ($storageKey): setString returned false',
+              source: 'SettingsService',
+            );
+          }
         }
       }
     } catch (e) {
@@ -1777,14 +1823,28 @@ class SettingsService extends ChangeNotifier {
     // SharedPreferences
     try {
       final rawPrefs = _prefs.getString(storageKey);
-      if (rawPrefs != null && rawPrefs.contains('"$targetField"')) {
+      if (rawPrefs != null &&
+          fieldsToScrub.any((f) => rawPrefs.contains('"$f"'))) {
         final Map<String, dynamic> map = json.decode(rawPrefs);
-        if (map.containsKey(targetField)) {
-          map.remove(targetField);
-          await _prefs.setString(storageKey, json.encode(map));
-          logDebug(
-            'Scrubbed $targetField from SharedPreferences key $storageKey',
-          );
+        bool changed = false;
+        for (final field in fieldsToScrub) {
+          if (map.containsKey(field)) {
+            map.remove(field);
+            changed = true;
+          }
+        }
+        if (changed) {
+          final success = await _prefs.setString(storageKey, json.encode(map));
+          if (success) {
+            logDebug(
+              'Scrubbed $fieldsToScrub from SharedPreferences key $storageKey',
+            );
+          } else {
+            logWarning(
+              'Failed to scrub $fieldsToScrub from SharedPreferences ($storageKey): setString returned false',
+              source: 'SettingsService',
+            );
+          }
         }
       }
     } catch (e) {

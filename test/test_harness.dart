@@ -137,6 +137,13 @@ final class TestHarness {
 
   /// Removes the isolated files and restores the path-provider implementation.
   static Future<void> tearDown() async {
+    _mockSecureStorage.clear();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      null,
+    );
+
     final originalPathProvider = _originalPathProvider;
     if (originalPathProvider != null) {
       PathProviderPlatform.instance = originalPathProvider;

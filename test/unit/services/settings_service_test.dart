@@ -547,6 +547,52 @@ void main() {
     });
 
     test(
+        'SharedPreferences-only legacy multi_ai_settings should be loaded and migrated without being overwritten',
+        () async {
+      final mmkv = MMKVService();
+      final prefs = await SharedPreferences.getInstance();
+
+      final legacyPrefsJson = '''
+      {
+        "currentProviderId": "custom_provider",
+        "availableProviders": [
+          {
+            "id": "custom_provider",
+            "name": "Custom AI",
+            "api_key": "sk-prefs-only-key-99999",
+            "apiUrl": "https://api.custom.com/v1",
+            "model": "custom-chat-v1",
+            "isEnabled": true
+          }
+        ]
+      }
+      ''';
+
+      await mmkv.remove('multi_ai_settings');
+      await prefs.setString('multi_ai_settings', legacyPrefsJson);
+      addTearDown(() async {
+        await mmkv.remove('multi_ai_settings');
+        await mmkv.remove('ai_settings');
+        await mmkv.remove('ai_auto_enable_pending_v1');
+        await prefs.remove('multi_ai_settings');
+        await prefs.remove('ai_settings');
+      });
+
+      final rebuiltService = await SettingsService.create();
+      final key = await APIKeyManager().getProviderApiKey('custom_provider');
+
+      expect(key, equals('sk-prefs-only-key-99999'));
+      expect(rebuiltService.multiAISettings.currentProviderId,
+          equals('custom_provider'));
+      expect(rebuiltService.multiAISettings.providers.first.model,
+          equals('custom-chat-v1'));
+
+      final storedPrefs = prefs.getString('multi_ai_settings') ?? '';
+      expect(storedPrefs.contains('sk-prefs-only-key-99999'), isFalse);
+      expect(rebuiltService.multiAISettings.providers.first.apiKey, isEmpty);
+    });
+
+    test(
         'restoreAllSettingsFromBackup should extract API keys into APIKeyManager and scrub stored settings',
         () async {
       final backupData = {
@@ -579,6 +625,9 @@ void main() {
 
       final deepseekKey = await APIKeyManager().getProviderApiKey('deepseek');
       expect(deepseekKey, equals('sk-backup-deepseek-key-67890'));
+
+      final openaiKey = await APIKeyManager().getProviderApiKey('openai');
+      expect(openaiKey, equals('sk-backup-legacy-key'));
 
       final mmkvMulti = MMKVService().getString('multi_ai_settings') ?? '';
       expect(mmkvMulti.contains('sk-backup-deepseek-key-67890'), isFalse);
