@@ -178,9 +178,8 @@ class ApkDownloadService {
       if (downloadDir == null) return;
 
       if (await downloadDir.exists()) {
-        final List<FileSystemEntity> files = downloadDir.listSync();
         // 清理目录下所有 APK 文件，因为这是应用私有下载目录，不应包含其他重要文件
-        for (var file in files) {
+        await for (final file in downloadDir.list()) {
           if (file is File && file.path.toLowerCase().endsWith('.apk')) {
             try {
               logDebug('启动清理旧安装包: ${file.path}');

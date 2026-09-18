@@ -186,3 +186,10 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** Synchronous file I/O operations like `readAsStringSync` and `existsSync` block Dart's event loop during execution. Converting file operations in analysis scripts to non-blocking asynchronous calls (`await file.exists()`, `await file.readAsString()`) prevents event loop thread blockage.
 **Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
 
+## 2026-08-19 - 优化 ApkDownloadService 旧安装包清理的 I/O 阻塞
+
+**Learning:**
+在 Dart/Flutter 应用启动或磁盘清理主流程中，使用 `Directory.listSync()` 获取文件列表会以同步阻塞方式进行磁盘 I/O 操作。如果下载目录中积累过多文件或磁盘 I/O 存在延迟，阻塞 Dart 主事件循环（Main Isolate）会导致 UI 微卡顿。采用异步流处理 `await for (final file in downloadDir.list())` 可确保文件列表读取异步化，避免阻塞主线程。
+
+**Action:**
+将 `lib/services/apk_download_service.dart` 中 `cleanupApkFiles()` 方法内的 `downloadDir.listSync()` 替换为异步流 `await for (final file in downloadDir.list())`，并补充单元测试 `test/unit/services/apk_download_service_test.dart` 验证清理逻辑。
