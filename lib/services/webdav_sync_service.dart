@@ -562,9 +562,17 @@ class WebDAVSyncService extends ChangeNotifier {
 
   @visibleForTesting
   static String buildBasicAuthHeader(String username, String password) {
-    final credentialsBytes =
-        Uint8List.fromList(utf8.encode('$username:$password'));
+    final userBytes = utf8.encode(username);
+    final passBytes = utf8.encode(password);
+    final credentialsBytes = Uint8List(userBytes.length + 1 + passBytes.length);
     try {
+      credentialsBytes.setRange(0, userBytes.length, userBytes);
+      credentialsBytes[userBytes.length] = 0x3A; // ':'
+      credentialsBytes.setRange(
+        userBytes.length + 1,
+        credentialsBytes.length,
+        passBytes,
+      );
       return 'Basic ${base64Encode(credentialsBytes)}';
     } finally {
       credentialsBytes.fillRange(0, credentialsBytes.length, 0);
