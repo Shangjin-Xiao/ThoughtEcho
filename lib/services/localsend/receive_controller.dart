@@ -148,7 +148,13 @@ class ReceiveController {
               totalBytes,
               prepareRequest.info.alias,
             );
-          } catch (_) {
+          } catch (e, stack) {
+            logError(
+              '[ReceiveController] onApprovalNeeded callback failed',
+              error: e,
+              stackTrace: stack,
+              source: 'LocalSend',
+            );
             approved = false;
           }
         }
@@ -160,6 +166,8 @@ class ReceiveController {
           status: SessionStatus.canceledByReceiver,
           lastActivity: DateTime.now(),
         );
+        logInfo('recv_prepare_rejected session=$sessionId',
+            source: 'LocalSend');
         throw Exception('接收端已拒绝');
       }
 
@@ -183,6 +191,9 @@ class ReceiveController {
       );
       return await Isolate.run(() => response.toJson());
     } catch (e, stack) {
+      if (e.toString().contains('接收端已拒绝')) {
+        rethrow;
+      }
       logError(
         'Invalid prepare upload request',
         error: e,

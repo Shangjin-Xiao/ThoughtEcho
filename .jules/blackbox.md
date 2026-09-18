@@ -78,7 +78,7 @@
 **异常:** `api_service_daily_quote_remote.dart` 中针对各种第三方 API（Hitokoto、ZenQuotes、API Ninjas 等）返回数据进行 `json.decode` 时的 `catch (e)` 块直接吞掉了报错堆栈，并且仅使用 `logDebug` 进行极其粗糙的记录，难以排查具体解析失败的原因。
 **拦截:** 修改所有第三方一言 API 请求方法的 `json.decode` 异常捕获块，使用 `catch (e, stackTrace)` 完整捕获异常及堆栈，并调用 `logError` 带上 `stackTrace` 和 `source: 'ApiService'` 参数上报结构化日志，确保发生响应结构变更或解析错误时留下完整的堆栈线索。
 
-## 2025-10-25 - 🗃️ 黑匣: [完善 LocalSend 接收模块的结构化日志]
+## 2026-09-16 - 🗃️ 黑匣: [完善 LocalSend 接收模块的结构化日志]
 
 **异常:** [ReceiveController 在处理 LocalSend 文件接收过程中，针对指纹初始化失败、创建会话回调失败、请求解析异常以及临时文件清理异常等环节，仅使用了 catch (e) 进行空捕获或通过 logDebug/logWarning 进行了粗糙打印。这导致关键的错误堆栈信息 (stackTrace) 丢失，严重阻碍了排查设备发现失败和文件接收异常的根因。]
 **拦截:** [已将上述流程中的 catch (e) 升级为 catch (e, stack)，并统一使用结构化的 logError 进行记录。日志中附带了对应的报错描述、具体的异常对象 error: e、堆栈轨迹 stackTrace: stack，并指定了明确的模块来源 source: 'LocalSend'。确认所有记录仅包含连接状态及系统抛出的异常信息，未记录任何用户传输的具体文件内容或敏感隐私数据。]
