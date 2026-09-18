@@ -598,7 +598,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
         await db.transaction((txn) async {
           final batch = txn.batch();
-          final List<bool> preparedItems = [];
+          var phase1Logged = false;
           for (var item in validAnalyses) {
             try {
               final analysis = AIAnalysis.fromJson(item);
@@ -608,10 +608,15 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
                 newAnalysis.toJson(),
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
-              preparedItems.add(true);
             } catch (e) {
-              preparedItems.add(false);
               skippedCount++;
+              if (!phase1Logged) {
+                phase1Logged = true;
+                AppLogger.w(
+                  '批量导入跳过解析失败的条目 (${e.runtimeType})',
+                  source: 'AIAnalysisDB',
+                );
+              }
             }
           }
 

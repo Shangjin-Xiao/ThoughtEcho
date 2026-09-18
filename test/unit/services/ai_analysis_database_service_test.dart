@@ -171,25 +171,33 @@ void main() {
       expect(count, equals(0));
     });
 
-    test('importAnalysesFromList performance benchmark', () async {
-      final largeList = List.generate(
-        500,
-        (i) => {
-          'id': 'perf-$i',
-          'title': 'Performance Test $i',
-          'content': 'Content for performance test item $i',
-          'analysis_type': 'comprehensive',
-          'analysis_style': 'professional',
-          'created_at': DateTime.now().toIso8601String(),
+    test('importAnalysesFromList batches inserts and skips malformed items',
+        () async {
+      final mixedList = [
+        ...List.generate(
+          20,
+          (i) => {
+            'id': 'batch-$i',
+            'title': 'Batch Test $i',
+            'content': 'Content for batch test item $i',
+            'analysis_type': 'comprehensive',
+            'analysis_style': 'professional',
+            'created_at': DateTime.now().toIso8601String(),
+          },
+        ),
+        {
+          'id': 'invalid-item',
+          'title': null,
+          'content': null,
         },
-      );
+      ];
 
-      final stopwatch = Stopwatch()..start();
-      final count = await service.importAnalysesFromList(largeList);
-      stopwatch.stop();
+      final count = await service.importAnalysesFromList(mixedList);
+      expect(count, equals(20));
 
-      expect(count, equals(500));
-      print('Imported 500 records in ${stopwatch.elapsedMilliseconds} ms');
+      final item = await service.getAnalysisById('batch-0');
+      expect(item, isNotNull);
+      expect(item!.title, equals('Batch Test 0'));
     });
   });
 }
