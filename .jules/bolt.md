@@ -189,7 +189,7 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 ## 2026-09-18 - 优化 SchemaVersionAdapters 中的正则表达式编译性能
 
 **Learning:**
-在数据库版本迁移 adapter（如 `_upgradeToV7`）的循环中，如果内联实例化 `RegExp` 对象（如 `RegExp(r'《(.+?)》')`），会在对大量历史记录进行源文本匹配和正则替换时产生重复的对象分配和正则编译开销。在 10,000 条数据处理的基准测试中，内联实例化耗时为 ~75ms，而提升为静态常量后耗时降为 ~27ms（耗时缩短约 63.5%）。
+在数据库版本迁移 adapter（如 `_upgradeToV7`）的循环中，如果内联实例化 `RegExp` 对象（如 `RegExp(r'《(.+?)》')`），会在对大量历史记录进行源文本匹配和正则替换时产生重复的对象分配和正则编译开销。将正则表达式提升为静态成员并在首次访问时初始化、后续复用，可避免重复编译开销。
 
 **Action:**
-将 `SchemaVersionAdapters` 中的作品名匹配模式（`_sourceWorkRegex`）与作品名清除模式（`_sourceWorkStripRegex`）提取为类的 `static final RegExp` 静态常量成员，使其仅在类加载时编译一次，极大减轻高频正则匹配和替换时的垃圾回收与 CPU 占用。
+将 `SchemaVersionAdapters` 中的作品名匹配模式（`_sourceWorkRegex`）与作品名清除模式（`_sourceWorkStripRegex`）提取为类的 `static final RegExp` 静态成员，使其在首次访问时初始化并在后续调用中复用，减轻高频正则匹配和替换时的垃圾回收与 CPU 占用。
