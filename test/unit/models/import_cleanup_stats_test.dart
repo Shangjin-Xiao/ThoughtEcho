@@ -21,7 +21,8 @@ void main() {
     });
 
     group('isClean', () {
-      test('returns true when sanitizedFields and skippedEmptyQuotes are zero', () {
+      test('returns true when sanitizedFields and skippedEmptyQuotes are zero',
+          () {
         const stats = ImportCleanupStats(
           sanitizedFields: 0,
           skippedEmptyQuotes: 0,
