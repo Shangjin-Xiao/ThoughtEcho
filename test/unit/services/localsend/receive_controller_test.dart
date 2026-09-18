@@ -216,5 +216,44 @@ void main() {
 
       controllerForUpload.dispose();
     });
+
+    test('handlePrepareUpload handles onApprovalNeeded exception gracefully',
+        () async {
+      final requestData = {
+        'info': {
+          'alias': 'Test Sender',
+          'version': '2.0',
+          'deviceModel': 'Test Model',
+          'deviceType': 'desktop',
+          'fingerprint': 'test-fingerprint',
+          'port': 53320,
+          'protocol': 'http',
+          'download': false,
+        },
+        'files': {
+          'file-1': {
+            'id': 'file-1',
+            'fileName': 'test.txt',
+            'size': 100,
+            'fileType': 'text/plain',
+          }
+        }
+      };
+
+      final controllerError = ReceiveController(
+        consumePreApproval: (fp) => false,
+        onApprovalNeeded: (sessionId, totalBytes, senderAlias) async {
+          throw StateError('Simulated approval error');
+        },
+      );
+
+      expect(
+        () => controllerError.handlePrepareUpload(requestData),
+        throwsA(isA<Exception>()
+            .having((e) => e.toString(), 'message', contains('接收端已拒绝'))),
+      );
+
+      controllerError.dispose();
+    });
   });
 }
