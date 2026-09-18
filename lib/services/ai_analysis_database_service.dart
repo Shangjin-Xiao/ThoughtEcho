@@ -588,44 +588,56 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         AppLogger.i('批量导入完成(Web)', source: 'AIAnalysisDB');
         return count;
       } else {
-        // 非Web平台使用显式事务 + 逐行插入：batch 在 commit 时才执行，
-        // SQL 层错误会让整个事务回滚，故逐行 await insert 并各自捕获，
-        // 一条坏行只跳过自己（计入共享的 skippedCount）。
+        // 非Web平台使用显式事务 + Batch批量插入，大幅减少IPC/I/O往返开销
         AppLogger.i(
           '开始批量导入AI分析，共 ${validAnalyses.length} 条',
           source: 'AIAnalysisDB',
         );
         final db = await database;
         int count = 0;
-        var phase2Logged = false;
 
         await db.transaction((txn) async {
+          final batch = txn.batch();
+          var phase1Logged = false;
           for (var item in validAnalyses) {
             try {
               final analysis = AIAnalysis.fromJson(item);
               final newAnalysis = _prepareAnalysis(analysis);
-              await txn.insert(
+              batch.insert(
                 'ai_analyses',
                 newAnalysis.toJson(),
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
-              count++;
             } catch (e) {
+              skippedCount++;
+              if (!phase1Logged) {
+                phase1Logged = true;
+                AppLogger.w(
+                  '批量导入跳过解析失败的条目 (${e.runtimeType})',
+                  source: 'AIAnalysisDB',
+                );
+              }
+            }
+          }
+
+          final results = await batch.commit(continueOnError: true);
+          var phase2Logged = false;
+          for (final res in results) {
+            if (res is Exception || res is Error) {
               skippedCount++;
               if (!phase2Logged) {
                 phase2Logged = true;
-                // 此处实际只捕获 txn.insert 的本地库异常（fromJson 全字段
-                // 兜底不抛、_prepareAnalysis 为纯函数）：错误信息是引擎生成
-                // 的表名/约束名，不含用户正文，取首行并截断后记录以便定位。
-                final firstLine = e.toString().split('\n').first.trim();
+                final firstLine = res.toString().split('\n').first.trim();
                 final detail = firstLine.length > 200
                     ? '${firstLine.substring(0, 200)}…'
                     : firstLine;
                 AppLogger.w(
-                  '批量导入跳过无法写入的条目 (${e.runtimeType}: $detail)',
+                  '批量导入跳过无法写入的条目 (${res.runtimeType}: $detail)',
                   source: 'AIAnalysisDB',
                 );
               }
+            } else {
+              count++;
             }
           }
         });
