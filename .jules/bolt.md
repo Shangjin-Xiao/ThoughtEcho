@@ -186,7 +186,13 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** Synchronous file I/O operations like `readAsStringSync` and `existsSync` block Dart's event loop during execution. Converting file operations in analysis scripts to non-blocking asynchronous calls (`await file.exists()`, `await file.readAsString()`) prevents event loop thread blockage.
 **Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
 
+## 2026-08-18 - 优化 WebCommandHelper 自然语言 URL 提取的正则表达式编译开销
+
+**Learning:** 在频繁处理自然语言用户输入的场景中（如 Chat / Agent 对话解析中的 `extractUrlFromNaturalLanguage`），内联声明 `RegExp(r'https?://[^\s]+')` 与 `RegExp(r'[.,。!！?？;；:：）)]*$')` 会在每次调用时重新分配与编译正则表达式对象。提取为 `static final RegExp` 能让正则表达式仅在类加载时编译一次，避免对 GC 造成额外负担。
+**Action:** 修改 `lib/utils/ai_command_helpers.dart`，将 `WebCommandHelper` 内的 URL 匹配和尾部标点符号清理正则提取为 `_httpPattern` 与 `_trailingPunctuationPattern` 静态常量成员。
+
 ## 2026-08-18 - 替换 WebDAV 同步中同步文件列表扫描为异步 Stream
 
 **Learning:** 在 Dart / Flutter 应用中，使用同步 I/O 方法（如 `Directory.listSync`）遍历可能包含大量文件或嵌套目录的文件夹会彻底阻塞 Dart 主事件循环，引发 UI 丢帧与界面卡顿。将其转换为异步 Stream (`Directory.list().where(...).cast<T>().toList()`) 可以将磁盘 I/O 调度给底层操作系统内核，避免阻塞事件循环。
 **Action:** 将 `lib/services/webdav_sync_service.dart` 中 `_syncMediaFiles` 方法的 `mediaRoot.listSync(recursive: true)` 替换为 `await mediaRoot.list(recursive: true).where((entity) => entity is File).cast<File>().toList()`，并在 `test/performance/webdav_sync_service_benchmark_test.dart` 中追加相关基准测试。
+
