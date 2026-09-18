@@ -186,3 +186,7 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** Synchronous file I/O operations like `readAsStringSync` and `existsSync` block Dart's event loop during execution. Converting file operations in analysis scripts to non-blocking asynchronous calls (`await file.exists()`, `await file.readAsString()`) prevents event loop thread blockage.
 **Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
 
+## 2026-08-18 - Convert Synchronous File Existence Check to Async in ZipStreamProcessor
+
+**Learning:** Calling synchronous filesystem I/O methods like `existsSync` inside an asynchronous loop or isolate event loop blocks the thread during file existence checks. Replacing synchronous calls with non-blocking `await file.exists()` allows the Dart event loop to remain responsive during zip packaging and file operations.
+**Action:** Updated `_createZipInIsolate` in `lib/utils/zip_stream_processor.dart` to replace `file.existsSync()` with `await file.exists()`.

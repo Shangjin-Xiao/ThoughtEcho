@@ -115,7 +115,7 @@ class ZipStreamProcessor {
 
       for (final entry in files.entries) {
         final file = File(entry.value);
-        if (file.existsSync()) {
+        if (await file.exists()) {
           try {
             await encoder.addFile(file, entry.key);
           } catch (_) {
