@@ -1217,7 +1217,11 @@ class WebDAVSyncService extends ChangeNotifier {
 
     // 1. 扫描本地所有存在的媒体文件
     final List<File> localFiles = await mediaRoot.exists()
-        ? mediaRoot.listSync(recursive: true).whereType<File>().toList()
+        ? await mediaRoot
+            .list(recursive: true)
+            .where((entity) => entity is File)
+            .cast<File>()
+            .toList()
         : <File>[];
 
     final Map<String, File> localMediaMap = {};
