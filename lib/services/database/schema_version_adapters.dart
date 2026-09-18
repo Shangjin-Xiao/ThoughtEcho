@@ -88,6 +88,9 @@ class SchemaMigrationPolicy {
 class SchemaVersionAdapters {
   SchemaVersionAdapters(this._definitions, this._legacyTags);
 
+  static final RegExp _sourceWorkRegex = RegExp(r'《(.+?)》');
+  static final RegExp _sourceWorkStripRegex = RegExp(r'《.+?》');
+
   final DatabaseSchemaDefinitions _definitions;
   final SchemaLegacyTagAdapter _legacyTags;
 
@@ -233,10 +236,10 @@ class SchemaVersionAdapters {
       String? sourceAuthor;
       String? sourceWork;
       if (source.contains('《') && source.contains('》')) {
-        final workMatch = RegExp(r'《(.+?)》').firstMatch(source);
+        final workMatch = _sourceWorkRegex.firstMatch(source);
         if (workMatch != null) {
           sourceWork = workMatch.group(1);
-          sourceAuthor = source.replaceAll(RegExp(r'《.+?》'), '').trim();
+          sourceAuthor = source.replaceAll(_sourceWorkStripRegex, '').trim();
           if (sourceAuthor.isEmpty) {
             sourceAuthor = null;
           }

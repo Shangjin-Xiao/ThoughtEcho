@@ -169,7 +169,7 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** 在初始化或批量生成笔记标签（如添加一言默认标签）时，如果在循环体内逐个通过 `db.getTagById(fixedId)` 查询数据库，会造成 N+1 查询模式。将标签类别列表预先加载或更新至内存缓存（`allCategoriesCache`），并在内存中基于 `fixedId` 或 `name` 进行匹配，可消除循环内的数据库 I/O 交互。
 **Action:** 修改 `lib/controllers/add_note_controller.dart` 中 `ensureTagExists` 和 `addDefaultHitokotoTagsAsync`，在处理标签前统一使用 `db.getTags()` 填充 `allCategoriesCache`，并在内存中进行 ID/名称匹配和副分类 ID 获取，将 `getTagById` 查询次数降为 0。
 
-## 2026-08-17 - 消除 ChatSessionService 空会话清理中的 N+1 删除语句
+## 2026-08-18 - 消除 ChatSessionService 空会话清理中的 N+1 删除语句
 
 **Learning:** 在数据库批量清理无关联数据的残留记录时，如果在循环体内对每个要删除的 ID 逐个执行单条 `await db.delete('table', where: 'id = ?')`，会由于大量 IPC / MethodChannel 通信与单个事务频繁开销造成严重的 N+1 性能瓶颈。将目标 ID 汇总后，按 SQLite 参数限制（如 500 个）分块，通过 `db.batch()` 累积 `where: 'id IN ($placeholders)'` 分块删除并一次性 `commit()`，可将所有分块删除合并为单次事务与 IPC 交互，大幅降低清理耗时。
 **Action:** 修改 `lib/services/chat_session_service.dart` 中的 `_cleanupEmptySessions` 方法，收集筛选出要删除的会话 ID 列表 `idsToDelete`，以 500 为 chunk 大小将 `id IN (?, ?, ...)` 批量删除语句放入 `db.batch()` 中统一提交。在 500 个空会话的基准测试中，清理耗时由 2826 ms 降至 352 ms（耗时缩短约 87.5% / 提升约 8 倍）。
@@ -203,6 +203,19 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Learning:** 频繁的 `String.split(',')` 结合 `.map().where().toList()` 链式调用会生成多个中间列表、迭代器及子字符串，在 `Quote.fromJson` 及数据库备份恢复循环中频繁解析时会增加 GC 负担。
 **Action:** 将利用 `String.indexOf(',')` 与 `String.substring` 的零临时集合解析提取为公用工具方法 `StringUtils.parseCommaSeparatedString`，并在模型与备份服务中统一替换 `split` 链，减少内存分配。
+
+## 2026-08-18 - 替换 WebDAV 同步中同步文件列表扫描为异步 Stream
+
+**Learning:** 在 Dart / Flutter 应用中，使用同步 I/O 方法（如 `Directory.listSync`）遍历可能包含大量文件或嵌套目录的文件夹会彻底阻塞 Dart 主事件循环，引发 UI 丢帧与界面卡顿。将其转换为异步 Stream (`Directory.list().where(...).cast<T>().toList()`) 可以将磁盘 I/O 调度给底层操作系统内核，避免阻塞事件循环。
+**Action:** 将 `lib/services/webdav_sync_service.dart` 中 `_syncMediaFiles` 方法的 `mediaRoot.listSync(recursive: true)` 替换为 `await mediaRoot.list(recursive: true).where((entity) => entity is File).cast<File>().toList()`，并在 `test/performance/webdav_sync_service_benchmark_test.dart` 中追加相关基准测试。
+
+## 2026-09-18 - 优化 SchemaVersionAdapters 中的正则表达式编译性能
+
+**Learning:**
+在数据库版本迁移 adapter（如 `_upgradeToV7`）的循环中，如果内联实例化 `RegExp` 对象（如 `RegExp(r'《(.+?)》')`），会在对大量历史记录进行源文本匹配和正则替换时产生重复的对象分配和正则编译开销。将正则表达式提升为静态成员并在首次访问时初始化、后续复用，可避免重复编译开销。
+
+**Action:**
+将 `SchemaVersionAdapters` 中的作品名匹配模式（`_sourceWorkRegex`）与作品名清除模式（`_sourceWorkStripRegex`）提取为类的 `static final RegExp` 静态成员，使其在首次访问时初始化并在后续调用中复用，减轻高频正则匹配和替换时的垃圾回收与 CPU 占用。
 
 ## 2026-08-18 - Convert Synchronous File Existence Check to Async in ZipStreamProcessor
 
