@@ -227,9 +227,8 @@ class WebDAVSyncService extends ChangeNotifier {
               status == 308);
     };
 
-    // 计算 Basic Auth 头
-    final basicAuth =
-        'Basic ${base64Encode(utf8.encode('$requestUsername:$requestPassword'))}';
+    // 计算 Basic Auth 头并安全及时清理敏感字节数据
+    final basicAuth = buildBasicAuthHeader(requestUsername, requestPassword);
     dio.options.headers = {'Authorization': basicAuth, 'Accept': '*/*'};
 
     dio.interceptors.add(
@@ -558,6 +557,17 @@ class WebDAVSyncService extends ChangeNotifier {
           );
         }
       }
+    }
+  }
+
+  @visibleForTesting
+  static String buildBasicAuthHeader(String username, String password) {
+    final credentialsBytes =
+        Uint8List.fromList(utf8.encode('$username:$password'));
+    try {
+      return 'Basic ${base64Encode(credentialsBytes)}';
+    } finally {
+      credentialsBytes.fillRange(0, credentialsBytes.length, 0);
     }
   }
 

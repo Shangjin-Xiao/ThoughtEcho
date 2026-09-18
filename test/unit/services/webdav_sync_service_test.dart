@@ -204,6 +204,11 @@ void main() {
     expect(result, isFalse);
   });
 
+  test('buildBasicAuthHeader correctly encodes credentials', () {
+    final header = WebDAVSyncService.buildBasicAuthHeader('user', 'pass');
+    expect(header, 'Basic dXNlcjpwYXNz');
+  });
+
   test('WebDAV media parser should extract existing remote files and sizes',
       () {
     const xml = '''
