@@ -199,9 +199,15 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Action:**
 将 `lib/services/apk_download_service.dart` 中 `cleanupApkFiles()` 方法内的 `downloadDir.listSync()` 替换为异步流 `await for (final file in downloadDir.list())`，并补充单元测试 `test/unit/services/apk_download_service_test.dart` 验证清理逻辑。
 
+## 2026-09-16 - 提取 StringUtils.parseCommaSeparatedString 优化逗号解析的内存分配
+
+**Learning:** 频繁的 `String.split(',')` 结合 `.map().where().toList()` 链式调用会生成多个中间列表、迭代器及子字符串，在 `Quote.fromJson` 及数据库备份恢复循环中频繁解析时会增加 GC 负担。
+**Action:** 将利用 `String.indexOf(',')` 与 `String.substring` 的零临时集合解析提取为公用工具方法 `StringUtils.parseCommaSeparatedString`，并在模型与备份服务中统一替换 `split` 链，减少内存分配。
+
 ## 2026-08-18 - 替换 WebDAV 同步中同步文件列表扫描为异步 Stream
 
 **Learning:** 在 Dart / Flutter 应用中，使用同步 I/O 方法（如 `Directory.listSync`）遍历可能包含大量文件或嵌套目录的文件夹会彻底阻塞 Dart 主事件循环，引发 UI 丢帧与界面卡顿。将其转换为异步 Stream (`Directory.list().where(...).cast<T>().toList()`) 可以将磁盘 I/O 调度给底层操作系统内核，避免阻塞事件循环。
 **Action:** 将 `lib/services/webdav_sync_service.dart` 中 `_syncMediaFiles` 方法的 `mediaRoot.listSync(recursive: true)` 替换为 `await mediaRoot.list(recursive: true).where((entity) => entity is File).cast<File>().toList()`，并在 `test/performance/webdav_sync_service_benchmark_test.dart` 中追加相关基准测试。
+
 
 

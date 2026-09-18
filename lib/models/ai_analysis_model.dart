@@ -1,4 +1,5 @@
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/string_utils.dart';
 
 /// AI分析结果模型
 class AIAnalysis {
@@ -34,11 +35,7 @@ class AIAnalysis {
       if (raw == null) return null;
       if (raw is String) {
         if (raw.isEmpty) return null;
-        final list = raw
-            .split(',')
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
+        final list = StringUtils.parseCommaSeparatedString(raw);
         return list.isEmpty ? null : list;
       }
       if (raw is List) {
