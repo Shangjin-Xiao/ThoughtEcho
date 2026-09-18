@@ -1,4 +1,6 @@
 // ignore_for_file: avoid_print
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -55,5 +57,47 @@ void main() {
         'Improvement: ${stopwatchN1.elapsedMilliseconds / stopwatchBatch.elapsedMilliseconds}x faster');
 
     await db.close();
+  });
+
+  test('Benchmark media directory listing: listSync vs async list Stream',
+      () async {
+    final tempDir = await Directory.systemTemp.createTemp('webdav_media_bench');
+    try {
+      const fileCount = 500;
+      final imagesDir = Directory('${tempDir.path}/media/images');
+      await imagesDir.create(recursive: true);
+
+      for (var i = 0; i < fileCount; i++) {
+        await File('${imagesDir.path}/img_$i.jpg').writeAsString('test');
+      }
+
+      final mediaRoot = Directory('${tempDir.path}/media');
+
+      // Synchronous listSync
+      final swSync = Stopwatch()..start();
+      final syncFiles =
+          mediaRoot.listSync(recursive: true).whereType<File>().toList();
+      swSync.stop();
+
+      // Asynchronous Stream list
+      final swAsync = Stopwatch()..start();
+      final asyncFiles = await mediaRoot
+          .list(recursive: true)
+          .where((entity) => entity is File)
+          .cast<File>()
+          .toList();
+      swAsync.stop();
+
+      expect(asyncFiles.length, equals(syncFiles.length));
+      expect(asyncFiles.length, equals(fileCount));
+
+      print('--- Media Directory Listing Benchmark ($fileCount files) ---');
+      print(
+          'listSync duration: ${swSync.elapsedMicroseconds} us (${swSync.elapsedMilliseconds} ms)');
+      print(
+          'async list Stream duration: ${swAsync.elapsedMicroseconds} us (${swAsync.elapsedMilliseconds} ms)');
+    } finally {
+      await tempDir.delete(recursive: true);
+    }
   });
 }
