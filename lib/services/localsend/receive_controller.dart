@@ -76,8 +76,13 @@ class ReceiveController {
         'fingerprint_initialized fp=$_cachedFingerprint',
         source: 'LocalSend',
       );
-    } catch (e) {
-      logWarning('fingerprint_init_fail $e', source: 'LocalSend');
+    } catch (e, stack) {
+      logError(
+        'fingerprint_init_fail',
+        error: e,
+        stackTrace: stack,
+        source: 'LocalSend',
+      );
     }
   }
 
@@ -126,8 +131,13 @@ class ReceiveController {
             totalBytes,
             prepareRequest.info.alias,
           );
-        } catch (e) {
-          logDebug('[ReceiveController] onSessionCreated callback failed: $e');
+        } catch (e, stack) {
+          logError(
+            '[ReceiveController] onSessionCreated callback failed',
+            error: e,
+            stackTrace: stack,
+            source: 'LocalSend',
+          );
         }
 
         approved = true; // 默认通过除非显式需要用户确认
@@ -138,7 +148,13 @@ class ReceiveController {
               totalBytes,
               prepareRequest.info.alias,
             );
-          } catch (_) {
+          } catch (e, stack) {
+            logError(
+              '[ReceiveController] onApprovalNeeded callback failed',
+              error: e,
+              stackTrace: stack,
+              source: 'LocalSend',
+            );
             approved = false;
           }
         }
@@ -150,6 +166,8 @@ class ReceiveController {
           status: SessionStatus.canceledByReceiver,
           lastActivity: DateTime.now(),
         );
+        logInfo('recv_prepare_rejected session=$sessionId',
+            source: 'LocalSend');
         throw Exception('接收端已拒绝');
       }
 
@@ -172,7 +190,16 @@ class ReceiveController {
         files: fileTokens,
       );
       return await Isolate.run(() => response.toJson());
-    } catch (e) {
+    } catch (e, stack) {
+      if (e.toString().contains('接收端已拒绝')) {
+        rethrow;
+      }
+      logError(
+        'Invalid prepare upload request',
+        error: e,
+        stackTrace: stack,
+        source: 'LocalSend',
+      );
       throw Exception('Invalid prepare upload request: $e');
     }
   }
@@ -315,8 +342,13 @@ class ReceiveController {
           try {
             final f = File(deletePath);
             if (await f.exists()) await f.delete();
-          } catch (e) {
-            logDebug('[ReceiveController] temp file cleanup failed: $e');
+          } catch (e, stack) {
+            logError(
+              '[ReceiveController] temp file cleanup failed',
+              error: e,
+              stackTrace: stack,
+              source: 'LocalSend',
+            );
           }
         });
       }
@@ -341,15 +373,25 @@ class ReceiveController {
       );
       try {
         await raf?.close();
-      } catch (e) {
-        logDebug('[ReceiveController] raf close error: $e');
+      } catch (e, stack) {
+        logError(
+          '[ReceiveController] raf close error',
+          error: e,
+          stackTrace: stack,
+          source: 'LocalSend',
+        );
       }
       try {
         if (tempFile != null && await tempFile.exists()) {
           await tempFile.delete();
         }
-      } catch (e) {
-        logDebug('[ReceiveController] temp file cleanup error: $e');
+      } catch (e, stack) {
+        logError(
+          '[ReceiveController] temp file cleanup error',
+          error: e,
+          stackTrace: stack,
+          source: 'LocalSend',
+        );
       }
       throw Exception('Upload failed: $e');
     }

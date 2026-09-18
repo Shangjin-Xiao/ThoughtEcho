@@ -167,6 +167,11 @@ class SessionMessageHelper {
 
 /// Web命令助手
 class WebCommandHelper {
+  // 提取为静态成员，避免每次调用 extractUrlFromNaturalLanguage 时重新编译正则表达式
+  static final RegExp _httpPattern = RegExp(r'https?://[^\s]+');
+  static final RegExp _trailingPunctuationPattern =
+      RegExp(r'[.,。!！?？;；:：）)]*$');
+
   /// 从命令文本提取URL
   /// 支持 `/web <url>` 或 `/web: <url>` 格式
   static String? extractUrl(String text) {
@@ -205,12 +210,11 @@ class WebCommandHelper {
   /// 检测文本是否包含有效的URL（用于自然语言检测）
   static String? extractUrlFromNaturalLanguage(String text) {
     // 寻找http://或https://开头的URL
-    final httpPattern = RegExp(r'https?://[^\s]+');
-    final match = httpPattern.firstMatch(text);
+    final match = _httpPattern.firstMatch(text);
     if (match != null) {
       final url = match.group(0) ?? '';
       // 移除末尾的常见标点符号
-      return url.replaceAll(RegExp(r'[.,。!！?？;；:：）)]*$'), '').trim();
+      return url.replaceAll(_trailingPunctuationPattern, '').trim();
     }
     return null;
   }

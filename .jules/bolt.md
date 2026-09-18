@@ -186,6 +186,11 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** Synchronous file I/O operations like `readAsStringSync` and `existsSync` block Dart's event loop during execution. Converting file operations in analysis scripts to non-blocking asynchronous calls (`await file.exists()`, `await file.readAsString()`) prevents event loop thread blockage.
 **Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
 
+## 2026-08-18 - 优化 WebCommandHelper 自然语言 URL 提取的正则表达式编译开销
+
+**Learning:** 在频繁处理自然语言用户输入的场景中（如 Chat / Agent 对话解析中的 `extractUrlFromNaturalLanguage`），内联声明 `RegExp(r'https?://[^\s]+')` 与 `RegExp(r'[.,。!！?？;；:：）)]*$')` 会在每次调用时重新分配与编译正则表达式对象。提取为 `static final RegExp` 能让正则表达式仅在类加载时编译一次，避免对 GC 造成额外负担。
+**Action:** 修改 `lib/utils/ai_command_helpers.dart`，将 `WebCommandHelper` 内的 URL 匹配和尾部标点符号清理正则提取为 `_httpPattern` 与 `_trailingPunctuationPattern` 静态常量成员。
+
 ## 2026-09-18 - 优化 SchemaVersionAdapters 中的正则表达式编译性能
 
 **Learning:**
@@ -193,3 +198,4 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:**
 将 `SchemaVersionAdapters` 中的作品名匹配模式（`_sourceWorkRegex`）与作品名清除模式（`_sourceWorkStripRegex`）提取为类的 `static final RegExp` 静态成员，使其在首次访问时初始化并在后续调用中复用，减轻高频正则匹配和替换时的垃圾回收与 CPU 占用。
+

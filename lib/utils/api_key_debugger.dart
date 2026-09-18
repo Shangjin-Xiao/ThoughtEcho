@@ -29,7 +29,7 @@ class ApiKeyDebugger {
         // 2. 检查配置文件中的API Key状态
         logDebug('📄 2. 配置文件中的API Key状态');
         logDebug(
-          '   配置中的API Key: ${currentProvider.apiKey.isEmpty ? "空" : "${currentProvider.apiKey.length}字符"}',
+          '   配置中的API Key: ${currentProvider.apiKey.isEmpty ? "空" : "已设置"}',
         );
         logDebug(
           '   配置中的API Key内容: ${currentProvider.apiKey.isEmpty ? "空" : "[REDACTED]"}',
@@ -41,7 +41,7 @@ class ApiKeyDebugger {
           currentProvider.id,
         );
         logDebug(
-          '   安全存储中的API Key: ${secureApiKey.isEmpty ? "空" : "${secureApiKey.length}字符"}',
+          '   安全存储中的API Key: ${secureApiKey.isEmpty ? "空" : "已设置"}',
         );
         logDebug(
           '   安全存储中的API Key内容: ${secureApiKey.isEmpty ? "空" : "[REDACTED]"}',
@@ -65,7 +65,7 @@ class ApiKeyDebugger {
           final apiKeyFromHeader =
               authHeader.replaceAll('Bearer ', '').replaceAll('x-api-key ', '');
           logDebug(
-            '   Headers中的API Key: ${apiKeyFromHeader.isEmpty ? "空" : "${apiKeyFromHeader.length}字符"}',
+            '   Headers中的API Key: ${apiKeyFromHeader.isEmpty ? "空" : "已设置"}',
           );
           logDebug(
             '   Headers中的API Key内容: ${apiKeyFromHeader.isEmpty ? "空" : "[REDACTED]"}',
@@ -88,10 +88,10 @@ class ApiKeyDebugger {
           );
           logDebug('     ID: ${provider.id}');
           logDebug(
-            '     配置中API Key: ${provider.apiKey.isEmpty ? "空" : "${provider.apiKey.length}字符"}',
+            '     配置中API Key: ${provider.apiKey.isEmpty ? "空" : "已设置"}',
           );
           logDebug(
-            '     安全存储API Key: ${providerApiKey.isEmpty ? "空" : "${providerApiKey.length}字符"}',
+            '     安全存储API Key: ${providerApiKey.isEmpty ? "空" : "已设置"}',
           );
           logDebug(
             '     有效性: ${await apiKeyManager.hasValidProviderApiKey(provider.id)}',
@@ -114,7 +114,7 @@ class ApiKeyDebugger {
 
     logDebug('=== 💾 API Key 保存过程调试 ===');
     logDebug('Provider ID: $providerId');
-    logDebug('API Key长度: ${apiKey.length}');
+    logDebug('API Key状态: ${apiKey.isEmpty ? "空" : "已设置"}');
     logDebug(
       'API Key前缀: ${apiKey.isEmpty ? "空" : "[REDACTED]"}',
     );
@@ -125,7 +125,7 @@ class ApiKeyDebugger {
       // 保存前检查
       final beforeSave = await apiKeyManager.getProviderApiKey(providerId);
       logDebug(
-        '保存前存储状态: ${beforeSave.isEmpty ? "空" : "${beforeSave.length}字符"}',
+        '保存前存储状态: ${beforeSave.isEmpty ? "空" : "已设置"}',
       );
 
       // 保存
@@ -134,7 +134,7 @@ class ApiKeyDebugger {
 
       // 保存后检查
       final afterSave = await apiKeyManager.getProviderApiKey(providerId);
-      logDebug('保存后存储状态: ${afterSave.isEmpty ? "空" : "${afterSave.length}字符"}');
+      logDebug('保存后存储状态: ${afterSave.isEmpty ? "空" : "已设置"}');
       logDebug('保存是否成功: ${afterSave == apiKey}');
 
       if (afterSave != apiKey) {
@@ -160,7 +160,7 @@ class ApiKeyDebugger {
     logDebug('=== 🌐 API Key 请求时状态调试 ===');
     logDebug('Provider ID: $providerId');
     logDebug('Provider Name: $providerName');
-    logDebug('传入API Key长度: ${apiKey.length}');
+    logDebug('传入API Key状态: ${apiKey.isEmpty ? "空" : "已设置"}');
     logDebug('传入API Key是否为空: ${apiKey.isEmpty}');
     logDebug(
       '传入API Key前缀: ${apiKey.isNotEmpty ? "[REDACTED]" : "无"}',
@@ -171,7 +171,7 @@ class ApiKeyDebugger {
 
       // 从加密存储读取API Key进行对比
       final storedApiKey = await apiKeyManager.getProviderApiKey(providerId);
-      logDebug('存储中的API Key长度: ${storedApiKey.length}');
+      logDebug('存储中的API Key状态: ${storedApiKey.isEmpty ? "空" : "已设置"}');
       logDebug('存储中的API Key是否为空: ${storedApiKey.isEmpty}');
       logDebug(
         '存储中的API Key前缀: ${storedApiKey.isNotEmpty ? "[REDACTED]" : "无"}',
