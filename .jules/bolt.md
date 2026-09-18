@@ -217,5 +217,10 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Action:**
 将 `SchemaVersionAdapters` 中的作品名匹配模式（`_sourceWorkRegex`）与作品名清除模式（`_sourceWorkStripRegex`）提取为类的 `static final RegExp` 静态成员，使其在首次访问时初始化并在后续调用中复用，减轻高频正则匹配和替换时的垃圾回收与 CPU 占用。
 
+## 2026-08-18 - Convert Synchronous File Existence Check to Async in ZipStreamProcessor
+
+**Learning:** Using asynchronous filesystem checks (`await file.exists()`) aligns file checking with the surrounding asynchronous isolate pipeline (`await encoder.addFile()`) in `ZipStreamProcessor`.
+**Action:** Updated `_createZipInIsolate` in `lib/utils/zip_stream_processor.dart` to replace `file.existsSync()` with `await file.exists()`, and added unit tests in `test/unit/utils/zip_stream_processor_test.dart` using `TestHarness` for streaming zip creation.
+
 
 
