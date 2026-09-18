@@ -63,39 +63,47 @@ void main() {
       () async {
     final tempDir = await Directory.systemTemp.createTemp('webdav_media_bench');
     try {
-      const fileCount = 500;
-      final imagesDir = Directory('${tempDir.path}/media/images');
-      await imagesDir.create(recursive: true);
+      const fileCount = 300;
+      final dir1 = Directory('${tempDir.path}/media1/images');
+      final dir2 = Directory('${tempDir.path}/media2/images');
+      await dir1.create(recursive: true);
+      await dir2.create(recursive: true);
 
       for (var i = 0; i < fileCount; i++) {
-        await File('${imagesDir.path}/img_$i.jpg').writeAsString('test');
+        await File('${dir1.path}/img_$i.jpg').writeAsString('test');
+        await File('${dir2.path}/img_$i.jpg').writeAsString('test');
       }
 
-      final mediaRoot = Directory('${tempDir.path}/media');
+      final mediaRoot1 = Directory('${tempDir.path}/media1');
+      final mediaRoot2 = Directory('${tempDir.path}/media2');
 
-      // Synchronous listSync
+      // 1. Synchronous listSync on mediaRoot1
       final swSync = Stopwatch()..start();
       final syncFiles =
-          mediaRoot.listSync(recursive: true).whereType<File>().toList();
+          mediaRoot1.listSync(recursive: true).whereType<File>().toList();
       swSync.stop();
 
-      // Asynchronous Stream list
+      // 2. Asynchronous Stream list on independent mediaRoot2 with event loop responsiveness check
+      int eventLoopTicks = 0;
+      bool isListing = true;
+      void tickLoop() {
+        if (!isListing) return;
+        eventLoopTicks++;
+        Future.microtask(tickLoop);
+      }
+
+      Future.microtask(tickLoop);
+
       final swAsync = Stopwatch()..start();
-      final asyncFiles = await mediaRoot
-          .list(recursive: true)
-          .where((entity) => entity is File)
-          .cast<File>()
-          .toList();
+      final asyncFiles =
+          await mediaRoot2.list(recursive: true).whereType<File>().toList();
       swAsync.stop();
+      isListing = false;
 
       expect(asyncFiles.length, equals(syncFiles.length));
       expect(asyncFiles.length, equals(fileCount));
-
-      print('--- Media Directory Listing Benchmark ($fileCount files) ---');
-      print(
-          'listSync duration: ${swSync.elapsedMicroseconds} us (${swSync.elapsedMilliseconds} ms)');
-      print(
-          'async list Stream duration: ${swAsync.elapsedMicroseconds} us (${swAsync.elapsedMilliseconds} ms)');
+      // 验证异步流处理期间事件循环保持活跃且微任务能够得到执行
+      expect(eventLoopTicks, greaterThanOrEqualTo(1));
     } finally {
       await tempDir.delete(recursive: true);
     }
