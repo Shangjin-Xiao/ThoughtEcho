@@ -212,7 +212,8 @@ class Quote {
       List<String> parseTagIds() {
         if (json['tag_ids'] == null) return [];
         if (json['tag_ids'] is String) {
-          return StringUtils.parseCommaSeparatedString(json['tag_ids'] as String);
+          return StringUtils.parseCommaSeparatedString(
+              json['tag_ids'] as String);
         }
         if (json['tag_ids'] is List) {
           return (json['tag_ids'] as List)
@@ -227,7 +228,8 @@ class Quote {
       List<String>? parseKeywords() {
         if (json['keywords'] == null) return null;
         if (json['keywords'] is String) {
-          final keywords = StringUtils.parseCommaSeparatedString(json['keywords'] as String);
+          final keywords =
+              StringUtils.parseCommaSeparatedString(json['keywords'] as String);
           return keywords.isEmpty ? null : keywords;
         }
         if (json['keywords'] is List) {

@@ -138,7 +138,8 @@ class DatabaseBackupService {
           if (quoteData.containsKey('tag_ids')) {
             final raw = quoteData['tag_ids'];
             if (raw is String) {
-              parsedTagIds = StringUtils.parseCommaSeparatedString(raw).toSet().toList();
+              parsedTagIds =
+                  StringUtils.parseCommaSeparatedString(raw).toSet().toList();
             } else if (raw is List) {
               parsedTagIds = raw
                   .map((e) => e.toString().trim())
@@ -151,7 +152,8 @@ class DatabaseBackupService {
             // 处理错误的字段名 taglds -> tag_ids
             final raw = quoteData['taglds'];
             if (raw is String) {
-              parsedTagIds = StringUtils.parseCommaSeparatedString(raw).toSet().toList();
+              parsedTagIds =
+                  StringUtils.parseCommaSeparatedString(raw).toSet().toList();
             } else if (raw is List) {
               parsedTagIds = raw
                   .map((e) => e.toString().trim())
@@ -1072,7 +1074,8 @@ class DatabaseBackupService {
           final raw = quoteData['tag_ids'];
           if (raw is String) {
             if (raw.isNotEmpty) {
-              parsedTagIds = StringUtils.parseCommaSeparatedString(raw).toSet().toList();
+              parsedTagIds =
+                  StringUtils.parseCommaSeparatedString(raw).toSet().toList();
             }
           } else if (raw is List) {
             parsedTagIds = raw
