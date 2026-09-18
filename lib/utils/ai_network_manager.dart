@@ -612,8 +612,12 @@ class AINetworkManager {
       // 验证构建的headers
       final headers = providerWithApiKey.buildHeaders();
       final authHeader = headers['Authorization'] ?? headers['x-api-key'] ?? '';
+      final rawKey = authHeader
+          .replaceAll('Bearer ', '')
+          .replaceAll('x-api-key ', '')
+          .trim();
       logDebug(
-        '构建的请求头中的API Key: ${authHeader.isEmpty ? "空" : "已设置"}',
+        '构建的请求头中的API Key: ${rawKey.isEmpty ? "空" : "已设置"}',
       );
 
       return providerWithApiKey;
