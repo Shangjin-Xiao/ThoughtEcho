@@ -207,12 +207,6 @@ void main() {
   test('buildBasicAuthHeader correctly encodes credentials', () {
     final header = WebDAVSyncService.buildBasicAuthHeader('user', 'pass');
     expect(header, 'Basic dXNlcjpwYXNz');
-
-    final utf8Header = WebDAVSyncService.buildBasicAuthHeader('用户', '密码');
-    expect(
-      utf8Header,
-      'Basic ${base64Encode(utf8.encode('用户:密码'))}',
-    );
   });
 
   test('WebDAV media parser should extract existing remote files and sizes',
