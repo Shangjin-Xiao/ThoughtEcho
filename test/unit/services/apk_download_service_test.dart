@@ -26,13 +26,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late Directory tempDir;
+  late PathProviderPlatform originalPlatform;
 
   setUp(() async {
+    originalPlatform = PathProviderPlatform.instance;
     tempDir = await Directory.systemTemp.createTemp('apk_download_test_');
     PathProviderPlatform.instance = MockPathProvider(tempDir.path);
   });
 
   tearDown(() async {
+    PathProviderPlatform.instance = originalPlatform;
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
