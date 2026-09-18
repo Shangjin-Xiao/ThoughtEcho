@@ -95,8 +95,11 @@ void main() {
       Future.microtask(tickLoop);
 
       final swAsync = Stopwatch()..start();
-      final asyncFiles =
-          await mediaRoot2.list(recursive: true).whereType<File>().toList();
+      final asyncFiles = await mediaRoot2
+          .list(recursive: true)
+          .where((entity) => entity is File)
+          .cast<File>()
+          .toList();
       swAsync.stop();
       isListing = false;
 
