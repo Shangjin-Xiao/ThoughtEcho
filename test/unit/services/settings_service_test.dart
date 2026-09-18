@@ -3,9 +3,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -497,6 +499,88 @@ void main() {
 
       expect(settingsService.aiSettings.apiKey, isEmpty);
       expect(settingsService.aiSettings.model, equals('gpt-4o'));
+    });
+
+    test('legacy multi-provider API keys in MMKV or SharedPreferences should migrate to APIKeyManager and scrub',
+        () async {
+      final mmkv = MMKVService();
+      final prefs = await SharedPreferences.getInstance();
+
+      final legacyMultiJson = '''
+      {
+        "currentProviderId": "openai",
+        "providers": [
+          {
+            "id": "openai",
+            "name": "OpenAI",
+            "apiKey": "sk-legacy-openai-key-12345",
+            "apiUrl": "https://api.openai.com/v1",
+            "model": "gpt-4o",
+            "isEnabled": true
+          }
+        ]
+      }
+      ''';
+
+      await mmkv.setString('multi_ai_settings', legacyMultiJson);
+      await prefs.setString('multi_ai_settings', legacyMultiJson);
+      addTearDown(() async {
+        await mmkv.remove('multi_ai_settings');
+        await mmkv.remove('ai_settings');
+        await mmkv.remove('ai_auto_enable_pending_v1');
+        await prefs.remove('multi_ai_settings');
+        await prefs.remove('ai_settings');
+      });
+
+      final rebuiltService = await SettingsService.create();
+      final key = await APIKeyManager().getProviderApiKey('openai');
+
+      expect(key, equals('sk-legacy-openai-key-12345'));
+
+      final storedMmkv = mmkv.getString('multi_ai_settings') ?? '';
+      final storedPrefs = prefs.getString('multi_ai_settings') ?? '';
+
+      expect(storedMmkv.contains('sk-legacy-openai-key-12345'), isFalse);
+      expect(storedPrefs.contains('sk-legacy-openai-key-12345'), isFalse);
+      expect(rebuiltService.multiAISettings.providers.first.apiKey, isEmpty);
+    });
+
+    test('restoreAllSettingsFromBackup should extract API keys into APIKeyManager and scrub stored settings',
+        () async {
+      final backupData = {
+        'ai_settings': {
+          'apiKey': 'sk-backup-legacy-key',
+          'model': 'gpt-3.5-turbo',
+        },
+        'multi_ai_settings': {
+          'currentProviderId': 'deepseek',
+          'providers': [
+            {
+              'id': 'deepseek',
+              'name': 'DeepSeek',
+              'apiKey': 'sk-backup-deepseek-key-67890',
+              'apiUrl': 'https://api.deepseek.com/v1',
+              'model': 'deepseek-chat',
+              'isEnabled': true,
+            }
+          ]
+        }
+      };
+
+      addTearDown(() async {
+        await MMKVService().remove('multi_ai_settings');
+        await MMKVService().remove('ai_settings');
+        await MMKVService().remove('ai_auto_enable_pending_v1');
+      });
+
+      await settingsService.restoreAllSettingsFromBackup(backupData);
+
+      final deepseekKey = await APIKeyManager().getProviderApiKey('deepseek');
+      expect(deepseekKey, equals('sk-backup-deepseek-key-67890'));
+
+      final mmkvMulti = MMKVService().getString('multi_ai_settings') ?? '';
+      expect(mmkvMulti.contains('sk-backup-deepseek-key-67890'), isFalse);
+      expect(settingsService.aiSettings.apiKey, isEmpty);
     });
 
     test('新用户配置有效 AI 服务时应自动开启相关 AI 功能', () async {
