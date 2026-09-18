@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -69,9 +70,35 @@ final class TestHarness {
   static Directory? _root;
 
   /// Installs the shared-preferences, path-provider, and desktop SQLite fakes.
+  static final Map<String, String> _mockSecureStorage = {};
+
   static Future<void> initialize() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
+    _mockSecureStorage.clear();
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'read') {
+          return _mockSecureStorage[methodCall.arguments['key']];
+        }
+        if (methodCall.method == 'write') {
+          _mockSecureStorage[methodCall.arguments['key']] =
+              methodCall.arguments['value'];
+          return null;
+        }
+        if (methodCall.method == 'delete') {
+          _mockSecureStorage.remove(methodCall.arguments['key']);
+          return null;
+        }
+        if (methodCall.method == 'readAll') {
+          return _mockSecureStorage;
+        }
+        return null;
+      },
+    );
 
     if (_pathProvider != null) {
       return;
@@ -110,6 +137,13 @@ final class TestHarness {
 
   /// Removes the isolated files and restores the path-provider implementation.
   static Future<void> tearDown() async {
+    _mockSecureStorage.clear();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      null,
+    );
+
     final originalPathProvider = _originalPathProvider;
     if (originalPathProvider != null) {
       PathProviderPlatform.instance = originalPathProvider;

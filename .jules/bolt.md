@@ -191,8 +191,17 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** 在频繁处理自然语言用户输入的场景中（如 Chat / Agent 对话解析中的 `extractUrlFromNaturalLanguage`），内联声明 `RegExp(r'https?://[^\s]+')` 与 `RegExp(r'[.,。!！?？;；:：）)]*$')` 会在每次调用时重新分配与编译正则表达式对象。提取为 `static final RegExp` 能让正则表达式仅在类加载时编译一次，避免对 GC 造成额外负担。
 **Action:** 修改 `lib/utils/ai_command_helpers.dart`，将 `WebCommandHelper` 内的 URL 匹配和尾部标点符号清理正则提取为 `_httpPattern` 与 `_trailingPunctuationPattern` 静态常量成员。
 
+## 2026-08-19 - 优化 ApkDownloadService 旧安装包清理的 I/O 阻塞
+
+**Learning:**
+在 Dart/Flutter 应用启动或磁盘清理主流程中，使用 `Directory.listSync()` 获取文件列表会以同步阻塞方式进行磁盘 I/O 操作。如果下载目录中积累过多文件或磁盘 I/O 存在延迟，阻塞 Dart 主事件循环（Main Isolate）会导致 UI 微卡顿。采用异步流处理 `await for (final file in downloadDir.list())` 可确保文件列表读取异步化，避免阻塞主线程。
+
+**Action:**
+将 `lib/services/apk_download_service.dart` 中 `cleanupApkFiles()` 方法内的 `downloadDir.listSync()` 替换为异步流 `await for (final file in downloadDir.list())`，并补充单元测试 `test/unit/services/apk_download_service_test.dart` 验证清理逻辑。
+
 ## 2026-08-18 - Convert Synchronous File Existence Check to Async in ZipStreamProcessor
 
 **Learning:** Using asynchronous filesystem checks (`await file.exists()`) aligns file checking with the surrounding asynchronous isolate pipeline (`await encoder.addFile()`) in `ZipStreamProcessor`.
 **Action:** Updated `_createZipInIsolate` in `lib/utils/zip_stream_processor.dart` to replace `file.existsSync()` with `await file.exists()`, and added unit tests in `test/unit/utils/zip_stream_processor_test.dart` using `TestHarness` for streaming zip creation.
+
 
