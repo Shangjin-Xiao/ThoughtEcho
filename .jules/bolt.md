@@ -187,7 +187,7 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
 
 
-## 2024-05-18 - [Optimize String splitting to avoid memory allocation for comma separated values]
+## 2026-09-16 - 提取 StringUtils.parseCommaSeparatedString 优化逗号解析的内存分配
 
-**Learning:** Frequent `String.split(',')` combined with `.map().where().toList()` chains generates multiple intermediate lists, iterators and strings, putting significant pressure on the Garbage Collector, especially when parsing large numbers of items like in `Quote.fromJson` and database backup loops.
-**Action:** Extracted manual parsing utilizing `String.indexOf(',')` and `String.substring` into a utility method `StringUtils.parseCommaSeparatedString` and used it to replace `split` chains in models and database backup services to reduce memory allocations and GC pauses.
+**Learning:** 频繁的 `String.split(',')` 结合 `.map().where().toList()` 链式调用会生成多个中间列表、迭代器及子字符串，在 `Quote.fromJson` 及数据库备份恢复循环中频繁解析时会增加 GC 负担。
+**Action:** 将利用 `String.indexOf(',')` 与 `String.substring` 的零临时集合解析提取为公用工具方法 `StringUtils.parseCommaSeparatedString`，并在模型与备份服务中统一替换 `split` 链，减少内存分配。

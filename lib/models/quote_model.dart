@@ -228,9 +228,9 @@ class Quote {
       List<String>? parseKeywords() {
         if (json['keywords'] == null) return null;
         if (json['keywords'] is String) {
-          final keywords =
-              StringUtils.parseCommaSeparatedString(json['keywords'] as String);
-          return keywords.isEmpty ? null : keywords;
+          final keywordString = json['keywords'] as String;
+          if (keywordString.isEmpty) return null;
+          return StringUtils.parseCommaSeparatedString(keywordString);
         }
         if (json['keywords'] is List) {
           final keywords = (json['keywords'] as List)
