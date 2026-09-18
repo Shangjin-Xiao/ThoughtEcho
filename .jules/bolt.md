@@ -186,6 +186,11 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** Synchronous file I/O operations like `readAsStringSync` and `existsSync` block Dart's event loop during execution. Converting file operations in analysis scripts to non-blocking asynchronous calls (`await file.exists()`, `await file.readAsString()`) prevents event loop thread blockage.
 **Action:** Updated `scripts/analyze_note_list_performance.dart` by converting `main` and `_printReport` to async functions and replacing `existsSync` and `readAsStringSync` with `await file.exists()` and `await file.readAsString()`.
 
+## 2026-08-18 - 优化 WebCommandHelper 自然语言 URL 提取的正则表达式编译开销
+
+**Learning:** 在频繁处理自然语言用户输入的场景中（如 Chat / Agent 对话解析中的 `extractUrlFromNaturalLanguage`），内联声明 `RegExp(r'https?://[^\s]+')` 与 `RegExp(r'[.,。!！?？;；:：）)]*$')` 会在每次调用时重新分配与编译正则表达式对象。提取为 `static final RegExp` 能让正则表达式仅在类加载时编译一次，避免对 GC 造成额外负担。
+**Action:** 修改 `lib/utils/ai_command_helpers.dart`，将 `WebCommandHelper` 内的 URL 匹配和尾部标点符号清理正则提取为 `_httpPattern` 与 `_trailingPunctuationPattern` 静态常量成员。
+
 ## 2026-08-19 - 优化 ApkDownloadService 旧安装包清理的 I/O 阻塞
 
 **Learning:**
@@ -193,3 +198,4 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:**
 将 `lib/services/apk_download_service.dart` 中 `cleanupApkFiles()` 方法内的 `downloadDir.listSync()` 替换为异步流 `await for (final file in downloadDir.list())`，并补充单元测试 `test/unit/services/apk_download_service_test.dart` 验证清理逻辑。
+
