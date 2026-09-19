@@ -95,7 +95,7 @@ class _FakeLocationService extends ChangeNotifier implements LocationService {
   _FakeLocationService({
     Position? position,
     this.formattedLocation = '中国,北京市,北京市,东城区',
-    this.poiName = '故宫博物院',
+    this.poiName,
     this.reverseResult,
     this.onReverseGeocodePoint,
   }) : _position = position ?? _mockPosition();
@@ -284,6 +284,35 @@ void main() {
     expect(selectedResult!.location, '中国,北京市,北京市,东城区');
     expect(selectedResult!.latitude, 39.9042);
     expect(selectedResult!.longitude, 116.4074);
+  });
+
+  testWidgets('系统定位含详细街道或 POI 时，第一项展示并返回该详细地名', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      poiName: '北京街道',
+      formattedLocation: '中国,广东省,广州市,越秀区',
+    );
+    final fakeSearch = _FakePlaceSearchService(places: []);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    expect(find.textContaining('越秀区·北京街道'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_system_location_tile')));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '北京街道');
+    expect(selectedResult!.location, '中国,广东省,广州市,越秀区');
   });
 
   testWidgets('在线地点服务不可用时，第一项仍然可用，且展示轻量重试横条', (WidgetTester tester) async {

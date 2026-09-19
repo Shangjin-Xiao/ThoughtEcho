@@ -162,7 +162,7 @@ void main() {
       );
     });
 
-    test('请求带上限定的 viewbox 和可识别的 User-Agent，且不绑定 bounded=1 限制', () async {
+    test('请求带上限定的 viewbox 和可识别的 User-Agent，且绑定 bounded=1 限制在附近', () async {
       final network = _FakeNetworkService(_jsonResponse(const []));
       final service = NominatimPlaceSearchService(networkService: network);
 
@@ -172,8 +172,7 @@ void main() {
       final params = network.lastUri!.queryParameters;
       expect(params['q'], '咖啡馆');
       expect(params['format'], 'json');
-      // 移除 bounded=1 限制，允许通过 viewbox 软偏好检索周边更广范围地点
-      expect(params['bounded'], isNull);
+      expect(params['bounded'], '1');
       expect(params['viewbox'], isNotNull);
       expect(network.lastHeaders!['User-Agent'], contains('ThoughtEcho'));
       expect(network.lastHeaders!['Accept-Language'], startsWith('zh-CN'));
@@ -283,16 +282,27 @@ void main() {
       expect(params['q'], '西湖区');
     });
 
-    test('未传入 categoryOrKeyword 时不使用硬编码的 restaurant，而是检索综合 POI 类别', () async {
-      final network = _FakeNetworkService(_jsonResponse(const []));
+    test('未传入 categoryOrKeyword 时按页码轮替综合 POI 类别', () async {
+      final network = _FakeNetworkService(_jsonResponse([
+        {
+          'place_id': 100,
+          'name': '景点',
+          'lat': '39.9052',
+          'lon': '116.4074',
+          'type': 'attraction',
+          'address': {'tourism': '景点'},
+        },
+      ]));
       final service = NominatimPlaceSearchService(networkService: network);
 
-      await service.getNearbyPlaces(refLat, refLon);
+      // 第一页 (offset=0) 默认请求 tourism
+      await service.getNearbyPlaces(refLat, refLon, offset: 0, limit: 20);
+      expect(network.lastUri!.queryParameters['q'], '[tourism]');
+      expect(network.lastUri!.queryParameters.containsKey('amenity'), isFalse);
 
-      final params = network.lastUri!.queryParameters;
-      expect(params.containsKey('amenity'), isFalse);
-      expect(params['q'], isNotNull);
-      expect(params['q'], isNot('restaurant'));
+      // 第二页 (offset=20) 轮替到 historic
+      await service.getNearbyPlaces(refLat, refLon, offset: 20, limit: 20);
+      expect(network.lastUri!.queryParameters['q'], '[historic]');
     });
 
     test('请求失败时抛出异常，让调用方展示重试横幅', () async {

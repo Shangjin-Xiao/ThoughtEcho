@@ -3,7 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/widgets/map/osm_map_layers.dart';
 
-import '../../test_harness.dart';
+import '../../../test_harness.dart';
 
 void main() {
   setUpAll(() async {
@@ -29,8 +29,13 @@ void main() {
           contains('com.shangjin.thoughtecho'));
     });
 
-    testWidgets('attribution() 包含 OpenStreetMap contributors 版权标注',
+    testWidgets('attribution() 包含 OpenStreetMap contributors 与 OSM France 版权标注',
         (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final widget = OsmMapLayers.attribution();
 
       await tester.pumpWidget(
@@ -41,7 +46,8 @@ void main() {
         ),
       );
 
-      expect(find.text('OpenStreetMap contributors'), findsOneWidget);
+      expect(find.textContaining('OpenStreetMap contributors'), findsOneWidget);
+      expect(find.textContaining('OSM France'), findsOneWidget);
     });
   });
 }

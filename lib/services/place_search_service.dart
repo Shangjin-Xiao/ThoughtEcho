@@ -104,6 +104,7 @@ class NominatimPlaceSearchService implements PlaceSearchService {
   NetworkService get _network => _networkService ?? NetworkService.instance;
 
   final Set<String> _seenPlaceIds = <String>{};
+  int _categoryCursor = 0;
 
   @override
   Future<List<PlaceInfo>> searchNearby(
@@ -129,6 +130,7 @@ class NominatimPlaceSearchService implements PlaceSearchService {
             '${latitude + _viewboxDelta},'
             '${longitude + _viewboxDelta},'
             '${latitude - _viewboxDelta}',
+        'bounded': '1',
       };
       if (offset > 0) {
         queryParams['offset'] = '$offset';
@@ -164,7 +166,9 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       for (final item in decoded) {
         if (item is! Map) continue;
         final place = _toPlace(item, latitude, longitude);
-        if (place != null) places.add(place);
+        if (place != null) {
+          places.add(place);
+        }
       }
 
       places.sort(
@@ -196,6 +200,9 @@ class NominatimPlaceSearchService implements PlaceSearchService {
 
       if (offset == 0) {
         _seenPlaceIds.clear();
+        _categoryCursor = 0;
+      } else {
+        _categoryCursor++;
       }
 
       final queryParams = <String, String>{
@@ -216,65 +223,71 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       }
 
       final trimmed = categoryOrKeyword?.trim() ?? '';
-      if (trimmed.isNotEmpty) {
-        queryParams['q'] = trimmed;
-      } else {
-        const defaultPoiCategories = [
-          '[tourism]',
-          '[historic]',
-          '[leisure]',
-          'attraction',
-        ];
-        final categoryIndex =
-            (offset ~/ (limit > 0 ? limit : 20)) % defaultPoiCategories.length;
-        queryParams['q'] = defaultPoiCategories[categoryIndex];
-      }
+      final categoriesToTry = trimmed.isNotEmpty
+          ? [trimmed]
+          : const [
+              '[tourism]',
+              '[historic]',
+              '[leisure]',
+              'attraction',
+            ];
+      final baseIndex =
+          trimmed.isNotEmpty ? 0 : (_categoryCursor % categoriesToTry.length);
 
-      final uri = Uri.parse(_searchUrl).replace(
-        queryParameters: queryParams,
-      );
+      for (var attempt = 0; attempt < categoriesToTry.length; attempt++) {
+        final currentCatIndex = (baseIndex + attempt) % categoriesToTry.length;
+        queryParams['q'] = categoriesToTry[currentCatIndex];
 
-      final response = await _network.get(
-        uri.toString(),
-        headers: {
-          'Accept-Language': I18nLanguage.buildAcceptLanguage(
-            I18nLanguage.appLanguageOrSystem(localeCode),
-          ),
-          'User-Agent': _userAgent,
-        },
-        timeoutSeconds: 10,
-      );
-
-      if (response.statusCode != 200) {
-        logWarning(
-          'Nominatim 附近候选地点搜索返回 ${response.statusCode}',
-          source: 'PlaceSearchService',
+        final uri = Uri.parse(_searchUrl).replace(
+          queryParameters: queryParams,
         );
-        throw Exception('Nominatim 附近候选地点搜索失败 (HTTP ${response.statusCode})');
+
+        final response = await _network.get(
+          uri.toString(),
+          headers: {
+            'Accept-Language': I18nLanguage.buildAcceptLanguage(
+              I18nLanguage.appLanguageOrSystem(localeCode),
+            ),
+            'User-Agent': _userAgent,
+          },
+          timeoutSeconds: 10,
+        );
+
+        if (response.statusCode != 200) {
+          logWarning(
+            'Nominatim 附近候选地点搜索返回 ${response.statusCode}',
+            source: 'PlaceSearchService',
+          );
+          throw Exception('Nominatim 附近候选地点搜索失败 (HTTP ${response.statusCode})');
+        }
+
+        final decoded = json.decode(response.body);
+        if (decoded is! List) continue;
+
+        final places = <PlaceInfo>[];
+        for (final item in decoded) {
+          if (item is! Map) continue;
+          final placeId = item['place_id']?.toString();
+          if (placeId != null && placeId.isNotEmpty) {
+            _seenPlaceIds.add(placeId);
+          }
+          final place = _toPlace(item, latitude, longitude);
+          if (place != null && (place.distanceMeters ?? 0) <= 5000) {
+            places.add(place);
+          }
+        }
+
+        if (places.isNotEmpty || trimmed.isNotEmpty) {
+          places.sort(
+            (a, b) => (a.distanceMeters ?? double.infinity).compareTo(
+              b.distanceMeters ?? double.infinity,
+            ),
+          );
+          return places;
+        }
       }
 
-      final decoded = json.decode(response.body);
-      if (decoded is! List) return const [];
-
-      final places = <PlaceInfo>[];
-      for (final item in decoded) {
-        if (item is! Map) continue;
-        final placeId = item['place_id']?.toString();
-        if (placeId != null && placeId.isNotEmpty) {
-          _seenPlaceIds.add(placeId);
-        }
-        final place = _toPlace(item, latitude, longitude);
-        if (place != null && (place.distanceMeters ?? 0) <= 5000) {
-          places.add(place);
-        }
-      }
-
-      places.sort(
-        (a, b) => (a.distanceMeters ?? double.infinity).compareTo(
-          b.distanceMeters ?? double.infinity,
-        ),
-      );
-      return places;
+      return const [];
     } catch (e) {
       logWarning(
         '附近候选地点搜索失败: $e',

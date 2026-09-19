@@ -539,7 +539,7 @@ class LocationService extends ChangeNotifier {
   ) async {
     try {
       final online = await _reverseGeocodeWithNominatim(latitude, longitude);
-      if (online != null) return online;
+      if (online != null && _isAddressSufficient(online)) return online;
     } catch (e) {
       logDebug('在线反查选点地址失败: $e');
     }
@@ -550,6 +550,7 @@ class LocationService extends ChangeNotifier {
         latitude,
         longitude,
         localeCode: _apiLanguageParam,
+        bypassCache: true,
       );
       if (systemResult != null) {
         logDebug('反查选点地址使用系统SDK地理编码回退成功');

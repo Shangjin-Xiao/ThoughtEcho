@@ -72,6 +72,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   double? _deviceLatitude;
   double? _deviceLongitude;
   String? _deviceLocationString;
+  String? _devicePoiName;
 
   bool _isLocating = true;
   bool _locatingFailed = false;
@@ -199,6 +200,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       if (pos != null) {
         _deviceLatitude = pos.latitude;
         _deviceLongitude = pos.longitude;
+        _devicePoiName = locService.currentPoiName;
         final fmt = locService.getFormattedLocation();
         _deviceLocationString = fmt.isNotEmpty ? fmt : null;
         _onDeviceLocationAcquired();
@@ -206,6 +208,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         final cached = locService.currentPosition!;
         _deviceLatitude = cached.latitude;
         _deviceLongitude = cached.longitude;
+        _devicePoiName = locService.currentPoiName;
         final fmt = locService.getFormattedLocation();
         _deviceLocationString = fmt.isNotEmpty ? fmt : null;
         _onDeviceLocationAcquired();
@@ -225,6 +228,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       _deviceLatitude = widget.initialLatitude;
       _deviceLongitude = widget.initialLongitude;
       _deviceLocationString = widget.initialLocation;
+      if (_systemSelected) {
+        _devicePoiName = widget.initialPoiName;
+      }
       _onDeviceLocationAcquired();
     } else {
       _isLocating = false;
@@ -234,6 +240,18 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   void _onDeviceLocationAcquired() {
+    if (_customSelectedPoiName != null &&
+        _devicePoiName != null &&
+        _customSelectedPoiName == _devicePoiName) {
+      final coordsMatchOrNull = (_customSelectedLatitude == null &&
+              _customSelectedLongitude == null) ||
+          _coordsMatch(_customSelectedLatitude, _customSelectedLongitude,
+              _deviceLatitude, _deviceLongitude);
+      if (coordsMatchOrNull) {
+        _systemSelected = true;
+        _customSelectedPoiName = null;
+      }
+    }
     _isLocating = false;
     setState(() {});
     _resolveAddressAndFetchPlaces();
@@ -252,6 +270,11 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         if (mounted && rev != null) {
           setState(() {
             _deviceLocationString = LocationService.buildStorageLocation(rev);
+            if ((_devicePoiName == null || _devicePoiName!.isEmpty) &&
+                rev['poi_name'] != null &&
+                rev['poi_name']!.trim().isNotEmpty) {
+              _devicePoiName = rev['poi_name']!.trim();
+            }
           });
         }
       } catch (e) {
@@ -276,6 +299,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       return;
     }
 
+    _searchEpoch++;
     setState(() {
       _isSearching = true;
       _searchError = false;
@@ -320,7 +344,11 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         stackTrace: stack,
         source: 'NearbyLocationPicker',
       );
-      if (!mounted || epoch != _searchEpoch) return;
+      if (!mounted ||
+          epoch != _searchEpoch ||
+          _searchController.text.trim() != query) {
+        return;
+      }
       setState(() {
         _isSearching = false;
         _searchError = true;
@@ -497,7 +525,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           ),
         );
       } else if (_systemSelected) {
-        // 选中当前设备位置（所见即所得：仅保存行政区，不偷偷注入周边 POI）
+        // 选中当前设备位置（所见即所得：保留系统定位/反查获取的最详细街道或 POI）
         if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
           return;
         }
@@ -506,7 +534,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
             latitude: _deviceLatitude!,
             longitude: _deviceLongitude!,
             location: _deviceLocationString,
-            poiName: null,
+            poiName: _devicePoiName,
           ),
         );
       } else if (_customSelectedPoiName != null &&
@@ -533,7 +561,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
             latitude: _deviceLatitude!,
             longitude: _deviceLongitude!,
             location: _deviceLocationString,
-            poiName: null,
+            poiName: _devicePoiName,
           ),
         );
       }
@@ -699,7 +727,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           fillColor: theme.colorScheme.surfaceContainerHigh,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 10,
+            vertical: 8,
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
@@ -834,7 +862,13 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   /// 第一项：设备当前系统定位
   Widget _buildSystemLocationTile(ThemeData theme, AppLocalizations l10n) {
     final String title;
-    if (_deviceLocationString != null && _deviceLocationString!.isNotEmpty) {
+    if (_devicePoiName != null && _devicePoiName!.isNotEmpty) {
+      title = LocationService.formatPoiForDisplay(
+        _devicePoiName,
+        _deviceLocationString,
+      );
+    } else if (_deviceLocationString != null &&
+        _deviceLocationString!.isNotEmpty) {
       title = LocationService.formatLocationForDisplay(_deviceLocationString);
     } else {
       title = LocationService.formatCoordinates(

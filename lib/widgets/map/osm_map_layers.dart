@@ -13,7 +13,9 @@ abstract final class OsmMapLayers {
   static const String _tileUrlTemplate =
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-  /// 兜底瓦片源：使用 OpenStreetMap France 镜像源，全球与国内访问更稳定快速。
+  /// 兜底瓦片源：使用 OpenStreetMap France (osmfr) 镜像源。
+  /// 注意：osmfr 采用法语社区定制的 CartoCSS 渲染样式，与官方主源相比在色彩与微观注记上有轻微差异，
+  /// 但具备独立的 CDN 节点；当官方主源发生超时、阻断或局部 404 时，可作为可用性兜底避免地图出现大面积白块。
   static const String _fallbackTileUrlTemplate =
       'https://tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png';
 
@@ -44,8 +46,9 @@ abstract final class OsmMapLayers {
       );
 
   /// 版权标注层。放在 [FlutterMap] 的最后一个 child，压在瓦片之上。
+  /// 明确标明数据来源自 OpenStreetMap contributors 及兜底源 OSM France。
   static Widget attribution() => SimpleAttributionWidget(
-        source: const Text('OpenStreetMap contributors'),
+        source: const Text('OpenStreetMap contributors / OSM France'),
         onTap: _openCopyrightPage,
       );
 
