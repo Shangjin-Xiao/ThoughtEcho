@@ -102,8 +102,7 @@ class SettingsService extends ChangeNotifier {
   /// 用户在设置页显式触发。
   static const String _agentMemoryEnabledKey = 'agent_memory_enabled';
   static const String _dreamingEnabledKey = 'dreaming_enabled';
-  static const String _dreamingOnIdleEnabledKey =
-      'dreaming_on_idle_enabled';
+  static const String _dreamingOnIdleEnabledKey = 'dreaming_on_idle_enabled';
   static const String _dreamingAfterInsightEnabledKey =
       'dreaming_after_insight_enabled';
 
@@ -166,8 +165,7 @@ class SettingsService extends ChangeNotifier {
       _mmkv.getBool(_dreamingAfterInsightEnabledKey) ?? true;
 
   Future<void> setDreamingAfterInsightEnabled(bool value) async {
-    final success =
-        await _mmkv.setBool(_dreamingAfterInsightEnabledKey, value);
+    final success = await _mmkv.setBool(_dreamingAfterInsightEnabledKey, value);
     if (!success) {
       AppLogger.e(
         'Dreaming 洞察后整理开关保存失败：MMKV setBool 返回 false（value=$value）',

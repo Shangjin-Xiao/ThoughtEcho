@@ -655,9 +655,8 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             title: Text(l10n.dreamingEnableTitle),
             subtitle: Text(l10n.dreamingEnableDesc),
             value: settingsService.dreamingEnabled,
-            onChanged: settingsService.agentMemoryEnabled
-                ? _setDreamingEnabled
-                : null,
+            onChanged:
+                settingsService.agentMemoryEnabled ? _setDreamingEnabled : null,
             secondary: const Icon(Icons.auto_awesome_outlined),
           ),
           SwitchListTile(
