@@ -1590,4 +1590,45 @@ void main() {
     final farDy = tester.getTopLeft(find.text('远处地点 0')).dy;
     expect(nearDy, lessThan(farDy), reason: '近处候选应排在远处候选之前');
   });
+
+  testWidgets('同坐标但设备行政区为空时，回退自带四级串而不是 null', (WidgetTester tester) async {
+    var reverseCalls = 0;
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '',
+      onReverseGeocodePoint: (lat, lng) async {
+        reverseCalls++;
+        return null;
+      },
+    );
+    const candidatePlace = PlaceInfo(
+      name: '故宫角楼',
+      latitude: 39.9042,
+      longitude: 116.4074,
+      address: '景山前街4号',
+      distanceMeters: 50,
+      storageLocation: '中国,北京市,北京市,东城区',
+    );
+    final fakeSearch = _FakePlaceSearchService(places: [candidatePlace]);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    await tester.tap(find.text('故宫角楼'));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '故宫角楼');
+    expect(selectedResult!.location, '中国,北京市,北京市,东城区');
+    // 设备地址为空时初始化会有一次设备反查；点选确认不得再发起第二次
+    expect(reverseCalls, 1);
+  });
 }

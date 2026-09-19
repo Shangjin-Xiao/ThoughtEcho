@@ -1,6 +1,10 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geocoding_platform_interface/geocoding_platform_interface.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
@@ -98,6 +102,11 @@ class _TestLocationService extends ChangeNotifier implements LocationService {
 /// 手动"更新位置"后才能解析出行政区。
 class _CoordsOnlyPoiLocationService extends ChangeNotifier
     implements LocationService {
+  _CoordsOnlyPoiLocationService({this.updateResolvesAdmin = true});
+
+  /// 为 false 时模拟"服务反查不出行政区"，对话框回退走静态本地反查。
+  final bool updateResolvesAdmin;
+
   bool _adminReady = false;
 
   @override
@@ -127,11 +136,54 @@ class _CoordsOnlyPoiLocationService extends ChangeNotifier
 
   @override
   void setCoordinates(double latitude, double longitude, {String? address}) {
-    _adminReady = true;
+    // 与真实语义一致：只定坐标，行政区等反查回来再填。
+  }
+
+  @override
+  Future<void> getAddressFromLatLng() async {
+    if (updateResolvesAdmin) _adminReady = true;
   }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// 返回固定中文四级地址的地理编码桩，供静态本地反查走成功分支。
+class _AdminMockGeocodingPlatform extends GeocodingPlatform
+    with MockPlatformInterfaceMixin {
+  @override
+  Future<void> setLocaleIdentifier(String localeIdentifier) async {}
+
+  @override
+  Future<List<Placemark>> placemarkFromCoordinates(
+    double latitude,
+    double longitude, {
+    String? localeIdentifier,
+  }) async {
+    return [
+      Placemark(
+        country: '中国',
+        administrativeArea: '北京市',
+        locality: '北京市',
+        subLocality: '西城区',
+      ),
+    ];
+  }
+}
+
+/// 装上桩并返回之前的平台实例，调用方用 addTearDown 恢复。
+GeocodingPlatform _installAdminMockPlatform([
+  GeocodingPlatform? mock,
+]) {
+  GeocodingPlatform? previous;
+  try {
+    previous = GeocodingPlatform.instance;
+  } catch (_) {
+    previous = null;
+  }
+  final platform = mock ?? _AdminMockGeocodingPlatform();
+  GeocodingPlatform.instance = platform;
+  return previous ?? platform;
 }
 
 class _TestWeatherService extends ChangeNotifier implements WeatherService {
@@ -418,11 +470,46 @@ void main() {
     await tester.pumpAndSettle();
 
     // "更新位置"按设计先关弹窗再执行更新：更新成功后只剩提示条。
+    expect(find.textContaining('位置已更新为'), findsOneWidget);
+
     // 直接保存：POI 名必须还在，行政区已补上
     final saveButton = find.byType(FilledButton).last;
     await tester.tap(saveButton);
     await tester.pumpAndSettle();
 
+    expect(savedQuote, isNotNull);
+    expect(savedQuote!.poiName, '景山公园');
+    expect(savedQuote!.location, '中国,北京市,北京市,西城区');
+  });
+
+  testWidgets('服务反查不出行政区时回退本地反查：同样保留 POI 名', (WidgetTester tester) async {
+    final previousPlatform = _installAdminMockPlatform();
+    addTearDown(() => GeocodingPlatform.instance = previousPlatform);
+    Quote? savedQuote;
+
+    await tester.pumpWidget(_buildTestApp(
+      locationService:
+          _CoordsOnlyPoiLocationService(updateResolvesAdmin: false),
+      onSave: (quote) {
+        savedQuote = quote;
+      },
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('add_note_location_chip')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('add_note_location_chip')));
+    await tester.pumpAndSettle();
+    expect(find.text('更新位置'), findsOneWidget);
+
+    await tester.tap(find.text('更新位置'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('位置已更新为'), findsOneWidget);
+
+    final saveButton = find.byType(FilledButton).last;
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
     expect(savedQuote, isNotNull);
     expect(savedQuote!.poiName, '景山公园');
     expect(savedQuote!.location, '中国,北京市,北京市,西城区');

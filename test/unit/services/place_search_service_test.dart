@@ -471,5 +471,45 @@ void main() {
 
       expect(results.single.storageLocation, isNull);
     });
+
+    test('只有国家没有省市时四级串为 null，不存无法落地的国家串', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'name': '某地',
+            'lat': '39.9142',
+            'lon': '116.4074',
+            'address': {'country': '中国', 'road': '近街'},
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.getNearbyPlaces(refLat, refLon);
+
+      expect(results.single.storageLocation, isNull);
+    });
+
+    test('行政区别名有多语言变体时只取首选写法，与反查口径一致', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'name': '中央公园',
+            'lat': '39.9142',
+            'lon': '116.4074',
+            'address': {
+              'country': '美国',
+              'state': '纽约州;紐約州',
+              'city': '纽约市',
+            },
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.getNearbyPlaces(refLat, refLon);
+
+      expect(results.single.storageLocation, '美国,纽约州,纽约市,');
+    });
   });
 }

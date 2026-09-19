@@ -357,13 +357,14 @@ class NominatimPlaceSearchService implements PlaceSearchService {
   ///
   /// 字段映射与 `LocationService` 的在线反查保持一致（country / state 系 /
   /// city 系 / district 系），拼出来的 `国家,省份,城市,区县` 可直接入库。
-  /// 四级全空时返回 null，调用方再走反查兜底。
+  /// 省份和城市都缺失时返回 null（光有国家落不了地），调用方再走反查兜底；
+  /// 区县允许空位。
   static String? _storageLocationFromAddress(dynamic address) {
     if (address is! Map) return null;
 
     String? s(dynamic v) {
-      if (v is String && v.trim().isNotEmpty) return v.trim();
-      return null;
+      final cleaned = _cleanVariant(v);
+      return cleaned.isNotEmpty ? cleaned : null;
     }
 
     final country = s(address['country']);
@@ -395,12 +396,27 @@ class NominatimPlaceSearchService implements PlaceSearchService {
           address['neighbourhood'],
     );
 
-    if ((country == null || country.isEmpty) &&
-        (province == null || province.isEmpty) &&
+    if ((province == null || province.isEmpty) &&
         (city == null || city.isEmpty)) {
       return null;
     }
     return '${country ?? ''},${province ?? ''},${city ?? ''},${district ?? ''}';
+  }
+
+  /// 去掉多语言/多变体混杂（如 "纽约;紐約" 取 "纽约"），口径与
+  /// `LocationService.cleanGeocodingText` 一致。这里不直接复用那个方法：
+  /// 它在 `LocationService` 上，这个纯搜索服务不引入那边的依赖。
+  static String _cleanVariant(dynamic v) {
+    if (v is! String) return '';
+    final trimmed = v.trim();
+    if (trimmed.isEmpty) return '';
+    if (!trimmed.contains(';') && !trimmed.contains('/')) return trimmed;
+    final head = trimmed
+        .split(RegExp(r'\s*[;/]\s*'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    return head.isEmpty ? trimmed : head.first;
   }
 
   /// 地点名：优先 OSM 要素名，其次 address 里的类型化别名，最后取

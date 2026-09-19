@@ -508,13 +508,17 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       } else if (place != null) {
         // 用户从列表中点选了候选 POI：
         // 行政区必须为合规的四级结构串（国家,省份,城市,区县），不能直接保存街道门牌展示串。
-        // 若与设备定位同坐标，复用设备行政区串；否则优先复用搜索响应自带的四级串
-        //（和列表副行同一份地址，不用再等一次在线反查，也不会存成另一条街）；
-        // 两者都没有时设为 null（保存退回坐标/地名），杜绝写入非标准格式。
+        // 若与设备定位同坐标且设备行政区可用，复用设备行政区串；否则优先复用
+        // 搜索响应自带的四级串（和列表副行同一份地址，不用再等一次在线反查，
+        // 也不会存成另一条街）；两者都没有时设为 null（保存退回坐标/地名），
+        // 杜绝写入非标准格式。
         String? adminLocation;
-        if (_coordsMatch(place.latitude, place.longitude, _deviceLatitude,
-            _deviceLongitude)) {
-          adminLocation = _deviceLocationString;
+        final deviceAdmin = _coordsMatch(place.latitude, place.longitude,
+                _deviceLatitude, _deviceLongitude)
+            ? _deviceLocationString
+            : null;
+        if (deviceAdmin != null && deviceAdmin.isNotEmpty) {
+          adminLocation = deviceAdmin;
         } else if (place.storageLocation != null &&
             place.storageLocation!.trim().isNotEmpty) {
           adminLocation = place.storageLocation;

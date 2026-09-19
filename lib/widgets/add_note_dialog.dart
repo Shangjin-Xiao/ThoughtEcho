@@ -1998,7 +1998,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         location: _controller.includeLocation
             ? (isEditing
                 ? _controller.originalLocation
-                : AddNoteController.resolvePickedLocationForSave(
+                : LocationService.resolvePickedLocationForSave(
                     pickedLocation: _controller.newLocation,
                     pickedPoiName: _controller.newPoiName,
                     pickedLatitude: _controller.newLatitude,
