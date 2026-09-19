@@ -220,7 +220,8 @@ class NominatimPlaceSearchService implements PlaceSearchService {
         queryParams['offset'] = '$offset';
       }
       if (_seenPlaceIds.isNotEmpty) {
-        queryParams['exclude_place_ids'] = _seenPlaceIds.join(',');
+        // 限制最多传递 50 个 place_id 避免 URL 过长导致 HTTP 414
+        queryParams['exclude_place_ids'] = _seenPlaceIds.take(50).join(',');
       }
 
       final categoriesToTry = trimmed.isNotEmpty
@@ -275,6 +276,9 @@ class NominatimPlaceSearchService implements PlaceSearchService {
             if (_seenPlaceIds.contains(placeId)) {
               // 内存层过滤：若服务端未履行 exclude_place_ids 或返回重复项，主动跳过
               continue;
+            }
+            if (_seenPlaceIds.length >= 100) {
+              _seenPlaceIds.remove(_seenPlaceIds.first);
             }
             _seenPlaceIds.add(placeId);
           }

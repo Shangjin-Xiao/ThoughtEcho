@@ -19,7 +19,6 @@ class _FakeNetworkService implements NetworkService {
 
   int calls = 0;
   Uri? lastUri;
-  final List<Uri> recordedUris = [];
   Map<String, String>? lastHeaders;
 
   @override
@@ -30,7 +29,6 @@ class _FakeNetworkService implements NetworkService {
   }) async {
     final uri = Uri.parse(url);
     lastUri = uri;
-    recordedUris.add(uri);
     lastHeaders = headers;
     if (shouldThrow) {
       throw Exception('Network request failed');

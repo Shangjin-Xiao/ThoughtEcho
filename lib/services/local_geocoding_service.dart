@@ -130,7 +130,9 @@ class LocalGeocodingService {
       // 串行化执行以避免全局 locale 状态的竞态条件，并在底层调用设置超时以避免队列挂起
       try {
         final placemarks = await _runSerialized(() async {
-          await geocoding.setLocaleIdentifier(localeIdentifier);
+          await geocoding
+              .setLocaleIdentifier(localeIdentifier)
+              .timeout(timeout);
           return await geocoding
               .placemarkFromCoordinates(latitude, longitude)
               .timeout(timeout);
