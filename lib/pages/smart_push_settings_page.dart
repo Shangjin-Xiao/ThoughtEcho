@@ -189,6 +189,10 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     }
   }
 
+  void updateState([VoidCallback? fn]) {
+    setState(fn ?? () {});
+  }
+
   Future<void> _checkPermissionAndShowDialog() async {
     if (!mounted) return;
     try {
