@@ -56,6 +56,10 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     super.dispose();
   }
 
+  void _updateState(VoidCallback fn) {
+    setState(fn);
+  }
+
   Future<void> _loadData() async {
     try {
       final smartPushService = context.read<SmartPushService>();

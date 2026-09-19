@@ -170,7 +170,7 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
       if (!mounted) return;
       final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
       slots[index] = slot.copyWith(hour: time.hour, minute: time.minute);
-      setState(() {
+      _updateState(() {
         _settings = _settings.copyWith(pushTimeSlots: slots);
       });
     }
@@ -185,7 +185,7 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
       if (!mounted) return;
       final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
       slots.add(PushTimeSlot(hour: time.hour, minute: time.minute));
-      setState(() {
+      _updateState(() {
         _settings = _settings.copyWith(pushTimeSlots: slots);
       });
     }
@@ -227,7 +227,7 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
                 Switch(
                   value: _settings.dailyQuotePushEnabled,
                   onChanged: (value) {
-                    setState(() {
+                    _updateState(() {
                       _settings = _settings.copyWith(
                         dailyQuotePushEnabled: value,
                       );
