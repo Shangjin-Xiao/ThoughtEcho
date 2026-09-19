@@ -1,25 +1,8 @@
 part of 'session_history_page.dart';
 
 extension _SessionHistoryPageContent on _SessionHistoryPageState {
-  Widget _buildEmptyState(ThemeData theme, AppLocalizations l10n) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 48,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.noChats,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      );
+  Widget _buildEmptyState(ThemeData theme, AppLocalizations l10n) =>
+      AppEmptyView(text: l10n.noChats);
 
   Widget _buildSearchResultsList(
     BuildContext context,
@@ -70,13 +53,35 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
-              child: Text(
-                groupKey,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+              padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
+              child: Row(
+                children: [
+                  Text(
+                    groupKey,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(
+                        AppShapeTokens.of(context).buttonRadius * 0.4,
+                      ),
+                    ),
+                    child: Text(
+                      '${groupSessions.length}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             for (final session in groupSessions)
@@ -102,6 +107,8 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
     int snippetMatchStart = -1,
     int snippetMatchEnd = -1,
   }) {
+    final cardRadius = AppShapeTokens.of(context).cardRadius;
+    final isSelected = _selectedSessionIds.contains(session.id);
     final isCurrent = session.id == widget.currentSessionId;
     final messageCount = _messageCounts[session.id] ?? 0;
     final displayTitle = _resolveSessionTitle(session, l10n);
@@ -112,157 +119,214 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
       context,
       session.lastActiveAt,
     );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Slidable(
-        key: ValueKey(session.id),
-        startActionPane: ActionPane(
-          motion: const ScrollMotion(),
-          children: [
-            SlidableAction(
-              onPressed: (_) async {
-                await widget.chatSessionService.togglePin(session.id);
-                await _loadSessions();
-                if (_searchQuery.isNotEmpty) {
-                  await _performSearch(_searchQuery);
-                }
-              },
-              backgroundColor: session.isPinned
-                  ? AppSemanticColors.of(context).warningContainer
-                  : theme.colorScheme.primary,
-              foregroundColor: session.isPinned
-                  ? AppSemanticColors.of(context).onWarningContainer
-                  : theme.colorScheme.onPrimary,
-              icon: session.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
-              label: session.isPinned ? l10n.unpinChat : l10n.pinChat,
-            ),
-          ],
-        ),
-        endActionPane: ActionPane(
-          motion: const ScrollMotion(),
-          children: [
-            SlidableAction(
-              onPressed: (_) => _confirmDelete(context, session.id),
-              backgroundColor: theme.colorScheme.error,
-              foregroundColor: theme.colorScheme.onError,
-              icon: Icons.delete_outline,
-              label: l10n.delete,
-            ),
-          ],
-        ),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: isCurrent
-                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-                : theme.colorScheme.surfaceContainerHigh,
-            border: Border.all(
-              color: isCurrent
-                  ? theme.colorScheme.primary.withValues(alpha: 0.5)
-                  : Colors.transparent,
-              width: isCurrent ? 1.5 : 1,
-            ),
-            borderRadius:
-                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(cardRadius),
+        child: Slidable(
+          key: ValueKey(session.id),
+          enabled: !_isMultiSelectMode,
+          startActionPane: ActionPane(
+            motion: const BehindMotion(),
+            extentRatio: 0.24,
+            children: [
+              SlidableAction(
+                onPressed: (_) async {
+                  await widget.chatSessionService.togglePin(session.id);
+                  await _loadSessions();
+                  if (_searchQuery.isNotEmpty) {
+                    await _performSearch(_searchQuery);
+                  }
+                },
+                backgroundColor: session.isPinned
+                    ? AppSemanticColors.of(context).warningContainer
+                    : theme.colorScheme.primary,
+                foregroundColor: session.isPinned
+                    ? AppSemanticColors.of(context).onWarningContainer
+                    : theme.colorScheme.onPrimary,
+                icon: session.isPinned
+                    ? Icons.push_pin_outlined
+                    : Icons.push_pin_rounded,
+                label: session.isPinned ? l10n.unpinChat : l10n.pinChat,
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(cardRadius),
+                ),
+              ),
+            ],
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: isCurrent ? null : () => widget.onSelect(session.id),
-              borderRadius:
-                  BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (session.isPinned) ...[
-                          Icon(
-                            Icons.push_pin,
-                            size: 14,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 4),
-                        ],
-                        Expanded(
-                          child: _buildHighlightedText(
-                            text: title,
-                            query: _searchQuery,
-                            baseStyle: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ) ??
-                                const TextStyle(fontWeight: FontWeight.w600),
-                            theme: theme,
-                            useBackground: false,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            l10n.messageCountLabel(messageCount),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+          endActionPane: ActionPane(
+            motion: const BehindMotion(),
+            extentRatio: 0.24,
+            children: [
+              SlidableAction(
+                onPressed: (_) => _confirmDelete(context, session.id),
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
+                icon: Icons.delete_outline_rounded,
+                label: l10n.delete,
+                borderRadius: BorderRadius.horizontal(
+                  right: Radius.circular(cardRadius),
+                ),
+              ),
+            ],
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.45)
+                  : (isCurrent
+                      ? theme.colorScheme.primaryContainer
+                          .withValues(alpha: 0.3)
+                      : theme.colorScheme.surfaceContainerHigh),
+              border: Border.all(
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : (isCurrent
+                        ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                        : Colors.transparent),
+                width: isSelected || isCurrent ? 1.5 : 1,
+              ),
+              borderRadius: BorderRadius.circular(cardRadius),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isMultiSelectMode
+                    ? () => _toggleSessionSelection(session.id)
+                    : (isCurrent ? null : () => widget.onSelect(session.id)),
+                onLongPress: _isMultiSelectMode
+                    ? () => _toggleSessionSelection(session.id)
+                    : () =>
+                        _enterMultiSelectMode(initialSelectedId: session.id),
+                borderRadius: BorderRadius.circular(cardRadius),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (_isMultiSelectMode) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Icon(
+                            isSelected
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            size: 22,
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant
+                                    .withValues(alpha: 0.6),
                           ),
                         ),
                       ],
-                    ),
-                    if (snippet.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      (snippetMatchStart >= 0 &&
-                              snippetMatchEnd > snippetMatchStart)
-                          ? _buildHighlightedTextByRange(
-                              text: snippet,
-                              matchStart: snippetMatchStart,
-                              matchEnd: snippetMatchEnd,
-                              baseStyle: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ) ??
-                                  TextStyle(
-                                    color: theme.colorScheme.onSurfaceVariant,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                if (session.isPinned) ...[
+                                  Icon(
+                                    Icons.push_pin_rounded,
+                                    size: 14,
+                                    color: theme.colorScheme.primary,
                                   ),
-                              theme: theme,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            )
-                          : _buildHighlightedText(
-                              text: snippet,
-                              query: _searchQuery,
-                              baseStyle: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ) ??
-                                  TextStyle(
-                                    color: theme.colorScheme.onSurfaceVariant,
+                                  const SizedBox(width: 4),
+                                ],
+                                Expanded(
+                                  child: _buildHighlightedText(
+                                    text: title,
+                                    query: _searchQuery,
+                                    baseStyle:
+                                        theme.textTheme.bodyMedium?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ) ??
+                                            const TextStyle(
+                                                fontWeight: FontWeight.w600),
+                                    theme: theme,
+                                    useBackground: false,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                              theme: theme,
-                              useBackground: true,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary
+                                        .withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(
+                                      AppShapeTokens.of(context).buttonRadius *
+                                          0.4,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    l10n.messageCountLabel(messageCount),
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                    ],
-                    const SizedBox(height: 6),
-                    Text(
-                      updated,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                            if (snippet.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              (snippetMatchStart >= 0 &&
+                                      snippetMatchEnd > snippetMatchStart)
+                                  ? _buildHighlightedTextByRange(
+                                      text: snippet,
+                                      matchStart: snippetMatchStart,
+                                      matchEnd: snippetMatchEnd,
+                                      baseStyle:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                                color: theme.colorScheme
+                                                    .onSurfaceVariant,
+                                              ) ??
+                                              TextStyle(
+                                                color: theme.colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                      theme: theme,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  : _buildHighlightedText(
+                                      text: snippet,
+                                      query: _searchQuery,
+                                      baseStyle:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                                color: theme.colorScheme
+                                                    .onSurfaceVariant,
+                                              ) ??
+                                              TextStyle(
+                                                color: theme.colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                      theme: theme,
+                                      useBackground: true,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                            ],
+                            const SizedBox(height: 6),
+                            Text(
+                              updated,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -411,6 +475,9 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
                 await _performSearch(_searchQuery);
               }
             },
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: Text(l10n.delete),
           ),
         ],

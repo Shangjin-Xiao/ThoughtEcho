@@ -639,27 +639,35 @@ class ChatSessionService extends ChangeNotifier {
     if (sessionIds.isEmpty) return const {};
     final db = await _getDatabaseForRead();
     if (db == null) return const {};
-    final placeholders = List.filled(sessionIds.length, '?').join(',');
-    final rows = await db.rawQuery(
-      '''
-      SELECT s.id,
-        (SELECT COUNT(*) FROM chat_messages c WHERE c.session_id = s.id)
-          AS message_count,
-        (SELECT m.content FROM chat_messages m
-          WHERE m.session_id = s.id
-          ORDER BY m.created_at DESC LIMIT 1) AS last_content
-      FROM chat_sessions s
-      WHERE s.id IN ($placeholders)
-      ''',
-      sessionIds,
-    );
-    return {
-      for (final row in rows)
-        row['id'] as String: ChatSessionOverview(
+    const chunkSize = 500;
+    final result = <String, ChatSessionOverview>{};
+    for (var i = 0; i < sessionIds.length; i += chunkSize) {
+      final end = (i + chunkSize < sessionIds.length)
+          ? i + chunkSize
+          : sessionIds.length;
+      final chunk = sessionIds.sublist(i, end);
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      final rows = await db.rawQuery(
+        '''
+        SELECT s.id,
+          (SELECT COUNT(*) FROM chat_messages c WHERE c.session_id = s.id)
+            AS message_count,
+          (SELECT m.content FROM chat_messages m
+            WHERE m.session_id = s.id
+            ORDER BY m.created_at DESC LIMIT 1) AS last_content
+        FROM chat_sessions s
+        WHERE s.id IN ($placeholders)
+        ''',
+        chunk,
+      );
+      for (final row in rows) {
+        result[row['id'] as String] = ChatSessionOverview(
           messageCount: row['message_count'] as int? ?? 0,
           snippet: _truncatePreview(row['last_content'] as String?),
-        ),
-    };
+        );
+      }
+    }
+    return result;
   }
 
   String _truncatePreview(String? content) {
@@ -797,17 +805,38 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<void> deleteSession(String sessionId) async {
+    await deleteSessions([sessionId]);
+  }
+
+  /// 批量删除多个会话及其关联消息，避免多次写事务和循环通知导致的性能问题与 N+1 查询。
+  Future<void> deleteSessions(List<String> sessionIds) async {
+    if (sessionIds.isEmpty) return;
     try {
       await _persistOrQueueWrite((db) async {
-        await db.delete(
-          'chat_sessions',
-          where: 'id = ?',
-          whereArgs: [sessionId],
-        );
-      }, operationName: 'ChatSessionService.deleteSession');
+        await db.transaction((txn) async {
+          const chunkSize = 500;
+          for (var i = 0; i < sessionIds.length; i += chunkSize) {
+            final end = (i + chunkSize < sessionIds.length)
+                ? i + chunkSize
+                : sessionIds.length;
+            final chunk = sessionIds.sublist(i, end);
+            final placeholders = List.filled(chunk.length, '?').join(',');
+            await txn.delete(
+              'chat_messages',
+              where: 'session_id IN ($placeholders)',
+              whereArgs: chunk,
+            );
+            await txn.delete(
+              'chat_sessions',
+              where: 'id IN ($placeholders)',
+              whereArgs: chunk,
+            );
+          }
+        });
+      }, operationName: 'ChatSessionService.deleteSessions');
     } catch (e) {
       logError(
-        'ChatSessionService.deleteSession 失败',
+        'ChatSessionService.deleteSessions 失败',
         error: e,
         source: 'ChatSessionService',
       );

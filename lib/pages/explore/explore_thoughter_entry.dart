@@ -319,6 +319,10 @@ extension _ExploreThoughterEntry on _ExplorePageState {
             await service.deleteSession(id);
             await _loadRecentSessions();
           },
+          onBatchDelete: (ids) async {
+            await service.deleteSessions(ids);
+            await _loadRecentSessions();
+          },
           onNewChat: () {
             Navigator.of(ctx).pop();
             _openThoughter();

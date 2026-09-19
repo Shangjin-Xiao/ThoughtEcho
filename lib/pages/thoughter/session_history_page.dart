@@ -1,13 +1,19 @@
-import 'package:thoughtecho/theme/app_semantic_colors.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/chat_session.dart';
 import '../../services/chat_session_service.dart';
+import '../../theme/app_semantic_colors.dart';
+import '../../theme/theme_style.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/time_utils.dart';
-import '../../theme/theme_style.dart';
+import '../../widgets/app_empty_view.dart';
+import '../../widgets/app_loading_view.dart';
+import '../../widgets/app_snackbar.dart';
 
 part 'session_history_page_content.dart';
 
@@ -18,6 +24,7 @@ class SessionHistoryPage extends StatefulWidget {
   final ChatSessionService chatSessionService;
   final ValueChanged<String> onSelect;
   final ValueChanged<String> onDelete;
+  final FutureOr<void> Function(List<String> ids)? onBatchDelete;
   final VoidCallback onNewChat;
 
   const SessionHistoryPage({
@@ -27,6 +34,7 @@ class SessionHistoryPage extends StatefulWidget {
     required this.chatSessionService,
     required this.onSelect,
     required this.onDelete,
+    this.onBatchDelete,
     required this.onNewChat,
   });
 
@@ -44,11 +52,27 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  bool _isMultiSelectMode = false;
+  final Set<String> _selectedSessionIds = {};
+
   /// 笔记入口默认只看这条笔记的对话，但用户也要能翻到全部对话。
   /// 探索入口本来就是全部（noteId 为空），不显示切换。
   bool _showAllSessions = false;
 
   bool get _isNoteScoped => widget.noteId.isNotEmpty;
+
+  List<ChatSession> get _currentVisibleSessions {
+    if (_searchQuery.isNotEmpty) {
+      return _searchResults?.map((r) => r.session).toList() ?? [];
+    }
+    return _sessions ?? [];
+  }
+
+  bool get _areAllVisibleSessionsSelected {
+    final visible = _currentVisibleSessions;
+    if (visible.isEmpty) return false;
+    return visible.every((s) => _selectedSessionIds.contains(s.id));
+  }
 
   @override
   void initState() {
@@ -129,6 +153,21 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
     try {
       final results =
           await widget.chatSessionService.searchSessions(trimmedQuery);
+
+      if (results.isNotEmpty) {
+        final missingIds = results
+            .map((r) => r.session.id)
+            .where((id) => !_messageCounts.containsKey(id))
+            .toList();
+        if (missingIds.isNotEmpty) {
+          final overviews =
+              await widget.chatSessionService.getSessionOverviews(missingIds);
+          for (final entry in overviews.entries) {
+            _messageCounts[entry.key] = entry.value.messageCount;
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _searchResults = results;
@@ -142,6 +181,111 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
           _searchResults = [];
           _isSearching = false;
         });
+      }
+    }
+  }
+
+  void _enterMultiSelectMode({String? initialSelectedId}) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _isMultiSelectMode = true;
+      _selectedSessionIds.clear();
+      if (initialSelectedId != null) {
+        _selectedSessionIds.add(initialSelectedId);
+      }
+    });
+  }
+
+  void _exitMultiSelectMode() {
+    setState(() {
+      _isMultiSelectMode = false;
+      _selectedSessionIds.clear();
+    });
+  }
+
+  void _toggleSessionSelection(String sessionId) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_selectedSessionIds.contains(sessionId)) {
+        _selectedSessionIds.remove(sessionId);
+      } else {
+        _selectedSessionIds.add(sessionId);
+      }
+    });
+  }
+
+  void _toggleSelectAll() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      final visible = _currentVisibleSessions;
+      if (_areAllVisibleSessionsSelected) {
+        _selectedSessionIds.clear();
+      } else {
+        _selectedSessionIds.addAll(visible.map((s) => s.id));
+      }
+    });
+  }
+
+  Future<void> _confirmBatchDelete() async {
+    final count = _selectedSessionIds.length;
+    if (count == 0) return;
+
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.deleteSelectedChats),
+        content: Text(l10n.deleteSelectedChatsConfirm(count)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _executeBatchDelete();
+    }
+  }
+
+  Future<void> _executeBatchDelete() async {
+    final idsToDelete = _selectedSessionIds.toList();
+    if (idsToDelete.isEmpty) return;
+
+    final l10n = AppLocalizations.of(context);
+    try {
+      if (widget.onBatchDelete != null) {
+        await widget.onBatchDelete!(idsToDelete);
+      } else {
+        await widget.chatSessionService.deleteSessions(idsToDelete);
+        for (final id in idsToDelete) {
+          widget.onDelete(id);
+        }
+      }
+
+      if (!mounted) return;
+      final deletedCount = idsToDelete.length;
+      _exitMultiSelectMode();
+      await _loadSessions();
+      if (_searchQuery.isNotEmpty) {
+        await _performSearch(_searchQuery);
+      }
+      if (mounted) {
+        AppSnackBar.success(context, l10n.deleteChatsSuccess(deletedCount));
+      }
+    } catch (e) {
+      AppLogger.e('Batch delete sessions failed', error: e);
+      if (mounted) {
+        AppSnackBar.error(context, l10n.deleteFailedSimple);
       }
     }
   }
@@ -178,62 +322,117 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.chatHistory),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: l10n.newChat,
-            onPressed: widget.onNewChat,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (_isNoteScoped) _buildScopeSelector(l10n),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: SearchBar(
-              controller: _searchController,
-              hintText: l10n.searchChatHistory,
-              leading: const Icon(Icons.search, size: 20),
-              elevation: const WidgetStatePropertyAll(0),
-              backgroundColor: WidgetStatePropertyAll(
-                theme.colorScheme.surfaceContainerHighest,
-              ),
-              shape: WidgetStatePropertyAll(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppShapeTokens.of(context).inputRadius,
+    return PopScope(
+      canPop: !_isMultiSelectMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _isMultiSelectMode) {
+          _exitMultiSelectMode();
+        }
+      },
+      child: Scaffold(
+        appBar: _isMultiSelectMode
+            ? _buildMultiSelectAppBar(context, theme, l10n)
+            : _buildNormalAppBar(context, theme, l10n),
+        body: Column(
+          children: [
+            if (_isNoteScoped && !_isMultiSelectMode) _buildScopeSelector(l10n),
+            if (!_isMultiSelectMode)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: SearchBar(
+                  controller: _searchController,
+                  hintText: l10n.searchChatHistory,
+                  leading: const Icon(Icons.search, size: 20),
+                  elevation: const WidgetStatePropertyAll(0),
+                  backgroundColor: WidgetStatePropertyAll(
+                    theme.colorScheme.surfaceContainerHighest,
                   ),
+                  shape: WidgetStatePropertyAll(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppShapeTokens.of(context).inputRadius,
+                      ),
+                    ),
+                  ),
+                  trailing: [
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        tooltip: l10n.clear,
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                            _searchResults = null;
+                          });
+                        },
+                      ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _searchQuery = value);
+                    _performSearch(value);
+                  },
                 ),
               ),
-              trailing: [
-                if (_searchQuery.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    tooltip: l10n.clear,
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {
-                        _searchQuery = '';
-                        _searchResults = null;
-                      });
-                    },
-                  ),
-              ],
-              onChanged: (value) {
-                setState(() => _searchQuery = value);
-                _performSearch(value);
-              },
+            Expanded(
+              child: _buildBody(context, theme, l10n),
             ),
-          ),
-          Expanded(
-            child: _buildBody(context, theme, l10n),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildNormalAppBar(
+      BuildContext context, ThemeData theme, AppLocalizations l10n) {
+    final visibleCount = _currentVisibleSessions.length;
+    return AppBar(
+      title: Text(l10n.chatHistory),
+      actions: [
+        if (visibleCount > 0)
+          IconButton(
+            icon: const Icon(Icons.checklist_rounded),
+            tooltip: l10n.multiSelectChats,
+            onPressed: _enterMultiSelectMode,
+          ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: l10n.newChat,
+          onPressed: widget.onNewChat,
+        ),
+      ],
+    );
+  }
+
+  PreferredSizeWidget _buildMultiSelectAppBar(
+      BuildContext context, ThemeData theme, AppLocalizations l10n) {
+    final count = _selectedSessionIds.length;
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.close_rounded),
+        tooltip: l10n.cancel,
+        onPressed: _exitMultiSelectMode,
+      ),
+      title: Text(l10n.selectedChatCount(count)),
+      actions: [
+        IconButton(
+          icon: Icon(
+            _areAllVisibleSessionsSelected
+                ? Icons.deselect_rounded
+                : Icons.select_all_rounded,
+          ),
+          tooltip: _areAllVisibleSessionsSelected
+              ? l10n.deselectAll
+              : l10n.selectAll,
+          onPressed: _toggleSelectAll,
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline_rounded),
+          tooltip: l10n.deleteSelectedChats,
+          onPressed: count > 0 ? _confirmBatchDelete : null,
+          color: count > 0 ? theme.colorScheme.error : null,
+        ),
+      ],
     );
   }
 
@@ -267,9 +466,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
   Widget _buildBody(
       BuildContext context, ThemeData theme, AppLocalizations l10n) {
     if (_isLoading || (_searchQuery.isNotEmpty && _isSearching)) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const AppLoadingView();
     }
 
     if (_searchQuery.isNotEmpty) {

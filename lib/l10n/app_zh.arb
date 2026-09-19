@@ -4097,6 +4097,33 @@
   "noChats": "暂无对话",
   "deleteChat": "删除对话",
   "deleteChatConfirm": "确定要删除这个对话吗？",
+  "deselectAll": "取消全选",
+  "multiSelectChats": "多选",
+  "selectedChatCount": "已选择 {count} 项",
+  "@selectedChatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedChats": "删除所选对话",
+  "deleteSelectedChatsConfirm": "确定要删除选中的 {count} 项对话吗？此操作无法撤销。",
+  "@deleteSelectedChatsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteChatsSuccess": "已删除 {count} 项对话",
+  "@deleteChatsSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "searchChatHistory": "搜索对话...",
   "dynamicInsightStats": "你已记录 {count} 条心迹，最近 7 天新增 {recentCount} 条。",
   "@dynamicInsightStats": {

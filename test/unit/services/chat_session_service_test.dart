@@ -588,5 +588,97 @@ void main() {
       await deleteDatabase(mainDbPath);
       await deleteDatabase(injectedDbPath);
     });
+
+    test(
+        'deleteSessions deletes multiple sessions and their messages in a single batch',
+        () async {
+      final dbPath = path.join(
+        Directory.systemTemp.createTempSync('chat_db_test_batch_').path,
+        'chat.db',
+      );
+      final service = ChatSessionService(
+        databasePath: dbPath,
+        openOwnDatabase: true,
+      );
+
+      final s1 = await service.createSession(
+        sessionType: 'agent',
+        title: 'Session 1',
+      );
+      final s2 = await service.createSession(
+        sessionType: 'agent',
+        title: 'Session 2',
+      );
+      final s3 = await service.createSession(
+        sessionType: 'agent',
+        title: 'Session 3',
+      );
+
+      await service.addMessage(
+        s1.id,
+        ChatMessage(
+          id: 'msg-1',
+          content: 'Hello in session 1',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime.now(),
+        ),
+      );
+      await service.addMessage(
+        s2.id,
+        ChatMessage(
+          id: 'msg-2',
+          content: 'Hello in session 2',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime.now(),
+        ),
+      );
+      await service.addMessage(
+        s3.id,
+        ChatMessage(
+          id: 'msg-3',
+          content: 'Hello in session 3',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      expect((await service.getMessages(s1.id)).length, 1);
+      expect((await service.getMessages(s2.id)).length, 1);
+      expect((await service.getMessages(s3.id)).length, 1);
+
+      await service.deleteSessions([s1.id, s2.id]);
+
+      final remainingSessions = await service.getAllSessions();
+      final remainingIds = remainingSessions.map((s) => s.id).toList();
+      expect(remainingIds, contains(s3.id));
+      expect(remainingIds, isNot(contains(s1.id)));
+      expect(remainingIds, isNot(contains(s2.id)));
+
+      expect(await service.getMessages(s1.id), isEmpty);
+      expect(await service.getMessages(s2.id), isEmpty);
+      expect((await service.getMessages(s3.id)).length, 1);
+
+      await service.close();
+      await deleteDatabase(dbPath);
+    });
+
+    test('deleteSessions with empty list does nothing', () async {
+      final dbPath = path.join(
+        Directory.systemTemp.createTempSync('chat_db_test_empty_').path,
+        'chat.db',
+      );
+      final service = ChatSessionService(
+        databasePath: dbPath,
+        openOwnDatabase: true,
+      );
+
+      await service.deleteSessions([]);
+
+      await service.close();
+      await deleteDatabase(dbPath);
+    });
   });
 }

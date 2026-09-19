@@ -4097,6 +4097,33 @@
   "noChats": "No chats yet",
   "deleteChat": "Delete Chat",
   "deleteChatConfirm": "Are you sure you want to delete this chat?",
+  "deselectAll": "Deselect All",
+  "multiSelectChats": "Select",
+  "selectedChatCount": "{count, plural, =1{1 selected} other{{count} selected}}",
+  "@selectedChatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedChats": "Delete Selected Chats",
+  "deleteSelectedChatsConfirm": "Are you sure you want to delete {count, plural, =1{the selected chat} other{the {count} selected chats}}? This action cannot be undone.",
+  "@deleteSelectedChatsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteChatsSuccess": "{count, plural, =1{Deleted 1 chat} other{Deleted {count} chats}}",
+  "@deleteChatsSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "searchChatHistory": "Search chats...",
   "dynamicInsightStats": "You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
   "@dynamicInsightStats": {

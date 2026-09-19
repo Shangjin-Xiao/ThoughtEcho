@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/chat_session.dart';
@@ -18,13 +19,14 @@ class _FakeChatSessionService extends ChatSessionService {
   final Map<String, int> messageCounts;
   final List<ChatSessionSearchResult> searchResults;
   String? lastSearchQuery;
+  final List<String> deletedSessionIds = [];
 
   @override
   Future<List<ChatSession>> getAllSessions({
     int limit = 50,
     int offset = 0,
   }) async {
-    return sessions;
+    return List.from(sessions);
   }
 
   @override
@@ -61,7 +63,14 @@ class _FakeChatSessionService extends ChatSessionService {
 
   @override
   Future<void> deleteSession(String sessionId) async {
-    // No-op for test fake
+    deletedSessionIds.add(sessionId);
+    sessions.removeWhere((s) => s.id == sessionId);
+  }
+
+  @override
+  Future<void> deleteSessions(List<String> sessionIds) async {
+    deletedSessionIds.addAll(sessionIds);
+    sessions.removeWhere((s) => sessionIds.contains(s.id));
   }
 
   @override
@@ -269,5 +278,261 @@ void main() {
     // Verify that RichText widgets exist for the highlights
     final richTexts = tester.widgetList<RichText>(find.byType(RichText));
     expect(richTexts.length, greaterThanOrEqualTo(2));
+  });
+
+  testWidgets(
+      'enters multi-select mode via action button and toggles selection',
+      (tester) async {
+    final now = DateTime(2026, 4, 18, 12);
+    final service = _FakeChatSessionService(
+      sessions: [
+        _session(id: 's1', title: '会话一', lastActiveAt: now),
+        _session(
+          id: 's2',
+          title: '会话二',
+          lastActiveAt: now.subtract(const Duration(minutes: 5)),
+        ),
+      ],
+      messageCounts: const {'s1': 2, 's2': 3},
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SessionHistoryPage)),
+    );
+
+    // Click multi-select button in AppBar
+    expect(find.byIcon(Icons.checklist_rounded), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.checklist_rounded));
+    await tester.pumpAndSettle();
+
+    // In multi-select mode, title shows 0 selected
+    expect(find.text(l10n.selectedChatCount(0)), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+    // Tap first card to select it
+    await tester.tap(find.text('会话一'));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.selectedChatCount(1)), findsOneWidget);
+
+    // Tap second card to select it
+    await tester.tap(find.text('会话二'));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.selectedChatCount(2)), findsOneWidget);
+
+    // Tap second card again to deselect
+    await tester.tap(find.text('会话二'));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.selectedChatCount(1)), findsOneWidget);
+  });
+
+  testWidgets('enters multi-select mode via long press on a card',
+      (tester) async {
+    final now = DateTime(2026, 4, 18, 12);
+    final service = _FakeChatSessionService(
+      sessions: [
+        _session(id: 's1', title: '长按会话', lastActiveAt: now),
+      ],
+      messageCounts: const {'s1': 1},
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SessionHistoryPage)),
+    );
+
+    // Long press card
+    await tester.longPress(find.text('长按会话'));
+    await tester.pumpAndSettle();
+
+    // Automatically in multi-select mode with 1 selected
+    expect(find.text(l10n.selectedChatCount(1)), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+  });
+
+  testWidgets('selects all and deselects all in multi-select mode',
+      (tester) async {
+    final now = DateTime(2026, 4, 18, 12);
+    final service = _FakeChatSessionService(
+      sessions: [
+        _session(id: 's1', title: '会话A', lastActiveAt: now),
+        _session(id: 's2', title: '会话B', lastActiveAt: now),
+      ],
+      messageCounts: const {'s1': 1, 's2': 1},
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SessionHistoryPage)),
+    );
+
+    // Enter multi-select
+    await tester.tap(find.byIcon(Icons.checklist_rounded));
+    await tester.pumpAndSettle();
+
+    // Tap Select All
+    await tester.tap(find.byIcon(Icons.select_all_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.selectedChatCount(2)), findsOneWidget);
+
+    // Tap Deselect All
+    await tester.tap(find.byIcon(Icons.deselect_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.selectedChatCount(0)), findsOneWidget);
+  });
+
+  testWidgets(
+      'batch deletes selected sessions with confirmation dialog and calls onBatchDelete',
+      (tester) async {
+    final now = DateTime(2026, 4, 18, 12);
+    final service = _FakeChatSessionService(
+      sessions: [
+        _session(id: 's1', title: '待删一', lastActiveAt: now),
+        _session(id: 's2', title: '待删二', lastActiveAt: now),
+        _session(id: 's3', title: '保留项', lastActiveAt: now),
+      ],
+      messageCounts: const {'s1': 1, 's2': 1, 's3': 2},
+    );
+
+    List<String>? batchDeletedIds;
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onBatchDelete: (ids) async {
+            batchDeletedIds = List.from(ids);
+            await service.deleteSessions(ids);
+          },
+          onNewChat: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SessionHistoryPage)),
+    );
+
+    // Enter multi-select
+    await tester.tap(find.byIcon(Icons.checklist_rounded));
+    await tester.pumpAndSettle();
+
+    // Select s1 and s2
+    await tester.tap(find.text('待删一'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('待删二'));
+    await tester.pumpAndSettle();
+
+    // Tap delete button in AppBar
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+    await tester.pumpAndSettle();
+
+    // Confirmation dialog should appear
+    expect(find.text(l10n.deleteSelectedChats), findsOneWidget);
+    expect(find.text(l10n.deleteSelectedChatsConfirm(2)), findsOneWidget);
+
+    // Tap confirm delete in dialog
+    await tester.tap(find.widgetWithText(TextButton, l10n.delete));
+    await tester.pumpAndSettle();
+
+    // Verify onBatchDelete was invoked with both IDs
+    expect(batchDeletedIds, containsAll(['s1', 's2']));
+    expect(batchDeletedIds, isNot(contains('s3')));
+
+    // Should exit multi-select mode and remaining session should be visible
+    expect(find.text('保留项'), findsOneWidget);
+    expect(find.text('待删一'), findsNothing);
+    expect(find.text('待删二'), findsNothing);
+  });
+
+  testWidgets(
+      'swipe to delete reveals delete action and slidable is disabled in multi-select mode',
+      (tester) async {
+    final now = DateTime(2026, 4, 18, 12);
+    final service = _FakeChatSessionService(
+      sessions: [
+        _session(id: 's1', title: '可滑动会话', lastActiveAt: now),
+      ],
+      messageCounts: const {'s1': 1},
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final slidableFinder = find.byType(Slidable);
+    expect(slidableFinder, findsOneWidget);
+    final slidable = tester.widget<Slidable>(slidableFinder);
+    expect(slidable.enabled, isTrue);
+
+    // Enter multi-select mode
+    await tester.tap(find.byIcon(Icons.checklist_rounded));
+    await tester.pumpAndSettle();
+
+    // In multi-select mode, Slidable must be disabled
+    final slidableInMultiSelect =
+        tester.widget<Slidable>(find.byType(Slidable));
+    expect(slidableInMultiSelect.enabled, isFalse);
+
+    // Exit multi-select mode via close button
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    final slidableAfterExit = tester.widget<Slidable>(find.byType(Slidable));
+    expect(slidableAfterExit.enabled, isTrue);
   });
 }

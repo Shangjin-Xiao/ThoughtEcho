@@ -687,6 +687,14 @@ extension _ThoughterSession on _ThoughterPageState {
               await _startNewChat();
             }
           },
+          onBatchDelete: (ids) async {
+            await _chatSessionService.deleteSessions(ids);
+            if (!mounted || !ctx.mounted) return;
+            if (_currentSessionId != null && ids.contains(_currentSessionId)) {
+              Navigator.of(ctx).pop();
+              await _startNewChat();
+            }
+          },
           onNewChat: () {
             Navigator.of(ctx).pop();
             _startNewChat();
