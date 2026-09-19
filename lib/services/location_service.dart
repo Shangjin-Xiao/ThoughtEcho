@@ -538,11 +538,28 @@ class LocationService extends ChangeNotifier {
     double longitude,
   ) async {
     try {
-      return await _reverseGeocodeWithNominatim(latitude, longitude);
+      final online = await _reverseGeocodeWithNominatim(latitude, longitude);
+      if (online != null) return online;
     } catch (e) {
-      logDebug('反查选点地址失败: $e');
-      return null;
+      logDebug('在线反查选点地址失败: $e');
     }
+
+    try {
+      final systemResult =
+          await LocalGeocodingService.getAddressFromCoordinates(
+        latitude,
+        longitude,
+        localeCode: _apiLanguageParam,
+      );
+      if (systemResult != null) {
+        logDebug('反查选点地址使用系统SDK地理编码回退成功');
+        return systemResult;
+      }
+    } catch (e) {
+      logDebug('系统SDK地理编码回退失败: $e');
+    }
+
+    return null;
   }
 
   /// 开发者模式：强制使用免费的在线反向地理编码（Nominatim）

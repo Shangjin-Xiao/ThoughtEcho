@@ -142,7 +142,7 @@ void main() {
       expect(await service.searchNearby(refLat, refLon, query: '咖啡馆'), isEmpty);
     });
 
-    test('请求带上限定的 viewbox 和可识别的 User-Agent', () async {
+    test('请求带上限定的 viewbox 和可识别的 User-Agent，且不绑定 bounded=1 限制', () async {
       final network = _FakeNetworkService(_jsonResponse(const []));
       final service = NominatimPlaceSearchService(networkService: network);
 
@@ -152,8 +152,8 @@ void main() {
       final params = network.lastUri!.queryParameters;
       expect(params['q'], '咖啡馆');
       expect(params['format'], 'json');
-      // bounded=1 + viewbox：不限定的话「咖啡馆」会搜出全球结果
-      expect(params['bounded'], '1');
+      // 移除 bounded=1 限制，允许通过 viewbox 软偏好检索周边更广范围地点
+      expect(params['bounded'], isNull);
       expect(params['viewbox'], isNotNull);
       expect(network.lastHeaders!['User-Agent'], contains('ThoughtEcho'));
       expect(network.lastHeaders!['Accept-Language'], startsWith('zh-CN'));
@@ -261,6 +261,18 @@ void main() {
 
       final params = network.lastUri!.queryParameters;
       expect(params['q'], '西湖区');
+    });
+
+    test('未传入 categoryOrKeyword 时不使用硬编码的 restaurant，而是检索综合 POI 类别', () async {
+      final network = _FakeNetworkService(_jsonResponse(const []));
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      await service.getNearbyPlaces(refLat, refLon);
+
+      final params = network.lastUri!.queryParameters;
+      expect(params.containsKey('amenity'), isFalse);
+      expect(params['q'], isNotNull);
+      expect(params['q'], isNot('restaurant'));
     });
 
     test('请求失败时抛出异常，让调用方展示重试横幅', () async {

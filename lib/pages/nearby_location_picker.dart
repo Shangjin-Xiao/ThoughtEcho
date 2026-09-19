@@ -85,6 +85,12 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   bool _hasMore = true;
   bool _placesError = false;
 
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounceTimer;
+  final List<PlaceInfo> _searchResults = [];
+  bool _isSearching = false;
+  bool _searchError = false;
+
   int _currentOffset = 0;
   static const int _pageSize = 20;
 
@@ -152,6 +158,8 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
 
   @override
   void dispose() {
+    _searchDebounceTimer?.cancel();
+    _searchController.dispose();
     _confirmEpoch++;
     _routeAnimation?.removeStatusListener(_onRouteAnimationStatusChanged);
     _scrollController.removeListener(_onScroll);
@@ -184,7 +192,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         return;
       }
 
-      final pos = await locService.getCurrentLocation();
+      final pos = await locService.getCurrentLocation(highAccuracy: true);
       if (!mounted) return;
 
       if (pos != null) {
@@ -230,20 +238,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   }
 
   void _onDeviceLocationAcquired() {
-    // 若用户传入的 initialPoiName 与设备当前 POI 相同且坐标一致（或未传入坐标），则视同选中系统当前位置
-    if (_customSelectedPoiName != null &&
-        _devicePoiName != null &&
-        _customSelectedPoiName == _devicePoiName) {
-      final coordsMatchOrNull = (_customSelectedLatitude == null &&
-              _customSelectedLongitude == null) ||
-          _coordsMatch(_customSelectedLatitude, _customSelectedLongitude,
-              _deviceLatitude, _deviceLongitude);
-      if (coordsMatchOrNull) {
-        _systemSelected = true;
-        _customSelectedPoiName = null;
-      }
-    }
-
     _isLocating = false;
     setState(() {});
     _resolveAddressAndFetchPlaces();
@@ -272,6 +266,60 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
 
     if (!mounted) return;
     _fetchNearbyPlaces(isLoadMore: false);
+  }
+
+  void _onSearchChanged(String query) {
+    _searchDebounceTimer?.cancel();
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _searchResults.clear();
+        _searchError = false;
+      });
+      return;
+    }
+
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 400), () {
+      _executeSearch(trimmed);
+    });
+  }
+
+  Future<void> _executeSearch(String query) async {
+    if (!mounted) return;
+    if (_deviceLatitude == null || _deviceLongitude == null) return;
+    setState(() {
+      _isSearching = true;
+      _searchError = false;
+    });
+
+    try {
+      final localeCode = Localizations.localeOf(context).languageCode;
+      final results = await _placeSearch.searchNearby(
+        _deviceLatitude!,
+        _deviceLongitude!,
+        query: query,
+        localeCode: localeCode,
+      );
+      if (!mounted) return;
+      setState(() {
+        _searchResults.clear();
+        _searchResults.addAll(results);
+        _isSearching = false;
+      });
+    } catch (e, stack) {
+      logError(
+        '搜索地点失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NearbyLocationPicker',
+      );
+      if (!mounted) return;
+      setState(() {
+        _isSearching = false;
+        _searchError = true;
+      });
+    }
   }
 
   void _onScroll() {
@@ -303,16 +351,11 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     }
 
     try {
-      final keyword = _locationService?.district ??
-          _locationService?.city ??
-          _devicePoiName ??
-          '';
       final localeCode = Localizations.localeOf(context).languageCode;
 
       final results = await _placeSearch.getNearbyPlaces(
         _deviceLatitude!,
         _deviceLongitude!,
-        categoryOrKeyword: keyword.isNotEmpty ? keyword : null,
         localeCode: localeCode,
         limit: _pageSize,
         offset: _currentOffset,
@@ -448,7 +491,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           ),
         );
       } else if (_systemSelected) {
-        // 选中当前设备位置（离线反查失败时保留精确经纬度）
+        // 选中当前设备位置（所见即所得：仅保存行政区，不偷偷注入周边 POI）
         if (!mounted || epoch != _confirmEpoch || !_isCurrentRouteActive) {
           return;
         }
@@ -457,7 +500,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
             latitude: _deviceLatitude!,
             longitude: _deviceLongitude!,
             location: _deviceLocationString,
-            poiName: _devicePoiName,
+            poiName: null,
           ),
         );
       } else if (_customSelectedPoiName != null &&
@@ -484,7 +527,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
             latitude: _deviceLatitude!,
             longitude: _deviceLongitude!,
             location: _deviceLocationString,
-            poiName: _devicePoiName,
+            poiName: null,
           ),
         );
       }
@@ -592,43 +635,16 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         ),
       );
     } else {
-      content = ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: 1 +
-            (_placesError ? 1 : 0) +
-            _places.length +
-            (_isLoadingPlaces || _isLoadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          // 第 0 项：设备当前系统定位，永远可用
-          if (index == 0) {
-            return _buildSystemLocationTile(theme, l10n);
-          }
-
-          var offsetIndex = index - 1;
-
-          // 在线服务错误提示条目（附轻量重试按钮）
-          if (_placesError) {
-            if (offsetIndex == 0) {
-              return _buildErrorBanner(theme, l10n);
-            }
-            offsetIndex--;
-          }
-
-          // 候选 POI 列表
-          if (offsetIndex < _places.length) {
-            final place = _places[offsetIndex];
-            return _buildPlaceTile(theme, l10n, place);
-          }
-
-          // 底部加载更多指示器
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(
-              child: AppInlineLoadingIndicator(),
-            ),
-          );
-        },
+      final isSearchingMode = _searchController.text.trim().isNotEmpty;
+      content = Column(
+        children: [
+          _buildSearchBar(theme, l10n),
+          Expanded(
+            child: isSearchingMode
+                ? _buildSearchResultsList(theme, l10n)
+                : _buildNearbyPlacesList(theme, l10n),
+          ),
+        ],
       );
     }
 
@@ -639,16 +655,189 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     );
   }
 
+  Widget _buildSearchBar(ThemeData theme, AppLocalizations l10n) {
+    final shapeTokens = AppShapeTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: TextField(
+        controller: _searchController,
+        style: theme.textTheme.bodyMedium,
+        decoration: InputDecoration(
+          hintText: l10n.mapPickerSearchHint,
+          hintStyle: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear_rounded),
+                  tooltip: l10n.clear,
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged('');
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: theme.colorScheme.surfaceContainerHigh,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 10,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
+            borderSide: BorderSide(
+              color: theme.colorScheme.primary,
+              width: 1.5,
+            ),
+          ),
+        ),
+        onChanged: _onSearchChanged,
+      ),
+    );
+  }
+
+  Widget _buildSearchResultsList(ThemeData theme, AppLocalizations l10n) {
+    if (_isSearching) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const AppInlineLoadingIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              l10n.mapPickerSearching,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_searchError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 40,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.onlinePlaceSearchUnavailable,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => _executeSearch(_searchController.text.trim()),
+                child: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_searchResults.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.search_off_rounded,
+                size: 48,
+                color: theme.colorScheme.outline,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.noCityFound,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final place = _searchResults[index];
+        return _buildPlaceTile(theme, l10n, place);
+      },
+    );
+  }
+
+  Widget _buildNearbyPlacesList(ThemeData theme, AppLocalizations l10n) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: 1 +
+          (_placesError ? 1 : 0) +
+          _places.length +
+          (_isLoadingPlaces || _isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        // 第 0 项：设备当前系统定位，永远可用
+        if (index == 0) {
+          return _buildSystemLocationTile(theme, l10n);
+        }
+
+        var offsetIndex = index - 1;
+
+        // 在线服务错误提示条目（附轻量重试按钮）
+        if (_placesError) {
+          if (offsetIndex == 0) {
+            return _buildErrorBanner(theme, l10n);
+          }
+          offsetIndex--;
+        }
+
+        // 候选 POI 列表
+        if (offsetIndex < _places.length) {
+          final place = _places[offsetIndex];
+          return _buildPlaceTile(theme, l10n, place);
+        }
+
+        // 底部加载更多指示器
+        return const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(
+            child: AppInlineLoadingIndicator(),
+          ),
+        );
+      },
+    );
+  }
+
   /// 第一项：设备当前系统定位
   Widget _buildSystemLocationTile(ThemeData theme, AppLocalizations l10n) {
     final String title;
-    if (_devicePoiName != null && _devicePoiName!.isNotEmpty) {
-      title = LocationService.formatPoiForDisplay(
-        _devicePoiName,
-        _deviceLocationString,
-      );
-    } else if (_deviceLocationString != null &&
-        _deviceLocationString!.isNotEmpty) {
+    if (_deviceLocationString != null && _deviceLocationString!.isNotEmpty) {
       title = LocationService.formatLocationForDisplay(_deviceLocationString);
     } else {
       title = LocationService.formatCoordinates(
@@ -666,6 +855,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     }
 
     return ListTile(
+      key: const ValueKey('nearby_picker_system_location_tile'),
       leading: Icon(
         Icons.my_location,
         color: _systemSelected

@@ -13,6 +13,10 @@ abstract final class OsmMapLayers {
   static const String _tileUrlTemplate =
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
+  /// 兜底瓦片源：使用 OpenStreetMap France 镜像源，全球与国内访问更稳定快速。
+  static const String _fallbackTileUrlTemplate =
+      'https://tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png';
+
   /// 用于 User-Agent，与 Android 的 applicationId 一致。
   static const String _packageName = 'com.shangjin.thoughtecho';
 
@@ -26,11 +30,14 @@ abstract final class OsmMapLayers {
       Uri.parse('https://www.openstreetmap.org/copyright');
 
   /// 瓦片层。作为 [FlutterMap] 的第一个 child。
-  /// 配置持久化磁盘瓦片缓存，缩放时优先读取本地缓存，避免重复向 OSM 发起网络请求。
+  /// 配置持久化磁盘瓦片缓存，并启用预缓冲 (panBuffer: 1) 与全球加速镜像兜底 (fallbackUrl)，
+  /// 避免缩放与平移时因瓦片请求卡顿而出现灰块。
   static TileLayer tiles() => TileLayer(
         urlTemplate: _tileUrlTemplate,
+        fallbackUrl: _fallbackTileUrlTemplate,
         userAgentPackageName: _packageName,
         maxNativeZoom: _maxNativeZoom,
+        panBuffer: 1,
         tileProvider: NetworkTileProvider(
           cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(),
         ),

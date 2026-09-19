@@ -195,6 +195,8 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
             : null,
         initialCenter: _deviceCenter ?? _fallbackCenter,
         initialZoom: _emptyStateZoom,
+        minZoom: 3.0,
+        maxZoom: 18.5,
         backgroundColor: theme.colorScheme.surfaceContainerLow,
       ),
       children: [

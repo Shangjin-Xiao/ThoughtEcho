@@ -129,7 +129,6 @@ class NominatimPlaceSearchService implements PlaceSearchService {
             '${latitude + _viewboxDelta},'
             '${longitude + _viewboxDelta},'
             '${latitude - _viewboxDelta}',
-        'bounded': '1',
       };
       if (offset > 0) {
         queryParams['offset'] = '$offset';
@@ -222,7 +221,15 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       if (trimmed.isNotEmpty) {
         queryParams['q'] = trimmed;
       } else {
-        queryParams['amenity'] = 'restaurant';
+        const defaultPoiCategories = [
+          '[tourism]',
+          '[historic]',
+          '[leisure]',
+          'attraction',
+        ];
+        final categoryIndex =
+            (offset ~/ (limit > 0 ? limit : 20)) % defaultPoiCategories.length;
+        queryParams['q'] = defaultPoiCategories[categoryIndex];
       }
 
       final uri = Uri.parse(_searchUrl).replace(
