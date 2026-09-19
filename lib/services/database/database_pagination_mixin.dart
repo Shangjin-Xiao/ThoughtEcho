@@ -178,7 +178,6 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
 
       // 重置状态并加载新数据
       _watchOffset = 0;
-      _quotesCache = [];
       _watchHasMore = true;
       _currentQuotes = [];
       _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set

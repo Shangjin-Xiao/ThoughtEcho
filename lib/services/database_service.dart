@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element, unused_field
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -267,18 +266,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   });
   Future<Map<String, dynamic>> getDatabaseHealthInfo();
 
-  Future<List<Quote>> _directGetQuotes({
-    List<String>? tagIds,
-    String? categoryId,
-    int offset = 0,
-    int limit = 10,
-    String orderBy = 'date DESC',
-    String? searchQuery,
-    List<String>? selectedWeathers,
-    List<String>? selectedDayPeriods,
-    bool includeDeleted = false,
-  });
-
   /// 修复：验证排序参数，防止 SQL 注入
   @visibleForTesting
   String sanitizeOrderBy(String orderBy, {String prefix = ''}) {
@@ -445,7 +432,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   // 新增：流式分页加载笔记
   StreamController<List<Quote>>? _quotesController;
-  List<Quote> _quotesCache = [];
   List<String>? _watchTagIds;
   String? _watchCategoryId;
   String _watchOrderBy = 'date DESC';
@@ -745,7 +731,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
       // 重置流相关状态
       _watchOffset = 0;
-      _quotesCache = [];
       _filterCache.clear();
       _watchHasMore = true;
 
@@ -977,75 +962,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     }
   }
 
-  /// 修复：在初始化时预加载笔记数据，避免循环依赖
-  Future<void> _prefetchInitialQuotes() async {
-    try {
-      // 修复：重置状态，但不依赖流控制器
-      _currentQuotes = [];
-      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
-      _watchHasMore = true;
-      _isLoading = false;
-      _watchOffset = 0;
-
-      // 修复：确保流控制器已初始化
-      if (_quotesController == null || _quotesController!.isClosed) {
-        _quotesController = StreamController<List<Quote>>.broadcast();
-        logDebug('预加载时初始化流控制器');
-      }
-
-      // 修复：直接查询数据库，绕过getUserQuotes的初始化检查，避免循环依赖
-      final quotes = await _directGetQuotes(
-        tagIds: null,
-        categoryId: null,
-        offset: 0,
-        limit: _watchLimit,
-        orderBy: 'date DESC',
-        searchQuery: null,
-        selectedWeathers: null,
-        selectedDayPeriods: null,
-        includeDeleted: false,
-      );
-
-      _currentQuotes = quotes;
-      _currentQuoteIds
-        ..clear()
-        ..addAll(quotes.map((quote) => quote.id).whereType<String>());
-      _watchOffset = quotes.length;
-      _watchHasMore = quotes.length >= _watchLimit;
-
-      // 修复：针对安卓平台的特殊处理
-      if (!kIsWeb && Platform.isAndroid) {
-        // 安卓平台延迟通知，确保UI完全准备好
-        await Future.delayed(const Duration(milliseconds: 100));
-        _safeNotifyQuotesStream();
-        logDebug('安卓平台预加载完成，延迟通知UI，获取到 ${quotes.length} 条笔记');
-      } else {
-        // 其他平台立即通知
-        _safeNotifyQuotesStream();
-        logDebug('预加载完成，获取到 ${quotes.length} 条笔记，已通知UI更新');
-      }
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '预加载笔记时出错',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'DatabaseService',
-      );
-      // 确保状态一致
-      _currentQuotes = [];
-      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
-      _watchHasMore = false;
-
-      // 修复：确保流控制器存在
-      if (_quotesController == null || _quotesController!.isClosed) {
-        _quotesController = StreamController<List<Quote>>.broadcast();
-      }
-
-      // 即使出错也要通知流，确保UI状态正确
-      _safeNotifyQuotesStream();
-    }
-  }
-
   /// 启动时执行数据库健康检查
   Future<void> _performStartupHealthCheck() async {
     try {
@@ -1168,7 +1084,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _startupBackgroundMaintenanceTimer?.cancel();
     _startupBackgroundMaintenanceTimer = null;
     _clearAllCache();
-    _quotesCache = [];
     _watchOffset = 0;
     _watchHasMore = true;
     _watchIncludeDeleted = false;
@@ -1188,7 +1103,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       }
 
       // 重置状态
-      _quotesCache = [];
       _watchOffset = 0;
       _watchHasMore = true;
       _watchIncludeDeleted = false;
