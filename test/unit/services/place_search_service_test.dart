@@ -175,6 +175,30 @@ void main() {
       );
     });
 
+    test('searchNearby 同样带上入库四级串', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'name': '朝阳公园',
+            'lat': '39.9142',
+            'lon': '116.4074',
+            'address': {
+              'country': '中国',
+              'state': '北京市',
+              'city': '北京市',
+              'suburb': '朝阳区',
+              'road': '农展馆南路',
+            },
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.searchNearby(refLat, refLon, query: '公园');
+
+      expect(results.single.storageLocation, '中国,北京市,北京市,朝阳区');
+    });
+
     test('请求带上限定的 viewbox 和可识别的 User-Agent，且绑定 bounded=1 限制在附近', () async {
       final network = _FakeNetworkService(_jsonResponse(const []));
       final service = NominatimPlaceSearchService(networkService: network);
@@ -404,6 +428,88 @@ void main() {
         final gap = network.timestamps[i].difference(network.timestamps[i - 1]);
         expect(gap, greaterThanOrEqualTo(const Duration(milliseconds: 35)));
       }
+    });
+
+    test('搜索结果自带入库四级串，点选可直接复用', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'name': '景山公园',
+            'lat': '39.9242',
+            'lon': '116.4014',
+            'address': {
+              'country': '中国',
+              'state': '北京市',
+              'city': '北京市',
+              'city_district': '西城区',
+              'road': '景山西街',
+            },
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.getNearbyPlaces(refLat, refLon);
+
+      expect(results.single.storageLocation, '中国,北京市,北京市,西城区');
+    });
+
+    test('响应里没有行政区字段时四级串为 null，调用方再走反查', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'name': '近处的书店',
+            'lat': '39.9142',
+            'lon': '116.4074',
+            'address': {'road': '近街'},
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.getNearbyPlaces(refLat, refLon);
+
+      expect(results.single.storageLocation, isNull);
+    });
+
+    test('只有国家没有省市时四级串为 null，不存无法落地的国家串', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'name': '某地',
+            'lat': '39.9142',
+            'lon': '116.4074',
+            'address': {'country': '中国', 'road': '近街'},
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.getNearbyPlaces(refLat, refLon);
+
+      expect(results.single.storageLocation, isNull);
+    });
+
+    test('行政区别名有多语言变体时只取首选写法，与反查口径一致', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse([
+          {
+            'name': '中央公园',
+            'lat': '39.9142',
+            'lon': '116.4074',
+            'address': {
+              'country': '美国',
+              'state': '纽约州;紐約州',
+              'city': '纽约市',
+            },
+          },
+        ]),
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      final results = await service.getNearbyPlaces(refLat, refLon);
+
+      expect(results.single.storageLocation, '美国,纽约州,纽约市,');
     });
   });
 }

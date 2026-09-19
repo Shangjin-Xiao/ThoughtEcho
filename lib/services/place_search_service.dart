@@ -16,6 +16,7 @@ class PlaceInfo {
     required this.longitude,
     this.address,
     this.distanceMeters,
+    this.storageLocation,
   });
 
   /// 地点名，如"芝公园"。列表主行显示的就是它。
@@ -29,6 +30,14 @@ class PlaceInfo {
 
   /// 距离参考点的直线距离（米）。搜索结果按它排序；为 null 时排在最后。
   final double? distanceMeters;
+
+  /// 搜索响应里 addressdetails 直接析出的入库四级串 `国家,省份,城市,区县`
+  /// （格式与 `LocationService.buildStorageLocation` 一致）。
+  ///
+  /// 点选确认时优先用它，免去对该坐标的二次反查：既省一次在线请求等待，
+  /// 又保证存下来的行政区和列表副行是同一份地址，不会出现"选的是这个
+  /// 地点、存的却是另一条街"的错位。为 null 时调用方再走反查兜底。
+  final String? storageLocation;
 }
 
 /// 地点搜索。
@@ -340,7 +349,74 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       longitude: lon,
       address: _extractAddress(item),
       distanceMeters: distanceBetween(refLat, refLon, lat, lon),
+      storageLocation: _storageLocationFromAddress(item['address']),
     );
+  }
+
+  /// 从搜索响应的 `addressdetails` 直接析出入库四级串。
+  ///
+  /// 字段映射与 `LocationService` 的在线反查保持一致（country / state 系 /
+  /// city 系 / district 系），拼出来的 `国家,省份,城市,区县` 可直接入库。
+  /// 省份和城市都缺失时返回 null（光有国家落不了地），调用方再走反查兜底；
+  /// 区县允许空位。
+  static String? _storageLocationFromAddress(dynamic address) {
+    if (address is! Map) return null;
+
+    String? s(dynamic v) {
+      final cleaned = _cleanVariant(v);
+      return cleaned.isNotEmpty ? cleaned : null;
+    }
+
+    final country = s(address['country']);
+    final province = s(
+      address['state'] ??
+          address['province'] ??
+          address['region'] ??
+          address['state_district'] ??
+          address['prefecture'],
+    );
+    final county = s(address['county']);
+    String? city = s(
+      address['city'] ??
+          address['municipality'] ??
+          address['town'] ??
+          address['village'] ??
+          county,
+    );
+    if ((city == null || city == province) &&
+        county != null &&
+        county != province) {
+      city = county;
+    }
+    final district = s(
+      address['city_district'] ??
+          address['district'] ??
+          address['suburb'] ??
+          address['quarter'] ??
+          address['neighbourhood'],
+    );
+
+    if ((province == null || province.isEmpty) &&
+        (city == null || city.isEmpty)) {
+      return null;
+    }
+    return '${country ?? ''},${province ?? ''},${city ?? ''},${district ?? ''}';
+  }
+
+  /// 去掉多语言/多变体混杂（如 "纽约;紐約" 取 "纽约"），口径与
+  /// `LocationService.cleanGeocodingText` 一致。这里不直接复用那个方法：
+  /// 它在 `LocationService` 上，这个纯搜索服务不引入那边的依赖。
+  static String _cleanVariant(dynamic v) {
+    if (v is! String) return '';
+    final trimmed = v.trim();
+    if (trimmed.isEmpty) return '';
+    if (!trimmed.contains(';') && !trimmed.contains('/')) return trimmed;
+    final head = trimmed
+        .split(RegExp(r'\s*[;/]\s*'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    return head.isEmpty ? trimmed : head.first;
   }
 
   /// 地点名：优先 OSM 要素名，其次 address 里的类型化别名，最后取

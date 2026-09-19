@@ -1341,7 +1341,8 @@ class LocationService extends ChangeNotifier {
   /// 不能直接存 `formatted_address`——那是给人看的带空格拼接，
   /// [formatLocationForDisplay] 按逗号分段解析它会失败，卡片上就退回英文原文。
   ///
-  /// 四级全空时返回 null，让调用方自己决定是留空还是退回坐标。
+  /// 省份和城市都缺时返回 null（光有国家落不了地，调用方退回坐标或待解析标记，
+  /// 不能把 `中国,,,` 这类串存进库）；区县允许空位。
   static String? buildStorageLocation(Map<String, String?>? address) {
     if (address == null) return null;
 
@@ -1350,8 +1351,59 @@ class LocationService extends ChangeNotifier {
     final city = address['city']?.trim() ?? '';
     final district = address['district']?.trim() ?? '';
 
-    if (country.isEmpty && province.isEmpty && city.isEmpty) return null;
+    if (province.isEmpty && city.isEmpty) return null;
     return '$country,$province,$city,$district';
+  }
+
+  /// 手选坐标匹配容差（度），与选点页的同名同坐标判定口径一致。
+  static const double coordsMatchTolerance = 0.0001;
+
+  /// 快捷新增保存时解析最终入库的 `location` 串。纯函数，方便单测。
+  ///
+  /// 手选了异地 POI 但行政区缺失（如选点反查失败）时，不拿设备行政区顶上去：
+  /// 坐标已经不在设备那条街上，顶上去存的就是错的街。此时返回
+  /// [kAddressPending]，显示只剩 POI 名、坐标仍在，后续点
+  /// 位置行还能手动"更新"补地址。
+  static String? resolvePickedLocationForSave({
+    required String? pickedLocation,
+    required String? pickedPoiName,
+    required double? pickedLatitude,
+    required double? pickedLongitude,
+    required String? deviceLocation,
+    required double? deviceLatitude,
+    required double? deviceLongitude,
+  }) {
+    if (pickedLocation != null && pickedLocation.isNotEmpty) {
+      return pickedLocation;
+    }
+    if (pickedPoiName != null &&
+        pickedPoiName.isNotEmpty &&
+        pickedLatitude != null &&
+        pickedLongitude != null &&
+        !_coordsMatch(
+          pickedLatitude,
+          pickedLongitude,
+          deviceLatitude,
+          deviceLongitude,
+        )) {
+      return kAddressPending;
+    }
+    if ((deviceLocation == null || deviceLocation.isEmpty) &&
+        pickedLatitude != null) {
+      return kAddressPending;
+    }
+    return deviceLocation;
+  }
+
+  static bool _coordsMatch(
+    double pickedLat,
+    double pickedLng,
+    double? deviceLat,
+    double? deviceLng,
+  ) {
+    if (deviceLat == null || deviceLng == null) return false;
+    return (pickedLat - deviceLat).abs() < coordsMatchTolerance &&
+        (pickedLng - deviceLng).abs() < coordsMatchTolerance;
   }
 
   // 获取显示格式的位置，如"广州市·天河区"（中文）或 "Guangzhou · Tianhe"（英文）

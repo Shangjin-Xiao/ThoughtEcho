@@ -1445,10 +1445,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           final standardAddress =
               LocationService.buildStorageLocation(addressInfo);
           if (standardAddress != null) {
+            // 只刷新行政区：坐标没变，用户已选的精确地点名必须保留，
+            // 否则显示会从"地点名"掉一级变成纯行政区。
             _controller.setOriginalLocationData(
               standardAddress,
               _controller.originalLatitude,
               _controller.originalLongitude,
+              poiName: _controller.originalPoiName,
             );
             _controller.setIncludeLocation(true);
             setState(() {});
@@ -1627,10 +1630,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           await locationService.getAddressFromLatLng();
           final resolved = locationService.getFormattedLocation();
           if (resolved.isNotEmpty && mounted) {
+            // 同上：只刷新行政区，保留已选地点名。
             _controller.setNewLocationData(
               resolved,
               _controller.newLatitude,
               _controller.newLongitude,
+              poiName: _controller.newPoiName,
             );
             setState(() {});
             if (context.mounted) {
@@ -1653,18 +1658,17 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
-          final country = addressInfo['country'] ?? '';
-          final province = addressInfo['province'] ?? '';
-          final city = addressInfo['city'] ?? '';
-          final district = addressInfo['district'] ?? '';
-          final standardAddress = '$country,$province,$city,$district';
-          final hasAnyField =
-              country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
-          if (hasAnyField) {
+          // 走统一的入库校验：省市都缺（如只有国家）时返回 null，
+          // 不把无法落地的串存进库。
+          final standardAddress =
+              LocationService.buildStorageLocation(addressInfo);
+          if (standardAddress != null) {
+            // 同上：只刷新行政区，保留已选地点名。
             _controller.setNewLocationData(
               standardAddress,
               _controller.newLatitude,
               _controller.newLongitude,
+              poiName: _controller.newPoiName,
             );
             setState(() {});
             if (context.mounted) {
@@ -1991,15 +1995,16 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         location: _controller.includeLocation
             ? (isEditing
                 ? _controller.originalLocation
-                : () {
-                    final loc = _controller.newLocation ??
-                        locationService?.getFormattedLocation();
-                    if ((loc == null || loc.isEmpty) &&
-                        _controller.newLatitude != null) {
-                      return LocationService.kAddressPending;
-                    }
-                    return loc;
-                  }())
+                : LocationService.resolvePickedLocationForSave(
+                    pickedLocation: _controller.newLocation,
+                    pickedPoiName: _controller.newPoiName,
+                    pickedLatitude: _controller.newLatitude,
+                    pickedLongitude: _controller.newLongitude,
+                    deviceLocation: locationService?.getFormattedLocation(),
+                    deviceLatitude: locationService?.currentPosition?.latitude,
+                    deviceLongitude:
+                        locationService?.currentPosition?.longitude,
+                  ))
             : null,
         poiName: _controller.includeLocation
             ? (isEditing ? _controller.originalPoiName : _controller.newPoiName)
@@ -2847,6 +2852,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                       ),
                       SizedBox(width: 8),
                       FilledButton(
+                        key: const ValueKey('add_note_save_button'),
                         onPressed: (_isLoadingFullQuote || _waitingForFetch)
                             ? null
                             : () async {
