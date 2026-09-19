@@ -1,4 +1,3 @@
-// ignore_for_file: invalid_use_of_protected_member
 part of 'smart_push_settings_page.dart';
 
 extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
@@ -125,8 +124,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                   }
                 }
 
-                if (!mounted) return;
-                setState(() {
+                _updateState(() {
                   _settings = _settings.copyWith(enabled: value);
                 });
               },
@@ -187,7 +185,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               onChanged: (value) {
                 final next = values[value.round()];
                 if (next == _settings.pushIntensity) return;
-                setState(() {
+                _updateState(() {
                   _settings = _settings.copyWith(pushIntensity: next);
                 });
               },
@@ -268,7 +266,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               subtitle: l10n.smartPushModeSmartDesc,
               isRecommended: true,
               onTap: () {
-                setState(() {
+                _updateState(() {
                   _settings = _settings.copyWith(
                     pushMode: PushMode.smart,
                     showAdvancedOptions: false,
@@ -287,7 +285,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               title: l10n.smartPushModeCustom,
               subtitle: l10n.smartPushModeCustomDesc,
               onTap: () {
-                setState(() {
+                _updateState(() {
                   _settings = _settings.copyWith(pushMode: PushMode.custom);
                 });
               },
@@ -483,8 +481,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                                 context.read<SmartPushService>();
                             await smartPushService
                                 .requestNotificationPermission();
-                            if (!mounted) return;
-                            setState(() {});
+                            _updateState(() {});
                           },
                     theme: theme,
                     colorScheme: colorScheme,
@@ -503,8 +500,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                                   context.read<SmartPushService>();
                               await smartPushService
                                   .requestExactAlarmPermission();
-                              if (!mounted) return;
-                              setState(() {});
+                              _updateState(() {});
                             },
                       theme: theme,
                       colorScheme: colorScheme,
@@ -523,8 +519,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                                   context.read<SmartPushService>();
                               await smartPushService
                                   .requestBatteryOptimizationExemption();
-                              if (!mounted) return;
-                              setState(() {});
+                              _updateState(() {});
                             } catch (e, stack) {
                               logError(
                                 '请求电池优化豁免失败',
@@ -761,7 +756,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               if (mounted) {
                 Navigator.of(context).pop();
                 // 刷新状态
-                setState(() {});
+                _updateState(() {});
               }
             },
             child: Text(l10n.iHaveConfigured),
@@ -782,8 +777,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
       initialTime: TimeOfDay(hour: slot.hour, minute: slot.minute),
     );
     if (time != null) {
-      if (!mounted) return;
-      setState(() {
+      _updateState(() {
         _settings = _settings.copyWith(
           dailyQuotePushTime: slot.copyWith(
             hour: time.hour,

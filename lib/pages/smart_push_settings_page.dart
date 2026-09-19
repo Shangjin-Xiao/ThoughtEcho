@@ -36,6 +36,11 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  void _updateState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
+
   @override
   void initState() {
     super.initState();
