@@ -91,7 +91,47 @@ class _TestLocationService extends ChangeNotifier implements LocationService {
       _mockPosition();
 
   @override
-  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// 自动抓取只拿到坐标和 POI、行政区为空（在线反查失败的典型现场）；
+/// 手动"更新位置"后才能解析出行政区。
+class _CoordsOnlyPoiLocationService extends ChangeNotifier
+    implements LocationService {
+  bool _adminReady = false;
+
+  @override
+  String? currentLocaleCode;
+
+  @override
+  bool get hasLocationPermission => true;
+
+  @override
+  bool get isLocationServiceEnabled => true;
+
+  @override
+  Position? get currentPosition => _mockPosition();
+
+  @override
+  String? get currentPoiName => '景山公园';
+
+  @override
+  String getFormattedLocation() => _adminReady ? '中国,北京市,北京市,西城区' : '';
+
+  @override
+  Future<Position?> getCurrentLocation({
+    bool highAccuracy = false,
+    bool skipPermissionRequest = false,
+  }) async =>
+      _mockPosition();
+
+  @override
+  void setCoordinates(double latitude, double longitude, {String? address}) {
+    _adminReady = true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _TestWeatherService extends ChangeNotifier implements WeatherService {
@@ -142,6 +182,7 @@ Widget _buildTestApp({
   Quote? initialQuote,
   bool autoAttachLocation = false,
   void Function(Quote)? onSave,
+  LocationService? locationService,
 }) {
   return MultiProvider(
     providers: [
@@ -149,7 +190,7 @@ Widget _buildTestApp({
         value: _TestSettingsService(autoAttachLocation: autoAttachLocation),
       ),
       ChangeNotifierProvider<LocationService>.value(
-        value: _TestLocationService(),
+        value: locationService ?? _TestLocationService(),
       ),
       ChangeNotifierProvider<WeatherService>.value(
         value: _TestWeatherService(),
@@ -345,5 +386,45 @@ void main() {
       matching: find.text('取消'),
     ));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('新建模式只有坐标+POI 时点更新位置：只补行政区，不洗掉 POI 名',
+      (WidgetTester tester) async {
+    Quote? savedQuote;
+
+    await tester.pumpWidget(_buildTestApp(
+      locationService: _CoordsOnlyPoiLocationService(),
+      onSave: (quote) {
+        savedQuote = quote;
+      },
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // 首次勾选位置：触发抓取。Fake 只给坐标和 POI、行政区为空
+    //（在线反查失败的典型现场）。
+    await tester.tap(find.byKey(const ValueKey('add_note_location_chip')));
+    await tester.pumpAndSettle();
+    final chipWidget = tester.widget<FilterChip>(
+        find.byKey(const ValueKey('add_note_location_chip')));
+    expect(chipWidget.selected, isTrue);
+
+    // 再点一次打开管理对话框：只有坐标无地址时才有"更新位置"
+    await tester.tap(find.byKey(const ValueKey('add_note_location_chip')));
+    await tester.pumpAndSettle();
+    expect(find.text('更新位置'), findsOneWidget);
+
+    await tester.tap(find.text('更新位置'));
+    await tester.pumpAndSettle();
+
+    // "更新位置"按设计先关弹窗再执行更新：更新成功后只剩提示条。
+    // 直接保存：POI 名必须还在，行政区已补上
+    final saveButton = find.byType(FilledButton).last;
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(savedQuote, isNotNull);
+    expect(savedQuote!.poiName, '景山公园');
+    expect(savedQuote!.location, '中国,北京市,北京市,西城区');
   });
 }

@@ -430,6 +430,14 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
           _places.clear();
         }
         _places.addAll(newUnique);
+        // 服务端按类别轮询返回（attraction/park/museum/…），页与页之间不是全局
+        // 按距离排的。这里对已累积的候选做一次全局按距离升序，保证无搜索时的
+        // 列表所见即远近；距离缺失的沉底。
+        _places.sort(
+          (a, b) => (a.distanceMeters ?? double.infinity).compareTo(
+            b.distanceMeters ?? double.infinity,
+          ),
+        );
         _currentOffset += results.length;
         if (results.isEmpty) {
           _hasMore = false;
@@ -500,12 +508,16 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       } else if (place != null) {
         // 用户从列表中点选了候选 POI：
         // 行政区必须为合规的四级结构串（国家,省份,城市,区县），不能直接保存街道门牌展示串。
-        // 若与设备定位同坐标，复用设备行政区串；否则若提供反查服务则尝试反查行政区，
-        // 无法反查时设为 null（保存退回坐标/地名），杜绝写入非标准格式。
+        // 若与设备定位同坐标，复用设备行政区串；否则优先复用搜索响应自带的四级串
+        //（和列表副行同一份地址，不用再等一次在线反查，也不会存成另一条街）；
+        // 两者都没有时设为 null（保存退回坐标/地名），杜绝写入非标准格式。
         String? adminLocation;
         if (_coordsMatch(place.latitude, place.longitude, _deviceLatitude,
             _deviceLongitude)) {
           adminLocation = _deviceLocationString;
+        } else if (place.storageLocation != null &&
+            place.storageLocation!.trim().isNotEmpty) {
+          adminLocation = place.storageLocation;
         } else if (_locationService != null) {
           try {
             final rev = await _locationService!

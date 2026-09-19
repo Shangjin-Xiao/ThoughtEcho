@@ -309,6 +309,57 @@ class AddNoteController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 坐标匹配容差（度），与选点页的同名同坐标判定口径一致。
+  static const double coordsMatchTolerance = 0.0001;
+
+  /// 快捷新增保存时解析最终入库的 `location` 串。纯函数，方便单测。
+  ///
+  /// 手选了异地 POI 但行政区缺失（如选点反查失败）时，不拿设备行政区顶上去：
+  /// 坐标已经不在设备那条街上，顶上去存的就是错的街。此时返回
+  /// [LocationService.kAddressPending]，显示只剩 POI 名、坐标仍在，后续点
+  /// 位置行还能手动"更新"补地址。
+  static String? resolvePickedLocationForSave({
+    required String? pickedLocation,
+    required String? pickedPoiName,
+    required double? pickedLatitude,
+    required double? pickedLongitude,
+    required String? deviceLocation,
+    required double? deviceLatitude,
+    required double? deviceLongitude,
+  }) {
+    if (pickedLocation != null && pickedLocation.isNotEmpty) {
+      return pickedLocation;
+    }
+    if (pickedPoiName != null &&
+        pickedPoiName.isNotEmpty &&
+        pickedLatitude != null &&
+        pickedLongitude != null &&
+        !_coordsMatch(
+          pickedLatitude,
+          pickedLongitude,
+          deviceLatitude,
+          deviceLongitude,
+        )) {
+      return LocationService.kAddressPending;
+    }
+    if ((deviceLocation == null || deviceLocation.isEmpty) &&
+        pickedLatitude != null) {
+      return LocationService.kAddressPending;
+    }
+    return deviceLocation;
+  }
+
+  static bool _coordsMatch(
+    double pickedLat,
+    double pickedLng,
+    double? deviceLat,
+    double? deviceLng,
+  ) {
+    if (deviceLat == null || deviceLng == null) return false;
+    return (pickedLat - deviceLat).abs() < coordsMatchTolerance &&
+        (pickedLng - deviceLng).abs() < coordsMatchTolerance;
+  }
+
   /// 获取新建笔记的实时位置
   Future<void> fetchLocationForNewNote() async {
     final locService = locationService;

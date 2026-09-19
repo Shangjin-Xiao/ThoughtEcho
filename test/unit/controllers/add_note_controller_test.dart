@@ -49,6 +49,95 @@ void main() {
     });
   });
 
+  group('AddNoteController.resolvePickedLocationForSave', () {
+    test('已选定四级串时直接采用', () {
+      expect(
+        AddNoteController.resolvePickedLocationForSave(
+          pickedLocation: '中国,北京市,北京市,西城区',
+          pickedPoiName: '景山公园',
+          pickedLatitude: 39.9242,
+          pickedLongitude: 116.4014,
+          deviceLocation: '中国,北京市,北京市,东城区',
+          deviceLatitude: 39.9042,
+          deviceLongitude: 116.4074,
+        ),
+        '中国,北京市,北京市,西城区',
+      );
+    });
+
+    test('异地 POI 缺行政区时不拿设备行政区顶，退回待解析标记', () {
+      expect(
+        AddNoteController.resolvePickedLocationForSave(
+          pickedLocation: null,
+          pickedPoiName: '景山公园',
+          pickedLatitude: 39.9242,
+          pickedLongitude: 116.4014,
+          deviceLocation: '中国,北京市,北京市,东城区',
+          deviceLatitude: 39.9042,
+          deviceLongitude: 116.4074,
+        ),
+        LocationService.kAddressPending,
+      );
+    });
+
+    test('同坐标 POI 缺行政区时仍可用设备行政区', () {
+      expect(
+        AddNoteController.resolvePickedLocationForSave(
+          pickedLocation: null,
+          pickedPoiName: '故宫角楼',
+          pickedLatitude: 39.9042,
+          pickedLongitude: 116.4074,
+          deviceLocation: '中国,北京市,北京市,东城区',
+          deviceLatitude: 39.9042,
+          deviceLongitude: 116.4074,
+        ),
+        '中国,北京市,北京市,东城区',
+      );
+    });
+
+    test('无 POI 纯设备定位时沿用旧兜底', () {
+      expect(
+        AddNoteController.resolvePickedLocationForSave(
+          pickedLocation: null,
+          pickedPoiName: null,
+          pickedLatitude: 39.9042,
+          pickedLongitude: 116.4074,
+          deviceLocation: '中国,北京市,北京市,东城区',
+          deviceLatitude: 39.9042,
+          deviceLongitude: 116.4074,
+        ),
+        '中国,北京市,北京市,东城区',
+      );
+    });
+
+    test('都没有时有坐标则待解析，无坐标则空', () {
+      expect(
+        AddNoteController.resolvePickedLocationForSave(
+          pickedLocation: null,
+          pickedPoiName: null,
+          pickedLatitude: 39.9042,
+          pickedLongitude: 116.4074,
+          deviceLocation: null,
+          deviceLatitude: null,
+          deviceLongitude: null,
+        ),
+        LocationService.kAddressPending,
+      );
+      expect(
+        AddNoteController.resolvePickedLocationForSave(
+          pickedLocation: null,
+          pickedPoiName: null,
+          pickedLatitude: null,
+          pickedLongitude: null,
+          deviceLocation: null,
+          deviceLatitude: null,
+          deviceLongitude: null,
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('AddNoteController 自动附加抓取标志', () {
     test('armAutoMetadataFetch 预约后 isFetchingMetadata 立即为真', () {
       final controller = AddNoteController(context: FakeBuildContext());
