@@ -170,8 +170,9 @@ class _AdminMockGeocodingPlatform extends GeocodingPlatform
   }
 }
 
-/// 装上桩并返回之前的平台实例，调用方用 addTearDown 恢复。
-GeocodingPlatform _installAdminMockPlatform([
+/// 装上桩并返回之前的平台实例（可能为 null，即之前未设置）。
+/// 调用方只在非 null 时恢复，避免把桩当成"之前的状态"装回去。
+GeocodingPlatform? _installAdminMockPlatform([
   GeocodingPlatform? mock,
 ]) {
   GeocodingPlatform? previous;
@@ -180,9 +181,8 @@ GeocodingPlatform _installAdminMockPlatform([
   } catch (_) {
     previous = null;
   }
-  final platform = mock ?? _AdminMockGeocodingPlatform();
-  GeocodingPlatform.instance = platform;
-  return previous ?? platform;
+  GeocodingPlatform.instance = mock ?? _AdminMockGeocodingPlatform();
+  return previous;
 }
 
 void main() {
@@ -199,7 +199,11 @@ void main() {
   testWidgets('编辑模式只有坐标+POI 时点更新位置：同样保留 POI 名', (WidgetTester tester) async {
     final mockPlatform = _AdminMockGeocodingPlatform();
     final previousPlatform = _installAdminMockPlatform(mockPlatform);
-    addTearDown(() => GeocodingPlatform.instance = previousPlatform);
+    addTearDown(() {
+      if (previousPlatform != null) {
+        GeocodingPlatform.instance = previousPlatform;
+      }
+    });
     Quote? savedQuote;
     final initialQuote = Quote(
       id: 'existing-edit-poi-1',
@@ -269,8 +273,7 @@ void main() {
     // 静态反查真跑到了，断言成功链路而不是兜底分支
     expect(mockPlatform.placemarkCalls, 1);
 
-    final saveButton = find.byType(FilledButton).last;
-    await tester.tap(saveButton);
+    await tester.tap(find.byKey(const ValueKey('add_note_save_button')));
     await tester.pumpAndSettle();
 
     expect(savedQuote, isNotNull);

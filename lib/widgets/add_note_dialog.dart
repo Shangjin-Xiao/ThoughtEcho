@@ -2855,6 +2855,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                       ),
                       SizedBox(width: 8),
                       FilledButton(
+                        key: const ValueKey('add_note_save_button'),
                         onPressed: (_isLoadingFullQuote || _waitingForFetch)
                             ? null
                             : () async {

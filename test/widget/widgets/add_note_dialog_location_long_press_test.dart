@@ -171,8 +171,9 @@ class _AdminMockGeocodingPlatform extends GeocodingPlatform
   }
 }
 
-/// 装上桩并返回之前的平台实例，调用方用 addTearDown 恢复。
-GeocodingPlatform _installAdminMockPlatform([
+/// 装上桩并返回之前的平台实例（可能为 null，即之前未设置）。
+/// 调用方只在非 null 时恢复，避免把桩当成"之前的状态"装回去。
+GeocodingPlatform? _installAdminMockPlatform([
   GeocodingPlatform? mock,
 ]) {
   GeocodingPlatform? previous;
@@ -181,9 +182,8 @@ GeocodingPlatform _installAdminMockPlatform([
   } catch (_) {
     previous = null;
   }
-  final platform = mock ?? _AdminMockGeocodingPlatform();
-  GeocodingPlatform.instance = platform;
-  return previous ?? platform;
+  GeocodingPlatform.instance = mock ?? _AdminMockGeocodingPlatform();
+  return previous;
 }
 
 class _TestWeatherService extends ChangeNotifier implements WeatherService {
@@ -472,9 +472,8 @@ void main() {
     // "更新位置"按设计先关弹窗再执行更新：更新成功后只剩提示条。
     expect(find.textContaining('位置已更新为'), findsOneWidget);
 
-    // 直接保存：POI 名必须还在，行政区已补上
-    final saveButton = find.byType(FilledButton).last;
-    await tester.tap(saveButton);
+    // 直接保存：POI 名必须还在，行政区已补上（用稳定 Key，不依赖按钮顺序）
+    await tester.tap(find.byKey(const ValueKey('add_note_save_button')));
     await tester.pumpAndSettle();
 
     expect(savedQuote, isNotNull);
@@ -484,7 +483,11 @@ void main() {
 
   testWidgets('服务反查不出行政区时回退本地反查：同样保留 POI 名', (WidgetTester tester) async {
     final previousPlatform = _installAdminMockPlatform();
-    addTearDown(() => GeocodingPlatform.instance = previousPlatform);
+    addTearDown(() {
+      if (previousPlatform != null) {
+        GeocodingPlatform.instance = previousPlatform;
+      }
+    });
     Quote? savedQuote;
 
     await tester.pumpWidget(_buildTestApp(
@@ -507,8 +510,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('位置已更新为'), findsOneWidget);
 
-    final saveButton = find.byType(FilledButton).last;
-    await tester.tap(saveButton);
+    await tester.tap(find.byKey(const ValueKey('add_note_save_button')));
     await tester.pumpAndSettle();
     expect(savedQuote, isNotNull);
     expect(savedQuote!.poiName, '景山公园');
