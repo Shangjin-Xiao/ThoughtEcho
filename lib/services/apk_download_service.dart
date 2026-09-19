@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
+import '../widgets/app_snackbar.dart';
 
 /// 下载状态枚举
 enum DownloadStatus {
@@ -80,6 +81,31 @@ class ApkDownloadService {
   /// 下载取消令牌
   static CancelToken? _cancelToken;
 
+  /// 是否正在下载
+  static bool get isDownloading =>
+      _cancelToken != null && !_cancelToken!.isCancelled;
+
+  /// 取消当前下载
+  static void cancelDownload() {
+    if (_cancelToken != null && !_cancelToken!.isCancelled) {
+      _cancelToken!.cancel();
+    }
+    _cancelToken = null;
+  }
+
+  @visibleForTesting
+  static CancelToken? get cancelToken => _cancelToken;
+
+  @visibleForTesting
+  static set cancelToken(CancelToken? token) => _cancelToken = token;
+
+  @visibleForTesting
+  static set dio(Dio? customDio) => _dio = customDio;
+
+  @visibleForTesting
+  static set notificationsPlugin(FlutterLocalNotificationsPlugin? plugin) =>
+      _notificationsPlugin = plugin;
+
   // 缓存的本地化字符串，用于通知（因为通知无法访问 BuildContext）
   static String? _cachedNotificationTitle;
   static String? _cachedDownloadStarted;
@@ -123,6 +149,14 @@ class ApkDownloadService {
     String apkUrl,
     String version,
   ) async {
+    if (isDownloading) {
+      logDebug('已有下载正在进行中，忽略重复下载请求');
+      return;
+    }
+    final downloadToken = CancelToken();
+    _cancelToken = downloadToken;
+    var downloadStarted = false;
+
     try {
       // 强制使用 HTTPS
       if (!apkUrl.toLowerCase().startsWith('https://')) {
@@ -160,7 +194,14 @@ class ApkDownloadService {
 
       // 开始下载
       if (context.mounted) {
-        _showDownloadDialog(context, apkUrl, filePath, version);
+        _showDownloadDialog(
+          context,
+          apkUrl,
+          filePath,
+          version,
+          downloadToken,
+        );
+        downloadStarted = true;
       }
     } catch (e) {
       logError('APK下载失败: $e');
@@ -168,13 +209,17 @@ class ApkDownloadService {
         final l10n = AppLocalizations.of(context);
         _showErrorDialog(context, l10n.apkDownloadFailed(e.toString()));
       }
+    } finally {
+      if (!downloadStarted && identical(_cancelToken, downloadToken)) {
+        _cancelToken = null;
+      }
     }
   }
 
   /// 清理下载目录中的所有旧安装包
   static Future<void> cleanupApkFiles() async {
     // 若当前正在进行下载，则直接跳过启动清理以防产生竞态冲突
-    if (_cancelToken != null && !_cancelToken!.isCancelled) {
+    if (isDownloading) {
       return;
     }
     try {
@@ -185,7 +230,7 @@ class ApkDownloadService {
         // 清理目录下所有 APK 文件，因为这是应用私有下载目录，不应包含其他重要文件
         await for (final file in downloadDir.list()) {
           // 清理过程中若开始新的下载，跳过当前下载目标
-          if (_cancelToken != null &&
+          if (isDownloading &&
               file.path.toLowerCase().endsWith('thoughtecho_latest.apk')) {
             continue;
           }
@@ -256,10 +301,10 @@ class ApkDownloadService {
     String apkUrl,
     String filePath,
     String version,
+    CancelToken downloadToken,
   ) {
     // 重置进度和取消令牌
-    progressNotifier = ValueNotifier(const DownloadProgress());
-    _cancelToken = CancelToken();
+    progressNotifier.value = const DownloadProgress();
 
     showDialog(
       context: context,
@@ -268,7 +313,7 @@ class ApkDownloadService {
         return _DownloadProgressDialog(
           version: version,
           onCancel: () {
-            _cancelToken?.cancel();
+            downloadToken.cancel();
             Navigator.of(dialogContext).pop();
           },
         );
@@ -276,7 +321,7 @@ class ApkDownloadService {
     );
 
     // 开始下载
-    _startDownload(context, apkUrl, filePath, version);
+    _startDownload(context, apkUrl, filePath, version, downloadToken);
   }
 
   /// 开始下载
@@ -285,14 +330,17 @@ class ApkDownloadService {
     String apkUrl,
     String filePath,
     String version,
+    CancelToken downloadToken,
   ) async {
-    // 缓存本地化字符串用于通知
-    final l10n = AppLocalizations.of(context);
-    _cachedNotificationTitle = l10n.apkNotificationTitle;
-    _cachedDownloadStarted = l10n.apkDownloadStarted(version);
-    _cachedDownloadComplete = l10n.apkDownloadComplete;
-
     try {
+      // 缓存本地化字符串用于通知
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context);
+        _cachedNotificationTitle = l10n.apkNotificationTitle;
+        _cachedDownloadStarted = l10n.apkDownloadStarted(version);
+        _cachedDownloadComplete = l10n.apkDownloadComplete;
+      }
+
       // 创建通知渠道
       await _createNotificationChannel();
 
@@ -300,12 +348,14 @@ class ApkDownloadService {
       _currentNotificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
       // 显示初始通知
-      await _showDownloadNotification(_cachedDownloadStarted!, 0);
+      if (_cachedDownloadStarted != null) {
+        await _showDownloadNotification(_cachedDownloadStarted!, 0);
+      }
 
       await dio.download(
         apkUrl,
         filePath,
-        cancelToken: _cancelToken,
+        cancelToken: downloadToken,
         onReceiveProgress: (received, total) {
           if (total > 0) {
             final progress = received / total;
@@ -316,9 +366,15 @@ class ApkDownloadService {
               totalBytes: total,
             );
             final progressPercent = (progress * 100).round();
-            _cachedDownloadProgress = l10n.apkDownloadProgress(progressPercent);
-            _showDownloadNotification(
-                _cachedDownloadProgress!, progressPercent);
+            if (context.mounted) {
+              final l10n = AppLocalizations.of(context);
+              _cachedDownloadProgress =
+                  l10n.apkDownloadProgress(progressPercent);
+            }
+            if (_cachedDownloadProgress != null) {
+              _showDownloadNotification(
+                  _cachedDownloadProgress!, progressPercent);
+            }
           } else {
             // 未知总大小，仅更新已下载字节数
             progressNotifier.value = DownloadProgress(
@@ -336,7 +392,9 @@ class ApkDownloadService {
         status: DownloadStatus.completed,
         progress: 1.0,
       );
-      await _showDownloadNotification(_cachedDownloadComplete!, 100);
+      if (_cachedDownloadComplete != null) {
+        await _showDownloadNotification(_cachedDownloadComplete!, 100);
+      }
 
       // 关闭下载对话框
       if (context.mounted) {
@@ -351,6 +409,9 @@ class ApkDownloadService {
       if (e.type == DioExceptionType.cancel) {
         // 用户取消下载，静默处理
         logDebug('APK下载已取消');
+        progressNotifier.value = const DownloadProgress(
+          status: DownloadStatus.cancelled,
+        );
         return;
       }
       // 真正的下载错误
@@ -393,6 +454,10 @@ class ApkDownloadService {
       } else {
         await _showDownloadNotification('Download failed: $e', -1);
       }
+    } finally {
+      if (identical(_cancelToken, downloadToken)) {
+        _cancelToken = null;
+      }
     }
   }
 
@@ -419,12 +484,7 @@ class ApkDownloadService {
       if (result.type == ResultType.done) {
         // 安装成功或文件已打开
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.apkInstallReady),
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          AppSnackBar.info(context, l10n.apkInstallReady);
         }
       } else {
         // 安装失败
@@ -443,20 +503,24 @@ class ApkDownloadService {
 
   /// 创建通知渠道
   static Future<void> _createNotificationChannel() async {
-    const androidChannel = AndroidNotificationChannel(
-      _notificationChannelId,
-      _notificationChannelName,
-      description: _notificationChannelDescription,
-      importance: Importance.low,
-      showBadge: false,
-      enableVibration: false,
-      playSound: false,
-    );
+    try {
+      const androidChannel = AndroidNotificationChannel(
+        _notificationChannelId,
+        _notificationChannelName,
+        description: _notificationChannelDescription,
+        importance: Importance.low,
+        showBadge: false,
+        enableVibration: false,
+        playSound: false,
+      );
 
-    await notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
+      await notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(androidChannel);
+    } catch (e) {
+      logDebug('创建通知渠道失败（可能由于平台不支持）: $e');
+    }
   }
 
   /// 显示下载通知
@@ -464,33 +528,37 @@ class ApkDownloadService {
     String message,
     int progress,
   ) async {
-    final androidDetails = AndroidNotificationDetails(
-      _notificationChannelId,
-      _notificationChannelName,
-      channelDescription: _notificationChannelDescription,
-      importance: Importance.low,
-      priority: Priority.low,
-      showProgress: progress >= 0 && progress < 100,
-      maxProgress: 100,
-      progress: progress,
-      ongoing: progress >= 0 && progress < 100,
-      autoCancel: progress == 100,
-      onlyAlertOnce: true,
-    );
+    try {
+      final androidDetails = AndroidNotificationDetails(
+        _notificationChannelId,
+        _notificationChannelName,
+        channelDescription: _notificationChannelDescription,
+        importance: Importance.low,
+        priority: Priority.low,
+        showProgress: progress >= 0 && progress < 100,
+        maxProgress: 100,
+        progress: progress,
+        ongoing: progress >= 0 && progress < 100,
+        autoCancel: progress == 100,
+        onlyAlertOnce: true,
+      );
 
-    const iosDetails = DarwinNotificationDetails();
+      const iosDetails = DarwinNotificationDetails();
 
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+      final details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
 
-    await notificationsPlugin.show(
-      _currentNotificationId ?? 0,
-      _cachedNotificationTitle ?? 'APK Download',
-      message,
-      details,
-    );
+      await notificationsPlugin.show(
+        _currentNotificationId ?? 0,
+        _cachedNotificationTitle ?? 'APK Download',
+        message,
+        details,
+      );
+    } catch (e) {
+      logDebug('显示下载通知失败（可能由于平台不支持）: $e');
+    }
   }
 
   /// 显示安装权限对话框
@@ -542,10 +610,13 @@ class ApkDownloadService {
 
   /// 清理资源
   static void dispose() {
+    _cancelToken?.cancel();
+    _cancelToken = null;
     _dio?.close();
     _dio = null;
     _notificationsPlugin = null;
     progressNotifier.dispose();
+    progressNotifier = ValueNotifier(const DownloadProgress());
   }
 }
 
