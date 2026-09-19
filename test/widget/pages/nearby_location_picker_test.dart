@@ -30,15 +30,25 @@ Position _mockPosition(
 class _FakePlaceSearchService implements PlaceSearchService {
   _FakePlaceSearchService({
     this.places = const [],
+    this.searchResults = const [],
     this.shouldThrow = false,
+    this.searchShouldThrow = false,
     this.onGetNearbyPlaces,
   });
 
   List<PlaceInfo> places;
+  List<PlaceInfo> searchResults;
   bool shouldThrow;
+  bool searchShouldThrow;
   int callCount = 0;
+  int searchCallCount = 0;
+  String? lastSearchQuery;
+  double? lastLatitude;
+  double? lastLongitude;
+  String? lastLocaleCode;
   final List<int> requestedOffsets = [];
   Future<List<PlaceInfo>> Function(int offset, int limit)? onGetNearbyPlaces;
+  Future<List<PlaceInfo>> Function(String query)? onSearchNearby;
 
   @override
   Future<List<PlaceInfo>> getNearbyPlaces(
@@ -61,6 +71,29 @@ class _FakePlaceSearchService implements PlaceSearchService {
   }
 
   @override
+  Future<List<PlaceInfo>> searchNearby(
+    double latitude,
+    double longitude, {
+    required String query,
+    String? localeCode,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    searchCallCount++;
+    lastSearchQuery = query;
+    lastLatitude = latitude;
+    lastLongitude = longitude;
+    lastLocaleCode = localeCode;
+    if (searchShouldThrow) {
+      throw Exception('Search network failed');
+    }
+    if (onSearchNearby != null) {
+      return onSearchNearby!(query);
+    }
+    return searchResults;
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -68,7 +101,7 @@ class _FakeLocationService extends ChangeNotifier implements LocationService {
   _FakeLocationService({
     Position? position,
     this.formattedLocation = '中国,北京市,北京市,东城区',
-    this.poiName = '故宫博物院',
+    this.poiName,
     this.reverseResult,
     this.onReverseGeocodePoint,
   }) : _position = position ?? _mockPosition();
@@ -79,6 +112,7 @@ class _FakeLocationService extends ChangeNotifier implements LocationService {
   final Map<String, String>? reverseResult;
   final Future<Map<String, String>?> Function(
       double latitude, double longitude)? onReverseGeocodePoint;
+  bool? lastHighAccuracyRequested;
 
   @override
   Position? get currentPosition => _position;
@@ -96,8 +130,10 @@ class _FakeLocationService extends ChangeNotifier implements LocationService {
   Future<Position?> getCurrentLocation({
     bool highAccuracy = false,
     bool skipPermissionRequest = false,
-  }) async =>
-      _position;
+  }) async {
+    lastHighAccuracyRequested = highAccuracy;
+    return _position;
+  }
 
   @override
   String getFormattedLocation() => formattedLocation;
@@ -165,8 +201,7 @@ void main() {
     UnifiedLogService.instance.dispose();
   });
 
-  testWidgets('朋友圈模式：不渲染地图瓦片与自定义搜索输入框，第一项常驻当前系统位置',
-      (WidgetTester tester) async {
+  testWidgets('朋友圈模式：渲染顶部搜索框，第一项常驻当前系统行政区位置', (WidgetTester tester) async {
     final fakeLoc = _FakeLocationService();
     final fakeSearch = _FakePlaceSearchService(places: [
       const PlaceInfo(
@@ -187,11 +222,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.byType(TextField), findsNothing);
-    expect(find.byType(TextFormField), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
     expect(find.text('所在位置'), findsOneWidget);
 
-    expect(find.textContaining('故宫博物院'), findsOneWidget);
+    expect(find.text('北京市·东城区'), findsOneWidget);
     expect(find.text('只记城市和区县，不记具体地点'), findsOneWidget);
     expect(find.byIcon(Icons.check), findsWidgets);
 
@@ -231,7 +265,8 @@ void main() {
     expect(selectedResult!.longitude, candidatePlace.longitude);
   });
 
-  testWidgets('点击系统位置项可返回设备物理位置', (WidgetTester tester) async {
+  testWidgets('点击系统位置项所见即所得返回设备物理位置与行政区（不暗中注入 POI）',
+      (WidgetTester tester) async {
     final fakeLoc = _FakeLocationService();
     final fakeSearch = _FakePlaceSearchService(places: []);
 
@@ -246,13 +281,44 @@ void main() {
       onResult: (res) => selectedResult = res,
     );
 
-    await tester.tap(find.textContaining('故宫博物院'));
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_system_location_tile')));
     await tester.pumpAndSettle();
 
     expect(selectedResult, isNotNull);
-    expect(selectedResult!.poiName, '故宫博物院');
+    expect(selectedResult!.poiName, isNull);
+    expect(selectedResult!.location, '中国,北京市,北京市,东城区');
     expect(selectedResult!.latitude, 39.9042);
     expect(selectedResult!.longitude, 116.4074);
+  });
+
+  testWidgets('系统定位含详细街道或 POI 时，第一项展示并返回该详细地名', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      poiName: '北京街道',
+      formattedLocation: '中国,广东省,广州市,越秀区',
+    );
+    final fakeSearch = _FakePlaceSearchService(places: []);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    expect(find.textContaining('越秀区·北京街道'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_system_location_tile')));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '北京街道');
+    expect(selectedResult!.location, '中国,广东省,广州市,越秀区');
   });
 
   testWidgets('在线地点服务不可用时，第一项仍然可用，且展示轻量重试横条', (WidgetTester tester) async {
@@ -273,11 +339,14 @@ void main() {
     expect(find.text('在线地点服务不可用'), findsOneWidget);
     expect(find.text('重试'), findsOneWidget);
 
-    expect(find.textContaining('故宫博物院'), findsOneWidget);
-    await tester.tap(find.textContaining('故宫博物院'));
+    expect(find.byKey(const ValueKey('nearby_picker_system_location_tile')),
+        findsOneWidget);
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_system_location_tile')));
     await tester.pumpAndSettle();
 
     expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, isNull);
     expect(selectedResult!.latitude, 39.9042);
   });
 
@@ -329,16 +398,288 @@ void main() {
       onResult: (res) => selectedResult = res,
     );
 
-    expect(find.textContaining('故宫博物院'), findsOneWidget);
+    expect(find.byKey(const ValueKey('nearby_picker_system_location_tile')),
+        findsOneWidget);
     expect(find.text('天安门广场'), findsOneWidget);
 
-    await tester.tap(find.textContaining('故宫博物院'));
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_system_location_tile')));
     await tester.pumpAndSettle();
 
     expect(selectedResult, isNotNull);
-    expect(selectedResult!.poiName, '故宫博物院');
+    expect(selectedResult!.poiName, isNull);
+    expect(selectedResult!.location, '中国,北京市,北京市,东城区');
     expect(selectedResult!.latitude, 39.9042);
     expect(selectedResult!.longitude, 116.4074);
+  });
+
+  testWidgets('选点器进入时向系统请求 highAccuracy: true 高精度定位',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(places: []);
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(fakeLoc.lastHighAccuracyRequested, isTrue);
+  });
+
+  testWidgets('顶部搜索栏支持输入实时搜索 POI，防抖触发 searchNearby 并展示搜索结果，点击可确认',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    const searchResultPlace = PlaceInfo(
+      name: '奥林匹克森林公园',
+      latitude: 40.0182,
+      longitude: 116.3920,
+      address: '科荟路33号',
+      distanceMeters: 12500,
+    );
+    final fakeSearch = _FakePlaceSearchService(
+      places: [
+        const PlaceInfo(
+          name: '近处普通地点',
+          latitude: 39.9050,
+          longitude: 116.4080,
+        ),
+      ],
+      searchResults: [searchResultPlace],
+    );
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    expect(find.text('近处普通地点'), findsOneWidget);
+
+    // 输入搜索词
+    await tester.enterText(find.byType(TextField), '奥森');
+    await tester.pump(const Duration(milliseconds: 200));
+    // 防抖中，尚未触发 searchNearby
+    expect(fakeSearch.searchCallCount, equals(0));
+
+    // 超过防抖间隔 400ms
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(fakeSearch.searchCallCount, equals(1));
+    expect(fakeSearch.lastSearchQuery, equals('奥森'));
+    expect(fakeSearch.lastLatitude, equals(39.9042));
+    expect(fakeSearch.lastLongitude, equals(116.4074));
+    expect(find.text('奥林匹克森林公园'), findsOneWidget);
+
+    // 点选搜索结果并确认返回
+    await tester.tap(find.text('奥林匹克森林公园'));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '奥林匹克森林公园');
+    expect(selectedResult!.latitude, searchResultPlace.latitude);
+    expect(selectedResult!.longitude, searchResultPlace.longitude);
+  });
+
+  testWidgets('清空搜索框后恢复周边 POI 列表与系统定位项', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    const searchResultPlace = PlaceInfo(
+      name: '远方美术馆',
+      latitude: 40.0000,
+      longitude: 116.5000,
+    );
+    final fakeSearch = _FakePlaceSearchService(
+      places: [
+        const PlaceInfo(
+          name: '常驻周边地点',
+          latitude: 39.9050,
+          longitude: 116.4080,
+        ),
+      ],
+      searchResults: [searchResultPlace],
+    );
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('常驻周边地点'), findsOneWidget);
+
+    // 输入搜索关键词并等待触发
+    await tester.enterText(find.byType(TextField), '美术馆');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('远方美术馆'), findsOneWidget);
+    expect(find.text('常驻周边地点'), findsNothing);
+
+    // 点击清除按钮
+    await tester.tap(find.byIcon(Icons.clear_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('常驻周边地点'), findsOneWidget);
+    expect(find.byKey(const ValueKey('nearby_picker_system_location_tile')),
+        findsOneWidget);
+  });
+
+  testWidgets('搜索失败时展示错误提示，点击重试可重新请求', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(
+      searchShouldThrow: true,
+      searchResults: [
+        const PlaceInfo(
+          name: '故宫角楼',
+          latitude: 39.9200,
+          longitude: 116.4000,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '角楼');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+    expect(find.text('在线地点服务不可用'), findsOneWidget);
+
+    // 恢复服务并点击重试
+    fakeSearch.searchShouldThrow = false;
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('故宫角楼'), findsOneWidget);
+  });
+
+  testWidgets('搜索无匹配结果时展示 mapPickerNoResults 空状态提示',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(
+      places: [
+        const PlaceInfo(
+          name: '常驻周边地点',
+          latitude: 39.9050,
+          longitude: 116.4080,
+        ),
+      ],
+      searchResults: [],
+    );
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '火星基地');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('没有找到相关地点'), findsOneWidget);
+  });
+
+  testWidgets('键盘提交 searchAction 立即触发搜索，无需等待 400ms 防抖延迟',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(
+      searchResults: [
+        const PlaceInfo(
+          name: '立即搜索结果',
+          latitude: 39.9100,
+          longitude: 116.4100,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '立即');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(fakeSearch.searchCallCount, equals(1));
+    expect(fakeSearch.lastSearchQuery, equals('立即'));
+    expect(find.text('立即搜索结果'), findsOneWidget);
+  });
+
+  testWidgets('连续输入不同搜索词时，旧请求返回不覆盖新请求结果', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final completer1 = Completer<List<PlaceInfo>>();
+    final completer2 = Completer<List<PlaceInfo>>();
+
+    final fakeSearch = _FakePlaceSearchService();
+    fakeSearch.onSearchNearby = (query) {
+      if (query == '旧词') return completer1.future;
+      if (query == '新词') return completer2.future;
+      return Future.value([]);
+    };
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // 输入旧词并触发
+    await tester.enterText(find.byType(TextField), '旧词');
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 立即输入新词并触发
+    await tester.enterText(find.byType(TextField), '新词');
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 让新词先返回
+    completer2.complete([
+      const PlaceInfo(
+        name: '新词命中地点',
+        latitude: 39.9200,
+        longitude: 116.4200,
+      ),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('新词命中地点'), findsOneWidget);
+
+    // 旧词慢速返回，不应覆盖新词结果
+    completer1.complete([
+      const PlaceInfo(
+        name: '旧词命中地点',
+        latitude: 39.9100,
+        longitude: 116.4100,
+      ),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('新词命中地点'), findsOneWidget);
+    expect(find.text('旧词命中地点'), findsNothing);
   });
 
   testWidgets('滑动列表到底部触发 getNearbyPlaces 分页加载更多', (WidgetTester tester) async {
@@ -720,7 +1061,10 @@ void main() {
     await tester.tap(find.text('北海公园'), warnIfMissed: false);
     await tester.pump();
 
-    await tester.tap(find.textContaining('故宫博物院'), warnIfMissed: false);
+    await tester.tap(
+      find.byKey(const ValueKey('nearby_picker_system_location_tile')),
+      warnIfMissed: false,
+    );
     await tester.pump();
 
     await tester.tap(
@@ -898,7 +1242,7 @@ void main() {
     expect(find.text('地点0'), findsOneWidget);
 
     // 1. 模拟触底滚动触发加载更多（验证 hasMore 保持为 true）
-    final scrollFinder = find.byType(Scrollable).first;
+    final scrollFinder = find.byType(ListView);
     await tester.drag(scrollFinder, const Offset(0, -1000));
     await tester.pumpAndSettle();
 
@@ -1115,5 +1459,39 @@ void main() {
     expect(selectedResult!.location, '中国,北京市,北京市,东城区');
     // 保留原本传入的经度，而不是被覆盖为系统设备经度 116.4074
     expect(selectedResult!.longitude, 116.3971);
+  });
+
+  testWidgets('初始经纬度均为空且与设备同名时，不误判定为系统当前位置', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService(
+      position: _mockPosition(latitude: 39.9042, longitude: 116.4074),
+      formattedLocation: '系统设备地址',
+      poiName: '故宫博物院',
+    );
+    final fakeSearch = _FakePlaceSearchService(places: []);
+
+    LocationPickerResult? selectedResult;
+
+    await _pumpPickerWithNavigation(
+      tester,
+      picker: NearbyLocationPicker(
+        initialLatitude: null,
+        initialLongitude: null,
+        initialLocation: '中国,北京市,北京市,东城区',
+        initialPoiName: '故宫博物院',
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+      onResult: (res) => selectedResult = res,
+    );
+
+    // 点击右上角确认按钮（未点选系统位置，保持原初始 POI）
+    await tester
+        .tap(find.byKey(const ValueKey('nearby_picker_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(selectedResult, isNotNull);
+    expect(selectedResult!.poiName, '故宫博物院');
+    // 验证保留原始初始地址，而不是被误判为系统位置覆盖为「系统设备地址」
+    expect(selectedResult!.location, '中国,北京市,北京市,东城区');
   });
 }

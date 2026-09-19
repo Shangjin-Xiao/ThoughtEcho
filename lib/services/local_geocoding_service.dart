@@ -94,11 +94,14 @@ class LocalGeocodingService {
   /// [latitude]: 纬度
   /// [longitude]: 经度
   /// [localeCode]: 语言代码，如 'zh' 或 'en'，用于返回对应语言的地址
+  /// [bypassCache]: 是否跳过缓存（例如选点反查需要高精度对应，绕过约500米粗粒度复用）
   /// 返回包含地址信息的Map，如果失败返回null
   static Future<Map<String, String?>?> getAddressFromCoordinates(
     double latitude,
     double longitude, {
     String? localeCode,
+    bool bypassCache = false,
+    Duration timeout = const Duration(seconds: 4),
   }) async {
     try {
       // Windows平台：跳过系统地理编码（不支持），返回 null 让调用者使用在线服务
@@ -111,22 +114,28 @@ class LocalGeocodingService {
       final localeIdentifier = _buildLocaleIdentifier(localeCode);
 
       // 首先尝试从缓存读取（含语言匹配）
-      final cachedAddress = await _getFromCache(
-        latitude,
-        longitude,
-        localeIdentifier,
-      );
-      if (cachedAddress != null) {
-        logDebug('使用缓存的地理编码数据');
-        return cachedAddress;
+      if (!bypassCache) {
+        final cachedAddress = await _getFromCache(
+          latitude,
+          longitude,
+          localeIdentifier,
+        );
+        if (cachedAddress != null) {
+          logDebug('使用缓存的地理编码数据');
+          return cachedAddress;
+        }
       }
 
       // 使用系统提供的地理编码功能，通过 setLocaleIdentifier 控制返回语言
-      // 串行化执行以避免全局 locale 状态的竞态条件
+      // 串行化执行以避免全局 locale 状态的竞态条件，并在底层调用设置超时以避免队列挂起
       try {
         final placemarks = await _runSerialized(() async {
-          await geocoding.setLocaleIdentifier(localeIdentifier);
-          return await geocoding.placemarkFromCoordinates(latitude, longitude);
+          await geocoding
+              .setLocaleIdentifier(localeIdentifier)
+              .timeout(timeout);
+          return await geocoding
+              .placemarkFromCoordinates(latitude, longitude)
+              .timeout(timeout);
         });
 
         if (placemarks.isNotEmpty) {

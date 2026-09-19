@@ -7,9 +7,15 @@ import 'package:thoughtecho/utils/http_response.dart';
 
 /// 只回放一段固定响应，并记下请求长什么样。
 class _FakeNetworkService implements NetworkService {
-  _FakeNetworkService(this.response);
+  _FakeNetworkService(
+    this.response, {
+    this.responses,
+    this.shouldThrow = false,
+  });
 
   final HttpResponse response;
+  final List<HttpResponse>? responses;
+  final bool shouldThrow;
 
   int calls = 0;
   Uri? lastUri;
@@ -21,9 +27,18 @@ class _FakeNetworkService implements NetworkService {
     Map<String, String>? headers,
     int? timeoutSeconds,
   }) async {
-    calls++;
-    lastUri = Uri.parse(url);
+    final uri = Uri.parse(url);
+    lastUri = uri;
     lastHeaders = headers;
+    if (shouldThrow) {
+      throw Exception('Network request failed');
+    }
+    if (responses != null && calls < responses!.length) {
+      final res = responses![calls];
+      calls++;
+      return res;
+    }
+    calls++;
     return response;
   }
 
@@ -37,6 +52,7 @@ class _RecordingNetworkService implements NetworkService {
 
   final HttpResponse response;
   final List<DateTime> timestamps = [];
+  final List<Uri> uris = [];
 
   @override
   Future<HttpResponse> get(
@@ -45,6 +61,7 @@ class _RecordingNetworkService implements NetworkService {
     int? timeoutSeconds,
   }) async {
     timestamps.add(DateTime.now());
+    uris.add(Uri.parse(url));
     return response;
   }
 
@@ -133,16 +150,32 @@ void main() {
       expect(results.map((p) => p.name), ['有坐标的地点']);
     });
 
-    test('非 200 响应降级为空列表，不抛给调用方', () async {
+    test('非 200 响应时抛出异常，让调用方展示重试横幅', () async {
       final network = _FakeNetworkService(
         _jsonResponse(const [], statusCode: 429),
       );
       final service = NominatimPlaceSearchService(networkService: network);
 
-      expect(await service.searchNearby(refLat, refLon, query: '咖啡馆'), isEmpty);
+      expect(
+        () => service.searchNearby(refLat, refLon, query: '咖啡馆'),
+        throwsException,
+      );
     });
 
-    test('请求带上限定的 viewbox 和可识别的 User-Agent', () async {
+    test('网络异常时抛出异常，让调用方展示重试横幅', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse(const [], statusCode: 500),
+        shouldThrow: true,
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      expect(
+        () => service.searchNearby(refLat, refLon, query: '咖啡馆'),
+        throwsException,
+      );
+    });
+
+    test('请求带上限定的 viewbox 和可识别的 User-Agent，且绑定 bounded=1 限制在附近', () async {
       final network = _FakeNetworkService(_jsonResponse(const []));
       final service = NominatimPlaceSearchService(networkService: network);
 
@@ -152,7 +185,6 @@ void main() {
       final params = network.lastUri!.queryParameters;
       expect(params['q'], '咖啡馆');
       expect(params['format'], 'json');
-      // bounded=1 + viewbox：不限定的话「咖啡馆」会搜出全球结果
       expect(params['bounded'], '1');
       expect(params['viewbox'], isNotNull);
       expect(network.lastHeaders!['User-Agent'], contains('ThoughtEcho'));
@@ -246,7 +278,8 @@ void main() {
       final network = _FakeNetworkService(_jsonResponse(const []));
       final service = NominatimPlaceSearchService(networkService: network);
 
-      await service.getNearbyPlaces(refLat, refLon, offset: 20, limit: 20);
+      await service.getNearbyPlaces(refLat, refLon,
+          categoryOrKeyword: '公园', offset: 20, limit: 20);
 
       final params = network.lastUri!.queryParameters;
       expect(params['offset'], '20');
@@ -261,6 +294,56 @@ void main() {
 
       final params = network.lastUri!.queryParameters;
       expect(params['q'], '西湖区');
+    });
+
+    test('未传入 categoryOrKeyword 时按页码轮替综合 POI 类别且不把全局 offset 强加给新类别', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse(const []),
+        responses: [
+          _jsonResponse([
+            {
+              'place_id': 100,
+              'name': '景点',
+              'lat': '39.9052',
+              'lon': '116.4074',
+              'type': 'attraction',
+              'address': {'tourism': '景点'},
+            },
+          ]),
+          _jsonResponse([
+            {
+              'place_id': 200,
+              'name': '公园',
+              'lat': '39.9062',
+              'lon': '116.4074',
+              'type': 'park',
+              'address': {'leisure': '公园'},
+            },
+          ]),
+        ],
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      // 第一页 (offset=0) 默认请求 attraction
+      final page1 =
+          await service.getNearbyPlaces(refLat, refLon, offset: 0, limit: 20);
+      expect(network.lastUri!.queryParameters['q'], 'attraction');
+      expect(network.lastUri!.queryParameters.containsKey('amenity'), isFalse);
+      expect(network.lastUri!.queryParameters.containsKey('offset'), isFalse);
+      expect(page1.length, 1);
+      expect(page1.first.name, '景点');
+
+      // 第二页 (offset=20) 轮替到 park，依靠 exclude_place_ids 去重而不强加 offset=20
+      final page2 =
+          await service.getNearbyPlaces(refLat, refLon, offset: 20, limit: 20);
+      expect(network.lastUri!.queryParameters['q'], 'park');
+      expect(network.lastUri!.queryParameters.containsKey('offset'), isFalse);
+      expect(
+        network.lastUri!.queryParameters['exclude_place_ids'],
+        contains('100'),
+      );
+      expect(page2.length, 1);
+      expect(page2.first.name, '公园');
     });
 
     test('请求失败时抛出异常，让调用方展示重试横幅', () async {
@@ -291,12 +374,36 @@ void main() {
       final service = NominatimPlaceSearchService(networkService: network);
 
       // 第一页抓取
-      await service.getNearbyPlaces(refLat, refLon, offset: 0);
+      final page1 = await service.getNearbyPlaces(refLat, refLon, offset: 0);
+      expect(page1.length, 1);
+      expect(page1.first.name, '近处的书店');
 
-      // 第二页抓取，应带上第一页的 place_id
-      await service.getNearbyPlaces(refLat, refLon, offset: 1);
+      // 第二页抓取，应带上第一页的 place_id 且本地过滤重复项
+      final page2 = await service.getNearbyPlaces(refLat, refLon, offset: 1);
       final params = network.lastUri!.queryParameters;
       expect(params['exclude_place_ids'], contains('12345'));
+      expect(page2, isEmpty);
+    });
+
+    test('分类轮替重试时对后续尝试执行限流节流', () async {
+      final network = _RecordingNetworkService(_jsonResponse(const []));
+      final service = NominatimPlaceSearchService(
+        networkService: network,
+        minRequestInterval: const Duration(milliseconds: 50),
+      );
+
+      await service.getNearbyPlaces(refLat, refLon);
+
+      // 验证按轮替顺序依次尝试四个分类
+      expect(
+        network.uris.map((u) => u.queryParameters['q']),
+        ['attraction', 'park', 'museum', 'monument'],
+      );
+      // 检查后续请求之间满足限流间隔
+      for (var i = 1; i < network.timestamps.length; i++) {
+        final gap = network.timestamps[i].difference(network.timestamps[i - 1]);
+        expect(gap, greaterThanOrEqualTo(const Duration(milliseconds: 35)));
+      }
     });
   });
 }

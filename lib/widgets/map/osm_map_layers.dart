@@ -13,6 +13,12 @@ abstract final class OsmMapLayers {
   static const String _tileUrlTemplate =
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
+  /// 兜底瓦片源：使用 OpenStreetMap France (osmfr) 镜像源。
+  /// 注意：osmfr 采用法语社区定制的 CartoCSS 渲染样式，与官方主源相比在色彩与微观注记上有轻微差异，
+  /// 但具备独立的 CDN 节点；当官方主源发生超时、阻断或局部 404 时，可作为可用性兜底避免地图出现大面积白块。
+  static const String _fallbackTileUrlTemplate =
+      'https://tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png';
+
   /// 用于 User-Agent，与 Android 的 applicationId 一致。
   static const String _packageName = 'com.shangjin.thoughtecho';
 
@@ -26,19 +32,23 @@ abstract final class OsmMapLayers {
       Uri.parse('https://www.openstreetmap.org/copyright');
 
   /// 瓦片层。作为 [FlutterMap] 的第一个 child。
-  /// 配置持久化磁盘瓦片缓存，缩放时优先读取本地缓存，避免重复向 OSM 发起网络请求。
+  /// 配置持久化磁盘瓦片缓存，并启用扩大预缓冲 (panBuffer: 2) 与全球镜像兜底 (fallbackUrl)，
+  /// 在主源错误阻断时自动降级，平移时提前加载周边瓦片以减少灰块。
   static TileLayer tiles() => TileLayer(
         urlTemplate: _tileUrlTemplate,
+        fallbackUrl: _fallbackTileUrlTemplate,
         userAgentPackageName: _packageName,
         maxNativeZoom: _maxNativeZoom,
+        panBuffer: 2,
         tileProvider: NetworkTileProvider(
           cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(),
         ),
       );
 
   /// 版权标注层。放在 [FlutterMap] 的最后一个 child，压在瓦片之上。
+  /// 明确标明数据来源自 OpenStreetMap contributors 及兜底源 OSM France。
   static Widget attribution() => SimpleAttributionWidget(
-        source: const Text('OpenStreetMap contributors'),
+        source: const Text('OpenStreetMap contributors / OSM France'),
         onTap: _openCopyrightPage,
       );
 
