@@ -1,4 +1,3 @@
-// ignore_for_file: invalid_use_of_protected_member
 part of 'smart_push_settings_page.dart';
 
 extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
