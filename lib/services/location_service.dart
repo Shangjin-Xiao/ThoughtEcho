@@ -1341,7 +1341,8 @@ class LocationService extends ChangeNotifier {
   /// 不能直接存 `formatted_address`——那是给人看的带空格拼接，
   /// [formatLocationForDisplay] 按逗号分段解析它会失败，卡片上就退回英文原文。
   ///
-  /// 四级全空时返回 null，让调用方自己决定是留空还是退回坐标。
+  /// 省份和城市都缺时返回 null（光有国家落不了地，调用方退回坐标或待解析标记，
+  /// 不能把 `中国,,,` 这类串存进库）；区县允许空位。
   static String? buildStorageLocation(Map<String, String?>? address) {
     if (address == null) return null;
 
@@ -1350,7 +1351,7 @@ class LocationService extends ChangeNotifier {
     final city = address['city']?.trim() ?? '';
     final district = address['district']?.trim() ?? '';
 
-    if (country.isEmpty && province.isEmpty && city.isEmpty) return null;
+    if (province.isEmpty && city.isEmpty) return null;
     return '$country,$province,$city,$district';
   }
 

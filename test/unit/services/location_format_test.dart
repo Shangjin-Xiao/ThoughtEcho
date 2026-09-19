@@ -286,6 +286,25 @@ void main() {
         isNull,
       );
     });
+
+    test('只有国家没有省市时返回 null，不存无法落地的国家串', () {
+      expect(
+        LocationService.buildStorageLocation(<String, String?>{
+          'country': '中国',
+        }),
+        isNull,
+      );
+    });
+
+    test('有省无市时保留，区县仍可空位', () {
+      expect(
+        LocationService.buildStorageLocation(<String, String?>{
+          'country': '中国',
+          'province': '北京市',
+        }),
+        '中国,北京市,,',
+      );
+    });
   });
 
   group('LocationService.resolvePickedLocationForSave', () {

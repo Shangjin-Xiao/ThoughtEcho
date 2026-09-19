@@ -1658,14 +1658,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
-          final country = addressInfo['country'] ?? '';
-          final province = addressInfo['province'] ?? '';
-          final city = addressInfo['city'] ?? '';
-          final district = addressInfo['district'] ?? '';
-          final standardAddress = '$country,$province,$city,$district';
-          final hasAnyField =
-              country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
-          if (hasAnyField) {
+          // 走统一的入库校验：省市都缺（如只有国家）时返回 null，
+          // 不把无法落地的串存进库。
+          final standardAddress =
+              LocationService.buildStorageLocation(addressInfo);
+          if (standardAddress != null) {
             // 同上：只刷新行政区，保留已选地点名。
             _controller.setNewLocationData(
               standardAddress,
