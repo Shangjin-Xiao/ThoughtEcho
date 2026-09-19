@@ -39,7 +39,6 @@ void configureSentryOptions(SentryFlutterOptions options) {
   // 付的。下面 [sanitizeSentryTransaction] 那层筛选省的是**上传**，不是采样开销。
   // 明知如此仍然取 1.0：Sentry 默认关闭、由用户主动打开来查这一个问题，而调低采样率
   // 会按概率漏掉真卡的那几段 —— 那正是唯一要看的样本。
-  // ignore: experimental_member_use
   options.profilesSampleRate = 1.0;
 
   // 开启 TTFD (完全渲染时间监控)
@@ -48,7 +47,6 @@ void configureSentryOptions(SentryFlutterOptions options) {
 
   options.sendDefaultPii = false;
   options.attachScreenshot = false;
-  // ignore: experimental_member_use
   options.attachViewHierarchy = false;
   options.enableAutoSessionTracking = false;
   options.enablePrintBreadcrumbs = false;
@@ -295,17 +293,16 @@ class SentryHelper {
     }
 
     try {
-      await SentryFlutter.init(
-        (options) {
-          configureSentryOptions(options);
-        },
-      );
+      await SentryFlutter.init((options) {
+        configureSentryOptions(options);
+      });
 
       // 5. 绑定完全脱敏的匿名 Device ID，用于 Sentry 统计影响的用户百分比
       try {
         final deviceId = await DeviceIdentityManager.I.getFingerprint();
         Sentry.configureScope(
-            (scope) => scope.setUser(SentryUser(id: deviceId)));
+          (scope) => scope.setUser(SentryUser(id: deviceId)),
+        );
       } catch (e) {
         if (kDebugMode) print('[Sentry] Failed to set User ID: $e');
       }
