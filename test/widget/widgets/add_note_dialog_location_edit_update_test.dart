@@ -1,10 +1,6 @@
-// ignore_for_file: depend_on_referenced_packages
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:geocoding_platform_interface/geocoding_platform_interface.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
@@ -19,25 +15,13 @@ import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 import '../../test_harness.dart';
+import 'geocoding_test_support.dart';
 
 /// 编辑模式"更新位置"保留 POI 名的回归测试单独成文件。
 ///
 /// 它要走静态本地反查（`LocalGeocodingService` 自带串行队列和 MMKV 缓存，
 /// 都是进程级单例）。和其他用例同文件时会互相污染该共享状态，
 /// 导致成功分支不稳定；独立文件即独立测试隔离区，结果确定。
-Position _mockPosition() => Position(
-      longitude: 116.4074,
-      latitude: 39.9042,
-      timestamp: DateTime(2026, 1, 1),
-      accuracy: 0.0,
-      altitude: 0.0,
-      altitudeAccuracy: 0.0,
-      heading: 0.0,
-      headingAccuracy: 0.0,
-      speed: 0.0,
-      speedAccuracy: 0.0,
-    );
-
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
   bool get autoAttachLocation => false;
@@ -81,7 +65,7 @@ class _TestLocationService extends ChangeNotifier implements LocationService {
   bool get isLocationServiceEnabled => true;
 
   @override
-  Position? get currentPosition => _mockPosition();
+  Position? get currentPosition => mockPosition();
 
   @override
   String? get currentPoiName => '故宫博物院';
@@ -94,7 +78,7 @@ class _TestLocationService extends ChangeNotifier implements LocationService {
     bool highAccuracy = false,
     bool skipPermissionRequest = false,
   }) async =>
-      _mockPosition();
+      mockPosition();
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -144,47 +128,6 @@ class _TestFeatureGuideService extends ChangeNotifier
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// 返回固定中文四级地址的地理编码桩，供静态本地反查走成功分支。
-class _AdminMockGeocodingPlatform extends GeocodingPlatform
-    with MockPlatformInterfaceMixin {
-  int placemarkCalls = 0;
-
-  @override
-  Future<void> setLocaleIdentifier(String localeIdentifier) async {}
-
-  @override
-  Future<List<Placemark>> placemarkFromCoordinates(
-    double latitude,
-    double longitude, {
-    String? localeIdentifier,
-  }) async {
-    placemarkCalls++;
-    return [
-      Placemark(
-        country: '中国',
-        administrativeArea: '北京市',
-        locality: '北京市',
-        subLocality: '西城区',
-      ),
-    ];
-  }
-}
-
-/// 装上桩并返回之前的平台实例（可能为 null，即之前未设置）。
-/// 调用方只在非 null 时恢复，避免把桩当成"之前的状态"装回去。
-GeocodingPlatform? _installAdminMockPlatform([
-  GeocodingPlatform? mock,
-]) {
-  GeocodingPlatform? previous;
-  try {
-    previous = GeocodingPlatform.instance;
-  } catch (_) {
-    previous = null;
-  }
-  GeocodingPlatform.instance = mock ?? _AdminMockGeocodingPlatform();
-  return previous;
-}
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -197,13 +140,9 @@ void main() {
   });
 
   testWidgets('编辑模式只有坐标+POI 时点更新位置：同样保留 POI 名', (WidgetTester tester) async {
-    final mockPlatform = _AdminMockGeocodingPlatform();
-    final previousPlatform = _installAdminMockPlatform(mockPlatform);
-    addTearDown(() {
-      if (previousPlatform != null) {
-        GeocodingPlatform.instance = previousPlatform;
-      }
-    });
+    final mockPlatform = AdminMockGeocodingPlatform();
+    final previousPlatform = installAdminMockPlatform(mockPlatform);
+    addTearDown(() => restoreAdminMockPlatform(previousPlatform));
     Quote? savedQuote;
     final initialQuote = Quote(
       id: 'existing-edit-poi-1',

@@ -1,10 +1,6 @@
-// ignore_for_file: depend_on_referenced_packages
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:geocoding_platform_interface/geocoding_platform_interface.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
@@ -20,19 +16,7 @@ import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 import '../../test_harness.dart';
-
-Position _mockPosition() => Position(
-      longitude: 116.4074,
-      latitude: 39.9042,
-      timestamp: DateTime(2026, 1, 1),
-      accuracy: 0.0,
-      altitude: 0.0,
-      altitudeAccuracy: 0.0,
-      heading: 0.0,
-      headingAccuracy: 0.0,
-      speed: 0.0,
-      speedAccuracy: 0.0,
-    );
+import 'geocoding_test_support.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   _TestSettingsService({this.autoAttachLocation = false});
@@ -79,7 +63,7 @@ class _TestLocationService extends ChangeNotifier implements LocationService {
   bool get isLocationServiceEnabled => true;
 
   @override
-  Position? get currentPosition => _mockPosition();
+  Position? get currentPosition => mockPosition();
 
   @override
   String? get currentPoiName => '故宫博物院';
@@ -92,7 +76,7 @@ class _TestLocationService extends ChangeNotifier implements LocationService {
     bool highAccuracy = false,
     bool skipPermissionRequest = false,
   }) async =>
-      _mockPosition();
+      mockPosition();
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -119,7 +103,7 @@ class _CoordsOnlyPoiLocationService extends ChangeNotifier
   bool get isLocationServiceEnabled => true;
 
   @override
-  Position? get currentPosition => _mockPosition();
+  Position? get currentPosition => mockPosition();
 
   @override
   String? get currentPoiName => '景山公园';
@@ -132,7 +116,7 @@ class _CoordsOnlyPoiLocationService extends ChangeNotifier
     bool highAccuracy = false,
     bool skipPermissionRequest = false,
   }) async =>
-      _mockPosition();
+      mockPosition();
 
   @override
   void setCoordinates(double latitude, double longitude, {String? address}) {
@@ -146,44 +130,6 @@ class _CoordsOnlyPoiLocationService extends ChangeNotifier
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-/// 返回固定中文四级地址的地理编码桩，供静态本地反查走成功分支。
-class _AdminMockGeocodingPlatform extends GeocodingPlatform
-    with MockPlatformInterfaceMixin {
-  @override
-  Future<void> setLocaleIdentifier(String localeIdentifier) async {}
-
-  @override
-  Future<List<Placemark>> placemarkFromCoordinates(
-    double latitude,
-    double longitude, {
-    String? localeIdentifier,
-  }) async {
-    return [
-      Placemark(
-        country: '中国',
-        administrativeArea: '北京市',
-        locality: '北京市',
-        subLocality: '西城区',
-      ),
-    ];
-  }
-}
-
-/// 装上桩并返回之前的平台实例（可能为 null，即之前未设置）。
-/// 调用方只在非 null 时恢复，避免把桩当成"之前的状态"装回去。
-GeocodingPlatform? _installAdminMockPlatform([
-  GeocodingPlatform? mock,
-]) {
-  GeocodingPlatform? previous;
-  try {
-    previous = GeocodingPlatform.instance;
-  } catch (_) {
-    previous = null;
-  }
-  GeocodingPlatform.instance = mock ?? _AdminMockGeocodingPlatform();
-  return previous;
 }
 
 class _TestWeatherService extends ChangeNotifier implements WeatherService {
@@ -482,12 +428,8 @@ void main() {
   });
 
   testWidgets('服务反查不出行政区时回退本地反查：同样保留 POI 名', (WidgetTester tester) async {
-    final previousPlatform = _installAdminMockPlatform();
-    addTearDown(() {
-      if (previousPlatform != null) {
-        GeocodingPlatform.instance = previousPlatform;
-      }
-    });
+    final previousPlatform = installAdminMockPlatform();
+    addTearDown(() => restoreAdminMockPlatform(previousPlatform));
     Quote? savedQuote;
 
     await tester.pumpWidget(_buildTestApp(
