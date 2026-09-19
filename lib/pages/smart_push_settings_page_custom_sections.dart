@@ -1,4 +1,3 @@
-// ignore_for_file: invalid_use_of_protected_member
 part of 'smart_push_settings_page.dart';
 
 extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
@@ -113,7 +112,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
               onChanged: (value) {
                 final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
                 slots[index] = slot.copyWith(enabled: value);
-                setState(() {
+                _updateState(() {
                   _settings = _settings.copyWith(pushTimeSlots: slots);
                 });
               },
@@ -152,7 +151,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                         _settings.pushTimeSlots,
                       );
                       slots.removeAt(index);
-                      setState(() {
+                      _updateState(() {
                         _settings = _settings.copyWith(pushTimeSlots: slots);
                       });
                     },
@@ -210,7 +209,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                   selected: isSelected,
                   onSelected: (selected) {
                     if (selected) {
-                      setState(() {
+                      _updateState(() {
                         _settings = _settings.copyWith(frequency: freq);
                       });
                     }
@@ -240,7 +239,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                       } else if (weekdays.length > 1) {
                         weekdays.remove(weekday);
                       }
-                      setState(() {
+                      _updateState(() {
                         _settings = _settings.copyWith(
                           selectedWeekdays: weekdays,
                         );
@@ -275,7 +274,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
             borderRadius: BorderRadius.vertical(
                 top: Radius.circular(AppShapeTokens.of(context).cardRadius)),
             onTap: () {
-              setState(() {
+              _updateState(() {
                 _settings = _settings.copyWith(
                   showAdvancedOptions: !_settings.showAdvancedOptions,
                 );
@@ -347,7 +346,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                             } else if (types.length > 1) {
                               types.remove(type);
                             }
-                            setState(() {
+                            _updateState(() {
                               _settings = _settings.copyWith(
                                 enabledPastNoteTypes: types,
                               );
@@ -387,7 +386,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                             } else {
                               types.remove(weather);
                             }
-                            setState(() {
+                            _updateState(() {
                               _settings = _settings.copyWith(
                                 filterWeatherTypes: types,
                               );
@@ -445,7 +444,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                             } else {
                               tagIds.remove(tag.id);
                             }
-                            setState(() {
+                            _updateState(() {
                               _settings = _settings.copyWith(
                                 filterTagIds: tagIds,
                               );
