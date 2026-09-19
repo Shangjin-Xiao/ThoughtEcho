@@ -528,9 +528,9 @@ class LocationService extends ChangeNotifier {
   /// `_currentAddress` 一起写掉。地图选点要的是用户手指点的那个点，写进这些
   /// 字段会让天气、每日一言这些按「当前城市」取数的地方跟着漂走。
   ///
-  /// 走 Nominatim 而不是系统地理编码：系统地理编码只给行政区，给不出
-  /// `poi_name`（"芝公园"），而选点的意义正是那个地点名。Windows 上系统
-  /// 地理编码本来也不可用。
+  /// 优先通过在线 Nominatim 获取精细街道与 POI 名称（`poi_name` 如"芝公园"）；
+  /// 当在线不可用、失败或超时时，自动回退至系统本地 SDK 地理编码
+  /// （[LocalGeocodingService]）以保障基础四级行政区结构可用。
   ///
   /// 返回的键与在线反查一致，额外带 `poi_name`；失败返回 null。
   Future<Map<String, String?>?> reverseGeocodePoint(
@@ -551,7 +551,7 @@ class LocationService extends ChangeNotifier {
         longitude,
         localeCode: _apiLanguageParam,
         bypassCache: true,
-      );
+      ).timeout(const Duration(seconds: 4), onTimeout: () => null);
       if (systemResult != null) {
         logDebug('反查选点地址使用系统SDK地理编码回退成功');
         return systemResult;

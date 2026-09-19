@@ -267,7 +267,8 @@ void main() {
       final network = _FakeNetworkService(_jsonResponse(const []));
       final service = NominatimPlaceSearchService(networkService: network);
 
-      await service.getNearbyPlaces(refLat, refLon, offset: 20, limit: 20);
+      await service.getNearbyPlaces(refLat, refLon,
+          categoryOrKeyword: '公园', offset: 20, limit: 20);
 
       final params = network.lastUri!.queryParameters;
       expect(params['offset'], '20');
@@ -284,7 +285,7 @@ void main() {
       expect(params['q'], '西湖区');
     });
 
-    test('未传入 categoryOrKeyword 时按页码轮替综合 POI 类别', () async {
+    test('未传入 categoryOrKeyword 时按页码轮替综合 POI 类别且不把全局 offset 强加给新类别', () async {
       final network = _FakeNetworkService(_jsonResponse([
         {
           'place_id': 100,
@@ -297,14 +298,16 @@ void main() {
       ]));
       final service = NominatimPlaceSearchService(networkService: network);
 
-      // 第一页 (offset=0) 默认请求 tourism
+      // 第一页 (offset=0) 默认请求 attraction
       await service.getNearbyPlaces(refLat, refLon, offset: 0, limit: 20);
-      expect(network.lastUri!.queryParameters['q'], '[tourism]');
+      expect(network.lastUri!.queryParameters['q'], 'attraction');
       expect(network.lastUri!.queryParameters.containsKey('amenity'), isFalse);
+      expect(network.lastUri!.queryParameters.containsKey('offset'), isFalse);
 
-      // 第二页 (offset=20) 轮替到 historic
+      // 第二页 (offset=20) 轮替到 park，依靠 exclude_place_ids 去重而不强加 offset=20
       await service.getNearbyPlaces(refLat, refLon, offset: 20, limit: 20);
-      expect(network.lastUri!.queryParameters['q'], '[historic]');
+      expect(network.lastUri!.queryParameters['q'], 'park');
+      expect(network.lastUri!.queryParameters.containsKey('offset'), isFalse);
     });
 
     test('请求失败时抛出异常，让调用方展示重试横幅', () async {
@@ -355,7 +358,7 @@ void main() {
       // 验证按轮替顺序依次尝试四个分类
       expect(
         network.uris.map((u) => u.queryParameters['q']),
-        ['[tourism]', '[historic]', '[leisure]', 'attraction'],
+        ['attraction', 'park', 'museum', 'monument'],
       );
       // 检查后续请求之间满足限流间隔
       for (var i = 1; i < network.timestamps.length; i++) {

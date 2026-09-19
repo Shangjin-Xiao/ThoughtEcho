@@ -32,14 +32,14 @@ abstract final class OsmMapLayers {
       Uri.parse('https://www.openstreetmap.org/copyright');
 
   /// 瓦片层。作为 [FlutterMap] 的第一个 child。
-  /// 配置持久化磁盘瓦片缓存，并启用预缓冲 (panBuffer: 1) 与全球加速镜像兜底 (fallbackUrl)，
-  /// 避免缩放与平移时因瓦片请求卡顿而出现灰块。
+  /// 配置持久化磁盘瓦片缓存，并启用扩大预缓冲 (panBuffer: 2) 与全球镜像兜底 (fallbackUrl)，
+  /// 在主源错误阻断时自动降级，平移时提前加载周边瓦片以减少灰块。
   static TileLayer tiles() => TileLayer(
         urlTemplate: _tileUrlTemplate,
         fallbackUrl: _fallbackTileUrlTemplate,
         userAgentPackageName: _packageName,
         maxNativeZoom: _maxNativeZoom,
-        panBuffer: 1,
+        panBuffer: 2,
         tileProvider: NetworkTileProvider(
           cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(),
         ),

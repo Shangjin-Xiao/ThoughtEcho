@@ -215,21 +215,21 @@ class NominatimPlaceSearchService implements PlaceSearchService {
             '${latitude - _viewboxDelta}',
         'bounded': '1',
       };
-      if (offset > 0) {
+      final trimmed = categoryOrKeyword?.trim() ?? '';
+      if (trimmed.isNotEmpty && offset > 0) {
         queryParams['offset'] = '$offset';
       }
       if (_seenPlaceIds.isNotEmpty) {
         queryParams['exclude_place_ids'] = _seenPlaceIds.join(',');
       }
 
-      final trimmed = categoryOrKeyword?.trim() ?? '';
       final categoriesToTry = trimmed.isNotEmpty
           ? [trimmed]
           : const [
-              '[tourism]',
-              '[historic]',
-              '[leisure]',
               'attraction',
+              'park',
+              'museum',
+              'monument',
             ];
       final baseIndex =
           trimmed.isNotEmpty ? 0 : (_categoryCursor % categoriesToTry.length);

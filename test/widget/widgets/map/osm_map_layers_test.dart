@@ -22,7 +22,7 @@ void main() {
           'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
       expect(tileLayer.fallbackUrl,
           'https://tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png');
-      expect(tileLayer.panBuffer, equals(1));
+      expect(tileLayer.panBuffer, equals(2));
       expect(tileLayer.maxNativeZoom, equals(19));
       expect(tileLayer.tileProvider, isA<NetworkTileProvider>());
       expect(tileLayer.tileProvider.headers['User-Agent'],

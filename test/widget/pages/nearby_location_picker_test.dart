@@ -43,6 +43,9 @@ class _FakePlaceSearchService implements PlaceSearchService {
   int callCount = 0;
   int searchCallCount = 0;
   String? lastSearchQuery;
+  double? lastLatitude;
+  double? lastLongitude;
+  String? lastLocaleCode;
   final List<int> requestedOffsets = [];
   Future<List<PlaceInfo>> Function(int offset, int limit)? onGetNearbyPlaces;
   Future<List<PlaceInfo>> Function(String query)? onSearchNearby;
@@ -78,6 +81,9 @@ class _FakePlaceSearchService implements PlaceSearchService {
   }) async {
     searchCallCount++;
     lastSearchQuery = query;
+    lastLatitude = latitude;
+    lastLongitude = longitude;
+    lastLocaleCode = localeCode;
     if (searchShouldThrow) {
       throw Exception('Search network failed');
     }
@@ -469,6 +475,8 @@ void main() {
 
     expect(fakeSearch.searchCallCount, equals(1));
     expect(fakeSearch.lastSearchQuery, equals('奥森'));
+    expect(fakeSearch.lastLatitude, equals(39.9042));
+    expect(fakeSearch.lastLongitude, equals(116.4074));
     expect(find.text('奥林匹克森林公园'), findsOneWidget);
 
     // 点选搜索结果并确认返回
