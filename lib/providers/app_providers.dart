@@ -189,10 +189,18 @@ List<SingleChildWidget> buildAppProviders({
           databaseService: context.read<DatabaseService>(),
           aiService: context.read<AIService>(),
         );
-        context.read<InsightHistoryService>().onAiInsightPersisted =
-            () => dreaming.run();
+        context.read<InsightHistoryService>().onAiInsightPersisted = () {
+          final settings = context.read<SettingsService>();
+          if (!settings.dreamingAfterInsightEnabled) {
+            return Future<void>.value();
+          }
+          return dreaming.run();
+        };
         final settings = context.read<SettingsService>();
-        if (settings.agentMemoryEnabled && dreaming.passesGates()) {
+        if (settings.dreamingOnIdleEnabled &&
+            settings.agentMemoryEnabled &&
+            settings.dreamingEnabled &&
+            dreaming.passesGates()) {
           dreaming.scheduleIdleRunOnStartup();
         }
         return dreaming;

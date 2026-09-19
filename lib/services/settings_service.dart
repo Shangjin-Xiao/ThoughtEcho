@@ -101,6 +101,10 @@ class SettingsService extends ChangeNotifier {
   /// 关闭只停止读写，**不清空已有记忆**——关开关和删数据是两件事，清空必须由
   /// 用户在设置页显式触发。
   static const String _agentMemoryEnabledKey = 'agent_memory_enabled';
+  static const String _dreamingEnabledKey = 'dreaming_enabled';
+  static const String _dreamingOnIdleEnabledKey = 'dreaming_on_idle_enabled';
+  static const String _dreamingAfterInsightEnabledKey =
+      'dreaming_after_insight_enabled';
 
   /// 「Thoughter 会记住你的偏好」这条一次性说明是否显示过。
   static const String _agentMemoryNoticeShownKey = 'agent_memory_notice_shown';
@@ -121,6 +125,53 @@ class SettingsService extends ChangeNotifier {
         source: 'SettingsService',
       );
       throw StateError('保存 Thoughter 记忆开关失败');
+    }
+    notifyListeners();
+  }
+
+  /// Dreaming 总开关。默认开启，但只有长期记忆开启时才会生效。
+  bool get dreamingEnabled => _mmkv.getBool(_dreamingEnabledKey) ?? true;
+
+  Future<void> setDreamingEnabled(bool value) async {
+    final success = await _mmkv.setBool(_dreamingEnabledKey, value);
+    if (!success) {
+      AppLogger.e(
+        'Dreaming 开关保存失败：MMKV setBool 返回 false（value=$value）',
+        source: 'SettingsService',
+      );
+      throw StateError('保存 Dreaming 开关失败');
+    }
+    notifyListeners();
+  }
+
+  /// 应用启动空闲时是否允许 Dreaming 自动整理画像。
+  bool get dreamingOnIdleEnabled =>
+      _mmkv.getBool(_dreamingOnIdleEnabledKey) ?? true;
+
+  Future<void> setDreamingOnIdleEnabled(bool value) async {
+    final success = await _mmkv.setBool(_dreamingOnIdleEnabledKey, value);
+    if (!success) {
+      AppLogger.e(
+        'Dreaming 空闲整理开关保存失败：MMKV setBool 返回 false（value=$value）',
+        source: 'SettingsService',
+      );
+      throw StateError('保存 Dreaming 空闲整理开关失败');
+    }
+    notifyListeners();
+  }
+
+  /// 周期洞察保存后是否允许 Dreaming 自动继续整理画像。
+  bool get dreamingAfterInsightEnabled =>
+      _mmkv.getBool(_dreamingAfterInsightEnabledKey) ?? true;
+
+  Future<void> setDreamingAfterInsightEnabled(bool value) async {
+    final success = await _mmkv.setBool(_dreamingAfterInsightEnabledKey, value);
+    if (!success) {
+      AppLogger.e(
+        'Dreaming 洞察后整理开关保存失败：MMKV setBool 返回 false（value=$value）',
+        source: 'SettingsService',
+      );
+      throw StateError('保存 Dreaming 洞察后整理开关失败');
     }
     notifyListeners();
   }

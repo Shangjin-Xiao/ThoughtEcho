@@ -83,14 +83,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
       }
 
       final insightHistoryService = context.read<InsightHistoryService>();
-      final recentInsights =
-          await insightHistoryService.formatRecentInsightsForDailyPrompt();
-      logDebug(
-        '获取到 ${recentInsights.length} 条最近的周期洞察',
-        source: 'HomeDailyPromptPanel',
-      );
-
-      if (!mounted) return;
+      final recentInsightsFuture =
+          insightHistoryService.formatRecentInsightsForDailyPrompt();
 
       final l10n = AppLocalizations.of(context);
       final promptStream = aiService.streamGenerateDailyPrompt(
@@ -100,7 +94,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
             ? null
             : WeatherCodeMapper.getLocalizedDescription(l10n, weatherKey),
         temperature: temperature,
-        historicalInsights: recentInsights,
+        historicalInsightsFuture: recentInsightsFuture,
       );
 
       if (!mounted) return;

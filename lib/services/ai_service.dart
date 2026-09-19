@@ -632,11 +632,20 @@ class AIService extends ChangeNotifier {
     String? weather,
     String? temperature,
     String? historicalInsights,
+    Future<String?>? historicalInsightsFuture,
   }) {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
-    final controller = StreamController<String>(sync: true);
+    late final StreamController<String> controller;
+    controller = StreamController<String>(
+      sync: true,
+      onCancel: () {
+        if (!controller.isClosed) {
+          return controller.close();
+        }
+      },
+    );
 
     () async {
       try {
@@ -658,16 +667,34 @@ class AIService extends ChangeNotifier {
           return;
         }
 
+        // 与画像读取并行准备最近洞察，避免两个本地数据源串行等待。
+        final profileFuture = _userProfileContext();
+        String? resolvedHistoricalInsights = historicalInsights;
+        if (historicalInsightsFuture != null) {
+          try {
+            resolvedHistoricalInsights = await historicalInsightsFuture;
+          } catch (error, stackTrace) {
+            logError(
+              '读取每日提示的最近洞察失败，使用已有上下文',
+              error: error,
+              stackTrace: stackTrace,
+              source: 'AIService.streamGenerateDailyPrompt',
+            );
+          }
+        }
+        if (controller.isClosed) return;
+
         // 获取包含环境信息的系统提示词
         final systemPromptWithContext =
             _promptManager.getDailyPromptSystemPromptWithContext(
           city: city,
           weather: weather,
           temperature: temperature,
-          historicalInsights: historicalInsights,
+          historicalInsights: resolvedHistoricalInsights,
           languageCode: languageCode,
         );
-        final profileBlock = await _userProfileContext();
+        final profileBlock = await profileFuture;
+        if (controller.isClosed) return;
 
         final userMessage = _promptManager.buildDailyPromptUserMessage(
           city: city,
