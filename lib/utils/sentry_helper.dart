@@ -295,16 +295,17 @@ class SentryHelper {
     }
 
     try {
-      await SentryFlutter.init((options) {
-        configureSentryOptions(options);
-      });
+      await SentryFlutter.init(
+        (options) {
+          configureSentryOptions(options);
+        },
+      );
 
       // 5. 绑定完全脱敏的匿名 Device ID，用于 Sentry 统计影响的用户百分比
       try {
         final deviceId = await DeviceIdentityManager.I.getFingerprint();
         Sentry.configureScope(
-          (scope) => scope.setUser(SentryUser(id: deviceId)),
-        );
+            (scope) => scope.setUser(SentryUser(id: deviceId)));
       } catch (e) {
         if (kDebugMode) print('[Sentry] Failed to set User ID: $e');
       }
