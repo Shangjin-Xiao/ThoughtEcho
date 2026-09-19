@@ -340,5 +340,23 @@ void main() {
       final params = network.lastUri!.queryParameters;
       expect(params['exclude_place_ids'], contains('12345'));
     });
+
+    test('分类轮替重试时对后续尝试执行限流节流', () async {
+      final network = _RecordingNetworkService(_jsonResponse(const []));
+      final service = NominatimPlaceSearchService(
+        networkService: network,
+        minRequestInterval: const Duration(milliseconds: 50),
+      );
+
+      await service.getNearbyPlaces(refLat, refLon);
+
+      // 4 个分类依次尝试，共产生 4 次网络请求
+      expect(network.timestamps, hasLength(4));
+      // 检查后续请求之间满足限流间隔
+      for (var i = 1; i < network.timestamps.length; i++) {
+        final gap = network.timestamps[i].difference(network.timestamps[i - 1]);
+        expect(gap, greaterThanOrEqualTo(const Duration(milliseconds: 35)));
+      }
+    });
   });
 }

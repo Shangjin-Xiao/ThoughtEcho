@@ -235,6 +235,9 @@ class NominatimPlaceSearchService implements PlaceSearchService {
           trimmed.isNotEmpty ? 0 : (_categoryCursor % categoriesToTry.length);
 
       for (var attempt = 0; attempt < categoriesToTry.length; attempt++) {
+        if (attempt > 0) {
+          await _throttle();
+        }
         final currentCatIndex = (baseIndex + attempt) % categoriesToTry.length;
         queryParams['q'] = categoriesToTry[currentCatIndex];
 
