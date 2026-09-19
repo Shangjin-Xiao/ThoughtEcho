@@ -18,11 +18,9 @@ class SentryDatabaseTracing {
 
   /// 仅在用户明确授权后包装主笔记数据库。
   static Database wrapMainDatabase(Database database) {
-    // ignore: experimental_member_use
     if (!_enabled || database is SentryDatabase) {
       return database;
     }
-    // ignore: experimental_member_use
     return SentryDatabase(database);
   }
 }
