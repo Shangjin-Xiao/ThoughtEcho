@@ -285,10 +285,6 @@ String _ensureMetadataPresenceStatic(
 String _escape(String v) =>
     v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
-// 检测是否包含中文
-// ignore: unused_element
-bool _containsChinese(String text) => RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
-
 /// 验证SVG基本结构
 bool _isValidSVGStructure(String svgContent) {
   if (svgContent.trim().isEmpty) return false;
