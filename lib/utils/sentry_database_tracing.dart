@@ -1,5 +1,3 @@
-// ignore_for_file: experimental_member_use
-
 import 'package:sentry_sqflite/sentry_sqflite.dart';
 import 'package:sqflite/sqflite.dart';
 
