@@ -112,6 +112,26 @@ void main() {
           reason: 'aiAnalysis should be excluded in list view');
     });
 
+    test('getUserQuotes should retain poiName and location for list cards',
+        () async {
+      final id = const Uuid().v4();
+      final quote = Quote(
+        id: id,
+        content: 'Test content with poi',
+        date: DateTime.now().toIso8601String(),
+        location: '中国,测试省,测试市,测试区',
+        poiName: '测试公园',
+      );
+
+      await service.addQuote(quote);
+
+      final quotes = await service.getUserQuotes();
+      final fetchedQuote = quotes.firstWhere((q) => q.id == id);
+
+      expect(fetchedQuote.location, equals('中国,测试省,测试市,测试区'));
+      expect(fetchedQuote.poiName, equals('测试公园'));
+    });
+
     test('getQuoteById should return full quote', () async {
       final id = const Uuid().v4();
       final fullQuote = Quote(

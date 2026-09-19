@@ -1314,7 +1314,7 @@ class LocationService extends ChangeNotifier {
     if (poi.isEmpty) return formatLocationForDisplay(locationString);
 
     final area = _finestAdminArea(locationString);
-    if (area.isEmpty || area == poi) return poi;
+    if (area.isEmpty || area == poi || poi.startsWith(area)) return poi;
     return '$area·$poi';
   }
 

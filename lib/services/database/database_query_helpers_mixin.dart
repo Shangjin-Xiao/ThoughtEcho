@@ -72,6 +72,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
           'q.category_id',
           'q.color_hex',
           'q.location',
+          'q.poi_name',
           'q.latitude',
           'q.longitude',
           'q.weather',

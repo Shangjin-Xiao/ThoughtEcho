@@ -329,7 +329,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       final String query = '''
         SELECT
           q.id, q.content, q.date, q.category_id, q.weather,
-          q.day_period, q.location, q.favorite_count, q.last_modified, q.is_deleted
+          q.day_period, q.location, q.poi_name, q.favorite_count, q.last_modified, q.is_deleted
         FROM quotes q
         $whereClause
       ''';

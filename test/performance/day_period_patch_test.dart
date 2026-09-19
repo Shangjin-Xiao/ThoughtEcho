@@ -38,6 +38,7 @@ void main() {
             location TEXT,
             latitude REAL,
             longitude REAL,
+            poi_name TEXT,
             sentiment TEXT,
             keywords TEXT,
             summary TEXT

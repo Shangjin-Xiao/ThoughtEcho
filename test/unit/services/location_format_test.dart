@@ -199,6 +199,28 @@ void main() {
       expect(LocationService.formatPoiForDisplay('港区', '日本,东京都,,港区'), '港区');
     });
 
+    test('地点名已包含行政区前缀时避免重复前缀', () {
+      expect(
+        LocationService.formatPoiForDisplay('示例区中央公园', '中国,示例省,示例市,示例区'),
+        '示例区中央公园',
+      );
+      expect(
+        LocationService.formatPoiForDisplay('示例街道中央公园', '中国,示例省,示例市,示例街道'),
+        '示例街道中央公园',
+      );
+    });
+
+    test('最细一级与地点名拼接，展示详细两级地址', () {
+      expect(
+        LocationService.formatPoiForDisplay('中央公园', '中国,示例省,示例市,示例区'),
+        '示例区·中央公园',
+      );
+      expect(
+        LocationService.formatPoiForDisplay('中央公园', '中国,示例省,示例市,示例街道'),
+        '示例街道·中央公园',
+      );
+    });
+
     test('没有地址时只显示地点名', () {
       expect(LocationService.formatPoiForDisplay('故宫博物院', null), '故宫博物院');
       expect(LocationService.formatPoiForDisplay('故宫博物院', ''), '故宫博物院');
