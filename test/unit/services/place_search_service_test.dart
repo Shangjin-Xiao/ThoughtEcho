@@ -7,9 +7,10 @@ import 'package:thoughtecho/utils/http_response.dart';
 
 /// 只回放一段固定响应，并记下请求长什么样。
 class _FakeNetworkService implements NetworkService {
-  _FakeNetworkService(this.response);
+  _FakeNetworkService(this.response, {this.shouldThrow = false});
 
   final HttpResponse response;
+  final bool shouldThrow;
 
   int calls = 0;
   Uri? lastUri;
@@ -24,6 +25,9 @@ class _FakeNetworkService implements NetworkService {
     calls++;
     lastUri = Uri.parse(url);
     lastHeaders = headers;
+    if (shouldThrow) {
+      throw Exception('Network request failed');
+    }
     return response;
   }
 
@@ -133,13 +137,29 @@ void main() {
       expect(results.map((p) => p.name), ['有坐标的地点']);
     });
 
-    test('非 200 响应降级为空列表，不抛给调用方', () async {
+    test('非 200 响应时抛出异常，让调用方展示重试横幅', () async {
       final network = _FakeNetworkService(
         _jsonResponse(const [], statusCode: 429),
       );
       final service = NominatimPlaceSearchService(networkService: network);
 
-      expect(await service.searchNearby(refLat, refLon, query: '咖啡馆'), isEmpty);
+      expect(
+        () => service.searchNearby(refLat, refLon, query: '咖啡馆'),
+        throwsException,
+      );
+    });
+
+    test('网络异常时抛出异常，让调用方展示重试横幅', () async {
+      final network = _FakeNetworkService(
+        _jsonResponse(const [], statusCode: 500),
+        shouldThrow: true,
+      );
+      final service = NominatimPlaceSearchService(networkService: network);
+
+      expect(
+        () => service.searchNearby(refLat, refLon, query: '咖啡馆'),
+        throwsException,
+      );
     });
 
     test('请求带上限定的 viewbox 和可识别的 User-Agent，且不绑定 bounded=1 限制', () async {

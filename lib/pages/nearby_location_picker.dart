@@ -8,6 +8,7 @@ import '../services/location_service.dart';
 import '../services/place_search_service.dart';
 import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
+import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
 
 /// 位置选择结果。
@@ -71,7 +72,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   double? _deviceLatitude;
   double? _deviceLongitude;
   String? _deviceLocationString;
-  String? _devicePoiName;
 
   bool _isLocating = true;
   bool _locatingFailed = false;
@@ -87,6 +87,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
 
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounceTimer;
+  int _searchEpoch = 0;
   final List<PlaceInfo> _searchResults = [];
   bool _isSearching = false;
   bool _searchError = false;
@@ -198,7 +199,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       if (pos != null) {
         _deviceLatitude = pos.latitude;
         _deviceLongitude = pos.longitude;
-        _devicePoiName = locService.currentPoiName;
         final fmt = locService.getFormattedLocation();
         _deviceLocationString = fmt.isNotEmpty ? fmt : null;
         _onDeviceLocationAcquired();
@@ -206,7 +206,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         final cached = locService.currentPosition!;
         _deviceLatitude = cached.latitude;
         _deviceLongitude = cached.longitude;
-        _devicePoiName = locService.currentPoiName;
         final fmt = locService.getFormattedLocation();
         _deviceLocationString = fmt.isNotEmpty ? fmt : null;
         _onDeviceLocationAcquired();
@@ -226,9 +225,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       _deviceLatitude = widget.initialLatitude;
       _deviceLongitude = widget.initialLongitude;
       _deviceLocationString = widget.initialLocation;
-      if (_systemSelected) {
-        _devicePoiName = widget.initialPoiName;
-      }
       _onDeviceLocationAcquired();
     } else {
       _isLocating = false;
@@ -256,7 +252,6 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         if (mounted && rev != null) {
           setState(() {
             _deviceLocationString = LocationService.buildStorageLocation(rev);
-            _devicePoiName ??= rev['poi_name'];
           });
         }
       } catch (e) {
@@ -272,6 +267,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     _searchDebounceTimer?.cancel();
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
+      _searchEpoch++;
       setState(() {
         _isSearching = false;
         _searchResults.clear();
@@ -279,6 +275,11 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       });
       return;
     }
+
+    setState(() {
+      _isSearching = true;
+      _searchError = false;
+    });
 
     _searchDebounceTimer = Timer(const Duration(milliseconds: 400), () {
       _executeSearch(trimmed);
@@ -288,6 +289,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   Future<void> _executeSearch(String query) async {
     if (!mounted) return;
     if (_deviceLatitude == null || _deviceLongitude == null) return;
+    final epoch = ++_searchEpoch;
     setState(() {
       _isSearching = true;
       _searchError = false;
@@ -301,7 +303,11 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         query: query,
         localeCode: localeCode,
       );
-      if (!mounted) return;
+      if (!mounted ||
+          epoch != _searchEpoch ||
+          _searchController.text.trim() != query) {
+        return;
+      }
       setState(() {
         _searchResults.clear();
         _searchResults.addAll(results);
@@ -314,7 +320,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         stackTrace: stack,
         source: 'NearbyLocationPicker',
       );
-      if (!mounted) return;
+      if (!mounted || epoch != _searchEpoch) return;
       setState(() {
         _isSearching = false;
         _searchError = true;
@@ -662,6 +668,14 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       child: TextField(
         controller: _searchController,
         style: theme.textTheme.bodyMedium,
+        textInputAction: TextInputAction.search,
+        onSubmitted: (value) {
+          final trimmed = value.trim();
+          if (trimmed.isNotEmpty) {
+            _searchDebounceTimer?.cancel();
+            _executeSearch(trimmed);
+          }
+        },
         decoration: InputDecoration(
           hintText: l10n.mapPickerSearchHint,
           hintStyle: theme.textTheme.bodyMedium?.copyWith(
@@ -759,31 +773,13 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     }
 
     if (_searchResults.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.search_off_rounded,
-                size: 48,
-                color: theme.colorScheme.outline,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.noCityFound,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
+      return AppEmptyView(
+        text: l10n.mapPickerNoResults,
       );
     }
 
     return ListView.builder(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
@@ -796,6 +792,7 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
   Widget _buildNearbyPlacesList(ThemeData theme, AppLocalizations l10n) {
     return ListView.builder(
       controller: _scrollController,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: 1 +
           (_placesError ? 1 : 0) +

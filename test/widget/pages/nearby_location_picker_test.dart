@@ -45,6 +45,7 @@ class _FakePlaceSearchService implements PlaceSearchService {
   String? lastSearchQuery;
   final List<int> requestedOffsets = [];
   Future<List<PlaceInfo>> Function(int offset, int limit)? onGetNearbyPlaces;
+  Future<List<PlaceInfo>> Function(String query)? onSearchNearby;
 
   @override
   Future<List<PlaceInfo>> getNearbyPlaces(
@@ -79,6 +80,9 @@ class _FakePlaceSearchService implements PlaceSearchService {
     lastSearchQuery = query;
     if (searchShouldThrow) {
       throw Exception('Search network failed');
+    }
+    if (onSearchNearby != null) {
+      return onSearchNearby!(query);
     }
     return searchResults;
   }
@@ -527,6 +531,118 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('故宫角楼'), findsOneWidget);
+  });
+
+  testWidgets('搜索无匹配结果时展示 mapPickerNoResults 空状态提示',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(
+      places: [
+        const PlaceInfo(
+          name: '常驻周边地点',
+          latitude: 39.9050,
+          longitude: 116.4080,
+        ),
+      ],
+      searchResults: [],
+    );
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '火星基地');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('没有找到相关地点'), findsOneWidget);
+  });
+
+  testWidgets('键盘提交 searchAction 立即触发搜索，无需等待 400ms 防抖延迟',
+      (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(
+      searchResults: [
+        const PlaceInfo(
+          name: '立即搜索结果',
+          latitude: 39.9100,
+          longitude: 116.4100,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '立即');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(fakeSearch.searchCallCount, equals(1));
+    expect(fakeSearch.lastSearchQuery, equals('立即'));
+    expect(find.text('立即搜索结果'), findsOneWidget);
+  });
+
+  testWidgets('连续输入不同搜索词时，旧请求返回不覆盖新请求结果', (WidgetTester tester) async {
+    final fakeLoc = _FakeLocationService();
+    final completer1 = Completer<List<PlaceInfo>>();
+    final completer2 = Completer<List<PlaceInfo>>();
+
+    final fakeSearch = _FakePlaceSearchService();
+    fakeSearch.onSearchNearby = (query) {
+      if (query == '旧词') return completer1.future;
+      if (query == '新词') return completer2.future;
+      return Future.value([]);
+    };
+
+    await tester.pumpWidget(_wrapPicker(
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // 输入旧词并触发
+    await tester.enterText(find.byType(TextField), '旧词');
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 立即输入新词并触发
+    await tester.enterText(find.byType(TextField), '新词');
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 让新词先返回
+    completer2.complete([
+      const PlaceInfo(
+        name: '新词命中地点',
+        latitude: 39.9200,
+        longitude: 116.4200,
+      ),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('新词命中地点'), findsOneWidget);
+
+    // 旧词慢速返回，不应覆盖新词结果
+    completer1.complete([
+      const PlaceInfo(
+        name: '旧词命中地点',
+        latitude: 39.9100,
+        longitude: 116.4100,
+      ),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('新词命中地点'), findsOneWidget);
+    expect(find.text('旧词命中地点'), findsNothing);
   });
 
   testWidgets('滑动列表到底部触发 getNearbyPlaces 分页加载更多', (WidgetTester tester) async {

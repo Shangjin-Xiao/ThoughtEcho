@@ -150,11 +150,11 @@ class NominatimPlaceSearchService implements PlaceSearchService {
       );
 
       if (response.statusCode != 200) {
-        logDebug(
+        logWarning(
           'Nominatim 地点搜索返回 ${response.statusCode}',
           source: 'PlaceSearchService',
         );
-        return const [];
+        throw Exception('Nominatim 地点搜索失败 (HTTP ${response.statusCode})');
       }
 
       final decoded = json.decode(response.body);
@@ -173,14 +173,12 @@ class NominatimPlaceSearchService implements PlaceSearchService {
         ),
       );
       return places;
-    } catch (e, stack) {
-      logError(
-        '地点搜索失败',
-        error: e,
-        stackTrace: stack,
+    } catch (e) {
+      logWarning(
+        '地点搜索失败: $e',
         source: 'PlaceSearchService',
       );
-      return const [];
+      rethrow;
     }
   }
 
