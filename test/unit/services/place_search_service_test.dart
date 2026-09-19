@@ -41,6 +41,7 @@ class _RecordingNetworkService implements NetworkService {
 
   final HttpResponse response;
   final List<DateTime> timestamps = [];
+  final List<Uri> uris = [];
 
   @override
   Future<HttpResponse> get(
@@ -49,6 +50,7 @@ class _RecordingNetworkService implements NetworkService {
     int? timeoutSeconds,
   }) async {
     timestamps.add(DateTime.now());
+    uris.add(Uri.parse(url));
     return response;
   }
 
@@ -350,8 +352,11 @@ void main() {
 
       await service.getNearbyPlaces(refLat, refLon);
 
-      // 4 个分类依次尝试，共产生 4 次网络请求
-      expect(network.timestamps, hasLength(4));
+      // 验证按轮替顺序依次尝试四个分类
+      expect(
+        network.uris.map((u) => u.queryParameters['q']),
+        ['[tourism]', '[historic]', '[leisure]', 'attraction'],
+      );
       // 检查后续请求之间满足限流间隔
       for (var i = 1; i < network.timestamps.length; i++) {
         final gap = network.timestamps[i].difference(network.timestamps[i - 1]);
