@@ -272,6 +272,10 @@ class NominatimPlaceSearchService implements PlaceSearchService {
           if (item is! Map) continue;
           final placeId = item['place_id']?.toString();
           if (placeId != null && placeId.isNotEmpty) {
+            if (_seenPlaceIds.contains(placeId)) {
+              // 内存层过滤：若服务端未履行 exclude_place_ids 或返回重复项，主动跳过
+              continue;
+            }
             _seenPlaceIds.add(placeId);
           }
           final place = _toPlace(item, latitude, longitude);

@@ -101,6 +101,7 @@ class LocalGeocodingService {
     double longitude, {
     String? localeCode,
     bool bypassCache = false,
+    Duration timeout = const Duration(seconds: 4),
   }) async {
     try {
       // Windows平台：跳过系统地理编码（不支持），返回 null 让调用者使用在线服务
@@ -126,11 +127,13 @@ class LocalGeocodingService {
       }
 
       // 使用系统提供的地理编码功能，通过 setLocaleIdentifier 控制返回语言
-      // 串行化执行以避免全局 locale 状态的竞态条件
+      // 串行化执行以避免全局 locale 状态的竞态条件，并在底层调用设置超时以避免队列挂起
       try {
         final placemarks = await _runSerialized(() async {
           await geocoding.setLocaleIdentifier(localeIdentifier);
-          return await geocoding.placemarkFromCoordinates(latitude, longitude);
+          return await geocoding
+              .placemarkFromCoordinates(latitude, longitude)
+              .timeout(timeout);
         });
 
         if (placemarks.isNotEmpty) {

@@ -551,7 +551,14 @@ class LocationService extends ChangeNotifier {
         longitude,
         localeCode: _apiLanguageParam,
         bypassCache: true,
-      ).timeout(const Duration(seconds: 4), onTimeout: () => null);
+        timeout: const Duration(seconds: 4),
+      ).timeout(
+        const Duration(seconds: 4),
+        onTimeout: () {
+          logDebug('反查选点地址使用系统SDK地理编码超时(4s)');
+          return null;
+        },
+      );
       if (systemResult != null) {
         logDebug('反查选点地址使用系统SDK地理编码回退成功');
         return systemResult;
