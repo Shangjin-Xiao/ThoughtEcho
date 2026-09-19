@@ -205,6 +205,11 @@ class DreamingService {
       userMessage: _buildUserMessage(samples),
     );
 
+    if (!_settings.agentMemoryEnabled || !_settings.dreamingEnabled) {
+      logDebug('Dreaming 归纳期间用户关闭了记忆或 Dreaming，丢弃本轮结果');
+      return DreamingOutcome.skipped;
+    }
+
     final parsed = _parse(raw);
     if (parsed == null) {
       logDebug('Dreaming 未能从模型输出里解析出可用结论，本轮不更新记忆');
@@ -215,8 +220,8 @@ class DreamingService {
     // 用户完全可能在这段时间里把记忆开关关掉，而写入层本身不认这个开关
     // （交互式的 remember 由工具在调用点把关，够用；后台任务的窗口长得多）。
     // 关掉记忆却仍被写入一条从笔记归纳出的画像，是拿隐私开关不当回事。
-    if (!_settings.agentMemoryEnabled) {
-      logDebug('Dreaming 归纳期间用户关闭了记忆，丢弃本轮结果');
+    if (!_settings.agentMemoryEnabled || !_settings.dreamingEnabled) {
+      logDebug('Dreaming 写入前用户关闭了记忆或 Dreaming，丢弃本轮结果');
       return DreamingOutcome.skipped;
     }
 
