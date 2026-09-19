@@ -102,7 +102,7 @@ void main() {
       expect(map['is_pinned'], equals(1));
     });
 
-    test('isPinned 为 false 时 sequence 为 0', () {
+    test('isPinned 为 false 时 is_pinned 为 0', () {
       final session = ChatSession(
         id: 'session-unpinned',
         sessionType: 'agent',
