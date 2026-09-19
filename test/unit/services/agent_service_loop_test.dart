@@ -306,6 +306,41 @@ void main() {
       expect(capturedTools, hasLength(1));
     });
 
+    test('includes app capability guidance grounded in real surfaces',
+        () async {
+      const provider = AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      late List<openai.ChatMessage> capturedMessages;
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          capturedMessages = messages;
+          return _textCompletion('done');
+        },
+      );
+
+      await service.runAgent(userMessage: '这个应用能干什么');
+
+      final systemPrompt = _chatMessageText(capturedMessages.first);
+      expect(systemPrompt, contains('编辑器的 AI 菜单'));
+      expect(systemPrompt, contains('距上次已过 7 天'));
+      expect(systemPrompt, contains('近 60 天笔记够 10 条'));
+      expect(systemPrompt, contains('不进备份、不同步'));
+      expect(systemPrompt, contains('没有单条管理列表'));
+    });
+
     test('provides structured bound-note identity as untrusted context',
         () async {
       const provider = AIProviderSettings(
