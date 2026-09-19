@@ -266,7 +266,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   });
   Future<Map<String, dynamic>> getDatabaseHealthInfo();
 
-
   /// 修复：验证排序参数，防止 SQL 注入
   @visibleForTesting
   String sanitizeOrderBy(String orderBy, {String prefix = ''}) {
@@ -962,7 +961,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       rethrow;
     }
   }
-
 
   /// 启动时执行数据库健康检查
   Future<void> _performStartupHealthCheck() async {

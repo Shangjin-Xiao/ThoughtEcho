@@ -2,7 +2,6 @@ part of '../database_service.dart';
 
 /// Mixin providing query helper operations for DatabaseService.
 mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
-
   /// 检查并修复数据库结构，确保所有必要的列都存在
   /// 修复：检查并修复数据库结构，包括字段和索引
   @override
