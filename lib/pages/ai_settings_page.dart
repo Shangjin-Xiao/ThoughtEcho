@@ -651,6 +651,36 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             secondary: const Icon(Icons.history_edu_outlined),
           ),
           const Divider(height: 1),
+          SwitchListTile(
+            title: Text(l10n.dreamingEnableTitle),
+            subtitle: Text(l10n.dreamingEnableDesc),
+            value: settingsService.dreamingEnabled,
+            onChanged: settingsService.agentMemoryEnabled
+                ? _setDreamingEnabled
+                : null,
+            secondary: const Icon(Icons.auto_awesome_outlined),
+          ),
+          SwitchListTile(
+            title: Text(l10n.dreamingOnIdleTitle),
+            subtitle: Text(l10n.dreamingOnIdleDesc),
+            value: settingsService.dreamingOnIdleEnabled,
+            onChanged: settingsService.agentMemoryEnabled &&
+                    settingsService.dreamingEnabled
+                ? _setDreamingOnIdleEnabled
+                : null,
+            secondary: const Icon(Icons.hourglass_empty_outlined),
+          ),
+          SwitchListTile(
+            title: Text(l10n.dreamingAfterInsightTitle),
+            subtitle: Text(l10n.dreamingAfterInsightDesc),
+            value: settingsService.dreamingAfterInsightEnabled,
+            onChanged: settingsService.agentMemoryEnabled &&
+                    settingsService.dreamingEnabled
+                ? _setDreamingAfterInsightEnabled
+                : null,
+            secondary: const Icon(Icons.insights_outlined),
+          ),
+          const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: TextField(
@@ -721,6 +751,52 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
       );
       if (!mounted) return;
       AppSnackBar.error(context, l10n.agentMemorySwitchFailed);
+    }
+  }
+
+  Future<void> _setDreamingEnabled(bool value) async {
+    final l10n = AppLocalizations.of(context);
+    await _setDreamingSetting(
+      value,
+      context.read<SettingsService>().setDreamingEnabled,
+      l10n.dreamingSwitchFailed,
+    );
+  }
+
+  Future<void> _setDreamingOnIdleEnabled(bool value) async {
+    final l10n = AppLocalizations.of(context);
+    await _setDreamingSetting(
+      value,
+      context.read<SettingsService>().setDreamingOnIdleEnabled,
+      l10n.dreamingSwitchFailed,
+    );
+  }
+
+  Future<void> _setDreamingAfterInsightEnabled(bool value) async {
+    final l10n = AppLocalizations.of(context);
+    await _setDreamingSetting(
+      value,
+      context.read<SettingsService>().setDreamingAfterInsightEnabled,
+      l10n.dreamingSwitchFailed,
+    );
+  }
+
+  Future<void> _setDreamingSetting(
+    bool value,
+    Future<void> Function(bool) save,
+    String errorMessage,
+  ) async {
+    try {
+      await save(value);
+    } catch (error, stack) {
+      logError(
+        'Dreaming 设置保存失败（value=$value）',
+        error: error,
+        stackTrace: stack,
+        source: 'AISettingsPage',
+      );
+      if (!mounted) return;
+      AppSnackBar.error(context, errorMessage);
     }
   }
 

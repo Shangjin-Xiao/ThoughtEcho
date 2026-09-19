@@ -24,6 +24,9 @@ class _FlowTestSettingsService extends ChangeNotifier
 
   final AIProviderSettings provider;
   bool _agentMemoryEnabled;
+  bool _dreamingEnabled = true;
+  bool _dreamingOnIdleEnabled = true;
+  bool _dreamingAfterInsightEnabled = true;
   DateTime? _lastDreamingAt;
 
   @override
@@ -32,6 +35,33 @@ class _FlowTestSettingsService extends ChangeNotifier
   @override
   Future<void> setAgentMemoryEnabled(bool enabled) async {
     _agentMemoryEnabled = enabled;
+    notifyListeners();
+  }
+
+  @override
+  bool get dreamingEnabled => _dreamingEnabled;
+
+  @override
+  Future<void> setDreamingEnabled(bool enabled) async {
+    _dreamingEnabled = enabled;
+    notifyListeners();
+  }
+
+  @override
+  bool get dreamingOnIdleEnabled => _dreamingOnIdleEnabled;
+
+  @override
+  Future<void> setDreamingOnIdleEnabled(bool enabled) async {
+    _dreamingOnIdleEnabled = enabled;
+    notifyListeners();
+  }
+
+  @override
+  bool get dreamingAfterInsightEnabled => _dreamingAfterInsightEnabled;
+
+  @override
+  Future<void> setDreamingAfterInsightEnabled(bool enabled) async {
+    _dreamingAfterInsightEnabled = enabled;
     notifyListeners();
   }
 

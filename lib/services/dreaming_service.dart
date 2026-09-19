@@ -131,10 +131,10 @@ class DreamingService {
   void scheduleIdleRunOnStartup({
     Duration idleDelay = const Duration(seconds: 5),
   }) {
-    if (!passesGates()) return;
+    if (!_settings.dreamingOnIdleEnabled || !passesGates()) return;
     _idleStartupTimer?.cancel();
     _idleStartupTimer = Timer(idleDelay, () {
-      if (passesGates()) {
+      if (_settings.dreamingOnIdleEnabled && passesGates()) {
         unawaited(run());
       }
     });
@@ -233,7 +233,7 @@ class DreamingService {
   /// 检查当前是否满足 Dreaming 的调度与执行门槛。
   bool passesGates([DateTime? now]) {
     final currentTime = now ?? DateTime.now();
-    if (!_settings.agentMemoryEnabled) {
+    if (!_settings.agentMemoryEnabled || !_settings.dreamingEnabled) {
       return false;
     }
     final last = _settings.lastDreamingAt;

@@ -632,6 +632,7 @@ class AIService extends ChangeNotifier {
     String? weather,
     String? temperature,
     String? historicalInsights,
+    Future<String?>? historicalInsightsFuture,
   }) {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
@@ -658,16 +659,22 @@ class AIService extends ChangeNotifier {
           return;
         }
 
+        // 与画像读取并行准备最近洞察，避免两个本地数据源串行等待。
+        final profileFuture = _userProfileContext();
+        final resolvedHistoricalInsights = historicalInsightsFuture == null
+            ? historicalInsights
+            : await historicalInsightsFuture;
+
         // 获取包含环境信息的系统提示词
         final systemPromptWithContext =
             _promptManager.getDailyPromptSystemPromptWithContext(
           city: city,
           weather: weather,
           temperature: temperature,
-          historicalInsights: historicalInsights,
+          historicalInsights: resolvedHistoricalInsights,
           languageCode: languageCode,
         );
-        final profileBlock = await _userProfileContext();
+        final profileBlock = await profileFuture;
 
         final userMessage = _promptManager.buildDailyPromptUserMessage(
           city: city,

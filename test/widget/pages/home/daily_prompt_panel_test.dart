@@ -30,6 +30,7 @@ class MockAIService extends ChangeNotifier implements AIService {
     String? weather,
     String? temperature,
     String? historicalInsights,
+    Future<String?>? historicalInsightsFuture,
   }) {
     streamGenerateDailyPromptCallCount += 1;
     return _mockStream ?? Stream.value('This is a test prompt.');
