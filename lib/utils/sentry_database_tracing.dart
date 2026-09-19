@@ -1,5 +1,3 @@
-// ignore_for_file: experimental_member_use
-
 import 'package:sentry_sqflite/sentry_sqflite.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -20,9 +18,12 @@ class SentryDatabaseTracing {
 
   /// 仅在用户明确授权后包装主笔记数据库。
   static Database wrapMainDatabase(Database database) {
-    if (!_enabled || database is SentryDatabase) {
+    // ignore: experimental_member_use
+    final isSentryDb = database is SentryDatabase;
+    if (!_enabled || isSentryDb) {
       return database;
     }
+    // ignore: experimental_member_use
     return SentryDatabase(database);
   }
 }
