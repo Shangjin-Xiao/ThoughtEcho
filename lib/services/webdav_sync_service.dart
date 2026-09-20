@@ -1178,13 +1178,9 @@ class WebDAVSyncService extends ChangeNotifier {
       // 富文本 Quill Delta JSON 插入前缀
       if (clonedQuote['delta_content'] != null &&
           (clonedQuote['delta_content'] as String).isNotEmpty) {
-        try {
-          final delta = json.decode(clonedQuote['delta_content'] as String);
-          if (delta is List) {
-            delta.insert(0, {'insert': '[冲突备份] '});
-            clonedQuote['delta_content'] = json.encode(delta);
-          }
-        } catch (_) {}
+        clonedQuote['delta_content'] = prependConflictPrefixToDelta(
+          clonedQuote['delta_content'] as String,
+        );
       }
 
       batch.insert('quotes', clonedQuote);
@@ -1615,6 +1611,33 @@ class WebDAVSyncService extends ChangeNotifier {
     final segments = stdPath.split('/');
     final firstSegment = segments.isEmpty ? null : segments.first;
     return _mediaSubFolders.contains(firstSegment) ? firstSegment : null;
+  }
+
+  @visibleForTesting
+  static String? prependConflictPrefixToDelta(String? deltaContent) {
+    if (deltaContent == null || deltaContent.trim().isEmpty) return deltaContent;
+    try {
+      final decoded = json.decode(deltaContent);
+      if (decoded is List) {
+        final list = List<dynamic>.from(decoded);
+        list.insert(0, {'insert': '[冲突备份] '});
+        return json.encode(list);
+      } else if (decoded is Map && decoded['ops'] is List) {
+        final map = Map<String, dynamic>.from(decoded);
+        final ops = List<dynamic>.from(map['ops'] as List);
+        ops.insert(0, {'insert': '[冲突备份] '});
+        map['ops'] = ops;
+        return json.encode(map);
+      }
+    } catch (e, stack) {
+      logError(
+        '冲突笔记 Delta 内容加前缀失败',
+        error: e,
+        stackTrace: stack,
+        source: 'WebDAVSyncService',
+      );
+    }
+    return deltaContent;
   }
 
   @visibleForTesting
