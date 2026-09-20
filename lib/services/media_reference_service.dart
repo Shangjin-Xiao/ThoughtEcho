@@ -176,7 +176,7 @@ class MediaReferenceService {
         [normalizedPath],
       );
 
-      final count = result.first['count'] as int;
+      final count = (result.firstOrNull?['count'] as num?)?.toInt() ?? 0;
       return count;
     } catch (e, stackTrace) {
       logError(
@@ -217,7 +217,7 @@ class MediaReferenceService {
         'WHERE file_path = ? OR file_path = ?',
         [posixTail, windowsTail],
       );
-      final exactCount = exact.first['count'] as int;
+      final exactCount = (exact.firstOrNull?['count'] as num?)?.toInt() ?? 0;
       if (exactCount > 0) return exactCount;
 
       // 兜底：老版本写入的外来绝对路径引用行只能按尾段匹配。这里用
@@ -235,7 +235,7 @@ class MediaReferenceService {
         [posixSuffix, posixSuffix, windowsSuffix, windowsSuffix],
       );
 
-      return fallback.first['count'] as int;
+      return (fallback.firstOrNull?['count'] as num?)?.toInt() ?? 0;
     } catch (e, stackTrace) {
       logError(
         '统计云端媒体引用计数失败: $relativeToMediaRoot ($e)',
@@ -1271,13 +1271,15 @@ class MediaReferenceService {
       final totalRefsResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM $_tableName',
       );
-      final totalRefs = totalRefsResult.first['count'] as int;
+      final totalRefs =
+          (totalRefsResult.firstOrNull?['count'] as num?)?.toInt() ?? 0;
 
       // 被引用的文件数
       final referencedFilesResult = await db.rawQuery(
         'SELECT COUNT(DISTINCT file_path) as count FROM $_tableName',
       );
-      final referencedFiles = referencedFilesResult.first['count'] as int;
+      final referencedFiles =
+          (referencedFilesResult.firstOrNull?['count'] as num?)?.toInt() ?? 0;
 
       // 总媒体文件数
       final allMediaFiles = await _getAllMediaFiles();
