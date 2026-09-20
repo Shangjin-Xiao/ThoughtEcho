@@ -520,7 +520,8 @@ void main() {
       AppLogger.serviceForTesting = logService;
       try {
         const invalidJson = 'invalid json {';
-        final result = WebDAVSyncService.prependConflictPrefixToDelta(invalidJson);
+        final result =
+            WebDAVSyncService.prependConflictPrefixToDelta(invalidJson);
         expect(result, invalidJson);
 
         final errorLogs = logService.records

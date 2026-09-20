@@ -1615,7 +1615,8 @@ class WebDAVSyncService extends ChangeNotifier {
 
   @visibleForTesting
   static String? prependConflictPrefixToDelta(String? deltaContent) {
-    if (deltaContent == null || deltaContent.trim().isEmpty) return deltaContent;
+    if (deltaContent == null || deltaContent.trim().isEmpty)
+      return deltaContent;
     try {
       final decoded = json.decode(deltaContent);
       if (decoded is List) {
