@@ -33,7 +33,10 @@ class QuoteCardColors {
 
     final bool isLightCard =
         ThemeData.estimateBrightnessForColor(cardColor) == Brightness.light;
-    final Color base = isLightCard ? Colors.black : Colors.white;
+    final bool isAppLight = colorScheme.brightness == Brightness.light;
+    final Color base = (isLightCard == isAppLight)
+        ? colorScheme.onSurface
+        : colorScheme.onInverseSurface;
 
     return QuoteCardColors(
       cardColor: cardColor,
