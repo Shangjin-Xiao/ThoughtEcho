@@ -4653,7 +4653,35 @@
   "settingsReleaseNotes": "What's New",
   "settingsReleaseNotesDesc": "See what this version adds",
   "generatingInsightsForRange": "Generating insights for {period}...",
+  "@generatingInsightsForRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
   "exploreSummarizeRange": "Summarize {period}",
+  "@exploreSummarizeRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
   "exploreSummarizeRangePrompt": "Summarize my notes from {period} — what stands out?",
-  "noNotesInRange": "No notes in {period}"
+  "@exploreSummarizeRangePrompt": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noNotesInRange": "No notes in {period}",
+  "@noNotesInRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  }
 }
