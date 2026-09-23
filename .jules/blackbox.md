@@ -82,3 +82,8 @@
 
 **异常:** [ReceiveController 在处理 LocalSend 文件接收过程中，针对指纹初始化失败、创建会话回调失败、请求解析异常以及临时文件清理异常等环节，仅使用了 catch (e) 进行空捕获或通过 logDebug/logWarning 进行了粗糙打印。这导致关键的错误堆栈信息 (stackTrace) 丢失，严重阻碍了排查设备发现失败和文件接收异常的根因。]
 **拦截:** [已将上述流程中的 catch (e) 升级为 catch (e, stack)，并统一使用结构化的 logError 进行记录。日志中附带了对应的报错描述、具体的异常对象 error: e、堆栈轨迹 stackTrace: stack，并指定了明确的模块来源 source: 'LocalSend'。确认所有记录仅包含连接状态及系统抛出的异常信息，未记录任何用户传输的具体文件内容或敏感隐私数据。]
+
+## 2025-10-25 - 🗃️ 黑匣: [完善 DatabaseTag 模块的结构化日志]
+
+**异常:** [数据库标签初始化及操作相关 mixin（_DatabaseTagMixin 和 _DatabaseTagInitMixin）在捕获数据库初始化、查询、更新等异常时，仅使用了 `catch (e)` 空捕获或粗糙的 `logDebug('...失败: $e')` 记录。这丢失了错误堆栈信息 (stackTrace) 及统一的模块来源标识 (source)，导致在生产环境中遇到标签相关故障（如数据库死锁或语句错误）时极难定位根因。]
+**拦截:** [已将上述流程中的所有 `catch (e)` 升级为结构化的 `catch (e, stack)`，并统一使用带有 `error: e`、`stackTrace: stack` 和 `source: 'DatabaseService'` 参数的 `logError` 进行记录。确认记录的内容仅涉及系统层面的异常对象自身，绝不包含任何标签名称或用户隐私数据。]
