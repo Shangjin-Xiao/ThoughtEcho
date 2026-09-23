@@ -12,7 +12,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       final db = database;
       return await db.query('categories');
     } catch (e, stack) {
-      logError('获取所有标签失败: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+      logError('获取所有标签失败: $e',
+          error: e, stackTrace: stack, source: 'DatabaseService');
       return [];
     }
   }
@@ -28,7 +29,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       final categories = maps.map((map) => NoteTag.fromMap(map)).toList();
       return _moveHiddenTagToBottom(categories);
     } catch (e, stack) {
-      logError('获取标签错误: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+      logError('获取标签错误: $e',
+          error: e, stackTrace: stack, source: 'DatabaseService');
       return [];
     }
   }
@@ -181,7 +183,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       try {
         await init();
       } catch (e, stack) {
-        logError('添加标签前初始化数据库失败: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+        logError('添加标签前初始化数据库失败: $e',
+            error: e, stackTrace: stack, source: 'DatabaseService');
         throw Exception('数据库未初始化，无法添加标签');
       }
     }
@@ -253,7 +256,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       notifyListeners();
       notifyLocalDataChangedForParts();
     } catch (e, stack) {
-      logError('添加指定ID标签失败: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+      logError('添加指定ID标签失败: $e',
+          error: e, stackTrace: stack, source: 'DatabaseService');
       // 重试一次作为回退方案
       try {
         final categoryMap = {
@@ -278,7 +282,10 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         notifyLocalDataChangedForParts();
         logDebug('通过回退方式成功添加标签');
       } catch (retryError, retryStack) {
-        logError('重试添加标签也失败: $retryError', error: retryError, stackTrace: retryStack, source: 'DatabaseService');
+        logError('重试添加标签也失败: $retryError',
+            error: retryError,
+            stackTrace: retryStack,
+            source: 'DatabaseService');
         throw Exception('无法添加标签: $e');
       }
     }
@@ -456,7 +463,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       try {
         return _tagStore.firstWhere((cat) => cat.id == id);
       } catch (e, stack) {
-        logError('在内存中找不到 ID 为 $id 的标签: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+        logError('在内存中找不到 ID 为 $id 的标签: $e',
+            error: e, stackTrace: stack, source: 'DatabaseService');
         return null;
       }
     }
@@ -475,7 +483,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
 
       return NoteTag.fromMap(maps.first);
     } catch (e, stack) {
-      logError('根据 ID 获取标签失败: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+      logError('根据 ID 获取标签失败: $e',
+          error: e, stackTrace: stack, source: 'DatabaseService');
       return null;
     }
   }
@@ -523,7 +532,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       }
       return result;
     } catch (e, stack) {
-      logError('批量根据 ID 获取标签失败: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+      logError('批量根据 ID 获取标签失败: $e',
+          error: e, stackTrace: stack, source: 'DatabaseService');
       return {};
     }
   }

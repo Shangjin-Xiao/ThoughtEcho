@@ -29,7 +29,8 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
         try {
           await init();
         } catch (e, stack) {
-          logError('数据库初始化失败，但仍将尝试创建默认标签: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+          logError('数据库初始化失败，但仍将尝试创建默认标签: $e',
+              error: e, stackTrace: stack, source: 'DatabaseService');
         }
       }
 
@@ -178,7 +179,8 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
       // 更新标签流
       await updateTagsStreamForParts();
     } catch (e, stack) {
-      logError('初始化默认一言标签出错: $e', error: e, stackTrace: stack, source: 'DatabaseService');
+      logError('初始化默认一言标签出错: $e',
+          error: e, stackTrace: stack, source: 'DatabaseService');
     }
   }
 
