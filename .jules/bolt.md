@@ -222,5 +222,10 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** Using asynchronous filesystem checks (`await file.exists()`) aligns file checking with the surrounding asynchronous isolate pipeline (`await encoder.addFile()`) in `ZipStreamProcessor`.
 **Action:** Updated `_createZipInIsolate` in `lib/utils/zip_stream_processor.dart` to replace `file.existsSync()` with `await file.exists()`, and added unit tests in `test/unit/utils/zip_stream_processor_test.dart` using `TestHarness` for streaming zip creation.
 
+## 2026-09-23 - 优化 Quote 模型高频验证与出处解析中的正则表达式编译开销
 
+**Learning:**
+在笔记数据模型（`Quote`）的验证、出处清洗和归属识别（如 `isValidColorHex`、`stripAuthorPrefix`、`isBuiltinPersonalWork` 和 `isSelfAttributed`）中，内联调用 `RegExp` 会导致每次创建笔记、校验字段或列表渲染时重复分配和编译正则表达式对象。由于笔记列表渲染和筛选是频繁触发的热路径，将正则表达式提升为类的 `static final RegExp` 静态成员可使其仅在类加载时编译一次，消除频繁调用时的 GC 压力与重复编译开销。
 
+**Action:**
+将 `lib/models/quote_model.dart` 中的颜色十六进制匹配、破折号前缀剥离、两端括号引号剥离以及作者出处分隔符匹配正则表达式提取为 `Quote` 类的 `static final RegExp` 静态成员，并新增 `test/performance/quote_model_benchmark_test.dart` 进行基准测试验证。
