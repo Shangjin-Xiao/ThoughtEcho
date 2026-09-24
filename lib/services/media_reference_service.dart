@@ -39,6 +39,20 @@ class MediaReferenceService {
     _database = null;
   }
 
+  static int _countFromRows(
+    List<Map<String, Object?>> rows, [
+    String key = 'count',
+  ]) {
+    return (rows.firstOrNull?[key] as num?)?.toInt() ?? 0;
+  }
+
+  @visibleForTesting
+  static int countFromRowsForTest(
+    List<Map<String, Object?>> rows, [
+    String key = 'count',
+  ]) =>
+      _countFromRows(rows, key);
+
   /// 获取数据库实例
   static Future<Database> get database async {
     if (_database != null) return _database!;
@@ -176,7 +190,7 @@ class MediaReferenceService {
         [normalizedPath],
       );
 
-      final count = (result.firstOrNull?['count'] as num?)?.toInt() ?? 0;
+      final count = _countFromRows(result);
       return count;
     } catch (e, stackTrace) {
       logError(
@@ -217,7 +231,7 @@ class MediaReferenceService {
         'WHERE file_path = ? OR file_path = ?',
         [posixTail, windowsTail],
       );
-      final exactCount = (exact.firstOrNull?['count'] as num?)?.toInt() ?? 0;
+      final exactCount = _countFromRows(exact);
       if (exactCount > 0) return exactCount;
 
       // 兜底：老版本写入的外来绝对路径引用行只能按尾段匹配。这里用
@@ -235,7 +249,7 @@ class MediaReferenceService {
         [posixSuffix, posixSuffix, windowsSuffix, windowsSuffix],
       );
 
-      return (fallback.firstOrNull?['count'] as num?)?.toInt() ?? 0;
+      return _countFromRows(fallback);
     } catch (e, stackTrace) {
       logError(
         '统计云端媒体引用计数失败: $relativeToMediaRoot ($e)',
@@ -1271,15 +1285,13 @@ class MediaReferenceService {
       final totalRefsResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM $_tableName',
       );
-      final totalRefs =
-          (totalRefsResult.firstOrNull?['count'] as num?)?.toInt() ?? 0;
+      final totalRefs = _countFromRows(totalRefsResult);
 
       // 被引用的文件数
       final referencedFilesResult = await db.rawQuery(
         'SELECT COUNT(DISTINCT file_path) as count FROM $_tableName',
       );
-      final referencedFiles =
-          (referencedFilesResult.firstOrNull?['count'] as num?)?.toInt() ?? 0;
+      final referencedFiles = _countFromRows(referencedFilesResult);
 
       // 总媒体文件数
       final allMediaFiles = await _getAllMediaFiles();
