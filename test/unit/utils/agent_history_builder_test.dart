@@ -395,5 +395,123 @@ void main() {
       expect(msg.content, contains('读书笔记'));
       expect(msg.content, contains('想专注在历史类书籍'));
     });
+
+    test('多问题 ask_user 逐条压缩各问题的回答', () {
+      final completed = ChatMessage(
+        id: 'ask-6',
+        role: 'assistant',
+        isUser: false,
+        content: '用哪种鉴权？\n还有什么补充？',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'isCompleted': true,
+          'isCancelled': false,
+          'questions': [
+            {
+              'question': '用哪种鉴权？',
+              'header': '鉴权',
+              'options': [
+                {'label': 'OAuth'},
+                {'label': 'JWT'},
+              ],
+              'multiSelect': false,
+              'selectedOptions': ['OAuth'],
+              'customText': null,
+            },
+            {
+              'question': '还有什么补充？',
+              'options': [
+                {'label': '无'},
+                {'label': '稍后定'},
+              ],
+              'multiSelect': false,
+              'selectedOptions': [],
+              'customText': '用公司统一的 SSO',
+            },
+          ],
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([completed]);
+      expect(history.length, 1);
+      final msg = history.single;
+      expect(msg.isUser, isTrue);
+      expect(
+        msg.content,
+        '[用户选择]针对「用哪种鉴权？」，用户选择了：OAuth；'
+        '针对「还有什么补充？」，用户回复：用公司统一的 SSO。',
+      );
+    });
+
+    test('多问题 ask_user 取消后压缩成取消记录', () {
+      final cancelled = ChatMessage(
+        id: 'ask-7',
+        role: 'assistant',
+        isUser: false,
+        content: '用哪种鉴权？',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'isCompleted': true,
+          'isCancelled': true,
+          'questions': [
+            {
+              'question': '用哪种鉴权？',
+              'options': [
+                {'label': 'OAuth'},
+                {'label': 'JWT'},
+              ],
+              'multiSelect': false,
+              'selectedOptions': [],
+              'customText': null,
+            },
+          ],
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([cancelled]);
+      expect(history.single.content, contains('用户取消了选择'));
+    });
+
+    test('多问题 ask_user 未作答的问题标记为未作答', () {
+      final completed = ChatMessage(
+        id: 'ask-8',
+        role: 'assistant',
+        isUser: false,
+        content: '第一问？\n第二问？',
+        timestamp: DateTime(2026, 7, 31),
+        metaJson: jsonEncode({
+          'type': 'ask_user',
+          'isCompleted': true,
+          'isCancelled': false,
+          'questions': [
+            {
+              'question': '第一问？',
+              'options': [
+                {'label': 'A'},
+                {'label': 'B'},
+              ],
+              'multiSelect': false,
+              'selectedOptions': ['A'],
+              'customText': null,
+            },
+            {
+              'question': '第二问？',
+              'options': [
+                {'label': 'C'},
+                {'label': 'D'},
+              ],
+              'multiSelect': false,
+              'selectedOptions': [],
+              'customText': null,
+            },
+          ],
+        }),
+      );
+
+      final history = AgentHistoryBuilder.build([completed]);
+      expect(history.single.content, contains('针对「第二问？」，用户未作答'));
+    });
   });
 }

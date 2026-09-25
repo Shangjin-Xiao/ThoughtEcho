@@ -18,6 +18,14 @@ class QuoteCardColors {
     required this.baseContentColor,
   });
 
+  static double _contrastRatio(Color a, Color b) {
+    final la = a.computeLuminance();
+    final lb = b.computeLuminance();
+    final lighter = la > lb ? la : lb;
+    final darker = la > lb ? lb : la;
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
   factory QuoteCardColors.fromHex(String? colorHex, ColorScheme colorScheme) {
     Color cardColor;
     if (colorHex != null && colorHex.isNotEmpty) {
@@ -31,9 +39,13 @@ class QuoteCardColors {
       cardColor = colorScheme.surfaceContainerLowest;
     }
 
-    final bool isLightCard =
-        ThemeData.estimateBrightnessForColor(cardColor) == Brightness.light;
-    final Color base = isLightCard ? Colors.black : Colors.white;
+    final double contrastOnSurface =
+        _contrastRatio(cardColor, colorScheme.onSurface);
+    final double contrastOnInverse =
+        _contrastRatio(cardColor, colorScheme.onInverseSurface);
+    final Color base = contrastOnSurface >= contrastOnInverse
+        ? colorScheme.onSurface
+        : colorScheme.onInverseSurface;
 
     return QuoteCardColors(
       cardColor: cardColor,

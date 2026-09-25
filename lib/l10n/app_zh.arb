@@ -4287,8 +4287,17 @@
   },
   "agentPreparedSuggestionCard": "已生成建议",
   "agentAskingUser": "正在向你提问...",
-  "agentAskUserTitle": "助手提问",
-  "agentAskUserCustomHint": "输入自定义回复（可选）",
+  "agentAskUserTitleThoughter": "Thoughter 有一个问题",
+  "agentAskUserTitleThoughterMulti": "Thoughter 有 {count} 个问题",
+  "@agentAskUserTitleThoughterMulti": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserCustomHint": "写下你的回答…（输入会清空上面的选择）",
+  "agentAskUserUnanswered": "未作答",
   "agentAskUserCancelled": "已取消选择",
   "agentAskUserSelectedPrefix": "已选择：",
   "agentAskUserCustomPrefix": "自定义回复：",

@@ -211,6 +211,15 @@ class AgentHistoryBuilder {
     final isCompleted = meta['isCompleted'] == true;
     if (!isCompleted) return null;
 
+    final rawQuestions = meta['questions'];
+    if (rawQuestions is List && rawQuestions.isNotEmpty) {
+      return _summarizeAskUserQuestions(
+        rawQuestions,
+        isCancelled: meta['isCancelled'] == true,
+        cap: cap,
+      );
+    }
+
     final question = meta['question']?.toString().trim() ?? '';
     final isCancelled = meta['isCancelled'] == true;
     final customText = meta['customText']?.toString().trim();
@@ -243,6 +252,37 @@ class AgentHistoryBuilder {
     }
 
     return _truncate(buffer.toString(), cap);
+  }
+
+  /// 多问题 ask_user 元数据的摘要：逐条列出各问题的用户回答。
+  static String? _summarizeAskUserQuestions(
+    List<dynamic> rawQuestions, {
+    required bool isCancelled,
+    required int cap,
+  }) {
+    if (isCancelled) return _truncate('$askUserHeader，用户取消了选择。', cap);
+    final parts = <String>[];
+    for (final item in rawQuestions) {
+      if (item is! Map) continue;
+      final question = item['question']?.toString().trim() ?? '';
+      final customText = item['customText']?.toString().trim();
+      final rawOptions = item['selectedOptions'];
+      final selectedOptions = rawOptions is List
+          ? rawOptions
+              .map((e) => e.toString().trim())
+              .where((e) => e.isNotEmpty)
+              .toList()
+          : const <String>[];
+      final hasCustom = customText != null && customText.isNotEmpty;
+      final answer = hasCustom
+          ? '用户回复：$customText'
+          : selectedOptions.isNotEmpty
+              ? '用户选择了：${selectedOptions.join('、')}'
+              : '用户未作答';
+      parts.add(question.isNotEmpty ? '针对「$question」，$answer' : answer);
+    }
+    if (parts.isEmpty) return null;
+    return _truncate('$askUserHeader${parts.join('；')}。', cap);
   }
 
   static String _truncate(String text, int cap) {
