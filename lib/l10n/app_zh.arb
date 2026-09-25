@@ -4298,6 +4298,23 @@
   },
   "agentAskUserCustomHint": "写下你的回答…（输入会清空上面的选择）",
   "agentAskUserUnanswered": "未作答",
+  "agentAskUserStepOf": "问题 {index}/{total}",
+  "@agentAskUserStepOf": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserPrev": "上一步",
+  "agentAskUserNext": "继续",
+  "agentAskUserReviewTitle": "确认你的回答",
+  "agentAskUserSubmitAll": "提交全部",
+  "agentAskUserEditAnswer": "修改",
+  "agentAskUserIncompleteHint": "还有问题没回答",
   "agentAskUserCancelled": "已取消选择",
   "agentAskUserSelectedPrefix": "已选择：",
   "agentAskUserCustomPrefix": "自定义回复：",

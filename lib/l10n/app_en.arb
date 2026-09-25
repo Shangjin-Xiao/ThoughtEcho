@@ -4298,6 +4298,23 @@
   },
   "agentAskUserCustomHint": "Write your answer… (typing clears the selection above)",
   "agentAskUserUnanswered": "Not answered",
+  "agentAskUserStepOf": "Question {index} of {total}",
+  "@agentAskUserStepOf": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserPrev": "Back",
+  "agentAskUserNext": "Continue",
+  "agentAskUserReviewTitle": "Review your answers",
+  "agentAskUserSubmitAll": "Submit all",
+  "agentAskUserEditAnswer": "Edit",
+  "agentAskUserIncompleteHint": "Some questions are unanswered",
   "agentAskUserCancelled": "Selection cancelled",
   "agentAskUserSelectedPrefix": "Selected: ",
   "agentAskUserCustomPrefix": "Custom response: ",

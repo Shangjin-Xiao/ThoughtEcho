@@ -73,7 +73,7 @@ void main() {
       expect(find.byType(Radio<String?>), findsNWidgets(3));
     });
 
-    testWidgets('多问题展示计数标题与全部问题', (tester) async {
+    testWidgets('多问题向导只展示第一题与进度', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
           questions: [
@@ -85,10 +85,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Thoughter 有 2 个问题'), findsOneWidget);
+      expect(find.text('问题 1/2'), findsOneWidget);
+      // 一次只展示一题，第二题尚未出现
       expect(find.text('第一问？'), findsOneWidget);
-      expect(find.text('第二问？'), findsOneWidget);
+      expect(find.text('第二问？'), findsNothing);
       expect(find.byType(Radio<String?>), findsNWidgets(2));
-      expect(find.byType(Checkbox), findsNWidgets(2));
+      expect(find.byType(Checkbox), findsNothing);
+      // 未作答时继续按钮禁用
+      expect(
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, '继续')),
+        isNotNull,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, '继续'))
+            .onPressed,
+        isNull,
+      );
     });
 
     testWidgets('单选模式下切换选项并提交', (tester) async {
@@ -234,8 +247,8 @@ void main() {
       );
     });
 
-    testWidgets('多问题需全部作答后才能提交', (tester) async {
-      var submitted = false;
+    testWidgets('向导单选自动前进、上一步保留答案、总览提交', (tester) async {
+      List<AskUserAnswer>? submitted;
 
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
@@ -244,30 +257,145 @@ void main() {
             _question('第二问？', options: ['C', 'D']),
           ],
           onSubmit: ({required answers}) {
-            submitted = true;
+            submitted = answers;
           },
         ),
       ));
       await tester.pumpAndSettle();
 
-      final confirmButtonFinder = find.widgetWithText(FilledButton, '确定');
+      // 点选 A 后自动进入第二题
+      await tester.tap(find.text('A'));
+      await tester.pumpAndSettle();
+      expect(find.text('第一问？'), findsNothing);
+      expect(find.text('第二问？'), findsOneWidget);
+      expect(find.text('问题 2/2'), findsOneWidget);
+
+      // 上一步返回，第一题的 A 仍然选中
+      await tester.tap(find.text('上一步'));
+      await tester.pumpAndSettle();
+      expect(find.text('第一问？'), findsOneWidget);
       expect(
-          tester.widget<FilledButton>(confirmButtonFinder).onPressed, isNull);
+        tester
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        'A',
+      );
+
+      // 继续回到第二题，点选 D 后进入总览页
+      await tester.tap(find.text('继续'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('D'));
+      await tester.pumpAndSettle();
+      expect(find.text('确认你的回答'), findsOneWidget);
+      expect(find.text('第一问？'), findsOneWidget);
+      expect(find.text('第二问？'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, '提交全部'));
+      await tester.pumpAndSettle();
+
+      expect(submitted?.length, 2);
+      expect(submitted?[0].selectedOptions, ['A']);
+      expect(submitted?[1].selectedOptions, ['D']);
+    });
+
+    testWidgets('向导多选与自定义输入走继续按钮前进', (tester) async {
+      List<AskUserAnswer>? submitted;
+
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('多选题？', options: ['M1', 'M2', 'M3'], multiSelect: true),
+            _question('问答题？', options: ['X', 'Y']),
+          ],
+          onSubmit: ({required answers}) {
+            submitted = answers;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // 多选点选不自动前进，手动继续
+      await tester.tap(find.text('M1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('M3'));
+      await tester.pumpAndSettle();
+      expect(find.text('多选题？'), findsOneWidget);
+      await tester.tap(find.text('继续'));
+      await tester.pumpAndSettle();
+
+      // 第二题手输自定义后继续，进入总览并提交
+      expect(find.text('问答题？'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '手写答案');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('继续'));
+      await tester.pumpAndSettle();
+      expect(find.text('确认你的回答'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, '提交全部'));
+      await tester.pumpAndSettle();
+
+      expect(submitted?.length, 2);
+      expect(submitted?[0].selectedOptions, containsAll(['M1', 'M3']));
+      expect(submitted?[1].selectedOptions, isEmpty);
+      expect(submitted?[1].customText, '手写答案');
+    });
+
+    testWidgets('向导总览页可回跳修改答案', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('第一问？', options: ['A', 'B']),
+            _question('第二问？', options: ['C', 'D']),
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('A'));
       await tester.pumpAndSettle();
-      // 只答一题仍禁用
-      expect(
-          tester.widget<FilledButton>(confirmButtonFinder).onPressed, isNull);
+      await tester.tap(find.text('C'));
+      await tester.pumpAndSettle();
+      expect(find.text('确认你的回答'), findsOneWidget);
 
+      // 点第一行的修改回到第一题，改选 B 后线性回到第二题，再继续回总览
+      await tester.tap(find.text('修改').first);
+      await tester.pumpAndSettle();
+      expect(find.text('第一问？'), findsOneWidget);
+      await tester.tap(find.text('B'));
+      await tester.pumpAndSettle();
+      expect(find.text('第二问？'), findsOneWidget);
+      await tester.tap(find.text('继续'));
+      await tester.pumpAndSettle();
+      expect(find.text('确认你的回答'), findsOneWidget);
+    });
+
+    testWidgets('向导跳题留下未作答时总览禁用提交并提示', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('第一问？', options: ['A', 'B']),
+            _question('第二问？', options: ['C', 'D']),
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // 通过进度段直接跳到第二题，第一题留空
+      await tester.tap(find.byType(InkWell).at(1));
+      await tester.pumpAndSettle();
+      expect(find.text('第二问？'), findsOneWidget);
       await tester.tap(find.text('D'));
       await tester.pumpAndSettle();
-      expect(tester.widget<FilledButton>(confirmButtonFinder).onPressed,
-          isNotNull);
 
-      await tester.tap(confirmButtonFinder);
-      await tester.pumpAndSettle();
-      expect(submitted, isTrue);
+      expect(find.text('确认你的回答'), findsOneWidget);
+      expect(find.text('未作答'), findsOneWidget);
+      expect(find.text('还有问题没回答'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, '提交全部'))
+            .onPressed,
+        isNull,
+      );
     });
 
     testWidgets('点击取消按钮调用 onCancel 回调', (tester) async {
