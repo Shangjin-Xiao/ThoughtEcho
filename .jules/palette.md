@@ -44,3 +44,6 @@
 ## 2026-08-28 - [Add tooltips to "More Options" IconButtons]
 **Learning:** Icon-only buttons representing "More Options" (`Icons.more_vert`) often lack the `tooltip` property. While visually universally understood, omitting the tooltip prevents screen readers from announcing their purpose, leading to poor accessibility.
 **Action:** Always add a localized `tooltip` (e.g., `AppLocalizations.of(context).moreOptions`) to all icon-only `IconButton` instances, particularly those serving as menus or secondary actions.
+## 2026-09-25 - [Add tooltip to "More Options" IconButton in Smart Push Settings]
+**Learning:** Even in internal settings pages (like custom sections in smart push settings), icon-only buttons representing "More Options" (`Icons.more_vert`) without a `tooltip` fail to communicate their intent to assistive technologies, reducing accessibility.
+**Action:** Consistently apply `AppLocalizations.of(context).moreOptions` to all `Icons.more_vert` `IconButton` widgets across the application, especially in trailing actions within list items.
