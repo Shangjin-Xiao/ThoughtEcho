@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/services/agent_tools/ask_user_tool.dart';
 import 'package:thoughtecho/widgets/ai/ask_user_card.dart';
 
 Widget _buildTestApp(Widget child) {
@@ -25,37 +26,81 @@ Widget _buildTestApp(Widget child) {
   );
 }
 
+AskUserQuestion _question(
+  String question, {
+  String? header,
+  required List<String> options,
+  Map<String, String> descriptions = const {},
+  bool multiSelect = false,
+}) {
+  return AskUserQuestion(
+    question: question,
+    header: header,
+    options: [
+      for (final label in options)
+        AskUserOption(label: label, description: descriptions[label] ?? ''),
+    ],
+    multiSelect: multiSelect,
+  );
+}
+
 void main() {
   group('AskUserCard Widget 测试', () {
-    testWidgets('正常展示标题、问题与选项', (tester) async {
+    testWidgets('正常展示 Thoughter 标题、问题与纵向选项', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const AskUserCard(
-          header: '分类确认',
-          question: '你想创建哪种类型的笔记？',
-          options: ['工作复盘', '生活随笔', '读书随笔'],
+        AskUserCard(
+          questions: [
+            _question(
+              '你想创建哪种类型的笔记？',
+              header: '分类确认',
+              options: ['工作复盘', '生活随笔', '读书随笔'],
+              descriptions: {'工作复盘': '记录项目得失'},
+            ),
+          ],
         ),
       ));
       await tester.pumpAndSettle();
 
+      expect(find.text('Thoughter 有一个问题'), findsOneWidget);
       expect(find.text('分类确认'), findsOneWidget);
       expect(find.text('你想创建哪种类型的笔记？'), findsOneWidget);
       expect(find.text('工作复盘'), findsOneWidget);
+      expect(find.text('记录项目得失'), findsOneWidget);
       expect(find.text('生活随笔'), findsOneWidget);
-      expect(find.text('读书随笔'), findsOneWidget);
       expect(find.text('单选'), findsOneWidget);
+      // 纵向整宽行：不再使用横向 FilterChip
+      expect(find.byType(FilterChip), findsNothing);
+      expect(find.byType(Radio<String?>), findsNWidgets(3));
+    });
+
+    testWidgets('多问题展示计数标题与全部问题', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('第一问？', options: ['A', 'B']),
+            _question('第二问？', options: ['C', 'D'], multiSelect: true),
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Thoughter 有 2 个问题'), findsOneWidget);
+      expect(find.text('第一问？'), findsOneWidget);
+      expect(find.text('第二问？'), findsOneWidget);
+      expect(find.byType(Radio<String?>), findsNWidgets(2));
+      expect(find.byType(Checkbox), findsNWidgets(2));
     });
 
     testWidgets('单选模式下切换选项并提交', (tester) async {
-      List<String>? submittedOptions;
-      String? submittedCustom;
+      List<AskUserAnswer>? submitted;
 
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
-          question: '请选择分类',
-          options: const ['A', 'B'],
-          onSubmit: ({required selectedOptions, customText}) {
-            submittedOptions = selectedOptions;
-            submittedCustom = customText;
+          questions: [
+            _question('请选择分类', options: ['A', 'B'])
+          ],
+          onSubmit: ({required answers}) {
+            submitted = answers;
           },
         ),
       ));
@@ -80,20 +125,22 @@ void main() {
       await tester.tap(confirmButtonFinder);
       await tester.pumpAndSettle();
 
-      expect(submittedOptions, ['B']);
-      expect(submittedCustom, isNull);
+      expect(submitted?.length, 1);
+      expect(submitted?.first.selectedOptions, ['B']);
+      expect(submitted?.first.customText, isNull);
     });
 
     testWidgets('多选模式下选择多个选项并提交', (tester) async {
-      List<String>? submittedOptions;
+      List<AskUserAnswer>? submitted;
 
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
-          question: '可多选标签',
-          options: const ['标签1', '标签2', '标签3'],
-          multiSelect: true,
-          onSubmit: ({required selectedOptions, customText}) {
-            submittedOptions = selectedOptions;
+          questions: [
+            _question('可多选标签',
+                options: ['标签1', '标签2', '标签3'], multiSelect: true),
+          ],
+          onSubmit: ({required answers}) {
+            submitted = answers;
           },
         ),
       ));
@@ -110,36 +157,117 @@ void main() {
       await tester.tap(confirmButtonFinder);
       await tester.pumpAndSettle();
 
-      expect(submittedOptions, containsAll(['标签1', '标签3']));
-      expect(submittedOptions?.length, 2);
+      expect(submitted?.first.selectedOptions, containsAll(['标签1', '标签3']));
+      expect(submitted?.first.selectedOptions.length, 2);
     });
 
-    testWidgets('自定义文本输入与提交', (tester) async {
-      String? submittedCustom;
+    testWidgets('输入自定义文本会清空已选选项（互斥）', (tester) async {
+      List<AskUserAnswer>? submitted;
 
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
-          question: '请选择或输入',
-          options: const ['A', 'B'],
-          onSubmit: ({required selectedOptions, customText}) {
-            submittedCustom = customText;
+          questions: [
+            _question('请选择或输入', options: ['A', 'B'])
+          ],
+          onSubmit: ({required answers}) {
+            submitted = answers;
           },
         ),
       ));
       await tester.pumpAndSettle();
 
-      // 输入自定义文本
+      // 先选 A
+      await tester.tap(find.text('A'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>)),
+        isNotNull,
+      );
+      expect(
+        tester
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        'A',
+      );
+
+      // 再输入自定义文本：选项选择被清空
       await tester.enterText(find.byType(TextField), '自定义笔记主题');
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        isNull,
+      );
+
+      await tester.tap(find.widgetWithText(FilledButton, '确定'));
+      await tester.pumpAndSettle();
+
+      expect(submitted?.first.selectedOptions, isEmpty);
+      expect(submitted?.first.customText, '自定义笔记主题');
+    });
+
+    testWidgets('点选选项会清空自定义文本（互斥）', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('请选择或输入', options: ['A', 'B'])
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '手输内容');
+      await tester.pumpAndSettle();
+      expect(find.text('手输内容'), findsOneWidget);
+
+      await tester.tap(find.text('B'));
+      await tester.pumpAndSettle();
+
+      // 文本框被清空，选项 B 被选中
+      expect(find.text('手输内容'), findsNothing);
+      expect(
+        tester
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        'B',
+      );
+    });
+
+    testWidgets('多问题需全部作答后才能提交', (tester) async {
+      var submitted = false;
+
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('第一问？', options: ['A', 'B']),
+            _question('第二问？', options: ['C', 'D']),
+          ],
+          onSubmit: ({required answers}) {
+            submitted = true;
+          },
+        ),
+      ));
       await tester.pumpAndSettle();
 
       final confirmButtonFinder = find.widgetWithText(FilledButton, '确定');
+      expect(
+          tester.widget<FilledButton>(confirmButtonFinder).onPressed, isNull);
+
+      await tester.tap(find.text('A'));
+      await tester.pumpAndSettle();
+      // 只答一题仍禁用
+      expect(
+          tester.widget<FilledButton>(confirmButtonFinder).onPressed, isNull);
+
+      await tester.tap(find.text('D'));
+      await tester.pumpAndSettle();
       expect(tester.widget<FilledButton>(confirmButtonFinder).onPressed,
           isNotNull);
 
       await tester.tap(confirmButtonFinder);
       await tester.pumpAndSettle();
-
-      expect(submittedCustom, '自定义笔记主题');
+      expect(submitted, isTrue);
     });
 
     testWidgets('点击取消按钮调用 onCancel 回调', (tester) async {
@@ -147,8 +275,9 @@ void main() {
 
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
-          question: '是否确认？',
-          options: const ['是', '否'],
+          questions: [
+            _question('是否确认？', options: ['是', '否'])
+          ],
           onCancel: () {
             cancelled = true;
           },
@@ -162,17 +291,21 @@ void main() {
       expect(cancelled, isTrue);
     });
 
-    testWidgets('已完成状态正确展示已选选项与摘要，隐藏交互控件', (tester) async {
+    testWidgets('已完成状态正确展示已选选项，隐藏交互控件', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const AskUserCard(
-          question: '风格选择',
-          options: ['纸墨', '素笺'],
+        AskUserCard(
+          questions: [
+            _question('风格选择', options: ['纸墨', '素笺'])
+          ],
           isCompleted: true,
-          selectedOptions: ['纸墨'],
+          completedAnswers: const [
+            AskUserAnswer(selectedOptions: ['纸墨']),
+          ],
         ),
       ));
       await tester.pumpAndSettle();
 
+      expect(find.text('Thoughter 有一个问题'), findsOneWidget);
       expect(find.text('已选择：'), findsOneWidget);
       expect(find.text('纸墨'), findsOneWidget);
       // 输入框与确定按钮不应在已完成状态出现
@@ -183,9 +316,10 @@ void main() {
 
     testWidgets('已取消状态正确展示已取消标识', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const AskUserCard(
-          question: '风格选择',
-          options: ['纸墨', '素笺'],
+        AskUserCard(
+          questions: [
+            _question('风格选择', options: ['纸墨', '素笺'])
+          ],
           isCompleted: true,
           isCancelled: true,
         ),
@@ -198,11 +332,14 @@ void main() {
 
     testWidgets('已完成状态正确展示自定义回复', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const AskUserCard(
-          question: '风格选择',
-          options: ['纸墨', '素笺'],
+        AskUserCard(
+          questions: [
+            _question('风格选择', options: ['纸墨', '素笺'])
+          ],
           isCompleted: true,
-          customText: '我想用深色素笺',
+          completedAnswers: const [
+            AskUserAnswer(customText: '我想用深色素笺'),
+          ],
         ),
       ));
       await tester.pumpAndSettle();
@@ -211,44 +348,35 @@ void main() {
       expect(find.byType(TextField), findsNothing);
     });
 
-    testWidgets('同时选择选项与输入自定义文本并提交', (tester) async {
-      List<String>? submittedOptions;
-      String? submittedCustom;
-
+    testWidgets('已完成多问题中未作答的问题展示未作答', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
-          question: '请选择或补充',
-          options: const ['生活随笔', '读书笔记'],
-          onSubmit: ({required selectedOptions, customText}) {
-            submittedOptions = selectedOptions;
-            submittedCustom = customText;
-          },
+          questions: [
+            _question('第一问？', options: ['A', 'B']),
+            _question('第二问？', options: ['C', 'D']),
+          ],
+          isCompleted: true,
+          completedAnswers: const [
+            AskUserAnswer(selectedOptions: ['A']),
+            AskUserAnswer(),
+          ],
         ),
       ));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('读书笔记'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField), '历史书单');
-      await tester.pumpAndSettle();
-
-      final confirmButtonFinder = find.widgetWithText(FilledButton, '确定');
-      await tester.tap(confirmButtonFinder);
-      await tester.pumpAndSettle();
-
-      expect(submittedOptions, ['读书笔记']);
-      expect(submittedCustom, '历史书单');
+      expect(find.text('Thoughter 有 2 个问题'), findsOneWidget);
+      expect(find.text('未作答'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
     });
 
-    testWidgets('已完成但未选任何选项且无自定义回复时作为取消状态展示', (tester) async {
+    testWidgets('已完成但无任何答案时作为取消状态展示', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const AskUserCard(
-          question: '风格选择',
-          options: ['纸墨', '素笺'],
+        AskUserCard(
+          questions: [
+            _question('风格选择', options: ['纸墨', '素笺'])
+          ],
           isCompleted: true,
-          selectedOptions: [],
-          customText: null,
+          completedAnswers: const [],
         ),
       ));
       await tester.pumpAndSettle();
@@ -258,93 +386,105 @@ void main() {
       expect(find.text('确定'), findsNothing);
     });
 
-    testWidgets('didUpdateWidget 正常同步外部属性变更', (tester) async {
+    testWidgets('didUpdateWidget 正常同步外部初始答案变更', (tester) async {
+      AskUserQuestion question() => _question('测试变更', options: ['A', 'B']);
+
       await tester.pumpWidget(_buildTestApp(
-        const AskUserCard(
-          question: '测试变更',
-          options: ['A', 'B'],
-          selectedOptions: ['A'],
-          customText: '旧备注',
+        AskUserCard(
+          questions: [question()],
+          initialAnswers: const [
+            AskUserAnswer(selectedOptions: ['A'], customText: '旧备注'),
+          ],
         ),
       ));
       await tester.pumpAndSettle();
 
       expect(find.text('旧备注'), findsOneWidget);
-      expect(
-        tester
-            .widget<FilterChip>(find.widgetWithText(FilterChip, 'A'))
-            .selected,
-        isTrue,
-      );
-      expect(
-        tester
-            .widget<FilterChip>(find.widgetWithText(FilterChip, 'B'))
-            .selected,
-        isFalse,
-      );
 
       await tester.pumpWidget(_buildTestApp(
-        const AskUserCard(
-          question: '测试变更',
-          options: ['A', 'B'],
-          selectedOptions: ['B'],
-          customText: '新备注',
+        AskUserCard(
+          questions: [question()],
+          initialAnswers: const [
+            AskUserAnswer(selectedOptions: ['B'], customText: '新备注'),
+          ],
         ),
       ));
       await tester.pumpAndSettle();
 
       expect(find.text('新备注'), findsOneWidget);
+      // 外部初始答案被同步：B 选中（历史数据里选项与自定义可共存，原样呈现）
       expect(
         tester
-            .widget<FilterChip>(find.widgetWithText(FilterChip, 'B'))
-            .selected,
-        isTrue,
-      );
-      expect(
-        tester
-            .widget<FilterChip>(find.widgetWithText(FilterChip, 'A'))
-            .selected,
-        isFalse,
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        'B',
       );
     });
 
-    testWidgets('重建提供内容相同但实例不同的新 selectedOptions 时保留内部用户选择', (tester) async {
+    testWidgets('外部初始答案不变时保留用户自己的选择', (tester) async {
+      const initial = [
+        AskUserAnswer(selectedOptions: ['A']),
+      ];
+      AskUserQuestion question() => _question('保持选择', options: ['A', 'B']);
+
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
-          question: '测试保持选择',
-          options: const ['A', 'B'],
-          selectedOptions: List<String>.from(['A']),
+          questions: [question()],
+          initialAnswers: initial,
         ),
       ));
       await tester.pumpAndSettle();
 
-      // 用户在界面上点击了 B
+      // 用户在界面上改选 B
       await tester.tap(find.text('B'));
       await tester.pumpAndSettle();
 
-      expect(
-        tester
-            .widget<FilterChip>(find.widgetWithText(FilterChip, 'B'))
-            .selected,
-        isTrue,
-      );
-
-      // 外部因为滚动/重新构建传入了内容相同的全新 List 实例
+      // 外部因滚动重建传入内容相同的全新实例
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
-          question: '测试保持选择',
-          options: const ['A', 'B'],
-          selectedOptions: List<String>.from(['A']),
+          questions: [question()],
+          initialAnswers: List<AskUserAnswer>.from(initial),
         ),
       ));
       await tester.pumpAndSettle();
 
-      // 用户在界面上的选择 B 不应被清空回滚
+      // 用户的选择 B 不应被回滚
       expect(
         tester
-            .widget<FilterChip>(find.widgetWithText(FilterChip, 'B'))
-            .selected,
-        isTrue,
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        'B',
+      );
+    });
+
+    testWidgets('问题列表变化时重建草稿', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('第一组？', options: ['A', 'B'])
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('A'));
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('第二组？', options: ['C', 'D'])
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('第二组？'), findsOneWidget);
+      expect(
+        tester
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        isNull,
       );
     });
   });
