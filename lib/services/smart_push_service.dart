@@ -185,7 +185,7 @@ class SmartPushService extends ChangeNotifier {
 
     final contentHash = _contentHash(content);
     final hashesStr = pushedData.substring(today.length + 1);
-    final pushedHashes = hashesStr.split(',').toSet();
+    final pushedHashes = StringUtils.parseCommaSeparatedString(hashesStr).toSet();
     return pushedHashes.contains(contentHash);
   }
 
@@ -233,12 +233,8 @@ class SmartPushService extends ChangeNotifier {
     final rawData = _mmkv.getString(_todayPushedNoteIdsKey);
     if (rawData == null || !rawData.startsWith('$today|')) return {};
 
-    final ids = rawData
-        .substring(today.length + 1)
-        .split(',')
-        .map((id) => id.trim())
-        .where((id) => id.isNotEmpty)
-        .toSet();
+    final idsStr = rawData.substring(today.length + 1);
+    final ids = StringUtils.parseCommaSeparatedString(idsStr).toSet();
     return ids;
   }
 
