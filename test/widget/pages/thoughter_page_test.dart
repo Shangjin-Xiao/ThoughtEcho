@@ -397,7 +397,7 @@ class _FakeAgentService extends AgentService {
 
     if (simulateAskUser && askUserHandler != null) {
       final promptFuture = askUserHandler!(
-        const AskUserRequest(
+        AskUserRequest.single(
           toolCallId: 'call_ask_mock',
           question: '模拟提问：请选择',
           options: ['选项1', '选项2'],
@@ -2987,7 +2987,7 @@ void main() {
       // 第二个提问到达并顶掉第一个：旧卡片必须显式取消并持久化，
       // 而不是被覆盖后只靠 UI 派生状态兜底
       final secondFuture = agentService.askUserHandler!(
-        const AskUserRequest(
+        AskUserRequest.single(
           toolCallId: 'call_ask_second',
           question: '第二个提问：请选择',
           options: ['选项A', '选项B'],
