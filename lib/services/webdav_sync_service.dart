@@ -1615,8 +1615,9 @@ class WebDAVSyncService extends ChangeNotifier {
 
   @visibleForTesting
   static String? prependConflictPrefixToDelta(String? deltaContent) {
-    if (deltaContent == null || deltaContent.trim().isEmpty)
+    if (deltaContent == null || deltaContent.trim().isEmpty) {
       return deltaContent;
+    }
     try {
       final decoded = json.decode(deltaContent);
       if (decoded is List) {
@@ -1629,11 +1630,16 @@ class WebDAVSyncService extends ChangeNotifier {
         ops.insert(0, {'insert': '[冲突备份] '});
         map['ops'] = ops;
         return json.encode(map);
+      } else {
+        logWarning(
+          '冲突笔记 Delta 结构不支持加前缀，返回原内容',
+          source: 'WebDAVSyncService',
+        );
       }
     } catch (e, stack) {
       logError(
-        '冲突笔记 Delta 内容加前缀失败',
-        error: e,
+        '冲突笔记 Delta 内容加前缀失败: ${e.runtimeType}',
+        error: e.runtimeType.toString(),
         stackTrace: stack,
         source: 'WebDAVSyncService',
       );

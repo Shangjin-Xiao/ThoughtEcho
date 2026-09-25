@@ -529,6 +529,32 @@ void main() {
             .toList();
         expect(errorLogs, isNotEmpty);
         expect(errorLogs.first.message, contains('冲突笔记 Delta 内容加前缀失败'));
+        expect(errorLogs.first.error, 'FormatException');
+        expect(errorLogs.first.stackTrace, isNotNull);
+      } finally {
+        AppLogger.initialize();
+      }
+    });
+
+    test('handles unsupported JSON structure gracefully and logs warning', () {
+      final logService = _RecordingLogService();
+      AppLogger.serviceForTesting = logService;
+      try {
+        const invalidStructure = '{"ops":"not-a-list"}';
+        final result =
+            WebDAVSyncService.prependConflictPrefixToDelta(invalidStructure);
+        expect(result, invalidStructure);
+
+        const numberJson = '42';
+        final numResult =
+            WebDAVSyncService.prependConflictPrefixToDelta(numberJson);
+        expect(numResult, numberJson);
+
+        final warningLogs = logService.records
+            .where((r) => r.level == UnifiedLogLevel.warning)
+            .toList();
+        expect(warningLogs, hasLength(2));
+        expect(warningLogs.first.message, contains('冲突笔记 Delta 结构不支持加前缀'));
       } finally {
         AppLogger.initialize();
       }
@@ -546,6 +572,7 @@ class _RecordingLogService implements UnifiedLogService {
         String message,
         String? source,
         Object? error,
+        StackTrace? stackTrace,
       })> records = [];
 
   @override
@@ -636,7 +663,13 @@ class _RecordingLogService implements UnifiedLogService {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    records.add((level: level, message: message, source: source, error: error));
+    records.add((
+      level: level,
+      message: message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    ));
   }
 
   @override
