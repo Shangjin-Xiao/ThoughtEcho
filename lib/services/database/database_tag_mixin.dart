@@ -460,13 +460,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
   @override
   Future<NoteTag?> getTagById(String id) async {
     if (kIsWeb) {
-      try {
-        return _tagStore.firstWhere((cat) => cat.id == id);
-      } catch (e, stack) {
-        logError('在内存中找不到 ID 为 $id 的标签: $e',
-            error: e, stackTrace: stack, source: 'DatabaseService');
-        return null;
-      }
+      return _tagStore.where((cat) => cat.id == id).firstOrNull;
     }
 
     try {

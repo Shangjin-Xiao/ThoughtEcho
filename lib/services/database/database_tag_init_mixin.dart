@@ -28,9 +28,9 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
         logDebug('数据库尚未初始化，尝试先进行初始化');
         try {
           await init();
-        } catch (e, stack) {
-          logError('数据库初始化失败，但仍将尝试创建默认标签: $e',
-              error: e, stackTrace: stack, source: 'DatabaseService');
+        } catch (e) {
+          logWarning('数据库初始化失败，但仍将尝试创建默认标签: ${e.runtimeType}',
+              source: 'DatabaseService');
         }
       }
 
