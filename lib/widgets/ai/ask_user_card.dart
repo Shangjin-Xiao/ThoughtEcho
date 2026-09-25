@@ -8,10 +8,12 @@ import '../../theme/theme_style.dart';
 
 /// Agent 向用户提问与选项确认卡片（对齐 Claude Code `AskUserQuestion`）。
 ///
-/// 一次可展示 1–4 个问题，纵向堆叠；每个问题的选项纵向排列为整宽行
-/// （短标题 + 说明），单选用 Radio、多选用 Checkbox。
-/// 自定义输入与选项选择互斥：输入自定义文本会清空选项选择，
-/// 点选选项会清空自定义文本。
+/// 单个问题时直接展示整块内容；多个问题时走分步向导：一次只展示一题，
+/// 顶部是可点击跳转的分段进度，单选点选后自动进入下一题，多选与自定义
+/// 输入点「继续」前进，上一步保留已填答案，末尾是可回跳修改的总览页。
+/// 每个问题的选项纵向排列为整宽行（短标题 + 说明），单选用 Radio、
+/// 多选用 Checkbox。自定义输入与选项选择互斥：输入自定义文本会清空
+/// 选项选择，点选选项会清空自定义文本。
 ///
 /// 样式遵循项目 UI 规范：圆角来自 `AppShapeTokens`，语义色来自
 /// `AppSemanticColors` / `ColorScheme`，支持手工风格自适应。
@@ -62,6 +64,13 @@ class _QuestionDraft {
 class _AskUserCardState extends State<AskUserCard> {
   late List<_QuestionDraft> _drafts;
 
+  /// 向导当前步骤：0..questions.length-1 为各问题，
+  /// 等于 questions.length 时为总览页。单问题卡片不用向导，恒为 0。
+  int _currentStep = 0;
+
+  /// 多问题才启用分步向导；单问题保持原来的整块展示。
+  bool get _isWizard => widget.questions.length > 1;
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +98,7 @@ class _AskUserCardState extends State<AskUserCard> {
         draft.dispose();
       }
       _drafts = _buildDrafts();
+      _currentStep = 0;
       return;
     }
     if (listEquals(oldWidget.initialAnswers, widget.initialAnswers)) return;
@@ -153,6 +163,24 @@ class _AskUserCardState extends State<AskUserCard> {
         }
       }
     });
+    // 向导中单选点选即确认本题：选中后自动进入下一步（或总览页）；
+    // 再次点选取消选中时停留在本题。自定义输入与多选走「继续」按钮。
+    if (_isWizard &&
+        !widget.questions[index].multiSelect &&
+        draft.selected.isNotEmpty) {
+      _goToStep(index + 1);
+    }
+  }
+
+  /// 向导步骤跳转（含总览页），顺手收起键盘。
+  void _goToStep(int step) {
+    final total = widget.questions.length;
+    final clamped = step.clamp(0, total);
+    if (clamped == _currentStep) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _currentStep = clamped;
+    });
   }
 
   void _handleCustomChanged(int index) {
@@ -210,6 +238,8 @@ class _AskUserCardState extends State<AskUserCard> {
             const SizedBox(height: 12),
             if (widget.isCompleted)
               _buildCompletedView(theme, l10n, semanticColors, shapeTokens)
+            else if (_isWizard)
+              _buildWizard(theme, l10n, shapeTokens)
             else ...[
               for (var index = 0; index < widget.questions.length; index++) ...[
                 if (index > 0) const SizedBox(height: 16),
@@ -245,6 +275,305 @@ class _AskUserCardState extends State<AskUserCard> {
               color: theme.colorScheme.primary,
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  /// 多问题分步向导：进度条 + 当前一题（或末尾总览页）+ 导航按钮。
+  Widget _buildWizard(
+    ThemeData theme,
+    AppLocalizations l10n,
+    AppShapeTokens shapeTokens,
+  ) {
+    final total = widget.questions.length;
+    final isReview = _currentStep >= total;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildProgress(theme, l10n, shapeTokens, total, isReview),
+        const SizedBox(height: 12),
+        if (isReview)
+          _buildReview(theme, l10n, shapeTokens)
+        else
+          _buildQuestionBlock(
+            theme,
+            l10n,
+            shapeTokens,
+            _currentStep,
+            widget.questions[_currentStep],
+          ),
+        const SizedBox(height: 16),
+        if (isReview)
+          _buildReviewActions(theme, l10n, shapeTokens)
+        else
+          _buildWizardNav(theme, l10n, shapeTokens),
+      ],
+    );
+  }
+
+  /// 分段进度：答过的段填实，点击任意段跳转；旁边标注当前进度。
+  Widget _buildProgress(
+    ThemeData theme,
+    AppLocalizations l10n,
+    AppShapeTokens shapeTokens,
+    int total,
+    bool isReview,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          isReview
+              ? l10n.agentAskUserReviewTitle
+              : l10n.agentAskUserStepOf(_currentStep + 1, total),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (var index = 0; index < total; index++) ...[
+              if (index > 0) const SizedBox(width: 4),
+              Expanded(
+                child: Semantics(
+                  button: true,
+                  label: l10n.agentAskUserStepOf(index + 1, total),
+                  child: InkWell(
+                    borderRadius:
+                        BorderRadius.circular(shapeTokens.buttonRadius),
+                    onTap: () => _goToStep(index),
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(shapeTokens.buttonRadius),
+                        color: _isAnswered(index)
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.outlineVariant
+                                .withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 向导问题页导航：上一步（首题不占位）+ 取消 + 继续。
+  Widget _buildWizardNav(
+    ThemeData theme,
+    AppLocalizations l10n,
+    AppShapeTokens shapeTokens,
+  ) {
+    final answered = _isAnswered(_currentStep);
+    return Row(
+      children: [
+        if (_currentStep > 0)
+          TextButton(
+            onPressed: () => _goToStep(_currentStep - 1),
+            child: Text(l10n.agentAskUserPrev),
+          ),
+        const Spacer(),
+        if (widget.onCancel != null) ...[
+          OutlinedButton(
+            onPressed: widget.onCancel,
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+              ),
+              side: BorderSide(
+                color: theme.colorScheme.outlineVariant,
+                width:
+                    shapeTokens.borderWidth > 0 ? shapeTokens.borderWidth : 1.0,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+            child: Text(
+              l10n.cancel,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        FilledButton(
+          onPressed: answered ? () => _goToStep(_currentStep + 1) : null,
+          style: FilledButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          ),
+          child: Text(
+            l10n.agentAskUserNext,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: answered
+                  ? theme.colorScheme.onPrimary
+                  : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 总览页：逐题列出回答，点击回跳修改；提交前最后确认。
+  Widget _buildReview(
+    ThemeData theme,
+    AppLocalizations l10n,
+    AppShapeTokens shapeTokens,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var index = 0; index < widget.questions.length; index++) ...[
+          if (index > 0) const SizedBox(height: 4),
+          InkWell(
+            borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+            onTap: () => _goToStep(index),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    _isAnswered(index)
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 18,
+                    color: _isAnswered(index)
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.questions[index].question,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _summarizeDraft(index, l10n),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: _isAnswered(index)
+                                ? theme.colorScheme.onSurface
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _goToStep(index),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(l10n.agentAskUserEditAnswer),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  String _summarizeDraft(int index, AppLocalizations l10n) {
+    final draft = _drafts[index];
+    final custom = draft.custom.text.trim();
+    if (custom.isNotEmpty) return custom;
+    if (draft.selected.isNotEmpty) return draft.selected.join('、');
+    return l10n.agentAskUserUnanswered;
+  }
+
+  /// 总览页操作：取消 + 提交全部（有未答题时禁用并提示）。
+  Widget _buildReviewActions(
+    ThemeData theme,
+    AppLocalizations l10n,
+    AppShapeTokens shapeTokens,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!_canSubmit)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              l10n.agentAskUserIncompleteHint,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => _goToStep(widget.questions.length - 1),
+              child: Text(l10n.agentAskUserPrev),
+            ),
+            const Spacer(),
+            if (widget.onCancel != null) ...[
+              OutlinedButton(
+                onPressed: widget.onCancel,
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(shapeTokens.buttonRadius),
+                  ),
+                  side: BorderSide(
+                    color: theme.colorScheme.outlineVariant,
+                    width: shapeTokens.borderWidth > 0
+                        ? shapeTokens.borderWidth
+                        : 1.0,
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                child: Text(
+                  l10n.cancel,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            FilledButton(
+              onPressed: _canSubmit ? _handleSubmit : null,
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              ),
+              child: Text(
+                l10n.agentAskUserSubmitAll,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: _canSubmit
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
