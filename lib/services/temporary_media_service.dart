@@ -341,14 +341,31 @@ class TemporaryMediaService {
         return 0;
       }
 
+      final files = <File>[];
       await for (final entity in tempMediaDir.list(recursive: true)) {
         if (entity is File) {
+          files.add(entity);
+        }
+      }
+
+      if (files.isEmpty) {
+        return 0;
+      }
+
+      try {
+        await tempMediaDir.delete(recursive: true);
+        await tempMediaDir.create(recursive: true);
+        cleanedCount = files.length;
+      } catch (e) {
+        logDebug('批量删除临时目录失败，尝试逐个删除: $e');
+        for (final file in files) {
           try {
-            await entity.delete();
-            cleanedCount++;
-            logDebug('已清理临时文件: ${entity.path}');
-          } catch (e) {
-            logDebug('清理临时文件失败: ${entity.path}, 错误: $e');
+            if (await file.exists()) {
+              await file.delete();
+              cleanedCount++;
+            }
+          } catch (fileErr) {
+            logDebug('清理单个临时文件失败: ${file.path}, 错误: $fileErr');
           }
         }
       }
