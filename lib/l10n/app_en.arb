@@ -4287,8 +4287,17 @@
   },
   "agentPreparedSuggestionCard": "Suggestion ready",
   "agentAskingUser": "Asking you...",
-  "agentAskUserTitle": "Assistant Question",
-  "agentAskUserCustomHint": "Enter custom response (optional)",
+  "agentAskUserTitleThoughter": "Thoughter has a question",
+  "agentAskUserTitleThoughterMulti": "Thoughter has {count} questions",
+  "@agentAskUserTitleThoughterMulti": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserCustomHint": "Write your answer… (typing clears the selection above)",
+  "agentAskUserUnanswered": "Not answered",
   "agentAskUserCancelled": "Selection cancelled",
   "agentAskUserSelectedPrefix": "Selected: ",
   "agentAskUserCustomPrefix": "Custom response: ",
