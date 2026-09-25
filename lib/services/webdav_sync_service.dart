@@ -486,11 +486,11 @@ class WebDAVSyncService extends ChangeNotifier {
           remoteSyncFile,
         );
       } finally {
-        // 清理临时文件
-        for (final path in [tempJsonPath, tempZipPath]) {
+        // 清理临时文件（并行检测与删除）
+        await Future.wait([tempJsonPath, tempZipPath].map((path) async {
           final f = File(path);
           if (await f.exists()) await f.delete();
-        }
+        }));
       }
 
       // 7. 更新同步状态。笔记数据已完整同步，水位线可以前推；

@@ -111,4 +111,53 @@ void main() {
       await tempDir.delete(recursive: true);
     }
   });
+
+  test('Benchmark temp file cleanup: sequential vs Future.wait parallel',
+      () async {
+    final tempDir =
+        await Directory.systemTemp.createTemp('webdav_cleanup_bench');
+    try {
+      const fileCount = 20;
+      final seqFiles = <String>[];
+      final parFiles = <String>[];
+
+      for (var i = 0; i < fileCount; i++) {
+        final pSeq = '${tempDir.path}/seq_$i.tmp';
+        final pPar = '${tempDir.path}/par_$i.tmp';
+        await File(pSeq).writeAsString('temp_data_$i');
+        await File(pPar).writeAsString('temp_data_$i');
+        seqFiles.add(pSeq);
+        parFiles.add(pPar);
+      }
+
+      // 1. Sequential existence check & delete
+      final swSeq = Stopwatch()..start();
+      for (final path in seqFiles) {
+        final f = File(path);
+        if (await f.exists()) await f.delete();
+      }
+      swSeq.stop();
+
+      // 2. Parallel Future.wait existence check & delete
+      final swPar = Stopwatch()..start();
+      await Future.wait(parFiles.map((path) async {
+        final f = File(path);
+        if (await f.exists()) await f.delete();
+      }));
+      swPar.stop();
+
+      for (final path in seqFiles) {
+        expect(await File(path).exists(), isFalse);
+      }
+      for (final path in parFiles) {
+        expect(await File(path).exists(), isFalse);
+      }
+
+      print('--- Cleanup Benchmark ($fileCount files) ---');
+      print('Sequential cleanup: ${swSeq.elapsedMicroseconds} us');
+      print('Future.wait cleanup: ${swPar.elapsedMicroseconds} us');
+    } finally {
+      await tempDir.delete(recursive: true);
+    }
+  });
 }

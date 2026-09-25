@@ -229,3 +229,11 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:**
 将 `lib/models/quote_model.dart` 中的颜色十六进制匹配、破折号前缀剥离、两端括号引号剥离以及作者出处分隔符匹配正则表达式提取为 `Quote` 类的 `static final RegExp` 静态成员，并新增 `test/performance/quote_model_benchmark_test.dart` 进行基准测试验证。
+
+## 2026-09-25 - 优化 WebDAV 同步中临时文件的顺序删除为 Future.wait 并行删除
+
+**Learning:**
+在涉及多个独立文件 I/O 异步操作（如 `await f.exists()` 和 `await f.delete()`）的清理代码中，直接在 `for` 循环中使用顺序 `await` 会导致任务串行排队执行，每次文件存在性判断与删除都会产生一次事件循环等待。通过 `Future.wait` 并行化独立的异步操作，可以将原本顺序排队的底层文件系统操作重叠执行，减少总体延迟并更高效地利用异步 I/O。
+
+**Action:**
+在 `lib/services/webdav_sync_service.dart` 的 `triggerSync` 方法 `finally` 块中，将 `for (final path in [tempJsonPath, tempZipPath])` 的顺序 `await` 删除替换为 `await Future.wait([tempJsonPath, tempZipPath].map((path) async { final f = File(path); if (await f.exists()) await f.delete(); }));`，并在 `test/performance/webdav_sync_service_benchmark_test.dart` 中补充基准测试验证。
