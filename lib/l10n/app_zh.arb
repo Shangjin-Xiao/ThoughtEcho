@@ -307,8 +307,8 @@
     }
   },
   "cannotGetLocationPermission": "无法获取位置权限",
-  "logDebugInfo": "日志调试信息",
-  "logDebugInfoDesc": "显示日志数据库状态和路径信息",
+  "logDebugInfo": "运行诊断信息",
+  "logDebugInfoDesc": "查看应用运行状态与日志记录统计",
   "addNoteAutoFocusExperiment": "[实验] AddNote 自动聚焦",
   "addNoteAutoFocusExperimentDesc": "打开添加笔记对话框稳定后自动弹出键盘（默认开）",
   "databaseStatus": "数据库状态:",
@@ -4287,8 +4287,17 @@
   },
   "agentPreparedSuggestionCard": "已生成建议",
   "agentAskingUser": "正在向你提问...",
-  "agentAskUserTitle": "助手提问",
-  "agentAskUserCustomHint": "输入自定义回复（可选）",
+  "agentAskUserTitleThoughter": "Thoughter 有一个问题",
+  "agentAskUserTitleThoughterMulti": "Thoughter 有 {count} 个问题",
+  "@agentAskUserTitleThoughterMulti": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserCustomHint": "写下你的回答…（输入会清空上面的选择）",
+  "agentAskUserUnanswered": "未作答",
   "agentAskUserCancelled": "已取消选择",
   "agentAskUserSelectedPrefix": "已选择：",
   "agentAskUserCustomPrefix": "自定义回复：",

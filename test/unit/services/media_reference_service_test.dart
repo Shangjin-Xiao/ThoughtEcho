@@ -190,4 +190,53 @@ void main() {
       );
     });
   });
+
+  group('countFromRowsForTest', () {
+    test('空列表返回 0', () {
+      expect(MediaReferenceService.countFromRowsForTest([]), 0);
+    });
+
+    test('字段缺失或为 null 时返回 0', () {
+      expect(
+        MediaReferenceService.countFromRowsForTest([
+          {'other': 123}
+        ]),
+        0,
+      );
+      expect(
+        MediaReferenceService.countFromRowsForTest([
+          {'count': null}
+        ]),
+        0,
+      );
+    });
+
+    test('支持 int 及 num/double 浮点类型安全转为 int', () {
+      expect(
+        MediaReferenceService.countFromRowsForTest([
+          {'count': 42}
+        ]),
+        42,
+      );
+      expect(
+        MediaReferenceService.countFromRowsForTest([
+          {'count': 42.0}
+        ]),
+        42,
+      );
+    });
+  });
+
+  group('getMediaReferenceStats', () {
+    test('统计结果正确返回引用数与文件数', () async {
+      await MediaReferenceService.addReference(
+        '$iosContainer/media/images/test1.jpg',
+        'q1',
+        cachedAppPath: iosContainer,
+      );
+      final stats = await MediaReferenceService.getMediaReferenceStats();
+      expect(stats['totalReferences'], 1);
+      expect(stats['referencedFiles'], 1);
+    });
+  });
 }

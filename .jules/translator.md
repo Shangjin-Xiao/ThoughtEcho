@@ -62,3 +62,6 @@
 ## 2024-09-14 - [统一语言设置词条]
 **发现:** `lib/pages/settings_page.dart` 中在渲染语言选项时，使用了诸如 `const Text('English')`、`const Text('日本語')` 等硬编码字符串。虽然它们本身就是各国语言的原生写法，但 `AppLocalizations` 中其实已经定义好了相对应的国际化键值（如 `l10n.languageEnglish`、`l10n.languageJapanese`），且同一文件的 `getLanguageName` 方法已经在使用这些国际化变量。
 **规则:** 对于语言名称，即便它们的硬编码是语言原生的表现形式，也应使用已存在的国际化变量统一维护（如 `l10n.languageJapanese`），避免同一视图层混合使用硬编码和本地化变量，确保翻译源的一致性和可维护性。
+## 2024-11-20 - [补全缺失的 Meta Keys]
+**发现:** `lib/l10n/app_en.arb` 中缺失了 `app_zh.arb` 里新增的 `@` 开头的 meta 键（如 `@generatingInsightsForRange`），导致中英文占位符定义不对齐。
+**规则:** 凡是在 `app_zh.arb` (模板源文件) 中定义了带 placeholder 的词条，在 `app_en.arb` 中也必须同步包含对应的 `@key` meta 块，以确保中英文占位符类型与描述完整一致。
