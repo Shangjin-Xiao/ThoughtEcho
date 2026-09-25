@@ -4287,8 +4287,17 @@
   },
   "agentPreparedSuggestionCard": "Suggestion ready",
   "agentAskingUser": "Asking you...",
-  "agentAskUserTitle": "Assistant Question",
-  "agentAskUserCustomHint": "Enter custom response (optional)",
+  "agentAskUserTitleThoughter": "Thoughter has a question",
+  "agentAskUserTitleThoughterMulti": "Thoughter has {count} questions",
+  "@agentAskUserTitleThoughterMulti": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserCustomHint": "Write your answer… (typing clears the selection above)",
+  "agentAskUserUnanswered": "Not answered",
   "agentAskUserCancelled": "Selection cancelled",
   "agentAskUserSelectedPrefix": "Selected: ",
   "agentAskUserCustomPrefix": "Custom response: ",
@@ -4653,7 +4662,35 @@
   "settingsReleaseNotes": "What's New",
   "settingsReleaseNotesDesc": "See what this version adds",
   "generatingInsightsForRange": "Generating insights for {period}...",
+  "@generatingInsightsForRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
   "exploreSummarizeRange": "Summarize {period}",
+  "@exploreSummarizeRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
   "exploreSummarizeRangePrompt": "Summarize my notes from {period} — what stands out?",
-  "noNotesInRange": "No notes in {period}"
+  "@exploreSummarizeRangePrompt": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noNotesInRange": "No notes in {period}",
+  "@noNotesInRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  }
 }
