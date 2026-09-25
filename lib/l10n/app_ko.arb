@@ -272,8 +272,8 @@
     }
   },
   "cannotGetLocationPermission": "위치 권한을 얻을 수 없음",
-  "logDebugInfo": "디버그 정보 기록",
-  "logDebugInfoDesc": "로그 데이터베이스 상태 및 경로 정보 표시",
+  "logDebugInfo": "진단 정보",
+  "logDebugInfoDesc": "앱 실행 상태 및 로그 기록 통계 확인",
   "databaseStatus": "데이터베이스 상태:",
   "logStatistics": "로그 통계:",
   "getDebugInfoFailed": "디버그 정보를 가져오지 못했습니다: {error}",

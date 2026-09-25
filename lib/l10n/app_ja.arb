@@ -272,8 +272,8 @@
     }
   },
   "cannotGetLocationPermission": "位置情報の権限を取得できません",
-  "logDebugInfo": "ログデバッグ情報",
-  "logDebugInfoDesc": "ログデータベースの状態とパスを表示",
+  "logDebugInfo": "診断情報",
+  "logDebugInfoDesc": "アプリの稼働状態とログ統計を表示",
   "databaseStatus": "データベース状態:",
   "logStatistics": "ログ統計:",
   "getDebugInfoFailed": "デバッグ情報の取得に失敗: {error}",
