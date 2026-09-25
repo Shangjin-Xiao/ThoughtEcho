@@ -371,6 +371,100 @@ extension _ThoughterUI on _ThoughterPageState {
     );
   }
 
+  /// 解析 ask_user 卡片的问题列表：优先读 `questions` 数组
+  /// （含 label/description 的选项对象），缺失时回退到顶层
+  /// question/options 兼容字段（历史卡片的纯字符串选项）。
+  List<AskUserQuestion> _parseAskUserQuestions(Map<String, dynamic> meta) {
+    final raw = meta['questions'];
+    if (raw is List && raw.isNotEmpty) {
+      final parsed = <AskUserQuestion>[];
+      for (final item in raw) {
+        if (item is! Map) continue;
+        final question = item['question']?.toString().trim() ?? '';
+        if (question.isEmpty) continue;
+        final header = item['header']?.toString().trim();
+        final options = <AskUserOption>[];
+        final rawOptions = item['options'];
+        if (rawOptions is List) {
+          for (final option in rawOptions) {
+            final parsedOption = AskUserOption.tryParse(option);
+            if (parsedOption != null) options.add(parsedOption);
+          }
+        }
+        parsed.add(
+          AskUserQuestion(
+            question: question,
+            header: header?.isNotEmpty == true ? header : null,
+            options: options,
+            multiSelect: item['multiSelect'] == true,
+          ),
+        );
+      }
+      if (parsed.isNotEmpty) return parsed;
+    }
+    final question = meta['question']?.toString() ?? '';
+    final header = meta['header']?.toString();
+    final rawOptions = meta['options'];
+    final options = <AskUserOption>[];
+    if (rawOptions is List) {
+      for (final option in rawOptions) {
+        final parsedOption = AskUserOption.tryParse(option);
+        if (parsedOption != null) options.add(parsedOption);
+      }
+    }
+    return [
+      AskUserQuestion(
+        question: question,
+        header: header?.isNotEmpty == true ? header : null,
+        options: options,
+        multiSelect: meta['multiSelect'] == true,
+      ),
+    ];
+  }
+
+  /// 解析 ask_user 卡片各问题的已有回答：优先读 questions 数组条目，
+  /// 缺失时回退到顶层 selectedOptions/customText（单问题历史卡片）。
+  List<AskUserAnswer> _parseAskUserAnswers(
+    Map<String, dynamic> meta,
+    int count,
+  ) {
+    final raw = meta['questions'];
+    if (raw is List && raw.length == count && raw.isNotEmpty) {
+      var hasEntries = false;
+      final parsed = <AskUserAnswer>[];
+      for (final item in raw) {
+        if (item is! Map) {
+          parsed.add(const AskUserAnswer());
+          continue;
+        }
+        hasEntries = true;
+        final rawSelected = item['selectedOptions'];
+        final selected = rawSelected is List
+            ? rawSelected.map((e) => e.toString()).toList()
+            : const <String>[];
+        parsed.add(
+          AskUserAnswer(
+            selectedOptions: selected,
+            customText: item['customText']?.toString(),
+          ),
+        );
+      }
+      if (hasEntries) return parsed;
+    }
+    if (count == 1) {
+      final rawSelected = meta['selectedOptions'];
+      return [
+        AskUserAnswer(
+          selectedOptions: rawSelected is List
+              ? rawSelected.map((e) => e.toString()).toList()
+              : const <String>[],
+          customText: meta['customText']?.toString(),
+        ),
+      ];
+    }
+    return List<AskUserAnswer>.filled(count, const AskUserAnswer());
+  }
+
   Widget _buildMessageBubble(
     app_chat.ChatMessage message,
     ThemeData theme,
@@ -445,17 +539,10 @@ extension _ThoughterUI on _ThoughterPageState {
               ),
             );
           case 'ask_user':
-            final question = meta['question'] as String? ?? '';
-            final header = meta['header'] as String?;
-            final rawOptions = meta['options'] as List<dynamic>? ?? [];
-            final options = rawOptions.map((e) => e.toString()).toList();
-            final multiSelect = meta['multiSelect'] as bool? ?? false;
+            final questions = _parseAskUserQuestions(meta);
+            final answers = _parseAskUserAnswers(meta, questions.length);
             final isCompleted = meta['isCompleted'] as bool? ?? false;
             final isCancelled = meta['isCancelled'] as bool? ?? false;
-            final rawSelected = meta['selectedOptions'] as List<dynamic>? ?? [];
-            final selectedOptions =
-                rawSelected.map((e) => e.toString()).toList();
-            final customText = meta['customText'] as String?;
 
             final isCurrentPending = !isCompleted &&
                 _pendingAskUserCompleter != null &&
@@ -469,20 +556,16 @@ extension _ThoughterUI on _ThoughterPageState {
               padding: _kCardMessageInsets,
               child: AskUserCard(
                 key: ValueKey('ask_user_${message.id}'),
-                question: question,
-                header: header,
-                options: options,
-                multiSelect: multiSelect,
+                questions: questions,
+                initialAnswers: effectiveCompleted ? const [] : answers,
                 isCompleted: effectiveCompleted,
                 isCancelled: effectiveCancelled,
-                selectedOptions: selectedOptions,
-                customText: customText,
-                onSubmit: ({required selectedOptions, customText}) {
+                completedAnswers: answers,
+                onSubmit: ({required answers}) {
                   _handleAskUserSubmit(
                     message.id,
                     meta,
-                    selectedOptions: selectedOptions,
-                    customText: customText,
+                    answers: answers,
                   );
                 },
                 onCancel: () {

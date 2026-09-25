@@ -395,7 +395,8 @@ class SchemaDataBackfillAdapter {
         final verifyCount = await transaction.rawQuery(
           'SELECT COUNT(*) as count FROM quotes WHERE day_period IS NOT NULL',
         );
-        final totalAfter = verifyCount.first['count'] as int;
+        final totalAfter =
+            (verifyCount.firstOrNull?['count'] as num?)?.toInt() ?? 0;
         if (totalAfter < migratedCount) {
           throw StateError('dayPeriod字段迁移验证失败');
         }
@@ -468,7 +469,8 @@ class SchemaDataBackfillAdapter {
         final verifyCount = await transaction.rawQuery(
           'SELECT COUNT(*) as count FROM quotes WHERE weather IS NOT NULL',
         );
-        final totalAfter = verifyCount.first['count'] as int;
+        final totalAfter =
+            (verifyCount.firstOrNull?['count'] as num?)?.toInt() ?? 0;
         if (totalAfter < migratedCount) {
           throw StateError('weather字段迁移验证失败');
         }

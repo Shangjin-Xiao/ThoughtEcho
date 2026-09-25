@@ -288,15 +288,29 @@ extension _ThoughterAgent on _ThoughterPageState {
           id: msgId,
           role: 'assistant',
           isUser: false,
-          content: request.question,
+          content: request.questions.map((item) => item.question).join('\n'),
           timestamp: DateTime.now(),
           metaJson: jsonEncode({
             'type': 'ask_user',
             'toolCallId': request.toolCallId,
+            // 单问题兼容字段：历史卡片与旧测试仍读取顶层 question/options。
             'question': request.question,
             'header': request.header,
             'options': request.options,
             'multiSelect': request.multiSelect,
+            'questions': [
+              for (final item in request.questions)
+                {
+                  'question': item.question,
+                  'header': item.header,
+                  'options': [
+                    for (final option in item.options) option.toJson()
+                  ],
+                  'multiSelect': item.multiSelect,
+                  'selectedOptions': <String>[],
+                  'customText': null,
+                },
+            ],
             'isCompleted': false,
             'isCancelled': false,
             'selectedOptions': <String>[],
@@ -768,19 +782,48 @@ extension _ThoughterAgent on _ThoughterPageState {
     );
   }
 
+  /// 把用户各问题的回答写回 meta 的 questions 数组；缺失条目补空答案。
+  List<Map<String, Object?>> _encodeAnsweredQuestions(
+    Map<String, dynamic> meta,
+    List<AskUserAnswer> answers,
+  ) {
+    final raw = meta['questions'];
+    final items = raw is List ? raw : const [];
+    return List<Map<String, Object?>>.generate(
+      items.length,
+      (index) {
+        final item = items[index];
+        final entry = item is Map
+            ? Map<String, Object?>.fromEntries(
+                item.entries
+                    .map((e) => MapEntry('${e.key}', e.value as Object?)),
+              )
+            : <String, Object?>{};
+        final answer =
+            index < answers.length ? answers[index] : const AskUserAnswer();
+        entry['selectedOptions'] = answer.selectedOptions;
+        entry['customText'] = answer.customText;
+        return entry;
+      },
+      growable: false,
+    );
+  }
+
   void _handleAskUserSubmit(
     String messageId,
     Map<String, dynamic> meta, {
-    required List<String> selectedOptions,
-    String? customText,
+    required List<AskUserAnswer> answers,
   }) {
     final isPending = messageId == _pendingAskUserMessageId;
+    final firstAnswer = answers.isEmpty ? const AskUserAnswer() : answers.first;
     final updatedMeta = {
       ...meta,
       'isCompleted': true,
       'isCancelled': false,
-      'selectedOptions': selectedOptions,
-      'customText': customText,
+      'questions': _encodeAnsweredQuestions(meta, answers),
+      // 单问题兼容字段：历史摘要与旧卡片读取顶层 selectedOptions/customText。
+      'selectedOptions': firstAnswer.selectedOptions,
+      'customText': firstAnswer.customText,
     };
     app_chat.ChatMessage? updated;
     final idx = _messages.indexWhere((m) => m.id == messageId);
@@ -808,10 +851,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         _pendingAskUserCompleter != null &&
         !_pendingAskUserCompleter!.isCompleted) {
       _pendingAskUserCompleter!.complete(
-        AskUserResponse(
-          selectedOptions: selectedOptions,
-          customText: customText,
-        ),
+        AskUserResponse(answers: answers),
       );
       _pendingAskUserCompleter = null;
       _pendingAskUserMessageId = null;

@@ -272,8 +272,8 @@
     }
   },
   "cannotGetLocationPermission": "Impossible d'obtenir la permission de localisation",
-  "logDebugInfo": "Journaliser les infos de débogage",
-  "logDebugInfoDesc": "Afficher l'état de la base de données des journaux et les informations de chemin",
+  "logDebugInfo": "Informations de diagnostic",
+  "logDebugInfoDesc": "Consulter l'état de l'application et les statistiques des journaux",
   "databaseStatus": "État de la base de données :",
   "logStatistics": "Statistiques des journaux :",
   "getDebugInfoFailed": "Échec de l'obtention des infos de débogage : {error}",

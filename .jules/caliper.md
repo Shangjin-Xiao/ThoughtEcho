@@ -74,3 +74,6 @@
 **对策:**
 1. 为 `draft_restore_utils_test.dart` 补全字段恢复的单元测试，包含存在原始笔记与新建笔记的各种情况，特别验证了针对 null 值的安全 fallback 处理，确保转换逻辑稳固。
 2. 为 `theme_style_labels_test.dart` 补充缺失的 `themeAccentLabel` 测试组，提供定制化的 MockAppLocalizations 以模拟各类本地化枚举文本，完成了所有强调色枚举项的方法功能覆盖。这使得我们在保持极简无依赖单元测试的原则下，最大限度清除了代码库中的潜藏隐患。
+## 2026-09-22 - [补充 MotionPhotoInfo 纯函数数据模型的测试]
+**盲点:** `MotionPhotoInfo` 作为一个简单但核心的纯数据模型类，负责存储和推断动态照片中的视频位置与长度，但它本身缺乏基本的隔离单元测试。如果以后修改其基础结构或 getter 方法，可能导致基于其上构建的 `MotionPhotoUtils` 功能无法正确推断 `videoLength`。
+**对策:** 编写极简的独立单元测试（位于 `test/unit/utils/motion_photo_info_test.dart`）。在隔离环境下通过不同的初始化参数（普通情况，起始与结束相同，结束小于起始等边界条件）验证 `videoLength` 的 getter 计算逻辑，增加稳定性且避免增加整体集成测试的耗时。
