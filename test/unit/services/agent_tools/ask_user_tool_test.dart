@@ -12,6 +12,27 @@ ToolCall _toolCall(Map<String, Object?> arguments, {String id = 'call_1'}) {
   );
 }
 
+Map<String, Object?> _question(
+  String question, {
+  String? header,
+  required List<Object?> options,
+  bool multiSelect = false,
+}) {
+  return {
+    'question': question,
+    if (header != null) 'header': header,
+    'options': options,
+    'multi_select': multiSelect,
+  };
+}
+
+Map<String, Object?> _option(String label, [String description = '']) {
+  return {
+    'label': label,
+    if (description.isNotEmpty) 'description': description,
+  };
+}
+
 void main() {
   group('AskUserTool - 静态定义与元数据', () {
     late AskUserTool tool;
@@ -27,17 +48,22 @@ void main() {
       expect(tool.isInteractive, isTrue);
     });
 
-    test('参数 Schema 声明', () {
+    test('参数 Schema 声明 questions 与单问题兼容字段', () {
       final schema = tool.parametersSchema;
       expect(schema['type'], 'object');
       final properties = schema['properties'] as Map<String, Object?>;
+      expect(properties.containsKey('questions'), isTrue);
       expect(properties.containsKey('question'), isTrue);
       expect(properties.containsKey('header'), isTrue);
       expect(properties.containsKey('options'), isTrue);
       expect(properties.containsKey('multi_select'), isTrue);
-      final required = schema['required'] as List;
-      expect(required, contains('question'));
-      expect(required, contains('options'));
+    });
+
+    test('上限常量与 Claude Code 对齐', () {
+      expect(AskUserTool.maxQuestions, 4);
+      expect(AskUserTool.minOptions, 2);
+      expect(AskUserTool.maxOptions, 4);
+      expect(AskUserTool.maxHeaderLength, 12);
     });
   });
 
@@ -48,11 +74,10 @@ void main() {
       tool = AskUserTool();
     });
 
-    test('缺少 question 参数时报错', () async {
-      final result = await tool.execute(_toolCall({
-        'options': ['选项A', '选项B'],
-      }));
+    test('两种写法都缺失时报错', () async {
+      final result = await tool.execute(_toolCall({}));
       expect(result.isError, isTrue);
+      expect(result.content, contains('questions'));
       expect(result.content, contains('question'));
     });
 
@@ -107,6 +132,69 @@ void main() {
       expect(result.isError, isTrue);
       expect(result.content, contains('不能重复'));
     });
+
+    test('options 里手写 Other 兜底选项时报错', () async {
+      final result = await tool.execute(_toolCall({
+        'question': '请选择',
+        'options': ['A', 'Other'],
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('自定义输入'));
+    });
+
+    test('header 超过 12 个字符时报错', () async {
+      final result = await tool.execute(_toolCall({
+        'question': '请选择',
+        'header': '这是一个超长的分类标题文本',
+        'options': ['A', 'B'],
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('header'));
+    });
+
+    test('questions 超过 4 个问题时报错', () async {
+      final result = await tool.execute(_toolCall({
+        'questions': [
+          for (var i = 0; i < 5; i++) _question('问题$i？', options: ['A', 'B']),
+        ],
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('最多包含 4 个问题'));
+    });
+
+    test('questions 存在重复问题时报错', () async {
+      final result = await tool.execute(_toolCall({
+        'questions': [
+          _question('相同的问题？', options: ['A', 'B']),
+          _question('相同的问题？', options: ['C', 'D']),
+        ],
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('重复的问题'));
+    });
+
+    test('questions 中某个问题选项不足时定位到该问题', () async {
+      final result = await tool.execute(_toolCall({
+        'questions': [
+          _question('第一个问题？', options: ['A', 'B']),
+          _question('第二个问题？', options: ['只有一项']),
+        ],
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('第 2 个问题'));
+    });
+
+    test('选项对象缺少 label 时视为无效选项', () async {
+      final result = await tool.execute(_toolCall({
+        'questions': [
+          _question('请选择？', options: [
+            {'description': '没有标题的选项'},
+          ]),
+        ],
+      }));
+      expect(result.isError, isTrue);
+      expect(result.content, contains('有效选项'));
+    });
   });
 
   group('AskUserTool - 交互与回复处理', () {
@@ -144,6 +232,34 @@ void main() {
       expect(capturedRequest?.multiSelect, isFalse);
     });
 
+    test('选项对象携带的 description 正确透传给处理程序', () async {
+      AskUserRequest? capturedRequest;
+      final tool = AskUserTool(
+        promptHandler: (request) async {
+          capturedRequest = request;
+          return AskUserResponse.selected(['OAuth']);
+        },
+      );
+
+      final result = await tool.execute(_toolCall({
+        'questions': [
+          _question('用哪种鉴权？', header: '鉴权', options: [
+            _option('OAuth', '行业标准，支持多供应商'),
+            _option('JWT', '无状态，适合 API'),
+          ]),
+        ],
+      }));
+
+      expect(result.isError, isFalse);
+      expect(result.content, '用户选择了：OAuth');
+      final captured = capturedRequest!;
+      expect(captured.questions.length, 1);
+      expect(
+        captured.questions.first.options.first,
+        const AskUserOption(label: 'OAuth', description: '行业标准，支持多供应商'),
+      );
+    });
+
     test('多选选项回复正常格式化为中文顿号拼接', () async {
       final tool = AskUserTool(
         promptHandler: (request) async {
@@ -162,6 +278,58 @@ void main() {
       expect(result.content, '用户选择了：生活随笔、读书笔记');
     });
 
+    test('多问题一次返回各问题答案并逐条格式化', () async {
+      final tool = AskUserTool(
+        promptHandler: (request) async {
+          expect(request.questions.length, 2);
+          return const AskUserResponse(
+            answers: [
+              AskUserAnswer(selectedOptions: ['OAuth']),
+              AskUserAnswer(customText: '用公司统一的 SSO'),
+            ],
+          );
+        },
+      );
+
+      final result = await tool.execute(_toolCall({
+        'questions': [
+          _question('用哪种鉴权？', options: ['OAuth', 'JWT']),
+          _question('还有什么补充？', options: ['无', '稍后定']),
+        ],
+      }));
+
+      expect(result.isError, isFalse);
+      expect(
+        result.content,
+        '用户回答了 2 个问题：\n'
+        '1. 「用哪种鉴权？」→选择了：OAuth\n'
+        '2. 「还有什么补充？」→回复：用公司统一的 SSO',
+      );
+    });
+
+    test('多问题中未作答的问题标记为未作答', () async {
+      final tool = AskUserTool(
+        promptHandler: (request) async {
+          return const AskUserResponse(
+            answers: [
+              AskUserAnswer(selectedOptions: ['A']),
+              AskUserAnswer(),
+            ],
+          );
+        },
+      );
+
+      final result = await tool.execute(_toolCall({
+        'questions': [
+          _question('第一问？', options: ['A', 'B']),
+          _question('第二问？', options: ['C', 'D']),
+        ],
+      }));
+
+      expect(result.isError, isFalse);
+      expect(result.content, contains('2. 「第二问？」→未作答'));
+    });
+
     test('自定义文本回复正常返回', () async {
       final tool = AskUserTool(
         promptHandler: (request) async {
@@ -176,6 +344,29 @@ void main() {
 
       expect(result.isError, isFalse);
       expect(result.content, '用户输入了自定义回复：我想做年度目标规划');
+    });
+
+    test('同一问题同时有选项与自定义时自定义优先（互斥）', () async {
+      final tool = AskUserTool(
+        promptHandler: (request) async {
+          return const AskUserResponse(
+            answers: [
+              AskUserAnswer(
+                selectedOptions: ['读书随笔'],
+                customText: '关于《百年孤独》的随笔',
+              ),
+            ],
+          );
+        },
+      );
+
+      final result = await tool.execute(_toolCall({
+        'question': '请选择类型',
+        'options': ['生活随笔', '读书随笔'],
+      }));
+
+      expect(result.isError, isFalse);
+      expect(result.content, '用户输入了自定义回复：关于《百年孤独》的随笔');
     });
 
     test('用户取消选择时返回清晰的取消结果', () async {
@@ -255,28 +446,6 @@ void main() {
       expect(result.content, contains('用户交互处理异常'));
     });
 
-    test('用户同时提供选项选择与自定义补充回复时完整保留两者', () async {
-      final tool = AskUserTool(
-        promptHandler: (request) async {
-          return const AskUserResponse(
-            selectedOptions: ['读书随笔'],
-            customText: '关于《百年孤独》的随笔',
-          );
-        },
-      );
-
-      final result = await tool.execute(_toolCall({
-        'question': '请选择类型',
-        'options': ['生活随笔', '读书随笔'],
-      }));
-
-      expect(result.isError, isFalse);
-      expect(
-        result.content,
-        '用户选择了：读书随笔，并补充回复：关于《百年孤独》的随笔',
-      );
-    });
-
     test('用户既未选择选项也未输入自定义内容且未取消时返回明确提示', () async {
       final tool = AskUserTool(
         promptHandler: (request) async {
@@ -291,170 +460,6 @@ void main() {
 
       expect(result.isError, isFalse);
       expect(result.content, '用户未做出有效选择。');
-    });
-
-    test('parametersSchema 包含 minItems 和 maxItems 约束', () {
-      final tool = AskUserTool();
-      final optionsSchema = (tool.parametersSchema['properties']
-          as Map<String, dynamic>)['options'] as Map<String, dynamic>;
-
-      expect(optionsSchema['minItems'], 2);
-      expect(optionsSchema['maxItems'], 4);
-    });
-
-    test('AskUserRequest 与 AskUserResponse 值相等性与 toString 正常工作', () {
-      final req1 = AskUserRequest(
-        toolCallId: 'call-1',
-        question: 'Q',
-        options: List<String>.from(['A', 'B']),
-        header: 'H',
-        multiSelect: true,
-      );
-      final req2 = AskUserRequest(
-        toolCallId: 'call-1',
-        question: 'Q',
-        options: List<String>.from(['A', 'B']),
-        header: 'H',
-        multiSelect: true,
-      );
-
-      expect(identical(req1, req2), isFalse);
-      expect(req1, equals(req2));
-      expect(req1.hashCode, equals(req2.hashCode));
-      expect(req1.toString(), contains('toolCallId: call-1'));
-
-      // 差异字段的负向断言
-      expect(
-        req1 ==
-            AskUserRequest(
-              toolCallId: 'call-diff',
-              question: 'Q',
-              options: List<String>.from(['A', 'B']),
-              header: 'H',
-              multiSelect: true,
-            ),
-        isFalse,
-      );
-      expect(
-        req1 ==
-            AskUserRequest(
-              toolCallId: 'call-1',
-              question: 'Q-diff',
-              options: List<String>.from(['A', 'B']),
-              header: 'H',
-              multiSelect: true,
-            ),
-        isFalse,
-      );
-      expect(
-        req1 ==
-            AskUserRequest(
-              toolCallId: 'call-1',
-              question: 'Q',
-              options: List<String>.from(['A', 'C']),
-              header: 'H',
-              multiSelect: true,
-            ),
-        isFalse,
-      );
-      expect(
-        req1 ==
-            AskUserRequest(
-              toolCallId: 'call-1',
-              question: 'Q',
-              options: List<String>.from(['A', 'B']),
-              header: 'H-diff',
-              multiSelect: true,
-            ),
-        isFalse,
-      );
-      expect(
-        req1 ==
-            AskUserRequest(
-              toolCallId: 'call-1',
-              question: 'Q',
-              options: List<String>.from(['A', 'B']),
-              header: 'H',
-              multiSelect: false,
-            ),
-        isFalse,
-      );
-
-      expect(
-        req1 ==
-            AskUserRequest(
-              toolCallId: 'call-1',
-              question: 'Q',
-              options: List<String>.from(['A', 'B']),
-              header: null,
-              multiSelect: true,
-            ),
-        isFalse,
-      );
-
-      final resp1 = AskUserResponse(
-        selectedOptions: List<String>.from(['A']),
-        customText: 'C',
-        isCancelled: false,
-      );
-      final resp2 = AskUserResponse(
-        selectedOptions: List<String>.from(['A']),
-        customText: 'C',
-        isCancelled: false,
-      );
-
-      expect(identical(resp1, resp2), isFalse);
-      expect(resp1, equals(resp2));
-      expect(resp1.hashCode, equals(resp2.hashCode));
-      expect(resp1.toString(), contains('selectedOptions: [A]'));
-
-      // 差异字段负向断言
-      expect(
-        resp1 ==
-            AskUserResponse(
-              selectedOptions: List<String>.from(['B']),
-              customText: 'C',
-              isCancelled: false,
-            ),
-        isFalse,
-      );
-      expect(
-        resp1 ==
-            AskUserResponse(
-              selectedOptions: List<String>.from(['A']),
-              customText: 'C-diff',
-              isCancelled: false,
-            ),
-        isFalse,
-      );
-      expect(
-        resp1 ==
-            AskUserResponse(
-              selectedOptions: List<String>.from(['A']),
-              customText: null,
-              isCancelled: false,
-            ),
-        isFalse,
-      );
-      expect(
-        resp1 ==
-            AskUserResponse(
-              selectedOptions: List<String>.from(['A']),
-              customText: 'C',
-              isCancelled: true,
-            ),
-        isFalse,
-      );
-
-      // AskUserResponse.cancelled() 与独立构造实例相等性
-      final cancelledResp1 = AskUserResponse.cancelled();
-      final cancelledResp2 = AskUserResponse(
-        selectedOptions: List<String>.from([]),
-        customText: null,
-        isCancelled: true,
-      );
-      expect(cancelledResp1, equals(cancelledResp2));
-      expect(cancelledResp1.hashCode, equals(cancelledResp2.hashCode));
     });
 
     test('handler 同步抛错时能够被捕获并清理 _activeCompleter', () async {
@@ -481,7 +486,9 @@ void main() {
     test('外部 handler 返回非法选项时返回错误并拦截', () async {
       final tool = AskUserTool();
       tool.setPromptHandler((request) async => AskUserResponse(
-            selectedOptions: ['C'],
+            answers: const [
+              AskUserAnswer(selectedOptions: ['C'])
+            ],
           ));
 
       final call = ToolCall(
@@ -501,7 +508,9 @@ void main() {
     test('外部 handler 返回重复选项时返回错误并拦截', () async {
       final tool = AskUserTool();
       tool.setPromptHandler((request) async => AskUserResponse(
-            selectedOptions: ['A', 'A'],
+            answers: const [
+              AskUserAnswer(selectedOptions: ['A', 'A'])
+            ],
           ));
 
       final call = ToolCall(
@@ -522,7 +531,9 @@ void main() {
     test('单选模式下外部 handler 返回多个选项时返回错误并拦截', () async {
       final tool = AskUserTool();
       tool.setPromptHandler((request) async => AskUserResponse(
-            selectedOptions: ['A', 'B'],
+            answers: const [
+              AskUserAnswer(selectedOptions: ['A', 'B'])
+            ],
           ));
 
       final call = ToolCall(
@@ -538,6 +549,136 @@ void main() {
       final result = await tool.execute(call);
       expect(result.isError, isTrue);
       expect(result.content, contains('单选模式下不能选择多个选项'));
+    });
+
+    test('多问题中超量回答时返回错误', () async {
+      final tool = AskUserTool();
+      tool.setPromptHandler((request) async => const AskUserResponse(
+            answers: [
+              AskUserAnswer(selectedOptions: ['A']),
+              AskUserAnswer(selectedOptions: ['C']),
+              AskUserAnswer(selectedOptions: ['A']),
+            ],
+          ));
+
+      final result = await tool.execute(_toolCall({
+        'questions': [
+          _question('第一问？', options: ['A', 'B']),
+          _question('第二问？', options: ['C', 'D']),
+        ],
+      }));
+
+      expect(result.isError, isTrue);
+      expect(result.content, contains('超过了问题数量'));
+    });
+  });
+
+  group('AskUserTool - 模型值语义', () {
+    test('AskUserOption 解析字符串与对象两种形态', () {
+      expect(
+        AskUserOption.tryParse(' 纸墨 '),
+        const AskUserOption(label: '纸墨'),
+      );
+      expect(
+        AskUserOption.tryParse({'label': 'OAuth', 'description': '标准'}),
+        const AskUserOption(label: 'OAuth', description: '标准'),
+      );
+      expect(AskUserOption.tryParse('   '), isNull);
+      expect(AskUserOption.tryParse({'description': '无标题'}), isNull);
+      expect(AskUserOption.tryParse(42), isNull);
+    });
+
+    test('AskUserRequest 单问题便捷访问与相等性', () {
+      final req1 = AskUserRequest.single(
+        toolCallId: 'call-1',
+        question: 'Q',
+        header: 'H',
+        options: ['A', 'B'],
+        multiSelect: true,
+      );
+      final req2 = AskUserRequest.single(
+        toolCallId: 'call-1',
+        question: 'Q',
+        header: 'H',
+        options: ['A', 'B'],
+        multiSelect: true,
+      );
+
+      expect(identical(req1, req2), isFalse);
+      expect(req1, equals(req2));
+      expect(req1.hashCode, equals(req2.hashCode));
+      expect(req1.question, 'Q');
+      expect(req1.options, ['A', 'B']);
+      expect(req1.multiSelect, isTrue);
+      expect(req1.toString(), contains('toolCallId: call-1'));
+
+      expect(
+        req1 ==
+            AskUserRequest.single(
+              toolCallId: 'call-diff',
+              question: 'Q',
+              options: ['A', 'B'],
+            ),
+        isFalse,
+      );
+      expect(
+        req1 ==
+            AskUserRequest(
+              toolCallId: 'call-1',
+              questions: const [
+                AskUserQuestion(
+                  question: 'Q-diff',
+                  options: [AskUserOption(label: 'A')],
+                ),
+              ],
+            ),
+        isFalse,
+      );
+    });
+
+    test('AskUserResponse 兼容工厂与相等性', () {
+      final resp1 = AskUserResponse.selected(['A']);
+      final resp2 = AskUserResponse(
+        answers: const [
+          AskUserAnswer(selectedOptions: ['A'])
+        ],
+      );
+      expect(resp1, equals(resp2));
+      expect(resp1.hashCode, equals(resp2.hashCode));
+      expect(resp1.selectedOptions, ['A']);
+      expect(resp1.customText, isNull);
+      expect(resp1.toString(), contains('selectedOptions: [A]'));
+
+      expect(
+        AskUserResponse.custom('C'),
+        equals(
+          const AskUserResponse(
+            answers: [AskUserAnswer(customText: 'C')],
+          ),
+        ),
+      );
+
+      final cancelledResp1 = AskUserResponse.cancelled();
+      const cancelledResp2 = AskUserResponse(isCancelled: true);
+      expect(cancelledResp1, equals(cancelledResp2));
+      expect(cancelledResp1.hashCode, equals(cancelledResp2.hashCode));
+
+      expect(
+        resp1 == const AskUserResponse(answers: [AskUserAnswer()]),
+        isFalse,
+      );
+    });
+
+    test('AskUserAnswer 有效自定义文本识别', () {
+      expect(
+        const AskUserAnswer(customText: '  hi  ').effectiveCustomText,
+        'hi',
+      );
+      expect(
+        const AskUserAnswer(customText: '   ').effectiveCustomText,
+        isNull,
+      );
+      expect(const AskUserAnswer().effectiveCustomText, isNull);
     });
   });
 }
