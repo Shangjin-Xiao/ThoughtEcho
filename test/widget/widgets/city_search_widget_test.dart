@@ -10,6 +10,7 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/widgets/app_loading_view.dart';
 import 'package:thoughtecho/widgets/city_search_widget.dart';
 
 class MockLocationService extends Mock implements LocationService {
@@ -222,5 +223,45 @@ void main() {
     expect(find.text('清空历史'), findsOneWidget);
     expect(find.text('杭州'), findsOneWidget);
     expect(find.text('深圳'), findsOneWidget);
+  });
+
+  testWidgets('renders accurate subtitle description', (tester) async {
+    await tester.pumpWidget(
+      _buildTestApp(
+        controller: controller,
+        locationService: mockLocationService,
+        weatherService: mockWeatherService,
+        settingsService: mockSettingsService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('设置城市后可以提供相应位置天气'), findsOneWidget);
+  });
+
+  testWidgets(
+      'displays single loading view without LinearProgressIndicator when searching',
+      (tester) async {
+    when(mockLocationService.isSearching).thenReturn(true);
+    when(mockLocationService.searchResults).thenReturn(<CityInfo>[]);
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        controller: controller,
+        locationService: mockLocationService,
+        weatherService: mockWeatherService,
+        settingsService: mockSettingsService,
+      ),
+    );
+    await tester.pump();
+
+    // 输入搜索文本激活搜索状态
+    await tester.enterText(find.byType(TextField), '上海');
+    await tester.pump();
+
+    // 验证仅显示单个居中加载动画，无 LinearProgressIndicator 重复加载条
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.byType(AppLoadingView), findsOneWidget);
+    expect(find.text('搜索城市中...'), findsOneWidget);
   });
 }

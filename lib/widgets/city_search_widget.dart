@@ -39,6 +39,7 @@ class CitySearchWidget extends StatefulWidget {
 class _CitySearchWidgetState extends State<CitySearchWidget> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearchActive = false;
+  bool _isDebouncing = false;
   Timer? _debounce;
   CityInfo? _selectingCity;
   bool _isLocating = false;
@@ -49,6 +50,12 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     if (widget.initialCity != null && widget.initialCity!.isNotEmpty) {
       _searchController.text = widget.initialCity!;
       _isSearchActive = true;
+      _isDebouncing = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _performSearch(widget.initialCity!);
+        }
+      });
     }
   }
 
@@ -73,25 +80,55 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     locationService.currentLocaleCode = settingsService.localeCode;
 
     _debounce?.cancel();
-    final hasText = value.trim().isNotEmpty;
-    setState(() {
-      _isSearchActive = hasText;
-    });
+    final trimmed = value.trim();
+    final hasText = trimmed.isNotEmpty;
 
     if (!hasText) {
+      setState(() {
+        _isSearchActive = false;
+        _isDebouncing = false;
+      });
       locationService.clearSearchResults();
     } else {
+      setState(() {
+        _isSearchActive = true;
+        _isDebouncing = true;
+      });
       _debounce = Timer(AppConstants.searchDebounceDelay, () {
         if (mounted) {
-          final currentQuery = _searchController.text.trim();
-          if (currentQuery.isNotEmpty) {
-            locationService.searchCity(currentQuery);
-          } else {
-            locationService.clearSearchResults();
-          }
+          _performSearch(_searchController.text.trim());
         }
       });
     }
+  }
+
+  void _performSearch(String query) {
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
+    if (query.isEmpty) {
+      setState(() {
+        _isDebouncing = false;
+        _isSearchActive = false;
+      });
+      locationService.clearSearchResults();
+      return;
+    }
+
+    locationService.searchCity(query).then((_) {
+      if (mounted) {
+        setState(() {
+          _isDebouncing = false;
+        });
+      }
+    }).catchError((_) {
+      if (mounted) {
+        setState(() {
+          _isDebouncing = false;
+        });
+      }
+    });
   }
 
   Future<void> _useCurrentLocation() async {
@@ -252,15 +289,6 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               ),
             ),
 
-            // 搜索进度指示器
-            if (locationService.isSearching || isBusy)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: LinearProgressIndicator(minHeight: 2),
-              )
-            else
-              const SizedBox(height: 2),
-
             const SizedBox(height: 8),
 
             // 核心内容区（最近选择历史 / 搜索结果）
@@ -323,7 +351,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -519,10 +547,12 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
             ? IconButton(
                 icon: const Icon(Icons.clear_rounded),
                 tooltip: l10n.clear,
-                onPressed: () {
-                  _searchController.clear();
-                  _onSearchChanged('');
-                },
+                onPressed: isBusy
+                    ? null
+                    : () {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      },
               )
             : null,
         filled: true,
@@ -548,6 +578,17 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
         ),
       ),
       onChanged: _onSearchChanged,
+      onSubmitted: (value) {
+        final trimmed = value.trim();
+        if (trimmed.isNotEmpty) {
+          _debounce?.cancel();
+          setState(() {
+            _isSearchActive = true;
+            _isDebouncing = false;
+          });
+          _performSearch(trimmed);
+        }
+      },
     );
   }
 
@@ -569,15 +610,18 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
       );
     }
 
+    final isSearching = locationService.isSearching || _isDebouncing;
+
+    if (isSearching) {
+      return AppLoadingView(
+        message: l10n.searchingCity,
+        size: 80,
+      );
+    }
+
     final results = locationService.searchResults;
 
     if (results.isEmpty) {
-      if (locationService.isSearching) {
-        return AppLoadingView(
-          message: l10n.searchingCity,
-          size: 60,
-        );
-      }
       return AppEmptyView(
         text: l10n.noCityFound,
         message: l10n.tryDifferentKeywords,

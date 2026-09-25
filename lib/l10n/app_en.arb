@@ -2743,7 +2743,7 @@
   "locateCurrentPosition": "Locate Current Position",
   "locating": "Locating...",
   "searchCityHint": "Search any city, district, or region...",
-  "citySearchSubtitle": "Notes and daily quotes will match local weather once set",
+  "citySearchSubtitle": "Set a city to get weather for that location",
   "citySelected": "City selected: {city}",
   "@citySelected": {
     "placeholders": {

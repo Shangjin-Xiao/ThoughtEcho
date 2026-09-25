@@ -2749,7 +2749,7 @@
   "locateCurrentPosition": "定位当前位置",
   "locating": "正在定位...",
   "searchCityHint": "搜索全球城市、区县或英文名...",
-  "citySearchSubtitle": "设置城市后，便签和每日名言将匹配当地天气",
+  "citySearchSubtitle": "设置城市后可以提供相应位置天气",
   "citySelected": "已选择城市：{city}",
   "@citySelected": {
     "placeholders": {

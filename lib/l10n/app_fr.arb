@@ -2557,7 +2557,7 @@
   "locateCurrentPosition": "Localiser la position actuelle",
   "locating": "Localisation en cours...",
   "searchCityHint": "Rechercher une ville ou une région...",
-  "citySearchSubtitle": "Les notes et citations s'adapteront à la météo locale",
+  "citySearchSubtitle": "Définissez une ville pour obtenir la météo de ce lieu",
   "citySelected": "Ville sélectionnée : {city}",
   "@citySelected": {
     "placeholders": {

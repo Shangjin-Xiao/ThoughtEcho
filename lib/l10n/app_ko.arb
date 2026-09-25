@@ -2564,7 +2564,7 @@
   "locateCurrentPosition": "현재 위치 가져오기",
   "locating": "위치 확인 중...",
   "searchCityHint": "도시 또는 지역 이름으로 검색...",
-  "citySearchSubtitle": "도시를 설정하면 노트와 명언에 날씨가 반영됩니다",
+  "citySearchSubtitle": "도시를 설정하면 해당 위치의 날씨가 제공됩니다",
   "citySelected": "도시 선택됨: {city}",
   "@citySelected": {
     "placeholders": {

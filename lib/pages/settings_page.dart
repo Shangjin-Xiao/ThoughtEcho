@@ -240,7 +240,6 @@ class SettingsPageState extends State<SettingsPage> {
             ),
             child: CitySearchWidget(
               weatherController: weatherController,
-              initialCity: locationService.city,
               onSuccess: () {
                 // 刷新设置页面的状态
                 if (mounted) {

@@ -2564,7 +2564,7 @@
   "locateCurrentPosition": "現在地を取得",
   "locating": "測位中...",
   "searchCityHint": "都市名、地域名で検索...",
-  "citySearchSubtitle": "都市を設定するとメモや日々の名言に天気が反映されます",
+  "citySearchSubtitle": "都市を設定すると、その位置の天気が提供されます",
   "citySelected": "都市を選択しました: {city}",
   "@citySelected": {
     "placeholders": {
