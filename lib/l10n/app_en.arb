@@ -307,8 +307,8 @@
     }
   },
   "cannotGetLocationPermission": "Cannot get location permission",
-  "logDebugInfo": "Log Debug Info",
-  "logDebugInfoDesc": "Show log database status and path info",
+  "logDebugInfo": "Diagnostic Info",
+  "logDebugInfoDesc": "View app status and logging statistics",
   "addNoteAutoFocusExperiment": "[Experiment] AddNote auto focus",
   "addNoteAutoFocusExperimentDesc": "Automatically show the keyboard after the add note dialog settles (on by default)",
   "databaseStatus": "Database Status:",
