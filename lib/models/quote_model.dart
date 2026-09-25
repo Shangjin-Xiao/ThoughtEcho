@@ -89,10 +89,15 @@ class Quote {
     }
   }
 
+  static final RegExp _validColorHexRegex = RegExp(r'^#[0-9A-Fa-f]{6}$');
+  static final RegExp _leadingDashRegex = RegExp(r'^[-—–—―]+\s*');
+  static final RegExp _enclosingBracketsQuotesRegex =
+      RegExp(r'''^[「“"'《【\[]+|[」”"'》】\]]+$''');
+  static final RegExp _authorWorkDelimiterRegex = RegExp(r'\s*[-—–：:]\s*');
+
   static bool isValidColorHex(String? colorHex) {
     if (colorHex == null) return true;
-    final regex = RegExp(r'^#[0-9A-Fa-f]{6}$');
-    return regex.hasMatch(colorHex);
+    return _validColorHexRegex.hasMatch(colorHex);
   }
 
   /// 新建笔记时的内容长度上限。
@@ -625,7 +630,7 @@ class Quote {
   static String stripAuthorPrefix(String text) {
     var trimmed = text.trim();
     // 剥离全角、半角及长短破折号
-    trimmed = trimmed.replaceFirst(RegExp(r'^[-—–—―]+\s*'), '').trim();
+    trimmed = trimmed.replaceFirst(_leadingDashRegex, '').trim();
     final lower = trimmed.toLowerCase();
     if (lower.startsWith('作者：') || lower.startsWith('作者:')) {
       trimmed = trimmed.substring(3).trim();
@@ -635,10 +640,9 @@ class Quote {
       trimmed = trimmed.substring(3).trim();
     }
     // 剥离可能残存的破折号
-    trimmed = trimmed.replaceFirst(RegExp(r'^[-—–—―]+\s*'), '').trim();
+    trimmed = trimmed.replaceFirst(_leadingDashRegex, '').trim();
     // 剥离两端可能包裹的成对括号引号
-    trimmed =
-        trimmed.replaceAll(RegExp(r'''^[「“"'《【\[]+|[」”"'》】\]]+$'''), '').trim();
+    trimmed = trimmed.replaceAll(_enclosingBracketsQuotesRegex, '').trim();
     return trimmed;
   }
 
@@ -663,7 +667,7 @@ class Quote {
     }
 
     // 如果剥离署名前缀后仍包含作者出处分隔符（如 "鲁迅 - 狂人日记"），不属于单一作品/类别名
-    if (stripped.contains(RegExp(r'\s*[-—–：:]\s*'))) {
+    if (stripped.contains(_authorWorkDelimiterRegex)) {
       return false;
     }
 
@@ -797,7 +801,7 @@ class Quote {
 
       // 2.2 剥离可能存在的「作者：/ author: / ——」前缀后，拆分「作者 - 出处」或「作者：出处」格式
       final normalizedSource = stripAuthorPrefix(rawSource);
-      final parts = normalizedSource.split(RegExp(r'\s*[-—–：:]\s*'));
+      final parts = normalizedSource.split(_authorWorkDelimiterRegex);
       if (parts.length >= 2) {
         final authorCandidate = parts.first.trim();
         if (isSelfAuthor(
