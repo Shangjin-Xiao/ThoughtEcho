@@ -531,62 +531,6 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 本地AI功能 - 仅在开发者模式下显示
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return ListTile(
-                      title: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              l10n.localAiFeatures,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary.withValues(
-                                alpha: 0.2,
-                              ),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: theme.colorScheme.tertiary.withValues(
-                                  alpha: 0.5,
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              'Preview',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(color: theme.colorScheme.tertiary),
-                            ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Text(l10n.localAiFeaturesDesc),
-                      leading: const Icon(Icons.device_hub),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LocalAISettingsPage(),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
                 // 智能推送
                 Builder(
                   builder: (context) {
@@ -1131,6 +1075,56 @@ class SettingsPageState extends State<SettingsPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const LogsSettingsPage(),
+                    ),
+                  );
+                },
+              ),
+
+              // 本地 AI 功能入口（实验室统一收口开发者模式可见性）
+              ListTile(
+                title: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        l10n.localAiFeatures,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.tertiary.withValues(
+                          alpha: 0.2,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: theme.colorScheme.tertiary.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.localAiFeaturesPreview,
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(color: theme.colorScheme.tertiary),
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: Text(l10n.localAiFeaturesDesc),
+                leading: const Icon(Icons.device_hub),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LocalAISettingsPage(),
                     ),
                   );
                 },
