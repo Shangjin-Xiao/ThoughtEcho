@@ -91,3 +91,11 @@
 `test/unit/controllers/search_controller_test.dart` 验证，分页与筛选由 NoteList/
 Database owner-boundary 测试验证；未来新增默认值测试必须保护独立的配置、迁移、
 平台或用户可见契约，而不是复制实现字面量。
+
+## 2026-09-26 - [清理媒体服务存在性探针]
+**盲点:** 根目录的 `test/media_management_test.dart` 只断言三个类对象非空，
+以及两个静态成员是 `Function`，没有执行任何媒体文件、引用计数或清理行为。
+这类 assertion-free coverage probe 不能检测生产回归，却会让服务看起来已有测试覆盖。
+**对策:** 删除该文件。媒体引用、临时文件和清理行为继续由
+`test/unit/services/media_reference_service_test.dart`、媒体优化/修复测试和性能基准
+在真实服务边界验证；不为存在性探针新增替代测试。
