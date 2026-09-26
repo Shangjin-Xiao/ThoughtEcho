@@ -426,6 +426,30 @@ void main() {
       expect(prompt, contains('replaces_id'));
     });
 
+    test('系统提示词包含应用功能未知时查手册原文并认不知道的兜底', () {
+      final askTool = AskUserTool();
+      final service = AgentService(
+        settingsService: settingsService,
+        tools: [askTool],
+        memoryService: memory,
+      );
+
+      final prompt = service.buildSystemPrompt(memoryEnabled: false);
+      expect(
+        prompt,
+        contains(
+          'https://raw.githubusercontent.com/Shangjin-Xiao/ThoughtEcho/main/docs/USER_MANUAL.md',
+        ),
+      );
+      expect(prompt, contains('web_fetch'));
+      expect(prompt, contains('设置 > 关于 > 用户指南'));
+      expect(
+        prompt,
+        contains('https://note.shangjinyun.cn/user-guide.html'),
+      );
+      expect(prompt, contains('不要猜'));
+    });
+
     test('Agent 流程检测到存疑笔名画像时，通过 ask_user 向用户核实并调用 remember 完成闭环更新', () async {
       // 1. 初始化画像中的存疑待确认别名
       final pendingEntry = await memory.rememberProfile(
