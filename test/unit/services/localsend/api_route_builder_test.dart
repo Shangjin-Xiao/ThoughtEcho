@@ -5,35 +5,25 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 void main() {
   group('ApiRoute', () {
     group('v1 and v2 path getters', () {
-      test('correctly constructs v1 and v2 paths for all routes', () {
-        expect(ApiRoute.info.v1, '/api/localsend/v1/info');
-        expect(ApiRoute.info.v2, '/api/localsend/v2/info');
+      for (final route in ApiRoute.values) {
+        test('${route.name} uses the expected v1 and v2 paths', () {
+          final expectedV1 = switch (route) {
+            ApiRoute.prepareUpload => '/api/localsend/v1/send-request',
+            ApiRoute.upload => '/api/localsend/v1/send',
+            _ => '/api/localsend/v1/${route.name.replaceAllMapped(
+                RegExp(r'([A-Z])'),
+                (match) => '-${match.group(1)!.toLowerCase()}',
+              )}',
+          };
+          final expectedV2 = '/api/localsend/v2/${route.name.replaceAllMapped(
+            RegExp(r'([A-Z])'),
+            (match) => '-${match.group(1)!.toLowerCase()}',
+          )}';
 
-        expect(ApiRoute.register.v1, '/api/localsend/v1/register');
-        expect(ApiRoute.register.v2, '/api/localsend/v2/register');
-
-        // prepareUpload has legacy 'send-request'
-        expect(ApiRoute.prepareUpload.v1, '/api/localsend/v1/send-request');
-        expect(ApiRoute.prepareUpload.v2, '/api/localsend/v2/prepare-upload');
-
-        // upload has legacy 'send'
-        expect(ApiRoute.upload.v1, '/api/localsend/v1/send');
-        expect(ApiRoute.upload.v2, '/api/localsend/v2/upload');
-
-        expect(ApiRoute.cancel.v1, '/api/localsend/v1/cancel');
-        expect(ApiRoute.cancel.v2, '/api/localsend/v2/cancel');
-
-        expect(ApiRoute.show.v1, '/api/localsend/v1/show');
-        expect(ApiRoute.show.v2, '/api/localsend/v2/show');
-
-        expect(
-            ApiRoute.prepareDownload.v1, '/api/localsend/v1/prepare-download');
-        expect(
-            ApiRoute.prepareDownload.v2, '/api/localsend/v2/prepare-download');
-
-        expect(ApiRoute.download.v1, '/api/localsend/v1/download');
-        expect(ApiRoute.download.v2, '/api/localsend/v2/download');
-      });
+          expect(route.v1, expectedV1);
+          expect(route.v2, expectedV2);
+        });
+      }
     });
 
     group('target', () {
