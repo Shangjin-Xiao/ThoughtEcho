@@ -233,12 +233,8 @@ class SmartPushService extends ChangeNotifier {
     final rawData = _mmkv.getString(_todayPushedNoteIdsKey);
     if (rawData == null || !rawData.startsWith('$today|')) return {};
 
-    final ids = rawData
-        .substring(today.length + 1)
-        .split(',')
-        .map((id) => id.trim())
-        .where((id) => id.isNotEmpty)
-        .toSet();
+    final idsStr = rawData.substring(today.length + 1);
+    final ids = StringUtils.parseCommaSeparatedString(idsStr).toSet();
     return ids;
   }
 

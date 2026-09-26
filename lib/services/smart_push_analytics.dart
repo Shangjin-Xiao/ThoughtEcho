@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/smart_push_settings.dart';
+import '../utils/string_utils.dart';
 import '../utils/app_logger.dart';
 import 'mmkv_service.dart';
 
@@ -287,10 +288,7 @@ class SmartPushAnalytics extends ChangeNotifier {
       final jsonStr = _mmkv.getString(_appOpenTimesKey);
       if (jsonStr == null || jsonStr.isEmpty) return [];
 
-      final List<dynamic> list = List<dynamic>.from(
-        (jsonStr.split(',').where((s) => s.isNotEmpty)),
-      );
-      return list.cast<String>();
+      return StringUtils.parseCommaSeparatedString(jsonStr);
     } catch (e, stack) {
       AppLogger.e(
         '获取应用打开记录异常',

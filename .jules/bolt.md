@@ -233,7 +233,12 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 ## 2026-09-25 - 优化 TemporaryMediaService 批量清理临时文件性能
 
 **Learning:**
-在清理包含大量文件的临时目录（如 `temp_media`）时，对每个文件逐个调用 `await entity.delete()` 会在 Dart 事件循环和文件系统 Native API 间产生极高的异步 I/O 开销。使用整目录递归删除 `tempMediaDir.delete(recursive: true)` 配合 `tempMediaDir.create(recursive: true)` 重新建空的根目录，可以将全部文件删除合并为单次底层 OS unlink 目录树调用。同时保留个别删除作为 try-catch 降级方案，以提升强容错性。
+在清理包含大量文件的临时目录（如 `temp_media`）时，对每个文件逐个调用 `await entity.delete()` 会在 Dart 事件循环和文件系统 Native API 间产生额外的异步 I/O 开销。使用整目录递归删除 `tempMediaDir.delete(recursive: true)` 配合 `tempMediaDir.create(recursive: true)` 重新建空的根目录，可以减少 Dart 层逐文件调用；文件系统仍会在底层逐项移除目录内容。同时保留个别删除作为 try-catch 降级方案，以提升强容错性。
 
 **Action:**
 修改 `lib/services/temporary_media_service.dart` 中的 `cleanupAllTemporaryFiles()`，利用 `tempMediaDir.delete(recursive: true)` 与 `create()` 替代原逐文件循环删除，并补充了 `test/performance/temporary_media_service_benchmark_test.dart` 基准测试。清理 1000 个文件的耗时由 363 ms 降至 44 ms，提升约 8.25 倍（执行时间缩短 ~88%）。
+
+## 2026-10-25 - [Optimize comma-separated string parsing in frequent calls]
+
+**Learning:** Chaining `String.split(',')` with `.map()`, `.where()`, and `.toList()`/`.toSet()` creates multiple intermediate list, iterable, and string objects, putting significant pressure on the Garbage Collector when called frequently (e.g., when analyzing metrics or iterating pushed IDs).
+**Action:** Replace these chains with `StringUtils.parseCommaSeparatedString()`, which avoids intermediate lists and iterators while parsing, to reduce memory allocations in high-frequency string splitting scenarios like smart push logic.
