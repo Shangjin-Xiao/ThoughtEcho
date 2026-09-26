@@ -77,3 +77,7 @@
 ## 2026-09-22 - [补充 MotionPhotoInfo 纯函数数据模型的测试]
 **盲点:** `MotionPhotoInfo` 作为一个简单但核心的纯数据模型类，负责存储和推断动态照片中的视频位置与长度，但它本身缺乏基本的隔离单元测试。如果以后修改其基础结构或 getter 方法，可能导致基于其上构建的 `MotionPhotoUtils` 功能无法正确推断 `videoLength`。
 **对策:** 编写极简的独立单元测试（位于 `test/unit/utils/motion_photo_info_test.dart`）。在隔离环境下通过不同的初始化参数（普通情况，起始与结束相同，结束小于起始等边界条件）验证 `videoLength` 的 getter 计算逻辑，增加稳定性且避免增加整体集成测试的耗时。
+
+## 2026-09-26 - [清理 AddNoteDialog 伪性能测试]
+**盲点:** `test/performance/` 中曾有三份 AddNoteDialog 相关测试将 mock 数据长度、测试内自行执行的标签 `where` 过滤、通用 Chip/ExpansionTile 构建和基础 widget 存在性包装成性能或延迟加载验证。真正的计时用宿主机墙钟测量 `pumpAndSettle()` 或通用测试树，并设置 10/100/300/1500/2000ms 阈值；它们既没有采样生产 frame timing，也没有稳定的设备基准，导致冷编译和测试环境波动直接产生误报。多份文件还重复覆盖同一个弹窗打开和标签搜索场景。
+**对策:** 删除三份伪性能/重复测试。AddNoteDialog 的焦点时序、保存竞态、位置天气和 UI 行为继续由 `test/widget/` 的 owner-boundary 测试覆盖；未来性能测试必须测量真实生产路径并使用受控、可重复的基准指标，不能用墙钟阈值替代行为断言。

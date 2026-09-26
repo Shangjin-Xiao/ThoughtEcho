@@ -3,6 +3,10 @@
 本目录包含 unit、widget、integration、performance 以及少量历史根级测试。不要继续无理由增加
 根级测试文件。
 
+涉及测试审查、测试删除/合并、测试分层或判断测试是否有独立价值时，先使用 `/test-audit`
+skill。遵循其 authoring gate、junk patterns、retention bar 和 candidate evidence；没有明确
+的行为契约、回归风险或独立边界证明时，不新增替代测试，也不要仅因测试文件较大或运行较慢就删除。
+
 新增测试先选根再镜像 `lib/` 路径：用 `testWidgets` 渲染的进 `test/widget/`，纯逻辑的进
 `test/unit/`。例如 `lib/widgets/ai/tool_progress_panel.dart` 的 widget 测试放
 `test/widget/widgets/ai/tool_progress_panel_test.dart`。不要新建平行目录。
@@ -53,6 +57,10 @@ dart run build_runner build --delete-conflicting-outputs
   “works” 或实现细节。
 - Bug 修复先写能稳定失败的回归测试；覆盖正常路径、边界值、失败/取消和资源释放，而不是追求
   无意义覆盖率数字。
+- 性能测试必须测量真实的生产路径，并使用受控、可重复的基准指标；不要用测试代码自行实现
+  过滤逻辑、只检查 mock 数据结构，或用宿主机墙钟时间给 `pumpAndSettle()`、动画和 widget
+  构建设置毫秒阈值。行为契约应放在对应的 unit/widget owner 测试中，性能基准单独放在
+  `test/performance/`，不能用“性能测试”名称包装功能冒烟测试。
 - 平台插件和文件系统使用 `test_harness.dart` 的 `TestHarness.initialize` 及已有 mock/fake。测试不能读取真实用户目录、调用
   真实 AI/网络服务或依赖真实 API 密钥。
 - 数据库测试使用独立临时库并在 `tearDown` 清理；迁移测试分别验证新建和旧版本升级，避免用
