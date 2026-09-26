@@ -81,3 +81,13 @@
 ## 2026-09-26 - [清理 AddNoteDialog 伪性能测试]
 **盲点:** `test/performance/` 中曾有三份 AddNoteDialog 相关测试将 mock 数据长度、测试内自行执行的标签 `where` 过滤、通用 Chip/ExpansionTile 构建和基础 widget 存在性包装成性能或延迟加载验证。真正的计时用宿主机墙钟测量 `pumpAndSettle()` 或通用测试树，并设置 10/100/300/1500/2000ms 阈值；它们既没有采样生产 frame timing，也没有稳定的设备基准，导致冷编译和测试环境波动直接产生误报。多份文件还重复覆盖同一个弹窗打开和标签搜索场景。
 **对策:** 删除三份伪性能/重复测试。AddNoteDialog 的焦点时序、保存竞态、位置天气和 UI 行为继续由 `test/widget/` 的 owner-boundary 测试覆盖；未来性能测试必须测量真实生产路径并使用受控、可重复的基准指标，不能用墙钟阈值替代行为断言。
+
+## 2026-09-26 - [清理 AppConstants 字面量复制测试]
+**盲点:** `test/unit/constants/app_constants_test.dart` 的断言逐项复制
+`app_constants.dart` 中的数值，并额外检查常量之间的大小关系。它没有验证搜索、
+分页、响应式布局、SnackBar、缓存或超时的实际用户行为；常量改变时测试只会告诉
+维护者“字面量变了”，不能证明生产路径回归。
+**对策:** 删除该测试文件，不新增替代测试。搜索状态和超时由
+`test/unit/controllers/search_controller_test.dart` 验证，分页与筛选由 NoteList/
+Database owner-boundary 测试验证；未来新增默认值测试必须保护独立的配置、迁移、
+平台或用户可见契约，而不是复制实现字面量。
