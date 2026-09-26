@@ -5,7 +5,7 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'agent_probe.dart';
 
 Future<void> main(List<String> args) async {
-  print('🚀 启动 Thoughter AI 拟真场景评测脚本...');
+  stdout.writeln('🚀 启动 Thoughter AI 拟真场景评测脚本...');
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final base = AgentProbeConfig.load();
@@ -14,10 +14,10 @@ Future<void> main(List<String> args) async {
       : (Platform.environment['TE_PROBE_MODEL'] ?? 'gemma4:31b');
 
   final config = base.withModel(targetModel);
-  print('📌 目标模型: ${config.model} | Endpoint: ${config.baseUrl}');
+  stdout.writeln('📌 目标模型: ${config.model} | Endpoint: ${config.baseUrl}');
 
   if (!config.isAvailable) {
-    print('❌ 错误: 未配置 API 密钥');
+    stdout.writeln('❌ 错误: 未配置 API 密钥');
     exit(1);
   }
 
@@ -301,10 +301,11 @@ Future<void> main(List<String> args) async {
   // =========================================================================
   // 场景 1: 自然闲聊中的孤独归属辨识（未设昵称）
   // =========================================================================
-  print(
+  stdout.writeln(
       '\n═══════════════════════════════════════════════════════════════════');
-  print('▶ 开始评测 [场景 1]: 自然闲聊中的孤独归属辨识（未设昵称）');
-  print('═══════════════════════════════════════════════════════════════════');
+  stdout.writeln('▶ 开始评测 [场景 1]: 自然闲聊中的孤独归属辨识（未设昵称）');
+  stdout.writeln(
+      '═══════════════════════════════════════════════════════════════════');
 
   final probe1 = await AgentProbe.start(
     scenario: '01-自然闲聊孤独归属-$tag',
@@ -320,11 +321,11 @@ Future<void> main(List<String> args) async {
   reportTurn('自然口吻询问孤独', askSolitude);
 
   final reply1 = askSolitude.response?.content ?? '';
-  print('\n>>> [场景 1] AI 回复内容:\n$reply1\n');
+  stdout.writeln('\n>>> [场景 1] AI 回复内容:\n$reply1\n');
 
   final usedExplore1 =
       askSolitude.toolCalls.any((c) => c['tool'] == 'explore_notes');
-  print('🔍 工具调用 explore_notes: ${usedExplore1 ? "✅ 命中" : "❌ 未调用"}');
+  stdout.writeln('🔍 工具调用 explore_notes: ${usedExplore1 ? "✅ 命中" : "❌ 未调用"}');
 
   final mentionsTurkle = reply1.contains('雪莉·特克尔') || reply1.contains('特克尔');
   final mentionsWork = reply1.contains('群体性孤独');
@@ -334,20 +335,21 @@ Future<void> main(List<String> args) async {
       reply1.contains('不是你自己写') ||
       reply1.contains('书中');
 
-  print('💡 识别出作者（雪莉·特克尔）: ${mentionsTurkle ? "✅" : "❌"}');
-  print('💡 识别出作品名（群体性孤独）: ${mentionsWork ? "✅" : "❌"}');
-  print('💡 主动澄清这是摘录/他人观点而非用户自己写的: ${clarifiesExcerpt ? "✅" : "❌"}');
+  stdout.writeln('💡 识别出作者（雪莉·特克尔）: ${mentionsTurkle ? "✅" : "❌"}');
+  stdout.writeln('💡 识别出作品名（群体性孤独）: ${mentionsWork ? "✅" : "❌"}');
+  stdout.writeln('💡 主动澄清这是摘录/他人观点而非用户自己写的: ${clarifiesExcerpt ? "✅" : "❌"}');
 
   final transcript1 = await probe1.finish();
-  print('📁 场景 1 报告已生成: ${transcript1.path}');
+  stdout.writeln('📁 场景 1 报告已生成: ${transcript1.path}');
 
   // =========================================================================
   // 场景 2: 未设昵称时对「自签名原创」阿澈的归属辨析
   // =========================================================================
-  print(
+  stdout.writeln(
       '\n═══════════════════════════════════════════════════════════════════');
-  print('▶ 开始评测 [场景 2]: 未设昵称时对「自签名原创」阿澈的归属辨析');
-  print('═══════════════════════════════════════════════════════════════════');
+  stdout.writeln('▶ 开始评测 [场景 2]: 未设昵称时对「自签名原创」阿澈的归属辨析');
+  stdout.writeln(
+      '═══════════════════════════════════════════════════════════════════');
 
   final probe2 = await AgentProbe.start(
     scenario: '02-自签名阿澈辨析-$tag',
@@ -363,7 +365,7 @@ Future<void> main(List<String> args) async {
   reportTurn('询问阿澈署名笔记', askChe);
 
   final reply2 = askChe.response?.content ?? '';
-  print('\n>>> [场景 2] AI 回复内容:\n$reply2\n');
+  stdout.writeln('\n>>> [场景 2] AI 回复内容:\n$reply2\n');
 
   final treatsAsOriginal = reply2.contains('你自己') ||
       reply2.contains('你的笔名') ||
@@ -372,18 +374,19 @@ Future<void> main(List<String> args) async {
       reply2.contains('夜跑') ||
       reply2.contains('海创园');
 
-  print('💡 识别为用户原创/生活随笔/笔名: ${treatsAsOriginal ? "✅" : "❌"}');
+  stdout.writeln('💡 识别为用户原创/生活随笔/笔名: ${treatsAsOriginal ? "✅" : "❌"}');
 
   final transcript2 = await probe2.finish();
-  print('📁 场景 2 报告已生成: ${transcript2.path}');
+  stdout.writeln('📁 场景 2 报告已生成: ${transcript2.path}');
 
   // =========================================================================
   // 场景 3: 个人周总结（严禁将名家名句算在用户头上）
   // =========================================================================
-  print(
+  stdout.writeln(
       '\n═══════════════════════════════════════════════════════════════════');
-  print('▶ 开始评测 [场景 3]: 个人周总结（过滤名家摘录）');
-  print('═══════════════════════════════════════════════════════════════════');
+  stdout.writeln('▶ 开始评测 [场景 3]: 个人周总结（过滤名家摘录）');
+  stdout.writeln(
+      '═══════════════════════════════════════════════════════════════════');
 
   final probe3 = await AgentProbe.start(
     scenario: '03-个人周总结过滤摘录-$tag',
@@ -399,7 +402,7 @@ Future<void> main(List<String> args) async {
   reportTurn('生成个人周总结', askSummary);
 
   final reply3 = askSummary.response?.content ?? '';
-  print('\n>>> [场景 3] AI 回复内容:\n$reply3\n');
+  stdout.writeln('\n>>> [场景 3] AI 回复内容:\n$reply3\n');
 
   final includesUserLife = reply3.contains('心流') ||
       reply3.contains('Local-First') ||
@@ -411,19 +414,21 @@ Future<void> main(List<String> args) async {
       !reply3.contains('你的名言“保持饥饿”') &&
       !reply3.contains('你在《月亮与六便士》中提到');
 
-  print('💡 包含用户真实生活/技术内容: ${includesUserLife ? "✅" : "❌"}');
-  print('💡 正确排除名家名言侵入个人经历: ${excludesFamousQuotesAsMine ? "✅" : "❌"}');
+  stdout.writeln('💡 包含用户真实生活/技术内容: ${includesUserLife ? "✅" : "❌"}');
+  stdout
+      .writeln('💡 正确排除名家名言侵入个人经历: ${excludesFamousQuotesAsMine ? "✅" : "❌"}');
 
   final transcript3 = await probe3.finish();
-  print('📁 场景 3 报告已生成: ${transcript3.path}');
+  stdout.writeln('📁 场景 3 报告已生成: ${transcript3.path}');
 
   // =========================================================================
   // 场景 4: 自然口语偏好纠正与长期记忆写入
   // =========================================================================
-  print(
+  stdout.writeln(
       '\n═══════════════════════════════════════════════════════════════════');
-  print('▶ 开始评测 [场景 4]: 自然口语偏好纠正与长期记忆写入');
-  print('═══════════════════════════════════════════════════════════════════');
+  stdout.writeln('▶ 开始评测 [场景 4]: 自然口语偏好纠正与长期记忆写入');
+  stdout.writeln(
+      '═══════════════════════════════════════════════════════════════════');
 
   final probe4 = await AgentProbe.start(
     scenario: '04-口语偏好纠正记忆-$tag',
@@ -439,25 +444,26 @@ Future<void> main(List<String> args) async {
   reportTurn('提出偏好纠正', askCorrection);
 
   final reply4 = askCorrection.response?.content ?? '';
-  print('\n>>> [场景 4] AI 回复内容:\n$reply4\n');
+  stdout.writeln('\n>>> [场景 4] AI 回复内容:\n$reply4\n');
 
   await reportMemory(probe4, '纠正后的记忆库状态');
 
   final profile4 = await probe4.memory.activeProfile();
   final nicknameUpdated = probe4.settings.userNickname == '阿澈' ||
       profile4.any((p) => p.directive.contains('阿澈'));
-  print('💡 称呼成功更新为「阿澈」: ${nicknameUpdated ? "✅" : "❌"}');
+  stdout.writeln('💡 称呼成功更新为「阿澈」: ${nicknameUpdated ? "✅" : "❌"}');
 
   final transcript4 = await probe4.finish();
-  print('📁 场景 4 报告已生成: ${transcript4.path}');
+  stdout.writeln('📁 场景 4 报告已生成: ${transcript4.path}');
 
   // =========================================================================
   // 场景 5: 偏好翻转与原位覆盖（Supersede）
   // =========================================================================
-  print(
+  stdout.writeln(
       '\n═══════════════════════════════════════════════════════════════════');
-  print('▶ 开始评测 [场景 5]: 偏好翻转与原位覆盖（Supersede）');
-  print('═══════════════════════════════════════════════════════════════════');
+  stdout.writeln('▶ 开始评测 [场景 5]: 偏好翻转与原位覆盖（Supersede）');
+  stdout.writeln(
+      '═══════════════════════════════════════════════════════════════════');
 
   final probe5 = await AgentProbe.start(
     scenario: '05-偏好翻转原位覆盖-$tag',
@@ -476,14 +482,16 @@ Future<void> main(List<String> args) async {
   final profiles5 = await probe5.memory.activeProfile();
   final activeCoffeeProfiles =
       profiles5.where((p) => p.directive.contains('咖啡')).toList();
-  print('💡 当前活跃的咖啡相关画像数: ${activeCoffeeProfiles.length} (期望 0 或 1 条戒咖啡声明)');
+  stdout.writeln(
+      '💡 当前活跃的咖啡相关画像数: ${activeCoffeeProfiles.length} (期望 0 或 1 条戒咖啡声明)');
 
   final transcript5 = await probe5.finish();
-  print('📁 场景 5 报告已生成: ${transcript5.path}');
+  stdout.writeln('📁 场景 5 报告已生成: ${transcript5.path}');
 
-  print(
+  stdout.writeln(
       '\n═══════════════════════════════════════════════════════════════════');
-  print('🎉 全部拟真评测场景执行完毕！');
-  print('═══════════════════════════════════════════════════════════════════');
+  stdout.writeln('🎉 全部拟真评测场景执行完毕！');
+  stdout.writeln(
+      '═══════════════════════════════════════════════════════════════════');
   exit(0);
 }

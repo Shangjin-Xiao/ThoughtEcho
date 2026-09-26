@@ -1,4 +1,6 @@
 /// Analyzes note list performance timeline summaries and prints a formatted report asynchronously.
+library;
+
 import 'dart:convert';
 import 'dart:io';
 
