@@ -1197,16 +1197,22 @@ class WebDAVSyncService extends ChangeNotifier {
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
         } else {
-          final valuePlaceholders =
-              List.filled(tags.length, '(?, ?)').join(', ');
-          final args = <Object?>[];
-          for (final tag in tags) {
-            args.addAll([clonedId, tag['tag_id']]);
+          const chunkSize = 400;
+          for (var i = 0; i < tags.length; i += chunkSize) {
+            final end =
+                (i + chunkSize < tags.length) ? i + chunkSize : tags.length;
+            final chunk = tags.sublist(i, end);
+            final valuePlaceholders =
+                List.filled(chunk.length, '(?, ?)').join(', ');
+            final args = <Object?>[];
+            for (final tag in chunk) {
+              args.addAll([clonedId, tag['tag_id']]);
+            }
+            batch.rawInsert(
+              'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
+              args,
+            );
           }
-          batch.rawInsert(
-            'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
-            args,
-          );
         }
       }
 
