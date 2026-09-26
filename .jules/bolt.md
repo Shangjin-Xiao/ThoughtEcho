@@ -237,3 +237,8 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:**
 修改 `lib/services/webdav_sync_service.dart` 中的 `_cloneConflictQuote` 方法，将 `tags` 列表循环中的 `batch.insert` 改为判断：单条标签使用带 `conflictAlgorithm: ConflictAlgorithm.ignore` 的 `batch.insert`，多条标签按每批 400 条构造多值 `batch.rawInsert`，在减少批处理命令数量的同时避免超过 SQLite 参数上限。
+
+## 2026-10-25 - [Optimize comma-separated string parsing in frequent calls]
+
+**Learning:** Chaining `String.split(',')` with `.map()`, `.where()`, and `.toList()`/`.toSet()` creates multiple intermediate list, iterable, and string objects, putting significant pressure on the Garbage Collector when called frequently (e.g., when analyzing metrics or iterating pushed IDs).
+**Action:** Replace these chains with `StringUtils.parseCommaSeparatedString()`, which avoids intermediate lists and iterators while parsing, to reduce memory allocations in high-frequency string splitting scenarios like smart push logic.

@@ -32,6 +32,43 @@ void main() {
 
       expect(expression, equals('poi_name'));
     });
+
+    test('returns NULL AS poi_name when tableInfo is empty', () {
+      final expression =
+          DatabaseSchemaManager.poiNameSelectExpressionFromTableInfo([]);
+
+      expect(expression, equals('NULL AS poi_name'));
+    });
+
+    test(
+        'returns NULL AS poi_name when column names only contain poi_name as substring',
+        () {
+      final tableInfo = <Map<String, Object?>>[
+        {'name': 'id'},
+        {'name': 'poi_name_backup'},
+        {'name': 'old_poi_name'},
+      ];
+
+      final expression =
+          DatabaseSchemaManager.poiNameSelectExpressionFromTableInfo(tableInfo);
+
+      expect(expression, equals('NULL AS poi_name'));
+    });
+
+    test(
+        'returns NULL AS poi_name when tableInfo contains maps without name or with null values',
+        () {
+      final tableInfo = <Map<String, Object?>>[
+        {'other_key': 'val'},
+        {'name': null},
+        {'name': 'content'},
+      ];
+
+      final expression =
+          DatabaseSchemaManager.poiNameSelectExpressionFromTableInfo(tableInfo);
+
+      expect(expression, equals('NULL AS poi_name'));
+    });
   });
 
   group('DatabaseSchemaManager v21 validation targets', () {
