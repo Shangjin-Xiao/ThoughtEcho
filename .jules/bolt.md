@@ -229,3 +229,8 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:**
 将 `lib/models/quote_model.dart` 中的颜色十六进制匹配、破折号前缀剥离、两端括号引号剥离以及作者出处分隔符匹配正则表达式提取为 `Quote` 类的 `static final RegExp` 静态成员，并新增 `test/performance/quote_model_benchmark_test.dart` 进行基准测试验证。
+
+## 2026-10-25 - [Optimize comma-separated string parsing in frequent calls]
+
+**Learning:** Chaining `String.split(',')` with `.map()`, `.where()`, and `.toList()`/`.toSet()` creates multiple intermediate list, iterable, and string objects, putting significant pressure on the Garbage Collector when called frequently (e.g., when analyzing metrics or iterating pushed IDs).
+**Action:** Replace these chains with `StringUtils.parseCommaSeparatedString()`, which avoids intermediate lists and iterators while parsing, to reduce memory allocations in high-frequency string splitting scenarios like smart push logic.
