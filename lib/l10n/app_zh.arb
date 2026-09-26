@@ -4709,5 +4709,134 @@
         "type": "String"
       }
     }
+  },
+  "agentMemoryManageTitle": "管理记忆",
+  "agentMemoryManageSubtitle": "查看、纠偏与管理 Thoughter 记下的特质与依据",
+  "agentMemoryPageTitle": "Thoughter 记忆",
+  "agentMemoryResonanceSummary": "共凝聚 {profileCount} 条特质 · {sliceCount} 束近况 · {factCount} 则存念",
+  "@agentMemoryResonanceSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "sliceCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCognitiveLoad": "记忆容量",
+  "agentMemoryBudgetNormal": "容量充足，对话与灵感畅通",
+  "agentMemoryBudgetNearFull": "接近记忆上限，优先保留最新特质",
+  "agentMemoryTabAll": "全部",
+  "agentMemoryTabProfile": "画像特质",
+  "agentMemoryTabPulse": "近期状态",
+  "agentMemoryTabFacts": "记忆细节",
+  "agentMemoryTabHistory": "历史更迭",
+  "agentMemorySearchHint": "搜索特质、存念或关键词...",
+  "agentMemoryKindIdentity": "身份常识",
+  "agentMemoryKindPreference": "内容偏好",
+  "agentMemoryKindStyle": "表达风格",
+  "agentMemoryKindFeedback": "纠偏反馈",
+  "agentMemoryKindTaste": "摘录品味",
+  "agentMemoryKindVoice": "写作声音",
+  "agentMemorySourceDreaming": "由笔记提炼",
+  "agentMemorySourceThoughter": "对话中记住",
+  "agentMemorySourceUser": "手动记下",
+  "agentMemoryStatusActive": "生效中",
+  "agentMemoryStatusSuperseded": "已存档",
+  "agentMemoryEvidenceTitle": "见于 {count} 篇笔记",
+  "@agentMemoryEvidenceTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEvidenceViewNote": "查看笔记",
+  "agentMemoryEvidenceNoteDeleted": "原笔记已在别处被移除",
+  "agentMemoryPulseExpiresIn": "尚余 {days} 天",
+  "@agentMemoryPulseExpiresIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryPulseExpiresToday": "今日到期",
+  "agentMemoryPulseTtlNotice": "近期状态具时效性，两周后自然淡去，保持记忆清爽",
+  "agentMemoryFactImportance": "重要度 {score}/10",
+  "@agentMemoryFactImportance": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryFactRecalledTimes": "已想起 {count} 次",
+  "@agentMemoryFactRecalledTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEditDirectiveTitle": "修正记忆特质",
+  "agentMemoryEditDirectiveHint": "例如：回复保持碎句，多留白",
+  "agentMemoryEditSave": "保存修正",
+  "agentMemoryEditSuccess": "已修正该条记忆",
+  "agentMemoryForgetConfirmTitle": "让 Thoughter 忘掉这条？",
+  "agentMemoryForgetConfirmBody": "忘掉后，Thoughter 在对话、每日提示和周期洞察中将不再使用这条结论。",
+  "agentMemoryForgetAction": "忘掉",
+  "agentMemoryForgotten": "已遗忘该条记忆",
+  "agentMemoryCompactTitle": "整理记忆",
+  "agentMemoryCompactConfirm": "将自动清理已淡去的近期状态与过时的历史记录。是否继续？",
+  "agentMemoryCompactDone": "已整理清理 {count} 条过时记忆",
+  "@agentMemoryCompactDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCompactNoop": "记忆库整洁，无需整理",
+  "agentMemoryAddTitle": "告诉 Thoughter 一条特质",
+  "agentMemoryAddKind": "特质分类",
+  "agentMemoryAddDirective": "记忆内容 (以清晰指令表述)",
+  "agentMemoryAddHint": "例如：称呼我为行者，喜欢探讨文学与存在主义",
+  "agentMemoryAddSuccess": "已记下新特质",
+  "agentMemoryEmpty": "暂无匹配的记忆",
+  "agentMemoryEmptyDesc": "Thoughter 会在与你的对话或笔记沉淀中自然领悟你的特质",
+  "agentMemoryCharsCount": "{usedChars} / {maxChars} 字符",
+  "@agentMemoryCharsCount": {
+    "placeholders": {
+      "usedChars": {
+        "type": "int"
+      },
+      "maxChars": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEntriesCount": "{usedEntries} / {maxEntries} 条",
+  "@agentMemoryEntriesCount": {
+    "placeholders": {
+      "usedEntries": {
+        "type": "int"
+      },
+      "maxEntries": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryObservationTime": "观察于 {time}",
+  "@agentMemoryObservationTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   }
 }

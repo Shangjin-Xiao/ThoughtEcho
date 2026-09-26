@@ -940,6 +940,51 @@ class AgentMemoryService extends ChangeNotifier {
     return deleted > 0;
   }
 
+  /// 获取所有事实层条目（供管理界面展示与检索，不触发召回计数递增）。
+  Future<List<AgentMemoryFact>> allFacts({
+    int limit = factsCapacity,
+    String? query,
+  }) async {
+    final db = await _db;
+    final normalized = query?.trim() ?? '';
+    if (normalized.isEmpty) {
+      final rows = await db.query(
+        factsTable,
+        orderBy: 'importance DESC, created_at DESC',
+        limit: limit,
+      );
+      return rows.map(AgentMemoryFact.fromMap).toList(growable: false);
+    }
+
+    final keywords = extractKeywords(normalized);
+    if (keywords.isEmpty) {
+      final rows = await db.query(
+        factsTable,
+        orderBy: 'importance DESC, created_at DESC',
+        limit: limit,
+      );
+      return rows.map(AgentMemoryFact.fromMap).toList(growable: false);
+    }
+
+    final clauses = <String>[];
+    final args = <Object?>[];
+    for (final keyword in keywords) {
+      clauses.add(
+        '(content LIKE ? OR trigger_phrases LIKE ? OR category LIKE ?)',
+      );
+      final pattern = '%$keyword%';
+      args.addAll(<Object?>[pattern, pattern, pattern]);
+    }
+    final rows = await db.query(
+      factsTable,
+      where: clauses.join(' OR '),
+      whereArgs: args,
+      orderBy: 'importance DESC, created_at DESC',
+      limit: limit,
+    );
+    return rows.map(AgentMemoryFact.fromMap).toList(growable: false);
+  }
+
   /// 按关键词检索事实层。
   ///
   /// [query] 为空时按得分返回最重要的若干条（用户问「你都记得我什么」的路径）。

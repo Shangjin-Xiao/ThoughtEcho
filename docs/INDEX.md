@@ -76,6 +76,7 @@
 
 | 文档名称 | 路径 | 日期 | 状态 | 核心内容 / 结论 |
 |---|---|---|:---:|---|
+| **Dreaming 横向对比调研（OpenClaw + OpenAI V3）** | [`dreaming-comparative-research-2026-09-26.md`](dreaming-comparative-research-2026-09-26.md) | 2026-09-26 | 🔍 调研参考 | OpenClaw 三阶段源码级精读与 OpenAI V3 文稿精读：改写而非追加、确定性门先行、可审查三收敛及本地 P0–P2 落点 |
 | **Dreaming 与记忆系统二期方案** | [`dreaming-and-memory-plan-2026-08-28.md`](dreaming-and-memory-plan-2026-08-28.md) | 2026-08-28 | 🟢 **已实现（前置未完成）** | 记忆内容供给二期：`taste` / `voice` 两类画像、带 TTL 的近况切片、周期洞察后触发的 Dreaming 归纳，及上线前置的记忆可见性要求 |
 | **Thoughter 长期记忆系统深度调研与设计** | [`agent-memory-research-2026-08-08.md`](agent-memory-research-2026-08-08.md) | 2026-08-08 | 🔒 **唯一事实源** | 独立物理数据库 `agent_memory.db` 隔离机制、用户画像独立 user 消息包裹、原位 supersede 与事实层打分检索定案 |
 | **共享记忆系统构想 [已废弃 / 已被取代]** | [`memory-system-plan-2026-07-31.md`](memory-system-plan-2026-07-31.md) | 2026-07-31 | 📦 **归档 / 已废弃方案** | 早期三层共享记忆构想原案（已被 08-08 独立库架构完全取代） |
