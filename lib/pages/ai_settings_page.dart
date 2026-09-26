@@ -12,6 +12,7 @@ import '../theme/app_semantic_colors.dart';
 import '../utils/ai_connection_tester.dart';
 import '../utils/app_logger.dart';
 import '../widgets/app_snackbar.dart';
+import 'agent_memory/agent_memory_page.dart';
 import 'ai_provider_edit_page.dart';
 import 'user_guide_page.dart';
 import '../theme/theme_style.dart';
@@ -701,6 +702,29 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
               textInputAction: TextInputAction.done,
               onChanged: _saveNickname,
             ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.psychology_alt_outlined),
+            title: Text(l10n.agentMemoryManageTitle),
+            subtitle: Text(l10n.agentMemoryManageSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            enabled: settingsService.agentMemoryEnabled,
+            onTap: () {
+              Navigator.of(context)
+                  .push(
+                MaterialPageRoute(
+                  builder: (_) => const AgentMemoryPage(),
+                ),
+              )
+                  .then((_) {
+                if (mounted) {
+                  setState(() {
+                    _countsFuture = context.read<AgentMemoryService>().counts();
+                  });
+                }
+              });
+            },
           ),
           const Divider(height: 1),
           FutureBuilder<({int profileCount, int factCount})>(

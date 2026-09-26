@@ -4709,5 +4709,134 @@
         "type": "String"
       }
     }
+  },
+  "agentMemoryManageTitle": "Manage Memory",
+  "agentMemoryManageSubtitle": "Inspect, correct, and manage traits and evidence remembered by Thoughter",
+  "agentMemoryPageTitle": "Thoughter Memory",
+  "agentMemoryResonanceSummary": "Holding {profileCount} traits · {sliceCount} pulse · {factCount} facts",
+  "@agentMemoryResonanceSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "sliceCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCognitiveLoad": "Memory Capacity",
+  "agentMemoryBudgetNormal": "Optimal memory capacity",
+  "agentMemoryBudgetNearFull": "Near capacity limit, prioritizing newest traits",
+  "agentMemoryTabAll": "All",
+  "agentMemoryTabProfile": "Traits",
+  "agentMemoryTabPulse": "Recent State",
+  "agentMemoryTabFacts": "Key Facts",
+  "agentMemoryTabHistory": "History",
+  "agentMemorySearchHint": "Search traits, facts, or keywords...",
+  "agentMemoryKindIdentity": "Identity",
+  "agentMemoryKindPreference": "Preference",
+  "agentMemoryKindStyle": "Style",
+  "agentMemoryKindFeedback": "Feedback",
+  "agentMemoryKindTaste": "Reading Taste",
+  "agentMemoryKindVoice": "Writing Voice",
+  "agentMemorySourceDreaming": "Synthesized from Notes",
+  "agentMemorySourceThoughter": "Remembered in Chat",
+  "agentMemorySourceUser": "User Added",
+  "agentMemoryStatusActive": "Active",
+  "agentMemoryStatusSuperseded": "Archived",
+  "agentMemoryEvidenceTitle": "Found in {count} notes",
+  "@agentMemoryEvidenceTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEvidenceViewNote": "View Note",
+  "agentMemoryEvidenceNoteDeleted": "Original note removed",
+  "agentMemoryPulseExpiresIn": "{days} days left",
+  "@agentMemoryPulseExpiresIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryPulseExpiresToday": "Expires today",
+  "agentMemoryPulseTtlNotice": "Recent state naturally fades after 14 days to keep memory clean",
+  "agentMemoryFactImportance": "Importance {score}/10",
+  "@agentMemoryFactImportance": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryFactRecalledTimes": "Referenced {count} times",
+  "@agentMemoryFactRecalledTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEditDirectiveTitle": "Edit Memory Trait",
+  "agentMemoryEditDirectiveHint": "e.g., Keep replies concise with natural pauses",
+  "agentMemoryEditSave": "Save Changes",
+  "agentMemoryEditSuccess": "Memory updated",
+  "agentMemoryForgetConfirmTitle": "Forget this memory?",
+  "agentMemoryForgetConfirmBody": "Once forgotten, Thoughter will no longer reference or inject this trait in chats, daily prompts, or insights.",
+  "agentMemoryForgetAction": "Forget",
+  "agentMemoryForgotten": "Memory forgotten",
+  "agentMemoryCompactTitle": "Tidy Up Memory",
+  "agentMemoryCompactConfirm": "This will clean up faded recent states and outdated history. Continue?",
+  "agentMemoryCompactDone": "Cleaned up {count} outdated entries",
+  "@agentMemoryCompactDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCompactNoop": "Memory is already neat and organized",
+  "agentMemoryAddTitle": "Teach Thoughter a Trait",
+  "agentMemoryAddKind": "Trait Category",
+  "agentMemoryAddDirective": "Directive Content",
+  "agentMemoryAddHint": "e.g., Address me as Wanderer, enjoy literature and philosophy",
+  "agentMemoryAddSuccess": "New trait remembered",
+  "agentMemoryEmpty": "No matching memories",
+  "agentMemoryEmptyDesc": "Thoughter will naturally perceive your traits as you chat and write",
+  "agentMemoryCharsCount": "{usedChars} / {maxChars} chars",
+  "@agentMemoryCharsCount": {
+    "placeholders": {
+      "usedChars": {
+        "type": "int"
+      },
+      "maxChars": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEntriesCount": "{usedEntries} / {maxEntries} items",
+  "@agentMemoryEntriesCount": {
+    "placeholders": {
+      "usedEntries": {
+        "type": "int"
+      },
+      "maxEntries": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryObservationTime": "Observed on {time}",
+  "@agentMemoryObservationTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   }
 }

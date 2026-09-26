@@ -810,5 +810,32 @@ void main() {
 
       await memory.clearAll();
     });
+
+    test('allFacts 获取事实列表与按关键词过滤，且不累加 recall_count', () async {
+      final now = DateTime.now();
+      await memory.addFact(
+        content: '用户在练习指弹吉他',
+        importance: 8,
+        createdAt: now,
+      );
+      await memory.addFact(
+        content: '用户喜欢阅读博尔赫斯',
+        importance: 9,
+        category: '文学',
+        createdAt: now.subtract(const Duration(hours: 1)),
+      );
+
+      final facts = await memory.allFacts();
+      expect(facts, hasLength(2));
+      expect(facts.first.content, '用户喜欢阅读博尔赫斯');
+      expect(facts.first.recallCount, 0);
+
+      final filtered = await memory.allFacts(query: '吉他');
+      expect(filtered, hasLength(1));
+      expect(filtered.first.content, '用户在练习指弹吉他');
+      expect(filtered.first.recallCount, 0);
+
+      await memory.clearAll();
+    });
   });
 }
