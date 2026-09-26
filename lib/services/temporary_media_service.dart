@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -21,6 +22,21 @@ class TemporaryMediaService {
 
   // 临时文件过期时间（24小时）
   static const Duration _tempFileExpiration = Duration(hours: 24);
+  static Future<void> _tempOperationLock = Future<void>.value();
+
+  static Future<T> _withTempOperationLock<T>(
+    Future<T> Function() operation,
+  ) async {
+    final previous = _tempOperationLock;
+    final release = Completer<void>();
+    _tempOperationLock = release.future;
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release.complete();
+    }
+  }
 
   /// 获取临时媒体文件目录
   static Future<Directory> _getTempMediaDirectory(String subfolder) async {
@@ -96,64 +112,66 @@ class TemporaryMediaService {
     Function(String status)? onStatusUpdate,
     lfm.CancelToken? cancelToken,
   }) async {
-    try {
-      logDebug('开始保存文件到临时目录: $sourcePath');
+    return _withTempOperationLock(() async {
+      try {
+        logDebug('开始保存文件到临时目录: $sourcePath');
 
-      // 检查源文件
-      final sourceFile = File(sourcePath);
-      if (!await sourceFile.exists()) {
-        throw Exception('源文件不存在: $sourcePath');
+        // 检查源文件
+        final sourceFile = File(sourcePath);
+        if (!await sourceFile.exists()) {
+          throw Exception('源文件不存在: $sourcePath');
+        }
+
+        final fileSize = await sourceFile.length();
+        logDebug('文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
+
+        final tempDir = await _getTempMediaDirectory(subfolder);
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
+        final targetPath = path.join(tempDir.path, fileName);
+
+        // 检查磁盘空间
+        if (!await StreamingFileProcessor.hasEnoughDiskSpace(
+          targetPath,
+          fileSize,
+        )) {
+          throw Exception('磁盘空间不足');
+        }
+
+        onStatusUpdate?.call('正在保存到临时目录...');
+
+        // 使用流式处理器复制文件
+        await StreamingFileProcessor.copyFileStreaming(
+          sourcePath,
+          targetPath,
+          onProgress: (current, total) {
+            cancelToken?.throwIfCancelled();
+            if (onProgress != null && total > 0) {
+              onProgress(current / total);
+            }
+          },
+          onStatusUpdate: (status) {
+            onStatusUpdate?.call(status);
+            logDebug('临时文件保存状态: $status');
+          },
+          shouldCancel: () => cancelToken?.isCancelled == true,
+        );
+
+        // 验证文件完整性
+        if (!await StreamingFileProcessor.verifyFileCopy(
+          sourcePath,
+          targetPath,
+        )) {
+          throw Exception('临时文件复制验证失败');
+        }
+
+        logDebug('文件已保存到临时目录: $targetPath');
+        return targetPath;
+      } catch (e) {
+        logDebug('保存临时文件失败: $e');
+        return null;
       }
-
-      final fileSize = await sourceFile.length();
-      logDebug('文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
-
-      final tempDir = await _getTempMediaDirectory(subfolder);
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
-      final targetPath = path.join(tempDir.path, fileName);
-
-      // 检查磁盘空间
-      if (!await StreamingFileProcessor.hasEnoughDiskSpace(
-        targetPath,
-        fileSize,
-      )) {
-        throw Exception('磁盘空间不足');
-      }
-
-      onStatusUpdate?.call('正在保存到临时目录...');
-
-      // 使用流式处理器复制文件
-      await StreamingFileProcessor.copyFileStreaming(
-        sourcePath,
-        targetPath,
-        onProgress: (current, total) {
-          cancelToken?.throwIfCancelled();
-          if (onProgress != null && total > 0) {
-            onProgress(current / total);
-          }
-        },
-        onStatusUpdate: (status) {
-          onStatusUpdate?.call(status);
-          logDebug('临时文件保存状态: $status');
-        },
-        shouldCancel: () => cancelToken?.isCancelled == true,
-      );
-
-      // 验证文件完整性
-      if (!await StreamingFileProcessor.verifyFileCopy(
-        sourcePath,
-        targetPath,
-      )) {
-        throw Exception('临时文件复制验证失败');
-      }
-
-      logDebug('文件已保存到临时目录: $targetPath');
-      return targetPath;
-    } catch (e) {
-      logDebug('保存临时文件失败: $e');
-      return null;
-    }
+    });
   }
 
   /// 将临时文件移动到永久目录
@@ -331,6 +349,10 @@ class TemporaryMediaService {
 
   /// 清理所有临时文件（强制清理）
   static Future<int> cleanupAllTemporaryFiles() async {
+    return _withTempOperationLock(_cleanupAllTemporaryFiles);
+  }
+
+  static Future<int> _cleanupAllTemporaryFiles() async {
     int cleanedCount = 0;
 
     try {
@@ -352,21 +374,30 @@ class TemporaryMediaService {
         return 0;
       }
 
+      var directoryDeleted = false;
       try {
         await tempMediaDir.delete(recursive: true);
+        directoryDeleted = true;
         await tempMediaDir.create(recursive: true);
         cleanedCount = files.length;
       } catch (e) {
         logDebug('批量删除临时目录失败，尝试逐个删除: $e');
-        for (final file in files) {
-          try {
-            if (await file.exists()) {
-              await file.delete();
-              cleanedCount++;
+        if (directoryDeleted) {
+          cleanedCount = files.length;
+        } else {
+          for (final file in files) {
+            try {
+              if (await file.exists()) {
+                await file.delete();
+                cleanedCount++;
+              }
+            } catch (fileErr) {
+              logDebug('清理单个临时文件失败: ${file.path}, 错误: $fileErr');
             }
-          } catch (fileErr) {
-            logDebug('清理单个临时文件失败: ${file.path}, 错误: $fileErr');
           }
+        }
+        if (!await tempMediaDir.exists()) {
+          await tempMediaDir.create(recursive: true);
         }
       }
 
