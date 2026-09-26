@@ -124,6 +124,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                     Icons.more_vert,
                     color: colorScheme.onSurfaceVariant,
                   ),
+                  tooltip: AppLocalizations.of(context).moreOptions,
                   onPressed: () {
                     if (controller.isOpen) {
                       controller.close();
