@@ -1187,11 +1187,32 @@ class WebDAVSyncService extends ChangeNotifier {
 
       // 3. 复制对应的标签关联关系
       if (tags.isNotEmpty) {
-        for (final tag in tags) {
-          batch.insert('quote_tags', {
-            'quote_id': clonedId,
-            'tag_id': tag['tag_id'],
-          });
+        if (tags.length == 1) {
+          batch.insert(
+            'quote_tags',
+            {
+              'quote_id': clonedId,
+              'tag_id': tags.first['tag_id'],
+            },
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        } else {
+          const chunkSize = 400;
+          for (var i = 0; i < tags.length; i += chunkSize) {
+            final end =
+                (i + chunkSize < tags.length) ? i + chunkSize : tags.length;
+            final chunk = tags.sublist(i, end);
+            final valuePlaceholders =
+                List.filled(chunk.length, '(?, ?)').join(', ');
+            final args = <Object?>[];
+            for (final tag in chunk) {
+              args.addAll([clonedId, tag['tag_id']]);
+            }
+            batch.rawInsert(
+              'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
+              args,
+            );
+          }
         }
       }
 

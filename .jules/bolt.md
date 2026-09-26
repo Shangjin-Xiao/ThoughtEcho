@@ -230,6 +230,14 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Action:**
 将 `lib/models/quote_model.dart` 中的颜色十六进制匹配、破折号前缀剥离、两端括号引号剥离以及作者出处分隔符匹配正则表达式提取为 `Quote` 类的 `static final RegExp` 静态成员，并新增 `test/performance/quote_model_benchmark_test.dart` 进行基准测试验证。
 
+## 2026-09-24 - 优化 WebDAV 同步冲突克隆中的标签批量插入
+
+**Learning:**
+在 `sqflite` 的 `Batch` 中，在循环里为每个标签逐条调用 `batch.insert` 会向底层 SQLite 批处理队列中添加大量独立的单条 SQL 映射命令。对于单篇或多篇冲突笔记关联的标签数据，采用拼接占位符的单条 SQL `INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES (?, ?), (?, ?)...` 批量插入（`batch.rawInsert`），能大幅降低跨 IPC 边界与批处理队列的命令数量，提高 SQLite 写入效率。
+
+**Action:**
+修改 `lib/services/webdav_sync_service.dart` 中的 `_cloneConflictQuote` 方法，将 `tags` 列表循环中的 `batch.insert` 改为判断：单条标签使用带 `conflictAlgorithm: ConflictAlgorithm.ignore` 的 `batch.insert`，多条标签按每批 400 条构造多值 `batch.rawInsert`，在减少批处理命令数量的同时避免超过 SQLite 参数上限。
+
 ## 2026-09-25 - 优化 TemporaryMediaService 批量清理临时文件性能
 
 **Learning:**
