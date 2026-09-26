@@ -478,8 +478,8 @@ void main() {
     );
     expect(
       missesWhenWarming(quotes.first),
-      1,
-      reason: '预热还在从第 0 条开始往下走，屏幕上的卡片要等它走完才轮得到',
+      lessThanOrEqualTo(1),
+      reason: '预热应优先从视口附近扩散，首条最多只在同一轮预算内被处理一次',
     );
 
     await tester.pumpWidget(const SizedBox.shrink());
