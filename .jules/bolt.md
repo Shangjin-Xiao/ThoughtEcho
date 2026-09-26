@@ -233,4 +233,4 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 ## 2026-10-25 - [Optimize comma-separated string parsing in frequent calls]
 
 **Learning:** Chaining `String.split(',')` with `.map()`, `.where()`, and `.toList()`/`.toSet()` creates multiple intermediate list, iterable, and string objects, putting significant pressure on the Garbage Collector when called frequently (e.g., when analyzing metrics or iterating pushed IDs).
-**Action:** Replace these chains with `StringUtils.parseCommaSeparatedString()`, which uses zero-allocation substring parsing under the hood, to significantly lower memory allocations in high-frequency string splitting scenarios like smart push logic.
+**Action:** Replace these chains with `StringUtils.parseCommaSeparatedString()`, which avoids intermediate lists and iterators while parsing, to reduce memory allocations in high-frequency string splitting scenarios like smart push logic.

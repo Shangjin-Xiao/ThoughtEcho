@@ -185,8 +185,7 @@ class SmartPushService extends ChangeNotifier {
 
     final contentHash = _contentHash(content);
     final hashesStr = pushedData.substring(today.length + 1);
-    final pushedHashes =
-        StringUtils.parseCommaSeparatedString(hashesStr).toSet();
+    final pushedHashes = hashesStr.split(',').toSet();
     return pushedHashes.contains(contentHash);
   }
 
