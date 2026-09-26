@@ -862,10 +862,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
 
         final listView = tester.widget<ListView>(find.byType(ListView));
-        // ignore: deprecated_member_use
-        final cacheExtent = listView.cacheExtent;
+        final cacheExtent = listView.scrollCacheExtent;
         expect(cacheExtent, isNotNull);
-        expect(cacheExtent, inInclusiveRange(400.0, 900.0));
+        expect(cacheExtent!.value, inInclusiveRange(400.0, 900.0));
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
