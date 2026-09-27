@@ -25,17 +25,38 @@ class DraftService {
     }
   }
 
+  Map<String, dynamic>? _parseDraftData(dynamic stored) {
+    if (stored == null) return null;
+    if (stored is Map<String, dynamic>) return stored;
+    if (stored is Map) {
+      return stored.map((k, v) => MapEntry(k.toString(), v));
+    }
+    if (stored is String) {
+      try {
+        final decoded = jsonDecode(stored);
+        if (decoded is Map) {
+          return decoded.map((k, v) => MapEntry(k.toString(), v));
+        }
+      } catch (e) {
+        logDebug('解析草稿 JSON 失败: $e');
+      }
+    }
+    return null;
+  }
+
   /// 读取草稿（跨平台）
   Future<Map<String, dynamic>?> getDraft(String id) async {
     try {
       final key = _makeKey(id);
       final dynamic stored = MMKVService().getJson(key);
-      if (stored == null) return null;
-      if (stored is Map<String, dynamic>) return stored;
-      if (stored is String) return jsonDecode(stored) as Map<String, dynamic>?;
-      return Map<String, dynamic>.from(stored);
-    } catch (e) {
-      logError('读取草稿失败: $id', error: e, source: 'DraftService');
+      return _parseDraftData(stored);
+    } catch (e, stackTrace) {
+      logError(
+        '读取草稿失败: $id',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DraftService',
+      );
       return null;
     }
   }
@@ -72,7 +93,13 @@ class DraftService {
       final key = _makeKey(id);
       final v = MMKVService().getString(key);
       return v != null && v.isNotEmpty;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError(
+        '检查草稿是否存在失败: $id',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DraftService',
+      );
       return false;
     }
   }
@@ -90,20 +117,13 @@ class DraftService {
 
         try {
           final dynamic stored = MMKVService().getJson(key);
-          Map<String, dynamic>? data;
-          if (stored == null) continue;
-          if (stored is Map<String, dynamic>) {
-            data = stored;
-          } else if (stored is String) {
-            data = jsonDecode(stored) as Map<String, dynamic>;
-          } else {
-            data = Map<String, dynamic>.from(stored);
-          }
+          final data = _parseDraftData(stored);
+          if (data == null) continue;
 
           // 只有包含正文内容的草稿才考虑恢复
           // 自动添加的天气、位置、标签等不应该触发草稿恢复
-          final plainText = data['plainText'] as String?;
-          if (plainText == null || plainText.trim().isEmpty) {
+          final plainText = data['plainText'];
+          if (plainText is! String || plainText.trim().isEmpty) {
             continue;
           }
 
@@ -114,13 +134,15 @@ class DraftService {
           }
 
           if (data.containsKey('timestamp')) {
-            final tsStr = data['timestamp'] as String;
-            final ts = DateTime.tryParse(tsStr);
-            if (ts != null) {
-              if (latestTime == null || ts.isAfter(latestTime)) {
-                latestTime = ts;
-                latestKey = key;
-                latestData = data;
+            final tsStr = data['timestamp']?.toString();
+            if (tsStr != null) {
+              final ts = DateTime.tryParse(tsStr);
+              if (ts != null) {
+                if (latestTime == null || ts.isAfter(latestTime)) {
+                  latestTime = ts;
+                  latestKey = key;
+                  latestData = data;
+                }
               }
             }
           }
@@ -154,15 +176,8 @@ class DraftService {
         if (!key.startsWith('draft_')) continue;
         try {
           final dynamic stored = MMKVService().getJson(key);
-          Map<String, dynamic>? data;
-          if (stored == null) continue;
-          if (stored is Map<String, dynamic>) {
-            data = stored;
-          } else if (stored is String) {
-            data = jsonDecode(stored) as Map<String, dynamic>;
-          } else {
-            data = Map<String, dynamic>.from(stored);
-          }
+          final data = _parseDraftData(stored);
+          if (data == null) continue;
 
           if (data.containsKey('deltaContent')) {
             final deltaContent = data['deltaContent'];
