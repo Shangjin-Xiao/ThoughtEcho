@@ -53,10 +53,13 @@ class AskUserCard extends StatefulWidget {
 const _customOptionValue = '__custom_option__';
 
 class _QuestionDraft {
-  _QuestionDraft({AskUserAnswer? initial})
-      : selected = Set<String>.from(initial?.selectedOptions ?? const []),
-        customSelected = initial?.customText != null &&
-            initial!.customText!.trim().isNotEmpty,
+  _QuestionDraft({
+    AskUserAnswer? initial,
+    bool multiSelect = false,
+  })  : selected = Set<String>.from(initial?.selectedOptions ?? const []),
+        customSelected = (initial?.customText != null &&
+                initial!.customText!.trim().isNotEmpty) &&
+            (multiSelect || initial.selectedOptions.isEmpty),
         custom = TextEditingController(text: initial?.customText ?? ''),
         focusNode = FocusNode();
 
@@ -94,6 +97,7 @@ class _AskUserCardState extends State<AskUserCard> {
         initial: index < widget.initialAnswers.length
             ? widget.initialAnswers[index]
             : null,
+        multiSelect: widget.questions[index].multiSelect,
       ),
       growable: false,
     );
@@ -117,6 +121,7 @@ class _AskUserCardState extends State<AskUserCard> {
           ? widget.initialAnswers[index]
           : null;
       final draft = _drafts[index];
+      final isMulti = widget.questions[index].multiSelect;
       if (!setEquals(draft.selected,
           Set<String>.from(initial?.selectedOptions ?? const []))) {
         draft
@@ -125,8 +130,10 @@ class _AskUserCardState extends State<AskUserCard> {
       }
       final initialHasCustom =
           initial?.customText != null && initial!.customText!.trim().isNotEmpty;
-      if (draft.customSelected != initialHasCustom) {
-        draft.customSelected = initialHasCustom;
+      final shouldSelectCustom =
+          initialHasCustom && (isMulti || initial.selectedOptions.isEmpty);
+      if (draft.customSelected != shouldSelectCustom) {
+        draft.customSelected = shouldSelectCustom;
       }
       if (draft.custom.text != (initial?.customText ?? '')) {
         draft.custom.text = initial?.customText ?? '';
