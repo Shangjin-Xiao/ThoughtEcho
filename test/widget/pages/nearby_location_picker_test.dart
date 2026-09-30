@@ -730,6 +730,15 @@ void main() {
 
     expect(fakeSearch.callCount, 2);
     expect(fakeSearch.requestedOffsets, [0, 20]);
+
+    await tester.scrollUntilVisible(
+      find.text('次页地点 0'),
+      100,
+      scrollable: find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
+    );
     expect(find.text('次页地点 0'), findsOneWidget);
   });
 
