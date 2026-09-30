@@ -77,6 +77,7 @@ class AppSettings {
   final String offlineQuoteSource;
   final String exportFormat;
   final bool sentryEnabled; // 是否启用 Sentry 诊断与性能上报
+  final bool telemetryEnabled; // 是否启用匿名功能改进统计（Aptabase）
   /// 3.7.0 的 Sentry 上报提示弹窗是否显示过。
   ///
   /// 弹窗本身已经被更新说明页取代，这个字段留下来是因为它是**唯一能证明用户
@@ -128,6 +129,7 @@ class AppSettings {
     this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
     this.exportFormat = 'card', // 默认精致分享卡片
     this.sentryEnabled = false, // 默认不启用 Sentry 诊断与性能上报
+    this.telemetryEnabled = false, // 默认不启用匿名功能统计
     this.sentryDisclosureShown = false, // 默认未显示提示
     this.noteInsertAnimationType = 'slide', // 默认平滑上升
     String noteCardMediaStyle = NoteCardMediaStyle.thumbnail,
@@ -192,6 +194,7 @@ class AppSettings {
       'offlineQuoteSource': offlineQuoteSource,
       'exportFormat': exportFormat,
       'sentryEnabled': sentryEnabled,
+      'telemetryEnabled': telemetryEnabled,
       'sentryDisclosureShown': sentryDisclosureShown,
       'noteInsertAnimationType': noteInsertAnimationType,
       'noteCardMediaStyle': noteCardMediaStyle,
@@ -304,6 +307,7 @@ class AppSettings {
       offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
       exportFormat: _readString(map['exportFormat'], 'card'),
       sentryEnabled: map['sentryEnabled'] ?? false,
+      telemetryEnabled: map['telemetryEnabled'] ?? false,
       sentryDisclosureShown: map['sentryDisclosureShown'] ?? false,
       noteInsertAnimationType:
           _readString(map['noteInsertAnimationType'], 'scale'),
@@ -352,6 +356,7 @@ class AppSettings {
         offlineQuoteSource: 'tagOnly',
         exportFormat: 'card',
         sentryEnabled: false,
+        telemetryEnabled: false,
         sentryDisclosureShown: false,
         noteInsertAnimationType: 'slide',
         noteCardMediaStyle: NoteCardMediaStyle.thumbnail,
@@ -401,6 +406,7 @@ class AppSettings {
     String? offlineQuoteSource,
     String? exportFormat,
     bool? sentryEnabled,
+    bool? telemetryEnabled,
     bool? sentryDisclosureShown,
     String? noteInsertAnimationType,
     String? noteCardMediaStyle,
@@ -464,6 +470,7 @@ class AppSettings {
       offlineQuoteSource: offlineQuoteSource ?? this.offlineQuoteSource,
       exportFormat: exportFormat ?? this.exportFormat,
       sentryEnabled: sentryEnabled ?? this.sentryEnabled,
+      telemetryEnabled: telemetryEnabled ?? this.telemetryEnabled,
       sentryDisclosureShown:
           sentryDisclosureShown ?? this.sentryDisclosureShown,
       noteInsertAnimationType:

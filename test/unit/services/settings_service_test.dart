@@ -378,6 +378,19 @@ void main() {
       expect(rebuiltService.appSettings.sentryDisclosureShown, isTrue);
     });
 
+    test('should persist telemetry settings changes', () async {
+      await settingsService.setTelemetryEnabled(false);
+      expect(settingsService.telemetryEnabled, isFalse);
+
+      await settingsService.setTelemetryEnabled(true);
+      expect(settingsService.telemetryEnabled, isTrue);
+      expect(settingsService.appSettings.telemetryEnabled, isTrue);
+
+      final rebuiltService = await SettingsService.create();
+      expect(rebuiltService.telemetryEnabled, isTrue);
+      expect(rebuiltService.appSettings.telemetryEnabled, isTrue);
+    });
+
     group('全新安装默认主题风格', () {
       test('首次安装种下信笺', () async {
         // setUp 里的 create() 走的正是首次安装分支。

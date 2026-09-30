@@ -8,6 +8,8 @@
   "smartPushPeriodNight": "Night",
   "settingsSentryTitle": "Send diagnostics to help improve",
   "settingsSentryDesc": "Disabled by default. When enabled, sends anonymous error logs and diagnostic info to help improve app stability. Never collects note contents, AI chats, or personal data.",
+  "settingsTelemetryTitle": "Anonymous Feature Improvement Program",
+  "settingsTelemetryDesc": "Disabled by default. When enabled, sends anonymous feature usage counts to help prioritize development. Never collects note contents, search terms, or personal data.",
   "sentryRestartHint": "Settings saved, takes effect after restarting",
   "sentryDisclosureTitle": "Privacy Policy Updated",
   "sentryDisclosureMessage": "The ThoughtEcho privacy policy has been updated and is available on our website.\n\nTo help diagnose app crashes and improve reliability, error diagnostics have been introduced. To protect your privacy, this is disabled by default and can be enabled anytime under \"Settings -> Feedback & Contact\".\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",

@@ -6,9 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/pages/custom_feedback_page.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
-import 'package:thoughtecho/pages/custom_feedback_page.dart';
+import 'package:thoughtecho/widgets/app_snackbar.dart';
 
 class FeedbackContactPage extends StatelessWidget {
   const FeedbackContactPage({super.key});
@@ -218,6 +219,46 @@ class FeedbackContactPage extends StatelessWidget {
                             content: Text(l10n.saveFailed(e.toString())),
                             duration: AppConstants.snackBarDurationError,
                           ),
+                        );
+                      }
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Consumer<SettingsService>(
+              builder: (context, settingsService, _) {
+                final theme = Theme.of(context);
+                return SwitchListTile(
+                  title: Text(l10n.settingsTelemetryTitle),
+                  subtitle: Text(
+                    l10n.settingsTelemetryDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  secondary: Icon(
+                    Icons.insights_outlined,
+                    color: colorScheme.primary,
+                  ),
+                  value: settingsService.telemetryEnabled,
+                  onChanged: (enabled) async {
+                    try {
+                      await settingsService.setTelemetryEnabled(enabled);
+                    } catch (e, stack) {
+                      logError(
+                        'FeedbackContactPage.setTelemetryEnabled failed',
+                        error: e,
+                        stackTrace: stack,
+                        source: 'FeedbackContact',
+                      );
+                      if (context.mounted) {
+                        AppSnackBar.error(
+                          context,
+                          l10n.saveFailed(e.toString()),
                         );
                       }
                     }

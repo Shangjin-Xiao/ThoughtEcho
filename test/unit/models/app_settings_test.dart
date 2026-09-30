@@ -49,6 +49,7 @@ void main() {
       expect(settings.skipNonFullscreenEditor, isFalse);
       expect(settings.offlineQuoteSource, equals('tagOnly'));
       expect(settings.sentryEnabled, isFalse);
+      expect(settings.telemetryEnabled, isFalse);
       expect(settings.sentryDisclosureShown, isFalse);
     });
 
@@ -90,6 +91,7 @@ void main() {
         skipNonFullscreenEditor: true,
         offlineQuoteSource: 'all',
         sentryEnabled: true,
+        telemetryEnabled: true,
         sentryDisclosureShown: true,
       );
 
@@ -183,6 +185,7 @@ void main() {
       );
       expect(fromJson.offlineQuoteSource, equals(settings.offlineQuoteSource));
       expect(fromJson.sentryEnabled, equals(settings.sentryEnabled));
+      expect(fromJson.telemetryEnabled, equals(settings.telemetryEnabled));
       expect(fromJson.sentryDisclosureShown,
           equals(settings.sentryDisclosureShown));
     });
@@ -231,6 +234,7 @@ void main() {
         noteListDisableCardShadows: true,
         noteListDisableBackdropBlur: true,
         sentryEnabled: true,
+        telemetryEnabled: true,
         sentryDisclosureShown: true,
       );
 
@@ -240,6 +244,7 @@ void main() {
       expect(updated.noteListDisableCardShadows, isTrue);
       expect(updated.noteListDisableBackdropBlur, isTrue);
       expect(updated.sentryEnabled, isTrue);
+      expect(updated.telemetryEnabled, isTrue);
       expect(updated.sentryDisclosureShown, isTrue);
       expect(updated.defaultStartPage, equals(settings.defaultStartPage));
     });

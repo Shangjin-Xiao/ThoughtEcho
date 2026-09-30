@@ -91,4 +91,9 @@ class AppConstants {
   /// Sentry DSN 配置，支持编译期通过 --dart-define=SENTRY_DSN 注入
   static const String sentryDsn =
       String.fromEnvironment('SENTRY_DSN', defaultValue: '');
+
+  // ==================== Aptabase 统计配置 ====================
+  /// Aptabase App Key，支持编译期通过 --dart-define=APTABASE_APP_KEY 注入
+  static const String aptabaseAppKey =
+      String.fromEnvironment('APTABASE_APP_KEY', defaultValue: '');
 }

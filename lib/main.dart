@@ -36,6 +36,7 @@ import 'package:thoughtecho/services/apk_download_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
@@ -213,6 +214,9 @@ Future<void> main() async {
         SentryDatabaseTracing.configure(enabled: settingsService.sentryEnabled);
         SentryNetworkTracing.configure(enabled: settingsService.sentryEnabled);
         SentryHelper.startIfEnabled(settingsService.sentryEnabled);
+        unawaited(AptabaseHelper.configure(
+          enabled: settingsService.telemetryEnabled,
+        ));
         await NetworkService.instance.init();
 
         final String currentVersion = packageInfo.version;
