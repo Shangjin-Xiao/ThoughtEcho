@@ -6,14 +6,14 @@ import '../../services/agent_tools/ask_user_tool.dart';
 import '../../theme/app_semantic_colors.dart';
 import '../../theme/theme_style.dart';
 
-/// Agent 向用户提问与选项确认卡片（对齐 Claude Code `AskUserQuestion`）。
+/// Agent 向用户提问与选项确认卡片（对齐 Claude Code / zcode `AskUserQuestion`）。
 ///
 /// 单个问题时直接展示整块内容；多个问题时走分步向导：一次只展示一题，
-/// 顶部是可点击跳转的分段进度，单选点选后自动进入下一题，多选与自定义
-/// 输入点「继续」前进，上一步保留已填答案，末尾是可回跳修改的总览页。
+/// 顶部是可点击跳转的分段进度。所有题目点选选项后均停留在本题，由用户
+/// 手动点击「继续/下一项」前进，上一步保留已填答案，末尾是可回跳修改的总览页。
 /// 每个问题的选项纵向排列为整宽行（短标题 + 说明），单选用 Radio、
-/// 多选用 Checkbox。自定义输入与选项选择互斥：输入自定义文本会清空
-/// 选项选择，点选选项会清空自定义文本。
+/// 多选用 Checkbox。手动输入作为单独一个选项排在选项末尾，支持被选中；
+/// 选中其他选项不会清空手动输入的文字，切回时文字依然保留。
 ///
 /// 样式遵循项目 UI 规范：圆角来自 `AppShapeTokens`，语义色来自
 /// `AppSemanticColors` / `ColorScheme`，支持手工风格自适应。
@@ -50,15 +50,25 @@ class AskUserCard extends StatefulWidget {
   State<AskUserCard> createState() => _AskUserCardState();
 }
 
+const _customOptionValue = '__custom_option__';
+
 class _QuestionDraft {
   _QuestionDraft({AskUserAnswer? initial})
       : selected = Set<String>.from(initial?.selectedOptions ?? const []),
-        custom = TextEditingController(text: initial?.customText ?? '');
+        customSelected = initial?.customText != null &&
+            initial!.customText!.trim().isNotEmpty,
+        custom = TextEditingController(text: initial?.customText ?? ''),
+        focusNode = FocusNode();
 
   final Set<String> selected;
+  bool customSelected;
   final TextEditingController custom;
+  final FocusNode focusNode;
 
-  void dispose() => custom.dispose();
+  void dispose() {
+    custom.dispose();
+    focusNode.dispose();
+  }
 }
 
 class _AskUserCardState extends State<AskUserCard> {
@@ -113,6 +123,11 @@ class _AskUserCardState extends State<AskUserCard> {
           ..selected.clear()
           ..selected.addAll(initial?.selectedOptions ?? const []);
       }
+      final initialHasCustom =
+          initial?.customText != null && initial!.customText!.trim().isNotEmpty;
+      if (draft.customSelected != initialHasCustom) {
+        draft.customSelected = initialHasCustom;
+      }
       if (draft.custom.text != (initial?.customText ?? '')) {
         draft.custom.text = initial?.customText ?? '';
       }
@@ -129,7 +144,10 @@ class _AskUserCardState extends State<AskUserCard> {
 
   bool _isAnswered(int index) {
     final draft = _drafts[index];
-    return draft.selected.isNotEmpty || draft.custom.text.trim().isNotEmpty;
+    final hasSelected = draft.selected.isNotEmpty;
+    final hasCustom =
+        draft.customSelected && draft.custom.text.trim().isNotEmpty;
+    return hasSelected || hasCustom;
   }
 
   bool get _canSubmit {
@@ -144,8 +162,6 @@ class _AskUserCardState extends State<AskUserCard> {
     if (widget.isCompleted) return;
     final draft = _drafts[index];
     setState(() {
-      // 与自定义输入互斥：点选选项即清空手输内容。
-      if (draft.custom.text.isNotEmpty) draft.custom.clear();
       final question = widget.questions[index];
       if (question.multiSelect) {
         if (draft.selected.contains(label)) {
@@ -154,6 +170,8 @@ class _AskUserCardState extends State<AskUserCard> {
           draft.selected.add(label);
         }
       } else {
+        // 单选：切换到该预设选项，取消手输选项选中，但不清空已手输文字
+        draft.customSelected = false;
         if (draft.selected.contains(label)) {
           draft.selected.clear();
         } else {
@@ -163,13 +181,54 @@ class _AskUserCardState extends State<AskUserCard> {
         }
       }
     });
-    // 向导中单选点选即确认本题：选中后自动进入下一步（或总览页）；
-    // 再次点选取消选中时停留在本题。自定义输入与多选走「继续」按钮。
-    if (_isWizard &&
-        !widget.questions[index].multiSelect &&
-        draft.selected.isNotEmpty) {
-      _goToStep(index + 1);
+    // 停留在当前题，不自动跳下一项，由用户手动点击底部导航「继续/下一项」。
+  }
+
+  void _handleCustomToggle(int index, {bool focus = false}) {
+    if (widget.isCompleted) return;
+    final draft = _drafts[index];
+    setState(() {
+      final question = widget.questions[index];
+      if (question.multiSelect) {
+        draft.customSelected = !draft.customSelected;
+      } else {
+        draft.selected.clear();
+        draft.customSelected = true;
+      }
+    });
+    if (draft.customSelected && focus) {
+      draft.focusNode.requestFocus();
+    } else if (!draft.customSelected) {
+      draft.focusNode.unfocus();
     }
+  }
+
+  void _handleCustomFocusOrTap(int index) {
+    if (widget.isCompleted) return;
+    final draft = _drafts[index];
+    if (!draft.customSelected) {
+      setState(() {
+        final question = widget.questions[index];
+        if (!question.multiSelect) {
+          draft.selected.clear();
+        }
+        draft.customSelected = true;
+      });
+    }
+  }
+
+  void _handleCustomChanged(int index) {
+    if (widget.isCompleted) return;
+    final draft = _drafts[index];
+    setState(() {
+      if (!draft.customSelected) {
+        final question = widget.questions[index];
+        if (!question.multiSelect) {
+          draft.selected.clear();
+        }
+        draft.customSelected = true;
+      }
+    });
   }
 
   /// 向导步骤跳转（含总览页），顺手收起键盘。
@@ -183,17 +242,6 @@ class _AskUserCardState extends State<AskUserCard> {
     });
   }
 
-  void _handleCustomChanged(int index) {
-    if (widget.isCompleted) return;
-    final draft = _drafts[index];
-    // 与选项选择互斥：开始手输即清空已选选项。
-    if (draft.selected.isNotEmpty) {
-      setState(draft.selected.clear);
-    } else {
-      setState(() {});
-    }
-  }
-
   void _handleSubmit() {
     if (!_canSubmit) return;
     widget.onSubmit?.call(
@@ -201,9 +249,10 @@ class _AskUserCardState extends State<AskUserCard> {
         for (final draft in _drafts)
           AskUserAnswer(
             selectedOptions: draft.selected.toList(),
-            customText: draft.custom.text.trim().isNotEmpty
-                ? draft.custom.text.trim()
-                : null,
+            customText:
+                draft.customSelected && draft.custom.text.trim().isNotEmpty
+                    ? draft.custom.text.trim()
+                    : null,
           ),
       ],
     );
@@ -495,9 +544,20 @@ class _AskUserCardState extends State<AskUserCard> {
 
   String _summarizeDraft(int index, AppLocalizations l10n) {
     final draft = _drafts[index];
-    final custom = draft.custom.text.trim();
-    if (custom.isNotEmpty) return custom;
-    if (draft.selected.isNotEmpty) return draft.selected.join('、');
+    final custom = draft.customSelected && draft.custom.text.trim().isNotEmpty
+        ? draft.custom.text.trim()
+        : null;
+    final selected =
+        draft.selected.isNotEmpty ? draft.selected.join('、') : null;
+    if (selected != null && custom != null) {
+      return '$selected；${l10n.agentAskUserCustomPrefix}$custom';
+    }
+    if (custom != null) {
+      return '${l10n.agentAskUserCustomPrefix}$custom';
+    }
+    if (selected != null) {
+      return selected;
+    }
     return l10n.agentAskUserUnanswered;
   }
 
@@ -605,9 +665,7 @@ class _AskUserCardState extends State<AskUserCard> {
           ),
         ),
         const SizedBox(height: 12),
-        _buildOptions(theme, shapeTokens, index, question),
-        const SizedBox(height: 8),
-        _buildCustomInput(theme, l10n, shapeTokens, index),
+        _buildOptions(theme, l10n, shapeTokens, index, question),
       ],
     );
   }
@@ -682,8 +740,10 @@ class _AskUserCardState extends State<AskUserCard> {
   }
 
   /// 选项纵向列表：单选包一层 RadioGroup，多选直接堆 Checkbox 行。
+  /// 手动输入作为末尾独立选项行展示，支持单选/多选联动。
   Widget _buildOptions(
     ThemeData theme,
+    AppLocalizations l10n,
     AppShapeTokens shapeTokens,
     int index,
     AskUserQuestion question,
@@ -691,15 +751,23 @@ class _AskUserCardState extends State<AskUserCard> {
     final rows = [
       for (final option in question.options)
         _buildOptionRow(theme, shapeTokens, index, question, option),
+      _buildCustomOptionRow(theme, l10n, shapeTokens, index, question),
     ];
     if (question.multiSelect) {
       return Column(children: rows);
     }
-    final selected = _drafts[index].selected;
+    final draft = _drafts[index];
+    final groupValue = draft.customSelected
+        ? _customOptionValue
+        : (draft.selected.length == 1 ? draft.selected.single : null);
     return RadioGroup<String?>(
-      groupValue: selected.length == 1 ? selected.single : null,
+      groupValue: groupValue,
       onChanged: (value) {
-        if (value != null) _handleOptionToggle(index, value);
+        if (value == _customOptionValue) {
+          _handleCustomToggle(index, focus: true);
+        } else if (value != null) {
+          _handleOptionToggle(index, value);
+        }
       },
       child: Column(children: rows),
     );
@@ -786,48 +854,86 @@ class _AskUserCardState extends State<AskUserCard> {
     );
   }
 
-  Widget _buildCustomInput(
+  /// 纵向手输选项行：与预设选项平级的独立选项卡片。
+  /// 单选使用 Radio、多选使用 Checkbox，右侧内嵌文本输入框。
+  Widget _buildCustomOptionRow(
     ThemeData theme,
     AppLocalizations l10n,
     AppShapeTokens shapeTokens,
     int index,
+    AskUserQuestion question,
   ) {
-    final outlineWidth =
-        shapeTokens.borderWidth > 0 ? shapeTokens.borderWidth : 1.0;
-    final focusedWidth =
-        shapeTokens.borderWidth > 0 ? shapeTokens.borderWidth : 1.5;
+    final draft = _drafts[index];
+    final isSelected = draft.customSelected;
+    final borderColor = isSelected
+        ? theme.colorScheme.primary.withValues(alpha: 0.6)
+        : theme.colorScheme.outlineVariant.withValues(alpha: 0.5);
 
-    return TextField(
-      controller: _drafts[index].custom,
-      onChanged: (_) => _handleCustomChanged(index),
-      style: theme.textTheme.bodyMedium,
-      decoration: InputDecoration(
-        hintText: l10n.agentAskUserCustomHint,
-        hintStyle: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-        ),
-        isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
-          borderSide: BorderSide(
-            color: theme.colorScheme.outlineVariant,
-            width: outlineWidth,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
-          borderSide: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-            width: outlineWidth,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
-          borderSide: BorderSide(
-            color: theme.colorScheme.primary,
-            width: focusedWidth,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: isSelected
+            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.6)
+            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+          onTap: () => _handleCustomToggle(index, focus: true),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+              border: Border.all(
+                color: borderColor,
+                width:
+                    shapeTokens.borderWidth > 0 ? shapeTokens.borderWidth : 1.0,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (question.multiSelect)
+                  Checkbox(
+                    value: isSelected,
+                    onChanged: (_) => _handleCustomToggle(index, focus: true),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  )
+                else
+                  Radio<String?>(
+                    value: _customOptionValue,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: TextField(
+                    controller: draft.custom,
+                    focusNode: draft.focusNode,
+                    onTap: () => _handleCustomFocusOrTap(index),
+                    onChanged: (_) => _handleCustomChanged(index),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isSelected
+                          ? theme.colorScheme.onPrimaryContainer
+                          : theme.colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 6),
+                      hintText: l10n.agentAskUserCustomHint,
+                      hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

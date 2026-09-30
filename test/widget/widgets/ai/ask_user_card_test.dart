@@ -70,7 +70,7 @@ void main() {
       expect(find.text('单选'), findsOneWidget);
       // 纵向整宽行：不再使用横向 FilterChip
       expect(find.byType(FilterChip), findsNothing);
-      expect(find.byType(Radio<String?>), findsNWidgets(3));
+      expect(find.byType(Radio<String?>), findsNWidgets(4));
     });
 
     testWidgets('多问题向导只展示第一题与进度', (tester) async {
@@ -89,7 +89,7 @@ void main() {
       // 一次只展示一题，第二题尚未出现
       expect(find.text('第一问？'), findsOneWidget);
       expect(find.text('第二问？'), findsNothing);
-      expect(find.byType(Radio<String?>), findsNWidgets(2));
+      expect(find.byType(Radio<String?>), findsNWidgets(3));
       expect(find.byType(Checkbox), findsNothing);
       // 未作答时继续按钮禁用
       expect(
@@ -174,7 +174,7 @@ void main() {
       expect(submitted?.first.selectedOptions.length, 2);
     });
 
-    testWidgets('输入自定义文本会清空已选选项（互斥）', (tester) async {
+    testWidgets('输入自定义文本自动切换为手输选项，切换回预设选项不抹除手输文本', (tester) async {
       List<AskUserAnswer>? submitted;
 
       await tester.pumpWidget(_buildTestApp(
@@ -193,34 +193,81 @@ void main() {
       await tester.tap(find.text('A'));
       await tester.pumpAndSettle();
       expect(
-        tester.widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>)),
-        isNotNull,
-      );
-      expect(
         tester
             .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
             .groupValue,
         'A',
       );
 
-      // 再输入自定义文本：选项选择被清空
+      // 输入自定义文本：单选自动选中手输选项
       await tester.enterText(find.byType(TextField), '自定义笔记主题');
       await tester.pumpAndSettle();
       expect(
         tester
             .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
             .groupValue,
-        isNull,
+        '__custom_option__',
+      );
+
+      // 切换到预设选项 B：单选切换为 B，但手输文本不被清空
+      await tester.tap(find.text('B'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        'B',
+      );
+      expect(find.text('自定义笔记主题'), findsOneWidget);
+
+      // 提交时由于当前选的是 B，只提交选项 B，不提交手输文本
+      await tester.tap(find.widgetWithText(FilledButton, '确定'));
+      await tester.pumpAndSettle();
+      expect(submitted?.first.selectedOptions, ['B']);
+      expect(submitted?.first.customText, isNull);
+    });
+
+    testWidgets('切换回手输选项保留已输文本并可正常提交', (tester) async {
+      List<AskUserAnswer>? submitted;
+
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('请选择或输入', options: ['A', 'B'])
+          ],
+          onSubmit: ({required answers}) {
+            submitted = answers;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '手输内容');
+      await tester.pumpAndSettle();
+      expect(find.text('手输内容'), findsOneWidget);
+
+      // 切换到选项 B
+      await tester.tap(find.text('B'));
+      await tester.pumpAndSettle();
+      expect(find.text('手输内容'), findsOneWidget);
+
+      // 再次点击手输选项所在的输入框，切回手输选项
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
+            .groupValue,
+        '__custom_option__',
       );
 
       await tester.tap(find.widgetWithText(FilledButton, '确定'));
       await tester.pumpAndSettle();
-
       expect(submitted?.first.selectedOptions, isEmpty);
-      expect(submitted?.first.customText, '自定义笔记主题');
+      expect(submitted?.first.customText, '手输内容');
     });
 
-    testWidgets('点选选项会清空自定义文本（互斥）', (tester) async {
+    testWidgets('手输选项未输入文字时确定按钮禁用，输入文字后启用', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
           questions: [
@@ -230,24 +277,27 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField), '手输内容');
-      await tester.pumpAndSettle();
-      expect(find.text('手输内容'), findsOneWidget);
+      final confirmBtn = find.widgetWithText(FilledButton, '确定');
+      expect(tester.widget<FilledButton>(confirmBtn).onPressed, isNull);
 
-      await tester.tap(find.text('B'));
+      // 点击手输选项行对应的 Radio
+      await tester.tap(find.byType(Radio<String?>).last);
       await tester.pumpAndSettle();
+      // 虽已选中手输选项，但输入框文字为空，确定按钮仍应禁用
+      expect(tester.widget<FilledButton>(confirmBtn).onPressed, isNull);
 
-      // 文本框被清空，选项 B 被选中
-      expect(find.text('手输内容'), findsNothing);
-      expect(
-        tester
-            .widget<RadioGroup<String?>>(find.byType(RadioGroup<String?>))
-            .groupValue,
-        'B',
-      );
+      // 输入文字后启用
+      await tester.enterText(find.byType(TextField), '有效回复');
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(confirmBtn).onPressed, isNotNull);
+
+      // 清空文字后重新禁用
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(confirmBtn).onPressed, isNull);
     });
 
-    testWidgets('向导单选自动前进、上一步保留答案、总览提交', (tester) async {
+    testWidgets('向导单选点选后不自动前进，需手动点击继续', (tester) async {
       List<AskUserAnswer>? submitted;
 
       await tester.pumpWidget(_buildTestApp(
@@ -263,8 +313,15 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // 点选 A 后自动进入第二题
+      // 点选 A 后停留在第一题，不自动进入第二题
       await tester.tap(find.text('A'));
+      await tester.pumpAndSettle();
+      expect(find.text('第一问？'), findsOneWidget);
+      expect(find.text('第二问？'), findsNothing);
+      expect(find.text('问题 1/2'), findsOneWidget);
+
+      // 手动点击「继续」进入第二题
+      await tester.tap(find.text('继续'));
       await tester.pumpAndSettle();
       expect(find.text('第一问？'), findsNothing);
       expect(find.text('第二问？'), findsOneWidget);
@@ -281,10 +338,15 @@ void main() {
         'A',
       );
 
-      // 继续回到第二题，点选 D 后进入总览页
+      // 继续回到第二题，点选 D，停留在第二题
       await tester.tap(find.text('继续'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('D'));
+      await tester.pumpAndSettle();
+      expect(find.text('第二问？'), findsOneWidget);
+
+      // 手动点击「继续」进入总览页
+      await tester.tap(find.text('继续'));
       await tester.pumpAndSettle();
       expect(find.text('确认你的回答'), findsOneWidget);
       expect(find.text('第一问？'), findsOneWidget);
@@ -340,6 +402,37 @@ void main() {
       expect(submitted?[1].customText, '手写答案');
     });
 
+    testWidgets('多选模式下手输选项可与预设选项同时勾选并一并提交', (tester) async {
+      List<AskUserAnswer>? submitted;
+
+      await tester.pumpWidget(_buildTestApp(
+        AskUserCard(
+          questions: [
+            _question('可多选标签', options: ['标签1', '标签2'], multiSelect: true),
+          ],
+          onSubmit: ({required answers}) {
+            submitted = answers;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // 勾选标签1
+      await tester.tap(find.text('标签1'));
+      await tester.pumpAndSettle();
+
+      // 勾选手输选项并输入内容
+      await tester.enterText(find.byType(TextField), '补充标签');
+      await tester.pumpAndSettle();
+
+      // 此时既勾选了标签1，又勾选了手输选项
+      await tester.tap(find.widgetWithText(FilledButton, '确定'));
+      await tester.pumpAndSettle();
+
+      expect(submitted?.first.selectedOptions, ['标签1']);
+      expect(submitted?.first.customText, '补充标签');
+    });
+
     testWidgets('向导总览页可回跳修改答案', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         AskUserCard(
@@ -353,15 +446,21 @@ void main() {
 
       await tester.tap(find.text('A'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('继续'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('C'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('继续'));
       await tester.pumpAndSettle();
       expect(find.text('确认你的回答'), findsOneWidget);
 
-      // 点第一行的修改回到第一题，改选 B 后线性回到第二题，再继续回总览
+      // 点第一行的修改回到第一题，改选 B 后手动点击继续回到第二题，再继续回总览
       await tester.tap(find.text('修改').first);
       await tester.pumpAndSettle();
       expect(find.text('第一问？'), findsOneWidget);
       await tester.tap(find.text('B'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('继续'));
       await tester.pumpAndSettle();
       expect(find.text('第二问？'), findsOneWidget);
       await tester.tap(find.text('继续'));
@@ -385,6 +484,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('第二问？'), findsOneWidget);
       await tester.tap(find.text('D'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('继续'));
       await tester.pumpAndSettle();
 
       expect(find.text('确认你的回答'), findsOneWidget);
