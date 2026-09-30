@@ -83,13 +83,15 @@ class SVGCardWidget extends StatelessWidget {
         allowDrawingOutsideViewBox: false, // 与offscreen renderer保持一致
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
-                  color: Colors.grey[200],
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
+                        CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           AppLocalizations.of(context).svgLoading,
                           style: TextStyle(
@@ -128,58 +130,61 @@ class SVGCardWidget extends StatelessWidget {
   }
 
   Widget _buildErrorWidget(BuildContext context, String message) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final shapeTokens = AppShapeTokens.of(context);
     return errorWidget ??
         Container(
           width: width,
           height: height,
           decoration: BoxDecoration(
-            color: Colors.grey[100],
-            border: Border.all(color: Colors.grey[300]!, width: 1),
-            borderRadius:
-                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+            color: colorScheme.surfaceContainerHighest,
+            border: Border.all(color: colorScheme.outlineVariant, width: 1),
+            borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
           ),
           child: Center(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.image_not_supported_outlined,
                     size: 48,
-                    color: Colors.grey[600],
+                    color: colorScheme.onSurfaceVariant,
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     AppLocalizations.of(context).svgRenderFailed,
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
-                        ?.copyWith(color: Colors.grey[700]),
+                        ?.copyWith(color: colorScheme.onSurface),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     AppLocalizations.of(context).svgTryingFallback,
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
-                        ?.copyWith(color: Colors.grey[600]),
+                        ?.copyWith(color: colorScheme.onSurfaceVariant),
                     textAlign: TextAlign.center,
                   ),
                   if (kDebugMode) ...[
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(4),
+                        color: colorScheme.surfaceContainerLow,
+                        borderRadius:
+                            BorderRadius.circular(shapeTokens.inputRadius),
                       ),
                       child: Text(
                         message.length > 100
                             ? '${message.substring(0, 100)}...'
                             : message,
                         style: TextStyle(
-                          color: Colors.black87,
+                          color: colorScheme.onSurface,
                           fontSize: 10,
                           fontFamily: 'monospace',
                         ),
@@ -218,13 +223,15 @@ class SVGCardWidget extends StatelessWidget {
         fit: fit,
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
-                  color: Colors.grey[100],
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
+                        CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           AppLocalizations.of(context).svgLoadingFallback,
                           style: TextStyle(
@@ -255,37 +262,38 @@ class SVGCardWidget extends StatelessWidget {
 
   /// 构建最终错误提示（当所有方案都失败时）
   Widget _buildFinalErrorWidget(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.red[50],
-        border: Border.all(color: Colors.red[200]!, width: 2),
+        color: colorScheme.errorContainer,
+        border: Border.all(color: colorScheme.error, width: 1.5),
         borderRadius:
             BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       ),
       child: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
-              SizedBox(height: 12),
+              Icon(Icons.error_outline,
+                  size: 48, color: colorScheme.onErrorContainer),
+              const SizedBox(height: 12),
               Text(
                 AppLocalizations.of(context).cardRenderFailed,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
-                    ?.copyWith(color: Colors.red[700]),
+                    ?.copyWith(color: colorScheme.onErrorContainer),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 AppLocalizations.of(context).cardRegeneratePrompt,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.red[600]),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onErrorContainer.withValues(alpha: 0.8)),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -639,7 +647,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                       child: Container(
                         margin: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(
                             AppShapeTokens.of(context).dialogRadius,
                           ),
