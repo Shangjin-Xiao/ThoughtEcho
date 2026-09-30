@@ -399,10 +399,14 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    // 首次勾选位置：触发抓取。Fake 只给坐标和 POI、行政区为空
-    //（在线反查失败的典型现场）。
-    await tester.tap(find.byKey(const ValueKey('add_note_location_chip')));
+    // 首次长按位置按钮：打开选择器选中当前详细地点（Fake 只给坐标和 POI、行政区为空）。
+    await tester
+        .longPress(find.byKey(const ValueKey('add_note_location_chip')));
     await tester.pumpAndSettle();
+    expect(find.textContaining('景山公园'), findsOneWidget);
+    await tester.tap(find.textContaining('景山公园'));
+    await tester.pumpAndSettle();
+
     final chipWidget = tester.widget<FilterChip>(
         find.byKey(const ValueKey('add_note_location_chip')));
     expect(chipWidget.selected, isTrue);
@@ -442,8 +446,14 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('add_note_location_chip')));
+    // 长按打开选择器选中当前详细地点
+    await tester
+        .longPress(find.byKey(const ValueKey('add_note_location_chip')));
     await tester.pumpAndSettle();
+    expect(find.textContaining('景山公园'), findsOneWidget);
+    await tester.tap(find.textContaining('景山公园'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const ValueKey('add_note_location_chip')));
     await tester.pumpAndSettle();
     expect(find.text('更新位置'), findsOneWidget);
