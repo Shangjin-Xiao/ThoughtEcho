@@ -25,6 +25,7 @@ import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../theme/theme_style.dart';
 import '../utils/feature_guide_helper.dart';
+import '../utils/string_utils.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'accessible_color_grid.dart'; // Import the new accessible color grid
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
@@ -1835,28 +1836,17 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   // 解析格式如"——作者《作品》"的字符串
+  // 性能优化：复用 StringUtils.parseSourceToControllers，使用预编译静态正则
   void _parseSource(
     String source,
     TextEditingController authorController,
     TextEditingController workController,
   ) {
-    String author = '';
-    String work = '';
-
-    // 提取作者（在"——"之后，"《"之前）
-    final authorMatch = RegExp(r'——([^《]+)').firstMatch(source);
-    if (authorMatch != null && authorMatch.groupCount >= 1) {
-      author = authorMatch.group(1)?.trim() ?? '';
-    }
-
-    // 提取作品（在《》之间）
-    final workMatch = RegExp(r'《(.+?)》').firstMatch(source);
-    if (workMatch != null && workMatch.groupCount >= 1) {
-      work = workMatch.group(1) ?? '';
-    }
-
-    authorController.text = author;
-    workController.text = work;
+    StringUtils.parseSourceToControllers(
+      source,
+      authorController,
+      workController,
+    );
   }
 
   // 格式化来源
