@@ -89,25 +89,30 @@ class GeneratedCard {
     );
   }
 
-  /// 从JSON创建对象
+  /// 从JSON创建对象，进行防御性类型校验与容错解析
   factory GeneratedCard.fromJson(Map<String, dynamic> json) {
+    final rawCreatedAt = json['createdAt']?.toString();
+    final parsedCreatedAt =
+        rawCreatedAt != null ? DateTime.tryParse(rawCreatedAt) : null;
+    final rawType = json['type']?.toString();
+
     return GeneratedCard(
-      id: json['id'] as String,
-      noteId: json['noteId'] as String,
-      originalContent: json['originalContent'] as String,
-      svgContent: json['svgContent'] as String,
+      id: json['id']?.toString() ?? '',
+      noteId: json['noteId']?.toString() ?? '',
+      originalContent: json['originalContent']?.toString() ?? '',
+      svgContent: json['svgContent']?.toString() ?? '',
       type: CardType.values.firstWhere(
-        (e) => e.toString() == json['type'],
+        (e) => e.toString() == rawType || e.name == rawType,
         orElse: () => CardType.knowledge,
       ),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      author: json['author'] as String?,
-      source: json['source'] as String?,
-      location: json['location'] as String?,
-      weather: json['weather'] as String?,
-      temperature: json['temperature'] as String?,
-      date: json['date'] as String?,
-      dayPeriod: json['dayPeriod'] as String?,
+      createdAt: parsedCreatedAt ?? DateTime.now(),
+      author: json['author']?.toString(),
+      source: json['source']?.toString(),
+      location: json['location']?.toString(),
+      weather: json['weather']?.toString(),
+      temperature: json['temperature']?.toString(),
+      date: json['date']?.toString(),
+      dayPeriod: json['dayPeriod']?.toString(),
     );
   }
 

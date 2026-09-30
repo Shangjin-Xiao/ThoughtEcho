@@ -53,5 +53,28 @@ void main() {
       expect(latestDraft!['id'], 'newer-body-draft');
       expect(latestDraft['plainText'], 'Newer meaningful content');
     });
+
+    test('handles non-string timestamps and non-string plainText gracefully',
+        () async {
+      await draftService.saveDraft('int-timestamp-draft', {
+        'plainText': 'Content with int timestamp',
+        'timestamp': 1711700000,
+      });
+
+      final draft = await draftService.getDraft('int-timestamp-draft');
+      expect(draft, isNotNull);
+      expect(draft!['plainText'], 'Content with int timestamp');
+
+      final latest = await draftService.getLatestDraft();
+      expect(latest, isNotNull);
+      expect(latest!['id'], 'int-timestamp-draft');
+    });
+
+    test('hasDraft returns true for existing key and false for non-existing',
+        () async {
+      expect(await draftService.hasDraft('non-existent'), isFalse);
+      await draftService.saveDraft('test-draft', {'plainText': 'hello'});
+      expect(await draftService.hasDraft('test-draft'), isTrue);
+    });
   });
 }
