@@ -19,12 +19,6 @@ class SvgToImageService {
   static final SvgRasterCacheService _cacheService = SvgRasterCacheService();
 
   // 预编译正则表达式以提升性能
-  static final RegExp _viewBoxRegex = RegExp(r'viewBox="([^"]+)"');
-  static final RegExp _splitSpaceCommaRegex = RegExp(r'[\s,]+');
-  static final RegExp _widthRegex = RegExp(r'width="([^"]+)"');
-  static final RegExp _heightRegex = RegExp(r'height="([^"]+)"');
-  static final RegExp _rectFallbackRegex =
-      RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"');
   static final RegExp _numericRegex = RegExp('[^0-9.-]');
   static final RegExp _linearGradientRegex = RegExp(
       r'<linearGradient[^>]*>.*?<\/linearGradient>',
@@ -205,57 +199,6 @@ class SvgToImageService {
         throw Exception('SVG内容包含不安全的元素: $dangerous');
       }
     }
-  }
-
-  /// 标准化SVG内容以确保正确渲染
-
-  /// 推断SVG的内在尺寸，优先使用合法viewBox，其次使用数值width/height，
-  /// 若为百分比或无效则从首个大矩形推断，最后回退到400x600。
-  // ignore: unused_element
-  static (String, String) _inferSvgIntrinsicSize(String svgContent) {
-    // 1) 优先使用合法的viewBox
-    final viewBoxMatch = _viewBoxRegex.firstMatch(svgContent);
-    if (viewBoxMatch != null) {
-      final parts = viewBoxMatch.group(1)!.split(_splitSpaceCommaRegex);
-      if (parts.length == 4 && parts.every((p) => double.tryParse(p) != null)) {
-        return (parts[2], parts[3]);
-      }
-    }
-
-    // 2) 解析数值width/height（忽略百分比/空值）
-    double? w = _parseNumericDimension(
-      _widthRegex.firstMatch(svgContent)?.group(1),
-    );
-    double? h = _parseNumericDimension(
-      _heightRegex.firstMatch(svgContent)?.group(1),
-    );
-
-    // 3) 如果根节点给的是百分比或0，尝试从第一个rect推断背景尺寸
-    if (w == null || h == null) {
-      final rectMatch = _rectFallbackRegex.firstMatch(svgContent);
-      if (rectMatch != null) {
-        w = _parseNumericDimension(rectMatch.group(1)) ?? w;
-        h = _parseNumericDimension(rectMatch.group(2)) ?? h;
-      }
-    }
-
-    // 4) 仍然无效时使用默认值
-    w ??= 400;
-    h ??= 600;
-
-    return (w.toString(), h.toString());
-  }
-
-  /// 仅接受数值维度，忽略百分比/空/非数字，避免 100% 导致视窗被错置。
-  // ignore: unused_element
-  static double? _parseNumericDimension(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return null;
-    if (raw.contains('%')) return null;
-    final cleaned = raw.replaceAll(_numericRegex, '');
-    if (cleaned.isEmpty) return null;
-    final parsed = double.tryParse(cleaned);
-    if (parsed == null || parsed <= 0) return null;
-    return parsed;
   }
 
   /// 渲染SVG为字节数组
