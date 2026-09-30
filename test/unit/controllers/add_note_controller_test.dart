@@ -158,8 +158,7 @@ void main() {
       expect(controller.newLocation, '中国,北京市,北京市,东城区');
     });
 
-    test('fetchLocationForNewNote 从 LocationSnapshot 严格同源获取坐标与 poiName',
-        () async {
+    test('fetchLocationForNewNote 快速定位仅保留行政区与坐标，不自动附带 poiName', () async {
       final completer = Completer<Position?>();
       final locService = _MockLocationServiceForRace(completer);
       final controller = AddNoteController(context: FakeBuildContext())
@@ -183,7 +182,7 @@ void main() {
       ));
       await fetchFuture;
 
-      expect(controller.newPoiName, '自动定位地名');
+      expect(controller.newPoiName, isNull);
       expect(controller.newLatitude, 39.9042);
       expect(controller.newLongitude, 116.4074);
       expect(controller.newLocation, '中国,北京市,北京市,海淀区');

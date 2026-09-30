@@ -896,9 +896,9 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
       );
     }
 
-    final String subtitle;
+    final String? subtitle;
     if (_deviceLocationString != null && _deviceLocationString!.isNotEmpty) {
-      subtitle = l10n.mapPickerCurrentLocationSubtitle;
+      subtitle = null;
     } else {
       subtitle = l10n.offlineCoordinates;
     }
@@ -916,11 +916,13 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text(
-        subtitle,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+          : null,
       trailing: _systemSelected
           ? Icon(Icons.check, color: theme.colorScheme.primary)
           : null,

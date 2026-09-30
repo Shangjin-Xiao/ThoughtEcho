@@ -346,7 +346,9 @@ class AddNoteController extends ChangeNotifier {
         newLatitude = snapshot.position.latitude;
         newLongitude = snapshot.position.longitude;
         newLocation = snapshot.location.isNotEmpty ? snapshot.location : null;
-        newPoiName = snapshot.poiName;
+        // 快速定位（不长按）：仅保存和展示到市·区行政区，不附带详细 POI；
+        // 详细 POI 仅由用户长按进入周边地点选择器主动选取。
+        newPoiName = null;
         isFetchingLocation = false;
         notifyListeners();
         onLocationFetched?.call();

@@ -226,7 +226,7 @@ void main() {
     expect(find.text('所在位置'), findsOneWidget);
 
     expect(find.text('北京市·东城区'), findsOneWidget);
-    expect(find.text('只记城市和区县，不记具体地点'), findsOneWidget);
+    expect(find.text('只记城市和区县，不记具体地点'), findsNothing);
     expect(find.byIcon(Icons.check), findsWidgets);
 
     expect(find.text('景山公园'), findsOneWidget);

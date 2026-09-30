@@ -28,14 +28,15 @@ class LocationWeatherHelper {
   }
 
   static Future<LocationSnapshot?> fetchLocation(
-    LocationService locationService,
-  ) async {
+    LocationService locationService, {
+    bool includePoi = false,
+  }) async {
     final position = await locationService.getCurrentLocation();
     if (position == null) {
       return null;
     }
 
-    final poiName = locationService.currentPoiName;
+    final poiName = includePoi ? locationService.currentPoiName : null;
 
     return LocationSnapshot(
       position: position,
