@@ -469,8 +469,12 @@ class ThemeStyleForm {
   /// 子集外字形的去处。
   ///
   /// [bundledSerif] 是 GB2312 子集（约 7800 个字形），覆盖不到的字——生僻人名用字、
-  /// 繁体引文、少数民族文字——会按这条链逐个找。**排系统衬线体而不是让它回落到
+  /// 繁体引文、日语特有汉字、少数民族文字——会按这条链逐个找。**排系统衬线体而不是让它回落到
   /// 引擎默认**，是为了让混排出来的那个字至少还是衬线，而不是段落里突然冒出一个黑体字。
+  ///
+  /// 中文在前、日文在后：子集里有的字不受影响，只有中文衬线体也没有的字才会落到
+  /// 日文衬线体（`Hiragino Mincho` / `Yu Mincho` / `Noto Serif JP` 等），
+  /// 日语缺字不再变豆腐块或黑体。
   ///
   /// 链尾不再需要通用族名 `serif`：首选族已经一定解析得到，逐字回退这条路是通的，
   /// 而 `serif` 在 iOS 上本来就解析不到，留着只是噪音。
@@ -481,6 +485,16 @@ class ThemeStyleForm {
     'Noto Serif SC',
     'Source Han Serif SC',
     'SimSun',
+    // 日语系统衬线：子集外的日语特有汉字落到这里。
+    // iOS / macOS 在前，Android / Windows 在后，顺序只影响缺字时先问谁。
+    'Hiragino Mincho ProN',
+    'Hiragino Mincho Pro',
+    'YuMincho',
+    'Yu Mincho',
+    'MS Mincho',
+    'Noto Serif CJK JP',
+    'Noto Serif JP',
+    'Source Han Serif JP',
   ];
 
   /// M3 `bodyLarge` 的字号。[ruleSpacing] 由它乘 [readingFontScale] 再乘
