@@ -99,3 +99,6 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 **对策:** 删除该文件。媒体引用、临时文件和清理行为继续由
 `test/unit/services/media_reference_service_test.dart`、媒体优化/修复测试和性能基准
 在真实服务边界验证；不为存在性探针新增替代测试。
+## 2025-02-23 - 补充 PathSecurityUtils 的核心测试
+**盲点:** `PathSecurityUtils.sanitizeZipEntryName` 函数缺乏针对 Windows 反斜杠、混合斜杠及前导斜杠（绝对路径解释防护）转换场景的专门单元测试。虽然已有 Zip Slip 尝试防御相关的 `validateExtractionPath` 测试，但基础的路径清理机制属于纯函数处理，缺少明确验证。
+**对策:** 为核心工具库中用于路径安全的纯函数（如 `sanitizeZipEntryName`）编写特定的断言，覆盖诸如反斜杠转换、剥离首个 `/` 和保持无问题字符串不变的情况。在处理安全或文件路径相关功能时，优先对最底层的纯文本清理函数增加 100% 边界验证测试。

@@ -4,6 +4,30 @@ import 'package:thoughtecho/utils/path_security_utils.dart';
 
 void main() {
   group('PathSecurityUtils', () {
+    test('sanitizeZipEntryName converts backslashes to forward slashes', () {
+      expect(PathSecurityUtils.sanitizeZipEntryName(r'folder\file.txt'),
+          'folder/file.txt');
+    });
+
+    test('sanitizeZipEntryName removes leading slashes', () {
+      expect(PathSecurityUtils.sanitizeZipEntryName('/folder/file.txt'),
+          'folder/file.txt');
+      expect(PathSecurityUtils.sanitizeZipEntryName('///folder/file.txt'),
+          'folder/file.txt');
+    });
+
+    test(
+        'sanitizeZipEntryName handles mixed backslashes and forward slashes with leading slashes',
+        () {
+      expect(PathSecurityUtils.sanitizeZipEntryName(r'/\folder\file.txt'),
+          'folder/file.txt');
+    });
+
+    test('sanitizeZipEntryName leaves safe paths unchanged', () {
+      expect(PathSecurityUtils.sanitizeZipEntryName('folder/file.txt'),
+          'folder/file.txt');
+    });
+
     // Define a base extraction directory for tests using the current working directory
     // to ensure we have a valid absolute base.
     final extractDir = path.join(path.current, 'safe_extract_dir');
