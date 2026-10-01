@@ -8,6 +8,7 @@ import '../utils/stub_implementations.dart'
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import 'ai_service.dart';
 import 'settings_service.dart';
 import 'svg_to_image_service.dart';
@@ -55,6 +56,7 @@ class AICardGenerationService extends ChangeNotifier {
     bool isRegeneration = false,
     CardType? excludeType,
   }) async {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'ai_card_generate'});
     final languageCode = _currentLanguageCode;
 
     // 如果用户关闭了 AI 生成功能，则直接使用模板（功能仍可用，只是没有AI增强）

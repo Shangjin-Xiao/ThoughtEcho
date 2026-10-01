@@ -37,6 +37,10 @@ void main() {
         'save_note',
         'delete_note',
         'toggle_favorite',
+        'ai_message_send',
+        'ai_card_generate',
+        'ai_insight_generate',
+        'ai_proposal_accept',
       ];
 
       for (final action in actions) {

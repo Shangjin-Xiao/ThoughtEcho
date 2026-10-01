@@ -5,6 +5,8 @@ extension _ThoughterWorkflow on _ThoughterPageState {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _isLoading) return;
 
+    AptabaseHelper.trackEvent('feature_used', {'action': 'ai_message_send'});
+
     _textController.clear();
     _setAutoScrollEnabled(true);
 
