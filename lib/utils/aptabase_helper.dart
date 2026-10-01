@@ -14,12 +14,16 @@ class AptabaseHelper {
 
   static bool _initialized = false;
   static bool _enabled = false;
+  static Future<void>? _initFuture;
 
   /// 配置或切换统计开关状态
   static Future<void> configure({required bool enabled}) async {
     _enabled = enabled;
     if (!enabled) return;
     if (_initialized) return;
+
+    final inFlight = _initFuture;
+    if (inFlight != null) return inFlight;
 
     final appKey = AppConstants.aptabaseAppKey;
     if (appKey.isEmpty) {
@@ -29,13 +33,19 @@ class AptabaseHelper {
       return;
     }
 
-    try {
-      await Aptabase.init(appKey);
-      _initialized = true;
-      logInfo('Aptabase 初始化成功', source: 'Aptabase');
-    } catch (e) {
-      logWarning('Aptabase 初始化失败: $e', source: 'Aptabase');
-    }
+    final initFuture = () async {
+      try {
+        await Aptabase.init(appKey);
+        _initialized = true;
+        logInfo('Aptabase 初始化成功', source: 'Aptabase');
+      } catch (e) {
+        logWarning('Aptabase 初始化失败: $e', source: 'Aptabase');
+      } finally {
+        _initFuture = null;
+      }
+    }();
+    _initFuture = initFuture;
+    return initFuture;
   }
 
   /// 记录自定义事件

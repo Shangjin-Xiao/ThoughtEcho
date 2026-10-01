@@ -20,5 +20,15 @@ void main() {
         completes,
       );
     });
+
+    test('concurrent configure calls complete without error', () async {
+      await expectLater(
+        Future.wait([
+          AptabaseHelper.configure(enabled: true),
+          AptabaseHelper.configure(enabled: true),
+        ]),
+        completes,
+      );
+    });
   });
 }
