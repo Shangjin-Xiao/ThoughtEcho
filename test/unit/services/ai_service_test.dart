@@ -4,6 +4,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:thoughtecho/models/chat_message.dart';
 import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
+
+class _FakeSettingsService extends Fake implements SettingsService {
+  @override
+  String? get localeCode => 'zh';
+  @override
+  String get userNickname => '';
+  @override
+  String get defaultAuthor => '';
+  @override
+  String get defaultSource => '';
+  @override
+  Set<String> get userAliases => const {};
+}
 
 /// 用户画像必须作为独立的 user 数据消息注入，绝不能并进 system prompt。
 ///
@@ -108,6 +123,38 @@ void main() {
         isTrue,
       );
       expect(roleOf(messages.last), 'user');
+    });
+  });
+
+  group('AIService 埋点测试', () {
+    test('生成洞察流触发 ai_insight_generate 埋点', () async {
+      final aiService = AIService(settingsService: _FakeSettingsService());
+
+      final events = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        events.add({'event': eventName, 'props': props});
+      };
+
+      try {
+        final stream1 = aiService.streamReportInsight(
+          periodLabel: '本周',
+          activeDays: 3,
+          noteCount: 5,
+          totalWordCount: 100,
+        );
+        final sub = stream1.listen((_) {});
+        await sub.cancel();
+
+        aiService.streamGenerateInsights([]);
+
+        expect(events, hasLength(2));
+        for (final e in events) {
+          expect(e['event'], equals('feature_used'));
+          expect(e['props'], equals({'action': 'ai_insight_generate'}));
+        }
+      } finally {
+        AptabaseHelper.onTrackEventForTesting = null;
+      }
     });
   });
 }

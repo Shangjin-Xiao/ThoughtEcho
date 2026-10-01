@@ -8,6 +8,7 @@ import '../utils/stub_implementations.dart'
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import 'ai_service.dart';
 import 'settings_service.dart';
 import 'svg_to_image_service.dart';
@@ -71,6 +72,7 @@ class AICardGenerationService extends ChangeNotifier {
     }
 
     try {
+      AptabaseHelper.trackEvent('feature_used', {'action': 'ai_card_generate'});
       return await _aiStrategy.generate(
         note: note,
         brandName: brandName,

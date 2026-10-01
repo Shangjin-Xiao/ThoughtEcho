@@ -16,6 +16,10 @@ class AptabaseHelper {
   static bool _enabled = false;
   static Future<void>? _initFuture;
 
+  @visibleForTesting
+  static void Function(String eventName, Map<String, Object>? props)?
+      onTrackEventForTesting;
+
   /// 配置或切换统计开关状态
   static Future<void> configure({required bool enabled}) async {
     _enabled = enabled;
@@ -53,6 +57,7 @@ class AptabaseHelper {
   /// [eventName] 事件名称，例如 'feature_used', 'page_view'
   /// [props] 可选属性键值对（必须是固定枚举或数字/布尔，严禁携带用户输入内容）
   static void trackEvent(String eventName, [Map<String, Object>? props]) {
+    onTrackEventForTesting?.call(eventName, props);
     if (!_enabled || !_initialized) return;
     try {
       Aptabase.instance.trackEvent(eventName, props);

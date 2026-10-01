@@ -13,6 +13,7 @@ import '../utils/daily_prompt_generator.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/localization_resolver.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
@@ -497,6 +498,8 @@ class AIService extends ChangeNotifier {
     DateTime? rangeStart, // 这批笔记的时间范围（闭区间），用于给模型定位"现在"
     DateTime? rangeEnd,
   }) async* {
+    AptabaseHelper.trackEvent(
+        'feature_used', {'action': 'ai_insight_generate'});
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
@@ -560,6 +563,8 @@ class AIService extends ChangeNotifier {
     int? daysSinceLastNote,
     bool everWroteAnything = true,
   }) async* {
+    AptabaseHelper.trackEvent(
+        'feature_used', {'action': 'ai_insight_generate'});
     final languageCode = _settingsService.localeCode;
     final profileBlock = await _userProfileContext();
 
@@ -795,6 +800,8 @@ class AIService extends ChangeNotifier {
     DateTime? rangeEnd,
     String? periodLabel,
   }) {
+    AptabaseHelper.trackEvent(
+        'feature_used', {'action': 'ai_insight_generate'});
     // 将笔记数据转换为JSON格式
     final jsonData = _requestHelper.convertQuotesToJson(
       quotes,

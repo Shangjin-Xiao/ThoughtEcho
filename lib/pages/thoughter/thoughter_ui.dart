@@ -1433,7 +1433,7 @@ extension _ThoughterUI on _ThoughterPageState {
   Future<String?> _applyNoteProposal(NoteProposalArtifact artifact) async {
     if (artifact.action == NoteProposalAction.create) {
       final validatedOps = _validatedArtifactOps(artifact);
-      return _saveSmartResultAsNewNote(
+      final noteId = await _saveSmartResultAsNewNote(
         {
           ...artifact.metadata,
           'document_kind': artifact.resultKind.name,
@@ -1441,6 +1441,13 @@ extension _ThoughterUI on _ThoughterPageState {
         },
         artifact.content,
       );
+      if (noteId != null) {
+        AptabaseHelper.trackEvent(
+          'feature_used',
+          {'action': 'ai_proposal_accept'},
+        );
+      }
+      return noteId;
     }
     final db = context.read<DatabaseService>();
     final result = await NoteProposalApplier(db).applyEdit(artifact);
@@ -1448,6 +1455,7 @@ extension _ThoughterUI on _ThoughterPageState {
       _showRichEditConflict();
       return null;
     }
+    AptabaseHelper.trackEvent('feature_used', {'action': 'ai_proposal_accept'});
     if (mounted) {
       AppSnackBar.success(context, AppLocalizations.of(context).saveSuccess);
     }
