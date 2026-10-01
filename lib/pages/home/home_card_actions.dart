@@ -11,6 +11,7 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/ai_card_generation_service.dart';
 import 'package:thoughtecho/services/svg_to_image_service.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/svg_card_widget.dart';
 
@@ -86,6 +87,7 @@ class HomeCardActions {
   }
 
   Future<void> _shareCard(GeneratedCard card) async {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'share_card_image'});
     try {
       final sharePrefix = AppLocalizations.of(context).cardSharePrefix;
       if (isMounted()) {
@@ -164,6 +166,7 @@ class HomeCardActions {
     AICardGenerationService service,
     GeneratedCard card,
   ) async {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'export_card_image'});
     try {
       if (isMounted()) {
         ScaffoldMessenger.of(context).showSnackBar(

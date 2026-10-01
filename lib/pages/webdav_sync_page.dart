@@ -9,6 +9,7 @@ import '../services/mmkv_service.dart';
 import '../services/webdav_sync_service.dart';
 import '../utils/lww_utils.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../theme/app_semantic_colors.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
@@ -277,6 +278,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
   /// 触发手动同步
   Future<void> _triggerManualSync(
       WebDAVSyncService syncService, AppLocalizations l10n) async {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'webdav_sync_manual'});
     await syncService.triggerSync();
     await _checkConflictNotes();
 
