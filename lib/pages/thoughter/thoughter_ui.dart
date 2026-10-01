@@ -1808,6 +1808,7 @@ extension _ThoughterUI on _ThoughterPageState {
       );
 
       await db.addQuote(quote);
+      AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

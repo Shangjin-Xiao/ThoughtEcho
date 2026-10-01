@@ -687,11 +687,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // FAB 短按处理
   void _onFABTap() {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'create_note'});
     _showAddQuoteDialog();
   }
 
   // FAB 长按由捕获模块处理语音与 OCR 的完整交互。
   void _onFABLongPress() {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'create_note'});
     unawaited(_captureActions.startVoiceCapture());
   }
 

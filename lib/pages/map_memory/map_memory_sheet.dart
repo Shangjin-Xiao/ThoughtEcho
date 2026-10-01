@@ -92,6 +92,7 @@ extension _MapMemorySheet on _MapMemoryPageState {
 
     try {
       await database.deleteQuote(quoteId);
+      AptabaseHelper.trackEvent('feature_used', {'action': 'delete_note'});
       if (!mounted) return;
       AppSnackBar.success(context, l10n.noteMovedToTrash);
       await _load();

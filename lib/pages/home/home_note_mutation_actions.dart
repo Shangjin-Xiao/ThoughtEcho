@@ -8,6 +8,7 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 
@@ -39,6 +40,7 @@ class HomeNoteMutationActions {
 
     try {
       await database.deleteQuote(quoteId);
+      AptabaseHelper.trackEvent('feature_used', {'action': 'delete_note'});
       if (!_active) return;
 
       _trashSnackBarTimer?.cancel();
@@ -113,6 +115,7 @@ class HomeNoteMutationActions {
     if (!_active || quoteId == null) return;
     try {
       await context.read<DatabaseService>().incrementFavoriteCount(quoteId);
+      AptabaseHelper.trackEvent('feature_used', {'action': 'toggle_favorite'});
       if (!isMounted() || !context.mounted || _disposed) return;
       final l10n = AppLocalizations.of(context);
       final errorColorScheme = Theme.of(context).colorScheme;
@@ -177,6 +180,7 @@ class HomeNoteMutationActions {
 
     try {
       await context.read<DatabaseService>().resetFavoriteCount(quoteId);
+      AptabaseHelper.trackEvent('feature_used', {'action': 'toggle_favorite'});
       if (!isMounted() || !context.mounted || _disposed) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

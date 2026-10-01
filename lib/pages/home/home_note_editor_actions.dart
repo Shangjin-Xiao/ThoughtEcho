@@ -13,6 +13,7 @@ import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
@@ -173,6 +174,8 @@ class HomeNoteEditorActions {
       } else {
         await database.addQuote(quote);
       }
+
+      AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
 
       if (!isMounted() || !context.mounted) return;
       messenger.showSnackBar(

@@ -400,6 +400,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         _mediaState.markSavedSuccessfully();
         _editorState.markDraftSaved();
         saveSucceeded = true;
+        AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
         widget.onSaved?.call(quote);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -418,6 +419,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         _mediaState.markSavedSuccessfully();
         _editorState.markDraftSaved();
         saveSucceeded = true;
+        AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
         widget.onSaved?.call(quote);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

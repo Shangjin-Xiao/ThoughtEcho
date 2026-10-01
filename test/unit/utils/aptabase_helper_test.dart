@@ -12,6 +12,26 @@ void main() {
         () => AptabaseHelper.trackEvent('test_event', {'key': 'val'}),
         returnsNormally,
       );
+      expect(
+        () => AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'create_note'}),
+        returnsNormally,
+      );
+      expect(
+        () =>
+            AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'}),
+        returnsNormally,
+      );
+      expect(
+        () => AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'delete_note'}),
+        returnsNormally,
+      );
+      expect(
+        () => AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'toggle_favorite'}),
+        returnsNormally,
+      );
     });
 
     test('configure handles disabled gracefully', () async {
