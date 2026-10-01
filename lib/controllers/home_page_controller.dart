@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import 'package:thoughtecho/models/note_tag.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 
 /// Owns the observable navigation and note-list state composed by [HomePage].
 ///
@@ -49,6 +50,7 @@ class HomePageController extends ChangeNotifier {
     final next = List<String>.unmodifiable(tagIds);
     if (listEquals(_selectedTagIds, next)) return;
     _selectedTagIds = next;
+    AptabaseHelper.trackEvent('feature_used', {'action': 'filter_by_tag'});
     notifyListeners();
   }
 
@@ -56,6 +58,7 @@ class HomePageController extends ChangeNotifier {
     if (_sortType == type && _sortAscending == ascending) return;
     _sortType = type;
     _sortAscending = ascending;
+    AptabaseHelper.trackEvent('feature_used', {'action': 'sort_changed'});
     notifyListeners();
   }
 

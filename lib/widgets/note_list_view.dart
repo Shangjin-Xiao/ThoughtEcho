@@ -43,6 +43,7 @@ import '../services/settings_service.dart'; // 导入设置服务
 import '../services/pdf_export_service.dart';
 import '../services/pdf_font_service.dart';
 import '../widgets/pdf_preview_dialog.dart';
+import '../utils/aptabase_helper.dart';
 import 'note_list/note_item_motion.dart';
 import 'note_list/scroll_alignment.dart';
 import 'app_snackbar.dart';
