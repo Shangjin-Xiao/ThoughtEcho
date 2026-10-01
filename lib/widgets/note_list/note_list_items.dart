@@ -1108,6 +1108,7 @@ extension _NoteListItemsExtension on NoteListViewState {
 
     // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
     if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
+      AptabaseHelper.trackEvent('feature_used', {'action': 'search_performed'});
       try {
         final searchController = Provider.of<NoteSearchController>(
           context,
