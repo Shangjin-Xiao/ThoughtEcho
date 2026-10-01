@@ -269,6 +269,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       throw ArgumentError('笔记ID不能为空');
     }
     await _hardDeleteQuotes([id]);
+    AptabaseHelper.trackEvent('feature_used', {'action': 'delete_note'});
   }
 
   @override

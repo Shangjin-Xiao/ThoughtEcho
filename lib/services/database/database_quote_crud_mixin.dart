@@ -18,6 +18,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       _memoryStore.add(quote);
       notifyListeners();
       notifyLocalDataChangedForParts();
+      AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
       return;
     }
 
@@ -103,6 +104,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         refreshQuotesStreamForParts();
         notifyListeners(); // 通知其他监听者（如Homepage的FAB）
         notifyLocalDataChangedForParts();
+        AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
       } catch (e) {
         logDebug('保存笔记到数据库时出错: $e');
         rethrow; // 重新抛出异常，让调用者处理
@@ -501,6 +503,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       refreshQuotesStreamForParts();
       notifyListeners();
       notifyLocalDataChangedForParts();
+      AptabaseHelper.trackEvent('feature_used', {'action': 'delete_note'});
       return;
     }
 
@@ -529,6 +532,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         refreshQuotesStreamForParts();
         notifyListeners();
         notifyLocalDataChangedForParts();
+        AptabaseHelper.trackEvent('feature_used', {'action': 'delete_note'});
 
         logDebug('笔记已移入回收站，ID: $id');
       } catch (e, stack) {
@@ -607,6 +611,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
       notifyListeners();
       notifyLocalDataChangedForParts();
+      AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
       return QuoteUpdateResult.updated;
     }
 
@@ -754,6 +759,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           _quotesController!.add(List.from(_currentQuotes));
         }
         notifyListeners(); // 通知其他监听者
+        AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
         return QuoteUpdateResult.updated;
       } catch (e, stack) {
         UnifiedLogService.instance.error(

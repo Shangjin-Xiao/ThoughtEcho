@@ -36,6 +36,8 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
         }
         notifyListeners();
         notifyLocalDataChangedForParts();
+        AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'toggle_favorite'});
       } else {
         logWarning(
           'Web平台收藏操作失败: 未找到quoteId=$quoteId',
@@ -120,6 +122,8 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
         }
         notifyListeners();
         notifyLocalDataChangedForParts();
+        AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'toggle_favorite'});
       } catch (e) {
         logError(
           '增加心形点击次数时出错: quoteId=$quoteId, error=$e',
@@ -160,6 +164,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
       }
       notifyListeners();
       notifyLocalDataChangedForParts();
+      AptabaseHelper.trackEvent('feature_used', {'action': 'toggle_favorite'});
       return;
     }
 
@@ -225,6 +230,8 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
         }
         notifyListeners();
         notifyLocalDataChangedForParts();
+        AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'toggle_favorite'});
       } catch (e) {
         logError(
           '清除收藏时出错: quoteId=$quoteId, error=$e',
