@@ -8,6 +8,8 @@
   "smartPushPeriodNight": "夜间",
   "settingsSentryTitle": "发送诊断数据帮助改进",
   "settingsSentryDesc": "默认关闭。手动开启后将发送匿名错误日志与诊断信息，帮助改进应用稳定性。绝不收集笔记内容、AI 对话或任何个人隐私。",
+  "settingsTelemetryTitle": "参与匿名功能改进计划",
+  "settingsTelemetryDesc": "默认关闭。开启后仅收集匿名功能使用频次（如功能使用比例），帮助规划开发优先级。绝不收集笔记正文、搜索词等任何个人隐私。",
   "sentryRestartHint": "设置已保存，重启应用后生效",
   "sentryDisclosureTitle": "隐私政策已更新",
   "sentryDisclosureMessage": "心迹隐私政策已更新，您可以在官网查看。\n\n为帮助排查应用闪退与改进使用体验，我们新增了错误诊断日志收集。为保护您的隐私，该功能默认关闭，您可随时在“设置 -> 反馈与联系”中按需开启。\n\n隐私政策链接：https://note.shangjinyun.cn/privacy",

@@ -46,6 +46,7 @@ import '../utils/ai_smart_result_utils.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/agent_history_builder.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/note_proposal_applier.dart';
 import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';
@@ -365,6 +366,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   @override
   void initState() {
     super.initState();
+    AptabaseHelper.trackPageView('thoughter');
     _initStateImpl();
   }
 

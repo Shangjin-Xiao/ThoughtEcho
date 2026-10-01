@@ -12,6 +12,7 @@ import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import '../models/thoughter_entry.dart'; // 新增 ThoughterPageMode
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/utils/sentry_network_tracing.dart';
@@ -417,6 +418,15 @@ class SettingsService extends ChangeNotifier {
     SentryDatabaseTracing.configure(enabled: enabled);
     SentryNetworkTracing.configure(enabled: enabled);
     SentryHelper.startIfEnabled(enabled);
+    notifyListeners();
+  }
+
+  // 是否启用匿名功能改进统计（Aptabase）
+  bool get telemetryEnabled => _appSettings.telemetryEnabled;
+  Future<void> setTelemetryEnabled(bool enabled) async {
+    _appSettings = _appSettings.copyWith(telemetryEnabled: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    await AptabaseHelper.configure(enabled: enabled);
     notifyListeners();
   }
 

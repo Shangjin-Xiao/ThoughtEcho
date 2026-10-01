@@ -54,6 +54,8 @@ on:
     secrets:
       SENTRY_DSN:
         required: false
+      APTABASE_APP_KEY:
+        required: false
 
 jobs:
   build-windows:
@@ -132,12 +134,13 @@ jobs:
       env:
         BUILD_TYPE: ${{ inputs.build_type || 'release' }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
       run: |
         if ($env:BUILD_TYPE -notin @('release', 'profile')) {
           Write-Error "Invalid build type: $env:BUILD_TYPE"
           exit 1
         }
-        flutter build windows --$env:BUILD_TYPE --verbose --dart-define=SENTRY_DSN=$env:SENTRY_DSN
+        flutter build windows --$env:BUILD_TYPE --verbose --dart-define=SENTRY_DSN=$env:SENTRY_DSN --dart-define=APTABASE_APP_KEY=$env:APTABASE_APP_KEY
       
     - name: Verify MSIX configuration
       shell: pwsh

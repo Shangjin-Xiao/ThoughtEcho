@@ -23,6 +23,7 @@ import 'settings_page.dart';
 import 'note_full_editor_page.dart';
 import '../services/settings_service.dart'; // Import SettingsService
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../services/ai_card_generation_service.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../services/draft_service.dart';
@@ -170,9 +171,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // 网络恢复监听
   ConnectivityService? _connectivityService;
 
+  int? _lastTrackedIndex;
+
+  void _trackTab(int index) {
+    if (_lastTrackedIndex == index) return;
+    _lastTrackedIndex = index;
+    final pageName = switch (index) {
+      0 => 'home',
+      1 => 'notes',
+      2 => 'explore',
+      3 => 'settings',
+      _ => 'unknown',
+    };
+    AptabaseHelper.trackPageView(pageName);
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _trackTab(_pageController.currentIndex);
+      }
+    });
     _pageController = HomePageController(initialPage: widget.initialPage)
       ..addListener(_onPageStateChanged);
     _cardActions = HomeCardActions(
@@ -333,6 +354,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   void _onPageStateChanged() {
+    _trackTab(_pageController.currentIndex);
     if (mounted) setState(() {});
   }
 

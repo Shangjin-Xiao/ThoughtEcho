@@ -119,6 +119,7 @@ jobs:
     uses: ./.github/workflows/flutter-release-build.yml
     secrets:
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -136,6 +137,7 @@ jobs:
     uses: ./.github/workflows/build-windows.yml
     secrets:
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
     with:
       app_version: ${{ needs.prepare.outputs.msix_version }}
       flutter_version: '3.47.x'
@@ -147,6 +149,7 @@ jobs:
     uses: ./.github/workflows/ios-build.yml
     secrets:
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
       # 没配这几个 secret 时上传步骤会自己跳过，不会让发版构建失败。
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
