@@ -56,7 +56,6 @@ class AICardGenerationService extends ChangeNotifier {
     bool isRegeneration = false,
     CardType? excludeType,
   }) async {
-    AptabaseHelper.trackEvent('feature_used', {'action': 'ai_card_generate'});
     final languageCode = _currentLanguageCode;
 
     // 如果用户关闭了 AI 生成功能，则直接使用模板（功能仍可用，只是没有AI增强）
@@ -73,6 +72,7 @@ class AICardGenerationService extends ChangeNotifier {
     }
 
     try {
+      AptabaseHelper.trackEvent('feature_used', {'action': 'ai_card_generate'});
       return await _aiStrategy.generate(
         note: note,
         brandName: brandName,

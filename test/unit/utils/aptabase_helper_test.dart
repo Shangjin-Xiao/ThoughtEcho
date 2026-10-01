@@ -56,5 +56,36 @@ void main() {
         expect(props['action'], equals(action));
       }
     });
+
+    test(
+        'onTrackEventForTesting interceptor captures tracked events and validates privacy',
+        () {
+      final events = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        events.add({'event': eventName, 'props': props});
+      };
+
+      try {
+        AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'ai_message_send'});
+        AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'ai_card_generate'});
+        AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'ai_insight_generate'});
+        AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'ai_proposal_accept'});
+
+        expect(events, hasLength(4));
+        for (final item in events) {
+          expect(item['event'], 'feature_used');
+          final props = item['props'] as Map<String, Object>?;
+          expect(props, isNotNull);
+          expect(props!.keys, equals(['action']));
+          expect(props['action'].toString().startsWith('ai_'), isTrue);
+        }
+      } finally {
+        AptabaseHelper.onTrackEventForTesting = null;
+      }
+    });
   });
 }
