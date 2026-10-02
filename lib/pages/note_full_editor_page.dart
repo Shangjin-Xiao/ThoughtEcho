@@ -10,7 +10,6 @@ import '../services/database_service.dart';
 import '../models/quote_model.dart';
 import '../models/note_tag.dart';
 import '../services/location_service.dart';
-import '../services/local_geocoding_service.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -43,6 +42,7 @@ import '../utils/location_weather_helper.dart';
 import '../services/settings_service.dart';
 import '../controllers/note_editor_states.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/note_metadata_dialogs.dart';
 import '../theme/theme_style.dart';
 import 'nearby_location_picker.dart';
 

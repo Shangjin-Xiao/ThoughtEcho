@@ -52,6 +52,17 @@ void main() {
       expect(clipboardService.shouldSkipNextClipboardCheck, isFalse);
     });
 
+    test('skips clipboard check when content is recorded as internal copy',
+        () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+      const text = '这是应用内部复制出来的金句文本';
+      await Clipboard.setData(const ClipboardData(text: text));
+
+      clipboardService.recordInternalCopy(text);
+
+      expect(await clipboardService.checkClipboard(), isNull);
+    });
+
     test('extracts source before trailing author without dropping clipboard',
         () async {
       clipboardService.setEnableClipboardMonitoring(true);

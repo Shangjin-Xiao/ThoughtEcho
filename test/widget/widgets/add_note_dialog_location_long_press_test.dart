@@ -262,8 +262,9 @@ void main() {
     // 验证弹出的是只读提示对话框，而不是 NearbyLocationPicker
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('位置信息'), findsOneWidget);
-    // 弹窗提示内容包含格式化 POI 地名
-    expect(find.textContaining('东城区·故宫博物院'), findsOneWidget);
+    // 弹窗提示内容包含地点名称与行政区
+    expect(find.textContaining('故宫博物院'), findsOneWidget);
+    expect(find.textContaining('东城区'), findsOneWidget);
     expect(find.byType(NearbyLocationPicker), findsNothing);
 
     // 关闭对话框并清理

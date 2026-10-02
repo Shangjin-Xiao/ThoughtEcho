@@ -44,6 +44,11 @@ class ClipboardService extends ChangeNotifier {
     logDebug('通知笔记导航后跳过下一次剪贴板检查');
   }
 
+  /// 记录应用内生成的剪贴板内容，避免应用内监听或切回前台时重复处理自身产生的文本。
+  void recordInternalCopy(String text) {
+    _lastProcessedContent = text;
+  }
+
   /// 初始化服务（需要在应用启动时显式调用）
   Future<void> init() async {
     await _initPreferences();

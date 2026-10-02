@@ -2563,6 +2563,7 @@
   "editNoteMenu": "编辑笔记",
   "askAIMenu": "问 Thoughter",
   "generateCardShareMenu": "生成卡片分享",
+  "copyTextMenu": "复制文本",
   "deleteNoteMenu": "删除笔记",
   "doubleTapToViewFull": "双击查看全文",
   "logLevel": "级别: {level}",

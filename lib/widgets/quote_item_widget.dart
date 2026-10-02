@@ -1,23 +1,26 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
-import '../theme/theme_style.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../extensions/note_tag_localization_extension.dart';
-import '../models/quote_model.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../models/note_tag.dart';
-import '../theme/app_semantic_colors.dart';
-import '../widgets/common/paper_rule_background.dart';
-import '../widgets/quote_content_widget.dart';
-import '../services/weather_service.dart';
+import '../models/quote_model.dart';
+import '../services/clipboard_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
-import '../utils/quill_editor_extensions.dart';
-import '../utils/time_utils.dart';
+import '../services/weather_service.dart';
+import '../theme/app_semantic_colors.dart';
+import '../theme/theme_style.dart';
 import '../utils/icon_utils.dart';
-
-import '../gen_l10n/app_localizations.dart';
+import '../utils/quill_editor_extensions.dart';
+import '../utils/quote_text_extractor.dart';
+import '../utils/time_utils.dart';
+import '../widgets/common/paper_rule_background.dart';
+import '../widgets/quote_content_widget.dart';
+import 'app_snackbar.dart';
 import 'quote_card_helpers.dart';
 
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
@@ -43,6 +46,7 @@ class QuoteItemWidget extends StatefulWidget {
   final Function() onAskAI;
   final Function()? onGenerateCard;
   final Function()? onExportPdf; // PDF导出回调
+  final Function()? onCopyText; // 复制文本回调
   final Function()? onFavorite; // 心形按钮点击回调
   final Function()? onLongPressFavorite; // 心形按钮长按回调（清除收藏）
   final String? searchQuery;
@@ -98,6 +102,7 @@ class QuoteItemWidget extends StatefulWidget {
     required this.onAskAI,
     this.onGenerateCard,
     this.onExportPdf,
+    this.onCopyText,
     this.onFavorite, // 心形按钮点击回调
     this.onLongPressFavorite, // 心形按钮长按回调（清除收藏）
     this.tagBuilder,
@@ -533,23 +538,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return [...matchedTags, ...otherTags];
   }
 
-  String _formatSource(String author, String work) {
-    if (author.isEmpty && work.isEmpty) {
-      return '';
-    }
-
-    String result = '';
-    if (author.isNotEmpty) {
-      result += '——$author';
-    }
-
-    if (work.isNotEmpty) {
-      result += ' 《$work》';
-    }
-
-    return result;
-  }
-
   // 根据天气key获取图标
   IconData _getWeatherIcon(String weatherKey) {
     return WeatherService.getWeatherIconDataByKey(weatherKey);
@@ -750,14 +738,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
   /// 来源与出处那一行的文本；没有来源时为 null。
   String? _sourceLineFor(Quote quote) {
-    final author = quote.sourceAuthor ?? '';
-    final work = quote.sourceWork ?? '';
-    if (author.isNotEmpty || work.isNotEmpty) {
-      return _formatSource(author, work);
-    }
-    final source = quote.source;
-    if (source != null && source.isNotEmpty) return source;
-    return null;
+    return QuoteTextExtractor.formatSource(quote);
   }
 
   /// 来源行，右端可以搭一条折叠提示。
@@ -1278,6 +1259,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     // 导出格式在点开时才读：菜单在这一刻才需要它，卡片本身不必为它订阅设置变更。
     final String exportFormat = context.read<SettingsService>().exportFormat;
+    final bool hasTextContent =
+        QuoteTextExtractor.extractPlainText(widget.quote).isNotEmpty;
 
     final String? selected = await showMenu<String>(
       context: context,
@@ -1339,6 +1322,20 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
               ],
             ),
           ),
+        if (hasTextContent)
+          PopupMenuItem<String>(
+            value: 'copy_text',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.copy_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(l10n.copyTextMenu),
+              ],
+            ),
+          ),
         PopupMenuItem<String>(
           value: 'delete',
           child: Row(
@@ -1365,9 +1362,42 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         widget.onGenerateCard?.call();
       case 'export_pdf':
         widget.onExportPdf?.call();
+      case 'copy_text':
+        if (widget.onCopyText != null) {
+          widget.onCopyText!();
+        } else {
+          await _handleCopyText(l10n);
+        }
       case 'delete':
         widget.onDelete();
     }
+  }
+
+  Future<void> _handleCopyText(AppLocalizations l10n) async {
+    final text = QuoteTextExtractor.formatForCopy(widget.quote);
+    if (text.isEmpty) return;
+
+    ClipboardService? clipboardService;
+    try {
+      clipboardService = context.read<ClipboardService>();
+    } catch (_) {
+      // 在未注入 ClipboardService 的轻量测试或隔离环境中降级
+    }
+
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.error(context, l10n.operationFailedSimple);
+      return;
+    }
+
+    clipboardService?.recordInternalCopy(text);
+
+    HapticFeedback.selectionClick();
+
+    if (!mounted) return;
+    AppSnackBar.success(context, l10n.copiedToClipboard);
   }
 
   @override

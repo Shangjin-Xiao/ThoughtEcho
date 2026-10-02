@@ -2557,6 +2557,7 @@
   "editNoteMenu": "Edit Note",
   "askAIMenu": "Chat with Thoughter",
   "generateCardShareMenu": "Generate Card",
+  "copyTextMenu": "Copy Text",
   "deleteNoteMenu": "Delete Note",
   "doubleTapToViewFull": "Double tap to view full",
   "logLevel": "Level: {level}",
