@@ -303,6 +303,74 @@ void main() {
       expect(row['sentiment'], isNull);
       expect(row['sentiment_backup'], 'thoughtful');
     });
+
+    group('DatabaseSchemaLifecycle direct methods', () {
+      test('createCurrentSchema initializes tables and pragmas', () async {
+        final lifecycle = DatabaseSchemaLifecycle.standard();
+        await lifecycle.createCurrentSchema(database);
+
+        final tables = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table'",
+        );
+        final tableNames =
+            tables.map((table) => table['name'] as String).toSet();
+
+        expect(
+          tableNames,
+          containsAll(<String>['quotes', 'categories', 'quote_tags']),
+        );
+      });
+
+      test('upgrade does nothing if oldVersion >= newVersion', () async {
+        final lifecycle = DatabaseSchemaLifecycle.standard();
+        await lifecycle.createCurrentSchema(database);
+
+        // Should return early without throwing
+        await lifecycle.upgrade(database, 21, 21);
+        await lifecycle.upgrade(database, 22, 21);
+      });
+
+      test('upgrade throws ArgumentError if newVersion exceeds max version',
+          () async {
+        final lifecycle = DatabaseSchemaLifecycle.standard();
+        await lifecycle.createCurrentSchema(database);
+
+        expect(
+          () => lifecycle.upgrade(
+            database,
+            1,
+            DatabaseSchemaDefinitions.schemaVersion + 1,
+          ),
+          throwsArgumentError,
+        );
+      });
+
+      test('configureDatabasePragmas configures pragmas correctly', () async {
+        final lifecycle = DatabaseSchemaLifecycle.standard();
+
+        await lifecycle.configureDatabasePragmas(database, inTransaction: true);
+        final foreignKeysInTx = await database.rawQuery('PRAGMA foreign_keys');
+        expect(foreignKeysInTx.first['foreign_keys'], 1);
+
+        await lifecycle.configureDatabasePragmas(database,
+            inTransaction: false);
+        final foreignKeysNoTx = await database.rawQuery('PRAGMA foreign_keys');
+        expect(foreignKeysNoTx.first['foreign_keys'], 1);
+      });
+
+      test('verifyForeignKeysEnabled checks foreign keys pragma', () async {
+        final lifecycle = DatabaseSchemaLifecycle.standard();
+        await lifecycle.configureDatabasePragmas(database,
+            inTransaction: false);
+
+        // Should execute foreign_keys verification without error
+        await lifecycle.verifyForeignKeysEnabled(database);
+
+        // Test disabled foreign keys warning code path
+        await database.execute('PRAGMA foreign_keys = OFF');
+        await lifecycle.verifyForeignKeysEnabled(database);
+      });
+    });
   });
 }
 
