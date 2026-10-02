@@ -32,6 +32,7 @@ import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 import '../controllers/add_note_controller.dart';
 import 'add_note_dialog_parts.dart'; // 导入拆分的组件
 import 'app_snackbar.dart';
+import 'note_metadata_dialogs.dart';
 
 // TODO(refactor): This file exceeds 2400 lines and contains redundant location/weather logic.
 // Consider extracting core business logic into a separate controller or service.
@@ -1365,89 +1366,36 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     BuildContext context,
     ThemeData theme,
   ) async {
-    final l10n = AppLocalizations.of(context);
-    final hasLocationData = _controller.originalLocation != null ||
-        (_controller.originalLatitude != null &&
-            _controller.originalLongitude != null);
-    final hasCoordinates = _controller.originalLatitude != null &&
-        _controller.originalLongitude != null;
-    final hasOnlyCoordinates =
-        _controller.originalLocation == null && hasCoordinates;
-
-    String title;
-    String content;
-    List<Widget> actions = [];
-
-    if (!hasLocationData) {
-      // 没有位置数据
-      title = l10n.cannotAddLocation;
-      content = l10n.cannotAddLocationDesc;
-      actions = [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.iKnow),
-        ),
-      ];
-    } else {
-      // 有位置数据
-      title = l10n.locationInfo;
-      final displayLocation = LocationService.formatPoiForDisplay(
-        _controller.originalPoiName,
-        _controller.originalLocation,
-      );
-      content = hasOnlyCoordinates
-          ? l10n.locationUpdateHint(LocationService.formatCoordinates(
-              _controller.originalLatitude, _controller.originalLongitude))
-          : l10n.locationRemoveHint(
-              displayLocation.isNotEmpty
-                  ? displayLocation
-                  : LocationService.formatLocationForDisplay(
-                      _controller.originalLocation),
-            );
-      actions = [
-        if (_controller.includeLocation)
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'remove'),
-            child: Text(l10n.remove),
-          ),
-        if (hasOnlyCoordinates)
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'update'),
-            child: Text(l10n.updateLocation),
-          ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, 'cancel'),
-          child: Text(l10n.cancel),
-        ),
-      ];
-    }
-
-    final result = await showDialog<String>(
+    final action = await NoteMetadataDialogs.showLocationInfoDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
-        actions: actions,
-      ),
+      location: _controller.originalLocation,
+      latitude: _controller.originalLatitude,
+      longitude: _controller.originalLongitude,
+      poiName: _controller.originalPoiName,
+      isSelected: _controller.includeLocation,
     );
 
-    if (result == 'update' && hasCoordinates) {
-      // 尝试用坐标更新地址
-      try {
-        // 获取当前语言设置
-        final localeCode = l10n.localeName;
-        final addressInfo =
-            await LocalGeocodingService.getAddressFromCoordinates(
-          _controller.originalLatitude!,
-          _controller.originalLongitude!,
-          localeCode: localeCode,
-        );
-        if (addressInfo != null && mounted) {
+    if (!mounted || !context.mounted || action == null) return;
+
+    switch (action) {
+      case NoteLocationDialogAction.remove:
+        _controller.removeOriginalLocation();
+        setState(() {});
+        break;
+      case NoteLocationDialogAction.clearPoi:
+        _controller.originalPoiName = null;
+        setState(() {});
+        break;
+      case NoteLocationDialogAction.updateLocation:
+        if (_controller.originalLatitude != null &&
+            _controller.originalLongitude != null) {
           final standardAddress =
-              LocationService.buildStorageLocation(addressInfo);
-          if (standardAddress != null) {
-            // 只刷新行政区：坐标没变，用户已选的精确地点名必须保留，
-            // 否则显示会从"地点名"掉一级变成纯行政区。
+              await NoteMetadataDialogs.updateAddressFromCoordinates(
+            context: context,
+            latitude: _controller.originalLatitude!,
+            longitude: _controller.originalLongitude!,
+          );
+          if (standardAddress != null && mounted) {
             _controller.setOriginalLocationData(
               standardAddress,
               _controller.originalLatitude,
@@ -1456,96 +1404,29 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             );
             _controller.setIncludeLocation(true);
             setState(() {});
-            if (context.mounted) {
-              final l10n = AppLocalizations.of(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    l10n.locationUpdatedTo(
-                      LocationService.formatLocationForDisplay(standardAddress),
-                    ),
-                  ),
-                ),
-              );
-            }
-          } else if (context.mounted) {
-            final l10n = AppLocalizations.of(context);
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
           }
-        } else if (mounted && context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
         }
-      } catch (e) {
-        if (mounted && context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(
-              SnackBar(content: Text(l10n.updateFailed(e.toString()))));
-        }
-      }
-    } else if (result == 'remove') {
-      _controller.removeOriginalLocation();
-      setState(() {});
+        break;
     }
   }
 
   /// 编辑模式下的天气对话框
   Future<void> _showWeatherDialog(BuildContext context, ThemeData theme) async {
-    final l10n = AppLocalizations.of(context);
-    final hasWeatherData = _controller.originalWeather != null;
-
-    String title;
-    String content;
-    List<Widget> actions = [];
-
-    if (!hasWeatherData) {
-      // 没有天气数据
-      title = l10n.cannotAddWeather;
-      content = l10n.cannotAddWeatherDesc;
-      actions = [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.iKnow),
-        ),
-      ];
-    } else {
-      // 有天气数据
-      title = l10n.weatherInfo2;
-      final weatherDisplay =
-          '${_controller.originalWeather}${_controller.originalTemperature != null ? " ${_controller.originalTemperature}" : ""}';
-      content = l10n.weatherRemoveHint(weatherDisplay);
-      actions = [
-        if (_controller.includeWeather)
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'remove'),
-            child: Text(l10n.remove),
-          ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, 'cancel'),
-          child: Text(l10n.cancel),
-        ),
-      ];
-    }
-
-    final result = await showDialog<String>(
+    final action = await NoteMetadataDialogs.showWeatherInfoDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
-        actions: actions,
-      ),
+      weather: _controller.originalWeather,
+      temperature: _controller.originalTemperature,
+      isSelected: _controller.includeWeather,
     );
 
-    if (result == 'remove') {
-      setState(() {
-        _controller.includeWeather = false;
-      });
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case NoteWeatherDialogAction.remove:
+        setState(() {
+          _controller.includeWeather = false;
+        });
+        break;
     }
   }
 

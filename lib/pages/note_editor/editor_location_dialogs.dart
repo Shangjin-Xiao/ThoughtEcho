@@ -6,178 +6,53 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     BuildContext context,
     ThemeData theme,
   ) async {
-    final l10n = AppLocalizations.of(context);
-    final hasLocationData = _metadataState.originalLocation != null ||
-        (_metadataState.originalLatitude != null &&
-            _metadataState.originalLongitude != null);
-    final hasCoordinates = _metadataState.originalLatitude != null &&
-        _metadataState.originalLongitude != null;
-    final hasOnlyCoordinates =
-        _metadataState.originalLocation == null && hasCoordinates;
-    final hasPoiName = _metadataState.poiName != null &&
-        _metadataState.poiName!.trim().isNotEmpty;
-
-    String title;
-    String content;
-    List<Widget> actions = [];
-
-    if (!hasLocationData) {
-      // 没有位置数据
-      title = l10n.cannotAddLocation;
-      content = l10n.cannotAddLocationDesc;
-      actions = [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.iKnow),
-        ),
-      ];
-    } else {
-      // 有位置数据
-      title = l10n.locationInfo;
-      final locationInfoText = hasOnlyCoordinates
-          ? l10n.locationUpdateHint(
-              LocationService.formatCoordinates(
-                _metadataState.originalLatitude,
-                _metadataState.originalLongitude,
-              ),
-            )
-          : l10n.locationRemoveHint(
-              LocationService.formatLocationForDisplay(
-                _metadataState.originalLocation ?? _metadataState.location,
-              ),
-            );
-      content = hasPoiName
-          ? '${l10n.poiNameLabel}: ${_metadataState.poiName!.trim()}\n\n$locationInfoText'
-          : locationInfoText;
-      actions = [
-        if (_metadataState.showLocation)
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'remove'),
-            child: Text(l10n.remove),
-          ),
-        if (hasPoiName)
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'clear_poi'),
-            child: Text('${l10n.clear} ${l10n.poiNameLabel}'),
-          ),
-        if (hasOnlyCoordinates)
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'update'),
-            child: Text(l10n.updateLocation),
-          ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, 'cancel'),
-          child: Text(l10n.cancel),
-        ),
-      ];
-    }
-
-    final result = await showDialog<String>(
+    final action = await NoteMetadataDialogs.showLocationInfoDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
-        actions: actions,
-      ),
+      location: _metadataState.originalLocation ?? _metadataState.location,
+      latitude: _metadataState.originalLatitude,
+      longitude: _metadataState.originalLongitude,
+      poiName: _metadataState.poiName,
+      isSelected: _metadataState.showLocation,
     );
 
-    if (!mounted) {
-      return; // Ensure the widget is still in the tree before using context
-    }
+    if (!mounted || !context.mounted || action == null) return;
 
-    if (result == 'update' && hasCoordinates) {
-      // 尝试用坐标更新地址
-      try {
-        // 获取当前语言设置（在异步操作前获取，避免 context 跨越异步间隙）
-        if (!context.mounted) return;
-        final localeCode = l10n.localeName;
-        final addressInfo =
-            await LocalGeocodingService.getAddressFromCoordinates(
-          _metadataState.originalLatitude!,
-          _metadataState.originalLongitude!,
-          localeCode: localeCode,
-        );
-        if (addressInfo != null && mounted) {
+    switch (action) {
+      case NoteLocationDialogAction.remove:
+        _updateState(() {
+          _metadataState.showLocation = false;
+          _metadataState.location = null;
+          _metadataState.latitude = null;
+          _metadataState.longitude = null;
+          _metadataState.poiName = null;
+          _metadataState.originalLocation = null;
+          _metadataState.originalLatitude = null;
+          _metadataState.originalLongitude = null;
+        });
+        break;
+      case NoteLocationDialogAction.clearPoi:
+        _updateState(() {
+          _metadataState.poiName = null;
+        });
+        break;
+      case NoteLocationDialogAction.updateLocation:
+        if (_metadataState.originalLatitude != null &&
+            _metadataState.originalLongitude != null) {
           final standardAddress =
-              LocationService.buildStorageLocation(addressInfo);
-          if (standardAddress != null) {
+              await NoteMetadataDialogs.updateAddressFromCoordinates(
+            context: context,
+            latitude: _metadataState.originalLatitude!,
+            longitude: _metadataState.originalLongitude!,
+          );
+          if (standardAddress != null && mounted) {
             _updateState(() {
               _metadataState.location = standardAddress;
               _metadataState.originalLocation = standardAddress;
+              _metadataState.showLocation = true;
             });
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    l10n.locationUpdatedTo(
-                      LocationService.formatLocationForDisplay(standardAddress),
-                    ),
-                  ),
-                ),
-              );
-            }
-          } else if (context.mounted) {
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: Text(l10n.cannotGetLocationTitle),
-                content: Text(l10n.cannotGetAddress),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(l10n.iKnow),
-                  ),
-                ],
-              ),
-            );
           }
-        } else if (mounted && context.mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.cannotGetLocationTitle),
-              content: Text(l10n.cannotGetAddress),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
         }
-      } catch (e) {
-        if (mounted && context.mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.cannotGetLocationTitle),
-              content: Text(l10n.updateFailed(e.toString())),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    } else if (result == 'remove') {
-      _updateState(() {
-        _metadataState.showLocation = false;
-        _metadataState.location = null;
-        _metadataState.latitude = null;
-        _metadataState.longitude = null;
-        _metadataState.poiName = null;
-        _metadataState.originalLocation = null;
-        _metadataState.originalLatitude = null;
-        _metadataState.originalLongitude = null;
-      });
-    } else if (result == 'clear_poi') {
-      _updateState(() {
-        _metadataState.poiName = null;
-      });
+        break;
     }
   }
 
@@ -186,62 +61,24 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     BuildContext context,
     ThemeData theme,
   ) async {
-    final l10n = AppLocalizations.of(context);
-    final hasWeatherData = _metadataState.originalWeather != null;
-
-    String title;
-    String content;
-    List<Widget> actions = [];
-
-    if (!hasWeatherData) {
-      // 没有天气数据
-      title = l10n.cannotAddWeather;
-      content = l10n.cannotAddWeatherDesc;
-      actions = [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.iKnow),
-        ),
-      ];
-    } else {
-      // 有天气数据
-      final weatherDesc = WeatherService.getLocalizedWeatherDescription(
-        AppLocalizations.of(context),
-        _metadataState.originalWeather!,
-      );
-      title = l10n.weatherInfo2;
-      content = l10n.weatherRemoveHint(
-        '$weatherDesc${_metadataState.temperature != null ? " ${_metadataState.temperature}" : ""}',
-      );
-      actions = [
-        if (_metadataState.showWeather)
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'remove'),
-            child: Text(l10n.remove),
-          ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, 'cancel'),
-          child: Text(l10n.cancel),
-        ),
-      ];
-    }
-
-    final result = await showDialog<String>(
+    final action = await NoteMetadataDialogs.showWeatherInfoDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
-        actions: actions,
-      ),
+      weather: _metadataState.originalWeather,
+      temperature: _metadataState.temperature,
+      isSelected: _metadataState.showWeather,
     );
 
-    if (result == 'remove') {
-      _updateState(() {
-        _metadataState.showWeather = false;
-        _metadataState.weather = null;
-        _metadataState.temperature = null;
-        _metadataState.originalWeather = null;
-      });
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case NoteWeatherDialogAction.remove:
+        _updateState(() {
+          _metadataState.showWeather = false;
+          _metadataState.weather = null;
+          _metadataState.temperature = null;
+          _metadataState.originalWeather = null;
+        });
+        break;
     }
   }
 
