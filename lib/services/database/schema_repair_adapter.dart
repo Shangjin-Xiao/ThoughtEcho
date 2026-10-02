@@ -129,6 +129,7 @@ class SchemaRepairAdapter {
     await _definitions.ensureQuoteTagsTable(executor);
     await _definitions.ensureQuoteTombstonesTable(executor);
     await _definitions.ensureMediaReferencesTable(executor);
+    await _definitions.ensureSyncDeltaLogTable(executor);
   }
 }
 

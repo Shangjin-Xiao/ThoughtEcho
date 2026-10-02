@@ -98,6 +98,14 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       categoryMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    await DeltaLogService.recordChange(
+      db,
+      entityType: 'category',
+      entityId: id,
+      action: 'insert',
+      payload: categoryMap,
+      timestamp: categoryMap['last_modified']?.toString(),
+    );
     await updateTagsStreamForParts();
     notifyListeners();
     notifyLocalDataChangedForParts();
@@ -352,6 +360,14 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
 
       // 4. 最后删除标签本身
       await txn.delete('categories', where: 'id = ?', whereArgs: [id]);
+      await DeltaLogService.recordChange(
+        txn,
+        entityType: 'category',
+        entityId: id,
+        action: 'delete',
+        payload: {'id': id},
+        timestamp: DateTime.now().toUtc().toIso8601String(),
+      );
     });
 
     // 清理缓存
