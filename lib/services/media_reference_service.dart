@@ -294,15 +294,13 @@ class MediaReferenceService {
       final db = await database;
       final grouped = <String, List<String>>{};
 
-      for (var start = 0; start < uniqueIds.length; start += maxChunkSize) {
-        final end = math.min(start + maxChunkSize, uniqueIds.length);
-        final chunk = uniqueIds.sublist(start, end);
-        final placeholders = List.filled(chunk.length, '?').join(',');
+      if (uniqueIds.length <= maxChunkSize) {
+        final placeholders = List.filled(uniqueIds.length, '?').join(',');
         final result = await db.query(
           _tableName,
           columns: ['quote_id', 'file_path'],
           where: 'quote_id IN ($placeholders)',
-          whereArgs: chunk,
+          whereArgs: uniqueIds,
         );
 
         for (final row in result) {
@@ -312,6 +310,34 @@ class MediaReferenceService {
             continue;
           }
           grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
+        }
+      } else {
+        final batch = db.batch();
+        for (var start = 0; start < uniqueIds.length; start += maxChunkSize) {
+          final end = math.min(start + maxChunkSize, uniqueIds.length);
+          final chunk = uniqueIds.sublist(start, end);
+          final placeholders = List.filled(chunk.length, '?').join(',');
+          batch.query(
+            _tableName,
+            columns: ['quote_id', 'file_path'],
+            where: 'quote_id IN ($placeholders)',
+            whereArgs: chunk,
+          );
+        }
+        final results = await batch.commit(noResult: false);
+        for (final result in results) {
+          if (result is List) {
+            for (final row in result) {
+              if (row is Map) {
+                final quoteId = row['quote_id'] as String?;
+                final filePath = row['file_path'] as String?;
+                if (quoteId == null || filePath == null) {
+                  continue;
+                }
+                grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
+              }
+            }
+          }
         }
       }
       return grouped;
