@@ -183,7 +183,9 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       );
       AptabaseHelper.trackEvent('feature_used', {
         'action': 'ai_test_connection',
-        'provider_preset': _preset?.id ?? 'custom',
+        'provider_preset':
+            AIProviderPresets.matchApiUrl(_apiUrlController.text.trim())?.id ??
+                'custom',
       });
 
       if (!mounted) return;
@@ -269,7 +271,8 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       AptabaseHelper.trackEvent('feature_used', {
         'action': 'ai_provider_save',
         'is_new': existing == null,
-        'provider_preset': _preset?.id ?? 'custom',
+        'provider_preset':
+            AIProviderPresets.matchApiUrl(saved.apiUrl)?.id ?? 'custom',
       });
 
       if (!mounted) return;

@@ -48,6 +48,7 @@ void main() {
         'ai_card_generate',
         'ai_card_regenerate',
         'ai_insight_generate',
+        'ai_insight_fallback',
         'ai_proposal_accept',
         'ai_action_analyze_source',
         'ai_action_polish',
@@ -142,22 +143,33 @@ void main() {
         });
 
         AptabaseHelper.trackEvent('feature_used', {
+          'action': 'ai_insight_fallback',
+          'is_empty_period': true,
+        });
+
+        AptabaseHelper.trackEvent('feature_used', {
           'action': 'toggle_setting',
           'setting': 'agent_memory',
           'enabled': true,
         });
 
-        expect(events, hasLength(3));
+        expect(events, hasLength(4));
         expect(events[0]['props']['action'], 'save_note');
         expect(events[0]['props']['has_tags'], isTrue);
         expect(events[0]['props']['has_weather'], isFalse);
+        expect(events[0]['props']['has_location'], isTrue);
+        expect(events[0]['props']['has_source'], isFalse);
 
         expect(events[1]['props']['action'], 'ai_insight_generate');
         expect(events[1]['props']['is_ai'], isTrue);
+        expect(events[1]['props']['is_empty_period'], isFalse);
 
-        expect(events[2]['props']['action'], 'toggle_setting');
-        expect(events[2]['props']['setting'], 'agent_memory');
-        expect(events[2]['props']['enabled'], isTrue);
+        expect(events[2]['props']['action'], 'ai_insight_fallback');
+        expect(events[2]['props']['is_empty_period'], isTrue);
+
+        expect(events[3]['props']['action'], 'toggle_setting');
+        expect(events[3]['props']['setting'], 'agent_memory');
+        expect(events[3]['props']['enabled'], isTrue);
       } finally {
         AptabaseHelper.onTrackEventForTesting = null;
       }

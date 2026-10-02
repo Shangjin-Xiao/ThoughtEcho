@@ -8,14 +8,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
   void _trackSaveNoteEvent(Quote quote) {
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'save_note',
-      'has_tags': quote.tagIds.isNotEmpty,
-      'has_weather': quote.weather != null && quote.weather!.isNotEmpty,
-      'has_location': quote.latitude != null ||
-          (quote.location != null && quote.location!.isNotEmpty),
-      'has_source':
-          (quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
-              (quote.sourceWork != null && quote.sourceWork!.isNotEmpty) ||
-              (quote.source != null && quote.source!.isNotEmpty),
+      'has_tags': quote.hasTags,
+      'has_weather': quote.hasWeather,
+      'has_location': quote.hasLocation,
+      'has_source': quote.hasAttribution,
     });
   }
 

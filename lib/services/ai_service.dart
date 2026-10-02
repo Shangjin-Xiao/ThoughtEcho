@@ -566,7 +566,7 @@ class AIService extends ChangeNotifier {
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'ai_insight_generate',
       'is_ai': true,
-      'is_empty_period': true
+      'is_empty_period': true,
     });
     final languageCode = _settingsService.localeCode;
     final profileBlock = await _userProfileContext();
@@ -596,12 +596,20 @@ class AIService extends ChangeNotifier {
     required String periodLabel,
     int? daysSinceLastNote,
     bool everWroteAnything = true,
+    bool isFallback = false,
   }) {
-    AptabaseHelper.trackEvent('feature_used', {
-      'action': 'ai_insight_generate',
-      'is_ai': false,
-      'is_empty_period': true
-    });
+    if (isFallback) {
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'ai_insight_fallback',
+        'is_empty_period': true,
+      });
+    } else {
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'ai_insight_generate',
+        'is_ai': false,
+        'is_empty_period': true,
+      });
+    }
     return _promptManager.formatLocalEmptyPeriodInsight(
       periodLabel: periodLabel,
       daysSinceLastNote: daysSinceLastNote,
@@ -619,9 +627,20 @@ class AIService extends ChangeNotifier {
     required int activeDays,
     required int noteCount,
     required int totalWordCount,
+    bool isFallback = false,
   }) {
-    AptabaseHelper.trackEvent(
-        'feature_used', {'action': 'ai_insight_generate', 'is_ai': false});
+    if (isFallback) {
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'ai_insight_fallback',
+        'is_empty_period': false,
+      });
+    } else {
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'ai_insight_generate',
+        'is_ai': false,
+        'is_empty_period': false,
+      });
+    }
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
@@ -667,6 +686,10 @@ class AIService extends ChangeNotifier {
         // 异步检查API Key是否有效
         if (!await hasValidApiKeyAsync()) {
           logDebug('API Key无效，使用DailyPromptGenerator生成每日提示');
+          AptabaseHelper.trackEvent('feature_used', {
+            'action': 'daily_prompt_generate',
+            'is_ai': false,
+          });
           controller.add(DailyPromptGenerator.getDefaultPrompt(l10n));
           await controller.close();
           return;
@@ -677,6 +700,10 @@ class AIService extends ChangeNotifier {
           await _validateSettings();
         } catch (e) {
           logDebug('AI设置验证失败: $e，将使用默认提示');
+          AptabaseHelper.trackEvent('feature_used', {
+            'action': 'daily_prompt_generate',
+            'is_ai': false,
+          });
           controller.add(DailyPromptGenerator.getDefaultPrompt(l10n));
           await controller.close();
           return;
