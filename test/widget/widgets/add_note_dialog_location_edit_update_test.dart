@@ -219,4 +219,84 @@ void main() {
     expect(savedQuote!.poiName, '景山公园');
     expect(savedQuote!.location, '中国,北京市,北京市,西城区');
   });
+
+  testWidgets('编辑模式点击清除地点名称后保存：poiName 被清除为 null 但保留行政区与坐标', (
+    WidgetTester tester,
+  ) async {
+    Quote? savedQuote;
+    final initialQuote = Quote(
+      id: 'existing-edit-poi-clear-1',
+      content: '已有笔记内容',
+      date: DateTime.now().toIso8601String(),
+      location: '中国,北京市,北京市,西城区',
+      latitude: 39.9242,
+      longitude: 116.4014,
+      poiName: '景山公园',
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _TestSettingsService(),
+          ),
+          ChangeNotifierProvider<LocationService>.value(
+            value: _TestLocationService(),
+          ),
+          ChangeNotifierProvider<WeatherService>.value(
+            value: _TestWeatherService(),
+          ),
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: _TestDatabaseService(),
+          ),
+          ChangeNotifierProvider<FeatureGuideService>.value(
+            value: _TestFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => Dialog(
+                    child: AddNoteDialog(
+                      initialQuote: initialQuote,
+                      tags: const [],
+                      prefilledContent: '测试清除POI',
+                      onSave: (quote) {
+                        savedQuote = quote;
+                      },
+                    ),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('add_note_location_chip')));
+    await tester.pumpAndSettle();
+    expect(find.text('清除 地点名称'), findsOneWidget);
+
+    await tester.tap(find.text('清除 地点名称'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('add_note_save_button')));
+    await tester.pumpAndSettle();
+
+    expect(savedQuote, isNotNull);
+    expect(savedQuote!.poiName, isNull);
+    expect(savedQuote!.location, '中国,北京市,北京市,西城区');
+    expect(savedQuote!.latitude, 39.9242);
+    expect(savedQuote!.longitude, 116.4014);
+  });
 }

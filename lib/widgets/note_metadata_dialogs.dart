@@ -4,6 +4,7 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/services/local_geocoding_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'app_snackbar.dart';
 
 /// 用户在位置元数据对话框中的操作类型
 enum NoteLocationDialogAction {
@@ -43,11 +44,10 @@ class NoteMetadataDialogs {
   }) async {
     final l10n = AppLocalizations.of(context);
     final hasCoordinates = latitude != null && longitude != null;
-    final hasLocationData =
-        (location != null && location.isNotEmpty) || hasCoordinates;
-    final hasOnlyCoordinates =
-        (location == null || location.isEmpty) && hasCoordinates;
+    final hasValidAddress = !LocationService.isNonDisplayMarker(location);
     final hasPoiName = poiName != null && poiName.trim().isNotEmpty;
+    final hasLocationData = hasValidAddress || hasCoordinates || hasPoiName;
+    final hasOnlyCoordinates = !hasValidAddress && hasCoordinates;
 
     final String title;
     final String content;
@@ -64,17 +64,18 @@ class NoteMetadataDialogs {
       ];
     } else {
       title = l10n.locationInfo;
+      final displayLocation =
+          LocationService.formatLocationForDisplay(location);
       final locationInfoText = hasOnlyCoordinates
           ? l10n.locationUpdateHint(
               LocationService.formatCoordinates(latitude, longitude),
             )
           : l10n.locationRemoveHint(
-              LocationService.formatPoiForDisplay(
-                poiName,
-                location,
-              ).isNotEmpty
-                  ? LocationService.formatPoiForDisplay(poiName, location)
-                  : LocationService.formatLocationForDisplay(location),
+              displayLocation.isNotEmpty
+                  ? displayLocation
+                  : (hasCoordinates
+                      ? LocationService.formatCoordinates(latitude, longitude)
+                      : (poiName?.trim() ?? '')),
             );
 
       content = hasPoiName
@@ -128,7 +129,9 @@ class NoteMetadataDialogs {
     required bool isSelected,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final hasWeatherData = weather != null && weather.isNotEmpty;
+    final hasWeatherData = (weather != null && weather.isNotEmpty) ||
+        (temperature != null && temperature.isNotEmpty) ||
+        isSelected;
 
     final String title;
     final String content;
@@ -145,13 +148,19 @@ class NoteMetadataDialogs {
       ];
     } else {
       title = l10n.weatherInfo2;
-      final weatherDesc = WeatherService.getLocalizedWeatherDescription(
-        l10n,
-        weather,
-      );
-      final weatherDisplay =
-          '$weatherDesc${temperature != null && temperature.isNotEmpty ? " $temperature" : ""}';
-      content = l10n.weatherRemoveHint(weatherDisplay);
+      final weatherDesc = (weather != null && weather.isNotEmpty)
+          ? WeatherService.getLocalizedWeatherDescription(
+              l10n,
+              weather,
+            )
+          : '';
+      final tempText = (temperature != null && temperature.isNotEmpty)
+          ? ' $temperature'
+          : '';
+      final weatherDisplay = '$weatherDesc$tempText'.trim();
+      final displayContent =
+          weatherDisplay.isNotEmpty ? weatherDisplay : l10n.weatherUnknown;
+      content = l10n.weatherRemoveHint(displayContent);
       actions = [
         if (isSelected)
           TextButton(
@@ -178,52 +187,72 @@ class NoteMetadataDialogs {
 
   /// 使用经纬度坐标异步反查行政区地址，并在界面上给出标准反馈。
   ///
+  /// - [useDialogOnFailure]: 失败时是否弹出 AlertDialog（全屏编辑器保留模态反馈，默认 false 使用 SnackBar）
+  /// - [addressFetcher]: 可选的地址反查执行体，默认使用 [LocalGeocodingService.getAddressFromCoordinates]
   /// - 成功：返回标准入库地址字符串，并在 [context] 中弹出“位置已更新为...”提示；
-  /// - 失败：返回 null，并在 [context] 中弹出失败提示。
+  /// - 失败：返回 null，并在 [context] 中给出失败提示。
   static Future<String?> updateAddressFromCoordinates({
     required BuildContext context,
     required double latitude,
     required double longitude,
+    bool useDialogOnFailure = false,
+    Future<Map<String, String?>?> Function(
+      double latitude,
+      double longitude,
+      String? localeCode,
+    )? addressFetcher,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+
+    void showFailureFeedback(String message) {
+      if (!context.mounted) return;
+      if (useDialogOnFailure) {
+        showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.cannotGetLocationTitle),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.iKnow),
+              ),
+            ],
+          ),
+        );
+      } else {
+        AppSnackBar.error(context, message);
+      }
+    }
 
     try {
       final localeCode = l10n.localeName;
-      final addressInfo = await LocalGeocodingService.getAddressFromCoordinates(
-        latitude,
-        longitude,
-        localeCode: localeCode,
-      );
+      final addressInfo = addressFetcher != null
+          ? await addressFetcher(latitude, longitude, localeCode)
+          : await LocalGeocodingService.getAddressFromCoordinates(
+              latitude,
+              longitude,
+              localeCode: localeCode,
+            );
 
       if (addressInfo != null && context.mounted) {
         final standardAddress =
             LocationService.buildStorageLocation(addressInfo);
         if (standardAddress != null) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                l10n.locationUpdatedTo(
-                  LocationService.formatLocationForDisplay(standardAddress),
-                ),
-              ),
+          AppSnackBar.success(
+            context,
+            l10n.locationUpdatedTo(
+              LocationService.formatLocationForDisplay(standardAddress),
             ),
           );
           return standardAddress;
         }
       }
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.cannotGetAddress)),
-        );
-      }
+
+      showFailureFeedback(l10n.cannotGetAddress);
       return null;
     } catch (e) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.updateFailed(e.toString()))),
-        );
-      }
+      showFailureFeedback(l10n.updateFailed(e.toString()));
       return null;
     }
   }

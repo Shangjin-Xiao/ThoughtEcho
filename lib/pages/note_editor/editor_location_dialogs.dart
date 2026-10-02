@@ -43,6 +43,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
             context: context,
             latitude: _metadataState.originalLatitude!,
             longitude: _metadataState.originalLongitude!,
+            useDialogOnFailure: true,
           );
           if (standardAddress != null && mounted) {
             _updateState(() {
