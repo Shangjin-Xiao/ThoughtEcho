@@ -380,6 +380,10 @@ void main() {
   group('NoteMetadataDialogs.updateAddressFromCoordinates', () {
     testWidgets('反查地址成功时展示成功 SnackBar 并返回格式化地址', (tester) async {
       String? updatedAddress;
+      int fetcherCalls = 0;
+      double? capturedLat;
+      double? capturedLon;
+      String? capturedLocale;
 
       await tester.pumpWidget(
         _buildTestApp(
@@ -390,12 +394,18 @@ void main() {
                 context: context,
                 latitude: 39.9042,
                 longitude: 116.4074,
-                addressFetcher: (lat, lon, locale) async => {
-                  'country': '中国',
-                  'province': '北京市',
-                  'city': '北京市',
-                  'district': '西城区',
-                  'formatted_address': '北京市西城区',
+                addressFetcher: (lat, lon, locale) async {
+                  fetcherCalls++;
+                  capturedLat = lat;
+                  capturedLon = lon;
+                  capturedLocale = locale;
+                  return {
+                    'country': '中国',
+                    'province': '北京市',
+                    'city': '北京市',
+                    'district': '西城区',
+                    'formatted_address': '北京市西城区',
+                  };
                 },
               );
             },
@@ -407,6 +417,10 @@ void main() {
       await tester.tap(find.text('update'));
       await tester.pumpAndSettle();
 
+      expect(fetcherCalls, equals(1));
+      expect(capturedLat, equals(39.9042));
+      expect(capturedLon, equals(116.4074));
+      expect(capturedLocale, isNotNull);
       expect(updatedAddress, '中国,北京市,北京市,西城区');
       expect(find.textContaining('位置已更新为'), findsOneWidget);
     });
