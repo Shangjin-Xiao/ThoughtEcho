@@ -469,7 +469,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 心迹也支持在同一 WiFi 网络下的设备间直接同步，无需云服务器。
 
-- **设备标识码与隐私保护**：系统为每台设备生成简短的“设备标识码”（如 `#A1B2C3`）用于识别设备，绝不收集面容、指纹等任何个人生物识别数据（“指纹”一词仅用于应用内的系统面容/指纹解锁设置）。
+- **设备标识码**：系统为每台设备生成简短的“设备标识码”（如 `#A1B2C3`）用于识别设备。
 - **清晰简明状态显示**：设备列表默认展示简单清晰的网络状态（如“局域网在线 · 192.168.1.100”），自动隐藏复杂的端口与网址协议头。长按设备卡片可复制完整的网络调试地址。
 - **智能增量传输**：在局域网同步时，系统会自动比对两端设备的图片、音频与视频等媒体文件，仅传输新增或修改的内容。
 - **快速跳过与节省流量**：对已存在且未变更的媒体文件自动跳过，大幅缩短后续同步耗时并节省局域网带宽。
@@ -1268,7 +1268,7 @@ ThoughtEcho supports secure cloud synchronization via the WebDAV protocol:
 
 ThoughtEcho also supports direct sync between devices on the same WiFi network, no cloud server required.
 
-- **Device ID & Privacy**: Uses a short, secure "Device ID" (e.g., `#A1B2C3`) to uniquely identify devices without ever collecting fingerprints, facial recognition, or any personal biometric data (the term "fingerprint" is strictly reserved for system biometric unlock settings).
+- **Device ID**: Uses a short, secure "Device ID" (e.g., `#A1B2C3`) to uniquely identify devices.
 - **Clean Connection Status**: Nearby device cards display a clear connection status (e.g., "LAN Online · 192.168.1.100"), hiding technical port numbers and address prefixes. Long-pressing a device card copies the complete network address for troubleshooting.
 - **Smart Incremental Media Sync**: Prior to media transfer, devices compare media inventory (images, audio, video) and transmit only new or modified attachments.
 - **Fast Skip & Bandwidth Savings**: Already existing media files are skipped automatically, speeding up subsequent syncs and saving network bandwidth.

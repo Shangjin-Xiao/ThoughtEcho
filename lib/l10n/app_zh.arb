@@ -3961,6 +3961,7 @@
   "webdavSyncSubtitle": "配置私有云盘，实现多端自动同步笔记",
   "webdavProvider": "网盘服务商",
   "webdavServerUrl": "服务器地址",
+  "webdavServerUrlHint": "example.com/dav/",
   "webdavUsername": "用户名/账号",
   "webdavPassword": "应用密码/Token",
   "webdavTestConnection": "测试连接",

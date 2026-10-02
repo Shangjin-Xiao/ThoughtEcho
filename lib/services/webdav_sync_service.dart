@@ -62,6 +62,9 @@ class WebDAVSyncService extends ChangeNotifier {
     _initSettings();
   }
 
+  @visibleForTesting
+  WebDAVSyncService.forTesting() : this._internal();
+
   // 核心存储与安全服务
   final MMKVService _mmkv = MMKVService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();

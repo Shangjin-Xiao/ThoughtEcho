@@ -4000,6 +4000,7 @@
   "webdavSyncSubtitle": "WebDAV 서버를 통해 노트 동기화",
   "webdavProvider": "Cloud Provider",
   "webdavServerUrl": "서버 URL",
+  "webdavServerUrlHint": "example.com/dav/",
   "webdavUsername": "사용자 이름",
   "webdavPassword": "비밀번호",
   "webdavTestConnection": "연결 테스트",

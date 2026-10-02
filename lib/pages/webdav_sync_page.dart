@@ -171,10 +171,10 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       } else if (provider == 'infinicloud') {
         _urlController.text = 'dav.teracloud.jp/dav/';
       } else if (provider == 'nextcloud') {
-        if (_urlController.text == 'dav.jianguoyun.com/dav/' ||
-            _urlController.text == 'https://dav.jianguoyun.com/dav/' ||
-            _urlController.text == 'dav.teracloud.jp/dav/' ||
-            _urlController.text == 'https://dav.teracloud.jp/dav/') {
+        final norm = _getNormalizedUrl(_urlController.text)
+            .replaceAll(RegExp(r'/+$'), '');
+        if (norm == 'https://dav.jianguoyun.com/dav' ||
+            norm == 'https://dav.teracloud.jp/dav') {
           _urlController.text = '';
         }
       } else {
@@ -416,45 +416,38 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           SizedBox(height: 16),
 
                           // 2. 服务器 URL
-                          TextFormField(
-                            controller: _urlController,
-                            enabled: _selectedProvider == 'custom' ||
-                                _selectedProvider == 'nextcloud',
-                            decoration: InputDecoration(
-                              labelText: l10n.webdavServerUrl,
-                              hintText: 'dav.jianguoyun.com/dav/',
-                              prefixIcon: Icon(Icons.link),
-                              prefixText: _urlController.text
-                                      .trim()
-                                      .toLowerCase()
-                                      .startsWith('http://')
-                                  ? null
-                                  : 'https://',
-                              prefixStyle: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                            onChanged: (val) {
-                              var trimmed = val.trim();
-                              if (trimmed
-                                  .toLowerCase()
-                                  .startsWith('https://')) {
-                                final clean = trimmed.substring(8);
-                                _urlController.value = TextEditingValue(
-                                  text: clean,
-                                  selection: TextSelection.collapsed(
-                                      offset: clean.length),
-                                );
-                              }
-                              setState(() {});
-                            },
-                            validator: (val) {
-                              final normalized = _getNormalizedUrl(val ?? '');
-                              if (normalized.isEmpty) {
-                                return l10n.webdavServerUrlEmptyError;
-                              }
-                              return null;
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _urlController,
+                            builder: (context, value, child) {
+                              final trimmed = value.text.trim().toLowerCase();
+                              final hasScheme = trimmed.startsWith('http://') ||
+                                  trimmed.startsWith('https://');
+                              return TextFormField(
+                                controller: _urlController,
+                                enabled: _selectedProvider == 'custom' ||
+                                    _selectedProvider == 'nextcloud',
+                                decoration: InputDecoration(
+                                  labelText: l10n.webdavServerUrl,
+                                  hintText: l10n.webdavServerUrlHint,
+                                  prefixIcon: Icon(Icons.link),
+                                  prefixText: hasScheme ? null : 'https://',
+                                  prefixStyle: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                validator: (val) {
+                                  final raw = (val ?? '').trim();
+                                  if (raw.isEmpty) {
+                                    return l10n.webdavServerUrlEmptyError;
+                                  }
+                                  if (raw.toLowerCase().startsWith('http://')) {
+                                    return l10n.webdavServerUrlInvalidError;
+                                  }
+                                  return null;
+                                },
+                              );
                             },
                           ),
                           SizedBox(height: 16),

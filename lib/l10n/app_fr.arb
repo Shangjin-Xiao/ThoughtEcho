@@ -3993,6 +3993,7 @@
   "webdavSyncSubtitle": "Synchroniser les notes via le serveur WebDAV",
   "webdavProvider": "Cloud Provider",
   "webdavServerUrl": "URL du serveur",
+  "webdavServerUrlHint": "example.com/dav/",
   "webdavUsername": "Nom d'utilisateur",
   "webdavPassword": "Mot de passe",
   "webdavTestConnection": "Tester la connexion",

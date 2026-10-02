@@ -863,20 +863,15 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 ),
                                 subtitle: Padding(
                                   padding: const EdgeInsets.only(top: 4),
-                                  child: Tooltip(
-                                    message: fullEndpoint,
-                                    waitDuration:
-                                        const Duration(milliseconds: 350),
-                                    child: Text(
-                                      networkStatus,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: theme.colorScheme.onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                    ),
+                                  child: Text(
+                                    networkStatus,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
                                   ),
                                 ),
                                 trailing: isSendingToThis
@@ -1451,23 +1446,18 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   Widget _buildShortFingerprint(String fingerprint) {
     if (fingerprint.isEmpty) return const SizedBox.shrink();
     final short = _shortFingerprint(fingerprint);
-    final l10n = AppLocalizations.of(context);
-    return Tooltip(
-      message: l10n.fingerprint(fingerprint),
-      waitDuration: const Duration(milliseconds: 350),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          '#$short',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSecondaryContainer,
-                letterSpacing: 0.5,
-              ),
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '#$short',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+              letterSpacing: 0.5,
+            ),
       ),
     );
   }

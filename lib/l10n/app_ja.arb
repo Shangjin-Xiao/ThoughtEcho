@@ -2089,7 +2089,7 @@
     }
   },
   "localDeviceLoading": "ID取得中...",
-  "localDeviceId": "本机ID #{fingerprint}",
+  "localDeviceId": "ローカル ID #{fingerprint}",
   "@localDeviceId": {
     "placeholders": {
       "fingerprint": {
@@ -4000,6 +4000,7 @@
   "webdavSyncSubtitle": "WebDAV サーバー経由でメモを同期",
   "webdavProvider": "Cloud Provider",
   "webdavServerUrl": "サーバーURL",
+  "webdavServerUrlHint": "example.com/dav/",
   "webdavUsername": "ユーザー名",
   "webdavPassword": "パスワード",
   "webdavTestConnection": "接続テスト",

@@ -3961,6 +3961,7 @@
   "webdavSyncSubtitle": "Configure private cloud storage to auto-sync notes across devices",
   "webdavProvider": "Cloud Provider",
   "webdavServerUrl": "Server URL",
+  "webdavServerUrlHint": "example.com/dav/",
   "webdavUsername": "Username / Account",
   "webdavPassword": "App Password / Token",
   "webdavTestConnection": "Test Connection",
