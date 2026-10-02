@@ -77,22 +77,23 @@ void main() {
         draftChangeCount++;
       });
 
-      // Replacing with identical controller should return early without notifying
       state.replaceController(oldController);
       expect(notifyCount, 0);
 
-      // Replacing with a new controller
       final newController = quill.QuillController.basic();
       state.replaceController(newController);
 
       expect(notifyCount, 1);
       expect(state.controller, equals(newController));
+      expect(oldController.document.documentChangeObserver.isClosed, isTrue);
+      expect(
+        () => oldController.replaceText(0, 0, 'z', null),
+        throwsAssertionError,
+      );
 
-      // Check draftChangeListener is attached to new controller
       newController.replaceText(0, 0, 'a', null);
       expect(draftChangeCount, greaterThan(0));
 
-      // Mark draft saved
       expect(state.restoredFromDraft, isTrue);
       state.markDraftSaved();
       expect(state.restoredFromDraft, isFalse);
@@ -138,7 +139,6 @@ void main() {
       expect(state.isLoadingFullQuote, isTrue);
       expect(notifyCount, 1);
 
-      // Same value should not notify
       state.isLoadingFullQuote = true;
       expect(notifyCount, 1);
 
@@ -255,7 +255,6 @@ void main() {
       expect(state.selectedTagIds, equals(['tag-1']));
       expect(notifications, 1);
 
-      // Adding duplicate does not trigger unnecessary state changes
       state.toggleTag('tag-1', selected: true);
       expect(notifications, 1);
 
@@ -279,7 +278,6 @@ void main() {
       expect(state.author, 'Author A');
       expect(notifications, 1);
 
-      // Same author -> no notify
       state.setAuthor('Author A');
       expect(notifications, 1);
 
@@ -343,14 +341,11 @@ void main() {
         ),
       );
 
-      // When analysis is unchanged from snapshot, hydration succeeds
       state.hydrateAiAnalysisIfUnchanged('Updated Analysis');
       expect(state.currentAiAnalysis, 'Updated Analysis');
 
-      // Now user manually modifies AI analysis
       state.currentAiAnalysis = 'User Modified Analysis';
 
-      // Attempt to hydrate again with another value -> should be ignored because current != initial snapshot
       state.hydrateAiAnalysisIfUnchanged('Third Analysis');
       expect(state.currentAiAnalysis, 'User Modified Analysis');
 
@@ -392,10 +387,8 @@ void main() {
       expect(state.hasChanges(isExistingNote: true), isTrue);
       state.currentAiAnalysis = 'AI';
 
-      // For existing notes, location changes flag hasChanges
       state.location = 'New City';
       expect(state.hasChanges(isExistingNote: true), isTrue);
-      // For new notes (isExistingNote: false), location changes don't flag hasChanges
       expect(state.hasChanges(isExistingNote: false), isFalse);
 
       state.dispose();
@@ -443,7 +436,6 @@ void main() {
       state.isSaving = true;
       expect(notifications, 1);
 
-      // Same setting shouldn't notify
       state.isSaving = true;
       expect(notifications, 1);
 
