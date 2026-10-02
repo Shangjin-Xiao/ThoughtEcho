@@ -433,6 +433,9 @@ class ChatSessionService extends ChangeNotifier {
       'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)',
     );
     await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_created ON chat_messages(session_id, created_at DESC)',
+    );
+    await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_chat_messages_content ON chat_messages(content)',
     );
   }
@@ -646,22 +649,30 @@ class ChatSessionService extends ChangeNotifier {
           ? i + chunkSize
           : sessionIds.length;
       final chunk = sessionIds.sublist(i, end);
+      for (final id in chunk) {
+        result[id] = const ChatSessionOverview(messageCount: 0, snippet: '');
+      }
       final placeholders = List.filled(chunk.length, '?').join(',');
       final rows = await db.rawQuery(
         '''
-        SELECT s.id,
-          (SELECT COUNT(*) FROM chat_messages c WHERE c.session_id = s.id)
-            AS message_count,
-          (SELECT m.content FROM chat_messages m
-            WHERE m.session_id = s.id
-            ORDER BY m.created_at DESC LIMIT 1) AS last_content
-        FROM chat_sessions s
-        WHERE s.id IN ($placeholders)
+        WITH ranked_messages AS (
+          SELECT
+            session_id,
+            content,
+            ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at DESC) AS rn,
+            COUNT(*) OVER (PARTITION BY session_id) AS total_count
+          FROM chat_messages
+          WHERE session_id IN ($placeholders)
+        )
+        SELECT session_id, content AS last_content, total_count AS message_count
+        FROM ranked_messages
+        WHERE rn = 1
         ''',
         chunk,
       );
       for (final row in rows) {
-        result[row['id'] as String] = ChatSessionOverview(
+        final id = row['session_id'] as String;
+        result[id] = ChatSessionOverview(
           messageCount: row['message_count'] as int? ?? 0,
           snippet: _truncatePreview(row['last_content'] as String?),
         );
