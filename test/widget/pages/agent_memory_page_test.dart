@@ -186,7 +186,7 @@ void main() {
       await TestHarness.tearDown();
     });
 
-    testWidgets('渲染概览卡片、认知负荷与记忆列表', (tester) async {
+    testWidgets('渲染概览卡片与记忆列表', (tester) async {
       _setLargeSurfaceSize(tester);
       await tester.runAsync(() async {
         await memoryService.rememberProfile(
@@ -215,9 +215,17 @@ void main() {
       );
       await _settleWithRealAsync(tester);
 
-      // 验证概览卡片呈现昵称与标题
+      // 验证概览卡片呈现昵称、标题与统计摘要
       expect(find.text('Thoughter 记忆'), findsWidgets);
       expect(find.text('阿澈'), findsOneWidget);
+      expect(find.text('共 1 条画像 · 1 条近况 · 1 条细节'), findsOneWidget);
+
+      // 验证不含容量进度条与无病呻吟的修饰文案
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+      expect(find.text('容量充足，对话与灵感畅通'), findsNothing);
+
+      // 验证不含手动添加浮动按钮
+      expect(find.byType(FloatingActionButton), findsNothing);
 
       // 验证条目内容展示
       expect(find.text('回复保持碎句与哲思留白'), findsOneWidget);
@@ -397,7 +405,7 @@ void main() {
       });
     });
 
-    testWidgets('来源归因证据展示：点击追溯笔记', (tester) async {
+    testWidgets('来源归因展示：卡片底部呈现关联笔记数量且无需预览抽屉', (tester) async {
       _setLargeSurfaceSize(tester);
       fakeDb.quotes['quote-1'] = Quote(
         id: 'quote-1',
@@ -425,15 +433,45 @@ void main() {
       );
       await _settleWithRealAsync(tester);
 
-      // 点击归因渊源按钮
-      final evidenceBtn = find.text('见于 1 篇笔记');
-      expect(evidenceBtn, findsOneWidget);
-      await tester.tap(evidenceBtn);
+      // 验证底部元信息包含关联笔记数量，且不弹出抽屉
+      expect(find.text('·  关联 1 篇笔记'), findsOneWidget);
+      expect(find.text('树叶在林间细语，阳光穿过枝丫落在长椅上。'), findsNothing);
+    });
+
+    testWidgets('更多菜单支持触发整理记忆', (tester) async {
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.saveRecentSlice(
+          content: '过期的临时切片',
+          ttl: const Duration(days: -1),
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
       await _settleWithRealAsync(tester);
 
-      // 底部抽屉展开并显示引用笔记内容和作者
-      expect(find.text('树叶在林间细语，阳光穿过枝丫落在长椅上。'), findsOneWidget);
-      expect(find.text('—— 史铁生'), findsOneWidget);
+      // 点击右上角更多菜单
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      // 点击整理记忆
+      await tester.tap(find.text('整理记忆'));
+      await tester.pumpAndSettle();
+
+      // 弹窗确认
+      expect(find.text('将自动清理已过期的近期状态、过时的历史画像与低权重细节。是否继续？'), findsOneWidget);
+      await tester.tap(find.text('确定'));
+      await tester.pumpAndSettle();
+
+      // 验证清理完成并刷新
+      expect(find.text('过期的临时切片'), findsNothing);
     });
 
     testWidgets('AISettingsPage 包含「管理记忆」入口并可点击跳转', (tester) async {

@@ -7,6 +7,7 @@ import '../../services/agent_memory_service.dart';
 import '../../theme/theme_style.dart';
 import '../../utils/aptabase_helper.dart';
 import '../../widgets/app_empty_view.dart';
+import '../../widgets/app_error_view.dart';
 import '../../widgets/app_snackbar.dart';
 import 'agent_memory_card.dart';
 import 'agent_memory_dialogs.dart';
@@ -164,6 +165,12 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (snapshot.hasError) {
+            return Center(
+              child: AppErrorView(text: l10n.operationFailedSimple),
+            );
+          }
+
           final bundle = snapshot.data ??
               const _MemoryBundle(
                 profiles: [],
@@ -177,7 +184,11 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
               bundle.profiles.where((p) => !p.isActive).toList();
 
           return RefreshIndicator(
-            onRefresh: () async => setState(() => _refreshBundle()),
+            onRefresh: () async {
+              final future = _loadBundle(memoryService, _searchQuery);
+              setState(() => _bundleFuture = future);
+              await future;
+            },
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
@@ -187,8 +198,6 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
                       activeProfiles: activeProfiles,
                       activeSlices: bundle.slices,
                       factCount: bundle.facts.length,
-                      onCompactTap: () =>
-                          _handleCompact(context, memoryService),
                     ),
                   ),
                 ),
@@ -260,19 +269,6 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final added = await showAddMemoryDialog(context);
-          if (added && mounted) {
-            setState(_refreshBundle);
-          }
-        },
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(shapeTokens.fabRadius),
-        ),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.agentMemoryAddTitle),
       ),
     );
   }
@@ -348,7 +344,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -383,13 +379,27 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
           previewText: entry.directive,
         );
         if (!confirmed) return;
-        final success = await memoryService.forgetProfile(entry.id);
-        if (context.mounted && success) {
-          AppSnackBar.success(
-            context,
-            AppLocalizations.of(context).agentMemoryForgotten,
-          );
-          setState(_refreshBundle);
+        try {
+          final success = await memoryService.forgetProfile(entry.id);
+          if (context.mounted && success) {
+            AppSnackBar.success(
+              context,
+              AppLocalizations.of(context).agentMemoryForgotten,
+            );
+            setState(_refreshBundle);
+          } else if (context.mounted) {
+            AppSnackBar.error(
+              context,
+              AppLocalizations.of(context).operationFailedSimple,
+            );
+          }
+        } catch (_) {
+          if (context.mounted) {
+            AppSnackBar.error(
+              context,
+              AppLocalizations.of(context).operationFailedSimple,
+            );
+          }
         }
       },
     );
@@ -408,13 +418,27 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
           previewText: slice.content,
         );
         if (!confirmed) return;
-        final success = await memoryService.clearRecentSlice(id: slice.id);
-        if (context.mounted && success) {
-          AppSnackBar.success(
-            context,
-            AppLocalizations.of(context).agentMemoryForgotten,
-          );
-          setState(_refreshBundle);
+        try {
+          final success = await memoryService.clearRecentSlice(id: slice.id);
+          if (context.mounted && success) {
+            AppSnackBar.success(
+              context,
+              AppLocalizations.of(context).agentMemoryForgotten,
+            );
+            setState(_refreshBundle);
+          } else if (context.mounted) {
+            AppSnackBar.error(
+              context,
+              AppLocalizations.of(context).operationFailedSimple,
+            );
+          }
+        } catch (_) {
+          if (context.mounted) {
+            AppSnackBar.error(
+              context,
+              AppLocalizations.of(context).operationFailedSimple,
+            );
+          }
         }
       },
     );
@@ -433,13 +457,27 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
           previewText: fact.content,
         );
         if (!confirmed) return;
-        final success = await memoryService.forgetFact(fact.id);
-        if (context.mounted && success) {
-          AppSnackBar.success(
-            context,
-            AppLocalizations.of(context).agentMemoryForgotten,
-          );
-          setState(_refreshBundle);
+        try {
+          final success = await memoryService.forgetFact(fact.id);
+          if (context.mounted && success) {
+            AppSnackBar.success(
+              context,
+              AppLocalizations.of(context).agentMemoryForgotten,
+            );
+            setState(_refreshBundle);
+          } else if (context.mounted) {
+            AppSnackBar.error(
+              context,
+              AppLocalizations.of(context).operationFailedSimple,
+            );
+          }
+        } catch (_) {
+          if (context.mounted) {
+            AppSnackBar.error(
+              context,
+              AppLocalizations.of(context).operationFailedSimple,
+            );
+          }
         }
       },
     );
@@ -481,21 +519,27 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
     AgentMemoryService memoryService,
   ) async {
     final confirmed = await showCompactConfirmDialog(context);
-    if (!confirmed) return;
-
-    final stats = await memoryService.compactAndPrune();
-    if (!context.mounted) return;
-
-    setState(_refreshBundle);
+    if (!confirmed || !context.mounted) return;
 
     final l10n = AppLocalizations.of(context);
-    if (stats.totalPruned > 0) {
-      AppSnackBar.success(
-        context,
-        l10n.agentMemoryCompactDone(stats.totalPruned),
-      );
-    } else {
-      AppSnackBar.info(context, l10n.agentMemoryCompactNoop);
+    try {
+      final stats = await memoryService.compactAndPrune();
+      if (!context.mounted) return;
+
+      setState(_refreshBundle);
+
+      if (stats.totalPruned > 0) {
+        AppSnackBar.success(
+          context,
+          l10n.agentMemoryCompactDone(stats.totalPruned),
+        );
+      } else {
+        AppSnackBar.info(context, l10n.agentMemoryCompactNoop);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackBar.error(context, l10n.operationFailedSimple);
+      }
     }
   }
 
@@ -532,12 +576,18 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
       },
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
 
-    await memoryService.clearAll();
-    if (!context.mounted) return;
-    setState(_refreshBundle);
-    AppSnackBar.success(context, l10n.agentMemoryCleared);
+    try {
+      await memoryService.clearAll();
+      if (!context.mounted) return;
+      setState(_refreshBundle);
+      AppSnackBar.success(context, l10n.agentMemoryCleared);
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackBar.error(context, l10n.agentMemoryClearFailed);
+      }
+    }
   }
 }
 

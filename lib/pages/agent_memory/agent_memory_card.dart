@@ -4,7 +4,6 @@ import '../../gen_l10n/app_localizations.dart';
 import '../../models/agent_memory.dart';
 import '../../theme/app_semantic_colors.dart';
 import '../../theme/theme_style.dart';
-import 'agent_memory_evidence_sheet.dart';
 
 /// 画像层条目卡片。
 class ProfileEntryCard extends StatelessWidget {
@@ -89,7 +88,7 @@ class ProfileEntryCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
-                    vertical: 2,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: entry.isActive
@@ -136,59 +135,6 @@ class ProfileEntryCard extends StatelessWidget {
                     : colorScheme.onSurfaceVariant,
               ),
             ),
-            if (entry.sourceNoteIds.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              InkWell(
-                borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
-                onTap: () => showAgentMemoryEvidenceSheet(
-                  context,
-                  noteIds: entry.sourceNoteIds,
-                  traitDirective: entry.directive,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(
-                      shapeTokens.buttonRadius,
-                    ),
-                    border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.menu_book_outlined,
-                        size: 14,
-                        color: colorScheme.secondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.agentMemoryEvidenceTitle(
-                          entry.sourceNoteIds.length,
-                        ),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 10,
-                        color: colorScheme.secondary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
             const SizedBox(height: 12),
             Row(
               children: [
@@ -202,6 +148,15 @@ class ProfileEntryCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     '·  $sourceLabel',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.outline,
+                    ),
+                  ),
+                ],
+                if (entry.sourceNoteIds.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '·  ${l10n.agentMemoryEvidenceTitle(entry.sourceNoteIds.length)}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colorScheme.outline,
                     ),
@@ -342,7 +297,7 @@ class RecentSliceCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
-                    vertical: 2,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: remainingDays <= 2
@@ -378,66 +333,26 @@ class RecentSliceCard extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.agentMemoryPulseTtlNotice,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(
+                  _formatDate(slice.observedAt),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.outline,
+                  ),
+                ),
+                if (slice.sourceNoteIds.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '·  ${l10n.agentMemoryEvidenceTitle(slice.sourceNoteIds.length)}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ],
             ),
-            if (slice.sourceNoteIds.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              InkWell(
-                borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
-                onTap: () => showAgentMemoryEvidenceSheet(
-                  context,
-                  noteIds: slice.sourceNoteIds,
-                  traitDirective: slice.content,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(
-                      shapeTokens.buttonRadius,
-                    ),
-                    border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.menu_book_outlined,
-                        size: 14,
-                        color: colorScheme.secondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.agentMemoryEvidenceTitle(
-                          slice.sourceNoteIds.length,
-                        ),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 10,
-                        color: colorScheme.secondary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -518,7 +433,7 @@ class FactCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
-                    vertical: 2,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: colorScheme.surfaceContainerHighest,

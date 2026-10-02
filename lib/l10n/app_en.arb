@@ -4715,7 +4715,7 @@
   "agentMemoryManageTitle": "Manage Memory",
   "agentMemoryManageSubtitle": "Inspect, correct, and manage traits and evidence remembered by Thoughter",
   "agentMemoryPageTitle": "Thoughter Memory",
-  "agentMemoryResonanceSummary": "Holding {profileCount} traits · {sliceCount} pulse · {factCount} facts",
+  "agentMemoryResonanceSummary": "{profileCount} traits · {sliceCount} pulses · {factCount} facts",
   "@agentMemoryResonanceSummary": {
     "placeholders": {
       "profileCount": {
@@ -4737,7 +4737,7 @@
   "agentMemoryTabPulse": "Recent State",
   "agentMemoryTabFacts": "Key Facts",
   "agentMemoryTabHistory": "History",
-  "agentMemorySearchHint": "Search traits, facts, or keywords...",
+  "agentMemorySearchHint": "Search memories or keywords...",
   "agentMemoryKindIdentity": "Identity",
   "agentMemoryKindPreference": "Preference",
   "agentMemoryKindStyle": "Style",
@@ -4749,7 +4749,7 @@
   "agentMemorySourceUser": "User Added",
   "agentMemoryStatusActive": "Active",
   "agentMemoryStatusSuperseded": "Archived",
-  "agentMemoryEvidenceTitle": "Found in {count} notes",
+  "agentMemoryEvidenceTitle": "{count} linked notes",
   "@agentMemoryEvidenceTitle": {
     "placeholders": {
       "count": {
@@ -4794,7 +4794,7 @@
   "agentMemoryForgetAction": "Forget",
   "agentMemoryForgotten": "Memory forgotten",
   "agentMemoryCompactTitle": "Tidy Up Memory",
-  "agentMemoryCompactConfirm": "This will clean up faded recent states and outdated history. Continue?",
+  "agentMemoryCompactConfirm": "This will clean up expired recent pulses, outdated profile history, and low-priority details. Continue?",
   "agentMemoryCompactDone": "Cleaned up {count} outdated entries",
   "@agentMemoryCompactDone": {
     "placeholders": {
@@ -4810,7 +4810,7 @@
   "agentMemoryAddHint": "e.g., Address me as Wanderer, enjoy literature and philosophy",
   "agentMemoryAddSuccess": "New trait remembered",
   "agentMemoryEmpty": "No matching memories",
-  "agentMemoryEmptyDesc": "Thoughter will naturally perceive your traits as you chat and write",
+  "agentMemoryEmptyDesc": "Chat with Thoughter, and it will naturally remember your habits and preferences",
   "agentMemoryCharsCount": "{usedChars} / {maxChars} chars",
   "@agentMemoryCharsCount": {
     "placeholders": {

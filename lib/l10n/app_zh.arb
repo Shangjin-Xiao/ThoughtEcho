@@ -4715,7 +4715,7 @@
   "agentMemoryManageTitle": "管理记忆",
   "agentMemoryManageSubtitle": "查看、纠偏与管理 Thoughter 记下的特质与依据",
   "agentMemoryPageTitle": "Thoughter 记忆",
-  "agentMemoryResonanceSummary": "共凝聚 {profileCount} 条特质 · {sliceCount} 束近况 · {factCount} 则存念",
+  "agentMemoryResonanceSummary": "共 {profileCount} 条画像 · {sliceCount} 条近况 · {factCount} 条细节",
   "@agentMemoryResonanceSummary": {
     "placeholders": {
       "profileCount": {
@@ -4737,7 +4737,7 @@
   "agentMemoryTabPulse": "近期状态",
   "agentMemoryTabFacts": "记忆细节",
   "agentMemoryTabHistory": "历史更迭",
-  "agentMemorySearchHint": "搜索特质、存念或关键词...",
+  "agentMemorySearchHint": "搜索记忆或关键词...",
   "agentMemoryKindIdentity": "身份常识",
   "agentMemoryKindPreference": "内容偏好",
   "agentMemoryKindStyle": "表达风格",
@@ -4749,7 +4749,7 @@
   "agentMemorySourceUser": "手动记下",
   "agentMemoryStatusActive": "生效中",
   "agentMemoryStatusSuperseded": "已存档",
-  "agentMemoryEvidenceTitle": "见于 {count} 篇笔记",
+  "agentMemoryEvidenceTitle": "关联 {count} 篇笔记",
   "@agentMemoryEvidenceTitle": {
     "placeholders": {
       "count": {
@@ -4794,7 +4794,7 @@
   "agentMemoryForgetAction": "忘掉",
   "agentMemoryForgotten": "已遗忘该条记忆",
   "agentMemoryCompactTitle": "整理记忆",
-  "agentMemoryCompactConfirm": "将自动清理已淡去的近期状态与过时的历史记录。是否继续？",
+  "agentMemoryCompactConfirm": "将自动清理已过期的近期状态、过时的历史画像与低权重细节。是否继续？",
   "agentMemoryCompactDone": "已整理清理 {count} 条过时记忆",
   "@agentMemoryCompactDone": {
     "placeholders": {
@@ -4810,7 +4810,7 @@
   "agentMemoryAddHint": "例如：称呼我为行者，喜欢探讨文学与存在主义",
   "agentMemoryAddSuccess": "已记下新特质",
   "agentMemoryEmpty": "暂无匹配的记忆",
-  "agentMemoryEmptyDesc": "Thoughter 会在与你的对话或笔记沉淀中自然领悟你的特质",
+  "agentMemoryEmptyDesc": "在对话中与 Thoughter 交流，它会自然记下你的偏好与习惯",
   "agentMemoryCharsCount": "{usedChars} / {maxChars} 字符",
   "@agentMemoryCharsCount": {
     "placeholders": {
