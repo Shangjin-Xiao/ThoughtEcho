@@ -491,15 +491,46 @@ class SchemaDataBackfillAdapter {
     await _legacyTags.cleanup(database);
   }
 
+  /// Whitelist of allowed (columnName, sourceColumn) pairs for schema backup columns.
+  static const Map<String, String> _allowedBackupColumnPairs =
+      <String, String>{
+    'sentiment_backup': 'sentiment',
+    'day_period_backup': 'day_period',
+    'weather_backup': 'weather',
+  };
+
+  @visibleForTesting
+  Future<void> ensureBackupColumnForTest(
+    Transaction transaction, {
+    required String columnName,
+    required String sourceColumn,
+  }) =>
+      _ensureBackupColumn(
+        transaction,
+        columnName: columnName,
+        sourceColumn: sourceColumn,
+      );
+
   Future<void> _ensureBackupColumn(
     Transaction transaction, {
     required String columnName,
     required String sourceColumn,
   }) async {
+    // 校验列名与源列名的关联关系是否属于预定义的安全白名单
+    if (_allowedBackupColumnPairs[columnName] != sourceColumn) {
+      throw StateError(
+        '未授权的备份列映射: $columnName -> $sourceColumn',
+      );
+    }
+
     final columns = await _definitions.columnNames(transaction, 'quotes');
     if (columns.contains(columnName)) {
       return;
     }
+
+    // SQLite 不支持在 DDL/DML 的标识符（列名、表名）位置使用问号 (?) 参数绑定。
+    // 因此在确认 (columnName, sourceColumn) 匹配静态白名单的基础上，
+    // 依然通过 _quoteIdentifier 校验语法规范并进行双引号转义，确保 SQL 拼接绝对安全。
     final safeColumnName = _quoteIdentifier(columnName);
     final safeSourceColumn = _quoteIdentifier(sourceColumn);
 

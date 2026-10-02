@@ -303,6 +303,47 @@ void main() {
       expect(row['sentiment'], isNull);
       expect(row['sentiment_backup'], 'thoughtful');
     });
+
+    test('_ensureBackupColumn 拒绝未授权的备份列映射与非法列名', () async {
+      final manager = DatabaseSchemaManager();
+      await manager.createTables(database);
+
+      // 验证未授权的列映射会被拒绝
+      expect(
+        () => database.transaction(
+          (txn) => manager.ensureBackupColumnForTest(
+            txn,
+            columnName: 'unauthorized_backup',
+            sourceColumn: 'sentiment',
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('未授权的备份列映射'),
+          ),
+        ),
+      );
+
+      // 验证源列不匹配的情况会被拒绝
+      expect(
+        () => database.transaction(
+          (txn) => manager.ensureBackupColumnForTest(
+            txn,
+            columnName: 'sentiment_backup',
+            sourceColumn: 'weather',
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('未授权的备份列映射'),
+          ),
+        ),
+      );
+    });
   });
 }
 

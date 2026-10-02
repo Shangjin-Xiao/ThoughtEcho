@@ -76,6 +76,18 @@ class DatabaseSchemaManager {
   Future<void> cleanupLegacyTagIdsColumn(Database database) =>
       _lifecycle.cleanupLegacyTagIdsColumn(database);
 
+  @visibleForTesting
+  Future<void> ensureBackupColumnForTest(
+    Transaction transaction, {
+    required String columnName,
+    required String sourceColumn,
+  }) =>
+      _lifecycle.ensureBackupColumnForTest(
+        transaction,
+        columnName: columnName,
+        sourceColumn: sourceColumn,
+      );
+
   Future<void> verifyForeignKeysEnabled(Database database) =>
       _lifecycle.verifyForeignKeysEnabled(database);
 

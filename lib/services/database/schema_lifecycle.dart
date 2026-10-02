@@ -114,6 +114,18 @@ class DatabaseSchemaLifecycle {
   Future<void> cleanupLegacyTagIdsColumn(Database database) =>
       _backfill.cleanupLegacyTagIdsColumn(database);
 
+  @visibleForTesting
+  Future<void> ensureBackupColumnForTest(
+    Transaction transaction, {
+    required String columnName,
+    required String sourceColumn,
+  }) =>
+      _backfill.ensureBackupColumnForTest(
+        transaction,
+        columnName: columnName,
+        sourceColumn: sourceColumn,
+      );
+
   Future<void> verifyForeignKeysEnabled(Database database) async {
     try {
       final result = await database.rawQuery('PRAGMA foreign_keys');
