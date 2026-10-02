@@ -2,7 +2,6 @@ part of '../note_full_editor_page.dart';
 
 /// Location and weather dialog handlers and basic fetch methods.
 extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
-  // ignore: unused_element
   Future<void> _showLocationDialogInEditor(
     BuildContext context,
     ThemeData theme,
@@ -170,6 +169,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
         _metadataState.location = null;
         _metadataState.latitude = null;
         _metadataState.longitude = null;
+        _metadataState.poiName = null;
         _metadataState.originalLocation = null;
         _metadataState.originalLatitude = null;
         _metadataState.originalLongitude = null;
@@ -182,8 +182,6 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
   }
 
   /// 编辑模式下的天气对话框
-  /// 注：天气编辑模式下暂时采用简化逻辑，此方法保留以备将来扩展
-  // ignore: unused_element
   Future<void> _showWeatherDialogInEditor(
     BuildContext context,
     ThemeData theme,
@@ -240,6 +238,9 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     if (result == 'remove') {
       _updateState(() {
         _metadataState.showWeather = false;
+        _metadataState.weather = null;
+        _metadataState.temperature = null;
+        _metadataState.originalWeather = null;
       });
     }
   }

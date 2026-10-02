@@ -175,7 +175,7 @@ class NoteEditorMetadataState extends ChangeNotifier {
   String? _originalLocation;
   double? _originalLatitude;
   double? _originalLongitude;
-  final String? _originalWeather;
+  String? _originalWeather;
   String? _currentAiAnalysis;
   String _tagSearchQuery = '';
 
@@ -220,6 +220,12 @@ class NoteEditorMetadataState extends ChangeNotifier {
         longitude: value,
       );
   String? get originalWeather => _originalWeather;
+  set originalWeather(String? value) {
+    if (_originalWeather == value) return;
+    _originalWeather = value;
+    notifyListeners();
+  }
+
   String? get currentAiAnalysis => _currentAiAnalysis;
   set currentAiAnalysis(String? value) => setAiAnalysis(value);
   String get tagSearchQuery => _tagSearchQuery;

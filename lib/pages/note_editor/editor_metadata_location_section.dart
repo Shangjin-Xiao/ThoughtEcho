@@ -87,14 +87,13 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                 label: Text(l10n.locationLabel),
                                 selected: _metadataState.showLocation,
                                 onSelected: (value) async {
-                                  // 编辑模式下统一提示只读
+                                  // 编辑模式下弹对话框（查看/移除/更新地址）
                                   if (widget.initialQuote?.id != null) {
-                                    if (context.mounted) {
-                                      AppSnackBar.info(
-                                        context,
-                                        l10n.editModeMetadataReadOnlyHint,
-                                      );
-                                    }
+                                    await _showLocationDialogInEditor(
+                                      context,
+                                      theme,
+                                    );
+                                    setDialogState(() {});
                                     return;
                                   }
                                   // 新建模式
@@ -164,17 +163,13 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                         label: Text(l10n.weatherLabel),
                         selected: _metadataState.showWeather,
                         onSelected: (value) async {
-                          // 编辑模式下统一只读提示
+                          // 编辑模式下弹对话框（查看/移除）
                           if (widget.initialQuote?.id != null) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content:
-                                      Text(l10n.editModeMetadataReadOnlyHint),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            }
+                            await _showWeatherDialogInEditor(
+                              context,
+                              theme,
+                            );
+                            setDialogState(() {});
                             return;
                           }
                           // 新建模式
