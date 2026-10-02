@@ -100,6 +100,17 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             }
             await batch.commit(noResult: true);
           }
+
+          final deltaPayload = Map<String, dynamic>.from(quoteMap);
+          deltaPayload['tag_ids'] = quoteWithId.tagIds;
+          await DeltaLogService.recordChange(
+            txn,
+            entityType: 'quote',
+            entityId: newQuoteId,
+            action: 'insert',
+            payload: deltaPayload,
+            timestamp: quoteMap['last_modified']?.toString(),
+          );
         });
 
         logDebug('笔记已成功保存到数据库，ID: ${quoteWithId.id}');
@@ -522,11 +533,29 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         final db = await safeDatabase;
 
         final now = DateTime.now().toUtc().toIso8601String();
-        final updatedCount = await db.rawUpdate(
-          'UPDATE quotes SET is_deleted = 1, deleted_at = ?, last_modified = ? '
-          'WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)',
-          [now, now, id],
-        );
+        int updatedCount = 0;
+        await db.transaction((txn) async {
+          updatedCount = await txn.rawUpdate(
+            'UPDATE quotes SET is_deleted = 1, deleted_at = ?, last_modified = ? '
+            'WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)',
+            [now, now, id],
+          );
+          if (updatedCount > 0) {
+            await DeltaLogService.recordChange(
+              txn,
+              entityType: 'quote',
+              entityId: id,
+              action: 'delete',
+              payload: {
+                'id': id,
+                'is_deleted': 1,
+                'deleted_at': now,
+                'last_modified': now
+              },
+              timestamp: now,
+            );
+          }
+        });
 
         if (updatedCount == 0) {
           logDebug('要删除的笔记不存在或已在回收站: $id');
@@ -724,6 +753,17 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
             txn,
             quote,
+          );
+
+          final deltaPayload = Map<String, dynamic>.from(quoteMap);
+          deltaPayload['tag_ids'] = quote.tagIds;
+          await DeltaLogService.recordChange(
+            txn,
+            entityType: 'quote',
+            entityId: quote.id!,
+            action: 'update',
+            payload: deltaPayload,
+            timestamp: quoteMap['last_modified']?.toString(),
           );
         });
 

@@ -12,6 +12,7 @@ class DatabaseSchemaDefinitions {
     'quote_tags',
     'quote_tombstones',
     'media_references',
+    'sync_delta_log',
   };
 
   static const Map<String, String> repairableQuoteColumns = <String, String>{
@@ -84,6 +85,8 @@ class DatabaseSchemaDefinitions {
     'idx_quote_tombstones_deleted_at',
     'idx_media_references_file_path',
     'idx_media_references_quote_id',
+    'idx_sync_delta_log_seq',
+    'idx_sync_delta_log_timestamp',
   ];
 
   static const List<String> categoryIndexStatements = <String>[
@@ -102,6 +105,11 @@ class DatabaseSchemaDefinitions {
   static const List<String> mediaReferenceIndexStatements = <String>[
     'CREATE INDEX IF NOT EXISTS idx_media_references_file_path ON media_references(file_path)',
     'CREATE INDEX IF NOT EXISTS idx_media_references_quote_id ON media_references(quote_id)',
+  ];
+
+  static const List<String> syncDeltaLogIndexStatements = <String>[
+    'CREATE INDEX IF NOT EXISTS idx_sync_delta_log_seq ON sync_delta_log(seq)',
+    'CREATE INDEX IF NOT EXISTS idx_sync_delta_log_timestamp ON sync_delta_log(timestamp)',
   ];
 
   static const String categoriesTableSql = '''
@@ -143,6 +151,17 @@ class DatabaseSchemaDefinitions {
     )
   ''';
 
+  static const String syncDeltaLogTableSql = '''
+    CREATE TABLE IF NOT EXISTS sync_delta_log(
+      seq INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      timestamp TEXT NOT NULL
+    )
+  ''';
+
   Future<void> createCurrentSchema(Database database) async {
     await database.execute(categoriesTableSql);
     await database.execute(quotesTableSql('quotes'));
@@ -150,6 +169,7 @@ class DatabaseSchemaDefinitions {
     await ensureQuoteTagsTable(database);
     await ensureQuoteTombstonesTable(database);
     await ensureMediaReferencesTable(database);
+    await ensureSyncDeltaLogTable(database);
   }
 
   Future<void> ensureCurrentIndexes(DatabaseExecutor executor) async {
@@ -178,6 +198,11 @@ class DatabaseSchemaDefinitions {
   Future<void> ensureMediaReferencesTable(DatabaseExecutor executor) async {
     await executor.execute(mediaReferencesTableSql);
     await _executeAll(executor, mediaReferenceIndexStatements);
+  }
+
+  Future<void> ensureSyncDeltaLogTable(DatabaseExecutor executor) async {
+    await executor.execute(syncDeltaLogTableSql);
+    await _executeAll(executor, syncDeltaLogIndexStatements);
   }
 
   Future<void> _executeAll(

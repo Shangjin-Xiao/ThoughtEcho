@@ -29,6 +29,9 @@ class LocalSendServer {
       _onApprovalNeeded;
   void Function(String sessionId)? _onApprovalCancelled;
   Future<MediaSyncManifest> Function()? _onMediaManifestRequested;
+  Future<Map<String, dynamic>> Function(Map<String, dynamic> request)?
+      onDeltaSyncRequested;
+  Future<int> Function()? onMaxSequenceRequested;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -298,11 +301,37 @@ class LocalSendServer {
             _preApprovedFingerprints.add(senderFp);
             _approvedIntentFingerprints[tempId] = senderFp;
           }
+          int localMaxSeq = 0;
+          if (onMaxSequenceRequested != null) {
+            try {
+              localMaxSeq = await onMaxSequenceRequested!();
+            } catch (_) {}
+          }
+
           responseData = {
             'approved': approved,
+            'supports_delta': true,
+            'peer_max_seq': localMaxSeq,
             if (approved && mediaManifest != null)
               'mediaManifest': mediaManifest.toJson(),
           };
+        } else if (path == '/api/thoughtecho/v1/delta-sync' &&
+            request.method == 'POST') {
+          final bodyBytes = await _readLimitedBody(request);
+          final bodyString = utf8.decode(bodyBytes);
+          Map<String, dynamic> req = {};
+          try {
+            req = await Isolate.run(
+              () => jsonDecode(bodyString) as Map<String, dynamic>,
+            );
+          } catch (e) {
+            logDebug('[LocalSendServer] delta-sync JSON decode failed: $e');
+          }
+          if (onDeltaSyncRequested != null) {
+            responseData = await onDeltaSyncRequested!(req);
+          } else {
+            responseData = {'ok': false, 'reason': 'delta_sync_not_supported'};
+          }
         } else if ((path == '/api/localsend/v2/prepare-upload' ||
                 path == '/api/localsend/v1/send-request') &&
             request.method == 'POST') {

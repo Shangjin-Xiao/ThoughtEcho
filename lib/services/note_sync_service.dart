@@ -11,6 +11,8 @@ import 'package:thoughtecho/models/merge_report.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/delta_log_service.dart';
+import 'package:thoughtecho/services/delta_merge_engine.dart';
 import 'package:thoughtecho/services/large_file_manager.dart' as lfm;
 import 'package:thoughtecho/services/localsend/constants.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
@@ -37,8 +39,17 @@ enum SyncStatus {
 class SyncIntentApproval {
   final bool approved;
   final MediaSyncManifest? mediaManifest;
+  final bool supportsDelta;
+  final bool sequenceGap;
+  final int peerMaxSeq;
 
-  const SyncIntentApproval({required this.approved, this.mediaManifest});
+  const SyncIntentApproval({
+    required this.approved,
+    this.mediaManifest,
+    this.supportsDelta = false,
+    this.sequenceGap = false,
+    this.peerMaxSeq = 0,
+  });
 }
 
 /// 笔记同步服务 - 基于LocalSend的P2P同步功能
@@ -142,8 +153,16 @@ class NoteSyncService extends ChangeNotifier {
     if (approved is! bool) {
       throw const FormatException('同步审批响应格式无效');
     }
+    final supportsDelta = response['supports_delta'] == true;
+    final sequenceGap = response['sequence_gap'] == true;
+    final peerMaxSeq =
+        response['peer_max_seq'] is int ? response['peer_max_seq'] as int : 0;
+
     return SyncIntentApproval(
       approved: approved,
+      supportsDelta: supportsDelta,
+      sequenceGap: sequenceGap,
+      peerMaxSeq: peerMaxSeq,
       mediaManifest: approved
           ? MediaSyncManifest.tryParse(response['mediaManifest'])
           : null,
@@ -255,6 +274,12 @@ class NoteSyncService extends ChangeNotifier {
           });
         },
       );
+      _localSendServer!.onMaxSequenceRequested = () async {
+        return await DeltaLogService.getMaxSequence(_databaseService.database);
+      };
+      _localSendServer!.onDeltaSyncRequested = (req) async {
+        return await _handleP2PDeltaSyncRequest(req);
+      };
       final actualPort = _localSendServer!.port;
       AppLogger.i(
         'LocalSendServer启动成功，端口: $actualPort',
@@ -430,6 +455,55 @@ class NoteSyncService extends ChangeNotifier {
         throw Exception('对方拒绝同步请求');
       }
       _setAwaitingPeerApproval(false);
+
+      if (approval.supportsDelta && !approval.sequenceGap) {
+        try {
+          _updateSyncStatus(SyncStatus.sending, '正在通过 P2P 增量同步传输...', 0.3);
+          final unsyncedDeltas = await DeltaLogService.getDeltasAfterSequence(
+            _databaseService.database,
+            approval.peerMaxSeq,
+          );
+          final localMaxSeq =
+              await DeltaLogService.getMaxSequence(_databaseService.database);
+
+          final deltaUri = Uri.parse(
+            '${targetDevice.https ? 'https' : 'http'}://${targetDevice.ip}:${targetDevice.port}/api/thoughtecho/v1/delta-sync',
+          );
+          final dio = Dio(BaseOptions(
+            connectTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(minutes: 1),
+          ));
+
+          final deltaRes = await dio.postUri<Map<String, dynamic>>(
+            deltaUri,
+            data: {
+              'from_sequence': localMaxSeq,
+              'deltas': unsyncedDeltas,
+            },
+            options: Options(contentType: Headers.jsonContentType),
+          );
+
+          if (deltaRes.statusCode == 200 && deltaRes.data?['ok'] == true) {
+            final returnDeltas = (deltaRes.data!['deltas'] as List?)
+                    ?.cast<Map<String, dynamic>>() ??
+                [];
+            if (returnDeltas.isNotEmpty) {
+              _updateSyncStatus(SyncStatus.merging, '正在合并对端增量数据...', 0.8);
+              await DeltaMergeEngine.applyDeltaBatch(
+                _databaseService.database,
+                returnDeltas,
+                isFromSync: true,
+              );
+              _databaseService.refreshQuotes();
+            }
+            _updateSyncStatus(SyncStatus.completed, 'P2P 增量同步完成！', 1.0);
+            return 'p2p_incremental_sync_success';
+          }
+        } catch (e) {
+          logWarning('P2P 增量同步通信失败，平滑回退至 ZIP 全量同步: $e',
+              source: 'NoteSyncService');
+        }
+      }
 
       // 1. 更新状态：开始打包（不显示大小/数量）
       _updateSyncStatus(SyncStatus.packaging, '正在打包数据...', 0.1);
@@ -1140,6 +1214,44 @@ class NoteSyncService extends ChangeNotifier {
   @visibleForTesting
   void debugHandleReceiveProgress(int received, int total) =>
       _handleReceiveProgress(received, total);
+
+  Future<Map<String, dynamic>> _handleP2PDeltaSyncRequest(
+      Map<String, dynamic> req) async {
+    try {
+      final fromSeq = req['from_sequence'] as int? ?? 0;
+      final incomingDeltas =
+          (req['deltas'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+      if (incomingDeltas.isNotEmpty) {
+        _updateSyncStatus(SyncStatus.merging, '正在增量智能合并笔记...', 0.5);
+        await DeltaMergeEngine.applyDeltaBatch(
+          _databaseService.database,
+          incomingDeltas,
+          isFromSync: true,
+        );
+        _databaseService.refreshQuotes();
+      }
+
+      final responseDeltas = await DeltaLogService.getDeltasAfterSequence(
+        _databaseService.database,
+        fromSeq,
+      );
+      final currentMaxSeq =
+          await DeltaLogService.getMaxSequence(_databaseService.database);
+
+      _updateSyncStatus(SyncStatus.completed, '增量同步完成', 1.0);
+
+      return {
+        'ok': true,
+        'peer_max_seq': currentMaxSeq,
+        'deltas': responseDeltas,
+      };
+    } catch (e, stack) {
+      logError('P2P 增量同步处理异常: $e',
+          error: e, stackTrace: stack, source: 'NoteSyncService');
+      return {'ok': false, 'reason': e.toString()};
+    }
+  }
 }
 
 /// 速度样本（用于滑动窗口平均）

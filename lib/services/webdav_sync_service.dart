@@ -16,6 +16,9 @@ import '../services/connectivity_service.dart';
 import '../services/database_service.dart';
 import '../services/media_reference_service.dart';
 import '../services/mmkv_service.dart';
+import '../services/delta_log_service.dart';
+import '../services/delta_merge_engine.dart';
+import '../services/delta_compaction_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/lww_utils.dart';
 
@@ -384,73 +387,112 @@ class WebDAVSyncService extends ChangeNotifier {
       await _ensureDirectoryExists(dio, '${_url}thoughtecho/media/videos/');
       await _ensureDirectoryExists(dio, '${_url}thoughtecho/media/audios/');
 
-      final remoteSyncZipUrl = '${_url}thoughtecho/thoughtecho_sync.zip';
-
-      // 2. 检查云端备份是否存在并下载
-      Map<String, dynamic>? remoteData;
-      bool remoteSyncFileCorrupted = false;
-      var remoteSyncFile =
-          await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
-
-      if (remoteSyncFile.exists) {
-        logDebug('发现云端备份文件，开始下载...');
-        final downloadRes = await dio.get<List<int>>(
-          remoteSyncZipUrl,
-          options: Options(responseType: ResponseType.bytes),
-        );
-
-        if (downloadRes.statusCode == 200 && downloadRes.data != null) {
-          final bytes = downloadRes.data!;
-          final expectedLength = remoteSyncFile.contentLength ??
-              _contentLengthFromHeaders(downloadRes.headers);
-          if (expectedLength != null && expectedLength != bytes.length) {
-            throw StateError(
-              '云端同步文件下载不完整，期望 $expectedLength 字节，实际 ${bytes.length} 字节',
-            );
-          }
-          try {
-            remoteData = _decodeAndValidateRemoteSyncZip(bytes);
-          } on _CorruptedRemoteSyncFileException catch (e) {
-            // 损坏的云端文件里没有任何可合并的数据，若继续抛错，每次同步都会
-            // 卡在同一处、永远无法自愈。这里改为归档损坏文件并用本地数据重建。
-            remoteData = null;
-            remoteSyncFileCorrupted = true;
-            logWarning(
-              '云端同步文件无法解析（${e.reason}），将归档损坏文件并用本地数据重建',
-              source: 'WebDAVSyncService',
-            );
-            await _archiveCorruptedRemoteSyncFile(dio, remoteSyncZipUrl);
-            // 归档可能已把原文件移走，重新探测状态，避免上传时用错
-            // If-Match / If-None-Match 前置条件导致 412。
-            remoteSyncFile =
-                await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
-          }
-        }
-      }
-
       final dbService = DatabaseService();
 
-      // 3. 如果两端都有数据，进行冲突检测与克隆
-      if (remoteData != null && _lastSyncTime.isNotEmpty) {
-        logDebug('进行同步冲突检测与隔离...');
-        _lastConflictCount = await _detectAndCloneConflicts(
-          dbService,
-          remoteData,
-          _lastSyncTime,
-        );
+      bool remoteSyncFileCorrupted = false;
+      bool incrementalDone = false;
+      try {
+        incrementalDone = await _performIncrementalWebDAVSync(dio, dbService);
+      } catch (e) {
+        logWarning('WebDAV 增量同步尝试失败，平滑回退全量快照模式: $e',
+            source: 'WebDAVSyncService');
+        incrementalDone = false;
       }
 
-      // 4. 合并云端数据到本地数据库
-      if (remoteData != null) {
-        logDebug('开始执行 LWW 本地智能合并...');
-        final mergeReport = await dbService.importDataWithLWWMerge(
-          remoteData,
-          sourceDevice: 'WebDAV_Cloud',
-        );
-        if (mergeReport.hasErrors) {
-          throw StateError('云端数据合并失败: ${mergeReport.errors.join('; ')}');
+      if (!incrementalDone) {
+        logInfo('执行 WebDAV 全量快照同步模式...', source: 'WebDAVSyncService');
+        final remoteSyncZipUrl = '${_url}thoughtecho/thoughtecho_sync.zip';
+
+        // 2. 检查云端备份是否存在并下载
+        Map<String, dynamic>? remoteData;
+        var remoteSyncFile =
+            await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
+
+        if (remoteSyncFile.exists) {
+          logDebug('发现云端备份文件，开始下载...');
+          final downloadRes = await dio.get<List<int>>(
+            remoteSyncZipUrl,
+            options: Options(responseType: ResponseType.bytes),
+          );
+
+          if (downloadRes.statusCode == 200 && downloadRes.data != null) {
+            final bytes = downloadRes.data!;
+            final expectedLength = remoteSyncFile.contentLength ??
+                _contentLengthFromHeaders(downloadRes.headers);
+            if (expectedLength != null && expectedLength != bytes.length) {
+              throw StateError(
+                '云端同步文件下载不完整，期望 $expectedLength 字节，实际 ${bytes.length} 字节',
+              );
+            }
+            try {
+              remoteData = _decodeAndValidateRemoteSyncZip(bytes);
+            } on _CorruptedRemoteSyncFileException catch (e) {
+              remoteData = null;
+              remoteSyncFileCorrupted = true;
+              logWarning(
+                '云端同步文件无法解析（${e.reason}），将归档损坏文件并用本地数据重建',
+                source: 'WebDAVSyncService',
+              );
+              await _archiveCorruptedRemoteSyncFile(dio, remoteSyncZipUrl);
+              remoteSyncFile =
+                  await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
+            }
+          }
         }
-        dbService.refreshQuotes(); // 刷新 UI
+
+        // 3. 如果两端都有数据，进行冲突检测与克隆
+        if (remoteData != null && _lastSyncTime.isNotEmpty) {
+          logDebug('进行同步冲突检测与隔离...');
+          _lastConflictCount = await _detectAndCloneConflicts(
+            dbService,
+            remoteData,
+            _lastSyncTime,
+          );
+        }
+
+        // 4. 合并云端数据到本地数据库
+        if (remoteData != null) {
+          logDebug('开始执行 LWW 本地智能合并...');
+          final mergeReport = await dbService.importDataWithLWWMerge(
+            remoteData,
+            sourceDevice: 'WebDAV_Cloud',
+          );
+          if (mergeReport.hasErrors) {
+            throw StateError('云端数据合并失败: ${mergeReport.errors.join('; ')}');
+          }
+          dbService.refreshQuotes(); // 刷新 UI
+        }
+
+        // 6. 打包本地最新数据上传云端
+        logDebug('打包本地最新数据上传云端...');
+        final tempDir = await getTemporaryDirectory();
+        final tempJsonPath = p.join(
+          tempDir.path,
+          'thoughtecho_webdav_sync.json',
+        );
+        final tempZipPath = p.join(
+          tempDir.path,
+          'thoughtecho_webdav_sync.zip',
+        );
+        try {
+          await _writeLocalDataToTempJson(dbService.database, tempJsonPath);
+          await packSyncZip(tempJsonPath, tempZipPath);
+          await _uploadSyncZipWithConflictProtection(
+            dio,
+            remoteSyncZipUrl,
+            File(tempZipPath),
+            remoteSyncFile,
+          );
+        } finally {
+          for (final path in [tempJsonPath, tempZipPath]) {
+            final f = File(path);
+            if (await f.exists()) await f.delete();
+          }
+        }
+
+        final currentMaxSeq =
+            await DeltaLogService.getMaxSequence(dbService.database);
+        await _mmkv.setInt('webdav_last_sync_seq', currentMaxSeq);
       }
 
       // 5. 增量比对并同步大媒体附件 (Images, Videos, Audios)
@@ -460,37 +502,6 @@ class WebDAVSyncService extends ChangeNotifier {
       } else {
         logDebug('开始同步本地与云端媒体文件...');
         mediaFailureCount = await _syncMediaFiles(dio);
-      }
-
-      // 6. 流式写入本地数据到临时文件并上传（避免全量数据入内存）
-      logDebug('打包本地最新数据上传云端...');
-      final tempDir = await getTemporaryDirectory();
-      final tempJsonPath = p.join(
-        tempDir.path,
-        'thoughtecho_webdav_sync.json',
-      );
-      final tempZipPath = p.join(
-        tempDir.path,
-        'thoughtecho_webdav_sync.zip',
-      );
-      try {
-        // 分页流式写入 JSON 到临时文件
-        await _writeLocalDataToTempJson(dbService.database, tempJsonPath);
-
-        await packSyncZip(tempJsonPath, tempZipPath);
-
-        await _uploadSyncZipWithConflictProtection(
-          dio,
-          remoteSyncZipUrl,
-          File(tempZipPath),
-          remoteSyncFile,
-        );
-      } finally {
-        // 清理临时文件
-        for (final path in [tempJsonPath, tempZipPath]) {
-          final f = File(path);
-          if (await f.exists()) await f.delete();
-        }
       }
 
       // 7. 更新同步状态。笔记数据已完整同步，水位线可以前推；
@@ -1780,6 +1791,195 @@ class WebDAVSyncService extends ChangeNotifier {
     } finally {
       await sink.close();
     }
+  }
+
+  Future<bool> _performIncrementalWebDAVSync(
+      Dio dio, DatabaseService dbService) async {
+    final deltasFolderUrl = '${_url}thoughtecho/deltas/';
+    await _ensureDirectoryExists(dio, deltasFolderUrl);
+
+    final manifestUrl = '${deltasFolderUrl}manifest.json';
+    int localSyncSeq = _mmkv.getInt('webdav_last_sync_seq') ?? 0;
+
+    Map<String, dynamic>? manifestData;
+    try {
+      final res = await dio.get<String>(manifestUrl,
+          options: Options(responseType: ResponseType.plain));
+      if (res.statusCode == 200 &&
+          res.data != null &&
+          res.data!.toString().trim().isNotEmpty) {
+        manifestData = jsonDecode(res.data!) as Map<String, dynamic>;
+      }
+    } catch (_) {
+      logDebug('未获取到云端 deltas/manifest.json，将回退至全量快照同步',
+          source: 'WebDAVSyncService');
+    }
+
+    if (manifestData == null) {
+      return false;
+    }
+
+    final baseSeq =
+        manifestData['base_seq'] is int ? manifestData['base_seq'] as int : 0;
+    final maxSeq =
+        manifestData['max_seq'] is int ? manifestData['max_seq'] as int : 0;
+
+    if (localSyncSeq < baseSeq || localSyncSeq > maxSeq) {
+      logWarning(
+          '本地水位线 $localSyncSeq 不在云端有效序列范围 [$baseSeq, $maxSeq]，触发全量快照同步自愈',
+          source: 'WebDAVSyncService');
+      return false;
+    }
+
+    final batchesList =
+        (manifestData['batches'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final pendingBatches = batchesList.where((b) {
+      final endSeq = b['end_seq'] is int ? b['end_seq'] as int : 0;
+      return endSeq > localSyncSeq;
+    }).toList();
+
+    for (final batch in pendingBatches) {
+      final filename = batch['filename'] as String?;
+      if (filename == null || filename.isEmpty) continue;
+
+      final batchUrl = '$deltasFolderUrl$filename';
+      try {
+        final res = await dio.get<String>(batchUrl,
+            options: Options(responseType: ResponseType.plain));
+        if (res.statusCode == 200 && res.data != null) {
+          final batchJson = jsonDecode(res.data!) as Map<String, dynamic>;
+          final deltasList =
+              (batchJson['deltas'] as List?)?.cast<Map<String, dynamic>>() ??
+                  [];
+          await DeltaMergeEngine.applyDeltaBatch(dbService.database, deltasList,
+              isFromSync: true);
+          final endSeq =
+              batch['end_seq'] is int ? batch['end_seq'] as int : localSyncSeq;
+          if (endSeq > localSyncSeq) localSyncSeq = endSeq;
+        }
+      } catch (e) {
+        logError('下载或应用增量批次 $filename 失败: $e', source: 'WebDAVSyncService');
+        return false;
+      }
+    }
+
+    dbService.refreshQuotes();
+
+    final localUnsynced = await DeltaLogService.getDeltasAfterSequence(
+        dbService.database, localSyncSeq);
+    if (localUnsynced.isNotEmpty) {
+      logInfo('开始上传 ${localUnsynced.length} 条本地增量变更到 WebDAV...',
+          source: 'WebDAVSyncService');
+
+      const maxBatchBytes = 5 * 1024 * 1024; // 5MB limit
+      List<Map<String, dynamic>> currentChunk = [];
+      int currentChunkBytes = 0;
+
+      final List<Map<String, dynamic>> uploadedBatches = List.from(batchesList);
+
+      for (int i = 0; i < localUnsynced.length; i++) {
+        final item = localUnsynced[i];
+        final itemBytes = jsonEncode(item).length;
+
+        if (currentChunkBytes + itemBytes > maxBatchBytes &&
+            currentChunk.isNotEmpty) {
+          final startSeq = currentChunk.first['seq'] as int;
+          final endSeq = currentChunk.last['seq'] as int;
+          final batchFileName = 'delta_${startSeq}_$endSeq.json';
+          final batchData = {
+            'version': 1,
+            'start_seq': startSeq,
+            'end_seq': endSeq,
+            'deltas': currentChunk,
+          };
+
+          await dio.put<void>(
+            '$deltasFolderUrl$batchFileName',
+            data: jsonEncode(batchData),
+            options: Options(contentType: 'application/json'),
+          );
+
+          uploadedBatches.add({
+            'filename': batchFileName,
+            'start_seq': startSeq,
+            'end_seq': endSeq,
+            'timestamp': DateTime.now().toUtc().toIso8601String(),
+          });
+
+          localSyncSeq = endSeq;
+          currentChunk = [];
+          currentChunkBytes = 0;
+        }
+
+        currentChunk.add(item);
+        currentChunkBytes += itemBytes;
+      }
+
+      if (currentChunk.isNotEmpty) {
+        final startSeq = currentChunk.first['seq'] as int;
+        final endSeq = currentChunk.last['seq'] as int;
+        final batchFileName = 'delta_${startSeq}_$endSeq.json';
+        final batchData = {
+          'version': 1,
+          'start_seq': startSeq,
+          'end_seq': endSeq,
+          'deltas': currentChunk,
+        };
+
+        await dio.put<void>(
+          '$deltasFolderUrl$batchFileName',
+          data: jsonEncode(batchData),
+          options: Options(contentType: 'application/json'),
+        );
+
+        uploadedBatches.add({
+          'filename': batchFileName,
+          'start_seq': startSeq,
+          'end_seq': endSeq,
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+        });
+
+        localSyncSeq = endSeq;
+      }
+
+      final updatedManifest = {
+        'version': 1,
+        'last_updated': DateTime.now().toUtc().toIso8601String(),
+        'base_seq': baseSeq,
+        'max_seq': localSyncSeq,
+        'batches': uploadedBatches,
+      };
+
+      await dio.put<void>(
+        manifestUrl,
+        data: jsonEncode(updatedManifest),
+        options: Options(contentType: 'application/json'),
+      );
+    }
+
+    await _mmkv.setInt('webdav_last_sync_seq', localSyncSeq);
+
+    if (await DeltaCompactionService.shouldCompact(dbService.database)) {
+      final summary =
+          await DeltaCompactionService.compactDeltas(dbService.database);
+      final updatedManifest = {
+        'version': 1,
+        'last_updated': DateTime.now().toUtc().toIso8601String(),
+        'base_seq': summary.compactedUpToSeq,
+        'max_seq': localSyncSeq,
+        'batches': batchesList
+            .where(
+                (b) => (b['end_seq'] as int? ?? 0) > summary.compactedUpToSeq)
+            .toList(),
+      };
+      await dio.put<void>(
+        manifestUrl,
+        data: jsonEncode(updatedManifest),
+        options: Options(contentType: 'application/json'),
+      );
+    }
+
+    return true;
   }
 
   /// 供 UI 层侦听数据库修改并静默防抖同步

@@ -235,12 +235,30 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       }
 
       final now = DateTime.now().toUtc().toIso8601String();
-      final updatedRows = await db.rawUpdate(
-        'UPDATE quotes '
-        'SET is_deleted = 0, deleted_at = NULL, last_modified = ? '
-        'WHERE id = ? AND is_deleted = 1',
-        [now, id],
-      );
+      int updatedRows = 0;
+      await db.transaction((txn) async {
+        updatedRows = await txn.rawUpdate(
+          'UPDATE quotes '
+          'SET is_deleted = 0, deleted_at = NULL, last_modified = ? '
+          'WHERE id = ? AND is_deleted = 1',
+          [now, id],
+        );
+        if (updatedRows > 0) {
+          await DeltaLogService.recordChange(
+            txn,
+            entityType: 'quote',
+            entityId: id,
+            action: 'update',
+            payload: {
+              'id': id,
+              'is_deleted': 0,
+              'deleted_at': null,
+              'last_modified': now
+            },
+            timestamp: now,
+          );
+        }
+      });
 
       // 修复：如果没有行被更新，说明笔记不在回收站或已被删除
       if (updatedRows == 0) {
@@ -485,6 +503,14 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
                   'device_id': null,
                 },
                 conflictAlgorithm: ConflictAlgorithm.replace);
+            await DeltaLogService.recordChange(
+              txn,
+              entityType: 'tombstone',
+              entityId: id,
+              action: 'insert',
+              payload: {'quote_id': id, 'deleted_at': now, 'device_id': null},
+              timestamp: now,
+            );
           }
 
           await txn.delete(
