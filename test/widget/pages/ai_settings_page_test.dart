@@ -354,6 +354,10 @@ void main() {
       try {
         await tester.pumpWidget(_wrap(settingsService, memoryService));
         await tester.pumpAndSettle();
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pumpAndSettle();
 
         // 1. Verify page view is tracked
         expect(
@@ -426,6 +430,10 @@ void main() {
               e['props']?['is_new'] == false &&
               e['props']?['provider_preset'] == 'deepseek'),
           isTrue,
+        );
+
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
         );
       } finally {
         AptabaseHelper.onTrackEventForTesting = null;
