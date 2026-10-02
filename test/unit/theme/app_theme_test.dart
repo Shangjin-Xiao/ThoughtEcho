@@ -186,4 +186,58 @@ void main() {
       AptabaseHelper.onTrackEventForTesting = null;
     }
   });
+
+  test('setThemeAccent 切换非默认墨色上报统计，选中已生效的默认墨色抑制上报', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+    await storage.remove('theme_accent');
+    await storage.setString('theme_style', ThemeStyle.paper.name);
+    await storage.remove('theme_accent_${ThemeStyle.paper.name}');
+    await storage.remove('theme_accent_${ThemeStyle.plain.name}');
+    await storage.remove('theme_accent_${ThemeStyle.material.name}');
+
+    final events = <Map<String, dynamic>>[];
+    AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+      events.add({'event': eventName, 'props': props});
+    };
+
+    try {
+      final appTheme = AppTheme();
+      await appTheme.initialize();
+
+      // 当前是 paper 风格，默认墨色是 umber。
+      // 1. 用户选中已生效的默认墨色（umber）：写盘落落定，但不发射 switch_theme_accent
+      await appTheme.setThemeAccent(ThemeStyle.paper.defaultAccent);
+      expect(
+        events.any((e) =>
+            e['event'] == 'feature_used' &&
+            (e['props'] as Map)['action'] == 'switch_theme_accent'),
+        isFalse,
+      );
+      expect(
+        storage.getString('theme_accent_${ThemeStyle.paper.name}'),
+        ThemeStyle.paper.defaultAccent.name,
+      );
+
+      // 2. 用户切换到非默认墨色（cinnabar）：真正生效变化，上报 switch_theme_accent
+      await appTheme.setThemeAccent(ThemeAccent.cinnabar);
+      expect(
+        events.any(
+          (e) =>
+              e['event'] == 'feature_used' &&
+              (e['props'] as Map)['action'] == 'switch_theme_accent' &&
+              (e['props'] as Map)['accent'] == ThemeAccent.cinnabar.name &&
+              (e['props'] as Map)['style'] == ThemeStyle.paper.name,
+        ),
+        isTrue,
+      );
+
+      // 3. 再次设置相同墨色（cinnabar）：拦截，不上报
+      events.clear();
+      await appTheme.setThemeAccent(ThemeAccent.cinnabar);
+      expect(events, isEmpty);
+    } finally {
+      AptabaseHelper.onTrackEventForTesting = null;
+    }
+  });
 }

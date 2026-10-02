@@ -11,6 +11,7 @@ import '../services/settings_service.dart';
 import '../theme/app_semantic_colors.dart';
 import '../utils/ai_connection_tester.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../widgets/app_snackbar.dart';
 import 'agent_memory/agent_memory_page.dart';
 import 'ai_provider_edit_page.dart';
@@ -38,6 +39,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
   @override
   void initState() {
     super.initState();
+    AptabaseHelper.trackPageView('ai_settings');
     _reload();
   }
 
@@ -203,6 +205,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
         systemPrompt: l10n.connectionTestSystemMessage,
         userMessage: l10n.connectionTestUserMessage,
       );
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'ai_test_connection',
+        'provider_preset':
+            AIProviderPresets.matchApiUrl(provider.apiUrl)?.id ?? 'custom',
+      });
 
       if (!mounted) return;
       AppSnackBar.success(context, l10n.connectionTestSuccess);

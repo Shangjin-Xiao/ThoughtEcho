@@ -150,7 +150,10 @@ void main() {
         expect(events, hasLength(2));
         for (final e in events) {
           expect(e['event'], equals('feature_used'));
-          expect(e['props'], equals({'action': 'ai_insight_generate'}));
+          expect(
+            e['props'],
+            equals({'action': 'ai_insight_generate', 'is_ai': true}),
+          );
         }
       } finally {
         AptabaseHelper.onTrackEventForTesting = null;

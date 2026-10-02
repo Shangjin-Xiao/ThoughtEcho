@@ -411,6 +411,7 @@ extension _ExploreDataLoading on _ExplorePageState {
                 activeDays: activeDays,
                 noteCount: noteCount,
                 totalWordCount: _totalWordCount,
+                isFallback: true,
               );
           _updateState(() {
             _insightText = local;
@@ -509,11 +510,12 @@ extension _ExploreDataLoading on _ExplorePageState {
       date: _selectedDate,
     );
 
-    String localFallback() =>
+    String localFallback({bool isFallback = false}) =>
         context.read<AIService>().buildLocalEmptyPeriodInsight(
               periodLabel: periodLabel,
               daysSinceLastNote: daysSinceLastNote,
               everWroteAnything: everWroteAnything,
+              isFallback: isFallback,
             );
 
     if (!useAI) {
@@ -552,7 +554,7 @@ extension _ExploreDataLoading on _ExplorePageState {
         _insightFlushTimer = null;
         _insightPending = '';
         _updateState(() {
-          _insightText = localFallback();
+          _insightText = localFallback(isFallback: true);
           _insightLoading = false;
         });
         // 同 AI 洞察的兜底：清掉签名，下次刷新重新试 AI，不要被本地模板钉死。

@@ -168,6 +168,7 @@ class MockAIService extends ChangeNotifier implements AIService {
     required String periodLabel,
     int? daysSinceLastNote,
     bool everWroteAnything = true,
+    bool isFallback = false,
   }) =>
       '$periodLabel还没有落笔。';
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
 import '../models/ai_provider_settings.dart';
@@ -18,6 +19,14 @@ import '../services/openai_stream_service.dart';
 class AIConnectionTester {
   const AIConnectionTester._();
 
+  @visibleForTesting
+  static Future<String> Function({
+    required AIProviderSettings provider,
+    required String systemPrompt,
+    required String userMessage,
+    Duration timeout,
+  })? testOverrideForTesting;
+
   /// 发一次最小的聊天请求验证配置。
   ///
   /// 返回模型的回复文本（可能为空字符串）。任何失败都以异常抛出，调用方负责转成
@@ -32,6 +41,14 @@ class AIConnectionTester {
     required String userMessage,
     Duration timeout = const Duration(seconds: 30),
   }) async {
+    if (testOverrideForTesting != null) {
+      return await testOverrideForTesting!(
+        provider: provider,
+        systemPrompt: systemPrompt,
+        userMessage: userMessage,
+        timeout: timeout,
+      );
+    }
     final resolved = provider.apiKey.isNotEmpty
         ? provider
         : provider.copyWith(

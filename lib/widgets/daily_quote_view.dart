@@ -11,6 +11,7 @@ import 'dart:async'; // Import async for StreamController and StreamSubscription
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../utils/aptabase_helper.dart';
 import 'app_snackbar.dart';
 
 class DailyQuoteView extends StatefulWidget {
@@ -252,6 +253,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
   // 公开刷新方法，供父组件调用（手动刷新时清除通知标志）
   Future<void> refreshQuote() async {
     _isShowingNotificationQuote = false;
+    AptabaseHelper.trackEvent(
+        'feature_used', {'action': 'daily_quote_refresh'});
     await _loadDailyQuote();
   }
 
@@ -330,6 +333,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       child: SlidingCard(
         // 单击整个卡片区域复制内容
         onTap: () {
+          AptabaseHelper.trackEvent(
+              'feature_used', {'action': 'daily_quote_copy'});
           final String formattedQuote =
               '${dailyQuote['content']}\n${dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ? '——${dailyQuote['from_who']}' : ''}${dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ? '《${dailyQuote['from']}》' : ''}';
 
@@ -345,6 +350,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         },
         // 双击整个卡片区域快速保存到笔记
         onDoubleTap: () {
+          AptabaseHelper.trackEvent(
+              'feature_used', {'action': 'daily_quote_save'});
           widget.onAddQuote(
             dailyQuote['content'],
             dailyQuote['from_who'],

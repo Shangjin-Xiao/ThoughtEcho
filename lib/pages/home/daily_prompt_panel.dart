@@ -13,6 +13,7 @@ import '../../services/location_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/weather_service.dart';
 import '../../utils/app_logger.dart';
+import '../../utils/aptabase_helper.dart';
 import '../../utils/daily_prompt_generator.dart';
 import '../thoughter_page.dart';
 
@@ -156,6 +157,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     String? temperature,
   }) {
     if (!mounted) return;
+    AptabaseHelper.trackEvent(
+        'feature_used', {'action': 'daily_prompt_generate', 'is_ai': false});
     final l10n = AppLocalizations.of(context);
     final localPrompt = DailyPromptGenerator.generatePromptBasedOnContext(
       l10n,
@@ -213,6 +216,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
   /// 第一句，也进入模型上下文——不需要再让 AI 生成一次开场，也不替用户
   /// 先问一句，接下来说什么由用户决定。
   void _openThoughterWithPrompt() {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'daily_prompt_ask'});
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ThoughterPage(

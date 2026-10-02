@@ -127,6 +127,11 @@ class SettingsService extends ChangeNotifier {
       );
       throw StateError('保存 Thoughter 记忆开关失败');
     }
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'agent_memory',
+      'enabled': value,
+    });
     notifyListeners();
   }
 
@@ -142,6 +147,11 @@ class SettingsService extends ChangeNotifier {
       );
       throw StateError('保存 Dreaming 开关失败');
     }
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'dreaming',
+      'enabled': value,
+    });
     notifyListeners();
   }
 
@@ -562,6 +572,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setUseLocalQuotesOnly(bool enabled) async {
     _appSettings = _appSettings.copyWith(useLocalQuotesOnly: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'local_quotes_only',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -702,6 +717,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setRequireBiometricForHidden(bool enabled) async {
     _appSettings = _appSettings.copyWith(requireBiometricForHidden: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'biometric_hidden',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -710,6 +730,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setAutoAttachLocation(bool enabled) async {
     _appSettings = _appSettings.copyWith(autoAttachLocation: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'auto_attach_location',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -718,6 +743,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setAutoAttachWeather(bool enabled) async {
     _appSettings = _appSettings.copyWith(autoAttachWeather: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'auto_attach_weather',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 

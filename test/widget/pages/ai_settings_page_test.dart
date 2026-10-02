@@ -10,6 +10,8 @@ import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/ai_connection_tester.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 
 import '../../test_harness.dart';
 
@@ -333,6 +335,110 @@ void main() {
       // 关掉记忆后画像块整块不注入，称呼也就不会生效——输入框必须跟着禁用，
       // 否则用户填了却没反应。
       expect(tester.widget<TextField>(field).enabled, isFalse);
+    });
+
+    testWidgets('tracks telemetry for connection test and provider save',
+        (tester) async {
+      final events = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (event, props) {
+        events.add({'event': event, 'props': props});
+      };
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async =>
+          'pong';
+
+      try {
+        await tester.pumpWidget(_wrap(settingsService, memoryService));
+        await tester.pumpAndSettle();
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Verify page view is tracked
+        expect(
+          events.any((e) =>
+              e['event'] == 'page_view' &&
+              e['props']?['page'] == 'ai_settings'),
+          isTrue,
+        );
+
+        final l10n = _l10n(tester);
+
+        // 2. Open Add AI Service
+        await tester.tap(find.text(l10n.addAiService));
+        await tester.pumpAndSettle();
+
+        // Select DeepSeek preset
+        await tester.tap(find.text(l10n.selectProviderTemplate).last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_presetName).last);
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, l10n.apiKeyField),
+          'sk-test-key-1234',
+        );
+        await tester.pumpAndSettle();
+
+        // Tap Test Connection in edit page
+        await tester.tap(find.text(l10n.testConnectionButton));
+        await tester.pumpAndSettle();
+
+        expect(
+          events.any((e) =>
+              e['event'] == 'feature_used' &&
+              e['props']?['action'] == 'ai_test_connection' &&
+              e['props']?['provider_preset'] == 'deepseek'),
+          isTrue,
+        );
+
+        // Tap Save (new provider)
+        await tester.tap(find.text(l10n.save));
+        await tester.pumpAndSettle();
+
+        expect(
+          events.any((e) =>
+              e['event'] == 'feature_used' &&
+              e['props']?['action'] == 'ai_provider_save' &&
+              e['props']?['is_new'] == true &&
+              e['props']?['provider_preset'] == 'deepseek'),
+          isTrue,
+        );
+
+        // 3. Edit existing provider and save
+        await tester.tap(find.text(_presetName));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, l10n.modelNameField),
+          'deepseek-reasoner',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.save));
+        await tester.pumpAndSettle();
+
+        expect(
+          events.any((e) =>
+              e['event'] == 'feature_used' &&
+              e['props']?['action'] == 'ai_provider_save' &&
+              e['props']?['is_new'] == false &&
+              e['props']?['provider_preset'] == 'deepseek'),
+          isTrue,
+        );
+
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+      } finally {
+        AptabaseHelper.onTrackEventForTesting = null;
+        AIConnectionTester.testOverrideForTesting = null;
+      }
     });
   });
 }

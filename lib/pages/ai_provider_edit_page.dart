@@ -11,6 +11,7 @@ import '../services/settings_service.dart';
 import '../utils/ai_connection_tester.dart';
 import '../utils/ai_endpoint_security.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
 
@@ -170,16 +171,22 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       return;
     }
 
+    final draft = _buildDraftProvider();
     setState(() => _isTesting = true);
     try {
       // 走和真正聊天完全相同的链路，测试结论才等于实际可用性。请求正常返回即算
       // 通过：正文可能是空的（思考模型会把预算花在推理上），但能走到这一步就说明
       // URL、密钥和模型三样都对。
       await AIConnectionTester.test(
-        provider: _buildDraftProvider(),
+        provider: draft,
         systemPrompt: l10n.connectionTestSystemMessage,
         userMessage: l10n.connectionTestUserMessage,
       );
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'ai_test_connection',
+        'provider_preset':
+            AIProviderPresets.matchApiUrl(draft.apiUrl)?.id ?? 'custom',
+      });
 
       if (!mounted) return;
       AppSnackBar.success(context, l10n.connectionTestSuccess);
@@ -260,6 +267,13 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
           hostOverride: saved.hostOverride,
         ),
       );
+
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'ai_provider_save',
+        'is_new': existing == null,
+        'provider_preset':
+            AIProviderPresets.matchApiUrl(saved.apiUrl)?.id ?? 'custom',
+      });
 
       if (!mounted) return;
       navigator.pop(saved);
