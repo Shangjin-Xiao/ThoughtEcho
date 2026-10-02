@@ -239,4 +239,68 @@ void main() {
       expect(stats['referencedFiles'], 1);
     });
   });
+
+  // 超过 900 个 ID 会走 batch 分块提交那条路径，和单块 db.query 必须是同一个
+  // 返回形状：合库时按 ID 决定要不要搬附件，漏一条就是把媒体当孤儿删掉。
+  group('getReferencedFilesBatch', () {
+    Future<Map<String, List<String>>> seedAndQuery(int quoteCount) async {
+      final batch = db.batch();
+      for (var i = 0; i < quoteCount; i++) {
+        final quoteId = 'bulk$i';
+        batch.insert('quotes', {
+          'id': quoteId,
+          'content': '正文',
+          'date': '2026-08-21T00:00:00.000Z',
+        });
+        // 每条笔记挂两个附件，验证同 ID 的多条引用都被收进来
+        for (final suffix in ['a', 'b']) {
+          batch.insert('media_references', {
+            'id': 'ref_${quoteId}_$suffix',
+            'file_path': 'images/$quoteId-$suffix.jpg',
+            'quote_id': quoteId,
+            'created_at': '2026-08-21T00:00:00.000Z',
+          });
+        }
+      }
+      await batch.commit(noResult: true);
+
+      return MediaReferenceService.getReferencedFilesBatch(
+        List.generate(quoteCount, (i) => 'bulk$i'),
+      );
+    }
+
+    /// 按 quote_id 取引用文件并排序：批量查询不保证同一 ID 下的返回顺序。
+    List<String> pathsOf(Map<String, List<String>> grouped, String quoteId) =>
+        (grouped[quoteId] ?? const <String>[]).toList()..sort();
+
+    List<String> expectedPaths(String quoteId) =>
+        ['images/$quoteId-a.jpg', 'images/$quoteId-b.jpg'];
+
+    test('单块查询返回每条笔记的全部引用文件', () async {
+      final grouped = await seedAndQuery(3);
+
+      expect(grouped, hasLength(3));
+      expect(pathsOf(grouped, 'bulk0'), equals(expectedPaths('bulk0')));
+      expect(pathsOf(grouped, 'bulk2'), equals(expectedPaths('bulk2')));
+    });
+
+    test('超过参数上限分块后结果与单块查询一致', () async {
+      // 1200 > 900，跨两块；末块不满，是分块最容易写错的地方
+      const quoteCount = 1200;
+      final grouped = await seedAndQuery(quoteCount);
+
+      expect(grouped, hasLength(quoteCount));
+      expect(pathsOf(grouped, 'bulk0'), equals(expectedPaths('bulk0')));
+      // 第 900 个之后的 ID 只可能由第二块查到
+      expect(pathsOf(grouped, 'bulk900'), equals(expectedPaths('bulk900')));
+      final lastId = 'bulk${quoteCount - 1}';
+      expect(pathsOf(grouped, lastId), equals(expectedPaths(lastId)));
+      expect(grouped['bulk$quoteCount'], isNull, reason: '库外 ID 不能凭空出现');
+    });
+
+    test('空输入直接返回空表', () async {
+      expect(await MediaReferenceService.getReferencedFilesBatch(const []),
+          isEmpty);
+    });
+  });
 }

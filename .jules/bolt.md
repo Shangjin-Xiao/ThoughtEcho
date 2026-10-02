@@ -251,6 +251,14 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** Chaining `String.split(',')` with `.map()`, `.where()`, and `.toList()`/`.toSet()` creates multiple intermediate list, iterable, and string objects, putting significant pressure on the Garbage Collector when called frequently (e.g., when analyzing metrics or iterating pushed IDs).
 **Action:** Replace these chains with `StringUtils.parseCommaSeparatedString()`, which avoids intermediate lists and iterators while parsing, to reduce memory allocations in high-frequency string splitting scenarios like smart push logic.
 
+## 2026-10-27 - 优化 MediaReferenceService.getReferencedFilesBatch 批量查询性能
+
+**Learning:**
+在分块查询（chunked query）场景中，当 ID 列表超过 SQLite 900 参数上限时，若在 `for` 循环中依次 `await db.query(...)` 逐个查询，会产生明显的 IPC / FFI 跨边界通讯开销。利用 `db.batch()` 统一构建所有分块查询请求并在一次 `await batch.commit(noResult: false)` 中提交，能将多个串行查询合并为单次数据库往返操作，大幅减少等待延迟；同时对于单块数据（`<= 900`），增加单查询快速通道以避免创建 batch 对象。
+
+**Action:**
+优化 `lib/services/media_reference_service.dart` 中的 `getReferencedFilesBatch` 方法，新增单分块快速路径与多分块 `db.batch()` 批处理路径，并新增基准测试 `test/performance/media_reference_batch_benchmark_test.dart`。
+
 ## 2026-10-26 - 优化 AddNoteDialog 来源解析中的正则表达式编译与对象分配
 
 **Learning:**

@@ -294,25 +294,39 @@ class MediaReferenceService {
       final db = await database;
       final grouped = <String, List<String>>{};
 
-      for (var start = 0; start < uniqueIds.length; start += maxChunkSize) {
-        final end = math.min(start + maxChunkSize, uniqueIds.length);
-        final chunk = uniqueIds.sublist(start, end);
-        final placeholders = List.filled(chunk.length, '?').join(',');
-        final result = await db.query(
-          _tableName,
-          columns: ['quote_id', 'file_path'],
-          where: 'quote_id IN ($placeholders)',
-          whereArgs: chunk,
+      if (uniqueIds.length <= maxChunkSize) {
+        // 没超 SQLite 参数上限就不必付 Batch 的分配和事务开销
+        _collectReferencedFiles(
+          [
+            await db.query(
+              _tableName,
+              columns: ['quote_id', 'file_path'],
+              where:
+                  'quote_id IN (${List.filled(uniqueIds.length, '?').join(',')})',
+              whereArgs: uniqueIds,
+            ),
+          ],
+          grouped,
         );
-
-        for (final row in result) {
-          final quoteId = row['quote_id'] as String?;
-          final filePath = row['file_path'] as String?;
-          if (quoteId == null || filePath == null) {
-            continue;
-          }
-          grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
+      } else {
+        // 超上限必须分块。逐块 await 是 N 次数据库往返，打包成一次提交压到 1 次；
+        // 未开 continueOnError 时任一块查询失败整个 batch 抛出去，不会静默少数据。
+        final batch = db.batch();
+        for (var start = 0; start < uniqueIds.length; start += maxChunkSize) {
+          final end = math.min(start + maxChunkSize, uniqueIds.length);
+          final chunk = uniqueIds.sublist(start, end);
+          batch.query(
+            _tableName,
+            columns: ['quote_id', 'file_path'],
+            where: 'quote_id IN (${List.filled(chunk.length, '?').join(',')})',
+            whereArgs: chunk,
+          );
         }
+        _collectReferencedFiles(
+          (await batch.commit(noResult: false))
+              .whereType<List<Map<String, Object?>>>(),
+          grouped,
+        );
       }
       return grouped;
     } catch (e, stackTrace) {
@@ -323,6 +337,25 @@ class MediaReferenceService {
         source: 'MediaReferenceService',
       );
       rethrow;
+    }
+  }
+
+  /// 把若干查询结果集按 quote_id 归并进 [grouped]，缺列的行跳过。
+  ///
+  /// 单块和多块两条路径共用这一个归并步骤，两者的返回形状因此不可能分叉。
+  static void _collectReferencedFiles(
+    Iterable<Iterable<Map<String, Object?>>> resultSets,
+    Map<String, List<String>> grouped,
+  ) {
+    for (final rows in resultSets) {
+      for (final row in rows) {
+        final quoteId = row['quote_id'] as String?;
+        final filePath = row['file_path'] as String?;
+        if (quoteId == null || filePath == null) {
+          continue;
+        }
+        grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
+      }
     }
   }
 
