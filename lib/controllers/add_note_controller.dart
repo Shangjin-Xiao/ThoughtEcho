@@ -644,8 +644,9 @@ class AddNoteController extends ChangeNotifier {
         }
       }
 
+      final lowerName = name.toLowerCase();
       for (final tag in categories) {
-        if (tag.name.toLowerCase() == name.toLowerCase()) {
+        if (tag.name.toLowerCase() == lowerName) {
           return tag.id;
         }
       }
@@ -654,10 +655,9 @@ class AddNoteController extends ChangeNotifier {
         try {
           await db.addTagWithId(fixedId, name, iconName: iconName);
           if (_isDisposed) return null;
-          final fetchedCategories = await db.getTags();
-          if (_isDisposed) return null;
           if (databaseService != db) return null;
-          allCategoriesCache = fetchedCategories;
+          final newTag = NoteTag(id: fixedId, name: name, iconName: iconName);
+          allCategoriesCache = [...categories, newTag];
           return fixedId;
         } catch (e, stackTrace) {
           logError(
@@ -681,7 +681,7 @@ class AddNoteController extends ChangeNotifier {
       if (databaseService != db) return null;
       allCategoriesCache = updatedCategories;
       for (final tag in updatedCategories) {
-        if (tag.name.toLowerCase() == name.toLowerCase()) {
+        if (tag.name.toLowerCase() == lowerName) {
           return tag.id;
         }
       }
