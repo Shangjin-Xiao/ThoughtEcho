@@ -1,8 +1,7 @@
 import 'dart:collection';
 
-import 'package:flutter/foundation.dart';
-
 import '../models/note_proposal_artifact.dart';
+import '../utils/app_logger.dart';
 
 abstract class AgentTool {
   const AgentTool();
@@ -102,11 +101,12 @@ class ToolCall {
 
   /// 记录错误日志
   void logError(String message, {Object? error, StackTrace? stackTrace}) {
-    if (kDebugMode) {
-      print('[$name] $message');
-      if (error != null) print('  Error: $error');
-      if (stackTrace != null) print('  Stack: $stackTrace');
-    }
+    AppLogger.e(
+      message,
+      error: error,
+      stackTrace: stackTrace,
+      source: 'AgentTool:$name',
+    );
   }
 
   @override
