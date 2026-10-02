@@ -122,13 +122,103 @@ void main() {
     l10n = FakeAppLocalizations();
   });
 
+  group('WeatherSearchResult', () {
+    test('getLocalizedMessage returns correct strings for all result types',
+        () {
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.citySelectedSuccess,
+          isSuccess: true,
+          cityName: 'Beijing',
+        ).getLocalizedMessage(l10n),
+        'citySelectedWeatherUpdated:Beijing',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.currentLocationSuccess,
+          isSuccess: true,
+          cityName: 'Shanghai',
+        ).getLocalizedMessage(l10n),
+        'currentLocationWeatherUpdated:Shanghai',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.currentLocationSuccess,
+          isSuccess: true,
+          cityName: null,
+        ).getLocalizedMessage(l10n),
+        'currentLocationWeatherUpdated:currentLocationLabel',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.weatherTimeout,
+          isSuccess: false,
+        ).getLocalizedMessage(l10n),
+        'weatherTimeoutRetry',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.weatherFetchFailed,
+          isSuccess: false,
+        ).getLocalizedMessage(l10n),
+        'weatherFetchFailedCheckNetwork',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.locationTimeout,
+          isSuccess: false,
+        ).getLocalizedMessage(l10n),
+        'locationTimeoutCheckPermission',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.locationPermissionDenied,
+          isSuccess: false,
+        ).getLocalizedMessage(l10n),
+        'cannotGetCurrentLocation',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.cityLocationNotFound,
+          isSuccess: false,
+        ).getLocalizedMessage(l10n),
+        'cannotGetSelectedCityLocation',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.citySelectionError,
+          isSuccess: false,
+          errorDetail: 'City error',
+        ).getLocalizedMessage(l10n),
+        'citySelectionError:City error',
+      );
+
+      expect(
+        const WeatherSearchResult(
+          type: WeatherSearchResultType.locationFetchError,
+          isSuccess: false,
+          errorDetail: 'Location error',
+        ).getLocalizedMessage(l10n),
+        'locationFetchError:Location error',
+      );
+    });
+  });
+
   group('WeatherSearchController', () {
     test('initial state is correct', () {
       expect(controller.isLoading, isFalse);
       expect(controller.lastResult, isNull);
     });
 
-    test('clearMessages resets lastResult', () async {
+    test('clearMessages resets lastResult and notifies listeners', () async {
       when(mockLocationService.currentPosition).thenReturn(null);
       when(mockLocationService.setSelectedCity(any)).thenAnswer((_) async {});
 
@@ -144,9 +234,61 @@ void main() {
 
       expect(controller.lastResult, isNotNull);
 
+      bool notified = false;
+      controller.addListener(() {
+        notified = true;
+      });
+
       controller.clearMessages();
 
       expect(controller.lastResult, isNull);
+      expect(notified, isTrue);
+    });
+
+    test('selectCityAndUpdateWeather toggles isLoading and notifies listeners',
+        () async {
+      final cityInfo = CityInfo(
+          name: 'TestCity',
+          fullName: 'TestCity, TestCountry',
+          lat: 0.0,
+          lon: 0.0,
+          country: 'TestCountry',
+          province: 'TestProvince');
+
+      when(mockLocationService.setSelectedCity(any)).thenAnswer((_) async {});
+      when(mockLocationService.currentPosition).thenReturn(null);
+
+      final states = <bool>[];
+      int notificationCount = 0;
+      controller.addListener(() {
+        states.add(controller.isLoading);
+        notificationCount++;
+      });
+
+      await controller.selectCityAndUpdateWeather(cityInfo);
+
+      expect(states, [true, false]);
+      expect(notificationCount, 2);
+      expect(controller.isLoading, isFalse);
+    });
+
+    test('useCurrentLocation toggles isLoading and notifies listeners',
+        () async {
+      when(mockLocationService.getCurrentLocation())
+          .thenAnswer((_) async => null);
+
+      final states = <bool>[];
+      int notificationCount = 0;
+      controller.addListener(() {
+        states.add(controller.isLoading);
+        notificationCount++;
+      });
+
+      await controller.useCurrentLocation();
+
+      expect(states, [true, false]);
+      expect(notificationCount, 2);
+      expect(controller.isLoading, isFalse);
     });
 
     group('selectCityAndUpdateWeather', () {
@@ -408,6 +550,53 @@ void main() {
         );
         expect(result.getLocalizedMessage(l10n),
             'currentLocationWeatherUpdated:currentLocationLabel');
+      });
+
+      test(
+          'returns false with weatherTimeout when TimeoutException message lacks Location',
+          () async {
+        when(mockLocationService.getCurrentLocation()).thenThrow(
+            TimeoutException('Generic timeout without location keyword'));
+
+        final result = await controller.useCurrentLocation();
+
+        expect(result, isFalse);
+        expect(controller.lastResult?.type,
+            WeatherSearchResultType.weatherTimeout);
+        expect(controller.lastResult?.isSuccess, isFalse);
+        expect(controller.lastResult?.getLocalizedMessage(l10n),
+            'weatherTimeoutRetry');
+      });
+
+      test(
+          'returns false on generic exception during weather fetch in useCurrentLocation',
+          () async {
+        final position = Position(
+          longitude: 0.0,
+          latitude: 0.0,
+          timestamp: DateTime.now(),
+          accuracy: 0.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        );
+
+        when(mockLocationService.getCurrentLocation())
+            .thenAnswer((_) async => position);
+        when(mockWeatherService.getWeatherData(any, any))
+            .thenThrow(Exception('Weather API crashed'));
+
+        final result = await controller.useCurrentLocation();
+
+        expect(result, isFalse);
+        expect(controller.lastResult?.type,
+            WeatherSearchResultType.locationFetchError);
+        expect(controller.lastResult?.isSuccess, isFalse);
+        expect(controller.lastResult?.errorDetail,
+            contains('Weather API crashed'));
       });
 
       test('returns false on generic exception', () async {
