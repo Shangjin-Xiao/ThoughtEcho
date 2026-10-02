@@ -105,3 +105,7 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-10-02 - [补充 NoteEditorStates 的单元测试]
 **盲点:** `NoteEditorStates` 定义了笔记编辑器的三大状态对象（`NoteEditorState`、`NoteEditorMetadataState`、`NoteEditorMediaState`），但此前缺乏针对 `replaceController` 监听转移、`hydrateAiAnalysisIfUnchanged` 条件更新、`hasChanges` 差异判断分支以及保存状态生命周期等关键行为的全面测试覆盖。
 **对策:** 补充并完善 `test/unit/controllers/note_editor_states_test.dart` 单元测试套件，全面覆盖 QuillController 替换迁移、草稿定时保存取消、标签增删与查重过滤、AI 分析条件注水、地理/天气变化侦测，以及媒体导入去重与保存进度重置，确保核心编辑器状态管理的稳定与健壮。
+
+## 2026-10-02 - [补充 NetworkService 的单元测试]
+**盲点:** `NetworkService` 整合了通用 HTTP 请求（`get` / `post`）与 AI 请求（`aiRequest` / `aiStreamRequest`），但此前缺乏全面覆盖初始化/清理生命周期、错误转换、Hitokoto 特殊响应格式解析，以及 OpenAI/Anthropic 流式 chunks 解析的单元测试。
+**对策:** 扩展 `test/unit/services/network_service_test.dart` 单元测试套件。利用自定义 `TestHttpClientAdapter` 模拟网络层请求，对 GET/POST 请求、一言响应转换、DioException 异常捕获、AI 请求参数归一化、以及 SSE 流式分块解析（OpenAI delta content & Anthropic delta text）进行了全路径断言测试，保证核心网络服务的健壮性。
