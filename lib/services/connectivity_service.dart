@@ -25,7 +25,11 @@ class ConnectivityService extends ChangeNotifier {
     'api.open-meteo.com', // 天气 API
   ];
 
-  bool get isConnected => _isConnected;
+  /// 用于单元测试中精确控制网络连通状态
+  @visibleForTesting
+  static bool? isConnectedOverrideForTesting;
+
+  bool get isConnected => isConnectedOverrideForTesting ?? _isConnected;
 
   /// 初始化连接检查
   Future<void> init() async {
@@ -104,6 +108,9 @@ class ConnectivityService extends ChangeNotifier {
 
   /// 立即检查连接状态
   Future<bool> checkConnectionNow() async {
+    if (isConnectedOverrideForTesting != null) {
+      return isConnectedOverrideForTesting!;
+    }
     await _checkConnectivity();
     return _isConnected;
   }
