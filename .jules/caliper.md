@@ -58,7 +58,7 @@
 **对策:** 为这些不依赖上下文的纯函数编写独立的单元测试。通过利用各种正常及边界条件直接断言 `StringUtils` 格式化、`ThemeStyleLabels` 映射、以及 `ZipInfo` 压缩比例计算，既提升了整个应用的数据展示健壮性，也保持了测试的极简与高效。
 ## 2026-08-18 - [补充 StringUtils.forEachLine 测试]
 **盲点:** `StringUtils.forEachLine` 作为核心底层工具方法之一，用于替代 `split('\n')` 以减少 GC 压力，但缺乏相应的测试覆盖，可能在某些边界条件（如末尾换行、连续换行、空字符串）下存在断裂风险。
-**对策:** 在 `test/unit/utils/string_utils_test.dart` 中增加 `forEachLine` 组，补充了空字符串、单行、多行、末尾带换行符、连续换行等场景用例，以确保该纯函数边界严谨，不引入隐患。
+**对策:** 在 `test/unit/controllers/search_controller_test.dart` 中增加 `forEachLine` 组，补充了空字符串、单行、多行、末尾带换行符、连续换行等场景用例，以确保该纯函数边界严谨，不引入隐患。
 ## 2026-08-25 - [补充 dio_network_utils 重试逻辑的测试]
 **盲点:** `dio_network_utils.dart` 中的 `RetryInterceptor` 包含了对特定网络错误和服务器响应 (`_shouldRetry`) 的重试判断逻辑，这一纯逻辑处理长期缺乏测试覆盖，在调整重试条件时极易引入回归问题。
 **对策:** 通过编写针对 `RetryInterceptor` 处理流程 (`onError`) 的单元测试，利用伪造的 `Dio` 和 `ErrorInterceptorHandler`，验证其针对各种 HTTP 状态码（500、502）以及“model not found”等具体错误负载的决策是否准确，确保其不会阻拦正常的客户端错误返回。
@@ -102,3 +102,6 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2025-02-23 - 补充 PathSecurityUtils 的核心测试
 **盲点:** `PathSecurityUtils.sanitizeZipEntryName` 函数缺乏针对 Windows 反斜杠、混合斜杠及前导斜杠（绝对路径解释防护）转换场景的专门单元测试。虽然已有 Zip Slip 尝试防御相关的 `validateExtractionPath` 测试，但基础的路径清理机制属于纯函数处理，缺少明确验证。
 **对策:** 为核心工具库中用于路径安全的纯函数（如 `sanitizeZipEntryName`）编写特定的断言，覆盖诸如反斜杠转换、剥离首个 `/` 和保持无问题字符串不变的情况。在处理安全或文件路径相关功能时，优先对最底层的纯文本清理函数增加 100% 边界验证测试。
+## 2026-10-02 - [补充 NoteEditorStates 的单元测试]
+**盲点:** `NoteEditorStates` 定义了笔记编辑器的三大状态对象（`NoteEditorState`、`NoteEditorMetadataState`、`NoteEditorMediaState`），但此前缺乏针对 `replaceController` 监听转移、`hydrateAiAnalysisIfUnchanged` 条件更新、`hasChanges` 差异判断分支以及保存状态生命周期等关键行为的全面测试覆盖。
+**对策:** 补充并完善 `test/unit/controllers/note_editor_states_test.dart` 单元测试套件，全面覆盖 QuillController 替换迁移、草稿定时保存取消、标签增删与查重过滤、AI 分析条件注水、地理/天气变化侦测，以及媒体导入去重与保存进度重置，确保核心编辑器状态管理的稳定与健壮。
