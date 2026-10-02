@@ -105,3 +105,7 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-10-02 - [补充 NoteEditorStates 的单元测试]
 **盲点:** `NoteEditorStates` 定义了笔记编辑器的三大状态对象（`NoteEditorState`、`NoteEditorMetadataState`、`NoteEditorMediaState`），但此前缺乏针对 `replaceController` 监听转移、`hydrateAiAnalysisIfUnchanged` 条件更新、`hasChanges` 差异判断分支以及保存状态生命周期等关键行为的全面测试覆盖。
 **对策:** 补充并完善 `test/unit/controllers/note_editor_states_test.dart` 单元测试套件，全面覆盖 QuillController 替换迁移、草稿定时保存取消、标签增删与查重过滤、AI 分析条件注水、地理/天气变化侦测，以及媒体导入去重与保存进度重置，确保核心编辑器状态管理的稳定与健壮。
+
+## 2026-10-02 - [补充 NoteSearchController 状态与并发调度的测试]
+**盲点:** `NoteSearchController` 包含超时保护定时器（5秒）、多版本并发搜索控制（`_searchVersion`）以及特定分支下清空搜索（`clearSearch` 当查询为空但处于搜索中/异常状态时）的逻辑。过往测试未覆盖跨版本定时器取消与多轮连续搜索请求触发超时冲突的边缘分支。
+**对策:** 在 `test/unit/controllers/search_controller_test.dart` 中使用 `fakeAsync` 模拟多轮 `updateSearch` 的时间推移，验证旧版本定时器触发时由于版本比对（`currentVersion == _searchVersion`）不会影响新版本搜索状态，并补充了在 `searchQuery` 为空但包含错误/搜索标记时的 `clearSearch` 行为以及 `dispose` 时定时器资源释放测试。
