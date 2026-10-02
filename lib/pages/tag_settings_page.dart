@@ -288,7 +288,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
+        builder: (context, setDialogState) {
           final emojiCategories = IconUtils.getCategorizedEmojis();
 
           Map<String, List<String>> filteredEmojis = {};
@@ -323,7 +323,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 emojiSearchController.clear();
-                                setState(() => searchQuery = '');
+                                setDialogState(() => searchQuery = '');
                               },
                             )
                           : null,
@@ -334,7 +334,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                       ),
                     ),
                     onChanged: (value) {
-                      setState(() => searchQuery = value);
+                      setDialogState(() => searchQuery = value);
                     },
                   ),
                   const SizedBox(height: 8),
@@ -389,7 +389,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                         : Icons.expand_more,
                                   ),
                                   onTap: () {
-                                    setState(() {
+                                    setDialogState(() {
                                       expandedTags[category] =
                                           !(expandedTags[category] ?? false);
                                     });
@@ -468,7 +468,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                   : Icons.expand_more,
                             ),
                             onTap: () {
-                              setState(() {
+                              setDialogState(() {
                                 expandedTags[l10n.systemIcons] =
                                     !(expandedTags[l10n.systemIcons] ?? false);
                               });
@@ -573,77 +573,81 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(shapeTokens.dialogRadius),
-          ),
-          title: Text(l10n.editTagTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.tagNameLabel,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      shapeTokens.inputRadius,
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(shapeTokens.dialogRadius),
+              ),
+              title: Text(l10n.editTagTitle),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: l10n.tagNameLabel,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          shapeTokens.inputRadius,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Text(l10n.iconLabel),
-                  IconButton(
-                    icon: IconUtils.getCategoryIcon(selectedIcon),
-                    tooltip: l10n.iconLabel,
-                    onPressed: () async {
-                      final BuildContext currentContext = dialogContext;
-                      if (!context.mounted) return;
-                      final icon = await showDialog<String>(
-                        context: currentContext,
-                        builder: (iconDialogContext) =>
-                            _IconSelectorDialog(initialIcon: selectedIcon),
-                      );
-                      if (icon != null && mounted) {
-                        setState(() => selectedIcon = icon);
-                      }
-                    },
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Text(l10n.iconLabel),
+                      IconButton(
+                        icon: IconUtils.getCategoryIcon(selectedIcon),
+                        tooltip: l10n.iconLabel,
+                        onPressed: () async {
+                          final BuildContext currentContext = dialogContext;
+                          if (!context.mounted) return;
+                          final icon = await showDialog<String>(
+                            context: currentContext,
+                            builder: (iconDialogContext) =>
+                                _IconSelectorDialog(initialIcon: selectedIcon),
+                          );
+                          if (icon != null && context.mounted) {
+                            setDialogState(() => selectedIcon = icon);
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final newName = nameController.text.trim();
-                if (newName.isEmpty) return;
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final newName = nameController.text.trim();
+                    if (newName.isEmpty) return;
 
-                final dbService = Provider.of<DatabaseService>(
-                  context,
-                  listen: false,
-                );
-                await dbService.updateTag(
-                  category.id,
-                  newName,
-                  iconName: selectedIcon,
-                );
+                    final dbService = Provider.of<DatabaseService>(
+                      context,
+                      listen: false,
+                    );
+                    await dbService.updateTag(
+                      category.id,
+                      newName,
+                      iconName: selectedIcon,
+                    );
 
-                if (!mounted) return;
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                }
-              },
-              child: Text(l10n.save),
-            ),
-          ],
+                    if (!mounted) return;
+                    if (dialogContext.mounted) {
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: Text(l10n.save),
+                ),
+              ],
+            );
+          },
         );
       },
     );
