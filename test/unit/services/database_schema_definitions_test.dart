@@ -66,13 +66,25 @@ void main() {
     });
 
     test('requiredIndexNames matches all defined index statements', () {
-      final allIndexNames = DatabaseSchemaDefinitions.requiredIndexNames;
-      expect(allIndexNames, isNotEmpty);
-      expect(allIndexNames, contains('idx_quotes_category_id'));
-      expect(allIndexNames, contains('idx_categories_last_modified'));
-      expect(allIndexNames, contains('idx_quote_tags_quote_id'));
-      expect(allIndexNames, contains('idx_quote_tombstones_deleted_at'));
-      expect(allIndexNames, contains('idx_media_references_quote_id'));
+      final allStatements = <String>[
+        ...DatabaseSchemaDefinitions.quoteIndexStatements,
+        ...DatabaseSchemaDefinitions.categoryIndexStatements,
+        ...DatabaseSchemaDefinitions.quoteTagsIndexStatements,
+        ...DatabaseSchemaDefinitions.quoteTombstoneIndexStatements,
+        ...DatabaseSchemaDefinitions.mediaReferenceIndexStatements,
+      ];
+      final regex = RegExp(r'CREATE INDEX IF NOT EXISTS (\w+)');
+      final statementIndexNames = allStatements.map((s) {
+        final match = regex.firstMatch(s);
+        expect(match, isNotNull,
+            reason: 'Index statement should match regex: $s');
+        return match!.group(1)!;
+      }).toList();
+
+      expect(
+        DatabaseSchemaDefinitions.requiredIndexNames,
+        equals(statementIndexNames),
+      );
     });
 
     test(
@@ -159,6 +171,16 @@ void main() {
           'icon_name',
           'last_modified',
         ]),
+      );
+
+      final indexRows = await database.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_autoindex_%'",
+      );
+      final createdIndexNames =
+          indexRows.map((row) => row['name'] as String).toSet();
+      expect(
+        createdIndexNames,
+        containsAll(DatabaseSchemaDefinitions.requiredIndexNames),
       );
     });
 
