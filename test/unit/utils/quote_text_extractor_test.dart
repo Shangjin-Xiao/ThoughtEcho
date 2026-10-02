@@ -148,6 +148,31 @@ void main() {
       expect(extracted, expected);
     });
 
+    test('富文本笔记：同一 op 包含多个带列表属性的换行时，每行都保留列表标记', () {
+      final delta = jsonEncode([
+        {
+          'insert': '甲\n乙\n',
+          'attributes': {'list': 'bullet'},
+        },
+        {
+          'insert': '子\n丑\n',
+          'attributes': {'list': 'ordered'},
+        },
+      ]);
+
+      final quote = Quote(
+        content: '甲\n乙\n子\n丑\n',
+        deltaContent: delta,
+        date: '2026-10-02T10:00:00Z',
+      );
+
+      final extracted = QuoteTextExtractor.extractPlainText(quote);
+      expect(
+        extracted,
+        '• 甲\n• 乙\n1. 子\n2. 丑',
+      );
+    });
+
     test('富文本笔记：媒体嵌入被安全过滤且不留 U+FFFC', () {
       final delta = jsonEncode([
         {'insert': '这是第一段正文。\n'},

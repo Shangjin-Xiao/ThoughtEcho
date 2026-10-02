@@ -96,8 +96,7 @@ abstract final class QuoteTextExtractor {
         }
 
         lineBuffer.write(text.substring(start, newlineIndex));
-        final isLastNewline = newlineIndex == text.length - 1;
-        flushLine(isLastNewline ? lineAttrs : const {});
+        flushLine(lineAttrs);
         start = newlineIndex + 1;
       }
     }
