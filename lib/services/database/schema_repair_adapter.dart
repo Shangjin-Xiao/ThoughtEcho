@@ -492,8 +492,7 @@ class SchemaDataBackfillAdapter {
   }
 
   /// Whitelist of allowed (columnName, sourceColumn) pairs for schema backup columns.
-  static const Map<String, String> _allowedBackupColumnPairs =
-      <String, String>{
+  static const Map<String, String> _allowedBackupColumnPairs = <String, String>{
     'sentiment_backup': 'sentiment',
     'day_period_backup': 'day_period',
     'weather_backup': 'weather',
