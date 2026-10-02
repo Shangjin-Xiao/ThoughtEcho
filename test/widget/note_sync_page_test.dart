@@ -147,8 +147,8 @@ void main() {
       // 验证设备列表项
       expect(find.text('Test Device 1'), findsOneWidget);
       expect(find.text('Test Device 2'), findsOneWidget);
-      expect(find.text('http://192.168.1.100:53317'), findsOneWidget);
-      expect(find.text('http://192.168.1.101:53317'), findsOneWidget);
+      expect(find.text('局域网在线 · 192.168.1.100'), findsOneWidget);
+      expect(find.text('局域网在线 · 192.168.1.101'), findsOneWidget);
 
       // 验证设备图标
       expect(find.byIcon(Icons.smartphone), findsOneWidget); // mobile

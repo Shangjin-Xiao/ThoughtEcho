@@ -137,4 +137,24 @@ void main() {
 
     expect(launchUrlCalled, isTrue);
   });
+
+  testWidgets(
+      'WebDAVSyncPage URL field normalizes missing https prefix without validation error',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    final urlFinder = find.widgetWithText(TextFormField, '服务器地址');
+    expect(urlFinder, findsOneWidget);
+
+    await tester.enterText(urlFinder, 'dav.jianguoyun.com/dav/');
+    await tester.pumpAndSettle();
+
+    final testBtn = find.text('测试连接');
+    await tester.ensureVisible(testBtn);
+    await tester.tap(testBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('地址必须以 https:// 开头'), findsNothing);
+  });
 }

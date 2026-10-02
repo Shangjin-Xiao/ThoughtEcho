@@ -958,7 +958,7 @@
   },
   "noDevicesFound": "なし",
   "unknownModel": "不明なモデル",
-  "fingerprint": "指紋: {fingerprint}",
+  "fingerprint": "デバイスID: {fingerprint}",
   "@fingerprint": {
     "placeholders": {
       "fingerprint": {
@@ -2089,7 +2089,7 @@
     }
   },
   "localDeviceLoading": "ID取得中...",
-  "localDeviceId": "自分 #{fingerprint}",
+  "localDeviceId": "本机ID #{fingerprint}",
   "@localDeviceId": {
     "placeholders": {
       "fingerprint": {
@@ -2189,10 +2189,18 @@
       }
     }
   },
-  "copiedFingerprint": "指紋をコピー: {fingerprint}",
+  "copiedFingerprint": "デバイスIDをコピー: {fingerprint}",
   "@copiedFingerprint": {
     "placeholders": {
       "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "lanOnlineWithIp": "LANオンライン · {ip}",
+  "@lanOnlineWithIp": {
+    "placeholders": {
+      "ip": {
         "type": "String"
       }
     }

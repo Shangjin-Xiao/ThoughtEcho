@@ -1048,7 +1048,7 @@
   },
   "noDevicesFound": "暂无发现的设备",
   "unknownModel": "未知型号",
-  "fingerprint": "指纹: {fingerprint}",
+  "fingerprint": "设备标识码: {fingerprint}",
   "@fingerprint": {
     "placeholders": {
       "fingerprint": {
@@ -2267,8 +2267,8 @@
       }
     }
   },
-  "localDeviceLoading": "本机标识获取中...",
-  "localDeviceId": "本机 #{fingerprint}",
+  "localDeviceLoading": "本机标识码获取中...",
+  "localDeviceId": "本机标识码: #{fingerprint}",
   "@localDeviceId": {
     "placeholders": {
       "fingerprint": {
@@ -2368,10 +2368,18 @@
       }
     }
   },
-  "copiedFingerprint": "已复制设备标识: {fingerprint}",
+  "copiedFingerprint": "已复制设备标识码: {fingerprint}",
   "@copiedFingerprint": {
     "placeholders": {
       "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "lanOnlineWithIp": "局域网在线 · {ip}",
+  "@lanOnlineWithIp": {
+    "placeholders": {
+      "ip": {
         "type": "String"
       }
     }

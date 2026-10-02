@@ -41,7 +41,11 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     final syncService = Provider.of<WebDAVSyncService>(context, listen: false);
 
     _selectedProvider = syncService.provider;
-    _urlController = TextEditingController(text: syncService.url);
+    var initialUrl = syncService.url;
+    if (initialUrl.toLowerCase().startsWith('https://')) {
+      initialUrl = initialUrl.substring(8);
+    }
+    _urlController = TextEditingController(text: initialUrl);
     _usernameController = TextEditingController(text: syncService.username);
     _passwordController = TextEditingController(); // 密码仅在保存时输入或读取
 
@@ -51,6 +55,16 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showExperimentalWarningIfNeeded();
     });
+  }
+
+  String _getNormalizedUrl(String raw) {
+    var trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+    final lower = trimmed.toLowerCase();
+    if (lower.startsWith('https://') || lower.startsWith('http://')) {
+      return trimmed;
+    }
+    return 'https://$trimmed';
   }
 
   /// 弹出实验性功能预览提示（符合国际化，支持临时关闭或永久忽略）
@@ -153,11 +167,13 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     setState(() {
       _selectedProvider = provider;
       if (provider == 'nutstore') {
-        _urlController.text = 'https://dav.jianguoyun.com/dav/';
+        _urlController.text = 'dav.jianguoyun.com/dav/';
       } else if (provider == 'infinicloud') {
-        _urlController.text = 'https://dav.teracloud.jp/dav/';
+        _urlController.text = 'dav.teracloud.jp/dav/';
       } else if (provider == 'nextcloud') {
-        if (_urlController.text == 'https://dav.jianguoyun.com/dav/' ||
+        if (_urlController.text == 'dav.jianguoyun.com/dav/' ||
+            _urlController.text == 'https://dav.jianguoyun.com/dav/' ||
+            _urlController.text == 'dav.teracloud.jp/dav/' ||
             _urlController.text == 'https://dav.teracloud.jp/dav/') {
           _urlController.text = '';
         }
@@ -221,7 +237,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     bool success = false;
     try {
       success = await syncService.testConnection(
-        _urlController.text,
+        _getNormalizedUrl(_urlController.text),
         _usernameController.text,
         _passwordController.text,
       );
@@ -256,7 +272,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       await syncService.saveSettings(
         enabled: true,
         provider: _selectedProvider,
-        url: _urlController.text,
+        url: _getNormalizedUrl(_urlController.text),
         username: _usernameController.text,
         password: _passwordController.text,
         syncOnLaunch: syncService.syncOnLaunch,
@@ -406,17 +422,35 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                 _selectedProvider == 'nextcloud',
                             decoration: InputDecoration(
                               labelText: l10n.webdavServerUrl,
+                              hintText: 'dav.jianguoyun.com/dav/',
                               prefixIcon: Icon(Icons.link),
+                              prefixText: _urlController.text
+                                      .trim()
+                                      .toLowerCase()
+                                      .startsWith('http://')
+                                  ? null
+                                  : 'https://',
+                              prefixStyle: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                             ),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return l10n.webdavServerUrlEmptyError;
+                            onChanged: (val) {
+                              var trimmed = val.trim();
+                              if (trimmed.toLowerCase().startsWith('https://')) {
+                                final clean = trimmed.substring(8);
+                                _urlController.value = TextEditingValue(
+                                  text: clean,
+                                  selection:
+                                      TextSelection.collapsed(offset: clean.length),
+                                );
                               }
-                              if (!val
-                                  .trim()
-                                  .toLowerCase()
-                                  .startsWith('https://')) {
-                                return l10n.webdavServerUrlInvalidError;
+                              setState(() {});
+                            },
+                            validator: (val) {
+                              final normalized = _getNormalizedUrl(val ?? '');
+                              if (normalized.isEmpty) {
+                                return l10n.webdavServerUrlEmptyError;
                               }
                               return null;
                             },
@@ -503,7 +537,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             syncService.saveSettings(
                               enabled: syncService.enabled,
                               provider: _selectedProvider,
-                              url: _urlController.text,
+                              url: _getNormalizedUrl(_urlController.text),
                               username: _usernameController.text,
                               syncOnLaunch: val,
                               syncOnChange: syncService.syncOnChange,
@@ -522,7 +556,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             syncService.saveSettings(
                               enabled: syncService.enabled,
                               provider: _selectedProvider,
-                              url: _urlController.text,
+                              url: _getNormalizedUrl(_urlController.text),
                               username: _usernameController.text,
                               syncOnLaunch: syncService.syncOnLaunch,
                               syncOnChange: val,
@@ -541,7 +575,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             syncService.saveSettings(
                               enabled: syncService.enabled,
                               provider: _selectedProvider,
-                              url: _urlController.text,
+                              url: _getNormalizedUrl(_urlController.text),
                               username: _usernameController.text,
                               syncOnLaunch: syncService.syncOnLaunch,
                               syncOnChange: syncService.syncOnChange,
@@ -563,7 +597,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                   syncService.saveSettings(
                                     enabled: syncService.enabled,
                                     provider: _selectedProvider,
-                                    url: _urlController.text,
+                                    url: _getNormalizedUrl(_urlController.text),
                                     username: _usernameController.text,
                                     syncOnLaunch: syncService.syncOnLaunch,
                                     syncOnChange: syncService.syncOnChange,
@@ -633,7 +667,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         syncService.saveSettings(
                           enabled: false,
                           provider: _selectedProvider,
-                          url: _urlController.text,
+                          url: _getNormalizedUrl(_urlController.text),
                           username: _usernameController.text,
                           syncOnLaunch: syncService.syncOnLaunch,
                           syncOnChange: syncService.syncOnChange,

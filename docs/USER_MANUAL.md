@@ -462,13 +462,15 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 心迹支持使用 WebDAV 协议进行安全可靠的云端同步：
 
 - **配置路径**：设置 → WebDAV 同步
-- **安全与流量控制**：支持强制 HTTPS 加密传输，并可限制移动网络下同步以节省流量。
+- **安全与协议自动补全**：默认推荐并强制 HTTPS 加密传输。服务器地址输入框提供 `https://` 协议头徽章与智能补全，避免误报格式错误。同时可限制移动网络下同步以节省流量。
 - **冲突隔离**：在多端云同步时，如果发生笔记内容冲突将被妥善隔离，避免您的数据遭到意外覆盖。
 
 ### 局域网直接同步
 
 心迹也支持在同一 WiFi 网络下的设备间直接同步，无需云服务器。
 
+- **设备标识码与隐私**：基于加密公钥生成简短“设备标识码”（如 `#A1B2C3`），绝不收集面容、指纹等任何生物识别数据（“指纹”一词仅用于应用内的系统生物识别解锁设置）。
+- **网络状态脱敏显示**：设备列表默认展示语义化网络状态（如“局域网在线 · 192.168.1.100”），隐去 `:端口号` 与 `http://` 协议头。长按设备卡片可展示并一键复制包含完整 IP 与端口的高级调试 URI。
 - **智能增量传输**：在局域网同步时，系统会自动比对两端设备的图片、音频与视频等媒体文件，仅传输新增或修改的内容。
 - **快速跳过与节省流量**：对已存在且未变更的媒体文件自动跳过，大幅缩短后续同步耗时并节省局域网带宽。
 - **全版本平滑兼容**：与旧版本心迹设备同步时会自动平滑调整传输策略，确保不同版本间依然能够正常同步。
@@ -1259,13 +1261,15 @@ Chat with AI about specific note content.
 ThoughtEcho supports secure cloud synchronization via the WebDAV protocol:
 
 - **Path**: Settings → WebDAV Sync
-- **Security & Data Control**: Enforces HTTPS encryption and allows restricting sync over cellular networks.
+- **Security & Protocol Helper**: Enforces HTTPS encryption with an `https://` prefix badge and auto-completion helper on the server address field to prevent invalid scheme errors. Also supports restricting sync over cellular networks.
 - **Conflict Isolation**: Notes modified simultaneously on different devices are isolated safely to prevent data loss.
 
 ### Local Network Sync
 
 ThoughtEcho also supports direct sync between devices on the same WiFi network, no cloud server required.
 
+- **Device Identifier**: Uses a cryptographic public key hash presented as a short "Device ID" (e.g., `#A1B2C3`) to uniquely identify devices. It does not collect any biometric data such as fingerprints or facial recognition (the term "fingerprint" is exclusively reserved for system biometric unlock settings).
+- **De-sensitized Network Status**: Nearby device cards display a clean semantic status (e.g., "LAN Online · 192.168.1.100") hiding raw `:port` numbers and `http://` prefixes. Long-pressing a device card copies full debugging URI details with IP and port.
 - **Smart Incremental Media Sync**: Prior to media transfer, devices compare media inventory (images, audio, video) and transmit only new or modified attachments.
 - **Fast Skip & Bandwidth Savings**: Already existing media files are skipped automatically, speeding up subsequent syncs and saving network bandwidth.
 - **Seamless Backward Compatibility**: Automatically adjusts sync methods when connecting with older client versions to ensure seamless data exchange.

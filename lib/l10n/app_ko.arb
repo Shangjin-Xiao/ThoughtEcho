@@ -958,7 +958,7 @@
   },
   "noDevicesFound": "기기 없음",
   "unknownModel": "알 수 없는 모델",
-  "fingerprint": "지문: {fingerprint}",
+  "fingerprint": "기기 ID: {fingerprint}",
   "@fingerprint": {
     "placeholders": {
       "fingerprint": {
@@ -2088,8 +2088,8 @@
       }
     }
   },
-  "localDeviceLoading": "로컬 장치 ID 로드 중...",
-  "localDeviceId": "Local #{fingerprint}",
+  "localDeviceLoading": "로컬 기기 ID 로드 중...",
+  "localDeviceId": "Local ID #{fingerprint}",
   "@localDeviceId": {
     "placeholders": {
       "fingerprint": {
@@ -2189,10 +2189,18 @@
       }
     }
   },
-  "copiedFingerprint": "Copied local fingerprint: {fingerprint}",
+  "copiedFingerprint": "기기 ID 복사됨: {fingerprint}",
   "@copiedFingerprint": {
     "placeholders": {
       "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "lanOnlineWithIp": "LAN 온라인 · {ip}",
+  "@lanOnlineWithIp": {
+    "placeholders": {
+      "ip": {
         "type": "String"
       }
     }
