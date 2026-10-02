@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -1292,11 +1293,85 @@ void main() {
       final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
       expect(find.text(l10n.editNoteMenu), findsOneWidget);
       expect(find.text(l10n.askAIMenu), findsOneWidget);
+      expect(find.text(l10n.copyTextMenu), findsOneWidget);
       expect(find.text(l10n.deleteNoteMenu), findsOneWidget);
 
       await tester.tap(find.text(l10n.editNoteMenu));
       await tester.pumpAndSettle();
       expect(edited, isTrue);
+    });
+
+    testWidgets('更多按钮支持快捷复制文本并回调对应动作', (tester) async {
+      var copied = false;
+      await _pumpCard(
+        tester,
+        _buildQuote(id: 'q-copy', content: '测试复制文本正文', editSource: 'inline'),
+        onCopyText: () => copied = true,
+      );
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      expect(find.text(l10n.copyTextMenu), findsOneWidget);
+
+      await tester.tap(find.text(l10n.copyTextMenu));
+      await tester.pumpAndSettle();
+      expect(copied, isTrue);
+    });
+
+    testWidgets('纯图片笔记动态隐藏复制文本菜单项', (tester) async {
+      final delta = jsonEncode([
+        {
+          'insert': {'image': 'content://media/external/images/1'},
+        },
+        {'insert': '\n'},
+      ]);
+      await _pumpCard(
+        tester,
+        _buildQuote(
+          id: 'q-pure-img',
+          content: '\uFFFC\n',
+          deltaContent: delta,
+          editSource: 'inline',
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      expect(find.text(l10n.copyTextMenu), findsNothing);
+      expect(find.text(l10n.editNoteMenu), findsOneWidget);
+    });
+
+    testWidgets('默认复制文本操作将格式化内容写入剪贴板并提示已复制', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          return null;
+        }
+        return null;
+      });
+
+      await _pumpCard(
+        tester,
+        _buildQuote(
+          id: 'q-default-copy',
+          content: '春江潮水连海平，海上明月共潮生。',
+          sourceAuthor: '张若虚',
+          editSource: 'inline',
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      await tester.tap(find.text(l10n.copyTextMenu));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.copiedToClipboard), findsOneWidget);
     });
 
     testWidgets('触摸端动作按钮不挂 Tooltip，无障碍名称仍在', (tester) async {
@@ -1358,6 +1433,7 @@ Future<void> _pumpCard(
   Map<String, NoteTag> tagMap = const {},
   VoidCallback? onFavorite,
   VoidCallback? onEdit,
+  VoidCallback? onCopyText,
   double width = 800,
 }) async {
   await tester.pumpWidget(
@@ -1383,6 +1459,7 @@ Future<void> _pumpCard(
               onEdit: onEdit ?? () {},
               onDelete: () {},
               onAskAI: () {},
+              onCopyText: onCopyText,
               onFavorite: onFavorite,
             ),
           ),
