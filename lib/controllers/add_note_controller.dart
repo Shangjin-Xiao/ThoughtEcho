@@ -656,8 +656,20 @@ class AddNoteController extends ChangeNotifier {
           await db.addTagWithId(fixedId, name, iconName: iconName);
           if (_isDisposed) return null;
           if (databaseService != db) return null;
-          final newTag = NoteTag(id: fixedId, name: name, iconName: iconName);
-          allCategoriesCache = [...categories, newTag];
+          // 缓存必须和 getTags() 读回来的形状一致，否则从 allCategoriesCache 取到
+          // 这个标签的调用方会拿到失真元数据：addTagWithId 会按 systemTagIds 给
+          // 内置系统标签写 is_default=1，漏掉就会让它退化成可删可改的普通标签。
+          // where 顺带覆盖 addTagWithId 走"更新已存在行"分支的情况——缓存陈旧时
+          // 该行可能已在库里，直接 append 会让同一个 ID 在缓存里出现两次。
+          allCategoriesCache = [
+            ...categories.where((tag) => tag.id != fixedId),
+            NoteTag(
+              id: fixedId,
+              name: name,
+              isDefault: DatabaseService.systemTagIds.contains(fixedId),
+              iconName: iconName,
+            ),
+          ];
           return fixedId;
         } catch (e, stackTrace) {
           logError(
