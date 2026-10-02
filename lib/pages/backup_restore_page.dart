@@ -328,8 +328,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   Future<void> _handleBackup() async {
     if (!mounted) return;
 
-    AptabaseHelper.trackEvent('feature_used', {'action': 'export_text_backup'});
-
     _backupProgressUpdateGate.reset();
     setState(() {
       _isLoading = true;
@@ -395,6 +393,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
           _showSuccessSnackBar(savedToPathMessage);
         }
+      }
+
+      if (backupPath != null) {
+        AptabaseHelper.trackEvent(
+          'feature_used',
+          {'action': 'export_text_backup'},
+        );
       }
 
       // 导出完成后上报富文本路径转换失败（不静默降级）

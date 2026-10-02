@@ -16,7 +16,6 @@ import '../services/settings_service.dart';
 import '../utils/quill_editor_extensions.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
-import '../utils/aptabase_helper.dart';
 
 import '../gen_l10n/app_localizations.dart';
 import 'quote_card_helpers.dart';
@@ -1365,7 +1364,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       case 'generate_card':
         widget.onGenerateCard?.call();
       case 'export_pdf':
-        AptabaseHelper.trackEvent('feature_used', {'action': 'export_pdf'});
         widget.onExportPdf?.call();
       case 'delete':
         widget.onDelete();
