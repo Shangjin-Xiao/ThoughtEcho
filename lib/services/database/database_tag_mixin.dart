@@ -76,6 +76,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       _tagsController.add(_tagStore);
       notifyListeners();
       notifyLocalDataChangedForParts();
+      AptabaseHelper.trackEvent('feature_used', {'action': 'create_tag'});
       return;
     }
 
@@ -100,6 +101,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
     await updateTagsStreamForParts();
     notifyListeners();
     notifyLocalDataChangedForParts();
+    AptabaseHelper.trackEvent('feature_used', {'action': 'create_tag'});
   }
 
   /// 修复：统一的标签名称唯一性验证
@@ -311,6 +313,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       _tagsController.add(_tagStore);
       notifyListeners();
       notifyLocalDataChangedForParts();
+      AptabaseHelper.trackEvent('feature_used', {'action': 'delete_tag'});
       return;
     }
 
@@ -358,6 +361,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
     notifyListeners();
     notifyLocalDataChangedForParts();
 
+    AptabaseHelper.trackEvent('feature_used', {'action': 'delete_tag'});
     logDebug('标签删除完成，ID: $id');
   }
 

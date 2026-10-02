@@ -37,6 +37,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       BackupProgressUpdateGate();
 
   @override
+  void initState() {
+    super.initState();
+    AptabaseHelper.trackPageView('backup_restore');
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
@@ -611,6 +617,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             _handleRestoreProgressUpdate(current, total);
           },
           cancelToken: _cancelToken,
+        );
+      }
+
+      if (report != null) {
+        AptabaseHelper.trackEvent(
+          'feature_used',
+          {'action': useMerge ? 'merge_backup' : 'restore_backup'},
         );
       }
 

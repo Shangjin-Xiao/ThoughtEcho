@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../extensions/note_tag_localization_extension.dart';
 import '../services/database_service.dart';
 import '../models/note_tag.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/icon_utils.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
@@ -24,6 +25,12 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
   final _categoryNameController = TextEditingController();
   bool _isLoading = false;
   String? _selectedIconName;
+
+  @override
+  void initState() {
+    super.initState();
+    AptabaseHelper.trackPageView('tag_settings');
+  }
 
   @override
   void dispose() {

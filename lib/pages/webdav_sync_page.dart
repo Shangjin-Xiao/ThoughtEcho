@@ -37,6 +37,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
   @override
   void initState() {
     super.initState();
+    AptabaseHelper.trackPageView('webdav_sync');
     final syncService = Provider.of<WebDAVSyncService>(context, listen: false);
 
     _selectedProvider = syncService.provider;
@@ -208,6 +209,11 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     setState(() {
       _isTestingConnection = true;
     });
+
+    AptabaseHelper.trackEvent(
+      'feature_used',
+      {'action': 'webdav_test_connection'},
+    );
 
     final l10n = AppLocalizations.of(context);
     final syncService = Provider.of<WebDAVSyncService>(context, listen: false);

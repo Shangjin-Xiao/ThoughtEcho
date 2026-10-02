@@ -8,6 +8,7 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../utils/aptabase_helper.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
 
@@ -155,6 +156,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   @override
   void initState() {
     super.initState();
+    AptabaseHelper.trackPageView('note_sync');
     _initializeSyncService();
     _loadLocalFingerprint();
   }
@@ -545,6 +547,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         ) ??
         false;
     if (!confirmed) return;
+
+    AptabaseHelper.trackEvent('feature_used', {'action': 'localsend_send'});
 
     // 保存用户选择
     _sendIncludeMedia = includeMedia;

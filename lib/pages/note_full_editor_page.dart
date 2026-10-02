@@ -20,6 +20,7 @@ import 'dart:math' show min; // 添加math包导入
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/string_utils.dart';
 import 'thoughter_page.dart';
 import '../models/thoughter_entry.dart';
@@ -128,6 +129,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   @override
   void initState() {
     super.initState();
+    AptabaseHelper.trackPageView('note_editor');
     _metadataState = NoteEditorMetadataState(
       initialQuote: widget.initialQuote,
       initialAuthor: widget.initialAuthor,

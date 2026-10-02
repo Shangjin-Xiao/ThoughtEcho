@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'app_semantic_colors.dart';
 import 'theme_style.dart';
 
@@ -706,6 +707,10 @@ class AppTheme with ChangeNotifier {
     if (_themeMode == mode) return;
     _themeMode = mode;
     _clearThemeCache();
+    AptabaseHelper.trackEvent(
+      'feature_used',
+      {'action': 'switch_theme_mode', 'mode': mode.name},
+    );
     // 先刷新UI，避免存储层偶发卡顿/异常导致“怎么点都没反应”
     notifyListeners();
 
@@ -728,6 +733,10 @@ class AppTheme with ChangeNotifier {
     if (_themeStyle == style) return;
     _themeStyle = style;
     _clearThemeCache();
+    AptabaseHelper.trackEvent(
+      'feature_used',
+      {'action': 'switch_theme_style', 'style': style.name},
+    );
     // 与 setThemeMode 一致：先刷新 UI，再落盘。
     notifyListeners();
 

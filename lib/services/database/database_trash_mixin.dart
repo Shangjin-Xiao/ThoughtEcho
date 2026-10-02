@@ -217,6 +217,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       refreshQuotesStreamForParts();
       notifyListeners();
       notifyLocalDataChangedForParts();
+      AptabaseHelper.trackEvent('feature_used', {'action': 'restore_note'});
       return;
     }
 
@@ -260,6 +261,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       refreshQuotesStreamForParts();
       notifyListeners();
       notifyLocalDataChangedForParts();
+      AptabaseHelper.trackEvent('feature_used', {'action': 'restore_note'});
     });
   }
 
@@ -283,6 +285,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         return;
       }
       await _hardDeleteQuotes(deletedIds);
+      AptabaseHelper.trackEvent('feature_used', {'action': 'empty_trash'});
       return;
     }
 
@@ -301,6 +304,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       return;
     }
     await _hardDeleteQuotes(ids);
+    AptabaseHelper.trackEvent('feature_used', {'action': 'empty_trash'});
   }
 
   @override

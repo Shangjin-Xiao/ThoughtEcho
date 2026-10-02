@@ -12,6 +12,7 @@ import '../models/thoughter_entry.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../widgets/app_error_view.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_snackbar.dart';
@@ -59,6 +60,7 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
   @override
   void initState() {
     super.initState();
+    AptabaseHelper.trackPageView('map_memory');
     _load();
   }
 

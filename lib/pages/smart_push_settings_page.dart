@@ -12,6 +12,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 
 part 'smart_push_settings_page_basic_sections.dart';
 part 'smart_push_settings_page_custom_sections.dart';
@@ -44,6 +45,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   @override
   void initState() {
     super.initState();
+    AptabaseHelper.trackPageView('smart_push_settings');
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -132,6 +134,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
 
   Future<void> _testPush() async {
     setState(() => _isTesting = true);
+    AptabaseHelper.trackEvent('feature_used', {'action': 'smart_push_test'});
     try {
       final smartPushService = context.read<SmartPushService>();
 

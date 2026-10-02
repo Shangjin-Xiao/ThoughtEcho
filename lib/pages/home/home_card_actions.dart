@@ -69,11 +69,17 @@ class HomeCardActions {
           card: card,
           onShare: _shareCard,
           onSave: (selected) => _saveCard(service, selected),
-          onRegenerate: () => service.generateCard(
-            note: quote,
-            isRegeneration: true,
-            brandName: brandName,
-          ),
+          onRegenerate: () {
+            AptabaseHelper.trackEvent(
+              'feature_used',
+              {'action': 'ai_card_regenerate'},
+            );
+            return service.generateCard(
+              note: quote,
+              isRegeneration: true,
+              brandName: brandName,
+            );
+          },
         ),
       );
     } catch (error) {

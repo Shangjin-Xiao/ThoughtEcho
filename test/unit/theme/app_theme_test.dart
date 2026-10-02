@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
@@ -149,5 +151,39 @@ void main() {
     await appTheme.initialize();
 
     expect(appTheme.themeStyle, ThemeStyle.material);
+  });
+
+  test('setThemeStyle 与 setThemeMode 触发匿名统计埋点', () async {
+    final events = <Map<String, dynamic>>[];
+    AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+      events.add({'event': eventName, 'props': props});
+    };
+
+    try {
+      final appTheme = AppTheme();
+      await appTheme.setThemeStyle(ThemeStyle.paper);
+      expect(
+        events.any(
+          (e) =>
+              e['event'] == 'feature_used' &&
+              (e['props'] as Map)['action'] == 'switch_theme_style' &&
+              (e['props'] as Map)['style'] == 'paper',
+        ),
+        isTrue,
+      );
+
+      await appTheme.setThemeMode(ThemeMode.dark);
+      expect(
+        events.any(
+          (e) =>
+              e['event'] == 'feature_used' &&
+              (e['props'] as Map)['action'] == 'switch_theme_mode' &&
+              (e['props'] as Map)['mode'] == 'dark',
+        ),
+        isTrue,
+      );
+    } finally {
+      AptabaseHelper.onTrackEventForTesting = null;
+    }
   });
 }

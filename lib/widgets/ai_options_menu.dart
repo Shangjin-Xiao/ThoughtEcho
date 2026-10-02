@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/color_utils.dart'; // applyOpacity 扩展方法
 import 'ai/experimental_badge.dart';
 import '../theme/theme_style.dart';
@@ -77,23 +78,43 @@ class AiOptionsMenu extends StatelessWidget {
         return AiOptionsMenu(
           showAskNote: showAskNote,
           onAnalyzeSource: () {
+            AptabaseHelper.trackEvent(
+              'feature_used',
+              {'action': 'ai_action_analyze_source'},
+            );
             Navigator.pop(context);
             onAnalyzeSource();
           },
           onPolishText: () {
+            AptabaseHelper.trackEvent(
+              'feature_used',
+              {'action': 'ai_action_polish'},
+            );
             Navigator.pop(context);
             onPolishText();
           },
           onContinueText: () {
+            AptabaseHelper.trackEvent(
+              'feature_used',
+              {'action': 'ai_action_continue'},
+            );
             Navigator.pop(context);
             onContinueText();
           },
           onAnalyzeContent: () {
+            AptabaseHelper.trackEvent(
+              'feature_used',
+              {'action': 'ai_action_analyze_content'},
+            );
             Navigator.pop(context);
             onAnalyzeContent();
           },
           onAskNote: onAskNote != null
               ? () {
+                  AptabaseHelper.trackEvent(
+                    'feature_used',
+                    {'action': 'ai_action_ask_note'},
+                  );
                   Navigator.pop(context);
                   onAskNote();
                 }

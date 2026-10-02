@@ -36,11 +36,36 @@ void main() {
         'create_note',
         'save_note',
         'delete_note',
+        'restore_note',
+        'empty_trash',
         'toggle_favorite',
+        'filter_by_tag',
+        'sort_changed',
+        'search_performed',
+        'create_tag',
+        'delete_tag',
         'ai_message_send',
         'ai_card_generate',
+        'ai_card_regenerate',
         'ai_insight_generate',
         'ai_proposal_accept',
+        'ai_action_analyze_source',
+        'ai_action_polish',
+        'ai_action_continue',
+        'ai_action_analyze_content',
+        'ai_action_ask_note',
+        'export_text_backup',
+        'restore_backup',
+        'merge_backup',
+        'share_card_image',
+        'export_card_image',
+        'webdav_sync_manual',
+        'webdav_test_connection',
+        'export_pdf',
+        'localsend_send',
+        'smart_push_test',
+        'switch_theme_style',
+        'switch_theme_mode',
       ];
 
       for (final action in actions) {
@@ -54,6 +79,32 @@ void main() {
         expect(props.keys.length, equals(1));
         expect(props.keys.first, equals('action'));
         expect(props['action'], equals(action));
+      }
+    });
+
+    test('tracks page_view events across all core pages without throwing', () {
+      const pages = [
+        'home',
+        'notes',
+        'explore',
+        'settings',
+        'thoughter',
+        'note_editor',
+        'backup_restore',
+        'webdav_sync',
+        'trash',
+        'tag_settings',
+        'map_memory',
+        'theme_settings',
+        'smart_push_settings',
+        'note_sync',
+      ];
+
+      for (final page in pages) {
+        expect(
+          () => AptabaseHelper.trackPageView(page),
+          returnsNormally,
+        );
       }
     });
 

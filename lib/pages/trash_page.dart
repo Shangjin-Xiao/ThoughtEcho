@@ -10,6 +10,7 @@ import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/time_utils.dart';
 import '../widgets/trash_quote_card.dart';
 
@@ -42,6 +43,7 @@ class _TrashPageState extends State<TrashPage> {
   @override
   void initState() {
     super.initState();
+    AptabaseHelper.trackPageView('trash');
     _scrollController.addListener(_handleScroll);
     _categoriesSubscription =
         context.read<DatabaseService>().watchTags().listen(

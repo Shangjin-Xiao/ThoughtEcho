@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_style.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/color_utils.dart'; // 导入颜色工具
 import '../utils/theme_style_labels.dart';
 import '../widgets/theme_style_preview.dart';
@@ -34,6 +35,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   bool _useDynamicColor = true;
   Color? _customColor;
   bool _hasSyncedFromTheme = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AptabaseHelper.trackPageView('theme_settings');
+  }
 
   @override
   void didChangeDependencies() {
