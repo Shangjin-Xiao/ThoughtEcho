@@ -102,3 +102,6 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2025-02-23 - 补充 PathSecurityUtils 的核心测试
 **盲点:** `PathSecurityUtils.sanitizeZipEntryName` 函数缺乏针对 Windows 反斜杠、混合斜杠及前导斜杠（绝对路径解释防护）转换场景的专门单元测试。虽然已有 Zip Slip 尝试防御相关的 `validateExtractionPath` 测试，但基础的路径清理机制属于纯函数处理，缺少明确验证。
 **对策:** 为核心工具库中用于路径安全的纯函数（如 `sanitizeZipEntryName`）编写特定的断言，覆盖诸如反斜杠转换、剥离首个 `/` 和保持无问题字符串不变的情况。在处理安全或文件路径相关功能时，优先对最底层的纯文本清理函数增加 100% 边界验证测试。
+## 2026-10-02 - [补充 NoteEditorStates 的单元测试]
+**盲点:** `NoteEditorStates` 定义了笔记编辑器的三大状态对象（`NoteEditorState`、`NoteEditorMetadataState`、`NoteEditorMediaState`），但此前缺乏针对 `replaceController` 监听转移、`hydrateAiAnalysisIfUnchanged` 条件更新、`hasChanges` 差异判断分支以及保存状态生命周期等关键行为的全面测试覆盖。
+**对策:** 补充并完善 `test/unit/controllers/note_editor_states_test.dart` 单元测试套件，全面覆盖 QuillController 替换迁移、草稿定时保存取消、标签增删与查重过滤、AI 分析条件注水、地理/天气变化侦测，以及媒体导入去重与保存进度重置，确保核心编辑器状态管理的稳定与健壮。
