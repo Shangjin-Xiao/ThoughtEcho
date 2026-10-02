@@ -250,3 +250,11 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Learning:** Chaining `String.split(',')` with `.map()`, `.where()`, and `.toList()`/`.toSet()` creates multiple intermediate list, iterable, and string objects, putting significant pressure on the Garbage Collector when called frequently (e.g., when analyzing metrics or iterating pushed IDs).
 **Action:** Replace these chains with `StringUtils.parseCommaSeparatedString()`, which avoids intermediate lists and iterators while parsing, to reduce memory allocations in high-frequency string splitting scenarios like smart push logic.
+
+## 2026-10-26 - 优化 AddNoteDialog 来源解析中的正则表达式编译与对象分配
+
+**Learning:**
+在编辑或新建笔记弹窗中，当涉及频繁或动态解析出处字符串（如“——作者《作品》”）时，方法内联调用 `RegExp` 构造函数会导致每次调用都重新分配和编译正则对象。复用集中管理的公用工具类方法（如 `StringUtils.parseSourceToControllers`），利用其已初始化的 `static final RegExp` 静态只读正则，可以在保证零代码冗余的同时消除重复正则编译和垃圾回收（GC）开销。
+
+**Action:**
+重构 `lib/widgets/add_note_dialog.dart` 中的 `_parseSource` 方法，替换内联正则提取逻辑为直接调用 `StringUtils.parseSourceToControllers`。
