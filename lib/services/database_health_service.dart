@@ -552,23 +552,26 @@ class DatabaseHealthService {
           SELECT DISTINCT q.* FROM quotes q
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
           WHERE qt.tag_id IN ($placeholders)
-            AND length(q.content) <= $_maxOfflineQuoteLength
+            AND length(q.content) <= ?
             $deletedFilter
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          tagIds,
+          [...tagIds, _maxOfflineQuoteLength],
         );
       } else {
         // allNotes 模式：全局随机抽取
-        results = await db.rawQuery('''
+        results = await db.rawQuery(
+          '''
           SELECT * FROM quotes
-          WHERE length(content) <= $_maxOfflineQuoteLength
+          WHERE length(content) <= ?
             AND content NOT LIKE '%\n%'
             $deletedFilterSimple
           ORDER BY RANDOM()
           LIMIT 1
-        ''');
+        ''',
+          [_maxOfflineQuoteLength],
+        );
       }
 
       if (results.isNotEmpty) {

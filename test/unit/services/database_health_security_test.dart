@@ -115,5 +115,121 @@ void main() {
         expect(result.isEmpty, isTrue);
       });
     });
+
+    group('getLocalDailyQuote query filtering and offline quote retrieval', () {
+      setUp(() async {
+        await db.execute('''
+          CREATE TABLE quotes (
+            id TEXT PRIMARY KEY,
+            content TEXT,
+            source_work TEXT,
+            source_author TEXT,
+            is_deleted INTEGER DEFAULT 0
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE categories (
+            id TEXT PRIMARY KEY,
+            name TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE quote_tags (
+            quote_id TEXT,
+            tag_id TEXT
+          )
+        ''');
+      });
+
+      test('returns daily-tagged quote within length limit in tagOnly mode',
+          () async {
+        await db.insert('categories',
+            {'id': DatabaseHealthService.dailyQuoteTagId, 'name': '每日一言'});
+
+        // Quote exceeding 100 characters should be excluded
+        await db.insert('quotes', {
+          'id': 'q_long',
+          'content': 'A' * 101,
+          'source_work': 'Work Long',
+          'source_author': 'Author Long',
+          'is_deleted': 0
+        });
+        await db.insert('quote_tags', {
+          'quote_id': 'q_long',
+          'tag_id': DatabaseHealthService.dailyQuoteTagId
+        });
+
+        final tooLongResult = await healthService.getLocalDailyQuote(
+          db,
+          offlineQuoteSource: 'tagOnly',
+        );
+        expect(tooLongResult, isNull);
+
+        // Quote within 100 characters should be included
+        await db.insert('quotes', {
+          'id': 'q1',
+          'content': 'Short quote content',
+          'source_work': 'Work',
+          'source_author': 'Author',
+          'is_deleted': 0
+        });
+        await db.insert('quote_tags', {
+          'quote_id': 'q1',
+          'tag_id': DatabaseHealthService.dailyQuoteTagId
+        });
+
+        final result = await healthService.getLocalDailyQuote(
+          db,
+          offlineQuoteSource: 'tagOnly',
+        );
+
+        expect(result, isNotNull);
+        expect(result!['content'], equals('Short quote content'));
+      });
+
+      test('returns single-line quote within length limit in allNotes mode',
+          () async {
+        // Multi-line quote should be excluded
+        await db.insert('quotes', {
+          'id': 'q_multiline',
+          'content': 'Line 1\nLine 2',
+          'source_work': 'Work Multiline',
+          'source_author': 'Author Multiline',
+          'is_deleted': 0
+        });
+
+        // Quote exceeding 100 characters should be excluded
+        await db.insert('quotes', {
+          'id': 'q_too_long',
+          'content': 'B' * 105,
+          'source_work': 'Work Too Long',
+          'source_author': 'Author Too Long',
+          'is_deleted': 0
+        });
+
+        final excludedResult = await healthService.getLocalDailyQuote(
+          db,
+          offlineQuoteSource: 'allNotes',
+        );
+        expect(excludedResult, isNull);
+
+        // Single-line quote within 100 characters should be returned
+        await db.insert('quotes', {
+          'id': 'q2',
+          'content': 'Short single line quote',
+          'source_work': 'Work 2',
+          'source_author': 'Author 2',
+          'is_deleted': 0
+        });
+
+        final result = await healthService.getLocalDailyQuote(
+          db,
+          offlineQuoteSource: 'allNotes',
+        );
+
+        expect(result, isNotNull);
+        expect(result!['content'], equals('Short single line quote'));
+      });
+    });
   });
 }
