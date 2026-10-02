@@ -1346,9 +1346,11 @@ void main() {
     });
 
     testWidgets('默认复制文本操作将格式化内容写入剪贴板并提示已复制', (tester) async {
+      String? copiedText;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, (call) async {
         if (call.method == 'Clipboard.setData') {
+          copiedText = (call.arguments as Map?)?['text'] as String?;
           return null;
         }
         return null;
@@ -1371,7 +1373,36 @@ void main() {
       await tester.tap(find.text(l10n.copyTextMenu));
       await tester.pumpAndSettle();
 
+      expect(copiedText, '春江潮水连海平，海上明月共潮生。\n\n——张若虚');
       expect(find.text(l10n.copiedToClipboard), findsOneWidget);
+    });
+
+    testWidgets('复制文本遇到平台剪贴板异常时展示失败提示', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          throw PlatformException(code: 'CLIPBOARD_ERROR');
+        }
+        return null;
+      });
+
+      await _pumpCard(
+        tester,
+        _buildQuote(
+          id: 'q-copy-fail',
+          content: '测试复制异常时的错误兜底提示',
+          editSource: 'inline',
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      await tester.tap(find.text(l10n.copyTextMenu));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.operationFailedSimple), findsOneWidget);
     });
 
     testWidgets('触摸端动作按钮不挂 Tooltip，无障碍名称仍在', (tester) async {

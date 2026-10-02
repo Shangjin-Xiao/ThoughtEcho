@@ -1,5 +1,6 @@
+import 'dart:convert';
+
 import '../models/quote_model.dart';
-import 'delta_rich_text_parser.dart';
 import 'string_utils.dart';
 
 /// 专门用于提取和格式化笔记纯文本的工具类。
@@ -8,53 +9,20 @@ import 'string_utils.dart';
 abstract final class QuoteTextExtractor {
   /// 提取笔记的干净纯文本正文。
   ///
-  /// - 若有富文本 Delta，复用 [parseDeltaRichText] 提取：
+  /// - 若有富文本 Delta，直接解析 Delta 操作并提取纯文本：
   ///   - 行内粗/斜/色等样式剥离为纯字；
   ///   - 列表项保留语义符号（`• `、`1. `、`[ ] `、`[x] `、`> `）；
-  ///   - 媒体嵌入（图片等）自动剔除；
+  ///   - 行内媒体自动剔除，且保留前后文本在同一行的连续性；
   /// - 剔除富文本可能遗留的 Object Replacement Character (`\uFFFC`)；
-  /// - 折叠多余的连续换行（最多保留两个换行符）；
+  /// - 统一 CRLF/CR 并折叠多余的连续换行（最多保留两个换行符）；
   /// - 遇到任何解析异常时稳妥回退到 `quote.content` 的清洗结果。
   static String extractPlainText(Quote quote) {
     final delta = quote.deltaContent;
     if (delta != null && delta.trim().isNotEmpty) {
       try {
-        final blocks = parseDeltaRichText(delta);
-        if (blocks.isNotEmpty) {
-          final buffer = StringBuffer();
-          for (final block in blocks) {
-            if (block.isMedia) continue;
-            final text = StringUtils.removeObjectReplacementChar(
-              block.plainText,
-            );
-            if (text.isEmpty && block.kind == RichTextBlockKind.paragraph) {
-              buffer.writeln();
-              continue;
-            }
-
-            switch (block.kind) {
-              case RichTextBlockKind.bullet:
-                buffer.writeln('• $text');
-              case RichTextBlockKind.ordered:
-                buffer.writeln('${block.orderedIndex}. $text');
-              case RichTextBlockKind.checkbox:
-                final checkMark = block.checked ? '[x]' : '[ ]';
-                buffer.writeln('$checkMark $text');
-              case RichTextBlockKind.quote:
-                buffer.writeln('> $text');
-              case RichTextBlockKind.paragraph:
-              case RichTextBlockKind.header:
-              case RichTextBlockKind.codeBlock:
-              case RichTextBlockKind.media:
-                buffer.writeln(text);
-            }
-          }
-
-          final result =
-              _normalizeConsecutiveNewlines(buffer.toString().trim());
-          if (result.isNotEmpty) {
-            return result;
-          }
+        final extracted = _extractTextFromDelta(delta);
+        if (extracted != null && extracted.isNotEmpty) {
+          return extracted;
         }
       } catch (_) {
         // 富文本解析异常时回退到纯文本清洗
@@ -65,12 +33,100 @@ abstract final class QuoteTextExtractor {
     return _normalizeConsecutiveNewlines(rawContent.trim());
   }
 
+  static String? _extractTextFromDelta(String deltaJson) {
+    final ops = _decodeOps(deltaJson);
+    if (ops == null || ops.isEmpty) return null;
+
+    final buffer = StringBuffer();
+    final lineBuffer = StringBuffer();
+    var orderedIndex = 0;
+
+    void flushLine(Map<String, dynamic> lineAttributes) {
+      final lineText = lineBuffer.toString();
+      lineBuffer.clear();
+
+      final listType = lineAttributes['list']?.toString();
+      final isQuote = lineAttributes['blockquote'] == true;
+
+      if (listType == 'ordered') {
+        orderedIndex++;
+        buffer.writeln('$orderedIndex. $lineText');
+      } else {
+        orderedIndex = 0;
+        if (listType == 'bullet') {
+          buffer.writeln('• $lineText');
+        } else if (listType == 'checked') {
+          buffer.writeln('[x] $lineText');
+        } else if (listType == 'unchecked') {
+          buffer.writeln('[ ] $lineText');
+        } else if (isQuote) {
+          buffer.writeln('> $lineText');
+        } else {
+          buffer.writeln(lineText);
+        }
+      }
+    }
+
+    for (final op in ops) {
+      if (op is! Map) continue;
+      final insert = op['insert'];
+      if (insert == null) continue;
+
+      if (insert is! String) {
+        // 媒体/嵌入对象：直接跳过，不打断行内前后文字的连接
+        continue;
+      }
+
+      final text = StringUtils.removeObjectReplacementChar(insert);
+      if (text.isEmpty) continue;
+
+      final attributes = op['attributes'];
+      final lineAttrs = attributes is Map<String, dynamic>
+          ? attributes
+          : (attributes is Map
+              ? attributes.cast<String, dynamic>()
+              : const <String, dynamic>{});
+
+      var start = 0;
+      while (start < text.length) {
+        final newlineIndex = text.indexOf('\n', start);
+        if (newlineIndex == -1) {
+          lineBuffer.write(text.substring(start));
+          break;
+        }
+
+        lineBuffer.write(text.substring(start, newlineIndex));
+        final isLastNewline = newlineIndex == text.length - 1;
+        flushLine(isLastNewline ? lineAttrs : const {});
+        start = newlineIndex + 1;
+      }
+    }
+
+    if (lineBuffer.isNotEmpty) {
+      flushLine(const {});
+    }
+
+    final raw = buffer.toString().trim();
+    return _normalizeConsecutiveNewlines(raw);
+  }
+
+  static List<Object?>? _decodeOps(String deltaContent) {
+    try {
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) return decoded;
+      if (decoded is Map && decoded['ops'] is List) {
+        return decoded['ops'] as List<Object?>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// 提取笔记来源/出处单行文本。
   ///
   /// 格式化规则：
   /// - 若同时有作者与作品：`——作者 《作品》`
   /// - 若仅有作者：`——作者`
-  /// - 若仅有作品：` 《作品》`
+  /// - 若仅有作品：`《作品》`
   /// - 否则回退到兼容字段 `quote.source`
   static String? formatSource(Quote quote) {
     final author = quote.sourceAuthor?.trim() ?? '';
@@ -115,11 +171,12 @@ abstract final class QuoteTextExtractor {
     return content;
   }
 
-  /// 折叠超过 2 个的连续空行
+  /// 将 Windows CRLF 和单独的 CR 统一转为 LF，并将超过 2 个的连续换行折叠为 2 个换行。
   static String _normalizeConsecutiveNewlines(String text) {
-    if (!text.contains('\n\n\n')) {
-      return text;
+    final normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    if (!normalized.contains('\n\n\n')) {
+      return normalized;
     }
-    return text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return normalized.replaceAll(RegExp(r'\n{3,}'), '\n\n');
   }
 }

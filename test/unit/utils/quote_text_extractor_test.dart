@@ -16,6 +16,26 @@ void main() {
       expect(extracted, '这是一段纯文本笔记。');
     });
 
+    test('纯文本笔记：折叠超过 2 个的连续换行（LF 及 CRLF）', () {
+      final quoteLf = Quote(
+        content: '第一段。\n\n\n\n第二段。',
+        date: '2026-10-02T10:00:00Z',
+      );
+      expect(
+        QuoteTextExtractor.extractPlainText(quoteLf),
+        '第一段。\n\n第二段。',
+      );
+
+      final quoteCrlf = Quote(
+        content: '第一段。\r\n\r\n\r\n\r\n第二段。',
+        date: '2026-10-02T10:00:00Z',
+      );
+      expect(
+        QuoteTextExtractor.extractPlainText(quoteCrlf),
+        '第一段。\n\n第二段。',
+      );
+    });
+
     test('纯文本笔记：剔除可能包含的 U+FFFC 媒体占位符', () {
       final quote = Quote(
         content: '图片前\uFFFC图片后\uFFFC',
@@ -24,6 +44,25 @@ void main() {
 
       final extracted = QuoteTextExtractor.extractPlainText(quote);
       expect(extracted, '图片前图片后');
+    });
+
+    test('富文本笔记：行内媒体保留前后文字在同一行的连贯性，不插入额外换行', () {
+      final delta = jsonEncode([
+        {'insert': '这是前半句，'},
+        {
+          'insert': {'image': 'content://media/external/images/inline'},
+        },
+        {'insert': '这是后半句。\n'},
+      ]);
+
+      final quote = Quote(
+        content: '这是前半句，\uFFFC这是后半句。\n',
+        deltaContent: delta,
+        date: '2026-10-02T10:00:00Z',
+      );
+
+      final extracted = QuoteTextExtractor.extractPlainText(quote);
+      expect(extracted, '这是前半句，这是后半句。');
     });
 
     test('富文本笔记：行内加粗、斜体、颜色等样式平铺剥离为纯字', () {
@@ -125,7 +164,7 @@ void main() {
       );
 
       final extracted = QuoteTextExtractor.extractPlainText(quote);
-      expect(extracted, '这是第一段正文。\n这是第二段正文。');
+      expect(extracted, '这是第一段正文。\n\n这是第二段正文。');
     });
 
     test('纯图片笔记：无文字内容时提取结果为空字符串', () {

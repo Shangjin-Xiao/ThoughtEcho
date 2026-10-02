@@ -1384,7 +1384,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       // 在未注入 ClipboardService 的轻量测试或隔离环境中降级
     }
 
-    await Clipboard.setData(ClipboardData(text: text));
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.error(context, l10n.operationFailedSimple);
+      return;
+    }
+
     clipboardService?.recordInternalCopy(text);
 
     HapticFeedback.selectionClick();
