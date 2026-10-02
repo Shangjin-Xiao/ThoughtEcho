@@ -168,6 +168,11 @@ class SettingsService extends ChangeNotifier {
       );
       throw StateError('保存 Dreaming 空闲整理开关失败');
     }
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'dreaming_on_idle',
+      'enabled': value,
+    });
     notifyListeners();
   }
 
@@ -184,6 +189,11 @@ class SettingsService extends ChangeNotifier {
       );
       throw StateError('保存 Dreaming 洞察后整理开关失败');
     }
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'dreaming_after_insight',
+      'enabled': value,
+    });
     notifyListeners();
   }
 
@@ -399,6 +409,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setReportInsightsUseAI(bool enabled) async {
     _appSettings = _appSettings.copyWith(reportInsightsUseAI: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'report_insights_ai',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -407,6 +422,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setTodayThoughtsUseAI(bool enabled) async {
     _appSettings = _appSettings.copyWith(todayThoughtsUseAI: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'today_thoughts_ai',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -428,11 +448,19 @@ class SettingsService extends ChangeNotifier {
     SentryDatabaseTracing.configure(enabled: enabled);
     SentryNetworkTracing.configure(enabled: enabled);
     SentryHelper.startIfEnabled(enabled);
+    // 只上报开关状态布尔值，不涉及任何诊断内容。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'sentry',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
   // 是否启用匿名功能改进统计（Aptabase）
   bool get telemetryEnabled => _appSettings.telemetryEnabled;
+  // 注意：这里故意不上报开关事件——上报通道本身就是这个开关，
+  // 关掉时事件发不出去，开时报一条「开启了统计」也没有产品意义。
   Future<void> setTelemetryEnabled(bool enabled) async {
     _appSettings = _appSettings.copyWith(telemetryEnabled: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
@@ -460,6 +488,12 @@ class SettingsService extends ChangeNotifier {
       trashRetentionLastModified: modified,
     );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    // 上报归一化后的档位（7/30/90），时间戳不上传。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'select_setting',
+      'setting': 'trash_retention_days',
+      'value': normalizedDays,
+    });
     notifyListeners();
   }
 
@@ -556,6 +590,11 @@ class SettingsService extends ChangeNotifier {
       prioritizeBoldContentInCollapse: enabled,
     );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'prioritize_bold_content',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -564,6 +603,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setShowFavoriteButton(bool enabled) async {
     _appSettings = _appSettings.copyWith(showFavoriteButton: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'show_favorite_button',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -585,6 +629,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setDailyQuoteProvider(String provider) async {
     _appSettings = _appSettings.copyWith(dailyQuoteProvider: provider);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    // provider 来自预设下拉选项（固定枚举），不是用户自由输入，可上报。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'select_setting',
+      'setting': 'daily_quote_provider',
+      'value': provider,
+    });
     notifyListeners();
   }
 
@@ -601,6 +651,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setShowNoteEditTime(bool enabled) async {
     _appSettings = _appSettings.copyWith(showNoteEditTime: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'show_note_edit_time',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -609,6 +664,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setOfflineQuoteSource(String source) async {
     _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    // 取值来自卡片内固定单选项（tagOnly/allNotes），不是用户自由输入。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'select_setting',
+      'setting': 'offline_quote_source',
+      'value': source,
+    });
     notifyListeners();
   }
 
@@ -617,6 +678,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setShowExactTime(bool enabled) async {
     _appSettings = _appSettings.copyWith(showExactTime: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'show_exact_time',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -701,6 +767,12 @@ class SettingsService extends ChangeNotifier {
       _appSettings = _appSettings.copyWith(localeCode: localeCode);
     }
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    // 语言代码来自应用支持的固定列表（null 记为 system），不是自由输入。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'select_setting',
+      'setting': 'locale',
+      'value': localeCode ?? 'system',
+    });
     notifyListeners();
   }
 
@@ -709,6 +781,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setEnableHiddenNotes(bool enabled) async {
     _appSettings = _appSettings.copyWith(enableHiddenNotes: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'hidden_notes',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -757,6 +834,11 @@ class SettingsService extends ChangeNotifier {
     _appSettings = _appSettings.copyWith(excerptIntentEnabled: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     await _syncExcerptIntentEntryPoint();
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'excerpt_intent',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -770,12 +852,19 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> setDefaultAuthor(String? author) async {
-    if (author == null || author.isEmpty) {
+    final hasValue = author != null && author.isNotEmpty;
+    if (!hasValue) {
       _appSettings = _appSettings.copyWith(clearDefaultAuthor: true);
     } else {
       _appSettings = _appSettings.copyWith(defaultAuthor: author);
     }
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    // 作者是用户自由输入，只上报「是否填写」，绝不上传内容本身。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'default_author',
+      'enabled': hasValue,
+    });
     notifyListeners();
   }
 
@@ -789,12 +878,19 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> setDefaultSource(String? source) async {
-    if (source == null || source.isEmpty) {
+    final hasValue = source != null && source.isNotEmpty;
+    if (!hasValue) {
       _appSettings = _appSettings.copyWith(clearDefaultSource: true);
     } else {
       _appSettings = _appSettings.copyWith(defaultSource: source);
     }
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    // 出处是用户自由输入，只上报「是否填写」，绝不上传内容本身。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'default_source',
+      'enabled': hasValue,
+    });
     notifyListeners();
   }
 
@@ -803,6 +899,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setDefaultTagIds(List<String> tagIds) async {
     _appSettings = _appSettings.copyWith(defaultTagIds: tagIds);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    // 标签 ID 关联用户数据，只上报「是否设置」，不上传 ID 本身。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'default_tags',
+      'enabled': tagIds.isNotEmpty,
+    });
     notifyListeners();
   }
 
@@ -884,6 +986,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setSkipNonFullscreenEditor(bool enabled) async {
     _appSettings = _appSettings.copyWith(skipNonFullscreenEditor: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'skip_non_fullscreen_editor',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 
@@ -894,6 +1001,11 @@ class SettingsService extends ChangeNotifier {
         const ['card', 'pdf'].contains(format) ? format : 'card';
     _appSettings = _appSettings.copyWith(exportFormat: validatedFormat);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'select_setting',
+      'setting': 'export_format',
+      'value': validatedFormat,
+    });
     notifyListeners();
   }
 
@@ -915,11 +1027,21 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setSyncSkipConfirm(bool value) async {
     await _mmkv.setBool(_syncSkipConfirmKey, value);
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'sync_skip_confirm',
+      'enabled': value,
+    });
     notifyListeners();
   }
 
   Future<void> setSyncDefaultIncludeMedia(bool value) async {
     await _mmkv.setBool(_syncDefaultIncludeMediaKey, value);
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'sync_include_media',
+      'enabled': value,
+    });
     notifyListeners();
   }
 
@@ -1320,6 +1442,11 @@ class SettingsService extends ChangeNotifier {
   Future<void> setAICardGenerationEnabled(bool enabled) async {
     _appSettings = _appSettings.copyWith(aiCardGenerationEnabled: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'ai_card_generation',
+      'enabled': enabled,
+    });
     notifyListeners();
   }
 

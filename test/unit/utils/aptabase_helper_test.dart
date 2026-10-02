@@ -69,6 +69,7 @@ void main() {
         'switch_theme_mode',
         'switch_theme_accent',
         'toggle_setting',
+        'select_setting',
         'daily_quote_copy',
         'daily_quote_save',
         'daily_quote_refresh',

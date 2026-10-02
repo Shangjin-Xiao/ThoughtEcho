@@ -39,6 +39,7 @@ import '../utils/anniversary_banner_text_utils.dart';
 import '../utils/anniversary_display_utils.dart';
 import 'webdav_sync_page.dart';
 import '../services/webdav_sync_service.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/lww_utils.dart';
 import '../theme/theme_style.dart';
 
@@ -1530,6 +1531,13 @@ class SettingsPageState extends State<SettingsPage> {
                           defaultStartPage: value,
                         ),
                       );
+                      // 启动页走批量写入通道，这里单独补一条选择事件
+                      //（value 只有 0/1 两个固定取值）。
+                      AptabaseHelper.trackEvent('feature_used', {
+                        'action': 'select_setting',
+                        'setting': 'default_start_page',
+                        'value': value,
+                      });
                       Navigator.pop(dialogContext);
                     }
                   },

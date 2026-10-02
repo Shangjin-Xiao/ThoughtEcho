@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 
 /// 用户接受剪贴板摘录后的回调：交给页面用它自己的新增笔记入口打开编辑器，
@@ -73,6 +74,12 @@ class ClipboardService extends ChangeNotifier {
     _enableClipboardMonitoring = value;
     _storage?.setBool(_keyEnableClipboardMonitoring, value);
     logDebug('剪贴板监控设置已更新: $value');
+    // 只上报开关布尔值，剪贴板内容绝不进入统计。
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'clipboard_monitoring',
+      'enabled': value,
+    });
     notifyListeners();
   }
 
