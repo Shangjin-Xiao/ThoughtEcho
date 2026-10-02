@@ -283,13 +283,13 @@ Agent 会在工具调用后继续处理结果，并将完整回答保留为最�
 | **删除**     | 菜单 → 删除 / 左滑         | 删除笔记                                 |
 | **收藏**     | 点击 ❤️                    | 增加喜爱度（最高显示 99+）               |
 
-### 紧凑富文本卡片渲染 (CollapsedRichText)
+### 列表卡片快速渲染与预览
 
-心迹在笔记列表与折叠卡片中采用了专门研发的 `CollapsedRichText` 高性能离屏渲染引擎：
+心迹在笔记列表与预览卡片中进行了深度性能与排版优化：
 
-- **摆脱 Quill 编辑器开销**：折叠卡片彻底不运行完整 `QuillEditor`，改由轻量级 `Text.rich` 拼接 `RichTextBlock` 序列，消除 Quill 控件 20~48ms 的冷启动初次布局延迟，彻底解决滚动列表时的顿挫感与「空白 → 灰框 → 图片」三段式闪烁。
-- **动态行数预算控制 (`maxLines`)**：针对固定高度的折叠盒（如 160px），根据可用像素区间动态算好每块标题与正文的行数上限。即便面对万字长文，排版计算量恒定受控，极大降低滚动过程中的 CPU 消耗。
-- **右侧自适应媒体缩略图 (`CollapsedMediaImage`)**：自动提取富文本 Delta 中的首个媒体引用（`DeltaMediaRef`），并在卡片右侧生成自适应比例的图文混合缩略图，保持多行文字与媒体图的视觉对齐。
+- **流畅的列表滚动体验**：对笔记卡片展示进行了全面优化，彻底解决长列表快速滑动时的卡顿与闪烁现象，让浏览更加流畅丝滑。
+- **智能行数自适应**：根据卡片展示区域自动调整标题与正文预览行数，即便是数万字的长文笔记也能保持整洁清爽。
+- **右侧图文自适应缩略图**：自动识别笔记中的首张图片，并在卡片右侧生成精致的缩略图，提供赏心悦目的图文混排效果。
 
 ### AI 卡片生成（20 种模板）
 
@@ -469,9 +469,9 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 心迹也支持在同一 WiFi 网络下的设备间直接同步，无需云服务器。
 
-- **`MediaSyncManifest` 1.0 增量清单协议**：基于 LocalSend P2P 架构，传输前两端先建立并交换包含 `images/`、`videos/`、`audios/` 媒体文件相对路径与精确字节大小的 `MediaSyncManifest` 1.0 清单。
-- **增量跳过与零流量加速**：接收端对比清单，对已存在且文件大小完全一致的媒体文件自动执行增量跳过，仅传输缺失或有修改的文件。第二次及后续同步速度提升 90% 以上，秒级完成且不浪费带宽。
-- **优雅降级保障**：与未支持 `MediaSyncManifest` 的旧版设备同步时，系统会自动平滑降级为传统全量媒体传输，确保全版本兼容。
+- **智能增量传输**：在局域网同步时，系统会自动比对两端设备的图片、音频与视频等媒体文件，仅传输新增或修改的内容。
+- **快速跳过与节省流量**：对已存在且未变更的媒体文件自动跳过，大幅缩短后续同步耗时并节省局域网带宽。
+- **全版本平滑兼容**：与旧版本心迹设备同步时会自动平滑调整传输策略，确保不同版本间依然能够正常同步。
 
 ### 同步流程
 
@@ -571,30 +571,30 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ![主题设置](https://img.shangjinyun.cn/projects/thoughtecho/theme_settings_page.jpg)
 
-#### 主题风格（3 种，`ThemeStyle`）
+#### 主题风格（3 种）
 
 心迹提供了三种独特的设计风格：
 
-| 风格 | 枚举标识 | 说明 | 特点 |
-| --- | --- | --- | --- |
-| 🎨 **Material** | `material` | 标准 Material 3 动态取色 | 支持 Material You 动态壁纸取色或自定义主题色 seed |
-| 📜 **纸与墨** | `paper` | 温暖典雅的手工质感（全新安装默认） | 暖白纸张色调 (`#FCFBF9`)、衬线字体、对齐的横线纹理与温润微阴影 |
-| 📄 **素笺** | `plain` | 冷峻极简的现代纸感 | 冷灰纸面 (`#F8F9FA`)、深青色墨、硬朗无横线极简边框 |
+| 风格 | 说明 | 特点 |
+| --- | --- | --- |
+| 🎨 **Material** | 标准 Material 3 动态取色 | 支持 Material You 动态壁纸取色或自定义主题色 |
+| 📜 **纸与墨** | 温暖典雅的手工质感（全新安装默认） | 暖白纸张色调、衬线字体、对齐的横线纹理与温润微阴影 |
+| 📄 **素笺** | 冷峻极简的现代纸感 | 冷灰纸面、深青色墨、硬朗无横线极简边框 |
 
-#### 墨色定制（Theme Accent）
+#### 墨色定制
 
-在选择「纸与墨」或「素笺」手工风格时，您可以进一步挑选搭配的墨色 Accent（独立于纸张外观），实现「换一支笔，不换一叠纸」的个性化排版：
+在选择「纸与墨」或「素笺」手工风格时，您可以进一步挑选搭配的墨色（独立于纸张外观），实现「换一支笔，不换一叠纸」的个性化排版：
 
-1. 🤎 **生褐 (`umber`)**：暖棕赭石墨色（亮色 `#7A5530` / 暗色 `#C9A077`），典雅沉稳，为「纸与墨」默认搭配。
-2. 🍵 **青瓷 (`celadon`)**：黛青瓷色（亮色 `#38534F` / 暗色 `#8FB5B0`），清雅宁静，为「素笺」默认搭配。
-3. 💙 **黛蓝 (`indigo`)**：经典靛蓝墨色（亮色 `#3C4E78` / 暗色 `#A3B6E0`），庄重深邃，古风书卷感十足。
-4. 🔴 **朱砂 (`cinnabar`)**：鲜明朱砂红墨（亮色 `#8E3A2C` / 暗色 `#E09B84`），醒目提神，适合重点印记。
+1. 🤎 **生褐**：暖棕赭石墨色，典雅沉稳，为「纸与墨」默认搭配。
+2. 🍵 **青瓷**：黛青瓷色，清雅宁静，为「素笺」默认搭配。
+3. 💙 **黛蓝**：经典靛蓝墨色，庄重深邃，古风书卷感十足。
+4. 🔴 **朱砂**：鲜明朱砂红墨，醒目提神，适合重点印记。
 
-#### 内置思源宋体字库 (`NotoSerifSC-Subset.ttf`)
+#### 高品质衬线字体
 
-心迹在应用内部直接内置了精简优化的思源宋体（Noto Serif SC Subset）字体文件：
+心迹内置了精美的衬线字体：
 - 选择「纸与墨」或「素笺」手工风格时自动生效衬线排版。
-- 零离线流量开销，无需在运行时额外下载字体文件，即刻享有书籍印刷级的纸质排版质感。
+- 无需在线下载额外字体文件，即刻享有书籍印刷级的纸质排版质感。
 
 #### 主题模式
 
@@ -1082,13 +1082,13 @@ All filters can be combined and reset.
 | **Delete**        | Menu → Delete / Swipe left          | Delete note                                                |
 | **Favorite**      | Tap ❤️                              | Increase favorite count (max display 99+)                  |
 
-### Compact Rich Text Card Rendering (CollapsedRichText)
+### Fast Card Rendering & Preview
 
-ThoughtEcho features a custom high-performance `CollapsedRichText` off-screen rendering engine for note list cards:
+ThoughtEcho optimizes note list card loading and preview performance:
 
-- **Eliminates Quill Editor Overhead**: Collapsed cards bypass heavy `QuillEditor` widgets entirely, rendering formatted `RichTextBlock` sequences using `Text.rich`. This removes the 20–48ms cold initial layout latency and scroll stuttering.
-- **Dynamic Line Budgeting (`maxLines`)**: Line budgets are calculated on the fly based on container height (e.g. 160px box). Even for long notes spanning thousands of words, layout costs remain strictly bounded.
-- **Adaptive Right-Side Thumbnail (`CollapsedMediaImage`)**: Automatically detects the primary media reference (`DeltaMediaRef`) from Delta content and displays an adaptive right-aligned media thumbnail next to the truncated text.
+- **Smooth List Scrolling**: Card layout is optimized for high performance, eliminating scrolling stutter and rendering delays for a fluid browsing experience.
+- **Adaptive Line Budgeting**: Line limits automatically adjust based on card height, keeping long notes clean, compact, and responsive.
+- **Adaptive Right-Side Media Thumbnail**: Automatically detects the first image or media attachment in a note and displays an elegant thumbnail on the right side of the card.
 
 ### AI Card Generation (20 Templates)
 
@@ -1266,9 +1266,9 @@ ThoughtEcho supports secure cloud synchronization via the WebDAV protocol:
 
 ThoughtEcho also supports direct sync between devices on the same WiFi network, no cloud server required.
 
-- **`MediaSyncManifest` 1.0 Incremental Sync Protocol**: Powered by LocalSend P2P architecture, devices exchange a `MediaSyncManifest` (v1.0) listing relative file paths (`images/`, `videos/`, `audios/`) and byte sizes before media transfer starts.
-- **Incremental Skip & Zero-Traffic Speedup**: The receiver compares the manifest and skips media files that already exist with identical sizes. Subsequent syncs finish up to 90% faster while saving network bandwidth.
-- **Graceful Fallback**: Syncing with older ThoughtEcho clients automatically falls back to full media transfer for seamless backward compatibility.
+- **Smart Incremental Media Sync**: Prior to media transfer, devices compare media inventory (images, audio, video) and transmit only new or modified attachments.
+- **Fast Skip & Bandwidth Savings**: Already existing media files are skipped automatically, speeding up subsequent syncs and saving network bandwidth.
+- **Seamless Backward Compatibility**: Automatically adjusts sync methods when connecting with older client versions to ensure seamless data exchange.
 
 ### Sync Process
 
@@ -1366,28 +1366,28 @@ The app supports multiple languages including Chinese, English, Japanese, Korean
 
 ![Theme Settings](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/theme_settings_page.jpg)
 
-#### Theme Styles (3 Types, `ThemeStyle`)
+#### Theme Styles (3 Types)
 
 ThoughtEcho offers three distinctive design aesthetics:
 
-| Style | Enum Key | Description | Highlights |
-| --- | --- | --- | --- |
-| 🎨 **Material** | `material` | Standard Material 3 dynamic theme | Supports Material You wallpaper color extraction or custom seed color |
-| 📜 **Paper & Ink** | `paper` | Warm, handcrafted tactile feel (Default for new installs) | Warm paper tone (`#FCFBF9`), serif typography, aligned ruling lines & subtle shadows |
-| 📄 **Plain** | `plain` | Minimalist cool paper aesthetic | Cool paper surface (`#F8F9FA`), deep teal ink, clean border styling without ruling lines |
+| Style | Description | Highlights |
+| --- | --- | --- |
+| 🎨 **Material** | Standard Material 3 dynamic theme | Supports Material You wallpaper color extraction or custom color themes |
+| 📜 **Paper & Ink** | Warm, handcrafted tactile feel (Default for new installs) | Warm paper tone, serif typography, aligned ruling lines & subtle shadows |
+| 📄 **Plain** | Minimalist cool paper aesthetic | Cool paper surface, deep teal ink, clean border styling without ruling lines |
 
-#### Custom Ink Accents (Theme Accent)
+#### Custom Ink Accents
 
 When using "Paper & Ink" or "Plain" handcrafted styles, you can select custom accent ink colors independently from the paper background ("Change the pen, keep the paper"):
 
-1. 🤎 **Raw Umber (`umber`)**: Warm brown/ochre ink (Light `#7A5530` / Dark `#C9A077`), classic and elegant. Default for Paper & Ink.
-2. 🍵 **Celadon (`celadon`)**: Subtle celadon teal ink (Light `#38534F` / Dark `#8FB5B0`), calm and serene. Default for Plain.
-3. 💙 **Indigo (`indigo`)**: Deep classic indigo ink (Light `#3C4E78` / Dark `#A3B6E0`), scholarly and refined.
-4. 🔴 **Cinnabar (`cinnabar`)**: Vibrant cinnabar red ink (Light `#8E3A2C` / Dark `#E09B84`), energetic and striking for key highlights.
+1. 🤎 **Raw Umber**: Warm brown/ochre ink, classic and elegant. Default for Paper & Ink.
+2. 🍵 **Celadon**: Subtle celadon teal ink, calm and serene. Default for Plain.
+3. 💙 **Indigo**: Deep classic indigo ink, scholarly and refined.
+4. 🔴 **Cinnabar**: Vibrant cinnabar red ink, energetic and striking for key highlights.
 
-#### Built-in Noto Serif SC Font (`NotoSerifSC-Subset.ttf`)
+#### Built-in High-Quality Serif Font
 
-ThoughtEcho embeds a lightweight subset of Noto Serif SC directly into the app:
+ThoughtEcho embeds elegant serif typography directly into the app:
 - Automatically activated when selecting "Paper & Ink" or "Plain" handcrafted styles.
 - Zero network downloads required — experience authentic paper publishing typography right out of the box.
 
