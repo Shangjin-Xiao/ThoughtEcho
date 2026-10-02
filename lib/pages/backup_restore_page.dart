@@ -5,6 +5,7 @@ import '../models/merge_report.dart';
 import '../services/backup_service.dart';
 import '../services/large_file_manager.dart';
 import '../utils/app_logger.dart';
+import '../utils/aptabase_helper.dart';
 import '../utils/backup_progress_update_gate.dart';
 import '../utils/stream_file_selector.dart';
 import '../utils/time_utils.dart';
@@ -392,6 +393,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
           _showSuccessSnackBar(savedToPathMessage);
         }
+      }
+
+      if (backupPath != null) {
+        AptabaseHelper.trackEvent(
+          'feature_used',
+          {'action': 'export_text_backup'},
+        );
       }
 
       // 导出完成后上报富文本路径转换失败（不静默降级）

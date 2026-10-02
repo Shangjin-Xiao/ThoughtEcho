@@ -862,9 +862,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
 
         final listView = tester.widget<ListView>(find.byType(ListView));
-        final cacheExtent = listView.scrollCacheExtent;
+        final cacheExtent = listView.cacheExtent;
         expect(cacheExtent, isNotNull);
-        expect(cacheExtent!.value, inInclusiveRange(400.0, 900.0));
+        expect(cacheExtent, inInclusiveRange(400.0, 900.0));
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
