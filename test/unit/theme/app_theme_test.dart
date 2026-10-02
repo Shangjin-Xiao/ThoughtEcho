@@ -190,8 +190,11 @@ void main() {
   test('setThemeAccent 切换非默认墨色上报统计，选中已生效的默认墨色抑制上报', () async {
     final storage = SafeMMKV();
     await storage.initialize();
+    await storage.remove('theme_accent');
     await storage.setString('theme_style', ThemeStyle.paper.name);
     await storage.remove('theme_accent_${ThemeStyle.paper.name}');
+    await storage.remove('theme_accent_${ThemeStyle.plain.name}');
+    await storage.remove('theme_accent_${ThemeStyle.material.name}');
 
     final events = <Map<String, dynamic>>[];
     AptabaseHelper.onTrackEventForTesting = (eventName, props) {
