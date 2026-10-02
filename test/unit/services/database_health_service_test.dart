@@ -284,20 +284,26 @@ void main() {
     test('checkTagDataConsistency 检测孤立关联、重复关联与无效分类引用', () async {
       // 插入正常分类和笔记
       await database.insert('categories', {'id': 'cat-1', 'name': '分类1'});
-      await database.insert('quotes', {'id': 'q-1', 'content': '内容1', 'category_id': 'cat-1'});
+      await database.insert(
+          'quotes', {'id': 'q-1', 'content': '内容1', 'category_id': 'cat-1'});
 
       // 1. 孤立 quote_tags（引用不存在的 quote_id）
-      await database.insert('quote_tags', {'quote_id': 'non-existent-quote', 'tag_id': 'cat-1'});
+      await database.insert(
+          'quote_tags', {'quote_id': 'non-existent-quote', 'tag_id': 'cat-1'});
 
       // 2. 孤立 quote_tags（引用不存在的 tag_id）
-      await database.insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'non-existent-cat'});
+      await database.insert(
+          'quote_tags', {'quote_id': 'q-1', 'tag_id': 'non-existent-cat'});
 
       // 3. 重复标签关联
-      await database.insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'cat-1'});
-      await database.insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'cat-1'});
+      await database
+          .insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'cat-1'});
+      await database
+          .insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'cat-1'});
 
       // 4. 无效分类引用
-      await database.insert('quotes', {'id': 'q-2', 'content': '内容2', 'category_id': 'invalid-cat'});
+      await database.insert('quotes',
+          {'id': 'q-2', 'content': '内容2', 'category_id': 'invalid-cat'});
 
       final report = await service.checkTagDataConsistency(database);
 
@@ -310,18 +316,24 @@ void main() {
 
     test('cleanupTagDataInconsistencies 正确清理不一致的数据', () async {
       await database.insert('categories', {'id': 'cat-1', 'name': '分类1'});
-      await database.insert('quotes', {'id': 'q-1', 'content': '内容1', 'category_id': 'cat-1'});
+      await database.insert(
+          'quotes', {'id': 'q-1', 'content': '内容1', 'category_id': 'cat-1'});
 
       // 孤立关联
-      await database.insert('quote_tags', {'quote_id': 'non-existent-quote', 'tag_id': 'cat-1'});
-      await database.insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'non-existent-cat'});
+      await database.insert(
+          'quote_tags', {'quote_id': 'non-existent-quote', 'tag_id': 'cat-1'});
+      await database.insert(
+          'quote_tags', {'quote_id': 'q-1', 'tag_id': 'non-existent-cat'});
 
       // 重复关联
-      await database.insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'cat-1'});
-      await database.insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'cat-1'});
+      await database
+          .insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'cat-1'});
+      await database
+          .insert('quote_tags', {'quote_id': 'q-1', 'tag_id': 'cat-1'});
 
       // 无效分类引用
-      await database.insert('quotes', {'id': 'q-2', 'content': '内容2', 'category_id': 'invalid-cat'});
+      await database.insert('quotes',
+          {'id': 'q-2', 'content': '内容2', 'category_id': 'invalid-cat'});
 
       final success = await service.cleanupTagDataInconsistencies(database);
       expect(success, isTrue);
@@ -335,16 +347,19 @@ void main() {
       expect(issues, isEmpty);
 
       // 确认无效分类引用已置空
-      final q2Result = await database.query('quotes', where: 'id = ?', whereArgs: ['q-2']);
+      final q2Result =
+          await database.query('quotes', where: 'id = ?', whereArgs: ['q-2']);
       expect(q2Result.first['category_id'], isNull);
 
       // 确认重复关联保留了1条
-      final tagRelations = await database.query('quote_tags', where: 'quote_id = ? AND tag_id = ?', whereArgs: ['q-1', 'cat-1']);
+      final tagRelations = await database.query('quote_tags',
+          where: 'quote_id = ? AND tag_id = ?', whereArgs: ['q-1', 'cat-1']);
       expect(tagRelations.length, 1);
     });
   });
 
-  group('DatabaseHealthService Maintenance and Memory Store Quote Selection', () {
+  group('DatabaseHealthService Maintenance and Memory Store Quote Selection',
+      () {
     late DatabaseHealthService service;
     late Database database;
 
@@ -357,7 +372,8 @@ void main() {
       await database.close();
     });
 
-    test('performDatabaseMaintenance 执行 VACUUM, ANALYZE, REINDEX 并触发进度回调', () async {
+    test('performDatabaseMaintenance 执行 VACUUM, ANALYZE, REINDEX 并触发进度回调',
+        () async {
       final progressLog = <String>[];
       final result = await service.performDatabaseMaintenance(
         database,
