@@ -399,6 +399,34 @@ void main() {
       expect(controller.allCategoriesCache, isNull);
       expect(db2.getTagsCallCount, equals(0));
     });
+
+    test('ensureTagExists 新建固定 ID 标签后缓存条目与数据库读回的一致', () async {
+      final db = _CountingDatabaseService();
+      final controller = AddNoteController(context: FakeBuildContext())
+        ..updateServices(dbService: db);
+
+      // 抖机灵不预建，只在保存对应一言时按固定 ID 建出，走的正是缓存更新分支
+      final tagId = await controller.ensureTagExists(
+        db,
+        '抖机灵',
+        '😆',
+        fixedId: DatabaseService.defaultTagIdJoke,
+      );
+
+      expect(tagId, DatabaseService.defaultTagIdJoke);
+      expect(db.getTagsCallCount, equals(1), reason: '新建成功后就地更新缓存，不应再全量拉一次标签');
+
+      final persisted = (await db.getTags())
+          .firstWhere((tag) => tag.id == DatabaseService.defaultTagIdJoke);
+      final cached = controller.allCategoriesCache!
+          .where((tag) => tag.id == DatabaseService.defaultTagIdJoke)
+          .toList();
+      expect(cached, hasLength(1), reason: '同一个固定 ID 不能在缓存里出现两次');
+      expect(cached.single.name, equals(persisted.name));
+      expect(cached.single.isDefault, equals(persisted.isDefault),
+          reason: '内置系统标签必须保留 is_default，否则会退化成可删可改的普通标签');
+      expect(cached.single.iconName, equals(persisted.iconName));
+    });
   });
 }
 
@@ -428,7 +456,14 @@ class _CountingDatabaseService extends DatabaseService {
 
   @override
   Future<void> addTagWithId(String id, String name, {String? iconName}) async {
-    _tags[id] = NoteTag(id: id, name: name, iconName: iconName ?? '');
+    _tags[id] = NoteTag(
+      id: id,
+      name: name,
+      // 镜像 database_tag_mixin.dart：内置系统标签写回 is_default，
+      // iconName 为空时落成 '' 而不是 null
+      isDefault: DatabaseService.systemTagIds.contains(id),
+      iconName: iconName ?? '',
+    );
   }
 
   @override

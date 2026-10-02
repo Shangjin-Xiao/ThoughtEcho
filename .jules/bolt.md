@@ -258,3 +258,11 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:**
 重构 `lib/widgets/add_note_dialog.dart` 中的 `_parseSource` 方法，替换内联正则提取逻辑为直接调用 `StringUtils.parseSourceToControllers`。
+
+## 2026-10-27 - 优化 AddNoteController 中 ensureTagExists 数据库查询与标签缓存机制
+
+**Learning:**
+在 `AddNoteController` 中创建固定 ID 的新标签时，以往在写入数据库后会重新调用 `db.getTags()` 刷新整个缓存。由于新标签的 ID 与名称均已确定，直接将新创建的 `NoteTag` 追加更新至内存缓存 `allCategoriesCache`，可完全消除创建新固定标签时的数据库重新查询开销；同时把循环中 `name.toLowerCase()` 的计算提升到循环体外，能进一步消除重复字符串变换。
+
+**Action:**
+修改 `lib/controllers/add_note_controller.dart` 中 `ensureTagExists` 的逻辑，提升 `lowerName = name.toLowerCase()`，并且在 `addTagWithId` 成功后直接使用 `allCategoriesCache = [...categories, newTag]` 更新内存缓存返回，免去多余的 `db.getTags()` 数据库查询。
