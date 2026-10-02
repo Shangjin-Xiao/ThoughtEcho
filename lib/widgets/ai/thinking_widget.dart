@@ -66,12 +66,16 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
     if (oldWidget.inProgress != widget.inProgress) {
       if (widget.inProgress) {
         if (!_isExpanded) {
-          _isExpanded = true;
+          setState(() {
+            _isExpanded = true;
+          });
           _rotationController.forward();
         }
       } else {
         if (_isExpanded) {
-          _isExpanded = false;
+          setState(() {
+            _isExpanded = false;
+          });
           _rotationController.reverse();
         }
       }

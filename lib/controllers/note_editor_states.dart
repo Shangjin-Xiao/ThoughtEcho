@@ -19,6 +19,8 @@ class NoteEditorState extends ChangeNotifier {
         _controller = quill.QuillController.basic();
 
   quill.QuillController _controller;
+  final ScrollController scrollController = ScrollController();
+  final FocusNode focusNode = FocusNode();
   final String initialPlainText;
   final String? initialDeltaContent;
   final String draftStorageKey;
@@ -107,6 +109,8 @@ class NoteEditorState extends ChangeNotifier {
       _controller.removeListener(draftChangeListener);
     }
     _controller.dispose();
+    scrollController.dispose();
+    focusNode.dispose();
     super.dispose();
   }
 }

@@ -222,8 +222,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                       padding: const EdgeInsets.all(16),
                       child: quill.QuillEditor(
                         controller: _editorState.controller,
-                        scrollController: ScrollController(),
-                        focusNode: FocusNode(),
+                        scrollController: _editorState.scrollController,
+                        focusNode: _editorState.focusNode,
                         config: quill.QuillEditorConfig(
                           // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
                           // 卡片里的正文挤得多——同一条笔记「写的时候」和

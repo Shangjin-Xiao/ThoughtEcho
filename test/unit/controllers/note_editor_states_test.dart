@@ -36,6 +36,27 @@ void main() {
       expect(saves, 1);
       state.dispose();
     });
+
+    test('provides and disposes scrollController and focusNode', () {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_key',
+        restoredFromDraft: false,
+      );
+
+      final scrollController = state.scrollController;
+      final focusNode = state.focusNode;
+
+      expect(scrollController, isNotNull);
+      expect(focusNode, isNotNull);
+      expect(focusNode.hasFocus, isFalse);
+
+      state.dispose();
+
+      expect(() => scrollController.addListener(() {}), throwsFlutterError);
+      expect(() => focusNode.addListener(() {}), throwsFlutterError);
+    });
   });
 
   group('NoteEditorMetadataState', () {
