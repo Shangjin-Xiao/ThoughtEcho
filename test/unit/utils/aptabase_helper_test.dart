@@ -66,6 +66,15 @@ void main() {
         'smart_push_test',
         'switch_theme_style',
         'switch_theme_mode',
+        'switch_theme_accent',
+        'toggle_setting',
+        'daily_quote_copy',
+        'daily_quote_save',
+        'daily_quote_refresh',
+        'daily_prompt_generate',
+        'daily_prompt_ask',
+        'ai_test_connection',
+        'ai_provider_save',
       ];
 
       for (final action in actions) {
@@ -98,6 +107,8 @@ void main() {
         'theme_settings',
         'smart_push_settings',
         'note_sync',
+        'ai_settings',
+        'agent_memory',
       ];
 
       for (final page in pages) {
@@ -105,6 +116,50 @@ void main() {
           () => AptabaseHelper.trackPageView(page),
           returnsNormally,
         );
+      }
+    });
+
+    test('tracks enriched feature_used events with anonymous boolean metadata',
+        () {
+      final events = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        events.add({'event': eventName, 'props': props});
+      };
+
+      try {
+        AptabaseHelper.trackEvent('feature_used', {
+          'action': 'save_note',
+          'has_tags': true,
+          'has_weather': false,
+          'has_location': true,
+          'has_source': false,
+        });
+
+        AptabaseHelper.trackEvent('feature_used', {
+          'action': 'ai_insight_generate',
+          'is_ai': true,
+          'is_empty_period': false,
+        });
+
+        AptabaseHelper.trackEvent('feature_used', {
+          'action': 'toggle_setting',
+          'setting': 'agent_memory',
+          'enabled': true,
+        });
+
+        expect(events, hasLength(3));
+        expect(events[0]['props']['action'], 'save_note');
+        expect(events[0]['props']['has_tags'], isTrue);
+        expect(events[0]['props']['has_weather'], isFalse);
+
+        expect(events[1]['props']['action'], 'ai_insight_generate');
+        expect(events[1]['props']['is_ai'], isTrue);
+
+        expect(events[2]['props']['action'], 'toggle_setting');
+        expect(events[2]['props']['setting'], 'agent_memory');
+        expect(events[2]['props']['enabled'], isTrue);
+      } finally {
+        AptabaseHelper.onTrackEventForTesting = null;
       }
     });
 

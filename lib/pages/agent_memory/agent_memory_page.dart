@@ -5,6 +5,7 @@ import '../../gen_l10n/app_localizations.dart';
 import '../../models/agent_memory.dart';
 import '../../services/agent_memory_service.dart';
 import '../../theme/theme_style.dart';
+import '../../utils/aptabase_helper.dart';
 import '../../widgets/app_empty_view.dart';
 import '../../widgets/app_snackbar.dart';
 import 'agent_memory_card.dart';
@@ -39,6 +40,12 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
   bool _isSearching = false;
   String _searchQuery = '';
   Future<_MemoryBundle>? _bundleFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    AptabaseHelper.trackPageView('agent_memory');
+  }
 
   @override
   void didChangeDependencies() {

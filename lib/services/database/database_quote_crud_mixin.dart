@@ -5,6 +5,20 @@ part of '../database_service.dart';
 /// TODO: 接入 tostore 向量索引 —— 在 addQuote / updateQuote / deleteQuote
 /// 中同步维护 `note_embeddings` 向量表，供本地语义搜索使用。
 mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
+  void _trackSaveNoteEvent(Quote quote) {
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'save_note',
+      'has_tags': quote.tagIds.isNotEmpty,
+      'has_weather': quote.weather != null && quote.weather!.isNotEmpty,
+      'has_location': quote.latitude != null ||
+          (quote.location != null && quote.location!.isNotEmpty),
+      'has_source':
+          (quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
+              (quote.sourceWork != null && quote.sourceWork!.isNotEmpty) ||
+              (quote.source != null && quote.source!.isNotEmpty),
+    });
+  }
+
   /// 修复：添加一条引用（笔记），增加数据验证和并发控制
   @override
   Future<void> addQuote(Quote quote) async {
@@ -18,7 +32,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       _memoryStore.add(quote);
       notifyListeners();
       notifyLocalDataChangedForParts();
-      AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
+      _trackSaveNoteEvent(quote);
       return;
     }
 
@@ -104,7 +118,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         refreshQuotesStreamForParts();
         notifyListeners(); // 通知其他监听者（如Homepage的FAB）
         notifyLocalDataChangedForParts();
-        AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
+        _trackSaveNoteEvent(quoteWithId);
       } catch (e) {
         logDebug('保存笔记到数据库时出错: $e');
         rethrow; // 重新抛出异常，让调用者处理
@@ -611,7 +625,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
       notifyListeners();
       notifyLocalDataChangedForParts();
-      AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
+      _trackSaveNoteEvent(quote);
       return QuoteUpdateResult.updated;
     }
 
@@ -759,7 +773,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           _quotesController!.add(List.from(_currentQuotes));
         }
         notifyListeners(); // 通知其他监听者
-        AptabaseHelper.trackEvent('feature_used', {'action': 'save_note'});
+        _trackSaveNoteEvent(quote);
         return QuoteUpdateResult.updated;
       } catch (e, stack) {
         UnifiedLogService.instance.error(

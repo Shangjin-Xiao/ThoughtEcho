@@ -762,6 +762,11 @@ class AppTheme with ChangeNotifier {
     if (_themeAccents[style] == accent) return;
     _themeAccents[style] = accent;
     _clearThemeCache();
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'switch_theme_accent',
+      'accent': accent.name,
+      'style': style.name,
+    });
     // 与 setThemeMode 一致：先刷新 UI，再落盘。
     notifyListeners();
 
@@ -781,6 +786,11 @@ class AppTheme with ChangeNotifier {
     if (_useDynamicColor == value) return;
     _useDynamicColor = value;
     _clearThemeCache();
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'toggle_setting',
+      'setting': 'use_dynamic_color',
+      'enabled': value,
+    });
     // 先刷新UI，避免持久化卡住导致无响应
     notifyListeners();
 

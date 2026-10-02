@@ -499,7 +499,7 @@ class AIService extends ChangeNotifier {
     DateTime? rangeEnd,
   }) async* {
     AptabaseHelper.trackEvent(
-        'feature_used', {'action': 'ai_insight_generate'});
+        'feature_used', {'action': 'ai_insight_generate', 'is_ai': true});
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
@@ -563,8 +563,11 @@ class AIService extends ChangeNotifier {
     int? daysSinceLastNote,
     bool everWroteAnything = true,
   }) async* {
-    AptabaseHelper.trackEvent(
-        'feature_used', {'action': 'ai_insight_generate'});
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'ai_insight_generate',
+      'is_ai': true,
+      'is_empty_period': true
+    });
     final languageCode = _settingsService.localeCode;
     final profileBlock = await _userProfileContext();
 
@@ -594,6 +597,11 @@ class AIService extends ChangeNotifier {
     int? daysSinceLastNote,
     bool everWroteAnything = true,
   }) {
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'ai_insight_generate',
+      'is_ai': false,
+      'is_empty_period': true
+    });
     return _promptManager.formatLocalEmptyPeriodInsight(
       periodLabel: periodLabel,
       daysSinceLastNote: daysSinceLastNote,
@@ -612,6 +620,8 @@ class AIService extends ChangeNotifier {
     required int noteCount,
     required int totalWordCount,
   }) {
+    AptabaseHelper.trackEvent(
+        'feature_used', {'action': 'ai_insight_generate', 'is_ai': false});
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
@@ -707,6 +717,9 @@ class AIService extends ChangeNotifier {
           temperature: temperature,
         );
 
+        AptabaseHelper.trackEvent(
+            'feature_used', {'action': 'daily_prompt_generate', 'is_ai': true});
+
         await for (final chunk in _streamViaOpenAI(
           systemPrompt: systemPromptWithContext,
           userMessage: userMessage,
@@ -801,7 +814,7 @@ class AIService extends ChangeNotifier {
     String? periodLabel,
   }) {
     AptabaseHelper.trackEvent(
-        'feature_used', {'action': 'ai_insight_generate'});
+        'feature_used', {'action': 'ai_insight_generate', 'is_ai': true});
     // 将笔记数据转换为JSON格式
     final jsonData = _requestHelper.convertQuotesToJson(
       quotes,
@@ -1180,6 +1193,7 @@ class AIService extends ChangeNotifier {
 
   // 润色文本
   Future<String> polishText(String content) async {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'ai_action_polish'});
     // 使用异步验证确保API Key有效性
     if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
@@ -1201,6 +1215,7 @@ class AIService extends ChangeNotifier {
   // 流式润色文本
   /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
   Stream<String> streamPolishText(String content) {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'ai_action_polish'});
     final userMessage = _promptManager.buildPolishUserMessage(content);
 
     return _streamViaOpenAI(
@@ -1212,6 +1227,7 @@ class AIService extends ChangeNotifier {
 
   // 续写文本
   Future<String> continueText(String content) async {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'ai_action_continue'});
     // 使用异步验证确保API Key有效性
     if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
@@ -1236,6 +1252,7 @@ class AIService extends ChangeNotifier {
   // 流式续写文本
   /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
   Stream<String> streamContinueText(String content) {
+    AptabaseHelper.trackEvent('feature_used', {'action': 'ai_action_continue'});
     final userMessage = _promptManager.buildContinuationUserMessage(content);
 
     return _streamViaOpenAI(
