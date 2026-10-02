@@ -115,5 +115,77 @@ void main() {
         expect(result.isEmpty, isTrue);
       });
     });
+
+    group('getLocalDailyQuote parameterized query safety', () {
+      setUp(() async {
+        await db.execute('''
+          CREATE TABLE quotes (
+            id TEXT PRIMARY KEY,
+            content TEXT,
+            source_work TEXT,
+            source_author TEXT,
+            is_deleted INTEGER DEFAULT 0
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE categories (
+            id TEXT PRIMARY KEY,
+            name TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE quote_tags (
+            quote_id TEXT,
+            tag_id TEXT
+          )
+        ''');
+      });
+
+      test(
+          'getLocalDailyQuote works safely with parameterized query in tagOnly mode',
+          () async {
+        await db.insert('categories',
+            {'id': DatabaseHealthService.dailyQuoteTagId, 'name': '每日一言'});
+        await db.insert('quotes', {
+          'id': 'q1',
+          'content': 'Short quote content',
+          'source_work': 'Work',
+          'source_author': 'Author',
+          'is_deleted': 0
+        });
+        await db.insert('quote_tags', {
+          'quote_id': 'q1',
+          'tag_id': DatabaseHealthService.dailyQuoteTagId
+        });
+
+        final result = await healthService.getLocalDailyQuote(
+          db,
+          offlineQuoteSource: 'tagOnly',
+        );
+
+        expect(result, isNotNull);
+        expect(result!['content'], equals('Short quote content'));
+      });
+
+      test(
+          'getLocalDailyQuote works safely with parameterized query in allNotes mode',
+          () async {
+        await db.insert('quotes', {
+          'id': 'q2',
+          'content': 'Short single line quote',
+          'source_work': 'Work 2',
+          'source_author': 'Author 2',
+          'is_deleted': 0
+        });
+
+        final result = await healthService.getLocalDailyQuote(
+          db,
+          offlineQuoteSource: 'allNotes',
+        );
+
+        expect(result, isNotNull);
+        expect(result!['content'], equals('Short single line quote'));
+      });
+    });
   });
 }
