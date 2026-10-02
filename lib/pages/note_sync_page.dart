@@ -865,7 +865,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Tooltip(
                                     message: fullEndpoint,
-                                    waitDuration: const Duration(milliseconds: 350),
+                                    waitDuration:
+                                        const Duration(milliseconds: 350),
                                     child: Text(
                                       networkStatus,
                                       style: Theme.of(context)

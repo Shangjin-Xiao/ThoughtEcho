@@ -437,12 +437,14 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             ),
                             onChanged: (val) {
                               var trimmed = val.trim();
-                              if (trimmed.toLowerCase().startsWith('https://')) {
+                              if (trimmed
+                                  .toLowerCase()
+                                  .startsWith('https://')) {
                                 final clean = trimmed.substring(8);
                                 _urlController.value = TextEditingValue(
                                   text: clean,
-                                  selection:
-                                      TextSelection.collapsed(offset: clean.length),
+                                  selection: TextSelection.collapsed(
+                                      offset: clean.length),
                                 );
                               }
                               setState(() {});
