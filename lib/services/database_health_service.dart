@@ -170,14 +170,12 @@ class DatabaseHealthService {
           !_tableColumnCache.keys
               .any((t) => _requiredMainDatabaseTables.contains(t))) {
         try {
-          final placeholders =
-              _requiredMainDatabaseTables.map((_) => '?').join(',');
           final args = _requiredMainDatabaseTables.toList();
 
           final batchedResult = await db.rawQuery('''
             SELECT m.name as table_name, p.name as column_name
             FROM sqlite_master m, pragma_table_info(m.name) p
-            WHERE m.type = 'table' AND m.name IN ($placeholders)
+            WHERE m.type = 'table' AND m.name IN (?, ?, ?)
           ''', args);
 
           // Initialize cache for all main tables to empty sets
