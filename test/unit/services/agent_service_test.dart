@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 import '../../test_harness.dart';
 
@@ -88,6 +90,33 @@ void main() {
 
       expect(a, equals(b));
       expect(a.hashCode, equals(b.hashCode));
+    });
+
+    test(
+        'ToolCall.logError forwards message, error, stackTrace, and source to AppLogger',
+        () {
+      final logService = _RecordingLogService();
+      AppLogger.serviceForTesting = logService;
+      addTearDown(() {
+        AppLogger.serviceForTesting = UnifiedLogService.instance;
+      });
+
+      final call = ToolCall(
+        id: 'call_1',
+        name: 'search_notes',
+        arguments: const <String, Object?>{},
+      );
+      final error = Exception('network failure');
+      final stack = StackTrace.current;
+
+      call.logError('Failed to search', error: error, stackTrace: stack);
+
+      expect(logService.records, hasLength(1));
+      final record = logService.records.first;
+      expect(record['message'], equals('Failed to search'));
+      expect(record['source'], equals('AgentTool:search_notes'));
+      expect(record['error'], equals(error));
+      expect(record['stackTrace'], equals(stack));
     });
   });
 
@@ -272,4 +301,22 @@ void main() {
       expect(AgentService.parsePostTurnMemoryJson('{corrupted json'), isNull);
     });
   });
+}
+
+class _RecordingLogService implements UnifiedLogService {
+  final List<Map<String, dynamic>> records = [];
+
+  @override
+  void error(String message,
+      {String? source, Object? error, StackTrace? stackTrace}) {
+    records.add({
+      'message': message,
+      'source': source,
+      'error': error,
+      'stackTrace': stackTrace,
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
