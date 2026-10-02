@@ -2,7 +2,7 @@ part of '../database_schema_manager.dart';
 
 /// The authoritative SQL definitions for the current main notes schema.
 class DatabaseSchemaDefinitions {
-  static const int schemaVersion = 21;
+  static const int schemaVersion = 22;
 
   static const String poiNameColumn = 'poi_name';
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import '../utils/app_logger.dart';
+import 'database_schema_manager.dart';
 
 /// Service responsible for append-only delta logging into `sync_delta_log`.
 class DeltaLogService {
@@ -19,13 +20,29 @@ class DeltaLogService {
     final utcTime = timestamp ?? DateTime.now().toUtc().toIso8601String();
     final jsonPayload = jsonEncode(payload);
 
-    final seq = await executor.insert(tableName, {
-      'entity_type': entityType,
-      'entity_id': entityId,
-      'action': action,
-      'payload': jsonPayload,
-      'timestamp': utcTime,
-    });
+    int seq;
+    try {
+      seq = await executor.insert(tableName, {
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'action': action,
+        'payload': jsonPayload,
+        'timestamp': utcTime,
+      });
+    } catch (e) {
+      if (e.toString().contains('no such table: sync_delta_log')) {
+        await DatabaseSchemaDefinitions().ensureSyncDeltaLogTable(executor);
+        seq = await executor.insert(tableName, {
+          'entity_type': entityType,
+          'entity_id': entityId,
+          'action': action,
+          'payload': jsonPayload,
+          'timestamp': utcTime,
+        });
+      } else {
+        rethrow;
+      }
+    }
 
     logDebug(
       'Recorded delta log entry #$seq [$action $entityType:$entityId]',
@@ -40,13 +57,21 @@ class DeltaLogService {
     int fromSeq, {
     int limit = 1000,
   }) async {
-    final rows = await executor.query(
-      tableName,
-      where: 'seq > ?',
-      whereArgs: [fromSeq],
-      orderBy: 'seq ASC',
-      limit: limit,
-    );
+    final List<Map<String, Object?>> rows;
+    try {
+      rows = await executor.query(
+        tableName,
+        where: 'seq > ?',
+        whereArgs: [fromSeq],
+        orderBy: 'seq ASC',
+        limit: limit,
+      );
+    } catch (e) {
+      if (e.toString().contains('no such table: sync_delta_log')) {
+        return [];
+      }
+      rethrow;
+    }
 
     return rows.map((row) {
       Map<String, dynamic> parsedPayload = {};
@@ -75,33 +100,54 @@ class DeltaLogService {
 
   /// Gets the highest sequence ID present in `sync_delta_log`.
   static Future<int> getMaxSequence(DatabaseExecutor executor) async {
-    final result = await executor.rawQuery(
-      'SELECT MAX(seq) as max_seq FROM $tableName',
-    );
-    if (result.isNotEmpty && result.first['max_seq'] != null) {
-      return result.first['max_seq'] as int;
+    try {
+      final result = await executor.rawQuery(
+        'SELECT MAX(seq) as max_seq FROM $tableName',
+      );
+      if (result.isNotEmpty && result.first['max_seq'] != null) {
+        return result.first['max_seq'] as int;
+      }
+    } catch (e) {
+      if (e.toString().contains('no such table: sync_delta_log')) {
+        return 0;
+      }
+      rethrow;
     }
     return 0;
   }
 
   /// Gets the lowest sequence ID present in `sync_delta_log`.
   static Future<int> getMinSequence(DatabaseExecutor executor) async {
-    final result = await executor.rawQuery(
-      'SELECT MIN(seq) as min_seq FROM $tableName',
-    );
-    if (result.isNotEmpty && result.first['min_seq'] != null) {
-      return result.first['min_seq'] as int;
+    try {
+      final result = await executor.rawQuery(
+        'SELECT MIN(seq) as min_seq FROM $tableName',
+      );
+      if (result.isNotEmpty && result.first['min_seq'] != null) {
+        return result.first['min_seq'] as int;
+      }
+    } catch (e) {
+      if (e.toString().contains('no such table: sync_delta_log')) {
+        return 0;
+      }
+      rethrow;
     }
     return 0;
   }
 
   /// Gets total row count in `sync_delta_log`.
   static Future<int> getDeltaCount(DatabaseExecutor executor) async {
-    final result = await executor.rawQuery(
-      'SELECT COUNT(*) as cnt FROM $tableName',
-    );
-    if (result.isNotEmpty && result.first['cnt'] != null) {
-      return result.first['cnt'] as int;
+    try {
+      final result = await executor.rawQuery(
+        'SELECT COUNT(*) as cnt FROM $tableName',
+      );
+      if (result.isNotEmpty && result.first['cnt'] != null) {
+        return result.first['cnt'] as int;
+      }
+    } catch (e) {
+      if (e.toString().contains('no such table: sync_delta_log')) {
+        return 0;
+      }
+      rethrow;
     }
     return 0;
   }
@@ -111,15 +157,29 @@ class DeltaLogService {
     DatabaseExecutor executor,
     int upToSeq,
   ) async {
-    return await executor.delete(
-      tableName,
-      where: 'seq <= ?',
-      whereArgs: [upToSeq],
-    );
+    try {
+      return await executor.delete(
+        tableName,
+        where: 'seq <= ?',
+        whereArgs: [upToSeq],
+      );
+    } catch (e) {
+      if (e.toString().contains('no such table: sync_delta_log')) {
+        return 0;
+      }
+      rethrow;
+    }
   }
 
   /// Purges all delta log records.
   static Future<int> clearAllDeltas(DatabaseExecutor executor) async {
-    return await executor.delete(tableName);
+    try {
+      return await executor.delete(tableName);
+    } catch (e) {
+      if (e.toString().contains('no such table: sync_delta_log')) {
+        return 0;
+      }
+      rethrow;
+    }
   }
 }

@@ -195,6 +195,11 @@ class SchemaVersionAdapters {
       description: 'add quotes.poi_name',
       apply: _upgradeToV21,
     ),
+    SchemaVersionAdapter(
+      version: 22,
+      description: 'create sync_delta_log table',
+      apply: _upgradeToV22,
+    ),
   ];
 
   Future<void> _upgradeToV2(Transaction transaction) => transaction.execute(
@@ -433,6 +438,10 @@ class SchemaVersionAdapters {
     await transaction.execute(
       'CREATE INDEX IF NOT EXISTS idx_quotes_coordinates ON quotes(latitude, longitude)',
     );
+  }
+
+  Future<void> _upgradeToV22(Transaction transaction) async {
+    await _definitions.ensureSyncDeltaLogTable(transaction);
   }
 
   Future<bool> _hasColumn(

@@ -168,7 +168,8 @@ void main() {
       await manager.createTables(database);
       await database.execute('DROP INDEX idx_quotes_coordinates');
 
-      await manager.upgradeDatabase(database, 20, 21);
+      await manager.upgradeDatabase(
+          database, 20, DatabaseSchemaManager.schemaVersion);
       await manager.validateSchema(database);
 
       final indexes = await database.rawQuery(
@@ -188,7 +189,8 @@ void main() {
       await database.execute('DROP TABLE media_references');
       await database.execute('DROP TABLE quote_tombstones');
 
-      await manager.upgradeDatabase(database, 20, 21);
+      await manager.upgradeDatabase(
+          database, 20, DatabaseSchemaManager.schemaVersion);
       await manager.validateSchema(database);
 
       final indexes = await database.rawQuery(
@@ -213,7 +215,8 @@ void main() {
       });
       await database.execute('DROP INDEX idx_categories_last_modified');
 
-      await manager.upgradeDatabase(database, 20, 21);
+      await manager.upgradeDatabase(
+          database, 20, DatabaseSchemaManager.schemaVersion);
       await manager.validateSchema(database);
 
       expect((await database.query('quotes')).single['content'],

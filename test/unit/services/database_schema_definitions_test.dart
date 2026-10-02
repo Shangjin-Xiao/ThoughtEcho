@@ -24,7 +24,7 @@ void main() {
 
   group('DatabaseSchemaDefinitions Constants & Pure Functions', () {
     test('schemaVersion is defined and positive', () {
-      expect(DatabaseSchemaDefinitions.schemaVersion, equals(21));
+      expect(DatabaseSchemaDefinitions.schemaVersion, equals(22));
     });
 
     test('poiNameColumn constant', () {
@@ -40,6 +40,7 @@ void main() {
           'quote_tags',
           'quote_tombstones',
           'media_references',
+          'sync_delta_log',
         }),
       );
     });
@@ -72,6 +73,7 @@ void main() {
         ...DatabaseSchemaDefinitions.quoteTagsIndexStatements,
         ...DatabaseSchemaDefinitions.quoteTombstoneIndexStatements,
         ...DatabaseSchemaDefinitions.mediaReferenceIndexStatements,
+        ...DatabaseSchemaDefinitions.syncDeltaLogIndexStatements,
       ];
       final regex = RegExp(r'CREATE INDEX IF NOT EXISTS (\w+)');
       final statementIndexNames = allStatements.map((s) {
@@ -124,6 +126,7 @@ void main() {
           'quote_tags',
           'quote_tombstones',
           'media_references',
+          'sync_delta_log',
         }),
       );
 
