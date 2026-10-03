@@ -61,7 +61,7 @@ class ReleaseHighlights {
             ReleaseHighlightPoint(
               title: l10n.releaseDreamingIdleTitle,
               description: l10n.releaseDreamingIdleDesc,
-              icon: Icons.psychology_outlined,
+              icon: Icons.hourglass_empty_outlined,
             ),
             ReleaseHighlightPoint(
               title: l10n.releaseDreamingControlTitle,
