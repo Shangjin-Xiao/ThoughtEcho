@@ -348,16 +348,20 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 
 在智能体模式下，Thoughter 可以使用以下扩展工具，工具联动过程会实时展示在对话界面：
 
-| 工具               | 说明                                               |
-| ------------------ | -------------------------------------------------- |
-| **搜索笔记**       | 按关键词、标签、日期、天气、时段等条件检索您的笔记 |
-| **获取笔记详情**   | 读取特定笔记的完整内容及元数据                     |
-| **获取标签列表**   | 查询您已有的全部标签                               |
-| **获取位置和天气** | 获取当前位置与天气信息                             |
-| **联网搜索**       | 通过搜索引擎检索实时信息（只读）                   |
-| **抓取网页**       | 读取指定网址的页面内容（只读）                     |
-| **提议新建笔记**   | 生成新笔记草稿，由您确认后保存                     |
-| **提议编辑笔记**   | 对已有笔记提出局部或全文修改建议，由您确认后应用   |
+| 工具                           | 说明                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| **搜索笔记（ExploreNotesTool）** | 按关键词、标签、日期、天气、时段等条件检索您的笔记                     |
+| **获取笔记详情（GetNoteDetailTool）** | 读取特定笔记的完整内容及元数据                                         |
+| **获取标签列表（GetTagsTool）** | 查询您已有的全部标签                                                   |
+| **获取位置和天气（GetLocationWeatherTool）** | 获取当前位置与天气信息                                                 |
+| **联网搜索（WebSearchTool）**   | 通过搜索引擎检索实时信息（只读）                                       |
+| **抓取网页（WebFetchTool）**   | 读取指定网址的页面内容（只读）                                         |
+| **提议新建笔记（ProposeNoteCreateTool）** | 生成新笔记草稿，由您确认后保存                                         |
+| **提议编辑笔记（ProposeNoteEditTool）** | 对已有笔记提出局部或全文修改建议，由您确认后应用                       |
+| **交互提问（AskUserTool）**     | 向您发起主动交互提问或弹出单选/多选卡片，澄清模糊意图与确认补充参数    |
+| **会话历史检索（SessionSearchTool）** | 检索历史对话记录与往期问答上下文                                       |
+| **长期记忆写入（RememberTool）** | 将您的表达偏好、身份特质与纠偏反馈写入或更新至长期记忆                 |
+| **长期记忆检索（RecallTool）**   | 检索并调取已记录的用户画像特质、喜好与长期记忆细节                     |
 
 **笔记提案卡片**：
 
@@ -1150,16 +1154,20 @@ Thoughter is ThoughtEcho's built-in AI conversation assistant. It supports natur
 
 In Agent mode, Thoughter can use the following tools. Tool actions are shown in real time in the conversation:
 
-| Tool                       | Description                                                                   |
-| -------------------------- | ----------------------------------------------------------------------------- |
-| **Explore Notes**          | Search notes by keyword, tag, date, weather, time period, and more            |
-| **Get Note Detail**        | Read the full content and metadata of a specific note                         |
-| **Get Tags**               | Retrieve your complete tag list                                               |
-| **Get Location & Weather** | Fetch current location and weather information                                |
-| **Web Search**             | Search for real-time information via a search engine (read-only)              |
-| **Web Fetch**              | Read the content of a specific URL (read-only)                                |
-| **Propose New Note**       | Generate a new note draft for you to review and save                          |
-| **Propose Note Edit**      | Suggest partial or full edits to an existing note for you to review and apply |
+| Tool                                   | Description                                                                   |
+| -------------------------------------- | ----------------------------------------------------------------------------- |
+| **Explore Notes (ExploreNotesTool)**   | Search notes by keyword, tag, date, weather, time period, and more            |
+| **Get Note Detail (GetNoteDetailTool)** | Read the full content and metadata of a specific note                         |
+| **Get Tags (GetTagsTool)**             | Retrieve your complete tag list                                               |
+| **Get Location & Weather (GetLocationWeatherTool)** | Fetch current location and weather information                                |
+| **Web Search (WebSearchTool)**         | Search for real-time information via a search engine (read-only)              |
+| **Web Fetch (WebFetchTool)**           | Read the content of a specific URL (read-only)                                |
+| **Propose New Note (ProposeNoteCreateTool)** | Generate a new note draft for you to review and save                          |
+| **Propose Note Edit (ProposeNoteEditTool)** | Suggest partial or full edits to an existing note for you to review and apply |
+| **Ask User (AskUserTool)**             | Present interactive choice cards or clarifying questions to confirm your intent or missing details |
+| **Session Search (SessionSearchTool)** | Search chat history and Q&A context across past conversations                 |
+| **Remember (RememberTool)**            | Write or update your writing style, personal traits, and preferences into long-term memory |
+| **Recall (RecallTool)**                | Search and retrieve stored personal profile facts, preferences, and memory details |
 
 **Note Proposal Cards**:
 
