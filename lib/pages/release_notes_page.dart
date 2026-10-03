@@ -11,6 +11,7 @@ import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
+import 'package:thoughtecho/widgets/data_collection_consent_card.dart';
 import 'package:thoughtecho/widgets/theme_style_preview.dart';
 
 /// 更新说明页：精致美观的一页式设计，信息清晰、排版通透。
@@ -124,6 +125,8 @@ class ReleaseNotesPage extends StatelessWidget {
                     _FootnoteCard(footnote: footnote),
                     const SizedBox(height: 6),
                   ],
+                  const SizedBox(height: 8),
+                  const DataCollectionConsentCard(),
                   const SizedBox(height: 2),
                   const _GitHubReleaseButton(),
                 ],

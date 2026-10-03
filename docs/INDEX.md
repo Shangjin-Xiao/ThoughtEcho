@@ -1,6 +1,6 @@
 # ThoughtEcho 知识库与历史文档索引 (Docs Index)
 
-> 本文档是 ThoughtEcho 研发知识库的全局导航索引（已 100% 覆盖全库 78 篇技术文档与资产）。在开展复杂功能开发、性能优化、主题改造或架构重构前，请先查阅对应主题的历史记录与审计文档，避免推翻既有决策或重复踩坑。
+> 本文档是 ThoughtEcho 研发知识库的全局导航索引（已 100% 覆盖全库 85 篇技术文档与资产）。在开展复杂功能开发、性能优化、主题改造或架构重构前，请先查阅对应主题的历史记录与审计文档，避免推翻既有决策或重复踩坑。
 
 ---
 
@@ -9,7 +9,7 @@
 - [一、核心规范与发布文档 (11 篇)](#一核心规范与发布文档)
 - [二、性能分析与优化演化链 (9 篇)](#二性能分析与优化演化链)
 - [三、主题系统与 UI 现代化 (9 篇)](#三主题系统与-ui-现代化)
-- [四、Thoughter 与 AI 记忆体系 (8 篇)](#四thoughter-与-ai-记忆体系)
+- [四、Thoughter 与 AI 记忆体系 (14 篇)](#四thoughter-与-ai-记忆体系)
 - [五、同步、网络与核心架构 (12 篇)](#五同步网络与核心架构)
 - [六、架构决策总账与 AI 团队资产 (29 篇)](#六架构决策总账与-ai-团队资产)
 - [七、新增文档命名与归档规范](#七新增文档命名与归档规范)
@@ -78,6 +78,11 @@
 | 文档名称 | 路径 | 日期 | 状态 | 核心内容 / 结论 |
 |---|---|---|:---:|---|
 | **Dreaming 横向对比调研（OpenClaw + OpenAI V3）** | [`dreaming-comparative-research-2026-09-26.md`](dreaming-comparative-research-2026-09-26.md) | 2026-09-26 | 🔍 调研参考 | OpenClaw 三阶段源码级精读与 OpenAI V3 文稿精读：改写而非追加、确定性门先行、可审查三收敛及本地 P0–P2 落点 |
+| **Thoughter Agent 验证与优化结项报告** | [`agent-system-audit-and-tracker.md`](agent-system-audit-and-tracker.md) | 2026-09-18 | 🟢 **事实源 / 结项** | 100 篇高拟真笔记全景基准实测、Gemma 与 Gemini 归因对比、记忆修改死锁与自签名出处启发式修复核销 |
+| **Thoughter 记忆系统多画像评测实验** | [`agent-memory-multi-persona-evaluation.md`](agent-memory-multi-persona-evaluation.md) | 2026-09-18 | 🔍 调研评测 | 多角色画像隔离评测、知识召回准确率、跨会话记忆衰减与更新评测报告 |
+| **Thoughter 记忆系统横向对比评测** | [`agent-memory-comparative-evaluation.md`](agent-memory-comparative-evaluation.md) | 2026-09-18 | 🔍 调研评测 | 记忆检索打分机制、LIKE vs 向量基准对比与延迟/内存开销评测 |
+| **Thoughter AI 端到端评测与测试基建规范** | [`thoughter-e2e-test-infra-2026-09-06.md`](thoughter-e2e-test-infra-2026-09-06.md) | 2026-09-06 | 🟢 **活跃规范** | Live 探针无头执行、合成生活笔记数据集、不变量断言（无笔记泄漏至记忆库、Delta 校验）与分层覆盖阈值 |
+| **Thoughter AI 评测与优化实施方案 [已完成]** | [`thoughter-evaluation-plan-2026-09-06.md`](thoughter-evaluation-plan-2026-09-06.md) | 2026-09-06 | 📦 已完成方案 | Thoughter 核心 Agent 工具套件、记忆隔离子系统、多模型交叉评测（Gemma/Gemini/Muse）里程碑路线图 |
 | **Dreaming 与记忆系统二期方案** | [`dreaming-and-memory-plan-2026-08-28.md`](dreaming-and-memory-plan-2026-08-28.md) | 2026-08-28 | 🟢 **已实现（前置未完成）** | 记忆内容供给二期：`taste` / `voice` 两类画像、带 TTL 的近况切片、周期洞察后触发的 Dreaming 归纳，及上线前置的记忆可见性要求 |
 | **Thoughter 长期记忆系统深度调研与设计** | [`agent-memory-research-2026-08-08.md`](agent-memory-research-2026-08-08.md) | 2026-08-08 | 🔒 **唯一事实源** | 独立物理数据库 `agent_memory.db` 隔离机制、用户画像独立 user 消息包裹、原位 supersede 与事实层打分检索定案 |
 | **共享记忆系统构想 [已废弃 / 已被取代]** | [`memory-system-plan-2026-07-31.md`](memory-system-plan-2026-07-31.md) | 2026-07-31 | 📦 **归档 / 已废弃方案** | 早期三层共享记忆构想原案（已被 08-08 独立库架构完全取代） |
@@ -97,6 +102,7 @@
 
 | 文档名称 | 路径 | 日期 | 状态 | 核心内容 / 结论 |
 |---|---|---|:---:|---|
+| **近 20 提交双轴代码审查** | [`code-review-audit-2026-10-03.md`](code-review-audit-2026-10-03.md) | 2026-10-03 | 📦 归档 | `b0812602..6887b11d` 区间 20 提交的 Standards/Spec 双轴审查：2 项硬规范违规 + 3 项判断题、5 项 spec 缺失 + 2 项实现错误，10 项整改已全部闭环并通过门禁验证 |
 | **全代码库深度审计与问题分析报告** | [`codebase-comprehensive-audit-2026-08-28.md`](codebase-comprehensive-audit-2026-08-28.md) | 2026-08-28 | 🟢 **最新事实源** | 全库安全、数据一致性、生命周期/内存泄露、UI主题令牌与代码风格全维度审计与整改路线图 |
 | **研发知识库全景审计与全维度存活待办报告** | [`codebase-roadmap-and-issues-2026-08-28.md`](codebase-roadmap-and-issues-2026-08-28.md) | 2026-08-28 | 🟢 事实源 | 全库 76 篇文档全景分类、隐私审计、历史 31 项核销证据、4 大 ADR 与 16 项存活待办路线图 |
 | **代码库架构深化与待办核销审计报告** | [`codebase-architecture-and-tasks-audit-2026-08-23.md`](codebase-architecture-and-tasks-audit-2026-08-23.md) | 2026-08-23 | 🟢 事实源 | 模块解耦、大文件与复杂文件监控、依赖反转钩子解耦与技术债核销总清单 |

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/onboarding_models.dart';
 import '../../config/onboarding_config.dart';
+import '../../constants/app_constants.dart';
 import '../../controllers/onboarding_controller.dart';
 import '../../services/settings_service.dart';
 import '../../services/location_service.dart';
@@ -31,7 +32,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
   late Animation<Offset> _slideAnimation;
 
   /// 与设置页关于对话框保持一致的上架隐私政策地址。
-  static const String _privacyUrl = 'https://note.shangjinyun.cn/privacy.html';
+  static const String _privacyUrl = AppConstants.privacyPolicyUrl;
 
   @override
   void initState() {

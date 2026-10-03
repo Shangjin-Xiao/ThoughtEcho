@@ -3625,7 +3625,7 @@
   "feedbackDiscussionDesc": "Poser des questions, partager des idées et échanger avec d autres utilisateurs",
   "feedbackSentryTitle": "Envoyer des commentaires (Sentry)",
   "feedbackSentryDesc": "Envoyer des commentaires, des suggestions ou des rapports de bugs directement aux développeurs",
-  "sentryDisclosureMessage": "La politique de confidentialité de ThoughtEcho a été mise à jour et est disponible sur notre site Web.\n\nPour aider à diagnostiquer les plantages de l'application et améliorer la fiabilité, le diagnostic des erreurs a été introduit. Pour protéger votre vie privée, cette fonction est désactivée par défaut et peut être activée à tout moment dans « Paramètres -> Commentaires et contact ».\n\nPolitique de confidentialité : https://note.shangjinyun.cn/privacy",
+  "sentryDisclosureMessage": "La politique de confidentialité de ThoughtEcho a été mise à jour et est disponible sur notre site Web.\n\nPour aider à diagnostiquer les plantages de l'application et améliorer la fiabilité, le diagnostic des erreurs a été introduit. Pour protéger votre vie privée, cette fonction est désactivée par défaut et peut être activée à tout moment dans « Paramètres -> Commentaires et contact ».\n\nPolitique de confidentialité : https://note.shangjinyun.cn/privacy.html",
   "feedbackEmailDesc": "shangjinyun@proton.me",
   "feedbackSentryDisabledHint": "Veuillez d'abord activer « Envoyer des données de diagnostic pour aider à améliorer » ci-dessous",
   "noteListDisableCardShadowsExperiment": "[Expérimental] Désactiver les ombres de carte dans la liste de notes",

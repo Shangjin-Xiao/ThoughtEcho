@@ -186,31 +186,33 @@ void main() {
   testWidgets(
       'WebDAVSyncPage URL field rejects explicit http:// scheme with validation error',
       (WidgetTester tester) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    final urlFinder = find.widgetWithText(TextFormField, '服务器地址');
+    final urlFinder = find.widgetWithText(TextFormField, l10n.webdavServerUrl);
     expect(urlFinder, findsOneWidget);
 
     await tester.enterText(urlFinder, 'http://example.com/dav/');
     await tester.enterText(
-        find.widgetWithText(TextFormField, '用户名/账号'), 'testuser');
+        find.widgetWithText(TextFormField, l10n.webdavUsername), 'testuser');
     await tester.enterText(
-        find.widgetWithText(TextFormField, '应用密码/Token'), 'testpass');
+        find.widgetWithText(TextFormField, l10n.webdavPassword), 'testpass');
     await tester.pumpAndSettle();
 
-    final testBtn = find.text('测试连接');
+    final testBtn = find.text(l10n.webdavTestConnection);
     await tester.ensureVisible(testBtn);
     await tester.tap(testBtn);
     await tester.pumpAndSettle();
 
-    expect(find.text('地址必须以 https:// 开头'), findsOneWidget);
+    expect(find.text(l10n.webdavServerUrlInvalidError), findsOneWidget);
     expect(syncService.lastTestedUrl, isNull);
   });
 
   testWidgets(
       'WebDAVSyncPage strips legacy http:// on init and tests with https://',
       (WidgetTester tester) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     await syncService.saveSettings(
       enabled: false,
       provider: 'custom',
@@ -226,32 +228,33 @@ void main() {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    final urlField = tester
-        .widget<TextFormField>(find.widgetWithText(TextFormField, '服务器地址'));
+    final urlField = tester.widget<TextFormField>(
+        find.widgetWithText(TextFormField, l10n.webdavServerUrl));
     expect(urlField.controller?.text, 'example.com/dav/');
 
     await tester.enterText(
-        find.widgetWithText(TextFormField, '用户名/账号'), 'testuser');
+        find.widgetWithText(TextFormField, l10n.webdavUsername), 'testuser');
     await tester.enterText(
-        find.widgetWithText(TextFormField, '应用密码/Token'), 'testpass');
+        find.widgetWithText(TextFormField, l10n.webdavPassword), 'testpass');
     await tester.pumpAndSettle();
 
-    final testBtn = find.text('测试连接');
+    final testBtn = find.text(l10n.webdavTestConnection);
     await tester.ensureVisible(testBtn);
     await tester.tap(testBtn);
     await tester.pumpAndSettle();
 
-    expect(find.text('地址必须以 https:// 开头'), findsNothing);
+    expect(find.text(l10n.webdavServerUrlInvalidError), findsNothing);
     expect(syncService.lastTestedUrl, 'https://example.com/dav/');
   });
 
   testWidgets(
       'WebDAVSyncPage auto-sync switch upgrades http:// to https:// instead of persisting plaintext',
       (WidgetTester tester) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    final urlFinder = find.widgetWithText(TextFormField, '服务器地址');
+    final urlFinder = find.widgetWithText(TextFormField, l10n.webdavServerUrl);
     await tester.enterText(urlFinder, 'http://example.com/dav/');
     await tester.pumpAndSettle();
 

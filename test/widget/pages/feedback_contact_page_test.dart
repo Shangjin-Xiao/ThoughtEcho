@@ -64,7 +64,7 @@ void main() {
 
       expect(find.text(l10n.settingsSentryTitle), findsOneWidget);
       expect(find.text(l10n.settingsTelemetryTitle), findsOneWidget);
-      expect(find.text(l10n.learnMoreDataCollection), findsNWidgets(2));
+      expect(find.text(l10n.learnMoreDataCollection), findsOneWidget);
     });
 
     testWidgets(
@@ -76,29 +76,13 @@ void main() {
 
       final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
-      // Tap the first "查看收集详情与脱敏源码" (from Sentry tile)
-      final buttons = find.text(l10n.learnMoreDataCollection);
-      await tester.tap(buttons.first);
+      // 两个开关共用同一个「查看收集详情与脱敏源码」按钮。
+      final button = find.text(l10n.learnMoreDataCollection);
+      expect(button, findsOneWidget);
+      await tester.tap(button);
       await tester.pumpAndSettle();
 
       // Verify dialog is shown explaining both Sentry and Aptabase
-      expect(find.text(l10n.dataCollectionDisclosureTitle), findsOneWidget);
-      expect(find.text(l10n.dataCollectionDisclosureContent), findsOneWidget);
-      expect(find.text(l10n.viewSentrySourceCode), findsOneWidget);
-      expect(find.text(l10n.viewAptabaseSourceCode), findsOneWidget);
-      expect(find.text(l10n.viewPrivacyPolicy), findsOneWidget);
-
-      // Dismiss dialog
-      await tester.tap(find.text(l10n.sentryDisclosureGotIt));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.dataCollectionDisclosureTitle), findsNothing);
-
-      // Tap the second "查看收集详情与脱敏源码" (from Telemetry tile)
-      await tester.tap(buttons.last);
-      await tester.pumpAndSettle();
-
-      // Verify dialog also shows the same comprehensive explanation
       expect(find.text(l10n.dataCollectionDisclosureTitle), findsOneWidget);
       expect(find.text(l10n.dataCollectionDisclosureContent), findsOneWidget);
       expect(find.text(l10n.viewSentrySourceCode), findsOneWidget);

@@ -3643,7 +3643,7 @@
   "feedbackDiscussionDesc": "質問、アイデアの共有、他のユーザーとの交流",
   "feedbackSentryTitle": "フィードバックを送信 (Sentry)",
   "feedbackSentryDesc": "開発者に直接意見、提案、またはバグ報告を送信",
-  "sentryDisclosureMessage": "ThoughtEchoのプライバシーポリシーが更新されました。ウェブサイトでご確認いただけます。\n\nアプリのクラッシュを診断し信頼性を向上させるため、エラー診断機能が導入されました。プライバシーを保護するため、この機能はデフォルトで無効になっており、「設定 -> フィードバックと連絡先」からいつでも有効にできます。\n\nプライバシーポリシー：https://note.shangjinyun.cn/privacy",
+  "sentryDisclosureMessage": "ThoughtEchoのプライバシーポリシーが更新されました。ウェブサイトでご確認いただけます。\n\nアプリのクラッシュを診断し信頼性を向上させるため、エラー診断機能が導入されました。プライバシーを保護するため、この機能はデフォルトで無効になっており、「設定 -> フィードバックと連絡先」からいつでも有効にできます。\n\nプライバシーポリシー：https://note.shangjinyun.cn/privacy.html",
   "feedbackEmailDesc": "shangjinyun@proton.me",
   "feedbackSentryDisabledHint": "まず以下の「改善のための診断データを送信する」を有効にしてください",
   "noteListDisableCardShadowsExperiment": "【実験機能】メモ一覧のカード影を無効化",
