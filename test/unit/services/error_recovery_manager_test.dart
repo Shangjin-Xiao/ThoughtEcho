@@ -4,6 +4,36 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/error_recovery_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
+class TestCustomStrategy implements ErrorRecoveryStrategy {
+  bool recovered = false;
+
+  @override
+  String get name => '测试自定义策略';
+
+  @override
+  Future<void> recover(ErrorRecord errorRecord) async {
+    recovered = true;
+  }
+}
+
+class FailingCustomStrategy implements ErrorRecoveryStrategy {
+  @override
+  String get name => '失败策略';
+
+  @override
+  Future<void> recover(ErrorRecord errorRecord) async {
+    throw Exception('策略恢复失败');
+  }
+}
+
+class CustomTestException implements Exception {
+  final String message;
+  CustomTestException(this.message);
+
+  @override
+  String toString() => 'CustomTestException: $message';
+}
+
 void main() {
   group('ErrorRecoveryManager Tests', () {
     late ErrorRecoveryManager errorRecoveryManager;
@@ -98,11 +128,119 @@ void main() {
       } catch (_) {}
 
       final stats = errorRecoveryManager.getErrorStatistics();
-      expect(
-          stats['FormatException'],
-          equals(
-              2)); // FormatException is likely caught as Exception or its runtime type
+      expect(stats['FormatException'], equals(2));
       expect(stats['TimeoutException'], equals(1));
+    });
+
+    test('registerRecoveryStrategy and custom strategy usage', () async {
+      errorRecoveryManager.initialize();
+      final customStrategy = TestCustomStrategy();
+      errorRecoveryManager.registerRecoveryStrategy(
+        CustomTestException,
+        customStrategy,
+      );
+
+      int attemptCount = 0;
+      final result = await errorRecoveryManager.executeWithRecovery(
+        'custom_strategy_test',
+        () async {
+          attemptCount++;
+          if (attemptCount == 1) {
+            throw CustomTestException('Custom Error');
+          }
+          return 'recovered';
+        },
+        maxRetries: 1,
+        retryDelay: Duration.zero,
+      );
+
+      expect(result, equals('recovered'));
+      expect(customStrategy.recovered, isTrue);
+    });
+
+    test('executeWithRecovery with customStrategy parameter', () async {
+      errorRecoveryManager.initialize();
+      final customStrategy = TestCustomStrategy();
+
+      int attemptCount = 0;
+      final result = await errorRecoveryManager.executeWithRecovery(
+        'custom_param_test',
+        () async {
+          attemptCount++;
+          if (attemptCount == 1) {
+            throw Exception('Generic error with custom strategy param');
+          }
+          return 'recovered_param';
+        },
+        maxRetries: 1,
+        retryDelay: Duration.zero,
+        customStrategy: customStrategy,
+      );
+
+      expect(result, equals('recovered_param'));
+      expect(customStrategy.recovered, isTrue);
+    });
+
+    test(
+        'executeWithRecovery rethrows the original error when the recovery strategy fails',
+        () async {
+      errorRecoveryManager.initialize();
+      final failingStrategy = FailingCustomStrategy();
+
+      int attemptCount = 0;
+      // The strategy's own exception is swallowed; the operation error must surface
+      await expectLater(
+        () => errorRecoveryManager.executeWithRecovery(
+          'failing_strategy_test',
+          () async {
+            attemptCount++;
+            throw Exception('Operation error');
+          },
+          maxRetries: 1,
+          retryDelay: Duration.zero,
+          customStrategy: failingStrategy,
+        ),
+        throwsA(isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          allOf(
+            contains('Operation error'),
+            isNot(contains('策略恢复失败')),
+          ),
+        )),
+      );
+
+      expect(attemptCount, equals(2));
+    });
+
+    test('getErrorHistory limit returns the most recent errors', () async {
+      errorRecoveryManager.initialize();
+      errorRecoveryManager.clearErrorHistory();
+
+      for (int i = 0; i < 3; i++) {
+        try {
+          await errorRecoveryManager.executeWithRecovery(
+            'history_op_$i',
+            () async => throw Exception('Err $i'),
+            maxRetries: 0,
+          );
+        } catch (_) {}
+      }
+
+      expect(
+        errorRecoveryManager
+            .getErrorHistory()
+            .map((r) => r.operationName)
+            .toList(),
+        equals(['history_op_0', 'history_op_1', 'history_op_2']),
+      );
+      expect(
+        errorRecoveryManager
+            .getErrorHistory(limit: 2)
+            .map((r) => r.operationName)
+            .toList(),
+        equals(['history_op_1', 'history_op_2']),
+      );
     });
   });
 }
