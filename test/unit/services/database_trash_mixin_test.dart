@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/database_schema_manager.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../test_harness.dart';
@@ -21,59 +22,9 @@ void main() {
       service = DatabaseService();
 
       db = await databaseFactory.openDatabase(inMemoryDatabasePath);
-      // Create tables required for DatabaseTrashMixin tests
-      await db.execute('''
-          CREATE TABLE quotes(
-            id TEXT PRIMARY KEY,
-            content TEXT NOT NULL,
-            date TEXT NOT NULL,
-            source TEXT,
-            source_author TEXT,
-            source_work TEXT,
-            ai_analysis TEXT,
-            sentiment TEXT,
-            keywords TEXT,
-            summary TEXT,
-            category_id TEXT DEFAULT '',
-            color_hex TEXT,
-            location TEXT,
-            latitude REAL,
-            longitude REAL,
-            poi_name TEXT,
-            weather TEXT,
-            temperature TEXT,
-            edit_source TEXT,
-            delta_content TEXT,
-            day_period TEXT,
-            last_modified TEXT,
-            favorite_count INTEGER DEFAULT 0,
-            is_deleted INTEGER DEFAULT 0,
-            deleted_at TEXT
-          )
-        ''');
-      await db.execute('''
-          CREATE TABLE quote_tombstones (
-            quote_id TEXT PRIMARY KEY,
-            deleted_at TEXT NOT NULL,
-            device_id TEXT
-          )
-        ''');
-      await db.execute('''
-          CREATE TABLE media_references (
-            id TEXT PRIMARY KEY,
-            file_path TEXT NOT NULL,
-            quote_id TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            UNIQUE(file_path, quote_id)
-          )
-        ''');
-      await db.execute('''
-          CREATE TABLE quote_tags (
-            quote_id TEXT NOT NULL,
-            tag_id TEXT NOT NULL,
-            PRIMARY KEY (quote_id, tag_id)
-          )
-        ''');
+      // Schema source of truth, so a new quotes column lands here automatically
+      // instead of silently drifting away from the production definition.
+      await DatabaseSchemaDefinitions().createCurrentSchema(db);
 
       DatabaseService.setTestDatabase(db);
       await service.init();
@@ -200,10 +151,28 @@ void main() {
         expect(restored.deletedAt, isNull);
       });
 
-      test('handles non-existent or active quote gracefully', () async {
-        final nonExistentId = const Uuid().v4();
-        // Should not throw exception
-        await service.restoreQuote(nonExistentId);
+      test('restoring a missing or active quote leaves rows untouched',
+          () async {
+        final activeId = const Uuid().v4();
+        await db.insert(
+          'quotes',
+          Quote(
+            id: activeId,
+            content: 'Active note',
+            date: DateTime.now().toUtc().toIso8601String(),
+          ).toJson(),
+        );
+        final before = await db.query('quotes');
+
+        // Neither id can match `WHERE id = ? AND is_deleted = 1`, so both calls
+        // must leave the row byte-identical instead of stamping last_modified.
+        await service.restoreQuote(const Uuid().v4());
+        await service.restoreQuote(activeId);
+
+        expect(await db.query('quotes'), equals(before));
+        final unchanged = (await service.getQuoteById(activeId))!;
+        expect(unchanged.lastModified, isNull);
+        expect(await service.getTombstonesForBackup(), isEmpty);
       });
     });
 
