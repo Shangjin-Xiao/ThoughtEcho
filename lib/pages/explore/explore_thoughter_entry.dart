@@ -42,7 +42,6 @@ extension _ExploreThoughterEntry on _ExplorePageState {
   /// 用户问出第一句，不需要改助手页。
   Widget _buildThoughterQuickAsks() {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     final insight = _insightText.trim();
     // 生成中只有半截洞察，带进对话会让 Thoughter 看到一句没说完的话。
     // 流由本页持有，跳走不会中断，回来就是完整的。
@@ -85,14 +84,6 @@ extension _ExploreThoughterEntry on _ExplorePageState {
           label: l10n.exploreFreeChat,
           onTap: () => _openThoughter(
             openingMessage: hasInsight ? insight : null,
-          ),
-        ),
-        // 实验性标记跟着入口走，不再单独占一张卡片的位置
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: DefaultTextStyle(
-            style: theme.textTheme.labelSmall ?? const TextStyle(),
-            child: const ExperimentalBadge(compact: true),
           ),
         ),
       ],

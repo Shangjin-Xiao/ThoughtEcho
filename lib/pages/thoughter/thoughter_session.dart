@@ -117,11 +117,8 @@ extension _ThoughterSession on _ThoughterPageState {
     }
   }
 
-  /// 进入 Thoughter 时的一次性提示，按顺序弹完为止。
+  /// 进入 Thoughter 时的一次性提示：只剩记忆说明，实验性说明已下线。
   Future<void> _showEntryNotices() async {
-    if (!_settingsService.dontShowAgentExperimentalNotice && mounted) {
-      await showExperimentalNoticeDialog(context);
-    }
     if (!_settingsService.agentMemoryNoticeShown && mounted) {
       await showAgentMemoryNoticeDialog(context);
     }
@@ -151,9 +148,6 @@ extension _ThoughterSession on _ThoughterPageState {
         _agentListenerAttached = true;
       }
       _settingsReady = true;
-      // 两条一次性提示串行弹，别叠在一起：实验性说明讲的是「AI 会出错」，
-      // 记忆说明讲的是「它会记住你」，同屏出现用户一条都读不进去。
-      //
       // 这里不 await：弹窗期间历史会话照常加载，用户关掉就能看到内容。只有
       // 自动发起的首轮请求需要等（见下面的 initialQuestion 分支），否则
       // 「先不要记」在首轮不生效——那一轮已经把记忆读写完了。

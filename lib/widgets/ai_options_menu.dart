@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../utils/aptabase_helper.dart';
 import '../utils/color_utils.dart'; // applyOpacity 扩展方法
-import 'ai/experimental_badge.dart';
 import '../theme/theme_style.dart';
 
 /// AI 功能选项的数据模型
@@ -12,7 +11,6 @@ class AiOptionItem {
   final String subtitle;
   final VoidCallback onTap;
   final Color? iconColor;
-  final bool isExperimental;
 
   const AiOptionItem({
     required this.icon,
@@ -20,7 +18,6 @@ class AiOptionItem {
     required this.subtitle,
     required this.onTap,
     this.iconColor,
-    this.isExperimental = false,
   });
 }
 
@@ -165,7 +162,6 @@ class AiOptionsMenu extends StatelessWidget {
           subtitle: l10n.askNoteDesc,
           onTap: onAskNote!,
           iconColor: theme.colorScheme.primary,
-          isExperimental: true,
         ),
     ];
 
@@ -202,8 +198,6 @@ class AiOptionsMenu extends StatelessWidget {
                           .titleLarge
                           ?.copyWith(color: theme.colorScheme.onSurface),
                     ),
-                    const SizedBox(width: 8),
-                    const ExperimentalBadge(compact: true),
                   ],
                 ),
               ),
@@ -261,23 +255,12 @@ class AiOptionsMenu extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            option.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(color: theme.colorScheme.onSurface),
-                          ),
-                          if (option.isExperimental) ...[
-                            const SizedBox(width: 6),
-                            const ExperimentalBadge(
-                              compact: true,
-                              enableTapNotice: false,
-                            ),
-                          ],
-                        ],
+                      Text(
+                        option.title,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(color: theme.colorScheme.onSurface),
                       ),
                       if (option.subtitle.isNotEmpty) ...[
                         const SizedBox(height: 4),

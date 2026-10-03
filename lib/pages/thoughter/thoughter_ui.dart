@@ -199,19 +199,10 @@ extension _ThoughterUI on _ThoughterPageState {
         // 与其留一条不说话的缝，不如让顶栏融进页面，边界交给对话区上缘的
         // 渐隐——它只在真的有内容被盖住时才出现，正是那条缝想说没说清的事。
         backgroundColor: theme.colorScheme.surface,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                // 编辑器的所有 AI 功能都汇入 Thoughter，标题不再按入口分叉
-                l10n.aiAssistantLabel,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 6),
-            const ExperimentalBadge(compact: true),
-          ],
+        title: Text(
+          // 编辑器的所有 AI 功能都汇入 Thoughter，标题不再按入口分叉
+          l10n.aiAssistantLabel,
+          overflow: TextOverflow.ellipsis,
         ),
         centerTitle: true,
         actions: [

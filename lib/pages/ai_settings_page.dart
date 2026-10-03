@@ -12,6 +12,7 @@ import '../theme/app_semantic_colors.dart';
 import '../utils/ai_connection_tester.dart';
 import '../utils/app_logger.dart';
 import '../utils/aptabase_helper.dart';
+import '../widgets/ai/experimental_badge.dart';
 import '../widgets/app_snackbar.dart';
 import 'agent_memory/agent_memory_page.dart';
 import 'ai_provider_edit_page.dart';
@@ -660,7 +661,17 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
           ),
           const Divider(height: 1),
           SwitchListTile(
-            title: Text(l10n.dreamingEnableTitle),
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(l10n.dreamingEnableTitle)),
+                const SizedBox(width: 8),
+                const ExperimentalBadge(
+                  compact: true,
+                  enableTapNotice: false,
+                ),
+              ],
+            ),
             subtitle: Text(l10n.dreamingEnableDesc),
             value: settingsService.dreamingEnabled,
             onChanged:
@@ -668,7 +679,17 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             secondary: const Icon(Icons.auto_awesome_outlined),
           ),
           SwitchListTile(
-            title: Text(l10n.dreamingOnIdleTitle),
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(l10n.dreamingOnIdleTitle)),
+                const SizedBox(width: 8),
+                const ExperimentalBadge(
+                  compact: true,
+                  enableTapNotice: false,
+                ),
+              ],
+            ),
             subtitle: Text(l10n.dreamingOnIdleDesc),
             value: settingsService.dreamingOnIdleEnabled,
             onChanged: settingsService.agentMemoryEnabled &&
@@ -678,7 +699,17 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             secondary: const Icon(Icons.hourglass_empty_outlined),
           ),
           SwitchListTile(
-            title: Text(l10n.dreamingAfterInsightTitle),
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(l10n.dreamingAfterInsightTitle)),
+                const SizedBox(width: 8),
+                const ExperimentalBadge(
+                  compact: true,
+                  enableTapNotice: false,
+                ),
+              ],
+            ),
             subtitle: Text(l10n.dreamingAfterInsightDesc),
             value: settingsService.dreamingAfterInsightEnabled,
             onChanged: settingsService.agentMemoryEnabled &&
@@ -712,7 +743,7 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
           ),
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.psychology_alt_outlined),
+            leading: const Icon(Icons.manage_search_outlined),
             title: Text(l10n.agentMemoryManageTitle),
             subtitle: Text(l10n.agentMemoryManageSubtitle),
             trailing: const Icon(Icons.chevron_right),

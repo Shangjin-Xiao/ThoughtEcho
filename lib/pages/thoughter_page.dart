@@ -57,7 +57,6 @@ import '../utils/time_utils.dart';
 import '../widgets/ai/agent_memory_notice.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
 import '../widgets/ai/ask_user_card.dart';
-import '../widgets/ai/experimental_badge.dart';
 import '../widgets/ai/note_proposal_card.dart';
 import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';

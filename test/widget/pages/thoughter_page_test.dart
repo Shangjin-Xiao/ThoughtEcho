@@ -2423,8 +2423,7 @@ void main() {
       );
     });
 
-    testWidgets(
-        'auto shows experimental notice dialog when enabled and allows closing with dontShowAgain',
+    testWidgets('no longer auto shows the experimental notice on entry',
         (WidgetTester tester) async {
       await settingsService.setDontShowAgentExperimentalNotice(false);
       final agentService = _FakeAgentService(settingsService: settingsService);
@@ -2441,31 +2440,12 @@ void main() {
       await tester.pumpWidget(harness);
       await tester.pumpAndSettle();
 
-      // Dialog is auto-shown
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.text('Thoughter 实验性功能说明'), findsOneWidget);
-
-      // Check "不再自动提示"
-      final checkbox = find.byType(Checkbox);
-      expect(checkbox, findsOneWidget);
-      await tester.tap(checkbox);
-      await tester.pumpAndSettle();
-
-      // Tap close button (Icons.close inside Dialog header)
-      final closeButton = find.descendant(
-        of: find.byType(Dialog),
-        matching: find.byIcon(Icons.close),
-      );
-      expect(closeButton, findsOneWidget);
-      await tester.tap(closeButton);
-      await tester.pumpAndSettle();
-
+      // 实验性说明已下线：即使未勾选"不再提示"，也不再自动弹窗。
       expect(find.byType(Dialog), findsNothing);
-      expect(settingsService.dontShowAgentExperimentalNotice, isTrue);
+      expect(find.text('Thoughter 实验性功能说明'), findsNothing);
     });
 
-    testWidgets(
-        'shows notice dialog when tapping ExperimentalBadge tag in app bar',
+    testWidgets('thoughter app bar no longer shows an experimental badge',
         (WidgetTester tester) async {
       await settingsService.setDontShowAgentExperimentalNotice(true);
       final agentService = _FakeAgentService(settingsService: settingsService);
@@ -2482,18 +2462,9 @@ void main() {
       await tester.pumpWidget(harness);
       await tester.pumpAndSettle();
 
-      // Initially no dialog because dontShow is true
+      // Thoughter 已去实验性标签：顶栏不再挂 ExperimentalBadge。
+      expect(find.byType(ExperimentalBadge), findsNothing);
       expect(find.byType(Dialog), findsNothing);
-
-      // Tap on ExperimentalBadge tag in AppBar
-      final badgeFinder = find.byType(ExperimentalBadge);
-      expect(badgeFinder, findsOneWidget);
-      await tester.tap(badgeFinder);
-      await tester.pumpAndSettle();
-
-      // Dialog pops up
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.text('Thoughter 实验性功能说明'), findsOneWidget);
     });
 
     // 「新建对话」以前直接调 _createNewSession，于是按钮本身就往 chat_sessions
