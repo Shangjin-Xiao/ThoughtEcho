@@ -75,11 +75,11 @@ void main() {
     });
 
     testWidgets('只跨一个版本时不标版本分段', (tester) async {
-      // 页头已经写着 4.0，正文里再标一遍是重复信息。
+      // 页头已经写着最新版本，正文里再标一遍是重复信息。
       useTallSurface(tester);
 
       await tester.pumpWidget(
-        buildApp(const ReleaseNotesPage.sinceUpgrade(lastSeenVersion: '3.7.0')),
+        buildApp(const ReleaseNotesPage.sinceUpgrade(lastSeenVersion: '4.0.0')),
       );
       await tester.pumpAndSettle();
 
@@ -96,7 +96,7 @@ void main() {
           .pumpWidget(buildApp(const ReleaseNotesPage.currentRelease()));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.releaseThoughterTitle), findsOneWidget);
+      expect(find.text(l10n.releaseFootprintsTitle), findsOneWidget);
       expect(find.text(l10n.releaseNotesCurrentLede), findsOneWidget);
       expect(find.text(l10n.releaseNotesGetStarted), findsNothing);
       expect(find.text(l10n.releaseNotesViewDetailedChangelog), findsOneWidget);
@@ -112,7 +112,7 @@ void main() {
 
       await tester.pumpWidget(
         buildApp(
-          const ReleaseNotesPage.currentRelease(),
+          const ReleaseNotesPage.sinceUpgrade(lastSeenVersion: '3.7.0'),
           appTheme: appTheme,
         ),
       );

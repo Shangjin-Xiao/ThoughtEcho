@@ -4,7 +4,7 @@ import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
-import 'test_harness.dart';
+import '../../test_harness.dart';
 
 void main() {
   group('InsightHistoryService Tests', () {

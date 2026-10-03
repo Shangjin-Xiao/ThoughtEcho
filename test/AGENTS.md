@@ -1,7 +1,6 @@
 # Test 模块
 
-本目录包含 unit、widget、integration、performance 以及少量历史根级测试。不要继续无理由增加
-根级测试文件。
+本目录按 unit、widget、integration、performance 分层架构组织。`test/` 根目录仅保留 `AGENTS.md`、`README.md` 与全局 `test_harness.dart`，禁止在根目录新增任何测试文件。
 
 涉及测试审查、测试删除/合并、测试分层或判断测试是否有独立价值时，先使用 `/test-audit`
 skill。遵循其 authoring gate、junk patterns、retention bar 和 candidate evidence；没有明确
@@ -30,10 +29,6 @@ timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
 # Widget 门禁（两片）
 timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
   --shard-index=0 --total-shards=2 test/widget
-
-# 根目录与历史回归测试（两片）
-timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
-  --shard-index=0 --total-shards=2 test/bug_fixes test/*_test.dart
 
 # 非默认集合：需要显式运行，不能作为普通门禁的隐式副作用
 timeout 300s flutter test --reporter compact --timeout 120s --concurrency 1 test/integration
@@ -71,8 +66,7 @@ dart run build_runner build --delete-conflicting-outputs
 - `*.mocks.dart` 和其他生成测试文件禁止手动编辑。
 
 `test/all_tests.dart` 已删除：人工导入清单不能证明完整覆盖。默认门禁按目录自动发现
-`test/unit/`、`test/widget/`、`test/bug_fixes/` 和根目录 `*_test.dart`；真实服务/设备集成和
-性能基准必须分别显式运行。每个测试文件仍必须可独立运行。
+`test/unit/` 与 `test/widget/`；真实服务/设备集成和性能基准必须分别显式运行。每个测试文件仍必须可独立运行。
 
 不以 `*_test.dart` 结尾的 `test/test_*.dart` 是历史诊断脚本，不属于 `flutter test` 门禁，也不能
 作为测试通过的证据。新增验证必须使用标准测试文件名；真实设备诊断使用受支持设备显式运行。
