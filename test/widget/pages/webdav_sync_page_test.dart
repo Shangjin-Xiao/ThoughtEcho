@@ -207,4 +207,61 @@ void main() {
     expect(find.text('地址必须以 https:// 开头'), findsOneWidget);
     expect(syncService.lastTestedUrl, isNull);
   });
+
+  testWidgets(
+      'WebDAVSyncPage strips legacy http:// on init and tests with https://',
+      (WidgetTester tester) async {
+    await syncService.saveSettings(
+      enabled: false,
+      provider: 'custom',
+      url: 'http://example.com/dav/',
+      username: 'testuser',
+      password: 'testpass',
+      syncOnLaunch: true,
+      syncOnChange: true,
+      syncOnCellular: false,
+      syncNotesOnlyOnCellular: false,
+    );
+
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    final urlField = tester
+        .widget<TextFormField>(find.widgetWithText(TextFormField, '服务器地址'));
+    expect(urlField.controller?.text, 'example.com/dav/');
+
+    await tester.enterText(
+        find.widgetWithText(TextFormField, '用户名/账号'), 'testuser');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, '应用密码/Token'), 'testpass');
+    await tester.pumpAndSettle();
+
+    final testBtn = find.text('测试连接');
+    await tester.ensureVisible(testBtn);
+    await tester.tap(testBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('地址必须以 https:// 开头'), findsNothing);
+    expect(syncService.lastTestedUrl, 'https://example.com/dav/');
+  });
+
+  testWidgets(
+      'WebDAVSyncPage auto-sync switch upgrades http:// to https:// instead of persisting plaintext',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    final urlFinder = find.widgetWithText(TextFormField, '服务器地址');
+    await tester.enterText(urlFinder, 'http://example.com/dav/');
+    await tester.pumpAndSettle();
+
+    final switchFinder = find.byType(Switch).first;
+    await tester.ensureVisible(switchFinder);
+    await tester.pumpAndSettle();
+    await tester.tap(switchFinder);
+    await tester.pumpAndSettle();
+
+    expect(syncService.url.toLowerCase().startsWith('https://'), isTrue);
+    expect(syncService.url.toLowerCase().startsWith('http://example'), isFalse);
+  });
 }

@@ -41,9 +41,13 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     final syncService = Provider.of<WebDAVSyncService>(context, listen: false);
 
     _selectedProvider = syncService.provider;
-    var initialUrl = syncService.url;
-    if (initialUrl.toLowerCase().startsWith('https://')) {
+    var initialUrl = syncService.url.trim();
+    final lowerInitial = initialUrl.toLowerCase();
+    if (lowerInitial.startsWith('https://')) {
       initialUrl = initialUrl.substring(8);
+    } else if (lowerInitial.startsWith('http://')) {
+      // 存量明文地址升级显示为裸主机，下次保存落库为 https。
+      initialUrl = initialUrl.substring(7);
     }
     _urlController = TextEditingController(text: initialUrl);
     _usernameController = TextEditingController(text: syncService.username);
@@ -61,8 +65,12 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     var trimmed = raw.trim();
     if (trimmed.isEmpty) return '';
     final lower = trimmed.toLowerCase();
-    if (lower.startsWith('https://') || lower.startsWith('http://')) {
+    if (lower.startsWith('https://')) {
       return trimmed;
+    }
+    if (lower.startsWith('http://')) {
+      // 强制 https：明文 scheme 升级而非原样保留，避免旁路开关静默落库 http。
+      return 'https://${trimmed.substring(7)}';
     }
     return 'https://$trimmed';
   }
