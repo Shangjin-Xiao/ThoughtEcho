@@ -285,6 +285,10 @@ void main() {
         ApiService.zenQuotesProvider,
       );
 
+      // UnifiedLogService 首次初始化会并发等 SafeMMKV，其 50ms 轮询 timer
+      // 挂在 FakeAsync 里，teardown 前推进假时钟让它走完
+      await tester.pump(const Duration(milliseconds: 500));
+
       databaseService.dispose();
       settingsService.dispose();
       clipboardService.dispose();
