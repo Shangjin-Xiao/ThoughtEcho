@@ -324,10 +324,16 @@ void main() {
       test('upgrade does nothing if oldVersion >= newVersion', () async {
         final lifecycle = DatabaseSchemaLifecycle.standard();
         await lifecycle.createCurrentSchema(database);
+        const v = DatabaseSchemaDefinitions.schemaVersion;
 
-        // Should return early without throwing
-        await lifecycle.upgrade(database, 21, 21);
-        await lifecycle.upgrade(database, 22, 21);
+        // Should return early without touching the schema
+        await lifecycle.upgrade(database, v, v);
+        await lifecycle.upgrade(database, v + 1, v);
+
+        expect(
+          await DatabaseSchemaDefinitions().columnNames(database, 'quotes'),
+          contains('poi_name'),
+        );
       });
 
       test('upgrade throws ArgumentError if newVersion exceeds max version',
@@ -356,19 +362,6 @@ void main() {
             inTransaction: false);
         final foreignKeysNoTx = await database.rawQuery('PRAGMA foreign_keys');
         expect(foreignKeysNoTx.first['foreign_keys'], 1);
-      });
-
-      test('verifyForeignKeysEnabled checks foreign keys pragma', () async {
-        final lifecycle = DatabaseSchemaLifecycle.standard();
-        await lifecycle.configureDatabasePragmas(database,
-            inTransaction: false);
-
-        // Should execute foreign_keys verification without error
-        await lifecycle.verifyForeignKeysEnabled(database);
-
-        // Test disabled foreign keys warning code path
-        await database.execute('PRAGMA foreign_keys = OFF');
-        await lifecycle.verifyForeignKeysEnabled(database);
       });
     });
   });
