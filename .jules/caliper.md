@@ -109,3 +109,10 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-10-02 - [补充 NetworkService 的单元测试]
 **盲点:** `NetworkService` 整合了通用 HTTP 请求（`get` / `post`）与 AI 请求（`aiRequest` / `aiStreamRequest`），但此前缺乏全面覆盖初始化/清理生命周期、错误转换、Hitokoto 特殊响应格式解析，以及 OpenAI/Anthropic 流式 chunks 解析的单元测试。
 **对策:** 扩展 `test/unit/services/network_service_test.dart` 单元测试套件。利用自定义 `TestHttpClientAdapter` 模拟网络层请求，对 GET/POST 请求、一言响应转换、DioException 异常捕获、AI 请求参数归一化、以及 SSE 流式分块解析（OpenAI delta content & Anthropic delta text）进行了全路径断言测试，保证核心网络服务的健壮性。
+
+## 2026-10-02 - [补充 NoteSearchController 状态与并发调度的测试]
+
+## 2026-10-02 - [补充 DatabaseHealthService 数据一致性与数据库维护测试]
+## 2026-10-02 - [补充 DatabaseHealthService 数据一致性与数据库维护测试]
+**盲点:** `DatabaseHealthService` 包含了针对数据库标签数据一致性（孤立标签关联、无效分类引用、重复标签关联）的检查与清理逻辑（`checkTagDataConsistency`, `cleanupTagDataInconsistencies`），以及主动数据库维护（`performDatabaseMaintenance`，包含 ANALYZE, VACUUM, REINDEX），但在单例测试中长期存在部分场景覆盖盲点。
+**对策:** 在 `test/unit/services/database_health_service_test.dart` 中新增完整的测试覆盖，验证了存在孤立/重复关联及无效分类时的诊断报告与一键清理修正逻辑，并测试了数据库维护指令流程及 `onProgress` 进度回调，保障了数据库运维服务的可靠性。

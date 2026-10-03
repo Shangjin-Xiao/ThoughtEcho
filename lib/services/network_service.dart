@@ -22,8 +22,8 @@ class NetworkService {
   NetworkService._();
 
   // 不同用途的Dio实例
-  late Dio _generalDio; // 通用HTTP请求
-  late Dio _aiDio; // AI服务请求
+  late final Dio _generalDio; // 通用HTTP请求
+  late final Dio _aiDio; // AI服务请求
 
   bool _initialized = false;
 
@@ -32,9 +32,6 @@ class NetworkService {
 
   @visibleForTesting
   Dio get aiDioForTesting => _aiDio;
-
-  @visibleForTesting
-  bool get isInitializedForTesting => _initialized;
 
   /// 初始化网络服务
   Future<void> init() async {
@@ -324,14 +321,6 @@ class NetworkService {
     AISettings? legacySettings,
   ) =>
       _buildAIHeaders(provider, legacySettings);
-
-  @visibleForTesting
-  Map<String, dynamic> adjustAIDataForTesting(
-    Map<String, dynamic> data,
-    AIProviderSettings? provider,
-    AISettings? legacySettings,
-  ) =>
-      _adjustAIData(data, provider, legacySettings);
 
   /// 构建AI请求头
   Map<String, String> _buildAIHeaders(

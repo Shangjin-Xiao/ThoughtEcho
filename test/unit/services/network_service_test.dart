@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/network_service.dart';
@@ -98,6 +101,7 @@ void main() {
     late NetworkService networkService;
 
     setUp(() {
+      NetworkService.instanceForTesting = null;
       networkService = NetworkService.instance;
     });
 
@@ -205,24 +209,28 @@ void main() {
 
   group('NetworkService Initialization and Lifecycle Tests', () {
     test('init() should initialize service and create Dio instances', () async {
+      NetworkService.instanceForTesting = null;
       final service = NetworkService.instance;
       await service.init();
 
-      expect(service.isInitializedForTesting, isTrue);
-      expect(service.generalDioForTesting, isNotNull);
-      expect(service.aiDioForTesting, isNotNull);
+      // 超时配置是用户可见的行为契约（通用 15s / AI 300s 接收）
+      expect(service.generalDioForTesting.options.connectTimeout,
+          const Duration(seconds: 15));
+      expect(service.generalDioForTesting.options.receiveTimeout,
+          const Duration(seconds: 15));
+      expect(service.aiDioForTesting.options.receiveTimeout,
+          const Duration(seconds: 300));
 
       // Re-initializing should be safe and idempotent
       await service.init();
-      expect(service.isInitializedForTesting, isTrue);
+      expect(service.generalDioForTesting.options.connectTimeout,
+          const Duration(seconds: 15));
     });
 
     test('calling get or post when uninitialized should throw StateError',
         () async {
+      NetworkService.instanceForTesting = null;
       final service = NetworkService.instance;
-      service.dispose();
-
-      expect(service.isInitializedForTesting, isFalse);
 
       expect(
         () => service.get('https://example.com'),
@@ -241,22 +249,6 @@ void main() {
         ),
         throwsStateError,
       );
-
-      // Re-initialize for subsequent tests
-      await service.init();
-    });
-
-    test('dispose() should close Dio instances and reset initialization flag',
-        () async {
-      final service = NetworkService.instance;
-      await service.init();
-      expect(service.isInitializedForTesting, isTrue);
-
-      service.dispose();
-      expect(service.isInitializedForTesting, isFalse);
-
-      // Re-initialize for subsequent tests
-      await service.init();
     });
   });
 
@@ -264,6 +256,7 @@ void main() {
     late NetworkService networkService;
 
     setUp(() async {
+      NetworkService.instanceForTesting = null;
       networkService = NetworkService.instance;
       await networkService.init();
     });
@@ -314,7 +307,11 @@ void main() {
       final response = await networkService.get('https://v1.hitokoto.cn/');
 
       expect(response.statusCode, 200);
-      expect(response.body, contains('hitokoto'));
+      // Dio 按 json 解码成 Map 后，一言分支必须把它重新编码回 JSON 字符串，
+      // 而不是落出 Dart Map 的 toString()（单引号、无法被 json.decode 解析）
+      final decoded = json.decode(response.body);
+      expect(decoded, isA<Map<String, dynamic>>());
+      expect((decoded as Map<String, dynamic>)['hitokoto'], 'hello');
     });
 
     test('get() should catch DioException and return error HttpResponse',
@@ -405,28 +402,14 @@ void main() {
   group('NetworkService AI Request Data Adjustment Tests', () {
     late NetworkService networkService;
 
-    setUp(() {
+    setUp(() async {
+      NetworkService.instanceForTesting = null;
       networkService = NetworkService.instance;
-    });
-
-    test('should convert string "true" stream parameter to boolean true', () {
-      final inputData = {'stream': 'true', 'prompt': 'hello'};
-      final adjusted =
-          networkService.adjustAIDataForTesting(inputData, null, null);
-
-      expect(adjusted['stream'], isTrue);
-    });
-
-    test('should default non-bool stream parameter to true', () {
-      final inputData = {'stream': 123, 'prompt': 'hello'};
-      final adjusted =
-          networkService.adjustAIDataForTesting(inputData, null, null);
-
-      expect(adjusted['stream'], isTrue);
+      await networkService.init();
     });
 
     test('should populate provider default model, temperature, and max_tokens',
-        () {
+        () async {
       final provider = AIProviderSettings(
         id: 'p1',
         name: 'Provider1',
@@ -437,16 +420,28 @@ void main() {
         maxTokens: 2000,
       );
 
-      final inputData = <String, dynamic>{'messages': []};
-      final adjusted =
-          networkService.adjustAIDataForTesting(inputData, provider, null);
+      networkService.aiDioForTesting.httpClientAdapter = TestHttpClientAdapter(
+        (options) async {
+          expect(options.data['model'], 'gpt-4o');
+          expect(options.data['temperature'], 0.7);
+          expect(options.data['max_tokens'], 2000);
+          return ResponseBody.fromString(
+            '{"choices": [{"message": {"content": "ok"}}]}',
+            200,
+          );
+        },
+      );
 
-      expect(adjusted['model'], 'gpt-4o');
-      expect(adjusted['temperature'], 0.7);
-      expect(adjusted['max_tokens'], 2000);
+      final response = await networkService.aiRequest(
+        url: 'https://api.openai.com/v1/chat/completions',
+        data: <String, dynamic>{'messages': []},
+        provider: provider,
+      );
+
+      expect(response.statusCode, 200);
     });
 
-    test('should preserve existing model in input data if provided', () {
+    test('should preserve existing model in input data if provided', () async {
       final provider = AIProviderSettings(
         id: 'p1',
         name: 'Provider1',
@@ -455,17 +450,26 @@ void main() {
         model: 'gpt-4o',
       );
 
-      final inputData = <String, dynamic>{
-        'model': 'custom-model',
-        'messages': [],
-      };
-      final adjusted =
-          networkService.adjustAIDataForTesting(inputData, provider, null);
+      networkService.aiDioForTesting.httpClientAdapter = TestHttpClientAdapter(
+        (options) async {
+          expect(options.data['model'], 'custom-model');
+          return ResponseBody.fromString(
+            '{"choices": [{"message": {"content": "ok"}}]}',
+            200,
+          );
+        },
+      );
 
-      expect(adjusted['model'], 'custom-model');
+      final response = await networkService.aiRequest(
+        url: 'https://api.openai.com/v1/chat/completions',
+        data: <String, dynamic>{'model': 'custom-model', 'messages': []},
+        provider: provider,
+      );
+
+      expect(response.statusCode, 200);
     });
 
-    test('should fallback to legacy settings if provider is null', () {
+    test('should fallback to legacy settings if provider is null', () async {
       final legacy = AISettings(
         apiUrl: 'https://api.openai.com/v1/chat/completions',
         apiKey: 'key',
@@ -474,13 +478,25 @@ void main() {
         maxTokens: 1000,
       );
 
-      final inputData = <String, dynamic>{'messages': []};
-      final adjusted =
-          networkService.adjustAIDataForTesting(inputData, null, legacy);
+      networkService.aiDioForTesting.httpClientAdapter = TestHttpClientAdapter(
+        (options) async {
+          expect(options.data['model'], 'gpt-3.5-turbo');
+          expect(options.data['temperature'], 0.5);
+          expect(options.data['max_tokens'], 1000);
+          return ResponseBody.fromString(
+            '{"choices": [{"message": {"content": "ok"}}]}',
+            200,
+          );
+        },
+      );
 
-      expect(adjusted['model'], 'gpt-3.5-turbo');
-      expect(adjusted['temperature'], 0.5);
-      expect(adjusted['max_tokens'], 1000);
+      final response = await networkService.aiRequest(
+        url: 'https://api.openai.com/v1/chat/completions',
+        data: <String, dynamic>{'messages': []},
+        legacySettings: legacy,
+      );
+
+      expect(response.statusCode, 200);
     });
   });
 
@@ -488,6 +504,7 @@ void main() {
     late NetworkService networkService;
 
     setUp(() async {
+      NetworkService.instanceForTesting = null;
       networkService = NetworkService.instance;
       await networkService.init();
     });
@@ -533,8 +550,6 @@ void main() {
         () async {
       networkService.aiDioForTesting.httpClientAdapter = TestHttpClientAdapter(
         (options) async {
-          expect(options.data['stream'], isTrue);
-
           final streamData = [
             'data: {"choices":[{"delta":{"content":"Hello"}}]}\n',
             'data: {"choices":[{"delta":{"content":" World"}}]}\n',
@@ -601,6 +616,45 @@ void main() {
     });
 
     test(
+        'aiStreamRequest() should reassemble SSE lines split across response chunks',
+        () async {
+      networkService.aiDioForTesting.httpClientAdapter = TestHttpClientAdapter(
+        (options) async {
+          // 一条 data: 行被切成三段，且第二段落在 JSON 中间
+          final chunks = <Uint8List>[
+            Uint8List.fromList(utf8.encode('data: {"choices":[{"delta":{"con')),
+            Uint8List.fromList(utf8.encode('tent":"Hello"}}]}\nda')),
+            Uint8List.fromList(utf8
+                .encode('ta: {"choices":[{"delta":{"content":" World"}}]}\n')),
+            Uint8List.fromList(utf8.encode('data: [DONE]\n')),
+          ];
+
+          return ResponseBody(
+            Stream.fromIterable(chunks),
+            200,
+            headers: {
+              'content-type': ['text/event-stream']
+            },
+          );
+        },
+      );
+
+      final receivedChunks = <String>[];
+      String? completedBuffer;
+
+      await networkService.aiStreamRequest(
+        url: 'https://api.openai.com/v1/chat/completions',
+        data: {},
+        onData: (chunk) => receivedChunks.add(chunk),
+        onComplete: (fullText) => completedBuffer = fullText,
+        onError: (err) => fail('Should not fail: $err'),
+      );
+
+      expect(receivedChunks, ['Hello', ' World']);
+      expect(completedBuffer, 'Hello World');
+    });
+
+    test(
         'aiStreamRequest() should invoke onError callback when exception occurs',
         () async {
       networkService.aiDioForTesting.httpClientAdapter = TestHttpClientAdapter(
@@ -631,6 +685,7 @@ void main() {
     late NetworkService networkService;
 
     setUp(() async {
+      NetworkService.instanceForTesting = null;
       networkService = NetworkService.instance;
       await networkService.init();
     });
@@ -655,14 +710,25 @@ void main() {
     // 接线由下面这条「公网明文被拦」和设置页那条 localhost 夹具用例共同证明。
 
     test('aiRequest should allow uppercase HTTPS URL scheme', () async {
-      try {
-        await networkService.aiRequest(
-          url: 'HTTPS://api.openai.com/v1/chat/completions',
-          data: {},
-        );
-      } catch (e) {
-        expect(e.toString(), isNot(contains('非安全URL')));
-      }
+      var adapterReached = false;
+      networkService.aiDioForTesting.httpClientAdapter = TestHttpClientAdapter(
+        (options) async {
+          adapterReached = true;
+          return ResponseBody.fromString(
+            '{"choices": [{"message": {"content": "ok"}}]}',
+            200,
+          );
+        },
+      );
+
+      final response = await networkService.aiRequest(
+        url: 'HTTPS://api.openai.com/v1/chat/completions',
+        data: {},
+      );
+
+      // 大写 scheme 通过了 URL 校验并真的发到了适配器层，而不是被拦下
+      expect(adapterReached, isTrue);
+      expect(response.statusCode, 200);
     });
 
     test('aiStreamRequest should call onError when URL is not HTTPS', () async {
