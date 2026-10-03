@@ -164,7 +164,7 @@ abstract final class QuoteTextExtractor {
 
     final sourceLine = formatSource(quote);
     if (sourceLine != null && sourceLine.isNotEmpty) {
-      return '$content\n\n$sourceLine';
+      return '$content\n$sourceLine';
     }
 
     return content;

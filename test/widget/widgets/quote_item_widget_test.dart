@@ -1373,7 +1373,7 @@ void main() {
       await tester.tap(find.text(l10n.copyTextMenu));
       await tester.pumpAndSettle();
 
-      expect(copiedText, '春江潮水连海平，海上明月共潮生。\n\n——张若虚');
+      expect(copiedText, '春江潮水连海平，海上明月共潮生。\n——张若虚');
       expect(find.text(l10n.copiedToClipboard), findsOneWidget);
     });
 

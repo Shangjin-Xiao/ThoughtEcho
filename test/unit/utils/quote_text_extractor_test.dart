@@ -277,7 +277,7 @@ void main() {
     });
 
     group('formatForCopy 剪贴板内容完整格式化', () {
-      test('有出处时拼接在正文后方空一行', () {
+      test('有出处时紧贴拼接在正文后方下一行', () {
         final quote = Quote(
           content: '人类的全部智慧就包含在这两个词中：等待和希望。',
           date: '2026-10-02T10:00:00Z',
@@ -288,7 +288,7 @@ void main() {
         final copyText = QuoteTextExtractor.formatForCopy(quote);
         expect(
           copyText,
-          '人类的全部智慧就包含在这两个词中：等待和希望。\n\n——大仲马 《基督山伯爵》',
+          '人类的全部智慧就包含在这两个词中：等待和希望。\n——大仲马 《基督山伯爵》',
         );
       });
 
