@@ -722,12 +722,12 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ### 关于与反馈
 
-在设置页面的“反馈与建议”中，您可以：
+在设置页面的“反馈与联系”中，您可以：
 
 - **反馈建议**：支持直接在应用内发送反馈，也可跳转到 GitHub 社区进行讨论。
 - **联系开发者**：通过电子邮件直接联系开发者。
-- **上报日志帮助改进**：开启后，遇到 Bug 或崩溃时将自动向开发团队提交错误日志。为了保护您的隐私，**该功能默认关闭**，且上传的信息仅包含崩溃堆栈及设备型号等排查所需的上下文信息，不包含任何您的日记内容。此设置在重启应用后生效。
-- **参与匿名功能改进计划**：开启后，应用会收集匿名的功能使用频次（如功能使用比例，基于开源隐私友好的 Aptabase 平台），用于帮助开发者规划后续功能的开发优先级。为了保护您的隐私，**该功能默认关闭**，严格遵循本地优先与隐私第一原则，绝不收集笔记正文、搜索关键词、个人标识符或位置等敏感数据。您可随时在“设置 -> 反馈与建议”中自由开启或关闭。
+- **发送诊断数据帮助改进**：开启后，遇到 Bug、崩溃或卡死时将自动向开发团队提交错误堆栈与诊断信息，并包含必要的性能指标（如页面加载耗时、脱敏后的操作类型，iOS 上包含 CPU 剖析）以协助排查卡顿与优化流畅度。为了保护您的隐私，**该功能默认关闭**，上传的数据经过本地严格脱敏，包含随机生成的安装标识（不关联硬件信息），绝不包含任何您的日记正文或隐私内容，服务亦不存储您的 IP 地址。此设置在重启应用后生效。
+- **参与匿名功能改进计划**：开启后，应用会统计匿名的功能点击与页面访问频次（基于开源轻量分析服务 Aptabase），附带操作系统版本、语言区域与单次启动的临时会话 ID（退出即失效），用于帮助开发者规划后续功能的开发优先级。为了保护您的隐私，**该功能默认关闭**，严格遵循本地优先与隐私第一原则，不使用 Cookie、不做跨应用追踪，不存储 IP 地址，绝不收集笔记正文、搜索关键词或个人身份信息。您可随时在“设置 -> 反馈与联系”中自由开启或关闭。
 
 ---
 
@@ -1520,11 +1520,12 @@ ThoughtEcho embeds elegant serif typography directly into the app:
 
 ### About & Feedback
 
-In the "Feedback & Suggestions" section within Settings, you can:
+In the "Feedback & Contact" section within Settings, you can:
 
 - **Feedback**: Supports sending feedback directly in-app, or navigating to GitHub for community discussions.
 - **Contact Developer**: Reach out to the developer directly via email.
-- **Upload logs to help improve**: When enabled, crash/bug diagnostics are sent to help troubleshoot. This feature is **disabled by default** for privacy, excludes note/journal content, and takes effect after app restart.
+- **Send diagnostics to help improve**: When enabled, crash/freeze diagnostics along with essential performance metrics (such as page load times, sanitized operation types, and CPU profiling on iOS) are automatically sent to help developers resolve issues and improve responsiveness. For your privacy, this feature is **disabled by default**, uses a randomly generated installation identifier (not linked to hardware info), excludes note contents and personal data, and the service does not store IP addresses. Takes effect after app restart.
+- **Anonymous Feature Improvement Program**: When enabled, counts of anonymous feature clicks and page views are collected (via privacy-focused open-source Aptabase) alongside OS version, locale, and temporary session ID (cleared on exit) to help guide development priorities. **Disabled by default**, uses no cookies or cross-app tracking, does not store IP addresses, and strictly never collects note contents, search terms, or personal identity details. Can be toggled anytime under "Settings -> Feedback & Contact".
 
 ---
 
