@@ -388,14 +388,19 @@ void main() {
       );
       final weaService = _ConfigurableWeatherService(hasData: true);
 
-      final controller = AddNoteController(context: FakeBuildContext())
-        ..updateServices(locService: locService, weaService: weaService);
+      var emptyCalled = false;
+      final controller = AddNoteController(
+        context: FakeBuildContext(),
+        onWeatherFetchEmpty: () => emptyCalled = true,
+      )..updateServices(locService: locService, weaService: weaService);
 
       await controller.fetchWeatherForNewNote();
 
       expect(weaService.lastLat, 22.5);
       expect(weaService.lastLon, 114.0);
       expect(controller.isFetchingWeather, isFalse);
+      expect(emptyCalled, isFalse,
+          reason: 'hasData 为 true 时不应走空数据分支触发 onWeatherFetchEmpty');
     });
 
     test('fetchWeatherForNewNote 抓取异常时触发 onWeatherFetchError 回调', () async {
@@ -613,13 +618,23 @@ void main() {
 
   group('AddNoteController Tag Matching and Fallback', () {
     test('ensureTagExists performs case-insensitive name matching', () async {
-      final db = _CountingDatabaseService();
+      final db = _CountingDatabaseService(
+        extraTags: {
+          'workout_tag': NoteTag(id: 'workout_tag', name: 'Workout'),
+        },
+      );
       final controller = AddNoteController(context: FakeBuildContext())
         ..updateServices(dbService: db);
 
-      // '动画' tag exists in db with id 'default_anime'
-      final tagId = await controller.ensureTagExists(db, '动画', '🎬');
-      expect(tagId, equals('default_anime'));
+      // 'workout' 不在 hitokotoTagNameToCategoryIdMap 里、也没有 id 命中，
+      // 只能靠小写化后的名字循环匹配到存量 'Workout'
+      final tagId = await controller.ensureTagExists(db, 'workout', '💪');
+      expect(tagId, equals('workout_tag'));
+      expect(
+        db.getTagsCallCount,
+        equals(1),
+        reason: '命中既有标签时不应再写库或重新全量拉取标签',
+      );
     });
 
     test(
@@ -636,8 +651,12 @@ void main() {
         fixedId: 'fixed_custom',
       );
 
-      expect(tagId, equals('自定义分类'));
-      expect(db.addTagCalled, isTrue);
+      // 真实契约：回退写入后重新拉标签并按名字解析，返回的是生成出来的 id
+      final persisted = (await db.getTags()).single;
+      expect(persisted.name, equals('自定义分类'));
+      expect(tagId, equals(persisted.id));
+      expect(tagId, isNot(equals('自定义分类')),
+          reason: '真实 addTag 生成 UUID 风格的 id，不会拿名字当 id');
     });
   });
 
@@ -757,7 +776,12 @@ void main() {
 }
 
 class _CountingDatabaseService extends DatabaseService {
-  _CountingDatabaseService() : super.forTesting();
+  _CountingDatabaseService({Map<String, NoteTag>? extraTags})
+      : super.forTesting() {
+    if (extraTags != null) {
+      _tags.addAll(extraTags);
+    }
+  }
 
   int getTagByIdCallCount = 0;
   int getTagsCallCount = 0;
@@ -805,7 +829,6 @@ class _CountingDatabaseService extends DatabaseService {
 class _FailingAddTagWithIdDatabaseService extends DatabaseService {
   _FailingAddTagWithIdDatabaseService() : super.forTesting();
 
-  bool addTagCalled = false;
   final Map<String, NoteTag> _tags = {};
 
   @override
@@ -820,8 +843,9 @@ class _FailingAddTagWithIdDatabaseService extends DatabaseService {
 
   @override
   Future<void> addTag(String name, {String? iconName}) async {
-    addTagCalled = true;
-    _tags[name] = NoteTag(id: name, name: name, iconName: iconName ?? '');
+    // 镜像 database_tag_mixin.dart：真实实现生成 UUID，不拿名字当 id
+    final id = 'generated-uuid-${_tags.length}';
+    _tags[id] = NoteTag(id: id, name: name, iconName: iconName ?? '');
   }
 
   @override
