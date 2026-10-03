@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
-import 'test_harness.dart';
+import '../../test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

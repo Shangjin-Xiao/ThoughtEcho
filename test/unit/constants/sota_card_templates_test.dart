@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:xml/xml.dart';
 import 'package:thoughtecho/constants/card_templates.dart';
 import 'package:thoughtecho/models/generated_card.dart';
 
@@ -19,7 +20,14 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, contains('<svg'));
+      final doc = XmlDocument.parse(svg);
+      expect(doc.rootElement.name.local, equals('svg'));
+      expect(
+        doc.rootElement.getAttribute('xmlns'),
+        equals('http://www.w3.org/2000/svg'),
+      );
+      expect(doc.rootElement.getAttribute('viewBox'), isNotNull);
+
       expect(svg, contains('sotaBlur'));
       expect(svg, contains('cardShadow'));
       expect(svg, contains('sotaOverlay'));
@@ -36,12 +44,21 @@ void main() {
         date: testDate,
       );
 
+      final doc = XmlDocument.parse(svg);
+      expect(doc.rootElement.name.local, equals('svg'));
+      expect(
+        doc.rootElement.getAttribute('xmlns'),
+        equals('http://www.w3.org/2000/svg'),
+      );
+
       expect(svg, contains('auroraBlur'));
       expect(svg, contains('textShadow'));
       expect(
-          svg,
-          contains(
-              'M6 17h3l2-4V7H5v6h3l-2 4zm8 0h3l2-4V7h-6v6h3l-2 4z')); // Quote icon path
+        svg,
+        contains(
+          'M6 17h3l2-4V7H5v6h3l-2 4zm8 0h3l2-4V7h-6v6h3l-2 4z',
+        ), // Quote icon path
+      );
     });
 
     test('getTemplateByType handles sotaModern', () {
@@ -53,6 +70,12 @@ void main() {
         date: testDate,
       );
 
+      final doc = XmlDocument.parse(svg);
+      expect(doc.rootElement.name.local, equals('svg'));
+      expect(
+        doc.rootElement.getAttribute('xmlns'),
+        equals('http://www.w3.org/2000/svg'),
+      );
       expect(svg, contains('sotaBlur'));
     });
 
@@ -62,6 +85,12 @@ void main() {
         content: testContent,
       );
 
+      final doc = XmlDocument.parse(svg);
+      expect(doc.rootElement.name.local, equals('svg'));
+      expect(
+        doc.rootElement.getAttribute('xmlns'),
+        equals('http://www.w3.org/2000/svg'),
+      );
       expect(svg, contains('minimalShadow'));
       expect(svg, contains('Inter'));
     });

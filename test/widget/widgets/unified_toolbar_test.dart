@@ -143,11 +143,4 @@ void main() {
       expect(redoneText, equals('Test text'));
     });
   });
-
-  group('Media Type Helper Tests', () {
-    test('Media type names are correct', () {
-      // 这些是内部方法，我们通过行为测试来验证
-      // 实际的媒体类型名称会在对话框中显示
-    });
-  });
 }
