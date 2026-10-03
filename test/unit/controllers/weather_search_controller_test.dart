@@ -313,6 +313,41 @@ void main() {
         expect(controller.lastResult?.getLocalizedMessage(l10n),
             contains('citySelectionError:Exception: Test error'));
       });
+
+      test(
+          'toggles isLoading and notifies listeners during selectCityAndUpdateWeather',
+          () async {
+        final position = Position(
+          longitude: 0.0,
+          latitude: 0.0,
+          timestamp: DateTime.now(),
+          accuracy: 0.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        );
+
+        when(mockLocationService.setSelectedCity(any)).thenAnswer((_) async {});
+        when(mockLocationService.currentPosition).thenReturn(position);
+        when(mockWeatherService.getWeatherData(any, any))
+            .thenAnswer((_) async {});
+        when(mockWeatherService.hasValidWeatherData).thenReturn(true);
+
+        final loadingStates = <bool>[];
+        controller.addListener(() {
+          loadingStates.add(controller.isLoading);
+        });
+
+        expect(controller.isLoading, isFalse);
+        final result = await controller.selectCityAndUpdateWeather(cityInfo);
+
+        expect(result, isTrue);
+        expect(controller.isLoading, isFalse);
+        expect(loadingStates, equals([true, false]));
+      });
     });
 
     group('useCurrentLocation', () {
@@ -508,6 +543,41 @@ void main() {
             contains('Test location error'));
         expect(controller.lastResult?.getLocalizedMessage(l10n),
             contains('locationFetchError:Exception: Test location error'));
+      });
+
+      test('toggles isLoading and notifies listeners during useCurrentLocation',
+          () async {
+        final position = Position(
+          longitude: 0.0,
+          latitude: 0.0,
+          timestamp: DateTime.now(),
+          accuracy: 0.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        );
+
+        when(mockLocationService.getCurrentLocation())
+            .thenAnswer((_) async => position);
+        when(mockWeatherService.getWeatherData(any, any))
+            .thenAnswer((_) async {});
+        when(mockWeatherService.hasValidWeatherData).thenReturn(true);
+        when(mockLocationService.city).thenReturn('CurrentCity');
+
+        final loadingStates = <bool>[];
+        controller.addListener(() {
+          loadingStates.add(controller.isLoading);
+        });
+
+        expect(controller.isLoading, isFalse);
+        final result = await controller.useCurrentLocation();
+
+        expect(result, isTrue);
+        expect(controller.isLoading, isFalse);
+        expect(loadingStates, equals([true, false]));
       });
     });
   });

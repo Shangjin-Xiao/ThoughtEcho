@@ -96,4 +96,9 @@ class AppConstants {
   /// Aptabase App Key，支持编译期通过 --dart-define=APTABASE_APP_KEY 注入
   static const String aptabaseAppKey =
       String.fromEnvironment('APTABASE_APP_KEY', defaultValue: '');
+
+  // ==================== 外部链接配置 ====================
+  /// 官方隐私政策统一地址
+  static const String privacyPolicyUrl =
+      'https://note.shangjinyun.cn/privacy.html';
 }

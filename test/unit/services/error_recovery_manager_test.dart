@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:thoughtecho/services/error_recovery_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -241,6 +242,118 @@ void main() {
             .toList(),
         equals(['history_op_1', 'history_op_2']),
       );
+    });
+
+    test('enforces maximum error history capacity limit of 100 entries',
+        () async {
+      errorRecoveryManager.initialize();
+      errorRecoveryManager.clearErrorHistory();
+
+      // Trigger 105 errors
+      for (int i = 0; i < 105; i++) {
+        try {
+          await errorRecoveryManager.executeWithRecovery(
+            'op_$i',
+            () async => throw Exception('error_$i'),
+            maxRetries: 0,
+          );
+        } catch (_) {}
+      }
+
+      final history = errorRecoveryManager.getErrorHistory();
+      expect(history.length, equals(100));
+      // First 5 (op_0 .. op_4) should have been evicted; earliest remaining is op_5
+      expect(history.first.operationName, equals('op_5'));
+      expect(history.last.operationName, equals('op_104'));
+    });
+
+    test('ErrorRecord properties and getters expose expected metadata', () {
+      final now = DateTime.now();
+      final record = ErrorRecord(
+        operationName: 'test_op',
+        error: const FormatException('Invalid JSON payload'),
+        stackTrace: StackTrace.current,
+        timestamp: now,
+        attemptCount: 2,
+        context: {'key': 'val'},
+      );
+
+      expect(record.operationName, equals('test_op'));
+      expect(record.error, isA<FormatException>());
+      expect(record.errorType, equals('FormatException'));
+      expect(record.errorMessage, contains('Invalid JSON payload'));
+      expect(record.attemptCount, equals(2));
+      expect(record.context['key'], equals('val'));
+      expect(record.timestamp, equals(now));
+    });
+
+    test('RecoveryAttempt calculates duration and tracks state', () {
+      final start = DateTime(2026, 1, 1, 12, 0, 0);
+      final end = DateTime(2026, 1, 1, 12, 0, 5);
+      final record = ErrorRecord(
+        operationName: 'op',
+        error: Exception('err'),
+        stackTrace: StackTrace.current,
+        timestamp: start,
+        attemptCount: 1,
+        context: {},
+      );
+      final attempt = RecoveryAttempt(
+        id: 'attempt_1',
+        operationId: 'op_id_1',
+        errorRecord: record,
+        strategy: TestCustomStrategy(),
+        startTime: start,
+      );
+
+      expect(attempt.duration, isNull);
+      expect(attempt.isSuccessful, isFalse);
+
+      attempt.endTime = end;
+      attempt.isSuccessful = true;
+
+      expect(attempt.duration, equals(const Duration(seconds: 5)));
+      expect(attempt.isSuccessful, isTrue);
+    });
+
+    test(
+        'default recovery strategy classes execute directly and report correct names',
+        () {
+      fakeAsync((async) {
+        final dummyRecord = ErrorRecord(
+          operationName: 'test',
+          error: Exception('test'),
+          stackTrace: StackTrace.current,
+          timestamp: DateTime.now(),
+          attemptCount: 1,
+          context: {},
+        );
+
+        final memory = MemoryRecoveryStrategy();
+        expect(memory.name, equals('内存恢复策略'));
+        memory.recover(dummyRecord);
+        async.elapse(const Duration(milliseconds: 1500));
+
+        final fileSystem = FileSystemRecoveryStrategy();
+        expect(fileSystem.name, equals('文件系统恢复策略'));
+        fileSystem.recover(dummyRecord);
+        async.elapse(const Duration(milliseconds: 100));
+
+        final timeout = TimeoutRecoveryStrategy();
+        expect(timeout.name, equals('超时恢复策略'));
+        timeout.recover(dummyRecord);
+        async.elapse(const Duration(seconds: 3));
+
+        final network = NetworkRecoveryStrategy();
+        expect(network.name, equals('网络恢复策略'));
+        network.recover(dummyRecord);
+        async.elapse(const Duration(seconds: 4));
+
+        final generic = GenericRecoveryStrategy();
+        expect(generic.name, equals('通用恢复策略'));
+        generic.recover(dummyRecord);
+        async.elapse(const Duration(milliseconds: 600));
+      });
     });
   });
 }

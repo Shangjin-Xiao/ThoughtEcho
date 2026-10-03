@@ -330,4 +330,20 @@ void main() {
       });
     });
   });
+
+  group('NoteSearchController - dispose', () {
+    test('dispose cancels active timeout and debounce timers', () {
+      fakeAsync((async) {
+        final controller = NoteSearchController();
+        controller.updateSearch('query to dispose');
+        expect(controller.isSearching, true);
+
+        // Disposing must cancel pending timers without throwing or calling notifyListeners on disposed controller
+        controller.dispose();
+
+        // Advance well beyond timeout window (5s)
+        async.elapse(const Duration(seconds: 10));
+      });
+    });
+  });
 }

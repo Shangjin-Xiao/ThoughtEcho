@@ -54,7 +54,7 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 定义链接地址 ---
   final String _projectUrl = 'https://github.com/Shangjin-Xiao/ThoughtEcho';
   final String _websiteUrl = 'https://note.shangjinyun.cn/';
-  final String _privacyUrl = 'https://note.shangjinyun.cn/privacy.html';
+  final String _privacyUrl = AppConstants.privacyPolicyUrl;
   // --- 链接地址结束 ---
   final TextEditingController _locationController = TextEditingController();
 

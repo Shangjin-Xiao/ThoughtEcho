@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/config/onboarding_config.dart';
+import 'package:thoughtecho/controllers/onboarding_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/onboarding_models.dart';
 import 'package:thoughtecho/services/api_service.dart';
@@ -10,6 +11,8 @@ import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
 import 'package:thoughtecho/widgets/onboarding/appearance_page_view.dart';
+import 'package:thoughtecho/widgets/onboarding/onboarding_section.dart';
+import 'package:thoughtecho/widgets/onboarding/page_views.dart';
 import 'package:thoughtecho/widgets/onboarding/preferences_page_view.dart';
 
 import '../../test_harness.dart';
@@ -48,6 +51,33 @@ void main() {
               pageData: OnboardingConfig.getPageDataWithContext(context, 1),
               state: state,
               onPreferenceChanged: onPreferenceChanged ?? (_, __) {},
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 欢迎屏（index 0）。
+  Widget buildWelcomePage({
+    OnboardingController? controller,
+  }) {
+    final c = controller ?? OnboardingController();
+    return ChangeNotifierProvider<OnboardingController>.value(
+      value: c,
+      child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => WelcomePageView(
+              pageData: OnboardingConfig.getPageDataWithContext(context, 0),
             ),
           ),
         ),
@@ -216,6 +246,50 @@ void main() {
 
       final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
       expect(checkbox.value, isFalse);
+    });
+
+    testWidgets('点按匿名改进计划开关触发 onPreferenceChanged 开启 telemetryEnabled',
+        (tester) async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      final changes = <String, dynamic>{};
+
+      await tester.pumpWidget(
+        buildPreferencesPage(
+          onPreferenceChanged: (key, value) => changes[key] = value,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final telemetryTitle = find.text(l10n.settingsTelemetryTitle);
+      expect(telemetryTitle, findsOneWidget);
+
+      final telemetrySection = find.ancestor(
+        of: telemetryTitle,
+        matching: find.byType(OnboardingSection),
+      );
+      final telemetrySwitch = find.descendant(
+        of: telemetrySection,
+        matching: find.byType(Switch),
+      );
+      expect(telemetrySwitch, findsOneWidget);
+
+      await tester.ensureVisible(telemetrySwitch);
+      await tester.tap(telemetrySwitch);
+      await tester.pumpAndSettle();
+
+      expect(changes['telemetryEnabled'], isTrue);
+    });
+  });
+
+  group('欢迎屏 · 隐私政策链接', () {
+    testWidgets('展示隐私政策链接入口', (tester) async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+
+      await tester.pumpWidget(buildWelcomePage());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settingsPrivacyPolicy), findsOneWidget);
+      expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
     });
   });
 }
