@@ -27,19 +27,6 @@ void main() {
   });
 
   group('SchemaVersionAdapter & SchemaMigrationException', () {
-    test('SchemaVersionAdapter holds expected properties', () {
-      Future<void> dummyApply(Transaction txn) async {}
-      final adapter = SchemaVersionAdapter(
-        version: 42,
-        description: 'Test adapter',
-        apply: dummyApply,
-      );
-
-      expect(adapter.version, equals(42));
-      expect(adapter.description, equals('Test adapter'));
-      expect(adapter.apply, equals(dummyApply));
-    });
-
     test('SchemaMigrationException stores context and formats toString()', () {
       final cause = Exception('root cause');
       final exception = SchemaMigrationException(
@@ -162,11 +149,14 @@ void main() {
 
   group('SchemaVersionAdapters Adapter List Configuration', () {
     test(
-        'adapters list starts at version 2 and ends at version 21 without gaps',
+        'adapters list starts at version 2 and ends at schemaVersion without gaps',
         () {
       final adapters = schemaAdapters.adapters;
       expect(adapters.first.version, equals(2));
-      expect(adapters.last.version, equals(21));
+      expect(
+        adapters.last.version,
+        equals(DatabaseSchemaDefinitions.schemaVersion),
+      );
 
       for (var i = 0; i < adapters.length; i++) {
         final expectedVersion = i + 2;
@@ -384,7 +374,7 @@ void main() {
       final tables = await database.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'quote_tags'",
       );
-      expect(tables, isNotEmpty);
+      expect(tables, hasLength(1));
     });
 
     test('v13 creates media_references table', () async {
@@ -398,7 +388,7 @@ void main() {
       final tables = await database.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'media_references'",
       );
-      expect(tables, isNotEmpty);
+      expect(tables, hasLength(1));
     });
 
     test('v14 adds day_period column and index idempotently', () async {
@@ -410,19 +400,24 @@ void main() {
         await adapterV14.apply(txn);
       });
 
-      final columns = await database.rawQuery('PRAGMA table_info(quotes)');
-      final columnNames = columns.map((c) => c['name'] as String).toList();
-      expect(columnNames, contains('day_period'));
+      Future<void> assertDayPeriodApplied() async {
+        final columns = await database.rawQuery('PRAGMA table_info(quotes)');
+        final columnNames = columns.map((c) => c['name'] as String).toList();
+        expect(columnNames, contains('day_period'));
 
-      final indexes = await database.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_day_period'",
-      );
-      expect(indexes, isNotEmpty);
+        final indexes = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_day_period'",
+        );
+        expect(indexes, hasLength(1));
+      }
 
-      // Idempotency re-run
+      await assertDayPeriodApplied();
+
+      // Idempotency re-run must not throw and must not change the schema
       await database.transaction((txn) async {
         await adapterV14.apply(txn);
       });
+      await assertDayPeriodApplied();
     });
 
     test('v15 adds last_modified to quotes, populates value, and creates index',
@@ -440,19 +435,28 @@ void main() {
         await adapterV15.apply(txn);
       });
 
-      final rows = await database.query('quotes', orderBy: 'id');
-      expect(rows[0]['last_modified'], equals('2025-01-01T10:00:00.000Z'));
-      expect(rows[1]['last_modified'], isNotNull);
+      Future<void> assertLastModifiedApplied() async {
+        final rows = await database.query('quotes', orderBy: 'id');
+        expect(rows[0]['last_modified'], equals('2025-01-01T10:00:00.000Z'));
+        // Null date falls back to the migration timestamp (COALESCE(date, now))
+        expect(
+          DateTime.tryParse(rows[1]['last_modified'] as String),
+          isNotNull,
+        );
 
-      final indexes = await database.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_last_modified'",
-      );
-      expect(indexes, isNotEmpty);
+        final indexes = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_last_modified'",
+        );
+        expect(indexes, hasLength(1));
+      }
 
-      // Idempotency check
+      await assertLastModifiedApplied();
+
+      // Idempotency re-run must not throw and must not change data or schema
       await database.transaction((txn) async {
         await adapterV15.apply(txn);
       });
+      await assertLastModifiedApplied();
     });
 
     test('v16 adds last_modified to categories and creates index', () async {
@@ -467,18 +471,23 @@ void main() {
         await adapterV16.apply(txn);
       });
 
-      final row = (await database.query('categories')).single;
-      expect(row['last_modified'], isNotNull);
+      Future<void> assertV16Applied() async {
+        final row = (await database.query('categories')).single;
+        expect(DateTime.tryParse(row['last_modified'] as String), isNotNull);
 
-      final indexes = await database.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_categories_last_modified'",
-      );
-      expect(indexes, isNotEmpty);
+        final indexes = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_categories_last_modified'",
+        );
+        expect(indexes, hasLength(1));
+      }
 
-      // Idempotency check
+      await assertV16Applied();
+
+      // Idempotency re-run must not throw and must not change data or schema
       await database.transaction((txn) async {
         await adapterV16.apply(txn);
       });
+      await assertV16Applied();
     });
 
     test('v17 adds favorite_count default 0 to quotes and creates index',
@@ -493,18 +502,23 @@ void main() {
         await adapterV17.apply(txn);
       });
 
-      final row = (await database.query('quotes')).single;
-      expect(row['favorite_count'], equals(0));
+      Future<void> assertV17Applied() async {
+        final row = (await database.query('quotes')).single;
+        expect(row['favorite_count'], equals(0));
 
-      final indexes = await database.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_favorite_count'",
-      );
-      expect(indexes, isNotEmpty);
+        final indexes = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_favorite_count'",
+        );
+        expect(indexes, hasLength(1));
+      }
 
-      // Idempotency check
+      await assertV17Applied();
+
+      // Idempotency re-run must not throw and must not change data or schema
       await database.transaction((txn) async {
         await adapterV17.apply(txn);
       });
+      await assertV17Applied();
     });
 
     test('v18 migrates default category icons', () async {
@@ -545,19 +559,24 @@ void main() {
         await adapterV19.apply(txn);
       });
 
-      final columns = await database.rawQuery('PRAGMA table_info(quotes)');
-      final columnNames = columns.map((c) => c['name'] as String).toSet();
-      expect(columnNames, containsAll(['latitude', 'longitude']));
+      Future<void> assertV19Applied() async {
+        final columns = await database.rawQuery('PRAGMA table_info(quotes)');
+        final columnNames = columns.map((c) => c['name'] as String).toSet();
+        expect(columnNames, containsAll(['latitude', 'longitude']));
 
-      final indexes = await database.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_coordinates'",
-      );
-      expect(indexes, isNotEmpty);
+        final indexes = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_coordinates'",
+        );
+        expect(indexes, hasLength(1));
+      }
 
-      // Idempotency check
+      await assertV19Applied();
+
+      // Idempotency re-run must not throw and must not change the schema
       await database.transaction((txn) async {
         await adapterV19.apply(txn);
       });
+      await assertV19Applied();
     });
 
     test(
@@ -578,19 +597,24 @@ void main() {
         await adapterV20.apply(txn);
       });
 
-      final columns = await database.rawQuery('PRAGMA table_info(quotes)');
-      final columnNames = columns.map((c) => c['name'] as String).toSet();
-      expect(columnNames, containsAll(['is_deleted', 'deleted_at']));
+      Future<void> assertV20Applied() async {
+        final columns = await database.rawQuery('PRAGMA table_info(quotes)');
+        final columnNames = columns.map((c) => c['name'] as String).toSet();
+        expect(columnNames, containsAll(['is_deleted', 'deleted_at']));
 
-      final tables = await database.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'quote_tombstones'",
-      );
-      expect(tables, isNotEmpty);
+        final tables = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'quote_tombstones'",
+        );
+        expect(tables, hasLength(1));
+      }
 
-      // Idempotency check
+      await assertV20Applied();
+
+      // Idempotency re-run must not throw and must not change the schema
       await database.transaction((txn) async {
         await adapterV20.apply(txn);
       });
+      await assertV20Applied();
     });
 
     test('v21 adds poi_name column and idx_quotes_poi_name index', () async {
@@ -603,19 +627,24 @@ void main() {
         await adapterV21.apply(txn);
       });
 
-      final columns = await database.rawQuery('PRAGMA table_info(quotes)');
-      final columnNames = columns.map((c) => c['name'] as String).toList();
-      expect(columnNames, contains('poi_name'));
+      Future<void> assertV21Applied() async {
+        final columns = await database.rawQuery('PRAGMA table_info(quotes)');
+        final columnNames = columns.map((c) => c['name'] as String).toList();
+        expect(columnNames, contains('poi_name'));
 
-      final indexes = await database.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_poi_name'",
-      );
-      expect(indexes, isNotEmpty);
+        final indexes = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_quotes_poi_name'",
+        );
+        expect(indexes, hasLength(1));
+      }
 
-      // Idempotency check
+      await assertV21Applied();
+
+      // Idempotency re-run must not throw and must not change the schema
       await database.transaction((txn) async {
         await adapterV21.apply(txn);
       });
+      await assertV21Applied();
     });
   });
 }
