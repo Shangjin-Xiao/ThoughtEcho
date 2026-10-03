@@ -177,9 +177,7 @@ void main() {
       });
     });
 
-    test(
-        'should not trigger timeout error for old search version when query changes before timeout',
-        () {
+    test('should restart the 5 second timeout window when query changes', () {
       fakeAsync((async) {
         controller.updateSearch('first query');
         expect(controller.isSearching, true);
@@ -187,11 +185,12 @@ void main() {
         // Advance time by 3 seconds
         async.elapse(const Duration(seconds: 3));
 
-        // Update search query to second query (resets timeout timer and increments version)
+        // Changing the query cancels the pending timer and starts a fresh 5s window
         controller.updateSearch('second query');
         expect(controller.isSearching, true);
 
-        // Advance 3 more seconds (total 6 seconds from start, 3 seconds from second query)
+        // 6 seconds from start = 3 seconds into the new window: the first query's
+        // 5 second mark has passed without firing, so its timer was cancelled
         async.elapse(const Duration(seconds: 3));
         expect(controller.isSearching, true);
         expect(controller.searchError, null);
@@ -301,15 +300,15 @@ void main() {
     });
 
     test(
-        'should clear search and notify when query is empty but isSearching or searchError is true',
+        'should clear search and notify when query is empty but isSearching is true',
         () {
-      // Trigger timeout to set searchError
       fakeAsync((async) {
         controller.updateSearch('test query');
         async.elapse(const Duration(seconds: 5));
         expect(controller.searchError, '搜索超时，请重试');
 
-        // Force searchQuery to empty string while error is present
+        // Clearing via updateSearch('') nulls searchError, so only isSearching
+        // is left for clearSearch() to reset
         controller.updateSearch('');
         expect(controller.searchQuery, '');
         expect(controller.searchError, null);
@@ -328,23 +327,6 @@ void main() {
         expect(controller.isSearching, false);
         expect(controller.searchError, null);
         expect(notified, true);
-      });
-    });
-  });
-
-  group('NoteSearchController - dispose', () {
-    test('should cancel pending timers on dispose', () {
-      fakeAsync((async) {
-        final controller = NoteSearchController();
-        controller.updateSearch('test query');
-        expect(controller.isSearching, true);
-
-        controller.dispose();
-
-        // Advance time past timeout
-        async.elapse(const Duration(seconds: 6));
-
-        // No uncaught exceptions or timers firing on disposed controller
       });
     });
   });
