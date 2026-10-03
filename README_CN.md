@@ -70,7 +70,7 @@
   <table>
     <tr>
       <td align="center" width="33%"><b>✍️ 富文本笔记</b><br>Quill 富文本、多媒体附件与纯文本/富文本双重存储</td>
-      <td align="center" width="33%"><b>✨ Thoughter（AI 灵感助手）</b><br>Agent 工具调用、跨会话长期记忆与笔记智能创作</td>
+      <td align="center" width="33%"><b>✨ Thoughter（AI 灵感助手）</b><br>智能体扩展工具联动、跨会话长期记忆与笔记智能创作</td>
       <td align="center" width="33%"><b>📊 洞察与报告</b><br>AI 周期洞察、年度报告与写作趋势深度分析</td>
     </tr>
     <tr>

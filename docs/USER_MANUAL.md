@@ -161,7 +161,7 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 
 ### Thoughter 辅助功能（✨ 按钮，实验性 / Beta）
 
-> ⚠️ **实验性功能说明**：Thoughter 属于实验性 AI Agent 助手。AI 回答可能包含错误或不准确内容，请客观核查；AI 不会直接改写您的笔记，所有的创建与修改建议均必须由您点击保存/应用后才会生效。
+> ⚠️ **实验性功能说明**：Thoughter 属于实验性 AI 智能助手。AI 回答可能包含错误或不准确内容，请客观核查；AI 不会直接改写您的笔记，所有的创建与修改建议均必须由您点击保存/应用后才会生效。
 
 点击编辑器顶部的 ✨ 按钮，可使用以下 AI 功能：
 
@@ -173,7 +173,7 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 | **深度分析**           | 生成笔记的总结和洞察       |
 | **问笔记**             | 针对笔记内容与 AI 对话交流 |
 
-Agent 会在工具调用后继续处理结果，并将完整回答保留为最终消息。新建或编辑建议会以卡片展示最终笔记，可生成普通文本或原生富文本；编辑建议可展开「查看修改记录」，确认后只修改匹配的段落并保留其他格式和媒体。普通笔记默认保持普通模式，转换为富文本时会明确提示。如果笔记在建议生成后又被修改，应用会拒绝覆盖并要求重新生成建议。
+智能体会在工具联动后继续处理结果，并将完整回答保留为最终消息。新建或编辑建议会以卡片展示最终笔记，可生成普通文本或原生富文本；编辑建议可展开「查看修改记录」，确认后只修改匹配的段落并保留其他格式和媒体。普通笔记默认保持普通模式，转换为富文本时会明确提示。如果笔记在建议生成后又被修改，应用会拒绝覆盖并要求重新生成建议。
 
 ### 附加信息编辑面板
 
@@ -298,7 +298,7 @@ Agent 会在工具调用后继续处理结果，并将完整回答保留为最�
 **卡片风格**：
 
 - **Knowledge** - 极光渐变、玻璃拟态、高对比度
-- **SOTA Modern** - 网格渐变、浮动卡片、动态阴影
+- **现代前沿** - 网格渐变、浮动卡片、动态阴影
 - **Mindful** - 有机形状、大地色系、纸张纹理
 - **Neon Cyber** - 深色网格、霓虹线条、等宽字体
 - **Quote** - 居中文字、蓝色网格背景
@@ -326,13 +326,13 @@ Agent 会在工具调用后继续处理结果，并将完整回答保留为最�
 
 ### Thoughter AI 对话助手
 
-> ⚠️ **实验性功能**：Thoughter 目前为实验性 AI Agent 助手，AI 回答可能包含错误，请自行核查；Thoughter 不会直接改写您的笔记，所有创建和修改建议须由您点击「保存」/「应用」后才会生效。
+> ⚠️ **实验性功能**：Thoughter 目前为实验性 AI 智能助手，AI 回答可能包含错误，请自行核查；Thoughter 不会直接改写您的笔记，所有创建和修改建议须由您点击「保存」/「应用」后才会生效。
 
-Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记联动分析与 Agent 工作流，帮助您整理思路、挖掘洞察并快速创作。
+Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记联动分析与智能体自动化工作流，帮助您整理思路、挖掘洞察并快速创作。
 
 **访问路径**：
 
-- **探索 Tab**（底部导航第三项）→ 直接进入 Thoughter Agent 对话
+- **探索页面**（底部导航第三项）→ 直接进入 Thoughter 智能体对话
 - **笔记菜单** → 「问 AI」→ 进入与该笔记绑定的对话
 - **编辑器 ✨ 按钮** → 「问笔记」→ 在编辑器内启动针对当前笔记的对话
 
@@ -340,13 +340,13 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 
 | 模式           | 说明                                                                                          |
 | -------------- | --------------------------------------------------------------------------------------------- |
-| **Agent 模式** | 默认模式。Thoughter 可主动调用工具搜索、分析笔记并提出创建/编辑建议，适合开放性探索与创作任务 |
+| **智能体模式** | 默认模式。Thoughter 可主动联动扩展工具搜索、分析笔记并提出创建/编辑建议，适合开放性探索与创作任务 |
 | **问笔记**     | 绑定到特定笔记，Thoughter 基于该笔记内容回答问题，不会随意扩展                                |
 | **自由对话**   | 纯对话模式，不绑定笔记内容                                                                    |
 
-**Agent 工具能力**：
+**智能体扩展工具联动能力**：
 
-在 Agent 模式下，Thoughter 可以调用以下工具，工具调用过程会实时展示在对话界面：
+在智能体模式下，Thoughter 可以使用以下扩展工具，工具联动过程会实时展示在对话界面：
 
 | 工具               | 说明                                               |
 | ------------------ | -------------------------------------------------- |
@@ -366,7 +366,7 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 **跨会话长期记忆与个性化**：
 
 - **长期记忆**：Thoughter 支持跨会话记住您的写作偏好、表达习惯与个人背景，并在对话中自动保持一致。
-- **隐私与物理隔离**：长期记忆存储于本地独立数据库，绝不上传云端，不进入多端同步与数据备份，保障您的绝对隐私。
+- **隐私与本地独立数据库隔离**：长期记忆存储于本地独立数据库，绝不上传云端，不进入多端同步与数据备份，保障您的绝对隐私。
 - **用户称呼**：支持在 Thoughter 中设置自定义昵称，让 AI 按照您喜欢的方式称呼您。
 - **记忆管理**：可在「设置」→「AI 设置」中随时查看当前已记录的画像条目或一键清空记忆。
 
@@ -616,7 +616,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 | 设置              | 类型 | 说明                          |
 | ----------------- | ---- | ----------------------------- |
 | 剪贴板监控        | 开关 | 自动捕获剪贴板文本            |
-| 显示收藏按钮      | 开关 | 在 UI 中显示收藏功能          |
+| 显示收藏按钮      | 开关 | 在界面中显示收藏功能          |
 | 显示精确时间      | 开关 | 显示精确时间戳 vs 相对时间    |
 | 显示笔记编辑时间  | 开关 | 在笔记中显示最后编辑时间      |
 | 优先显示加粗内容  | 开关 | 折叠视图中优先显示加粗文本    |
@@ -718,7 +718,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 - 创建新分类（最多 50 字符）
 - 图标选择（emoji 或 Material 图标）
 - 现有分类列表显示
-- 分类 CRUD 操作（创建、读取、更新、删除）
+- 分类管理（创建、查看、修改与删除）
 
 ### 关于与反馈
 
@@ -964,7 +964,7 @@ The editor provides rich text formatting tools:
 
 ### Thoughter Features (✨ Button, Experimental / Beta)
 
-> ⚠️ **Experimental Feature Notice**: Thoughter is an experimental AI Agent assistant. AI responses may contain errors or inaccuracies and should be verified critically. AI cannot directly edit your notes; all note creations and modification proposals will take effect only after you click Save/Apply.
+> ⚠️ **Experimental Feature Notice**: Thoughter is an experimental AI assistant. AI responses may contain errors or inaccuracies and should be verified critically. AI cannot directly edit your notes; all note creations and modification proposals will take effect only after you click Save/Apply.
 
 Click the ✨ button at the top of the editor for:
 
@@ -976,7 +976,7 @@ Click the ✨ button at the top of the editor for:
 | **Deep Analysis**                        | Generate summary and insights               |
 | **Ask Note**                             | Chat with AI about note content             |
 
-The Agent continues processing after tool calls and preserves its full answer as the final message. Create and edit proposals show the final note in a card and can contain plain text or native rich text. Edit cards offer a “View change history” panel, then apply only the matched passages while preserving unrelated formatting and media. Plain notes stay plain by default, and any conversion to rich text is called out explicitly. If a note changes after a proposal is generated, the app refuses to overwrite it and asks for a fresh proposal.
+The AI assistant continues processing after running tool actions and preserves its full answer as the final message. Create and edit proposals show the final note in a card and can contain plain text or native rich text. Edit cards offer a “View change history” panel, then apply only the matched passages while preserving unrelated formatting and media. Plain notes stay plain by default, and any conversion to rich text is called out explicitly. If a note changes after a proposal is generated, the app refuses to overwrite it and asks for a fresh proposal.
 
 ### Extra Information Panel
 
@@ -1099,7 +1099,7 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 **Card Styles**:
 
 - **Knowledge** - Aurora gradients, glassmorphism, high contrast
-- **SOTA Modern** - Mesh gradients, floating card, dynamic shadows
+- **Modern Frontier** - Mesh gradients, floating card, dynamic shadows
 - **Mindful** - Organic shapes, earth tones, paper texture
 - **Neon Cyber** - Dark grid, neon lines, monospace font
 - **Quote** - Centered text, blue grid background
@@ -1127,13 +1127,13 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 
 ### Thoughter AI Assistant
 
-> ⚠️ **Experimental Feature**: Thoughter is currently an experimental AI Agent assistant. AI responses may contain errors and should be verified. Thoughter cannot directly modify your notes — all create and edit proposals take effect only after you click Save/Apply.
+> ⚠️ **Experimental Feature**: Thoughter is currently an experimental AI assistant. AI responses may contain errors and should be verified. Thoughter cannot directly modify your notes — all create and edit proposals take effect only after you click Save/Apply.
 
-Thoughter is ThoughtEcho's built-in AI conversation assistant. It supports natural language dialogue, note-linked analysis, and Agent workflows to help you organize ideas, uncover insights, and create content quickly.
+Thoughter is ThoughtEcho's built-in AI conversation assistant. It supports natural language dialogue, note-linked analysis, and AI agent workflows to help you organize ideas, uncover insights, and create content quickly.
 
 **Access Paths**:
 
-- **Explore Tab** (third item in bottom navigation) → Open Thoughter Agent conversation directly
+- **Explore Page** (third item in bottom navigation) → Open Thoughter AI conversation directly
 - **Note menu** → "Ask AI" → Open a conversation linked to that note
 - **Editor ✨ button** → "Ask Note" → Start a note-linked conversation from within the editor
 
@@ -1141,13 +1141,13 @@ Thoughter is ThoughtEcho's built-in AI conversation assistant. It supports natur
 
 | Mode           | Description                                                                                                                                                    |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Agent Mode** | Default mode. Thoughter proactively uses tools to search, analyze notes, and propose create/edit actions. Ideal for open-ended exploration and creative tasks. |
+| **Agent Mode** | Default mode. Thoughter proactively uses integrated tools to search, analyze notes, and propose create/edit actions. Ideal for open-ended exploration and creative tasks. |
 | **Ask Note**   | Bound to a specific note. Thoughter answers questions based solely on that note's content.                                                                     |
 | **Free Chat**  | Pure conversation mode, not bound to any note content.                                                                                                         |
 
-**Agent Tool Capabilities**:
+**AI Tool Integration Capabilities**:
 
-In Agent mode, Thoughter can invoke the following tools. Tool calls are shown in real time in the conversation:
+In Agent mode, Thoughter can use the following tools. Tool actions are shown in real time in the conversation:
 
 | Tool                       | Description                                                                   |
 | -------------------------- | ----------------------------------------------------------------------------- |
@@ -1167,7 +1167,7 @@ When Thoughter proposes creating or editing a note, it displays the result as a 
 **Cross-Session Long-Term Memory & Personalization**:
 
 - **Long-Term Memory**: Thoughter remembers your writing style, preferences, and personal background across sessions, keeping its tone and assistance consistent over time.
-- **Privacy & Physical Isolation**: Long-term memory is stored locally in a separate database, never uploaded to any cloud server, and excluded from multi-device sync and data backups for complete privacy.
+- **Privacy & Local Isolated Database**: Long-term memory is stored locally in a separate database, never uploaded to any cloud server, and excluded from multi-device sync and data backups for complete privacy.
 - **Custom Nickname**: Set your preferred name or nickname in Thoughter settings for a more natural conversation experience.
 - **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings".
 
@@ -1413,7 +1413,7 @@ ThoughtEcho embeds elegant serif typography directly into the app:
 | Setting                      | Type   | Description                                      |
 | ---------------------------- | ------ | ------------------------------------------------ |
 | Clipboard Monitoring         | Toggle | Auto-capture clipboard text                      |
-| Show Favorite Button         | Toggle | Display favorites in UI                          |
+| Show Favorite Button         | Toggle | Display favorites in interface                   |
 | Show Exact Time              | Toggle | Precise timestamps vs relative time              |
 | Show Note Edit Time          | Toggle | Display the last edited time in notes            |
 | Prioritize Bold Content      | Toggle | Show bold text first in collapsed view           |
@@ -1515,7 +1515,7 @@ ThoughtEcho embeds elegant serif typography directly into the app:
 - Create new categories (max 50 characters)
 - Icon selection (emoji or Material icons)
 - List display of existing categories
-- Category CRUD operations (Create, Read, Update, Delete)
+- Category management (create, view, edit, and delete)
 
 ### About & Feedback
 
