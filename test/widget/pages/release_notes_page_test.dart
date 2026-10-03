@@ -79,6 +79,7 @@ void main() {
       expect(find.text(l10n.releaseThoughterTitle), findsOneWidget);
       expect(find.text(l10n.releaseThemeTitle), findsOneWidget);
       expect(find.text(l10n.releaseDiagnosticsNotice), findsOneWidget);
+      expect(find.text(l10n.releasePrivacyNotice), findsOneWidget);
       expect(find.text(l10n.releaseNotesGetStarted), findsOneWidget);
     });
 
@@ -129,6 +130,7 @@ void main() {
 
       expect(find.text(l10n.releaseFootprintsTitle), findsOneWidget);
       expect(find.text(l10n.releaseDreamingTitle), findsOneWidget);
+      expect(find.text(l10n.releasePrivacyNotice), findsOneWidget);
       expect(find.text(l10n.releaseNotesCurrentLede), findsOneWidget);
       expect(find.text(l10n.releaseNotesGetStarted), findsNothing);
       expect(find.text(l10n.releaseNotesViewDetailedChangelog), findsOneWidget);

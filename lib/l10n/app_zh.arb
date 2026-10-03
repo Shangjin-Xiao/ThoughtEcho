@@ -4706,6 +4706,7 @@
   "releaseMediaDisplayTitle": "图文排版更清爽",
   "releaseMediaDisplayLede": "列表中的配图改为右侧紧凑缩略图，图文错落更整洁；双击卡片即可随时展开全文与大图。",
   "releaseDiagnosticsNotice": "自 3.7.0 起，心迹支持匿名错误诊断上报以定位问题，不含笔记内容。可在「设置 › 反馈与联系」中关闭。",
+  "releasePrivacyNotice": "隐私政策已更新，补充了匿名功能改进计划（Aptabase）的数据说明。完整政策见「设置 › 反馈与联系」中的数据说明，两个开关均默认关闭。",
   "settingsReleaseNotes": "更新内容",
   "settingsReleaseNotesDesc": "查看本版本新增的功能",
   "generatingInsightsForRange": "正在生成{period}洞察…",

@@ -112,6 +112,12 @@ class ReleaseHighlights {
           icon: Icons.photo_size_select_actual_outlined,
         ),
         ReleaseHighlight(
+          version: '4.1.0',
+          lede: l10n.releasePrivacyNotice,
+          icon: Icons.privacy_tip_outlined,
+          isFootnote: true,
+        ),
+        ReleaseHighlight(
           version: sentryDisclosureVersion,
           lede: l10n.releaseDiagnosticsNotice,
           icon: Icons.shield_outlined,

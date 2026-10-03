@@ -4706,6 +4706,7 @@
   "releaseMediaDisplayTitle": "Cleaner Media Layout",
   "releaseMediaDisplayLede": "Photos in the note list now sit neatly as right-side thumbnails; double-tap any card to expand full text and images.",
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when errors occur. No note content is included. Manage in Settings › Feedback & Contact.",
+  "releasePrivacyNotice": "Privacy policy updated with details on the Anonymous Feature Improvement Program (Aptabase). See the full policy via Settings › Feedback & Contact; both toggles stay off by default.",
   "settingsReleaseNotes": "What's New",
   "settingsReleaseNotesDesc": "See what this version adds",
   "generatingInsightsForRange": "Generating insights for {period}...",

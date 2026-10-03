@@ -49,10 +49,21 @@ void main() {
           ReleaseHighlights.since(l10n, ReleaseHighlights.earliestVersion);
       final footnotes = entries.where((e) => e.isFootnote).toList();
 
-      expect(footnotes, hasLength(1));
-      expect(
-          footnotes.single.version, ReleaseHighlights.sentryDisclosureVersion);
+      expect(footnotes, hasLength(2));
+      final diagnostics =
+          footnotes.singleWhere((e) => e.lede == l10n.releaseDiagnosticsNotice);
+      expect(diagnostics.version, ReleaseHighlights.sentryDisclosureVersion);
       expect(ReleaseHighlights.sentryDisclosureVersion, '3.7.0');
+    });
+
+    test('隐私政策更新说明挂在 4.1.0 上，并且是脚注', () {
+      final entries =
+          ReleaseHighlights.since(l10n, ReleaseHighlights.earliestVersion);
+      final footnotes = entries.where((e) => e.isFootnote).toList();
+
+      final privacy =
+          footnotes.singleWhere((e) => e.lede == l10n.releasePrivacyNotice);
+      expect(privacy.version, '4.1.0');
     });
 
     test('主题那条带一个行内切换器，且全表只有一个', () {
@@ -76,12 +87,18 @@ void main() {
 
     test('3.7.0 及之后升上来的用户不再看到崩溃诊断说明', () {
       // 弹窗时代那条披露已经给他看过了，不该借着这一版再来一次。
+      // 4.1.0 新增的隐私政策脚注不受影响，照样要出现。
       for (final lastSeen in ['3.7.0', '3.8.0', '3.9.9']) {
         final entries = ReleaseHighlights.since(l10n, lastSeen);
         expect(
-          entries.any((e) => e.isFootnote),
+          entries.any((e) => e.lede == l10n.releaseDiagnosticsNotice),
           isFalse,
-          reason: '上次看过 $lastSeen 的用户不该再看到脚注',
+          reason: '上次看过 $lastSeen 的用户不该再看到崩溃诊断说明',
+        );
+        expect(
+          entries.any((e) => e.lede == l10n.releasePrivacyNotice),
+          isTrue,
+          reason: '上次看过 $lastSeen 的用户该看到隐私政策更新说明',
         );
         expect(entries.any((e) => e.version == '4.0.0'), isTrue);
       }
@@ -97,7 +114,14 @@ void main() {
     test('版本号按数字比较：3.10 比 3.7 新', () {
       // 按字符串比会把 3.10 当成旧版，于是给一个已经看过的用户重放全部内容。
       final entries = ReleaseHighlights.since(l10n, '3.10.0');
-      expect(entries.any((e) => e.isFootnote), isFalse);
+      expect(
+        entries.any((e) => e.lede == l10n.releaseDiagnosticsNotice),
+        isFalse,
+      );
+      expect(
+        entries.any((e) => e.lede == l10n.releasePrivacyNotice),
+        isTrue,
+      );
     });
 
     test('currentRelease 不做区间过滤，看过也照样列出来', () {
