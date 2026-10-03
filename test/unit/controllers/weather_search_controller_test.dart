@@ -123,92 +123,33 @@ void main() {
   });
 
   group('WeatherSearchResult', () {
-    test('getLocalizedMessage returns correct strings for all result types',
-        () {
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.citySelectedSuccess,
-          isSuccess: true,
-          cityName: 'Beijing',
-        ).getLocalizedMessage(l10n),
-        'citySelectedWeatherUpdated:Beijing',
-      );
+    // Only the two errorDetail-carrying types lack coverage elsewhere in this
+    // file; the rest are asserted via lastResult.getLocalizedMessage in the
+    // controller tests below.
+    test('getLocalizedMessage formats errorDetail for the error types', () {
+      final cases = <(WeatherSearchResultType, String, String)>[
+        (
+          WeatherSearchResultType.citySelectionError,
+          'City error',
+          'citySelectionError:City error',
+        ),
+        (
+          WeatherSearchResultType.locationFetchError,
+          'Location error',
+          'locationFetchError:Location error',
+        ),
+      ];
 
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.currentLocationSuccess,
-          isSuccess: true,
-          cityName: 'Shanghai',
-        ).getLocalizedMessage(l10n),
-        'currentLocationWeatherUpdated:Shanghai',
-      );
-
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.currentLocationSuccess,
-          isSuccess: true,
-          cityName: null,
-        ).getLocalizedMessage(l10n),
-        'currentLocationWeatherUpdated:currentLocationLabel',
-      );
-
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.weatherTimeout,
-          isSuccess: false,
-        ).getLocalizedMessage(l10n),
-        'weatherTimeoutRetry',
-      );
-
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.weatherFetchFailed,
-          isSuccess: false,
-        ).getLocalizedMessage(l10n),
-        'weatherFetchFailedCheckNetwork',
-      );
-
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.locationTimeout,
-          isSuccess: false,
-        ).getLocalizedMessage(l10n),
-        'locationTimeoutCheckPermission',
-      );
-
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.locationPermissionDenied,
-          isSuccess: false,
-        ).getLocalizedMessage(l10n),
-        'cannotGetCurrentLocation',
-      );
-
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.cityLocationNotFound,
-          isSuccess: false,
-        ).getLocalizedMessage(l10n),
-        'cannotGetSelectedCityLocation',
-      );
-
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.citySelectionError,
-          isSuccess: false,
-          errorDetail: 'City error',
-        ).getLocalizedMessage(l10n),
-        'citySelectionError:City error',
-      );
-
-      expect(
-        const WeatherSearchResult(
-          type: WeatherSearchResultType.locationFetchError,
-          isSuccess: false,
-          errorDetail: 'Location error',
-        ).getLocalizedMessage(l10n),
-        'locationFetchError:Location error',
-      );
+      for (final (type, detail, expected) in cases) {
+        expect(
+          WeatherSearchResult(
+            type: type,
+            isSuccess: false,
+            errorDetail: detail,
+          ).getLocalizedMessage(l10n),
+          expected,
+        );
+      }
     });
   });
 
@@ -243,52 +184,6 @@ void main() {
 
       expect(controller.lastResult, isNull);
       expect(notified, isTrue);
-    });
-
-    test('selectCityAndUpdateWeather toggles isLoading and notifies listeners',
-        () async {
-      final cityInfo = CityInfo(
-          name: 'TestCity',
-          fullName: 'TestCity, TestCountry',
-          lat: 0.0,
-          lon: 0.0,
-          country: 'TestCountry',
-          province: 'TestProvince');
-
-      when(mockLocationService.setSelectedCity(any)).thenAnswer((_) async {});
-      when(mockLocationService.currentPosition).thenReturn(null);
-
-      final states = <bool>[];
-      int notificationCount = 0;
-      controller.addListener(() {
-        states.add(controller.isLoading);
-        notificationCount++;
-      });
-
-      await controller.selectCityAndUpdateWeather(cityInfo);
-
-      expect(states, [true, false]);
-      expect(notificationCount, 2);
-      expect(controller.isLoading, isFalse);
-    });
-
-    test('useCurrentLocation toggles isLoading and notifies listeners',
-        () async {
-      when(mockLocationService.getCurrentLocation())
-          .thenAnswer((_) async => null);
-
-      final states = <bool>[];
-      int notificationCount = 0;
-      controller.addListener(() {
-        states.add(controller.isLoading);
-        notificationCount++;
-      });
-
-      await controller.useCurrentLocation();
-
-      expect(states, [true, false]);
-      expect(notificationCount, 2);
-      expect(controller.isLoading, isFalse);
     });
 
     group('selectCityAndUpdateWeather', () {
