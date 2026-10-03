@@ -1,6 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:xml/xml.dart';
 import 'package:thoughtecho/constants/card_templates.dart';
 import 'package:thoughtecho/models/generated_card.dart';
+
+XmlDocument parseAndAssertSvg(String svg) {
+  final doc = XmlDocument.parse(svg);
+  expect(doc.rootElement.name.local, equals('svg'));
+  expect(
+    doc.rootElement.getAttribute('xmlns'),
+    equals('http://www.w3.org/2000/svg'),
+  );
+  return doc;
+}
 
 void main() {
   group('现代化SVG卡片模板测试', () {
@@ -17,11 +28,11 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, isNotNull);
-      expect(svg, contains('<svg'));
-      expect(svg, contains('</svg>'));
-      expect(svg, contains('xmlns="http://www.w3.org/2000/svg"'));
-      expect(svg, matches(RegExp(r'viewBox="0 0 400\.?0? 600\.?0?"')));
+      final doc = parseAndAssertSvg(svg);
+      expect(
+        doc.rootElement.getAttribute('viewBox'),
+        matches(RegExp(r'0 0 400\.?0? 600\.?0?')),
+      );
       expect(svg, contains('auroraBlur'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
@@ -36,9 +47,8 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, isNotNull);
-      expect(svg, contains('<svg'));
-      expect(svg, contains('</svg>'));
+      final doc = parseAndAssertSvg(svg);
+      expect(doc.rootElement.name.local, equals('svg'));
       expect(svg, contains('quoteBg'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
@@ -68,9 +78,7 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, isNotNull);
-      expect(svg, contains('<svg'));
-      expect(svg, contains('</svg>'));
+      parseAndAssertSvg(svg);
       expect(svg, contains('philoBg'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
@@ -84,9 +92,7 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, isNotNull);
-      expect(svg, contains('<svg'));
-      expect(svg, contains('</svg>'));
+      parseAndAssertSvg(svg);
       expect(svg, contains('minimalShadow'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
@@ -100,9 +106,7 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, isNotNull);
-      expect(svg, contains('<svg'));
-      expect(svg, contains('</svg>'));
+      parseAndAssertSvg(svg);
       expect(svg, contains('natureBg'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
@@ -116,9 +120,7 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, isNotNull);
-      expect(svg, contains('<svg'));
-      expect(svg, contains('</svg>'));
+      parseAndAssertSvg(svg);
       expect(svg, contains('retroGrain'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
@@ -133,6 +135,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
+      parseAndAssertSvg(knowledgeSvg);
       expect(knowledgeSvg, contains('auroraBlur'));
 
       // 测试引用卡片
@@ -143,6 +146,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
+      parseAndAssertSvg(quoteSvg);
       expect(quoteSvg, contains('quoteBg'));
 
       // 测试哲学卡片
@@ -153,7 +157,8 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
-      expect(philoSvg, contains('philoBg')); // 注意大小写变化
+      parseAndAssertSvg(philoSvg);
+      expect(philoSvg, contains('philoBg'));
 
       // 测试简约卡片
       final minimalistSvg = CardTemplates.getTemplateByType(
@@ -163,6 +168,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
+      parseAndAssertSvg(minimalistSvg);
       expect(minimalistSvg, contains('minimalShadow'));
 
       // 测试自然卡片
@@ -173,6 +179,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
+      parseAndAssertSvg(natureSvg);
       expect(natureSvg, contains('natureBg'));
 
       // 测试复古卡片
@@ -183,6 +190,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
+      parseAndAssertSvg(retroSvg);
       expect(retroSvg, contains('retroGrain'));
 
       // 测试正念模板
@@ -193,6 +201,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
+      parseAndAssertSvg(mindfulSvg);
       expect(mindfulSvg, contains('paperTexture'));
 
       // 测试霓虹赛博模板
@@ -203,6 +212,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
+      parseAndAssertSvg(neonCyberSvg);
       expect(neonCyberSvg, contains('cyberGrid'));
     });
 
@@ -221,10 +231,7 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, isNotNull);
-      expect(svg, contains('<svg'));
-      expect(svg, contains('</svg>'));
-      // 验证文本被正确处理（不会过长）
+      parseAndAssertSvg(svg);
       expect(svg.length, lessThan(10000)); // 合理的SVG长度限制
     });
 
@@ -235,11 +242,8 @@ void main() {
         date: testDate,
       );
 
-      expect(svg, isNotNull);
-      expect(svg, contains('<svg'));
-      expect(svg, contains('</svg>'));
+      parseAndAssertSvg(svg);
       expect(svg, contains(testDate));
-      // 不应该包含空的作者信息
       expect(svg, isNot(contains('作者：null')));
     });
 
@@ -251,19 +255,16 @@ void main() {
         date: testDate,
       );
 
-      // 验证基本SVG结构
-      expect(svg, contains('<defs>'));
-      expect(svg, contains('</defs>'));
-      expect(svg, contains('<linearGradient'));
-      expect(svg, contains('<rect'));
-      expect(svg, contains('<text'));
-      // 验证阴影滤镜 (新命名为 cardShadow)
+      final doc = parseAndAssertSvg(svg);
+      expect(doc.findAllElements('defs').length, greaterThanOrEqualTo(1));
+      expect(doc.findAllElements('linearGradient').length,
+          greaterThanOrEqualTo(1));
+      expect(doc.findAllElements('rect').length, greaterThanOrEqualTo(1));
+      expect(doc.findAllElements('text').length, greaterThanOrEqualTo(1));
       expect(svg, contains('filter='));
-
-      // 验证现代化设计元素
       expect(svg, contains('system-ui'));
       expect(svg, contains('font-weight'));
-      expect(svg, contains('rx="')); // 圆角
+      expect(svg, contains('rx="'));
     });
 
     test('颜色和样式验证', () {
@@ -274,7 +275,7 @@ void main() {
         date: testDate,
       );
 
-      // 验证现代化配色 (更新后的颜色)
+      parseAndAssertSvg(svg);
       expect(svg, contains('#7c3aed')); // Violet
       expect(svg, contains('#0891b2')); // Cyan
       expect(svg, contains('#db2777')); // Pink
@@ -292,6 +293,7 @@ void main() {
         weather: '多云',
         temperature: '28℃',
       );
+      parseAndAssertSvg(svg);
       expect(svg, contains('北京'));
       expect(svg, contains('多云'));
       expect(svg, contains('28℃'));
@@ -306,7 +308,7 @@ void main() {
         date: testDate,
       );
 
-      // 验证特殊字符被转义
+      parseAndAssertSvg(svg);
       expect(svg, contains('&lt;'));
       expect(svg, contains('&gt;'));
       expect(svg, contains('&amp;'));

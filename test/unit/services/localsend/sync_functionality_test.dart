@@ -1,10 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
-import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
+import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
-import 'dart:io';
+import 'package:thoughtecho/utils/path_security_utils.dart';
 
 void main() {
   group('同步功能测试', () {
@@ -52,28 +54,19 @@ void main() {
       expect(device.download, true);
     });
 
-    test('文件名清理测试', () {
-      // 这个测试需要访问私有方法，所以我们创建一个简单的版本
-      String sanitizeFileName(String fileName) {
-        String sanitized = fileName
-            .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
-            .replaceAll('..', '_')
-            .trim();
-
-        if (sanitized.isEmpty) {
-          sanitized = 'unknown_file';
-        }
-        if (sanitized.length > 255) {
-          sanitized = sanitized.substring(0, 255);
-        }
-
-        return sanitized;
-      }
-
-      expect(sanitizeFileName('normal_file.txt'), 'normal_file.txt');
-      expect(sanitizeFileName('file<with>bad:chars'), 'file_with_bad_chars');
-      expect(sanitizeFileName(''), 'unknown_file');
-      expect(sanitizeFileName('../../../etc/passwd'), '______etc_passwd');
+    test('路径安全性清理测试', () {
+      expect(
+        PathSecurityUtils.sanitizeZipEntryName('normal_file.txt'),
+        'normal_file.txt',
+      );
+      expect(
+        PathSecurityUtils.sanitizeZipEntryName('/etc/passwd'),
+        'etc/passwd',
+      );
+      expect(
+        PathSecurityUtils.sanitizeZipEntryName('\\windows\\system32\\file.txt'),
+        'windows/system32/file.txt',
+      );
     });
 
     group('网络功能测试', () {

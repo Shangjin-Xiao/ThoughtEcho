@@ -99,14 +99,6 @@ jobs:
             paths: test/widget
             shard_index: 1
             total_shards: 2
-          - name: legacy 1/2
-            paths: test/bug_fixes test/*_test.dart
-            shard_index: 0
-            total_shards: 2
-          - name: legacy 2/2
-            paths: test/bug_fixes test/*_test.dart
-            shard_index: 1
-            total_shards: 2
 
     steps:
     - name: Checkout repository

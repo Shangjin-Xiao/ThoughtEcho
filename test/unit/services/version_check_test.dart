@@ -61,24 +61,12 @@ void main() {
     test('should handle timeout correctly', () async {
       // 这个测试验证超时处理逻辑
       // 使用极短超时来触发超时异常
-      try {
-        await VersionCheckService.checkForUpdates(
-          timeout: const Duration(milliseconds: 1), // 极短超时
-        );
-        // 如果没有抛出异常，测试应该失败（除非网络异常快）
-      } on VersionCheckTimeoutException {
-        // 预期的超时异常
-        expect(true, isTrue);
-      } on VersionCheckNetworkException {
-        // 网络异常也是可接受的（可能在建立连接前就失败了）
-        expect(true, isTrue);
-      } on VersionCheckException {
-        // 其他版本检查异常也是可接受的
-        expect(true, isTrue);
-      } catch (e) {
-        // 其他异常类型不应该发生
-        fail('Unexpected exception type: ${e.runtimeType}');
-      }
+      expect(
+        () async => await VersionCheckService.checkForUpdates(
+          timeout: const Duration(milliseconds: 1),
+        ),
+        throwsA(isA<VersionCheckException>()),
+      );
     });
 
     test('should parse APK download URL from assets', () {
