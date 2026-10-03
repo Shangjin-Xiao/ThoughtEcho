@@ -105,3 +105,15 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-10-02 - [补充 NoteEditorStates 的单元测试]
 **盲点:** `NoteEditorStates` 定义了笔记编辑器的三大状态对象（`NoteEditorState`、`NoteEditorMetadataState`、`NoteEditorMediaState`），但此前缺乏针对 `replaceController` 监听转移、`hydrateAiAnalysisIfUnchanged` 条件更新、`hasChanges` 差异判断分支以及保存状态生命周期等关键行为的全面测试覆盖。
 **对策:** 补充并完善 `test/unit/controllers/note_editor_states_test.dart` 单元测试套件，全面覆盖 QuillController 替换迁移、草稿定时保存取消、标签增删与查重过滤、AI 分析条件注水、地理/天气变化侦测，以及媒体导入去重与保存进度重置，确保核心编辑器状态管理的稳定与健壮。
+
+## 2026-10-02 - [补充 NoteSearchController 状态与并发调度的测试]
+**盲点:** `NoteSearchController` 包含超时保护定时器（5秒）、多版本并发搜索控制（`_searchVersion`）以及特定分支下清空搜索（`clearSearch` 当查询为空但处于搜索中/异常状态时）的逻辑。过往测试未覆盖跨版本定时器取消与多轮连续搜索请求触发超时冲突的边缘分支。
+**对策:** 在 `test/unit/controllers/search_controller_test.dart` 中使用 `fakeAsync` 模拟多轮 `updateSearch` 的时间推移，验证旧版本定时器触发时由于版本比对（`currentVersion == _searchVersion`）不会影响新版本搜索状态，并补充了在 `searchQuery` 为空但包含错误/搜索标记时的 `clearSearch` 行为以及 `dispose` 时定时器资源释放测试。
+
+## 2026-10-02 - [补充 DatabaseHealthService 数据一致性与数据库维护测试]
+**盲点:** `DatabaseHealthService` 包含了针对数据库标签数据一致性（孤立标签关联、无效分类引用、重复标签关联）的检查与清理逻辑（`checkTagDataConsistency`, `cleanupTagDataInconsistencies`），以及主动数据库维护（`performDatabaseMaintenance`，包含 ANALYZE, VACUUM, REINDEX），但在单例测试中长期存在部分场景覆盖盲点。
+**对策:** 在 `test/unit/services/database_health_service_test.dart` 中新增完整的测试覆盖，验证了存在孤立/重复关联及无效分类时的诊断报告与一键清理修正逻辑，并测试了数据库维护指令流程及 `onProgress` 进度回调，保障了数据库运维服务的可靠性。
+
+## 2026-10-02 - [补充 NetworkService 的单元测试]
+**盲点:** `NetworkService` 整合了通用 HTTP 请求（`get` / `post`）与 AI 请求（`aiRequest` / `aiStreamRequest`），但此前缺乏全面覆盖初始化/清理生命周期、错误转换、Hitokoto 特殊响应格式解析，以及 OpenAI/Anthropic 流式 chunks 解析的单元测试。
+**对策:** 扩展 `test/unit/services/network_service_test.dart` 单元测试套件。利用自定义 `TestHttpClientAdapter` 模拟网络层请求，对 GET/POST 请求、一言响应转换、DioException 异常捕获、AI 请求参数归一化、以及 SSE 流式分块解析（OpenAI delta content & Anthropic delta text）进行了全路径断言测试，保证核心网络服务的健壮性。

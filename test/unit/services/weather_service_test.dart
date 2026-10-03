@@ -298,6 +298,43 @@ void main() {
       expect(weatherService.lastError, contains('API响应格式错误: 缺少 current 数据'));
     });
 
+    test(
+        'refreshWeather should handle exception thrown during expired cache fallback and fallback to error state',
+        () async {
+      // Arrange
+      const latitude = 39.9042;
+      const longitude = 116.4074;
+
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+
+      // API request fails
+      when(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).thenThrow(Exception('Network error'));
+
+      // Loading expired cache also throws an exception
+      when(mockCacheManager.loadWeatherDataIgnoreExpiry(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenThrow(Exception('Cache read error'));
+
+      // Act
+      await weatherService.refreshWeather(latitude, longitude);
+
+      // Assert
+      verify(mockCacheManager.loadWeatherDataIgnoreExpiry(
+        latitude: latitude,
+        longitude: longitude,
+      )).called(1);
+
+      expect(weatherService.state, equals(WeatherServiceState.error));
+      expect(weatherService.hasData, isFalse);
+      expect(weatherService.lastError, contains('Network error'));
+      expect(weatherService.currentWeatherData, isNotNull);
+      expect(weatherService.currentWeatherData!.key, equals('error'));
+    });
+
     test('失败状态下兼容性 getter 必须返回 null，不能把 error 当天气交出去', () async {
       const latitude = 39.9042;
       const longitude = 116.4074;

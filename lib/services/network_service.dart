@@ -27,6 +27,12 @@ class NetworkService {
 
   bool _initialized = false;
 
+  @visibleForTesting
+  Dio get generalDioForTesting => _generalDio;
+
+  @visibleForTesting
+  Dio get aiDioForTesting => _aiDio;
+
   /// 初始化网络服务
   Future<void> init() async {
     if (_initialized) return;
