@@ -176,6 +176,31 @@ void main() {
         expect(controller.searchError, null);
       });
     });
+
+    test('should restart the 5 second timeout window when query changes', () {
+      fakeAsync((async) {
+        controller.updateSearch('first query');
+        expect(controller.isSearching, true);
+
+        // Advance time by 3 seconds
+        async.elapse(const Duration(seconds: 3));
+
+        // Changing the query cancels the pending timer and starts a fresh 5s window
+        controller.updateSearch('second query');
+        expect(controller.isSearching, true);
+
+        // 6 seconds from start = 3 seconds into the new window: the first query's
+        // 5 second mark has passed without firing, so its timer was cancelled
+        async.elapse(const Duration(seconds: 3));
+        expect(controller.isSearching, true);
+        expect(controller.searchError, null);
+
+        // Advance 2 more seconds (5 seconds from second query -> second timeout hits)
+        async.elapse(const Duration(seconds: 2));
+        expect(controller.isSearching, false);
+        expect(controller.searchError, '搜索超时，请重试');
+      });
+    });
   });
 
   group('NoteSearchController - resetSearchState', () {
@@ -272,6 +297,37 @@ void main() {
       // The query remains empty
       expect(controller.searchQuery, '');
       expect(controller.isSearching, false);
+    });
+
+    test(
+        'should clear search and notify when query is empty but isSearching is true',
+        () {
+      fakeAsync((async) {
+        controller.updateSearch('test query');
+        async.elapse(const Duration(seconds: 5));
+        expect(controller.searchError, '搜索超时，请重试');
+
+        // Clearing via updateSearch('') nulls searchError, so only isSearching
+        // is left for clearSearch() to reset
+        controller.updateSearch('');
+        expect(controller.searchQuery, '');
+        expect(controller.searchError, null);
+
+        // Set search state back to true
+        controller.setSearchState(true);
+        expect(controller.isSearching, true);
+
+        bool notified = false;
+        controller.addListener(() {
+          notified = true;
+        });
+
+        controller.clearSearch();
+
+        expect(controller.isSearching, false);
+        expect(controller.searchError, null);
+        expect(notified, true);
+      });
     });
   });
 }
