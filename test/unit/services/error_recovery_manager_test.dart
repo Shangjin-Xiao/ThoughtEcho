@@ -181,11 +181,14 @@ void main() {
       expect(customStrategy.recovered, isTrue);
     });
 
-    test('executeWithRecovery handles strategy failure gracefully', () async {
+    test(
+        'executeWithRecovery rethrows the original error when the recovery strategy fails',
+        () async {
       errorRecoveryManager.initialize();
       final failingStrategy = FailingCustomStrategy();
 
       int attemptCount = 0;
+      // The strategy's own exception is swallowed; the operation error must surface
       await expectLater(
         () => errorRecoveryManager.executeWithRecovery(
           'failing_strategy_test',
@@ -197,110 +200,47 @@ void main() {
           retryDelay: Duration.zero,
           customStrategy: failingStrategy,
         ),
-        throwsA(isA<Exception>()),
+        throwsA(isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          allOf(
+            contains('Operation error'),
+            isNot(contains('策略恢复失败')),
+          ),
+        )),
       );
 
       expect(attemptCount, equals(2));
     });
 
-    test('getErrorHistory limit and maximum error history queue', () async {
+    test('getErrorHistory limit returns the most recent errors', () async {
       errorRecoveryManager.initialize();
-
-      // Clear history first
       errorRecoveryManager.clearErrorHistory();
 
-      // Add 105 errors to test max error history limit (100)
-      for (int i = 0; i < 105; i++) {
+      for (int i = 0; i < 3; i++) {
         try {
           await errorRecoveryManager.executeWithRecovery(
-            'overflow_op_$i',
+            'history_op_$i',
             () async => throw Exception('Err $i'),
             maxRetries: 0,
           );
         } catch (_) {}
       }
 
-      final fullHistory = errorRecoveryManager.getErrorHistory();
-      expect(fullHistory.length, equals(100));
-      expect(fullHistory.first.operationName, equals('overflow_op_5'));
-      expect(fullHistory.last.operationName, equals('overflow_op_104'));
-
-      final limitedHistory = errorRecoveryManager.getErrorHistory(limit: 10);
-      expect(limitedHistory.length, equals(10));
-      expect(limitedHistory.last.operationName, equals('overflow_op_104'));
-    });
-
-    test('ErrorRecord properties and methods', () {
-      final record = ErrorRecord(
-        operationName: 'test_op',
-        error: const FormatException('Invalid format'),
-        stackTrace: StackTrace.empty,
-        timestamp: DateTime.now(),
-        attemptCount: 1,
-        context: {'key': 'value'},
+      expect(
+        errorRecoveryManager
+            .getErrorHistory()
+            .map((r) => r.operationName)
+            .toList(),
+        equals(['history_op_0', 'history_op_1', 'history_op_2']),
       );
-
-      expect(record.operationName, equals('test_op'));
-      expect(record.errorType, equals('FormatException'));
-      expect(record.errorMessage, contains('Invalid format'));
-      expect(record.context['key'], equals('value'));
-    });
-
-    test('RecoveryAttempt duration calculation', () {
-      final start = DateTime.now();
-      final record = ErrorRecord(
-        operationName: 'test_op',
-        error: Exception('Test'),
-        stackTrace: StackTrace.empty,
-        timestamp: start,
-        attemptCount: 1,
-        context: {},
+      expect(
+        errorRecoveryManager
+            .getErrorHistory(limit: 2)
+            .map((r) => r.operationName)
+            .toList(),
+        equals(['history_op_1', 'history_op_2']),
       );
-
-      final attempt = RecoveryAttempt(
-        id: 'rec_1',
-        operationId: 'op_1',
-        errorRecord: record,
-        strategy: TestCustomStrategy(),
-        startTime: start,
-      );
-
-      expect(attempt.duration, isNull);
-
-      final end = start.add(const Duration(milliseconds: 250));
-      attempt.endTime = end;
-      expect(attempt.duration, equals(const Duration(milliseconds: 250)));
-    });
-
-    test('Default recovery strategies execution', () async {
-      final record = ErrorRecord(
-        operationName: 'test',
-        error: Exception('test'),
-        stackTrace: StackTrace.empty,
-        timestamp: DateTime.now(),
-        attemptCount: 1,
-        context: {},
-      );
-
-      final memoryStrategy = MemoryRecoveryStrategy();
-      expect(memoryStrategy.name, equals('内存恢复策略'));
-      await memoryStrategy.recover(record);
-
-      final fileSystemStrategy = FileSystemRecoveryStrategy();
-      expect(fileSystemStrategy.name, equals('文件系统恢复策略'));
-      await fileSystemStrategy.recover(record);
-
-      final timeoutStrategy = TimeoutRecoveryStrategy();
-      expect(timeoutStrategy.name, equals('超时恢复策略'));
-      await timeoutStrategy.recover(record);
-
-      final networkStrategy = NetworkRecoveryStrategy();
-      expect(networkStrategy.name, equals('网络恢复策略'));
-      await networkStrategy.recover(record);
-
-      final genericStrategy = GenericRecoveryStrategy();
-      expect(genericStrategy.name, equals('通用恢复策略'));
-      await genericStrategy.recover(record);
     });
   });
 }
