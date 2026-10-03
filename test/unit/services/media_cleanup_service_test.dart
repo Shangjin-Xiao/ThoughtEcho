@@ -17,6 +17,37 @@ class _ThrowingPathProvider extends PathProviderPlatform {
   Future<String?> getApplicationDocumentsPath() async {
     throw Exception('Disk I/O failure');
   }
+
+  @override
+  Future<String?> getTemporaryPath() async {
+    throw Exception('Disk I/O failure');
+  }
+
+  @override
+  Future<String?> getApplicationSupportPath() async {
+    throw Exception('Disk I/O failure');
+  }
+
+  @override
+  Future<String?> getLibraryPath() async {
+    throw Exception('Disk I/O failure');
+  }
+
+  @override
+  Future<List<String>?> getExternalStoragePaths(
+      {StorageDirectory? type}) async {
+    throw Exception('Disk I/O failure');
+  }
+
+  @override
+  Future<String?> getExternalStoragePath() async {
+    throw Exception('Disk I/O failure');
+  }
+
+  @override
+  Future<String?> getDownloadsPath() async {
+    throw Exception('Disk I/O failure');
+  }
 }
 
 void main() {
@@ -60,25 +91,46 @@ void main() {
 
   group('MediaCleanupService Initialization & Lifecycle', () {
     test('initialize 和 dispose 幂等管理服务生命周期状态', () async {
+      // 静态服务状态只能从行为侧验证：两次 initialize 后任务仍可执行，
+      // dispose 后重新 initialize 不会抛错
       await MediaCleanupService.initialize();
-      // 重复初始化应平滑返回
       await MediaCleanupService.initialize();
 
       MediaCleanupService.dispose();
-      // dispose 后重新初始化
       await MediaCleanupService.initialize();
+
+      final results = await MediaCleanupService.performPeriodicCleanup();
+      expect(results, isNot(containsPair('error', 1)));
     });
   });
 
   group('MediaCleanupService.performPeriodicCleanup', () {
     test('定期清理成功执行并返回 expiredTempFiles 与 orphanFiles 统计信息', () async {
+      final appDocsDir = TestHarness.applicationDocumentsDirectory;
+
+      // 1 个过期临时文件（mtime 超过 24 小时）
+      final tempDir =
+          Directory(path.join(appDocsDir.path, 'temp_media', 'temp_images'));
+      await tempDir.create(recursive: true);
+      final expiredFile = File(path.join(tempDir.path, 'expired.png'));
+      await expiredFile.writeAsString('stale');
+      await expiredFile.setLastModified(
+        DateTime.now().subtract(const Duration(hours: 25)),
+      );
+
+      // 1 个孤儿媒体文件（磁盘上存在但无任何引用）
+      final imagesDir =
+          Directory(path.join(appDocsDir.path, 'media', 'images'));
+      await imagesDir.create(recursive: true);
+      final orphanFile = File(path.join(imagesDir.path, 'orphan.png'));
+      await orphanFile.writeAsString('orphan_bytes');
+
       final results = await MediaCleanupService.performPeriodicCleanup();
 
-      expect(results, isA<Map<String, int>>());
-      expect(results.containsKey('expiredTempFiles'), isTrue);
-      expect(results.containsKey('orphanFiles'), isTrue);
-      expect(results['expiredTempFiles'], greaterThanOrEqualTo(0));
-      expect(results['orphanFiles'], greaterThanOrEqualTo(0));
+      expect(results['expiredTempFiles'], equals(1));
+      expect(results['orphanFiles'], equals(1));
+      expect(expiredFile.existsSync(), isFalse);
+      expect(orphanFile.existsSync(), isFalse);
     });
   });
 
@@ -95,9 +147,9 @@ void main() {
       final results =
           await MediaCleanupService.performFullCleanup(dryRun: true);
 
+      expect(results['tempFilesCleared'], equals(1)); // 探测到 1 个临时文件
+      expect(results['orphanFilesCleared'], equals(0));
       expect(results.containsKey('beforeStats'), isTrue);
-      expect(results.containsKey('tempFilesCleared'), isTrue);
-      expect(results.containsKey('orphanFilesCleared'), isTrue);
       expect(results.containsKey('afterStats'),
           isFalse); // dryRun 模式不计算 afterStats
       expect(tempFile.existsSync(), isTrue); // 文件未被删除
@@ -115,9 +167,8 @@ void main() {
       final results =
           await MediaCleanupService.performFullCleanup(dryRun: false);
 
+      expect(results['tempFilesCleared'], equals(1));
       expect(results.containsKey('beforeStats'), isTrue);
-      expect(results.containsKey('tempFilesCleared'), isTrue);
-      expect(results.containsKey('orphanFilesCleared'), isTrue);
       expect(results.containsKey('afterStats'), isTrue);
       expect(results.containsKey('spaceSavedMB'), isTrue);
       expect(tempFile.existsSync(), isFalse); // 临时文件已被成功清理
@@ -142,11 +193,9 @@ void main() {
 
       final results = await MediaCleanupService.migrateExistingNotes();
 
+      expect(results['migratedQuotes'], equals(1));
       expect(results.containsKey('beforeStats'), isTrue);
-      expect(results.containsKey('migratedQuotes'), isTrue);
       expect(results.containsKey('afterStats'), isTrue);
-      expect(results.containsKey('orphanFilesDetected'), isTrue);
-      expect(results['migratedQuotes'], greaterThanOrEqualTo(1));
 
       // 验证媒体引用已被建立
       final refCount = await MediaReferenceService.getReferenceCount(
@@ -155,12 +204,20 @@ void main() {
     });
 
     test('当底库/存储异常时迁移过程平滑降级并返回结果结构', () async {
+      // 先放入一条带媒体引用的笔记，确保 migratedQuotes == 0 是降级
+      // 而不是"库里本来就没东西"
+      final quote = Quote(
+        id: 'note_degrade_1',
+        content: '带有图片的笔记',
+        deltaContent: '[{"insert":{"image":"media/images/degrade.jpg"}}]',
+        date: DateTime.now().toIso8601String(),
+      );
+      await dbService.addQuote(quote);
+
       PathProviderPlatform.instance = _ThrowingPathProvider();
 
       final results = await MediaCleanupService.migrateExistingNotes();
 
-      expect(results.containsKey('beforeStats'), isTrue);
-      expect(results.containsKey('migratedQuotes'), isTrue);
       expect(results['migratedQuotes'], equals(0));
     });
   });
