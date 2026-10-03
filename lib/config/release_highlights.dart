@@ -20,7 +20,7 @@ class ReleaseHighlights {
   /// 它同时是三件事的取值：页头显示的版本、用户看完之后记下的版本、以及新装
   /// 用户的记账基线（新装不该看到「更新内容」）。**加条目时必须一起抬**，否则
   /// 新条目永远进不了 [since] 的区间。由 `release_highlights_test.dart` 钉死。
-  static const String latestVersion = '4.0.0';
+  static const String latestVersion = '4.1.0';
 
   /// 崩溃诊断说明所属的版本，也就是 Sentry 进项目的那一版。
   ///
@@ -34,6 +34,42 @@ class ReleaseHighlights {
 
   /// 全部内容，新版本在前，同版本内按重要性排。
   static List<ReleaseHighlight> _entriesOf(AppLocalizations l10n) => [
+        ReleaseHighlight(
+          version: '4.1.0',
+          title: l10n.releaseFootprintsTitle,
+          lede: l10n.releaseFootprintsLede,
+          icon: Icons.map_outlined,
+          points: [
+            ReleaseHighlightPoint(
+              title: l10n.releaseFootprintsPickerTitle,
+              description: l10n.releaseFootprintsPickerDesc,
+              icon: Icons.place_outlined,
+            ),
+            ReleaseHighlightPoint(
+              title: l10n.releaseFootprintsMemoryTitle,
+              description: l10n.releaseFootprintsMemoryDesc,
+              icon: Icons.explore_outlined,
+            ),
+          ],
+        ),
+        ReleaseHighlight(
+          version: '4.1.0',
+          title: l10n.releaseDreamingTitle,
+          lede: l10n.releaseDreamingLede,
+          icon: Icons.auto_awesome_rounded,
+          points: [
+            ReleaseHighlightPoint(
+              title: l10n.releaseDreamingIdleTitle,
+              description: l10n.releaseDreamingIdleDesc,
+              icon: Icons.psychology_outlined,
+            ),
+            ReleaseHighlightPoint(
+              title: l10n.releaseDreamingControlTitle,
+              description: l10n.releaseDreamingControlDesc,
+              icon: Icons.tune_rounded,
+            ),
+          ],
+        ),
         ReleaseHighlight(
           version: '4.0.0',
           title: l10n.releaseThoughterTitle,

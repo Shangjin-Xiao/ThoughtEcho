@@ -20,7 +20,8 @@
 
 | 文档名称 | 路径 | 类型 / 状态 | 适用场景 / 核心内容 |
 |---|---|:---:|---|
-| **v4.0.0 发版说明** | [`Release_4.0.0.md`](Release_4.0.0.md) | 🟢 **最新发布** | v4.0.0 重大里程碑发版日志、Thoughter 思考伴侣、纸墨素笺主题与架构改造总结 |
+| **v4.1.0 发版说明** | [`Release_4.1.0.md`](Release_4.1.0.md) | 🟢 **最新发布** | v4.1.0 发版日志、足迹漫步与地图回忆、Thoughter 梦境整理（Dreaming）、快捷复制与安全性能加固 |
+| **v4.0.0 发版说明 [已归档]** | [`Release_4.0.0.md`](Release_4.0.0.md) | 📦 归档 | v4.0.0 重大里程碑发版日志、Thoughter 思考伴侣、纸墨素笺主题与架构改造总结 |
 | **双语用户手册** | [`USER_MANUAL.md`](USER_MANUAL.md) | 🟢 活跃 | 用户端双语完整使用指南（中文 + 英文），涵盖所有端侧功能与快捷操作 |
 | **商店上架与合规指南** | [`STORE_SUBMISSION_GUIDE.md`](STORE_SUBMISSION_GUIDE.md) | 🟢 活跃 | Windows Microsoft Store、Google Play 与 App Store 合规、文案与截图指南 |
 | **设备与测试环境说明** | [`DEVICE_INFO.md`](DEVICE_INFO.md) | 🟢 活跃 | 本地测试设备、硬件资源、冷启动耗时与测试运行约束（由 `.gitignore` 忽略） |
