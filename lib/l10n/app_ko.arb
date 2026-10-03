@@ -3639,7 +3639,7 @@
   "feedbackDiscussionDesc": "질문, 아이디어 공유 및 다른 사용자와의 소통",
   "feedbackSentryTitle": "피드백 보내기 (Sentry)",
   "feedbackSentryDesc": "개발자에게 직접 의견, 제안 또는 버그 보고서 보내기",
-  "sentryDisclosureMessage": "ThoughtEcho 개인정보 처리방침이 업데이트되었으며 웹사이트에서 확인하실 수 있습니다.\n\n앱 충돌을 진단하고 안정성을 향상시키기 위해 오류 진단 기능이 도입되었습니다. 개인정보 보호를 위해 이 기능은 기본적으로 비활성화되어 있으며, '설정 -> 피드백 및 문의'에서 언제든지 활성화할 수 있습니다.\n\n개인정보 처리방침: https://note.shangjinyun.cn/privacy",
+  "sentryDisclosureMessage": "ThoughtEcho 개인정보 처리방침이 업데이트되었으며 웹사이트에서 확인하실 수 있습니다.\n\n앱 충돌을 진단하고 안정성을 향상시키기 위해 오류 진단 기능이 도입되었습니다. 개인정보 보호를 위해 이 기능은 기본적으로 비활성화되어 있으며, '설정 -> 피드백 및 문의'에서 언제든지 활성화할 수 있습니다.\n\n개인정보 처리방침: https://note.shangjinyun.cn/privacy.html",
   "feedbackEmailDesc": "shangjinyun@proton.me",
   "feedbackSentryDisabledHint": "먼저 아래 '개선을 위한 진단 데이터 전송'을 활성화해 주세요",
   "noteListDisableCardShadowsExperiment": "[실험 기능] 노트 목록 카드 그림자 비활성화",
