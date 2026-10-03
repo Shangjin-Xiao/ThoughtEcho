@@ -292,6 +292,11 @@ class OnboardingController extends ChangeNotifier {
           _state.getPreference<bool>('sentryEnabled') ?? false;
       await _settingsService.setSentryEnabled(sentryEnabled);
 
+      // 保存匿名统计开关设置（Aptabase，默认关闭）
+      final telemetryEnabled =
+          _state.getPreference<bool>('telemetryEnabled') ?? false;
+      await _settingsService.setTelemetryEnabled(telemetryEnabled);
+
       logDebug('用户偏好设置保存完成');
     } catch (e) {
       logError('保存用户偏好设置失败', error: e, source: 'OnboardingController');

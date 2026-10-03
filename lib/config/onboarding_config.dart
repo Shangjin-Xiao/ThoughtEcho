@@ -76,7 +76,7 @@ class OnboardingConfig {
 
   /// 获取偏好设置列表（动态国际化）
   ///
-  /// 顺序按所属屏排列：前两项在外观屏，后三项在习惯屏。
+  /// 顺序按所属屏排列：前两项在外观屏，后四项在习惯屏。
   static List<OnboardingPreference<dynamic>> getPreferences(
     BuildContext context,
   ) {
@@ -145,6 +145,13 @@ class OnboardingConfig {
         key: 'sentryEnabled',
         title: l10n.settingsSentryTitle,
         description: l10n.settingsSentryDesc,
+        defaultValue: false,
+        type: OnboardingPreferenceType.toggle,
+      ),
+      OnboardingPreference<bool>(
+        key: 'telemetryEnabled',
+        title: l10n.settingsTelemetryTitle,
+        description: l10n.settingsTelemetryDesc,
         defaultValue: false,
         type: OnboardingPreferenceType.toggle,
       ),

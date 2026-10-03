@@ -46,6 +46,10 @@ class PreferencesPageView extends StatelessWidget {
           state: state,
           onPreferenceChanged: onPreferenceChanged,
         ),
+        _TelemetrySection(
+          state: state,
+          onPreferenceChanged: onPreferenceChanged,
+        ),
         _AiSection(
           state: state,
           onPreferenceChanged: onPreferenceChanged,
@@ -221,6 +225,38 @@ class _SentrySection extends StatelessWidget {
       trailing: Switch(
         value: value,
         onChanged: (newValue) => onPreferenceChanged('sentryEnabled', newValue),
+      ),
+    );
+  }
+}
+
+/// 匿名功能统计（Aptabase），默认关闭，和 Sentry 一样只由用户本人决定。
+class _TelemetrySection extends StatelessWidget {
+  const _TelemetrySection({
+    required this.state,
+    required this.onPreferenceChanged,
+  });
+
+  final OnboardingState state;
+  final void Function(String key, dynamic value) onPreferenceChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final preference =
+        OnboardingConfig.preferenceByKey(context, 'telemetryEnabled');
+    if (preference == null) return const SizedBox.shrink();
+
+    final value = state.getPreference<bool>('telemetryEnabled') ??
+        preference.defaultValue as bool;
+
+    return OnboardingSection(
+      icon: Icons.insights_outlined,
+      title: preference.title,
+      description: preference.description,
+      trailing: Switch(
+        value: value,
+        onChanged: (newValue) =>
+            onPreferenceChanged('telemetryEnabled', newValue),
       ),
     );
   }

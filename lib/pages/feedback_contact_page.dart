@@ -99,7 +99,7 @@ class FeedbackContactPage extends StatelessWidget {
                     label: Text(l10n.viewPrivacyPolicy),
                     onPressed: () => _launchUrl(
                       dialogContext,
-                      'https://note.shangjinyun.cn/privacy',
+                      'https://note.shangjinyun.cn/privacy.html',
                     ),
                   ),
                 ],

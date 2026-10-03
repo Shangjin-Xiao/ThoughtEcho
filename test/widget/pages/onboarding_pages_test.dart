@@ -176,7 +176,7 @@ void main() {
   });
 
   group('习惯与隐私屏', () {
-    testWidgets('展示三项设置和 AI 说明卡', (tester) async {
+    testWidgets('展示四项设置和 AI 说明卡', (tester) async {
       final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
       await tester.pumpWidget(buildPreferencesPage());
@@ -185,6 +185,7 @@ void main() {
       expect(find.text(l10n.prefDefaultStartPage), findsOneWidget);
       expect(find.text(l10n.prefLocationService), findsOneWidget);
       expect(find.text(l10n.settingsSentryTitle), findsOneWidget);
+      expect(find.text(l10n.settingsTelemetryTitle), findsOneWidget);
       expect(find.text(l10n.onboardingAiTitle), findsOneWidget);
       expect(find.text(l10n.onboardingAiOpenAfter), findsOneWidget);
     });
