@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_health_service.dart';
 
@@ -386,52 +385,6 @@ void main() {
       expect(progressLog, contains('正在整理数据库碎片...'));
       expect(progressLog, contains('正在优化索引...'));
       expect(progressLog, contains('维护完成！'));
-    });
-
-    test('_getLocalQuoteFromMemory 在 tagOnly 模式下正确从内存筛选每日一言笔记', () async {
-      final categoryStore = [
-        NoteTag(id: DatabaseHealthService.dailyQuoteTagId, name: '每日一言'),
-      ];
-
-      final memoryStore = <Quote>[
-        Quote(
-          id: '1',
-          content: '适合每日一言的短句',
-          sourceWork: '出处1',
-          sourceAuthor: '作者1',
-          date: '2023-01-01',
-          tagIds: [DatabaseHealthService.dailyQuoteTagId],
-        ),
-        Quote(
-          id: '2',
-          content: '没有每日一言标签的短句',
-          sourceWork: '出处2',
-          sourceAuthor: '作者2',
-          date: '2023-01-01',
-          tagIds: ['other_tag'],
-        ),
-        Quote(
-          id: '3',
-          content: '已删除的每日一言',
-          date: '2023-01-01',
-          tagIds: [DatabaseHealthService.dailyQuoteTagId],
-          isDeleted: true,
-        ),
-      ];
-
-      service.getLocalDailyQuote(
-        database,
-        offlineQuoteSource: 'tagOnly',
-        memoryStore: memoryStore,
-        categoryStore: categoryStore,
-      );
-
-      // 注意：Web 平台条件是 kIsWeb，在 FFI 环境下 `kIsWeb` 为 false，
-      // 但可以直接针对 _getLocalQuoteFromMemory 或通过模拟验证逻辑。
-      // 为确保测试完整性，如果处于 FFI 环境，getLocalDailyQuote 会走 SQL 分支。
-      // 我们在此同时测试 SQLite 数据库和内存引用的数据结构逻辑。
-      expect(memoryStore[0].content, '适合每日一言的短句');
-      expect(categoryStore[0].name, '每日一言');
     });
 
     test('内存引用逻辑过滤规则验证', () {
