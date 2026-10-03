@@ -41,7 +41,11 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     final syncService = Provider.of<WebDAVSyncService>(context, listen: false);
 
     _selectedProvider = syncService.provider;
-    _urlController = TextEditingController(text: syncService.url);
+    var initialUrl = syncService.url;
+    if (initialUrl.toLowerCase().startsWith('https://')) {
+      initialUrl = initialUrl.substring(8);
+    }
+    _urlController = TextEditingController(text: initialUrl);
     _usernameController = TextEditingController(text: syncService.username);
     _passwordController = TextEditingController(); // 密码仅在保存时输入或读取
 
@@ -51,6 +55,16 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showExperimentalWarningIfNeeded();
     });
+  }
+
+  String _getNormalizedUrl(String raw) {
+    var trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+    final lower = trimmed.toLowerCase();
+    if (lower.startsWith('https://') || lower.startsWith('http://')) {
+      return trimmed;
+    }
+    return 'https://$trimmed';
   }
 
   /// 弹出实验性功能预览提示（符合国际化，支持临时关闭或永久忽略）
@@ -153,12 +167,14 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     setState(() {
       _selectedProvider = provider;
       if (provider == 'nutstore') {
-        _urlController.text = 'https://dav.jianguoyun.com/dav/';
+        _urlController.text = 'dav.jianguoyun.com/dav/';
       } else if (provider == 'infinicloud') {
-        _urlController.text = 'https://dav.teracloud.jp/dav/';
+        _urlController.text = 'dav.teracloud.jp/dav/';
       } else if (provider == 'nextcloud') {
-        if (_urlController.text == 'https://dav.jianguoyun.com/dav/' ||
-            _urlController.text == 'https://dav.teracloud.jp/dav/') {
+        final norm = _getNormalizedUrl(_urlController.text)
+            .replaceAll(RegExp(r'/+$'), '');
+        if (norm == 'https://dav.jianguoyun.com/dav' ||
+            norm == 'https://dav.teracloud.jp/dav') {
           _urlController.text = '';
         }
       } else {
@@ -221,7 +237,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     bool success = false;
     try {
       success = await syncService.testConnection(
-        _urlController.text,
+        _getNormalizedUrl(_urlController.text),
         _usernameController.text,
         _passwordController.text,
       );
@@ -256,7 +272,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       await syncService.saveSettings(
         enabled: true,
         provider: _selectedProvider,
-        url: _urlController.text,
+        url: _getNormalizedUrl(_urlController.text),
         username: _usernameController.text,
         password: _passwordController.text,
         syncOnLaunch: syncService.syncOnLaunch,
@@ -400,25 +416,38 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           SizedBox(height: 16),
 
                           // 2. 服务器 URL
-                          TextFormField(
-                            controller: _urlController,
-                            enabled: _selectedProvider == 'custom' ||
-                                _selectedProvider == 'nextcloud',
-                            decoration: InputDecoration(
-                              labelText: l10n.webdavServerUrl,
-                              prefixIcon: Icon(Icons.link),
-                            ),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return l10n.webdavServerUrlEmptyError;
-                              }
-                              if (!val
-                                  .trim()
-                                  .toLowerCase()
-                                  .startsWith('https://')) {
-                                return l10n.webdavServerUrlInvalidError;
-                              }
-                              return null;
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _urlController,
+                            builder: (context, value, child) {
+                              final trimmed = value.text.trim().toLowerCase();
+                              final hasScheme = trimmed.startsWith('http://') ||
+                                  trimmed.startsWith('https://');
+                              return TextFormField(
+                                controller: _urlController,
+                                enabled: _selectedProvider == 'custom' ||
+                                    _selectedProvider == 'nextcloud',
+                                decoration: InputDecoration(
+                                  labelText: l10n.webdavServerUrl,
+                                  hintText: l10n.webdavServerUrlHint,
+                                  prefixIcon: Icon(Icons.link),
+                                  prefixText: hasScheme ? null : 'https://',
+                                  prefixStyle: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                validator: (val) {
+                                  final raw = (val ?? '').trim();
+                                  if (raw.isEmpty) {
+                                    return l10n.webdavServerUrlEmptyError;
+                                  }
+                                  if (raw.toLowerCase().startsWith('http://')) {
+                                    return l10n.webdavServerUrlInvalidError;
+                                  }
+                                  return null;
+                                },
+                              );
                             },
                           ),
                           SizedBox(height: 16),
@@ -503,7 +532,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             syncService.saveSettings(
                               enabled: syncService.enabled,
                               provider: _selectedProvider,
-                              url: _urlController.text,
+                              url: _getNormalizedUrl(_urlController.text),
                               username: _usernameController.text,
                               syncOnLaunch: val,
                               syncOnChange: syncService.syncOnChange,
@@ -522,7 +551,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             syncService.saveSettings(
                               enabled: syncService.enabled,
                               provider: _selectedProvider,
-                              url: _urlController.text,
+                              url: _getNormalizedUrl(_urlController.text),
                               username: _usernameController.text,
                               syncOnLaunch: syncService.syncOnLaunch,
                               syncOnChange: val,
@@ -541,7 +570,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             syncService.saveSettings(
                               enabled: syncService.enabled,
                               provider: _selectedProvider,
-                              url: _urlController.text,
+                              url: _getNormalizedUrl(_urlController.text),
                               username: _usernameController.text,
                               syncOnLaunch: syncService.syncOnLaunch,
                               syncOnChange: syncService.syncOnChange,
@@ -563,7 +592,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                   syncService.saveSettings(
                                     enabled: syncService.enabled,
                                     provider: _selectedProvider,
-                                    url: _urlController.text,
+                                    url: _getNormalizedUrl(_urlController.text),
                                     username: _usernameController.text,
                                     syncOnLaunch: syncService.syncOnLaunch,
                                     syncOnChange: syncService.syncOnChange,
@@ -633,7 +662,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         syncService.saveSettings(
                           enabled: false,
                           provider: _selectedProvider,
-                          url: _urlController.text,
+                          url: _getNormalizedUrl(_urlController.text),
                           username: _usernameController.text,
                           syncOnLaunch: syncService.syncOnLaunch,
                           syncOnChange: syncService.syncOnChange,

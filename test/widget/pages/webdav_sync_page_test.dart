@@ -12,6 +12,26 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
+class TestWebDAVSyncService extends WebDAVSyncService {
+  TestWebDAVSyncService() : super.forTesting();
+
+  String? lastTestedUrl;
+  String? lastTestedUsername;
+  String? lastTestedPassword;
+
+  @override
+  Future<bool> testConnection(
+    String testUrl,
+    String testUsername,
+    String testPassword,
+  ) async {
+    lastTestedUrl = testUrl;
+    lastTestedUsername = testUsername;
+    lastTestedPassword = testPassword;
+    return true;
+  }
+}
+
 void main() {
   const MethodChannel secureStorageChannel =
       MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
@@ -20,7 +40,7 @@ void main() {
 
   final Map<String, String> secureStorage = {};
   bool launchUrlCalled = false;
-  late WebDAVSyncService syncService;
+  late TestWebDAVSyncService syncService;
 
   setUpAll(() async {
     await TestHarness.initialize();
@@ -81,7 +101,7 @@ void main() {
       },
     );
 
-    syncService = WebDAVSyncService();
+    syncService = TestWebDAVSyncService();
   });
 
   Widget buildTestApp() {
@@ -136,5 +156,55 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(launchUrlCalled, isTrue);
+  });
+
+  testWidgets(
+      'WebDAVSyncPage URL field normalizes missing https prefix and passes normalized URL to testConnection',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    final urlFinder = find.widgetWithText(TextFormField, '服务器地址');
+    expect(urlFinder, findsOneWidget);
+
+    await tester.enterText(urlFinder, 'dav.jianguoyun.com/dav/');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, '用户名/账号'), 'testuser');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, '应用密码/Token'), 'testpass');
+    await tester.pumpAndSettle();
+
+    final testBtn = find.text('测试连接');
+    await tester.ensureVisible(testBtn);
+    await tester.tap(testBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('地址必须以 https:// 开头'), findsNothing);
+    expect(syncService.lastTestedUrl, 'https://dav.jianguoyun.com/dav/');
+  });
+
+  testWidgets(
+      'WebDAVSyncPage URL field rejects explicit http:// scheme with validation error',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    final urlFinder = find.widgetWithText(TextFormField, '服务器地址');
+    expect(urlFinder, findsOneWidget);
+
+    await tester.enterText(urlFinder, 'http://example.com/dav/');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, '用户名/账号'), 'testuser');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, '应用密码/Token'), 'testpass');
+    await tester.pumpAndSettle();
+
+    final testBtn = find.text('测试连接');
+    await tester.ensureVisible(testBtn);
+    await tester.tap(testBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('地址必须以 https:// 开头'), findsOneWidget);
+    expect(syncService.lastTestedUrl, isNull);
   });
 }

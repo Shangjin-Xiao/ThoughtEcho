@@ -1048,7 +1048,7 @@
   },
   "noDevicesFound": "No devices found",
   "unknownModel": "Unknown model",
-  "fingerprint": "Fingerprint: {fingerprint}",
+  "fingerprint": "Device ID: {fingerprint}",
   "@fingerprint": {
     "placeholders": {
       "fingerprint": {
@@ -2262,7 +2262,7 @@
     }
   },
   "localDeviceLoading": "Loading local device ID...",
-  "localDeviceId": "Local #{fingerprint}",
+  "localDeviceId": "Local ID #{fingerprint}",
   "@localDeviceId": {
     "placeholders": {
       "fingerprint": {
@@ -2362,10 +2362,18 @@
       }
     }
   },
-  "copiedFingerprint": "Copied device identifier: {fingerprint}",
+  "copiedFingerprint": "Copied device ID: {fingerprint}",
   "@copiedFingerprint": {
     "placeholders": {
       "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "lanOnlineWithIp": "LAN Online · {ip}",
+  "@lanOnlineWithIp": {
+    "placeholders": {
+      "ip": {
         "type": "String"
       }
     }
@@ -3953,6 +3961,7 @@
   "webdavSyncSubtitle": "Configure private cloud storage to auto-sync notes across devices",
   "webdavProvider": "Cloud Provider",
   "webdavServerUrl": "Server URL",
+  "webdavServerUrlHint": "example.com/dav/",
   "webdavUsername": "Username / Account",
   "webdavPassword": "App Password / Token",
   "webdavTestConnection": "Test Connection",

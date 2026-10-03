@@ -130,12 +130,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   List<Device> _nearbyDevices = [];
   bool _isScanning = false;
   bool _isSending = false; // 是否存在发送任务（全局禁用其他按钮用）
-  String? _sendingFingerprint; // 当前正在发送的设备指纹，仅该行显示加载指示
+  String? _sendingFingerprint; // 当前正在发送的设备标识码，仅该行显示加载指示
   bool _isInitializing = true;
   String _initializationError = '';
   NoteSyncService? _syncService;
-  String? _localFingerprint; // 本机完整指纹
-  String? _localShortFingerprint; // 本机短指纹 #XXXXXX
+  String? _localFingerprint; // 本机完整设备标识码
+  String? _localShortFingerprint; // 本机短标识码 #XXXXXX
   // 流式发现新增字段
   StreamSubscription<List<Device>>? _discoverySub;
   VoidCallback? _cancelDiscovery;
@@ -792,9 +792,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                           final theme = Theme.of(context);
                           final device = _nearbyDevices[index];
                           final displayIp = _resolveDeviceIp(device);
-                          final ipLine = displayIp != null
+                          final fullEndpoint = displayIp != null
                               ? '${device.https ? 'https' : 'http'}://$displayIp:${device.port}'
                               : '${l10n.networkInfoUnknown}${device.port > 0 ? ' · ${l10n.portNumber(device.port)}' : ''}';
+                          final networkStatus = displayIp != null
+                              ? l10n.lanOnlineWithIp(displayIp)
+                              : l10n.networkInfoUnknown;
                           final isSendingToThis =
                               _sendingFingerprint == device.fingerprint;
 
@@ -861,7 +864,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 subtitle: Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
-                                    ipLine,
+                                    networkStatus,
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
@@ -895,7 +898,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 onTap: _isSending
                                     ? null
                                     : () => _sendNotesToDevice(device),
-                                onLongPress: () => _copyIpPort(ipLine),
+                                onLongPress: () => _copyIpPort(fullEndpoint),
                               ),
                             ),
                           );
@@ -1439,7 +1442,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     }
   }
 
-  /// 构建简短指纹徽章（显示后 6 位），便于区分同名设备
+  /// 构建简短标识码徽章（显示后 6 位），便于区分同名设备
   Widget _buildShortFingerprint(String fingerprint) {
     if (fingerprint.isEmpty) return const SizedBox.shrink();
     final short = _shortFingerprint(fingerprint);

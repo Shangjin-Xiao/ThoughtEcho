@@ -951,7 +951,7 @@
   },
   "noDevicesFound": "Aucun appareil trouvé",
   "unknownModel": "Modèle inconnu",
-  "fingerprint": "Empreinte : {fingerprint}",
+  "fingerprint": "ID de l'appareil : {fingerprint}",
   "@fingerprint": {
     "placeholders": {
       "fingerprint": {
@@ -2082,7 +2082,7 @@
     }
   },
   "localDeviceLoading": "Chargement de l'ID de l'appareil local...",
-  "localDeviceId": "Locale #{fingerprint}",
+  "localDeviceId": "ID local #{fingerprint}",
   "@localDeviceId": {
     "placeholders": {
       "fingerprint": {
@@ -2182,10 +2182,18 @@
       }
     }
   },
-  "copiedFingerprint": "Empreinte digitale locale copiée : {fingerprint}",
+  "copiedFingerprint": "ID d'appareil copié : {fingerprint}",
   "@copiedFingerprint": {
     "placeholders": {
       "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "lanOnlineWithIp": "En ligne sur le LAN · {ip}",
+  "@lanOnlineWithIp": {
+    "placeholders": {
+      "ip": {
         "type": "String"
       }
     }
@@ -3985,6 +3993,7 @@
   "webdavSyncSubtitle": "Synchroniser les notes via le serveur WebDAV",
   "webdavProvider": "Cloud Provider",
   "webdavServerUrl": "URL du serveur",
+  "webdavServerUrlHint": "example.com/dav/",
   "webdavUsername": "Nom d'utilisateur",
   "webdavPassword": "Mot de passe",
   "webdavTestConnection": "Tester la connexion",
