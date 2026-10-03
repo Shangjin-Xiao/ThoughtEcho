@@ -3,7 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:thoughtecho/config/onboarding_config.dart';
 import 'package:thoughtecho/controllers/onboarding_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/ai_analysis_model.dart';
@@ -31,10 +33,58 @@ class FakeDatabaseServiceWithSafeDbError extends DatabaseService {
   }
 }
 
-class FakeAIAnalysisDatabaseService extends ChangeNotifier
-    implements AIAnalysisDatabaseService {
+/// 引导流程测试用的假数据库服务：把迁移、初始化等重 DB 路径空操作化，
+/// safeDatabase 返回内存库。真实 `DatabaseService().init()` 在测试环境会
+/// 走完整的建库/迁移/预加载流程，直接导致 completeOnboarding 挂死。
+class FakeDatabaseServiceForOnboarding extends DatabaseService {
+  FakeDatabaseServiceForOnboarding(this._db) : super.forTesting();
+
+  final Database _db;
+
   @override
   Future<void> init() async {}
+
+  @override
+  bool get isInitialized => true;
+
+  @override
+  Future<void> initDefaultHitokotoTags() async {}
+
+  @override
+  Future<Database> get safeDatabase async => _db;
+
+  @override
+  Future<void> patchQuotesDayPeriod() async {}
+
+  @override
+  Future<void> migrateWeatherToKey() async {}
+
+  @override
+  Future<void> migrateDayPeriodToKey() async {}
+}
+
+/// 让「完成引导」这一步写入失败，用于验证 fatal 时 isCompleting 被复位。
+class ThrowingCompleteSettingsService extends SettingsService {
+  ThrowingCompleteSettingsService(super.prefs);
+
+  @override
+  Future<void> setHasCompletedOnboarding(bool completed) async {
+    throw Exception('fatal: cannot persist onboarding completion');
+  }
+}
+
+class FakeAIAnalysisDatabaseService extends ChangeNotifier
+    implements AIAnalysisDatabaseService {
+  bool initCalled = false;
+  bool shouldThrow = false;
+
+  @override
+  Future<void> init() async {
+    initCalled = true;
+    if (shouldThrow) {
+      throw Exception('AI Analysis DB init error');
+    }
+  }
 
   @override
   Stream<List<AIAnalysis>> get analysesStream => const Stream.empty();
@@ -122,7 +172,8 @@ void main() {
       final settingsService = await SettingsService.create();
       final mmkvService = MMKVService();
       final clipboardService = ClipboardService();
-      final aiAnalysisDbService = AIAnalysisDatabaseService();
+      // 用 Fake 而非进程级单例：单例在测试间共享，dispose 会毒化后续用例
+      final aiAnalysisDbService = FakeAIAnalysisDatabaseService();
 
       await tester.pumpWidget(
         MultiProvider(
@@ -189,6 +240,167 @@ void main() {
         ApiService.zenQuotesProvider,
       );
     });
+
+    testWidgets(
+        'falls back to system locale when localeCode preference is empty',
+        (tester) async {
+      final databaseService = DatabaseService();
+      final settingsService = await SettingsService.create();
+      final mmkvService = MMKVService();
+      final clipboardService = ClipboardService();
+      // 用 Fake 而非进程级单例：单例在测试间共享，dispose 会毒化后续用例
+      final aiAnalysisDbService = FakeAIAnalysisDatabaseService();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DatabaseService>.value(
+                value: databaseService),
+            ChangeNotifierProvider<SettingsService>.value(
+                value: settingsService),
+            Provider<MMKVService>.value(value: mmkvService),
+            ChangeNotifierProvider<ClipboardService>.value(
+                value: clipboardService),
+            ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
+              value: aiAnalysisDbService,
+            ),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                sut.initialize(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      sut.updatePreference('localeCode', '');
+      expect(
+        sut.state.getPreference<String>('dailyQuoteProvider'),
+        ApiService.zenQuotesProvider,
+      );
+
+      databaseService.dispose();
+      settingsService.dispose();
+      clipboardService.dispose();
+      aiAnalysisDbService.dispose();
+    });
+  });
+
+  group('OnboardingController page navigation', () {
+    late SettingsService settingsService;
+    late DatabaseService databaseService;
+    late MMKVService mmkvService;
+    late ClipboardService clipboardService;
+    late FakeAIAnalysisDatabaseService aiAnalysisDbService;
+
+    setUp(() async {
+      await TestHarness.initialize();
+      sut = OnboardingController();
+      databaseService = DatabaseService();
+      settingsService = await SettingsService.create();
+      mmkvService = MMKVService();
+      clipboardService = ClipboardService();
+      aiAnalysisDbService = FakeAIAnalysisDatabaseService();
+    });
+
+    tearDown(() {
+      sut.dispose();
+      databaseService.dispose();
+      settingsService.dispose();
+      clipboardService.dispose();
+      aiAnalysisDbService.dispose();
+    });
+
+    test('onPageChanged updates state correctly', () {
+      int notified = 0;
+      sut.addListener(() => notified++);
+
+      expect(sut.state.currentPageIndex, 0);
+      expect(sut.state.canGoPrevious, isFalse);
+      expect(sut.state.canGoNext, isTrue);
+
+      sut.onPageChanged(1);
+
+      expect(sut.state.currentPageIndex, 1);
+      expect(sut.state.canGoPrevious, isTrue);
+      expect(sut.state.canGoNext, isTrue);
+      expect(notified, 1);
+
+      sut.onPageChanged(OnboardingConfig.totalPages - 1);
+
+      expect(sut.state.currentPageIndex, OnboardingConfig.totalPages - 1);
+      expect(sut.state.canGoPrevious, isTrue);
+      expect(sut.state.canGoNext, isTrue);
+    });
+
+    testWidgets(
+        'goToPage, nextPage, and previousPage navigate correctly when attached to PageView',
+        (tester) async {
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DatabaseService>.value(
+                value: databaseService),
+            ChangeNotifierProvider<SettingsService>.value(
+                value: settingsService),
+            Provider<MMKVService>.value(value: mmkvService),
+            ChangeNotifierProvider<ClipboardService>.value(
+                value: clipboardService),
+            ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
+              value: aiAnalysisDbService,
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                sut.initialize(context);
+                return PageView(
+                  controller: sut.pageController,
+                  onPageChanged: sut.onPageChanged,
+                  children: const [
+                    Text('Page 0'),
+                    Text('Page 1'),
+                    Text('Page 2'),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Invalid page indices are ignored (return early, no animation)
+      await sut.goToPage(-1);
+      expect(sut.state.currentPageIndex, 0);
+
+      await sut.goToPage(100);
+      expect(sut.state.currentPageIndex, 0);
+
+      // 动画 Future 只能靠 pump 推进：先启动、pump 完再 await，直接 await 会死锁
+      final nextFuture = sut.nextPage();
+      await tester.pumpAndSettle();
+      await nextFuture;
+      expect(sut.state.currentPageIndex, 1);
+
+      final prevFuture = sut.previousPage();
+      await tester.pumpAndSettle();
+      await prevFuture;
+      expect(sut.state.currentPageIndex, 0);
+
+      // Go to last page
+      final gotoFuture = sut.goToPage(OnboardingConfig.totalPages - 1);
+      await tester.pumpAndSettle();
+      await gotoFuture;
+      expect(sut.state.currentPageIndex, OnboardingConfig.totalPages - 1);
+    });
   });
 
   group('OnboardingController AI 快捷开关', () {
@@ -206,14 +418,11 @@ void main() {
     });
 
     test('引导页没表过态时，不覆盖今日思考 / 周期报告的现有取值', () async {
-      // 新用户在引导里配好 AI 服务后的状态：两个开关都已经开着。
       await settingsService.setTodayThoughtsUseAI(true);
       await settingsService.setReportInsightsUseAI(true);
 
-      // 引导页里根本没有这两个开关，所以 preferences 里不会有它们的取值。
       await sut.applyAiTogglePreferences(settingsService);
 
-      // 曾经这里会被无条件写成 false——新用户装完什么都没开就是这么来的。
       expect(settingsService.todayThoughtsUseAI, isTrue);
       expect(settingsService.reportInsightsUseAI, isTrue);
     });
@@ -228,6 +437,198 @@ void main() {
 
       expect(settingsService.todayThoughtsUseAI, isFalse);
       expect(settingsService.reportInsightsUseAI, isFalse);
+    });
+  });
+
+  group('OnboardingController completeOnboarding and skipOnboarding workflows',
+      () {
+    late SettingsService settingsService;
+    late FakeDatabaseServiceForOnboarding databaseService;
+    late MMKVService mmkvService;
+    late ClipboardService clipboardService;
+    late FakeAIAnalysisDatabaseService aiAnalysisDbService;
+    late ValueNotifier<bool> initializedNotifier;
+    late Database inMemoryDb;
+
+    setUp(() async {
+      await TestHarness.initialize();
+      PackageInfo.setMockInitialValues(
+        appName: 'ThoughtEcho',
+        packageName: 'com.example.thoughtecho',
+        version: '1.2.3',
+        buildNumber: '1',
+        buildSignature: '',
+      );
+      sqfliteFfiInit();
+      inMemoryDb = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+      databaseService = FakeDatabaseServiceForOnboarding(inMemoryDb);
+      settingsService = await SettingsService.create();
+      mmkvService = MMKVService();
+      await mmkvService.init();
+      clipboardService = ClipboardService();
+      aiAnalysisDbService = FakeAIAnalysisDatabaseService();
+      initializedNotifier = ValueNotifier<bool>(false);
+      sut = OnboardingController(
+        servicesInitializedNotifier: initializedNotifier,
+      );
+    });
+
+    tearDown(() async {
+      sut.dispose();
+      initializedNotifier.dispose();
+      databaseService.dispose();
+      settingsService.dispose();
+      clipboardService.dispose();
+      aiAnalysisDbService.dispose();
+      await inMemoryDb.close();
+      await TestHarness.tearDown();
+    });
+
+    testWidgets(
+        'completeOnboarding saves preferences and completes successfully',
+        (tester) async {
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DatabaseService>.value(
+                value: databaseService),
+            ChangeNotifierProvider<SettingsService>.value(
+                value: settingsService),
+            Provider<MMKVService>.value(value: mmkvService),
+            ChangeNotifierProvider<ClipboardService>.value(
+                value: clipboardService),
+            ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
+              value: aiAnalysisDbService,
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                sut.initialize(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      sut.updatePreference('defaultStartPage', 1);
+      sut.updatePreference('clipboardMonitoring', true);
+      sut.updatePreference('locationService', true);
+      sut.updatePreference('sentryEnabled', true);
+
+      final completeFuture = sut.completeOnboarding();
+      expect(sut.state.isCompleting, isTrue);
+
+      // Subsequent call to completeOnboarding during isCompleting does nothing
+      await sut.completeOnboarding();
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await completeFuture;
+
+      expect(settingsService.hasCompletedOnboarding(), isTrue);
+      expect(settingsService.appSettings.defaultStartPage, 1);
+      expect(settingsService.appSettings.clipboardMonitoringEnabled, isTrue);
+      expect(settingsService.sentryEnabled, isTrue);
+      expect(initializedNotifier.value, isTrue);
+      expect(aiAnalysisDbService.initCalled, isTrue);
+    });
+
+    testWidgets(
+        'skipOnboarding executes default migration and completes workflow',
+        (tester) async {
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DatabaseService>.value(
+                value: databaseService),
+            ChangeNotifierProvider<SettingsService>.value(
+                value: settingsService),
+            Provider<MMKVService>.value(value: mmkvService),
+            ChangeNotifierProvider<ClipboardService>.value(
+                value: clipboardService),
+            ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
+              value: aiAnalysisDbService,
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                sut.initialize(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      final skipFuture = sut.skipOnboarding();
+      expect(sut.state.isCompleting, isTrue);
+
+      // Re-entrant call is ignored
+      await sut.skipOnboarding();
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await skipFuture;
+
+      expect(settingsService.hasCompletedOnboarding(), isTrue);
+      expect(initializedNotifier.value, isTrue);
+    });
+
+    testWidgets(
+        'completeOnboarding resets isCompleting when a fatal exception occurs',
+        (tester) async {
+      // AI 初始化失败在生产里被吞掉（仅记日志），构不成 fatal；
+      // fatal 源用「完成引导」这一步的 settings 写入失败
+      final throwingSettings = ThrowingCompleteSettingsService(
+        await SharedPreferences.getInstance(),
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DatabaseService>.value(
+                value: databaseService),
+            ChangeNotifierProvider<SettingsService>.value(
+                value: throwingSettings),
+            Provider<MMKVService>.value(value: mmkvService),
+            ChangeNotifierProvider<ClipboardService>.value(
+                value: clipboardService),
+            ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
+              value: aiAnalysisDbService,
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                sut.initialize(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      // 同步挂载 onError，异常在 future 链内被消化，不会逃逸到 test zone
+      final completeFuture = sut.completeOnboarding();
+      final fatalObserved = completeFuture.then(
+        (_) => false,
+        onError: (Object e) => true,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(await fatalObserved, isTrue);
+      expect(sut.state.isCompleting, isFalse);
+      throwingSettings.dispose();
     });
   });
 
@@ -307,6 +708,7 @@ void main() {
 
       expect(settingsService.hasCompletedOnboarding(), isTrue);
       controller.dispose();
+      fakeAiDbService.dispose();
     });
   });
 }
