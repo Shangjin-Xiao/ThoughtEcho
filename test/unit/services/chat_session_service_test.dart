@@ -680,5 +680,43 @@ void main() {
       await service.close();
       await deleteDatabase(dbPath);
     });
+
+    test('getMessageCount and getSessionOverviews safely handle message counts',
+        () async {
+      final dbPath = path.join(
+        Directory.systemTemp.createTempSync('chat_db_test_counts_').path,
+        'chat.db',
+      );
+      final service = ChatSessionService(
+        databasePath: dbPath,
+        openOwnDatabase: true,
+      );
+
+      final session = await service.createSession(
+        sessionType: 'note',
+        title: 'Count Test Session',
+      );
+
+      expect(await service.getMessageCount(session.id), equals(0));
+
+      await service.addMessage(
+        session.id,
+        ChatMessage(
+          id: 'msg-1',
+          isUser: true,
+          content: 'Hello world',
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      expect(await service.getMessageCount(session.id), equals(1));
+
+      final overviews = await service.getSessionOverviews([session.id]);
+      expect(overviews[session.id]?.messageCount, equals(1));
+      expect(overviews[session.id]?.snippet, equals('Hello world'));
+
+      await service.close();
+      await deleteDatabase(dbPath);
+    });
   });
 }

@@ -685,7 +685,7 @@ class AgentMemoryService extends ChangeNotifier {
       'SELECT count(*) as count FROM $recentSliceTable WHERE expires_at > ?',
       <Object?>[now.toIso8601String()],
     );
-    final activeCount = (countRows.firstOrNull?['count'] as int?) ?? 0;
+    final activeCount = (countRows.firstOrNull?['count'] as num?)?.toInt() ?? 0;
     if (activeCount > AgentMemoryRecentSlice.maxRecentSlices * 2) {
       await db.delete(
         recentSliceTable,
@@ -1350,8 +1350,8 @@ class AgentMemoryService extends ChangeNotifier {
     );
     final factRows = await db.rawQuery('SELECT COUNT(*) AS c FROM $factsTable');
     return (
-      profileCount: (profileRows.first['c'] as int?) ?? 0,
-      factCount: (factRows.first['c'] as int?) ?? 0,
+      profileCount: (profileRows.first['c'] as num?)?.toInt() ?? 0,
+      factCount: (factRows.first['c'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -1390,7 +1390,7 @@ class AgentMemoryService extends ChangeNotifier {
     final db = await _db;
     final countRows =
         await db.rawQuery('SELECT COUNT(*) AS c FROM $factsTable');
-    final total = (countRows.first['c'] as int?) ?? 0;
+    final total = (countRows.first['c'] as num?)?.toInt() ?? 0;
     if (total <= factsCapacity) {
       return;
     }
