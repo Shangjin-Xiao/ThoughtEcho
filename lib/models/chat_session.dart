@@ -1,4 +1,5 @@
 import 'chat_message.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 聊天会话模型
 ///
@@ -27,20 +28,21 @@ class ChatSession {
 
   /// 从 SQLite 行映射构建（不含 messages，需单独查询）
   factory ChatSession.fromMap(Map<String, dynamic> map) {
-    final id = map['id'] as String?;
+    final id = map['id']?.toString();
     if (id == null || id.isEmpty) {
       throw const FormatException('ChatSession.fromMap: id 不能为空');
     }
     return ChatSession(
       id: id,
-      sessionType: map['session_type'] as String? ?? 'note',
-      noteId: map['note_id'] as String?,
-      title: map['title'] as String? ?? '',
-      createdAt: DateTime.tryParse(map['created_at'] as String? ?? '') ??
+      sessionType: map['session_type']?.toString() ?? 'note',
+      noteId: map['note_id']?.toString(),
+      title: map['title']?.toString() ?? '',
+      createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ??
           DateTime.now(),
-      lastActiveAt: DateTime.tryParse(map['last_active_at'] as String? ?? '') ??
-          DateTime.now(),
-      isPinned: (map['is_pinned'] as int? ?? 0) == 1,
+      lastActiveAt:
+          DateTime.tryParse(map['last_active_at']?.toString() ?? '') ??
+              DateTime.now(),
+      isPinned: _parseBool(map['is_pinned'], defaultValue: false),
     );
   }
 
@@ -83,8 +85,13 @@ class ChatSession {
               (k, v) => MapEntry(k.toString(), v),
             );
             messages.add(ChatMessage.fromJson(stringKeyMap));
-          } catch (_) {
-            // 静默跳过全损坏的单条消息对象
+          } catch (e, stackTrace) {
+            AppLogger.w(
+              'ChatSession.fromJson 跳过解析失败的 ChatMessage 条目: $e',
+              error: e,
+              stackTrace: stackTrace,
+              source: 'ChatSession',
+            );
           }
         }
       }
@@ -92,16 +99,28 @@ class ChatSession {
 
     return ChatSession(
       id: json['id']?.toString() ?? '',
-      sessionType: json['sessionType'] as String? ?? 'note',
-      noteId: json['noteId'] as String?,
-      title: json['title'] as String? ?? json['noteTitle'] as String? ?? '',
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      sessionType: json['sessionType']?.toString() ?? 'note',
+      noteId: json['noteId']?.toString(),
+      title: json['title']?.toString() ?? json['noteTitle']?.toString() ?? '',
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
-      lastActiveAt: DateTime.tryParse(json['lastActiveAt'] as String? ?? '') ??
+      lastActiveAt: DateTime.tryParse(json['lastActiveAt']?.toString() ?? '') ??
           DateTime.now(),
       messages: messages,
-      isPinned: json['isPinned'] as bool? ?? false,
+      isPinned: _parseBool(json['isPinned'], defaultValue: false),
     );
+  }
+
+  /// 辅助方法：安全转换为 bool
+  static bool _parseBool(dynamic val, {bool defaultValue = false}) {
+    if (val is bool) return val;
+    if (val is num) return val == 1;
+    if (val is String) {
+      final s = val.trim().toLowerCase();
+      if (s == 'true' || s == '1') return true;
+      if (s == 'false' || s == '0') return false;
+    }
+    return defaultValue;
   }
 
   ChatSession copyWith({

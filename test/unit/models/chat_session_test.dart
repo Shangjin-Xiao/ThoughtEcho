@@ -196,15 +196,17 @@ void main() {
           },
           {
             'id': 'msg-invalid-role',
-            'role': 12345, // 会在 ChatMessage.fromJson 中引发类型错误
+            'role': 12345, // 已被 Safe Casting 兼容转换为字符串 '12345'
           },
         ],
       };
 
       final session = ChatSession.fromJson(json);
 
-      expect(session.messages.length, equals(1));
-      expect(session.messages.first.id, equals('msg-valid'));
+      expect(session.messages.length, equals(2));
+      expect(session.messages[0].id, equals('msg-valid'));
+      expect(session.messages[1].id, equals('msg-invalid-role'));
+      expect(session.messages[1].role, equals('12345'));
     });
   });
 

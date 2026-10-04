@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 消息状态枚举 - 追踪消息的生成过程
 enum MessageState {
@@ -25,14 +26,33 @@ class ChatMessage {
   final bool includedInContext; // 是否纳入 AI 上下文
   final String? metaJson; // 扩展元数据（Phase 2 tool_call 等）
 
+  bool _isMetaParsed = false;
   Map<String, dynamic>? _parsedMeta;
 
   /// 缓存反序列化后的元数据 Map，避免列表滚动刷新时重复 jsonDecode
   Map<String, dynamic>? get parsedMeta {
-    if (_parsedMeta == null && metaJson != null && metaJson!.isNotEmpty) {
+    if (!_isMetaParsed && metaJson != null && metaJson!.isNotEmpty) {
+      _isMetaParsed = true;
       try {
-        _parsedMeta = jsonDecode(metaJson!) as Map<String, dynamic>;
-      } catch (_) {}
+        final decoded = jsonDecode(metaJson!);
+        if (decoded is Map<String, dynamic>) {
+          _parsedMeta = decoded;
+        } else if (decoded is Map) {
+          _parsedMeta = decoded.map((k, v) => MapEntry(k.toString(), v));
+        } else {
+          AppLogger.w(
+            'ChatMessage.parsedMeta 反序列化 metaJson 结果非 Map: ${decoded.runtimeType}',
+            source: 'ChatMessage',
+          );
+        }
+      } catch (e, stackTrace) {
+        AppLogger.w(
+          'ChatMessage.parsedMeta 反序列化 metaJson 失败: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'ChatMessage',
+        );
+      }
     }
     return _parsedMeta;
   }
@@ -68,18 +88,20 @@ class ChatMessage {
     if (id == null || id.isEmpty) {
       throw const FormatException('ChatMessage.fromMap: id 不能为空');
     }
-    final role = map['role'] as String? ?? 'user';
+    final role = map['role']?.toString();
+    final effectiveRole = (role != null && role.isNotEmpty) ? role : 'user';
     return ChatMessage(
       id: id,
-      content: map['content'] as String? ?? '',
-      isUser: role == 'user',
-      role: role,
-      timestamp: DateTime.tryParse(map['created_at'] as String? ?? '') ??
+      content: map['content']?.toString() ?? '',
+      isUser: effectiveRole == 'user',
+      role: effectiveRole,
+      timestamp: DateTime.tryParse(map['created_at']?.toString() ?? '') ??
           DateTime.now(),
-      includedInContext: (map['included_in_context'] as int? ?? 1) == 1,
-      metaJson: map['meta_json'] as String?,
-      contentFormat: map['content_format'] as String?,
-      deltaJson: map['delta_json'] as String?,
+      includedInContext:
+          _parseBool(map['included_in_context'], defaultValue: true),
+      metaJson: _parseString(map['meta_json']),
+      contentFormat: map['content_format']?.toString(),
+      deltaJson: _parseString(map['delta_json']),
     );
   }
 
@@ -118,13 +140,16 @@ class ChatMessage {
 
   /// 从 JSON 反序列化（备份/同步）
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
-    final role = json['role'] as String? ??
-        ((json['isUser'] as bool? ?? true) ? 'user' : 'assistant');
+    final rawRole = json['role']?.toString();
+    final isUser = _parseBool(json['isUser'], defaultValue: true);
+    final role = (rawRole != null && rawRole.isNotEmpty)
+        ? rawRole
+        : (isUser ? 'user' : 'assistant');
 
     // 安全解析state枚举
     MessageState state = MessageState.complete;
-    final stateStr = json['state'] as String?;
-    if (stateStr != null) {
+    final stateStr = json['state']?.toString();
+    if (stateStr != null && stateStr.isNotEmpty) {
       try {
         state = MessageState.values.byName(stateStr);
       } catch (_) {
@@ -134,27 +159,57 @@ class ChatMessage {
 
     return ChatMessage(
       id: json['id']?.toString() ?? '',
-      content: json['content'] as String? ?? '',
+      content: json['content']?.toString() ?? '',
       isUser: role == 'user',
       role: role,
-      timestamp: DateTime.tryParse(json['timestamp'] as String? ?? '') ??
+      timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
           DateTime.now(),
-      includedInContext: json['includedInContext'] as bool? ?? true,
-      metaJson: json['metaJson'] as String?,
+      includedInContext:
+          _parseBool(json['includedInContext'], defaultValue: true),
+      metaJson: _parseString(json['metaJson']),
       state: state,
       thinkingChunks: _toStringList(json['thinkingChunks']),
       responseChunks: _toStringList(json['responseChunks']),
-      contentFormat: json['contentFormat'] as String?,
-      deltaJson: json['deltaJson'] as String?,
+      contentFormat: json['contentFormat']?.toString(),
+      deltaJson: _parseString(json['deltaJson']),
     );
   }
 
-  /// 辅助方法：安全转换为String列表
+  /// 辅助方法：安全转换为 String 列表
   static List<String> _toStringList(dynamic value) {
     if (value is List) {
-      return value.map((e) => e.toString()).toList();
+      return value
+          .map((e) => e?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
     }
     return [];
+  }
+
+  /// 辅助方法：安全转换为 bool
+  static bool _parseBool(dynamic val, {bool defaultValue = true}) {
+    if (val is bool) return val;
+    if (val is num) return val == 1;
+    if (val is String) {
+      final s = val.trim().toLowerCase();
+      if (s == 'true' || s == '1') return true;
+      if (s == 'false' || s == '0') return false;
+    }
+    return defaultValue;
+  }
+
+  /// 辅助方法：安全转换为 String（支持 Map/List 转化为 JSON 字符串）
+  static String? _parseString(dynamic val) {
+    if (val == null) return null;
+    if (val is String) return val;
+    if (val is Map || val is List) {
+      try {
+        return jsonEncode(val);
+      } catch (_) {
+        return val.toString();
+      }
+    }
+    return val.toString();
   }
 
   ChatMessage copyWith({
