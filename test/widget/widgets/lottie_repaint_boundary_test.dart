@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lottie/lottie.dart';
 import 'package:thoughtecho/utils/lottie_animation_manager.dart';
 import 'package:thoughtecho/widgets/common/lottie_animation_widget.dart';
 import 'package:thoughtecho/widgets/lottie_loading_widget.dart';
 
 void main() {
-  testWidgets('EnhancedLottieAnimation is wrapped in RepaintBoundary',
+  testWidgets(
+      'EnhancedLottieAnimation uses a single internal RepaintBoundary without redundant outer boundary',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -17,16 +19,23 @@ void main() {
       ),
     );
 
+    final boundaries = find.descendant(
+      of: find.byType(EnhancedLottieAnimation),
+      matching: find.byType(RepaintBoundary),
+    );
+    expect(boundaries, findsOneWidget);
+
     expect(
       find.descendant(
-        of: find.byType(EnhancedLottieAnimation),
+        of: find.byType(Lottie),
         matching: find.byType(RepaintBoundary),
       ),
-      findsAtLeastNWidgets(1),
+      findsOneWidget,
     );
   });
 
-  testWidgets('LottieAnimationWidget is wrapped in RepaintBoundary',
+  testWidgets(
+      'LottieAnimationWidget uses a single internal RepaintBoundary without redundant outer boundary',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -38,37 +47,58 @@ void main() {
       ),
     );
 
+    final boundaries = find.descendant(
+      of: find.byType(LottieAnimationWidget),
+      matching: find.byType(RepaintBoundary),
+    );
+    expect(boundaries, findsOneWidget);
+
     expect(
       find.descendant(
-        of: find.byType(LottieAnimationWidget),
+        of: find.byType(Lottie),
         matching: find.byType(RepaintBoundary),
       ),
-      findsAtLeastNWidgets(1),
+      findsOneWidget,
     );
   });
 
-  testWidgets('LottieLoadingWidget is wrapped in RepaintBoundary',
+  testWidgets(
+      'LottieLoadingWidget relies on Lottie internal RepaintBoundary and keeps Text outside RepaintBoundary',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
           body: LottieLoadingWidget(
-            showText: false,
+            text: 'Loading...',
+            showText: true,
           ),
         ),
       ),
     );
 
+    final boundaries = find.descendant(
+      of: find.byType(LottieLoadingWidget),
+      matching: find.byType(RepaintBoundary),
+    );
+    expect(boundaries, findsOneWidget);
+
     expect(
       find.descendant(
-        of: find.byType(LottieLoadingWidget),
+        of: find.byType(Lottie),
         matching: find.byType(RepaintBoundary),
       ),
-      findsAtLeastNWidgets(1),
+      findsOneWidget,
     );
+
+    final textInsideBoundary = find.descendant(
+      of: boundaries,
+      matching: find.byType(Text),
+    );
+    expect(textInsideBoundary, findsNothing);
   });
 
-  testWidgets('LottieLoadingButton is wrapped in RepaintBoundary',
+  testWidgets(
+      'LottieLoadingButton uses a single internal RepaintBoundary without redundant outer boundary',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -78,12 +108,18 @@ void main() {
       ),
     );
 
+    final boundaries = find.descendant(
+      of: find.byType(LottieLoadingButton),
+      matching: find.byType(RepaintBoundary),
+    );
+    expect(boundaries, findsOneWidget);
+
     expect(
       find.descendant(
-        of: find.byType(LottieLoadingButton),
+        of: find.byType(Lottie),
         matching: find.byType(RepaintBoundary),
       ),
-      findsAtLeastNWidgets(1),
+      findsOneWidget,
     );
   });
 }

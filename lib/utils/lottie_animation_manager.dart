@@ -123,6 +123,8 @@ class LottieAnimationConfig {
 
 /// 增强的Lottie动画组件
 /// 提供更好的错误处理、性能优化和可访问性支持
+/// Note: Lottie.asset 内部默认将 addRepaintBoundary 设为 true，自动在 Layer 树中建立隔离图层，
+/// 避免动画逐帧绘制影响外层 Widget。此处无需额外包装外层 RepaintBoundary。
 class EnhancedLottieAnimation extends StatefulWidget {
   final LottieAnimationType type;
   final double? width;
@@ -198,30 +200,28 @@ class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
       return _buildFallbackWidget();
     }
 
-    return RepaintBoundary(
-      child: Semantics(
-        label: widget.semanticLabel ??
-            config.semanticLabel ??
-            _getDefaultSemanticLabel(),
-        child: SizedBox(
+    return Semantics(
+      label: widget.semanticLabel ??
+          config.semanticLabel ??
+          _getDefaultSemanticLabel(),
+      child: SizedBox(
+        width: finalWidth,
+        height: finalHeight,
+        child: Lottie.asset(
+          LottieAnimationManager.getAnimationPath(widget.type),
+          controller: _controller,
           width: finalWidth,
           height: finalHeight,
-          child: Lottie.asset(
-            LottieAnimationManager.getAnimationPath(widget.type),
-            controller: _controller,
-            width: finalWidth,
-            height: finalHeight,
-            fit: BoxFit.contain,
-            repeat: widget.repeat ?? config.repeat,
-            reverse: widget.reverse ?? config.reverse,
-            errorBuilder: (context, error, stackTrace) {
-              debugPrint('Lottie动画加载失败: ${widget.type}, 错误: $error');
-              setState(() {
-                _hasError = true;
-              });
-              return _buildFallbackWidget();
-            },
-          ),
+          fit: BoxFit.contain,
+          repeat: widget.repeat ?? config.repeat,
+          reverse: widget.reverse ?? config.reverse,
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint('Lottie动画加载失败: ${widget.type}, 错误: $error');
+            setState(() {
+              _hasError = true;
+            });
+            return _buildFallbackWidget();
+          },
         ),
       ),
     );
