@@ -129,20 +129,23 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: widget.width ?? (widget.scene != null ? _preset.size : null),
-      height: widget.height ?? (widget.scene != null ? _preset.size : null),
-      child: Lottie.asset(
-        _animationPath,
-        fit: widget.fit,
-        controller: _controller,
-        repeat: _shouldRepeat,
-        onLoaded: (composition) {
-          _controller.duration = composition.duration;
-          widget.onLoaded?.call();
-        },
-        options:
-            widget.color != null ? LottieOptions(enableMergePaths: true) : null,
+    return RepaintBoundary(
+      child: SizedBox(
+        width: widget.width ?? (widget.scene != null ? _preset.size : null),
+        height: widget.height ?? (widget.scene != null ? _preset.size : null),
+        child: Lottie.asset(
+          _animationPath,
+          fit: widget.fit,
+          controller: _controller,
+          repeat: _shouldRepeat,
+          onLoaded: (composition) {
+            _controller.duration = composition.duration;
+            widget.onLoaded?.call();
+          },
+          options: widget.color != null
+              ? LottieOptions(enableMergePaths: true)
+              : null,
+        ),
       ),
     );
   }

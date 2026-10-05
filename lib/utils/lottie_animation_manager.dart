@@ -198,28 +198,30 @@ class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
       return _buildFallbackWidget();
     }
 
-    return Semantics(
-      label: widget.semanticLabel ??
-          config.semanticLabel ??
-          _getDefaultSemanticLabel(),
-      child: SizedBox(
-        width: finalWidth,
-        height: finalHeight,
-        child: Lottie.asset(
-          LottieAnimationManager.getAnimationPath(widget.type),
-          controller: _controller,
+    return RepaintBoundary(
+      child: Semantics(
+        label: widget.semanticLabel ??
+            config.semanticLabel ??
+            _getDefaultSemanticLabel(),
+        child: SizedBox(
           width: finalWidth,
           height: finalHeight,
-          fit: BoxFit.contain,
-          repeat: widget.repeat ?? config.repeat,
-          reverse: widget.reverse ?? config.reverse,
-          errorBuilder: (context, error, stackTrace) {
-            debugPrint('Lottie动画加载失败: ${widget.type}, 错误: $error');
-            setState(() {
-              _hasError = true;
-            });
-            return _buildFallbackWidget();
-          },
+          child: Lottie.asset(
+            LottieAnimationManager.getAnimationPath(widget.type),
+            controller: _controller,
+            width: finalWidth,
+            height: finalHeight,
+            fit: BoxFit.contain,
+            repeat: widget.repeat ?? config.repeat,
+            reverse: widget.reverse ?? config.reverse,
+            errorBuilder: (context, error, stackTrace) {
+              debugPrint('Lottie动画加载失败: ${widget.type}, 错误: $error');
+              setState(() {
+                _hasError = true;
+              });
+              return _buildFallbackWidget();
+            },
+          ),
         ),
       ),
     );

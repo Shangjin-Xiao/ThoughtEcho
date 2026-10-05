@@ -22,32 +22,34 @@ class LottieLoadingWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: size,
-          height: size,
-          child: Lottie.asset(
-            'assets/lottie/custom_loading.json', // 使用自定义加载动画
-            fit: BoxFit.contain,
-            repeat: true,
-            animate: true,
-          ),
-        ),
-        if (showText && text != null) ...[
-          SizedBox(height: size * 0.2),
-          Text(
-            text!,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: textColor ??
-                  theme.colorScheme.onSurface.withValues(alpha: 0.7),
+    return RepaintBoundary(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: size,
+            height: size,
+            child: Lottie.asset(
+              'assets/lottie/custom_loading.json', // 使用自定义加载动画
+              fit: BoxFit.contain,
+              repeat: true,
+              animate: true,
             ),
-            textAlign: TextAlign.center,
           ),
+          if (showText && text != null) ...[
+            SizedBox(height: size * 0.2),
+            Text(
+              text!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: textColor ??
+                    theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -61,14 +63,16 @@ class LottieLoadingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Lottie.asset(
-        'assets/lottie/custom_loading.json', // 使用自定义加载动画
-        fit: BoxFit.contain,
-        repeat: true,
-        animate: true,
+    return RepaintBoundary(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Lottie.asset(
+          'assets/lottie/custom_loading.json', // 使用自定义加载动画
+          fit: BoxFit.contain,
+          repeat: true,
+          animate: true,
+        ),
       ),
     );
   }
