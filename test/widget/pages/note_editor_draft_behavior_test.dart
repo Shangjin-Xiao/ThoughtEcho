@@ -538,4 +538,76 @@ void main() {
     final draft = await draftService.getLatestDraft();
     expect(draft, isNull);
   });
+
+  testWidgets(
+      'in-flight draft save aborted when user discards changes mid-flight', (
+    tester,
+  ) async {
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _TestSettingsService(),
+        ),
+        ChangeNotifierProvider<FeatureGuideService>(
+          create: (_) => _TestFeatureGuideService(),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: const [
+          ...AppLocalizations.localizationsDelegates,
+          FlutterQuillLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => const NoteFullEditorPage(
+                      initialContent: '',
+                      skipDefaultMetadataAutofill: true,
+                    ),
+                  ));
+                },
+                child: const Text('Open editor'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Open editor'));
+    await tester.pumpAndSettle();
+
+    final editor = find.byType(QuillEditor);
+    final controller = tester.widget<QuillEditor>(editor).controller;
+    controller.replaceText(
+      0,
+      0,
+      'Content typed before mid-flight discard',
+      const TextSelection.collapsed(offset: 38),
+    );
+    await tester.pump();
+
+    // Advance 2 seconds so debounce timer fires and _saveDraft starts
+    await tester.pump(const Duration(seconds: 2));
+
+    // Pop route mid-flight / while save draft is in progress
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
+    await tester.tap(find.text(l10n.discardChanges));
+    await tester.pumpAndSettle();
+
+    // Wait and verify no draft was written or recreated
+    await tester.pump(const Duration(seconds: 3));
+
+    final draft = await draftService.getLatestDraft();
+    expect(draft, isNull);
+  });
 }

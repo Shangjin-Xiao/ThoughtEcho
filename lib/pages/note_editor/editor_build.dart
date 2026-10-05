@@ -16,8 +16,10 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
         if (!hasUnsavedChanges) {
           if (context.mounted) {
             // 没有未保存的更改，安全退出并清理草稿
-            _clearDraft();
-            Navigator.pop(context);
+            await _clearDraft();
+            if (context.mounted) {
+              Navigator.pop(context);
+            }
           }
           return;
         }
@@ -51,8 +53,10 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
         if (dialogResult == true) {
           if (context.mounted) {
             // 用户选择放弃更改，清理草稿
-            _clearDraft();
-            Navigator.pop(context);
+            await _clearDraft();
+            if (context.mounted) {
+              Navigator.pop(context);
+            }
           }
         } else if (dialogResult == 'save') {
           // 用户选择保存并退出

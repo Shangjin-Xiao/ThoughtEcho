@@ -101,24 +101,25 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
   Future<void> _saveDraft() async {
     final snapshotGen = _editorState.sessionGeneration;
+    if (!_isDraftSaveValid(snapshotGen)) return;
+
+    final key = _editorState.draftStorageKey;
+    if (key.isEmpty) return;
+
+    final plainText = _editorState.controller.document.toPlainText().trim();
+
+    // 只有用户实际编写了正文内容才保存草稿
+    // 自动添加的天气、位置、标签等不应该触发草稿保存
+    if (plainText.isEmpty) {
+      // 如果正文为空，删除已存在的草稿
+      await _deleteDraftKey(key);
+      return;
+    }
+
     final completer = Completer<void>();
-    _editorState.activeDraftSaveFuture = completer.future;
+    _editorState.registerInFlightDraftSave(completer.future);
 
     try {
-      if (!_isDraftSaveValid(snapshotGen)) return;
-
-      final key = _editorState.draftStorageKey;
-      if (key.isEmpty) return;
-      final plainText = _editorState.controller.document.toPlainText().trim();
-
-      // 只有用户实际编写了正文内容才保存草稿
-      // 自动添加的天气、位置、标签等不应该触发草稿保存
-      if (plainText.isEmpty) {
-        // 如果正文为空，删除已存在的草稿
-        await _clearDraft(isFromSaveDraft: true);
-        return;
-      }
-
       if (!_isDraftSaveValid(snapshotGen)) return;
 
       // 检查是否有用户实际输入的内容（非自动填充）
@@ -162,9 +163,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       if (!completer.isCompleted) {
         completer.complete();
       }
-      if (_editorState.activeDraftSaveFuture == completer.future) {
-        _editorState.activeDraftSaveFuture = null;
-      }
+      _editorState.unregisterInFlightDraftSave(completer.future);
     }
   }
 
@@ -195,21 +194,20 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     return false;
   }
 
-  Future<void> _clearDraft({bool isFromSaveDraft = false}) async {
-    _editorState.incrementSessionGeneration();
-    if (!isFromSaveDraft) {
-      final activeFuture = _editorState.activeDraftSaveFuture;
-      if (activeFuture != null) {
-        try {
-          await activeFuture;
-        } catch (_) {}
-      }
-    }
+  Future<void> _clearDraft() async {
+    final key = _editorState.draftStorageKey;
+    if (key.isEmpty) return;
+
+    _editorState.cancelDraftSave();
+    await _editorState.waitForActiveDraftSaves();
+    await _deleteDraftKey(key);
+  }
+
+  Future<void> _deleteDraftKey([String? key]) async {
+    final k = key ?? _editorState.draftStorageKey;
+    if (k.isEmpty) return;
     try {
-      final key = _editorState.draftStorageKey;
-      if (key.isEmpty) return;
-      // 使用 DraftService 删除草稿
-      await DraftService().deleteDraft(key);
+      await DraftService().deleteDraft(k);
     } catch (e) {
       logDebug('清理草稿失败: $e');
     }

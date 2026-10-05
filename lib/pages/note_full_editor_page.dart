@@ -1,30 +1,32 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math' show min;
+
+import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
-import 'dart:convert';
 import 'package:geolocator/geolocator.dart' show Position;
 import 'package:provider/provider.dart';
-import '../gen_l10n/app_localizations.dart';
 import 'package:uuid/uuid.dart';
-import '../services/database_service.dart';
-import '../models/quote_model.dart';
+
+import '../gen_l10n/app_localizations.dart';
 import '../models/note_tag.dart';
+import '../models/quote_model.dart';
+import '../models/thoughter_entry.dart';
+import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
-import '../utils/time_utils.dart'; // 导入时间工具类
-import 'package:flex_color_picker/flex_color_picker.dart';
-import '../utils/icon_utils.dart';
-import '../utils/color_utils.dart'; // Import color_utils
-import 'dart:math' show min; // 添加math包导入
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
 import '../utils/aptabase_helper.dart';
+import '../utils/color_utils.dart';
+import '../utils/icon_utils.dart';
 import '../utils/string_utils.dart';
+import '../utils/time_utils.dart';
 import 'thoughter_page.dart';
-import '../models/thoughter_entry.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, compute;
 
 import '../extensions/note_tag_localization_extension.dart';
 import '../utils/delta_content_serializer.dart';

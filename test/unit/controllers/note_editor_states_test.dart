@@ -150,7 +150,7 @@ void main() {
       expect(state.sessionGeneration, 3);
     });
 
-    test('activeDraftSaveFuture manages active draft save future', () async {
+    test('in-flight draft saves tracking and waitForActiveDraftSaves', () async {
       final state = NoteEditorState(
         initialPlainText: '',
         initialDeltaContent: null,
@@ -158,17 +158,34 @@ void main() {
         restoredFromDraft: false,
       );
 
-      expect(state.activeDraftSaveFuture, isNull);
+      expect(state.hasActiveDraftSaves, isFalse);
 
-      final completer = Completer<void>();
-      state.activeDraftSaveFuture = completer.future;
-      expect(state.activeDraftSaveFuture, equals(completer.future));
+      final completer1 = Completer<void>();
+      final completer2 = Completer<void>();
 
-      completer.complete();
-      await state.activeDraftSaveFuture;
+      state.registerInFlightDraftSave(completer1.future);
+      state.registerInFlightDraftSave(completer2.future);
 
-      state.activeDraftSaveFuture = null;
-      expect(state.activeDraftSaveFuture, isNull);
+      expect(state.hasActiveDraftSaves, isTrue);
+
+      var waited = false;
+      final waitFuture = state.waitForActiveDraftSaves().then((_) {
+        waited = true;
+      });
+
+      expect(waited, isFalse);
+
+      completer1.complete();
+      state.unregisterInFlightDraftSave(completer1.future);
+      await Future<void>.delayed(Duration.zero);
+      expect(waited, isFalse);
+
+      completer2.complete();
+      state.unregisterInFlightDraftSave(completer2.future);
+      await waitFuture;
+
+      expect(waited, isTrue);
+      expect(state.hasActiveDraftSaves, isFalse);
 
       state.dispose();
     });
