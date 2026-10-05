@@ -123,6 +123,8 @@ class LottieAnimationConfig {
 
 /// 增强的Lottie动画组件
 /// 提供更好的错误处理、性能优化和可访问性支持
+/// Note: Lottie.asset 内部默认将 addRepaintBoundary 设为 true，自动在 Layer 树中建立隔离图层，
+/// 避免动画逐帧绘制影响外层 Widget。此处无需额外包装外层 RepaintBoundary。
 class EnhancedLottieAnimation extends StatefulWidget {
   final LottieAnimationType type;
   final double? width;

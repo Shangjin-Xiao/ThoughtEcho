@@ -4,7 +4,9 @@ import '../../config/lottie_config.dart';
 
 /// 通用Lottie动画组件
 ///
-/// 支持多种动画场景和自定义配置
+/// 支持多种动画场景和自定义配置。
+/// Note: Lottie.asset 内部默认将 addRepaintBoundary 设为 true，自动在 Layer 树中建立隔离图层，
+/// 避免动画逐帧绘制影响外层 Widget。此处无需额外包装外层 RepaintBoundary。
 class LottieAnimationWidget extends StatefulWidget {
   final String? animationPath;
   final LottieScene? scene;
