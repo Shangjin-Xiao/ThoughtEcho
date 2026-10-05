@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/note_editor_states.dart';
@@ -120,6 +122,71 @@ void main() {
       state.cancelDraftSave();
       await Future<void>.delayed(const Duration(milliseconds: 70));
       expect(saved, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'sessionGeneration increments on cancelDraftSave, incrementSessionGeneration, and dispose',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'key',
+        restoredFromDraft: false,
+      );
+
+      expect(state.sessionGeneration, 0);
+
+      state.cancelDraftSave();
+      expect(state.sessionGeneration, 1);
+
+      state.incrementSessionGeneration();
+      expect(state.sessionGeneration, 2);
+
+      expect(state.isDisposed, isFalse);
+      state.dispose();
+      expect(state.isDisposed, isTrue);
+      expect(state.sessionGeneration, 3);
+    });
+
+    test('in-flight draft saves tracking and waitForActiveDraftSaves',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'key',
+        restoredFromDraft: false,
+      );
+
+      expect(state.hasActiveDraftSaves, isFalse);
+
+      final completer1 = Completer<void>();
+      final completer2 = Completer<void>();
+
+      state.registerInFlightDraftSave(completer1.future);
+      state.registerInFlightDraftSave(completer2.future);
+
+      expect(state.hasActiveDraftSaves, isTrue);
+
+      var waited = false;
+      final waitFuture = state.waitForActiveDraftSaves().then((_) {
+        waited = true;
+      });
+
+      expect(waited, isFalse);
+
+      completer1.complete();
+      state.unregisterInFlightDraftSave(completer1.future);
+      await Future<void>.delayed(Duration.zero);
+      expect(waited, isFalse);
+
+      completer2.complete();
+      state.unregisterInFlightDraftSave(completer2.future);
+      await waitFuture;
+
+      expect(waited, isTrue);
+      expect(state.hasActiveDraftSaves, isFalse);
 
       state.dispose();
     });

@@ -32,6 +32,8 @@ class NoteEditorState extends ChangeNotifier {
   Timer? _draftSaveTimer;
   VoidCallback? _draftChangeListener;
   bool _disposed = false;
+  int _sessionGeneration = 0;
+  final Set<Future<void>> _activeDraftSaveFutures = <Future<void>>{};
 
   quill.QuillController get controller => _controller;
   set controller(quill.QuillController value) => replaceController(value);
@@ -44,6 +46,27 @@ class NoteEditorState extends ChangeNotifier {
   set richTextLoadFailed(bool value) => setRichTextLoadFailed(value);
   Quote? get fullInitialQuote => _fullInitialQuote;
   set fullInitialQuote(Quote? value) => setFullInitialQuote(value);
+  int get sessionGeneration => _sessionGeneration;
+  bool get isDisposed => _disposed;
+  bool get hasActiveDraftSaves => _activeDraftSaveFutures.isNotEmpty;
+
+  void incrementSessionGeneration() {
+    _sessionGeneration++;
+  }
+
+  void registerInFlightDraftSave(Future<void> future) {
+    _activeDraftSaveFutures.add(future);
+  }
+
+  void unregisterInFlightDraftSave(Future<void> future) {
+    _activeDraftSaveFutures.remove(future);
+  }
+
+  Future<void> waitForActiveDraftSaves() async {
+    while (_activeDraftSaveFutures.isNotEmpty) {
+      await Future.wait(_activeDraftSaveFutures.toList(), eagerError: false);
+    }
+  }
 
   void replaceController(quill.QuillController controller) {
     if (identical(_controller, controller)) return;
@@ -78,6 +101,8 @@ class NoteEditorState extends ChangeNotifier {
 
   void cancelDraftSave() {
     _draftSaveTimer?.cancel();
+    _draftSaveTimer = null;
+    _sessionGeneration++;
   }
 
   void setFullQuoteLoading(bool value) {
@@ -104,6 +129,7 @@ class NoteEditorState extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _draftSaveTimer?.cancel();
+    _sessionGeneration++;
     final draftChangeListener = _draftChangeListener;
     if (draftChangeListener != null) {
       _controller.removeListener(draftChangeListener);
