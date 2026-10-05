@@ -150,7 +150,8 @@ void main() {
       expect(state.sessionGeneration, 3);
     });
 
-    test('in-flight draft saves tracking and waitForActiveDraftSaves', () async {
+    test('in-flight draft saves tracking and waitForActiveDraftSaves',
+        () async {
       final state = NoteEditorState(
         initialPlainText: '',
         initialDeltaContent: null,
