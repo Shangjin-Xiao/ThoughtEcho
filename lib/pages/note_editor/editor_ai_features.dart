@@ -85,8 +85,8 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
         ),
       );
       if (shouldSave != true) return;
-      await _saveContent();
-      if (!mounted) return;
+      final saveSucceeded = await _saveContent(popOnSuccess: false);
+      if (!saveSucceeded || !mounted) return;
     }
 
     // 创建包含元数据的临时 Quote，为 Agent 提供更丰富的上下文
