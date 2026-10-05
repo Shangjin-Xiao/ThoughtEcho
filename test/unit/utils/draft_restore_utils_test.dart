@@ -44,6 +44,7 @@ void main() {
       expect(restored.id, 'note-1');
       expect(restored.content, 'draft content');
       expect(restored.deltaContent, '[{"insert":"draft content\\n"}]');
+      expect(restored.date, '2026-03-20T12:00:00.000');
       expect(restored.aiAnalysis, 'draft analysis');
       expect(restored.sourceAuthor, 'new author');
       expect(restored.sourceWork, 'new work');
@@ -130,6 +131,51 @@ void main() {
         now: nowTime,
       );
       expect(withNowOnly.date, '2026-03-21T12:00:00.000Z');
+
+      // Empty string date falls back to timestamp
+      final withEmptyDate = buildRestoredDraftQuote(
+        draftData: {
+          'id': 'new_4',
+          'date': '   ',
+          'timestamp': '2026-03-20T08:00:00.000Z',
+        },
+        now: nowTime,
+      );
+      expect(withEmptyDate.date, '2026-03-20T08:00:00.000Z');
+
+      // Empty string date and timestamp fall back to now
+      final withEmptyDateAndTimestamp = buildRestoredDraftQuote(
+        draftData: {
+          'id': 'new_5',
+          'date': '',
+          'timestamp': '  ',
+        },
+        now: nowTime,
+      );
+      expect(withEmptyDateAndTimestamp.date, '2026-03-21T12:00:00.000Z');
+    });
+
+    test('handles non-string and polluted MMKV fields without throwing', () {
+      final restored = buildRestoredDraftQuote(
+        draftData: {
+          'id': 12345,
+          'plainText': 100,
+          'poiName': 999,
+          'date': 20261005,
+          'latitude': '3.14',
+          'longitude': 4,
+          'tagIds': [1, 'tag2', '  '],
+        },
+        now: DateTime.parse('2026-03-21T12:00:00.000Z'),
+      );
+
+      expect(restored.id, '12345');
+      expect(restored.content, '100');
+      expect(restored.poiName, '999');
+      expect(restored.date, '20261005');
+      expect(restored.latitude, 3.14);
+      expect(restored.longitude, 4.0);
+      expect(restored.tagIds, ['1', 'tag2']);
     });
 
     test('restores fields with null values gracefully', () {
