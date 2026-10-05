@@ -99,6 +99,30 @@ void main() {
       expect(state.restoredFromDraft, isTrue);
       state.markDraftSaved();
       expect(state.restoredFromDraft, isFalse);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test('dirty state tracking and document versioning on edit', () async {
+      final state = NoteEditorState(
+        initialPlainText: 'test',
+        initialDeltaContent: null,
+        draftStorageKey: 'key_dirty',
+        restoredFromDraft: false,
+      );
+
+      expect(state.isDirty, isFalse);
+      final initialVersion = state.documentVersion;
+
+      state.controller.replaceText(0, 0, 'new content ', null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isTrue);
+      expect(state.documentVersion, greaterThan(initialVersion));
+
+      state.markDraftSaved();
+      expect(state.isDirty, isFalse);
 
       state.dispose();
     });

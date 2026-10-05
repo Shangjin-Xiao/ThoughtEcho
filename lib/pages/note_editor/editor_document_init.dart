@@ -118,6 +118,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
+          _editorState.markClean();
         });
         logDebug('从纯文本生成的富文本初始化完成');
       }
@@ -238,6 +239,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
+          _editorState.markClean();
           _editorState.richTextLoadFailed = false;
         });
         logDebug('富文本内容直接初始化完成');
@@ -301,6 +303,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
+          _editorState.markClean();
           _editorState.richTextLoadFailed = false;
         });
         logDebug('富文本内容后台初始化完成');
@@ -348,6 +351,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
+          _editorState.markClean();
           _editorState.richTextLoadFailed = false;
         });
         logDebug('超大富文本内容分段加载完成');
@@ -403,14 +407,44 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     }
   }
 
+  /// 快速启发式估算 Delta 内容序列化后的 JSON 字节大小，避免主线程 deltaData.toString() 调用
+  int _estimateDeltaDataSize(dynamic deltaData) {
+    if (deltaData == null) return 0;
+    List<dynamic>? ops;
+    if (deltaData is List) {
+      ops = deltaData;
+    } else if (deltaData is Map && deltaData['ops'] is List) {
+      ops = deltaData['ops'] as List<dynamic>;
+    }
+    if (ops == null || ops.isEmpty) return 0;
+
+    int totalChars = 0;
+    for (final op in ops) {
+      if (op is Map) {
+        final insert = op['insert'];
+        if (insert is String) {
+          totalChars += insert.length;
+        } else if (insert != null) {
+          totalChars += 200; // 嵌入式多媒体节点估算值
+        }
+        final attributes = op['attributes'];
+        if (attributes is Map) {
+          totalChars += attributes.length * 30; // 属性键值开销估算值
+        }
+        totalChars += 30; // JSON 结构开销估算值
+      }
+    }
+    return totalChars * 2;
+  }
+
   Future<String> _getDocumentContentSafely() async {
     try {
       final memoryManager = DeviceMemoryManager();
       final delta = _editorState.controller.document.toDelta();
       final deltaData = delta.toJson();
 
-      // 估算内容大小
-      final estimatedSize = deltaData.toString().length * 2;
+      // 快速估算内容大小，不再执行 deltaData.toString()
+      final estimatedSize = _estimateDeltaDataSize(deltaData);
       logDebug('文档内容估算大小: ${(estimatedSize / 1024).toStringAsFixed(1)}KB');
 
       // 检查内存压力

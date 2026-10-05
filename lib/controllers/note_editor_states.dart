@@ -16,7 +16,9 @@ class NoteEditorState extends ChangeNotifier {
     required this.draftStorageKey,
     required bool restoredFromDraft,
   })  : _restoredFromDraft = restoredFromDraft,
-        _controller = quill.QuillController.basic();
+        _controller = quill.QuillController.basic() {
+    _subscribeToDocChanges();
+  }
 
   quill.QuillController _controller;
   final ScrollController scrollController = ScrollController();
@@ -35,6 +37,11 @@ class NoteEditorState extends ChangeNotifier {
   int _sessionGeneration = 0;
   final Set<Future<void>> _activeDraftSaveFutures = <Future<void>>{};
 
+  bool _isDirty = false;
+  int _documentVersion = 0;
+  int _savedDocumentVersion = 0;
+  StreamSubscription<quill.DocChange>? _docChangeSubscription;
+
   quill.QuillController get controller => _controller;
   set controller(quill.QuillController value) => replaceController(value);
   bool get restoredFromDraft => _restoredFromDraft;
@@ -49,6 +56,35 @@ class NoteEditorState extends ChangeNotifier {
   int get sessionGeneration => _sessionGeneration;
   bool get isDisposed => _disposed;
   bool get hasActiveDraftSaves => _activeDraftSaveFutures.isNotEmpty;
+
+  bool get isDirty => _isDirty || _documentVersion != _savedDocumentVersion;
+  int get documentVersion => _documentVersion;
+
+  void markDirty() {
+    _documentVersion++;
+    if (!_isDirty) {
+      _isDirty = true;
+      notifyListeners();
+    }
+  }
+
+  void markDraftSaved() {
+    _restoredFromDraft = false;
+    _isDirty = false;
+    _savedDocumentVersion = _documentVersion;
+  }
+
+  void markClean() {
+    _isDirty = false;
+    _savedDocumentVersion = _documentVersion;
+  }
+
+  void _subscribeToDocChanges() {
+    _docChangeSubscription?.cancel();
+    _docChangeSubscription = _controller.changes.listen((event) {
+      markDirty();
+    });
+  }
 
   void incrementSessionGeneration() {
     _sessionGeneration++;
@@ -74,11 +110,13 @@ class NoteEditorState extends ChangeNotifier {
     if (draftChangeListener != null) {
       _controller.removeListener(draftChangeListener);
     }
+    _docChangeSubscription?.cancel();
     _controller.dispose();
     _controller = controller;
     if (draftChangeListener != null) {
       _controller.addListener(draftChangeListener);
     }
+    _subscribeToDocChanges();
     notifyListeners();
   }
 
@@ -121,15 +159,12 @@ class NoteEditorState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void markDraftSaved() {
-    _restoredFromDraft = false;
-  }
-
   @override
   void dispose() {
     _disposed = true;
     _draftSaveTimer?.cancel();
     _sessionGeneration++;
+    _docChangeSubscription?.cancel();
     final draftChangeListener = _draftChangeListener;
     if (draftChangeListener != null) {
       _controller.removeListener(draftChangeListener);
