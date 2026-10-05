@@ -32,6 +32,8 @@ class NoteEditorState extends ChangeNotifier {
   Timer? _draftSaveTimer;
   VoidCallback? _draftChangeListener;
   bool _disposed = false;
+  int _sessionGeneration = 0;
+  Future<void>? activeDraftSaveFuture;
 
   quill.QuillController get controller => _controller;
   set controller(quill.QuillController value) => replaceController(value);
@@ -44,6 +46,12 @@ class NoteEditorState extends ChangeNotifier {
   set richTextLoadFailed(bool value) => setRichTextLoadFailed(value);
   Quote? get fullInitialQuote => _fullInitialQuote;
   set fullInitialQuote(Quote? value) => setFullInitialQuote(value);
+  int get sessionGeneration => _sessionGeneration;
+  bool get isDisposed => _disposed;
+
+  void incrementSessionGeneration() {
+    _sessionGeneration++;
+  }
 
   void replaceController(quill.QuillController controller) {
     if (identical(_controller, controller)) return;
@@ -78,6 +86,7 @@ class NoteEditorState extends ChangeNotifier {
 
   void cancelDraftSave() {
     _draftSaveTimer?.cancel();
+    _sessionGeneration++;
   }
 
   void setFullQuoteLoading(bool value) {
@@ -104,6 +113,7 @@ class NoteEditorState extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _draftSaveTimer?.cancel();
+    _sessionGeneration++;
     final draftChangeListener = _draftChangeListener;
     if (draftChangeListener != null) {
       _controller.removeListener(draftChangeListener);

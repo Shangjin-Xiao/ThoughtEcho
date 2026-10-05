@@ -390,4 +390,152 @@ void main() {
     slowDatabaseService.completeSave();
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+      'discarding changes immediately after typing leaves no draft in MMKV', (
+    tester,
+  ) async {
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _TestSettingsService(),
+        ),
+        ChangeNotifierProvider<FeatureGuideService>(
+          create: (_) => _TestFeatureGuideService(),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: const [
+          ...AppLocalizations.localizationsDelegates,
+          FlutterQuillLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => const NoteFullEditorPage(
+                      initialContent: '',
+                      skipDefaultMetadataAutofill: true,
+                    ),
+                  ));
+                },
+                child: const Text('Open editor'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Open editor'));
+    await tester.pumpAndSettle();
+
+    final editor = find.byType(QuillEditor);
+    final controller = tester.widget<QuillEditor>(editor).controller;
+    controller.replaceText(
+      0,
+      0,
+      'Content to discard',
+      const TextSelection.collapsed(offset: 18),
+    );
+    await tester.pump();
+
+    // Trigger back route while timer or save is pending
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    // Find and tap Discard button
+    final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
+    await tester.tap(find.text(l10n.discardChanges));
+    await tester.pumpAndSettle();
+
+    // Ensure 3 seconds elapse for any potential pending timer to fire
+    await tester.pump(const Duration(seconds: 3));
+
+    final draft = await draftService.getLatestDraft();
+    expect(draft, isNull);
+  });
+
+  testWidgets(
+      'saving and exiting immediately after typing saves to DB and leaves no draft in MMKV',
+      (
+    tester,
+  ) async {
+    final slowDatabaseService = _SlowSaveDatabaseService();
+
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<DatabaseService>.value(
+          value: slowDatabaseService,
+        ),
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _TestSettingsService(),
+        ),
+        ChangeNotifierProvider<FeatureGuideService>(
+          create: (_) => _TestFeatureGuideService(),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: const [
+          ...AppLocalizations.localizationsDelegates,
+          FlutterQuillLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => const NoteFullEditorPage(
+                      initialContent: '',
+                      skipDefaultMetadataAutofill: true,
+                    ),
+                  ));
+                },
+                child: const Text('Open editor'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Open editor'));
+    await tester.pumpAndSettle();
+
+    final editor = find.byType(QuillEditor);
+    final controller = tester.widget<QuillEditor>(editor).controller;
+    controller.replaceText(
+      0,
+      0,
+      'Content to save and exit',
+      const TextSelection.collapsed(offset: 23),
+    );
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
+    await tester.tap(find.text(l10n.saveAndExit));
+    await tester.pump();
+
+    expect(slowDatabaseService.addQuoteCallCount, 1);
+    slowDatabaseService.completeSave();
+    await tester.pumpAndSettle();
+
+    // Ensure 3 seconds elapse for any potential pending draft timer to fire
+    await tester.pump(const Duration(seconds: 3));
+
+    final draft = await draftService.getLatestDraft();
+    expect(draft, isNull);
+  });
 }

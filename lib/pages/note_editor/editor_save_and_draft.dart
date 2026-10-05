@@ -91,8 +91,22 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     );
   }
 
+  bool _isDraftSaveValid(int snapshotGen) {
+    if (!mounted) return false;
+    if (_editorState.isDisposed) return false;
+    if (!_editorState.draftLoaded) return false;
+    if (_editorState.sessionGeneration != snapshotGen) return false;
+    return true;
+  }
+
   Future<void> _saveDraft() async {
+    final snapshotGen = _editorState.sessionGeneration;
+    final completer = Completer<void>();
+    _editorState.activeDraftSaveFuture = completer.future;
+
     try {
+      if (!_isDraftSaveValid(snapshotGen)) return;
+
       final key = _editorState.draftStorageKey;
       if (key.isEmpty) return;
       final plainText = _editorState.controller.document.toPlainText().trim();
@@ -101,14 +115,19 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       // 自动添加的天气、位置、标签等不应该触发草稿保存
       if (plainText.isEmpty) {
         // 如果正文为空，删除已存在的草稿
-        await _clearDraft();
+        await _clearDraft(isFromSaveDraft: true);
         return;
       }
+
+      if (!_isDraftSaveValid(snapshotGen)) return;
 
       // 检查是否有用户实际输入的内容（非自动填充）
       final hasUserContent = _hasActualUserContent();
 
       final deltaJson = await _getDocumentContentSafely();
+
+      if (!_isDraftSaveValid(snapshotGen)) return;
+
       final payload = {
         'deltaContent': deltaJson,
         'plainText': plainText,
@@ -132,10 +151,20 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'timestamp': DateTime.now().toIso8601String(),
         'hasUserContent': hasUserContent,
       };
+
+      if (!_isDraftSaveValid(snapshotGen)) return;
+
       // 使用 DraftService 保存草稿
       await DraftService().saveDraft(key, payload);
     } catch (e) {
       logDebug('保存草稿失败: $e');
+    } finally {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+      if (_editorState.activeDraftSaveFuture == completer.future) {
+        _editorState.activeDraftSaveFuture = null;
+      }
     }
   }
 
@@ -166,7 +195,16 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     return false;
   }
 
-  Future<void> _clearDraft() async {
+  Future<void> _clearDraft({bool isFromSaveDraft = false}) async {
+    _editorState.incrementSessionGeneration();
+    if (!isFromSaveDraft) {
+      final activeFuture = _editorState.activeDraftSaveFuture;
+      if (activeFuture != null) {
+        try {
+          await activeFuture;
+        } catch (_) {}
+      }
+    }
     try {
       final key = _editorState.draftStorageKey;
       if (key.isEmpty) return;

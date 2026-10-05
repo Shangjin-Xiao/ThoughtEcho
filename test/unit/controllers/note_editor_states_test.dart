@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/note_editor_states.dart';
@@ -120,6 +122,53 @@ void main() {
       state.cancelDraftSave();
       await Future<void>.delayed(const Duration(milliseconds: 70));
       expect(saved, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'sessionGeneration increments on cancelDraftSave, incrementSessionGeneration, and dispose',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'key',
+        restoredFromDraft: false,
+      );
+
+      expect(state.sessionGeneration, 0);
+
+      state.cancelDraftSave();
+      expect(state.sessionGeneration, 1);
+
+      state.incrementSessionGeneration();
+      expect(state.sessionGeneration, 2);
+
+      expect(state.isDisposed, isFalse);
+      state.dispose();
+      expect(state.isDisposed, isTrue);
+      expect(state.sessionGeneration, 3);
+    });
+
+    test('activeDraftSaveFuture manages active draft save future', () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'key',
+        restoredFromDraft: false,
+      );
+
+      expect(state.activeDraftSaveFuture, isNull);
+
+      final completer = Completer<void>();
+      state.activeDraftSaveFuture = completer.future;
+      expect(state.activeDraftSaveFuture, equals(completer.future));
+
+      completer.complete();
+      await state.activeDraftSaveFuture;
+
+      state.activeDraftSaveFuture = null;
+      expect(state.activeDraftSaveFuture, isNull);
 
       state.dispose();
     });
