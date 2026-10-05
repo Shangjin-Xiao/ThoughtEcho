@@ -108,6 +108,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       // 检查是否有用户实际输入的内容（非自动填充）
       final hasUserContent = _hasActualUserContent();
 
+      final baseQuote = _editorState.fullInitialQuote ?? widget.initialQuote;
       final deltaJson = await _getDocumentContentSafely();
       final payload = {
         'deltaContent': deltaJson,
@@ -129,6 +130,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'temperature':
             _metadataState.showWeather ? _metadataState.temperature : null,
         'aiAnalysis': _metadataState.currentAiAnalysis,
+        'date': baseQuote?.date,
         'timestamp': DateTime.now().toIso8601String(),
         'hasUserContent': hasUserContent,
       };

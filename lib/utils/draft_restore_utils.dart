@@ -20,6 +20,7 @@ Quote buildRestoredDraftQuote({
       tagIds: (draftData['tagIds'] as List?)?.map((e) => e.toString()).toList(),
       colorHex: draftData['colorHex'] as String?,
       location: draftData['location'] as String?,
+      poiName: draftData['poiName'] as String?,
       latitude: (draftData['latitude'] as num?)?.toDouble(),
       longitude: (draftData['longitude'] as num?)?.toDouble(),
       weather: draftData['weather'] as String?,
@@ -31,7 +32,9 @@ Quote buildRestoredDraftQuote({
     id: isNew ? null : draftId,
     content: draftData['plainText'] as String? ?? '',
     deltaContent: draftData['deltaContent'] as String?,
-    date: timestamp,
+    date: draftData['date'] as String? ??
+        draftData['timestamp'] as String? ??
+        timestamp,
     aiAnalysis: draftData['aiAnalysis'] as String?,
     sourceAuthor: draftData['author'] as String?,
     sourceWork: draftData['work'] as String?,
@@ -39,6 +42,7 @@ Quote buildRestoredDraftQuote({
         (draftData['tagIds'] as List?)?.map((e) => e.toString()).toList() ?? [],
     colorHex: draftData['colorHex'] as String?,
     location: draftData['location'] as String?,
+    poiName: draftData['poiName'] as String?,
     latitude: (draftData['latitude'] as num?)?.toDouble(),
     longitude: (draftData['longitude'] as num?)?.toDouble(),
     weather: draftData['weather'] as String?,

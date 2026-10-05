@@ -32,6 +32,7 @@ void main() {
           'tagIds': ['tag2'],
           'colorHex': '#000000',
           'location': 'new location',
+          'poiName': '故宫博物院',
           'latitude': 3.0,
           'longitude': 4.0,
           'weather': 'Rainy',
@@ -49,6 +50,7 @@ void main() {
       expect(restored.tagIds, ['tag2']);
       expect(restored.colorHex, '#000000');
       expect(restored.location, 'new location');
+      expect(restored.poiName, '故宫博物院');
       expect(restored.latitude, 3.0);
       expect(restored.longitude, 4.0);
       expect(restored.weather, 'Rainy');
@@ -61,12 +63,15 @@ void main() {
           'id': 'new_123',
           'plainText': 'draft content',
           'deltaContent': '[{"insert":"draft content\\n"}]',
+          'date': '2026-03-20T10:00:00.000Z',
+          'timestamp': '2026-03-21T11:00:00.000Z',
           'aiAnalysis': 'draft analysis',
           'author': 'new author',
           'work': 'new work',
           'tagIds': ['tag2'],
           'colorHex': '#000000',
           'location': 'new location',
+          'poiName': '故宫博物院',
           'latitude': 3.0,
           'longitude': 4.0,
           'weather': 'Rainy',
@@ -78,18 +83,53 @@ void main() {
       expect(restored.id, isNull);
       expect(restored.content, 'draft content');
       expect(restored.deltaContent, '[{"insert":"draft content\\n"}]');
-      expect(restored.date, '2026-03-21T12:00:00.000Z');
+      expect(restored.date, '2026-03-20T10:00:00.000Z');
       expect(restored.aiAnalysis, 'draft analysis');
       expect(restored.sourceAuthor, 'new author');
       expect(restored.sourceWork, 'new work');
       expect(restored.tagIds, ['tag2']);
       expect(restored.colorHex, '#000000');
       expect(restored.location, 'new location');
+      expect(restored.poiName, '故宫博物院');
       expect(restored.latitude, 3.0);
       expect(restored.longitude, 4.0);
       expect(restored.weather, 'Rainy');
       expect(restored.temperature, '20');
       expect(restored.editSource, 'fullscreen');
+    });
+
+    test('respects date fallback priority chain when original is null', () {
+      final nowTime = DateTime.parse('2026-03-21T12:00:00.000Z');
+
+      // Priority 1: draftData['date']
+      final withDate = buildRestoredDraftQuote(
+        draftData: {
+          'id': 'new_1',
+          'date': '2026-03-19T08:00:00.000Z',
+          'timestamp': '2026-03-20T08:00:00.000Z',
+        },
+        now: nowTime,
+      );
+      expect(withDate.date, '2026-03-19T08:00:00.000Z');
+
+      // Priority 2: draftData['timestamp'] when date is absent
+      final withTimestampOnly = buildRestoredDraftQuote(
+        draftData: {
+          'id': 'new_2',
+          'timestamp': '2026-03-20T08:00:00.000Z',
+        },
+        now: nowTime,
+      );
+      expect(withTimestampOnly.date, '2026-03-20T08:00:00.000Z');
+
+      // Priority 3: now timestamp when both date and timestamp are absent
+      final withNowOnly = buildRestoredDraftQuote(
+        draftData: {
+          'id': 'new_3',
+        },
+        now: nowTime,
+      );
+      expect(withNowOnly.date, '2026-03-21T12:00:00.000Z');
     });
 
     test('restores fields with null values gracefully', () {
@@ -110,6 +150,7 @@ void main() {
       expect(restored.tagIds, isEmpty);
       expect(restored.colorHex, isNull);
       expect(restored.location, isNull);
+      expect(restored.poiName, isNull);
       expect(restored.latitude, isNull);
       expect(restored.longitude, isNull);
       expect(restored.weather, isNull);
