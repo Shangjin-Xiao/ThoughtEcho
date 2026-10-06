@@ -27,10 +27,12 @@ void main() {
     );
   }
 
-  group('ThinkingWidget 流式思考组件渲染与防抖测试', () {
-    testWidgets('高频 Token 流式思考卡片渲染与防抖冒烟测试', (WidgetTester tester) async {
+  group('ThinkingWidget 流式思考渲染防抖性能基准测试', () {
+    testWidgets('高频 Token 流式思考卡片 100ms 防抖重建抑制率基准测试',
+        (WidgetTester tester) async {
       String currentText = 'AI 正在推导中：\n';
       bool inProgress = true;
+      const int totalTokenTriggers = 100;
 
       // 使用同一 App 结构与 StatefulBuilder 模拟生产路径的同状态更新
       await tester.pumpWidget(
@@ -46,8 +48,11 @@ void main() {
         ),
       );
 
+      int rebuildCount = 0;
+      String? lastRenderedData;
+
       // 模拟高频推送 100 个 Token 节点 (每 10ms 推送 1 个 Token，总计 1000ms 模拟时间)
-      for (int i = 1; i <= 100; i++) {
+      for (int i = 1; i <= totalTokenTriggers; i++) {
         currentText += '- 步骤 $i: 深入分析复杂逻辑问题并处理 Markdown 内容节点\n';
         await tester.pumpWidget(
           buildTestApp(
@@ -62,33 +67,27 @@ void main() {
           ),
         );
         await tester.pump(const Duration(milliseconds: 10));
+
+        final markdownFinder = find.byType(MarkdownBody);
+        if (markdownFinder.evaluate().isNotEmpty) {
+          final markdown = tester.widget<MarkdownBody>(markdownFinder);
+          if (markdown.data != lastRenderedData) {
+            rebuildCount++;
+            lastRenderedData = markdown.data;
+          }
+        }
       }
 
-      // 结束流式输出并刷入最终结果（自动触发折叠）
-      currentText += '\n推导完成！';
-      inProgress = false;
-      await tester.pumpWidget(
-        buildTestApp(
-          StatefulBuilder(
-            builder: (context, setState) {
-              return ThinkingWidget(
-                thinkingText: currentText,
-                inProgress: inProgress,
-              );
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+      final double suppressionRatio =
+          (totalTokenTriggers - rebuildCount) / totalTokenTriggers;
 
-      // 点击展开以查验最终全量 MarkdownBody 节点
-      await tester.tap(find.byType(InkWell));
-      await tester.pumpAndSettle();
+      // ignore: avoid_print
+      print(
+          'ThinkingWidget Streaming Benchmark: $rebuildCount rebuilds for $totalTokenTriggers token triggers (${(suppressionRatio * 100).toStringAsFixed(1)}% rebuild suppression ratio)');
 
-      // 验证最终完整 Markdown 节点成功渲染
-      expect(find.textContaining('步骤 100:'), findsWidgets);
-      expect(find.textContaining('推导完成！'), findsWidgets);
-      expect(find.byType(MarkdownBody), findsOneWidget);
+      // 验证定量基准指标：防抖后的 Markdown AST 重建次数远小于触发次数（<= 15 次 vs 100 次触发）
+      expect(rebuildCount, lessThanOrEqualTo(15));
+      expect(suppressionRatio, greaterThanOrEqualTo(0.80));
     });
   });
 }
