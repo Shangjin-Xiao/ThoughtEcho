@@ -50,6 +50,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
   Map<String, int> _messageCounts = {};
   Map<String, String> _lastMessageSnippets = {};
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
 
   bool _isMultiSelectMode = false;
@@ -83,6 +84,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 

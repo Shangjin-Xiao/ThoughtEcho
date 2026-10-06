@@ -261,34 +261,39 @@ extension _ThoughterUI on _ThoughterPageState {
                           }
                           return false;
                         },
-                        child: ListView.builder(
+                        child: Scrollbar(
                           controller: _scrollController,
-                          // 水平留白下放给每条消息自己——AI 回复要铺满可读宽度，
-                          // 用户气泡要贴右边缘，两者的左右边距不一样。
-                          //
-                          // 底部比顶部多留一点：输入框现在是浮在底部的一颗胶囊，
-                          // 最后一行字紧贴着它会显得对话被框推着走。
-                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
-                          itemCount:
-                              _messages.length + (_showWaitingCursor ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index >= _messages.length) {
-                              return Padding(
-                                padding: _kMessageInsets,
-                                child: _BlinkingCursor(
-                                  key: const ValueKey('ai_assistant_waiting'),
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            // 水平留白下放给每条消息自己——AI 回复要铺满可读宽度，
+                            // 用户气泡要贴右边缘，两者的左右边距不一样。
+                            //
+                            // 底部比顶部多留一点：输入框现在是浮在底部的一颗胶囊，
+                            // 最后一行字紧贴着它会显得对话被框推着走。
+                            padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
+                            itemCount:
+                                _messages.length + (_showWaitingCursor ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index >= _messages.length) {
+                                return Padding(
+                                  padding: _kMessageInsets,
+                                  child: _BlinkingCursor(
+                                    key: const ValueKey('ai_assistant_waiting'),
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                );
+                              }
+                              final message = _messages[index];
+                              final keepAlive =
+                                  _shouldKeepAliveMessage(message);
+                              return _KeepAliveMessageItem(
+                                key: ValueKey('msg_keepalive_${message.id}'),
+                                keepAlive: keepAlive,
+                                child:
+                                    _buildMessageBubble(message, theme, l10n),
                               );
-                            }
-                            final message = _messages[index];
-                            final keepAlive = _shouldKeepAliveMessage(message);
-                            return _KeepAliveMessageItem(
-                              key: ValueKey('msg_keepalive_${message.id}'),
-                              keepAlive: keepAlive,
-                              child: _buildMessageBubble(message, theme, l10n),
-                            );
-                          },
+                            },
+                          ),
                         ),
                       ),
                     ),

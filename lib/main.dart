@@ -36,6 +36,7 @@ import 'package:thoughtecho/services/apk_download_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
+import 'package:thoughtecho/utils/app_scroll_behavior.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
@@ -824,6 +825,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             FlutterQuillLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
+          scrollBehavior: const AppScrollBehavior(),
         );
       },
     );
