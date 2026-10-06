@@ -18,13 +18,20 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           _editorState.controller.selection,
           doc.length,
         );
-        final finalDoc = _mergeWindowInputIfNeeded(doc);
+        final loadedDelta = doc.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: doc,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+          isDirty: _editorState.isDirty,
+        );
         _updateState(() {
           _editorState.replaceController(
             quill.QuillController(
               document: finalDoc,
               selection: selection,
             ),
+            savedDocumentDelta: loadedDelta,
             markCleanIfUnchanged: true,
           );
           _attachDraftListener();
@@ -60,13 +67,20 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           _editorState.controller.selection,
           doc.length,
         );
-        final finalDoc = _mergeWindowInputIfNeeded(doc);
+        final loadedDelta = doc.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: doc,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+          isDirty: _editorState.isDirty,
+        );
         _updateState(() {
           _editorState.replaceController(
             quill.QuillController(
               document: finalDoc,
               selection: selection,
             ),
+            savedDocumentDelta: loadedDelta,
             markCleanIfUnchanged: true,
           );
           _attachDraftListener();

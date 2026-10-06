@@ -101,64 +101,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     return selection.copyWith(baseOffset: base, extentOffset: extent);
   }
 
-  quill.Document _mergeWindowInputIfNeeded(
-    quill.Document loadedDoc, {
-    String? ignorePlaceholder,
-  }) {
-    if (!_editorState.isDirty) {
-      return loadedDoc;
-    }
-
-    final baselineDelta = _editorState.baselineWindowDelta;
-    final currentDelta = _editorState.controller.document.toDelta();
-
-    final windowDiff = baselineDelta.diff(currentDelta);
-    if (windowDiff.isEmpty) {
-      return loadedDoc;
-    }
-
-    final insertOps = <Operation>[];
-    for (final op in windowDiff.operations) {
-      if (op.isInsert) {
-        final data = op.data;
-        if (data is String) {
-          var cleaned = data;
-          if (ignorePlaceholder != null && ignorePlaceholder.isNotEmpty) {
-            cleaned = cleaned.replaceAll(ignorePlaceholder, '');
-          }
-          if (cleaned.isNotEmpty) {
-            insertOps.add(Operation.insert(cleaned, op.attributes));
-          }
-        } else {
-          insertOps.add(op);
-        }
-      }
-    }
-
-    if (insertOps.isEmpty) {
-      return loadedDoc;
-    }
-
-    if (loadedDoc.length <= 1) {
-      return quill.Document.fromDelta(currentDelta);
-    }
-
-    final loadedDelta = loadedDoc.toDelta();
-    final insertOffset = loadedDoc.length > 0 ? loadedDoc.length - 1 : 0;
-
-    final changeDelta = Delta();
-    if (insertOffset > 0) {
-      changeDelta.retain(insertOffset);
-    }
-
-    for (final op in insertOps) {
-      changeDelta.push(op);
-    }
-
-    final mergedDelta = loadedDelta.compose(changeDelta);
-    return quill.Document.fromDelta(mergedDelta);
-  }
-
   /// P2 Fallback: 从纯文本生成富文本表示
   /// 确保内容不丢失，即使缺少原始deltaContent
   Future<void> _initializeFromPlainTextFallback(String plainText) async {
@@ -185,13 +127,20 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           _editorState.controller.selection,
           document.length,
         );
-        final finalDoc = _mergeWindowInputIfNeeded(document);
+        final loadedDelta = document.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: document,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+          isDirty: _editorState.isDirty,
+        );
         _updateState(() {
           _editorState.replaceController(
             quill.QuillController(
               document: finalDoc,
               selection: selection,
             ),
+            savedDocumentDelta: loadedDelta,
             markCleanIfUnchanged: true,
           );
           _attachDraftListener();
@@ -313,13 +262,20 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           _editorState.controller.selection,
           document.length,
         );
-        final finalDoc = _mergeWindowInputIfNeeded(document);
+        final loadedDelta = document.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: document,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+          isDirty: _editorState.isDirty,
+        );
         _updateState(() {
           _editorState.replaceController(
             quill.QuillController(
               document: finalDoc,
               selection: selection,
             ),
+            savedDocumentDelta: loadedDelta,
             markCleanIfUnchanged: true,
           );
           _attachDraftListener();
@@ -384,13 +340,20 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           _editorState.controller.selection,
           document.length,
         );
-        final finalDoc = _mergeWindowInputIfNeeded(document);
+        final loadedDelta = document.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: document,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+          isDirty: _editorState.isDirty,
+        );
         _updateState(() {
           _editorState.replaceController(
             quill.QuillController(
               document: finalDoc,
               selection: selection,
             ),
+            savedDocumentDelta: loadedDelta,
             markCleanIfUnchanged: true,
           );
           _attachDraftListener();
@@ -420,8 +383,12 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           _editorState.controller.selection,
           placeholderDocument.length,
         );
-        final finalPlaceholderDoc =
-            _mergeWindowInputIfNeeded(placeholderDocument);
+        final finalPlaceholderDoc = appendWindowInput(
+          loadedDoc: placeholderDocument,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+          isDirty: _editorState.isDirty,
+        );
         _updateState(() {
           _editorState.replaceController(
             quill.QuillController(
@@ -448,8 +415,12 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           _editorState.controller.selection,
           document.length,
         );
-        final finalDoc = _mergeWindowInputIfNeeded(
-          document,
+        final loadedDelta = document.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: document,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+          isDirty: _editorState.isDirty,
           ignorePlaceholder: loadingMessage,
         );
         _updateState(() {
@@ -458,6 +429,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
               document: finalDoc,
               selection: selection,
             ),
+            savedDocumentDelta: loadedDelta,
             markCleanIfUnchanged: true,
           );
           _attachDraftListener();

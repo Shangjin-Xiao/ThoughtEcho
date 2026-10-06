@@ -2,59 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
-import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/note_editor_states.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-
-quill.Document mergeWindowInput(
-  quill.Document loadedDoc,
-  Delta baselineDelta,
-  Delta currentDelta, {
-  String? ignorePlaceholder,
-}) {
-  final windowDiff = baselineDelta.diff(currentDelta);
-  if (windowDiff.isEmpty) return loadedDoc;
-
-  final insertOps = <Operation>[];
-  for (final op in windowDiff.operations) {
-    if (op.isInsert) {
-      final data = op.data;
-      if (data is String) {
-        var cleaned = data;
-        if (ignorePlaceholder != null && ignorePlaceholder.isNotEmpty) {
-          cleaned = cleaned.replaceAll(ignorePlaceholder, '');
-        }
-        if (cleaned.isNotEmpty) {
-          insertOps.add(Operation.insert(cleaned, op.attributes));
-        }
-      } else {
-        insertOps.add(op);
-      }
-    }
-  }
-
-  if (insertOps.isEmpty) return loadedDoc;
-
-  if (loadedDoc.length <= 1) {
-    return quill.Document.fromDelta(currentDelta);
-  }
-
-  final loadedDelta = loadedDoc.toDelta();
-  final insertOffset = loadedDoc.length > 0 ? loadedDoc.length - 1 : 0;
-
-  final changeDelta = Delta();
-  if (insertOffset > 0) {
-    changeDelta.retain(insertOffset);
-  }
-
-  for (final op in insertOps) {
-    changeDelta.push(op);
-  }
-
-  final mergedDelta = loadedDelta.compose(changeDelta);
-  return quill.Document.fromDelta(mergedDelta);
-}
 
 void main() {
   group('NoteEditorState', () {
@@ -423,9 +373,7 @@ void main() {
       state.dispose();
     });
 
-    test(
-        'window input merge preserves rich text formatting and inserts losslessly',
-        () {
+    test('window input append preserves rich text formatting and inserts', () {
       final state = NoteEditorState(
         initialPlainText: 'initial text',
         initialDeltaContent: null,
@@ -437,25 +385,23 @@ void main() {
       state.controller.replaceText(0, 0, 'Window ', null);
       state.controller.formatText(0, 6, quill.Attribute.bold);
 
-      // Baseline window delta before merge
-      final baselineDelta = state.baselineWindowDelta;
-      final currentDelta = state.controller.document.toDelta();
-      final windowDiff = baselineDelta.diff(currentDelta);
-
       // Loaded document from async DB
       final loadedDoc = quill.Document()..insert(0, 'Loaded content\n');
 
-      final changeDelta = Delta()..retain(loadedDoc.length - 1);
-      for (final op in windowDiff.operations) {
-        changeDelta.push(op);
-      }
-      final mergedDelta = loadedDoc.toDelta().compose(changeDelta);
-      final mergedDoc = quill.Document.fromDelta(mergedDelta);
+      final mergedDoc = appendWindowInput(
+        loadedDoc: loadedDoc,
+        baselineWindowDelta: state.baselineWindowDelta,
+        currentWindowDelta: state.controller.document.toDelta(),
+        isDirty: state.isDirty,
+      );
 
       expect(mergedDoc.toPlainText().contains('Loaded content'), isTrue);
       expect(mergedDoc.toPlainText().contains('Window '), isTrue);
       expect(
-        mergedDelta.toJson().any((op) => op['attributes']?['bold'] == true),
+        mergedDoc
+            .toDelta()
+            .toJson()
+            .any((op) => op['attributes']?['bold'] == true),
         isTrue,
       );
 
@@ -479,18 +425,12 @@ void main() {
       const loadingMessage = 'Loading large document...';
       final placeholderDocument = quill.Document()..insert(0, loadingMessage);
 
-      // Baseline before placeholder swap
-      final baselineDelta = state.baselineWindowDelta;
-      final currentDelta = state.controller.document.toDelta();
-      final windowDiff = baselineDelta.diff(currentDelta);
-
-      // Merge pre-placeholder text into placeholder doc
-      final changeDelta = Delta()..retain(placeholderDocument.length - 1);
-      for (final op in windowDiff.operations) {
-        changeDelta.push(op);
-      }
-      final mergedPlaceholder = quill.Document.fromDelta(
-        placeholderDocument.toDelta().compose(changeDelta),
+      // Merge pre-placeholder text into placeholder doc using production function
+      final mergedPlaceholder = appendWindowInput(
+        loadedDoc: placeholderDocument,
+        baselineWindowDelta: state.baselineWindowDelta,
+        currentWindowDelta: state.controller.document.toDelta(),
+        isDirty: state.isDirty,
       );
 
       state.replaceController(
@@ -513,10 +453,11 @@ void main() {
       final largeLoadedDoc = quill.Document()
         ..insert(0, 'Full large document content.\n');
 
-      final finalMergedDoc = mergeWindowInput(
-        largeLoadedDoc,
-        state.baselineWindowDelta,
-        state.controller.document.toDelta(),
+      final finalMergedDoc = appendWindowInput(
+        loadedDoc: largeLoadedDoc,
+        baselineWindowDelta: state.baselineWindowDelta,
+        currentWindowDelta: state.controller.document.toDelta(),
+        isDirty: state.isDirty,
         ignorePlaceholder: loadingMessage,
       );
 
@@ -533,6 +474,95 @@ void main() {
         isTrue,
       );
       expect(finalMergedDoc.toPlainText().contains(loadingMessage), isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'async document load with window input reverts to clean state when window input is undone',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_async_undo_key',
+        restoredFromDraft: false,
+      );
+
+      // User types during async loading window
+      state.controller.replaceText(0, 0, 'window input', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // Async DB load completes with loadedDoc
+      final loadedDoc = quill.Document()..insert(0, 'Loaded DB Content\n');
+      final loadedDelta = loadedDoc.toDelta();
+
+      final mergedDoc = appendWindowInput(
+        loadedDoc: loadedDoc,
+        baselineWindowDelta: state.baselineWindowDelta,
+        currentWindowDelta: state.controller.document.toDelta(),
+        isDirty: state.isDirty,
+      );
+
+      // replaceController with mergedDoc and pass loadedDelta as clean baseline
+      state.replaceController(
+        quill.QuillController(
+          document: mergedDoc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        savedDocumentDelta: loadedDelta,
+        markCleanIfUnchanged: true,
+      );
+
+      // State is dirty because window input 'window input' was appended
+      expect(state.isDirty, isTrue);
+      expect(
+        state.controller.document.toPlainText().contains('window input'),
+        isTrue,
+      );
+
+      // User undos 'window input' back to 'Loaded DB Content\n'
+      final windowInputPos =
+          state.controller.document.toPlainText().indexOf('window input');
+      state.controller
+          .replaceText(windowInputPos, 'window input'.length, '', null);
+      await Future<void>.delayed(Duration.zero);
+
+      // Document now matches loadedDelta, so isDirty reverts to false!
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'fast-path length comparison optimizes dirty state checking without delta deserialization',
+        () async {
+      final doc = quill.Document()..insert(0, 'Original Baseline Content\n');
+      final state = NoteEditorState(
+        initialPlainText: 'Original Baseline Content',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_fastpath_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // Typing different length text triggers dirty state
+      state.controller.replaceText(0, 0, 'Extra ', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // Undoing extra text returns to baseline length & content
+      state.controller.replaceText(0, 6, '', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
 
       state.dispose();
     });

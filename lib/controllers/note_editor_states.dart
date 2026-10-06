@@ -19,6 +19,7 @@ class NoteEditorState extends ChangeNotifier {
   })  : _restoredFromDraft = restoredFromDraft,
         _controller = quill.QuillController.basic() {
     _savedDocumentDelta = _controller.document.toDelta();
+    _savedDocumentLength = _getDeltaCharacterLength(_savedDocumentDelta!);
     _baselineWindowDelta = _savedDocumentDelta;
     _subscribeToDocChanges();
   }
@@ -44,8 +45,24 @@ class NoteEditorState extends ChangeNotifier {
   int _documentVersion = 0;
   int _savedDocumentVersion = 0;
   Delta? _savedDocumentDelta;
+  int _savedDocumentLength = 0;
   Delta? _baselineWindowDelta;
   StreamSubscription<quill.DocChange>? _docChangeSubscription;
+
+  static int _getDeltaCharacterLength(Delta delta) {
+    int len = 0;
+    for (final op in delta.operations) {
+      if (op.isInsert) {
+        final data = op.data;
+        if (data is String) {
+          len += data.length;
+        } else {
+          len += 1;
+        }
+      }
+    }
+    return len;
+  }
 
   quill.QuillController get controller => _controller;
   set controller(quill.QuillController value) => replaceController(value);
@@ -86,14 +103,18 @@ class NoteEditorState extends ChangeNotifier {
     _restoredFromDraft = false;
     _isDirty = false;
     _savedDocumentVersion = _documentVersion;
-    _savedDocumentDelta = _controller.document.toDelta();
+    final delta = _controller.document.toDelta();
+    _savedDocumentDelta = delta;
+    _savedDocumentLength = _getDeltaCharacterLength(delta);
   }
 
   void markClean() {
     if (_disposed) return;
     _isDirty = false;
     _savedDocumentVersion = _documentVersion;
-    _savedDocumentDelta = _controller.document.toDelta();
+    final delta = _controller.document.toDelta();
+    _savedDocumentDelta = delta;
+    _savedDocumentLength = _getDeltaCharacterLength(delta);
   }
 
   void _subscribeToDocChanges() {
@@ -102,17 +123,22 @@ class NoteEditorState extends ChangeNotifier {
       if (_disposed) return;
       _documentVersion++;
       final savedDelta = _savedDocumentDelta;
-      if (savedDelta != null && _controller.document.toDelta() == savedDelta) {
-        if (_isDirty || _documentVersion != _savedDocumentVersion) {
-          _isDirty = false;
-          _savedDocumentVersion = _documentVersion;
-          notifyListeners();
+      if (savedDelta != null) {
+        final currentLength = _controller.document.length;
+        if (currentLength == _savedDocumentLength) {
+          if (_controller.document.toDelta() == savedDelta) {
+            if (_isDirty || _documentVersion != _savedDocumentVersion) {
+              _isDirty = false;
+              _savedDocumentVersion = _documentVersion;
+              notifyListeners();
+            }
+            return;
+          }
         }
-      } else {
-        if (!_isDirty) {
-          _isDirty = true;
-          notifyListeners();
-        }
+      }
+      if (!_isDirty) {
+        _isDirty = true;
+        notifyListeners();
       }
     });
   }
@@ -140,6 +166,7 @@ class NoteEditorState extends ChangeNotifier {
     quill.QuillController controller, {
     bool markCleanIfUnchanged = false,
     Delta? newBaselineWindowDelta,
+    Delta? savedDocumentDelta,
   }) {
     if (_disposed) {
       controller.dispose();
@@ -158,13 +185,29 @@ class NoteEditorState extends ChangeNotifier {
       _controller.addListener(draftChangeListener);
     }
     _subscribeToDocChanges();
-    if (wasDirty) {
-      _isDirty = true;
-      _savedDocumentDelta = null;
-    } else if (markCleanIfUnchanged) {
-      markClean();
+
+    if (savedDocumentDelta != null) {
+      _savedDocumentDelta = savedDocumentDelta;
+      _savedDocumentLength = _getDeltaCharacterLength(savedDocumentDelta);
+      if (_controller.document.length == _savedDocumentLength &&
+          _controller.document.toDelta() == savedDocumentDelta) {
+        _isDirty = false;
+        _savedDocumentVersion = _documentVersion;
+      } else {
+        _isDirty = true;
+      }
     } else {
-      _savedDocumentDelta = _controller.document.toDelta();
+      if (wasDirty) {
+        _isDirty = true;
+        _savedDocumentDelta =
+            _savedDocumentDelta ?? _controller.document.toDelta();
+        _savedDocumentLength = _getDeltaCharacterLength(_savedDocumentDelta!);
+      } else if (markCleanIfUnchanged) {
+        markClean();
+      } else {
+        _savedDocumentDelta = _controller.document.toDelta();
+        _savedDocumentLength = _getDeltaCharacterLength(_savedDocumentDelta!);
+      }
     }
     _baselineWindowDelta =
         newBaselineWindowDelta ?? _controller.document.toDelta();
@@ -699,4 +742,80 @@ class _MetadataSnapshot {
         weather != other.weather ||
         temperature != other.temperature;
   }
+}
+
+/// Appends window input typed by the user during asynchronous document loading
+/// to the end of [loadedDoc].
+///
+/// **Boundary and Limitations (`仅追加窗口期新增插入`)**:
+/// - This is an append-only window input insertion strategy.
+/// - Any text/embed deletions or formatting changes performed during the window load period
+///   are not reflected in [loadedDoc].
+/// - All inserted text and embeds from the window period are appended to the end of [loadedDoc].
+quill.Document appendWindowInput({
+  required quill.Document loadedDoc,
+  required Delta baselineWindowDelta,
+  required Delta currentWindowDelta,
+  bool isDirty = true,
+  String? ignorePlaceholder,
+}) {
+  final windowDiff = baselineWindowDelta.diff(currentWindowDelta);
+  if (windowDiff.isEmpty) {
+    return loadedDoc;
+  }
+
+  final insertOps = <Operation>[];
+  for (final op in windowDiff.operations) {
+    if (op.isInsert) {
+      final data = op.data;
+      if (data is String) {
+        var cleaned = data;
+        if (ignorePlaceholder != null && ignorePlaceholder.isNotEmpty) {
+          cleaned = cleaned.replaceAll(ignorePlaceholder, '');
+        }
+        if (cleaned.isNotEmpty) {
+          insertOps.add(Operation.insert(cleaned, op.attributes));
+        }
+      } else {
+        insertOps.add(op);
+      }
+    }
+  }
+
+  if (insertOps.isEmpty) {
+    return loadedDoc;
+  }
+
+  if (loadedDoc.length <= 1) {
+    return quill.Document.fromDelta(currentWindowDelta);
+  }
+
+  // Strip trailing newline from insertOps if loadedDoc already ends with newline
+  final lastOp = insertOps.last;
+  if (lastOp.isInsert && lastOp.data is String) {
+    final str = lastOp.data as String;
+    if (str.endsWith('\n') && str.length > 1) {
+      insertOps[insertOps.length - 1] = Operation.insert(
+        str.substring(0, str.length - 1),
+        lastOp.attributes,
+      );
+    } else if (str == '\n' && insertOps.length > 1) {
+      insertOps.removeLast();
+    }
+  }
+
+  final loadedDelta = loadedDoc.toDelta();
+  final insertOffset = loadedDoc.length > 0 ? loadedDoc.length - 1 : 0;
+
+  final changeDelta = Delta();
+  if (insertOffset > 0) {
+    changeDelta.retain(insertOffset);
+  }
+
+  for (final op in insertOps) {
+    changeDelta.push(op);
+  }
+
+  final mergedDelta = loadedDelta.compose(changeDelta);
+  return quill.Document.fromDelta(mergedDelta);
 }
