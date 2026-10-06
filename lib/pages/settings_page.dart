@@ -57,6 +57,7 @@ class SettingsPageState extends State<SettingsPage> {
   final String _privacyUrl = AppConstants.privacyPolicyUrl;
   // --- 链接地址结束 ---
   final TextEditingController _locationController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   // --- 版本检查相关状态 ---
   bool _isCheckingUpdate = false;
@@ -139,6 +140,7 @@ class SettingsPageState extends State<SettingsPage> {
   @override
   void dispose() {
     _locationController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -269,20 +271,212 @@ class SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(
         title: Text(l10n.settingsTitle),
       ),
-      body: ListView(
-        children: [
-          // 周年庆典横幅（每届 3-23 至 4-30 期间显示，开发者模式可模拟）
-          _buildAnniversaryBanner(context),
+      body: Scrollbar(
+        controller: _scrollController,
+        child: ListView(
+          controller: _scrollController,
+          children: [
+            // 周年庆典横幅（每届 3-23 至 4-30 期间显示，开发者模式可模拟）
+            _buildAnniversaryBanner(context),
 
-          // 位置和天气设置 Card
-          Consumer<LocationService>(
-            builder: (context, locationService, _) => Card(
+            // 位置和天气设置 Card
+            Consumer<LocationService>(
+              builder: (context, locationService, _) => Card(
+                margin: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: Text(l10n.settingsLocationWeather),
+                      leading: const Icon(Icons.location_on),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Divider(
+                        color: theme.colorScheme.outline.withAlpha(
+                          (0.2 * 255).round(),
+                        ),
+                      ),
+                    ),
+                    SwitchListTile(
+                      title: Text(l10n.settingsUseLocationService),
+                      subtitle: Text(
+                        locationService.hasLocationPermission
+                            ? (locationService.isLocationServiceEnabled
+                                ? l10n.settingsLocationEnabled
+                                : l10n.settingsLocationPermissionOnly)
+                            : l10n.settingsLocationNoPermission,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: locationService.hasLocationPermission &&
+                                  locationService.isLocationServiceEnabled
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.error,
+                        ),
+                      ),
+                      value: locationService.hasLocationPermission &&
+                          locationService.isLocationServiceEnabled,
+                      onChanged: (value) async {
+                        if (value) {
+                          bool permissionGranted =
+                              await locationService.requestLocationPermission();
+                          if (!permissionGranted) {
+                            if (mounted && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.locationPermissionDenied),
+                                  duration: AppConstants.snackBarDurationError,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
+                          bool serviceEnabled =
+                              await Geolocator.isLocationServiceEnabled();
+                          if (!mounted) return; // Add this check
+                          if (!serviceEnabled) {
+                            if (mounted && context.mounted) {
+                              final currentContext =
+                                  context; // Capture context before async gap
+                              showDialog(
+                                context: currentContext,
+                                builder: (context) => AlertDialog(
+                                  title: Text(l10n.enableLocationService),
+                                  content: Text(l10n.enableLocationServiceDesc),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(currentContext),
+                                      child: Text(l10n.cancel),
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        if (!currentContext.mounted) {
+                                          return; // Check mounted before pop
+                                        }
+                                        Navigator.pop(currentContext);
+                                        await Geolocator.openLocationSettings();
+                                        if (!mounted) return; // Add this check
+                                      },
+                                      child: Text(l10n.goToSettings),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
+                          if (mounted && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.gettingLocation),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                          final position =
+                              await locationService.getCurrentLocation();
+                          if (!mounted) return; // Add this check
+                          if (position != null) {
+                            if (context.mounted) {
+                              final scaffoldMessenger = ScaffoldMessenger.of(
+                                context,
+                              );
+                              scaffoldMessenger.removeCurrentSnackBar();
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.locationServiceEnabled),
+                                  duration:
+                                      AppConstants.snackBarDurationImportant,
+                                ),
+                              );
+                            }
+                            setState(() {
+                              _locationController.text =
+                                  locationService.getFormattedLocation();
+                            });
+                          } else {
+                            if (!mounted) return;
+                            if (context.mounted) {
+                              final scaffoldMessenger = ScaffoldMessenger.of(
+                                context,
+                              );
+                              scaffoldMessenger.removeCurrentSnackBar();
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.cannotGetLocation),
+                                  duration: AppConstants.snackBarDurationError,
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          if (!mounted) return;
+                          if (context.mounted) {
+                            final scaffoldMessenger =
+                                ScaffoldMessenger.of(context);
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.locationServiceDisabled),
+                                duration: AppConstants.snackBarDurationNormal,
+                              ),
+                            );
+                          }
+                        }
+                        if (mounted) {
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settingsSetLocation,
+                            style: theme.textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 8.0),
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.search),
+                            label: Text(l10n.settingsSearchCity),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: () {
+                              _showCitySearchDialog(context);
+                            },
+                          ),
+                          const SizedBox(height: 8.0),
+                          Text(
+                            '${l10n.settingsCurrentLocation}: ${locationService.currentAddress ?? l10n.settingsNotSet}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8.0),
+                        ],
+                      ),
+                    ),
+                    // 当前天气信息已移动到"搜索并选择城市"对话框内
+                  ],
+                ),
+              ),
+            ),
+
+            // 应用设置 Card (保持不变)
+            Card(
               margin: const EdgeInsets.all(8.0),
               child: Column(
                 children: [
                   ListTile(
-                    title: Text(l10n.settingsLocationWeather),
-                    leading: const Icon(Icons.location_on),
+                    title: Text(l10n.settingsAppSettings),
+                    leading: const Icon(Icons.settings),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -292,688 +486,503 @@ class SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ),
-                  SwitchListTile(
-                    title: Text(l10n.settingsUseLocationService),
-                    subtitle: Text(
-                      locationService.hasLocationPermission
-                          ? (locationService.isLocationServiceEnabled
-                              ? l10n.settingsLocationEnabled
-                              : l10n.settingsLocationPermissionOnly)
-                          : l10n.settingsLocationNoPermission,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: locationService.hasLocationPermission &&
-                                locationService.isLocationServiceEnabled
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.error,
-                      ),
-                    ),
-                    value: locationService.hasLocationPermission &&
-                        locationService.isLocationServiceEnabled,
-                    onChanged: (value) async {
-                      if (value) {
-                        bool permissionGranted =
-                            await locationService.requestLocationPermission();
-                        if (!permissionGranted) {
-                          if (mounted && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.locationPermissionDenied),
-                                duration: AppConstants.snackBarDurationError,
-                              ),
-                            );
-                          }
-                          return;
-                        }
-
-                        bool serviceEnabled =
-                            await Geolocator.isLocationServiceEnabled();
-                        if (!mounted) return; // Add this check
-                        if (!serviceEnabled) {
-                          if (mounted && context.mounted) {
-                            final currentContext =
-                                context; // Capture context before async gap
-                            showDialog(
-                              context: currentContext,
-                              builder: (context) => AlertDialog(
-                                title: Text(l10n.enableLocationService),
-                                content: Text(l10n.enableLocationServiceDesc),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(currentContext),
-                                    child: Text(l10n.cancel),
-                                  ),
-                                  TextButton(
-                                    onPressed: () async {
-                                      if (!currentContext.mounted) {
-                                        return; // Check mounted before pop
-                                      }
-                                      Navigator.pop(currentContext);
-                                      await Geolocator.openLocationSettings();
-                                      if (!mounted) return; // Add this check
-                                    },
-                                    child: Text(l10n.goToSettings),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                          return;
-                        }
-
-                        if (mounted && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.gettingLocation),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                        final position =
-                            await locationService.getCurrentLocation();
-                        if (!mounted) return; // Add this check
-                        if (position != null) {
-                          if (context.mounted) {
-                            final scaffoldMessenger = ScaffoldMessenger.of(
-                              context,
-                            );
-                            scaffoldMessenger.removeCurrentSnackBar();
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.locationServiceEnabled),
-                                duration:
-                                    AppConstants.snackBarDurationImportant,
-                              ),
-                            );
-                          }
-                          setState(() {
-                            _locationController.text =
-                                locationService.getFormattedLocation();
-                          });
-                        } else {
-                          if (!mounted) return;
-                          if (context.mounted) {
-                            final scaffoldMessenger = ScaffoldMessenger.of(
-                              context,
-                            );
-                            scaffoldMessenger.removeCurrentSnackBar();
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.cannotGetLocation),
-                                duration: AppConstants.snackBarDurationError,
-                              ),
-                            );
-                          }
-                        }
-                      } else {
-                        if (!mounted) return;
-                        if (context.mounted) {
-                          final scaffoldMessenger =
-                              ScaffoldMessenger.of(context);
-                          scaffoldMessenger.showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.locationServiceDisabled),
-                              duration: AppConstants.snackBarDurationNormal,
-                            ),
-                          );
-                        }
-                      }
-                      if (mounted) {
-                        setState(() {});
-                      }
+                  // 语言设置
+                  _buildLanguageItem(context),
+                  // 二级页面入口：偏好设置
+                  ListTile(
+                    key: _preferencesGuideKey, // 功能引导 key
+                    title: Text(l10n.settingsPreferences),
+                    subtitle: Text(l10n.settingsPreferencesDesc),
+                    leading: const Icon(Icons.tune),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PreferencesDetailPage(),
+                        ),
+                      );
                     },
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.settingsSetLocation,
-                          style: theme.textTheme.titleSmall,
+
+                  // 添加默认启动页面设置
+                  _buildDefaultStartPageItem(context),
+
+                  ListTile(
+                    key: _themeGuideKey, // 功能引导 key
+                    title: Text(l10n.settingsTheme),
+                    subtitle: Text(l10n.settingsThemeDesc),
+                    leading: const Icon(Icons.color_lens_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ThemeSettingsPage(),
                         ),
-                        const SizedBox(height: 8.0),
-                        FilledButton.tonalIcon(
-                          icon: const Icon(Icons.search),
-                          label: Text(l10n.settingsSearchCity),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size.fromHeight(50),
-                          ),
-                          onPressed: () {
-                            _showCitySearchDialog(context);
-                          },
-                        ),
-                        const SizedBox(height: 8.0),
-                        Text(
-                          '${l10n.settingsCurrentLocation}: ${locationService.currentAddress ?? l10n.settingsNotSet}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8.0),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                  // 当前天气信息已移动到"搜索并选择城市"对话框内
+                  ListTile(
+                    title: Text(l10n.settingsAI),
+                    subtitle: Text(l10n.settingsAIDesc),
+                    leading: const Icon(Icons.auto_awesome),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AISettingsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  // 智能推送
+                  Builder(
+                    builder: (context) {
+                      return ListTile(
+                        title: Text(l10n.smartPushTitle),
+                        subtitle: Text(l10n.smartPushDesc),
+                        leading:
+                            const Icon(Icons.notifications_active_outlined),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const SmartPushSettingsPage(),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  ListTile(
+                    title: Text(l10n.settingsHitokoto),
+                    subtitle: Text(l10n.settingsHitokotoDesc),
+                    leading: const Icon(Icons.format_quote_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HitokotoSettingsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  // 日志和实验性开关已移至「实验室」Card（_buildLabSection）
+                  // 存储管理
+                  ListTile(
+                    title: Text(l10n.settingsStorage),
+                    subtitle: Text(l10n.settingsStorageDesc),
+                    leading: const Icon(Icons.storage_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const StorageManagementPage(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
-          ),
 
-          // 应用设置 Card (保持不变)
-          Card(
-            margin: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text(l10n.settingsAppSettings),
-                  leading: const Icon(Icons.settings),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Divider(
-                    color: theme.colorScheme.outline.withAlpha(
-                      (0.2 * 255).round(),
-                    ),
+            // 内容管理 Card (保持不变)
+            Card(
+              margin: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  ListTile(
+                    title: Text(l10n.settingsContentManagement),
+                    leading: const Icon(Icons.category),
                   ),
-                ),
-                // 语言设置
-                _buildLanguageItem(context),
-                // 二级页面入口：偏好设置
-                ListTile(
-                  key: _preferencesGuideKey, // 功能引导 key
-                  title: Text(l10n.settingsPreferences),
-                  subtitle: Text(l10n.settingsPreferencesDesc),
-                  leading: const Icon(Icons.tune),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PreferencesDetailPage(),
-                      ),
-                    );
-                  },
-                ),
-
-                // 添加默认启动页面设置
-                _buildDefaultStartPageItem(context),
-
-                ListTile(
-                  key: _themeGuideKey, // 功能引导 key
-                  title: Text(l10n.settingsTheme),
-                  subtitle: Text(l10n.settingsThemeDesc),
-                  leading: const Icon(Icons.color_lens_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ThemeSettingsPage(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text(l10n.settingsAI),
-                  subtitle: Text(l10n.settingsAIDesc),
-                  leading: const Icon(Icons.auto_awesome),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AISettingsPage(),
-                      ),
-                    );
-                  },
-                ),
-                // 智能推送
-                Builder(
-                  builder: (context) {
-                    return ListTile(
-                      title: Text(l10n.smartPushTitle),
-                      subtitle: Text(l10n.smartPushDesc),
-                      leading: const Icon(Icons.notifications_active_outlined),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SmartPushSettingsPage(),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text(l10n.settingsHitokoto),
-                  subtitle: Text(l10n.settingsHitokotoDesc),
-                  leading: const Icon(Icons.format_quote_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HitokotoSettingsPage(),
-                      ),
-                    );
-                  },
-                ),
-                // 日志和实验性开关已移至「实验室」Card（_buildLabSection）
-                // 存储管理
-                ListTile(
-                  title: Text(l10n.settingsStorage),
-                  subtitle: Text(l10n.settingsStorageDesc),
-                  leading: const Icon(Icons.storage_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const StorageManagementPage(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // 内容管理 Card (保持不变)
-          Card(
-            margin: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text(l10n.settingsContentManagement),
-                  leading: const Icon(Icons.category),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Divider(
-                    color: theme.colorScheme.outline.withAlpha(
-                      (0.2 * 255).round(),
-                    ),
-                  ),
-                ),
-                ListTile(
-                  title: Text(l10n.settingsTags),
-                  subtitle: Text(l10n.settingsTagsDesc),
-                  leading: const Icon(Icons.label_outline),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const TagSettingsPage(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text(l10n.settingsBackup),
-                  subtitle: Text(l10n.settingsBackupDesc),
-                  leading: const Icon(Icons.backup_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BackupRestorePage(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text(l10n.trash),
-                  subtitle: Consumer<SettingsService>(
-                    builder: (context, settingsService, _) => Text(
-                      _retentionLabel(
-                        l10n,
-                        settingsService.trashRetentionDays,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Divider(
+                      color: theme.colorScheme.outline.withAlpha(
+                        (0.2 * 255).round(),
                       ),
                     ),
                   ),
-                  leading: const Icon(Icons.delete_outline),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const TrashPage(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text(l10n.settingsSync),
-                  subtitle: Text(l10n.settingsSyncDesc),
-                  leading: const Icon(Icons.sync),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NoteSyncPage(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Row(
-                    children: [
-                      Text(l10n.webdavSyncTitle),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                  ListTile(
+                    title: Text(l10n.settingsTags),
+                    subtitle: Text(l10n.settingsTagsDesc),
+                    leading: const Icon(Icons.label_outline),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TagSettingsPage(),
                         ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.tertiaryContainer,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Preview',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onTertiaryContainer),
-                        ),
-                      ),
-                    ],
-                  ),
-                  subtitle: Consumer<WebDAVSyncService>(
-                    builder: (context, webdavSync, _) {
-                      if (!webdavSync.enabled) {
-                        return Text(l10n.webdavSyncSubtitle);
-                      }
-                      String statusStr = '';
-                      if (webdavSync.syncStatus == WebDAVSyncStatus.syncing) {
-                        statusStr = l10n.webdavStatusSyncing;
-                      } else if (webdavSync.syncStatus ==
-                          WebDAVSyncStatus.success) {
-                        statusStr = l10n.webdavStatusSuccess;
-                      } else if (webdavSync.syncStatus ==
-                          WebDAVSyncStatus.failed) {
-                        statusStr = l10n.webdavStatusFailed;
-                      }
-
-                      final timeStr = webdavSync.lastSyncTime.isNotEmpty
-                          ? LWWUtils.formatTimestamp(webdavSync.lastSyncTime)
-                          : l10n.webdavNeverSynced;
-
-                      return Text(statusStr.isNotEmpty
-                          ? l10n.settingsWebdavStatusWithTime(
-                              statusStr, timeStr)
-                          : l10n.settingsWebdavEnabledWithTime(timeStr));
+                      );
                     },
                   ),
-                  leading: const Icon(Icons.cloud_sync_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WebDAVSyncPage(),
+                  ListTile(
+                    title: Text(l10n.settingsBackup),
+                    subtitle: Text(l10n.settingsBackupDesc),
+                    leading: const Icon(Icons.backup_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BackupRestorePage(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    title: Text(l10n.trash),
+                    subtitle: Consumer<SettingsService>(
+                      builder: (context, settingsService, _) => Text(
+                        _retentionLabel(
+                          l10n,
+                          settingsService.trashRetentionDays,
+                        ),
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
+                    ),
+                    leading: const Icon(Icons.delete_outline),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TrashPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    title: Text(l10n.settingsSync),
+                    subtitle: Text(l10n.settingsSyncDesc),
+                    leading: const Icon(Icons.sync),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NoteSyncPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    title: Row(
+                      children: [
+                        Text(l10n.webdavSyncTitle),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.tertiaryContainer,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Preview',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onTertiaryContainer),
+                          ),
+                        ),
+                      ],
+                    ),
+                    subtitle: Consumer<WebDAVSyncService>(
+                      builder: (context, webdavSync, _) {
+                        if (!webdavSync.enabled) {
+                          return Text(l10n.webdavSyncSubtitle);
+                        }
+                        String statusStr = '';
+                        if (webdavSync.syncStatus == WebDAVSyncStatus.syncing) {
+                          statusStr = l10n.webdavStatusSyncing;
+                        } else if (webdavSync.syncStatus ==
+                            WebDAVSyncStatus.success) {
+                          statusStr = l10n.webdavStatusSuccess;
+                        } else if (webdavSync.syncStatus ==
+                            WebDAVSyncStatus.failed) {
+                          statusStr = l10n.webdavStatusFailed;
+                        }
 
-          // --- 修改后的关于信息 Card ---
-          Card(
-            margin: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                // --- 修改：关于标题 ListTile，点击弹出包含链接的对话框 ---
-                ListTile(
-                  title: Text(l10n.settingsAbout),
-                  leading: const Icon(Icons.info_outline),
-                  trailing: const Icon(Icons.chevron_right), // 添加箭头指示可点击
-                  onTap: () {
-                    // 使用自定义关于对话框替代 showAboutDialog，以避免系统自动添加 "查看许可证" 按钮
-                    showDialog(
-                      context: context,
-                      builder: (dialogContext) => AlertDialog(
-                        // **不给 title。** 「关于 心迹 (ThoughtEcho)」在对话框那点
-                        // 宽度里必然折行，折出来的第二行是孤零零一个
-                        // 「(ThoughtEcho)」压在图标上方。应用名本来就该在图标
-                        // 底下——那是关于页的读法，也不用再重复一遍「关于」。
-                        contentPadding: const EdgeInsets.only(top: 28),
-                        content: SizedBox(
-                          width: double.maxFinite,
-                          child: SingleChildScrollView(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                GestureDetector(
-                                  onTap: _handleLogoTap,
-                                  child: Image.asset(
-                                    'assets/icon.png',
-                                    width: 64,
-                                    height: 64,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        width: 64,
-                                        height: 64,
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                          borderRadius: BorderRadius.circular(
-                                            AppShapeTokens.of(context)
-                                                .buttonRadius,
-                                          ),
-                                        ),
-                                        // 前景取 onPrimary 而不是白：动态取色下
-                                        // primary 可能是浅色，白图标会糊在上面。
-                                        child: Center(
-                                          child: Icon(
-                                            Icons.apps,
+                        final timeStr = webdavSync.lastSyncTime.isNotEmpty
+                            ? LWWUtils.formatTimestamp(webdavSync.lastSyncTime)
+                            : l10n.webdavNeverSynced;
+
+                        return Text(statusStr.isNotEmpty
+                            ? l10n.settingsWebdavStatusWithTime(
+                                statusStr, timeStr)
+                            : l10n.settingsWebdavEnabledWithTime(timeStr));
+                      },
+                    ),
+                    leading: const Icon(Icons.cloud_sync_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WebDAVSyncPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // --- 修改后的关于信息 Card ---
+            Card(
+              margin: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  // --- 修改：关于标题 ListTile，点击弹出包含链接的对话框 ---
+                  ListTile(
+                    title: Text(l10n.settingsAbout),
+                    leading: const Icon(Icons.info_outline),
+                    trailing: const Icon(Icons.chevron_right), // 添加箭头指示可点击
+                    onTap: () {
+                      // 使用自定义关于对话框替代 showAboutDialog，以避免系统自动添加 "查看许可证" 按钮
+                      showDialog(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          // **不给 title。** 「关于 心迹 (ThoughtEcho)」在对话框那点
+                          // 宽度里必然折行，折出来的第二行是孤零零一个
+                          // 「(ThoughtEcho)」压在图标上方。应用名本来就该在图标
+                          // 底下——那是关于页的读法，也不用再重复一遍「关于」。
+                          contentPadding: const EdgeInsets.only(top: 28),
+                          content: SizedBox(
+                            width: double.maxFinite,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  GestureDetector(
+                                    onTap: _handleLogoTap,
+                                    child: Image.asset(
+                                      'assets/icon.png',
+                                      width: 64,
+                                      height: 64,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Container(
+                                          width: 64,
+                                          height: 64,
+                                          decoration: BoxDecoration(
                                             color: Theme.of(
                                               context,
-                                            ).colorScheme.onPrimary,
-                                            size: 36,
+                                            ).colorScheme.primary,
+                                            borderRadius: BorderRadius.circular(
+                                              AppShapeTokens.of(context)
+                                                  .buttonRadius,
+                                            ),
                                           ),
+                                          // 前景取 onPrimary 而不是白：动态取色下
+                                          // primary 可能是浅色，白图标会糊在上面。
+                                          child: Center(
+                                            child: Icon(
+                                              Icons.apps,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onPrimary,
+                                              size: 36,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    l10n.appTitle,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.titleLarge,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    l10n.settingsAboutSlogan,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  // 五个入口过去是五颗等宽的实心主按钮，从上到下
+                                  // 摞成一堵棕色的墙：全都长得像「主操作」，等于
+                                  // 一个都不是，对话框也被撑得比屏幕还高。
+                                  // 它们本来就是导航项，按导航项排——一行一条，
+                                  // 图标 + 文字 + 去向指示。
+                                  Divider(
+                                    height: 1,
+                                    color: theme.colorScheme.outlineVariant,
+                                  ),
+                                  _buildAboutEntry(
+                                    context: context,
+                                    icon: Icons.language_outlined,
+                                    text: l10n.settingsVisitWebsite,
+                                    onTap: () => _launchUrl(_websiteUrl),
+                                    isExternal: true,
+                                  ),
+                                  _buildAboutEntry(
+                                    context: context,
+                                    icon: Icons.code_outlined,
+                                    text: l10n.settingsViewSource,
+                                    onTap: () => _launchUrl(_projectUrl),
+                                    isExternal: true,
+                                  ),
+                                  _buildAboutEntry(
+                                    context: context,
+                                    icon: Icons.help_outline,
+                                    text: l10n.userGuide,
+                                    onTap: () {
+                                      Navigator.pop(dialogContext);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const UserGuidePage(),
                                         ),
                                       );
                                     },
                                   ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  l10n.appTitle,
-                                  textAlign: TextAlign.center,
-                                  style: theme.textTheme.titleLarge,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  l10n.settingsAboutSlogan,
-                                  textAlign: TextAlign.center,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
+                                  _buildAboutEntry(
+                                    context: context,
+                                    icon: Icons.article_outlined,
+                                    text: l10n.settingsViewLicenses,
+                                    onTap: () {
+                                      Navigator.pop(dialogContext);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const license.LicensePage(),
+                                        ),
+                                      );
+                                    },
                                   ),
-                                ),
-                                const SizedBox(height: 20),
-                                // 五个入口过去是五颗等宽的实心主按钮，从上到下
-                                // 摞成一堵棕色的墙：全都长得像「主操作」，等于
-                                // 一个都不是，对话框也被撑得比屏幕还高。
-                                // 它们本来就是导航项，按导航项排——一行一条，
-                                // 图标 + 文字 + 去向指示。
-                                Divider(
-                                  height: 1,
-                                  color: theme.colorScheme.outlineVariant,
-                                ),
-                                _buildAboutEntry(
-                                  context: context,
-                                  icon: Icons.language_outlined,
-                                  text: l10n.settingsVisitWebsite,
-                                  onTap: () => _launchUrl(_websiteUrl),
-                                  isExternal: true,
-                                ),
-                                _buildAboutEntry(
-                                  context: context,
-                                  icon: Icons.code_outlined,
-                                  text: l10n.settingsViewSource,
-                                  onTap: () => _launchUrl(_projectUrl),
-                                  isExternal: true,
-                                ),
-                                _buildAboutEntry(
-                                  context: context,
-                                  icon: Icons.help_outline,
-                                  text: l10n.userGuide,
-                                  onTap: () {
-                                    Navigator.pop(dialogContext);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const UserGuidePage(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                _buildAboutEntry(
-                                  context: context,
-                                  icon: Icons.article_outlined,
-                                  text: l10n.settingsViewLicenses,
-                                  onTap: () {
-                                    Navigator.pop(dialogContext);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const license.LicensePage(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                _buildAboutEntry(
-                                  context: context,
-                                  icon: Icons.privacy_tip_outlined,
-                                  text: l10n.settingsPrivacyPolicy,
-                                  onTap: () => _launchUrl(_privacyUrl),
-                                  isExternal: true,
-                                ),
-                              ],
+                                  _buildAboutEntry(
+                                    context: context,
+                                    icon: Icons.privacy_tip_outlined,
+                                    text: l10n.settingsPrivacyPolicy,
+                                    onTap: () => _launchUrl(_privacyUrl),
+                                    isExternal: true,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
+                          actions: [
+                            TextButton(
+                              style: _textButtonStyle(dialogContext),
+                              onPressed: () => Navigator.pop(dialogContext),
+                              child: Text(l10n.close),
+                            ),
+                          ],
                         ),
-                        actions: [
-                          TextButton(
-                            style: _textButtonStyle(dialogContext),
-                            onPressed: () => Navigator.pop(dialogContext),
-                            child: Text(l10n.close),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                // --- 关于标题 ListTile 结束 ---
+                      );
+                    },
+                  ),
+                  // --- 关于标题 ListTile 结束 ---
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Divider(
-                    color: theme.colorScheme.outline.withAlpha(
-                      (0.2 * 255).round(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Divider(
+                      color: theme.colorScheme.outline.withAlpha(
+                        (0.2 * 255).round(),
+                      ),
                     ),
                   ),
-                ),
-                ListTile(
-                  title: Text(l10n.feedbackAndContact),
-                  leading: const Icon(Icons.feedback_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const FeedbackContactPage(),
-                      ),
-                    );
-                  },
-                ),
-
-                // 添加分隔线
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Divider(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.outline.withAlpha((0.2 * 255).round()),
+                  ListTile(
+                    title: Text(l10n.feedbackAndContact),
+                    leading: const Icon(Icons.feedback_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const FeedbackContactPage(),
+                        ),
+                      );
+                    },
                   ),
-                ),
 
-                // 更新内容 ListTile：升级时自动弹过一次，这里是回头再看的入口
-                ListTile(
-                  title: Text(l10n.settingsReleaseNotes),
-                  subtitle: Text(l10n.settingsReleaseNotesDesc),
-                  leading: const Icon(Icons.auto_stories_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const ReleaseNotesPage.currentRelease(),
-                      ),
-                    );
-                  },
-                ),
-
-                // 添加分隔线
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Divider(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.outline.withAlpha((0.2 * 255).round()),
+                  // 添加分隔线
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Divider(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withAlpha((0.2 * 255).round()),
+                    ),
                   ),
-                ),
 
-                // 检查更新 ListTile
-                ListTile(
-                  title: Text(l10n.settingsCheckUpdate),
-                  subtitle: _updateCheckMessage != null
-                      ? Text(
-                          _updateCheckMessage!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        )
-                      : Text(l10n.settingsCheckUpdateDesc),
-                  leading: _isCheckingUpdate
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.system_update),
-                  trailing: _isCheckingUpdate
-                      ? null
-                      : const Icon(Icons.chevron_right),
-                  onTap: _isCheckingUpdate ? null : () => _checkForUpdates(),
-                ),
-              ],
+                  // 更新内容 ListTile：升级时自动弹过一次，这里是回头再看的入口
+                  ListTile(
+                    title: Text(l10n.settingsReleaseNotes),
+                    subtitle: Text(l10n.settingsReleaseNotesDesc),
+                    leading: const Icon(Icons.auto_stories_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const ReleaseNotesPage.currentRelease(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // 添加分隔线
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Divider(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withAlpha((0.2 * 255).round()),
+                    ),
+                  ),
+
+                  // 检查更新 ListTile
+                  ListTile(
+                    title: Text(l10n.settingsCheckUpdate),
+                    subtitle: _updateCheckMessage != null
+                        ? Text(
+                            _updateCheckMessage!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          )
+                        : Text(l10n.settingsCheckUpdateDesc),
+                    leading: _isCheckingUpdate
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.system_update),
+                    trailing: _isCheckingUpdate
+                        ? null
+                        : const Icon(Icons.chevron_right),
+                    onTap: _isCheckingUpdate ? null : () => _checkForUpdates(),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // --- 关于信息 Card 结束 ---
+            // --- 关于信息 Card 结束 ---
 
-          // 实验室 Card（仅开发者模式可见，放在最后避免干扰普通用户）
-          _buildLabSection(context),
+            // 实验室 Card（仅开发者模式可见，放在最后避免干扰普通用户）
+            _buildLabSection(context),
 
-          const SizedBox(height: 20), // 底部增加一些间距
-        ],
+            const SizedBox(height: 20), // 底部增加一些间距
+          ],
+        ),
       ),
     );
   }

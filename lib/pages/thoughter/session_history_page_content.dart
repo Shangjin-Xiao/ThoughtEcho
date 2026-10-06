@@ -10,21 +10,25 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
     ThemeData theme,
     AppLocalizations l10n,
   ) =>
-      ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: results.length,
-        itemBuilder: (context, index) {
-          final result = results[index];
-          return _buildSessionCard(
-            context: context,
-            session: result.session,
-            snippet: result.snippet,
-            snippetMatchStart: result.matchStart,
-            snippetMatchEnd: result.matchEnd,
-            theme: theme,
-            l10n: l10n,
-          );
-        },
+      Scrollbar(
+        controller: _scrollController,
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            final result = results[index];
+            return _buildSessionCard(
+              context: context,
+              session: result.session,
+              snippet: result.snippet,
+              snippetMatchStart: result.matchStart,
+              snippetMatchEnd: result.matchEnd,
+              theme: theme,
+              l10n: l10n,
+            );
+          },
+        ),
       );
 
   Widget _buildGroupedSessionsList(
@@ -40,61 +44,65 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
       l10n.sessionGroupThisWeek,
       l10n.sessionGroupEarlier,
     ];
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      itemCount: groupOrder.length,
-      itemBuilder: (context, index) {
-        final groupKey = groupOrder[index];
-        final groupSessions = groups[groupKey];
-        if (groupSessions == null || groupSessions.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
-              child: Row(
-                children: [
-                  Text(
-                    groupKey,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(
-                        AppShapeTokens.of(context).buttonRadius * 0.4,
-                      ),
-                    ),
-                    child: Text(
-                      '${groupSessions.length}',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+    return Scrollbar(
+      controller: _scrollController,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: groupOrder.length,
+        itemBuilder: (context, index) {
+          final groupKey = groupOrder[index];
+          final groupSessions = groups[groupKey];
+          if (groupSessions == null || groupSessions.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
+                child: Row(
+                  children: [
+                    Text(
+                      groupKey,
+                      style: theme.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).buttonRadius * 0.4,
+                        ),
+                      ),
+                      child: Text(
+                        '${groupSessions.length}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            for (final session in groupSessions)
-              _buildSessionCard(
-                context: context,
-                session: session,
-                snippet: _lastMessageSnippets[session.id] ?? '',
-                theme: theme,
-                l10n: l10n,
-              ),
-          ],
-        );
-      },
+              for (final session in groupSessions)
+                _buildSessionCard(
+                  context: context,
+                  session: session,
+                  snippet: _lastMessageSnippets[session.id] ?? '',
+                  theme: theme,
+                  l10n: l10n,
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 

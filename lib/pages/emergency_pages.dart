@@ -134,6 +134,7 @@ class EmergencyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      scrollBehavior: const AppScrollBehavior(),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(
