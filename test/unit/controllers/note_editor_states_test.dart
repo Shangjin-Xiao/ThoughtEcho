@@ -273,7 +273,7 @@ void main() {
     });
 
     test(
-        'disposed NoteEditorState ignores markDirty and replaceController calls',
+        'disposed NoteEditorState ignores markDirty, markClean, markDraftSaved and replaceController calls, and disposes incoming controller',
         () {
       final state = NoteEditorState(
         initialPlainText: 'initial',
@@ -282,17 +282,63 @@ void main() {
         restoredFromDraft: false,
       );
 
+      var notified = false;
+      state.addListener(() => notified = true);
+
       state.dispose();
 
       expect(state.isDisposed, isTrue);
 
-      // Subsequent markDirty call on disposed state should not throw or notify
+      // Subsequent mutator calls on disposed state should not throw or notify
       expect(() => state.markDirty(), returnsNormally);
+      expect(() => state.markClean(), returnsNormally);
+      expect(() => state.markDraftSaved(), returnsNormally);
+      expect(() => state.setDraftLoaded(true), returnsNormally);
+      expect(() => state.setFullQuoteLoading(true), returnsNormally);
+      expect(() => state.setFullInitialQuote(Quote(content: 'c', date: 'd')),
+          returnsNormally);
+      expect(() => state.setRichTextLoadFailed(true), returnsNormally);
+      expect(() => state.cancelDraftSave(), returnsNormally);
+      expect(() => state.incrementSessionGeneration(), returnsNormally);
 
-      // replaceController on disposed state should not throw or notify
-      final newController = quill.QuillController.basic();
-      expect(() => state.replaceController(newController), returnsNormally);
-      newController.dispose();
+      expect(notified, isFalse);
+
+      // replaceController on disposed state should dispose incoming controller and not throw
+      final incomingController = quill.QuillController.basic();
+      expect(
+          () => state.replaceController(incomingController), returnsNormally);
+      expect(
+          incomingController.document.documentChangeObserver.isClosed, isTrue);
+    });
+
+    test(
+        'replaceController respects markCleanIfUnchanged only if state was clean prior to replacement',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: 'initial',
+        initialDeltaContent: null,
+        draftStorageKey: 'key_mark_clean_test',
+        restoredFromDraft: false,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      final controller1 = quill.QuillController.basic();
+      state.replaceController(controller1, markCleanIfUnchanged: true);
+      expect(state.isDirty, isFalse);
+
+      // Make dirty
+      state.markDirty();
+      expect(state.isDirty, isTrue);
+
+      // Replace controller with markCleanIfUnchanged: true while dirty
+      final controller2 = quill.QuillController.basic();
+      state.replaceController(controller2, markCleanIfUnchanged: true);
+
+      // Must remain dirty!
+      expect(state.isDirty, isTrue);
+
+      state.dispose();
     });
   });
 

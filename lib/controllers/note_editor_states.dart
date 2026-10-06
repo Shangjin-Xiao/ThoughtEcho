@@ -70,12 +70,14 @@ class NoteEditorState extends ChangeNotifier {
   }
 
   void markDraftSaved() {
+    if (_disposed) return;
     _restoredFromDraft = false;
     _isDirty = false;
     _savedDocumentVersion = _documentVersion;
   }
 
   void markClean() {
+    if (_disposed) return;
     _isDirty = false;
     _savedDocumentVersion = _documentVersion;
   }
@@ -89,6 +91,7 @@ class NoteEditorState extends ChangeNotifier {
   }
 
   void incrementSessionGeneration() {
+    if (_disposed) return;
     _sessionGeneration++;
   }
 
@@ -106,8 +109,14 @@ class NoteEditorState extends ChangeNotifier {
     }
   }
 
-  void replaceController(quill.QuillController controller) {
-    if (_disposed) return;
+  void replaceController(
+    quill.QuillController controller, {
+    bool markCleanIfUnchanged = false,
+  }) {
+    if (_disposed) {
+      controller.dispose();
+      return;
+    }
     if (identical(_controller, controller)) return;
     final wasDirty = isDirty;
     final draftChangeListener = _draftChangeListener;
@@ -123,6 +132,8 @@ class NoteEditorState extends ChangeNotifier {
     _subscribeToDocChanges();
     if (wasDirty) {
       _isDirty = true;
+    } else if (markCleanIfUnchanged) {
+      markClean();
     }
     notifyListeners();
   }
@@ -135,6 +146,7 @@ class NoteEditorState extends ChangeNotifier {
   }
 
   void setDraftLoaded(bool value) {
+    if (_disposed) return;
     _draftLoaded = value;
   }
 
@@ -145,23 +157,25 @@ class NoteEditorState extends ChangeNotifier {
   }
 
   void cancelDraftSave() {
+    if (_disposed) return;
     _draftSaveTimer?.cancel();
     _draftSaveTimer = null;
     _sessionGeneration++;
   }
 
   void setFullQuoteLoading(bool value) {
-    if (_isLoadingFullQuote == value) return;
+    if (_disposed || _isLoadingFullQuote == value) return;
     _isLoadingFullQuote = value;
     notifyListeners();
   }
 
   void setFullInitialQuote(Quote? quote) {
+    if (_disposed) return;
     _fullInitialQuote = quote;
   }
 
   void setRichTextLoadFailed(bool value) {
-    if (_richTextLoadFailed == value) return;
+    if (_disposed || _richTextLoadFailed == value) return;
     _richTextLoadFailed = value;
     notifyListeners();
   }

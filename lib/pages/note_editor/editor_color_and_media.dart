@@ -242,17 +242,14 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
     try {
       logDebug('开始处理临时媒体文件...');
 
-      // 获取当前文档的Delta内容
-      final deltaData = _editorState.controller.document.toDelta().toJson();
-      // 修复：使用深拷贝确保备份数据完全独立，避免嵌套对象的意外修改
-      final originalDeltaData = _deepCopy(deltaData) as List;
-      bool hasChanges = false;
       final processedFiles = <String, String>{}; // 记录已处理的文件映射
 
-      // 预扫描：统计需要处理的临时媒体文件
+      // 预扫描：从当前文档截取初始状态，统计需要处理的临时媒体文件
+      final initialDeltaData =
+          _editorState.controller.document.toDelta().toJson();
       final l10n = AppLocalizations.of(context);
       final mediaEntries = <Map<String, dynamic>>[];
-      for (final op in deltaData) {
+      for (final op in initialDeltaData) {
         if (op.containsKey('insert')) {
           final insert = op['insert'];
           if (insert is Map) {
@@ -306,8 +303,6 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
             },
           );
           if (newPath != null) {
-            ref[key] = newPath;
-            hasChanges = true;
             onFileMoved?.call(newPath);
           }
         }
@@ -318,96 +313,50 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
         }
       }
 
-      // 遍历Delta内容，查找临时媒体文件
-      for (final op in deltaData) {
-        if (op.containsKey('insert')) {
-          final insert = op['insert'];
-          if (insert is Map) {
-            // 处理图片
-            if (insert.containsKey('image')) {
-              final imagePath = insert['image'] as String?;
-              if (imagePath != null &&
-                  await TemporaryMediaService.isTemporaryFile(imagePath)) {
-                final permanentPath = await _moveMediaFileSafely(
-                  imagePath,
-                  processedFiles,
-                );
-                if (permanentPath != null) {
-                  insert['image'] = permanentPath;
-                  hasChanges = true;
-                  logDebug('临时图片已移动: $imagePath -> $permanentPath');
-                  onFileMoved?.call(permanentPath);
+      // 如果有移动成功的媒体文件，在异步操作完全结束后取最新文档快照进行路径替换
+      if (processedFiles.isNotEmpty) {
+        // 关键：在异步操作之后取最新 Delta，确保期间用户键入的内容不丢失
+        final latestDeltaData =
+            _editorState.controller.document.toDelta().toJson();
+        for (final op in latestDeltaData) {
+          if (op.containsKey('insert')) {
+            final insert = op['insert'];
+            if (insert is Map) {
+              if (insert.containsKey('image')) {
+                final oldPath = insert['image'] as String?;
+                if (oldPath != null && processedFiles.containsKey(oldPath)) {
+                  insert['image'] = processedFiles[oldPath];
                 }
               }
-            }
-
-            // 处理视频
-            if (insert.containsKey('video')) {
-              final videoPath = insert['video'] as String?;
-              if (videoPath != null &&
-                  await TemporaryMediaService.isTemporaryFile(videoPath)) {
-                final permanentPath = await _moveMediaFileSafely(
-                  videoPath,
-                  processedFiles,
-                );
-                if (permanentPath != null) {
-                  insert['video'] = permanentPath;
-                  hasChanges = true;
-                  logDebug('临时视频已移动: $videoPath -> $permanentPath');
-                  onFileMoved?.call(permanentPath);
+              if (insert.containsKey('video')) {
+                final oldPath = insert['video'] as String?;
+                if (oldPath != null && processedFiles.containsKey(oldPath)) {
+                  insert['video'] = processedFiles[oldPath];
                 }
               }
-            }
-
-            // 处理自定义嵌入（如音频）
-            if (insert.containsKey('custom')) {
-              final custom = insert['custom'];
-              if (custom is Map && custom.containsKey('audio')) {
-                final audioPath = custom['audio'] as String?;
-                if (audioPath != null &&
-                    await TemporaryMediaService.isTemporaryFile(audioPath)) {
-                  final permanentPath = await _moveMediaFileSafely(
-                    audioPath,
-                    processedFiles,
-                  );
-                  if (permanentPath != null) {
-                    custom['audio'] = permanentPath;
-                    hasChanges = true;
-                    logDebug('临时音频已移动: $audioPath -> $permanentPath');
-                    onFileMoved?.call(permanentPath);
+              if (insert.containsKey('custom')) {
+                final custom = insert['custom'];
+                if (custom is Map && custom.containsKey('audio')) {
+                  final oldPath = custom['audio'] as String?;
+                  if (oldPath != null && processedFiles.containsKey(oldPath)) {
+                    custom['audio'] = processedFiles[oldPath];
                   }
                 }
               }
             }
           }
         }
-      }
 
-      // 只有在有变更时才更新编辑器内容
-      if (hasChanges) {
         final selection = _editorState.controller.selection;
-        try {
-          final newDocument = quill.Document.fromJson(deltaData);
-          _editorState.replaceController(
-            quill.QuillController(
-              document: newDocument,
-              selection: selection,
-            ),
-          );
-          _editorState.markDirty();
-          logDebug('临时媒体文件处理完成，共处理 ${processedFiles.length} 个文件');
-        } catch (e) {
-          logDebug('更新编辑器内容失败，回滚到原始状态: $e');
-          // 回滚到原始状态
-          final rollbackDocument = quill.Document.fromJson(originalDeltaData);
-          _editorState.replaceController(
-            quill.QuillController(
-              document: rollbackDocument,
-              selection: selection,
-            ),
-          );
-          rethrow;
-        }
+        final newDocument = quill.Document.fromJson(latestDeltaData);
+        _editorState.replaceController(
+          quill.QuillController(
+            document: newDocument,
+            selection: selection,
+          ),
+        );
+        _editorState.markDirty();
+        logDebug('临时媒体文件处理完成，共处理 ${processedFiles.length} 个文件');
       } else {
         logDebug('没有临时媒体文件需要处理');
       }

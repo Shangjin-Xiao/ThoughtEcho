@@ -14,16 +14,20 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         if (contentText.isNotEmpty) {
           doc.insert(0, contentText);
         }
-        final wasDirty = _editorState.isDirty;
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          doc.length,
+        );
+        final finalDoc = _mergeWindowInputIfNeeded(doc);
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: doc,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
-          if (!wasDirty) {
-            _editorState.markClean();
-          }
         });
       }
     } catch (e) {
@@ -52,16 +56,20 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
             }
           }
         }
-        final wasDirty = _editorState.isDirty;
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          doc.length,
+        );
+        final finalDoc = _mergeWindowInputIfNeeded(doc);
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: doc,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
-          if (!wasDirty) {
-            _editorState.markClean();
-          }
         });
       }
     } catch (e) {

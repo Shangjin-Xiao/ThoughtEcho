@@ -91,6 +91,50 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     }
   }
 
+  TextSelection _clampSelection(TextSelection selection, int docLength) {
+    if (!selection.isValid) {
+      return const TextSelection.collapsed(offset: 0);
+    }
+    final maxOffset = docLength > 0 ? docLength - 1 : 0;
+    final base = selection.baseOffset.clamp(0, maxOffset);
+    final extent = selection.extentOffset.clamp(0, maxOffset);
+    return selection.copyWith(baseOffset: base, extentOffset: extent);
+  }
+
+  quill.Document _mergeWindowInputIfNeeded(
+    quill.Document loadedDoc, {
+    String? ignorePlaceholder,
+  }) {
+    if (!_editorState.isDirty) {
+      return loadedDoc;
+    }
+    final oldPlainText = _editorState.controller.document.toPlainText();
+    var cleanedOldText = oldPlainText;
+    if (ignorePlaceholder != null && ignorePlaceholder.isNotEmpty) {
+      cleanedOldText = cleanedOldText.replaceAll(ignorePlaceholder, '');
+    }
+    cleanedOldText = cleanedOldText.trim();
+    final initialText = _editorState.initialPlainText.trim();
+
+    if (cleanedOldText.isEmpty || cleanedOldText == initialText) {
+      return loadedDoc;
+    }
+
+    final loadedPlainText = loadedDoc.toPlainText().trim();
+    if (loadedPlainText.contains(cleanedOldText)) {
+      return loadedDoc;
+    }
+
+    final mergedDoc = quill.Document.fromDelta(loadedDoc.toDelta());
+    final insertOffset = mergedDoc.length > 0 ? mergedDoc.length - 1 : 0;
+    if (insertOffset > 0 && !mergedDoc.toPlainText().endsWith('\n')) {
+      mergedDoc.insert(insertOffset, '\n$cleanedOldText');
+    } else {
+      mergedDoc.insert(insertOffset, '$cleanedOldText\n');
+    }
+    return mergedDoc;
+  }
+
   /// P2 Fallback: 从纯文本生成富文本表示
   /// 确保内容不丢失，即使缺少原始deltaContent
   Future<void> _initializeFromPlainTextFallback(String plainText) async {
@@ -112,16 +156,21 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final generatedDelta = _generateDeltaFromPlainText(plainText);
 
       if (mounted) {
-        final wasDirty = _editorState.isDirty;
+        final document = quill.Document.fromJson(generatedDelta);
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          document.length,
+        );
+        final finalDoc = _mergeWindowInputIfNeeded(document);
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: quill.Document.fromJson(generatedDelta),
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
-          if (!wasDirty) {
-            _editorState.markClean();
-          }
         });
         logDebug('从纯文本生成的富文本初始化完成');
       }
@@ -236,16 +285,20 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
-        final wasDirty = _editorState.isDirty;
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          document.length,
+        );
+        final finalDoc = _mergeWindowInputIfNeeded(document);
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: document,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
-          if (!wasDirty) {
-            _editorState.markClean();
-          }
           _editorState.richTextLoadFailed = false;
         });
         logDebug('富文本内容直接初始化完成');
@@ -303,16 +356,20 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
-        final wasDirty = _editorState.isDirty;
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          document.length,
+        );
+        final finalDoc = _mergeWindowInputIfNeeded(document);
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: document,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
-          if (!wasDirty) {
-            _editorState.markClean();
-          }
           _editorState.richTextLoadFailed = false;
         });
         logDebug('富文本内容后台初始化完成');
@@ -335,10 +392,16 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final placeholderDocument = quill.Document()..insert(0, loadingMessage);
 
       if (mounted) {
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          placeholderDocument.length,
+        );
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: placeholderDocument,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: placeholderDocument,
+              selection: selection,
+            ),
           );
           _attachDraftListener();
         });
@@ -354,16 +417,23 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       // 替换为实际文档
       if (mounted) {
-        final wasDirty = _editorState.isDirty;
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          document.length,
+        );
+        final finalDoc = _mergeWindowInputIfNeeded(
+          document,
+          ignorePlaceholder: loadingMessage,
+        );
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: document,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
-          if (!wasDirty) {
-            _editorState.markClean();
-          }
           _editorState.richTextLoadFailed = false;
         });
         logDebug('超大富文本内容分段加载完成');
@@ -525,21 +595,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
         rethrow;
       }
       throw DeltaContentSerializationException(e.toString());
-    }
-  }
-
-  dynamic _deepCopy(dynamic original) {
-    if (original == null) {
-      return null;
-    } else if (original is Map) {
-      return Map<String, dynamic>.from(
-        original.map((key, value) => MapEntry(key, _deepCopy(value))),
-      );
-    } else if (original is List) {
-      return original.map((item) => _deepCopy(item)).toList();
-    } else {
-      // 基本类型（String, int, double, bool等）直接返回
-      return original;
     }
   }
 }
