@@ -440,13 +440,13 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         saveSucceeded = true;
         widget.onSaved?.call(quote);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).noteSaved),
-              duration: AppConstants.snackBarDurationImportant,
-            ),
-          );
           if (popOnSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context).noteSaved),
+                duration: AppConstants.snackBarDurationImportant,
+              ),
+            );
             Navigator.of(context).pop(true);
           }
         }
@@ -460,13 +460,13 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         saveSucceeded = true;
         widget.onSaved?.call(quote);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).noteSaved),
-              duration: AppConstants.snackBarDurationImportant,
-            ),
-          );
           if (popOnSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context).noteSaved),
+                duration: AppConstants.snackBarDurationImportant,
+              ),
+            );
             Navigator.of(context).pop(true);
           }
         }

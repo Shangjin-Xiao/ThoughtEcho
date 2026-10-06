@@ -166,8 +166,9 @@ void main() {
       expect(databaseService.lastSavedQuote?.content,
           equals('Test content for AI'));
 
-      // Verify ThoughterPage is now displayed
+      // Verify ThoughterPage is now displayed and NoteFullEditorPage is replaced
       expect(find.byType(ThoughterPage), findsOneWidget);
+      expect(find.byType(NoteFullEditorPage), findsNothing);
     },
   );
 

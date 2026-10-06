@@ -96,7 +96,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
               tooltip: l10n.save,
               onPressed: _editorState.isLoadingFullQuote || _mediaState.isSaving
                   ? null
-                  : _saveContent,
+                  : () => _saveContent(),
             ),
           ],
           automaticallyImplyLeading: true,
