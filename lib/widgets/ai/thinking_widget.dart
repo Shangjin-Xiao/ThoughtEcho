@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,7 +14,7 @@ import '../app_loading_view.dart';
 /// - 折叠态是一行状态文字，展开后内容靠左侧竖线归组
 /// - 可点击标题栏切换展开/折叠
 /// - 使用 Markdown 渲染思考内容
-/// - 支持流式增量内容更新
+/// - 支持流式增量内容更新与防抖缓冲
 class ThinkingWidget extends StatefulWidget {
   /// 思考过程文本内容
   final String thinkingText;
@@ -40,21 +42,26 @@ class ThinkingWidget extends StatefulWidget {
 class _ThinkingWidgetState extends State<ThinkingWidget>
     with SingleTickerProviderStateMixin {
   late bool _isExpanded;
-  late AnimationController _rotationController;
+  late AnimationController _expandController;
+  late final ValueNotifier<String> _displayedThinkingTextNotifier;
+  Timer? _debounceTimer;
+
+  static const Duration _debounceInterval = Duration(milliseconds: 100);
 
   @override
   void initState() {
     super.initState();
     // 思考中展开，完成后折叠
     _isExpanded = widget.inProgress;
+    _displayedThinkingTextNotifier = ValueNotifier<String>(widget.thinkingText);
 
-    // 箭头旋转动画
-    _rotationController = AnimationController(
+    // 展开/折叠与箭头旋转动画
+    _expandController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
     if (_isExpanded) {
-      _rotationController.value = 1.0;
+      _expandController.value = 1.0;
     }
   }
 
@@ -69,22 +76,54 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
           setState(() {
             _isExpanded = true;
           });
-          _rotationController.forward();
+          _expandController.forward();
         }
       } else {
         if (_isExpanded) {
           setState(() {
             _isExpanded = false;
           });
-          _rotationController.reverse();
+          _expandController.reverse();
         }
       }
+    }
+
+    // 处理思考文本增量更新与防抖
+    if (oldWidget.thinkingText != widget.thinkingText) {
+      _scheduleTextUpdate();
+    }
+  }
+
+  void _scheduleTextUpdate() {
+    if (!widget.inProgress) {
+      // 流式输出结束时，立即清空 Timer 并刷新最终完整文本
+      _debounceTimer?.cancel();
+      _debounceTimer = null;
+      _displayedThinkingTextNotifier.value = widget.thinkingText;
+      return;
+    }
+
+    // 从空文本到有内容时，立即刷新首字保证交互响应
+    if (_displayedThinkingTextNotifier.value.isEmpty &&
+        widget.thinkingText.isNotEmpty) {
+      _displayedThinkingTextNotifier.value = widget.thinkingText;
+    }
+
+    // 100ms 帧防抖缓冲：无活跃 Timer 时启动防抖 Timer
+    if (_debounceTimer == null || !_debounceTimer!.isActive) {
+      _debounceTimer = Timer(_debounceInterval, () {
+        if (mounted) {
+          _displayedThinkingTextNotifier.value = widget.thinkingText;
+        }
+      });
     }
   }
 
   @override
   void dispose() {
-    _rotationController.dispose();
+    _debounceTimer?.cancel();
+    _displayedThinkingTextNotifier.dispose();
+    _expandController.dispose();
     super.dispose();
   }
 
@@ -92,9 +131,9 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
     setState(() {
       _isExpanded = !_isExpanded;
       if (_isExpanded) {
-        _rotationController.forward();
+        _expandController.forward();
       } else {
-        _rotationController.reverse();
+        _expandController.reverse();
       }
     });
   }
@@ -178,7 +217,7 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                       // 旋转箭头
                       RotationTransition(
                         turns: Tween<double>(begin: 0, end: 0.5)
-                            .animate(_rotationController),
+                            .animate(_expandController),
                         child: Icon(
                           Icons.expand_more,
                           size: 18,
@@ -191,10 +230,13 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
               ),
             ),
           ),
-          // 思考内容区域（可展开/折叠）
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
+          // 思考内容区域（平滑过渡 + 防抖缓冲 + 重绘图层隔离）
+          SizeTransition(
+            sizeFactor: CurvedAnimation(
+              parent: _expandController,
+              curve: Curves.easeInOutCubic,
+            ),
+            alignment: Alignment.topCenter,
             child: _isExpanded
                 ? Padding(
                     padding: const EdgeInsets.only(top: 2, bottom: 6),
@@ -207,16 +249,21 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                           ),
                         ),
                       ),
-                      child: widget.thinkingText.isEmpty
-                          ? Text(
+                      child: ValueListenableBuilder<String>(
+                        valueListenable: _displayedThinkingTextNotifier,
+                        builder: (context, thinkingText, child) {
+                          if (thinkingText.isEmpty) {
+                            return Text(
                               l10n.thinkingInProgress,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
-                            )
-                          : SingleChildScrollView(
+                            );
+                          }
+                          return RepaintBoundary(
+                            child: SingleChildScrollView(
                               child: MarkdownBody(
-                                data: widget.thinkingText,
+                                data: thinkingText,
                                 // 推理还在流的时候不开可选：selectable 会给每
                                 // 个块套 SelectableText，而这段文字每来一批
                                 // token 就整篇重建一次，越想越贵。想完就恢复。
@@ -227,8 +274,10 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                                     final uri = Uri.tryParse(href);
                                     if (uri != null &&
                                         await canLaunchUrl(uri)) {
-                                      await launchUrl(uri,
-                                          mode: LaunchMode.externalApplication);
+                                      await launchUrl(
+                                        uri,
+                                        mode: LaunchMode.externalApplication,
+                                      );
                                     }
                                   } catch (_) {}
                                 },
@@ -260,6 +309,9 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                                 ),
                               ),
                             ),
+                          );
+                        },
+                      ),
                     ),
                   )
                 : const SizedBox.shrink(),

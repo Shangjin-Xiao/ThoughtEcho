@@ -129,5 +129,113 @@ void main() {
 
       expect(find.byType(MarkdownBody), findsNothing);
     });
+
+    testWidgets('debounces rapid streaming text updates to 100ms interval',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '初始文本',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      expect(find.text('初始文本'), findsOneWidget);
+
+      // 20ms 后传入 Chunk 1
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '初始文本 + Chunk 1',
+            inProgress: true,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 20));
+
+      // 40ms 后传入 Chunk 2
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '初始文本 + Chunk 1 + Chunk 2',
+            inProgress: true,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 20));
+
+      // 此时未到 100ms 防抖间隔，文本仍保持初始文本
+      expect(find.text('初始文本'), findsOneWidget);
+      expect(find.text('初始文本 + Chunk 1 + Chunk 2'), findsNothing);
+
+      // 前进 70ms（累计 110ms），防抖 Timer 触发更新
+      await tester.pump(const Duration(milliseconds: 70));
+
+      expect(find.text('初始文本 + Chunk 1 + Chunk 2'), findsOneWidget);
+    });
+
+    testWidgets(
+        'flushes text immediately when stream completes (inProgress becomes false)',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '流式思考中...',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      expect(find.text('流式思考中...'), findsOneWidget);
+
+      // 流式输出结束，立即传入完整思考文本且 inProgress 设为 false
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '流式思考中...完整终极推导结论。',
+            inProgress: false,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 点击展开以查看 MarkdownBody
+      await tester.tap(find.byType(InkWell));
+      await tester.pumpAndSettle();
+
+      expect(find.text('流式思考中...完整终极推导结论。'), findsOneWidget);
+    });
+
+    testWidgets('cancels debounce timer cleanly on dispose without throwing',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: 'Token 1',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      // 触发增量更新，启动 100ms 防抖 Timer
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: 'Token 1 + Token 2',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      // 在 Timer 触发前直接销毁 Widget
+      await tester.pumpWidget(const SizedBox());
+
+      // 前进时间超过 100ms
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // 验证无未处理异常/Timer 泄露
+      expect(find.byType(ThinkingWidget), findsNothing);
+    });
   });
 }
