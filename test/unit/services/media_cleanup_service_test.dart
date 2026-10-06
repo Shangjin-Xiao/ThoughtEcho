@@ -322,6 +322,52 @@ void main() {
       expect(results.containsKey('error'), isTrue);
       expect(results['error'], contains('Disk I/O failure'));
     });
+
+    test('分块并发校验大量媒体文件完整性正确识别存在与缺失文件', () async {
+      final appDocsDir = TestHarness.applicationDocumentsDirectory;
+      final imagesDir =
+          Directory(path.join(appDocsDir.path, 'media', 'images'));
+      await imagesDir.create(recursive: true);
+
+      // 创建 120 个引用的文件（超过单批次 50 个上限）
+      // 其中前 80 个物理文件存在，后 40 个物理文件不存在
+      const totalCount = 120;
+      const existingCount = 80;
+
+      final inserts = <Map<String, String>>[];
+      for (var i = 0; i < totalCount; i++) {
+        final relPath = 'media/images/bulk_check_$i.jpg';
+        if (i < existingCount) {
+          final file = File(path.join(imagesDir.path, 'bulk_check_$i.jpg'));
+          await file.writeAsString('bytes_$i');
+        }
+        inserts.add({'image': relPath});
+      }
+
+      // 将 120 个引用分配到 3 条笔记中
+      for (var n = 0; n < 3; n++) {
+        final subList = inserts.sublist(n * 40, (n + 1) * 40);
+        // 手动构造符合规范的 deltaContent JSON
+        final jsonOps = subList
+            .map((m) => '{"insert":{"image":"${m['image']}"}}')
+            .join(',');
+        final validDelta = '[$jsonOps]';
+        final validQuote = Quote(
+          id: 'note_bulk_$n',
+          content: '批量笔记 $n',
+          deltaContent: validDelta,
+          date: DateTime.now().toIso8601String(),
+        );
+        await dbService.addQuote(validQuote);
+      }
+
+      final results = await MediaCleanupService.verifyMediaIntegrity();
+
+      expect(results['checkedReferences'], equals(totalCount));
+      expect(results['missingFiles'], equals(totalCount - existingCount));
+      expect(results['isHealthy'], isFalse);
+      expect((results['issues'] as List).length, equals(40));
+    });
   });
 
   group('MediaCleanupService.repairMediaReferences', () {

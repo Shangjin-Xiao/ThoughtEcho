@@ -404,17 +404,32 @@ class MediaReferenceService {
         }
         cleanedCount = plan.candidates.length;
       } else {
-        for (final candidate in plan.candidates) {
-          try {
-            final file = File(candidate.absolutePath);
-            if (await file.exists()) {
-              await file.delete();
-              cleanedCount++;
-              logDebug('已删除孤儿文件: ${candidate.absolutePath}');
-            }
-          } catch (e) {
-            logDebug('删除孤儿文件失败: ${candidate.absolutePath}, 错误: $e');
-          }
+        const chunkSize = 50;
+        for (var i = 0; i < plan.candidates.length; i += chunkSize) {
+          final chunk = plan.candidates.sublist(
+            i,
+            i + chunkSize > plan.candidates.length
+                ? plan.candidates.length
+                : i + chunkSize,
+          );
+
+          final results = await Future.wait(
+            chunk.map((candidate) async {
+              try {
+                final file = File(candidate.absolutePath);
+                if (await file.exists()) {
+                  await file.delete();
+                  logDebug('已删除孤儿文件: ${candidate.absolutePath}');
+                  return true;
+                }
+              } catch (e) {
+                logDebug('删除孤儿文件失败: ${candidate.absolutePath}, 错误: $e');
+              }
+              return false;
+            }),
+          );
+
+          cleanedCount += results.where((deleted) => deleted).length;
         }
       }
 
@@ -828,22 +843,38 @@ class MediaReferenceService {
       }
 
       var deletedCount = 0;
-      for (final candidate in candidates) {
-        if (storedKeys.contains(candidate.canonicalKey) ||
-            quoteRefs.containsKey(candidate.canonicalKey)) {
-          continue;
-        }
+      final orphanCandidates = candidates
+          .where((candidate) =>
+              !storedKeys.contains(candidate.canonicalKey) &&
+              !quoteRefs.containsKey(candidate.canonicalKey))
+          .toList(growable: false);
 
-        try {
-          final file = File(candidate.absolutePath);
-          if (await file.exists()) {
-            await file.delete();
-            deletedCount++;
-            logDebug('已删除无引用文件: ${candidate.absolutePath}');
-          }
-        } catch (e) {
-          logDebug('删除无引用文件失败: ${candidate.absolutePath}, 错误: $e');
-        }
+      const chunkSize = 50;
+      for (var i = 0; i < orphanCandidates.length; i += chunkSize) {
+        final chunk = orphanCandidates.sublist(
+          i,
+          i + chunkSize > orphanCandidates.length
+              ? orphanCandidates.length
+              : i + chunkSize,
+        );
+
+        final results = await Future.wait(
+          chunk.map((candidate) async {
+            try {
+              final file = File(candidate.absolutePath);
+              if (await file.exists()) {
+                await file.delete();
+                logDebug('已删除无引用文件: ${candidate.absolutePath}');
+                return true;
+              }
+            } catch (e) {
+              logDebug('删除无引用文件失败: ${candidate.absolutePath}, 错误: $e');
+            }
+            return false;
+          }),
+        );
+
+        deletedCount += results.where((deleted) => deleted).length;
       }
 
       return deletedCount;

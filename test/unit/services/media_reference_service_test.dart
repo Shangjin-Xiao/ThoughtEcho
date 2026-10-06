@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/media_reference_service.dart';
@@ -301,6 +303,36 @@ void main() {
     test('空输入直接返回空表', () async {
       expect(await MediaReferenceService.getReferencedFilesBatch(const []),
           isEmpty);
+    });
+  });
+
+  group('quickCheckAndDeleteOrphans', () {
+    test('分块并发检测并删除大量无引用文件', () async {
+      final tempDir = await Directory.systemTemp.createTemp('media_ref_test_');
+      try {
+        const fileCount = 120; // 超出单批次 50 上限
+        final filePaths = <String>[];
+        for (var i = 0; i < fileCount; i++) {
+          final file = File('${tempDir.path}/orphan_$i.png');
+          await file.writeAsString('orphan_content_$i');
+          filePaths.add(file.path);
+        }
+
+        final deletedCount =
+            await MediaReferenceService.quickCheckAndDeleteOrphans(
+          filePaths,
+          cachedAppPath: tempDir.path,
+        );
+
+        expect(deletedCount, equals(fileCount));
+        for (final filePath in filePaths) {
+          expect(File(filePath).existsSync(), isFalse);
+        }
+      } finally {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      }
     });
   });
 }
