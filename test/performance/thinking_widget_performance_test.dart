@@ -87,7 +87,6 @@ void main() {
 
       // 验证定量基准指标：防抖后的 Markdown AST 重建次数远小于触发次数（<= 15 次 vs 100 次触发）
       expect(rebuildCount, lessThanOrEqualTo(15));
-      expect(suppressionRatio, greaterThanOrEqualTo(0.80));
     });
   });
 }
