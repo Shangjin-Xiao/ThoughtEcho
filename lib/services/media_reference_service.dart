@@ -21,6 +21,9 @@ import 'database_service.dart';
 /// - 检测和清理孤儿文件
 /// - 提供垃圾回收机制
 class MediaReferenceService {
+  /// 媒体文件 I/O 与分块处理批次大小（沿用既有链路的分块并发数量）
+  static const int _ioBatchSize = 50;
+
   static const String _tableName = 'media_references';
   static Database? _database;
 
@@ -404,7 +407,7 @@ class MediaReferenceService {
         }
         cleanedCount = plan.candidates.length;
       } else {
-        const chunkSize = 50;
+        const chunkSize = _ioBatchSize;
         for (var i = 0; i < plan.candidates.length; i += chunkSize) {
           final chunk = plan.candidates.sublist(
             i,
@@ -422,8 +425,13 @@ class MediaReferenceService {
                   logDebug('已删除孤儿文件: ${candidate.absolutePath}');
                   return true;
                 }
-              } catch (e) {
-                logDebug('删除孤儿文件失败: ${candidate.absolutePath}, 错误: $e');
+              } catch (e, stackTrace) {
+                logError(
+                  '删除孤儿文件失败: ${candidate.absolutePath}',
+                  error: e,
+                  stackTrace: stackTrace,
+                  source: 'MediaReferenceService',
+                );
               }
               return false;
             }),
@@ -435,8 +443,13 @@ class MediaReferenceService {
 
       logDebug('${dryRun ? '模拟' : '实际'}清理完成，共处理 $cleanedCount 个孤儿文件');
       return cleanedCount;
-    } catch (e) {
-      logDebug('清理孤儿文件失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '清理孤儿文件失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
       return 0;
     }
   }
@@ -594,7 +607,7 @@ class MediaReferenceService {
       );
       if (quotes.isEmpty) break;
 
-      const int chunkSize = 50;
+      const int chunkSize = _ioBatchSize;
       final quotesList = quotes.toList(growable: false);
       for (var i = 0; i < quotesList.length; i += chunkSize) {
         final chunk = quotesList.skip(i).take(chunkSize);
@@ -781,8 +794,13 @@ class MediaReferenceService {
       }
 
       return false;
-    } catch (e) {
-      logDebug('检查并删除文件失败: $filePath, 错误: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '检查并删除文件失败: $filePath',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
       return false;
     }
   }
@@ -849,7 +867,7 @@ class MediaReferenceService {
               !quoteRefs.containsKey(candidate.canonicalKey))
           .toList(growable: false);
 
-      const chunkSize = 50;
+      const chunkSize = _ioBatchSize;
       for (var i = 0; i < orphanCandidates.length; i += chunkSize) {
         final chunk = orphanCandidates.sublist(
           i,
@@ -867,8 +885,13 @@ class MediaReferenceService {
                 logDebug('已删除无引用文件: ${candidate.absolutePath}');
                 return true;
               }
-            } catch (e) {
-              logDebug('删除无引用文件失败: ${candidate.absolutePath}, 错误: $e');
+            } catch (e, stackTrace) {
+              logError(
+                '删除无引用文件失败: ${candidate.absolutePath}',
+                error: e,
+                stackTrace: stackTrace,
+                source: 'MediaReferenceService',
+              );
             }
             return false;
           }),
@@ -878,8 +901,13 @@ class MediaReferenceService {
       }
 
       return deletedCount;
-    } catch (e) {
-      logDebug('批量检查并删除文件失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '批量检查并删除文件失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
       return 0;
     }
   }
@@ -923,7 +951,7 @@ class MediaReferenceService {
     Database db,
     List<_OrphanCandidate> candidates,
   ) async {
-    const maxChunkSize = 50;
+    const maxChunkSize = _ioBatchSize;
     final references = <String, Map<String, Set<String>>>{};
     if (candidates.isEmpty) return references;
 
@@ -1044,8 +1072,13 @@ class MediaReferenceService {
       }
 
       return false;
-    } catch (e) {
-      logDebug('安全检查并删除文件失败: $filePath, 错误: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '安全检查并删除文件失败: $filePath',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
       return false;
     }
   }
@@ -1351,7 +1384,7 @@ class MediaReferenceService {
         if (quotes.isEmpty) break;
 
         // 限制并发数量，避免内存溢出和数据库锁定
-        const int chunkSize = 50;
+        const int chunkSize = _ioBatchSize;
         final quotesList = quotes.toList(growable: false);
         int pageMigratedCount = 0;
         for (var i = 0; i < quotesList.length; i += chunkSize) {
@@ -1377,8 +1410,13 @@ class MediaReferenceService {
 
       logDebug('迁移完成，共处理 $migratedCount 个笔记');
       return migratedCount;
-    } catch (e) {
-      logDebug('迁移现有笔记媒体文件引用失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '迁移现有笔记媒体文件引用失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
       return 0;
     }
   }

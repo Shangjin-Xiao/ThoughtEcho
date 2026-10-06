@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -365,8 +366,57 @@ void main() {
 
       expect(results['checkedReferences'], equals(totalCount));
       expect(results['missingFiles'], equals(totalCount - existingCount));
+      expect(results['checkFailedFiles'], equals(0));
       expect(results['isHealthy'], isFalse);
       expect((results['issues'] as List).length, equals(40));
+    });
+
+    test('存在性检查异常时拆分为独立错误桶 checkFailedFiles 且不影响其余正常文件', () async {
+      final appDocsDir = TestHarness.applicationDocumentsDirectory;
+      final imgFile = File(
+          path.join(appDocsDir.path, 'media', 'images', 'valid_exist.jpg'));
+      await imgFile.parent.create(recursive: true);
+      await imgFile.writeAsString('valid_data');
+
+      final quote = Quote(
+        id: 'note_verify_err_bucket',
+        content: '包含正常存在、缺失与检查异常文件的笔记',
+        deltaContent: jsonEncode([
+          {
+            'insert': {'image': 'media/images/valid_exist.jpg'}
+          },
+          {
+            'insert': {'image': 'media/images/missing_absent.jpg'}
+          },
+          {
+            'insert': {'image': 'media/images/error_file.jpg'}
+          },
+        ]),
+        date: DateTime.now().toIso8601String(),
+      );
+      await dbService.addQuote(quote);
+
+      MediaCleanupService.fileExistsForTesting = (file) async {
+        if (file.path.contains('error_file.jpg')) {
+          throw const FileSystemException('Simulated I/O error');
+        }
+        return file.exists();
+      };
+
+      try {
+        final results = await MediaCleanupService.verifyMediaIntegrity();
+
+        expect(results['checkedReferences'], equals(3));
+        expect(results['missingFiles'], equals(1));
+        expect(results['checkFailedFiles'], equals(1));
+        expect(results['isHealthy'], isFalse);
+        final issues = results['issues'] as List;
+        expect(issues.length, equals(2));
+        expect(issues.any((i) => i.contains('不存在')), isTrue);
+        expect(issues.any((i) => i.contains('存在性检查失败')), isTrue);
+      } finally {
+        MediaCleanupService.fileExistsForTesting = null;
+      }
     });
   });
 

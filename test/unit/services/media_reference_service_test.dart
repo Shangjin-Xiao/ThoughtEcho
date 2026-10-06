@@ -334,5 +334,71 @@ void main() {
         }
       }
     });
+
+    test('混入有引用文件应保留，只删除无引用的孤儿文件', () async {
+      final tempDir = await Directory.systemTemp.createTemp('media_ref_mix_');
+      try {
+        final referencedFile =
+            File('${tempDir.path}/media/images/ref_kept.png');
+        await referencedFile.parent.create(recursive: true);
+        await referencedFile.writeAsString('referenced_data');
+
+        final orphanFile = File('${tempDir.path}/media/images/orphan_del.png');
+        await orphanFile.writeAsString('orphan_data');
+
+        // 为 referencedFile 建立数据库引用记录
+        await MediaReferenceService.addReference(
+          referencedFile.path,
+          'q1',
+          cachedAppPath: tempDir.path,
+        );
+
+        final deletedCount =
+            await MediaReferenceService.quickCheckAndDeleteOrphans(
+          [referencedFile.path, orphanFile.path],
+          cachedAppPath: tempDir.path,
+        );
+
+        expect(deletedCount, equals(1));
+        expect(referencedFile.existsSync(), isTrue, reason: '有引用的文件必须保留');
+        expect(orphanFile.existsSync(), isFalse, reason: '无引用的孤儿文件必须被删除');
+      } finally {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      }
+    });
+
+    test('单文件删除失败不影响同批次其余孤儿文件正常删除', () async {
+      final tempDir = await Directory.systemTemp.createTemp('media_ref_err_');
+      try {
+        final ok1 = File('${tempDir.path}/ok1.png');
+        await ok1.writeAsString('ok1_data');
+
+        final ok2 = File('${tempDir.path}/ok2.png');
+        await ok2.writeAsString('ok2_data');
+
+        // 创建一个非空目录作为同名路径，调用 File.delete() 时会触发 FileSystemException
+        final failPath = '${tempDir.path}/fail_item.png';
+        final subDir = Directory('$failPath/sub');
+        await subDir.create(recursive: true);
+        await File('${subDir.path}/child.txt').writeAsString('child');
+
+        final deletedCount =
+            await MediaReferenceService.quickCheckAndDeleteOrphans(
+          [ok1.path, failPath, ok2.path],
+          cachedAppPath: tempDir.path,
+        );
+
+        expect(deletedCount, equals(2));
+        expect(ok1.existsSync(), isFalse);
+        expect(ok2.existsSync(), isFalse);
+        expect(Directory(failPath).existsSync(), isTrue);
+      } finally {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      }
+    });
   });
 }

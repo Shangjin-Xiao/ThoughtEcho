@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import '../utils/app_logger.dart';
@@ -15,6 +16,13 @@ import 'database_service.dart';
 /// - 迁移现有笔记的媒体引用
 /// - 定期维护任务
 class MediaCleanupService {
+  /// 媒体文件 I/O 批处理大小（沿用既有链路的分块并发数量，避免单次控制并发过多或产生 I/O 阀值卡顿）
+  static const int ioBatchSize = 50;
+
+  /// 测试专用的文件存在性检查回调 Hook
+  @visibleForTesting
+  static Future<bool> Function(File file)? fileExistsForTesting;
+
   static bool _isInitialized = false;
 
   /// 初始化清理服务
@@ -248,7 +256,7 @@ class MediaCleanupService {
         if (entity is File) {
           currentChunk.add(entity);
 
-          if (currentChunk.length >= 50) {
+          if (currentChunk.length >= ioBatchSize) {
             await processChunk(currentChunk);
             currentChunk = <File>[];
             await Future<void>.delayed(Duration.zero);
@@ -300,12 +308,13 @@ class MediaCleanupService {
 
       int checkedReferences = 0;
       int missingFiles = 0;
+      int checkFailedFiles = 0;
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = appDir.path;
 
       // 批量并发处理笔记，拆分提取路径与 I/O 检查
       final refsToCheck = <_MediaRefToCheck>[];
-      const quoteChunkSize = 50;
+      const quoteChunkSize = ioBatchSize;
       for (var i = 0; i < quotes.length; i += quoteChunkSize) {
         final chunk = quotes.sublist(
           i,
@@ -342,8 +351,8 @@ class MediaCleanupService {
         }
       }
 
-      // 按固定批次（如 50 个路径）组合为列表，通过 Future.wait 并行并发执行 File(absolutePath).exists() 判定
-      const ioChunkSize = 50;
+      // 按固定批次组合为列表，通过 Future.wait 并行并发执行 File(absolutePath).exists() 判定
+      const ioChunkSize = ioBatchSize;
       for (var i = 0; i < refsToCheck.length; i += ioChunkSize) {
         final chunk = refsToCheck.sublist(
           i,
@@ -352,13 +361,23 @@ class MediaCleanupService {
               : i + ioChunkSize,
         );
 
-        final existsResults = await Future.wait(
+        final checkResults = await Future.wait(
           chunk.map((ref) async {
             try {
-              return await File(ref.absolutePath).exists();
-            } catch (e) {
-              logDebug('检查文件存在性异常: ${ref.absolutePath}, 错误: $e');
-              return false;
+              final exists = fileExistsForTesting != null
+                  ? await fileExistsForTesting!(File(ref.absolutePath))
+                  : await File(ref.absolutePath).exists();
+              return exists
+                  ? _FileCheckResult.exists
+                  : _FileCheckResult.missing;
+            } catch (e, stackTrace) {
+              logError(
+                '检查文件存在性异常: ${ref.absolutePath}',
+                error: e,
+                stackTrace: stackTrace,
+                source: 'MediaCleanupService',
+              );
+              return _FileCheckResult.error;
             }
           }),
         );
@@ -366,19 +385,28 @@ class MediaCleanupService {
         for (var j = 0; j < chunk.length; j++) {
           checkedReferences++;
           final ref = chunk[j];
-          final exists = existsResults[j];
+          final checkResult = checkResults[j];
 
-          if (!exists) {
-            missingFiles++;
-            issues.add('笔记 ${ref.quoteId} 引用的文件不存在: ${ref.mediaPath}');
+          switch (checkResult) {
+            case _FileCheckResult.exists:
+              break;
+            case _FileCheckResult.missing:
+              missingFiles++;
+              issues.add('笔记 ${ref.quoteId} 引用的文件不存在: ${ref.mediaPath}');
+              break;
+            case _FileCheckResult.error:
+              checkFailedFiles++;
+              issues.add('笔记 ${ref.quoteId} 引用的文件存在性检查失败: ${ref.mediaPath}');
+              break;
           }
         }
       }
 
       results['checkedReferences'] = checkedReferences;
       results['missingFiles'] = missingFiles;
+      results['checkFailedFiles'] = checkFailedFiles;
       results['issues'] = issues;
-      results['isHealthy'] = missingFiles == 0;
+      results['isHealthy'] = missingFiles == 0 && checkFailedFiles == 0;
 
       logDebug('媒体文件完整性验证完成: $results');
       return results;
@@ -432,4 +460,10 @@ class _MediaRefToCheck {
     required this.mediaPath,
     required this.absolutePath,
   });
+}
+
+enum _FileCheckResult {
+  exists,
+  missing,
+  error,
 }
