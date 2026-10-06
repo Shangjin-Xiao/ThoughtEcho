@@ -303,12 +303,15 @@ class MediaCleanupService {
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = appDir.path;
 
-      // 批量并发处理笔记，避免顺序执行导致的 I/O 阻塞
-      const chunkSize = 50;
-      for (var i = 0; i < quotes.length; i += chunkSize) {
+      // 批量并发处理笔记，拆分提取路径与 I/O 检查
+      final refsToCheck = <_MediaRefToCheck>[];
+      const quoteChunkSize = 50;
+      for (var i = 0; i < quotes.length; i += quoteChunkSize) {
         final chunk = quotes.sublist(
           i,
-          i + chunkSize > quotes.length ? quotes.length : i + chunkSize,
+          i + quoteChunkSize > quotes.length
+              ? quotes.length
+              : i + quoteChunkSize,
         );
 
         final chunkResults = await Future.wait(
@@ -325,17 +328,49 @@ class MediaCleanupService {
           final mediaPaths = chunkResults[j];
 
           for (final mediaPath in mediaPaths) {
-            checkedReferences++;
-
-            // 转换为绝对路径
             final absolutePath = path.isAbsolute(mediaPath)
                 ? mediaPath
                 : path.join(appPath, mediaPath);
+            refsToCheck.add(
+              _MediaRefToCheck(
+                quoteId: quote.id,
+                mediaPath: mediaPath,
+                absolutePath: absolutePath,
+              ),
+            );
+          }
+        }
+      }
 
-            if (!await File(absolutePath).exists()) {
-              missingFiles++;
-              issues.add('笔记 ${quote.id} 引用的文件不存在: $mediaPath');
+      // 按固定批次（如 50 个路径）组合为列表，通过 Future.wait 并行并发执行 File(absolutePath).exists() 判定
+      const ioChunkSize = 50;
+      for (var i = 0; i < refsToCheck.length; i += ioChunkSize) {
+        final chunk = refsToCheck.sublist(
+          i,
+          i + ioChunkSize > refsToCheck.length
+              ? refsToCheck.length
+              : i + ioChunkSize,
+        );
+
+        final existsResults = await Future.wait(
+          chunk.map((ref) async {
+            try {
+              return await File(ref.absolutePath).exists();
+            } catch (e) {
+              logDebug('检查文件存在性异常: ${ref.absolutePath}, 错误: $e');
+              return false;
             }
+          }),
+        );
+
+        for (var j = 0; j < chunk.length; j++) {
+          checkedReferences++;
+          final ref = chunk[j];
+          final exists = existsResults[j];
+
+          if (!exists) {
+            missingFiles++;
+            issues.add('笔记 ${ref.quoteId} 引用的文件不存在: ${ref.mediaPath}');
           }
         }
       }
@@ -385,4 +420,16 @@ class MediaCleanupService {
       return {'error': e.toString()};
     }
   }
+}
+
+class _MediaRefToCheck {
+  final String? quoteId;
+  final String mediaPath;
+  final String absolutePath;
+
+  const _MediaRefToCheck({
+    required this.quoteId,
+    required this.mediaPath,
+    required this.absolutePath,
+  });
 }
