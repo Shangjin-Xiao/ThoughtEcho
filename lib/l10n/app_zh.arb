@@ -3114,7 +3114,7 @@
     }
   },
   "backupCompleteWithWarnings": "备份已完成，但有警告",
-  "backupDeltaFailuresMessage": "{count, plural, other{有 # 条笔记的富文本媒体路径转换失败，这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n受影响的笔记ID：{ids}}}",
+  "backupDeltaFailuresMessage": "{count, plural, other{有 # 条笔记的嵌入图片或媒体路径无法打包，备份文件中仍保留了本机原始路径。若还原到其他设备，相关图片可能无法直接显示。\n\n涉及笔记：{ids}}}",
   "@backupDeltaFailuresMessage": {
     "placeholders": {
       "count": {

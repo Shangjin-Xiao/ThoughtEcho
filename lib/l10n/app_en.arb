@@ -3108,7 +3108,7 @@
     }
   },
   "backupCompleteWithWarnings": "Backup completed, but with warnings",
-  "backupDeltaFailuresMessage": "{count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
+  "backupDeltaFailuresMessage": "{count, plural, =1{1 note contains embedded images or media that could not be packaged, so its original local path was kept. Images may not display if restored on a different device.\n\nAffected note: {ids}} other{# notes contain embedded images or media that could not be packaged, so their original local paths were kept. Images may not display if restored on a different device.\n\nAffected notes: {ids}}}",
   "@backupDeltaFailuresMessage": {
     "placeholders": {
       "count": {
