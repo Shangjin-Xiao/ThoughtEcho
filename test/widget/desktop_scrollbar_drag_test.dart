@@ -42,6 +42,21 @@ class _FakeChatSessionService extends ChatSessionService {
   }
 
   @override
+  Future<List<ChatSession>> getSessionsForNote(String noteId) async {
+    return List.generate(
+      15,
+      (i) => ChatSession(
+        id: 'note_s$i',
+        noteId: noteId,
+        title: 'Note Session $i',
+        sessionType: 'note',
+        createdAt: DateTime.now().subtract(Duration(days: i)),
+        lastActiveAt: DateTime.now().subtract(Duration(days: i)),
+      ),
+    );
+  }
+
+  @override
   Future<Map<String, ChatSessionOverview>> getSessionOverviews(
     List<String> sessionIds,
   ) async {
@@ -56,21 +71,22 @@ class _FakeChatSessionService extends ChatSessionService {
     String query, {
     int limit = 20,
   }) async {
-    return [
-      ChatSessionSearchResult(
+    return List.generate(
+      20,
+      (i) => ChatSessionSearchResult(
         session: ChatSession(
-          id: 's0',
-          title: 'Session 0',
+          id: 'search_s$i',
+          title: 'Search Session $i',
           sessionType: 'explore',
-          createdAt: DateTime.now(),
-          lastActiveAt: DateTime.now(),
+          createdAt: DateTime.now().subtract(Duration(days: i)),
+          lastActiveAt: DateTime.now().subtract(Duration(days: i)),
         ),
-        snippet: 'Search snippet for $query',
+        snippet: 'Search snippet $i for $query',
         isTruncated: false,
         matchStart: 0,
         matchEnd: query.length,
       ),
-    ];
+    );
   }
 }
 
@@ -440,7 +456,7 @@ void main() {
   });
 
   testWidgets(
-      'SessionHistoryPage resets scroll position when search query is entered',
+      'SessionHistoryPage resets scroll position when search query is entered and cleared',
       (tester) async {
     final fakeService = _FakeChatSessionService();
 
@@ -470,13 +486,14 @@ void main() {
           .first,
     );
 
-    // Drag down to scroll
+    // 1. Drag down initial list
     await tester.drag(listViewFinder, const Offset(0, -300),
         kind: PointerDeviceKind.mouse);
     await tester.pumpAndSettle();
 
     expect(scrollableState.position.pixels, greaterThan(0.0));
 
+    // 2. Enter search query -> search results (20 items) shown, reset to 0.0
     await tester.enterText(find.byType(SearchBar), 'Session');
     await tester.pumpAndSettle();
 
@@ -488,5 +505,97 @@ void main() {
           .first,
     );
     expect(searchScrollableState.position.pixels, equals(0.0));
+
+    // 3. Scroll search results list down -> offset > 0.0
+    await tester.drag(searchListViewFinder, const Offset(0, -300),
+        kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(searchScrollableState.position.pixels, greaterThan(0.0));
+
+    // 4. Tap clear search button -> reset to 0.0 and restore main list
+    await tester.tap(find.byIcon(Icons.clear));
+    await tester.pumpAndSettle();
+
+    final restoredListViewFinder = find.byType(ListView).first;
+    final restoredScrollableState = tester.state<ScrollableState>(
+      find
+          .descendant(
+              of: restoredListViewFinder, matching: find.byType(Scrollable))
+          .first,
+    );
+    expect(restoredScrollableState.position.pixels, equals(0.0));
+  });
+
+  testWidgets(
+      'SessionHistoryPage resets scroll position when toggling session scope group',
+      (tester) async {
+    final fakeService = _FakeChatSessionService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        scrollBehavior: const AppScrollBehavior(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        home: SessionHistoryPage(
+          noteId: 'note_1',
+          currentSessionId: null,
+          chatSessionService: fakeService,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final listViewFinder = find.byType(ListView).first;
+    final scrollableState = tester.state<ScrollableState>(
+      find
+          .descendant(of: listViewFinder, matching: find.byType(Scrollable))
+          .first,
+    );
+
+    // 1. Scroll "This Note" sessions list down
+    await tester.drag(listViewFinder, const Offset(0, -300),
+        kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(scrollableState.position.pixels, greaterThan(0.0));
+
+    // 2. Switch scope to "All Chats" ChoiceChip
+    final allChatsChip = find.byType(ChoiceChip).last;
+    await tester.tap(allChatsChip);
+    await tester.pumpAndSettle();
+
+    // Verify scroll position was reset to top
+    final allChatsScrollableState = tester.state<ScrollableState>(
+      find
+          .descendant(
+              of: find.byType(ListView).first,
+              matching: find.byType(Scrollable))
+          .first,
+    );
+    expect(allChatsScrollableState.position.pixels, equals(0.0));
+
+    // 3. Scroll "All Chats" list down
+    await tester.drag(find.byType(ListView).first, const Offset(0, -300),
+        kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(allChatsScrollableState.position.pixels, greaterThan(0.0));
+
+    // 4. Switch scope back to "This Note" ChoiceChip
+    final thisNoteChip = find.byType(ChoiceChip).first;
+    await tester.tap(thisNoteChip);
+    await tester.pumpAndSettle();
+
+    final thisNoteScrollableState = tester.state<ScrollableState>(
+      find
+          .descendant(
+              of: find.byType(ListView).first,
+              matching: find.byType(Scrollable))
+          .first,
+    );
+    expect(thisNoteScrollableState.position.pixels, equals(0.0));
   });
 }
