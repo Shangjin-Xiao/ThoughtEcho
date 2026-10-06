@@ -260,10 +260,10 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     return false;
   }
 
-  Future<void> _saveContent() async {
+  Future<bool> _saveContent({bool popOnSuccess = true}) async {
     // Set the guard before the first await so every save entry point, including
     // the app-bar action, is protected from rapid repeated taps.
-    if (_mediaState.isSaving) return;
+    if (_mediaState.isSaving) return false;
     _mediaState.isSaving = true;
 
     _editorState.cancelDraftSave();
@@ -327,7 +327,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       }
       _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
-      return;
+      return false;
     }
 
     try {
@@ -349,7 +349,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       }
       _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
-      return;
+      return false;
     } catch (e) {
       logDebug('获取文档内容失败: $e');
       await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
@@ -358,7 +358,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       }
       _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
-      return;
+      return false;
     }
 
     final now = DateTime.now().toIso8601String();
@@ -431,7 +431,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               _updateFailureMessage(l10n, updateResult),
             );
           }
-          return;
+          return false;
         }
         _editorState.cancelDraftSave();
         await _clearDraft();
@@ -446,7 +446,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               duration: AppConstants.snackBarDurationImportant,
             ),
           );
-          Navigator.of(context).pop(true);
+          if (popOnSuccess) {
+            Navigator.of(context).pop(true);
+          }
         }
       } else {
         logDebug('添加新笔记');
@@ -464,7 +466,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               duration: AppConstants.snackBarDurationImportant,
             ),
           );
-          Navigator.of(context).pop(true);
+          if (popOnSuccess) {
+            Navigator.of(context).pop(true);
+          }
         }
       }
     } catch (e) {
@@ -492,6 +496,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         });
       }
     }
+    return saveSucceeded;
   }
 
   String _updateFailureMessage(
