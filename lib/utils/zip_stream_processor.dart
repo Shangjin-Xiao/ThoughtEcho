@@ -436,8 +436,7 @@ class ZipStreamProcessor {
     try {
       final archive = ZipDecoder().decodeStream(inputStream);
 
-      final targetSanitized =
-          PathSecurityUtils.sanitizeZipEntryName(fileName);
+      final targetSanitized = PathSecurityUtils.sanitizeZipEntryName(fileName);
       for (final file in archive) {
         if (PathSecurityUtils.sanitizeZipEntryName(file.name) ==
             targetSanitized) {

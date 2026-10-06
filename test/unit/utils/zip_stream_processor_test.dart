@@ -64,10 +64,11 @@ void main() {
       final extractedBytes =
           await ZipStreamProcessor.extractFileToMemory(zipPath, 'test1.txt');
       expect(extractedBytes, isNotNull);
-      expect(String.fromCharCodes(extractedBytes!), equals('hello isolate world'));
+      expect(
+          String.fromCharCodes(extractedBytes!), equals('hello isolate world'));
 
-      final nonExistentBytes = await ZipStreamProcessor.extractFileToMemory(
-          zipPath, 'missing.txt');
+      final nonExistentBytes =
+          await ZipStreamProcessor.extractFileToMemory(zipPath, 'missing.txt');
       expect(nonExistentBytes, isNull);
     });
 
