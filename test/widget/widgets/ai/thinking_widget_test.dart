@@ -207,6 +207,112 @@ void main() {
       expect(find.text('流式思考中...完整终极推导结论。'), findsOneWidget);
     });
 
+    testWidgets(
+        'flushes pending debounced text immediately when inProgress turns false without text change',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '初始文本',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      // 1. 传入最后一块文本，启动 100ms 防抖 Timer
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '初始文本 + 最后块',
+            inProgress: true,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 10));
+
+      // 文本尚未到达 100ms 防抖点
+      expect(find.text('初始文本'), findsOneWidget);
+
+      // 2. 随后单独更新翻转 inProgress 标志（文本未变）
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '初始文本 + 最后块',
+            inProgress: false,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 点击展开查看最新文本
+      await tester.tap(find.byType(InkWell));
+      await tester.pumpAndSettle();
+
+      // 应立即刷入最后块文本，无需滞后等待 100ms 防抖 Timer
+      expect(find.text('初始文本 + 最后块'), findsOneWidget);
+    });
+
+    testWidgets(
+        'syncs text immediately when text becomes shorter or non-prefix growth',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '上一轮思考过程文本',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      expect(find.text('上一轮思考过程文本'), findsOneWidget);
+
+      // 传入非前缀增长的新文本（如开启新一轮思考）
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '新一轮',
+            inProgress: true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 应该立即同步新文本，不闪现旧文
+      expect(find.text('新一轮'), findsOneWidget);
+    });
+
+    testWidgets(
+        'keeps content resident during collapse animation without instant vanishing',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '正在折叠的内容',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      expect(find.text('正在折叠的内容'), findsOneWidget);
+
+      // 点击折叠触发动画
+      await tester.tap(find.byType(InkWell));
+      await tester.pump(); // 1st frame to start animation
+
+      // 前进 100ms (动画播放过半，200ms 总时长)
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 动画过程中，内容保持常驻，不应在第一帧就替换为空盒
+      expect(find.text('正在折叠的内容'), findsOneWidget);
+
+      // 完成剩余 100ms 动画 (总时长 200ms)
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // 动画完成后完全折叠 (Offstage)
+      expect(find.byType(MarkdownBody), findsNothing);
+    });
+
     testWidgets('cancels debounce timer cleanly on dispose without throwing',
         (WidgetTester tester) async {
       await tester.pumpWidget(

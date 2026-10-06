@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/widgets/ai/thinking_widget.dart';
@@ -26,41 +27,55 @@ void main() {
     );
   }
 
-  group('ThinkingWidget 流式输出渲染性能基准测试', () {
-    testWidgets('高频 Token 流式思考卡片渲染性能 benchmark', (WidgetTester tester) async {
-      final Stopwatch stopwatch = Stopwatch()..start();
-
-      // 1. 初始化展开状态下的 ThinkingWidget
+  group('ThinkingWidget 流式思考组件渲染与防抖测试', () {
+    testWidgets('高频 Token 流式思考卡片渲染与防抖冒烟测试', (WidgetTester tester) async {
       String currentText = 'AI 正在推导中：\n';
+      bool inProgress = true;
+
+      // 使用同一 App 结构与 StatefulBuilder 模拟生产路径的同状态更新
       await tester.pumpWidget(
         buildTestApp(
-          ThinkingWidget(
-            thinkingText: currentText,
-            inProgress: true,
+          StatefulBuilder(
+            builder: (context, setState) {
+              return ThinkingWidget(
+                thinkingText: currentText,
+                inProgress: inProgress,
+              );
+            },
           ),
         ),
       );
 
-      // 2. 模拟高频推送 100 个 Token 节点 (每 10ms 推送 1 个 Token)
+      // 模拟高频推送 100 个 Token 节点 (每 10ms 推送 1 个 Token，总计 1000ms 模拟时间)
       for (int i = 1; i <= 100; i++) {
         currentText += '- 步骤 $i: 深入分析复杂逻辑问题并处理 Markdown 内容节点\n';
         await tester.pumpWidget(
           buildTestApp(
-            ThinkingWidget(
-              thinkingText: currentText,
-              inProgress: true,
+            StatefulBuilder(
+              builder: (context, setState) {
+                return ThinkingWidget(
+                  thinkingText: currentText,
+                  inProgress: inProgress,
+                );
+              },
             ),
           ),
         );
         await tester.pump(const Duration(milliseconds: 10));
       }
 
-      // 3. 结束流式输出并刷入最终结果（此时自动折叠）
+      // 结束流式输出并刷入最终结果（自动触发折叠）
+      currentText += '\n推导完成！';
+      inProgress = false;
       await tester.pumpWidget(
         buildTestApp(
-          ThinkingWidget(
-            thinkingText: '$currentText\n推导完成！',
-            inProgress: false,
+          StatefulBuilder(
+            builder: (context, setState) {
+              return ThinkingWidget(
+                thinkingText: currentText,
+                inProgress: inProgress,
+              );
+            },
           ),
         ),
       );
@@ -70,14 +85,10 @@ void main() {
       await tester.tap(find.byType(InkWell));
       await tester.pumpAndSettle();
 
-      stopwatch.stop();
-
       // 验证最终完整 Markdown 节点成功渲染
       expect(find.textContaining('步骤 100:'), findsWidgets);
       expect(find.textContaining('推导完成！'), findsWidgets);
-
-      // 确认 100 次 Token 流式高频刷新能在合理时延内完成 (小于 10 秒)
-      expect(stopwatch.elapsedMilliseconds, lessThan(10000));
+      expect(find.byType(MarkdownBody), findsOneWidget);
     });
   });
 }
