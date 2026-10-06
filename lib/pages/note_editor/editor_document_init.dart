@@ -132,7 +132,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           loadedDoc: document,
           baselineWindowDelta: _editorState.baselineWindowDelta,
           currentWindowDelta: _editorState.controller.document.toDelta(),
-          isDirty: _editorState.isDirty,
         );
         _updateState(() {
           _editorState.replaceController(
@@ -267,7 +266,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           loadedDoc: document,
           baselineWindowDelta: _editorState.baselineWindowDelta,
           currentWindowDelta: _editorState.controller.document.toDelta(),
-          isDirty: _editorState.isDirty,
         );
         _updateState(() {
           _editorState.replaceController(
@@ -345,7 +343,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           loadedDoc: document,
           baselineWindowDelta: _editorState.baselineWindowDelta,
           currentWindowDelta: _editorState.controller.document.toDelta(),
-          isDirty: _editorState.isDirty,
         );
         _updateState(() {
           _editorState.replaceController(
@@ -387,7 +384,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           loadedDoc: placeholderDocument,
           baselineWindowDelta: _editorState.baselineWindowDelta,
           currentWindowDelta: _editorState.controller.document.toDelta(),
-          isDirty: _editorState.isDirty,
         );
         _updateState(() {
           _editorState.replaceController(
@@ -420,7 +416,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           loadedDoc: document,
           baselineWindowDelta: _editorState.baselineWindowDelta,
           currentWindowDelta: _editorState.controller.document.toDelta(),
-          isDirty: _editorState.isDirty,
           ignorePlaceholder: loadingMessage,
         );
         _updateState(() {

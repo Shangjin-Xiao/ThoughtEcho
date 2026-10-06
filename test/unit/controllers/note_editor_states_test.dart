@@ -105,7 +105,8 @@ void main() {
       state.dispose();
     });
 
-    test('dirty state tracking and document versioning on edit', () async {
+    test('dirty state tracking and document versioning on edit is synchronous',
+        () {
       final state = NoteEditorState(
         initialPlainText: 'test',
         initialDeltaContent: null,
@@ -116,11 +117,17 @@ void main() {
       expect(state.isDirty, isFalse);
       final initialVersion = state.documentVersion;
 
+      // Edit happens synchronously
       state.controller.replaceText(0, 0, 'new content ', null);
-      await Future<void>.delayed(Duration.zero);
 
+      // Must be dirty immediately with no async microtask/delay
       expect(state.isDirty, isTrue);
       expect(state.documentVersion, greaterThan(initialVersion));
+
+      // Immediate replaceController without delay must read accurate wasDirty
+      final newController = quill.QuillController.basic();
+      state.replaceController(newController);
+      expect(state.isDirty, isTrue);
 
       state.markDraftSaved();
       expect(state.isDirty, isFalse);
@@ -392,7 +399,6 @@ void main() {
         loadedDoc: loadedDoc,
         baselineWindowDelta: state.baselineWindowDelta,
         currentWindowDelta: state.controller.document.toDelta(),
-        isDirty: state.isDirty,
       );
 
       expect(mergedDoc.toPlainText().contains('Loaded content'), isTrue);
@@ -430,7 +436,6 @@ void main() {
         loadedDoc: placeholderDocument,
         baselineWindowDelta: state.baselineWindowDelta,
         currentWindowDelta: state.controller.document.toDelta(),
-        isDirty: state.isDirty,
       );
 
       state.replaceController(
@@ -457,7 +462,6 @@ void main() {
         loadedDoc: largeLoadedDoc,
         baselineWindowDelta: state.baselineWindowDelta,
         currentWindowDelta: state.controller.document.toDelta(),
-        isDirty: state.isDirty,
         ignorePlaceholder: loadingMessage,
       );
 
@@ -501,7 +505,6 @@ void main() {
         loadedDoc: loadedDoc,
         baselineWindowDelta: state.baselineWindowDelta,
         currentWindowDelta: state.controller.document.toDelta(),
-        isDirty: state.isDirty,
       );
 
       // replaceController with mergedDoc and pass loadedDelta as clean baseline

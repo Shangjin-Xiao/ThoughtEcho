@@ -23,7 +23,6 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           loadedDoc: doc,
           baselineWindowDelta: _editorState.baselineWindowDelta,
           currentWindowDelta: _editorState.controller.document.toDelta(),
-          isDirty: _editorState.isDirty,
         );
         _updateState(() {
           _editorState.replaceController(
@@ -72,7 +71,6 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           loadedDoc: doc,
           baselineWindowDelta: _editorState.baselineWindowDelta,
           currentWindowDelta: _editorState.controller.document.toDelta(),
-          isDirty: _editorState.isDirty,
         );
         _updateState(() {
           _editorState.replaceController(

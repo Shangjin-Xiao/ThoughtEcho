@@ -20,6 +20,7 @@ class NoteEditorState extends ChangeNotifier {
         _controller = quill.QuillController.basic() {
     _savedDocumentDelta = _controller.document.toDelta();
     _savedDocumentLength = _getDeltaCharacterLength(_savedDocumentDelta!);
+    _lastKnownDocDelta = _savedDocumentDelta;
     _baselineWindowDelta = _savedDocumentDelta;
     _subscribeToDocChanges();
   }
@@ -47,7 +48,7 @@ class NoteEditorState extends ChangeNotifier {
   Delta? _savedDocumentDelta;
   int _savedDocumentLength = 0;
   Delta? _baselineWindowDelta;
-  StreamSubscription<quill.DocChange>? _docChangeSubscription;
+  Delta? _lastKnownDocDelta;
 
   static int _getDeltaCharacterLength(Delta delta) {
     int len = 0;
@@ -106,6 +107,7 @@ class NoteEditorState extends ChangeNotifier {
     final delta = _controller.document.toDelta();
     _savedDocumentDelta = delta;
     _savedDocumentLength = _getDeltaCharacterLength(delta);
+    _lastKnownDocDelta = delta;
   }
 
   void markClean() {
@@ -115,32 +117,43 @@ class NoteEditorState extends ChangeNotifier {
     final delta = _controller.document.toDelta();
     _savedDocumentDelta = delta;
     _savedDocumentLength = _getDeltaCharacterLength(delta);
+    _lastKnownDocDelta = delta;
   }
 
   void _subscribeToDocChanges() {
-    _docChangeSubscription?.cancel();
-    _docChangeSubscription = _controller.changes.listen((event) {
-      if (_disposed) return;
-      _documentVersion++;
-      final savedDelta = _savedDocumentDelta;
-      if (savedDelta != null) {
-        final currentLength = _controller.document.length;
-        if (currentLength == _savedDocumentLength) {
-          if (_controller.document.toDelta() == savedDelta) {
-            if (_isDirty || _documentVersion != _savedDocumentVersion) {
-              _isDirty = false;
-              _savedDocumentVersion = _documentVersion;
-              notifyListeners();
-            }
-            return;
+    _controller.addListener(_onDocChanged);
+  }
+
+  void _unsubscribeFromDocChanges() {
+    _controller.removeListener(_onDocChanged);
+  }
+
+  void _onDocChanged() {
+    if (_disposed) return;
+    final currentDelta = _controller.document.toDelta();
+    if (_lastKnownDocDelta != null && _lastKnownDocDelta == currentDelta) {
+      return;
+    }
+    _lastKnownDocDelta = currentDelta;
+    _documentVersion++;
+    final savedDelta = _savedDocumentDelta;
+    if (savedDelta != null) {
+      final currentLength = _controller.document.length;
+      if (currentLength == _savedDocumentLength) {
+        if (currentDelta == savedDelta) {
+          if (_isDirty || _documentVersion != _savedDocumentVersion) {
+            _isDirty = false;
+            _savedDocumentVersion = _documentVersion;
+            notifyListeners();
           }
+          return;
         }
       }
-      if (!_isDirty) {
-        _isDirty = true;
-        notifyListeners();
-      }
-    });
+    }
+    if (!_isDirty) {
+      _isDirty = true;
+      notifyListeners();
+    }
   }
 
   void incrementSessionGeneration() {
@@ -178,13 +191,14 @@ class NoteEditorState extends ChangeNotifier {
     if (draftChangeListener != null) {
       _controller.removeListener(draftChangeListener);
     }
-    _docChangeSubscription?.cancel();
+    _unsubscribeFromDocChanges();
     _controller.dispose();
     _controller = controller;
     if (draftChangeListener != null) {
       _controller.addListener(draftChangeListener);
     }
     _subscribeToDocChanges();
+    _lastKnownDocDelta = _controller.document.toDelta();
 
     if (savedDocumentDelta != null) {
       _savedDocumentDelta = savedDocumentDelta;
@@ -261,7 +275,7 @@ class NoteEditorState extends ChangeNotifier {
     _disposed = true;
     _draftSaveTimer?.cancel();
     _sessionGeneration++;
-    _docChangeSubscription?.cancel();
+    _unsubscribeFromDocChanges();
     final draftChangeListener = _draftChangeListener;
     if (draftChangeListener != null) {
       _controller.removeListener(draftChangeListener);
@@ -756,7 +770,6 @@ quill.Document appendWindowInput({
   required quill.Document loadedDoc,
   required Delta baselineWindowDelta,
   required Delta currentWindowDelta,
-  bool isDirty = true,
   String? ignorePlaceholder,
 }) {
   final windowDiff = baselineWindowDelta.diff(currentWindowDelta);
