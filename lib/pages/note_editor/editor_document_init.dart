@@ -108,31 +108,55 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     if (!_editorState.isDirty) {
       return loadedDoc;
     }
-    final oldPlainText = _editorState.controller.document.toPlainText();
-    var cleanedOldText = oldPlainText;
-    if (ignorePlaceholder != null && ignorePlaceholder.isNotEmpty) {
-      cleanedOldText = cleanedOldText.replaceAll(ignorePlaceholder, '');
-    }
-    cleanedOldText = cleanedOldText.trim();
-    final initialText = _editorState.initialPlainText.trim();
 
-    if (cleanedOldText.isEmpty || cleanedOldText == initialText) {
+    final baselineDelta = _editorState.baselineWindowDelta;
+    final currentDelta = _editorState.controller.document.toDelta();
+
+    final windowDiff = baselineDelta.diff(currentDelta);
+    if (windowDiff.isEmpty) {
       return loadedDoc;
     }
 
-    final loadedPlainText = loadedDoc.toPlainText().trim();
-    if (loadedPlainText.contains(cleanedOldText)) {
+    final insertOps = <Operation>[];
+    for (final op in windowDiff.operations) {
+      if (op.isInsert) {
+        final data = op.data;
+        if (data is String) {
+          var cleaned = data;
+          if (ignorePlaceholder != null && ignorePlaceholder.isNotEmpty) {
+            cleaned = cleaned.replaceAll(ignorePlaceholder, '');
+          }
+          if (cleaned.isNotEmpty) {
+            insertOps.add(Operation.insert(cleaned, op.attributes));
+          }
+        } else {
+          insertOps.add(op);
+        }
+      }
+    }
+
+    if (insertOps.isEmpty) {
       return loadedDoc;
     }
 
-    final mergedDoc = quill.Document.fromDelta(loadedDoc.toDelta());
-    final insertOffset = mergedDoc.length > 0 ? mergedDoc.length - 1 : 0;
-    if (insertOffset > 0 && !mergedDoc.toPlainText().endsWith('\n')) {
-      mergedDoc.insert(insertOffset, '\n$cleanedOldText');
-    } else {
-      mergedDoc.insert(insertOffset, '$cleanedOldText\n');
+    if (loadedDoc.length <= 1) {
+      return quill.Document.fromDelta(currentDelta);
     }
-    return mergedDoc;
+
+    final loadedDelta = loadedDoc.toDelta();
+    final insertOffset = loadedDoc.length > 0 ? loadedDoc.length - 1 : 0;
+
+    final changeDelta = Delta();
+    if (insertOffset > 0) {
+      changeDelta.retain(insertOffset);
+    }
+
+    for (final op in insertOps) {
+      changeDelta.push(op);
+    }
+
+    final mergedDelta = loadedDelta.compose(changeDelta);
+    return quill.Document.fromDelta(mergedDelta);
   }
 
   /// P2 Fallback: 从纯文本生成富文本表示
@@ -396,12 +420,15 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
           _editorState.controller.selection,
           placeholderDocument.length,
         );
+        final finalPlaceholderDoc =
+            _mergeWindowInputIfNeeded(placeholderDocument);
         _updateState(() {
           _editorState.replaceController(
             quill.QuillController(
-              document: placeholderDocument,
+              document: finalPlaceholderDoc,
               selection: selection,
             ),
+            newBaselineWindowDelta: placeholderDocument.toDelta(),
           );
           _attachDraftListener();
         });

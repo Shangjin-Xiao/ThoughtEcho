@@ -1,9 +1,60 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/note_editor_states.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+
+quill.Document mergeWindowInput(
+  quill.Document loadedDoc,
+  Delta baselineDelta,
+  Delta currentDelta, {
+  String? ignorePlaceholder,
+}) {
+  final windowDiff = baselineDelta.diff(currentDelta);
+  if (windowDiff.isEmpty) return loadedDoc;
+
+  final insertOps = <Operation>[];
+  for (final op in windowDiff.operations) {
+    if (op.isInsert) {
+      final data = op.data;
+      if (data is String) {
+        var cleaned = data;
+        if (ignorePlaceholder != null && ignorePlaceholder.isNotEmpty) {
+          cleaned = cleaned.replaceAll(ignorePlaceholder, '');
+        }
+        if (cleaned.isNotEmpty) {
+          insertOps.add(Operation.insert(cleaned, op.attributes));
+        }
+      } else {
+        insertOps.add(op);
+      }
+    }
+  }
+
+  if (insertOps.isEmpty) return loadedDoc;
+
+  if (loadedDoc.length <= 1) {
+    return quill.Document.fromDelta(currentDelta);
+  }
+
+  final loadedDelta = loadedDoc.toDelta();
+  final insertOffset = loadedDoc.length > 0 ? loadedDoc.length - 1 : 0;
+
+  final changeDelta = Delta();
+  if (insertOffset > 0) {
+    changeDelta.retain(insertOffset);
+  }
+
+  for (final op in insertOps) {
+    changeDelta.push(op);
+  }
+
+  final mergedDelta = loadedDelta.compose(changeDelta);
+  return quill.Document.fromDelta(mergedDelta);
+}
 
 void main() {
   group('NoteEditorState', () {
@@ -337,6 +388,210 @@ void main() {
 
       // Must remain dirty!
       expect(state.isDirty, isTrue);
+
+      state.dispose();
+    });
+
+    test('undo back to saved baseline reverts isDirty to false', () async {
+      final doc = quill.Document()..insert(0, 'hello');
+      final state = NoteEditorState(
+        initialPlainText: 'hello',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_undo_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 5),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // User types text
+      state.controller.replaceText(5, 0, ' world', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // User undoes text back to initial state
+      state.controller.replaceText(5, 6, '', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'window input merge preserves rich text formatting and inserts losslessly',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: 'initial text',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_merge_key',
+        restoredFromDraft: false,
+      );
+
+      // Simulate user typing formatted rich text during loading window
+      state.controller.replaceText(0, 0, 'Window ', null);
+      state.controller.formatText(0, 6, quill.Attribute.bold);
+
+      // Baseline window delta before merge
+      final baselineDelta = state.baselineWindowDelta;
+      final currentDelta = state.controller.document.toDelta();
+      final windowDiff = baselineDelta.diff(currentDelta);
+
+      // Loaded document from async DB
+      final loadedDoc = quill.Document()..insert(0, 'Loaded content\n');
+
+      final changeDelta = Delta()..retain(loadedDoc.length - 1);
+      for (final op in windowDiff.operations) {
+        changeDelta.push(op);
+      }
+      final mergedDelta = loadedDoc.toDelta().compose(changeDelta);
+      final mergedDoc = quill.Document.fromDelta(mergedDelta);
+
+      expect(mergedDoc.toPlainText().contains('Loaded content'), isTrue);
+      expect(mergedDoc.toPlainText().contains('Window '), isTrue);
+      expect(
+        mergedDelta.toJson().any((op) => op['attributes']?['bold'] == true),
+        isTrue,
+      );
+
+      state.dispose();
+    });
+
+    test(
+        'chunked loading placeholder preserves window typing before and during replacement',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_chunked_key',
+        restoredFromDraft: false,
+      );
+
+      // User types before placeholder arrives
+      state.controller.replaceText(0, 0, 'Pre-placeholder text. ', null);
+
+      // Placeholder is created
+      const loadingMessage = 'Loading large document...';
+      final placeholderDocument = quill.Document()..insert(0, loadingMessage);
+
+      // Baseline before placeholder swap
+      final baselineDelta = state.baselineWindowDelta;
+      final currentDelta = state.controller.document.toDelta();
+      final windowDiff = baselineDelta.diff(currentDelta);
+
+      // Merge pre-placeholder text into placeholder doc
+      final changeDelta = Delta()..retain(placeholderDocument.length - 1);
+      for (final op in windowDiff.operations) {
+        changeDelta.push(op);
+      }
+      final mergedPlaceholder = quill.Document.fromDelta(
+        placeholderDocument.toDelta().compose(changeDelta),
+      );
+
+      state.replaceController(
+        quill.QuillController(
+          document: mergedPlaceholder,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        newBaselineWindowDelta: placeholderDocument.toDelta(),
+      );
+
+      // User types while placeholder is shown
+      state.controller.replaceText(
+        state.controller.document.length - 1,
+        0,
+        'Typed during placeholder!',
+        null,
+      );
+
+      // Large document finishes loading
+      final largeLoadedDoc = quill.Document()
+        ..insert(0, 'Full large document content.\n');
+
+      final finalMergedDoc = mergeWindowInput(
+        largeLoadedDoc,
+        state.baselineWindowDelta,
+        state.controller.document.toDelta(),
+        ignorePlaceholder: loadingMessage,
+      );
+
+      expect(
+        finalMergedDoc.toPlainText().contains('Full large document content.'),
+        isTrue,
+      );
+      expect(
+        finalMergedDoc.toPlainText().contains('Pre-placeholder text.'),
+        isTrue,
+      );
+      expect(
+        finalMergedDoc.toPlainText().contains('Typed during placeholder!'),
+        isTrue,
+      );
+      expect(finalMergedDoc.toPlainText().contains(loadingMessage), isFalse);
+
+      state.dispose();
+    });
+
+    test('typing during media file replacement preserves newly typed text',
+        () async {
+      final doc = quill.Document()..insert(0, 'Text before media\n');
+      const tempImagePath = '/tmp/media/temp_123.jpg';
+      const permImagePath = '/perm/media/perm_123.jpg';
+      doc.insert(doc.length - 1, quill.BlockEmbed.image(tempImagePath));
+
+      final state = NoteEditorState(
+        initialPlainText: 'Text before media',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_media_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(quill.QuillController(
+        document: doc,
+        selection: const TextSelection.collapsed(offset: 0),
+      ));
+
+      final processedFiles = <String, String>{tempImagePath: permImagePath};
+
+      // User types while media files are being moved asynchronously
+      state.controller.replaceText(0, 0, 'Typed during media move! ', null);
+
+      // Media process completes and takes latest delta
+      final latestDeltaData = state.controller.document.toDelta().toJson();
+      for (final op in latestDeltaData) {
+        if (op.containsKey('insert') && op['insert'] is Map) {
+          final insertMap = op['insert'] as Map;
+          if (insertMap['image'] == tempImagePath) {
+            insertMap['image'] = processedFiles[tempImagePath];
+          }
+        }
+      }
+
+      final updatedDoc = quill.Document.fromJson(latestDeltaData);
+      state.replaceController(quill.QuillController(
+        document: updatedDoc,
+        selection: const TextSelection.collapsed(offset: 0),
+      ));
+
+      expect(
+        state.controller.document
+            .toPlainText()
+            .contains('Typed during media move!'),
+        isTrue,
+      );
+      expect(
+        state.controller.document.toPlainText().contains('Text before media'),
+        isTrue,
+      );
+      final hasPermImage = state.controller.document.toDelta().toJson().any(
+            (op) =>
+                op['insert'] is Map && op['insert']['image'] == permImagePath,
+          );
+      expect(hasPermImage, isTrue);
 
       state.dispose();
     });

@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill/quill_delta.dart';
 
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/location_service.dart';
@@ -17,6 +18,8 @@ class NoteEditorState extends ChangeNotifier {
     required bool restoredFromDraft,
   })  : _restoredFromDraft = restoredFromDraft,
         _controller = quill.QuillController.basic() {
+    _savedDocumentDelta = _controller.document.toDelta();
+    _baselineWindowDelta = _savedDocumentDelta;
     _subscribeToDocChanges();
   }
 
@@ -40,6 +43,8 @@ class NoteEditorState extends ChangeNotifier {
   bool _isDirty = false;
   int _documentVersion = 0;
   int _savedDocumentVersion = 0;
+  Delta? _savedDocumentDelta;
+  Delta? _baselineWindowDelta;
   StreamSubscription<quill.DocChange>? _docChangeSubscription;
 
   quill.QuillController get controller => _controller;
@@ -58,7 +63,14 @@ class NoteEditorState extends ChangeNotifier {
   bool get hasActiveDraftSaves => _activeDraftSaveFutures.isNotEmpty;
 
   bool get isDirty => _isDirty || _documentVersion != _savedDocumentVersion;
+
   int get documentVersion => _documentVersion;
+  Delta get baselineWindowDelta =>
+      _baselineWindowDelta ?? _controller.document.toDelta();
+
+  void updateBaselineWindowDelta([Delta? delta]) {
+    _baselineWindowDelta = delta ?? _controller.document.toDelta();
+  }
 
   void markDirty() {
     if (_disposed) return;
@@ -74,19 +86,34 @@ class NoteEditorState extends ChangeNotifier {
     _restoredFromDraft = false;
     _isDirty = false;
     _savedDocumentVersion = _documentVersion;
+    _savedDocumentDelta = _controller.document.toDelta();
   }
 
   void markClean() {
     if (_disposed) return;
     _isDirty = false;
     _savedDocumentVersion = _documentVersion;
+    _savedDocumentDelta = _controller.document.toDelta();
   }
 
   void _subscribeToDocChanges() {
     _docChangeSubscription?.cancel();
     _docChangeSubscription = _controller.changes.listen((event) {
       if (_disposed) return;
-      markDirty();
+      _documentVersion++;
+      final savedDelta = _savedDocumentDelta;
+      if (savedDelta != null && _controller.document.toDelta() == savedDelta) {
+        if (_isDirty || _documentVersion != _savedDocumentVersion) {
+          _isDirty = false;
+          _savedDocumentVersion = _documentVersion;
+          notifyListeners();
+        }
+      } else {
+        if (!_isDirty) {
+          _isDirty = true;
+          notifyListeners();
+        }
+      }
     });
   }
 
@@ -112,6 +139,7 @@ class NoteEditorState extends ChangeNotifier {
   void replaceController(
     quill.QuillController controller, {
     bool markCleanIfUnchanged = false,
+    Delta? newBaselineWindowDelta,
   }) {
     if (_disposed) {
       controller.dispose();
@@ -132,9 +160,14 @@ class NoteEditorState extends ChangeNotifier {
     _subscribeToDocChanges();
     if (wasDirty) {
       _isDirty = true;
+      _savedDocumentDelta = null;
     } else if (markCleanIfUnchanged) {
       markClean();
+    } else {
+      _savedDocumentDelta = _controller.document.toDelta();
     }
+    _baselineWindowDelta =
+        newBaselineWindowDelta ?? _controller.document.toDelta();
     notifyListeners();
   }
 
