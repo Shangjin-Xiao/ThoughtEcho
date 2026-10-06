@@ -363,6 +363,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
                         tooltip: l10n.clear,
                         onPressed: () {
                           _searchController.clear();
+                          _resetScrollPosition();
                           setState(() {
                             _searchQuery = '';
                             _searchResults = null;
@@ -371,6 +372,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
                       ),
                   ],
                   onChanged: (value) {
+                    _resetScrollPosition();
                     setState(() => _searchQuery = value);
                     _performSearch(value);
                   },
@@ -459,8 +461,15 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
     );
   }
 
+  void _resetScrollPosition() {
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+  }
+
   void _setShowAllSessions(bool showAll) {
     if (_showAllSessions == showAll) return;
+    _resetScrollPosition();
     setState(() => _showAllSessions = showAll);
     _loadSessions();
   }
