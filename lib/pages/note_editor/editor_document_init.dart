@@ -112,13 +112,16 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final generatedDelta = _generateDeltaFromPlainText(plainText);
 
       if (mounted) {
+        final wasDirty = _editorState.isDirty;
         _updateState(() {
           _editorState.controller = quill.QuillController(
             document: quill.Document.fromJson(generatedDelta),
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _editorState.markClean();
+          if (!wasDirty) {
+            _editorState.markClean();
+          }
         });
         logDebug('从纯文本生成的富文本初始化完成');
       }
@@ -233,13 +236,16 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
+        final wasDirty = _editorState.isDirty;
         _updateState(() {
           _editorState.controller = quill.QuillController(
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _editorState.markClean();
+          if (!wasDirty) {
+            _editorState.markClean();
+          }
           _editorState.richTextLoadFailed = false;
         });
         logDebug('富文本内容直接初始化完成');
@@ -297,13 +303,16 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
+        final wasDirty = _editorState.isDirty;
         _updateState(() {
           _editorState.controller = quill.QuillController(
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _editorState.markClean();
+          if (!wasDirty) {
+            _editorState.markClean();
+          }
           _editorState.richTextLoadFailed = false;
         });
         logDebug('富文本内容后台初始化完成');
@@ -345,13 +354,16 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       // 替换为实际文档
       if (mounted) {
+        final wasDirty = _editorState.isDirty;
         _updateState(() {
           _editorState.controller = quill.QuillController(
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _editorState.markClean();
+          if (!wasDirty) {
+            _editorState.markClean();
+          }
           _editorState.richTextLoadFailed = false;
         });
         logDebug('超大富文本内容分段加载完成');
@@ -424,12 +436,34 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
         final insert = op['insert'];
         if (insert is String) {
           totalChars += insert.length;
+        } else if (insert is Map) {
+          for (final entry in insert.entries) {
+            totalChars += entry.key.toString().length;
+            final val = entry.value;
+            if (val is String) {
+              totalChars += val.length;
+            } else if (val != null) {
+              totalChars += val.toString().length;
+            }
+          }
+          totalChars += 50;
         } else if (insert != null) {
           totalChars += 200; // 嵌入式多媒体节点估算值
         }
         final attributes = op['attributes'];
         if (attributes is Map) {
-          totalChars += attributes.length * 30; // 属性键值开销估算值
+          for (final entry in attributes.entries) {
+            totalChars += entry.key.toString().length;
+            final val = entry.value;
+            if (val is String) {
+              totalChars += val.length;
+            } else if (val is Map || val is List) {
+              totalChars += val.toString().length;
+            } else if (val != null) {
+              totalChars += val.toString().length;
+            }
+            totalChars += 10;
+          }
         }
         totalChars += 30; // JSON 结构开销估算值
       }

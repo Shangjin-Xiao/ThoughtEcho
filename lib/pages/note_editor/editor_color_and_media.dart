@@ -385,15 +385,27 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
 
       // 只有在有变更时才更新编辑器内容
       if (hasChanges) {
+        final selection = _editorState.controller.selection;
         try {
           final newDocument = quill.Document.fromJson(deltaData);
-          _editorState.controller.document = newDocument;
+          _editorState.replaceController(
+            quill.QuillController(
+              document: newDocument,
+              selection: selection,
+            ),
+          );
+          _editorState.markDirty();
           logDebug('临时媒体文件处理完成，共处理 ${processedFiles.length} 个文件');
         } catch (e) {
           logDebug('更新编辑器内容失败，回滚到原始状态: $e');
           // 回滚到原始状态
           final rollbackDocument = quill.Document.fromJson(originalDeltaData);
-          _editorState.controller.document = rollbackDocument;
+          _editorState.replaceController(
+            quill.QuillController(
+              document: rollbackDocument,
+              selection: selection,
+            ),
+          );
           rethrow;
         }
       } else {

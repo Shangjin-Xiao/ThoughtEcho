@@ -246,6 +246,54 @@ void main() {
 
       state.dispose();
     });
+
+    test(
+        'replaceController preserves isDirty if state was dirty prior to replacement',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: 'initial',
+        initialDeltaContent: null,
+        draftStorageKey: 'key_replace_dirty',
+        restoredFromDraft: false,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // Simulate user editing before replacement controller is set
+      state.markDirty();
+      expect(state.isDirty, isTrue);
+
+      final newController = quill.QuillController.basic();
+      state.replaceController(newController);
+
+      // Should preserve dirty state
+      expect(state.isDirty, isTrue);
+
+      state.dispose();
+    });
+
+    test(
+        'disposed NoteEditorState ignores markDirty and replaceController calls',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: 'initial',
+        initialDeltaContent: null,
+        draftStorageKey: 'key_dispose_safe',
+        restoredFromDraft: false,
+      );
+
+      state.dispose();
+
+      expect(state.isDisposed, isTrue);
+
+      // Subsequent markDirty call on disposed state should not throw or notify
+      expect(() => state.markDirty(), returnsNormally);
+
+      // replaceController on disposed state should not throw or notify
+      final newController = quill.QuillController.basic();
+      expect(() => state.replaceController(newController), returnsNormally);
+      newController.dispose();
+    });
   });
 
   group('NoteEditorMetadataState', () {

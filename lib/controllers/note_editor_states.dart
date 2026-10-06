@@ -61,6 +61,7 @@ class NoteEditorState extends ChangeNotifier {
   int get documentVersion => _documentVersion;
 
   void markDirty() {
+    if (_disposed) return;
     _documentVersion++;
     if (!_isDirty) {
       _isDirty = true;
@@ -82,6 +83,7 @@ class NoteEditorState extends ChangeNotifier {
   void _subscribeToDocChanges() {
     _docChangeSubscription?.cancel();
     _docChangeSubscription = _controller.changes.listen((event) {
+      if (_disposed) return;
       markDirty();
     });
   }
@@ -105,7 +107,9 @@ class NoteEditorState extends ChangeNotifier {
   }
 
   void replaceController(quill.QuillController controller) {
+    if (_disposed) return;
     if (identical(_controller, controller)) return;
+    final wasDirty = isDirty;
     final draftChangeListener = _draftChangeListener;
     if (draftChangeListener != null) {
       _controller.removeListener(draftChangeListener);
@@ -117,6 +121,9 @@ class NoteEditorState extends ChangeNotifier {
       _controller.addListener(draftChangeListener);
     }
     _subscribeToDocChanges();
+    if (wasDirty) {
+      _isDirty = true;
+    }
     notifyListeners();
   }
 

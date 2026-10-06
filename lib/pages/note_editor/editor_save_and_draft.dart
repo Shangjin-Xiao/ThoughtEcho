@@ -14,13 +14,16 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         if (contentText.isNotEmpty) {
           doc.insert(0, contentText);
         }
+        final wasDirty = _editorState.isDirty;
         _updateState(() {
           _editorState.controller = quill.QuillController(
             document: doc,
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _editorState.markClean();
+          if (!wasDirty) {
+            _editorState.markClean();
+          }
         });
       }
     } catch (e) {
@@ -49,13 +52,16 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
             }
           }
         }
+        final wasDirty = _editorState.isDirty;
         _updateState(() {
           _editorState.controller = quill.QuillController(
             document: doc,
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _editorState.markClean();
+          if (!wasDirty) {
+            _editorState.markClean();
+          }
         });
       }
     } catch (e) {
