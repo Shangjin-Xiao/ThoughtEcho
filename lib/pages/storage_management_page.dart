@@ -205,7 +205,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     }
   }
 
-  /// 清理孤儿媒体文件
+  /// 清理未关联媒体文件
   Future<void> _cleanupOrphanFiles() async {
     final l10n = AppLocalizations.of(context);
     // 确认对话框
@@ -809,7 +809,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
   /// 构建操作按钮
   /// Windows 平台临时目录是系统共享的，无法准确统计和清理应用缓存
-  /// 因此 Windows 端隐藏清理缓存、清理无用媒体文件和数据库维护优化功能
+  /// 因此 Windows 端隐藏清理缓存、清理未关联媒体文件和数据库维护优化功能
   Widget _buildActionButtons(ColorScheme colorScheme, AppLocalizations l10n) {
     // Windows 平台不显示操作按钮
     if (Platform.isWindows) {
