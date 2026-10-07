@@ -318,6 +318,19 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   Future<void> _loadSession(String sessionId) async {
+    _agentService?.requestStop();
+    _agentEventSubscription?.cancel();
+    _agentEventSubscription = null;
+    _agentRequestGeneration++;
+    _cancelPendingAskUser();
+    _agentService?.setAskUserHandler(null);
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+    _cancelStreamUpdate();
+    _cancelToolProgressUpdate();
+    _isLoading = false;
+    _agentStatusDismissTimer?.cancel();
+
     final generation = ++_sessionLoadGeneration;
     try {
       // 从一个还没说过话的会话跳到历史里的另一段：同上，那一段不留。

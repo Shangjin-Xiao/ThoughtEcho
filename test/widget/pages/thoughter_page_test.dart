@@ -387,6 +387,7 @@ class _FakeAgentService extends AgentService {
     AgentNoteContext? noteContext,
   }) async {
     runCount++;
+    stopRequested = false;
     lastNoteContext = noteContext;
     _setMockState(isRunning: true, statusKey: 'agentThinking');
 
@@ -3363,6 +3364,74 @@ void main() {
       // 释放 pending init，避免未完成的 Future 泄漏
       pendingChatService.initCompleter.complete();
       await tester.pump();
+    });
+
+    testWidgets(
+        'switching sessions during running agent calls requestStop and prevents cross-session contamination',
+        (tester) async {
+      final sessionA = await chatSessionService.createSession(
+        sessionType: 'agent',
+        title: '会话 A',
+      );
+      final sessionB = await chatSessionService.createSession(
+        sessionType: 'agent',
+        title: '会话 B',
+      );
+
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        emitSmartResultCard: true,
+        proposalMetadata: {'title': '会话A提议'},
+        responseChunks: const ['回答片段1', '回答片段2'],
+        responseChunkDelay: const Duration(milliseconds: 50),
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: ThoughterPage(
+            key: const ValueKey('session_switch_agent_stop_page'),
+            session: sessionA,
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final initialStopCount = agentService.stopRequestCount;
+
+      // 在会话 A 中发送消息，启动 Agent
+      await tester.enterText(find.byType(TextField), '在会话A中提问');
+      await tester.tap(find.byIcon(Icons.arrow_upward));
+      await tester.pump();
+
+      expect(agentService.stopRequestCount, equals(initialStopCount));
+
+      // 切换到会话 B
+      final pageState = tester.state(find.byType(ThoughterPage)) as dynamic;
+      unawaited(pageState.debugLoadSessionForTest(sessionB.id) as Future<void>);
+      await tester.pump();
+
+      // 验证在 _loadSession 执行第一步即调用了 requestStop
+      expect(agentService.stopRequestCount, greaterThan(initialStopCount));
+
+      await tester.pumpAndSettle();
+
+      // 检查会话 B 中绝对不含会话 A 的增量回答或卡片
+      final messagesB = await chatSessionService.getMessages(sessionB.id);
+      expect(
+        messagesB.any(
+            (m) => m.content.contains('回答片段') || m.content.contains('在会话A中提问')),
+        isFalse,
+      );
+      expect(
+        messagesB.any((m) {
+          final meta = m.parsedMeta;
+          return meta != null && meta['type'] == NoteProposalArtifact.typeName;
+        }),
+        isFalse,
+      );
     });
   });
 }
