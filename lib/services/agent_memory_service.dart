@@ -297,6 +297,14 @@ class AgentMemoryService extends ChangeNotifier {
   static final RegExp _callMeRegex = RegExp(
     r'''(?:称呼(?:用户|我)?|自称|名字|笔名|别名|叫我|我叫)\s*(?:为|是|叫|：|:)?\s*[「“"'《]?([^「」“”"'\s,，。；;！？!?《》\n（\(]{1,30})[」”"'》]?''',
   );
+  static final RegExp _quoteTrimRegex = RegExp(r'''^[「“"'《]+|[」”"'》]+$''');
+  static final RegExp _punctuationOrSpaceRegex =
+      RegExp(r'''[\s,，。；;！？!?\n「」“”"'《》]''');
+  static final RegExp _punctuationSplitRegex = RegExp(
+    r'[\s,，。、；;:：!！?？"‘’“”()（）\[\]【】<>《》/\\|~`@#$%^&*+=_-]+',
+  );
+  static final RegExp _cjkRegex = RegExp(r'[一-鿿]');
+  static final RegExp _whitespaceCollapseRegex = RegExp(r'\s+');
 
   /// 检查画像指令文本是否包含存疑或待确认标记（如「（存疑）」、「（待确认）」）。
   static bool isDoubtfulOrUnconfirmedDirective(String directive) {
@@ -336,11 +344,10 @@ class AgentMemoryService extends ChangeNotifier {
 
     // 2. 若前两步未提取到且整句极简（1~15 字且无任何标点与结构词），整句可能是裸名字（如 "阿澈"）
     if (result.isEmpty) {
-      final clean =
-          trimmed.replaceAll(RegExp(r'''^[「“"'《]+|[」”"'》]+$'''), '').trim();
+      final clean = trimmed.replaceAll(_quoteTrimRegex, '').trim();
       if (clean.isNotEmpty &&
           clean.length <= 15 &&
-          !clean.contains(RegExp(r'''[\s,，。；;！？!?\n「」“”"'《》]'''))) {
+          !clean.contains(_punctuationOrSpaceRegex)) {
         const structuralKeywords = [
           '用户',
           '称呼',
@@ -919,7 +926,8 @@ class AgentMemoryService extends ChangeNotifier {
       // 逐条折叠内部空白：trigger_phrases 在库里是换行分隔的一列，
       // 留着内部换行会让一条 phrase 在往返后裂成好几条，还绕过 take(8)。
       triggerPhrases: triggerPhrases
-          .map((phrase) => phrase.replaceAll(RegExp(r'\s+'), ' ').trim())
+          .map((phrase) =>
+              phrase.replaceAll(_whitespaceCollapseRegex, ' ').trim())
           .where((phrase) => phrase.isNotEmpty)
           .take(8)
           .toList(growable: false),
@@ -1086,9 +1094,9 @@ class AgentMemoryService extends ChangeNotifier {
     if (normalized.isEmpty) {
       return const <String>[];
     }
+    // 复用编译好的正则表达式，避免高频检索时重复创建与编译 RegExp 对象
     final segments = normalized
-        .split(RegExp(r'[\s,，。、；;:：!！?？"'
-            '‘’“”()（）\\[\\]【】<>《》/\\\\|~`@#\$%^&*+=_-]+'))
+        .split(_punctuationSplitRegex)
         .where((segment) => segment.isNotEmpty)
         .toList();
 
@@ -1109,7 +1117,7 @@ class AgentMemoryService extends ChangeNotifier {
     return keywords.take(12).toList(growable: false);
   }
 
-  static bool _isCjk(String value) => RegExp(r'[一-鿿]').hasMatch(value);
+  static bool _isCjk(String value) => _cjkRegex.hasMatch(value);
 
   // ======================== 全局操作 ========================
 
@@ -1431,7 +1439,7 @@ class AgentMemoryService extends ChangeNotifier {
 
   /// 折叠空白并截断到 [maxChars]。静态方法：画像块渲染（纯函数）也要用。
   static String normalizeMemoryText(String value, int maxChars) {
-    final collapsed = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final collapsed = value.replaceAll(_whitespaceCollapseRegex, ' ').trim();
     if (collapsed.length <= maxChars) {
       return collapsed;
     }
