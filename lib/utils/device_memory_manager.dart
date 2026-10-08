@@ -381,12 +381,8 @@ class DeviceMemoryManager {
 
   /// 停止内存监控
   Future<void> stopMemoryMonitoring() async {
-    if (!_isMonitoring) {
-      return;
-    }
-
     try {
-      if (Platform.isAndroid) {
+      if (_isMonitoring && Platform.isAndroid) {
         const platform = MethodChannel('thoughtecho/memory_info');
         await platform.invokeMethod('stopMemoryMonitoring');
       }
@@ -405,6 +401,12 @@ class DeviceMemoryManager {
     _memoryStatusController ??=
         StreamController<Map<String, dynamic>>.broadcast();
     return _memoryStatusController?.stream;
+  }
+
+  /// 仅用于单元测试触发内存状态更新
+  @visibleForTesting
+  void emitMemoryStatusForTesting(Map<String, dynamic> data) {
+    _memoryStatusController?.add(data);
   }
 
   /// 强制垃圾回收

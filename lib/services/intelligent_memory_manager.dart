@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../utils/device_memory_manager.dart';
 import '../utils/app_logger.dart';
 
@@ -9,14 +10,29 @@ class IntelligentMemoryManager {
   static final IntelligentMemoryManager _instance =
       IntelligentMemoryManager._internal();
   factory IntelligentMemoryManager() => _instance;
-  IntelligentMemoryManager._internal();
 
-  final DeviceMemoryManager _deviceMemoryManager = DeviceMemoryManager();
+  IntelligentMemoryManager._internal()
+      : _deviceMemoryManager = DeviceMemoryManager();
+
+  @visibleForTesting
+  IntelligentMemoryManager.forTesting({
+    DeviceMemoryManager? deviceMemoryManager,
+  }) : _deviceMemoryManager = deviceMemoryManager ?? DeviceMemoryManager();
+
+  final DeviceMemoryManager _deviceMemoryManager;
 
   // 内存监控状态
   bool _isMonitoring = false;
   Timer? _monitoringTimer;
   StreamController<MemoryPressureEvent>? _pressureEventController;
+  StreamSubscription<Map<String, dynamic>>? _nativeMemorySubscription;
+
+  @visibleForTesting
+  StreamSubscription<Map<String, dynamic>>? get nativeMemorySubscription =>
+      _nativeMemorySubscription;
+
+  @visibleForTesting
+  int nativeMemoryUpdateCount = 0;
 
   // 内存压力历史记录
   final List<MemoryPressureRecord> _pressureHistory = [];
@@ -34,6 +50,10 @@ class IntelligentMemoryManager {
     }
 
     _isMonitoring = true;
+
+    // 先取消任何残留的旧订阅
+    await _nativeMemorySubscription?.cancel();
+    _nativeMemorySubscription = null;
 
     // 修复：如果已有旧的 controller，先关闭再创建新的
     await _pressureEventController?.close();
@@ -54,7 +74,8 @@ class IntelligentMemoryManager {
     );
 
     // 监听原生内存状态更新
-    _deviceMemoryManager.memoryStatusStream?.listen((data) {
+    _nativeMemorySubscription =
+        _deviceMemoryManager.memoryStatusStream?.listen((data) {
       _handleNativeMemoryUpdate(data);
     });
   }
@@ -68,6 +89,9 @@ class IntelligentMemoryManager {
     _isMonitoring = false;
     _monitoringTimer?.cancel();
     _monitoringTimer = null;
+
+    await _nativeMemorySubscription?.cancel();
+    _nativeMemorySubscription = null;
 
     await _deviceMemoryManager.stopMemoryMonitoring();
     await _pressureEventController?.close();
@@ -211,6 +235,7 @@ class IntelligentMemoryManager {
 
   /// 处理原生内存更新
   void _handleNativeMemoryUpdate(Map<String, dynamic> data) {
+    nativeMemoryUpdateCount++;
     final pressureLevel = data['pressureLevel'] as int? ?? 0;
 
     // 可以在这里添加更详细的原生内存数据处理逻辑
