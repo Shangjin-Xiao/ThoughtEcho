@@ -310,9 +310,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
               child: Text(l10n.delete),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                _updateState(() {
-                  _metadataState.currentAiAnalysis = null;
-                });
+                _metadataState.currentAiAnalysis = null;
                 setDialogState(() {});
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

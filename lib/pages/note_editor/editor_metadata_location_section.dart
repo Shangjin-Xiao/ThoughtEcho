@@ -101,23 +101,17 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                       _metadataState.location == null &&
                                       _metadataState.latitude == null) {
                                     // 先设置为选中，获取失败后会在回调中取消
-                                    _updateState(() {
-                                      _metadataState.showLocation = true;
-                                    });
+                                    _metadataState.showLocation = true;
                                     setDialogState(() {});
                                     await _fetchLocationForNewNoteWithFailCallback(
                                       () {
                                         // 失败回调：取消选中
-                                        _updateState(() {
-                                          _metadataState.showLocation = false;
-                                        });
+                                        _metadataState.showLocation = false;
                                         setDialogState(() {});
                                       },
                                     );
                                   } else {
-                                    _updateState(() {
-                                      _metadataState.showLocation = value;
-                                    });
+                                    _metadataState.showLocation = value;
                                     setDialogState(() {});
                                   }
                                 },
@@ -175,21 +169,15 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                           // 新建模式
                           if (value && _metadataState.weather == null) {
                             // 先设置为选中，获取失败后会在回调中取消
-                            _updateState(() {
-                              _metadataState.showWeather = true;
-                            });
+                            _metadataState.showWeather = true;
                             setDialogState(() {});
                             await _fetchLocationWeatherWithFailCallback(() {
                               // 失败回调：取消选中
-                              _updateState(() {
-                                _metadataState.showWeather = false;
-                              });
+                              _metadataState.showWeather = false;
                               setDialogState(() {});
                             });
                           } else {
-                            _updateState(() {
-                              _metadataState.showWeather = value;
-                            });
+                            _metadataState.showWeather = value;
                             setDialogState(() {});
                           }
                         },

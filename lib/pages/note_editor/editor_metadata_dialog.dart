@@ -19,8 +19,12 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             void updateMetadataDialogState(VoidCallback fn) {
-              setDialogState(fn);
-              _updateState(() {});
+              fn();
+              if (context.mounted) {
+                setDialogState(() {});
+              } else if (mounted) {
+                _updateState(() {});
+              }
             }
 
             return DraggableScrollableSheet(

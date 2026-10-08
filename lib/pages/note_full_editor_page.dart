@@ -74,6 +74,10 @@ class NoteFullEditorPage extends StatefulWidget {
   /// 保存成功后的回调，携带落库的笔记（用于调用方回写采纳状态）
   final void Function(Quote quote)? onSaved;
 
+  /// 测试辅助：记录 NoteFullEditorPage 的 build 次数
+  @visibleForTesting
+  static int debugBuildCount = 0;
+
   const NoteFullEditorPage({
     super.key,
     required this.initialContent,
@@ -228,7 +232,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   @override
-  Widget build(BuildContext context) => _buildEditorPage(context);
+  Widget build(BuildContext context) {
+    NoteFullEditorPage.debugBuildCount++;
+    return _buildEditorPage(context);
+  }
 
   @override
   void dispose() {
