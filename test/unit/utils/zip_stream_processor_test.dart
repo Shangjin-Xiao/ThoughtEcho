@@ -50,6 +50,44 @@ void main() {
       expect(zipInfo!.fileCount, equals(1));
       expect(zipInfo.fileNames, contains('test1.txt'));
     });
+
+    test('extractFileToMemory extracts file content from valid ZIP in isolate',
+        () async {
+      final existingFile = File('${tempDir.path}/test1.txt');
+      await existingFile.writeAsString('hello isolate world');
+
+      final zipPath = '${tempDir.path}/extract_test.zip';
+      final files = {'test1.txt': existingFile.path};
+
+      await ZipStreamProcessor.createZipStreaming(zipPath, files);
+
+      final extractedBytes =
+          await ZipStreamProcessor.extractFileToMemory(zipPath, 'test1.txt');
+      expect(extractedBytes, isNotNull);
+      expect(
+          String.fromCharCodes(extractedBytes!), equals('hello isolate world'));
+
+      final nonExistentBytes =
+          await ZipStreamProcessor.extractFileToMemory(zipPath, 'missing.txt');
+      expect(nonExistentBytes, isNull);
+    });
+
+    test('getZipInfo returns metadata for multi-file ZIP', () async {
+      final file1 = File('${tempDir.path}/f1.txt')..writeAsStringSync('12345');
+      final file2 = File('${tempDir.path}/f2.txt')..writeAsStringSync('67890');
+
+      final zipPath = '${tempDir.path}/multi.zip';
+      await ZipStreamProcessor.createZipStreaming(zipPath, {
+        'f1.txt': file1.path,
+        'f2.txt': file2.path,
+      });
+
+      final zipInfo = await ZipStreamProcessor.getZipInfo(zipPath);
+      expect(zipInfo, isNotNull);
+      expect(zipInfo!.fileCount, equals(2));
+      expect(zipInfo.uncompressedSize, equals(10));
+      expect(zipInfo.fileNames, containsAll(['f1.txt', 'f2.txt']));
+    });
   });
 
   group('ZipInfo Tests', () {

@@ -335,43 +335,43 @@ class ZipStreamProcessor {
   /// [zipPath] - ZIP文件路径
   static Future<ZipInfo?> getZipInfo(String zipPath) async {
     try {
-      final zipFile = File(zipPath);
-      if (!await zipFile.exists()) {
-        return null;
-      }
-
-      try {
-        // 使用流式解析 ZIP，不将整个文件加载到内存
-        final inputStream = InputFileStream(zipPath);
-        final archive = ZipDecoder().decodeStream(inputStream);
-
-        int totalUncompressedSize = 0;
-        int fileCount = 0;
-        final fileNames = <String>[];
-
-        for (final file in archive) {
-          totalUncompressedSize += file.size;
-          fileCount++;
-          fileNames.add(PathSecurityUtils.sanitizeZipEntryName(file.name));
-        }
-
-        inputStream.closeSync();
-
-        final zipSize = await zipFile.length();
-
-        return ZipInfo(
-          compressedSize: zipSize,
-          uncompressedSize: totalUncompressedSize,
-          fileCount: fileCount,
-          fileNames: fileNames,
-        );
-      } catch (e) {
-        logDebug('ZIP信息获取失败: $zipPath, 错误: $e');
-        return null;
-      }
+      return await compute(_getZipInfoInIsolate, zipPath);
     } catch (e) {
       logDebug('获取ZIP信息失败: $zipPath, 错误: $e');
       return null;
+    }
+  }
+
+  static ZipInfo? _getZipInfoInIsolate(String zipPath) {
+    final zipFile = File(zipPath);
+    if (!zipFile.existsSync()) {
+      return null;
+    }
+
+    final inputStream = InputFileStream(zipPath);
+    try {
+      final archive = ZipDecoder().decodeStream(inputStream);
+
+      int totalUncompressedSize = 0;
+      int fileCount = 0;
+      final fileNames = <String>[];
+
+      for (final file in archive) {
+        totalUncompressedSize += file.size;
+        fileCount++;
+        fileNames.add(PathSecurityUtils.sanitizeZipEntryName(file.name));
+      }
+
+      final zipSize = zipFile.lengthSync();
+
+      return ZipInfo(
+        compressedSize: zipSize,
+        uncompressedSize: totalUncompressedSize,
+        fileCount: fileCount,
+        fileNames: fileNames,
+      );
+    } finally {
+      inputStream.closeSync();
     }
   }
 
@@ -413,50 +413,50 @@ class ZipStreamProcessor {
     String fileName,
   ) async {
     try {
-      final zipFile = File(zipPath);
-      if (!await zipFile.exists()) {
-        return null;
-      }
-
-      try {
-        // 使用流式解码
-        final inputStream = InputFileStream(zipPath);
-        final archive = ZipDecoder().decodeStream(inputStream);
-
-        final targetSanitized =
-            PathSecurityUtils.sanitizeZipEntryName(fileName);
-        for (final file in archive) {
-          if (PathSecurityUtils.sanitizeZipEntryName(file.name) ==
-              targetSanitized) {
-            // 检查文件大小，避免将超大文件加载到内存
-            const largeFileThreshold = 100 * 1024 * 1024; // 100MB
-
-            if (file.size > largeFileThreshold) {
-              inputStream.closeSync();
-              logDebug(
-                '文件过大，无法提取到内存: $fileName (${(file.size / 1024 / 1024).toStringAsFixed(1)}MB)',
-              );
-              throw Exception(
-                '文件过大，无法提取到内存: ${(file.size / 1024 / 1024).toStringAsFixed(1)}MB',
-              );
-            }
-
-            // 对于小文件，可以安全加载到内存
-            final content = Uint8List.fromList(file.content as List<int>);
-            inputStream.closeSync();
-            return content;
-          }
-        }
-
-        inputStream.closeSync();
-        return null;
-      } catch (e) {
-        logDebug('从ZIP提取文件失败: $fileName, 错误: $e');
-        return null;
-      }
+      return await compute(_extractFileToMemoryInIsolate, {
+        'zipPath': zipPath,
+        'fileName': fileName,
+      });
     } catch (e) {
       logDebug('从ZIP提取文件到内存失败: $fileName, 错误: $e');
       return null;
+    }
+  }
+
+  static Uint8List? _extractFileToMemoryInIsolate(Map<String, String> args) {
+    final zipPath = args['zipPath']!;
+    final fileName = args['fileName']!;
+
+    final zipFile = File(zipPath);
+    if (!zipFile.existsSync()) {
+      return null;
+    }
+
+    final inputStream = InputFileStream(zipPath);
+    try {
+      final archive = ZipDecoder().decodeStream(inputStream);
+
+      final targetSanitized = PathSecurityUtils.sanitizeZipEntryName(fileName);
+      for (final file in archive) {
+        if (PathSecurityUtils.sanitizeZipEntryName(file.name) ==
+            targetSanitized) {
+          // 检查文件大小，避免将超大文件加载到内存
+          const largeFileThreshold = 100 * 1024 * 1024; // 100MB
+
+          if (file.size > largeFileThreshold) {
+            throw Exception(
+              '文件过大，无法提取到内存: ${(file.size / 1024 / 1024).toStringAsFixed(1)}MB',
+            );
+          }
+
+          // 对于小文件，可以安全加载到内存
+          return Uint8List.fromList(file.content as List<int>);
+        }
+      }
+
+      return null;
+    } finally {
+      inputStream.closeSync();
     }
   }
 }
