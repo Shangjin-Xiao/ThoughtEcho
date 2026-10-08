@@ -10,10 +10,28 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
                     widget.initialQuote!.content.isNotEmpty)
                 ? widget.initialQuote!.content
                 : widget.initialContent);
+        final doc = quill.Document();
+        if (contentText.isNotEmpty) {
+          doc.insert(0, contentText);
+        }
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          doc.length,
+        );
+        final loadedDelta = doc.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: doc,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+        );
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: quill.Document()..insert(0, contentText),
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            savedDocumentDelta: loadedDelta,
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
         });
@@ -28,50 +46,42 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   void _initializeEmptyDocument() {
     try {
       if (mounted) {
-        _updateState(() {
-          _editorState.controller = quill.QuillController.basic();
-          _attachDraftListener();
-
-          // 尝试安全地添加内容
+        final doc = quill.Document();
+        if (widget.initialContent.isNotEmpty) {
           try {
-            if (widget.initialContent.isNotEmpty) {
-              // 修复：分批添加内容，避免一次性插入大量文本，并正确跟踪插入位置
-              final content = widget.initialContent;
-              const chunkSize = 1000; // 每次插入1000字符
-              int currentInsertPosition = 0; // 跟踪当前插入位置
-
-              for (int i = 0; i < content.length; i += chunkSize) {
-                final end = (i + chunkSize < content.length)
-                    ? i + chunkSize
-                    : content.length;
-                final chunk = content.substring(i, end);
-
-                // 确保插入位置在有效范围内
-                final docLength = _editorState.controller.document.length;
-                final safeInsertPosition = currentInsertPosition.clamp(
-                  0,
-                  docLength - 1,
-                );
-
-                _editorState.controller.document
-                    .insert(safeInsertPosition, chunk);
-
-                // 更新插入位置：当前位置 + 插入的文本长度
-                currentInsertPosition = safeInsertPosition + chunk.length;
-              }
-            }
+            doc.insert(0, widget.initialContent);
           } catch (insertError) {
             logDebug('插入内容失败: $insertError');
-            // 最后的兜底：创建一个包含错误信息的文档
             try {
               final errorMessage = AppLocalizations.of(
                 context,
               ).documentLoadFailed;
-              _editorState.controller.document.insert(0, errorMessage);
+              doc.insert(0, errorMessage);
             } catch (_) {
               // 完全失败，保持空文档
             }
           }
+        }
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          doc.length,
+        );
+        final loadedDelta = doc.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: doc,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+        );
+        _updateState(() {
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            savedDocumentDelta: loadedDelta,
+            markCleanIfUnchanged: true,
+          );
+          _attachDraftListener();
         });
       }
     } catch (e) {
@@ -226,35 +236,19 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     }
 
     // 如果是来自每日一言且内容未修改，不提示未保存（双击每日一言快速进入，不需要提示）
-    final currentPlainText =
-        _editorState.controller.document.toPlainText().trim();
-    if (widget.isFromDailyQuote &&
-        currentPlainText == _editorState.initialPlainText.trim()) {
+    if (widget.isFromDailyQuote && !_editorState.isDirty) {
       return false;
     }
 
-    // 检查主要内容
-    if (currentPlainText != _editorState.initialPlainText.trim()) {
+    // 检查主要正文/样式变更 (O(1) 原地脏标记判断，无需序列化 Delta JSON 或纯文本)
+    if (_editorState.isDirty) {
       return true;
     }
+
     if (_metadataState.hasChanges(
       isExistingNote: widget.initialQuote != null,
     )) {
       return true;
-    }
-
-    // Notes that predate rich text have no persisted Delta. Their plain-text
-    // comparison above is the authoritative change signal until the note is
-    // saved once in the editor; comparing a generated Delta would otherwise
-    // mark an untouched note as edited.
-    final initialDeltaContent = _editorState.initialDeltaContent;
-    if (initialDeltaContent != null) {
-      final currentDeltaContent = jsonEncode(
-        _editorState.controller.document.toDelta().toJson(),
-      );
-      if (currentDeltaContent != initialDeltaContent) {
-        return true;
-      }
     }
 
     return false;

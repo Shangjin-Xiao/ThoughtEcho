@@ -91,6 +91,16 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     }
   }
 
+  TextSelection _clampSelection(TextSelection selection, int docLength) {
+    if (!selection.isValid) {
+      return const TextSelection.collapsed(offset: 0);
+    }
+    final maxOffset = docLength > 0 ? docLength - 1 : 0;
+    final base = selection.baseOffset.clamp(0, maxOffset);
+    final extent = selection.extentOffset.clamp(0, maxOffset);
+    return selection.copyWith(baseOffset: base, extentOffset: extent);
+  }
+
   /// P2 Fallback: 从纯文本生成富文本表示
   /// 确保内容不丢失，即使缺少原始deltaContent
   Future<void> _initializeFromPlainTextFallback(String plainText) async {
@@ -112,10 +122,25 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final generatedDelta = _generateDeltaFromPlainText(plainText);
 
       if (mounted) {
+        final document = quill.Document.fromJson(generatedDelta);
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          document.length,
+        );
+        final loadedDelta = document.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: document,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+        );
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: quill.Document.fromJson(generatedDelta),
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            savedDocumentDelta: loadedDelta,
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
         });
@@ -232,10 +257,24 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          document.length,
+        );
+        final loadedDelta = document.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: document,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+        );
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: document,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            savedDocumentDelta: loadedDelta,
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
           _editorState.richTextLoadFailed = false;
@@ -295,10 +334,24 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          document.length,
+        );
+        final loadedDelta = document.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: document,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+        );
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: document,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            savedDocumentDelta: loadedDelta,
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
           _editorState.richTextLoadFailed = false;
@@ -323,10 +376,22 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final placeholderDocument = quill.Document()..insert(0, loadingMessage);
 
       if (mounted) {
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          placeholderDocument.length,
+        );
+        final finalPlaceholderDoc = appendWindowInput(
+          loadedDoc: placeholderDocument,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+        );
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: placeholderDocument,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalPlaceholderDoc,
+              selection: selection,
+            ),
+            newBaselineWindowDelta: placeholderDocument.toDelta(),
           );
           _attachDraftListener();
         });
@@ -342,10 +407,25 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       // 替换为实际文档
       if (mounted) {
+        final selection = _clampSelection(
+          _editorState.controller.selection,
+          document.length,
+        );
+        final loadedDelta = document.toDelta();
+        final finalDoc = appendWindowInput(
+          loadedDoc: document,
+          baselineWindowDelta: _editorState.baselineWindowDelta,
+          currentWindowDelta: _editorState.controller.document.toDelta(),
+          ignorePlaceholder: loadingMessage,
+        );
         _updateState(() {
-          _editorState.controller = quill.QuillController(
-            document: document,
-            selection: const TextSelection.collapsed(offset: 0),
+          _editorState.replaceController(
+            quill.QuillController(
+              document: finalDoc,
+              selection: selection,
+            ),
+            savedDocumentDelta: loadedDelta,
+            markCleanIfUnchanged: true,
           );
           _attachDraftListener();
           _editorState.richTextLoadFailed = false;
@@ -403,14 +483,66 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     }
   }
 
+  /// 快速启发式估算 Delta 内容序列化后的 JSON 字节大小，避免主线程 deltaData.toString() 调用
+  int _estimateDeltaDataSize(dynamic deltaData) {
+    if (deltaData == null) return 0;
+    List<dynamic>? ops;
+    if (deltaData is List) {
+      ops = deltaData;
+    } else if (deltaData is Map && deltaData['ops'] is List) {
+      ops = deltaData['ops'] as List<dynamic>;
+    }
+    if (ops == null || ops.isEmpty) return 0;
+
+    int totalChars = 0;
+    for (final op in ops) {
+      if (op is Map) {
+        final insert = op['insert'];
+        if (insert is String) {
+          totalChars += insert.length;
+        } else if (insert is Map) {
+          for (final entry in insert.entries) {
+            totalChars += entry.key.toString().length;
+            final val = entry.value;
+            if (val is String) {
+              totalChars += val.length;
+            } else if (val != null) {
+              totalChars += val.toString().length;
+            }
+          }
+          totalChars += 50;
+        } else if (insert != null) {
+          totalChars += 200; // 嵌入式多媒体节点估算值
+        }
+        final attributes = op['attributes'];
+        if (attributes is Map) {
+          for (final entry in attributes.entries) {
+            totalChars += entry.key.toString().length;
+            final val = entry.value;
+            if (val is String) {
+              totalChars += val.length;
+            } else if (val is Map || val is List) {
+              totalChars += val.toString().length;
+            } else if (val != null) {
+              totalChars += val.toString().length;
+            }
+            totalChars += 10;
+          }
+        }
+        totalChars += 30; // JSON 结构开销估算值
+      }
+    }
+    return totalChars * 2;
+  }
+
   Future<String> _getDocumentContentSafely() async {
     try {
       final memoryManager = DeviceMemoryManager();
       final delta = _editorState.controller.document.toDelta();
       final deltaData = delta.toJson();
 
-      // 估算内容大小
-      final estimatedSize = deltaData.toString().length * 2;
+      // 快速估算内容大小，不再执行 deltaData.toString()
+      final estimatedSize = _estimateDeltaDataSize(deltaData);
       logDebug('文档内容估算大小: ${(estimatedSize / 1024).toStringAsFixed(1)}KB');
 
       // 检查内存压力
@@ -457,21 +589,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
         rethrow;
       }
       throw DeltaContentSerializationException(e.toString());
-    }
-  }
-
-  dynamic _deepCopy(dynamic original) {
-    if (original == null) {
-      return null;
-    } else if (original is Map) {
-      return Map<String, dynamic>.from(
-        original.map((key, value) => MapEntry(key, _deepCopy(value))),
-      );
-    } else if (original is List) {
-      return original.map((item) => _deepCopy(item)).toList();
-    } else {
-      // 基本类型（String, int, double, bool等）直接返回
-      return original;
     }
   }
 }

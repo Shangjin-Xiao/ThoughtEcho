@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/note_editor_states.dart';
@@ -99,6 +100,37 @@ void main() {
       expect(state.restoredFromDraft, isTrue);
       state.markDraftSaved();
       expect(state.restoredFromDraft, isFalse);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test('dirty state tracking and document versioning on edit is synchronous',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: 'test',
+        initialDeltaContent: null,
+        draftStorageKey: 'key_dirty',
+        restoredFromDraft: false,
+      );
+
+      expect(state.isDirty, isFalse);
+      final initialVersion = state.documentVersion;
+
+      // Edit happens synchronously
+      state.controller.replaceText(0, 0, 'new content ', null);
+
+      // Must be dirty immediately with no async microtask/delay
+      expect(state.isDirty, isTrue);
+      expect(state.documentVersion, greaterThan(initialVersion));
+
+      // Immediate replaceController without delay must read accurate wasDirty
+      final newController = quill.QuillController.basic();
+      state.replaceController(newController);
+      expect(state.isDirty, isTrue);
+
+      state.markDraftSaved();
+      expect(state.isDirty, isFalse);
 
       state.dispose();
     });
@@ -219,6 +251,380 @@ void main() {
       final quote = Quote(content: 'test', date: '2026-01-01');
       state.fullInitialQuote = quote;
       expect(state.fullInitialQuote, equals(quote));
+
+      state.dispose();
+    });
+
+    test(
+        'replaceController preserves isDirty if state was dirty prior to replacement',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: 'initial',
+        initialDeltaContent: null,
+        draftStorageKey: 'key_replace_dirty',
+        restoredFromDraft: false,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // Simulate user editing before replacement controller is set
+      state.markDirty();
+      expect(state.isDirty, isTrue);
+
+      final newController = quill.QuillController.basic();
+      state.replaceController(newController);
+
+      // Should preserve dirty state
+      expect(state.isDirty, isTrue);
+
+      state.dispose();
+    });
+
+    test(
+        'disposed NoteEditorState ignores markDirty, markClean, markDraftSaved and replaceController calls, and disposes incoming controller',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: 'initial',
+        initialDeltaContent: null,
+        draftStorageKey: 'key_dispose_safe',
+        restoredFromDraft: false,
+      );
+
+      var notified = false;
+      state.addListener(() => notified = true);
+
+      state.dispose();
+
+      expect(state.isDisposed, isTrue);
+
+      // Subsequent mutator calls on disposed state should not throw or notify
+      expect(() => state.markDirty(), returnsNormally);
+      expect(() => state.markClean(), returnsNormally);
+      expect(() => state.markDraftSaved(), returnsNormally);
+      expect(() => state.setDraftLoaded(true), returnsNormally);
+      expect(() => state.setFullQuoteLoading(true), returnsNormally);
+      expect(() => state.setFullInitialQuote(Quote(content: 'c', date: 'd')),
+          returnsNormally);
+      expect(() => state.setRichTextLoadFailed(true), returnsNormally);
+      expect(() => state.cancelDraftSave(), returnsNormally);
+      expect(() => state.incrementSessionGeneration(), returnsNormally);
+
+      expect(notified, isFalse);
+
+      // replaceController on disposed state should dispose incoming controller and not throw
+      final incomingController = quill.QuillController.basic();
+      expect(
+          () => state.replaceController(incomingController), returnsNormally);
+      expect(
+          incomingController.document.documentChangeObserver.isClosed, isTrue);
+    });
+
+    test(
+        'replaceController respects markCleanIfUnchanged only if state was clean prior to replacement',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: 'initial',
+        initialDeltaContent: null,
+        draftStorageKey: 'key_mark_clean_test',
+        restoredFromDraft: false,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      final controller1 = quill.QuillController.basic();
+      state.replaceController(controller1, markCleanIfUnchanged: true);
+      expect(state.isDirty, isFalse);
+
+      // Make dirty
+      state.markDirty();
+      expect(state.isDirty, isTrue);
+
+      // Replace controller with markCleanIfUnchanged: true while dirty
+      final controller2 = quill.QuillController.basic();
+      state.replaceController(controller2, markCleanIfUnchanged: true);
+
+      // Must remain dirty!
+      expect(state.isDirty, isTrue);
+
+      state.dispose();
+    });
+
+    test('undo back to saved baseline reverts isDirty to false', () async {
+      final doc = quill.Document()..insert(0, 'hello');
+      final state = NoteEditorState(
+        initialPlainText: 'hello',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_undo_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 5),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // User types text
+      state.controller.replaceText(5, 0, ' world', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // User undoes text back to initial state
+      state.controller.replaceText(5, 6, '', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test('window input append preserves rich text formatting and inserts', () {
+      final state = NoteEditorState(
+        initialPlainText: 'initial text',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_merge_key',
+        restoredFromDraft: false,
+      );
+
+      // Simulate user typing formatted rich text during loading window
+      state.controller.replaceText(0, 0, 'Window ', null);
+      state.controller.formatText(0, 6, quill.Attribute.bold);
+
+      // Loaded document from async DB
+      final loadedDoc = quill.Document()..insert(0, 'Loaded content\n');
+
+      final mergedDoc = appendWindowInput(
+        loadedDoc: loadedDoc,
+        baselineWindowDelta: state.baselineWindowDelta,
+        currentWindowDelta: state.controller.document.toDelta(),
+      );
+
+      expect(mergedDoc.toPlainText().contains('Loaded content'), isTrue);
+      expect(mergedDoc.toPlainText().contains('Window '), isTrue);
+      expect(
+        mergedDoc
+            .toDelta()
+            .toJson()
+            .any((op) => op['attributes']?['bold'] == true),
+        isTrue,
+      );
+
+      state.dispose();
+    });
+
+    test(
+        'chunked loading placeholder preserves window typing before and during replacement',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_chunked_key',
+        restoredFromDraft: false,
+      );
+
+      // User types before placeholder arrives
+      state.controller.replaceText(0, 0, 'Pre-placeholder text. ', null);
+
+      // Placeholder is created
+      const loadingMessage = 'Loading large document...';
+      final placeholderDocument = quill.Document()..insert(0, loadingMessage);
+
+      // Merge pre-placeholder text into placeholder doc using production function
+      final mergedPlaceholder = appendWindowInput(
+        loadedDoc: placeholderDocument,
+        baselineWindowDelta: state.baselineWindowDelta,
+        currentWindowDelta: state.controller.document.toDelta(),
+      );
+
+      state.replaceController(
+        quill.QuillController(
+          document: mergedPlaceholder,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        newBaselineWindowDelta: placeholderDocument.toDelta(),
+      );
+
+      // User types while placeholder is shown
+      state.controller.replaceText(
+        state.controller.document.length - 1,
+        0,
+        'Typed during placeholder!',
+        null,
+      );
+
+      // Large document finishes loading
+      final largeLoadedDoc = quill.Document()
+        ..insert(0, 'Full large document content.\n');
+
+      final finalMergedDoc = appendWindowInput(
+        loadedDoc: largeLoadedDoc,
+        baselineWindowDelta: state.baselineWindowDelta,
+        currentWindowDelta: state.controller.document.toDelta(),
+        ignorePlaceholder: loadingMessage,
+      );
+
+      expect(
+        finalMergedDoc.toPlainText().contains('Full large document content.'),
+        isTrue,
+      );
+      expect(
+        finalMergedDoc.toPlainText().contains('Pre-placeholder text.'),
+        isTrue,
+      );
+      expect(
+        finalMergedDoc.toPlainText().contains('Typed during placeholder!'),
+        isTrue,
+      );
+      expect(finalMergedDoc.toPlainText().contains(loadingMessage), isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'async document load with window input reverts to clean state when window input is undone',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_async_undo_key',
+        restoredFromDraft: false,
+      );
+
+      // User types during async loading window
+      state.controller.replaceText(0, 0, 'window input', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // Async DB load completes with loadedDoc
+      final loadedDoc = quill.Document()..insert(0, 'Loaded DB Content\n');
+      final loadedDelta = loadedDoc.toDelta();
+
+      final mergedDoc = appendWindowInput(
+        loadedDoc: loadedDoc,
+        baselineWindowDelta: state.baselineWindowDelta,
+        currentWindowDelta: state.controller.document.toDelta(),
+      );
+
+      // replaceController with mergedDoc and pass loadedDelta as clean baseline
+      state.replaceController(
+        quill.QuillController(
+          document: mergedDoc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        savedDocumentDelta: loadedDelta,
+        markCleanIfUnchanged: true,
+      );
+
+      // State is dirty because window input 'window input' was appended
+      expect(state.isDirty, isTrue);
+      expect(
+        state.controller.document.toPlainText().contains('window input'),
+        isTrue,
+      );
+
+      // User undos 'window input' back to 'Loaded DB Content\n'
+      final windowInputPos =
+          state.controller.document.toPlainText().indexOf('window input');
+      state.controller
+          .replaceText(windowInputPos, 'window input'.length, '', null);
+      await Future<void>.delayed(Duration.zero);
+
+      // Document now matches loadedDelta, so isDirty reverts to false!
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'fast-path length comparison optimizes dirty state checking without delta deserialization',
+        () async {
+      final doc = quill.Document()..insert(0, 'Original Baseline Content\n');
+      final state = NoteEditorState(
+        initialPlainText: 'Original Baseline Content',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_fastpath_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // Typing different length text triggers dirty state
+      state.controller.replaceText(0, 0, 'Extra ', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // Undoing extra text returns to baseline length & content
+      state.controller.replaceText(0, 6, '', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test('typing during media file replacement preserves newly typed text',
+        () async {
+      final doc = quill.Document()..insert(0, 'Text before media\n');
+      const tempImagePath = '/tmp/media/temp_123.jpg';
+      const permImagePath = '/perm/media/perm_123.jpg';
+      doc.insert(doc.length - 1, quill.BlockEmbed.image(tempImagePath));
+
+      final state = NoteEditorState(
+        initialPlainText: 'Text before media',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_media_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(quill.QuillController(
+        document: doc,
+        selection: const TextSelection.collapsed(offset: 0),
+      ));
+
+      final processedFiles = <String, String>{tempImagePath: permImagePath};
+
+      // User types while media files are being moved asynchronously
+      state.controller.replaceText(0, 0, 'Typed during media move! ', null);
+
+      // Media process completes and takes latest delta
+      final latestDeltaData = state.controller.document.toDelta().toJson();
+      for (final op in latestDeltaData) {
+        if (op.containsKey('insert') && op['insert'] is Map) {
+          final insertMap = op['insert'] as Map;
+          if (insertMap['image'] == tempImagePath) {
+            insertMap['image'] = processedFiles[tempImagePath];
+          }
+        }
+      }
+
+      final updatedDoc = quill.Document.fromJson(latestDeltaData);
+      state.replaceController(quill.QuillController(
+        document: updatedDoc,
+        selection: const TextSelection.collapsed(offset: 0),
+      ));
+
+      expect(
+        state.controller.document
+            .toPlainText()
+            .contains('Typed during media move!'),
+        isTrue,
+      );
+      expect(
+        state.controller.document.toPlainText().contains('Text before media'),
+        isTrue,
+      );
+      final hasPermImage = state.controller.document.toDelta().toJson().any(
+            (op) =>
+                op['insert'] is Map && op['insert']['image'] == permImagePath,
+          );
+      expect(hasPermImage, isTrue);
 
       state.dispose();
     });
