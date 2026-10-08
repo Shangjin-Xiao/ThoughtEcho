@@ -182,10 +182,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   void _resetSaveUiAfterFailure() {
     if (!mounted) return;
 
-    _updateState(() {
-      _mediaState.saveProgress = 0.0;
-      _mediaState.isSaving = false;
-    });
+    _mediaState.resetSaveAfterFailure();
   }
 
   /// 检查是否有用户实际输入的内容（非自动填充的内容）
@@ -258,7 +255,6 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     // Set the guard before the first await so every save entry point, including
     // the app-bar action, is protected from rapid repeated taps.
     if (_mediaState.isSaving) return false;
-    _mediaState.isSaving = true;
 
     _editorState.cancelDraftSave();
     _editorState.draftLoaded = false;
@@ -269,10 +265,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     bool saveSucceeded = false;
     logDebug('开始保存笔记内容...');
     if (mounted) {
-      _updateState(() {
-        _mediaState.saveProgress = 0.0;
-        _mediaState.saveStatus = l10n.preparingProcess;
-      });
+      _mediaState.beginSave(status: l10n.preparingProcess);
     }
 
     try {
@@ -288,10 +281,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       await _processTemporaryMediaFiles(
         onProgress: (p, status) {
           if (mounted) {
-            _updateState(() {
-              _mediaState.saveProgress = p.clamp(0.0, 1.0);
-              if (status != null) _mediaState.saveStatus = status;
-            });
+            _mediaState.updateSaveProgress(p, status: status);
           }
         },
         onFileMoved: (permanentPath) {
@@ -405,11 +395,10 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       );
 
       if (mounted) {
-        _updateState(() {
-          _mediaState.saveStatus = l10n.writingDatabase;
-          _mediaState.saveProgress =
-              _mediaState.saveProgress < 0.9 ? 0.9 : _mediaState.saveProgress;
-        });
+        _mediaState.updateSaveProgress(
+          _mediaState.saveProgress < 0.9 ? 0.9 : _mediaState.saveProgress,
+          status: l10n.writingDatabase,
+        );
       }
 
       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
@@ -473,21 +462,16 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       }
     } finally {
       if (mounted) {
-        _updateState(() {
-          if (saveSucceeded) {
-            _mediaState.saveProgress = 1.0;
-            _mediaState.saveStatus = l10n.saveComplete;
-          } else {
-            _mediaState.saveProgress = 0.0;
-          }
-        });
-        Future.delayed(const Duration(milliseconds: 320), () {
-          if (mounted) {
-            _updateState(() {
+        if (saveSucceeded) {
+          _mediaState.updateSaveProgress(1.0, status: l10n.saveComplete);
+          Future.delayed(const Duration(milliseconds: 320), () {
+            if (mounted) {
               _mediaState.isSaving = false;
-            });
-          }
-        });
+            }
+          });
+        } else {
+          _mediaState.resetSaveAfterFailure();
+        }
       }
     }
     return saveSucceeded;
