@@ -5,6 +5,37 @@ import 'package:geocoding_platform_interface/geocoding_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:thoughtecho/services/local_geocoding_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/network_service.dart';
+import 'package:thoughtecho/utils/http_response.dart';
+
+class _FakeNetworkService implements NetworkService {
+  final Map<String, Duration> delays;
+  final Map<String, String> responses;
+
+  _FakeNetworkService({
+    required this.delays,
+    required this.responses,
+  });
+
+  @override
+  Future<HttpResponse> get(
+    String url, {
+    Map<String, String>? headers,
+    int? timeoutSeconds,
+  }) async {
+    for (final entry in delays.entries) {
+      if (url.contains(entry.key)) {
+        await Future.delayed(entry.value);
+        final body = responses[entry.key] ?? '[]';
+        return HttpResponse(body, 200);
+      }
+    }
+    return HttpResponse('[]', 200);
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class _SlowMockGeocodingPlatform extends GeocodingPlatform
     with MockPlatformInterfaceMixin {
@@ -110,6 +141,124 @@ void main() {
           GeocodingPlatform.instance = original;
         }
       }
+    });
+  });
+
+  group('LocationService Search Concurrency Tests', () {
+    late LocationService locationService;
+
+    setUp(() {
+      locationService = LocationService();
+      NetworkService.instanceForTesting = _FakeNetworkService(
+        delays: {
+          'slow_city': const Duration(milliseconds: 100),
+          'fast_city': const Duration(milliseconds: 10),
+        },
+        responses: {
+          'slow_city': '''
+[
+  {
+    "name": "Slow City",
+    "lat": 1.0,
+    "lon": 1.0,
+    "address": {
+      "country": "CountryA",
+      "city": "Slow City"
+    }
+  }
+]
+''',
+          'fast_city': '''
+[
+  {
+    "name": "Fast City",
+    "lat": 2.0,
+    "lon": 2.0,
+    "address": {
+      "country": "CountryB",
+      "city": "Fast City"
+    }
+  }
+]
+''',
+        },
+      );
+    });
+
+    tearDown(() {
+      NetworkService.instanceForTesting = null;
+    });
+
+    test('searchCity 乱序返回时，高延迟旧请求结果不应覆盖最新结果', () async {
+      int notifyCount = 0;
+      locationService.addListener(() => notifyCount++);
+
+      final futureSlow = locationService.searchCity('slow_city');
+      expect(locationService.isSearching, isTrue);
+
+      await Future.delayed(const Duration(milliseconds: 5));
+
+      final futureFast = locationService.searchCity('fast_city');
+      expect(locationService.isSearching, isTrue);
+
+      await futureFast;
+
+      expect(locationService.searchResults.length, 1);
+      expect(locationService.searchResults.first.name, 'Fast City');
+      expect(locationService.isSearching, isFalse);
+      final countAfterFast = notifyCount;
+
+      await futureSlow;
+
+      // 过期旧请求返回后，结果不应被覆盖，状态与通知次数应保持不变
+      expect(locationService.searchResults.length, 1);
+      expect(locationService.searchResults.first.name, 'Fast City');
+      expect(locationService.isSearching, isFalse);
+      expect(notifyCount, countAfterFast);
+    });
+
+    test('clearSearchResults 中途打断时，未完成的后台请求结果被丢弃', () async {
+      int notifyCount = 0;
+      locationService.addListener(() => notifyCount++);
+
+      final futureSlow = locationService.searchCity('slow_city');
+      expect(locationService.isSearching, isTrue);
+
+      await Future.delayed(const Duration(milliseconds: 5));
+
+      locationService.clearSearchResults();
+      expect(locationService.searchResults, isEmpty);
+      expect(locationService.isSearching, isFalse);
+      final countAfterClear = notifyCount;
+
+      await futureSlow;
+
+      expect(locationService.searchResults, isEmpty);
+      expect(locationService.isSearching, isFalse);
+      expect(notifyCount, countAfterClear);
+    });
+
+    test('searchCity 传入空字符串打断时，未完成的后台请求结果被丢弃', () async {
+      int notifyCount = 0;
+      locationService.addListener(() => notifyCount++);
+
+      final futureSlow = locationService.searchCity('slow_city');
+      expect(locationService.isSearching, isTrue);
+
+      await Future.delayed(const Duration(milliseconds: 5));
+
+      final emptyFuture = locationService.searchCity('   ');
+      await emptyFuture;
+
+      expect(locationService.searchResults, isEmpty);
+      expect(locationService.isSearching, isFalse);
+      final countAfterEmpty = notifyCount;
+
+      await futureSlow;
+
+      expect(locationService.searchResults, isEmpty);
+      expect(locationService.isSearching, isFalse);
+      expect(notifyCount, countAfterEmpty);
     });
   });
 }

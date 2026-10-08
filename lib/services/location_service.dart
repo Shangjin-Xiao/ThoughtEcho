@@ -104,6 +104,7 @@ class LocationService extends ChangeNotifier {
   bool _isLocationServiceEnabled = false;
   bool _isLoading = false;
   int _geocodeToken = 0;
+  int _searchToken = 0;
   Completer<void>? _initCompleter;
 
   // 城市搜索结果
@@ -834,11 +835,14 @@ class LocationService extends ChangeNotifier {
   // 搜索城市
   Future<List<CityInfo>> searchCity(String query) async {
     if (query.trim().isEmpty) {
+      _searchToken++;
       _searchResults = [];
+      _isSearching = false;
       notifyListeners();
       return _searchResults;
     }
 
+    final token = ++_searchToken;
     _isSearching = true;
     notifyListeners();
 
@@ -848,15 +852,24 @@ class LocationService extends ChangeNotifier {
         query,
       ).timeout(const Duration(seconds: 12), onTimeout: () => <CityInfo>[]);
 
+      if (token != _searchToken) {
+        logDebug('城市搜索请求已过期 (token $token != $_searchToken)，丢弃结果');
+        return _searchResults;
+      }
+
       _searchResults = results;
       return _searchResults;
     } catch (e) {
       logDebug('城市搜索失败: $e');
-      _searchResults = [];
+      if (token == _searchToken) {
+        _searchResults = [];
+      }
       return _searchResults;
     } finally {
-      _isSearching = false;
-      notifyListeners();
+      if (token == _searchToken) {
+        _isSearching = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -1157,6 +1170,7 @@ class LocationService extends ChangeNotifier {
 
   // 清空搜索结果
   void clearSearchResults() {
+    _searchToken++;
     _searchResults = [];
     _isSearching = false; // 确保搜索状态也重置
     notifyListeners();
