@@ -310,6 +310,51 @@ void main() {
       );
 
       expect(find.byType(AnimatedContainer), findsOneWidget);
+      final animatedContainerWidget =
+          tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      expect(animatedContainerWidget.child, isA<RepaintBoundary>());
+    });
+
+    testWidgets('选择态卡片在 AnimatedContainer 中包含 RepaintBoundary 隔离外壳',
+        (tester) async {
+      final quote = _buildQuote(
+        content: '选择态笔记内容',
+        editSource: 'inline',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: QuoteItemWidget(
+                quote: quote,
+                tagMap: const {},
+                isExpanded: false,
+                selectionMode: true,
+                isSelected: true,
+                onToggleExpanded: (_) {},
+                onEdit: () {},
+                onDelete: () {},
+                onAskAI: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(AnimatedContainer), findsOneWidget);
+      final containerWidget =
+          tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      expect(containerWidget.child, isA<RepaintBoundary>());
     });
 
     testWidgets('默认状态下展示截断内容并显示提示', (tester) async {
@@ -943,6 +988,14 @@ void main() {
         find.byKey(const ValueKey('quote_item.double_tap_overlay')),
         findsOneWidget,
       );
+
+      final transformFinder = find.byType(Transform);
+      expect(transformFinder, findsWidgets);
+      final repaintInTransform = find.descendant(
+        of: transformFinder,
+        matching: find.byType(RepaintBoundary),
+      );
+      expect(repaintInTransform, findsWidgets);
     });
 
     testWidgets('富文本默认显示 deltaContent', (tester) async {
