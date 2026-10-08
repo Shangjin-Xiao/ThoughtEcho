@@ -239,5 +239,127 @@ void main() {
       expect(points.single.latitude, -90.0);
       expect(points.single.longitude, 180.0);
     });
+
+    test('Bounding Box 视口范围过滤仅返回矩形区域内的坐标点', () async {
+      await service.addQuote(
+        Quote(
+          id: 'beijing',
+          content: '北京',
+          date: '2026-08-01T10:00:00.000Z',
+          latitude: 39.9042,
+          longitude: 116.4074,
+        ),
+      );
+      await service.addQuote(
+        Quote(
+          id: 'shanghai',
+          content: '上海',
+          date: '2026-08-02T10:00:00.000Z',
+          latitude: 31.2304,
+          longitude: 121.4737,
+        ),
+      );
+      await service.addQuote(
+        Quote(
+          id: 'tokyo',
+          content: '东京',
+          date: '2026-08-03T10:00:00.000Z',
+          latitude: 35.6762,
+          longitude: 139.6503,
+        ),
+      );
+
+      // 查询华东/华北区域 bounds [30, 41], [115, 125] -> 北京 + 上海，不含东京
+      final points = await service.getQuotesWithCoordinates(
+        minLatitude: 30.0,
+        maxLatitude: 41.0,
+        minLongitude: 115.0,
+        maxLongitude: 125.0,
+      );
+
+      expect(points.map((p) => p.id), ['shanghai', 'beijing']);
+    });
+
+    test('跨越 180 度经线 (Antimeridian) 的 Bounding Box 查询正确包含两侧坐标', () async {
+      await service.addQuote(
+        Quote(
+          id: 'fiji',
+          content: '斐济',
+          date: '2026-08-01T10:00:00.000Z',
+          latitude: -17.7134,
+          longitude: 178.0650,
+        ),
+      );
+      await service.addQuote(
+        Quote(
+          id: 'samoa',
+          content: '萨摩亚',
+          date: '2026-08-02T10:00:00.000Z',
+          latitude: -13.7590,
+          longitude: -172.1046,
+        ),
+      );
+      await service.addQuote(
+        Quote(
+          id: 'london',
+          content: '伦敦',
+          date: '2026-08-03T10:00:00.000Z',
+          latitude: 51.5074,
+          longitude: -0.1278,
+        ),
+      );
+
+      // 视口跨越国际日期变更线: minLon = 170.0, maxLon = -170.0
+      final points = await service.getQuotesWithCoordinates(
+        minLatitude: -30.0,
+        maxLatitude: 0.0,
+        minLongitude: 170.0,
+        maxLongitude: -170.0,
+      );
+
+      expect(points.map((p) => p.id), containsAll(['samoa', 'fiji']));
+      expect(points.map((p) => p.id), isNot(contains('london')));
+    });
+
+    test('支持 limit 与 offset 分页查询', () async {
+      for (int i = 1; i <= 5; i++) {
+        await service.addQuote(
+          Quote(
+            id: 'note-$i',
+            content: '笔记 $i',
+            date: '2026-08-0${i}T10:00:00.000Z',
+            latitude: 30.0 + i,
+            longitude: 120.0 + i,
+          ),
+        );
+      }
+
+      // 按时间倒序：note-5, note-4, note-3, note-2, note-1
+      final page1 = await service.getQuotesWithCoordinates(limit: 2, offset: 0);
+      expect(page1.map((p) => p.id), ['note-5', 'note-4']);
+
+      final page2 = await service.getQuotesWithCoordinates(limit: 2, offset: 2);
+      expect(page2.map((p) => p.id), ['note-3', 'note-2']);
+
+      final page3 = await service.getQuotesWithCoordinates(limit: 2, offset: 4);
+      expect(page3.map((p) => p.id), ['note-1']);
+    });
+
+    test('大量数据 (> 50 条) 触发 Isolate 后台计算解析并保证准确性', () async {
+      for (int i = 1; i <= 60; i++) {
+        await service.addQuote(
+          Quote(
+            id: 'bulk-$i',
+            content: '大量数据 $i',
+            date: '2026-08-01T10:00:00.000Z',
+            latitude: 30.0 + (i % 10),
+            longitude: 120.0 + (i % 10),
+          ),
+        );
+      }
+
+      final points = await service.getQuotesWithCoordinates();
+      expect(points.length, equals(60));
+    });
   });
 }

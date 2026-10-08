@@ -147,8 +147,15 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     bool includeDeleted = false,
   });
 
-  /// 地图回忆页要用的全部坐标点，只取 marker 需要的四列。
-  Future<List<QuoteMapPoint>> getQuotesWithCoordinates();
+  /// 地图回忆页要用的坐标点，只取 marker 需要的四列，支持视口 Bounding Box 过滤和分页。
+  Future<List<QuoteMapPoint>> getQuotesWithCoordinates({
+    double? minLatitude,
+    double? maxLatitude,
+    double? minLongitude,
+    double? maxLongitude,
+    int? limit,
+    int? offset,
+  });
   Future<int> getQuotesCount({
     List<String>? tagIds,
     String? categoryId,
