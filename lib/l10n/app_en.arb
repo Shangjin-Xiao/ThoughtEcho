@@ -2877,6 +2877,7 @@
     }
   },
   "cannotGetAddress": "Cannot get address, please check network",
+  "locationUpdateTimeout": "Location request timed out. Please check your network connection.",
   "updateFailed": "Update failed: {error}",
   "@updateFailed": {
     "placeholders": {

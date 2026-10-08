@@ -99,10 +99,31 @@ class _SlowLocationService extends ChangeNotifier implements LocationService {
   }
 
   @override
+  String? currentLocaleCode;
+
+  @override
+  void setCoordinates(double lat, double lng, {String? address}) {}
+
+  @override
+  Future<void> getAddressFromLatLng() async {}
+
+  @override
   String getFormattedLocation() => '中国,北京市,北京市,朝阳区';
 
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _TimeoutLocationService extends _SlowLocationService {
+  _TimeoutLocationService({super.initialPosition});
+
+  @override
+  String getFormattedLocation() => '';
+
+  @override
+  Future<void> getAddressFromLatLng() async {
+    await Future<void>.delayed(const Duration(seconds: 10));
+  }
 }
 
 /// 天气在定位之后才开始抓，再花 300ms——两次抓取之间正是元数据被丢掉的窗口。
@@ -458,6 +479,74 @@ void main() {
       isTrue,
       reason: '键盘每动一帧都重建整棵主体，缓存没命中',
     );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
+
+  testWidgets('位置更新 5 秒超时防护与 UI 加载状态校验', (WidgetTester tester) async {
+    Quote? saved;
+
+    await tester.pumpWidget(
+      _buildApp(
+        settings: _TestSettingsService(autoAttachLocation: false),
+        location: _TimeoutLocationService(initialPosition: _beijingPosition()),
+        weather: _SlowWeatherService(),
+        onSave: (quote) => saved = quote,
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // 先勾选位置以拿到坐标（_TimeoutLocationService.getCurrentLocation 200ms）
+    final locationChip = find.byKey(const ValueKey('add_note_location_chip'));
+    await tester.tap(locationChip);
+    await tester.pump(const Duration(milliseconds: 250));
+
+    // 已有坐标无完整地址时，再点击 Chip 触发弹窗
+    await tester.tap(locationChip);
+    await tester.pumpAndSettle();
+
+    // 点击"更新位置"
+    expect(find.text('更新位置'), findsOneWidget);
+    await tester.tap(find.text('更新位置'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final saveButton = find.byKey(const ValueKey('add_note_save_button'));
+    final cancelButton = find.ancestor(
+      of: find.text('取消'),
+      matching: find.byType(FilledButton),
+    );
+
+    // 验证保存与取消按钮均被禁用
+    expect(tester.widget<FilledButton>(saveButton).onPressed, isNull);
+    expect(tester.widget<FilledButton>(cancelButton).onPressed, isNull);
+
+    // 验证位置 Chip 显示 CircularProgressIndicator
+    expect(
+      find.descendant(
+        of: locationChip,
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+
+    // 推进 5 秒触发超时
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
+
+    // 验证 SnackBar 提示
+    expect(find.text('位置获取超时，请检查网络'), findsOneWidget);
+
+    // 验证 UI 恢复正常（按钮不再禁用）
+    expect(tester.widget<FilledButton>(saveButton).onPressed, isNotNull);
+    expect(tester.widget<FilledButton>(cancelButton).onPressed, isNotNull);
+    expect(saved, isNull);
+
+    // 清理后台延时定时器（_TimeoutLocationService 10s 延时）
+    await tester.pump(const Duration(seconds: 5));
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 600));

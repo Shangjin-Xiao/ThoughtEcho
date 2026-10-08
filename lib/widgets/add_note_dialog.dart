@@ -159,6 +159,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   Timer? _dbChangeDebounceTimer;
 
   bool _isSaving = false;
+  bool _isUpdatingLocation = false;
   bool _closeRequestInFlight = false; // 未保存确认框只允许在飞一个
   bool _waitingForFetch = false; // 用户已触发保存，正在等待位置/天气获取完成
   bool _deferredControlsVisible = true;
@@ -1500,6 +1501,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址（优先在线 Nominatim → 回退系统 SDK）
+      setState(() {
+        _isUpdatingLocation = true;
+      });
       try {
         _ensureMetadataServices();
         final locationService = _cachedLocationService;
@@ -1509,7 +1513,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             _controller.newLatitude!,
             _controller.newLongitude!,
           );
-          await locationService.getAddressFromLatLng();
+          await locationService
+              .getAddressFromLatLng()
+              .timeout(const Duration(seconds: 5));
           final resolved = locationService.getFormattedLocation();
           if (resolved.isNotEmpty && mounted) {
             // 同上：只刷新行政区，保留已选地点名。
@@ -1519,7 +1525,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
               _controller.newLongitude,
               poiName: _controller.newPoiName,
             );
-            setState(() {});
+            if (mounted) setState(() {});
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1538,7 +1544,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           _controller.newLatitude!,
           _controller.newLongitude!,
           localeCode: localeCode,
-        );
+        ).timeout(const Duration(seconds: 5));
         if (addressInfo != null && mounted) {
           // 走统一的入库校验：省市都缺（如只有国家）时返回 null，
           // 不把无法落地的串存进库。
@@ -1552,7 +1558,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
               _controller.newLongitude,
               poiName: _controller.newPoiName,
             );
-            setState(() {});
+            if (mounted) setState(() {});
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1569,10 +1575,23 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
         }
+      } on TimeoutException {
+        if (mounted && context.mounted) {
+          AppSnackBar.warning(
+            context,
+            l10n.locationUpdateTimeout,
+          );
+        }
       } catch (e) {
         if (mounted && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.updateFailed(e.toString()))));
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isUpdatingLocation = false;
+          });
         }
       }
     } else if (result == 'remove') {
@@ -2034,7 +2053,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   Future<void> _handleCloseRequest() async {
     // 确认框弹出前「取消」还点得到，返回键也还进得来。没有这道闸，
     // 连点两下就会叠两个未保存确认框，各自 await 各自的结果。
-    if (!mounted || _closeRequestInFlight) return;
+    if (!mounted || _closeRequestInFlight || _isUpdatingLocation) return;
     _closeRequestInFlight = true;
     try {
       // 检查是否有未保存的更改
@@ -2392,72 +2411,90 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                 child: Stack(
                                   children: [
                                     GestureDetector(
-                                      onLongPress: () async {
-                                        // 编辑模式下长按表现与单击一致（只读/删除，不能选新地点）
-                                        if (widget.initialQuote != null) {
-                                          await _showLocationDialog(
-                                              context, theme);
-                                          return;
-                                        }
-                                        // 新建模式下长按：打开附近地点选择器
-                                        await _openNearbyLocationPicker();
-                                      },
+                                      onLongPress: _isUpdatingLocation
+                                          ? null
+                                          : () async {
+                                              // 编辑模式下长按表现与单击一致（只读/删除，不能选新地点）
+                                              if (widget.initialQuote != null) {
+                                                await _showLocationDialog(
+                                                    context, theme);
+                                                return;
+                                              }
+                                              // 新建模式下长按：打开附近地点选择器
+                                              await _openNearbyLocationPicker();
+                                            },
                                       child: FilterChip(
                                         key: const ValueKey(
                                             'add_note_location_chip'),
                                         showCheckmark: false,
-                                        avatar: Icon(
-                                          Icons.location_on,
-                                          color: _controller.includeLocation
-                                              ? theme.colorScheme.primary
-                                              : theme
-                                                  .colorScheme.onSurfaceVariant,
-                                          size: 18,
-                                        ),
+                                        avatar: (_isUpdatingLocation ||
+                                                _controller.isFetchingLocation)
+                                            ? const SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.location_on,
+                                                color: _controller
+                                                        .includeLocation
+                                                    ? theme.colorScheme.primary
+                                                    : theme.colorScheme
+                                                        .onSurfaceVariant,
+                                                size: 18,
+                                              ),
                                         label: Text(l10n.location),
                                         selected: _controller.includeLocation,
-                                        onSelected: (value) async {
-                                          if (!value) {
-                                            _cancelAutoAttachPlan(
-                                                location: true);
-                                          }
-                                          // 编辑模式下统一弹对话框
-                                          if (widget.initialQuote != null) {
-                                            await _showLocationDialog(
-                                                context, theme);
-                                            return;
-                                          }
-                                          // 新建模式：已有坐标/地址时弹对话框（查看/转换/移除）
-                                          if (_controller.includeLocation &&
-                                              (_controller.newLatitude !=
-                                                      null ||
-                                                  _controller.newLocation !=
-                                                      null)) {
-                                            await _showNewNoteLocationDialog(
-                                                context, theme);
-                                            return;
-                                          }
-                                          // 新建模式：首次勾选，获取位置
-                                          if (value) {
-                                            if (_controller.newLocation ==
-                                                    null &&
-                                                _controller.newLatitude ==
+                                        onSelected: _isUpdatingLocation
+                                            ? null
+                                            : (value) async {
+                                                if (!value) {
+                                                  _cancelAutoAttachPlan(
+                                                      location: true);
+                                                }
+                                                // 编辑模式下统一弹对话框
+                                                if (widget.initialQuote !=
                                                     null) {
-                                              _ensureMetadataServices();
-                                              _controller
-                                                  .fetchLocationForNewNote();
-                                            }
-                                            setState(() {
-                                              _controller.includeLocation =
-                                                  true;
-                                            });
-                                            return;
-                                          }
-                                          // 取消勾选：走 removeNewLocation 一并放掉在途标志。
-                                          // 定位还没回来时（上面的弹窗分支进不去）只改勾选，
-                                          // 保存会继续等一个结果已经不要了的请求，最多转 5 秒。
-                                          _controller.removeNewLocation();
-                                        },
+                                                  await _showLocationDialog(
+                                                      context, theme);
+                                                  return;
+                                                }
+                                                // 新建模式：已有坐标/地址时弹对话框（查看/转换/移除）
+                                                if (_controller
+                                                        .includeLocation &&
+                                                    (_controller.newLatitude !=
+                                                            null ||
+                                                        _controller
+                                                                .newLocation !=
+                                                            null)) {
+                                                  await _showNewNoteLocationDialog(
+                                                      context, theme);
+                                                  return;
+                                                }
+                                                // 新建模式：首次勾选，获取位置
+                                                if (value) {
+                                                  if (_controller.newLocation ==
+                                                          null &&
+                                                      _controller.newLatitude ==
+                                                          null) {
+                                                    _ensureMetadataServices();
+                                                    _controller
+                                                        .fetchLocationForNewNote();
+                                                  }
+                                                  setState(() {
+                                                    _controller
+                                                        .includeLocation = true;
+                                                  });
+                                                  return;
+                                                }
+                                                // 取消勾选：走 removeNewLocation 一并放掉在途标志。
+                                                // 定位还没回来时（上面的弹窗分支进不去）只改勾选，
+                                                // 保存会继续等一个结果已经不要了的请求，最多转 5 秒。
+                                                _controller.removeNewLocation();
+                                              },
                                         selectedColor:
                                             theme.colorScheme.primaryContainer,
                                       ),
@@ -2718,20 +2755,26 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                         ),
                       const Spacer(),
                       FilledButton.tonal(
-                        onPressed: () => unawaited(_handleCloseRequest()),
+                        onPressed: _isUpdatingLocation
+                            ? null
+                            : () => unawaited(_handleCloseRequest()),
                         child: Text(l10n.cancel),
                       ),
                       SizedBox(width: 8),
                       FilledButton(
                         key: const ValueKey('add_note_save_button'),
-                        onPressed: (_isLoadingFullQuote || _waitingForFetch)
+                        onPressed: (_isLoadingFullQuote ||
+                                _waitingForFetch ||
+                                _isUpdatingLocation)
                             ? null
                             : () async {
                                 if (_contentController.text.isNotEmpty) {
                                   await _saveAndExit();
                                 }
                               },
-                        child: (_isLoadingFullQuote || _waitingForFetch)
+                        child: (_isLoadingFullQuote ||
+                                _waitingForFetch ||
+                                _isUpdatingLocation)
                             ? SizedBox(
                                 width: 20,
                                 height: 20,
