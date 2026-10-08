@@ -16,12 +16,12 @@ Run one before and after any agent-readiness work — the score is a shareable a
 ### 1. Access — can an agent get to the page and see real content?
 
 - **Core content in the initial HTML response.** Most agents never execute JavaScript. If the content only exists after client-side rendering, it doesn't exist. This is the #1 essential check in both tools.
-- **No bot challenge or firewall block** on the request path. Aggressive bot protection (Cloudflare challenges, WAF rules) that blocks `GPTBot`, `PerplexityBot`, `ClaudeBot`, etc. is self-inflicted invisibility. Audit what your CDN/WAF actually does to those user agents — many sites block them by default without anyone deciding to.
+- **No bot challenge or firewall block** on the intended discovery path. Blocking `OAI-SearchBot`, `PerplexityBot`, or `Claude-SearchBot` may reduce search visibility. Blocking model-development crawlers such as `GPTBot` or `ClaudeBot` can be an intentional training opt-out and is not, by itself, a visibility failure. Audit what your CDN/WAF actually does to each user agent — many sites block them by default without anyone deciding to.
 - **Correct HTTP behavior**: real status codes (no soft-404s), stable canonical URLs, recoverable errors.
 
 ### 2. Discovery — do your files tell agents what's here?
 
-- **robots.txt with an explicit AI-crawler stance** — name the major AI crawlers and state your policy, rather than leaving it to be assumed (see the bot-access table in SKILL.md for the allow/block list).
+- **robots.txt with an explicit AI-crawler stance** — name the relevant user agents and state a purpose-specific policy, rather than leaving it to be assumed (see the bot-access guidance in SKILL.md).
 - **A sitemap that loads and parses cleanly.**
 - **llms.txt at the domain root** (see Machine-Readable Files in SKILL.md).
 - **`llms-full.txt`** — the newer companion: your entire site content in one file, so an agent gets everything in a single request instead of crawling. Emerging, cheap to generate alongside llms.txt, and scored as bonus signal by both tools.
@@ -41,9 +41,18 @@ Reading is becoming table stakes. The next race is whether an agent can *act* on
 
 Practical today: make sure your highest-intent actions (signup, pricing, demo booking, contact) work without JavaScript-only flows, have labeled semantic form fields, and return machine-readable confirmation.
 
+**Ways to add WebMCP** (all early; confirm browser and assistant support before promising anything):
+- **Implement it yourself.** Follow the WebMCP draft to declare each action as a tool with an input schema, wired to the form or API the page already uses. Keep the tool list short (the 2–4 highest-intent actions) and reuse existing validation, spam protection, and permissions rather than building a parallel path.
+- **Use your platform's support, if it has any.** Some site platforms and agent workflows add WebMCP for you. Ploy ◆, for example, has a Ploybook that inspects the site, defines tool contracts, implements them against existing form logic, and validates them. It's a guided workflow, not a hosted MCP server. ◆ marks a [Verified Partner](https://github.com/coreyhaines31/marketingskills/blob/main/tools/REGISTRY.md#verified-partners) of this repository (disclosure, not endorsement); name an alternative alongside it when you mention it.
+- **Have a coding agent do it** in the site's repo, with the same scoping: a few actions, existing logic, a test for each.
+
+Whichever path, test that each tool rejects bad input, that submissions land where the normal form's do (CRM, inbox, conversion tracking), and that nothing bypasses consent or rate limits.
+
 ## Citation-source volatility (why you diversify)
 
 Third-party citation mixes are **not stable** — they shift overnight with model and retrieval updates, and August 2026 provided the case study: **ChatGPT's query fan-out changes nearly wiped Reddit as a citation source** within days (practitioner-reported by multiple AEO teams; one had been earning 24-hour citations from Reddit at 1M+ impressions/month before the change). Meanwhile the same practitioners report **business-owned websites dominate Gemini citations (~60%)**.
+
+LinkedIn moved in the same update: ChatGPT's LinkedIn citations fell ~36% in mid-August 2026, and its citations of Pulse articles fell ~86% from May to Oct while citations of feed posts rose. Perplexity and Copilot moved the other way. See [linkedin-ai-citations.md](linkedin-ai-citations.md).
 
 What this means for strategy:
 

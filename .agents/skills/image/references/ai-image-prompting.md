@@ -157,7 +157,7 @@ modern SaaS product presentation style,
 
 ### GPT Image (OpenAI)
 
-- Current models: `gpt-image-1` and variants (DALL-E 3 is deprecated)
+- Current models: `gpt-image-2.5-sunburst` and `gpt-image-2.5-flare` (the `gpt-image-1` family retires in late 2026; DALL-E 3 is deprecated)
 - Integrated with ChatGPT — conversational image generation
 - Good at following detailed prompts
 - Decent text rendering (behind Ideogram, comparable to Gemini)

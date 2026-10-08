@@ -91,6 +91,37 @@
         "Does not silently produce a stripped-down plan"
       ],
       "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "A founder wants a plan but keeps asking 'what's the one channel that will make us blow up?' They also want a defensible way to split the budget so they don't starve future growth, and a way to know when a channel is running out of steam. Frame the strategic thinking for the plan.",
+      "expected_output": "Should push back on silver-bullet thinking with the marketing-as-investing framing — a compounding portfolio, 'no silver bullets, a hundred golden pellets,' one asset that ranks + earns backlinks + feeds the newsletter + becomes a talk, audition not an auction, hope is not a strategy. Should apply the problem size x frequency market-quality gate to sanity-check whether the product is even in a build-big-and-frequent quadrant. Should introduce the 70/20/10 resource-allocation rule (current / next / experimental) so future growth stays funded. Should introduce a weekly tracking cadence with plateau-indicator alerts (flattening week-over-week additions, rising CAC, effort up / output flat) that trigger shifting weight to the next S-curve. Should tie these into Section 2 (Strategic frame), Section 10 (12-month outlook), and Section 13 (Measurement).",
+      "assertions": [
+        "Rejects silver-bullet framing using marketing-as-investing / compounding portfolio",
+        "Uses the 'no silver bullets, a hundred golden pellets' and 'audition, not an auction' framing",
+        "Invokes 'hope is not a strategy' — every move has a mechanism and leading indicator",
+        "Applies the problem size x frequency market-quality gate",
+        "Introduces the 70/20/10 resource-allocation rule (current / next / experimental)",
+        "Introduces a weekly tracking cadence with plateau-indicator alerts",
+        "Ties plateau alerts to shifting weight toward the next S-curve",
+        "Maps the framing to Section 2, Section 10, and Section 13"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Before we build the plan, how big is the market for an AI call-summary tool for sales teams at mid-size B2B SaaS companies? The founder keeps quoting a '$12B AI productivity market' to investors.",
+      "expected_output": "Should define the market boundary in one sentence (geography, buyer, use case, price model) before estimating. Should push back on the single top-down $12B figure as TAM that proves nothing about demand. Should use references/market-sizing.md to separate TAM, SAM, and SOM in plain terms, with SOM as the number that matters for the plan. Should triangulate across at least two of the four methods (bottom-up, search-led, competitor-led, channel-led), show the math for each, and compare results, explaining any gap larger than ~3x. Should present ranges with assumptions listed separately from observed facts, never a single precise number without sources. Should label each estimate high / medium / low / unknown confidence and name the assumption that would most change the answer plus how to test it. May score the 10-factor attractiveness scorecard and tie the SOM range into Section 2, Section 10, and Section 13 open decisions.",
+      "assertions": [
+        "Defines the market boundary before sizing",
+        "Challenges the single top-down $12B figure rather than adopting it",
+        "Distinguishes TAM, SAM, and SOM and treats SOM as the planning number",
+        "Triangulates across at least two sizing methods with visible math",
+        "Presents ranges with stated assumptions, not a single precise number",
+        "Labels each estimate with a confidence level",
+        "Names the highest-impact assumption and a way to validate it"
+      ],
+      "files": []
     }
   ]
 }

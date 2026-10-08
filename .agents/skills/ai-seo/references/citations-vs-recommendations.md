@@ -21,6 +21,8 @@ Rungs 1–3 are legitimate signals your content is working, and most prompt-trac
 
 There is also a shadow rung: **recommended against**. On detailed, requirements-heavy prompts, models increasingly name products a buyer should *avoid* for their use case, with sources. The downside of weak third-party consensus is no longer just absence from the shortlist — it can be an explicit rule-out. This makes monitoring the *framing* around your mentions (favorable / neutral / hedged / negative), not just counting them, part of the job.
 
+**Repairing a weakness models repeat.** Address it in public, with specifics, from a real person. One practitioner's client was "slaughtered" on implementation time; over 1.5–2 years, founder posts about the process, guides on real timelines, and a concrete "4–8 weeks" on the implementation page shifted how models described it (anecdote, Harpreet Singh on Edward Sturm's podcast, Sep 2026). More in [positioning-and-consensus.md](positioning-and-consensus.md).
+
 ---
 
 ## The Self-Promotional Listicle Risk
@@ -37,6 +39,8 @@ The common tactic — publish a "best [category] software" guide, rank yourself 
 - **Emerging brands** may win the citation and even shape the category's framing, but miss the recommendation. That's not a wasted outcome — influencing how an LLM defines the category and its evaluation criteria is real positioning work — but it is not the shortlist placement the tactic promises.
 
 **What this changes (and doesn't):** genuinely useful buyer's guides still belong in a B2B content strategy at any stage. What changes is the expectation and the investment split. If you're not yet the consensus pick, weight effort toward the offsite signals that actually govern recommendations (below) rather than publishing a plethora of self-ranked listicles.
+
+**A third option between ranking yourself #1 and not writing the guide:** name the category leader first, say honestly what it does well, then show the specific cases where your product goes further (practitioner pattern, Sep 2026). It reads as a fair source, which is what models are now starting to filter for.
 
 ---
 
@@ -70,7 +74,7 @@ Two behavioral studies quantified the gap between rungs:
 **Measurement triad** (no single signal is complete; together they give a reliable read):
 
 1. **AI prompt tracking** — whether and how you're mentioned/recommended in LLM answers, even when no click ever lands (tools in SKILL.md's Monitoring section). Track the framing around mentions — recommended, neutral, hedged, or recommended-against — not just the count.
-2. **Self-reported attribution** — a "how did you hear about us?" field catches buyers whose journey started in an AI chat but arrived via branded search or direct.
+2. **Self-reported attribution** — a "how did you hear about us?" field catches buyers whose journey started in an AI chat but arrived via branded search or direct. Add an AI option with a follow-up, "What did you type?", so buyers hand you real prompts to track. ChatGPT referral UTMs undercount, and AI Overview revenue can't be separated from organic in analytics, so this field is often the clearest signal you have.
 3. **Sales call recordings** — buyers' own language often reveals an AI conversation shaped the shortlist long before any form fill.
 
 Also watch **branded search volume** as a proxy: sustained lifts without a matching campaign are increasingly AI-influence showing up under another name.

@@ -26,12 +26,38 @@ Submit only during launch week. These are time-sensitive with limited re-submiss
 | **DevHunt** | ~35 | Yes | Free | Dev-focused. Best fit for developer tools and technical products. |
 | **PeerPush** | ~25 | Yes | Free | Similar to Fazier. Low competition. |
 | **LaunchVault** | ~20 | Yes | Free | Anti-VC positioning. Good for bootstrapped narrative. |
-| **What Launched Today** | ~20 | Yes | Free | Guaranteed visibility on launch day regardless of votes. |
 | **Firsto** | ~25 | Yes | Free tier | Sustained discovery, not one-day spike. |
 | **GetByte** | ~20 | Yes | Free | Lightweight listing + promotional support. |
-| **Best of Web** | ~30 | Yes | Free | Easy fast submission, free dofollow. |
 | **Tiny Launch** | ~20 | Yes | Free | Lightweight, fast approval. |
 | **PitchWall** | ~25 | Yes | Free | Indie-hacker friendly. |
+
+### Tier 1B — Indie launch sites (the badge economy)
+
+A wave of small launch sites trade listings for a badge on your site. They're cheap to work through and can move DR fast, but read them carefully:
+
+- **Judge by traffic, not DR.** Many show DR 50–80 with close to zero organic traffic. That DR comes from badge-swap link rings, so it passes little real value and can disappear.
+- **Free often means reciprocal.** The dofollow link frequently lasts only while their badge stays on your site. Decide up front whether you'll keep badges in your footer.
+- **Use the exact domain below.** Two of these have lookalike `.com` domains that are for sale. A lapsed lookalike is a ready-made phishing page.
+
+Domains verified live on 2026-10-02. Re-check before submitting (see the safety gate in SKILL.md).
+
+| Directory | Domain | DR | Traffic | Cost / link terms |
+|---|---|---|---|---|
+| **Twelve Tools** | twelve.tools | ~83 | ~1.8k/mo | Free (≈72h review), 1 dofollow link; $36 Pro |
+| **Turbo0** | turbo0.com | ~81 | ~0 | Free with a backlink to them (3 dofollow links); paid from $29.90 |
+| **Findly** | findly.tools | ~81 | ~0 | Login required; terms unverified |
+| **Tinyshelf** | tinyshelf.co | ~73 | ~0 | Google login, reviewed listings. Not `tinyshelf.com` |
+| **Launch Llama** | tools.launchllama.co | ~73 | — | Free listing in the directory of a newsletter (claims ~55k readers) |
+| **ScrollLaunch** | scrolllaunch.com | ~71 | — | Free, dofollow only while their badge stays up; $19/$39 premium |
+| **Acid Tools** | acidtools.com | ~68 | ~0 | Login required; terms unverified |
+| **Better Launch** | betterlaunch.co | ~63 | ~0 | Free listing; sells $149–$199 submission packages |
+| **LaunchPanda** | launchpanda.dev | ~61 | — | Free, dofollow with their badge. **Never `launchpanda.com` (for sale)** |
+| **DanielLaunches** | daniellaunches.com | ~59 | ~0 | Login required |
+| **Stork** | stork.ai | ~53 | ~19k/mo | $49, or free with their "Verified" badge. Also sells a backlink service |
+| **Noonlaunch** | noonlaunch.com | ~52 | — | Paid spots $11–$99; free tier unclear |
+| **Launch Streak** | launchstreak.dev | ~51 | — | Free account, dofollow claimed. **Never `launchstreak.com` (for sale)** |
+| **ConfettiSaaS** | confettisaas.com | ~47 | — | Appears free; email approval |
+| **IndieTool** | indietool.io | ~46 | — | Submit flow unverified |
 
 ---
 
@@ -123,23 +149,18 @@ Relevant only for AI-native products. Submit during weeks 1–3.
 | **TopAI.tools** | ~60 | Task-based search similar to TAAFT. |
 | **Supertools** | ~61 | Clean interface, good categorization. |
 | **AI Tools Directory** (aitoolsdirectory.com) | ~55 | Curated; featured placement available. |
-| **AI Tools Love** | ~25 | Comparison-focused. |
 | **AIChief** | ~35 | Business-focused. |
 | **LogicBalls** | ~40 | 3,500+ verified tools. |
 | **SaasAITools** | ~30 | SaaS + AI crossover. |
 | **PoweredByAI** | ~35 | Growing directory with newsletter reach. |
 | **TheAISurf** | ~30 | Newer, actively promoting submissions. |
-| **Aixyz** | ~30 | 1,500+ tools, smart filters. |
 | **AI Pedia Hub** | ~40 | "Largest directory, updated daily." |
 | **Dofollow.Tools** | ~30 | Explicitly free dofollow backlinks. |
 | **AIBacklinkList** | ~25 | Aggregated list of 2500+ AI backlink opportunities. |
 | **AI Scout** | ~25 | Emerging, less competition. |
-| **AiMatchPro** | ~20 | Use-case search. |
-| **GPTForge** | ~30 | Domain created 2025 — DR 88 from source list is implausible. Verify via Ahrefs. |
 | **AI Tools Guide** | 77 | Curated AI tools directory. |
 | **AIToolly** | 69 | AI tool discovery. |
 | **All The AI Tools** | 66 | Comprehensive AI tool listing. |
-| **Aiforme.wiki** | 66 | AI tool wiki/directory. |
 | **Noxilo** | 66 | AI tools directory. |
 | **AI Generation** | 55 | AI tools directory. |
 | **Every AI** | 55 | AI tool aggregator. |
@@ -156,20 +177,70 @@ Relevant only for AI-native products. Submit during weeks 1–3.
 
 Relevant only if the product exposes agent capabilities or MCP servers. These are a real moat for AI-native tools — traditional SaaS products cannot list here.
 
+### Tier 4A — Publish to the official MCP Registry first
+
+The official registry at `registry.modelcontextprotocol.io` is the source other MCP directories build on. PulseMCP ingests from it (and isn't taking direct submissions as of 2026-10), and Glama builds on top of it. Publishing here first means several listings appear without separate submissions. Its own link passes little SEO value; the point is distribution. The registry is still labeled "preview," so data resets are possible.
+
+1. **Publish the package first.** The registry stores metadata only, so the server must already be on npm, PyPI, NuGet, crates.io, Docker/OCI, or MCPB. A remote server can skip this and list a Streamable HTTP URL under `remotes`.
+2. **Mark the package as yours.** npm: `"mcpName"` in `package.json`. PyPI/NuGet: `mcp-name: <name>` in the README (visible text for crates.io). Docker: the `io.modelcontextprotocol.server.name` label.
+3. **Install the CLI and generate `server.json`:** `brew install mcp-publisher`, then `mcp-publisher init`. The `name` must match the package marker.
+4. **Prove the namespace:** `mcp-publisher login github` gives you `io.github.<user>/*` (org namespaces need org Owner). For `com.yourdomain/*`, use a DNS TXT record or a key at `/.well-known/mcp-registry-auth`.
+5. **Publish:** `mcp-publisher publish`. Versions are immutable once published.
+
+Source: [modelcontextprotocol/registry](https://github.com/modelcontextprotocol/registry) docs.
+
+### Tier 4B — MCP directories (submit directly)
+
+| Directory | Domain | DR | Notes |
+|---|---|---|---|
+| **Smithery** | smithery.ai | ~79 | Web form or `smithery mcp publish <url>`; login. One of the most-used catalogs |
+| **Glama** | glama.ai/mcp/servers | ~75 | Add from a GitHub repo. Security grades (A/B/C/F) matter, so optimize for a good grade |
+| **MCP.so** | mcp.so | ~73 | Free form (server, remote, client, agent); $39 fast track. Doesn't appear to ingest from the official registry |
+| **MCP Servers** | mcpservers.org | ~71 | Free review (~2 weeks); dofollow only on the $39 tier. ~41k visits/mo |
+| **MCP Market** | mcpmarket.com | ~61 | Submit a GitHub repo; takes servers and skills. Free queue 4–6 weeks, $29 fast track. ~89k visits/mo |
+| **APITracker MCP directory** | apitracker.io | — | 110+ servers, 90 official integrations |
+| **MCP Directory** | mcp.directory | ~37 | Free form. Not `mcpdirectory.app` |
+| **AllMCPs** | allmcps.com | ~36 | Low value. Not `allmcp.com` (unrelated business) |
+| **MCP Repository** | mcprepository.com | ~21 | Free form, low value |
+| **AI Indigo** | aiindigo.com | ~12 | Has an MCP section, low value |
+
+### Tier 4C — Agent directories
+
 | Directory | Category | Notes |
 |---|---|---|
 | **AI Agents List (aiagentslist.com)** | Agents | Hosts the 593+ MCP server directory. |
-| **Glama.ai MCP servers** | MCP | 20K+ security-graded MCP servers. A/B/C/F grades matter — optimize for a good grade. |
-| **APITracker MCP directory** | MCP | 110+ servers, 90 official integrations. |
-| **Linux Foundation MCP Registry** | MCP | Canonical registry (PR-based submission, low volume but high signal). Anthropic donated MCP to LF in Dec 2025. |
 | **AI Agent Store** | Agents | Compare agents, platforms, frameworks. |
 | **AI Agents Base** | Agents | All-in-one directory. |
 | **AI Agents Directory** | Agents | Specialized, updated daily. |
-| **AI Agents Verse** | Agents | Curated directory. |
 | **AgentHunter** | Agents | "Discover the best AI agents." |
 | **Add AI Directory** | Agents | Catalogs agents + tools. |
 | **AI Agents Live** | Agents | Discovery + sharing. |
 | **AI Agents Marketplace** | Agents | Organized by 300+ human role equivalents. |
+
+### Tier 4D — GitHub lists (open a PR)
+
+GitHub marks README links nofollow, so these are for discovery and AI-search visibility, not DR. Check that a list is still merging PRs before spending time on it: a big star count with hundreds of open PRs and no recent merges means your PR will sit.
+
+| List | Repo | Activity (2026-10) | Fit |
+|---|---|---|---|
+| **public-apis** | public-apis/public-apis | ~485k stars, active, ~2k open PRs | Only if you have a free public API |
+| **awesome-mcp-servers (TensorBlock)** | TensorBlock/awesome-mcp-servers | ~870 stars, 200+ merges/30 days | MCP servers |
+| **awesome-mcp-list** | MobinX/awesome-mcp-list | ~885 stars, ~130 merges/30 days | MCP servers |
+| **toolsdk-mcp-registry** | toolsdk-ai/toolsdk-mcp-registry | ~190 stars, ~25 merges/30 days | MCP servers |
+| **xAI plugin marketplace** | xai-org/plugin-marketplace | ~275 stars | Grok plugins; add an entry to `.grok-plugin/marketplace.json`. Mostly merges company submissions |
+| **awesome-mcp-lists** | collabnix/awesome-mcp-lists | ~34 stars | Low value |
+
+Skip **jaw9c/awesome-remote-mcp-servers** for now: ~1.1k stars but no merges since 2026-06 and 500+ open PRs.
+
+### Tier 4E — Agent & AI-search listings
+
+Listings that agents and AI assistants read directly. Part of GEO more than SEO.
+
+| Listing | Where | Notes |
+|---|---|---|
+| **Claude plugin directory** | claude.ai/directory/manage (listings at claude.com/marketplace/plugins) | Anthropic's official directory for plugins and connectors across Claude apps and Claude Code. Submit through the developer portal (paid Claude plan required); every listing is security-scanned and reviewed. Not a backlink play |
+| **ClawHub** | clawhub.ai | Official registry for OpenClaw skills and plugins. Publish via CLI or web with GitHub login. **Security caveat:** 341 malicious skills were found on it in Feb 2026; screening was added since, but say so if you recommend it and keep your listing's source public |
+| **llms.txt directories** | llmstxt.site, directory.llmstxt.cloud, llmstxthub.com | List your `/llms.txt` once it exists. llmstxthub's PR route is slow (400+ open PRs), so use its site form |
 
 ---
 
@@ -342,7 +413,6 @@ Publish articles or press releases to earn dofollow backlinks. Best for product 
 
 | Site | DR | Type | Notes |
 |---|---|---|---|
-| **EzineArticles** | 80 | Article | Established article directory. Editorial review. |
 | **Feedspot** | 80 | Blog directory | Blog discovery + RSS aggregation. Submit your blog. |
 | **Alltop** | 73 | Blog directory | Guy Kawasaki's blog aggregator. |
 | **ArticlesBase** | 70 | Article | Article publishing platform. |
@@ -362,7 +432,6 @@ Publish articles or press releases to earn dofollow backlinks. Best for product 
 | **OpenPR** | 72 | Free international press release distribution. |
 | **1888 Press Release** | 69 | Free press release site. |
 | **NewswireToday** | 65 | Free press release distribution. |
-| **Online PR News** | 62 | Free press release distribution. |
 | **PR Free** | 62 | Free press release site. |
 
 ### Marketing & General Directories
@@ -404,7 +473,6 @@ Industry-specific directories. Only submit if your product genuinely fits the ve
 |---|---|---|
 | **Justia** | 85 | Legal services directory. |
 | **Lawyers.com** | 82 | Legal directory. |
-| **HG.org** | 75 | Legal resources directory. |
 
 ### Home & Construction
 
@@ -473,5 +541,7 @@ After any submission goes live, verify the backlink exists and is dofollow. You 
 1. **Manual:** Open the listing, right-click your product link, "Inspect" → check for `rel="nofollow"` or `rel="ugc"`. If absent, the link is dofollow.
 2. **curl:** `curl -sIL https://directory.com/your-listing | grep -i link`
 3. **SEO tools:** Ahrefs Site Explorer → Backlinks → filter by this directory's domain.
+
+**Re-check liveness before each campaign.** Domains in this list were live when added, but small directories lapse and lookalike domains get bought. Run `dig +short <domain>` and open the root URL before submitting.
 
 **Re-verify quarterly.** Directories sometimes change all outbound links to nofollow without warning — if DR stops moving, check whether your biggest inbound links have silently flipped.

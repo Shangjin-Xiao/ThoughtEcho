@@ -11,7 +11,7 @@ Sources cited throughout: Princeton GEO study (KDD 2024), SE Ranking domain auth
 Every AI platform shares three baseline requirements:
 
 1. **Your content must be in their index** — Each platform uses a different search backend (Google, Bing, Brave, or their own). If you're not indexed, you can't be cited.
-2. **Your content must be crawlable** — AI bots need access via robots.txt. Block the bot, lose the citation.
+2. **Your content must be crawlable for discovery** — Allow the relevant search-discovery path through robots.txt and your WAF; model-training controls are separate.
 3. **Your content must be extractable** — AI systems pull passages, not pages. Clear structure and self-contained paragraphs win.
 
 Beyond these basics, each platform weights different signals. Here's what matters and where.
@@ -20,14 +20,14 @@ Beyond these basics, each platform weights different signals. Here's what matter
 
 ## Google AI Overviews
 
-Google AI Overviews pull from Google's own index and lean heavily on E-E-A-T signals (Experience, Expertise, Authoritativeness, Trustworthiness). They appear in roughly 45% of Google searches.
+Google AI Overviews pull from Google's own index and lean heavily on E-E-A-T signals (Experience, Expertise, Authoritativeness, Trustworthiness). Studies have measured them on roughly 45% of tracked keywords (BrightEdge).
 
-**What makes Google AI Overviews different:** They already have your traditional SEO signals — backlinks, page authority, topical relevance. The additional AI layer adds a preference for content with cited sources and structured data. Research shows that including authoritative citations in your content correlates with a 132% visibility boost, and writing with an authoritative (not salesy) tone adds another 89%.
+**What makes Google AI Overviews different:** They already have your traditional SEO signals — backlinks, page authority, topical relevance. The additional AI layer adds a preference for content with cited sources and structured data. The GEO study (Aggarwal et al., 2023) found that adding citations, quotations, and statistics raised visibility by roughly 30–40% on its own metric; individual examples in the paper show much larger jumps, but those aren't typical or additive.
 
-**Importantly, AI Overviews don't just recycle the traditional Top 10.** Only about 15% of AI Overview sources overlap with conventional organic results. Pages that wouldn't crack page 1 in traditional search can still get cited if they have strong structured data and clear, extractable answers.
+**AI Overviews don't just recycle the traditional Top 10.** Some studies have put the overlap between AI Overview sources and conventional organic results as low as ~15%, though figures vary widely by study, date, and query set. Pages that wouldn't crack page 1 can still get cited with clear, extractable answers. Even so, practitioners consistently find that better organic rankings mean better AI visibility, so don't treat the low-overlap stat as permission to skip SEO.
 
 **What to focus on:**
-- Schema markup is the single biggest lever — Article, FAQPage, HowTo, and Product schemas give AI Overviews structured context to work with (30-40% visibility boost)
+- Schema markup gives AI Overviews structured context (Article, HowTo, Product). It's one lever among several, and Google says no special markup is required for AI features. Google limited FAQ rich results to government and health sites in 2023, so don't promise an AI lift from FAQPage schema
 - Build topical authority through content clusters with strong internal linking
 - Include named, sourced citations in your content (not just claims)
 - Author bios with real credentials matter — E-E-A-T is weighted heavily
@@ -85,14 +85,14 @@ Perplexity always cites its sources with clickable links, making it the most tra
 
 Copilot is embedded across Microsoft's ecosystem — Edge, Windows, Microsoft 365, and Bing Search. It relies entirely on Bing's index, so if Bing hasn't indexed your content, Copilot can't cite it.
 
-**What makes Copilot different:** The Microsoft ecosystem connection creates unique optimization opportunities. Mentions and content on LinkedIn and GitHub provide ranking boosts that other platforms don't offer. Copilot also puts more weight on page speed — sub-2-second load times are a clear threshold.
+**What makes Copilot different:** The Microsoft ecosystem connection creates unique optimization opportunities. Copilot cites LinkedIn heavily (its LinkedIn citations more than doubled May → Oct 2026 and run about 6.5× its Reddit citations, per Ahrefs data), and GitHub content is a natural fit too. Copilot also puts more weight on page speed — sub-2-second load times are a clear threshold.
 
 **What to focus on:**
 - Submit your site to Bing Webmaster Tools (many sites only submit to Google Search Console)
 - Use IndexNow protocol for faster indexing of new and updated content
 - Optimize page speed to under 2 seconds
 - Write clear entity definitions — when your content defines a term or concept, make the definition explicit and extractable
-- Build presence on LinkedIn (publish articles, maintain company page) and GitHub if relevant
+- Build presence on LinkedIn (articles, posts, and a complete company page; see [linkedin-ai-citations.md](linkedin-ai-citations.md)) and GitHub if relevant
 - Ensure Bingbot has full crawl access
 
 ---
@@ -105,30 +105,43 @@ Claude uses Brave Search as its search backend when web search is enabled — no
 
 **What to focus on:**
 - Verify your content appears in Brave Search results (search for your brand and key terms at search.brave.com)
-- Allow ClaudeBot and anthropic-ai user agents in robots.txt
+- Decide separately whether to allow `Claude-SearchBot` for search discovery, `Claude-User` for user-directed retrieval, and `ClaudeBot` for potential model training
 - Maximize factual density — specific numbers, named sources, dated statistics
 - Use clear, extractable structure with descriptive headings
 - Cite authoritative sources within your content
 - Aim to be the most factually accurate source on your topic — Claude rewards precision
+- Don't rely on self-ranked "best X" lists. In a live test (Sep 2026), Claude noted that results for a "best [category]" query were dominated by vendors ranking themselves #1 and leaned on juried awards and practitioner reputation instead
 
 ---
 
 ## Allowing AI Bots in robots.txt
 
-If your robots.txt blocks an AI bot, that platform can't cite your content. Here are the user agents to allow:
+Do not copy one blanket allowlist. Choose controls by documented purpose, then check WAF and CDN rules as well as `robots.txt`.
 
-```
-User-agent: GPTBot           # OpenAI — powers ChatGPT search
-User-agent: ChatGPT-User     # ChatGPT browsing mode
-User-agent: PerplexityBot    # Perplexity AI search
-User-agent: ClaudeBot        # Anthropic Claude
-User-agent: anthropic-ai     # Anthropic Claude (alternate)
-User-agent: Google-Extended   # Google Gemini and AI Overviews
-User-agent: Bingbot          # Microsoft Copilot (via Bing)
+```text
+# Automatic search discovery
+User-agent: Bingbot
+User-agent: Googlebot
+User-agent: OAI-SearchBot
+User-agent: PerplexityBot
+User-agent: Claude-SearchBot
 Allow: /
+
+# Potential model training (publisher choice shown as disallow)
+User-agent: GPTBot
+User-agent: ClaudeBot
+Disallow: /
+
+# Gemini model training and grounding (publisher choice shown as disallow)
+User-agent: Google-Extended
+Disallow: /
 ```
 
-**Training vs. search:** Some AI bots are used for both model training and search citation. If you want to be cited but don't want your content used for training, your options are limited — GPTBot handles both for OpenAI. However, you can safely block **CCBot** (Common Crawl) without affecting any AI search citations, since it's only used for training dataset collection.
+User-triggered fetchers such as `ChatGPT-User`, `Claude-User`, and `Perplexity-User` are separate from automatic discovery. Vendor behavior can differ: OpenAI says `robots.txt` rules may not apply to `ChatGPT-User`, and Perplexity says `Perplexity-User` generally ignores them because these fetches are user-requested. Use `OAI-SearchBot`, not `ChatGPT-User`, to manage ChatGPT Search inclusion. `Google-Extended` is a standalone product token rather than a separate HTTP crawler; Google says it controls certain Gemini training and grounding uses and does not affect Google Search inclusion or ranking.
+
+Verify the current names and consequences in the vendors' maintained documentation: [OpenAI](https://developers.openai.com/api/docs/bots), [Perplexity](https://docs.perplexity.ai/docs/resources/perplexity-crawlers), [Anthropic](https://privacy.anthropic.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler), and [Google](https://developers.google.com/crawling/docs/crawlers-fetchers/google-common-crawlers).
+
+For implementation, inspect `/robots.txt` manually first. Optional helpers include each vendor's own crawler documentation and robots.txt testing tools.
 
 ---
 
@@ -145,7 +158,7 @@ If you're optimizing for AI search for the first time, focus your effort where y
 **Copilot and Claude are lower priority** unless your audience skews enterprise/Microsoft (Copilot) or developer/analyst (Claude). But the fundamentals — structured content, cited sources, schema markup — help across all platforms.
 
 **Actions that help everywhere:**
-1. Allow all AI bots in robots.txt
+1. Set an explicit, purpose-specific robots policy: allow relevant discovery crawlers while deciding training and user-triggered retrieval separately
 2. Implement schema markup (FAQPage, Article, Organization at minimum)
 3. Include statistics with named sources in your content
 4. Update content regularly — monthly for competitive topics

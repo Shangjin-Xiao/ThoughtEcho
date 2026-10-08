@@ -97,6 +97,20 @@
         "Notes the other formats are judged by different jobs rather than calling them worthless"
       ],
       "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "We publish one good blog post a week but nobody reads it — we just post the link once on Twitter and LinkedIn and move on. How should we think about getting our content actually seen, and how should we balance what we produce?",
+      "expected_output": "Should reframe content as brand surface area and each piece as its own launch — creating is only half the job, distribution is the other half. Should introduce 'Create Once, Distribute Twice': one flagship piece repurposed/atomized across channels rather than a single link-drop, with distribution hooks (standalone subheads, modular sections, pull quotes) designed in at creation time. Should diagnose the failure modes at play — spray-and-pray / posting once with no repurposing, and the risk of platform dependency and the ownership paradox (over-investing in rented channels vs owned). Should present the ORB framework as a discovery->engagement->conversion funnel (borrowed -> rented -> owned) routing attention back to owned assets, and reference the launch skill (ORB playbook) and social skill (atomization execution) rather than re-deriving them. Should recommend a calendar balance (60% searchable / 30% shareable / 10% experimental) as a starting ratio. May reference the Content Distribution Flywheel and per-format execution discipline (e.g., 10 titles, ~5 editing passes for a blog post).",
+      "assertions": [
+        "Reframes content as brand surface area / each piece as its own launch and names distribution as the missing half",
+        "Introduces Create Once, Distribute Twice with atomization and creation-time distribution hooks",
+        "Names failure modes: spray-and-pray, platform dependency, ownership paradox",
+        "Presents ORB (borrowed/rented/owned) as a discovery-to-conversion funnel routing back to owned, cross-linking launch and social",
+        "Recommends the 60/30/10 calendar split as a starting ratio",
+        "May reference the Content Distribution Flywheel or per-format execution discipline"
+      ],
+      "files": []
     }
   ]
 }

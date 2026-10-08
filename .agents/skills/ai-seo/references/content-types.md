@@ -47,6 +47,17 @@ For the cross-cutting strategy, see [SKILL.md](../SKILL.md).
 
 ---
 
+## Industry / Segment Pages
+
+**Goal:** Get recommended when a prompt names an industry or company size ("email marketing software for e-commerce," "RFP software for government," "enterprise [category]"). Models increasingly sort brands into segments and personalize answers, so a generic page can lose to a competitor's segment page.
+
+**Optimize:**
+- One page per core industry or segment you actually serve, with industry-specific workflows, integrations, compliance, and customer proof
+- Start with core segments. Many pages are fine if each adds real, segment-specific value; templated pages that only swap the industry name are what the scaled-content policy targets (see the `programmatic-seo` skill)
+- Match the segment language used on your third-party profiles (see [positioning-and-consensus.md](positioning-and-consensus.md))
+
+---
+
 ## Documentation / Help Content
 
 **Goal:** Get cited in "How to [X] with [your product]" queries.

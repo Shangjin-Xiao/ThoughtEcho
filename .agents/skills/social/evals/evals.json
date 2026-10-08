@@ -102,6 +102,49 @@
         "Does not invent stats or pad the tactic count"
       ],
       "files": []
+    },
+    {
+      "prompt": "Write a LinkedIn post announcing that our invoicing tool now syncs with QuickBooks. Make it punchy so it gets engagement.",
+      "expected_output": "Should write a post that leads with a specific hook (a fact, number, or customer situation) and avoids AI tells even though 'punchy' and 'engagement' invite them. No contrast reveals, no 'no X, no Y, no Z' lists, no self-answered questions or colon reveals, no em dashes. No broetry (one sentence per line for the whole post), no engagement-bait closer ('Agree?', 'Thoughts?', 'Let that sink in'), no emoji bullets. Ends on the point or a real question.",
+      "assertions": [
+        "No contrast reveal or negation list",
+        "No em dashes",
+        "Not written as broetry",
+        "No engagement-bait closer",
+        "Hook is specific rather than a generic pattern-interrupt"
+      ],
+      "files": [],
+      "id": 8
+    },
+    {
+      "id": 9,
+      "prompt": "I'm posting on X 5 times every morning between 9 and 10am and my reach keeps dropping. I mostly post quick thoughts and hot takes. What am I doing wrong?",
+      "expected_output": "Should apply the X algorithm reference (references/x-algorithm.md). Should identify post clustering as the primary problem: the author-diversity scorer decays scores of repeated authors within a feed response, so 5 posts in an hour cannibalize each other — recommend spacing original posts ~60 minutes apart or spreading across the day. Should also check hook mechanics (specific claim in the first 8 words, topic named early so topic-based distribution can route the post) and presence (staying available to reply for the first 30 minutes after each post rather than batch-firing and leaving). Should reframe goals toward DM-shares, follows, and profile clicks rather than likes, since those are separately scored signals. Should note weight values are unpublished and recommendations are directional.",
+      "assertions": [
+        "References X algorithm mechanics from x-algorithm.md",
+        "Identifies post clustering / author-diversity decay as the main issue",
+        "Recommends ~60 minute spacing between original posts",
+        "Addresses hook structure (specific claim in first 8 words)",
+        "Mentions topic-anchoring for topic-based distribution",
+        "Recommends being present to reply after posting",
+        "Reframes toward shares/follows/profile clicks over likes"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Write an X post announcing our new AI feature. Draft: 'We're so excited to announce something HUGE is coming... 🔥🔥 You won't want to miss this. Like and retweet if you're ready!!'",
+      "expected_output": "Should rewrite rather than lightly edit, and explain why using X ranking mechanics: the draft has no specific claim in the first 8 words, doesn't name the topic (so topic-based distribution can't route it), names nothing specific (no product, no capability), and 'like and retweet if you're ready' is engagement bait — the algorithm predicts negative actions (not interested, mute, block) and subtracts them, and baity phrasing risks muted-keyword filtering. Rewrite should open with the specific capability and name the product/tools involved, make the post DM-forwardable (specific, useful claim), and optionally suggest posting mechanics: don't cluster with other posts, stay present for the first 30 minutes, and if including video make it 8+ seconds with captions.",
+      "assertions": [
+        "Rewrites the post rather than approving it",
+        "Flags the missing specific claim in the first 8 words",
+        "Flags engagement bait and explains predicted negative-action penalties",
+        "Names the specific feature/product in the rewrite",
+        "Explains topic-anchoring for distribution",
+        "Optimizes for shareability over like-solicitation",
+        "Includes posting mechanics guidance (spacing, first-30-minutes presence)"
+      ],
+      "files": []
     }
   ]
 }
