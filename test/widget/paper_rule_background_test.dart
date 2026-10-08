@@ -44,6 +44,18 @@ void main() {
     expect(ruleLayer(), findsOneWidget);
   });
 
+  testWidgets('纸与墨画横线时包裹 RepaintBoundary', (tester) async {
+    await tester.pumpWidget(host(ThemeStyle.paper));
+    expect(ruleLayer(), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(PaperRuleBackground),
+        matching: find.byType(RepaintBoundary),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('主题里没注册令牌时安全降级，不崩也不画', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

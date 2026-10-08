@@ -314,4 +314,36 @@ void main() {
       ),
     );
   });
+
+  testWidgets('包含 RepaintBoundary 包裹 ClipRRect 且点击事件正常响应', (tester) async {
+    var tapped = false;
+    final media = _mediaWithImage();
+
+    await tester.pumpWidget(
+      _wrap(
+        CollapsedMediaThumbnail(
+          media: media,
+          onTap: () => tapped = true,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final clipFinder = find.descendant(
+      of: find.byType(CollapsedMediaThumbnail),
+      matching: find.byType(ClipRRect),
+    );
+    expect(clipFinder, findsOneWidget);
+
+    expect(
+      find.descendant(
+        of: find.byType(CollapsedMediaThumbnail),
+        matching: find.byType(RepaintBoundary),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byType(CollapsedMediaThumbnail));
+    expect(tapped, isTrue);
+  });
 }

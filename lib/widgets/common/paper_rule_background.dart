@@ -46,15 +46,17 @@ class PaperRuleBackground extends StatelessWidget {
         .outlineVariant
         .withValues(alpha: tokens.ruleOpacity);
 
-    return CustomPaint(
-      painter: _PaperRulePainter(
-        spacing: tokens.ruleSpacing,
-        color: color,
-        borderRadius: borderRadius,
-        topInset: topInset,
-        bottomInset: bottomInset,
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _PaperRulePainter(
+          spacing: tokens.ruleSpacing,
+          color: color,
+          borderRadius: borderRadius,
+          topInset: topInset,
+          bottomInset: bottomInset,
+        ),
+        child: child,
       ),
-      child: child,
     );
   }
 }
