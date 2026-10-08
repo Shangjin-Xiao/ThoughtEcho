@@ -1577,8 +1577,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
       } on TimeoutException {
         if (mounted && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('位置获取超时，请检查网络')),
+          AppSnackBar.warning(
+            context,
+            l10n.locationUpdateTimeout,
           );
         }
       } catch (e) {
