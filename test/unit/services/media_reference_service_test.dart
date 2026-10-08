@@ -243,7 +243,7 @@ void main() {
   });
 
   // 超过 900 个 ID 会走 batch 分块提交那条路径，和单块 db.query 必须是同一个
-  // 返回形状：合库时按 ID 决定要不要搬附件，漏一条就是把媒体当孤儿删掉。
+  // 返回形状：合库时按 ID 决定要不要搬附件，漏一条就是把媒体当未关联媒体删掉。
   group('getReferencedFilesBatch', () {
     Future<Map<String, List<String>>> seedAndQuery(int quoteCount) async {
       final batch = db.batch();

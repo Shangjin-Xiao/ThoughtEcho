@@ -10,7 +10,7 @@ import 'database_service.dart';
 /// 媒体文件清理服务
 ///
 /// 负责媒体文件的垃圾回收和清理工作，包括：
-/// - 清理孤儿文件
+/// - 清理未关联媒体文件
 /// - 清理过期临时文件
 /// - 迁移现有笔记的媒体引用
 /// - 定期维护任务
@@ -55,7 +55,7 @@ class MediaCleanupService {
           await TemporaryMediaService.cleanupExpiredTemporaryFiles();
       results['expiredTempFiles'] = expiredTempFiles;
 
-      // 2. 清理孤儿媒体文件
+      // 2. 清理未关联媒体文件
       final orphanFiles = await MediaReferenceService.cleanupOrphanFiles();
       results['orphanFiles'] = orphanFiles;
 
@@ -92,7 +92,7 @@ class MediaCleanupService {
           : await TemporaryMediaService.cleanupAllTemporaryFiles();
       results['tempFilesCleared'] = tempFiles;
 
-      // 3. 清理孤儿媒体文件
+      // 3. 清理未关联媒体文件
       final orphanFiles = await MediaReferenceService.cleanupOrphanFiles(
         dryRun: dryRun,
       );
@@ -141,7 +141,7 @@ class MediaCleanupService {
       final afterStats = await MediaReferenceService.getMediaReferenceStats();
       results['afterStats'] = afterStats;
 
-      // 4. 检测孤儿文件
+      // 4. 检测未关联媒体文件
       final orphanFiles = await MediaReferenceService.detectOrphanFiles();
       results['orphanFilesDetected'] = orphanFiles.length;
       results['orphanFilesList'] = orphanFiles;

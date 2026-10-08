@@ -18,7 +18,7 @@ import 'database_service.dart';
 /// 负责管理媒体文件的引用关系，包括：
 /// - 添加和移除媒体文件引用
 /// - 计算引用计数
-/// - 检测和清理孤儿文件
+/// - 检测和清理未关联媒体文件
 /// - 提供垃圾回收机制
 class MediaReferenceService {
   static const String _tableName = 'media_references';
@@ -359,21 +359,21 @@ class MediaReferenceService {
     }
   }
 
-  /// 检测孤儿文件（没有被任何笔记引用的文件）
+  /// 检测未关联媒体文件（没有被任何笔记引用的文件）
   static Future<List<String>> detectOrphanFiles() async {
     try {
       final plan = await _planOrphanCleanupStreamed();
       logDebug(
-        '检测到 ${plan.candidates.length} 个孤儿文件，待修复引用 ${plan.missingReferencePairs} 条',
+        '检测到 ${plan.candidates.length} 个未关联媒体文件，待修复引用 ${plan.missingReferencePairs} 条',
       );
       return plan.candidates.map((c) => c.absolutePath).toList();
     } catch (e) {
-      logDebug('检测孤儿文件失败: $e');
+      logDebug('检测未关联媒体文件失败: $e');
       return [];
     }
   }
 
-  /// 清理孤儿文件
+  /// 清理未关联媒体文件
   static Future<int> cleanupOrphanFiles({bool dryRun = false}) async {
     try {
       final plan = await _planOrphanCleanupStreamed();
@@ -392,7 +392,7 @@ class MediaReferenceService {
       }
 
       if (plan.candidates.isEmpty) {
-        logDebug('${dryRun ? '模拟' : '实际'}清理完成：未发现孤儿文件');
+        logDebug('${dryRun ? '模拟' : '实际'}清理完成：未发现未关联媒体文件');
         return 0;
       }
 
@@ -400,7 +400,7 @@ class MediaReferenceService {
 
       if (dryRun) {
         for (final candidate in plan.candidates) {
-          logDebug('(模拟) 将删除孤儿文件: ${candidate.absolutePath}');
+          logDebug('(模拟) 将删除未关联媒体文件: ${candidate.absolutePath}');
         }
         cleanedCount = plan.candidates.length;
       } else {
@@ -419,11 +419,11 @@ class MediaReferenceService {
                 final file = File(candidate.absolutePath);
                 if (await file.exists()) {
                   await file.delete();
-                  logDebug('已删除孤儿文件: ${candidate.absolutePath}');
+                  logDebug('已删除未关联媒体文件: ${candidate.absolutePath}');
                   return true;
                 }
               } catch (e) {
-                logDebug('删除孤儿文件失败: ${candidate.absolutePath}, 错误: $e');
+                logDebug('删除未关联媒体文件失败: ${candidate.absolutePath}, 错误: $e');
               }
               return false;
             }),
@@ -433,10 +433,10 @@ class MediaReferenceService {
         }
       }
 
-      logDebug('${dryRun ? '模拟' : '实际'}清理完成，共处理 $cleanedCount 个孤儿文件');
+      logDebug('${dryRun ? '模拟' : '实际'}清理完成，共处理 $cleanedCount 个未关联媒体文件');
       return cleanedCount;
     } catch (e) {
-      logDebug('清理孤儿文件失败: $e');
+      logDebug('清理未关联媒体文件失败: $e');
       return 0;
     }
   }
@@ -1035,11 +1035,11 @@ class MediaReferenceService {
         return false;
       }
 
-      // 确认是孤儿文件，执行删除
+      // 确认是未关联媒体文件，执行删除
       final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
-        logDebug('安全删除孤儿文件: $filePath');
+        logDebug('安全删除未关联媒体文件: $filePath');
         return true;
       }
 
@@ -1305,7 +1305,7 @@ class MediaReferenceService {
       final allMediaFiles = await _getAllMediaFiles();
       final totalFiles = allMediaFiles.length;
 
-      // 孤儿文件数
+      // 未关联媒体文件数
       final orphanFiles = totalFiles - referencedFiles;
 
       return {

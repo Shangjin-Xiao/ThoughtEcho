@@ -118,7 +118,7 @@ void main() {
         DateTime.now().subtract(const Duration(hours: 25)),
       );
 
-      // 1 个孤儿媒体文件（磁盘上存在但无任何引用）
+      // 1 个未关联媒体文件（磁盘上存在但无任何引用）
       final imagesDir =
           Directory(path.join(appDocsDir.path, 'media', 'images'));
       await imagesDir.create(recursive: true);
@@ -155,7 +155,7 @@ void main() {
       expect(tempFile.existsSync(), isTrue); // 文件未被删除
     });
 
-    test('dryRun = false 模式下清理临时文件与孤儿文件并计算节省空间', () async {
+    test('dryRun = false 模式下清理临时文件与未关联媒体文件并计算节省空间', () async {
       final appDocsDir = TestHarness.applicationDocumentsDirectory;
       final tempMediaDir =
           Directory(path.join(appDocsDir.path, 'temp_media', 'temp_images'));
@@ -176,7 +176,7 @@ void main() {
   });
 
   group('MediaCleanupService.migrateExistingNotes', () {
-    test('成功同步现有笔记的媒体引用并检测孤儿文件', () async {
+    test('成功同步现有笔记的媒体引用并检测未关联媒体文件', () async {
       final quote = Quote(
         id: 'note_migrate_1',
         content: '带有图片的笔记',

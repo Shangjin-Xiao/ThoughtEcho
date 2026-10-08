@@ -437,16 +437,16 @@ class StorageManagementService {
     }
   }
 
-  /// 清理孤儿媒体文件
+  /// 清理未关联媒体文件
   /// 返回清理的文件数量
   static Future<int> cleanupOrphanFiles() async {
     try {
-      logDebug('开始清理孤儿媒体文件...');
+      logDebug('开始清理未关联媒体文件...');
       final orphanCount = await MediaReferenceService.cleanupOrphanFiles();
-      logDebug('孤儿媒体文件清理完成: 清理了 $orphanCount 个文件');
+      logDebug('未关联媒体文件清理完成: 清理了 $orphanCount 个文件');
       return orphanCount;
     } catch (e, stackTrace) {
-      logError('清理孤儿媒体文件失败: $e', error: e, stackTrace: stackTrace);
+      logError('清理未关联媒体文件失败: $e', error: e, stackTrace: stackTrace);
       return 0;
     }
   }

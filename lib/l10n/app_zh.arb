@@ -768,8 +768,8 @@
   "clearCache": "清理缓存",
   "clearCacheConfirmTitle": "清理缓存",
   "clearCacheConfirmContent": "确定要清理应用缓存吗？\n\n这将清除临时文件、图片缓存等，不会删除您的笔记数据。",
-  "cleanOrphanMedia": "清理无用媒体文件",
-  "cleanOrphanMediaConfirmTitle": "清理无用媒体文件",
+  "cleanOrphanMedia": "清理未关联媒体",
+  "cleanOrphanMediaConfirmTitle": "清理未关联媒体",
   "cleanOrphanMediaConfirmContent": "这将删除没有被任何笔记引用的媒体文件（图片、视频、音频）。\n\n确定继续吗？",
   "databaseMaintenance": "本地存储维护优化",
   "databaseMaintenanceConfirmTitle": "本地存储维护优化",
@@ -838,7 +838,7 @@
       }
     }
   },
-  "orphanFilesCleanedResult": "{count, plural, =0{没有发现无用文件} other{清理完成，删除了 {count} 个无用文件}}",
+  "orphanFilesCleanedResult": "{count, plural, =0{没有发现未关联媒体} other{清理完成，删除了 {count} 个未关联媒体文件}}",
   "@orphanFilesCleanedResult": {
     "placeholders": {
       "count": {
@@ -846,7 +846,7 @@
       }
     }
   },
-  "noOrphanFilesFound": "没有发现无用文件",
+  "noOrphanFilesFound": "没有发现未关联媒体",
   "cleanupFailed": "清理失败: {error}",
   "@cleanupFailed": {
     "placeholders": {
@@ -1533,7 +1533,7 @@
   "mediaFileStats": "媒体文件统计",
   "totalFiles": "总文件数",
   "referencedFiles": "被引用文件数",
-  "orphanFiles": "孤儿文件数",
+  "orphanFiles": "未关联媒体数",
   "totalReferences": "总引用数",
   "totalSize": "总大小",
   "imagesSize": "图片大小",
@@ -1546,10 +1546,10 @@
   "cleanupOperations": "清理操作",
   "cleanupExpiredTempFiles": "清理过期临时文件",
   "cleanupExpiredTempFilesDesc": "删除超过24小时的临时文件",
-  "cleanupOrphanFiles": "清理孤儿文件",
+  "cleanupOrphanFiles": "清理未关联媒体",
   "cleanupOrphanFilesDesc": "删除没有被任何笔记引用的媒体文件",
   "fullCleanup": "完整清理",
-  "fullCleanupDesc": "清理所有临时文件和孤儿文件",
+  "fullCleanupDesc": "清理所有临时文件和未关联媒体",
   "migrateExistingNotes": "迁移现有笔记",
   "migrateExistingNotesDesc": "重新建立现有笔记的媒体文件引用关系",
   "verifyFileIntegrity": "验证文件完整性",
@@ -1565,7 +1565,7 @@
   "cleanedFilesCount": "清理文件数",
   "spaceSavedMbLabel": "节省空间 (MB)",
   "migratedQuotesCount": "迁移笔记数",
-  "orphanFilesDetected": "检测到孤儿文件",
+  "orphanFilesDetected": "检测到未关联媒体",
   "checkedReferencesCount": "检查引用数",
   "missingFilesCount": "缺失文件数",
   "fileIntegrity": "文件完整性",

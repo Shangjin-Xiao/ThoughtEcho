@@ -520,7 +520,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         );
       } catch (e, stack) {
         UnifiedLogService.instance.error(
-          '批量清理孤儿媒体文件失败',
+          '批量清理未关联媒体文件失败',
           error: e,
           stackTrace: stack,
         );
