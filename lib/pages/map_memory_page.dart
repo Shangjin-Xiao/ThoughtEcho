@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
@@ -50,9 +52,13 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
   final MapController _mapController = MapController();
 
   List<QuoteMapPoint> _points = const [];
+  List<QuoteMapPoint> _allPoints = const [];
   Map<String, NoteTag> _tagMap = const {};
   bool _loading = true;
   bool _failed = false;
+
+  Timer? _cameraDebounceTimer;
+  int _loadGeneration = 0;
 
   /// 没有任何坐标笔记时，地图落在设备位置附近，而不是给一张空的世界地图。
   LatLng? _deviceCenter;
@@ -66,14 +72,16 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
 
   @override
   void dispose() {
+    _cameraDebounceTimer?.cancel();
     _mapController.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({LatLngBounds? bounds}) async {
+    final generation = ++_loadGeneration;
     final database = context.read<DatabaseService>();
     final locationService = context.read<LocationService>();
-    if (mounted) {
+    if (mounted && _points.isEmpty) {
       setState(() {
         _loading = true;
         _failed = false;
@@ -81,19 +89,33 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
     }
 
     try {
-      final points = await database.getQuotesWithCoordinates();
-      final tags = await database.getTags();
+      final points = await database.getQuotesWithCoordinates(
+        minLatitude: bounds?.southWest.latitude,
+        maxLatitude: bounds?.northEast.latitude,
+        minLongitude: bounds?.southWest.longitude,
+        maxLongitude: bounds?.northEast.longitude,
+      );
+      final tags = _tagMap.isEmpty ? await database.getTags() : null;
+
+      if (bounds == null) {
+        _allPoints = points;
+      }
 
       // 一条坐标笔记都没有时才去问设备位置——有足迹的话地图按足迹取景，
       // 多问一次没有意义。
-      final deviceCenter =
-          points.isEmpty ? await _resolveDeviceCenter(locationService) : null;
+      final deviceCenter = points.isEmpty && bounds == null
+          ? await _resolveDeviceCenter(locationService)
+          : null;
 
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _points = points;
-        _tagMap = {for (final tag in tags) tag.id: tag};
-        _deviceCenter = deviceCenter;
+        if (tags != null) {
+          _tagMap = {for (final tag in tags) tag.id: tag};
+        }
+        if (deviceCenter != null) {
+          _deviceCenter = deviceCenter;
+        }
         _loading = false;
       });
     } catch (e, stack) {
@@ -103,12 +125,21 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
         stackTrace: stack,
         source: 'MapMemoryPage',
       );
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _loading = false;
         _failed = true;
       });
     }
+  }
+
+  void _onPositionChanged(MapCamera camera, bool hasGesture) {
+    if (!hasGesture) return;
+    _cameraDebounceTimer?.cancel();
+    _cameraDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      _load(bounds: camera.visibleBounds);
+    });
   }
 
   /// 空状态下地图落在哪儿。
@@ -133,10 +164,13 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
 
   /// 回到「看得见全部足迹」的取景。
   void _fitAllPoints() {
-    if (_points.isEmpty) return;
+    _cameraDebounceTimer?.cancel();
+    _load();
+    final targetPoints = _allPoints.isNotEmpty ? _allPoints : _points;
+    if (targetPoints.isEmpty) return;
     _mapController.fitCamera(
       CameraFit.coordinates(
-        coordinates: _points.map(_toLatLng).toList(),
+        coordinates: targetPoints.map(_toLatLng).toList(),
         padding: _overviewPadding,
         maxZoom: _overviewMaxZoom,
       ),
@@ -187,6 +221,7 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
     return FlutterMap(
       mapController: _mapController,
       options: MapOptions(
+        onPositionChanged: _onPositionChanged,
         // 有足迹就按足迹取景，进来第一眼就是"我去过这些地方"。
         initialCameraFit: hasPoints
             ? CameraFit.coordinates(

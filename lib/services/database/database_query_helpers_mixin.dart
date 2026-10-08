@@ -113,7 +113,14 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
   /// 加载成功的空地图，数据库故障被藏了起来。地图页有自己的错误态。
   /// Web 上没有这张表，异常会照样冒出去——那正是「本平台不支持」的实情。
   @override
-  Future<List<QuoteMapPoint>> getQuotesWithCoordinates() async {
+  Future<List<QuoteMapPoint>> getQuotesWithCoordinates({
+    double? minLatitude,
+    double? maxLatitude,
+    double? minLongitude,
+    double? maxLongitude,
+    int? limit,
+    int? offset,
+  }) async {
     try {
       if (!_isInitialized) {
         if (_isInitializing && _initCompleter != null) {
@@ -125,54 +132,54 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
       final db = await safeDatabase;
 
+      final minLat = minLatitude ?? -90.0;
+      final maxLat = maxLatitude ?? 90.0;
+      final minLon = minLongitude ?? -180.0;
+      final maxLon = maxLongitude ?? 180.0;
+
+      final bool crossesAntimeridian = minLon > maxLon;
+      final String lonClause = crossesAntimeridian
+          ? '(q.longitude >= ? OR q.longitude <= ?)'
+          : 'q.longitude >= ? AND q.longitude <= ?';
+
+      final String whereClause = '''
+        q.latitude IS NOT NULL
+        AND q.longitude IS NOT NULL
+        AND q.latitude >= ? AND q.latitude <= ?
+        AND $lonClause
+        AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
+        AND NOT EXISTS (
+          SELECT 1 FROM quote_tags qt_hidden
+          WHERE qt_hidden.quote_id = q.id
+          AND qt_hidden.tag_id = ?
+        )
+      ''';
+
+      final List<Object> whereArgs = [
+        minLat,
+        maxLat,
+        minLon,
+        maxLon,
+        _DatabaseServiceBase.hiddenTagId,
+      ];
+
       final maps = await db.query(
         'quotes q',
         columns: ['q.id', 'q.date', 'q.latitude', 'q.longitude'],
-        where: '''
-          q.latitude IS NOT NULL
-          AND q.longitude IS NOT NULL
-          AND q.latitude >= ? AND q.latitude <= ?
-          AND q.longitude >= ? AND q.longitude <= ?
-          AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
-          AND NOT EXISTS (
-            SELECT 1 FROM quote_tags qt_hidden
-            WHERE qt_hidden.quote_id = q.id
-            AND qt_hidden.tag_id = ?
-          )
-        ''',
-        whereArgs: [
-          -90.0,
-          90.0,
-          -180.0,
-          180.0,
-          _DatabaseServiceBase.hiddenTagId,
-        ],
+        where: whereClause,
+        whereArgs: whereArgs,
         orderBy: 'q.date DESC',
+        limit: limit,
+        offset: offset,
       );
 
-      final points = <QuoteMapPoint>[];
-      for (final map in maps) {
-        final latitude = (map['latitude'] as num?)?.toDouble();
-        final longitude = (map['longitude'] as num?)?.toDouble();
-        final id = map['id']?.toString();
-        if (latitude == null || longitude == null || id == null) continue;
-        if (latitude < -90.0 ||
-            latitude > 90.0 ||
-            longitude < -180.0 ||
-            longitude > 180.0) {
-          continue;
-        }
+      if (maps.isEmpty) return const [];
 
-        points.add(
-          QuoteMapPoint(
-            id: id,
-            date: map['date']?.toString() ?? '',
-            latitude: latitude,
-            longitude: longitude,
-          ),
-        );
+      if (maps.length > 50) {
+        return await compute(_parseAndFilterQuoteMapPointsInIsolate, maps);
+      } else {
+        return _parseAndFilterQuoteMapPointsInIsolate(maps);
       }
-      return points;
     } catch (e, stack) {
       logError(
         'getQuotesWithCoordinates 失败: $e',
@@ -377,4 +384,33 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       return 0;
     }
   }
+}
+
+/// 在后台 Isolate 中将 SQL 结果行转为 QuoteMapPoint 并校验坐标范围
+List<QuoteMapPoint> _parseAndFilterQuoteMapPointsInIsolate(
+  List<Map<String, Object?>> maps,
+) {
+  final points = <QuoteMapPoint>[];
+  for (final map in maps) {
+    final latitude = (map['latitude'] as num?)?.toDouble();
+    final longitude = (map['longitude'] as num?)?.toDouble();
+    final id = map['id']?.toString();
+    if (latitude == null || longitude == null || id == null) continue;
+    if (latitude < -90.0 ||
+        latitude > 90.0 ||
+        longitude < -180.0 ||
+        longitude > 180.0) {
+      continue;
+    }
+
+    points.add(
+      QuoteMapPoint(
+        id: id,
+        date: map['date']?.toString() ?? '',
+        latitude: latitude,
+        longitude: longitude,
+      ),
+    );
+  }
+  return points;
 }
