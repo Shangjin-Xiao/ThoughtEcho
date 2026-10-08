@@ -80,23 +80,29 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
               tooltip: l10n.aiAssistantLabel,
               onPressed: () => _showAIOptions(context),
             ),
-            IconButton(
-              icon: _editorState.isLoadingFullQuote
-                  ? SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant, // 适配 AppBar 颜色
-                      ),
-                    )
-                  : Icon(Icons.save),
-              tooltip: l10n.save,
-              onPressed: _editorState.isLoadingFullQuote || _mediaState.isSaving
-                  ? null
-                  : _saveContent,
+            ListenableBuilder(
+              listenable: _mediaState,
+              builder: (context, _) {
+                return IconButton(
+                  icon: _editorState.isLoadingFullQuote
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant, // 适配 AppBar 颜色
+                          ),
+                        )
+                      : Icon(Icons.save),
+                  tooltip: l10n.save,
+                  onPressed:
+                      _editorState.isLoadingFullQuote || _mediaState.isSaving
+                          ? null
+                          : _saveContent,
+                );
+              },
             ),
           ],
           automaticallyImplyLeading: true,
@@ -104,236 +110,264 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
         body: SafeArea(
           child: Stack(
             children: [
-              Column(
-                children: [
-                  UnifiedQuillToolbar(
-                    key: _toolbarGuideKey, // 新增：用于气泡定位
-                    controller: _editorState.controller,
-                    onMediaImported: (String filePath) {
-                      _mediaState.recordImportedMedia(filePath);
-                    },
-                  ),
-                  if (_metadataState.selectedTagIds.isNotEmpty ||
-                      _metadataState.selectedColorHex != null ||
-                      _metadataState.showLocation ||
-                      _metadataState.showWeather ||
-                      (_metadataState.currentAiAnalysis != null &&
-                          _metadataState.currentAiAnalysis!.isNotEmpty))
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: theme.colorScheme.outlineVariant
-                                .applyOpacity(0.1),
-                            width: 1,
+              RepaintBoundary(
+                child: Column(
+                  children: [
+                    UnifiedQuillToolbar(
+                      key: _toolbarGuideKey, // 新增：用于气泡定位
+                      controller: _editorState.controller,
+                      onMediaImported: (String filePath) {
+                        _mediaState.recordImportedMedia(filePath);
+                      },
+                    ),
+                    if (_metadataState.selectedTagIds.isNotEmpty ||
+                        _metadataState.selectedColorHex != null ||
+                        _metadataState.showLocation ||
+                        _metadataState.showWeather ||
+                        (_metadataState.currentAiAnalysis != null &&
+                            _metadataState.currentAiAnalysis!.isNotEmpty))
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: theme.colorScheme.outlineVariant
+                                  .applyOpacity(0.1),
+                              width: 1,
+                            ),
                           ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          if (_metadataState.selectedTagIds.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Chip(
-                                visualDensity: VisualDensity.compact,
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                                label: Text(
-                                  l10n.tagsCount(
-                                      _metadataState.selectedTagIds.length),
-                                ),
-                                avatar: Icon(Icons.tag, size: 16),
-                              ),
-                            ),
-                          if (_metadataState.selectedColorHex != null)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: Color(
-                                    int.parse(
-                                          _metadataState.selectedColorHex!
-                                              .substring(1),
-                                          radix: 16,
-                                        ) |
-                                        0xFF000000,
+                        child: Row(
+                          children: [
+                            if (_metadataState.selectedTagIds.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Chip(
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  label: Text(
+                                    l10n.tagsCount(
+                                        _metadataState.selectedTagIds.length),
                                   ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: theme.colorScheme.outline
-                                        .applyOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                key: ValueKey(
-                                  'color-indicator-$_metadataState.selectedColorHex',
+                                  avatar: Icon(Icons.tag, size: 16),
                                 ),
                               ),
-                            ),
-                          if (_metadataState.showLocation &&
-                              (_metadataState.location != null ||
-                                  (_metadataState.latitude != null &&
-                                      _metadataState.longitude != null)))
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Icon(
-                                Icons.location_on,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          if (_metadataState.showWeather &&
-                              _metadataState.weather != null)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Icon(
-                                _getWeatherIcon(_metadataState.weather!),
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          if (_metadataState.currentAiAnalysis != null &&
-                              _metadataState.currentAiAnalysis!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Icon(
-                                Icons.auto_awesome,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () => _showMetadataDialog(context),
-                            child: Text(
-                              l10n.editMetadata,
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Expanded(
-                    child: Container(
-                      color: theme.colorScheme.surface,
-                      padding: const EdgeInsets.all(16),
-                      child: quill.QuillEditor(
-                        controller: _editorState.controller,
-                        scrollController: _editorState.scrollController,
-                        focusNode: _editorState.focusNode,
-                        config: quill.QuillEditorConfig(
-                          // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
-                          // 卡片里的正文挤得多——同一条笔记「写的时候」和
-                          // 「读的时候」行距不一样。两边共用同一套令牌纠正。
-                          customStyles: QuillThemeTypography.paragraphOnly(
-                            QuillThemeTypography.paragraphStyle(context),
-                            boldWeight:
-                                QuillThemeTypography.boldWeight(context),
-                          ),
-                          embedBuilders: kIsWeb
-                              ? FlutterQuillEmbeds.editorWebBuilders()
-                              : QuillEditorExtensions.getEmbedBuilders(
-                                  optimizedImages: false,
-                                ),
-                          placeholder: AppLocalizations.of(
-                            context,
-                          ).fullscreenEditorPlaceholder,
-                          padding: const EdgeInsets.all(16),
-                          autoFocus: false,
-                          expands: false,
-                          scrollable: true,
-                          enableInteractiveSelection: true,
-                          enableSelectionToolbar: true,
-                          showCursor: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (_mediaState.isSaving)
-                Positioned.fill(
-                  child: Container(
-                    color: theme.colorScheme.surface.withValues(alpha: 0.72),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 300),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 24,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(
-                              AppShapeTokens.of(context).cardRadius,
-                            ),
-                            boxShadow: AppShapeTokens.of(context).raisedShadow,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      value: _mediaState.saveProgress >= 0.99
-                                          ? 1.0
-                                          : (_mediaState.saveProgress <= 0
-                                              ? null
-                                              : _mediaState.saveProgress),
-                                      strokeWidth: 3,
+                            if (_metadataState.selectedColorHex != null)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: Color(
+                                      int.parse(
+                                            _metadataState.selectedColorHex!
+                                                .substring(1),
+                                            radix: 16,
+                                          ) |
+                                          0xFF000000,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: theme.colorScheme.outline
+                                          .applyOpacity(0.2),
+                                      width: 1,
                                     ),
                                   ),
-                                  SizedBox(width: 12),
-                                  Text(
-                                    _mediaState.saveProgress < 1.0
-                                        ? l10n.savingNote
-                                        : l10n.done,
-                                    style: theme.textTheme.titleMedium,
+                                  key: ValueKey(
+                                    'color-indicator-$_metadataState.selectedColorHex',
                                   ),
-                                ],
-                              ),
-                              SizedBox(height: 16),
-                              LinearProgressIndicator(
-                                value: _mediaState.saveProgress.clamp(0.0, 1.0),
-                                minHeight: 6,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              SizedBox(height: 12),
-                              if (_mediaState.saveStatus != null)
-                                Text(
-                                  _mediaState.saveStatus!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                  textAlign: TextAlign.center,
                                 ),
-                              SizedBox(height: 8),
-                              Text(
-                                '${(_mediaState.saveProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                                style: theme.textTheme.labelMedium,
                               ),
-                            ],
+                            if (_metadataState.showLocation &&
+                                (_metadataState.location != null ||
+                                    (_metadataState.latitude != null &&
+                                        _metadataState.longitude != null)))
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Icon(
+                                  Icons.location_on,
+                                  size: 16,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            if (_metadataState.showWeather &&
+                                _metadataState.weather != null)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Icon(
+                                  _getWeatherIcon(_metadataState.weather!),
+                                  size: 16,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            if (_metadataState.currentAiAnalysis != null &&
+                                _metadataState.currentAiAnalysis!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Icon(
+                                  Icons.auto_awesome,
+                                  size: 16,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: () => _showMetadataDialog(context),
+                              child: Text(
+                                l10n.editMetadata,
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Expanded(
+                      child: Container(
+                        color: theme.colorScheme.surface,
+                        padding: const EdgeInsets.all(16),
+                        child: quill.QuillEditor(
+                          controller: _editorState.controller,
+                          scrollController: _editorState.scrollController,
+                          focusNode: _editorState.focusNode,
+                          config: quill.QuillEditorConfig(
+                            // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
+                            // 卡片里的正文挤得多——同一条笔记「写的时候」和
+                            // 「读的时候」行距不一样。两边共用同一套令牌纠正。
+                            customStyles: QuillThemeTypography.paragraphOnly(
+                              QuillThemeTypography.paragraphStyle(context),
+                              boldWeight:
+                                  QuillThemeTypography.boldWeight(context),
+                            ),
+                            embedBuilders: kIsWeb
+                                ? FlutterQuillEmbeds.editorWebBuilders()
+                                : QuillEditorExtensions.getEmbedBuilders(
+                                    optimizedImages: false,
+                                  ),
+                            placeholder: AppLocalizations.of(
+                              context,
+                            ).fullscreenEditorPlaceholder,
+                            padding: const EdgeInsets.all(16),
+                            autoFocus: false,
+                            expands: false,
+                            scrollable: true,
+                            enableInteractiveSelection: true,
+                            enableSelectionToolbar: true,
+                            showCursor: true,
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
+              ),
+              _EditorSaveOverlay(mediaState: _mediaState),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EditorSaveOverlay extends StatelessWidget {
+  final NoteEditorMediaState mediaState;
+
+  const _EditorSaveOverlay({
+    required this.mediaState,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: ListenableBuilder(
+        listenable: mediaState,
+        builder: (context, _) {
+          if (!mediaState.isSaving) {
+            return const SizedBox.shrink();
+          }
+
+          final theme = Theme.of(context);
+          final l10n = AppLocalizations.of(context);
+
+          return RepaintBoundary(
+            child: Container(
+              color: theme.colorScheme.surface.withValues(alpha: 0.72),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 24,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(
+                        AppShapeTokens.of(context).cardRadius,
+                      ),
+                      boxShadow: AppShapeTokens.of(context).raisedShadow,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                value: mediaState.saveProgress >= 0.99
+                                    ? 1.0
+                                    : (mediaState.saveProgress <= 0
+                                        ? null
+                                        : mediaState.saveProgress),
+                                strokeWidth: 3,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              mediaState.saveProgress < 1.0
+                                  ? l10n.savingNote
+                                  : l10n.done,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        LinearProgressIndicator(
+                          value: mediaState.saveProgress.clamp(0.0, 1.0),
+                          minHeight: 6,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: 12),
+                        if (mediaState.saveStatus != null)
+                          Text(
+                            mediaState.saveStatus!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${(mediaState.saveProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                          style: theme.textTheme.labelMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
