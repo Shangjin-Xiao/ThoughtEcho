@@ -33,20 +33,8 @@ extension NoteListFiltersExtension on NoteListViewState {
         widget.selectedTagIds.map((tagId) {
           final tag =
               tagMap[tagId] ?? NoteTag(id: tagId, name: l10n.unknownTag);
-          return TweenAnimationBuilder<double>(
+          return AnimatedFilterChip(
             key: ValueKey('tag_$tagId'),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.8 + (0.2 * value),
-                  child: child,
-                ),
-              );
-            },
             child: _buildModernFilterChip(
               theme: theme,
               label: tag.localizedName(l10n),
@@ -79,20 +67,8 @@ extension NoteListFiltersExtension on NoteListViewState {
           final label =
               WeatherService.getLocalizedFilterCategoryLabel(context, cat);
           final icon = WeatherService.getFilterCategoryIcon(cat);
-          return TweenAnimationBuilder<double>(
+          return AnimatedFilterChip(
             key: ValueKey('weather_cat_$cat'),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.8 + (0.2 * value),
-                  child: child,
-                ),
-              );
-            },
             child: _buildModernFilterChip(
               theme: theme,
               label: label,
@@ -119,20 +95,8 @@ extension NoteListFiltersExtension on NoteListViewState {
       for (final k in others) {
         final label = WeatherService.getLocalizedWeatherLabel(context, k);
         allChips.add(
-          TweenAnimationBuilder<double>(
+          AnimatedFilterChip(
             key: ValueKey('weather_$k'),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.8 + (0.2 * value),
-                  child: child,
-                ),
-              );
-            },
             child: _buildModernFilterChip(
               theme: theme,
               label: label,
@@ -157,20 +121,8 @@ extension NoteListFiltersExtension on NoteListViewState {
             periodKey,
           );
           final periodIcon = TimeUtils.getDayPeriodIconByKey(periodKey);
-          return TweenAnimationBuilder<double>(
+          return AnimatedFilterChip(
             key: ValueKey('period_$periodKey'),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.8 + (0.2 * value),
-                  child: child,
-                ),
-              );
-            },
             child: _buildModernFilterChip(
               theme: theme,
               label: periodLabel,
@@ -357,6 +309,38 @@ extension NoteListFiltersExtension on NoteListViewState {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 带进场微动画与图层裁切优化的筛选 Chip 包裹组件
+class AnimatedFilterChip extends StatelessWidget {
+  final Widget child;
+
+  const AnimatedFilterChip({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+      tween: Tween(begin: 0.0, end: 1.0),
+      child: child,
+      builder: (context, value, child) {
+        if (value >= 1.0) {
+          return child!;
+        }
+        return Opacity(
+          opacity: value,
+          child: Transform.scale(
+            scale: 0.8 + (0.2 * value),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
