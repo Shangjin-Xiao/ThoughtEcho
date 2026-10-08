@@ -126,54 +126,56 @@ class CollapsedMediaThumbnail extends StatelessWidget {
     final Widget thumbnail = SizedBox(
       width: size,
       height: size,
-      child: ClipRRect(
-        borderRadius: radius,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 语义标签放在图片分支内部：加载失败时读屏应当播报「图片加载失败」，
-            // 而不是继续说「查看图片」——失败态只有 _ThumbnailImage 自己知道。
-            if (imageSource != null)
-              _ThumbnailImage(size: size, source: imageSource)
-            else
-              Semantics(
-                label: media.videoCount > 0 ? l10n.video : l10n.audio,
-                child: CollapsedMediaPlaceholder(
-                  icon: media.videoCount > 0
-                      ? Icons.videocam_outlined
-                      : Icons.audiotrack_outlined,
-                ),
-              ),
-            if (extraCount > 0)
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.scrim.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.only(
-                      topLeft: radius.topLeft,
-                    ),
+      child: RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 语义标签放在图片分支内部：加载失败时读屏应当播报「图片加载失败」，
+              // 而不是继续说「查看图片」——失败态只有 _ThumbnailImage 自己知道。
+              if (imageSource != null)
+                _ThumbnailImage(size: size, source: imageSource)
+              else
+                Semantics(
+                  label: media.videoCount > 0 ? l10n.video : l10n.audio,
+                  child: CollapsedMediaPlaceholder(
+                    icon: media.videoCount > 0
+                        ? Icons.videocam_outlined
+                        : Icons.audiotrack_outlined,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 1,
+                ),
+              if (extraCount > 0)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.scrim.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.only(
+                        topLeft: radius.topLeft,
+                      ),
                     ),
-                    child: Text(
-                      '+$extraCount',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        // 底板是 scrim（任何主题下都是半透明黑），所以这里刻意
-                        // 用固定白色而不是跟随主题的 onSurface 一类令牌——
-                        // 跟随主题会在浅色模式下变成黑字压在黑底上。
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      child: Text(
+                        '+$extraCount',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          // 底板是 scrim（任何主题下都是半透明黑），所以这里刻意
+                          // 用固定白色而不是跟随主题的 onSurface 一类令牌——
+                          // 跟随主题会在浅色模式下变成黑字压在黑底上。
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

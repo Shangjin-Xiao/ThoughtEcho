@@ -78,50 +78,52 @@ class CollapsedMediaBanner extends StatelessWidget {
     final Widget banner = SizedBox(
       height: height,
       width: double.infinity,
-      child: ClipRRect(
-        borderRadius: radius,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (imageSource != null)
-              _BannerImage(source: imageSource)
-            else
-              Semantics(
-                label: media.videoCount > 0 ? l10n.video : l10n.audio,
-                child: CollapsedMediaPlaceholder(
-                  icon: media.videoCount > 0
-                      ? Icons.videocam_outlined
-                      : Icons.audiotrack_outlined,
-                  iconSize: 32,
-                ),
-              ),
-            if (extraCount > 0)
-              Positioned(
-                right: 8,
-                bottom: 8,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.scrim.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(10),
+      child: RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (imageSource != null)
+                _BannerImage(source: imageSource)
+              else
+                Semantics(
+                  label: media.videoCount > 0 ? l10n.video : l10n.audio,
+                  child: CollapsedMediaPlaceholder(
+                    icon: media.videoCount > 0
+                        ? Icons.videocam_outlined
+                        : Icons.audiotrack_outlined,
+                    iconSize: 32,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                ),
+              if (extraCount > 0)
+                Positioned(
+                  right: 8,
+                  bottom: 8,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.scrim.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(
-                      '+$extraCount',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        // 底板是 scrim（任何主题下都是半透明黑），刻意用固定白色：
-                        // 跟随主题会在浅色模式下变成黑字压在黑底上。
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      child: Text(
+                        '+$extraCount',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          // 底板是 scrim（任何主题下都是半透明黑），刻意用固定白色：
+                          // 跟随主题会在浅色模式下变成黑字压在黑底上。
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
