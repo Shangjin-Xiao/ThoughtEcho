@@ -29,8 +29,9 @@ class QuoteCard extends StatelessWidget {
           children: [
             Text(
               quote.content,
-              style: (theme.textTheme.titleLarge ?? const TextStyle(fontSize: 22))
-                  .copyWith(color: colors.primaryTextColor),
+              style:
+                  (theme.textTheme.titleLarge ?? const TextStyle(fontSize: 22))
+                      .copyWith(color: colors.primaryTextColor),
             ),
             const SizedBox(height: 16),
             _buildSource(colors.secondaryTextColor),

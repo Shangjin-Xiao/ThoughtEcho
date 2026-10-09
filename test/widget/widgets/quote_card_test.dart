@@ -47,7 +47,8 @@ void main() {
   }
 
   group('QuoteCard Dynamic Contrast Tests', () {
-    testWidgets('renders light card color (#FFFFFF) with high contrast text in light mode',
+    testWidgets(
+        'renders light card color (#FFFFFF) with high contrast text in light mode',
         (WidgetTester tester) async {
       final quote = createTestQuote(
         colorHex: '#FFFFFF',
@@ -55,11 +56,13 @@ void main() {
         sourceWork: 'Book A',
       );
 
-      await tester.pumpWidget(buildTestApp(quote: quote, brightness: Brightness.light));
+      await tester
+          .pumpWidget(buildTestApp(quote: quote, brightness: Brightness.light));
 
       final BuildContext context = tester.element(find.byType(QuoteCard));
       final theme = Theme.of(context);
-      final expectedColors = QuoteCardColors.fromHex('#FFFFFF', theme.colorScheme);
+      final expectedColors =
+          QuoteCardColors.fromHex('#FFFFFF', theme.colorScheme);
 
       final contentText = tester.widget<Text>(find.text('Test Quote Content'));
       expect(contentText.style?.color, expectedColors.primaryTextColor);
@@ -72,18 +75,21 @@ void main() {
       expect(decoration.color, expectedColors.cardColor);
     });
 
-    testWidgets('renders light card color (#FFFFFF) with dark text in dark mode',
+    testWidgets(
+        'renders light card color (#FFFFFF) with dark text in dark mode',
         (WidgetTester tester) async {
       final quote = createTestQuote(
         colorHex: '#FFFFFF',
         sourceAuthor: 'Author B',
       );
 
-      await tester.pumpWidget(buildTestApp(quote: quote, brightness: Brightness.dark));
+      await tester
+          .pumpWidget(buildTestApp(quote: quote, brightness: Brightness.dark));
 
       final BuildContext context = tester.element(find.byType(QuoteCard));
       final theme = Theme.of(context);
-      final expectedColors = QuoteCardColors.fromHex('#FFFFFF', theme.colorScheme);
+      final expectedColors =
+          QuoteCardColors.fromHex('#FFFFFF', theme.colorScheme);
 
       final contentText = tester.widget<Text>(find.text('Test Quote Content'));
       expect(contentText.style?.color, expectedColors.primaryTextColor);
@@ -92,18 +98,21 @@ void main() {
       expect(sourceText.style?.color, expectedColors.secondaryTextColor);
     });
 
-    testWidgets('renders dark card color (#000000) with light text in light mode',
+    testWidgets(
+        'renders dark card color (#000000) with light text in light mode',
         (WidgetTester tester) async {
       final quote = createTestQuote(
         colorHex: '#000000',
         source: 'Legacy Source',
       );
 
-      await tester.pumpWidget(buildTestApp(quote: quote, brightness: Brightness.light));
+      await tester
+          .pumpWidget(buildTestApp(quote: quote, brightness: Brightness.light));
 
       final BuildContext context = tester.element(find.byType(QuoteCard));
       final theme = Theme.of(context);
-      final expectedColors = QuoteCardColors.fromHex('#000000', theme.colorScheme);
+      final expectedColors =
+          QuoteCardColors.fromHex('#000000', theme.colorScheme);
 
       final contentText = tester.widget<Text>(find.text('Test Quote Content'));
       expect(contentText.style?.color, expectedColors.primaryTextColor);
@@ -114,7 +123,8 @@ void main() {
   });
 
   group('QuoteCard Fallback Handling Tests', () {
-    testWidgets('degrades gracefully when colorHex is null', (WidgetTester tester) async {
+    testWidgets('degrades gracefully when colorHex is null',
+        (WidgetTester tester) async {
       final quote = createTestQuote(colorHex: null, source: 'Source Test');
 
       await tester.pumpWidget(buildTestApp(quote: quote));
@@ -129,7 +139,8 @@ void main() {
       expect(decoration.color, expectedColors.cardColor);
     });
 
-    testWidgets('degrades gracefully when colorHex is empty string', (WidgetTester tester) async {
+    testWidgets('degrades gracefully when colorHex is empty string',
+        (WidgetTester tester) async {
       final quote = createTestQuote(colorHex: '', source: 'Source Test');
 
       await tester.pumpWidget(buildTestApp(quote: quote));
@@ -142,8 +153,10 @@ void main() {
       expect(decoration.color, theme.colorScheme.surfaceContainerLowest);
     });
 
-    testWidgets('degrades gracefully when colorHex is invalid hex', (WidgetTester tester) async {
-      final quote = createTestQuote(colorHex: 'invalid-hex', source: 'Source Test');
+    testWidgets('degrades gracefully when colorHex is invalid hex',
+        (WidgetTester tester) async {
+      final quote =
+          createTestQuote(colorHex: 'invalid-hex', source: 'Source Test');
 
       await tester.pumpWidget(buildTestApp(quote: quote));
 
@@ -157,8 +170,10 @@ void main() {
   });
 
   group('QuoteCard AppShapeTokens Theme Integration Tests', () {
-    testWidgets('adapts card radius and shadow based on AppShapeTokens', (WidgetTester tester) async {
-      final shapeTokens = AppShapeTokens.fromForm(ThemeStyleForm.paper, Brightness.light);
+    testWidgets('adapts card radius and shadow based on AppShapeTokens',
+        (WidgetTester tester) async {
+      final shapeTokens =
+          AppShapeTokens.fromForm(ThemeStyleForm.paper, Brightness.light);
       final themeWithPaper = ThemeData(
         brightness: Brightness.light,
         extensions: [shapeTokens],
@@ -176,7 +191,8 @@ void main() {
       final container = tester.widget<Container>(find.byType(Container));
       final decoration = container.decoration as BoxDecoration;
 
-      expect(decoration.borderRadius, BorderRadius.circular(shapeTokens.cardRadius));
+      expect(decoration.borderRadius,
+          BorderRadius.circular(shapeTokens.cardRadius));
       expect(decoration.boxShadow, shapeTokens.restShadow);
     });
   });
