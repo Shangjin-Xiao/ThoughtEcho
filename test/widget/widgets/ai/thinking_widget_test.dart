@@ -74,7 +74,7 @@ void main() {
 
       expect(find.byType(MarkdownBody), findsOneWidget);
 
-      // 流式结束，inProgress 变为 false，触发 didUpdateWidget 自动折叠
+      // 流式结束，inProgress 变为 false，保持当前展开状态（不自动折叠）
       await tester.pumpWidget(
         buildTestApp(
           const ThinkingWidget(
@@ -85,10 +85,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(MarkdownBody), findsNothing);
+      expect(find.byType(MarkdownBody), findsOneWidget);
+      expect(find.text('思考完成。'), findsOneWidget);
       expect(find.text('思考'), findsOneWidget);
 
-      // 再次进入思考状态，inProgress 变为 true，触发 didUpdateWidget 自动展开
+      // 手动折叠
+      await tester.tap(find.byType(InkWell));
+      await tester.pumpAndSettle();
+      expect(find.byType(MarkdownBody), findsNothing);
+
+      // 再次进入思考状态，inProgress 变为 true，由于此前已折叠，触发 didUpdateWidget 自动展开
       await tester.pumpWidget(
         buildTestApp(
           const ThinkingWidget(
@@ -102,6 +108,65 @@ void main() {
 
       expect(find.byType(MarkdownBody), findsOneWidget);
       expect(find.text('第二轮思考中...'), findsOneWidget);
+    });
+
+    testWidgets(
+        'preserves user intention when manually toggling during and after streaming',
+        (WidgetTester tester) async {
+      // 1. 开始流式思考，默认展开
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '第 1 轮思考中...',
+            inProgress: true,
+          ),
+        ),
+      );
+      expect(find.byType(MarkdownBody), findsOneWidget);
+
+      // 2. 思考过程中用户手动折叠（inProgress 为 true 时有转圈动画，用 pump(300ms) 替代 pumpAndSettle）
+      await tester.tap(find.byType(InkWell));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(MarkdownBody), findsNothing);
+
+      // 3. 流式结束 (inProgress -> false)，由于用户已手动折叠，组件保持折叠状态
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '第 1 轮思考完成',
+            inProgress: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(MarkdownBody), findsNothing);
+
+      // 4. 发起第 2 轮思考 (inProgress -> true)，折叠状态自动展开
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '第 2 轮思考中...',
+            inProgress: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(MarkdownBody), findsOneWidget);
+
+      // 5. 第 2 轮思考结束，用户未折叠，保留展开状态
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '第 2 轮思考完成',
+            inProgress: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(MarkdownBody), findsOneWidget);
+      expect(find.text('第 2 轮思考完成'), findsOneWidget);
     });
 
     testWidgets('toggles expanded state on tap', (WidgetTester tester) async {
@@ -198,12 +263,9 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
-
-      // 点击展开以查看 MarkdownBody
-      await tester.tap(find.byType(InkWell));
       await tester.pumpAndSettle();
 
+      // 流式结束保持展开，直接可查看 MarkdownBody 中的完整文本
       expect(find.text('流式思考中...完整终极推导结论。'), findsOneWidget);
     });
 
@@ -242,13 +304,9 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
-
-      // 点击展开查看最新文本
-      await tester.tap(find.byType(InkWell));
       await tester.pumpAndSettle();
 
-      // 应立即刷入最后块文本，无需滞后等待 100ms 防抖 Timer
+      // 流式结束保持展开，应立即刷入最后块文本，无需滞后等待 100ms 防抖 Timer
       expect(find.text('初始文本 + 最后块'), findsOneWidget);
     });
 

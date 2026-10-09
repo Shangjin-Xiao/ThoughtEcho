@@ -10,7 +10,7 @@ import '../app_loading_view.dart';
 
 /// 思考过程折叠组件 - 展示 AI 的思考过程
 ///
-/// - 进行中时自动展开，完成后默认折叠
+/// - 进行中与流式结束时保留展开状态，仅在发起新思考时若折叠则自动展开
 /// - 折叠态是一行状态文字，展开后内容靠左侧竖线归组
 /// - 可点击标题栏切换展开/折叠
 /// - 使用 Markdown 渲染思考内容
@@ -69,22 +69,14 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
   void didUpdateWidget(ThinkingWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 如果进度状态改变，自动折叠/展开
-    if (oldWidget.inProgress != widget.inProgress) {
-      if (widget.inProgress) {
-        if (!_isExpanded) {
-          setState(() {
-            _isExpanded = true;
-          });
-          _expandController.forward();
-        }
-      } else {
-        if (_isExpanded) {
-          setState(() {
-            _isExpanded = false;
-          });
-          _expandController.reverse();
-        }
+    // 当开始新的思考过程（inProgress 变为 true）时，若处于折叠状态则自动展开；
+    // 流式结束（inProgress 变为 false）时保留当前展开状态，避免打断用户阅读。
+    if (oldWidget.inProgress != widget.inProgress && widget.inProgress) {
+      if (!_isExpanded) {
+        setState(() {
+          _isExpanded = true;
+        });
+        _expandController.forward();
       }
     }
 
