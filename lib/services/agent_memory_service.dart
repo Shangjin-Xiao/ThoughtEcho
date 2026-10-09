@@ -252,7 +252,7 @@ class AgentMemoryService extends ChangeNotifier {
     ''');
     // v1 → v2 的加列。建表语句里已经有这一列，所以只有升级路径会真的加上；
     // 重复执行由下面的吞异常兜底，和整套 schema 的自愈策略保持一致。
-    await _addColumnIfMissing(db, profileTable, 'source_note_ids TEXT');
+    await _addColumnIfMissing(db, profileTable, 'source_note_ids', 'TEXT');
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_agent_memory_profile_status '
       'ON $profileTable(status)',
@@ -267,6 +267,13 @@ class AgentMemoryService extends ChangeNotifier {
     );
   }
 
+  static String _quoteIdentifier(String identifier) {
+    if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(identifier)) {
+      throw StateError('不安全的标识符: $identifier');
+    }
+    return '"$identifier"';
+  }
+
   /// 加列，列已存在时静默跳过。
   ///
   /// SQLite 没有 `ADD COLUMN IF NOT EXISTS`，而 [_ensureSchema] 在 onCreate /
@@ -275,10 +282,20 @@ class AgentMemoryService extends ChangeNotifier {
   static Future<void> _addColumnIfMissing(
     DatabaseExecutor db,
     String table,
+    String columnName,
     String columnDefinition,
   ) async {
     try {
-      await db.execute('ALTER TABLE $table ADD COLUMN $columnDefinition');
+      final safeTable = _quoteIdentifier(table);
+      final safeColumnName = _quoteIdentifier(columnName);
+
+      // columnDefinition 不是标识符且不可参数化，用白名单校验后拼入 DDL
+      if (!RegExp(r"^[a-zA-Z0-9_ (),]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$")
+          .hasMatch(columnDefinition)) {
+        throw StateError('不安全的列定义: $columnDefinition');
+      }
+
+      await db.execute('ALTER TABLE $safeTable ADD COLUMN $safeColumnName $columnDefinition');
     } catch (_) {
       // 列已存在。其它 DDL 失败会在后续读写时暴露，不在这里吞成静默损坏。
     }

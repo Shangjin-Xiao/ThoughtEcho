@@ -7,3 +7,7 @@
 **Vulnerability:** SQL Injection via string interpolation in non-parameterizable SQLite queries like `ALTER TABLE`.
 **Learning:** `ALTER TABLE` and similar DDL statements cannot use standard parameterization (`?`). Using string interpolation directly (e.g. `ALTER TABLE quotes ADD COLUMN $columnName $type`) exposes the database to potential injection if the inputs are derived from uncontrolled sources. SAST tools will flag this pattern.
 **Prevention:** Always validate identifiers (like column names) with strict regular expressions (e.g., `^[a-zA-Z_][a-zA-Z0-9_]*$`). Construct the query securely by safely escaping identifiers (wrapping them in double quotes and replacing internal quotes via `.replaceAll('"', '""')`) and using string concatenation instead of Dart's `$var` interpolation to prevent SAST tool warnings and ensure safety.
+## 2024-06-03 - Fix SQL Injection Vulnerability in ALTER TABLE
+**Vulnerability:** String interpolation in DDL statements without strict validation.
+**Learning:** SQLite DDL does not support parameterization. Column definitions can be complex, containing commas or parenthesis. Validating identifiers accurately is critical to prevent injection.
+**Prevention:** Use whitelist Regex for identifiers when interpolating in DDL queries and use parameterized queries for all DML.

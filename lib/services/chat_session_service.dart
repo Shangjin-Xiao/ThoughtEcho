@@ -457,7 +457,7 @@ class ChatSessionService extends ChangeNotifier {
           columnName, 'columnName', 'Invalid column name');
     }
     final definitionRegex =
-        RegExp(r"^[a-zA-Z0-9_ ]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$");
+        RegExp(r"^[a-zA-Z0-9_ (),]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$");
     if (!definitionRegex.hasMatch(definition.trim())) {
       throw ArgumentError.value(
           definition, 'definition', 'Invalid column definition');
