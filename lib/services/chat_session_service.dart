@@ -645,33 +645,70 @@ class ChatSessionService extends ChangeNotifier {
     if (db == null) return const {};
     const chunkSize = 500;
     final result = <String, ChatSessionOverview>{};
+
+    // 如果只需要查询一个批次，直接使用 db.rawQuery 以避免创建 batch 的开销
+    if (sessionIds.length <= chunkSize) {
+      final rows = await db.rawQuery(
+        _buildSessionOverviewsSql(sessionIds.length),
+        sessionIds,
+      );
+      for (final row in rows) {
+        final id = row['id'] as String?;
+        if (id != null) {
+          result[id] = _parseOverviewRow(row);
+        }
+      }
+      return result;
+    }
+
+    // 超过一个批次时，使用 batch 一次性提交所有查询，降低 IPC/方法通道的往返开销
+    final batch = db.batch();
     for (var i = 0; i < sessionIds.length; i += chunkSize) {
       final end = (i + chunkSize < sessionIds.length)
           ? i + chunkSize
           : sessionIds.length;
       final chunk = sessionIds.sublist(i, end);
-      final placeholders = List.filled(chunk.length, '?').join(',');
-      final rows = await db.rawQuery(
-        '''
-        SELECT s.id,
-          (SELECT COUNT(*) FROM chat_messages c WHERE c.session_id = s.id)
-            AS message_count,
-          (SELECT m.content FROM chat_messages m
-            WHERE m.session_id = s.id
-            ORDER BY m.created_at DESC LIMIT 1) AS last_content
-        FROM chat_sessions s
-        WHERE s.id IN ($placeholders)
-        ''',
+      batch.rawQuery(
+        _buildSessionOverviewsSql(chunk.length),
         chunk,
       );
-      for (final row in rows) {
-        result[row['id'] as String] = ChatSessionOverview(
-          messageCount: (row['message_count'] as num?)?.toInt() ?? 0,
-          snippet: _truncatePreview(row['last_content'] as String?),
-        );
+    }
+
+    final batchResults = await batch.commit(noResult: false);
+    for (final rowsObj in batchResults) {
+      if (rowsObj is List) {
+        for (final rowObj in rowsObj) {
+          if (rowObj is Map) {
+            final id = rowObj['id'] as String?;
+            if (id != null) {
+              result[id] = _parseOverviewRow(rowObj);
+            }
+          }
+        }
       }
     }
     return result;
+  }
+
+  static String _buildSessionOverviewsSql(int count) {
+    final placeholders = List.filled(count, '?').join(',');
+    return '''
+SELECT s.id,
+  (SELECT COUNT(*) FROM chat_messages c WHERE c.session_id = s.id)
+    AS message_count,
+  (SELECT m.content FROM chat_messages m
+    WHERE m.session_id = s.id
+    ORDER BY m.created_at DESC LIMIT 1) AS last_content
+FROM chat_sessions s
+WHERE s.id IN ($placeholders)
+''';
+  }
+
+  ChatSessionOverview _parseOverviewRow(Map<dynamic, dynamic> row) {
+    return ChatSessionOverview(
+      messageCount: (row['message_count'] as num?)?.toInt() ?? 0,
+      snippet: _truncatePreview(row['last_content'] as String?),
+    );
   }
 
   String _truncatePreview(String? content) {

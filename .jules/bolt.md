@@ -282,3 +282,8 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:**
 修改 `lib/services/agent_memory_service.dart`，提取 `_quoteTrimRegex`、`_punctuationOrSpaceRegex`、`_punctuationSplitRegex`、`_cjkRegex` 与 `_whitespaceCollapseRegex` 静态常量并在相关高频方法中复用，并通过了单元测试。
+
+## 2026-10-28 - 优化 ChatSessionService.getSessionOverviews 批量查询性能
+
+**Learning:** 在批量读取会话概览时，若每次循环都等待单次 `await db.rawQuery()` 执行，会产生巨大的 Dart 到 Native 的平台通道（Method Channel/IPC）往返开销。特别是当 `sessionIds` 列表很长需要切分多个 chunk（>500）时，连续发送 N 个独立查询是严重的性能瓶颈。
+**Action:** 在 `ChatSessionService.getSessionOverviews` 中引入了 `db.batch()` 进行批量处理。当 chunk 数超过 1 时，使用 `batch.rawQuery()` 累积所有查询，随后通过一次 `await batch.commit(noResult: false)` 进行统一提交和数据返回，极大减少了 IPC 的阻塞耗时。同时针对不超过单个 chunk 大小的简单查询，依然走直接的快速路径 `rawQuery` 避开了 `batch` 本身的创建消耗。
