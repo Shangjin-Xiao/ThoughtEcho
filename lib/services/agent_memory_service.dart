@@ -295,7 +295,8 @@ class AgentMemoryService extends ChangeNotifier {
         throw StateError('不安全的列定义: $columnDefinition');
       }
 
-      await db.execute('ALTER TABLE $safeTable ADD COLUMN $safeColumnName $columnDefinition');
+      await db.execute(
+          'ALTER TABLE $safeTable ADD COLUMN $safeColumnName $columnDefinition');
     } catch (_) {
       // 列已存在。其它 DDL 失败会在后续读写时暴露，不在这里吞成静默损坏。
     }
