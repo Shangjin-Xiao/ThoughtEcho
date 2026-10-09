@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../models/quote_model.dart';
+import '../theme/theme_style.dart';
+import 'quote_card_helpers.dart';
 
 class QuoteCard extends StatelessWidget {
   final Quote quote;
@@ -8,34 +11,36 @@ class QuoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color? cardColor;
-    if (quote.colorHex != null && quote.colorHex!.isNotEmpty) {
-      try {
-        cardColor = Color(
-          int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
-        );
-      } catch (_) {
-        cardColor = null;
-      }
-    }
-    return Card(
+    final theme = Theme.of(context);
+    final colors = QuoteCardColors.fromHex(quote.colorHex, theme.colorScheme);
+    final shapeTokens = AppShapeTokens.of(context);
+
+    return Container(
       margin: const EdgeInsets.all(16),
-      color: cardColor, // 新增：支持自定义颜色
+      decoration: BoxDecoration(
+        color: colors.cardColor,
+        borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+        boxShadow: shapeTokens.restShadow,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(quote.content, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              quote.content,
+              style: (theme.textTheme.titleLarge ?? const TextStyle(fontSize: 22))
+                  .copyWith(color: colors.primaryTextColor),
+            ),
             const SizedBox(height: 16),
-            _buildSource(context),
+            _buildSource(colors.secondaryTextColor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSource(BuildContext context) {
+  Widget _buildSource(Color secondaryTextColor) {
     // 如果有sourceAuthor或sourceWork，优先使用这些值构建显示
     if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
         (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) {
@@ -53,7 +58,7 @@ class QuoteCard extends StatelessWidget {
         sourceText,
         style: TextStyle(
           fontSize: 14,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          color: secondaryTextColor,
         ),
         textAlign: TextAlign.right,
       );
@@ -68,7 +73,7 @@ class QuoteCard extends StatelessWidget {
       quote.source!,
       style: TextStyle(
         fontSize: 14,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        color: secondaryTextColor,
       ),
       textAlign: TextAlign.right,
     );
