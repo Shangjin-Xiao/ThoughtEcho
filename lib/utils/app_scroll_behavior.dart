@@ -17,3 +17,19 @@ class AppScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.invertedStylus,
       };
 }
+
+/// 编辑器局部 [ScrollBehavior] 扩展。
+///
+/// 从 [dragDevices] 中移除 [PointerDeviceKind.mouse]，避免桌面端使用鼠标在富文本
+/// 编辑器或文本输入框内拖拽选中文本、移动光标时手势被外层 [Scrollable] 抢占并触发页面意外滚动。
+class EditorScrollBehavior extends MaterialScrollBehavior {
+  const EditorScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+      };
+}

@@ -8,6 +8,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../models/app_settings.dart';
 import '../models/quote_model.dart';
 import '../theme/theme_style.dart';
+import '../utils/app_scroll_behavior.dart';
 import '../utils/delta_media_extractor.dart';
 import '../utils/delta_rich_text_parser.dart';
 import '../utils/quill_editor_extensions.dart';
@@ -1233,14 +1234,17 @@ class QuoteContent extends StatelessWidget {
     final paragraphStyle =
         QuillThemeTypography.paragraphStyle(context, base: style);
 
-    Widget richTextEditor = quill.QuillEditor(
-      controller: controllerSet.quillController,
-      scrollController: controllerSet.scrollController,
-      focusNode: controllerSet.focusNode,
-      config: _editorConfigFor(
-        paragraphStyle,
-        AppTypographyTokens.of(context).variableWeightCompensation,
-        QuillThemeTypography.boldWeight(context),
+    Widget richTextEditor = ScrollConfiguration(
+      behavior: const EditorScrollBehavior(),
+      child: quill.QuillEditor(
+        controller: controllerSet.quillController,
+        scrollController: controllerSet.scrollController,
+        focusNode: controllerSet.focusNode,
+        config: _editorConfigFor(
+          paragraphStyle,
+          AppTypographyTokens.of(context).variableWeightCompensation,
+          QuillThemeTypography.boldWeight(context),
+        ),
       ),
     );
 
