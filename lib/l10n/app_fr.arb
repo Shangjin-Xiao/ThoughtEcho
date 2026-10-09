@@ -806,6 +806,17 @@
       }
     }
   },
+  "cancellingAndCleaning": "Annulation et nettoyage en cours...",
+  "migrationCancelled": "Migration annulée",
+  "migrationCancelledMessage": "La migration a été annulée. Le répertoire cible a été nettoyé et les données d'origine restent intactes.",
+  "migrationFailedAndCleanedMessage": "Échec de la migration : {error}\n\nLe chemin cible a été automatiquement nettoyé et les données d'origine restent intactes.",
+  "@migrationFailedAndCleanedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "selectNewDataDirectory": "Sélectionner le nouveau répertoire de stockage des données",
   "directoryNotAvailable": "Le répertoire sélectionné n'est pas disponible ou manque de permission d'écriture",
   "selectDirectoryFailed": "Échec de la sélection du répertoire : {error}",

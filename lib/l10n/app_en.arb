@@ -906,6 +906,17 @@
       }
     }
   },
+  "cancellingAndCleaning": "Cancelling and cleaning up...",
+  "migrationCancelled": "Migration Cancelled",
+  "migrationCancelledMessage": "Migration cancelled. The target directory has been cleaned up, and the original data remains safe and intact.",
+  "migrationFailedAndCleanedMessage": "Migration failed: {error}\n\nThe target directory has been automatically cleaned up, and the original data remains safe and intact.",
+  "@migrationFailedAndCleanedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "selectNewDataDirectory": "Select New Data Storage Directory",
   "directoryNotAvailable": "Selected directory is not available or lacks write permission",
   "selectDirectoryFailed": "Failed to select directory: {error}",

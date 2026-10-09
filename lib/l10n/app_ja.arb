@@ -813,6 +813,17 @@
       }
     }
   },
+  "cancellingAndCleaning": "キャンセルしてクリーンアップ中...",
+  "migrationCancelled": "移行がキャンセルされました",
+  "migrationCancelledMessage": "移行はキャンセルされました。移行先ディレクトリは削除され、元のデータは安全に保持されています。",
+  "migrationFailedAndCleanedMessage": "移行に失敗しました：{error}\n\n移行先パスは自動的にクリーンアップされ、元のデータは安全に保持されています。",
+  "@migrationFailedAndCleanedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "selectNewDataDirectory": "新しいディレクトリを選択",
   "directoryNotAvailable": "ディレクトリが利用できないか、権限がありません",
   "selectDirectoryFailed": "選択失敗: {error}",

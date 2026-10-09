@@ -7,6 +7,7 @@ import '../services/storage_management_service.dart';
 import '../services/weather_service.dart';
 import '../services/database_service.dart';
 import '../services/data_directory_service.dart';
+import '../services/large_file_manager.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/app_semantic_colors.dart';
@@ -944,11 +945,17 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       _isMigrating = true;
     });
 
+    final cancelToken = LargeFileManager.createCancelToken();
+
     // 进度对话框只推一次，靠 ValueNotifier 刷新内容：迁移期间进度回调非常
     // 频繁，每次都 pop/push 路由会闪烁，还可能误关别的路由。
-    final migrationProgress =
-        ValueNotifier<({double progress, String? status})>(
-      (progress: 0.0, status: null),
+    final migrationProgress = ValueNotifier<
+        ({
+          double progress,
+          String? status,
+          bool isCancelling,
+        })>(
+      (progress: 0.0, status: null, isCancelling: false),
     );
     var dialogVisible = false;
 
@@ -970,18 +977,41 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           child: ValueListenableBuilder(
             valueListenable: migrationProgress,
             builder: (context, value, _) => AlertDialog(
-              title: Text(l10n.migratingData),
+              title: Text(
+                value.isCancelling
+                    ? l10n.cancellingAndCleaning
+                    : l10n.migratingData,
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LinearProgressIndicator(value: value.progress),
+                  LinearProgressIndicator(
+                    value: value.isCancelling ? null : value.progress,
+                  ),
                   const SizedBox(height: 16),
                   Text(
-                    value.status ?? l10n.preparingProgress,
+                    value.isCancelling
+                        ? l10n.cancellingAndCleaning
+                        : (value.status ?? l10n.preparingProgress),
                     style: const TextStyle(fontSize: 13),
                   ),
                 ],
               ),
+              actions: [
+                TextButton(
+                  onPressed: value.isCancelling
+                      ? null
+                      : () {
+                          migrationProgress.value = (
+                            progress: value.progress,
+                            status: l10n.cancellingAndCleaning,
+                            isCancelling: true,
+                          );
+                          cancelToken.cancel();
+                        },
+                  child: Text(l10n.cancel),
+                ),
+              ],
             ),
           ),
         ),
@@ -990,10 +1020,25 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       // 执行迁移
       final success = await DataDirectoryService.migrateDataDirectory(
         newPath,
-        onProgress: (p) => migrationProgress.value =
-            (progress: p, status: migrationProgress.value.status),
-        onStatusUpdate: (status) => migrationProgress.value =
-            (progress: migrationProgress.value.progress, status: status),
+        cancelToken: cancelToken,
+        onProgress: (p) {
+          if (!migrationProgress.value.isCancelling) {
+            migrationProgress.value = (
+              progress: p,
+              status: migrationProgress.value.status,
+              isCancelling: false,
+            );
+          }
+        },
+        onStatusUpdate: (status) {
+          if (!migrationProgress.value.isCancelling) {
+            migrationProgress.value = (
+              progress: migrationProgress.value.progress,
+              status: status,
+              isCancelling: false,
+            );
+          }
+        },
       );
 
       if (!mounted) return;
@@ -1010,8 +1055,6 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
               FilledButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  // 可以在这里添加退出应用的逻辑
-                  // 或者提示用户手动重启
                 },
                 child: Text(l10n.confirm),
               ),
@@ -1023,12 +1066,72 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
         await _loadAppDataPath();
       } else {
         if (!mounted) return;
-        AppSnackBar.error(context, l10n.migrationFailed);
+        if (cancelToken.isCancelled) {
+          await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(l10n.migrationCancelled),
+              content: Text(l10n.migrationCancelledMessage),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.confirm),
+                ),
+              ],
+            ),
+          );
+        } else {
+          await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(l10n.migrationFailed),
+              content: Text(
+                l10n.migrationFailedAndCleanedMessage(l10n.migrationFailed),
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.confirm),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;
       closeProgressDialog();
-      AppSnackBar.error(context, l10n.migrationFailedWithError(e.toString()));
+      if (e is CancelledException || cancelToken.isCancelled) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(l10n.migrationCancelled),
+            content: Text(l10n.migrationCancelledMessage),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.confirm),
+              ),
+            ],
+          ),
+        );
+      } else {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(l10n.migrationFailed),
+            content: Text(
+              l10n.migrationFailedAndCleanedMessage(e.toString()),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.confirm),
+              ),
+            ],
+          ),
+        );
+      }
     } finally {
       migrationProgress.dispose();
       if (mounted) {
