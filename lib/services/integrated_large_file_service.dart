@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 import '../utils/device_memory_manager.dart';
 import 'intelligent_memory_manager.dart';
@@ -27,17 +28,27 @@ class IntegratedLargeFileService {
 
   bool _isInitialized = false;
 
+  @visibleForTesting
+  bool get isInitialized => _isInitialized;
+
+  @visibleForTesting
+  ErrorRecoveryManager get errorRecoveryManager => _errorRecoveryManager;
+
+  @visibleForTesting
+  IntelligentMemoryManager get intelligentMemoryManager =>
+      _intelligentMemoryManager;
+
   /// 初始化服务
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
-      // 初始化各个管理器
-      _errorRecoveryManager.initialize();
-      await _fallbackManager.initialize();
-
-      // 启动智能内存监控
+      // 1. 先启动智能内存监控，确保 pressureEventStream 就绪
       await _intelligentMemoryManager.startIntelligentMonitoring();
+
+      // 2. 初始化错误恢复管理器与降级策略管理器
+      await _errorRecoveryManager.initialize();
+      await _fallbackManager.initialize();
 
       _isInitialized = true;
       logDebug('集成大文件处理服务已初始化');
@@ -52,6 +63,9 @@ class IntegratedLargeFileService {
     if (!_isInitialized) return;
 
     try {
+      // 级联释放错误恢复管理器
+      await _errorRecoveryManager.dispose();
+
       // 停止内存监控
       await _intelligentMemoryManager.stopIntelligentMonitoring();
 

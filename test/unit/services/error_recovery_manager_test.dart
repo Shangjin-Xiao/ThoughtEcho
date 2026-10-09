@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:thoughtecho/services/error_recovery_manager.dart';
+import 'package:thoughtecho/services/intelligent_memory_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 class TestCustomStrategy implements ErrorRecoveryStrategy {
@@ -39,10 +40,17 @@ void main() {
   group('ErrorRecoveryManager Tests', () {
     late ErrorRecoveryManager errorRecoveryManager;
 
-    setUp(() {
+    setUp(() async {
       AppLogger.initialize();
       errorRecoveryManager = ErrorRecoveryManager();
+      await errorRecoveryManager.dispose();
+      await IntelligentMemoryManager().stopIntelligentMonitoring();
       errorRecoveryManager.clearErrorHistory();
+    });
+
+    tearDown(() async {
+      await errorRecoveryManager.dispose();
+      await IntelligentMemoryManager().stopIntelligentMonitoring();
     });
 
     test('executeWithRecovery successful operation', () async {
@@ -354,6 +362,59 @@ void main() {
         generic.recover(dummyRecord);
         async.elapse(const Duration(milliseconds: 600));
       });
+    });
+
+    test(
+        'initialize is idempotent and retains only 1 active subscription on repeated calls',
+        () async {
+      final memoryManager = IntelligentMemoryManager();
+      await memoryManager.startIntelligentMonitoring();
+
+      // Call initialize 10 times in succession
+      for (int i = 0; i < 10; i++) {
+        await errorRecoveryManager.initialize();
+      }
+
+      expect(errorRecoveryManager.isInitialized, isTrue);
+      expect(errorRecoveryManager.pressureSubscription, isNotNull);
+
+      await errorRecoveryManager.dispose();
+      await memoryManager.stopIntelligentMonitoring();
+    });
+
+    test(
+        'dispose cancels pressure subscription and resets isInitialized to false',
+        () async {
+      final memoryManager = IntelligentMemoryManager();
+      await memoryManager.startIntelligentMonitoring();
+
+      await errorRecoveryManager.initialize();
+      expect(errorRecoveryManager.isInitialized, isTrue);
+      expect(errorRecoveryManager.pressureSubscription, isNotNull);
+
+      await errorRecoveryManager.dispose();
+      expect(errorRecoveryManager.isInitialized, isFalse);
+      expect(errorRecoveryManager.pressureSubscription, isNull);
+
+      await memoryManager.stopIntelligentMonitoring();
+    });
+
+    test('can be safely re-initialized after dispose', () async {
+      final memoryManager = IntelligentMemoryManager();
+      await memoryManager.startIntelligentMonitoring();
+
+      await errorRecoveryManager.initialize();
+      expect(errorRecoveryManager.isInitialized, isTrue);
+
+      await errorRecoveryManager.dispose();
+      expect(errorRecoveryManager.isInitialized, isFalse);
+
+      await errorRecoveryManager.initialize();
+      expect(errorRecoveryManager.isInitialized, isTrue);
+      expect(errorRecoveryManager.pressureSubscription, isNotNull);
+
+      await errorRecoveryManager.dispose();
+      await memoryManager.stopIntelligentMonitoring();
     });
   });
 }

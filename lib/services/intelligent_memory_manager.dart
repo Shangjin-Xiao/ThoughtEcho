@@ -82,7 +82,10 @@ class IntelligentMemoryManager {
 
   /// 停止智能内存监控
   Future<void> stopIntelligentMonitoring() async {
-    if (!_isMonitoring) {
+    if (!_isMonitoring &&
+        _monitoringTimer == null &&
+        _nativeMemorySubscription == null &&
+        _pressureEventController == null) {
       return;
     }
 

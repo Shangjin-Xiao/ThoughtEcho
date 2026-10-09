@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 import '../utils/device_memory_manager.dart';
 import 'intelligent_memory_manager.dart';
@@ -19,6 +20,17 @@ class ErrorRecoveryManager {
       IntelligentMemoryManager();
   final EnhancedProgressManager _progressManager = EnhancedProgressManager();
 
+  // 状态与订阅管理
+  bool _isInitialized = false;
+  StreamSubscription<MemoryPressureEvent>? _pressureSubscription;
+
+  @visibleForTesting
+  bool get isInitialized => _isInitialized;
+
+  @visibleForTesting
+  StreamSubscription<MemoryPressureEvent>? get pressureSubscription =>
+      _pressureSubscription;
+
   // 错误恢复策略
   final Map<Type, ErrorRecoveryStrategy> _recoveryStrategies = {};
 
@@ -30,16 +42,37 @@ class ErrorRecoveryManager {
   final Map<String, RecoveryAttempt> _activeRecoveries = {};
 
   /// 初始化错误恢复管理器
-  void initialize() {
+  Future<void> initialize() async {
+    if (_isInitialized && _pressureSubscription != null) {
+      return;
+    }
+
+    _isInitialized = true;
+
     // 注册默认的错误恢复策略
     _registerDefaultStrategies();
 
+    // 显式取消旧订阅（防重防护）
+    await _pressureSubscription?.cancel();
+    _pressureSubscription = null;
+
     // 监听内存压力事件
-    _intelligentMemoryManager.pressureEventStream?.listen(
-      _handleMemoryPressureEvent,
-    );
+    if (_intelligentMemoryManager.pressureEventStream != null) {
+      _pressureSubscription =
+          _intelligentMemoryManager.pressureEventStream?.listen(
+        _handleMemoryPressureEvent,
+      );
+    }
 
     logDebug('错误恢复管理器已初始化');
+  }
+
+  /// 释放资源并取消订阅
+  Future<void> dispose() async {
+    await _pressureSubscription?.cancel();
+    _pressureSubscription = null;
+    _isInitialized = false;
+    logDebug('错误恢复管理器已释放');
   }
 
   /// 执行带错误恢复的操作
