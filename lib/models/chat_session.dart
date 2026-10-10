@@ -85,14 +85,17 @@ class ChatSession {
               (k, v) => MapEntry(k.toString(), v),
             );
             messages.add(ChatMessage.fromJson(stringKeyMap));
-          } catch (e, stackTrace) {
+          } catch (e) {
             AppLogger.w(
-              'ChatSession.fromJson 跳过解析失败的 ChatMessage 条目: $e',
-              error: e,
-              stackTrace: stackTrace,
+              'ChatSession.fromJson 跳过解析失败的 ChatMessage 条目 (${e.runtimeType})',
               source: 'ChatSession',
             );
           }
+        } else if (item != null) {
+          AppLogger.w(
+            'ChatSession.fromJson 跳过非 Map 类型的 ChatMessage 条目 (${item.runtimeType})',
+            source: 'ChatSession',
+          );
         }
       }
     }

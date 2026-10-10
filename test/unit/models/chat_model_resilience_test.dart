@@ -54,6 +54,27 @@ void main() {
       expect(msg.deltaJson, '[{"insert":"hello"}]');
     });
 
+    test(
+        'ChatMessage.fromJson 在缺少 role 时安全从 isUser 解析角色，并支持非 string 键的 metaJson',
+        () {
+      final rawJson = {
+        'id': 'msg_101',
+        'content': 'test without role',
+        'isUser': 'false', // string 形式的 bool
+      };
+      final msg = ChatMessage.fromJson(rawJson);
+      expect(msg.isUser, false);
+      expect(msg.role, 'assistant');
+
+      final rawJsonWithIntKeys = {
+        'id': 'msg_102',
+        'content': 'test non string key meta',
+        'metaJson': {123: 'val'},
+      };
+      final msg2 = ChatMessage.fromJson(rawJsonWithIntKeys);
+      expect(msg2.parsedMeta, equals({'123': 'val'}));
+    });
+
     test('ChatMessage.parsedMeta 安全处理损坏的 metaJson 字符串', () {
       final msgCorruptedMeta = ChatMessage(
         id: 'msg_err',
