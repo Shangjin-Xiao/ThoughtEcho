@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../models/quote_model.dart';
-import '../theme/theme_style.dart';
 import 'quote_card_helpers.dart';
 
 class QuoteCard extends StatelessWidget {
@@ -13,15 +12,10 @@ class QuoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = QuoteCardColors.fromHex(quote.colorHex, theme.colorScheme);
-    final shapeTokens = AppShapeTokens.of(context);
 
-    return Container(
+    return Card(
       margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.cardColor,
-        borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
-        boxShadow: shapeTokens.restShadow,
-      ),
+      color: colors.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

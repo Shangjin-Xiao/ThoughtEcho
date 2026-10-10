@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/widgets/quote_card.dart';
 import 'package:thoughtecho/widgets/quote_card_helpers.dart';
 
@@ -70,9 +69,8 @@ void main() {
       final sourceText = tester.widget<Text>(find.text('——Author A 「Book A」'));
       expect(sourceText.style?.color, expectedColors.secondaryTextColor);
 
-      final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
-      expect(decoration.color, expectedColors.cardColor);
+      final card = tester.widget<Card>(find.byType(Card));
+      expect(card.color, expectedColors.cardColor);
     });
 
     testWidgets(
@@ -133,10 +131,9 @@ void main() {
       final theme = Theme.of(context);
       final expectedColors = QuoteCardColors.fromHex(null, theme.colorScheme);
 
-      final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
-      expect(decoration.color, theme.colorScheme.surfaceContainerLowest);
-      expect(decoration.color, expectedColors.cardColor);
+      final card = tester.widget<Card>(find.byType(Card));
+      expect(card.color, theme.colorScheme.surfaceContainerLowest);
+      expect(card.color, expectedColors.cardColor);
     });
 
     testWidgets('degrades gracefully when colorHex is empty string',
@@ -148,9 +145,8 @@ void main() {
       final BuildContext context = tester.element(find.byType(QuoteCard));
       final theme = Theme.of(context);
 
-      final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
-      expect(decoration.color, theme.colorScheme.surfaceContainerLowest);
+      final card = tester.widget<Card>(find.byType(Card));
+      expect(card.color, theme.colorScheme.surfaceContainerLowest);
     });
 
     testWidgets('degrades gracefully when colorHex is invalid hex',
@@ -163,20 +159,21 @@ void main() {
       final BuildContext context = tester.element(find.byType(QuoteCard));
       final theme = Theme.of(context);
 
-      final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
-      expect(decoration.color, theme.colorScheme.surfaceContainerLowest);
+      final card = tester.widget<Card>(find.byType(Card));
+      expect(card.color, theme.colorScheme.surfaceContainerLowest);
     });
   });
 
-  group('QuoteCard AppShapeTokens Theme Integration Tests', () {
-    testWidgets('adapts card radius and shadow based on AppShapeTokens',
+  group('QuoteCard Theme Integration Tests', () {
+    testWidgets('renders Card with specified quote color and uses CardTheme',
         (WidgetTester tester) async {
-      final shapeTokens =
-          AppShapeTokens.fromForm(ThemeStyleForm.paper, Brightness.light);
-      final themeWithPaper = ThemeData(
+      const cardTheme = CardThemeData(
+        margin: EdgeInsets.all(16),
+        elevation: 2,
+      );
+      final themeWithCard = ThemeData(
         brightness: Brightness.light,
-        extensions: [shapeTokens],
+        cardTheme: cardTheme,
       );
 
       final quote = createTestQuote(colorHex: '#F0F0F0');
@@ -184,16 +181,13 @@ void main() {
       await tester.pumpWidget(
         buildTestApp(
           quote: quote,
-          theme: themeWithPaper,
+          theme: themeWithCard,
         ),
       );
 
-      final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
-
-      expect(decoration.borderRadius,
-          BorderRadius.circular(shapeTokens.cardRadius));
-      expect(decoration.boxShadow, shapeTokens.restShadow);
+      final card = tester.widget<Card>(find.byType(Card));
+      expect(card.color, const Color(0xFFF0F0F0));
+      expect(card.margin, const EdgeInsets.all(16));
     });
   });
 }
