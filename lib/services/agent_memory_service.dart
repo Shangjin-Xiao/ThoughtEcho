@@ -274,6 +274,26 @@ class AgentMemoryService extends ChangeNotifier {
     return '"$identifier"';
   }
 
+  static void _validateColumnDefinition(String columnDefinition) {
+    final trimmedDef = columnDefinition.trim();
+    final parts =
+        trimmedDef.split(RegExp(r'\s+DEFAULT\s+', caseSensitive: false));
+    if (parts.length > 2 ||
+        !RegExp(r'^[a-zA-Z0-9_ ()]+$').hasMatch(parts[0]) ||
+        (parts.length == 2 &&
+            !RegExp(r"^(?:'[a-zA-Z0-9_]*'|[0-9]+)$").hasMatch(parts[1]))) {
+      throw StateError('不安全的列定义: $columnDefinition');
+    }
+  }
+
+  @visibleForTesting
+  static String quoteIdentifierForTesting(String identifier) =>
+      _quoteIdentifier(identifier);
+
+  @visibleForTesting
+  static void validateColumnDefinitionForTesting(String definition) =>
+      _validateColumnDefinition(definition);
+
   /// 加列，列已存在时静默跳过。
   ///
   /// SQLite 没有 `ADD COLUMN IF NOT EXISTS`，而 [_ensureSchema] 在 onCreate /
@@ -285,16 +305,11 @@ class AgentMemoryService extends ChangeNotifier {
     String columnName,
     String columnDefinition,
   ) async {
+    final safeTable = _quoteIdentifier(table);
+    final safeColumnName = _quoteIdentifier(columnName);
+    _validateColumnDefinition(columnDefinition);
+
     try {
-      final safeTable = _quoteIdentifier(table);
-      final safeColumnName = _quoteIdentifier(columnName);
-
-      // columnDefinition 不是标识符且不可参数化，用白名单校验后拼入 DDL
-      if (!RegExp(r"^[a-zA-Z0-9_ (),]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$")
-          .hasMatch(columnDefinition)) {
-        throw StateError('不安全的列定义: $columnDefinition');
-      }
-
       await db.execute(
           'ALTER TABLE $safeTable ADD COLUMN $safeColumnName $columnDefinition');
     } catch (_) {
