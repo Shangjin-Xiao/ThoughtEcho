@@ -28,8 +28,12 @@ void main() {
       ),
     );
 
+    final BuildContext context = tester.element(find.byType(PdfPreviewDialog));
+    final expectedTitle = AppLocalizations.of(context).pdfPreviewAndPrint;
+
     expect(find.byType(PdfPreviewDialog), findsOneWidget);
     expect(find.byType(AppBar), findsOneWidget);
+    expect(find.text(expectedTitle), findsOneWidget);
     expect(find.byIcon(Icons.close), findsOneWidget);
   });
 }
