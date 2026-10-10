@@ -23,19 +23,24 @@ class QuoteCard extends StatelessWidget {
           children: [
             Text(
               quote.content,
-              style:
-                  (theme.textTheme.titleLarge ?? const TextStyle(fontSize: 22))
-                      .copyWith(color: colors.primaryTextColor),
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: colors.primaryTextColor,
+              ),
             ),
             const SizedBox(height: 16),
-            _buildSource(colors.secondaryTextColor),
+            _buildSource(context, colors.secondaryTextColor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSource(Color secondaryTextColor) {
+  Widget _buildSource(BuildContext context, Color secondaryTextColor) {
+    final sourceStyle = Theme.of(context)
+        .textTheme
+        .bodyMedium
+        ?.copyWith(color: secondaryTextColor);
+
     // 如果有sourceAuthor或sourceWork，优先使用这些值构建显示
     if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
         (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) {
@@ -51,10 +56,7 @@ class QuoteCard extends StatelessWidget {
 
       return Text(
         sourceText,
-        style: TextStyle(
-          fontSize: 14,
-          color: secondaryTextColor,
-        ),
+        style: sourceStyle,
         textAlign: TextAlign.right,
       );
     }
@@ -66,10 +68,7 @@ class QuoteCard extends StatelessWidget {
 
     return Text(
       quote.source!,
-      style: TextStyle(
-        fontSize: 14,
-        color: secondaryTextColor,
-      ),
+      style: sourceStyle,
       textAlign: TextAlign.right,
     );
   }
