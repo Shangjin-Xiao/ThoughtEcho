@@ -98,7 +98,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
               [quoteId],
             );
             final newCount = result.isNotEmpty
-                ? (result.first['favorite_count'] as int?) ?? 0
+                ? (result.first['favorite_count'] as num?)?.toInt() ?? 0
                 : 0;
             logInfo(
               '收藏操作成功: quoteId=$quoteId, 旧值=$oldCount, 数据库新值=$newCount',

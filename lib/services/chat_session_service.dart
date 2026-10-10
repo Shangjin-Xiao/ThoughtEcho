@@ -662,7 +662,7 @@ class ChatSessionService extends ChangeNotifier {
       );
       for (final row in rows) {
         result[row['id'] as String] = ChatSessionOverview(
-          messageCount: row['message_count'] as int? ?? 0,
+          messageCount: (row['message_count'] as num?)?.toInt() ?? 0,
           snippet: _truncatePreview(row['last_content'] as String?),
         );
       }
@@ -873,7 +873,8 @@ class ChatSessionService extends ChangeNotifier {
           whereArgs: [sessionId],
         );
         if (rows.isNotEmpty) {
-          final current = (rows.first['is_pinned'] as int? ?? 0) == 1;
+          final current =
+              ((rows.first['is_pinned'] as num?)?.toInt() ?? 0) == 1;
           await db.update(
             'chat_sessions',
             {'is_pinned': current ? 0 : 1},
@@ -1003,7 +1004,7 @@ class ChatSessionService extends ChangeNotifier {
         'SELECT COUNT(*) as count FROM chat_messages WHERE session_id = ?',
         [sessionId],
       );
-      return result.first['count'] as int? ?? 0;
+      return (result.first['count'] as num?)?.toInt() ?? 0;
     } catch (e) {
       logError(
         'ChatSessionService.getMessageCount 失败',
