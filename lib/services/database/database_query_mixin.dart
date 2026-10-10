@@ -531,7 +531,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       'WHERE category_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)',
       [categoryId],
     );
-    return (result.first['count'] as num?)?.toInt() ?? 0;
+    return _safeParseInt(result.firstOrNull?['count']);
   }
 
   /// 修复：更新查询性能统计

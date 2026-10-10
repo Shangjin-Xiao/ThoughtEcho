@@ -6,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../theme/theme_style.dart';
+import '../../utils/app_logger.dart';
 import '../app_loading_view.dart';
+import '../app_snackbar.dart';
 
 /// 思考过程折叠组件 - 展示 AI 的思考过程
 ///
@@ -299,8 +301,29 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                                     uri,
                                     mode: LaunchMode.externalApplication,
                                   );
+                                } else {
+                                  if (context.mounted) {
+                                    AppSnackBar.warning(
+                                      context,
+                                      AppLocalizations.of(context)
+                                          .openLinkFailed,
+                                    );
+                                  }
                                 }
-                              } catch (_) {}
+                              } catch (e, stackTrace) {
+                                AppLogger.w(
+                                  'ThinkingWidget 打开链接失败: $href',
+                                  error: e,
+                                  stackTrace: stackTrace,
+                                  source: 'ThinkingWidget',
+                                );
+                                if (context.mounted) {
+                                  AppSnackBar.error(
+                                    context,
+                                    AppLocalizations.of(context).openLinkFailed,
+                                  );
+                                }
+                              }
                             },
                             styleSheet:
                                 MarkdownStyleSheet.fromTheme(theme).copyWith(

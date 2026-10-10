@@ -704,9 +704,19 @@ WHERE s.id IN ($placeholders)
 ''';
   }
 
+  static int _safeParseInt(Object? value, [int defaultValue = 0]) {
+    if (value is num) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value) ??
+          num.tryParse(value)?.toInt() ??
+          defaultValue;
+    }
+    return defaultValue;
+  }
+
   ChatSessionOverview _parseOverviewRow(Map<dynamic, dynamic> row) {
     return ChatSessionOverview(
-      messageCount: (row['message_count'] as num?)?.toInt() ?? 0,
+      messageCount: _safeParseInt(row['message_count']),
       snippet: _truncatePreview(row['last_content'] as String?),
     );
   }
@@ -1045,7 +1055,7 @@ WHERE s.id IN ($placeholders)
         'SELECT COUNT(*) as count FROM chat_messages WHERE session_id = ?',
         [sessionId],
       );
-      return (result.first['count'] as num?)?.toInt() ?? 0;
+      return _safeParseInt(result.firstOrNull?['count']);
     } catch (e) {
       logError(
         'ChatSessionService.getMessageCount 失败',

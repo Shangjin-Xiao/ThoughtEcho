@@ -244,6 +244,9 @@ void main() {
       expect(service.readCountForTest({'count': 42.0}, 'count'), 42);
       expect(service.readCountForTest({'count': 0}, 'count'), 0);
       expect(service.readCountForTest({'count': null}, 'count'), 0);
+      expect(service.readCountForTest({'count': '42'}, 'count'), 42);
+      expect(service.readCountForTest({'count': '42.5'}, 'count'), 42);
+      expect(service.readCountForTest({'count': 'invalid'}, 'count'), 0);
       expect(service.readCountForTest({}, 'count'), 0);
     });
   });

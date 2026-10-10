@@ -45,9 +45,11 @@ class ChatMessage {
             source: 'ChatMessage',
           );
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
         AppLogger.w(
           'ChatMessage.parsedMeta 反序列化 metaJson 失败 (${e.runtimeType})',
+          error: e,
+          stackTrace: stackTrace,
           source: 'ChatMessage',
         );
       }
@@ -205,14 +207,14 @@ class ChatMessage {
         final stringKeyMap = val.map((k, v) => MapEntry(k.toString(), v));
         return jsonEncode(stringKeyMap);
       } catch (_) {
-        return null;
+        return val.toString();
       }
     }
     if (val is List) {
       try {
         return jsonEncode(val);
       } catch (_) {
-        return null;
+        return val.toString();
       }
     }
     return val.toString();

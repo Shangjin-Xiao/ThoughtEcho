@@ -65,4 +65,51 @@ void main() {
     await tester.tap(find.byType(CollapsedMediaBanner));
     expect(tapped, isTrue);
   });
+
+  testWidgets('多图折叠徽标使用 onInverseSurface / inverseSurface 语义令牌',
+      (tester) async {
+    final media = parseDeltaMedia(jsonEncode([
+      {
+        'insert': {
+          'image':
+              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+        },
+      },
+      {'insert': '\n'},
+      {
+        'insert': {
+          'image':
+              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+        },
+      },
+      {'insert': '\n'},
+      {
+        'insert': {
+          'image':
+              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+        },
+      },
+      {'insert': '\n'},
+      {
+        'insert': {
+          'image':
+              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+        },
+      },
+      {'insert': '\n'},
+    ]));
+    await tester.pumpWidget(
+      _wrap(
+        CollapsedMediaBanner(
+          media: media,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final textWidget = tester.widget<Text>(find.text('+3'));
+    final context = tester.element(find.text('+3'));
+    final theme = Theme.of(context);
+    expect(textWidget.style?.color, equals(theme.colorScheme.onInverseSurface));
+  });
 }

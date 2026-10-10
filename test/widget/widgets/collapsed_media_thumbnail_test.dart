@@ -346,4 +346,35 @@ void main() {
     await tester.tap(find.byType(CollapsedMediaThumbnail));
     expect(tapped, isTrue);
   });
+
+  testWidgets('缩略图多图折叠徽标使用 onInverseSurface / inverseSurface 语义令牌',
+      (tester) async {
+    final media = parseDeltaMedia(jsonEncode([
+      {
+        'insert': {'image': _tinyPngDataUrl},
+      },
+      {'insert': '\n'},
+      {
+        'insert': {'image': _tinyPngDataUrl},
+      },
+      {'insert': '\n'},
+      {
+        'insert': {'image': _tinyPngDataUrl},
+      },
+      {'insert': '\n'},
+    ]));
+    await tester.pumpWidget(
+      _wrap(
+        CollapsedMediaThumbnail(
+          media: media,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final textWidget = tester.widget<Text>(find.text('+2'));
+    final context = tester.element(find.text('+2'));
+    final theme = Theme.of(context);
+    expect(textWidget.style?.color, equals(theme.colorScheme.onInverseSurface));
+  });
 }

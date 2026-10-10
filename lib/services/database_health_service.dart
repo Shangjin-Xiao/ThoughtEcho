@@ -231,7 +231,12 @@ class DatabaseHealthService {
   }
 
   int _readCount(Map<String, Object?> row, String key) {
-    return (row[key] as num?)?.toInt() ?? 0;
+    final val = row[key];
+    if (val is num) return val.toInt();
+    if (val is String) {
+      return int.tryParse(val) ?? num.tryParse(val)?.toInt() ?? 0;
+    }
+    return 0;
   }
 
   @visibleForTesting
