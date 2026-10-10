@@ -23,6 +23,7 @@ import '../utils/database_platform_init.dart';
 import '../utils/expiring_cache.dart';
 import '../utils/lww_utils.dart';
 import '../utils/sentry_database_tracing.dart';
+import '../utils/sqlite_type_utils.dart';
 import 'large_file_manager.dart';
 import 'media_path_repair_service.dart';
 import 'media_reference_service.dart';

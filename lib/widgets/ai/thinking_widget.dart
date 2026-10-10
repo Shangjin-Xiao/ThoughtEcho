@@ -297,10 +297,17 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                               try {
                                 final uri = Uri.tryParse(href);
                                 if (uri != null && await canLaunchUrl(uri)) {
-                                  await launchUrl(
+                                  final launched = await launchUrl(
                                     uri,
                                     mode: LaunchMode.externalApplication,
                                   );
+                                  if (!launched && context.mounted) {
+                                    AppSnackBar.warning(
+                                      context,
+                                      AppLocalizations.of(context)
+                                          .openLinkFailed,
+                                    );
+                                  }
                                 } else {
                                   if (context.mounted) {
                                     AppSnackBar.warning(

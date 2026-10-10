@@ -329,7 +329,7 @@ class DataDirectoryService {
       //    被复制进自己并截断。
       final currentPath = await getCurrentDataDirectory();
 
-      // 2. 相同/祖先检查必须发生在 validateDirectory 之前：被剪裁的路径
+      // 2. 相同/祖先检查必须发生在 validateDirectory 之前：被拒绝的路径
       //    不应先触发目录创建和写权限探针等副作用。
       final pathError = validateDataDirectoryPath(
         canonicalizePath(currentPath),
@@ -339,12 +339,7 @@ class DataDirectoryService {
         throw Exception(pathError);
       }
 
-      // 3. 验证新目录
-      if (!await validateDirectory(newPath)) {
-        throw Exception('新目录不可用或没有写权限');
-      }
-
-      // 目标目录必须为空，防止覆盖或回滚时误伤既有文件
+      // 3. 目标目录若已存在必须为空，防止覆盖或回滚时误伤既有文件
       final newDir = Directory(newPath);
       if (await newDir.exists()) {
         final existingEntries =
@@ -352,6 +347,11 @@ class DataDirectoryService {
         if (existingEntries.isNotEmpty) {
           throw FileSystemException('目标目录不为空，无法进行数据迁移', newPath);
         }
+      }
+
+      // 4. 验证新目录（创建目录与写权限探针）
+      if (!await validateDirectory(newPath)) {
+        throw Exception('新目录不可用或没有写权限');
       }
 
       if (!await Directory(currentPath).exists()) {
@@ -544,10 +544,11 @@ class DataDirectoryService {
       final canonicalCurrent = canonicalizePath(currentPath);
       final canonicalNew = canonicalizePath(newPath);
 
-      // 安全防护：严禁对原数据目录或其祖先目录进行清理
+      // 安全防护：严禁对原数据目录自身、其内部子目录或其父祖先目录进行清理
       if (path.equals(canonicalCurrent, canonicalNew) ||
-          path.isWithin(canonicalNew, canonicalCurrent)) {
-        logError('拒绝对原数据目录或其父目录进行回滚清理: $newPath');
+          path.isWithin(canonicalNew, canonicalCurrent) ||
+          path.isWithin(canonicalCurrent, canonicalNew)) {
+        logError('拒绝对原数据目录内部或其父目录进行回滚清理: $newPath');
         return;
       }
 

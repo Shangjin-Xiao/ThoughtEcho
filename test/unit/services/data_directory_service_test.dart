@@ -510,5 +510,31 @@ void main() {
       expect(await rootExisting.exists(), isTrue);
       expect(await Directory(target.path).exists(), isTrue);
     });
+
+    test('迁移在关闭数据库之后被取消时恢复 DatabaseService 且自动回滚清理', () async {
+      createFile('databases/thoughtecho.db');
+      createFile('media/large.dat');
+
+      final target =
+          await TestHarness.createTempDirectory('mid_migration_cancel_target');
+      addTearDown(() => TestHarness.deleteTempDirectory(target));
+
+      final cancelToken = LargeFileManager.createCancelToken();
+
+      var progressFired = false;
+      final success = await DataDirectoryService.migrateDataDirectory(
+        target.path,
+        cancelToken: cancelToken,
+        onProgress: (_) {
+          if (!progressFired) {
+            progressFired = true;
+            cancelToken.cancel();
+          }
+        },
+      );
+
+      expect(success, isFalse);
+      expect(File(abs('databases/thoughtecho.db')).existsSync(), isTrue);
+    });
   });
 }

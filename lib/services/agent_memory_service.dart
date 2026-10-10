@@ -11,6 +11,7 @@ import '../models/agent_memory.dart';
 import '../utils/app_logger.dart';
 import '../utils/untrusted_text.dart';
 import 'data_directory_service.dart';
+import '../utils/sqlite_type_utils.dart';
 import 'settings_service.dart';
 
 /// Thoughter 的长期记忆。
@@ -274,15 +275,8 @@ class AgentMemoryService extends ChangeNotifier {
     return '"$identifier"';
   }
 
-  static int _safeParseInt(Object? value, [int defaultValue = 0]) {
-    if (value is num) return value.toInt();
-    if (value is String) {
-      return int.tryParse(value) ??
-          num.tryParse(value)?.toInt() ??
-          defaultValue;
-    }
-    return defaultValue;
-  }
+  static int _safeParseInt(Object? value, [int defaultValue = 0]) =>
+      safeParseInt(value, defaultValue);
 
   static void _validateColumnDefinition(String columnDefinition) {
     final trimmedDef = columnDefinition.trim();
@@ -292,7 +286,7 @@ class AgentMemoryService extends ChangeNotifier {
         !RegExp(r'^[a-zA-Z0-9_ (),]+$').hasMatch(parts[0]) ||
         (parts.length == 2 &&
             !RegExp(
-              r"^(?:NULL|'[a-zA-Z0-9_ -]*'|-?[0-9]+(?:\.[0-9]+)?)$",
+              r"^(?:NULL|'[a-zA-Z0-9_ -]*'|-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)$",
               caseSensitive: false,
             ).hasMatch(parts[1]))) {
       throw StateError('不安全的列定义: $columnDefinition');

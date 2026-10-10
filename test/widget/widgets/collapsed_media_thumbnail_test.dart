@@ -376,5 +376,16 @@ void main() {
     final context = tester.element(find.text('+2'));
     final theme = Theme.of(context);
     expect(textWidget.style?.color, equals(theme.colorScheme.onInverseSurface));
+
+    final decoratedBox = tester.widget<DecoratedBox>(
+      find
+          .ancestor(of: find.text('+2'), matching: find.byType(DecoratedBox))
+          .first,
+    );
+    final decoration = decoratedBox.decoration as BoxDecoration;
+    expect(
+      decoration.color,
+      equals(theme.colorScheme.inverseSurface.withValues(alpha: 0.85)),
+    );
   });
 }

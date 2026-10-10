@@ -892,6 +892,21 @@ void main() {
             'INTEGER NOT NULL DEFAULT -1'),
         returnsNormally,
       );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'REAL DEFAULT 1e-3'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'FLOAT DEFAULT 1.5e+2'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'DOUBLE DEFAULT -2.3E-4'),
+        returnsNormally,
+      );
 
       // 非法列定义注入载荷
       expect(

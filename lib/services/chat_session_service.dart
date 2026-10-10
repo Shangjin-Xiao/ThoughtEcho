@@ -11,6 +11,7 @@ import '../models/chat_message.dart';
 import '../models/chat_session.dart';
 import '../utils/app_logger.dart';
 import 'data_directory_service.dart';
+import '../utils/sqlite_type_utils.dart';
 
 class ChatSessionOverview {
   const ChatSessionOverview({
@@ -704,15 +705,12 @@ WHERE s.id IN ($placeholders)
 ''';
   }
 
-  static int _safeParseInt(Object? value, [int defaultValue = 0]) {
-    if (value is num) return value.toInt();
-    if (value is String) {
-      return int.tryParse(value) ??
-          num.tryParse(value)?.toInt() ??
-          defaultValue;
-    }
-    return defaultValue;
-  }
+  static int _safeParseInt(Object? value, [int defaultValue = 0]) =>
+      safeParseInt(value, defaultValue);
+
+  @visibleForTesting
+  static int safeParseIntForTest(Object? value, [int defaultValue = 0]) =>
+      _safeParseInt(value, defaultValue);
 
   ChatSessionOverview _parseOverviewRow(Map<dynamic, dynamic> row) {
     return ChatSessionOverview(

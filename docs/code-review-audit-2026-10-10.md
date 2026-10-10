@@ -54,7 +54,7 @@
 
 `editor_build.dart`、`editor_metadata_dialog.dart`、`settings_page.dart`、`add_note_dialog.dart` 中的 `ScaffoldMessenger`/`fontSize: 12`/`BorderRadius.circular(8/4)` 均为纯缩进重排（加减号文本一致）；新文件 `data_collection_consent_card.dart`/`data_collection_disclosure.dart` 正确使用 `AppSnackBar` + `shapeTokens.dialogRadius/buttonRadius` + 全量 l10n；`circular(10)` 与代码块 `circular(6)` 属“纯装饰性小元素可自行取值”；`quote_card.dart` 去掉两处 `TextStyle(fontSize: 14)` + 裸 `Color(int.parse…)` 改用 `QuoteCardColors`/`textTheme`（修复旧违规）；`note_list_filters.dart` 抽取修复 4 处重复；无新增 `ThemeStyle.paper` 分支、无 Service 持 `BuildContext`、无动态 `orderBy`、DDL 改动收紧插值、新文件 import 分组合规、`lib/gen_l10n/` 未被手改。
 
-### 3.2 Spec 轴（7 项成立 / 1 项驳回）
+### 3.2 Spec 轴（8 项成立 / 1 项驳回）
 
 #### 实现与宣称不符 / 部分实现
 
@@ -90,7 +90,7 @@
 - [x] **P2**：SQLite 跨平台聚合计数解析补充 `_safeParseInt`（支持 String/num 统一转换与容错），覆盖 `quote_row_parser`、`database_health_service`、`chat_session_service`、`agent_memory_service`。
 - [x] **P3**：`ChatMessage._parseString` 遇到非普通对象时在 jsonEncode 失败后回退 `val.toString()` 保障数据不丢；`parsedMeta` 与 `ChatSession.fromJson` 捕获异常补齐 `error` 与 `stackTrace`。
 - [x] **P4**：澄清批量查询性能机制与 SQLite IPC 开销优化定位，对齐 `_safeParseInt`。
-- [x] **P5**：`AddNoteDialog` 地理定位异常使用 `AppLogger.w` 记上下文，UI 裸 `ScaffoldMessenger` 与 `e.toString()` 替换为 `AppSnackBar` 与脱敏文案 `cannotGetAddress`。
+- [x] **P5**：UI 裸 ScaffoldMessenger 与 e.toString() 泄露已完全修复并脱敏，错误以 AppSnackBar 与 l10n 提示；底层 Future.timeout 网络连接取消已记录待下沉至网络服务层重构。
 - [x] **P7（P0）**：数据目录迁移前对非空既有目标目录立即中止报错（`FileSystemException`）；回滚实现重构为仅删除本次迁移清单文件白名单并修剪空目录，不触碰目标目录任何无关文件；恢复取消返回 `false` 契约，补充回归测试（26/26 用例全部通过）。
 - [x] **P6/P8**：审查记录已归档并补充说明回归链与重构属性。
 
@@ -108,7 +108,7 @@
    dart format --output=none --set-exit-if-changed <changed-dart-files>
    # 结果：19 个修改的 Dart 文件格式化检查完全通过 (0 changed)
    ```
-3. **单元与 Widget 测试全量通过**：
+3. **相关重点单元与 Widget 测试通过**：
    - `test/unit/services/data_directory_service_test.dart`（26/26 全部通过，覆盖白名单回滚、非空目标拦截与取消契约）
    - `test/unit/services/agent_memory_service_test.dart`（39/39 全部通过，覆盖扩展 DDL 定义校验）
    - `test/unit/services/database_health_service_test.dart`（17/17 全部通过，覆盖跨平台数值解析）

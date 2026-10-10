@@ -9,6 +9,7 @@ import 'package:sqflite/sqflite.dart';
 import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
+import '../utils/sqlite_type_utils.dart';
 
 class DatabaseStartupDiagnostic {
   const DatabaseStartupDiagnostic({
@@ -230,14 +231,8 @@ class DatabaseHealthService {
     }
   }
 
-  int _readCount(Map<String, Object?> row, String key) {
-    final val = row[key];
-    if (val is num) return val.toInt();
-    if (val is String) {
-      return int.tryParse(val) ?? num.tryParse(val)?.toInt() ?? 0;
-    }
-    return 0;
-  }
+  int _readCount(Map<String, Object?> row, String key) =>
+      safeParseInt(row[key], 0);
 
   @visibleForTesting
   int readCountForTest(Map<String, Object?> row, String key) =>

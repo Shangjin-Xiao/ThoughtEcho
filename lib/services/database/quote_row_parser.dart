@@ -100,11 +100,5 @@ String _shortRowId(Object? id) {
   return text.length > maxLength ? '${text.substring(0, maxLength)}…' : text;
 }
 
-/// 安全解析 SQLite 聚合整数结果，支持 num 与 String 编码跨平台兜底。
-int _safeParseInt(Object? value, [int defaultValue = 0]) {
-  if (value is num) return value.toInt();
-  if (value is String) {
-    return int.tryParse(value) ?? num.tryParse(value)?.toInt() ?? defaultValue;
-  }
-  return defaultValue;
-}
+int _safeParseInt(Object? value, [int defaultValue = 0]) =>
+    safeParseInt(value, defaultValue);
