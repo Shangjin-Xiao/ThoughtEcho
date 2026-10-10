@@ -231,34 +231,37 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                       child: Container(
                         color: theme.colorScheme.surface,
                         padding: const EdgeInsets.all(16),
-                        child: quill.QuillEditor(
-                          controller: _editorState.controller,
-                          scrollController: _editorState.scrollController,
-                          focusNode: _editorState.focusNode,
-                          config: quill.QuillEditorConfig(
-                            // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
-                            // 卡片里的正文挤得多——同一条笔记「写的时候」和
-                            // 「读的时候」行距不一样。两边共用同一套令牌纠正。
-                            customStyles: QuillThemeTypography.paragraphOnly(
-                              QuillThemeTypography.paragraphStyle(context),
-                              boldWeight:
-                                  QuillThemeTypography.boldWeight(context),
+                        child: ScrollConfiguration(
+                          behavior: const EditorScrollBehavior(),
+                          child: quill.QuillEditor(
+                            controller: _editorState.controller,
+                            scrollController: _editorState.scrollController,
+                            focusNode: _editorState.focusNode,
+                            config: quill.QuillEditorConfig(
+                              // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
+                              // 卡片里的正文挤得多——同一条笔记「写的时候」和
+                              // 「读的时候」行距不一样。两边共用同一套令牌纠正。
+                              customStyles: QuillThemeTypography.paragraphOnly(
+                                QuillThemeTypography.paragraphStyle(context),
+                                boldWeight:
+                                    QuillThemeTypography.boldWeight(context),
+                              ),
+                              embedBuilders: kIsWeb
+                                  ? FlutterQuillEmbeds.editorWebBuilders()
+                                  : QuillEditorExtensions.getEmbedBuilders(
+                                      optimizedImages: false,
+                                    ),
+                              placeholder: AppLocalizations.of(
+                                context,
+                              ).fullscreenEditorPlaceholder,
+                              padding: const EdgeInsets.all(16),
+                              autoFocus: false,
+                              expands: false,
+                              scrollable: true,
+                              enableInteractiveSelection: true,
+                              enableSelectionToolbar: true,
+                              showCursor: true,
                             ),
-                            embedBuilders: kIsWeb
-                                ? FlutterQuillEmbeds.editorWebBuilders()
-                                : QuillEditorExtensions.getEmbedBuilders(
-                                    optimizedImages: false,
-                                  ),
-                            placeholder: AppLocalizations.of(
-                              context,
-                            ).fullscreenEditorPlaceholder,
-                            padding: const EdgeInsets.all(16),
-                            autoFocus: false,
-                            expands: false,
-                            scrollable: true,
-                            enableInteractiveSelection: true,
-                            enableSelectionToolbar: true,
-                            showCursor: true,
                           ),
                         ),
                       ),

@@ -21,6 +21,7 @@ import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/app_scroll_behavior.dart';
 import '../utils/aptabase_helper.dart';
 import '../utils/color_utils.dart';
 import '../utils/icon_utils.dart';
