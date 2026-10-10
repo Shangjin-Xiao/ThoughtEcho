@@ -274,3 +274,11 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:**
 修改 `lib/controllers/add_note_controller.dart` 中 `ensureTagExists` 的逻辑，提升 `lowerName = name.toLowerCase()`，并且在 `addTagWithId` 成功后直接使用 `allCategoriesCache = [...categories, newTag]` 更新内存缓存返回，免去多余的 `db.getTags()` 数据库查询。
+
+## 2026-10-28 - 优化 AgentMemoryService 文本解析与关键词提取中的正则表达式编译开销
+
+**Learning:**
+在 AI 长期记忆服务（`AgentMemoryService`）的高频事实检索、关键词拆分以及字符正则化方法（如 `extractKeywords`、`extractAliasesFromDirective`、`_isCjk` 和 `normalizeMemoryText`）中，内联调用 `RegExp` 构造函数会导致每次检索事实或清理字符串时重复分配与编译正则表达式。将用于分隔符切分、CJK字符匹配、空白折叠和引用清洗的正则表达式提取为 `AgentMemoryService` 的 `static final RegExp` 静态成员，使其在首次访问时编译一次并复用，可有效减少重复分配和 GC 压力。
+
+**Action:**
+修改 `lib/services/agent_memory_service.dart`，提取 `_quoteTrimRegex`、`_punctuationOrSpaceRegex`、`_punctuationSplitRegex`、`_cjkRegex` 与 `_whitespaceCollapseRegex` 静态常量并在相关高频方法中复用，并通过了单元测试。
