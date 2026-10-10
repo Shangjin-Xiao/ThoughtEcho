@@ -837,5 +837,63 @@ void main() {
 
       await memory.clearAll();
     });
+
+    test('quoteIdentifier 与 validateColumnDefinition 严格防护 SQL 注入与恶意输入', () {
+      expect(
+        () => AgentMemoryService.quoteIdentifierForTesting('safe_table_name'),
+        returnsNormally,
+      );
+      expect(
+        AgentMemoryService.quoteIdentifierForTesting('safe_table_name'),
+        '"safe_table_name"',
+      );
+      expect(
+        () => AgentMemoryService.quoteIdentifierForTesting(
+            'tbl; DROP TABLE users;--'),
+        throwsStateError,
+      );
+      expect(
+        () => AgentMemoryService.quoteIdentifierForTesting('table with spaces'),
+        throwsStateError,
+      );
+
+      // 合法列定义
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting('TEXT'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'INTEGER DEFAULT 0'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            "TEXT DEFAULT 'hello'"),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'VARCHAR(255)'),
+        returnsNormally,
+      );
+
+      // 非法列定义注入载荷
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'TEXT; DROP TABLE users;--'),
+        throwsStateError,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'TEXT DEFAULT (SELECT sql FROM sqlite_master)'),
+        throwsStateError,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'TEXT DEFAULT (random())'),
+        throwsStateError,
+      );
+    });
   });
 }

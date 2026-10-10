@@ -456,9 +456,13 @@ class ChatSessionService extends ChangeNotifier {
       throw ArgumentError.value(
           columnName, 'columnName', 'Invalid column name');
     }
-    final definitionRegex =
-        RegExp(r"^[a-zA-Z0-9_ ]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$");
-    if (!definitionRegex.hasMatch(definition.trim())) {
+    final trimmedDef = definition.trim();
+    final parts =
+        trimmedDef.split(RegExp(r'\s+DEFAULT\s+', caseSensitive: false));
+    if (parts.length > 2 ||
+        !RegExp(r'^[a-zA-Z0-9_ ()]+$').hasMatch(parts[0]) ||
+        (parts.length == 2 &&
+            !RegExp(r"^(?:'[a-zA-Z0-9_]*'|[0-9]+)$").hasMatch(parts[1]))) {
       throw ArgumentError.value(
           definition, 'definition', 'Invalid column definition');
     }

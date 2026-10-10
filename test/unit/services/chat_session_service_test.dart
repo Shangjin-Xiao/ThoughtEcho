@@ -733,5 +733,68 @@ void main() {
         }
       }
     });
+
+    test('addColumnIfMissing 严格验证表名、列名与列定义防止 SQL 注入', () async {
+      final service = ChatSessionService();
+      final db = await openDatabase(inMemoryDatabasePath);
+      await db.execute('CREATE TABLE chat_sessions (id TEXT PRIMARY KEY)');
+      try {
+        // 非法表名
+        expect(
+          () => service.addColumnIfMissing(
+            db,
+            tableName: 'sessions; DROP TABLE sessions;--',
+            columnName: 'valid_col',
+            definition: 'TEXT',
+          ),
+          throwsArgumentError,
+        );
+
+        // 非法列名
+        expect(
+          () => service.addColumnIfMissing(
+            db,
+            tableName: 'chat_sessions',
+            columnName: 'bad col',
+            definition: 'TEXT',
+          ),
+          throwsArgumentError,
+        );
+
+        // 非法列定义注入载荷
+        expect(
+          () => service.addColumnIfMissing(
+            db,
+            tableName: 'chat_sessions',
+            columnName: 'col1',
+            definition: 'TEXT; DROP TABLE chat_sessions;--',
+          ),
+          throwsArgumentError,
+        );
+        expect(
+          () => service.addColumnIfMissing(
+            db,
+            tableName: 'chat_sessions',
+            columnName: 'col2',
+            definition: 'TEXT DEFAULT (SELECT sql FROM sqlite_master)',
+          ),
+          throwsArgumentError,
+        );
+
+        // 合法列添加
+        await service.addColumnIfMissing(
+          db,
+          tableName: 'chat_sessions',
+          columnName: 'test_safe_col',
+          definition: "TEXT DEFAULT 'safe'",
+        );
+        final columns = await db.rawQuery(
+            'SELECT * FROM pragma_table_info(?)', ['chat_sessions']);
+        expect(columns.any((c) => c['name'] == 'test_safe_col'), isTrue);
+      } finally {
+        await service.close();
+        await db.close();
+      }
+    });
   });
 }
