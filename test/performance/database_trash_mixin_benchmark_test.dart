@@ -13,7 +13,8 @@ void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
-  test('Benchmark: emptyTrash performance with 2500 soft-deleted quotes', () async {
+  test('Benchmark: emptyTrash performance with 2500 soft-deleted quotes',
+      () async {
     await TestHarness.initialize();
     DatabaseService.clearTestDatabase();
     final service = DatabaseService();
@@ -63,7 +64,8 @@ void main() {
     final tombstones = await service.getTombstonesForBackup();
     expect(tombstones.length, equals(totalQuotes));
 
-    debugPrint('emptyTrash with $totalQuotes quotes took: ${stopwatch.elapsedMilliseconds}ms (${stopwatch.elapsedMicroseconds} us)');
+    debugPrint(
+        'emptyTrash with $totalQuotes quotes took: ${stopwatch.elapsedMilliseconds}ms (${stopwatch.elapsedMicroseconds} us)');
 
     DatabaseService.clearTestDatabase();
     await db.close();
