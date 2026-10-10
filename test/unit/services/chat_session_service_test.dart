@@ -452,6 +452,68 @@ void main() {
       await service.close();
     });
 
+    test('loads history overviews across multiple chunks (>500 sessions) via batch',
+        () async {
+      final testDir =
+          Directory.systemTemp.createTempSync('chat_db_test_batch_overviews_');
+      final dbPath = path.join(testDir.path, 'chat.db');
+      var service = ChatSessionService(
+        databasePath: dbPath,
+        openOwnDatabase: true,
+      );
+      await service.init();
+      try {
+        final db = await databaseFactory.openDatabase(dbPath);
+        final batch = db.batch();
+        const totalSessions = 505;
+        final ids = <String>[];
+        final now = DateTime.now().toIso8601String();
+
+        for (var i = 0; i < totalSessions; i++) {
+          final id = 'session-$i';
+          ids.add(id);
+          batch.insert('chat_sessions', {
+            'id': id,
+            'session_type': 'agent',
+            'title': 'Session $i',
+            'created_at': now,
+            'last_active_at': now,
+            'is_pinned': 0,
+          });
+          batch.insert('chat_messages', {
+            'id': 'msg-$i',
+            'session_id': id,
+            'role': 'user',
+            'content': 'Content $i',
+            'created_at': now,
+            'included_in_context': 1,
+          });
+        }
+        await batch.commit(noResult: true);
+        await db.close();
+        await service.close();
+
+        service = ChatSessionService(
+          databasePath: dbPath,
+          openOwnDatabase: true,
+        );
+        await service.init();
+
+        final overviews = await service.getSessionOverviews(ids);
+        expect(overviews.length, totalSessions);
+        expect(overviews['session-0']?.messageCount, 1);
+        expect(overviews['session-0']?.snippet, 'Content 0');
+        expect(overviews['session-504']?.messageCount, 1);
+        expect(overviews['session-504']?.snippet, 'Content 504');
+      } finally {
+        await service.close();
+        await deleteDatabase(dbPath);
+        if (testDir.existsSync()) {
+          testDir.deleteSync(recursive: true);
+        }
+      }
+    });
+
     test('migrates legacy chat tables from main database idempotently',
         () async {
       final mainDbPath = path.join(tempDir.path, 'main.db');

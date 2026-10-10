@@ -66,6 +66,8 @@ void main() {
     }
     await batch.commit(noResult: true);
     await db.close();
+    // 关闭先前的连接，避免覆盖仍持有数据库连接的实例造成连接泄漏
+    await service.close();
 
     // Re-initialize to ensure it uses a fresh, open connection.
     service = ChatSessionService(databasePath: dbPath);
@@ -78,9 +80,13 @@ void main() {
     final result = await service.getSessionOverviews(sessionIds);
     stopwatch.stop();
 
+    // 注意：当前基准运行在 sqflite_common_ffi 后端，主要验证 FFI 下批处理与数据解析开销；
+    // 原生平台（Android/iOS/macOS）上通过减少 Method Channel IPC 往返收益将更显著。
     debugPrint(
-        'Optimized time for $sessionCount sessions: ${stopwatch.elapsedMilliseconds} ms');
+        'Optimized time for $sessionCount sessions (FFI): ${stopwatch.elapsedMilliseconds} ms');
 
+    // 性能回归保护阈值：1500 条会话在任何环境下均应在 5 秒内完成批量概览提取
+    expect(stopwatch.elapsedMilliseconds, lessThan(5000));
     expect(result.length, sessionCount);
     expect(result['session-0']?.messageCount, 1);
     expect(result['session-0']?.snippet, 'Test message 0');
