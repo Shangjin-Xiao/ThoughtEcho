@@ -32,12 +32,14 @@ class IntegratedLargeFileService {
     if (_isInitialized) return;
 
     try {
-      // 初始化各个管理器
-      _errorRecoveryManager.initialize();
-      await _fallbackManager.initialize();
-
-      // 启动智能内存监控
+      // 1. 优先启动智能内存监控，创建广播 EventController 与 Stream
       await _intelligentMemoryManager.startIntelligentMonitoring();
+
+      // 2. 初始化错误恢复管理器，订阅内存压力事件 Stream
+      _errorRecoveryManager.initialize();
+
+      // 3. 初始化降级管理器
+      await _fallbackManager.initialize();
 
       _isInitialized = true;
       logDebug('集成大文件处理服务已初始化');
@@ -52,10 +54,13 @@ class IntegratedLargeFileService {
     if (!_isInitialized) return;
 
     try {
-      // 停止内存监控
+      // 1. 级联释放 ErrorRecoveryManager 订阅
+      _errorRecoveryManager.dispose();
+
+      // 2. 停止内存监控
       await _intelligentMemoryManager.stopIntelligentMonitoring();
 
-      // 取消所有活动操作
+      // 3. 取消所有活动操作
       _progressManager.cancelAllOperations(reason: '服务关闭');
 
       _isInitialized = false;

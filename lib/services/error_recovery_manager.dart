@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 import '../utils/device_memory_manager.dart';
 import 'intelligent_memory_manager.dart';
@@ -29,17 +30,45 @@ class ErrorRecoveryManager {
   // 恢复状态跟踪
   final Map<String, RecoveryAttempt> _activeRecoveries = {};
 
+  bool _isInitialized = false;
+  StreamSubscription<MemoryPressureEvent>? _pressureSubscription;
+
+  @visibleForTesting
+  bool get isInitialized => _isInitialized;
+
+  @visibleForTesting
+  StreamSubscription<MemoryPressureEvent>? get pressureSubscription =>
+      _pressureSubscription;
+
   /// 初始化错误恢复管理器
   void initialize() {
+    if (_isInitialized) {
+      return;
+    }
+
+    // 取消任何可能残留的旧订阅
+    _pressureSubscription?.cancel();
+    _pressureSubscription = null;
+
     // 注册默认的错误恢复策略
     _registerDefaultStrategies();
 
     // 监听内存压力事件
-    _intelligentMemoryManager.pressureEventStream?.listen(
+    _pressureSubscription =
+        _intelligentMemoryManager.pressureEventStream?.listen(
       _handleMemoryPressureEvent,
     );
 
+    _isInitialized = true;
     logDebug('错误恢复管理器已初始化');
+  }
+
+  /// 释放资源与状态重置
+  void dispose() {
+    _pressureSubscription?.cancel();
+    _pressureSubscription = null;
+    _isInitialized = false;
+    logDebug('错误恢复管理器已释放');
   }
 
   /// 执行带错误恢复的操作
