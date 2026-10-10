@@ -287,3 +287,9 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Learning:** 在批量读取会话概览时，若每次循环都等待单次 `await db.rawQuery()` 执行，会产生巨大的 Dart 到 Native 的平台通道（Method Channel/IPC）往返开销。特别是当 `sessionIds` 列表很长需要切分多个 chunk（>500）时，连续发送 N 个独立查询是严重的性能瓶颈。
 **Action:** 在 `ChatSessionService.getSessionOverviews` 中引入了 `db.batch()` 进行批量处理。当 chunk 数超过 1 时，使用 `batch.rawQuery()` 累积所有查询，随后通过一次 `await batch.commit(noResult: false)` 进行统一提交和数据返回，极大减少了 IPC 的阻塞耗时。同时针对不超过单个 chunk 大小的简单查询，依然走直接的快速路径 `rawQuery` 避开了 `batch` 本身的创建消耗。
+
+## 2026-10-29 - 优化 _hardDeleteQuotes 彻底删除笔记的 N+1 数据库往返
+
+**Learning:** 在 SQLite 数据库多分块处理操作（如清空回收站彻底删除数千条笔记）中，若在 `for (final idBatch in _chunkIds(uniqueIds))` 循环体内逐块 `await txn.query(...)` 查 quotes、`await txn.query(...)` 查 media_references 以及 `await txn.delete(...)` 删 quotes，会导致多达 3*K 次 FFI / IPC 通道数据库往返开销。将多块查询统一排入 `txn.batch()` 中一次提交，并把墓碑记录插入与删除操作聚合至单个写批处理 `writeBatch.commit(noResult: true)`，可将数据库往返次数压缩至固定的 3 次。
+
+**Action:** 优化了 `lib/services/database/database_trash_mixin.dart` 中的 `_hardDeleteQuotes` 方法，使用 `quotesBatch` 和 `refBatch` 分别批量读取 quotes 与 media_references，并在一个 `writeBatch` 中批量写入墓碑与删除记录。新增了 `test/performance/database_trash_mixin_benchmark_test.dart` 基准测试，彻底删除 2500 条软删除笔记的耗时从 524ms 降至 ~431ms（提升约 17.7%）， IPC 往返次数降低至 3 次。

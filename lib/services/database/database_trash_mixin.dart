@@ -417,86 +417,121 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       var deletedIdsInTxn = <String>[];
 
       await db.transaction((txn) async {
-        final tombstoneBatch = txn.batch();
-
+        // ⚡ Bolt: 使用 batch 批量查询 quotes 记录，减少 N+1 数据库往返
+        final quotesBatch = txn.batch();
         for (final idBatch in _chunkIds(uniqueIds)) {
           final placeholders = List.filled(idBatch.length, '?').join(',');
-
-          final fullRows = await txn.query(
+          quotesBatch.query(
             'quotes',
             columns: ['id', 'delta_content', 'content', 'date'],
             where: 'is_deleted = 1 AND id IN ($placeholders)',
             whereArgs: idBatch,
           );
+        }
 
-          if (fullRows.isEmpty) {
-            continue;
-          }
-
-          final batchDeletedIds = fullRows
-              .map((row) => row['id'])
-              .whereType<String>()
-              .toList(growable: false);
-
-          deletedIdsInTxn.addAll(batchDeletedIds);
-
-          final extractFutures = fullRows.map((row) async {
-            try {
-              final quote = Quote.fromJson(row);
-              return await MediaReferenceService.extractMediaPathsFromQuote(
-                  quote);
-            } catch (e, stack) {
-              UnifiedLogService.instance.error(
-                '提取已删除笔记媒体路径失败',
-                error: e,
-                stackTrace: stack,
-              );
-              return <String>[];
+        final quotesBatchResults = await quotesBatch.commit();
+        final fullRows = <Map<String, dynamic>>[];
+        for (final res in quotesBatchResults) {
+          if (res is List) {
+            for (final row in res) {
+              if (row is Map<String, dynamic>) {
+                fullRows.add(row);
+              } else if (row is Map) {
+                fullRows.add(Map<String, dynamic>.from(row));
+              }
             }
-          });
-          final extractedResults = await Future.wait(extractFutures);
-          for (final extracted in extractedResults) {
-            mediaCandidates.addAll(extracted);
           }
+        }
 
+        if (fullRows.isEmpty) {
+          return;
+        }
+
+        deletedIdsInTxn = fullRows
+            .map((row) => row['id'])
+            .whereType<String>()
+            .toList(growable: false);
+
+        if (deletedIdsInTxn.isEmpty) {
+          return;
+        }
+
+        // 提取已删除笔记中的媒体路径
+        final extractFutures = fullRows.map((row) async {
+          try {
+            final quote = Quote.fromJson(row);
+            return await MediaReferenceService.extractMediaPathsFromQuote(
+                quote);
+          } catch (e, stack) {
+            UnifiedLogService.instance.error(
+              '提取已删除笔记媒体路径失败',
+              error: e,
+              stackTrace: stack,
+            );
+            return <String>[];
+          }
+        });
+        final extractedResults = await Future.wait(extractFutures);
+        for (final extracted in extractedResults) {
+          mediaCandidates.addAll(extracted);
+        }
+
+        // ⚡ Bolt: 使用 batch 批量查询 media_references，减少 N+1 数据库往返
+        final refBatch = txn.batch();
+        for (final batchDeletedIds in _chunkIds(deletedIdsInTxn)) {
           final actualPlaceholders = List.filled(
             batchDeletedIds.length,
             '?',
           ).join(',');
-          final refRows = await txn.query(
+          refBatch.query(
             'media_references',
             columns: ['file_path'],
             where: 'quote_id IN ($actualPlaceholders)',
             whereArgs: batchDeletedIds,
           );
-          for (final refRow in refRows) {
-            final fp = refRow['file_path']?.toString();
-            if (fp != null && fp.isNotEmpty) {
-              mediaCandidates.add(fp);
+        }
+
+        final refBatchResults = await refBatch.commit();
+        for (final res in refBatchResults) {
+          if (res is List) {
+            for (final refRow in res) {
+              if (refRow is Map) {
+                final fp = refRow['file_path']?.toString();
+                if (fp != null && fp.isNotEmpty) {
+                  mediaCandidates.add(fp);
+                }
+              }
             }
           }
+        }
 
-          for (final id in batchDeletedIds) {
-            tombstoneBatch.insert(
-                'quote_tombstones',
-                {
-                  'quote_id': id,
-                  'deleted_at': now,
-                  'device_id': null,
-                },
-                conflictAlgorithm: ConflictAlgorithm.replace);
-          }
+        // ⚡ Bolt: 使用 batch 批量插入 tombstone 并删除 quotes 记录
+        final writeBatch = txn.batch();
+        for (final id in deletedIdsInTxn) {
+          writeBatch.insert(
+            'quote_tombstones',
+            {
+              'quote_id': id,
+              'deleted_at': now,
+              'device_id': null,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
 
-          await txn.delete(
+        for (final batchDeletedIds in _chunkIds(deletedIdsInTxn)) {
+          final actualPlaceholders = List.filled(
+            batchDeletedIds.length,
+            '?',
+          ).join(',');
+          writeBatch.delete(
             'quotes',
             where: 'is_deleted = 1 AND id IN ($actualPlaceholders)',
             whereArgs: batchDeletedIds,
           );
         }
 
-        if (deletedIdsInTxn.isNotEmpty) {
-          await tombstoneBatch.commit(noResult: true);
-        }
+        await writeBatch.commit(noResult: true);
       });
 
       if (deletedIdsInTxn.isEmpty) {
