@@ -117,3 +117,7 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-10-02 - [补充 NetworkService 的单元测试]
 **盲点:** `NetworkService` 整合了通用 HTTP 请求（`get` / `post`）与 AI 请求（`aiRequest` / `aiStreamRequest`），但此前缺乏全面覆盖初始化/清理生命周期、错误转换、Hitokoto 特殊响应格式解析，以及 OpenAI/Anthropic 流式 chunks 解析的单元测试。
 **对策:** 扩展 `test/unit/services/network_service_test.dart` 单元测试套件。利用自定义 `TestHttpClientAdapter` 模拟网络层请求，对 GET/POST 请求、一言响应转换、DioException 异常捕获、AI 请求参数归一化、以及 SSE 流式分块解析（OpenAI delta content & Anthropic delta text）进行了全路径断言测试，保证核心网络服务的健壮性。
+
+## 2026-10-06 - [补充 TimeUtils 时间格式化纯函数的测试]
+**盲点:** `TimeUtils` 中的 `formatQuoteTime`、`formatDate`、`formatDateTime` 等核心时间格式化纯函数缺乏单元测试覆盖。这些函数在业务中被广泛用于页面展示及笔记生成，如果格式化逻辑被无意破坏，容易引起隐蔽的展示异常。
+**对策:** 在 `test/unit/utils/time_utils_test.dart` 中对工具类中的纯函数补充基于输入输出的边界与补零断言测试，保证核心格式化输出符合预期。

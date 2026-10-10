@@ -372,5 +372,23 @@ void main() {
       expect(TimeUtils.formatDateFromIso(emptyIso), '');
       expect(TimeUtils.formatDateTimeFromIso(emptyIso), '');
     });
+
+    test('formatQuoteTime 应该正确补零并格式化时间', () {
+      expect(TimeUtils.formatQuoteTime(DateTime(2025, 6, 21, 8, 5)), '08:05');
+      expect(TimeUtils.formatQuoteTime(DateTime(2025, 6, 21, 14, 30)), '14:30');
+      expect(TimeUtils.formatQuoteTime(DateTime(2025, 6, 21, 0, 0)), '00:00');
+    });
+
+    test('formatDate 应该正确格式化仅日期', () {
+      expect(TimeUtils.formatDate(DateTime(2025, 6, 21)), '2025年6月21日');
+      expect(TimeUtils.formatDate(DateTime(2025, 12, 1)), '2025年12月1日');
+    });
+
+    test('formatDateTime 应该正确格式化日期和时间（包含补零）', () {
+      expect(TimeUtils.formatDateTime(DateTime(2025, 6, 21, 8, 5)),
+          '2025年6月21日 08:05');
+      expect(TimeUtils.formatDateTime(DateTime(2025, 12, 1, 14, 30)),
+          '2025年12月1日 14:30');
+    });
   });
 }
