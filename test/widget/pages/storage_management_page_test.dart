@@ -173,5 +173,89 @@ void main() {
       await _disposeApp(tester);
       _disposeLogServiceOnce();
     });
+
+    testWidgets('数据迁移进度弹窗包含取消按钮且点击后变为正在取消', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Builder(
+            builder: (context) {
+              final l10n = AppLocalizations.of(context);
+              return Scaffold(
+                body: ElevatedButton(
+                  onPressed: () {
+                    final migrationProgress = ValueNotifier<
+                        ({
+                          double progress,
+                          String? status,
+                          bool isCancelling,
+                        })>(
+                      (progress: 0.2, status: '正在复制文件...', isCancelling: false),
+                    );
+
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => ValueListenableBuilder(
+                        valueListenable: migrationProgress,
+                        builder: (context, value, _) => AlertDialog(
+                          title: Text(
+                            value.isCancelling
+                                ? l10n.cancellingAndCleaning
+                                : l10n.migratingData,
+                          ),
+                          content: Text(
+                            value.isCancelling
+                                ? l10n.cancellingAndCleaning
+                                : (value.status ?? l10n.preparingProgress),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: value.isCancelling
+                                  ? null
+                                  : () {
+                                      migrationProgress.value = (
+                                        progress: value.progress,
+                                        status: l10n.cancellingAndCleaning,
+                                        isCancelling: true,
+                                      );
+                                    },
+                              child: Text(l10n.cancel),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Show Dialog'),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show Dialog'));
+      await tester.pump();
+
+      expect(find.text('正在迁移数据'), findsOneWidget);
+      expect(find.text('正在复制文件...'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, '取消'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, '取消'));
+      await tester.pump();
+
+      expect(find.text('正在取消并清理...'), findsNWidgets(2)); // Title and content
+
+      await _disposeApp(tester);
+      _disposeLogServiceOnce();
+    });
   });
 }

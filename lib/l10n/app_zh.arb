@@ -906,6 +906,17 @@
       }
     }
   },
+  "cancellingAndCleaning": "正在取消并清理...",
+  "migrationCancelled": "迁移已取消",
+  "migrationCancelledMessage": "迁移已取消，目标目录已清理，原数据完好无损。",
+  "migrationFailedAndCleanedMessage": "迁移失败：{error}\n\n目标路径已自动清理，原数据完好无损。",
+  "@migrationFailedAndCleanedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "selectNewDataDirectory": "选择新的数据存储目录",
   "directoryNotAvailable": "所选目录不可用或没有写权限",
   "selectDirectoryFailed": "选择目录失败: {error}",

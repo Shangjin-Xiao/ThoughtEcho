@@ -813,6 +813,17 @@
       }
     }
   },
+  "cancellingAndCleaning": "취소 및 정리 중...",
+  "migrationCancelled": "마이그레이션 취소됨",
+  "migrationCancelledMessage": "마이그레이션이 취소되었습니다. 대상 디렉터리가 정리되었으며 원본 데이터는 안전하게 보존됩니다.",
+  "migrationFailedAndCleanedMessage": "마이그레이션 실패: {error}\n\n대상 경로가 자동으로 정리되었으며 원본 데이터는 안전하게 보존됩니다.",
+  "@migrationFailedAndCleanedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "selectNewDataDirectory": "새 데이터 저장 디렉터리 선택",
   "directoryNotAvailable": "선택한 디렉터리를 사용할 수 없거나 쓰기 권한이 없습니다",
   "selectDirectoryFailed": "디렉터리 선택 실패: {error}",
