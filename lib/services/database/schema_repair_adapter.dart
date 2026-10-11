@@ -562,8 +562,8 @@ class SchemaLegacyTagAdapter {
         await transaction.query('categories', columns: const <String>['id']);
     final categoryIds =
         categories.map((category) => category['id'] as String).toSet();
-    final batch = transaction.batch();
 
+    final tagRelations = <MapEntry<String, String>>[];
     for (final quote in quotesWithTags) {
       final quoteId = quote['id'] as String;
       final tagIds = (quote['tag_ids'] as String)
@@ -571,10 +571,40 @@ class SchemaLegacyTagAdapter {
           .map((id) => id.trim())
           .where((id) => id.isNotEmpty && categoryIds.contains(id));
       for (final tagId in tagIds) {
-        batch.insert(
-          'quote_tags',
-          <String, Object?>{'quote_id': quoteId, 'tag_id': tagId},
-          conflictAlgorithm: ConflictAlgorithm.ignore,
+        tagRelations.add(MapEntry(quoteId, tagId));
+      }
+    }
+
+    if (tagRelations.isEmpty) {
+      return;
+    }
+
+    final batch = transaction.batch();
+    if (tagRelations.length == 1) {
+      batch.insert(
+        'quote_tags',
+        <String, Object?>{
+          'quote_id': tagRelations.first.key,
+          'tag_id': tagRelations.first.value,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    } else {
+      const chunkSize = 400;
+      for (var i = 0; i < tagRelations.length; i += chunkSize) {
+        final end = (i + chunkSize < tagRelations.length)
+            ? i + chunkSize
+            : tagRelations.length;
+        final chunk = tagRelations.sublist(i, end);
+        final valuePlaceholders =
+            List.filled(chunk.length, '(?, ?)').join(', ');
+        final args = <Object?>[];
+        for (final rel in chunk) {
+          args.addAll([rel.key, rel.value]);
+        }
+        batch.rawInsert(
+          'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
+          args,
         );
       }
     }

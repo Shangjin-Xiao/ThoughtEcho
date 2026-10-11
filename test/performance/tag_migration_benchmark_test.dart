@@ -12,7 +12,9 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  test('Benchmark Tag Migration (N+1 vs Optimized)', () async {
+  test(
+      'Benchmark Tag Migration (Single batch.insert vs Chunked multi-row rawInsert)',
+      () async {
     final db = await openDatabase(inMemoryDatabasePath);
     // Setup tables
     await db.execute('CREATE TABLE categories(id TEXT PRIMARY KEY, name TEXT)');
@@ -22,7 +24,7 @@ void main() {
 
     // Seed data
     final uuid = const Uuid();
-    final random = Random();
+    final random = Random(42);
     final categoryIds = List.generate(100, (_) => uuid.v4());
 
     // Batch insert categories
@@ -35,7 +37,8 @@ void main() {
     // Insert 2000 quotes, each with 1-5 tags
     final quotes = List.generate(2000, (i) {
       final numTags = random.nextInt(5) + 1;
-      final tags = (List.of(categoryIds)..shuffle()).take(numTags).toList();
+      final tags =
+          (List.of(categoryIds)..shuffle(random)).take(numTags).toList();
       return {
         'id': uuid.v4(),
         'tag_ids': tags.join(','),
@@ -51,126 +54,129 @@ void main() {
 
     debugPrint('Seeded 2000 quotes and 100 categories.');
 
-    // --- Benchmark Slow (N+1) ---
-    final stopwatchSlow = Stopwatch()..start();
-    await db.transaction((txn) async {
-      // Logic copied from _migrateTagDataSafely (simplified for repro)
-      final quotesWithTags = await txn.query(
-        'quotes',
-        columns: ['id', 'tag_ids'],
-        where: 'tag_ids IS NOT NULL AND tag_ids != ""',
-      );
-
-      for (final quote in quotesWithTags) {
-        final quoteId = quote['id'] as String;
-        final tagIdsString = quote['tag_ids'] as String?;
-        if (tagIdsString == null || tagIdsString.isEmpty) continue;
-
-        final tagIds = tagIdsString
-            .split(',')
-            .map((id) => id.trim())
-            .where((id) => id.isNotEmpty)
-            .toList();
-
-        final validTagIds = <String>[];
-        for (final tagId in tagIds) {
-          // N+1 Query here
-          final categoryExists = await txn.query(
-            'categories',
-            where: 'id = ?',
-            whereArgs: [tagId],
-            limit: 1,
-          );
-
-          if (categoryExists.isNotEmpty) {
-            validTagIds.add(tagId);
-          }
-        }
-
-        for (final tagId in validTagIds) {
-          await txn.insert(
-              'quote_tags',
-              {
-                'quote_id': quoteId,
-                'tag_id': tagId,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
-        }
-      }
-    });
-    stopwatchSlow.stop();
-    debugPrint('Slow migration took: ${stopwatchSlow.elapsedMilliseconds}ms');
-
-    // Verify count
-    final countSlow = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
-    debugPrint('Slow migration inserted $countSlow records.');
-
-    // --- Cleanup for Fast Benchmark ---
-    await db.delete('quote_tags');
-
-    // --- Benchmark Fast (Optimized) ---
-    final stopwatchFast = Stopwatch()..start();
+    // --- Benchmark Baseline (Sequential batch.insert per tag) ---
+    final stopwatchBaseline = Stopwatch()..start();
     await db.transaction((txn) async {
       final quotesWithTags = await txn.query(
         'quotes',
-        columns: ['id', 'tag_ids'],
-        where: 'tag_ids IS NOT NULL AND tag_ids != ""',
+        columns: const <String>['id', 'tag_ids'],
+        where: "tag_ids IS NOT NULL AND tag_ids != ''",
       );
 
       if (quotesWithTags.isEmpty) return;
 
-      // 1. Fetch all category IDs once
-      final allCategories = await txn.query('categories', columns: ['id']);
-      final allCategoryIds =
-          allCategories.map((c) => c['id'] as String).toSet();
+      final categories =
+          await txn.query('categories', columns: const <String>['id']);
+      final categoryIdsSet = categories.map((c) => c['id'] as String).toSet();
 
-      // 2. Prepare batch
       final batch = txn.batch();
 
       for (final quote in quotesWithTags) {
         final quoteId = quote['id'] as String;
-        final tagIdsString = quote['tag_ids'] as String?;
-        if (tagIdsString == null || tagIdsString.isEmpty) continue;
-
-        final tagIds = tagIdsString
+        final tagIds = (quote['tag_ids'] as String)
             .split(',')
             .map((id) => id.trim())
-            .where((id) => id.isNotEmpty)
-            .toList();
+            .where((id) => id.isNotEmpty && categoryIdsSet.contains(id));
 
-        // 3. In-memory check
-        final validTagIds = tagIds.where((id) => allCategoryIds.contains(id));
-
-        for (final tagId in validTagIds) {
-          // 4. Batch insert
+        for (final tagId in tagIds) {
           batch.insert(
-              'quote_tags',
-              {
-                'quote_id': quoteId,
-                'tag_id': tagId,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+            'quote_tags',
+            <String, Object?>{'quote_id': quoteId, 'tag_id': tagId},
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
         }
       }
 
-      // 5. Commit batch (Single transaction commit minimizes IPC overhead)
       await batch.commit(noResult: true);
     });
-    stopwatchFast.stop();
-    debugPrint('Fast migration took: ${stopwatchFast.elapsedMilliseconds}ms');
+    stopwatchBaseline.stop();
+    debugPrint(
+        'Baseline (batch.insert) took: ${stopwatchBaseline.elapsedMilliseconds}ms');
 
-    // Verify count (Fast)
-    final countFast = Sqflite.firstIntValue(
+    // Verify count
+    final countBaseline = Sqflite.firstIntValue(
         await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
-    debugPrint('Fast migration inserted $countFast records.');
+    debugPrint('Baseline inserted $countBaseline records.');
 
-    // Ensure both strategies produce the same result.
-    expect(countFast, countSlow);
+    // --- Cleanup for Chunked Multi-Row Benchmark ---
+    await db.delete('quote_tags');
 
-    final improvement = (stopwatchSlow.elapsedMilliseconds -
-            stopwatchFast.elapsedMilliseconds) /
-        stopwatchSlow.elapsedMilliseconds *
+    // --- Benchmark Chunked Multi-row rawInsert ---
+    final stopwatchOptimized = Stopwatch()..start();
+    await db.transaction((txn) async {
+      final quotesWithTags = await txn.query(
+        'quotes',
+        columns: const <String>['id', 'tag_ids'],
+        where: "tag_ids IS NOT NULL AND tag_ids != ''",
+      );
+
+      if (quotesWithTags.isEmpty) return;
+
+      final categories =
+          await txn.query('categories', columns: const <String>['id']);
+      final categoryIdsSet = categories.map((c) => c['id'] as String).toSet();
+
+      final tagRelations = <MapEntry<String, String>>[];
+
+      for (final quote in quotesWithTags) {
+        final quoteId = quote['id'] as String;
+        final tagIds = (quote['tag_ids'] as String)
+            .split(',')
+            .map((id) => id.trim())
+            .where((id) => id.isNotEmpty && categoryIdsSet.contains(id));
+
+        for (final tagId in tagIds) {
+          tagRelations.add(MapEntry(quoteId, tagId));
+        }
+      }
+
+      final batch = txn.batch();
+      if (tagRelations.length == 1) {
+        batch.insert(
+          'quote_tags',
+          <String, Object?>{
+            'quote_id': tagRelations.first.key,
+            'tag_id': tagRelations.first.value,
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      } else if (tagRelations.length > 1) {
+        const chunkSize = 400;
+        for (var i = 0; i < tagRelations.length; i += chunkSize) {
+          final end = (i + chunkSize < tagRelations.length)
+              ? i + chunkSize
+              : tagRelations.length;
+          final chunk = tagRelations.sublist(i, end);
+          final valuePlaceholders =
+              List.filled(chunk.length, '(?, ?)').join(', ');
+          final args = <Object?>[];
+          for (final rel in chunk) {
+            args.addAll([rel.key, rel.value]);
+          }
+          batch.rawInsert(
+            'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
+            args,
+          );
+        }
+      }
+
+      await batch.commit(noResult: true);
+    });
+    stopwatchOptimized.stop();
+    debugPrint(
+        'Optimized (chunked rawInsert) took: ${stopwatchOptimized.elapsedMilliseconds}ms');
+
+    // Verify count (Optimized)
+    final countOptimized = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
+    debugPrint('Optimized inserted $countOptimized records.');
+
+    // Ensure both strategies produce the exact same result.
+    expect(countOptimized, countBaseline);
+
+    final improvement = (stopwatchBaseline.elapsedMilliseconds -
+            stopwatchOptimized.elapsedMilliseconds) /
+        stopwatchBaseline.elapsedMilliseconds *
         100;
     debugPrint(
       'Performance Improvement: ${improvement.toStringAsFixed(2)}%',
