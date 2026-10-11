@@ -1003,20 +1003,22 @@ class AppTheme with ChangeNotifier {
 
   ThemeData? _cachedLightThemeData;
   ThemeData? _cachedDarkThemeData;
-  Locale? _cachedThemeLocale;
+  Locale? _cachedLightLocale;
+  Locale? _cachedDarkLocale;
 
   void _clearThemeCache() {
     _cachedLightThemeData = null;
     _cachedDarkThemeData = null;
-    _cachedThemeLocale = null;
+    _cachedLightLocale = null;
+    _cachedDarkLocale = null;
   }
 
   // 创建亮色主题数据
   ThemeData createLightThemeData({Locale? locale}) {
-    if (_cachedLightThemeData != null && _cachedThemeLocale == locale) {
+    if (_cachedLightThemeData != null && _cachedLightLocale == locale) {
       return _cachedLightThemeData!;
     }
-    _cachedThemeLocale = locale;
+    _cachedLightLocale = locale;
     // 手工色板要原样落地：关掉 keyColors（否则 FlexColorScheme 会拿色板里的
     // primary 当种子重新推导整套色调）和表面混合（否则纸色会被强调色染上一层）。
     final generated = _themeStyle.isGenerated;
@@ -1174,10 +1176,10 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData({Locale? locale}) {
-    if (_cachedDarkThemeData != null && _cachedThemeLocale == locale) {
+    if (_cachedDarkThemeData != null && _cachedDarkLocale == locale) {
       return _cachedDarkThemeData!;
     }
-    _cachedThemeLocale = locale;
+    _cachedDarkLocale = locale;
     final colorScheme = darkColorScheme;
     final form = _themeStyle.form.forLocale(locale);
 

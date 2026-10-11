@@ -50,7 +50,7 @@ ThoughtEcho 在纸与墨（`paper`）和素笺（`plain`）两套手工主题风
 | **iOS / iPadOS** | `Songti TC` (宋體-繁) | `Hiragino Mincho ProN` (ヒラギノ明朝 ProN) | **系统预装且可用**。字形规范优美，支持 Regular/Bold 等经典字重，但**不具备连续 Variable Font 轴**。CoreText 必须使用确切具名家族名，不认 `serif`。 |
 | **macOS** | `Songti TC` (宋體-繁)、`STSong` | `Hiragino Mincho ProN`、`YuMincho` (游明朝体) | **系统预装且完整**。排版质量高，但同样不认 `serif` 通用族名。 |
 | **Android (AOSP 原生)** | `NotoSerifCJK-Regular.ttc`（含 TC 分支） | `NotoSerifCJK-Regular.ttc`（含 JP 分支） | 理论上 AOSP `fonts.xml` 配置了 `fallbackFor="serif"`。但**仅有 Regular (w400) 单一档**，无中等字重或粗体变体。 |
-| **Android (国内/主流 OEM)** | **绝大多数缺失** (95%+) | **绝大多数缺失** (99%+) | 小米、OPPO、vivo、华为等厂商定制系统镜像中移除了所有 CJK Serif 字体，仅保留黑体。依赖系统字体必定回退为系统黑体。 |
+| **Android (国内/主流 OEM)** | **主流机型实测缺失** | **主流机型实测缺失** | 主流厂商定制系统（如小米 HyperOS、OPPO ColorOS、vivo OriginOS、华为 HarmonyOS）为压缩系统分区体积，其 `/system/fonts` 默认仅保留黑体（如 MiSans / OPPO Sans / HarmonyOS Sans）与拉丁衬线体，普遍未内置 CJK Serif。依赖系统字体在这些设备上必定回退为系统黑体。 |
 | **Windows** | `MingLiU` (細明體) / `PMingLiU` (新細明體) | `MS Mincho` (MS 明朝)、`Yu Mincho` (游明朝，Win 10+) | **自带但质量两极分化**：`MingLiU` 属于 Windows 早期点阵/矢量混合字体，小字号强制内嵌粗糙点阵（Bitmaps），高分屏下笔画生硬无梯度；Win 10+ 的 `Yu Mincho` 质量良好，但旧字体兼容性负担重。 |
 
 ---

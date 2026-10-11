@@ -213,7 +213,7 @@ void main() {
 
   group('语言感知排版（Locale-Aware Typography）', () {
     for (final style in [ThemeStyle.paper, ThemeStyle.plain]) {
-      test('${style.name} 在 ja 与繁体中文（zh-Hant、zh_TW）下回退到系统字体，杜绝混排', () async {
+      test('${style.name} 在 ja、ko 与繁体中文下回退到系统字体，杜绝混排；并保持行高与亮暗缓存隔离', () async {
         final appTheme = AppTheme();
         await appTheme.setThemeStyle(style);
 
@@ -227,6 +227,32 @@ void main() {
         expect(
           jaTheme.textTheme.bodyLarge?.fontSize,
           closeTo(16.0 * style.form.readingFontScale, 0.001),
+        );
+        expect(
+          jaTheme.textTheme.bodyLarge?.height,
+          style.form.bodyLineHeight,
+        );
+
+        // 韩文环境（ko）：同样回退系统黑体
+        final koTheme =
+            appTheme.createLightThemeData(locale: const Locale('ko'));
+        expect(koTheme.textTheme.bodyLarge?.fontFamily, 'Roboto');
+        expect(koTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+            isNull);
+        expect(
+          koTheme.textTheme.bodyLarge?.height,
+          style.form.bodyLineHeight,
+        );
+
+        // 暗色主题：韩文环境同样正确回退系统黑体与保留行高
+        final koDarkTheme =
+            appTheme.createDarkThemeData(locale: const Locale('ko'));
+        expect(koDarkTheme.textTheme.bodyLarge?.fontFamily, 'Roboto');
+        expect(koDarkTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+            isNull);
+        expect(
+          koDarkTheme.textTheme.bodyLarge?.height,
+          style.form.bodyLineHeight,
         );
 
         // 繁体中文（zh-Hant）：同样回退系统黑体
@@ -254,6 +280,24 @@ void main() {
         expect(
           zhTheme.extension<AppTypographyTokens>()?.readingFontFamily,
           ThemeStyleForm.bundledSerif,
+        );
+
+        // 暗色主题：简体中文同样使用随包衬线体
+        final zhDarkTheme =
+            appTheme.createDarkThemeData(locale: const Locale('zh'));
+        expect(zhDarkTheme.textTheme.bodyLarge?.fontFamily,
+            ThemeStyleForm.bundledSerif);
+
+        // 亮暗交错切换 Locale 缓存隔离验证：
+        // 从 zh 切换到 ja 时，先生成 ja 亮色，再生成 ja 暗色。
+        // 暗色绝不能错误命中上次 zh 的过期缓存。
+        final jaDarkTheme =
+            appTheme.createDarkThemeData(locale: const Locale('ja'));
+        expect(jaDarkTheme.textTheme.bodyLarge?.fontFamily, 'Roboto',
+            reason: '暗色主题不应命中旧 locale (zh) 的衬线体缓存');
+        expect(
+          jaDarkTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          isNull,
         );
 
         // 英文（en）：拉丁字符完整覆盖，继续使用随包衬线体

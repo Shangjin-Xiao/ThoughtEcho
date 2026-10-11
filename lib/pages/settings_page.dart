@@ -1448,6 +1448,7 @@ class SettingsPageState extends State<SettingsPage> {
           context: context,
           builder: (dialogContext) => AlertDialog(
             title: Text(l10n.selectLanguage),
+            scrollable: true,
             content: StatefulBuilder(
               builder: (context, setState) {
                 return RadioGroup<String?>(
