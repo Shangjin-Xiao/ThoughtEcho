@@ -59,6 +59,8 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
       var adopted = 0;
 
       await db.transaction((txn) async {
+        final batch = txn.batch();
+
         // 第一轮：按固定 ID 修复已存在的系统标签（名称 + is_default）。
         // 必须先于按名称的收编，否则一个系统标签顶着另一个系统标签的名字时
         // （例如 default_anime 的名称被写成"每日一言"），会被当成占位行收编掉，
@@ -74,7 +76,7 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           final needDefaultFix = !(isDefault == 1 || isDefault == true);
           if (!needNameFix && !needDefaultFix) continue;
 
-          await txn.update(
+          batch.update(
             'categories',
             {
               'name': category.name,
@@ -112,8 +114,8 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           final impostorId = impostor?['id'] as String?;
           if (impostorId != null &&
               !_DatabaseServiceBase.systemTagIds.contains(impostorId)) {
-            await _adoptTagAsSystemTag(
-              txn,
+            _adoptTagAsSystemTag(
+              batch,
               oldId: impostorId,
               category: category,
               timestamp: nowUtc,
@@ -139,7 +141,7 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
             'icon_name': category.iconName,
             'last_modified': nowUtc,
           };
-          await txn.insert(
+          batch.insert(
             'categories',
             newRow,
             conflictAlgorithm: ConflictAlgorithm.ignore,
@@ -156,7 +158,7 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           if (!_DatabaseServiceBase.systemTagIds.contains(rowId)) continue;
           final isDefault = row['is_default'];
           if (isDefault == 1 || isDefault == true) continue;
-          await txn.update(
+          batch.update(
             'categories',
             {
               'is_default': 1,
@@ -167,6 +169,10 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           );
           repaired++;
           logDebug('修复系统标签属性: $rowId');
+        }
+
+        if (inserted > 0 || repaired > 0 || adopted > 0) {
+          await batch.commit(noResult: true);
         }
       });
 
@@ -188,18 +194,18 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
   ///
   /// categories.id 是主键且被 quote_tags / quotes 引用，不能直接改 ID，
   /// 所以先建出固定 ID 的行、把引用迁过去，最后删掉占位行。
-  Future<void> _adoptTagAsSystemTag(
-    Transaction txn, {
+  void _adoptTagAsSystemTag(
+    Batch batch, {
     required String oldId,
     required NoteTag category,
     required String timestamp,
-  }) async {
+  }) {
     if (oldId == category.id) return;
 
     // 这里绝不能用 ConflictAlgorithm.replace：SQLite 的 REPLACE 是 DELETE+INSERT，
     // 若规范行已被另一条恢复/启动路径抢先建出，删除会经 quote_tags 的
     // ON DELETE CASCADE 连带清掉它已有的笔记关联。改为 ignore + 显式 update。
-    await txn.insert(
+    batch.insert(
         'categories',
         {
           'id': category.id,
@@ -209,7 +215,7 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
           'last_modified': timestamp,
         },
         conflictAlgorithm: ConflictAlgorithm.ignore);
-    await txn.update(
+    batch.update(
       'categories',
       {
         'name': category.name,
@@ -222,13 +228,13 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
     );
 
     // 笔记可能同时挂着新旧两个标签，用 OR IGNORE 避开主键冲突
-    await txn.rawInsert(
+    batch.rawInsert(
       'INSERT OR IGNORE INTO quote_tags(quote_id, tag_id) '
       'SELECT quote_id, ? FROM quote_tags WHERE tag_id = ?',
       [category.id, oldId],
     );
-    await txn.delete('quote_tags', where: 'tag_id = ?', whereArgs: [oldId]);
-    await txn.update(
+    batch.delete('quote_tags', where: 'tag_id = ?', whereArgs: [oldId]);
+    batch.update(
       'quotes',
       {
         'category_id': category.id,
@@ -239,7 +245,7 @@ mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
       where: 'category_id = ?',
       whereArgs: [oldId],
     );
-    await txn.delete('categories', where: 'id = ?', whereArgs: [oldId]);
+    batch.delete('categories', where: 'id = ?', whereArgs: [oldId]);
   }
 
   /// 获取默认一言标签列表
