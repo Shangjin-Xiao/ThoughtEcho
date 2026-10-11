@@ -2,7 +2,7 @@
 
 > [!NOTE]
 > ### 📦 本代码审查报告已归档 (Archived / Milestone Audit)
-> - **状态**：📦 已归档（真实问题均已整改闭环，门禁全绿；P5 底层网络取消待下沉重构）
+> - **状态**：📦 已归档（核心整改已完成，P5 底层网络取消仍待下沉重构；门禁全绿）
 > - **责任人 / 产出角色**：AI 代码审查会话（Standards / Spec 双子代理并行执行，整改完成）
 > - **涉及模块**：`lib/services/`、`lib/widgets/`、`lib/pages/`、`lib/controllers/`、`lib/l10n/`、`test/`
 > - **归档时间**：2026-10-10
@@ -112,10 +112,10 @@
    # 结果：19 个修改的 Dart 文件格式化检查完全通过 (0 changed)
    ```
 3. **相关重点单元与 Widget 测试通过**：
-   - `test/unit/services/data_directory_service_test.dart`（26/26 全部通过，覆盖白名单回滚、非空目标拦截与取消契约）
+   - `test/unit/services/data_directory_service_test.dart`（27/27 全部通过，覆盖白名单回滚、非空目标拦截与取消契约）
    - `test/unit/services/agent_memory_service_test.dart`（39/39 全部通过，覆盖扩展 DDL 定义校验）
    - `test/unit/services/database_health_service_test.dart`（17/17 全部通过，覆盖跨平台数值解析）
-   - `test/unit/models/chat_model_resilience_test.dart`（7/7 全部通过，覆盖反序列化防御与非字符串回退）
+   - `test/unit/models/chat_model_resilience_test.dart`（8/8 全部通过，覆盖反序列化防御与非字符串回退）
    - `test/widget/widgets/collapsed_media_banner_test.dart`（2/2 全部通过，覆盖 onInverseSurface / inverseSurface 语义令牌）
    - `test/widget/widgets/collapsed_media_thumbnail_test.dart`（12/12 全部通过，覆盖角标颜色令牌）
-   - `test/widget/widgets/ai/thinking_widget_test.dart`（11/11 全部通过，覆盖防抖与展开状态）
+   - `test/widget/widgets/ai/thinking_widget_test.dart`（13/13 全部通过，覆盖防抖、展开状态与链接反馈）

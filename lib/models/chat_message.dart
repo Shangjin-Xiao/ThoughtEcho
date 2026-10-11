@@ -205,33 +205,18 @@ class ChatMessage {
     if (val == null) return null;
     if (val is String) return val;
     if (val is num || val is bool) return val.toString();
-    if (val is Map) {
-      try {
-        final stringKeyMap = val.map((k, v) => MapEntry(k.toString(), v));
-        return jsonEncode(
-          stringKeyMap,
-          toEncodable: (nonEncodable) => nonEncodable.toString(),
-        );
-      } catch (_) {
-        return null;
-      }
-    }
-    if (val is List) {
-      try {
-        return jsonEncode(
-          val,
-          toEncodable: (nonEncodable) => nonEncodable.toString(),
-        );
-      } catch (_) {
-        return null;
-      }
-    }
     try {
+      final target =
+          val is Map ? val.map((k, v) => MapEntry(k.toString(), v)) : val;
       return jsonEncode(
-        val,
+        target,
         toEncodable: (nonEncodable) => nonEncodable.toString(),
       );
-    } catch (_) {
+    } catch (e) {
+      AppLogger.w(
+        'ChatMessage._parseString 序列化失败，降级为 null (${e.runtimeType})',
+        source: 'ChatMessage',
+      );
       return null;
     }
   }

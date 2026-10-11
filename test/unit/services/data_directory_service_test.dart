@@ -554,6 +554,7 @@ void main() {
       // DatabaseService 重置后可正常重新初始化使用
       await DatabaseService().init();
       expect(DatabaseService().database.isOpen, isTrue);
+      await DatabaseService.closeDatabase();
     });
   });
 }
