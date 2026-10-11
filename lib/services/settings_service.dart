@@ -1716,16 +1716,20 @@ class SettingsService extends ChangeNotifier {
       final Set<String> restoredProviderIds = {};
 
       // 优先恢复多provider AI设置
-      if (backupData.containsKey('multi_ai_settings')) {
-        final multiAiSettingsJson =
-            backupData['multi_ai_settings'] as Map<String, dynamic>;
+      if (backupData.containsKey('multi_ai_settings') &&
+          backupData['multi_ai_settings'] is Map) {
+        final multiAiSettingsJson = Map<String, dynamic>.from(
+          backupData['multi_ai_settings'] as Map,
+        );
         final rawProviders = multiAiSettingsJson['providers'] ??
             multiAiSettingsJson['availableProviders'];
         if (rawProviders is List) {
           for (final item in rawProviders) {
-            if (item is Map<String, dynamic>) {
-              final id = item['id'] as String?;
-              final rawKey = (item['apiKey'] ?? item['api_key']) as String?;
+            if (item is Map) {
+              final itemMap = Map<String, dynamic>.from(item);
+              final id = itemMap['id'] as String?;
+              final rawKey =
+                  (itemMap['apiKey'] ?? itemMap['api_key']) as String?;
               if (id != null &&
                   id.isNotEmpty &&
                   rawKey != null &&
@@ -1741,9 +1745,11 @@ class SettingsService extends ChangeNotifier {
       }
 
       // 恢复单provider遗留AI设置（仅当对应provider未被multi_ai覆盖时）
-      if (backupData.containsKey('ai_settings')) {
-        final aiSettingsJson =
-            backupData['ai_settings'] as Map<String, dynamic>;
+      if (backupData.containsKey('ai_settings') &&
+          backupData['ai_settings'] is Map) {
+        final aiSettingsJson = Map<String, dynamic>.from(
+          backupData['ai_settings'] as Map,
+        );
         final rawApiKey =
             (aiSettingsJson['apiKey'] ?? aiSettingsJson['api_key']) as String?;
         if (rawApiKey != null && rawApiKey.trim().isNotEmpty) {
@@ -1760,33 +1766,52 @@ class SettingsService extends ChangeNotifier {
       }
 
       // 恢复本地AI设置
-      if (backupData.containsKey('local_ai_settings')) {
-        final localAiSettingsJson =
-            backupData['local_ai_settings'] as Map<String, dynamic>;
+      if (backupData.containsKey('local_ai_settings') &&
+          backupData['local_ai_settings'] is Map) {
+        final localAiSettingsJson = Map<String, dynamic>.from(
+          backupData['local_ai_settings'] as Map,
+        );
         final localAiSettings = LocalAISettings.fromJson(localAiSettingsJson);
         await saveLocalAISettings(localAiSettings);
       }
 
       // 恢复应用设置
-      if (backupData.containsKey('app_settings')) {
-        final appSettingsJson =
-            backupData['app_settings'] as Map<String, dynamic>;
+      if (backupData.containsKey('app_settings') &&
+          backupData['app_settings'] is Map) {
+        final appSettingsJson = Map<String, dynamic>.from(
+          backupData['app_settings'] as Map,
+        );
         final appSettings = AppSettings.fromJson(appSettingsJson);
         await updateAppSettings(appSettings);
       }
 
-      // 恢复主题模式
+      // 恢复主题模式（防御性解析，防止类型不匹配与索引越界）
       if (backupData.containsKey('theme_mode')) {
-        final themeModeIndex = backupData['theme_mode'] as int;
-        final themeMode = ThemeMode.values[themeModeIndex];
-        await updateThemeMode(themeMode);
+        final rawThemeMode = backupData['theme_mode'];
+        int? themeModeIndex;
+        if (rawThemeMode is int) {
+          themeModeIndex = rawThemeMode;
+        } else if (rawThemeMode is num) {
+          themeModeIndex = rawThemeMode.toInt();
+        } else if (rawThemeMode is String) {
+          themeModeIndex = int.tryParse(rawThemeMode);
+        }
+
+        if (themeModeIndex != null &&
+            themeModeIndex >= 0 &&
+            themeModeIndex < ThemeMode.values.length) {
+          final themeMode = ThemeMode.values[themeModeIndex];
+          await updateThemeMode(themeMode);
+        } else if (rawThemeMode != null) {
+          logWarning('忽略无效的主题模式: $rawThemeMode', source: 'SettingsService');
+        }
       }
 
       // 恢复/记录 device_id（不覆盖本地已有，仅在本地不存在时写入，保持源ID可用于审计）
       if (backupData.containsKey('device_id')) {
-        final remoteId = backupData['device_id'];
+        final remoteId = backupData['device_id']?.toString();
         if ((_mmkv.getString(_deviceIdKey) ?? '').isEmpty &&
-            remoteId is String &&
+            remoteId != null &&
             remoteId.isNotEmpty) {
           await _mmkv.setString(_deviceIdKey, remoteId);
         }
