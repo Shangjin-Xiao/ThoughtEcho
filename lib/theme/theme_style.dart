@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_semantic_colors.dart';
@@ -440,6 +441,153 @@ class ThemeStyleForm {
         compensated: compensated,
       );
 
+  /// 判断指定语言环境是否适合使用随包简中衬线体 [bundledSerif]。
+  ///
+  /// [bundledSerif] 是 GB2312 简体中文字体子集。对于日文（ja）、繁体中文（zh-Hant、
+  /// zh-TW、zh-HK 等）以及韩文（ko），子集缺少对应汉字字形；若强行应用该字体，
+  /// 缺失汉字会穿透回退到系统黑体，导致「宋黑混排」的严重版式撕裂。
+  ///
+  /// 判定目标区域是否为繁体中文。
+  static bool _isTraditionalChinese(Locale? locale) {
+    if (locale == null) return false;
+    if (locale.languageCode.toLowerCase() != 'zh') return false;
+    final script = locale.scriptCode?.toLowerCase();
+    if (script == 'hant') return true;
+    if (script == 'hans') return false;
+    final country = locale.countryCode?.toUpperCase();
+    return country == 'TW' || country == 'HK' || country == 'MO';
+  }
+
+  /// 随包分发的中文衬线体（GB2312 子集）是否支持该语言。
+  ///
+  /// 日文汉字、繁体中文汉字、韩文谚文均不在子集中；
+  /// 在这些语言环境下，手工风格的正文应安全回退到系统字体，杜绝混排。
+  static bool isBundledSerifSupported(Locale? locale) {
+    if (locale == null) return true;
+    final lang = locale.languageCode.toLowerCase();
+    if (lang == 'ja' || lang == 'ko') {
+      return false;
+    }
+    if (_isTraditionalChinese(locale)) {
+      return false;
+    }
+    return true;
+  }
+
+  /// 解析针对目标语言 [locale] 与运行平台 [platform] 的系统衬线字体主族名。
+  ///
+  /// - Android：通用族名 'serif' 由系统 Minikin/fonts.xml 映射至系统衬线字体；
+  /// - iOS / macOS：CoreText 依赖具名族名，日文使用 'Hiragino Mincho ProN'，
+  ///   繁体中文使用 'Songti TC'，韩文使用 'AppleMyungjo'；
+  /// - Windows：日文使用高质量的 'Yu Mincho'（游明朝），繁体中文使用 'PMingLiU'（新细明体）。
+  static String getSystemSerifFamily({
+    Locale? locale,
+    TargetPlatform? platform,
+  }) {
+    final p = platform ?? defaultTargetPlatform;
+    final lang = locale?.languageCode.toLowerCase() ?? 'en';
+    final isHant = _isTraditionalChinese(locale);
+
+    switch (p) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        if (lang == 'ja') return 'Hiragino Mincho ProN';
+        if (isHant) return 'Songti TC';
+        if (lang == 'ko') return 'AppleMyungjo';
+        return 'Songti SC';
+      case TargetPlatform.android:
+        return 'serif';
+      case TargetPlatform.windows:
+        if (lang == 'ja') return 'Yu Mincho';
+        if (isHant) return 'PMingLiU';
+        if (lang == 'ko') return 'Batang';
+        return 'SimSun';
+      default:
+        return 'serif';
+    }
+  }
+
+  /// 对应语言的跨平台系统衬线体回退列表。
+  static List<String> getSystemSerifFallbackList(Locale? locale) {
+    final lang = locale?.languageCode.toLowerCase() ?? 'en';
+    if (lang == 'ja') {
+      return _japaneseSerifFallback;
+    }
+    if (_isTraditionalChinese(locale)) {
+      return _traditionalChineseSerifFallback;
+    }
+    if (lang == 'ko') {
+      return _koreanSerifFallback;
+    }
+    return _systemSerifFallback;
+  }
+
+  /// 为目标 [locale] 解析适用的风格形式。
+  ///
+  /// 若当前风格指定了随包字体 [bundledSerif]，但在目标语言（如日文、繁体中文、韩文）下
+  /// 随包子集因字符集缺失会引发同一段落内的宋黑混排，则切换为各平台对应的系统衬线体
+  /// （Android 为 'serif'，iOS 为具名宋体/明朝体，Windows 为游明朝/新细明体），
+  /// 让系统字体管理器统一接管整段渲染，既杜绝局部斑秃混排，又在有系统字体的设备上呈现优美衬线排版。
+  ThemeStyleForm forLocale(Locale? locale, {TargetPlatform? platform}) {
+    if (fontFamily == null) return this;
+    if (!isBundledSerifSupported(locale)) {
+      final systemSerif =
+          getSystemSerifFamily(locale: locale, platform: platform);
+      final systemFallback = getSystemSerifFallbackList(locale);
+      return copyWith(
+        fontFamily: () => systemSerif,
+        fontFamilyFallback: () => systemFallback,
+      );
+    }
+    return this;
+  }
+
+  /// 返回属性替换后的副本。
+  ThemeStyleForm copyWith({
+    double? cardRadius,
+    double? dialogRadius,
+    double? buttonRadius,
+    double? inputRadius,
+    double? fabRadius,
+    double? borderWidth,
+    double? shadowOpacityLight,
+    double? shadowOpacityDark,
+    double? shadowBlur,
+    double? ruleSpacing,
+    double? ruleOpacity,
+    String? Function()? fontFamily,
+    List<String>? Function()? fontFamilyFallback,
+    double? bodyLineHeight,
+    double? readingFontScale,
+    int? titleWeightFloor,
+    int? bodyWeightFloor,
+    double? variableWeightCompensation,
+  }) {
+    return ThemeStyleForm(
+      cardRadius: cardRadius ?? this.cardRadius,
+      dialogRadius: dialogRadius ?? this.dialogRadius,
+      buttonRadius: buttonRadius ?? this.buttonRadius,
+      inputRadius: inputRadius ?? this.inputRadius,
+      fabRadius: fabRadius ?? this.fabRadius,
+      borderWidth: borderWidth ?? this.borderWidth,
+      shadowOpacityLight: shadowOpacityLight ?? this.shadowOpacityLight,
+      shadowOpacityDark: shadowOpacityDark ?? this.shadowOpacityDark,
+      shadowBlur: shadowBlur ?? this.shadowBlur,
+      ruleSpacing: ruleSpacing ?? this.ruleSpacing,
+      ruleOpacity: ruleOpacity ?? this.ruleOpacity,
+      fontFamily: fontFamily != null ? fontFamily() : this.fontFamily,
+      fontFamilyFallback: fontFamilyFallback != null
+          ? fontFamilyFallback()
+          : this.fontFamilyFallback,
+      bodyLineHeight: bodyLineHeight ?? this.bodyLineHeight,
+      readingFontScale: readingFontScale ?? this.readingFontScale,
+      titleWeightFloor: titleWeightFloor ?? this.titleWeightFloor,
+      bodyWeightFloor: bodyWeightFloor ?? this.bodyWeightFloor,
+      variableWeightCompensation:
+          variableWeightCompensation ?? this.variableWeightCompensation,
+    );
+  }
+
   /// 随包分发的中文衬线体族名，必须和 `pubspec.yaml` 的 `fonts: - family:` 一致。
   ///
   /// **为什么不再用系统字体。** 这里曾经写通用族名 `serif`，靠 AOSP 从 Android 9
@@ -478,15 +626,18 @@ class ThemeStyleForm {
   ///
   /// 链尾不再需要通用族名 `serif`：首选族已经一定解析得到，逐字回退这条路是通的，
   /// 而 `serif` 在 iOS 上本来就解析不到，留着只是噪音。
-  static const List<String> _systemSerifFallback = [
-    'Songti SC',
-    'STSong',
-    'Noto Serif CJK SC',
-    'Noto Serif SC',
-    'Source Han Serif SC',
-    'SimSun',
-    // 日语系统衬线：子集外的日语特有汉字落到这里。
-    // iOS / macOS 在前，Android / Windows 在后，顺序只影响缺字时先问谁。
+  /// 繁体中文系统衬线回退列表。
+  static const List<String> _traditionalChineseSerifFallback = [
+    'Songti TC',
+    'LiSong Pro',
+    'PMingLiU',
+    'MingLiU',
+    'Noto Serif CJK TC',
+    'Noto Serif TC',
+  ];
+
+  /// 日语系统衬线回退列表：iOS/macOS 在前，Android/Windows 在后。
+  static const List<String> _japaneseSerifFallback = [
     'Hiragino Mincho ProN',
     'Hiragino Mincho Pro',
     'YuMincho',
@@ -495,6 +646,32 @@ class ThemeStyleForm {
     'Noto Serif CJK JP',
     'Noto Serif JP',
     'Source Han Serif JP',
+  ];
+
+  /// 韩文系统衬线回退列表。
+  static const List<String> _koreanSerifFallback = [
+    'AppleMyungjo',
+    'Batang',
+    'Noto Serif CJK KR',
+    'Noto Serif KR',
+  ];
+
+  /// 简体中文系统衬线回退列表。
+  static const List<String> _simplifiedChineseSerifFallback = [
+    'Songti SC',
+    'STSong',
+    'Noto Serif CJK SC',
+    'Noto Serif SC',
+    'Source Han Serif SC',
+    'SimSun',
+  ];
+
+  /// 子集外字形的去处。
+  ///
+  /// 由简体中文与日文衬线候选族组合而成，供随包 [bundledSerif] 遇到生僻字时回退。
+  static const List<String> _systemSerifFallback = [
+    ..._simplifiedChineseSerifFallback,
+    ..._japaneseSerifFallback,
   ];
 
   /// M3 `bodyLarge` 的字号。[ruleSpacing] 由它乘 [readingFontScale] 再乘

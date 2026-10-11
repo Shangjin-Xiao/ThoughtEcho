@@ -210,4 +210,174 @@ void main() {
       });
     });
   }
+
+  group('语言感知排版（Locale-Aware Typography）', () {
+    for (final style in [ThemeStyle.paper, ThemeStyle.plain]) {
+      test('${style.name} 在 ja、ko 与繁体中文下切换至系统衬线体，杜绝混排；并保持行高与亮暗缓存隔离', () async {
+        final appTheme = AppTheme();
+        await appTheme.setThemeStyle(style);
+
+        // 日文环境：切换为对应平台的系统衬线体（测试在 Linux/默认环境为 'serif'）
+        final jaTheme =
+            appTheme.createLightThemeData(locale: const Locale('ja'));
+        expect(jaTheme.textTheme.bodyLarge?.fontFamily, 'serif');
+        expect(
+          jaTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          'serif',
+        );
+        expect(
+          jaTheme.textTheme.bodyLarge?.fontFamilyFallback,
+          contains('Hiragino Mincho ProN'),
+        );
+        // 但行高和字号缩放依然保留（维持纸墨版式氛围）
+        expect(
+          jaTheme.textTheme.bodyLarge?.fontSize,
+          closeTo(16.0 * style.form.readingFontScale, 0.001),
+        );
+        expect(
+          jaTheme.textTheme.bodyLarge?.height,
+          style.form.bodyLineHeight,
+        );
+
+        // 韩文环境（ko）：同样切换系统衬线体
+        final koTheme =
+            appTheme.createLightThemeData(locale: const Locale('ko'));
+        expect(koTheme.textTheme.bodyLarge?.fontFamily, 'serif');
+        expect(
+          koTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          'serif',
+        );
+        expect(
+          koTheme.textTheme.bodyLarge?.height,
+          style.form.bodyLineHeight,
+        );
+
+        // 暗色主题：韩文环境同样正确应用系统衬线体与保留行高
+        final koDarkTheme =
+            appTheme.createDarkThemeData(locale: const Locale('ko'));
+        expect(koDarkTheme.textTheme.bodyLarge?.fontFamily, 'serif');
+        expect(
+          koDarkTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          'serif',
+        );
+        expect(
+          koDarkTheme.textTheme.bodyLarge?.height,
+          style.form.bodyLineHeight,
+        );
+
+        // 繁体中文（zh-Hant）：切换为系统繁体衬线体
+        final hantTheme = appTheme.createLightThemeData(
+          locale:
+              const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+        );
+        expect(hantTheme.textTheme.bodyLarge?.fontFamily, 'serif');
+        expect(
+          hantTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          'serif',
+        );
+        expect(
+          hantTheme.textTheme.bodyLarge?.fontFamilyFallback,
+          contains('Songti TC'),
+        );
+
+        // 繁体中文地区代码（zh_TW）：同样切换为系统繁体衬线体
+        final twTheme = appTheme.createLightThemeData(
+          locale: const Locale('zh', 'TW'),
+        );
+        expect(twTheme.textTheme.bodyLarge?.fontFamily, 'serif');
+        expect(
+          twTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          'serif',
+        );
+
+        // 简体中文（zh）：继续享受随包 NotoSerifSC 衬线体
+        final zhTheme =
+            appTheme.createLightThemeData(locale: const Locale('zh'));
+        expect(zhTheme.textTheme.bodyLarge?.fontFamily,
+            ThemeStyleForm.bundledSerif);
+        expect(
+          zhTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          ThemeStyleForm.bundledSerif,
+        );
+
+        // 暗色主题：简体中文同样使用随包衬线体
+        final zhDarkTheme =
+            appTheme.createDarkThemeData(locale: const Locale('zh'));
+        expect(zhDarkTheme.textTheme.bodyLarge?.fontFamily,
+            ThemeStyleForm.bundledSerif);
+
+        // 亮暗交错切换 Locale 缓存隔离验证：
+        // 从 zh 切换到 ja 时，先生成 ja 亮色，再生成 ja 暗色。
+        // 暗色绝不能错误命中上次 zh 的过期缓存。
+        final jaDarkTheme =
+            appTheme.createDarkThemeData(locale: const Locale('ja'));
+        expect(jaDarkTheme.textTheme.bodyLarge?.fontFamily, 'serif',
+            reason: '暗色主题不应命中旧 locale (zh) 的随包衬线体缓存');
+        expect(
+          jaDarkTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          'serif',
+        );
+
+        // 英文（en）：拉丁字符完整覆盖，继续使用随包衬线体
+        final enTheme =
+            appTheme.createLightThemeData(locale: const Locale('en'));
+        expect(enTheme.textTheme.bodyLarge?.fontFamily,
+            ThemeStyleForm.bundledSerif);
+      });
+    }
+
+    test('多平台系统衬线体族名解析（TargetPlatform mapping）', () {
+      const hantLocale =
+          Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant');
+      const jaLocale = Locale('ja');
+
+      // Android: 通用名 'serif'
+      expect(
+        ThemeStyleForm.getSystemSerifFamily(
+          locale: hantLocale,
+          platform: TargetPlatform.android,
+        ),
+        'serif',
+      );
+      expect(
+        ThemeStyleForm.getSystemSerifFamily(
+          locale: jaLocale,
+          platform: TargetPlatform.android,
+        ),
+        'serif',
+      );
+
+      // iOS: 具名 Songti TC 与 Hiragino Mincho ProN
+      expect(
+        ThemeStyleForm.getSystemSerifFamily(
+          locale: hantLocale,
+          platform: TargetPlatform.iOS,
+        ),
+        'Songti TC',
+      );
+      expect(
+        ThemeStyleForm.getSystemSerifFamily(
+          locale: jaLocale,
+          platform: TargetPlatform.iOS,
+        ),
+        'Hiragino Mincho ProN',
+      );
+
+      // Windows: 具名 PMingLiU 与 Yu Mincho
+      expect(
+        ThemeStyleForm.getSystemSerifFamily(
+          locale: hantLocale,
+          platform: TargetPlatform.windows,
+        ),
+        'PMingLiU',
+      );
+      expect(
+        ThemeStyleForm.getSystemSerifFamily(
+          locale: jaLocale,
+          platform: TargetPlatform.windows,
+        ),
+        'Yu Mincho',
+      );
+    });
+  });
 }
