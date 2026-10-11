@@ -90,9 +90,9 @@ ThoughtEcho 在纸与墨（`paper`）和素笺（`plain`）两套手工主题风
 在 `ThemeStyleForm.forLocale(locale)` 中，按当前运行平台精准匹配系统衬线族名：
 1. **Android 平台**：
    - 首选族名设为 **`serif`**。
-   - Android 系统底层（Minikin / `Typeface.create("serif")`）会通过 `/system/etc/fonts.xml` 将 `serif` 映射至系统衬线字体族。在原生 Android、三星、一加等配置了 CJK Serif 的机型上完整呈现衬线体；在未内置 CJK Serif 的机型上，系统整段统一平滑回落至系统黑体，**绝不会出现同一句子内字形拼贴**。
+   - Android 系统底层（Minikin / `Typeface.create("serif")`）会通过 `/system/etc/fonts.xml` 将 `serif` 映射至系统衬线字体族。在配置了 CJK Serif（如 NotoSerifCJK）的原生 Android 或特定厂商机型上，CJK 字符能呈现完整的衬线体；而在未内置 CJK Serif 的机型上，由于 Flutter 采用逐字形回退（per-glyph fallback），西文字符呈现 Noto Serif，缺字的 CJK 字符则回落至系统默认黑体。脱离随包 GB2312 简体子集后，汉字自身不再因子集缺字而分裂为半宋半黑。
 2. **iOS / macOS 平台**：
-   - iOS 的 CoreText 不认通用别名 `serif`，但认具体具名 PostScript / Family Name：
+   - iOS 的 CoreText 不认通用别名 `serif`，但认具体具名族名：
      - 日文（`ja`）：**`Hiragino Mincho ProN`**（ヒラギノ明朝，苹果内置的高品质印刷级明朝体）；
      - 繁体中文（`zh-Hant`）：**`Songti TC`**（宋體-繁）/ `LiSong Pro`；
      - 韩文（`ko`）：**`AppleMyungjo`**。
@@ -100,12 +100,12 @@ ThoughtEcho 在纸与墨（`paper`）和素笺（`plain`）两套手工主题风
 3. **Windows 平台**：
    - 日文（`ja`）：**`Yu Mincho`**（游明朝，Windows 10/11 默认自带的高质量衬线体）与 `MS Mincho`；
    - 繁体中文（`zh-Hant`）：**`PMingLiU`**（新細明體）与 `MingLiU`。
-4. **备选回退链（`fontFamilyFallback`）**：
-   - 包含跨平台的所有候选衬线体族名列表（含 `'serif'`），形成互补兜底。
+4. **备选回退链（`fontFamilyFallback`）的定位与局限**：
+   - Flutter 的 `fontFamilyFallback` 仅在**主族解析成功但缺失特定字符字形**时触发逐字回退，并不会在主族名称完全无法解析时整体切换到备用族。因此在此处放置跨平台候选衬线体列表，主要用于主字体缺字时（如日文借用汉字、繁体生僻字等）优先借用其他可用衬线字形。
 
 **收益**：
 - **零包体增加**（不增添任何离线字体包）；
-- **彻底杜绝斑秃混排**（整段由系统统一调度）；
+- **大幅减轻斑秃混排**（汉字统一由系统字体管理器调度，避免随包 GB2312 子集局部截断）；
 - **最大化保留纸墨衬线美学**（在支持的 Android、iOS、macOS、Windows 上均呈现地道衬线字体）。
 
 ---

@@ -109,6 +109,16 @@ void main() {
       );
       expect(effective, const Locale('en'));
     });
+
+    test(
+        'does not return unsupported Chinese locale when custom supported list excludes it',
+        () {
+      final effective = resolveEffectiveLocale(
+        preferredLocale: const Locale('zh'),
+        supportedLocales: const [Locale('en'), Locale('ja')],
+      );
+      expect(effective, const Locale('en'));
+    });
   });
 
   group('resolveAppLocalizations', () {

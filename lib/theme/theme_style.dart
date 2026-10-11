@@ -447,6 +447,20 @@ class ThemeStyleForm {
   /// zh-TW、zh-HK 等）以及韩文（ko），子集缺少对应汉字字形；若强行应用该字体，
   /// 缺失汉字会穿透回退到系统黑体，导致「宋黑混排」的严重版式撕裂。
   ///
+  /// 判定目标区域是否为繁体中文。
+  static bool _isTraditionalChinese(Locale? locale) {
+    if (locale == null) return false;
+    if (locale.languageCode.toLowerCase() != 'zh') return false;
+    final script = locale.scriptCode?.toLowerCase();
+    if (script == 'hant') return true;
+    if (script == 'hans') return false;
+    final country = locale.countryCode?.toUpperCase();
+    return country == 'TW' || country == 'HK' || country == 'MO';
+  }
+
+  /// 随包分发的中文衬线体（GB2312 子集）是否支持该语言。
+  ///
+  /// 日文汉字、繁体中文汉字、韩文谚文均不在子集中；
   /// 在这些语言环境下，手工风格的正文应安全回退到系统字体，杜绝混排。
   static bool isBundledSerifSupported(Locale? locale) {
     if (locale == null) return true;
@@ -454,11 +468,8 @@ class ThemeStyleForm {
     if (lang == 'ja' || lang == 'ko') {
       return false;
     }
-    if (lang == 'zh') {
-      final script = locale.scriptCode?.toLowerCase();
-      if (script == 'hant') return false;
-      final country = locale.countryCode?.toUpperCase();
-      if (country == 'TW' || country == 'HK' || country == 'MO') return false;
+    if (_isTraditionalChinese(locale)) {
+      return false;
     }
     return true;
   }
@@ -475,8 +486,7 @@ class ThemeStyleForm {
   }) {
     final p = platform ?? defaultTargetPlatform;
     final lang = locale?.languageCode.toLowerCase() ?? 'en';
-    final isHant = locale?.scriptCode?.toLowerCase() == 'hant' ||
-        ['TW', 'HK', 'MO'].contains(locale?.countryCode?.toUpperCase());
+    final isHant = _isTraditionalChinese(locale);
 
     switch (p) {
       case TargetPlatform.iOS:
@@ -500,40 +510,14 @@ class ThemeStyleForm {
   /// 对应语言的跨平台系统衬线体回退列表。
   static List<String> getSystemSerifFallbackList(Locale? locale) {
     final lang = locale?.languageCode.toLowerCase() ?? 'en';
-    final isHant = locale?.scriptCode?.toLowerCase() == 'hant' ||
-        ['TW', 'HK', 'MO'].contains(locale?.countryCode?.toUpperCase());
-
     if (lang == 'ja') {
-      return const [
-        'Hiragino Mincho ProN',
-        'Hiragino Mincho Pro',
-        'YuMincho',
-        'Yu Mincho',
-        'MS Mincho',
-        'Noto Serif CJK JP',
-        'Noto Serif JP',
-        'serif',
-      ];
+      return _japaneseSerifFallback;
     }
-    if (isHant) {
-      return const [
-        'Songti TC',
-        'LiSong Pro',
-        'PMingLiU',
-        'MingLiU',
-        'Noto Serif CJK TC',
-        'Noto Serif TC',
-        'serif',
-      ];
+    if (_isTraditionalChinese(locale)) {
+      return _traditionalChineseSerifFallback;
     }
     if (lang == 'ko') {
-      return const [
-        'AppleMyungjo',
-        'Batang',
-        'Noto Serif CJK KR',
-        'Noto Serif KR',
-        'serif',
-      ];
+      return _koreanSerifFallback;
     }
     return _systemSerifFallback;
   }
@@ -642,15 +626,18 @@ class ThemeStyleForm {
   ///
   /// 链尾不再需要通用族名 `serif`：首选族已经一定解析得到，逐字回退这条路是通的，
   /// 而 `serif` 在 iOS 上本来就解析不到，留着只是噪音。
-  static const List<String> _systemSerifFallback = [
-    'Songti SC',
-    'STSong',
-    'Noto Serif CJK SC',
-    'Noto Serif SC',
-    'Source Han Serif SC',
-    'SimSun',
-    // 日语系统衬线：子集外的日语特有汉字落到这里。
-    // iOS / macOS 在前，Android / Windows 在后，顺序只影响缺字时先问谁。
+  /// 繁体中文系统衬线回退列表。
+  static const List<String> _traditionalChineseSerifFallback = [
+    'Songti TC',
+    'LiSong Pro',
+    'PMingLiU',
+    'MingLiU',
+    'Noto Serif CJK TC',
+    'Noto Serif TC',
+  ];
+
+  /// 日语系统衬线回退列表：iOS/macOS 在前，Android/Windows 在后。
+  static const List<String> _japaneseSerifFallback = [
     'Hiragino Mincho ProN',
     'Hiragino Mincho Pro',
     'YuMincho',
@@ -659,6 +646,32 @@ class ThemeStyleForm {
     'Noto Serif CJK JP',
     'Noto Serif JP',
     'Source Han Serif JP',
+  ];
+
+  /// 韩文系统衬线回退列表。
+  static const List<String> _koreanSerifFallback = [
+    'AppleMyungjo',
+    'Batang',
+    'Noto Serif CJK KR',
+    'Noto Serif KR',
+  ];
+
+  /// 简体中文系统衬线回退列表。
+  static const List<String> _simplifiedChineseSerifFallback = [
+    'Songti SC',
+    'STSong',
+    'Noto Serif CJK SC',
+    'Noto Serif SC',
+    'Source Han Serif SC',
+    'SimSun',
+  ];
+
+  /// 子集外字形的去处。
+  ///
+  /// 由简体中文与日文衬线候选族组合而成，供随包 [bundledSerif] 遇到生僻字时回退。
+  static const List<String> _systemSerifFallback = [
+    ..._simplifiedChineseSerifFallback,
+    ..._japaneseSerifFallback,
   ];
 
   /// M3 `bodyLarge` 的字号。[ruleSpacing] 由它乘 [readingFontScale] 再乘

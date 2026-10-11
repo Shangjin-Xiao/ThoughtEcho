@@ -60,7 +60,19 @@ Locale resolveZhLocale(Locale locale) {
 
 Locale? _matchCandidate(Locale candidate, Iterable<Locale> supported) {
   if (candidate.languageCode.toLowerCase() == 'zh') {
-    return resolveZhLocale(candidate);
+    final zhVariant = resolveZhLocale(candidate);
+    final targetScript = zhVariant.scriptCode?.toLowerCase();
+    for (final s in supported) {
+      if (s.languageCode.toLowerCase() == 'zh') {
+        final sScript = s.scriptCode?.toLowerCase();
+        if (targetScript == 'hant') {
+          if (sScript == 'hant') return s;
+        } else {
+          if (sScript == null || sScript == 'hans') return s;
+        }
+      }
+    }
+    return null;
   }
   for (final s in supported) {
     if (s.languageCode.toLowerCase() == candidate.languageCode.toLowerCase() &&
