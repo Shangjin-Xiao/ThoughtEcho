@@ -11,6 +11,7 @@ import '../models/agent_memory.dart';
 import '../utils/app_logger.dart';
 import '../utils/untrusted_text.dart';
 import 'data_directory_service.dart';
+import '../utils/sqlite_type_utils.dart';
 import 'settings_service.dart';
 
 /// Thoughter 的长期记忆。
@@ -274,14 +275,20 @@ class AgentMemoryService extends ChangeNotifier {
     return '"$identifier"';
   }
 
+  static int _safeParseInt(Object? value, [int defaultValue = 0]) =>
+      safeParseInt(value, defaultValue);
+
   static void _validateColumnDefinition(String columnDefinition) {
     final trimmedDef = columnDefinition.trim();
     final parts =
         trimmedDef.split(RegExp(r'\s+DEFAULT\s+', caseSensitive: false));
     if (parts.length > 2 ||
-        !RegExp(r'^[a-zA-Z0-9_ ()]+$').hasMatch(parts[0]) ||
+        !RegExp(r'^[a-zA-Z0-9_ (),]+$').hasMatch(parts[0]) ||
         (parts.length == 2 &&
-            !RegExp(r"^(?:'[a-zA-Z0-9_]*'|[0-9]+)$").hasMatch(parts[1]))) {
+            !RegExp(
+              r"^(?:NULL|'[a-zA-Z0-9_ -]*'|-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)$",
+              caseSensitive: false,
+            ).hasMatch(parts[1]))) {
       throw StateError('不安全的列定义: $columnDefinition');
     }
   }
@@ -725,7 +732,7 @@ class AgentMemoryService extends ChangeNotifier {
       'SELECT count(*) as count FROM $recentSliceTable WHERE expires_at > ?',
       <Object?>[now.toIso8601String()],
     );
-    final activeCount = (countRows.firstOrNull?['count'] as num?)?.toInt() ?? 0;
+    final activeCount = _safeParseInt(countRows.firstOrNull?['count']);
     if (activeCount > AgentMemoryRecentSlice.maxRecentSlices * 2) {
       await db.delete(
         recentSliceTable,

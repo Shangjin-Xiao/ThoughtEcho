@@ -877,6 +877,36 @@ void main() {
             'VARCHAR(255)'),
         returnsNormally,
       );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'NUMERIC(10, 2) DEFAULT 0.0'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'DECIMAL(10,2) DEFAULT NULL'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'INTEGER NOT NULL DEFAULT -1'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'REAL DEFAULT 1e-3'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'FLOAT DEFAULT 1.5e+2'),
+        returnsNormally,
+      );
+      expect(
+        () => AgentMemoryService.validateColumnDefinitionForTesting(
+            'DOUBLE DEFAULT -2.3E-4'),
+        returnsNormally,
+      );
 
       // 非法列定义注入载荷
       expect(

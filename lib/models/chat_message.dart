@@ -1,4 +1,7 @@
 import 'dart:convert';
+
+import 'package:meta/meta.dart';
+
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 消息状态枚举 - 追踪消息的生成过程
@@ -45,9 +48,10 @@ class ChatMessage {
             source: 'ChatMessage',
           );
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
         AppLogger.w(
           'ChatMessage.parsedMeta 反序列化 metaJson 失败 (${e.runtimeType})',
+          stackTrace: stackTrace,
           source: 'ChatMessage',
         );
       }
@@ -203,20 +207,29 @@ class ChatMessage {
     if (val is Map) {
       try {
         final stringKeyMap = val.map((k, v) => MapEntry(k.toString(), v));
-        return jsonEncode(stringKeyMap);
+        return jsonEncode(
+          stringKeyMap,
+          toEncodable: (nonEncodable) => nonEncodable.toString(),
+        );
       } catch (_) {
-        return null;
+        return val.toString();
       }
     }
     if (val is List) {
       try {
-        return jsonEncode(val);
+        return jsonEncode(
+          val,
+          toEncodable: (nonEncodable) => nonEncodable.toString(),
+        );
       } catch (_) {
-        return null;
+        return val.toString();
       }
     }
     return val.toString();
   }
+
+  @visibleForTesting
+  static String? parseStringForTest(dynamic val) => _parseString(val);
 
   ChatMessage copyWith({
     String? id,

@@ -431,20 +431,110 @@ void main() {
       final cancelToken = LargeFileManager.createCancelToken();
       cancelToken.cancel();
 
-      try {
-        await DataDirectoryService.migrateDataDirectory(
-          target.path,
-          cancelToken: cancelToken,
-        );
-      } catch (e) {
-        expect(e, isA<CancelledException>());
-      }
+      final success = await DataDirectoryService.migrateDataDirectory(
+        target.path,
+        cancelToken: cancelToken,
+      );
+      expect(success, isFalse);
 
       // 原文件安全无损
       expect(File(abs('databases/thoughtecho.db')).existsSync(), isTrue);
       expect(File(abs('media/photo.jpg')).existsSync(), isTrue);
       // 目标路径被自动清理
       expect(Directory(target.path).existsSync(), isFalse);
+    });
+
+    test('目标目录非空时拒绝迁移并保留原目录与目标目录既有内容', () async {
+      createFile('databases/thoughtecho.db');
+
+      final target = await TestHarness.createTempDirectory('non_empty_target');
+      addTearDown(() => TestHarness.deleteTempDirectory(target));
+
+      // 在目标目录中放置既有文件
+      final unrelatedFile = File(path.join(target.path, 'unrelated.txt'));
+      await unrelatedFile.writeAsString('important user data');
+
+      final success = await DataDirectoryService.migrateDataDirectory(
+        target.path,
+      );
+      expect(success, isFalse);
+
+      // 原目录内容未受影响
+      expect(File(abs('databases/thoughtecho.db')).existsSync(), isTrue);
+      // 目标目录中既有文件未被误删
+      expect(await unrelatedFile.exists(), isTrue);
+      expect(await unrelatedFile.readAsString(), 'important user data');
+    });
+
+    test('rollbackPartialMigration 仅清理白名单内的迁移文件，不误伤目标目录中的既有文件', () async {
+      final target =
+          await TestHarness.createTempDirectory('rollback_whitelist_target');
+      addTearDown(() => TestHarness.deleteTempDirectory(target));
+
+      // 目标目录中有迁移复制出的文件和子目录
+      final migratedFile =
+          File(path.join(target.path, 'databases', 'thoughtecho.db'));
+      await migratedFile.parent.create(recursive: true);
+      await migratedFile.writeAsString('migrated db');
+
+      // 目标目录中也有其它无关既有文件与子目录
+      final existingDoc = File(path.join(target.path, 'my_docs', 'notes.txt'));
+      await existingDoc.parent.create(recursive: true);
+      await existingDoc.writeAsString('user notes');
+
+      final rootExisting = File(path.join(target.path, 'config.json'));
+      await rootExisting.writeAsString('{}');
+
+      // 执行回滚，仅指定迁移清单中的文件
+      await DataDirectoryService.rollbackPartialMigration(
+        target.path,
+        files: [
+          ('source/databases/thoughtecho.db', 'databases/thoughtecho.db'),
+        ],
+      );
+
+      // 迁移复制出的文件被删除，且其空父目录被修剪
+      expect(await migratedFile.exists(), isFalse);
+      expect(
+        await Directory(path.join(target.path, 'databases')).exists(),
+        isFalse,
+      );
+
+      // 目标目录既有文件与子目录完整无损
+      expect(await existingDoc.exists(), isTrue);
+      expect(await existingDoc.readAsString(), 'user notes');
+      expect(
+        await Directory(path.join(target.path, 'my_docs')).exists(),
+        isTrue,
+      );
+      expect(await rootExisting.exists(), isTrue);
+      expect(await Directory(target.path).exists(), isTrue);
+    });
+
+    test('迁移在关闭数据库之后被取消时恢复 DatabaseService 且自动回滚清理', () async {
+      createFile('databases/thoughtecho.db');
+      createFile('media/large.dat');
+
+      final target =
+          await TestHarness.createTempDirectory('mid_migration_cancel_target');
+      addTearDown(() => TestHarness.deleteTempDirectory(target));
+
+      final cancelToken = LargeFileManager.createCancelToken();
+
+      var progressFired = false;
+      final success = await DataDirectoryService.migrateDataDirectory(
+        target.path,
+        cancelToken: cancelToken,
+        onProgress: (_) {
+          if (!progressFired) {
+            progressFired = true;
+            cancelToken.cancel();
+          }
+        },
+      );
+
+      expect(success, isFalse);
+      expect(File(abs('databases/thoughtecho.db')).existsSync(), isTrue);
     });
   });
 }

@@ -102,7 +102,8 @@ class CollapsedMediaBanner extends StatelessWidget {
                   bottom: 8,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.scrim.withValues(alpha: 0.55),
+                      color: theme.colorScheme.inverseSurface
+                          .withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Padding(
@@ -113,9 +114,7 @@ class CollapsedMediaBanner extends StatelessWidget {
                       child: Text(
                         '+$extraCount',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          // 底板是 scrim（任何主题下都是半透明黑），刻意用固定白色：
-                          // 跟随主题会在浅色模式下变成黑字压在黑底上。
-                          color: Colors.white,
+                          color: theme.colorScheme.onInverseSurface,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

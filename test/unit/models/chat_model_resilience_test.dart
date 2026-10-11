@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/chat_message.dart';
 import 'package:thoughtecho/models/chat_session.dart';
@@ -118,6 +120,29 @@ void main() {
         'content': 'test',
       };
       expect(() => ChatMessage.fromMap(mapWithEmptyId), throwsFormatException);
+    });
+
+    test('ChatMessage._parseString 能够归一化非标准对象为有效 JSON，且对循环引用安全回退', () {
+      final mapWithDateTime = {
+        'timestamp': DateTime.utc(2026, 10, 10),
+        'count': 123,
+      };
+      final encoded = ChatMessage.parseStringForTest(mapWithDateTime);
+      expect(encoded, isNotNull);
+      expect(jsonDecode(encoded!), isA<Map>());
+      expect((jsonDecode(encoded) as Map)['count'], 123);
+
+      final cyclicMap = <String, dynamic>{'key': 'value'};
+      cyclicMap['self'] = cyclicMap;
+      final fallback = ChatMessage.parseStringForTest(cyclicMap);
+      expect(fallback, isNotNull);
+      expect(fallback, contains('key'));
+
+      final cyclicList = <dynamic>[1, 2];
+      cyclicList.add(cyclicList);
+      final listFallback = ChatMessage.parseStringForTest(cyclicList);
+      expect(listFallback, isNotNull);
+      expect(listFallback, contains('1'));
     });
   });
 

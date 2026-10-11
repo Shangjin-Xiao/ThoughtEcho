@@ -85,9 +85,11 @@ class ChatSession {
               (k, v) => MapEntry(k.toString(), v),
             );
             messages.add(ChatMessage.fromJson(stringKeyMap));
-          } catch (e) {
+          } catch (e, stackTrace) {
             AppLogger.w(
               'ChatSession.fromJson 跳过解析失败的 ChatMessage 条目 (${e.runtimeType})',
+              error: e,
+              stackTrace: stackTrace,
               source: 'ChatSession',
             );
           }

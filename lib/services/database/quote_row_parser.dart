@@ -99,3 +99,6 @@ String _shortRowId(Object? id) {
       .trim();
   return text.length > maxLength ? '${text.substring(0, maxLength)}…' : text;
 }
+
+int _safeParseInt(Object? value, [int defaultValue = 0]) =>
+    safeParseInt(value, defaultValue);

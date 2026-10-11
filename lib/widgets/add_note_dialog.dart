@@ -1527,10 +1527,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             );
             if (mounted) setState(() {});
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(l10n.locationUpdatedTo(
-                        LocationService.formatLocationForDisplay(resolved)))),
+              AppSnackBar.success(
+                context,
+                l10n.locationUpdatedTo(
+                  LocationService.formatLocationForDisplay(resolved),
+                ),
               );
             }
             return;
@@ -1560,20 +1561,18 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             );
             if (mounted) setState(() {});
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(l10n.locationUpdatedTo(
-                        LocationService.formatLocationForDisplay(
-                            standardAddress)))),
+              AppSnackBar.success(
+                context,
+                l10n.locationUpdatedTo(
+                  LocationService.formatLocationForDisplay(standardAddress),
+                ),
               );
             }
           } else if (context.mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+            AppSnackBar.warning(context, l10n.cannotGetAddress);
           }
         } else if (mounted && context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+          AppSnackBar.warning(context, l10n.cannotGetAddress);
         }
       } on TimeoutException {
         if (mounted && context.mounted) {
@@ -1582,10 +1581,15 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             l10n.locationUpdateTimeout,
           );
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
+        AppLogger.w(
+          'AddNoteDialog 更新位置失败',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'AddNoteDialog',
+        );
         if (mounted && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.updateFailed(e.toString()))));
+          AppSnackBar.error(context, l10n.cannotGetAddress);
         }
       } finally {
         if (mounted) {

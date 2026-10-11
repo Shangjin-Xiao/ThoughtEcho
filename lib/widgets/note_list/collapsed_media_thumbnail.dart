@@ -151,7 +151,8 @@ class CollapsedMediaThumbnail extends StatelessWidget {
                   bottom: 0,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.scrim.withValues(alpha: 0.55),
+                      color: theme.colorScheme.inverseSurface
+                          .withValues(alpha: 0.85),
                       borderRadius: BorderRadius.only(
                         topLeft: radius.topLeft,
                       ),
@@ -164,10 +165,7 @@ class CollapsedMediaThumbnail extends StatelessWidget {
                       child: Text(
                         '+$extraCount',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          // 底板是 scrim（任何主题下都是半透明黑），所以这里刻意
-                          // 用固定白色而不是跟随主题的 onSurface 一类令牌——
-                          // 跟随主题会在浅色模式下变成黑字压在黑底上。
-                          color: Colors.white,
+                          color: theme.colorScheme.onInverseSurface,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

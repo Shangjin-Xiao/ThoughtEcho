@@ -168,7 +168,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     final result = await db.rawQuery(
       'SELECT COUNT(*) as count FROM quotes WHERE is_deleted = 1',
     );
-    return (result.first['count'] as num?)?.toInt() ?? 0;
+    return _safeParseInt(result.firstOrNull?['count']);
   }
 
   @override

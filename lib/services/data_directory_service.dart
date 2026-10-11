@@ -317,6 +317,7 @@ class DataDirectoryService {
     }
 
     var databasesCloseAttempted = false;
+    MigrationFileScan? scan;
     try {
       cancelToken?.throwIfCancelled();
 
@@ -338,7 +339,17 @@ class DataDirectoryService {
         throw Exception(pathError);
       }
 
-      // 3. 验证新目录
+      // 3. 目标目录若已存在必须为空，防止覆盖或回滚时误伤既有文件
+      final newDir = Directory(newPath);
+      if (await newDir.exists()) {
+        final existingEntries =
+            await newDir.list(followLinks: false).take(1).toList();
+        if (existingEntries.isNotEmpty) {
+          throw FileSystemException('目标目录不为空，无法进行数据迁移', newPath);
+        }
+      }
+
+      // 4. 验证新目录（创建目录与写权限探针）
       if (!await validateDirectory(newPath)) {
         throw Exception('新目录不可用或没有写权限');
       }
@@ -362,28 +373,29 @@ class DataDirectoryService {
 
       // 5. 整目录收集应用文件（数据已收敛在专属文件夹，无需维护白名单）
       // 使用 isolate 避免阻塞 UI。
-      final scan = await compute(collectFilesForMigration, currentPath);
+      final scanResult = await compute(collectFilesForMigration, currentPath);
+      scan = scanResult;
 
-      if (scan.errors.isNotEmpty) {
+      if (scanResult.errors.isNotEmpty) {
         // 收集阶段有文件访问失败：继续迁移会让部分数据在新目录缺失，
         // 且配置已切换导致旧目录被"遗弃"，因此必须中止。
         throw FileSystemException(
-          '收集迁移文件失败: ${scan.errors.join('; ')}',
+          '收集迁移文件失败: ${scanResult.errors.join('; ')}',
           currentPath,
         );
       }
 
       cancelToken?.throwIfCancelled();
 
-      if (scan.files.isEmpty) {
+      if (scanResult.files.isEmpty) {
         logDebug('没有需要迁移的文件');
         // 即使没有文件，也继续设置新目录
       } else {
-        logDebug('需要迁移 ${scan.files.length} 个文件');
+        logDebug('需要迁移 ${scanResult.files.length} 个文件');
 
         // 6. 复制文件到新目录（任一文件失败即中止）
         await copyFilesForMigration(
-          scan.files,
+          scanResult.files,
           newPath,
           cancelToken: cancelToken,
           onProgress: onProgress,
@@ -419,13 +431,13 @@ class DataDirectoryService {
         await _restoreDatabasesAfterFailedMigration();
       }
 
-      // 自动清理目标路径半复制文件与目录
-      await _rollbackPartialMigration(newPath);
+      // 自动清理目标路径半复制文件与目录（仅限本次计划/已复制的文件清单）
+      await _rollbackPartialMigration(newPath, files: scan?.files);
 
       if (e is CancelledException || cancelToken?.isCancelled == true) {
         logInfo('数据迁移已被取消，目标路径已完成自动回滚清理');
-        onStatusUpdate?.call('正在取消并清理...');
-        throw const CancelledException();
+        onStatusUpdate?.call('迁移已取消');
+        return false;
       }
 
       logError('数据迁移失败: $e', error: e, stackTrace: stackTrace);
@@ -510,8 +522,20 @@ class DataDirectoryService {
 
   /// 迁移失败或取消后对目标路径下已创建的坏文件与空子目录进行自动回滚清理。
   ///
-  /// 仅清理 [newPath] 中由本次迁移创建的文件，严禁触碰或误删原数据目录中的任何文件。
-  static Future<void> _rollbackPartialMigration(String newPath) async {
+  /// 仅清理 [newPath] 中由本次迁移创建的文件（由 [files] 相对路径白名单指定），
+  /// 严禁触碰或误删原数据目录或目标目录中的其它既有无关文件。
+  static Future<void> _rollbackPartialMigration(
+    String newPath, {
+    List<(String, String)>? files,
+  }) =>
+      rollbackPartialMigration(newPath, files: files);
+
+  /// 迁移失败或取消后的回滚清理实现。
+  @visibleForTesting
+  static Future<void> rollbackPartialMigration(
+    String newPath, {
+    List<(String, String)>? files,
+  }) async {
     try {
       final targetDir = Directory(newPath);
       if (!await targetDir.exists()) return;
@@ -520,17 +544,39 @@ class DataDirectoryService {
       final canonicalCurrent = canonicalizePath(currentPath);
       final canonicalNew = canonicalizePath(newPath);
 
-      // 安全防护：严禁对原数据目录或其祖先目录进行清理
+      // 安全防护：严禁对原数据目录自身、其内部子目录或其父祖先目录进行清理
       if (path.equals(canonicalCurrent, canonicalNew) ||
-          path.isWithin(canonicalNew, canonicalCurrent)) {
-        logError('拒绝对原数据目录或其父目录进行回滚清理: $newPath');
+          path.isWithin(canonicalNew, canonicalCurrent) ||
+          path.isWithin(canonicalCurrent, canonicalNew)) {
+        logError('拒绝对原数据目录内部或其父目录进行回滚清理: $newPath');
         return;
       }
 
       logInfo('开始对目标路径进行回滚清理: $newPath');
-      await _deleteDirectoryContents(targetDir, canonicalNew);
 
-      // 若目标目录为空，尝试将其删除
+      if (files != null && files.isNotEmpty) {
+        // 仅根据白名单列表删除本次迁移已复制或计划复制的文件
+        for (final (_, relPath) in files) {
+          try {
+            final targetFilePath = path.join(newPath, relPath);
+            final canonicalFile = canonicalizePath(targetFilePath);
+            PathSecurityUtils.validateExtractionPath(
+              canonicalFile,
+              canonicalNew,
+            );
+            final file = File(targetFilePath);
+            if (await file.exists()) {
+              await file.delete();
+            }
+          } catch (e) {
+            logError('清理迁移复制文件失败: $relPath, $e');
+          }
+        }
+        // 递归修剪本次可能留下的空子目录（不会误删含有其他文件的目录）
+        await _pruneEmptyDirectories(targetDir, canonicalNew);
+      }
+
+      // 若目标根目录为空，尝试将其删除
       if (await targetDir.exists()) {
         final remaining = await targetDir.list().toList();
         if (remaining.isEmpty) {
@@ -544,8 +590,9 @@ class DataDirectoryService {
     }
   }
 
-  /// 递归清理 [dir] 内的所有文件与子目录（安全限定在 [rootReal] 内部）。
-  static Future<void> _deleteDirectoryContents(
+  /// 递归清理 [dir] 内的所有空子目录（安全限定在 [rootReal] 内部）。
+  /// 仅当子目录及其所有子内容为空时才删除，绝不删除任何包含非空内容的目录。
+  static Future<void> _pruneEmptyDirectories(
     Directory dir,
     String rootReal,
   ) async {
@@ -554,27 +601,24 @@ class DataDirectoryService {
     try {
       final entities = await dir.list(followLinks: false).toList();
       for (final entity in entities) {
-        final canonicalEntity = canonicalizePath(entity.path);
-
-        // 跨平台路径安全校验：必须位于 rootReal 内部
-        PathSecurityUtils.validateExtractionPath(canonicalEntity, rootReal);
-
         if (entity is Directory) {
-          await _deleteDirectoryContents(entity, rootReal);
+          final canonicalEntity = canonicalizePath(entity.path);
+          PathSecurityUtils.validateExtractionPath(canonicalEntity, rootReal);
+
+          // 先递归深入修剪子目录
+          await _pruneEmptyDirectories(entity, rootReal);
+
+          // 若修剪后该目录已变为空，则删除之
           if (await entity.exists()) {
             final remaining = await entity.list().toList();
             if (remaining.isEmpty) {
               await entity.delete();
             }
           }
-        } else {
-          if (await entity.exists()) {
-            await entity.delete();
-          }
         }
       }
     } catch (e) {
-      logError('清理目录内容时发生异常: ${dir.path}, $e');
+      logError('修剪空目录时发生异常: ${dir.path}, $e');
     }
   }
 

@@ -859,5 +859,15 @@ void main() {
         await db.close();
       }
     });
+
+    test('safeParseIntForTest 能够正确解析跨平台 String 计数并在坏值时安全兜底', () {
+      expect(ChatSessionService.safeParseIntForTest(42), 42);
+      expect(ChatSessionService.safeParseIntForTest('42'), 42);
+      expect(ChatSessionService.safeParseIntForTest('42.0'), 42);
+      expect(ChatSessionService.safeParseIntForTest(null), 0);
+      expect(ChatSessionService.safeParseIntForTest('invalid', 5), 5);
+      expect(ChatSessionService.safeParseIntForTest('NaN', 0), 0);
+      expect(ChatSessionService.safeParseIntForTest('Infinity', 0), 0);
+    });
   });
 }

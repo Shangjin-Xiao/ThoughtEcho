@@ -11,6 +11,7 @@ import '../models/chat_message.dart';
 import '../models/chat_session.dart';
 import '../utils/app_logger.dart';
 import 'data_directory_service.dart';
+import '../utils/sqlite_type_utils.dart';
 
 class ChatSessionOverview {
   const ChatSessionOverview({
@@ -721,9 +722,16 @@ WHERE s.id IN ($placeholders)
 ''';
   }
 
+  static int _safeParseInt(Object? value, [int defaultValue = 0]) =>
+      safeParseInt(value, defaultValue);
+
+  @visibleForTesting
+  static int safeParseIntForTest(Object? value, [int defaultValue = 0]) =>
+      _safeParseInt(value, defaultValue);
+
   ChatSessionOverview _parseOverviewRow(Map<dynamic, dynamic> row) {
     return ChatSessionOverview(
-      messageCount: (row['message_count'] as num?)?.toInt() ?? 0,
+      messageCount: _safeParseInt(row['message_count']),
       snippet: _truncatePreview(row['last_content'] as String?),
     );
   }
@@ -1062,7 +1070,7 @@ WHERE s.id IN ($placeholders)
         'SELECT COUNT(*) as count FROM chat_messages WHERE session_id = ?',
         [sessionId],
       );
-      return (result.first['count'] as num?)?.toInt() ?? 0;
+      return _safeParseInt(result.firstOrNull?['count']);
     } catch (e) {
       logError(
         'ChatSessionService.getMessageCount 失败',
