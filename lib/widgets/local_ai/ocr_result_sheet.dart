@@ -47,6 +47,8 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return SafeArea(
       top: false,
@@ -57,7 +59,7 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
         maxChildSize: 0.95,
         builder: (context, scrollController) {
           return Material(
-            color: theme.colorScheme.surface,
+            color: colorScheme.surface,
             child: Column(
               children: [
                 // 标题栏
@@ -67,7 +69,7 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                     children: [
                       Text(
                         l10n.ocrResultTitle,
-                        style: theme.textTheme.titleMedium,
+                        style: textTheme.titleMedium,
                       ),
                       const Spacer(),
                       IconButton(
