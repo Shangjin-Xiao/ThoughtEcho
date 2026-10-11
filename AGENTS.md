@@ -97,6 +97,12 @@ pwsh ./scripts/build_msix_ci.ps1
 3. 做最小且完整的改动。修 Bug 时优先添加能复现问题的回归测试；新增逻辑补相应测试。
 4. 只格式化和验证相关文件。除非用户明确要求，不主动运行全量测试或全仓库格式化。
 5. 完成前检查 diff、相关测试和静态分析结果；无法执行的验证要明确说明，不能声称已通过。
+6. **命令行输出与 Token 控制**：
+   - 严禁向上下文倾倒未过滤的冗长日志（如全量依赖拉取、完整测试过程输出、全量静态分析清单）。
+   - 运行可能产生大量输出的命令（测试、分析、构建）时，优先采用静默重定向并仅在失败时打印末尾报错：
+     `command > /tmp/run.log 2>&1 || tail -n 25 /tmp/run.log`，或配合 `tail -n 2` / `grep` 进行行数过滤。
+   - 查询外部状态（如 GitHub Actions、API）时使用极简结构化参数（如 `gh run view <id> --json status,conclusion`），禁止使用带终端持续刷新的交互式/轮询命令（如 `gh run watch`）。
+   - 确定无需输出的辅助指令使用 `> /dev/null 2>&1` 彻底静默。
 
 涉及第三方库、Flutter/Dart SDK、平台 API、AI 服务协议或 GitHub Actions 时，先用 Context7
 查询当前官方文档（`resolve-library-id` → `get-library-docs`）；Context7 不可用或无对应资料时，

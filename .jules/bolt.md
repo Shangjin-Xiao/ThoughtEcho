@@ -293,3 +293,7 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** 在 SQLite 数据库多分块处理操作（如清空回收站彻底删除数千条笔记）中，若在 `for (final idBatch in _chunkIds(uniqueIds))` 循环体内逐块 `await txn.query(...)` 查 quotes、`await txn.query(...)` 查 media_references 以及 `await txn.delete(...)` 删 quotes，会导致多达 3*K 次 FFI / IPC 通道数据库往返开销。将多块查询统一排入 `txn.batch()` 中一次提交，并把墓碑记录插入与删除操作聚合至单个写批处理 `writeBatch.commit(noResult: true)`，可将数据库往返次数压缩至固定的 3 次。
 
 **Action:** 优化了 `lib/services/database/database_trash_mixin.dart` 中的 `_hardDeleteQuotes` 方法，使用 `quotesBatch` 和 `refBatch` 分别批量读取 quotes 与 media_references，并在一个 `writeBatch` 中批量写入墓碑与删除记录。新增了 `test/performance/database_trash_mixin_benchmark_test.dart` 基准测试，彻底删除 2500 条软删除笔记的耗时从 524ms 降至 ~431ms（提升约 17.7%）， IPC 往返次数降低至 3 次。
+
+## 2025-02-20 - Batch chunking during ChatSessionService legacy database migration
+**Learning:** Performing a single `txn.batch()` across thousands of database rows can cause high memory overhead and IPC method channel pressure.
+**Action:** Split large migration data sets into chunks of 500 rows per batch within a single transaction to keep memory bounded and reduce IPC overhead.
