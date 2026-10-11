@@ -299,7 +299,8 @@ void main() {
             'citySelectedWeatherUpdated:TestCity');
       });
 
-      test('returns false on generic exception', () async {
+      test('returns false on generic exception during setSelectedCity',
+          () async {
         when(mockLocationService.setSelectedCity(any))
             .thenThrow(Exception('Test error'));
 
@@ -312,6 +313,38 @@ void main() {
         expect(controller.lastResult?.errorDetail, contains('Test error'));
         expect(controller.lastResult?.getLocalizedMessage(l10n),
             contains('citySelectionError:Exception: Test error'));
+      });
+
+      test('returns false on generic exception during weather fetch', () async {
+        final position = Position(
+          longitude: 0.0,
+          latitude: 0.0,
+          timestamp: DateTime.now(),
+          accuracy: 0.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        );
+
+        when(mockLocationService.setSelectedCity(any)).thenAnswer((_) async {});
+        when(mockLocationService.currentPosition).thenReturn(position);
+        when(mockWeatherService.getWeatherData(any, any))
+            .thenThrow(Exception('Network socket error'));
+
+        final result = await controller.selectCityAndUpdateWeather(cityInfo);
+
+        expect(result, isFalse);
+        expect(controller.lastResult?.type,
+            WeatherSearchResultType.citySelectionError);
+        expect(controller.lastResult?.isSuccess, isFalse);
+        expect(controller.lastResult?.errorDetail,
+            contains('Network socket error'));
+        expect(controller.lastResult?.getLocalizedMessage(l10n),
+            contains('citySelectionError:Exception: Network socket error'));
+        expect(controller.isLoading, isFalse);
       });
 
       test(
