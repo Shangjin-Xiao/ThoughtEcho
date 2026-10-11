@@ -647,6 +647,44 @@ void main() {
       expect(settingsService.aiSettings.apiKey, isEmpty);
     });
 
+    test(
+        'restoreAllSettingsFromBackup should safely handle non-int or out-of-range theme_mode and generic Map payloads',
+        () async {
+      await settingsService.updateThemeMode(ThemeMode.light);
+      expect(settingsService.themeMode, equals(ThemeMode.light));
+
+      // 1. Valid string representation of theme mode ("2" => ThemeMode.dark)
+      await settingsService.restoreAllSettingsFromBackup({
+        'theme_mode': '2',
+      });
+      expect(settingsService.themeMode, equals(ThemeMode.dark));
+
+      // 2. Out of range or invalid theme mode values (e.g. 99, -1, "invalid") should be safely ignored
+      await settingsService.restoreAllSettingsFromBackup({
+        'theme_mode': 99,
+      });
+      expect(settingsService.themeMode, equals(ThemeMode.dark));
+
+      await settingsService.restoreAllSettingsFromBackup({
+        'theme_mode': 'unparseable',
+      });
+      expect(settingsService.themeMode, equals(ThemeMode.dark));
+
+      // 3. Generic Map<dynamic, dynamic> payloads for nested settings
+      final Map<dynamic, dynamic> genericPayload = {
+        'theme_mode': 1, // ThemeMode.light
+        'app_settings': <dynamic, dynamic>{
+          'dailyQuoteProvider': 'zenquotes',
+        },
+      };
+
+      await settingsService.restoreAllSettingsFromBackup(
+        Map<String, dynamic>.from(genericPayload),
+      );
+      expect(settingsService.themeMode, equals(ThemeMode.light));
+      expect(settingsService.dailyQuoteProvider, equals('zenquotes'));
+    });
+
     test('新用户配置有效 AI 服务时应自动开启相关 AI 功能', () async {
       // Arrange
       await settingsService.setHasCompletedOnboarding(false);
