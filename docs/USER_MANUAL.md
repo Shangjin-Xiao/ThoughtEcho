@@ -724,6 +724,22 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 - 现有分类列表显示
 - 分类管理（创建、查看、修改与删除）
 
+### 隐私与遥测设置
+
+![设置与隐私控制](https://img.shangjinyun.cn/projects/thoughtecho/preferences_detail_page.jpg)
+
+**访问路径**：设置 → 反馈与联系
+
+在「反馈与联系」页面底部，心迹通过 `DataCollectionConsentCard` 组件提供了集中透明的数据收集与遥测选项管理卡片。卡片包含“诊断数据（Sentry）”与“匿名统计（Aptabase）”两个独立开关及“查看收集详情与脱敏源码”说明按钮：
+
+| 遥测开关 | 收集目的 | 收集内容与脱敏机制 | 默认状态与保护承诺 |
+| --- | --- | --- | --- |
+| **诊断数据<br>(Sentry)** | 捕获崩溃堆栈、诊断卡死与系统兼容性 Bug，分析页面加载耗时与流畅度 | 崩溃堆栈、错误类型、系统版本、设备型号、随机安装标识、性能耗时指标。发送前本地正则脱敏 SQL 文本与 URL 参数，强禁截图 | **默认彻底关闭** (Strict Opt-in)。绝不收集笔记正文、富文本 Delta、图片附件或 PII；服务端不保存 IP |
+| **匿名统计<br>(Aptabase)** | 统计各功能使用频次与热度（如卡片模板与排版偏好），规划开发优先级 | 匿名功能点击与页面访问频次、系统平台与版本、语言区域、应用版本号、单次启动临时会话 ID（退出即销毁） | **默认彻底关闭** (Strict Opt-in)。无 Cookie、无跨应用追踪、无设备指纹、无用户画像；绝不收集笔记正文或搜索词 |
+
+- **透明度与源码查验**：点击卡片底部的「查看收集详情与脱敏源码」按钮，可随时调出弹窗，直接查验 Sentry 脱敏源码、Aptabase 客户端集成源码以及完整的官网隐私政策说明。
+- **实时控制**：诊断数据与匿名统计均可随时一键自由开启或关闭；诊断数据开关更改将在重启应用后正式生效。
+
 ### 关于与反馈
 
 在设置页面的“反馈与联系”中，您可以：
@@ -1525,6 +1541,22 @@ ThoughtEcho embeds elegant serif typography directly into the app:
 - Icon selection (emoji or Material icons)
 - List display of existing categories
 - Category management (create, view, edit, and delete)
+
+### Privacy & Telemetry Settings
+
+![Settings & Privacy Controls](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/preferences_detail_page.jpg)
+
+**Access Path**: Settings → Feedback & Contact
+
+At the bottom of the "Feedback & Contact" page, ThoughtEcho provides a unified `DataCollectionConsentCard` component for transparent telemetry control. The card includes dual toggle switches for "Diagnostic Data (Sentry)" and "Anonymous Statistics (Aptabase)" along with a detailed disclosure button:
+
+| Telemetry Toggle | Purpose | Data Scope & Redaction Mechanism | Default State & Privacy Commitments |
+| --- | --- | --- | --- |
+| **Diagnostic Data<br>(Sentry)** | Captures crash stack traces, diagnoses freezes/bugs, and analyzes page load performance and UI responsiveness | Crash stack traces, error types, OS version, device model, random installation ID, performance metrics. Locally strips SQL text/params & URL query params via regex; screenshots disabled | **Disabled by default** (Strict Opt-in). Never collects note text, rich-text Delta JSON, attachments, or PII; server does not store IP |
+| **Anonymous Statistics<br>(Aptabase)** | Tracks feature usage frequency and popularity (e.g., card templates, layout styles) to guide development priorities | Anonymous feature click/page view counts, OS platform/version, locale, app version, temporary session ID (cleared on app exit) | **Disabled by default** (Strict Opt-in). No cookies, no cross-app tracking, no device fingerprinting, no profiling; never collects note contents or search terms |
+
+- **Transparency & Source Inspection**: Click the "Learn More & Source Code" button at the bottom of the card to open a disclosure dialog with direct links to Sentry redaction code, Aptabase integration code, and full privacy policy details.
+- **Instant Control**: Both toggles can be switched on or off at any time. Diagnostic data changes take effect upon app restart.
 
 ### About & Feedback
 
