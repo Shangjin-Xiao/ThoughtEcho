@@ -68,6 +68,22 @@ class MockWeatherCacheManager extends Mock implements WeatherCacheManager {
       returnValue: Future.value(null),
     );
   }
+
+  @override
+  Future<Map<String, dynamic>?> getCacheInfo() {
+    return super.noSuchMethod(
+      Invocation.method(#getCacheInfo, []),
+      returnValue: Future.value(null),
+    );
+  }
+
+  @override
+  Future<void> clearCache() {
+    return super.noSuchMethod(
+      Invocation.method(#clearCache, []),
+      returnValue: Future.value(),
+    );
+  }
 }
 
 void main() {
@@ -359,6 +375,143 @@ void main() {
       expect(weatherService.weatherDescription, isNull);
       expect(weatherService.weatherIcon, isNull);
       expect(weatherService.temperatureValue, isNull);
+    });
+
+    test(
+        'should handle initialization failure in _ensureInitialized and allow retry',
+        () async {
+      const latitude = 39.9042;
+      const longitude = 116.4074;
+
+      // First initialization attempt fails
+      when(mockCacheManager.initialize()).thenThrow(Exception('DB init error'));
+
+      await weatherService.getWeatherData(latitude, longitude);
+
+      expect(weatherService.state, equals(WeatherServiceState.error));
+      expect(weatherService.lastError, contains('DB init error'));
+
+      // Second attempt succeeds
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+      when(mockCacheManager.loadWeatherData(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenAnswer((_) async => null);
+
+      final mockApiResponse = {
+        'current': {
+          'temperature_2m': 18.0,
+          'weather_code': 1,
+          'wind_speed_10m': 2.0,
+        }
+      };
+
+      when(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).thenAnswer((_) async => HttpResponse(
+            json.encode(mockApiResponse),
+            200,
+            headers: {},
+          ));
+      when(mockCacheManager.saveWeatherData(any)).thenAnswer((_) async => {});
+
+      await weatherService.getWeatherData(latitude, longitude);
+
+      expect(weatherService.state, equals(WeatherServiceState.success));
+      expect(weatherService.hasData, isTrue);
+      expect(weatherService.temperatureValue, equals(18.0));
+    });
+
+    test('should enter error state when API returns non-200 HTTP status code',
+        () async {
+      const latitude = 39.9042;
+      const longitude = 116.4074;
+
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+      when(mockCacheManager.loadWeatherData(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenAnswer((_) async => null);
+
+      when(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).thenAnswer(
+          (_) async => HttpResponse('Server error', 500, headers: {}));
+
+      when(mockCacheManager.loadWeatherDataIgnoreExpiry(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenAnswer((_) async => null);
+
+      await weatherService.getWeatherData(latitude, longitude);
+
+      expect(weatherService.state, equals(WeatherServiceState.error));
+      expect(weatherService.lastError, contains('API请求失败: 500'));
+      expect(weatherService.hasData, isFalse);
+    });
+
+    test(
+        'should enter error state when API response is missing weather_code field',
+        () async {
+      const latitude = 39.9042;
+      const longitude = 116.4074;
+
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+      when(mockCacheManager.loadWeatherData(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenAnswer((_) async => null);
+
+      final malformedResponse = {
+        'current': {
+          'temperature_2m': 20.0,
+          // weather_code missing
+        }
+      };
+
+      when(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).thenAnswer((_) async => HttpResponse(
+            json.encode(malformedResponse),
+            200,
+            headers: {},
+          ));
+
+      when(mockCacheManager.loadWeatherDataIgnoreExpiry(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenAnswer((_) async => null);
+
+      await weatherService.getWeatherData(latitude, longitude);
+
+      expect(weatherService.state, equals(WeatherServiceState.error));
+      expect(weatherService.lastError, contains('API响应格式错误: 缺少 weather_code'));
+      expect(weatherService.hasData, isFalse);
+    });
+
+    test(
+        'getCacheInfo should return null when cacheManager.getCacheInfo throws',
+        () async {
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+      when(mockCacheManager.getCacheInfo())
+          .thenThrow(Exception('Cache info error'));
+
+      final cacheInfo = await weatherService.getCacheInfo();
+
+      expect(cacheInfo, isNull);
+    });
+
+    test(
+        'clearCache should handle exception when cacheManager.clearCache throws',
+        () async {
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+      when(mockCacheManager.clearCache())
+          .thenThrow(Exception('Clear cache error'));
+
+      expect(() async => await weatherService.clearCache(), returnsNormally);
     });
   });
 }
