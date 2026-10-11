@@ -15,6 +15,7 @@ import '../gen_l10n/app_localizations.dart';
 class OnboardingConfig {
   static const Map<String, String> _nativeLanguageLabels = {
     'zh': '简体中文',
+    'zh-Hant': '繁體中文',
     'en': 'English',
     'ja': '日本語',
     'ko': '한국어',
@@ -27,6 +28,7 @@ class OnboardingConfig {
   static const List<String> languageCodes = [
     '',
     'zh',
+    'zh-Hant',
     'en',
     'ja',
     'ko',

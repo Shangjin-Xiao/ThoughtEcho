@@ -54,6 +54,7 @@ import 'utils/app_widgets_binding.dart';
 import 'utils/deferred_error_buffer.dart';
 import 'services/database_platform_bootstrap.dart';
 import 'utils/global_exception_handler.dart';
+import 'utils/localization_resolver.dart' show parseLocale;
 import 'theme/app_theme.dart';
 import 'providers/app_providers.dart';
 import 'pages/home_page.dart';
@@ -782,7 +783,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       (s) => s.appSettings.defaultStartPage,
     );
     final appTheme = Provider.of<AppTheme>(context);
-    final Locale? locale = localeCode != null ? Locale(localeCode) : null;
+    final Locale? userLocale = parseLocale(localeCode);
+    final Locale effectiveLocale =
+        userLocale ?? PlatformDispatcher.instance.locale;
 
     // 使用 DynamicColorBuilder 以支持动态取色功能
     return DynamicColorBuilder(
@@ -795,7 +798,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           navigatorKey: widget.navigatorKey,
           navigatorObservers:
               sentryEnabled ? [SentryHelper.navigatorObserver] : const [],
-          title: '心迹',
+          onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
             return MediaQuery(
@@ -803,11 +806,42 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               child: child ?? const SizedBox.shrink(),
             );
           },
-          theme: appTheme.createLightThemeData(),
-          darkTheme: appTheme.createDarkThemeData(),
+          theme: appTheme.createLightThemeData(locale: effectiveLocale),
+          darkTheme: appTheme.createDarkThemeData(locale: effectiveLocale),
           themeMode: appTheme.themeMode,
           debugShowCheckedModeBanner: false,
-          locale: locale,
+          locale: userLocale,
+          localeListResolutionCallback: (locales, supportedLocales) {
+            if (userLocale != null) return userLocale;
+            if (locales != null) {
+              for (final u in locales) {
+                if (u.languageCode.toLowerCase() == 'zh') {
+                  final script = u.scriptCode?.toLowerCase();
+                  final country = u.countryCode?.toUpperCase();
+                  if (script == 'hant' ||
+                      country == 'TW' ||
+                      country == 'HK' ||
+                      country == 'MO') {
+                    return const Locale.fromSubtags(
+                      languageCode: 'zh',
+                      scriptCode: 'Hant',
+                    );
+                  }
+                  return const Locale('zh');
+                }
+                for (final supported in supportedLocales) {
+                  if (supported.languageCode.toLowerCase() ==
+                          u.languageCode.toLowerCase() &&
+                      (supported.scriptCode == null ||
+                          supported.scriptCode?.toLowerCase() ==
+                              u.scriptCode?.toLowerCase())) {
+                    return supported;
+                  }
+                }
+              }
+            }
+            return const Locale('en');
+          },
           home: widget.showUpdateReady
               ? const OnboardingPage(showUpdateReady: true)
               : !hasCompletedOnboarding

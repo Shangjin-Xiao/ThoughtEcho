@@ -1420,6 +1420,8 @@ class SettingsPageState extends State<SettingsPage> {
       switch (code) {
         case 'zh':
           return l10n.languageChinese;
+        case 'zh-Hant':
+          return l10n.languageTraditionalChinese;
         case 'en':
           return l10n.languageEnglish;
         case 'ja':
@@ -1466,6 +1468,10 @@ class SettingsPageState extends State<SettingsPage> {
                       RadioListTile<String?>(
                         title: Text(l10n.languageChinese),
                         value: 'zh',
+                      ),
+                      RadioListTile<String?>(
+                        title: Text(l10n.languageTraditionalChinese),
+                        value: 'zh-Hant',
                       ),
                       RadioListTile<String?>(
                         title: Text(l10n.languageEnglish),

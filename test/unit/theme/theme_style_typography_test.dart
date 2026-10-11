@@ -210,4 +210,58 @@ void main() {
       });
     });
   }
+
+  group('语言感知排版（Locale-Aware Typography）', () {
+    for (final style in [ThemeStyle.paper, ThemeStyle.plain]) {
+      test('${style.name} 在 ja 与繁体中文（zh-Hant、zh_TW）下回退到系统字体，杜绝混排', () async {
+        final appTheme = AppTheme();
+        await appTheme.setThemeStyle(style);
+
+        // 日文环境：正文回退为系统默认（Roboto/系统黑体），排版令牌 readingFontFamily 为 null
+        final jaTheme =
+            appTheme.createLightThemeData(locale: const Locale('ja'));
+        expect(jaTheme.textTheme.bodyLarge?.fontFamily, 'Roboto');
+        expect(jaTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+            isNull);
+        // 但行高和字号缩放依然保留（维持纸墨版式氛围）
+        expect(
+          jaTheme.textTheme.bodyLarge?.fontSize,
+          closeTo(16.0 * style.form.readingFontScale, 0.001),
+        );
+
+        // 繁体中文（zh-Hant）：同样回退系统黑体
+        final hantTheme = appTheme.createLightThemeData(
+          locale:
+              const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+        );
+        expect(hantTheme.textTheme.bodyLarge?.fontFamily, 'Roboto');
+        expect(hantTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+            isNull);
+
+        // 繁体中文地区代码（zh_TW）：同样回退系统黑体
+        final twTheme = appTheme.createLightThemeData(
+          locale: const Locale('zh', 'TW'),
+        );
+        expect(twTheme.textTheme.bodyLarge?.fontFamily, 'Roboto');
+        expect(twTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+            isNull);
+
+        // 简体中文（zh）：继续享受随包 NotoSerifSC 衬线体
+        final zhTheme =
+            appTheme.createLightThemeData(locale: const Locale('zh'));
+        expect(zhTheme.textTheme.bodyLarge?.fontFamily,
+            ThemeStyleForm.bundledSerif);
+        expect(
+          zhTheme.extension<AppTypographyTokens>()?.readingFontFamily,
+          ThemeStyleForm.bundledSerif,
+        );
+
+        // 英文（en）：拉丁字符完整覆盖，继续使用随包衬线体
+        final enTheme =
+            appTheme.createLightThemeData(locale: const Locale('en'));
+        expect(enTheme.textTheme.bodyLarge?.fontFamily,
+            ThemeStyleForm.bundledSerif);
+      });
+    }
+  });
 }

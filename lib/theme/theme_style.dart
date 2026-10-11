@@ -440,6 +440,90 @@ class ThemeStyleForm {
         compensated: compensated,
       );
 
+  /// 判断指定语言环境是否适合使用随包简中衬线体 [bundledSerif]。
+  ///
+  /// [bundledSerif] 是 GB2312 简体中文字体子集。对于日文（ja）、繁体中文（zh-Hant、
+  /// zh-TW、zh-HK 等）以及韩文（ko），子集缺少对应汉字字形；若强行应用该字体，
+  /// 缺失汉字会穿透回退到系统黑体，导致「宋黑混排」的严重版式撕裂。
+  ///
+  /// 在这些语言环境下，手工风格的正文应安全回退到系统字体，杜绝混排。
+  static bool isBundledSerifSupported(Locale? locale) {
+    if (locale == null) return true;
+    final lang = locale.languageCode.toLowerCase();
+    if (lang == 'ja' || lang == 'ko') {
+      return false;
+    }
+    if (lang == 'zh') {
+      final script = locale.scriptCode?.toLowerCase();
+      if (script == 'hant') return false;
+      final country = locale.countryCode?.toUpperCase();
+      if (country == 'TW' || country == 'HK' || country == 'MO') return false;
+    }
+    return true;
+  }
+
+  /// 为目标 [locale] 解析适用的风格形式。
+  ///
+  /// 若当前风格指定了随包字体 [bundledSerif]，但在目标语言（如日文、繁体中文）下
+  /// 会因字符集缺失引发混排，则将 [fontFamily] 与 [fontFamilyFallback] 回退为 null
+  /// （采用统一系统默认黑体），保留色板、纸纹、圆角等其他手工风格特征。
+  ThemeStyleForm forLocale(Locale? locale) {
+    if (fontFamily == null) return this;
+    if (!isBundledSerifSupported(locale)) {
+      return copyWith(
+        fontFamily: () => null,
+        fontFamilyFallback: () => null,
+      );
+    }
+    return this;
+  }
+
+  /// 返回属性替换后的副本。
+  ThemeStyleForm copyWith({
+    double? cardRadius,
+    double? dialogRadius,
+    double? buttonRadius,
+    double? inputRadius,
+    double? fabRadius,
+    double? borderWidth,
+    double? shadowOpacityLight,
+    double? shadowOpacityDark,
+    double? shadowBlur,
+    double? ruleSpacing,
+    double? ruleOpacity,
+    String? Function()? fontFamily,
+    List<String>? Function()? fontFamilyFallback,
+    double? bodyLineHeight,
+    double? readingFontScale,
+    int? titleWeightFloor,
+    int? bodyWeightFloor,
+    double? variableWeightCompensation,
+  }) {
+    return ThemeStyleForm(
+      cardRadius: cardRadius ?? this.cardRadius,
+      dialogRadius: dialogRadius ?? this.dialogRadius,
+      buttonRadius: buttonRadius ?? this.buttonRadius,
+      inputRadius: inputRadius ?? this.inputRadius,
+      fabRadius: fabRadius ?? this.fabRadius,
+      borderWidth: borderWidth ?? this.borderWidth,
+      shadowOpacityLight: shadowOpacityLight ?? this.shadowOpacityLight,
+      shadowOpacityDark: shadowOpacityDark ?? this.shadowOpacityDark,
+      shadowBlur: shadowBlur ?? this.shadowBlur,
+      ruleSpacing: ruleSpacing ?? this.ruleSpacing,
+      ruleOpacity: ruleOpacity ?? this.ruleOpacity,
+      fontFamily: fontFamily != null ? fontFamily() : this.fontFamily,
+      fontFamilyFallback: fontFamilyFallback != null
+          ? fontFamilyFallback()
+          : this.fontFamilyFallback,
+      bodyLineHeight: bodyLineHeight ?? this.bodyLineHeight,
+      readingFontScale: readingFontScale ?? this.readingFontScale,
+      titleWeightFloor: titleWeightFloor ?? this.titleWeightFloor,
+      bodyWeightFloor: bodyWeightFloor ?? this.bodyWeightFloor,
+      variableWeightCompensation:
+          variableWeightCompensation ?? this.variableWeightCompensation,
+    );
+  }
+
   /// 随包分发的中文衬线体族名，必须和 `pubspec.yaml` 的 `fonts: - family:` 一致。
   ///
   /// **为什么不再用系统字体。** 这里曾经写通用族名 `serif`，靠 AOSP 从 Android 9
