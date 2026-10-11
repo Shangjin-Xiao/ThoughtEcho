@@ -271,7 +271,8 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         }
 
         if (skippedCount > 0) {
-          AppLogger.w('getAllAnalyses: 共跳过 $skippedCount 条损坏记录', source: 'AIAnalysisDB');
+          AppLogger.w('getAllAnalyses: 共跳过 $skippedCount 条损坏记录',
+              source: 'AIAnalysisDB');
         }
 
         AppLogger.i('成功转换为 ${analyses.length} 个分析对象', source: 'AIAnalysisDB');
