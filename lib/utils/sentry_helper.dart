@@ -307,17 +307,13 @@ class SentryHelper {
         Sentry.configureScope(
             (scope) => scope.setUser(SentryUser(id: deviceId)));
       } catch (e) {
-        if (kDebugMode) print('[Sentry] Failed to set User ID: $e');
+        logWarning('Failed to set User ID: $e', source: 'Sentry');
       }
 
       _initialized = true;
-      if (kDebugMode) {
-        print('[Sentry] Sentry SDK initialized successfully.');
-      }
+      logInfo('Sentry SDK initialized successfully.', source: 'Sentry');
     } catch (e) {
-      if (kDebugMode) {
-        print('[Sentry] Failed to initialize Sentry: $e');
-      }
+      logError('Failed to initialize Sentry: $e', error: e, source: 'Sentry');
       rethrow;
     }
   }
