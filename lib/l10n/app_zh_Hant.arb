@@ -1,10 +1,4890 @@
 {
   "@@locale": "zh_Hant",
+  "smartPushPeriodEarlyMorning": "清晨",
+  "smartPushPeriodMorning": "上午",
+  "smartPushPeriodNoon": "中午",
+  "smartPushPeriodAfternoon": "下午",
+  "smartPushPeriodEvening": "晚上",
+  "smartPushPeriodNight": "夜間",
+  "settingsSentryTitle": "傳送診斷資料幫助改進",
+  "settingsSentryDesc": "預設關閉。手動開啟後將傳送匿名錯誤日誌與診斷資訊，幫助改進應用穩定性。絕不收集筆記內容、AI 對話或任何個人隱私。",
+  "settingsTelemetryTitle": "參與匿名功能改進計劃",
+  "settingsTelemetryDesc": "預設關閉。開啟後僅收集匿名功能使用頻次（如功能使用比例），幫助規劃開發優先順序。絕不收集筆記正文、搜尋詞等任何個人隱私。",
+  "sentryRestartHint": "設定已儲存，重啟應用後生效",
+  "sentryDisclosureTitle": "隱私政策已更新",
+  "sentryDisclosureMessage": "心跡隱私政策已更新，您可以在官網檢視。\n\n為幫助排查應用閃退與改進使用體驗，我們新增了錯誤診斷日誌收集。為保護您的隱私，該功能預設關閉，您可隨時在“設定 -> 反饋與聯絡”中按需開啟。\n\n隱私政策連結：https://note.shangjinyun.cn/privacy.html",
+  "sentryDisclosureGotIt": "我知道了",
+  "learnMoreDataCollection": "檢視收集詳情與脫敏原始碼",
+  "dataCollectionDisclosureTitle": "資料收集與開源脫敏說明",
+  "dataCollectionDisclosureContent": "【說明宗旨】\n心跡（ThoughtEcho）是一款開源、離線優先的記錄應用。所有外部資料收集功能均【預設關閉】。即使您手動開啟，我們也嚴格遵守資料最小化與本地強脫敏原則。\n\n一、錯誤診斷與效能監控（Sentry）\n• 目的：捕獲應用閃退堆疊，排查嚴重崩潰、卡死與系統相容性 Bug，並透過效能追蹤分析頁面載入耗時與流暢度。\n• 收集內容：崩潰堆疊追蹤、錯誤型別、系統版本、裝置型號、隨機生成的安裝標識（不關聯任何硬體資訊），以及效能追蹤指標（頁面載入耗時、脫敏後的資料庫操作型別、網路請求的域名和路徑，iOS 上包含 CPU 剖析）。\n• 脫敏機制：在資料傳送前，本地透過正則自動剝離 SQL 語句中的查詢文字與引數，剝離 URL 查詢引數，強制禁用截圖與螢幕錄製。\n\n二、匿名功能改進計劃（Aptabase）\n• 目的：統計各功能的使用頻次與熱度（如卡片模板偏好、排版樣式選擇），幫助科學規劃開發路線。\n• 收集內容：匿名功能點選與頁面訪問事件、系統平臺與版本、語言區域、應用版本號、每次啟動的臨時會話 ID（應用退出即失效），以及由服務端根據傳輸層推斷的粗粒度國家/地區（不儲存 IP）。\n• 隱私機制：採用注重隱私的開源輕量分析服務 Aptabase，不使用 Cookie，不做跨應用追蹤，不進行裝置指紋識別，無任何使用者個人畫像。\n\n三、絕對不收集的資料邊界（嚴守底線）\n• 筆記正文、富文字 Delta JSON、圖片與錄音附件\n• 標籤名稱、出處、分類、搜尋關鍵詞\n• AI 對話記錄、Prompt 內容及第三方 API 金鑰\n• 個人身份資訊（姓名、郵箱、手機號等）；診斷與統計服務不儲存您的 IP 地址\n\n四、開源透明與程式碼查驗\n心跡的所有資料脫敏與網路請求程式碼均完全開源，歡迎查驗程式碼實現。",
+  "viewSentrySourceCode": "Sentry 脫敏原始碼",
+  "viewAptabaseSourceCode": "Aptabase 原始碼",
+  "viewPrivacyPolicy": "完整隱私政策",
   "appTitle": "心跡",
-  "languageChinese": "簡體中文",
-  "languageTraditionalChinese": "繁體中文",
+  "draftRestored": "已自動恢復未儲存的草稿",
+  "draftRecoverTitle": "恢復未儲存的草稿",
+  "draftRecoverMessage": "檢測到上次有未儲存的編輯內容，是否恢復並繼續編輯？",
+  "restore": "恢復",
+  "discard": "丟棄",
+  "draftSaved": "草稿已儲存",
+  "cancel": "取消",
+  "confirm": "確定",
+  "delete": "刪除",
+  "save": "儲存",
+  "edit": "編輯",
+  "search": "搜尋",
+  "settings": "設定",
+  "loading": "載入中...",
+  "retry": "重試",
+  "refresh": "重新整理",
+  "annualReport": "年度報告",
+  "clearRecords": "清空記錄",
+  "home": "首頁",
+  "notes": "記錄",
+  "aiFeatures": "AI",
   "languageSettings": "語言 / Language",
   "languageFollowSystem": "跟隨系統",
-  "settings": "設定",
-  "notes": "筆記"
+  "languageChinese": "簡體中文",
+  "languageTraditionalChinese": "繁體中文",
+  "languageEnglish": "English",
+  "languageJapanese": "日本語",
+  "languageKorean": "한국어",
+  "languageSpanish": "Español",
+  "languageFrench": "Français",
+  "languageGerman": "Deutsch",
+  "selectLanguage": "選擇語言 / Select Language",
+  "onboardingSelectLanguage": "選擇語言",
+  "onboardingWelcome": "歡迎使用心跡",
+  "onboardingSubtitle": "你的專屬靈感摘錄本",
+  "onboardingDescription": "讓我們一起隨心記錄",
+  "onboardingModifyLater": "這些設定可以隨時在應用中修改",
+  "onboardingAppearanceTitle": "外觀與每日一言",
+  "onboardingAppearanceSubtitle": "挑一套看著舒服的樣子",
+  "onboardingHabitsTitle": "使用習慣與隱私",
+  "onboardingHabitsSubtitle": "最後幾個小選擇",
+  "onboardingThemeStyleDesc": "決定全應用的紙面、墨色與圓角",
+  "onboardingProviderRecommended": "按你選的語言推薦",
+  "onboardingCustomizeTypes": "自定義型別",
+  "onboardingAiTitle": "AI 洞察（可選）",
+  "onboardingAiDesc": "配置任意一個 AI 服務後，心跡能為筆記生成摘要、洞察和分享卡片。不配置也不影響記錄。",
+  "onboardingAiOpenAfter": "完成後帶我去配置",
+  "onboardingSkip": "跳過",
+  "onboardingNext": "下一步",
+  "onboardingPrevious": "上一步",
+  "onboardingStart": "開始使用",
+  "onboardingPreparing": "正在準備...",
+  "onboardingSkipTitle": "跳過引導",
+  "onboardingSkipMessage": "確定要跳過引導直接進入應用嗎？\n部分設定將使用預設值。",
+  "onboardingConfirmSkip": "確定跳過",
+  "onboardingInitializing": "正在初始化...",
+  "onboardingInitFailed": "初始化失敗，請重試",
+  "onboardingContinueUsing": "繼續使用",
+  "onboardingError": "出現問題",
+  "onboardingUpdateComplete": "更新完成",
+  "onboardingUpdateSuccess": "心跡已成功更新到新版本\n資料已自動遷移，無需手動操作",
+  "onboardingUpdateFailed": "資料更新失敗，但您仍可繼續使用應用",
+  "onboardingUpdateProcessFailed": "更新處理失敗，請重啟應用",
+  "onboardingEnterApp": "進入應用",
+  "featureDailyQuote": "每日一言",
+  "prefLanguage": "語言 / Language",
+  "prefLanguageDesc": "選擇應用顯示語言",
+  "prefDailyQuoteType": "每日一言型別",
+  "prefDailyQuoteTypeDesc": "選擇您感興趣的內容型別",
+  "prefLocationService": "位置服務",
+  "prefLocationServiceDesc": "啟用位置服務以自動記錄筆記地點和獲取天氣資訊",
+  "prefDefaultStartPage": "預設啟動頁面",
+  "prefDefaultStartPageDesc": "選擇開啟應用時首先看到的頁面",
+  "prefHomeOverview": "主頁概覽",
+  "prefHomeOverviewDesc": "檢視每日一言和最近筆記",
+  "prefNoteList": "筆記列表",
+  "prefNoteListDesc": "直接進入筆記管理介面",
+  "prefSelectAll": "全選",
+  "prefClearAll": "清空",
+  "settingsTitle": "設定",
+  "settingsLocationWeather": "位置與天氣設定",
+  "settingsAutoAttachLocation": "新增筆記時自動附加位置",
+  "settingsAutoAttachLocationDesc": "新建筆記時自動記錄當前位置",
+  "settingsAutoAttachWeather": "新增筆記時自動附加天氣",
+  "settingsAutoAttachWeatherDesc": "新建筆記時自動獲取並記錄當前天氣",
+  "weatherFetchFailedTitle": "天氣獲取失敗",
+  "weatherFetchFailedDesc": "無法獲取當前天氣資訊，請檢查網路連線或稍後重試",
+  "locationFetchFailedNoNetwork": "無網路連線，已儲存座標位置",
+  "locationAndWeatherUnavailable": "當前無法獲取位置和天氣資訊",
+  "settingsUseLocationService": "使用位置服務",
+  "settingsLocationEnabled": "已獲得許可權並啟用",
+  "settingsLocationPermissionOnly": "已獲得許可權但服務未啟用",
+  "settingsLocationNoPermission": "未獲得位置許可權",
+  "settingsSetLocation": "設定顯示位置",
+  "settingsSearchCity": "搜尋並選擇城市",
+  "settingsCurrentLocation": "當前顯示位置",
+  "settingsNotSet": "未設定",
+  "settingsAppSettings": "應用設定",
+  "settingsPreferences": "偏好設定",
+  "settingsPreferencesDesc": "介面互動、預設屬性與編輯器偏好",
+  "settingsDefaultStartPage": "預設啟動頁面",
+  "settingsStartPageHome": "首頁（每日一言）",
+  "settingsStartPageNotes": "記錄（筆記列表）",
+  "settingsSelectStartPage": "選擇預設啟動頁面",
+  "settingsTheme": "主題設定",
+  "settingsThemeDesc": "自定義應用的外觀主題",
+  "settingsAI": "AI設定",
+  "settingsAIDesc": "配置 AI 服務商、模型與智慧分析功能",
+  "settingsHitokoto": "每日一言設定",
+  "settingsHitokotoDesc": "自定義每日一言的內容型別與資料來源",
+  "settingsLogs": "日誌設定",
+  "settingsLogsDesc": "管理執行診斷日誌，協助排查異常",
+  "settingsStorage": "儲存管理",
+  "settingsStorageDesc": "檢視儲存空間佔用，管理媒體與清理快取",
+  "settingsContentManagement": "內容管理",
+  "settingsTags": "標籤管理",
+  "settingsTagsDesc": "整理與管理筆記分類標籤",
+  "settingsBackup": "備份與恢復",
+  "settingsBackupDesc": "備份資料或從備份中恢復",
+  "settingsSync": "附近裝置同步",
+  "settingsSyncDesc": "在同一 Wi-Fi 下與附近的裝置互傳筆記",
+  "settingsAbout": "關於 心跡 (ThoughtEcho)",
+  "settingsAboutSlogan": "你的專屬靈感摘錄本",
+  "settingsViewSource": "檢視專案原始碼",
+  "settingsVisitWebsite": "訪問官網",
+  "settingsPrivacyPolicy": "隱私政策",
+  "settingsFeedback": "反饋建議",
+  "settingsContactDeveloper": "聯絡開發者",
+  "feedbackAndContact": "反饋與聯絡",
+  "feedbackAndContactDesc": "我們非常重視您的反饋！您可以透過以下方式聯絡我們：",
+  "feedbackGithubTitle": "在 GitHub 提交問題",
+  "feedbackGithubDesc": "提交 Bug 報告、功能建議或參與討論",
+  "feedbackGithubRepoTitle": "檢視專案原始碼",
+  "feedbackGithubRepoDesc": "檢視原始碼、給專案加星或提交 Pull Request",
+  "contactDeveloperSectionTitle": "聯絡開發者",
+  "feedbackEmailTitle": "傳送郵件",
+  "feedbackEmailDesc": "shangjinyun@proton.me",
+  "feedbackDiscussionTitle": "加入社群討論",
+  "feedbackDiscussionDesc": "提問、分享想法、和其他使用者交流",
+  "feedbackSentryTitle": "傳送意見與反饋",
+  "feedbackSentryDesc": "直接向開發者反饋您在使用過程中遇到的問題或建議",
+  "feedbackSentryDisabledHint": "請先在下方開啟「傳送診斷資料幫助改進」",
+  "settingsViewLicenses": "檢視許可證資訊",
+  "settingsCheckUpdate": "檢查更新",
+  "settingsCheckUpdateDesc": "檢查是否有新版本可用",
+  "settingsClose": "關閉",
+  "developerModeEnabled": "🎉 開發者模式已開啟！",
+  "developerModeDisabled": "✅ 開發者模式已關閉",
+  "devFirstScrollPerfMonitorTitle": "首次滑動卡頓監測（開發者）",
+  "devFirstScrollPerfMonitorDesc": "監測開啟記錄頁後的手勢滑動幀率與卡頓耗時",
+  "noteListDisableCardShadowsExperiment": "[實驗] 記錄頁禁用卡片陰影",
+  "noteListDisableCardShadowsExperimentDesc": "關閉卡片投影陰影，可提升低配置裝置上的列表滑動流暢度",
+  "noteListDisableBackdropBlurExperiment": "[實驗] 記錄頁禁用摺疊模糊",
+  "noteListDisableBackdropBlurExperimentDesc": "將長卡片摺疊處的背景模糊替換為漸變遮罩，減輕圖形渲染負擔",
+  "devFirstScrollPerfResult": "首次滑動效能：總幀 {total}，卡頓幀 {jank}，平均 {avgMs}ms，最慢 {worstMs}ms",
+  "@devFirstScrollPerfResult": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "jank": {
+        "type": "int"
+      },
+      "avgMs": {
+        "type": "String"
+      },
+      "worstMs": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryTitle": "心跡 - 資料恢復",
+  "emergencyRecoveryHeading": "資料庫初始化失敗",
+  "emergencyRecoveryDescription": "應用無法正常啟動。可能是資料庫損壞或無法訪問。\n\n您可以嘗試備份現有資料以防資料丟失，或嘗試重新啟動應用。",
+  "emergencyBackupAndRestoreButton": "備份和恢復資料",
+  "emergencyTryRestartAppButton": "嘗試重新啟動應用",
+  "emergencyReinitializeFailed": "重新初始化失敗: {error}",
+  "@emergencyReinitializeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryHint": "提示: 如果問題持續存在，可能需要重新安裝應用。請確保在此之前備份您的資料。",
+  "emergencyAppTitle": "心跡 - 緊急恢復",
+  "emergencyModeTitle": "緊急恢復模式",
+  "emergencyAppStartFailedTitle": "應用啟動失敗",
+  "emergencyAppStartFailedDesc": "心跡應用啟動過程中發生嚴重錯誤。這可能是由於資料損壞或者儲存許可權問題導致。",
+  "emergencyErrorLabel": "錯誤資訊:",
+  "emergencyTechnicalDetails": "技術詳情",
+  "emergencyExitAppButton": "退出應用",
+  "emergencyPersistentIssueHint": "如果問題持續存在，請嘗試重新安裝應用，或聯絡開發者獲取支援。",
+  "emergencyBackupPageTitle": "緊急資料恢復",
+  "emergencyBackupToolTitle": "資料緊急恢復工具",
+  "emergencyBackupToolDesc": "由於應用發生了嚴重錯誤，您可以嘗試：\n\n1. 匯出資料庫檔案 - 匯出原始資料庫檔案供專業人員恢復\n2. 嘗試檢視備份恢復頁 - 注意：由於資料庫可能損壞，此功能可能無法正常工作",
+  "emergencyProcessing": "正在處理...",
+  "emergencyExportDatabaseButton": "匯出資料庫檔案",
+  "emergencyOpenBackupPageButton": "嘗試開啟標準備份還原頁面",
+  "emergencyOpenBackupFailed": "無法開啟備份還原頁面：{error}",
+  "@emergencyOpenBackupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportHint": "提示: 匯出的資料檔案可用於技術支援與專業恢復。",
+  "emergencyLocatingDatabase": "正在定位資料庫檔案...",
+  "emergencyDatabaseNotFound": "未找到資料庫檔案",
+  "emergencyPreparingExport": "正在準備匯出...",
+  "emergencyCopyingFile": "正在複製檔案...",
+  "emergencyDatabaseExported": "資料庫檔案已匯出到: {path}",
+  "@emergencyDatabaseExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportFailed": "匯出失敗: {error}",
+  "@emergencyExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "locationPermissionDenied": "位置許可權被拒絕，無法啟用位置服務",
+  "enableLocationService": "請啟用位置服務",
+  "enableLocationServiceDesc": "心跡需要訪問您的位置以提供天氣等功能。請在系統設定中啟用位置服務。",
+  "goToSettings": "去設定",
+  "gettingLocation": "正在獲取位置...",
+  "locationServiceEnabled": "位置服務已啟用，位置已更新",
+  "locationServiceDisabled": "位置服務已禁用",
+  "cannotGetLocation": "無法獲取當前位置",
+  "selectedCount": "已選擇 {count} 種型別",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pleaseWait": "請稍候...",
+  "close": "關閉",
+  "ok": "好的",
+  "timeJustNow": "剛剛",
+  "timeMinutesAgo": "{count}分鐘前",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{count}小時前",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{count}天前",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYesterday": "昨天",
+  "exactAlarmDeniedHint": "未授予精確提醒許可權，推送時間可能會有延遲",
+  "error": "錯誤",
+  "success": "成功",
+  "warning": "警告",
+  "info": "資訊",
+  "cannotOpenLink": "無法開啟連結: {url}",
+  "@cannotOpenLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "checkUpdateFailed": "檢查更新失敗: {error}",
+  "@checkUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermission": "無法獲取位置許可權",
+  "logDebugInfo": "執行診斷資訊",
+  "logDebugInfoDesc": "檢視應用執行狀態與日誌記錄統計",
+  "addNoteAutoFocusExperiment": "[實驗] AddNote 自動聚焦",
+  "addNoteAutoFocusExperimentDesc": "開啟新增筆記對話方塊穩定後自動彈出鍵盤（預設開）",
+  "databaseStatus": "資料庫狀態:",
+  "logStatistics": "日誌統計:",
+  "getDebugInfoFailed": "獲取除錯資訊失敗: {error}",
+  "@getDebugInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAIReport": "正在生成AI年度報告...",
+  "generateReportFailed": "生成年度報告失敗",
+  "aiReturnedEmpty": "AI返回了空內容，請重試",
+  "pleaseConfigureApiKey": "請先在AI設定中配置有效的API Key",
+  "networkError": "網路連線異常，請檢查網路後重試",
+  "aiQuotaExceeded": "AI服務配額不足，請稍後重試",
+  "generateAIReportFailed": "生成AI年度報告失敗",
+  "getDataFailed": "獲取資料失敗",
+  "testingAIReport": "正在測試AI年度報告...",
+  "testResult": "測試結果",
+  "contentLength": "內容長度：{length}字元",
+  "@contentLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "htmlFormat": "HTML格式：{status}",
+  "@htmlFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "jsonFormat": "JSON格式：{status}",
+  "@jsonFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "containsHtmlTags": "包含HTML標籤：{status}",
+  "@containsHtmlTags": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "first100Chars": "前100字元：",
+  "viewReport": "檢視報告",
+  "testFailed": "測試失敗：{error}",
+  "@testFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "testFailedEmpty": "測試失敗：AI返回了空內容",
+  "testFailedApiKey": "測試失敗：請先在AI設定中配置有效的API Key",
+  "testFailedNetwork": "測試失敗：網路連線異常",
+  "testInitFailed": "測試初始化失敗",
+  "followSystem": "跟隨系統",
+  "navHome": "首頁",
+  "navNotes": "記錄",
+  "navInsights": "洞察",
+  "navSettings": "設定",
+  "appTitleOffline": "心跡 - 無網路",
+  "loadingDataPleaseWait": "正在載入資料，請稍等...",
+  "noTagsAvailable": "暫無標籤資料",
+  "deleteNote": "刪除筆記",
+  "deleteNoteConfirmation": "確定要刪除這條筆記嗎？此操作無法撤銷。",
+  "noteDeleted": "筆記已刪除",
+  "noteNotFound": "筆記不存在",
+  "noteUpdateSkippedDeleted": "筆記已刪除，更新已跳過",
+  "favorited": "已收藏 ({count})",
+  "@favorited": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "favoriteFailed": "收藏失敗，請重試",
+  "aiCardServiceNotInitialized": "AI卡片服務未初始化",
+  "generateCardFailed": "生成卡片失敗: {error}",
+  "@generateCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingShareImage": "正在生成分享圖片...",
+  "cardSharedSuccessfully": "卡片分享成功",
+  "shareFailed": "分享失敗: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "savingCardToGallery": "正在儲存卡片到相簿...",
+  "cardSavedToGallery": "卡片已儲存到相簿: {path}",
+  "@cardSavedToGallery": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "儲存失敗: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "view": "檢視",
+  "viewImage": "檢視圖片",
+  "imageLoadFailed": "圖片載入失敗",
+  "todayThoughts": "今日思考",
+  "loadingTodayThoughts": "正在載入今日思考...",
+  "fetchingDefaultPrompt": "正在獲取預設提示...",
+  "waitingForTodayThoughts": "等待今日思考...",
+  "noTodayThoughts": "暫無今日思考",
+  "cannotOpenFullEditor": "無法開啟全螢幕編輯器: {error}",
+  "@cannotOpenFullEditor": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshFailed": "重新整理失敗: {error}",
+  "@refreshFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupAndRestore": "資料備份與還原",
+  "dataBackup": "資料備份",
+  "dataRestore": "資料還原",
+  "includeMediaFiles": "包含媒體檔案",
+  "creatingBackup": "正在備份...",
+  "createBackup": "建立備份",
+  "selectBackupFileToRestore": "選擇備份檔案還原",
+  "importantNotes": "重要提示",
+  "dataSecurity": "資料安全",
+  "dataSafetyDesc": "覆蓋還原將替換當前所有筆記與設定，建議在還原前先備份當前資料",
+  "backupAdvice": "備份建議",
+  "backupAdviceDesc": "建議定期備份資料到多個位置（本地、雲端儲存等）",
+  "formatInfo": "格式說明",
+  "formatInfoDesc": "ZIP 格式包含完整筆記與媒體檔案；舊版 JSON 格式僅包含純文字資料",
+  "compatibility": "相容性",
+  "compatibilityDesc": "支援匯入心跡 ZIP 完整備份包及舊版 JSON 純文字備份",
+  "confirmRestore": "確認還原",
+  "confirmMergeImport": "確認合併匯入",
+  "startMerge": "開始合併",
+  "selectImportMode": "選擇匯入模式",
+  "continueAction": "繼續",
+  "backupFailed": "備份失敗",
+  "restoreFailed": "還原失敗",
+  "selectFileFailed": "選擇檔案失敗",
+  "cannotGetFilePath": "無法讀取所選檔案路徑，請重新選擇或檢查系統的檔案訪問許可權",
+  "invalidBackupFile": "無效的備份檔案",
+  "invalidBackupFileDesc": "無法識別所選檔案。請確認檔案格式為 .zip 或 .json，且屬於心跡（ThoughtEcho）匯出的備份資料。",
+  "backupCanceled": "備份已取消",
+  "restoreCanceled": "還原已取消",
+  "unknownField": "未知欄位",
+  "confirmRestoreData": "確認還原資料",
+  "insightsTitle": "AI 洞察",
+  "analysisTypeComprehensive": "全面分析",
+  "analysisTypeComprehensiveDesc": "綜合分析您所有筆記，探索主題、情感和思維模式",
+  "analysisTypeEmotional": "情感洞察",
+  "analysisTypeEmotionalDesc": "分析您的情緒狀態和變化趨勢",
+  "analysisTypeMindmap": "思維導圖",
+  "analysisTypeMindmapDesc": "構建您思考的結構和思維習慣分析",
+  "analysisTypeGrowth": "成長建議",
+  "analysisTypeGrowthDesc": "根據您的筆記提供個性化成長和進步建議",
+  "analysisStyleProfessional": "專業分析",
+  "analysisStyleProfessionalDesc": "客觀專業的分析視角",
+  "analysisStyleFriendly": "友好導師",
+  "analysisStyleFriendlyDesc": "像一位友好的導師給予溫和的建議",
+  "analysisStyleHumorous": "風趣幽默",
+  "analysisStyleHumorousDesc": "以幽默風趣的方式解讀您的思考",
+  "analysisStyleLiterary": "文學風格",
+  "analysisStyleLiteraryDesc": "以優美的文學語言描述您的思考旅程",
+  "selectAnalysisType": "選擇分析型別",
+  "selectAnalysisStyle": "選擇分析風格",
+  "customPrompt": "自定義提示",
+  "startAnalysis": "開始分析",
+  "stopAnalysis": "停止",
+  "shareAnalysis": "分享",
+  "copyAnalysis": "複製",
+  "saveAnalysis": "儲存",
+  "noNotesToAnalyze": "暫無筆記可分析",
+  "noNotesToAnalyzeDesc": "請先新增一些筆記，AI 才能為您提供洞察",
+  "aiServiceNotConfigured": "AI服務未配置",
+  "configureAIService": "配置AI服務",
+  "analysisHistory": "歷史記錄",
+  "newAnalysis": "新分析",
+  "analyzing": "正在分析...",
+  "analysisSaved": "分析已儲存",
+  "analysisCopied": "分析已複製到剪貼簿",
+  "noteSaved": "筆記已儲存",
+  "selectCardColor": "選擇卡片顏色",
+  "presetColors": "預設顏色",
+  "customColor": "自定義顏色",
+  "select": "選擇",
+  "editMetadata": "編輯後設資料",
+  "noLocationWeatherRecorded": "此筆記首次儲存時未記錄位置和天氣資訊",
+  "done": "完成",
+  "selectTags": "選擇標籤",
+  "noMatchingTags": "沒有找到匹配的標籤",
+  "smartAnalyzeSource": "智慧分析來源",
+  "smartAnalyzeSourceDesc": "分析文字中可能的作者和作品",
+  "polishText": "潤色文字",
+  "polishTextDesc": "最佳化文字表達，使其更加流暢、優美",
+  "continueWriting": "續寫內容",
+  "continueWritingDesc": "以相同的風格和語調延伸當前內容",
+  "deepAnalysis": "深度分析",
+  "deepAnalysisDesc": "對筆記內容進行深入分析和解讀",
+  "askNote": "問 Thoughter",
+  "askNoteDesc": "",
+  "pleaseEnterContent": "請先輸入內容",
+  "analysisResults": "分析結果",
+  "confidence": "可信度",
+  "noAuthorOrWorkIdentified": "未能識別出明確的作者或作品",
+  "applyAnalysisResults": "應用分析結果",
+  "parseResultsFailed": "解析結果失敗",
+  "analysisFailed": "分析失敗: {error}",
+  "analysisResultsCopied": "分析結果已複製到剪貼簿",
+  "noteInfo": "筆記資訊",
+  "source": "來源",
+  "createdAt": "建立時間",
+  "content": "內容",
+  "periodicReport": "週期報告",
+  "aiInsightsTab": "智慧洞察",
+  "locationServiceNotEnabled": "位置服務未啟用",
+  "pleaseEnableLocationInSettings": "請在系統設定中啟用位置服務",
+  "locationServiceEnabledMsg": "位置服務已啟用",
+  "confirmDelete": "確認刪除",
+  "confirmDeleteAnalysis": "確定要刪除這條分析記錄嗎？",
+  "deleteSuccess": "刪除成功",
+  "deleteFailed": "刪除失敗: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceNotInitialized": "服務未初始化",
+  "location": "位置",
+  "weather": "天氣",
+  "color": "顏色",
+  "noteUpdated": "筆記已更新",
+  "openFullEditorFailed": "開啟全螢幕編輯器失敗: {error}",
+  "@openFullEditorFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailedWithError": "儲存失敗: {error}",
+  "@saveFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "themeSettings": "主題設定",
+  "themeStyle": "主題風格",
+  "themeStyleMaterial": "Material",
+  "themeStyleMaterialDesc": "跟隨系統取色",
+  "themeStylePaper": "信箋",
+  "themeStylePaperDesc": "暖紙，行距松，有紙張橫線",
+  "themeStylePlain": "素箋",
+  "themeStylePlainDesc": "冷紙，行距緊，不畫橫線",
+  "themeStyleGroupSignature": "紙與墨",
+  "themeStyleGroupSystem": "系統配色",
+  "themeAccent": "墨色",
+  "themeAccentDesc": "換一支筆，不換這疊紙",
+  "themeAccentUmber": "赭石",
+  "themeAccentCeladon": "黛青",
+  "themeAccentIndigo": "靛藍",
+  "themeAccentCinnabar": "硃砂",
+  "themeMode": "主題模式",
+  "themeModeLight": "淺色",
+  "themeModeDark": "深色",
+  "useCustomThemeColor": "使用自定義主題色",
+  "selectThemeColor": "選擇主題色",
+  "dynamicColor": "動態取色",
+  "dynamicColorDesc": "從系統提取主題顏色",
+  "customColorEnabledHint": "已啟用自定義主題色，動態取色功能已暫時禁用",
+  "dynamicColorDisabledHint": "未啟用動態取色，將使用預設藍色主題",
+  "themeTools": "主題工具",
+  "themeToolsDesc": "如果主題顏色顯示異常，可以嘗試重新整理主題",
+  "themeRefreshed": "主題已重新整理",
+  "refreshTheme": "重新整理主題",
+  "hitokotoSettings": "每日一言設定",
+  "hitokotoTypeSettings": "每日一言型別設定",
+  "hitokotoTypeDesc": "您可以選擇一個或多個\"每日一言\"型別，程式將從您選擇的型別中隨機抽取內容展示。不同型別代表不同的內容來源和風格。",
+  "dailyQuoteApiDesc": "選擇用於首頁每日文段的服務提供方。",
+  "dailyQuoteApiHitokoto": "一言 (Hitokoto)",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "名言教えるよ",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "dailyQuoteApiNinjasManageApiKey": "配置服務金鑰",
+  "dailyQuoteApiNinjasApiKeyHint": "輸入 API Ninjas 的 X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "已配置服務金鑰",
+  "dailyQuoteApiNinjasApiKeyMissing": "尚未配置服務金鑰，無法請求該服務",
+  "dailyQuoteApiNinjasApiKeyInvalid": "服務金鑰格式無效",
+  "dailyQuoteApiNinjasCategorySelection": "分類選擇",
+  "dailyQuoteApiNinjasCategoryDesc": "支援搜尋、多選與清空；如果一個也不選，則自動按全域性隨機處理。",
+  "dailyQuoteApiNinjasCategorySearchHint": "搜尋分類",
+  "dailyQuoteApiNinjasNoCategoriesFound": "沒有匹配的分類",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "未限制分類，將從全部分類中隨機抽取",
+  "dailyQuoteApiNinjasSelectedCount": "已選擇 {count} 個分類",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "智慧",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "哲學",
+  "dailyQuoteApiNinjasCategoryLife": "人生",
+  "dailyQuoteApiNinjasCategoryTruth": "真理",
+  "dailyQuoteApiNinjasCategoryInspirational": "勵志",
+  "dailyQuoteApiNinjasCategoryRelationships": "關係",
+  "dailyQuoteApiNinjasCategoryLove": "愛情",
+  "dailyQuoteApiNinjasCategoryFaith": "信念",
+  "dailyQuoteApiNinjasCategoryHumor": "幽默",
+  "dailyQuoteApiNinjasCategorySuccess": "成功",
+  "dailyQuoteApiNinjasCategoryCourage": "勇氣",
+  "dailyQuoteApiNinjasCategoryHappiness": "幸福",
+  "dailyQuoteApiNinjasCategoryArt": "藝術",
+  "dailyQuoteApiNinjasCategoryWriting": "寫作",
+  "dailyQuoteApiNinjasCategoryFear": "恐懼",
+  "dailyQuoteApiNinjasCategoryNature": "自然",
+  "dailyQuoteApiNinjasCategoryTime": "時間",
+  "dailyQuoteApiNinjasCategoryFreedom": "自由",
+  "dailyQuoteApiNinjasCategoryDeath": "死亡",
+  "dailyQuoteApiNinjasCategoryLeadership": "領導力",
+  "selectAll": "全選",
+  "clearAll": "清除全部",
+  "typeSelection": "型別選擇",
+  "typeSelectionHint": "選擇感興趣的句子型別",
+  "dailyQuoteProviderNoTypeSelection": "當前來源不支援分類篩選。",
+  "usageInstructions": "使用說明",
+  "hitokotoServiceProvider": "一言服務由 Hitokoto 提供",
+  "dailyQuoteServiceProvider": "當前內容由 {provider} 提供",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "hitokotoHelpItem1": "至少需要選擇一種型別，程式會隨機展示選中型別的內容",
+  "hitokotoHelpItem2": "選擇多種型別可以獲得更豐富多樣的內容體驗",
+  "hitokotoHelpItem3": "不同型別代表不同的內容風格和來源平臺",
+  "settingsSaved": "設定已儲存",
+  "tagManagement": "標籤管理",
+  "newTagName": "新標籤名稱",
+  "enterTagNameHint": "輸入標籤名稱（最多50字）",
+  "selectIcon": "選擇圖示",
+  "adding": "新增中",
+  "add": "新增",
+  "pleaseEnterTagName": "請輸入標籤名稱",
+  "tagAddedSuccess": "標籤新增成功",
+  "addTagFailed": "新增標籤失敗：{error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "可選一個圖示或直接輸入一個Emoji作為標籤圖示",
+  "iconSelected": "已選擇圖示：{icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "clear": "清除",
+  "loadTagsFailed": "載入標籤失敗: {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "暫無標籤",
+  "editTag": "編輯標籤",
+  "tagName": "標籤名稱",
+  "icon": "圖示",
+  "deleteTagConfirmation": "確定要刪除標籤\"{name}\"嗎？相關聯的筆記將保留，但不再關聯此標籤。",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "標籤刪除成功",
+  "deleteTagFailed": "刪除標籤失敗：{error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "預設",
+  "systemDefaultTag": "系統預設標籤",
+  "tapToEditLongPressToDelete": "點選編輯，長按刪除",
+  "enterEmojiHint": "直接輸入表情符號...",
+  "useAsIcon": "使用 \"{emoji}\" 作為圖示",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "系統圖示",
+  "storageManagement": "儲存管理",
+  "clearCache": "清理快取",
+  "clearCacheConfirmTitle": "清理快取",
+  "clearCacheConfirmContent": "確定要清理應用快取嗎？\n\n這將清除臨時檔案、圖片快取等，不會刪除您的筆記資料。",
+  "cleanOrphanMedia": "清理未關聯媒體",
+  "cleanOrphanMediaConfirmTitle": "清理未關聯媒體",
+  "cleanOrphanMediaConfirmContent": "這將刪除沒有被任何筆記引用的媒體檔案（圖片、影片、音訊）。\n\n確定繼續嗎？",
+  "databaseMaintenance": "本地儲存維護最佳化",
+  "databaseMaintenanceConfirmTitle": "本地儲存維護最佳化",
+  "databaseMaintenanceConfirmContent": "此操作將對本地儲存進行整理最佳化，包括：\n\n• 釋放碎片空間\n• 最佳化檢索索引\n• 提升載入速度\n\n維護過程通常僅需幾秒鐘，確定繼續嗎？",
+  "startMaintenance": "開始維護",
+  "maintenanceInProgress": "正在整理最佳化儲存...",
+  "preparingProgress": "準備中...",
+  "maintenanceComplete": "維護完成",
+  "maintenanceDuration": "耗時: {duration} 秒",
+  "@maintenanceDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "databaseSizeChange": "資料庫大小: {before} MB → {after} MB",
+  "@databaseSizeChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceSavedMb": "釋放空間: {size} MB",
+  "@spaceSavedMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noSpaceSaved": "未釋放空間（資料庫已很緊湊）",
+  "maintenanceFailed": "維護失敗: {error}",
+  "@maintenanceFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStorageInfoFailed": "載入儲存資訊失敗: {error}",
+  "@loadStorageInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheCleanedResult": "快取清理完成，釋放了 {size}",
+  "@cacheCleanedResult": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "清理快取失敗: {error}",
+  "@clearCacheFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanFilesCleanedResult": "{count, plural, =0{沒有發現未關聯媒體} other{清理完成，刪除了 {count} 個未關聯媒體檔案}}",
+  "@orphanFilesCleanedResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noOrphanFilesFound": "沒有發現未關聯媒體",
+  "cleanupFailed": "清理失敗: {error}",
+  "@cleanupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStorageUsage": "總佔用空間",
+  "databaseUsage": "資料庫佔用",
+  "mediaFilesUsage": "媒體檔案佔用",
+  "cacheUsage": "快取佔用",
+  "notesDatabase": "筆記資料庫",
+  "trashStorageUsageHint": "回收站中有 {count} 條筆記，仍會佔用資料庫和附件空間。",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "檢視回收站",
+  "aiDatabase": "AI資料庫",
+  "logDatabase": "日誌資料庫",
+  "images": "圖片",
+  "videos": "影片",
+  "audios": "音訊",
+  "tempFilesAndCache": "臨時檔案和快取",
+  "fileCount": "{count} 個檔案",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataStorageLocation": "資料儲存位置",
+  "currentDataDirectory": "當前資料目錄",
+  "custom": "自定義",
+  "windowsDataMigration": "Windows端資料目錄遷移",
+  "windowsDataMigrationDesc": "將應用資料遷移到其他位置（如D盤），釋放系統盤空間",
+  "changeDataDirectory": "更改資料目錄",
+  "migrating": "遷移中...",
+  "confirmDataMigration": "確認資料遷移",
+  "migrationTargetPath": "即將遷移所有應用資料到：",
+  "migrationWarning": "⚠️ 遷移過程可能需要幾分鐘，期間請勿關閉應用。\n⚠️ 遷移完成後需要重啟應用才能生效。",
+  "startMigration": "開始遷移",
+  "migratingData": "正在遷移資料",
+  "migrationComplete": "遷移完成",
+  "migrationCompleteMessage": "資料已成功遷移到新目錄！\n\n請重啟應用以使更改生效。",
+  "migrationFailed": "資料遷移失敗，請檢視日誌瞭解詳情",
+  "migrationFailedWithError": "遷移失敗: {error}",
+  "@migrationFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cancellingAndCleaning": "正在取消並清理...",
+  "migrationCancelled": "遷移已取消",
+  "migrationCancelledMessage": "遷移已取消，目標目錄已清理，原資料完好無損。",
+  "migrationFailedAndCleanedMessage": "遷移失敗：{error}\n\n目標路徑已自動清理，原資料完好無損。",
+  "@migrationFailedAndCleanedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectNewDataDirectory": "選擇新的資料儲存目錄",
+  "directoryNotAvailable": "所選目錄不可用或沒有寫許可權",
+  "selectDirectoryFailed": "選擇目錄失敗: {error}",
+  "@selectDirectoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationTargetSameAsCurrent": "新目錄與當前資料目錄相同",
+  "migrationTargetAncestor": "新目錄不能是當前資料目錄的上級目錄",
+  "migrationTargetNested": "新目錄不能位於當前資料目錄內部",
+  "logsViewer": "日誌檢視",
+  "logFilter": "日誌過濾",
+  "clearLogs": "清除日誌",
+  "searchLogs": "搜尋日誌...",
+  "noLogs": "暫無日誌",
+  "loadMoreLogs": "載入更多日誌",
+  "loadMoreLogsFailed": "載入更多日誌失敗: {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "{level} 日誌 {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "複製全部資訊",
+  "timestamp": "時間: {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "訊息:",
+  "errorLabel": "錯誤:",
+  "stackTrace": "堆疊跟蹤:",
+  "logCopiedToClipboard": "日誌詳情已複製到剪貼簿",
+  "containsError": "包含錯誤資訊",
+  "sourceFilter": "來源: {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "搜尋: {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "清除全部",
+  "logFilterOptions": "日誌過濾選項",
+  "reset": "重置",
+  "filterByLogLevel": "按日誌級別過濾",
+  "filterBySource": "按來源過濾",
+  "enterSourceName": "輸入日誌來源名稱...",
+  "apply": "應用",
+  "clearLogsTitle": "清除日誌",
+  "clearLogsQuestion": "您想清除哪些日誌？",
+  "clearMemoryLogsOnly": "僅清除記憶體日誌",
+  "clearAllLogs": "清除全部日誌",
+  "memoryLogsCleared": "記憶體中的日誌已清除",
+  "allLogsCleared": "所有日誌記錄已清除",
+  "logsCount": "已顯示 {count} 條日誌 • 長按日誌可複製 • 點選檢視詳情",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "日誌頁渲染異常:",
+  "networkDiagnostic": "網路診斷",
+  "networkConfig": "網路配置",
+  "networkDiagnosticSection": "網路診斷",
+  "diagnosing": "診斷中...",
+  "runNetworkDiagnostic": "執行網路診斷",
+  "diagnosticResult": "診斷結果: {passed}/{total} 項透過",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "診斷失敗: {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "裝置發現",
+  "startDiscovery": "開始發現",
+  "stopDiscovery": "停止發現",
+  "sendAnnouncement": "傳送公告",
+  "deviceAnnouncementSent": "裝置公告已傳送",
+  "startDiscoveryFailed": "啟動裝置發現失敗: {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "傳送裝置公告失敗: {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "狀態: 執行中",
+  "statusStopped": "狀態: 已停止",
+  "discoveredDevices": "發現的裝置",
+  "discoveredDevicesCount": "發現的裝置 ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "暫無發現的裝置",
+  "unknownModel": "未知型號",
+  "fingerprint": "裝置標識碼: {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "hitokotoTypeA": "動畫",
+  "hitokotoTypeB": "漫畫",
+  "hitokotoTypeC": "遊戲",
+  "hitokotoTypeD": "文學",
+  "hitokotoTypeE": "原創",
+  "hitokotoTypeF": "來自網路",
+  "hitokotoTypeG": "其他",
+  "hitokotoTypeH": "影視",
+  "hitokotoTypeI": "詩詞",
+  "hitokotoTypeJ": "網易雲",
+  "hitokotoTypeK": "哲學",
+  "hitokotoTypeJoke": "幽默",
+  "noNetworkConnection": "無網路連線",
+  "unknown": "未知",
+  "defaultQuote1": "生活不止眼前的苟且，還有詩和遠方。",
+  "defaultQuote2": "人生就像一場旅行，不必在乎目的地，在乎的是沿途的風景。",
+  "defaultQuote3": "不要等待機會，而要創造機會。",
+  "editTagTitle": "編輯標籤",
+  "tagNameLabel": "標籤名稱",
+  "iconLabel": "圖示：",
+  "emotion": "情感",
+  "thinking": "思考",
+  "nature": "自然",
+  "mood": "心情",
+  "life": "生活",
+  "growth": "成長",
+  "reward": "獎勵",
+  "transport": "交通",
+  "otherCategory": "其他",
+  "logLoadMoreError": "載入更多日誌失敗: {error}",
+  "@logLoadMoreError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logLoadError": "載入日誌失敗",
+  "logSourceFilter": "來源: {source}",
+  "@logSourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "logSearchFilter": "搜尋: {query}",
+  "@logSearchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "logClearAllFilters": "清除全部",
+  "logCopyAll": "複製全部資訊",
+  "logTimestamp": "時間: {time}",
+  "@logTimestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logMessage": "訊息:",
+  "logError": "錯誤:",
+  "logStackTrace": "堆疊跟蹤:",
+  "logCopied": "日誌詳情已複製到剪貼簿",
+  "logFilterReset": "重置",
+  "logFilterByLevel": "按日誌級別過濾",
+  "logFilterBySource": "按來源過濾",
+  "logFilterSourceHint": "輸入日誌來源名稱...",
+  "logFilterApply": "應用",
+  "logClearTitle": "清除日誌",
+  "logClearQuestion": "您想清除哪些日誌？",
+  "logClearMemory": "僅清除記憶體日誌",
+  "logClearMemorySuccess": "記憶體中的日誌已清除",
+  "logClearAll": "清除全部日誌",
+  "logClearAllSuccess": "所有日誌記錄已清除",
+  "logClearError": "清除日誌失敗: {error}",
+  "@logClearError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logContainsError": "包含錯誤資訊",
+  "httpServerPort": "HTTP 服務埠: {port}",
+  "@httpServerPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastDiscoveryPort": "多播發現埠: {port}",
+  "@multicastDiscoveryPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastAddress": "多播地址: {address}",
+  "@multicastAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "protocolVersion": "協議版本: {version}",
+  "@protocolVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "testAnalysis": "測試分析",
+  "testAnalysisDesc": "這是一個測試分析，用於驗證儲存功能是否正常工作。",
+  "viewHistory": "檢視歷史",
+  "saveAnalysisError": "儲存分析失敗: {error}",
+  "@saveAnalysisError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisNoteTitle": "# {title}\n\n{content}",
+  "@analysisNoteTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysisSource": "AI分析",
+  "thoughtechoAI": "心跡AI",
+  "savedAsNote": "已儲存為新筆記",
+  "saveAsNoteError": "儲存為筆記失敗: {error}",
+  "@saveAsNoteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareError": "分享失敗: {error}",
+  "@shareError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "configureApiKey": "請先在設定中配置 API Key",
+  "noteListEmptyTitle": "還沒有筆記，開始記錄吧！",
+  "noteSearchEmptyTitle": "未找到相關筆記",
+  "noteSearchEmptySubtitle": "嘗試使用其他關鍵詞或檢查拼寫",
+  "noteSearchTimeoutMessage": "搜尋超時，請重試",
+  "searchingLabel": "搜尋中",
+  "guideAddNoteTagHiddenTitle": "隱藏筆記",
+  "guideAddNoteTagHiddenDesc": "選擇標籤可以將筆記設為隱藏",
+  "guideNoteItemMoreShareTitle": "卡片分享",
+  "guideNoteItemMoreShareDesc": "在此生成卡片分享",
+  "filterAndSortTooltip": "篩選筆記或檢視隱藏內容",
+  "noNotesFound": "沒有找到筆記，請先新增一些筆記",
+  "generateInsightsError": "生成洞察失敗: {error}",
+  "@generateInsightsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalError": "AI 服務響應異常，請檢查模型名稱或網路配置",
+  "checkSettings": "檢查設定",
+  "invalidApiKey": "API金鑰無效，請檢查設定",
+  "checkApiKey": "檢查API金鑰",
+  "rateLimitExceeded": "請求頻率過高，請稍後重試",
+  "tryLater": "稍後重試",
+  "generateInsightsSetupError": "生成洞察失敗 (setup): {error}",
+  "@generateInsightsSetupError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalErrorConfig": "AI 服務響應異常，請檢查 AI 模型配置與網路連線",
+  "invalidApiKeyUpdate": "API金鑰無效，請在設定中更新API金鑰",
+  "configureValidApiKey": "請先在設定中配置有效的API金鑰",
+  "regenerate": "重新生成",
+  "viewToolProcess": "檢視過程",
+  "selectAnalysisMethod": "選擇分析方式",
+  "advancedOptions": "高階選項",
+  "customPromptHint": "例如：分析我的筆記中提到的人物和地點",
+  "analysisHistoryRecord": "分析歷史記錄",
+  "viewPreviousAnalysis": "檢視之前的AI分析結果",
+  "analysisDescriptionTitle": "分析說明",
+  "analysisDescription": "AI 分析會綜合您所有的筆記內容，發現潛在的思維模式和規律。可以選擇不同的分析風格來獲取多樣的洞察視角。這可能需要一些時間，請耐心等待。",
+  "aiAnalysisUsageInstructionsTitle": "AI 分析使用說明",
+  "aiAnalysisUsageInstructions": "1. AI可能會生成不準確或誤導性內容，請謹慎評估分析結果\n2. 使用此功能時，您的所有筆記資訊（包括內容、日期、位置、天氣和溫度等）都會傳送給AI進行全面分析\n3. 分析結果僅供參考，最終解釋權歸您自己\n4. 建議在網路良好的環境下使用此功能，以獲得最佳體驗",
+  "copyToClipboard": "複製到剪貼簿",
+  "analysisResultCopied": "分析結果已複製到剪貼簿",
+  "saveAsNoteButton": "儲存為筆記",
+  "saveAnalysisButton": "儲存分析",
+  "shareInsightsButton": "分享洞察",
+  "generateInsightsErrorSnapshot": "生成洞察時出錯: {error}",
+  "@generateInsightsErrorSnapshot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsPageEmpty": "選擇分析型別並點選\"開始分析\"\n洞察將幫助你發現筆記中的思維模式和規律",
+  "customAnalysis": "自定義分析",
+  "siliconflow": "矽基流動",
+  "openapiCompatible": "OpenAI 相容",
+  "verifyingApiKey": "正在驗證API Key...",
+  "noProviderSelected": "未選擇服務商",
+  "apiKeyValid": "API Key有效 ({length}字元)",
+  "@apiKeyValid": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "apiKeyInvalid": "未配置有效的API Key",
+  "noAiProviderSelected": "❌ 未選擇AI服務商",
+  "providerDisabled": "⚠️ 服務商已禁用",
+  "apiKeyVerified": "✅ API Key有效 (已驗證)",
+  "apiKeyStatusCheck": "API Key狀態檢查: {status}",
+  "@apiKeyStatusCheck": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkFailed": "檢查失敗: {error}",
+  "@checkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsError": "載入AI設定失敗: {error}",
+  "@loadAiSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsErrorUser": "載入AI設定失敗，請檢查網路連線或重新啟動應用",
+  "fixFormErrors": "請修正表單中的錯誤後再儲存",
+  "presetCreated": "新預設已建立並儲存成功",
+  "saveSettingsError": "儲存設定失敗: {error}",
+  "@saveSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfig": "自定義配置",
+  "customConfigHost": "自定義-{host}",
+  "@customConfigHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfigTimestamp": "自定義-{timestamp}",
+  "@customConfigTimestamp": {
+    "placeholders": {
+      "timestamp": {
+        "type": "String"
+      }
+    }
+  },
+  "testingConnection": "正在測試連線...",
+  "connectionTestSuccess": "AI連線測試成功！",
+  "connectionTestFailed": "連線測試失敗：{error}",
+  "@connectionTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyRequired": "{providerName} 需要配置API金鑰",
+  "@apiKeyRequired": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionSuccess": "連線成功",
+  "responseFormatError": "響應格式異常",
+  "connectionFailed": "連線失敗：{statusCode}",
+  "@connectionFailed": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "switchedTo": "已切換到 {providerName}",
+  "@switchedTo": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "renamePreset": "重新命名預設",
+  "presetName": "預設名稱",
+  "presetRenamed": "預設已重新命名為 \"{result}\"",
+  "@presetRenamed": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePreset": "刪除預設",
+  "deletePresetConfirm": "確定要刪除預設 \"{providerName}\" 嗎？此操作無法撤銷。",
+  "@deletePresetConfirm": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "presetDeleted": "預設 \"{providerName}\" 已刪除",
+  "@presetDeleted": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderSelection": "AI 服務商選擇",
+  "currentProvider": "當前: {providerName}",
+  "@currentProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlLabel": "API: {url}",
+  "@apiUrlLabel": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLabel": "模型: {model}",
+  "@modelLabel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyLabel": "API Key: {status}",
+  "@apiKeyLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "modelNotConfigured": "未配置",
+  "checkApiKeyStatus": "檢查API Key狀態",
+  "savedPresets": "已儲存的預設 ({length}):",
+  "@savedPresets": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noPresetsSaved": "還沒有儲存的預設。配置完API資訊後點選\"儲存設定\"來建立第一個預設。",
+  "rename": "重新命名",
+  "testConnectionButton": "測試連線",
+  "reportInsightsUseAi": "週期報告洞察使用AI",
+  "reportInsightsUseAiDesc": "開啟後進入報告頁自動生成“詩意洞察”，關閉則使用本地生成",
+  "aiSettingsTitle": "AI 設定",
+  "quickPresets": "快速預設",
+  "selectPreset": "選擇服務商預設",
+  "selectPresetHint": "或手動配置下方連線引數",
+  "connectionConfig": "連線配置 ({providerName})",
+  "@connectionConfig": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlField": "API URL",
+  "apiUrlHint": "例如 https://api.xxx.com/v1",
+  "apiUrlHelper": "填服務商文件給的地址即可，會自動補全 /chat/completions",
+  "apiKeyField": "API Key",
+  "apiKeyHint": "服務所需的金鑰（可留空）",
+  "show": "顯示",
+  "hide": "隱藏",
+  "modelAndAdvanced": "模型與高階",
+  "modelNameField": "模型名稱",
+  "modelNameHint": "請輸入模型名稱",
+  "modelNameHintDefault": "使用預設模型或自定義",
+  "hostOverrideField": "主機覆蓋 (Host Override)",
+  "hostOverrideHint": "可選，用於代理/反向代理場景",
+  "createNewPreset": "建立新預設",
+  "aiCardGeneration": "AI 卡片生成",
+  "aiCardGenerationDesc": "開啟後由 AI 智慧設計排版卡片，關閉則使用精選內建模板",
+  "aiCardGenerationTip": "提示：建議選用綜合理解與生成能力較強的模型（如 GPT-4o、Claude 3.5、DeepSeek-V3 等），卡片排版效果更佳。",
+  "aiEnhancedGeneration": "AI 增強生成",
+  "aiEnhancedGenerationDesc": "關閉後改用本地模板，不再呼叫模型",
+  "todayThoughtsUseAi": "今日思考使用AI",
+  "todayThoughtsUseAiDesc": "開啟後將使用AI生成今日思考提示，關閉則使用本地生成",
+  "apiUrlRequired": "API URL不能為空",
+  "invalidUrl": "請填寫 HTTPS 地址；本機或區域網路的 HTTP 地址也可以",
+  "fieldRequired": "此欄位不能為空",
+  "mediaManagementTitle": "媒體檔案管理",
+  "loadStatsError": "載入統計資訊失敗: {error}",
+  "@loadStatsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "operationCompleted": "{operation} 完成",
+  "@operationCompleted": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "operationFailed": "{operation} 失敗: {error}",
+  "@operationFailed": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStatsFailed": "無法載入統計資訊",
+  "mediaFileStats": "媒體檔案統計",
+  "totalFiles": "總檔案數",
+  "referencedFiles": "被引用檔案數",
+  "orphanFiles": "未關聯媒體數",
+  "totalReferences": "總引用數",
+  "totalSize": "總大小",
+  "imagesSize": "圖片大小",
+  "videosSize": "影片大小",
+  "audiosSize": "音訊大小",
+  "tempFiles": "臨時檔案",
+  "tempFilesCount": "臨時檔案數",
+  "expiredFilesCount": "過期檔案數",
+  "tempFilesSize": "臨時檔案大小",
+  "cleanupOperations": "清理操作",
+  "cleanupExpiredTempFiles": "清理過期臨時檔案",
+  "cleanupExpiredTempFilesDesc": "刪除超過24小時的臨時檔案",
+  "cleanupOrphanFiles": "清理未關聯媒體",
+  "cleanupOrphanFilesDesc": "刪除沒有被任何筆記引用的媒體檔案",
+  "fullCleanup": "完整清理",
+  "fullCleanupDesc": "清理所有臨時檔案和未關聯媒體",
+  "migrateExistingNotes": "遷移現有筆記",
+  "migrateExistingNotesDesc": "重新建立現有筆記的媒體檔案引用關係",
+  "verifyFileIntegrity": "驗證檔案完整性",
+  "verifyFileIntegrityDesc": "檢查媒體檔案引用的完整性",
+  "operationResult": "{operation} 結果",
+  "@operationResult": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanedFilesCount": "清理檔案數",
+  "spaceSavedMbLabel": "節省空間 (MB)",
+  "migratedQuotesCount": "遷移筆記數",
+  "orphanFilesDetected": "檢測到未關聯媒體",
+  "checkedReferencesCount": "檢查引用數",
+  "missingFilesCount": "缺失檔案數",
+  "fileIntegrity": "檔案完整性",
+  "normal": "正常",
+  "abnormal": "異常",
+  "yourThoughtTrack": "你的思想軌跡",
+  "tapToExplore": "點選螢幕開始探索",
+  "annualOverview": "年度概覽",
+  "noNotesInPeriod": "這個時段還沒有筆記",
+  "startRecording": "開始記錄你的想法吧",
+  "totalRecorded": "總共記錄",
+  "notesUnit": "篇筆記",
+  "writingDays": "寫作天數",
+  "daysUnit": "天",
+  "longestStreak": "最長連續",
+  "tagsUsed": "使用標籤",
+  "tagsUnit": "個",
+  "writingHabits": "寫作習慣",
+  "noWritingHabits": "暫無寫作習慣資料",
+  "mostActiveTime": "最活躍時間",
+  "noData": "暫無資料",
+  "favoriteDay": "最喜歡的日子",
+  "avgWordsPerNote": "平均每篇字數",
+  "wordsUnit": " 字",
+  "longestNote": "最長的一篇",
+  "mostCommonPeriod": "最常見時間段",
+  "mostCommonWeather": "最常見天氣",
+  "mostUsedTag": "最常用標籤",
+  "tagAnalysis": "標籤分析",
+  "mostUsedTags": "最常用的標籤",
+  "usedXTimes": "使用了 {count} 次 ({percentage}%)",
+  "@usedXTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "percentage": {
+        "type": "String"
+      }
+    }
+  },
+  "noTagsUsed": "還沒有使用過標籤",
+  "timeline": "時間軸",
+  "noRecordsInPeriod": "這個時段還沒有記錄",
+  "monthX": "{month}月",
+  "@monthX": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "notesCount": "{count}篇",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deepInsights": "深度洞察",
+  "thinkingDensity": "思考密度",
+  "deepThinker": "你喜歡深度思考，每篇筆記都很詳細。這樣的習慣幫助你更好地整理思路。",
+  "conciseThinker": "你的思考簡潔而有力，善於抓住要點。這是很好的總結能力。",
+  "quickThinker": "你習慣記錄簡短的想法，這樣能快速捕捉靈感，是很好的記錄習慣。",
+  "growthTrack": "成長軌跡",
+  "notStarted": "還沒有開始記錄,現在就是最好的時機。",
+  "increasingFrequency": "你的記錄頻率越來越高了！從年初到年末，思考和記錄的習慣越來越好。",
+  "decreasingFrequency": "年初的記錄很活躍，也許可以重新找回那時的寫作熱情。",
+  "stableRhythm": "你保持了穩定的記錄節奏，這種堅持很難得！",
+  "beginningOfYear": "今年是記錄的開始，期待看到更多的思考軌跡。",
+  "writingRhythm": "寫作節奏",
+  "goodRhythm": "你有很好的寫作節奏，最長連續記錄了{longestStreak}天！堅持就是力量。",
+  "@goodRhythm": {
+    "placeholders": {
+      "longestStreak": {
+        "type": "int"
+      }
+    }
+  },
+  "decentRhythm": "你已經建立了不錯的記錄習慣，繼續保持這個節奏。",
+  "startRhythm": "記錄更多是一個習慣，可以嘗試每天記錄一些小想法。",
+  "generatingInsights": "正在生成本期洞察…",
+  "noInsights": "暫無洞察",
+  "thankYou": "感謝你的堅持",
+  "everyThoughtCounts": "每一個想法都值得被記錄\n每一次記錄都是成長的足跡",
+  "continueRecording": "繼續記錄 {year}",
+  "@continueRecording": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "reportCopied": "年度報告已複製到剪貼簿",
+  "monday": "星期一",
+  "tuesday": "星期二",
+  "wednesday": "星期三",
+  "thursday": "星期四",
+  "friday": "星期五",
+  "saturday": "星期六",
+  "sunday": "星期日",
+  "dayOfMonth": "{day}日",
+  "@dayOfMonth": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteDate": "{month}{day}",
+  "@noteDate": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLocation": "於 {location}",
+  "@noteLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "noteWeather": "（天氣：{weather}）",
+  "@noteWeather": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "annualReportForYear": "{year}年度報告",
+  "@annualReportForYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportTitle": "ThoughtEcho 年度報告",
+  "pageIndicator": "{currentPage} / {totalPages}",
+  "@pageIndicator": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      }
+    }
+  },
+  "shareAnnualReportContent": "我的{year}年心跡回顧\n\n📝 記錄了 {totalQuotes} 條心跡\n💭 見證了一年的成長與思考\n\n在ThoughtEcho中記錄生活的點點滴滴\n#心跡 #年度回顧 #ThoughtEcho",
+  "@shareAnnualReportContent": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "totalQuotes": {
+        "type": "int"
+      }
+    }
+  },
+  "dataOverview": "資料概覽",
+  "featuredCards": "精選卡片",
+  "timeRange": "時間範圍",
+  "selectDate": "選擇具體日期",
+  "thisWeek": "本週",
+  "thisMonth": "本月",
+  "thisYear": "本年",
+  "lastWeek": "上週",
+  "lastMonth": "上月",
+  "lastYear": "去年",
+  "noteCount": "筆記數量",
+  "notesUnitPlain": "條",
+  "totalWordCount": "總字數",
+  "wordsUnitPlain": "字",
+  "avgWords": "平均字數",
+  "wordsPerNote": "字/條",
+  "activeDays": "活躍天數",
+  "daysUnitPlain": "天",
+  "commonPeriod": "常見時段",
+  "noDataYet": "暫無",
+  "commonWeather": "常見天氣",
+  "commonTag": "常用標籤",
+  "noFavoritesInPeriod": "本週期暫無喜愛記錄，去給喜歡的筆記點個心吧！",
+  "mostFavoritedInPeriod": "本週期珍藏數最多",
+  "recentNotes": "最近筆記",
+  "startRecordingThoughts": "開始記錄您的思考吧",
+  "totalCards": "共 {count} 張卡片",
+  "@totalCards": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardSelected": "已選中第{index}張",
+  "@cardSelected": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "generateCards": "生成卡片",
+  "aiCardGenerationDisabledLog": "AI卡片生成已關閉，使用本地模板生成",
+  "missingGalleryPermission": "沒有相簿訪問許可權，請在設定中開啟許可權",
+  "desktopGalleryNotSupported": "桌面端暫不支援直接儲存到相簿，建議使用分享功能",
+  "cardFileNamePrefix": "心跡_Card",
+  "aiProviderConfigMissing": "未找到可用的AI提供商配置",
+  "aiSvgEmpty": "AI返回了空的SVG內容",
+  "unsafeSvgContent": "SVG內容包含不安全的元素",
+  "invalidSvgContent": "AI返回的內容不包含有效的SVG程式碼",
+  "noFeaturedCards": "暫無精選卡片",
+  "featuredCardGenerationTip": "根據筆記內容生成精美分享卡片：開啟 AI 為智慧設計排版，關閉則使用內建精選模板",
+  "cardFromReport": "來自心跡週期報告的精美卡片",
+  "cardSharePrefix": "來自心跡的精美卡片\n\n",
+  "loadDataFailed": "載入資料失敗: {error}",
+  "@loadDataFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "thisPeriod": "本{period}",
+  "@thisPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "periodWeek": "周",
+  "periodMonth": "月",
+  "periodYear": "年",
+  "periodDuring": "期間",
+  "dateRange": "{startDate} - {endDate}",
+  "@dateRange": {
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "yearMonth": "{year}年{month}月",
+  "@yearMonth": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "yearOnly": "{year}年",
+  "@yearOnly": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "detectedAIJSONFormat": "⚠️ 報告生成格式異常\n\nAI 未能生成完整的排版報告，返回瞭如下文字摘要：\n{json}\n\n建議嘗試：\n1. 點選重新生成報告\n2. 在「AI 設定」中檢查模型配置或切換其他模型\n3. 檢視基礎統計報告",
+  "@detectedAIJSONFormat": {
+    "placeholders": {
+      "json": {
+        "type": "String"
+      }
+    }
+  },
+  "detectedAbnormalFormat": "⚠️ 資料解析異常\n\nAI 返回的資料未能正常解析為報告內容。\n\n返回內容：\n{content}\n\n建議重新生成報告或檢視基礎報告。",
+  "@detectedAbnormalFormat": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiGeneratedTextContent": "📄 AI生成的文字內容\n\n{content}\n\n💡 提示：AI返回了純文字格式的總結而非HTML報告。\n這可能是因為模型理解了內容但沒有按照HTML格式輸出。\n\n完整內容可以在瀏覽器中檢視，系統會自動包裝為HTML格式。",
+  "@aiGeneratedTextContent": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlReportCopiedSteps": "HTML報告內容已複製到剪貼簿。請按以下步驟操作：",
+  "browserInstructionsStep1": "1. 開啟瀏覽器（Chrome/Safari等）",
+  "browserInstructionsStep2": "2. 新建空白頁面或新標籤頁",
+  "browserInstructionsStep3": "3. 在位址列輸入：data:text/html,",
+  "browserInstructionsStep4": "4. 貼上複製的內容",
+  "browserInstructionsStep5": "5. 回車檢視報告",
+  "desktopInstructionsStep1": "1. 新建文字檔案，貼上內容",
+  "desktopInstructionsStep2": "2. 將檔案儲存為 .html 格式",
+  "desktopInstructionsStep3": "3. 雙擊檔案在瀏覽器中開啟",
+  "annualReportHtmlTitle": "心跡 {year} 年度報告",
+  "generationTimeLabel": "生成時間: {time}",
+  "noteInfoTitle": "筆記資訊",
+  "meUser": "我",
+  "aiAssistantUser": "Thoughter",
+  "aiAssistantWelcome": "你好！我是 Thoughter，你的 AI 筆記助手。你可以問我關於這篇筆記的任何問題，我會基於筆記內容為你提供深度解答。\n\n💡 你可以試試這些問題：\n\n- 這篇筆記的核心思想是什麼？\n- 從這篇筆記中能得到什麼啟發？\n- 如何將這篇筆記的想法應用到實際生活中？\n- 這篇筆記反映了什麼樣的思維模式？",
+  "thinkingInProgress": "正在思考中...",
+  "aiMisunderstoodQuestion": "抱歉，我沒能理解這個問題。請嘗試換個方式問我。",
+  "aiResponseError": "抱歉，回答時出現了錯誤：{error}",
+  "agentErrorNoProvider": "請選擇 AI 服務商後重試。",
+  "agentErrorMissingApiKey": "請先為 {providerName} 配置 API 金鑰，然後重試。",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "當前 AI 服務商不支援 Thoughter 對話，請更換服務商後重試。",
+  "agentErrorTimeout": "請求超時，請檢查網路後重試。",
+  "agentErrorCancelled": "已停止本次請求。",
+  "agentErrorGeneric": "暫時無法完成請求，請稍後重試。",
+  "apiKeyDiagnosticsTitle": "API金鑰診斷",
+  "apiKeyDiagnosticsTool": "API金鑰診斷工具",
+  "apiKeyDiagnosticsDesc": "檢查 API 金鑰的配置與儲存狀態，幫助排查認證失敗或連線異常。",
+  "runDiagnostics": "執行診斷",
+  "diagnosticResultLabel": "診斷結果:",
+  "diagnosticReportHeader": "=== API金鑰診斷報告 ===",
+  "diagnosticReportTime": "時間: {time}",
+  "diagnosticMultiProviderCheck": "1. 多供應商配置...",
+  "diagnosticCurrentProvider": "   - 當前供應商: {name}",
+  "diagnosticAvailableProviders": "   - 可用供應商數量: {count}",
+  "diagnosticEnabledProviders": "   - 已啟用供應商: {count}",
+  "diagnosticProviderDetails": "2. 當前供應商詳情...",
+  "diagnosticProviderId": "   - ID: {id}",
+  "diagnosticProviderName": "   - 名稱: {name}",
+  "diagnosticProviderUrl": "   - API URL: {url}",
+  "diagnosticProviderModel": "   - 模型: {model}",
+  "diagnosticProviderEnabled": "   - 已啟用: {status}",
+  "diagnosticApiKeyCheck": "3. API金鑰檢查...",
+  "diagnosticApiKeyInSettings": "   - 設定中有金鑰: {status}",
+  "diagnosticApiKeyLength": "   - 設定中金鑰長度: {length}",
+  "diagnosticApiKeyPrefix": "   - 設定中金鑰字首: {prefix}",
+  "diagnosticSecureApiKeyExists": "   - 安全儲存中有金鑰: {status}",
+  "diagnosticSecureApiKeyLength": "   - 安全儲存金鑰長度: {length}",
+  "diagnosticSecureApiKeyPrefix": "   - 安全儲存金鑰字首: {prefix}",
+  "diagnosticApiKeyValidation": "4. 金鑰驗證...",
+  "diagnosticAsyncValidation": "   - 非同步驗證: {status}",
+  "diagnosticFormatValidation": "   - 格式驗證: {status}",
+  "diagnosticErrorNoProvider": "2. 錯誤: 未選擇當前供應商",
+  "diagnosticAllProvidersStatus": "5. 所有供應商狀態...",
+  "diagnosticProviderStatusItem": "   - {name}: {keyStatus} {enabledStatus}",
+  "diagnosticSuggestions": "6. 建議...",
+  "diagnosticSuggestionSelectProvider": "   - 請選擇一個AI服務商",
+  "diagnosticSuggestionEnableProvider": "   - 請啟用當前選擇的AI服務商",
+  "diagnosticSuggestionConfigureKey": "   - 請為 {name} 配置有效的API金鑰",
+  "diagnosticSuggestionNormal": "   - ✓ API金鑰配置正常",
+  "diagnosticComplete": "=== 診斷完成 ===",
+  "diagnosticError": "診斷過程中發生錯誤: {error}",
+  "passStatus": "透過",
+  "failStatus": "失敗",
+  "yesStatus": "是",
+  "noStatus": "否",
+  "notSelectedStatus": "未選擇",
+  "importInstructions": "匯入說明",
+  "selectingFile": "正在選擇檔案...",
+  "validatingFile": "正在驗證檔案...",
+  "checkingFileCompatibility": "正在檢查檔案相容性...",
+  "importingFile": "正在匯入檔案...",
+  "importComplete": "匯入完成！",
+  "fileSaveFailed": "檔案儲存失敗",
+  "unsupportedMediaType": "不支援的媒體型別",
+  "unsupportedMediaTypeWithName": "不支援的媒體型別: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "選擇的檔案不存在或已被移動刪除\n路徑: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "選擇的檔案為空\n路徑: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "不支援的檔案格式: .{extension}\n支援的格式: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "檔案無法讀取，可能原因：\n• 檔案已損壞\n• 檔案被其他程式佔用\n• 許可權不足\n請檢查檔案狀態後重試",
+  "mediaTypeNoCameraImport": "{mediaType}不支援相機匯入",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "processingMedia": "正在處理{mediaType}...",
+  "@processingMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingFile": "正在下載檔案...",
+  "downloadComplete": "下載完成！",
+  "connectingToServer": "正在連線 AI 服務...",
+  "savingFile": "正在儲存檔案...",
+  "waitingForAIContent": "正在等待 AI 生成內容...",
+  "occurredError": "[發生錯誤: {error}]",
+  "cancelLabel": "取消",
+  "selectFromGallery": "從相簿選擇{mediaType}",
+  "@selectFromGallery": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFromFilesWithTypeName": "從檔案選擇{mediaType}",
+  "@selectFromFilesWithTypeName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "importTipsImage": "• 支援 JPG、PNG、GIF、WebP 等常用圖片格式\n• 自動最佳化大圖載入，保障流暢體驗\n• 集中儲存在應用媒體庫中\n• 未儲存退出的臨時檔案會自動清理",
+  "importTipsVideo": "• 支援 MP4、MOV、AVI、MKV 等常用影片格式\n• 針對音影片最佳化流暢播放與儲存\n• 集中儲存在應用媒體庫中\n• 未儲存退出的臨時檔案會自動清理",
+  "importTipsAudio": "• 支援 MP3、WAV、AAC、M4A 等常用音訊格式\n• 最佳化儲存與快速載入\n• 集中儲存在應用媒體庫中\n• 未儲存退出的臨時檔案會自動清理",
+  "importTipsDefault": "• 支援多種常見媒體格式\n• 集中儲存在應用媒體庫中\n• 自動最佳化記憶體與儲存空間\n• 未儲存退出的臨時檔案會自動清理",
+  "viewNoteInfo": "檢視筆記資訊",
+  "contentLengthLabel": "內容長度：{length}字元",
+  "htmlFormatLabel": "HTML格式：{status}",
+  "jsonFormatLabel": "JSON格式：{status}",
+  "containsHtmlTagsLabel": "包含HTML標籤：{status}",
+  "first100CharsLabel": "前100字元：",
+  "testFailedEmptyContent": "測試失敗：AI返回了空內容",
+  "formattedDate": "{month}月{day}日",
+  "@formattedDate": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteMetaWithLocation": "【{date}·{location}】{content}",
+  "@noteMetaWithLocation": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "location": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "noteMeta": "【{date}】{content}",
+  "@noteMeta": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherInfo": "（天氣：{weather}）",
+  "@weatherInfo": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAttribution": "（署名：{source}）",
+  "@noteAttribution": {
+    "description": "餵給 AI 的筆記內容裡，標出這條筆記填的作者/出處，用於區分摘錄與原創署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOpenAI": "OpenAI",
+  "aiProviderOpenRouter": "OpenRouter",
+  "aiProviderDeepSeek": "DeepSeek",
+  "aiProviderAnthropic": "Anthropic (Claude)",
+  "aiProviderOllama": "Ollama",
+  "aiProviderOllamaCloud": "Ollama 雲端",
+  "aiProviderLMStudio": "LMStudio",
+  "apiKeyStatusEmpty": "空",
+  "apiKeyStatusRedacted": "[REDACTED]",
+  "apiKeyStatusNotEmpty": "{length}字元",
+  "@apiKeyStatusNotEmpty": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noProvider": "無",
+  "connectionTestSystemMessage": "你是 Thoughter，一個 AI 助手。請簡單回覆\"連線測試成功\"。",
+  "connectionTestUserMessage": "測試連線",
+  "apiKeySavedForProvider": "已儲存 {providerName} 的API金鑰到安全儲存",
+  "@apiKeySavedForProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAiReport": "正在生成AI年度報告...",
+  "includeMediaFilesHint": "勾選後將備份圖片、音訊等媒體檔案（檔案更大但更完整）",
+  "overwriteImport": "覆蓋匯入 (清空現有資料)",
+  "overwriteImportDesc": "刪除當前所有資料，以備份內容替換",
+  "mergeImport": "合併匯入 (LWW策略)",
+  "mergeImportDesc": "保留現有資料，與備份資料按更新時間合併",
+  "restoreSuccess": "資料還原成功！所有資料已更新。",
+  "importCleanupNotice": "匯入完成，但有 {sanitized} 處欄位值無法識別、已忽略；{skipped} 條正文為空的筆記未匯入。這些資料不是心跡產生的。",
+  "@importCleanupNotice": {
+    "description": "匯入後提示：備份檔案裡含有本應用無法識別的欄位值或空筆記",
+    "placeholders": {
+      "sanitized": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "mergeImportHint": "此操作將保留當前資料，並與備份資料進行合併：",
+  "mergeImportReversible": "此操作可逆：可再次匯入覆蓋備份或繼續合併。",
+  "confirmRestoreBtn": "確認還原",
+  "favoriteCountWithNum": "已收藏 ({count})",
+  "@favoriteCountWithNum": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "analysisRecordDeleted": "分析記錄已刪除",
+  "loadFailed": "載入失敗: {error}",
+  "@loadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadFailedSimple": "載入失敗",
+  "loadNoteFailed": "載入筆記失敗",
+  "queryTimeoutShort": "查詢超時",
+  "queryTimeoutRetry": "查詢超時，請重試",
+  "databaseQueryError": "讀取筆記資料出錯",
+  "deleteConfirmTitle": "刪除確認",
+  "deleteRecordConfirm": "確定要刪除這條分析記錄嗎？",
+  "confirmDeleteAll": "確認刪除",
+  "deleteAllRecordsConfirm": "確定要刪除所有分析記錄嗎？此操作不可恢復。",
+  "allRecordsDeleted": "所有記錄已刪除",
+  "selectAnnualReportType": "選擇年度報告型別",
+  "selectReportTypeHint": "請選擇要生成的年度報告型別：",
+  "unknownTag": "未知標籤",
+  "morning": "早晨",
+  "forenoon": "上午",
+  "afternoon": "下午",
+  "evening": "傍晚",
+  "night": "夜晚",
+  "learning": "學習",
+  "progress": "進步",
+  "happiness": "快樂",
+  "gratitude": "感謝",
+  "harvest": "收穫",
+  "breakthrough": "突破",
+  "hope": "希望",
+  "backupFormatZip": "將建立ZIP格式的備份檔案，包含所有筆記、設定和媒體檔案",
+  "backupFormatJson": "將建立JSON格式的備份檔案，包含所有筆記和設定",
+  "supportedBackupFormats": "支援新版ZIP格式和舊版JSON格式的備份檔案",
+  "restoringData": "正在還原資料... {current}/{total}",
+  "@restoringData": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreFailedGeneric": "無法完成資料還原：{error}",
+  "@restoreFailedGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreFailedOutOfMemory": "還原失敗：記憶體不足\n\n建議：\n• 關閉其他應用釋放記憶體\n• 重啟應用後再試\n• 檢查備份檔案大小是否過大",
+  "restoreFailedNoSpace": "還原失敗：儲存空間不足\n\n請清理裝置儲存空間後重試。",
+  "restoreFailedPermission": "還原失敗：許可權不足\n\n請檢查應用的儲存許可權設定。",
+  "restoreCancelled": "還原已取消",
+  "restoreFailedCorrupt": "還原失敗：備份檔案損壞或格式不正確\n\n請檢查備份檔案是否完整。",
+  "restoreConfirmDialogTitle": "確認還原資料",
+  "restoreConfirmDialogDesc": "此操作將：",
+  "restoreConfirmDialogItem1": "• 刪除當前裝置上的所有筆記和設定",
+  "restoreConfirmDialogItem2": "• 用備份檔案中的資料替換",
+  "restoreConfirmDialogItem3": "• 此操作無法撤銷",
+  "restoreConfirmDialogWarning": "請確保您已經備份了當前的重要資料。",
+  "mergeConfirmDialogTitle": "確認合併匯入",
+  "mergeConfirmDialogDesc": "此操作將保留當前資料，並與備份資料進行合併：",
+  "mergeConfirmDialogItem1": "• 重複的筆記自動保留最新修改的版本",
+  "mergeConfirmDialogItem2": "• 本地與備份中不重複的筆記全部保留",
+  "mergeConfirmDialogItem3": "• 設定與AI分析資料合併追加",
+  "mergeConfirmDialogReversible": "此操作可逆：可再次匯入覆蓋備份或繼續合併。",
+  "tagSettingsDescription": "建立和管理您的個人標籤體系",
+  "addNewTag": "新增新標籤",
+  "tagNameHint": "請輸入標籤名稱",
+  "loadingTags": "載入標籤中...",
+  "loadTagsError": "載入標籤失敗",
+  "noTagsHint": "建立您的第一個標籤來開始整理思想",
+  "myTags": "我的標籤",
+  "confirmDeleteTag": "確認刪除",
+  "deleteTagDialogContent": "確定要刪除標籤\"{name}\"嗎？\n\n刪除後，使用此標籤的筆記將不再顯示該標籤。",
+  "@deleteTagDialogContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enterEmojiDirectly": "直接輸入表情符號...",
+  "useAsTagIcon": "使用 \"{emoji}\" 作為圖示",
+  "@useAsTagIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "noteSync": "筆記同步",
+  "refreshDeviceList": "重新整理裝置列表",
+  "initializingService": "正在啟動...",
+  "startFailed": "啟動失敗: {error}",
+  "@startFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanningDevices": "搜尋中... {count} 臺",
+  "@scanningDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanningDevicesWithTime": "搜尋中... {count} 臺 ({seconds}s)",
+  "@scanningDevicesWithTime": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "foundDevicesCount": "發現 {count} 臺裝置",
+  "@foundDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localDeviceLoading": "本機標識碼獲取中...",
+  "localDeviceId": "本機標識碼: #{fingerprint}",
+  "@localDeviceId": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "noNearbyDevices": "未發現附近裝置",
+  "ensureDeviceOnSameNetwork": "請確保目標裝置也開啟了心跡同步頁\n並且兩臺裝置在同一WiFi網路中",
+  "networkInfoUnknown": "網路資訊未知",
+  "portNumber": "埠 {port}",
+  "@portNumber": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "send": "傳送",
+  "sendConfirmTitle": "傳送確認",
+  "sendConfirmContent": "將向裝置 \"{alias}\" 傳送全部筆記資料。",
+  "@sendConfirmContent": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "includeMediaFilesOption": "包含媒體檔案",
+  "includeMediaFilesHintSync": "圖片/音訊/影片等，可能增加體積和耗時",
+  "startSend": "開始傳送",
+  "sendTextOnlyHint": "將僅傳送筆記文字（不含媒體檔案）",
+  "sendStarted": "已開始向裝置傳送筆記（會話：{sessionId}）",
+  "@sendStarted": {
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFailedWithError": "傳送失敗: {error}",
+  "@sendFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmLeave": "確認離開",
+  "leaveWhileSyncing": "當前正在進行同步操作（{status}），離開將中斷傳輸過程，確認要返回嗎？",
+  "@leaveWhileSyncing": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveWhileScanning": "當前正在搜尋附近裝置，離開將停止搜尋，確認返回嗎？",
+  "leaveWhileSending": "當前正在傳送筆記，離開將中斷傳輸，確認返回嗎？",
+  "syncServiceNotReady": "同步服務未就緒，請重新初始化",
+  "syncServiceInitializing": "同步服務正在初始化，請稍後再試",
+  "searchingNearbyDevices": "正在搜尋附近裝置...",
+  "initializingSyncService": "正在初始化同步服務...",
+  "syncServiceStartFailed": "同步服務啟動失敗: {error}",
+  "@syncServiceStartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscoveryCancelled": "裝置發現已取消",
+  "deviceDiscoveryFailed": "裝置發現失敗: {error}",
+  "@deviceDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceAliasAndModel": "{model}\n別名：{alias}",
+  "@deviceAliasAndModel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedText": "已複製: {text}",
+  "@copiedText": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedFingerprint": "已複製裝置標識碼: {fingerprint}",
+  "@copiedFingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "lanOnlineWithIp": "區域網路線上 · {ip}",
+  "@lanOnlineWithIp": {
+    "placeholders": {
+      "ip": {
+        "type": "String"
+      }
+    }
+  },
+  "usageInstructionsTitle": "使用說明",
+  "syncUsageInstruction1": "點選裝置右側的傳送按鈕來分享你的筆記",
+  "syncUsageInstruction2": "接收到的筆記會自動與現有筆記合併",
+  "syncUsageInstruction3": "重複的筆記會保留最新版本",
+  "syncUsageInstruction4": "確保兩臺裝置都連線到同一WiFi網路",
+  "initializing": "初始化中",
+  "cancelDiscovery": "取消發現",
+  "discoverDevices": "發現裝置",
+  "cancelDiscoveryTooltip": "取消本次裝置發現",
+  "startDiscoveryTooltip": "開始發現附近裝置",
+  "receiveSyncRequest": "接收同步請求",
+  "waitingPeerApproval": "等待對方確認",
+  "deviceWantsToSync": "裝置 \"{alias}\" 想同步筆記",
+  "@deviceWantsToSync": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "doNotAskAgain": "以後不再提示",
+  "autoAcceptSyncRequests": "將自動接受來自其他裝置的同步請求",
+  "waitingLabel": "等待",
+  "syncRequestSent": "已向目標裝置傳送同步請求，請在對方確認後繼續。",
+  "reject": "拒絕",
+  "accept": "接受",
+  "cancelReceive": "取消接收",
+  "cancelSend": "取消傳送",
+  "syncCompleted": "同步完成",
+  "syncStatusIdle": "空閒",
+  "syncStatusPackaging": "正在打包資料",
+  "syncStatusSending": "正在傳送",
+  "syncStatusReceiving": "正在接收",
+  "syncStatusMerging": "正在合併",
+  "syncStatusCompleted": "同步完成",
+  "syncStatusFailed": "同步失敗",
+  "sendingProgressMessage": "已傳送 {sent}MB / {total}MB{extra}",
+  "@sendingProgressMessage": {
+    "placeholders": {
+      "sent": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "syncFromSuffix": "（來自{from}）",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingProgressMessage": "已接收{from} {received}MB / {total}MB{extra}",
+  "@receivingProgressMessage": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "received": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherClear": "晴",
+  "weatherPartlyCloudy": "少雲",
+  "weatherCloudy": "多雲",
+  "weatherFog": "霧",
+  "weatherDrizzle": "毛毛雨",
+  "weatherFreezingRain": "凍雨",
+  "weatherRain": "雨",
+  "weatherSnow": "雪",
+  "weatherSnowGrains": "雪粒",
+  "weatherRainShower": "陣雨",
+  "weatherSnowShower": "陣雪",
+  "weatherThunderstorm": "雷雨",
+  "weatherThunderstormHeavy": "雷暴雨",
+  "weatherUnknown": "未知",
+  "weatherError": "獲取失敗",
+  "weatherDataFetchFailed": "天氣資料獲取失敗",
+  "unknownWeather": "未知天氣",
+  "noAiAnalysisRecords": "暫無AI分析記錄",
+  "aiAssistant": "Thoughter",
+  "analyzingSource": "正在分析來源...",
+  "analysisResult": "分析結果",
+  "confidenceLevel": "可信度: {confidence}",
+  "@confidenceLevel": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "author": "作者",
+  "authorLabel": "作者: {author}",
+  "@authorLabel": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "workLabel": "作品: {work}",
+  "@workLabel": {
+    "placeholders": {
+      "work": {
+        "type": "String"
+      }
+    }
+  },
+  "applyResult": "應用結果",
+  "parseResultFailedWithError": "解析結果失敗: {error}",
+  "@parseResultFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisFailedWithError": "分析失敗: {error}",
+  "@analysisFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "polishResult": "潤色結果",
+  "applyChanges": "應用更改",
+  "polishFailedWithError": "潤色失敗: {error}",
+  "@polishFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "continueResult": "續寫結果",
+  "appendToNote": "追加到筆記",
+  "continueFailedWithError": "續寫失敗: {error}",
+  "@continueFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAnalysis": "筆記分析",
+  "applyToNote": "應用到筆記",
+  "analysisComplete": "分析完成",
+  "filterAndSort": "篩選與排序",
+  "resetFilter": "重置",
+  "tagFilter": "標籤篩選",
+  "weatherFilter": "天氣篩選",
+  "weatherFilterSunny": "晴",
+  "weatherFilterRainy": "雨",
+  "weatherFilterCloudy": "多雲",
+  "weatherFilterSnowy": "雪",
+  "timePeriodFilter": "時間段篩選",
+  "sortMethod": "排序方式",
+  "sortByTime": "按時間排序",
+  "sortByName": "按名稱排序",
+  "sortByFavorite": "按喜愛度排序",
+  "ascending": "升序",
+  "applyFilter": "應用",
+  "editNoteMenu": "編輯筆記",
+  "askAIMenu": "問 Thoughter",
+  "generateCardShareMenu": "生成卡片分享",
+  "copyTextMenu": "複製文字",
+  "deleteNoteMenu": "刪除筆記",
+  "doubleTapToViewFull": "雙擊檢視全文",
+  "logLevel": "級別: {level}",
+  "@logLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "prefSettingsTitle": "偏好設定",
+  "personalizationSettings": "個性化設定",
+  "personalizationSettingsDesc": "根據您的使用習慣調整應用行為",
+  "commonPreferences": "常用偏好",
+  "clipboardMonitoring": "剪貼簿監控",
+  "clipboardMonitoringDesc": "自動檢測剪貼簿內容並提示新增筆記",
+  "showFavoriteButton": "顯示喜愛按鈕",
+  "showFavoriteButtonDesc": "在筆記卡片上顯示心形按鈕",
+  "prioritizeBoldContent": "優先顯示加粗內容",
+  "prioritizeBoldContentDesc": "摺疊時優先顯示加粗文字",
+  "useLocalNotesOnly": "僅展示本地記錄",
+  "useLocalNotesOnlyDesc": "首頁不再從網路獲取新的每日一言",
+  "aiSmartFeatures": "AI 智慧功能",
+  "aiGenerateDailyPrompt": "AI生成每日提示",
+  "aiGenerateDailyPromptDesc": "使用 AI 根據近期筆記智慧為你推薦靈感與思考主題",
+  "periodicReportAiInsights": "週期報告AI洞察",
+  "periodicReportAiInsightsDesc": "在週報和月報中由 AI 自動歸納寫作主題與情緒趨勢",
+  "aiCardGenerationLabel": "AI卡片生成",
+  "aiCardGenerationLabelDesc": "為筆記智慧排版並生成精美分享卡片",
+  "moreAiSettings": "更多AI設定",
+  "moreAiSettingsDesc": "配置AI服務商、模型等",
+  "licenseInfo": "許可證資訊",
+  "appLicense": "本程式許可證",
+  "viewAppLicense": "檢視本程式 LICENSE",
+  "loadLicenseFailed": "無法載入本程式許可證：{error}",
+  "@loadLicenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "licenseFileNotFound": "未找到本程式 LICENSE 檔案。",
+  "openSourceAcknowledgements": "開源庫與鳴謝",
+  "lottieAnimationLicense": "Lottie 動畫許可",
+  "systemLicenses": "系統許可證",
+  "openSourceDesc": "本應用基於 Flutter 框架構建，使用並感謝下列開源庫與服務：",
+  "framework": "框架",
+  "stateManagement": "狀態管理",
+  "animationSupport": "動畫支援",
+  "localStorage": "本地儲存",
+  "readingFont": "閱讀字型",
+  "syncIntegrationNote": "同步功能整合說明：",
+  "serviceApiAcknowledgements": "服務與 API 鳴謝：",
+  "weatherData": "天氣資料",
+  "geocodingApi": "地理編碼 API",
+  "dailyQuoteApi": "每日一言服務提供方",
+  "viewFullDependencyList": "檢視完整依賴列表",
+  "thankOpenSourceContributors": "感謝所有開源專案與社群貢獻者，正是這些工具和服務讓本應用成為可能。具體許可證請以各專案倉庫或包管理頁面為準。",
+  "lottieFilesCredits": "應用使用了來自 LottieFiles 的動畫資源：",
+  "searchLoadingAnimation": "搜尋載入動畫",
+  "weatherSearchAnimation": "天氣搜尋動畫",
+  "aiThinkingAnimation": "AI思考動畫",
+  "noResultsAnimation": "搜尋無結果動畫",
+  "thankLottieFiles": "感謝 LottieFiles 提供優質的動畫資源。",
+  "sourceLabel": "來源:",
+  "systemLicensesDesc": "系統許可證包括 Flutter SDK 及依賴包的許可證，點選下方按鈕檢視完整列表。",
+  "viewSystemLicenses": "檢視系統許可證",
+  "expandCollapseAll": "全部展開/摺疊",
+  "licensePageDesc": "本頁自動彙總了 Flutter 及所有依賴包的許可證資訊，內容由各依賴包宣告自動生成，僅供參考。",
+  "searchPackageOrLicense": "搜尋包名或許可證內容（只搜尋首段）",
+  "loadSystemLicensesFailed": "載入系統許可證失敗：{error}",
+  "@loadSystemLicensesFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noSystemLicensesFound": "未找到系統許可證條目",
+  "noMatchingLicensesFound": "未找到匹配的許可證條目",
+  "licenseEntriesCount": "{visible}/{total} 條",
+  "@licenseEntriesCount": {
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "unnamed": "未命名",
+  "noLicenseContent": "(無許可內容)",
+  "copyLicense": "複製許可證",
+  "licenseCopied": "已複製許可證內容",
+  "searchAnalysisRecords": "搜尋分析記錄...",
+  "authorPerson": "作者/人物",
+  "workSource": "作品/來源",
+  "searchTags": "搜尋標籤...",
+  "writeYourThoughts": "寫下你的感悟...",
+  "workName": "作品名稱",
+  "searchNotes": "搜尋筆記...",
+  "searchCity": "搜尋城市...",
+  "logSettingsTitle": "日誌設定",
+  "viewLogs": "檢視日誌",
+  "logLevelDescription": "選擇日誌記錄的詳細程度。詳細日誌有助於排查異常與定位問題，但也可能略微增加系統開銷。",
+  "logLevelVerbose": "記錄所有詳細資訊，用於深入除錯。",
+  "logLevelDebug": "記錄除錯相關資訊。",
+  "logLevelInfo": "記錄常規操作資訊。 (推薦)",
+  "logLevelWarning": "記錄潛在問題或警告。",
+  "logLevelError": "僅記錄錯誤資訊。",
+  "logLevelNone": "不記錄任何日誌。",
+  "updateFoundNewVersion": "發現新版本",
+  "updateCurrentVersion": "當前版本",
+  "updateLatestVersion": "最新版本",
+  "updateReleaseNotes": "更新內容",
+  "updateReleaseTime": "釋出時間: {date}",
+  "@updateReleaseTime": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAlreadyLatest": "已是最新版本",
+  "updateCurrentVersionLabel": "當前版本 {version}",
+  "@updateCurrentVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateUsingLatestVersion": "您使用的已是最新版本",
+  "updateIgnoreForever": "永久忽略",
+  "updateIgnoreThisTime": "本次忽略",
+  "updateViewDetails": "檢視詳情",
+  "updateGoToStore": "前往商店",
+  "updateNow": "立即更新",
+  "updateVersionIgnored": "已忽略此版本更新",
+  "updateOpenStoreFailed": "開啟Microsoft Store失敗: {error}",
+  "@updateOpenStoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateOpenLinkFailed": "開啟下載連結失敗: {error}",
+  "@updateOpenLinkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectCity": "選擇城市",
+  "currentWeather": "當前天氣",
+  "cityNotSetHint": "尚未設定城市，先在下方搜尋並選擇",
+  "clickRefreshHint": "城市：{city}（點選右側按鈕重新整理）",
+  "@clickRefreshHint": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshWeather": "重新整理天氣",
+  "weatherUpdated": "天氣已更新",
+  "weatherUpdateFailed": "天氣更新失敗，請稍後重試",
+  "weatherFetchFailed": "天氣獲取失敗",
+  "pleaseSelectCityFirst": "請先選擇城市或啟用位置服務",
+  "useCurrentLocation": "使用當前位置",
+  "useFreeOnlineReverseGeocoding": "使用免費線上反向地理編碼",
+  "onlineReverseGeocodingNeedsLocation": "請先獲取當前位置",
+  "onlineReverseGeocodingFailed": "線上反向地理編碼失敗",
+  "onlineReverseGeocodingSuccess": "線上反向地理編碼已更新：{address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherProvidedBy": "天氣資料由 Open-Meteo 提供",
+  "processing": "正在處理...",
+  "searchingCity": "搜尋城市中...",
+  "noCityFound": "沒有找到匹配的城市",
+  "tryDifferentKeywords": "嘗試使用不同的關鍵詞或城市名稱",
+  "recentCities": "最近選擇城市",
+  "clearRecentCities": "清空歷史",
+  "noRecentCities": "暫無搜尋歷史",
+  "locateCurrentPosition": "定位當前位置",
+  "locating": "正在定位...",
+  "searchCityHint": "搜尋全球城市、區縣或英文名...",
+  "citySearchSubtitle": "設定城市後可以提供相應位置天氣",
+  "citySelected": "已選擇城市：{city}",
+  "@citySelected": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "enterCityToSearch": "輸入城市名稱開始搜尋",
+  "addInfo": "新增資訊",
+  "selectTagsWithCount": "選擇標籤 ({count})",
+  "@selectTagsWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTagsAvailableHint": "暫無可用標籤，請先新增標籤",
+  "addLocationPrefix": "新增位置",
+  "locationServiceUnavailable": "位置服務不可用",
+  "sourceInfo": "來源資訊",
+  "tagsLabel": "標籤",
+  "selectedTagsCount": "已選擇 {count} 個標籤",
+  "@selectedTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedTags": "已選標籤",
+  "unknownTagWithId": "未知標籤(ID:{id}...)",
+  "@unknownTagWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "colorLabel": "顏色",
+  "selectCardColorLabel": "選擇卡片顏色",
+  "noColor": "無顏色",
+  "colorSet": "已設定顏色",
+  "locationAndWeather": "位置和天氣",
+  "recordedOnFirstSave": "首次儲存時記錄",
+  "locationLabel": "位置",
+  "weatherLabel": "天氣",
+  "refreshLocationWeather": "重新整理位置和天氣",
+  "gettingLocationHint": "位置獲取中...",
+  "noteNoLocationWeatherInfo": "此筆記首次儲存時未記錄位置和天氣資訊",
+  "aiAssistantLabel": "Thoughter",
+  "polishingText": "正在潤色文字...",
+  "continuingText": "正在續寫文字...",
+  "analyzingNote": "正在分析筆記...",
+  "analysisResultWithConfidence": "分析結果 (可信度: {confidence})",
+  "@analysisResultWithConfidence": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "possibleAuthor": "可能的作者:",
+  "possibleWork": "可能的作品:",
+  "analysisExplanation": "分析說明:",
+  "noAuthorWorkIdentified": "未能識別出明確的作者或作品",
+  "applyAnalysisResult": "應用分析結果",
+  "parseResultFailed": "解析結果失敗: {error}",
+  "@parseResultFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@analysisFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseInputContent": "請先輸入內容",
+  "copyResult": "複製結果",
+  "cannotAddLocation": "無法新增位置",
+  "cannotAddLocationDesc": "此筆記首次儲存時未記錄位置資訊，無法補充新增。\n\n如需記錄位置，請在新建筆記時勾選位置選項。",
+  "iKnow": "我知道了",
+  "locationInfo": "位置資訊",
+  "locationUpdateHint": "當前位置：{coordinates}\n\n可以嘗試更新為詳細地址，或移除位置（移除後無法再次新增）。",
+  "@locationUpdateHint": {
+    "placeholders": {
+      "coordinates": {
+        "type": "String"
+      }
+    }
+  },
+  "locationRemoveHint": "當前位置：{location}\n\n移除位置資訊後將無法再次新增或更改。",
+  "@locationRemoveHint": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "remove": "移除",
+  "updateLocation": "更新位置",
+  "locationUpdatedTo": "位置已更新為: {address}",
+  "@locationUpdatedTo": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetAddress": "無法獲取地址，請檢查網路",
+  "locationUpdateTimeout": "位置獲取超時，請檢查網路",
+  "updateFailed": "更新失敗: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotAddWeather": "無法新增天氣",
+  "cannotAddWeatherDesc": "此筆記首次儲存時未記錄天氣資訊，無法補充新增。\n\n如需記錄天氣，請在新建筆記時勾選天氣選項。",
+  "weatherInfo2": "天氣資訊",
+  "weatherRemoveHint": "當前天氣：{weather}\n\n移除天氣資訊後將無法再次新增或更改。",
+  "@weatherRemoveHint": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationTitle": "無法獲取位置",
+  "cannotGetLocationDesc": "無法獲取當前位置，請檢查定位許可權或網路狀態。",
+  "getLocationFailedTitle": "獲取位置失敗",
+  "getLocationFailedDesc": "獲取位置失敗: {error}",
+  "@getLocationFailedDesc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermissionShort": "無法獲取位置許可權",
+  "savingNote": "正在儲存",
+  "saveComplete": "完成",
+  "writingDatabase": "正在儲存筆記資料...",
+  "preparingProcess": "準備處理中...",
+  "mediaProcessFailed": "媒體檔案處理失敗: {error}",
+  "@mediaProcessFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "documentLoadFailed": "文件載入失敗，請重新開啟編輯器",
+  "tagsCount": "{count}個標籤",
+  "@tagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editMetadataShort": "編輯後設資料",
+  "startWritingHint": "開始編寫你的想法...",
+  "unknownLocation": "未知位置",
+  "dayPeriodDawn": "晨曦",
+  "dayPeriodMorning": "上午",
+  "dayPeriodAfternoon": "午後",
+  "dayPeriodDusk": "黃昏",
+  "dayPeriodEvening": "夜晚",
+  "dayPeriodMidnight": "深夜",
+  "showExactTime": "顯示精確時間",
+  "showExactTimeDesc": "在筆記中顯示時間（時:分）",
+  "showNoteEditTime": "顯示筆記編輯時間",
+  "showNoteEditTimeDesc": "在筆記中顯示最後編輯時間",
+  "editedAtLabel": "編輯於 {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "guideHomepageDailyQuoteTitle": "每日一言小技巧",
+  "guideHomepageDailyQuoteDesc": "單擊可快速複製內容\n雙擊可快速新增到筆記",
+  "guideNotePageFilterTitle": "篩選與排序",
+  "guideNotePageFilterDesc": "點選這裡可以篩選和排序你的筆記\n支援按標籤、天氣、時間等多種方式",
+  "guideNotePageFavoriteTitle": "喜愛標記",
+  "guideNotePageFavoriteDesc": "點選心形圖示可以標記喜愛\n在篩選中可以按喜愛度排序",
+  "guideNotePageExpandTitle": "展開/摺疊筆記",
+  "guideNotePageExpandDesc": "雙擊卡片可以展開檢視完整內容\n再次雙擊即可摺疊",
+  "guideEditorMetadataTitle": "編輯筆記後設資料",
+  "guideEditorMetadataDesc": "點選這裡可以編輯筆記的標籤、分類等資訊",
+  "guideEditorToolbarUsageTitle": "工具欄操作提示",
+  "guideEditorToolbarUsageDesc": "工具欄支援左右滑動\n試試新增圖片、影片等媒體檔案！",
+  "guideAddNoteFullscreenButtonTitle": "全螢幕編輯器",
+  "guideAddNoteFullscreenButtonDesc": "點選這裡開啟全螢幕編輯器\n支援富文字、插入圖片/音訊/影片",
+  "guideSettingsPreferencesTitle": "偏好設定",
+  "guideSettingsPreferencesDesc": "這裡可開啟加粗優先顯示、剪貼簿監控等個性化設定。",
+  "guideSettingsStartupTitle": "預設啟動頁面",
+  "guideSettingsStartupDesc": "可以設定應用啟動時預設開啟的頁面",
+  "guideSettingsThemeTitle": "主題設定",
+  "guideSettingsThemeDesc": "這裡可以自定義應用的主題顏色和外觀",
+  "guideTrashLocationTitle": "回收站位置",
+  "guideTrashLocationDesc": "筆記已移到回收站\n可在「設定」中找到回收站並恢復",
+  "guideSmartPushTitle": "讓筆記回來找你",
+  "guideSmartPushDesc": "在「設定 → 智慧推送」裡開啟後，心跡會在你選的時段，把往年今日和值得重讀的舊筆記推送給你。",
+  "apkDownloadTitle": "下載APK",
+  "apkDownloading": "正在下載 ThoughtEcho {version}...",
+  "@apkDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadHint": "請勿退出程式，下載完成後將自動開始安裝",
+  "apkDownloadStarted": "開始下載 ThoughtEcho {version}",
+  "@apkDownloadStarted": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadProgress": "下載中... {progress}%",
+  "@apkDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "apkDownloadComplete": "下載完成，正在安裝...",
+  "apkDownloadFailed": "下載失敗: {error}",
+  "@apkDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallReady": "APK檔案已準備就緒，請在系統安裝程式中完成安裝",
+  "apkOpenFailed": "無法開啟APK檔案: {error}",
+  "@apkOpenFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallFailed": "安裝失敗: {error}",
+  "@apkInstallFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkNotificationTitle": "APK下載",
+  "storagePermissionRequired": "需要儲存許可權",
+  "storagePermissionDesc": "下載APK檔案需要儲存許可權。請在設定中允許應用訪問儲存空間。",
+  "installPermissionRequired": "需要安裝許可權",
+  "installPermissionDesc": "安裝APK需要安裝未知應用許可權。請在設定中允許安裝未知來源應用。",
+  "errorTitle": "錯誤",
+  "cannotGetDownloadDir": "無法獲取下載目錄",
+  "webPlatformApkNotSupported": "Web 平臺不支援 APK 下載",
+  "serviceNotInitializedDeleteFailed": "服務未初始化，刪除失敗",
+  "deleteAllConfirmMessage": "確定要刪除所有分析記錄嗎？此操作不可恢復。",
+  "deleteFailedSimple": "刪除失敗",
+  "aiAnalysisDetails": "AI分析詳情",
+  "analysisTime": "分析時間",
+  "analysisContent": "分析內容",
+  "aiAnalysisResult": "AI分析結果",
+  "emotionalAnalysis": "情感分析",
+  "comprehensiveAnalysis": "綜合分析",
+  "mindMapAnalysis": "思維導圖",
+  "growthAnalysis": "成長分析",
+  "aiAnalysis": "AI分析",
+  "deleteAiAnalysis": "刪除AI分析",
+  "deleteAiAnalysisConfirm": "確定要刪除此筆記的AI分析結果嗎？此操作可在儲存筆記前撤銷。",
+  "aiAnalysisDeleted": "AI分析已刪除",
+  "aiAnalysisSaved": "AI分析已儲存",
+  "aiGenerating": "AI 正在生成...",
+  "complete": "完成",
+  "viewFull": "檢視全文",
+  "copy": "複製",
+  "copiedToClipboard": "已複製到剪貼簿",
+  "selectReportTypePrompt": "請選擇要生成的年度報告型別：",
+  "aiSmartReport": "AI 智慧報告",
+  "aiSmartReportDesc": "基於 AI 深度分析生成的專屬回顧報告，包含成長洞察與視覺化圖表",
+  "nativeFlutterReport": "原生 Flutter 報告",
+  "nativeFlutterReportDesc": "使用Flutter原生元件生成的互動式報告，流暢的動畫效果",
+  "generateAnnualReportFailed": "生成年度報告失敗",
+  "generatingAIAnnualReport": "正在生成AI年度報告...",
+  "cannotReadReportTemplate": "無法讀取報告模板",
+  "aiReturnFormatAbnormal": "AI返回格式異常，已使用備用模板生成報告",
+  "aiServiceAbnormal": "AI服務異常，已使用備用模板生成報告",
+  "monthJan": "1月",
+  "monthFeb": "2月",
+  "monthMar": "3月",
+  "monthApr": "4月",
+  "monthMay": "5月",
+  "monthJun": "6月",
+  "monthJul": "7月",
+  "monthAug": "8月",
+  "monthSep": "9月",
+  "monthOct": "10月",
+  "monthNov": "11月",
+  "monthDec": "12月",
+  "achievementRecordMaster": "記錄達人",
+  "achievementPersistent": "堅持不懈",
+  "achievementWriter": "文字創作者",
+  "achievementOrganizer": "分類整理",
+  "continuingToGrow": "持續成長中",
+  "allDayLong": "全天候",
+  "preparingBackup": "準備開始備份...",
+  "collectingData": "正在收集資料...",
+  "processingNoteData": "正在處理筆記資料...",
+  "processingMediaFiles": "正在處理媒體檔案...",
+  "creatingBackupFile": "正在建立備份檔案...",
+  "verifyingBackupFile": "正在驗證備份檔案...",
+  "thoughtEchoBackupFile": "心跡備份檔案",
+  "backupFileReady": "備份檔案已準備就緒，請透過分享儲存",
+  "backupCompleteSelectLocation": "備份完成，請選擇儲存位置",
+  "zipFile": "ZIP 檔案",
+  "jsonFile": "JSON 檔案",
+  "outOfMemoryText": "記憶體不足",
+  "storageSpaceText": "儲存空間",
+  "permissionText": "許可權",
+  "backupCancelled": "備份已取消",
+  "backupFailedText": "備份失敗",
+  "backupSavedToPath": "備份已儲存到: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "備份已完成，但有警告",
+  "backupDeltaFailuresMessage": "{count, plural, other{有 # 條筆記的富文字媒體路徑轉換失敗，這些筆記在備份中仍保留本機絕對路徑，恢復到其他裝置時相關圖片可能無法顯示。\n\n受影響的筆記ID：{ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "、",
+  "backupDeltaFailuresMoreSuffix": " 等",
+  "backupFailedGeneric": "無法完成備份，請稍後重試",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "備份失敗：記憶體不足\n\n建議：\n• 關閉其他應用釋放記憶體\n• 嘗試不包含媒體檔案的備份\n• 重啟應用後再試",
+  "backupFailedNoSpace": "備份失敗：儲存空間不足\n\n請清理裝置儲存空間後重試。",
+  "backupFailedPermission": "備份失敗：許可權不足\n\n請檢查應用的儲存許可權設定。",
+  "selectFileError": "選擇檔案失敗",
+  "mergingDataProgress": "正在合併資料...",
+  "yearAIAnnualReport": "{year} AI年度報告",
+  "@yearAIAnnualReport": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "openInBrowser": "在瀏覽器中開啟",
+  "shareReport": "分享報告",
+  "saveTempFileFailed": "儲存臨時檔案失敗",
+  "openBrowserFailed": "開啟瀏覽器失敗",
+  "createShareFileFailed": "建立分享檔案失敗",
+  "saveReport": "儲存報告",
+  "processingReport": "正在處理報告...",
+  "personalizedSummaryByAI": "基於AI分析的個性化總結",
+  "aiGeneratedReview": "AI已為您生成專屬的年度回顧，包含資料分析、成長洞察和未來建議",
+  "reportPreview": "報告內容預覽",
+  "fullReportViewInBrowser": "完整報告包含精美的圖表和互動效果，建議在瀏覽器中檢視",
+  "openFullReportInBrowser": "用瀏覽器開啟完整報告",
+  "shareBtn": "分享",
+  "regenerateCard": "重新生成",
+  "regeneratingCard": "正在重新生成...",
+  "aiSuggestionCoreIdea": "這篇筆記的核心思想是什麼？",
+  "aiSuggestionInspiration": "從中能得到什麼啟發？",
+  "aiSuggestionSummarize": "能否總結一下要點？",
+  "aiSuggestionSolution": "有什麼解決方案嗎？",
+  "aiSuggestionUnderstandConcept": "如何更好地理解這個概念？",
+  "aiSuggestionActionPlan": "如何制定行動計劃？",
+  "aiSuggestionPsychology": "這反映了什麼心理狀態？",
+  "aiSuggestionRealLife": "如何應用到實際生活中？",
+  "aiSuggestionThinkingPattern": "反映了什麼思維模式？",
+  "svgLoading": "正在載入SVG...",
+  "svgLoadingFallback": "正在載入備用模板...",
+  "svgRenderFailed": "SVG渲染失敗",
+  "svgTryingFallback": "正在嘗試使用備用模板...",
+  "cardRenderFailed": "卡片渲染失敗",
+  "cardRegeneratePrompt": "請嘗試重新生成卡片",
+  "svgContentParseFailed": "內容解析失敗",
+  "svgContentExtractFailed": "無法提取內容",
+  "svgContentEmpty": "SVG內容為空",
+  "svgContentInvalidFormat": "無效的SVG格式",
+  "svgFallbackTitle": "SVG生成失敗",
+  "svgFallbackHint": "請嘗試重新生成或檢查AI配置",
+  "svgFallbackIdentifier": "心跡 - 備用模板",
+  "cardGenerating": "正在生成卡片...",
+  "generatingCards": "正在生成卡片...",
+  "loadMoreCards": "載入更多卡片",
+  "remainingCards": "還有 {count} 張可生成",
+  "@remainingCards": {
+    "description": "剩餘可生成卡片數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveBtn": "儲存",
+  "work": "作品: ",
+  "explanation": "說明: ",
+  "generatingReportContent": "正在生成報告內容...",
+  "reportOpenedInBrowser": "報告已在瀏覽器中開啟",
+  "cannotOpenBrowserUseShare": "無法直接開啟瀏覽器，請使用分享功能選擇瀏覽器開啟",
+  "reportFileSavedInstructions": "報告檔案已儲存，請按以下步驟在瀏覽器中開啟：",
+  "step1OpenFileManager": "1. 開啟手機的檔案管理器",
+  "step2NavigateToPath": "2. 導航到以下路徑：",
+  "step3TapHtmlFile": "3. 點選HTML檔案",
+  "step4SelectBrowser": "4. 選擇瀏覽器開啟",
+  "gotIt": "知道了",
+  "copyPath": "複製路徑",
+  "pathCopied": "檔案路徑已複製到剪貼簿",
+  "howToViewInBrowser": "如何在瀏覽器中檢視",
+  "htmlContentCopied": "HTML報告內容已複製到剪貼簿。請按以下步驟操作：",
+  "mobileSteps": "📱 手機端：",
+  "desktopSteps": "💻 電腦端：",
+  "copyPrefix": "複製字首",
+  "addressBarPrefixCopied": "位址列字首已複製，請在瀏覽器中貼上後再貼上HTML內容",
+  "reportShared": "報告已分享",
+  "reportSavedLocally": "報告已儲存到本地檔案",
+  "cannotSaveFileCopyToClipboard": "無法儲存檔案，內容已複製到剪貼簿",
+  "videoFileNotFound": "影片檔案不存在",
+  "initializingLargeVideo": "開始初始化大影片檔案",
+  "videoLoadingTooLong": "影片載入時間過長，請嘗試使用較小的影片檔案",
+  "videoInitTimeout": "影片初始化超時，檔案可能過大",
+  "largeVideoInitSuccess": "大影片初始化成功",
+  "playbackSpeed": "播放速度",
+  "subtitles": "字幕",
+  "shareVideo": "分享影片",
+  "videoInfo": "影片資訊",
+  "videoLoadFailed": "影片載入失敗",
+  "timeout": "超時",
+  "videoLoadTimeout": "影片載入超時",
+  "fileTooLargeUseSmaller": "檔案可能過大，請稍後重試或使用較小的影片檔案",
+  "format": "格式",
+  "unsupportedVideoFormat": "不支援的影片格式",
+  "useCommonFormats": "請使用MP4、MOV等常見格式",
+  "cannotAccessVideoFile": "無法訪問影片檔案",
+  "checkFilePermissions": "請檢查檔案許可權",
+  "checkFileIntegrity": "請檢查檔案是否完整或嘗試重新匯入",
+  "outOfMemoryVideo": "記憶體不足，無法載入影片",
+  "audioFileNotFound": "音訊檔案不存在",
+  "clickToPlayVideo": "點選播放影片",
+  "motionPhoto": "實況",
+  "viewPhoto": "檢視照片",
+  "motionPhotoPlayFailed": "無法播放這張動態照片",
+  "loadingVideo": "正在載入影片...",
+  "shareAudio": "分享音訊",
+  "fileInfo": "檔案資訊",
+  "audioInfo": "音訊資訊",
+  "fileName": "檔名",
+  "duration": "時長",
+  "path": "路徑",
+  "resolution": "解析度",
+  "aspectRatio": "長寬比",
+  "featureInDevelopment": "分享功能開發中...",
+  "selectFromFiles": "從檔案選擇",
+  "supportsLargeFiles": "支援大檔案，記憶體安全處理",
+  "unifiedMediaImportImportMedia": "匯入{mediaType}",
+  "@unifiedMediaImportImportMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaTypeImage": "圖片",
+  "mediaTypeVideo": "影片",
+  "mediaTypeAudio": "音訊",
+  "mediaTypeMedia": "媒體",
+  "mediaProcessingNone": "無需處理媒體檔案",
+  "mediaProcessingFound": "{total, plural, other{發現 # 個媒體檔案}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "複製{typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "已處理 {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "takePhoto": "拍照",
+  "recordVideo": "錄製影片",
+  "recordAudio": "錄製音訊",
+  "takePhotoDirectly": "直接拍照",
+  "recordVideoDirectly": "直接錄製",
+  "recordAudioDirectly": "直接錄音",
+  "enterUrlHint": "輸入媒體檔案的網址",
+  "image": "圖片",
+  "video": "影片",
+  "audio": "音訊",
+  "weatherSunny": "晴",
+  "weatherUnknownWeather": "未知天氣",
+  "weatherShowers": "陣雨",
+  "weatherSnowShowers": "陣雪",
+  "weatherThunderstormWithHail": "雷暴雨",
+  "fileTypeImage": "圖片",
+  "fileTypeVideo": "影片",
+  "fileTypeAudio": "音訊",
+  "fileTypeDocument": "文件",
+  "fileTypeText": "文字",
+  "fileTypeApplication": "應用",
+  "fileTypeOther": "其他",
+  "fileStatusQueued": "佇列中",
+  "fileStatusSending": "正在傳送",
+  "fileStatusCompleted": "已完成",
+  "fileStatusFailed": "失敗",
+  "fileStatusSkipped": "已跳過",
+  "sessionStatusWaiting": "等待中",
+  "sessionStatusSending": "正在傳送",
+  "sessionStatusReceiving": "正在接收",
+  "sessionStatusCompleted": "已完成",
+  "sessionStatusCancelled": "已取消",
+  "sessionStatusRejected": "被拒絕",
+  "sessionStatusError": "發生錯誤",
+  "timeMorning": "早上",
+  "timeAfternoon": "下午",
+  "timeEvening": "晚上",
+  "timeLateNight": "深夜",
+  "promptDefault1": "今天有什麼值得感恩的事？",
+  "promptDefault2": "給過去的自己一句鼓勵的話，會說什麼？",
+  "promptDefault3": "今天學到了什麼讓你感到興奮的新東西？",
+  "promptDefault4": "什麼美好的想法正在等待你去實現？",
+  "promptDefault5": "最近什麼讓你感到快樂和滿足？",
+  "promptDefault6": "克服困難後有什麼值得慶祝的感悟？",
+  "promptDefault7": "如果明天完全自由，你最想做什麼有意義的事？",
+  "promptDefault8": "今天遇到的挑戰教會了你什麼寶貴經驗？",
+  "promptDefault9": "哪些積極的小習慣正在讓你變得更好？",
+  "promptDefault10": "此刻，你想對未來的自己說什麼溫暖的話？",
+  "promptDefault11": "今天有什麼小小的成就值得為自己驕傲？",
+  "promptDefault12": "什麼溫暖的回憶讓你嘴角不禁上揚？",
+  "promptGeneric1": "此刻，你有什麼特別的想法或美好感受想要記錄下來嗎？",
+  "promptGeneric2": "回顧今天，有什麼讓你印象深刻的溫暖瞬間？",
+  "promptGeneric3": "靜下心來，感受一下當下的情緒，它想告訴你什麼美好的資訊？",
+  "promptGeneric4": "今天有什麼小小的進步或收穫讓你感到欣慰？",
+  "promptGeneric5": "什麼事物讓你感到充滿希望和動力？",
+  "promptMorning1": "新的一天開始了，你對今天有什麼美好的期待？",
+  "promptMorning2": "早晨的空氣聞起來怎麼樣？它讓你想起了什麼溫馨的回憶？",
+  "promptMorning3": "為今天設定一個讓你興奮的小目標吧，可以是什麼呢？",
+  "promptMorning4": "晨光中，什麼積極的想法正在你心中萌芽？",
+  "promptAfternoon1": "午後的陽光或微風，讓你有什麼愉悅的感觸？",
+  "promptAfternoon2": "今天過半，有什麼進展順利讓你感到滿意的事情嗎？",
+  "promptAfternoon3": "花點時間放鬆一下，想想讓你感到安心和快樂的事物。",
+  "promptAfternoon4": "午後時光，什麼美好的計劃正在你心中醞釀？",
+  "promptEvening1": "夜幕降臨，回顧今天，有什麼值得慶祝或感恩的事？",
+  "promptEvening2": "此刻的寧靜適合思考，你腦海中浮現了什麼美好的畫面？",
+  "promptEvening3": "為明天做個充滿希望的計劃或設想吧。",
+  "promptEvening4": "夕陽西下，今天的哪個時刻讓你感到特別溫暖？",
+  "promptLateNight1": "夜深人靜，有什麼溫馨的想法或美好的靈感悄然浮現？",
+  "promptLateNight2": "此刻的寂靜讓你想到了什麼珍貴的回憶？",
+  "promptLateNight3": "睡前放下雜念，記錄下此刻內心的平靜和滿足。",
+  "promptLateNight4": "繁星點點，什麼美好的願望正在你心中閃耀？",
+  "promptClearMorning": "清晨的陽光灑滿窗臺，此刻你的心情如何？有什麼美好的計劃嗎？",
+  "promptRainMorning": "聽著清晨溫柔的雨聲，內心是否格外寧靜？有什麼溫暖的感悟？",
+  "promptCloudyMorning": "雲層微厚的早晨，正適合慢慢品味，思考一下最近的美好收穫。",
+  "promptClearAfternoon": "午後暖陽正好，適合小憩片刻，記錄下此刻的愜意和滿足。",
+  "promptRainAfternoon": "雨天的午後，窗外滴答作響，屋內適合讀一本書或寫下溫暖的想法。",
+  "promptClearEvening": "夜幕降臨，星光或月色正好，此刻有什麼美好的心願或溫暖的回憶？",
+  "promptRainEvening": "雨夜漫漫，適合獨處思考，最近有什麼讓你感到欣慰或期待的事？",
+  "promptWindEvening": "晚風輕拂的夜晚，思緒是否也隨風飄遠？記錄下此刻美好的靈感吧。",
+  "promptClearWeather1": "陽光明媚的日子，有什麼讓你感到開心和充滿活力？",
+  "promptClearWeather2": "這樣的好天氣，適合做些什麼讓你放鬆和快樂的事情？",
+  "promptRainWeather1": "聽著雨聲，你的心情是否格外寧靜和平和？",
+  "promptRainWeather2": "雨天適合沉思，有什麼溫暖的想法在腦海中縈繞？",
+  "promptCloudyWeather1": "多雲的天空下，你的思緒飄向了什麼美好的地方？",
+  "promptCloudyWeather2": "陰天有時也別有韻味，它讓你想起了什麼珍貴的回憶？",
+  "promptSnowWeather1": "窗外的雪景給你帶來了怎樣的純淨感受？",
+  "promptSnowWeather2": "下雪天，適合窩在溫暖的地方思考些什麼美好的事？",
+  "promptHotWeather": "天氣有點熱，此刻你最想做什麼舒適的事來享受夏日時光？",
+  "promptColdWeather": "天氣有點冷，注意保暖的同時，有什麼溫暖人心的想法嗎？",
+  "promptCityContext": "身在 {city}，這座城市今天給你帶來了什麼靈感？",
+  "@promptCityContext": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "promptFallback": "今天，你有什麼新的感悟或美好的想法想要分享呢？",
+  "citySuffix": "市",
+  "locationDisplayFormat": "{city}{suffix}",
+  "@locationDisplayFormat": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "locationDisplayWithDistrict": "{city}·{district}",
+  "@locationDisplayWithDistrict": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "noLocationInfo": "無位置資訊",
+  "currentLocationLabel": "當前位置",
+  "annualReportOpenedInBrowser": "報告已在瀏覽器中開啟",
+  "annualReportCannotOpenBrowser": "無法直接開啟瀏覽器，請使用分享功能選擇瀏覽器開啟",
+  "annualReportOpenInBrowser": "在瀏覽器中開啟",
+  "annualReportHowToView": "如何在瀏覽器中檢視",
+  "annualReportMobileInstructions": "📱 手機端：",
+  "annualReportDesktopInstructions": "💻 電腦端：",
+  "annualReportSavedToLocal": "報告已儲存到本地檔案",
+  "annualReportCopiedToClipboard": "無法儲存檔案，內容已複製到剪貼簿",
+  "fullscreenEditTooltip": "全螢幕編輯",
+  "fullscreenEditLongTextTip": "建議全螢幕編輯長文字",
+  "sourcePreviewFormat": "將顯示為: {source}",
+  "@sourcePreviewFormat": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherWithValue": "新增天氣: {weather}",
+  "@addWeatherWithValue": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherInfo": "新增天氣資訊",
+  "cardColorSet": "已設定卡片顏色",
+  "setCardColor": "設定卡片顏色",
+  "openFullEditorFailedSimple": "開啟全螢幕編輯器失敗",
+  "loadingLargeDocument": "正在載入大型文件...",
+  "documentLoadFailedRetry": "文件載入失敗，請重新開啟編輯器",
+  "contentCopiedToClipboard": "已複製到剪貼簿",
+  "messageCopiedToClipboard": "訊息已複製到剪貼簿",
+  "dailyQuoteLoading": "載入中...",
+  "dailyQuoteLoadingLocal": "從本地記錄載入中...",
+  "dailyQuoteLoadingOffline": "網路未連線，從本地記錄載入中...",
+  "dailyQuoteNoNetworkRetry": "無網路連線且無本地記錄，點選重試",
+  "dailyQuoteFetchFailedRetry": "獲取每日一言失敗，點選重試",
+  "fetchHitokotoFailed": "獲取每日一言失敗: {error}",
+  "@fetchHitokotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "copyMessage": "複製訊息",
+  "shareMessage": "分享訊息",
+  "shareFeatureInDevelopment": "分享功能開發中",
+  "cancelImport": "取消匯入",
+  "enterMediaUrl": "輸入{mediaType}網址",
+  "@enterMediaUrl": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "insertMediaFailed": "插入{mediaType}失敗: {error}",
+  "@insertMediaFailed": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFileNotFoundWithPath": "音訊檔案不存在: {path}",
+  "@audioFileNotFoundWithPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "audioLoadFailed": "音訊載入失敗: {error}",
+  "@audioLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "outOfMemoryVideoLoad": "記憶體不足，無法載入影片",
+  "codeCopiedToClipboard": "程式碼已複製到剪貼簿",
+  "videoLoadTooLong": "影片載入時間過長，請嘗試使用較小的影片檔案",
+  "outOfMemorySuggestions": "建議：\n• 關閉其他應用釋放記憶體\n• 重啟應用後重試\n• 使用較小的影片檔案",
+  "fullscreenEditorPlaceholder": "開始編寫你的想法...",
+  "unsavedChangesTitle": "未儲存的內容",
+  "unsavedChangesDesc": "您有未儲存的編輯內容，是否要放棄這些更改？",
+  "continueEditing": "繼續編輯",
+  "discardChanges": "放棄更改",
+  "saveAndExit": "儲存並退出",
+  "localAiFeatures": "本地 AI 功能",
+  "localAiFeaturesPreview": "預覽版",
+  "localAiFeaturesDesc": "使用裝置端 AI 能力增強筆記體驗",
+  "enableLocalAi": "啟用本地 AI",
+  "enableLocalAiDesc": "開啟後將啟用裝置端 AI 功能",
+  "localAiPreviewNote": "此功能目前處於預覽階段，部分功能可能不穩定",
+  "inputEnhancement": "輸入增強",
+  "searchAndDiscovery": "搜尋與發現",
+  "contentAnalysis": "內容分析",
+  "speechToText": "語音轉文字",
+  "speechToTextDesc": "長按錄音按鈕，將語音實時轉換為文字",
+  "ocrRecognition": "OCR 文字識別",
+  "ocrRecognitionDesc": "拍照識別圖片中的文字內容",
+  "aiCorrection": "AI 識別糾錯",
+  "aiCorrectionDesc": "智慧修復語音和 OCR 識別中的錯誤",
+  "sourceRecognition": "智慧識別來源",
+  "sourceRecognitionDesc": "自動提取文字中的作者和作品資訊",
+  "aiSearch": "AI 語義搜尋",
+  "aiSearchDesc": "使用 AI 理解搜尋意圖，找到語義相關的筆記",
+  "relatedNotes": "相關筆記推薦",
+  "relatedNotesDesc": "基於內容相似度推薦相關筆記",
+  "smartTags": "智慧標籤推薦",
+  "smartTagsDesc": "儲存筆記時智慧推薦合適的標籤",
+  "noteClassification": "筆記型別分類",
+  "noteClassificationDesc": "自動識別筆記型別（感悟、摘錄、日記等）",
+  "emotionDetection": "情緒檢測",
+  "emotionDetectionDesc": "分析筆記內容的情感傾向",
+  "swipeUpForOcr": "上划進入 OCR",
+  "listening": "正在聆聽...",
+  "recording": "錄音中",
+  "releaseToFinish": "鬆開結束錄音",
+  "applyToEditor": "填入編輯器",
+  "noSourceFound": "未識別到來源資訊",
+  "sourceFound": "識別到來源",
+  "correcting": "正在糾錯...",
+  "correctionComplete": "糾錯完成",
+  "recognizing": "正在識別...",
+  "recognitionComplete": "識別完成",
+  "voiceInputTitle": "語音輸入",
+  "voiceResultTitle": "語音識別結果",
+  "ocrCaptureTitle": "OCR 文字識別",
+  "ocrResultTitle": "OCR 識別結果",
+  "selectTextRegions": "選擇要提取的文字區域",
+  "takeAnotherPhoto": "再拍一張",
+  "finishSelection": "完成選擇",
+  "noTextDetected": "未檢測到文字",
+  "tapToSelectRegion": "點選選擇文字區域",
+  "aiSearchMode": "AI 搜尋",
+  "normalSearchMode": "普通搜尋",
+  "switchToAiSearch": "切換到 AI 語義搜尋",
+  "switchToNormalSearch": "切換到普通搜尋",
+  "recommendedTags": "推薦標籤",
+  "noteType": "筆記型別",
+  "emotionAnalysis": "情感分析",
+  "viewRelatedNotes": "檢視相關筆記",
+  "localAiNotEnabled": "本地 AI 功能未啟用",
+  "enableInSettings": "請在設定中啟用",
+  "featureNotAvailable": "功能暫不可用",
+  "featureComingSoon": "功能即將推出",
+  "localAISettings": "本地 AI 功能",
+  "localAISettingsDesc": "裝置端 AI 功能設定 (Preview)",
+  "localAIPreviewBadge": "Preview",
+  "localAIEnabled": "啟用本地 AI 功能",
+  "localAIEnabledDesc": "開啟後可使用裝置端 AI 功能",
+  "localAIInputEnhancement": "輸入增強",
+  "localAISpeechToText": "語音轉文字",
+  "localAISpeechToTextDesc": "長按 FAB 錄製語音並轉換為文字",
+  "localAIOCR": "OCR 文字識別",
+  "localAIOCRDesc": "從圖片中提取文字內容",
+  "localAICorrection": "AI 識別糾錯",
+  "localAICorrectionDesc": "修復語音和 OCR 識別錯誤",
+  "localAISourceRecognition": "智慧識別來源",
+  "localAISourceRecognitionDesc": "自動提取作者和作品名稱",
+  "localAISearchDiscovery": "搜尋與發現",
+  "localAISemanticSearch": "AI 語義搜尋",
+  "localAISemanticSearchDesc": "使用 AI 理解搜尋意圖",
+  "localAIRelatedNotes": "相關筆記推薦",
+  "localAIRelatedNotesDesc": "發現相關的筆記內容",
+  "localAIContentAnalysis": "內容分析",
+  "localAISmartTags": "智慧標籤推薦",
+  "localAISmartTagsDesc": "AI 推薦合適的標籤",
+  "localAINoteClassification": "筆記型別分類",
+  "localAINoteClassificationDesc": "自動識別筆記型別",
+  "localAIEmotionDetection": "情緒檢測",
+  "localAIEmotionDetectionDesc": "分析筆記的情感傾向",
+  "voiceRecording": "正在錄音...",
+  "voiceRecordingHint": "鬆開結束，上滑進入 OCR",
+  "voiceProcessing": "處理中...",
+  "voiceTranscribing": "轉寫中...",
+  "voiceEditResult": "編輯識別結果",
+  "voiceApplyCorrection": "AI 糾錯",
+  "voiceRecognizeSource": "識別來源",
+  "voiceInsertToEditor": "填入編輯器",
+  "ocrCapture": "拍照識別",
+  "ocrCaptureHint": "對準文字區域拍照",
+  "ocrSelectRegion": "選擇文字區域",
+  "ocrSelectRegionHint": "點選要識別的文字區域",
+  "ocrProcessing": "識別中...",
+  "ocrNoTextDetected": "未檢測到文字",
+  "aiSearching": "AI 搜尋中...",
+  "aiCorrectionApplied": "已應用 AI 糾錯",
+  "aiSourceRecognized": "已識別來源",
+  "aiNoSourceFound": "未找到明確的作者或作品資訊",
+  "smartTagsRecommendation": "AI 推薦標籤",
+  "smartTagsApply": "應用推薦",
+  "noteTypeDetected": "檢測到筆記型別",
+  "emotionDetectedLabel": "情緒分析",
+  "relatedNotesTitle": "相關筆記",
+  "relatedNotesEmpty": "暫無相關筆記",
+  "hiddenNotesFeature": "隱藏筆記",
+  "hiddenNotesFeatureDesc": "開啟後將顯示「隱藏」標籤，帶有此標籤的筆記會從主列表中隱藏",
+  "requireBiometricForHidden": "訪問隱藏筆記需要驗證",
+  "requireBiometricForHiddenDesc": "檢視隱藏筆記時需要進行生物識別驗證",
+  "hiddenTag": "隱藏",
+  "hiddenTagDesc": "帶有此標籤的筆記將從主列表中隱藏",
+  "hiddenTagUsageHint": "新增此標籤後，筆記將從主列表中隱藏，僅可透過篩選「隱藏」標籤檢視",
+  "systemTag": "系統標籤",
+  "systemTagCannotEdit": "系統標籤無法編輯",
+  "systemTagCannotDelete": "系統標籤無法刪除",
+  "biometricAuthRequired": "需要身份驗證",
+  "biometricAuthReason": "請驗證身份以檢視隱藏筆記",
+  "biometricAuthFailed": "身份驗證失敗",
+  "biometricNotAvailable": "裝置不支援生物識別驗證",
+  "biometricNotSetup": "請先在系統設定中設定指紋或面容識別",
+  "privacyAndSecurity": "隱私與安全",
+  "smartPushTitle": "智慧推送",
+  "smartPushTitlePreview": "智慧推送 (Preview)",
+  "smartPushDesc": "定時推送過去的筆記和每日一言",
+  "smartPushEnable": "啟用智慧推送",
+  "smartPushEnableDesc": "在設定時間推送回憶筆記或每日一言",
+  "smartPushContentType": "推送模式",
+  "smartPushDailyQuote": "每日一言",
+  "smartPushDailyQuoteDesc": "推送精選語錄",
+  "smartPushDailyQuoteIndependentNote": "每日一言獨立於智慧推送，兩者互不影響，可分別開啟或關閉。",
+  "smartPushPastNotes": "往日筆記",
+  "smartPushPastNotesDesc": "定時重溫往日記錄的心情與靈感",
+  "smartPushModeSmart": "智慧推送",
+  "smartPushModeSmartDesc": "結合時間與歷史足跡，智慧推薦值得重溫的往日靈感",
+  "smartPushModeBoth": "隨機推送",
+  "smartPushModeBothDesc": "隨機推送每日一言或往日筆記",
+  "smartPushPastNoteTypes": "回顧型別",
+  "smartPushYearAgoToday": "去年今日",
+  "smartPushYearAgoTodayDesc": "推送往年同月同日的筆記",
+  "smartPushMonthAgoToday": "往月今日",
+  "smartPushMonthAgoTodayDesc": "推送歷史同一天的筆記",
+  "smartPushWeekAgoToday": "一週前",
+  "smartPushWeekAgoTodayDesc": "推送一週前的筆記",
+  "smartPushRandomMemory": "隨機回憶",
+  "smartPushRandomMemoryDesc": "隨機推送歷史筆記",
+  "smartPushSameLocation": "相同地點",
+  "smartPushSameLocationDesc": "推送同一區域的筆記",
+  "smartPushSameWeather": "相同天氣",
+  "smartPushSameWeatherDesc": "推送相似天氣時記錄的筆記",
+  "smartPushWeatherFilter": "天氣篩選",
+  "smartPushTagFilter": "標籤篩選",
+  "smartPushTagFilterDesc": "僅推送帶有選中標籤的筆記（不選則不限制）",
+  "smartPushTimeSettings": "推送時間",
+  "smartPushAddTime": "新增推送時間",
+  "smartPushFrequency": "推送頻率",
+  "smartPushIntensityFewer": "更少",
+  "smartPushIntensityMore": "更多",
+  "smartPushFrequencyDaily": "每天",
+  "smartPushFrequencyWeekdays": "工作日",
+  "smartPushFrequencyWeekends": "週末",
+  "smartPushFrequencyCustom": "自定義",
+  "smartPushAdvancedOptions": "高階選項",
+  "smartPushTest": "傳送測試推送",
+  "smartPushTestSent": "測試推送已傳送，請檢視通知",
+  "smartPushNoMatchingNotes": "沒有符合條件的內容可推送",
+  "smartPushPermissionRequired": "需要通知許可權才能傳送推送",
+  "smartPushNotice": "使用說明",
+  "smartPushNoticeDesc": "• 開啟通知許可權以接收回憶提醒\n• 為確保準時到達，建議允許後臺執行並關閉系統電池最佳化\n• 智慧模式會自動挑選最契合的內容",
+  "smartPushModeCustom": "自定義推送",
+  "smartPushModeCustomDesc": "手動選擇回顧型別和篩選條件",
+  "smartPushExactAlarmHint": "建議開啟精確鬧鐘許可權以確保準時推送",
+  "smartPushExactAlarmTitle": "精確鬧鐘許可權",
+  "smartPushExactAlarmMessage": "為確保推送準時送達，需要授予精確鬧鐘許可權。不授權也可使用，但推送時間可能有幾分鐘誤差。",
+  "smartPushGoToSettings": "去設定",
+  "smartPushPermissionWarningTitle": "許可權設定不完整",
+  "smartPushPermissionWarningDesc": "部分許可權未授予，可能影響準時提醒。點選下方專案前往開啟。",
+  "smartPushNotificationPermission": "通知許可權",
+  "smartPushBatteryOptimization": "關閉電池最佳化",
+  "smartPushAutoStartPermission": "自啟動許可權",
+  "smartPushAutoStartHint": "部分 Android 裝置需要開啟自啟動許可權以保證後臺準時推送",
+  "smartPushAutoStartTitle": "自啟動設定指引",
+  "smartPushAutoStartInstructions": "請按以下步驟操作：",
+  "smartPushAutoStartNote": "注意：不同系統版本介面可能略有差異，請在應用管理中找到心跡並允許自啟動和後臺執行。",
+  "smartPushUnknownManufacturer": "未知裝置",
+  "iHaveConfigured": "我已設定",
+  "recommended": "推薦",
+  "actionFavorite": "收藏",
+  "actionUnfavorite": "取消收藏",
+  "clearFavoriteTitle": "清除收藏",
+  "clearFavoriteMessage": "確定要清除這條筆記的 {count} 次收藏嗎？",
+  "@clearFavoriteMessage": {
+    "description": "清除收藏確認訊息",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "已清除收藏",
+  "clearFavoriteFailed": "清除收藏失敗",
+  "moreOptions": "更多選項",
+  "settingsUserManual": "使用者手冊",
+  "settingsUserManualDesc": "瞭解如何使用心跡的各項功能",
+  "manualTitle": "使用者手冊",
+  "manualLoadFailed": "無法載入手冊內容",
+  "viewing": "檢視中...",
+  "backToAnalysis": "回到分析",
+  "userGuide": "使用者指南",
+  "userGuideDesc": "瞭解如何使用心跡的各項功能",
+  "userGuideSearchHint": "搜尋使用者指南...",
+  "userGuideNoResults": "未找到相關內容",
+  "userGuideOnlineDoc": "完整線上文件",
+  "tileNoLocationPermission": "無定位",
+  "tileLocationServiceOff": "定位未開啟",
+  "tileOffline": "離線",
+  "tileNoNetwork": "無網路",
+  "tileLoading": "載入中...",
+  "tileNoWeather": "無天氣",
+  "tileCachedSuffix": "快取",
+  "noteAutoFillSection": "筆記預設填充",
+  "noteAutoFillSectionDesc": "新建筆記時自動填充作者、出處和標籤",
+  "defaultAuthor": "預設作者",
+  "defaultAuthorDesc": "新建筆記時自動填充的作者",
+  "defaultAuthorHint": "輸入預設作者名",
+  "defaultSource": "預設出處",
+  "defaultSourceDesc": "新建筆記時自動填充的出處/作品",
+  "defaultSourceHint": "輸入預設出處或作品名",
+  "defaultTags": "預設標籤",
+  "defaultTagsDesc": "新建筆記時自動新增的標籤",
+  "defaultTagsNone": "未設定",
+  "defaultTagsCount": "已選 {count} 個標籤",
+  "@defaultTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDefaultTags": "選擇預設標籤",
+  "autoFillEnabled": "已啟用自動填充",
+  "clearDefaultValue": "清除",
+  "saveDefaultValue": "儲存",
+  "defaultValueSaved": "預設值已儲存",
+  "defaultValueCleared": "預設值已清除",
+  "excerptIntentEnabled": "摘錄到心跡",
+  "excerptIntentEnabledDesc": "允許從瀏覽器或其他應用選中文字後直接跳轉到心跡，並開啟非全螢幕編輯器",
+  "citySelectedWeatherUpdated": "已選擇城市：{cityName}，天氣已更新",
+  "@citySelectedWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "citySelectionError": "處理城市選擇時出錯：{error}",
+  "@citySelectionError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocationWeatherUpdated": "已使用當前位置：{cityName}，天氣已更新",
+  "@currentLocationWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFetchError": "獲取當前位置失敗：{error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTimeoutRetry": "天氣獲取超時，請稍後重試",
+  "weatherFetchFailedCheckNetwork": "天氣資料獲取失敗，請檢查網路連線",
+  "locationTimeoutCheckPermission": "位置獲取超時，請檢查位置許可權設定",
+  "cannotGetCurrentLocation": "無法獲取當前位置，請確保已授予位置許可權",
+  "cannotGetSelectedCityLocation": "無法獲取選中城市的位置資訊",
+  "cityInfoIncomplete": "城市資訊不完整",
+  "annualReportDemo": "年度報告演示",
+  "manualApiTest": "手動API測試",
+  "manualApiTestTitle": "手動API金鑰測試",
+  "manualApiTestDesc": "直接輸入API引數進行測試，繞過儲存系統檢查API金鑰是否有效。",
+  "testResultLabel": "測試結果:",
+  "fillAllFieldsError": "錯誤: 請填寫所有必填欄位",
+  "testReportTitle": "=== 手動API金鑰測試報告 ===",
+  "testParamsLabel": "測試引數:",
+  "keyFormatCheckLabel": "金鑰格式檢查:",
+  "testApiKeyPrefixLabel": "  API Key字首: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "傳送請求:",
+  "responseResultLabel": "響應結果:",
+  "testApiKey": "測試API金鑰",
+  "aiReturnedEmptyContent": "AI返回了空內容，請重試",
+  "chatWithAiAssistant": "與 Thoughter (AI 助手) 對話，深入探討筆記內容",
+  "messageCopied": "訊息已複製到剪貼簿",
+  "anniversaryTitle": "心跡 · ThoughtEcho",
+  "anniversarySubtitle": "{years} 週年 · 感恩有你，一路同行",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "進入應用",
+  "anniversaryBannerTitle": "心跡 ThoughtEcho {years} 週年",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "感恩有你，一路同行 · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "點選重溫慶典動畫",
+  "anniversaryBadgeMore": "+{hidden}",
+  "@anniversaryBadgeMore": {
+    "description": "橫幅上放不下的紀念勳章數量",
+    "placeholders": {
+      "hidden": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBadgeTooltip": "{years} 週年紀念勳章",
+  "@anniversaryBadgeTooltip": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryReplayButton": "重播動畫",
+  "developerAnniversarySimulate": "模擬週年慶典",
+  "developerAnniversarySimulateDescOff": "開啟後模擬 {years} 週年：設定頁橫幅、下次啟動的慶典彈窗都按那一屆展示；關閉則按真實日期判斷",
+  "@developerAnniversarySimulateDescOff": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescActive": "正在模擬 {years} 週年：設定頁橫幅按這一屆展示，每次啟動都會播慶典彈窗；不會寫入或清空參與記錄",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "trash": "回收站",
+  "trashEmpty": "回收站為空",
+  "trashEmptyHint": "誤刪的內容會先暫存在這裡，包含圖片、音訊和影片，也都可以一起恢復。",
+  "trashRetentionHint": "最近刪除的記錄和附件會在這裡暫存，超過保留期後自動清理。",
+  "moveNoteToTrashTitle": "移至回收站",
+  "moveNoteToTrashConfirmation": "確定要將此筆記移至回收站？您可在 {days} 天內恢復它。",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "剩餘 {days} 天",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "恢復",
+  "permanentlyDelete": "永久刪除",
+  "permanentlyDeleteConfirmation": "警告：此操作無法撤銷，筆記將被永久刪除且無法恢復。",
+  "emptyTrash": "清空回收站",
+  "emptyTrashConfirmation": "確定要清空整個回收站嗎？所有筆記將被永久刪除且無法恢復。",
+  "noteMovedToTrash": "筆記已移至回收站，可在回收站恢復",
+  "noteRestored": "筆記已恢復",
+  "undoDelete": "撤銷",
+  "trashEmptied": "回收站已清空",
+  "deletedAt": "刪除於 {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "回收站 ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "回收站保留時間",
+  "trashRetentionOption7Days": "7 天",
+  "trashRetentionOption30Days": "30 天",
+  "trashRetentionOption90Days": "90 天",
+  "insertImage": "插入圖片",
+  "insertVideo": "插入影片",
+  "insertAudio": "插入音訊",
+  "mediaPlayerPlay": "播放",
+  "mediaPlayerPause": "暫停",
+  "clipboardFoundHint": "發現剪貼簿內容，點選新增為筆記",
+  "operationFailedSimple": "操作失敗",
+  "operationSuccess": "操作成功！",
+  "loadingInProgress": "正在載入...",
+  "aiThinkingProgress": "AI正在思考...",
+  "processingData": "正在處理資料...",
+  "analyzingContent": "正在分析內容...",
+  "skipNonFullscreenEditor": "直接進入全螢幕編輯器",
+  "skipNonFullscreenEditorDesc": "點選新增筆記時跳過快速編輯，直接開啟全螢幕富文字編輯器",
+  "offlineQuoteSourceTitle": "無網路時展示",
+  "offlineQuoteSourceDesc": "無網路或僅展示本地記錄時，首頁顯示什麼內容",
+  "offlineQuoteSourceTagOnly": "歷史儲存的每日一言",
+  "offlineQuoteSourceAll": "隨機展示全部本地記錄",
+  "noLocalSavedQuotes": "還沒有歷史儲存的每日一言",
+  "copyCode": "複製程式碼",
+  "copiedCode": "已複製",
+  "appendToOriginal": "附加到原文",
+  "webdavSyncTitle": "WebDAV 雲同步",
+  "webdavSyncSubtitle": "配置私有云盤，實現多端自動同步筆記",
+  "webdavProvider": "網盤服務商",
+  "webdavServerUrl": "伺服器地址",
+  "webdavServerUrlHint": "example.com/dav/",
+  "webdavUsername": "使用者名稱/帳號",
+  "webdavPassword": "應用密碼/Token",
+  "webdavTestConnection": "測試連線",
+  "webdavTestSuccess": "連線測試成功！",
+  "webdavTestFailed": "無法連線伺服器，請檢查網路連線、地址或應用密碼是否正確",
+  "webdavAutoSyncLaunch": "開啟或回前臺時自動同步",
+  "webdavAutoSyncLaunchSubtitle": "開啟應用或從後臺切回前臺時，自動與雲端合併最新內容",
+  "webdavAutoSyncChange": "修改筆記後自動後臺同步",
+  "webdavAutoSyncChangeSubtitle": "編輯筆記後，自動在後臺同步最新修改",
+  "webdavExperimentalTitle": "實驗性功能提示",
+  "webdavExperimentalContent": "當前 WebDAV 雲同步功能處於實驗性預覽（Preview）階段。為了您的資料安全，建議您在啟用前備份本地核心筆記。在使用過程中，如遇到任何問題，歡迎隨時反饋。",
+  "webdavExperimentalClose": "關閉提示",
+  "webdavExperimentalIgnore": "永久忽略",
+  "webdavLastSync": "上次同步：{time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "正在同步...",
+  "webdavStatusSuccess": "同步成功",
+  "webdavStatusFailed": "同步失敗",
+  "settingsWebdavStatusWithTime": "{status} (上次：{time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "已啟用 (上次：{time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "立即同步",
+  "webdavEnableSync": "啟用雲同步",
+  "webdavSaveAndSync": "儲存並同步",
+  "webdavHowToGetAppPassword": "如何獲取應用密碼？",
+  "webdavShowPasswordTooltip": "顯示密碼",
+  "webdavHidePasswordTooltip": "隱藏密碼",
+  "webdavOpenHelpFailed": "無法開啟幫助連結，請檢查系統預設瀏覽器設定",
+  "webdavConflictCategoryName": "同步衝突",
+  "webdavConflictNotePrefix": "[衝突備份] ",
+  "webdavConflictNotification": "檢測到 {count} 處同步衝突，已安全備份至『同步衝突』分類",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "立即檢視",
+  "webdavConflictKeepTooltip": "確認保留（移入預設分類）",
+  "webdavConflictKeepSuccess": "已確認並移回預設筆記列表。",
+  "webdavConflictDiscardTooltip": "丟棄此衝突備份",
+  "webdavConflictDiscardSuccess": "已永久丟棄此衝突筆記。",
+  "exportFormatLabel": "預設匯出格式",
+  "exportFormatCard": "精緻分享卡片",
+  "exportFormatPdf": "標準 A4 PDF",
+  "exportFormatDesc": "配置筆記一鍵匯出或分享時的預設生成格式",
+  "pdfExportExperimentalWarning": "PDF 匯出功能在首次使用時會自動下載字型包（支援多語言與 Emoji），下載完成後即可離線使用。",
+  "exportToPdf": "匯出為 PDF",
+  "pdfExportSelectionMode": "選擇匯出模式",
+  "selectSameMonth": "一鍵選同月",
+  "selectSameCategory": "一鍵選同分類",
+  "exportSelected": "匯出 ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "匯出成功",
+  "exportFailed": "匯出失敗",
+  "generatingPdf": "正在生成 PDF...",
+  "pdfExportFailed": "匯出 PDF 失敗: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "批次匯出 PDF 失敗: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "請先選擇至少一條筆記",
+  "selectedNotesHaveNoCategories": "所選筆記沒有分類標籤",
+  "pdfPreviewAndPrint": "PDF 預覽 & 列印",
+  "pdfFontFallbackWarning": "未檢測到中文字型，中文內容可能會顯示為亂碼。請檢查網路後重試。",
+  "webdavSyncOnCellular": "允許資料流量下同步",
+  "webdavSyncOnCellularSubtitle": "允許在移動資料網路下進行雲端備份和合並",
+  "webdavSyncNotesOnlyOnCellular": "資料流量下僅同步筆記",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "啟用後在行動網路下僅同步文字，跳過大型媒體檔案以節省流量",
+  "customFeedbackTitle": "傳送意見反饋",
+  "customFeedbackMessageLabel": "反饋內容",
+  "customFeedbackMessageHint": "請描述您遇到的問題或建議...",
+  "customFeedbackNameLabel": "您的稱呼 (可選)",
+  "customFeedbackEmailLabel": "聯絡郵箱 (可選)",
+  "customFeedbackSubmit": "傳送反饋",
+  "customFeedbackSuccess": "感謝您的反饋！",
+  "customFeedbackEmptyError": "請輸入反饋內容",
+  "saveSuccess": "儲存成功",
+  "toolCallStatusPending": "待執行",
+  "toolCallStatusExecuting": "執行中",
+  "toolCallStatusCompleted": "完成",
+  "toolCallStatusError": "錯誤",
+  "toolCallParameters": "引數",
+  "toolCallResult": "結果",
+  "failedToPickFiles": "選擇檔案失敗: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "已儲存筆記的位置和天氣不支援編輯修改",
+  "explore": "探索",
+  "aiChat": "與 Thoughter 對話",
+  "dataInsights": "資料分析",
+  "dataInsightsDesc": "深度分析你的筆記資料和寫作趨勢",
+  "exploreMapMemory": "地圖記憶",
+  "exploreMapMemoryDesc": "在地圖上探索你的足跡",
+  "favoriteNotes": "收藏筆記",
+  "chatHistory": "對話歷史",
+  "sessionScopeThisNote": "本條筆記",
+  "sessionScopeAllChats": "全部對話",
+  "newChat": "新建對話",
+  "noChats": "暫無對話",
+  "deleteChat": "刪除對話",
+  "deleteChatConfirm": "確定要刪除這個對話嗎？",
+  "deselectAll": "取消全選",
+  "multiSelectChats": "多選",
+  "selectedChatCount": "已選擇 {count} 項",
+  "@selectedChatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedChats": "刪除所選對話",
+  "deleteSelectedChatsConfirm": "確定要刪除選中的 {count} 項對話嗎？此操作無法撤銷。",
+  "@deleteSelectedChatsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteChatsSuccess": "已刪除 {count} 項對話",
+  "@deleteChatsSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchChatHistory": "搜尋對話...",
+  "dynamicInsightStats": "你已記錄 {count} 條心跡，最近 7 天新增 {recentCount} 條。",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "今天",
+  "sessionGroupYesterday": "昨天",
+  "sessionGroupThisWeek": "本週",
+  "sessionGroupEarlier": "更早",
+  "messageCountLabel": "{count} 條訊息",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteNoteWithChatsConfirmation": "刪除此筆記將同時刪除 {count} 條相關對話。確定要繼續嗎？",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "潤色",
+  "commandContinue": "續寫",
+  "commandDeepAnalysis": "深度分析",
+  "commandInsight": "智慧洞察",
+  "aiPromptPolish": "請幫我潤色這段文字",
+  "aiPromptContinue": "請幫我續寫這段文字",
+  "aiPromptDeepAnalysis": "請對這段筆記進行深度分析",
+  "aiPromptSourceAnalysis": "請分析這段文字的來源，識別可能的作者和出處",
+  "aiAssistantInputHint": "輸入問題...",
+  "aiAssistantExploreWelcome": "{summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "當前筆記上下文",
+  "workflowUnavailable": "工作流不可用",
+  "aiWorkflowNeedsBoundNote": "此功能需要繫結筆記才能使用",
+  "confidenceLabel": "置信度",
+  "replaceOriginalNote": "替換原文",
+  "appendToEnd": "追加到末尾",
+  "scrollToBottom": "滾動到底部",
+  "pinChat": "置頂",
+  "unpinChat": "取消置頂",
+  "stopGenerate": "停止生成",
+  "aiModeChat": "對話模式",
+  "aiModeAgent": "Agent 模式",
+  "aiAgent": "智慧體",
+  "agentThinking": "正在思考...",
+  "agentReachedMaxRounds": "已達到本輪處理步驟上限，以上結論基於目前已獲取的資訊。如需更完整的結果，可以補充更具體的要求後再試一次。",
+  "agentSearchingNotes": "正在搜尋筆記...",
+  "agentAnalyzingData": "正在分析資料...",
+  "agentWebSearching": "正在聯網搜尋...",
+  "agentReviewingRecentNotes": "正在瀏覽筆記...",
+  "agentSearchingNotesForQuery": "正在查詢\"{query}\"相關記錄...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "正在獲取標籤...",
+  "agentReadingNoteDetail": "正在檢視筆記...",
+  "agentCheckingLocationWeather": "正在獲取位置和天氣...",
+  "agentSavingMemory": "正在儲存記憶...",
+  "agentRecallingMemory": "正在查詢記憶...",
+  "agentRecallingMemoryForQuery": "正在查詢\"{query}\"相關記憶...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingWebForQuery": "正在查詢\"{query}\"的資料...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "正在讀取網頁...",
+  "agentPreparingNewNoteSuggestion": "正在準備新筆記建議...",
+  "agentPreparingEditSuggestion": "正在準備修改建議...",
+  "agentFoundNoMatchingNotes": "未找到相關記錄",
+  "agentFoundMatchingNotes": "找到 {count} 條相關記錄",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "找到 {count} 條相關記錄，還有更多",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "找到 {count} 個可用標籤",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "已獲取位置和天氣",
+  "agentCheckedLocationWeatherWithDetails": "位置：{location}，天氣：{weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "找到 {count} 條網路資料",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "已讀取網頁，約 {count} 字",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "已讀取筆記《{title}》的完整正文",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "已生成建議",
+  "agentAskingUser": "正在向你提問...",
+  "agentAskUserTitleThoughter": "Thoughter 有一個問題",
+  "agentAskUserTitleThoughterMulti": "Thoughter 有 {count} 個問題",
+  "@agentAskUserTitleThoughterMulti": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserCustomHint": "寫下你的回答…（輸入會清空上面的選擇）",
+  "agentAskUserUnanswered": "未作答",
+  "agentAskUserStepOf": "問題 {index}/{total}",
+  "@agentAskUserStepOf": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserPrev": "上一步",
+  "agentAskUserNext": "繼續",
+  "agentAskUserReviewTitle": "確認你的回答",
+  "agentAskUserSubmitAll": "提交全部",
+  "agentAskUserEditAnswer": "修改",
+  "agentAskUserIncompleteHint": "還有問題沒回答",
+  "agentAskUserCancelled": "已取消選擇",
+  "agentAskUserSelectedPrefix": "已選擇：",
+  "agentAskUserCustomPrefix": "自定義回覆：",
+  "agentAskUserSingleSelectHint": "單選",
+  "agentAskUserMultiSelectHint": "可多選",
+  "agentToolStepFinished": "已完成",
+  "agentToolStepDidNotFinish": "未完成",
+  "agentMemorySaved": "已儲存記憶",
+  "agentMemoryDeleted": "已刪除記憶",
+  "agentRecalledFacts": "找到 {count} 條相關記憶",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "未找到相關記憶",
+  "aiThinking": "正在思考...",
+  "thinkingMode": "深度思考",
+  "showThinking": "檢視思考過程",
+  "hideThinking": "收起思考過程",
+  "toolExecutionProgress": "正在執行...",
+  "toolExecutionCompleted": "執行完成",
+  "executedNOperations": "執行了 {count} 個操作",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentToolCall": "使用 {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerTitle": "選擇位置",
+  "nearbyLocationTitle": "所在位置",
+  "mapPickerCurrentLocation": "當前位置",
+  "mapPickerConfirm": "確認位置",
+  "poiNameLabel": "地點名稱",
+  "longPressForMapPicker": "長按開啟地圖選點",
+  "longPressForNearbyPicker": "長按選擇附近位置",
+  "onlinePlaceSearchUnavailable": "線上地點服務不可用",
+  "offlineCoordinates": "離線座標",
+  "mapPickerSearchHint": "搜尋附近地點",
+  "mapPickerSearchResults": "搜尋結果",
+  "mapPickerSearching": "正在搜尋…",
+  "mapPickerNoResults": "沒有找到相關地點",
+  "mapPickerSelectedPoint": "地圖上的選點",
+  "mapPickerResolvingPoint": "正在識別這個位置…",
+  "mapPickerUnnamedPoint": "未命名的地點",
+  "mapPickerLocateMe": "回到當前位置",
+  "mapPickerCurrentLocationSubtitle": "只記城市和區縣，不記具體地點",
+  "mapPickerDistanceMeters": "{distance} 米",
+  "@mapPickerDistanceMeters": {
+    "description": "地圖選點頁搜尋結果與選點之間的距離（米）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerDistanceKilometers": "{distance} 公里",
+  "@mapPickerDistanceKilometers": {
+    "description": "地圖選點頁搜尋結果與選點之間的距離（公里）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapMemoryEmptyHint": "還沒有帶位置的筆記。在編輯器里長按位置按鈕，就能給筆記標一個地點。",
+  "mapMemoryLoadFailed": "地圖資料載入失敗",
+  "mapMemoryResetView": "看全部足跡",
+  "mapMemoryPlaceCount": "{count} 條帶位置的筆記",
+  "@mapMemoryPlaceCount": {
+    "description": "地圖回憶頁頂部提示裡帶座標的筆記條數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "附加檔案",
+  "yesterday": "昨天",
+  "openInEditor": "開啟編輯器",
+  "saveDirectly": "直接儲存",
+  "replace": "替換",
+  "append": "追加",
+  "notice": "提示",
+  "saveRequired": "儲存提示",
+  "saveBeforeAiAssistant": "進入 Thoughter 前需先儲存當前筆記內容",
+  "saveAndContinue": "儲存並繼續",
+  "toggleAddLocation": "新增位置",
+  "toggleAddWeather": "新增天氣",
+  "webdavDisableSyncSuccess": "已關閉 WebDAV 雲同步。本地資料完全保留。",
+  "webdavDisableSync": "關閉並停用雲同步",
+  "webdavGoToResolve": "去處理",
+  "webdavNoConflicts": "沒有檢測到衝突筆記",
+  "webdavAllConflictsResolved": "您的所有同步衝突均已處理乾淨。",
+  "webdavProviderNutstore": "堅果雲 (Nutstore)",
+  "webdavProviderCustom": "自定義 (Custom)",
+  "webdavProviderNextcloud": "Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "InfiniCLOUD",
+  "webdavProviderConfig": "服務商配置",
+  "webdavServerUrlEmptyError": "請輸入 WebDAV 伺服器地址",
+  "webdavServerUrlInvalidError": "地址必須以 https:// 開頭",
+  "webdavUsernameEmptyError": "請輸入使用者名稱",
+  "webdavPasswordEmptyError": "請輸入應用密碼",
+  "webdavSyncStrategy": "同步策略",
+  "webdavStatusNotEnabled": "未啟用雲同步",
+  "webdavStatusNotEnabledDesc": "配置您的 WebDAV 服務，享受安全跨端多路同步。",
+  "webdavStatusSyncingDesc": "正在同步本地與雲端筆記...",
+  "webdavStatusRunning": "雲同步執行中",
+  "webdavStatusRunningDesc": "已連線雲端網盤，實時同步已就緒。\n上次同步：{time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "同步出現異常",
+  "webdavStatusExceptionDesc": "網路連線異常或雲端正在被其他裝置更新，稍後將自動重試。",
+  "webdavStatusEnabled": "雲同步已啟用",
+  "webdavStatusEnabledDesc": "服務就緒。上次同步：{time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "從未同步",
+  "webdavNeverSucceeded": "從未成功",
+  "webdavConflictPrompt": "檢測到有 {count} 篇同步衝突備份，建議立即處理。",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "網頁內容",
+  "fetchingWebContent": "正在獲取網頁內容：{url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "請使用 /web 命令提供有效的 URL",
+  "webCommandInvalidUrlTitle": "無效的 URL",
+  "aiSuggestion": "AI 建議",
+  "autoAttachMetadataUnavailable": "位置/天氣未能附加，已直接儲存",
+  "richTextSaveUnavailable": "儲存已停止：富文字內容無法無損處理，請關閉其他應用釋放記憶體後重試。",
+  "agentRichEditConflict": "筆記內容已發生變化。為避免覆蓋你的修改，請讓 AI 重新生成建議。",
+  "agentDiffOriginal": "原文",
+  "agentDiffReplacement": "改為",
+  "agentDiffInsertBefore": "在此內容前插入",
+  "agentDiffInsertAfter": "在此內容後插入",
+  "agentDiffAppend": "追加內容",
+  "agentDiffDelete": "刪除內容",
+  "availableCommands": "可用命令",
+  "typeSlashToSeeCommands": "輸入訊息...",
+  "noteProposalCreate": "新建",
+  "noteProposalEdit": "編輯",
+  "noteProposalPlain": "普通筆記",
+  "noteProposalRich": "富文字筆記",
+  "noteProposalChangeCount": "修改 {count} 處",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "展開全文",
+  "noteProposalCollapse": "收起全文",
+  "noteProposalViewChanges": "檢視修改記錄",
+  "noteProposalPlainToRichWarning": "應用後將使用全螢幕富文字編輯器開啟此筆記。",
+  "noteProposalBefore": "原文",
+  "noteProposalAfter": "改為",
+  "noteProposalCompleted": "已完成",
+  "noteProposalApply": "應用修改",
+  "noteProposalSave": "儲存筆記",
+  "noteProposalLegacyReadOnly": "這是舊版建議，缺少安全的版本資訊，僅供檢視。請讓 AI 重新生成後再應用。",
+  "noteProposalPlainEditorPreferenceWarning": "你的設定會在全螢幕富文字編輯器中開啟此普通草稿；儲存後它將成為富文字筆記。",
+  "aiCardBadgeCreate": "新建",
+  "aiCardBadgeEdit": "修改",
+  "aiCardQuickEdit": "快編",
+  "aiCardQuickEditTooltip": "快速編輯內容、來源或標籤",
+  "aiCardSavedViewNote": "已儲存 · 檢視筆記",
+  "aiCardSaveFailedGeneric": "儲存失敗，請稍後重試。",
+  "aiCardEditContentHint": "編輯內容",
+  "experimentalTag": "實驗性",
+  "agentExperimentalNoticeTitle": "Thoughter 實驗性功能說明",
+  "agentExperimentalNoticeIntro": "Thoughter 是正在測試中的 AI 助手。在開始使用前，請閱讀以下注意事項：",
+  "agentExperimentalNoticePoint1": "AI 可能會生成錯誤或不準確的回答，請對生成內容進行客觀核查。",
+  "agentExperimentalNoticePoint2": "AI 不能直接修改你的筆記（新建與編輯提案需確認後生效）。AI 可透過卡片主動發起互動提問，或檢索歷史會話與調閱長期記憶。",
+  "agentExperimentalNoticePoint3": "功能仍處於實驗測試階段，使用過程中可能會遇到異常或不穩定情況。",
+  "agentExperimentalNoticeGotIt": "理解並繼續",
+  "agentExperimentalBannerText": "實驗性功能：AI 回答可能包含錯誤；新建與編輯提案需確認後生效，支援主動互動提問、會話歷史檢索與長期記憶讀寫。",
+  "agentExperimentalNoticeAction": "檢視說明",
+  "dontShowAgain": "不再自動提示",
+  "settingsLab": "實驗室",
+  "settingsLabDesc": "開發者模式下的除錯入口和實驗性開關，可能不穩定",
+  "firstOpenScrollPerfMonitorExperiment": "[實驗] 首屏滾動效能監測",
+  "firstOpenScrollPerfMonitorExperimentDesc": "記錄冷啟動後首次滑動記錄頁的掉幀資料（預設關）",
+  "addNoteDeferMetadataExperiment": "[實驗] AddNote 延遲獲取後設資料",
+  "addNoteDeferMetadataExperimentDesc": "延遲位置和天氣獲取至鍵盤動畫結束後（預設關）",
+  "noteCardMediaStyleExperiment": "[實驗] 記錄頁圖片顯示方式",
+  "noteCardMediaStyleThumbnail": "右側小圖",
+  "noteCardMediaStyleThumbnailDesc": "卡片右側顯示縮略小圖。佈局緊湊清晰，瀏覽流暢省資源。",
+  "noteCardMediaStyleInline": "正文原位（舊版式）",
+  "noteCardMediaStyleInlineDesc": "按圖文原始順序混排。保持上下文連續，超出部分可雙擊展開。",
+  "noteCardMediaStyleBanner": "頂部通欄大圖",
+  "noteCardMediaStyleBannerDesc": "卡片頂部展示整寬大圖。視覺焦點突出，適合攝影與多圖記錄。",
+  "noteInsertAnimationExperiment": "[實驗] 記錄頁新增筆記動畫",
+  "noteInsertAnimationCurrent": "當前：{name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "氣泡縮放",
+  "noteInsertAnimationSlide": "平滑上升",
+  "noteInsertAnimationNone": "無動畫",
+  "exploreAskAboutInsight": "追問這條",
+  "exploreAskAboutInsightPrompt": "能就這段再展開講講嗎？",
+  "exploreFreeChat": "隨便聊聊",
+  "exploreRecentChats": "最近對話",
+  "exploreViewAllChats": "全部",
+  "aiProviderZhipu": "智譜 GLM",
+  "aiProviderMoonshot": "月之暗面 Kimi",
+  "aiProviderDashScope": "阿里雲百鍊",
+  "aiProviderVolcengine": "火山方舟",
+  "aiProviderGemini": "Google Gemini",
+  "presetDescOllamaCloud": "免費額度充足，註冊就能用，推薦第一次配置的使用者選它",
+  "presetDescOpenAI": "OpenAI 官方介面，需要海外支付方式",
+  "presetDescOpenRouter": "一個 Key 呼叫 Claude、Gemini 等上百個模型",
+  "presetDescDeepSeek": "國內直連，價格低，中文表現好",
+  "presetDescSiliconFlow": "國內聚合平臺，部分小模型免費",
+  "presetDescZhipu": "國內直連，glm-4-flash 免費",
+  "presetDescMoonshot": "國內直連，長上下文表現好",
+  "presetDescDashScope": "阿里雲百鍊的 OpenAI 相容介面，通義千問系列",
+  "presetDescVolcengine": "火山方舟豆包系列，模型名稱請填寫推理接入點 ID",
+  "presetDescGemini": "Gemini 官方的 OpenAI 相容介面，有免費額度",
+  "presetDescOllamaLocal": "連線本機執行的 Ollama，不聯網、不需要金鑰",
+  "presetDescLMStudio": "連線本機執行的 LM Studio，不聯網、不需要金鑰",
+  "presetDescCustom": "任何 OpenAI 相容介面，地址和模型全部手填",
+  "aiServicesSectionTitle": "我的 AI 服務",
+  "aiServiceEmptyTitle": "還沒有配置 AI 服務",
+  "aiServiceEmptyBody": "配置一個服務商之後，AI 洞察、卡片生成和 Thoughter 助手才能工作。",
+  "addAiService": "新增 AI 服務",
+  "editAiServiceTitle": "編輯 AI 服務",
+  "newAiServiceTitle": "新建 AI 服務",
+  "selectProviderTemplate": "選擇服務商",
+  "changeProviderTemplate": "更換",
+  "providerGroupCloud": "雲端服務",
+  "providerGroupLocal": "本地執行",
+  "providerGroupCustom": "自定義",
+  "recommendedBadge": "推薦",
+  "inUseBadge": "使用中",
+  "getApiKeyLink": "獲取 API Key",
+  "apiKeyNotNeededHint": "本地服務通常不需要金鑰，留空即可",
+  "suggestedModelsLabel": "常用模型",
+  "configNameField": "配置名稱",
+  "statusKeyConfigured": "金鑰已配置",
+  "statusKeyMissing": "缺少金鑰",
+  "aiServiceSaved": "已儲存 {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "推薦用 Ollama 雲端",
+  "ollamaCloudTipBody": "免費額度充足，註冊後複製 API Key 就能用，不用綁卡。",
+  "ollamaCloudTipAction": "一鍵新增",
+  "aiConfigHelpLink": "不知道怎麼填？檢視配置說明",
+  "openLinkFailed": "無法開啟連結",
+  "testBeforeSaveHint": "填好地址、金鑰和模型後即可測試，不必先儲存",
+  "agentMemorySectionTitle": "Thoughter 記憶",
+  "agentMemoryEnableTitle": "長期記憶",
+  "agentMemoryEnableDesc": "跨對話記住你的偏好與表達習慣",
+  "agentMemoryNicknameTitle": "稱呼",
+  "agentMemoryNicknameHint": "Thoughter 該怎麼稱呼你？",
+  "agentMemoryNicknameDesc": "設定 Thoughter 對你的稱呼，留空則不使用",
+  "agentMemoryNicknameSaveFailed": "稱呼沒能儲存，請重試",
+  "agentMemoryNicknameDisabled": "開啟長期記憶後生效",
+  "agentMemoryClearTitle": "清空記憶",
+  "agentMemoryClearSummary": "當前記著 {profileCount} 條偏好、{factCount} 條細節",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryClearEmpty": "還沒有記下任何內容",
+  "agentMemoryClearConfirmTitle": "清空 Thoughter 記憶？",
+  "agentMemoryClearConfirmBody": "記下的偏好和細節會被全部刪除，無法恢復。這不會影響你的筆記。",
+  "agentMemoryClearConfirmAction": "清空",
+  "agentMemoryCleared": "已清空 Thoughter 記憶",
+  "agentMemoryClearFailed": "清空記憶失敗",
+  "agentMemoryNoticeTitle": "Thoughter 會記住你",
+  "agentMemoryNoticeBody": "為了不用每次都重新認識你，Thoughter 會把你的身份和表達偏好記下來，之後的對話、每日提示和週期洞察都會用上。",
+  "agentMemoryNoticeHint": "你可以隨時讓 Thoughter 修改或忘掉某條記憶，也可以在「AI 設定」裡關閉或清空。",
+  "agentMemoryNoticeGotIt": "知道了",
+  "agentMemoryNoticeDisable": "先不要記",
+  "agentMemorySwitchFailed": "記憶開關沒能儲存，請重試",
+  "agentMemoryCountsUnavailable": "讀取記憶數量失敗，仍可嘗試清空",
+  "dreamingEnableTitle": "後臺整理畫像",
+  "dreamingEnableDesc": "讓 Thoughter 在合適的時候整理你的長期畫像",
+  "dreamingOnIdleTitle": "應用空閒時整理",
+  "dreamingOnIdleDesc": "開啟應用後空閒下來時，自動整理一次畫像",
+  "dreamingAfterInsightTitle": "週期洞察後繼續整理",
+  "dreamingAfterInsightDesc": "週期洞察完成後，再從近期筆記中更新畫像",
+  "dreamingSwitchFailed": "Dreaming 設定沒能儲存，請重試",
+  "releaseNotesTitle": "更新內容",
+  "releaseNotesUpgradeLede": "以下是你上次使用之後新增的功能。",
+  "releaseNotesCurrentLede": "以下是本版本新增的功能。",
+  "releaseNotesHighlights": "核心亮點",
+  "releaseNotesGetStarted": "開始使用",
+  "releaseNotesViewDetailedChangelog": "前往 GitHub Releases 檢視更多最佳化詳情",
+  "releaseFootprintsTitle": "足跡與地圖回憶",
+  "releaseFootprintsLede": "記下寫下文字時的身處之地，按地點重溫舊日筆記。",
+  "releaseFootprintsPickerTitle": "附近地點選擇",
+  "releaseFootprintsPickerDesc": "支援直接搜尋附近地點，自動整理為清晰的「市·區」地名，記錄位置更省心。",
+  "releaseFootprintsMemoryTitle": "地圖足跡回憶",
+  "releaseFootprintsMemoryDesc": "在探索頁開啟地圖，沿途回看曾在不同地點寫下的心跡。",
+  "releaseDreamingTitle": "Thoughter 夢境整理",
+  "releaseDreamingLede": "在後臺輕柔提煉你的文風偏好，讓陪伴更契合。",
+  "releaseDreamingIdleTitle": "空閒時整理",
+  "releaseDreamingIdleDesc": "在應用空閒時自動梳理你的寫作習慣，不打擾當前記錄。",
+  "releaseDreamingControlTitle": "自主可控",
+  "releaseDreamingControlDesc": "記憶獨立儲存在本地裝置上，隨時可以檢視、編輯或清空。",
+  "releaseThoughterTitle": "Thoughter 思考搭檔",
+  "releaseThoughterLede": "深度聯動筆記庫，提供智慧檢索、整理與創作洞察。",
+  "releaseThoughterSearchTitle": "智慧檢索",
+  "releaseThoughterSearchDesc": "自然語言問答，自動關聯筆記線索與聯網搜尋。",
+  "releaseThoughterControlTitle": "提案確認",
+  "releaseThoughterControlDesc": "修改以卡片呈現，逐條確認後方才應用。",
+  "releaseThoughterSingleNoteTitle": "單篇深聊",
+  "releaseThoughterSingleNoteDesc": "一鍵深入單篇筆記，進行潤色、追問或續寫。",
+  "releaseThoughterMemoryTitle": "長期記憶",
+  "releaseThoughterMemoryDesc": "跨會話記住創作偏好，資料可隨時清空。",
+  "releaseThoughterInsightTitle": "週期洞察",
+  "releaseThoughterInsightDesc": "定期生成階段洞察，在探索頁集中呈現。",
+  "releaseThemeTitle": "全新主題風格",
+  "releaseThemeLede": "新增「紙與墨」與「素箋」兩套手工風格，點選下方卡片即刻體驗。",
+  "releaseThemeStylesTitle": "三套風格",
+  "releaseThemeStylesDesc": "Material 延續系統取色，「紙與墨」暖調襯線，「素箋」冷調硬朗。",
+  "releaseThemeAccentTitle": "墨色可選",
+  "releaseThemeAccentDesc": "手工風格備赭石、黛青、靛藍、硃砂四支墨色。",
+  "releaseThemeSwitchTitle": "隨時切換",
+  "releaseThemeSwitchDesc": "預設仍是 Material，可在此試用或在設定中隨時調整。",
+  "releaseMediaDisplayTitle": "圖文排版更清爽",
+  "releaseMediaDisplayLede": "列表中的配圖改為右側緊湊縮圖，圖文錯落更整潔；雙擊卡片即可隨時展開全文與大圖。",
+  "releaseDiagnosticsNotice": "自 3.7.0 起，心跡支援匿名錯誤診斷上報以定位問題，不含筆記內容。可在「設定 › 反饋與聯絡」中關閉。",
+  "releasePrivacyNotice": "隱私政策已更新，補充了匿名功能改進計劃（Aptabase）的資料說明。完整政策見「設定 › 反饋與聯絡」中的資料說明，兩個開關均預設關閉。",
+  "settingsReleaseNotes": "更新內容",
+  "settingsReleaseNotesDesc": "檢視本版本新增的功能",
+  "generatingInsightsForRange": "正在生成{period}洞察…",
+  "@generatingInsightsForRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSummarizeRange": "總結{period}",
+  "@exploreSummarizeRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSummarizeRangePrompt": "幫我總結一下{period}的記錄，有哪些值得注意的地方？",
+  "@exploreSummarizeRangePrompt": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noNotesInRange": "{period}暫無筆記",
+  "@noNotesInRange": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "agentMemoryManageTitle": "管理記憶",
+  "agentMemoryManageSubtitle": "檢視、糾偏與管理 Thoughter 記下的特質與依據",
+  "agentMemoryPageTitle": "Thoughter 記憶",
+  "agentMemoryResonanceSummary": "共 {profileCount} 條畫像 · {sliceCount} 條近況 · {factCount} 條細節",
+  "@agentMemoryResonanceSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "sliceCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCognitiveLoad": "記憶容量",
+  "agentMemoryBudgetNormal": "容量充足，對話與靈感暢通",
+  "agentMemoryBudgetNearFull": "接近記憶上限，優先保留最新特質",
+  "agentMemoryTabAll": "全部",
+  "agentMemoryTabProfile": "畫像特質",
+  "agentMemoryTabPulse": "近期狀態",
+  "agentMemoryTabFacts": "記憶細節",
+  "agentMemoryTabHistory": "歷史更迭",
+  "agentMemorySearchHint": "搜尋記憶或關鍵詞...",
+  "agentMemoryKindIdentity": "身份常識",
+  "agentMemoryKindPreference": "內容偏好",
+  "agentMemoryKindStyle": "表達風格",
+  "agentMemoryKindFeedback": "糾偏反饋",
+  "agentMemoryKindTaste": "摘錄品味",
+  "agentMemoryKindVoice": "寫作聲音",
+  "agentMemorySourceDreaming": "由筆記提煉",
+  "agentMemorySourceThoughter": "對話中記住",
+  "agentMemorySourceUser": "手動記下",
+  "agentMemoryStatusActive": "生效中",
+  "agentMemoryStatusSuperseded": "已存檔",
+  "agentMemoryEvidenceTitle": "關聯 {count} 篇筆記",
+  "@agentMemoryEvidenceTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEvidenceViewNote": "檢視筆記",
+  "agentMemoryEvidenceNoteDeleted": "原筆記已在別處被移除",
+  "agentMemoryPulseExpiresIn": "尚餘 {days} 天",
+  "@agentMemoryPulseExpiresIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryPulseExpiresToday": "今日到期",
+  "agentMemoryPulseTtlNotice": "近期狀態具時效性，兩週後自然淡去，保持記憶清爽",
+  "agentMemoryFactImportance": "重要度 {score}/10",
+  "@agentMemoryFactImportance": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryFactRecalledTimes": "已想起 {count} 次",
+  "@agentMemoryFactRecalledTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEditDirectiveTitle": "修正記憶特質",
+  "agentMemoryEditDirectiveHint": "例如：回覆保持碎句，多留白",
+  "agentMemoryEditSave": "儲存修正",
+  "agentMemoryEditSuccess": "已修正該條記憶",
+  "agentMemoryForgetConfirmTitle": "讓 Thoughter 忘掉這條？",
+  "agentMemoryForgetConfirmBody": "忘掉後，Thoughter 在對話、每日提示和週期洞察中將不再使用這條結論。",
+  "agentMemoryForgetAction": "忘掉",
+  "agentMemoryForgotten": "已遺忘該條記憶",
+  "agentMemoryCompactTitle": "整理記憶",
+  "agentMemoryCompactConfirm": "將自動清理已過期的近期狀態、過時的歷史畫像與低權重細節。是否繼續？",
+  "agentMemoryCompactDone": "已整理清理 {count} 條過時記憶",
+  "@agentMemoryCompactDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCompactNoop": "記憶庫整潔，無需整理",
+  "agentMemoryAddTitle": "告訴 Thoughter 一條特質",
+  "agentMemoryAddKind": "特質分類",
+  "agentMemoryAddDirective": "記憶內容 (以清晰指令表述)",
+  "agentMemoryAddHint": "例如：稱呼我為行者，喜歡探討文學與存在主義",
+  "agentMemoryAddSuccess": "已記下新特質",
+  "agentMemoryEmpty": "暫無匹配的記憶",
+  "agentMemoryEmptyDesc": "在對話中與 Thoughter 交流，它會自然記下你的偏好與習慣",
+  "agentMemoryCharsCount": "{usedChars} / {maxChars} 字元",
+  "@agentMemoryCharsCount": {
+    "placeholders": {
+      "usedChars": {
+        "type": "int"
+      },
+      "maxChars": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEntriesCount": "{usedEntries} / {maxEntries} 條",
+  "@agentMemoryEntriesCount": {
+    "placeholders": {
+      "usedEntries": {
+        "type": "int"
+      },
+      "maxEntries": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryObservationTime": "觀察於 {time}",
+  "@agentMemoryObservationTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }
