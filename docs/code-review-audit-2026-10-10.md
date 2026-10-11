@@ -1,9 +1,12 @@
-# 76 提交双轴代码审查 (2026-10-10)
+# 76 提交双轴代码审查 (2026-10-10) [已归档 / 阶段审计]
 
-> **状态**：📦 已归档（所有待办项已整改闭环，门禁全绿）
-> **责任人 / 产出角色**：AI 代码审查会话（Standards / Spec 双子代理并行执行，整改完成）
-> **涉及模块**：`lib/services/`、`lib/widgets/`、`lib/pages/`、`lib/controllers/`、`lib/l10n/`、`test/`
-> **关联历史**：[`code-review-audit-2026-10-03.md`](code-review-audit-2026-10-03.md)、[`codebase-comprehensive-audit-2026-08-28.md`](codebase-comprehensive-audit-2026-08-28.md)
+> [!NOTE]
+> ### 📦 本代码审查报告已归档 (Archived / Milestone Audit)
+> - **状态**：📦 已归档（真实问题均已整改闭环，门禁全绿；P5 底层网络取消待下沉重构）
+> - **责任人 / 产出角色**：AI 代码审查会话（Standards / Spec 双子代理并行执行，整改完成）
+> - **涉及模块**：`lib/services/`、`lib/widgets/`、`lib/pages/`、`lib/controllers/`、`lib/l10n/`、`test/`
+> - **归档时间**：2026-10-10
+> - **关联历史**：[`code-review-audit-2026-10-03.md`](code-review-audit-2026-10-03.md)、[`codebase-comprehensive-audit-2026-08-28.md`](codebase-comprehensive-audit-2026-08-28.md)
 
 ---
 
@@ -82,16 +85,16 @@
 
 #701（PDF 预览主题）、#727（编辑器拖拽隔离）、#710（thoughter 会话切换）、#709（searchToken）、#724（流清理）、#725（展开态保留）、#715（订阅取消）、#699（popOnSuccess）、#696/#697（draft 锁与恢复）、#712（正则优化）等未发现实质偏离。
 
-## 4. 影响范围与整改清单（已闭环）
+## 4. 影响范围与整改清单（核心问题均已闭环）
 
 - [x] **S1**：两处 `Colors.white`（`collapsed_media_banner.dart` 与 `collapsed_media_thumbnail.dart`）统一换用 `theme.colorScheme.onInverseSurface` 与 `inverseSurface.withValues(alpha: 0.85)`，消除硬编码颜色违规并合并注释说明。
-- [x] **S2**：`thinking_widget.dart` 的 `onTapLink` 捕获异常补齐 `AppLogger.w` 上下文日志与 `AppSnackBar.error(context, l10n.openLinkFailed)` 用户反馈，不再静默吞错。
-- [x] **P1**：`AgentMemoryService` 的 `_validateColumnDefinition` 增强扩展，支持 `NUMERIC(10, 2)`、`DECIMAL(10,2)`、`DEFAULT NULL`、负数与浮点默认值，补全单元测试覆盖。
-- [x] **P2**：SQLite 跨平台聚合计数解析补充 `_safeParseInt`（支持 String/num 统一转换与容错），覆盖 `quote_row_parser`、`database_health_service`、`chat_session_service`、`agent_memory_service`。
-- [x] **P3**：`ChatMessage._parseString` 遇到非普通对象时在 jsonEncode 失败后回退 `val.toString()` 保障数据不丢；`parsedMeta` 与 `ChatSession.fromJson` 捕获异常补齐 `error` 与 `stackTrace`。
-- [x] **P4**：澄清批量查询性能机制与 SQLite IPC 开销优化定位，对齐 `_safeParseInt`。
-- [x] **P5**：UI 裸 ScaffoldMessenger 与 e.toString() 泄露已完全修复并脱敏，错误以 AppSnackBar 与 l10n 提示；底层 Future.timeout 网络连接取消已记录待下沉至网络服务层重构。
-- [x] **P7（P0）**：数据目录迁移前对非空既有目标目录立即中止报错（`FileSystemException`）；回滚实现重构为仅删除本次迁移清单文件白名单并修剪空目录，不触碰目标目录任何无关文件；恢复取消返回 `false` 契约，补充回归测试（26/26 用例全部通过）。
+- [x] **S2**：`thinking_widget.dart` 的 `onTapLink` 捕获异常补齐 `AppLogger.w` 上下文日志与 `AppSnackBar.error(context, l10n.openLinkFailed)` 用户反馈，不再静默吞错；补全打开链接失败的警告提示与回归测试。
+- [x] **P1**：`AgentMemoryService` 的 `_validateColumnDefinition` 增强扩展，支持 `NUMERIC(10, 2)`、`DECIMAL(10,2)`、`DEFAULT NULL`、负数与浮点科学计数法默认值，补全单元测试覆盖。
+- [x] **P2**：抽取独立工具 `sqlite_type_utils.dart` 中的 `safeParseInt`（严格校验 `isFinite` 并统一支持 `num`/`String` 跨平台转换与容错），各数据库服务消除重复直接复用。
+- [x] **P3**：`ChatMessage._parseString` 遇到非普通对象使用 `toEncodable: (nonEncodable) => nonEncodable.toString()`，不可编码对象安全回退为 `null` 避免非法 JSON；`parsedMeta` 与 `ChatSession.fromJson` 捕获异常补齐脱敏日志与堆栈。
+- [x] **P4**：澄清批量查询性能机制与 SQLite IPC 开销优化定位，对齐 `safeParseInt`。
+- [ ] **P5（部分完成）**：UI 裸 `ScaffoldMessenger` 与 `e.toString()` 泄露已完全修复并脱敏，错误以 `AppSnackBar` 与 l10n 提示；底层 `Future.timeout` 网络连接取消已记录待下沉至网络服务层重构（作为后续技术债务跟踪）。
+- [x] **P7（P0）**：数据目录迁移前对非空既有目标目录立即中止报错（`FileSystemException`）；回滚实现重构为仅删除本次迁移清单文件白名单并修剪空目录，不触碰目标目录任何无关文件；恢复取消返回 `false` 契约，补充回归测试（27/27 用例全部通过）。
 - [x] **P6/P8**：审查记录已归档并补充说明回归链与重构属性。
 
 ## 5. 验证与门禁结果

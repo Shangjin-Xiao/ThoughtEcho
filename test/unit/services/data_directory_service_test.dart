@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/large_file_manager.dart';
 
 import '../../test_harness.dart';
@@ -512,12 +514,21 @@ void main() {
     });
 
     test('迁移在关闭数据库之后被取消时恢复 DatabaseService 且自动回滚清理', () async {
-      createFile('databases/thoughtecho.db');
-      createFile('media/large.dat');
-
       final target =
           await TestHarness.createTempDirectory('mid_migration_cancel_target');
       addTearDown(() => TestHarness.deleteTempDirectory(target));
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_using_custom_data_directory', true);
+      await prefs.setString('custom_data_directory_path', tempDir.path);
+      addTearDown(() async {
+        final p = await SharedPreferences.getInstance();
+        await p.remove('is_using_custom_data_directory');
+        await p.remove('custom_data_directory_path');
+      });
+
+      createFile('databases/thoughtecho.db');
+      createFile('media/large.dat');
 
       final cancelToken = LargeFileManager.createCancelToken();
 
@@ -534,7 +545,15 @@ void main() {
       );
 
       expect(success, isFalse);
+      expect(progressFired, isTrue);
+      // 原文件安全无损
       expect(File(abs('databases/thoughtecho.db')).existsSync(), isTrue);
+      expect(File(abs('media/large.dat')).existsSync(), isTrue);
+      // 目标路径被自动回滚清理
+      expect(Directory(target.path).existsSync(), isFalse);
+      // DatabaseService 重置后可正常重新初始化使用
+      await DatabaseService().init();
+      expect(DatabaseService().database.isOpen, isTrue);
     });
   });
 }

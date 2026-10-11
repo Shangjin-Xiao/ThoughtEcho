@@ -204,6 +204,7 @@ class ChatMessage {
   static String? _parseString(dynamic val) {
     if (val == null) return null;
     if (val is String) return val;
+    if (val is num || val is bool) return val.toString();
     if (val is Map) {
       try {
         final stringKeyMap = val.map((k, v) => MapEntry(k.toString(), v));
@@ -212,7 +213,7 @@ class ChatMessage {
           toEncodable: (nonEncodable) => nonEncodable.toString(),
         );
       } catch (_) {
-        return val.toString();
+        return null;
       }
     }
     if (val is List) {
@@ -222,10 +223,17 @@ class ChatMessage {
           toEncodable: (nonEncodable) => nonEncodable.toString(),
         );
       } catch (_) {
-        return val.toString();
+        return null;
       }
     }
-    return val.toString();
+    try {
+      return jsonEncode(
+        val,
+        toEncodable: (nonEncodable) => nonEncodable.toString(),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   @visibleForTesting

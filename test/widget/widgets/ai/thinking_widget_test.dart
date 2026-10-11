@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -400,6 +401,84 @@ void main() {
 
       // 验证无未处理异常/Timer 泄露
       expect(find.byType(ThinkingWidget), findsNothing);
+    });
+
+    testWidgets('onTapLink 在 launchUrl 返回 false 时弹出警告 SnackBar',
+        (WidgetTester tester) async {
+      const MethodChannel urlLauncherChannel =
+          MethodChannel('plugins.flutter.io/url_launcher');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        urlLauncherChannel,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'canLaunch' ||
+              methodCall.method == 'canLaunchUrl') {
+            return true;
+          }
+          if (methodCall.method == 'launch' ||
+              methodCall.method == 'launchUrl') {
+            return false;
+          }
+          return false;
+        },
+      );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(urlLauncherChannel, null);
+      });
+
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '[参考链接](https://example.com)',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      final markdown = tester.widget<MarkdownBody>(find.byType(MarkdownBody));
+      markdown.onTapLink?.call('参考链接', 'https://example.com', '');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('无法打开链接'), findsOneWidget);
+    });
+
+    testWidgets('onTapLink 在 canLaunchUrl 返回 false 时弹出警告 SnackBar',
+        (WidgetTester tester) async {
+      const MethodChannel urlLauncherChannel =
+          MethodChannel('plugins.flutter.io/url_launcher');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        urlLauncherChannel,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'canLaunch' ||
+              methodCall.method == 'canLaunchUrl') {
+            return false;
+          }
+          return false;
+        },
+      );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(urlLauncherChannel, null);
+      });
+
+      await tester.pumpWidget(
+        buildTestApp(
+          const ThinkingWidget(
+            thinkingText: '[不可用链接](https://invalid.local)',
+            inProgress: true,
+          ),
+        ),
+      );
+
+      final markdown = tester.widget<MarkdownBody>(find.byType(MarkdownBody));
+      markdown.onTapLink?.call('不可用链接', 'https://invalid.local', '');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('无法打开链接'), findsOneWidget);
     });
   });
 }

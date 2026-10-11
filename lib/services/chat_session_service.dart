@@ -722,16 +722,13 @@ WHERE s.id IN ($placeholders)
 ''';
   }
 
-  static int _safeParseInt(Object? value, [int defaultValue = 0]) =>
-      safeParseInt(value, defaultValue);
-
   @visibleForTesting
   static int safeParseIntForTest(Object? value, [int defaultValue = 0]) =>
-      _safeParseInt(value, defaultValue);
+      safeParseInt(value, defaultValue);
 
   ChatSessionOverview _parseOverviewRow(Map<dynamic, dynamic> row) {
     return ChatSessionOverview(
-      messageCount: _safeParseInt(row['message_count']),
+      messageCount: safeParseInt(row['message_count']),
       snippet: _truncatePreview(row['last_content'] as String?),
     );
   }
@@ -1070,7 +1067,7 @@ WHERE s.id IN ($placeholders)
         'SELECT COUNT(*) as count FROM chat_messages WHERE session_id = ?',
         [sessionId],
       );
-      return _safeParseInt(result.firstOrNull?['count']);
+      return safeParseInt(result.firstOrNull?['count']);
     } catch (e) {
       logError(
         'ChatSessionService.getMessageCount 失败',
