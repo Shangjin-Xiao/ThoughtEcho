@@ -275,9 +275,6 @@ class AgentMemoryService extends ChangeNotifier {
     return '"$identifier"';
   }
 
-  static int _safeParseInt(Object? value, [int defaultValue = 0]) =>
-      safeParseInt(value, defaultValue);
-
   static void _validateColumnDefinition(String columnDefinition) {
     final trimmedDef = columnDefinition.trim();
     final parts =
@@ -732,7 +729,7 @@ class AgentMemoryService extends ChangeNotifier {
       'SELECT count(*) as count FROM $recentSliceTable WHERE expires_at > ?',
       <Object?>[now.toIso8601String()],
     );
-    final activeCount = _safeParseInt(countRows.firstOrNull?['count']);
+    final activeCount = safeParseInt(countRows.firstOrNull?['count']);
     if (activeCount > AgentMemoryRecentSlice.maxRecentSlices * 2) {
       await db.delete(
         recentSliceTable,

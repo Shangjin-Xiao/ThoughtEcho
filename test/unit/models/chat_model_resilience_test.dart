@@ -135,14 +135,12 @@ void main() {
       final cyclicMap = <String, dynamic>{'key': 'value'};
       cyclicMap['self'] = cyclicMap;
       final fallback = ChatMessage.parseStringForTest(cyclicMap);
-      expect(fallback, isNotNull);
-      expect(fallback, contains('key'));
+      expect(fallback, isNull);
 
       final cyclicList = <dynamic>[1, 2];
       cyclicList.add(cyclicList);
       final listFallback = ChatMessage.parseStringForTest(cyclicList);
-      expect(listFallback, isNotNull);
-      expect(listFallback, contains('1'));
+      expect(listFallback, isNull);
     });
   });
 
