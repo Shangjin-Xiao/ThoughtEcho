@@ -80,14 +80,33 @@ ThoughtEcho 在纸与墨（`paper`）和素笺（`plain`）两套手工主题风
 
 ---
 
-### 4. 字体回退方案权衡与实施路线
+### 4. 最佳方案：平台差异化系统衬线体显式调用（Platform-Aware System Serif）
 
-- **多语言优雅回退到系统黑体（推荐，第二步核心）**：
-  当语言为 `zh-Hant`、`ja` 或 `ko` 时，**显式禁用 `bundledSerif`，正文字体设为 null（回退系统默认黑体）**。
-  - **100% 杜绝混排**：整段文字由系统高质量黑体统一渲染；
-  - **零包体增加**；
-  - **设计哲学高度契合**：纸墨风格的灵魂在于**手工纸墨色板、发丝边框微层次、卡片背景纸纹（PaperRuleBackground）**，黑体在纸墨色板与横线下同样具备极佳可读性；
-  - 契合 ThoughtEcho 既有规则（`label*` 与 `bodySmall` 坚持黑体保可读性）。
+#### 为什么直接设为 null（黑体）过于保守？
+直接退回系统黑体固然规避了混排，但完全放弃了各平台上现成的优质系统衬线体资产。事实上，**导致单段落内“宋黑斑秃混排”的真正根源是首选族强行绑定了随包简体子集 `NotoSerifSC-Subset`（因其仅收录 GB2312）**。
+只要在非简体语言下**脱离该随包子集**，直接向系统请求衬线字体族，整段文本便由系统字体管理器统一排版，根本不会发生字形撕裂。
+
+#### 跨平台显式映射与逐步回退设计
+在 `ThemeStyleForm.forLocale(locale)` 中，按当前运行平台精准匹配系统衬线族名：
+1. **Android 平台**：
+   - 首选族名设为 **`serif`**。
+   - Android 系统底层（Minikin / `Typeface.create("serif")`）会通过 `/system/etc/fonts.xml` 将 `serif` 映射至系统衬线字体族。在原生 Android、三星、一加等配置了 CJK Serif 的机型上完整呈现衬线体；在未内置 CJK Serif 的机型上，系统整段统一平滑回落至系统黑体，**绝不会出现同一句子内字形拼贴**。
+2. **iOS / macOS 平台**：
+   - iOS 的 CoreText 不认通用别名 `serif`，但认具体具名 PostScript / Family Name：
+     - 日文（`ja`）：**`Hiragino Mincho ProN`**（ヒラギノ明朝，苹果内置的高品质印刷级明朝体）；
+     - 繁体中文（`zh-Hant`）：**`Songti TC`**（宋體-繁）/ `LiSong Pro`；
+     - 韩文（`ko`）：**`AppleMyungjo`**。
+   - 在 iPhone / iPad / Mac 上获得原汁原味的系统宋体/明朝体体验。
+3. **Windows 平台**：
+   - 日文（`ja`）：**`Yu Mincho`**（游明朝，Windows 10/11 默认自带的高质量衬线体）与 `MS Mincho`；
+   - 繁体中文（`zh-Hant`）：**`PMingLiU`**（新細明體）与 `MingLiU`。
+4. **备选回退链（`fontFamilyFallback`）**：
+   - 包含跨平台的所有候选衬线体族名列表（含 `'serif'`），形成互补兜底。
+
+**收益**：
+- **零包体增加**（不增添任何离线字体包）；
+- **彻底杜绝斑秃混排**（整段由系统统一调度）；
+- **最大化保留纸墨衬线美学**（在支持的 Android、iOS、macOS、Windows 上均呈现地道衬线字体）。
 
 ---
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_semantic_colors.dart';
@@ -462,17 +463,96 @@ class ThemeStyleForm {
     return true;
   }
 
+  /// 解析针对目标语言 [locale] 与运行平台 [platform] 的系统衬线字体主族名。
+  ///
+  /// - Android：通用族名 'serif' 由系统 Minikin/fonts.xml 映射至系统衬线字体；
+  /// - iOS / macOS：CoreText 依赖具名族名，日文使用 'Hiragino Mincho ProN'，
+  ///   繁体中文使用 'Songti TC'，韩文使用 'AppleMyungjo'；
+  /// - Windows：日文使用高质量的 'Yu Mincho'（游明朝），繁体中文使用 'PMingLiU'（新细明体）。
+  static String getSystemSerifFamily({
+    Locale? locale,
+    TargetPlatform? platform,
+  }) {
+    final p = platform ?? defaultTargetPlatform;
+    final lang = locale?.languageCode.toLowerCase() ?? 'en';
+    final isHant = locale?.scriptCode?.toLowerCase() == 'hant' ||
+        ['TW', 'HK', 'MO'].contains(locale?.countryCode?.toUpperCase());
+
+    switch (p) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        if (lang == 'ja') return 'Hiragino Mincho ProN';
+        if (isHant) return 'Songti TC';
+        if (lang == 'ko') return 'AppleMyungjo';
+        return 'Songti SC';
+      case TargetPlatform.android:
+        return 'serif';
+      case TargetPlatform.windows:
+        if (lang == 'ja') return 'Yu Mincho';
+        if (isHant) return 'PMingLiU';
+        if (lang == 'ko') return 'Batang';
+        return 'SimSun';
+      default:
+        return 'serif';
+    }
+  }
+
+  /// 对应语言的跨平台系统衬线体回退列表。
+  static List<String> getSystemSerifFallbackList(Locale? locale) {
+    final lang = locale?.languageCode.toLowerCase() ?? 'en';
+    final isHant = locale?.scriptCode?.toLowerCase() == 'hant' ||
+        ['TW', 'HK', 'MO'].contains(locale?.countryCode?.toUpperCase());
+
+    if (lang == 'ja') {
+      return const [
+        'Hiragino Mincho ProN',
+        'Hiragino Mincho Pro',
+        'YuMincho',
+        'Yu Mincho',
+        'MS Mincho',
+        'Noto Serif CJK JP',
+        'Noto Serif JP',
+        'serif',
+      ];
+    }
+    if (isHant) {
+      return const [
+        'Songti TC',
+        'LiSong Pro',
+        'PMingLiU',
+        'MingLiU',
+        'Noto Serif CJK TC',
+        'Noto Serif TC',
+        'serif',
+      ];
+    }
+    if (lang == 'ko') {
+      return const [
+        'AppleMyungjo',
+        'Batang',
+        'Noto Serif CJK KR',
+        'Noto Serif KR',
+        'serif',
+      ];
+    }
+    return _systemSerifFallback;
+  }
+
   /// 为目标 [locale] 解析适用的风格形式。
   ///
-  /// 若当前风格指定了随包字体 [bundledSerif]，但在目标语言（如日文、繁体中文）下
-  /// 会因字符集缺失引发混排，则将 [fontFamily] 与 [fontFamilyFallback] 回退为 null
-  /// （采用统一系统默认黑体），保留色板、纸纹、圆角等其他手工风格特征。
-  ThemeStyleForm forLocale(Locale? locale) {
+  /// 若当前风格指定了随包字体 [bundledSerif]，但在目标语言（如日文、繁体中文、韩文）下
+  /// 随包子集因字符集缺失会引发同一段落内的宋黑混排，则切换为各平台对应的系统衬线体
+  /// （Android 为 'serif'，iOS 为具名宋体/明朝体，Windows 为游明朝/新细明体），
+  /// 让系统字体管理器统一接管整段渲染，既杜绝局部斑秃混排，又在有系统字体的设备上呈现优美衬线排版。
+  ThemeStyleForm forLocale(Locale? locale, {TargetPlatform? platform}) {
     if (fontFamily == null) return this;
     if (!isBundledSerifSupported(locale)) {
+      final systemSerif =
+          getSystemSerifFamily(locale: locale, platform: platform);
+      final systemFallback = getSystemSerifFallbackList(locale);
       return copyWith(
-        fontFamily: () => null,
-        fontFamilyFallback: () => null,
+        fontFamily: () => systemSerif,
+        fontFamilyFallback: () => systemFallback,
       );
     }
     return this;
