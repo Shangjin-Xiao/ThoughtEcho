@@ -28,11 +28,10 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.ocrSelectRegion),
-      ),
+      appBar: AppBar(title: Text(l10n.ocrSelectRegion)),
       body: Column(
         children: [
           // 提示文本
@@ -49,9 +48,7 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
             child: Stack(
               children: [
                 // TODO: 显示图片 - 后端实现后添加
-                AppEmptyView(
-                  text: l10n.featureComingSoon,
-                ),
+                AppEmptyView(text: l10n.featureComingSoon),
 
                 // TODO: 文字区域高亮 - 后端实现后添加
                 ...widget.detectedRegions.asMap().entries.map((entry) {
@@ -76,12 +73,12 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: isSelected
-                                ? theme.colorScheme.primary
+                                ? primaryColor
                                 : theme.colorScheme.outline,
                             width: 2,
                           ),
                           color: isSelected
-                              ? theme.colorScheme.primary.withValues(alpha: 0.2)
+                              ? primaryColor.withValues(alpha: 0.2)
                               : Colors.transparent,
                         ),
                       ),

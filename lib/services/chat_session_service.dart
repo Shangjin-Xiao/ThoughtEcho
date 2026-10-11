@@ -173,23 +173,40 @@ class ChatSessionService extends ChangeNotifier {
       final legacyMessages = await sourceDb.query('chat_messages');
 
       await targetDb.transaction((txn) async {
-        final batch = txn.batch();
-        for (final row in legacySessions) {
-          batch.insert(
-            'chat_sessions',
-            row,
-            conflictAlgorithm: ConflictAlgorithm.ignore,
-          );
+        const chunkSize = 500;
+
+        for (var i = 0; i < legacySessions.length; i += chunkSize) {
+          final batch = txn.batch();
+          final end = (i + chunkSize < legacySessions.length)
+              ? i + chunkSize
+              : legacySessions.length;
+          for (var j = i; j < end; j++) {
+            batch.insert(
+              'chat_sessions',
+              legacySessions[j],
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
+          }
+          await batch.commit(noResult: true);
         }
 
-        for (final row in legacyMessages) {
-          batch.insert(
-            'chat_messages',
-            row,
-            conflictAlgorithm: ConflictAlgorithm.ignore,
-          );
+        for (var i = 0; i < legacyMessages.length; i += chunkSize) {
+          final batch = txn.batch();
+          final end = (i + chunkSize < legacyMessages.length)
+              ? i + chunkSize
+              : legacyMessages.length;
+          for (var j = i; j < end; j++) {
+            batch.insert(
+              'chat_messages',
+              legacyMessages[j],
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
+          }
+          await batch.commit(noResult: true);
         }
-        batch.insert(
+
+        final metaBatch = txn.batch();
+        metaBatch.insert(
           'chat_metadata',
           {
             'key': _legacyMainDbMigrationKey,
@@ -197,7 +214,7 @@ class ChatSessionService extends ChangeNotifier {
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
-        await batch.commit(noResult: true);
+        await metaBatch.commit(noResult: true);
       });
       logInfo(
         '已迁移 ${legacySessions.length} 个旧聊天会话到独立聊天数据库',

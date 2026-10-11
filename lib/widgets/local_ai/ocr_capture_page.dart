@@ -13,9 +13,10 @@ class OCRCapturePage extends StatefulWidget {
 }
 
 class _OCRCapturePageState extends State<OCRCapturePage> {
+  AppLocalizations get l10n => AppLocalizations.of(context);
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     final primary = theme.colorScheme.primary;

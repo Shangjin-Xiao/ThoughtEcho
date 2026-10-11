@@ -452,7 +452,8 @@ void main() {
       await service.close();
     });
 
-    test('loads history overviews across multiple chunks (>500 sessions) via batch',
+    test(
+        'loads history overviews across multiple chunks (>500 sessions) via batch',
         () async {
       final testDir =
           Directory.systemTemp.createTempSync('chat_db_test_batch_overviews_');
@@ -850,8 +851,8 @@ void main() {
           columnName: 'test_safe_col',
           definition: "TEXT DEFAULT 'safe'",
         );
-        final columns = await db.rawQuery(
-            'SELECT * FROM pragma_table_info(?)', ['chat_sessions']);
+        final columns = await db
+            .rawQuery('SELECT * FROM pragma_table_info(?)', ['chat_sessions']);
         expect(columns.any((c) => c['name'] == 'test_safe_col'), isTrue);
       } finally {
         await service.close();

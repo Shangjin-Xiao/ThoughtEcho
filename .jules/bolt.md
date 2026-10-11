@@ -293,3 +293,6 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** 在 SQLite 数据库 schema 修复和版本迁移（如将历史 `quotes.tag_ids` 迁移至 `quote_tags` 关联表）中，若在循环里为每个笔记标签逐条调用 `batch.insert`，会向底层 SQLite 批处理队列中添加海量的独立单条 SQL 命令，带来显著的跨 IPC/FFI 序列化与队列管理开销。先收集所有合法关联项，再通过每批 400 条的多值 `batch.rawInsert`（`INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES (?, ?), (?, ?)...`）进行分块批量写入，能大幅压缩 IPC 跨边界发送的命令数量，将数据库迁移开销显著降低。
 
 **Action:** 修改 `lib/services/database/schema_repair_adapter.dart` 中的 `_migrateTagData` 方法，先将待迁移的笔记-标签关联关系汇总至内存中的 `tagRelations` 列表，再按每批 400 条参数对（800 个变参，安全低于 SQLite 999 变参上限）使用多值 `batch.rawInsert` 提交。在 2,000 条笔记与近 6,000 个标签的基准测试中，迁移耗时由 202 ms 降低至 49 ms（性能提升约 75.7%）。
+## 2025-02-20 - Batch chunking during ChatSessionService legacy database migration
+**Learning:** Performing a single `txn.batch()` across thousands of database rows can cause high memory overhead and IPC method channel pressure.
+**Action:** Split large migration data sets into chunks of 500 rows per batch within a single transaction to keep memory bounded and reduce IPC overhead.
