@@ -216,7 +216,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
             throw Exception(
                 l10n.unsupportedMediaTypeWithName(widget.mediaType));
         }
-      }, operationName: l10n.unifiedMediaImportSelectMediaFile(_getMediaTypeName(widget.mediaType)));
+      },
+              operationName: l10n.unifiedMediaImportSelectMediaFile(
+                  _getMediaTypeName(widget.mediaType)));
 
       if (result == null || result.files.isEmpty) {
         _resetState();
@@ -313,7 +315,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
                   l10n.unsupportedMediaTypeWithName(widget.mediaType));
           }
         },
-        operationName: l10n.unifiedMediaImportSaveMediaFile(_getMediaTypeName(widget.mediaType)),
+        operationName: l10n.unifiedMediaImportSaveMediaFile(
+            _getMediaTypeName(widget.mediaType)),
       );
 
       if (savedPath != null && mounted) {
@@ -389,7 +392,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
               throw Exception(l10n.unsupportedMediaType);
           }
         },
-        operationName: l10n.unifiedMediaImportSaveMedia(_getMediaTypeName(widget.mediaType)),
+        operationName: l10n
+            .unifiedMediaImportSaveMedia(_getMediaTypeName(widget.mediaType)),
       );
 
       if (savedPath != null && mounted) {
@@ -465,7 +469,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         () async {
           return await _downloadMediaFromUrl(url);
         },
-        operationName: l10n.unifiedMediaImportDownloadMedia(_getMediaTypeName(widget.mediaType)),
+        operationName: l10n.unifiedMediaImportDownloadMedia(
+            _getMediaTypeName(widget.mediaType)),
       );
 
       if (savedPath != null && mounted) {
