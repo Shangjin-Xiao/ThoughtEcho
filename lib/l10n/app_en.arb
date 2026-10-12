@@ -3268,6 +3268,38 @@
       }
     }
   },
+  "unifiedMediaImportSelectMediaFile": "Select {mediaType} File",
+  "@unifiedMediaImportSelectMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMediaFile": "Save {mediaType} File",
+  "@unifiedMediaImportSaveMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMedia": "Save {mediaType}",
+  "@unifiedMediaImportSaveMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportDownloadMedia": "Download {mediaType}",
+  "@unifiedMediaImportDownloadMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
   "mediaTypeImage": "Image",
   "mediaTypeVideo": "Video",
   "mediaTypeAudio": "Audio",
