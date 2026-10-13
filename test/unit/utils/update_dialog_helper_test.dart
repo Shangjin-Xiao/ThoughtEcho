@@ -11,7 +11,8 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    testWidgets('should not show dialog if version is ignored', (WidgetTester tester) async {
+    testWidgets('should not show dialog if version is ignored',
+        (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -47,7 +48,8 @@ void main() {
       expect(find.byType(BottomSheet), findsNothing);
     });
 
-    testWidgets('should show dialog if version is not ignored', (WidgetTester tester) async {
+    testWidgets('should show dialog if version is not ignored',
+        (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
