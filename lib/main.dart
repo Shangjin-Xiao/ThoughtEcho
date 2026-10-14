@@ -764,7 +764,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           if (webdav.enabled && webdav.syncOnOpenOrForeground) {
             webdav.triggerSync(isBackground: true);
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          AppLogger.e(
+            '应用回到前台触发 WebDAV 后台同步失败',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'AppLifecycle',
+          );
+        }
       });
     }
   }
