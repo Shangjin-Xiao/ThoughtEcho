@@ -7,6 +7,8 @@ import 'string_utils.dart';
 ///
 /// 纯函数集合，不持有状态，用于剪贴板复制、分享预览和纯文本导出。
 abstract final class QuoteTextExtractor {
+  /// 预编译用于折叠 3 个及以上连续换行符的正则表达式
+  static final RegExp _excessiveNewlinesRegex = RegExp(r'\n{3,}');
   /// 提取笔记的干净纯文本正文。
   ///
   /// - 若有富文本 Delta，直接解析 Delta 操作并提取纯文本：
@@ -176,6 +178,6 @@ abstract final class QuoteTextExtractor {
     if (!normalized.contains('\n\n\n')) {
       return normalized;
     }
-    return normalized.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return normalized.replaceAll(_excessiveNewlinesRegex, '\n\n');
   }
 }
