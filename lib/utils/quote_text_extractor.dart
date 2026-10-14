@@ -9,6 +9,7 @@ import 'string_utils.dart';
 abstract final class QuoteTextExtractor {
   /// 预编译用于折叠 3 个及以上连续换行符的正则表达式
   static final RegExp _excessiveNewlinesRegex = RegExp(r'\n{3,}');
+
   /// 提取笔记的干净纯文本正文。
   ///
   /// - 若有富文本 Delta，直接解析 Delta 操作并提取纯文本：
