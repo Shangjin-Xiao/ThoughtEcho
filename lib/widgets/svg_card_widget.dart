@@ -9,6 +9,14 @@ import '../theme/theme_style.dart';
 
 /// SVG卡片渲染组件
 class SVGCardWidget extends StatelessWidget {
+  /// 预编译用于从 SVG 中提取 text 标签内容的正则表达式
+  static final RegExp _textTagRegex = RegExp(r'<text[^>]*>([^<]+)</text>');
+
+  /// 预编译用于从 SVG 中提取 foreignObject 标签内容的正则表达式
+  static final RegExp _foreignObjectTagRegex = RegExp(
+    r'<foreignObject[^>]*>.*?<div[^>]*>([^<]+)</div>',
+    dotAll: true,
+  );
   final String svgContent;
   final VoidCallback? onTap;
   final double? width;
@@ -307,7 +315,7 @@ class SVGCardWidget extends StatelessWidget {
   String _extractContentFromSVG(BuildContext context, String svg) {
     try {
       // 尝试提取text标签中的内容
-      final textMatches = RegExp(r'<text[^>]*>([^<]+)</text>').allMatches(svg);
+      final textMatches = _textTagRegex.allMatches(svg);
       final texts = textMatches
           .map((match) => match.group(1)?.trim() ?? '')
           .where((text) => text.isNotEmpty)
@@ -318,10 +326,7 @@ class SVGCardWidget extends StatelessWidget {
       }
 
       // 尝试提取foreignObject中的内容
-      final foreignMatches = RegExp(
-        r'<foreignObject[^>]*>.*?<div[^>]*>([^<]+)</div>',
-        dotAll: true,
-      ).allMatches(svg);
+      final foreignMatches = _foreignObjectTagRegex.allMatches(svg);
       if (foreignMatches.isNotEmpty) {
         final content = foreignMatches.first.group(1)?.trim() ?? '';
         if (content.isNotEmpty) {
