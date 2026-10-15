@@ -8,6 +8,7 @@ import '../../theme/theme_style.dart';
 import '../../utils/aptabase_helper.dart';
 import '../../widgets/app_empty_view.dart';
 import '../../widgets/app_error_view.dart';
+import '../../widgets/app_loading_view.dart';
 import '../../widgets/app_snackbar.dart';
 import 'agent_memory_card.dart';
 import 'agent_memory_dialogs.dart';
@@ -162,7 +163,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting &&
               !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppLoadingView();
           }
 
           if (snapshot.hasError) {

@@ -14,6 +14,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:thoughtecho/widgets/app_loading_view.dart';
 
 import '../../test_harness.dart';
 
@@ -101,7 +102,8 @@ Future<void> _settleWithRealAsync(
       await Future<void>.delayed(const Duration(milliseconds: 30));
     });
     await tester.pump();
-    if (find.byType(CircularProgressIndicator).evaluate().isEmpty) {
+    if (find.byType(AppLoadingView).evaluate().isEmpty &&
+        find.byType(CircularProgressIndicator).evaluate().isEmpty) {
       break;
     }
   }
