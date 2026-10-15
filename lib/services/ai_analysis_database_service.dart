@@ -256,9 +256,24 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
         AppLogger.i('查询到 ${maps.length} 条记录', source: 'AIAnalysisDB');
 
-        final analyses = List.generate(maps.length, (i) {
-          return AIAnalysis.fromJson(maps[i]);
-        });
+        final analyses = <AIAnalysis>[];
+        var skippedCount = 0;
+        for (final map in maps) {
+          try {
+            analyses.add(AIAnalysis.fromJson(map));
+          } catch (e) {
+            skippedCount++;
+            AppLogger.w(
+              'getAllAnalyses: 跳过损坏的 AI 分析行 (id: ${map['id']}): $e',
+              source: 'AIAnalysisDB',
+            );
+          }
+        }
+
+        if (skippedCount > 0) {
+          AppLogger.w('getAllAnalyses: 共跳过 $skippedCount 条损坏记录',
+              source: 'AIAnalysisDB');
+        }
 
         AppLogger.i('成功转换为 ${analyses.length} 个分析对象', source: 'AIAnalysisDB');
         return analyses;
@@ -366,9 +381,18 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           orderBy: 'created_at DESC',
         );
 
-        return List.generate(maps.length, (i) {
-          return AIAnalysis.fromJson(maps[i]);
-        });
+        final analyses = <AIAnalysis>[];
+        for (final map in maps) {
+          try {
+            analyses.add(AIAnalysis.fromJson(map));
+          } catch (e) {
+            AppLogger.w(
+              'searchAnalysesByType: 跳过损坏的 AI 分析行 (id: ${map['id']}): $e',
+              source: 'AIAnalysisDB',
+            );
+          }
+        }
+        return analyses;
       }
     } catch (e) {
       AppLogger.e('按分析类型搜索AI分析失败: $e', error: e, source: 'AIAnalysisDB');
@@ -398,9 +422,18 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           orderBy: 'created_at DESC',
         );
 
-        return List.generate(maps.length, (i) {
-          return AIAnalysis.fromJson(maps[i]);
-        });
+        final analyses = <AIAnalysis>[];
+        for (final map in maps) {
+          try {
+            analyses.add(AIAnalysis.fromJson(map));
+          } catch (e) {
+            AppLogger.w(
+              'searchAnalyses: 跳过损坏的 AI 分析行 (id: ${map['id']}): $e',
+              source: 'AIAnalysisDB',
+            );
+          }
+        }
+        return analyses;
       }
     } catch (e) {
       AppLogger.e('搜索AI分析失败: $e', error: e, source: 'AIAnalysisDB');

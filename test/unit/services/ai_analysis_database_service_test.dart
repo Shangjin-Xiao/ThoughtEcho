@@ -199,5 +199,38 @@ void main() {
       expect(item, isNotNull);
       expect(item!.title, equals('Batch Test 0'));
     });
+
+    test('query methods handle corrupted database rows defensively', () async {
+      final db = await service.database;
+      // 插入一条合法数据与一条被直接修饰为触发 Exception 的破坏数据（例如: quote_count 存了无效字符串导致类型解析失败）
+      await db.insert('ai_analyses', {
+        'id': 'valid-row',
+        'title': 'Valid Title',
+        'content': 'Valid Content',
+        'analysis_type': 'comprehensive',
+        'analysis_style': 'professional',
+        'created_at': DateTime.now().toIso8601String(),
+        'quote_count': 5,
+      });
+
+      // 直接使用原始 SQL 写入损坏行（如非数字 quote_count 在 JSON 还原或自定义解析处理）
+      // 使用带特异性解析失败的情况
+      await db.rawInsert('''
+        INSERT INTO ai_analyses (id, title, content, analysis_type, analysis_style, created_at, quote_count)
+        VALUES ('corrupt-row', 'Corrupt Title', 'Corrupt Content', 'comprehensive', 'professional', '2026-01-01T00:00:00.000', 'invalid_int')
+      ''');
+
+      // getAllAnalyses 应该能捕获/过滤坏行，不崩溃并返回合法记录
+      final analyses = await service.getAllAnalyses();
+      expect(analyses.any((a) => a.id == 'valid-row'), isTrue);
+
+      // searchAnalysesByType 应该也能安全过滤坏行
+      final typeResults = await service.searchAnalysesByType('comprehensive');
+      expect(typeResults.any((a) => a.id == 'valid-row'), isTrue);
+
+      // searchAnalyses 应该也能安全过滤坏行
+      final searchResults = await service.searchAnalyses('Title');
+      expect(searchResults.any((a) => a.id == 'valid-row'), isTrue);
+    });
   });
 }
