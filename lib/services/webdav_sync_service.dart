@@ -121,6 +121,36 @@ class WebDAVSyncService extends ChangeNotifier {
     caseSensitive: false,
   );
 
+  static final RegExp _responseRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _hrefRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _collectionRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?collection\s*/?>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _statusRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?status>\s*HTTP/\d(?:\.\d)?\s+(\d{3})[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?status>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _lengthRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>(\d+)<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _etagRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?getetag>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getetag>',
+    caseSensitive: false,
+  );
+
   /// 初始化设置，从 MMKV 中读取缓存配置
   void _initSettings() {
     _enabled = _mmkv.getBool('webdav_enabled') ?? false;
@@ -191,7 +221,9 @@ class WebDAVSyncService extends ChangeNotifier {
     await _mmkv.setBool('webdav_sync_on_change', _syncOnChange);
     await _mmkv.setBool('webdav_sync_on_cellular', _syncOnCellular);
     await _mmkv.setBool(
-        'webdav_sync_notes_only_on_cellular', _syncNotesOnlyOnCellular);
+      'webdav_sync_notes_only_on_cellular',
+      _syncNotesOnlyOnCellular,
+    );
 
     if (password != null) {
       await _secureStorage.write(
@@ -392,8 +424,10 @@ class WebDAVSyncService extends ChangeNotifier {
       // 2. 检查云端备份是否存在并下载
       Map<String, dynamic>? remoteData;
       bool remoteSyncFileCorrupted = false;
-      var remoteSyncFile =
-          await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
+      var remoteSyncFile = await _getRemoteSyncFileMetadata(
+        dio,
+        remoteSyncZipUrl,
+      );
 
       if (remoteSyncFile.exists) {
         logDebug('发现云端备份文件，开始下载...');
@@ -404,7 +438,8 @@ class WebDAVSyncService extends ChangeNotifier {
 
         if (downloadRes.statusCode == 200 && downloadRes.data != null) {
           final bytes = downloadRes.data!;
-          final expectedLength = remoteSyncFile.contentLength ??
+          final expectedLength =
+              remoteSyncFile.contentLength ??
               _contentLengthFromHeaders(downloadRes.headers);
           if (expectedLength != null && expectedLength != bytes.length) {
             throw StateError(
@@ -425,8 +460,10 @@ class WebDAVSyncService extends ChangeNotifier {
             await _archiveCorruptedRemoteSyncFile(dio, remoteSyncZipUrl);
             // 归档可能已把原文件移走，重新探测状态，避免上传时用错
             // If-Match / If-None-Match 前置条件导致 412。
-            remoteSyncFile =
-                await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
+            remoteSyncFile = await _getRemoteSyncFileMetadata(
+              dio,
+              remoteSyncZipUrl,
+            );
           }
         }
       }
@@ -468,14 +505,8 @@ class WebDAVSyncService extends ChangeNotifier {
       // 6. 流式写入本地数据到临时文件并上传（避免全量数据入内存）
       logDebug('打包本地最新数据上传云端...');
       final tempDir = await getTemporaryDirectory();
-      final tempJsonPath = p.join(
-        tempDir.path,
-        'thoughtecho_webdav_sync.json',
-      );
-      final tempZipPath = p.join(
-        tempDir.path,
-        'thoughtecho_webdav_sync.zip',
-      );
+      final tempJsonPath = p.join(tempDir.path, 'thoughtecho_webdav_sync.json');
+      final tempZipPath = p.join(tempDir.path, 'thoughtecho_webdav_sync.zip');
       try {
         // 分页流式写入 JSON 到临时文件
         await _writeLocalDataToTempJson(dbService.database, tempJsonPath);
@@ -548,10 +579,7 @@ class WebDAVSyncService extends ChangeNotifier {
           logDebug(
             '同步未成功，${delay.inSeconds}s 后重试排队任务（第 $_pendingSyncRetryCount/$_maxPendingSyncRetries 次）',
           );
-          Future.delayed(
-            delay,
-            () => triggerSync(isBackground: isBackground),
-          );
+          Future.delayed(delay, () => triggerSync(isBackground: isBackground));
         } else {
           _pendingSyncRetryCount = 0;
           logWarning(
@@ -565,8 +593,9 @@ class WebDAVSyncService extends ChangeNotifier {
 
   @visibleForTesting
   static String buildBasicAuthHeader(String username, String password) {
-    final credentialsBytes =
-        Uint8List.fromList(utf8.encode('$username:$password'));
+    final credentialsBytes = Uint8List.fromList(
+      utf8.encode('$username:$password'),
+    );
     try {
       return 'Basic ${base64Encode(credentialsBytes)}';
     } finally {
@@ -592,9 +621,9 @@ class WebDAVSyncService extends ChangeNotifier {
     final raw = e.toString();
     // HTTP 状态码识别
     final statusMatch = RegExp(
-            r'status[Cc]ode[:\s]+(\d+)|status code[:\s]+(\d+)|HTTP\s+(\d+)',
-            caseSensitive: false)
-        .firstMatch(raw);
+      r'status[Cc]ode[:\s]+(\d+)|status code[:\s]+(\d+)|HTTP\s+(\d+)',
+      caseSensitive: false,
+    ).firstMatch(raw);
     if (statusMatch != null) {
       final matchedStr =
           statusMatch.group(1) ?? statusMatch.group(2) ?? statusMatch.group(3);
@@ -657,12 +686,14 @@ class WebDAVSyncService extends ChangeNotifier {
         return const _RemoteSyncFileMetadata(exists: false);
       }
       final lastModifiedHeader = response.headers.value('last-modified');
-      final xmlLastModified =
-          _extractFirstXmlTagValue(targetResponse, 'getlastmodified');
+      final xmlLastModified = _extractFirstXmlTagValue(
+        targetResponse,
+        'getlastmodified',
+      );
       final lastModified =
           (xmlLastModified != null && xmlLastModified.isNotEmpty)
-              ? xmlLastModified
-              : lastModifiedHeader;
+          ? xmlLastModified
+          : lastModifiedHeader;
 
       return _RemoteSyncFileMetadata(
         exists: true,
@@ -695,29 +726,16 @@ class WebDAVSyncService extends ChangeNotifier {
     final targetPath = _normalizedUriPath(fileUrl);
     if (targetPath == null || targetPath.endsWith('/')) return null;
 
-    final responseRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
-      caseSensitive: false,
-    );
-    final hrefRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
-      caseSensitive: false,
-    );
-    final collectionRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?collection\s*/?>',
-      caseSensitive: false,
-    );
-
-    final responses = responseRegExp.allMatches(xmlData).toList();
+    final responses = _responseRegExp.allMatches(xmlData).toList();
     final responseBlocks = responses.isEmpty
         ? <String>[xmlData]
         : responses.map((m) => m[0]!).toList();
 
     for (final block in responseBlocks) {
-      if (collectionRegExp.hasMatch(block)) continue;
+      if (_collectionRegExp.hasMatch(block)) continue;
       if (!_propfindResponseHasSuccessStatus(block)) continue;
 
-      final hrefMatch = hrefRegExp.firstMatch(block);
+      final hrefMatch = _hrefRegExp.firstMatch(block);
       if (hrefMatch == null) continue;
 
       final hrefPath = _normalizedUriPath(hrefMatch.group(1) ?? '');
@@ -728,11 +746,7 @@ class WebDAVSyncService extends ChangeNotifier {
   }
 
   static bool _propfindResponseHasSuccessStatus(String responseBlock) {
-    final statusRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?status>\s*HTTP/\d(?:\.\d)?\s+(\d{3})[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?status>',
-      caseSensitive: false,
-    );
-    final statusCodes = statusRegExp
+    final statusCodes = _statusRegExp
         .allMatches(responseBlock)
         .map((match) => int.tryParse(match.group(1) ?? ''))
         .whereType<int>()
@@ -809,8 +823,7 @@ class WebDAVSyncService extends ChangeNotifier {
   @visibleForTesting
   static Map<String, dynamic> decodeAndValidateRemoteSyncZipForTesting(
     List<int> bytes,
-  ) =>
-      _instance._decodeAndValidateRemoteSyncZip(bytes);
+  ) => _instance._decodeAndValidateRemoteSyncZip(bytes);
 
   Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
     final Archive archive;
@@ -847,10 +860,10 @@ class WebDAVSyncService extends ChangeNotifier {
   /// 把无法解析的云端文件改名归档，避免重建时直接丢弃用户数据。
   /// 归档失败不阻断同步（本地数据本身才是权威副本）。
   Future<void> _archiveCorruptedRemoteSyncFile(Dio dio, String fileUrl) async {
-    final stamp = DateTime.now()
-        .toUtc()
-        .toIso8601String()
-        .replaceAll(RegExp(r'[:.]'), '-');
+    final stamp = DateTime.now().toUtc().toIso8601String().replaceAll(
+      RegExp(r'[:.]'),
+      '-',
+    );
     final destination = fileUrl.replaceFirst(
       RegExp(r'thoughtecho_sync\.zip$'),
       'thoughtecho_sync.corrupted-$stamp.zip',
@@ -866,10 +879,7 @@ class WebDAVSyncService extends ChangeNotifier {
       );
       logInfo('已归档损坏的云端同步文件', source: 'WebDAVSyncService');
     } catch (e) {
-      logWarning(
-        '归档损坏的云端同步文件失败，将直接以本地数据覆盖: $e',
-        source: 'WebDAVSyncService',
-      );
+      logWarning('归档损坏的云端同步文件失败，将直接以本地数据覆盖: $e', source: 'WebDAVSyncService');
     }
   }
 
@@ -1038,11 +1048,13 @@ class WebDAVSyncService extends ChangeNotifier {
       final end = (i + 900 < modifiedIds.length) ? i + 900 : modifiedIds.length;
       final chunk = modifiedIds.sublist(i, end);
       final placeholders = List.filled(chunk.length, '?').join(',');
-      localQuotes.addAll(await db.query(
-        'quotes',
-        where: 'id IN ($placeholders)',
-        whereArgs: chunk,
-      ));
+      localQuotes.addAll(
+        await db.query(
+          'quotes',
+          where: 'id IN ($placeholders)',
+          whereArgs: chunk,
+        ),
+      );
     }
 
     if (localQuotes.isEmpty) return 0;
@@ -1064,7 +1076,8 @@ class WebDAVSyncService extends ChangeNotifier {
       final localQuote = localQuotesMap[quoteId];
       if (localQuote == null) continue;
 
-      final remoteModStr = rqMap['last_modified']?.toString() ??
+      final remoteModStr =
+          rqMap['last_modified']?.toString() ??
           rqMap['lastModified']?.toString() ??
           '';
       if (remoteModStr.isEmpty) continue;
@@ -1191,22 +1204,21 @@ class WebDAVSyncService extends ChangeNotifier {
       // 3. 复制对应的标签关联关系
       if (tags.isNotEmpty) {
         if (tags.length == 1) {
-          batch.insert(
-            'quote_tags',
-            {
-              'quote_id': clonedId,
-              'tag_id': tags.first['tag_id'],
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore,
-          );
+          batch.insert('quote_tags', {
+            'quote_id': clonedId,
+            'tag_id': tags.first['tag_id'],
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         } else {
           const chunkSize = 400;
           for (var i = 0; i < tags.length; i += chunkSize) {
-            final end =
-                (i + chunkSize < tags.length) ? i + chunkSize : tags.length;
+            final end = (i + chunkSize < tags.length)
+                ? i + chunkSize
+                : tags.length;
             final chunk = tags.sublist(i, end);
-            final valuePlaceholders =
-                List.filled(chunk.length, '(?, ?)').join(', ');
+            final valuePlaceholders = List.filled(
+              chunk.length,
+              '(?, ?)',
+            ).join(', ');
             final args = <Object?>[];
             for (final tag in chunk) {
               args.addAll([clonedId, tag['tag_id']]);
@@ -1238,10 +1250,10 @@ class WebDAVSyncService extends ChangeNotifier {
     // 1. 扫描本地所有存在的媒体文件
     final List<File> localFiles = await mediaRoot.exists()
         ? await mediaRoot
-            .list(recursive: true)
-            .where((entity) => entity is File)
-            .cast<File>()
-            .toList()
+              .list(recursive: true)
+              .where((entity) => entity is File)
+              .cast<File>()
+              .toList()
         : <File>[];
 
     final Map<String, File> localMediaMap = {};
@@ -1259,38 +1271,42 @@ class WebDAVSyncService extends ChangeNotifier {
     final failedRemoteMediaFolders = <String>{};
 
     // 2. 并行扫描云端所有媒体子目录的文件列表，减少网络请求等待时间并防限流
-    await Future.wait(_mediaSubFolders.map((folder) async {
-      final folderUrl = '${_url}thoughtecho/media/$folder/';
-      try {
-        final response = await dio.request(
-          folderUrl,
-          options: Options(
-            method: 'PROPFIND',
-            headers: {'Depth': '1'},
-            responseType: ResponseType.plain,
-            validateStatus: (status) => status == 207 || status == 200,
-          ),
-        );
+    await Future.wait(
+      _mediaSubFolders.map((folder) async {
+        final folderUrl = '${_url}thoughtecho/media/$folder/';
+        try {
+          final response = await dio.request(
+            folderUrl,
+            options: Options(
+              method: 'PROPFIND',
+              headers: {'Depth': '1'},
+              responseType: ResponseType.plain,
+              validateStatus: (status) => status == 207 || status == 200,
+            ),
+          );
 
-        if ((response.statusCode == 207 || response.statusCode == 200) &&
-            response.data != null) {
-          final dynamic rawData = response.data;
-          final String xmlData = rawData is List<int>
-              ? utf8.decode(rawData, allowMalformed: true)
-              : rawData.toString();
-          final extracted = _extractRemoteMediaDetails(xmlData);
-          for (final entry in extracted.entries) {
-            remoteMediaFiles[entry.key] = entry.value.length;
-            remoteMediaEtags[entry.key] = entry.value.etag;
+          if ((response.statusCode == 207 || response.statusCode == 200) &&
+              response.data != null) {
+            final dynamic rawData = response.data;
+            final String xmlData = rawData is List<int>
+                ? utf8.decode(rawData, allowMalformed: true)
+                : rawData.toString();
+            final extracted = _extractRemoteMediaDetails(xmlData);
+            for (final entry in extracted.entries) {
+              remoteMediaFiles[entry.key] = entry.value.length;
+              remoteMediaEtags[entry.key] = entry.value.etag;
+            }
           }
+        } catch (e) {
+          failedRemoteMediaFolders.add(folder);
+          failureCount++;
+          logWarning(
+            '获取云端媒体目录 ($folder) 列表失败，该目录本轮不同步: $e',
+            source: 'WebDAVSyncService',
+          );
         }
-      } catch (e) {
-        failedRemoteMediaFolders.add(folder);
-        failureCount++;
-        logWarning('获取云端媒体目录 ($folder) 列表失败，该目录本轮不同步: $e',
-            source: 'WebDAVSyncService');
-      }
-    }));
+      }),
+    );
 
     // 3. 上传本地独有文件到云端
     for (final entry in localMediaMap.entries) {
@@ -1316,9 +1332,7 @@ class WebDAVSyncService extends ChangeNotifier {
           await dio.put(
             uploadUrl,
             data: file.openRead(),
-            options: Options(
-              headers: {Headers.contentLengthHeader: fileLen},
-            ),
+            options: Options(headers: {Headers.contentLengthHeader: fileLen}),
           );
         } catch (e) {
           failureCount++;
@@ -1344,8 +1358,8 @@ class WebDAVSyncService extends ChangeNotifier {
         try {
           final refCount =
               await MediaReferenceService.getReferenceCountForMediaRelativePath(
-            stdPath,
-          );
+                stdPath,
+              );
 
           if (refCount > 0) {
             // 该云端媒体在本地数据库有笔记引用，需从云端下载（如新设备登录同步）
@@ -1361,8 +1375,10 @@ class WebDAVSyncService extends ChangeNotifier {
             try {
               // 确保父目录存在
               await localTargetFile.parent.create(recursive: true);
-              final downloadResponse =
-                  await dio.download(downloadUrl, tmpFile.path);
+              final downloadResponse = await dio.download(
+                downloadUrl,
+                tmpFile.path,
+              );
 
               // 1. 校验下载文件长度与远端一致性
               final downloadedLen = await tmpFile.length();
@@ -1371,7 +1387,8 @@ class WebDAVSyncService extends ChangeNotifier {
                   expectedSize > 0 &&
                   downloadedLen != expectedSize) {
                 throw Exception(
-                    '下载附件长度不一致: 本地=$downloadedLen, 期望=$expectedSize');
+                  '下载附件长度不一致: 本地=$downloadedLen, 期望=$expectedSize',
+                );
               }
               if (downloadedLen == 0) {
                 throw Exception('下载附件为空文件');
@@ -1422,41 +1439,26 @@ class WebDAVSyncService extends ChangeNotifier {
     String xmlData,
   ) {
     final files = <String, _RemoteMediaFileInfo>{};
-    final responseRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
-      caseSensitive: false,
-    );
-    final hrefRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
-      caseSensitive: false,
-    );
-    final lengthRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>(\d+)<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
-      caseSensitive: false,
-    );
-    final etagRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?getetag>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getetag>',
-      caseSensitive: false,
-    );
 
-    final responses = responseRegExp.allMatches(xmlData).toList();
+    final responses = _responseRegExp.allMatches(xmlData).toList();
     final responseBlocks = responses.isEmpty
         ? <String>[xmlData]
         : responses.map((m) => m[0]!).toList();
 
     for (final block in responseBlocks) {
-      final hrefMatch = hrefRegExp.firstMatch(block);
+      final hrefMatch = _hrefRegExp.firstMatch(block);
       if (hrefMatch == null) continue;
 
       final relPath = _mediaRelativePathFromHref(hrefMatch.group(1) ?? '');
       if (relPath == null) continue;
 
-      final lengthMatch = lengthRegExp.firstMatch(block);
-      final etagMatch = etagRegExp.firstMatch(block);
+      final lengthMatch = _lengthRegExp.firstMatch(block);
+      final etagMatch = _etagRegExp.firstMatch(block);
 
       files[relPath] = _RemoteMediaFileInfo(
-        length:
-            lengthMatch == null ? null : int.tryParse(lengthMatch.group(1)!),
+        length: lengthMatch == null
+            ? null
+            : int.tryParse(lengthMatch.group(1)!),
         etag: etagMatch?.group(1),
       );
     }
@@ -1486,9 +1488,9 @@ class WebDAVSyncService extends ChangeNotifier {
     // 从 HTTP 响应头大小写不敏感查找哈希或 ETag
     final headerHash =
         _getHeaderCaseInsensitive(responseHeaders, 'x-checksum-sha256') ??
-            _getHeaderCaseInsensitive(responseHeaders, 'x-amz-meta-sha256') ??
-            _getHeaderCaseInsensitive(responseHeaders, 'content-md5') ??
-            _getHeaderCaseInsensitive(responseHeaders, 'etag');
+        _getHeaderCaseInsensitive(responseHeaders, 'x-amz-meta-sha256') ??
+        _getHeaderCaseInsensitive(responseHeaders, 'content-md5') ??
+        _getHeaderCaseInsensitive(responseHeaders, 'etag');
 
     final targetCandidate = _cleanHashString(headerHash ?? remoteEtag);
     if (targetCandidate == null || targetCandidate.isEmpty) {
@@ -1503,7 +1505,8 @@ class WebDAVSyncService extends ChangeNotifier {
       final localSha256 = digest.toString().toLowerCase();
       if (localSha256 != cleanTarget) {
         throw Exception(
-            '下载附件 SHA-256 哈希比对失败: 本地=$localSha256, 远端=$cleanTarget');
+          '下载附件 SHA-256 哈希比对失败: 本地=$localSha256, 远端=$cleanTarget',
+        );
       }
     } else if (cleanTarget.length == 32) {
       // 32 位 Hex（标准的 MD5）：流式计算 MD5
@@ -1655,10 +1658,7 @@ class WebDAVSyncService extends ChangeNotifier {
         map['ops'] = ops;
         return json.encode(map);
       } else {
-        logWarning(
-          '冲突笔记 Delta 结构不支持加前缀，返回原内容',
-          source: 'WebDAVSyncService',
-        );
+        logWarning('冲突笔记 Delta 结构不支持加前缀，返回原内容', source: 'WebDAVSyncService');
       }
     } catch (e, stack) {
       logError(
@@ -1713,20 +1713,13 @@ class WebDAVSyncService extends ChangeNotifier {
   /// 格式与 [DatabaseBackupService.exportDataAsMap] 兼容：
   /// `{ metadata, categories, quotes: [...], tombstones }`
   /// 笔记按每页 50 条分页查询，避免全表入内存。
-  Future<void> _writeLocalDataToTempJson(
-    Database db,
-    String filePath,
-  ) async {
+  Future<void> _writeLocalDataToTempJson(Database db, String filePath) async {
     final sink = File(filePath).openWrite(encoding: utf8);
     try {
       await db.transaction((txn) async {
         final dbVersion = await txn.getVersion();
         sink.write(
-          '{"metadata":${json.encode({
-                'app': '心迹',
-                'version': dbVersion,
-                'exportTime': DateTime.now().toIso8601String()
-              })},',
+          '{"metadata":${json.encode({'app': '心迹', 'version': dbVersion, 'exportTime': DateTime.now().toIso8601String()})},',
         );
 
         // categories — 一致性快照读取

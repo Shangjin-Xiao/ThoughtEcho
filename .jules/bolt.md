@@ -302,3 +302,7 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 ## 2025-02-20 - Batch chunking during ChatSessionService legacy database migration
 **Learning:** Performing a single `txn.batch()` across thousands of database rows can cause high memory overhead and IPC method channel pressure.
 **Action:** Split large migration data sets into chunks of 500 rows per batch within a single transaction to keep memory bounded and reduce IPC overhead.
+
+## 2024-05-18 - [WebDAV Sync Service RegExp Optimization]
+**Learning:** In Dart, compiling `RegExp` objects inside frequently executed methods or loops causes unnecessary CPU overhead and memory allocations, particularly in services that process large strings or XMLs like `WebDAVSyncService`.
+**Action:** Always pre-compile `RegExp` objects into `static final` class members rather than leaving them inline, especially inside loops or methods expected to be called frequently like error parsing or propfind data extraction.
