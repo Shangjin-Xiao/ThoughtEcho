@@ -96,6 +96,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
+            tooltip: _isSearching ? l10n.cancel : l10n.search,
             onPressed: () {
               setState(() {
                 if (_isSearching) {
