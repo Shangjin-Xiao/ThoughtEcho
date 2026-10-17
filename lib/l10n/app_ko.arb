@@ -3007,6 +3007,38 @@
       }
     }
   },
+  "unifiedMediaImportSelectMediaFile": "{mediaType} 파일 선택",
+  "@unifiedMediaImportSelectMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMediaFile": "{mediaType} 파일 저장",
+  "@unifiedMediaImportSaveMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMedia": "{mediaType} 저장",
+  "@unifiedMediaImportSaveMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportDownloadMedia": "{mediaType} 다운로드",
+  "@unifiedMediaImportDownloadMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
   "mediaTypeImage": "영상",
   "mediaTypeVideo": "동영상",
   "mediaTypeAudio": "오디오",
