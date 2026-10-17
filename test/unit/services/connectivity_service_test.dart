@@ -5,8 +5,9 @@ import 'package:thoughtecho/services/connectivity_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const MethodChannel connectivityChannel =
-      MethodChannel('dev.fluttercommunity.plus/connectivity');
+  const MethodChannel connectivityChannel = MethodChannel(
+    'dev.fluttercommunity.plus/connectivity',
+  );
 
   List<String>? mockConnectivityResults;
   bool shouldThrowPlatformException = false;
@@ -17,21 +18,20 @@ void main() {
     shouldThrowPlatformException = false;
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      connectivityChannel,
-      (MethodCall methodCall) async {
-        if (shouldThrowPlatformException) {
-          throw PlatformException(
-            code: 'UNAVAILABLE',
-            message: 'Connectivity service unavailable',
-          );
-        }
-        if (methodCall.method == 'check') {
-          return mockConnectivityResults;
-        }
-        return null;
-      },
-    );
+        .setMockMethodCallHandler(connectivityChannel, (
+      MethodCall methodCall,
+    ) async {
+      if (shouldThrowPlatformException) {
+        throw PlatformException(
+          code: 'UNAVAILABLE',
+          message: 'Connectivity service unavailable',
+        );
+      }
+      if (methodCall.method == 'check') {
+        return mockConnectivityResults;
+      }
+      return null;
+    });
   });
 
   tearDown(() {
@@ -91,28 +91,34 @@ void main() {
       expect(await service.isCellularConnection(), isFalse);
     });
 
-    test('isCellularConnection handles exception safely and returns false',
-        () async {
-      final service = ConnectivityService();
-      shouldThrowPlatformException = true;
+    test(
+      'isCellularConnection handles exception safely and returns false',
+      () async {
+        final service = ConnectivityService();
+        shouldThrowPlatformException = true;
 
-      final isCellular = await service.isCellularConnection();
-      expect(isCellular, isFalse);
-    });
+        final isCellular = await service.isCellularConnection();
+        expect(isCellular, isFalse);
+      },
+    );
 
-    test('checkConnectionNow performs check and updates connection state',
-        () async {
-      final service = ConnectivityService();
-      ConnectivityService.isConnectedOverrideForTesting = null;
+    test(
+      'checkConnectionNow performs check and updates connection state',
+      () async {
+        final service = ConnectivityService();
+        ConnectivityService.isConnectedOverrideForTesting = null;
 
-      final isConnected = await service.checkConnectionNow();
-      expect(isConnected, isA<bool>());
-      expect(service.isConnected, equals(isConnected));
-    });
+        final isConnected = await service.checkConnectionNow();
+        expect(isConnected, isA<bool>());
+        expect(service.isConnected, equals(isConnected));
+      },
+    );
 
     test('listeners are notified when connectivity state changes', () async {
       final service = ConnectivityService();
-      ConnectivityService.isConnectedOverrideForTesting = null;
+      ConnectivityService.isConnectedOverrideForTesting = true;
+      await service.checkConnectionNow();
+      expect(service.isConnected, isTrue);
 
       bool listenerCalled = false;
       void listener() {
@@ -121,19 +127,15 @@ void main() {
 
       service.addListener(listener);
 
-      // Force check connection state transition
-      final previousState = service.isConnected;
+      // Force connection state transition to false
+      ConnectivityService.isConnectedOverrideForTesting = false;
       await service.checkConnectionNow();
-      final newState = service.isConnected;
 
       service.removeListener(listener);
+      ConnectivityService.isConnectedOverrideForTesting = null;
 
-      if (previousState != newState) {
-        expect(listenerCalled, isTrue);
-      } else {
-        // If state did not change, notifyListeners would not be called
-        expect(listenerCalled, isFalse);
-      }
+      expect(listenerCalled, isTrue);
+      expect(service.isConnected, isFalse);
     });
 
     test('init and dispose manage connectivity state lifecycle', () async {
@@ -141,10 +143,11 @@ void main() {
       ConnectivityService.isConnectedOverrideForTesting = null;
 
       await service.init();
-      expect(service.isConnected, isA<bool>());
+      service.addListener(() {});
+      expect(service.hasListenersForTesting, isTrue);
 
-      // Ensure dispose can be invoked without throwing exceptions
-      expect(() => service.dispose(), returnsNormally);
+      service.dispose();
+      expect(service.hasListenersForTesting, isFalse);
     });
   });
 }

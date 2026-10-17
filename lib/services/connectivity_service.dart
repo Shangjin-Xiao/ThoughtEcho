@@ -31,6 +31,10 @@ class ConnectivityService extends ChangeNotifier {
 
   bool get isConnected => isConnectedOverrideForTesting ?? _isConnected;
 
+  /// 供测试检查是否有活动监听器
+  @visibleForTesting
+  bool get hasListenersForTesting => hasListeners;
+
   /// 初始化连接检查
   Future<void> init() async {
     await _checkConnectivity();
@@ -52,7 +56,9 @@ class ConnectivityService extends ChangeNotifier {
     bool wasConnected = _isConnected;
 
     try {
-      if (kIsWeb) {
+      if (isConnectedOverrideForTesting != null) {
+        _isConnected = isConnectedOverrideForTesting!;
+      } else if (kIsWeb) {
         // Web 平台：尝试对轻量 URL 发 HEAD 请求检测网络
         _isConnected = await _checkConnectivityWeb();
       } else {
@@ -108,9 +114,6 @@ class ConnectivityService extends ChangeNotifier {
 
   /// 立即检查连接状态
   Future<bool> checkConnectionNow() async {
-    if (isConnectedOverrideForTesting != null) {
-      return isConnectedOverrideForTesting!;
-    }
     await _checkConnectivity();
     return _isConnected;
   }

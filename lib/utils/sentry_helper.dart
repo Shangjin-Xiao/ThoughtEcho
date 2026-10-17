@@ -295,25 +295,29 @@ class SentryHelper {
     }
 
     try {
-      await SentryFlutter.init(
-        (options) {
-          configureSentryOptions(options);
-        },
-      );
+      await SentryFlutter.init((options) {
+        configureSentryOptions(options);
+      });
 
       // 5. 绑定完全脱敏的匿名 Device ID，用于 Sentry 统计影响的用户百分比
       try {
         final deviceId = await DeviceIdentityManager.I.getFingerprint();
         Sentry.configureScope(
-            (scope) => scope.setUser(SentryUser(id: deviceId)));
+          (scope) => scope.setUser(SentryUser(id: deviceId)),
+        );
       } catch (e) {
         logWarning('Failed to set User ID: $e', source: 'Sentry');
       }
 
       _initialized = true;
       logInfo('Sentry SDK initialized successfully.', source: 'Sentry');
-    } catch (e) {
-      logError('Failed to initialize Sentry: $e', error: e, source: 'Sentry');
+    } catch (e, stackTrace) {
+      logError(
+        'Failed to initialize Sentry: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'Sentry',
+      );
       rethrow;
     }
   }
@@ -329,9 +333,6 @@ class SentryHelper {
     if (enabled) {
       try {
         await init();
-        if (_desiredEnabled) {
-          logInfo('Sentry 初始化成功', source: 'BackgroundInit');
-        }
       } catch (e) {
         logWarning('Sentry 初始化失败: $e', source: 'BackgroundInit');
       }
