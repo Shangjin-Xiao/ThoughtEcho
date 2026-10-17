@@ -39,17 +39,25 @@ class StreamingTextDialog extends StatefulWidget {
 
 class _StreamingTextDialogState extends State<StreamingTextDialog>
     with SingleTickerProviderStateMixin {
+  static const Duration _kStreamThrottleInterval = Duration(milliseconds: 50);
+
   AppLocalizations get l10n => AppLocalizations.of(context);
-  String _currentText = '';
+  final ValueNotifier<String> _textNotifier = ValueNotifier<String>('');
   bool _isStreamingComplete = false;
   bool _hasError = false;
+
   StreamSubscription<String>? _streamSubscription;
+  Timer? _streamThrottleTimer;
+  String _pendingText = '';
+  bool _isFirstChunk = true;
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   final ScrollController _scrollController = ScrollController();
+  MarkdownStyleSheet? _markdownStyleSheet;
 
-  String get _displayText =>
-      widget.displayTextTransformer?.call(_currentText) ?? _currentText;
+  String _getDisplayText(String rawText) =>
+      widget.displayTextTransformer?.call(rawText) ?? rawText;
 
   @override
   void initState() {
@@ -66,45 +74,159 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
     _pulseController.repeat(reverse: true);
 
     _streamSubscription = widget.textStream.listen(
-      (chunk) {
-        if (mounted) {
-          setState(() {
-            _currentText += chunk;
-          });
-          // 自动滚动到底部
-          _scrollToBottom();
-        }
-      },
-      onDone: () {
-        if (mounted) {
-          setState(() {
-            _isStreamingComplete = true;
-          });
-          _pulseController.stop();
-        }
-      },
-      onError: (error) {
-        logDebug('流式传输错误: $error');
-        if (mounted) {
-          setState(() {
-            _currentText += '\n\n${l10n.occurredError(error.toString())}';
-            _isStreamingComplete = true;
-            _hasError = true;
-          });
-          _pulseController.stop();
-        }
-      },
+      _onChunkReceived,
+      onDone: _onStreamDone,
+      onError: _onStreamError,
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.isMarkdown) {
+      _updateMarkdownStyleSheet();
+    }
+  }
+
+  @override
+  void didUpdateWidget(StreamingTextDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isMarkdown) {
+      _updateMarkdownStyleSheet();
+    }
+  }
+
+  void _updateMarkdownStyleSheet() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    _markdownStyleSheet = MarkdownStyleSheet(
+      p: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.onSurface,
+        height: 1.6,
+      ),
+      h1: theme.textTheme.headlineSmall?.copyWith(color: colorScheme.onSurface),
+      h2: theme.textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
+      h3: theme.textTheme.titleMedium?.copyWith(color: colorScheme.onSurface),
+      listBullet: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.primary,
+      ),
+      blockquote: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: colorScheme.primary.applyOpacity(0.5),
+            width: 3,
+          ),
+        ),
+      ),
+      blockquotePadding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+      code: theme.textTheme.bodySmall?.copyWith(
+        fontFamily: 'monospace',
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        color: colorScheme.onSurface,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _onChunkReceived(String chunk) {
+    if (!mounted) return;
+    _pendingText += chunk;
+
+    // 前沿立即：首个 Token 到达时实现前沿立即渲染，避免首帧延迟
+    if (_isFirstChunk) {
+      _isFirstChunk = false;
+      _flushStreamUpdate();
+      _armStreamThrottleWindow();
+      return;
+    }
+
+    // 后沿窗口节流：若窗口定时器处于激活状态，则积攒内容等待窗口到点统一刷新
+    if (_streamThrottleTimer?.isActive ?? false) return;
+
+    _flushStreamUpdate();
+    _armStreamThrottleWindow();
+  }
+
+  void _armStreamThrottleWindow() {
+    _streamThrottleTimer = Timer(_kStreamThrottleInterval, () {
+      _streamThrottleTimer = null;
+      if (!mounted) return;
+      if (_textNotifier.value != _pendingText) {
+        _flushStreamUpdate();
+      }
+    });
+  }
+
+  void _flushStreamUpdate() {
+    if (!mounted) return;
+    if (_textNotifier.value != _pendingText) {
+      final bool isNearBottom;
+      if (_textNotifier.value.isEmpty) {
+        isNearBottom = true;
+      } else if (_scrollController.hasClients) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final currentScroll = _scrollController.position.pixels;
+        const threshold = 60.0;
+        isNearBottom = (maxScroll - currentScroll) <= threshold;
+      } else {
+        isNearBottom = true;
+      }
+
+      _textNotifier.value = _pendingText;
+
+      if (isNearBottom) {
+        _scrollToBottom();
+      }
+    }
+  }
+
+  void _onStreamDone() {
+    _streamThrottleTimer?.cancel();
+    _streamThrottleTimer = null;
+    if (mounted) {
+      _flushStreamUpdate();
+      setState(() {
+        _isStreamingComplete = true;
+      });
+      _pulseController.stop();
+    }
+  }
+
+  void _onStreamError(dynamic error) {
+    logDebug('流式传输错误: $error');
+    _streamThrottleTimer?.cancel();
+    _streamThrottleTimer = null;
+    if (mounted) {
+      _pendingText += '\n\n${l10n.occurredError(error.toString())}';
+      _flushStreamUpdate();
+      setState(() {
+        _isStreamingComplete = true;
+        _hasError = true;
+      });
+      _pulseController.stop();
+    }
   }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-        );
+      if (!mounted || !_scrollController.hasClients) return;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      if (maxScroll > 0) {
+        _scrollController.jumpTo(maxScroll);
       }
     });
   }
@@ -112,8 +234,10 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
   @override
   void dispose() {
     _streamSubscription?.cancel();
+    _streamThrottleTimer?.cancel();
     _pulseController.dispose();
     _scrollController.dispose();
+    _textNotifier.dispose();
     super.dispose();
   }
 
@@ -247,27 +371,6 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
 
   /// 构建内容区域
   Widget _buildContent(ThemeData theme, ColorScheme colorScheme) {
-    if (_currentText.isEmpty && !_isStreamingComplete) {
-      // 加载状态
-      return Container(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 加载动画
-            _buildLoadingIndicator(colorScheme),
-            const SizedBox(height: 20),
-            Text(
-              l10n.waitingForAIContent,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -284,86 +387,70 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
         child: SingleChildScrollView(
           controller: _scrollController,
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              widget.isMarkdown
-                  ? MarkdownBody(
-                      data: _displayText,
-                      selectable: true,
-                      styleSheet: MarkdownStyleSheet(
-                        p: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurface,
-                          height: 1.6,
-                        ),
-                        h1: theme.textTheme.headlineSmall
-                            ?.copyWith(color: colorScheme.onSurface),
-                        h2: theme.textTheme.titleLarge
-                            ?.copyWith(color: colorScheme.onSurface),
-                        h3: theme.textTheme.titleMedium
-                            ?.copyWith(color: colorScheme.onSurface),
-                        listBullet: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.primary,
-                        ),
-                        blockquote: theme.textTheme.bodyMedium?.copyWith(
+          child: ValueListenableBuilder<String>(
+            valueListenable: _textNotifier,
+            builder: (context, currentText, child) {
+              if (currentText.isEmpty && !_isStreamingComplete) {
+                // 加载状态
+                return Container(
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 加载动画
+                      _buildLoadingIndicator(colorScheme),
+                      const SizedBox(height: 20),
+                      Text(
+                        l10n.waitingForAIContent,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
-                        blockquoteDecoration: BoxDecoration(
-                          border: Border(
-                            left: BorderSide(
-                              color: colorScheme.primary.applyOpacity(0.5),
-                              width: 3,
-                            ),
-                          ),
-                        ),
-                        blockquotePadding:
-                            const EdgeInsets.only(left: 16, top: 8, bottom: 8),
-                        code: theme.textTheme.bodySmall?.copyWith(
-                          fontFamily: 'monospace',
-                          backgroundColor: colorScheme.surfaceContainerHighest,
-                          color: colorScheme.onSurface,
-                        ),
-                        codeblockDecoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        horizontalRuleDecoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(
-                              color: colorScheme.outlineVariant,
-                              width: 1,
-                            ),
-                          ),
-                        ),
                       ),
-                    )
-                  : SelectableText(
-                      _displayText,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        height: 1.6,
+                    ],
+                  ),
+                );
+              }
+
+              final displayText = _getDisplayText(currentText);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  widget.isMarkdown
+                      ? MarkdownBody(
+                          data: displayText,
+                          selectable: true,
+                          styleSheet: _markdownStyleSheet,
+                        )
+                      : SelectableText(
+                          displayText,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            height: 1.6,
+                          ),
+                        ),
+                  // 流式加载时显示光标
+                  if (!_isStreamingComplete)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: AnimatedBuilder(
+                        animation: _pulseAnimation,
+                        builder: (context, child) {
+                          return Container(
+                            width: 8,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary
+                                  .applyOpacity(_pulseAnimation.value),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          );
+                        },
                       ),
                     ),
-              // 流式加载时显示光标
-              if (!_isStreamingComplete)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return Container(
-                        width: 8,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary
-                              .applyOpacity(_pulseAnimation.value),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -412,7 +499,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
   /// 构建底部操作栏
   Widget _buildActions(ThemeData theme, ColorScheme colorScheme) {
     final canApply =
-        _isStreamingComplete && _currentText.isNotEmpty && !_hasError;
+        _isStreamingComplete && _textNotifier.value.isNotEmpty && !_hasError;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -470,7 +557,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
           FilledButton.icon(
             onPressed: canApply
                 ? () {
-                    widget.onApply(_currentText);
+                    widget.onApply(_textNotifier.value);
                   }
                 : null,
             icon: Icon(
