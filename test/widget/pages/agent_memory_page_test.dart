@@ -315,9 +315,16 @@ void main() {
       expect(find.text('是一名资深软件工程师'), findsOneWidget);
       expect(find.text('早晨只喝黑咖啡'), findsOneWidget);
 
+      // 验证搜索与更多选项按钮的 tooltip
+      expect(find.byTooltip('搜索'), findsOneWidget);
+      expect(find.byTooltip('更多选项'), findsOneWidget);
+
       // 点击搜索按钮打开搜索输入框
       await tester.tap(find.byIcon(Icons.search));
       await tester.pumpAndSettle();
+
+      // 验证激活搜索后按钮变为取消提示
+      expect(find.byTooltip('取消'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), '咖啡');
       await _waitForWidgetGone(tester, find.text('是一名资深软件工程师'));

@@ -96,6 +96,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
+            tooltip: _isSearching ? l10n.cancel : l10n.search,
             onPressed: () {
               setState(() {
                 if (_isSearching) {
@@ -111,6 +112,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
+            tooltip: l10n.moreOptions,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(shapeTokens.dialogRadius),
             ),
