@@ -63,6 +63,9 @@ dart format <changed-dart-files>
 # 只检查格式，不改文件
 dart format --output=none --set-exit-if-changed <changed-dart-files>
 
+# 运行仓库增量机械规则检查（颜色令牌、动态圆角、AppSnackBar、已删除 API；首次可运行 git config core.hooksPath .githooks 启用提交钩子）
+dart scripts/lint_repo_rules.dart
+
 # 静态分析
 flutter analyze --no-fatal-infos
 
@@ -164,104 +167,44 @@ pwsh ./scripts/build_msix_ci.ps1
 
 **主题风格是和亮暗、动态取色并列的第三个维度**，三选一：`material`（M3 动态取色）、
 `paper` 纸与墨（暖，手工色板 + 衬线体 + 纸张横线）、`plain` 素笺（冷，更硬朗）。
-默认是 `material`，写在 `ThemeStyle.defaultStyle` 一处。**改这个默认值等于让所有
-没选过风格的老用户升级后外观直接变**（这套主题没有迁移逻辑），不要顺手动它；
-手工风格的推广走更新说明页里的行内切换器。
+默认是 `material`，写在 `ThemeStyle.defaultStyle` 一处，不要修改默认值（无迁移逻辑，改默认会让存量老用户升级后外观突变）；手工风格推广走更新说明页里的行内切换器。
 
-- 🔒 **绝不在 widget 里写 `if (style == ThemeStyle.paper)`。** 品牌差异**全部**通过
-  `ThemeStyleForm` 的令牌取值表达，由 `AppShapeTokens` 这个 `ThemeExtension` 下发。
-  连开关判据都用取值而不是风格身份：`borderWidth > 0` 决定用边框还是投影，
-  `ruleSpacing > 0` 决定画不画纸纹。这样加第四套风格 = 新增两组常量并登记，
-  不碰构建逻辑、不碰任何 widget。参考项目里 90 处风格分支散在 150 个文件的教训不要重演。
+- 🔒 **绝不在 widget 里写 `if (style == ThemeStyle.paper)`。** 品牌差异全部通过
+  `ThemeStyleForm` 的令牌取值表达，由 `AppShapeTokens`（`ThemeExtension`）下发：
+  `borderWidth > 0` 决定用边框还是投影，`ruleSpacing > 0` 决定画不画纸纹。
 - 改色板必须先过 `test/theme/theme_style_contrast_test.dart`（WCAG AA + 令牌不变量）。
 - 手工色板**不能喂给 seed 生成器**：亮色路径要按风格关掉 `keyColors` 和表面混合，
   否则 FlexColorScheme 会拿 primary 当种子把整套色调重新推导掉。
-- 完整设计推导、已结案的决定（字体不打包、便签纸色否决、素笺不画横线）和踩过的坑
-  见 `docs/paper-ink-theme-handoff-2026-07-31.md`，**那是唯一事实来源**，动主题前先读。
+- 完整设计推导与已结案决定见唯一事实源 `docs/paper-ink-theme-handoff-2026-07-31.md`，动主题前先读。
 
 ### UI 硬性约束
 
-以下是反复出现过的实际问题，提交前自查。带 ❌ 的写法在 `lib/pages/` 和 `lib/widgets/` 里
-一律不接受，评审会直接打回。
+以下规则在 `lib/pages/` 和 `lib/widgets/` 中由 `dart scripts/lint_repo_rules.dart` 与评审共同把关：
 
 **颜色**
 
-- ❌ `Colors.red` / `green` / `orange` / `grey` / `blue` 等 Material 命名色，包括
-  `Colors.grey[100]`、`Colors.green.shade600`。它们不随 M3 动态取色变化，用户换了主题色后
-  会突兀，`Colors.grey` 当次要文字色还会在暗色模式下对比度不足。
-  - 语义状态色用 `Theme.of(context).extension<AppSemanticColors>()!` 的
-    `success` / `warning` / `danger` / `info`（定义在 `lib/theme/app_semantic_colors.dart`）。
-  - 中性文字用 `colorScheme.onSurfaceVariant`，不是 `Colors.grey`。
-  - 错误用 `colorScheme.error` / `errorContainer`。
-  - 收藏红心用 `AppSemanticColors.of(context).favorite` / `onFavorite`。红心必须是红的，
-    但它不是「错误」，不能借 `colorScheme.error` 的槽位，所以单开了一格；
-    别再写 `Colors.red.shade400`。
-- ❌ 硬编码浅色背景（`Colors.white`、`Colors.grey[100]`、`Colors.grey.shade100`）——
-  暗色模式下会变成刺眼白块。用 `colorScheme.surfaceContainerHighest` 等 surface 层级。
-  - 例外：确定绘制在 `primary`/`error` 等已知深色之上时，用配对的 `onPrimary` / `onError`，
-    仍然不要写 `Colors.white`。
-- ❌ **Tailwind 默认色板**：`0xFF6366F1`（indigo-500）、`0xFF8B5CF6`、`0xFF10B981`、
-  `0xFFF59E0B`、`0xFFEF4444`、`0xFF1E293B`、`0xFF0F172A`、`0xFF94A3B8` 等。这类值是
-  AI 生成前端代码的默认产物，和本项目 M3 主题无关，出现即为 bug。图表/统计配色从
-  `colorScheme` 的 primary / secondary / tertiary / error 及其 container 变体派生。
+- 语义状态色用 `Theme.of(context).extension<AppSemanticColors>()!` 的 `success` / `warning` / `danger` / `info`（`lib/theme/app_semantic_colors.dart`）；收藏红心用 `AppSemanticColors.of(context).favorite` / `onFavorite`；中性次要文字用 `colorScheme.onSurfaceVariant`；错误用 `colorScheme.error` / `errorContainer`；浅色背景用 `colorScheme.surfaceContainerHighest` 等 surface 层级（深色背景上的前景用配对的 `onPrimary` / `onError`）。
+- ❌ 禁止 `Colors.red` / `green` / `orange` / `grey` / `blue` / `white` 等 Material 命名色及其 `shade` 变体（不随动态取色变化，暗色下对比度失衡或成刺眼白块）。
+- ❌ 禁止 Tailwind 默认色板（`0xFF6366F1`、`0xFF8B5CF6`、`0xFF10B981`、`0xFFF59E0B`、`0xFFEF4444`、`0xFF1E293B`、`0xFF0F172A`、`0xFF94A3B8` 等）。图表/统计配色从 `colorScheme` 的 primary / secondary / tertiary / error 及其 container 变体派生。
 
 **尺寸与排版**
 
-- ❌ 手写 `BorderRadius.circular(N)` 造卡片/按钮/输入框。用
-  `AppShapeTokens.of(context)` 的 `cardRadius` / `buttonRadius` / `inputRadius` /
-  `dialogRadius` / `fabRadius`——**圆角随主题风格变**（Material 18、纸墨 6、素笺 3），
-  写死会让手工风格下的新组件仍然是圆的。历史代码里有 13 种不同圆角值同屏并存，
-  不要再增加。纯装饰性小元素（徽章、色块）可自行取值。
-  - `AppTheme.cardRadius` 那组 `static const` 是 material 的取值，**不随风格变化**，
-    只为老代码保留，新代码不要引用。
-  - `AppShapeTokens.of(context)` 是方法调用，不能出现在 `const` 表达式里。
-    遇到 `const RoundedRectangleBorder(...)` 是去掉 `const`，不是退回静态常量。
-- ❌ `fontSize:` 字面量。用 `theme.textTheme.*`，需要微调时 `.copyWith()`。
-- ❌ 写死正文 `height:`（行高）、`fontSize:` 或 `fontWeight:` 来「调得好看点」。
-  这三样都由 `ThemeStyleForm` 下发到 `textTheme.title*` / `textTheme.body*`：
-  行高 `bodyLineHeight`（Material 1.5、纸墨 1.75、素笺 1.6，只作用于 `body*`）、
-  字号 `readingFontScale`（Material ×1、手工风格 ×1.0625，`title*` 和 `body*` 同乘）、
-  字重下限 `titleWeightFloor` / `bodyWeightFloor`（Material 无、手工风格 w600 / w500）。
-  在 widget 里 `copyWith` 任何一项都会盖掉令牌。
-  - 纸墨的**纸张横线间距是从「正文字号 × 行高」推导的**，覆盖任一项都会让文字逐行
-    相对横线漂移，卡片看起来像背了一张格子图。见 `theme_style_contrast_test.dart`
-    的不变量。
-  - 字重有两个**方向相反**的补偿，别搞混：Android 的可变字重补偿（w400→350）是给
-    **黑体**减重，衬线风格靠 `variableWeightCompensation: 0` 关掉；
-    两个 `*WeightFloor` 是给**衬线体**加重，所有平台生效。别在 widget 里另外补。
-  - **标题的下限比正文高一档，这一档就是层级本身**：构建期 M3 的字重还是 null，
-    共用一个下限会把 `title*` 和 `body*` 一起钉成同一个字重，小节标题和列表正文
-    分不出主次。同理 `readingFontScale` 必须两边同乘，只放大正文会让
-    `bodyLarge`(17) 压过 `titleMedium`(16)，层级是倒的。
-  - `label*`（按钮、胶囊、导航栏标签）**不换字体族、不缩放**，永远是系统黑体。
-    这是全局规则，不要给它加风格字体。
-- ❌ `fontStyle: FontStyle.italic` **用作 UI 装饰**（出处、提示、占位、次要说明）。中文字体没有
-  真斜体字形，Flutter 会做合成倾斜（skew），横竖笔画粗细对比被破坏、交接处糊在一起，小字号下
-  明显发虚。要弱化层次就用 `onSurfaceVariant` + 字号或字重差。
-  - **例外，这几类必须保留斜体，不要顺手删**：用户在编辑器里手动标记的富文本斜体
-    （`quote_content_widget.dart` 里判断 `attributes['italic']` 的分支）、PDF 导出时还原用户
-    格式（`pdf_export_service.dart`、`delta_to_pdf_parser.dart` 的 `pw.FontStyle.italic`）。
-    这些是在忠实呈现用户的内容格式，不是 UI 自己的装饰选择。
-  - Markdown 渲染的 `em` 样式（`chat_markdown_styles.dart`、`enhanced_markdown_widgets.dart`）
-    介于两者之间，改动前先确认，不要单方面删。
+- ❌ 禁止手写 `BorderRadius.circular(N)` 造卡片/按钮/输入框，或引用静态的 `AppTheme.cardRadius`。统一使用 `AppShapeTokens.of(context)` 的 `cardRadius` / `buttonRadius` / `inputRadius` / `dialogRadius` / `fabRadius`（随主题风格在 Material 18、纸墨 6、素笺 3 间切换；遇到 `const RoundedRectangleBorder(...)` 时去掉 `const`）。纯装饰性小元素（徽章、色块）可自行取值。
+- ❌ 禁止 `fontSize:` 字面量，以及在 widget 里写死正文 `height:` 或 `fontWeight:`。这三项由 `ThemeStyleForm` 下发到 `textTheme.title*` / `textTheme.body*`（`bodyLineHeight`、`readingFontScale`、`titleWeightFloor` / `bodyWeightFloor`）：
+  - 纸墨的纸张横线间距由「正文字号 × 行高」推导，覆盖任一项都会让文字相对横线逐行漂移（见 `theme_style_contrast_test.dart`）。
+  - Android 可变字重补偿（w400→350）给黑体减重（衬线风格靠 `variableWeightCompensation: 0` 关掉），两个 `*WeightFloor` 给衬线体加重；`titleWeightFloor` 比 `bodyWeightFloor` 高一档以维持标题与正文层级，`readingFontScale` 须 `title*` 与 `body*` 同乘。
+  - `label*`（按钮、胶囊、导航栏标签）永远保持系统黑体且不缩放。
+- ❌ 禁止将 `fontStyle: FontStyle.italic` 用作 UI 装饰（出处、提示、占位、次要说明），弱化层次用 `onSurfaceVariant` + 字号或字重差。
+  - **必须保留斜体的例外**：用户在编辑器标记的富文本斜体（`quote_content_widget.dart` 的 `attributes['italic']`）、PDF 导出还原（`pdf_export_service.dart`、`delta_to_pdf_parser.dart` 的 `pw.FontStyle.italic`）；Markdown `em` 样式（`chat_markdown_styles.dart`、`enhanced_markdown_widgets.dart`）改动前先确认。
 - 间距用 4 的倍数（4/8/12/16/24/32）。
 
-**组件复用**
+**组件复用与审美方向**
 
-- ❌ 手写 `ScaffoldMessenger.of(context).showSnackBar(...)`。用 `AppSnackBar.info/success/
-  error/warning`（`lib/widgets/app_snackbar.dart`），它统一了时长、`context.mounted` 检查和
-  语义色。
-- ❌ 裸 `CircularProgressIndicator` / 自己拼「居中图标 + 文字」的空态和错误态。用
-  `AppLoadingView`、`AppEmptyView`、`AppErrorView`（`lib/widgets/`）。
-- 卡片用 `Card`（已配好 `cardTheme`），不要用 `Container` + `BoxDecoration` 另搓一套，
-  两者同屏时圆角和高光对不齐。
-
-**审美方向**
-
-- 渐变背景、多层 `RadialGradient` 光晕、「大数字 + 小标签 + 渐变强调色」的统计卡是 AI 生成
-  设计的通用模板，本项目不再新增。需要视觉重点时优先靠留白、字号层级和单一强调色。
-- 新增开发者/实验性开关必须放进设置页的「实验室」卡片（`_buildLabSection`），不要混进
-  「应用设置」；每个开关都要有区别于其它开关的 l10n 标题，不复用别的键。
+- ❌ 禁止手写 `ScaffoldMessenger.of(context).showSnackBar(...)`，统一用 `AppSnackBar.info/success/error/warning`（`lib/widgets/app_snackbar.dart`）。
+- ❌ 禁止裸 `CircularProgressIndicator` 或手拼空态/错误态，统一用 `AppLoadingView`、`AppEmptyView`、`AppErrorView`（`lib/widgets/`）。
+- 卡片用 `Card`（已配好 `cardTheme`），不用 `Container` + `BoxDecoration` 另起一套。
+- 不再新增渐变背景、多层 `RadialGradient` 光晕或「大数字 + 小标签 + 渐变强调色」模板卡；视觉重点优先靠留白、字号层级和单一强调色。
+- 新增开发者/实验性开关必须放进设置页「实验室」卡片（`_buildLabSection`），并配独立 l10n 标题。
 
 ## 数据库与批量数据
 
@@ -278,31 +221,12 @@ pwsh ./scripts/build_msix_ci.ps1
   `File.writeAsString` / 全量内存编码。
 - 删除 SQL 查询字段前全局检查模型、UI、导入导出和同步依赖，避免运行期缺列或类型错误。
 - 🔒 **读和写两侧的校验必须对齐**：`Quote.fromJson` 放行的行，`Quote.validationError` 必须
-  也放行。两边尺子不一样的那道缝里，笔记会变成**能显示、不能保存**的砖，报错还指不回是哪个
-  字段。长度上限这类**输入层策略**不要塞进持久化校验——卡在保存那一步丢的是用户已经写好的字。
-- 🔒 **外来数据的值域收敛只做在导入边界**（`DatabaseBackupService`），读的时候不洗：读时悄悄
-  修正等于把库里的坏行永远藏着。清洗过什么要能报给用户（`MergeReport.sanitizedFields` /
-  `ImportCleanupStats`），不能只写日志。已经入库的坏行只能靠启动迁移修，删导入代码救不回来。
-- 🔒 **不可逆写入前先把整列快照到 `<列名>_backup`**，并在修复自己那条 UPDATE 里写原值
-  （`SET x_backup = x, x = ?`）——`_ensureBackupColumn` 只在建列那一次整列复制，列已存在
-  就早退，二次修复不写就没有留底。
-  **遗留列清理必须排在所有建快照列的迁移之前**：`_removeTagIdsColumn` 重建 `quotes` 用的是
-  写死的列清单，不含任何 `*_backup` 列，排在后面会把三剂后悔药一起抹掉。
-  - 这条规则一度被 `migrateWeatherToKey` / `migrateDayPeriodToKey` 违反着：它们的 UPDATE
-    只写规范化值，只靠 `_ensureBackupColumn` 建列那一次快照兜着，第二轮再跑时原值就没了。
-    已在 PR #538 补齐，三处现在写法一致，都可以照着抄。
-- 🔒 **逐行反序列化必须有兜底**：查询结果统一走 `_parseQuoteRows` / `_tryParseQuoteRow`，
-  坏行跳过并计数。裸 `maps.map((m) => Quote.fromJson(m))` 会让一条坏行带走整页笔记，用户
-  看到的是列表整个打不开。批处理阶段的 `as String` 强转同样要改成 `whereType<String>()`——
-  它跑在逐行兜底**之前**，抛出来一样是整批阵亡。
-- 🔒 **外来值进日志要限量、限长、去控制字符，并且绝不写 `e.toString()`**：
-  `Quote.fromJson` 的兜底分支抛的是 `FormatException('…, JSON: $json')`，那个 `$json` 是整行
-  数据，`content` 和 `delta_content` 都在里面——写进日志等于把用户笔记正文抄进日志库。
-  只记异常类型。
-- `categories` 表、`category_id` 列和备份 JSON 的 `categories` 键存的是**标签**
-  （`quote_tags.tag_id REFERENCES categories(id)`）。Dart 侧一律 `NoteTag` / `getTags()`，
-  只有 SQL 和备份键保留旧名 —— 改它们要写迁移且破坏同步兼容，不要"顺手统一"。
-  注意 API Ninjas 名言分类和 emoji 分组是真的 `category`，与标签无关。
+  也放行；长度上限这类输入层策略不要塞进持久化校验，避免存量笔记变成能显示却不能保存的坏块。
+- 🔒 **外来数据的值域收敛只做在导入边界**（`DatabaseBackupService`），读库时不静默修数据；清洗内容通过 `MergeReport.sanitizedFields` / `ImportCleanupStats` 报给用户，已入库坏行靠启动迁移修复。
+- 🔒 **不可逆写入前先把整列快照到 `<列名>_backup`**，并在修复 UPDATE 里同句写原值（`SET x_backup = x, x = ?`）；遗留列清理（如 `_removeTagIdsColumn`）必须排在所有建快照列的迁移之前，防止重建表抹掉 `*_backup` 列。
+- 🔒 **逐行反序列化必须有兜底**：查询结果统一走 `_parseQuoteRows` / `_tryParseQuoteRow` 跳过坏行并计数，禁止裸 `maps.map((m) => Quote.fromJson(m))`；批处理阶段的 `as String` 强转同样改用 `whereType<String>()`。
+- 🔒 **外来值进日志要限量、限长、去控制字符，并且绝不写 `e.toString()`**：`Quote.fromJson` 抛出的 `FormatException` 含整行笔记正文与 `delta_content`，日志只记异常类型。
+- `categories` 表、`category_id` 列和备份 JSON 的 `categories` 键存的是**标签**（`quote_tags.tag_id REFERENCES categories(id)`）。Dart 侧一律 `NoteTag` / `getTags()`，SQL 和备份键保留旧名以兼容同步与备份；API Ninjas 名言分类和 emoji 分组才是真的 `category`。
 
 ## AI 服务
 
@@ -321,25 +245,17 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 - 支持的预设以 `AIProviderSettings.getPresetProviders()` 为准，不在文档中复制易过期的名单。
 - 使用现有流式 API。已删除的 `AIService.generateDailyPrompt` 不得恢复，使用
   `streamGenerateDailyPrompt`。
-- 🔒 **「测试连接」必须和真正聊天走同一条链路**（`AIConnectionTester` → `OpenAIStreamService`
-  → openai_dart）。两条链路一旦分家，测试结论就不代表可用性：老实现自己 POST 用户填的
-  `apiUrl`，而用户填的通常是 base URL（`…/v1`），服务端回 **405**——能正常聊天的配置被测试
-  按钮判死。URL 拼接交给 openai_dart，不要手写。
-- 🔒 **超时要下沉给 client 自己**（`buildOpenAIConfig` / `chatCompletion` 的 `timeout`），
-  不要用 `Future.timeout` 去截：那只让等待方提前返回，底层请求继续跑到底，`client.close()`
-  也要等它跑完才执行，连点几次就攒下一批在飞的连接。
+- 🔒 **「测试连接」必须和真正聊天走同一条链路**（`AIConnectionTester` → `OpenAIStreamService` → `openai_dart`），URL 拼接交给 `openai_dart`，不要手写 POST `apiUrl`。
+- 🔒 **超时要下沉给 client 自己**（`buildOpenAIConfig` / `chatCompletion` 的 `timeout`），不要用 `Future.timeout` 外层截断导致底层在飞连接泄漏。
 
 ### Thoughter 长期记忆（`AgentMemoryService`）
 
-- 独立数据库 `agent_memory.db`（同聊天记录、日志、AI 分析），**不在主库**，有自己的
-  `schemaVersion`。物理隔离让"不进备份、不跨设备同步、能整个删掉"成为事实而非约定。
-- 只存**笔记里推导不出来**的东西（身份、表达偏好、对 Thoughter 的纠正）；用户写过什么
-  归 `explore_notes`，两套检索职责重叠模型会反复横跳。
+- 独立数据库 `agent_memory.db`（同聊天记录、日志、AI 分析），**不在主库**，有独立 `schemaVersion`（不进备份、不跨设备同步、可整体删除）。
+- 只存**笔记里推导不出来**的信息（身份、表达偏好、对 Thoughter 的纠正）；笔记内容检索归 `explore_notes`。
 - 画像走**独立 user 数据消息**并先过 `wrapUserProfile`，不得拼进 system prompt。
 - 偏好变化**原位 supersede**，不允许两条矛盾的 active 画像条目并存。
 - 检索是 `LIKE` + Dart 内打分，不是 FTS5；换实现只动 `searchFacts`。
-- 设计取舍（不进备份/不进同步、不用 FTS5、未做定期整理）见
-  `docs/agent-memory-research-2026-08-08.md` 第七节，改之前先读。
+- 设计取舍见 `docs/agent-memory-research-2026-08-08.md` 第七节，改之前先读。
 
 ## 平台与文件组织
 
@@ -385,7 +301,6 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 - 开发者文档：`AGENTS.md`、各子目录 `AGENTS.md`、`README.md`
 - 双语用户手册：`docs/USER_MANUAL.md`
-- 网站与用户指南：`res/index.html`、`res/user-guide.html`
 
 只有用户可见行为变化时才同步用户文档，并同时维护中英文内容；纯内部重构只更新确实受影响
 的开发者文档。禁止描述尚未实现的功能，除非明确标为路线图。
@@ -394,18 +309,9 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 动手改一块**已经被优化过或返工过**的代码之前，先翻阅历史沉淀，别从零推一遍别人踩过的坑：
 
-- 📚 **全局知识库与历史索引**：查阅 [`docs/INDEX.md`](docs/INDEX.md)（已按性能、主题、Thoughter 记忆、同步等分类整理了所有 30+ 份审计、方案与交接文档）。
-- `docs/` —— 按主题的技术审计、专项方案、性能分析与交接文档（详细索引见 `docs/INDEX.md`）。例如：
-  - 性能排查链：`docs/note-list-perf-handoff-2026-08-12.md` → `docs/note-list-perf-analysis-2026-08-13.md` → `docs/note-list-first-paint-cost-2026-08-19.md`
-  - 主题事实源：`docs/paper-ink-theme-handoff-2026-07-31.md`
-  - Thoughter 记忆事实源：`docs/agent-memory-research-2026-08-08.md`
-  - 架构决议真源：`docs/decisions.md`（所有重要决策的权威记录，带日期和决策人）。
-- `docs/squad/` —— **AI 团队的历史过程档案**（团队分工 `team.md`、角色历史 `agents/<name>/history.md`、会话日志 `log/` 与分派 `casting/`）。
-
-  这些是**过程档案**，不是规范，也不能直接当实现依据——里面有大量后来被推翻的中间
-  判断。只用来追溯「为什么当初这么做」，那个信息基本只在历史记录里写着。
-  与当前代码、本文件或 `docs/` 下的最终交接文档冲突时，一律以当前实现和最终交接
-  文档为准（`docs/decisions.md` 说的「权威」是指它在团队决策演进内部权威）。
+- 📚 **全局知识库与历史索引**：查阅 [`docs/INDEX.md`](docs/INDEX.md)（按性能、主题、Thoughter 记忆、同步等分类整理了 30+ 份审计、方案与交接文档）。
+- `docs/` —— 按主题的技术审计、专项方案、性能分析与交接文档（如性能排查链 `docs/note-list-perf-*.md`、主题事实源 `docs/paper-ink-theme-handoff-2026-07-31.md`、Thoughter 记忆事实源 `docs/agent-memory-research-2026-08-08.md`、架构决议真源 `docs/decisions.md`）。
+- `docs/squad/` —— **AI 团队的历史过程档案**（仅供追溯历史背景，不作为实现规范；与当前代码、本文件或 `docs/` 最终交接文档冲突时，一律以当前实现和最终交接文档为准）。
 
 ## Git、隐私与提交
 
@@ -413,6 +319,7 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 - 切换其他分支或排查其他分支时使用 `git worktree`，不要在当前工作区直接切分支。
 - 提交时只用 `git add <明确文件...>`；禁止 `git add .` 和 `git add -A`。
 - 未经用户要求不要 amend、rebase、force-push、删除分支或创建远程 PR。
+- **测试与提交脱敏**：复现问题或编写测试时，禁止将用户举例中的真实具体地名/POI、姓名、私人路径或笔记内容写入测试夹具（Fixtures）、代码注释、提交信息或公开 PR 描述，一律替换为合成占位数据（如 `示例省·示例市`、`MockPOI`）。
 - 提交前检查 staged diff，不得包含真实 API 密钥、令牌、个人数据、私密路径、含隐私截图或
   本机缓存。
 - 提交信息应概括实际改动；只有验证通过或明确记录未执行项后，才能宣称完成。
