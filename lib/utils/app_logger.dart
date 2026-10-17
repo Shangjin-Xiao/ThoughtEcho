@@ -164,49 +164,85 @@ void logWarning(String message, {String? source}) {
   AppLogger.w(message, source: source ?? 'Warning');
 }
 
+/// 日志分类枚举
+enum LogCategory {
+  http('HTTP', UnifiedLogLevel.debug),
+  retry('RETRY', UnifiedLogLevel.debug),
+  ai('AI', UnifiedLogLevel.debug),
+  dio('DIO', UnifiedLogLevel.debug),
+  database('Database', UnifiedLogLevel.debug),
+  file('File', UnifiedLogLevel.debug),
+  performance('Performance', UnifiedLogLevel.info),
+  userAction('UserAction', UnifiedLogLevel.info),
+  security('Security', UnifiedLogLevel.warning);
+
+  final String tag;
+  final UnifiedLogLevel defaultLevel;
+
+  const LogCategory(this.tag, this.defaultLevel);
+}
+
+/// 分类日志统一记录函数
+void logCategory(
+  LogCategory category,
+  String message, {
+  String? source,
+  Object? error,
+  StackTrace? stackTrace,
+  UnifiedLogLevel? level,
+}) {
+  AppLogger.log(
+    level ?? category.defaultLevel,
+    message,
+    source: source ?? category.tag,
+    error: error,
+    stackTrace: stackTrace,
+  );
+}
+
 /// HTTP 请求日志函数
 void logHttp(String message, {String? source}) {
-  AppLogger.d(message, source: source ?? 'HTTP');
+  logCategory(LogCategory.http, message, source: source);
 }
 
 /// 网络重试日志函数
 void logRetry(String message, {String? source}) {
-  AppLogger.d(message, source: source ?? 'RETRY');
+  logCategory(LogCategory.retry, message, source: source);
 }
 
 /// AI 相关日志函数
 void logAI(String message, {String? source}) {
-  AppLogger.d(message, source: source ?? 'AI');
+  logCategory(LogCategory.ai, message, source: source);
 }
 
 /// DIO 网络日志函数
 void logDio(String message, {String? source}) {
-  AppLogger.d(message, source: source ?? 'DIO');
+  logCategory(LogCategory.dio, message, source: source);
 }
 
 /// 数据库操作日志函数
 void logDatabase(String message, {String? source}) {
-  AppLogger.d(message, source: source ?? 'Database');
+  logCategory(LogCategory.database, message, source: source);
 }
 
 /// 文件操作日志函数
 void logFile(String message, {String? source}) {
-  AppLogger.d(message, source: source ?? 'File');
+  logCategory(LogCategory.file, message, source: source);
 }
 
 /// 性能监控日志函数
 void logPerformance(String message, {String? source}) {
-  AppLogger.i(message, source: source ?? 'Performance');
+  logCategory(LogCategory.performance, message, source: source);
 }
 
 /// 用户操作日志函数
 void logUserAction(String message, {String? source}) {
-  AppLogger.i(message, source: source ?? 'UserAction');
+  logCategory(LogCategory.userAction, message, source: source);
 }
 
 /// 安全相关日志函数
 void logSecurity(String message, {String? source}) {
-  AppLogger.w(message, source: source ?? 'Security');
+  logCategory(LogCategory.security, message, source: source);
 }
 
 /// 条件日志：只在特定条件下记录
