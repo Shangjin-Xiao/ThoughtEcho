@@ -136,6 +136,22 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 - 随时在列表里一键切换当前使用的服务
 - 当前服务不可用时会自动尝试其他已配置的服务
 
+### 长期记忆与梦境整理配置
+
+**访问路径**：
+- **梦境整理与记忆开关**：`设置 → AI 设置 →「长期记忆」卡片`
+- **记忆条目追溯与管理**：`设置 → AI 设置 → 管理长期记忆`
+
+- **长期记忆总开关**：开启后允许 Thoughter 记住您的沟通习惯与表达偏好。若关闭此开关，所有长期记忆提取与使用完全停用。
+- **梦境整理开关 (Dreaming)**：控制后台梦境整理机制的启用状态。
+  - **空闲时整理**：控制应用处于空闲状态时是否自动触发后台梦境整理。
+  - **周期洞察后整理**：控制在成功生成并保存新的 AI 周期洞察后，是否在后台异步触发梦境整理。
+- **即时隐私生效保障**：在整理过程中，若您在任意时刻关闭长期记忆或梦境整理开关，**后台整理任务会立即静默终止，正在生成的结果会被即刻丢弃**，绝对不向数据库写入任何新画像条目。
+- **记忆管理与自主控制**（入口：`设置 → AI 设置 → 管理长期记忆`）：
+  - **追溯来源笔记**：在长期记忆列表中，每条由梦境整理归纳出的画像均带有“由笔记提炼”标识，点击可展开并追溯归纳所依据的来源笔记。
+  - **编辑与修正**：支持对任何一条记忆条目进行手动调整或独立删除。
+  - **一键彻底清空**：点击「清空记忆」可彻底销毁本地保存的所有长期记忆画像与近况切片，重置 AI 记忆。
+
 ---
 
 ## 3. 富文本编辑器
@@ -372,7 +388,7 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 - **长期记忆**：Thoughter 支持跨会话记住您的写作偏好、表达习惯与个人背景，并在对话中自动保持一致。
 - **隐私与本地独立数据库隔离**：长期记忆存储于本地独立数据库，绝不上传云端，不进入多端同步与数据备份，保障您的绝对隐私。
 - **用户称呼**：支持在 Thoughter 中设置自定义昵称，让 AI 按照您喜欢的方式称呼您。
-- **记忆管理**：可在「设置」→「AI 设置」中随时查看当前已记录的画像条目或一键清空记忆。
+- **记忆管理**：可在「设置」→「AI 设置」→「管理长期记忆」中随时查看当前已记录的画像条目，或通过「清空记忆」一键重置。
 
 **思考过程与快捷操作**：
 
@@ -388,14 +404,14 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 
 ### Thoughter 梦境整理 (Dreaming) 与长期记忆提炼
 
-Thoughter 梦境整理是心迹 v4.1.0 推出的后台长期记忆提炼机制。它能在不打扰您记录的前提下，利用应用空闲时段或在您回顾周期洞察后，轻柔梳理近期的笔记积累，提炼出反映您文风偏好与生活关注的长期记忆画像，让 AI 在后续对话伴写中更加懂您。
+Thoughter 梦境整理是心迹 v4.1.0 推出的后台长期记忆提炼机制。它能在不打扰您记录的前提下，利用应用空闲时段或在成功生成新的 AI 周期洞察后，轻柔梳理近期的笔记积累，提炼出反映您文风偏好与生活关注的长期记忆画像，让 AI 在后续对话伴写中更加懂您。
 
 #### 1. 触发条件与采样规则
 
 - **触发门槛**：两次整理之间至少间隔 **7 天**，且在过去 **60 天**的采样窗口内需积累至少 **10 条**有效笔记。若不满足门槛条件，整理任务会自动跳过。
 - **触发时机**：
   - **空闲时整理**：应用启动 5 秒后，若处于空闲状态且满足门槛，会自动启动后台整理。
-  - **周期洞察后整理**：当您在「洞察」页面查阅周报或月报时，系统会在完成洞察分析后同步触发整理。
+  - **周期洞察后整理**：当您成功生成并保存新的 AI 周期洞察（如周报、月报）后，系统会在后台异步轻量触发整理，不会同步阻塞界面渲染或洞察分析流程。
 - **正文截短与保护**：为降低模型 Token 消耗并最大程度保护您的私密长文，单条笔记送入模型归纳时会自动执行 **160 字截短保护**，仅提取语言结构与表达特征，绝不上传或完整复述您的私密细节。
 
 #### 2. 摘录与原创分离归纳逻辑
@@ -660,19 +676,9 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 | AI 卡片生成       | 开关 | 启用 AI 卡片生成功能          |
 | 生物识别认证      | 开关 | 需要指纹/面部解锁查看隐藏笔记 |
 
-### 长期记忆与梦境整理设置
+### AI 设置与长期记忆
 
-**访问路径**：设置 → AI 设置 → 长期记忆
-
-- **长期记忆总开关**：开启后允许 Thoughter 记住您的沟通习惯与表达偏好。若关闭此开关，所有长期记忆提取与使用完全停用。
-- **梦境整理开关 (Dreaming)**：控制后台梦境整理机制的启用状态。
-  - **空闲时整理**：控制应用处于空闲状态时是否自动触发后台梦境整理。
-  - **周期洞察后整理**：控制在完成周期周报/月报分析后是否同步触发梦境整理。
-- **即时隐私生效保障**：在整理过程中，若您在任意时刻关闭长期记忆或梦境整理开关，**后台整理任务会立即静默终止，正在生成的结果会被即刻丢弃**，绝对不向数据库写入任何新画像条目。
-- **记忆管理与自主控制**：
-  - **追溯来源笔记**：在长期记忆列表中，每条由梦境整理归纳出的画像均带有“由笔记提炼”标识，点击可展开并追溯归纳所依据的来源笔记。
-  - **编辑与修正**：支持对任何一条记忆条目进行手动态调整或独立删除。
-  - **一键彻底清空**：点击「清空记忆」可彻底销毁本地保存的所有长期记忆画像与近况切片，重置 AI 记忆。
+关于 AI 服务商配置、长期记忆总开关、梦境整理与记忆管理的完整说明，请参阅 [2. AI 服务配置](#2-ai-服务配置) 与 [5. AI 功能 - Thoughter 梦境整理 (Dreaming) 与长期记忆提炼](#5-ai-功能)。
 
 ### 每日一言设置
 
@@ -986,6 +992,22 @@ ThoughtEcho can keep several AI configurations at once:
 - Switch the active service from the list at any time
 - Other configured services are tried automatically if the active one fails
 
+### Long-Term Memory & Dreaming Controls
+
+**Access Paths**:
+- **Dreaming & Memory Toggles**: `Settings → AI Settings → "Long-Term Memory" Card`
+- **Memory Item Attribution & Management**: `Settings → AI Settings → Manage Long-Term Memory`
+
+- **Master Memory Toggle**: Master switch allowing Thoughter to remember your phrasing preferences and voice. Disabling this turns off all long-term memory operations.
+- **Dreaming Master Toggle**: Enables or disables background Dreaming distillation tasks.
+  - **Idle Reflection**: Toggles background dreaming execution during application idle time.
+  - **Post-Insight Reflection**: Toggles background dreaming execution following the creation and saving of a new AI periodic report.
+- **Immediate Privacy Enforcement**: If you turn off Long-Term Memory or Dreaming switches while a distillation task is in progress, **the background task is immediately aborted and generated results are silently discarded**, ensuring zero unauthorized memory writes.
+- **User Control & Transparency** (Path: `Settings → AI Settings → Manage Long-Term Memory`):
+  - **Source Attribution**: Distilled memory profile cards are tagged with "Synthesized from Notes". Tapping an item opens a breakdown view allowing you to trace the exact source notes used for that synthesis.
+  - **Inline Editing & Deletion**: Individual memory profile items can be edited or removed at any time.
+  - **One-Tap Reset / Wipe**: Tapping "Clear Memory" permanently wipes all stored profile facts and recent slices from local storage.
+
 ---
 
 ## 3. Rich Text Editor
@@ -1220,7 +1242,7 @@ When Thoughter proposes creating or editing a note, it displays the result as a 
 - **Long-Term Memory**: Thoughter remembers your writing style, preferences, and personal background across sessions, keeping its tone and assistance consistent over time.
 - **Privacy & Local Isolated Database**: Long-term memory is stored locally in a separate database, never uploaded to any cloud server, and excluded from multi-device sync and data backups for complete privacy.
 - **Custom Nickname**: Set your preferred name or nickname in Thoughter settings for a more natural conversation experience.
-- **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings".
+- **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings" → "Manage Long-Term Memory".
 
 **Deep Thinking & Action Bar**:
 
@@ -1236,14 +1258,14 @@ When Thoughter proposes creating or editing a note, it displays the result as a 
 
 ### Thoughter Dreaming & Long-Term Memory Distillation
 
-Thoughter Dreaming is an offline background distillation mechanism introduced in ThoughtEcho v4.1.0. It gently analyzes your recent notes when the application is idle or after you review periodic insights, distilling long-term writing traits, reading preferences, and recent topics into a local memory profile. This enables Thoughter to better adapt to your voice during chats and assistance.
+Thoughter Dreaming is an offline background distillation mechanism introduced in ThoughtEcho v4.1.0. It gently analyzes your recent notes when the application is idle or after a new AI periodic report is generated and saved, distilling long-term writing traits, reading preferences, and recent topics into a local memory profile. This enables Thoughter to better adapt to your voice during chats and assistance.
 
 #### 1. Trigger Conditions & Sampling Thresholds
 
 - **Activation Thresholds**: Requires a minimum interval of **7 days** between distillation runs and at least **10 valid notes** created within the past **60-day** sampling window. Distillation automatically skips if thresholds are not met.
 - **Trigger Times**:
   - **Idle Reflection**: Runs automatically 5 seconds after startup when the device is idle and gate conditions pass.
-  - **Post-Insight Distillation**: Triggers synchronously after completing a weekly or monthly report analysis on the Insights page.
+  - **Post-Insight Distillation**: Triggers asynchronously in the background after a new AI periodic report (e.g. weekly or monthly insight) is generated and saved. It runs as a lightweight background task and will never block UI rendering or report analysis.
 - **Content Truncation Protection**: To optimize AI token usage and safeguard personal privacy, each sampled note is truncated to a maximum of **160 characters**. Only sentence structures and stylistic features are extracted, ensuring full private texts are never transmitted or reproduced.
 
 #### 2. Excerpt vs. Original Separation Logic
@@ -1504,19 +1526,9 @@ ThoughtEcho embeds elegant serif typography directly into the app:
 | AI Card Generation           | Toggle | Enable AI card generation feature                |
 | Biometric Authentication     | Toggle | Require fingerprint/face unlock for hidden notes |
 
-### Long-Term Memory & Dreaming Controls
+### AI Settings & Long-Term Memory Controls
 
-**Access Path**: Settings → AI Settings → Long-Term Memory
-
-- **Master Memory Toggle**: Master switch allowing Thoughter to remember your phrasing preferences and voice. Disabling this turns off all long-term memory operations.
-- **Dreaming Master Toggle**: Enables or disables background Dreaming distillation tasks.
-  - **Idle Reflection**: Toggles background dreaming execution during application idle time.
-  - **Post-Insight Reflection**: Toggles dreaming execution following weekly/monthly periodic report generation.
-- **Immediate Privacy Enforcement**: If you turn off Long-Term Memory or Dreaming switches while a distillation task is in progress, **the background task is immediately aborted and generated results are silently discarded**, ensuring zero unauthorized memory writes.
-- **User Control & Transparency**:
-  - **Source Attribution**: Distilled memory profile cards are tagged with "Synthesized from Notes". Tapping an item opens a breakdown view allowing you to trace the exact source notes used for that synthesis.
-  - **Inline Editing & Deletion**: Individual memory profile items can be edited or removed at any time.
-  - **One-Tap Reset / Wipe**: Tapping "Clear Memory" permanently wipes all stored profile facts and recent slices from local storage.
+For full details on AI provider configuration, master memory toggles, dreaming options, and memory management, please refer to [2. AI Service Configuration](#2-ai-service-configuration) and [5. AI Features - Thoughter Dreaming & Long-Term Memory Distillation](#5-ai-features).
 
 ### Daily Quote Settings
 
