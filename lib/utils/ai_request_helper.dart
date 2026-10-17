@@ -315,17 +315,6 @@ class AIRequestHelper {
     }
   }
 
-  /// 处理流式完成的通用逻辑
-  @Deprecated('Use OpenAIStreamService instead')
-  void handleStreamComplete({
-    required StreamController<String> controller,
-    String? fullText,
-  }) {
-    if (!controller.isClosed) {
-      controller.close();
-    }
-  }
-
   /// 处理流式错误的通用逻辑
   @Deprecated('Use OpenAIStreamService instead')
   void handleStreamError({
