@@ -773,14 +773,27 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 - 现有分类列表显示
 - 分类管理（创建、查看、修改与删除）
 
+### 隐私与遥测设置
+
+**访问路径**：设置 → 反馈与联系
+
+在「反馈与联系」页面底部，心迹提供了集中透明的「数据收集与隐私」卡片，用于管理各项遥测与诊断选项。卡片包含“诊断数据（Sentry）”与“匿名统计（Aptabase）”两个独立开关及“查看收集详情与脱敏源码”说明按钮：
+
+| 遥测开关 | 收集目的 | 收集内容与脱敏机制 | 默认状态与保护承诺 |
+| --- | --- | --- | --- |
+| **诊断数据<br>(Sentry)** | 捕获崩溃堆栈、诊断卡死与系统兼容性 Bug，分析页面加载耗时与流畅度 | 崩溃堆栈、错误类型、系统版本、设备型号、随机安装标识、性能耗时指标。发送前本地正则脱敏 SQL 文本与 URL 参数，强禁截图 | **默认彻底关闭** (Strict Opt-in)。绝不收集笔记正文、富文本 Delta、图片附件或 PII；服务端不保存 IP |
+| **匿名统计<br>(Aptabase)** | 统计各功能使用频次与热度（如卡片模板与排版偏好），规划开发优先级 | 匿名功能点击与页面访问频次、系统平台与版本、语言区域、应用版本号、单次启动临时会话 ID（退出即销毁） | **默认彻底关闭** (Strict Opt-in)。无 Cookie、无跨应用追踪、无设备指纹、无用户画像；绝不收集笔记正文或搜索词 |
+
+- **透明度与源码查验**：点击卡片底部的「查看收集详情与脱敏源码」按钮，可随时调出弹窗，直接查验 Sentry 脱敏源码、Aptabase 客户端集成源码以及完整的官网隐私政策说明。
+- **实时控制**：诊断数据与匿名统计均可随时一键自由开启或关闭；诊断数据开关更改将在重启应用后正式生效。
+
 ### 关于与反馈
 
 在设置页面的“反馈与联系”中，您可以：
 
 - **反馈建议**：支持直接在应用内发送反馈，也可跳转到 GitHub 社区进行讨论。
 - **联系开发者**：通过电子邮件直接联系开发者。
-- **发送诊断数据帮助改进**：开启后，遇到 Bug、崩溃或卡死时将自动向开发团队提交错误堆栈与诊断信息，并包含必要的性能指标（如页面加载耗时、脱敏后的操作类型，iOS 上包含 CPU 剖析）以协助排查卡顿与优化流畅度。为了保护您的隐私，**该功能默认关闭**，上传的数据经过本地严格脱敏，包含随机生成的安装标识（不关联硬件信息），绝不包含任何您的日记正文或隐私内容，服务亦不存储您的 IP 地址。此设置在重启应用后生效。
-- **参与匿名功能改进计划**：开启后，应用会统计匿名的功能点击与页面访问频次（基于开源轻量分析服务 Aptabase），附带操作系统版本、语言区域与单次启动的临时会话 ID（退出即失效），用于帮助开发者规划后续功能的开发优先级。为了保护您的隐私，**该功能默认关闭**，严格遵循本地优先与隐私第一原则，不使用 Cookie、不做跨应用追踪，不存储 IP 地址，绝不收集笔记正文、搜索关键词或个人身份信息。您可随时在“设置 -> 反馈与联系”中自由开启或关闭。
+- **数据收集与隐私控制**：集中管理“诊断数据（Sentry）”与“匿名统计（Aptabase）”遥测选项，并可随时查验脱敏源码（详见「隐私与遥测设置」）。
 
 ---
 
@@ -1624,14 +1637,27 @@ For full details on AI provider configuration, master memory toggles, dreaming o
 - List display of existing categories
 - Category management (create, view, edit, and delete)
 
+### Privacy & Telemetry Settings
+
+**Access Path**: Settings → Feedback & Contact
+
+At the bottom of the "Feedback & Contact" page, ThoughtEcho provides a unified "Data Collection & Privacy" card for transparent telemetry control. The card includes dual toggle switches for "Diagnostic Data (Sentry)" and "Anonymous Statistics (Aptabase)" along with a detailed disclosure button:
+
+| Telemetry Toggle | Purpose | Data Scope & Redaction Mechanism | Default State & Privacy Commitments |
+| --- | --- | --- | --- |
+| **Diagnostic Data<br>(Sentry)** | Captures crash stack traces, diagnoses freezes/bugs, and analyzes page load performance and UI responsiveness | Crash stack traces, error types, OS version, device model, random installation ID, performance metrics. Locally strips SQL text/params & URL query params via regex; screenshots disabled | **Disabled by default** (Strict Opt-in). Never collects note text, rich-text Delta JSON, attachments, or PII; server does not store IP |
+| **Anonymous Statistics<br>(Aptabase)** | Tracks feature usage frequency and popularity (e.g., card templates, layout styles) to guide development priorities | Anonymous feature click/page view counts, OS platform/version, locale, app version, temporary session ID (cleared on app exit) | **Disabled by default** (Strict Opt-in). No cookies, no cross-app tracking, no device fingerprinting, no profiling; never collects note contents or search terms |
+
+- **Transparency & Source Inspection**: Click the "Learn More & Source Code" button at the bottom of the card to open a disclosure dialog with direct links to Sentry redaction code, Aptabase integration code, and full privacy policy details.
+- **Instant Control**: Both toggles can be switched on or off at any time. Diagnostic data changes take effect upon app restart.
+
 ### About & Feedback
 
 In the "Feedback & Contact" section within Settings, you can:
 
 - **Feedback**: Supports sending feedback directly in-app, or navigating to GitHub for community discussions.
 - **Contact Developer**: Reach out to the developer directly via email.
-- **Send diagnostics to help improve**: When enabled, crash/freeze diagnostics along with essential performance metrics (such as page load times, sanitized operation types, and CPU profiling on iOS) are automatically sent to help developers resolve issues and improve responsiveness. For your privacy, this feature is **disabled by default**, uses a randomly generated installation identifier (not linked to hardware info), excludes note contents and personal data, and the service does not store IP addresses. Takes effect after app restart.
-- **Anonymous Feature Improvement Program**: When enabled, counts of anonymous feature clicks and page views are collected (via privacy-focused open-source Aptabase) alongside OS version, locale, and temporary session ID (cleared on exit) to help guide development priorities. **Disabled by default**, uses no cookies or cross-app tracking, does not store IP addresses, and strictly never collects note contents, search terms, or personal identity details. Can be toggled anytime under "Settings -> Feedback & Contact".
+- **Data Collection & Privacy Controls**: Centralized controls for "Diagnostic Data (Sentry)" and "Anonymous Statistics (Aptabase)" telemetry toggles and source disclosure (see "Privacy & Telemetry Settings" for details).
 
 ---
 
