@@ -60,9 +60,6 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         setState(() {
           _accumulatedPromptText = _rawPromptText;
         });
-        if (_accumulatedPromptText != _rawPromptText) {
-          _scheduleDebounceTimer();
-        }
       }
     });
   }
@@ -143,11 +140,11 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         onDone: () {
           if (!mounted) return;
           _cancelDebounceTimer();
-          _accumulatedPromptText = _rawPromptText;
+          final trimmedPrompt = _rawPromptText.trim();
 
           // 流正常结束但没有任何正文（例如推理模型把预算全花在思考上、
           // 或模型返回空内容）时退回本地提示，避免面板停在"等待"状态。
-          if (_accumulatedPromptText.trim().isEmpty) {
+          if (trimmedPrompt.isEmpty) {
             logDebug('每日提示流结束但内容为空，使用本地生成的提示');
             _setLocalPrompt(
               city: city,
@@ -157,8 +154,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
             return;
           }
           setState(() {
-            _accumulatedPromptText = _accumulatedPromptText.trim();
-            _rawPromptText = _accumulatedPromptText;
+            _accumulatedPromptText = trimmedPrompt;
+            _rawPromptText = trimmedPrompt;
             _isGeneratingDailyPrompt = false;
           });
         },
@@ -383,40 +380,44 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
           AnimatedSize(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              child:
-                  (_isGeneratingDailyPrompt && _accumulatedPromptText.isEmpty)
-                      ? _DailyPromptLoading(
-                          key: const ValueKey('loading'),
-                          isAiConfigured: isAiConfigured,
-                          screenWidth: widget.screenWidth,
-                          isSmallScreen: widget.isSmallScreen,
-                          isVerySmallScreen: widget.isVerySmallScreen,
-                        )
-                      : Text(
-                          _accumulatedPromptText.isNotEmpty
-                              ? _accumulatedPromptText.trim()
-                              : (isAiConfigured
-                                  ? l10n.waitingForTodayThoughts
-                                  : l10n.noTodayThoughts),
-                          key: const ValueKey('text'),
-                          style: promptStyle?.copyWith(
-                            // 这张卡是紧排的两三行居中提问，不跟正文行高（纸墨 1.75）走，
-                            // 否则卡片会显著变高、把上面那张一言卡挤扁。
-                            height: 1.4,
-                            // 颜色要读**实际选中的那一级**：极小屏用的是 bodyMedium，
-                            // 却去取 bodyLarge 的颜色，一旦主题给两级配了不同颜色就会错。
-                            color: _accumulatedPromptText.isNotEmpty
-                                ? promptStyle.color
-                                : theme.colorScheme.onSurface.withAlpha(120),
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: double.infinity,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child:
+                    (_isGeneratingDailyPrompt && _accumulatedPromptText.isEmpty)
+                        ? _DailyPromptLoading(
+                            key: const ValueKey('loading'),
+                            isAiConfigured: isAiConfigured,
+                            screenWidth: widget.screenWidth,
+                            isSmallScreen: widget.isSmallScreen,
+                            isVerySmallScreen: widget.isVerySmallScreen,
+                          )
+                        : Text(
+                            _accumulatedPromptText.isNotEmpty
+                                ? _accumulatedPromptText.trim()
+                                : (isAiConfigured
+                                    ? l10n.waitingForTodayThoughts
+                                    : l10n.noTodayThoughts),
+                            key: const ValueKey('text'),
+                            style: promptStyle?.copyWith(
+                              // 这张卡是紧排的两三行居中提问，不跟正文行高（纸墨 1.75）走，
+                              // 否则卡片会显著变高、把上面那张一言卡挤扁。
+                              height: 1.4,
+                              // 颜色要读**实际选中的那一级**：极小屏用的是 bodyMedium，
+                              // 却去取 bodyLarge 的颜色，一旦主题给两级配了不同颜色就会错。
+                              color: _accumulatedPromptText.isNotEmpty
+                                  ? promptStyle.color
+                                  : theme.colorScheme.onSurface.withAlpha(120),
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: widget.isVerySmallScreen ? 2 : 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          textAlign: TextAlign.center,
-                          maxLines: widget.isVerySmallScreen ? 2 : 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+              ),
             ),
           ),
         ],

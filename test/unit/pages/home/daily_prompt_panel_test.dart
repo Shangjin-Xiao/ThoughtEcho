@@ -74,7 +74,12 @@ void main() {
   testWidgets(
       'HomeDailyPromptPanel includes AnimatedSize and AnimatedSwitcher and debounces stream updates',
       (WidgetTester tester) async {
+    final originalDebugCheck = Provider.debugCheckInvalidValueType;
     Provider.debugCheckInvalidValueType = null;
+    addTearDown(() {
+      Provider.debugCheckInvalidValueType = originalDebugCheck;
+    });
+
     final controller = StreamController<String>();
 
     final aiService = _FakeAIService(controller.stream);
@@ -120,6 +125,17 @@ void main() {
     expect(
         animatedSizeWidget.duration, equals(const Duration(milliseconds: 200)));
     expect(animatedSizeWidget.curve, equals(Curves.easeOutCubic));
+    expect(animatedSizeWidget.alignment, equals(Alignment.topCenter));
+
+    final sizedBoxWidget = tester.widget<SizedBox>(
+      find
+          .descendant(
+            of: find.byType(AnimatedSize),
+            matching: find.byType(SizedBox),
+          )
+          .first,
+    );
+    expect(sizedBoxWidget.width, equals(double.infinity));
 
     final animatedSwitcherWidget =
         tester.widget<AnimatedSwitcher>(find.byType(AnimatedSwitcher));
