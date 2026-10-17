@@ -14,6 +14,10 @@ Future<void> main(List<String> args) async {
   final mode = _parseArgs(args);
   final linesToCheck = await _collectLines(mode);
 
+  if (Platform.environment['CI'] != 'true') {
+    await _checkGitHooksTip();
+  }
+
   if (linesToCheck.isEmpty) {
     stdout.writeln('✅ Repo rules check passed (0 candidate lines).');
     return;
@@ -260,4 +264,16 @@ void _checkLine(_SourceLine line, List<String> violations) {
       'Use AppShapeTokens.of(context).cardRadius/buttonRadius/inputRadius/dialogRadius/fabRadius instead of static AppTheme.*Radius.',
     );
   }
+}
+
+Future<void> _checkGitHooksTip() async {
+  try {
+    final res = await Process.run('git', ['config', 'core.hooksPath']);
+    final current = (res.stdout as String).trim();
+    if (current != '.githooks') {
+      stdout.writeln(
+        '💡 Tip: Run "git config core.hooksPath .githooks" to enable automatic pre-commit checks.',
+      );
+    }
+  } catch (_) {}
 }

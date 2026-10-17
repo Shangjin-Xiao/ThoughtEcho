@@ -104,7 +104,7 @@ pwsh ./scripts/build_msix_ci.ps1
    - 严禁向上下文倾倒未过滤的冗长日志（如全量依赖拉取、完整测试过程输出、全量静态分析清单）。
    - 运行可能产生大量输出的命令（测试、分析、构建）时，优先采用静默重定向并仅在失败时打印末尾报错：
      `command > /tmp/run.log 2>&1 || tail -n 25 /tmp/run.log`，或配合 `tail -n 2` / `grep` 进行行数过滤。
-   - 查询外部状态（如 GitHub Actions、API）时使用极简结构化参数（如 `gh run view <id> --json status,conclusion`），禁止使用带终端持续刷新的交互式/轮询命令（如 `gh run watch`）。
+   - 查询外部状态（如 GitHub Actions、API）时使用极简结构化参数（如 `gh run view <id> --json status,conclusion`；`gh run view` 必须指定 `<id>` 避免交互菜单挂起），禁止使用带终端持续刷新的交互式/轮询命令（如 `gh run watch` 或循环轮询 CI 状态）。
    - 确定无需输出的辅助指令使用 `> /dev/null 2>&1` 彻底静默。
 
 涉及第三方库、Flutter/Dart SDK、平台 API、AI 服务协议或 GitHub Actions 时，先用 Context7
@@ -160,7 +160,7 @@ pwsh ./scripts/build_msix_ci.ps1
 
 - UI 层禁止硬编码任何用户可见文本，包括按钮、菜单、Tooltip、Dialog、SnackBar、空状态和
   无障碍标签。
-- 新文案与描述只需新增中英文（`lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`），占位符声明元数据，其他语言后续补充；未提供本地化的语言默认回退显示为英文（`l10n.yaml` 中首选语言为 `en`）。无需手动运行 `gen-l10n`（构建与 CI 会自动生成）；禁止手动编辑 `lib/gen_l10n/`。
+- 新文案与描述在日常开发与 PR 中**只需新增中英文**（`lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`），占位符声明元数据；其他语言包后续由专门的翻译流程统一完善。无需手动运行 `gen-l10n`（构建与 CI 会自动生成）；禁止手动编辑 `lib/gen_l10n/`。
 - 颜色和文字样式优先来自 `Theme.of(context)` / `ColorScheme`。只有品牌色、数据可视化语义色
   或平台明确要求的颜色可集中定义，不在页面散落 `Color(0x...)`。
 - 异步间隔后使用 `context` 或更新 State 前检查 `mounted` / `context.mounted`。
@@ -322,4 +322,5 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 - **测试与提交脱敏**：复现问题或编写测试时，禁止将用户举例中的真实具体地名/POI、姓名、私人路径或笔记内容写入测试夹具（Fixtures）、代码注释、提交信息或公开 PR 描述，一律替换为合成占位数据（如 `示例省·示例市`、`MockPOI`）。
 - 提交前检查 staged diff，不得包含真实 API 密钥、令牌、个人数据、私密路径、含隐私截图或
   本机缓存。
+- 提交前对本次修改的 Dart 文件执行 `dart format`，避免因格式化失误导致 CI 失败或引来外部 Bot 抢跑冲突。
 - 提交信息应概括实际改动；只有验证通过或明确记录未执行项后，才能宣称完成。
