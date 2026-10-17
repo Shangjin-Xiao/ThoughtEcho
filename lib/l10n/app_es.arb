@@ -102,5 +102,37 @@
   "exploreSummarizeRange": "Resumir {period}",
   "generatingInsightsForRange": "Generando ideas para {period}...",
   "noNotesInRange": "Sin notas en {period}",
-  "exploreSummarizeRangePrompt": "Resume mis notas de {period}: ¿qué destaca?"
+  "exploreSummarizeRangePrompt": "Resume mis notas de {period}: ¿qué destaca?",
+  "unifiedMediaImportSelectMediaFile": "Seleccionar archivo de {mediaType}",
+  "@unifiedMediaImportSelectMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMediaFile": "Guardar archivo de {mediaType}",
+  "@unifiedMediaImportSaveMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMedia": "Guardar {mediaType}",
+  "@unifiedMediaImportSaveMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportDownloadMedia": "Descargar {mediaType}",
+  "@unifiedMediaImportDownloadMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  }
 }

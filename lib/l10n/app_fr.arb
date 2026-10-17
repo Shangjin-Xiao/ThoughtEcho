@@ -2993,6 +2993,38 @@
       }
     }
   },
+  "unifiedMediaImportSelectMediaFile": "Sélectionner un fichier {mediaType}",
+  "@unifiedMediaImportSelectMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMediaFile": "Enregistrer le fichier {mediaType}",
+  "@unifiedMediaImportSaveMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMedia": "Enregistrer {mediaType}",
+  "@unifiedMediaImportSaveMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportDownloadMedia": "Télécharger {mediaType}",
+  "@unifiedMediaImportDownloadMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
   "mediaTypeImage": "Image",
   "mediaTypeVideo": "Vidéo",
   "mediaTypeAudio": "Audio",

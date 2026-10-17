@@ -3007,6 +3007,38 @@
       }
     }
   },
+  "unifiedMediaImportSelectMediaFile": "{mediaType}ファイルを選択",
+  "@unifiedMediaImportSelectMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMediaFile": "{mediaType}ファイルを保存",
+  "@unifiedMediaImportSaveMediaFile": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportSaveMedia": "{mediaType}を保存",
+  "@unifiedMediaImportSaveMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "unifiedMediaImportDownloadMedia": "{mediaType}をダウンロード",
+  "@unifiedMediaImportDownloadMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
   "mediaTypeImage": "画像",
   "mediaTypeVideo": "動画",
   "mediaTypeAudio": "音声",
