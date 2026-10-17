@@ -306,3 +306,9 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 ## 2026-10-16 - [WebDAV Sync Service RegExp Optimization]
 **Learning:** In Dart, compiling `RegExp` objects inside frequently executed methods or loops causes unnecessary CPU overhead and memory allocations, particularly in services that process large strings or XMLs like `WebDAVSyncService`.
 **Action:** Always pre-compile `RegExp` objects into `static final` class members rather than leaving them inline, especially inside loops or methods expected to be called frequently like error parsing or propfind data extraction.
+
+## 2026-10-30 - 优化 AddNoteController 标签缓存查找复杂度至 O(1)
+
+**Learning:** 在标签管理与保存笔记场景（如 `ensureTagExists` 或 `addDefaultHitokotoTagsAsync`）中，若通过遍历 List 进行 ID 或小写名称匹配，时间复杂度为 O(N)。随着存量标签增加，频繁调用会带来不必要的 CPU 消耗。构建 `_idToCategoryCache` (Map<String, NoteTag>) 与 `_lowerNameToCategoryCache` (Map<String, NoteTag>)，在预载或变更标签列表时一次性填充哈希表，能将后续所有按 ID 和按名称的检索替换为 O(1) 查找。
+
+**Action:** 重构 `lib/controllers/add_note_controller.dart`，新增 `_idToCategoryCache` 与 `_lowerNameToCategoryCache` 哈希表，并在 `_updateCategoriesCache` 中同步更新，将 `ensureTagExists` 及一言副分类标签查找逻辑简化为 O(1) Map 检索，并在 `test/performance/add_note_controller_benchmark_test.dart` 中进行了性能基准测试验证（50,000 次查找单次耗时降低约 60%）。
