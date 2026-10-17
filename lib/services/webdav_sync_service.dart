@@ -142,7 +142,7 @@ class WebDAVSyncService extends ChangeNotifier {
   );
 
   static final RegExp _lengthRegExp = RegExp(
-    r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>(\d+)<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
+    r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>\s*(\d+)\s*<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
     caseSensitive: false,
   );
 
@@ -150,6 +150,34 @@ class WebDAVSyncService extends ChangeNotifier {
     r'<(?:[a-zA-Z0-9_.-]+:)?getetag>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getetag>',
     caseSensitive: false,
   );
+
+  static final RegExp _lastModifiedRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?getlastmodified>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getlastmodified>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _errorStatusCodeRegExp = RegExp(
+    r'status[Cc]ode[:\s]+(\d+)|status code[:\s]+(\d+)|HTTP\s+(\d+)',
+    caseSensitive: false,
+  );
+
+  static final RegExp _serverUrlPattern = RegExp(
+    r'https?://[^\s]+',
+  );
+
+  static final RegExp _colonOrDotPattern = RegExp(r'[:.]');
+
+  static final RegExp _syncZipSuffixPattern = RegExp(
+    r'thoughtecho_sync\.zip$',
+  );
+
+  static final Map<String, RegExp> _commonXmlTagRegExps = {
+    'getlastmodified': _lastModifiedRegExp,
+    'getetag': _etagRegExp,
+    'getcontentlength': _lengthRegExp,
+  };
+
+  static final Map<String, RegExp> _dynamicTagRegExpCache = {};
 
   /// 初始化设置，从 MMKV 中读取缓存配置
   void _initSettings() {
@@ -621,10 +649,7 @@ class WebDAVSyncService extends ChangeNotifier {
 
     final raw = e.toString();
     // HTTP 状态码识别
-    final statusMatch = RegExp(
-            r'status[Cc]ode[:\s]+(\d+)|status code[:\s]+(\d+)|HTTP\s+(\d+)',
-            caseSensitive: false)
-        .firstMatch(raw);
+    final statusMatch = _errorStatusCodeRegExp.firstMatch(raw);
     if (statusMatch != null) {
       final matchedStr =
           statusMatch.group(1) ?? statusMatch.group(2) ?? statusMatch.group(3);
@@ -654,7 +679,7 @@ class WebDAVSyncService extends ChangeNotifier {
       return '网络请求失败，请稍后重试';
     }
     // 脱敏替换，包含包含用户名密码的 URL
-    final safe = raw.replaceAll(RegExp(r'https?://[^\s]+'), '[服务器地址]');
+    final safe = raw.replaceAll(_serverUrlPattern, '[服务器地址]');
     return safe.length > 80 ? '${safe.substring(0, 80)}…' : safe;
   }
 
@@ -863,9 +888,9 @@ class WebDAVSyncService extends ChangeNotifier {
     final stamp = DateTime.now()
         .toUtc()
         .toIso8601String()
-        .replaceAll(RegExp(r'[:.]'), '-');
+        .replaceAll(_colonOrDotPattern, '-');
     final destination = fileUrl.replaceFirst(
-      RegExp(r'thoughtecho_sync\.zip$'),
+      _syncZipSuffixPattern,
       'thoughtecho_sync.corrupted-$stamp.zip',
     );
     try {
@@ -975,11 +1000,15 @@ class WebDAVSyncService extends ChangeNotifier {
   }
 
   String? _extractFirstXmlTagValue(String xmlData, String localName) {
-    final regExp = RegExp(
-      '<(?:[a-zA-Z0-9_.-]+:)?$localName>([\\s\\S]*?)'
-      '</(?:[a-zA-Z0-9_.-]+:)?$localName>',
-      caseSensitive: false,
-    );
+    final regExp = _commonXmlTagRegExps[localName] ??
+        _dynamicTagRegExpCache.putIfAbsent(
+          localName,
+          () => RegExp(
+            '<(?:[a-zA-Z0-9_.-]+:)?$localName>([\\s\\S]*?)'
+            '</(?:[a-zA-Z0-9_.-]+:)?$localName>',
+            caseSensitive: false,
+          ),
+        );
     return regExp.firstMatch(xmlData)?.group(1)?.trim();
   }
 
@@ -1454,7 +1483,7 @@ class WebDAVSyncService extends ChangeNotifier {
       files[relPath] = _RemoteMediaFileInfo(
         length:
             lengthMatch == null ? null : int.tryParse(lengthMatch.group(1)!),
-        etag: etagMatch?.group(1),
+        etag: etagMatch?.group(1)?.trim(),
       );
     }
 
@@ -1671,6 +1700,13 @@ class WebDAVSyncService extends ChangeNotifier {
   @visibleForTesting
   static Map<String, int?> extractRemoteMediaFilesForTesting(String xmlData) {
     return _extractRemoteMediaFiles(xmlData);
+  }
+
+  @visibleForTesting
+  static Map<String, String?> extractRemoteMediaEtagsForTesting(
+      String xmlData) {
+    final details = _extractRemoteMediaDetails(xmlData);
+    return details.map((key, value) => MapEntry(key, value.etag));
   }
 
   @visibleForTesting
