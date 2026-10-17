@@ -44,6 +44,6 @@
 ## 2026-08-28 - [Add tooltips to "More Options" IconButtons]
 **Learning:** Icon-only buttons representing "More Options" (`Icons.more_vert`) often lack the `tooltip` property. While visually universally understood, omitting the tooltip prevents screen readers from announcing their purpose, leading to poor accessibility.
 **Action:** Always add a localized `tooltip` (e.g., `AppLocalizations.of(context).moreOptions`) to all icon-only `IconButton` instances, particularly those serving as menus or secondary actions.
-## 2024-05-30 - Missing tooltip in IconButton for agent memory search
+## 2026-10-16 - Missing tooltip in IconButton for agent memory search
 **Learning:** Found an `IconButton` used for searching in `agent_memory_page.dart` that was missing a tooltip for accessibility. Missing tooltips on icon-only buttons reduce accessibility for screen readers and confused users trying to understand the icon's purpose.
 **Action:** Add tooltips to icon-only buttons like search toggles using the localized strings (e.g. `l10n.search` and `l10n.cancel`).

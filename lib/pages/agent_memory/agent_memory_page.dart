@@ -112,6 +112,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
+            tooltip: l10n.moreOptions,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(shapeTokens.dialogRadius),
             ),
