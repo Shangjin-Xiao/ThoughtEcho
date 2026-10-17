@@ -2178,7 +2178,7 @@
   "breakthrough": "Breakthrough",
   "hope": "Hope",
   "backupFormatZip": "Creates a complete backup, including all notes, settings, and media files",
-  "backupFormatJson": "Creates a lightweight backup with notes and settings only (no media)",
+  "backupFormatJson": "Creates a lightweight backup with notes and settings (no media)",
   "supportedBackupFormats": "Supports new ZIP format and legacy JSON format backup files",
   "restoringData": "Restoring data... {current}/{total}",
   "@restoringData": {

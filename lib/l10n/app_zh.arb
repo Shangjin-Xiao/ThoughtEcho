@@ -2183,8 +2183,8 @@
   "harvest": "收获",
   "breakthrough": "突破",
   "hope": "希望",
-  "backupFormatZip": "生成完整备份包，包含所有笔记、设置及图片录音等媒体文件",
-  "backupFormatJson": "生成轻量备份包，包含所有笔记与设置（不含媒体文件）",
+  "backupFormatZip": "生成完整 ZIP 备份包，包含所有笔记、设置及图片、录音等媒体文件",
+  "backupFormatJson": "生成轻量 JSON 备份包，包含所有笔记与设置（不含媒体文件）",
   "supportedBackupFormats": "支持新版ZIP格式和旧版JSON格式的备份文件",
   "restoringData": "正在还原数据... {current}/{total}",
   "@restoringData": {

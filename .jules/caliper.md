@@ -121,10 +121,10 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-10-06 - [补充 TimeUtils 时间格式化纯函数的测试]
 **盲点:** `TimeUtils` 中的 `formatQuoteTime`、`formatDate`、`formatDateTime` 等核心时间格式化纯函数缺乏单元测试覆盖。这些函数在业务中被广泛用于页面展示及笔记生成，如果格式化逻辑被无意破坏，容易引起隐蔽的展示异常。
 **对策:** 在 `test/unit/utils/time_utils_test.dart` 中对工具类中的纯函数补充基于输入输出的边界与补零断言测试，保证核心格式化输出符合预期。
-## 2024-10-13 - [补充 UpdateDialogHelper 的测试]
+## 2026-10-13 - [补充 UpdateDialogHelper 的测试]
 **盲点:** `UpdateDialogHelper.showUpdateDialog` 作为直接控制更新对话框是否显示的核心逻辑（特别是 `shouldIgnore` 这一分支条件），竟然一直没有任何单元测试覆盖。
 **对策:** 在为依赖 `BuildContext` 的 Helper 类补充测试时，使用 `testWidgets` 构建 `MaterialApp` 环境来验证是否真正抛出了/拦截了 `BottomSheet`，特别是要注意在涉及到 l10n 时配置 `localizationsDelegates` 和 `supportedLocales` 以免 `AppLocalizations.of(context)` 报空指针。
 
-## 2024-10-13 - [补充 AIConnectionTester 的测试]
+## 2026-10-14 - [补充 AIConnectionTester 的测试]
 **盲点:** `AIConnectionTester` 提供了一个面向测试的接口 `testOverrideForTesting` 允许 mock 请求结果，但这套机制本身没有任何测试保证。
 **对策:** 增加针对核心配置类的测试（位于 `test/unit/utils/ai_connection_tester_test.dart`），确保即使测试机制也应当有自测试校验。

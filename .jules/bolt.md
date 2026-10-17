@@ -299,9 +299,9 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 
 **Action:** 优化了 `lib/services/database/database_trash_mixin.dart` 中的 `_hardDeleteQuotes` 方法，使用 `quotesBatch` 和 `refBatch` 分别批量读取 quotes 与 media_references，并在一个 `writeBatch` 中批量写入墓碑与删除记录。新增了 `test/performance/database_trash_mixin_benchmark_test.dart` 基准测试，彻底删除 2500 条软删除笔记的耗时从 524ms 降至 ~431ms（提升约 17.7%）， IPC 往返次数降低至 3 次。
 
-## 2025-02-20 - Batch chunking during ChatSessionService legacy database migration
+## 2026-10-10 - Batch chunking during ChatSessionService legacy database migration
 **Learning:** Performing a single `txn.batch()` across thousands of database rows can cause high memory overhead and IPC method channel pressure.
-**Action:** Split large migration data sets into chunks of 500 rows per batch within a single transaction to keep memory bounded and reduce IPC overhead.
+**Action:** Split large migration data sets into chunks of 500 rows per batch within a single transaction to bound each batch queue and reduce IPC overhead.
 
 ## 2026-10-16 - [WebDAV Sync Service RegExp Optimization]
 **Learning:** In Dart, compiling `RegExp` objects inside frequently executed methods or loops causes unnecessary CPU overhead and memory allocations, particularly in services that process large strings or XMLs like `WebDAVSyncService`.

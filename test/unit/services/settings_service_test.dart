@@ -13,6 +13,7 @@ import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
+
 import '../../test_harness.dart';
 
 void main() {
@@ -46,11 +47,13 @@ void main() {
       expect(AppSettings.fromJson(const {}).excerptIntentEnabled, isTrue);
     });
 
-    test('AppSettings should default direct fullscreen editor toggle to false',
-        () {
-      expect(AppSettings.defaultSettings().skipNonFullscreenEditor, isFalse);
-      expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
-    });
+    test(
+      'AppSettings should default direct fullscreen editor toggle to false',
+      () {
+        expect(AppSettings.defaultSettings().skipNonFullscreenEditor, isFalse);
+        expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
+      },
+    );
 
     test('AppSettings should default add note dialog experiments safely', () {
       expect(AppSettings.defaultSettings().addNoteDialogAutoFocus, isTrue);
@@ -68,7 +71,9 @@ void main() {
     test('AppSettings should default note-list visual experiments safely', () {
       expect(AppSettings.defaultSettings().noteListDisableCardShadows, isFalse);
       expect(
-          AppSettings.fromJson(const {}).noteListDisableCardShadows, isFalse);
+        AppSettings.fromJson(const {}).noteListDisableCardShadows,
+        isFalse,
+      );
       expect(
         AppSettings.defaultSettings().noteListDisableBackdropBlur,
         isFalse,
@@ -118,37 +123,41 @@ void main() {
       expect((await SettingsService.create()).userNickname, isEmpty);
     });
 
-    test('userAliases merges memory aliases only while memory is enabled',
-        () async {
-      var providerCalls = 0;
-      await settingsService.setUserNickname('  阿澈  ');
-      await settingsService.setDefaultAuthor('  林晚  ');
-      settingsService.setIdentityAliasesProvider(() {
-        providerCalls++;
-        return const {'墨客'};
-      });
+    test(
+      'userAliases merges memory aliases only while memory is enabled',
+      () async {
+        var providerCalls = 0;
+        await settingsService.setUserNickname('  阿澈  ');
+        await settingsService.setDefaultAuthor('  林晚  ');
+        settingsService.setIdentityAliasesProvider(() {
+          providerCalls++;
+          return const {'墨客'};
+        });
 
-      expect(settingsService.userAliases, {'阿澈', '林晚', '墨客'});
-      expect(providerCalls, 1);
+        expect(settingsService.userAliases, {'阿澈', '林晚', '墨客'});
+        expect(providerCalls, 1);
 
-      await settingsService.setAgentMemoryEnabled(false);
+        await settingsService.setAgentMemoryEnabled(false);
 
-      expect(settingsService.userAliases, {'阿澈', '林晚'});
-      expect(providerCalls, 1);
-    });
+        expect(settingsService.userAliases, {'阿澈', '林晚'});
+        expect(providerCalls, 1);
+      },
+    );
 
-    test('identity alias provider registration and refresh notify listeners',
-        () {
-      var notifications = 0;
-      settingsService.addListener(() => notifications++);
+    test(
+      'identity alias provider registration and refresh notify listeners',
+      () {
+        var notifications = 0;
+        settingsService.addListener(() => notifications++);
 
-      settingsService.setIdentityAliasesProvider(() => const {'临时别名'});
-      settingsService.refreshIdentityAliases();
-      settingsService.setIdentityAliasesProvider(null);
+        settingsService.setIdentityAliasesProvider(() => const {'临时别名'});
+        settingsService.refreshIdentityAliases();
+        settingsService.setIdentityAliasesProvider(null);
 
-      expect(notifications, 3);
-      expect(settingsService.userAliases, isNot(contains('临时别名')));
-    });
+        expect(notifications, 3);
+        expect(settingsService.userAliases, isNot(contains('临时别名')));
+      },
+    );
 
     test('should persist add note dialog experiment toggles', () async {
       expect(settingsService.addNoteDialogAutoFocus, isTrue);
@@ -180,25 +189,24 @@ void main() {
     });
 
     test(
-      'applyIncomingTrashSettings should ignore missing timestamp when local is newer',
-      () async {
-        await settingsService.setTrashRetentionDays(
-          90,
-          modifiedAt: DateTime.utc(2026, 3, 28, 10),
-        );
+        'applyIncomingTrashSettings should ignore missing timestamp when local is newer',
+        () async {
+      await settingsService.setTrashRetentionDays(
+        90,
+        modifiedAt: DateTime.utc(2026, 3, 28, 10),
+      );
 
-        final applied = await settingsService.applyIncomingTrashSettings({
-          'retention_days': 7,
-        });
+      final applied = await settingsService.applyIncomingTrashSettings({
+        'retention_days': 7,
+      });
 
-        expect(applied, isFalse);
-        expect(settingsService.trashRetentionDays, equals(90));
-        expect(
-          settingsService.trashRetentionLastModified,
-          equals('2026-03-28T10:00:00.000Z'),
-        );
-      },
-    );
+      expect(applied, isFalse);
+      expect(settingsService.trashRetentionDays, equals(90));
+      expect(
+        settingsService.trashRetentionLastModified,
+        equals('2026-03-28T10:00:00.000Z'),
+      );
+    });
 
     test(
       'applyIncomingTrashSettings should ignore payload without retention_days',
@@ -221,20 +229,19 @@ void main() {
       },
     );
 
-    test('setTrashRetentionDays should persist modifiedAt as UTC timestamp',
-        () async {
-      final localTime = DateTime(2026, 3, 28, 10, 30, 0);
+    test(
+      'setTrashRetentionDays should persist modifiedAt as UTC timestamp',
+      () async {
+        final localTime = DateTime(2026, 3, 28, 10, 30, 0);
 
-      await settingsService.setTrashRetentionDays(
-        90,
-        modifiedAt: localTime,
-      );
+        await settingsService.setTrashRetentionDays(90, modifiedAt: localTime);
 
-      expect(
-        settingsService.trashRetentionLastModified,
-        equals(localTime.toUtc().toIso8601String()),
-      );
-    });
+        expect(
+          settingsService.trashRetentionLastModified,
+          equals(localTime.toUtc().toIso8601String()),
+        );
+      },
+    );
 
     test(
       'applyIncomingTrashSettings should ignore unparseable retention_days',
@@ -332,27 +339,27 @@ void main() {
     test('should persist API Ninjas categories changes', () async {
       expect(settingsService.apiNinjasCategories, isEmpty);
 
-      await settingsService.setApiNinjasCategories(
-        const ['wisdom', 'success'],
-      );
+      await settingsService.setApiNinjasCategories(const ['wisdom', 'success']);
 
       expect(settingsService.apiNinjasCategories, ['wisdom', 'success']);
-      expect(
-        settingsService.appSettings.apiNinjasCategories,
-        ['wisdom', 'success'],
-      );
+      expect(settingsService.appSettings.apiNinjasCategories, [
+        'wisdom',
+        'success',
+      ]);
     });
 
-    test('set locale with region keeps locale-native daily quote provider',
-        () async {
-      await settingsService.setLocale('zh_CN');
+    test(
+      'set locale with region keeps locale-native daily quote provider',
+      () async {
+        await settingsService.setLocale('zh_CN');
 
-      final provider = ApiService.recommendedDailyQuoteProviderForLanguage(
-        settingsService.localeCode,
-      );
+        final provider = ApiService.recommendedDailyQuoteProviderForLanguage(
+          settingsService.localeCode,
+        );
 
-      expect(provider, ApiService.hitokotoProvider);
-    });
+        expect(provider, ApiService.hitokotoProvider);
+      },
+    );
 
     test('should persist Sentry settings changes', () async {
       // Initialize to false to ensure a consistent starting state
@@ -501,18 +508,20 @@ void main() {
       });
     });
 
-    test('updateAISettings should omit apiKey from persisted MMKV JSON',
-        () async {
-      final aiSettings = settingsService.aiSettings.copyWith(
-        apiKey: 'secret-key-123',
-        model: 'gpt-4o',
-      );
+    test(
+      'updateAISettings should omit apiKey from persisted MMKV JSON',
+      () async {
+        final aiSettings = settingsService.aiSettings.copyWith(
+          apiKey: 'secret-key-123',
+          model: 'gpt-4o',
+        );
 
-      await settingsService.updateAISettings(aiSettings);
+        await settingsService.updateAISettings(aiSettings);
 
-      expect(settingsService.aiSettings.apiKey, isEmpty);
-      expect(settingsService.aiSettings.model, equals('gpt-4o'));
-    });
+        expect(settingsService.aiSettings.apiKey, isEmpty);
+        expect(settingsService.aiSettings.model, equals('gpt-4o'));
+      },
+    );
 
     test(
         'legacy multi-provider API keys in MMKV or SharedPreferences should migrate to APIKeyManager and scrub',
@@ -595,10 +604,14 @@ void main() {
       final key = await APIKeyManager().getProviderApiKey('custom_provider');
 
       expect(key, equals('sk-prefs-only-key-99999'));
-      expect(rebuiltService.multiAISettings.currentProviderId,
-          equals('custom_provider'));
-      expect(rebuiltService.multiAISettings.providers.first.model,
-          equals('custom-chat-v1'));
+      expect(
+        rebuiltService.multiAISettings.currentProviderId,
+        equals('custom_provider'),
+      );
+      expect(
+        rebuiltService.multiAISettings.providers.first.model,
+        equals('custom-chat-v1'),
+      );
 
       final storedPrefs = prefs.getString('multi_ai_settings') ?? '';
       expect(storedPrefs.contains('sk-prefs-only-key-99999'), isFalse);
@@ -623,9 +636,9 @@ void main() {
               'apiUrl': 'https://api.deepseek.com/v1',
               'model': 'deepseek-chat',
               'isEnabled': true,
-            }
-          ]
-        }
+            },
+          ],
+        },
       };
 
       addTearDown(() async {
@@ -654,15 +667,17 @@ void main() {
       expect(settingsService.themeMode, equals(ThemeMode.light));
 
       // 1. Valid string representation of theme mode ("2" => ThemeMode.dark)
-      await settingsService.restoreAllSettingsFromBackup({
-        'theme_mode': '2',
-      });
+      await settingsService.restoreAllSettingsFromBackup({'theme_mode': '2'});
       expect(settingsService.themeMode, equals(ThemeMode.dark));
 
-      // 2. Out of range or invalid theme mode values (e.g. 99, -1, "invalid") should be safely ignored
-      await settingsService.restoreAllSettingsFromBackup({
-        'theme_mode': 99,
-      });
+      // 2. Out of range or invalid theme mode values (e.g. 99, -1, 1.9, "invalid") should be safely ignored
+      await settingsService.restoreAllSettingsFromBackup({'theme_mode': 99});
+      expect(settingsService.themeMode, equals(ThemeMode.dark));
+
+      await settingsService.restoreAllSettingsFromBackup({'theme_mode': -1});
+      expect(settingsService.themeMode, equals(ThemeMode.dark));
+
+      await settingsService.restoreAllSettingsFromBackup({'theme_mode': 1.9});
       expect(settingsService.themeMode, equals(ThemeMode.dark));
 
       await settingsService.restoreAllSettingsFromBackup({
@@ -670,12 +685,13 @@ void main() {
       });
       expect(settingsService.themeMode, equals(ThemeMode.dark));
 
+      // Non-string device_id should be ignored
+      await settingsService.restoreAllSettingsFromBackup({'device_id': true});
+
       // 3. Generic Map<dynamic, dynamic> payloads for nested settings
       final Map<dynamic, dynamic> genericPayload = {
         'theme_mode': 1, // ThemeMode.light
-        'app_settings': <dynamic, dynamic>{
-          'dailyQuoteProvider': 'zenquotes',
-        },
+        'app_settings': <dynamic, dynamic>{'dailyQuoteProvider': 'zenquotes'},
       };
 
       await settingsService.restoreAllSettingsFromBackup(
@@ -820,34 +836,36 @@ void main() {
       expect(settingsService.aiCardGenerationEnabled, isFalse);
     });
 
-    test('并发 saveMultiAISettings 和 setHasCompletedOnboarding 应保持状态一致',
-        () async {
-      // Arrange
-      await settingsService.setHasCompletedOnboarding(false);
-      await settingsService.setReportInsightsUseAI(false);
+    test(
+      '并发 saveMultiAISettings 和 setHasCompletedOnboarding 应保持状态一致',
+      () async {
+        // Arrange
+        await settingsService.setHasCompletedOnboarding(false);
+        await settingsService.setReportInsightsUseAI(false);
 
-      final multiSettings = settingsService.multiAISettings.copyWith(
-        providers: [
-          ...settingsService.multiAISettings.providers,
-          const AIProviderSettings(
-            id: 'test_provider_concurrent',
-            name: 'Test AI Concurrent',
-            apiUrl: 'https://api.openai.com/v1',
-            model: 'gpt-4o',
-            isEnabled: true,
-          ),
-        ],
-      );
+        final multiSettings = settingsService.multiAISettings.copyWith(
+          providers: [
+            ...settingsService.multiAISettings.providers,
+            const AIProviderSettings(
+              id: 'test_provider_concurrent',
+              name: 'Test AI Concurrent',
+              apiUrl: 'https://api.openai.com/v1',
+              model: 'gpt-4o',
+              isEnabled: true,
+            ),
+          ],
+        );
 
-      // Act: 并发触发
-      final future1 = settingsService.saveMultiAISettings(multiSettings);
-      final future2 = settingsService.setHasCompletedOnboarding(true);
+        // Act: 并发触发
+        final future1 = settingsService.saveMultiAISettings(multiSettings);
+        final future2 = settingsService.setHasCompletedOnboarding(true);
 
-      await Future.wait([future1, future2]);
+        await Future.wait([future1, future2]);
 
-      // Assert: 重建后确认内存与持久化保持最终调用的正确状态
-      final rebuiltService = await SettingsService.create();
-      expect(rebuiltService.hasCompletedOnboarding(), isTrue);
-    });
+        // Assert: 重建后确认内存与持久化保持最终调用的正确状态
+        final rebuiltService = await SettingsService.create();
+        expect(rebuiltService.hasCompletedOnboarding(), isTrue);
+      },
+    );
   });
 }

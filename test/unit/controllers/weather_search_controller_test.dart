@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
@@ -45,14 +46,10 @@ class MockLocationService extends Mock implements LocationService {
     bool skipPermissionRequest = false,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #getCurrentLocation,
-          [],
-          {
-            #highAccuracy: highAccuracy,
-            #skipPermissionRequest: skipPermissionRequest,
-          },
-        ),
+        Invocation.method(#getCurrentLocation, [], {
+          #highAccuracy: highAccuracy,
+          #skipPermissionRequest: skipPermissionRequest,
+        }),
         returnValue: Future<Position?>.value(),
         returnValueForMissingStub: Future<Position?>.value(),
       ) as Future<Position?>;
@@ -67,8 +64,12 @@ class MockWeatherService extends Mock implements WeatherService {
       ) as bool;
 
   @override
-  Future<void> getWeatherData(double? lat, double? lon,
-          {bool forceRefresh = false, Duration? timeout}) =>
+  Future<void> getWeatherData(
+    double? lat,
+    double? lon, {
+    bool forceRefresh = false,
+    Duration? timeout,
+  }) =>
       super.noSuchMethod(
         Invocation.method(
           #getWeatherData,
@@ -117,8 +118,10 @@ void main() {
   setUp(() {
     mockLocationService = MockLocationService();
     mockWeatherService = MockWeatherService();
-    controller =
-        WeatherSearchController(mockLocationService, mockWeatherService);
+    controller = WeatherSearchController(
+      mockLocationService,
+      mockWeatherService,
+    );
     l10n = FakeAppLocalizations();
   });
 
@@ -164,12 +167,13 @@ void main() {
       when(mockLocationService.setSelectedCity(any)).thenAnswer((_) async {});
 
       final cityInfo = CityInfo(
-          name: 'TestCity',
-          fullName: 'TestCity, TestCountry',
-          lat: 0.0,
-          lon: 0.0,
-          country: 'TestCountry',
-          province: 'TestProvince');
+        name: 'TestCity',
+        fullName: 'TestCity, TestCountry',
+        lat: 0.0,
+        lon: 0.0,
+        country: 'TestCountry',
+        province: 'TestProvince',
+      );
 
       await controller.selectCityAndUpdateWeather(cityInfo);
 
@@ -188,12 +192,13 @@ void main() {
 
     group('selectCityAndUpdateWeather', () {
       final cityInfo = CityInfo(
-          name: 'TestCity',
-          fullName: 'TestCity, TestCountry',
-          lat: 0.0,
-          lon: 0.0,
-          country: 'TestCountry',
-          province: 'TestProvince');
+        name: 'TestCity',
+        fullName: 'TestCity, TestCountry',
+        lat: 0.0,
+        lon: 0.0,
+        country: 'TestCountry',
+        province: 'TestProvince',
+      );
 
       test('returns false when position is null', () async {
         when(mockLocationService.setSelectedCity(any)).thenAnswer((_) async {});
@@ -202,11 +207,15 @@ void main() {
         final result = await controller.selectCityAndUpdateWeather(cityInfo);
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.cityLocationNotFound);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.cityLocationNotFound,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'cannotGetSelectedCityLocation');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'cannotGetSelectedCityLocation',
+        );
       });
 
       test('returns false on weather fetch timeout', () async {
@@ -231,11 +240,15 @@ void main() {
         final result = await controller.selectCityAndUpdateWeather(cityInfo);
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.weatherTimeout);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.weatherTimeout,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'weatherTimeoutRetry');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'weatherTimeoutRetry',
+        );
       });
 
       test('returns false when weather fetch fails', () async {
@@ -261,11 +274,15 @@ void main() {
         final result = await controller.selectCityAndUpdateWeather(cityInfo);
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.weatherFetchFailed);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.weatherFetchFailed,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'weatherFetchFailedCheckNetwork');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'weatherFetchFailedCheckNetwork',
+        );
       });
 
       test('returns true on success', () async {
@@ -291,29 +308,39 @@ void main() {
         final result = await controller.selectCityAndUpdateWeather(cityInfo);
 
         expect(result, isTrue);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.citySelectedSuccess);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.citySelectedSuccess,
+        );
         expect(controller.lastResult?.isSuccess, isTrue);
         expect(controller.lastResult?.cityName, 'TestCity');
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'citySelectedWeatherUpdated:TestCity');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'citySelectedWeatherUpdated:TestCity',
+        );
       });
 
-      test('returns false on generic exception during setSelectedCity',
-          () async {
-        when(mockLocationService.setSelectedCity(any))
-            .thenThrow(Exception('Test error'));
+      test(
+        'returns false on generic exception during setSelectedCity',
+        () async {
+          when(mockLocationService.setSelectedCity(any))
+              .thenThrow(Exception('Test error'));
 
-        final result = await controller.selectCityAndUpdateWeather(cityInfo);
+          final result = await controller.selectCityAndUpdateWeather(cityInfo);
 
-        expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.citySelectionError);
-        expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.errorDetail, contains('Test error'));
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            contains('citySelectionError:Exception: Test error'));
-      });
+          expect(result, isFalse);
+          expect(
+            controller.lastResult?.type,
+            WeatherSearchResultType.citySelectionError,
+          );
+          expect(controller.lastResult?.isSuccess, isFalse);
+          expect(controller.lastResult?.errorDetail, contains('Test error'));
+          expect(
+            controller.lastResult?.getLocalizedMessage(l10n),
+            contains('citySelectionError:Exception: Test error'),
+          );
+        },
+      );
 
       test('returns false on generic exception during weather fetch', () async {
         final position = Position(
@@ -332,18 +359,24 @@ void main() {
         when(mockLocationService.setSelectedCity(any)).thenAnswer((_) async {});
         when(mockLocationService.currentPosition).thenReturn(position);
         when(mockWeatherService.getWeatherData(any, any))
-            .thenThrow(Exception('Network socket error'));
+            .thenAnswer((_) async => throw Exception('Network socket error'));
 
         final result = await controller.selectCityAndUpdateWeather(cityInfo);
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.citySelectionError);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.citySelectionError,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.errorDetail,
-            contains('Network socket error'));
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            contains('citySelectionError:Exception: Network socket error'));
+        expect(
+          controller.lastResult?.errorDetail,
+          contains('Network socket error'),
+        );
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          contains('citySelectionError:Exception: Network socket error'),
+        );
         expect(controller.isLoading, isFalse);
       });
 
@@ -391,11 +424,15 @@ void main() {
         final result = await controller.useCurrentLocation();
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.locationPermissionDenied);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.locationPermissionDenied,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'cannotGetCurrentLocation');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'cannotGetCurrentLocation',
+        );
       });
 
       test('returns false on location fetch timeout', () async {
@@ -405,11 +442,15 @@ void main() {
         final result = await controller.useCurrentLocation();
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.locationTimeout);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.locationTimeout,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'locationTimeoutCheckPermission');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'locationTimeoutCheckPermission',
+        );
       });
 
       test('returns false on weather fetch timeout', () async {
@@ -434,11 +475,15 @@ void main() {
         final result = await controller.useCurrentLocation();
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.weatherTimeout);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.weatherTimeout,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'weatherTimeoutRetry');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'weatherTimeoutRetry',
+        );
       });
 
       test('returns false when weather fetch fails', () async {
@@ -464,11 +509,15 @@ void main() {
         final result = await controller.useCurrentLocation();
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.weatherFetchFailed);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.weatherFetchFailed,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'weatherFetchFailedCheckNetwork');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'weatherFetchFailedCheckNetwork',
+        );
       });
 
       test('returns true on success', () async {
@@ -495,40 +544,52 @@ void main() {
         final result = await controller.useCurrentLocation();
 
         expect(result, isTrue);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.currentLocationSuccess);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.currentLocationSuccess,
+        );
         expect(controller.lastResult?.isSuccess, isTrue);
         expect(controller.lastResult?.cityName, 'CurrentCity');
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'currentLocationWeatherUpdated:CurrentCity');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'currentLocationWeatherUpdated:CurrentCity',
+        );
       });
 
       test(
-          'currentLocationSuccess localized message handles null city correctly',
-          () {
-        final result = WeatherSearchResult(
-          type: WeatherSearchResultType.currentLocationSuccess,
-          isSuccess: true,
-          cityName: null,
-        );
-        expect(result.getLocalizedMessage(l10n),
-            'currentLocationWeatherUpdated:currentLocationLabel');
-      });
+        'currentLocationSuccess localized message handles null city correctly',
+        () {
+          final result = WeatherSearchResult(
+            type: WeatherSearchResultType.currentLocationSuccess,
+            isSuccess: true,
+            cityName: null,
+          );
+          expect(
+            result.getLocalizedMessage(l10n),
+            'currentLocationWeatherUpdated:currentLocationLabel',
+          );
+        },
+      );
 
       test(
           'returns false with weatherTimeout when TimeoutException message lacks Location',
           () async {
         when(mockLocationService.getCurrentLocation()).thenThrow(
-            TimeoutException('Generic timeout without location keyword'));
+          TimeoutException('Generic timeout without location keyword'),
+        );
 
         final result = await controller.useCurrentLocation();
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.weatherTimeout);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.weatherTimeout,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            'weatherTimeoutRetry');
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          'weatherTimeoutRetry',
+        );
       });
 
       test(
@@ -555,11 +616,15 @@ void main() {
         final result = await controller.useCurrentLocation();
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.locationFetchError);
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.locationFetchError,
+        );
         expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.errorDetail,
-            contains('Weather API crashed'));
+        expect(
+          controller.lastResult?.errorDetail,
+          contains('Weather API crashed'),
+        );
       });
 
       test('returns false on generic exception', () async {
@@ -569,49 +634,57 @@ void main() {
         final result = await controller.useCurrentLocation();
 
         expect(result, isFalse);
-        expect(controller.lastResult?.type,
-            WeatherSearchResultType.locationFetchError);
-        expect(controller.lastResult?.isSuccess, isFalse);
-        expect(controller.lastResult?.errorDetail,
-            contains('Test location error'));
-        expect(controller.lastResult?.getLocalizedMessage(l10n),
-            contains('locationFetchError:Exception: Test location error'));
-      });
-
-      test('toggles isLoading and notifies listeners during useCurrentLocation',
-          () async {
-        final position = Position(
-          longitude: 0.0,
-          latitude: 0.0,
-          timestamp: DateTime.now(),
-          accuracy: 0.0,
-          altitude: 0.0,
-          altitudeAccuracy: 0.0,
-          heading: 0.0,
-          headingAccuracy: 0.0,
-          speed: 0.0,
-          speedAccuracy: 0.0,
+        expect(
+          controller.lastResult?.type,
+          WeatherSearchResultType.locationFetchError,
         );
-
-        when(mockLocationService.getCurrentLocation())
-            .thenAnswer((_) async => position);
-        when(mockWeatherService.getWeatherData(any, any))
-            .thenAnswer((_) async {});
-        when(mockWeatherService.hasValidWeatherData).thenReturn(true);
-        when(mockLocationService.city).thenReturn('CurrentCity');
-
-        final loadingStates = <bool>[];
-        controller.addListener(() {
-          loadingStates.add(controller.isLoading);
-        });
-
-        expect(controller.isLoading, isFalse);
-        final result = await controller.useCurrentLocation();
-
-        expect(result, isTrue);
-        expect(controller.isLoading, isFalse);
-        expect(loadingStates, equals([true, false]));
+        expect(controller.lastResult?.isSuccess, isFalse);
+        expect(
+          controller.lastResult?.errorDetail,
+          contains('Test location error'),
+        );
+        expect(
+          controller.lastResult?.getLocalizedMessage(l10n),
+          contains('locationFetchError:Exception: Test location error'),
+        );
       });
+
+      test(
+        'toggles isLoading and notifies listeners during useCurrentLocation',
+        () async {
+          final position = Position(
+            longitude: 0.0,
+            latitude: 0.0,
+            timestamp: DateTime.now(),
+            accuracy: 0.0,
+            altitude: 0.0,
+            altitudeAccuracy: 0.0,
+            heading: 0.0,
+            headingAccuracy: 0.0,
+            speed: 0.0,
+            speedAccuracy: 0.0,
+          );
+
+          when(mockLocationService.getCurrentLocation())
+              .thenAnswer((_) async => position);
+          when(mockWeatherService.getWeatherData(any, any))
+              .thenAnswer((_) async {});
+          when(mockWeatherService.hasValidWeatherData).thenReturn(true);
+          when(mockLocationService.city).thenReturn('CurrentCity');
+
+          final loadingStates = <bool>[];
+          controller.addListener(() {
+            loadingStates.add(controller.isLoading);
+          });
+
+          expect(controller.isLoading, isFalse);
+          final result = await controller.useCurrentLocation();
+
+          expect(result, isTrue);
+          expect(controller.isLoading, isFalse);
+          expect(loadingStates, equals([true, false]));
+        },
+      );
     });
   });
 }

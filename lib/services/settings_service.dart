@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../config/release_highlights.dart';
 import '../models/ai_settings.dart';
 import '../models/anniversary_participation.dart';
@@ -10,12 +12,14 @@ import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import '../models/thoughter_entry.dart'; // 新增 ThoughterPageMode
+
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/utils/sentry_network_tracing.dart';
+
 import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
@@ -306,8 +310,9 @@ class SettingsService extends ChangeNotifier {
   /// 添加最近选择的城市（置顶且去重，最多保留8条）
   Future<void> addRecentCity(CityInfo city) async {
     final current = List<CityInfo>.from(recentCities);
-    current
-        .removeWhere((c) => c.name == city.name && c.country == city.country);
+    current.removeWhere(
+      (c) => c.name == city.name && c.country == city.country,
+    );
     current.insert(0, city);
     if (current.length > _maxRecentCities) {
       current.removeRange(_maxRecentCities, current.length);
@@ -320,8 +325,9 @@ class SettingsService extends ChangeNotifier {
   /// 删除单条最近选择城市
   Future<void> removeRecentCity(CityInfo city) async {
     final current = List<CityInfo>.from(recentCities);
-    current
-        .removeWhere((c) => c.name == city.name && c.country == city.country);
+    current.removeWhere(
+      (c) => c.name == city.name && c.country == city.country,
+    );
     final jsonString = json.encode(current.map((c) => c.toJson()).toList());
     await _mmkv.setString(_recentCitiesKey, jsonString);
     notifyListeners();
@@ -372,8 +378,10 @@ class SettingsService extends ChangeNotifier {
   /// 换成会 rethrow 的 `setString` 之后，不接住就等于让一次写失败掀掉整个设置加载。
   Future<bool> _writeLastSeenReleaseVersion(String version) async {
     try {
-      final success =
-          await _mmkv.setString(_lastSeenReleaseVersionKey, version);
+      final success = await _mmkv.setString(
+        _lastSeenReleaseVersionKey,
+        version,
+      );
       if (!success) {
         AppLogger.w(
           '更新说明已读版本保存失败：MMKV setString 返回 false（version=$version）',
@@ -1404,8 +1412,9 @@ class SettingsService extends ChangeNotifier {
     _saveMultiAiLock = completer;
 
     try {
-      final candidateSettings =
-          _appSettings.copyWith(hasCompletedOnboarding: completed);
+      final candidateSettings = _appSettings.copyWith(
+        hasCompletedOnboarding: completed,
+      );
       final success = await _mmkv.setString(
         _appSettingsKey,
         json.encode(candidateSettings.toJson()),
@@ -1499,8 +1508,10 @@ class SettingsService extends ChangeNotifier {
       appSettingsWritten = false;
       try {
         if (appKeyExisted && previousAppJson != null) {
-          final rollbackOk =
-              await _mmkv.setString(_appSettingsKey, previousAppJson);
+          final rollbackOk = await _mmkv.setString(
+            _appSettingsKey,
+            previousAppJson,
+          );
           if (!rollbackOk) {
             AppLogger.e(
               '回滚应用设置失败：MMKV setString 返回 false',
@@ -1556,10 +1567,7 @@ class SettingsService extends ChangeNotifier {
       if (candidateAppSettings != null &&
           appKeyExisted &&
           previousAppJson == null) {
-        AppLogger.e(
-          '应用设置键存在但读取值为 null，中止保存以防数据丢失',
-          source: 'SettingsService',
-        );
+        AppLogger.e('应用设置键存在但读取值为 null，中止保存以防数据丢失', source: 'SettingsService');
         throw StateError('读取原有应用设置失败');
       }
 
@@ -1580,8 +1588,10 @@ class SettingsService extends ChangeNotifier {
         appSettingsWritten = true;
       }
 
-      final successMulti =
-          await _mmkv.setString(_multiAiSettingsKey, multiJson);
+      final successMulti = await _mmkv.setString(
+        _multiAiSettingsKey,
+        multiJson,
+      );
       if (!successMulti) {
         AppLogger.e(
           '保存多provider AI设置失败：MMKV setString 返回 false（key=$_multiAiSettingsKey）',
@@ -1724,20 +1734,26 @@ class SettingsService extends ChangeNotifier {
         final rawProviders = multiAiSettingsJson['providers'] ??
             multiAiSettingsJson['availableProviders'];
         if (rawProviders is List) {
+          final normalizedProviders = <Map<String, dynamic>>[];
           for (final item in rawProviders) {
             if (item is Map) {
               final itemMap = Map<String, dynamic>.from(item);
-              final id = itemMap['id'] as String?;
-              final rawKey =
-                  (itemMap['apiKey'] ?? itemMap['api_key']) as String?;
-              if (id != null &&
+              final id = itemMap['id'];
+              final rawKey = itemMap['apiKey'] ?? itemMap['api_key'];
+              if (id is String &&
                   id.isNotEmpty &&
-                  rawKey != null &&
+                  rawKey is String &&
                   rawKey.trim().isNotEmpty) {
                 await apiKeyManager.saveProviderApiKey(id, rawKey.trim());
                 restoredProviderIds.add(id);
               }
+              normalizedProviders.add(itemMap);
             }
+          }
+          if (multiAiSettingsJson.containsKey('providers')) {
+            multiAiSettingsJson['providers'] = normalizedProviders;
+          } else if (multiAiSettingsJson.containsKey('availableProviders')) {
+            multiAiSettingsJson['availableProviders'] = normalizedProviders;
           }
         }
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
@@ -1750,9 +1766,8 @@ class SettingsService extends ChangeNotifier {
         final aiSettingsJson = Map<String, dynamic>.from(
           backupData['ai_settings'] as Map,
         );
-        final rawApiKey =
-            (aiSettingsJson['apiKey'] ?? aiSettingsJson['api_key']) as String?;
-        if (rawApiKey != null && rawApiKey.trim().isNotEmpty) {
+        final rawApiKey = aiSettingsJson['apiKey'] ?? aiSettingsJson['api_key'];
+        if (rawApiKey is String && rawApiKey.trim().isNotEmpty) {
           const defaultProviderId = 'openai';
           if (!restoredProviderIds.contains(defaultProviderId)) {
             await apiKeyManager.saveProviderApiKey(
@@ -1792,7 +1807,9 @@ class SettingsService extends ChangeNotifier {
         if (rawThemeMode is int) {
           themeModeIndex = rawThemeMode;
         } else if (rawThemeMode is num) {
-          themeModeIndex = rawThemeMode.toInt();
+          themeModeIndex = (rawThemeMode.isFinite && rawThemeMode % 1 == 0)
+              ? rawThemeMode.toInt()
+              : null;
         } else if (rawThemeMode is String) {
           themeModeIndex = int.tryParse(rawThemeMode);
         }
@@ -1809,11 +1826,11 @@ class SettingsService extends ChangeNotifier {
 
       // 恢复/记录 device_id（不覆盖本地已有，仅在本地不存在时写入，保持源ID可用于审计）
       if (backupData.containsKey('device_id')) {
-        final remoteId = backupData['device_id']?.toString();
+        final remoteId = backupData['device_id'];
         if ((_mmkv.getString(_deviceIdKey) ?? '').isEmpty &&
-            remoteId != null &&
-            remoteId.isNotEmpty) {
-          await _mmkv.setString(_deviceIdKey, remoteId);
+            remoteId is String &&
+            remoteId.trim().isNotEmpty) {
+          await _mmkv.setString(_deviceIdKey, remoteId.trim());
         }
       }
 
@@ -1890,7 +1907,9 @@ class SettingsService extends ChangeNotifier {
         );
         if (!hasSecureKey) {
           await apiKeyManager.saveProviderApiKey(
-              providerId, _aiSettings.apiKey);
+            providerId,
+            _aiSettings.apiKey,
+          );
           logDebug(
             'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
           );
@@ -1967,8 +1986,10 @@ class SettingsService extends ChangeNotifier {
               p.remove('api_key');
             }
           }
-          final success =
-              await _mmkv.setString(_multiAiSettingsKey, json.encode(map));
+          final success = await _mmkv.setString(
+            _multiAiSettingsKey,
+            json.encode(map),
+          );
           if (success) {
             logDebug(
               'Scrubbed plaintext API keys from MMKV _multiAiSettingsKey.',
@@ -2001,8 +2022,10 @@ class SettingsService extends ChangeNotifier {
               p.remove('api_key');
             }
           }
-          final success =
-              await _prefs.setString(_multiAiSettingsKey, json.encode(map));
+          final success = await _prefs.setString(
+            _multiAiSettingsKey,
+            json.encode(map),
+          );
           if (success) {
             logDebug(
               'Scrubbed plaintext API keys from SharedPreferences _multiAiSettingsKey.',
