@@ -42,8 +42,27 @@ class HomeDailyPromptPanel extends StatefulWidget {
 
 class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
   String _accumulatedPromptText = '';
+  String _rawPromptText = '';
+  Timer? _debounceTimer;
   StreamSubscription<String>? _promptSubscription;
   bool _isGeneratingDailyPrompt = false;
+
+  void _cancelDebounceTimer() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+  }
+
+  void _scheduleDebounceTimer() {
+    _debounceTimer ??= Timer(const Duration(milliseconds: 100), () {
+      _debounceTimer = null;
+      if (!mounted) return;
+      if (_accumulatedPromptText != _rawPromptText) {
+        setState(() {
+          _accumulatedPromptText = _rawPromptText;
+        });
+      }
+    });
+  }
 
   Future<void> refreshPrompt({bool initialLoad = false}) async {
     if (initialLoad &&
@@ -55,6 +74,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     }
 
     if (!mounted) return;
+    _cancelDebounceTimer();
+    _rawPromptText = '';
     setState(() {
       _accumulatedPromptText = '';
       _isGeneratingDailyPrompt = true;
@@ -103,13 +124,13 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
       _promptSubscription = promptStream.listen(
         (chunk) {
           if (!mounted) return;
-          setState(() {
-            _accumulatedPromptText += chunk;
-          });
+          _rawPromptText += chunk;
+          _scheduleDebounceTimer();
         },
         onError: (error) {
           logDebug('获取每日提示流出错: $error，使用本地生成的提示');
           if (!mounted) return;
+          _cancelDebounceTimer();
           _setLocalPrompt(
             city: city,
             weather: weatherKey,
@@ -118,9 +139,12 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         },
         onDone: () {
           if (!mounted) return;
+          _cancelDebounceTimer();
+          final trimmedPrompt = _rawPromptText.trim();
+
           // 流正常结束但没有任何正文（例如推理模型把预算全花在思考上、
           // 或模型返回空内容）时退回本地提示，避免面板停在"等待"状态。
-          if (_accumulatedPromptText.trim().isEmpty) {
+          if (trimmedPrompt.isEmpty) {
             logDebug('每日提示流结束但内容为空，使用本地生成的提示');
             _setLocalPrompt(
               city: city,
@@ -130,7 +154,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
             return;
           }
           setState(() {
-            _accumulatedPromptText = _accumulatedPromptText.trim();
+            _accumulatedPromptText = trimmedPrompt;
+            _rawPromptText = trimmedPrompt;
             _isGeneratingDailyPrompt = false;
           });
         },
@@ -142,6 +167,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
 
       final locationService = context.read<LocationService>();
       final weatherService = context.read<WeatherService>();
+      _cancelDebounceTimer();
       _setLocalPrompt(
         city: locationService.city,
         weather: weatherService.currentWeather,
@@ -157,6 +183,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     String? temperature,
   }) {
     if (!mounted) return;
+    _cancelDebounceTimer();
     AptabaseHelper.trackEvent(
         'feature_used', {'action': 'daily_prompt_generate', 'is_ai': false});
     final l10n = AppLocalizations.of(context);
@@ -168,6 +195,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     );
 
     setState(() {
+      _rawPromptText = localPrompt;
       _accumulatedPromptText = localPrompt;
       _isGeneratingDailyPrompt = false;
     });
@@ -229,6 +257,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
 
   @override
   void dispose() {
+    _cancelDebounceTimer();
     _promptSubscription?.cancel();
     super.dispose();
   }
@@ -348,34 +377,49 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
             height:
                 widget.isVerySmallScreen ? 4 : (widget.isSmallScreen ? 6 : 8),
           ),
-          if (_isGeneratingDailyPrompt && _accumulatedPromptText.isEmpty)
-            _DailyPromptLoading(
-              isAiConfigured: isAiConfigured,
-              screenWidth: widget.screenWidth,
-              isSmallScreen: widget.isSmallScreen,
-              isVerySmallScreen: widget.isVerySmallScreen,
-            )
-          else
-            Text(
-              _accumulatedPromptText.isNotEmpty
-                  ? _accumulatedPromptText.trim()
-                  : (isAiConfigured
-                      ? l10n.waitingForTodayThoughts
-                      : l10n.noTodayThoughts),
-              style: promptStyle?.copyWith(
-                // 这张卡是紧排的两三行居中提问，不跟正文行高（纸墨 1.75）走，
-                // 否则卡片会显著变高、把上面那张一言卡挤扁。
-                height: 1.4,
-                // 颜色要读**实际选中的那一级**：极小屏用的是 bodyMedium，
-                // 却去取 bodyLarge 的颜色，一旦主题给两级配了不同颜色就会错。
-                color: _accumulatedPromptText.isNotEmpty
-                    ? promptStyle.color
-                    : theme.colorScheme.onSurface.withAlpha(120),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: double.infinity,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child:
+                    (_isGeneratingDailyPrompt && _accumulatedPromptText.isEmpty)
+                        ? _DailyPromptLoading(
+                            key: const ValueKey('loading'),
+                            isAiConfigured: isAiConfigured,
+                            screenWidth: widget.screenWidth,
+                            isSmallScreen: widget.isSmallScreen,
+                            isVerySmallScreen: widget.isVerySmallScreen,
+                          )
+                        : Text(
+                            _accumulatedPromptText.isNotEmpty
+                                ? _accumulatedPromptText.trim()
+                                : (isAiConfigured
+                                    ? l10n.waitingForTodayThoughts
+                                    : l10n.noTodayThoughts),
+                            key: const ValueKey('text'),
+                            style: promptStyle?.copyWith(
+                              // 这张卡是紧排的两三行居中提问，不跟正文行高（纸墨 1.75）走，
+                              // 否则卡片会显著变高、把上面那张一言卡挤扁。
+                              height: 1.4,
+                              // 颜色要读**实际选中的那一级**：极小屏用的是 bodyMedium，
+                              // 却去取 bodyLarge 的颜色，一旦主题给两级配了不同颜色就会错。
+                              color: _accumulatedPromptText.isNotEmpty
+                                  ? promptStyle.color
+                                  : theme.colorScheme.onSurface.withAlpha(120),
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: widget.isVerySmallScreen ? 2 : 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
               ),
-              textAlign: TextAlign.center,
-              maxLines: widget.isVerySmallScreen ? 2 : 3,
-              overflow: TextOverflow.ellipsis,
             ),
+          ),
         ],
       ),
     );
@@ -389,6 +433,7 @@ class _DailyPromptLoading extends StatelessWidget {
   final bool isVerySmallScreen;
 
   const _DailyPromptLoading({
+    super.key,
     required this.isAiConfigured,
     required this.screenWidth,
     required this.isSmallScreen,
