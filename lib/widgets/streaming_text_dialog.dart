@@ -104,12 +104,9 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
         color: colorScheme.onSurface,
         height: 1.6,
       ),
-      h1: theme.textTheme.headlineSmall
-          ?.copyWith(color: colorScheme.onSurface),
-      h2: theme.textTheme.titleLarge
-          ?.copyWith(color: colorScheme.onSurface),
-      h3: theme.textTheme.titleMedium
-          ?.copyWith(color: colorScheme.onSurface),
+      h1: theme.textTheme.headlineSmall?.copyWith(color: colorScheme.onSurface),
+      h2: theme.textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
+      h3: theme.textTheme.titleMedium?.copyWith(color: colorScheme.onSurface),
       listBullet: theme.textTheme.bodyMedium?.copyWith(
         color: colorScheme.primary,
       ),

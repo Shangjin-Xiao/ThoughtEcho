@@ -222,7 +222,8 @@ void main() {
         await tester.pump();
         final scrollableFinder = find.byType(SingleChildScrollView);
         expect(scrollableFinder, findsOneWidget);
-        final SingleChildScrollView scrollView = tester.widget(scrollableFinder);
+        final SingleChildScrollView scrollView =
+            tester.widget(scrollableFinder);
         final scrollController = scrollView.controller!;
 
         expect(scrollController.position.maxScrollExtent, greaterThan(0));
@@ -280,7 +281,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         final scrollableFinder = find.byType(SingleChildScrollView);
-        final SingleChildScrollView scrollView = tester.widget(scrollableFinder);
+        final SingleChildScrollView scrollView =
+            tester.widget(scrollableFinder);
         final scrollController = scrollView.controller!;
 
         final maxScroll1 = scrollController.position.maxScrollExtent;
