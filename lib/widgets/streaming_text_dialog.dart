@@ -54,6 +54,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   final ScrollController _scrollController = ScrollController();
+  MarkdownStyleSheet? _markdownStyleSheet;
 
   String _getDisplayText(String rawText) =>
       widget.displayTextTransformer?.call(rawText) ?? rawText;
@@ -76,6 +77,71 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
       _onChunkReceived,
       onDone: _onStreamDone,
       onError: _onStreamError,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.isMarkdown) {
+      _updateMarkdownStyleSheet();
+    }
+  }
+
+  @override
+  void didUpdateWidget(StreamingTextDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isMarkdown) {
+      _updateMarkdownStyleSheet();
+    }
+  }
+
+  void _updateMarkdownStyleSheet() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    _markdownStyleSheet = MarkdownStyleSheet(
+      p: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.onSurface,
+        height: 1.6,
+      ),
+      h1: theme.textTheme.headlineSmall
+          ?.copyWith(color: colorScheme.onSurface),
+      h2: theme.textTheme.titleLarge
+          ?.copyWith(color: colorScheme.onSurface),
+      h3: theme.textTheme.titleMedium
+          ?.copyWith(color: colorScheme.onSurface),
+      listBullet: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.primary,
+      ),
+      blockquote: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: colorScheme.primary.applyOpacity(0.5),
+            width: 3,
+          ),
+        ),
+      ),
+      blockquotePadding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+      code: theme.textTheme.bodySmall?.copyWith(
+        fontFamily: 'monospace',
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        color: colorScheme.onSurface,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+      ),
     );
   }
 
@@ -104,7 +170,6 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
       if (!mounted) return;
       if (_textNotifier.value != _pendingText) {
         _flushStreamUpdate();
-        _armStreamThrottleWindow();
       }
     });
   }
@@ -112,8 +177,23 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
   void _flushStreamUpdate() {
     if (!mounted) return;
     if (_textNotifier.value != _pendingText) {
+      final bool isNearBottom;
+      if (_textNotifier.value.isEmpty) {
+        isNearBottom = true;
+      } else if (_scrollController.hasClients) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final currentScroll = _scrollController.position.pixels;
+        const threshold = 60.0;
+        isNearBottom = (maxScroll - currentScroll) <= threshold;
+      } else {
+        isNearBottom = true;
+      }
+
       _textNotifier.value = _pendingText;
-      _scrollToBottomIfNeeded();
+
+      if (isNearBottom) {
+        _scrollToBottom();
+      }
     }
   }
 
@@ -144,19 +224,11 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
     }
   }
 
-  void _scrollToBottomIfNeeded() {
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
-
       final maxScroll = _scrollController.position.maxScrollExtent;
-      final currentScroll = _scrollController.position.pixels;
-
-      // 护栏：只有当用户处于底部附近（例如距离底部在 60px 以内）时才自动滚动，
-      // 避免打扰用户主动向上滚动查看历史内容
-      const threshold = 60.0;
-      final isNearBottom = (maxScroll - currentScroll) <= threshold;
-
-      if (isNearBottom && maxScroll > 0) {
+      if (maxScroll > 0) {
         _scrollController.jumpTo(maxScroll);
       }
     });
@@ -351,52 +423,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
                       ? MarkdownBody(
                           data: displayText,
                           selectable: true,
-                          styleSheet: MarkdownStyleSheet(
-                            p: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurface,
-                              height: 1.6,
-                            ),
-                            h1: theme.textTheme.headlineSmall
-                                ?.copyWith(color: colorScheme.onSurface),
-                            h2: theme.textTheme.titleLarge
-                                ?.copyWith(color: colorScheme.onSurface),
-                            h3: theme.textTheme.titleMedium
-                                ?.copyWith(color: colorScheme.onSurface),
-                            listBullet: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.primary,
-                            ),
-                            blockquote: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            blockquoteDecoration: BoxDecoration(
-                              border: Border(
-                                left: BorderSide(
-                                  color: colorScheme.primary.applyOpacity(0.5),
-                                  width: 3,
-                                ),
-                              ),
-                            ),
-                            blockquotePadding: const EdgeInsets.only(
-                                left: 16, top: 8, bottom: 8),
-                            code: theme.textTheme.bodySmall?.copyWith(
-                              fontFamily: 'monospace',
-                              backgroundColor:
-                                  colorScheme.surfaceContainerHighest,
-                              color: colorScheme.onSurface,
-                            ),
-                            codeblockDecoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            horizontalRuleDecoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(
-                                  color: colorScheme.outlineVariant,
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                          ),
+                          styleSheet: _markdownStyleSheet,
                         )
                       : SelectableText(
                           displayText,
