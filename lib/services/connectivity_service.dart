@@ -31,6 +31,10 @@ class ConnectivityService extends ChangeNotifier {
 
   bool get isConnected => isConnectedOverrideForTesting ?? _isConnected;
 
+  /// 供测试检查是否有活动监听器
+  @visibleForTesting
+  bool get hasListenersForTesting => hasListeners;
+
   /// 初始化连接检查
   Future<void> init() async {
     await _checkConnectivity();

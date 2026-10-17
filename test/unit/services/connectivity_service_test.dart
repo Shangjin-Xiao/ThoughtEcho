@@ -144,10 +144,10 @@ void main() {
 
       await service.init();
       service.addListener(() {});
-      expect(service.hasListeners, isTrue);
+      expect(service.hasListenersForTesting, isTrue);
 
       service.dispose();
-      expect(service.hasListeners, isFalse);
+      expect(service.hasListenersForTesting, isFalse);
     });
   });
 }
