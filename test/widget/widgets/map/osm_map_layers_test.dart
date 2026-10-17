@@ -63,21 +63,26 @@ void main() {
       expect(darkTileLayer.tileBuilder, equals(darkModeTileBuilder));
     });
 
-    testWidgets('attribution() 包含 OpenStreetMap contributors 与 OSM France 版权标注',
+    testWidgets(
+        'attribution(context) 包含 OpenStreetMap contributors 与 OSM France 版权标注，并应用主题对应的背景颜色与文字样式',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      final lightTheme = ThemeData.light();
+      final darkTheme = ThemeData.dark();
+
+      // 1. 验证浅色主题下的背景色与文字颜色
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark(),
-          themeMode: ThemeMode.dark,
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => OsmMapLayers.attribution(context),
+          home: Theme(
+            data: lightTheme,
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => OsmMapLayers.attribution(context),
+              ),
             ),
           ),
         ),
@@ -85,6 +90,51 @@ void main() {
 
       expect(find.textContaining('OpenStreetMap contributors'), findsOneWidget);
       expect(find.textContaining('OSM France'), findsOneWidget);
+
+      final lightAttributionWidget = tester.widget<SimpleAttributionWidget>(
+          find.byType(SimpleAttributionWidget));
+      expect(
+        lightAttributionWidget.backgroundColor,
+        equals(lightTheme.colorScheme.surface.withValues(alpha: 0.8)),
+      );
+
+      final lightText = tester
+          .widget<Text>(find.textContaining('OpenStreetMap contributors'));
+      expect(
+        lightText.style?.color,
+        equals(lightTheme.colorScheme.onSurface),
+      );
+
+      // 2. 验证暗色主题下的背景色与文字颜色
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Theme(
+            data: darkTheme,
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => OsmMapLayers.attribution(context),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.textContaining('OpenStreetMap contributors'), findsOneWidget);
+      expect(find.textContaining('OSM France'), findsOneWidget);
+
+      final darkAttributionWidget = tester.widget<SimpleAttributionWidget>(
+          find.byType(SimpleAttributionWidget));
+      expect(
+        darkAttributionWidget.backgroundColor,
+        equals(darkTheme.colorScheme.surface.withValues(alpha: 0.8)),
+      );
+
+      final darkText = tester
+          .widget<Text>(find.textContaining('OpenStreetMap contributors'));
+      expect(
+        darkText.style?.color,
+        equals(darkTheme.colorScheme.onSurface),
+      );
     });
   });
 }
