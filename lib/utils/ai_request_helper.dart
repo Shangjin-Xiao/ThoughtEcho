@@ -287,82 +287,6 @@ class AIRequestHelper {
     return StreamController<String>(sync: true);
   }
 
-  /// 处理流式响应的通用逻辑
-  @Deprecated('Use OpenAIStreamService instead')
-  void handleStreamResponse({
-    required StreamController<String> controller,
-    required dynamic chunk, // 改为dynamic以便进行类型检查
-  }) {
-    if (!controller.isClosed) {
-      // 确保chunk确实是字符串类型
-      if (chunk is String) {
-        controller.add(chunk);
-      } else {
-        logDebug('Warning: chunk不是字符串类型: ${chunk.runtimeType} = $chunk');
-        // 尝试转换为字符串
-        try {
-          final stringChunk = chunk.toString();
-          controller.add(stringChunk);
-        } catch (e) {
-          logDebug('无法将chunk转换为字符串: $e');
-          handleStreamError(
-            controller: controller,
-            error: Exception('流式响应数据类型错误: ${chunk.runtimeType}'),
-            context: '流式响应处理',
-          );
-        }
-      }
-    }
-  }
-
-  /// 处理流式完成的通用逻辑
-  @Deprecated('Use OpenAIStreamService instead')
-  void handleStreamComplete({
-    required StreamController<String> controller,
-    String? fullText,
-  }) {
-    if (!controller.isClosed) {
-      controller.close();
-    }
-  }
-
-  /// 处理流式错误的通用逻辑
-  @Deprecated('Use OpenAIStreamService instead')
-  void handleStreamError({
-    required StreamController<String> controller,
-    required dynamic error,
-    String? context,
-  }) {
-    if (context != null) {
-      logDebug('$context错误: $error');
-      // 添加更详细的错误信息
-      if (error.toString().contains('type') &&
-          error.toString().contains('subtype')) {
-        logDebug('检测到类型转换错误，可能是stream参数类型问题');
-        logDebug('错误详情: ${error.runtimeType} - $error');
-
-        // 检查是否是布尔值到字符串的转换错误
-        if (error.toString().contains('bool') &&
-            error.toString().contains('String')) {
-          logDebug('这是一个布尔值到字符串的类型转换错误');
-          logDebug('可能的原因：');
-          logDebug('1. API响应中的content字段是boolean而不是string');
-          logDebug('2. 某个地方期望字符串但收到了boolean值');
-          logDebug('3. JSON解析过程中的类型不匹配');
-        }
-      }
-
-      // 打印完整的错误堆栈
-      if (error is Exception) {
-        logDebug('异常类型: ${error.runtimeType}');
-      }
-    }
-    if (!controller.isClosed) {
-      controller.addError(error);
-      controller.close();
-    }
-  }
-
   /// 单次洞察分析最多送出的笔记条数。
   ///
   /// 调用方传进来的往往是「全部笔记」，攒了几年的库直接整个进请求体，
@@ -507,32 +431,5 @@ class AIRequestHelper {
       logDebug('$context错误: $e');
       rethrow;
     }
-  }
-
-  /// 创建并执行流式操作的通用模式
-  ///
-  /// 使用 onListen 延迟启动，确保监听者先挂载再生产数据。
-  /// **sync: true** 保证 controller.add() 立即同步投递到监听者，
-  /// 而不是排入微任务队列——否则同一帧内到达的多个 chunk 会被
-  /// Flutter 合并成一次 setState，导致用户看到"全部出完才显示"。
-  @Deprecated('Use OpenAIStreamService instead')
-  Stream<String> executeStreamOperation({
-    required Future<void> Function(StreamController<String>) operation,
-    required String context,
-  }) {
-    late final StreamController<String> controller;
-
-    controller = StreamController<String>.broadcast(
-      sync: true,
-      onListen: () async {
-        try {
-          await operation(controller);
-        } catch (e) {
-          handleStreamError(controller: controller, error: e, context: context);
-        }
-      },
-    );
-
-    return controller.stream;
   }
 }
