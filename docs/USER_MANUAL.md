@@ -136,6 +136,22 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 - 随时在列表里一键切换当前使用的服务
 - 当前服务不可用时会自动尝试其他已配置的服务
 
+### 长期记忆与梦境整理配置
+
+**访问路径**：
+- **梦境整理与记忆开关**：`设置 → AI 设置 →「长期记忆」卡片`
+- **记忆条目追溯与管理**：`设置 → AI 设置 → 管理长期记忆`
+
+- **长期记忆总开关**：开启后允许 Thoughter 记住您的沟通习惯与表达偏好。若关闭此开关，所有长期记忆提取与使用完全停用。
+- **梦境整理开关 (Dreaming)**：控制后台梦境整理机制的启用状态。
+  - **空闲时整理**：控制应用处于空闲状态时是否自动触发后台梦境整理。
+  - **周期洞察后整理**：控制在成功生成并保存新的 AI 周期洞察后，是否在后台异步触发梦境整理。
+- **即时隐私生效保障**：在整理过程中，若您在任意时刻关闭长期记忆或梦境整理开关，**后台整理任务会立即静默终止，正在生成的结果会被即刻丢弃**，绝对不向数据库写入任何新画像条目。
+- **记忆管理与自主控制**（入口：`设置 → AI 设置 → 管理长期记忆`）：
+  - **追溯来源笔记**：在长期记忆列表中，每条由梦境整理归纳出的画像均带有“由笔记提炼”标识，点击可展开并追溯归纳所依据的来源笔记。
+  - **编辑与修正**：支持对任何一条记忆条目进行手动调整或独立删除。
+  - **一键彻底清空**：点击「清空记忆」可彻底销毁本地保存的所有长期记忆画像与近况切片，重置 AI 记忆。
+
 ---
 
 ## 3. 富文本编辑器
@@ -338,30 +354,30 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 
 **三种对话模式**：
 
-| 模式           | 说明                                                                                          |
-| -------------- | --------------------------------------------------------------------------------------------- |
+| 模式           | 说明                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------- |
 | **智能体模式** | 默认模式。Thoughter 可主动联动扩展工具搜索、分析笔记并提出创建/编辑建议，适合开放性探索与创作任务 |
-| **问笔记**     | 绑定到特定笔记，Thoughter 基于该笔记内容回答问题，不会随意扩展                                |
-| **自由对话**   | 纯对话模式，不绑定笔记内容                                                                    |
+| **问笔记**     | 绑定到特定笔记，Thoughter 基于该笔记内容回答问题，不会随意扩展                                    |
+| **自由对话**   | 纯对话模式，不绑定笔记内容                                                                        |
 
 **智能体扩展工具联动能力**：
 
 在智能体模式下，Thoughter 可以使用以下扩展工具，工具联动过程会实时展示在对话界面：
 
-| 工具                           | 说明                                                                   |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| **搜索笔记（ExploreNotesTool）** | 按关键词、标签、日期、天气、时段等条件检索您的笔记                     |
-| **获取笔记详情（GetNoteDetailTool）** | 读取特定笔记的完整内容及元数据                                         |
-| **获取标签列表（GetTagsTool）** | 查询您已有的全部标签                                                   |
-| **获取位置和天气（GetLocationWeatherTool）** | 获取当前位置与天气信息                                                 |
-| **联网搜索（WebSearchTool）**   | 通过搜索引擎检索实时信息（只读）                                       |
-| **抓取网页（WebFetchTool）**   | 读取指定网址的页面内容（只读）                                         |
-| **提议新建笔记（ProposeNoteCreateTool）** | 生成新笔记草稿，由您确认后保存                                         |
-| **提议编辑笔记（ProposeNoteEditTool）** | 对已有笔记提出局部或全文修改建议，由您确认后应用                       |
-| **交互提问（AskUserTool）**     | 向您发起主动交互提问或弹出单选/多选卡片，澄清模糊意图与确认补充参数    |
-| **会话历史检索（SessionSearchTool）** | 检索历史对话记录与往期问答上下文                                       |
-| **长期记忆写入（RememberTool）** | 将您的表达偏好、身份特质与纠偏反馈写入或更新至长期记忆                 |
-| **长期记忆检索（RecallTool）**   | 检索并调取已记录的用户画像特质、喜好与长期记忆细节                     |
+| 工具                                         | 说明                                                                |
+| -------------------------------------------- | ------------------------------------------------------------------- |
+| **搜索笔记（ExploreNotesTool）**             | 按关键词、标签、日期、天气、时段等条件检索您的笔记                  |
+| **获取笔记详情（GetNoteDetailTool）**        | 读取特定笔记的完整内容及元数据                                      |
+| **获取标签列表（GetTagsTool）**              | 查询您已有的全部标签                                                |
+| **获取位置和天气（GetLocationWeatherTool）** | 获取当前位置与天气信息                                              |
+| **联网搜索（WebSearchTool）**                | 通过搜索引擎检索实时信息（只读）                                    |
+| **抓取网页（WebFetchTool）**                 | 读取指定网址的页面内容（只读）                                      |
+| **提议新建笔记（ProposeNoteCreateTool）**    | 生成新笔记草稿，由您确认后保存                                      |
+| **提议编辑笔记（ProposeNoteEditTool）**      | 对已有笔记提出局部或全文修改建议，由您确认后应用                    |
+| **交互提问（AskUserTool）**                  | 向您发起主动交互提问或弹出单选/多选卡片，澄清模糊意图与确认补充参数 |
+| **会话历史检索（SessionSearchTool）**        | 检索历史对话记录与往期问答上下文                                    |
+| **长期记忆写入（RememberTool）**             | 将您的表达偏好、身份特质与纠偏反馈写入或更新至长期记忆              |
+| **长期记忆检索（RecallTool）**               | 检索并调取已记录的用户画像特质、喜好与长期记忆细节                  |
 
 **笔记提案卡片**：
 
@@ -372,7 +388,7 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 - **长期记忆**：Thoughter 支持跨会话记住您的写作偏好、表达习惯与个人背景，并在对话中自动保持一致。
 - **隐私与本地独立数据库隔离**：长期记忆存储于本地独立数据库，绝不上传云端，不进入多端同步与数据备份，保障您的绝对隐私。
 - **用户称呼**：支持在 Thoughter 中设置自定义昵称，让 AI 按照您喜欢的方式称呼您。
-- **记忆管理**：可在「设置」→「AI 设置」中随时查看当前已记录的画像条目或一键清空记忆。
+- **记忆管理**：可在「设置」→「AI 设置」→「管理长期记忆」中随时查看当前已记录的画像条目，或通过「清空记忆」一键重置。
 
 **思考过程与快捷操作**：
 
@@ -383,6 +399,34 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 
 - 点击右上角「历史」图标可查看并恢复历史对话记录。
 - 点击右上角「新建对话」图标可开启全新会话。
+
+---
+
+### Thoughter 梦境整理 (Dreaming) 与长期记忆提炼
+
+Thoughter 梦境整理是心迹 v4.1.0 推出的后台长期记忆提炼机制。它能在不打扰您记录的前提下，利用应用空闲时段或在成功生成新的 AI 周期洞察后，轻柔梳理近期的笔记积累，提炼出反映您文风偏好与生活关注的长期记忆画像，让 AI 在后续对话伴写中更加懂您。
+
+#### 1. 触发条件与采样规则
+
+- **触发门槛**：两次整理之间至少间隔 **7 天**，且在过去 **60 天**的采样窗口内需积累至少 **10 条**有效笔记。若不满足门槛条件，整理任务会自动跳过。
+- **触发时机**：
+  - **空闲时整理**：应用启动 5 秒后，若处于空闲状态且满足门槛，会自动启动后台整理。
+  - **周期洞察后整理**：当您成功生成并保存新的 AI 周期洞察（如周报、月报）后，系统会在后台异步轻量触发整理，不会同步阻塞界面渲染或洞察分析流程。
+- **正文截短与保护**：为降低模型 Token 消耗并最大程度保护您的私密长文，单条笔记送入模型归纳时会自动执行 **160 字截短保护**，仅提取语言结构与表达特征，绝不上传或完整复述您的私密细节。
+
+#### 2. 摘录与原创分离归纳逻辑
+
+梦境整理严格区分您的阅读摘录与自己写的原创笔记，确保 AI 在代笔或伴写时不会把您摘录的名言警句误认为是您平时的表达风格：
+
+- **摘录笔记 (`excerpt`)**：归纳您欣赏的题材、类型与调性，提炼为**「品味」 (Taste)** 画像（如“偏好凝练深邃的文学哲思与自然白描”）。
+- **原创笔记 (`original`)**：归纳您真实的写作篇幅、句式节奏、人称与结尾习惯，提炼为**「文风」 (Voice)** 画像（如“习惯使用第一人称生活短句，句式轻快平实”）。
+- **近况关注 (`recent`)**：客观梳理您近期反复提到的主题、去过的地点或在做的事（如“近期关注个人笔记工具整理与习惯养成”），只陈述客观事实，**绝不做任何主观情绪评价**。
+- **笔名与署名推断**：从原创笔记中自动推断并提炼您的固定笔名或署名，帮助 AI 在提议卡片中精准称呼。
+
+#### 3. 100% 本地隐私与静默失败机制
+
+- **100% 本地存储**：归纳出的长期记忆条目仅保存在您设备本地的独立数据库中，绝不上传至任何云端服务器，亦不包含在多端同步与备份数据中。
+- **静默失败无打扰**：若在整理过程中遇到网络波动、模型返回格式解析失败或数据库异常，梦境整理会**无声静默终止**并保留原有记忆，不弹出任何报错提示或 Toast 弹窗，绝不抢占前台冷启动资源或打扰您的当前记录。
 
 ---
 
@@ -571,7 +615,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ### 语言设置
 
-应用支持多种语言，包括中文、英文、日文、韩文、西班牙文、法文、德文等。也可以选择跟随系统语言。
+应用支持多种语言，包括简体中文、繁体中文、英文、日文、韩文、西班牙文、法文、德文等。也可以选择跟随系统语言。
 
 ### 主题设置
 
@@ -581,11 +625,11 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 心迹提供了三种独特的设计风格：
 
-| 风格 | 说明 | 特点 |
-| --- | --- | --- |
-| 🎨 **Material** | 标准 Material 3 动态取色 | 支持 Material You 动态壁纸取色或自定义主题色 |
-| 📜 **纸与墨** | 温暖典雅的手工质感（全新安装默认） | 暖白纸张色调、衬线字体、对齐的横线纹理与温润微阴影 |
-| 📄 **素笺** | 冷峻极简的现代纸感 | 冷灰纸面、深青色墨、硬朗无横线极简边框 |
+| 风格            | 说明                               | 特点                                               |
+| --------------- | ---------------------------------- | -------------------------------------------------- |
+| 🎨 **Material** | 标准 Material 3 动态取色           | 支持 Material You 动态壁纸取色或自定义主题色       |
+| 📜 **纸与墨**   | 温暖典雅的手工质感（全新安装默认） | 暖白纸张色调、衬线字体、对齐的横线纹理与温润微阴影 |
+| 📄 **素笺**     | 冷峻极简的现代纸感                 | 冷灰纸面、深青色墨、硬朗无横线极简边框             |
 
 #### 墨色定制
 
@@ -599,6 +643,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 #### 高品质衬线字体
 
 心迹内置了精美的衬线字体：
+
 - 选择「纸与墨」或「素笺」手工风格时自动生效衬线排版。
 - 无需在线下载额外字体文件，即刻享有书籍印刷级的纸质排版质感。
 
@@ -631,6 +676,10 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 | 周期报告 AI 洞察  | 开关 | 启用周期报告的 AI 分析        |
 | AI 卡片生成       | 开关 | 启用 AI 卡片生成功能          |
 | 生物识别认证      | 开关 | 需要指纹/面部解锁查看隐藏笔记 |
+
+### AI 设置与长期记忆
+
+关于 AI 服务商配置、长期记忆总开关、梦境整理与记忆管理的完整说明，请参阅 [2. AI 服务配置](#2-ai-服务配置) 与 [5. AI 功能 - Thoughter 梦境整理 (Dreaming) 与长期记忆提炼](#5-ai-功能)。
 
 ### 每日一言设置
 
@@ -724,14 +773,27 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 - 现有分类列表显示
 - 分类管理（创建、查看、修改与删除）
 
+### 隐私与遥测设置
+
+**访问路径**：设置 → 反馈与联系
+
+在「反馈与联系」页面底部，心迹提供了集中透明的「数据收集与隐私」卡片，用于管理各项遥测与诊断选项。卡片包含“诊断数据（Sentry）”与“匿名统计（Aptabase）”两个独立开关及“查看收集详情与脱敏源码”说明按钮：
+
+| 遥测开关 | 收集目的 | 收集内容与脱敏机制 | 默认状态与保护承诺 |
+| --- | --- | --- | --- |
+| **诊断数据<br>(Sentry)** | 捕获崩溃堆栈、诊断卡死与系统兼容性 Bug，分析页面加载耗时与流畅度 | 崩溃堆栈、错误类型、系统版本、设备型号、随机安装标识、性能耗时指标。发送前本地正则脱敏 SQL 文本与 URL 参数，强禁截图 | **默认彻底关闭** (Strict Opt-in)。绝不收集笔记正文、富文本 Delta、图片附件或 PII；服务端不保存 IP |
+| **匿名统计<br>(Aptabase)** | 统计各功能使用频次与热度（如卡片模板与排版偏好），规划开发优先级 | 匿名功能点击与页面访问频次、系统平台与版本、语言区域、应用版本号、单次启动临时会话 ID（退出即销毁） | **默认彻底关闭** (Strict Opt-in)。无 Cookie、无跨应用追踪、无设备指纹、无用户画像；绝不收集笔记正文或搜索词 |
+
+- **透明度与源码查验**：点击卡片底部的「查看收集详情与脱敏源码」按钮，可随时调出弹窗，直接查验 Sentry 脱敏源码、Aptabase 客户端集成源码以及完整的官网隐私政策说明。
+- **实时控制**：诊断数据与匿名统计均可随时一键自由开启或关闭；诊断数据开关更改将在重启应用后正式生效。
+
 ### 关于与反馈
 
 在设置页面的“反馈与联系”中，您可以：
 
 - **反馈建议**：支持直接在应用内发送反馈，也可跳转到 GitHub 社区进行讨论。
 - **联系开发者**：通过电子邮件直接联系开发者。
-- **发送诊断数据帮助改进**：开启后，遇到 Bug、崩溃或卡死时将自动向开发团队提交错误堆栈与诊断信息，并包含必要的性能指标（如页面加载耗时、脱敏后的操作类型，iOS 上包含 CPU 剖析）以协助排查卡顿与优化流畅度。为了保护您的隐私，**该功能默认关闭**，上传的数据经过本地严格脱敏，包含随机生成的安装标识（不关联硬件信息），绝不包含任何您的日记正文或隐私内容，服务亦不存储您的 IP 地址。此设置在重启应用后生效。
-- **参与匿名功能改进计划**：开启后，应用会统计匿名的功能点击与页面访问频次（基于开源轻量分析服务 Aptabase），附带操作系统版本、语言区域与单次启动的临时会话 ID（退出即失效），用于帮助开发者规划后续功能的开发优先级。为了保护您的隐私，**该功能默认关闭**，严格遵循本地优先与隐私第一原则，不使用 Cookie、不做跨应用追踪，不存储 IP 地址，绝不收集笔记正文、搜索关键词或个人身份信息。您可随时在“设置 -> 反馈与联系”中自由开启或关闭。
+- **数据收集与隐私控制**：集中管理“诊断数据（Sentry）”与“匿名统计（Aptabase）”遥测选项，并可随时查验脱敏源码（详见「隐私与遥测设置」）。
 
 ---
 
@@ -944,6 +1006,22 @@ ThoughtEcho can keep several AI configurations at once:
 - Switch the active service from the list at any time
 - Other configured services are tried automatically if the active one fails
 
+### Long-Term Memory & Dreaming Controls
+
+**Access Paths**:
+- **Dreaming & Memory Toggles**: `Settings → AI Settings → "Long-Term Memory" Card`
+- **Memory Item Attribution & Management**: `Settings → AI Settings → Manage Long-Term Memory`
+
+- **Master Memory Toggle**: Master switch allowing Thoughter to remember your phrasing preferences and voice. Disabling this turns off all long-term memory operations.
+- **Dreaming Master Toggle**: Enables or disables background Dreaming distillation tasks.
+  - **Idle Reflection**: Toggles background dreaming execution during application idle time.
+  - **Post-Insight Reflection**: Toggles background dreaming execution following the creation and saving of a new AI periodic report.
+- **Immediate Privacy Enforcement**: If you turn off Long-Term Memory or Dreaming switches while a distillation task is in progress, **the background task is immediately aborted and generated results are silently discarded**, ensuring zero unauthorized memory writes.
+- **User Control & Transparency** (Path: `Settings → AI Settings → Manage Long-Term Memory`):
+  - **Source Attribution**: Distilled memory profile cards are tagged with "Synthesized from Notes". Tapping an item opens a breakdown view allowing you to trace the exact source notes used for that synthesis.
+  - **Inline Editing & Deletion**: Individual memory profile items can be edited or removed at any time.
+  - **One-Tap Reset / Wipe**: Tapping "Clear Memory" permanently wipes all stored profile facts and recent slices from local storage.
+
 ---
 
 ## 3. Rich Text Editor
@@ -1144,30 +1222,30 @@ Thoughter is ThoughtEcho's built-in AI conversation assistant. It supports natur
 
 **Three Conversation Modes**:
 
-| Mode           | Description                                                                                                                                                    |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mode           | Description                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Agent Mode** | Default mode. Thoughter proactively uses integrated tools to search, analyze notes, and propose create/edit actions. Ideal for open-ended exploration and creative tasks. |
-| **Ask Note**   | Bound to a specific note. Thoughter answers questions based solely on that note's content.                                                                     |
-| **Free Chat**  | Pure conversation mode, not bound to any note content.                                                                                                         |
+| **Ask Note**   | Bound to a specific note. Thoughter answers questions based solely on that note's content.                                                                                |
+| **Free Chat**  | Pure conversation mode, not bound to any note content.                                                                                                                    |
 
 **AI Tool Integration Capabilities**:
 
 In Agent mode, Thoughter can use the following tools. Tool actions are shown in real time in the conversation:
 
-| Tool                                   | Description                                                                   |
-| -------------------------------------- | ----------------------------------------------------------------------------- |
-| **Explore Notes (ExploreNotesTool)**   | Search notes by keyword, tag, date, weather, time period, and more            |
-| **Get Note Detail (GetNoteDetailTool)** | Read the full content and metadata of a specific note                         |
-| **Get Tags (GetTagsTool)**             | Retrieve your complete tag list                                               |
-| **Get Location & Weather (GetLocationWeatherTool)** | Fetch current location and weather information                                |
-| **Web Search (WebSearchTool)**         | Search for real-time information via a search engine (read-only)              |
-| **Web Fetch (WebFetchTool)**           | Read the content of a specific URL (read-only)                                |
-| **Propose New Note (ProposeNoteCreateTool)** | Generate a new note draft for you to review and save                          |
-| **Propose Note Edit (ProposeNoteEditTool)** | Suggest partial or full edits to an existing note for you to review and apply |
-| **Ask User (AskUserTool)**             | Present interactive choice cards or clarifying questions to confirm your intent or missing details |
-| **Session Search (SessionSearchTool)** | Search chat history and Q&A context across past conversations                 |
-| **Remember (RememberTool)**            | Write or update your writing style, personal traits, and preferences into long-term memory |
-| **Recall (RecallTool)**                | Search and retrieve stored personal profile facts, preferences, and memory details |
+| Tool                                                | Description                                                                                        |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Explore Notes (ExploreNotesTool)**                | Search notes by keyword, tag, date, weather, time period, and more                                 |
+| **Get Note Detail (GetNoteDetailTool)**             | Read the full content and metadata of a specific note                                              |
+| **Get Tags (GetTagsTool)**                          | Retrieve your complete tag list                                                                    |
+| **Get Location & Weather (GetLocationWeatherTool)** | Fetch current location and weather information                                                     |
+| **Web Search (WebSearchTool)**                      | Search for real-time information via a search engine (read-only)                                   |
+| **Web Fetch (WebFetchTool)**                        | Read the content of a specific URL (read-only)                                                     |
+| **Propose New Note (ProposeNoteCreateTool)**        | Generate a new note draft for you to review and save                                               |
+| **Propose Note Edit (ProposeNoteEditTool)**         | Suggest partial or full edits to an existing note for you to review and apply                      |
+| **Ask User (AskUserTool)**                          | Present interactive choice cards or clarifying questions to confirm your intent or missing details |
+| **Session Search (SessionSearchTool)**              | Search chat history and Q&A context across past conversations                                      |
+| **Remember (RememberTool)**                         | Write or update your writing style, personal traits, and preferences into long-term memory         |
+| **Recall (RecallTool)**                             | Search and retrieve stored personal profile facts, preferences, and memory details                 |
 
 **Note Proposal Cards**:
 
@@ -1178,7 +1256,7 @@ When Thoughter proposes creating or editing a note, it displays the result as a 
 - **Long-Term Memory**: Thoughter remembers your writing style, preferences, and personal background across sessions, keeping its tone and assistance consistent over time.
 - **Privacy & Local Isolated Database**: Long-term memory is stored locally in a separate database, never uploaded to any cloud server, and excluded from multi-device sync and data backups for complete privacy.
 - **Custom Nickname**: Set your preferred name or nickname in Thoughter settings for a more natural conversation experience.
-- **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings".
+- **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings" → "Manage Long-Term Memory".
 
 **Deep Thinking & Action Bar**:
 
@@ -1189,6 +1267,34 @@ When Thoughter proposes creating or editing a note, it displays the result as a 
 
 - Tap the "History" icon in the top-right corner to view and restore previous conversations.
 - Tap the "New Chat" icon to start a fresh session.
+
+---
+
+### Thoughter Dreaming & Long-Term Memory Distillation
+
+Thoughter Dreaming is an offline background distillation mechanism introduced in ThoughtEcho v4.1.0. It gently analyzes your recent notes when the application is idle or after a new AI periodic report is generated and saved, distilling long-term writing traits, reading preferences, and recent topics into a local memory profile. This enables Thoughter to better adapt to your voice during chats and assistance.
+
+#### 1. Trigger Conditions & Sampling Thresholds
+
+- **Activation Thresholds**: Requires a minimum interval of **7 days** between distillation runs and at least **10 valid notes** created within the past **60-day** sampling window. Distillation automatically skips if thresholds are not met.
+- **Trigger Times**:
+  - **Idle Reflection**: Runs automatically 5 seconds after startup when the device is idle and gate conditions pass.
+  - **Post-Insight Distillation**: Triggers asynchronously in the background after a new AI periodic report (e.g. weekly or monthly insight) is generated and saved. It runs as a lightweight background task and will never block UI rendering or report analysis.
+- **Content Truncation Protection**: To optimize AI token usage and safeguard personal privacy, each sampled note is truncated to a maximum of **160 characters**. Only sentence structures and stylistic features are extracted, ensuring full private texts are never transmitted or reproduced.
+
+#### 2. Excerpt vs. Original Separation Logic
+
+Dreaming strictly separates your clipped quotes from your original personal notes to prevent AI from confusing reading appreciation with your actual writing voice:
+
+- **Excerpts (`excerpt`)**: Analyzes clipped texts to extract your reading preferences, themes, and aesthetic style into a **"Taste"** profile fact (e.g., "Prefers concise philosophical prose and natural descriptive quotes").
+- **Original Notes (`original`)**: Analyzes your self-written text to extract length habits, sentence structures, perspective, and tone into a **"Voice"** profile fact (e.g., "Uses first-person short sentences with a conversational tone").
+- **Recent Focus (`recent`)**: Summarizes recurring topics, places visited, or recent activities into a **"Recent"** slice (e.g., "Focusing on personal note organization and daily habit tracking"). Stated purely factually **without any subjective emotional judgment**.
+- **Signature & Alias Inference**: Automatically identifies recurring author signatures from original notes to personalize AI address titles.
+
+#### 3. 100% On-Device Privacy & Silent Failure Mechanism
+
+- **100% On-Device Storage**: Distilled memory profiles are stored exclusively in an isolated local database on your device. Memory data is never uploaded to external servers and is excluded from multi-device sync and backups.
+- **Silent Failure Protection**: If network interruptions, model parsing errors, or database exceptions occur during distillation, Dreaming **silently aborts** and preserves existing memories. It produces no error dialogs or toast notifications, ensuring zero disruption to cold startup or active note-taking.
 
 ---
 
@@ -1373,7 +1479,7 @@ When importing a backup, you can choose from three modes:
 
 ### Language Settings
 
-The app supports multiple languages including Chinese, English, Japanese, Korean, Spanish, French, German, etc. You can also choose to follow system language.
+The app supports multiple languages including Simplified and Traditional Chinese, English, Japanese, Korean, Spanish, French, German, etc. You can also choose to follow system language.
 
 ### Theme Settings
 
@@ -1383,11 +1489,11 @@ The app supports multiple languages including Chinese, English, Japanese, Korean
 
 ThoughtEcho offers three distinctive design aesthetics:
 
-| Style | Description | Highlights |
-| --- | --- | --- |
-| 🎨 **Material** | Standard Material 3 dynamic theme | Supports Material You wallpaper color extraction or custom color themes |
-| 📜 **Paper & Ink** | Warm, handcrafted tactile feel (Default for new installs) | Warm paper tone, serif typography, aligned ruling lines & subtle shadows |
-| 📄 **Plain** | Minimalist cool paper aesthetic | Cool paper surface, deep teal ink, clean border styling without ruling lines |
+| Style              | Description                                               | Highlights                                                                   |
+| ------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 🎨 **Material**    | Standard Material 3 dynamic theme                         | Supports Material You wallpaper color extraction or custom color themes      |
+| 📜 **Paper & Ink** | Warm, handcrafted tactile feel (Default for new installs) | Warm paper tone, serif typography, aligned ruling lines & subtle shadows     |
+| 📄 **Plain**       | Minimalist cool paper aesthetic                           | Cool paper surface, deep teal ink, clean border styling without ruling lines |
 
 #### Custom Ink Accents
 
@@ -1401,6 +1507,7 @@ When using "Paper & Ink" or "Plain" handcrafted styles, you can select custom ac
 #### Built-in High-Quality Serif Font
 
 ThoughtEcho embeds elegant serif typography directly into the app:
+
 - Automatically activated when selecting "Paper & Ink" or "Plain" handcrafted styles.
 - Zero network downloads required — experience authentic paper publishing typography right out of the box.
 
@@ -1433,6 +1540,10 @@ ThoughtEcho embeds elegant serif typography directly into the app:
 | Periodic Report AI Insights  | Toggle | Enable AI analysis for periodic reports          |
 | AI Card Generation           | Toggle | Enable AI card generation feature                |
 | Biometric Authentication     | Toggle | Require fingerprint/face unlock for hidden notes |
+
+### AI Settings & Long-Term Memory Controls
+
+For full details on AI provider configuration, master memory toggles, dreaming options, and memory management, please refer to [2. AI Service Configuration](#2-ai-service-configuration) and [5. AI Features - Thoughter Dreaming & Long-Term Memory Distillation](#5-ai-features).
 
 ### Daily Quote Settings
 
@@ -1526,14 +1637,27 @@ ThoughtEcho embeds elegant serif typography directly into the app:
 - List display of existing categories
 - Category management (create, view, edit, and delete)
 
+### Privacy & Telemetry Settings
+
+**Access Path**: Settings → Feedback & Contact
+
+At the bottom of the "Feedback & Contact" page, ThoughtEcho provides a unified "Data Collection & Privacy" card for transparent telemetry control. The card includes dual toggle switches for "Diagnostic Data (Sentry)" and "Anonymous Statistics (Aptabase)" along with a detailed disclosure button:
+
+| Telemetry Toggle | Purpose | Data Scope & Redaction Mechanism | Default State & Privacy Commitments |
+| --- | --- | --- | --- |
+| **Diagnostic Data<br>(Sentry)** | Captures crash stack traces, diagnoses freezes/bugs, and analyzes page load performance and UI responsiveness | Crash stack traces, error types, OS version, device model, random installation ID, performance metrics. Locally strips SQL text/params & URL query params via regex; screenshots disabled | **Disabled by default** (Strict Opt-in). Never collects note text, rich-text Delta JSON, attachments, or PII; server does not store IP |
+| **Anonymous Statistics<br>(Aptabase)** | Tracks feature usage frequency and popularity (e.g., card templates, layout styles) to guide development priorities | Anonymous feature click/page view counts, OS platform/version, locale, app version, temporary session ID (cleared on app exit) | **Disabled by default** (Strict Opt-in). No cookies, no cross-app tracking, no device fingerprinting, no profiling; never collects note contents or search terms |
+
+- **Transparency & Source Inspection**: Click the "Learn More & Source Code" button at the bottom of the card to open a disclosure dialog with direct links to Sentry redaction code, Aptabase integration code, and full privacy policy details.
+- **Instant Control**: Both toggles can be switched on or off at any time. Diagnostic data changes take effect upon app restart.
+
 ### About & Feedback
 
 In the "Feedback & Contact" section within Settings, you can:
 
 - **Feedback**: Supports sending feedback directly in-app, or navigating to GitHub for community discussions.
 - **Contact Developer**: Reach out to the developer directly via email.
-- **Send diagnostics to help improve**: When enabled, crash/freeze diagnostics along with essential performance metrics (such as page load times, sanitized operation types, and CPU profiling on iOS) are automatically sent to help developers resolve issues and improve responsiveness. For your privacy, this feature is **disabled by default**, uses a randomly generated installation identifier (not linked to hardware info), excludes note contents and personal data, and the service does not store IP addresses. Takes effect after app restart.
-- **Anonymous Feature Improvement Program**: When enabled, counts of anonymous feature clicks and page views are collected (via privacy-focused open-source Aptabase) alongside OS version, locale, and temporary session ID (cleared on exit) to help guide development priorities. **Disabled by default**, uses no cookies or cross-app tracking, does not store IP addresses, and strictly never collects note contents, search terms, or personal identity details. Can be toggled anytime under "Settings -> Feedback & Contact".
+- **Data Collection & Privacy Controls**: Centralized controls for "Diagnostic Data (Sentry)" and "Anonymous Statistics (Aptabase)" telemetry toggles and source disclosure (see "Privacy & Telemetry Settings" for details).
 
 ---
 

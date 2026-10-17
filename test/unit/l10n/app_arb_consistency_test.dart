@@ -54,5 +54,29 @@ void main() {
       expect(zh['leaveWhileSyncing'], isNot(contains('服务器')));
       expect(en['leaveWhileSyncing'], isNot(contains('server')));
     });
+
+    test(
+        'app_zh_Hant.arb contains all keys from app_zh.arb and preserves placeholders',
+        () {
+      final zh = jsonDecode(File('lib/l10n/app_zh.arb').readAsStringSync())
+          as Map<String, dynamic>;
+      final zhHant =
+          jsonDecode(File('lib/l10n/app_zh_Hant.arb').readAsStringSync())
+              as Map<String, dynamic>;
+
+      expect(zhHant['@@locale'], 'zh_Hant');
+
+      final zhKeys = zh.keys.where((k) => !k.startsWith('@')).toSet();
+      final zhHantKeys = zhHant.keys.where((k) => !k.startsWith('@')).toSet();
+
+      final missingKeys = zhKeys.difference(zhHantKeys);
+      expect(missingKeys, isEmpty,
+          reason:
+              'app_zh_Hant.arb should contain all translation keys from app_zh.arb');
+
+      expect(zhHant['appTitle'], '心跡');
+      expect(zhHant['languageChinese'], '簡體中文');
+      expect(zhHant['languageTraditionalChinese'], '繁體中文');
+    });
   });
 }
