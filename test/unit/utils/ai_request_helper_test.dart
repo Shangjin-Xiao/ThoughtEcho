@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/chat_message.dart';
 import 'package:thoughtecho/utils/ai_request_helper.dart';
@@ -120,6 +121,78 @@ void main() {
       ]);
       expect(metadataOf(json)['originalCount'], 2);
       expect(metadataOf(json)['excerptCount'], 2);
+    });
+  });
+
+  group('stream handling logic', () {
+    final helper = AIRequestHelper();
+
+    test('handleStreamResponse adds string chunk to controller', () async {
+      final controller = helper.createStreamController();
+      final received = <String>[];
+      controller.stream.listen(received.add);
+
+      // ignore: deprecated_member_use_from_same_package
+      helper.handleStreamResponse(controller: controller, chunk: 'chunk1');
+      // ignore: deprecated_member_use_from_same_package
+      helper.handleStreamResponse(controller: controller, chunk: 'chunk2');
+      // ignore: deprecated_member_use_from_same_package
+      helper.handleStreamComplete(controller: controller);
+
+      expect(received, ['chunk1', 'chunk2']);
+      expect(controller.isClosed, isTrue);
+    });
+
+    test('handleStreamError passes error and closes controller', () async {
+      final controller = helper.createStreamController();
+      Object? caughtError;
+      controller.stream.listen(
+        (_) {},
+        onError: (e) {
+          caughtError = e;
+        },
+      );
+
+      final testException = Exception('Test stream error');
+      // ignore: deprecated_member_use_from_same_package
+      helper.handleStreamError(
+        controller: controller,
+        error: testException,
+        context: 'Unit testing',
+      );
+
+      expect(caughtError, testException);
+      expect(controller.isClosed, isTrue);
+    });
+
+    test('executeStreamOperation yields data and handles errors', () async {
+      final received = <String>[];
+      Object? caughtError;
+      final completer = Completer<void>();
+
+      // ignore: deprecated_member_use_from_same_package
+      final stream = helper.executeStreamOperation(
+        operation: (controller) async {
+          controller.add('hello');
+          throw Exception('Operation failed');
+        },
+        context: 'Stream op test',
+      );
+
+      stream.listen(
+        received.add,
+        onError: (e) {
+          caughtError = e;
+        },
+        onDone: () {
+          completer.complete();
+        },
+      );
+
+      await completer.future;
+
+      expect(received, ['hello']);
+      expect(caughtError, isA<Exception>());
     });
   });
 }

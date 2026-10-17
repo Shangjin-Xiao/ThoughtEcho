@@ -636,6 +636,28 @@ void main() {
         expect(config.defaultHeaders.containsKey('Content-Type'), isFalse);
         expect(config.defaultHeaders.containsKey('content-type'), isFalse);
       });
+
+      test('handleStreamError passes error to stream controller and closes it',
+          () async {
+        final controller = StreamController<String>(sync: true);
+        Object? caughtError;
+        controller.stream.listen(
+          (_) {},
+          onError: (e) {
+            caughtError = e;
+          },
+        );
+
+        final testException = Exception('Test OpenAIStreamService error');
+        OpenAIStreamService.handleStreamError(
+          controller: controller,
+          error: testException,
+          context: 'Test Context',
+        );
+
+        expect(caughtError, testException);
+        expect(controller.isClosed, isTrue);
+      });
     });
   });
 }
