@@ -17,6 +17,7 @@ import sys
 import json
 import time
 import re
+import asyncio
 import urllib.request
 import urllib.error
 from datetime import datetime, timedelta
@@ -439,21 +440,21 @@ class ResilientGeminiClient:
         self.last_request_time = 0
         self.min_interval = 2.5
 
-    def _pace(self):
+    async def _pace(self):
         elapsed = time.time() - self.last_request_time
         if elapsed < self.min_interval:
             sleep_needed = self.min_interval - elapsed
-            time.sleep(sleep_needed)
+            await asyncio.sleep(sleep_needed)
         self.last_request_time = time.time()
 
-    def complete(self, messages, tools=None, temperature=0.3):
+    async def complete(self, messages, tools=None, temperature=0.3):
         max_retries = 3
         backoff = 3.0
 
         for model_idx in range(self.active_model_idx, len(self.models)):
             model_name = self.models[model_idx]
             for attempt in range(max_retries):
-                self._pace()
+                await self._pace()
                 url = f"{self.base_url}/chat/completions"
                 payload = {
                     "model": model_name,
@@ -487,14 +488,14 @@ class ResilientGeminiClient:
                         pass
                     print(f"⚠️ [{model_name}] HTTP {e.code} (attempt {attempt+1}/{max_retries}): {e.reason} {body[:120]}")
                     if e.code in (429, 503, 500):
-                        time.sleep(backoff)
+                        await asyncio.sleep(backoff)
                         backoff *= 2.0
                         continue
                     else:
                         break
                 except Exception as e:
                     print(f"⚠️ [{model_name}] 网络请求异常 (attempt {attempt+1}/{max_retries}): {e}")
-                    time.sleep(backoff)
+                    await asyncio.sleep(backoff)
                     backoff *= 1.5
 
             print(f"🔄 模型 {model_name} 额度受限或不可用，自动降级至备选模型...")
@@ -504,7 +505,7 @@ class ResilientGeminiClient:
 # -----------------------------------------------------------------------------
 # 学生用户实机场景基准评测
 # -----------------------------------------------------------------------------
-def run_benchmark():
+async def run_benchmark():
     print("=" * 80)
     print("🚀 开始执行 ThoughtEcho 第三模拟用户（小舟·在读大学生）高拟真基准评测")
     print("=" * 80)
@@ -637,7 +638,7 @@ def run_benchmark():
             {"role": "user", "content": tc["prompt"]}
         ]
 
-        res = client.complete(messages, temperature=0.3)
+        res = await client.complete(messages, temperature=0.3)
         if res["error"]:
             print(f"❌ 请求失败: {res['error']}")
             case_results.append({"id": tc["id"], "success": False, "matched": 0, "total": len(tc["expect"])})
@@ -672,4 +673,4 @@ def run_benchmark():
     print("=" * 80)
 
 if __name__ == "__main__":
-    run_benchmark()
+    asyncio.run(run_benchmark())
