@@ -144,14 +144,53 @@ void main() {
 
       expect(fakeService.logRecords.length, 9);
       expect(fakeService.logRecords[0]['source'], 'custom_http');
+      expect(fakeService.logRecords[0]['level'], UnifiedLogLevel.debug);
+
       expect(fakeService.logRecords[1]['source'], 'RETRY');
+      expect(fakeService.logRecords[1]['level'], UnifiedLogLevel.debug);
+
       expect(fakeService.logRecords[2]['source'], 'AI');
+      expect(fakeService.logRecords[2]['level'], UnifiedLogLevel.debug);
+
       expect(fakeService.logRecords[3]['source'], 'DIO');
+      expect(fakeService.logRecords[3]['level'], UnifiedLogLevel.debug);
+
       expect(fakeService.logRecords[4]['source'], 'Database');
+      expect(fakeService.logRecords[4]['level'], UnifiedLogLevel.debug);
+
       expect(fakeService.logRecords[5]['source'], 'File');
+      expect(fakeService.logRecords[5]['level'], UnifiedLogLevel.debug);
+
       expect(fakeService.logRecords[6]['source'], 'Performance');
+      expect(fakeService.logRecords[6]['level'], UnifiedLogLevel.info);
+
       expect(fakeService.logRecords[7]['source'], 'UserAction');
+      expect(fakeService.logRecords[7]['level'], UnifiedLogLevel.info);
+
       expect(fakeService.logRecords[8]['source'], 'Security');
+      expect(fakeService.logRecords[8]['level'], UnifiedLogLevel.warning);
+    });
+
+    test('logCategory routes with category defaults and overrides correctly',
+        () {
+      logCategory(LogCategory.ai, 'ai default msg');
+      logCategory(
+        LogCategory.security,
+        'security override msg',
+        source: 'CustomSec',
+        level: UnifiedLogLevel.error,
+        error: 'SecError',
+      );
+
+      expect(fakeService.logRecords.length, 2);
+      expect(fakeService.logRecords[0]['level'], UnifiedLogLevel.debug);
+      expect(fakeService.logRecords[0]['message'], 'ai default msg');
+      expect(fakeService.logRecords[0]['source'], 'AI');
+
+      expect(fakeService.logRecords[1]['level'], UnifiedLogLevel.error);
+      expect(fakeService.logRecords[1]['message'], 'security override msg');
+      expect(fakeService.logRecords[1]['source'], 'CustomSec');
+      expect(fakeService.logRecords[1]['error'], 'SecError');
     });
 
     test('logConditional routes correctly based on condition', () {
