@@ -8,6 +8,7 @@ import '../models/quote_model.dart';
 import '../utils/ai_network_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../models/chat_message.dart';
+import '../services/openai_stream_service.dart';
 
 /// AI请求辅助工具
 ///
@@ -305,7 +306,7 @@ class AIRequestHelper {
           controller.add(stringChunk);
         } catch (e) {
           logDebug('无法将chunk转换为字符串: $e');
-          handleStreamError(
+          OpenAIStreamService.handleStreamError(
             controller: controller,
             error: Exception('流式响应数据类型错误: ${chunk.runtimeType}'),
             context: '流式响应处理',
@@ -327,40 +328,17 @@ class AIRequestHelper {
   }
 
   /// 处理流式错误的通用逻辑
-  @Deprecated('Use OpenAIStreamService instead')
+  @Deprecated('Use OpenAIStreamService.handleStreamError instead')
   void handleStreamError({
     required StreamController<String> controller,
     required dynamic error,
     String? context,
   }) {
-    if (context != null) {
-      logDebug('$context错误: $error');
-      // 添加更详细的错误信息
-      if (error.toString().contains('type') &&
-          error.toString().contains('subtype')) {
-        logDebug('检测到类型转换错误，可能是stream参数类型问题');
-        logDebug('错误详情: ${error.runtimeType} - $error');
-
-        // 检查是否是布尔值到字符串的转换错误
-        if (error.toString().contains('bool') &&
-            error.toString().contains('String')) {
-          logDebug('这是一个布尔值到字符串的类型转换错误');
-          logDebug('可能的原因：');
-          logDebug('1. API响应中的content字段是boolean而不是string');
-          logDebug('2. 某个地方期望字符串但收到了boolean值');
-          logDebug('3. JSON解析过程中的类型不匹配');
-        }
-      }
-
-      // 打印完整的错误堆栈
-      if (error is Exception) {
-        logDebug('异常类型: ${error.runtimeType}');
-      }
-    }
-    if (!controller.isClosed) {
-      controller.addError(error);
-      controller.close();
-    }
+    OpenAIStreamService.handleStreamError(
+      controller: controller,
+      error: error,
+      context: context,
+    );
   }
 
   /// 单次洞察分析最多送出的笔记条数。
@@ -528,7 +506,11 @@ class AIRequestHelper {
         try {
           await operation(controller);
         } catch (e) {
-          handleStreamError(controller: controller, error: e, context: context);
+          OpenAIStreamService.handleStreamError(
+            controller: controller,
+            error: e,
+            context: context,
+          );
         }
       },
     );

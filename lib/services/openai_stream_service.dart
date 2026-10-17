@@ -470,6 +470,39 @@ class OpenAIStreamService extends ChangeNotifier {
     return '';
   }
 
+  /// 处理流式响应或流操作错误的通用逻辑
+  static void handleStreamError({
+    required StreamController<String> controller,
+    required dynamic error,
+    String? context,
+  }) {
+    if (context != null) {
+      logError('[OpenAIStreamService] $context错误', error: error);
+      if (error.toString().contains('type') &&
+          error.toString().contains('subtype')) {
+        logDebug('检测到类型转换错误，可能是stream参数类型问题');
+        logDebug('错误详情: ${error.runtimeType} - $error');
+
+        if (error.toString().contains('bool') &&
+            error.toString().contains('String')) {
+          logDebug('这是一个布尔值到字符串的类型转换错误');
+          logDebug('可能的原因：');
+          logDebug('1. API响应中的content字段是boolean而不是string');
+          logDebug('2. 某个地方期望字符串但收到了boolean值');
+          logDebug('3. JSON解析过程中的类型不匹配');
+        }
+      }
+
+      if (error is Exception) {
+        logDebug('异常类型: ${error.runtimeType}');
+      }
+    }
+    if (!controller.isClosed) {
+      controller.addError(error);
+      controller.close();
+    }
+  }
+
   // ========= 私有方法 =========
 
   /// 创建底层的 `Stream<ChatStreamEvent>`
