@@ -237,6 +237,33 @@ void main() {
     });
   });
 
+  test(
+      'WebDAV media parser should tolerate whitespace in getcontentlength and trim etags',
+      () {
+    const xml = '''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/photo.jpg</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getcontentlength>
+          45678
+        </d:getcontentlength>
+        <d:getetag>  "etag-with-spaces"  </d:getetag>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''';
+
+    final files = WebDAVSyncService.extractRemoteMediaFilesForTesting(xml);
+    expect(files, {'images/photo.jpg': 45678});
+
+    final etags = WebDAVSyncService.extractRemoteMediaEtagsForTesting(xml);
+    expect(etags, {'images/photo.jpg': '"etag-with-spaces"'});
+  });
+
   test('WebDAV media parser should reject traversal paths', () {
     const xml = '''
 <?xml version="1.0" encoding="utf-8"?>

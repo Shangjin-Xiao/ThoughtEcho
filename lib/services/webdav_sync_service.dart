@@ -121,6 +121,64 @@ class WebDAVSyncService extends ChangeNotifier {
     caseSensitive: false,
   );
 
+  static final RegExp _responseRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _hrefRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _collectionRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?collection\s*/?>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _statusRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?status>\s*HTTP/\d(?:\.\d)?\s+(\d{3})[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?status>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _lengthRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>\s*(\d+)\s*<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _etagRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?getetag>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getetag>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _lastModifiedRegExp = RegExp(
+    r'<(?:[a-zA-Z0-9_.-]+:)?getlastmodified>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getlastmodified>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _errorStatusCodeRegExp = RegExp(
+    r'status[Cc]ode[:\s]+(\d+)|status code[:\s]+(\d+)|HTTP\s+(\d+)',
+    caseSensitive: false,
+  );
+
+  static final RegExp _serverUrlPattern = RegExp(
+    r'https?://[^\s]+',
+  );
+
+  static final RegExp _colonOrDotPattern = RegExp(r'[:.]');
+
+  static final RegExp _syncZipSuffixPattern = RegExp(
+    r'thoughtecho_sync\.zip$',
+  );
+
+  static final Map<String, RegExp> _commonXmlTagRegExps = {
+    'getlastmodified': _lastModifiedRegExp,
+    'getetag': _etagRegExp,
+    'getcontentlength': _lengthRegExp,
+  };
+
+  static final Map<String, RegExp> _dynamicTagRegExpCache = {};
+
   /// 初始化设置，从 MMKV 中读取缓存配置
   void _initSettings() {
     _enabled = _mmkv.getBool('webdav_enabled') ?? false;
@@ -591,10 +649,7 @@ class WebDAVSyncService extends ChangeNotifier {
 
     final raw = e.toString();
     // HTTP 状态码识别
-    final statusMatch = RegExp(
-            r'status[Cc]ode[:\s]+(\d+)|status code[:\s]+(\d+)|HTTP\s+(\d+)',
-            caseSensitive: false)
-        .firstMatch(raw);
+    final statusMatch = _errorStatusCodeRegExp.firstMatch(raw);
     if (statusMatch != null) {
       final matchedStr =
           statusMatch.group(1) ?? statusMatch.group(2) ?? statusMatch.group(3);
@@ -624,7 +679,7 @@ class WebDAVSyncService extends ChangeNotifier {
       return '网络请求失败，请稍后重试';
     }
     // 脱敏替换，包含包含用户名密码的 URL
-    final safe = raw.replaceAll(RegExp(r'https?://[^\s]+'), '[服务器地址]');
+    final safe = raw.replaceAll(_serverUrlPattern, '[服务器地址]');
     return safe.length > 80 ? '${safe.substring(0, 80)}…' : safe;
   }
 
@@ -695,29 +750,16 @@ class WebDAVSyncService extends ChangeNotifier {
     final targetPath = _normalizedUriPath(fileUrl);
     if (targetPath == null || targetPath.endsWith('/')) return null;
 
-    final responseRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
-      caseSensitive: false,
-    );
-    final hrefRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
-      caseSensitive: false,
-    );
-    final collectionRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?collection\s*/?>',
-      caseSensitive: false,
-    );
-
-    final responses = responseRegExp.allMatches(xmlData).toList();
+    final responses = _responseRegExp.allMatches(xmlData).toList();
     final responseBlocks = responses.isEmpty
         ? <String>[xmlData]
         : responses.map((m) => m[0]!).toList();
 
     for (final block in responseBlocks) {
-      if (collectionRegExp.hasMatch(block)) continue;
+      if (_collectionRegExp.hasMatch(block)) continue;
       if (!_propfindResponseHasSuccessStatus(block)) continue;
 
-      final hrefMatch = hrefRegExp.firstMatch(block);
+      final hrefMatch = _hrefRegExp.firstMatch(block);
       if (hrefMatch == null) continue;
 
       final hrefPath = _normalizedUriPath(hrefMatch.group(1) ?? '');
@@ -728,11 +770,7 @@ class WebDAVSyncService extends ChangeNotifier {
   }
 
   static bool _propfindResponseHasSuccessStatus(String responseBlock) {
-    final statusRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?status>\s*HTTP/\d(?:\.\d)?\s+(\d{3})[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?status>',
-      caseSensitive: false,
-    );
-    final statusCodes = statusRegExp
+    final statusCodes = _statusRegExp
         .allMatches(responseBlock)
         .map((match) => int.tryParse(match.group(1) ?? ''))
         .whereType<int>()
@@ -850,9 +888,9 @@ class WebDAVSyncService extends ChangeNotifier {
     final stamp = DateTime.now()
         .toUtc()
         .toIso8601String()
-        .replaceAll(RegExp(r'[:.]'), '-');
+        .replaceAll(_colonOrDotPattern, '-');
     final destination = fileUrl.replaceFirst(
-      RegExp(r'thoughtecho_sync\.zip$'),
+      _syncZipSuffixPattern,
       'thoughtecho_sync.corrupted-$stamp.zip',
     );
     try {
@@ -962,11 +1000,15 @@ class WebDAVSyncService extends ChangeNotifier {
   }
 
   String? _extractFirstXmlTagValue(String xmlData, String localName) {
-    final regExp = RegExp(
-      '<(?:[a-zA-Z0-9_.-]+:)?$localName>([\\s\\S]*?)'
-      '</(?:[a-zA-Z0-9_.-]+:)?$localName>',
-      caseSensitive: false,
-    );
+    final regExp = _commonXmlTagRegExps[localName] ??
+        _dynamicTagRegExpCache.putIfAbsent(
+          localName,
+          () => RegExp(
+            '<(?:[a-zA-Z0-9_.-]+:)?$localName>([\\s\\S]*?)'
+            '</(?:[a-zA-Z0-9_.-]+:)?$localName>',
+            caseSensitive: false,
+          ),
+        );
     return regExp.firstMatch(xmlData)?.group(1)?.trim();
   }
 
@@ -1422,42 +1464,26 @@ class WebDAVSyncService extends ChangeNotifier {
     String xmlData,
   ) {
     final files = <String, _RemoteMediaFileInfo>{};
-    final responseRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
-      caseSensitive: false,
-    );
-    final hrefRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
-      caseSensitive: false,
-    );
-    final lengthRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>(\d+)<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
-      caseSensitive: false,
-    );
-    final etagRegExp = RegExp(
-      r'<(?:[a-zA-Z0-9_.-]+:)?getetag>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getetag>',
-      caseSensitive: false,
-    );
 
-    final responses = responseRegExp.allMatches(xmlData).toList();
+    final responses = _responseRegExp.allMatches(xmlData).toList();
     final responseBlocks = responses.isEmpty
         ? <String>[xmlData]
         : responses.map((m) => m[0]!).toList();
 
     for (final block in responseBlocks) {
-      final hrefMatch = hrefRegExp.firstMatch(block);
+      final hrefMatch = _hrefRegExp.firstMatch(block);
       if (hrefMatch == null) continue;
 
       final relPath = _mediaRelativePathFromHref(hrefMatch.group(1) ?? '');
       if (relPath == null) continue;
 
-      final lengthMatch = lengthRegExp.firstMatch(block);
-      final etagMatch = etagRegExp.firstMatch(block);
+      final lengthMatch = _lengthRegExp.firstMatch(block);
+      final etagMatch = _etagRegExp.firstMatch(block);
 
       files[relPath] = _RemoteMediaFileInfo(
         length:
             lengthMatch == null ? null : int.tryParse(lengthMatch.group(1)!),
-        etag: etagMatch?.group(1),
+        etag: etagMatch?.group(1)?.trim(),
       );
     }
 
@@ -1674,6 +1700,13 @@ class WebDAVSyncService extends ChangeNotifier {
   @visibleForTesting
   static Map<String, int?> extractRemoteMediaFilesForTesting(String xmlData) {
     return _extractRemoteMediaFiles(xmlData);
+  }
+
+  @visibleForTesting
+  static Map<String, String?> extractRemoteMediaEtagsForTesting(
+      String xmlData) {
+    final details = _extractRemoteMediaDetails(xmlData);
+    return details.map((key, value) => MapEntry(key, value.etag));
   }
 
   @visibleForTesting
