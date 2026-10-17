@@ -237,7 +237,7 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
         backgroundColor: theme.colorScheme.surfaceContainerLow,
       ),
       children: [
-        OsmMapLayers.tiles(),
+        OsmMapLayers.tiles(context),
         if (hasPoints)
           MarkerClusterLayerWidget(
             options: MarkerClusterLayerOptions(
@@ -252,7 +252,7 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
                   _buildClusterBadge(theme, markers.length),
             ),
           ),
-        OsmMapLayers.attribution(),
+        OsmMapLayers.attribution(context),
       ],
     );
   }

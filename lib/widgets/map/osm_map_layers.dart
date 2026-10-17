@@ -34,12 +34,19 @@ abstract final class OsmMapLayers {
   /// 瓦片层。作为 [FlutterMap] 的第一个 child。
   /// 配置持久化磁盘瓦片缓存，并启用扩大预缓冲 (panBuffer: 2) 与全球镜像兜底 (fallbackUrl)，
   /// 在主源错误阻断时自动降级，平移时提前加载周边瓦片以减少灰块。
-  static TileLayer tiles() => TileLayer(
+  /// 根据当前主题 brightness 动态配置 tileBuilder（暗色模式下应用 [darkModeTileBuilder] 滤镜）。
+  ///
+  /// 暗色滤镜是在 Widget 渲染层（[darkModeTileBuilder]）通过色彩矩阵动态应用的，
+  /// 底层 [BuiltInMapCachingProvider] 依然缓存原始瓦片，因此在深浅色切换时不会引发瓦片重新下载或重复磁盘缓存。
+  static TileLayer tiles(BuildContext context) => TileLayer(
         urlTemplate: _tileUrlTemplate,
         fallbackUrl: _fallbackTileUrlTemplate,
         userAgentPackageName: _packageName,
         maxNativeZoom: _maxNativeZoom,
         panBuffer: 2,
+        tileBuilder: Theme.of(context).brightness == Brightness.dark
+            ? darkModeTileBuilder
+            : null,
         tileProvider: NetworkTileProvider(
           cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(),
         ),
@@ -47,10 +54,17 @@ abstract final class OsmMapLayers {
 
   /// 版权标注层。放在 [FlutterMap] 的最后一个 child，压在瓦片之上。
   /// 明确标明数据来源自 OpenStreetMap contributors 及兜底源 OSM France。
-  static Widget attribution() => SimpleAttributionWidget(
-        source: const Text('OpenStreetMap contributors / OSM France'),
-        onTap: _openCopyrightPage,
-      );
+  static Widget attribution(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SimpleAttributionWidget(
+      source: Text(
+        'OpenStreetMap contributors / OSM France',
+        style: TextStyle(color: colorScheme.onSurface),
+      ),
+      backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
+      onTap: _openCopyrightPage,
+    );
+  }
 
   static Future<void> _openCopyrightPage() async {
     try {
