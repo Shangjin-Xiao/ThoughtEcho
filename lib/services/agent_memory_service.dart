@@ -1041,15 +1041,15 @@ class AgentMemoryService extends ChangeNotifier {
     final keywords = extractKeywords(query);
     final now = DateTime.now();
 
-    // 候选窗口取整个 [factsCapacity]：候选截断发生在 SQL 层，而排序在 Dart 层，
-    // 两者一旦不一致，就会按 SQLite 未定义的返回顺序丢掉本该排前面的记忆。
-    // 事实层本来就有 400 条硬上限，全捞出来再打分是可负担的。
+    // 动态候选窗口预筛，避免全表无限制加载至 Dart 堆内存（默认 limit=8 时取 30 条候选）
+    final candidateLimit = math.max(limit * 3, 30);
+
     List<Map<String, Object?>> rows;
     if (keywords.isEmpty) {
       rows = await db.query(
         factsTable,
         orderBy: 'importance DESC, created_at DESC',
-        limit: factsCapacity,
+        limit: candidateLimit,
       );
     } else {
       // 参数绑定，关键词只作为 LIKE 的值出现，不参与 SQL 拼接。
@@ -1065,7 +1065,8 @@ class AgentMemoryService extends ChangeNotifier {
         factsTable,
         where: clauses.join(' OR '),
         whereArgs: args,
-        limit: factsCapacity,
+        orderBy: 'importance DESC, created_at DESC',
+        limit: candidateLimit,
       );
     }
 
@@ -1082,7 +1083,7 @@ class AgentMemoryService extends ChangeNotifier {
       ..sort((left, right) => right.score.compareTo(left.score));
 
     final selected = hits.take(limit).toList(growable: false);
-    await _markRecalled(selected.map((hit) => hit.fact.id));
+    _enqueueRecall(selected.map((hit) => hit.fact.id));
     return selected;
   }
 
@@ -1095,18 +1096,21 @@ class AgentMemoryService extends ChangeNotifier {
     required List<String> keywords,
     required DateTime now,
   }) {
-    final haystack = <String>[
-      fact.content,
-      fact.category ?? '',
-      ...fact.triggerPhrases,
-    ].join('\n').toLowerCase();
-
     double relevance;
     if (keywords.isEmpty) {
       relevance = 0.5;
     } else {
-      final matched =
-          keywords.where((keyword) => haystack.contains(keyword)).length;
+      final contentLower = fact.content.toLowerCase();
+      final categoryLower = fact.category?.toLowerCase();
+      var matched = 0;
+      for (final keyword in keywords) {
+        if (contentLower.contains(keyword) ||
+            (categoryLower != null && categoryLower.contains(keyword)) ||
+            fact.triggerPhrases
+                .any((phrase) => phrase.toLowerCase().contains(keyword))) {
+          matched++;
+        }
+      }
       if (matched == 0) {
         return 0;
       }
@@ -1417,18 +1421,53 @@ class AgentMemoryService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _markRecalled(Iterable<String> ids) async {
-    final idList = ids.toList(growable: false);
-    if (idList.isEmpty) {
-      return;
+  final List<String> _pendingRecallIds = <String>[];
+  bool _isFlushingRecallQueue = false;
+
+  void _enqueueRecall(Iterable<String> ids) {
+    if (ids.isEmpty) return;
+    _pendingRecallIds.addAll(ids);
+    unawaited(_flushRecallQueue());
+  }
+
+  Future<void> _flushRecallQueue() async {
+    if (_isFlushingRecallQueue || _pendingRecallIds.isEmpty) return;
+    _isFlushingRecallQueue = true;
+    try {
+      while (_pendingRecallIds.isNotEmpty) {
+        if (_disposed) break;
+        final batch = _pendingRecallIds.toList();
+        _pendingRecallIds.clear();
+
+        final db = await _db;
+        if (!db.isOpen || _disposed) break;
+
+        final counts = <String, int>{};
+        for (final id in batch) {
+          counts[id] = (counts[id] ?? 0) + 1;
+        }
+        final nowStr = DateTime.now().toIso8601String();
+
+        await db.transaction((txn) async {
+          for (final entry in counts.entries) {
+            await txn.rawUpdate(
+              'UPDATE $factsTable SET recall_count = recall_count + ?, '
+              'last_recalled_at = ? WHERE id = ?',
+              <Object?>[entry.value, nowStr, entry.key],
+            );
+          }
+        });
+      }
+    } catch (error, stackTrace) {
+      logError(
+        '后台异步更新记忆召回状态失败',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AgentMemoryService',
+      );
+    } finally {
+      _isFlushingRecallQueue = false;
     }
-    final db = await _db;
-    final placeholders = List<String>.filled(idList.length, '?').join(', ');
-    await db.rawUpdate(
-      'UPDATE $factsTable SET recall_count = recall_count + 1, '
-      'last_recalled_at = ? WHERE id IN ($placeholders)',
-      <Object?>[DateTime.now().toIso8601String(), ...idList],
-    );
   }
 
   Future<void> _evictOverflowFacts() async {
@@ -1436,11 +1475,18 @@ class AgentMemoryService extends ChangeNotifier {
     final countRows =
         await db.rawQuery('SELECT COUNT(*) AS c FROM $factsTable');
     final total = (countRows.first['c'] as num?)?.toInt() ?? 0;
-    if (total <= factsCapacity) {
+    final overflowCount = total - factsCapacity;
+    if (overflowCount <= 0) {
       return;
     }
 
-    final rows = await db.query(factsTable);
+    // 仅提取潜在低分淘汰候选，避免全表无 LIMIT 加载
+    final candidateLimit = overflowCount + 20;
+    final rows = await db.query(
+      factsTable,
+      orderBy: 'importance ASC, created_at ASC',
+      limit: candidateLimit,
+    );
     final now = DateTime.now();
     final scored = rows
         .map(AgentMemoryFact.fromMap)
@@ -1454,7 +1500,7 @@ class AgentMemoryService extends ChangeNotifier {
       ..sort((left, right) => left.score.compareTo(right.score));
 
     final victims = scored
-        .take(total - factsCapacity)
+        .take(overflowCount)
         .map((hit) => hit.fact.id)
         .toList(growable: false);
     if (victims.isEmpty) {

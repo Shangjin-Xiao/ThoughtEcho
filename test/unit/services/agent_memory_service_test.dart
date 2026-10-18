@@ -925,5 +925,45 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('searchFacts 在 SQL 检索层限制候选窗口，不拉取全表所有记录', () async {
+      await memory.clearAll();
+      for (var i = 1; i <= 60; i++) {
+        await memory.addFact(
+          content: '知识条目编号 $i - 记忆详情',
+          importance: i % 10 + 1,
+        );
+      }
+
+      final hits = await memory.searchFacts('知识条目', limit: 8);
+      expect(hits.length, equals(8));
+
+      final emptyHits = await memory.searchFacts('', limit: 8);
+      expect(emptyHits.length, equals(8));
+
+      await memory.clearAll();
+    });
+
+    test('_evictOverflowFacts 超容量时通过 SQL ORDER BY ... LIMIT 正确淘汰最低分条目', () async {
+      await memory.clearAll();
+      await memory.addFact(
+        content: '最差要被淘汰的无用记录',
+        importance: 1,
+      );
+      for (var i = 2; i <= 401; i++) {
+        await memory.addFact(
+          content: '重要偏好事实 $i',
+          importance: 8,
+        );
+      }
+
+      final count = await memory.counts();
+      expect(count.factCount, equals(400));
+
+      final hits = await memory.searchFacts('最差要被淘汰的无用记录');
+      expect(hits, isEmpty);
+
+      await memory.clearAll();
+    });
   });
 }
