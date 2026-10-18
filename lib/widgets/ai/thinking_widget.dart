@@ -248,7 +248,7 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
               parent: _expandController,
               curve: Curves.easeInOutCubic,
             ),
-            alignment: Alignment.topCenter,
+            axisAlignment: -1.0,
             child: AnimatedBuilder(
               animation: _expandController,
               builder: (context, child) {
