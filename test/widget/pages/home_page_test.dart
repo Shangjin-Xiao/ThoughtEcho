@@ -389,6 +389,23 @@ void main() {
       expect(find.byType(SettingsPage), findsOneWidget);
     });
 
+    testWidgets('should wrap each IndexedStack child with a RepaintBoundary',
+        (WidgetTester tester) async {
+      await pumpHomePage(tester);
+
+      final indexedStackFinder = find.byType(IndexedStack);
+      expect(indexedStackFinder, findsOneWidget);
+
+      final indexedStack = tester.widget<IndexedStack>(indexedStackFinder);
+      expect(indexedStack.children.length, equals(4));
+
+      for (int i = 0; i < indexedStack.children.length; i++) {
+        final child = indexedStack.children[i];
+        expect(child, isA<RepaintBoundary>(),
+            reason: 'IndexedStack child at index $i must be a RepaintBoundary');
+      }
+    });
+
     testWidgets('short location chip keeps its natural visual width',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 200);
