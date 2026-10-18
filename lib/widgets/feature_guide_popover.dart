@@ -36,8 +36,9 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  Timer? _visibilityTimer;
+  Timer? _autoDismissTimer;
   bool _isDismissing = false;
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -54,10 +55,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
     _controller.forward();
 
-    _startVisibilityWatchdog();
+    _scheduleVisibilityCheck();
 
     // 自动消失
-    Future.delayed(widget.autoDismissDuration, () {
+    _autoDismissTimer = Timer(widget.autoDismissDuration, () {
       if (mounted) {
         _handleDismiss();
       }
@@ -66,48 +67,73 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
   @override
   void dispose() {
-    _visibilityTimer?.cancel();
+    _isDisposed = true;
+    _autoDismissTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  void _startVisibilityWatchdog() {
+  void _scheduleVisibilityCheck() {
+    if (!mounted || _isDisposed || _isDismissing) {
+      return;
+    }
+
     if (widget.visibilityPredicate == null && widget.guide.targetKey == null) {
       return;
     }
 
-    _visibilityTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      if (!mounted) {
-        _visibilityTimer?.cancel();
-        return;
-      }
-
-      if (widget.visibilityPredicate != null &&
-          !widget.visibilityPredicate!()) {
-        _handleDismiss();
-        return;
-      }
-
-      if (widget.guide.targetKey != null) {
-        final targetContext = widget.guide.targetKey.currentContext;
-        final renderBox = targetContext?.findRenderObject() as RenderBox?;
-        final visible =
-            renderBox != null && renderBox.attached && renderBox.hasSize;
-        if (!visible) {
-          _handleDismiss();
-        }
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkVisibilityAndScheduleNext();
     });
   }
 
+  RenderBox? _findTargetRenderBox(BuildContext? targetContext) {
+    if (targetContext == null || !targetContext.mounted) {
+      return null;
+    }
+    try {
+      final renderObject = targetContext.findRenderObject();
+      if (renderObject is RenderBox) {
+        return renderObject;
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  void _checkVisibilityAndScheduleNext() {
+    if (!mounted || _isDisposed || _isDismissing) {
+      return;
+    }
+
+    if (widget.visibilityPredicate != null && !widget.visibilityPredicate!()) {
+      _handleDismiss();
+      return;
+    }
+
+    if (widget.guide.targetKey != null) {
+      final renderBox =
+          _findTargetRenderBox(widget.guide.targetKey!.currentContext);
+      final visible =
+          renderBox != null && renderBox.attached && renderBox.hasSize;
+      if (!visible) {
+        _handleDismiss();
+        return;
+      }
+    }
+
+    _scheduleVisibilityCheck();
+  }
+
   Future<void> _handleDismiss() async {
-    if (_isDismissing) {
+    if (_isDismissing || _isDisposed) {
       return;
     }
     _isDismissing = true;
-    _visibilityTimer?.cancel();
+    _autoDismissTimer?.cancel();
     await _controller.reverse();
-    if (mounted) {
+    if (mounted && !_isDisposed) {
       widget.onDismiss();
     }
   }
@@ -122,9 +148,8 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     }
 
     // 获取目标元素的位置
-    final RenderBox? renderBox =
-        guide.targetKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) {
+    final renderBox = _findTargetRenderBox(guide.targetKey!.currentContext);
+    if (renderBox == null || !renderBox.attached || !renderBox.hasSize) {
       return _buildCenteredPopover(context);
     }
 
