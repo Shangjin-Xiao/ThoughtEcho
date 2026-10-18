@@ -306,3 +306,11 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 ## 2026-10-16 - [WebDAV Sync Service RegExp Optimization]
 **Learning:** In Dart, compiling `RegExp` objects inside frequently executed methods or loops causes unnecessary CPU overhead and memory allocations, particularly in services that process large strings or XMLs like `WebDAVSyncService`.
 **Action:** Always pre-compile `RegExp` objects into `static final` class members rather than leaving them inline, especially inside loops or methods expected to be called frequently like error parsing or propfind data extraction.
+
+## 2024-10-24 - 优化 benchmark_persona_student.py 中 ResilientGeminiClient 的控速与请求为异步 asyncio
+
+**Learning:**
+在 Python 评测脚本或工具中，使用同步阻塞调用 `time.sleep()` 会导致当前的执行线程被彻底暂停，无法在控速等待期内并发调度其他任务。将控速 `_pace()` 及 API 调用改写为 Python `asyncio` (`async def` 与 `await asyncio.sleep()`)，可以消除阻塞式 I/O 挂起，使得多任务/多模型请求场景下的协程调度与控速更加高效。
+
+**Action:**
+修改 `scripts/benchmark_persona_student.py`，将 `ResilientGeminiClient` 的 `_pace()`、`complete()` 及 `run_benchmark()` 转换为 `async` 方法，内部将 `time.sleep()` 替换为 `await asyncio.sleep()`，并在程序入口使用 `asyncio.run(run_benchmark())` 驱动主协程。
