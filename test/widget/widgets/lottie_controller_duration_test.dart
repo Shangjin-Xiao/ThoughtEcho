@@ -8,7 +8,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('EnhancedLottieAnimation Duration & Lifecycle Tests', () {
-    testWidgets('Sets controller duration from composition when widget.duration is null',
+    testWidgets(
+        'Sets controller duration from composition when widget.duration is null',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -56,7 +57,8 @@ void main() {
       expect(controller!.duration, equals(customDuration));
     });
 
-    testWidgets('Triggers onComplete callback when non-repeating animation completes',
+    testWidgets(
+        'Triggers onComplete callback when non-repeating animation completes',
         (WidgetTester tester) async {
       bool completed = false;
 
@@ -121,7 +123,8 @@ void main() {
       expect(controller.duration! > Duration.zero, isTrue);
     });
 
-    testWidgets('Scales duration based on speed parameter (2.0x speed -> 0.5x duration)',
+    testWidgets(
+        'Scales duration based on speed parameter (2.0x speed -> 0.5x duration)',
         (WidgetTester tester) async {
       Duration? normalDuration;
       Duration? fastDuration;
@@ -139,7 +142,9 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      normalDuration = (tester.widget<Lottie>(find.byType(Lottie)).controller as AnimationController?)?.duration;
+      normalDuration = (tester.widget<Lottie>(find.byType(Lottie)).controller
+              as AnimationController?)
+          ?.duration;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -154,7 +159,9 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      fastDuration = (tester.widget<Lottie>(find.byType(Lottie)).controller as AnimationController?)?.duration;
+      fastDuration = (tester.widget<Lottie>(find.byType(Lottie)).controller
+              as AnimationController?)
+          ?.duration;
 
       expect(normalDuration, isNotNull);
       expect(fastDuration, isNotNull);
@@ -182,7 +189,9 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      normalDuration = (tester.widget<Lottie>(find.byType(Lottie)).controller as AnimationController?)?.duration;
+      normalDuration = (tester.widget<Lottie>(find.byType(Lottie)).controller
+              as AnimationController?)
+          ?.duration;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -197,12 +206,15 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      zeroSpeedDuration = (tester.widget<Lottie>(find.byType(Lottie)).controller as AnimationController?)?.duration;
+      zeroSpeedDuration = (tester.widget<Lottie>(find.byType(Lottie)).controller
+              as AnimationController?)
+          ?.duration;
 
       expect(zeroSpeedDuration, equals(normalDuration));
     });
 
-    testWidgets('Triggers onCompleted callback when non-repeating animation finishes',
+    testWidgets(
+        'Triggers onCompleted callback when non-repeating animation finishes',
         (WidgetTester tester) async {
       bool completed = false;
 
@@ -233,7 +245,8 @@ void main() {
       expect(completed, isTrue);
     });
 
-    testWidgets('Preserves external controller and safely populates duration if null',
+    testWidgets(
+        'Preserves external controller and safely populates duration if null',
         (WidgetTester tester) async {
       final externalController = AnimationController(vsync: const TestVSync());
 
