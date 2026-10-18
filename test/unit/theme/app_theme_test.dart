@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart' show Colors, ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
@@ -239,5 +239,41 @@ void main() {
     } finally {
       AptabaseHelper.onTrackEventForTesting = null;
     }
+  });
+
+  test('存储数据损坏时 _loadThemeMode 捕获异常并回退到 ThemeMode.system', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+    await storage.setString('theme_mode', 'invalid_corrupted_theme_mode');
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    expect(appTheme.themeMode, ThemeMode.system);
+  });
+
+  test('存储数据损坏时 _loadCustomColor 捕获异常并降级回默认值', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+    // 通过 storage.setString 写入字符串类型值，使 getInt('custom_color') 抛出 TypeError
+    await storage.setString('custom_color', 'invalid_string_instead_of_int');
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    expect(appTheme.customColor, Colors.blue);
+    expect(appTheme.useCustomColor, isFalse);
+  });
+
+  test('存储数据类型错误时 _loadThemeStyle 捕获异常并降级为 ThemeStyle.defaultStyle', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+    // 写入 int 类型到 theme_style 键，引起 getString('theme_style') 抛出 TypeError
+    await storage.setInt('theme_style', 12345);
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    expect(appTheme.themeStyle, ThemeStyle.defaultStyle);
   });
 }
