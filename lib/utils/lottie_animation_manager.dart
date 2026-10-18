@@ -158,30 +158,30 @@ class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
     with TickerProviderStateMixin {
   late AnimationController _controller;
   bool _hasError = false;
+  LottieComposition? _composition;
 
   @override
   void initState() {
     super.initState();
-    final config = LottieAnimationManager.getAnimationConfig(widget.type);
 
     _controller = AnimationController(
-      duration: widget.duration ?? const Duration(seconds: 2),
+      duration: widget.duration,
       vsync: this,
     );
-
-    if (widget.autoPlay ?? config.autoPlay) {
-      _controller.forward();
-    }
-
-    if (widget.repeat ?? config.repeat) {
-      _controller.repeat(reverse: widget.reverse ?? config.reverse);
-    }
 
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && widget.onComplete != null) {
         widget.onComplete!();
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(EnhancedLottieAnimation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.duration != oldWidget.duration && _composition != null) {
+      _controller.duration = widget.duration ?? _composition!.duration;
+    }
   }
 
   @override
@@ -215,6 +215,23 @@ class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
           fit: BoxFit.contain,
           repeat: widget.repeat ?? config.repeat,
           reverse: widget.reverse ?? config.reverse,
+          onLoaded: (composition) {
+            if (!mounted) return;
+            _composition = composition;
+            _controller.duration = widget.duration ?? composition.duration;
+
+            final autoPlay = widget.autoPlay ?? config.autoPlay;
+            final repeat = widget.repeat ?? config.repeat;
+            final reverse = widget.reverse ?? config.reverse;
+
+            if (autoPlay) {
+              if (repeat) {
+                _controller.repeat(reverse: reverse);
+              } else {
+                _controller.forward(from: 0.0);
+              }
+            }
+          },
           errorBuilder: (context, error, stackTrace) {
             debugPrint('Lottie动画加载失败: ${widget.type}, 错误: $error');
             setState(() {
