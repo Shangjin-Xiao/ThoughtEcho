@@ -556,11 +556,39 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     });
   }
 
-  /// 根据内容搜索笔记（用于媒体引用校验等内部逻辑）
+  /// 默认查询列投影：排除 ai_analysis 与 summary 等大文本字段，提升列表加载和搜索效率
+  static const List<String> _defaultSearchColumns = [
+    'id',
+    'content',
+    'date',
+    'source',
+    'source_author',
+    'source_work',
+    'category_id',
+    'color_hex',
+    'location',
+    'latitude',
+    'longitude',
+    'poi_name',
+    'weather',
+    'temperature',
+    'edit_source',
+    'delta_content',
+    'day_period',
+    'last_modified',
+    'favorite_count',
+    'is_deleted',
+    'deleted_at',
+  ];
+
+  /// 根据内容搜索笔记（支持列投影与 limit/offset 分页控制）
   @override
   Future<List<Quote>> searchQuotesByContent(
     String query, {
     bool includeDeleted = false,
+    List<String>? columns,
+    int? limit,
+    int? offset,
   }) async {
     if (kIsWeb) {
       var result = _memoryStore
@@ -573,6 +601,18 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       if (!includeDeleted) {
         result = result.where((q) => !q.isDeleted).toList();
       }
+      if (offset != null && offset > 0) {
+        if (offset >= result.length) {
+          result = [];
+        } else {
+          result = result.sublist(offset);
+        }
+      }
+      if (limit != null && limit > 0 && result.isNotEmpty) {
+        if (limit < result.length) {
+          result = result.sublist(0, limit);
+        }
+      }
       return result;
     }
 
@@ -583,11 +623,72 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         : '(content LIKE ?) AND (is_deleted = 0 OR is_deleted IS NULL)';
     final List<Map<String, dynamic>> results = await db.query(
       'quotes',
+      columns: columns ?? _defaultSearchColumns,
       where: where,
       whereArgs: ['%$query%'],
+      limit: limit,
+      offset: offset,
     );
 
     return _parseQuoteRows(results);
+  }
+
+  /// 根据内容仅检索笔记 ID 列表（用于媒体引用校验等轻量级场景）
+  @override
+  Future<List<String>> searchQuoteIdsByContent(
+    String query, {
+    bool includeDeleted = false,
+    int? limit,
+    int? offset,
+  }) async {
+    if (kIsWeb) {
+      var result = _memoryStore
+          .where(
+            (q) =>
+                (q.content.contains(query)) ||
+                (q.deltaContent != null && q.deltaContent!.contains(query)),
+          )
+          .toList();
+      if (!includeDeleted) {
+        result = result.where((q) => !q.isDeleted).toList();
+      }
+      if (offset != null && offset > 0) {
+        if (offset >= result.length) {
+          result = [];
+        } else {
+          result = result.sublist(offset);
+        }
+      }
+      if (limit != null && limit > 0 && result.isNotEmpty) {
+        if (limit < result.length) {
+          result = result.sublist(0, limit);
+        }
+      }
+      return result
+          .map((q) => q.id)
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toList();
+    }
+
+    final db = await safeDatabase;
+    final where = includeDeleted
+        ? 'content LIKE ?'
+        : '(content LIKE ?) AND (is_deleted = 0 OR is_deleted IS NULL)';
+    final List<Map<String, dynamic>> results = await db.query(
+      'quotes',
+      columns: ['id'],
+      where: where,
+      whereArgs: ['%$query%'],
+      limit: limit,
+      offset: offset,
+    );
+
+    return results
+        .map((row) => row['id']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toList();
   }
 
   /// 修复：更新笔记内容，增加数据验证和并发控制

@@ -188,6 +188,107 @@ void main() {
       expect(includeDeletedIds.contains(deletedId), isTrue);
     });
 
+    test('searchQuotesByContent projection excludes aiAnalysis and summary by default', () async {
+      final id = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: id,
+          content: 'projection test quote',
+          date: now,
+          aiAnalysis: 'Heavy AI Analysis Text',
+          summary: 'Heavy Summary Text',
+        ),
+      );
+
+      final defaultResults = await service.searchQuotesByContent('projection test quote');
+      expect(defaultResults, hasLength(1));
+      expect(defaultResults.first.aiAnalysis, isNull);
+      expect(defaultResults.first.summary, isNull);
+
+      final fullResults = await service.searchQuotesByContent(
+        'projection test quote',
+        columns: ['id', 'content', 'date', 'ai_analysis', 'summary'],
+      );
+      expect(fullResults, hasLength(1));
+      expect(fullResults.first.aiAnalysis, equals('Heavy AI Analysis Text'));
+      expect(fullResults.first.summary, equals('Heavy Summary Text'));
+    });
+
+    test('searchQuotesByContent respects limit and offset', () async {
+      final now = DateTime.now().toUtc().toIso8601String();
+      for (int i = 0; i < 5; i++) {
+        await service.addQuote(
+          Quote(
+            id: 'page-quote-$i',
+            content: 'pagination-search-keyword index $i',
+            date: now,
+          ),
+        );
+      }
+
+      final page1 = await service.searchQuotesByContent(
+        'pagination-search-keyword',
+        limit: 2,
+        offset: 0,
+      );
+      expect(page1, hasLength(2));
+
+      final page2 = await service.searchQuotesByContent(
+        'pagination-search-keyword',
+        limit: 2,
+        offset: 2,
+      );
+      expect(page2, hasLength(2));
+      expect(page1.map((q) => q.id).toSet().intersection(page2.map((q) => q.id).toSet()), isEmpty);
+
+      final page3 = await service.searchQuotesByContent(
+        'pagination-search-keyword',
+        limit: 2,
+        offset: 4,
+      );
+      expect(page3, hasLength(1));
+    });
+
+    test('searchQuoteIdsByContent returns list of string IDs and respects includeDeleted and limit/offset', () async {
+      final activeId1 = const Uuid().v4();
+      final activeId2 = const Uuid().v4();
+      final deletedId = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(id: activeId1, content: 'id-search-keyword first', date: now),
+      );
+      await service.addQuote(
+        Quote(id: activeId2, content: 'id-search-keyword second', date: now),
+      );
+      await service.addQuote(
+        Quote(
+          id: deletedId,
+          content: 'id-search-keyword deleted',
+          date: now,
+          isDeleted: true,
+          deletedAt: now,
+        ),
+      );
+
+      final activeIds = await service.searchQuoteIdsByContent('id-search-keyword');
+      expect(activeIds, isA<List<String>>());
+      expect(activeIds, containsAll([activeId1, activeId2]));
+      expect(activeIds.contains(deletedId), isFalse);
+
+      final allIds = await service.searchQuoteIdsByContent('id-search-keyword', includeDeleted: true);
+      expect(allIds, containsAll([activeId1, activeId2, deletedId]));
+
+      final limitedIds = await service.searchQuoteIdsByContent(
+        'id-search-keyword',
+        includeDeleted: true,
+        limit: 1,
+      );
+      expect(limitedIds, hasLength(1));
+    });
+
     test('getUserQuotes includeDeleted keeps deleted metadata', () async {
       final deletedId = const Uuid().v4();
       final deletedAt = DateTime.now().toUtc().toIso8601String();
