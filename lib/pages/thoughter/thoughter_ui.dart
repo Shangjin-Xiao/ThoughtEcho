@@ -1366,8 +1366,7 @@ extension _ThoughterUI on _ThoughterPageState {
           prefilledWork: artifact.metadata['source']?.toString(),
           prefilledIncludeLocation:
               artifact.metadata['include_location'] == true,
-          prefilledIncludeWeather:
-              artifact.metadata['include_weather'] == true,
+          prefilledIncludeWeather: artifact.metadata['include_weather'] == true,
           useAIPrefilledLocationWeather: true,
           tags: tags,
           onSave: (quote) async {
