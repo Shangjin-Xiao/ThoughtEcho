@@ -1731,6 +1731,33 @@ class SettingsService extends ChangeNotifier {
         final multiAiSettingsJson = Map<String, dynamic>.from(
           backupData['multi_ai_settings'] as Map,
         );
+
+        // 强校验顶层 multi_ai_settings 中的 currentProviderId（以及 legacy currentProvider.id）
+        final rawCurrentProviderId = multiAiSettingsJson['currentProviderId'];
+        if (rawCurrentProviderId is! String ||
+            rawCurrentProviderId.trim().isEmpty) {
+          multiAiSettingsJson.remove('currentProviderId');
+        } else {
+          multiAiSettingsJson['currentProviderId'] =
+              rawCurrentProviderId.trim();
+        }
+
+        if (multiAiSettingsJson.containsKey('currentProvider')) {
+          final rawCurrentProvider = multiAiSettingsJson['currentProvider'];
+          if (rawCurrentProvider is Map) {
+            final legacyMap = Map<String, dynamic>.from(rawCurrentProvider);
+            final rawLegacyId = legacyMap['id'];
+            if (rawLegacyId is! String || rawLegacyId.trim().isEmpty) {
+              legacyMap.remove('id');
+            } else {
+              legacyMap['id'] = rawLegacyId.trim();
+            }
+            multiAiSettingsJson['currentProvider'] = legacyMap;
+          } else {
+            multiAiSettingsJson.remove('currentProvider');
+          }
+        }
+
         final rawProviders = multiAiSettingsJson['providers'] ??
             multiAiSettingsJson['availableProviders'];
         if (rawProviders is List) {
@@ -1739,20 +1766,49 @@ class SettingsService extends ChangeNotifier {
             if (item is Map) {
               final itemMap = Map<String, dynamic>.from(item);
               final id = itemMap['id'];
-              final rawKey = itemMap['apiKey'] ?? itemMap['api_key'];
-              if (id is String &&
-                  id.isNotEmpty &&
-                  rawKey is String &&
-                  rawKey.trim().isNotEmpty) {
-                await apiKeyManager.saveProviderApiKey(id, rawKey.trim());
-                restoredProviderIds.add(id);
+              if (id is! String || id.trim().isEmpty) {
+                continue;
               }
+              final normalizedId = id.trim();
+              itemMap['id'] = normalizedId;
+
+              // 解析 provider 的 apiKey：
+              // 若 itemMap["apiKey"] 存在但非 String，必须尝试回退到 itemMap["api_key"]；
+              // 如果两者均非 String，则不保存。
+              String? rawKey;
+              if (itemMap['apiKey'] is String &&
+                  (itemMap['apiKey'] as String).trim().isNotEmpty) {
+                rawKey = (itemMap['apiKey'] as String).trim();
+              } else if (itemMap['api_key'] is String &&
+                  (itemMap['api_key'] as String).trim().isNotEmpty) {
+                rawKey = (itemMap['api_key'] as String).trim();
+              }
+
+              if (rawKey != null) {
+                await apiKeyManager.saveProviderApiKey(
+                  normalizedId,
+                  rawKey,
+                );
+                restoredProviderIds.add(normalizedId);
+              }
+
+              // 传递给 MultiAISettings.fromJson 前，对每个 provider 的 apiKey 进行清洗，确保非 String 类型被移除或置为 null
+              if (itemMap.containsKey('apiKey') &&
+                  itemMap['apiKey'] is! String) {
+                itemMap.remove('apiKey');
+              }
+              if (itemMap.containsKey('api_key') &&
+                  itemMap['api_key'] is! String) {
+                itemMap.remove('api_key');
+              }
+
               normalizedProviders.add(itemMap);
             }
           }
           if (multiAiSettingsJson.containsKey('providers')) {
             multiAiSettingsJson['providers'] = normalizedProviders;
-          } else if (multiAiSettingsJson.containsKey('availableProviders')) {
+          }
+          if (multiAiSettingsJson.containsKey('availableProviders')) {
             multiAiSettingsJson['availableProviders'] = normalizedProviders;
           }
         }
@@ -1766,6 +1822,12 @@ class SettingsService extends ChangeNotifier {
         final aiSettingsJson = Map<String, dynamic>.from(
           backupData['ai_settings'] as Map,
         );
+        if (aiSettingsJson['apiKey'] is! String) {
+          aiSettingsJson.remove('apiKey');
+        }
+        if (aiSettingsJson['api_key'] is! String) {
+          aiSettingsJson.remove('api_key');
+        }
         final rawApiKey = aiSettingsJson['apiKey'] ?? aiSettingsJson['api_key'];
         if (rawApiKey is String && rawApiKey.trim().isNotEmpty) {
           const defaultProviderId = 'openai';
