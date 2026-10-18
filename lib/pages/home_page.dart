@@ -1006,7 +1006,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         onLongPressFavorite: settingsService.showFavoriteButton
                             ? _handleLongPressFavorite
                             : null, // 长按清除收藏
-                        isLoadingTags: _pageController.isLoadingTags, // 传递标签加载状态
+                        isLoadingTags:
+                            _pageController.isLoadingTags, // 传递标签加载状态
                         selectedWeathers: _pageController.selectedWeathers,
                         selectedDayPeriods: _pageController.selectedDayPeriods,
                         onFilterChanged: (weathers, dayPeriods) {
