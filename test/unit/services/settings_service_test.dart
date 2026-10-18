@@ -687,6 +687,7 @@ void main() {
 
       // Non-string device_id should be ignored
       await settingsService.restoreAllSettingsFromBackup({'device_id': true});
+      expect(MMKVService().getString('device_id_v1'), isNot('true'));
 
       // 3. Generic Map<dynamic, dynamic> payloads for nested settings
       final Map<dynamic, dynamic> genericPayload = {
@@ -699,6 +700,70 @@ void main() {
       );
       expect(settingsService.themeMode, equals(ThemeMode.light));
       expect(settingsService.dailyQuoteProvider, equals('zenquotes'));
+    });
+
+    test(
+        'restoreAllSettingsFromBackup should safely handle nested Map<dynamic, dynamic> providers and sanitize invalid provider ids and api keys',
+        () async {
+      addTearDown(() async {
+        await MMKVService().remove('multi_ai_settings');
+        await MMKVService().remove('ai_settings');
+        await MMKVService().remove('ai_auto_enable_pending_v1');
+        await APIKeyManager().removeProviderApiKey('valid_nested_provider');
+      });
+
+      final Map<dynamic, dynamic> backupPayload = {
+        'multi_ai_settings': <dynamic, dynamic>{
+          'currentProviderId': 'valid_nested_provider',
+          'providers': <dynamic>[
+            <dynamic, dynamic>{
+              'id': 'valid_nested_provider',
+              'name': 'Valid Provider',
+              'apiKey': 'sk-nested-valid-key',
+              'apiUrl': 'https://api.example.com/v1',
+              'model': 'gpt-4o',
+            },
+            <dynamic, dynamic>{
+              'id': 12345, // invalid non-string id
+              'name': 'Invalid Int Id Provider',
+              'apiKey': 'sk-invalid-id-key',
+            },
+            <dynamic, dynamic>{
+              'id': '', // invalid empty id
+              'name': 'Invalid Empty Id Provider',
+            },
+            <dynamic, dynamic>{
+              'id': '   ', // invalid whitespace id
+              'name': 'Invalid Whitespace Id Provider',
+            },
+          ],
+        },
+        'ai_settings': <dynamic, dynamic>{
+          'apiKey': 99999, // non-string apiKey should be stripped
+          'apiUrl': 'https://api.legacy.com/v1',
+          'model': 'legacy-model',
+        },
+      };
+
+      await settingsService.restoreAllSettingsFromBackup(
+        Map<String, dynamic>.from(backupPayload),
+      );
+
+      final restoredProviders = settingsService.multiAISettings.providers;
+      expect(
+        restoredProviders.any((p) => p.id == 'valid_nested_provider'),
+        isTrue,
+      );
+      expect(restoredProviders.any((p) => p.id == '12345'), isFalse);
+      expect(restoredProviders.any((p) => p.id.trim().isEmpty), isFalse);
+      expect(restoredProviders.length, equals(1));
+
+      final savedKey =
+          await APIKeyManager().getProviderApiKey('valid_nested_provider');
+      expect(savedKey, equals('sk-nested-valid-key'));
+
+      expect(settingsService.aiSettings.apiKey, isEmpty);
+      expect(settingsService.aiSettings.model, equals('legacy-model'));
     });
 
     test('新用户配置有效 AI 服务时应自动开启相关 AI 功能', () async {

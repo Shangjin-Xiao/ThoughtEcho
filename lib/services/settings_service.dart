@@ -1739,11 +1739,11 @@ class SettingsService extends ChangeNotifier {
             if (item is Map) {
               final itemMap = Map<String, dynamic>.from(item);
               final id = itemMap['id'];
+              if (id is! String || id.trim().isEmpty) {
+                continue;
+              }
               final rawKey = itemMap['apiKey'] ?? itemMap['api_key'];
-              if (id is String &&
-                  id.isNotEmpty &&
-                  rawKey is String &&
-                  rawKey.trim().isNotEmpty) {
+              if (rawKey is String && rawKey.trim().isNotEmpty) {
                 await apiKeyManager.saveProviderApiKey(id, rawKey.trim());
                 restoredProviderIds.add(id);
               }
@@ -1766,6 +1766,9 @@ class SettingsService extends ChangeNotifier {
         final aiSettingsJson = Map<String, dynamic>.from(
           backupData['ai_settings'] as Map,
         );
+        if (aiSettingsJson['apiKey'] is! String) {
+          aiSettingsJson.remove('apiKey');
+        }
         final rawApiKey = aiSettingsJson['apiKey'] ?? aiSettingsJson['api_key'];
         if (rawApiKey is String && rawApiKey.trim().isNotEmpty) {
           const defaultProviderId = 'openai';
