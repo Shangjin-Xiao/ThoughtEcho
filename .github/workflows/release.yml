@@ -26,6 +26,10 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 # 默认只读；只有归集产物、创建 Release 的 release 作业需要写权限
 permissions:
   contents: read
