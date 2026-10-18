@@ -10,6 +10,7 @@ import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
+import 'package:thoughtecho/pages/onboarding_page.dart';
 import 'package:thoughtecho/widgets/onboarding/appearance_page_view.dart';
 import 'package:thoughtecho/widgets/onboarding/onboarding_section.dart';
 import 'package:thoughtecho/widgets/onboarding/page_views.dart';
@@ -290,6 +291,74 @@ void main() {
 
       expect(find.text(l10n.settingsPrivacyPolicy), findsOneWidget);
       expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
+    });
+  });
+
+  group('OnboardingPage 淡入动画优化验证', () {
+    testWidgets('引导页初始化后通过 FadeTransition 进行淡入渲染', (tester) async {
+      final servicesInitializedNotifier = ValueNotifier<bool>(true);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => AppTheme()),
+            ChangeNotifierProvider<ValueNotifier<bool>>.value(
+                value: servicesInitializedNotifier),
+          ],
+          child: const MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: OnboardingPage(),
+          ),
+        ),
+      );
+
+      // 触发 microtask 初始化
+      await tester.pump();
+      // 推进 500ms 延迟
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.byType(OnboardingPage), findsOneWidget);
+      expect(find.byType(FadeTransition), findsWidgets);
+    });
+
+    testWidgets('更新完成模式下使用 FadeTransition 渲染淡入视图', (tester) async {
+      final servicesInitializedNotifier = ValueNotifier<bool>(true);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => AppTheme()),
+            ChangeNotifierProvider<ValueNotifier<bool>>.value(
+                value: servicesInitializedNotifier),
+          ],
+          child: const MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: OnboardingPage(
+              showUpdateReady: true,
+              showFullOnboarding: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.byType(FadeTransition), findsWidgets);
     });
   });
 }
