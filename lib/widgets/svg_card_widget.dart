@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/generated_card.dart';
+import '../theme/app_semantic_colors.dart';
 import '../utils/app_logger.dart';
 import 'app_snackbar.dart';
 import '../theme/theme_style.dart';
@@ -523,7 +524,7 @@ class _ActionButton extends StatelessWidget {
 class CardPreviewDialog extends StatefulWidget {
   final GeneratedCard card;
   final Future<void> Function(GeneratedCard card)? onShare;
-  final Future<void> Function(GeneratedCard card)? onSave;
+  final Future<dynamic> Function(GeneratedCard card)? onSave;
   final Future<GeneratedCard> Function()? onRegenerate;
   final Future<GeneratedCard> Function(GeneratedCard currentCard)?
       onRegenerateWithExclude;
@@ -548,6 +549,10 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
   late Animation<double> _opacityAnimation;
   late GeneratedCard _currentCard;
   bool _isRegenerating = false;
+  bool _isExporting = false;
+  String? _exportProgressMessage;
+  String? _feedbackMessage;
+  bool _isFeedbackError = false;
 
   @override
   void initState() {
@@ -569,15 +574,90 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
     _animationController.forward();
   }
 
+  Future<void> _handleShare() async {
+    if (widget.onShare == null || _isExporting || _isRegenerating) {
+      return;
+    }
+
+    setState(() {
+      _isExporting = true;
+      _exportProgressMessage =
+          AppLocalizations.of(context).generatingShareImage;
+      _feedbackMessage = null;
+    });
+
+    try {
+      await widget.onShare!(_currentCard);
+      if (!mounted) return;
+      setState(() {
+        _feedbackMessage = AppLocalizations.of(context).cardSharedSuccessfully;
+        _isFeedbackError = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      setState(() {
+        _feedbackMessage = l10n.shareFailed(e.toString());
+        _isFeedbackError = true;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleSave() async {
+    if (widget.onSave == null || _isExporting || _isRegenerating) {
+      return;
+    }
+
+    setState(() {
+      _isExporting = true;
+      _exportProgressMessage = AppLocalizations.of(context).savingCardToGallery;
+      _feedbackMessage = null;
+    });
+
+    try {
+      final result = await widget.onSave!(_currentCard);
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      final msg = (result is String && result.isNotEmpty)
+          ? l10n.cardSavedToGallery(result)
+          : l10n.cardSavedToGallery('');
+      setState(() {
+        _feedbackMessage = msg;
+        _isFeedbackError = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      setState(() {
+        _feedbackMessage = l10n.saveFailed(e.toString());
+        _isFeedbackError = true;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
+    }
+  }
+
   Future<void> _handleRegenerate() async {
     if ((widget.onRegenerate == null &&
             widget.onRegenerateWithExclude == null) ||
-        _isRegenerating) {
+        _isRegenerating ||
+        _isExporting) {
       return;
     }
 
     setState(() {
       _isRegenerating = true;
+      _feedbackMessage = null;
     });
 
     try {
@@ -658,54 +738,123 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                           ),
                           boxShadow: AppShapeTokens.of(context).accentShadow,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 标题
-                              Text(
-                                l10n.featuredCards,
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              SizedBox(height: 16),
-                              // 卡片
-                              GeneratedCardWidget(
-                                card: _currentCard,
-                                onShare: widget.onShare,
-                                onSave: widget.onSave,
-                                onRegenerate: widget.onRegenerate == null &&
-                                        widget.onRegenerateWithExclude == null
-                                    ? null
-                                    : () async => await _handleRegenerate(),
-                                actionsEnabled: !_isRegenerating,
-                                width: 300,
-                                height: 400,
-                              ),
-
-                              if (_isRegenerating) ...[
-                                SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      l10n.regeneratingCard,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ],
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 标题
+                                Text(
+                                  l10n.featuredCards,
+                                  style: Theme.of(context).textTheme.titleLarge,
                                 ),
+                                SizedBox(height: 16),
+                                // 卡片
+                                GeneratedCardWidget(
+                                  card: _currentCard,
+                                  onShare: widget.onShare == null
+                                      ? null
+                                      : (_) async => await _handleShare(),
+                                  onSave: widget.onSave == null
+                                      ? null
+                                      : (_) async => await _handleSave(),
+                                  onRegenerate: widget.onRegenerate == null &&
+                                          widget.onRegenerateWithExclude == null
+                                      ? null
+                                      : () async => await _handleRegenerate(),
+                                  actionsEnabled:
+                                      !_isRegenerating && !_isExporting,
+                                  width: 300,
+                                  height: 400,
+                                ),
+
+                                if (_isRegenerating) ...[
+                                  SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        l10n.regeneratingCard,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ] else if (_isExporting) ...[
+                                  SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        _exportProgressMessage ??
+                                            l10n.generatingShareImage,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ] else if (_feedbackMessage != null) ...[
+                                  SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _isFeedbackError
+                                            ? Icons.error_outline
+                                            : Icons.check_circle_outline,
+                                        size: 18,
+                                        color: _isFeedbackError
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .error
+                                            : AppSemanticColors.of(context)
+                                                .onSuccessContainer,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _feedbackMessage!,
+                                          textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: _isFeedbackError
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .error
+                                                    : AppSemanticColors.of(
+                                                            context)
+                                                        .onSuccessContainer,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         ),
                       ),
