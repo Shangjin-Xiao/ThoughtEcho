@@ -143,8 +143,8 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     final allTagMaps = await batch.commit();
 
     for (final result in allTagMaps) {
-      final tagMaps = result as List;
-      for (final item in tagMaps) {
+      if (result is! List) continue;
+      for (final item in result) {
         // 关联表的值同样不能硬转：一个坏值抛出来会连累整批查询，而逐行兜底
         // （_parseQuoteRows）根本还没轮到运行。
         if (item is! Map) continue;
