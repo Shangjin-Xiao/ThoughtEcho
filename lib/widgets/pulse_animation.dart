@@ -43,12 +43,14 @@ class _PulseAnimationState extends State<PulseAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      child: widget.child,
-      builder: (context, child) {
-        return Opacity(opacity: _animation.value, child: child);
-      },
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _animation,
+        child: widget.child,
+        builder: (context, child) {
+          return Opacity(opacity: _animation.value, child: child);
+        },
+      ),
     );
   }
 }

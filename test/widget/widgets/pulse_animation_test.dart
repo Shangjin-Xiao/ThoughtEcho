@@ -21,6 +21,12 @@ void main() {
 
     expect(find.text('Test Pulse Child'), findsOneWidget);
 
+    final repaintBoundaryFinder = find.descendant(
+      of: find.byType(PulseAnimation),
+      matching: find.byType(RepaintBoundary),
+    );
+    expect(repaintBoundaryFinder, findsOneWidget);
+
     final opacityFinder = find.ancestor(
       of: find.text('Test Pulse Child'),
       matching: find.byType(Opacity),
@@ -76,5 +82,40 @@ void main() {
 
     // Child should NOT rebuild on animation ticks due to AnimatedBuilder child reuse
     expect(childBuildCount, equals(1));
+  });
+
+  testWidgets(
+      'PulseAnimation includes RepaintBoundary for repaint layer isolation',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: PulseAnimation(
+            child: Text('Isolated Child'),
+          ),
+        ),
+      ),
+    );
+
+    final pulseFinder = find.byType(PulseAnimation);
+    expect(pulseFinder, findsOneWidget);
+
+    final repaintBoundaryFinder = find.descendant(
+      of: pulseFinder,
+      matching: find.byType(RepaintBoundary),
+    );
+    expect(repaintBoundaryFinder, findsOneWidget);
+
+    final opacityFinder = find.descendant(
+      of: repaintBoundaryFinder,
+      matching: find.byType(Opacity),
+    );
+    expect(opacityFinder, findsOneWidget);
+
+    final childFinder = find.descendant(
+      of: opacityFinder,
+      matching: find.text('Isolated Child'),
+    );
+    expect(childFinder, findsOneWidget);
   });
 }
