@@ -332,7 +332,8 @@ void main() {
     expect(settings.offlineQuoteSource, 'allNotes');
   });
 
-  void mockBiometricSupport({required bool isSupported, required bool authenticateResult}) {
+  void mockBiometricSupport(
+      {required bool isSupported, required bool authenticateResult}) {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(localAuthChannel, (methodCall) async {
       switch (methodCall.method) {
@@ -370,7 +371,8 @@ void main() {
 
     expect(settings.requireBiometricForHidden, isTrue);
 
-    await tester.tap(findSwitchForText(localizations.requireBiometricForHidden));
+    await tester
+        .tap(findSwitchForText(localizations.requireBiometricForHidden));
     await tester.pumpAndSettle();
 
     expect(settings.requireBiometricForHidden, isFalse);
@@ -397,7 +399,8 @@ void main() {
 
     expect(settings.requireBiometricForHidden, isTrue);
 
-    await tester.tap(findSwitchForText(localizations.requireBiometricForHidden));
+    await tester
+        .tap(findSwitchForText(localizations.requireBiometricForHidden));
     await tester.pumpAndSettle();
 
     expect(settings.requireBiometricForHidden, isTrue);
@@ -425,7 +428,8 @@ void main() {
 
     expect(settings.requireBiometricForHidden, isFalse);
 
-    await tester.tap(findSwitchForText(localizations.requireBiometricForHidden));
+    await tester
+        .tap(findSwitchForText(localizations.requireBiometricForHidden));
     await tester.pumpAndSettle();
 
     expect(settings.requireBiometricForHidden, isTrue);
@@ -452,7 +456,8 @@ void main() {
 
     expect(settings.requireBiometricForHidden, isFalse);
 
-    await tester.tap(findSwitchForText(localizations.requireBiometricForHidden));
+    await tester
+        .tap(findSwitchForText(localizations.requireBiometricForHidden));
     await tester.pumpAndSettle();
 
     expect(settings.requireBiometricForHidden, isFalse);
