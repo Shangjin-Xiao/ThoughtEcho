@@ -613,107 +613,107 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
     final l10n = AppLocalizations.of(context);
     return AnimatedBuilder(
       animation: _animationController,
-      builder: (context, child) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Opacity(
-              opacity: _opacityAnimation.value,
-              child: Container(
-                constraints: const BoxConstraints(
-                  maxWidth: 500,
-                  maxHeight: 700,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 关闭按钮
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                          tooltip: l10n.close,
-                        ),
-                      ),
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(
+            maxWidth: 500,
+            maxHeight: 700,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 关闭按钮
+              Align(
+                alignment: Alignment.topRight,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black
+                        .withValues(alpha: 0.5), // ignore: repo_lint
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white, // ignore: repo_lint
+                      size: 24,
                     ),
-                    // 卡片内容
-                    Flexible(
-                      child: Container(
-                        margin: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(
-                            AppShapeTokens.of(context).dialogRadius,
-                          ),
-                          boxShadow: AppShapeTokens.of(context).accentShadow,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 标题
-                              Text(
-                                l10n.featuredCards,
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              SizedBox(height: 16),
-                              // 卡片
-                              GeneratedCardWidget(
-                                card: _currentCard,
-                                onShare: widget.onShare,
-                                onSave: widget.onSave,
-                                onRegenerate: widget.onRegenerate == null &&
-                                        widget.onRegenerateWithExclude == null
-                                    ? null
-                                    : () async => await _handleRegenerate(),
-                                actionsEnabled: !_isRegenerating,
-                                width: 300,
-                                height: 400,
-                              ),
-
-                              if (_isRegenerating) ...[
-                                SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      l10n.regeneratingCard,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    tooltip: l10n.close,
+                  ),
                 ),
               ),
-            ),
+              // 卡片内容
+              Flexible(
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).dialogRadius,
+                    ),
+                    boxShadow: AppShapeTokens.of(context).accentShadow,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 标题
+                        Text(
+                          l10n.featuredCards,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 16),
+                        // 卡片
+                        GeneratedCardWidget(
+                          card: _currentCard,
+                          onShare: widget.onShare,
+                          onSave: widget.onSave,
+                          onRegenerate: widget.onRegenerate == null &&
+                                  widget.onRegenerateWithExclude == null
+                              ? null
+                              : () async => await _handleRegenerate(),
+                          actionsEnabled: !_isRegenerating,
+                          width: 300,
+                          height: 400,
+                        ),
+
+                        if (_isRegenerating) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                l10n.regeneratingCard,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Opacity(
+            opacity: _opacityAnimation.value,
+            child: child,
           ),
         );
       },
