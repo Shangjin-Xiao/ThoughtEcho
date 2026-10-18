@@ -188,7 +188,9 @@ void main() {
       expect(includeDeletedIds.contains(deletedId), isTrue);
     });
 
-    test('searchQuotesByContent projection excludes aiAnalysis and summary by default', () async {
+    test(
+        'searchQuotesByContent projection excludes aiAnalysis and summary by default',
+        () async {
       final id = const Uuid().v4();
       final now = DateTime.now().toUtc().toIso8601String();
 
@@ -202,7 +204,8 @@ void main() {
         ),
       );
 
-      final defaultResults = await service.searchQuotesByContent('projection test quote');
+      final defaultResults =
+          await service.searchQuotesByContent('projection test quote');
       expect(defaultResults, hasLength(1));
       expect(defaultResults.first.aiAnalysis, isNull);
       expect(defaultResults.first.summary, isNull);
@@ -241,7 +244,12 @@ void main() {
         offset: 2,
       );
       expect(page2, hasLength(2));
-      expect(page1.map((q) => q.id).toSet().intersection(page2.map((q) => q.id).toSet()), isEmpty);
+      expect(
+          page1
+              .map((q) => q.id)
+              .toSet()
+              .intersection(page2.map((q) => q.id).toSet()),
+          isEmpty);
 
       final page3 = await service.searchQuotesByContent(
         'pagination-search-keyword',
@@ -251,7 +259,9 @@ void main() {
       expect(page3, hasLength(1));
     });
 
-    test('searchQuoteIdsByContent returns list of string IDs and respects includeDeleted and limit/offset', () async {
+    test(
+        'searchQuoteIdsByContent returns list of string IDs and respects includeDeleted and limit/offset',
+        () async {
       final activeId1 = const Uuid().v4();
       final activeId2 = const Uuid().v4();
       final deletedId = const Uuid().v4();
@@ -273,12 +283,14 @@ void main() {
         ),
       );
 
-      final activeIds = await service.searchQuoteIdsByContent('id-search-keyword');
+      final activeIds =
+          await service.searchQuoteIdsByContent('id-search-keyword');
       expect(activeIds, isA<List<String>>());
       expect(activeIds, containsAll([activeId1, activeId2]));
       expect(activeIds.contains(deletedId), isFalse);
 
-      final allIds = await service.searchQuoteIdsByContent('id-search-keyword', includeDeleted: true);
+      final allIds = await service.searchQuoteIdsByContent('id-search-keyword',
+          includeDeleted: true);
       expect(allIds, containsAll([activeId1, activeId2, deletedId]));
 
       final limitedIds = await service.searchQuoteIdsByContent(
