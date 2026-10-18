@@ -148,6 +148,25 @@ class AddNoteController extends ChangeNotifier {
 
   // 缓存所有标签，避免重复查询
   List<NoteTag>? allCategoriesCache;
+  Map<String, NoteTag>? _idToCategoryCache;
+  Map<String, NoteTag>? _lowerNameToCategoryCache;
+
+  void _updateCategoriesCache(List<NoteTag>? categories) {
+    allCategoriesCache = categories;
+    if (categories == null) {
+      _idToCategoryCache = null;
+      _lowerNameToCategoryCache = null;
+    } else {
+      final idMap = <String, NoteTag>{};
+      final nameMap = <String, NoteTag>{};
+      for (final tag in categories) {
+        idMap.putIfAbsent(tag.id, () => tag);
+        nameMap.putIfAbsent(tag.name.toLowerCase(), () => tag);
+      }
+      _idToCategoryCache = idMap;
+      _lowerNameToCategoryCache = nameMap;
+    }
+  }
 
   // 外界可以通过回调或直接获取 selectedTagIds
   final List<String> _selectedTagIds;
@@ -210,7 +229,7 @@ class AddNoteController extends ChangeNotifier {
     weatherService = weaService ?? weatherService;
     if (dbService != null && dbService != databaseService) {
       databaseService = dbService;
-      allCategoriesCache = null;
+      _updateCategoriesCache(null);
     }
   }
 
@@ -544,7 +563,7 @@ class AddNoteController extends ChangeNotifier {
         // 若在异步拉取期间数据库服务实例已切换，放弃在陈旧实例上的标签预载与附加操作，
         // 避免跨数据库实例写入或状态污染。
         if (databaseService != db) return;
-        allCategoriesCache = fetchedCategories;
+        _updateCategoriesCache(fetchedCategories);
       }
 
       final List<String> tagIds = [];
@@ -573,15 +592,7 @@ class AddNoteController extends ChangeNotifier {
       }
 
       if (subtypeTagId != null) {
-        NoteTag? category;
-        if (allCategoriesCache != null) {
-          for (final tag in allCategoriesCache!) {
-            if (tag.id == subtypeTagId) {
-              category = tag;
-              break;
-            }
-          }
-        }
+        final category = _idToCategoryCache?[subtypeTagId];
         if (_isDisposed) return;
         final selected = category ?? await db.getTagById(subtypeTagId);
         if (_isDisposed) return;
@@ -632,23 +643,20 @@ class AddNoteController extends ChangeNotifier {
         final fetchedCategories = await db.getTags();
         if (_isDisposed) return null;
         if (databaseService != db) return null;
-        allCategoriesCache = fetchedCategories;
+        _updateCategoriesCache(fetchedCategories);
       }
-      final categories = allCategoriesCache!;
 
       if (fixedId != null) {
-        for (final tag in categories) {
-          if (tag.id == fixedId) {
-            return tag.id;
-          }
+        final tag = _idToCategoryCache?[fixedId];
+        if (tag != null) {
+          return tag.id;
         }
       }
 
       final lowerName = name.toLowerCase();
-      for (final tag in categories) {
-        if (tag.name.toLowerCase() == lowerName) {
-          return tag.id;
-        }
+      final tagByName = _lowerNameToCategoryCache?[lowerName];
+      if (tagByName != null) {
+        return tagByName.id;
       }
 
       if (fixedId != null) {
@@ -661,15 +669,15 @@ class AddNoteController extends ChangeNotifier {
           // 内置系统标签写 is_default=1，漏掉就会让它退化成可删可改的普通标签。
           // where 顺带覆盖 addTagWithId 走"更新已存在行"分支的情况——缓存陈旧时
           // 该行可能已在库里，直接 append 会让同一个 ID 在缓存里出现两次。
-          allCategoriesCache = [
-            ...categories.where((tag) => tag.id != fixedId),
+          _updateCategoriesCache([
+            ...(allCategoriesCache ?? []).where((tag) => tag.id != fixedId),
             NoteTag(
               id: fixedId,
               name: name,
               isDefault: DatabaseService.systemTagIds.contains(fixedId),
               iconName: iconName,
             ),
-          ];
+          ]);
           return fixedId;
         } catch (e, stackTrace) {
           logError(
@@ -691,14 +699,8 @@ class AddNoteController extends ChangeNotifier {
       final updatedCategories = await db.getTags();
       if (_isDisposed) return null;
       if (databaseService != db) return null;
-      allCategoriesCache = updatedCategories;
-      for (final tag in updatedCategories) {
-        if (tag.name.toLowerCase() == lowerName) {
-          return tag.id;
-        }
-      }
-
-      return null;
+      _updateCategoriesCache(updatedCategories);
+      return _lowerNameToCategoryCache?[lowerName]?.id;
     } catch (e, stackTrace) {
       logError(
         '确保标签"$name"存在时出错',
