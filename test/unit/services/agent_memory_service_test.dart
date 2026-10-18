@@ -944,7 +944,8 @@ void main() {
       await memory.clearAll();
     });
 
-    test('_evictOverflowFacts 超容量时通过 SQL ORDER BY ... LIMIT 正确淘汰最低分条目', () async {
+    test('_evictOverflowFacts 超容量时通过 SQL ORDER BY ... LIMIT 正确淘汰最低分条目',
+        () async {
       await memory.clearAll();
       await memory.addFact(
         content: '最差要被淘汰的无用记录',
