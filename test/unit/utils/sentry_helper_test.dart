@@ -40,6 +40,112 @@ void main() {
     });
   });
 
+  group('sanitizeSentryDatabaseDescription', () {
+    test('handles database lifecycle prefixes', () {
+      expect(
+        sanitizeSentryDatabaseDescription('Open DB: /path/to/db.sqlite'),
+        'Open DB: main',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('Close DB: /path/to/db.sqlite'),
+        'Close DB: main',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('Transaction DB: /path/to/db.sqlite'),
+        'Transaction DB: main',
+      );
+    });
+
+    test('sanitizes app logs and log database operations', () {
+      expect(
+        sanitizeSentryDatabaseDescription(
+            'INSERT INTO app_logs (id) VALUES (1)'),
+        'Log database write',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('SELECT * FROM LOG_DATABASE'),
+        'Log database write',
+      );
+    });
+
+    test('sanitizes standard SQL query patterns with table names', () {
+      expect(
+        sanitizeSentryDatabaseDescription(
+            'SELECT id, content FROM notes WHERE id = 1'),
+        'SELECT FROM NOTES',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription(
+            'INSERT INTO user_profile (name) VALUES (?)'),
+        'INSERT INTO USER_PROFILE',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('UPDATE settings SET theme = "dark"'),
+        'UPDATE SETTINGS',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('DELETE FROM trash_bin WHERE id = ?'),
+        'DELETE FROM TRASH_BIN',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('CREATE TABLE items (id INT)'),
+        'CREATE TABLE ITEMS',
+      );
+    });
+
+    test('falls back to generic query description when table name is missing',
+        () {
+      expect(
+        sanitizeSentryDatabaseDescription('SELECT (1)'),
+        'SELECT query',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('INSERT (1)'),
+        'INSERT query',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('UPDATE (1)'),
+        'UPDATE query',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('DELETE (1)'),
+        'DELETE query',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('CREATE INDEX idx_test ON items(id)'),
+        'CREATE query',
+      );
+    });
+
+    test('sanitizes schema and pragma queries', () {
+      expect(
+        sanitizeSentryDatabaseDescription(
+            'ALTER TABLE users ADD COLUMN age INT'),
+        'SQL schema/pragma query',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('DROP TABLE obsolete_data'),
+        'SQL schema/pragma query',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('PRAGMA foreign_keys = ON'),
+        'SQL schema/pragma query',
+      );
+    });
+
+    test('handles leading whitespace, mixed case, and unmatched descriptions',
+        () {
+      expect(
+        sanitizeSentryDatabaseDescription('   select * from notes'),
+        'SELECT FROM NOTES',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('Custom Non-SQL Operation'),
+        'Custom Non-SQL Operation',
+      );
+    });
+  });
+
   group('Sentry database privacy', () {
     test('removes local paths from database descriptions', () {
       const privatePath = '/Users/private/Documents/ThoughtEcho/quotes.db';
