@@ -2,6 +2,8 @@ import 'dart:ui' show Locale, PlatformDispatcher;
 
 import '../gen_l10n/app_localizations.dart';
 
+final RegExp _localeSeparatorRegex = RegExp(r'[_-]');
+
 /// 将语言字符串（如 'zh-Hant'、'zh_TW'、'zh_CN'、'en'）解析为标准 [Locale]。
 ///
 /// 支持 RFC 5646 / BCP 47 与下划线格式，正确识别 4 位字母的 Script 代码（如 'Hant'）
@@ -9,7 +11,7 @@ import '../gen_l10n/app_localizations.dart';
 /// scriptCode 误置为 countryCode 或 languageCode。
 Locale? parseLocale(String? localeCode) {
   if (localeCode == null || localeCode.trim().isEmpty) return null;
-  final parts = localeCode.trim().split(RegExp(r'[_-]'));
+  final parts = localeCode.trim().split(_localeSeparatorRegex);
   if (parts.length == 1) {
     return Locale(parts[0].toLowerCase());
   }
