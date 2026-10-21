@@ -92,3 +92,7 @@
 
 **异常:** [在应用从后台恢复到前台时，`AppLifecycleState.resumed` 会触发 WebDAV 后台同步。原代码在这个过程中使用了 `catch (_) {}` 的空捕获，静默吞噬了同步触发阶段可能发生的所有异常，导致排查用户反馈的“回到应用没有自动同步”的问题时缺乏任何关键日志线索。]
 **拦截:** [将 `catch (_) {}` 改写为 `catch (e, stackTrace)`，并使用 `AppLogger.e` 进行结构化日志上报。注入了具体的异常对象、堆栈轨迹以及明确的来源模块标识 `source: 'AppLifecycle'`。确认记录内容仅包含错误与堆栈信息，未包含任何用户数据和隐私信息。]
+
+## 2026-10-25 - 🗃️ 黑匣: [完善 DatabaseQuoteCrud 模块的结构化日志]
+**异常:** [DatabaseQuoteCrudMixin 在保存、按 ID 获取以及获取所有笔记失败时，仅使用了 `catch (e)` 并在 catch 块中通过粗糙的 `logDebug('...出错: $e')` 记录。这丢失了极其重要的错误堆栈信息 (stackTrace) 及明确的来源标识 (source)，导致如果在存储或查询这些核心数据时出错，将极难排查根因。]
+**拦截:** [已将上述流程中的相关异常捕获升级为 `catch (e, stackTrace)`，并统一替换为 `logError` 进行结构化日志记录。日志中附带了对应的报错描述、异常对象 `error: e`、堆栈轨迹 `stackTrace: stackTrace` 以及模块来源 `source: 'DatabaseQuoteCrudMixin'`。相关异常不会带入并泄露用户隐私数据。]

@@ -115,8 +115,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         notifyListeners(); // 通知其他监听者（如Homepage的FAB）
         notifyLocalDataChangedForParts();
         _trackSaveNoteEvent(quoteWithId);
-      } catch (e) {
-        logDebug('保存笔记到数据库时出错: $e');
+      } catch (e, stackTrace) {
+        logError(
+          '保存笔记到数据库时出错',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'DatabaseQuoteCrudMixin',
+        );
         rethrow; // 重新抛出异常，让调用者处理
       }
     });
@@ -163,8 +168,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       mutableMap['tag_ids'] = tags.join(',');
 
       return _tryParseQuoteRow(mutableMap);
-    } catch (e) {
-      logDebug('获取指定ID笔记失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '获取指定ID笔记失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseQuoteCrudMixin',
+      );
       return null;
     }
   }
@@ -261,8 +271,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       }
 
       return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
-    } catch (e) {
-      logDebug('获取所有笔记失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '获取所有笔记失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseQuoteCrudMixin',
+      );
       return [];
     }
   }
