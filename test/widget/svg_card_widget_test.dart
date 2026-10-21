@@ -164,6 +164,20 @@ void main() {
       // Verify regenerated card state is displayed and loading indicator disappears
       expect(find.byType(CardPreviewDialog), findsOneWidget);
       expect(find.byType(GeneratedCardWidget), findsOneWidget);
+
+      final cardWidget =
+          tester.widget<GeneratedCardWidget>(find.byType(GeneratedCardWidget));
+      expect(cardWidget.card.id, equals('card_2'));
+      expect(cardWidget.card.originalContent, equals('Regenerated Card Content'));
+      expect(cardWidget.card.svgContent, contains('Card 2'));
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SVGCardWidget && widget.svgContent.contains('Card 2'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('CardPreviewDialog can be closed via close button',

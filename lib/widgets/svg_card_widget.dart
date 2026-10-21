@@ -611,6 +611,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _animationController,
       child: Dialog(
@@ -628,15 +629,14 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                 alignment: Alignment.topRight,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.black
-                        .withValues(alpha: 0.5), // ignore: repo_lint
+                    color: colorScheme.scrim.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close,
-                      color: Colors.white, // ignore: repo_lint
+                      color: colorScheme.onInverseSurface,
                       size: 24,
                     ),
                     tooltip: l10n.close,
