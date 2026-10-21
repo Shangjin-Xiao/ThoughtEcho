@@ -104,6 +104,7 @@ class UpdateBottomSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Card(
+              margin: EdgeInsets.zero,
               color: colorScheme.surfaceContainerHigh,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -182,6 +183,7 @@ class UpdateBottomSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Card(
+                margin: EdgeInsets.zero,
                 color: colorScheme.surfaceContainerHigh,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -290,6 +292,7 @@ class UpdateBottomSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Card(
+              margin: EdgeInsets.zero,
               color: colorScheme.surfaceContainerHigh,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -447,7 +450,7 @@ class UpdateBottomSheet extends StatelessWidget {
       ),
 
       // 文本装饰
-      em: TextStyle(color: baseColor),
+      em: TextStyle(color: baseColor, fontStyle: FontStyle.italic),
       strong: theme.textTheme.titleSmall?.copyWith(color: baseColor),
       del: TextStyle(
         color: baseColor.withValues(alpha: 0.7),

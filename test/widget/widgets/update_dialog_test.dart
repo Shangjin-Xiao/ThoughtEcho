@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
@@ -82,6 +85,15 @@ void main() {
       final decoration = container.decoration as BoxDecoration;
       final borderRadius = decoration.borderRadius as BorderRadius;
       expect(borderRadius.topLeft.x, 12.0);
+
+      final cards = tester.widgetList<Card>(find.byType(Card)).toList();
+      expect(cards.length, 2);
+      for (final card in cards) {
+        expect(card.margin, EdgeInsets.zero);
+      }
+
+      final markdown = tester.widget<MarkdownBody>(find.byType(MarkdownBody));
+      expect(markdown.styleSheet?.em?.fontStyle, FontStyle.italic);
     });
 
     testWidgets('渲染已是最新版本的对话框', (WidgetTester tester) async {
@@ -97,6 +109,10 @@ void main() {
 
       expect(find.text('已是最新版本'), findsOneWidget);
       expect(find.text('确定'), findsOneWidget);
+
+      final cards = tester.widgetList<Card>(find.byType(Card)).toList();
+      expect(cards.length, 1);
+      expect(cards.first.margin, EdgeInsets.zero);
     });
 
     testWidgets('验证纸墨风格下 AppShapeTokens 圆角应用正常', (WidgetTester tester) async {
