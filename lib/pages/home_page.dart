@@ -918,123 +918,114 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           index: _pageController.currentIndex,
           children: [
             // 首页 - 每日一言和每日提示
-            RepaintBoundary(
-              child: RefreshIndicator(
-                onRefresh: _refreshCoordinator.refresh,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final screenHeight = constraints.maxHeight;
-                    final screenWidth = constraints.maxWidth;
-                    final isSmallScreen = screenHeight < 600;
-                    final isVerySmallScreen = screenHeight < 550;
+            RefreshIndicator(
+              onRefresh: _refreshCoordinator.refresh,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenHeight = constraints.maxHeight;
+                  final screenWidth = constraints.maxWidth;
+                  final isSmallScreen = screenHeight < 600;
+                  final isVerySmallScreen = screenHeight < 550;
 
-                    return SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: SizedBox(
-                        height: screenHeight, // 确保占满整个屏幕高度
-                        child: Column(
-                          children: [
-                            // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考。
-                            //
-                            // 卡片刻意撑满这块区域而不是按内容收缩：试过收缩版
-                            // （2026-08-16 出图比对），一言只有一两行时卡片缩成中间
-                            // 一条，留白全跑到页面上，首页反而更空。撑满的版本把留白
-                            // 收在卡片内部，一言居中，观感更稳。
-                            Expanded(
-                              child: Container(
-                                key: _dailyQuoteGuideKey, // 功能引导 key
-                                constraints: BoxConstraints(
-                                  minHeight: screenHeight *
-                                      (isVerySmallScreen
-                                          ? 0.55
-                                          : 0.50), // 极小屏幕调整比例
-                                ),
-                                child: DailyQuoteView(
-                                  key: _dailyQuoteViewKey,
-                                  onAddQuote:
-                                      (content, author, work, hitokotoData) =>
-                                          _showAddQuoteDialog(
-                                    prefilledContent: content,
-                                    prefilledAuthor: author,
-                                    prefilledWork: work,
-                                    hitokotoData: hitokotoData,
-                                  ),
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: SizedBox(
+                      height: screenHeight, // 确保占满整个屏幕高度
+                      child: Column(
+                        children: [
+                          // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考。
+                          //
+                          // 卡片刻意撑满这块区域而不是按内容收缩：试过收缩版
+                          // （2026-08-16 出图比对），一言只有一两行时卡片缩成中间
+                          // 一条，留白全跑到页面上，首页反而更空。撑满的版本把留白
+                          // 收在卡片内部，一言居中，观感更稳。
+                          Expanded(
+                            child: Container(
+                              key: _dailyQuoteGuideKey, // 功能引导 key
+                              constraints: BoxConstraints(
+                                minHeight: screenHeight *
+                                    (isVerySmallScreen
+                                        ? 0.55
+                                        : 0.50), // 极小屏幕调整比例
+                              ),
+                              child: DailyQuoteView(
+                                key: _dailyQuoteViewKey,
+                                onAddQuote:
+                                    (content, author, work, hitokotoData) =>
+                                        _showAddQuoteDialog(
+                                  prefilledContent: content,
+                                  prefilledAuthor: author,
+                                  prefilledWork: work,
+                                  hitokotoData: hitokotoData,
                                 ),
                               ),
                             ),
-                            HomeDailyPromptPanel(
-                              key: _dailyPromptPanelKey,
-                              screenWidth: screenWidth,
-                              isSmallScreen: isSmallScreen,
-                              isVerySmallScreen: isVerySmallScreen,
-                            ),
-                          ],
-                        ),
+                          ),
+                          HomeDailyPromptPanel(
+                            key: _dailyPromptPanelKey,
+                            screenWidth: screenWidth,
+                            isSmallScreen: isSmallScreen,
+                            isVerySmallScreen: isVerySmallScreen,
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            // 笔记列表页
-            RepaintBoundary(
-              child: Consumer<SettingsService>(
-                builder: (context, settingsService, child) {
-                  return Consumer<NoteSearchController>(
-                    builder: (context, searchController, child) {
-                      return NoteListView(
-                        key: _noteListViewKey, // 绑定全局Key
-                        tags: _pageController.tags,
-                        selectedTagIds: _pageController.selectedTagIds,
-                        onTagSelectionChanged: (tagIds) {
-                          _pageController.setSelectedTagIds(tagIds);
-                        },
-                        searchQuery: searchController.searchQuery,
-                        sortType: _pageController.sortType,
-                        sortAscending: _pageController.sortAscending,
-                        onSortChanged: _handleSortChanged,
-                        onSearchChanged: (query) {
-                          searchController.updateSearch(query);
-                        },
-                        onEdit: _showEditQuoteDialog,
-                        onDelete: _deleteQuote,
-                        onAskAI: _showAIQuestionDialog,
-                        onGenerateCard: _generateAICard,
-                        onFavorite: settingsService.showFavoriteButton
-                            ? _handleFavoriteClick
-                            : null, // 根据设置控制心形按钮显示
-                        onLongPressFavorite: settingsService.showFavoriteButton
-                            ? _handleLongPressFavorite
-                            : null, // 长按清除收藏
-                        isLoadingTags:
-                            _pageController.isLoadingTags, // 传递标签加载状态
-                        selectedWeathers: _pageController.selectedWeathers,
-                        selectedDayPeriods: _pageController.selectedDayPeriods,
-                        onFilterChanged: (weathers, dayPeriods) {
-                          _pageController.setFilters(
-                            weathers: weathers,
-                            dayPeriods: dayPeriods,
-                          );
-                        },
-                        filterButtonKey: _noteFilterGuideKey, // 功能引导 key
-                        favoriteButtonGuideKey: _noteFavoriteGuideKey,
-                        moreButtonGuideKey: _noteMoreGuideKey,
-                        foldToggleGuideKey: _noteFoldGuideKey,
-                        onGuideTargetsReady: _handleNoteGuideTargetsReady,
-                      );
-                    },
+                    ),
                   );
                 },
               ),
             ),
+            // 笔记列表页
+            Consumer<SettingsService>(
+              builder: (context, settingsService, child) {
+                return Consumer<NoteSearchController>(
+                  builder: (context, searchController, child) {
+                    return NoteListView(
+                      key: _noteListViewKey, // 绑定全局Key
+                      tags: _pageController.tags,
+                      selectedTagIds: _pageController.selectedTagIds,
+                      onTagSelectionChanged: (tagIds) {
+                        _pageController.setSelectedTagIds(tagIds);
+                      },
+                      searchQuery: searchController.searchQuery,
+                      sortType: _pageController.sortType,
+                      sortAscending: _pageController.sortAscending,
+                      onSortChanged: _handleSortChanged,
+                      onSearchChanged: (query) {
+                        searchController.updateSearch(query);
+                      },
+                      onEdit: _showEditQuoteDialog,
+                      onDelete: _deleteQuote,
+                      onAskAI: _showAIQuestionDialog,
+                      onGenerateCard: _generateAICard,
+                      onFavorite: settingsService.showFavoriteButton
+                          ? _handleFavoriteClick
+                          : null, // 根据设置控制心形按钮显示
+                      onLongPressFavorite: settingsService.showFavoriteButton
+                          ? _handleLongPressFavorite
+                          : null, // 长按清除收藏
+                      isLoadingTags: _pageController.isLoadingTags, // 传递标签加载状态
+                      selectedWeathers: _pageController.selectedWeathers,
+                      selectedDayPeriods: _pageController.selectedDayPeriods,
+                      onFilterChanged: (weathers, dayPeriods) {
+                        _pageController.setFilters(
+                          weathers: weathers,
+                          dayPeriods: dayPeriods,
+                        );
+                      },
+                      filterButtonKey: _noteFilterGuideKey, // 功能引导 key
+                      favoriteButtonGuideKey: _noteFavoriteGuideKey,
+                      moreButtonGuideKey: _noteMoreGuideKey,
+                      foldToggleGuideKey: _noteFoldGuideKey,
+                      onGuideTargetsReady: _handleNoteGuideTargetsReady,
+                    );
+                  },
+                );
+              },
+            ),
             // 探索页
-            const RepaintBoundary(
-              child: ExplorePage(),
-            ),
+            const ExplorePage(),
             // 设置页
-            RepaintBoundary(
-              child: SettingsPage(key: _settingsPageKey),
-            ),
+            SettingsPage(key: _settingsPageKey),
           ],
         ),
         floatingActionButton: Semantics(
