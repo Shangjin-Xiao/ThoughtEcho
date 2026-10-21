@@ -1041,15 +1041,15 @@ class AgentMemoryService extends ChangeNotifier {
     final keywords = extractKeywords(query);
     final now = DateTime.now();
 
-    // 动态候选窗口预筛，避免全表无限制加载至 Dart 堆内存（默认 limit=8 时取 30 条候选）
-    final candidateLimit = math.max(limit * 3, 30);
-
+    // 候选窗口取整个 [factsCapacity]：候选截断发生在 SQL 层，而排序在 Dart 层，
+    // 两者一旦不一致，就会按 SQLite 未定义的返回顺序丢掉本该排前面的记忆。
+    // 事实层本来就有 400 条硬上限，全捞出来再打分是可负担的。
     List<Map<String, Object?>> rows;
     if (keywords.isEmpty) {
       rows = await db.query(
         factsTable,
         orderBy: 'importance DESC, created_at DESC',
-        limit: candidateLimit,
+        limit: factsCapacity,
       );
     } else {
       // 参数绑定，关键词只作为 LIKE 的值出现，不参与 SQL 拼接。
@@ -1065,8 +1065,7 @@ class AgentMemoryService extends ChangeNotifier {
         factsTable,
         where: clauses.join(' OR '),
         whereArgs: args,
-        orderBy: 'importance DESC, created_at DESC',
-        limit: candidateLimit,
+        limit: factsCapacity,
       );
     }
 
@@ -1439,34 +1438,48 @@ class AgentMemoryService extends ChangeNotifier {
         final batch = _pendingRecallIds.toList();
         _pendingRecallIds.clear();
 
-        final db = await _db;
-        if (!db.isOpen || _disposed) break;
+        try {
+          final db = await _db;
+          if (!db.isOpen || _disposed) break;
 
-        final counts = <String, int>{};
-        for (final id in batch) {
-          counts[id] = (counts[id] ?? 0) + 1;
-        }
-        final nowStr = DateTime.now().toIso8601String();
-
-        await db.transaction((txn) async {
-          for (final entry in counts.entries) {
-            await txn.rawUpdate(
-              'UPDATE $factsTable SET recall_count = recall_count + ?, '
-              'last_recalled_at = ? WHERE id = ?',
-              <Object?>[entry.value, nowStr, entry.key],
-            );
+          final counts = <String, int>{};
+          for (final id in batch) {
+            counts[id] = (counts[id] ?? 0) + 1;
           }
-        });
+          final nowStr = DateTime.now().toIso8601String();
+
+          await db.transaction((txn) async {
+            for (final entry in counts.entries) {
+              await txn.rawUpdate(
+                'UPDATE $factsTable SET recall_count = recall_count + ?, '
+                'last_recalled_at = ? WHERE id = ?',
+                <Object?>[entry.value, nowStr, entry.key],
+              );
+            }
+          });
+        } catch (error, stackTrace) {
+          _pendingRecallIds.insertAll(0, batch);
+          logError(
+            '后台异步更新记忆召回状态失败',
+            error: error,
+            stackTrace: stackTrace,
+            source: 'AgentMemoryService',
+          );
+          break;
+        }
       }
-    } catch (error, stackTrace) {
-      logError(
-        '后台异步更新记忆召回状态失败',
-        error: error,
-        stackTrace: stackTrace,
-        source: 'AgentMemoryService',
-      );
     } finally {
       _isFlushingRecallQueue = false;
+      if (!_disposed && _pendingRecallIds.isNotEmpty) {
+        unawaited(_rescheduleFlushQueue());
+      }
+    }
+  }
+
+  Future<void> _rescheduleFlushQueue() async {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    if (!_disposed && _pendingRecallIds.isNotEmpty) {
+      await _flushRecallQueue();
     }
   }
 
@@ -1480,13 +1493,7 @@ class AgentMemoryService extends ChangeNotifier {
       return;
     }
 
-    // 仅提取潜在低分淘汰候选，避免全表无 LIMIT 加载
-    final candidateLimit = overflowCount + 20;
-    final rows = await db.query(
-      factsTable,
-      orderBy: 'importance ASC, created_at ASC',
-      limit: candidateLimit,
-    );
+    final rows = await db.query(factsTable);
     final now = DateTime.now();
     final scored = rows
         .map(AgentMemoryFact.fromMap)
