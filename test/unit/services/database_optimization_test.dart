@@ -189,7 +189,7 @@ void main() {
     });
 
     test(
-        'searchQuotesByContent projection excludes aiAnalysis and summary by default',
+        'searchQuotesByContent fetches all columns by default, and respects projection when specified',
         () async {
       final id = const Uuid().v4();
       final now = DateTime.now().toUtc().toIso8601String();
@@ -207,16 +207,90 @@ void main() {
       final defaultResults =
           await service.searchQuotesByContent('projection test quote');
       expect(defaultResults, hasLength(1));
-      expect(defaultResults.first.aiAnalysis, isNull);
-      expect(defaultResults.first.summary, isNull);
+      expect(defaultResults.first.aiAnalysis, equals('Heavy AI Analysis Text'));
+      expect(defaultResults.first.summary, equals('Heavy Summary Text'));
 
-      final fullResults = await service.searchQuotesByContent(
+      final projectedResults = await service.searchQuotesByContent(
         'projection test quote',
-        columns: ['id', 'content', 'date', 'ai_analysis', 'summary'],
+        columns: ['id', 'content', 'date'],
       );
-      expect(fullResults, hasLength(1));
-      expect(fullResults.first.aiAnalysis, equals('Heavy AI Analysis Text'));
-      expect(fullResults.first.summary, equals('Heavy Summary Text'));
+      expect(projectedResults, hasLength(1));
+      expect(projectedResults.first.aiAnalysis, isNull);
+      expect(projectedResults.first.summary, isNull);
+    });
+
+    test('searchQuotesByContent returns empty list when limit is 0', () async {
+      final id = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: id,
+          content: 'limit zero test quote',
+          date: now,
+        ),
+      );
+
+      final zeroLimitResults = await service.searchQuotesByContent(
+        'limit zero test quote',
+        limit: 0,
+      );
+      expect(zeroLimitResults, isEmpty);
+
+      final zeroLimitIds = await service.searchQuoteIdsByContent(
+        'limit zero test quote',
+        limit: 0,
+      );
+      expect(zeroLimitIds, isEmpty);
+    });
+
+    test('searchQuotesByContent whitelists invalid columns safely', () async {
+      final id = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: id,
+          content: 'whitelisting test quote',
+          date: now,
+        ),
+      );
+
+      final sanitizedResults = await service.searchQuotesByContent(
+        'whitelisting test quote',
+        columns: ['id', 'content', 'non_existent_column; DROP TABLE quotes;--'],
+      );
+      expect(sanitizedResults, hasLength(1));
+      expect(sanitizedResults.first.id, equals(id));
+    });
+
+    test('searchQuotesByContent sorts deterministically by date DESC, id DESC',
+        () async {
+      await service.addQuote(
+        Quote(
+            id: 'id-1',
+            content: 'ordering-quote',
+            date: '2026-01-01T10:00:00Z'),
+      );
+      await service.addQuote(
+        Quote(
+            id: 'id-2',
+            content: 'ordering-quote',
+            date: '2026-01-02T10:00:00Z'),
+      );
+      await service.addQuote(
+        Quote(
+            id: 'id-3',
+            content: 'ordering-quote',
+            date: '2026-01-02T10:00:00Z'),
+      );
+
+      final results = await service.searchQuotesByContent('ordering-quote');
+      final ids = results.map((q) => q.id).toList();
+      expect(ids, equals(['id-3', 'id-2', 'id-1']));
+
+      final quoteIds = await service.searchQuoteIdsByContent('ordering-quote');
+      expect(quoteIds, equals(['id-3', 'id-2', 'id-1']));
     });
 
     test('searchQuotesByContent respects limit and offset', () async {

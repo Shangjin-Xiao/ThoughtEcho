@@ -556,32 +556,15 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     });
   }
 
-  /// 默认查询列投影：排除 ai_analysis 与 summary 等大文本字段，提升列表加载和搜索效率
-  static const List<String> _defaultSearchColumns = [
-    'id',
-    'content',
-    'date',
-    'source',
-    'source_author',
-    'source_work',
-    'category_id',
-    'color_hex',
-    'location',
-    'latitude',
-    'longitude',
-    'poi_name',
-    'weather',
-    'temperature',
-    'edit_source',
-    'delta_content',
-    'day_period',
-    'last_modified',
-    'favorite_count',
-    'is_deleted',
-    'deleted_at',
-  ];
-
-  /// 根据内容搜索笔记（支持列投影与 limit/offset 分页控制）
+  /// 根据内容搜索笔记（支持可选列投影与 limit/offset 分页控制）。
+  ///
+  /// 默认查询所有列 (`columns: null`) 以防止部分对象写回风险。
+  /// **警告（Partial-Object Mutation Hazard）**：
+  /// 如果显式传入 [columns] 投影且排除了某些字段（例如 `ai_analysis` 或 `summary`），
+  /// 修改返回的 [Quote] 并通过 [updateQuote] 保存时，未包含的字段将被 `null` 覆盖。
+  ///
+  /// 传入的 [columns] 会根据 [DatabaseSchemaDefinitions.requiredQuoteColumns] 进行白名单过滤。
+  /// 查询固定使用 `date DESC, id DESC` 进行稳定排序。
   @override
   Future<List<Quote>> searchQuotesByContent(
     String query, {
@@ -590,6 +573,19 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     int? limit,
     int? offset,
   }) async {
+    List<String>? queryColumns;
+    if (columns != null) {
+      final sanitized = columns
+          .where(DatabaseSchemaDefinitions.requiredQuoteColumns.contains)
+          .toSet();
+      if (sanitized.isNotEmpty) {
+        sanitized.addAll(['id', 'content', 'date']);
+        queryColumns = sanitized.toList();
+      } else {
+        queryColumns = ['id', 'content', 'date'];
+      }
+    }
+
     if (kIsWeb) {
       var result = _memoryStore
           .where(
@@ -601,6 +597,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       if (!includeDeleted) {
         result = result.where((q) => !q.isDeleted).toList();
       }
+      result.sort((a, b) {
+        final dateCmp = b.date.compareTo(a.date);
+        if (dateCmp != 0) return dateCmp;
+        return (b.id ?? '').compareTo(a.id ?? '');
+      });
       if (offset != null && offset > 0) {
         if (offset >= result.length) {
           result = [];
@@ -608,10 +609,20 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           result = result.sublist(offset);
         }
       }
-      if (limit != null && limit > 0 && result.isNotEmpty) {
-        if (limit < result.length) {
+      if (limit != null) {
+        if (limit <= 0) {
+          result = [];
+        } else if (limit < result.length) {
           result = result.sublist(0, limit);
         }
+      }
+      if (queryColumns != null) {
+        final colSet = queryColumns.toSet();
+        result = result.map((q) {
+          final map = q.toJson();
+          map.removeWhere((key, _) => !colSet.contains(key));
+          return _tryParseQuoteRow(map) ?? q;
+        }).toList();
       }
       return result;
     }
@@ -623,9 +634,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         : '(content LIKE ?) AND (is_deleted = 0 OR is_deleted IS NULL)';
     final List<Map<String, dynamic>> results = await db.query(
       'quotes',
-      columns: columns ?? _defaultSearchColumns,
+      columns: queryColumns,
       where: where,
       whereArgs: ['%$query%'],
+      orderBy: 'date DESC, id DESC',
       limit: limit,
       offset: offset,
     );
@@ -642,29 +654,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     int? offset,
   }) async {
     if (kIsWeb) {
-      var result = _memoryStore
-          .where(
-            (q) =>
-                (q.content.contains(query)) ||
-                (q.deltaContent != null && q.deltaContent!.contains(query)),
-          )
-          .toList();
-      if (!includeDeleted) {
-        result = result.where((q) => !q.isDeleted).toList();
-      }
-      if (offset != null && offset > 0) {
-        if (offset >= result.length) {
-          result = [];
-        } else {
-          result = result.sublist(offset);
-        }
-      }
-      if (limit != null && limit > 0 && result.isNotEmpty) {
-        if (limit < result.length) {
-          result = result.sublist(0, limit);
-        }
-      }
-      return result
+      final quotes = await searchQuotesByContent(
+        query,
+        includeDeleted: includeDeleted,
+        limit: limit,
+        offset: offset,
+      );
+      return quotes
           .map((q) => q.id)
           .whereType<String>()
           .where((id) => id.isNotEmpty)
@@ -680,6 +676,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       columns: ['id'],
       where: where,
       whereArgs: ['%$query%'],
+      orderBy: 'date DESC, id DESC',
       limit: limit,
       offset: offset,
     );
