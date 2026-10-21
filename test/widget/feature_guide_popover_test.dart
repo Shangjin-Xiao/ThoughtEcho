@@ -191,4 +191,92 @@ void main() {
     expect(find.byType(FeatureGuidePopover), findsOneWidget);
     expect(dismissed, isFalse);
   });
+
+  testWidgets('静止闲置时通过 500ms 兜底定时器检测 visibilityPredicate 改变并自动关闭',
+      (WidgetTester tester) async {
+    bool isVisible = true;
+    bool dismissed = false;
+
+    const guide = FeatureGuide(
+      id: 'homepage_daily_quote',
+      title: '每日一言',
+      description: '点击切换',
+    );
+
+    await tester.pumpWidget(
+      buildTestableWidget(
+        child: FeatureGuidePopover(
+          guide: guide,
+          visibilityPredicate: () => isVisible,
+          autoDismissDuration: const Duration(seconds: 10),
+          onDismiss: () {
+            dismissed = true;
+          },
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.byType(FeatureGuidePopover), findsOneWidget);
+    expect(dismissed, isFalse);
+
+    // 在静止无重绘的情况下修改 predicate
+    isVisible = false;
+
+    // 推进 500ms 触发 fallback 定时器（不依赖 setState/pump 重绘新帧）
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(dismissed, isTrue);
+  });
+
+  testWidgets(
+      '当 targetKey.currentContext 在 findRenderObject 抛出异常时在 _findTargetRenderBox 中捕获日志并降级居中显示',
+      (WidgetTester tester) async {
+    final key = GlobalKey();
+
+    await tester.pumpWidget(
+      buildTestableWidget(
+        child: Stack(
+          children: [
+            _ThrowingWidget(key: key),
+            FeatureGuidePopover(
+              guide: FeatureGuide(
+                id: 'test_guide',
+                title: '测试标题',
+                description: '测试描述',
+                targetKey: key,
+              ),
+              autoDismissDuration: const Duration(seconds: 10),
+              onDismiss: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // 应当安全捕获异常，降级显示 Popover，页面不崩溃
+    expect(find.byType(FeatureGuidePopover), findsOneWidget);
+  });
+}
+
+class _ThrowingWidget extends Widget {
+  const _ThrowingWidget({super.key});
+
+  @override
+  Element createElement() => _ThrowingElement(this);
+}
+
+class _ThrowingElement extends ComponentElement {
+  _ThrowingElement(super.widget);
+
+  @override
+  Widget build() => const SizedBox.shrink();
+
+  @override
+  RenderObject? findRenderObject() {
+    throw StateError('Simulated findRenderObject failure');
+  }
 }

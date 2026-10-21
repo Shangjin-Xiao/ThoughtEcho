@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/feature_guide.dart';
 import '../theme/theme_style.dart';
+import '../utils/app_logger.dart';
 
 /// 气泡箭头方向
 enum PopoverArrowDirection {
@@ -37,8 +38,12 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   Timer? _autoDismissTimer;
+  Timer? _fallbackTimer;
   bool _isDismissing = false;
   bool _isDisposed = false;
+  bool _hasPendingPostFrameCallback = false;
+
+  static const Duration _fallbackCheckInterval = Duration(milliseconds: 500);
 
   @override
   void initState() {
@@ -57,6 +62,13 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
     _scheduleVisibilityCheck();
 
+    // 静止/闲置界面下的保活轮询 (500ms)，确保在无新帧渲染或界面静止时也能确定性地自动关闭
+    _fallbackTimer = Timer.periodic(_fallbackCheckInterval, (_) {
+      if (mounted) {
+        _checkVisibility();
+      }
+    });
+
     // 自动消失
     _autoDismissTimer = Timer(widget.autoDismissDuration, () {
       if (mounted) {
@@ -66,9 +78,19 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   }
 
   @override
+  void didUpdateWidget(FeatureGuidePopover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.guide.targetKey != widget.guide.targetKey ||
+        oldWidget.visibilityPredicate != widget.visibilityPredicate) {
+      _scheduleVisibilityCheck();
+    }
+  }
+
+  @override
   void dispose() {
     _isDisposed = true;
     _autoDismissTimer?.cancel();
+    _fallbackTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -82,8 +104,14 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       return;
     }
 
+    if (_hasPendingPostFrameCallback) {
+      return;
+    }
+
+    _hasPendingPostFrameCallback = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkVisibilityAndScheduleNext();
+      _hasPendingPostFrameCallback = false;
+      _checkVisibility();
     });
   }
 
@@ -96,13 +124,19 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       if (renderObject is RenderBox) {
         return renderObject;
       }
-    } catch (_) {
+    } catch (e, stackTrace) {
+      AppLogger.w(
+        'FeatureGuidePopover 无法解析目标 RenderBox',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'FeatureGuidePopover',
+      );
       return null;
     }
     return null;
   }
 
-  void _checkVisibilityAndScheduleNext() {
+  void _checkVisibility() {
     if (!mounted || _isDisposed || _isDismissing) {
       return;
     }
@@ -122,8 +156,6 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         return;
       }
     }
-
-    _scheduleVisibilityCheck();
   }
 
   Future<void> _handleDismiss() async {
@@ -132,6 +164,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     }
     _isDismissing = true;
     _autoDismissTimer?.cancel();
+    _fallbackTimer?.cancel();
     await _controller.reverse();
     if (mounted && !_isDisposed) {
       widget.onDismiss();
