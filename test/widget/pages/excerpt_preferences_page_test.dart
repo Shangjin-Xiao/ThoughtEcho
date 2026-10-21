@@ -14,6 +14,7 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _useLocalQuotesOnly;
   String _offlineQuoteSource;
   bool _requireBiometricForHidden;
+  bool throwOnSetRequireBiometric;
 
   _TestSettingsService({
     bool excerptIntentEnabled = true,
@@ -22,6 +23,7 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
     bool useLocalQuotesOnly = false,
     String offlineQuoteSource = 'tagOnly',
     bool requireBiometricForHidden = false,
+    this.throwOnSetRequireBiometric = false,
   })  : _excerptIntentEnabled = excerptIntentEnabled,
         _showNoteEditTime = showNoteEditTime,
         _skipNonFullscreenEditor = skipNonFullscreenEditor,
@@ -151,6 +153,9 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   Future<void> setRequireBiometricForHidden(bool enabled) async {
+    if (throwOnSetRequireBiometric) {
+      throw Exception('Database persistence error');
+    }
     _requireBiometricForHidden = enabled;
     notifyListeners();
   }
@@ -332,8 +337,12 @@ void main() {
     expect(settings.offlineQuoteSource, 'allNotes');
   });
 
-  void mockBiometricSupport(
-      {required bool isSupported, required bool authenticateResult}) {
+  void mockBiometricSupport({
+    required bool isSupported,
+    required bool authenticateResult,
+    bool throwOnAuthenticate = false,
+    String? expectedReason,
+  }) {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(localAuthChannel, (methodCall) async {
       switch (methodCall.method) {
@@ -344,6 +353,16 @@ void main() {
         case 'getAvailableBiometrics':
           return isSupported ? <String>['fingerprint'] : <String>[];
         case 'authenticate':
+          if (expectedReason != null) {
+            final args = methodCall.arguments as Map;
+            expect(args['localizedReason'], expectedReason);
+          }
+          if (throwOnAuthenticate) {
+            throw PlatformException(
+              code: 'biometric_error',
+              message: 'Biometric failed',
+            );
+          }
           return authenticateResult;
       }
       return null;
@@ -351,12 +370,16 @@ void main() {
   }
 
   testWidgets('关闭生物识别保护且验证成功时，设置正确更新为 false', (tester) async {
-    mockBiometricSupport(isSupported: true, authenticateResult: true);
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+    mockBiometricSupport(
+      isSupported: true,
+      authenticateResult: true,
+      expectedReason: localizations.biometricToggleAuthReason,
+    );
 
     final settings = _TestSettingsService(requireBiometricForHidden: true);
     final clipboard = _TestClipboardService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
 
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();
@@ -379,12 +402,16 @@ void main() {
   });
 
   testWidgets('关闭生物识别保护且验证失败时，设置保留为 true 并弹窗提示', (tester) async {
-    mockBiometricSupport(isSupported: true, authenticateResult: false);
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+    mockBiometricSupport(
+      isSupported: true,
+      authenticateResult: false,
+      expectedReason: localizations.biometricToggleAuthReason,
+    );
 
     final settings = _TestSettingsService(requireBiometricForHidden: true);
     final clipboard = _TestClipboardService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
 
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();
@@ -408,12 +435,16 @@ void main() {
   });
 
   testWidgets('开启生物识别保护且验证成功时，设置正确更新为 true', (tester) async {
-    mockBiometricSupport(isSupported: true, authenticateResult: true);
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+    mockBiometricSupport(
+      isSupported: true,
+      authenticateResult: true,
+      expectedReason: localizations.biometricToggleAuthReason,
+    );
 
     final settings = _TestSettingsService(requireBiometricForHidden: false);
     final clipboard = _TestClipboardService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
 
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();
@@ -436,12 +467,86 @@ void main() {
   });
 
   testWidgets('开启生物识别保护且验证失败时，设置保留为 false 并弹窗提示', (tester) async {
-    mockBiometricSupport(isSupported: true, authenticateResult: false);
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+    mockBiometricSupport(
+      isSupported: true,
+      authenticateResult: false,
+      expectedReason: localizations.biometricToggleAuthReason,
+    );
 
     final settings = _TestSettingsService(requireBiometricForHidden: false);
     final clipboard = _TestClipboardService();
+
+    await tester.pumpWidget(buildApp(settings, clipboard));
+    await tester.pumpAndSettle();
+
+    final titleFinder = find.text(localizations.requireBiometricForHidden);
+    await tester.scrollUntilVisible(
+      titleFinder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(settings.requireBiometricForHidden, isFalse);
+
+    await tester
+        .tap(findSwitchForText(localizations.requireBiometricForHidden));
+    await tester.pumpAndSettle();
+
+    expect(settings.requireBiometricForHidden, isFalse);
+    expect(find.text(localizations.biometricAuthFailed), findsOneWidget);
+  });
+
+  testWidgets('生物识别验证过程抛出异常时，设置保持不变并弹窗提示错误', (tester) async {
     final localizations =
         await AppLocalizations.delegate.load(const Locale('zh'));
+    mockBiometricSupport(
+      isSupported: true,
+      authenticateResult: false,
+      throwOnAuthenticate: true,
+      expectedReason: localizations.biometricToggleAuthReason,
+    );
+
+    final settings = _TestSettingsService(requireBiometricForHidden: false);
+    final clipboard = _TestClipboardService();
+
+    await tester.pumpWidget(buildApp(settings, clipboard));
+    await tester.pumpAndSettle();
+
+    final titleFinder = find.text(localizations.requireBiometricForHidden);
+    await tester.scrollUntilVisible(
+      titleFinder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(settings.requireBiometricForHidden, isFalse);
+
+    await tester
+        .tap(findSwitchForText(localizations.requireBiometricForHidden));
+    await tester.pumpAndSettle();
+
+    expect(settings.requireBiometricForHidden, isFalse);
+    expect(find.text(localizations.biometricAuthFailed), findsOneWidget);
+  });
+
+  testWidgets('保存生物识别设置抛出异常时，设置保持不变并弹窗提示错误', (tester) async {
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+    mockBiometricSupport(
+      isSupported: true,
+      authenticateResult: true,
+      expectedReason: localizations.biometricToggleAuthReason,
+    );
+
+    final settings = _TestSettingsService(
+      requireBiometricForHidden: false,
+      throwOnSetRequireBiometric: true,
+    );
+    final clipboard = _TestClipboardService();
 
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();

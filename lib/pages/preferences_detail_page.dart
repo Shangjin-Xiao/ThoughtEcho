@@ -457,14 +457,20 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     final settings = context.read<SettingsService>();
     final l10n = AppLocalizations.of(context);
 
-    // 开启或关闭隐蔽笔记生物识别保护前均需验证身份
-    final authenticated = await _biometricService.authenticate(
-      localizedReason: l10n.biometricAuthReason,
-    );
+    try {
+      // 开启或关闭隐蔽笔记生物识别保护前均需验证身份
+      final authenticated = await _biometricService.authenticate(
+        localizedReason: l10n.biometricToggleAuthReason,
+      );
 
-    if (authenticated) {
-      await settings.setRequireBiometricForHidden(enabled);
-    } else {
+      if (authenticated) {
+        await settings.setRequireBiometricForHidden(enabled);
+      } else {
+        if (context.mounted) {
+          AppSnackBar.error(context, l10n.biometricAuthFailed);
+        }
+      }
+    } catch (e) {
       if (context.mounted) {
         AppSnackBar.error(context, l10n.biometricAuthFailed);
       }

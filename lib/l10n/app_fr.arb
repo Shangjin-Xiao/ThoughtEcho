@@ -3379,6 +3379,7 @@
   "systemTagCannotDelete": "Les balises système ne peuvent pas être supprimées",
   "biometricAuthRequired": "Authentification requise",
   "biometricAuthReason": "Veuillez vérifier votre identité pour afficher les notes masquées",
+  "biometricToggleAuthReason": "Veuillez vérifier votre identité pour modifier les paramètres de protection des notes masquées",
   "biometricAuthFailed": "L'authentification a échoué",
   "biometricNotAvailable": "L'authentification biométrique n'est pas disponible sur cet appareil",
   "biometricNotSetup": "Veuillez d'abord configurer la reconnaissance des empreintes digitales ou du visage dans les paramètres système.",

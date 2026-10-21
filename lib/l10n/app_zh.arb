@@ -3684,6 +3684,7 @@
   "systemTagCannotDelete": "系统标签无法删除",
   "biometricAuthRequired": "需要身份验证",
   "biometricAuthReason": "请验证身份以查看隐藏笔记",
+  "biometricToggleAuthReason": "请验证身份以修改隐藏笔记保护设置",
   "biometricAuthFailed": "身份验证失败",
   "biometricNotAvailable": "设备不支持生物识别验证",
   "biometricNotSetup": "请先在系统设置中设置指纹或面容识别",
