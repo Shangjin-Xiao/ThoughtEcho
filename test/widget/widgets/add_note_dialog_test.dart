@@ -551,4 +551,81 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 600));
   });
+
+  testWidgets('AddNoteDialog.show 不允许通过下滑拖拽手势关闭弹窗',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _TestSettingsService(autoAttachLocation: false),
+          ),
+          ChangeNotifierProvider<LocationService>.value(
+            value: _SlowLocationService(),
+          ),
+          ChangeNotifierProvider<WeatherService>.value(
+            value: _SlowWeatherService(),
+          ),
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: _TestDatabaseService(),
+          ),
+          ChangeNotifierProvider<FeatureGuideService>.value(
+            value: _TestFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => AddNoteDialog.show<void>(
+                  context: context,
+                  tags: const [],
+                  prefilledContent: '测试防下滑拖拽关闭',
+                  onSave: (_) {},
+                ),
+                child: const Text('open_show'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open_show'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddNoteDialog), findsOneWidget);
+
+    // 尝试向下滑动拖拽弹窗（Offset(0, 500)）
+    await tester.drag(find.byType(AddNoteDialog), const Offset(0, 500));
+    await tester.pumpAndSettle();
+
+    // 确认 enableDrag: false 生效，弹窗未被关闭
+    expect(
+      find.byType(AddNoteDialog),
+      findsOneWidget,
+      reason: 'AddNoteDialog.show 显式设置 enableDrag: false，下滑拖拽不应关闭弹窗',
+    );
+
+    // 尝试向下快速甩动（fling）
+    await tester.fling(
+      find.byType(AddNoteDialog),
+      const Offset(0, 800),
+      1000.0,
+    );
+    await tester.pumpAndSettle();
+
+    // 再次确认弹窗依然未被关闭
+    expect(
+      find.byType(AddNoteDialog),
+      findsOneWidget,
+      reason: 'AddNoteDialog.show 显式设置 enableDrag: false，向下 fling 甩动不应关闭弹窗',
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
 }
