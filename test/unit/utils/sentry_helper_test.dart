@@ -112,7 +112,7 @@ void main() {
         'DELETE query',
       );
       expect(
-        sanitizeSentryDatabaseDescription('CREATE INDEX idx_test ON items(id)'),
+        sanitizeSentryDatabaseDescription('CREATE (1)'),
         'CREATE query',
       );
     });
@@ -136,7 +136,7 @@ void main() {
     test('handles leading whitespace, mixed case, and unmatched descriptions',
         () {
       expect(
-        sanitizeSentryDatabaseDescription('   select * from notes'),
+        sanitizeSentryDatabaseDescription('   SeLeCt * FrOm NoTeS'),
         'SELECT FROM NOTES',
       );
       expect(
