@@ -21,31 +21,24 @@ void main() {
 
     expect(find.text('Test Pulse Child'), findsOneWidget);
 
-    final repaintBoundaryFinder = find.descendant(
+    final fadeTransitionFinder = find.descendant(
       of: find.byType(PulseAnimation),
-      matching: find.byType(RepaintBoundary),
+      matching: find.byType(FadeTransition),
     );
-    expect(repaintBoundaryFinder, findsOneWidget);
-
-    final opacityFinder = find.ancestor(
-      of: find.text('Test Pulse Child'),
-      matching: find.byType(Opacity),
-    );
-    expect(opacityFinder, findsOneWidget);
+    expect(fadeTransitionFinder, findsOneWidget);
 
     // Initial opacity at begin (0.2)
-    Opacity opacityWidget = tester.widget<Opacity>(opacityFinder);
-    expect(opacityWidget.opacity, equals(0.2));
+    final FadeTransition fadeTransition =
+        tester.widget<FadeTransition>(fadeTransitionFinder);
+    expect(fadeTransition.opacity.value, equals(0.2));
 
     // Advance 500ms (halfway)
     await tester.pump(const Duration(milliseconds: 500));
-    opacityWidget = tester.widget<Opacity>(opacityFinder);
-    expect(opacityWidget.opacity, closeTo(0.5, 0.1));
+    expect(fadeTransition.opacity.value, closeTo(0.5, 0.1));
 
     // Advance another 500ms to end (1.0s)
     await tester.pump(const Duration(milliseconds: 500));
-    opacityWidget = tester.widget<Opacity>(opacityFinder);
-    expect(opacityWidget.opacity, closeTo(0.8, 0.05));
+    expect(fadeTransition.opacity.value, closeTo(0.8, 0.05));
   });
 
   testWidgets(
@@ -80,42 +73,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    // Child should NOT rebuild on animation ticks due to AnimatedBuilder child reuse
+    // Child should NOT rebuild on animation ticks due to FadeTransition render object updates
     expect(childBuildCount, equals(1));
-  });
-
-  testWidgets(
-      'PulseAnimation includes RepaintBoundary for repaint layer isolation',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: PulseAnimation(
-            child: Text('Isolated Child'),
-          ),
-        ),
-      ),
-    );
-
-    final pulseFinder = find.byType(PulseAnimation);
-    expect(pulseFinder, findsOneWidget);
-
-    final repaintBoundaryFinder = find.descendant(
-      of: pulseFinder,
-      matching: find.byType(RepaintBoundary),
-    );
-    expect(repaintBoundaryFinder, findsOneWidget);
-
-    final opacityFinder = find.descendant(
-      of: repaintBoundaryFinder,
-      matching: find.byType(Opacity),
-    );
-    expect(opacityFinder, findsOneWidget);
-
-    final childFinder = find.descendant(
-      of: opacityFinder,
-      matching: find.text('Isolated Child'),
-    );
-    expect(childFinder, findsOneWidget);
   });
 }
