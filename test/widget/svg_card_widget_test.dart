@@ -168,7 +168,8 @@ void main() {
       final cardWidget =
           tester.widget<GeneratedCardWidget>(find.byType(GeneratedCardWidget));
       expect(cardWidget.card.id, equals('card_2'));
-      expect(cardWidget.card.originalContent, equals('Regenerated Card Content'));
+      expect(
+          cardWidget.card.originalContent, equals('Regenerated Card Content'));
       expect(cardWidget.card.svgContent, contains('Card 2'));
 
       expect(
