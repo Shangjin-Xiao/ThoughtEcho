@@ -21,8 +21,13 @@ ByteData _buildFontDataWithTables(List<String> tableTags) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(() {
+    PdfFontService.resetAllCachesForTesting();
+    PdfFontService.disableExternalLoadingForTesting = true;
+  });
+
   tearDown(() {
-    PdfFontService.setCachedFontDataForTesting(null);
+    PdfFontService.resetAllCachesForTesting();
   });
 
   group('PdfFontService Unit Tests', () {
@@ -91,13 +96,13 @@ void main() {
 
     test('loadFontSet with cached font data produces non-fallback PdfFontSet',
         () async {
-      final realFontData =
-          await rootBundle.load(ThemeStyleForm.bundledSerifAsset);
-      PdfFontService.setCachedFontDataForTesting(realFontData);
+      final validFontData = ByteData(4)..setUint32(0, 0x00010000);
+      PdfFontService.setCachedFontDataForTesting(validFontData);
 
       final fontSet = await PdfFontService.loadFontSet();
       expect(fontSet.isFallback, isFalse);
       expect(fontSet.regular, isA<pw.Font>());
+      expect((fontSet.regular as pw.TtfFont).data, equals(validFontData));
       expect(fontSet.bold, isA<pw.Font>());
       expect(fontSet.italic, isA<pw.Font>());
       expect(fontSet.boldItalic, isA<pw.Font>());
@@ -106,19 +111,39 @@ void main() {
     test(
         'loadFontSet with bundledSerif loads bundled font and includes regular font in fallback list',
         () async {
-      final realFontData =
-          await rootBundle.load(ThemeStyleForm.bundledSerifAsset);
-      PdfFontService.setCachedFontDataForTesting(realFontData);
+      final serifFontData = ByteData(4)..setUint32(0, 0x00010000);
+      final mainFontData = ByteData(4)..setUint32(0, 0x74727565);
+
+      PdfFontService.setCachedFontDataForTesting(mainFontData);
+      PdfFontService.setCachedBundledSerifDataForTesting(serifFontData);
 
       final fontSet = await PdfFontService.loadFontSet(
           readingFontFamily: ThemeStyleForm.bundledSerif);
       expect(fontSet.isFallback, isFalse);
+      expect((fontSet.regular as pw.TtfFont).data, equals(serifFontData));
       expect(fontSet.fallbackFonts, isNotEmpty);
+      expect((fontSet.fallbackFonts.first as pw.TtfFont).data,
+          equals(mainFontData));
     });
 
-    test('loadFont returns custom font when cached, or default font', () async {
+    test('loadFont returns TTF font with cached data when cache is present',
+        () async {
+      final validTtfData = ByteData(4)..setUint32(0, 0x00010000);
+      PdfFontService.setCachedFontDataForTesting(validTtfData);
+
       final font = await PdfFontService.loadFont();
-      expect(font, isA<pw.Font>());
+      expect(font, isA<pw.TtfFont>());
+      expect((font as pw.TtfFont).data, equals(validTtfData));
+    });
+
+    test('loadFont falls back to Helvetica when no font data is available',
+        () async {
+      PdfFontService.setCachedFontDataForTesting(null);
+      PdfFontService.disableExternalLoadingForTesting = true;
+
+      final font = await PdfFontService.loadFont();
+      expect(font, isNot(isA<pw.TtfFont>()));
+      expect(font.font, equals(pw.Type1Fonts.helvetica));
     });
   });
 }
