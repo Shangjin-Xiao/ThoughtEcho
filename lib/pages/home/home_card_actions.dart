@@ -14,10 +14,11 @@ import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/svg_card_widget.dart';
 
-/// Owns the complete AI-card interaction flow used by the home page.
+/// Owns the AI-card interaction flow used by the home page.
 ///
-/// Callers only start generation. Preview, regeneration, image export, share,
-/// save, progress feedback and failures remain local to this module.
+/// Callers start generation and receive the card preview dialog. Regeneration,
+/// image export, share, and save actions are delegated to the modal [CardPreviewDialog],
+/// which handles export progress and result feedback directly within the dialog.
 class HomeCardActions {
   HomeCardActions({
     required this.context,

@@ -90,7 +90,7 @@ void main() {
               return CardPreviewDialog(
                 card: testCard,
                 onShare: (card) => shareCompleter.future,
-                onSave: (card) async {},
+                onSave: (card) async => null,
                 onRegenerate: () async => testCard,
               );
             },
@@ -233,6 +233,76 @@ void main() {
       expect(find.text(errorText), findsOneWidget);
       final FilledButton saveButtonAfter = tester.widget(saveButtonFinder);
       expect(saveButtonAfter.onPressed, isNotNull);
+    },
+  );
+
+  testWidgets(
+    'CardPreviewDialog blocks dismissal via close button or back gesture while exporting',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final shareCompleter = Completer<void>();
+
+      await tester.pumpWidget(
+        buildTestableWidget(
+          Builder(
+            builder: (context) {
+              return CardPreviewDialog(
+                card: testCard,
+                onShare: (card) => shareCompleter.future,
+                onSave: (card) async => null,
+                onRegenerate: () async => testCard,
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final shareButtonFinder = find.widgetWithIcon(FilledButton, Icons.share);
+      await tester.tap(shareButtonFinder);
+      await tester.pump();
+
+      // Progress indicator should be active
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      // Verify close button is disabled during export
+      final closeButtonFinder = find.widgetWithIcon(IconButton, Icons.close);
+      expect(closeButtonFinder, findsOneWidget);
+      final IconButton closeButton = tester.widget(closeButtonFinder);
+      expect(closeButton.onPressed, isNull);
+
+      // Tapping close button does nothing while exporting
+      await tester.tap(closeButtonFinder, warnIfMissed: false);
+      await tester.pump();
+      expect(find.byType(CardPreviewDialog), findsOneWidget);
+
+      // PopScope should prevent pop
+      final popScopeFinder = find.byType(PopScope);
+      expect(popScopeFinder, findsOneWidget);
+      final popScopeWidget = tester.widget<PopScope>(popScopeFinder);
+      expect(popScopeWidget.canPop, isFalse);
+
+      // Complete export
+      shareCompleter.complete();
+      await tester.pumpAndSettle();
+
+      // PopScope and close button should now allow popping
+      final popScopeAfter = tester.widget<PopScope>(popScopeFinder);
+      expect(popScopeAfter.canPop, isTrue);
+
+      final IconButton closeButtonAfter = tester.widget(closeButtonFinder);
+      expect(closeButtonAfter.onPressed, isNotNull);
+
+      // Tap close button to pop
+      await tester.tap(closeButtonFinder);
+      await tester.pumpAndSettle();
+
+      // Dialog should be dismissed
+      expect(find.byType(CardPreviewDialog), findsNothing);
     },
   );
 }
