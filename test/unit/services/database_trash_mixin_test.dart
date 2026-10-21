@@ -3,6 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_schema_manager.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../test_harness.dart';
@@ -86,6 +87,45 @@ void main() {
         final secondPage = await service.getDeletedQuotes(limit: 1, offset: 1);
         expect(secondPage.length, equals(1));
         expect(secondPage.first.id, equals(id1));
+      });
+
+      test(
+          'logs error and completes without throwing when batch.commit() returns non-List element',
+          () async {
+        final now = DateTime.now().toUtc();
+        final id = const Uuid().v4();
+
+        final quote = Quote(
+          id: id,
+          content: 'Deleted Note with non-List batch commit',
+          date: now.toIso8601String(),
+          isDeleted: true,
+          deletedAt: now.toIso8601String(),
+        );
+
+        await service.addQuote(quote);
+        await db.insert('quote_tags', {'quote_id': id, 'tag_id': 'tag_test'});
+
+        final wrappedDb = _CorruptedBatchDatabase(
+          db,
+          batchResults: ['not-a-list', 123],
+        );
+        DatabaseService.setTestDatabase(wrappedDb);
+
+        UnifiedLogService.instance.clearMemoryLogs();
+        final deletedQuotes = await service.getDeletedQuotes();
+
+        expect(deletedQuotes.length, equals(1));
+        expect(deletedQuotes.first.id, equals(id));
+        expect(deletedQuotes.first.tagIds, isEmpty);
+
+        final errorLogs = UnifiedLogService.instance.logs
+            .where((l) => l.message.contains('回收站批量关联查询标签返回非 List 异常结果'))
+            .toList();
+        expect(errorLogs, isNotEmpty);
+        expect(errorLogs.first.level, equals(UnifiedLogLevel.error));
+
+        DatabaseService.setTestDatabase(db);
       });
     });
 
@@ -299,4 +339,230 @@ void main() {
       });
     });
   });
+}
+
+class _CorruptedBatchDatabase implements Database {
+  final Database _inner;
+  final List<dynamic> batchResults;
+
+  _CorruptedBatchDatabase(this._inner, {required this.batchResults});
+
+  @override
+  Batch batch() => _CorruptedBatch(_inner.batch(), batchResults);
+
+  @override
+  bool get isOpen => _inner.isOpen;
+
+  @override
+  String get path => _inner.path;
+
+  @override
+  Future<void> close() => _inner.close();
+
+  @override
+  Database get database => this;
+
+  @override
+  Future<List<Map<String, Object?>>> query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) =>
+      _inner.query(
+        table,
+        distinct: distinct,
+        columns: columns,
+        where: where,
+        whereArgs: whereArgs,
+        groupBy: groupBy,
+        having: having,
+        orderBy: orderBy,
+        limit: limit,
+        offset: offset,
+      );
+
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) =>
+      _inner.rawQuery(sql, arguments);
+
+  @override
+  Future<int> insert(
+    String table,
+    Map<String, Object?> values, {
+    String? nullColumnHack,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) =>
+      _inner.insert(
+        table,
+        values,
+        nullColumnHack: nullColumnHack,
+        conflictAlgorithm: conflictAlgorithm,
+      );
+
+  @override
+  Future<int> rawInsert(String sql, [List<Object?>? arguments]) =>
+      _inner.rawInsert(sql, arguments);
+
+  @override
+  Future<int> update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) =>
+      _inner.update(
+        table,
+        values,
+        where: where,
+        whereArgs: whereArgs,
+        conflictAlgorithm: conflictAlgorithm,
+      );
+
+  @override
+  Future<int> rawUpdate(String sql, [List<Object?>? arguments]) =>
+      _inner.rawUpdate(sql, arguments);
+
+  @override
+  Future<int> delete(
+    String table, {
+    String? where,
+    List<Object?>? whereArgs,
+  }) =>
+      _inner.delete(table, where: where, whereArgs: whereArgs);
+
+  @override
+  Future<int> rawDelete(String sql, [List<Object?>? arguments]) =>
+      _inner.rawDelete(sql, arguments);
+
+  @override
+  Future<void> execute(String sql, [List<Object?>? arguments]) =>
+      _inner.execute(sql, arguments);
+
+  @override
+  Future<T> transaction<T>(
+    Future<T> Function(Transaction txn) action, {
+    bool? exclusive,
+  }) =>
+      _inner.transaction(action, exclusive: exclusive);
+
+  @override
+  Future<T> readTransaction<T>(Future<T> Function(Transaction txn) action) =>
+      _inner.readTransaction(action);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _CorruptedBatch implements Batch {
+  final Batch _inner;
+  final List<dynamic> _results;
+
+  _CorruptedBatch(this._inner, this._results);
+
+  @override
+  Future<List<Object?>> commit({
+    bool? exclusive,
+    bool? noResult,
+    bool? continueOnError,
+  }) async {
+    return _results;
+  }
+
+  @override
+  Future<List<Object?>> apply({bool? noResult, bool? continueOnError}) =>
+      _inner.apply(noResult: noResult, continueOnError: continueOnError);
+
+  @override
+  void delete(String table, {String? where, List<Object?>? whereArgs}) =>
+      _inner.delete(table, where: where, whereArgs: whereArgs);
+
+  @override
+  void execute(String sql, [List<Object?>? arguments]) =>
+      _inner.execute(sql, arguments);
+
+  @override
+  void insert(
+    String table,
+    Map<String, Object?> values, {
+    String? nullColumnHack,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) =>
+      _inner.insert(
+        table,
+        values,
+        nullColumnHack: nullColumnHack,
+        conflictAlgorithm: conflictAlgorithm,
+      );
+
+  @override
+  void query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) =>
+      _inner.query(
+        table,
+        distinct: distinct,
+        columns: columns,
+        where: where,
+        whereArgs: whereArgs,
+        groupBy: groupBy,
+        having: having,
+        orderBy: orderBy,
+        limit: limit,
+        offset: offset,
+      );
+
+  @override
+  void rawDelete(String sql, [List<Object?>? arguments]) =>
+      _inner.rawDelete(sql, arguments);
+
+  @override
+  void rawInsert(String sql, [List<Object?>? arguments]) =>
+      _inner.rawInsert(sql, arguments);
+
+  @override
+  void rawQuery(String sql, [List<Object?>? arguments]) =>
+      _inner.rawQuery(sql, arguments);
+
+  @override
+  void rawUpdate(String sql, [List<Object?>? arguments]) =>
+      _inner.rawUpdate(sql, arguments);
+
+  @override
+  void update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) =>
+      _inner.update(
+        table,
+        values,
+        where: where,
+        whereArgs: whereArgs,
+        conflictAlgorithm: conflictAlgorithm,
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

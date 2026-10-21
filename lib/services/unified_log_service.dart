@@ -9,7 +9,7 @@ import 'package:thoughtecho/services/log_service.dart' as old_log;
 import 'package:thoughtecho/utils/global_exception_handler.dart';
 import 'package:flutter/widgets.dart';
 
-// 导入main.dart中的全局函数
+import '../utils/app_logger.dart' show LogCategory;
 import '../utils/deferred_error_buffer.dart';
 
 // 定义日志级别映射
@@ -876,8 +876,12 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
+    dynamic category,
   }) {
     if (_isDisposed) return;
+
+    final effectiveSource = source ??
+        (category is LogCategory ? category.tag : category?.toString());
 
     // 确保已初始化
     if (!_initialized) {
@@ -886,7 +890,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         timestamp: DateTime.now(),
         level: level,
         message: message,
-        source: source,
+        source: effectiveSource,
         error: error?.toString(),
         stackTrace: stackTrace?.toString(),
       );
@@ -910,7 +914,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
             timestamp: DateTime.now(),
             level: level,
             message: message,
-            source: source,
+            source: effectiveSource,
             error: error?.toString(),
             stackTrace: stackTrace?.toString(),
           ),
@@ -919,7 +923,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         // 同时使用 logging_flutter 记录日志（仅用于控制台输出）
         if (kDebugMode) {
           final loggingLevel = _mapUnifiedLevelToLogging(level);
-          final loggerName = source ?? 'ThoughtEcho';
+          final loggerName = effectiveSource ?? 'ThoughtEcho';
           final logger = logging.Logger(loggerName);
 
           logger.log(loggingLevel, message, error, stackTrace);
@@ -1004,6 +1008,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
+    dynamic category,
   }) =>
       log(
         UnifiedLogLevel.verbose,
@@ -1011,6 +1016,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         source: source,
         error: error,
         stackTrace: stackTrace,
+        category: category,
       );
 
   void debug(
@@ -1018,6 +1024,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
+    dynamic category,
   }) =>
       log(
         UnifiedLogLevel.debug,
@@ -1025,6 +1032,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         source: source,
         error: error,
         stackTrace: stackTrace,
+        category: category,
       );
 
   void info(
@@ -1032,6 +1040,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
+    dynamic category,
   }) =>
       log(
         UnifiedLogLevel.info,
@@ -1039,6 +1048,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         source: source,
         error: error,
         stackTrace: stackTrace,
+        category: category,
       );
 
   void warning(
@@ -1046,6 +1056,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
+    dynamic category,
   }) =>
       log(
         UnifiedLogLevel.warning,
@@ -1053,6 +1064,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         source: source,
         error: error,
         stackTrace: stackTrace,
+        category: category,
       );
 
   void error(
@@ -1060,6 +1072,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
+    dynamic category,
   }) =>
       log(
         UnifiedLogLevel.error,
@@ -1067,6 +1080,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         source: source,
         error: error,
         stackTrace: stackTrace,
+        category: category,
       );
 
   /// 获取日志统计摘要

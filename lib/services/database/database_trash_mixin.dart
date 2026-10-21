@@ -143,7 +143,13 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     final allTagMaps = await batch.commit();
 
     for (final result in allTagMaps) {
-      if (result is! List) continue;
+      if (result is! List) {
+        UnifiedLogService.instance.error(
+          '回收站批量关联查询标签返回非 List 异常结果: ${result.runtimeType}',
+          category: LogCategory.database,
+        );
+        continue;
+      }
       for (final item in result) {
         // 关联表的值同样不能硬转：一个坏值抛出来会连累整批查询，而逐行兜底
         // （_parseQuoteRows）根本还没轮到运行。
