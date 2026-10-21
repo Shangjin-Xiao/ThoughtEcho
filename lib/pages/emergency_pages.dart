@@ -1,13 +1,202 @@
 part of '../main.dart';
 
+T? _tryFind<T>(BuildContext context) {
+  try {
+    return Provider.of<T>(context, listen: false);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 为紧急模式下的备份与还原页面提供所需的基础服务 Provider。
+///
+/// 确保包含 [BackupService]、[DatabaseService]、[SettingsService] 与 [AIAnalysisDatabaseService]，
+/// 避免在未注入 Provider 的紧急模式下访问引发 [ProviderNotFoundException]。
+class EmergencyBackupRestoreScope extends StatefulWidget {
+  final Widget child;
+  final BackupService? backupService;
+  final DatabaseService? databaseService;
+  final SettingsService? settingsService;
+  final AIAnalysisDatabaseService? aiAnalysisDbService;
+
+  const EmergencyBackupRestoreScope({
+    super.key,
+    this.child = const BackupRestorePage(),
+    this.backupService,
+    this.databaseService,
+    this.settingsService,
+    this.aiAnalysisDbService,
+  });
+
+  @override
+  State<EmergencyBackupRestoreScope> createState() =>
+      _EmergencyBackupRestoreScopeState();
+}
+
+class _EmergencyBackupRestoreScopeState
+    extends State<EmergencyBackupRestoreScope> {
+  DatabaseService? _dbService;
+  SettingsService? _settingsService;
+  AIAnalysisDatabaseService? _aiDbService;
+  BackupService? _backupService;
+  bool _isLoading = true;
+  String? _initError;
+  bool _didInit = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInit) {
+      _didInit = true;
+      _resolveServices();
+    }
+  }
+
+  void _resolveServices() {
+    _dbService ??= widget.databaseService ??
+        _tryFind<DatabaseService>(this.context) ??
+        DatabaseService();
+    _aiDbService ??= widget.aiAnalysisDbService ??
+        _tryFind<AIAnalysisDatabaseService>(this.context) ??
+        AIAnalysisDatabaseService();
+    _settingsService ??=
+        widget.settingsService ?? _tryFind<SettingsService>(this.context);
+    _backupService ??=
+        widget.backupService ?? _tryFind<BackupService>(this.context);
+
+    if (_backupService != null) {
+      _isLoading = false;
+      _extractServicesFromBackup();
+      if (_settingsService == null) {
+        _initAsyncSettings();
+      }
+    } else if (_settingsService != null) {
+      _backupService = BackupService(
+        databaseService: _dbService!,
+        settingsService: _settingsService!,
+        aiAnalysisDbService: _aiDbService!,
+      );
+      _isLoading = false;
+    } else {
+      _initAsync();
+    }
+  }
+
+  void _extractServicesFromBackup() {
+    final b = _backupService;
+    if (b == null) return;
+    try {
+      _settingsService ??= b.settingsService;
+    } catch (_) {}
+    try {
+      _dbService ??= b.databaseService;
+    } catch (_) {}
+    try {
+      _aiDbService ??= b.aiAnalysisDbService;
+    } catch (_) {}
+  }
+
+  Future<void> _initAsyncSettings() async {
+    try {
+      final settings = await SettingsService.create();
+      if (!mounted) return;
+      setState(() {
+        _settingsService = settings;
+      });
+    } catch (_) {
+      // 容错处理：当已存在 BackupService 时，后台设置加载失败不影响基本备份还原展示
+    }
+  }
+
+  Future<void> _initAsync() async {
+    try {
+      final settings = await SettingsService.create();
+      if (!mounted) return;
+      setState(() {
+        _settingsService = settings;
+        _backupService = BackupService(
+          databaseService: _dbService!,
+          settingsService: settings,
+          aiAnalysisDbService: _aiDbService!,
+        );
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _initError = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: AppLoadingView(),
+        ),
+      );
+    }
+
+    if (_initError != null && _backupService == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(AppLocalizations.of(context).backupAndRestore),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: AppErrorView(text: _initError!),
+          ),
+        ),
+      );
+    }
+
+    final db = _dbService ?? DatabaseService();
+    final aiDb = _aiDbService ?? AIAnalysisDatabaseService();
+    final settings = _settingsService;
+    final backup = _backupService;
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<DatabaseService>.value(value: db),
+        if (settings != null)
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+        ChangeNotifierProvider<AIAnalysisDatabaseService>.value(value: aiDb),
+        if (backup != null) Provider<BackupService>.value(value: backup),
+      ],
+      child: widget.child,
+    );
+  }
+}
+
 /// 紧急恢复页面，在数据库初始化失败时显示
 class EmergencyRecoveryPage extends StatelessWidget {
-  const EmergencyRecoveryPage({super.key});
+  final BackupService? backupService;
+  final DatabaseService? databaseService;
+  final SettingsService? settingsService;
+  final AIAnalysisDatabaseService? aiAnalysisDbService;
+
+  const EmergencyRecoveryPage({
+    super.key,
+    this.backupService,
+    this.databaseService,
+    this.settingsService,
+    this.aiAnalysisDbService,
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    final db = databaseService ?? _tryFind<DatabaseService>(context);
+    final settings = settingsService ?? _tryFind<SettingsService>(context);
+    final aiDb =
+        aiAnalysisDbService ?? _tryFind<AIAnalysisDatabaseService>(context);
+    final backup = backupService ?? _tryFind<BackupService>(context);
+
+    final page = Scaffold(
       appBar: AppBar(
         title: Text(l10n.emergencyRecoveryTitle),
         backgroundColor: Colors.red,
@@ -48,7 +237,16 @@ class EmergencyRecoveryPage extends StatelessWidget {
                       // 使用 await
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const BackupRestorePage(),
+                        builder: (navContext) => EmergencyBackupRestoreScope(
+                          backupService:
+                              backup ?? _tryFind<BackupService>(navContext),
+                          databaseService:
+                              db ?? _tryFind<DatabaseService>(navContext),
+                          settingsService:
+                              settings ?? _tryFind<SettingsService>(navContext),
+                          aiAnalysisDbService: aiDb ??
+                              _tryFind<AIAnalysisDatabaseService>(navContext),
+                        ),
                       ),
                     );
                   },
@@ -64,9 +262,9 @@ class EmergencyRecoveryPage extends StatelessWidget {
                   onPressed: () async {
                     // 尝试重新初始化数据库
                     try {
-                      final databaseService = DatabaseService();
-                      databaseService.reinitialize();
-                      await databaseService.initializeNewDatabase();
+                      final databaseServiceInstance = db ?? DatabaseService();
+                      databaseServiceInstance.reinitialize();
+                      await databaseServiceInstance.initializeNewDatabase();
 
                       if (!context.mounted) return;
 
@@ -108,6 +306,23 @@ class EmergencyRecoveryPage extends StatelessWidget {
         ),
       ),
     );
+
+    if (db == null && settings == null && aiDb == null && backup == null) {
+      return page;
+    }
+
+    return MultiProvider(
+      providers: [
+        if (db != null)
+          ChangeNotifierProvider<DatabaseService>.value(value: db),
+        if (settings != null)
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+        if (aiDb != null)
+          ChangeNotifierProvider<AIAnalysisDatabaseService>.value(value: aiDb),
+        if (backup != null) Provider<BackupService>.value(value: backup),
+      ],
+      child: page,
+    );
   }
 }
 
@@ -115,18 +330,28 @@ class EmergencyRecoveryPage extends StatelessWidget {
 class EmergencyApp extends StatelessWidget {
   final String error;
   final String stackTrace;
+  final GlobalKey<NavigatorState>? customNavigatorKey;
+  final BackupService? backupService;
+  final DatabaseService? databaseService;
+  final SettingsService? settingsService;
+  final AIAnalysisDatabaseService? aiAnalysisDbService;
 
   const EmergencyApp({
     super.key,
     required this.error,
     required this.stackTrace,
+    this.customNavigatorKey,
+    this.backupService,
+    this.databaseService,
+    this.settingsService,
+    this.aiAnalysisDbService,
   });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ThoughtEcho Emergency',
-      navigatorKey: navigatorKey, // 使用全局导航键
+      navigatorKey: customNavigatorKey ?? navigatorKey, // 使用全局导航键
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -149,7 +374,17 @@ class EmergencyApp extends StatelessWidget {
         ),
       ),
       home: EmergencyHomePage(error: error, stackTrace: stackTrace),
-      routes: {'/backup_restore': (context) => const BackupRestorePage()},
+      routes: {
+        '/backup_restore': (context) => EmergencyBackupRestoreScope(
+              backupService: backupService ?? _tryFind<BackupService>(context),
+              databaseService:
+                  databaseService ?? _tryFind<DatabaseService>(context),
+              settingsService:
+                  settingsService ?? _tryFind<SettingsService>(context),
+              aiAnalysisDbService: aiAnalysisDbService ??
+                  _tryFind<AIAnalysisDatabaseService>(context),
+            ),
+      },
     );
   }
 }

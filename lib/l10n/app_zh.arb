@@ -216,7 +216,7 @@
   "emergencyPersistentIssueHint": "如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。",
   "emergencyBackupPageTitle": "紧急数据恢复",
   "emergencyBackupToolTitle": "数据紧急恢复工具",
-  "emergencyBackupToolDesc": "应用遇到异常状况，别担心，你可以尝试以下方式保障数据安全：\n\n1. 导出数据文件 — 将原始数据保存至本地，便于后续恢复或寻求协助\n2. 打开备份与恢复 — 尝试直接从已有的本地历史备份中恢复数据",
+  "emergencyBackupToolDesc": "应用遇到异常状况，别担心，你可以尝试以下方式保障数据安全：\n\n1. 导出数据库文件 — 将原始数据库文件保存至本地，便于后续恢复或寻求技术支持\n2. 打开备份与恢复 — 选择本地已有的 .zip 或 .json 备份文件进行数据恢复尝试",
   "emergencyProcessing": "正在处理...",
   "emergencyExportDatabaseButton": "导出数据库文件",
   "emergencyOpenBackupPageButton": "尝试打开标准备份还原页面",
@@ -228,7 +228,7 @@
       }
     }
   },
-  "emergencyExportHint": "提示：导出的数据包含你的完整笔记记录，可用于后续数据恢复或寻求技术支持。",
+  "emergencyExportHint": "提示：导出的数据库文件包含你的完整笔记记录，可用于后续数据恢复或寻求技术支持。",
   "emergencyLocatingDatabase": "正在定位数据库文件...",
   "emergencyDatabaseNotFound": "未找到数据库文件",
   "emergencyPreparingExport": "正在准备导出...",

@@ -34,6 +34,10 @@ class BackupService {
         _settingsService = settingsService,
         _aiAnalysisDbService = aiAnalysisDbService;
 
+  DatabaseService get databaseService => _databaseService;
+  SettingsService get settingsService => _settingsService;
+  AIAnalysisDatabaseService get aiAnalysisDbService => _aiAnalysisDbService;
+
   /// 最近一次导出中富文本媒体路径转换失败的笔记ID列表
   ///
   /// 转换失败时会退回写入原始 delta（可能含本机绝对路径），不会中止导出，

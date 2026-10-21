@@ -216,7 +216,7 @@
   "emergencyPersistentIssueHint": "If the issue persists, try reinstalling the app or contact the developer for support.",
   "emergencyBackupPageTitle": "Emergency Data Recovery",
   "emergencyBackupToolTitle": "Emergency data recovery tool",
-  "emergencyBackupToolDesc": "The app encountered an unexpected issue. Don't worry, you can try the following steps to safeguard your data:\n\n1. Export data file — Save your raw data locally for future recovery or technical support\n2. Open Backup & Restore — Try restoring your data directly from local history backups",
+  "emergencyBackupToolDesc": "The app encountered an unexpected issue. Don't worry, you can try the following steps to safeguard your data:\n\n1. Export database file — Save your raw database file locally for data recovery or technical support\n2. Open Backup & Restore — Select an existing local .zip or .json backup file to attempt recovery",
   "emergencyProcessing": "Processing...",
   "emergencyExportDatabaseButton": "Export database file",
   "emergencyOpenBackupPageButton": "Try opening standard backup & restore",
@@ -228,7 +228,7 @@
       }
     }
   },
-  "emergencyExportHint": "Tip: The exported data file contains your note history and can be used for data recovery or technical support.",
+  "emergencyExportHint": "Tip: The exported database file contains your complete note history and can be used for data recovery or technical support.",
   "emergencyLocatingDatabase": "Locating database file...",
   "emergencyDatabaseNotFound": "Database file not found",
   "emergencyPreparingExport": "Preparing export...",
