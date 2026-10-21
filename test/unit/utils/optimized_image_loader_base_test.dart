@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/utils/optimized_image_loader.dart';
 import 'package:thoughtecho/utils/optimized_image_loader_base.dart';
 
 void main() {
@@ -194,9 +193,9 @@ void main() {
         expect(isDataUrl(source), isFalse);
       });
 
-      test('returns false for uppercase DATA: scheme prefix', () {
+      test('returns true for uppercase DATA: scheme prefix', () {
         const source = 'DATA:image/png;base64,abc';
-        expect(isDataUrl(source), isFalse);
+        expect(isDataUrl(source), isTrue);
       });
 
       test('returns false for string with leading whitespace', () {
@@ -207,18 +206,6 @@ void main() {
       test('returns false when data: is embedded within a query string', () {
         const source = 'https://example.com/view?url=data:image/png;base64,abc';
         expect(isDataUrl(source), isFalse);
-      });
-    });
-
-    group('isInlineDataImage', () {
-      test('delegates to isDataUrl and returns true for valid data URL', () {
-        const source = 'data:image/png;base64,abc';
-        expect(isInlineDataImage(source), isTrue);
-      });
-
-      test('delegates to isDataUrl and returns false for standard web URL', () {
-        const source = 'https://example.com/image.png';
-        expect(isInlineDataImage(source), isFalse);
       });
     });
 

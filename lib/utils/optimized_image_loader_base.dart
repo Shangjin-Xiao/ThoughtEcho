@@ -91,7 +91,8 @@ int? decodeHeightBudgetFor(int? decodeWidth) {
   return budget > 0 ? budget : null;
 }
 
-bool isDataUrl(String source) => source.startsWith('data:');
+bool isDataUrl(String source) =>
+    source.length >= 5 && source.substring(0, 5).toLowerCase() == 'data:';
 
 Uint8List? tryDecodeDataUrl(String source) {
   if (!isDataUrl(source)) {
