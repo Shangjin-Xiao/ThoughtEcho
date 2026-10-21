@@ -270,5 +270,181 @@ void main() {
 
       externalController.dispose();
     });
+
+    testWidgets(
+        'Updates speed dynamically and re-triggers repeating animation in didUpdateWidget',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LottieAnimationWidget(
+              animationPath: 'assets/lottie/custom_loading.json',
+              speed: 1.0,
+              repeat: true,
+              autoPlay: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final lottieWidget = tester.widget<Lottie>(find.byType(Lottie));
+      final controller = lottieWidget.controller as AnimationController?;
+      expect(controller, isNotNull);
+      final initialDuration = controller!.duration!;
+      expect(controller.isAnimating, isTrue);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LottieAnimationWidget(
+              animationPath: 'assets/lottie/custom_loading.json',
+              speed: 2.0,
+              repeat: true,
+              autoPlay: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        controller.duration!.inMilliseconds,
+        equals((initialDuration.inMilliseconds / 2.0).round()),
+      );
+      expect(controller.isAnimating, isTrue);
+    });
+
+    testWidgets(
+        'Does not clobber external controller duration when speed changes in didUpdateWidget',
+        (WidgetTester tester) async {
+      final customDuration = const Duration(milliseconds: 3000);
+      final externalController = AnimationController(
+        vsync: const TestVSync(),
+        duration: customDuration,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LottieAnimationWidget(
+              animationPath: 'assets/lottie/custom_loading.json',
+              controller: externalController,
+              speed: 1.0,
+              autoPlay: false,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(externalController.duration, equals(customDuration));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LottieAnimationWidget(
+              animationPath: 'assets/lottie/custom_loading.json',
+              controller: externalController,
+              speed: 2.0,
+              autoPlay: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(externalController.duration, equals(customDuration));
+
+      externalController.dispose();
+    });
+  });
+
+  group('EnhancedLottieAnimation didUpdateWidget Tests', () {
+    testWidgets(
+        'Updates duration dynamically and re-triggers repeating animation in didUpdateWidget',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: EnhancedLottieAnimation(
+              type: LottieAnimationType.loading,
+              duration: Duration(milliseconds: 1000),
+              repeat: true,
+              autoPlay: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final lottieWidget = tester.widget<Lottie>(find.byType(Lottie));
+      final controller = lottieWidget.controller as AnimationController?;
+      expect(controller, isNotNull);
+      expect(controller!.duration, equals(const Duration(milliseconds: 1000)));
+      expect(controller.isAnimating, isTrue);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: EnhancedLottieAnimation(
+              type: LottieAnimationType.loading,
+              duration: Duration(milliseconds: 500),
+              repeat: true,
+              autoPlay: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(controller.duration, equals(const Duration(milliseconds: 500)));
+      expect(controller.isAnimating, isTrue);
+    });
+
+    testWidgets(
+        'Updates duration dynamically and re-triggers forward animation in didUpdateWidget',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: EnhancedLottieAnimation(
+              type: LottieAnimationType.loading,
+              duration: Duration(milliseconds: 1000),
+              repeat: false,
+              autoPlay: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final lottieWidget = tester.widget<Lottie>(find.byType(Lottie));
+      final controller = lottieWidget.controller as AnimationController?;
+      expect(controller, isNotNull);
+      expect(controller!.duration, equals(const Duration(milliseconds: 1000)));
+      expect(controller.isAnimating, isTrue);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: EnhancedLottieAnimation(
+              type: LottieAnimationType.loading,
+              duration: Duration(milliseconds: 500),
+              repeat: false,
+              autoPlay: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(controller.duration, equals(const Duration(milliseconds: 500)));
+      expect(controller.isAnimating, isTrue);
+    });
   });
 }

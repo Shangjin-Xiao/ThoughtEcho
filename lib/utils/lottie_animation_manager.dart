@@ -181,6 +181,16 @@ class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
     super.didUpdateWidget(oldWidget);
     if (widget.duration != oldWidget.duration && _composition != null) {
       _controller.duration = widget.duration ?? _composition!.duration;
+      if (_controller.isAnimating) {
+        final config = LottieAnimationManager.getAnimationConfig(widget.type);
+        final repeat = widget.repeat ?? config.repeat;
+        final reverse = widget.reverse ?? config.reverse;
+        if (repeat) {
+          _controller.repeat(reverse: reverse);
+        } else {
+          _controller.forward(from: _controller.value);
+        }
+      }
     }
   }
 

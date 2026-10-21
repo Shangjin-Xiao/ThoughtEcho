@@ -91,16 +91,22 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
   @override
   void didUpdateWidget(LottieAnimationWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.speed != oldWidget.speed && _composition != null) {
+    _initializeAnimation();
+    if (widget.controller == null &&
+        widget.speed != oldWidget.speed &&
+        _composition != null) {
       final speed =
           (widget.speed != null && widget.speed! > 0) ? widget.speed! : 1.0;
       final effectiveDuration = Duration(
         milliseconds: (_composition!.duration.inMilliseconds / speed).round(),
       );
-      if (widget.controller == null) {
-        _controller.duration = effectiveDuration;
-      } else if (_controller.duration != null) {
-        _controller.duration = effectiveDuration;
+      _controller.duration = effectiveDuration;
+      if (_controller.isAnimating) {
+        if (_shouldRepeat) {
+          _controller.repeat();
+        } else {
+          _controller.forward(from: _controller.value);
+        }
       }
     }
   }
