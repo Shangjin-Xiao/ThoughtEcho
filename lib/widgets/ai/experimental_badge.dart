@@ -224,40 +224,49 @@ Future<void> showExperimentalNoticeDialog(BuildContext context) async {
                   const SizedBox(height: 16),
 
                   // 不再自动提示勾选框
-                  InkWell(
-                    onTap: () {
-                      setDialogState(() {
-                        dontShowAgain = !dontShowAgain;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 4,
-                        horizontal: 4,
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: Checkbox(
-                              value: dontShowAgain,
-                              onChanged: (val) {
-                                setDialogState(() {
-                                  dontShowAgain = val ?? false;
-                                });
-                              },
+                  Semantics(
+                    checked: dontShowAgain,
+                    label: l10n.dontShowAgain,
+                    button: true,
+                    child: InkWell(
+                      onTap: () {
+                        setDialogState(() {
+                          dontShowAgain = !dontShowAgain;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 4,
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: ExcludeSemantics(
+                                child: Checkbox(
+                                  value: dontShowAgain,
+                                  onChanged: (val) {
+                                    setDialogState(() {
+                                      dontShowAgain = val ?? false;
+                                    });
+                                  },
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.dontShowAgain,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+                            const SizedBox(width: 8),
+                            ExcludeSemantics(
+                              child: Text(
+                                l10n.dontShowAgain,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
