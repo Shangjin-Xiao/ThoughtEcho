@@ -227,7 +227,6 @@ Future<void> showExperimentalNoticeDialog(BuildContext context) async {
                   Semantics(
                     checked: dontShowAgain,
                     label: l10n.dontShowAgain,
-                    button: true,
                     child: InkWell(
                       onTap: () {
                         setDialogState(() {

@@ -2446,11 +2446,31 @@ void main() {
       expect(find.byType(Dialog), findsOneWidget);
       expect(find.text('Thoughter 实验性功能说明'), findsOneWidget);
 
+      final l10n = _l10n(tester);
+      final checkboxSemanticsFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == l10n.dontShowAgain,
+      );
+      expect(checkboxSemanticsFinder, findsOneWidget);
+
+      final initialSemanticsWidget =
+          tester.widget<Semantics>(checkboxSemanticsFinder);
+      expect(initialSemanticsWidget.properties.label, l10n.dontShowAgain);
+      expect(initialSemanticsWidget.properties.checked, isFalse);
+      expect(initialSemanticsWidget.properties.button, isNot(isTrue));
+
       // Check "不再自动提示"
       final checkbox = find.byType(Checkbox);
       expect(checkbox, findsOneWidget);
       await tester.tap(checkbox);
       await tester.pumpAndSettle();
+
+      final toggledSemanticsWidget =
+          tester.widget<Semantics>(checkboxSemanticsFinder);
+      expect(toggledSemanticsWidget.properties.label, l10n.dontShowAgain);
+      expect(toggledSemanticsWidget.properties.checked, isTrue);
+      expect(toggledSemanticsWidget.properties.button, isNot(isTrue));
 
       // Tap close button (Icons.close inside Dialog header)
       final closeButton = find.descendant(
