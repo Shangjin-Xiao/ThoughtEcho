@@ -716,7 +716,10 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                         alignment: Alignment.topRight,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .scrim
+                                .withValues(alpha: 0.5),
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
@@ -725,7 +728,14 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                                 : () => Navigator.of(context).pop(),
                             icon: Icon(
                               Icons.close,
-                              color: isLocked ? Colors.white38 : Colors.white,
+                              color: isLocked
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onInverseSurface
+                                      .withValues(alpha: 0.38)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onInverseSurface,
                               size: 24,
                             ),
                             tooltip: l10n.close,
