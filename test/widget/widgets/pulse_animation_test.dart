@@ -21,24 +21,25 @@ void main() {
 
     expect(find.text('Test Pulse Child'), findsOneWidget);
 
-    final fadeTransitionFinder = find.descendant(
-      of: find.byType(PulseAnimation),
-      matching: find.byType(FadeTransition),
+    final opacityFinder = find.ancestor(
+      of: find.text('Test Pulse Child'),
+      matching: find.byType(Opacity),
     );
-    expect(fadeTransitionFinder, findsOneWidget);
+    expect(opacityFinder, findsOneWidget);
 
     // Initial opacity at begin (0.2)
-    final FadeTransition fadeTransition =
-        tester.widget<FadeTransition>(fadeTransitionFinder);
-    expect(fadeTransition.opacity.value, equals(0.2));
+    Opacity opacityWidget = tester.widget<Opacity>(opacityFinder);
+    expect(opacityWidget.opacity, equals(0.2));
 
     // Advance 500ms (halfway)
     await tester.pump(const Duration(milliseconds: 500));
-    expect(fadeTransition.opacity.value, closeTo(0.5, 0.1));
+    opacityWidget = tester.widget<Opacity>(opacityFinder);
+    expect(opacityWidget.opacity, closeTo(0.5, 0.1));
 
     // Advance another 500ms to end (1.0s)
     await tester.pump(const Duration(milliseconds: 500));
-    expect(fadeTransition.opacity.value, closeTo(0.8, 0.05));
+    opacityWidget = tester.widget<Opacity>(opacityFinder);
+    expect(opacityWidget.opacity, closeTo(0.8, 0.05));
   });
 
   testWidgets(
@@ -73,7 +74,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    // Child should NOT rebuild on animation ticks due to FadeTransition render object updates
+    // Child should NOT rebuild on animation ticks due to AnimatedBuilder child reuse
     expect(childBuildCount, equals(1));
   });
 }
