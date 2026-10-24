@@ -395,15 +395,43 @@ class MockDatabaseService extends _i1.Mock implements _i15.DatabaseService {
   _i5.Future<List<_i17.Quote>> searchQuotesByContent(
     String? query, {
     bool? includeDeleted = false,
+    List<String>? columns,
+    int? limit,
+    int? offset,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #searchQuotesByContent,
           [query],
-          {#includeDeleted: includeDeleted},
+          {
+            #includeDeleted: includeDeleted,
+            #columns: columns,
+            #limit: limit,
+            #offset: offset,
+          },
         ),
         returnValue: _i5.Future<List<_i17.Quote>>.value(<_i17.Quote>[]),
       ) as _i5.Future<List<_i17.Quote>>);
+
+  @override
+  _i5.Future<List<String>> searchQuoteIdsByContent(
+    String? query, {
+    bool? includeDeleted = false,
+    int? limit,
+    int? offset,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #searchQuoteIdsByContent,
+          [query],
+          {
+            #includeDeleted: includeDeleted,
+            #limit: limit,
+            #offset: offset,
+          },
+        ),
+        returnValue: _i5.Future<List<String>>.value(<String>[]),
+      ) as _i5.Future<List<String>>);
 
   @override
   _i5.Future<_i15.QuoteUpdateResult> updateQuote(_i17.Quote? quote) =>

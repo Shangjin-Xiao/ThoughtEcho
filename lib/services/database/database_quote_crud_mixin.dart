@@ -556,12 +556,36 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     });
   }
 
-  /// 根据内容搜索笔记（用于媒体引用校验等内部逻辑）
+  /// 根据内容搜索笔记（支持可选列投影与 limit/offset 分页控制）。
+  ///
+  /// 默认查询所有列 (`columns: null`) 以防止部分对象写回风险。
+  /// **警告（Partial-Object Mutation Hazard）**：
+  /// 如果显式传入 [columns] 投影且排除了某些字段（例如 `ai_analysis` 或 `summary`），
+  /// 修改返回的 [Quote] 并通过 [updateQuote] 保存时，未包含的字段将被 `null` 覆盖。
+  ///
+  /// 传入的 [columns] 会根据 [DatabaseSchemaDefinitions.requiredQuoteColumns] 进行白名单过滤。
+  /// 查询固定使用 `date DESC, id DESC` 进行稳定排序。
   @override
   Future<List<Quote>> searchQuotesByContent(
     String query, {
     bool includeDeleted = false,
+    List<String>? columns,
+    int? limit,
+    int? offset,
   }) async {
+    List<String>? queryColumns;
+    if (columns != null) {
+      final sanitized = columns
+          .where(DatabaseSchemaDefinitions.requiredQuoteColumns.contains)
+          .toSet();
+      if (sanitized.isNotEmpty) {
+        sanitized.addAll(['id', 'content', 'date']);
+        queryColumns = sanitized.toList();
+      } else {
+        queryColumns = ['id', 'content', 'date'];
+      }
+    }
+
     if (kIsWeb) {
       var result = _memoryStore
           .where(
@@ -573,6 +597,33 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       if (!includeDeleted) {
         result = result.where((q) => !q.isDeleted).toList();
       }
+      result.sort((a, b) {
+        final dateCmp = b.date.compareTo(a.date);
+        if (dateCmp != 0) return dateCmp;
+        return (b.id ?? '').compareTo(a.id ?? '');
+      });
+      if (offset != null && offset > 0) {
+        if (offset >= result.length) {
+          result = [];
+        } else {
+          result = result.sublist(offset);
+        }
+      }
+      if (limit != null) {
+        if (limit <= 0) {
+          result = [];
+        } else if (limit < result.length) {
+          result = result.sublist(0, limit);
+        }
+      }
+      if (queryColumns != null) {
+        final colSet = queryColumns.toSet();
+        result = result.map((q) {
+          final map = q.toJson();
+          map.removeWhere((key, _) => !colSet.contains(key));
+          return _tryParseQuoteRow(map) ?? q;
+        }).toList();
+      }
       return result;
     }
 
@@ -583,11 +634,58 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         : '(content LIKE ?) AND (is_deleted = 0 OR is_deleted IS NULL)';
     final List<Map<String, dynamic>> results = await db.query(
       'quotes',
+      columns: queryColumns,
       where: where,
       whereArgs: ['%$query%'],
+      orderBy: 'date DESC, id DESC',
+      limit: limit,
+      offset: offset,
     );
 
     return _parseQuoteRows(results);
+  }
+
+  /// 根据内容仅检索笔记 ID 列表（用于媒体引用校验等轻量级场景）
+  @override
+  Future<List<String>> searchQuoteIdsByContent(
+    String query, {
+    bool includeDeleted = false,
+    int? limit,
+    int? offset,
+  }) async {
+    if (kIsWeb) {
+      final quotes = await searchQuotesByContent(
+        query,
+        includeDeleted: includeDeleted,
+        limit: limit,
+        offset: offset,
+      );
+      return quotes
+          .map((q) => q.id)
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toList();
+    }
+
+    final db = await safeDatabase;
+    final where = includeDeleted
+        ? 'content LIKE ?'
+        : '(content LIKE ?) AND (is_deleted = 0 OR is_deleted IS NULL)';
+    final List<Map<String, dynamic>> results = await db.query(
+      'quotes',
+      columns: ['id'],
+      where: where,
+      whereArgs: ['%$query%'],
+      orderBy: 'date DESC, id DESC',
+      limit: limit,
+      offset: offset,
+    );
+
+    return results
+        .map((row) => row['id']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toList();
   }
 
   /// 修复：更新笔记内容，增加数据验证和并发控制

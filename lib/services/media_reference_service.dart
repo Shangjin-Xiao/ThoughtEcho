@@ -750,21 +750,21 @@ class MediaReferenceService {
       // 注意：这步对于数据安全至关重要
       // 修复：搜索所有笔记（含回收站），避免误删仍可恢复笔记引用的媒体
       final dbService = DatabaseService();
-      final quotesWithFile = await dbService.searchQuotesByContent(
+      final quoteIdsWithFile = await dbService.searchQuoteIdsByContent(
         normalizedPath,
         includeDeleted: true,
       );
 
-      if (quotesWithFile.isNotEmpty) {
+      if (quoteIdsWithFile.isNotEmpty) {
         logDebug(
-          '警告：文件 $filePath 在引用表中无记录，但在 ${quotesWithFile.length} 条笔记内容中发现引用。正在自动修复引用表并跳过删除。',
+          '警告：文件 $filePath 在引用表中无记录，但在 ${quoteIdsWithFile.length} 条笔记内容中发现引用。正在自动修复引用表并跳过删除。',
         );
         // 自动修复逻辑：重建引用记录
-        for (final quote in quotesWithFile) {
-          if (quote.id != null) {
+        for (final quoteId in quoteIdsWithFile) {
+          if (quoteId.isNotEmpty) {
             await addReference(
               normalizedPath,
-              quote.id!,
+              quoteId,
               cachedAppPath: appPath,
             );
           }

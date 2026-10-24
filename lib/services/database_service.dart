@@ -119,6 +119,15 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<List<Quote>> searchQuotesByContent(
     String query, {
     bool includeDeleted = false,
+    List<String>? columns,
+    int? limit,
+    int? offset,
+  });
+  Future<List<String>> searchQuoteIdsByContent(
+    String query, {
+    bool includeDeleted = false,
+    int? limit,
+    int? offset,
   });
   Future<QuoteUpdateResult> updateQuote(Quote quote);
 

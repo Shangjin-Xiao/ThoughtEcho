@@ -188,6 +188,193 @@ void main() {
       expect(includeDeletedIds.contains(deletedId), isTrue);
     });
 
+    test(
+        'searchQuotesByContent fetches all columns by default, and respects projection when specified',
+        () async {
+      final id = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: id,
+          content: 'projection test quote',
+          date: now,
+          aiAnalysis: 'Heavy AI Analysis Text',
+          summary: 'Heavy Summary Text',
+        ),
+      );
+
+      final defaultResults =
+          await service.searchQuotesByContent('projection test quote');
+      expect(defaultResults, hasLength(1));
+      expect(defaultResults.first.aiAnalysis, equals('Heavy AI Analysis Text'));
+      expect(defaultResults.first.summary, equals('Heavy Summary Text'));
+
+      final projectedResults = await service.searchQuotesByContent(
+        'projection test quote',
+        columns: ['id', 'content', 'date'],
+      );
+      expect(projectedResults, hasLength(1));
+      expect(projectedResults.first.aiAnalysis, isNull);
+      expect(projectedResults.first.summary, isNull);
+    });
+
+    test('searchQuotesByContent returns empty list when limit is 0', () async {
+      final id = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: id,
+          content: 'limit zero test quote',
+          date: now,
+        ),
+      );
+
+      final zeroLimitResults = await service.searchQuotesByContent(
+        'limit zero test quote',
+        limit: 0,
+      );
+      expect(zeroLimitResults, isEmpty);
+
+      final zeroLimitIds = await service.searchQuoteIdsByContent(
+        'limit zero test quote',
+        limit: 0,
+      );
+      expect(zeroLimitIds, isEmpty);
+    });
+
+    test('searchQuotesByContent whitelists invalid columns safely', () async {
+      final id = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: id,
+          content: 'whitelisting test quote',
+          date: now,
+        ),
+      );
+
+      final sanitizedResults = await service.searchQuotesByContent(
+        'whitelisting test quote',
+        columns: ['id', 'content', 'non_existent_column; DROP TABLE quotes;--'],
+      );
+      expect(sanitizedResults, hasLength(1));
+      expect(sanitizedResults.first.id, equals(id));
+    });
+
+    test('searchQuotesByContent sorts deterministically by date DESC, id DESC',
+        () async {
+      await service.addQuote(
+        Quote(
+            id: 'id-1',
+            content: 'ordering-quote',
+            date: '2026-01-01T10:00:00Z'),
+      );
+      await service.addQuote(
+        Quote(
+            id: 'id-2',
+            content: 'ordering-quote',
+            date: '2026-01-02T10:00:00Z'),
+      );
+      await service.addQuote(
+        Quote(
+            id: 'id-3',
+            content: 'ordering-quote',
+            date: '2026-01-02T10:00:00Z'),
+      );
+
+      final results = await service.searchQuotesByContent('ordering-quote');
+      final ids = results.map((q) => q.id).toList();
+      expect(ids, equals(['id-3', 'id-2', 'id-1']));
+
+      final quoteIds = await service.searchQuoteIdsByContent('ordering-quote');
+      expect(quoteIds, equals(['id-3', 'id-2', 'id-1']));
+    });
+
+    test('searchQuotesByContent respects limit and offset', () async {
+      final now = DateTime.now().toUtc().toIso8601String();
+      for (int i = 0; i < 5; i++) {
+        await service.addQuote(
+          Quote(
+            id: 'page-quote-$i',
+            content: 'pagination-search-keyword index $i',
+            date: now,
+          ),
+        );
+      }
+
+      final page1 = await service.searchQuotesByContent(
+        'pagination-search-keyword',
+        limit: 2,
+        offset: 0,
+      );
+      expect(page1, hasLength(2));
+
+      final page2 = await service.searchQuotesByContent(
+        'pagination-search-keyword',
+        limit: 2,
+        offset: 2,
+      );
+      expect(page2, hasLength(2));
+      expect(
+          page1
+              .map((q) => q.id)
+              .toSet()
+              .intersection(page2.map((q) => q.id).toSet()),
+          isEmpty);
+
+      final page3 = await service.searchQuotesByContent(
+        'pagination-search-keyword',
+        limit: 2,
+        offset: 4,
+      );
+      expect(page3, hasLength(1));
+    });
+
+    test(
+        'searchQuoteIdsByContent returns list of string IDs and respects includeDeleted and limit/offset',
+        () async {
+      final activeId1 = const Uuid().v4();
+      final activeId2 = const Uuid().v4();
+      final deletedId = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(id: activeId1, content: 'id-search-keyword first', date: now),
+      );
+      await service.addQuote(
+        Quote(id: activeId2, content: 'id-search-keyword second', date: now),
+      );
+      await service.addQuote(
+        Quote(
+          id: deletedId,
+          content: 'id-search-keyword deleted',
+          date: now,
+          isDeleted: true,
+          deletedAt: now,
+        ),
+      );
+
+      final activeIds =
+          await service.searchQuoteIdsByContent('id-search-keyword');
+      expect(activeIds, isA<List<String>>());
+      expect(activeIds, containsAll([activeId1, activeId2]));
+      expect(activeIds.contains(deletedId), isFalse);
+
+      final allIds = await service.searchQuoteIdsByContent('id-search-keyword',
+          includeDeleted: true);
+      expect(allIds, containsAll([activeId1, activeId2, deletedId]));
+
+      final limitedIds = await service.searchQuoteIdsByContent(
+        'id-search-keyword',
+        includeDeleted: true,
+        limit: 1,
+      );
+      expect(limitedIds, hasLength(1));
+    });
+
     test('getUserQuotes includeDeleted keeps deleted metadata', () async {
       final deletedId = const Uuid().v4();
       final deletedAt = DateTime.now().toUtc().toIso8601String();
