@@ -32,6 +32,9 @@ class PdfFontSet {
 }
 
 class PdfFontService {
+  @visibleForTesting
+  static bool disableExternalLoadingForTesting = false;
+
   static ByteData? _cachedFontData;
   static final Map<String, ByteData> _cachedLanguageFallbackData = {};
   static ByteData? _cachedEmojiFontData;
@@ -169,6 +172,9 @@ class PdfFontService {
     if (validMemoryCache != null) {
       return validMemoryCache;
     }
+    if (disableExternalLoadingForTesting) {
+      return null;
+    }
     try {
       await _removeObsoleteFontCache();
 
@@ -213,6 +219,9 @@ class PdfFontService {
     if (cached != null && isValidFontData(cached)) {
       return cached;
     }
+    if (disableExternalLoadingForTesting) {
+      return null;
+    }
     try {
       final data = await rootBundle.load(ThemeStyleForm.bundledSerifAsset);
       if (!isValidFontData(data)) {
@@ -233,6 +242,9 @@ class PdfFontService {
       return _cachedEmojiFontData!;
     }
     _cachedEmojiFontData = null;
+    if (disableExternalLoadingForTesting) {
+      return null;
+    }
     final cached = await _tryLoadCachedFont(_emojiFontFileName);
     if (cached != null && isValidEmojiFontData(cached)) {
       _cachedEmojiFontData = cached;
@@ -255,6 +267,10 @@ class PdfFontService {
         isValidFontData(_cachedMaterialIconFontData!)) {
       return _cachedMaterialIconFontData;
     }
+    _cachedMaterialIconFontData = null;
+    if (disableExternalLoadingForTesting) {
+      return null;
+    }
     final cached = await _tryLoadCachedFont(_materialIconFontFileName);
     if (cached != null && isValidFontData(cached)) {
       _cachedMaterialIconFontData = cached;
@@ -276,6 +292,10 @@ class PdfFontService {
         isValidFontData(_cachedMonochromeEmojiFontData!)) {
       return _cachedMonochromeEmojiFontData;
     }
+    _cachedMonochromeEmojiFontData = null;
+    if (disableExternalLoadingForTesting) {
+      return null;
+    }
     final cached = await _tryLoadCachedFont(_monochromeEmojiFontFileName);
     if (cached != null && isValidFontData(cached)) {
       _cachedMonochromeEmojiFontData = cached;
@@ -293,6 +313,9 @@ class PdfFontService {
   }
 
   static Future<List<ByteData>> _loadLanguageFallbackFontData() async {
+    if (disableExternalLoadingForTesting) {
+      return List.unmodifiable(_cachedLanguageFallbackData.values);
+    }
     for (final config in _languageFallbackFonts) {
       if (_cachedLanguageFallbackData.containsKey(config.fileName)) {
         continue;
@@ -364,8 +387,24 @@ class PdfFontService {
   }
 
   @visibleForTesting
+  static void resetAllCachesForTesting() {
+    _cachedFontData = null;
+    _cachedLanguageFallbackData.clear();
+    _cachedEmojiFontData = null;
+    _cachedMonochromeEmojiFontData = null;
+    _cachedMaterialIconFontData = null;
+    _cachedBundledSerifData = null;
+    disableExternalLoadingForTesting = false;
+  }
+
+  @visibleForTesting
   static void setCachedFontDataForTesting(ByteData? data) {
     _cachedFontData = data;
+  }
+
+  @visibleForTesting
+  static void setCachedBundledSerifDataForTesting(ByteData? data) {
+    _cachedBundledSerifData = data;
   }
 
   @visibleForTesting

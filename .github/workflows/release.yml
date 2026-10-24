@@ -26,6 +26,10 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 # 默认只读；只有归集产物、创建 Release 的 release 作业需要写权限
 permissions:
   contents: read
@@ -221,6 +225,36 @@ jobs:
               >> "$GITHUB_STEP_SUMMARY"
           done
 
+      - name: 生成 SHA-256 校验和
+        id: checksums
+        run: |
+          set -euo pipefail
+          (
+            cd dist
+            # 遍历所有待发布的二进制安装包与压缩包，生成标准格式 checksums.txt
+            files=()
+            for f in *; do
+              if [[ -f "$f" && "$f" != "checksums.txt" ]]; then
+                files+=("$f")
+              fi
+            done
+
+            if [[ ${#files[@]} -eq 0 ]]; then
+              echo "::error::dist 目录下无待校验的发布文件"
+              exit 1
+            fi
+
+            sha256sum "${files[@]}" > checksums.txt
+          )
+
+          {
+            echo "### SHA-256 校验和"
+            echo ""
+            echo '```'
+            cat dist/checksums.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: 生成 Release 正文
         id: notes
         env:
@@ -255,6 +289,18 @@ jobs:
             echo "- **iOS**：\`ThoughtEcho-unsigned.ipa\` 未签名，需自行签名侧载，尚未上架 App Store"
             echo ""
             echo "完整下载指引：https://note.shangjinyun.cn/dl"
+            echo ""
+            echo "### 完整性校验"
+            echo ""
+            echo "所有发布资产的 SHA-256 校验和均记录在 \`checksums.txt\` 中。下载后可使用以下命令校验文件完整性："
+            echo ""
+            echo "\`\`\`bash"
+            echo "# Linux / macOS (使用 --ignore-missing 仅校验已下载的文件)"
+            echo "sha256sum -c checksums.txt --ignore-missing"
+            echo ""
+            echo "# Windows (PowerShell)"
+            echo "Get-FileHash <文件名> -Algorithm SHA256"
+            echo "\`\`\`"
           } >> "$out"
 
           echo "body_file=$out" >> "$GITHUB_OUTPUT"

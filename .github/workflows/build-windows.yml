@@ -57,6 +57,10 @@ on:
       APTABASE_APP_KEY:
         required: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   build-windows:
     runs-on: windows-latest
