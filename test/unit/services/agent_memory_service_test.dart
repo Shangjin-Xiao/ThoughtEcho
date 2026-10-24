@@ -925,5 +925,78 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('searchFacts 精确打分并优先召回高相关度多关键词匹配事实，不受 SQL 排序提前截断影响', () async {
+      await memory.clearAll();
+      // 写入 35 条只有 1 个关键词匹配的高重要度事实 (importance 10)
+      for (var i = 1; i <= 35; i++) {
+        await memory.addFact(
+          content: '高重要度单关键词记忆条目 $i',
+          importance: 10,
+        );
+      }
+      // 写入 1 条匹配 3 个关键词的中重要度事实 (importance 5)
+      final multiHit = await memory.addFact(
+        content: '高相关度多关键词记忆 苹果 笔记本 条目',
+        importance: 5,
+      );
+
+      final hits = await memory.searchFacts('记忆 苹果 笔记本', limit: 8);
+      expect(hits, isNotEmpty);
+      expect(hits.first.fact.id, equals(multiHit.id));
+
+      await memory.clearAll();
+    });
+
+    test('_evictOverflowFacts 超容量时通过全表打分正确淘汰包含时间衰减的最低分条目', () async {
+      await memory.clearAll();
+      final now = DateTime.now();
+
+      // 1 条 180 天前创建的高重要度旧记忆（已衰减至低得分）
+      await memory.addFact(
+        content: '古老独一无二旧高重要度记忆',
+        importance: 10,
+        createdAt: now.subtract(const Duration(days: 180)),
+      );
+
+      // 400 条最近创建的较低重要度新记忆
+      for (var i = 1; i <= 400; i++) {
+        await memory.addFact(
+          content: '新创建偏好事实 $i',
+          importance: 2,
+          createdAt: now,
+        );
+      }
+
+      final count = await memory.counts();
+      expect(count.factCount, equals(400));
+
+      // 验证旧的已衰减低分记忆已被正确淘汰，而不是新记忆
+      final hits = await memory.searchFacts('古老独一无二旧高重要度记忆');
+      expect(hits, isEmpty);
+
+      await memory.clearAll();
+    });
+
+    test('_flushRecallQueue 在队列失败时重入未刷新 ID，防止召回更新丢失', () async {
+      await memory.clearAll();
+      final fact = await memory.addFact(
+        content: '需要测试异步召回计数的记忆',
+        importance: 8,
+      );
+
+      // 触发召回
+      final hits = await memory.searchFacts('异步召回计数');
+      expect(hits, isNotEmpty);
+
+      // 等待异步队列完成刷新
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+
+      final refreshedFacts = await memory.allFacts(query: '异步召回计数');
+      expect(refreshedFacts.first.id, equals(fact.id));
+      expect(refreshedFacts.first.recallCount, greaterThanOrEqualTo(1));
+
+      await memory.clearAll();
+    });
   });
 }
