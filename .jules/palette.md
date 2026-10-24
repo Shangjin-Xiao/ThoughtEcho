@@ -47,3 +47,7 @@
 ## 2026-10-16 - Missing tooltip in IconButton for agent memory search
 **Learning:** Found an `IconButton` used for searching in `agent_memory_page.dart` that was missing a tooltip for accessibility. Missing tooltips on icon-only buttons reduce accessibility for screen readers and confused users trying to understand the icon's purpose.
 **Action:** Add tooltips to icon-only buttons like search toggles using the localized strings (e.g. `l10n.search` and `l10n.cancel`).
+
+## 2026-10-23 - Added Semantics wrapper to Checkbox in ExperimentalBadge Dialog
+**Learning:** While custom interactive rows (like `InkWell` wrapping icon/text) generally use `Semantics(button: true, ...)` per the 2026-08-14 entry, adding `button: true` to a checkbox row conflicts with the checkbox semantic role for screen readers. When building composite checkbox controls (e.g., a row with `Checkbox` and `Text`), screen readers should announce it as a checkbox rather than a generic button.
+**Action:** When creating custom checkbox rows with `InkWell`, wrap the interactive block in `Semantics(checked: ..., label: ...)` without setting `button: true`. Keep `ExcludeSemantics` around the inner visual `Checkbox` and label `Text` to prevent fragmented or duplicate announcements.
