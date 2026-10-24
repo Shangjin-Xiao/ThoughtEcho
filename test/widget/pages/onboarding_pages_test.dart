@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/config/onboarding_config.dart';
 import 'package:thoughtecho/controllers/onboarding_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/ai_analysis_model.dart';
 import 'package:thoughtecho/models/onboarding_models.dart';
+import 'package:thoughtecho/pages/onboarding_page.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/api_service.dart';
+import 'package:thoughtecho/services/clipboard_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
@@ -17,10 +26,108 @@ import 'package:thoughtecho/widgets/onboarding/preferences_page_view.dart';
 
 import '../../test_harness.dart';
 
+class _FakeDatabaseServiceForOnboardingPage extends DatabaseService {
+  _FakeDatabaseServiceForOnboardingPage() : super.forTesting();
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  bool get isInitialized => true;
+
+  @override
+  Future<void> initDefaultHitokotoTags() async {}
+
+  @override
+  Future<Database> get safeDatabase async {
+    return openDatabase(inMemoryDatabasePath);
+  }
+
+  @override
+  Future<void> patchQuotesDayPeriod() async {}
+
+  @override
+  Future<void> migrateWeatherToKey() async {}
+
+  @override
+  Future<void> migrateDayPeriodToKey() async {}
+}
+
+class _FakeAIAnalysisDatabaseService extends ChangeNotifier
+    implements AIAnalysisDatabaseService {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Stream<List<AIAnalysis>> get analysesStream => const Stream.empty();
+
+  @override
+  Future<bool> deleteAllAnalyses() async => true;
+
+  @override
+  Future<bool> deleteAnalysis(String id) async => true;
+
+  @override
+  Future<String> exportToJson() async => '[]';
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   setUpAll(() async {
     await TestHarness.initialize();
+    PackageInfo.setMockInitialValues(
+      appName: 'ThoughtEcho',
+      packageName: 'com.thoughtecho.app',
+      version: '1.0.0',
+      buildNumber: '12',
+      buildSignature: '',
+    );
   });
+
+  Widget buildOnboardingPageHost({
+    required SettingsService settingsService,
+    Widget child = const OnboardingPage(),
+    ValueNotifier<bool>? servicesInitializedNotifier,
+  }) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<DatabaseService>.value(
+          value: _FakeDatabaseServiceForOnboardingPage(),
+        ),
+        ChangeNotifierProvider<SettingsService>.value(
+          value: settingsService,
+        ),
+        Provider<MMKVService>.value(
+          value: MMKVService(),
+        ),
+        ChangeNotifierProvider<ClipboardService>.value(
+          value: ClipboardService(),
+        ),
+        ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
+          value: _FakeAIAnalysisDatabaseService(),
+        ),
+        ChangeNotifierProvider<AppTheme>(
+          create: (_) => AppTheme(),
+        ),
+        ChangeNotifierProvider<ValueNotifier<bool>>.value(
+          value: servicesInitializedNotifier ?? ValueNotifier<bool>(true),
+        ),
+      ],
+      child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: child,
+      ),
+    );
+  }
 
   String styleName(AppLocalizations l10n, ThemeStyle style) {
     final (name, _) = themeStyleLabel(l10n, style);
@@ -290,6 +397,97 @@ void main() {
 
       expect(find.text(l10n.settingsPrivacyPolicy), findsOneWidget);
       expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
+    });
+  });
+
+  group('OnboardingPage 淡入动画优化验证', () {
+    testWidgets('引导页初始化后通过 FadeTransition 进行淡入渲染', (tester) async {
+      final settingsService = await SettingsService.create();
+      final servicesInitializedNotifier = ValueNotifier<bool>(true);
+
+      await tester.pumpWidget(
+        buildOnboardingPageHost(
+          settingsService: settingsService,
+          servicesInitializedNotifier: servicesInitializedNotifier,
+          child: const OnboardingPage(),
+        ),
+      );
+
+      // 触发 microtask 初始化并推进 500ms 加载延迟
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final fadeFinder = find.descendant(
+        of: find.byType(OnboardingPage),
+        matching: find.byType(FadeTransition),
+      );
+
+      expect(find.byType(OnboardingPage), findsOneWidget);
+      expect(fadeFinder, findsWidgets);
+
+      final initialOpacity =
+          tester.widget<FadeTransition>(fadeFinder.first).opacity.value;
+      expect(initialOpacity, equals(0.0));
+
+      // 推进动画 400ms (800ms 动画中途)
+      await tester.pump(const Duration(milliseconds: 400));
+      final midOpacity =
+          tester.widget<FadeTransition>(fadeFinder.first).opacity.value;
+      expect(midOpacity, greaterThan(0.0));
+      expect(midOpacity, lessThan(1.0));
+
+      // 推进动画 400ms (动画结束)
+      await tester.pump(const Duration(milliseconds: 400));
+      final finalOpacity =
+          tester.widget<FadeTransition>(fadeFinder.first).opacity.value;
+      expect(finalOpacity, equals(1.0));
+    });
+
+    testWidgets('更新完成模式下使用 FadeTransition 渲染淡入视图', (tester) async {
+      final settingsService = await SettingsService.create();
+      final servicesInitializedNotifier = ValueNotifier<bool>(true);
+
+      await tester.pumpWidget(
+        buildOnboardingPageHost(
+          settingsService: settingsService,
+          servicesInitializedNotifier: servicesInitializedNotifier,
+          child: const OnboardingPage(
+            showUpdateReady: true,
+            showFullOnboarding: false,
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump();
+
+      final fadeFinder = find.descendant(
+        of: find.byType(OnboardingPage),
+        matching: find.byType(FadeTransition),
+      );
+
+      expect(fadeFinder, findsOneWidget);
+
+      final initialOpacity =
+          tester.widget<FadeTransition>(fadeFinder).opacity.value;
+      expect(initialOpacity, equals(0.0));
+
+      // 推进动画 400ms (800ms 动画中途)
+      await tester.pump(const Duration(milliseconds: 400));
+      final midOpacity =
+          tester.widget<FadeTransition>(fadeFinder).opacity.value;
+      expect(midOpacity, greaterThan(0.0));
+      expect(midOpacity, lessThan(1.0));
+
+      // 推进动画 400ms (动画结束)
+      await tester.pump(const Duration(milliseconds: 400));
+      final finalOpacity =
+          tester.widget<FadeTransition>(fadeFinder).opacity.value;
+      expect(finalOpacity, equals(1.0));
+
+      // 卸载组件，阻止 1500ms 后的 _navigateToHome 在缺少 HomePage Provider 的测试环境下报错，并清理 Timer
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 1000));
     });
   });
 }

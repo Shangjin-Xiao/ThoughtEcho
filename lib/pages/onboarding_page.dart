@@ -327,49 +327,44 @@ class _OnboardingPageState extends State<OnboardingPage>
     final animation = _fadeInAnimation ?? const AlwaysStoppedAnimation(1.0);
 
     return Scaffold(
-      body: AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          return Opacity(
-            opacity: animation.value,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.upgrade,
-                      size: 80,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      AppLocalizations.of(context).onboardingUpdateComplete,
-                      style: theme.textTheme.headlineMedium
-                          ?.copyWith(color: theme.colorScheme.primary),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      AppLocalizations.of(context).onboardingUpdateSuccess,
-                      style: theme.textTheme.titleLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    // 这一页只在 _errorMessage == null 时才会被 build() 选中
-                    // （出错走 _buildErrorView），迁移完成后必定自动跳转，
-                    // 所以这里不需要显式的进入按钮。
-                    const EnhancedLottieAnimation(
-                      type: LottieAnimationType.pulseLoading,
-                      width: 60,
-                      height: 60,
-                    ),
-                  ],
+      body: FadeTransition(
+        opacity: animation,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.upgrade,
+                  size: 80,
+                  color: theme.colorScheme.primary,
                 ),
-              ),
+                const SizedBox(height: 32),
+                Text(
+                  AppLocalizations.of(context).onboardingUpdateComplete,
+                  style: theme.textTheme.headlineMedium
+                      ?.copyWith(color: theme.colorScheme.primary),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  AppLocalizations.of(context).onboardingUpdateSuccess,
+                  style: theme.textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                // 这一页只在 _errorMessage == null 时才会被 build() 选中
+                // （出错走 _buildErrorView），迁移完成后必定自动跳转，
+                // 所以这里不需要显式的进入按钮。
+                const EnhancedLottieAnimation(
+                  type: LottieAnimationType.pulseLoading,
+                  width: 60,
+                  height: 60,
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -384,43 +379,38 @@ class _OnboardingPageState extends State<OnboardingPage>
 
     return ChangeNotifierProvider.value(
       value: controller,
-      child: AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          return Opacity(
-            opacity: animation.value,
-            child: Consumer<OnboardingController>(
-              builder: (context, controller, child) {
-                return Scaffold(
-                  body: SafeArea(
-                    child: Stack(
-                      children: [
-                        // 页面内容
-                        PageView.builder(
-                          controller: controller.pageController,
-                          onPageChanged: controller.onPageChanged,
-                          itemCount: OnboardingConfig.totalPages,
-                          itemBuilder: (context, index) {
-                            return _buildPageContent(index, controller);
-                          },
-                        ),
-
-                        // 底部导航
-                        _buildBottomNavigation(controller),
-
-                        // 跳过按钮
-                        if (!OnboardingConfig.isLastPage(
-                          controller.state.currentPageIndex,
-                        ))
-                          _buildSkipButton(controller),
-                      ],
+      child: FadeTransition(
+        opacity: animation,
+        child: Consumer<OnboardingController>(
+          builder: (context, controller, child) {
+            return Scaffold(
+              body: SafeArea(
+                child: Stack(
+                  children: [
+                    // 页面内容
+                    PageView.builder(
+                      controller: controller.pageController,
+                      onPageChanged: controller.onPageChanged,
+                      itemCount: OnboardingConfig.totalPages,
+                      itemBuilder: (context, index) {
+                        return _buildPageContent(index, controller);
+                      },
                     ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+
+                    // 底部导航
+                    _buildBottomNavigation(controller),
+
+                    // 跳过按钮
+                    if (!OnboardingConfig.isLastPage(
+                      controller.state.currentPageIndex,
+                    ))
+                      _buildSkipButton(controller),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
