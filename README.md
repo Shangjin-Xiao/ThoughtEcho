@@ -37,6 +37,7 @@
   <p align="center">
     <a href="README.md"><b>English</b></a> • 
     <a href="README_CN.md"><b>简体中文</b></a> •
+    <a href="README.zh-Hant.md"><b>繁體中文</b></a> •
     <a href="README_JA.md"><b>日本語</b></a> •
     <a href="README_KO.md"><b>한국어</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>Official Website</b></a> •
@@ -50,7 +51,7 @@
   </p>
 
   <p><sub>Windows: Recommended from Microsoft Store (auto-update) · Android: Download APK from <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">GitHub Releases</a></sub></p>
-  <p><sub>🌍 <b>Localization:</b> Full support for <b>English</b>, <b>简体中文</b>, <b>日本語</b>, and <b>한국어</b> (German, Spanish, French in progress)</sub></p>
+  <p><sub>🌍 <b>Localization:</b> Full support for <b>English</b>, <b>简体中文</b>, <b>繁體中文</b>, <b>日本語</b>, and <b>한국어</b> (German, Spanish, French in progress)</sub></p>
   
 </div>
 
