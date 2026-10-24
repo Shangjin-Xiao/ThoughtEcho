@@ -79,12 +79,36 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
   late AnimationPreset _preset;
   late String _animationPath;
   late bool _shouldRepeat;
+  LottieComposition? _composition;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimation();
     _setupController();
+  }
+
+  @override
+  void didUpdateWidget(LottieAnimationWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _initializeAnimation();
+    if (widget.controller == null &&
+        widget.speed != oldWidget.speed &&
+        _composition != null) {
+      final speed =
+          (widget.speed != null && widget.speed! > 0) ? widget.speed! : 1.0;
+      final effectiveDuration = Duration(
+        milliseconds: (_composition!.duration.inMilliseconds / speed).round(),
+      );
+      _controller.duration = effectiveDuration;
+      if (_controller.isAnimating) {
+        if (_shouldRepeat) {
+          _controller.repeat();
+        } else {
+          _controller.forward(from: _controller.value);
+        }
+      }
+    }
   }
 
   void _initializeAnimation() {
@@ -99,25 +123,15 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
   }
 
   void _setupController() {
-    _controller = widget.controller ??
-        AnimationController(vsync: this, duration: const Duration(seconds: 2));
-
-    // 设置播放速度
-    if (widget.speed != null && widget.speed != 1.0) {
-      _controller.duration = Duration(
-        milliseconds:
-            (_controller.duration!.inMilliseconds / widget.speed!).round(),
-      );
-    }
-
-    if (widget.autoPlay) {
-      if (_shouldRepeat) {
-        _controller.repeat();
-      } else {
-        _controller.forward().then((_) {
+    if (widget.controller != null) {
+      _controller = widget.controller!;
+    } else {
+      _controller = AnimationController(vsync: this);
+      _controller.addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
           widget.onCompleted?.call();
-        });
-      }
+        }
+      });
     }
   }
 
@@ -140,7 +154,28 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
         controller: _controller,
         repeat: _shouldRepeat,
         onLoaded: (composition) {
-          _controller.duration = composition.duration;
+          if (!mounted) return;
+          _composition = composition;
+
+          final speed =
+              (widget.speed != null && widget.speed! > 0) ? widget.speed! : 1.0;
+          final effectiveDuration = Duration(
+            milliseconds: (composition.duration.inMilliseconds / speed).round(),
+          );
+
+          if (widget.controller != null) {
+            _controller.duration ??= effectiveDuration;
+          } else {
+            _controller.duration = effectiveDuration;
+            if (widget.autoPlay) {
+              if (_shouldRepeat) {
+                _controller.repeat();
+              } else {
+                _controller.forward(from: 0.0);
+              }
+            }
+          }
+
           widget.onLoaded?.call();
         },
         options:
