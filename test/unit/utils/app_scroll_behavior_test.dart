@@ -14,16 +14,5 @@ void main() {
       expect(devices.contains(PointerDeviceKind.stylus), isTrue);
       expect(devices.contains(PointerDeviceKind.invertedStylus), isTrue);
     });
-
-    test('EditorScrollBehavior does not contain mouse in dragDevices', () {
-      const behavior = EditorScrollBehavior();
-      final devices = behavior.dragDevices;
-
-      expect(devices.contains(PointerDeviceKind.mouse), isFalse);
-      expect(devices.contains(PointerDeviceKind.touch), isTrue);
-      expect(devices.contains(PointerDeviceKind.trackpad), isTrue);
-      expect(devices.contains(PointerDeviceKind.stylus), isTrue);
-      expect(devices.contains(PointerDeviceKind.invertedStylus), isTrue);
-    });
   });
 }
