@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/feature_guide.dart';
 import '../theme/theme_style.dart';
+import '../utils/app_logger.dart';
 
 /// 气泡箭头方向
 enum PopoverArrowDirection {
@@ -36,8 +37,13 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  Timer? _visibilityTimer;
+  Timer? _autoDismissTimer;
+  Timer? _fallbackTimer;
   bool _isDismissing = false;
+  bool _isDisposed = false;
+  bool _hasPendingPostFrameCallback = false;
+
+  static const Duration _fallbackCheckInterval = Duration(milliseconds: 500);
 
   @override
   void initState() {
@@ -54,10 +60,17 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
 
     _controller.forward();
 
-    _startVisibilityWatchdog();
+    _scheduleVisibilityCheck();
+
+    // 静止/闲置界面下的保活轮询 (500ms)，确保在无新帧渲染或界面静止时也能确定性地自动关闭
+    _fallbackTimer = Timer.periodic(_fallbackCheckInterval, (_) {
+      if (mounted) {
+        _checkVisibility();
+      }
+    });
 
     // 自动消失
-    Future.delayed(widget.autoDismissDuration, () {
+    _autoDismissTimer = Timer(widget.autoDismissDuration, () {
       if (mounted) {
         _handleDismiss();
       }
@@ -65,49 +78,95 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   }
 
   @override
+  void didUpdateWidget(FeatureGuidePopover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.guide.targetKey != widget.guide.targetKey ||
+        oldWidget.visibilityPredicate != widget.visibilityPredicate) {
+      _scheduleVisibilityCheck();
+    }
+  }
+
+  @override
   void dispose() {
-    _visibilityTimer?.cancel();
+    _isDisposed = true;
+    _autoDismissTimer?.cancel();
+    _fallbackTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  void _startVisibilityWatchdog() {
+  void _scheduleVisibilityCheck() {
+    if (!mounted || _isDisposed || _isDismissing) {
+      return;
+    }
+
     if (widget.visibilityPredicate == null && widget.guide.targetKey == null) {
       return;
     }
 
-    _visibilityTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      if (!mounted) {
-        _visibilityTimer?.cancel();
-        return;
-      }
+    if (_hasPendingPostFrameCallback) {
+      return;
+    }
 
-      if (widget.visibilityPredicate != null &&
-          !widget.visibilityPredicate!()) {
-        _handleDismiss();
-        return;
-      }
-
-      if (widget.guide.targetKey != null) {
-        final targetContext = widget.guide.targetKey.currentContext;
-        final renderBox = targetContext?.findRenderObject() as RenderBox?;
-        final visible =
-            renderBox != null && renderBox.attached && renderBox.hasSize;
-        if (!visible) {
-          _handleDismiss();
-        }
-      }
+    _hasPendingPostFrameCallback = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hasPendingPostFrameCallback = false;
+      _checkVisibility();
     });
   }
 
+  RenderBox? _findTargetRenderBox(BuildContext? targetContext) {
+    if (targetContext == null || !targetContext.mounted) {
+      return null;
+    }
+    try {
+      final renderObject = targetContext.findRenderObject();
+      if (renderObject is RenderBox) {
+        return renderObject;
+      }
+    } catch (e, stackTrace) {
+      AppLogger.w(
+        'FeatureGuidePopover 无法解析目标 RenderBox',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'FeatureGuidePopover',
+      );
+      return null;
+    }
+    return null;
+  }
+
+  void _checkVisibility() {
+    if (!mounted || _isDisposed || _isDismissing) {
+      return;
+    }
+
+    if (widget.visibilityPredicate != null && !widget.visibilityPredicate!()) {
+      _handleDismiss();
+      return;
+    }
+
+    if (widget.guide.targetKey != null) {
+      final renderBox =
+          _findTargetRenderBox(widget.guide.targetKey!.currentContext);
+      final visible =
+          renderBox != null && renderBox.attached && renderBox.hasSize;
+      if (!visible) {
+        _handleDismiss();
+        return;
+      }
+    }
+  }
+
   Future<void> _handleDismiss() async {
-    if (_isDismissing) {
+    if (_isDismissing || _isDisposed) {
       return;
     }
     _isDismissing = true;
-    _visibilityTimer?.cancel();
+    _autoDismissTimer?.cancel();
+    _fallbackTimer?.cancel();
     await _controller.reverse();
-    if (mounted) {
+    if (mounted && !_isDisposed) {
       widget.onDismiss();
     }
   }
@@ -122,9 +181,8 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     }
 
     // 获取目标元素的位置
-    final RenderBox? renderBox =
-        guide.targetKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) {
+    final renderBox = _findTargetRenderBox(guide.targetKey!.currentContext);
+    if (renderBox == null || !renderBox.attached || !renderBox.hasSize) {
       return _buildCenteredPopover(context);
     }
 
