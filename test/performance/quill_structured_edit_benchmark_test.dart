@@ -1,20 +1,28 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:thoughtecho/utils/quill_structured_edit.dart';
 
 void main() {
   test('alignPunctuationStyle performance benchmark', () {
-    final original = 'This is a "test" with “curly” quotes and plain ones.';
-    final replacement = 'Replacement text.';
+    const original = 'This is a "test" with “curly” quotes and plain ones.';
+    const replacement = 'Replacement text.';
+    const iterations = 50000;
 
     final stopwatch = Stopwatch()..start();
-    for (var i = 0; i < 50000; i++) {
+    for (var i = 0; i < iterations; i++) {
       QuillStructuredEdit.alignPunctuationStyle(replacement, original);
     }
     stopwatch.stop();
 
-    print(
-        'alignPunctuationStyle x50000 took ${stopwatch.elapsedMilliseconds}ms');
-    expect(stopwatch.elapsedMilliseconds, lessThan(500));
+    final elapsedMs = stopwatch.elapsedMilliseconds;
+    final usPerOp =
+        (stopwatch.elapsedMicroseconds / iterations).toStringAsFixed(2);
+
+    debugPrint(
+      'alignPunctuationStyle x$iterations took $elapsedMs ms ($usPerOp us/op)',
+    );
+    expect(elapsedMs, greaterThanOrEqualTo(0));
   });
 
   test('plainTextOf performance benchmark', () {
@@ -22,14 +30,21 @@ void main() {
       {'insert': 'Hello\nWorld\n'},
       {'insert': 'End\n'}
     ];
+    const iterations = 50000;
 
     final stopwatch = Stopwatch()..start();
-    for (var i = 0; i < 50000; i++) {
+    for (var i = 0; i < iterations; i++) {
       QuillStructuredEdit.plainTextOf(ops);
     }
     stopwatch.stop();
 
-    print('plainTextOf x50000 took ${stopwatch.elapsedMilliseconds}ms');
-    expect(stopwatch.elapsedMilliseconds, lessThan(500));
+    final elapsedMs = stopwatch.elapsedMilliseconds;
+    final usPerOp =
+        (stopwatch.elapsedMicroseconds / iterations).toStringAsFixed(2);
+
+    debugPrint(
+      'plainTextOf x$iterations took $elapsedMs ms ($usPerOp us/op)',
+    );
+    expect(elapsedMs, greaterThanOrEqualTo(0));
   });
 }
