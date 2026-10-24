@@ -319,3 +319,9 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** 在标签管理与保存笔记场景（如 `ensureTagExists` 或 `addDefaultHitokotoTagsAsync`）中，若通过遍历 List 进行 ID 或小写名称匹配，时间复杂度为 O(N)。随着存量标签增加，频繁调用会带来不必要的 CPU 消耗。构建 `_idToCategoryCache` (Map<String, NoteTag>) 与 `_lowerNameToCategoryCache` (Map<String, NoteTag>)，在预载或变更标签列表时一次性填充哈希表，能将后续所有按 ID 和按名称的检索替换为 O(1) 查找。
 
 **Action:** 重构 `lib/controllers/add_note_controller.dart`，新增 `_idToCategoryCache` 与 `_lowerNameToCategoryCache` 哈希表，并在 `_updateCategoriesCache` 中同步更新，将 `ensureTagExists` 及一言副分类标签查找逻辑简化为 O(1) Map 检索，并在 `test/performance/add_note_controller_benchmark_test.dart` 中进行了性能基准测试验证（50,000 次查找单次耗时降低约 60%）。
+
+## 2026-11-01 - 优化 untrusted_text 与语言解析工具类中正则表达式重复编译开销
+
+**Learning:** 在高频文本转义、提示词打包及 Locale 代码解析方法（如 `_neutralizeTag`、`I18nLanguage.base`、`parseLocale`）中，若使用内联声明 `RegExp` 构造函数，会在每次构建上下文或解析 Locale 时造成重复的正则对象分配和编译。对于带有动态参数（如 HTML/XML 标签名）的高频解析方法，采用 Map 缓存 (`putIfAbsent`) 保存每个 tag 对应的 compiled `RegExp`；对于固定分隔符，使用 static/top-level `final RegExp` 可以在保持代码整洁的同时彻底消除重复编译开销。
+
+**Action:** 在 `lib/utils/untrusted_text.dart` 中使用 `_tagRegexCache` 缓存开启/闭合标签对应的 RegExp 表达式对；在 `lib/utils/i18n_language.dart` 与 `lib/utils/localization_resolver.dart` 中将 `RegExp(r'[_-]')` 提取为 `_separatorRegex` / `_localeSeparatorRegex` 静态/模块级成员复用。
