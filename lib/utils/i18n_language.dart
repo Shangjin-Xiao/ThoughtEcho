@@ -6,11 +6,13 @@ class I18nLanguage {
   /// 应用支持的语言集合
   static const supported = {'zh', 'en', 'ja', 'ko', 'fr'};
 
+  static final RegExp _separatorRegex = RegExp(r'[_-]');
+
   /// 从 locale 字符串提取基础语言代码
   /// 例如 'zh_CN' -> 'zh', 'en-US' -> 'en', 'fr_FR' -> 'fr'
   static String base(String? localeCode) {
     if (localeCode == null || localeCode.trim().isEmpty) return 'en';
-    return localeCode.toLowerCase().split(RegExp(r'[_-]')).first;
+    return localeCode.toLowerCase().split(_separatorRegex).first;
   }
 
   /// 返回应用支持的语言代码，不支持的回退到 'en'
