@@ -3393,6 +3393,7 @@
   "systemTagCannotDelete": "시스템 태그는 삭제할 수 없습니다.",
   "biometricAuthRequired": "인증 필요",
   "biometricAuthReason": "숨겨진 메모를 보려면 본인 확인을 완료하세요.",
+  "biometricToggleAuthReason": "숨겨진 메모 보호 설정을 변경하려면 본인 확인을 완료하세요.",
   "biometricAuthFailed": "인증 실패",
   "biometricNotAvailable": "이 기기에서는 생체 인증을 사용할 수 없습니다.",
   "biometricNotSetup": "먼저 시스템 설정에서 지문 또는 얼굴 인식을 설정하세요.",

@@ -3688,6 +3688,7 @@
   "systemTagCannotDelete": "系統標籤無法刪除",
   "biometricAuthRequired": "需要身份驗證",
   "biometricAuthReason": "請驗證身份以檢視隱藏筆記",
+  "biometricToggleAuthReason": "請驗證身份以修改隱藏筆記保護設定",
   "biometricAuthFailed": "身份驗證失敗",
   "biometricNotAvailable": "裝置不支援生物識別驗證",
   "biometricNotSetup": "請先在系統設定中設定指紋或面容識別",

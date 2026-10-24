@@ -9,6 +9,7 @@ import '../services/clipboard_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import '../utils/icon_utils.dart';
+import '../widgets/app_snackbar.dart';
 import 'ai_settings_page.dart';
 import '../theme/theme_style.dart';
 
@@ -456,23 +457,23 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     final settings = context.read<SettingsService>();
     final l10n = AppLocalizations.of(context);
 
-    if (enabled) {
-      // 启用前先验证一次，确保用户有能力通过验证
+    try {
+      // 开启或关闭隐蔽笔记生物识别保护前均需验证身份
       final authenticated = await _biometricService.authenticate(
-        localizedReason: l10n.biometricAuthReason,
+        localizedReason: l10n.biometricToggleAuthReason,
       );
 
       if (authenticated) {
-        await settings.setRequireBiometricForHidden(true);
+        await settings.setRequireBiometricForHidden(enabled);
       } else {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.biometricAuthFailed)),
-          );
+          AppSnackBar.error(context, l10n.biometricAuthFailed);
         }
       }
-    } else {
-      await settings.setRequireBiometricForHidden(false);
+    } catch (e) {
+      if (context.mounted) {
+        AppSnackBar.error(context, l10n.biometricAuthFailed);
+      }
     }
   }
 

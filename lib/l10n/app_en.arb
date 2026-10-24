@@ -3693,6 +3693,7 @@
   "systemTagCannotDelete": "System tags cannot be deleted",
   "biometricAuthRequired": "Authentication Required",
   "biometricAuthReason": "Please verify your identity to view hidden notes",
+  "biometricToggleAuthReason": "Please verify your identity to change hidden notes protection settings",
   "biometricAuthFailed": "Authentication failed",
   "biometricNotAvailable": "Biometric authentication is not available on this device",
   "biometricNotSetup": "Please set up fingerprint or face recognition in system settings first",

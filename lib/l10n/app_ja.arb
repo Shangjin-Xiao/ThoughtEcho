@@ -3393,6 +3393,7 @@
   "systemTagCannotDelete": "削除不可",
   "biometricAuthRequired": "認証が必要",
   "biometricAuthReason": "認証してください",
+  "biometricToggleAuthReason": "非表示ノートの保護設定を変更するには認証してください",
   "biometricAuthFailed": "失敗",
   "biometricNotAvailable": "利用不可",
   "biometricNotSetup": "設定されていません",
