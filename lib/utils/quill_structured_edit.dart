@@ -38,6 +38,10 @@ class _MatchStrategy {
 class QuillStructuredEdit {
   const QuillStructuredEdit._();
 
+  static final RegExp _trailingNewlineRegex = RegExp(r'\n$');
+  static final RegExp _curlyQuotesRegex = RegExp('[“”‘’]');
+  static final RegExp _straightQuotesRegex = RegExp('["\']');
+
   static String revisionOf(List<Map<String, dynamic>> ops) =>
       sha256.convert(utf8.encode(jsonEncode(ops))).toString();
 
@@ -47,7 +51,7 @@ class QuillStructuredEdit {
       _blocksToOps(blocks);
 
   static String plainTextOf(List<Map<String, dynamic>> ops) =>
-      _plainText(ops).replaceFirst(RegExp(r'\n$'), '');
+      _plainText(ops).replaceFirst(_trailingNewlineRegex, '');
 
   static RichTextEditResult apply({
     required List<Map<String, dynamic>> originalOps,
@@ -73,8 +77,9 @@ class QuillStructuredEdit {
           );
           preview.add(RichTextEditPreview(
             type: operation.type,
-            oldText: plainText.replaceFirst(RegExp(r'\n$'), ''),
-            newText: _plainText(replacement).replaceFirst(RegExp(r'\n$'), ''),
+            oldText: plainText.replaceFirst(_trailingNewlineRegex, ''),
+            newText:
+                _plainText(replacement).replaceFirst(_trailingNewlineRegex, ''),
           ));
           ops = replacement;
         case RichTextEditOperationType.replace:
@@ -327,8 +332,8 @@ class QuillStructuredEdit {
   /// 靠归一化才命中时，让写入文本的标点风格跟随原文
   /// （claude-code `preserveQuoteStyle` 的简化版）。
   static String alignPunctuationStyle(String replacement, String original) {
-    final originalCurly = RegExp('[“”‘’]').hasMatch(original);
-    final originalStraight = RegExp('["\']').hasMatch(original);
+    final originalCurly = _curlyQuotesRegex.hasMatch(original);
+    final originalStraight = _straightQuotesRegex.hasMatch(original);
     var result = replacement;
 
     if (originalCurly && !originalStraight) {
