@@ -1356,27 +1356,23 @@ extension _ThoughterUI on _ThoughterPageState {
         final tags = await db.getTags();
         if (!mounted) return null;
         String? savedId;
-        await showModalBottomSheet<void>(
+        await AddNoteDialog.show<void>(
           context: context,
-          isScrollControlled: true,
-          builder: (_) => AddNoteDialog(
-            prefilledContent: artifact.content,
-            prefilledTagIds: _extractStringList(
-              artifact.metadata['tag_ids'],
-            ),
-            prefilledAuthor: artifact.metadata['author']?.toString(),
-            prefilledWork: artifact.metadata['source']?.toString(),
-            prefilledIncludeLocation:
-                artifact.metadata['include_location'] == true,
-            prefilledIncludeWeather:
-                artifact.metadata['include_weather'] == true,
-            useAIPrefilledLocationWeather: true,
-            tags: tags,
-            onSave: (quote) async {
-              await db.addQuote(quote);
-              savedId = quote.id;
-            },
+          prefilledContent: artifact.content,
+          prefilledTagIds: _extractStringList(
+            artifact.metadata['tag_ids'],
           ),
+          prefilledAuthor: artifact.metadata['author']?.toString(),
+          prefilledWork: artifact.metadata['source']?.toString(),
+          prefilledIncludeLocation:
+              artifact.metadata['include_location'] == true,
+          prefilledIncludeWeather: artifact.metadata['include_weather'] == true,
+          useAIPrefilledLocationWeather: true,
+          tags: tags,
+          onSave: (quote) async {
+            await db.addQuote(quote);
+            savedId = quote.id;
+          },
         );
         return savedId;
       }
@@ -1419,17 +1415,14 @@ extension _ThoughterUI on _ThoughterPageState {
         ),
       );
     } else {
-      await showModalBottomSheet<void>(
+      await AddNoteDialog.show<void>(
         context: context,
-        isScrollControlled: true,
-        builder: (_) => AddNoteDialog(
-          initialQuote: proposed,
-          tags: tags,
-          onSave: (quote) async {
-            await db.updateQuote(quote);
-            savedId = quote.id;
-          },
-        ),
+        initialQuote: proposed,
+        tags: tags,
+        onSave: (quote) async {
+          await db.updateQuote(quote);
+          savedId = quote.id;
+        },
       );
     }
     return savedId;
@@ -1526,24 +1519,20 @@ extension _ThoughterUI on _ThoughterPageState {
       final tags = await db.getTags();
       if (!mounted) return null;
       String? savedNoteId;
-      await showModalBottomSheet(
+      await AddNoteDialog.show(
         context: context,
-        isScrollControlled: true,
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-        builder: (_) => AddNoteDialog(
-          prefilledContent: content,
-          prefilledTagIds: tagIds,
-          prefilledAuthor: author,
-          prefilledWork: source,
-          prefilledIncludeLocation: includeLocation,
-          prefilledIncludeWeather: includeWeather,
-          useAIPrefilledLocationWeather: true,
-          tags: tags,
-          onSave: (quote) {
-            savedNoteId = quote.id;
-            return db.addQuote(quote);
-          },
-        ),
+        prefilledContent: content,
+        prefilledTagIds: tagIds,
+        prefilledAuthor: author,
+        prefilledWork: source,
+        prefilledIncludeLocation: includeLocation,
+        prefilledIncludeWeather: includeWeather,
+        useAIPrefilledLocationWeather: true,
+        tags: tags,
+        onSave: (quote) {
+          savedNoteId = quote.id;
+          return db.addQuote(quote);
+        },
       );
       return savedNoteId;
     }

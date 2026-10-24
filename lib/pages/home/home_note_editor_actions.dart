@@ -94,19 +94,14 @@ class HomeNoteEditorActions {
 
     await Future<void>.delayed(Duration.zero);
     if (!isMounted() || !context.mounted) return;
-    await showModalBottomSheet<void>(
+    await AddNoteDialog.show<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-      requestFocus: false,
-      builder: (sheetContext) => AddNoteDialog(
-        prefilledContent: prefilledContent,
-        prefilledAuthor: prefilledAuthor,
-        prefilledWork: prefilledWork,
-        hitokotoData: hitokotoData,
-        tags: readTags(),
-        onSave: (quote) => _save(quote, isEditing: false),
-      ),
+      prefilledContent: prefilledContent,
+      prefilledAuthor: prefilledAuthor,
+      prefilledWork: prefilledWork,
+      hitokotoData: hitokotoData,
+      tags: readTags(),
+      onSave: (quote) => _save(quote, isEditing: false),
     );
     if (!isMounted() || !context.mounted) return;
     releaseNoteSearchFocus();
@@ -121,16 +116,11 @@ class HomeNoteEditorActions {
       return;
     }
 
-    showModalBottomSheet<void>(
+    AddNoteDialog.show<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-      requestFocus: false,
-      builder: (sheetContext) => AddNoteDialog(
-        initialQuote: quote,
-        tags: readTags(),
-        onSave: (updatedQuote) => _save(updatedQuote, isEditing: true),
-      ),
+      initialQuote: quote,
+      tags: readTags(),
+      onSave: (updatedQuote) => _save(updatedQuote, isEditing: true),
     ).whenComplete(() {
       if (_active) releaseNoteSearchFocus();
     });

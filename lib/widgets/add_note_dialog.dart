@@ -71,6 +71,46 @@ class AddNoteDialog extends StatefulWidget {
     required this.onSave,
   });
 
+  /// 统一的快捷记事 ModalBottomSheet 调起方法。
+  ///
+  /// 显式配置 [enableDrag] 为 `false` 以禁用下滑拖拽手势，防止用户在编辑内容时
+  /// 误触下滑直接弹栈而绕过 [PopScope] 未保存更改防误触保护对话框。
+  static Future<T?> show<T>({
+    required BuildContext context,
+    Quote? initialQuote,
+    String? prefilledContent,
+    String? prefilledAuthor,
+    String? prefilledWork,
+    Map<String, dynamic>? hitokotoData,
+    List<String>? prefilledTagIds,
+    bool? prefilledIncludeLocation,
+    bool? prefilledIncludeWeather,
+    bool? useAIPrefilledLocationWeather,
+    required List<NoteTag> tags,
+    required FutureOr<void> Function(Quote) onSave,
+  }) {
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: false,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      requestFocus: false,
+      builder: (_) => AddNoteDialog(
+        initialQuote: initialQuote,
+        prefilledContent: prefilledContent,
+        prefilledAuthor: prefilledAuthor,
+        prefilledWork: prefilledWork,
+        hitokotoData: hitokotoData,
+        prefilledTagIds: prefilledTagIds,
+        prefilledIncludeLocation: prefilledIncludeLocation,
+        prefilledIncludeWeather: prefilledIncludeWeather,
+        useAIPrefilledLocationWeather: useAIPrefilledLocationWeather,
+        tags: tags,
+        onSave: onSave,
+      ),
+    );
+  }
+
   @override
   State<AddNoteDialog> createState() => _AddNoteDialogState();
 }
