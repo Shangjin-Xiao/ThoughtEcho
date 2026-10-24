@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/local_ai_settings.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
@@ -1010,5 +1012,97 @@ void main() {
         expect(rebuiltService.hasCompletedOnboarding(), isTrue);
       },
     );
+
+    group('Error Handling & Resilience Tests', () {
+      test('recentCities handles invalid JSON string gracefully (line 300)',
+          () async {
+        final mmkv = MMKVService();
+        await mmkv.setString('recent_cities_json_v1', 'invalid-json{');
+
+        expect(settingsService.recentCities, isEmpty);
+      });
+
+      test('recentCities handles malformed CityInfo JSON items gracefully',
+          () async {
+        final mmkv = MMKVService();
+        await mmkv.setString('recent_cities_json_v1', '[123, true]');
+
+        expect(settingsService.recentCities, isEmpty);
+      });
+
+      test(
+          'SettingsService recovers gracefully when app_settings JSON is corrupted',
+          () async {
+        final mmkv = MMKVService();
+        await mmkv.setString('app_settings', 'corrupted-app-settings-json{');
+
+        final rebuilt = await SettingsService.create();
+
+        expect(
+          rebuilt.appSettings.toJson(),
+          equals(AppSettings.defaultSettings().toJson()),
+        );
+      });
+
+      test(
+          'SettingsService recovers gracefully when multi_ai_settings JSON is corrupted',
+          () async {
+        final mmkv = MMKVService();
+        await mmkv.setString('multi_ai_settings', 'corrupted-multi-ai-json{');
+
+        final rebuilt = await SettingsService.create();
+
+        expect(
+          rebuilt.multiAISettings.toJson(),
+          equals(const MultiAISettings().toJson()),
+        );
+      });
+
+      test(
+          'SettingsService recovers gracefully when local_ai_settings JSON is corrupted',
+          () async {
+        final mmkv = MMKVService();
+        await mmkv.setString('local_ai_settings', 'corrupted-local-ai-json{');
+
+        final rebuilt = await SettingsService.create();
+
+        expect(
+          rebuilt.localAISettings,
+          equals(LocalAISettings.defaultSettings()),
+        );
+      });
+
+      test('setLastDreamingAt saves timestamp and handles null clearing',
+          () async {
+        expect(settingsService.lastDreamingAt, isNull);
+
+        final now = DateTime.utc(2026, 3, 28, 12, 0, 0);
+        await settingsService.setLastDreamingAt(now);
+        expect(
+          settingsService.lastDreamingAt?.millisecondsSinceEpoch,
+          equals(now.millisecondsSinceEpoch),
+        );
+
+        await settingsService.setLastDreamingAt(null);
+        expect(settingsService.lastDreamingAt, isNull);
+      });
+
+      test('agent memory and dreaming toggles persist successfully', () async {
+        await settingsService.setAgentMemoryEnabled(false);
+        expect(settingsService.agentMemoryEnabled, isFalse);
+
+        await settingsService.setDreamingEnabled(false);
+        expect(settingsService.dreamingEnabled, isFalse);
+
+        await settingsService.setDreamingOnIdleEnabled(false);
+        expect(settingsService.dreamingOnIdleEnabled, isFalse);
+
+        await settingsService.setDreamingAfterInsightEnabled(false);
+        expect(settingsService.dreamingAfterInsightEnabled, isFalse);
+
+        await settingsService.setAgentMemoryNoticeShown(true);
+        expect(settingsService.agentMemoryNoticeShown, isTrue);
+      });
+    });
   });
 }
