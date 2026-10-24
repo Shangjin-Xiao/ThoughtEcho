@@ -192,6 +192,21 @@ void main() {
         const source = 'database';
         expect(isDataUrl(source), isFalse);
       });
+
+      test('returns true for uppercase DATA: scheme prefix', () {
+        const source = 'DATA:image/png;base64,abc';
+        expect(isDataUrl(source), isTrue);
+      });
+
+      test('returns false for string with leading whitespace', () {
+        const source = '  data:image/png;base64,abc';
+        expect(isDataUrl(source), isFalse);
+      });
+
+      test('returns false when data: is embedded within a query string', () {
+        const source = 'https://example.com/view?url=data:image/png;base64,abc';
+        expect(isDataUrl(source), isFalse);
+      });
     });
 
     group('tryDecodeDataUrl', () {
