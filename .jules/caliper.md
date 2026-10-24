@@ -134,6 +134,6 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 **对策:** 在 `test/unit/utils/sqlite_type_utils_test.dart` 中扩充了针对 `safeParseInt` 的测试场景，覆盖负数浮点数转换、科学计数法解析、空/空白字符串默认值处理以及其他异构类型的回退机制。
 
 ## 2026-10-18 - [补充 escapeUntrustedText 及 UntrustedText 工具函数测试]
-**盲点:** `escapeUntrustedText` 是防范大模型提示词注入攻击的核心安全工具函数（包括转义代码块标记、打断角色标记、限制连续换行等）。虽然过往有简易测试，但缺少针对大小写不敏感角色标记（`[system]`, `[USER]`, `<|IM_START|>` 等）、边界输入（空字符串、安全文本）以及 `wrapSessionContent` 和 `wrapUserProfile` 包装函数的针对性单元测试覆盖。
-**对策:** 在 `test/unit/utils/untrusted_text_test.dart` 中扩展测试用例，覆盖安全文本原样返回、代码块转义、各种大小写组合的角色标记替换打断、连续换行（1、2、3+）上限压制，以及 `wrapSessionContent` 与 `wrapUserProfile` 的包装与中和机制，确保核心注入防护逻辑稳固有效。
+**盲点:** `escapeUntrustedText` 是防范大模型提示词注入攻击的核心安全工具函数（包括转义代码块标记、打断角色标记、限制连续换行等）。虽然过往有简易测试，但缺少针对大小写不敏感角色标记变体、边界输入（空字符串、安全文本）以及 `wrapSessionContent` 和 `wrapUserProfile` 包装函数的针对性单元测试覆盖。
+**对策:** 在 `test/unit/utils/untrusted_text_test.dart` 中扩展测试用例，覆盖安全文本原样返回、代码块转义、在大小写不敏感测试中实际输入大写与混合大小写变体（`[sYsTeM]`, `[uSeR]`, `[AsSiStAnT]`, `<|IM_START|>`, `<|IM_END|>`）并断言每个变体都被替换（无空断言）、连续换行（1、2、3+）上限压制，以及 `wrapSessionContent`（包含闭合标签 `<\/session>` 打断）与 `wrapUserProfile` 的包装与中和机制，确保核心注入防护逻辑稳固有效。
 

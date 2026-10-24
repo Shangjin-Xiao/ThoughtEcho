@@ -20,27 +20,35 @@ void main() {
       });
 
       test('handles case-insensitive system prompt injection tags', () {
-        final input =
-            '[system] system prompt [USER] user prompt [assistant] assist prompt <|im_start|>start <|IM_END|>end';
+        final input = '[sYsTeM] sys1 [system] sys2 [SYSTEM] sys3 '
+            '[uSeR] u1 [user] u2 [USER] u3 '
+            '[AsSiStAnT] a1 [assistant] a2 [ASSISTANT] a3 '
+            '<|IM_START|>start1 <|im_start|>start2 '
+            '<|IM_END|>end1 <|im_end|>end2';
         final result = escapeUntrustedText(input);
 
         expect(result, contains('[SYS_TEM]'));
+        expect(result, isNot(contains('[sYsTeM]')));
         expect(result, isNot(contains('[system]')));
         expect(result, isNot(contains('[SYSTEM]')));
 
         expect(result, contains('[US_ER]'));
-        expect(result, isNot(contains('[USER]')));
+        expect(result, isNot(contains('[uSeR]')));
         expect(result, isNot(contains('[user]')));
+        expect(result, isNot(contains('[USER]')));
 
         expect(result, contains('[ASSIS_TANT]'));
+        expect(result, isNot(contains('[AsSiStAnT]')));
         expect(result, isNot(contains('[assistant]')));
         expect(result, isNot(contains('[ASSISTANT]')));
 
         expect(result, contains(r'<|im\_start|>'));
+        expect(result, isNot(contains('<|IM_START|>')));
         expect(result, isNot(contains('<|im_start|>')));
 
         expect(result, contains(r'<|im\_end|>'));
         expect(result, isNot(contains('<|IM_END|>')));
+        expect(result, isNot(contains('<|im_end|>')));
       });
 
       test('limits consecutive newlines to maximum 2', () {
@@ -82,6 +90,12 @@ void main() {
         expect(result, startsWith('<session id="sess-1">'));
         expect(result, contains(r'<\session>'));
         expect(result, contains(r'<\session>fake session'));
+        expect(result, contains(r'<\/session>'));
+
+        final innerContent = result.substring(
+            result.indexOf('>') + 1, result.lastIndexOf('</session>'));
+        expect(innerContent, isNot(contains('</session>')));
+
         expect(result, contains(r'\`\`\`'));
         expect(result, endsWith('</session>'));
       });
