@@ -129,7 +129,12 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 **盲点:** `AIConnectionTester` 提供了一个面向测试的接口 `testOverrideForTesting` 允许 mock 请求结果，但这套机制本身没有任何测试保证。
 **对策:** 增加针对核心配置类的测试（位于 `test/unit/utils/ai_connection_tester_test.dart`），确保即使测试机制也应当有自测试校验。
 
+## 2026-10-15 - [扩展 safeParseInt 的单元测试覆盖]
+**盲点:** `safeParseInt` 作为 SQLite 聚合整数解析的纯函数，缺乏对负数浮点数/字符串（如 `-42.9`, `'-42.9'`）、科学计数法（如 `'1e2'`）、空白字符（如 `'   '`）以及非常规数据类型（如 `bool`, `List`）的测试断言。
+**对策:** 在 `test/unit/utils/sqlite_type_utils_test.dart` 中扩充了针对 `safeParseInt` 的测试场景，覆盖负数浮点数转换、科学计数法解析、空/空白字符串默认值处理以及其他异构类型的回退机制。
+
 ## 2026-10-20 - [补充 AppScrollBehavior 和 navigatorKey 基础配置的测试]
 **盲点:** `AppScrollBehavior` 和 `navigatorKey` 作为全局基础配置，一直缺乏单元测试覆盖。如果在后续重构中被意外修改了配置，会导致桌面端的鼠标拖拽滚动行为失效或者导航键初始化异常。
 **对策:** 为这些高优先级、易测试的基础配置编写独立的单元测试。通过验证 `dragDevices` 是否包含期望的指针设备，以及全局 `navigatorKey` 的类型与非空校验，提升了整个应用的健壮性，确保此类不易察觉的边界在未来不会退化。
+
 

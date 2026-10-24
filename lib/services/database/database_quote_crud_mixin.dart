@@ -248,13 +248,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       final allTagMaps = await batch.commit();
 
       for (final result in allTagMaps) {
-        if (result is! List) {
-          logDebug(
-            '批量关联查询标签返回非 List 结果: ${result.runtimeType}',
-            source: 'DatabaseService',
-          );
-          continue;
-        }
+        if (result is! List) continue;
         for (final item in result) {
           // 关联表的值同样不能硬转：一个坏值抛出来会连累整批查询，而逐行兜底
           // （_parseQuoteRows）根本还没轮到运行。
@@ -381,13 +375,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       final allTagMaps = await batch.commit();
 
       for (final result in allTagMaps) {
-        if (result is! List) {
-          logDebug(
-            '批量关联查询标签返回非 List 结果: ${result.runtimeType}',
-            source: 'DatabaseService',
-          );
-          continue;
-        }
+        if (result is! List) continue;
         for (final item in result) {
           // 关联表的值同样不能硬转：一个坏值抛出来会连累整批查询，而逐行兜底
           // （_parseQuoteRows）根本还没轮到运行。
