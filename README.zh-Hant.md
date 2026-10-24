@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://note.shangjinyun.cn/">
-    <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner-zh-hant.png" alt="ThoughtEcho 心跡 - 你的專屬靈感摘錄筆記本" width="100%">
+    <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner.png" alt="ThoughtEcho 心跡 - 你的專屬靈感摘錄筆記本" width="100%">
   </a>
   
   # 心跡 (ThoughtEcho)
@@ -107,31 +107,31 @@
 ### 核心功能
 | 首頁 | 筆記列表 |
 |:---:|:---:|
-| ![首頁](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/home_page.jpg) | ![筆記列表](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/note_list_view.jpg) |
+| ![首頁](https://img.shangjinyun.cn/projects/thoughtecho/home_page.jpg) | ![筆記列表](https://img.shangjinyun.cn/projects/thoughtecho/note_list_view.jpg) |
 
 ### 編輯與 AI 功能
 | 富文本編輯器 | AI 問答對話 |
 |:---:|:---:|
-| ![富文本編輯器](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/note_full_editor_page.jpg) | ![AI 問答對話](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/note_qa_chat_page.jpg) |
+| ![富文本編輯器](https://img.shangjinyun.cn/projects/thoughtecho/note_full_editor_page.jpg) | ![AI 問答對話](https://img.shangjinyun.cn/projects/thoughtecho/note_qa_chat_page.jpg) |
 
 ### 洞察與報告
 | 洞察分析 | 週期報告 |
 |:---:|:---:|
-| ![洞察分析](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/insights_page.jpg) | ![週期報告](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/period_report.jpg) |
+| ![洞察分析](https://img.shangjinyun.cn/projects/thoughtecho/insights_page.jpg) | ![週期報告](https://img.shangjinyun.cn/projects/thoughtecho/period_report.jpg) |
 
 ### 設定與管理
 | 主題風格設定 | AI 服務商設定 | 每日一言設定 |
 |:---:|:---:|:---:|
-| ![主題風格設定](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/theme_settings_page.jpg) | ![AI 服務商設定](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/ai_settings_page.jpg) | ![每日一言設定](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/hitokoto_settings_page.jpg) |
+| ![主題風格設定](https://img.shangjinyun.cn/projects/thoughtecho/theme_settings_page.jpg) | ![AI 服務商設定](https://img.shangjinyun.cn/projects/thoughtecho/l10n/en/ai_settings_page.jpg) | ![每日一言設定](https://img.shangjinyun.cn/projects/thoughtecho/hitokoto_settings_page.jpg) |
 
 | 偏好設定 | 智慧推播設定 |
 |:---:|:---:|
-| ![偏好設定](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/preferences_detail_page.jpg) | ![智慧推播設定](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/smart_push_settings_page.jpg) |
+| ![偏好設定](https://img.shangjinyun.cn/projects/thoughtecho/preferences_detail_page.jpg) | ![智慧推播設定](https://img.shangjinyun.cn/projects/thoughtecho/smart_push_settings_page.jpg) |
 
 ### 儲存與備份
 | WebDAV 雲端同步 | 資源回收筒 |
 |:---:|:---:|
-| ![WebDAV 雲端同步](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/webdav_sync_page.jpg) | ![資源回收筒](https://img.shangjinyun.cn/projects/thoughtecho/l10n/zh-Hant/recycle_bin_page.jpg) |
+| ![WebDAV 雲端同步](https://img.shangjinyun.cn/projects/thoughtecho/webdav_sync_page.jpg) | ![資源回收筒](https://img.shangjinyun.cn/projects/thoughtecho/recycle_bin_page.jpg) |
 
 ## 🛠️ 技術棧
 
