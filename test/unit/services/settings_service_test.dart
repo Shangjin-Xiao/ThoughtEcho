@@ -786,16 +786,19 @@ void main() {
       expect(restoredProviders.any((p) => p.id.trim().isEmpty), isFalse);
       expect(restoredProviders.length, equals(3));
 
-      final savedKey =
-          await APIKeyManager().getProviderApiKey('valid_nested_provider');
+      final savedKey = await APIKeyManager().getProviderApiKey(
+        'valid_nested_provider',
+      );
       expect(savedKey, equals('sk-nested-valid-key'));
 
-      final numericKey =
-          await APIKeyManager().getProviderApiKey('numeric_key_provider');
+      final numericKey = await APIKeyManager().getProviderApiKey(
+        'numeric_key_provider',
+      );
       expect(numericKey, isEmpty);
 
-      final fallbackKey =
-          await APIKeyManager().getProviderApiKey('fallback_key_provider');
+      final fallbackKey = await APIKeyManager().getProviderApiKey(
+        'fallback_key_provider',
+      );
       expect(fallbackKey, equals('sk-fallback-valid-key'));
 
       expect(settingsService.aiSettings.apiKey, isEmpty);
@@ -1014,21 +1017,22 @@ void main() {
     );
 
     group('Error Handling & Resilience Tests', () {
-      test('recentCities handles invalid JSON string gracefully (line 300)',
-          () async {
+      test('recentCities handles invalid JSON string gracefully', () async {
         final mmkv = MMKVService();
         await mmkv.setString('recent_cities_json_v1', 'invalid-json{');
 
         expect(settingsService.recentCities, isEmpty);
       });
 
-      test('recentCities handles malformed CityInfo JSON items gracefully',
-          () async {
-        final mmkv = MMKVService();
-        await mmkv.setString('recent_cities_json_v1', '[123, true]');
+      test(
+        'recentCities handles malformed CityInfo JSON items gracefully',
+        () async {
+          final mmkv = MMKVService();
+          await mmkv.setString('recent_cities_json_v1', '[123, true]');
 
-        expect(settingsService.recentCities, isEmpty);
-      });
+          expect(settingsService.recentCities, isEmpty);
+        },
+      );
 
       test(
           'SettingsService recovers gracefully when app_settings JSON is corrupted',
@@ -1072,20 +1076,22 @@ void main() {
         );
       });
 
-      test('setLastDreamingAt saves timestamp and handles null clearing',
-          () async {
-        expect(settingsService.lastDreamingAt, isNull);
+      test(
+        'setLastDreamingAt saves timestamp and handles null clearing',
+        () async {
+          expect(settingsService.lastDreamingAt, isNull);
 
-        final now = DateTime.utc(2026, 3, 28, 12, 0, 0);
-        await settingsService.setLastDreamingAt(now);
-        expect(
-          settingsService.lastDreamingAt?.millisecondsSinceEpoch,
-          equals(now.millisecondsSinceEpoch),
-        );
+          final now = DateTime.utc(2026, 3, 28, 12, 0, 0);
+          await settingsService.setLastDreamingAt(now);
+          expect(
+            settingsService.lastDreamingAt?.millisecondsSinceEpoch,
+            equals(now.millisecondsSinceEpoch),
+          );
 
-        await settingsService.setLastDreamingAt(null);
-        expect(settingsService.lastDreamingAt, isNull);
-      });
+          await settingsService.setLastDreamingAt(null);
+          expect(settingsService.lastDreamingAt, isNull);
+        },
+      );
 
       test('agent memory and dreaming toggles persist successfully', () async {
         await settingsService.setAgentMemoryEnabled(false);
