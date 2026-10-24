@@ -103,64 +103,70 @@ class UpdateBottomSheet extends StatelessWidget {
           // 版本信息卡片
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(contentPadding),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHigh,
+            child: Card(
+              margin: EdgeInsets.zero,
+              color: colorScheme.surfaceContainerHigh,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(
-                    AppShapeTokens.of(context).cardRadius),
-                border: Border.all(color: colorScheme.outline.withAlpha(50)),
+                  AppShapeTokens.of(context).cardRadius,
+                ),
+                side: BorderSide(
+                  color: colorScheme.outline.withAlpha(50),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context).updateCurrentVersion,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      Text(
-                        versionInfo.currentVersion,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context).updateLatestVersion,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          borderRadius: BorderRadius.circular(
-                            AppShapeTokens.of(context).buttonRadius,
+              child: Padding(
+                padding: EdgeInsets.all(contentPadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context).updateCurrentVersion,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        child: Text(
-                          versionInfo.latestVersion,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onPrimary,
+                        Text(
+                          versionInfo.currentVersion,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context).updateLatestVersion,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary,
+                            borderRadius: BorderRadius.circular(
+                              AppShapeTokens.of(context).buttonRadius,
+                            ),
+                          ),
+                          child: Text(
+                            versionInfo.latestVersion,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -176,33 +182,40 @@ class UpdateBottomSheet extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                width: double.infinity,
-                constraints: BoxConstraints(
-                  minHeight: 100,
-                  maxHeight: maxReleaseNotesHeight,
-                ),
-                padding: EdgeInsets.all(contentPadding),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
+              child: Card(
+                margin: EdgeInsets.zero,
+                color: colorScheme.surfaceContainerHigh,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
-                      AppShapeTokens.of(context).cardRadius),
-                  border: Border.all(color: colorScheme.outline.withAlpha(50)),
+                    AppShapeTokens.of(context).cardRadius,
+                  ),
+                  side: BorderSide(
+                    color: colorScheme.outline.withAlpha(50),
+                  ),
                 ),
-                child: SingleChildScrollView(
-                  child: MarkdownBody(
-                    data: versionInfo.releaseNotes,
-                    selectable: true,
-                    styleSheet: _createUpdateMarkdownStyle(context),
-                    onTapLink: (text, href, title) {
-                      if (href != null) {
-                        launchUrl(
-                          Uri.parse(href),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    shrinkWrap: false,
+                child: Container(
+                  width: double.infinity,
+                  constraints: BoxConstraints(
+                    minHeight: 100,
+                    maxHeight: maxReleaseNotesHeight,
+                  ),
+                  padding: EdgeInsets.all(contentPadding),
+                  child: SingleChildScrollView(
+                    child: MarkdownBody(
+                      data: versionInfo.releaseNotes,
+                      selectable: true,
+                      styleSheet: _createUpdateMarkdownStyle(context),
+                      onTapLink: (text, href, title) {
+                        if (href != null) {
+                          launchUrl(
+                            Uri.parse(href),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                      shrinkWrap: false,
+                    ),
                   ),
                 ),
               ),
@@ -278,34 +291,44 @@ class UpdateBottomSheet extends StatelessWidget {
           // 内容区域
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(contentPadding),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHigh,
+            child: Card(
+              margin: EdgeInsets.zero,
+              color: colorScheme.surfaceContainerHigh,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(
-                    AppShapeTokens.of(context).cardRadius),
-                border: Border.all(color: colorScheme.outline.withAlpha(50)),
+                  AppShapeTokens.of(context).cardRadius,
+                ),
+                side: BorderSide(
+                  color: colorScheme.outline.withAlpha(50),
+                ),
               ),
-              child: Column(
-                children: [
-                  Icon(Icons.verified,
-                      size: 48, color: AppSemanticColors.of(context).success),
-                  const SizedBox(height: 16),
-                  Text(
-                    AppLocalizations.of(
-                      context,
-                    ).updateCurrentVersionLabel(versionInfo.currentVersion),
-                    style: theme.textTheme.titleMedium,
+              child: Padding(
+                padding: EdgeInsets.all(contentPadding),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    children: [
+                      Icon(Icons.verified,
+                          size: 48,
+                          color: AppSemanticColors.of(context).success),
+                      const SizedBox(height: 16),
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        ).updateCurrentVersionLabel(versionInfo.currentVersion),
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppLocalizations.of(context).updateUsingLatestVersion,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    AppLocalizations.of(context).updateUsingLatestVersion,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -444,7 +467,6 @@ class UpdateBottomSheet extends StatelessWidget {
       // 引用块样式
       blockquote: theme.textTheme.bodySmall?.copyWith(
         color: baseColor.withValues(alpha: 0.8),
-        fontStyle: FontStyle.italic,
       ),
       blockquoteDecoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
