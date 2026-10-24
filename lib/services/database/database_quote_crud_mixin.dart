@@ -33,92 +33,87 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     }
 
     return _executeWithLock('addQuote_${quote.id ?? 'new'}', () async {
-      try {
-        final db = await safeDatabase;
-        final newQuoteId = quote.id ?? _uuid.v4();
-        final quoteWithId =
-            quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
+      final db = await safeDatabase;
+      final newQuoteId = quote.id ?? _uuid.v4();
+      final quoteWithId =
+          quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
 
-        await db.transaction((txn) async {
-          final quoteMap = quoteWithId.toJson();
-          quoteMap['id'] = newQuoteId;
+      await db.transaction((txn) async {
+        final quoteMap = quoteWithId.toJson();
+        quoteMap['id'] = newQuoteId;
 
-          // 自动设置 last_modified 时间戳
-          final now = DateTime.now().toUtc().toIso8601String();
-          if (quoteMap['last_modified'] == null ||
-              quoteMap['last_modified'].toString().isEmpty) {
-            quoteMap['last_modified'] = now;
-          } else {
-            // 调用方可能传入本地时区裸时间戳；LWW 比较要求统一 UTC 格式
-            quoteMap['last_modified'] = LWWUtils.normalizeTimestamp(
-              quoteMap['last_modified'].toString(),
-            );
-          }
-
-          // 自动补全 day_period 字段
-          if (quoteMap['date'] != null) {
-            final dt = DateTime.tryParse(quoteMap['date']);
-            if (dt != null) {
-              final hour = dt.hour;
-              String dayPeriodKey;
-              if (hour >= 5 && hour < 8) {
-                dayPeriodKey = 'dawn';
-              } else if (hour >= 8 && hour < 12) {
-                dayPeriodKey = 'morning';
-              } else if (hour >= 12 && hour < 17) {
-                dayPeriodKey = 'afternoon';
-              } else if (hour >= 17 && hour < 20) {
-                dayPeriodKey = 'dusk';
-              } else if (hour >= 20 && hour < 23) {
-                dayPeriodKey = 'evening';
-              } else {
-                dayPeriodKey = 'midnight';
-              }
-              quoteMap['day_period'] = dayPeriodKey;
-            }
-          }
-
-          // 插入笔记
-          await txn.insert(
-            'quotes',
-            quoteMap,
-            conflictAlgorithm: ConflictAlgorithm.replace,
+        // 自动设置 last_modified 时间戳
+        final now = DateTime.now().toUtc().toIso8601String();
+        if (quoteMap['last_modified'] == null ||
+            quoteMap['last_modified'].toString().isEmpty) {
+          quoteMap['last_modified'] = now;
+        } else {
+          // 调用方可能传入本地时区裸时间戳；LWW 比较要求统一 UTC 格式
+          quoteMap['last_modified'] = LWWUtils.normalizeTimestamp(
+            quoteMap['last_modified'].toString(),
           );
+        }
 
-          // 修复：插入标签关联，避免事务嵌套
-          if (quote.tagIds.isNotEmpty) {
-            // ⚡ Bolt: 使用 batch 优化批量插入标签，解决 N+1 性能问题
-            final batch = txn.batch();
-            for (final tagId in quote.tagIds) {
-              batch.insert(
-                  'quote_tags',
-                  {
-                    'quote_id': newQuoteId,
-                    'tag_id': tagId,
-                  },
-                  conflictAlgorithm: ConflictAlgorithm.ignore);
+        // 自动补全 day_period 字段
+        if (quoteMap['date'] != null) {
+          final dt = DateTime.tryParse(quoteMap['date']);
+          if (dt != null) {
+            final hour = dt.hour;
+            String dayPeriodKey;
+            if (hour >= 5 && hour < 8) {
+              dayPeriodKey = 'dawn';
+            } else if (hour >= 8 && hour < 12) {
+              dayPeriodKey = 'morning';
+            } else if (hour >= 12 && hour < 17) {
+              dayPeriodKey = 'afternoon';
+            } else if (hour >= 17 && hour < 20) {
+              dayPeriodKey = 'dusk';
+            } else if (hour >= 20 && hour < 23) {
+              dayPeriodKey = 'evening';
+            } else {
+              dayPeriodKey = 'midnight';
             }
-            await batch.commit(noResult: true);
+            quoteMap['day_period'] = dayPeriodKey;
           }
-        });
+        }
 
-        logDebug('笔记已成功保存到数据库，ID: ${quoteWithId.id}');
+        // 插入笔记
+        await txn.insert(
+          'quotes',
+          quoteMap,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
 
-        // 同步媒体文件引用
-        await MediaReferenceService.syncQuoteMediaReferences(quoteWithId);
+        // 修复：插入标签关联，避免事务嵌套
+        if (quote.tagIds.isNotEmpty) {
+          // ⚡ Bolt: 使用 batch 优化批量插入标签，解决 N+1 性能问题
+          final batch = txn.batch();
+          for (final tagId in quote.tagIds) {
+            batch.insert(
+                'quote_tags',
+                {
+                  'quote_id': newQuoteId,
+                  'tag_id': tagId,
+                },
+                conflictAlgorithm: ConflictAlgorithm.ignore);
+          }
+          await batch.commit(noResult: true);
+        }
+      });
 
-        // 优化：数据变更后清空缓存
-        clearAllCacheForParts();
+      logDebug('笔记已成功保存到数据库，ID: ${quoteWithId.id}');
 
-        // 修复：避免直接操作_currentQuotes，使用刷新机制确保数据一致性
-        refreshQuotesStreamForParts();
-        notifyListeners(); // 通知其他监听者（如Homepage的FAB）
-        notifyLocalDataChangedForParts();
-        _trackSaveNoteEvent(quoteWithId);
-      } catch (e) {
-        logDebug('保存笔记到数据库时出错: $e');
-        rethrow; // 重新抛出异常，让调用者处理
-      }
+      // 同步媒体文件引用
+      await MediaReferenceService.syncQuoteMediaReferences(quoteWithId);
+
+      // 优化：数据变更后清空缓存
+      clearAllCacheForParts();
+
+      // 修复：避免直接操作_currentQuotes，使用刷新机制确保数据一致性
+      refreshQuotesStreamForParts();
+      notifyListeners(); // 通知其他监听者（如Homepage的FAB）
+      notifyLocalDataChangedForParts();
+      _trackSaveNoteEvent(quoteWithId);
     });
   }
 
@@ -163,8 +158,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       mutableMap['tag_ids'] = tags.join(',');
 
       return _tryParseQuoteRow(mutableMap);
-    } catch (e) {
-      logDebug('获取指定ID笔记失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '获取指定ID笔记失败',
+        error: e.runtimeType,
+        stackTrace: stackTrace,
+        source: 'DatabaseQuoteCrudMixin',
+      );
       return null;
     }
   }
@@ -261,8 +261,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       }
 
       return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
-    } catch (e) {
-      logDebug('获取所有笔记失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '获取所有笔记失败',
+        error: e.runtimeType,
+        stackTrace: stackTrace,
+        source: 'DatabaseQuoteCrudMixin',
+      );
       return [];
     }
   }

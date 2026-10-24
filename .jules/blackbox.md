@@ -92,3 +92,7 @@
 
 **异常:** [在应用从后台恢复到前台时，`AppLifecycleState.resumed` 会触发 WebDAV 后台同步。原代码在这个过程中使用了 `catch (_) {}` 的空捕获，静默吞噬了同步触发阶段可能发生的所有异常，导致排查用户反馈的“回到应用没有自动同步”的问题时缺乏任何关键日志线索。]
 **拦截:** [将 `catch (_) {}` 改写为 `catch (e, stackTrace)`，并使用 `AppLogger.e` 进行结构化日志上报。注入了具体的异常对象、堆栈轨迹以及明确的来源模块标识 `source: 'AppLifecycle'`。确认记录内容仅包含错误与堆栈信息，未包含任何用户数据和隐私信息。]
+
+## 2026-10-25 - 🗃️ 黑匣: [完善 DatabaseQuoteCrud 模块的结构化日志与脱敏拦截]
+**异常:** [DatabaseQuoteCrudMixin 在保存、按 ID 获取以及获取所有笔记失败时存在两类隐患：1. `addQuote` 处在 `_executeWithLock` 锁执行器内部，而锁执行器本身已具备错误捕获与堆栈日志记录，若内部再捕获并 rethrow 会造成重复日志记录及双重 Sentry 上报；2. `getQuoteById` 和 `getAllQuotes` 捕获异常时若将原始异常对象 `e` 直接传给 `logError`，其可能携带未脱敏的 SQL 参数、解析异常明文或外部数据字段，有泄露隐私信息的风险。]
+**拦截:** [1. 移除 `addQuote` 内部冗余的 catch/logError 块，统一由 `_executeWithLock` 处理和记录，避免重复日志与 Sentry 双重上报；2. 在 `getQuoteById` 与 `getAllQuotes` 中对错误对象进行脱敏，使用 `error: e.runtimeType` 代替原始异常对象 `e`，同时完整保留 `stackTrace: stackTrace` 与模块来源标识 `source: 'DatabaseQuoteCrudMixin'`，在确保可观测性与堆栈可追溯的前提下彻底防止敏感字段外泄。]
