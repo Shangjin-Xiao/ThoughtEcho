@@ -1,336 +1,61 @@
-# ThoughtEcho 项目指南
+# ThoughtEcho AGENTS.md
 
-## 项目概览
+## 平台与作用域
 
-- **项目**：ThoughtEcho（心迹），Flutter 3.x 跨平台笔记应用
-- **支持平台**：Windows、Android、iOS
-- **不支持平台**：Web。不要新增 Web 入口、Web 专用实现、Web 构建或 Web 测试；仓库中
-  现存的 `kIsWeb`、`*_web.dart` 和 Web 依赖属于历史兼容代码，不代表支持 Web，也不要在
-  无关任务中顺手清理。
-- **主要技术**：Flutter、Dart、SQLite、Provider、FlutterQuill、多 AI Provider
+- **支持平台**：Windows、Android、iOS。**不支持 Web**：现存 `kIsWeb` / `*_web.dart` 属于历史兼容残留，禁止新增 Web 入口、实现或测试，也不要在无关任务中顺手清理。
+- **指令层级**：进入含 `AGENTS.md` 的子目录时同步遵守就近子目录规则（子目录不可放宽本文件的安全、隐私与主题红线）。若本地存在 `docs/DEVICE_INFO.md`（已忽略），先读其环境约束。
+- **历史沉淀优先**：改动已被深度优化过的模块（列表性能、主题、Thoughter 记忆、同步）前，先查 [`docs/INDEX.md`](docs/INDEX.md) 与 `docs/decisions.md`。`docs/squad/` 仅为历史过程档案，不作实现规范。
 
-## 指令作用域
-
-- 本文件适用于整个仓库；进入含有 `AGENTS.md` 的子目录后，还必须遵守距离目标文件最近的
-  子目录指令。
-- 子目录文件用于补充局部约定，不能放宽本文件中的平台、安全、隐私和 Git 约束。
-- 用户当前请求优先于仓库工作流偏好；如果请求与安全、隐私或数据完整性约束冲突，先说明
-  风险并请求确认。
-- 修改前先阅读目标实现、相邻测试和对应子目录 `AGENTS.md`。不要仅凭文件名或旧文档推断。
-
-## 目录结构
-
-```text
-ThoughtEcho/
-├── lib/
-│   ├── main.dart           # 应用入口、Provider 注入、启动恢复
-│   ├── controllers/        # 页面级 UI 状态与编排
-│   ├── models/             # 领域、持久化和展示模型
-│   ├── pages/              # 页面及页面级 part 拆分
-│   ├── services/           # 数据、网络、AI、同步等业务能力
-│   ├── utils/              # 可复用工具和平台适配
-│   ├── widgets/            # 可复用 UI 组件
-│   ├── constants/          # 应用常量、卡片模板、AI Prompt
-│   ├── theme/              # Material 3 主题
-│   ├── config/             # 动画和引导配置
-│   ├── extensions/         # Dart 扩展
-│   ├── l10n/               # ARB 国际化源文件
-│   └── gen_l10n/           # 生成的国际化代码，禁止手动编辑
-├── test/                   # 单元、Widget、集成、性能测试
-├── assets/                 # 应用图标、Lottie、SVG 等应用资源
-├── docs/                   # 用户手册等项目文档
-├── scripts/                # 构建及维护脚本
-├── .github/workflows/      # CI 与发布流程
-└── android/ ios/ windows/  # 平台原生工程
-```
-
-主要拆分：`services/database/`（12 个业务 mixin 与 schema 版本适配）、`pages/note_editor/`（富文本编辑器 `part` 拆分）、`pages/explore/`（探索页与地图记忆入口 `part` 拆分）、`pages/thoughter/`（Agent 会话、工作流与历史页拆分）、`pages/home/`（首页编排模块）、`services/smart_push/`（智能推送 `part` 拆分）、`widgets/note_list/`（列表 `part`、折叠富文本 `CollapsedRichText` 与视口预热 `NoteListWarmup`）。
-
-## 常用命令
+## 常用命令与验证
 
 ```bash
-# 安装依赖
-flutter pub get
-
-# 运行应用
-flutter run
-
-# 格式化本次修改的 Dart 文件
+# 格式化改动文件（提交前必跑）
 dart format <changed-dart-files>
 
-# 只检查格式，不改文件
-dart format --output=none --set-exit-if-changed <changed-dart-files>
-
-# 运行仓库增量机械规则检查（颜色令牌、动态圆角、AppSnackBar、禁止裸调 Aptabase、已删除 API；首次可运行 git config core.hooksPath .githooks 启用提交钩子）
+# 仓库增量机械规则检查（颜色令牌、动态圆角、AppSnackBar、禁止 ThemeStyle 分支、禁止裸调 Aptabase、已删 API）
+# 首次可运行 git config core.hooksPath .githooks 启用 pre-commit 自动检查
 dart scripts/lint_repo_rules.dart
 
 # 静态分析
 flutter analyze --no-fatal-infos
 
-# 运行相关测试文件（默认做法）
-timeout 60s flutter test --reporter compact test/path/to/file_test.dart
-
-# 按名称运行单个用例
+# 运行单个测试文件或按名称过滤（默认只跑相关测试；首次冷启动慢可将超时提至 180s）
 timeout 60s flutter test --reporter compact test/path/to/file_test.dart --name "用例名称"
 
-# 默认门禁由 CI 自动按目录分片；性能和真实服务/设备集成测试需显式运行
-
-# 修改 ARB 后生成国际化代码
-flutter gen-l10n
-
-# 修改 Mockito 接口或注解后重新生成 Mock
+# 重新生成 Mockito Mock
 dart run build_runner build --delete-conflicting-outputs
-
-# 平台构建
-./scripts/build_ios_unsigned.sh
-pwsh ./scripts/build_msix_ci.ps1
 ```
 
-> **环境与设备提示**：若本地存在 `docs/DEVICE_INFO.md`（由 `.gitignore` 忽略），进入开发前请先阅读并严格遵守其设备资源与操作约束。
+- **命令行输出控制**：运行测试、分析等长输出命令时优先静默重定向（`cmd > /tmp/run.log 2>&1 || tail -n 25 /tmp/run.log`），禁止用 `gh run watch` 等持续刷新命令刷屏；`gh run view <id>` 必须带 `<id>` 避免交互挂起。
+- **国际化（l10n）**：UI 层严禁硬编码用户可见文本（含 Tooltip、SnackBar、Dialog、Semantics）。日常开发只需新增中英文（`lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`，未翻译语言默认回退 `en`）；构建与 CI 会自动生成代码，禁止手动编辑 `lib/gen_l10n/`。
 
-测试冷启动可能超过 60 秒；首次卡在 `loading` 时可预热或将单次超时提高到 180 秒。输出过多
-时先定位编译/分析错误，不要反复运行长输出命令。
+## UI 与主题令牌红线（由 `lint_repo_rules.dart` 把关）
 
-## 工作方式
+主题风格是独立于亮暗/动态取色的第三维度：`material`（默认，`ThemeStyle.defaultStyle` 不可改）、`paper`（纸与墨）、`plain`（素笺）。动主题前先读 [`docs/paper-ink-theme-handoff-2026-07-31.md`](docs/paper-ink-theme-handoff-2026-07-31.md)，改色板必须过 `test/theme/theme_style_contrast_test.dart`（手工色板亮色路径须关 `keyColors` 与表面混合）。
 
-1. 先确认请求范围和验收标准，再检查 `git status --short`，保留用户已有改动；若存在 `docs/DEVICE_INFO.md`，先查看其说明。
-2. 用 `rg` / `rg --files` 查找定义、调用方、测试和文档；修改复杂文件前阅读其拆分文件。
-3. 做最小且完整的改动。修 Bug 时优先添加能复现问题的回归测试；新增逻辑补相应测试。
-4. 只格式化和验证相关文件。除非用户明确要求，不主动运行全量测试或全仓库格式化。
-5. 完成前检查 diff、相关测试和静态分析结果；无法执行的验证要明确说明，不能声称已通过。
-6. **命令行输出与 Token 控制**：
-   - 严禁向上下文倾倒未过滤的冗长日志（如全量依赖拉取、完整测试过程输出、全量静态分析清单）。
-   - 运行可能产生大量输出的命令（测试、分析、构建）时，优先采用静默重定向并仅在失败时打印末尾报错：
-     `command > /tmp/run.log 2>&1 || tail -n 25 /tmp/run.log`，或配合 `tail -n 2` / `grep` 进行行数过滤。
-   - 查询外部状态（如 GitHub Actions、API）时使用极简结构化参数（如 `gh run view <id> --json status,conclusion`；`gh run view` 必须指定 `<id>` 避免交互菜单挂起），禁止使用带终端持续刷新的交互式/轮询命令（如 `gh run watch` 或循环轮询 CI 状态）。
-   - 确定无需输出的辅助指令使用 `> /dev/null 2>&1` 彻底静默。
+- **禁在 Widget 判断 `ThemeStyle`**：边框、投影与纸纹差异全部通过 `AppShapeTokens.of(context)`（`borderWidth`、`ruleSpacing`、`cardRadius` / `buttonRadius` / `inputRadius` / `dialogRadius` / `fabRadius`）表达；禁止手写 `BorderRadius.circular(N)` 或引用静态 `AppTheme.*Radius`。
+- **颜色**：状态色用 `AppSemanticColors.of(context)`（`success` / `warning` / `danger` / `info` / `favorite`），次要文字用 `colorScheme.onSurfaceVariant`，背景用 `surfaceContainer*`；禁止在 `lib/pages/` 与 `lib/widgets/` 使用 `Colors.*` 命名色或 Tailwind 十六进制字面量。
+- **排版**：禁止在 Widget 写死 `fontSize:`、正文 `height:`、`fontWeight:`（纸墨横线间距由「正文字号 × 行高」推导，覆盖任一会导致文字逐行漂移；`label*` 保持系统黑体不缩放）。禁止将 `FontStyle.italic` 用作 UI 装饰（仅富文本编辑器内容、PDF 导出与 Markdown `em` 保留斜体）。
+- **通用组件**：统一用 `AppSnackBar.info/success/warning/error`（禁裸调 `showSnackBar`）；加载/空态/错误态用 `AppLoadingView` / `AppEmptyView` / `AppErrorView`；开发者/实验开关统一放入设置页 `_buildLabSection`。
 
-涉及第三方库、Flutter/Dart SDK、平台 API、AI 服务协议或 GitHub Actions 时，先用 Context7
-查询当前官方文档（`resolve-library-id` → `get-library-docs`）；Context7 不可用或无对应资料时，
-再查官方文档。纯项目内重构、业务调试、格式化和 ARB 文案调整无需查询。
+## 数据库与领域陷阱
 
-## Dart 与 Flutter 规范
+- **标签命名历史陷阱**：SQL 的 `categories` 表、`category_id` 列及备份 JSON 的 `categories` 键实际存的是**标签**（Dart 侧一律用 `NoteTag` / `getTags()`，管理页为 `tag_settings_page.dart`）；API Ninjas 名言分类和 emoji 分组才是真 `category`。
+- **`Quote` 双字段同步**：`Quote` 同时保存 `content`（纯文本）和 `deltaContent`（Quill Delta JSON），编辑、同步、导入恢复时必须保持一致。
+- **Schema 与 SQL 安全**：Schema 真源在 `lib/services/database_schema_manager.dart`（`schemaVersion`），修改须同时覆盖新建表与旧版升级迁移（禁改已发布版本的迁移语义）。动态 `orderBy` 必须经 `sanitizeOrderBy()` 白名单处理；禁止在循环内逐条查询。
+- **校验对齐与坏行隔离**：`Quote.fromJson` 与 `Quote.validationError` 校验边界必须一致；外来数据收敛仅做在导入边界（`DatabaseBackupService` → `MergeReport.sanitizedFields`）；不可逆迁移写入前必须先将整列快照至 `<列名>_backup`（遗留列清理排在建快照列之前）；查询反序列化统一走 `_parseQuoteRows` / `_tryParseQuoteRow`，且日志严禁打印含笔记正文的 `FormatException.toString()`。
 
-- 遵循 `analysis_options.yaml` 和 `dart format`；不要假设格式化器会自动整理 import。
-- import 分组依次为 `dart:`、Flutter SDK、第三方 package、`package:thoughtecho/`，组内按字母序。
-- 使用具体类型和 null safety，避免无边界的 `dynamic`、不必要的 `!` 和宽泛类型转换。
-- 类/枚举使用 `UpperCamelCase`，成员使用 `lowerCamelCase`，私有成员加 `_`，文件使用
-  `snake_case.dart`，测试使用 `*_test.dart`。
-- 文件名要指向它现在是什么，不是曾经是什么。禁止 `_clean`、`_new`、`_v2`、`_fixed`、
-  `_optimized` 这类状态词后缀，也不要留只做转发的 `_wrapper` 页面。改名一次改到底：文件、
-  类、`part` 路径、目录、对应测试一起改。废弃的页面/服务直接删，不要留"已弃用"注释躺在
-  `lib/` 里 —— 注释拦不住检索。
-- 公共 API 使用 `///`；注释解释原因、约束或不直观行为，不复述代码。提交前删除临时日志和
-  调试注释。
-- 新增或重构时避免继续扩大超大文件；优先按职责抽取 Widget、helper、mixin 或子目录。
-  “500 行”是需要评估拆分的信号，不是为了达标而机械切文件的硬门槛。
-- 重复逻辑达到三处时评估抽取；只有在共享概念确实稳定时才抽象。
+## AI、Thoughter 记忆与可观测性埋点
 
-## 架构约定
+- **AI 链路**：`MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamService`，API Key 仅走 `APIKeyManager`。`AIConnectionTester` 必须复用 `OpenAIStreamService → openai_dart` 真实链路，超时下沉到 client 配置而非外层 `Future.timeout`。
+- **已删除 API（禁止恢复）**：`AIService.generateDailyPrompt`（改用 `streamGenerateDailyPrompt`）、`TimeUtils.formatTime`（改用 `formatRelativeDateTime` / `formatQuoteTime`）、`NoteSyncService.receiveAndMerge`。
+- **Thoughter 长期记忆（`AgentMemoryService`）**：独立库 `agent_memory.db`（不进备份、不同步），只存笔记推导不出的用户画像/偏好，通过独立 user 消息经 `wrapUserProfile` 注入（禁拼 system prompt），偏好变更原位 supersede。详见 [`docs/agent-memory-research-2026-08-08.md`](docs/agent-memory-research-2026-08-08.md)。
+- **新功能可观测性与隐私埋点（默认均关闭，双独立开关）**：
+  - **Aptabase 匿名统计**：新增独立页面或用户显式触发的核心功能动作时，在成功触发边界调用 `AptabaseHelper.trackPageView('<snake_case_page>')` 或 `AptabaseHelper.trackEvent('feature_used', {'action': '<snake_case_action>'})`（禁裸调 `Aptabase.instance`；`props` 仅限固定枚举/布尔/数值，严禁含笔记正文、标签、搜索词或位置隐私）。
+  - **Sentry 诊断与追踪**：Service 不持有 `BuildContext`；异常统一调 `logError` / `AppLogger.e`（由 `UnifiedLogService` 按开关自动上报 Sentry，不手写 `Sentry.captureException`）；重度加载/渲染链路用 `AppTracer`；**AI 请求严禁挂载 `SentryNetworkTracing`**。
 
-### 状态管理
+## 代码卫生与 Git
 
-- 可观察的应用/UI 状态使用 `ChangeNotifier` 并由 Provider 注入；纯计算、文件工具和无状态服务
-  不需要为了统一形式继承 `ChangeNotifier`。
-- 只有可观察状态实际变化后才调用 `notifyListeners()`；只读操作或无状态 Service 不要空通知。
-- 不监听时使用 `context.read<T>()` 或 `Provider.of<T>(context, listen: false)`；需要重建时使用
-  `context.watch<T>()`、`select` 或 `Consumer<T>`，避免扩大重建范围。
-- Controller 管页面状态和交互编排，持久化、网络及可复用业务规则下沉到 Service。
-
-### 服务、错误处理与可观测性埋点（Aptabase & Sentry）
-
-- Service 不持有页面 `BuildContext`。现有 Service 如需调度帧，优先依赖
-  `package:flutter/scheduler.dart`，不要新增 `flutter/widgets.dart` 依赖来耦合 UI。
-- 异常应带操作上下文记录到 `UnifiedLogService` 或项目日志封装（`logError` / `AppLogger.e`），再向上抛出或采用明确的降级策略；禁止静默吞错。
-- 页面级用户操作用 `try/catch` 转成国际化、可理解的反馈，不向用户裸露堆栈或密钥。
-- 网络重试、超时和取消沿用现有网络工具；不要在调用点各自实现无限重试。
-
-**新增功能时的 Aptabase 与 Sentry 埋点规范**
-
-项目设有两个独立且默认关闭的隐私授权开关（用户体验优化计划 `Aptabase` 与崩溃及性能诊断 `Sentry`）。开发新功能或新页面时，应在合适的边界接入埋点与可观测性追踪，并遵守以下约束：
-
-1. **Aptabase 匿名功能统计（`lib/utils/aptabase_helper.dart`）**
-   - **何时埋点**：新增**独立页面**或**用户显式触发的核心业务动作**（如笔记增删改、标签管理、AI 交互与提案采纳、备份/导入导出、同步、主题/设置切换）时，在动作成功触发边界补充埋点；高频滚动/输入帧回调、内部状态流转或后台定时轮询**不加**统计埋点。
-   - **统一入口**：页面进入调用 `AptabaseHelper.trackPageView('<snake_case_page>')`；功能使用调用 `AptabaseHelper.trackEvent('feature_used', {'action': '<snake_case_action>'})`。❌ 禁止在业务层直接调用 `Aptabase.instance`（由 `lint_repo_rules.dart` 拦截）。
-   - 🔒 **参数脱敏铁律**：`props` 属性值**仅限固定枚举字符串、布尔值或计数/档位数字**；绝不传入笔记正文、标题、标签名、搜索词、文件路径、URL、经纬度/POI 或异常原文。单测中可通过 `AptabaseHelper.onTrackEventForTesting` 验证。
-2. **Sentry 错误与性能诊断（`lib/utils/sentry_helper.dart`、`app_logger.dart`、`app_tracer.dart`）**
-   - **异常上报走统一日志**：捕获非预期异常时统一调用 `logError('上下文描述', error: e, stackTrace: stackTrace, source: 'ModuleName')`（或 `AppLogger.e`）。当用户开启诊断开关时，`UnifiedLogService` 会自动将带 `error` 对象的错误日志转发至 `Sentry.captureException`，业务代码无需直接调用 `Sentry.captureException`。
-   - **关键链路性能追踪走 `AppTracer`**：涉及首屏加载、重度分页/渲染或复杂 I/O 的关键路径，使用 `AppTracer.start('ThoughtEcho.<Module>.<action>', operation: 'ui.load' | 'ui.action')` 并在结束时 `.finish()`（同时驱动本地 DevTools Timeline 与线上 Sentry Span）。异步数据加载完成的页面可调用 `SentryFlutter.currentDisplay()?.reportFullyDisplayed()` 记录 TTFD。
-   - 🔒 **追踪隔离与脱敏**：普通 HTTP 客户端可使用 `SentryNetworkTracing.addToGeneralDioIfEnabled(dio)`，但 **AI 请求严禁挂载 Sentry 网络追踪**（防止 Prompt 与笔记内容进入 Breadcrumb/Span）；主库 SQL 追踪由 `SentryDatabaseTracing.wrapMainDatabase` 统一包装，所有 SQL 与 URL 均经 `sanitizeSentry*` 剥离查询参数与敏感字段。
-
-### 模型与富文本
-
-- 需要持久化的模型提供与其存储格式匹配的序列化接口（如 `toMap/fromMap` 或
-  `toJson/fromJson`）；不可变模型提供 `copyWith()`。
-- `Quote` 同时保存 `content`（纯文本）和 `deltaContent`（Quill Delta JSON）；编辑、同步、
-  导入和恢复时必须保持两者一致。
-- 模型新增持久化字段时，同时检查 schema、迁移、备份/恢复、同步、`copyWith`、序列化和测试。
-
-### 国际化与主题
-
-- UI 层禁止硬编码任何用户可见文本，包括按钮、菜单、Tooltip、Dialog、SnackBar、空状态和
-  无障碍标签。
-- 新文案与描述在日常开发与 PR 中**只需新增中英文**（`lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`），占位符声明元数据；其他语言包后续由专门的翻译流程统一完善。无需手动运行 `gen-l10n`（构建与 CI 会自动生成）；禁止手动编辑 `lib/gen_l10n/`。
-- 颜色和文字样式优先来自 `Theme.of(context)` / `ColorScheme`。只有品牌色、数据可视化语义色
-  或平台明确要求的颜色可集中定义，不在页面散落 `Color(0x...)`。
-- 异步间隔后使用 `context` 或更新 State 前检查 `mounted` / `context.mounted`。
-
-**主题风格是和亮暗、动态取色并列的第三个维度**，三选一：`material`（M3 动态取色）、
-`paper` 纸与墨（暖，手工色板 + 衬线体 + 纸张横线）、`plain` 素笺（冷，更硬朗）。
-默认是 `material`，写在 `ThemeStyle.defaultStyle` 一处，不要修改默认值（无迁移逻辑，改默认会让存量老用户升级后外观突变）；手工风格推广走更新说明页里的行内切换器。
-
-- 🔒 **绝不在 widget 里写 `if (style == ThemeStyle.paper)`。** 品牌差异全部通过
-  `ThemeStyleForm` 的令牌取值表达，由 `AppShapeTokens`（`ThemeExtension`）下发：
-  `borderWidth > 0` 决定用边框还是投影，`ruleSpacing > 0` 决定画不画纸纹。
-- 改色板必须先过 `test/theme/theme_style_contrast_test.dart`（WCAG AA + 令牌不变量）。
-- 手工色板**不能喂给 seed 生成器**：亮色路径要按风格关掉 `keyColors` 和表面混合，
-  否则 FlexColorScheme 会拿 primary 当种子把整套色调重新推导掉。
-- 完整设计推导与已结案决定见唯一事实源 `docs/paper-ink-theme-handoff-2026-07-31.md`，动主题前先读。
-
-### UI 硬性约束
-
-以下规则在 `lib/pages/` 和 `lib/widgets/` 中由 `dart scripts/lint_repo_rules.dart` 与评审共同把关：
-
-**颜色**
-
-- 语义状态色用 `Theme.of(context).extension<AppSemanticColors>()!` 的 `success` / `warning` / `danger` / `info`（`lib/theme/app_semantic_colors.dart`）；收藏红心用 `AppSemanticColors.of(context).favorite` / `onFavorite`；中性次要文字用 `colorScheme.onSurfaceVariant`；错误用 `colorScheme.error` / `errorContainer`；浅色背景用 `colorScheme.surfaceContainerHighest` 等 surface 层级（深色背景上的前景用配对的 `onPrimary` / `onError`）。
-- ❌ 禁止 `Colors.red` / `green` / `orange` / `grey` / `blue` / `white` 等 Material 命名色及其 `shade` 变体（不随动态取色变化，暗色下对比度失衡或成刺眼白块）。
-- ❌ 禁止 Tailwind 默认色板（`0xFF6366F1`、`0xFF8B5CF6`、`0xFF10B981`、`0xFFF59E0B`、`0xFFEF4444`、`0xFF1E293B`、`0xFF0F172A`、`0xFF94A3B8` 等）。图表/统计配色从 `colorScheme` 的 primary / secondary / tertiary / error 及其 container 变体派生。
-
-**尺寸与排版**
-
-- ❌ 禁止手写 `BorderRadius.circular(N)` 造卡片/按钮/输入框，或引用静态的 `AppTheme.cardRadius`。统一使用 `AppShapeTokens.of(context)` 的 `cardRadius` / `buttonRadius` / `inputRadius` / `dialogRadius` / `fabRadius`（随主题风格在 Material 18、纸墨 6、素笺 3 间切换；遇到 `const RoundedRectangleBorder(...)` 时去掉 `const`）。纯装饰性小元素（徽章、色块）可自行取值。
-- ❌ 禁止 `fontSize:` 字面量，以及在 widget 里写死正文 `height:` 或 `fontWeight:`。这三项由 `ThemeStyleForm` 下发到 `textTheme.title*` / `textTheme.body*`（`bodyLineHeight`、`readingFontScale`、`titleWeightFloor` / `bodyWeightFloor`）：
-  - 纸墨的纸张横线间距由「正文字号 × 行高」推导，覆盖任一项都会让文字相对横线逐行漂移（见 `theme_style_contrast_test.dart`）。
-  - Android 可变字重补偿（w400→350）给黑体减重（衬线风格靠 `variableWeightCompensation: 0` 关掉），两个 `*WeightFloor` 给衬线体加重；`titleWeightFloor` 比 `bodyWeightFloor` 高一档以维持标题与正文层级，`readingFontScale` 须 `title*` 与 `body*` 同乘。
-  - `label*`（按钮、胶囊、导航栏标签）永远保持系统黑体且不缩放。
-- ❌ 禁止将 `fontStyle: FontStyle.italic` 用作 UI 装饰（出处、提示、占位、次要说明），弱化层次用 `onSurfaceVariant` + 字号或字重差。
-  - **必须保留斜体的例外**：用户在编辑器标记的富文本斜体（`quote_content_widget.dart` 的 `attributes['italic']`）、PDF 导出还原（`pdf_export_service.dart`、`delta_to_pdf_parser.dart` 的 `pw.FontStyle.italic`）；Markdown `em` 样式（`chat_markdown_styles.dart`、`enhanced_markdown_widgets.dart`）改动前先确认。
-- 间距用 4 的倍数（4/8/12/16/24/32）。
-
-**组件复用与审美方向**
-
-- ❌ 禁止手写 `ScaffoldMessenger.of(context).showSnackBar(...)`，统一用 `AppSnackBar.info/success/error/warning`（`lib/widgets/app_snackbar.dart`）。
-- ❌ 禁止裸 `CircularProgressIndicator` 或手拼空态/错误态，统一用 `AppLoadingView`、`AppEmptyView`、`AppErrorView`（`lib/widgets/`）。
-- 卡片用 `Card`（已配好 `cardTheme`），不用 `Container` + `BoxDecoration` 另起一套。
-- 不再新增渐变背景、多层 `RadialGradient` 光晕或「大数字 + 小标签 + 渐变强调色」模板卡；视觉重点优先靠留白、字号层级和单一强调色。
-- 新增开发者/实验性开关必须放进设置页「实验室」卡片（`_buildLabSection`），并配独立 l10n 标题。
-
-## 数据库与批量数据
-
-- Schema 真源位于 `lib/services/database_schema_manager.dart`，版本为
-  `DatabaseSchemaManager.schemaVersion`；`database_migration_mixin.dart` 处理运行期数据迁移和
-  维护，不是 schema 版本升级的唯一位置。
-- Schema 变更必须同时更新新建表结构、追加新的版本升级分支、递增 `schemaVersion`，并覆盖
-  新安装与旧版本升级两条路径。禁止改写已发布版本的迁移语义。
-- SQL 值使用参数绑定；动态 `orderBy` 必须经过 `sanitizeOrderBy()` 白名单处理。表名、列名等
-  无法绑定的标识符也必须来自内部白名单。
-- 禁止列表循环内逐条查询、计数、全文搜索或加载关联表。批量场景优先 `IN (...)`、事务、
-  `Batch`、批量 SQL 或预加载 Map。
-- 大文件和大 JSON 使用流式工具（如 `LargeFileManager`），不要用一次性
-  `File.writeAsString` / 全量内存编码。
-- 删除 SQL 查询字段前全局检查模型、UI、导入导出和同步依赖，避免运行期缺列或类型错误。
-- 🔒 **读和写两侧的校验必须对齐**：`Quote.fromJson` 放行的行，`Quote.validationError` 必须
-  也放行；长度上限这类输入层策略不要塞进持久化校验，避免存量笔记变成能显示却不能保存的坏块。
-- 🔒 **外来数据的值域收敛只做在导入边界**（`DatabaseBackupService`），读库时不静默修数据；清洗内容通过 `MergeReport.sanitizedFields` / `ImportCleanupStats` 报给用户，已入库坏行靠启动迁移修复。
-- 🔒 **不可逆写入前先把整列快照到 `<列名>_backup`**，并在修复 UPDATE 里同句写原值（`SET x_backup = x, x = ?`）；遗留列清理（如 `_removeTagIdsColumn`）必须排在所有建快照列的迁移之前，防止重建表抹掉 `*_backup` 列。
-- 🔒 **逐行反序列化必须有兜底**：查询结果统一走 `_parseQuoteRows` / `_tryParseQuoteRow` 跳过坏行并计数，禁止裸 `maps.map((m) => Quote.fromJson(m))`；批处理阶段的 `as String` 强转同样改用 `whereType<String>()`。
-- 🔒 **外来值进日志要限量、限长、去控制字符，并且绝不写 `e.toString()`**：`Quote.fromJson` 抛出的 `FormatException` 含整行笔记正文与 `delta_content`，日志只记异常类型。
-- `categories` 表、`category_id` 列和备份 JSON 的 `categories` 键存的是**标签**（`quote_tags.tag_id REFERENCES categories(id)`）。Dart 侧一律 `NoteTag` / `getTags()`，SQL 和备份键保留旧名以兼容同步与备份；API Ninjas 名言分类和 emoji 分组才是真的 `category`。
-
-## AI 服务
-
-主要链路：
-
-```text
-MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamService
-                                      ↓
-                                APIKeyManager
-```
-
-- API 密钥只能通过 `APIKeyManager` / 安全存储读写，禁止进入源码、日志、测试夹具、截图或
-  错误信息。
-- 新增 Provider 时至少检查预设、请求头、请求体适配、流式协议、设置 UI、连接测试、密钥存储
-  和相关单元测试；先查服务商当前官方协议。
-- 支持的预设以 `AIProviderSettings.getPresetProviders()` 为准，不在文档中复制易过期的名单。
-- 使用现有流式 API。已删除的 `AIService.generateDailyPrompt` 不得恢复，使用
-  `streamGenerateDailyPrompt`。
-- 🔒 **「测试连接」必须和真正聊天走同一条链路**（`AIConnectionTester` → `OpenAIStreamService` → `openai_dart`），URL 拼接交给 `openai_dart`，不要手写 POST `apiUrl`。
-- 🔒 **超时要下沉给 client 自己**（`buildOpenAIConfig` / `chatCompletion` 的 `timeout`），不要用 `Future.timeout` 外层截断导致底层在飞连接泄漏。
-
-### Thoughter 长期记忆（`AgentMemoryService`）
-
-- 独立数据库 `agent_memory.db`（同聊天记录、日志、AI 分析），**不在主库**，有独立 `schemaVersion`（不进备份、不跨设备同步、可整体删除）。
-- 只存**笔记里推导不出来**的信息（身份、表达偏好、对 Thoughter 的纠正）；笔记内容检索归 `explore_notes`。
-- 画像走**独立 user 数据消息**并先过 `wrapUserProfile`，不得拼进 system prompt。
-- 偏好变化**原位 supersede**，不允许两条矛盾的 active 画像条目并存。
-- 检索是 `LIKE` + Dart 内打分，不是 FTS5；换实现只动 `searchFacts`。
-- 设计取舍见 `docs/agent-memory-research-2026-08-08.md` 第七节，改之前先读。
-
-## 平台、发布产物与文件组织
-
-| 平台 | 约定 |
-|---|---|
-| Windows | SQLite 使用 FFI；数据目录逻辑由 `DataDirectoryService` 负责；公开 GitHub Release 仅发布免安装便携包 `thoughtecho-windows-x64-portable.zip`，未签名 `.msix`（`sign_msix: false`）仅留 Actions Artifact 供 Microsoft Store 提审，应用内更新引导跳转 Microsoft Store |
-| Android | 使用 sqflite/MMKV；Release 产出 `thoughtecho-standard64-release.apk`（64 位主力，官网直链）与 `thoughtecho-v7a-arm32Compat-release.apk`（32 位兼容，字母序排在 `standard64` 后以兼容旧版选包），Google Play `.aab` 仅留 Actions Artifact |
-| iOS | 使用 MMKV；无签名构建走 `scripts/build_ios_unsigned.sh` 产出 `ThoughtEcho-unsigned.ipa`；CI 自动向 Sentry 上传 `dSYM` 符号，刻意不加 `--split-debug-info` 或 `--obfuscate` 以保持应用内日志堆栈可读 |
-| Web | 不支持；不得新增或扩展 Web 功能 |
-
-- `.py`、`.sh`、`.bat`、`.ps1` 等维护脚本放在 `scripts/`，不要放仓库根目录。
-- 应用图标放 `assets/`，Lottie 放 `assets/lottie/`，SVG 放 `assets/svg/`。官网已完全独立迁移至 `thoughtecho-site` 仓库，演示截图与展示媒体统一托管于 `assets` 图床 CDN（`img.shangjinyun.cn`）。
-- 不提交 `.gradle/`、`.dart_tool/`、`build/`、`node_modules/`、`.metadata` 等生成物或本机状态。
-- 生成文件（`lib/gen_l10n/`、`*.mocks.dart`、平台插件注册文件）不得手动编辑；是否提交遵循
-  当前 `.gitignore` 和仓库既有跟踪状态，不要一概删除或强行加入。
-
-## 复杂度热点
-
-修改前先查找父文件的 `part` 声明、相关 mixin 和测试：
-
-| 区域 | 说明 |
-|---|---|
-| `lib/services/database_service.dart` + `services/database/` | 数据库接口、12 个 mixin、缓存与查询 |
-| `lib/services/database_schema_manager.dart` | 建表、版本升级、修复和迁移，数据风险高 |
-| `lib/pages/home_page.dart` | 主页面状态与多类交互 |
-| `lib/widgets/add_note_dialog.dart` | 超大新增笔记流程，另有 parts 文件 |
-| `lib/pages/settings_page.dart` | 设置入口与多 Service 交互 |
-| `lib/pages/note_sync_page.dart` | 设备发现、传输和合并状态 |
-| `lib/pages/explore_page.dart` + `pages/explore/` | 探索页：周期统计聚合与 Thoughter 入口 |
-| `lib/pages/note_full_editor_page.dart` + `pages/note_editor/` | Quill 编辑、媒体、元数据和草稿 |
-| `lib/pages/thoughter_page.dart` + `pages/thoughter/` | Agent 会话、工作流与流式 UI |
-| `lib/services/smart_push_service.dart` + `services/smart_push/` | 调度、权限、通知和内容选择 |
-| `lib/widgets/note_list_view.dart` + `widgets/note_list/` | 分页、过滤、滚动定位和条目构建 |
-| `lib/constants/card_templates.dart` | 大量卡片模板，改动需验证渲染与国际化 |
-
-## 已删除 API
-
-- `AIService.generateDailyPrompt` → 使用 `streamGenerateDailyPrompt`
-- `TimeUtils.formatTime` → 使用 `formatRelativeDateTime` 或 `formatQuoteTime`
-- `NoteSyncService.receiveAndMerge` → 不得重新引入，沿用当前同步/合并流程
-
-## 文档维护
-
-- 开发者文档：`AGENTS.md`、各子目录 `AGENTS.md`、`README.md`
-- 双语用户手册：`docs/USER_MANUAL.md`
-
-只有用户可见行为变化时才同步用户文档，并同时维护中英文内容；纯内部重构只更新确实受影响
-的开发者文档。禁止描述尚未实现的功能，除非明确标为路线图。
-
-### 历史记录去哪里找
-
-动手改一块**已经被优化过或返工过**的代码之前，先翻阅历史沉淀，别从零推一遍别人踩过的坑：
-
-- 📚 **全局知识库与历史索引**：查阅 [`docs/INDEX.md`](docs/INDEX.md)（按性能、主题、Thoughter 记忆、同步等分类整理了 30+ 份审计、方案与交接文档）。
-- `docs/` —— 按主题的技术审计、专项方案、性能分析与交接文档（如性能排查链 `docs/note-list-perf-*.md`、主题事实源 `docs/paper-ink-theme-handoff-2026-07-31.md`、Thoughter 记忆事实源 `docs/agent-memory-research-2026-08-08.md`、架构决议真源 `docs/decisions.md`）。
-- `docs/squad/` —— **AI 团队的历史过程档案**（仅供追溯历史背景，不作为实现规范；与当前代码、本文件或 `docs/` 最终交接文档冲突时，一律以当前实现和最终交接文档为准）。
-
-## Git、隐私与提交
-
-- 开始和结束时检查 `git status --short` 与 `git diff`，不要覆盖、回滚或格式化用户的无关改动。
-- 切换其他分支或排查其他分支时使用 `git worktree`，不要在当前工作区直接切分支。
-- 提交时只用 `git add <明确文件...>`；禁止 `git add .` 和 `git add -A`。
-- 未经用户要求不要 amend、rebase、force-push、删除分支或创建远程 PR。
-- **测试与提交脱敏**：复现问题或编写测试时，禁止将用户举例中的真实具体地名/POI、姓名、私人路径或笔记内容写入测试夹具（Fixtures）、代码注释、提交信息或公开 PR 描述，一律替换为合成占位数据（如 `示例省·示例市`、`MockPOI`）。
-- 提交前检查 staged diff，不得包含真实 API 密钥、令牌、个人数据、私密路径、含隐私截图或
-  本机缓存。
-- 提交前对本次修改的 Dart 文件执行 `dart format`，避免因格式化失误导致 CI 失败或引来外部 Bot 抢跑冲突。
-- 提交信息应概括实际改动；只有验证通过或明确记录未执行项后，才能宣称完成。
+- 文件与类名直指当前职责，禁止 `_v2` / `_new` / `_clean` / `_fixed` / `_wrapper` 后缀；废弃文件直接删除。
+- 切分支用 `git worktree`；只用 `git add <明确文件...>`（禁 `git add .` / `-A`），保留用户未提交改动。
+- **脱敏**：测试夹具、注释、提交信息与 PR 描述严禁出现真实具体地名/POI、姓名、私人路径或真实 API Key，一律用合成占位数据（如 `示例省·示例市`、`MockPOI`）。
