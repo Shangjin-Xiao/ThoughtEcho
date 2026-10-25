@@ -127,7 +127,7 @@ void main() {
           Map<String, String>? headers,
           int? timeoutSeconds,
         }) async {
-          expect(url, 'https://zenquotes.io/api/random');
+          expect(url, ApiService.zenQuotesApiUrl);
           return HttpResponse(
             '[{"q":"Stay hungry","a":"Steve Jobs"}]',
             200,
@@ -210,7 +210,7 @@ void main() {
         }) async {
           expect(
             url,
-            'https://api.api-ninjas.com/v2/randomquotes?categories=wisdom,success',
+            '${ApiService.apiNinjasApiUrl}?categories=wisdom,success',
           );
           expect(headers, {'X-Api-Key': 'secret-key'});
           return HttpResponse(
@@ -244,7 +244,7 @@ void main() {
         }) async {
           expect(
             url,
-            'https://api.api-ninjas.com/v2/randomquotes?categories=wisdom,success',
+            '${ApiService.apiNinjasApiUrl}?categories=wisdom,success',
           );
           return HttpResponse(
             '[{"quote":"Knowledge speaks","author":"Socrates","categories":["wisdom"]}]',
