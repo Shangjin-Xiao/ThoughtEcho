@@ -25,6 +25,8 @@ class Request {
 
 class ApiService {
   static const String baseUrl = 'https://v1.hitokoto.cn/';
+  static const String apiNinjasUrl =
+      'https://api.api-ninjas.com/v2/randomquotes';
   static const String hitokotoProvider = 'hitokoto';
   static const String zenQuotesProvider = 'zenquotes';
   static const String apiNinjasProvider = 'api_ninjas';

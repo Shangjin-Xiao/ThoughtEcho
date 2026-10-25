@@ -210,7 +210,7 @@ void main() {
         }) async {
           expect(
             url,
-            'https://api.api-ninjas.com/v2/randomquotes?categories=wisdom,success',
+            '${ApiService.apiNinjasUrl}?categories=wisdom,success',
           );
           expect(headers, {'X-Api-Key': 'secret-key'});
           return HttpResponse(
@@ -244,7 +244,7 @@ void main() {
         }) async {
           expect(
             url,
-            'https://api.api-ninjas.com/v2/randomquotes?categories=wisdom,success',
+            '${ApiService.apiNinjasUrl}?categories=wisdom,success',
           );
           return HttpResponse(
             '[{"quote":"Knowledge speaks","author":"Socrates","categories":["wisdom"]}]',
