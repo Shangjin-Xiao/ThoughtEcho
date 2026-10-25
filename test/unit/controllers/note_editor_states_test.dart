@@ -570,6 +570,83 @@ void main() {
       state.dispose();
     });
 
+    test(
+        'selection movement when clean or dirty preserves correct isDirty and version tracking',
+        () async {
+      final doc = quill.Document()..insert(0, 'Sample text content\n');
+      final state = NoteEditorState(
+        initialPlainText: 'Sample text content',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_selection_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+      final cleanVersion = state.documentVersion;
+
+      // Moving selection when clean does not mark dirty or change version
+      state.controller.updateSelection(
+        const TextSelection.collapsed(offset: 5),
+        quill.ChangeSource.local,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+      expect(state.documentVersion, cleanVersion);
+
+      // Typing makes state dirty
+      state.controller.replaceText(0, 0, 'Hi ', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+      final dirtyVersion = state.documentVersion;
+      expect(dirtyVersion, greaterThan(cleanVersion));
+
+      // Moving selection while dirty updates version but keeps isDirty true
+      state.controller.updateSelection(
+        const TextSelection.collapsed(offset: 2),
+        quill.ChangeSource.local,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+      expect(state.documentVersion, greaterThanOrEqualTo(dirtyVersion));
+
+      state.dispose();
+    });
+
+    test('equal-length character replacement correctly marks state as dirty',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc\n');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_equal_len_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // Replace 1 char with 1 char (equal length replacement)
+      state.controller.replaceText(0, 1, 'z', null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isTrue);
+
+      state.dispose();
+    });
+
     test('typing during media file replacement preserves newly typed text',
         () async {
       final doc = quill.Document()..insert(0, 'Text before media\n');

@@ -130,30 +130,50 @@ class NoteEditorState extends ChangeNotifier {
 
   void _onDocChanged() {
     if (_disposed) return;
+    final currentLength = _controller.document.length;
+
+    if (_isDirty) {
+      if (currentLength != _savedDocumentLength) {
+        _documentVersion++;
+        return;
+      }
+      final currentDelta = _controller.document.toDelta();
+      final savedDelta = _savedDocumentDelta;
+      if (savedDelta != null && currentDelta == savedDelta) {
+        _lastKnownDocDelta = currentDelta;
+        _documentVersion++;
+        _isDirty = false;
+        _savedDocumentVersion = _documentVersion;
+        notifyListeners();
+        return;
+      }
+      if (_lastKnownDocDelta != null && _lastKnownDocDelta == currentDelta) {
+        return;
+      }
+      _lastKnownDocDelta = currentDelta;
+      _documentVersion++;
+      return;
+    }
+
+    if (currentLength != _savedDocumentLength) {
+      _documentVersion++;
+      _isDirty = true;
+      notifyListeners();
+      return;
+    }
+
     final currentDelta = _controller.document.toDelta();
     if (_lastKnownDocDelta != null && _lastKnownDocDelta == currentDelta) {
       return;
     }
     _lastKnownDocDelta = currentDelta;
-    _documentVersion++;
     final savedDelta = _savedDocumentDelta;
-    if (savedDelta != null) {
-      final currentLength = _controller.document.length;
-      if (currentLength == _savedDocumentLength) {
-        if (currentDelta == savedDelta) {
-          if (_isDirty || _documentVersion != _savedDocumentVersion) {
-            _isDirty = false;
-            _savedDocumentVersion = _documentVersion;
-            notifyListeners();
-          }
-          return;
-        }
-      }
+    if (savedDelta != null && currentDelta == savedDelta) {
+      return;
     }
-    if (!_isDirty) {
-      _isDirty = true;
-      notifyListeners();
-    }
+    _documentVersion++;
+    _isDirty = true;
+    notifyListeners();
   }
 
   void incrementSessionGeneration() {
