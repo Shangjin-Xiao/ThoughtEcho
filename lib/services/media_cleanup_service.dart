@@ -303,42 +303,25 @@ class MediaCleanupService {
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = appDir.path;
 
-      // 批量并发处理笔记，拆分提取路径与 I/O 检查
+      // 批量提取笔记中的媒体路径与拆分 I/O 检查
       final refsToCheck = <_MediaRefToCheck>[];
-      const quoteChunkSize = 50;
-      for (var i = 0; i < quotes.length; i += quoteChunkSize) {
-        final chunk = quotes.sublist(
-          i,
-          i + quoteChunkSize > quotes.length
-              ? quotes.length
-              : i + quoteChunkSize,
+      for (final quote in quotes) {
+        final mediaPaths = MediaReferenceService.extractMediaPathsFromQuoteSync(
+          quote,
+          cachedAppPath: appPath, // 传递缓存的路径以避免多余的平台调用
         );
 
-        final chunkResults = await Future.wait(
-          chunk.map((quote) async {
-            return await MediaReferenceService.extractMediaPathsFromQuote(
-              quote,
-              cachedAppPath: appPath, // 传递缓存的路径以避免多余的平台调用
-            );
-          }),
-        );
-
-        for (var j = 0; j < chunk.length; j++) {
-          final quote = chunk[j];
-          final mediaPaths = chunkResults[j];
-
-          for (final mediaPath in mediaPaths) {
-            final absolutePath = path.isAbsolute(mediaPath)
-                ? mediaPath
-                : path.join(appPath, mediaPath);
-            refsToCheck.add(
-              _MediaRefToCheck(
-                quoteId: quote.id,
-                mediaPath: mediaPath,
-                absolutePath: absolutePath,
-              ),
-            );
-          }
+        for (final mediaPath in mediaPaths) {
+          final absolutePath = path.isAbsolute(mediaPath)
+              ? mediaPath
+              : path.join(appPath, mediaPath);
+          refsToCheck.add(
+            _MediaRefToCheck(
+              quoteId: quote.id,
+              mediaPath: mediaPath,
+              absolutePath: absolutePath,
+            ),
+          );
         }
       }
 
