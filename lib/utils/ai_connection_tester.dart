@@ -31,8 +31,7 @@ class AIConnectionTester {
     required String systemPrompt,
     required String userMessage,
     Duration timeout,
-  })?
-  testOverrideForTesting;
+  })? testOverrideForTesting;
 
   /// 发一次最小的聊天请求验证配置。
   ///
