@@ -251,6 +251,7 @@ class AINetworkManager {
     }
 
     Exception? lastError;
+    final providerCache = <String, AIProviderSettings>{};
 
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
@@ -261,6 +262,7 @@ class AINetworkManager {
         // 为当前provider加载API Key
         final providerWithApiKey = await _loadApiKeyForProvider(
           currentProvider,
+          providerCache,
         );
         return await _makeBaseRequest(
           config: providerWithApiKey,
@@ -289,7 +291,10 @@ class AINetworkManager {
         try {
           logDebug('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
-          final providerWithApiKey = await _loadApiKeyForProvider(provider);
+          final providerWithApiKey = await _loadApiKeyForProvider(
+            provider,
+            providerCache,
+          );
           return await _makeBaseRequest(
             config: providerWithApiKey,
             data: data,
@@ -326,6 +331,7 @@ class AINetworkManager {
     }
 
     Exception? lastError;
+    final providerCache = <String, AIProviderSettings>{};
 
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
@@ -336,6 +342,7 @@ class AINetworkManager {
         // 为当前provider加载API Key
         final providerWithApiKey = await _loadApiKeyForProvider(
           currentProvider,
+          providerCache,
         );
         final response = await _makeBaseRequest(
           config: providerWithApiKey,
@@ -371,7 +378,10 @@ class AINetworkManager {
         try {
           logDebug('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
-          final providerWithApiKey = await _loadApiKeyForProvider(provider);
+          final providerWithApiKey = await _loadApiKeyForProvider(
+            provider,
+            providerCache,
+          );
           final response = await _makeBaseRequest(
             config: providerWithApiKey,
             data: {...data, 'stream': true},
@@ -578,14 +588,20 @@ class AINetworkManager {
     return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
   }
 
-  /// 为provider加载API Key（从加密存储）
+  /// 为provider加载API Key（从加密存储），支持在执行作用域内进行缓存
   static Future<AIProviderSettings> _loadApiKeyForProvider(
-    AIProviderSettings provider,
-  ) async {
+    AIProviderSettings provider, [
+    Map<String, AIProviderSettings>? cache,
+  ]) async {
+    if (cache != null && cache.containsKey(provider.id)) {
+      return cache[provider.id]!;
+    }
+
     // 调用方已经显式给了 Key（例如设置页在保存前测试连接），直接用它，
     // 不要被加密存储里的旧值覆盖。
     if (provider.apiKey.isNotEmpty) {
       logDebug('Provider ${provider.name} 使用调用方提供的API Key');
+      cache?[provider.id] = provider;
       return provider;
     }
 
@@ -620,9 +636,11 @@ class AINetworkManager {
         '构建的请求头中的API Key: ${rawKey.isEmpty ? "空" : "已设置"}',
       );
 
+      cache?[provider.id] = providerWithApiKey;
       return providerWithApiKey;
     } catch (e) {
       logDebug('为Provider ${provider.name} 加载API Key失败: $e');
+      cache?[provider.id] = provider;
       return provider; // 返回原provider
     }
   }
