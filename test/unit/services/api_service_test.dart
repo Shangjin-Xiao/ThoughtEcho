@@ -127,7 +127,7 @@ void main() {
           Map<String, String>? headers,
           int? timeoutSeconds,
         }) async {
-          expect(url, 'https://zenquotes.io/api/random');
+          expect(url, ApiService.zenQuotesApiUrl);
           return HttpResponse(
             '[{"q":"Stay hungry","a":"Steve Jobs"}]',
             200,
@@ -141,6 +141,35 @@ void main() {
       expect(result['from'], '');
       expect(result['type'], 'k');
       expect(result['provider'], 'zenquotes');
+    });
+
+    test('koreanAdvice provider returns normalized quote fields', () async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+
+      final result = await ApiService.getDailyQuote(
+        l10n,
+        'k',
+        provider: ApiService.koreanAdviceProvider,
+        httpGet: (
+          url, {
+          Map<String, String>? headers,
+          int? timeoutSeconds,
+        }) async {
+          expect(url, ApiService.koreanAdviceApiUrl);
+          return HttpResponse(
+            '{"message":"좋은 글귀","author":"작가","authorProfile":"출처"}',
+            200,
+          );
+        },
+      );
+
+      expect(result['content'], '좋은 글귀');
+      expect(result['author'], '작가');
+      expect(result['from_who'], '작가');
+      expect(result['source'], '출처');
+      expect(result['from'], '출처');
+      expect(result['type'], 'k');
+      expect(result['provider'], ApiService.koreanAdviceProvider);
     });
 
     test('maps humor category to supported type key', () async {
