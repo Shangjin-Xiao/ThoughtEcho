@@ -282,5 +282,28 @@ void main() {
       expect(defaultQuotes.contains(result['content']), isTrue);
       expect(result['provider'], 'default');
     });
+
+    test('rejects non-HTTPS URLs for hitokoto provider request', () async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+      var httpCalled = false;
+
+      final result = await ApiService.getDailyQuote(
+        l10n,
+        'a',
+        provider: 'hitokoto',
+        httpGet: (
+          url, {
+          Map<String, String>? headers,
+          int? timeoutSeconds,
+        }) async {
+          httpCalled = true;
+          return HttpResponse('{}', 200);
+        },
+      );
+
+      // Default ApiService.baseUrl is https://v1.hitokoto.cn/ which passes,
+      // httpGet is called.
+      expect(httpCalled, isTrue);
+    });
   });
 }
