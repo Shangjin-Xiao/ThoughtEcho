@@ -44,9 +44,7 @@ ThoughtEcho/
 └── android/ ios/ windows/  # 平台原生工程
 ```
 
-主要拆分：`services/database/`（12 个 mixin）、`pages/note_editor/`（10 个 part）、
-`pages/explore/`（5 个 part）、`services/smart_push/`（6 个 part）、
-`widgets/note_list/`（4 个 part + 1 个独立辅助文件）。
+主要拆分：`services/database/`（12 个业务 mixin 与 schema 版本适配）、`pages/note_editor/`（富文本编辑器 `part` 拆分）、`pages/explore/`（探索页与地图记忆入口 `part` 拆分）、`pages/thoughter/`（Agent 会话、工作流与历史页拆分）、`pages/home/`（首页编排模块）、`services/smart_push/`（智能推送 `part` 拆分）、`widgets/note_list/`（列表 `part`、折叠富文本 `CollapsedRichText` 与视口预热 `NoteListWarmup`）。
 
 ## 常用命令
 
@@ -63,7 +61,7 @@ dart format <changed-dart-files>
 # 只检查格式，不改文件
 dart format --output=none --set-exit-if-changed <changed-dart-files>
 
-# 运行仓库增量机械规则检查（颜色令牌、动态圆角、AppSnackBar、已删除 API；首次可运行 git config core.hooksPath .githooks 启用提交钩子）
+# 运行仓库增量机械规则检查（颜色令牌、动态圆角、AppSnackBar、禁止裸调 Aptabase、已删除 API；首次可运行 git config core.hooksPath .githooks 启用提交钩子）
 dart scripts/lint_repo_rules.dart
 
 # 静态分析
@@ -139,14 +137,26 @@ pwsh ./scripts/build_msix_ci.ps1
   `context.watch<T>()`、`select` 或 `Consumer<T>`，避免扩大重建范围。
 - Controller 管页面状态和交互编排，持久化、网络及可复用业务规则下沉到 Service。
 
-### 服务与错误处理
+### 服务、错误处理与可观测性埋点（Aptabase & Sentry）
 
 - Service 不持有页面 `BuildContext`。现有 Service 如需调度帧，优先依赖
   `package:flutter/scheduler.dart`，不要新增 `flutter/widgets.dart` 依赖来耦合 UI。
-- 异常应带操作上下文记录到 `UnifiedLogService` 或项目日志封装，再向上抛出或采用明确的降级
-  策略；禁止静默吞错。
+- 异常应带操作上下文记录到 `UnifiedLogService` 或项目日志封装（`logError` / `AppLogger.e`），再向上抛出或采用明确的降级策略；禁止静默吞错。
 - 页面级用户操作用 `try/catch` 转成国际化、可理解的反馈，不向用户裸露堆栈或密钥。
 - 网络重试、超时和取消沿用现有网络工具；不要在调用点各自实现无限重试。
+
+**新增功能时的 Aptabase 与 Sentry 埋点规范**
+
+项目设有两个独立且默认关闭的隐私授权开关（用户体验优化计划 `Aptabase` 与崩溃及性能诊断 `Sentry`）。开发新功能或新页面时，应在合适的边界接入埋点与可观测性追踪，并遵守以下约束：
+
+1. **Aptabase 匿名功能统计（`lib/utils/aptabase_helper.dart`）**
+   - **何时埋点**：新增**独立页面**或**用户显式触发的核心业务动作**（如笔记增删改、标签管理、AI 交互与提案采纳、备份/导入导出、同步、主题/设置切换）时，在动作成功触发边界补充埋点；高频滚动/输入帧回调、内部状态流转或后台定时轮询**不加**统计埋点。
+   - **统一入口**：页面进入调用 `AptabaseHelper.trackPageView('<snake_case_page>')`；功能使用调用 `AptabaseHelper.trackEvent('feature_used', {'action': '<snake_case_action>'})`。❌ 禁止在业务层直接调用 `Aptabase.instance`（由 `lint_repo_rules.dart` 拦截）。
+   - 🔒 **参数脱敏铁律**：`props` 属性值**仅限固定枚举字符串、布尔值或计数/档位数字**；绝不传入笔记正文、标题、标签名、搜索词、文件路径、URL、经纬度/POI 或异常原文。单测中可通过 `AptabaseHelper.onTrackEventForTesting` 验证。
+2. **Sentry 错误与性能诊断（`lib/utils/sentry_helper.dart`、`app_logger.dart`、`app_tracer.dart`）**
+   - **异常上报走统一日志**：捕获非预期异常时统一调用 `logError('上下文描述', error: e, stackTrace: stackTrace, source: 'ModuleName')`（或 `AppLogger.e`）。当用户开启诊断开关时，`UnifiedLogService` 会自动将带 `error` 对象的错误日志转发至 `Sentry.captureException`，业务代码无需直接调用 `Sentry.captureException`。
+   - **关键链路性能追踪走 `AppTracer`**：涉及首屏加载、重度分页/渲染或复杂 I/O 的关键路径，使用 `AppTracer.start('ThoughtEcho.<Module>.<action>', operation: 'ui.load' | 'ui.action')` 并在结束时 `.finish()`（同时驱动本地 DevTools Timeline 与线上 Sentry Span）。异步数据加载完成的页面可调用 `SentryFlutter.currentDisplay()?.reportFullyDisplayed()` 记录 TTFD。
+   - 🔒 **追踪隔离与脱敏**：普通 HTTP 客户端可使用 `SentryNetworkTracing.addToGeneralDioIfEnabled(dio)`，但 **AI 请求严禁挂载 Sentry 网络追踪**（防止 Prompt 与笔记内容进入 Breadcrumb/Span）；主库 SQL 追踪由 `SentryDatabaseTracing.wrapMainDatabase` 统一包装，所有 SQL 与 URL 均经 `sanitizeSentry*` 剥离查询参数与敏感字段。
 
 ### 模型与富文本
 
@@ -257,13 +267,13 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 - 检索是 `LIKE` + Dart 内打分，不是 FTS5；换实现只动 `searchFacts`。
 - 设计取舍见 `docs/agent-memory-research-2026-08-08.md` 第七节，改之前先读。
 
-## 平台与文件组织
+## 平台、发布产物与文件组织
 
 | 平台 | 约定 |
 |---|---|
-| Windows | SQLite 使用 FFI；数据目录逻辑由 `DataDirectoryService` 和现有初始化代码负责 |
-| Android | 使用 sqflite/MMKV；保留现有 32 位 ARM 回退策略 |
-| iOS | 使用 MMKV；无签名构建走 `scripts/build_ios_unsigned.sh` |
+| Windows | SQLite 使用 FFI；数据目录逻辑由 `DataDirectoryService` 负责；公开 GitHub Release 仅发布免安装便携包 `thoughtecho-windows-x64-portable.zip`，未签名 `.msix`（`sign_msix: false`）仅留 Actions Artifact 供 Microsoft Store 提审，应用内更新引导跳转 Microsoft Store |
+| Android | 使用 sqflite/MMKV；Release 产出 `thoughtecho-standard64-release.apk`（64 位主力，官网直链）与 `thoughtecho-v7a-arm32Compat-release.apk`（32 位兼容，字母序排在 `standard64` 后以兼容旧版选包），Google Play `.aab` 仅留 Actions Artifact |
+| iOS | 使用 MMKV；无签名构建走 `scripts/build_ios_unsigned.sh` 产出 `ThoughtEcho-unsigned.ipa`；CI 自动向 Sentry 上传 `dSYM` 符号，刻意不加 `--split-debug-info` 或 `--obfuscate` 以保持应用内日志堆栈可读 |
 | Web | 不支持；不得新增或扩展 Web 功能 |
 
 - `.py`、`.sh`、`.bat`、`.ps1` 等维护脚本放在 `scripts/`，不要放仓库根目录。

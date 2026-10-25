@@ -3,10 +3,10 @@
 页面层负责路由目标、页面级状态组合和用户反馈，遵循 Material 3。复杂页面已经通过子目录或
 `part` 文件拆分：
 
-- `note_editor/`：富文本编辑器，10 个 part，另见该目录 `AGENTS.md`
-- `explore/`：探索页（底部导航第三个 tab），5 个 part
+- `note_editor/`：富文本编辑器 `part` 拆分，另见该目录 `AGENTS.md`
+- `explore/`：探索页（底部导航第三个 tab），周期洞察、统计与地图记忆入口 `part` 拆分
 - `thoughter/`：Thoughter 对话页的会话、工作流和 UI 拆分，另含会话历史页
-- `home/`：主页局部面板
+- `home/`：主页局部面板与交互编排模块
 
 页面文件名与它在 UI 上的身份一致。管理**标签**的是 `tag_settings_page.dart`；
 `api_ninjas_category_selection_page.dart` 管的才是名言 API 的**分类**，两者无关。

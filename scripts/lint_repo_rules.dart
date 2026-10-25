@@ -55,11 +55,7 @@ class _ScanMode {
   final String? baseRef;
   final List<String> files;
 
-  const _ScanMode({
-    required this.type,
-    this.baseRef,
-    this.files = const [],
-  });
+  const _ScanMode({required this.type, this.baseRef, this.files = const []});
 }
 
 class _SourceLine {
@@ -83,10 +79,7 @@ _ScanMode _parseArgs(List<String> args) {
   }
   final baseIdx = args.indexOf('--base');
   if (baseIdx != -1 && baseIdx + 1 < args.length) {
-    return _ScanMode(
-      type: _ScanModeType.baseRef,
-      baseRef: args[baseIdx + 1],
-    );
+    return _ScanMode(type: _ScanModeType.baseRef, baseRef: args[baseIdx + 1]);
   }
   final filesIdx = args.indexOf('--files');
   if (filesIdx != -1) {
@@ -122,8 +115,13 @@ Future<List<_SourceLine>> _collectLines(_ScanMode mode) async {
       return lines;
 
     case _ScanModeType.staged:
-      return _collectGitDiffLines(
-          ['diff', '--cached', '--unified=0', '--', '*.dart']);
+      return _collectGitDiffLines([
+        'diff',
+        '--cached',
+        '--unified=0',
+        '--',
+        '*.dart',
+      ]);
 
     case _ScanModeType.baseRef:
       return _collectGitDiffLines([
@@ -135,8 +133,13 @@ Future<List<_SourceLine>> _collectLines(_ScanMode mode) async {
       ]);
 
     case _ScanModeType.workingTree:
-      return _collectGitDiffLines(
-          ['diff', 'HEAD', '--unified=0', '--', '*.dart']);
+      return _collectGitDiffLines([
+        'diff',
+        'HEAD',
+        '--unified=0',
+        '--',
+        '*.dart',
+      ]);
   }
 }
 
@@ -204,6 +207,8 @@ final _deletedApiRegex = RegExp(
   r'\b(generateDailyPrompt|receiveAndMerge)\s*\(|\bTimeUtils\.formatTime\s*\(',
 );
 
+final _rawAptabaseRegex = RegExp(r'\bAptabase\.(instance|init)\b');
+
 void _checkLine(_SourceLine line, List<String> violations) {
   final trimmed = line.content.trimLeft();
   if (trimmed.startsWith('//') || line.content.contains('ignore: repo_lint')) {
@@ -229,6 +234,14 @@ void _checkLine(_SourceLine line, List<String> violations) {
     violations.add(
       '${line.filePath}:${line.lineNumber} [no-deleted-api] '
       'Call to deleted API detected (use streamGenerateDailyPrompt, formatRelativeDateTime/formatQuoteTime, or current sync flow).',
+    );
+  }
+
+  if (path != 'lib/utils/aptabase_helper.dart' &&
+      _rawAptabaseRegex.hasMatch(line.content)) {
+    violations.add(
+      '${line.filePath}:${line.lineNumber} [no-raw-aptabase] '
+      'Use AptabaseHelper.trackEvent / trackPageView instead of calling Aptabase SDK directly.',
     );
   }
 
