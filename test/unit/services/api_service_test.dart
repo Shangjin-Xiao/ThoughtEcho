@@ -304,6 +304,7 @@ void main() {
       // Default ApiService.baseUrl is https://v1.hitokoto.cn/ which passes,
       // httpGet is called.
       expect(httpCalled, isTrue);
+      expect(result, isNotNull);
     });
   });
 }
