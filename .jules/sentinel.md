@@ -11,3 +11,8 @@
 **Vulnerability:** String interpolation in DDL statements without strict validation.
 **Learning:** SQLite DDL does not support parameterization. Column definitions can be complex, containing commas or parenthesis. Validating identifiers accurately and strictly validating column definitions against whitelist formats is critical to prevent injection.
 **Prevention:** Use whitelist regex for identifiers and column definitions when interpolating in DDL queries and use parameterized queries for all DML.
+
+## 2026-10-25 - Fix Hardcoded External API URLs in Daily Quote Service
+**Vulnerability:** Hardcoded external API URLs scattered directly inside function scopes.
+**Learning:** Hardcoded inline API URLs hinder security auditing, configuration management, and centralized domain validation or override capabilities.
+**Prevention:** Centralize all external API endpoints as static constants in service classes (e.g. `ApiService.koreanAdviceApiUrl`) to allow centralized maintenance, security inspection, and environment-aware overrides.
