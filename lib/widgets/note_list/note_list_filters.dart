@@ -8,13 +8,11 @@ extension NoteListFiltersExtension on NoteListViewState {
         widget.selectedWeathers.isNotEmpty ||
         widget.selectedDayPeriods.isNotEmpty;
 
-    // 使用 AnimatedSize 实现整个筛选区域的展开/收起动画
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      child: !hasFilters
-          ? const SizedBox.shrink()
-          : _buildFilterContent(theme, horizontalPadding),
+    // 使用 SizeTransition 与 RepaintBoundary 实现筛选区域的展开/收起动画与图层隔离
+    return _FilterDisplayContainer(
+      key: const ValueKey('filter_display_container'),
+      hasFilters: hasFilters,
+      child: _buildFilterContent(theme, horizontalPadding),
     );
   }
 
@@ -338,6 +336,89 @@ class AnimatedFilterChip extends StatelessWidget {
           child: Transform.scale(
             scale: 0.8 + (0.2 * value),
             child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 包裹筛选栏的 SizeTransition 与 RepaintBoundary 动画容器
+class _FilterDisplayContainer extends StatefulWidget {
+  final bool hasFilters;
+  final Widget child;
+
+  const _FilterDisplayContainer({
+    super.key,
+    required this.hasFilters,
+    required this.child,
+  });
+
+  @override
+  State<_FilterDisplayContainer> createState() =>
+      _FilterDisplayContainerState();
+}
+
+class _FilterDisplayContainerState extends State<_FilterDisplayContainer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  Widget? _cachedChild;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+      value: widget.hasFilters ? 1.0 : 0.0,
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    if (widget.hasFilters) {
+      _cachedChild = widget.child;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_FilterDisplayContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.hasFilters) {
+      _cachedChild = widget.child;
+    }
+    if (widget.hasFilters != oldWidget.hasFilters) {
+      if (widget.hasFilters) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, _) {
+        if (_animation.value == 0.0 && !widget.hasFilters) {
+          return const SizedBox.shrink();
+        }
+        final displayChild = widget.hasFilters
+            ? widget.child
+            : (_cachedChild ?? const SizedBox.shrink());
+        return RepaintBoundary(
+          child: SizeTransition(
+            sizeFactor: _animation,
+            axisAlignment: -1.0,
+            child: displayChild,
           ),
         );
       },
