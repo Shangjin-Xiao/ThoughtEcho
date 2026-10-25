@@ -251,6 +251,19 @@ class AINetworkManager {
     }
 
     Exception? lastError;
+    final Map<String, AIProviderSettings> providerKeyCache = {};
+
+    Future<AIProviderSettings> resolveProviderWithKey(
+      AIProviderSettings provider,
+    ) async {
+      final cached = providerKeyCache[provider.id];
+      if (cached != null) {
+        return cached;
+      }
+      final resolved = await _loadApiKeyForProvider(provider);
+      providerKeyCache[provider.id] = resolved;
+      return resolved;
+    }
 
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
@@ -259,7 +272,7 @@ class AINetworkManager {
         !_isProviderInCooldown(currentProvider.id)) {
       try {
         // 为当前provider加载API Key
-        final providerWithApiKey = await _loadApiKeyForProvider(
+        final providerWithApiKey = await resolveProviderWithKey(
           currentProvider,
         );
         return await _makeBaseRequest(
@@ -289,7 +302,7 @@ class AINetworkManager {
         try {
           logDebug('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
-          final providerWithApiKey = await _loadApiKeyForProvider(provider);
+          final providerWithApiKey = await resolveProviderWithKey(provider);
           return await _makeBaseRequest(
             config: providerWithApiKey,
             data: data,
@@ -326,6 +339,19 @@ class AINetworkManager {
     }
 
     Exception? lastError;
+    final Map<String, AIProviderSettings> providerKeyCache = {};
+
+    Future<AIProviderSettings> resolveProviderWithKey(
+      AIProviderSettings provider,
+    ) async {
+      final cached = providerKeyCache[provider.id];
+      if (cached != null) {
+        return cached;
+      }
+      final resolved = await _loadApiKeyForProvider(provider);
+      providerKeyCache[provider.id] = resolved;
+      return resolved;
+    }
 
     // 首先尝试当前选择的服务商
     var currentProvider = multiSettings.currentProvider;
@@ -334,7 +360,7 @@ class AINetworkManager {
         !_isProviderInCooldown(currentProvider.id)) {
       try {
         // 为当前provider加载API Key
-        final providerWithApiKey = await _loadApiKeyForProvider(
+        final providerWithApiKey = await resolveProviderWithKey(
           currentProvider,
         );
         final response = await _makeBaseRequest(
@@ -371,7 +397,7 @@ class AINetworkManager {
         try {
           logDebug('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
-          final providerWithApiKey = await _loadApiKeyForProvider(provider);
+          final providerWithApiKey = await resolveProviderWithKey(provider);
           final response = await _makeBaseRequest(
             config: providerWithApiKey,
             data: {...data, 'stream': true},
@@ -532,50 +558,57 @@ class AINetworkManager {
 
   /// 处理错误
   static Exception _handleError(dynamic error) {
-    final statusCode = error.response?.statusCode;
-    final errorBody = error.response?.data?.toString() ?? error.message ?? '';
+    if (error is Exception && error is! DioException) {
+      return error;
+    }
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      final errorBody = error.response?.data?.toString() ?? error.message ?? '';
 
-    if (statusCode == 401) {
-      logError('AI Request Error: 401 Unauthorized', error: error);
-      return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
-    } else if (statusCode == 429) {
-      logError('AI Request Error: 429 Too Many Requests', error: error);
-      return Exception('API调用频率超限 (429)，请稍后重试');
-    } else if (statusCode == 500) {
-      String errorMessage = 'AI服务器内部错误 (500)';
+      if (statusCode == 401) {
+        logError('AI Request Error: 401 Unauthorized', error: error);
+        return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
+      } else if (statusCode == 429) {
+        logError('AI Request Error: 429 Too Many Requests', error: error);
+        return Exception('API调用频率超限 (429)，请稍后重试');
+      } else if (statusCode == 500) {
+        String errorMessage = 'AI服务器内部错误 (500)';
 
-      try {
-        final errorData = json.decode(errorBody);
-        if (errorData['error'] != null) {
-          final errorInfo = errorData['error'];
-          if (errorInfo['message'] != null) {
-            errorMessage += '：${errorInfo['message']}';
+        try {
+          final errorData = json.decode(errorBody);
+          if (errorData['error'] != null) {
+            final errorInfo = errorData['error'];
+            if (errorInfo['message'] != null) {
+              errorMessage += '：${errorInfo['message']}';
+            }
           }
+        } catch (e) {
+          if (errorBody.contains('model')) {
+            errorMessage += '：可能是模型不存在或不可用';
+          }
+          logError('Failed to parse 500 error body JSON', error: e);
         }
-      } catch (e) {
-        if (errorBody.contains('model')) {
-          errorMessage += '：可能是模型不存在或不可用';
-        }
-        logError('Failed to parse 500 error body JSON', error: e);
+
+        logError('AI Request Error: 500 Internal Server Error', error: error);
+        return Exception(
+          '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
+        );
+      } else if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        logError(
+          'AI Request Error: Connection/Timeout Error (${error.type.name})',
+          error: error,
+        );
+        return Exception('网络连接超时，请检查网络设置或稍后重试');
       }
 
-      logError('AI Request Error: 500 Internal Server Error', error: error);
-      return Exception(
-        '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
-      );
-    } else if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout ||
-        error.type == DioExceptionType.connectionError) {
-      logError(
-        'AI Request Error: Connection/Timeout Error (${error.type.name})',
-        error: error,
-      );
-      return Exception('网络连接超时，请检查网络设置或稍后重试');
+      logError('AI Request Error: Unknown DioException', error: error);
+      return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
     }
 
-    logError('AI Request Error: Unknown DioException', error: error);
-    return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
+    return error is Exception ? error : Exception('AI请求未知错误: $error');
   }
 
   /// 为provider加载API Key（从加密存储）
