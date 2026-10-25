@@ -257,6 +257,62 @@ void main() {
       expect(result['type'], 'k');
     });
 
+    test('meigen provider returns normalized quote fields', () async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+
+      final result = await ApiService.getDailyQuote(
+        l10n,
+        'a',
+        provider: ApiService.meigenProvider,
+        httpGet: (
+          url, {
+          Map<String, String>? headers,
+          int? timeoutSeconds,
+        }) async {
+          expect(url, ApiService.meigenApiUrl);
+          return HttpResponse(
+            '[{"meigen":"一期一会","auther":"千利休"}]',
+            200,
+          );
+        },
+      );
+
+      expect(result['content'], '一期一会');
+      expect(result['author'], '千利休');
+      expect(result['from_who'], '千利休');
+      expect(result['from'], '');
+      expect(result['type'], 'a');
+      expect(result['provider'], ApiService.meigenProvider);
+    });
+
+    test('korean advice provider returns normalized quote fields', () async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+
+      final result = await ApiService.getDailyQuote(
+        l10n,
+        'a',
+        provider: ApiService.koreanAdviceProvider,
+        httpGet: (
+          url, {
+          Map<String, String>? headers,
+          int? timeoutSeconds,
+        }) async {
+          expect(url, ApiService.koreanAdviceApiUrl);
+          return HttpResponse(
+            '{"message":"오늘 할 일을 내일로 미루지 마라","author":"공자","authorProfile":"사상가"}',
+            200,
+          );
+        },
+      );
+
+      expect(result['content'], '오늘 할 일을 내일로 미루지 마라');
+      expect(result['author'], '공자');
+      expect(result['from_who'], '공자');
+      expect(result['from'], '사상가');
+      expect(result['type'], 'a');
+      expect(result['provider'], ApiService.koreanAdviceProvider);
+    });
+
     test('handles malformed JSON response by falling back to default quote',
         () async {
       final l10n = lookupAppLocalizations(const Locale('zh'));

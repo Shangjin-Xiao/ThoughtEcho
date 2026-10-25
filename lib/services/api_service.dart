@@ -30,6 +30,15 @@ class ApiService {
   static const String apiNinjasProvider = 'api_ninjas';
   static const String meigenProvider = 'meigen';
   static const String koreanAdviceProvider = 'kadvice';
+
+  // Remote provider endpoint URLs
+  static const String zenQuotesApiUrl = 'https://zenquotes.io/api/random';
+  static const String apiNinjasApiUrl =
+      'https://api.api-ninjas.com/v2/randomquotes';
+  static const String meigenApiUrl =
+      'https://meigen.doodlenote.net/api/json.php?c=1';
+  static const String koreanAdviceApiUrl =
+      'https://korean-advice-open-api.vercel.app/api/advice';
   static const List<String> supportedDailyQuoteProviders = [
     hitokotoProvider,
     zenQuotesProvider,
