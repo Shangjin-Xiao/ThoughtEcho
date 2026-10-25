@@ -337,19 +337,20 @@ jobs:
             }
         }
         
-        # 如果找到MSIX文件，复制并设置输出
+        # 如果找到MSIX文件，移出构建目录并设置输出（避免后续打便携版 ZIP 时把 MSIX 套娃打进去）
         if ($msixFound) {
             $msixName = "thoughtecho-windows-x64-v$version-$buildType.msix"
-            Copy-Item -Path $sourceMsixPath -Destination $msixName -Force
+            Move-Item -Path $sourceMsixPath -Destination $msixName -Force
+            Remove-Item -Path "$buildPath/*.msix" -Force -ErrorAction SilentlyContinue
             
-            # 验证复制成功
+            # 验证移动成功
             if (Test-Path $msixName) {
                 $msixSize = (Get-Item $msixName).Length
                 Write-Host "✅ 成功创建MSIX安装包: $msixName (大小: $([math]::Round($msixSize/1MB, 2)) MB)" -ForegroundColor Green
                 "msix_name=$msixName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
                 "has_msix=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             } else {
-                Write-Warning "MSIX文件复制失败"
+                Write-Warning "MSIX文件整理失败"
                 "has_msix=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             }
         } else {
@@ -368,10 +369,8 @@ jobs:
       shell: pwsh
       run: |
         $buildPath = "${{ steps.artifacts.outputs.build_path }}"
-        $version = "${{ steps.version.outputs.version }}"
-        $buildType = "${{ inputs.build_type || 'release' }}"
-        $zipPath = "thoughtecho-windows-x64-v$version-$buildType-portable.zip"
-        Compress-Archive -Path "$buildPath/*" -DestinationPath $zipPath -Force
+        $zipPath = "thoughtecho-windows-x64-portable.zip"
+        Get-ChildItem -Path $buildPath -Exclude "*.msix" | Compress-Archive -DestinationPath $zipPath -Force
         "zip_path=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       id: zip_portable
 
