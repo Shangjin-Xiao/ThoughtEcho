@@ -92,19 +92,18 @@ void main() {
       final messages = [openai.ChatMessage.user(_message)];
       return switch (mode) {
         _RequestMode.completion => service.chatCompletion(
-          provider: provider,
-          messages: messages,
-        ),
+            provider: provider,
+            messages: messages,
+          ),
         _RequestMode.streaming =>
           service.streamChat(provider: provider, messages: messages).join(),
-        _RequestMode.ollamaThinking =>
-          service
-              .streamChatWithThinking(
-                provider: provider,
-                messages: messages,
-                enableThinking: true,
-              )
-              .join(),
+        _RequestMode.ollamaThinking => service
+            .streamChatWithThinking(
+              provider: provider,
+              messages: messages,
+              enableThinking: true,
+            )
+            .join(),
         _RequestMode.agent => throw StateError('Handled above'),
       };
     }, () => client);
