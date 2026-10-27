@@ -3270,6 +3270,14 @@
   "featureInDevelopment": "分享功能開發中...",
   "selectFromFiles": "從檔案選擇",
   "supportsLargeFiles": "支援大檔案，記憶體安全處理",
+  "mediaUrlTooLarge": "檔案超過網址匯入的 {maxSizeMb} MB 限制，請選擇較小的檔案。",
+  "@mediaUrlTooLarge": {
+    "placeholders": {
+      "maxSizeMb": {
+        "type": "int"
+      }
+    }
+  },
   "unifiedMediaImportImportMedia": "匯入{mediaType}",
   "@unifiedMediaImportImportMedia": {
     "placeholders": {
