@@ -5,6 +5,7 @@ import '../../utils/untrusted_text.dart';
 import '../agent_memory_service.dart';
 import '../agent_tool.dart';
 import '../chat_session_service.dart';
+import '../database_service.dart';
 
 /// 检索过往会话，回答「我们之前聊过什么」。
 ///
@@ -16,9 +17,10 @@ import '../chat_session_service.dart';
 /// 存在的理由是记忆层故意不存对话原文（那会和画像层互相打架，也撑爆预算），
 /// 于是「上周聊到的那个方案叫什么」这类问题此前无解。检索按需走，不进注入层。
 class SessionSearchTool extends AgentTool {
-  const SessionSearchTool(this._sessions);
+  const SessionSearchTool(this._sessions, this._database);
 
   final ChatSessionService _sessions;
+  final DatabaseService _database;
 
   /// 默认返回条数。会话摘要比笔记预览短，但命中的往往是同一个话题的连续几段，
   /// 给太多只是把同一件事重复喂进上下文。
@@ -82,7 +84,17 @@ class SessionSearchTool extends AgentTool {
 
     try {
       final now = DateTime.now();
-      final hits = await _sessions.searchSessions(query, limit: limit);
+      final matches = await _sessions.searchSessions(query, limit: limit);
+      // Filter the entire hit: titles and snippets may contain the bound note.
+      final visibleNoteIds = await _database.getVisibleQuoteIds({
+        for (final hit in matches)
+          if (hit.session.noteId != null) hit.session.noteId!,
+      });
+      final hits = matches
+          .where((hit) =>
+              hit.session.noteId == null ||
+              visibleNoteIds.contains(hit.session.noteId))
+          .toList(growable: false);
 
       final payload = <String, Object?>{
         'query': query,

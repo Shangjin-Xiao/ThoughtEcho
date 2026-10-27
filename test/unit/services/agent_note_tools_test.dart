@@ -338,6 +338,46 @@ void main() {
       expect(result.content, contains('媒体'));
     });
 
+    for (final rich in [false, true]) {
+      test(
+          'edit denies hidden ${rich ? 'rich' : 'plain'} note with known revision',
+          () async {
+        final quote = Quote(
+          id: 'protected-edit',
+          content: 'Synthetic protected body',
+          date: '2026-07-15T00:00:00Z',
+          tagIds: [DatabaseService.hiddenTagId],
+          editSource: rich ? 'fullscreen' : null,
+          deltaContent: rich
+              ? jsonEncode([
+                  {'insert': 'Synthetic protected body\n'}
+                ])
+              : null,
+        );
+        final tool = ProposeNoteEditTool(
+          _TestDatabaseService(const [], quote: quote),
+        );
+
+        final result = await tool.execute(ToolCall(
+          id: 'protected-edit-call',
+          name: tool.name,
+          arguments: {
+            'proposal_title': 'Append text',
+            'note_id': quote.id,
+            'base_revision': ProposeNoteEditTool.revisionForQuote(quote),
+            'result_kind': 'preserve',
+            'operations': [
+              {'type': 'append', 'insert_text': ' Appended text'}
+            ],
+          },
+        ));
+
+        expect(result.isError, isTrue);
+        expect(result.artifact, isNull);
+        expect(result.content, isNot(contains(quote.content)));
+      });
+    }
+
     test('edit rejects model-authored raw Delta operations', () async {
       final quote = Quote(
         id: 'plain-raw-edit',
