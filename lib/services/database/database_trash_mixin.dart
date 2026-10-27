@@ -540,17 +540,13 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
       DatabaseService.onQuoteCachesInvalidate?.call(deletedIdsInTxn.toSet());
 
-      // Convert relative media paths to absolute paths before cleanup
+      // Cleanup resolves relative paths and verifies application media ownership.
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = normalize(appDir.path);
 
       try {
-        final mediaPaths = mediaCandidates.map((mediaPath) {
-          if (isAbsolute(mediaPath)) return mediaPath;
-          return join(appPath, mediaPath);
-        }).toList(growable: false);
         await MediaReferenceService.quickCheckAndDeleteOrphans(
-          mediaPaths,
+          mediaCandidates,
           cachedAppPath: appPath,
         );
       } catch (e, stack) {
