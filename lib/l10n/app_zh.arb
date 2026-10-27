@@ -174,7 +174,7 @@
   "noteListDisableCardShadowsExperiment": "[实验] 记录页禁用卡片阴影",
   "noteListDisableCardShadowsExperimentDesc": "关闭卡片投影阴影，可提升低配置设备上的列表滑动流畅度",
   "noteListDisableBackdropBlurExperiment": "[实验] 记录页禁用折叠模糊",
-  "noteListDisableBackdropBlurExperimentDesc": "将长卡片折叠处的背景模糊替换为渐变遮罩，减轻图形渲染负担",
+  "noteListDisableBackdropBlurExperimentDesc": "将长卡片折叠处的背景模糊替换为渐变遮罩，提升页面滑动流畅度并节省电量",
   "devFirstScrollPerfResult": "首次滑动性能：总帧 {total}，卡顿帧 {jank}，平均 {avgMs}ms，最慢 {worstMs}ms",
   "@devFirstScrollPerfResult": {
     "placeholders": {
