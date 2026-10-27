@@ -198,10 +198,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final l10n = AppLocalizations.of(context);
     setState(() => _testing.add(provider.id));
     try {
-      // 走和真正聊天完全相同的链路（见 [AIConnectionTester]）。密钥不在这个对象上，
-      // 由 tester 回落到 APIKeyManager 取。
+      // 只为列表中的已保存配置取密钥，并保留它的已保存地址；tester 不替草稿取密钥。
+      final resolved = provider.apiKey.isNotEmpty
+          ? provider
+          : provider.copyWith(
+              apiKey: await APIKeyManager().getProviderApiKey(provider.id),
+            );
       await AIConnectionTester.test(
-        provider: provider,
+        provider: resolved,
         systemPrompt: l10n.connectionTestSystemMessage,
         userMessage: l10n.connectionTestUserMessage,
       );
