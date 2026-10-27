@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as path;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/media_reference_service.dart';
 
@@ -307,13 +308,115 @@ void main() {
   });
 
   group('quickCheckAndDeleteOrphans', () {
+    test(
+      'keeps external paths and paths escaping the media directory',
+      () async {
+        final root = await Directory.systemTemp.createTemp('media_ownership_');
+        addTearDown(() => root.delete(recursive: true));
+        final appDir = await Directory(
+          path.join(root.path, 'documents'),
+        ).create();
+        final external = File(path.join(root.path, 'external.png'));
+        final sibling = File(
+          path.join(appDir.path, 'media-other', 'image.png'),
+        );
+        await sibling.parent.create();
+        for (final file in [external, sibling]) {
+          await file.writeAsString('must survive');
+        }
+        final deleted = await MediaReferenceService.quickCheckAndDeleteOrphans([
+          external.path,
+          sibling.path,
+          path.join(appDir.path, 'media', '..', '..', 'external.png'),
+        ], cachedAppPath: appDir.path);
+        expect(deleted, 0);
+        for (final file in [external, sibling]) {
+          expect(await file.readAsString(), 'must survive');
+        }
+      },
+    );
+
+    test('deletes owned media through an application directory alias',
+        () async {
+      final root = await Directory.systemTemp.createTemp('media_app_alias_');
+      addTearDown(() => root.delete(recursive: true));
+      final appDir = Directory(path.join(root.path, 'documents'));
+      final file =
+          File(path.join(appDir.path, 'media', 'images', 'orphan.png'));
+      await file.parent.create(recursive: true);
+      await file.writeAsString('orphan');
+      final alias =
+          await Link(path.join(root.path, 'app-alias')).create(appDir.path);
+
+      final deleted = await MediaReferenceService.quickCheckAndDeleteOrphans(
+        [path.join(alias.path, 'media', 'images', 'orphan.png')],
+        cachedAppPath: alias.path,
+      );
+      expect(deleted, 1);
+      expect(await file.exists(), isFalse);
+    },
+        skip: Platform.isWindows
+            ? 'Creating symlinks requires Windows privileges'
+            : false);
+
+    for (final linkKind in ['media root', 'subdirectory', 'file']) {
+      test(
+        'keeps files reached through a $linkKind symlink',
+        () async {
+          final root = await Directory.systemTemp.createTemp('media_symlink_');
+          addTearDown(() => root.delete(recursive: true));
+          final appDir = await Directory(
+            path.join(root.path, 'documents'),
+          ).create();
+          final protectedDir = await Directory(
+            path.join(appDir.path, 'protected'),
+          ).create();
+          final protectedFile = File(path.join(protectedDir.path, 'image.png'));
+          await protectedFile.writeAsString('must survive');
+          final mediaDir = Directory(path.join(appDir.path, 'media'));
+          late Link link;
+          late String candidate;
+          if (linkKind == 'media root') {
+            link = await Link(mediaDir.path).create(protectedDir.path);
+            candidate = path.join(link.path, 'image.png');
+          } else {
+            await mediaDir.create();
+            if (linkKind == 'subdirectory') {
+              link = await Link(
+                path.join(mediaDir.path, 'images'),
+              ).create(protectedDir.path);
+              candidate = path.join(link.path, 'image.png');
+            } else {
+              link = await Link(
+                path.join(mediaDir.path, 'image.png'),
+              ).create(protectedFile.path);
+              candidate = link.path;
+            }
+          }
+          final deleted =
+              await MediaReferenceService.quickCheckAndDeleteOrphans([
+            candidate,
+          ], cachedAppPath: appDir.path);
+          expect(deleted, 0);
+          expect(await protectedFile.readAsString(), 'must survive');
+          expect(await link.exists(), isTrue);
+        },
+        skip: Platform.isWindows
+            ? 'Creating symlinks requires Windows privileges'
+            : false,
+      );
+    }
+
     test('分块并发检测并删除大量无引用文件', () async {
       final tempDir = await Directory.systemTemp.createTemp('media_ref_test_');
       try {
         const fileCount = 120; // 超出单批次 50 上限
+        final mediaDir = await Directory(
+          path.join(tempDir.path, 'media', 'images'),
+        ).create(recursive: true);
         final filePaths = <String>[];
         for (var i = 0; i < fileCount; i++) {
-          final file = File('${tempDir.path}/orphan_$i.png');
+          final file = File(path.join(mediaDir.path, 'orphan_$i.png'));
           await file.writeAsString('orphan_content_$i');
           filePaths.add(file.path);
         }
