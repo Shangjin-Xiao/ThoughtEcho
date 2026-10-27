@@ -3266,6 +3266,14 @@
   "featureInDevelopment": "分享功能开发中...",
   "selectFromFiles": "从文件选择",
   "supportsLargeFiles": "支持大文件，内存安全处理",
+  "mediaUrlTooLarge": "文件超过网址导入的 {maxSizeMb} MB 限制，请选择较小的文件。",
+  "@mediaUrlTooLarge": {
+    "placeholders": {
+      "maxSizeMb": {
+        "type": "int"
+      }
+    }
+  },
   "unifiedMediaImportImportMedia": "导入{mediaType}",
   "@unifiedMediaImportImportMedia": {
     "placeholders": {
