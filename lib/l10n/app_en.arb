@@ -4915,5 +4915,23 @@
         "type": "String"
       }
     }
-  }
+  },
+  "agentExternalRequestApproval": "This request sends the address or search text below to an external service. It may contain private notes or conversation data. Allow it once?\n\n{details}",
+  "@agentExternalRequestApproval": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPrivateAccessApproval": "Allow Thoughter to access or change local data for this action once?\n\n{details}",
+  "@agentPrivateAccessApproval": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDenyRequest": "Deny",
+  "agentAllowOnce": "Allow once"
 }

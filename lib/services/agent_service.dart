@@ -12,6 +12,7 @@ import '../models/chat_message.dart' as app_chat;
 import '../models/note_proposal_artifact.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
+import '../utils/localization_resolver.dart';
 import '../utils/report_period_utils.dart';
 import '../utils/untrusted_text.dart';
 import 'agent_memory_service.dart';
@@ -354,6 +355,11 @@ class AgentService extends ChangeNotifier {
         profileBlock: profileBlock,
       );
       final openAITools = _buildOpenAITools();
+      final permissions = _ToolPermissionScope(
+        userMessage: userMessage,
+        // Historical replies can retain instructions from previously fetched pages.
+        hasExternalContent: history?.isNotEmpty ?? false,
+      );
 
       final executedCalls = <ToolCall>[];
       final toolExecutions = <ToolExecution>[];
@@ -586,8 +592,11 @@ class AgentService extends ChangeNotifier {
 
         if (pendingExecutions.isNotEmpty) {
           repliedAnyToolCall = true;
-          final executionResults =
-              await _executePendingToolCalls(pendingExecutions, runId: runId);
+          final executionResults = await _executePendingToolCalls(
+            pendingExecutions,
+            runId: runId,
+            permissions: permissions,
+          );
 
           if (!_shouldContinue(runId)) {
             return AgentResponse(content: '', toolCalls: executedCalls);
@@ -1408,6 +1417,7 @@ class AgentService extends ChangeNotifier {
   Future<ToolResult> _executeToolSafely(
     ToolCall toolCall, {
     required int runId,
+    required _ToolPermissionScope permissions,
   }) async {
     final tool = _findTool(toolCall.name);
     if (tool == null) {
@@ -1420,8 +1430,17 @@ class AgentService extends ChangeNotifier {
       );
     }
 
-    _setStatus(_toolStatusText(toolCall.name), runId: runId);
     try {
+      if (!_shouldContinue(runId) ||
+          (permissions.requiresApproval(toolCall) &&
+              !await _approveToolCall(toolCall, runId: runId))) {
+        return ToolResult(
+          toolCallId: toolCall.id,
+          content: '本次调用未获用户授权。不要重试或改写参数绕过确认。',
+          isError: true,
+        );
+      }
+      _setStatus(_toolStatusText(toolCall.name), runId: runId);
       if (tool.isInteractive) {
         return await tool.execute(toolCall);
       }
@@ -1446,6 +1465,28 @@ class AgentService extends ChangeNotifier {
         failureType: AgentFailureType.toolExecutionFailed,
       );
     }
+  }
+
+  /// 只认可本次应用确认的显式选择，模型的 ask_user 结果不能授予权限。
+  Future<bool> _approveToolCall(ToolCall call, {required int runId}) async {
+    final askUser = findTool<AskUserTool>();
+    if (askUser == null) return false;
+    final l10n = resolveAppLocalizations(_settingsService.localeCode);
+    final details = '${call.name}\n${jsonEncode(call.arguments)}';
+    _setStatus('agentAskingUser', runId: runId);
+    final response = await askUser.prompt(AskUserRequest.single(
+      toolCallId: 'permission:$runId:${call.id}',
+      question: _ToolPermissionScope.isExternal(call.name)
+          ? l10n.agentExternalRequestApproval(details)
+          : l10n.agentPrivateAccessApproval(details),
+      options: [l10n.agentDenyRequest, l10n.agentAllowOnce],
+    ));
+    return _shouldContinue(runId) &&
+        !response.isCancelled &&
+        response.answers.length == 1 &&
+        response.customText == null &&
+        response.selectedOptions.length == 1 &&
+        response.selectedOptions.single == l10n.agentAllowOnce;
   }
 
   /// 工具出错后，把只读调用从两道重复守卫里摘出去。
@@ -1475,12 +1516,21 @@ class AgentService extends ChangeNotifier {
   Future<List<_ToolExecutionResult>> _executePendingToolCalls(
     List<_PendingToolExecution> pendingExecutions, {
     required int runId,
+    required _ToolPermissionScope permissions,
   }) async {
     if (pendingExecutions.isEmpty) {
       return const <_ToolExecutionResult>[];
     }
 
+    // Reserve the boundary for the whole batch before any async execution: a
+    // private read in the same round as a fetch must not race past approval.
+    if (pendingExecutions.any((pending) =>
+        _ToolPermissionScope.isExternal(pending.parsedToolCall.name))) {
+      permissions.hasExternalContent = true;
+    }
     final executeInParallel = pendingExecutions.length > 1 &&
+        !pendingExecutions.any((pending) =>
+            permissions.requiresApproval(pending.parsedToolCall)) &&
         pendingExecutions.every((pending) {
           final tool = _findTool(pending.parsedToolCall.name);
           return tool != null && tool.isReadOnly && tool.isConcurrencySafe;
@@ -1501,6 +1551,7 @@ class AgentService extends ChangeNotifier {
         final result = await _executeToolSafely(
           pending.parsedToolCall,
           runId: runId,
+          permissions: permissions,
         );
         return _ToolExecutionResult(pending: pending, result: result);
       }).toList(growable: false);
@@ -1515,6 +1566,7 @@ class AgentService extends ChangeNotifier {
       final result = await _executeToolSafely(
         pending.parsedToolCall,
         runId: runId,
+        permissions: permissions,
       );
       results.add(_ToolExecutionResult(pending: pending, result: result));
       if (!_shouldContinue(runId)) {
@@ -2061,4 +2113,35 @@ class _ToolExecutionResult {
 
   final _PendingToolExecution pending;
   final ToolResult result;
+}
+
+/// Per-run authority comes only from initiating input and exact user approvals.
+/// Never derive grants from tool output, assistant text, history or memory.
+class _ToolPermissionScope {
+  _ToolPermissionScope({
+    required String userMessage,
+    required this.hasExternalContent,
+  }) : _userUrls = RegExp(r'''https?://[^\s<>"'`]+''')
+            .allMatches(userMessage)
+            .map((match) => match.group(0)!)
+            .toSet();
+
+  final Set<String> _userUrls;
+  bool hasExternalContent;
+
+  static bool isExternal(String name) =>
+      name == 'web_fetch' || name == 'web_search';
+
+  bool requiresApproval(ToolCall call) {
+    if (call.name == 'web_fetch') {
+      final url = call.getString('url').trim();
+      // Exact URLs only: sharing a host does not authorize a new path or query.
+      return !_userUrls.contains(url) &&
+          url !=
+              'https://raw.githubusercontent.com/Shangjin-Xiao/ThoughtEcho/main/docs/USER_MANUAL.md';
+    }
+    if (call.name == 'web_search') return true;
+    // All other local tools can expose private data or mutate local state.
+    return hasExternalContent && call.name != 'ask_user';
+  }
 }

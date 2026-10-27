@@ -4915,5 +4915,23 @@
         "type": "String"
       }
     }
-  }
+  },
+  "agentExternalRequestApproval": "此请求会将以下网址或搜索内容发送给外部服务，其中可能包含私人笔记或对话内容。是否仅允许这一次？\n\n{details}",
+  "@agentExternalRequestApproval": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPrivateAccessApproval": "是否允许 Thoughter 为本次操作访问或修改本地数据？仅对这一次操作生效。\n\n{details}",
+  "@agentPrivateAccessApproval": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDenyRequest": "拒绝",
+  "agentAllowOnce": "仅允许一次"
 }

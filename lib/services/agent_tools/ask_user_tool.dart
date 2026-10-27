@@ -383,8 +383,7 @@ class AskUserTool extends AgentTool {
       return _error(call, questionsError);
     }
 
-    final handler = _promptHandler;
-    if (handler == null) {
+    if (_promptHandler == null) {
       return ToolResult(
         toolCallId: call.id,
         content: '当前环境未配置用户交互处理程序，无法向用户提问。',
@@ -398,23 +397,8 @@ class AskUserTool extends AgentTool {
       questions: questions,
     );
 
-    cancelActivePrompt();
-
-    final completer = Completer<AskUserResponse>();
-    _activeCompleter = completer;
-
-    Future.sync(() => handler(request)).then((response) {
-      if (!completer.isCompleted) {
-        completer.complete(response);
-      }
-    }).catchError((error, stack) {
-      if (!completer.isCompleted) {
-        completer.completeError(error, stack);
-      }
-    });
-
     try {
-      final response = await completer.future;
+      final response = await prompt(request);
       if (response.isCancelled) {
         return ToolResult(
           toolCallId: call.id,
@@ -434,6 +418,31 @@ class AskUserTool extends AgentTool {
     } catch (e, stack) {
       logError('AskUserTool 执行失败', error: e, stackTrace: stack);
       return _error(call, '用户交互处理异常: $e');
+    }
+  }
+
+  /// 应用发起的确认与模型提问共用取消机制；未配置交互时拒绝确认。
+  Future<AskUserResponse> prompt(AskUserRequest request) async {
+    final handler = _promptHandler;
+    if (handler == null) return AskUserResponse.cancelled();
+
+    cancelActivePrompt();
+
+    final completer = Completer<AskUserResponse>();
+    _activeCompleter = completer;
+
+    Future.sync(() => handler(request)).then((response) {
+      if (!completer.isCompleted) {
+        completer.complete(response);
+      }
+    }).catchError((error, stack) {
+      if (!completer.isCompleted) {
+        completer.completeError(error, stack);
+      }
+    });
+
+    try {
+      return await completer.future;
     } finally {
       if (identical(_activeCompleter, completer)) {
         _activeCompleter = null;
