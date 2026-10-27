@@ -138,3 +138,6 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 **对策:** 为这些高优先级、易测试的基础配置编写独立的单元测试。通过验证 `dragDevices` 是否包含期望的指针设备，以及全局 `navigatorKey` 的类型与非空校验，提升了整个应用的健壮性，确保此类不易察觉的边界在未来不会退化。
 
 
+## 2026-10-27 - [补充 LocationWeatherHelper.fetchLocation 的测试]
+**盲点:** `LocationWeatherHelper.fetchLocation` 在提供 `includePoi` 参数后，获取 poiName 的分支逻辑缺少单元测试覆盖。
+**对策:** 在 `test/unit/utils/location_weather_helper_test.dart` 中为 `fetchLocation` 新增指定 `includePoi: true` 的相关测试断言。通过模拟 `MockLocationService.currentPoiName` 以及修改现有的 `test` 中断言，确保 fetch 的 `LocationSnapshot` 中能正确组装或缺失 `poiName` 属性。在修改现有测试参数时，注意具名参数必须以参数名对应。
