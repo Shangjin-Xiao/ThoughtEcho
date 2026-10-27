@@ -2,6 +2,9 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:thoughtecho/services/device_identity_manager.dart';
+import 'package:thoughtecho/services/localsend/secure_transport.dart';
 import 'package:thoughtecho/services/media_sync_manifest.dart';
 
 // Extension to access private method for testing
@@ -112,11 +115,17 @@ void main() {
         },
       );
 
-      final client = HttpClient();
+      final identity = await DeviceIdentityManager.I.getLocalSendIdentity();
+      final client = LocalSendTransport.createHttpClient(Device.empty.copyWith(
+        ip: '127.0.0.1',
+        port: server.port,
+        https: true,
+        fingerprint: identity.fingerprint,
+      ));
       addTearDown(client.close);
       final request = await client.postUrl(
         Uri.parse(
-          'http://127.0.0.1:${server.port}/api/thoughtecho/v1/sync-intent',
+          'https://127.0.0.1:${server.port}/api/thoughtecho/v1/sync-intent',
         ),
       );
       request.headers.contentType = ContentType.json;
@@ -151,11 +160,17 @@ void main() {
         },
       );
 
-      final client = HttpClient();
+      final identity = await DeviceIdentityManager.I.getLocalSendIdentity();
+      final client = LocalSendTransport.createHttpClient(Device.empty.copyWith(
+        ip: '127.0.0.1',
+        port: server.port,
+        https: true,
+        fingerprint: identity.fingerprint,
+      ));
       addTearDown(client.close);
       final request = await client.postUrl(
         Uri.parse(
-          'http://127.0.0.1:${server.port}/api/thoughtecho/v1/sync-intent',
+          'https://127.0.0.1:${server.port}/api/thoughtecho/v1/sync-intent',
         ),
       );
       request.headers.contentType = ContentType.json;

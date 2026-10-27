@@ -65,13 +65,15 @@ class ReceiveController {
       'deviceType': 'mobile',
       'fingerprint': _cachedFingerprint ?? 'uninitialized',
       'download': true,
+      'protocol': 'https',
     };
   }
 
   /// Explicitly set fingerprint when server starts to avoid 'loading' flicker
   Future<void> initializeFingerprint() async {
     try {
-      _cachedFingerprint = await DeviceIdentityManager.I.getFingerprint();
+      _cachedFingerprint =
+          (await DeviceIdentityManager.I.getLocalSendIdentity()).fingerprint;
       logDebug(
         'fingerprint_initialized fp=$_cachedFingerprint',
         source: 'LocalSend',

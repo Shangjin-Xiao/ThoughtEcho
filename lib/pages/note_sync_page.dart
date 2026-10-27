@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
+import 'package:thoughtecho/services/localsend/secure_transport.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../utils/aptabase_helper.dart';
@@ -244,7 +245,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     try {
       // 延迟到下一帧，避免与Provider读取竞争
       await Future.delayed(Duration.zero);
-      final fp = await DeviceIdentityManager.I.getFingerprint();
+      final fp =
+          (await DeviceIdentityManager.I.getLocalSendIdentity()).fingerprint;
       if (!mounted) return;
       setState(() {
         _localFingerprint = fp;
@@ -500,12 +502,20 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     final messenger = ScaffoldMessenger.of(context);
     final syncService = context.read<NoteSyncService>();
 
-    // 先弹出确认对话框（是否包含媒体文件）
+    try {
+      LocalSendTransport.requireSecurePeer(device);
+    } on StateError {
+      AppSnackBar.error(context, l10n.syncSecurePeerRequired);
+      return;
+    }
+
+    // Verify the receiver identity before any peer request or backup export.
     bool includeMedia = _sendIncludeMedia;
     final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) {
             bool localInclude = includeMedia;
+            bool codesMatch = false;
             return StatefulBuilder(
               builder: (ctx, setLocal) {
                 return AlertDialog(
@@ -515,6 +525,17 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(l10n.sendConfirmContent(device.alias)),
+                      SizedBox(height: 12),
+                      Text(l10n.syncVerifyPeer),
+                      SizedBox(height: 8),
+                      SelectableText(device.fingerprint),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.syncCodesMatch),
+                        value: codesMatch,
+                        onChanged: (value) =>
+                            setLocal(() => codesMatch = value ?? false),
+                      ),
                       SizedBox(height: 12),
                       CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
@@ -532,11 +553,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       child: Text(l10n.cancel),
                     ),
                     FilledButton(
-                      onPressed: () {
-                        // 关键修复：把对话框中的最新勾选结果写回外层变量
-                        includeMedia = localInclude;
-                        Navigator.of(ctx).pop(true);
-                      },
+                      onPressed: codesMatch
+                          ? () {
+                              includeMedia = localInclude;
+                              Navigator.of(ctx).pop(true);
+                            }
+                          : null,
                       child: Text(l10n.startSend),
                     ),
                   ],
@@ -727,6 +749,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       ),
                     ),
                   ),
+                  if (_localFingerprint != null) ...[
+                    SizedBox(height: 8),
+                    Text(l10n.syncVerificationCode),
+                    SelectableText(_localFingerprint!),
+                  ],
                   // 触发同步对话框逻辑（隐藏状态条但保留监听）
                   Consumer<NoteSyncService>(
                     builder: (context, s, _) {

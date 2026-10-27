@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/pages/note_sync_page.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
@@ -16,6 +17,10 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'note_sync_page_test.mocks.dart';
 
 void main() {
+  setUpAll(() async {
+    await DeviceIdentityManager.I.getLocalSendIdentity();
+  });
+
   group('NoteSyncPage UI测试', () {
     late MockNoteSyncService mockSyncService;
 
@@ -240,14 +245,14 @@ void main() {
       expect(find.text('同步失败: 网络错误'), findsWidgets);
     });
 
-    testWidgets('发送按钮点击测试', (WidgetTester tester) async {
+    testWidgets('核对完整校验码后才能发送', (WidgetTester tester) async {
       final testDevice = Device(
         signalingId: null,
         ip: '192.168.1.100',
         version: '2.1',
         port: 53317,
-        https: false,
-        fingerprint: 'device1',
+        https: true,
+        fingerprint: '1' * 64,
         alias: 'Test Device',
         deviceModel: 'Test Model',
         deviceType: DeviceType.mobile,
@@ -269,6 +274,16 @@ void main() {
 
       // 点击发送按钮
       await tester.tap(find.byIcon(Icons.send));
+      await tester.pump();
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, '开始发送'))
+            .onPressed,
+        isNull,
+      );
+      verifyNever(mockSyncService.createSyncPackage(any));
+      expect(find.text('1' * 64), findsOneWidget);
+      await tester.tap(find.text('我已核对两台设备，完整校验码一致'));
       await tester.pump();
       await tester.tap(find.text('开始发送'));
       await tester.pump();

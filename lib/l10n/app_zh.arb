@@ -4915,5 +4915,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "syncVerifyPeer": "请与接收设备上显示的校验码逐字核对。只有完整校验码一致时，才能继续。",
+  "syncCodesMatch": "我已核对两台设备，完整校验码一致",
+  "syncVerificationCode": "校验码",
+  "syncSecurePeerRequired": "此设备暂不支持安全同步。请更新两台设备上的心迹后重新搜索。"
 }

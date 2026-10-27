@@ -22,6 +22,7 @@ import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 import 'device_identity_manager.dart';
+import 'localsend/secure_transport.dart';
 
 /// 同步状态枚举
 enum SyncStatus {
@@ -201,7 +202,7 @@ class NoteSyncService extends ChangeNotifier {
 
       // 启动LocalSend服务器
       // ensure fingerprint ready before server start
-      await DeviceIdentityManager.I.getFingerprint();
+      await DeviceIdentityManager.I.getLocalSendIdentity();
 
       // 安全性：对于点对点同步，我们必须绑定到所有接口，
       // 以便在同一本地网络上的其他设备能够发现并访问。
@@ -571,7 +572,8 @@ class NoteSyncService extends ChangeNotifier {
     // 注意：即使本地设置了 skipSyncConfirmation，我们仍然需要发送 intent
     // 以便接收方知道即将到来的同步，并且接收方可以根据自己的设置决定是否需要审批
     final uri = buildSyncIntentUri(target);
-    final dio = Dio(
+    final dio = LocalSendTransport.createDio(
+      target,
       BaseOptions(
         connectTimeout: const Duration(seconds: 5),
         receiveTimeout: const Duration(minutes: 2),
@@ -579,7 +581,8 @@ class NoteSyncService extends ChangeNotifier {
       ),
     );
     try {
-      final fp = await DeviceIdentityManager.I.getFingerprint();
+      final fp =
+          (await DeviceIdentityManager.I.getLocalSendIdentity()).fingerprint;
       // 直接使用 discoveryService 的设备型号，它已经正确地从设备信息中获取
       String alias = 'ThoughtEcho';
       try {
@@ -597,7 +600,7 @@ class NoteSyncService extends ChangeNotifier {
                 ip: null,
                 version: '',
                 port: _localSendServer?.port ?? defaultPort,
-                https: false,
+                https: true,
                 fingerprint: fp,
                 alias: 'ThoughtEcho',
                 deviceModel: null,
@@ -630,7 +633,7 @@ class NoteSyncService extends ChangeNotifier {
         throw Exception('目标设备不支持同步审批 (${response.statusCode})');
       }
       final responseData = response.data ?? const {};
-      return await Isolate.run(() => parseSyncIntentApproval(responseData));
+      return parseSyncIntentApproval(responseData);
     } finally {
       dio.close(force: true);
     }
@@ -719,18 +722,20 @@ class NoteSyncService extends ChangeNotifier {
     final uri = Uri.parse(
       '$protocol://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent/cancel',
     );
-    final dio = Dio(
-      BaseOptions(
-        connectTimeout: const Duration(seconds: 2),
-        receiveTimeout: const Duration(seconds: 2),
-      ),
-    );
+    Dio? dio;
     try {
+      dio = LocalSendTransport.createDio(
+        target,
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 2),
+          receiveTimeout: const Duration(seconds: 2),
+        ),
+      );
       await dio.postUri<void>(uri, data: {'intentId': intentId});
     } catch (e) {
       AppLogger.d('通知接收端取消审批失败: $e', source: 'NoteSyncService');
     } finally {
-      dio.close(force: true);
+      dio?.close(force: true);
     }
   }
 
@@ -762,7 +767,8 @@ class NoteSyncService extends ChangeNotifier {
     Device target,
     CancelToken cancelToken,
   ) async {
-    final dio = Dio(
+    final dio = LocalSendTransport.createDio(
+      target,
       BaseOptions(
         connectTimeout: const Duration(seconds: 3),
         receiveTimeout: const Duration(seconds: 3),

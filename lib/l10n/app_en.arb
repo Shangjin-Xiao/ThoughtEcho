@@ -4915,5 +4915,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "syncVerifyPeer": "Compare this code with the verification code shown on the receiving device. Continue only if the full codes match.",
+  "syncCodesMatch": "I checked both devices and the full codes match",
+  "syncVerificationCode": "Verification code",
+  "syncSecurePeerRequired": "This device does not support secure sync. Update ThoughtEcho on both devices and search again."
 }

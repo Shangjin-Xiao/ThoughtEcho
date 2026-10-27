@@ -66,6 +66,7 @@ dependencies:
   gal: ^2.3.0 # 替换image_gallery_saver，保存图片到相册，支持最新Android
   vector_graphics: ^1.1.19
   crypto: ^3.0.3 # 用于文件校验和计算
+  basic_utils: ^5.8.2 # LocalSend TLS certificate generation
   device_info_plus: ^12.1.0 # 获取设备信息，用于localsend设备识别
   network_info_plus: ^7.0.0 # 获取网络信息，用于localsend网络发现
   multicast_dns: ^0.3.2+5 # mDNS服务发现，用于localsend设备发现

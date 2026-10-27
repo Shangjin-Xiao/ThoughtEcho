@@ -8,6 +8,7 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:uuid/uuid.dart';
 
 import '../device_identity_manager.dart';
+import 'secure_transport.dart';
 import 'api_route_builder.dart';
 import 'constants.dart';
 import 'models/device.dart';
@@ -57,6 +58,7 @@ class LocalSendProvider {
     _cancelledSessions.remove(sessionId);
 
     try {
+      LocalSendTransport.requireSecurePeer(target);
       // 0. Optional handshake: verify /info endpoint for better reliability
       await _handshakeWithTarget(target, sessionId);
       _throwIfCancelled(sessionId);
@@ -86,7 +88,7 @@ class LocalSendProvider {
         source: 'LocalSend',
       );
 
-      final client = http.Client();
+      final client = LocalSendTransport.createClient(target);
       _activeClients[sessionId] = client;
       try {
         final requestBody =
@@ -125,7 +127,7 @@ class LocalSendProvider {
         }
 
         logDebug(
-          'prepare_resp status=${response.statusCode} body=${_summarizeBody(response.body, maxLength: 50)}',
+          'prepare_resp status=${response.statusCode}',
           source: 'LocalSend',
         );
 
@@ -284,7 +286,7 @@ class LocalSendProvider {
           },
         );
         logInfo(
-          'Uploading file to: $url (file: ${file.path.split('/').last}, attempt: ${attempt + 1}/$maxRetries)',
+          'Uploading file: ${file.path.split('/').last}, attempt: ${attempt + 1}/$maxRetries',
           source: 'LocalSend',
         );
 
@@ -309,7 +311,7 @@ class LocalSendProvider {
         request.files.add(multipart);
 
         // Send request with timeout
-        client = http.Client();
+        client = LocalSendTransport.createClient(session.target);
         _activeClients[sessionId] = client;
         final response = await client.send(request).timeout(
               const Duration(minutes: 5),
@@ -324,7 +326,7 @@ class LocalSendProvider {
           // Try legacy v1 route if needed
           url =
               '${ApiRoute.upload.targetRaw(session.target.ip ?? '127.0.0.1', session.target.port, session.target.https, '1.0')}?sessionId=${Uri.encodeQueryComponent(session.remoteSessionId!)}&fileId=$fileId&token=$token';
-          logInfo('v2 upload 404, trying v1 route: $url', source: 'LocalSend');
+          logInfo('v2 upload 404, trying v1 route', source: 'LocalSend');
           final legacyReq = http.MultipartRequest('POST', Uri.parse(url));
           legacyReq.headers['User-Agent'] = 'ThoughtEcho/1.0';
           final legacyStream = file.openRead().transform<List<int>>(
@@ -440,7 +442,7 @@ class LocalSendProvider {
     SendSession session,
     String remoteSessionId,
   ) async {
-    final client = http.Client();
+    final client = LocalSendTransport.createClient(session.target);
     try {
       final url =
           ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
@@ -485,7 +487,7 @@ class LocalSendProvider {
 
   /// Query target /info once to validate connectivity and possibly adapt route
   Future<void> _handshakeWithTarget(Device target, String sessionId) async {
-    final client = http.Client();
+    final client = LocalSendTransport.createClient(target);
     _activeClients[sessionId] = client;
     try {
       final infoUrl = ApiRoute.info.target(target);
@@ -525,7 +527,8 @@ class LocalSendProvider {
 
   /// Build a stable sender info to be compatible with LocalSend
   Future<InfoRegisterDto> _buildInfoRegisterDto() async {
-    final stableFingerprint = await DeviceIdentityManager.I.getFingerprint();
+    final stableFingerprint =
+        (await DeviceIdentityManager.I.getLocalSendIdentity()).fingerprint;
     return InfoRegisterDto(
       alias: 'ThoughtEcho',
       version: protocolVersion,
@@ -533,7 +536,7 @@ class LocalSendProvider {
       deviceType: DeviceType.mobile,
       fingerprint: stableFingerprint,
       port: defaultPort,
-      protocol: ProtocolType.http,
+      protocol: ProtocolType.https,
       download: true,
     );
   }

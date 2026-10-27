@@ -66,7 +66,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       deviceType: deviceType,
       fingerprint: fingerprint,
       port: serverPort,
-      protocol: ProtocolType.http,
+      protocol: ProtocolType.https,
       download: true,
       announcement: isAnnouncement,
       announce: isAnnouncement,
@@ -89,7 +89,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   Future<void> _ensureFingerprint() async {
     if (_fingerprintReady && _deviceFingerprint != 'initializing') return;
     try {
-      final fp = await DeviceIdentityManager.I.getFingerprint();
+      final fp =
+          (await DeviceIdentityManager.I.getLocalSendIdentity()).fingerprint;
       if (!_fingerprintReady) {
         _deviceFingerprint = fp;
         _fingerprintReady = true;

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:thoughtecho/services/localsend/models/session_status.dart';
 
 void main() {
@@ -82,7 +83,12 @@ void main() {
 
     test('cancelSession aborts a pending prepare request promptly', () async {
       final prepareStarted = Completer<void>();
-      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final identity = await DeviceIdentityManager.I.getLocalSendIdentity();
+      final server = await HttpServer.bindSecure(
+        InternetAddress.loopbackIPv4,
+        0,
+        identity.securityContext,
+      );
       addTearDown(() => server.close(force: true));
       server.listen((request) async {
         if (request.uri.path.endsWith('/info')) {
@@ -114,7 +120,8 @@ void main() {
         target: Device.empty.copyWith(
           ip: InternetAddress.loopbackIPv4.address,
           port: server.port,
-          https: false,
+          https: true,
+          fingerprint: identity.fingerprint,
           version: '2.1',
         ),
         files: [file],
@@ -138,7 +145,12 @@ void main() {
 
     test('cancelSession aborts a pending info handshake promptly', () async {
       final infoStarted = Completer<void>();
-      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final identity = await DeviceIdentityManager.I.getLocalSendIdentity();
+      final server = await HttpServer.bindSecure(
+        InternetAddress.loopbackIPv4,
+        0,
+        identity.securityContext,
+      );
       addTearDown(() => server.close(force: true));
       server.listen((request) async {
         if (request.uri.path.endsWith('/info')) {
@@ -163,7 +175,8 @@ void main() {
         target: Device.empty.copyWith(
           ip: InternetAddress.loopbackIPv4.address,
           port: server.port,
-          https: false,
+          https: true,
+          fingerprint: identity.fingerprint,
           version: '2.1',
         ),
         files: [file],

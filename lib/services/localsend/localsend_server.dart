@@ -4,13 +4,14 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'constants.dart';
+import '../device_identity_manager.dart';
 import 'receive_controller.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:thoughtecho/services/media_sync_manifest.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
-/// Simple HTTP server for LocalSend protocol
+/// Simple HTTPS server for LocalSend protocol
 /// Based on LocalSend's server but simplified for ThoughtEcho
 class LocalSendServer {
   HttpServer? _server;
@@ -33,7 +34,7 @@ class LocalSendServer {
   bool get isRunning => _isRunning;
   int get port => _port;
 
-  /// Start the HTTP server
+  /// Start the HTTPS server
   /// [bindAddress] defaults to loopbackIPv4 for security.
   /// Set to [InternetAddress.anyIPv4] only if network access is required and handled.
   Future<void> start({
@@ -80,6 +81,7 @@ class LocalSendServer {
     // ensure fingerprint ready before advertising info endpoint
     await _receiveController.initializeFingerprint();
 
+    final identity = await DeviceIdentityManager.I.getLocalSendIdentity();
     final address = bindAddress ?? InternetAddress.loopbackIPv4;
     try {
       logInfo(
@@ -88,7 +90,8 @@ class LocalSendServer {
       );
 
       // Try to bind to the specified port
-      _server = await HttpServer.bind(address, _port);
+      _server =
+          await HttpServer.bindSecure(address, _port, identity.securityContext);
       _port = _server!.port;
       _server!.autoCompress = true;
 
@@ -114,7 +117,8 @@ class LocalSendServer {
       for (int altPort in alternativePorts) {
         try {
           logDebug('server_try_port port=$altPort', source: 'LocalSend');
-          _server = await HttpServer.bind(address, altPort);
+          _server = await HttpServer.bindSecure(
+              address, altPort, identity.securityContext);
           _server!.autoCompress = true;
           _server!.listen(_handleRequest);
           _port = altPort == 0 ? _server!.port : altPort;
@@ -140,7 +144,7 @@ class LocalSendServer {
     }
   }
 
-  /// Stop the HTTP server
+  /// Stop the HTTPS server
   Future<void> stop() async {
     if (!_isRunning) return;
 
@@ -331,7 +335,7 @@ class LocalSendServer {
 
           if (sessionId == null || fileId == null || token == null) {
             logWarning(
-              'upload_missing_params sessionId=$sessionId fileId=$fileId token=$token',
+              'upload_missing_params',
               source: 'LocalSend',
             );
             statusCode = 400;

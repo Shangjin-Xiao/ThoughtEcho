@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+import 'localsend/secure_transport.dart';
+
 /// 管理应用在本设备上的稳定指纹（跨进程/重启保持）
 /// 仅在首次调用时生成 UUIDv4 并持久化。
 class DeviceIdentityManager {
@@ -10,11 +12,17 @@ class DeviceIdentityManager {
   static final DeviceIdentityManager _instance = DeviceIdentityManager._();
   final _uuid = const Uuid();
   String? _cached;
+  Future<LocalSendIdentity>? _localSendIdentity;
   bool _loading = false;
   final List<Completer<String>> _waiters = [];
 
   DeviceIdentityManager._();
   static DeviceIdentityManager get I => _instance;
+
+  /// Peer-sync certificate identity, independent of the persisted telemetry ID.
+  /// Shared for this process so discovery, TLS and pairing show the same pin.
+  Future<LocalSendIdentity> getLocalSendIdentity() =>
+      _localSendIdentity ??= LocalSendIdentity.generate();
 
   /// 已缓存的指纹（如果尚未加载则为 null）
   String? get currentFingerprint => _cached;

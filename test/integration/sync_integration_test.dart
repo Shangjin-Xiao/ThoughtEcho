@@ -10,6 +10,8 @@ import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/large_file_manager.dart' as lfm;
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
+import 'package:thoughtecho/services/localsend/localsend_server.dart';
+import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/media_sync_manifest.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
@@ -79,6 +81,66 @@ void main() {
         if (f2.existsSync()) f2.deleteSync();
       } catch (_) {}
     });
+
+    test(
+        'real HTTPS sync waits for approval and delivers the backup bytes',
+        () => HttpOverrides.runWithHttpOverrides(() async {
+              final identity =
+                  await DeviceIdentityManager.I.getLocalSendIdentity();
+              final approvalRequested = Completer<void>();
+              final approval = Completer<bool>();
+              final received = Completer<String>();
+              final receiver = LocalSendServer();
+              addTearDown(receiver.stop);
+              var approvalCount = 0;
+              await receiver.start(
+                port: 0,
+                onFileReceived: received.complete,
+                onReceiveSessionCreated: (_, __, ___) {},
+                onApprovalNeeded: (_, __, ___) {
+                  approvalCount++;
+                  if (!approvalRequested.isCompleted) {
+                    approvalRequested.complete();
+                  }
+                  return approval.future;
+                },
+              );
+              final sender = NoteSyncService(
+                backupService: mockBackupService,
+                databaseService: mockDatabaseService,
+                settingsService: mockSettingsService,
+                aiAnalysisDbService: mockAiAnalysisDbService,
+              );
+              addTearDown(sender.dispose);
+              sender.localSendProviderForTesting = LocalSendProvider();
+              when(mockBackupService.exportAllData(
+                includeMediaFiles: true,
+                onProgress: anyNamed('onProgress'),
+                cancelToken: anyNamed('cancelToken'),
+              )).thenAnswer((_) async => '/tmp/test_backup.zip');
+              final transfer = sender.createSyncPackage(Device.empty.copyWith(
+                ip: '127.0.0.1',
+                port: receiver.port,
+                version: '2.1',
+                https: true,
+                fingerprint: identity.fingerprint,
+              ));
+              await approvalRequested.future
+                  .timeout(const Duration(seconds: 5));
+              verifyNever(mockBackupService.exportAllData(
+                includeMediaFiles: true,
+                onProgress: anyNamed('onProgress'),
+                cancelToken: anyNamed('cancelToken'),
+              ));
+
+              approval.complete(true);
+              await transfer;
+              final receivedFile = File(await received.future);
+              addTearDown(receivedFile.delete);
+              expect(await receivedFile.readAsString(), 'fake zip data');
+              expect(sender.syncStatus, SyncStatus.completed);
+              expect(approvalCount, 1);
+            }, _LoopbackHttpOverrides()));
 
     test('同步状态管理测试', () {
       // 初始状态应该是idle
@@ -431,3 +493,6 @@ void main() {
     });
   });
 }
+
+// Restore real loopback sockets inside this transport integration test only.
+class _LoopbackHttpOverrides extends HttpOverrides {}

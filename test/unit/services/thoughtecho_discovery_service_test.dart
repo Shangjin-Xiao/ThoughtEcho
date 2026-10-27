@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/services/localsend/models/multicast_dto.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 
 void main() {
@@ -12,6 +13,7 @@ void main() {
     );
 
     expect(dto.port, 54321);
+    expect(dto.protocol, ProtocolType.https);
     expect(dto.announcement, isFalse);
     expect(dto.announce, isFalse);
   });
