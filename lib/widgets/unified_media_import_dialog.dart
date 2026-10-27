@@ -43,6 +43,17 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   double _progress = 0.0;
   String _statusMessage = '';
   lfm.CancelToken? _cancelToken;
+  CancelToken? _downloadCancelToken;
+
+  // Bound decoded bytes, including gzip expansion, before any disk write.
+  static const int _maxUrlDownloadBytes = 100 * 1024 * 1024;
+
+  @override
+  void dispose() {
+    _cancelToken?.cancel();
+    _downloadCancelToken?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -442,7 +453,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       ),
     );
 
-    if (url == null || url.isEmpty) return;
+    if (!mounted || url == null || url.isEmpty) return;
 
     // Validate URL scheme
     final uri = Uri.tryParse(url);
@@ -455,25 +466,29 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       return;
     }
 
+    final cancelToken = lfm.LargeFileManager.createCancelToken();
+    final downloadCancelToken = CancelToken();
     try {
       setState(() {
         _isImporting = true;
         _progress = 0.0;
         _statusMessage = l10n.downloadingFile;
-        _cancelToken = lfm.LargeFileManager.createCancelToken();
+        _cancelToken = cancelToken;
+        _downloadCancelToken = downloadCancelToken;
       });
 
       // 使用内存保护下载文件
       final String? savedPath =
           await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
         () async {
-          return await _downloadMediaFromUrl(url);
+          return await _downloadMediaFromUrl(
+              url, cancelToken, downloadCancelToken);
         },
         operationName: l10n.unifiedMediaImportDownloadMedia(
             _getMediaTypeName(widget.mediaType)),
       );
 
-      if (savedPath != null && mounted) {
+      if (savedPath != null && mounted && !cancelToken.isCancelled) {
         setState(() {
           _progress = 1.0;
           _statusMessage = l10n.downloadComplete;
@@ -482,6 +497,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         _completeImport(savedPath);
       }
     } catch (e) {
+      if (cancelToken.isCancelled) return;
       logDebug('网址导入失败: $e');
       if (mounted) {
         _showError('${l10n.restoreFailed}: $e');
@@ -492,6 +508,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   /// 取消导入
   void _cancelImport() {
     _cancelToken?.cancel();
+    _downloadCancelToken?.cancel();
     _resetState();
   }
 
@@ -503,6 +520,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         _progress = 0.0;
         _statusMessage = '';
         _cancelToken = null;
+        _downloadCancelToken = null;
       });
     }
   }
@@ -635,95 +653,107 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   }
 
   /// 从URL下载媒体文件
-  Future<String?> _downloadMediaFromUrl(String url) async {
+  Future<String?> _downloadMediaFromUrl(
+    String url,
+    lfm.CancelToken cancelToken,
+    CancelToken downloadCancelToken,
+  ) async {
+    // Keep operation-local tokens: Cancel resets the dialog for a new import.
+    cancelToken.throwIfCancelled();
+    _updateStatus(l10n.connectingToServer);
+
+    final fileName =
+        '${DateTime.now().millisecondsSinceEpoch}_${path.basename(url)}';
+    final tempFile = File(path.join(Directory.systemTemp.path, fileName));
+    final dio = Dio();
+
     try {
-      _updateStatus(l10n.connectingToServer);
-
-      // 生成临时文件路径
-      final tempDir = Directory.systemTemp;
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(url)}';
-      final tempFile = File(path.join(tempDir.path, fileName));
-
-      // 创建Dio实例
-      final dio = Dio();
-
-      // 创建Dio的CancelToken
-      final dioCancelToken = CancelToken();
-
+      final output = await tempFile.open(mode: FileMode.write);
       try {
-        // 使用Dio下载文件
-        await dio.download(
+        final response = await dio.get<ResponseBody>(
           url,
-          tempFile.path,
-          cancelToken: dioCancelToken,
-          onReceiveProgress: (received, total) {
-            // 检查是否被取消
-            _cancelToken?.throwIfCancelled();
-
-            if (total > 0) {
-              _updateProgress(received / total * 0.8); // 80%用于下载
-            }
-            _updateStatus(
-              '${l10n.downloadingFile} ${(received / 1024 / 1024).toStringAsFixed(1)}MB',
-            );
-          },
+          options: Options(responseType: ResponseType.stream),
+          cancelToken: downloadCancelToken,
         );
+        cancelToken.throwIfCancelled();
 
-        _updateStatus(l10n.savingFile);
-        _updateProgress(0.9);
-
-        // 保存到应用目录（直接保存到媒体目录）
-        String? savedPath;
-        switch (widget.mediaType) {
-          case 'image':
-            savedPath = await MediaFileService.saveImage(
-              tempFile.path,
-              onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
-              cancelToken: _cancelToken,
-            );
-            break;
-          case 'video':
-            savedPath = await MediaFileService.saveVideo(
-              tempFile.path,
-              onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
-              onStatusUpdate: _updateStatus,
-              cancelToken: _cancelToken,
-            );
-            break;
-          case 'audio':
-            savedPath = await MediaFileService.saveAudio(
-              tempFile.path,
-              onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
-              cancelToken: _cancelToken,
-            );
-            break;
-        }
-
-        // 清理临时文件
-        try {
-          if (await tempFile.exists()) {
-            await tempFile.delete();
+        // Content-Length still describes compressed bytes when HttpClient
+        // automatically decodes gzip. Use it only for unencoded progress.
+        final total =
+            response.headers.value(Headers.contentEncodingHeader) == null
+                ? int.tryParse(
+                        response.headers.value(Headers.contentLengthHeader) ??
+                            '') ??
+                    -1
+                : -1;
+        var received = 0;
+        await for (final chunk in response.data!.stream) {
+          cancelToken.throwIfCancelled();
+          if (chunk.length > _maxUrlDownloadBytes - received) {
+            throw Exception(
+                l10n.mediaUrlTooLarge(_maxUrlDownloadBytes ~/ (1024 * 1024)));
           }
-        } catch (e) {
-          logDebug('清理临时文件失败: $e');
-        }
-
-        return savedPath;
-      } catch (e) {
-        // 清理临时文件
-        try {
-          if (await tempFile.exists()) {
-            await tempFile.delete();
+          await output.writeFrom(chunk);
+          received += chunk.length;
+          cancelToken.throwIfCancelled();
+          if (total > 0) {
+            _updateProgress((received / total).clamp(0.0, 1.0) * 0.8);
           }
-        } catch (cleanupError) {
-          logDebug('清理临时文件失败: $cleanupError');
+          _updateStatus(
+            '${l10n.downloadingFile} ${(received / 1024 / 1024).toStringAsFixed(1)}MB',
+          );
         }
-        rethrow;
+      } finally {
+        await output.close();
       }
+
+      cancelToken.throwIfCancelled();
+      _updateStatus(l10n.savingFile);
+      _updateProgress(0.9);
+
+      String? savedPath;
+      switch (widget.mediaType) {
+        case 'image':
+          savedPath = await MediaFileService.saveImage(
+            tempFile.path,
+            onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
+            cancelToken: cancelToken,
+          );
+          break;
+        case 'video':
+          savedPath = await MediaFileService.saveVideo(
+            tempFile.path,
+            onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
+            onStatusUpdate: (status) {
+              if (!cancelToken.isCancelled) _updateStatus(status);
+            },
+            cancelToken: cancelToken,
+          );
+          break;
+        case 'audio':
+          savedPath = await MediaFileService.saveAudio(
+            tempFile.path,
+            onProgress: (progress) => _updateProgress(0.9 + progress * 0.1),
+            cancelToken: cancelToken,
+          );
+          break;
+      }
+      if (cancelToken.isCancelled && savedPath != null) {
+        await File(savedPath).delete();
+      }
+      cancelToken.throwIfCancelled();
+      return savedPath;
     } catch (e) {
-      logDebug('URL下载失败: $e');
+      // Stop the active response even if rejection happened between chunks.
+      downloadCancelToken.cancel();
       rethrow;
+    } finally {
+      dio.close(force: true);
+      try {
+        if (await tempFile.exists()) await tempFile.delete();
+      } catch (e) {
+        logDebug('清理临时文件失败: $e');
+      }
     }
   }
 }
