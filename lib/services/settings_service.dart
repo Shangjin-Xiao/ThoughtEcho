@@ -1723,7 +1723,7 @@ class SettingsService extends ChangeNotifier {
   ) async {
     try {
       final apiKeyManager = APIKeyManager();
-      final Set<String> restoredProviderIds = {};
+      final restoredProviderKeys = <String, String>{};
 
       // 优先恢复多provider AI设置
       if (backupData.containsKey('multi_ai_settings') &&
@@ -1785,11 +1785,7 @@ class SettingsService extends ChangeNotifier {
               }
 
               if (rawKey != null) {
-                await apiKeyManager.saveProviderApiKey(
-                  normalizedId,
-                  rawKey,
-                );
-                restoredProviderIds.add(normalizedId);
+                restoredProviderKeys[normalizedId] = rawKey;
               }
 
               // 传递给 MultiAISettings.fromJson 前，对每个 provider 的 apiKey 进行清洗，确保非 String 类型被移除或置为 null
@@ -1813,6 +1809,26 @@ class SettingsService extends ChangeNotifier {
           }
         }
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
+
+        // A backup controls provider IDs and URLs, but does not authorize sending
+        // this device's saved credentials to a different origin. Invalidate keys
+        // before publishing any restored settings or installing imported keys.
+        for (final provider in multiAiSettings.providers) {
+          final origin = _httpOrigin(provider.apiUrl);
+          final previousProviders = _multiAISettings.providers.where(
+            (previous) => previous.id == provider.id,
+          );
+          if (origin == null ||
+              previousProviders.isEmpty ||
+              previousProviders.any(
+                (previous) => _httpOrigin(previous.apiUrl) != origin,
+              )) {
+            await apiKeyManager.removeProviderApiKey(provider.id);
+          }
+        }
+        for (final entry in restoredProviderKeys.entries) {
+          await apiKeyManager.saveProviderApiKey(entry.key, entry.value);
+        }
         await saveMultiAISettings(multiAiSettings);
       }
 
@@ -1831,7 +1847,7 @@ class SettingsService extends ChangeNotifier {
         final rawApiKey = aiSettingsJson['apiKey'] ?? aiSettingsJson['api_key'];
         if (rawApiKey is String && rawApiKey.trim().isNotEmpty) {
           const defaultProviderId = 'openai';
-          if (!restoredProviderIds.contains(defaultProviderId)) {
+          if (!restoredProviderKeys.containsKey(defaultProviderId)) {
             await apiKeyManager.saveProviderApiKey(
               defaultProviderId,
               rawApiKey.trim(),
@@ -1901,6 +1917,18 @@ class SettingsService extends ChangeNotifier {
       AppLogger.e('设置数据恢复失败', error: e, source: 'SettingsService');
       rethrow;
     }
+  }
+
+  /// Compare destinations using canonical scheme, host and effective port.
+  /// Invalid or unknown destinations must never authorize credential reuse.
+  static String? _httpOrigin(String apiUrl) {
+    final uri = Uri.tryParse(apiUrl.trim());
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty) {
+      return null;
+    }
+    return uri.origin;
   }
 
   /// 获取或生成设备唯一ID（持久化）

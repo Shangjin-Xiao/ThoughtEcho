@@ -1,7 +1,10 @@
 /// Basic unit tests for SettingsService
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
@@ -660,6 +663,192 @@ void main() {
       final mmkvMulti = MMKVService().getString('multi_ai_settings') ?? '';
       expect(mmkvMulti.contains('sk-backup-deepseek-key-67890'), isFalse);
       expect(settingsService.aiSettings.apiKey, isEmpty);
+    });
+
+    group('backup provider credential destinations', () {
+      const providerId = 'restored-provider';
+      const savedKey = 'synthetic-local-provider-key';
+      const original = AIProviderSettings(
+        id: providerId,
+        name: 'Example Provider',
+        apiUrl: 'https://api.example.com/v1',
+        model: 'example-model',
+      );
+
+      setUp(() async {
+        await settingsService.saveMultiAISettings(
+          const MultiAISettings(
+            providers: [original],
+            currentProviderId: providerId,
+          ),
+        );
+        await APIKeyManager().saveProviderApiKey(providerId, savedKey);
+        addTearDown(() async {
+          await MMKVService().remove('multi_ai_settings');
+          await MMKVService().remove('ai_auto_enable_pending_v1');
+        });
+      });
+
+      final cases = [
+        (url: 'https://collector.example/v1', keep: false),
+        (url: 'http://api.example.com/v1', keep: false),
+        (url: 'https://api.example.com:8443/v1', keep: false),
+        (url: '', keep: false),
+        (url: '/v1', keep: false),
+        (url: 'https://[invalid', keep: false),
+        (url: 'https://api.example.com/v1', keep: true),
+        (url: ' HTTPS://API.EXAMPLE.COM:443/v1/chat/completions ', keep: true),
+      ];
+      for (final legacy in [false, true]) {
+        for (final entry in cases) {
+          test(
+            'restore ${legacy ? 'legacy' : 'current'} URL ${entry.url} '
+            '${entry.keep ? 'retains' : 'invalidates'} the saved key',
+            () async {
+              Future<String>? keyWhenPublished;
+              settingsService.addListener(() {
+                keyWhenPublished = APIKeyManager().getProviderApiKey(
+                  providerId,
+                );
+              });
+              await settingsService.restoreAllSettingsFromBackup({
+                'multi_ai_settings': {
+                  'currentProviderId': providerId,
+                  legacy ? 'availableProviders' : 'providers': [
+                    {...original.toJson(), 'apiUrl': entry.url},
+                  ],
+                },
+              });
+
+              expect(
+                settingsService.multiAISettings.currentProvider!.apiUrl,
+                entry.url,
+              );
+              expect(
+                await APIKeyManager().getProviderApiKey(providerId),
+                entry.keep ? savedKey : isEmpty,
+              );
+              expect(await keyWhenPublished, entry.keep ? savedKey : isEmpty);
+              expect(
+                (await SettingsService.create())
+                    .multiAISettings
+                    .currentProvider!
+                    .apiUrl,
+                entry.url,
+              );
+              expect(
+                await APIKeyManager().getProviderApiKey(providerId),
+                entry.keep ? savedKey : isEmpty,
+              );
+            },
+          );
+        }
+      }
+
+      test(
+        'restore invalidates an orphaned key without an approved destination',
+        () async {
+          await settingsService.saveMultiAISettings(const MultiAISettings());
+          await settingsService.restoreAllSettingsFromBackup({
+            'multi_ai_settings': {
+              'currentProviderId': providerId,
+              'providers': [original.toJson()],
+            },
+          });
+          expect(await APIKeyManager().getProviderApiKey(providerId), isEmpty);
+        },
+      );
+
+      test(
+        'restore checks every destination when provider IDs are duplicated',
+        () async {
+          await settingsService.restoreAllSettingsFromBackup({
+            'multi_ai_settings': {
+              'currentProviderId': providerId,
+              'providers': [
+                original.toJson(),
+                {
+                  ...original.toJson(),
+                  'apiUrl': 'https://collector.example/v1',
+                },
+              ],
+            },
+          });
+          expect(await APIKeyManager().getProviderApiKey(providerId), isEmpty);
+        },
+      );
+
+      test(
+        'restore uses an imported key after the destination changes',
+        () async {
+          await settingsService.restoreAllSettingsFromBackup({
+            'multi_ai_settings': {
+              'currentProviderId': providerId,
+              'providers': [
+                {
+                  ...original.toJson(),
+                  'apiUrl': 'https://collector.example/v1',
+                  'apiKey': 'synthetic-imported-provider-key',
+                },
+              ],
+            },
+          });
+          expect(
+            await APIKeyManager().getProviderApiKey(providerId),
+            'synthetic-imported-provider-key',
+          );
+          expect(
+            settingsService.multiAISettings.currentProvider!.apiKey,
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'restore aborts before publishing a redirect if key removal fails',
+        () async {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(
+            const MethodChannel(
+              'plugins.it_nomads.com/flutter_secure_storage',
+            ),
+            (call) async {
+              if (call.method == 'read') {
+                return jsonEncode({providerId: savedKey});
+              }
+              if (call.method == 'write') {
+                throw PlatformException(code: 'storage-unavailable');
+              }
+              return null;
+            },
+          );
+          await expectLater(
+            settingsService.restoreAllSettingsFromBackup({
+              'multi_ai_settings': {
+                'currentProviderId': providerId,
+                'providers': [
+                  {
+                    ...original.toJson(),
+                    'apiUrl': 'https://collector.example/v1',
+                  },
+                ],
+              },
+            }),
+            throwsA(isA<PlatformException>()),
+          );
+          expect(
+            settingsService.multiAISettings.currentProvider!.apiUrl,
+            original.apiUrl,
+          );
+          expect(
+            (await SettingsService.create())
+                .multiAISettings
+                .currentProvider!
+                .apiUrl,
+            original.apiUrl,
+          );
+        },
+      );
     });
 
     test(
