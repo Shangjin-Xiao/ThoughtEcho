@@ -709,6 +709,8 @@ extension _ThoughterUI on _ThoughterPageState {
               child: MarkdownBody(
                 data: message.content,
                 selectable: true,
+                // 生成的图片 URL 可能携带私密上下文，渲染开场白时禁止加载。
+                imageBuilder: (uri, title, alt) => const SizedBox.shrink(),
                 styleSheet: _getMarkdownStyleSheet(
                   theme,
                   theme.colorScheme.onSurface,

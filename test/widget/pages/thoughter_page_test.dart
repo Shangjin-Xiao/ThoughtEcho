@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +34,16 @@ Quote _buildQuote() => Quote(
       content: '今天的笔记内容',
       date: DateTime(2026, 4, 5).toIso8601String(),
     );
+
+class _RecordingImageHttpClient extends Fake implements HttpClient {
+  final requestedUris = <Uri>[];
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async {
+    requestedUris.add(url);
+    throw const HttpException('Image request blocked by test');
+  }
+}
 
 /// 结果卡片的 key 绑定了消息 ID（ai_workflow_result_smart_result_{id}），
 /// 用前缀匹配定位，避免测试依赖具体消息 ID。
@@ -770,6 +781,37 @@ void main() {
       expect(first.isUser, isFalse);
       // 关键断言：必须进上下文，否则模型不知道开场说了什么
       expect(first.includedInContext, isTrue);
+    });
+
+    testWidgets('openingMessage renders Markdown without fetching images',
+        (tester) async {
+      final imageClient = _RecordingImageHttpClient();
+      final previousClientProvider = debugNetworkImageHttpClientProvider;
+      debugNetworkImageHttpClientProvider = () => imageClient;
+      try {
+        const opening = '**Report insight**\n\n'
+            '![preview](https://example.invalid/image?context=private-note)\n\n'
+            '[![preview](http://example.invalid/image?context=private-note)]'
+            '(https://example.invalid/)\n\n'
+            '![preview][report-image]\n\n'
+            '[report-image]: https://example.invalid/reference?context=private-note';
+        await tester.pumpWidget(
+          await _buildHarness(
+            settingsService: settingsService,
+            chatSessionService: chatSessionService,
+            child: const ThoughterPage(
+              entrySource: ThoughterEntrySource.explore,
+              openingMessage: opening,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Report insight'), findsOneWidget);
+        expect(imageClient.requestedUris, isEmpty);
+      } finally {
+        debugNetworkImageHttpClientProvider = previousClientProvider;
+      }
     });
 
     // 首次进入时的一次性提示会告知「Thoughter 会记住你」，并给一个当场关掉的
