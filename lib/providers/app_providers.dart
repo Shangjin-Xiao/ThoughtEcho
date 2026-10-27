@@ -63,7 +63,7 @@ List<AgentTool> _buildAgentTools(
     ProposeNoteEditTool(db),
     RememberTool(memoryService),
     RecallTool(memoryService),
-    SessionSearchTool(chatSessionService),
+    SessionSearchTool(chatSessionService, db),
     AskUserTool(),
   ];
 }

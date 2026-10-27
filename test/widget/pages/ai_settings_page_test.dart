@@ -9,6 +9,7 @@ import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
+import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/ai_connection_tester.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
@@ -152,6 +153,45 @@ void main() {
       expect(find.text(l10n.aiServiceEmptyTitle), findsOneWidget);
       expect(find.text(l10n.ollamaCloudTipTitle), findsOneWidget);
       expect(find.text(l10n.ollamaCloudTipAction), findsOneWidget);
+    });
+
+    testWidgets(
+        'saved connection test uses its stored key and saved destination',
+        (tester) async {
+      const provider = AIProviderSettings(
+        id: 'saved-provider',
+        name: 'Saved provider',
+        apiUrl: 'https://original.example/v1',
+        model: 'test-model',
+      );
+      await APIKeyManager()
+          .saveProviderApiKey(provider.id, 'synthetic-stored-key');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(providers: [provider]),
+      );
+      final testedProviders = <AIProviderSettings>[];
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async {
+        testedProviders.add(provider);
+        return 'pong';
+      };
+      addTearDown(() => AIConnectionTester.testOverrideForTesting = null);
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
+      await tester.tap(find.byTooltip(l10n.moreOptions));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+
+      expect(testedProviders, hasLength(1));
+      expect(testedProviders.single.apiUrl, provider.apiUrl);
+      expect(testedProviders.single.apiKey, 'synthetic-stored-key');
     });
 
     testWidgets(

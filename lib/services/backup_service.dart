@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/biometric_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/utils/backup_media_processor.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -11,6 +12,7 @@ import 'package:thoughtecho/utils/zip_stream_processor.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/path_security_utils.dart';
 import 'package:thoughtecho/utils/device_memory_manager.dart';
+import 'package:thoughtecho/utils/localization_resolver.dart';
 import 'package:thoughtecho/models/import_cleanup_stats.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'package:thoughtecho/services/media_sync_manifest.dart';
@@ -53,6 +55,8 @@ class BackupService {
 
   /// 导出所有应用数据（增强版，支持大文件安全处理）
   ///
+  /// 备份包含隐藏笔记，启用身份验证保护时必须先验证，失败则不导出任何数据。
+  ///
   /// [includeMediaFiles] - 是否在备份中包含媒体文件（图片等）
   /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则创建在临时目录
   /// [onProgress] - 进度回调函数，接收 (current, total) 参数
@@ -65,6 +69,18 @@ class BackupService {
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
   }) async {
+    cancelToken?.throwIfCancelled();
+    // 在读取或写出任何备份数据前统一验证，覆盖备份页面和局域网同步等调用方。
+    if (_settingsService.requireBiometricForHidden) {
+      final l10n = resolveAppLocalizations(_settingsService.localeCode);
+      final authenticated = await BiometricService().authenticate(
+        localizedReason: l10n.biometricAuthReason,
+      );
+      if (!authenticated) {
+        throw StateError(l10n.biometricAuthFailed);
+      }
+    }
+
     // 预先检查内存状态
     final memoryManager = DeviceMemoryManager();
     final memoryPressure = await memoryManager.getMemoryPressureLevel();

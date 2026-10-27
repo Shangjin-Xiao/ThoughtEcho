@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:openai_dart/openai_dart.dart' as openai;
 
 import '../models/ai_provider_settings.dart';
+import '../utils/ai_endpoint_security.dart';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
 
@@ -205,6 +206,10 @@ class OpenAIStreamService extends ChangeNotifier {
     Duration timeout = const Duration(minutes: 3),
   }) {
     final normalizedUrl = normalizeOpenAIBaseUrl(provider.apiUrl);
+    // Restored settings bypass the editor's endpoint validation.
+    if (!isSecureAiEndpoint(Uri.parse(normalizedUrl))) {
+      throw const FormatException('非安全URL: 公网请求必须使用 HTTPS');
+    }
 
     // 构建请求头（排除 Content-Type，由 http 包自动处理）
     final headers = Map<String, String>.from(provider.buildHeaders())

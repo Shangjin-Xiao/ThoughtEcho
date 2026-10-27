@@ -6,6 +6,7 @@ import 'package:thoughtecho/models/chat_message.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/session_search_tool.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -15,20 +16,33 @@ void main() {
   group('SessionSearchTool', () {
     late ChatSessionService sessions;
     late SessionSearchTool tool;
+    late Database notes;
 
     setUp(() async {
       sessions = ChatSessionService(databasePath: inMemoryDatabasePath);
       await sessions.init();
-      tool = SessionSearchTool(sessions);
+      notes = await openDatabase(inMemoryDatabasePath, singleInstance: false);
+      await notes.execute(
+        'CREATE TABLE quotes (id TEXT PRIMARY KEY, is_deleted INTEGER DEFAULT 0)',
+      );
+      await notes.execute(
+        'CREATE TABLE quote_tags (quote_id TEXT, tag_id TEXT)',
+      );
+      DatabaseService.setTestDatabase(notes);
+      tool = SessionSearchTool(sessions, DatabaseService.forTesting());
     });
 
     tearDown(() async {
       await sessions.close();
+      await notes.close();
+      DatabaseService.clearTestDatabase();
     });
 
-    Future<String> seedSession(String title, String messageContent) async {
+    Future<String> seedSession(String title, String messageContent,
+        {String? noteId}) async {
       final session = await sessions.createSession(
-        sessionType: 'agent',
+        sessionType: noteId == null ? 'agent' : 'note',
+        noteId: noteId,
         title: title,
       );
       await sessions.addMessage(
@@ -105,6 +119,60 @@ void main() {
       final hits = (payload['sessions'] as List).cast<Map<String, Object?>>();
       expect(hits.length, lessThanOrEqualTo(SessionSearchTool.maxLimit));
       expect(hits, hasLength(3));
+    });
+
+    test('only returns sessions with a currently visible bound note', () async {
+      await notes.insert('quotes', {'id': 'visible-note'});
+      final freeId = await seedSession('Free alpha', 'Free alpha discussion');
+      final boundId = await seedSession('Bound alpha', 'Synthetic alpha body',
+          noteId: 'visible-note');
+
+      var payload = await search(const {'query': 'alpha'});
+      expect(
+        (payload['sessions'] as List).map((hit) => hit['session_id']),
+        unorderedEquals([freeId, boundId]),
+      );
+
+      await notes.insert('quote_tags', {
+        'quote_id': 'visible-note',
+        'tag_id': DatabaseService.hiddenTagId,
+      });
+      payload = await search(const {'query': 'alpha'});
+      expect(payload['count'], 1);
+      expect((payload['sessions'] as List).single['session_id'], freeId);
+      expect(jsonEncode(payload), isNot(contains('Synthetic alpha body')));
+      expect(jsonEncode(payload), isNot(contains('Bound alpha')));
+      expect(jsonEncode(payload), isNot(contains('visible-note')));
+
+      await notes.insert('quotes', {'id': 'deleted-note', 'is_deleted': 1});
+      await seedSession('Deleted alpha', 'Deleted alpha body',
+          noteId: 'deleted-note');
+      await seedSession('Missing alpha', 'Missing alpha body',
+          noteId: 'missing-note');
+
+      await notes.delete('quote_tags');
+      payload = await search(const {'query': 'alpha'});
+      expect(
+        (payload['sessions'] as List).map((hit) => hit['session_id']),
+        unorderedEquals([freeId, boundId]),
+      );
+    });
+
+    test('denies session results when note visibility cannot be checked',
+        () async {
+      await seedSession('Bound alpha', 'Synthetic protected alpha body',
+          noteId: 'protected-note');
+      await notes.execute('DROP TABLE quote_tags');
+
+      final result = await tool.execute(ToolCall(
+        id: 'unavailable-visibility',
+        name: tool.name,
+        arguments: {'query': 'alpha'},
+      ));
+
+      expect(result.isError, isTrue);
+      expect(result.content, isNot(contains('Synthetic protected alpha body')));
+      expect(result.content, isNot(contains('protected-note')));
     });
 
     test('空 query 直接报错，不去捞全部会话', () async {

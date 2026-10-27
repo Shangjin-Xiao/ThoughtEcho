@@ -48,6 +48,34 @@ void main() {
       expect(info['download'], true);
     });
 
+    test('handlePrepareUpload rejects without an approval handler', () async {
+      await expectLater(
+        controller.handlePrepareUpload({
+          'info': {'alias': 'Test Sender'},
+          'files': {
+            'file-1': {
+              'id': 'file-1',
+              'fileName': 'package.zip',
+              'size': 4,
+              'fileType': 'application/zip',
+            },
+          },
+        }),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('接收端已拒绝'),
+          ),
+        ),
+      );
+      expect(controller.sessions.values.single.fileTokens, isNull);
+      expect(
+        controller.sessions.values.single.status,
+        SessionStatus.canceledByReceiver,
+      );
+    });
+
     test('handlePrepareUpload creates a session and approves it', () async {
       final requestData = {
         'info': {
@@ -71,7 +99,7 @@ void main() {
       };
 
       final controllerWithApproval = ReceiveController(
-        consumePreApproval: (fp) => true, // pre-approved
+        onApprovalNeeded: (_, __, ___) async => true,
       );
 
       final response =
@@ -113,7 +141,6 @@ void main() {
       };
 
       final controllerRejecting = ReceiveController(
-        consumePreApproval: (fp) => false,
         onApprovalNeeded: (sessionId, totalBytes, senderAlias) async => false,
       );
 
@@ -149,7 +176,7 @@ void main() {
       };
 
       final controllerWithApproval = ReceiveController(
-        consumePreApproval: (fp) => true,
+        onApprovalNeeded: (_, __, ___) async => true,
       );
 
       final response =
@@ -189,7 +216,7 @@ void main() {
       bool fileReceived = false;
       int bytesReceived = 0;
       final controllerForUpload = ReceiveController(
-        consumePreApproval: (fp) => true,
+        onApprovalNeeded: (_, __, ___) async => true,
         onFileReceived: (path) => fileReceived = true,
         onReceiveProgress: (received, total) => bytesReceived = received,
       );
@@ -241,7 +268,6 @@ void main() {
       };
 
       final controllerError = ReceiveController(
-        consumePreApproval: (fp) => false,
         onApprovalNeeded: (sessionId, totalBytes, senderAlias) async {
           throw StateError('Simulated approval error');
         },

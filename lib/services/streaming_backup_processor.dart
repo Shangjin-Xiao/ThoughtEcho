@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../utils/app_logger.dart';
 import '../utils/path_security_utils.dart';
+import 'media_sync_manifest.dart';
 
 /// 备份文件后台处理器
 ///
@@ -120,13 +121,17 @@ class StreamingBackupProcessor {
 
       if (extractMediaFiles) {
         for (final file in archive) {
-          if (!file.isFile || file.name == dataFile.name) continue;
+          if (!file.isFile ||
+              file.isSymbolicLink ||
+              file.name == dataFile.name) {
+            continue;
+          }
 
           try {
             final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
             final platformRelativePath = posixName.replaceAll('/', p.separator);
             final safeRelativePath =
-                _normalizeSafeRelativePath(platformRelativePath);
+                _normalizeSafeMediaPath(platformRelativePath);
             if (safeRelativePath == null) continue;
 
             final targetPath = p.join(appDirectoryPath, safeRelativePath);
@@ -134,6 +139,17 @@ class StreamingBackupProcessor {
               targetPath,
               appDirectoryPath,
             );
+            // Lexical containment alone cannot prevent writes through links.
+            var currentPath = appDirectoryPath;
+            for (final segment in p.split(safeRelativePath)) {
+              currentPath = p.join(currentPath, segment);
+              if (FileSystemEntity.isLinkSync(currentPath)) {
+                throw FileSystemException(
+                  'Symbolic links are not allowed in backup media paths',
+                  currentPath,
+                );
+              }
+            }
             Directory(p.dirname(targetPath)).createSync(recursive: true);
             final outputStream = OutputFileStream(targetPath);
             try {
@@ -197,7 +213,7 @@ class StreamingBackupProcessor {
     throw Exception('无法识别的备份文件格式');
   }
 
-  static String? _normalizeSafeRelativePath(String relativePath) {
+  static String? _normalizeSafeMediaPath(String relativePath) {
     final normalized = p.normalize(relativePath);
 
     if (normalized.isEmpty || normalized == '.' || normalized == p.separator) {
@@ -209,7 +225,25 @@ class StreamingBackupProcessor {
     }
 
     final segments = p.split(normalized);
-    if (segments.any((segment) => segment == '..' || segment.isEmpty)) {
+    // Reuse the media inventory's folder contract. Never extract databases or
+    // other application files, even when their paths are inside Documents.
+    if (segments.length < 3 ||
+        segments.first != 'media' ||
+        MediaSyncManifest.normalizeRelativePath(
+              p.joinAll(segments.skip(1)),
+            ) ==
+            null) {
+      return null;
+    }
+
+    // Windows treats colons and trailing dots/spaces specially. Reject these
+    // aliases on every platform so a backup has the same write scope everywhere.
+    if (segments.any((segment) =>
+        segment == '..' ||
+        segment.isEmpty ||
+        segment.contains(':') ||
+        segment.endsWith('.') ||
+        segment.endsWith(' '))) {
       return null;
     }
 
