@@ -708,6 +708,8 @@ extension _ThoughterUI on _ThoughterPageState {
             Expanded(
               child: MarkdownBody(
                 data: message.content,
+                // Opening content can also be model-generated; never load images.
+                imageBuilder: (uri, title, alt) => const SizedBox.shrink(),
                 selectable: true,
                 styleSheet: _getMarkdownStyleSheet(
                   theme,
@@ -816,6 +818,8 @@ extension _ThoughterUI on _ThoughterPageState {
               data: isStreaming
                   ? '${message.content}$_kStreamingCursor'
                   : message.content,
+              // Generated image URLs may contain private note data.
+              imageBuilder: (uri, title, alt) => const SizedBox.shrink(),
               // 流式过程中不开可选：selectable 会把每个块换成 SelectableText，
               // 各自带手势识别和 selection registrar，而整篇 markdown 每
               // 50ms 就要重建一次——回答越长，每次重建越贵，最后 UI 线程被

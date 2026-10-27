@@ -288,6 +288,9 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                         child: SingleChildScrollView(
                           child: MarkdownBody(
                             data: thinkingText,
+                            // Reasoning is untrusted model output too.
+                            imageBuilder: (uri, title, alt) =>
+                                const SizedBox.shrink(),
                             // 推理还在流的时候不开可选：selectable 会给每
                             // 个块套 SelectableText，而这段文字每来一批
                             // token 就整篇重建一次，越想越贵。想完就恢复。

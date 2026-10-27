@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,16 @@ import 'package:thoughtecho/widgets/ai/experimental_badge.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_harness.dart';
+
+class _RecordingImageHttpClient extends Fake implements HttpClient {
+  final requestedUrls = <Uri>[];
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async {
+    requestedUrls.add(url);
+    throw const SocketException('Image requests are blocked in tests');
+  }
+}
 
 Quote _buildQuote() => Quote(
       id: 'note-1',
@@ -718,6 +729,76 @@ void main() {
           .clearAccessibilityFeaturesTestValue();
       await TestHarness.tearDown();
     });
+
+    for (final view in ['opening', 'complete', 'streaming', 'reasoning']) {
+      testWidgets('$view assistant Markdown does not fetch images',
+          (tester) async {
+        final client = _RecordingImageHttpClient();
+        debugNetworkImageHttpClientProvider = () => client;
+        addTearDown(() => debugNetworkImageHttpClientProvider = null);
+
+        const markdown = '## Summary\n\n'
+            'Safe **analysis** and [source](https://example.invalid/read).\n\n'
+            '![inline](https://example.invalid/image?context=synthetic-private)\n\n'
+            '![reference][image]\n\n'
+            '[![linked](http://example.invalid/image?context=synthetic-private)]'
+            '(https://example.invalid/read)\n\n'
+            '[image]: https://example.invalid/reference?context=synthetic-private';
+        final now = DateTime(2026, 9, 1);
+        final session = ChatSession(
+          id: 'image-session',
+          sessionType: 'agent',
+          title: 'Image safety',
+          createdAt: now,
+          lastActiveAt: now,
+        );
+        chatSessionService.seedSession(session, [
+          if (view != 'opening')
+            app_chat.ChatMessage(
+              id: 'user',
+              content: 'Summarize my notes',
+              isUser: true,
+              timestamp: now,
+            ),
+          app_chat.ChatMessage(
+            id: 'assistant',
+            content: view == 'reasoning' ? 'Answer' : markdown,
+            isUser: false,
+            timestamp: now,
+            state: view == 'streaming'
+                ? app_chat.MessageState.responding
+                : app_chat.MessageState.complete,
+            thinkingChunks: view == 'reasoning' ? [markdown] : const [],
+          ),
+        ]);
+
+        await tester.pumpWidget(
+          await _buildHarness(
+            settingsService: settingsService,
+            chatSessionService: chatSessionService,
+            child: ThoughterPage(session: session),
+          ),
+        );
+        await tester.pumpAndSettle();
+        if (view == 'reasoning') {
+          await tester.tap(find.text(_l10n(tester).thinking));
+          await tester.pumpAndSettle();
+        }
+
+        debugNetworkImageHttpClientProvider = null;
+
+        expect(find.text('Summary', findRichText: true), findsWidgets);
+        expect(
+          find.textContaining('Safe analysis', findRichText: true),
+          findsWidgets,
+        );
+        expect(
+          client.requestedUrls,
+          isEmpty,
+          reason: 'Displaying model output must not send note data to a URL',
+        );
+      });
+    }
 
     testWidgets('explore entry defaults to agent without mode toggle',
         (tester) async {
