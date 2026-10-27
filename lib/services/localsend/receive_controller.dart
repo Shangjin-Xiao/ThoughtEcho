@@ -26,8 +26,6 @@ class ReceiveController {
     int totalBytes,
     String senderAlias,
   )? onApprovalNeeded; // 需要用户审批时回调，true 继续 false 取消
-  final bool Function(String? fingerprint)?
-      consumePreApproval; // 若返回true表示已存在预批准并已消费
   final Map<String, ReceiveSession> _sessions = {};
   final Duration sessionTimeout = const Duration(minutes: 2);
   Timer? _gcTimer;
@@ -38,7 +36,6 @@ class ReceiveController {
     this.onReceiveProgress,
     this.onSessionCreated,
     this.onApprovalNeeded,
-    this.consumePreApproval,
   });
 
   void _startGcTimer() {
@@ -118,45 +115,39 @@ class ReceiveController {
         totalBytes += f.size;
       }
 
-      // 预批准检测（ handshake 已批准 ）
+      // Fingerprints are public metadata, not authorization. Approve this
+      // preparation and its file list even when a sync intent was approved.
       bool approved = false;
-      final senderFp = prepareRequest.info.fingerprint;
-      if (consumePreApproval?.call(senderFp) == true) {
-        approved = true;
-      } else {
-        // 通知 UI 有新会话（等待审批）
+      // 通知 UI 有新会话（等待审批）
+      try {
+        onSessionCreated?.call(
+          sessionId,
+          totalBytes,
+          prepareRequest.info.alias,
+        );
+      } catch (e, stack) {
+        logError(
+          '[ReceiveController] onSessionCreated callback failed',
+          error: e,
+          stackTrace: stack,
+          source: 'LocalSend',
+        );
+      }
+
+      if (onApprovalNeeded != null) {
         try {
-          onSessionCreated?.call(
+          approved = await onApprovalNeeded!(
             sessionId,
             totalBytes,
             prepareRequest.info.alias,
           );
         } catch (e, stack) {
           logError(
-            '[ReceiveController] onSessionCreated callback failed',
+            '[ReceiveController] onApprovalNeeded callback failed',
             error: e,
             stackTrace: stack,
             source: 'LocalSend',
           );
-        }
-
-        approved = true; // 默认通过除非显式需要用户确认
-        if (onApprovalNeeded != null) {
-          try {
-            approved = await onApprovalNeeded!(
-              sessionId,
-              totalBytes,
-              prepareRequest.info.alias,
-            );
-          } catch (e, stack) {
-            logError(
-              '[ReceiveController] onApprovalNeeded callback failed',
-              error: e,
-              stackTrace: stack,
-              source: 'LocalSend',
-            );
-            approved = false;
-          }
         }
       }
 
