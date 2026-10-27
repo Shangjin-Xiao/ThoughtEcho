@@ -17,9 +17,7 @@ class LocalSendServer {
   late ReceiveController _receiveController;
   bool _isRunning = false;
   int _port = defaultPort;
-  final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
   final Set<String> _cancelledIntentIds = {};
-  final Map<String, String> _approvedIntentFingerprints = {};
 
   /// 控制消息请求体最大字节数（不包含文件上传端点）
   static const int _maxRequestBodyBytes = 64 * 1024; // 64 KB
@@ -68,14 +66,6 @@ class LocalSendServer {
       onReceiveProgress: onReceiveProgress,
       onSessionCreated: onReceiveSessionCreated,
       onApprovalNeeded: onApprovalNeeded,
-      consumePreApproval: (fp) {
-        if (fp == null) return false;
-        if (_preApprovedFingerprints.remove(fp)) {
-          _approvedIntentFingerprints.removeWhere((_, value) => value == fp);
-          return true; // consumed
-        }
-        return false;
-      },
     );
     // ensure fingerprint ready before advertising info endpoint
     await _receiveController.initializeFingerprint();
@@ -229,11 +219,6 @@ class LocalSendServer {
               _cancelledIntentIds.remove(_cancelledIntentIds.first);
             }
             _cancelledIntentIds.add(intentId);
-            final approvedFingerprint =
-                _approvedIntentFingerprints.remove(intentId);
-            if (approvedFingerprint != null) {
-              _preApprovedFingerprints.remove(approvedFingerprint);
-            }
             _onApprovalCancelled?.call(intentId);
             responseData = {'ok': true};
           }
@@ -250,7 +235,6 @@ class LocalSendServer {
           } catch (e) {
             logDebug('[LocalSendServer] JSON decode failed: $e');
           }
-          final senderFp = req['fingerprint'] as String?;
           final senderAlias = req['alias'] as String? ?? '对方';
           final requestedIntentId = req['intentId'];
           final tempId =
@@ -293,10 +277,6 @@ class LocalSendServer {
           if (_cancelledIntentIds.remove(tempId)) {
             approved = false;
             mediaManifest = null;
-          }
-          if (approved && senderFp != null) {
-            _preApprovedFingerprints.add(senderFp);
-            _approvedIntentFingerprints[tempId] = senderFp;
           }
           responseData = {
             'approved': approved,
