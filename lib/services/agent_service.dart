@@ -10,6 +10,7 @@ import '../models/agent_memory.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/chat_message.dart' as app_chat;
 import '../models/note_proposal_artifact.dart';
+import '../utils/ai_endpoint_security.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
 import '../utils/report_period_utils.dart';
@@ -1058,6 +1059,12 @@ class AgentService extends ChangeNotifier {
   }
 
   openai.OpenAIConfig _buildOpenAIConfig(AIProviderSettings provider) {
+    final normalizedUrl = normalizeOpenAIBaseUrl(provider.apiUrl);
+    // Apply the same transport policy as the other AI request paths.
+    if (!isSecureAiEndpoint(Uri.parse(normalizedUrl))) {
+      throw const FormatException('非安全URL: 公网请求必须使用 HTTPS');
+    }
+
     final headers = Map<String, String>.from(provider.buildHeaders())
       ..removeWhere((key, _) => key.toLowerCase() == 'content-type');
 
@@ -1068,7 +1075,7 @@ class AgentService extends ChangeNotifier {
     }
 
     return openai.OpenAIConfig(
-      baseUrl: normalizeOpenAIBaseUrl(provider.apiUrl),
+      baseUrl: normalizedUrl,
       authProvider: provider.apiKey.isNotEmpty
           ? openai.ApiKeyProvider(provider.apiKey)
           : null,
