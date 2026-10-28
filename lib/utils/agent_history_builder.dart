@@ -285,8 +285,10 @@ class AgentHistoryBuilder {
     return _truncate('$askUserHeader${parts.join('；')}。', cap);
   }
 
+  static final RegExp _whitespaceRegex = RegExp(r'\s+');
+
   static String _truncate(String text, int cap) {
-    final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final normalized = text.replaceAll(_whitespaceRegex, ' ').trim();
     if (normalized.length <= cap) return normalized;
     return '${normalized.substring(0, cap)}…（已截断）';
   }
