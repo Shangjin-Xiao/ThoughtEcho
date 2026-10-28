@@ -118,7 +118,7 @@ Future<Map<String, dynamic>?> _fetchFromApiNinjas(
     return null;
   }
 
-  var apiUrl = 'https://api.api-ninjas.com/v2/randomquotes';
+  var apiUrl = ApiService.apiNinjasUrl;
   final supportedCategories = apiNinjasCategories
       .where((category) => ApiService.apiNinjasCategoryKeys.contains(category))
       .toList(growable: false);
