@@ -25,7 +25,8 @@ void main() {
       AgentHistoryBuilder.build(messages);
     }
     historyStopwatch.stop();
-    print('AgentHistoryBuilder.build $iterations times elapsed: ${historyStopwatch.elapsedMilliseconds} ms');
+    print(
+        'AgentHistoryBuilder.build $iterations times elapsed: ${historyStopwatch.elapsedMilliseconds} ms');
 
     // 2. compareVersions benchmark
     final versionStopwatch = Stopwatch()..start();
@@ -34,7 +35,8 @@ void main() {
       compareVersions('2.0.0', 'v2.0.0-rc.1');
     }
     versionStopwatch.stop();
-    print('compareVersions $iterations times elapsed: ${versionStopwatch.elapsedMilliseconds} ms');
+    print(
+        'compareVersions $iterations times elapsed: ${versionStopwatch.elapsedMilliseconds} ms');
 
     // 3. AIPromptManager formatLocalReportInsight benchmark
     final promptManager = AIPromptManager();
@@ -52,7 +54,8 @@ void main() {
       );
     }
     insightStopwatch.stop();
-    print('formatLocalReportInsight $iterations times elapsed: ${insightStopwatch.elapsedMilliseconds} ms');
+    print(
+        'formatLocalReportInsight $iterations times elapsed: ${insightStopwatch.elapsedMilliseconds} ms');
 
     // Verify correct logic output
     expect(compareVersions('v1.2.3', '1.2.3'), 0);
