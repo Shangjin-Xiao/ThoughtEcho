@@ -331,3 +331,8 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** In Dart, calling `RegExp(...)` inside high-frequency utility methods like `plainTextOf`, `apply`, or `alignPunctuationStyle` causes the regular expression to be repeatedly allocated and compiled. For a text editing tool, this introduces significant garbage collection pressure and CPU overhead when called heavily.
 **Action:** Extracted the regular expressions for trailing newline (`_trailingNewlineRegex`), curly quotes (`_curlyQuotesRegex`), and straight quotes (`_straightQuotesRegex`) as `static final RegExp` members at the top of the `QuillStructuredEdit` class. This allows them to be compiled exactly once and reused, which benchmarks showed reduces execution time by over 70% in high-volume scenarios. Added `test/performance/quill_structured_edit_benchmark_test.dart` to benchmark execution performance with non-flaky bounds.
 
+## 2026-11-02 - 优化 AgentHistoryBuilder、version_utils 与 AIPromptManager 中正则表达式重复编译性能
+
+**Learning:** 在高频文本处理、历史对话摘要、版本号比较以及系统提示词文本处理方法（如 `AgentHistoryBuilder._truncate`、`compareVersions` 与 `AIPromptManager.formatLocalReportInsight`）中，内联调用 `RegExp(...)` 会在每次调用时重新分配和编译正则表达式对象。将其提取为静态/文件级只读变量可在保持现有代码语义与行为完全一致的前提下，消除重复正则编译和垃圾回收（GC）开销。
+
+**Action:** 将 `AgentHistoryBuilder` 中的 `_whitespaceRegex`、`version_utils.dart` 中的 `_vPrefixRegex` 与 `_plusMinusRegex`，以及 `AIPromptManager` 中的 `_leadingHashRegex` 提取为 `static final RegExp` 或 `final RegExp` 只读对象，并在新增的 `test/performance/utils_regex_benchmark_test.dart` 性能基准测试中验证通过。
