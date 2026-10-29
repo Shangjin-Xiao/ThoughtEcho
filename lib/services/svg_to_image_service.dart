@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart' as flutter_svg;
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/svg_rendering_safety.dart';
 import 'svg_offscreen_renderer.dart';
 import 'svg_raster_cache_service.dart';
 
@@ -190,6 +191,8 @@ class SvgToImageService {
       // 1MB限制
       throw Exception('SVG内容过大，超过1MB限制');
     }
+
+    validateSvgDashSafety(svgContent);
 
     // 基本的安全检查
     final dangerousElements = ['<script', '<iframe', '<object', '<embed'];

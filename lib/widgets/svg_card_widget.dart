@@ -5,6 +5,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/generated_card.dart';
 import '../theme/app_semantic_colors.dart';
 import '../utils/app_logger.dart';
+import '../utils/svg_rendering_safety.dart';
 import 'app_snackbar.dart';
 import '../theme/theme_style.dart';
 
@@ -77,6 +78,15 @@ class SVGCardWidget extends StatelessWidget {
       }
 
       if (!svgContent.contains('<svg') || !svgContent.contains('</svg>')) {
+        return _buildErrorWidget(
+          context,
+          AppLocalizations.of(context).svgContentInvalidFormat,
+        );
+      }
+
+      try {
+        validateSvgDashSafety(svgContent);
+      } on FormatException {
         return _buildErrorWidget(
           context,
           AppLocalizations.of(context).svgContentInvalidFormat,

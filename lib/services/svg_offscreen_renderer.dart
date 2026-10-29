@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/rendering.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/svg_rendering_safety.dart';
 import 'svg_to_image_service.dart';
 
 /// 使用 Overlay + Offstage + RepaintBoundary 进行真实渲染，获取与预览一致的位图。
@@ -26,6 +27,8 @@ class SvgOffscreenRenderer {
     bool devicePixelRatioAware = true,
     double borderRadius = 0,
   }) async {
+    validateSvgDashSafety(svgContent);
+
     // 检查context是否有效
     if (context is Element) {
       if (!context.mounted) {
