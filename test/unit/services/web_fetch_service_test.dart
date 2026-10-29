@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/web_fetch_service.dart';
 
@@ -7,6 +9,83 @@ void main() {
 
     setUp(() {
       service = WebFetchService();
+    });
+
+    group('connection safety', () {
+      late HttpServer server;
+      late _LocalSocketOverrides sockets;
+      final requests = <HttpRequest>[];
+      var redirectLocation = '';
+
+      setUp(() async {
+        requests.clear();
+        redirectLocation = '';
+        server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        sockets = _LocalSocketOverrides(server.port);
+        server.listen((request) async {
+          requests.add(request);
+          request.response.persistentConnection = false;
+          if (request.uri.path == '/redirect') {
+            request.response.statusCode = HttpStatus.found;
+            request.response.headers.set('location', redirectLocation);
+          } else {
+            request.response.headers.contentType = ContentType.html;
+            request.response.write('<title>Example</title><p>Public page</p>');
+          }
+          await request.response.close();
+        });
+      });
+
+      tearDown(() => server.close(force: true));
+
+      for (final method in ['GET', 'HEAD']) {
+        Future<Object> fetch(String url) => method == 'GET'
+            ? service.fetchText(url)
+            : service.isUrlAccessible(url);
+
+        test('$method connects to validated IPs on every redirect hop',
+            () async {
+          redirectLocation = 'http://93.184.216.35/page';
+          final result = await HttpOverrides.runWithHttpOverrides(
+            () => IOOverrides.runWithIOOverrides(
+              () => fetch('http://93.184.216.34/redirect'),
+              sockets,
+            ),
+            _DirectHttpOverrides(),
+          );
+
+          expect(result, method == 'GET' ? contains('Public page') : isTrue);
+          // A String here would let the socket layer resolve the host again.
+          expect(sockets.targets, hasLength(2));
+          expect(sockets.targets, everyElement(isA<InternetAddress>()));
+          expect(
+            sockets.targets.cast<InternetAddress>().map((ip) => ip.address),
+            ['93.184.216.34', '93.184.216.35'],
+          );
+          expect(requests.map((r) => r.method), [method, method]);
+          expect(requests.map((r) => r.headers.host),
+              ['93.184.216.34', '93.184.216.35']);
+        });
+
+        test('$method blocks a redirect to a private service', () async {
+          redirectLocation = 'http://127.0.0.1/private';
+          final operation = HttpOverrides.runWithHttpOverrides(
+            () => IOOverrides.runWithIOOverrides(
+              () => fetch('http://93.184.216.34/redirect'),
+              sockets,
+            ),
+            _DirectHttpOverrides(),
+          );
+
+          if (method == 'GET') {
+            await expectLater(operation, throwsA(isA<Exception>()));
+          } else {
+            expect(await operation, isFalse);
+          }
+          expect(requests.map((r) => r.uri.path), ['/redirect']);
+          expect(sockets.targets, hasLength(1));
+        });
+      }
     });
 
     group('SSRF Protection', () {
@@ -68,4 +147,30 @@ void main() {
       });
     });
   });
+}
+
+// Keep the real HTTP client and substitute only the socket destination. These
+// tests never connect to the public fixture IPs or require external DNS.
+final class _LocalSocketOverrides extends IOOverrides {
+  final int serverPort;
+  final targets = <Object>[];
+
+  _LocalSocketOverrides(this.serverPort);
+
+  @override
+  Future<ConnectionTask<Socket>> socketStartConnect(
+    host,
+    int port, {
+    sourceAddress,
+    int sourcePort = 0,
+  }) {
+    targets.add(host as Object);
+    return super.socketStartConnect(InternetAddress.loopbackIPv4, serverPort);
+  }
+}
+
+class _DirectHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) =>
+      super.createHttpClient(context)..findProxy = (_) => 'DIRECT';
 }
