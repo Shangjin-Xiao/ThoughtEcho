@@ -151,12 +151,17 @@ class ReceiveController {
         }
       }
 
-      if (!approved) {
+      final currentSession = _sessions[sessionId];
+      if (!approved ||
+          currentSession == null ||
+          currentSession.status != SessionStatus.waiting) {
         // 标记取消
-        _sessions[sessionId] = session.copyWith(
-          status: SessionStatus.canceledByReceiver,
-          lastActivity: DateTime.now(),
-        );
+        if (currentSession != null) {
+          _sessions[sessionId] = currentSession.copyWith(
+            status: SessionStatus.canceledByReceiver,
+            lastActivity: DateTime.now(),
+          );
+        }
         logInfo('recv_prepare_rejected session=$sessionId',
             source: 'LocalSend');
         throw Exception('接收端已拒绝');
@@ -169,7 +174,7 @@ class ReceiveController {
         fileTokens[fileId] = uuid.v4();
       }
 
-      _sessions[sessionId] = session.copyWith(
+      _sessions[sessionId] = currentSession.copyWith(
         status: SessionStatus.sending,
         fileTokens: fileTokens,
         lastActivity: DateTime.now(),
@@ -209,10 +214,7 @@ class ReceiveController {
         'recv_upload_start session=$sessionId fileId=$fileId',
         source: 'LocalSend',
       );
-      final session = _sessions[sessionId];
-      if (session == null) {
-        throw Exception('Session not found');
-      }
+      final session = _requireSendingSession(sessionId);
       if (session.fileTokens?[fileId] != token) {
         throw Exception('Invalid token');
       }
@@ -254,15 +256,7 @@ class ReceiveController {
         final transformer = MimeMultipartTransformer(boundary);
         final parts = request.cast<List<int>>().transform(transformer);
         await for (final part in parts) {
-          final currentSession = _sessions[sessionId];
-          if (currentSession != null &&
-              currentSession.status == SessionStatus.canceledByReceiver) {
-            logWarning(
-              'recv_aborted_by_user session=$sessionId',
-              source: 'LocalSend',
-            );
-            throw Exception('接收已取消');
-          }
+          _requireSendingSession(sessionId);
           final headers = part.headers;
           final disposition = headers['content-disposition'] ?? '';
           if (!disposition.contains('filename=')) {
@@ -271,8 +265,10 @@ class ReceiveController {
             continue;
           }
           await for (final chunk in part) {
+            _requireSendingSession(sessionId);
             received += chunk.length;
             await raf.writeFrom(chunk);
+            _requireSendingSession(sessionId);
             // Report progress if we've received enough new bytes
             if (received - lastReportedBytes >= progressThreshold) {
               logDebug(
@@ -287,17 +283,10 @@ class ReceiveController {
       } else {
         // Raw body streaming
         await for (final chunk in request) {
-          final currentSession = _sessions[sessionId];
-          if (currentSession != null &&
-              currentSession.status == SessionStatus.canceledByReceiver) {
-            logWarning(
-              'recv_aborted_by_user session=$sessionId',
-              source: 'LocalSend',
-            );
-            throw Exception('接收已取消');
-          }
+          _requireSendingSession(sessionId);
           received += chunk.length;
           await raf.writeFrom(chunk);
+          _requireSendingSession(sessionId);
           // Report progress if we've received enough new bytes
           if (received - lastReportedBytes >= progressThreshold) {
             logDebug(
@@ -323,8 +312,10 @@ class ReceiveController {
         );
       }
 
-      // update session lastActivity
-      _sessions[sessionId] = session.copyWith(lastActivity: DateTime.now());
+      // Check after the final I/O and preserve the live session before dispatch.
+      final currentSession = _requireSendingSession(sessionId);
+      _sessions[sessionId] =
+          currentSession.copyWith(lastActivity: DateTime.now());
 
       if (onFileReceived != null) {
         onFileReceived!(tempFile.path);
@@ -386,6 +377,17 @@ class ReceiveController {
       }
       throw Exception('Upload failed: $e');
     }
+  }
+
+  ReceiveSession _requireSendingSession(String sessionId) {
+    final session = _sessions[sessionId];
+    if (session == null) {
+      throw Exception('Session not found');
+    }
+    if (session.status != SessionStatus.sending) {
+      throw Exception('接收已取消');
+    }
+    return session;
   }
 
   /// Get session info
