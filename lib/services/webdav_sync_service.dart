@@ -47,6 +47,50 @@ class _CorruptedRemoteSyncFileException implements Exception {
   String toString() => '云端同步文件损坏: $reason';
 }
 
+// A size rejection must fail sync, rather than archive and overwrite remote
+// data through the corrupted-file recovery path.
+class _RemoteSyncSizeLimitException extends StateError {
+  _RemoteSyncSizeLimitException() : super('云端同步文件超过 32 MiB，已停止同步');
+}
+
+class _RemoteSyncJsonOutput extends OutputMemoryStream {
+  void _checkAdditionalBytes(int count) {
+    if (length + count > WebDAVSyncService._maxRemoteSyncBytes) {
+      throw _RemoteSyncSizeLimitException();
+    }
+  }
+
+  @override
+  void writeByte(int value) {
+    _checkAdditionalBytes(1);
+    super.writeByte(value);
+  }
+
+  @override
+  void writeBytes(List<int> bytes, {int? length}) {
+    _checkAdditionalBytes(length ?? bytes.length);
+    super.writeBytes(bytes, length: length);
+  }
+
+  @override
+  void writeStream(InputStream stream) {
+    _checkAdditionalBytes(stream.length);
+    super.writeStream(stream);
+  }
+}
+
+class _RemoteSyncJsonSink extends ByteConversionSink {
+  _RemoteSyncJsonSink(this.output);
+
+  final _RemoteSyncJsonOutput output;
+
+  @override
+  void add(List<int> chunk) => output.writeBytes(chunk);
+
+  @override
+  void close() {}
+}
+
 class _RemoteMediaFileInfo {
   const _RemoteMediaFileInfo({this.length, this.etag});
 
@@ -76,6 +120,9 @@ class WebDAVSyncService extends ChangeNotifier {
   bool _hasPendingSync = false; // 是否有排队中的同步任务
   int _pendingSyncRetryCount = 0; // 失败后追加同步的重试计数（指数退避）
   static const int _maxPendingSyncRetries = 3;
+  // Sync ZIPs contain JSON only; media is transferred separately. Bound both
+  // archive parsing and expanded JSON before allocating strings or objects.
+  static const int _maxRemoteSyncBytes = 32 * 1024 * 1024;
   bool _isSyncExecuting = false; // 独占同步/上传互斥锁，防止并发重入
   String _lastSyncError = ''; // 最近一次失败的错误摘要（对用户安全）
 
@@ -470,7 +517,7 @@ class WebDAVSyncService extends ChangeNotifier {
             );
           }
           try {
-            remoteData = _decodeAndValidateRemoteSyncZip(bytes);
+            remoteData = await compute(_decodeAndValidateRemoteSyncZip, bytes);
           } on _CorruptedRemoteSyncFileException catch (e) {
             // 损坏的云端文件里没有任何可合并的数据，若继续抛错，每次同步都会
             // 卡在同一处、永远无法自愈。这里改为归档损坏文件并用本地数据重建。
@@ -848,19 +895,25 @@ class WebDAVSyncService extends ChangeNotifier {
   static Map<String, dynamic> decodeAndValidateRemoteSyncZipForTesting(
     List<int> bytes,
   ) =>
-      _instance._decodeAndValidateRemoteSyncZip(bytes);
+      _decodeAndValidateRemoteSyncZip(bytes);
 
-  Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
-    final Archive archive;
+  static Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
+    if (bytes.length > _maxRemoteSyncBytes) {
+      throw _RemoteSyncSizeLimitException();
+    }
+    final directory = ZipDirectory();
     try {
-      archive = ZipDecoder().decodeBytes(bytes);
+      // ZipDecoder eagerly expands Unix symlink entries. Read metadata only,
+      // then decompress just the selected JSON member under the output budget.
+      directory.read(InputMemoryStream(bytes));
     } catch (e) {
       throw _CorruptedRemoteSyncFileException('不是有效的 ZIP 文件 ($e)');
     }
 
-    ArchiveFile? dataJsonFile;
-    for (final file in archive) {
-      if (file.isFile && _isBackupDataEntryName(file.name)) {
+    ZipFile? dataJsonFile;
+    for (final header in directory.fileHeaders) {
+      final file = header.file;
+      if (file != null && _isBackupDataEntryName(file.filename)) {
         dataJsonFile = file;
         break;
       }
@@ -868,10 +921,33 @@ class WebDAVSyncService extends ChangeNotifier {
     if (dataJsonFile == null) {
       throw const _CorruptedRemoteSyncFileException('缺少 backup_data.json');
     }
+    if (dataJsonFile.uncompressedSize > _maxRemoteSyncBytes ||
+        dataJsonFile.header!.uncompressedSize > _maxRemoteSyncBytes) {
+      throw _RemoteSyncSizeLimitException();
+    }
 
     final Object? decoded;
     try {
-      decoded = json.decode(utf8.decode(dataJsonFile.content));
+      final output = _RemoteSyncJsonOutput();
+      if (dataJsonFile.compressionMethod == CompressionType.deflate) {
+        // archive 4.0.9's native decodeStream buffers all chunks before writing
+        // to OutputStream. Use dart:io's incremental sink to stop expansion as
+        // soon as the actual byte budget is exceeded, even with forged sizes.
+        final input = dataJsonFile.getStream(decompress: false);
+        final sink = ZLibCodec(raw: true)
+            .decoder
+            .startChunkedConversion(_RemoteSyncJsonSink(output));
+        while (!input.isEOS) {
+          sink.add(input.readBytes(1024).toUint8List());
+        }
+        sink.close();
+      } else {
+        // Stored and BZip2 entries write directly to the bounded output.
+        dataJsonFile.decompress(output);
+      }
+      decoded = json.decode(utf8.decode(output.getBytes()));
+    } on _RemoteSyncSizeLimitException {
+      rethrow;
     } catch (e) {
       throw _CorruptedRemoteSyncFileException('数据文件不是有效 JSON ($e)');
     }
@@ -911,7 +987,7 @@ class WebDAVSyncService extends ChangeNotifier {
     }
   }
 
-  void _validateRemoteSyncData(Map<String, dynamic> data) {
+  static void _validateRemoteSyncData(Map<String, dynamic> data) {
     final categories = data['categories'];
     final quotes = data['quotes'];
     if (categories is! List || quotes is! List) {
