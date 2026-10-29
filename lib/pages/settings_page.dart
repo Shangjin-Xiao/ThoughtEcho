@@ -300,11 +300,13 @@ class SettingsPageState extends State<SettingsPage> {
                     SwitchListTile(
                       title: Text(l10n.settingsUseLocationService),
                       subtitle: Text(
-                        locationService.hasLocationPermission
-                            ? (locationService.isLocationServiceEnabled
-                                ? l10n.settingsLocationEnabled
-                                : l10n.settingsLocationPermissionOnly)
-                            : l10n.settingsLocationNoPermission,
+                        !locationService.locationEnabled
+                            ? l10n.locationServiceDisabled
+                            : locationService.hasLocationPermission
+                                ? (locationService.isLocationServiceEnabled
+                                    ? l10n.settingsLocationEnabled
+                                    : l10n.settingsLocationPermissionOnly)
+                                : l10n.settingsLocationNoPermission,
                         style: TextStyle(
                           fontSize: 12,
                           color: locationService.hasLocationPermission &&
@@ -313,8 +315,7 @@ class SettingsPageState extends State<SettingsPage> {
                               : theme.colorScheme.error,
                         ),
                       ),
-                      value: locationService.hasLocationPermission &&
-                          locationService.isLocationServiceEnabled,
+                      value: locationService.locationEnabled,
                       onChanged: (value) async {
                         if (value) {
                           bool permissionGranted =
@@ -367,6 +368,15 @@ class SettingsPageState extends State<SettingsPage> {
                             return;
                           }
 
+                          try {
+                            await locationService.setLocationEnabled(true);
+                          } catch (_) {
+                            if (context.mounted) {
+                              AppSnackBar.error(
+                                  context, l10n.operationFailedSimple);
+                            }
+                            return;
+                          }
                           if (mounted && context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -412,6 +422,15 @@ class SettingsPageState extends State<SettingsPage> {
                             }
                           }
                         } else {
+                          try {
+                            await locationService.setLocationEnabled(false);
+                          } catch (_) {
+                            if (context.mounted) {
+                              AppSnackBar.error(
+                                  context, l10n.operationFailedSimple);
+                            }
+                            return;
+                          }
                           if (!mounted) return;
                           if (context.mounted) {
                             final scaffoldMessenger =

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -259,6 +260,30 @@ void main() {
       NetworkService.instanceForTesting = null;
       networkService = NetworkService.instance;
       await networkService.init();
+    });
+
+    test('GET cancellation reaches transport and suppresses retries', () async {
+      final started = Completer<void>();
+      final response = Completer<ResponseBody>();
+      var calls = 0;
+      networkService.generalDioForTesting.httpClientAdapter =
+          TestHttpClientAdapter((_) {
+        calls++;
+        started.complete();
+        return response.future;
+      });
+      final cancellation = CancelToken();
+      final request = networkService.get('https://example.invalid/reverse',
+          cancelToken: cancellation);
+      final cancelled = expectLater(
+          request,
+          throwsA(isA<DioException>()
+              .having((error) => error.type, 'type', DioExceptionType.cancel)));
+      await started.future;
+      cancellation.cancel();
+      await cancelled;
+      response.complete(ResponseBody.fromString('{}', 200));
+      expect(calls, 1);
     });
 
     test('get() should make GET request and return HttpResponse', () async {

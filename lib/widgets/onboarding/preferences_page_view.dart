@@ -38,10 +38,7 @@ class PreferencesPageView extends StatelessWidget {
           state: state,
           onPreferenceChanged: onPreferenceChanged,
         ),
-        _LocationSection(
-          state: state,
-          onPreferenceChanged: onPreferenceChanged,
-        ),
+        _LocationSection(onPreferenceChanged: onPreferenceChanged),
         _SentrySection(
           state: state,
           onPreferenceChanged: onPreferenceChanged,
@@ -119,11 +116,9 @@ class _StartPageSection extends StatelessWidget {
 /// 否则设置里显示已开启、实际拿不到位置，用户无从排查。
 class _LocationSection extends StatelessWidget {
   const _LocationSection({
-    required this.state,
     required this.onPreferenceChanged,
   });
 
-  final OnboardingState state;
   final void Function(String key, dynamic value) onPreferenceChanged;
 
   Future<void> _enableLocation(BuildContext context) async {
@@ -163,13 +158,21 @@ class _LocationSection extends StatelessWidget {
       return;
     }
 
+    try {
+      await locationService.setLocationEnabled(true);
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackBar.error(context, l10n.operationFailedSimple);
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    onPreferenceChanged('locationService', true);
     final position = await locationService.getCurrentLocation();
     if (!context.mounted) return;
     if (position != null) {
       AppSnackBar.success(context, l10n.locationServiceEnabledMsg);
     }
-
-    onPreferenceChanged('locationService', true);
   }
 
   @override
@@ -178,8 +181,7 @@ class _LocationSection extends StatelessWidget {
         OnboardingConfig.preferenceByKey(context, 'locationService');
     if (preference == null) return const SizedBox.shrink();
 
-    final value = state.getPreference<bool>('locationService') ??
-        preference.defaultValue as bool;
+    final value = context.watch<LocationService>().locationEnabled;
 
     return OnboardingSection(
       icon: Icons.place_outlined,
@@ -187,11 +189,21 @@ class _LocationSection extends StatelessWidget {
       description: preference.description,
       trailing: Switch(
         value: value,
-        onChanged: (newValue) {
+        onChanged: (newValue) async {
           if (newValue) {
-            _enableLocation(context);
+            await _enableLocation(context);
           } else {
+            final service = context.read<LocationService>();
+            final save = service.setLocationEnabled(false);
             onPreferenceChanged('locationService', false);
+            try {
+              await save;
+            } catch (_) {
+              if (context.mounted) {
+                AppSnackBar.error(context,
+                    AppLocalizations.of(context).operationFailedSimple);
+              }
+            }
           }
         },
       ),

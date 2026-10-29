@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart' show CancelToken;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/network_service.dart';
@@ -26,6 +27,7 @@ class _FakeNetworkService implements NetworkService {
     String url, {
     Map<String, String>? headers,
     int? timeoutSeconds,
+    CancelToken? cancelToken,
   }) async {
     final uri = Uri.parse(url);
     lastUri = uri;
@@ -59,6 +61,7 @@ class _RecordingNetworkService implements NetworkService {
     String url, {
     Map<String, String>? headers,
     int? timeoutSeconds,
+    CancelToken? cancelToken,
   }) async {
     timestamps.add(DateTime.now());
     uris.add(Uri.parse(url));

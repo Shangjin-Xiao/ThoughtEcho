@@ -104,6 +104,7 @@ class NetworkService {
     String url, {
     Map<String, String>? headers,
     int? timeoutSeconds,
+    CancelToken? cancelToken,
   }) async {
     _ensureInitialized();
 
@@ -115,6 +116,7 @@ class NetworkService {
 
       final response = await _generalDio.get(
         url,
+        cancelToken: cancelToken,
         options: Options(
           headers: headers,
           receiveTimeout:
@@ -127,6 +129,7 @@ class NetworkService {
 
       return _convertDioResponseToHttpResponse(response);
     } on DioException catch (e, stack) {
+      if (CancelToken.isCancel(e)) rethrow;
       AppLogger.e(
         'GET请求失败: $url',
         error: e,
