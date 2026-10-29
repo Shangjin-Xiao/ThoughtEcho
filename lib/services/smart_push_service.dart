@@ -280,6 +280,8 @@ class SmartPushService extends ChangeNotifier {
       'from': from,
       if (type.isNotEmpty) 'type': type,
       if (provider.isNotEmpty) 'provider': provider,
+      if (rawData['local_quote_id'] is String)
+        'local_quote_id': rawData['local_quote_id'],
     };
   }
 

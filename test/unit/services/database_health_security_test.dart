@@ -141,6 +141,69 @@ void main() {
         ''');
       });
 
+      for (final source in ['tagOnly', 'allNotes']) {
+        for (final hasDeletedColumn in [true, false]) {
+          test(
+            '$source excludes hidden notes before selection '
+            '(is_deleted column: $hasDeletedColumn)',
+            () async {
+              if (!hasDeletedColumn) {
+                await db.execute('ALTER TABLE quotes DROP COLUMN is_deleted');
+              }
+              // Use a user-created daily quote tag to cover name-based lookup.
+              const dailyTagId = 'custom_daily_quote';
+              await db.insert('categories', {
+                'id': dailyTagId,
+                'name': '每日一言',
+              });
+              await db.insert('quotes', {
+                'id': 'hidden',
+                'content': 'Protected content',
+                'source_work': 'Protected source',
+                'source_author': 'Protected author',
+              });
+              await db.insert('quote_tags', {
+                'quote_id': 'hidden',
+                'tag_id': dailyTagId,
+              });
+              // Visibility depends on the relation, even without a category row.
+              await db.insert('quote_tags', {
+                'quote_id': 'hidden',
+                'tag_id': 'system_hidden_tag',
+              });
+
+              expect(
+                await healthService.getLocalDailyQuote(
+                  db,
+                  offlineQuoteSource: source,
+                ),
+                isNull,
+              );
+
+              await db.insert('quotes', {
+                'id': 'visible',
+                'content': 'Public content',
+                'source_work': 'Public source',
+                'source_author': 'Public author',
+              });
+              if (source == 'tagOnly') {
+                await db.insert('quote_tags', {
+                  'quote_id': 'visible',
+                  'tag_id': dailyTagId,
+                });
+              }
+              final result = await healthService.getLocalDailyQuote(
+                db,
+                offlineQuoteSource: source,
+              );
+              expect(result, containsPair('content', 'Public content'));
+              expect(result, containsPair('source', 'Public source'));
+              expect(result, containsPair('author', 'Public author'));
+            },
+          );
+        }
+      }
+
       test('returns daily-tagged quote within length limit in tagOnly mode',
           () async {
         await db.insert('categories',
