@@ -173,7 +173,7 @@ extension SmartPushNotification on SmartPushService {
   /// 标记每日一言通知点击后的首页展示内容（一次性消费）。
   Future<void> _navigateToDailyQuote() async {
     try {
-      var hitokotoData = getCachedDailyQuoteForToday();
+      var hitokotoData = await getCachedDailyQuoteForToday();
       if (hitokotoData == null) {
         AppLogger.d('通知点击时缓存为空，实时获取每日一言...');
         hitokotoData = await _loadDailyQuoteData(preferCache: false);
@@ -214,7 +214,7 @@ extension SmartPushNotification on SmartPushService {
   String _todayDateKey() => DateTime.now().toIso8601String().substring(0, 10);
 
   /// 读取当天缓存的一言数据，跨首页与推送共用。
-  Map<String, dynamic>? getCachedDailyQuoteForToday() {
+  Future<Map<String, dynamic>?> getCachedDailyQuoteForToday() async {
     try {
       final cachedDate =
           _mmkv.getString(SmartPushService._lastDailyQuoteDateKey);
@@ -232,7 +232,7 @@ extension SmartPushNotification on SmartPushService {
         return null;
       }
 
-      return SmartPushService.normalizeDailyQuoteData(decoded);
+      return await _validateCachedDailyQuote(decoded);
     } catch (e) {
       AppLogger.w('读取每日一言缓存失败', error: e);
       return null;
@@ -259,20 +259,34 @@ extension SmartPushNotification on SmartPushService {
         return null;
       }
 
-      final normalizedData = SmartPushService.normalizeDailyQuoteData(decoded);
       await _mmkv.remove(SmartPushService._pendingHomeDailyQuoteKey);
-      return normalizedData;
+      return await _validateCachedDailyQuote(decoded);
     } catch (e) {
       AppLogger.w('读取待展示每日一言失败', error: e);
       return null;
     }
   }
 
+  /// 本地缓存可能在笔记隐藏/删除后仍然存在，读取时重新校验可见性。
+  Future<Map<String, dynamic>?> _validateCachedDailyQuote(
+    Map<String, dynamic> rawData,
+  ) async {
+    final data = SmartPushService.normalizeDailyQuoteData(rawData);
+    if (data == null || data['type'] != 'local') return data;
+
+    // 旧缓存未保存笔记 ID，无法安全验证，交由调用方重新获取。
+    final noteId = data['local_quote_id'];
+    if (noteId is! String || noteId.isEmpty) return null;
+
+    final visibleIds = await _databaseService.getVisibleQuoteIds([noteId]);
+    return visibleIds.contains(noteId) ? data : null;
+  }
+
   Future<Map<String, dynamic>?> _loadDailyQuoteData({
     bool preferCache = true,
   }) async {
     if (preferCache) {
-      final cachedData = getCachedDailyQuoteForToday();
+      final cachedData = await getCachedDailyQuoteForToday();
       if (cachedData != null) {
         return cachedData;
       }
