@@ -80,14 +80,12 @@ void main() {
         'deleted_at': '2026-01-01T00:00:00Z',
       });
 
-      // 2. Construct malformed restore map (non-map element in quotes list causes exception)
+      // 2. Construct malformed restore map (non-list quotes element causes exception)
       final malformedData = {
         'categories': [
           {'id': 'cat_new', 'name': 'New Category'},
         ],
-        'quotes': [
-          'invalid_string_instead_of_map', // Will trigger type error on 'q as Map'
-        ],
+        'quotes': 'invalid_string_instead_of_list',
       };
 
       // 3. Attempt import and expect exception

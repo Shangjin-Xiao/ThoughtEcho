@@ -20,6 +20,16 @@ class DatabaseBackupService {
 
   DatabaseBackupService({Uuid? uuid}) : _uuid = uuid ?? const Uuid();
 
+  Map<String, dynamic>? _asMap(dynamic item) {
+    if (item is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(item);
+    }
+    if (item is Map) {
+      return item.map((k, v) => MapEntry(k.toString(), v));
+    }
+    return null;
+  }
+
   /// 从Map对象导入数据，返回本次入库前被清洗/跳过的统计。
   Future<ImportCleanupStats> importDataFromMap(
     Database db,
@@ -62,9 +72,8 @@ class DatabaseBackupService {
         final processedCategories = <Map<String, dynamic>>[];
 
         for (final c in categories) {
-          final categoryData = Map<String, dynamic>.from(
-            c as Map<String, dynamic>,
-          );
+          final categoryData = _asMap(c);
+          if (categoryData == null) continue;
 
           // 修复：处理旧版分类数据字段名兼容性
           final categoryFieldMappings = {
@@ -127,9 +136,8 @@ class DatabaseBackupService {
         final processedQuotes = <Map<String, dynamic>>[];
 
         for (final q in quotes) {
-          final quoteData = Map<String, dynamic>.from(
-            q as Map<String, dynamic>,
-          );
+          final quoteData = _asMap(q);
+          if (quoteData == null) continue;
 
           // 修复：处理旧版笔记数据字段名兼容性
           List<String> parsedTagIds = [];
@@ -681,9 +689,8 @@ class DatabaseBackupService {
 
     for (final c in categories) {
       try {
-        final categoryData = Map<String, dynamic>.from(
-          c as Map<String, dynamic>,
-        );
+        final categoryData = _asMap(c);
+        if (categoryData == null) continue;
 
         // 标准化字段名
         const categoryFieldMappings = {
@@ -1042,7 +1049,8 @@ class DatabaseBackupService {
 
     for (final q in quotes) {
       try {
-        final quoteData = Map<String, dynamic>.from(q as Map<String, dynamic>);
+        final quoteData = _asMap(q);
+        if (quoteData == null) continue;
 
         // 标准化字段名
         final fieldMappings = {
@@ -1336,16 +1344,20 @@ class DatabaseBackupService {
         final refsResult = queryResults[i + 1] as List<Object?>;
 
         for (final rowObj in quotesResult) {
-          final row = rowObj as Map<String, dynamic>;
-          final id = row['id'] as String;
-          existingQuotesMap[id] = row;
+          final row = _asMap(rowObj);
+          if (row == null) continue;
+          final id = row['id']?.toString();
+          if (id != null && id.isNotEmpty) {
+            existingQuotesMap[id] = row;
+          }
         }
 
         for (final rowObj in refsResult) {
-          final row = rowObj as Map<String, dynamic>;
-          final qId = row['quote_id'] as String;
+          final row = _asMap(rowObj);
+          if (row == null) continue;
+          final qId = row['quote_id']?.toString();
           final fp = row['file_path']?.toString();
-          if (fp != null && fp.isNotEmpty) {
+          if (qId != null && qId.isNotEmpty && fp != null && fp.isNotEmpty) {
             existingMediaRefsMap.putIfAbsent(qId, () => []).add(fp);
           }
         }
