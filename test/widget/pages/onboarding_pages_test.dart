@@ -15,6 +15,7 @@ import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
@@ -93,6 +94,8 @@ void main() {
   }) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<LocationService>(
+            create: (_) => LocationService()),
         ChangeNotifierProvider<DatabaseService>.value(
           value: _FakeDatabaseServiceForOnboardingPage(),
         ),
@@ -197,21 +200,24 @@ void main() {
     OnboardingState state = const OnboardingState(),
     void Function(String key, dynamic value)? onPreferenceChanged,
   }) {
-    return MaterialApp(
-      locale: const Locale('zh'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: Builder(
-          builder: (context) => PreferencesPageView(
-            pageData: OnboardingConfig.getPageDataWithContext(context, 2),
-            state: state,
-            onPreferenceChanged: onPreferenceChanged ?? (_, __) {},
+    return ChangeNotifierProvider<LocationService>(
+      create: (_) => LocationService(),
+      child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => PreferencesPageView(
+              pageData: OnboardingConfig.getPageDataWithContext(context, 2),
+              state: state,
+              onPreferenceChanged: onPreferenceChanged ?? (_, __) {},
+            ),
           ),
         ),
       ),
@@ -313,6 +319,31 @@ void main() {
   });
 
   group('习惯与隐私屏', () {
+    testWidgets('turning location off persists the choice immediately',
+        (tester) async {
+      await MMKVService().init();
+      await MMKVService().setBool('location_service_enabled', true);
+      final changes = <String, dynamic>{};
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      await tester.pumpWidget(buildPreferencesPage(
+        state: const OnboardingState(preferences: {'locationService': true}),
+        onPreferenceChanged: (key, value) => changes[key] = value,
+      ));
+      await tester.pumpAndSettle();
+      final locationSwitch = find.descendant(
+        of: find.ancestor(
+            of: find.text(l10n.prefLocationService),
+            matching: find.byType(OnboardingSection)),
+        matching: find.byType(Switch),
+      );
+      await tester.ensureVisible(locationSwitch);
+      await tester.tap(locationSwitch);
+      await tester.pumpAndSettle();
+
+      expect(changes['locationService'], isFalse);
+      expect(MMKVService().getBool('location_service_enabled'), isFalse);
+    });
+
     testWidgets('展示四项设置和 AI 说明卡', (tester) async {
       final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 

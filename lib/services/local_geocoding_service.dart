@@ -27,12 +27,15 @@ class LocalGeocodingService {
   /// 返回位置对象，如果获取失败返回null
   static Future<Position?> getCurrentPosition({
     bool highAccuracy = false,
+    bool Function()? canUseLocation,
   }) async {
     try {
+      if (canUseLocation?.call() == false) return null;
       // Windows平台使用geolocator_windows插件获取真实位置
       // 需要在Windows设置中启用位置服务：设置 > 隐私 > 位置
       // 检查位置服务是否启用
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (canUseLocation?.call() == false) return null;
       if (!serviceEnabled) {
         logDebug('位置服务未启用');
         return null;
@@ -40,6 +43,7 @@ class LocalGeocodingService {
 
       // 检查位置权限
       LocationPermission permission = await Geolocator.checkPermission();
+      if (canUseLocation?.call() == false) return null;
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
@@ -48,6 +52,7 @@ class LocalGeocodingService {
         }
       }
 
+      if (canUseLocation?.call() == false) return null;
       if (permission == LocationPermission.deniedForever) {
         logDebug('位置权限被永久拒绝');
         return null;
@@ -68,13 +73,16 @@ class LocalGeocodingService {
         ),
       );
 
+      if (canUseLocation?.call() == false) return null;
       logDebug('成功获取位置: ${position.latitude}, ${position.longitude}');
       return position;
     } catch (e) {
+      if (canUseLocation?.call() == false) return null;
       // 如果获取当前位置失败，尝试获取最后已知位置
       try {
         logDebug('获取当前位置失败，尝试获取最后已知位置');
         final lastPosition = await Geolocator.getLastKnownPosition();
+        if (canUseLocation?.call() == false) return null;
         if (lastPosition != null) {
           logDebug(
             '成功获取最后已知位置: ${lastPosition.latitude}, ${lastPosition.longitude}',
@@ -102,8 +110,10 @@ class LocalGeocodingService {
     String? localeCode,
     bool bypassCache = false,
     Duration timeout = const Duration(seconds: 4),
+    bool Function()? canUseLocation,
   }) async {
     try {
+      if (canUseLocation?.call() == false) return null;
       // Windows平台：跳过系统地理编码（不支持），返回 null 让调用者使用在线服务
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
         logDebug('Windows平台：系统地理编码不支持，将使用在线服务');
@@ -120,6 +130,7 @@ class LocalGeocodingService {
           longitude,
           localeIdentifier,
         );
+        if (canUseLocation?.call() == false) return null;
         if (cachedAddress != null) {
           logDebug('使用缓存的地理编码数据');
           return cachedAddress;
@@ -130,14 +141,17 @@ class LocalGeocodingService {
       // 串行化执行以避免全局 locale 状态的竞态条件，并在底层调用设置超时以避免队列挂起
       try {
         final placemarks = await _runSerialized(() async {
+          if (canUseLocation?.call() == false) return <geocoding.Placemark>[];
           await geocoding
               .setLocaleIdentifier(localeIdentifier)
               .timeout(timeout);
+          if (canUseLocation?.call() == false) return <geocoding.Placemark>[];
           return await geocoding
               .placemarkFromCoordinates(latitude, longitude)
               .timeout(timeout);
         });
 
+        if (canUseLocation?.call() == false) return null;
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
 

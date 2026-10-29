@@ -1,6 +1,14 @@
 // ignore_for_file: depend_on_referenced_packages
 
+import 'dart:async';
+import 'package:dio/dio.dart' show CancelToken;
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
+import 'package:thoughtecho/services/mmkv_service.dart';
+
+import '../../test_harness.dart';
 import 'package:geocoding_platform_interface/geocoding_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:thoughtecho/services/local_geocoding_service.dart';
@@ -22,6 +30,7 @@ class _FakeNetworkService implements NetworkService {
     String url, {
     Map<String, String>? headers,
     int? timeoutSeconds,
+    CancelToken? cancelToken,
   }) async {
     for (final entry in delays.entries) {
       if (url.contains(entry.key)) {
@@ -64,7 +73,246 @@ class _SlowMockGeocodingPlatform extends GeocodingPlatform
   }
 }
 
+class _ConsentGeolocator extends GeolocatorPlatform
+    with MockPlatformInterfaceMixin {
+  int positionCalls = 0;
+  final started = Completer<void>();
+  Completer<Position>? pendingPosition;
+
+  @override
+  Future<bool> isLocationServiceEnabled() async => true;
+
+  @override
+  Future<LocationPermission> checkPermission() async =>
+      LocationPermission.whileInUse;
+
+  @override
+  Future<Position> getCurrentPosition(
+      {LocationSettings? locationSettings}) async {
+    positionCalls++;
+    if (!started.isCompleted) started.complete();
+    return pendingPosition?.future ??
+        Future.value(Position(
+          latitude: 12.3,
+          longitude: 45.6,
+          timestamp: DateTime(2026),
+          accuracy: 1,
+          altitude: 0,
+          altitudeAccuracy: 0,
+          heading: 0,
+          headingAccuracy: 0,
+          speed: 0,
+          speedAccuracy: 0,
+        ));
+  }
+}
+
+class _ConsentGeocoding extends GeocodingPlatform
+    with MockPlatformInterfaceMixin {
+  Completer<List<Placemark>>? pendingAddress;
+  final started = Completer<void>();
+
+  @override
+  Future<void> setLocaleIdentifier(String localeIdentifier) async {}
+
+  @override
+  Future<List<Placemark>> placemarkFromCoordinates(
+    double latitude,
+    double longitude, {
+    String? localeIdentifier,
+  }) async {
+    if (!started.isCompleted) started.complete();
+    return pendingAddress?.future ?? Future.value(<Placemark>[]);
+  }
+}
+
+class _ConsentNetwork implements NetworkService {
+  final urls = <String>[];
+  final started = Completer<void>();
+  Completer<HttpResponse>? pendingResponse;
+  CancelToken? cancellation;
+
+  @override
+  Future<HttpResponse> get(
+    String url, {
+    Map<String, String>? headers,
+    int? timeoutSeconds,
+    CancelToken? cancelToken,
+  }) async {
+    cancellation = cancelToken;
+    urls.add(url);
+    if (!started.isCompleted) started.complete();
+    return pendingResponse?.future ??
+        Future.value(HttpResponse(
+          '{"address":{"country":"Example Country","state":"Example Region","city":"Example City"}}',
+          200,
+        ));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  group('Location consent', () {
+    late GeolocatorPlatform originalLocation;
+    GeocodingPlatform? originalGeocoding;
+    late _ConsentGeolocator device;
+    late _ConsentGeocoding geocoding;
+    late _ConsentNetwork network;
+    late LocationService service;
+
+    setUp(() async {
+      await TestHarness.initialize();
+      await MMKVService().init();
+      await MMKVService().setBool('location_service_enabled', false);
+      originalLocation = GeolocatorPlatform.instance;
+      try {
+        originalGeocoding = GeocodingPlatform.instance;
+      } catch (_) {
+        originalGeocoding = null;
+      }
+      GeolocatorPlatform.instance = device = _ConsentGeolocator();
+      GeocodingPlatform.instance = geocoding = _ConsentGeocoding();
+      NetworkService.instanceForTesting = network = _ConsentNetwork();
+      service = LocationService();
+    });
+
+    tearDown(() {
+      service.dispose();
+      GeolocatorPlatform.instance = originalLocation;
+      if (originalGeocoding != null) {
+        GeocodingPlatform.instance = originalGeocoding!;
+      }
+      NetworkService.instanceForTesting = null;
+    });
+
+    test('stored off choice blocks startup and refresh despite OS permission',
+        () async {
+      await service.init();
+      await service.refreshServiceStatus();
+      final position = await service.getCurrentLocation();
+      expect(position, isNull);
+      expect(device.positionCalls, 0);
+      expect(network.urls, isEmpty);
+    });
+
+    test('missing preference does not inherit surviving OS permission',
+        () async {
+      await MMKVService().remove('location_service_enabled');
+      await service.init();
+      expect(await service.getCurrentLocation(), isNull);
+      expect(device.positionCalls, 0);
+      expect(network.urls, isEmpty);
+    });
+
+    test('explicit consent allows collection and coordinate geocoding',
+        () async {
+      await service.setLocationEnabled(true);
+      final position = await service.getCurrentLocation();
+      expect(position?.latitude, 12.3);
+      expect(device.positionCalls, 1);
+      expect(network.urls.single, contains('lat=12.3&lon=45.6'));
+      expect(service.city, 'Example City');
+
+      final restarted = LocationService();
+      expect(restarted.locationEnabled, isTrue);
+      restarted.dispose();
+    });
+
+    test('revocation discards an acquired position even after re-enabling',
+        () async {
+      await service.setLocationEnabled(true);
+      device.pendingPosition = Completer<Position>();
+      final fetch = service.getCurrentLocation();
+      await device.started.future;
+
+      final disable = service.setLocationEnabled(false);
+      expect(service.locationEnabled, isFalse);
+      expect(service.currentPosition, isNull);
+      expect(service.isLoading, isFalse);
+      await disable;
+      await service.setLocationEnabled(true);
+      device.pendingPosition!.complete(Position(
+        latitude: 12.3,
+        longitude: 45.6,
+        timestamp: DateTime(2026),
+        accuracy: 1,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 0,
+        headingAccuracy: 0,
+        speed: 0,
+        speedAccuracy: 0,
+      ));
+
+      expect(await fetch, isNull);
+      expect(service.currentPosition, isNull);
+      expect(network.urls, isEmpty);
+    });
+
+    test('revocation during system geocoding prevents online fallback',
+        () async {
+      await service.setLocationEnabled(true);
+      geocoding.pendingAddress = Completer<List<Placemark>>();
+      final fetch = service.getCurrentLocation();
+      await geocoding.started.future;
+
+      await service.setLocationEnabled(false);
+      await service.setLocationEnabled(true);
+      geocoding.pendingAddress!.complete([]);
+      expect(await fetch, isNull);
+      expect(network.urls, isEmpty);
+      expect(service.currentPosition, isNull);
+      expect(service.currentAddress, isNull);
+    });
+
+    test('revocation drops online results and blocks cached coordinate reuse',
+        () async {
+      await service.setLocationEnabled(true);
+      network.pendingResponse = Completer<HttpResponse>();
+      service.setCoordinates(12.3, 45.6,
+          address: 'Example Country, Example Region, Example City');
+      service.currentLocaleCode = 'en';
+      await network.started.future;
+
+      await service.setLocationEnabled(false);
+      expect(network.cancellation!.isCancelled, isTrue);
+      network.pendingResponse!.complete(HttpResponse(
+          '{"address":{"country":"Example Country","state":"Example Region","city":"Example City"}}',
+          200));
+      // Drain the locale refresh so its old-address fallback also runs.
+      await Future<void>.delayed(Duration.zero);
+      service.currentLocaleCode = 'zh';
+      service.setCoordinates(12.3, 45.6);
+      await service.getAddressFromLatLng();
+      expect(await service.resolveOfflineLocation(), isFalse);
+      expect(await service.refreshAddressFromOnlineReverseGeocoding(), isFalse);
+      expect(await service.reverseGeocodePoint(12.3, 45.6), isNull);
+      expect(service.currentPosition, isNull);
+      expect(service.currentAddress, isNull);
+      expect(service.city, isNull);
+      expect(network.urls, hasLength(1));
+
+      final restarted = LocationService();
+      await restarted.init();
+      expect(await restarted.getCurrentLocation(), isNull);
+      expect(device.positionCalls, 0);
+      restarted.dispose();
+    });
+
+    test('rapid enable then disable persists the last choice', () async {
+      await Future.wait([
+        service.setLocationEnabled(true),
+        service.setLocationEnabled(false),
+      ]);
+      expect(service.locationEnabled, isFalse);
+      final restarted = LocationService();
+      expect(restarted.locationEnabled, isFalse);
+      restarted.dispose();
+    });
+  });
+
   group('LocationService Tests', () {
     late LocationService locationService;
 

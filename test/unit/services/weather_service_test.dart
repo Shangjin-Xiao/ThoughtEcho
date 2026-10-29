@@ -2,6 +2,7 @@
 library;
 
 import 'dart:convert';
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
@@ -16,7 +17,8 @@ class MockNetworkService extends Mock implements NetworkService {
   Future<HttpResponse> get(String? url,
       {Map<String, String>? headers,
       Map<String, dynamic>? queryParameters,
-      int? timeoutSeconds}) {
+      int? timeoutSeconds,
+      CancelToken? cancelToken}) {
     return super.noSuchMethod(
       Invocation.method(
         #get,
@@ -24,7 +26,8 @@ class MockNetworkService extends Mock implements NetworkService {
         {
           #headers: headers,
           #queryParameters: queryParameters,
-          #timeoutSeconds: timeoutSeconds
+          #timeoutSeconds: timeoutSeconds,
+          #cancelToken: cancelToken
         },
       ),
       returnValue: Future.value(HttpResponse('{}', 200, headers: {})),

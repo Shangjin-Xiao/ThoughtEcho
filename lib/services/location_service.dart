@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
 import '../services/network_service.dart';
+import 'mmkv_service.dart';
 import 'local_geocoding_service.dart'; // 导入本地地理编码服务
 import '../utils/app_logger.dart';
 import '../utils/i18n_language.dart';
@@ -98,6 +100,58 @@ class LocationService extends ChangeNotifier {
   static bool isNonDisplayMarker(String? s) =>
       s == null || s.isEmpty || isPendingMarker(s) || isFailedMarker(s);
 
+  // Device consent is local to this installation; OS permission is insufficient.
+  static const _locationEnabledKey = 'location_service_enabled';
+  final MMKVService _preferences = MMKVService();
+  bool _locationBlocked = false;
+  int _locationConsentVersion = 0;
+  Future<void> _preferenceWrite = Future.value();
+  final _reverseGeocodingRequests = <CancelToken>{};
+
+  bool get locationEnabled =>
+      !_locationBlocked && (_preferences.getBool(_locationEnabledKey) ?? false);
+
+  bool _canUseLocation(int version) =>
+      locationEnabled && version == _locationConsentVersion;
+
+  Future<void> setLocationEnabled(bool enabled) {
+    final version = ++_locationConsentVersion;
+    _locationBlocked = true;
+    ++_geocodeToken;
+    for (final request in _reverseGeocodingRequests) {
+      request.cancel('Location preference changed');
+    }
+    _reverseGeocodingRequests.clear();
+    _isLoading = false;
+    if (!enabled) {
+      _currentPosition = null;
+      _currentAddress = null;
+      _country = null;
+      _province = null;
+      _city = null;
+      _district = null;
+      _currentPoiName = null;
+    }
+    notifyListeners();
+
+    // Serialize rapid toggles so an older enable cannot overwrite a revocation.
+    final write = _preferenceWrite.then((_) async {
+      await _preferences.init();
+      if (!await _preferences.setBool(_locationEnabledKey, enabled)) {
+        logError('Failed to save location preference',
+            source: 'LocationService');
+        throw StateError('Location preference could not be saved');
+      }
+      if (version == _locationConsentVersion) {
+        _locationBlocked = !enabled;
+        notifyListeners();
+      }
+    });
+    _preferenceWrite =
+        write.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return write;
+  }
+
   Position? _currentPosition;
   String? _currentAddress;
   bool _hasLocationPermission = false;
@@ -117,7 +171,8 @@ class LocationService extends ChangeNotifier {
   Position? get currentPosition => _currentPosition;
   String? get currentAddress => _currentAddress;
   bool get hasLocationPermission => _hasLocationPermission;
-  bool get isLocationServiceEnabled => _isLocationServiceEnabled;
+  bool get isLocationServiceEnabled =>
+      locationEnabled && _isLocationServiceEnabled;
   bool get isLoading => _isLoading;
 
   /// init() 是否已完成首次执行（完成后状态字段才有意义，可供 UI 判断显示时机）
@@ -140,7 +195,8 @@ class LocationService extends ChangeNotifier {
 
   /// 语言变更后重新解析地址，失败时保留旧地址
   Future<void> _refreshAddressForNewLocale() async {
-    if (_currentPosition == null) return;
+    if (!locationEnabled || _currentPosition == null) return;
+    final version = _locationConsentVersion;
     // 没有有效地址时无需刷新（可能还在初始化中）
     if (isNonDisplayMarker(_currentAddress)) return;
 
@@ -153,6 +209,7 @@ class LocationService extends ChangeNotifier {
 
     try {
       await getAddressFromLatLng();
+      if (!_canUseLocation(version)) return;
       // 如果新解析失败，恢复旧地址
       if (isNonDisplayMarker(_currentAddress) &&
           !isNonDisplayMarker(oldAddress)) {
@@ -164,6 +221,7 @@ class LocationService extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      if (!_canUseLocation(version)) return;
       logDebug('语言变更后重新解析地址失败，保留旧地址: $e');
       _country = oldCountry;
       _province = oldProvince;
@@ -204,6 +262,7 @@ class LocationService extends ChangeNotifier {
     var initFailedWithException = false;
     logDebug('开始初始化位置服务');
     try {
+      await _preferences.init();
       // Windows平台使用geolocator_windows插件，支持系统定位服务
       // 需要在Windows设置中启用位置服务：设置 > 隐私 > 位置
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -217,7 +276,7 @@ class LocationService extends ChangeNotifier {
         logDebug('位置权限状态: $_hasLocationPermission');
 
         // 只在首次获取到权限时尝试获取位置
-        if (_hasLocationPermission) {
+        if (locationEnabled && _hasLocationPermission) {
           getCurrentLocation(highAccuracy: false).then((position) {
             if (position != null) {
               logDebug(
@@ -338,6 +397,8 @@ class LocationService extends ChangeNotifier {
     bool highAccuracy = false,
     bool skipPermissionRequest = false, // 添加跳过权限请求的参数
   }) async {
+    if (!locationEnabled) return null;
+    final version = _locationConsentVersion;
     // 检查位置服务是否启用
     if (!_isLocationServiceEnabled) {
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -364,6 +425,8 @@ class LocationService extends ChangeNotifier {
       return null;
     }
 
+    if (!_canUseLocation(version)) return null;
+
     try {
       _isLoading = true;
       notifyListeners();
@@ -371,8 +434,9 @@ class LocationService extends ChangeNotifier {
       logDebug('开始获取位置，使用${highAccuracy ? "高" : "低"}精度模式...');
 
       // 使用LocalGeocodingService获取位置，并添加超时控制
-      _currentPosition = await LocalGeocodingService.getCurrentPosition(
+      final position = await LocalGeocodingService.getCurrentPosition(
         highAccuracy: highAccuracy,
+        canUseLocation: () => _canUseLocation(version),
       ).timeout(
         const Duration(seconds: 15), // 15秒超时
         onTimeout: () {
@@ -380,6 +444,9 @@ class LocationService extends ChangeNotifier {
           throw Exception('位置获取超时，请重试');
         },
       );
+
+      if (!_canUseLocation(version)) return null;
+      _currentPosition = position;
 
       if (_currentPosition != null) {
         logDebug(
@@ -401,10 +468,12 @@ class LocationService extends ChangeNotifier {
         logDebug('无法获取当前位置');
       }
 
+      if (!_canUseLocation(version)) return null;
       _isLoading = false;
       notifyListeners();
       return _currentPosition;
     } catch (e) {
+      if (!_canUseLocation(version)) return null;
       _isLoading = false;
       logDebug('获取位置失败: $e');
       notifyListeners();
@@ -415,12 +484,13 @@ class LocationService extends ChangeNotifier {
   // 根据经纬度获取地址信息
   // 优先级：缓存 → 系统SDK → Nominatim在线 → 系统SDK部分结果
   Future<void> getAddressFromLatLng() async {
-    if (_currentPosition == null) {
+    if (!locationEnabled || _currentPosition == null) {
       logDebug('没有位置信息，无法获取地址');
       return;
     }
 
     final token = ++_geocodeToken;
+    final version = _locationConsentVersion;
 
     try {
       logDebug('开始通过经纬度获取地址信息...');
@@ -434,9 +504,10 @@ class LocationService extends ChangeNotifier {
         lat,
         lon,
         localeCode: _apiLanguageParam,
+        canUseLocation: () => _canUseLocation(version),
       );
 
-      if (token != _geocodeToken) return;
+      if (token != _geocodeToken || !_canUseLocation(version)) return;
 
       // Step 2: 系统结果已达到首选展示格式（优先“省份·城市”）时，直接使用
       if (systemResult != null && _isPreferredDisplayReady(systemResult)) {
@@ -458,7 +529,7 @@ class LocationService extends ChangeNotifier {
       Map<String, String?>? mergedResult;
       try {
         onlineResult = await _reverseGeocodeWithNominatim(lat, lon);
-        if (token != _geocodeToken) return;
+        if (token != _geocodeToken || !_canUseLocation(version)) return;
         if (onlineResult != null) {
           mergedResult = _mergeAddressResult(
             preferred: onlineResult,
@@ -477,7 +548,7 @@ class LocationService extends ChangeNotifier {
         logDebug('在线地址解析失败: $e');
       }
 
-      if (token != _geocodeToken) return;
+      if (token != _geocodeToken || !_canUseLocation(version)) return;
 
       // Step 4: 在线未达到首选时，优先使用系统可展示结果
       if (systemResult != null && _isAddressSufficient(systemResult)) {
@@ -519,7 +590,9 @@ class LocationService extends ChangeNotifier {
       _applyAddressResult(null);
     } catch (e) {
       logDebug('获取地址信息失败: $e');
-      if (token == _geocodeToken) _applyAddressResult(null);
+      if (token == _geocodeToken && _canUseLocation(version)) {
+        _applyAddressResult(null);
+      }
     }
   }
 
@@ -538,13 +611,17 @@ class LocationService extends ChangeNotifier {
     double latitude,
     double longitude,
   ) async {
+    if (!locationEnabled) return null;
+    final version = _locationConsentVersion;
     try {
       final online = await _reverseGeocodeWithNominatim(latitude, longitude);
+      if (!_canUseLocation(version)) return null;
       if (online != null && _isAddressSufficient(online)) return online;
     } catch (e) {
       logDebug('在线反查选点地址失败: $e');
     }
 
+    if (!_canUseLocation(version)) return null;
     try {
       final systemResult =
           await LocalGeocodingService.getAddressFromCoordinates(
@@ -552,6 +629,7 @@ class LocationService extends ChangeNotifier {
         longitude,
         localeCode: _apiLanguageParam,
         bypassCache: true,
+        canUseLocation: () => _canUseLocation(version),
         timeout: const Duration(seconds: 4),
       ).timeout(
         const Duration(seconds: 4),
@@ -560,6 +638,7 @@ class LocationService extends ChangeNotifier {
           return null;
         },
       );
+      if (!_canUseLocation(version)) return null;
       if (systemResult != null) {
         logDebug('反查选点地址使用系统SDK地理编码回退成功');
         return systemResult;
@@ -574,16 +653,19 @@ class LocationService extends ChangeNotifier {
   /// 开发者模式：强制使用免费的在线反向地理编码（Nominatim）
   /// 返回 true 表示解析成功并更新了地址信息
   Future<bool> refreshAddressFromOnlineReverseGeocoding() async {
-    if (_currentPosition == null) {
+    if (!locationEnabled || _currentPosition == null) {
       logDebug('没有位置信息，无法使用在线反向地理编码');
       return false;
     }
 
+    final version = _locationConsentVersion;
+    final token = ++_geocodeToken;
     try {
       final result = await _reverseGeocodeWithNominatim(
         _currentPosition!.latitude,
         _currentPosition!.longitude,
       );
+      if (!_canUseLocation(version) || token != _geocodeToken) return false;
       if (result != null) {
         final merged = _mergeAddressResult(
           preferred: result,
@@ -718,20 +800,26 @@ class LocationService extends ChangeNotifier {
     double latitude,
     double longitude,
   ) async {
+    if (!locationEnabled) return null;
     final url =
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=$latitude&lon=$longitude&zoom=18&addressdetails=1';
 
     final acceptLanguage = I18nLanguage.buildAcceptLanguage(_apiLanguageParam);
 
-    final response = await NetworkService.instance.get(
-      url,
-      headers: {
-        'Accept-Language': acceptLanguage,
-        'User-Agent':
-            'ThoughtEcho/3.4 (https://github.com/Shangjin-Xiao/ThoughtEcho)',
-      },
-      timeoutSeconds: 15,
-    );
+    final cancellation = CancelToken();
+    _reverseGeocodingRequests.add(cancellation);
+    final response = await NetworkService.instance
+        .get(
+          url,
+          headers: {
+            'Accept-Language': acceptLanguage,
+            'User-Agent':
+                'ThoughtEcho/3.4 (https://github.com/Shangjin-Xiao/ThoughtEcho)',
+          },
+          timeoutSeconds: 15,
+          cancelToken: cancellation,
+        )
+        .whenComplete(() => _reverseGeocodingRequests.remove(cancellation));
 
     if (response.statusCode != 200) {
       logDebug('Nominatim 返回非200状态码: ${response.statusCode}');
@@ -1576,6 +1664,7 @@ class LocationService extends ChangeNotifier {
 
   /// 从经纬度设置位置（用于从数据库恢复离线坐标）
   void setCoordinates(double latitude, double longitude, {String? address}) {
+    if (!locationEnabled) return;
     _currentPosition = Position(
       latitude: latitude,
       longitude: longitude,
@@ -1607,6 +1696,7 @@ class LocationService extends ChangeNotifier {
 
   /// 尝试解析离线坐标的地址（联网后调用）
   Future<bool> resolveOfflineLocation() async {
+    if (!locationEnabled) return false;
     if (_currentPosition == null) return false;
     if (!isOfflineLocation) return true; // 已经有地址了
 
