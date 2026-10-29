@@ -11,6 +11,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
+import 'package:xml/xml.dart';
+import 'package:xml/xml_events.dart';
 
 import '../services/connectivity_service.dart';
 import '../services/database_service.dart';
@@ -121,38 +123,12 @@ class WebDAVSyncService extends ChangeNotifier {
     caseSensitive: false,
   );
 
-  static final RegExp _responseRegExp = RegExp(
-    r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
-    caseSensitive: false,
-  );
-
-  static final RegExp _hrefRegExp = RegExp(
-    r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
-    caseSensitive: false,
-  );
-
-  static final RegExp _collectionRegExp = RegExp(
-    r'<(?:[a-zA-Z0-9_.-]+:)?collection\s*/?>',
-    caseSensitive: false,
-  );
-
-  static final RegExp _statusRegExp = RegExp(
-    r'<(?:[a-zA-Z0-9_.-]+:)?status>\s*HTTP/\d(?:\.\d)?\s+(\d{3})[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?status>',
-    caseSensitive: false,
-  );
-
-  static final RegExp _lengthRegExp = RegExp(
-    r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>\s*(\d+)\s*<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
-    caseSensitive: false,
-  );
-
-  static final RegExp _etagRegExp = RegExp(
-    r'<(?:[a-zA-Z0-9_.-]+:)?getetag>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getetag>',
-    caseSensitive: false,
-  );
-
-  static final RegExp _lastModifiedRegExp = RegExp(
-    r'<(?:[a-zA-Z0-9_.-]+:)?getlastmodified>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getlastmodified>',
+  // Bound network buffering and XML work independently of server-supplied headers.
+  static const int _maxPropfindBytes = 8 * 1024 * 1024;
+  static const int _maxPropfindXmlEvents = 100000;
+  static const int _maxPropfindDepth = 64;
+  static final RegExp _propfindStatusPattern = RegExp(
+    r'^HTTP/\d(?:\.\d)?\s+(\d{3})\b',
     caseSensitive: false,
   );
 
@@ -170,14 +146,6 @@ class WebDAVSyncService extends ChangeNotifier {
   static final RegExp _syncZipSuffixPattern = RegExp(
     r'thoughtecho_sync\.zip$',
   );
-
-  static final Map<String, RegExp> _commonXmlTagRegExps = {
-    'getlastmodified': _lastModifiedRegExp,
-    'getetag': _etagRegExp,
-    'getcontentlength': _lengthRegExp,
-  };
-
-  static final Map<String, RegExp> _dynamicTagRegExpCache = {};
 
   /// 初始化设置，从 MMKV 中读取缓存配置
   void _initSettings() {
@@ -379,13 +347,11 @@ class WebDAVSyncService extends ChangeNotifier {
       final dio = await _createDio(cleanUrl, testUsername, testPassword);
 
       // 发送 PROPFIND 请求获取根目录信息，验证凭证和地址是否有效
-      final response = await dio.request(
+      final response = await _requestPropfind(
+        dio,
         cleanUrl,
-        options: Options(
-          method: 'PROPFIND',
-          headers: {'Depth': '0'},
-          validateStatus: (status) => status != null && status < 500,
-        ),
+        depth: '0',
+        validateStatus: (status) => status != null && status < 500,
       );
 
       return response.statusCode == 200 || response.statusCode == 207;
@@ -688,15 +654,12 @@ class WebDAVSyncService extends ChangeNotifier {
     String fileUrl,
   ) async {
     try {
-      final response = await dio.request(
+      final response = await _requestPropfind(
+        dio,
         fileUrl,
-        options: Options(
-          method: 'PROPFIND',
-          headers: {'Depth': '0'},
-          responseType: ResponseType.plain,
-          validateStatus: (status) =>
-              status == 200 || status == 207 || status == 404,
-        ),
+        depth: '0',
+        validateStatus: (status) =>
+            status == 200 || status == 207 || status == 404,
       );
 
       if (response.statusCode == 404) {
@@ -706,7 +669,7 @@ class WebDAVSyncService extends ChangeNotifier {
         return const _RemoteSyncFileMetadata(exists: false);
       }
 
-      final body = response.data?.toString() ?? '';
+      final body = response.data ?? '';
       final targetResponse = _findTargetSyncFilePropfindResponse(body, fileUrl);
       if (targetResponse == null) {
         return const _RemoteSyncFileMetadata(exists: false);
@@ -741,43 +704,110 @@ class WebDAVSyncService extends ChangeNotifier {
     return int.tryParse(value);
   }
 
-  static String? _findTargetSyncFilePropfindResponse(
+  static Future<Response<String>> _requestPropfind(
+    Dio dio,
+    String url, {
+    required String depth,
+    required ValidateStatus validateStatus,
+  }) {
+    final cancelToken = CancelToken();
+    return dio.request<String>(
+      url,
+      options: Options(
+        method: 'PROPFIND',
+        headers: {'Depth': depth},
+        responseType: ResponseType.plain,
+        validateStatus: validateStatus,
+      ),
+      cancelToken: cancelToken,
+      onReceiveProgress: (received, total) {
+        if (received > _maxPropfindBytes || total > _maxPropfindBytes) {
+          cancelToken.cancel('WebDAV listing exceeds size limit');
+        }
+      },
+    );
+  }
+
+  static Iterable<XmlElement> _parsePropfindResponses(String xmlData) {
+    if (xmlData.length > _maxPropfindBytes ||
+        utf8.encode(xmlData).length > _maxPropfindBytes) {
+      throw const FormatException('WebDAV listing exceeds size limit');
+    }
+    if (xmlData.trim().isEmpty) return const [];
+
+    // Validate the entire listing before exposing any entries to upload decisions.
+    // Pull parsing consumes each token once, even when closing tags are missing.
+    final events = <XmlEvent>[];
+    var depth = 0;
+    try {
+      for (final event in parseEvents(
+        xmlData,
+        validateNesting: true,
+        validateDocument: true,
+      )) {
+        if (events.length >= _maxPropfindXmlEvents) {
+          throw const FormatException('WebDAV listing exceeds XML event limit');
+        }
+        if (event is XmlDoctypeEvent) {
+          throw const FormatException('WebDAV listing must not contain a DTD');
+        }
+        if (event is XmlStartElementEvent) {
+          if (depth + 1 > _maxPropfindDepth) {
+            throw const FormatException(
+                'WebDAV listing exceeds XML depth limit');
+          }
+          if (!event.isSelfClosing) depth++;
+        } else if (event is XmlEndElementEvent) {
+          depth--;
+        }
+        events.add(event);
+      }
+      final document = XmlDocument(const XmlNodeDecoder().convert(events));
+      final responses = document.descendantElements
+          .where((element) => element.name.local.toLowerCase() == 'response');
+      return responses.isEmpty ? [document.rootElement] : responses;
+    } on XmlParserException {
+      throw const FormatException('Invalid WebDAV XML listing');
+    } on XmlTagException {
+      throw const FormatException('Invalid WebDAV XML listing');
+    }
+  }
+
+  static XmlElement? _findTargetSyncFilePropfindResponse(
     String xmlData,
     String fileUrl,
   ) {
-    if (xmlData.trim().isEmpty) return null;
-
     final targetPath = _normalizedUriPath(fileUrl);
     if (targetPath == null || targetPath.endsWith('/')) return null;
 
-    final responses = _responseRegExp.allMatches(xmlData).toList();
-    final responseBlocks = responses.isEmpty
-        ? <String>[xmlData]
-        : responses.map((m) => m[0]!).toList();
-
-    for (final block in responseBlocks) {
-      if (_collectionRegExp.hasMatch(block)) continue;
+    for (final block in _parsePropfindResponses(xmlData)) {
+      if (block.descendantElements
+          .any((element) => element.name.local.toLowerCase() == 'collection')) {
+        continue;
+      }
       if (!_propfindResponseHasSuccessStatus(block)) continue;
 
-      final hrefMatch = _hrefRegExp.firstMatch(block);
-      if (hrefMatch == null) continue;
+      final href = _extractFirstXmlTagValue(block, 'href');
+      if (href == null) continue;
 
-      final hrefPath = _normalizedUriPath(hrefMatch.group(1) ?? '');
+      final hrefPath = _normalizedUriPath(href);
       if (hrefPath == targetPath) return block;
     }
 
     return null;
   }
 
-  static bool _propfindResponseHasSuccessStatus(String responseBlock) {
-    final statusCodes = _statusRegExp
-        .allMatches(responseBlock)
-        .map((match) => int.tryParse(match.group(1) ?? ''))
-        .whereType<int>()
-        .toList();
-
-    if (statusCodes.isEmpty) return true;
-    return statusCodes.any((code) => code >= 200 && code < 300);
+  static bool _propfindResponseHasSuccessStatus(XmlElement responseBlock) {
+    var hasStatus = false;
+    for (final element in responseBlock.descendantElements
+        .where((element) => element.name.local.toLowerCase() == 'status')) {
+      final match = _propfindStatusPattern.firstMatch(element.innerText.trim());
+      final code = int.tryParse(match?.group(1) ?? '');
+      if (code == null) continue;
+      hasStatus = true;
+      if (code >= 200 && code < 300) return true;
+    }
+    return !hasStatus;
   }
 
   static String? _normalizedUriPath(String value) {
@@ -999,29 +1029,26 @@ class WebDAVSyncService extends ChangeNotifier {
     }
   }
 
-  String? _extractFirstXmlTagValue(String xmlData, String localName) {
-    final regExp = _commonXmlTagRegExps[localName] ??
-        _dynamicTagRegExpCache.putIfAbsent(
-          localName,
-          () => RegExp(
-            '<(?:[a-zA-Z0-9_.-]+:)?$localName>([\\s\\S]*?)'
-            '</(?:[a-zA-Z0-9_.-]+:)?$localName>',
-            caseSensitive: false,
-          ),
-        );
-    return regExp.firstMatch(xmlData)?.group(1)?.trim();
+  static String? _extractFirstXmlTagValue(
+    XmlElement response,
+    String localName,
+  ) {
+    for (final element in response.descendantElements) {
+      if (element.name.local.toLowerCase() == localName) {
+        return element.innerText.trim();
+      }
+    }
+    return null;
   }
 
   /// 确保 WebDAV 上特定目录存在，如果不存在则自动创建
   Future<void> _ensureDirectoryExists(Dio dio, String folderUrl) async {
     try {
-      final response = await dio.request(
+      final response = await _requestPropfind(
+        dio,
         folderUrl,
-        options: Options(
-          method: 'PROPFIND',
-          headers: {'Depth': '0'},
-          validateStatus: (status) => status != null && status < 500,
-        ),
+        depth: '0',
+        validateStatus: (status) => status != null && status < 500,
       );
 
       // 404 说明目录不存在，发起创建目录请求
@@ -1304,23 +1331,16 @@ class WebDAVSyncService extends ChangeNotifier {
     await Future.wait(_mediaSubFolders.map((folder) async {
       final folderUrl = '${_url}thoughtecho/media/$folder/';
       try {
-        final response = await dio.request(
+        final response = await _requestPropfind(
+          dio,
           folderUrl,
-          options: Options(
-            method: 'PROPFIND',
-            headers: {'Depth': '1'},
-            responseType: ResponseType.plain,
-            validateStatus: (status) => status == 207 || status == 200,
-          ),
+          depth: '1',
+          validateStatus: (status) => status == 207 || status == 200,
         );
 
         if ((response.statusCode == 207 || response.statusCode == 200) &&
             response.data != null) {
-          final dynamic rawData = response.data;
-          final String xmlData = rawData is List<int>
-              ? utf8.decode(rawData, allowMalformed: true)
-              : rawData.toString();
-          final extracted = _extractRemoteMediaDetails(xmlData);
+          final extracted = _extractRemoteMediaDetails(response.data!);
           for (final entry in extracted.entries) {
             remoteMediaFiles[entry.key] = entry.value.length;
             remoteMediaEtags[entry.key] = entry.value.etag;
@@ -1465,25 +1485,17 @@ class WebDAVSyncService extends ChangeNotifier {
   ) {
     final files = <String, _RemoteMediaFileInfo>{};
 
-    final responses = _responseRegExp.allMatches(xmlData).toList();
-    final responseBlocks = responses.isEmpty
-        ? <String>[xmlData]
-        : responses.map((m) => m[0]!).toList();
+    for (final block in _parsePropfindResponses(xmlData)) {
+      final href = _extractFirstXmlTagValue(block, 'href');
+      if (href == null) continue;
 
-    for (final block in responseBlocks) {
-      final hrefMatch = _hrefRegExp.firstMatch(block);
-      if (hrefMatch == null) continue;
-
-      final relPath = _mediaRelativePathFromHref(hrefMatch.group(1) ?? '');
+      final relPath = _mediaRelativePathFromHref(href);
       if (relPath == null) continue;
 
-      final lengthMatch = _lengthRegExp.firstMatch(block);
-      final etagMatch = _etagRegExp.firstMatch(block);
-
       files[relPath] = _RemoteMediaFileInfo(
-        length:
-            lengthMatch == null ? null : int.tryParse(lengthMatch.group(1)!),
-        etag: etagMatch?.group(1)?.trim(),
+        length: int.tryParse(
+            _extractFirstXmlTagValue(block, 'getcontentlength') ?? ''),
+        etag: _extractFirstXmlTagValue(block, 'getetag'),
       );
     }
 

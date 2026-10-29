@@ -523,6 +523,83 @@ void main() {
     );
   });
 
+  group('WebDAV listing validation', () {
+    const target = '/dav/thoughtecho/thoughtecho_sync.zip';
+    const media = '/dav/thoughtecho/media/images/photo.png';
+    const validResponse = '<response><href>$target</href></response>'
+        '<response><href>$media</href></response>';
+    final invalidListings = <String, String>{
+      'unclosed response tags after valid entries':
+          '<multistatus>$validResponse${'<response>' * 2000}</multistatus>',
+      'mismatched closing tags':
+          '<multistatus>$validResponse<response></prop></multistatus>',
+      'truncated property': '<multistatus>$validResponse<response><getetag>',
+      'more than 8 MiB of response text':
+          '<multistatus>$validResponse<!--${'x' * (8 * 1024 * 1024)}--></multistatus>',
+      'more than 8 MiB of UTF-8 bytes':
+          '<multistatus>$validResponse<!--${'图' * (3 * 1024 * 1024)}--></multistatus>',
+      'more than 100000 elements':
+          '<multistatus>$validResponse${'<prop/>' * 100000}</multistatus>',
+      'more than 64 nested elements':
+          '<multistatus>$validResponse${'<prop>' * 64}${'</prop>' * 64}</multistatus>',
+      'a document type declaration':
+          '<!DOCTYPE multistatus [<!ENTITY example "value">]>'
+              '<multistatus>$validResponse</multistatus>',
+    };
+
+    for (final entry in invalidListings.entries) {
+      test('rejects ${entry.key} without returning partial entries', () {
+        expect(
+          () =>
+              WebDAVSyncService.extractRemoteMediaFilesForTesting(entry.value),
+          throwsFormatException,
+        );
+        expect(
+          () => WebDAVSyncService.isTargetSyncFilePropfindResponseForTesting(
+            entry.value,
+            'https://example.com$target',
+          ),
+          throwsFormatException,
+        );
+      });
+    }
+
+    for (final prefix in ['', 'd:', 'custom:']) {
+      test('reads XML text and properties with prefix "$prefix"', () {
+        final xml = '''
+<${prefix}multistatus xmlns="DAV:" xmlns:d="DAV:" xmlns:custom="DAV:">
+  <${prefix}response>
+    <${prefix}href>/dav/thoughtecho/media/images/a&amp;b.png</${prefix}href>
+    <${prefix}propstat><${prefix}prop>
+      <${prefix}getcontentlength>42</${prefix}getcontentlength>
+      <${prefix}getetag><![CDATA[ "media-etag" ]]></${prefix}getetag>
+    </${prefix}prop></${prefix}propstat>
+  </${prefix}response>
+  <${prefix}response>
+    <${prefix}href>$target</${prefix}href>
+    <${prefix}status>HTTP/1.1 200 OK</${prefix}status>
+  </${prefix}response>
+</${prefix}multistatus>
+''';
+        expect(
+          WebDAVSyncService.extractRemoteMediaFilesForTesting(xml),
+          {'images/a&b.png': 42},
+        );
+        expect(
+          WebDAVSyncService.extractRemoteMediaEtagsForTesting(xml),
+          {'images/a&b.png': '"media-etag"'},
+        );
+        expect(
+          WebDAVSyncService.isTargetSyncFilePropfindResponseForTesting(
+            xml,
+            'https://example.com$target',
+          ),
+          isTrue,
+        );
+      });
+    }
+  });
+
   group('prependConflictPrefixToDelta', () {
     test('prepends conflict prefix to List-style Delta JSON', () {
       const delta = '[{"insert":"Hello\\n"}]';
