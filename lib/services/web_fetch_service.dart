@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html2md/html2md.dart' as html2md;
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 
 import '../utils/app_logger.dart';
 
@@ -110,11 +111,11 @@ class WebFetchService {
   /// 验证 URL 是否可访问
   Future<bool> isUrlAccessible(String url) async {
     try {
-      await validateUrlSafety(url);
-      final client = http.Client();
+      final client = _createSafeClient();
       try {
-        final response = await client.head(Uri.parse(url),
-            headers: {'User-Agent': _userAgent}).timeout(_timeout);
+        final response =
+            await _sendSafeRequest(client, Uri.parse(url), method: 'HEAD');
+        await response.stream.drain<void>().timeout(_timeout);
         return response.statusCode == 200;
       } finally {
         client.close();
@@ -140,6 +141,10 @@ class WebFetchService {
 
   /// 验证 URL 安全性以防御 SSRF
   static Future<void> validateUrlSafety(String url) async {
+    await _resolveSafeAddresses(url);
+  }
+
+  static Future<List<InternetAddress>> _resolveSafeAddresses(String url) async {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       throw Exception('URL 格式无效，必须以 http:// 或 https:// 开头: $url');
     }
@@ -155,12 +160,14 @@ class WebFetchService {
     }
 
     var blocked = isPrivateOrLocalHost(host);
+    var resolved = <InternetAddress>[];
     if (!blocked) {
       try {
-        final resolved = await InternetAddress.lookup(host);
-        blocked = resolved.any(
-          (address) => isPrivateOrLocalHost(address.address),
-        );
+        resolved = await InternetAddress.lookup(host);
+        blocked = resolved.isEmpty ||
+            resolved.any(
+              (address) => isPrivateOrLocalHost(address.address),
+            );
       } catch (_) {
         blocked = true;
       }
@@ -169,6 +176,7 @@ class WebFetchService {
     if (blocked) {
       throw Exception('安全限制：不允许访问本地或私有网络地址: $url');
     }
+    return resolved;
   }
 
   /// 检查主机名或 IP 是否为私有或本地地址
@@ -215,12 +223,53 @@ class WebFetchService {
     return bytes[10] == 0xff && bytes[11] == 0xff;
   }
 
+  // Connect only to the exact addresses checked here. Keep the request URI
+  // unchanged for HTTP Host, and explicitly use its host for TLS verification.
+  static http.Client _createSafeClient() {
+    final client = HttpClient()
+      ..connectionTimeout = _timeout
+      ..connectionFactory = (uri, _, __) async {
+        final addresses = await _resolveSafeAddresses(uri.toString());
+        ConnectionTask<Socket>? pending;
+        Socket? connected;
+        var cancelled = false;
+
+        Future<Socket> connect() async {
+          for (var i = 0; i < addresses.length; i++) {
+            try {
+              pending = await Socket.startConnect(addresses[i], uri.port);
+              if (cancelled) pending!.cancel();
+              final socket = await pending!.socket;
+              connected = socket;
+              if (cancelled) {
+                socket.destroy();
+                throw const SocketException('Connection cancelled');
+              }
+              if (uri.scheme == 'https') {
+                return await SecureSocket.secure(socket, host: uri.host);
+              }
+              return socket;
+            } on SocketException {
+              if (cancelled || i == addresses.length - 1) rethrow;
+            }
+          }
+          throw const SocketException('No validated address available');
+        }
+
+        return ConnectionTask.fromSocket(connect(), () {
+          cancelled = true;
+          pending?.cancel();
+          connected?.destroy();
+        });
+      }
+      ..findProxy = (_) => 'DIRECT';
+    return IOClient(client);
+  }
+
   /// 抓取网页 HTML 原文
   Future<String> _fetchHtml(String url) async {
-    await validateUrlSafety(url);
-
     logDebug('WebFetchService: 开始抓取 $url');
-    final client = http.Client();
+    final client = _createSafeClient();
     try {
       final response = await _sendSafeRequest(client, Uri.parse(url));
 
@@ -273,12 +322,13 @@ class WebFetchService {
 
   Future<http.StreamedResponse> _sendSafeRequest(
     http.Client client,
-    Uri initialUri,
-  ) async {
+    Uri initialUri, {
+    String method = 'GET',
+  }) async {
     var uri = initialUri;
     for (var redirectCount = 0; redirectCount <= 5; redirectCount++) {
       await validateUrlSafety(uri.toString());
-      final request = http.Request('GET', uri)
+      final request = http.Request(method, uri)
         ..followRedirects = false
         ..headers.addAll({
           'User-Agent': _userAgent,
