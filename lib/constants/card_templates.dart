@@ -172,7 +172,7 @@ class CardTemplates {
     
     <g transform="translate(0, 25)" opacity="0.8">
       <path d="$_locationIcon" transform="scale(0.6)" fill="white"/>
-      <text x="22" y="10" fill="white" font-family="system-ui, sans-serif" font-size="10" font-weight="500">${_escape(location ?? '')} ${temperature ?? ''} ${weather ?? ''}</text>
+      <text x="22" y="10" fill="white" font-family="system-ui, sans-serif" font-size="10" font-weight="500">${_escape(location ?? '')} ${_escape(temperature ?? '')} ${_escape(weather ?? '')}</text>
     </g>
 
     <g transform="translate(240, 15)" text-anchor="end">

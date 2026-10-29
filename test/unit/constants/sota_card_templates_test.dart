@@ -36,6 +36,23 @@ void main() {
       expect(svg, contains(testAuthor));
     });
 
+    for (final field in ['weather', 'temperature']) {
+      test('sotaModernTemplate keeps $field markup as literal text', () {
+        const metadata = '</text><pattern id="injected" width="100000" '
+            'height="100000"><rect width="1" height="1"/></pattern><text>';
+        final svg = CardTemplates.sotaModernTemplate(
+          content: testContent,
+          weather: field == 'weather' ? metadata : null,
+          temperature: field == 'temperature' ? metadata : null,
+        );
+
+        final doc = XmlDocument.parse(svg);
+        expect(doc.findAllElements('pattern'), isEmpty);
+        expect(doc.findAllElements('text').map((e) => e.innerText),
+            contains(contains(metadata)));
+      });
+    }
+
     test('knowledgeTemplate upgraded with SOTA mesh and icons', () {
       final svg = CardTemplates.knowledgeTemplate(
         brandName: testBrand,

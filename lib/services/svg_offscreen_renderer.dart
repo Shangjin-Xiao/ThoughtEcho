@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/rendering.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'svg_to_image_service.dart';
+import '../utils/bounded_svg_loader.dart';
 
 /// 使用 Overlay + Offstage + RepaintBoundary 进行真实渲染，获取与预览一致的位图。
 /// 需要传入当前应用中的 BuildContext（带 Overlay）。
@@ -70,8 +71,8 @@ class SvgOffscreenRenderer {
 
     // 创建SVG widget，使用与预览完全一致的配置
     // 直接设置width和height，让SvgPicture处理缩放，与SvgCardWidget保持一致
-    final svgWidget = SvgPicture.string(
-      svgContent,
+    final svgWidget = SvgPicture(
+      BoundedSvgLoader(svgContent),
       width: width.toDouble(),
       height: height.toDouble(),
       fit: boxFit,
