@@ -338,6 +338,7 @@ class AgentService extends ChangeNotifier {
     try {
       final provider = await _getProvider();
       final memoryEnabled = _memoryService?.isEnabled ?? false;
+      final memoryGeneration = _memoryService?.captureGeneration;
       final systemPrompt = buildSystemPrompt(
         lastHistoryAt:
             history?.isNotEmpty == true ? history!.last.timestamp : null,
@@ -451,6 +452,7 @@ class AgentService extends ChangeNotifier {
               userMessage: userMessage,
               assistantResponse: responseContent,
               provider: provider,
+              generation: memoryGeneration!,
             );
           }
 
@@ -1185,9 +1187,12 @@ class AgentService extends ChangeNotifier {
     required String userMessage,
     required String assistantResponse,
     required AIProviderSettings provider,
+    required int generation,
   }) async {
     final memoryService = _memoryService;
-    if (memoryService == null || !memoryService.isEnabled) return;
+    if (memoryService == null || !memoryService.isCaptureCurrent(generation)) {
+      return;
+    }
 
     try {
       const extractionPrompt = '''
@@ -1225,6 +1230,7 @@ class AgentService extends ChangeNotifier {
         temperature: 0.1,
         maxTokens: 300,
       );
+      if (!memoryService.isCaptureCurrent(generation)) return;
 
       final raw = completion.choices.firstOrNull?.message.content?.trim() ?? '';
       final parsed = parsePostTurnMemoryJson(raw);
@@ -1281,12 +1287,14 @@ class AgentService extends ChangeNotifier {
         }
       }
 
-      await memoryService.rememberProfile(
+      final saved = await memoryService.rememberProfileFromCapture(
+        generation: generation,
         kind: parsed.kind,
         directive: directive,
         replacesId: replacesId,
         source: 'post_turn_reflection',
       );
+      if (!saved) return;
       logDebug(
         'Post-turn 提炼并保存长期记忆 (kind=${parsed.kind.name})',
         source: 'AgentService',
@@ -1305,12 +1313,14 @@ class AgentService extends ChangeNotifier {
     required String userMessage,
     required String assistantResponse,
     required AIProviderSettings provider,
+    required int generation,
   }) {
     _postTurnMemoryLock = _postTurnMemoryLock.then((_) async {
       await _maybeCaptureMemoryPostTurn(
         userMessage: userMessage,
         assistantResponse: assistantResponse,
         provider: provider,
+        generation: generation,
       );
     }).catchError((error, stackTrace) {
       logError(
