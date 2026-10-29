@@ -76,6 +76,27 @@ void main() {
     expect(saved.deltaContent, isNull);
   });
 
+  test(
+      'a proposal cannot update a subsequently hidden note without authorization',
+      () async {
+    final original = await seed(Quote(
+      id: 'note-hidden',
+      content: '原始正文。',
+      date: DateTime.now().toIso8601String(),
+    ));
+    final artifact = editArtifact(original: original, content: '改过的正文。');
+    await database.updateQuote(original.copyWith(
+      tagIds: [DatabaseService.hiddenTagId],
+    ));
+
+    final result = await NoteProposalApplier(database).applyEdit(artifact);
+
+    expect(result.isApplied, isFalse);
+    final saved = (await database.getQuoteById(original.id!))!;
+    expect(saved.content, original.content);
+    expect(saved.tagIds, contains(DatabaseService.hiddenTagId));
+  });
+
   test('采纳富文本提案：content 与 deltaContent 必须一致', () async {
     final original = await seed(Quote(
       id: 'note-rich',
