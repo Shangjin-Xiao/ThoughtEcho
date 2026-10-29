@@ -160,8 +160,25 @@ String? sanitizeSentryUrl(String? url) {
   ).toString();
 }
 
+final _exceptionUrlPattern = RegExp(
+  r'''[a-z][a-z0-9+.-]*://[^\s<>"']+''',
+  caseSensitive: false,
+);
+
 SentryEvent? sanitizeSentryEvent(SentryEvent event, Hint hint) {
   _sanitizeSentryRequest(event);
+  // SDK processors flatten nested causes before this transmission boundary.
+  for (final exception in event.exceptions ?? <SentryException>[]) {
+    final value = exception.value;
+    if (value == null) continue;
+    exception.value = value.replaceAllMapped(_exceptionUrlPattern, (match) {
+      final url = match.group(0)!;
+      // Do not retain a sensitive URL when parsing fails.
+      return Uri.tryParse(url) == null
+          ? '[invalid URL]'
+          : sanitizeSentryUrl(url)!;
+    });
+  }
   return event;
 }
 
