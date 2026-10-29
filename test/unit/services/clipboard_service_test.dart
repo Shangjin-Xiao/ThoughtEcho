@@ -267,5 +267,47 @@ void main() {
       expect(result!['content'], text);
       expect(result['source'], isNull);
     });
+
+    for (final suffix in [
+      ' — Writer《Example Book》',
+      '《Example Book》 — Writer',
+      ' — Writer',
+      ' ——《Example Book》',
+    ]) {
+      test('extracts a complete attribution after a long body: $suffix',
+          () async {
+        clipboardService.setEnableClipboardMonitoring(true);
+        final body = 'Text ' * 950;
+        await Clipboard.setData(ClipboardData(text: '$body$suffix'));
+
+        final result = await clipboardService.checkClipboard();
+
+        expect(result!['content'], body.trim());
+        expect(
+            result['author'], suffix == ' ——《Example Book》' ? null : 'Writer');
+        expect(result['source'], suffix == ' — Writer' ? null : 'Example Book');
+      });
+    }
+
+    for (final text in [
+      'Quote body ${'—' * 300} Writer',
+      'Quote body — Writer《${'Title ' * 60}》',
+      'Quote body《${'Title ' * 60}《Example Book》 — Writer',
+      'Quote body —《${'Title ' * 60} — Writer《Example Book》',
+      '${'Text ' * 50}《${'S' * 247}》—Writer',
+    ]) {
+      test(
+          'preserves an attribution crossing the search boundary: '
+          '${text.substring(0, 20)}', () async {
+        clipboardService.setEnableClipboardMonitoring(true);
+        await Clipboard.setData(ClipboardData(text: text));
+
+        final result = await clipboardService.checkClipboard();
+
+        expect(result!['content'], text);
+        expect(result['author'], isNull);
+        expect(result['source'], isNull);
+      });
+    }
   });
 }
