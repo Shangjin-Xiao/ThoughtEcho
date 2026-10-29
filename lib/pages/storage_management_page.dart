@@ -351,10 +351,13 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       // 显示结果
       if (result['success'] == true) {
-        final durationMs = result['duration_ms'] as int;
-        final spaceSaved = result['space_saved_mb'] as double;
-        final dbSizeBefore = result['db_size_before_mb'] as double;
-        final dbSizeAfter = result['db_size_after_mb'] as double;
+        final durationMs = (result['duration_ms'] as num?)?.toInt() ?? 0;
+        final spaceSaved =
+            (result['space_saved_mb'] as num?)?.toDouble() ?? 0.0;
+        final dbSizeBefore =
+            (result['db_size_before_mb'] as num?)?.toDouble() ?? 0.0;
+        final dbSizeAfter =
+            (result['db_size_after_mb'] as num?)?.toDouble() ?? 0.0;
 
         showDialog(
           context: context,
