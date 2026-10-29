@@ -31,6 +31,9 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   bool get agentMemoryEnabled => true;
 
   @override
+  int get agentMemoryGeneration => 0;
+
+  @override
   String get userNickname => '';
 
   @override
