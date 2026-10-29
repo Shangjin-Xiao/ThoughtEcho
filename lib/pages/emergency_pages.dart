@@ -7,45 +7,46 @@ class EmergencyRecoveryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final shapeTokens = AppShapeTokens.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.emergencyRecoveryTitle),
-        backgroundColor: Colors.red,
+        backgroundColor: colorScheme.errorContainer,
+        foregroundColor: colorScheme.onErrorContainer,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          // 添加SingleChildScrollView使内容可滚动
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              mainAxisSize: MainAxisSize.min, // 设置为min以适应内容
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(
+                Icon(
                   Icons.warning_amber_rounded,
                   size: 64,
-                  color: Colors.red,
+                  color: colorScheme.error,
                 ),
                 const SizedBox(height: 24),
                 Text(
                   l10n.emergencyRecoveryHeading,
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: theme.textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   l10n.emergencyRecoveryDescription,
-                  style: const TextStyle(fontSize: 16),
+                  style: theme.textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
                 FilledButton.icon(
                   onPressed: () async {
-                    // 标记为 async
-                    // 导航前检查 mounted 状态
                     if (!context.mounted) return;
                     await Navigator.push(
-                      // 使用 await
                       context,
                       MaterialPageRoute(
                         builder: (context) => const BackupRestorePage(),
@@ -55,14 +56,16 @@ class EmergencyRecoveryPage extends StatelessWidget {
                   icon: const Icon(Icons.backup),
                   label: Text(l10n.emergencyBackupAndRestoreButton),
                   style: FilledButton.styleFrom(
-                    backgroundColor: Colors.orange,
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(shapeTokens.buttonRadius),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () async {
-                    // 尝试重新初始化数据库
                     try {
                       final databaseService = DatabaseService();
                       databaseService.reinitialize();
@@ -70,7 +73,6 @@ class EmergencyRecoveryPage extends StatelessWidget {
 
                       if (!context.mounted) return;
 
-                      // 成功后导航到主页
                       await Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
@@ -80,7 +82,6 @@ class EmergencyRecoveryPage extends StatelessWidget {
                     } catch (e) {
                       if (!context.mounted) return;
 
-                      // 如果重新初始化失败，显示错误信息
                       AppSnackBar.error(
                         context,
                         l10n.emergencyReinitializeFailed('$e'),
@@ -91,6 +92,10 @@ class EmergencyRecoveryPage extends StatelessWidget {
                   label: Text(l10n.emergencyTryRestartAppButton),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(shapeTokens.buttonRadius),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -98,7 +103,7 @@ class EmergencyRecoveryPage extends StatelessWidget {
                   l10n.emergencyRecoveryHint,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -126,7 +131,7 @@ class EmergencyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ThoughtEcho Emergency',
-      navigatorKey: navigatorKey, // 使用全局导航键
+      navigatorKey: navigatorKey,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -143,8 +148,9 @@ class EmergencyApp extends StatelessWidget {
         );
       },
       theme: ThemeData(
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.red,
+          seedColor: const Color(0xFFD32F2F),
           brightness: Brightness.light,
         ),
       ),
@@ -167,7 +173,6 @@ class EmergencyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 防御性处理：国际化可能尚未初始化完成，使用 nullable 版本
     final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
     final emergencyModeTitle = l10n?.emergencyModeTitle ?? 'Emergency Mode';
     final emergencyAppStartFailedTitle =
@@ -184,122 +189,153 @@ class EmergencyHomePage extends StatelessWidget {
     final emergencyExitAppButton = l10n?.emergencyExitAppButton ?? 'Exit App';
     final emergencyPersistentIssueHint = l10n?.emergencyPersistentIssueHint ??
         'If the issue persists, please contact support.';
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final shapeTokens = AppShapeTokens.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(emergencyModeTitle),
-        backgroundColor: Colors.red,
+        backgroundColor: colorScheme.errorContainer,
+        foregroundColor: colorScheme.onErrorContainer,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                emergencyAppStartFailedTitle,
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                emergencyAppStartFailedDesc,
-                style: const TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: colorScheme.error),
+                const SizedBox(height: 16),
+                Text(
+                  emergencyAppStartFailedTitle,
+                  style: theme.textTheme.titleLarge,
+                  textAlign: TextAlign.center,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      emergencyErrorLabel,
-                      style: Theme.of(context).textTheme.titleSmall,
+                const SizedBox(height: 16),
+                Text(
+                  emergencyAppStartFailedDesc,
+                  style: theme.textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Card(
+                  elevation: 0,
+                  color: colorScheme.surfaceContainerHighest,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(shapeTokens.cardRadius),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          emergencyErrorLabel,
+                          style: theme.textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          error,
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(error),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              ExpansionTile(
-                title: Text(emergencyTechnicalDetails),
-                children: [
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      color: Colors.grey.shade100,
-                      child: SelectableText(
-                        stackTrace,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                          color: Colors.grey.shade800,
+                const SizedBox(height: 16),
+                ExpansionTile(
+                  title: Text(emergencyTechnicalDetails),
+                  children: [
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Card(
+                        elevation: 0,
+                        color: colorScheme.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(shapeTokens.cardRadius),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: SelectableText(
+                            stackTrace,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EmergencyBackupPage(),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EmergencyBackupPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.backup),
+                  label: Text(emergencyBackupAndRestoreButton),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(shapeTokens.buttonRadius),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.backup),
-                label: Text(emergencyBackupAndRestoreButton),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () {
-                  // 尝试重新启动应用
-                  restartApp();
-                },
-                icon: const Icon(Icons.refresh),
-                label: Text(emergencyTryRestartAppButton),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () {
+                    restartApp();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: Text(emergencyTryRestartAppButton),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(shapeTokens.buttonRadius),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () {
-                  // 退出应用
-                  exit(0);
-                },
-                icon: const Icon(Icons.exit_to_app),
-                label: Text(emergencyExitAppButton),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  foregroundColor: Colors.red,
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    exit(0);
+                  },
+                  icon: const Icon(Icons.exit_to_app),
+                  label: Text(emergencyExitAppButton),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    foregroundColor: colorScheme.error,
+                    side: BorderSide(color: colorScheme.error),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(shapeTokens.buttonRadius),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                emergencyPersistentIssueHint,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                const SizedBox(height: 16),
+                Text(
+                  emergencyPersistentIssueHint,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -307,17 +343,13 @@ class EmergencyHomePage extends StatelessWidget {
   }
 
   void restartApp() {
-    // 重新启动应用的逻辑
     try {
-      // 清理全局状态
       _isEmergencyMode = false;
       getAndClearDeferredErrors();
 
-      // 重新运行main函数
       main();
     } catch (e) {
       logDebug('重启应用失败: $e');
-      // 如果重启失败，尝试导航到主页
       if (navigatorKey.currentState != null) {
         navigatorKey.currentState!.pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const HomePage()),
@@ -344,98 +376,116 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final shapeTokens = AppShapeTokens.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.emergencyBackupPageTitle),
-        backgroundColor: Colors.orange,
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.data_saver_on, size: 64, color: Colors.orange),
-              const SizedBox(height: 16),
-              Text(
-                l10n.emergencyBackupToolTitle,
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.emergencyBackupToolDesc,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 32),
-              if (_isLoading)
-                Column(
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(_statusMessage ?? l10n.emergencyProcessing),
-                  ],
-                )
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: _exportDatabaseFile,
-                      icon: const Icon(Icons.folder),
-                      label: Text(l10n.emergencyExportDatabaseButton),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: () {
-                        try {
-                          Navigator.of(context).pushNamed('/backup_restore');
-                        } catch (e) {
-                          AppSnackBar.error(
-                            context,
-                            l10n.emergencyOpenBackupFailed('$e'),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.backup),
-                      label: Text(l10n.emergencyOpenBackupPageButton),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                  ],
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.data_saver_on, size: 64, color: colorScheme.primary),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.emergencyBackupToolTitle,
+                  style: theme.textTheme.titleLarge,
+                  textAlign: TextAlign.center,
                 ),
-              if (_statusMessage != null && !_isLoading)
-                Container(
-                  margin: const EdgeInsets.only(top: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color:
-                        _hasError ? Colors.red.shade100 : Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.emergencyBackupToolDesc,
+                  style: theme.textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 32),
+                if (_isLoading)
+                  AppLoadingView(
+                    message: _statusMessage ?? l10n.emergencyProcessing,
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: _exportDatabaseFile,
+                        icon: const Icon(Icons.folder),
+                        label: Text(l10n.emergencyExportDatabaseButton),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(shapeTokens.buttonRadius),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: () {
+                          try {
+                            Navigator.of(context).pushNamed('/backup_restore');
+                          } catch (e) {
+                            AppSnackBar.error(
+                              context,
+                              l10n.emergencyOpenBackupFailed('$e'),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.backup),
+                        label: Text(l10n.emergencyOpenBackupPageButton),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(shapeTokens.buttonRadius),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    _statusMessage!,
-                    style: TextStyle(
+                if (_statusMessage != null && !_isLoading)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Card(
+                      elevation: 0,
                       color: _hasError
-                          ? Colors.red.shade900
-                          : Colors.green.shade900,
+                          ? colorScheme.errorContainer
+                          : colorScheme.primaryContainer,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(shapeTokens.cardRadius),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          _statusMessage!,
+                          style: TextStyle(
+                            color: _hasError
+                                ? colorScheme.onErrorContainer
+                                : colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
+                const SizedBox(height: 32),
+                Text(
+                  l10n.emergencyExportHint,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              const Spacer(),
-              Text(
-                l10n.emergencyExportHint,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -451,13 +501,11 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
     });
 
     try {
-      // 获取数据库文件路径
       final appDir = await getApplicationDocumentsDirectory();
       final dbPath = join(appDir.path, 'databases');
       final dbFile = File(join(dbPath, 'thoughtecho.db'));
       final oldDbFile = File(join(dbPath, 'mind_trace.db'));
 
-      // 确认文件存在
       if (!dbFile.existsSync() && !oldDbFile.existsSync()) {
         setState(() {
           _isLoading = false;
@@ -467,27 +515,23 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
         return;
       }
 
-      // 使用存在的文件
       final sourceFile = dbFile.existsSync() ? dbFile : oldDbFile;
 
       setState(() {
         _statusMessage = l10n.emergencyPreparingExport;
       });
 
-      // 创建一个导出目录
       final downloadsDir = Directory(join(appDir.path, 'Downloads'));
       if (!downloadsDir.existsSync()) {
         await downloadsDir.create(recursive: true);
       }
 
-      // 创建导出文件名
       final now = DateTime.now();
       final timestamp =
           '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
       final exportFileName = 'thoughtecho_emergency_$timestamp.db';
       final exportFile = File(join(downloadsDir.path, exportFileName));
 
-      // 复制文件
       setState(() {
         _statusMessage = l10n.emergencyCopyingFile;
       });
