@@ -42,6 +42,7 @@ dependencies:
   flex_color_picker: ^3.4.1
   lottie: ^3.3.2
   flutter_svg: ^2.2.4
+  xml: ^6.6.1
   dynamic_color: ^1.6.6
   # 交接文档记着「必须 ≥ 11.5.1」（Flutter 3.44.x 给 TextInputClient 加了
   # onFocusReceived，11.5.0 没实现）。这里**不收紧成 ^11.5.1**：11.5.1 自身要求
@@ -115,7 +116,6 @@ dev_dependencies:
   msix: ^3.16.7
   path_provider_platform_interface: ^2.1.2
   plugin_platform_interface: ^2.1.8
-  xml: ^6.6.1
 
 # 应用图标配置
 flutter_launcher_icons:

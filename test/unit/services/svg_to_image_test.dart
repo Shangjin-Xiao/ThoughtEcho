@@ -151,6 +151,25 @@ void main() {
       expect(key1, isNot(equals(key3)));
     });
 
+    test('dashed SVG export returns an error image without caching', () async {
+      final cacheService = SvgRasterCacheService()..clearCache();
+      const dashedSvg =
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+          '<rect width="100" height="100" fill="blue"/>'
+          '<path d="M0 0 L10 0" stroke="blue" stroke-dasharray="0.1 0.1"/>'
+          '</svg>';
+
+      final bytes = await SvgToImageService.convertSvgToImage(
+        dashedSvg,
+        width: 100,
+        height: 100,
+      );
+
+      final pixel = img.decodePng(bytes)!.getPixel(0, 0);
+      expect(pixel.r, greaterThan(pixel.b));
+      expect(cacheService.getCacheStats()['count'], 0);
+    });
+
     test('批量转换功能', () async {
       final svgList = [testSvg, testSvg, testSvg];
 

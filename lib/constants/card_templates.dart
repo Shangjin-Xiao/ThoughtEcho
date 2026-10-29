@@ -675,7 +675,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#14532d',
   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="url(#retroGrain)" opacity="0.2" rx="24"/>
   
   <!-- 边框 -->
-  <rect x="24" y="24" width="352" height="552" fill="none" stroke="#78350f" stroke-width="2" rx="16" stroke-dasharray="8 6"/>
+  <rect x="24" y="24" width="352" height="552" fill="none" stroke="#78350f" stroke-width="2" rx="16"/>
   <rect x="32" y="32" width="336" height="536" fill="none" stroke="#78350f" stroke-width="1" rx="12" stroke-opacity="0.3"/>
 
   <!-- 装饰 -->
