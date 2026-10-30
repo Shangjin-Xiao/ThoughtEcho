@@ -41,6 +41,12 @@ Future<Map<String, dynamic>?> _fetchFromHitokoto(
     apiUrl = '$apiUrl?c=$type';
   }
 
+  final uri = Uri.tryParse(apiUrl);
+  if (uri == null || uri.scheme != 'https') {
+    logError('无效或不安全的 URL (必须为 HTTPS): $apiUrl', source: 'ApiService');
+    return null;
+  }
+
   logDebug('一言API请求URL: $apiUrl');
   final response =
       await httpGet(apiUrl, timeoutSeconds: ApiService._timeoutSeconds);
