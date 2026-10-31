@@ -331,3 +331,8 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** In Dart, calling `RegExp(...)` inside high-frequency utility methods like `plainTextOf`, `apply`, or `alignPunctuationStyle` causes the regular expression to be repeatedly allocated and compiled. For a text editing tool, this introduces significant garbage collection pressure and CPU overhead when called heavily.
 **Action:** Extracted the regular expressions for trailing newline (`_trailingNewlineRegex`), curly quotes (`_curlyQuotesRegex`), and straight quotes (`_straightQuotesRegex`) as `static final RegExp` members at the top of the `QuillStructuredEdit` class. This allows them to be compiled exactly once and reused, which benchmarks showed reduces execution time by over 70% in high-volume scenarios. Added `test/performance/quill_structured_edit_benchmark_test.dart` to benchmark execution performance with non-flaky bounds.
 
+## 2026-11-02 - 优化 AINetworkManager 故障转移 API 密钥读取性能
+
+**Learning:** 在多服务商故障转移（Failover）或多服务商状态重试逻辑中，服务商密钥是通过加密存储（如 SecureStorage / KeyStore / Keychain）进行跨 Isolate/MethodChannel 通信异步读取的。若在单次请求的故障转移循环中为同一个或多个 provider 频繁重复调用 Key 读取方法，将产生冗余的异步 I/O 与平台 Channel IPC 开销。通过在请求执行作用域内传递一个本地 Map 缓存（execution-scope cache），能在单次请求的重试/故障转移链路中实现 O(1) 内存级别复用，既完全避免了跨网络/跨请求的数据污染风险，又消除了冗余平台通道读盘。
+
+**Action:** 修改 `lib/utils/ai_network_manager.dart` 中的 `_loadApiKeyForProvider` 方法支持可选的执行作用域缓存 `Map<String, AIProviderSettings>? cache`，并在 `_makeRequestWithFailover` 与 `_makeStreamRequestWithFailover` 方法中实例化 `providerCache` 进行复用，并补充了 `test/performance/ai_network_manager_benchmark_test.dart` 性能基准测试。
