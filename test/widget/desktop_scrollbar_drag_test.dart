@@ -217,7 +217,8 @@ void main() {
     expect(behavior.dragDevices, contains(PointerDeviceKind.trackpad));
   });
 
-  testWidgets('NoteListView contains a Scrollbar widget', (tester) async {
+  testWidgets('NoteListView contains a Scrollbar widget on desktop',
+      (tester) async {
     final databaseService = _FakeDatabaseService();
     final settingsService = _FakeSettingsService();
 
@@ -229,6 +230,7 @@ void main() {
           ChangeNotifierProvider(create: (_) => NoteSearchController()),
         ],
         child: MaterialApp(
+          theme: ThemeData(platform: TargetPlatform.windows),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),
@@ -255,6 +257,48 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 2));
     expect(find.byType(Scrollbar), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('NoteListView does not contain a Scrollbar widget on mobile',
+      (tester) async {
+    final databaseService = _FakeDatabaseService();
+    final settingsService = _FakeSettingsService();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
+          ChangeNotifierProvider<SettingsService>.value(value: settingsService),
+          ChangeNotifierProvider(create: (_) => NoteSearchController()),
+        ],
+        child: MaterialApp(
+          theme: ThemeData(platform: TargetPlatform.android),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Material(
+            child: NoteListView(
+              tags: const [],
+              selectedTagIds: const [],
+              onTagSelectionChanged: (_) {},
+              searchQuery: '',
+              sortType: 'time',
+              sortAscending: false,
+              onSortChanged: (_, __) {},
+              onSearchChanged: (_) {},
+              onEdit: (_) {},
+              onDelete: (_) {},
+              onAskAI: (_) {},
+              onFilterChanged: (_, __) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.byType(Scrollbar), findsNothing);
   });
 
   testWidgets('SettingsPage contains a Scrollbar widget', (tester) async {
