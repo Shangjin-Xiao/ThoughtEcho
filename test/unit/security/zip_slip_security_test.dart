@@ -197,7 +197,7 @@ void main() {
         zipFile.writeAsBytesSync(zipBytes);
 
         // Attempt streaming extraction - must throw Zip Slip security exception
-        expect(
+        await expectLater(
           ZipStreamProcessor.extractZipStreaming(zipFile.path, extractDir),
           throwsA(isA<Exception>().having(
             (e) => e.toString(),
@@ -209,6 +209,14 @@ void main() {
         // Verify outside file was NOT created
         final outsideFile = File(path.join(tempDir.path, 'outside_evil.txt'));
         expect(await outsideFile.exists(), isFalse);
+
+        // Verify that zip file handle was properly released and file can be deleted/modified without handle lock
+        expect(() => zipFile.deleteSync(), returnsNormally);
+        expect(await zipFile.exists(), isFalse);
+
+        // Verify extract directory is not locked by open output handles
+        expect(() => Directory(extractDir).deleteSync(recursive: true),
+            returnsNormally);
       });
     });
   });
