@@ -48,7 +48,7 @@ dependencies:
   # Flutter 3.44 / Dart 3.12，而 pubspec 的 SDK 下限还是 3.5.0、Windows 构建工作流
   # 还提供 3.38.6 / 3.35.3 选项，收紧会直接打断那两条构建。lock 已锁在 11.5.1，
   # 真要让这条护栏生效得连同 SDK 下限和 CI 版本矩阵一起提，那是独立的一次决定。
-  flutter_quill: ^11.5.0
+  flutter_quill: ^11.5.1
   flutter_quill_extensions: ^11.0.0
   video_player: ^2.8.17
   chewie: ^1.13.0
