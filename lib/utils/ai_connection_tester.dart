@@ -1,3 +1,9 @@
+/// AI 连通性测试服务（生产环境工具）
+///
+/// 为 AI 设置页（`ai_settings_page.dart` 与 `ai_provider_edit_page.dart`）提供真实 API
+/// 连通性测试服务的生产定位核心工具。
+library;
+
 import 'package:flutter/foundation.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/utils/svg_test_helper.dart';
+import '../../helpers/svg_test_helper.dart';
 
 void main() {
   group('SVGTestHelper', () {
@@ -48,12 +48,13 @@ void main() {
       });
 
       test(
-          'should still return true but log warnings when missing xmlns or viewBox',
-          () {
-        final validSvgWithoutAttrs = '<svg></svg>';
-        // According to the code, it returns true but logs a warning
-        expect(SVGTestHelper.validateSVG(validSvgWithoutAttrs), isTrue);
-      });
+        'should still return true but log warnings when missing xmlns or viewBox',
+        () {
+          final validSvgWithoutAttrs = '<svg></svg>';
+          // According to the code, it returns true but logs a warning
+          expect(SVGTestHelper.validateSVG(validSvgWithoutAttrs), isTrue);
+        },
+      );
     });
 
     group('cleanAndFixSVG', () {

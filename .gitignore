@@ -164,6 +164,7 @@ jest_*.log
 **/debug_info/
 **/crash_dumps/
 **/diagnostics/
+!tool/diagnostics/
 **/error_reports/
 UserInterfaceState.xcuserstate
 **/*.ipa
