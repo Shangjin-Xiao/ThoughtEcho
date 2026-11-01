@@ -319,28 +319,20 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   }
 
   Future<void> _stopSyncService() async {
+    // 只使用保存的引用（在 didChangeDependencies/_initializeSyncService 中获取）。
+    // 不要回退到 context.read：该方法会在 dispose() 中调用，此时 Element
+    // 已在卸载过程中（widget 已置空），通过 context 查找 Provider 会抛出
+    // "Null check operator used on a null value"。
+    // 引用为 null 说明服务已被停止（例如 _onWillPop 中已调用），无需重复处理。
+    final syncService = _syncService;
+    if (syncService == null) {
+      return;
+    }
+    // 先清理引用，避免并发/重复调用时重复停止
+    _syncService = null;
     try {
-      // 优先使用保存的引用
-      if (_syncService != null) {
-        debugPrint('使用保存的引用停止同步服务...');
-        await _syncService!.stopServer();
-      } else {
-        // 备用方案：通过context获取（但要小心context可能已失效）
-        try {
-          if (mounted) {
-            final syncService = context.read<NoteSyncService>();
-            debugPrint('使用context获取的引用停止同步服务...');
-            await syncService.stopServer();
-          }
-        } catch (e, stack) {
-          AppLogger.e(
-            '通过context停止同步服务失败',
-            error: e,
-            stackTrace: stack,
-            source: 'NoteSyncPage',
-          );
-        }
-      }
+      debugPrint('使用保存的引用停止同步服务...');
+      await syncService.stopServer();
       debugPrint('同步服务已停止');
     } catch (e, stack) {
       AppLogger.e(
@@ -349,8 +341,6 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         stackTrace: stack,
         source: 'NoteSyncPage',
       );
-    } finally {
-      _syncService = null; // 清理引用
     }
   }
 
