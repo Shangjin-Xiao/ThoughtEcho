@@ -594,7 +594,9 @@ class MediaReferenceService {
       );
       if (quotes.isEmpty) break;
 
-      for (final quote in quotes) {
+      const int chunkSize = 50;
+      for (var i = 0; i < quotes.length; i++) {
+        final quote = quotes[i];
         final quoteId = quote.id;
         if (quoteId == null || quoteId.isEmpty) {
           continue;
@@ -618,6 +620,11 @@ class MediaReferenceService {
             () => <String>{},
           );
           quoteSet.add(quoteId);
+        }
+
+        if ((i + 1) % chunkSize == 0) {
+          // 让出事件循环，避免长时间阻塞
+          await Future.delayed(Duration.zero);
         }
       }
 
@@ -1154,8 +1161,22 @@ class MediaReferenceService {
     Quote quote, {
     String? cachedAppPath,
   }) async {
-    final appPath = cachedAppPath ??
-        path.normalize((await getApplicationDocumentsDirectory()).path);
+    final deltaContent = quote.deltaContent;
+    if (deltaContent == null || deltaContent.isEmpty) {
+      return const [];
+    }
+
+    String appPath = cachedAppPath ?? '';
+    if (appPath.isEmpty) {
+      try {
+        appPath =
+            path.normalize((await getApplicationDocumentsDirectory()).path);
+      } catch (e) {
+        logDebug('获取应用文档目录失败: $e');
+        appPath = '';
+      }
+    }
+
     return extractMediaPathsFromQuoteSync(quote, cachedAppPath: appPath);
   }
 
@@ -1329,12 +1350,17 @@ class MediaReferenceService {
     String filePath, {
     String? cachedAppPath,
   }) async {
-    if (cachedAppPath != null) {
-      return normalizeFilePathSync(filePath, cachedAppPath: cachedAppPath);
+    try {
+      if (cachedAppPath != null) {
+        return normalizeFilePathSync(filePath, cachedAppPath: cachedAppPath);
+      }
+      final appPath =
+          path.normalize((await getApplicationDocumentsDirectory()).path);
+      return normalizeFilePathSync(filePath, cachedAppPath: appPath);
+    } catch (e) {
+      logDebug('标准化文件路径失败: $e');
+      return filePath;
     }
-    final appPath =
-        path.normalize((await getApplicationDocumentsDirectory()).path);
-    return normalizeFilePathSync(filePath, cachedAppPath: appPath);
   }
 
   /// 获取媒体引用统计信息

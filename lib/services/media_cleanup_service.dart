@@ -305,7 +305,9 @@ class MediaCleanupService {
 
       // 批量提取笔记中的媒体路径与拆分 I/O 检查
       final refsToCheck = <_MediaRefToCheck>[];
-      for (final quote in quotes) {
+      const quoteChunkSize = 50;
+      for (var i = 0; i < quotes.length; i++) {
+        final quote = quotes[i];
         final mediaPaths = MediaReferenceService.extractMediaPathsFromQuoteSync(
           quote,
           cachedAppPath: appPath, // 传递缓存的路径以避免多余的平台调用
@@ -322,6 +324,11 @@ class MediaCleanupService {
               absolutePath: absolutePath,
             ),
           );
+        }
+
+        if ((i + 1) % quoteChunkSize == 0) {
+          // 让出事件循环，避免长时间阻塞
+          await Future.delayed(Duration.zero);
         }
       }
 

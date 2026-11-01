@@ -50,16 +50,11 @@ void main() {
         i + quoteChunkSize > quotes.length ? quotes.length : i + quoteChunkSize,
       );
 
-      final chunkResults = await Future.wait(
-        chunk.map((quote) async {
-          return await MediaReferenceService.extractMediaPathsFromQuote(
-            quote,
-            cachedAppPath: dummyAppPath,
-          );
-        }),
-      );
-
-      for (final res in chunkResults) {
+      for (final quote in chunk) {
+        final res = MediaReferenceService.extractMediaPathsFromQuoteSync(
+          quote,
+          cachedAppPath: dummyAppPath,
+        );
         extractedCount += res.length;
       }
     }
