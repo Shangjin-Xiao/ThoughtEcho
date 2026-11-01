@@ -145,3 +145,7 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-11-03 - [补充 MultiAISettings 的单元测试]
 **盲点:** `MultiAISettings` 是应用中管理多 AI 渠道配置的核心数据模型，涵盖了旧版向后兼容字段解析（从 `availableProviders` 回退、从 `currentProvider` Map 提取 Provider ID）、`currentProvider` 动态查找容错、以及双向序列化逻辑。由于缺乏专门的单元测试，一旦字段解析或向后兼容逻辑受损，将直接导致用户配置加载异常或渠道状态丢失。
 **对策:** 编写极简且无外部依赖的纯单元测试套件 `test/unit/models/multi_ai_settings_test.dart`，系统性覆盖默认构造、`defaultSettings`、`currentProvider` 正反向查询、历史兼容 schema 反序列化与缺省回退、`toJson` 往返一致性以及 `copyWith` 字段独立更新，全面消除数据模型层的测试盲区。
+
+## 2026-11-01 - [补充 TimeUtils.getCurrentDayPeriodKey 的测试]
+**盲点:** `TimeUtils.getCurrentDayPeriodKey` 用于决定笔记与问候语的时段 Key（晨曦、上午、午后、黄昏、夜晚、深夜），直接绑定 `TimeOfDay.now()` 且缺乏测试覆盖，导致无法在单测中验证时段边界划分与跨天边界的正确性。
+**对策:** 为 `getCurrentDayPeriodKey([TimeOfDay? time])` 引入可选时间参数作为注入点，在保持原无参调用兼容的同时，在 `test/unit/utils/time_utils_test.dart` 中增加对 6 大时段所有边界点（00:00, 04:59, 05:00, 07:59, 08:00, 11:59, 12:00, 16:59, 17:00, 19:59, 20:00, 22:59, 23:00, 23:59）以及无参调用的确定性测试覆盖。

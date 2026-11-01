@@ -7,6 +7,88 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('TimeUtils 单元测试 - 时间段与边界转换', () {
+    test('getCurrentDayPeriodKey 应该正确覆盖所有时段边界', () {
+      // 00:00 -> midnight (深夜)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 0, minute: 0)),
+        'midnight',
+      );
+      // 04:59 -> midnight (深夜)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 4, minute: 59)),
+        'midnight',
+      );
+      // 05:00 -> dawn (晨曦)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 5, minute: 0)),
+        'dawn',
+      );
+      // 07:59 -> dawn (晨曦)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 7, minute: 59)),
+        'dawn',
+      );
+      // 08:00 -> morning (上午)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 8, minute: 0)),
+        'morning',
+      );
+      // 11:59 -> morning (上午)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 11, minute: 59)),
+        'morning',
+      );
+      // 12:00 -> afternoon (午后)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 12, minute: 0)),
+        'afternoon',
+      );
+      // 16:59 -> afternoon (午后)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 16, minute: 59)),
+        'afternoon',
+      );
+      // 17:00 -> dusk (黄昏)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 17, minute: 0)),
+        'dusk',
+      );
+      // 19:59 -> dusk (黄昏)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 19, minute: 59)),
+        'dusk',
+      );
+      // 20:00 -> evening (夜晚)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 20, minute: 0)),
+        'evening',
+      );
+      // 22:59 -> evening (夜晚)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 22, minute: 59)),
+        'evening',
+      );
+      // 23:00 -> midnight (深夜)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 23, minute: 0)),
+        'midnight',
+      );
+      // 23:59 -> midnight (深夜)
+      expect(
+        TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 23, minute: 59)),
+        'midnight',
+      );
+    });
+
+    test(
+        "getCurrentDayPeriodKey without arguments returns key for current time",
+        () {
+      final beforeKey = TimeUtils.getCurrentDayPeriodKey(TimeOfDay.now());
+      final result = TimeUtils.getCurrentDayPeriodKey();
+      final afterKey = TimeUtils.getCurrentDayPeriodKey(TimeOfDay.now());
+      expect(result == beforeKey || result == afterKey, isTrue);
+    });
+
     test('formatQuoteDate 时间段边界测试', () {
       // 04:59 -> 深夜
       expect(
