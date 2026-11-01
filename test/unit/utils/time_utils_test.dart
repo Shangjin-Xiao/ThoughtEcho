@@ -7,7 +7,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('TimeUtils 单元测试 - 时间段与边界转换', () {
-    test('getCurrentDayPeriodKey 应该正确覆盖所有时段边界与默认时间', () {
+    test('getCurrentDayPeriodKey 应该正确覆盖所有时段边界', () {
       // 00:00 -> midnight (深夜)
       expect(
         TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 0, minute: 0)),
@@ -78,13 +78,15 @@ void main() {
         TimeUtils.getCurrentDayPeriodKey(const TimeOfDay(hour: 23, minute: 59)),
         'midnight',
       );
+    });
 
-      // 无参调用（使用系统当前时间），必须返回有效的 6 种时段 Key 之一
-      final currentKey = TimeUtils.getCurrentDayPeriodKey();
-      expect(
-        ['dawn', 'morning', 'afternoon', 'dusk', 'evening', 'midnight'],
-        contains(currentKey),
-      );
+    test(
+        "getCurrentDayPeriodKey without arguments returns key for current time",
+        () {
+      final beforeKey = TimeUtils.getCurrentDayPeriodKey(TimeOfDay.now());
+      final result = TimeUtils.getCurrentDayPeriodKey();
+      final afterKey = TimeUtils.getCurrentDayPeriodKey(TimeOfDay.now());
+      expect(result == beforeKey || result == afterKey, isTrue);
     });
 
     test('formatQuoteDate 时间段边界测试', () {
