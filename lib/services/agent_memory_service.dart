@@ -348,6 +348,131 @@ class AgentMemoryService extends ChangeNotifier {
   static final RegExp _cjkRegex = RegExp(r'[一-鿿]');
   static final RegExp _whitespaceCollapseRegex = RegExp(r'\s+');
 
+  /// 常用 CJK 检索停用词（结构助词、疑问代词、常见意图谓词与虚词）。
+  /// 在 2-gram 滑窗与相关度打分中过滤或降权，避免噪声稀释核心概念。
+  static const Set<String> cjkStopWords = <String>{
+    // 结构意图与谓词
+    '我想了解',
+    '告诉我',
+    '我想',
+    '我要',
+    '我会',
+    '我在',
+    '我的',
+    '我们',
+    '了解',
+    '关于',
+    '对于',
+    '有关',
+    '至于',
+    '为了',
+    '中的',
+    '你的',
+    '他的',
+    '它的',
+    '有的',
+    '知道',
+    '告诉',
+    '请问',
+    '请教',
+    '看看',
+    '觉得',
+    '认为',
+    '希望',
+    '需要',
+    '想要',
+    '能否',
+    '可以',
+    '帮我',
+    '进行',
+    '讨论',
+    '说明',
+    '解释',
+    '怎样',
+    '如何',
+    '为何',
+    '什么',
+    '怎么',
+    '哪里',
+    '哪儿',
+    '哪个',
+    '哪些',
+    '为什么',
+    '你们',
+    '他们',
+    '自己',
+    '这个',
+    '那个',
+    '这些',
+    '那些',
+    '这样',
+    '那样',
+    '这么',
+    '那么',
+    '某个',
+    '某些',
+    '各个',
+    '非常',
+    '十分',
+    '特别',
+    '极其',
+    '比较',
+    '稍微',
+    '几乎',
+    '大概',
+    '大约',
+    '也许',
+    '已经',
+    '正在',
+    '将要',
+    '曾经',
+    '一直',
+    '总是',
+    '常常',
+    '经常',
+    '还是',
+    '也是',
+    '都是',
+    '不是',
+    '就是',
+    '并且',
+    '而且',
+    '以及',
+    '或者',
+    '如果',
+    '但是',
+    '因为',
+    '所以',
+    '由于',
+    '因此',
+    '之中',
+    '之间',
+    '之后',
+    '之前',
+    '之上',
+    '之下',
+    '其中',
+    '里面',
+    '外面',
+    '上面',
+    '下面',
+    '这里',
+    '那里',
+    '一下',
+    '一些',
+    '一点',
+    '一次',
+  };
+
+  static final RegExp _stopWordsSplitRegex = RegExp(
+    (cjkStopWords.toList()..sort((a, b) => b.length.compareTo(a.length)))
+        .map(RegExp.escape)
+        .join('|'),
+  );
+
+  @visibleForTesting
+  static bool isStopWord(String word) => cjkStopWords.contains(word.trim());
+
   /// 检查画像指令文本是否包含存疑或待确认标记（如「（存疑）」、「（待确认）」）。
   static bool isDoubtfulOrUnconfirmedDirective(String directive) {
     final trimmed = directive.trim();
@@ -1115,6 +1240,7 @@ class AgentMemoryService extends ChangeNotifier {
   /// relevance × recency 衰减 × importance，公式取自 Generative Agents。
   ///
   /// 查询时不做任何模型调用——排序必须是确定的，否则同一个问题两次问出不同记忆。
+  /// 采用核心词与次要/停用词分级加权与完整短语匹配加成机制，避免无意义词数量膨胀稀释核心词得分。
   @visibleForTesting
   static double scoreFact(
     AgentMemoryFact fact, {
@@ -1127,19 +1253,84 @@ class AgentMemoryService extends ChangeNotifier {
     } else {
       final contentLower = fact.content.toLowerCase();
       final categoryLower = fact.category?.toLowerCase();
-      var matched = 0;
+
+      double matchedWeight = 0.0;
+      double totalWeight = 0.0;
+      final matchedKeywords = <String>[];
+
       for (final keyword in keywords) {
-        if (contentLower.contains(keyword) ||
-            (categoryLower != null && categoryLower.contains(keyword)) ||
+        final kwLower = keyword.toLowerCase();
+        final isStop = isStopWord(kwLower);
+
+        // 分级加权：核心词权重远高于次要/停用虚词；长词/短语基础权重更高
+        double weight;
+        if (isStop) {
+          weight = 0.2;
+        } else {
+          if (kwLower.length >= 4) {
+            weight = 1.5;
+          } else if (kwLower.length == 3) {
+            weight = 1.25;
+          } else {
+            weight = 1.0;
+          }
+        }
+        totalWeight += weight;
+
+        final isMatched = contentLower.contains(kwLower) ||
+            (categoryLower != null && categoryLower.contains(kwLower)) ||
             fact.triggerPhrases
-                .any((phrase) => phrase.toLowerCase().contains(keyword))) {
-          matched++;
+                .any((phrase) => phrase.toLowerCase().contains(kwLower));
+
+        if (isMatched) {
+          matchedWeight += weight;
+          matchedKeywords.add(kwLower);
         }
       }
-      if (matched == 0) {
+
+      if (matchedKeywords.isEmpty || matchedWeight <= 0) {
         return 0;
       }
-      relevance = matched / keywords.length;
+
+      // 基础相关度（加权匹配占比归一化）
+      double baseRelevance = matchedWeight / totalWeight;
+
+      // 如果仅匹配了次要虚词/停用词（未命中任何核心词），大幅降低相关度上限（惩罚纯虚词召回）
+      final onlyMatchedStopWords = matchedKeywords.every(isStopWord);
+      if (onlyMatchedStopWords) {
+        baseRelevance = math.min(baseRelevance, 0.25) * 0.5;
+      }
+
+      // 完整短语匹配加成：
+      // 1. 命中了长度 >= 3 的核心短语关键词
+      // 2. 或者命中的多个关键词在内容中相连拼成短语（例如 "卡片" 与 "笔记" 拼成 "卡片笔记"）
+      double phraseBonus = 1.0;
+      bool hasPhraseMatch = false;
+
+      if (!onlyMatchedStopWords) {
+        if (matchedKeywords.any((k) => k.length >= 3 && !isStopWord(k))) {
+          hasPhraseMatch = true;
+        } else if (matchedKeywords.length >= 2) {
+          for (var i = 0; i < matchedKeywords.length; i++) {
+            for (var j = 0; j < matchedKeywords.length; j++) {
+              if (i != j) {
+                final combined = matchedKeywords[i] + matchedKeywords[j];
+                if (contentLower.contains(combined)) {
+                  hasPhraseMatch = true;
+                  break;
+                }
+              }
+            }
+            if (hasPhraseMatch) break;
+          }
+        }
+      }
+
+      if (hasPhraseMatch) {
+        phraseBonus = 1.25;
+      }
+
+      relevance = math.min(1.0, baseRelevance * phraseBonus);
     }
 
     final ageDays = now.difference(fact.createdAt).inMinutes / (60 * 24);
@@ -1152,8 +1343,8 @@ class AgentMemoryService extends ChangeNotifier {
 
   /// 把查询切成检索关键词。
   ///
-  /// 中文按「非分隔符连续片段」切，再对长片段补 2 字滑窗——没有分词器时这是
-  /// 用 LIKE 捞中文候选的务实办法，召回宁多勿少，排序在 [scoreFact] 里收敛。
+  /// 中文按「非分隔符连续片段」切，自动过滤 CJK 停用词与虚词边界噪声，再对长片段补 2 字滑窗。
+  /// 保留核心短语并排除常见无意义词，召回与排序在 [scoreFact] 里收敛。
   @visibleForTesting
   static List<String> extractKeywords(String query) {
     final normalized = query.toLowerCase().trim();
@@ -1169,18 +1360,35 @@ class AgentMemoryService extends ChangeNotifier {
     final keywords = <String>{};
     for (final segment in segments) {
       if (_isCjk(segment)) {
-        if (segment.length <= 3) {
-          keywords.add(segment);
-        } else {
-          for (var i = 0; i + 2 <= segment.length; i++) {
-            keywords.add(segment.substring(i, i + 2));
+        // 先按 CJK 停用词切分，过滤虚词并杜绝跨词滑窗产生的无意义虚词 2-gram
+        final cleanParts = segment
+            .split(_stopWordsSplitRegex)
+            .where((part) => part.isNotEmpty)
+            .toList();
+
+        for (final part in cleanParts) {
+          if (part.length <= 3) {
+            if (!isStopWord(part)) {
+              keywords.add(part);
+            }
+          } else {
+            // 保留核心完整长片段作为短语关键词
+            if (part.length <= 8 && !isStopWord(part)) {
+              keywords.add(part);
+            }
+            for (var i = 0; i + 2 <= part.length; i++) {
+              final gram = part.substring(i, i + 2);
+              if (!isStopWord(gram)) {
+                keywords.add(gram);
+              }
+            }
           }
         }
-      } else if (segment.length >= 2) {
+      } else if (segment.length >= 2 && !isStopWord(segment)) {
         keywords.add(segment);
       }
     }
-    return keywords.take(12).toList(growable: false);
+    return keywords.take(16).toList(growable: false);
   }
 
   static bool _isCjk(String value) => _cjkRegex.hasMatch(value);

@@ -152,6 +152,77 @@ void main() {
       expect(keywords, contains('啡馆'));
     });
 
+    test('extractKeywords 过滤 CJK 停用词并保留核心概念与 2-gram 滑窗', () {
+      final fluffKeywords = AgentMemoryService.extractKeywords('我想了解关于...');
+      expect(fluffKeywords, isNot(contains('我想')));
+      expect(fluffKeywords, isNot(contains('关于')));
+      expect(fluffKeywords, isNot(contains('了解')));
+
+      final subjectKeywords = AgentMemoryService.extractKeywords(
+        '我想了解关于卡片笔记法中的双向链接记录',
+      );
+      // 必须过滤掉无意义虚词与助词
+      expect(subjectKeywords, isNot(contains('我想')));
+      expect(subjectKeywords, isNot(contains('关于')));
+      expect(subjectKeywords, isNot(contains('了解')));
+      expect(subjectKeywords, isNot(contains('中的')));
+      // 必须提取核心专业词汇及 2-gram
+      expect(
+        subjectKeywords.any((k) => k == '卡片笔记法' || k == '卡片' || k == '笔记'),
+        isTrue,
+      );
+      expect(
+        subjectKeywords.any((k) => k == '双向链接' || k == '双向' || k == '链接'),
+        isTrue,
+      );
+      expect(subjectKeywords, contains('记录'));
+    });
+
+    test('scoreFact 中精确匹配核心专业词汇的事实得分显著高于仅匹配结构虚词的事实得分', () {
+      final now = DateTime(2026, 8, 8);
+      final coreFact = AgentMemoryFact(
+        id: 'core',
+        content: '用户深入践行卡片笔记法，注重双向链接与概念原子化',
+        createdAt: now,
+        importance: 5,
+      );
+      final stopFact = AgentMemoryFact(
+        id: 'stop',
+        content: '我想关于明天的安排做进一步了解中的讨论',
+        createdAt: now,
+        importance: 5,
+      );
+
+      // 1. 在包含核心词与虚词的复合检索场景下
+      final mixedKeywords = const <String>['卡片笔记法', '双向链接', '我想', '关于', '了解'];
+      final coreScore = AgentMemoryService.scoreFact(
+        coreFact,
+        keywords: mixedKeywords,
+        now: now,
+      );
+      final stopScore = AgentMemoryService.scoreFact(
+        stopFact,
+        keywords: mixedKeywords,
+        now: now,
+      );
+
+      expect(coreScore, greaterThan(stopScore * 2));
+
+      // 2. 独立单测纯核心词命中 vs 纯虚词命中打分
+      final singleCoreScore = AgentMemoryService.scoreFact(
+        coreFact,
+        keywords: const <String>['卡片笔记法'],
+        now: now,
+      );
+      final singleStopScore = AgentMemoryService.scoreFact(
+        stopFact,
+        keywords: const <String>['关于'],
+        now: now,
+      );
+
+      expect(singleCoreScore, greaterThan(singleStopScore * 2));
+    });
+
     test('英文查询保留完整词，丢弃单字符', () {
       final keywords = AgentMemoryService.extractKeywords('espresso a bar');
       expect(keywords, contains('espresso'));

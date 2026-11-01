@@ -124,6 +124,24 @@ void main() {
       );
       expect(roleOf(messages.last), 'user');
     });
+
+    test('用户输入超过 6000 字符时仍保留保底预算内的历史对话', () {
+      final historyMessage = message('写作风格约定：请保持碎句与哲思风格。', isUser: false);
+      final messages = AIService.buildChatMessages(
+        systemPrompt: '系统提示词',
+        userMessage: '长' * 6500,
+        maxChars: 6000,
+        history: [historyMessage],
+      );
+
+      // 应当包含 system, 保底历史消息, 以及当前的超长 user 消息
+      expect(messages.length, equals(3));
+      expect(roleOf(messages[0]), equals('system'));
+      expect(roleOf(messages[1]), equals('assistant'));
+      expect(contentOf(messages[1]), contains('写作风格约定'));
+      expect(roleOf(messages[2]), equals('user'));
+      expect(contentOf(messages[2]), contains('长' * 6500));
+    });
   });
 
   group('AIService 埋点测试', () {
