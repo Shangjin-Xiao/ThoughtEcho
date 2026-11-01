@@ -13,12 +13,13 @@ ImageProvider? createOptimizedImageProvider(
     return null;
   }
 
-  if (isDataUrl(source)) {
-    final data = tryDecodeDataUrl(source);
-    if (data == null) {
-      return null;
-    }
-    return _wrapResize(MemoryImage(data), cacheWidth, cacheHeight);
+  final bytes = tryDecodeAnyImageBytes(source);
+  if (bytes != null) {
+    return _wrapResize(MemoryImage(bytes), cacheWidth, cacheHeight);
+  }
+
+  if (source.startsWith('assets/')) {
+    return _wrapResize(AssetImage(source), cacheWidth, cacheHeight);
   }
 
   final uri = Uri.tryParse(source);

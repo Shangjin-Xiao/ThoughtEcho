@@ -171,11 +171,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
   });
 
-  testWidgets('全屏编辑器加载包含图片的富文本时渲染优化图片组件并隔离重绘', (WidgetTester tester) async {
+  testWidgets('全屏编辑器加载包含图片的富文本时渲染优化图片组件并隔离重绘，且点击弹出原生操作菜单',
+      (WidgetTester tester) async {
+    const sampleImageFixture =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
     final imageDelta = jsonEncode([
       {"insert": "图文笔记测试\n"},
       {
-        "insert": {"image": "https://example.com/sample_image.png"}
+        "insert": {"image": sampleImageFixture},
+        "attributes": {"width": "200", "height": "200"}
       },
       {"insert": "\n"}
     ]);
@@ -231,8 +236,33 @@ void main() {
     final quillEditorFinder = find.byType(QuillEditor);
     expect(quillEditorFinder, findsOneWidget);
 
-    // 验证富文本中的图片节点存在且有 RepaintBoundary 进行重绘隔离
-    expect(find.byType(RepaintBoundary), findsWidgets);
+    // 验证富文本中的 Image 节点正常渲染且使用带有解码尺寸限制的 ResizeImage
+    final imageFinder = find.descendant(
+      of: quillEditorFinder,
+      matching: find.byType(Image),
+    );
+    expect(imageFinder, findsOneWidget);
+
+    final imageWidget = tester.widget<Image>(imageFinder);
+    expect(imageWidget.image, isA<ResizeImage>());
+    final resizeImage = imageWidget.image as ResizeImage;
+    expect(resizeImage.width, isNotNull);
+
+    // 验证图片节点外层具有 RepaintBoundary 进行重绘隔离
+    final imageRepaintBoundaryFinder = find.ancestor(
+      of: imageFinder,
+      matching: find.byType(RepaintBoundary),
+    );
+    expect(imageRepaintBoundaryFinder, findsWidgets);
+
+    // 点击图片验证弹出编辑器原生操作菜单（调整大小、复制、删除等）
+    await tester.tap(imageFinder);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SimpleDialog), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.copy_all_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.delete_forever_outlined), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 600));

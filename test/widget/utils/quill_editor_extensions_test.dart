@@ -194,5 +194,31 @@ void main() {
         isTrue,
       );
     });
+
+    test('enableEditorMenu 参数正确传递给 _OptimizedImageEmbedBuilder', () {
+      final buildersWithMenu = QuillEditorExtensions.getEmbedBuilders(
+        optimizedImages: true,
+        enableEditorMenu: true,
+      );
+      final imageBuilderWithMenu = buildersWithMenu.firstWhere(
+        (b) => b.key == 'image',
+      );
+      expect(
+        imageBuilderWithMenu.runtimeType.toString(),
+        '_OptimizedImageEmbedBuilder',
+      );
+
+      final buildersWithoutMenu = QuillEditorExtensions.getEmbedBuilders(
+        optimizedImages: true,
+        enableEditorMenu: false,
+      );
+      final imageBuilderWithoutMenu = buildersWithoutMenu.firstWhere(
+        (b) => b.key == 'image',
+      );
+      expect(
+        imageBuilderWithoutMenu.runtimeType.toString(),
+        '_OptimizedImageEmbedBuilder',
+      );
+    });
   });
 }

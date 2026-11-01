@@ -1,3 +1,4 @@
+import 'dart:convert' show base64;
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
@@ -111,6 +112,32 @@ Uint8List? tryDecodeDataUrl(String source) {
     }
 
     return data.contentAsBytes();
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 尝试解析内联图片数据（支持完整 data URI 以及由标准 Quill 图片剥离后的纯 base64 字符串）。
+Uint8List? tryDecodeAnyImageBytes(String source) {
+  if (source.isEmpty) {
+    return null;
+  }
+
+  if (isDataUrl(source)) {
+    return tryDecodeDataUrl(source);
+  }
+
+  final trimmed = source.trim();
+  if (trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('file://') ||
+      trimmed.startsWith('/') ||
+      trimmed.startsWith('assets/')) {
+    return null;
+  }
+
+  try {
+    return base64.decode(trimmed);
   } catch (_) {
     return null;
   }
