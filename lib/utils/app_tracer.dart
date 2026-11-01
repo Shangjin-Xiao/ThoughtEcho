@@ -11,6 +11,78 @@ const String scrollSessionTraceName = 'ThoughtEcho.NoteListView.scrollSession';
 const String scrollSessionFinalizeTraceName =
     '$scrollSessionTraceName.finalize';
 
+final _tracerSensitiveWords = <String>{
+  'content',
+  'text',
+  'query',
+  'title',
+  'password',
+  'token',
+  'secret',
+  'authorization',
+  'auth',
+  'authentication',
+  'credential',
+  'credentials',
+  'apikey',
+};
+
+final _tracerMetricSuffixes = <String>{
+  'length',
+  'count',
+  'size',
+  'bytes',
+  'duration',
+  'ms',
+  'overhead',
+};
+
+final _tracerWordSplitPattern = RegExp(
+  r'[_\.\-\s]+|(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])',
+);
+
+bool _isSensitiveTracerKey(String key) {
+  final words =
+      key.split(_tracerWordSplitPattern).map((w) => w.toLowerCase()).toList();
+  if (words.isNotEmpty && _tracerMetricSuffixes.contains(words.last)) {
+    return false;
+  }
+  for (var i = 0; i < words.length; i++) {
+    final w = words[i];
+    if (_tracerSensitiveWords.contains(w)) return true;
+    if (w == 'api' && i + 1 < words.length && words[i + 1] == 'key') {
+      return true;
+    }
+  }
+  return false;
+}
+
+void _applySafeSpanData(ISentrySpan? span, Map<String, Object?>? arguments) {
+  if (span == null || arguments == null) return;
+  for (final entry in arguments.entries) {
+    if (_isSensitiveTracerKey(entry.key)) {
+      continue;
+    }
+    final value = entry.value;
+    if (value is String) {
+      final uri = Uri.tryParse(value);
+      if (uri != null && uri.hasScheme) {
+        span.setData(
+          entry.key,
+          Uri(
+            scheme: uri.scheme,
+            host: uri.host,
+            port: uri.hasPort ? uri.port : null,
+            path: uri.path,
+          ).toString(),
+        );
+        continue;
+      }
+    }
+    span.setData(entry.key, value);
+  }
+}
+
 /// 统一的性能监控追踪器
 ///
 /// 封装了底层的 [developer.TimelineTask] (用于本地 DevTools 和 Firebase Test Lab 测试)
@@ -64,11 +136,7 @@ class AppTracer {
       );
     }
 
-    if (arguments != null) {
-      for (final entry in arguments.entries) {
-        span.setData(entry.key, entry.value);
-      }
-    }
+    _applySafeSpanData(span, arguments);
 
     return AppTracer._(timeline, span);
   }
@@ -80,11 +148,7 @@ class AppTracer {
 
     // 2. Sentry 子节点地标 (为了在瀑布流里显示瞬间耗时，创建一个极短的子 Span)
     final markSpan = _sentrySpan?.startChild('mark', description: name);
-    if (arguments != null) {
-      for (final entry in arguments.entries) {
-        markSpan?.setData(entry.key, entry.value);
-      }
-    }
+    _applySafeSpanData(markSpan, arguments);
     markSpan?.finish();
   }
 
@@ -92,9 +156,7 @@ class AppTracer {
   void finish({Map<String, Object?>? arguments}) {
     if (arguments != null) {
       _timelineTask.finish(arguments: arguments);
-      for (final entry in arguments.entries) {
-        _sentrySpan?.setData(entry.key, entry.value);
-      }
+      _applySafeSpanData(_sentrySpan, arguments);
     } else {
       _timelineTask.finish();
     }
