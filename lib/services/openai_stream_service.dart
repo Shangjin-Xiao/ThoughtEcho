@@ -8,7 +8,6 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 import '../models/ai_provider_settings.dart';
 import '../utils/ai_endpoint_security.dart';
 import '../utils/app_logger.dart';
-import '../utils/string_utils.dart';
 
 /// 从正文里剥掉行内的 `<think>…</think>` 思考块。
 ///
@@ -580,6 +579,7 @@ class OpenAIStreamService extends ChangeNotifier {
     required openai.OpenAIConfig config,
     required Map<String, dynamic> requestBody,
     required StreamController<openai.ChatStreamEvent> controller,
+    http.Client? httpClient,
   }) async {
     // 确保流式请求标记
     requestBody['stream'] = true;
@@ -611,48 +611,98 @@ class OpenAIStreamService extends ChangeNotifier {
       'POST $url, body length=${jsonBody.length}',
     );
 
-    final httpClient = http.Client();
+    final client = httpClient ?? http.Client();
     try {
       final request = http.Request('POST', url)
         ..headers.addAll(headers)
         ..body = jsonBody;
 
-      final response = await httpClient.send(request);
+      final response = await client.send(request);
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
         throw Exception('AI 请求失败 (HTTP ${response.statusCode}): $body');
       }
 
+      String partialLine = '';
+
       await for (final chunk in response.stream.transform(utf8.decoder)) {
         if (controller.isClosed) break;
 
-        // 解析 SSE 数据
-        StringUtils.forEachLine(chunk, (line, _) {
-          final trimmed = line.trim();
-          if (trimmed.isEmpty) return;
+        final text = partialLine + chunk;
+        int startIndex = 0;
+        int newlineIndex;
 
-          if (trimmed.startsWith('data: ')) {
-            final data = trimmed.substring(6);
-            if (data == '[DONE]') return;
+        while ((newlineIndex = text.indexOf('\n', startIndex)) != -1) {
+          final line = text.substring(startIndex, newlineIndex);
+          startIndex = newlineIndex + 1;
 
-            try {
-              final json = jsonDecode(data) as Map<String, dynamic>;
-              final event = openai.ChatStreamEvent.fromJson(json);
-              if (!controller.isClosed) {
-                controller.add(event);
-              }
-            } catch (e) {
-              // 忽略解析错误的行（可能是不完整的 JSON）
-              logDebug('[OpenAIStreamService] SSE 解析错误: $e');
-            }
-          }
-        });
+          _parseSseLine(line, controller);
+          if (controller.isClosed) break;
+        }
+
+        partialLine = text.substring(startIndex);
+      }
+
+      // 当响应流读取完成（Stream 结束）且 controller 未关闭时，若 partialLine 中仍有残余文本，进行最后一次兜底解析刷新
+      if (!controller.isClosed && partialLine.isNotEmpty) {
+        _parseSseLine(partialLine, controller);
+        partialLine = '';
       }
     } finally {
-      httpClient.close();
+      if (httpClient == null) {
+        client.close();
+      }
     }
   }
+
+  /// 解析单行 SSE 数据并向控制器派发事件
+  static void _parseSseLine(
+    String line,
+    StreamController<openai.ChatStreamEvent> controller,
+  ) {
+    final trimmed = line.trim();
+    if (trimmed.isEmpty) return;
+
+    if (trimmed.startsWith('data:')) {
+      final data = trimmed.substring(5).trim();
+      if (data.isEmpty || data == '[DONE]') return;
+
+      try {
+        final json = jsonDecode(data) as Map<String, dynamic>;
+        final event = openai.ChatStreamEvent.fromJson(json);
+        if (!controller.isClosed) {
+          controller.add(event);
+        }
+      } catch (e) {
+        // 忽略解析错误的行（可能是不完整的 JSON）
+        logDebug('[OpenAIStreamService] SSE 解析错误: $e');
+      }
+    }
+  }
+
+  /// 供单元测试验证单行 SSE 解析逻辑
+  @visibleForTesting
+  static void parseSseLine(
+    String line,
+    StreamController<openai.ChatStreamEvent> controller,
+  ) =>
+      _parseSseLine(line, controller);
+
+  /// 供单元测试验证自定义请求体的流式解析逻辑
+  @visibleForTesting
+  Future<void> streamWithCustomBody({
+    required openai.OpenAIConfig config,
+    required Map<String, dynamic> requestBody,
+    required StreamController<openai.ChatStreamEvent> controller,
+    http.Client? httpClient,
+  }) =>
+      _streamWithCustomBody(
+        config: config,
+        requestBody: requestBody,
+        controller: controller,
+        httpClient: httpClient,
+      );
 
   /// 判断是否为 OpenRouter 提供商
   static bool _isOpenRouterProvider(AIProviderSettings provider) {

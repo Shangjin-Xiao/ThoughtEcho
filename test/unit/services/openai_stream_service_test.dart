@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/services/openai_stream_service.dart';
@@ -635,6 +638,268 @@ void main() {
         // Content-Type should not be in defaultHeaders
         expect(config.defaultHeaders.containsKey('Content-Type'), isFalse);
         expect(config.defaultHeaders.containsKey('content-type'), isFalse);
+      });
+    });
+
+    group('parseSseLine', () {
+      test('correctly parses valid SSE data line into ChatStreamEvent',
+          () async {
+        final controller = StreamController<openai.ChatStreamEvent>();
+        const line =
+            'data: {"id": "chatcmpl-1", "choices": [{"index": 0, "delta": {"content": "Hello"}}]}';
+
+        final eventsFuture = controller.stream.toList();
+        OpenAIStreamService.parseSseLine(line, controller);
+        await controller.close();
+
+        final events = await eventsFuture;
+        expect(events.length, 1);
+        expect(events[0].id, 'chatcmpl-1');
+        expect(events[0].choices?[0].delta.content, 'Hello');
+      });
+
+      test('ignores empty or whitespace-only lines', () async {
+        final controller = StreamController<openai.ChatStreamEvent>();
+        final eventsFuture = controller.stream.toList();
+
+        OpenAIStreamService.parseSseLine('', controller);
+        OpenAIStreamService.parseSseLine('   ', controller);
+        OpenAIStreamService.parseSseLine('\t\n', controller);
+        await controller.close();
+
+        final events = await eventsFuture;
+        expect(events, isEmpty);
+      });
+
+      test('ignores non-data SSE events and comments', () async {
+        final controller = StreamController<openai.ChatStreamEvent>();
+        final eventsFuture = controller.stream.toList();
+
+        OpenAIStreamService.parseSseLine(': ping', controller);
+        OpenAIStreamService.parseSseLine('event: completion', controller);
+        OpenAIStreamService.parseSseLine('id: 42', controller);
+        OpenAIStreamService.parseSseLine('retry: 1000', controller);
+        await controller.close();
+
+        final events = await eventsFuture;
+        expect(events, isEmpty);
+      });
+
+      test('handles [DONE] termination marker without adding event', () async {
+        final controller = StreamController<openai.ChatStreamEvent>();
+        final eventsFuture = controller.stream.toList();
+
+        OpenAIStreamService.parseSseLine('data: [DONE]', controller);
+        OpenAIStreamService.parseSseLine('data:[DONE]', controller);
+        OpenAIStreamService.parseSseLine('data:   [DONE]  ', controller);
+        await controller.close();
+
+        final events = await eventsFuture;
+        expect(events, isEmpty);
+      });
+
+      test('handles empty data payload gracefully', () async {
+        final controller = StreamController<openai.ChatStreamEvent>();
+        final eventsFuture = controller.stream.toList();
+
+        OpenAIStreamService.parseSseLine('data:', controller);
+        OpenAIStreamService.parseSseLine('data:   ', controller);
+        await controller.close();
+
+        final events = await eventsFuture;
+        expect(events, isEmpty);
+      });
+
+      test('catches malformed JSON without throwing or corrupting stream',
+          () async {
+        final controller = StreamController<openai.ChatStreamEvent>();
+        final eventsFuture = controller.stream.toList();
+
+        OpenAIStreamService.parseSseLine('data: {"id": "chatcmpl', controller);
+        OpenAIStreamService.parseSseLine('data: not json at all', controller);
+        await controller.close();
+
+        final events = await eventsFuture;
+        expect(events, isEmpty);
+      });
+
+      test('does not throw when controller is closed', () {
+        final controller = StreamController<openai.ChatStreamEvent>();
+        controller.close();
+
+        expect(
+          () => OpenAIStreamService.parseSseLine(
+            'data: {"id": "1", "choices": [{"index": 0, "delta": {"content": "Closed"}}]}',
+            controller,
+          ),
+          returnsNormally,
+        );
+      });
+    });
+
+    group('streamWithCustomBody & partialLine buffer', () {
+      const ollamaProvider = AIProviderSettings(
+        id: 'ollama',
+        name: 'Ollama',
+        apiKey: '',
+        apiUrl: 'http://localhost:11434/v1',
+        model: 'llama3',
+      );
+      final config = OpenAIStreamService.buildOpenAIConfig(ollamaProvider);
+      final service = OpenAIStreamService();
+
+      Future<List<openai.ChatStreamEvent>> executeStream(
+        List<String> chunks,
+      ) async {
+        final client = MockClient.streaming((request, body) async {
+          final stream = Stream.fromIterable(
+            chunks.map((c) => utf8.encode(c)),
+          );
+          return http.StreamedResponse(stream, 200);
+        });
+
+        final controller = StreamController<openai.ChatStreamEvent>();
+        final eventsFuture = controller.stream.toList();
+
+        await service.streamWithCustomBody(
+          config: config,
+          requestBody: {'model': 'llama3'},
+          controller: controller,
+          httpClient: client,
+        );
+        await controller.close();
+
+        return eventsFuture;
+      }
+
+      test(
+          'reassembles SSE data line split across two chunks (TCP fragmentation)',
+          () async {
+        // Line split at arbitrary point: `data: {"id": "1",`
+        final chunks = [
+          'data: {"id": "1",',
+          ' "choices": [{"index": 0, "delta": {"content": "reassembled"}}]}\n',
+        ];
+
+        final events = await executeStream(chunks);
+        expect(events.length, 1);
+        expect(events[0].id, '1');
+        expect(events[0].choices?[0].delta.content, 'reassembled');
+      });
+
+      test('reassembles SSE data line split across three chunks', () async {
+        final chunks = [
+          'data: {"id": "2", ',
+          '"choices": [{"index": 0, "delta": ',
+          '{"content": "piece by piece"}}]}\n',
+        ];
+
+        final events = await executeStream(chunks);
+        expect(events.length, 1);
+        expect(events[0].id, '2');
+        expect(events[0].choices?[0].delta.content, 'piece by piece');
+      });
+
+      test('handles single chunk containing multiple complete SSE lines',
+          () async {
+        final chunks = [
+          'data: {"id": "1", "choices": [{"index": 0, "delta": {"content": "First"}}]}\n'
+              'data: {"id": "2", "choices": [{"index": 0, "delta": {"content": "Second"}}]}\n'
+              'data: {"id": "3", "choices": [{"index": 0, "delta": {"content": "Third"}}]}\n',
+        ];
+
+        final events = await executeStream(chunks);
+        expect(events.length, 3);
+        expect(events[0].choices?[0].delta.content, 'First');
+        expect(events[1].choices?[0].delta.content, 'Second');
+        expect(events[2].choices?[0].delta.content, 'Third');
+      });
+
+      test('processes chunks cleanly when each chunk ends with a newline',
+          () async {
+        final chunks = [
+          'data: {"id": "1", "choices": [{"index": 0, "delta": {"content": "Line1"}}]}\n',
+          'data: {"id": "2", "choices": [{"index": 0, "delta": {"content": "Line2"}}]}\n',
+          'data: [DONE]\n',
+        ];
+
+        final events = await executeStream(chunks);
+        expect(events.length, 2);
+        expect(events[0].choices?[0].delta.content, 'Line1');
+        expect(events[1].choices?[0].delta.content, 'Line2');
+      });
+
+      test(
+          'flushes trailing partialLine when stream ends without newline (Requirement 4)',
+          () async {
+        final chunks = [
+          'data: {"id": "1", "choices": [{"index": 0, "delta": {"content": "Line1"}}]}\n',
+          'data: {"id": "final", "choices": [{"index": 0, "delta": {"content": "Tail"}}]}', // NO trailing \n
+        ];
+
+        final events = await executeStream(chunks);
+        expect(events.length, 2);
+        expect(events[0].choices?[0].delta.content, 'Line1');
+        expect(events[1].choices?[0].delta.content, 'Tail');
+      });
+
+      test('handles mixed chunk fragmentation with multiple lines and [DONE]',
+          () async {
+        final chunks = [
+          'data: {"id": "1", "choices": [{"index": 0, "delta": {"content": "A"}}]}\ndata: {"id": "2", "choi',
+          'ces": [{"index": 0, "delta": {"content": "B"}}]}\ndata: [DO',
+          'NE]\n',
+        ];
+
+        final events = await executeStream(chunks);
+        expect(events.length, 2);
+        expect(events[0].choices?[0].delta.content, 'A');
+        expect(events[1].choices?[0].delta.content, 'B');
+      });
+
+      test('handles CRLF line endings split across chunks', () async {
+        final chunks = [
+          'data: {"id": "1", "choices": [{"index": 0, "delta": {"content": "crlf1"}}]}\r',
+          '\ndata: {"id": "2", "choices": [{"index": 0, "delta": {"content": "crlf2"}}]}\r\n',
+        ];
+
+        final events = await executeStream(chunks);
+        expect(events.length, 2);
+        expect(events[0].choices?[0].delta.content, 'crlf1');
+        expect(events[1].choices?[0].delta.content, 'crlf2');
+      });
+
+      test('skips malformed JSON line and preserves subsequent valid lines',
+          () async {
+        final chunks = [
+          'data: {corrupt json}\n'
+              'data: {"id": "valid", "choices": [{"index": 0, "delta": {"content": "ok"}}]}\n',
+        ];
+
+        final events = await executeStream(chunks);
+        expect(events.length, 1);
+        expect(events[0].choices?[0].delta.content, 'ok');
+      });
+
+      test('throws Exception when HTTP response status is not 200', () async {
+        final client = MockClient(
+          (request) async => http.Response('Server Error', 500),
+        );
+        final controller = StreamController<openai.ChatStreamEvent>();
+
+        expect(
+          () => service.streamWithCustomBody(
+            config: config,
+            requestBody: {'model': 'llama3'},
+            controller: controller,
+            httpClient: client,
+          ),
+          throwsA(
+            predicate(
+              (e) => e is Exception && e.toString().contains('500'),
+            ),
+          ),
+        );
       });
     });
   });
