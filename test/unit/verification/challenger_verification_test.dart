@@ -206,9 +206,7 @@ void main() {
           'categories': [
             {'id': 'cat_new', 'name': 'New Category'},
           ],
-          'quotes': [
-            'this_is_not_a_map_and_will_throw_TypeError',
-          ],
+          'quotes': 'this_is_not_a_list_and_will_throw_TypeError',
         };
 
         // 3. Attempt import and catch error
