@@ -71,6 +71,7 @@ class QuillEditorExtensions {
   /// 获取编辑器的嵌入构建器
   static List<quill.EmbedBuilder> getEmbedBuilders({
     bool optimizedImages = true,
+    bool? enableEditorMenu,
   }) {
     // 获取官方的builders作为基础
     final builders = kIsWeb
@@ -88,7 +89,11 @@ class QuillEditorExtensions {
 
     if (optimizedImages) {
       builders.removeWhere((builder) => builder.key == 'image');
-      builders.add(_OptimizedImageEmbedBuilder());
+      builders.add(
+        _OptimizedImageEmbedBuilder(
+          enableEditorMenu: enableEditorMenu,
+        ),
+      );
     }
 
     return builders;
@@ -242,11 +247,60 @@ class _CustomAudioEmbedBuilder extends quill.EmbedBuilder {
 }
 
 class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
+  _OptimizedImageEmbedBuilder({
+    this.enableEditorMenu,
+  });
+
+  /// 是否启用编辑器交互操作菜单（调整大小、复制、删除、保存等）。
+  ///
+  /// 若为 null，则根据 [quill.EmbedContext.readOnly] 自动判定：
+  /// - 编辑态（`!embedContext.readOnly`）：使用配置了优化解码器的官方图片构建器，
+  ///   保留点击弹出操作菜单（调整大小、复制、删除、保存），同时享有尺寸解码上限与重绘隔离；
+  /// - 只读态（`embedContext.readOnly`）：使用 [_LazyQuillImage]，
+  ///   优化卡片列表滚动并支持动态照片/大图全屏预览。
+  final bool? enableEditorMenu;
+
   @override
   String get key => 'image';
 
   @override
   Widget build(BuildContext context, quill.EmbedContext embedContext) {
+    final bool isEditable = enableEditorMenu ?? !embedContext.readOnly;
+    if (isEditable) {
+      final imageEmbedBuilder = QuillEditorImageEmbedBuilder(
+        config: QuillEditorImageEmbedConfig(
+          imageProviderBuilder: (context, imageUrl) {
+            final mediaQuery = MediaQuery.of(context);
+            final double screenWidth = mediaQuery.size.width;
+            final double devicePixelRatio = mediaQuery.devicePixelRatio.clamp(
+              1.0,
+              _LazyQuillImageState._previewMaxPixelRatio,
+            );
+            final double fallbackWidth =
+                (screenWidth.isFinite && screenWidth > 0)
+                    ? screenWidth - 32
+                    : 360.0;
+            final int? targetCacheWidth = decodeSizeFor(
+              fallbackWidth,
+              devicePixelRatio,
+            );
+            final int? decodePixelBudgetHeight = decodeHeightBudget(
+              targetCacheWidth,
+            );
+            return createOptimizedImageProvider(
+              imageUrl,
+              cacheWidth: targetCacheWidth,
+              cacheHeight: decodePixelBudgetHeight,
+            );
+          },
+        ),
+      );
+
+      return RepaintBoundary(
+        child: imageEmbedBuilder.build(context, embedContext),
+      );
+    }
+
     final dynamic data = embedContext.node.value.data;
     final String source = _extractSource(data);
 
@@ -321,11 +375,10 @@ class _LazyQuillImage extends StatefulWidget {
 
 class _LazyQuillImageState extends State<_LazyQuillImage>
     with AutomaticKeepAliveClientMixin {
-  /// 卡片内预览图的解码倍率上限。
+  /// 笔记卡片与编辑器内预览图的解码倍率上限。
   ///
-  /// 这条路径只服务笔记卡片（全屏编辑器用 `optimizedImages: false` 的原生
-  /// builder，点开的大图预览页不传解码上限，都拿全分辨率），所以这里只需要
-  /// 满足"滑过去看一眼"的清晰度。
+  /// 这条路径服务笔记卡片与全屏编辑器（点开的大图预览页不传解码上限，
+  /// 拿全分辨率），在富文本视图中只需要满足常规查看与滚动的清晰度。
   ///
   /// 按屏幕最高精度（dpr 3）解码，单张常规照片就要 2.8MB，二十几张即可占满
   /// Flutter 默认 100MB 的图片缓存；之后每次上下滑都在淘汰和重新解码，

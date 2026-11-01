@@ -13,12 +13,11 @@ ImageProvider? createOptimizedImageProvider(
 
   ImageProvider provider;
 
-  if (isDataUrl(source)) {
-    final data = tryDecodeDataUrl(source);
-    if (data == null) {
-      return null;
-    }
-    provider = MemoryImage(data);
+  final bytes = tryDecodeAnyImageBytes(source);
+  if (bytes != null) {
+    provider = MemoryImage(bytes);
+  } else if (source.startsWith('assets/')) {
+    provider = AssetImage(source);
   } else {
     provider = NetworkImage(source);
   }

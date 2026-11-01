@@ -249,7 +249,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                               embedBuilders: kIsWeb
                                   ? FlutterQuillEmbeds.editorWebBuilders()
                                   : QuillEditorExtensions.getEmbedBuilders(
-                                      optimizedImages: false,
+                                      optimizedImages: true,
+                                      enableEditorMenu: true,
                                     ),
                               placeholder: AppLocalizations.of(
                                 context,

@@ -142,4 +142,83 @@ void main() {
     expect(paragraph.color, const Color(0xFF123456));
     expect(paragraph.decoration, TextDecoration.none);
   });
+
+  group('QuillEditorExtensions.getEmbedBuilders', () {
+    test('optimizedImages 为 true 时使用 _OptimizedImageEmbedBuilder', () {
+      final builders = QuillEditorExtensions.getEmbedBuilders(
+        optimizedImages: true,
+      );
+      final imageBuilder = builders.firstWhere((b) => b.key == 'image');
+      expect(
+        imageBuilder.runtimeType.toString(),
+        '_OptimizedImageEmbedBuilder',
+      );
+    });
+
+    test('默认参数使用 _OptimizedImageEmbedBuilder', () {
+      final builders = QuillEditorExtensions.getEmbedBuilders();
+      final imageBuilder = builders.firstWhere((b) => b.key == 'image');
+      expect(
+        imageBuilder.runtimeType.toString(),
+        '_OptimizedImageEmbedBuilder',
+      );
+    });
+
+    test('optimizedImages 为 false 时保留默认图片构建器', () {
+      final builders = QuillEditorExtensions.getEmbedBuilders(
+        optimizedImages: false,
+      );
+      final imageBuilder = builders.firstWhere((b) => b.key == 'image');
+      expect(
+        imageBuilder.runtimeType.toString(),
+        isNot('_OptimizedImageEmbedBuilder'),
+      );
+    });
+
+    test('非 Web 平台注册自定义音视频构建器', () {
+      final builders = QuillEditorExtensions.getEmbedBuilders();
+      expect(
+        builders.any(
+          (b) =>
+              b.key == 'video' &&
+              b.runtimeType.toString() == '_CustomVideoEmbedBuilder',
+        ),
+        isTrue,
+      );
+      expect(
+        builders.any(
+          (b) =>
+              b.key == 'audio' &&
+              b.runtimeType.toString() == '_CustomAudioEmbedBuilder',
+        ),
+        isTrue,
+      );
+    });
+
+    test('enableEditorMenu 参数正确传递给 _OptimizedImageEmbedBuilder', () {
+      final buildersWithMenu = QuillEditorExtensions.getEmbedBuilders(
+        optimizedImages: true,
+        enableEditorMenu: true,
+      );
+      final imageBuilderWithMenu = buildersWithMenu.firstWhere(
+        (b) => b.key == 'image',
+      );
+      expect(
+        imageBuilderWithMenu.runtimeType.toString(),
+        '_OptimizedImageEmbedBuilder',
+      );
+
+      final buildersWithoutMenu = QuillEditorExtensions.getEmbedBuilders(
+        optimizedImages: true,
+        enableEditorMenu: false,
+      );
+      final imageBuilderWithoutMenu = buildersWithoutMenu.firstWhere(
+        (b) => b.key == 'image',
+      );
+      expect(
+        imageBuilderWithoutMenu.runtimeType.toString(),
+        '_OptimizedImageEmbedBuilder',
+      );
+    });
+  });
 }
