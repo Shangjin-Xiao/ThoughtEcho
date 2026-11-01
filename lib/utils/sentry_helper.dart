@@ -135,9 +135,21 @@ String sanitizeSentryDatabaseDescription(String description) {
   return description;
 }
 
+const _allowedUrlSchemes = <String>{'http', 'https', 'file'};
+
+bool _isLikelySpanUrl(String value, [String? key]) {
+  if (key == 'url') return true;
+  if (value.contains('://')) return true;
+  final uri = Uri.tryParse(value);
+  if (uri != null && uri.hasScheme) {
+    return _allowedUrlSchemes.contains(uri.scheme.toLowerCase());
+  }
+  return false;
+}
+
 String sanitizeSentrySpanDescription(String description) {
   final parts = description.trim().split(RegExp(r'\s+'));
-  if (parts.length >= 2 && Uri.tryParse(parts[1])?.hasScheme == true) {
+  if (parts.length >= 2 && _isLikelySpanUrl(parts[1])) {
     return [
       parts.first,
       sanitizeSentryUrl(parts[1]),
@@ -373,6 +385,111 @@ bool _isScrollSessionWorthReporting(SentryTransaction transaction) {
   return true;
 }
 
+final _spanSensitiveWords = <String>{
+  'content',
+  'text',
+  'query',
+  'title',
+  'password',
+  'token',
+  'secret',
+  'authorization',
+  'auth',
+  'authentication',
+  'credential',
+  'credentials',
+  'apikey',
+};
+
+final _spanMetricSuffixes = <String>{
+  'length',
+  'count',
+  'size',
+  'bytes',
+  'duration',
+  'ms',
+  'overhead',
+};
+
+final _spanWordSplitPattern = RegExp(
+  r'[_\.\-\s]+|(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])',
+);
+
+bool _isSensitiveSpanKey(String key) {
+  final words =
+      key.split(_spanWordSplitPattern).map((w) => w.toLowerCase()).toList();
+  if (words.isNotEmpty && _spanMetricSuffixes.contains(words.last)) {
+    return false;
+  }
+  for (var i = 0; i < words.length; i++) {
+    final w = words[i];
+    if (_spanSensitiveWords.contains(w)) return true;
+    if (w == 'api' && i + 1 < words.length && words[i + 1] == 'key') {
+      return true;
+    }
+  }
+  return false;
+}
+
+dynamic _sanitizeSpanValue(dynamic value, {String? key}) {
+  if (value is String) {
+    if (_isLikelySpanUrl(value, key)) {
+      return sanitizeSentryUrl(value) ?? value;
+    }
+    return value;
+  }
+  if (value is Map) {
+    final result = <dynamic, dynamic>{};
+    for (final entry in value.entries) {
+      final entryKey = entry.key;
+      if (entryKey is String) {
+        if (entryKey == 'http.query' ||
+            entryKey == 'http.fragment' ||
+            _isSensitiveSpanKey(entryKey)) {
+          continue;
+        }
+        result[entryKey] = _sanitizeSpanValue(entry.value, key: entryKey);
+      } else {
+        result[entryKey] = _sanitizeSpanValue(entry.value);
+      }
+    }
+    return result;
+  }
+  if (value is List) {
+    final result = <dynamic>[];
+    for (final item in value) {
+      result.add(_sanitizeSpanValue(item));
+    }
+    return result;
+  }
+  return value;
+}
+
+Map<K, dynamic> _sanitizeSpanMap<K>(Map<K, dynamic> data) {
+  final result = <K, dynamic>{};
+  for (final entry in data.entries) {
+    final key = entry.key;
+    if (key is String) {
+      if (key == 'http.query' ||
+          key == 'http.fragment' ||
+          _isSensitiveSpanKey(key)) {
+        continue;
+      }
+      result[key] = _sanitizeSpanValue(entry.value, key: key);
+    } else {
+      result[key] = _sanitizeSpanValue(entry.value);
+    }
+  }
+  return result;
+}
+
+Map<String, dynamic> _sanitizeSpanData(Map<String, dynamic> data) =>
+    _sanitizeSpanMap<String>(data);
+
+@visibleForTesting
+Map<K, dynamic> sanitizeSpanData<K>(Map<K, dynamic> data) =>
+    _sanitizeSpanMap<K>(data);
+
 SentryTransaction? sanitizeSentryTransaction(
   SentryTransaction transaction,
   Hint hint,
@@ -382,13 +499,22 @@ SentryTransaction? sanitizeSentryTransaction(
     return null;
   }
   _sanitizeSentryRequest(transaction);
-  for (final span in transaction.spans) {
-    final url = span.data['url'];
-    if (url is String) {
-      span.data['url'] = sanitizeSentryUrl(url);
+  final traceData = transaction.contexts.trace?.data;
+  if (traceData != null) {
+    final sanitizedTraceData = _sanitizeSpanData(traceData);
+    try {
+      traceData.clear();
+      traceData.addAll(sanitizedTraceData);
+    } catch (_) {
+      transaction.contexts.trace?.data = sanitizedTraceData;
     }
-    span.data.remove('http.query');
-    span.data.remove('http.fragment');
+  }
+  for (final span in transaction.spans) {
+    final sanitized = _sanitizeSpanData(span.data);
+    try {
+      span.data.clear();
+      span.data.addAll(sanitized);
+    } catch (_) {}
     final description = span.context.description;
     if (description != null) {
       span.context.description = sanitizeSentrySpanDescription(description);
