@@ -16,8 +16,8 @@ import 'package:thoughtecho/widgets/add_note_dialog.dart';
 import 'package:thoughtecho/widgets/add_note_dialog_parts.dart';
 
 Position _testPosition() => Position(
-      latitude: 39.9042,
-      longitude: 116.4074,
+      latitude: 10.0,
+      longitude: 20.0,
       timestamp: DateTime(2026, 1, 1),
       accuracy: 0.0,
       altitude: 0.0,
@@ -65,7 +65,7 @@ class _MockSettingsService extends ChangeNotifier implements SettingsService {
 
 class _MockLocationService extends ChangeNotifier implements LocationService {
   Position? _position = _testPosition();
-  String _formattedLocation = '北京市朝阳区';
+  String _formattedLocation = '示例省·示例市';
   String? _poiName;
 
   @override
@@ -83,7 +83,7 @@ class _MockLocationService extends ChangeNotifier implements LocationService {
   @override
   Future<Position?> getCurrentLocation({
     bool highAccuracy = false,
-    bool skipPermissionRequest = false,
+    skipPermissionRequest = false,
   }) async {
     _position = _testPosition();
     return _position;
@@ -110,7 +110,7 @@ class _MockLocationService extends ChangeNotifier implements LocationService {
 
   @override
   Future<void> getAddressFromLatLng() async {
-    _formattedLocation = '北京市海淀区';
+    _formattedLocation = '示例省·示例市2';
   }
 
   @override
@@ -174,6 +174,7 @@ class _TestDatabaseService extends DatabaseService {
     'default_hitokoto':
         NoteTag(id: 'default_hitokoto', name: '每日一言', iconName: '💭'),
     'default_anime': NoteTag(id: 'default_anime', name: '动画', iconName: '🎬'),
+    'custom_tag_1': NoteTag(id: 'custom_tag_1', name: '自定义标签', iconName: '🏷️'),
   };
 
   @override
@@ -203,65 +204,94 @@ class _TestDatabaseService extends DatabaseService {
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+Widget _buildTestApp({
+  required void Function(Quote) onSave,
+  Map<String, dynamic>? hitokotoData,
+  String? prefilledContent,
+  String? prefilledAuthor,
+  String? prefilledWork,
+  List<String>? prefilledTagIds,
+  List<NoteTag> availableTags = const [],
+}) {
+  final content = prefilledContent ??
+      (hitokotoData != null ? (hitokotoData['hitokoto'] as String?) : null);
+  final author = prefilledAuthor ??
+      (hitokotoData != null ? (hitokotoData['from_who'] as String?) : null);
+  final work = prefilledWork ??
+      (hitokotoData != null ? (hitokotoData['from'] as String?) : null);
+
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<SettingsService>.value(
+        value: _MockSettingsService(),
+      ),
+      ChangeNotifierProvider<LocationService>.value(
+        value: _MockLocationService(),
+      ),
+      ChangeNotifierProvider<WeatherService>.value(
+        value: _MockWeatherService(),
+      ),
+      ChangeNotifierProvider<DatabaseService>.value(
+        value: _TestDatabaseService(),
+      ),
+      ChangeNotifierProvider<FeatureGuideService>.value(
+        value: _MockFeatureGuideService(),
+      ),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('zh'),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (_) => Dialog(
+                  child: AddNoteDialog(
+                    tags: availableTags,
+                    hitokotoData: hitokotoData,
+                    prefilledContent: content,
+                    prefilledAuthor: author,
+                    prefilledWork: work,
+                    prefilledTagIds: prefilledTagIds,
+                    onSave: onSave,
+                  ),
+                ),
+              );
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      'double click daily quote hitokotoData adds tags and centers SelectedTagsDisplay',
+      'double click daily quote hitokotoData adds tags and centers SelectedTagsDisplay and saves with tags',
       (tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
 
+    Quote? savedQuote;
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<SettingsService>.value(
-            value: _MockSettingsService(),
-          ),
-          ChangeNotifierProvider<LocationService>.value(
-            value: _MockLocationService(),
-          ),
-          ChangeNotifierProvider<WeatherService>.value(
-            value: _MockWeatherService(),
-          ),
-          ChangeNotifierProvider<DatabaseService>.value(
-            value: _TestDatabaseService(),
-          ),
-          ChangeNotifierProvider<FeatureGuideService>.value(
-            value: _MockFeatureGuideService(),
-          ),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () {
-                  showDialog<void>(
-                    context: context,
-                    builder: (_) => Dialog(
-                      child: AddNoteDialog(
-                        tags: const [],
-                        hitokotoData: const {
-                          'hitokoto': '一言测试内容',
-                          'from_who': '作者',
-                          'from': '作品',
-                          'type': 'a',
-                          'provider': 'hitokoto',
-                        },
-                        onSave: (quote) {},
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('open'),
-              ),
-            ),
-          ),
-        ),
+      _buildTestApp(
+        hitokotoData: const {
+          'hitokoto': '一言测试内容',
+          'from_who': '作者',
+          'from': '作品',
+          'type': 'a',
+          'provider': 'hitokoto',
+        },
+        onSave: (quote) {
+          savedQuote = quote;
+        },
       ),
     );
 
@@ -281,6 +311,145 @@ void main() {
       selectedTagsCenter.dx,
       closeTo(dialogCenter.dx, 1.0),
       reason: 'SelectedTagsDisplay should be horizontally centered',
+    );
+
+    // 3. Save quote and verify tagIds are properly passed
+    await tester.tap(find.byKey(const ValueKey('add_note_save_button')));
+    await tester.pumpAndSettle();
+
+    expect(savedQuote, isNotNull);
+    expect(
+      savedQuote!.tagIds,
+      containsAll(['default_hitokoto', 'default_anime']),
+    );
+  });
+
+  testWidgets(
+      'removing an auto-populated hitokoto tag updates display and excludes tag when saving',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    Quote? savedQuote;
+    await tester.pumpWidget(
+      _buildTestApp(
+        hitokotoData: const {
+          'hitokoto': '一言测试内容',
+          'from_who': '作者',
+          'from': '作品',
+          'type': 'a',
+          'provider': 'hitokoto',
+        },
+        onSave: (quote) {
+          savedQuote = quote;
+        },
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('每日一言'), findsOneWidget);
+    expect(find.text('动画'), findsOneWidget);
+
+    // Delete '每日一言' tag by tapping its cancel icon within SelectedTagsDisplay
+    final hitokotoChip = find.ancestor(
+      of: find.text('每日一言'),
+      matching: find.byType(Chip),
+    );
+    expect(hitokotoChip, findsOneWidget);
+
+    final cancelIcon = find.descendant(
+      of: hitokotoChip,
+      matching: find.byIcon(Icons.cancel),
+    );
+    expect(cancelIcon, findsOneWidget);
+
+    await tester.tap(cancelIcon);
+    await tester.pumpAndSettle();
+
+    // '每日一言' tag should be gone, '动画' should remain
+    expect(find.text('每日一言'), findsNothing);
+    expect(find.text('动画'), findsOneWidget);
+
+    // Save and verify tagIds
+    await tester.tap(find.byKey(const ValueKey('add_note_save_button')));
+    await tester.pumpAndSettle();
+
+    expect(savedQuote, isNotNull);
+    expect(savedQuote!.tagIds, equals(['default_anime']));
+  });
+
+  testWidgets(
+      'user can expand TagSelectionSection and manually select additional tag alongside hitokoto tags',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    Quote? savedQuote;
+    await tester.pumpWidget(
+      _buildTestApp(
+        hitokotoData: const {
+          'hitokoto': '一言测试内容',
+          'from_who': '作者',
+          'from': '作品',
+          'type': 'a',
+          'provider': 'hitokoto',
+        },
+        onSave: (quote) {
+          savedQuote = quote;
+        },
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('每日一言'), findsOneWidget);
+    expect(find.text('动画'), findsOneWidget);
+
+    // Expand TagSelectionSection ExpansionTile
+    await tester.tap(find.byType(ExpansionTile));
+    await tester.pumpAndSettle();
+
+    // Find custom_tag_1 in the list and tap it
+    expect(find.text('自定义标签'), findsOneWidget);
+    await tester.tap(find.text('自定义标签'));
+    await tester.pumpAndSettle();
+
+    // Verify all 3 tags are now present in SelectedTagsDisplay
+    expect(
+      find.descendant(
+        of: find.byType(SelectedTagsDisplay),
+        matching: find.text('自定义标签'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(SelectedTagsDisplay),
+        matching: find.text('每日一言'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(SelectedTagsDisplay),
+        matching: find.text('动画'),
+      ),
+      findsOneWidget,
+    );
+
+    // Save and verify all 3 tags are saved
+    await tester.tap(find.byKey(const ValueKey('add_note_save_button')));
+    await tester.pumpAndSettle();
+
+    expect(savedQuote, isNotNull);
+    expect(
+      savedQuote!.tagIds,
+      containsAll(['default_hitokoto', 'default_anime', 'custom_tag_1']),
     );
   });
 }
