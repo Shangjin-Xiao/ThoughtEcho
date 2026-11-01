@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../extensions/note_tag_localization_extension.dart';
 import '../models/note_tag.dart';
@@ -9,6 +10,7 @@ import '../services/database_service.dart'; // Import DatabaseService
 import '../utils/time_utils.dart'; // Import TimeUtils
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
+import 'interactive_animated_filter_chip.dart';
 
 class NoteFilterSortSheet extends StatefulWidget {
   final List<NoteTag> allTags;
@@ -126,6 +128,15 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     return TimeUtils.getLocalizedDayPeriodLabel(context, periodKey);
   }
 
+  /// 安全触发触觉反馈，在不支持设备上平滑降级
+  void _triggerHaptic(Future<void> Function() hapticCall) {
+    try {
+      hapticCall().catchError((_) {});
+    } catch (_) {
+      // Graceful degradation on unsupported platforms
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -147,6 +158,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                   Text(l10n.filterAndSort, style: theme.textTheme.titleMedium),
                   TextButton(
                     onPressed: () {
+                      _triggerHaptic(HapticFeedback.lightImpact);
                       setState(() {
                         _tempSelectedTagIds.clear();
                         _tempSortType = 'time';
@@ -199,6 +211,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                   FilledButton(
                     onPressed: _hasChanges()
                         ? () {
+                            _triggerHaptic(HapticFeedback.mediumImpact);
                             widget.onApply(
                               _tempSelectedTagIds,
                               _tempSortType,
@@ -320,37 +333,43 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
 
       final tagName = tag.localizedName(l10n);
 
-      return FilterChip(
-        selected: isSelected,
-        label: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (tag.iconName != null && tag.iconName!.isNotEmpty)
-              isEmoji
-                  ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
-                  : Icon(tagIcon, size: 16),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                tagName,
-                style: theme.textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            // 如果是隐藏标签且需要验证，显示锁图标
-            if (isHiddenTag &&
-                widget.requireBiometricForHidden &&
-                !_hiddenTagUnlocked) ...[
+      return InteractiveAnimatedFilterChip(
+        isSelected: isSelected,
+        child: FilterChip(
+          selected: isSelected,
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                isEmoji
+                    ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
+                    : Icon(tagIcon, size: 16),
               const SizedBox(width: 4),
-              Icon(
-                Icons.lock_outline,
-                size: 14,
-                color: theme.colorScheme.onSurfaceVariant,
+              Flexible(
+                child: Text(
+                  tagName,
+                  style: theme.textTheme.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              // 如果是隐藏标签且需要验证，显示锁图标
+              if (isHiddenTag &&
+                  widget.requireBiometricForHidden &&
+                  !_hiddenTagUnlocked) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.lock_outline,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
             ],
-          ],
+          ),
+          onSelected: (selected) {
+            _triggerHaptic(HapticFeedback.selectionClick);
+            _handleTagSelection(tag, selected, l10n);
+          },
         ),
-        onSelected: (selected) => _handleTagSelection(tag, selected, l10n),
       );
     }).toList();
 
@@ -411,38 +430,43 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
       // 使用预缓存的图标，标签使用本地化方法
       final icon = _weatherIconCache[filterCategory]!;
       final label = _getWeatherFilterLabel(context, filterCategory);
-      return FilterChip(
-        selected: isSelected,
-        label: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                label,
-                style: theme.textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
+      return InteractiveAnimatedFilterChip(
+        isSelected: isSelected,
+        child: FilterChip(
+          selected: isSelected,
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
-        ),
-        onSelected: (selected) {
-          setState(() {
-            final categoryKeys = WeatherService.getWeatherKeysByFilterCategory(
-              filterCategory,
-            );
-            if (selected) {
-              // 添加该分类下的所有天气key
-              _tempSelectedWeathers.addAll(categoryKeys);
-            } else {
-              // 移除该分类下的所有天气key
-              _tempSelectedWeathers.removeWhere(
-                (weather) => categoryKeys.contains(weather),
+            ],
+          ),
+          onSelected: (selected) {
+            _triggerHaptic(HapticFeedback.selectionClick);
+            setState(() {
+              final categoryKeys =
+                  WeatherService.getWeatherKeysByFilterCategory(
+                filterCategory,
               );
-            }
-          });
-        },
+              if (selected) {
+                // 添加该分类下的所有天气key
+                _tempSelectedWeathers.addAll(categoryKeys);
+              } else {
+                // 移除该分类下的所有天气key
+                _tempSelectedWeathers.removeWhere(
+                  (weather) => categoryKeys.contains(weather),
+                );
+              }
+            });
+          },
+        ),
       );
     }).toList();
 
@@ -456,31 +480,35 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
       // 使用预缓存的图标，标签使用本地化方法
       final icon = _dayPeriodIconCache[periodKey]!;
       final label = _getDayPeriodLabel(context, periodKey);
-      return FilterChip(
-        selected: isSelected,
-        label: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                label,
-                style: theme.textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
+      return InteractiveAnimatedFilterChip(
+        isSelected: isSelected,
+        child: FilterChip(
+          selected: isSelected,
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          onSelected: (selected) {
+            _triggerHaptic(HapticFeedback.selectionClick);
+            setState(() {
+              if (selected) {
+                _tempSelectedDayPeriods.add(periodKey);
+              } else {
+                _tempSelectedDayPeriods.remove(periodKey);
+              }
+            });
+          },
         ),
-        onSelected: (selected) {
-          setState(() {
-            if (selected) {
-              _tempSelectedDayPeriods.add(periodKey);
-            } else {
-              _tempSelectedDayPeriods.remove(periodKey);
-            }
-          });
-        },
       );
     }).toList();
 
