@@ -657,10 +657,6 @@ extension _NoteListItemsExtension on NoteListViewState {
 
                     itemWidget = _NoteListItemKeepAlive(
                       keepAlive: keepAliveItem,
-                      index: index,
-                      quote: quote,
-                      shouldKeepAlive: _shouldKeepAliveNoteListItem,
-                      scrollController: _scrollController,
                       child: itemWidget,
                     );
 
@@ -920,88 +916,8 @@ extension _NoteListItemsExtension on NoteListViewState {
       return true;
     }
 
-    final visibleRange = _measuredVisibleIndexRange();
-    if (visibleRange != null) {
-      return index >= visibleRange.$1 - radius &&
-          index <= visibleRange.$2 + radius;
-    }
-
     final centerIndex = _estimatedScrollCenterIndex();
     return (index - centerIndex).abs() <= radius;
-  }
-
-  RenderSliverMultiBoxAdaptor? _findSliverMultiBoxAdaptor() {
-    if (!_scrollController.hasClients) return null;
-    final position = _safeScrollPosition;
-    if (position == null) return null;
-    final context = position.context.notificationContext;
-    if (context == null || !context.mounted) return null;
-    final renderObject = context.findRenderObject();
-    if (renderObject == null) return null;
-
-    RenderSliverMultiBoxAdaptor? sliver;
-    void visitor(RenderObject child) {
-      if (sliver != null) return;
-      if (child is RenderSliverMultiBoxAdaptor) {
-        sliver = child;
-        return;
-      }
-      child.visitChildren(visitor);
-    }
-
-    if (renderObject is RenderSliverMultiBoxAdaptor) {
-      return renderObject;
-    }
-    renderObject.visitChildren(visitor);
-    return sliver;
-  }
-
-  (int, int)? _measuredVisibleIndexRange() {
-    final sliver = _findSliverMultiBoxAdaptor();
-    if (sliver == null || sliver.firstChild == null) {
-      return null;
-    }
-
-    final constraints = sliver.constraints;
-    final scrollOffset = constraints.scrollOffset;
-    final viewportDimension = constraints.viewportMainAxisExtent;
-    if (viewportDimension <= 0) {
-      return null;
-    }
-    final viewportEnd = scrollOffset + viewportDimension;
-
-    int? firstVisible;
-    int? lastVisible;
-
-    RenderBox? child = sliver.firstChild;
-    while (child != null) {
-      if (sliver.paintsChild(child) && child.hasSize) {
-        final offset = sliver.childScrollOffset(child);
-        if (offset != null) {
-          final itemTop = offset;
-          final itemBottom = offset + child.size.height;
-          if (itemBottom > scrollOffset && itemTop < viewportEnd) {
-            final index = sliver.indexOf(child);
-            firstVisible ??= index;
-            lastVisible = index;
-          }
-        }
-      }
-      child = sliver.childAfter(child);
-    }
-
-    if (firstVisible != null && lastVisible != null) {
-      return (firstVisible, lastVisible);
-    }
-    return null;
-  }
-
-  int _measuredOrEstimatedScrollCenterIndex() {
-    final visibleRange = _measuredVisibleIndexRange();
-    if (visibleRange != null) {
-      return (visibleRange.$1 + visibleRange.$2) ~/ 2;
-    }
-    return _estimatedScrollCenterIndex();
   }
 
   int _estimatedScrollCenterIndex() {
@@ -1419,30 +1335,10 @@ extension _NoteListItemsExtension on NoteListViewState {
 }
 
 class _NoteListItemKeepAlive extends StatefulWidget {
-  const _NoteListItemKeepAlive({
-    bool? keepAlive,
-    this.index,
-    this.quote,
-    this.shouldKeepAlive,
-    this.scrollController,
-    required this.child,
-  }) : _staticKeepAlive = keepAlive;
+  const _NoteListItemKeepAlive({required this.keepAlive, required this.child});
 
-  final bool? _staticKeepAlive;
-  final int? index;
-  final Quote? quote;
-  final bool Function(int index, Quote quote)? shouldKeepAlive;
-  final ScrollController? scrollController;
+  final bool keepAlive;
   final Widget child;
-
-  bool get keepAlive {
-    if (shouldKeepAlive != null && index != null && quote != null) {
-      return shouldKeepAlive!(index!, quote!);
-    }
-    return _staticKeepAlive ?? false;
-  }
-
-  bool get keepAliveState => keepAlive;
 
   @override
   State<_NoteListItemKeepAlive> createState() => _NoteListItemKeepAliveState();
@@ -1454,29 +1350,11 @@ class _NoteListItemKeepAliveState extends State<_NoteListItemKeepAlive>
   bool get wantKeepAlive => widget.keepAlive;
 
   @override
-  void initState() {
-    super.initState();
-    widget.scrollController?.addListener(_onScroll);
-  }
-
-  @override
   void didUpdateWidget(covariant _NoteListItemKeepAlive oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.scrollController != widget.scrollController) {
-      oldWidget.scrollController?.removeListener(_onScroll);
-      widget.scrollController?.addListener(_onScroll);
+    if (oldWidget.keepAlive != widget.keepAlive) {
+      updateKeepAlive();
     }
-    updateKeepAlive();
-  }
-
-  @override
-  void dispose() {
-    widget.scrollController?.removeListener(_onScroll);
-    super.dispose();
-  }
-
-  void _onScroll() {
-    updateKeepAlive();
   }
 
   @override

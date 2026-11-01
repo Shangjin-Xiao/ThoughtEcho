@@ -127,7 +127,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
     // 正看着的地方。中途取会被分页追加带偏，太早取（重开那一刻）又可能还没滚到位。
     if (_idleWarmupPass.emitted == 0) {
       _idleWarmupPass.restart(
-        anchor: _measuredOrEstimatedScrollCenterIndex(),
+        anchor: _estimatedScrollCenterIndex(),
         length: quotes.length,
       );
     }
