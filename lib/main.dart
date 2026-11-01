@@ -57,11 +57,13 @@ import 'utils/global_exception_handler.dart';
 import 'utils/localization_resolver.dart'
     show parseLocale, resolveEffectiveLocale;
 import 'theme/app_theme.dart';
+import 'theme/theme_style.dart';
 import 'providers/app_providers.dart';
 import 'pages/home_page.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/backup_restore_page.dart';
 import 'widgets/quote_content_widget.dart'; // 用于缓存管理
+import 'widgets/app_loading_view.dart';
 import 'widgets/app_snackbar.dart';
 
 part 'pages/emergency_pages.dart';

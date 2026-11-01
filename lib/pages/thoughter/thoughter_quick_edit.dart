@@ -225,6 +225,9 @@ extension _ThoughterQuickEdit on _ThoughterPageState {
             artifact.noteId!,
           );
       if (!mounted) return null;
+      if (original != null && !await _authorizeProposalNote(original)) {
+        return null;
+      }
     }
     final effective = isEdit
         ? _effectiveProposalMeta(artifact, original)
@@ -467,11 +470,31 @@ extension _ThoughterQuickEdit on _ThoughterPageState {
     ];
   }
 
+  /// 历史提案不代表当前访问权限；每次使用笔记前检查当前标签与保护设置。
+  Future<bool> _authorizeProposalNote(Quote note) async {
+    if (!mounted) return false;
+    if (!note.tagIds.contains(DatabaseService.hiddenTagId) ||
+        !context.read<SettingsService>().requireBiometricForHidden) {
+      return true;
+    }
+    final l10n = AppLocalizations.of(context);
+    final authenticated = await BiometricService().authenticate(
+      localizedReason: l10n.biometricAuthReason,
+    );
+    if (!mounted) return false;
+    if (!authenticated) {
+      AppSnackBar.error(context, l10n.biometricAuthFailed);
+    }
+    return authenticated;
+  }
+
   /// 「已保存 · 查看笔记」出口：从数据库取出笔记并打开。
   Future<void> _viewSavedNote(String noteId) async {
     final db = context.read<DatabaseService>();
     final quote = await db.getQuoteById(noteId);
     if (!mounted || quote == null) return;
+    if (!await _authorizeProposalNote(quote)) return;
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(

@@ -61,12 +61,14 @@ void main() {
       );
 
       final snapshot = LocationSnapshot(
+        poiName: 'Test POI',
         position: mockPosition,
         location: '北京市',
       );
 
       expect(snapshot.position, equals(mockPosition));
       expect(snapshot.location, equals('北京市'));
+      expect(snapshot.poiName, equals('Test POI'));
     });
   });
 
@@ -131,8 +133,11 @@ void main() {
         when(mockLocationService.getCurrentLocation())
             .thenAnswer((_) async => null);
 
+        when(mockLocationService.currentPoiName).thenReturn('Mock POI');
+
         final result = await LocationWeatherHelper.fetchLocation(
           mockLocationService,
+          includePoi: true,
         );
 
         expect(result, isNull);
@@ -159,13 +164,17 @@ void main() {
         when(mockLocationService.getFormattedLocation())
             .thenReturn(mockFormattedLocation);
 
+        when(mockLocationService.currentPoiName).thenReturn('Mock POI');
+
         final result = await LocationWeatherHelper.fetchLocation(
           mockLocationService,
+          includePoi: true,
         );
 
         expect(result, isNotNull);
         expect(result!.position, equals(mockPosition));
         expect(result.location, equals(mockFormattedLocation));
+        expect(result.poiName, equals('Mock POI'));
       });
     });
   });

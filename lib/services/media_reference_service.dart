@@ -806,15 +806,17 @@ class MediaReferenceService {
 
       final candidatesByKey = <String, _OrphanCandidate>{};
       for (final filePath in uniquePaths) {
+        final ownedPath = await _resolveOwnedMediaPath(filePath, appPath);
+        if (ownedPath == null) continue;
         final normalizedPath = await _normalizeFilePath(
-          filePath,
+          ownedPath,
           cachedAppPath: appPath,
         );
         final canonicalKey = _canonicalComparisonKey(normalizedPath);
         candidatesByKey.putIfAbsent(
           canonicalKey,
           () => _OrphanCandidate(
-            absolutePath: filePath,
+            absolutePath: ownedPath,
             normalizedPath: normalizedPath,
             canonicalKey: canonicalKey,
           ),
@@ -822,6 +824,7 @@ class MediaReferenceService {
       }
 
       final candidates = candidatesByKey.values.toList(growable: false);
+      if (candidates.isEmpty) return 0;
       final db = await database;
       final storedKeys = await _fetchStoredReferenceKeysForCandidates(
         db,
@@ -861,7 +864,13 @@ class MediaReferenceService {
         final results = await Future.wait(
           chunk.map((candidate) async {
             try {
-              final file = File(candidate.absolutePath);
+              // Recheck ownership after the asynchronous reference queries.
+              final ownedPath = await _resolveOwnedMediaPath(
+                candidate.absolutePath,
+                appPath,
+              );
+              if (ownedPath == null) return false;
+              final file = File(ownedPath);
               if (await file.exists()) {
                 await file.delete();
                 logDebug('已删除无引用文件: ${candidate.absolutePath}');
@@ -881,6 +890,39 @@ class MediaReferenceService {
     } catch (e) {
       logDebug('批量检查并删除文件失败: $e');
       return 0;
+    }
+  }
+
+  /// Attachment paths authorize deletion only inside the dedicated media tree.
+  /// Resolve the app root to allow platform aliases, but reject links below it.
+  static Future<String?> _resolveOwnedMediaPath(
+    String filePath,
+    String appPath,
+  ) async {
+    try {
+      var localPath = filePath.trim();
+      if (localPath.startsWith('file://')) {
+        localPath = Uri.parse(localPath).toFilePath();
+      }
+      final appRoot = path.normalize(path.absolute(appPath));
+      final absolutePath = path.normalize(
+        path.isAbsolute(localPath) ? localPath : path.join(appRoot, localPath),
+      );
+      if (!path.isWithin(path.join(appRoot, 'media'), absolutePath)) {
+        return null;
+      }
+
+      final canonicalAppRoot = await Directory(appRoot).resolveSymbolicLinks();
+      final canonicalFile = await File(absolutePath).resolveSymbolicLinks();
+      final expectedPath = path.join(
+        canonicalAppRoot,
+        path.relative(absolutePath, from: appRoot),
+      );
+      if (!path.equals(canonicalFile, expectedPath)) return null;
+      return absolutePath;
+    } catch (_) {
+      // Missing files and paths that cannot be resolved are never disposable.
+      return null;
     }
   }
 

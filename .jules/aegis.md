@@ -9,3 +9,7 @@
 ## 2026-03-30 - [SQLite 查询行反序列化逐行异常捕获与跳过降级]
 **Learning:** 使用 `List.generate(maps.length, (i) => Model.fromJson(maps[i]))` 处理数据库查询列表时，若数据库中存在一条脏数据或跨版本反序列化异常，会抛出未捕获的运行时异常并导致整个查询方法失败或返回空列表，使用户历史记录整体“消失”。
 **Action:** 对数据库查询结果集进行迭代时，将 `Model.fromJson` 行解析包裹在独立的 `try-catch` 块中，跳过损坏数据并使用 `AppLogger.w` 记录日志，确保合法数据正常加载呈现。
+
+## 2026-03-30 - [备份还原与 LWW 合并反序列化 Map 类型守卫]
+**Learning:** 在处理外部 JSON 备份、同步数据或 sqflite 批量查询结果集（`List<Object?>`）时，直接使用 `c as Map<String, dynamic>` 或 `row['id'] as String` 强转在遇到非标准 Map（如 `_Map<dynamic, dynamic>`）、`null` 或基础类型元素时会抛出 `TypeError` 崩溃，导致整笔导入事务中断 rollback，使用户无法还原任何数据。
+**Action:** 采用 `_asMap` 等类型守卫辅助函数先检查 `item is Map` 并重建 `Map<String, dynamic>`，结合 `?.toString()` 提取非空 ID，跳过异常节点并确保合法数据安全完成事务入库。

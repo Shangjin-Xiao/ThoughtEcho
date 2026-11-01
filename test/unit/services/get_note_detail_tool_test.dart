@@ -145,6 +145,46 @@ void main() {
       expect(data['document_ops'].toString(), isNot(contains('/home/user')));
     });
 
+    for (final rich in [false, true]) {
+      test('denies a ${rich ? 'rich' : 'plain'} note hidden after a prior read',
+          () async {
+        final quote = Quote(
+          id: 'protected-note',
+          content: 'Synthetic protected body',
+          date: '2026-06-06T12:00:00Z',
+          sourceAuthor: 'Synthetic author',
+          editSource: rich ? 'fullscreen' : null,
+          deltaContent: rich
+              ? jsonEncode([
+                  {'insert': 'Synthetic protected body\n'}
+                ])
+              : null,
+        );
+        quotes.add(quote);
+        final db = _TestDatabaseService(quotes);
+        final detail = GetNoteDetailTool(db);
+        final call = ToolCall(
+          id: 'protected-read',
+          name: detail.name,
+          arguments: {'note_id': quote.id},
+        );
+        expect((await detail.execute(call)).isError, isFalse);
+        final tagReads = db.getTagsByIdsCallCount;
+
+        quotes[quotes.indexOf(quote)] = quote.copyWith(
+          tagIds: [DatabaseService.hiddenTagId],
+        );
+        final denied = await detail.execute(call);
+
+        expect(denied.isError, isTrue);
+        expect(denied.content, isNot(contains(quote.content)));
+        expect(denied.content, isNot(contains(quote.sourceAuthor!)));
+        expect(denied.content, isNot(contains('document_revision')));
+        expect(denied.artifact, isNull);
+        expect(db.getTagsByIdsCallCount, tagReads);
+      });
+    }
+
     test('returns error if note_id is empty or missing', () async {
       final result = await tool.execute(
         ToolCall(

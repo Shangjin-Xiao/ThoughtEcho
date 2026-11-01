@@ -120,9 +120,39 @@ class SettingsService extends ChangeNotifier {
 
   bool get agentMemoryEnabled => _mmkv.getBool(_agentMemoryEnabledKey) ?? true;
 
+  int _agentMemoryGeneration = 0;
+  Future<void>? _agentMemoryPolicyLock;
+
+  /// 后台提取开始时记录这一代；关闭、重新开启或清空后，旧结果不得写回。
+  int get agentMemoryGeneration => _agentMemoryGeneration;
+
+  void invalidateAgentMemoryCaptures() => _agentMemoryGeneration++;
+
+  /// 将后台记忆写入、开关持久化和清空串行化，守卫覆盖完整 SQLite commit。
+  Future<T> withAgentMemoryPolicy<T>(Future<T> Function() action) async {
+    final previous = _agentMemoryPolicyLock;
+    final completion = Completer<void>();
+    _agentMemoryPolicyLock = completion.future;
+    try {
+      if (previous != null) await previous;
+      return await action();
+    } finally {
+      // 失败仍传给调用方，但不能让后续的隐私操作一起失败。
+      completion.complete();
+      if (identical(_agentMemoryPolicyLock, completion.future)) {
+        _agentMemoryPolicyLock = null;
+      }
+    }
+  }
+
   /// 写入失败时抛出：这个开关的默认值是 true，静默失败会让用户以为已经关掉，
   /// 下次启动却发现记忆还在读写——隐私开关不能糊弄过去。
-  Future<void> setAgentMemoryEnabled(bool value) async {
+  Future<void> setAgentMemoryEnabled(bool value) {
+    invalidateAgentMemoryCaptures();
+    return withAgentMemoryPolicy(() => _saveAgentMemoryEnabled(value));
+  }
+
+  Future<void> _saveAgentMemoryEnabled(bool value) async {
     final success = await _mmkv.setBool(_agentMemoryEnabledKey, value);
     if (!success) {
       AppLogger.e(
@@ -1723,7 +1753,7 @@ class SettingsService extends ChangeNotifier {
   ) async {
     try {
       final apiKeyManager = APIKeyManager();
-      final Set<String> restoredProviderIds = {};
+      final restoredProviderKeys = <String, String>{};
 
       // 优先恢复多provider AI设置
       if (backupData.containsKey('multi_ai_settings') &&
@@ -1785,11 +1815,7 @@ class SettingsService extends ChangeNotifier {
               }
 
               if (rawKey != null) {
-                await apiKeyManager.saveProviderApiKey(
-                  normalizedId,
-                  rawKey,
-                );
-                restoredProviderIds.add(normalizedId);
+                restoredProviderKeys[normalizedId] = rawKey;
               }
 
               // 传递给 MultiAISettings.fromJson 前，对每个 provider 的 apiKey 进行清洗，确保非 String 类型被移除或置为 null
@@ -1813,6 +1839,26 @@ class SettingsService extends ChangeNotifier {
           }
         }
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
+
+        // A backup controls provider IDs and URLs, but does not authorize sending
+        // this device's saved credentials to a different origin. Invalidate keys
+        // before publishing any restored settings or installing imported keys.
+        for (final provider in multiAiSettings.providers) {
+          final origin = _httpOrigin(provider.apiUrl);
+          final previousProviders = _multiAISettings.providers.where(
+            (previous) => previous.id == provider.id,
+          );
+          if (origin == null ||
+              previousProviders.isEmpty ||
+              previousProviders.any(
+                (previous) => _httpOrigin(previous.apiUrl) != origin,
+              )) {
+            await apiKeyManager.removeProviderApiKey(provider.id);
+          }
+        }
+        for (final entry in restoredProviderKeys.entries) {
+          await apiKeyManager.saveProviderApiKey(entry.key, entry.value);
+        }
         await saveMultiAISettings(multiAiSettings);
       }
 
@@ -1831,7 +1877,7 @@ class SettingsService extends ChangeNotifier {
         final rawApiKey = aiSettingsJson['apiKey'] ?? aiSettingsJson['api_key'];
         if (rawApiKey is String && rawApiKey.trim().isNotEmpty) {
           const defaultProviderId = 'openai';
-          if (!restoredProviderIds.contains(defaultProviderId)) {
+          if (!restoredProviderKeys.containsKey(defaultProviderId)) {
             await apiKeyManager.saveProviderApiKey(
               defaultProviderId,
               rawApiKey.trim(),
@@ -1901,6 +1947,18 @@ class SettingsService extends ChangeNotifier {
       AppLogger.e('设置数据恢复失败', error: e, source: 'SettingsService');
       rethrow;
     }
+  }
+
+  /// Compare destinations using canonical scheme, host and effective port.
+  /// Invalid or unknown destinations must never authorize credential reuse.
+  static String? _httpOrigin(String apiUrl) {
+    final uri = Uri.tryParse(apiUrl.trim());
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty) {
+      return null;
+    }
+    return uri.origin;
   }
 
   /// 获取或生成设备唯一ID（持久化）

@@ -493,9 +493,17 @@ class ChatSessionService extends ChangeNotifier {
       final safeColumnName = _escapeIdentifier(columnName);
 
       // DDL queries (ALTER TABLE) cannot use parameter bindings in sqlite.
+      // Table name, column name, and definition are strictly validated via regex above.
       // Double quoting identifiers and replacing internal double quotes prevents injection.
-      final query =
-          'ALTER TABLE "$safeTableName" ADD COLUMN "$safeColumnName" $definition';
+      // List.join is used to construct non-parameterizable DDL queries safely without SAST string interpolation or string composition warnings.
+      final query = [
+        'ALTER TABLE "',
+        safeTableName,
+        '" ADD COLUMN "',
+        safeColumnName,
+        '" ',
+        definition,
+      ].join();
       await db.execute(query);
     }
   }

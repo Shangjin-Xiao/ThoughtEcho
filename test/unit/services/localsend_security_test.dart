@@ -97,6 +97,97 @@ void main() {
     });
   });
 
+  group('LocalSendServer preparation approval', () {
+    for (final route in [
+      '/api/localsend/v2/prepare-upload',
+      '/api/localsend/v1/send-request',
+    ]) {
+      test(
+        'intent approval cannot authorize a claimed fingerprint on $route',
+        () async {
+          final server = LocalSendServer();
+          addTearDown(server.stop);
+          final approvalSizes = <int>[];
+          var allowPreparation = false;
+          await server.start(
+            port: 0,
+            onReceiveSessionCreated: (_, __, ___) {},
+            onApprovalNeeded: (_, totalBytes, __) async {
+              approvalSizes.add(totalBytes);
+              return totalBytes == 0 || allowPreparation;
+            },
+          );
+
+          final sender = HttpClient();
+          final attacker = HttpClient();
+          addTearDown(sender.close);
+          addTearDown(attacker.close);
+          Future<(int, Map<String, dynamic>)> post(
+            HttpClient client,
+            String path,
+            Map<String, dynamic> body,
+          ) async {
+            final request = await client.postUrl(
+              Uri.parse('http://127.0.0.1:${server.port}$path'),
+            );
+            request.headers.contentType = ContentType.json;
+            request.write(jsonEncode(body));
+            final response = await request.close();
+            return (
+              response.statusCode,
+              jsonDecode(await utf8.decoder.bind(response).join())
+                  as Map<String, dynamic>,
+            );
+          }
+
+          final (
+            _,
+            intent,
+          ) = await post(sender, '/api/thoughtecho/v1/sync-intent', {
+            'intentId': 'approved-intent',
+            'fingerprint': 'public-sender-fingerprint',
+            'alias': 'Sender',
+          });
+          expect(intent['approved'], isTrue);
+
+          final preparation = {
+            'info': {
+              'alias': 'Sender',
+              'fingerprint': 'public-sender-fingerprint',
+            },
+            'files': {
+              'file-1': {
+                'id': 'file-1',
+                'fileName': 'package.zip',
+                'size': 4,
+                'fileType': 'application/zip',
+              },
+            },
+          };
+          final (deniedStatus, deniedBody) = await post(
+            attacker,
+            route,
+            preparation,
+          );
+          expect(deniedStatus, isNot(HttpStatus.ok));
+          expect(deniedBody, isNot(contains('files')));
+          expect(approvalSizes, [0, 4]);
+
+          allowPreparation = true;
+          final (approvedStatus, approvedBody) = await post(
+            sender,
+            route,
+            preparation,
+          );
+          expect(approvedStatus, HttpStatus.ok);
+          expect(approvedBody['sessionId'], isA<String>());
+          expect(approvedBody['files']['file-1'], isA<String>());
+          expect(approvalSizes, [0, 4, 4]);
+        },
+      );
+    }
+  });
+
   group('LocalSendServer media manifest approval', () {
     test('returns media manifest only after approval', () async {
       final server = LocalSendServer();

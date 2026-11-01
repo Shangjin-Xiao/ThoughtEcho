@@ -174,7 +174,7 @@
   "noteListDisableCardShadowsExperiment": "[Experiment] Disable note-list card shadows",
   "noteListDisableCardShadowsExperimentDesc": "Disable card shadows to improve scrolling smoothness on lower-end devices",
   "noteListDisableBackdropBlurExperiment": "[Experiment] Disable note-list collapse blur",
-  "noteListDisableBackdropBlurExperimentDesc": "Replace collapsed card bottom blur with gradient mask to reduce rendering overhead",
+  "noteListDisableBackdropBlurExperimentDesc": "Replace collapsed card bottom blur with a gradient mask for smoother scrolling and lower battery consumption",
   "devFirstScrollPerfResult": "First-scroll performance: total {total}, jank {jank}, avg {avgMs}ms, worst {worstMs}ms",
   "@devFirstScrollPerfResult": {
     "placeholders": {
@@ -3260,6 +3260,14 @@
   "featureInDevelopment": "Share feature in development...",
   "selectFromFiles": "Select from Files",
   "supportsLargeFiles": "Supports large files with memory-safe handling",
+  "mediaUrlTooLarge": "This file exceeds the {maxSizeMb} MB URL import limit. Choose a smaller file.",
+  "@mediaUrlTooLarge": {
+    "placeholders": {
+      "maxSizeMb": {
+        "type": "int"
+      }
+    }
+  },
   "unifiedMediaImportImportMedia": "Import {mediaType}",
   "@unifiedMediaImportImportMedia": {
     "placeholders": {

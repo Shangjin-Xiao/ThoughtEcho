@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
@@ -14,6 +15,8 @@ import 'package:thoughtecho/models/note_proposal_artifact.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/thoughter_page.dart';
+import 'package:thoughtecho/pages/note_full_editor_page.dart';
+import 'package:thoughtecho/services/agent_tools/propose_note_edit_tool.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/ask_user_tool.dart';
@@ -24,6 +27,7 @@ import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/widgets/ai/experimental_badge.dart';
+import 'package:thoughtecho/widgets/ai/note_proposal_card.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_harness.dart';
@@ -589,6 +593,24 @@ class _TagOnlyDatabaseService extends DatabaseService {
   Future<List<NoteTag>> getTags() async => _tags;
 }
 
+class _ProposalDatabaseService extends _TagOnlyDatabaseService {
+  _ProposalDatabaseService(this.note) : super([]);
+
+  Quote? note;
+  int updates = 0;
+
+  @override
+  Future<Quote?> getQuoteById(String id, {bool includeDeleted = false}) async =>
+      note?.id == id ? note : null;
+
+  @override
+  Future<QuoteUpdateResult> updateQuote(Quote quote) async {
+    updates++;
+    note = quote;
+    return QuoteUpdateResult.updated;
+  }
+}
+
 Future<Widget> _buildHarness({
   required SettingsService settingsService,
   required ChatSessionService chatSessionService,
@@ -718,6 +740,156 @@ void main() {
           .clearAccessibilityFeaturesTestValue();
       await TestHarness.tearDown();
     });
+
+    const localAuthChannel = MethodChannel('plugins.flutter.io/local_auth');
+
+    Future<_ProposalDatabaseService> restoreProposal(
+      WidgetTester tester, {
+      bool saved = false,
+      bool hidden = true,
+    }) async {
+      final original = _buildQuote();
+      final artifact = NoteProposalArtifact(
+        action: NoteProposalAction.edit,
+        proposalTitle: '示例修改',
+        reason: '示例理由',
+        noteId: original.id,
+        originalKind: NoteDocumentKind.plain,
+        resultKind: NoteDocumentKind.plain,
+        content: '提案正文',
+        documentOps: null,
+        metadata: const {},
+        changes: const [],
+        baseRevision: ProposeNoteEditTool.revisionForQuote(original),
+      );
+      // The proposal predates hiding the note and changing its private metadata.
+      final database = _ProposalDatabaseService(original.copyWith(
+        tagIds: hidden ? [DatabaseService.hiddenTagId] : [],
+        sourceAuthor: '当前私密作者',
+      ));
+      final now = DateTime.now();
+      final session = ChatSession(
+        id: 'protected-proposal-session',
+        sessionType: 'agent',
+        title: '示例会话',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+      chatSessionService.seedSession(session, [
+        app_chat.ChatMessage(
+          id: 'protected-proposal',
+          role: 'assistant',
+          isUser: false,
+          content: '',
+          timestamp: now,
+          metaJson: jsonEncode({
+            'type': NoteProposalArtifact.typeName,
+            'artifact': artifact.toJson(),
+            if (saved) 'saved_note_id': original.id,
+          }),
+        ),
+      ]);
+      await tester.pumpWidget(await _buildHarness(
+        settingsService: settingsService,
+        chatSessionService: chatSessionService,
+        databaseService: database,
+        child: ThoughterPage(session: session),
+      ));
+      await tester.pumpAndSettle();
+      return database;
+    }
+
+    for (final action in ['view', 'editor', 'quick edit', 'accept']) {
+      testWidgets(
+          'protected proposal $action waits for authentication and denies cancellation',
+          (tester) async {
+        await settingsService.setRequireBiometricForHidden(true);
+        final authentication = Completer<bool>();
+        var authCalls = 0;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(localAuthChannel, (call) async {
+          if (call.method == 'authenticate') {
+            authCalls++;
+            return authentication.future;
+          }
+          if (call.method == 'getAvailableBiometrics') return ['fingerprint'];
+          return true;
+        });
+        addTearDown(() => TestDefaultBinaryMessengerBinding
+            .instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(localAuthChannel, null));
+        final database = await restoreProposal(tester, saved: action == 'view');
+        final card =
+            tester.widget<NoteProposalCard>(find.byType(NoteProposalCard));
+        Future<void>? pending;
+        await tester.runAsync(() async {
+          switch (action) {
+            case 'view':
+              card.onViewNote!(database.note!.id!);
+            case 'editor':
+              pending = card.onOpenInEditor();
+            case 'quick edit':
+              pending = card.onQuickEdit!(const NoteProposalQuickEdit(
+                content: '',
+                author: null,
+                source: null,
+                tagIds: [],
+              ));
+            case 'accept':
+              pending = card.onApply();
+          }
+          await Future<void>.delayed(Duration.zero);
+        });
+        expect(authCalls, 1);
+        expect(database.updates, 0);
+        expect(find.byType(NoteFullEditorPage), findsNothing);
+        expect(find.text('当前私密作者'), findsNothing);
+
+        authentication.complete(false);
+        await tester.runAsync(() async => await pending);
+        await tester.pumpAndSettle();
+        expect(database.updates, 0);
+        expect(database.note!.content, _buildQuote().content);
+        expect(find.byType(NoteFullEditorPage), findsNothing);
+        expect(find.text('当前私密作者'), findsNothing);
+      });
+    }
+
+    for (final scenario in [
+      (hidden: false, protection: true, authCalls: 0),
+      (hidden: true, protection: false, authCalls: 0),
+      (hidden: true, protection: true, authCalls: 1),
+    ]) {
+      testWidgets('proposal acceptance respects hidden-note policy $scenario',
+          (tester) async {
+        await settingsService.setRequireBiometricForHidden(scenario.protection);
+        var authCalls = 0;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(localAuthChannel, (call) async {
+          if (call.method == 'authenticate') authCalls++;
+          if (call.method == 'getAvailableBiometrics') return ['fingerprint'];
+          return true;
+        });
+        addTearDown(() => TestDefaultBinaryMessengerBinding
+            .instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(localAuthChannel, null));
+        final database = await restoreProposal(tester, hidden: scenario.hidden);
+        final card =
+            tester.widget<NoteProposalCard>(find.byType(NoteProposalCard));
+        final result = await tester.runAsync(card.onApply);
+        await tester.pumpAndSettle();
+        expect(result, database.note!.id);
+        expect(authCalls, scenario.authCalls);
+        expect(database.updates, 1);
+        expect(database.note!.content, '提案正文');
+        expect(database.note!.tagIds.contains(DatabaseService.hiddenTagId),
+            scenario.hidden);
+        expect(
+            chatSessionService
+                .storedMessages.values.single.last.parsedMeta?['saved_note_id'],
+            database.note!.id);
+      });
+    }
 
     testWidgets('explore entry defaults to agent without mode toggle',
         (tester) async {

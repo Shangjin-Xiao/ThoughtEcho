@@ -224,6 +224,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<void> removeHiddenTag();
   Future<bool> isQuoteHidden(String quoteId);
   Future<List<String>> getHiddenQuoteIds();
+  Future<Set<String>> getVisibleQuoteIds(Iterable<String> ids);
 
   void refreshQuotes();
   Stream<List<Quote>> watchQuotes({

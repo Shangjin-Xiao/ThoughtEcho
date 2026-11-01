@@ -176,6 +176,10 @@ class ClipboardService extends ChangeNotifier {
   static const int _authorMinLength = 2;
   static const int _authorMaxLength = 20;
 
+  // 归属匹配只搜索有界尾部，避免重复破折号/空白触发正则回溯阻塞 UI。
+  // 超出窗口的署名不提取，保留完整原文。
+  static const int _attributionMaxLength = 256;
+
   /// 出处**只认书名号**。中英文圆括号在普通文本里太常见
   /// （"今天心情不错（真的好）"），当出处切走会把正文改坏。
   static const String _source = r'[《〈]([^》〉]+?)[》〉]';
@@ -207,6 +211,25 @@ class ClipboardService extends ChangeNotifier {
   /// 宁可漏判也不误切——切错等于悄悄改用户的笔记正文，比不提取难受得多。
   _ClipboardAttribution _extractAttribution(String content) {
     final text = content.trim();
+    final searchStart = text.length > _attributionMaxLength
+        ? text.length - _attributionMaxLength
+        : 0;
+
+    // 窗口可能落在长出处内部（书名号允许嵌套开括号）。此时不能把后面的
+    // 开括号或破折号误当成新署名，否则只会切掉原署名的一部分。
+    var insideSource = false;
+    for (var i = 0; i < searchStart; i++) {
+      switch (text[i]) {
+        case '《':
+        case '〈':
+          insideSource = true;
+        case '》':
+        case '〉':
+          insideSource = false;
+      }
+    }
+    if (insideSource) return _ClipboardAttribution(content: content);
+    final suffix = text.substring(searchStart);
 
     String? clean(String? input) {
       final cleaned = input?.trim().replaceAll(_cleanPattern, '').trim();
@@ -219,7 +242,11 @@ class ClipboardService extends ChangeNotifier {
     // 署名从 matchStart 开始，前面剩下的才是正文。正文被切空说明整段都是
     // 署名（比如只复制了一句"——某人"），这种情况保留原文、不做提取。
     _ClipboardAttribution? cut(int matchStart, String? author, String? source) {
-      final body = text.substring(0, matchStart).trim();
+      // 窗口开头的匹配可能只是更长分隔符/署名的尾巴，不能据此切正文。
+      if (searchStart > 0 && matchStart == 0) {
+        return _ClipboardAttribution(content: content);
+      }
+      final body = text.substring(0, searchStart + matchStart).trim();
       if (body.isEmpty) return null;
       if (author == null && source == null) return null;
       return _ClipboardAttribution(
@@ -230,8 +257,8 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 1. 正文 ——作者《出处》
-    final m1 = _dashAuthorThenSource.firstMatch(text);
-    if (m1 != null && _hasInlineBody(text, m1.start)) {
+    final m1 = _dashAuthorThenSource.firstMatch(suffix);
+    if (m1 != null && _hasInlineBody(text, searchStart + m1.start)) {
       // 作者可省略；但凡写了又不合法，整条规则作废——只留出处会把那段
       // 不合法的作者文本一起从正文里删掉
       final rawAuthor = clean(m1.group(1));
@@ -246,7 +273,7 @@ class ClipboardService extends ChangeNotifier {
     //
     // 这里不做 _hasInlineBody 守卫：匹配是从书名号开始的，而"出处 + 作者"
     // 单独占一行是常见排版，按行首拦会把正常的署名块也拦掉。
-    final m2 = _sourceThenDashAuthor.firstMatch(text);
+    final m2 = _sourceThenDashAuthor.firstMatch(suffix);
     if (m2 != null) {
       // 作者不合法就整条作废，同规则 1
       final author = validAuthor(m2.group(2));
@@ -257,8 +284,8 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 3. 正文 ——作者
-    final m3 = _dashAuthorOnly.firstMatch(text);
-    if (m3 != null && _hasInlineBody(text, m3.start)) {
+    final m3 = _dashAuthorOnly.firstMatch(suffix);
+    if (m3 != null && _hasInlineBody(text, searchStart + m3.start)) {
       final result = cut(m3.start, validAuthor(m3.group(1)), null);
       if (result != null) return result;
     }

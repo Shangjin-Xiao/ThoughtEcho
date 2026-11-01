@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
 import '../models/ai_provider_settings.dart';
-import '../services/api_key_manager.dart';
 import '../services/openai_stream_service.dart';
 
 /// 设置页「测试连接」按钮背后的实际请求。
@@ -32,9 +31,8 @@ class AIConnectionTester {
   /// 返回模型的回复文本（可能为空字符串）。任何失败都以异常抛出，调用方负责转成
   /// 用户可读的提示。
   ///
-  /// [provider] 的 `apiKey` 为空时会回落到 [APIKeyManager]，这样设置列表里那个
-  /// 不带密钥的配置对象也能直接拿来测；编辑页则会把输入框里还没保存的密钥填进来，
-  /// 于是「先测后存」也成立。
+  /// 严格使用 [provider] 携带的密钥，包括空值。已保存配置的调用方负责将密钥
+  /// 与其保存的地址一起传入；编辑草稿清空密钥时，不能按保留的 ID 重新取旧密钥。
   static Future<String> test({
     required AIProviderSettings provider,
     required String systemPrompt,
@@ -49,17 +47,11 @@ class AIConnectionTester {
         timeout: timeout,
       );
     }
-    final resolved = provider.apiKey.isNotEmpty
-        ? provider
-        : provider.copyWith(
-            apiKey: await APIKeyManager().getProviderApiKey(provider.id),
-          );
-
     // 超时交给 client 自己：`Future.timeout` 只让等待方提前返回，底层请求会继续
     // 跑到底，`chatCompletion` 里的 `client.close()` 也要等它跑完才执行——用户
     // 连点几次「测试连接」就会攒下一批在飞的连接。
     return await OpenAIStreamService().chatCompletion(
-      provider: resolved,
+      provider: provider,
       messages: [
         openai.ChatMessage.system(systemPrompt),
         openai.ChatMessage.user(userMessage),

@@ -60,7 +60,8 @@ class GetNoteDetailTool extends AgentTool {
 
     try {
       final q = await _db.getQuoteById(noteId);
-      if (q == null) {
+      // Agent tools exclude hidden notes; a note ID is not an unlock grant.
+      if (q == null || q.tagIds.contains(DatabaseService.hiddenTagId)) {
         return ToolResult(
           toolCallId: call.id,
           content: '未找到ID为$noteId的笔记',

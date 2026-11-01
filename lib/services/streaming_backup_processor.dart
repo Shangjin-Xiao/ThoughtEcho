@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../utils/app_logger.dart';
 import '../utils/path_security_utils.dart';
+import 'media_sync_manifest.dart';
 
 /// 备份文件后台处理器
 ///
@@ -99,10 +100,10 @@ class StreamingBackupProcessor {
   ) {
     final inputStream = InputFileStream(filePath);
     try {
-      final archive = ZipDecoder().decodeStream(inputStream);
-      ArchiveFile? dataFile;
+      final archive = _readZipFiles(inputStream);
+      ZipFile? dataFile;
       for (final file in archive) {
-        final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
+        final posixName = PathSecurityUtils.sanitizeZipEntryName(file.filename);
         if (posixName == 'backup_data.json' ||
             posixName == 'data.json' ||
             posixName.endsWith('/backup_data.json') ||
@@ -115,18 +116,20 @@ class StreamingBackupProcessor {
         throw Exception('备份文件中未找到数据文件 (backup_data.json 或 data.json)');
       }
 
-      final map = json.decode(utf8.decode(dataFile.content as List<int>))
-          as Map<String, dynamic>;
+      final map = _decodeZipJson(dataFile);
 
       if (extractMediaFiles) {
         for (final file in archive) {
-          if (!file.isFile || file.name == dataFile.name) continue;
+          if (file.filename == dataFile.filename) {
+            continue;
+          }
 
           try {
-            final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
+            final posixName =
+                PathSecurityUtils.sanitizeZipEntryName(file.filename);
             final platformRelativePath = posixName.replaceAll('/', p.separator);
             final safeRelativePath =
-                _normalizeSafeRelativePath(platformRelativePath);
+                _normalizeSafeMediaPath(platformRelativePath);
             if (safeRelativePath == null) continue;
 
             final targetPath = p.join(appDirectoryPath, safeRelativePath);
@@ -134,17 +137,28 @@ class StreamingBackupProcessor {
               targetPath,
               appDirectoryPath,
             );
+            // Lexical containment alone cannot prevent writes through links.
+            var currentPath = appDirectoryPath;
+            for (final segment in p.split(safeRelativePath)) {
+              currentPath = p.join(currentPath, segment);
+              if (FileSystemEntity.isLinkSync(currentPath)) {
+                throw FileSystemException(
+                  'Symbolic links are not allowed in backup media paths',
+                  currentPath,
+                );
+              }
+            }
             Directory(p.dirname(targetPath)).createSync(recursive: true);
             final outputStream = OutputFileStream(targetPath);
             try {
-              file.writeContent(outputStream);
+              file.decompress(outputStream);
             } finally {
               outputStream.closeSync();
             }
           } catch (e) {
             // 单个媒体文件损坏不应阻断结构化数据还原，但必须记录日志以便排查
             logWarning(
-              '媒体文件解压失败 [${file.name}]: $e',
+              '媒体文件解压失败 [${file.filename}]: $e',
               source: 'StreamingBackupProcessor',
             );
           }
@@ -154,6 +168,44 @@ class StreamingBackupProcessor {
     } finally {
       inputStream.closeSync();
     }
+  }
+
+  static List<ZipFile> _readZipFiles(InputStream input) {
+    // ZipDecoder eagerly expands symbolic-link targets, before size checks.
+    // Read metadata only and skip links without ever decompressing their data.
+    final directory = ZipDirectory()..read(input);
+    final files = <ZipFile>[];
+    final names = <String>{};
+    for (final header in directory.fileHeaders) {
+      final file = header.file!;
+      final isLink = header.versionMadeBy >> 8 == 3 &&
+          (header.externalFileAttributes >> 16) & 0xf000 == 0xa000;
+      if (!names.add(file.filename) ||
+          isLink ||
+          file.filename.endsWith('/') ||
+          file.filename.endsWith(r'\')) {
+        continue;
+      }
+      files.add(file);
+    }
+    return files;
+  }
+
+  static Map<String, dynamic> _decodeZipJson(ZipFile file) {
+    _BackupJsonOutput.checkSize(file.uncompressedSize);
+    final output = _BackupJsonOutput();
+    final input = file.getStream(decompress: false);
+    switch (file.compressionMethod) {
+      case CompressionType.deflate:
+        // archive 4.0.9's native decodeStream buffers all expanded chunks.
+        // Inflate writes directly to our capped output as bytes are produced.
+        Inflate.stream(input, output: output);
+      case CompressionType.bzip2:
+        BZip2Decoder().decodeStream(input, output);
+      case CompressionType.none:
+        output.writeStream(input);
+    }
+    return json.decode(utf8.decode(output.getBytes())) as Map<String, dynamic>;
   }
 
   /// 检查备份文件类型
@@ -197,7 +249,7 @@ class StreamingBackupProcessor {
     throw Exception('无法识别的备份文件格式');
   }
 
-  static String? _normalizeSafeRelativePath(String relativePath) {
+  static String? _normalizeSafeMediaPath(String relativePath) {
     final normalized = p.normalize(relativePath);
 
     if (normalized.isEmpty || normalized == '.' || normalized == p.separator) {
@@ -209,7 +261,25 @@ class StreamingBackupProcessor {
     }
 
     final segments = p.split(normalized);
-    if (segments.any((segment) => segment == '..' || segment.isEmpty)) {
+    // Reuse the media inventory's folder contract. Never extract databases or
+    // other application files, even when their paths are inside Documents.
+    if (segments.length < 3 ||
+        segments.first != 'media' ||
+        MediaSyncManifest.normalizeRelativePath(
+              p.joinAll(segments.skip(1)),
+            ) ==
+            null) {
+      return null;
+    }
+
+    // Windows treats colons and trailing dots/spaces specially. Reject these
+    // aliases on every platform so a backup has the same write scope everywhere.
+    if (segments.any((segment) =>
+        segment == '..' ||
+        segment.isEmpty ||
+        segment.contains(':') ||
+        segment.endsWith('.') ||
+        segment.endsWith(' '))) {
       return null;
     }
 
@@ -269,13 +339,15 @@ class StreamingBackupProcessor {
   static bool _zipContainsBackupData(String filePath) {
     final inputStream = InputFileStream(filePath);
     try {
-      return ZipDecoder().decodeStream(inputStream).any(
+      return _readZipFiles(inputStream).any(
         (file) {
-          final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
-          return posixName == 'backup_data.json' ||
-              posixName == 'data.json' ||
-              posixName.endsWith('/backup_data.json') ||
-              posixName.endsWith('/data.json');
+          final posixName =
+              PathSecurityUtils.sanitizeZipEntryName(file.filename);
+          return file.uncompressedSize <= _BackupJsonOutput.maxBytes &&
+              (posixName == 'backup_data.json' ||
+                  posixName == 'data.json' ||
+                  posixName.endsWith('/backup_data.json') ||
+                  posixName.endsWith('/data.json'));
         },
       );
     } finally {
@@ -302,5 +374,35 @@ class StreamingBackupProcessor {
       'last_modified': lastModified.toIso8601String(),
       'is_large_file': fileSize > 50 * 1024 * 1024, // 50MB
     };
+  }
+}
+
+/// JSON still requires bytes, text and an object graph in memory. Bound its
+/// expanded input independently of the untrusted ZIP sizes, before allocation.
+class _BackupJsonOutput extends OutputMemoryStream {
+  static const maxBytes = 32 * 1024 * 1024;
+
+  static void checkSize(int size) {
+    if (size > maxBytes) {
+      throw const FormatException('备份中的笔记数据超过 32 MiB，无法导入');
+    }
+  }
+
+  @override
+  void writeByte(int value) {
+    checkSize(length + 1);
+    super.writeByte(value);
+  }
+
+  @override
+  void writeBytes(List<int> bytes, {int? length}) {
+    checkSize(this.length + (length ?? bytes.length));
+    super.writeBytes(bytes, length: length);
+  }
+
+  @override
+  void writeStream(InputStream stream) {
+    checkSize(length + stream.length);
+    super.writeStream(stream);
   }
 }

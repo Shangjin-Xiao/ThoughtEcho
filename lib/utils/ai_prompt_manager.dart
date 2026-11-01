@@ -1028,7 +1028,7 @@ $closing''';
     String tag;
     if (topTag != null && topTag.trim().isNotEmpty) {
       // 移除开头的#符号和多余空格
-      final cleanTag = topTag.trim().replaceAll(RegExp(r'^#+\s*'), '').trim();
+      final cleanTag = topTag.trim().replaceAll(_leadingHashRegex, '').trim();
       tag = cleanTag.isNotEmpty
           ? '「$cleanTag」'
           : (isEnglish ? 'diverse topics' : '多元主题');
@@ -1494,6 +1494,8 @@ $closing''';
               ];
     return templates[rng.nextInt(templates.length)];
   }
+
+  static final RegExp _leadingHashRegex = RegExp(r'^#+\s*');
 
   /// 清洗英文的周期标签，避免出现 "This This Week" 等语法语病
   String _cleanEnglishPeriodLabel(String periodLabel) {

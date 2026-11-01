@@ -298,25 +298,15 @@ class WebFetchService {
         return response;
       }
 
+      // 重定向无需读取响应体；立即取消，避免自动 gzip 解码消耗无界资源。
+      await response.stream.listen(null).cancel();
       final location = response.headers['location'];
       if (location == null || location.trim().isEmpty) {
-        await _drainRedirectResponse(response);
         throw Exception('网页重定向缺少 Location 响应头');
       }
-      await _drainRedirectResponse(response);
       uri = uri.resolve(location.trim());
     }
     throw Exception('网页重定向次数过多');
-  }
-
-  Future<void> _drainRedirectResponse(http.StreamedResponse response) async {
-    await response.stream.drain<void>().timeout(
-          _timeout,
-          onTimeout: () => throw WebFetchTimeoutException(
-            '网页重定向响应体读取超时（${_timeout.inSeconds}秒）',
-            _timeout,
-          ),
-        );
   }
 
   bool _isRedirectStatus(int statusCode) {

@@ -389,5 +389,113 @@ void main() {
       expect(await backupOf('first-round'), 'thoughtful');
       expect(await backupOf('second-round'), 'inspirational');
     });
+
+    test('软删除记录缺失 deleted_at 时无论覆盖还是合并导入均回填完整', () async {
+      final backup = {
+        'categories': [
+          {'id': 'cat-1', 'name': '默认分类', 'is_default': 1}
+        ],
+        'quotes': [
+          {
+            'id': 'deleted-quote-merge',
+            'content': '在回收站中的笔记',
+            'date': '2026-01-01T10:00:00.000Z',
+            'last_modified': '2026-01-02T12:00:00.000Z',
+            'is_deleted': 1,
+            // 缺失 deleted_at
+          },
+          {
+            'id': 'deleted-quote-date-fallback',
+            'content': '仅有 date 的回收站笔记',
+            'date': '2026-02-01T10:00:00.000Z',
+            'is_deleted': 'true',
+            // 缺失 deleted_at 与 last_modified
+          }
+        ]
+      };
+
+      // 测试 LWW 合并导入
+      await service.importDataWithLWWMerge(db, backup);
+
+      final row1 = (await db.query('quotes',
+              where: 'id = ?', whereArgs: ['deleted-quote-merge']))
+          .first;
+      expect(row1['is_deleted'], 1);
+      expect(row1['deleted_at'], '2026-01-02T12:00:00.000Z');
+
+      final row2 = (await db.query('quotes',
+              where: 'id = ?', whereArgs: ['deleted-quote-date-fallback']))
+          .first;
+      expect(row2['is_deleted'], 1);
+      expect(row2['deleted_at'], '2026-02-01T10:00:00.000Z');
+    });
+  });
+
+  group('异构/非标准 Map 与类型强转防御', () {
+    test('importDataFromMap 防御非标准 Map 和非 Map 元素崩溃', () async {
+      final heterogeneousMap = <dynamic, dynamic>{
+        'id': 'cat_hetero',
+        'name': '异构分类',
+        'last_modified': '2026-03-30T10:00:00Z',
+      };
+
+      final stats = await service.importDataFromMap(db, {
+        'categories': [
+          heterogeneousMap, // Map<dynamic, dynamic>
+          'invalid_category_string', // 纯字符串坏节点
+          null, // null 坏节点
+        ],
+        'quotes': [
+          <dynamic, dynamic>{
+            'id': 'quote_hetero',
+            'content': '异构 Map 笔记正文',
+            'date': '2026-03-30T10:00:00Z',
+          },
+          12345, // 整数坏节点
+        ],
+      });
+
+      expect(stats.skippedEmptyQuotes, 0);
+      final categories = await db.query('categories');
+      expect(categories, hasLength(1));
+      expect(categories.first['name'], '异构分类');
+
+      final quotes = await db.query('quotes');
+      expect(quotes, hasLength(1));
+      expect(quotes.first['content'], '异构 Map 笔记正文');
+    });
+
+    test('importDataWithLWWMerge 防御异构 Map 合并崩溃', () async {
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [
+          <dynamic, dynamic>{
+            'id': 'cat_merge_hetero',
+            'name': '合并异构分类',
+          },
+        ],
+        'quotes': [
+          <dynamic, dynamic>{
+            'id': 'quote_merge_hetero',
+            'content': 'LWW 异构 Map 笔记',
+            'date': '2026-03-30T10:00:00Z',
+          },
+          'invalid_quote',
+        ],
+        'tombstones': [
+          <dynamic, dynamic>{
+            'quote_id': 'quote_to_delete',
+            'deleted_at': '2026-03-30T10:00:00Z',
+          },
+        ],
+      });
+
+      expect(report.insertedCategories, 1);
+      expect(report.insertedQuotes, 1);
+      expect(report.errors, isEmpty);
+
+      final quotes = await db.query('quotes');
+      expect(quotes, hasLength(1));
+      expect(quotes.first['content'], 'LWW 异构 Map 笔记');
+    });
   });
 }

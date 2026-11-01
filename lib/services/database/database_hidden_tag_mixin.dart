@@ -2,6 +2,29 @@ part of '../database_service.dart';
 
 /// Mixin providing hidden tag operations for DatabaseService.
 mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
+  /// 校验一批绑定笔记的当前可见性。错误向上传递，避免授权检查失败时放行。
+  /// Agent 会话检索每批最多传入 20 个 ID，低于 SQLite 的绑定参数上限。
+  @override
+  Future<Set<String>> getVisibleQuoteIds(Iterable<String> ids) async {
+    final noteIds = ids.toSet();
+    if (noteIds.isEmpty) return {};
+
+    final db = await safeDatabase;
+    final rows = await db.rawQuery(
+      '''
+      SELECT q.id FROM quotes q
+      WHERE q.id IN (${List.filled(noteIds.length, '?').join(',')})
+        AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
+        AND NOT EXISTS (
+          SELECT 1 FROM quote_tags qt
+          WHERE qt.quote_id = q.id AND qt.tag_id = ?
+        )
+      ''',
+      [...noteIds, _DatabaseServiceBase.hiddenTagId],
+    );
+    return rows.map((row) => row['id'] as String).toSet();
+  }
+
   /// 获取或创建隐藏标签
   /// 当启用隐藏笔记功能时，确保隐藏标签存在
   /// 隐藏标签是系统标签，不可编辑或删除

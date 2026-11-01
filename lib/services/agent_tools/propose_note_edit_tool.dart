@@ -155,7 +155,8 @@ class ProposeNoteEditTool extends AgentTool {
         throw const FormatException('result_kind 必须为 preserve 或 rich。');
       }
       final quote = await _databaseService.getQuoteById(noteId);
-      if (quote == null) {
+      // A known revision must not expose a hidden note through its preview.
+      if (quote == null || quote.tagIds.contains(DatabaseService.hiddenTagId)) {
         return _error(call, '未找到指定笔记。');
       }
       final originalKind = kindForQuote(quote);

@@ -1,8 +1,15 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/database_backup_service.dart';
 import 'package:thoughtecho/services/database_schema_manager.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/media_reference_service.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../test_harness.dart';
@@ -207,6 +214,97 @@ void main() {
         expect(tombstones.length, equals(1));
       });
     });
+
+    for (final deletion in ['permanent trash deletion', 'imported tombstone']) {
+      test(
+        '$deletion preserves non-media files from imported attachments',
+        () async {
+          MediaReferenceService.setDatabaseForTesting(db);
+          addTearDown(MediaReferenceService.clearDatabaseForTesting);
+          final appDir = await getApplicationDocumentsDirectory();
+          final chatFile = File(path.join(appDir.path, 'chat.db'));
+          await chatFile.writeAsString('synthetic chat data');
+          final orphanFile = File(
+            path.join(appDir.path, 'media', 'images', 'orphan.png'),
+          );
+          await orphanFile.parent.create(recursive: true);
+          await orphanFile.writeAsString('synthetic image');
+          const quoteId = 'imported-attachment-note';
+          const modifiedAt = '2026-08-01T00:00:00.000Z';
+          const deletedAt = '2026-08-02T00:00:00.000Z';
+          final usesTombstone = deletion == 'imported tombstone';
+
+          final report = await DatabaseBackupService().importDataWithLWWMerge(
+            db,
+            {
+              'categories': [],
+              'quotes': [
+                {
+                  'id': quoteId,
+                  'content': 'Imported attachment note',
+                  'date': modifiedAt,
+                  'last_modified': modifiedAt,
+                  'is_deleted': usesTombstone ? 0 : 1,
+                  'deleted_at': usesTombstone ? null : deletedAt,
+                  'delta_content': jsonEncode([
+                    {
+                      'insert': {'image': 'chat.db'},
+                    },
+                    {
+                      'insert': {'video': 'media/images/../../chat.db'},
+                    },
+                    {
+                      'insert': {
+                        'custom': {'audio': chatFile.path},
+                      },
+                    },
+                    {
+                      'insert': {'image': 'media/images/orphan.png'},
+                    },
+                  ]),
+                },
+              ],
+              if (usesTombstone)
+                'tombstones': [
+                  {'quote_id': quoteId, 'deleted_at': deletedAt},
+                ],
+            },
+          );
+          expect(report.errors, isEmpty);
+          expect(report.insertedQuotes, 1);
+          if (usesTombstone) {
+            expect(report.deletedByTombstoneQuotes, 1);
+          } else {
+            await service.permanentlyDeleteQuote(quoteId);
+          }
+
+          expect(
+            await db.query('quotes', where: 'id = ?', whereArgs: [quoteId]),
+            isEmpty,
+          );
+          expect(
+            await db.query(
+              'quote_tombstones',
+              where: 'quote_id = ?',
+              whereArgs: [quoteId],
+            ),
+            hasLength(1),
+          );
+          expect(
+            await chatFile.exists(),
+            isTrue,
+            reason:
+                'Attachment references do not authorize deleting application databases',
+          );
+          expect(await chatFile.readAsString(), 'synthetic chat data');
+          expect(
+            await orphanFile.exists(),
+            isFalse,
+            reason: 'Unreferenced application media must still be cleaned up',
+          );
+        },
+      );
+    }
 
     group('emptyTrash', () {
       test('does nothing when trash is empty', () async {

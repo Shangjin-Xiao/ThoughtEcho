@@ -75,7 +75,7 @@ Future<Map<String, dynamic>?> _fetchFromZenQuotes(
   String type, {
   required DailyQuoteHttpGet httpGet,
 }) async {
-  const apiUrl = 'https://zenquotes.io/api/random';
+  const apiUrl = ApiService.zenQuotesApiUrl;
   final response =
       await httpGet(apiUrl, timeoutSeconds: ApiService._timeoutSeconds);
   if (response.statusCode != 200) {
@@ -118,7 +118,7 @@ Future<Map<String, dynamic>?> _fetchFromApiNinjas(
     return null;
   }
 
-  var apiUrl = 'https://api.api-ninjas.com/v2/randomquotes';
+  var apiUrl = ApiService.apiNinjasApiUrl;
   final supportedCategories = apiNinjasCategories
       .where((category) => ApiService.apiNinjasCategoryKeys.contains(category))
       .toList(growable: false);
@@ -167,7 +167,7 @@ Future<Map<String, dynamic>?> _fetchFromMeigen(
   String type, {
   required DailyQuoteHttpGet httpGet,
 }) async {
-  const apiUrl = 'https://meigen.doodlenote.net/api/json.php?c=1';
+  const apiUrl = ApiService.meigenApiUrl;
   final response =
       await httpGet(apiUrl, timeoutSeconds: ApiService._timeoutSeconds);
   if (response.statusCode != 200) {
@@ -202,7 +202,7 @@ Future<Map<String, dynamic>?> _fetchFromKoreanAdvice(
   String type, {
   required DailyQuoteHttpGet httpGet,
 }) async {
-  const apiUrl = 'https://korean-advice-open-api.vercel.app/api/advice';
+  const apiUrl = ApiService.koreanAdviceApiUrl;
   final response =
       await httpGet(apiUrl, timeoutSeconds: ApiService._timeoutSeconds);
   if (response.statusCode != 200) {

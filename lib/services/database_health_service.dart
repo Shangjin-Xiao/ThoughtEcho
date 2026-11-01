@@ -43,6 +43,7 @@ class DatabaseStartupDiagnostic {
 
 class DatabaseHealthService {
   static const int _maxOfflineQuoteLength = 100;
+  static const String _hiddenTagId = 'system_hidden_tag';
   static const String dailyQuoteTagId = 'default_hitokoto';
   static const Set<String> _requiredMainDatabaseTables = {
     'quotes',
@@ -503,7 +504,7 @@ class DatabaseHealthService {
     }
   }
 
-  /// 获取适合作为每日一言的本地笔记
+  /// 获取适合作为每日一言的本地笔记，始终排除隐藏笔记。
   /// 优先选择带有"每日一言"标签的笔记，然后选择较短的笔记
   Future<Map<String, dynamic>?> getLocalDailyQuote(
     Database db, {
@@ -531,8 +532,12 @@ class DatabaseHealthService {
       final deletedFilter = hasDeletedColumn
           ? 'AND (q.is_deleted = 0 OR q.is_deleted IS NULL)'
           : '';
-      final deletedFilterSimple =
-          hasDeletedColumn ? 'AND (is_deleted = 0 OR is_deleted IS NULL)' : '';
+      final hiddenFilter = '''
+        AND NOT EXISTS (
+          SELECT 1 FROM quote_tags qt_hidden
+          WHERE qt_hidden.quote_id = q.id AND qt_hidden.tag_id = ?
+        )
+      ''';
 
       if (offlineQuoteSource == 'tagOnly') {
         // 修复：兼容用户自己创建的“每日一言”标签（ID 可能不是 default_hitokoto）
@@ -553,24 +558,26 @@ class DatabaseHealthService {
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
           WHERE qt.tag_id IN ($placeholders)
             AND length(q.content) <= ?
+            $hiddenFilter
             $deletedFilter
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          [...tagIds, _maxOfflineQuoteLength],
+          [...tagIds, _maxOfflineQuoteLength, _hiddenTagId],
         );
       } else {
         // allNotes 模式：全局随机抽取
         results = await db.rawQuery(
           '''
-          SELECT * FROM quotes
-          WHERE length(content) <= ?
-            AND content NOT LIKE '%\n%'
-            $deletedFilterSimple
+          SELECT q.* FROM quotes q
+          WHERE length(q.content) <= ?
+            AND q.content NOT LIKE '%\n%'
+            $hiddenFilter
+            $deletedFilter
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          [_maxOfflineQuoteLength],
+          [_maxOfflineQuoteLength, _hiddenTagId],
         );
       }
 
@@ -581,6 +588,7 @@ class DatabaseHealthService {
           'source': quote['source_work'] ?? '',
           'author': quote['source_author'] ?? '',
           'type': 'local',
+          'local_quote_id': quote['id'],
           'from_who': quote['source_author'] ?? '',
           'from': quote['source_work'] ?? '',
         };
@@ -773,7 +781,8 @@ class DatabaseHealthService {
                     requiresHitokotoTag:
                         quote.tagIds.any(hitokotoTagIds.contains),
                   ) &&
-                  !quote.isDeleted,
+                  !quote.isDeleted &&
+                  !quote.tagIds.contains(_hiddenTagId),
             )
             .toList();
       } else {
@@ -784,7 +793,8 @@ class DatabaseHealthService {
                     quote.content,
                     offlineQuoteSource: offlineQuoteSource,
                   ) &&
-                  !quote.isDeleted,
+                  !quote.isDeleted &&
+                  !quote.tagIds.contains(_hiddenTagId),
             )
             .toList();
       }
@@ -797,6 +807,7 @@ class DatabaseHealthService {
           'source': quote.sourceWork ?? '',
           'author': quote.sourceAuthor ?? '',
           'type': 'local',
+          'local_quote_id': quote.id,
           'from_who': quote.sourceAuthor ?? '',
           'from': quote.sourceWork ?? '',
         };
