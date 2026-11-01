@@ -595,39 +595,37 @@ class MediaReferenceService {
       if (quotes.isEmpty) break;
 
       const int chunkSize = 50;
-      final quotesList = quotes.toList(growable: false);
-      for (var i = 0; i < quotesList.length; i += chunkSize) {
-        final chunk = quotesList.skip(i).take(chunkSize);
-        await Future.wait(
-          chunk.map((quote) async {
-            final quoteId = quote.id;
-            if (quoteId == null || quoteId.isEmpty) {
-              return;
-            }
+      for (var i = 0; i < quotes.length; i++) {
+        final quote = quotes[i];
+        final quoteId = quote.id;
+        if (quoteId == null || quoteId.isEmpty) {
+          continue;
+        }
 
-            final mediaPaths = await extractMediaPathsFromQuote(
-              quote,
-              cachedAppPath: appPath,
-            );
-
-            for (final mediaPath in mediaPaths) {
-              final variantPath = path.normalize(mediaPath);
-              final key = _canonicalComparisonKey(variantPath);
-
-              final variants = index.putIfAbsent(
-                key,
-                () => <String, Set<String>>{},
-              );
-              final quoteSet = variants.putIfAbsent(
-                variantPath,
-                () => <String>{},
-              );
-              quoteSet.add(quoteId);
-            }
-          }),
+        final mediaPaths = extractMediaPathsFromQuoteSync(
+          quote,
+          cachedAppPath: appPath,
         );
-        // 让出事件循环，避免长时间阻塞
-        await Future.delayed(Duration.zero);
+
+        for (final mediaPath in mediaPaths) {
+          final variantPath = path.normalize(mediaPath);
+          final key = _canonicalComparisonKey(variantPath);
+
+          final variants = index.putIfAbsent(
+            key,
+            () => <String, Set<String>>{},
+          );
+          final quoteSet = variants.putIfAbsent(
+            variantPath,
+            () => <String>{},
+          );
+          quoteSet.add(quoteId);
+        }
+
+        if ((i + 1) % chunkSize == 0) {
+          // 让出事件循环，避免长时间阻塞
+          await Future.delayed(Duration.zero);
+        }
       }
 
       offset += quotes.length;
@@ -1092,11 +1090,11 @@ class MediaReferenceService {
     }
   }
 
-  /// 从笔记内容中提取媒体文件路径
-  static Future<List<String>> extractMediaPathsFromQuote(
+  /// 从笔记内容中同步提取媒体文件路径（需传入已缓存的应用根目录）
+  static List<String> extractMediaPathsFromQuoteSync(
     Quote quote, {
-    String? cachedAppPath,
-  }) async {
+    required String cachedAppPath,
+  }) {
     final mediaPaths = <String>[];
 
     try {
@@ -1112,7 +1110,7 @@ class MediaReferenceService {
                 if (insert.containsKey('image')) {
                   final imagePath = insert['image'] as String?;
                   if (imagePath != null) {
-                    final normalizedPath = await _normalizeFilePath(
+                    final normalizedPath = normalizeFilePathSync(
                       imagePath,
                       cachedAppPath: cachedAppPath,
                     );
@@ -1124,7 +1122,7 @@ class MediaReferenceService {
                 if (insert.containsKey('video')) {
                   final videoPath = insert['video'] as String?;
                   if (videoPath != null) {
-                    final normalizedPath = await _normalizeFilePath(
+                    final normalizedPath = normalizeFilePathSync(
                       videoPath,
                       cachedAppPath: cachedAppPath,
                     );
@@ -1138,7 +1136,7 @@ class MediaReferenceService {
                   if (custom is Map && custom.containsKey('audio')) {
                     final audioPath = custom['audio'] as String?;
                     if (audioPath != null) {
-                      final normalizedPath = await _normalizeFilePath(
+                      final normalizedPath = normalizeFilePathSync(
                         audioPath,
                         cachedAppPath: cachedAppPath,
                       );
@@ -1156,6 +1154,30 @@ class MediaReferenceService {
     }
 
     return mediaPaths.toSet().toList(); // 去重
+  }
+
+  /// 从笔记内容中提取媒体文件路径
+  static Future<List<String>> extractMediaPathsFromQuote(
+    Quote quote, {
+    String? cachedAppPath,
+  }) async {
+    final deltaContent = quote.deltaContent;
+    if (deltaContent == null || deltaContent.isEmpty) {
+      return const [];
+    }
+
+    String appPath = cachedAppPath ?? '';
+    if (appPath.isEmpty) {
+      try {
+        appPath =
+            path.normalize((await getApplicationDocumentsDirectory()).path);
+      } catch (e) {
+        logDebug('获取应用文档目录失败: $e');
+        appPath = '';
+      }
+    }
+
+    return extractMediaPathsFromQuoteSync(quote, cachedAppPath: appPath);
   }
 
   /// 同步笔记的媒体文件引用
@@ -1178,7 +1200,7 @@ class MediaReferenceService {
       await removeAllReferencesForQuote(quoteId);
 
       // 从笔记内容中提取媒体文件路径
-      final mediaPaths = await extractMediaPathsFromQuote(
+      final mediaPaths = extractMediaPathsFromQuoteSync(
         quote,
         cachedAppPath: appPath,
       );
@@ -1234,7 +1256,7 @@ class MediaReferenceService {
       await txn.delete(_tableName, where: 'quote_id = ?', whereArgs: [quoteId]);
 
       // 从笔记内容中提取媒体文件路径
-      final mediaPaths = await extractMediaPathsFromQuote(
+      final mediaPaths = extractMediaPathsFromQuoteSync(
         quote,
         cachedAppPath: appPath,
       );
@@ -1292,11 +1314,11 @@ class MediaReferenceService {
     return mediaFiles;
   }
 
-  /// 标准化文件路径（转换为相对路径）
-  static Future<String> _normalizeFilePath(
+  /// 同步标准化文件路径（需传入已缓存的应用根目录）
+  static String normalizeFilePathSync(
     String filePath, {
-    String? cachedAppPath,
-  }) async {
+    required String cachedAppPath,
+  }) {
     try {
       if (filePath.isEmpty) {
         return filePath;
@@ -1313,15 +1335,30 @@ class MediaReferenceService {
 
       sanitized = path.normalize(sanitized);
 
-      final appPath = cachedAppPath ??
-          path.normalize((await getApplicationDocumentsDirectory()).path);
-
-      if (sanitized.startsWith(appPath)) {
-        return path.normalize(path.relative(sanitized, from: appPath));
+      if (sanitized.startsWith(cachedAppPath)) {
+        return path.normalize(path.relative(sanitized, from: cachedAppPath));
       }
 
       return sanitized;
     } catch (_) {
+      return filePath;
+    }
+  }
+
+  /// 标准化文件路径（转换为相对路径）
+  static Future<String> _normalizeFilePath(
+    String filePath, {
+    String? cachedAppPath,
+  }) async {
+    try {
+      if (cachedAppPath != null) {
+        return normalizeFilePathSync(filePath, cachedAppPath: cachedAppPath);
+      }
+      final appPath =
+          path.normalize((await getApplicationDocumentsDirectory()).path);
+      return normalizeFilePathSync(filePath, cachedAppPath: appPath);
+    } catch (e) {
+      logDebug('标准化文件路径失败: $e');
       return filePath;
     }
   }
