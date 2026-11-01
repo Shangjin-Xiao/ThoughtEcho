@@ -141,3 +141,7 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-10-27 - [补充 LocationWeatherHelper.fetchLocation 的测试]
 **盲点:** `LocationWeatherHelper.fetchLocation` 在提供 `includePoi` 参数后，获取 poiName 的分支逻辑缺少单元测试覆盖。
 **对策:** 在 `test/unit/utils/location_weather_helper_test.dart` 中为 `fetchLocation` 新增指定 `includePoi: true` 的相关测试断言。通过模拟 `MockLocationService.currentPoiName` 以及修改现有的 `test` 中断言，确保 fetch 的 `LocationSnapshot` 中能正确组装或缺失 `poiName` 属性。在修改现有测试参数时，注意具名参数必须以参数名对应。
+
+## 2026-11-03 - [补充 MultiAISettings 的单元测试]
+**盲点:** `MultiAISettings` 是应用中管理多 AI 渠道配置的核心数据模型，涵盖了旧版向后兼容字段解析（从 `availableProviders` 回退、从 `currentProvider` Map 提取 Provider ID）、`currentProvider` 动态查找容错、以及双向序列化逻辑。由于缺乏专门的单元测试，一旦字段解析或向后兼容逻辑受损，将直接导致用户配置加载异常或渠道状态丢失。
+**对策:** 编写极简且无外部依赖的纯单元测试套件 `test/unit/models/multi_ai_settings_test.dart`，系统性覆盖默认构造、`defaultSettings`、`currentProvider` 正反向查询、历史兼容 schema 反序列化与缺省回退、`toJson` 往返一致性以及 `copyWith` 字段独立更新，全面消除数据模型层的测试盲区。
