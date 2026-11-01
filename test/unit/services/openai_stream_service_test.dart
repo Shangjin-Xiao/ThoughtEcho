@@ -901,6 +901,69 @@ void main() {
           ),
         );
       });
+
+      test(
+          'throws Exception when single chunk exceeds maxSseLineLength without newline',
+          () async {
+        final hugeChunk = 'x' * (OpenAIStreamService.maxSseLineLength + 1);
+        final client = MockClient.streaming((request, body) async {
+          final stream = Stream.value(utf8.encode(hugeChunk));
+          return http.StreamedResponse(stream, 200);
+        });
+        final controller = StreamController<openai.ChatStreamEvent>();
+
+        expect(
+          () => service.streamWithCustomBody(
+            config: config,
+            requestBody: {'model': 'llama3'},
+            controller: controller,
+            httpClient: client,
+          ),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is Exception &&
+                  e.toString().contains('AI 响应单行超过') &&
+                  e.toString().contains(
+                        '${OpenAIStreamService.maxSseLineLength}',
+                      ),
+            ),
+          ),
+        );
+      });
+
+      test(
+          'throws Exception when cumulative chunks without newline exceed maxSseLineLength',
+          () async {
+        final half = OpenAIStreamService.maxSseLineLength ~/ 2 + 10;
+        final client = MockClient.streaming((request, body) async {
+          final stream = Stream.fromIterable([
+            utf8.encode('a' * half),
+            utf8.encode('b' * half),
+          ]);
+          return http.StreamedResponse(stream, 200);
+        });
+        final controller = StreamController<openai.ChatStreamEvent>();
+
+        expect(
+          () => service.streamWithCustomBody(
+            config: config,
+            requestBody: {'model': 'llama3'},
+            controller: controller,
+            httpClient: client,
+          ),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is Exception &&
+                  e.toString().contains('AI 响应单行超过') &&
+                  e.toString().contains(
+                        '${OpenAIStreamService.maxSseLineLength}',
+                      ),
+            ),
+          ),
+        );
+      });
     });
   });
 }

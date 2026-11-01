@@ -128,6 +128,10 @@ class ThinkTagFilter {
 /// URL 构造由 openai_dart 内部处理（客户端会自动追加
 /// `/chat/completions`），不再手动拼接路径，避免 405 错误。
 class OpenAIStreamService extends ChangeNotifier {
+  /// 单行 SSE 缓冲区的最大字符长度约束（1 MiB），防止异常流无换行导致内存无限增长
+  @visibleForTesting
+  static const int maxSseLineLength = 1024 * 1024;
+
   /// 规范化 OpenAI 兼容的 base URL
   ///
   /// 将用户配置的各种 URL 格式统一为 openai_dart 能正确处理的格式：
@@ -642,6 +646,9 @@ class OpenAIStreamService extends ChangeNotifier {
         }
 
         partialLine = text.substring(startIndex);
+        if (partialLine.length > maxSseLineLength) {
+          throw Exception('AI 响应单行超过 $maxSseLineLength 字符，已中止');
+        }
       }
 
       // 当响应流读取完成（Stream 结束）且 controller 未关闭时，若 partialLine 中仍有残余文本，进行最后一次兜底解析刷新
