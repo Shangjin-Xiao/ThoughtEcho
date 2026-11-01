@@ -18,6 +18,7 @@ import 'motion_photo_preview_page.dart';
 import 'note_list/collapsed_media_banner.dart';
 import 'note_list/collapsed_media_thumbnail.dart';
 import 'note_list/collapsed_rich_text.dart';
+import 'quote_card_settings.dart';
 
 /// 统一显示Quote内容的组件，支持富文本和普通文本
 class QuoteContent extends StatelessWidget {
@@ -27,6 +28,9 @@ class QuoteContent extends StatelessWidget {
   final bool showFullContent;
   final bool collapseRichTextSemantics;
   final bool? needsExpansionOverride;
+  final QuoteCardSettings? cardSettings;
+  final String? mediaStyle;
+  final bool? prioritizeBoldContent;
 
   const QuoteContent({
     super.key,
@@ -36,6 +40,9 @@ class QuoteContent extends StatelessWidget {
     this.showFullContent = false,
     this.collapseRichTextSemantics = false,
     this.needsExpansionOverride,
+    this.cardSettings,
+    this.mediaStyle,
+    this.prioritizeBoldContent,
   });
 
   /// [paragraphStyle] 由 [QuillThemeTypography.paragraphStyle] 算出：quill 的段落
@@ -968,13 +975,16 @@ class QuoteContent extends StatelessWidget {
         // [CollapsedRichText] 按「文字段, 媒体, 文字段…」的顺序交错排出来。三种
         // 版式现在都不建 `QuillEditor`，媒体也就都和卡片同时挂载，不再有
         // 「空白 → 灰框 → 图片」的三段式。
-        final String mediaStyle = context.select<SettingsService, String>(
-          (s) => s.noteCardMediaStyle,
-        );
-        final bool prioritizeBoldContent =
+        final String mediaStyle = this.mediaStyle ??
+            cardSettings?.mediaStyle ??
+            context.select<SettingsService, String>(
+              (s) => s.noteCardMediaStyle,
+            );
+        final bool prioritizeBoldContent = this.prioritizeBoldContent ??
+            cardSettings?.prioritizeBoldContent ??
             context.select<SettingsService, bool>(
-          (s) => s.prioritizeBoldContentInCollapse,
-        );
+              (s) => s.prioritizeBoldContentInCollapse,
+            );
 
         return LayoutBuilder(
           builder: (context, constraints) {
