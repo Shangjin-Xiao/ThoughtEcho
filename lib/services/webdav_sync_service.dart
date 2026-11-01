@@ -449,6 +449,11 @@ class WebDAVSyncService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // 0. 先确认本地主库可用（必要时会等待/重新初始化）。若主库启动失败，
+      // 在这里整体失败并记录一次错误，而不是在后续每个媒体文件上各抛一次。
+      final dbService = DatabaseService();
+      final localDb = await dbService.safeDatabase;
+
       final dio = await _createDio(_url, _username, password);
 
       // 1. 确保服务器同步目录结构存在 (/thoughtecho/ 和 /thoughtecho/media/ 等)
@@ -502,8 +507,6 @@ class WebDAVSyncService extends ChangeNotifier {
         }
       }
 
-      final dbService = DatabaseService();
-
       // 3. 如果两端都有数据，进行冲突检测与克隆
       if (remoteData != null && _lastSyncTime.isNotEmpty) {
         logDebug('进行同步冲突检测与隔离...');
@@ -549,7 +552,9 @@ class WebDAVSyncService extends ChangeNotifier {
       );
       try {
         // 分页流式写入 JSON 到临时文件
-        await _writeLocalDataToTempJson(dbService.database, tempJsonPath);
+        final uploadDb =
+            localDb.isOpen ? localDb : await dbService.safeDatabase;
+        await _writeLocalDataToTempJson(uploadDb, tempJsonPath);
 
         await packSyncZip(tempJsonPath, tempZipPath);
 
@@ -1544,8 +1549,12 @@ class WebDAVSyncService extends ChangeNotifier {
             logDebug('跳过云端未引用附件删除，等待后续本地清理策略处理: $stdPath');
           }
         } catch (e) {
+          // 这里只会捕获本地引用计数查询的失败（下载失败已在内层单独处理）。
+          // 数据库不可用是全局性问题，逐个文件重试只会刷出大量相同错误，
+          // 因此记录后中止媒体同步，交由 triggerSync 统一记录并标记失败。
           failureCount++;
           logWarning('检查或下载附件失败 ($stdPath): $e', source: 'WebDAVSyncService');
+          rethrow;
         }
       }
     }

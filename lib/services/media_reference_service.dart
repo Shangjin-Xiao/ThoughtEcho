@@ -54,12 +54,18 @@ class MediaReferenceService {
       _countFromRows(rows, key);
 
   /// 获取数据库实例
+  ///
+  /// 不能使用同步的 `DatabaseService.database`：主库启动失败、被关闭或仍在
+  /// 初始化时它会直接抛出"数据库未初始化或已关闭"。这里改用
+  /// `safeDatabase`，它会等待进行中的初始化，必要时重新初始化。
+  /// 缓存的句柄也只在仍处于打开状态时复用，避免拿到已关闭的旧连接。
   static Future<Database> get database async {
-    if (_database != null) return _database!;
+    final cached = _database;
+    if (cached != null && cached.isOpen) return cached;
 
-    final databaseService = DatabaseService();
-    _database = databaseService.database;
-    return _database!;
+    final db = await DatabaseService().safeDatabase;
+    _database = db;
+    return db;
   }
 
   /// 初始化媒体引用表
