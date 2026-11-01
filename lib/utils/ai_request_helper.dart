@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
@@ -60,7 +61,9 @@ class AIRequestHelper {
     if (contextMessages.isEmpty) return messages;
 
     int usedChars = 0;
-    final budget = maxChars - currentUserMessageLength;
+    final minHistoryBudget = (maxChars * 0.3).round();
+    final budget =
+        math.max(minHistoryBudget, maxChars - currentUserMessageLength);
     final selected = <Map<String, dynamic>>[];
 
     for (int i = contextMessages.length - 1; i >= 0; i--) {

@@ -9,6 +9,7 @@ import '../services/settings_service.dart' show SettingsService;
 import '../services/api_key_manager.dart';
 import '../services/openai_stream_service.dart';
 import 'dart:async';
+import 'dart:math' as math;
 import '../utils/daily_prompt_generator.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
@@ -253,6 +254,7 @@ class AIService extends ChangeNotifier {
     required String userMessage,
     List<ChatMessage>? history,
     String? profileBlock,
+    int maxChars = 6000,
   }) {
     final messages = <openai.ChatMessage>[
       openai.ChatMessage.system(systemPrompt),
@@ -275,9 +277,10 @@ class AIService extends ChangeNotifier {
           )
           .toList();
 
-      // Token 预算截断：保留近期的对话历史
+      // Token 预算截断：保留近期的对话历史，确保设置非负保底预算（30% 保底，即 1800 字符）
       int usedChars = 0;
-      final budget = 6000 - userMessage.length;
+      final minBudget = (maxChars * 0.3).round();
+      final budget = math.max(minBudget, maxChars - userMessage.length);
       final singleMessageCap = 1200;
 
       final selected = <openai.ChatMessage>[];
