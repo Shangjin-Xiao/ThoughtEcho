@@ -191,8 +191,22 @@ class SafeFileImage extends FileImage {
           'and cannot be loaded as an image.',
         );
       }
-      final buffer = await ui.ImmutableBuffer.fromFilePath(target.path);
-      return decode(buffer);
+      final ui.ImmutableBuffer buffer;
+      try {
+        buffer = await ui.ImmutableBuffer.fromFilePath(target.path);
+      } on Exception catch (e, stack) {
+        // fromFilePath throws a generic Exception (with the raw path in its
+        // message) when the file can't be read, e.g. deleted after the check.
+        PaintingBinding.instance.imageCache.evict(key);
+        final missing = MissingMediaFileException(
+          originalPath,
+          rebasedPath: rebasedPath,
+          cause: e,
+        );
+        MissingMediaFileReporter.handle(missing);
+        Error.throwWithStackTrace(missing, stack);
+      }
+      return await decode(buffer);
     } on PathNotFoundException catch (e) {
       // The file was deleted between the exists check and the read.
       PaintingBinding.instance.imageCache.evict(key);
