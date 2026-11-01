@@ -406,6 +406,171 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sanitized?.data, isNot(contains('http.fragment')));
     });
 
+    test('redacts local file paths in non-SQL breadcrumb messages', () {
+      final cases = <String, String>{
+        'User opened /Users/developer/mock_path/notes.txt':
+            'User opened [path]',
+        r'Saved export to C:\Users\developer\mock_docs\backup.json':
+            'Saved export to [path]',
+        'Android db ready at /data/user/0/com.thoughtecho/databases/app.db':
+            'Android db ready at [path]',
+        'Linux config in /home/developer/.config/app.conf':
+            'Linux config in [path]',
+        'Container file at /private/var/mobile/Containers/Data/notes.db':
+            'Container file at [path]',
+        'Quoted: "/Users/developer/My Documents/note.txt"': 'Quoted: "[path]"',
+        'Saved to /Users/developer/file.txt.': 'Saved to [path].',
+        'Failed (/Users/developer/file.txt)': 'Failed ([path])',
+      };
+
+      for (final entry in cases.entries) {
+        final breadcrumb = Breadcrumb(
+          message: entry.key,
+          category: 'ui.click',
+        );
+        final sanitized = sanitizeSentryBreadcrumb(breadcrumb, Hint());
+        expect(
+          sanitized?.message,
+          entry.value,
+          reason: 'Failed to sanitize "${entry.key}"',
+        );
+      }
+    });
+
+    test('sanitizes URLs in non-SQL breadcrumb messages while keeping base URL',
+        () {
+      final breadcrumb = Breadcrumb(
+        message:
+            'Navigated to https://example.com/notes?secret_key=12345#overview',
+        category: 'navigation',
+      );
+
+      final sanitized = sanitizeSentryBreadcrumb(breadcrumb, Hint());
+
+      expect(sanitized?.message, 'Navigated to https://example.com/notes');
+      expect(sanitized?.message, isNot(contains('secret_key')));
+      expect(sanitized?.message, isNot(contains('overview')));
+    });
+
+    test('removes sensitive blacklist keys from breadcrumb data', () {
+      final breadcrumb = Breadcrumb(
+        category: 'user_action',
+        data: <String, dynamic>{
+          'query': 'user search keyword',
+          'search': 'find quote',
+          'search_term': 'important',
+          'file_path': '/Users/developer/secret.txt',
+          'filePath': r'C:\Users\developer\secret.txt',
+          'path': '/home/developer/app',
+          'text': 'private user note text',
+          'button_text': 'submit',
+          'content': 'confidential content',
+          'prompt': 'summarize this text',
+          'system_prompt': 'you are an assistant',
+          'token': 'secret-token-value',
+          'access_token': 'xyz789',
+          'secret': 'client-secret-val',
+          'auth': 'Basic secretcredentials',
+          'action': 'tap_button',
+          'status_code': 200,
+          'count': 5,
+        },
+      );
+
+      final sanitized = sanitizeSentryBreadcrumb(breadcrumb, Hint());
+      final data = sanitized?.data;
+
+      expect(data, isNotNull);
+      expect(data, isNot(contains('query')));
+      expect(data, isNot(contains('search')));
+      expect(data, isNot(contains('search_term')));
+      expect(data, isNot(contains('file_path')));
+      expect(data, isNot(contains('filePath')));
+      expect(data, isNot(contains('path')));
+      expect(data, isNot(contains('text')));
+      expect(data, isNot(contains('button_text')));
+      expect(data, isNot(contains('content')));
+      expect(data, isNot(contains('prompt')));
+      expect(data, isNot(contains('system_prompt')));
+      expect(data, isNot(contains('token')));
+      expect(data, isNot(contains('access_token')));
+      expect(data, isNot(contains('secret')));
+      expect(data, isNot(contains('auth')));
+
+      expect(data?['action'], 'tap_button');
+      expect(data?['status_code'], 200);
+      expect(data?['count'], 5);
+    });
+
+    test(
+        'sanitizes local paths and URLs with query parameters in data String values',
+        () {
+      final breadcrumb = Breadcrumb(
+        category: 'custom',
+        data: <String, dynamic>{
+          'target_url':
+              'https://example.com/api/v1/resource?token=secret123&user=admin#section',
+          'destination_dir': '/Users/developer/Documents/backups',
+          'win_dir': r'C:\Users\developer\AppData\Local',
+          'android_dir': '/data/user/0/com.thoughtecho/files',
+          'summary':
+              'Exported https://example.com/item?api=val to /home/developer/out.json',
+          'is_valid': true,
+          'item_count': 10,
+        },
+      );
+
+      final sanitized = sanitizeSentryBreadcrumb(breadcrumb, Hint());
+      final data = sanitized?.data;
+
+      expect(data?['target_url'], 'https://example.com/api/v1/resource');
+      expect(data?['target_url'], isNot(contains('token')));
+      expect(data?['target_url'], isNot(contains('admin')));
+      expect(data?['destination_dir'], '[path]');
+      expect(data?['win_dir'], '[path]');
+      expect(data?['android_dir'], '[path]');
+      expect(
+        data?['summary'],
+        'Exported https://example.com/item to [path]',
+      );
+      expect(data?['is_valid'], isTrue);
+      expect(data?['item_count'], 10);
+    });
+
+    test('handles null, empty, or unmodifiable breadcrumb data gracefully', () {
+      // Null breadcrumb
+      expect(sanitizeSentryBreadcrumb(null, Hint()), isNull);
+
+      // Null data
+      final breadcrumbNullData = Breadcrumb(message: 'Plain message');
+      final sanitizedNull =
+          sanitizeSentryBreadcrumb(breadcrumbNullData, Hint());
+      expect(sanitizedNull?.message, 'Plain message');
+      expect(sanitizedNull?.data, isNull);
+
+      // Unmodifiable map in data
+      final unmodifiableBreadcrumb = Breadcrumb(
+        message: 'Loaded file at /Users/developer/data.txt',
+        data: Map.unmodifiable(<String, dynamic>{
+          'http.query': 'secret=1',
+          'custom_note': 'Loaded from /home/developer/doc.pdf',
+          'is_cached': true,
+        }),
+      );
+
+      expect(
+        () => sanitizeSentryBreadcrumb(unmodifiableBreadcrumb, Hint()),
+        returnsNormally,
+      );
+
+      final sanitizedUnmodifiable =
+          sanitizeSentryBreadcrumb(unmodifiableBreadcrumb, Hint());
+      expect(sanitizedUnmodifiable?.message, 'Loaded file at [path]');
+      expect(sanitizedUnmodifiable?.data, isNot(contains('http.query')));
+      expect(sanitizedUnmodifiable?.data?['custom_note'], 'Loaded from [path]');
+      expect(sanitizedUnmodifiable?.data?['is_cached'], isTrue);
+    });
+
     test('scrubs URLs in every transmitted nested network exception', () async {
       final transport = _MockSentryTransport();
       await Sentry.init((options) {
