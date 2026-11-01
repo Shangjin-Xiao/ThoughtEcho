@@ -34,11 +34,75 @@ class _FakeDatabaseService extends Fake implements DatabaseService {
 }
 
 class _FakeSettingsService extends Fake implements SettingsService {
+  Map<String, dynamic>? restoredSettings;
+
   @override
-  Future<void> restoreAllSettingsFromBackup(Map<String, dynamic> data) async {}
+  Future<void> restoreAllSettingsFromBackup(Map<String, dynamic> data) async {
+    restoredSettings = data;
+  }
 }
 
 void main() {
+  group('BackupService Settings Import Tests', () {
+    late _FakeDatabaseService fakeDb;
+    late _FakeSettingsService fakeSettings;
+    late _FakeAIAnalysisDatabaseService fakeAiDb;
+    late BackupService backupService;
+
+    setUp(() {
+      fakeDb = _FakeDatabaseService();
+      fakeSettings = _FakeSettingsService();
+      fakeAiDb = _FakeAIAnalysisDatabaseService();
+      backupService = BackupService(
+        databaseService: fakeDb,
+        settingsService: fakeSettings,
+        aiAnalysisDbService: fakeAiDb,
+      );
+    });
+
+    test(
+        'safely converts heterogeneous Map<dynamic, dynamic> settings to Map<String, dynamic>',
+        () async {
+      final dynamicSettings = <dynamic, dynamic>{
+        'theme_mode': 1,
+        'locale_code': 'zh',
+      };
+      final backupData = <String, dynamic>{
+        'settings': dynamicSettings,
+      };
+
+      await backupService.testProcessImportData(backupData);
+
+      expect(fakeSettings.restoredSettings, isNotNull);
+      expect(fakeSettings.restoredSettings!['theme_mode'], equals(1));
+      expect(fakeSettings.restoredSettings!['locale_code'], equals('zh'));
+    });
+
+    test(
+        'safely handles non-Map settings node without crashing or calling restore',
+        () async {
+      final backupData = <String, dynamic>{
+        'settings': 'invalid_string_instead_of_map',
+      };
+
+      await backupService.testProcessImportData(backupData);
+
+      expect(fakeSettings.restoredSettings, isNull);
+    });
+
+    test(
+        'safely handles null settings node without crashing or calling restore',
+        () async {
+      final backupData = <String, dynamic>{
+        'settings': null,
+      };
+
+      await backupService.testProcessImportData(backupData);
+
+      expect(fakeSettings.restoredSettings, isNull);
+    });
+  });
+
   group('BackupService AI Analysis Import Tests', () {
     late _FakeDatabaseService fakeDb;
     late _FakeSettingsService fakeSettings;

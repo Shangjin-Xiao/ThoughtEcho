@@ -13,3 +13,7 @@
 ## 2026-03-30 - [备份还原与 LWW 合并反序列化 Map 类型守卫]
 **Learning:** 在处理外部 JSON 备份、同步数据或 sqflite 批量查询结果集（`List<Object?>`）时，直接使用 `c as Map<String, dynamic>` 或 `row['id'] as String` 强转在遇到非标准 Map（如 `_Map<dynamic, dynamic>`）、`null` 或基础类型元素时会抛出 `TypeError` 崩溃，导致整笔导入事务中断 rollback，使用户无法还原任何数据。
 **Action:** 采用 `_asMap` 等类型守卫辅助函数先检查 `item is Map` 并重建 `Map<String, dynamic>`，结合 `?.toString()` 提取非空 ID，跳过异常节点并确保合法数据安全完成事务入库。
+
+## 2026-03-31 - [备份还原设置节点异构反序列化类型守卫与日志兜底]
+**Learning:** 在全量备份还原过程中，若 `backupData['settings']` 为异构 `Map<dynamic, dynamic>`、`null` 或被损坏为非 Map 类型，直接使用 `as Map<String, dynamic>` 强转会直接抛出 `TypeError` 运行时崩溃，导致在笔记数据已完成处理（甚至在清空本地库模式下）时还原流程异常中断，使得设置无法恢复或引发应用故障。
+**Action:** 在传递给 `SettingsService.restoreAllSettingsFromBackup` 之前，通过 `rawSettings is Map` 进行守卫与安全的 key 强制字符串化处理，若为非 Map 则记录结构化警告并优雅跳过，坚决避免强转未捕获崩溃。
