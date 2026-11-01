@@ -152,6 +152,9 @@ String? sanitizeSentryUrl(String? url) {
   final uri = Uri.tryParse(url);
   if (uri == null) return url;
   if (!uri.hasScheme) return uri.path;
+  if (uri.scheme.toLowerCase() == 'file') {
+    return '[path]';
+  }
   return Uri(
     scheme: uri.scheme,
     host: uri.host,
@@ -164,6 +167,125 @@ final _exceptionUrlPattern = RegExp(
   r'''[a-z][a-z0-9+.-]*://[^\s<>"']+''',
   caseSensitive: false,
 );
+
+final _quotedFileUriPattern = RegExp(
+  r'''(?<=["'])file:(?:/{1,3}|//[a-zA-Z0-9._-]+/)[^"'\r\n]+(?=["'])''',
+  caseSensitive: false,
+);
+
+final _unquotedFileUriPattern = RegExp(
+  r'''(?<![a-zA-Z0-9_])file:(?:/{1,3}|//[a-zA-Z0-9._-]+/)[^\s<>"'`]*''',
+  caseSensitive: false,
+);
+
+final _quotedLocalPathPattern = RegExp(
+  r'''(?<=["'])(?:[a-zA-Z]:[/\\\\]|/[a-zA-Z0-9._-]+/)[^"'\r\n]+(?=["'])''',
+  caseSensitive: false,
+);
+
+final _unquotedLocalPathPattern = RegExp(
+  r'''(?<![a-zA-Z0-9_/:\]])(?:[a-zA-Z]:[/\\\\]|/[a-zA-Z0-9._-]+/)[^\s<>"'`]*''',
+  caseSensitive: false,
+);
+
+String _sanitizeFileUrisInText(String text) {
+  var result = text.replaceAllMapped(_quotedFileUriPattern, (_) => '[path]');
+  result = result.replaceAllMapped(_unquotedFileUriPattern, (match) {
+    var p = match.group(0)!;
+    var suffix = '';
+    while (p.length > 1 &&
+        (p.endsWith('.') ||
+            p.endsWith(',') ||
+            p.endsWith(';') ||
+            p.endsWith(')') ||
+            p.endsWith(']'))) {
+      suffix = p[p.length - 1] + suffix;
+      p = p.substring(0, p.length - 1);
+    }
+    return '[path]$suffix';
+  });
+  return result;
+}
+
+String _sanitizePathsInText(String text) {
+  var result = text.replaceAllMapped(_quotedLocalPathPattern, (_) => '[path]');
+  result = result.replaceAllMapped(_unquotedLocalPathPattern, (match) {
+    var p = match.group(0)!;
+    var suffix = '';
+    while (p.length > 1 &&
+        (p.endsWith('.') ||
+            p.endsWith(',') ||
+            p.endsWith(';') ||
+            p.endsWith(')') ||
+            p.endsWith(']'))) {
+      suffix = p[p.length - 1] + suffix;
+      p = p.substring(0, p.length - 1);
+    }
+    return '[path]$suffix';
+  });
+  return result;
+}
+
+String _sanitizeUrlsInText(String text) {
+  return text.replaceAllMapped(_exceptionUrlPattern, (match) {
+    final url = match.group(0)!;
+    return Uri.tryParse(url) == null
+        ? '[invalid URL]'
+        : (sanitizeSentryUrl(url) ?? url);
+  });
+}
+
+/// 对非 SQL 文本进行脱敏（清洗本地 file: URI、URL 参数与本地系统绝对路径）。
+String sanitizeSentryNonSqlText(String text) {
+  final fileUriSanitized = _sanitizeFileUrisInText(text);
+  final urlSanitized = _sanitizeUrlsInText(fileUriSanitized);
+  return _sanitizePathsInText(urlSanitized);
+}
+
+const _sensitiveBreadcrumbDataKeys = <String>[
+  'query',
+  'search',
+  'file_path',
+  'path',
+  'text',
+  'content',
+  'prompt',
+  'token',
+  'secret',
+  'auth',
+  'fragment',
+];
+
+bool _isSensitiveBreadcrumbKey(String key) {
+  final lowerKey = key.toLowerCase();
+  for (final pattern in _sensitiveBreadcrumbDataKeys) {
+    if (lowerKey.contains(pattern)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+dynamic _sanitizeBreadcrumbDataValue(dynamic value) {
+  if (value is String) {
+    return sanitizeSentryNonSqlText(value);
+  }
+  if (value is Map) {
+    final sanitizedMap = <String, dynamic>{};
+    for (final entry in value.entries) {
+      final key = entry.key.toString();
+      if (_isSensitiveBreadcrumbKey(key)) {
+        continue;
+      }
+      sanitizedMap[key] = _sanitizeBreadcrumbDataValue(entry.value);
+    }
+    return sanitizedMap;
+  }
+  if (value is List) {
+    return value.map(_sanitizeBreadcrumbDataValue).toList();
+  }
+  return value;
+}
 
 SentryEvent? sanitizeSentryEvent(SentryEvent event, Hint hint) {
   _sanitizeSentryRequest(event);
@@ -194,17 +316,30 @@ void _sanitizeSentryRequest(SentryEvent event) {
 }
 
 Breadcrumb? sanitizeSentryBreadcrumb(Breadcrumb? breadcrumb, Hint hint) {
-  if (breadcrumb?.message != null) {
-    breadcrumb!.message = sanitizeSentryDatabaseDescription(
-      breadcrumb.message!,
-    );
+  if (breadcrumb == null) return null;
+
+  final message = breadcrumb.message;
+  if (message != null) {
+    final dbSanitized = sanitizeSentryDatabaseDescription(message);
+    if (dbSanitized != message) {
+      breadcrumb.message = dbSanitized;
+    } else {
+      breadcrumb.message = sanitizeSentryNonSqlText(message);
+    }
   }
-  final url = breadcrumb?.data?['url'];
-  if (url is String) {
-    breadcrumb?.data?['url'] = sanitizeSentryUrl(url);
+
+  final data = breadcrumb.data;
+  if (data != null) {
+    final sanitizedData = <String, dynamic>{};
+    for (final entry in data.entries) {
+      if (_isSensitiveBreadcrumbKey(entry.key)) {
+        continue;
+      }
+      sanitizedData[entry.key] = _sanitizeBreadcrumbDataValue(entry.value);
+    }
+    breadcrumb.data = sanitizedData;
   }
-  breadcrumb?.data?.remove('http.query');
-  breadcrumb?.data?.remove('http.fragment');
+
   return breadcrumb;
 }
 
