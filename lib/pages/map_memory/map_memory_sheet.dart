@@ -36,6 +36,9 @@ extension _MapMemorySheet on _MapMemoryPageState {
         initialChildSize: 0.55,
         minChildSize: 0.3,
         maxChildSize: 0.9,
+        snap: true,
+        snapSizes: const [0.3, 0.55, 0.9],
+        snapAnimationDuration: const Duration(milliseconds: 250),
         builder: (context, scrollController) => ListView(
           controller: scrollController,
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
