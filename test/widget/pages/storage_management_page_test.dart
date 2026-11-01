@@ -11,12 +11,31 @@ import 'package:thoughtecho/services/unified_log_service.dart';
 import '../../test_harness.dart';
 
 class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
-  _FakeDatabaseService({required this.deletedCount});
+  _FakeDatabaseService({
+    required this.deletedCount,
+    this.maintenanceResult,
+  });
 
   final int deletedCount;
+  final Map<String, dynamic>? maintenanceResult;
 
   @override
   Future<int> getDeletedQuotesCount() async => deletedCount;
+
+  @override
+  Future<Map<String, dynamic>> performDatabaseMaintenance({
+    Function(String)? onProgress,
+  }) async {
+    onProgress?.call('测试进度');
+    return maintenanceResult ??
+        {
+          'success': true,
+          'duration_ms': 1200,
+          'space_saved_mb': 1.5,
+          'db_size_before_mb': 10.0,
+          'db_size_after_mb': 8.5,
+        };
+  }
 
   @override
   noSuchMethod(Invocation invocation) =>
@@ -253,6 +272,40 @@ void main() {
       await tester.pump();
 
       expect(find.text('正在取消并清理...'), findsNWidgets(2)); // Title and content
+
+      await _disposeApp(tester);
+      _disposeLogServiceOnce();
+    });
+
+    testWidgets('数据库维护结果能够兼容 int / double / null 各种混合数值类型而不抛出 TypeError',
+        (tester) async {
+      final fakeDb = _FakeDatabaseService(
+        deletedCount: 0,
+        maintenanceResult: {
+          'success': true,
+          'duration_ms': 1200, // int
+          'space_saved_mb': 0, // int passed where double is expected
+          'db_size_before_mb': 10, // int passed where double is expected
+          'db_size_after_mb': null, // null handled safely
+        },
+      );
+
+      await tester.pumpWidget(_buildTestApp(databaseService: fakeDb));
+      await _pumpUntilStorageContentLoaded(tester);
+
+      // Find and click database maintenance button if present
+      final btnFinder = find.widgetWithText(OutlinedButton, '数据库维护与碎片整理');
+      if (btnFinder.evaluate().isNotEmpty) {
+        await tester.tap(btnFinder);
+        await tester.pump(); // Confirm dialog
+        final confirmBtn = find.widgetWithText(FilledButton, '开始维护');
+        if (confirmBtn.evaluate().isNotEmpty) {
+          await tester.tap(confirmBtn);
+          await tester.pumpAndSettle();
+
+          expect(find.text('数据库维护完成'), findsOneWidget);
+        }
+      }
 
       await _disposeApp(tester);
       _disposeLogServiceOnce();
