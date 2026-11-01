@@ -3694,7 +3694,7 @@
   "mapPickerResolvingPoint": "住所を取得しています...",
   "mapPickerUnnamedPoint": "名称未設定の地点",
   "mapPickerLocateMe": "現在地に移動",
-  "mapPickerCurrentLocationSubtitle": "デバイスの現在地",
+  "mapPickerCurrentLocationSubtitle": "市区町村のみを記録し、具体的な場所は記録しません",
   "mapPickerDistanceMeters": "{distance} m",
   "@mapPickerDistanceMeters": {
     "description": "地图选点页搜索结果与选点之间的距离（米）",
@@ -4436,7 +4436,7 @@
       }
     }
   },
-  "agentAskUserCustomHint": "または回答を入力...",
+  "agentAskUserCustomHint": "回答を入力…（入力すると上の選択が解除されます）",
   "agentAskUserUnanswered": "未回答",
   "agentAskUserStepOf": "質問 {index} / {total}",
   "@agentAskUserStepOf": {
@@ -4717,9 +4717,9 @@
   "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
   "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
   "dreamingEnableTitle": "Dreaming 整理を有効にする",
-  "dreamingEnableDesc": "Thoughter がバックグラウンドでノートを整理し、ユーザーの傾向を分析することを許可します",
+  "dreamingEnableDesc": "Thoughter が適切なタイミングで長期プロファイルを整理することを許可します",
   "dreamingOnIdleTitle": "アイドル時に自動整理",
-  "dreamingOnIdleDesc": "操作を停止して30秒後、ネットワークが空いているときに静かに整理を開始します",
+  "dreamingOnIdleDesc": "アプリ起動後に条件を満たした場合、静かにプロファイルを整理します",
   "dreamingAfterInsightTitle": "定期インサイト後に整理",
   "dreamingAfterInsightDesc": "定期インサイトの生成が完了した後、最近のノートからユーザー像を更新します",
   "dreamingSwitchFailed": "Dreaming の設定を保存できませんでした。もう一度お試しください",

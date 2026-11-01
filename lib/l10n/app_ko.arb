@@ -3690,7 +3690,7 @@
   "mapPickerResolvingPoint": "주소를 확인하는 중...",
   "mapPickerUnnamedPoint": "이름 없는 위치",
   "mapPickerLocateMe": "현재 위치로 이동",
-  "mapPickerCurrentLocationSubtitle": "기기의 현재 위치",
+  "mapPickerCurrentLocationSubtitle": "도시 및 시·구만 기록하며 구체적인 장소는 기록하지 않습니다",
   "mapPickerDistanceMeters": "{distance}m",
   "@mapPickerDistanceMeters": {
     "description": "地图选点页搜索结果与选点之间的距离（米）",
@@ -4436,7 +4436,7 @@
       }
     }
   },
-  "agentAskUserCustomHint": "또는 다른 답변 입력...",
+  "agentAskUserCustomHint": "답변을 입력하세요… (입력 시 위의 선택이 해제됩니다)",
   "agentAskUserUnanswered": "미답변",
   "agentAskUserStepOf": "질문 {index} / {total}",
   "@agentAskUserStepOf": {
@@ -4717,9 +4717,9 @@
   "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
   "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
   "dreamingEnableTitle": "Dreaming 정리 활성화",
-  "dreamingEnableDesc": "Thoughter가 백그라운드에서 노트를 정리하고 관심사 프로필을 다듬도록 허용합니다",
+  "dreamingEnableDesc": "Thoughter가 적절한 시점에 장기 프로필을 다듬도록 허용합니다",
   "dreamingOnIdleTitle": "유휴 시 자동 정리",
-  "dreamingOnIdleDesc": "입력이 30초 동안 멈추고 네트워크가 유휴 상태일 때 가볍게 정리를 시작합니다",
+  "dreamingOnIdleDesc": "앱 시작 후 설정된 조건을 충족하면 가볍게 프로필을 다듬습니다",
   "dreamingAfterInsightTitle": "정기 인사이트 후 정리",
   "dreamingAfterInsightDesc": "정기 인사이트가 완료된 후 최근 노트에서 프로필을 업데이트합니다",
   "dreamingSwitchFailed": "Dreaming 설정을 저장하지 못했습니다. 다시 시도해 주세요.",

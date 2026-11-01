@@ -3676,7 +3676,7 @@
   "mapPickerResolvingPoint": "Résolution de l'adresse en cours...",
   "mapPickerUnnamedPoint": "Lieu sans nom",
   "mapPickerLocateMe": "Centrer sur ma position",
-  "mapPickerCurrentLocationSubtitle": "Position actuelle de l'appareil",
+  "mapPickerCurrentLocationSubtitle": "Enregistre uniquement la ville et le quartier, pas un lieu précis",
   "mapPickerDistanceMeters": "{distance} m",
   "@mapPickerDistanceMeters": {
     "description": "地图选点页搜索结果与选点之间的距离（米）",
@@ -4429,7 +4429,7 @@
       }
     }
   },
-  "agentAskUserCustomHint": "Ou saisissez une autre réponse...",
+  "agentAskUserCustomHint": "Saisissez votre réponse… (la saisie efface la sélection ci-dessus)",
   "agentAskUserUnanswered": "Pas encore répondu",
   "agentAskUserStepOf": "Question {index} sur {total}",
   "@agentAskUserStepOf": {
@@ -4710,9 +4710,9 @@
   "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
   "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
   "dreamingEnableTitle": "Activer le Dreaming",
-  "dreamingEnableDesc": "Autoriser Thoughter à organiser vos notes et affiner votre profil en arrière-plan",
+  "dreamingEnableDesc": "Autoriser Thoughter à affiner votre profil à long terme au moment opportun",
   "dreamingOnIdleTitle": "Organiser en période d'inactivité",
-  "dreamingOnIdleDesc": "Démarre discrètement après 30 s d'inactivité lorsque le réseau est disponible",
+  "dreamingOnIdleDesc": "Tente une exécution discrète quelques secondes après le lancement de l'application si les conditions de Dreaming sont remplies",
   "dreamingAfterInsightTitle": "Affiner après les aperçus périodiques",
   "dreamingAfterInsightDesc": "Mettre à jour votre profil à partir des notes récentes une fois l'analyse prête",
   "dreamingSwitchFailed": "Impossible d'enregistrer le paramètre Dreaming. Veuillez réessayer.",
@@ -4767,7 +4767,7 @@
   "agentMemoryManageTitle": "Gérer la mémoire",
   "agentMemoryManageSubtitle": "Consulter, corriger et gérer les traits et indices mémorisés par Thoughter",
   "agentMemoryPageTitle": "Mémoire de Thoughter",
-  "agentMemoryResonanceSummary": "{profileCount} traits · {sliceCount} pulsions · {factCount} faits",
+  "agentMemoryResonanceSummary": "{profileCount} traits · {sliceCount} états récents · {factCount} faits",
   "@agentMemoryResonanceSummary": {
     "placeholders": {
       "profileCount": {
