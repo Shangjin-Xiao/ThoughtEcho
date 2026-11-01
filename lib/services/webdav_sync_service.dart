@@ -451,7 +451,11 @@ class WebDAVSyncService extends ChangeNotifier {
     try {
       // 0. 先确认本地主库可用（必要时会等待/重新初始化）。若主库启动失败，
       // 在这里整体失败并记录一次错误，而不是在后续每个媒体文件上各抛一次。
+      // 先 await init()：safeDatabase 在 init() 赋值 _database 后、schema 修复与
+      // 迁移完成前就会返回句柄；若随后初始化失败，该句柄会被关闭。init() 在已
+      // 完成时立即返回，进行中时等待并向上抛出初始化失败。
       final dbService = DatabaseService();
+      await dbService.init();
       final localDb = await dbService.safeDatabase;
 
       final dio = await _createDio(_url, _username, password);
@@ -1551,10 +1555,11 @@ class WebDAVSyncService extends ChangeNotifier {
         } catch (e) {
           // 这里只会捕获本地引用计数查询的失败（下载失败已在内层单独处理）。
           // 数据库不可用是全局性问题，逐个文件重试只会刷出大量相同错误，
-          // 因此记录后中止媒体同步，交由 triggerSync 统一记录并标记失败。
+          // 因此记录后停止媒体循环；返回失败计数让 triggerSync 继续上传笔记，
+          // 并按"媒体附件传输失败"标记本轮同步状态。
           failureCount++;
           logWarning('检查或下载附件失败 ($stdPath): $e', source: 'WebDAVSyncService');
-          rethrow;
+          return failureCount;
         }
       }
     }

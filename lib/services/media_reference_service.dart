@@ -24,10 +24,15 @@ class MediaReferenceService {
   static const String _tableName = 'media_references';
   static Database? _database;
 
+  /// 是否为测试显式注入的数据库句柄。注入句柄始终原样使用（即使已关闭），
+  /// 以便测试能验证查询异常会向上抛出，而不是被悄悄切换到主库。
+  static bool _isInjectedForTesting = false;
+
   /// 设置测试用的数据库实例
   @visibleForTesting
   static void setDatabaseForTesting(Database db) {
     _database = db;
+    _isInjectedForTesting = true;
   }
 
   /// 清除测试用的数据库实例
@@ -37,6 +42,7 @@ class MediaReferenceService {
   @visibleForTesting
   static void clearDatabaseForTesting() {
     _database = null;
+    _isInjectedForTesting = false;
   }
 
   static int _countFromRows(
@@ -61,7 +67,9 @@ class MediaReferenceService {
   /// 缓存的句柄也只在仍处于打开状态时复用，避免拿到已关闭的旧连接。
   static Future<Database> get database async {
     final cached = _database;
-    if (cached != null && cached.isOpen) return cached;
+    if (cached != null && (_isInjectedForTesting || cached.isOpen)) {
+      return cached;
+    }
 
     final db = await DatabaseService().safeDatabase;
     _database = db;
