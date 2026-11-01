@@ -24,10 +24,15 @@ class MediaReferenceService {
   static const String _tableName = 'media_references';
   static Database? _database;
 
+  /// 是否为测试显式注入的数据库句柄。注入句柄始终原样使用（即使已关闭），
+  /// 以便测试能验证查询异常会向上抛出，而不是被悄悄切换到主库。
+  static bool _isInjectedForTesting = false;
+
   /// 设置测试用的数据库实例
   @visibleForTesting
   static void setDatabaseForTesting(Database db) {
     _database = db;
+    _isInjectedForTesting = true;
   }
 
   /// 清除测试用的数据库实例
@@ -37,6 +42,7 @@ class MediaReferenceService {
   @visibleForTesting
   static void clearDatabaseForTesting() {
     _database = null;
+    _isInjectedForTesting = false;
   }
 
   static int _countFromRows(
@@ -54,12 +60,20 @@ class MediaReferenceService {
       _countFromRows(rows, key);
 
   /// 获取数据库实例
+  ///
+  /// 不能使用同步的 `DatabaseService.database`：主库启动失败、被关闭或仍在
+  /// 初始化时它会直接抛出"数据库未初始化或已关闭"。这里改用
+  /// `safeDatabase`，它会等待进行中的初始化，必要时重新初始化。
+  /// 缓存的句柄也只在仍处于打开状态时复用，避免拿到已关闭的旧连接。
   static Future<Database> get database async {
-    if (_database != null) return _database!;
+    final cached = _database;
+    if (cached != null && (_isInjectedForTesting || cached.isOpen)) {
+      return cached;
+    }
 
-    final databaseService = DatabaseService();
-    _database = databaseService.database;
-    return _database!;
+    final db = await DatabaseService().safeDatabase;
+    _database = db;
+    return db;
   }
 
   /// 初始化媒体引用表

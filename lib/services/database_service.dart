@@ -580,6 +580,32 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     return _database!;
   }
 
+  /// 供后台任务（如 WebDAV 同步）获取"已完成初始化"的数据库句柄。
+  ///
+  /// - 初始化进行中时等待其完成，并向上抛出初始化失败；不会在 schema 修复与
+  ///   迁移完成前就返回刚打开的句柄。
+  /// - 服务处于已销毁状态（例如 `closeDatabase(forMigration: true)` 正在迁移
+  ///   数据目录）时直接拒绝，绝不调用 `reinitialize()` 重新打开旧路径数据库，
+  ///   以免迁移期间的写入丢失。
+  Future<Database> ensureReadyDatabase() async {
+    if (_isDisposed) {
+      throw StateError('DatabaseService 已关闭（可能正在迁移数据目录），暂不可访问数据库');
+    }
+
+    if (!_isInitialized) {
+      // 此时未销毁，init() 不会触发 reinitialize()；初始化进行中会等待并
+      // 传播失败，未开始时按正常流程初始化。
+      await init();
+    }
+
+    // 等待期间可能已开始迁移关闭数据库，再次确认。
+    if (_isDisposed) {
+      throw StateError('DatabaseService 已关闭（可能正在迁移数据目录），暂不可访问数据库');
+    }
+
+    return safeDatabase;
+  }
+
   /// 带锁和超时的数据库操作执行器，防止死锁
   Future<T> _executeWithLock<T>(
     String operationId,
