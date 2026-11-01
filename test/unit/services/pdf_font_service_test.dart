@@ -357,6 +357,34 @@ void main() {
         expect(await tempFile.exists(), isFalse);
       });
 
+      test(
+          'invalid download leaves an existing valid target untouched and deletes .tmp file',
+          () async {
+        final docDir = await getApplicationDocumentsDirectory();
+        final targetFile = File('${docDir.path}/existing_test_font.ttf');
+        final tempFile = File('${docDir.path}/existing_test_font.ttf.tmp');
+        final originalBytes =
+            Uint8List.fromList([0x00, 0x01, 0x00, 0x00, 0xAA, 0xBB]);
+        await targetFile.writeAsBytes(originalBytes);
+
+        final invalidBytes = Uint8List.fromList([0xDE, 0xAD, 0xBE, 0xEF]);
+        final dio = Dio();
+        dio.httpClientAdapter = _TestHttpClientAdapter((options) async {
+          return ResponseBody.fromBytes(invalidBytes, 200);
+        });
+        PdfFontService.dioForTesting = dio;
+
+        final result = await PdfFontService.downloadAndCacheFontForTesting(
+          fileName: 'existing_test_font.ttf',
+          urls: ['https://example.com/font.ttf'],
+        );
+
+        expect(result, isNull);
+        expect(await targetFile.exists(), isTrue);
+        expect(await targetFile.readAsBytes(), equals(originalBytes));
+        expect(await tempFile.exists(), isFalse);
+      });
+
       test('network exception cleans up .tmp file safely', () async {
         final dio = Dio();
         dio.httpClientAdapter = _TestHttpClientAdapter((options) async {
