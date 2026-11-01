@@ -2354,7 +2354,7 @@ packages:
     source: hosted
     version: "1.2.2"
   vector_graphics_codec:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: vector_graphics_codec
       sha256: "99fd9fbd34d9f9a32efd7b6a6aae14125d8237b10403b422a6a6dfeac2806146"

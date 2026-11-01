@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart' as flutter_svg;
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'svg_offscreen_renderer.dart';
 import 'svg_raster_cache_service.dart';
+import '../utils/bounded_svg_loader.dart';
 
 /// 导出渲染模式
 enum ExportRenderMode {
@@ -338,8 +339,8 @@ class SvgToImageService {
     final focusManager = FocusManager();
     final buildOwner = BuildOwner(focusManager: focusManager);
 
-    Widget content = flutter_svg.SvgPicture.string(
-      svgContent,
+    Widget content = flutter_svg.SvgPicture(
+      BoundedSvgLoader(svgContent),
       width: outputSize.width,
       height: outputSize.height,
       fit: fit,
