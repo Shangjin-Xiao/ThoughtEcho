@@ -774,7 +774,7 @@
   "cleanOrphanMediaConfirmContent": "這將刪除沒有被任何筆記引用的媒體檔案（圖片、影片、音訊）。\n\n確定繼續嗎？",
   "databaseMaintenance": "本地儲存維護最佳化",
   "databaseMaintenanceConfirmTitle": "本地儲存維護最佳化",
-  "databaseMaintenanceConfirmContent": "此操作將對本地儲存進行整理最佳化，包括：\n\n• 釋放碎片空間\n• 最佳化檢索索引\n• 提升載入速度\n\n維護過程通常僅需幾秒鐘，確定繼續嗎？",
+  "databaseMaintenanceConfirmContent": "此操作將對本地儲存進行整理最佳化，包括：\n\n• 整理資料結構，提升檢索效能\n• 提升載入速度\n\n維護過程通常僅需幾秒鐘，確定繼續嗎？",
   "startMaintenance": "開始維護",
   "maintenanceInProgress": "正在整理最佳化儲存...",
   "preparingProgress": "準備中...",
@@ -856,11 +856,19 @@
       }
     }
   },
+  "storageErrorDiskFull": "儲存空間不足，請先釋放裝置空間",
+  "storageErrorPermissionDenied": "訪問受限，請檢查應用儲存權限",
+  "storageErrorFileNotFound": "未找到相關檔案或目錄",
+  "storageErrorDatabaseBusy": "資料忙碌中，請稍後再試",
+  "storageErrorDatabase": "資料處理異常，請稍後再試",
+  "storageErrorFileSystem": "檔案讀寫異常，請稍後再試",
+  "storageErrorTimeout": "操作逾時，請稍後再試",
+  "storageErrorGeneral": "操作失敗，請稍後再試",
   "totalStorageUsage": "總佔用空間",
   "databaseUsage": "資料庫佔用",
   "mediaFilesUsage": "媒體檔案佔用",
   "cacheUsage": "快取佔用",
-  "notesDatabase": "筆記資料庫",
+  "notesDatabase": "筆記與關聯資料",
   "trashStorageUsageHint": "回收站中有 {count} 條筆記，仍會佔用資料庫和附件空間。",
   "@trashStorageUsageHint": {
     "placeholders": {
@@ -870,8 +878,8 @@
     }
   },
   "viewTrash": "檢視回收站",
-  "aiDatabase": "AI資料庫",
-  "logDatabase": "日誌資料庫",
+  "aiDatabase": "智慧輔助資料",
+  "logDatabase": "執行與診斷日誌",
   "images": "圖片",
   "videos": "影片",
   "audios": "音訊",
@@ -4927,5 +4935,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "lottieSearchLoading": "搜尋中...",
+  "lottieWeatherSearchLoading": "天氣搜尋中...",
+  "lottieCustomLoading": "載入中...",
+  "lottieNotFound": "未找到相關內容"
 }

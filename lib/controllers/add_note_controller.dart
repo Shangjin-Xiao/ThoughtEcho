@@ -270,6 +270,11 @@ class AddNoteController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearOriginalPoiName() {
+    originalPoiName = null;
+    notifyListeners();
+  }
+
   void hydrateFromQuote(Quote quote) {
     final rawLoc = quote.location;
     originalLocation =

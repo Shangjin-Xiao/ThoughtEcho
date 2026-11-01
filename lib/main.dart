@@ -54,6 +54,7 @@ import 'utils/app_widgets_binding.dart';
 import 'utils/deferred_error_buffer.dart';
 import 'services/database_platform_bootstrap.dart';
 import 'utils/global_exception_handler.dart';
+import 'utils/safe_file_image.dart' show MissingMediaFileReporter;
 import 'utils/localization_resolver.dart'
     show parseLocale, resolveEffectiveLocale;
 import 'theme/app_theme.dart';
@@ -164,6 +165,15 @@ Future<void> main() async {
       FlutterError.onError = (FlutterErrorDetails details) {
         if (kDebugMode) {
           FlutterError.dumpErrorToConsole(details);
+        }
+
+        // 笔记引用的媒体文件缺失（Image 无 errorBuilder 监听时会走到这里）：
+        // 按路径去重、以 warning 级别带脱敏路径上报，避免重复上报为通用错误。
+        if (MissingMediaFileReporter.handle(
+          details.exception,
+          stackTrace: details.stack,
+        )) {
+          return;
         }
 
         // 在Windows平台简化错误处理，避免复杂的Provider查找导致卡死

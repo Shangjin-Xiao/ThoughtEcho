@@ -134,5 +134,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "lottieSearchLoading": "Suche läuft...",
+  "lottieWeatherSearchLoading": "Wettersuche läuft...",
+  "lottieCustomLoading": "Wird geladen...",
+  "lottieNotFound": "Keine Inhalte gefunden"
 }

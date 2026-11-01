@@ -53,9 +53,8 @@ class TimeUtils {
         return l10n.dayPeriodMidnight;
       default:
         // 如果是旧的中文标签，尝试转换
-        final reverseMap = dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
-        if (reverseMap.containsKey(key)) {
-          return localizedDayPeriodLabel(l10n, reverseMap[key]!);
+        if (_reverseDayPeriodMap.containsKey(key)) {
+          return localizedDayPeriodLabel(l10n, _reverseDayPeriodMap[key]!);
         }
         return key;
     }
@@ -90,6 +89,10 @@ class TimeUtils {
     'evening': '夜晚',
     'midnight': '深夜',
   };
+
+  /// 静态反向映射表（中文标签到英文 Key），避免每次格式化时动态构建临时映射
+  static final Map<String, String> _reverseDayPeriodMap =
+      dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
 
   static IconData getDayPeriodIconByKey(String? key) {
     // 直接使用 getDayPeriodIcon 方法，传入 key 对应的中文标签
@@ -251,8 +254,7 @@ class TimeUtils {
           return normalized;
         }
 
-        final reverseMap = dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
-        final mapped = reverseMap[normalized];
+        final mapped = _reverseDayPeriodMap[normalized];
         if (mapped != null && mapped.isNotEmpty) {
           return mapped;
         }

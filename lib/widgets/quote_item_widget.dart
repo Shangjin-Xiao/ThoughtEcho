@@ -22,6 +22,9 @@ import '../widgets/common/paper_rule_background.dart';
 import '../widgets/quote_content_widget.dart';
 import 'app_snackbar.dart';
 import 'quote_card_helpers.dart';
+import 'quote_card_settings.dart';
+
+export 'quote_card_settings.dart';
 
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
 class QuoteItemWidget extends StatefulWidget {
@@ -234,6 +237,7 @@ class QuoteItemWidget extends StatefulWidget {
   static QuoteHeaderTexts resolveHeaderTexts({
     required BuildContext context,
     required Quote quote,
+    required DateTime quoteDate,
     required bool showExactTime,
   }) {
     final theme = Theme.of(context);
@@ -243,7 +247,7 @@ class QuoteItemWidget extends StatefulWidget {
 
     final formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
-      DateTime.parse(quote.date),
+      quoteDate,
       dayPeriod: quote.dayPeriod,
       showExactTime: showExactTime,
     );
@@ -371,6 +375,7 @@ class QuoteItemWidget extends StatefulWidget {
     final header = resolveHeaderTexts(
       context: context,
       quote: quote,
+      quoteDate: quote.parsedDate,
       showExactTime: showExactTime,
     );
     measureSingleLineTextWidth(
@@ -609,6 +614,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required Color secondaryTextColor,
     required bool paperRulesDisabled,
     required AppLocalizations l10n,
+    required QuoteCardSettings cardSettings,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
@@ -628,9 +634,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             contentStyle,
             constraints.maxWidth,
           );
-          final String mediaStyle = context.select<SettingsService, String>(
-            (s) => s.noteCardMediaStyle,
-          );
+          final String mediaStyle = cardSettings.mediaStyle;
           // 「可展开」和「正文被裁了」是两件事：带媒体的笔记一律可展开，正文却
           // 常常一个字都没少。提示遮罩按后者画，短笔记才不会被一条模糊带压住。
           final bool textTruncated = needsExpansion &&
@@ -640,9 +644,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 style: contentStyle,
                 maxWidth: constraints.maxWidth,
                 mediaStyle: mediaStyle,
-                prioritizeBoldContent: context.select<SettingsService, bool>(
-                  (s) => s.prioritizeBoldContentInCollapse,
-                ),
+                prioritizeBoldContent: cardSettings.prioritizeBoldContent,
               );
           // 「短到不用折叠」不等于「展开」：短卡片仍然是列表卡片，应该走
           // QuoteContent 的轻量预览而不是 QuillEditor。只有用户真的双击展开了，
@@ -674,6 +676,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             contentStyle: contentStyle,
             innerTheme: innerTheme,
             l10n: l10n,
+            cardSettings: cardSettings,
           );
 
           final animatedContent = _buildAnimatedQuoteContent(
@@ -810,6 +813,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required TextStyle? contentStyle,
     required ThemeData innerTheme,
     required AppLocalizations l10n,
+    required QuoteCardSettings cardSettings,
   }) {
     final Widget quoteContent = QuoteContent(
       quote: quote,
@@ -817,6 +821,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       showFullContent: showFullContent,
       needsExpansionOverride: needsExpansion,
       collapseRichTextSemantics: true,
+      cardSettings: cardSettings,
     );
 
     // canToggle 由调用方给：不可展开的卡片正文永远不会在折叠态和展开态之间
@@ -1417,26 +1422,19 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     // Determine the text color based on the card color
 
     // 格式化日期和时间段（支持国际化和精确时间显示）
-    final DateTime quoteDate = DateTime.parse(quote.date);
-    final showExactTime = context.select<SettingsService, bool>(
-      (s) => s.showExactTime,
-    );
-    final showNoteEditTime = context.select<SettingsService, bool>(
-      (s) => s.showNoteEditTime,
-    );
-    final disableCardShadows = context.select<SettingsService, bool>(
-      (s) => s.noteListDisableCardShadows,
+    final DateTime quoteDate = quote.parsedDate;
+    final cardSettings = context.select<SettingsService, QuoteCardSettings>(
+      (s) => QuoteCardSettings.fromSettings(s),
     );
     final headerTexts = QuoteItemWidget.resolveHeaderTexts(
       context: context,
       quote: quote,
-      showExactTime: showExactTime,
+      quoteDate: quoteDate,
+      showExactTime: cardSettings.showExactTime,
     );
     final String formattedDate = headerTexts.formattedDate;
-    final DateTime? lastModified = quote.lastModified != null
-        ? DateTime.tryParse(quote.lastModified!)
-        : null;
-    final bool shouldShowEditedAt = showNoteEditTime &&
+    final DateTime? lastModified = quote.parsedLastModified;
+    final bool shouldShowEditedAt = cardSettings.showNoteEditTime &&
         lastModified != null &&
         !lastModified.isAtSameMomentAs(quoteDate);
     final String? formattedEditedAt = shouldShowEditedAt
@@ -1444,7 +1442,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             TimeUtils.formatQuoteDateLocalized(
               context,
               lastModified,
-              showExactTime: showExactTime,
+              showExactTime: cardSettings.showExactTime,
             ),
           )
         : null;
@@ -1459,7 +1457,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         QuoteItemWidget.disableVisualEffectsForTesting;
     final cardShadowsDisabled = visualEffectsDisabled ||
         QuoteItemWidget.disableCardShadowsForTesting ||
-        disableCardShadows;
+        cardSettings.disableCardShadows;
     final cardMargin = EdgeInsets.only(
       left: 12,
       right: 12,
@@ -1684,6 +1682,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             secondaryTextColor: secondaryTextColor,
             paperRulesDisabled: visualEffectsDisabled,
             l10n: l10n,
+            cardSettings: cardSettings,
           ),
 
           // 来源行画在 `_buildQuoteContentSection` 里面，不在这里：折叠提示要和它

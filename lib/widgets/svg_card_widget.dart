@@ -704,145 +704,152 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
               scale: _scaleAnimation.value,
               child: Opacity(
                 opacity: _opacityAnimation.value,
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          constraints: const BoxConstraints(
+            maxWidth: 500,
+            maxHeight: 700,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 关闭按钮
+              Align(
+                alignment: Alignment.topRight,
                 child: Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 500,
-                    maxHeight: 700,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .scrim
+                        .withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 关闭按钮
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .scrim
-                                .withValues(alpha: 0.5),
-                            shape: BoxShape.circle,
+                  child: IconButton(
+                    onPressed:
+                        isLocked ? null : () => Navigator.of(context).pop(),
+                    icon: Icon(
+                      Icons.close,
+                      color: isLocked
+                          ? Theme.of(context)
+                              .colorScheme
+                              .onInverseSurface
+                              .withValues(alpha: 0.38)
+                          : Theme.of(context).colorScheme.onInverseSurface,
+                      size: 24,
+                    ),
+                    tooltip: l10n.close,
+                  ),
+                ),
+              ),
+              // 卡片内容
+              Flexible(
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).dialogRadius,
+                    ),
+                    boxShadow: AppShapeTokens.of(context).accentShadow,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 标题
+                          Text(
+                            l10n.featuredCards,
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
-                          child: IconButton(
-                            onPressed: isLocked
+                          SizedBox(height: 16),
+                          // 卡片
+                          GeneratedCardWidget(
+                            card: _currentCard,
+                            onShare: widget.onShare == null
                                 ? null
-                                : () => Navigator.of(context).pop(),
-                            icon: Icon(
-                              Icons.close,
-                              color: isLocked
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .onInverseSurface
-                                      .withValues(alpha: 0.38)
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .onInverseSurface,
-                              size: 24,
-                            ),
-                            tooltip: l10n.close,
+                                : (_) async => await _handleShare(),
+                            onSave: widget.onSave == null
+                                ? null
+                                : (_) async => await _handleSave(),
+                            onRegenerate: widget.onRegenerate == null &&
+                                    widget.onRegenerateWithExclude == null
+                                ? null
+                                : () async => await _handleRegenerate(),
+                            actionsEnabled: !_isRegenerating && !_isExporting,
+                            width: 300,
+                            height: 400,
                           ),
-                        ),
-                      ),
-                      // 卡片内容
-                      Flexible(
-                        child: Container(
-                          margin: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(
-                              AppShapeTokens.of(context).dialogRadius,
-                            ),
-                            boxShadow: AppShapeTokens.of(context).accentShadow,
-                          ),
-                          child: SingleChildScrollView(
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // 标题
-                                  Text(
-                                    l10n.featuredCards,
-                                    style:
-                                        Theme.of(context).textTheme.titleLarge,
-                                  ),
-                                  SizedBox(height: 16),
-                                  // 卡片
-                                  GeneratedCardWidget(
-                                    card: _currentCard,
-                                    onShare: widget.onShare == null
-                                        ? null
-                                        : (_) async => await _handleShare(),
-                                    onSave: widget.onSave == null
-                                        ? null
-                                        : (_) async => await _handleSave(),
-                                    onRegenerate: widget.onRegenerate == null &&
-                                            widget.onRegenerateWithExclude ==
-                                                null
-                                        ? null
-                                        : () async => await _handleRegenerate(),
-                                    actionsEnabled:
-                                        !_isRegenerating && !_isExporting,
-                                    width: 300,
-                                    height: 400,
-                                  ),
 
-                                  if (_isRegenerating) ...[
-                                    SizedBox(height: 12),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          l10n.regeneratingCard,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium,
-                                        ),
-                                      ],
-                                    ),
-                                  ] else if (_isExporting) ...[
-                                    SizedBox(height: 12),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          _exportProgressMessage ??
-                                              l10n.generatingShareImage,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium,
-                                        ),
-                                      ],
-                                    ),
-                                  ] else if (_feedbackMessage != null) ...[
-                                    SizedBox(height: 12),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          _isFeedbackError
-                                              ? Icons.error_outline
-                                              : Icons.check_circle_outline,
-                                          size: 18,
+                          if (_isRegenerating) ...[
+                            SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  l10n.regeneratingCard,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ] else if (_isExporting) ...[
+                            SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  _exportProgressMessage ??
+                                      l10n.generatingShareImage,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ] else if (_feedbackMessage != null) ...[
+                            SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _isFeedbackError
+                                      ? Icons.error_outline
+                                      : Icons.check_circle_outline,
+                                  size: 18,
+                                  color: _isFeedbackError
+                                      ? Theme.of(context).colorScheme.error
+                                      : AppSemanticColors.of(context).success,
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _feedbackMessage!,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
                                           color: _isFeedbackError
                                               ? Theme.of(context)
                                                   .colorScheme
@@ -850,43 +857,20 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                                               : AppSemanticColors.of(context)
                                                   .success,
                                         ),
-                                        SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _feedbackMessage!,
-                                            textAlign: TextAlign.center,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                  color: _isFeedbackError
-                                                      ? Theme.of(context)
-                                                          .colorScheme
-                                                          .error
-                                                      : AppSemanticColors.of(
-                                                              context)
-                                                          .success,
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ],
-                              ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            ],
+          ),
+        ),
       ),
     );
   }

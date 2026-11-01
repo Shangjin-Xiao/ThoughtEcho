@@ -135,9 +135,21 @@ String sanitizeSentryDatabaseDescription(String description) {
   return description;
 }
 
+const _allowedUrlSchemes = <String>{'http', 'https', 'file'};
+
+bool _isLikelySpanUrl(String value, [String? key]) {
+  if (key == 'url') return true;
+  if (value.contains('://')) return true;
+  final uri = Uri.tryParse(value);
+  if (uri != null && uri.hasScheme) {
+    return _allowedUrlSchemes.contains(uri.scheme.toLowerCase());
+  }
+  return false;
+}
+
 String sanitizeSentrySpanDescription(String description) {
   final parts = description.trim().split(RegExp(r'\s+'));
-  if (parts.length >= 2 && Uri.tryParse(parts[1])?.hasScheme == true) {
+  if (parts.length >= 2 && _isLikelySpanUrl(parts[1])) {
     return [
       parts.first,
       sanitizeSentryUrl(parts[1]),
@@ -152,6 +164,9 @@ String? sanitizeSentryUrl(String? url) {
   final uri = Uri.tryParse(url);
   if (uri == null) return url;
   if (!uri.hasScheme) return uri.path;
+  if (uri.scheme.toLowerCase() == 'file') {
+    return '[path]';
+  }
   return Uri(
     scheme: uri.scheme,
     host: uri.host,
@@ -164,6 +179,125 @@ final _exceptionUrlPattern = RegExp(
   r'''[a-z][a-z0-9+.-]*://[^\s<>"']+''',
   caseSensitive: false,
 );
+
+final _quotedFileUriPattern = RegExp(
+  r'''(?<=["'])file:(?:/{1,3}|//[a-zA-Z0-9._-]+/)[^"'\r\n]+(?=["'])''',
+  caseSensitive: false,
+);
+
+final _unquotedFileUriPattern = RegExp(
+  r'''(?<![a-zA-Z0-9_])file:(?:/{1,3}|//[a-zA-Z0-9._-]+/)[^\s<>"'`]*''',
+  caseSensitive: false,
+);
+
+final _quotedLocalPathPattern = RegExp(
+  r'''(?<=["'])(?:[a-zA-Z]:[/\\\\]|/[a-zA-Z0-9._-]+/)[^"'\r\n]+(?=["'])''',
+  caseSensitive: false,
+);
+
+final _unquotedLocalPathPattern = RegExp(
+  r'''(?<![a-zA-Z0-9_/:\]])(?:[a-zA-Z]:[/\\\\]|/[a-zA-Z0-9._-]+/)[^\s<>"'`]*''',
+  caseSensitive: false,
+);
+
+String _sanitizeFileUrisInText(String text) {
+  var result = text.replaceAllMapped(_quotedFileUriPattern, (_) => '[path]');
+  result = result.replaceAllMapped(_unquotedFileUriPattern, (match) {
+    var p = match.group(0)!;
+    var suffix = '';
+    while (p.length > 1 &&
+        (p.endsWith('.') ||
+            p.endsWith(',') ||
+            p.endsWith(';') ||
+            p.endsWith(')') ||
+            p.endsWith(']'))) {
+      suffix = p[p.length - 1] + suffix;
+      p = p.substring(0, p.length - 1);
+    }
+    return '[path]$suffix';
+  });
+  return result;
+}
+
+String _sanitizePathsInText(String text) {
+  var result = text.replaceAllMapped(_quotedLocalPathPattern, (_) => '[path]');
+  result = result.replaceAllMapped(_unquotedLocalPathPattern, (match) {
+    var p = match.group(0)!;
+    var suffix = '';
+    while (p.length > 1 &&
+        (p.endsWith('.') ||
+            p.endsWith(',') ||
+            p.endsWith(';') ||
+            p.endsWith(')') ||
+            p.endsWith(']'))) {
+      suffix = p[p.length - 1] + suffix;
+      p = p.substring(0, p.length - 1);
+    }
+    return '[path]$suffix';
+  });
+  return result;
+}
+
+String _sanitizeUrlsInText(String text) {
+  return text.replaceAllMapped(_exceptionUrlPattern, (match) {
+    final url = match.group(0)!;
+    return Uri.tryParse(url) == null
+        ? '[invalid URL]'
+        : (sanitizeSentryUrl(url) ?? url);
+  });
+}
+
+/// 对非 SQL 文本进行脱敏（清洗本地 file: URI、URL 参数与本地系统绝对路径）。
+String sanitizeSentryNonSqlText(String text) {
+  final fileUriSanitized = _sanitizeFileUrisInText(text);
+  final urlSanitized = _sanitizeUrlsInText(fileUriSanitized);
+  return _sanitizePathsInText(urlSanitized);
+}
+
+const _sensitiveBreadcrumbDataKeys = <String>[
+  'query',
+  'search',
+  'file_path',
+  'path',
+  'text',
+  'content',
+  'prompt',
+  'token',
+  'secret',
+  'auth',
+  'fragment',
+];
+
+bool _isSensitiveBreadcrumbKey(String key) {
+  final lowerKey = key.toLowerCase();
+  for (final pattern in _sensitiveBreadcrumbDataKeys) {
+    if (lowerKey.contains(pattern)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+dynamic _sanitizeBreadcrumbDataValue(dynamic value) {
+  if (value is String) {
+    return sanitizeSentryNonSqlText(value);
+  }
+  if (value is Map) {
+    final sanitizedMap = <String, dynamic>{};
+    for (final entry in value.entries) {
+      final key = entry.key.toString();
+      if (_isSensitiveBreadcrumbKey(key)) {
+        continue;
+      }
+      sanitizedMap[key] = _sanitizeBreadcrumbDataValue(entry.value);
+    }
+    return sanitizedMap;
+  }
+  if (value is List) {
+    return value.map(_sanitizeBreadcrumbDataValue).toList();
+  }
+  return value;
+}
 
 SentryEvent? sanitizeSentryEvent(SentryEvent event, Hint hint) {
   _sanitizeSentryRequest(event);
@@ -194,17 +328,30 @@ void _sanitizeSentryRequest(SentryEvent event) {
 }
 
 Breadcrumb? sanitizeSentryBreadcrumb(Breadcrumb? breadcrumb, Hint hint) {
-  if (breadcrumb?.message != null) {
-    breadcrumb!.message = sanitizeSentryDatabaseDescription(
-      breadcrumb.message!,
-    );
+  if (breadcrumb == null) return null;
+
+  final message = breadcrumb.message;
+  if (message != null) {
+    final dbSanitized = sanitizeSentryDatabaseDescription(message);
+    if (dbSanitized != message) {
+      breadcrumb.message = dbSanitized;
+    } else {
+      breadcrumb.message = sanitizeSentryNonSqlText(message);
+    }
   }
-  final url = breadcrumb?.data?['url'];
-  if (url is String) {
-    breadcrumb?.data?['url'] = sanitizeSentryUrl(url);
+
+  final data = breadcrumb.data;
+  if (data != null) {
+    final sanitizedData = <String, dynamic>{};
+    for (final entry in data.entries) {
+      if (_isSensitiveBreadcrumbKey(entry.key)) {
+        continue;
+      }
+      sanitizedData[entry.key] = _sanitizeBreadcrumbDataValue(entry.value);
+    }
+    breadcrumb.data = sanitizedData;
   }
-  breadcrumb?.data?.remove('http.query');
-  breadcrumb?.data?.remove('http.fragment');
+
   return breadcrumb;
 }
 
@@ -238,6 +385,111 @@ bool _isScrollSessionWorthReporting(SentryTransaction transaction) {
   return true;
 }
 
+final _spanSensitiveWords = <String>{
+  'content',
+  'text',
+  'query',
+  'title',
+  'password',
+  'token',
+  'secret',
+  'authorization',
+  'auth',
+  'authentication',
+  'credential',
+  'credentials',
+  'apikey',
+};
+
+final _spanMetricSuffixes = <String>{
+  'length',
+  'count',
+  'size',
+  'bytes',
+  'duration',
+  'ms',
+  'overhead',
+};
+
+final _spanWordSplitPattern = RegExp(
+  r'[_\.\-\s]+|(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])',
+);
+
+bool _isSensitiveSpanKey(String key) {
+  final words =
+      key.split(_spanWordSplitPattern).map((w) => w.toLowerCase()).toList();
+  if (words.isNotEmpty && _spanMetricSuffixes.contains(words.last)) {
+    return false;
+  }
+  for (var i = 0; i < words.length; i++) {
+    final w = words[i];
+    if (_spanSensitiveWords.contains(w)) return true;
+    if (w == 'api' && i + 1 < words.length && words[i + 1] == 'key') {
+      return true;
+    }
+  }
+  return false;
+}
+
+dynamic _sanitizeSpanValue(dynamic value, {String? key}) {
+  if (value is String) {
+    if (_isLikelySpanUrl(value, key)) {
+      return sanitizeSentryUrl(value) ?? value;
+    }
+    return value;
+  }
+  if (value is Map) {
+    final result = <dynamic, dynamic>{};
+    for (final entry in value.entries) {
+      final entryKey = entry.key;
+      if (entryKey is String) {
+        if (entryKey == 'http.query' ||
+            entryKey == 'http.fragment' ||
+            _isSensitiveSpanKey(entryKey)) {
+          continue;
+        }
+        result[entryKey] = _sanitizeSpanValue(entry.value, key: entryKey);
+      } else {
+        result[entryKey] = _sanitizeSpanValue(entry.value);
+      }
+    }
+    return result;
+  }
+  if (value is List) {
+    final result = <dynamic>[];
+    for (final item in value) {
+      result.add(_sanitizeSpanValue(item));
+    }
+    return result;
+  }
+  return value;
+}
+
+Map<K, dynamic> _sanitizeSpanMap<K>(Map<K, dynamic> data) {
+  final result = <K, dynamic>{};
+  for (final entry in data.entries) {
+    final key = entry.key;
+    if (key is String) {
+      if (key == 'http.query' ||
+          key == 'http.fragment' ||
+          _isSensitiveSpanKey(key)) {
+        continue;
+      }
+      result[key] = _sanitizeSpanValue(entry.value, key: key);
+    } else {
+      result[key] = _sanitizeSpanValue(entry.value);
+    }
+  }
+  return result;
+}
+
+Map<String, dynamic> _sanitizeSpanData(Map<String, dynamic> data) =>
+    _sanitizeSpanMap<String>(data);
+
+@visibleForTesting
+Map<K, dynamic> sanitizeSpanData<K>(Map<K, dynamic> data) =>
+    _sanitizeSpanMap<K>(data);
+
 SentryTransaction? sanitizeSentryTransaction(
   SentryTransaction transaction,
   Hint hint,
@@ -247,13 +499,22 @@ SentryTransaction? sanitizeSentryTransaction(
     return null;
   }
   _sanitizeSentryRequest(transaction);
-  for (final span in transaction.spans) {
-    final url = span.data['url'];
-    if (url is String) {
-      span.data['url'] = sanitizeSentryUrl(url);
+  final traceData = transaction.contexts.trace?.data;
+  if (traceData != null) {
+    final sanitizedTraceData = _sanitizeSpanData(traceData);
+    try {
+      traceData.clear();
+      traceData.addAll(sanitizedTraceData);
+    } catch (_) {
+      transaction.contexts.trace?.data = sanitizedTraceData;
     }
-    span.data.remove('http.query');
-    span.data.remove('http.fragment');
+  }
+  for (final span in transaction.spans) {
+    final sanitized = _sanitizeSpanData(span.data);
+    try {
+      span.data.clear();
+      span.data.addAll(sanitized);
+    } catch (_) {}
     final description = span.context.description;
     if (description != null) {
       span.context.description = sanitizeSentrySpanDescription(description);
@@ -269,6 +530,47 @@ class SentryHelper {
   static bool _desiredEnabled = false;
   static Future<void>? _initialization;
   static Future<void>? _closing;
+
+  @visibleForTesting
+  static Future<SentryId> Function(
+    dynamic throwable, {
+    dynamic stackTrace,
+    Hint? hint,
+    ScopeCallback? withScope,
+  })? onCaptureExceptionForTesting;
+
+  /// 捕获并上报异常到 Sentry。
+  ///
+  /// 若配置了 [onCaptureExceptionForTesting]，则优先回调测试钩子。
+  /// 遵循隐私第一原则，调用方应确保存储层故障不上报敏感记忆数据，但完整记录报错堆栈。
+  static Future<SentryId> captureException(
+    dynamic throwable, {
+    dynamic stackTrace,
+    Hint? hint,
+    ScopeCallback? withScope,
+  }) async {
+    final testHandler = onCaptureExceptionForTesting;
+    if (testHandler != null) {
+      return testHandler(
+        throwable,
+        stackTrace: stackTrace,
+        hint: hint,
+        withScope: withScope,
+      );
+    }
+    if (!Sentry.isEnabled) return SentryId.empty();
+    try {
+      return await Sentry.captureException(
+        throwable,
+        stackTrace: stackTrace,
+        hint: hint,
+        withScope: withScope,
+      );
+    } catch (e) {
+      logWarning('Sentry captureException 失败: $e', source: 'Sentry');
+      return SentryId.empty();
+    }
+  }
 
   static bool get isInitialized => _initialized;
 

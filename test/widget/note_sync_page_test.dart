@@ -293,5 +293,211 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('AutoScrollText 视图使用 RepaintBoundary 隔离绘制图层', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 100,
+              child: AutoScrollText(
+                'Long text content that exceeds viewport width for testing repaint boundary isolation',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final autoScrollFinder = find.byType(AutoScrollText);
+      expect(autoScrollFinder, findsOneWidget);
+
+      final repaintBoundaryFinder = find.descendant(
+        of: autoScrollFinder,
+        matching: find.byType(RepaintBoundary),
+      );
+      expect(repaintBoundaryFinder, findsOneWidget);
+
+      final scrollFinder = find.descendant(
+        of: repaintBoundaryFinder,
+        matching: find.byType(SingleChildScrollView),
+      );
+      expect(scrollFinder, findsOneWidget);
+
+      // 卸载组件并推进时钟，等待未决的延时退出
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('短文本不发生滚动且代际标记正确', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 600,
+              child: AutoScrollText('Short text'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 50));
+      final state = tester.state<AutoScrollTextState>(
+        find.byType(AutoScrollText),
+      );
+      expect(state.debugAnimationGeneration, 0);
+
+      // 文本没有超出宽度，maxScrollExtent <= 0，不应处于活跃动画中
+      await tester.pump(const Duration(seconds: 3));
+      expect(state.debugScrollController.hasClients, isTrue);
+      expect(
+        state.debugScrollController.position.maxScrollExtent,
+        lessThanOrEqualTo(0),
+      );
+      expect(state.debugIsAnimating, isFalse);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('文本频繁更新时代际递增并重置，无并发动画冲突', (
+      WidgetTester tester,
+    ) async {
+      final longText1 = 'A' * 200;
+      final longText2 = 'B' * 200;
+      final longText3 = 'C' * 200;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 60,
+              child: AutoScrollText(longText1),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final state = tester.state<AutoScrollTextState>(
+        find.byType(AutoScrollText),
+      );
+      expect(state.debugAnimationGeneration, 0);
+
+      // 快速连续更新文本
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 60,
+              child: AutoScrollText(longText2),
+            ),
+          ),
+        ),
+      );
+      expect(state.debugAnimationGeneration, 1);
+
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 60,
+              child: AutoScrollText(longText3),
+            ),
+          ),
+        ),
+      );
+      expect(state.debugAnimationGeneration, 2);
+
+      // 推进动画时间，确保不会触发 ScrollController 并发异常或崩溃
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 3));
+
+      expect(state.debugAnimationGeneration, 2);
+      expect(state.debugScrollController.position.pixels, greaterThan(0));
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('动画运行过程中卸载组件不抛异常', (WidgetTester tester) async {
+      final longText = 'Long text for testing unmount while scrolling ' * 5;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 50,
+              child: AutoScrollText(longText),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      // 让动画开始
+      await tester.pump(const Duration(seconds: 3));
+
+      // 卸载组件
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(),
+          ),
+        ),
+      );
+
+      // 推进异步时间，旧的动画循环唤醒时应由于 generation 变更与 unmount 立即退出，不抛出异常
+      await tester.pump(const Duration(seconds: 5));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('在 NoteSyncPage 设备卡片中验证 RepaintBoundary 生效', (
+      WidgetTester tester,
+    ) async {
+      final testDevice = Device(
+        signalingId: null,
+        ip: '192.168.1.100',
+        version: '2.1',
+        port: 53317,
+        https: false,
+        fingerprint: 'device1',
+        alias:
+            'Super Long Device Alias Name That Should Trigger Auto Scroll Text',
+        deviceModel: 'Super Long Model Name For Testing Boundary',
+        deviceType: DeviceType.mobile,
+        download: true,
+        discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
+      );
+
+      when(
+        mockSyncService.discoverNearbyDevicesStream(
+          timeout: anyNamed('timeout'),
+        ),
+      ).thenReturn((Stream<List<Device>>.value([testDevice]), () {}));
+
+      await tester.pumpWidget(createTestWidget());
+      await pumpUi(tester);
+
+      // 验证设备卡片中的 AutoScrollText 确实被 RepaintBoundary 包裹
+      final autoScrollTexts = find.byType(AutoScrollText);
+      expect(autoScrollTexts, findsWidgets);
+
+      for (final element in autoScrollTexts.evaluate()) {
+        final descendantRepaint = find.descendant(
+          of: find.byWidget(element.widget),
+          matching: find.byType(RepaintBoundary),
+        );
+        expect(descendantRepaint, findsOneWidget);
+      }
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
+    });
   });
 }

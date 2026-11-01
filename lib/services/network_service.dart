@@ -30,6 +30,12 @@ class NetworkService {
   @visibleForTesting
   Dio get generalDioForTesting => _generalDio;
 
+  /// 通用HTTP请求Dio实例
+  Dio get generalDio {
+    _ensureInitialized();
+    return _generalDio;
+  }
+
   @visibleForTesting
   Dio get aiDioForTesting => _aiDio;
 

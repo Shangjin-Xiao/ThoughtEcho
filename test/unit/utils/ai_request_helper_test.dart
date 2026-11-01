@@ -49,6 +49,46 @@ void main() {
       expect(messages[1]['role'], 'assistant');
       expect(messages[1]['content'], contains('[系统提示：用户已采纳并应用了上述提案/编辑建议]'));
     });
+
+    test(
+        'createMessagesWithHistory preserves history within guaranteed minimum budget when currentUserMessageLength exceeds maxChars',
+        () {
+      final helper = AIRequestHelper();
+      final history = [
+        ChatMessage(
+          id: '1',
+          content: '这是一条较早的历史对话记录' * 10,
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+        ),
+        ChatMessage(
+          id: '2',
+          content: '这是写作风格约定的关键历史回复，请保持碎句与哲思风格。',
+          isUser: false,
+          role: 'assistant',
+          timestamp: DateTime.now(),
+        ),
+      ];
+
+      // userMessage 长度 6500，maxChars 6000（原本 6000 - 6500 = -500 导致历史被清空）
+      final messages = helper.createMessagesWithHistory(
+        systemPrompt: '你是写作助手',
+        history: history,
+        currentUserMessageLength: 6500,
+        maxChars: 6000,
+      );
+
+      // 返回的消息列表应包含 system prompt 以及保底预算内保留的最近历史消息
+      expect(messages.length, greaterThan(1));
+      expect(messages.first['role'], equals('system'));
+      expect(
+        messages.any((m) =>
+            m['role'] == 'assistant' &&
+            m['content'].toString().contains('写作风格约定')),
+        isTrue,
+      );
+    });
   });
 
   group('convertQuotesToJson attribution', () {

@@ -79,6 +79,19 @@ class Quote {
     return _source;
   }
 
+  DateTime? _cachedParsedDate;
+
+  /// 预解析的创建日期（懒加载缓存，避免 build 阶段重复 DateTime.parse）
+  DateTime get parsedDate => _cachedParsedDate ??= DateTime.parse(date);
+
+  DateTime? _cachedParsedLastModified;
+
+  /// 预解析的最后修改日期（懒加载缓存）
+  DateTime? get parsedLastModified {
+    if (lastModified == null) return null;
+    return _cachedParsedLastModified ??= DateTime.tryParse(lastModified!);
+  }
+
   /// 修复：添加数据验证方法
   static bool isValidDate(String date) {
     try {

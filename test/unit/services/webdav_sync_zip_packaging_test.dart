@@ -53,6 +53,22 @@ void main() {
     }
   });
 
+  test('缺少 JSON 输入时抛出包含路径的 StateError', () async {
+    final jsonPath = '${tempDir.path}/missing.json';
+    final zipPath = '${tempDir.path}/missing.zip';
+
+    await expectLater(
+      WebDAVSyncService.packSyncZip(jsonPath, zipPath),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains(jsonPath),
+        ),
+      ),
+    );
+  });
+
   test('打包大 JSON 时条目内容完整写入', () async {
     final quotes = List.generate(
       2000,

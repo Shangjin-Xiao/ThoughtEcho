@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:ddgs/ddgs.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../utils/app_logger.dart';
 import '../../utils/untrusted_text.dart';
@@ -18,6 +19,7 @@ class WebSearchTool extends AgentTool {
   static const int _maxLimit = 10;
 
   final SettingsService? _settingsService;
+  final bool _isWeb;
   final Future<List<Map<String, dynamic>>> Function(
     String query, {
     required String backend,
@@ -37,7 +39,9 @@ class WebSearchTool extends AgentTool {
       required String region,
       required int maxResults,
     })? searchExecutor,
-  ]) : _searchExecutor = searchExecutor ?? _defaultSearchExecutor;
+    @visibleForTesting bool? isWeb,
+  ])  : _searchExecutor = searchExecutor ?? _defaultSearchExecutor,
+        _isWeb = isWeb ?? kIsWeb;
 
   @override
   String get name => 'web_search';
@@ -166,7 +170,7 @@ class WebSearchTool extends AgentTool {
   ///
   /// 优先级顺序：
   /// 1. 检查应用语言设置（如果提供了SettingsService）
-  /// 2. 检查系统语言环境 (Platform.localeName)
+  /// 2. 检查系统语言环境 (!kIsWeb && Platform.localeName)
   /// 3. 检查搜索词是否包含中文字符（备选指标）
   bool _detectLanguageIsChinese(String query) {
     // 优先级1：应用语言设置
@@ -179,14 +183,24 @@ class WebSearchTool extends AgentTool {
       // 如果localeCode为null，表示跟随系统，继续检查系统语言
     }
 
-    // 优先级2：系统语言环境
-    if (Platform.localeName.toLowerCase().startsWith('zh')) {
-      return true;
+    // 优先级2：系统语言环境（Web平台跳过 Platform.localeName 防护 UnsupportedError）
+    if (!_isWeb) {
+      try {
+        if (Platform.localeName.toLowerCase().startsWith('zh')) {
+          return true;
+        }
+      } catch (_) {
+        // 安全降级：若平台访问异常，忽略并回退到特征检测
+      }
     }
 
     // 优先级3：搜索词是否包含中文（备选指标）
     return _containsChinese(query);
   }
+
+  /// 供测试暴露的语言检测辅助方法
+  @visibleForTesting
+  bool detectLanguageIsChinese(String query) => _detectLanguageIsChinese(query);
 
   /// 检查字符串是否包含中文字符
   static bool _containsChinese(String text) {

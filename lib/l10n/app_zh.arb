@@ -774,7 +774,7 @@
   "cleanOrphanMediaConfirmContent": "这将删除没有被任何笔记引用的媒体文件（图片、视频、音频）。\n\n确定继续吗？",
   "databaseMaintenance": "本地存储维护优化",
   "databaseMaintenanceConfirmTitle": "本地存储维护优化",
-  "databaseMaintenanceConfirmContent": "此操作将对本地存储进行整理优化，包括：\n\n• 释放碎片空间\n• 优化检索索引\n• 提升加载速度\n\n维护过程通常仅需几秒钟，确定继续吗？",
+  "databaseMaintenanceConfirmContent": "此操作将对本地存储进行整理优化，包括：\n\n• 整理数据结构，提升检索性能\n• 提升加载速度\n\n维护过程通常仅需几秒钟，确定继续吗？",
   "startMaintenance": "开始维护",
   "maintenanceInProgress": "正在整理优化存储...",
   "preparingProgress": "准备中...",
@@ -856,11 +856,19 @@
       }
     }
   },
+  "storageErrorDiskFull": "存储空间不足，请先释放设备空间",
+  "storageErrorPermissionDenied": "访问受限，请检查应用存储权限",
+  "storageErrorFileNotFound": "未找到相关文件或目录",
+  "storageErrorDatabaseBusy": "数据正忙，请稍候再试",
+  "storageErrorDatabase": "数据处理异常，请稍后重试",
+  "storageErrorFileSystem": "文件读写异常，请稍后重试",
+  "storageErrorTimeout": "操作超时，请稍后重试",
+  "storageErrorGeneral": "操作失败，请稍后重试",
   "totalStorageUsage": "总占用空间",
   "databaseUsage": "数据库占用",
   "mediaFilesUsage": "媒体文件占用",
   "cacheUsage": "缓存占用",
-  "notesDatabase": "笔记数据库",
+  "notesDatabase": "笔记与关联数据",
   "trashStorageUsageHint": "回收站中有 {count} 条笔记，仍会占用数据库和附件空间。",
   "@trashStorageUsageHint": {
     "placeholders": {
@@ -870,8 +878,8 @@
     }
   },
   "viewTrash": "查看回收站",
-  "aiDatabase": "AI数据库",
-  "logDatabase": "日志数据库",
+  "aiDatabase": "智能辅助数据",
+  "logDatabase": "运行与诊断日志",
   "images": "图片",
   "videos": "视频",
   "audios": "音频",
@@ -4923,5 +4931,21 @@
         "type": "String"
       }
     }
+  },
+  "lottieSearchLoading": "搜索中...",
+  "@lottieSearchLoading": {
+    "description": "Lottie animation description for search loading"
+  },
+  "lottieWeatherSearchLoading": "天气搜索中...",
+  "@lottieWeatherSearchLoading": {
+    "description": "Lottie animation description for weather search loading"
+  },
+  "lottieCustomLoading": "加载中...",
+  "@lottieCustomLoading": {
+    "description": "Lottie animation description for custom loading"
+  },
+  "lottieNotFound": "未找到相关内容",
+  "@lottieNotFound": {
+    "description": "Lottie animation description for not found"
   }
 }

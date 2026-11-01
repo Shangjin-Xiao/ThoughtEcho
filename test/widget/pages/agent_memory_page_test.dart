@@ -14,6 +14,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/widgets/app_loading_view.dart';
 
 import '../../test_harness.dart';
@@ -513,6 +514,220 @@ void main() {
 
       // 跳转到了 AgentMemoryPage
       expect(find.byType(AgentMemoryPage), findsOneWidget);
+    });
+
+    testWidgets('搜索框输入触发 agent_memory_search 匿名遥测并支持 300ms 防抖', (tester) async {
+      final trackedEvents = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props,
+        });
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      _setLargeSurfaceSize(tester);
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      // 点击搜索按钮打开搜索框
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+
+      // 输入第一个字：防抖时间内不应立即触发遥测
+      await tester.enterText(find.byType(TextField), '架');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
+
+      // 继续输入第二个字：重置防抖计时器
+      await tester.enterText(find.byType(TextField), '架构');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
+
+      // 防抖时间到期后触发一次遥测
+      await tester.pump(const Duration(milliseconds: 200));
+      final searchEvents = trackedEvents
+          .where((e) => e['eventName'] == 'agent_memory_search')
+          .toList();
+      expect(searchEvents, hasLength(1));
+      // 绝不上报搜索内容
+      expect(searchEvents.first['props'], isNull);
+
+      // 再次输入发起新的搜索（启动防抖计时器）
+      await tester.enterText(find.byType(TextField), '架构师');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 在防抖计时器未到期时清空输入为 ""，此时应立即取消 pending 的计时器
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        hasLength(1),
+      );
+
+      for (var i = 0; i < 6; i++) {
+        await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('搜索框输入未过防抖时间即关闭搜索时不触发 agent_memory_search 遥测', (tester) async {
+      final trackedEvents = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props,
+        });
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      _setLargeSurfaceSize(tester);
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      // 打开搜索并输入
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '临时输入');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 在防抖未触发时点击取消关闭搜索框
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pump();
+      for (var i = 0; i < 6; i++) {
+        await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pumpAndSettle();
+
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
+    });
+
+    testWidgets('编辑画像指令成功时触发 agent_memory_edit 匿名遥测', (tester) async {
+      final trackedEvents = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props,
+        });
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.style,
+          directive: '原始风格指令',
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      // 点击编辑按钮
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+
+      // 在对话框中修改指令并保存
+      await tester.enterText(find.byType(TextField), '修改后的风格指令');
+      await tester.tap(find.text('保存修正'));
+      await _waitForWidgetGone(tester, find.byType(EditableText));
+      await _settleWithRealAsync(tester);
+
+      final editEvents = trackedEvents
+          .where((e) => e['eventName'] == 'agent_memory_edit')
+          .toList();
+      expect(editEvents, isNotEmpty);
+      expect(editEvents.first['props'], equals({'kind': 'style'}));
+    });
+
+    testWidgets('确认遗忘画像触发 agent_memory_delete 匿名遥测', (tester) async {
+      final trackedEvents = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props,
+        });
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.taste,
+          directive: '偏好冷色调设计',
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      // 点击删除/遗忘按钮
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+
+      // 弹窗确认
+      await tester.tap(find.text('忘掉'));
+      await _waitForWidgetGone(tester, find.byType(AlertDialog));
+      await _settleWithRealAsync(tester);
+
+      final deleteEvents = trackedEvents
+          .where((e) => e['eventName'] == 'agent_memory_delete')
+          .toList();
+      expect(deleteEvents, isNotEmpty);
+      expect(
+          deleteEvents.first['props'],
+          equals({
+            'type': 'profile',
+            'kind': 'taste',
+          }));
     });
   });
 }

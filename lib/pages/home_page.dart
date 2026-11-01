@@ -395,6 +395,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
 
+    const excerptIntentService = ExcerptIntentService();
+    // 摘录入口只有 Android 原生侧实现，其他平台直接跳过。
+    if (!excerptIntentService.isSupported) {
+      return;
+    }
+
     final settingsService = context.read<SettingsService>();
     if (!settingsService.excerptIntentEnabled) {
       return;
@@ -402,7 +408,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     _pageController.isHandlingExcerptIntent = true;
     try {
-      const excerptIntentService = ExcerptIntentService();
       final excerptText =
           await excerptIntentService.consumePendingExcerptText();
       if (!mounted || excerptText == null) {
@@ -948,24 +953,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         ? 0.55
                                         : 0.50), // 极小屏幕调整比例
                               ),
-                              child: DailyQuoteView(
-                                key: _dailyQuoteViewKey,
-                                onAddQuote:
-                                    (content, author, work, hitokotoData) =>
-                                        _showAddQuoteDialog(
-                                  prefilledContent: content,
-                                  prefilledAuthor: author,
-                                  prefilledWork: work,
-                                  hitokotoData: hitokotoData,
+                              child: RepaintBoundary(
+                                child: DailyQuoteView(
+                                  key: _dailyQuoteViewKey,
+                                  onAddQuote:
+                                      (content, author, work, hitokotoData) =>
+                                          _showAddQuoteDialog(
+                                    prefilledContent: content,
+                                    prefilledAuthor: author,
+                                    prefilledWork: work,
+                                    hitokotoData: hitokotoData,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                          HomeDailyPromptPanel(
-                            key: _dailyPromptPanelKey,
-                            screenWidth: screenWidth,
-                            isSmallScreen: isSmallScreen,
-                            isVerySmallScreen: isVerySmallScreen,
+                          RepaintBoundary(
+                            child: HomeDailyPromptPanel(
+                              key: _dailyPromptPanelKey,
+                              screenWidth: screenWidth,
+                              isSmallScreen: isSmallScreen,
+                              isVerySmallScreen: isVerySmallScreen,
+                            ),
                           ),
                         ],
                       ),

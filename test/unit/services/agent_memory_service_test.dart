@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
+import 'package:thoughtecho/utils/sentry_helper.dart';
 
 import '../../test_harness.dart';
 
@@ -150,6 +153,123 @@ void main() {
       final keywords = AgentMemoryService.extractKeywords('我常去的咖啡馆');
       expect(keywords, contains('咖啡'));
       expect(keywords, contains('啡馆'));
+    });
+
+    test('extractKeywords 过滤 CJK 停用词并保留核心概念与 2-gram 滑窗', () {
+      final fluffKeywords = AgentMemoryService.extractKeywords('我想了解关于...');
+      expect(fluffKeywords, isNot(contains('我想')));
+      expect(fluffKeywords, isNot(contains('关于')));
+      expect(fluffKeywords, isNot(contains('了解')));
+
+      final subjectKeywords = AgentMemoryService.extractKeywords(
+        '我想了解关于卡片笔记法中的双向链接记录',
+      );
+      // 必须过滤掉无意义虚词与助词
+      expect(subjectKeywords, isNot(contains('我想')));
+      expect(subjectKeywords, isNot(contains('关于')));
+      expect(subjectKeywords, isNot(contains('了解')));
+      expect(subjectKeywords, isNot(contains('中的')));
+      // 必须提取核心专业词汇及 2-gram
+      expect(
+        subjectKeywords.any((k) => k == '卡片笔记法' || k == '卡片' || k == '笔记'),
+        isTrue,
+      );
+      expect(
+        subjectKeywords.any((k) => k == '双向链接' || k == '双向' || k == '链接'),
+        isTrue,
+      );
+      expect(subjectKeywords, contains('记录'));
+
+      // 验证 3 字片段在切分后也能输出 2-gram 关键词（如 "我想去杭州" 切出 "杭州"）
+      final hangzhouKeywords = AgentMemoryService.extractKeywords('我想去杭州');
+      expect(hangzhouKeywords, contains('杭州'));
+      expect(hangzhouKeywords, contains('去杭州'));
+
+      // 验证包含短词（如「进行曲」）正确提取短语关键词，不会被降级为泛化单字「曲」
+      final marchKeywords = AgentMemoryService.extractKeywords('进行曲');
+      expect(marchKeywords, contains('进行曲'));
+      expect(marchKeywords, isNot(contains('曲')));
+
+      // 验证在多字符问句中剔除停用词后依然保留有意义的单字主题词（如「我想了解茶」保留「茶」）
+      final teaKeywords = AgentMemoryService.extractKeywords('我想了解茶');
+      expect(teaKeywords, contains('茶'));
+      expect(teaKeywords, isNot(contains('我想')));
+      expect(teaKeywords, isNot(contains('了解')));
+    });
+
+    test('scoreFact 中相连完整短语匹配得分高于全词命中但分散的条目', () {
+      final now = DateTime(2026, 8, 8);
+      final contiguousFact = AgentMemoryFact(
+        id: 'phrase',
+        content: '用户喜欢学习咖啡拉花',
+        createdAt: now,
+        importance: 5,
+      );
+      final separatedFact = AgentMemoryFact(
+        id: 'separated',
+        content: '用户喜欢喝咖啡和练习拉花',
+        createdAt: now,
+        importance: 5,
+      );
+
+      final keywords = const <String>['咖啡', '拉花'];
+      final phraseScore = AgentMemoryService.scoreFact(
+        contiguousFact,
+        keywords: keywords,
+        now: now,
+      );
+      final separatedScore = AgentMemoryService.scoreFact(
+        separatedFact,
+        keywords: keywords,
+        now: now,
+      );
+
+      expect(phraseScore, greaterThan(separatedScore));
+    });
+
+    test('scoreFact 中精确匹配核心专业词汇的事实得分显著高于仅匹配结构虚词的事实得分', () {
+      final now = DateTime(2026, 8, 8);
+      final coreFact = AgentMemoryFact(
+        id: 'core',
+        content: '用户深入践行卡片笔记法，注重双向链接与概念原子化',
+        createdAt: now,
+        importance: 5,
+      );
+      final stopFact = AgentMemoryFact(
+        id: 'stop',
+        content: '我想关于明天的安排做进一步了解中的讨论',
+        createdAt: now,
+        importance: 5,
+      );
+
+      // 1. 在包含核心词与虚词的复合检索场景下
+      final mixedKeywords = const <String>['卡片笔记法', '双向链接', '我想', '关于', '了解'];
+      final coreScore = AgentMemoryService.scoreFact(
+        coreFact,
+        keywords: mixedKeywords,
+        now: now,
+      );
+      final stopScore = AgentMemoryService.scoreFact(
+        stopFact,
+        keywords: mixedKeywords,
+        now: now,
+      );
+
+      expect(coreScore, greaterThan(stopScore * 2));
+
+      // 2. 独立单测纯核心词命中 vs 纯虚词命中打分
+      final singleCoreScore = AgentMemoryService.scoreFact(
+        coreFact,
+        keywords: const <String>['卡片笔记法'],
+        now: now,
+      );
+      final singleStopScore = AgentMemoryService.scoreFact(
+        stopFact,
+        keywords: const <String>['关于'],
+        now: now,
+      );
+
+      expect(singleCoreScore, greaterThan(singleStopScore * 2));
     });
 
     test('英文查询保留完整词，丢弃单字符', () {
@@ -997,6 +1117,148 @@ void main() {
       expect(refreshedFacts.first.recallCount, greaterThanOrEqualTo(1));
 
       await memory.clearAll();
+    });
+  });
+
+  group('AgentMemoryService 遥测与异常捕获', () {
+    late AgentMemoryService memory;
+    late SettingsService settingsService;
+    final trackedEvents = <Map<String, dynamic>>[];
+    final capturedExceptions = <Map<String, dynamic>>[];
+
+    setUp(() async {
+      await MMKVService().clear();
+      SharedPreferences.resetStatic();
+      SharedPreferences.setMockInitialValues({});
+      settingsService = SettingsService(await SharedPreferences.getInstance());
+      memory = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: inMemoryDatabasePath,
+      );
+
+      trackedEvents.clear();
+      capturedExceptions.clear();
+
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props != null ? Map<String, Object>.from(props) : null,
+        });
+      };
+
+      SentryHelper.onCaptureExceptionForTesting = (
+        throwable, {
+        stackTrace,
+        hint,
+        withScope,
+      }) async {
+        final scope = Scope(SentryOptions(dsn: ''));
+        withScope?.call(scope);
+        capturedExceptions.add({
+          'throwable': throwable,
+          'stackTrace': stackTrace,
+          'hint': hint,
+          'scope': scope,
+        });
+        return SentryId.newId();
+      };
+    });
+
+    tearDown(() async {
+      AptabaseHelper.onTrackEventForTesting = null;
+      SentryHelper.onCaptureExceptionForTesting = null;
+      memory.dispose();
+    });
+
+    test('rememberProfile 记录 agent_memory_remember 且携带类别', () async {
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.preference,
+        directive: '偏好代码简洁',
+      );
+
+      final event = trackedEvents.firstWhere(
+        (e) => e['eventName'] == 'agent_memory_remember',
+      );
+      expect(event['props'], equals({'kind': 'preference'}));
+    });
+
+    test('clearAll 记录 agent_memory_clear_all 且不携带敏感内容', () async {
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.style,
+        directive: '喜欢使用中文输出',
+      );
+      trackedEvents.clear();
+
+      await memory.clearAll();
+
+      final event = trackedEvents.firstWhere(
+        (e) => e['eventName'] == 'agent_memory_clear_all',
+      );
+      expect(event['props'], isNull);
+    });
+
+    test('compactAndPrune 记录 agent_memory_compact 且上报脱敏剪裁度量', () async {
+      await memory.compactAndPrune();
+
+      final event = trackedEvents.firstWhere(
+        (e) => e['eventName'] == 'agent_memory_compact',
+      );
+      final props = event['props'] as Map<String, Object>;
+      expect(props.containsKey('expired_slices'), isTrue);
+      expect(props.containsKey('superseded_profiles'), isTrue);
+      expect(props.containsKey('decayed_facts'), isTrue);
+      expect(props.containsKey('duplicates_pruned'), isTrue);
+      expect(props.containsKey('total_pruned'), isTrue);
+      for (final value in props.values) {
+        expect(value, isA<int>());
+      }
+    });
+
+    test('searchFacts 记录 agent_memory_search_facts 且仅包含计数不包含查询文本', () async {
+      await memory.addFact(
+        content: '熟练掌握 Dart 和 Flutter 开发',
+        importance: 8,
+      );
+      trackedEvents.clear();
+
+      await memory.searchFacts('Flutter 开发');
+
+      final event = trackedEvents.firstWhere(
+        (e) => e['eventName'] == 'agent_memory_search_facts',
+      );
+      final props = event['props'] as Map<String, Object>;
+      expect(props['hit_count'], equals(1));
+      expect(props['keyword_count'], greaterThanOrEqualTo(1));
+      expect(props.containsKey('query'), isFalse);
+      expect(props.containsKey('keyword'), isFalse);
+      expect(props.values.every((v) => v is int), isTrue);
+    });
+
+    test('存储层异常通过 SentryHelper 捕获并附带脱敏异常与 Scope Tags', () {
+      final rawError = StateError(
+        'disk I/O failure with sensitive data: "secret user memory directive"',
+      );
+      final stack = StackTrace.current;
+
+      memory.reportDatabaseErrorForTesting('testOperation', rawError, stack);
+
+      expect(capturedExceptions, hasLength(1));
+      final captured = capturedExceptions.first;
+      // 绝不上报包含用户敏感记忆内容的原始异常
+      expect(captured['throwable'], isA<StateError>());
+      final reportedError = captured['throwable'] as StateError;
+      expect(
+        reportedError.message,
+        equals('AgentMemoryService database operation failed'),
+      );
+      expect(reportedError.message, isNot(contains('secret')));
+      expect(captured['stackTrace'], equals(stack));
+
+      // 验证通过 Scope tags 上报 operation 与 source
+      final scope = captured['scope'] as Scope?;
+      expect(scope, isNotNull);
+      expect(scope!.tags['operation'], equals('testOperation'));
+      expect(scope.tags['source'], equals('AgentMemoryService'));
     });
   });
 }

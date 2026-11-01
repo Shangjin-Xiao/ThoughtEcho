@@ -5,6 +5,7 @@ import '../../gen_l10n/app_localizations.dart';
 import '../../models/agent_memory.dart';
 import '../../services/agent_memory_service.dart';
 import '../../theme/theme_style.dart';
+import '../../utils/aptabase_helper.dart';
 import '../../widgets/app_snackbar.dart';
 
 /// 弹出编辑画像指令对话框。
@@ -68,6 +69,9 @@ Future<bool> showEditDirectiveDialog(
 
     if (!context.mounted) return success;
     if (success) {
+      AptabaseHelper.trackEvent('agent_memory_edit', {
+        'kind': entry.kind.storageValue,
+      });
       AppSnackBar.success(context, l10n.agentMemoryEditSuccess);
     } else {
       AppSnackBar.error(context, l10n.operationFailedSimple);

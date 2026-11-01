@@ -253,6 +253,348 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       }
     });
 
+    test(
+        'sanitizes sensitive span data keys and cleans URLs while preserving metrics',
+        () {
+      final spanData = <String, dynamic>{
+        'content': 'sensitive note content',
+        'rawContent': 'some raw text',
+        'note_content': 'user thoughts',
+        'text': 'quote text',
+        'noteText': 'additional note details',
+        'query': 'SELECT * FROM private_notes',
+        'search_query': 'user search query',
+        'http.query': 'api_key=secret',
+        'http.fragment': 'private_section',
+        'title': 'Secret Title',
+        'note_title': 'My Diary',
+        'password': 'user_password_123',
+        'token': 'bearer_token_abc',
+        'secret': 'app_secret_xyz',
+        'authorization': 'Bearer auth_token_secret',
+        'api_key': 'key_secret',
+        'apiKey': 'key_secret_camel',
+        'credential': 'user_credentials',
+        'frameJank': 2,
+        'worstFrameMs': 33.3,
+        'budgetMs': 16.6,
+        'droppedFrames': 1,
+        'frames': 60,
+        'avgFrameMs': 12.5,
+        'worstVsyncMs': 2.1,
+        'mode': 'edit',
+        'inset': 240,
+        'index': 3,
+        'contentLength': 140,
+        'textLength': 80,
+        'tagCount': 5,
+        'diagnostic': 'FormatException: bad input string',
+        'error_info': 'Error: failed to connect to host',
+        'url': 'https://example.com/api/v1/notes?secret_token=123#frag',
+        'endpoint': 'https://service.internal/path?auth=yes',
+        'nestedData': <String, dynamic>{
+          'content': 'nested sensitive content',
+          'innerMetric': 42,
+          'nestedUrl': 'https://api.example.com/endpoint?param=secret',
+          'nestedDiagnostic': 'FormatException: invalid integer',
+        },
+        'complexList': <dynamic>[
+          'https://api.example.com/item?api_key=secret#section',
+          'FormatException: not a url',
+          <String, dynamic>{
+            'query': 'nested search query',
+            'safeField': 'retained',
+          },
+          123,
+          true,
+        ],
+        'deepNestedList': <dynamic>[
+          <dynamic>[
+            <String, dynamic>{
+              'token': 'deeply_nested_token',
+              'count': 7,
+            },
+          ],
+        ],
+        'unmodifiableMap': Map.unmodifiable(<String, dynamic>{
+          'secret': 'unmodifiable_secret',
+          'validKey': 'preserved',
+        }),
+        'unmodifiableList': List.unmodifiable(<dynamic>[
+          'https://example.com/item?token=abc',
+          'FormatException: unmodifiable item',
+        ]),
+        'nonStringKeyMap': <dynamic, dynamic>{
+          101: 'numeric_id_val',
+          true: 'boolean_key_val',
+          'password': 'nested_pass_secret',
+        },
+      };
+
+      final sanitized = sanitizeSpanData(spanData);
+
+      // Sensitive fields must be removed
+      expect(sanitized, isNot(contains('content')));
+      expect(sanitized, isNot(contains('rawContent')));
+      expect(sanitized, isNot(contains('note_content')));
+      expect(sanitized, isNot(contains('text')));
+      expect(sanitized, isNot(contains('noteText')));
+      expect(sanitized, isNot(contains('query')));
+      expect(sanitized, isNot(contains('search_query')));
+      expect(sanitized, isNot(contains('http.query')));
+      expect(sanitized, isNot(contains('http.fragment')));
+      expect(sanitized, isNot(contains('title')));
+      expect(sanitized, isNot(contains('note_title')));
+      expect(sanitized, isNot(contains('password')));
+      expect(sanitized, isNot(contains('token')));
+      expect(sanitized, isNot(contains('secret')));
+      expect(sanitized, isNot(contains('authorization')));
+      expect(sanitized, isNot(contains('api_key')));
+      expect(sanitized, isNot(contains('apiKey')));
+      expect(sanitized, isNot(contains('credential')));
+
+      // Legitimate metrics and diagnostic keys must be preserved
+      expect(sanitized['frameJank'], 2);
+      expect(sanitized['worstFrameMs'], 33.3);
+      expect(sanitized['budgetMs'], 16.6);
+      expect(sanitized['droppedFrames'], 1);
+      expect(sanitized['frames'], 60);
+      expect(sanitized['avgFrameMs'], 12.5);
+      expect(sanitized['worstVsyncMs'], 2.1);
+      expect(sanitized['mode'], 'edit');
+      expect(sanitized['inset'], 240);
+      expect(sanitized['index'], 3);
+      expect(sanitized['contentLength'], 140);
+      expect(sanitized['textLength'], 80);
+      expect(sanitized['tagCount'], 5);
+
+      // Diagnostic text must NOT be misclassified or modified as URLs
+      expect(sanitized['diagnostic'], 'FormatException: bad input string');
+      expect(sanitized['error_info'], 'Error: failed to connect to host');
+
+      // URLs must have queries and fragments sanitized
+      expect(sanitized['url'], 'https://example.com/api/v1/notes');
+      expect(sanitized['endpoint'], 'https://service.internal/path');
+
+      // Complex nested map and list must be sanitized safely
+      final nested = sanitized['nestedData'] as Map<dynamic, dynamic>;
+      expect(nested, isNot(contains('content')));
+      expect(nested['innerMetric'], 42);
+      expect(nested['nestedUrl'], 'https://api.example.com/endpoint');
+      expect(nested['nestedDiagnostic'], 'FormatException: invalid integer');
+
+      final list = sanitized['complexList'] as List<dynamic>;
+      expect(list[0], 'https://api.example.com/item');
+      expect(list[1], 'FormatException: not a url');
+      final listMap = list[2] as Map<dynamic, dynamic>;
+      expect(listMap, isNot(contains('query')));
+      expect(listMap['safeField'], 'retained');
+      expect(list[3], 123);
+      expect(list[4], true);
+
+      // Deeply nested list traversal
+      final deepList = sanitized['deepNestedList'] as List<dynamic>;
+      final deepInnerList = deepList[0] as List<dynamic>;
+      final deepMap = deepInnerList[0] as Map<dynamic, dynamic>;
+      expect(deepMap, isNot(contains('token')));
+      expect(deepMap['count'], 7);
+
+      // Unmodifiable map & list are deep-copied safely without mutation
+      final unmodifiableMapResult =
+          sanitized['unmodifiableMap'] as Map<dynamic, dynamic>;
+      expect(unmodifiableMapResult, isNot(contains('secret')));
+      expect(unmodifiableMapResult['validKey'], 'preserved');
+
+      final unmodifiableListResult =
+          sanitized['unmodifiableList'] as List<dynamic>;
+      expect(unmodifiableListResult[0], 'https://example.com/item');
+      expect(unmodifiableListResult[1], 'FormatException: unmodifiable item');
+
+      // Map keys that are not String are preserved
+      final nonStringMap =
+          sanitized['nonStringKeyMap'] as Map<dynamic, dynamic>;
+      expect(nonStringMap[101], 'numeric_id_val');
+      expect(nonStringMap[true], 'boolean_key_val');
+      expect(nonStringMap, isNot(contains('password')));
+
+      // Top-level unmodifiable map handling
+      final topLevelUnmodifiable = Map.unmodifiable(<String, dynamic>{
+        'token': 'top_token',
+        'safeMetric': 99,
+      });
+      final sanitizedTop = sanitizeSpanData(topLevelUnmodifiable);
+      expect(sanitizedTop, isNot(contains('token')));
+      expect(sanitizedTop['safeMetric'], 99);
+    });
+
+    test('sanitizes AppTracer arguments directly in AppTracer before upload',
+        () async {
+      final mockTransport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://public@example.com/1';
+        options.transport = mockTransport;
+        options.tracesSampleRate = 1.0;
+        // Do NOT set options.beforeSendTransaction so this tests AppTracer directly.
+      });
+
+      try {
+        final tracer = AppTracer.start(
+          'ThoughtEcho.TracerSanitizeTest',
+          operation: 'ui.load',
+          arguments: {
+            'content': 'Sensitive note content from tracer start',
+            'query': 'SELECT * FROM secret_table',
+            'title': 'Confidential Title',
+            'password': 'tracer_password',
+            'token': 'tracer_token_value',
+            'frameJank': 1,
+            'worstFrameMs': 34.0,
+            'budgetMs': 16.6,
+            'mode': 'create',
+            'contentLength': 50,
+            'diagnostic': 'FormatException: bad number input',
+            'url': 'https://example.com/test?token=tracer_secret#tag',
+          },
+        );
+
+        tracer.instant(
+          'ThoughtEcho.TracerSanitizeTest.landmark',
+          arguments: {
+            'noteText': 'Instant landmark sensitive note text',
+            'secret': 'landmark_secret',
+            'droppedFrames': 2,
+            'inset': 150,
+          },
+        );
+
+        tracer.finish(
+          arguments: {
+            'search_query': 'user search keywords in finish',
+            'authorization': 'Bearer finish_auth_token',
+            'avgFrameMs': 16.0,
+          },
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+
+        final sentryTransaction = mockTransport.envelopes
+            .expand((envelope) => envelope.items)
+            .map((item) => item.originalObject)
+            .whereType<SentryTransaction>()
+            .single;
+
+        // Verify root trace context data populated directly by AppTracer
+        final traceData = sentryTransaction.contexts.trace?.data;
+        expect(traceData, isNotNull);
+        expect(traceData!, isNot(contains('content')));
+        expect(traceData, isNot(contains('query')));
+        expect(traceData, isNot(contains('title')));
+        expect(traceData, isNot(contains('password')));
+        expect(traceData, isNot(contains('token')));
+        expect(traceData, isNot(contains('secret')));
+        expect(traceData, isNot(contains('authorization')));
+        expect(traceData, isNot(contains('search_query')));
+        expect(traceData['frameJank'], 1);
+        expect(traceData['worstFrameMs'], 34.0);
+        expect(traceData['budgetMs'], 16.6);
+        expect(traceData['mode'], 'create');
+        expect(traceData['contentLength'], 50);
+        expect(traceData['avgFrameMs'], 16.0);
+        expect(traceData['diagnostic'], 'FormatException: bad number input');
+        expect(traceData['url'], 'https://example.com/test');
+
+        // Verify instant child span data
+        final landmarkSpan = sentryTransaction.spans.singleWhere(
+          (span) =>
+              span.context.description ==
+              'ThoughtEcho.TracerSanitizeTest.landmark',
+        );
+        expect(landmarkSpan.data, isNot(contains('noteText')));
+        expect(landmarkSpan.data, isNot(contains('secret')));
+        expect(landmarkSpan.data['droppedFrames'], 2);
+        expect(landmarkSpan.data['inset'], 150);
+
+        // Verify across all spans in the transaction
+        for (final span in sentryTransaction.spans) {
+          expect(span.data, isNot(contains('content')));
+          expect(span.data, isNot(contains('query')));
+          expect(span.data, isNot(contains('title')));
+          expect(span.data, isNot(contains('password')));
+          expect(span.data, isNot(contains('token')));
+          expect(span.data, isNot(contains('secret')));
+          expect(span.data, isNot(contains('authorization')));
+          expect(span.data, isNot(contains('noteText')));
+          expect(span.data, isNot(contains('search_query')));
+        }
+      } finally {
+        await Sentry.close();
+      }
+    });
+
+    test(
+        'end-to-end: sanitizeSentryTransaction hook scrubs span data and transaction trace data',
+        () async {
+      final mockTransport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://public@example.com/1';
+        options.transport = mockTransport;
+        options.tracesSampleRate = 1.0;
+        options.beforeSendTransaction = sanitizeSentryTransaction;
+      });
+
+      try {
+        final transaction = Sentry.startTransaction(
+          'DirectTransaction',
+          'task.direct',
+          bindToScope: true,
+        );
+        transaction.setData('rawContent', 'direct note content');
+        transaction.setData('frameJank', 4);
+        transaction.setData('url', 'https://api.example.com/v1?token=xyz#hash');
+
+        final childSpan = transaction.startChild(
+          'subtask',
+          description: 'GET https://api.example.com/data?user=secret',
+        );
+        childSpan.setData('query', 'SELECT password FROM accounts');
+        childSpan.setData('inset', 20);
+        childSpan.setData('nested', <String, dynamic>{
+          'secret': 'child_secret',
+          'innerMetric': 88,
+        });
+        await childSpan.finish();
+        await transaction.finish();
+
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+
+        final sentryTransaction = mockTransport.envelopes
+            .expand((envelope) => envelope.items)
+            .map((item) => item.originalObject)
+            .whereType<SentryTransaction>()
+            .single;
+
+        final traceData = sentryTransaction.contexts.trace?.data;
+        expect(traceData, isNotNull);
+        expect(traceData!, isNot(contains('rawContent')));
+        expect(traceData['frameJank'], 4);
+        expect(traceData['url'], 'https://api.example.com/v1');
+
+        final subtaskSpan = sentryTransaction.spans.singleWhere(
+          (span) => span.context.operation == 'subtask',
+        );
+        expect(subtaskSpan.context.description,
+            'GET https://api.example.com/data');
+        expect(subtaskSpan.data, isNot(contains('query')));
+        expect(subtaskSpan.data['inset'], 20);
+
+        final childNested = subtaskSpan.data['nested'] as Map<dynamic, dynamic>;
+        expect(childNested, isNot(contains('secret')));
+        expect(childNested['innerMetric'], 88);
+      } finally {
+        await Sentry.close();
+      }
+    });
+
     test('drops smooth scroll sessions but keeps janky ones', () async {
       final mockTransport = _MockSentryTransport();
       await Sentry.init((options) {
@@ -406,6 +748,235 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sanitized?.data, isNot(contains('http.fragment')));
     });
 
+    test('redacts local file paths in non-SQL breadcrumb messages', () {
+      final cases = <String, String>{
+        'User opened /Users/developer/mock_path/notes.txt':
+            'User opened [path]',
+        r'Saved export to C:\Users\developer\mock_docs\backup.json':
+            'Saved export to [path]',
+        'Android db ready at /data/user/0/com.thoughtecho/databases/app.db':
+            'Android db ready at [path]',
+        'Linux config in /home/developer/.config/app.conf':
+            'Linux config in [path]',
+        'Container file at /private/var/mobile/Containers/Data/notes.db':
+            'Container file at [path]',
+        'Mounted external storage at /mnt/developer/private-notes.txt':
+            'Mounted external storage at [path]',
+        'Volumes path /Volumes/ExternalDrive/notes.txt': 'Volumes path [path]',
+        'Server storage in /srv/data/backup.json': 'Server storage in [path]',
+        'Quoted: "/Users/developer/My Documents/note.txt"': 'Quoted: "[path]"',
+        'Quoted mount: "/mnt/developer/My Documents/note.txt"':
+            'Quoted mount: "[path]"',
+        'Saved to /Users/developer/file.txt.': 'Saved to [path].',
+        'Saved to /mnt/developer/file.txt.': 'Saved to [path].',
+        'Failed (/Users/developer/file.txt)': 'Failed ([path])',
+        'Failed (/mnt/developer/file.txt)': 'Failed ([path])',
+        'User opened file:///Users/developer/Documents/private.txt':
+            'User opened [path]',
+        'User opened file:///mnt/developer/private-notes.txt':
+            'User opened [path]',
+        'Windows file URI: file:///C:/Users/developer/notes.txt':
+            'Windows file URI: [path]',
+        'Quoted file URI: "file:///Users/developer/My Documents/note.txt"':
+            'Quoted file URI: "[path]"',
+        'Saved to file:///Users/developer/file.txt.': 'Saved to [path].',
+        'Failed (file:///Users/developer/file.txt)': 'Failed ([path])',
+      };
+
+      for (final entry in cases.entries) {
+        final breadcrumb = Breadcrumb(
+          message: entry.key,
+          category: 'ui.click',
+        );
+        final sanitized = sanitizeSentryBreadcrumb(breadcrumb, Hint());
+        expect(
+          sanitized?.message,
+          entry.value,
+          reason: 'Failed to sanitize "${entry.key}"',
+        );
+      }
+    });
+
+    test('sanitizes URLs in non-SQL breadcrumb messages while keeping base URL',
+        () {
+      final breadcrumb = Breadcrumb(
+        message:
+            'Navigated to https://example.com/notes?secret_key=12345#overview',
+        category: 'navigation',
+      );
+
+      final sanitized = sanitizeSentryBreadcrumb(breadcrumb, Hint());
+
+      expect(sanitized?.message, 'Navigated to https://example.com/notes');
+      expect(sanitized?.message, isNot(contains('secret_key')));
+      expect(sanitized?.message, isNot(contains('overview')));
+
+      final networkBreadcrumb = Breadcrumb(
+        message:
+            'Fetched https://example.com/mnt/storage/data?token=secret123#overview',
+        category: 'network',
+      );
+      final sanitizedNetwork =
+          sanitizeSentryBreadcrumb(networkBreadcrumb, Hint());
+      expect(
+        sanitizedNetwork?.message,
+        'Fetched https://example.com/mnt/storage/data',
+      );
+      expect(sanitizedNetwork?.message, isNot(contains('secret123')));
+      expect(sanitizedNetwork?.message, isNot(contains('[path]')));
+
+      final portBreadcrumb = Breadcrumb(
+        message: 'Calling http://localhost:8080/mnt/files?auth=secret',
+        category: 'network',
+      );
+      final sanitizedPort = sanitizeSentryBreadcrumb(portBreadcrumb, Hint());
+      expect(
+        sanitizedPort?.message,
+        'Calling http://localhost:8080/mnt/files',
+      );
+      expect(sanitizedPort?.message, isNot(contains('secret')));
+      expect(sanitizedPort?.message, isNot(contains('[path]')));
+    });
+
+    test('removes sensitive blacklist keys from breadcrumb data', () {
+      final breadcrumb = Breadcrumb(
+        category: 'user_action',
+        data: <String, dynamic>{
+          'query': 'user search keyword',
+          'search': 'find quote',
+          'search_term': 'important',
+          'file_path': '/Users/developer/secret.txt',
+          'filePath': r'C:\Users\developer\secret.txt',
+          'path': '/home/developer/app',
+          'text': 'private user note text',
+          'button_text': 'submit',
+          'content': 'confidential content',
+          'prompt': 'summarize this text',
+          'system_prompt': 'you are an assistant',
+          'token': 'secret-token-value',
+          'access_token': 'xyz789',
+          'secret': 'client-secret-val',
+          'auth': 'Basic secretcredentials',
+          'action': 'tap_button',
+          'status_code': 200,
+          'count': 5,
+        },
+      );
+
+      final sanitized = sanitizeSentryBreadcrumb(breadcrumb, Hint());
+      final data = sanitized?.data;
+
+      expect(data, isNotNull);
+      expect(data, isNot(contains('query')));
+      expect(data, isNot(contains('search')));
+      expect(data, isNot(contains('search_term')));
+      expect(data, isNot(contains('file_path')));
+      expect(data, isNot(contains('filePath')));
+      expect(data, isNot(contains('path')));
+      expect(data, isNot(contains('text')));
+      expect(data, isNot(contains('button_text')));
+      expect(data, isNot(contains('content')));
+      expect(data, isNot(contains('prompt')));
+      expect(data, isNot(contains('system_prompt')));
+      expect(data, isNot(contains('token')));
+      expect(data, isNot(contains('access_token')));
+      expect(data, isNot(contains('secret')));
+      expect(data, isNot(contains('auth')));
+
+      expect(data?['action'], 'tap_button');
+      expect(data?['status_code'], 200);
+      expect(data?['count'], 5);
+    });
+
+    test(
+        'sanitizes local paths and URLs with query parameters in data String values',
+        () {
+      final breadcrumb = Breadcrumb(
+        category: 'custom',
+        data: <String, dynamic>{
+          'target_url':
+              'https://example.com/api/v1/resource?token=secret123&user=admin#section',
+          'destination_dir': '/Users/developer/Documents/backups',
+          'win_dir': r'C:\Users\developer\AppData\Local',
+          'android_dir': '/data/user/0/com.thoughtecho/files',
+          'mnt_dir': '/mnt/developer/storage/notes',
+          'file_uri': 'file:///Users/developer/Documents/private.txt',
+          'mnt_file_uri': 'file:///mnt/developer/private.txt',
+          'network_url_with_mnt':
+              'https://example.com/mnt/storage?key=secret123',
+          'summary':
+              'Exported https://example.com/item?api=val to /home/developer/out.json',
+          'file_summary':
+              'Synced file:///Users/developer/file.txt to /mnt/developer/backup.txt',
+          'is_valid': true,
+          'item_count': 10,
+        },
+      );
+
+      final sanitized = sanitizeSentryBreadcrumb(breadcrumb, Hint());
+      final data = sanitized?.data;
+
+      expect(data?['target_url'], 'https://example.com/api/v1/resource');
+      expect(data?['target_url'], isNot(contains('token')));
+      expect(data?['target_url'], isNot(contains('admin')));
+      expect(data?['destination_dir'], '[path]');
+      expect(data?['win_dir'], '[path]');
+      expect(data?['android_dir'], '[path]');
+      expect(data?['mnt_dir'], '[path]');
+      expect(data?['file_uri'], '[path]');
+      expect(data?['mnt_file_uri'], '[path]');
+      expect(
+        data?['network_url_with_mnt'],
+        'https://example.com/mnt/storage',
+      );
+      expect(data?['network_url_with_mnt'], isNot(contains('secret123')));
+      expect(data?['network_url_with_mnt'], isNot(contains('[path]')));
+      expect(
+        data?['summary'],
+        'Exported https://example.com/item to [path]',
+      );
+      expect(
+        data?['file_summary'],
+        'Synced [path] to [path]',
+      );
+      expect(data?['is_valid'], isTrue);
+      expect(data?['item_count'], 10);
+    });
+
+    test('handles null, empty, or unmodifiable breadcrumb data gracefully', () {
+      // Null breadcrumb
+      expect(sanitizeSentryBreadcrumb(null, Hint()), isNull);
+
+      // Null data
+      final breadcrumbNullData = Breadcrumb(message: 'Plain message');
+      final sanitizedNull =
+          sanitizeSentryBreadcrumb(breadcrumbNullData, Hint());
+      expect(sanitizedNull?.message, 'Plain message');
+      expect(sanitizedNull?.data, isNull);
+
+      // Unmodifiable map in data
+      final unmodifiableBreadcrumb = Breadcrumb(
+        message: 'Loaded file at /Users/developer/data.txt',
+        data: Map.unmodifiable(<String, dynamic>{
+          'http.query': 'secret=1',
+          'custom_note': 'Loaded from /home/developer/doc.pdf',
+          'is_cached': true,
+        }),
+      );
+
+      expect(
+        () => sanitizeSentryBreadcrumb(unmodifiableBreadcrumb, Hint()),
+        returnsNormally,
+      );
+
+      final sanitizedUnmodifiable =
+          sanitizeSentryBreadcrumb(unmodifiableBreadcrumb, Hint());
+      expect(sanitizedUnmodifiable?.message, 'Loaded file at [path]');
+      expect(sanitizedUnmodifiable?.data, isNot(contains('http.query')));
+      expect(sanitizedUnmodifiable?.data?['custom_note'], 'Loaded from [path]');
+      expect(sanitizedUnmodifiable?.data?['is_cached'], isTrue);
+    });
+
     test('scrubs URLs in every transmitted nested network exception', () async {
       final transport = _MockSentryTransport();
       await Sentry.init((options) {
@@ -513,6 +1084,69 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sanitized?.request?.cookies, isNull);
       expect(sanitized?.request?.data, isNull);
       expect(sanitized?.request?.headers, isEmpty);
+    });
+  });
+
+  group('SentryHelper.captureException', () {
+    tearDown(() {
+      SentryHelper.onCaptureExceptionForTesting = null;
+    });
+
+    test('invokes onCaptureExceptionForTesting when set including withScope',
+        () async {
+      dynamic capturedThrowable;
+      dynamic capturedStackTrace;
+      Hint? capturedHint;
+      ScopeCallback? capturedWithScope;
+      final expectedId = SentryId.newId();
+
+      SentryHelper.onCaptureExceptionForTesting = (
+        throwable, {
+        stackTrace,
+        hint,
+        withScope,
+      }) async {
+        capturedThrowable = throwable;
+        capturedStackTrace = stackTrace;
+        capturedHint = hint;
+        capturedWithScope = withScope;
+        return expectedId;
+      };
+
+      final error = StateError('db_error');
+      final stackTrace = StackTrace.current;
+      final hint = Hint.withMap({'operation': 'test_op'});
+
+      final sentryId = await SentryHelper.captureException(
+        error,
+        stackTrace: stackTrace,
+        hint: hint,
+        withScope: (scope) {
+          scope.setTag('operation', 'test_op');
+          scope.setTag('source', 'AgentMemoryService');
+        },
+      );
+
+      expect(sentryId, equals(expectedId));
+      expect(capturedThrowable, equals(error));
+      expect(capturedStackTrace, equals(stackTrace));
+      expect(capturedHint?.get('operation'), equals('test_op'));
+      expect(capturedWithScope, isNotNull);
+
+      final scope = Scope(SentryOptions(dsn: ''));
+      capturedWithScope!(scope);
+      expect(scope.tags['operation'], equals('test_op'));
+      expect(scope.tags['source'], equals('AgentMemoryService'));
+    });
+
+    test('returns SentryId.empty() when not enabled and no handler set',
+        () async {
+      SentryHelper.onCaptureExceptionForTesting = null;
+      final sentryId = await SentryHelper.captureException(
+        Exception('some_error'),
+        stackTrace: StackTrace.current,
+      );
+      expect(sentryId, equals(SentryId.empty()));
     });
   });
 }

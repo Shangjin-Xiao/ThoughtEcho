@@ -207,7 +207,7 @@ class LottieAnimationWithText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final preset = LottieConfig.getAnimationForScene(scene);
-    final displayText = text ?? preset.description;
+    final displayText = text ?? preset.getDescription(context);
 
     return Column(
       mainAxisAlignment: mainAxisAlignment,

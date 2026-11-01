@@ -4,6 +4,7 @@ import 'database_service.dart';
 import 'settings_service.dart';
 import 'mmkv_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/version_utils.dart';
 
 /// 数据迁移服务
 ///
@@ -16,35 +17,45 @@ class MigrationService {
   final DatabaseService _databaseService;
   final SettingsService _settingsService;
   final MMKVService _mmkvService;
+  final PackageInfo? _packageInfo;
 
   static const String _keyLastRunVersion = 'lastRunVersionBuildNumber';
-  static const int _migrationNeededFromBuildNumber = 12;
+  static const String _migrationNeededFromVersion = '1.0.0+12';
 
   MigrationService({
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required MMKVService mmkvService,
+    PackageInfo? packageInfo,
   })  : _databaseService = databaseService,
         _settingsService = settingsService,
-        _mmkvService = mmkvService;
+        _mmkvService = mmkvService,
+        _packageInfo = packageInfo;
+
+  Future<PackageInfo> _getPackageInfo() async {
+    return _packageInfo ?? await PackageInfo.fromPlatform();
+  }
 
   /// 检查是否需要执行迁移
   Future<bool> needsMigration() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final currentBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
-      final lastRunBuildNumber =
-          int.tryParse(_mmkvService.getString(_keyLastRunVersion) ?? '0') ?? 0;
+      final packageInfo = await _getPackageInfo();
+      final currentVersion = formatVersion(
+        version: packageInfo.version,
+        buildNumber: packageInfo.buildNumber,
+      );
+      final rawLastRun = _mmkvService.getString(_keyLastRunVersion);
+      final lastRunVersion = normalizeVersion(rawLastRun);
 
       final isFirstSetup = !_settingsService.isInitialDatabaseSetupComplete();
       final isUpdateRequiringMigration =
-          currentBuildNumber > lastRunBuildNumber &&
-              currentBuildNumber >= _migrationNeededFromBuildNumber;
+          compareSemver(currentVersion, lastRunVersion) > 0 &&
+              compareSemver(currentVersion, _migrationNeededFromVersion) >= 0;
 
       final needsMigration = isFirstSetup || isUpdateRequiringMigration;
 
       logDebug(
-        '迁移检查: 当前版本=$currentBuildNumber, 上次版本=$lastRunBuildNumber, '
+        '迁移检查: 当前版本=$currentVersion, 上次版本=$lastRunVersion, '
         '首次设置=$isFirstSetup, 需要迁移=$needsMigration',
       );
 
@@ -138,9 +149,13 @@ class MigrationService {
   /// 更新版本记录
   Future<void> _updateVersionRecord() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      await _mmkvService.setString(_keyLastRunVersion, packageInfo.buildNumber);
-      logDebug('版本记录已更新: ${packageInfo.buildNumber}');
+      final packageInfo = await _getPackageInfo();
+      final currentVersion = formatVersion(
+        version: packageInfo.version,
+        buildNumber: packageInfo.buildNumber,
+      );
+      await _mmkvService.setString(_keyLastRunVersion, currentVersion);
+      logDebug('版本记录已更新: $currentVersion');
     } catch (e) {
       logError('更新版本记录失败', error: e, source: 'MigrationService');
     }
@@ -164,17 +179,22 @@ class MigrationService {
   /// 获取当前版本信息
   Future<VersionInfo> getCurrentVersion() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final lastRunVersion = _mmkvService.getString(_keyLastRunVersion) ?? '0';
+      final packageInfo = await _getPackageInfo();
+      final currentVersion = formatVersion(
+        version: packageInfo.version,
+        buildNumber: packageInfo.buildNumber,
+      );
+      final rawLastRun = _mmkvService.getString(_keyLastRunVersion);
+      final lastRunVersion = normalizeVersion(rawLastRun);
 
       return VersionInfo(
-        current: packageInfo.buildNumber,
+        current: currentVersion,
         lastRun: lastRunVersion,
         isFirstRun: !_settingsService.isInitialDatabaseSetupComplete(),
       );
     } catch (e) {
       logError('获取版本信息失败', error: e, source: 'MigrationService');
-      return VersionInfo(current: '0', lastRun: '0', isFirstRun: true);
+      return VersionInfo(current: '0.0.0', lastRun: '0.0.0', isFirstRun: true);
     }
   }
 }
@@ -212,5 +232,6 @@ class VersionInfo {
     required this.isFirstRun,
   });
 
-  bool get hasVersionChanged => current != lastRun;
+  bool get hasVersionChanged =>
+      compareSemver(current, lastRun) != 0 || current != lastRun;
 }

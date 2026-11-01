@@ -119,27 +119,27 @@ void main() {
       AppLogger.initialize();
     });
 
-    test('两个方法都吞掉 MissingPluginException 并记录 debug 而不向 error 记录', () async {
+    test('两个方法都吞掉 MissingPluginException 并记录 warning 而不向 error 记录', () async {
       // 平台判断之后还撞上，说明是 Android 侧注册时机的问题（例如引擎重建）。
-      // 仍然要能安全降级：调用方不该因此崩，且只记 debug，不当作 error 上报 Sentry。
+      // 仍然要能安全降级：调用方不该因此崩；按 warning 记录保持可见，不当作 error。
       expect(await service.consumePendingExcerptText(), isNull);
       await expectLater(service.syncEntryPointEnabled(true), completes);
 
-      final debugLogs = logService.records
-          .where((r) => r.level == UnifiedLogLevel.debug)
+      final warningLogs = logService.records
+          .where((r) => r.level == UnifiedLogLevel.warning)
           .toList();
       final errorLogs = logService.records
           .where((r) => r.level == UnifiedLogLevel.error)
           .toList();
 
       expect(errorLogs, isEmpty);
-      expect(debugLogs.length, 2);
+      expect(warningLogs.length, 2);
       expect(
-        debugLogs[0].message,
+        warningLogs[0].message,
         contains('ExcerptIntentService.consumePendingExcerptText 未找到原生实现'),
       );
       expect(
-        debugLogs[1].message,
+        warningLogs[1].message,
         contains('ExcerptIntentService.syncEntryPointEnabled 未找到原生实现'),
       );
     });

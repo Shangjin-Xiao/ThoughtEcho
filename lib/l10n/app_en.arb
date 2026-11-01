@@ -774,7 +774,7 @@
   "cleanOrphanMediaConfirmContent": "This will delete media files (images, videos, audio) that are not referenced by any notes.\n\nAre you sure you want to continue?",
   "databaseMaintenance": "Storage Optimization",
   "databaseMaintenanceConfirmTitle": "Storage Optimization",
-  "databaseMaintenanceConfirmContent": "This operation will optimize local storage performance:\n\n• Reclaim fragmented storage space\n• Optimize search indexes\n• Improve note loading speed\n\nThe process usually takes only a few seconds.\n\nAre you sure you want to continue?",
+  "databaseMaintenanceConfirmContent": "This operation will optimize local storage performance:\n\n• Reorganize data structure to improve search performance\n• Improve note loading speed\n\nThe process usually takes only a few seconds.\n\nAre you sure you want to continue?",
   "startMaintenance": "Start Maintenance",
   "maintenanceInProgress": "Optimizing storage in progress...",
   "preparingProgress": "Preparing...",
@@ -856,11 +856,19 @@
       }
     }
   },
+  "storageErrorDiskFull": "Insufficient storage space. Please free up device space.",
+  "storageErrorPermissionDenied": "Access denied. Please check storage permissions.",
+  "storageErrorFileNotFound": "File or directory not found.",
+  "storageErrorDatabaseBusy": "Database is busy. Please try again later.",
+  "storageErrorDatabase": "Data processing error. Please try again later.",
+  "storageErrorFileSystem": "File read/write error. Please try again later.",
+  "storageErrorTimeout": "Operation timed out. Please try again later.",
+  "storageErrorGeneral": "Operation failed. Please try again later.",
   "totalStorageUsage": "Total Storage Usage",
   "databaseUsage": "Database Usage",
   "mediaFilesUsage": "Media Files Usage",
   "cacheUsage": "Cache Usage",
-  "notesDatabase": "Notes Database",
+  "notesDatabase": "Notes & Associated Data",
   "trashStorageUsageHint": "{count, plural, =1{Trash contains 1 note and still uses database and attachment space.} other{Trash contains {count} notes and still uses database and attachment space.}}",
   "@trashStorageUsageHint": {
     "placeholders": {
@@ -870,8 +878,8 @@
     }
   },
   "viewTrash": "View Trash",
-  "aiDatabase": "AI Database",
-  "logDatabase": "Log Database",
+  "aiDatabase": "Smart Assistant Data",
+  "logDatabase": "Operation & Diagnostic Logs",
   "images": "Images",
   "videos": "Videos",
   "audios": "Audio",
@@ -4923,5 +4931,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "lottieSearchLoading": "Searching...",
+  "lottieWeatherSearchLoading": "Searching weather...",
+  "lottieCustomLoading": "Loading...",
+  "lottieNotFound": "No content found"
 }

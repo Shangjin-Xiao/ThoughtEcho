@@ -315,17 +315,20 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (context, child) {
-                return Icon(
-                  Icons.auto_awesome,
-                  size: 20,
-                  color: _isStreamingComplete
-                      ? colorScheme.primary
-                      : colorScheme.primary.applyOpacity(_pulseAnimation.value),
-                );
-              },
+            child: RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Icon(
+                    Icons.auto_awesome,
+                    size: 20,
+                    color: _isStreamingComplete
+                        ? colorScheme.primary
+                        : colorScheme.primary
+                            .applyOpacity(_pulseAnimation.value),
+                  );
+                },
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -416,36 +419,40 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  widget.isMarkdown
-                      ? MarkdownBody(
-                          data: displayText,
-                          selectable: true,
-                          styleSheet: _markdownStyleSheet,
-                        )
-                      : SelectableText(
-                          displayText,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            height: 1.6,
+                  RepaintBoundary(
+                    child: widget.isMarkdown
+                        ? MarkdownBody(
+                            data: displayText,
+                            selectable: true,
+                            styleSheet: _markdownStyleSheet,
+                          )
+                        : SelectableText(
+                            displayText,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              height: 1.6,
+                            ),
                           ),
-                        ),
+                  ),
                   // 流式加载时显示光标
                   if (!_isStreamingComplete)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: AnimatedBuilder(
-                        animation: _pulseAnimation,
-                        builder: (context, child) {
-                          return Container(
-                            width: 8,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary
-                                  .applyOpacity(_pulseAnimation.value),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          );
-                        },
+                      child: RepaintBoundary(
+                        child: AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            return Container(
+                              width: 8,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary
+                                    .applyOpacity(_pulseAnimation.value),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                 ],
@@ -459,40 +466,42 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
 
   /// 构建加载指示器
   Widget _buildLoadingIndicator(ColorScheme colorScheme) {
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) {
-        return Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [
-                colorScheme.primary.applyOpacity(_pulseAnimation.value * 0.3),
-                colorScheme.primary.applyOpacity(_pulseAnimation.value * 0.1),
-                Colors.transparent,
-              ],
-              stops: const [0.0, 0.6, 1.0],
-            ),
-          ),
-          child: Center(
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colorScheme.primaryContainer,
-              ),
-              child: Icon(
-                Icons.auto_awesome,
-                size: 24,
-                color: colorScheme.primary,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  colorScheme.primary.applyOpacity(_pulseAnimation.value * 0.3),
+                  colorScheme.primary.applyOpacity(_pulseAnimation.value * 0.1),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.6, 1.0],
               ),
             ),
-          ),
-        );
-      },
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.primaryContainer,
+                ),
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 24,
+                  color: colorScheme.primary,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
