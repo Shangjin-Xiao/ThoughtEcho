@@ -174,7 +174,7 @@
   "noteListDisableCardShadowsExperiment": "[Experiment] Disable note-list card shadows",
   "noteListDisableCardShadowsExperimentDesc": "Disable card shadows to improve scrolling smoothness on lower-end devices",
   "noteListDisableBackdropBlurExperiment": "[Experiment] Disable note-list collapse blur",
-  "noteListDisableBackdropBlurExperimentDesc": "Replace collapsed card bottom blur with gradient mask to reduce rendering overhead",
+  "noteListDisableBackdropBlurExperimentDesc": "Replace collapsed card bottom blur with a gradient mask for smoother scrolling and lower battery consumption",
   "devFirstScrollPerfResult": "First-scroll performance: total {total}, jank {jank}, avg {avgMs}ms, worst {worstMs}ms",
   "@devFirstScrollPerfResult": {
     "placeholders": {
