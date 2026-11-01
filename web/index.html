@@ -18,19 +18,34 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="An app to help you capture notes and thoughts">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="心迹">
+  <meta name="apple-mobile-web-app-title" content="ThoughtEcho">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>心迹</title>
+  <title>ThoughtEcho</title>
   <link rel="manifest" href="manifest.json">
+
+  <script>
+    (function () {
+      var lang = (navigator.languages && navigator.languages.length ? navigator.languages[0] : navigator.language) || '';
+      if (lang.toLowerCase().startsWith('zh')) {
+        document.title = '心迹';
+        var appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+        if (appleTitle) appleTitle.setAttribute('content', '心迹');
+        var desc = document.querySelector('meta[name="description"]');
+        if (desc) desc.setAttribute('content', '一款帮助你记录笔记和思想的应用');
+        var manifestLink = document.querySelector('link[rel="manifest"]');
+        if (manifestLink) manifestLink.setAttribute('href', 'manifest.zh.json');
+      }
+    })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
