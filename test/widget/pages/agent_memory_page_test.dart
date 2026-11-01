@@ -568,7 +568,12 @@ void main() {
       // 绝不上报搜索内容
       expect(searchEvents.first['props'], isNull);
 
-      // 输入清空为 "" 时取消计时器，不应触发新的遥测
+      // 再次输入发起新的搜索（启动防抖计时器）
+      await tester.enterText(find.byType(TextField), '架构师');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 在防抖计时器未到期时清空输入为 ""，此时应立即取消 pending 的计时器
       await tester.enterText(find.byType(TextField), '');
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
