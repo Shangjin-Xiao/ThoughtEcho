@@ -538,13 +538,16 @@ class WebDAVSyncService extends ChangeNotifier {
 
       // 6. 流式写入本地数据到临时文件并上传（避免全量数据入内存）
       logDebug('打包本地最新数据上传云端...');
-      final tempDir = await getTemporaryDirectory();
+      // 工作文件不能放在缓存目录：系统存储紧张时会清理 cache/，
+      // “清理缓存”也会清空整个临时目录，导致打包时找不到刚写入的 JSON。
+      // 改为放在应用支持目录下、每轮同步独立的子目录中。
+      final workDir = await _createSyncWorkDirectory();
       final tempJsonPath = p.join(
-        tempDir.path,
+        workDir.path,
         'thoughtecho_webdav_sync.json',
       );
       final tempZipPath = p.join(
-        tempDir.path,
+        workDir.path,
         'thoughtecho_webdav_sync.zip',
       );
       try {
@@ -560,10 +563,14 @@ class WebDAVSyncService extends ChangeNotifier {
           remoteSyncFile,
         );
       } finally {
-        // 清理临时文件
-        for (final path in [tempJsonPath, tempZipPath]) {
-          final f = File(path);
-          if (await f.exists()) await f.delete();
+        // 清理本轮同步的工作目录
+        try {
+          if (await workDir.exists()) await workDir.delete(recursive: true);
+        } catch (e) {
+          logWarning(
+            '清理 WebDAV 同步工作目录失败: $e',
+            source: 'WebDAVSyncService',
+          );
         }
       }
 
@@ -877,6 +884,30 @@ class WebDAVSyncService extends ChangeNotifier {
     return normalized;
   }
 
+  static const String _syncWorkDirName = 'webdav_sync_tmp';
+
+  /// 在应用支持目录下创建本轮同步专用的工作目录，并清理崩溃遗留的旧目录。
+  /// 调用方持有 [_isSyncExecuting] 互斥锁，因此不会误删正在使用的目录。
+  Future<Directory> _createSyncWorkDirectory() async {
+    final supportDir = await getApplicationSupportDirectory();
+    final root = Directory(p.join(supportDir.path, _syncWorkDirName));
+    if (await root.exists()) {
+      await for (final entity in root.list()) {
+        try {
+          await entity.delete(recursive: true);
+        } catch (e) {
+          logWarning(
+            '清理遗留的 WebDAV 同步工作文件失败: ${entity.path}, $e',
+            source: 'WebDAVSyncService',
+          );
+        }
+      }
+    } else {
+      await root.create(recursive: true);
+    }
+    return root.createTemp('run_');
+  }
+
   /// 是否为同步包中的数据条目。兼容旧版本/其他导出路径产生的
   /// `data.json` 与带目录前缀的条目名。
   static bool _isBackupDataEntryName(String name) {
@@ -894,6 +925,10 @@ class WebDAVSyncService extends ChangeNotifier {
   /// “云端同步文件缺少 backup_data.json”且无法自愈。
   @visibleForTesting
   static Future<void> packSyncZip(String jsonPath, String zipPath) async {
+    final jsonFile = File(jsonPath);
+    if (!await jsonFile.exists()) {
+      throw StateError('待打包的本地同步数据文件不存在: $jsonPath');
+    }
     final encoder = ZipFileEncoder();
     encoder.create(zipPath);
     try {
