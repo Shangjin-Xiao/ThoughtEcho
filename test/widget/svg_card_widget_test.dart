@@ -108,6 +108,7 @@ void main() {
     final cardFinder = find.byType(GeneratedCardWidget);
     expect(cardFinder, findsOneWidget);
     final initialCardElement = tester.element(cardFinder);
+    final initialCardWidget = tester.widget<GeneratedCardWidget>(cardFinder);
 
     // Mid-animation frame (t = 150ms)
     await tester.pump(const Duration(milliseconds: 150));
@@ -118,13 +119,17 @@ void main() {
 
     // Static child subtree is preserved and reused across animation frames
     final midCardElement = tester.element(cardFinder);
+    final midCardWidget = tester.widget<GeneratedCardWidget>(cardFinder);
     expect(midCardElement, same(initialCardElement));
+    expect(midCardWidget, same(initialCardWidget));
 
     // Settle animation to completion (300ms)
     await tester.pumpAndSettle();
 
     final finalOpacity = tester.widget<Opacity>(opacityFinder);
     expect(finalOpacity.opacity, equals(1.0));
+    final finalCardWidget = tester.widget<GeneratedCardWidget>(cardFinder);
+    expect(finalCardWidget, same(initialCardWidget));
     expect(find.byType(GeneratedCardWidget), findsOneWidget);
     expect(find.byIcon(Icons.close), findsOneWidget);
   });
@@ -161,6 +166,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final initialCardWidget =
+        tester.widget<GeneratedCardWidget>(find.byType(GeneratedCardWidget));
+    expect(initialCardWidget.card, equals(sampleCard));
+
     // Tap regenerate button
     final regenerateButton = find.byIcon(Icons.refresh);
     expect(regenerateButton, findsOneWidget);
@@ -178,6 +187,10 @@ void main() {
     // Loading indicator disappears and card is updated
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(GeneratedCardWidget), findsOneWidget);
+    final updatedCardWidget =
+        tester.widget<GeneratedCardWidget>(find.byType(GeneratedCardWidget));
+    expect(updatedCardWidget.card, equals(updatedCard));
+    expect(updatedCardWidget, isNot(same(initialCardWidget)));
   });
 
   testWidgets('CardPreviewDialog dismisses when close button is tapped',
