@@ -55,9 +55,21 @@ class AgentMemoryService extends ChangeNotifier {
     }
   }
 
-  final SettingsService _settingsService;
+  SettingsService _settingsService;
   final String? _databasePath;
   final Uuid _uuid = const Uuid();
+
+  SettingsService get settingsService => _settingsService;
+
+  /// 原位更新依赖引用（SettingsService）。
+  ///
+  /// 同步且幂等，不触发额外的 notifyListeners()。
+  void updateDependencies({required SettingsService settingsService}) {
+    if (identical(_settingsService, settingsService)) return;
+    _settingsService.setIdentityAliasesProvider(null);
+    _settingsService = settingsService;
+    _settingsService.setIdentityAliasesProvider(() => _cachedIdentityAliases);
+  }
 
   Database? _database;
   Completer<Database>? _opening;

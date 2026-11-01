@@ -51,8 +51,17 @@ class InsightHistoryService extends ChangeNotifier {
   static const String _storageKey = 'periodic_insights_history';
   static const int _maxInsights = 50; // 最多保存50条洞察
 
-  final SettingsService _settingsService;
+  SettingsService _settingsService;
   List<PeriodicInsight> _insights = [];
+
+  SettingsService get settingsService => _settingsService;
+
+  /// 原位更新依赖引用（SettingsService）。
+  ///
+  /// 同步且幂等，不触发额外的 notifyListeners()。
+  void updateDependencies({required SettingsService settingsService}) {
+    _settingsService = settingsService;
+  }
 
   /// 一条 AI 洞察成功落库后触发的后台归纳。
   ///

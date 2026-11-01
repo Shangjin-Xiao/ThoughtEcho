@@ -130,7 +130,8 @@ List<SingleChildWidget> buildAppProviders({
         settingsService: context.read<SettingsService>(),
       ),
       update: (context, settings, previous) =>
-          previous ?? AgentMemoryService(settingsService: settings),
+          (previous?..updateDependencies(settingsService: settings)) ??
+          AgentMemoryService(settingsService: settings),
     ),
     ChangeNotifierProxyProvider5<SettingsService, DatabaseService,
         LocationService, WeatherService, AgentMemoryService, AgentService>(
@@ -143,7 +144,19 @@ List<SingleChildWidget> buildAppProviders({
         chatSessionService,
       ),
       update: (context, settings, db, location, weather, memory, previous) =>
-          previous ??
+          (previous
+            ?..updateDependencies(
+              settingsService: settings,
+              memoryService: memory,
+              tools: _buildAgentTools(
+                settings,
+                db,
+                location,
+                weather,
+                memory,
+                chatSessionService,
+              ),
+            )) ??
           _createAgentService(
             settings,
             db,
@@ -160,7 +173,8 @@ List<SingleChildWidget> buildAppProviders({
         settingsService: context.read<SettingsService>(),
       ),
       update: (context, settingsService, insightHistoryService) =>
-          insightHistoryService ??
+          (insightHistoryService
+            ?..updateDependencies(settingsService: settingsService)) ??
           InsightHistoryService(settingsService: settingsService),
     ),
     Provider.value(value: mmkvService), // 使用 Provider.value 提供 MMKVService
@@ -174,7 +188,11 @@ List<SingleChildWidget> buildAppProviders({
         memoryService: context.read<AgentMemoryService>(),
       ),
       update: (context, settings, memory, previous) =>
-          previous ??
+          (previous
+            ?..updateDependencies(
+              settingsService: settings,
+              memoryService: memory,
+            )) ??
           AIService(settingsService: settings, memoryService: memory),
     ),
     // 必须排在 AIService 与 InsightHistoryService 之后：它在 create 里读这两个。
@@ -231,7 +249,13 @@ List<SingleChildWidget> buildAppProviders({
         aiAnalysisDbService,
         previous,
       ) =>
-          previous ??
+          (previous
+            ?..updateDependencies(
+              backupService: backupService,
+              databaseService: databaseService,
+              settingsService: settingsService,
+              aiAnalysisDbService: aiAnalysisDbService,
+            )) ??
           NoteSyncService(
             backupService: backupService,
             databaseService: databaseService,

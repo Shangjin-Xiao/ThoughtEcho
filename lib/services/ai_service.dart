@@ -28,14 +28,17 @@ typedef StreamingErrorCallback = void Function(dynamic error);
 // TODO(refactor): This file exceeds 1300 lines. Consider splitting AI functionalities
 // (e.g., summarization, translation, chat) into dedicated provider classes.
 class AIService extends ChangeNotifier {
-  final SettingsService _settingsService;
+  SettingsService _settingsService;
   final APIKeyManager _apiKeyManager = APIKeyManager();
   final AIPromptManager _promptManager = AIPromptManager();
   final AIRequestHelper _requestHelper = AIRequestHelper();
   final OpenAIStreamService _openAIStreamService = OpenAIStreamService();
 
   /// 用户画像来源。每日提示与周期洞察共用 Thoughter 的同一份记忆。
-  final AgentMemoryService? _memoryService;
+  AgentMemoryService? _memoryService;
+
+  SettingsService get settingsService => _settingsService;
+  AgentMemoryService? get memoryService => _memoryService;
 
   /// [memoryService] 为空时（测试、或调用方不想接入记忆）每日提示与周期洞察
   /// 照常工作，只是不带用户画像——记忆是增益，不是这两条链路的前置条件。
@@ -44,6 +47,17 @@ class AIService extends ChangeNotifier {
     AgentMemoryService? memoryService,
   })  : _settingsService = settingsService,
         _memoryService = memoryService;
+
+  /// 原位更新依赖引用（SettingsService 与 AgentMemoryService）。
+  ///
+  /// 同步且幂等，不触发额外的 notifyListeners()。
+  void updateDependencies({
+    required SettingsService settingsService,
+    AgentMemoryService? memoryService,
+  }) {
+    _settingsService = settingsService;
+    _memoryService = memoryService;
+  }
 
   /// 生成类链路的画像块。
   ///
