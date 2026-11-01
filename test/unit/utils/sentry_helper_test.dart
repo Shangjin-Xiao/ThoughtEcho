@@ -288,15 +288,19 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
         'contentLength': 140,
         'textLength': 80,
         'tagCount': 5,
+        'diagnostic': 'FormatException: bad input string',
+        'error_info': 'Error: failed to connect to host',
         'url': 'https://example.com/api/v1/notes?secret_token=123#frag',
         'endpoint': 'https://service.internal/path?auth=yes',
         'nestedData': <String, dynamic>{
           'content': 'nested sensitive content',
           'innerMetric': 42,
           'nestedUrl': 'https://api.example.com/endpoint?param=secret',
+          'nestedDiagnostic': 'FormatException: invalid integer',
         },
         'complexList': <dynamic>[
           'https://api.example.com/item?api_key=secret#section',
+          'FormatException: not a url',
           <String, dynamic>{
             'query': 'nested search query',
             'safeField': 'retained',
@@ -304,6 +308,27 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
           123,
           true,
         ],
+        'deepNestedList': <dynamic>[
+          <dynamic>[
+            <String, dynamic>{
+              'token': 'deeply_nested_token',
+              'count': 7,
+            },
+          ],
+        ],
+        'unmodifiableMap': Map.unmodifiable(<String, dynamic>{
+          'secret': 'unmodifiable_secret',
+          'validKey': 'preserved',
+        }),
+        'unmodifiableList': List.unmodifiable(<dynamic>[
+          'https://example.com/item?token=abc',
+          'FormatException: unmodifiable item',
+        ]),
+        'nonStringKeyMap': <dynamic, dynamic>{
+          101: 'numeric_id_val',
+          true: 'boolean_key_val',
+          'password': 'nested_pass_secret',
+        },
       };
 
       final sanitized = sanitizeSpanData(spanData);
@@ -343,33 +368,73 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sanitized['textLength'], 80);
       expect(sanitized['tagCount'], 5);
 
+      // Diagnostic text must NOT be misclassified or modified as URLs
+      expect(sanitized['diagnostic'], 'FormatException: bad input string');
+      expect(sanitized['error_info'], 'Error: failed to connect to host');
+
       // URLs must have queries and fragments sanitized
       expect(sanitized['url'], 'https://example.com/api/v1/notes');
       expect(sanitized['endpoint'], 'https://service.internal/path');
 
       // Complex nested map and list must be sanitized safely
-      final nested = sanitized['nestedData'] as Map<String, dynamic>;
+      final nested = sanitized['nestedData'] as Map<dynamic, dynamic>;
       expect(nested, isNot(contains('content')));
       expect(nested['innerMetric'], 42);
       expect(nested['nestedUrl'], 'https://api.example.com/endpoint');
+      expect(nested['nestedDiagnostic'], 'FormatException: invalid integer');
 
       final list = sanitized['complexList'] as List<dynamic>;
       expect(list[0], 'https://api.example.com/item');
-      final listMap = list[1] as Map<String, dynamic>;
+      expect(list[1], 'FormatException: not a url');
+      final listMap = list[2] as Map<dynamic, dynamic>;
       expect(listMap, isNot(contains('query')));
       expect(listMap['safeField'], 'retained');
-      expect(list[2], 123);
-      expect(list[3], true);
+      expect(list[3], 123);
+      expect(list[4], true);
+
+      // Deeply nested list traversal
+      final deepList = sanitized['deepNestedList'] as List<dynamic>;
+      final deepInnerList = deepList[0] as List<dynamic>;
+      final deepMap = deepInnerList[0] as Map<dynamic, dynamic>;
+      expect(deepMap, isNot(contains('token')));
+      expect(deepMap['count'], 7);
+
+      // Unmodifiable map & list are deep-copied safely without mutation
+      final unmodifiableMapResult =
+          sanitized['unmodifiableMap'] as Map<dynamic, dynamic>;
+      expect(unmodifiableMapResult, isNot(contains('secret')));
+      expect(unmodifiableMapResult['validKey'], 'preserved');
+
+      final unmodifiableListResult =
+          sanitized['unmodifiableList'] as List<dynamic>;
+      expect(unmodifiableListResult[0], 'https://example.com/item');
+      expect(unmodifiableListResult[1], 'FormatException: unmodifiable item');
+
+      // Map keys that are not String are preserved
+      final nonStringMap =
+          sanitized['nonStringKeyMap'] as Map<dynamic, dynamic>;
+      expect(nonStringMap[101], 'numeric_id_val');
+      expect(nonStringMap[true], 'boolean_key_val');
+      expect(nonStringMap, isNot(contains('password')));
+
+      // Top-level unmodifiable map handling
+      final topLevelUnmodifiable = Map.unmodifiable(<String, dynamic>{
+        'token': 'top_token',
+        'safeMetric': 99,
+      });
+      final sanitizedTop = sanitizeSpanData(topLevelUnmodifiable);
+      expect(sanitizedTop, isNot(contains('token')));
+      expect(sanitizedTop['safeMetric'], 99);
     });
 
-    test('sanitizes AppTracer arguments before Sentry transaction upload',
+    test('sanitizes AppTracer arguments directly in AppTracer before upload',
         () async {
       final mockTransport = _MockSentryTransport();
       await Sentry.init((options) {
         options.dsn = 'https://public@example.com/1';
         options.transport = mockTransport;
         options.tracesSampleRate = 1.0;
-        options.beforeSendTransaction = sanitizeSentryTransaction;
+        // Do NOT set options.beforeSendTransaction so this tests AppTracer directly.
       });
 
       try {
@@ -387,6 +452,7 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
             'budgetMs': 16.6,
             'mode': 'create',
             'contentLength': 50,
+            'diagnostic': 'FormatException: bad number input',
             'url': 'https://example.com/test?token=tracer_secret#tag',
           },
         );
@@ -417,24 +483,25 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
             .whereType<SentryTransaction>()
             .single;
 
-        // Verify root trace context data (if attached to transaction)
+        // Verify root trace context data populated directly by AppTracer
         final traceData = sentryTransaction.contexts.trace?.data;
-        if (traceData != null) {
-          expect(traceData, isNot(contains('content')));
-          expect(traceData, isNot(contains('query')));
-          expect(traceData, isNot(contains('title')));
-          expect(traceData, isNot(contains('password')));
-          expect(traceData, isNot(contains('token')));
-          expect(traceData, isNot(contains('secret')));
-          expect(traceData, isNot(contains('authorization')));
-          expect(traceData, isNot(contains('search_query')));
-          expect(traceData['frameJank'], 1);
-          expect(traceData['worstFrameMs'], 34.0);
-          expect(traceData['budgetMs'], 16.6);
-          expect(traceData['mode'], 'create');
-          expect(traceData['contentLength'], 50);
-          expect(traceData['url'], 'https://example.com/test');
-        }
+        expect(traceData, isNotNull);
+        expect(traceData!, isNot(contains('content')));
+        expect(traceData, isNot(contains('query')));
+        expect(traceData, isNot(contains('title')));
+        expect(traceData, isNot(contains('password')));
+        expect(traceData, isNot(contains('token')));
+        expect(traceData, isNot(contains('secret')));
+        expect(traceData, isNot(contains('authorization')));
+        expect(traceData, isNot(contains('search_query')));
+        expect(traceData['frameJank'], 1);
+        expect(traceData['worstFrameMs'], 34.0);
+        expect(traceData['budgetMs'], 16.6);
+        expect(traceData['mode'], 'create');
+        expect(traceData['contentLength'], 50);
+        expect(traceData['avgFrameMs'], 16.0);
+        expect(traceData['diagnostic'], 'FormatException: bad number input');
+        expect(traceData['url'], 'https://example.com/test');
 
         // Verify instant child span data
         final landmarkSpan = sentryTransaction.spans.singleWhere(
@@ -459,6 +526,70 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
           expect(span.data, isNot(contains('noteText')));
           expect(span.data, isNot(contains('search_query')));
         }
+      } finally {
+        await Sentry.close();
+      }
+    });
+
+    test(
+        'end-to-end: sanitizeSentryTransaction hook scrubs span data and transaction trace data',
+        () async {
+      final mockTransport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://public@example.com/1';
+        options.transport = mockTransport;
+        options.tracesSampleRate = 1.0;
+        options.beforeSendTransaction = sanitizeSentryTransaction;
+      });
+
+      try {
+        final transaction = Sentry.startTransaction(
+          'DirectTransaction',
+          'task.direct',
+          bindToScope: true,
+        );
+        transaction.setData('rawContent', 'direct note content');
+        transaction.setData('frameJank', 4);
+        transaction.setData('url', 'https://api.example.com/v1?token=xyz#hash');
+
+        final childSpan = transaction.startChild(
+          'subtask',
+          description: 'GET https://api.example.com/data?user=secret',
+        );
+        childSpan.setData('query', 'SELECT password FROM accounts');
+        childSpan.setData('inset', 20);
+        childSpan.setData('nested', <String, dynamic>{
+          'secret': 'child_secret',
+          'innerMetric': 88,
+        });
+        await childSpan.finish();
+        await transaction.finish();
+
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+
+        final sentryTransaction = mockTransport.envelopes
+            .expand((envelope) => envelope.items)
+            .map((item) => item.originalObject)
+            .whereType<SentryTransaction>()
+            .single;
+
+        final traceData = sentryTransaction.contexts.trace?.data;
+        expect(traceData, isNotNull);
+        expect(traceData!, isNot(contains('rawContent')));
+        expect(traceData['frameJank'], 4);
+        expect(traceData['url'], 'https://api.example.com/v1');
+
+        final subtaskSpan = sentryTransaction.spans.singleWhere(
+          (span) => span.context.operation == 'subtask',
+        );
+        expect(subtaskSpan.context.description,
+            'GET https://api.example.com/data');
+        expect(subtaskSpan.data, isNot(contains('query')));
+        expect(subtaskSpan.data['inset'], 20);
+
+        final childNested = subtaskSpan.data['nested'] as Map<dynamic, dynamic>;
+        expect(childNested, isNot(contains('secret')));
+        expect(childNested['innerMetric'], 88);
       } finally {
         await Sentry.close();
       }
