@@ -4,8 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite/sqflite.dart';
-// ignore: depend_on_referenced_packages
-import 'package:sqlite3/sqlite3.dart' show SqliteException;
+import 'package:sqlite3/common.dart' show SqliteException;
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/pages/storage_management_page.dart';
 
@@ -13,10 +12,12 @@ class _FakeDatabaseException implements DatabaseException {
   _FakeDatabaseException({
     required this.message,
     this.isReadOnly = false,
+    this.resultCode,
   });
 
   final String message;
   final bool isReadOnly;
+  final int? resultCode;
 
   @override
   bool isReadOnlyError() => isReadOnly;
@@ -43,7 +44,7 @@ class _FakeDatabaseException implements DatabaseException {
   bool isOpenFailedError() => false;
 
   @override
-  int? getResultCode() => null;
+  int? getResultCode() => resultCode;
 
   @override
   Object? get result => null;
@@ -97,6 +98,45 @@ void main() {
         l10nEn.databaseMaintenanceConfirmContent,
         isNot(contains('Reclaim fragmented storage space')),
       );
+    });
+
+    test('app_zh_Hant.arb 中存储管理词条与既有用词一致（使用「資料」「效能」「裝置」「執行」）', () {
+      final l10nZhHant = lookupAppLocalizations(
+        const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+      );
+      expect(l10nZhHant.notesDatabase, '筆記與關聯資料');
+      expect(l10nZhHant.aiDatabase, '智慧輔助資料');
+      expect(l10nZhHant.logDatabase, '執行與診斷日誌');
+      expect(l10nZhHant.storageErrorDiskFull, '儲存空間不足，請先釋放裝置空間');
+      expect(
+        l10nZhHant.databaseMaintenanceConfirmContent,
+        contains('整理資料結構，提升檢索效能'),
+      );
+      expect(
+        l10nZhHant.databaseMaintenanceConfirmContent,
+        isNot(contains('數據')),
+      );
+      expect(
+        l10nZhHant.databaseMaintenanceConfirmContent,
+        isNot(contains('性能')),
+      );
+    });
+
+    test('app_fr.arb, app_ja.arb, app_ko.arb 补齐 8 个 storageError* 词条', () {
+      final l10nFr = lookupAppLocalizations(const Locale('fr'));
+      final l10nJa = lookupAppLocalizations(const Locale('ja'));
+      final l10nKo = lookupAppLocalizations(const Locale('ko'));
+
+      for (final l10n in [l10nFr, l10nJa, l10nKo]) {
+        expect(l10n.storageErrorDiskFull, isNotEmpty);
+        expect(l10n.storageErrorPermissionDenied, isNotEmpty);
+        expect(l10n.storageErrorFileNotFound, isNotEmpty);
+        expect(l10n.storageErrorDatabaseBusy, isNotEmpty);
+        expect(l10n.storageErrorDatabase, isNotEmpty);
+        expect(l10n.storageErrorFileSystem, isNotEmpty);
+        expect(l10n.storageErrorTimeout, isNotEmpty);
+        expect(l10n.storageErrorGeneral, isNotEmpty);
+      }
     });
   });
 
@@ -269,6 +309,111 @@ void main() {
         expect(
           formatStorageError(err, l10nZh),
           l10nZh.storageErrorDatabase,
+        );
+      });
+
+      test('通过 getResultCode() 提取基本错误码并屏蔽技术细节', () {
+        final diskFullErr = _FakeDatabaseException(
+          message: 'disk full',
+          resultCode: 13,
+        );
+        expect(
+          formatStorageError(diskFullErr, l10nZh),
+          l10nZh.storageErrorDiskFull,
+        );
+
+        final busyErr = _FakeDatabaseException(
+          message: 'busy',
+          resultCode: 5,
+        );
+        expect(
+          formatStorageError(busyErr, l10nZh),
+          l10nZh.storageErrorDatabaseBusy,
+        );
+
+        final lockedErr = _FakeDatabaseException(
+          message: 'locked',
+          resultCode: 6,
+        );
+        expect(
+          formatStorageError(lockedErr, l10nZh),
+          l10nZh.storageErrorDatabaseBusy,
+        );
+
+        final readOnlyErr = _FakeDatabaseException(
+          message: 'readonly',
+          resultCode: 8,
+        );
+        expect(
+          formatStorageError(readOnlyErr, l10nZh),
+          l10nZh.storageErrorPermissionDenied,
+        );
+      });
+
+      test('通过 getResultCode() & 0xff 适配 SQLite 扩展错误码', () {
+        final extBusy = _FakeDatabaseException(
+          message: 'busy recovery',
+          resultCode: 5 | (1 << 8), // SQLITE_BUSY_RECOVERY = 261
+        );
+        expect(
+          formatStorageError(extBusy, l10nZh),
+          l10nZh.storageErrorDatabaseBusy,
+        );
+
+        final extFull = _FakeDatabaseException(
+          message: 'disk full extended',
+          resultCode: 13 | (2 << 8),
+        );
+        expect(
+          formatStorageError(extFull, l10nZh),
+          l10nZh.storageErrorDiskFull,
+        );
+
+        final extReadOnly = _FakeDatabaseException(
+          message: 'readonly recovery',
+          resultCode: 8 | (1 << 8),
+        );
+        expect(
+          formatStorageError(extReadOnly, l10nZh),
+          l10nZh.storageErrorPermissionDenied,
+        );
+
+        final extOther = _FakeDatabaseException(
+          message: 'busy query failed',
+          resultCode: 1 | (2 << 8),
+        );
+        expect(
+          formatStorageError(extOther, l10nZh),
+          l10nZh.storageErrorDatabase,
+        );
+      });
+
+      test('仅在 getResultCode() == null 时降级使用字符串匹配', () {
+        final errWithNullCodeFull = _FakeDatabaseException(
+          message: 'sqlite_full: disk is full',
+          resultCode: null,
+        );
+        expect(
+          formatStorageError(errWithNullCodeFull, l10nZh),
+          l10nZh.storageErrorDiskFull,
+        );
+
+        final errWithNullCodeBusy = _FakeDatabaseException(
+          message: 'sqlite_busy: table locked',
+          resultCode: null,
+        );
+        expect(
+          formatStorageError(errWithNullCodeBusy, l10nZh),
+          l10nZh.storageErrorDatabaseBusy,
+        );
+
+        final errWithNullCodeReadOnly = _FakeDatabaseException(
+          message: 'sqlite_readonly: attempt to write',
+          resultCode: null,
+        );
+        expect(
+          formatStorageError(errWithNullCodeReadOnly, l10nZh),
+          l10nZh.storageErrorPermissionDenied,
         );
       });
     });

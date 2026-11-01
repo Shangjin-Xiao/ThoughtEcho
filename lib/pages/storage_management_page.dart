@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-// ignore: depend_on_referenced_packages
-import 'package:sqlite3/sqlite3.dart' show SqliteException;
+import 'package:sqlite3/common.dart' show SqliteException;
 import 'package:sqflite/sqflite.dart';
 import '../services/storage_management_service.dart';
 import '../services/weather_service.dart';
@@ -50,9 +49,10 @@ String formatStorageError(Object error, AppLocalizations l10n) {
       final rawMessage =
           '${osError?.message ?? ''} ${fse.message}'.toLowerCase();
 
+      final isWin = Platform.isWindows;
+
       // 存储空间不足：Linux/Android/iOS/macOS errno 28 (ENOSPC)，Windows 112 (ERROR_DISK_FULL)
-      if (code == 28 ||
-          code == 112 ||
+      if ((isWin ? code == 112 : code == 28) ||
           rawMessage.contains('no space') ||
           rawMessage.contains('disk full') ||
           rawMessage.contains('not enough space')) {
@@ -60,9 +60,7 @@ String formatStorageError(Object error, AppLocalizations l10n) {
       }
 
       // 权限受限：Linux/Android errno 13 (EACCES) / 1 (EPERM)，Windows 5 (ERROR_ACCESS_DENIED)
-      if (code == 13 ||
-          code == 1 ||
-          code == 5 ||
+      if ((isWin ? code == 5 : (code == 13 || code == 1)) ||
           rawMessage.contains('permission denied') ||
           rawMessage.contains('access is denied') ||
           rawMessage.contains('operation not permitted')) {
@@ -71,7 +69,7 @@ String formatStorageError(Object error, AppLocalizations l10n) {
 
       // 文件或路径未找到：Linux errno 2 (ENOENT)，Windows 2 (ERROR_FILE_NOT_FOUND) / 3 (ERROR_PATH_NOT_FOUND)
       if (code == 2 ||
-          code == 3 ||
+          (isWin && code == 3) ||
           rawMessage.contains('no such file') ||
           rawMessage.contains('not found') ||
           rawMessage.contains('cannot find')) {
@@ -117,6 +115,20 @@ String formatStorageError(Object error, AppLocalizations l10n) {
     case final DatabaseException dbe:
       if (dbe.isReadOnlyError()) {
         return l10n.storageErrorPermissionDenied;
+      }
+
+      final resultCode = dbe.getResultCode();
+      if (resultCode != null) {
+        switch (resultCode & 0xff) {
+          case 13:
+            return l10n.storageErrorDiskFull;
+          case 5:
+          case 6:
+            return l10n.storageErrorDatabaseBusy;
+          case 8:
+            return l10n.storageErrorPermissionDenied;
+        }
+        return l10n.storageErrorDatabase;
       }
 
       final rawMessage = dbe.toString().toLowerCase();
