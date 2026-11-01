@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/widgets.dart';
@@ -9,6 +10,8 @@ import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
+import 'package:thoughtecho/utils/global_exception_handler.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/utils/sentry_network_tracing.dart';
@@ -18,19 +21,66 @@ import 'package:thoughtecho/services/database_platform_bootstrap.dart';
 const String kBackgroundPushTask = 'com.shangjin.thoughtecho.backgroundPush';
 const String kPeriodicCheckTask = 'com.shangjin.thoughtecho.periodicCheck';
 
-/// 从 MMKV 读取设置并根据用户配置后台初始化 Sentry
-void _configureSentryFromSettings(MMKVService mmkvService) {
-  final appSettingsJson = mmkvService.getString('app_settings');
-  if (appSettingsJson == null) return;
+/// 封装集中式后台监控初始化函数
+///
+/// 从 MMKV 读取设置，配置 Sentry（数据库与网络追踪）和 Aptabase 统计，
+/// 并初始化全局未捕获异常处理器 GlobalExceptionHandler 与 PlatformDispatcher.instance.onError，
+/// 消除后台 Isolate 监控盲区。
+void initBackgroundMonitoring(MMKVService mmkvService) {
+  // 1. 初始化全局异常处理器与 PlatformDispatcher 未捕获异常回调
+  try {
+    GlobalExceptionHandler.initialize();
+  } catch (e) {
+    AppLogger.w('后台 GlobalExceptionHandler 初始化失败: $e');
+  }
 
   try {
-    final settingsMap = json.decode(appSettingsJson) as Map<String, dynamic>;
-    final sentryEnabled = settingsMap['sentryEnabled'] as bool? ?? false;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      AppLogger.e(
+        '后台 Isolate 捕获到未处理的异步异常: $error',
+        error: error,
+        stackTrace: stack,
+        source: 'PlatformDispatcher',
+      );
+      return true;
+    };
+  } catch (e) {
+    AppLogger.w('后台 PlatformDispatcher.instance.onError 设置失败: $e');
+  }
+
+  // 2. 读取 MMKV 中的 app_settings，解析 sentryEnabled 与 telemetryEnabled
+  bool sentryEnabled = false;
+  bool telemetryEnabled = false;
+
+  try {
+    final appSettingsJson = mmkvService.getString('app_settings');
+    if (appSettingsJson != null) {
+      final settingsMap = json.decode(appSettingsJson) as Map<String, dynamic>;
+      sentryEnabled = settingsMap['sentryEnabled'] as bool? ?? false;
+      telemetryEnabled = settingsMap['telemetryEnabled'] as bool? ?? false;
+    }
+  } catch (e) {
+    AppLogger.w('后台解析 app_settings 失败，回退为默认配置: $e');
+  }
+
+  // 3. 配置 Sentry
+  try {
     SentryDatabaseTracing.configure(enabled: sentryEnabled);
     SentryNetworkTracing.configure(enabled: sentryEnabled);
     SentryHelper.startIfEnabled(sentryEnabled);
   } catch (e) {
     AppLogger.w('后台 Sentry 初始化失败: $e');
+  }
+
+  // 4. 配置 Aptabase 统计
+  try {
+    unawaited(
+      AptabaseHelper.configure(enabled: telemetryEnabled).catchError((e) {
+        AppLogger.w('后台 Aptabase 初始化失败: $e');
+      }),
+    );
+  } catch (e) {
+    AppLogger.w('后台 Aptabase 配置失败: $e');
   }
 }
 
@@ -51,8 +101,8 @@ void callbackDispatcher() {
       final mmkvService = MMKVService();
       await mmkvService.init();
 
-      // 从 mmkv 加载设置并判断是否启用 Sentry
-      _configureSentryFromSettings(mmkvService);
+      // 初始化后台集中监控
+      initBackgroundMonitoring(mmkvService);
 
       // 关键修复：后台 Isolate 必须先设置数据库路径
       // main.dart 中的 setDatabasesPath() 设置仅在主 Isolate 中生效，
@@ -136,8 +186,8 @@ void backgroundPushCallback(int id) async {
     await mmkvService.init();
     AppLogger.d('MMKV 初始化完成');
 
-    // 从 mmkv 加载设置并判断是否启用 Sentry
-    _configureSentryFromSettings(mmkvService);
+    // 初始化后台集中监控
+    initBackgroundMonitoring(mmkvService);
 
     // 关键修复：后台 Isolate 必须先设置数据库路径
     // main.dart 中的 setDatabasesPath() 设置仅在主 Isolate 中生效，
@@ -219,8 +269,8 @@ Future<void> backgroundPeriodicCheck() async {
     final mmkvService = MMKVService();
     await mmkvService.init();
 
-    // 从 mmkv 加载设置并判断是否启用 Sentry
-    _configureSentryFromSettings(mmkvService);
+    // 初始化后台集中监控
+    initBackgroundMonitoring(mmkvService);
 
     // 关键修复：后台 Isolate 必须先设置数据库路径
     await initializeDatabasePlatform();
