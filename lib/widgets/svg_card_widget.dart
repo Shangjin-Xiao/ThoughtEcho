@@ -5,6 +5,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/generated_card.dart';
 import '../theme/app_semantic_colors.dart';
 import '../utils/app_logger.dart';
+import '../utils/bounded_svg_loader.dart';
 import 'app_snackbar.dart';
 import '../theme/theme_style.dart';
 
@@ -84,8 +85,8 @@ class SVGCardWidget extends StatelessWidget {
       }
 
       // 使用与导出完全一致的渲染配置
-      return SvgPicture.string(
-        svgContent,
+      return SvgPicture(
+        BoundedSvgLoader(svgContent),
         fit: fit,
         width: width,
         height: height,
@@ -227,8 +228,8 @@ class SVGCardWidget extends StatelessWidget {
         source: 'SvgCardWidget',
       );
 
-      return SvgPicture.string(
-        fallbackSVG,
+      return SvgPicture(
+        BoundedSvgLoader(fallbackSVG),
         fit: fit,
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(

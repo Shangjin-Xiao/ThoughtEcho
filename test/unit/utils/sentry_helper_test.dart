@@ -1,6 +1,11 @@
 // ignore_for_file: experimental_member_use
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/utils/app_tracer.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
@@ -399,6 +404,93 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
 
       expect(sanitized?.data, isNot(contains('http.query')));
       expect(sanitized?.data, isNot(contains('http.fragment')));
+    });
+
+    test('scrubs URLs in every transmitted nested network exception', () async {
+      final transport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://public@example.com/1';
+        options.transport = transport;
+        options.beforeSend = sanitizeSentryEvent;
+      });
+      final dio = Dio()..addSentry();
+
+      try {
+        final uri = Uri.parse(
+          'https://user:private-pass@weather.example/forecast'
+          '?latitude=12.345678&longitude=98.765432&api_key=private-key'
+          '#private-fragment',
+        );
+        final stackTrace = StackTrace.current;
+        final error = DioException(
+          requestOptions: RequestOptions(path: uri.toString()),
+          error: HttpException(
+            'Connection closed before full header was received',
+            uri: uri,
+          ),
+          message: 'Retry HTTP://fallback.example/forecast?token=private-token',
+          stackTrace: stackTrace,
+        );
+
+        await Sentry.captureException(error, stackTrace: stackTrace);
+
+        final event = transport.envelopes
+            .expand((envelope) => envelope.items)
+            .map((item) => item.originalObject)
+            .whereType<SentryEvent>()
+            .single;
+        final exceptions = event.toJson()['exception']['values'] as List;
+        expect(
+          exceptions.map((dynamic exception) => exception['type']),
+          containsAll(['DioException', 'HttpException']),
+        );
+        for (final exception in exceptions) {
+          expect(
+              exception['value'], contains('https://weather.example/forecast'));
+          expect(exception['value'], contains('Connection closed'));
+        }
+        expect(
+          exceptions.singleWhere(
+            (dynamic exception) => exception['type'] == 'DioException',
+          )['value'],
+          contains('http://fallback.example/forecast'),
+        );
+        expect(event.exceptions!.any((e) => e.stackTrace != null), isTrue);
+        final payload = jsonEncode(event.toJson());
+        for (final sensitive in [
+          '12.345678',
+          '98.765432',
+          'user:',
+          'private-pass',
+          'api_key',
+          'private-key',
+          'private-fragment',
+          'private-token',
+        ]) {
+          expect(payload, isNot(contains(sensitive)));
+        }
+      } finally {
+        dio.close();
+        await Sentry.close();
+      }
+    });
+
+    test('preserves non-URL values and redacts malformed exception URLs', () {
+      final event = SentryEvent(exceptions: [
+        SentryException(type: 'StateError', value: 'Cache unavailable'),
+        SentryException(type: 'UnknownError', value: null),
+        SentryException(
+          type: 'NetworkError',
+          value: 'Failed: https://[invalid?token=private-token',
+        ),
+      ]);
+
+      final sanitized = sanitizeSentryEvent(event, Hint());
+
+      expect(
+        sanitized?.exceptions?.map((exception) => exception.value),
+        ['Cache unavailable', null, 'Failed: [invalid URL]'],
+      );
     });
 
     test('removes sensitive HTTP request context from error events', () {

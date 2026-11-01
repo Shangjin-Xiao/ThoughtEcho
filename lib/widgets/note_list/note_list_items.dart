@@ -514,8 +514,8 @@ extension _NoteListItemsExtension on NoteListViewState {
       // 性能优化：BackdropGroup 让多个 BackdropFilter.grouped 共享采样
       // 减少 GPU 重复帧缓冲读回，显著降低多模糊 item 同屏时的光栅开销
       child: BackdropGroup(
-        child: Scrollbar(
-          controller: _scrollController,
+        child: _wrapWithDesktopScrollbar(
+          context,
           child: ListView.builder(
             controller: _scrollController, // 添加滚动控制器
             // 必须显式给 padding。padding 为 null 时 BoxScrollView 会把
@@ -707,6 +707,19 @@ extension _NoteListItemsExtension on NoteListViewState {
         ),
       ),
     );
+  }
+
+  Widget _wrapWithDesktopScrollbar(
+    BuildContext context, {
+    required Widget child,
+  }) {
+    if (Theme.of(context).platform == TargetPlatform.windows) {
+      return Scrollbar(
+        controller: _scrollController,
+        child: child,
+      );
+    }
+    return child;
   }
 
   void _cancelScrollEndSettledWork() {

@@ -390,4 +390,72 @@ void main() {
       expect(await backupOf('second-round'), 'inspirational');
     });
   });
+
+  group('异构/非标准 Map 与类型强转防御', () {
+    test('importDataFromMap 防御非标准 Map 和非 Map 元素崩溃', () async {
+      final heterogeneousMap = <dynamic, dynamic>{
+        'id': 'cat_hetero',
+        'name': '异构分类',
+        'last_modified': '2026-03-30T10:00:00Z',
+      };
+
+      final stats = await service.importDataFromMap(db, {
+        'categories': [
+          heterogeneousMap, // Map<dynamic, dynamic>
+          'invalid_category_string', // 纯字符串坏节点
+          null, // null 坏节点
+        ],
+        'quotes': [
+          <dynamic, dynamic>{
+            'id': 'quote_hetero',
+            'content': '异构 Map 笔记正文',
+            'date': '2026-03-30T10:00:00Z',
+          },
+          12345, // 整数坏节点
+        ],
+      });
+
+      expect(stats.skippedEmptyQuotes, 0);
+      final categories = await db.query('categories');
+      expect(categories, hasLength(1));
+      expect(categories.first['name'], '异构分类');
+
+      final quotes = await db.query('quotes');
+      expect(quotes, hasLength(1));
+      expect(quotes.first['content'], '异构 Map 笔记正文');
+    });
+
+    test('importDataWithLWWMerge 防御异构 Map 合并崩溃', () async {
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [
+          <dynamic, dynamic>{
+            'id': 'cat_merge_hetero',
+            'name': '合并异构分类',
+          },
+        ],
+        'quotes': [
+          <dynamic, dynamic>{
+            'id': 'quote_merge_hetero',
+            'content': 'LWW 异构 Map 笔记',
+            'date': '2026-03-30T10:00:00Z',
+          },
+          'invalid_quote',
+        ],
+        'tombstones': [
+          <dynamic, dynamic>{
+            'quote_id': 'quote_to_delete',
+            'deleted_at': '2026-03-30T10:00:00Z',
+          },
+        ],
+      });
+
+      expect(report.insertedCategories, 1);
+      expect(report.insertedQuotes, 1);
+      expect(report.errors, isEmpty);
+
+      final quotes = await db.query('quotes');
+      expect(quotes, hasLength(1));
+      expect(quotes.first['content'], 'LWW 异构 Map 笔记');
+    });
+  });
 }

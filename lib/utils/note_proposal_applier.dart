@@ -11,6 +11,9 @@ enum NoteProposalApplyStatus {
   /// 已写入数据库。
   applied,
 
+  /// 当前笔记未通过访问验证，不写库。
+  accessDenied,
+
   /// 笔记不存在，或 revision 与提案生成时不一致（用户在别处改过）。
   conflict,
 }
@@ -41,14 +44,39 @@ class NoteProposalApplier {
   /// 提案生成后笔记又被改过时返回 [NoteProposalApplyStatus.conflict]，不写库——
   /// 这同时挡住了「同一个提案被重复采纳」：第一次采纳会改变笔记的 revision，
   /// 第二次就对不上了。
+  /// [authorizeNote] 负责当前笔记的访问验证；未提供时拒绝修改隐藏笔记。
   Future<NoteProposalApplyResult> applyEdit(
-    NoteProposalArtifact artifact,
-  ) async {
+    NoteProposalArtifact artifact, {
+    Future<bool> Function(Quote note)? authorizeNote,
+  }) async {
     final noteId = artifact.noteId;
     if (noteId == null) {
       return const NoteProposalApplyResult(NoteProposalApplyStatus.conflict);
     }
-    final note = await _databaseService.getQuoteById(noteId);
+    var note = await _databaseService.getQuoteById(noteId);
+    if (note == null) {
+      return const NoteProposalApplyResult(NoteProposalApplyStatus.conflict);
+    }
+    // Headless callers cannot implicitly authorize a hidden note. The UI checks
+    // the current protection setting and performs authentication in this gate.
+    final wasHidden = note.tagIds.contains(DatabaseService.hiddenTagId);
+    final authorized =
+        authorizeNote != null ? await authorizeNote(note) : !wasHidden;
+    if (!authorized) {
+      return const NoteProposalApplyResult(
+          NoteProposalApplyStatus.accessDenied);
+    }
+    // Authentication may wait on a system prompt. Re-read before composing the
+    // update so concurrent content/metadata changes are not silently overwritten.
+    if (authorizeNote != null) {
+      note = await _databaseService.getQuoteById(noteId);
+      if (note != null &&
+          !wasHidden &&
+          note.tagIds.contains(DatabaseService.hiddenTagId)) {
+        return const NoteProposalApplyResult(
+            NoteProposalApplyStatus.accessDenied);
+      }
+    }
     if (note == null ||
         ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
       return const NoteProposalApplyResult(NoteProposalApplyStatus.conflict);
