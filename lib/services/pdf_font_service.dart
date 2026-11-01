@@ -7,6 +7,7 @@ import 'package:meta/meta.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -42,6 +43,29 @@ class PdfFontService {
   static ByteData? _cachedMaterialIconFontData;
 
   static ByteData? _cachedBundledSerifData;
+
+  static final Map<String, Future<ByteData?>> _inFlightDownloads = {};
+
+  @visibleForTesting
+  static Dio? dioForTesting;
+
+  static Dio? _fallbackSharedDio;
+
+  static Dio _getDio() {
+    if (dioForTesting != null) {
+      return dioForTesting!;
+    }
+    try {
+      return NetworkService.instance.generalDio;
+    } catch (_) {
+      return _fallbackSharedDio ??= Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 8),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+    }
+  }
 
   static const _multilingualFontFileName = "cached_noto_sans_sc.ttf";
   static const _obsoleteMultilingualFontFileName =
@@ -245,7 +269,10 @@ class PdfFontService {
     if (disableExternalLoadingForTesting) {
       return null;
     }
-    final cached = await _tryLoadCachedFont(_emojiFontFileName);
+    final cached = await _tryLoadCachedFont(
+      _emojiFontFileName,
+      validator: isValidEmojiFontData,
+    );
     if (cached != null && isValidEmojiFontData(cached)) {
       _cachedEmojiFontData = cached;
       return cached;
@@ -394,8 +421,34 @@ class PdfFontService {
     _cachedMonochromeEmojiFontData = null;
     _cachedMaterialIconFontData = null;
     _cachedBundledSerifData = null;
+    _inFlightDownloads.clear();
+    dioForTesting = null;
+    _fallbackSharedDio?.close();
+    _fallbackSharedDio = null;
     disableExternalLoadingForTesting = false;
   }
+
+  @visibleForTesting
+  static Future<ByteData?> tryLoadCachedFontForTesting(
+    String fileName, {
+    bool Function(ByteData)? validator,
+  }) =>
+      _tryLoadCachedFont(fileName, validator: validator);
+
+  @visibleForTesting
+  static Future<ByteData?> downloadAndCacheFontForTesting({
+    required String fileName,
+    required List<String> urls,
+    bool Function(ByteData)? validator,
+  }) =>
+      _downloadAndCacheFont(
+        fileName: fileName,
+        urls: urls,
+        validator: validator,
+      );
+
+  @visibleForTesting
+  static int get inFlightDownloadsCountForTesting => _inFlightDownloads.length;
 
   @visibleForTesting
   static void setCachedFontDataForTesting(ByteData? data) {
@@ -496,15 +549,29 @@ class PdfFontService {
     return null;
   }
 
-  /// 读取已下载缓存的字体
-  static Future<ByteData?> _tryLoadCachedFont(String fileName) async {
+  /// 读取已下载缓存的字体，若数据非法或损坏则自动擦除自愈
+  static Future<ByteData?> _tryLoadCachedFont(
+    String fileName, {
+    bool Function(ByteData)? validator,
+  }) async {
+    final isValid = validator ?? isValidFontData;
     try {
       final docDir = await getApplicationDocumentsDirectory();
       final fontFile = File("${docDir.path}/$fileName");
       if (await fontFile.exists()) {
         final bytes = await fontFile.readAsBytes();
         if (bytes.isNotEmpty) {
-          return ByteData.view(bytes.buffer);
+          final byteData = ByteData.view(bytes.buffer);
+          if (isValid(byteData)) {
+            return byteData;
+          }
+        }
+        logDebug("检测到损坏或非法的本地字体缓存文件: $fileName，正在自动擦除自愈",
+            source: "PdfFontService");
+        try {
+          await fontFile.delete();
+        } catch (e) {
+          logDebug("擦除损坏字体缓存文件失败 ($fileName): $e", source: "PdfFontService");
         }
       }
     } catch (e) {
@@ -529,14 +596,37 @@ class PdfFontService {
     required String fileName,
     required List<String> urls,
     bool Function(ByteData)? validator,
+  }) {
+    if (disableExternalLoadingForTesting) {
+      return Future.value(null);
+    }
+    final inFlight = _inFlightDownloads[fileName];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _doDownloadAndCacheFont(
+      fileName: fileName,
+      urls: urls,
+      validator: validator,
+    );
+
+    _inFlightDownloads[fileName] = future;
+    return future.whenComplete(() {
+      _inFlightDownloads.remove(fileName);
+    });
+  }
+
+  static Future<ByteData?> _doDownloadAndCacheFont({
+    required String fileName,
+    required List<String> urls,
+    bool Function(ByteData)? validator,
   }) async {
     final isValid = validator ?? isValidFontData;
-    final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 8),
-      receiveTimeout: const Duration(seconds: 15),
-    ));
+    final dio = _getDio();
 
     for (final url in urls) {
+      File? tempFile;
       try {
         logDebug("开始网络下载 PDF 字体: $url", source: "PdfFontService");
         final response = await dio.get<List<int>>(
@@ -546,18 +636,44 @@ class PdfFontService {
         if (response.data != null && response.data!.isNotEmpty) {
           final bytes = Uint8List.fromList(response.data!);
           final byteData = ByteData.view(bytes.buffer);
+
+          final docDir = await getApplicationDocumentsDirectory();
+          tempFile = File("${docDir.path}/$fileName.tmp");
+          final targetFile = File("${docDir.path}/$fileName");
+
+          await tempFile.writeAsBytes(bytes, flush: true);
+
           if (isValid(byteData)) {
-            final docDir = await getApplicationDocumentsDirectory();
-            final fontFile = File("${docDir.path}/$fileName");
-            await fontFile.writeAsBytes(bytes);
-            logDebug("PDF 字体下载成功，并已缓存至: ${fontFile.path}",
+            try {
+              await tempFile.rename(targetFile.path);
+            } catch (_) {
+              if (await targetFile.exists()) {
+                try {
+                  await targetFile.delete();
+                } catch (_) {}
+              }
+              await tempFile.rename(targetFile.path);
+            }
+            logDebug("PDF 字体下载成功，并已缓存至: ${targetFile.path}",
                 source: "PdfFontService");
             return byteData;
           } else {
+            try {
+              if (await tempFile.exists()) {
+                await tempFile.delete();
+              }
+            } catch (_) {}
             logDebug("下载的字体数据格式无效，跳过该源: $url", source: "PdfFontService");
           }
         }
       } catch (e) {
+        if (tempFile != null) {
+          try {
+            if (await tempFile.exists()) {
+              await tempFile.delete();
+            }
+          } catch (_) {}
+        }
         logDebug("从 $url 下载中文字体失败: $e", source: "PdfFontService");
       }
     }
