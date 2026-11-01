@@ -7,6 +7,7 @@ import '../models/note_tag.dart';
 import '../services/biometric_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/database_service.dart';
+import '../services/excerpt_intent_service.dart';
 import '../services/settings_service.dart';
 import '../utils/icon_utils.dart';
 import '../widgets/app_snackbar.dart';
@@ -208,15 +209,18 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   onChanged: (v) => settings.setAutoAttachWeather(v),
                 ),
                 _buildDivider(),
-                _buildSwitchTile(
-                  context: context,
-                  title: l10n.excerptIntentEnabled,
-                  subtitle: l10n.excerptIntentEnabledDesc,
-                  icon: Icons.short_text_rounded,
-                  value: settings.excerptIntentEnabled,
-                  onChanged: (v) => settings.setExcerptIntentEnabled(v),
-                ),
-                _buildDivider(),
+                // 「摘录到心迹」只有 Android 原生侧实现，其他平台不展示该开关。
+                if (const ExcerptIntentService().isSupported) ...[
+                  _buildSwitchTile(
+                    context: context,
+                    title: l10n.excerptIntentEnabled,
+                    subtitle: l10n.excerptIntentEnabledDesc,
+                    icon: Icons.short_text_rounded,
+                    value: settings.excerptIntentEnabled,
+                    onChanged: (v) => settings.setExcerptIntentEnabled(v),
+                  ),
+                  _buildDivider(),
+                ],
                 _buildSwitchTile(
                   context: context,
                   title: l10n.skipNonFullscreenEditor,

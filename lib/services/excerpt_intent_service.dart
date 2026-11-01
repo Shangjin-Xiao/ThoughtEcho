@@ -42,8 +42,8 @@ class ExcerptIntentService {
       return trimmed;
     } on MissingPluginException catch (e) {
       // 平台判断之后还撞上，说明是 Android 侧注册时机出了问题（例如引擎重建）。
-      // 仍然要看得见，但它不是「错误」，别再进 Sentry 的错误流。
-      logDebug(
+      // 这是真实的注册缺陷，按 WARNING 记录以保持可见。
+      logWarning(
         'ExcerptIntentService.consumePendingExcerptText 未找到原生实现: $e',
         source: 'ExcerptIntentService',
       );
@@ -63,7 +63,8 @@ class ExcerptIntentService {
     try {
       await _channel.invokeMethod<void>('setExcerptEntryEnabled', enabled);
     } on MissingPluginException catch (e) {
-      logDebug(
+      // 仅在 Android 上可达：说明原生侧未注册 channel，按 WARNING 记录。
+      logWarning(
         'ExcerptIntentService.syncEntryPointEnabled 未找到原生实现: $e',
         source: 'ExcerptIntentService',
       );
