@@ -321,11 +321,10 @@ class _LazyQuillImage extends StatefulWidget {
 
 class _LazyQuillImageState extends State<_LazyQuillImage>
     with AutomaticKeepAliveClientMixin {
-  /// 卡片内预览图的解码倍率上限。
+  /// 笔记卡片与编辑器内预览图的解码倍率上限。
   ///
-  /// 这条路径只服务笔记卡片（全屏编辑器用 `optimizedImages: false` 的原生
-  /// builder，点开的大图预览页不传解码上限，都拿全分辨率），所以这里只需要
-  /// 满足"滑过去看一眼"的清晰度。
+  /// 这条路径服务笔记卡片与全屏编辑器（点开的大图预览页不传解码上限，
+  /// 拿全分辨率），在富文本视图中只需要满足常规查看与滚动的清晰度。
   ///
   /// 按屏幕最高精度（dpr 3）解码，单张常规照片就要 2.8MB，二十几张即可占满
   /// Flutter 默认 100MB 的图片缓存；之后每次上下滑都在淘汰和重新解码，
