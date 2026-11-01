@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+// ignore: depend_on_referenced_packages
+import 'package:sqlite3/sqlite3.dart' show SqliteException;
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/pages/storage_management_page.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
@@ -26,6 +30,7 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
   Future<Map<String, dynamic>> performDatabaseMaintenance({
     Function(String)? onProgress,
   }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     onProgress?.call('测试进度');
     return maintenanceResult ??
         {
@@ -35,6 +40,29 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
           'db_size_before_mb': 10.0,
           'db_size_after_mb': 8.5,
         };
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('DatabaseService.${invocation.memberName} 未实现');
+}
+
+class _ThrowingDatabaseService extends ChangeNotifier
+    implements DatabaseService {
+  _ThrowingDatabaseService(this.errorToThrow);
+
+  final Object errorToThrow;
+
+  @override
+  Future<int> getDeletedQuotesCount() async => 0;
+
+  @override
+  Future<Map<String, dynamic>> performDatabaseMaintenance({
+    Function(String)? onProgress,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    onProgress?.call('测试进度');
+    throw errorToThrow;
   }
 
   @override
@@ -83,6 +111,18 @@ Future<void> _pumpUntilStorageContentLoaded(WidgetTester tester) async {
     }
   }
   fail('存储管理页面内容未在预期时间内加载完成');
+}
+
+Future<void> _pumpUntilTextFound(WidgetTester tester, Pattern pattern) async {
+  for (var i = 0; i < 40; i++) {
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump(const Duration(milliseconds: 100));
+    if (find.textContaining(pattern).evaluate().isNotEmpty) {
+      return;
+    }
+  }
 }
 
 void main() {
@@ -292,20 +332,95 @@ void main() {
 
       await tester.pumpWidget(_buildTestApp(databaseService: fakeDb));
       await _pumpUntilStorageContentLoaded(tester);
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pump();
 
       // Find and click database maintenance button if present
-      final btnFinder = find.widgetWithText(OutlinedButton, '数据库维护与碎片整理');
+      final btnFinder = find.widgetWithText(OutlinedButton, '本地存储维护优化');
       if (btnFinder.evaluate().isNotEmpty) {
         await tester.tap(btnFinder);
         await tester.pump(); // Confirm dialog
         final confirmBtn = find.widgetWithText(FilledButton, '开始维护');
         if (confirmBtn.evaluate().isNotEmpty) {
           await tester.tap(confirmBtn);
-          await tester.pumpAndSettle();
+          await tester.pump();
+          await _pumpUntilTextFound(tester, '维护完成');
 
-          expect(find.text('数据库维护完成'), findsOneWidget);
+          expect(find.text('维护完成'), findsOneWidget);
         }
       }
+
+      await _disposeApp(tester);
+      _disposeLogServiceOnce();
+    });
+
+    testWidgets('数据库维护返回错误时通过 AppSnackBar 展示格式化后的友好错误信息（非技术异常文本）',
+        (tester) async {
+      final fakeDb = _FakeDatabaseService(
+        deletedCount: 0,
+        maintenanceResult: {
+          'success': false,
+          'errorCode': 'maintenance_failed',
+          'error': FileSystemException(
+            'write failed',
+            '/private/data/app.db',
+            const OSError('No space left on device', 28),
+          ),
+        },
+      );
+
+      await tester.pumpWidget(_buildTestApp(databaseService: fakeDb));
+      await _pumpUntilStorageContentLoaded(tester);
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pump();
+
+      final btnFinder = find.widgetWithText(OutlinedButton, '本地存储维护优化');
+      expect(btnFinder, findsOneWidget);
+      await tester.tap(btnFinder);
+      await tester.pump();
+
+      final confirmBtn = find.widgetWithText(FilledButton, '开始维护');
+      expect(confirmBtn, findsOneWidget);
+      await tester.tap(confirmBtn);
+      await tester.pump();
+      await _pumpUntilTextFound(tester, '存储空间不足');
+
+      // 应展示本地化友好的存储空间不足提示，而不是技术细节或内部路径
+      expect(find.textContaining('存储空间不足'), findsOneWidget);
+      expect(find.textContaining('FileSystemException'), findsNothing);
+      expect(find.textContaining('/private/data/app.db'), findsNothing);
+
+      await _disposeApp(tester);
+      _disposeLogServiceOnce();
+    });
+
+    testWidgets('数据库维护抛出异常时通过 AppSnackBar 展示格式化后的友好错误信息', (tester) async {
+      final throwingDb = _ThrowingDatabaseService(
+        SqliteException(
+          extendedResultCode: 5,
+          message: 'database is locked',
+        ),
+      );
+
+      await tester.pumpWidget(_buildTestApp(databaseService: throwingDb));
+      await _pumpUntilStorageContentLoaded(tester);
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pump();
+
+      final btnFinder = find.widgetWithText(OutlinedButton, '本地存储维护优化');
+      expect(btnFinder, findsOneWidget);
+      await tester.tap(btnFinder);
+      await tester.pump();
+
+      final confirmBtn = find.widgetWithText(FilledButton, '开始维护');
+      expect(confirmBtn, findsOneWidget);
+      await tester.tap(confirmBtn);
+      await tester.pump();
+      await _pumpUntilTextFound(tester, '数据正忙');
+
+      // 应展示数据正忙提示，不泄漏 SqliteException
+      expect(find.textContaining('数据正忙'), findsOneWidget);
+      expect(find.textContaining('SqliteException'), findsNothing);
 
       await _disposeApp(tester);
       _disposeLogServiceOnce();

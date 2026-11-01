@@ -1,14 +1,17 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+// ignore: depend_on_referenced_packages
+import 'package:sqlite3/sqlite3.dart' show SqliteException;
+import 'package:sqflite/sqflite.dart';
 import '../services/storage_management_service.dart';
 import '../services/weather_service.dart';
 import '../services/database_service.dart';
 import '../services/data_directory_service.dart';
 import '../services/large_file_manager.dart';
-import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/app_semantic_colors.dart';
 import '../theme/theme_style.dart';
@@ -32,6 +35,148 @@ String dataDirectoryRejectionMessage(
       DataDirectoryTargetRejection.nestedDirectory =>
         l10n.migrationTargetNested,
     };
+
+/// 把底层存储异常映射为对普通用户友好的本地化分类提示文案。
+///
+/// 遵循 [dataDirectoryRejectionMessage] 风格，通过模式匹配捕获 [FileSystemException]、
+/// [SqliteException]、[DatabaseException]、[TimeoutException] 等底层异常，
+/// 避免将代码级报错或 SQL / 数据库黑话暴露给用户。
+@visibleForTesting
+String formatStorageError(Object error, AppLocalizations l10n) {
+  switch (error) {
+    case final FileSystemException fse:
+      final osError = fse.osError;
+      final code = osError?.errorCode;
+      final rawMessage =
+          '${osError?.message ?? ''} ${fse.message}'.toLowerCase();
+
+      // 存储空间不足：Linux/Android/iOS/macOS errno 28 (ENOSPC)，Windows 112 (ERROR_DISK_FULL)
+      if (code == 28 ||
+          code == 112 ||
+          rawMessage.contains('no space') ||
+          rawMessage.contains('disk full') ||
+          rawMessage.contains('not enough space')) {
+        return l10n.storageErrorDiskFull;
+      }
+
+      // 权限受限：Linux/Android errno 13 (EACCES) / 1 (EPERM)，Windows 5 (ERROR_ACCESS_DENIED)
+      if (code == 13 ||
+          code == 1 ||
+          code == 5 ||
+          rawMessage.contains('permission denied') ||
+          rawMessage.contains('access is denied') ||
+          rawMessage.contains('operation not permitted')) {
+        return l10n.storageErrorPermissionDenied;
+      }
+
+      // 文件或路径未找到：Linux errno 2 (ENOENT)，Windows 2 (ERROR_FILE_NOT_FOUND) / 3 (ERROR_PATH_NOT_FOUND)
+      if (code == 2 ||
+          code == 3 ||
+          rawMessage.contains('no such file') ||
+          rawMessage.contains('not found') ||
+          rawMessage.contains('cannot find')) {
+        return l10n.storageErrorFileNotFound;
+      }
+
+      return l10n.storageErrorFileSystem;
+
+    case final SqliteException se:
+      final code = se.resultCode;
+      final extCode = se.extendedResultCode;
+      final rawMessage = '${se.message} ${se.explanation ?? ''}'.toLowerCase();
+
+      // SQLITE_FULL = 13
+      if (code == 13 ||
+          extCode == 13 ||
+          rawMessage.contains('full') ||
+          rawMessage.contains('no space')) {
+        return l10n.storageErrorDiskFull;
+      }
+
+      // SQLITE_BUSY = 5, SQLITE_LOCKED = 6
+      if (code == 5 ||
+          code == 6 ||
+          extCode == 5 ||
+          extCode == 6 ||
+          rawMessage.contains('busy') ||
+          rawMessage.contains('locked')) {
+        return l10n.storageErrorDatabaseBusy;
+      }
+
+      // SQLITE_READONLY = 8, SQLITE_AUTH = 23, SQLITE_CANTOPEN = 14
+      if (code == 8 ||
+          code == 23 ||
+          rawMessage.contains('readonly') ||
+          rawMessage.contains('permission') ||
+          rawMessage.contains('denied')) {
+        return l10n.storageErrorPermissionDenied;
+      }
+
+      return l10n.storageErrorDatabase;
+
+    case final DatabaseException dbe:
+      if (dbe.isReadOnlyError()) {
+        return l10n.storageErrorPermissionDenied;
+      }
+
+      final rawMessage = dbe.toString().toLowerCase();
+
+      if (rawMessage.contains('sqlite_full') ||
+          rawMessage.contains('full') ||
+          rawMessage.contains('no space') ||
+          rawMessage.contains('code 13')) {
+        return l10n.storageErrorDiskFull;
+      }
+
+      if (rawMessage.contains('sqlite_busy') ||
+          rawMessage.contains('sqlite_locked') ||
+          rawMessage.contains('busy') ||
+          rawMessage.contains('locked') ||
+          rawMessage.contains('code 5') ||
+          rawMessage.contains('code 6')) {
+        return l10n.storageErrorDatabaseBusy;
+      }
+
+      if (rawMessage.contains('sqlite_readonly') ||
+          rawMessage.contains('permission') ||
+          rawMessage.contains('denied') ||
+          rawMessage.contains('code 8')) {
+        return l10n.storageErrorPermissionDenied;
+      }
+
+      return l10n.storageErrorDatabase;
+
+    case final TimeoutException _:
+      return l10n.storageErrorTimeout;
+
+    default:
+      final str = error.toString().toLowerCase();
+      if (str == 'maintenance_failed') {
+        return l10n.storageErrorDatabase;
+      }
+      if (str.contains('sqlite_full') ||
+          str.contains('no space') ||
+          str.contains('disk full') ||
+          str.contains('not enough space')) {
+        return l10n.storageErrorDiskFull;
+      }
+      if (str.contains('permission denied') ||
+          str.contains('access is denied') ||
+          str.contains('access_denied')) {
+        return l10n.storageErrorPermissionDenied;
+      }
+      if (str.contains('timeout')) {
+        return l10n.storageErrorTimeout;
+      }
+      if (str.contains('database') ||
+          str.contains('sqlite') ||
+          str.contains('locked') ||
+          str.contains('busy')) {
+        return l10n.storageErrorDatabase;
+      }
+      return l10n.storageErrorGeneral;
+  }
+}
 
 /// 存储管理页面
 /// 展示应用存储占用详情，提供缓存清理和数据目录管理功能
@@ -94,11 +239,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.loadStorageInfoFailed(e.toString())),
-            duration: AppConstants.snackBarDurationError,
-          ),
+        AppSnackBar.error(
+          context,
+          l10n.loadStorageInfoFailed(formatStorageError(e, l10n)),
         );
       }
     }
@@ -181,21 +324,15 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.cacheCleanedResult(StorageStats.formatBytes(clearedBytes)),
-          ),
-          duration: AppConstants.snackBarDurationImportant,
-        ),
+      AppSnackBar.success(
+        context,
+        l10n.cacheCleanedResult(StorageStats.formatBytes(clearedBytes)),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.clearCacheFailed(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ),
+      AppSnackBar.error(
+        context,
+        l10n.clearCacheFailed(formatStorageError(e, l10n)),
       );
     } finally {
       if (mounted) {
@@ -244,19 +381,15 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.orphanFilesCleanedResult(orphanCount)),
-          duration: AppConstants.snackBarDurationImportant,
-        ),
+      AppSnackBar.success(
+        context,
+        l10n.orphanFilesCleanedResult(orphanCount),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.cleanupFailed(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ),
+      AppSnackBar.error(
+        context,
+        l10n.cleanupFailed(formatStorageError(e, l10n)),
       );
     } finally {
       if (mounted) {
@@ -415,11 +548,13 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.maintenanceFailed(result['message'].toString())),
-            duration: AppConstants.snackBarDurationError,
-          ),
+        final error = result['error'] ??
+            result['errorCode'] ??
+            result['message'] ??
+            'maintenance_failed';
+        AppSnackBar.error(
+          context,
+          l10n.maintenanceFailed(formatStorageError(error, l10n)),
         );
       }
     } catch (e) {
@@ -429,11 +564,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.maintenanceFailed(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ),
+      AppSnackBar.error(
+        context,
+        l10n.maintenanceFailed(formatStorageError(e, l10n)),
       );
     } finally {
       if (mounted) {
@@ -877,11 +1010,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       final isValid = await DataDirectoryService.validateDirectory(result);
       if (!isValid) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.directoryNotAvailable),
-            duration: AppConstants.snackBarDurationError,
-          ),
+        AppSnackBar.error(
+          context,
+          l10n.directoryNotAvailable,
         );
         return;
       }
@@ -932,11 +1063,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       await _performDataMigration(result);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.selectDirectoryFailed(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ),
+      AppSnackBar.error(
+        context,
+        l10n.selectDirectoryFailed(formatStorageError(e, l10n)),
       );
     }
   }
@@ -1124,7 +1253,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           builder: (context) => AlertDialog(
             title: Text(l10n.migrationFailed),
             content: Text(
-              l10n.migrationFailedAndCleanedMessage(e.toString()),
+              l10n.migrationFailedAndCleanedMessage(
+                formatStorageError(e, l10n),
+              ),
             ),
             actions: [
               FilledButton(

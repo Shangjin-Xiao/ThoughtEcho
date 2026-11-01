@@ -665,7 +665,11 @@ class DatabaseHealthService {
       result['message'] = '数据库维护完成';
       onProgress?.call('维护完成！');
     } catch (e) {
-      result['message'] = '维护失败: $e';
+      result['success'] = false;
+      result['error'] = e;
+      result['errorCode'] = 'maintenance_failed';
+      result['statusCode'] = 'maintenance_failed';
+      result['message'] = '维护失败';
       logError('数据库维护失败: $e', error: e, source: 'DatabaseService');
     } finally {
       stopwatch.stop();
