@@ -90,6 +90,17 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "ThoughtEcho Team" "\0"
+            VALUE "FileDescription", "ThoughtEcho" "\0"
+            VALUE "FileVersion", VERSION_AS_STRING "\0"
+            VALUE "InternalName", "ThoughtEcho" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 ThoughtEcho Team. All rights reserved." "\0"
+            VALUE "OriginalFilename", "ThoughtEcho.exe" "\0"
+            VALUE "ProductName", "ThoughtEcho" "\0"
+            VALUE "ProductVersion", VERSION_AS_STRING "\0"
+        END
+        BLOCK "080404b0"
+        BEGIN
+            VALUE "CompanyName", "ThoughtEcho Team" "\0"
             VALUE "FileDescription", "心迹" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "ThoughtEcho" "\0"
@@ -101,7 +112,7 @@ BEGIN
     END
     BLOCK "VarFileInfo"
     BEGIN
-        VALUE "Translation", 0x409, 1252
+        VALUE "Translation", 0x409, 1252, 0x804, 1200
     END
 END
 

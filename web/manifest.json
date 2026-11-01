@@ -1,11 +1,11 @@
 {
-    "name": "心迹",
-    "short_name": "心迹",
+    "name": "ThoughtEcho",
+    "short_name": "ThoughtEcho",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "一款帮助你记录笔记和思想的应用",
+    "description": "An app to help you capture notes and thoughts",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
