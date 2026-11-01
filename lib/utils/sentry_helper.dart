@@ -152,6 +152,9 @@ String? sanitizeSentryUrl(String? url) {
   final uri = Uri.tryParse(url);
   if (uri == null) return url;
   if (!uri.hasScheme) return uri.path;
+  if (uri.scheme.toLowerCase() == 'file') {
+    return '[path]';
+  }
   return Uri(
     scheme: uri.scheme,
     host: uri.host,
@@ -165,15 +168,44 @@ final _exceptionUrlPattern = RegExp(
   caseSensitive: false,
 );
 
+final _quotedFileUriPattern = RegExp(
+  r'''(?<=["'])file:(?:/{1,3}|//[a-zA-Z0-9._-]+/)[^"'\r\n]+(?=["'])''',
+  caseSensitive: false,
+);
+
+final _unquotedFileUriPattern = RegExp(
+  r'''(?<![a-zA-Z0-9_])file:(?:/{1,3}|//[a-zA-Z0-9._-]+/)[^\s<>"'`]*''',
+  caseSensitive: false,
+);
+
 final _quotedLocalPathPattern = RegExp(
-  r'''(?<=["'])(?:[a-zA-Z]:[/\\]|/(?:Users|home|data|private|storage|var|tmp|etc|opt|usr)/)[^"'\r\n]+(?=["'])''',
+  r'''(?<=["'])(?:[a-zA-Z]:[/\\\\]|/[a-zA-Z0-9._-]+/)[^"'\r\n]+(?=["'])''',
   caseSensitive: false,
 );
 
 final _unquotedLocalPathPattern = RegExp(
-  r'''(?<![a-zA-Z0-9_/])(?:[a-zA-Z]:[/\\]|/(?:Users|home|data|private|storage|var|tmp|etc|opt|usr)/)[^\s<>"'`]*''',
+  r'''(?<![a-zA-Z0-9_/:\]])(?:[a-zA-Z]:[/\\\\]|/[a-zA-Z0-9._-]+/)[^\s<>"'`]*''',
   caseSensitive: false,
 );
+
+String _sanitizeFileUrisInText(String text) {
+  var result = text.replaceAllMapped(_quotedFileUriPattern, (_) => '[path]');
+  result = result.replaceAllMapped(_unquotedFileUriPattern, (match) {
+    var p = match.group(0)!;
+    var suffix = '';
+    while (p.length > 1 &&
+        (p.endsWith('.') ||
+            p.endsWith(',') ||
+            p.endsWith(';') ||
+            p.endsWith(')') ||
+            p.endsWith(']'))) {
+      suffix = p[p.length - 1] + suffix;
+      p = p.substring(0, p.length - 1);
+    }
+    return '[path]$suffix';
+  });
+  return result;
+}
 
 String _sanitizePathsInText(String text) {
   var result = text.replaceAllMapped(_quotedLocalPathPattern, (_) => '[path]');
@@ -203,9 +235,10 @@ String _sanitizeUrlsInText(String text) {
   });
 }
 
-/// 对非 SQL 文本进行脱敏（清洗 URL 参数与本地系统绝对路径）。
+/// 对非 SQL 文本进行脱敏（清洗本地 file: URI、URL 参数与本地系统绝对路径）。
 String sanitizeSentryNonSqlText(String text) {
-  final urlSanitized = _sanitizeUrlsInText(text);
+  final fileUriSanitized = _sanitizeFileUrisInText(text);
+  final urlSanitized = _sanitizeUrlsInText(fileUriSanitized);
   return _sanitizePathsInText(urlSanitized);
 }
 

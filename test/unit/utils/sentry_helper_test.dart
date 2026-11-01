@@ -418,9 +418,27 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
             'Linux config in [path]',
         'Container file at /private/var/mobile/Containers/Data/notes.db':
             'Container file at [path]',
+        'Mounted external storage at /mnt/developer/private-notes.txt':
+            'Mounted external storage at [path]',
+        'Volumes path /Volumes/ExternalDrive/notes.txt': 'Volumes path [path]',
+        'Server storage in /srv/data/backup.json': 'Server storage in [path]',
         'Quoted: "/Users/developer/My Documents/note.txt"': 'Quoted: "[path]"',
+        'Quoted mount: "/mnt/developer/My Documents/note.txt"':
+            'Quoted mount: "[path]"',
         'Saved to /Users/developer/file.txt.': 'Saved to [path].',
+        'Saved to /mnt/developer/file.txt.': 'Saved to [path].',
         'Failed (/Users/developer/file.txt)': 'Failed ([path])',
+        'Failed (/mnt/developer/file.txt)': 'Failed ([path])',
+        'User opened file:///Users/developer/Documents/private.txt':
+            'User opened [path]',
+        'User opened file:///mnt/developer/private-notes.txt':
+            'User opened [path]',
+        'Windows file URI: file:///C:/Users/developer/notes.txt':
+            'Windows file URI: [path]',
+        'Quoted file URI: "file:///Users/developer/My Documents/note.txt"':
+            'Quoted file URI: "[path]"',
+        'Saved to file:///Users/developer/file.txt.': 'Saved to [path].',
+        'Failed (file:///Users/developer/file.txt)': 'Failed ([path])',
       };
 
       for (final entry in cases.entries) {
@@ -450,6 +468,32 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sanitized?.message, 'Navigated to https://example.com/notes');
       expect(sanitized?.message, isNot(contains('secret_key')));
       expect(sanitized?.message, isNot(contains('overview')));
+
+      final networkBreadcrumb = Breadcrumb(
+        message:
+            'Fetched https://example.com/mnt/storage/data?token=secret123#overview',
+        category: 'network',
+      );
+      final sanitizedNetwork =
+          sanitizeSentryBreadcrumb(networkBreadcrumb, Hint());
+      expect(
+        sanitizedNetwork?.message,
+        'Fetched https://example.com/mnt/storage/data',
+      );
+      expect(sanitizedNetwork?.message, isNot(contains('secret123')));
+      expect(sanitizedNetwork?.message, isNot(contains('[path]')));
+
+      final portBreadcrumb = Breadcrumb(
+        message: 'Calling http://localhost:8080/mnt/files?auth=secret',
+        category: 'network',
+      );
+      final sanitizedPort = sanitizeSentryBreadcrumb(portBreadcrumb, Hint());
+      expect(
+        sanitizedPort?.message,
+        'Calling http://localhost:8080/mnt/files',
+      );
+      expect(sanitizedPort?.message, isNot(contains('secret')));
+      expect(sanitizedPort?.message, isNot(contains('[path]')));
     });
 
     test('removes sensitive blacklist keys from breadcrumb data', () {
@@ -513,8 +557,15 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
           'destination_dir': '/Users/developer/Documents/backups',
           'win_dir': r'C:\Users\developer\AppData\Local',
           'android_dir': '/data/user/0/com.thoughtecho/files',
+          'mnt_dir': '/mnt/developer/storage/notes',
+          'file_uri': 'file:///Users/developer/Documents/private.txt',
+          'mnt_file_uri': 'file:///mnt/developer/private.txt',
+          'network_url_with_mnt':
+              'https://example.com/mnt/storage?key=secret123',
           'summary':
               'Exported https://example.com/item?api=val to /home/developer/out.json',
+          'file_summary':
+              'Synced file:///Users/developer/file.txt to /mnt/developer/backup.txt',
           'is_valid': true,
           'item_count': 10,
         },
@@ -529,9 +580,22 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(data?['destination_dir'], '[path]');
       expect(data?['win_dir'], '[path]');
       expect(data?['android_dir'], '[path]');
+      expect(data?['mnt_dir'], '[path]');
+      expect(data?['file_uri'], '[path]');
+      expect(data?['mnt_file_uri'], '[path]');
+      expect(
+        data?['network_url_with_mnt'],
+        'https://example.com/mnt/storage',
+      );
+      expect(data?['network_url_with_mnt'], isNot(contains('secret123')));
+      expect(data?['network_url_with_mnt'], isNot(contains('[path]')));
       expect(
         data?['summary'],
         'Exported https://example.com/item to [path]',
+      );
+      expect(
+        data?['file_summary'],
+        'Synced [path] to [path]',
       );
       expect(data?['is_valid'], isTrue);
       expect(data?['item_count'], 10);
