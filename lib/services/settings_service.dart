@@ -120,9 +120,39 @@ class SettingsService extends ChangeNotifier {
 
   bool get agentMemoryEnabled => _mmkv.getBool(_agentMemoryEnabledKey) ?? true;
 
+  int _agentMemoryGeneration = 0;
+  Future<void>? _agentMemoryPolicyLock;
+
+  /// 后台提取开始时记录这一代；关闭、重新开启或清空后，旧结果不得写回。
+  int get agentMemoryGeneration => _agentMemoryGeneration;
+
+  void invalidateAgentMemoryCaptures() => _agentMemoryGeneration++;
+
+  /// 将后台记忆写入、开关持久化和清空串行化，守卫覆盖完整 SQLite commit。
+  Future<T> withAgentMemoryPolicy<T>(Future<T> Function() action) async {
+    final previous = _agentMemoryPolicyLock;
+    final completion = Completer<void>();
+    _agentMemoryPolicyLock = completion.future;
+    try {
+      if (previous != null) await previous;
+      return await action();
+    } finally {
+      // 失败仍传给调用方，但不能让后续的隐私操作一起失败。
+      completion.complete();
+      if (identical(_agentMemoryPolicyLock, completion.future)) {
+        _agentMemoryPolicyLock = null;
+      }
+    }
+  }
+
   /// 写入失败时抛出：这个开关的默认值是 true，静默失败会让用户以为已经关掉，
   /// 下次启动却发现记忆还在读写——隐私开关不能糊弄过去。
-  Future<void> setAgentMemoryEnabled(bool value) async {
+  Future<void> setAgentMemoryEnabled(bool value) {
+    invalidateAgentMemoryCaptures();
+    return withAgentMemoryPolicy(() => _saveAgentMemoryEnabled(value));
+  }
+
+  Future<void> _saveAgentMemoryEnabled(bool value) async {
     final success = await _mmkv.setBool(_agentMemoryEnabledKey, value);
     if (!success) {
       AppLogger.e(

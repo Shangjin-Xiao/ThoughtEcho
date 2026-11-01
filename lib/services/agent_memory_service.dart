@@ -122,6 +122,11 @@ class AgentMemoryService extends ChangeNotifier {
 
   bool get isEnabled => _settingsService.agentMemoryEnabled;
 
+  int get captureGeneration => _settingsService.agentMemoryGeneration;
+
+  bool isCaptureCurrent(int generation) =>
+      !_disposed && isEnabled && generation == captureGeneration;
+
   Future<Database> get _db async {
     final current = _database;
     if (current != null && current.isOpen) {
@@ -486,6 +491,27 @@ class AgentMemoryService extends ChangeNotifier {
     final db = await _db;
     final rows = await db.query(profileTable, orderBy: 'observed_at DESC');
     return rows.map(AgentMemoryProfileEntry.fromMap).toList(growable: false);
+  }
+
+  /// 仅当提取期间隐私策略未变时写入；验证与完整事务共用开关/清空的锁。
+  /// 已获准的写入先完成，关闭随后生效；清空随后删除该写入。
+  Future<bool> rememberProfileFromCapture({
+    required int generation,
+    required AgentMemoryKind kind,
+    required String directive,
+    String? replacesId,
+    required String source,
+  }) {
+    return _settingsService.withAgentMemoryPolicy(() async {
+      if (!isCaptureCurrent(generation)) return false;
+      await rememberProfile(
+        kind: kind,
+        directive: directive,
+        replacesId: replacesId,
+        source: source,
+      );
+      return true;
+    });
   }
 
   /// 写入一条画像指令。
@@ -1162,7 +1188,12 @@ class AgentMemoryService extends ChangeNotifier {
   // ======================== 全局操作 ========================
 
   /// 清空全部记忆。**开关关闭不会走到这里**——关开关只停读写，不删数据。
-  Future<void> clearAll() async {
+  Future<void> clearAll() {
+    _settingsService.invalidateAgentMemoryCaptures();
+    return _settingsService.withAgentMemoryPolicy(_clearAll);
+  }
+
+  Future<void> _clearAll() async {
     try {
       final db = await _db;
       await db.transaction((txn) async {
