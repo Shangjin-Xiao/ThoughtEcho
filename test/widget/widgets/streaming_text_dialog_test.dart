@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/widgets/streaming_text_dialog.dart';
@@ -354,6 +355,177 @@ void main() {
         await tester.pump();
 
         expect(find.textContaining('Chunk 1 Chunk 2'), findsOneWidget);
+
+        await controller.close();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'isolates Header AI icon and loading indicator with RepaintBoundary during initial wait',
+      (tester) async {
+        final controller = StreamController<String>();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: StreamingTextDialog(
+                title: 'Loading RepaintBoundary Test',
+                textStream: controller.stream,
+                applyButtonText: '应用',
+                onApply: (_) {},
+                onCancel: () {},
+              ),
+            ),
+          ),
+        );
+
+        // Header AI pulse icon is isolated with RepaintBoundary
+        final headerIconFinder = find.byWidgetPredicate(
+          (widget) =>
+              widget is Icon &&
+              widget.icon == Icons.auto_awesome &&
+              widget.size == 20,
+        );
+        expect(headerIconFinder, findsOneWidget);
+
+        final headerRepaintBoundaryFinder = find.ancestor(
+          of: headerIconFinder,
+          matching: find.byType(RepaintBoundary),
+        );
+        expect(headerRepaintBoundaryFinder, findsAtLeastNWidgets(1));
+        final headerRenderObject =
+            tester.renderObject(headerRepaintBoundaryFinder.first);
+        expect(headerRenderObject.isRepaintBoundary, isTrue);
+
+        // Loading indicator is isolated with RepaintBoundary
+        final loadingIconFinder = find.byWidgetPredicate(
+          (widget) =>
+              widget is Icon &&
+              widget.icon == Icons.auto_awesome &&
+              widget.size == 24,
+        );
+        expect(loadingIconFinder, findsOneWidget);
+
+        final loadingRepaintBoundaryFinder = find.ancestor(
+          of: loadingIconFinder,
+          matching: find.byType(RepaintBoundary),
+        );
+        expect(loadingRepaintBoundaryFinder, findsAtLeastNWidgets(1));
+        final loadingRenderObject =
+            tester.renderObject(loadingRepaintBoundaryFinder.first);
+        expect(loadingRenderObject.isRepaintBoundary, isTrue);
+
+        await controller.close();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'isolates text content and streaming cursor with RepaintBoundary (Markdown)',
+      (tester) async {
+        final controller = StreamController<String>();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: StreamingTextDialog(
+                title: 'Content RepaintBoundary Test',
+                textStream: controller.stream,
+                applyButtonText: '应用',
+                isMarkdown: true,
+                onApply: (_) {},
+                onCancel: () {},
+              ),
+            ),
+          ),
+        );
+
+        controller.add('Streaming chunk content');
+        await tester.pump();
+
+        // MarkdownBody is wrapped with RepaintBoundary
+        final markdownFinder = find.byType(MarkdownBody);
+        expect(markdownFinder, findsOneWidget);
+
+        final markdownRepaintBoundary = find.ancestor(
+          of: markdownFinder,
+          matching: find.byType(RepaintBoundary),
+        );
+        expect(markdownRepaintBoundary, findsAtLeastNWidgets(1));
+        final markdownRenderObject =
+            tester.renderObject(markdownRepaintBoundary.first);
+        expect(markdownRenderObject.isRepaintBoundary, isTrue);
+
+        // Streaming cursor (while !_isStreamingComplete) is wrapped with RepaintBoundary
+        final cursorFinder = find.byWidgetPredicate(
+          (widget) =>
+              widget is Container &&
+              widget.constraints ==
+                  const BoxConstraints.tightFor(width: 8, height: 16),
+        );
+        expect(cursorFinder, findsOneWidget);
+
+        final cursorRepaintBoundary = find.ancestor(
+          of: cursorFinder,
+          matching: find.byType(RepaintBoundary),
+        );
+        expect(cursorRepaintBoundary, findsAtLeastNWidgets(1));
+        final cursorRenderObject =
+            tester.renderObject(cursorRepaintBoundary.first);
+        expect(cursorRenderObject.isRepaintBoundary, isTrue);
+
+        await controller.close();
+        await tester.pumpAndSettle();
+
+        // After stream is done, cursor is gone, but Markdown text remains isolated
+        expect(cursorFinder, findsNothing);
+        expect(markdownFinder, findsOneWidget);
+        final postDoneMarkdownRenderObject =
+            tester.renderObject(markdownRepaintBoundary.first);
+        expect(postDoneMarkdownRenderObject.isRepaintBoundary, isTrue);
+      },
+    );
+
+    testWidgets(
+      'isolates SelectableText with RepaintBoundary when isMarkdown is false',
+      (tester) async {
+        final controller = StreamController<String>();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: StreamingTextDialog(
+                title: 'Plain Text RepaintBoundary Test',
+                textStream: controller.stream,
+                applyButtonText: '应用',
+                isMarkdown: false,
+                onApply: (_) {},
+                onCancel: () {},
+              ),
+            ),
+          ),
+        );
+
+        controller.add('Plain text streaming chunk');
+        await tester.pump();
+
+        final selectableTextFinder = find.byType(SelectableText);
+        expect(selectableTextFinder, findsOneWidget);
+
+        final textRepaintBoundary = find.ancestor(
+          of: selectableTextFinder,
+          matching: find.byType(RepaintBoundary),
+        );
+        expect(textRepaintBoundary, findsAtLeastNWidgets(1));
+        final textRenderObject = tester.renderObject(textRepaintBoundary.first);
+        expect(textRenderObject.isRepaintBoundary, isTrue);
 
         await controller.close();
         await tester.pumpAndSettle();
