@@ -195,18 +195,7 @@ class DatabaseBackupService {
           quoteData['content'] ??= '';
           quoteData['date'] ??= DateTime.now().toIso8601String();
           quoteData['is_deleted'] = _parseDeletedFlag(quoteData['is_deleted']);
-          quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
-
-          // 修复：回填缺失的 deleted_at，确保软删除记录能被 autoCleanupExpiredTrash 清理
-          if ((quoteData['is_deleted'] as int) == 1 &&
-              (quoteData['deleted_at'] == null ||
-                  (quoteData['deleted_at'] as String).isEmpty)) {
-            final lastModified = quoteData['last_modified']?.toString();
-            quoteData['deleted_at'] =
-                (lastModified != null && lastModified.isNotEmpty)
-                    ? lastModified
-                    : DateTime.now().toUtc().toIso8601String();
-          }
+          _ensureDeletedAtIntegrity(quoteData);
 
           // 值域收敛：外来数据里应用词汇表之外的值必须在入库前处理掉，否则这条
           // 笔记要么存不回去、要么连整页都读不出来（见 [_sanitizeQuoteValues]）。
@@ -1108,7 +1097,7 @@ class DatabaseBackupService {
         quoteData['content'] ??= '';
         quoteData['date'] ??= DateTime.now().toIso8601String();
         quoteData['is_deleted'] = _parseDeletedFlag(quoteData['is_deleted']);
-        quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
+        _ensureDeletedAtIntegrity(quoteData);
 
         // 值域收敛。同步（局域网 / WebDAV）和「合并导入」共用这一段，所以对端版本
         // 比本机新、写了本机词汇表里还没有的值时，这里只收敛不拒收——整份拒收会
@@ -1434,6 +1423,26 @@ class DatabaseBackupService {
     }
 
     await batch.commit(noResult: true);
+  }
+
+  /// 保证软删除笔记的 deleted_at 元数据完整性。
+  ///
+  /// 若 is_deleted 为 1 且 deleted_at 为空，回填有效时间戳（遵循 COALESCE(last_modified, date, now)），
+  /// 确保回收站 autoCleanupExpiredTrash 能判定过期并防止幽灵数据滞留。
+  static void _ensureDeletedAtIntegrity(Map<String, dynamic> quoteData) {
+    quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
+    if (quoteData['is_deleted'] == 1 &&
+        (quoteData['deleted_at'] == null ||
+            (quoteData['deleted_at'] as String).isEmpty)) {
+      final lastModified = quoteData['last_modified']?.toString();
+      final date = quoteData['date']?.toString();
+      quoteData['deleted_at'] =
+          (lastModified != null && lastModified.isNotEmpty)
+              ? lastModified
+              : (date != null && date.isNotEmpty)
+                  ? date
+                  : DateTime.now().toUtc().toIso8601String();
+    }
   }
 
   int _parseDeletedFlag(dynamic value) {

@@ -389,5 +389,45 @@ void main() {
       expect(await backupOf('first-round'), 'thoughtful');
       expect(await backupOf('second-round'), 'inspirational');
     });
+
+    test('软删除记录缺失 deleted_at 时无论覆盖还是合并导入均回填完整', () async {
+      final backup = {
+        'categories': [
+          {'id': 'cat-1', 'name': '默认分类', 'is_default': 1}
+        ],
+        'quotes': [
+          {
+            'id': 'deleted-quote-merge',
+            'content': '在回收站中的笔记',
+            'date': '2026-01-01T10:00:00.000Z',
+            'last_modified': '2026-01-02T12:00:00.000Z',
+            'is_deleted': 1,
+            // 缺失 deleted_at
+          },
+          {
+            'id': 'deleted-quote-date-fallback',
+            'content': '仅有 date 的回收站笔记',
+            'date': '2026-02-01T10:00:00.000Z',
+            'is_deleted': 'true',
+            // 缺失 deleted_at 与 last_modified
+          }
+        ]
+      };
+
+      // 测试 LWW 合并导入
+      await service.importDataWithLWWMerge(db, backup);
+
+      final row1 = (await db.query('quotes',
+              where: 'id = ?', whereArgs: ['deleted-quote-merge']))
+          .first;
+      expect(row1['is_deleted'], 1);
+      expect(row1['deleted_at'], '2026-01-02T12:00:00.000Z');
+
+      final row2 = (await db.query('quotes',
+              where: 'id = ?', whereArgs: ['deleted-quote-date-fallback']))
+          .first;
+      expect(row2['is_deleted'], 1);
+      expect(row2['deleted_at'], '2026-02-01T10:00:00.000Z');
+    });
   });
 }
