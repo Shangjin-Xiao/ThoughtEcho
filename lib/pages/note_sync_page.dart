@@ -12,19 +12,33 @@ import '../utils/aptabase_helper.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
 
-class _AutoScrollText extends StatefulWidget {
+@visibleForTesting
+class AutoScrollText extends StatefulWidget {
   final String text;
   final TextStyle? style;
 
-  const _AutoScrollText(this.text, {this.style});
+  const AutoScrollText(this.text, {super.key, this.style});
 
   @override
-  State<_AutoScrollText> createState() => _AutoScrollTextState();
+  State<AutoScrollText> createState() => AutoScrollTextState();
 }
 
-class _AutoScrollTextState extends State<_AutoScrollText> {
+typedef _AutoScrollText = AutoScrollText;
+
+@visibleForTesting
+class AutoScrollTextState extends State<AutoScrollText> {
   final ScrollController _scrollController = ScrollController();
   bool _isAnimating = false;
+  int _animationGeneration = 0;
+
+  @visibleForTesting
+  int get debugAnimationGeneration => _animationGeneration;
+
+  @visibleForTesting
+  bool get debugIsAnimating => _isAnimating;
+
+  @visibleForTesting
+  ScrollController get debugScrollController => _scrollController;
 
   @override
   void initState() {
@@ -33,9 +47,10 @@ class _AutoScrollTextState extends State<_AutoScrollText> {
   }
 
   @override
-  void didUpdateWidget(covariant _AutoScrollText oldWidget) {
+  void didUpdateWidget(covariant AutoScrollText oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text || oldWidget.style != widget.style) {
+      _animationGeneration++;
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(0);
       }
@@ -48,69 +63,81 @@ class _AutoScrollTextState extends State<_AutoScrollText> {
     if (!mounted) return;
     if (_isAnimating) return;
     _isAnimating = true;
+    final currentGeneration = _animationGeneration;
 
     try {
-      while (mounted) {
+      while (mounted && currentGeneration == _animationGeneration) {
         if (!_scrollController.hasClients) {
+          if (!mounted || currentGeneration != _animationGeneration) return;
           await Future.delayed(const Duration(seconds: 1));
+          if (!mounted || currentGeneration != _animationGeneration) return;
           continue;
         }
 
         final maxScroll = _scrollController.position.maxScrollExtent;
         if (maxScroll <= 0) {
-          _isAnimating = false;
           return;
         }
 
+        if (!mounted || currentGeneration != _animationGeneration) return;
         await Future.delayed(const Duration(seconds: 2));
-        if (!mounted) break;
+        if (!mounted || currentGeneration != _animationGeneration) return;
 
         // 速度：每秒 30 像素
         final duration = Duration(milliseconds: (maxScroll * 30).toInt());
         if (_scrollController.hasClients) {
+          if (!mounted || currentGeneration != _animationGeneration) return;
           await _scrollController.animateTo(
             maxScroll,
             duration: duration,
             curve: Curves.linear,
           );
+          if (!mounted || currentGeneration != _animationGeneration) return;
         }
-        if (!mounted) break;
 
+        if (!mounted || currentGeneration != _animationGeneration) return;
         await Future.delayed(const Duration(seconds: 2));
-        if (!mounted) break;
+        if (!mounted || currentGeneration != _animationGeneration) return;
 
         if (_scrollController.hasClients) {
+          if (!mounted || currentGeneration != _animationGeneration) return;
           await _scrollController.animateTo(
             0,
             duration: duration,
             curve: Curves.linear,
           );
+          if (!mounted || currentGeneration != _animationGeneration) return;
         }
       }
     } catch (e) {
       // 忽略动画中断等异常
     } finally {
-      if (mounted) _isAnimating = false;
+      if (mounted && currentGeneration == _animationGeneration) {
+        _isAnimating = false;
+      }
     }
   }
 
   @override
   void dispose() {
+    _animationGeneration++;
     _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: _scrollController,
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Text(
-        widget.text,
-        style: widget.style,
-        softWrap: false,
-        maxLines: 1,
+    return RepaintBoundary(
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Text(
+          widget.text,
+          style: widget.style,
+          softWrap: false,
+          maxLines: 1,
+        ),
       ),
     );
   }
