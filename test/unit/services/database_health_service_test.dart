@@ -395,6 +395,18 @@ void main() {
       expect(progressLog, contains('维护完成！'));
     });
 
+    test('performDatabaseMaintenance 失败时返回结构化错误而不是字符串插值', () async {
+      await database.close();
+      final result = await service.performDatabaseMaintenance(database);
+
+      expect(result['success'], isFalse);
+      expect(result['error'], isNotNull);
+      expect(result['errorCode'], 'maintenance_failed');
+      expect(result['statusCode'], 'maintenance_failed');
+      expect(result['message'], '维护失败');
+      expect(result['message'], isNot(contains('DatabaseException')));
+    });
+
     test('内存引用逻辑过滤规则验证', () {
       final eligibleQuote = Quote(
         id: '1',

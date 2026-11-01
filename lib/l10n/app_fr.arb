@@ -756,6 +756,14 @@
       }
     }
   },
+  "storageErrorDiskFull": "Espace de stockage insuffisant. Veuillez libérer de l'espace sur l'appareil.",
+  "storageErrorPermissionDenied": "Accès refusé. Veuillez vérifier les autorisations de stockage.",
+  "storageErrorFileNotFound": "Fichier ou dossier introuvable.",
+  "storageErrorDatabaseBusy": "La base de données est occupée. Veuillez réessayer plus tard.",
+  "storageErrorDatabase": "Erreur de traitement des données. Veuillez réessayer plus tard.",
+  "storageErrorFileSystem": "Erreur de lecture ou d'écriture du fichier. Veuillez réessayer plus tard.",
+  "storageErrorTimeout": "L'opération a expiré. Veuillez réessayer plus tard.",
+  "storageErrorGeneral": "L'opération a échoué. Veuillez réessayer plus tard.",
   "totalStorageUsage": "Utilisation totale du stockage",
   "databaseUsage": "Utilisation de la base de données",
   "mediaFilesUsage": "Utilisation des fichiers multimédias",

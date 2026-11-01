@@ -763,6 +763,14 @@
       }
     }
   },
+  "storageErrorDiskFull": "空き容量が不足しています。端末の空き容量を確保してください。",
+  "storageErrorPermissionDenied": "アクセスが拒否されました。ストレージの権限を確認してください。",
+  "storageErrorFileNotFound": "ファイルまたはディレクトリが見つかりません。",
+  "storageErrorDatabaseBusy": "データベースがビジー状態です。しばらくしてからもう一度お試しください。",
+  "storageErrorDatabase": "データ処理エラーが発生しました。しばらくしてからもう一度お試しください。",
+  "storageErrorFileSystem": "ファイルの読み書きエラーが発生しました。しばらくしてからもう一度お試しください。",
+  "storageErrorTimeout": "操作がタイムアウトしました。しばらくしてからもう一度お試しください。",
+  "storageErrorGeneral": "操作に失敗しました。しばらくしてからもう一度お試しください。",
   "totalStorageUsage": "総使用量",
   "databaseUsage": "データベース",
   "mediaFilesUsage": "メディアファイル",
