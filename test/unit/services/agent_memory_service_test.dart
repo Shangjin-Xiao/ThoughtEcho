@@ -182,10 +182,16 @@ void main() {
       expect(hangzhouKeywords, contains('杭州'));
       expect(hangzhouKeywords, contains('去杭州'));
 
-      // 验证包含停用词前缀的短词（如「进行曲」包含「进行」）不会被降级为泛化单字「曲」
+      // 验证包含短词（如「进行曲」）正确提取短语关键词，不会被降级为泛化单字「曲」
       final marchKeywords = AgentMemoryService.extractKeywords('进行曲');
       expect(marchKeywords, contains('进行曲'));
       expect(marchKeywords, isNot(contains('曲')));
+
+      // 验证在多字符问句中剔除停用词后依然保留有意义的单字主题词（如「我想了解茶」保留「茶」）
+      final teaKeywords = AgentMemoryService.extractKeywords('我想了解茶');
+      expect(teaKeywords, contains('茶'));
+      expect(teaKeywords, isNot(contains('我想')));
+      expect(teaKeywords, isNot(contains('了解')));
     });
 
     test('scoreFact 中相连完整短语匹配得分高于全词命中但分散的条目', () {
