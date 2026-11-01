@@ -1330,7 +1330,9 @@ class AgentMemoryService extends ChangeNotifier {
         phraseBonus = 1.25;
       }
 
-      relevance = math.min(1.0, baseRelevance * phraseBonus);
+      // 为短语匹配预留得分空间（基础加权上限 0.8，短语加成乘 1.25 后达到 1.0），
+      // 确保全词命中时，相连完整短语匹配能有效拉开与散落匹配的分差。
+      relevance = math.min(1.0, baseRelevance * 0.8 * phraseBonus);
     }
 
     final ageDays = now.difference(fact.createdAt).inMinutes / (60 * 24);
@@ -1367,15 +1369,12 @@ class AgentMemoryService extends ChangeNotifier {
             .toList();
 
         for (final part in cleanParts) {
-          if (part.length <= 3) {
-            if (!isStopWord(part)) {
-              keywords.add(part);
-            }
-          } else {
-            // 保留核心完整长片段作为短语关键词
-            if (part.length <= 8 && !isStopWord(part)) {
-              keywords.add(part);
-            }
+          // 保留完整片段作为短语关键词（最多 8 字）
+          if (part.length <= 8 && !isStopWord(part)) {
+            keywords.add(part);
+          }
+          // 对于 3 字及以上的片段，切出 2 字滑窗（例如 "去杭州" 切出 "杭州"，"咖啡馆" 切出 "咖啡" 与 "啡馆"）
+          if (part.length >= 3) {
             for (var i = 0; i + 2 <= part.length; i++) {
               final gram = part.substring(i, i + 2);
               if (!isStopWord(gram)) {

@@ -176,6 +176,41 @@ void main() {
         isTrue,
       );
       expect(subjectKeywords, contains('记录'));
+
+      // 验证 3 字片段在切分后也能输出 2-gram 关键词（如 "我想去杭州" 切出 "杭州"）
+      final hangzhouKeywords = AgentMemoryService.extractKeywords('我想去杭州');
+      expect(hangzhouKeywords, contains('杭州'));
+      expect(hangzhouKeywords, contains('去杭州'));
+    });
+
+    test('scoreFact 中相连完整短语匹配得分高于全词命中但分散的条目', () {
+      final now = DateTime(2026, 8, 8);
+      final contiguousFact = AgentMemoryFact(
+        id: 'phrase',
+        content: '用户喜欢学习咖啡拉花',
+        createdAt: now,
+        importance: 5,
+      );
+      final separatedFact = AgentMemoryFact(
+        id: 'separated',
+        content: '用户喜欢喝咖啡和练习拉花',
+        createdAt: now,
+        importance: 5,
+      );
+
+      final keywords = const <String>['咖啡', '拉花'];
+      final phraseScore = AgentMemoryService.scoreFact(
+        contiguousFact,
+        keywords: keywords,
+        now: now,
+      );
+      final separatedScore = AgentMemoryService.scoreFact(
+        separatedFact,
+        keywords: keywords,
+        now: now,
+      );
+
+      expect(phraseScore, greaterThan(separatedScore));
     });
 
     test('scoreFact 中精确匹配核心专业词汇的事实得分显著高于仅匹配结构虚词的事实得分', () {
