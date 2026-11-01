@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show Colors, ThemeMode;
+import 'package:flutter/material.dart' show Color, Colors, ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
@@ -282,5 +282,87 @@ void main() {
 
     expect(appTheme.themeStyle, ThemeStyle.defaultStyle);
     expect(appTheme.themeMode, ThemeMode.light);
+  });
+
+  test('setDynamicColorEnabled 原子化更新状态并仅触发一次通知', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    // 先设置为使用自定义颜色
+    await appTheme.setCustomColorEnabled(Colors.purple);
+    expect(appTheme.useCustomColor, isTrue);
+    expect(appTheme.useDynamicColor, isFalse);
+    expect(appTheme.customColor, Colors.purple);
+
+    // 记录每次通知时的状态快照
+    final snapshots = <(bool, bool)>[];
+    void listener() {
+      snapshots.add((appTheme.useDynamicColor, appTheme.useCustomColor));
+    }
+
+    appTheme.addListener(listener);
+
+    await appTheme.setDynamicColorEnabled(true);
+    appTheme.removeListener(listener);
+
+    expect(snapshots, [(true, false)]);
+    expect(appTheme.useDynamicColor, isTrue);
+    expect(appTheme.useCustomColor, isFalse);
+    expect(storage.getBool('use_dynamic_color'), isTrue);
+    expect(storage.getBool('use_custom_color'), isFalse);
+  });
+
+  test('setCustomColorEnabled 原子化更新颜色与互斥开关并仅触发一次通知', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    // 先设置为动态取色
+    await appTheme.setDynamicColorEnabled(true);
+    expect(appTheme.useDynamicColor, isTrue);
+    expect(appTheme.useCustomColor, isFalse);
+
+    final enableSnapshots = <(bool, Color?, bool)>[];
+    void enableListener() {
+      enableSnapshots.add((
+        appTheme.useCustomColor,
+        appTheme.customColor,
+        appTheme.useDynamicColor,
+      ));
+    }
+
+    appTheme.addListener(enableListener);
+
+    await appTheme.setCustomColorEnabled(Colors.orange);
+    appTheme.removeListener(enableListener);
+
+    expect(enableSnapshots, [(true, Colors.orange, false)]);
+    expect(appTheme.useCustomColor, isTrue);
+    expect(appTheme.customColor, Colors.orange);
+    expect(appTheme.useDynamicColor, isFalse);
+    expect(storage.getBool('use_custom_color'), isTrue);
+    expect(storage.getBool('use_dynamic_color'), isFalse);
+    expect(storage.getInt('custom_color'), Colors.orange.toARGB32());
+
+    // 禁用自定义颜色
+    final disableSnapshots = <(bool, Color?)>[];
+    void disableListener() {
+      disableSnapshots.add((appTheme.useCustomColor, appTheme.customColor));
+    }
+
+    appTheme.addListener(disableListener);
+
+    await appTheme.setCustomColorEnabled(null);
+    appTheme.removeListener(disableListener);
+
+    expect(disableSnapshots, [(false, Colors.orange)]); // 保留记忆
+    expect(appTheme.useCustomColor, isFalse);
+    expect(appTheme.customColor, Colors.orange);
+    expect(storage.getBool('use_custom_color'), isFalse);
   });
 }

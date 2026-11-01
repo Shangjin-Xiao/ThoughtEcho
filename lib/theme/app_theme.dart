@@ -452,14 +452,12 @@ class AppTheme with ChangeNotifier {
     ),
   ];
 
-  // 获取是否启用动态取色
-  bool get useDynamicColor {
-    // 只有在系统支持动态取色时才返回true
-    if (_lightDynamicColorScheme == null && _darkDynamicColorScheme == null) {
-      return false;
-    }
-    return _useDynamicColor;
-  }
+  // 获取是否启用动态取色偏好
+  bool get useDynamicColor => _useDynamicColor;
+
+  // 系统是否支持动态取色
+  bool get isDynamicColorSupported =>
+      _lightDynamicColorScheme != null || _darkDynamicColorScheme != null;
 
   // 获取当前亮色主题的颜色方案
   ColorScheme get lightColorScheme =>
@@ -664,41 +662,104 @@ class AppTheme with ChangeNotifier {
     // 这里避免在 build 过程中再次 notifyListeners() 引发重建冲突。
   }
 
-  // 设置自定义颜色
-  Future<void> setCustomColor(Color color) async {
-    if (_customColor == color) return;
-    _customColor = color;
+  /// 原子化更新自定义颜色及其启用状态。
+  ///
+  /// 当 [color] 非空时，启用自定义主题色，设置对应颜色，并自动禁用动态取色；
+  /// 当 [color] 为 null 时，禁用自定义主题色。
+  /// 所有内存状态变更完成后仅触发一次 [notifyListeners]，最后统一异步持久化。
+  Future<void> setCustomColorEnabled(Color? color) async {
+    final bool enable = color != null;
+    final bool targetUseDynamicColor = enable ? false : _useDynamicColor;
+
+    if (_useCustomColor == enable &&
+        (color == null || _customColor == color) &&
+        _useDynamicColor == targetUseDynamicColor) {
+      return;
+    }
+
+    final bool customColorChanged = color != null && _customColor != color;
+    final bool useCustomColorChanged = _useCustomColor != enable;
+    final bool dynamicColorChanged = _useDynamicColor != targetUseDynamicColor;
+
+    if (color != null) {
+      _customColor = color;
+    }
+    _useCustomColor = enable;
+    if (enable) {
+      _useDynamicColor = false;
+    }
     _clearThemeCache();
-    // 先刷新UI，避免持久化卡住导致“怎么点都没反应”
+
+    if (dynamicColorChanged) {
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'toggle_setting',
+        'setting': 'use_dynamic_color',
+        'enabled': false,
+      });
+    }
+
+    // 先刷新UI，避免持久化卡顿导致界面迟钝
     notifyListeners();
 
     final storage = _storage;
     if (storage == null) return;
     try {
-      await storage
-          .setInt(_customColorKey, color.toARGB32())
-          .timeout(const Duration(seconds: 2));
+      final futures = <Future<void>>[];
+      if (color != null && customColorChanged) {
+        futures.add(
+          storage
+              .setInt(_customColorKey, color.toARGB32())
+              .timeout(const Duration(seconds: 2)),
+        );
+      }
+      if (useCustomColorChanged) {
+        futures.add(
+          storage
+              .setBool(_useCustomColorKey, enable)
+              .timeout(const Duration(seconds: 2)),
+        );
+      }
+      if (dynamicColorChanged) {
+        futures.add(
+          storage
+              .setBool(_useDynamicColorKey, false)
+              .timeout(const Duration(seconds: 2)),
+        );
+      }
+      await Future.wait(futures);
     } catch (e) {
-      logWarning('保存自定义主题色失败: $e', source: 'AppTheme');
+      logWarning('保存自定义主题色状态失败: $e', source: 'AppTheme');
     }
   }
 
-  // 切换是否使用自定义颜色
-  Future<void> setUseCustomColor(bool value) async {
-    if (_useCustomColor == value) return;
-    _useCustomColor = value;
-    _clearThemeCache();
-    // 先刷新UI，避免持久化卡住导致无响应
-    notifyListeners();
+  // 设置自定义颜色（兼容旧调用，若当前已启用自定义色则走原子更新）
+  Future<void> setCustomColor(Color color) async {
+    if (_useCustomColor) {
+      await setCustomColorEnabled(color);
+    } else {
+      if (_customColor == color) return;
+      _customColor = color;
+      _clearThemeCache();
+      notifyListeners();
 
-    final storage = _storage;
-    if (storage == null) return;
-    try {
-      await storage
-          .setBool(_useCustomColorKey, value)
-          .timeout(const Duration(seconds: 2));
-    } catch (e) {
-      logWarning('保存“使用自定义主题色”开关失败: $e', source: 'AppTheme');
+      final storage = _storage;
+      if (storage == null) return;
+      try {
+        await storage
+            .setInt(_customColorKey, color.toARGB32())
+            .timeout(const Duration(seconds: 2));
+      } catch (e) {
+        logWarning('保存自定义主题色失败: $e', source: 'AppTheme');
+      }
+    }
+  }
+
+  // 切换是否使用自定义颜色（委托给原子化更新方法）
+  Future<void> setUseCustomColor(bool value) async {
+    if (value) {
+      await setCustomColorEnabled(_customColor ?? Colors.blue);
+    } else {
+      await setCustomColorEnabled(null);
     }
   }
 
@@ -784,28 +845,63 @@ class AppTheme with ChangeNotifier {
     }
   }
 
-  // 设置是否使用动态取色
-  Future<void> setUseDynamicColor(bool value) async {
-    if (_useDynamicColor == value) return;
-    _useDynamicColor = value;
+  /// 原子化更新动态取色状态。
+  ///
+  /// 若启用动态取色，则自动禁用自定义主题色，确保两者状态互斥并在
+  /// 所有内存状态变更完成后仅触发一次 [notifyListeners]，最后统一异步持久化。
+  Future<void> setDynamicColorEnabled(bool enable) async {
+    final bool targetUseCustomColor = enable ? false : _useCustomColor;
+    if (_useDynamicColor == enable && _useCustomColor == targetUseCustomColor) {
+      return;
+    }
+
+    final bool dynamicColorChanged = _useDynamicColor != enable;
+    final bool useCustomColorChanged = _useCustomColor != targetUseCustomColor;
+
+    _useDynamicColor = enable;
+    if (enable) {
+      _useCustomColor = false;
+    }
     _clearThemeCache();
-    AptabaseHelper.trackEvent('feature_used', {
-      'action': 'toggle_setting',
-      'setting': 'use_dynamic_color',
-      'enabled': value,
-    });
-    // 先刷新UI，避免持久化卡住导致无响应
+
+    if (dynamicColorChanged) {
+      AptabaseHelper.trackEvent('feature_used', {
+        'action': 'toggle_setting',
+        'setting': 'use_dynamic_color',
+        'enabled': enable,
+      });
+    }
+
+    // 先刷新UI，避免持久化卡顿导致界面迟钝
     notifyListeners();
 
     final storage = _storage;
     if (storage == null) return;
     try {
-      await storage
-          .setBool(_useDynamicColorKey, value)
-          .timeout(const Duration(seconds: 2));
+      final futures = <Future<void>>[];
+      if (dynamicColorChanged) {
+        futures.add(
+          storage
+              .setBool(_useDynamicColorKey, enable)
+              .timeout(const Duration(seconds: 2)),
+        );
+      }
+      if (useCustomColorChanged) {
+        futures.add(
+          storage
+              .setBool(_useCustomColorKey, false)
+              .timeout(const Duration(seconds: 2)),
+        );
+      }
+      await Future.wait(futures);
     } catch (e) {
-      logWarning('保存“动态取色”开关失败: $e', source: 'AppTheme');
+      logWarning('保存动态取色状态失败: $e', source: 'AppTheme');
     }
+  }
+
+  // 设置是否使用动态取色（委托给原子化更新方法）
+  Future<void> setUseDynamicColor(bool value) async {
+    await setDynamicColorEnabled(value);
   }
 
   // 从持久化存储加载自定义颜色设置
