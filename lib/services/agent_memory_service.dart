@@ -1363,14 +1363,26 @@ class AgentMemoryService extends ChangeNotifier {
     for (final segment in segments) {
       if (_isCjk(segment)) {
         // 先按 CJK 停用词切分，过滤虚词并杜绝跨词滑窗产生的无意义虚词 2-gram
-        final cleanParts = segment
+        var cleanParts = segment
             .split(_stopWordsSplitRegex)
             .where((part) => part.isNotEmpty)
             .toList();
 
+        // 当停用词过滤将一个有意义的短 CJK 词汇（如「进行曲」中的「进行」被剔除仅余单字「曲」）
+        // 缩减为泛化单字符或抹除了其区分性特征时，保留原始词段，避免关键特征丢失
+        if (cleanParts.isNotEmpty &&
+            cleanParts.every((part) => part.length < 2) &&
+            segment.length >= 2 &&
+            segment.length <= 8 &&
+            !isStopWord(segment)) {
+          cleanParts = <String>[segment];
+        }
+
         for (final part in cleanParts) {
-          // 保留完整片段作为短语关键词（最多 8 字）
-          if (part.length <= 8 && !isStopWord(part)) {
+          // 保留完整片段作为短语关键词（最多 8 字；当输入原本包含多个字符时丢弃单字符碎片）
+          if (part.length <= 8 &&
+              !isStopWord(part) &&
+              (part.length >= 2 || segment.length == 1)) {
             keywords.add(part);
           }
           // 对于 3 字及以上的片段，切出 2 字滑窗（例如 "去杭州" 切出 "杭州"，"咖啡馆" 切出 "咖啡" 与 "啡馆"）
