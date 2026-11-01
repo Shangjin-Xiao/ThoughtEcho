@@ -382,40 +382,55 @@ void main() {
           ),
         );
 
+        final dialogFinder = find.byType(StreamingTextDialog);
+        expect(dialogFinder, findsOneWidget);
+
         // Header AI pulse icon is isolated with RepaintBoundary
-        final headerIconFinder = find.byWidgetPredicate(
-          (widget) =>
-              widget is Icon &&
-              widget.icon == Icons.auto_awesome &&
-              widget.size == 20,
+        final headerIconFinder = find.descendant(
+          of: dialogFinder,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Icon &&
+                widget.icon == Icons.auto_awesome &&
+                widget.size == 20,
+          ),
         );
         expect(headerIconFinder, findsOneWidget);
 
-        final headerRepaintBoundaryFinder = find.ancestor(
-          of: headerIconFinder,
-          matching: find.byType(RepaintBoundary),
+        final headerRepaintBoundaryFinder = find.descendant(
+          of: dialogFinder,
+          matching: find.ancestor(
+            of: headerIconFinder,
+            matching: find.byType(RepaintBoundary),
+          ),
         );
-        expect(headerRepaintBoundaryFinder, findsAtLeastNWidgets(1));
+        expect(headerRepaintBoundaryFinder, findsOneWidget);
         final headerRenderObject =
-            tester.renderObject(headerRepaintBoundaryFinder.first);
+            tester.renderObject(headerRepaintBoundaryFinder);
         expect(headerRenderObject.isRepaintBoundary, isTrue);
 
         // Loading indicator is isolated with RepaintBoundary
-        final loadingIconFinder = find.byWidgetPredicate(
-          (widget) =>
-              widget is Icon &&
-              widget.icon == Icons.auto_awesome &&
-              widget.size == 24,
+        final loadingIconFinder = find.descendant(
+          of: dialogFinder,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Icon &&
+                widget.icon == Icons.auto_awesome &&
+                widget.size == 24,
+          ),
         );
         expect(loadingIconFinder, findsOneWidget);
 
-        final loadingRepaintBoundaryFinder = find.ancestor(
-          of: loadingIconFinder,
-          matching: find.byType(RepaintBoundary),
+        final loadingRepaintBoundaryFinder = find.descendant(
+          of: dialogFinder,
+          matching: find.ancestor(
+            of: loadingIconFinder,
+            matching: find.byType(RepaintBoundary),
+          ),
         );
-        expect(loadingRepaintBoundaryFinder, findsAtLeastNWidgets(1));
+        expect(loadingRepaintBoundaryFinder, findsOneWidget);
         final loadingRenderObject =
-            tester.renderObject(loadingRepaintBoundaryFinder.first);
+            tester.renderObject(loadingRepaintBoundaryFinder);
         expect(loadingRenderObject.isRepaintBoundary, isTrue);
 
         await controller.close();
@@ -448,35 +463,49 @@ void main() {
         controller.add('Streaming chunk content');
         await tester.pump();
 
+        final dialogFinder = find.byType(StreamingTextDialog);
+        expect(dialogFinder, findsOneWidget);
+
         // MarkdownBody is wrapped with RepaintBoundary
-        final markdownFinder = find.byType(MarkdownBody);
+        final markdownFinder = find.descendant(
+          of: dialogFinder,
+          matching: find.byType(MarkdownBody),
+        );
         expect(markdownFinder, findsOneWidget);
 
-        final markdownRepaintBoundary = find.ancestor(
-          of: markdownFinder,
-          matching: find.byType(RepaintBoundary),
+        final markdownRepaintBoundary = find.descendant(
+          of: dialogFinder,
+          matching: find.ancestor(
+            of: markdownFinder,
+            matching: find.byType(RepaintBoundary),
+          ),
         );
-        expect(markdownRepaintBoundary, findsAtLeastNWidgets(1));
+        expect(markdownRepaintBoundary, findsOneWidget);
         final markdownRenderObject =
-            tester.renderObject(markdownRepaintBoundary.first);
+            tester.renderObject(markdownRepaintBoundary);
         expect(markdownRenderObject.isRepaintBoundary, isTrue);
 
         // Streaming cursor (while !_isStreamingComplete) is wrapped with RepaintBoundary
-        final cursorFinder = find.byWidgetPredicate(
-          (widget) =>
-              widget is Container &&
-              widget.constraints ==
-                  const BoxConstraints.tightFor(width: 8, height: 16),
+        final cursorFinder = find.descendant(
+          of: dialogFinder,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Container &&
+                widget.constraints ==
+                    const BoxConstraints.tightFor(width: 8, height: 16),
+          ),
         );
         expect(cursorFinder, findsOneWidget);
 
-        final cursorRepaintBoundary = find.ancestor(
-          of: cursorFinder,
-          matching: find.byType(RepaintBoundary),
+        final cursorRepaintBoundary = find.descendant(
+          of: dialogFinder,
+          matching: find.ancestor(
+            of: cursorFinder,
+            matching: find.byType(RepaintBoundary),
+          ),
         );
-        expect(cursorRepaintBoundary, findsAtLeastNWidgets(1));
-        final cursorRenderObject =
-            tester.renderObject(cursorRepaintBoundary.first);
+        expect(cursorRepaintBoundary, findsOneWidget);
+        final cursorRenderObject = tester.renderObject(cursorRepaintBoundary);
         expect(cursorRenderObject.isRepaintBoundary, isTrue);
 
         await controller.close();
@@ -486,7 +515,7 @@ void main() {
         expect(cursorFinder, findsNothing);
         expect(markdownFinder, findsOneWidget);
         final postDoneMarkdownRenderObject =
-            tester.renderObject(markdownRepaintBoundary.first);
+            tester.renderObject(markdownRepaintBoundary);
         expect(postDoneMarkdownRenderObject.isRepaintBoundary, isTrue);
       },
     );
@@ -516,15 +545,24 @@ void main() {
         controller.add('Plain text streaming chunk');
         await tester.pump();
 
-        final selectableTextFinder = find.byType(SelectableText);
+        final dialogFinder = find.byType(StreamingTextDialog);
+        expect(dialogFinder, findsOneWidget);
+
+        final selectableTextFinder = find.descendant(
+          of: dialogFinder,
+          matching: find.byType(SelectableText),
+        );
         expect(selectableTextFinder, findsOneWidget);
 
-        final textRepaintBoundary = find.ancestor(
-          of: selectableTextFinder,
-          matching: find.byType(RepaintBoundary),
+        final textRepaintBoundary = find.descendant(
+          of: dialogFinder,
+          matching: find.ancestor(
+            of: selectableTextFinder,
+            matching: find.byType(RepaintBoundary),
+          ),
         );
-        expect(textRepaintBoundary, findsAtLeastNWidgets(1));
-        final textRenderObject = tester.renderObject(textRepaintBoundary.first);
+        expect(textRepaintBoundary, findsOneWidget);
+        final textRenderObject = tester.renderObject(textRepaintBoundary);
         expect(textRenderObject.isRepaintBoundary, isTrue);
 
         await controller.close();
