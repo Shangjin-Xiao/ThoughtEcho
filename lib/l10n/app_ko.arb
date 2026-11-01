@@ -4899,5 +4899,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "lottieSearchLoading": "검색 중...",
+  "lottieWeatherSearchLoading": "날씨 검색 중...",
+  "lottieCustomLoading": "로딩 중...",
+  "lottieNotFound": "관련 내용을 찾을 수 없습니다"
 }

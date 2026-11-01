@@ -4927,5 +4927,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "lottieSearchLoading": "搜尋中...",
+  "lottieWeatherSearchLoading": "天氣搜尋中...",
+  "lottieCustomLoading": "載入中...",
+  "lottieNotFound": "未找到相關內容"
 }

@@ -4899,5 +4899,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "lottieSearchLoading": "検索中...",
+  "lottieWeatherSearchLoading": "天気を検索中...",
+  "lottieCustomLoading": "読み込み中...",
+  "lottieNotFound": "関連するコンテンツが見つかりません"
 }

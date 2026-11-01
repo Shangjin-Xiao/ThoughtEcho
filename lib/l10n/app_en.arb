@@ -4923,5 +4923,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "lottieSearchLoading": "Searching...",
+  "lottieWeatherSearchLoading": "Searching weather...",
+  "lottieCustomLoading": "Loading...",
+  "lottieNotFound": "No content found"
 }

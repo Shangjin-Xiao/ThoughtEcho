@@ -4923,5 +4923,21 @@
         "type": "String"
       }
     }
+  },
+  "lottieSearchLoading": "搜索中...",
+  "@lottieSearchLoading": {
+    "description": "Lottie animation description for search loading"
+  },
+  "lottieWeatherSearchLoading": "天气搜索中...",
+  "@lottieWeatherSearchLoading": {
+    "description": "Lottie animation description for weather search loading"
+  },
+  "lottieCustomLoading": "加载中...",
+  "@lottieCustomLoading": {
+    "description": "Lottie animation description for custom loading"
+  },
+  "lottieNotFound": "未找到相关内容",
+  "@lottieNotFound": {
+    "description": "Lottie animation description for not found"
   }
 }

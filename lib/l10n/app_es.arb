@@ -134,5 +134,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "lottieSearchLoading": "Buscando...",
+  "lottieWeatherSearchLoading": "Buscando el tiempo...",
+  "lottieCustomLoading": "Cargando...",
+  "lottieNotFound": "No se encontró contenido"
 }
