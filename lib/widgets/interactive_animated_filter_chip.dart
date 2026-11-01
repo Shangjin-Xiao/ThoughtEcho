@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 /// 具备按压缩放微动效与选中状态插值过渡的 FilterChip 交互包裹组件
@@ -107,19 +108,35 @@ class _InteractiveAnimatedFilterChipState
     super.dispose();
   }
 
+  Offset? _downPosition;
+
   void _handlePointerDown(PointerDownEvent event) {
+    _downPosition = event.position;
     if (mounted) {
       _pressController.forward();
     }
   }
 
+  void _handlePointerMove(PointerMoveEvent event) {
+    final downPosition = _downPosition;
+    if (downPosition != null &&
+        (event.position - downPosition).distance > kTouchSlop) {
+      _downPosition = null;
+      if (mounted) {
+        _pressController.reverse();
+      }
+    }
+  }
+
   void _handlePointerUp(PointerUpEvent event) {
+    _downPosition = null;
     if (mounted) {
       _pressController.reverse();
     }
   }
 
   void _handlePointerCancel(PointerCancelEvent event) {
+    _downPosition = null;
     if (mounted) {
       _pressController.reverse();
     }
@@ -130,6 +147,7 @@ class _InteractiveAnimatedFilterChipState
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: _handlePointerDown,
+      onPointerMove: _handlePointerMove,
       onPointerUp: _handlePointerUp,
       onPointerCancel: _handlePointerCancel,
       child: RepaintBoundary(

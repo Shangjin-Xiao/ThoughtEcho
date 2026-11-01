@@ -165,6 +165,62 @@ void main() {
       expect(getPressScale(), closeTo(1.0, 0.01));
     });
 
+    testWidgets('reverses press animation when pointer moves beyond kTouchSlop',
+        (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: InteractiveAnimatedFilterChip(
+                pressedScale: 0.94,
+                pressDuration: Duration(milliseconds: 120),
+                child: Text('Slop Chip'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final chipFinder = find.byType(InteractiveAnimatedFilterChip);
+      final center = tester.getCenter(chipFinder);
+
+      double getPressScale() {
+        final scaleTransitions = tester
+            .widgetList<ScaleTransition>(
+              find.descendant(
+                of: chipFinder,
+                matching: find.byType(ScaleTransition),
+              ),
+            )
+            .toList();
+        return scaleTransitions.first.scale.value;
+      }
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.touch);
+      await gesture.down(center);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(getPressScale(), closeTo(0.94, 0.01));
+
+      // Move within kTouchSlop (distance <= kTouchSlop, e.g. 2 pixels)
+      await gesture.moveBy(const Offset(2.0, 0));
+      await tester.pump();
+      expect(getPressScale(), closeTo(0.94, 0.01));
+
+      // Move beyond kTouchSlop (kTouchSlop is typically 18.0)
+      await gesture.moveBy(const Offset(kTouchSlop + 5.0, 0));
+      await tester.pump();
+
+      // Controller should now be reversing towards 1.0
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(getPressScale(), closeTo(1.0, 0.01));
+
+      await gesture.up();
+      await tester.pump();
+    });
+
     testWidgets(
         'triggers selection transition interpolation when isSelected changes', (
       tester,
