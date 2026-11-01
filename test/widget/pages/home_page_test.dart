@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
@@ -198,12 +199,35 @@ class MockLocationService extends ChangeNotifier implements LocationService {
 }
 
 class MockWeatherService extends ChangeNotifier implements WeatherService {
+  String? _currentWeather = 'Sunny';
+  String? _temperature = '20°C';
+  IconData _weatherIconData = Icons.wb_sunny;
+
   @override
-  String? get currentWeather => 'Sunny';
+  String? get currentWeather => _currentWeather;
+  set currentWeather(String? value) {
+    _currentWeather = value;
+  }
+
   @override
-  String? get temperature => '20°C';
+  String? get temperature => _temperature;
+  set temperature(String? value) {
+    _temperature = value;
+  }
+
   @override
-  IconData getWeatherIconData() => Icons.wb_sunny;
+  IconData getWeatherIconData() => _weatherIconData;
+  set weatherIconData(IconData value) {
+    _weatherIconData = value;
+  }
+
+  void updateWeather({String? weather, String? temp, IconData? icon}) {
+    if (weather != null) _currentWeather = weather;
+    if (temp != null) _temperature = temp;
+    if (icon != null) _weatherIconData = icon;
+    notifyListeners();
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -410,9 +434,36 @@ void main() {
       await tester.pump();
       expect(promptPanelBoundary.debugNeedsPaint, isFalse);
 
-      // Verify AppBar / weather state changes do not mark cards as needing paint
-      mockWeatherService.notifyListeners();
+      // Verify AppBar / weather state changes do not repaint cards
+      final beforeQuoteSym = dailyQuoteBoundary.debugSymmetricPaintCount;
+      final beforeQuoteAsym = dailyQuoteBoundary.debugAsymmetricPaintCount;
+      final beforePromptSym = promptPanelBoundary.debugSymmetricPaintCount;
+      final beforePromptAsym = promptPanelBoundary.debugAsymmetricPaintCount;
+
+      mockWeatherService.updateWeather(
+        weather: 'Rainy',
+        temp: '18°C',
+        icon: Icons.grain,
+      );
+
+      // Verify dirtiness does not propagate to card repaint boundaries prior to pump
+      expect(dailyQuoteBoundary.debugNeedsPaint, isFalse);
+      expect(promptPanelBoundary.debugNeedsPaint, isFalse);
+
       await tester.pump();
+
+      // Weather text update is reflected in the AppBar
+      expect(find.textContaining('18°C'), findsOneWidget);
+
+      // Verify neither card repainted across the frame: paint counts remain unchanged
+      expect(
+          dailyQuoteBoundary.debugSymmetricPaintCount, equals(beforeQuoteSym));
+      expect(dailyQuoteBoundary.debugAsymmetricPaintCount,
+          equals(beforeQuoteAsym));
+      expect(promptPanelBoundary.debugSymmetricPaintCount,
+          equals(beforePromptSym));
+      expect(promptPanelBoundary.debugAsymmetricPaintCount,
+          equals(beforePromptAsym));
       expect(dailyQuoteBoundary.debugNeedsPaint, isFalse);
       expect(promptPanelBoundary.debugNeedsPaint, isFalse);
 
@@ -424,7 +475,8 @@ void main() {
             await dailyQuoteImage.toByteData(format: ui.ImageByteFormat.png);
         dailyQuoteImage.dispose();
         if (dailyQuoteByteData != null) {
-          File('/tmp/daily_quote_isolated_boundary.png')
+          File(p.join(Directory.systemTemp.path,
+                  'daily_quote_isolated_boundary.png'))
               .writeAsBytesSync(dailyQuoteByteData.buffer.asUint8List());
         }
 
@@ -434,7 +486,8 @@ void main() {
             await promptPanelImage.toByteData(format: ui.ImageByteFormat.png);
         promptPanelImage.dispose();
         if (promptPanelByteData != null) {
-          File('/tmp/daily_prompt_panel_isolated_boundary.png')
+          File(p.join(Directory.systemTemp.path,
+                  'daily_prompt_panel_isolated_boundary.png'))
               .writeAsBytesSync(promptPanelByteData.buffer.asUint8List());
         }
       });
