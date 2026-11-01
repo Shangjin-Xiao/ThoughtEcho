@@ -1125,6 +1125,8 @@ class WebDAVSyncService extends ChangeNotifier {
 
         if (localContent != remoteContent) {
           conflictingQuotes.add(localQuote);
+          // 本轮每个本地快照只备份一次，避免重复云端 ID 放大正文和标签写入。
+          localQuotesMap.remove(quoteId);
         }
       }
     }
