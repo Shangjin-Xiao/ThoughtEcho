@@ -27,40 +27,73 @@ class MissingMediaFileException implements Exception {
   /// The original IO error (if any).
   final Object? cause;
 
+  /// Path with the device-specific prefix removed (e.g. `media/images/a.jpg`).
+  /// Use this for logs and reports so usernames and container IDs never leak.
+  String get redactedPath => MissingMediaFileReporter.redact(path);
+
   @override
   String toString() {
-    final rebased =
-        rebasedPath != null && rebasedPath != path ? ', rebased: $rebasedPath' : '';
-    return 'MissingMediaFileException: media file not found: $path$rebased';
+    return 'MissingMediaFileException: media file not found: $redactedPath';
   }
 }
 
 /// Reports missing media files. Each path goes to Sentry once per session at
-/// warning level, with the path attached, instead of being reported again as a
-/// generic error on every list rebuild.
+/// warning level, with the redacted path attached, instead of being reported
+/// again as a generic error on every list rebuild.
 class MissingMediaFileReporter {
   MissingMediaFileReporter._();
 
-  static final Set<String> _reportedPaths = <String>{};
+  /// Max distinct paths reported per session. Once reached, new paths are
+  /// only logged locally; already reported paths are never reported again.
+  static const int _maxReportedPaths = 500;
 
-  /// Returns true if [error] is a missing-media exception (and has been handled).
+  static final Set<String> _reportedPaths = <String>{};
+  static bool _capLogged = false;
+
+  /// Removes the device-specific prefix from [path] and keeps only
+  /// `media/<subfolder>/<file>` (or just the file name if not recognized).
+  static String redact(String path) {
+    final tail = MediaPathResolver.mediaRelativeTail(path);
+    if (tail != null) return tail;
+    final segments = path.split(RegExp(r'[\\/]'));
+    return segments.isEmpty ? path : segments.last;
+  }
+
+  /// Returns true if [error] is a missing-media exception (already handled).
   static bool handle(Object error, {StackTrace? stackTrace}) {
     if (error is! MissingMediaFileException) return false;
-    if (!_reportedPaths.add(error.path)) return true;
-    if (_reportedPaths.length > 500) {
-      _reportedPaths.remove(_reportedPaths.first);
+    if (_reportedPaths.contains(error.path)) return true;
+
+    final redactedPath = error.redactedPath;
+    if (_reportedPaths.length >= _maxReportedPaths) {
+      logDebug(
+        'Missing media file (not reported, session cap reached): $redactedPath',
+        source: 'MissingMediaFile',
+      );
+      if (!_capLogged) {
+        _capLogged = true;
+        logWarning(
+          'Missing media report cap ($_maxReportedPaths) reached this session',
+          source: 'MissingMediaFile',
+        );
+      }
+      return true;
     }
+    _reportedPaths.add(error.path);
 
     logWarning(error.toString(), source: 'MissingMediaFile');
     if (Sentry.isEnabled) {
+      final cause = error.cause;
       Sentry.captureMessage(
         'Missing media file referenced by note',
         level: SentryLevel.warning,
         withScope: (scope) {
           scope.setContexts('missing_media', {
-            'path': error.path,
-            if (error.rebasedPath != null) 'rebased_path': error.rebasedPath,
-            if (error.cause != null) 'cause': error.cause.toString(),
+            'path': redactedPath,
+            'rebased': error.rebasedPath != null,
+            if (cause != null) 'cause_type': cause.runtimeType.toString(),
+            if (cause is FileSystemException)
+              'os_error_code': cause.osError?.errorCode,
           });
         },
       );
@@ -75,6 +108,10 @@ class MissingMediaFileReporter {
 /// the file is still missing throws [MissingMediaFileException] so
 /// `errorBuilder` shows the broken-image placeholder.
 ///
+/// The missing file is reported here (deduplicated per path), because an
+/// `Image` with an `errorBuilder` consumes the error and it never reaches
+/// `FlutterError.onError`.
+///
 /// Equality/hash are inherited from [FileImage] (`runtimeType` + path + scale).
 /// Warmup and rendering both go through `createOptimizedImageProvider`, so
 /// cache keys stay identical.
@@ -88,7 +125,13 @@ class SafeFileImage extends FileImage {
     if (_appPathCache != null) return _appPathCache;
     try {
       _appPathCache = (await getApplicationDocumentsDirectory()).path;
-    } catch (_) {
+    } catch (e, stack) {
+      logError(
+        'Failed to get the documents directory; skipping media path rebase',
+        error: e,
+        stackTrace: stack,
+        source: 'SafeFileImage',
+      );
       return null;
     }
     return _appPathCache;
@@ -101,7 +144,7 @@ class SafeFileImage extends FileImage {
       scale: key.scale,
       debugLabel: key.file.path,
       informationCollector: () => <DiagnosticsNode>[
-        ErrorDescription('Path: ${file.path}'),
+        ErrorDescription('Path: ${MissingMediaFileReporter.redact(file.path)}'),
       ],
     );
   }
@@ -118,7 +161,10 @@ class SafeFileImage extends FileImage {
       if (!await target.exists()) {
         final appPath = await _appPath();
         if (appPath != null) {
-          final resolved = MediaPathResolver.resolveToLocal(originalPath, appPath);
+          final resolved = MediaPathResolver.resolveToLocal(
+            originalPath,
+            appPath,
+          );
           if (resolved != originalPath) {
             rebasedPath = resolved;
             final candidate = File(resolved);
@@ -128,25 +174,35 @@ class SafeFileImage extends FileImage {
           }
         }
         if (identical(target, key.file)) {
-          throw MissingMediaFileException(originalPath, rebasedPath: rebasedPath);
+          final missing = MissingMediaFileException(
+            originalPath,
+            rebasedPath: rebasedPath,
+          );
+          MissingMediaFileReporter.handle(missing);
+          throw missing;
         }
       }
 
       final int lengthInBytes = await target.length();
       if (lengthInBytes == 0) {
         PaintingBinding.instance.imageCache.evict(key);
-        throw StateError('$originalPath is empty and cannot be loaded as an image.');
+        throw StateError(
+          '${MissingMediaFileReporter.redact(originalPath)} is empty '
+          'and cannot be loaded as an image.',
+        );
       }
       final buffer = await ui.ImmutableBuffer.fromFilePath(target.path);
       return decode(buffer);
     } on PathNotFoundException catch (e) {
       // The file was deleted between the exists check and the read.
       PaintingBinding.instance.imageCache.evict(key);
-      throw MissingMediaFileException(
+      final missing = MissingMediaFileException(
         originalPath,
         rebasedPath: rebasedPath,
         cause: e,
       );
+      MissingMediaFileReporter.handle(missing);
+      throw missing;
     } on MissingMediaFileException {
       // Evict so the next attempt re-checks (the file may have been synced).
       PaintingBinding.instance.imageCache.evict(key);

@@ -167,8 +167,8 @@ Future<void> main() async {
           FlutterError.dumpErrorToConsole(details);
         }
 
-        // 笔记引用的媒体文件缺失：按路径去重、以 warning 级别带路径上报，
-        // 避免每次列表重建都重复上报为通用错误。
+        // 笔记引用的媒体文件缺失（Image 无 errorBuilder 监听时会走到这里）：
+        // 按路径去重、以 warning 级别带脱敏路径上报，避免重复上报为通用错误。
         if (MissingMediaFileReporter.handle(
           details.exception,
           stackTrace: details.stack,
