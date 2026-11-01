@@ -210,5 +210,178 @@ void main() {
       expect(result.content, contains('Auto结果'));
       expect(calls, equals(['auto']));
     });
+
+    group('Web platform and fallback language detection', () {
+      test('Web platform with null SettingsService detects Chinese query',
+          () async {
+        final regions = <String>[];
+        final tool = WebSearchTool(
+          null,
+          (query,
+              {required backend, required region, required maxResults}) async {
+            regions.add(region);
+            return _mockResult('结果');
+          },
+          true,
+        );
+
+        expect(tool.detectLanguageIsChinese('搜索测试'), isTrue);
+        final result = await tool.execute(
+          ToolCall(
+            id: 'web_zh',
+            name: 'web_search',
+            arguments: const {'query': '搜索测试'},
+          ),
+        );
+        expect(result.isError, isFalse);
+        expect(regions, equals(['cn-zh']));
+      });
+
+      test(
+          'Web platform with null SettingsService falls back to us-en for English query',
+          () async {
+        final regions = <String>[];
+        final tool = WebSearchTool(
+          null,
+          (query,
+              {required backend, required region, required maxResults}) async {
+            regions.add(region);
+            return _mockResult('Result');
+          },
+          true,
+        );
+
+        expect(tool.detectLanguageIsChinese('flutter agent tool'), isFalse);
+        final result = await tool.execute(
+          ToolCall(
+            id: 'web_en',
+            name: 'web_search',
+            arguments: const {'query': 'flutter agent tool'},
+          ),
+        );
+        expect(result.isError, isFalse);
+        expect(regions, equals(['us-en']));
+      });
+
+      test(
+          'Web platform with follow-system settings (localeCode == null) detects Chinese query',
+          () async {
+        final regions = <String>[];
+        final tool = WebSearchTool(
+          _MockSettingsService(null),
+          (query,
+              {required backend, required region, required maxResults}) async {
+            regions.add(region);
+            return _mockResult('结果');
+          },
+          true,
+        );
+
+        expect(tool.detectLanguageIsChinese('中文内容查询'), isTrue);
+        final result = await tool.execute(
+          ToolCall(
+            id: 'web_system_zh',
+            name: 'web_search',
+            arguments: const {'query': '中文内容查询'},
+          ),
+        );
+        expect(result.isError, isFalse);
+        expect(regions, equals(['cn-zh']));
+      });
+
+      test(
+          'Web platform with follow-system settings safely falls back to us-en for English query without UnsupportedError',
+          () async {
+        final regions = <String>[];
+        final tool = WebSearchTool(
+          _MockSettingsService(null),
+          (query,
+              {required backend, required region, required maxResults}) async {
+            regions.add(region);
+            return _mockResult('Result');
+          },
+          true,
+        );
+
+        expect(tool.detectLanguageIsChinese('quantum computing algorithms'),
+            isFalse);
+        final result = await tool.execute(
+          ToolCall(
+            id: 'web_system_en',
+            name: 'web_search',
+            arguments: const {'query': 'quantum computing algorithms'},
+          ),
+        );
+        expect(result.isError, isFalse);
+        expect(regions, equals(['us-en']));
+      });
+
+      test('Web platform still honors explicit user language preference',
+          () async {
+        final regions = <String>[];
+        final toolZh = WebSearchTool(
+          _MockSettingsService('zh'),
+          (query,
+              {required backend, required region, required maxResults}) async {
+            regions.add(region);
+            return _mockResult('结果');
+          },
+          true,
+        );
+        expect(toolZh.detectLanguageIsChinese('english only text'), isTrue);
+        await toolZh.execute(
+          ToolCall(
+            id: 'web_explicit_zh',
+            name: 'web_search',
+            arguments: const {'query': 'english only text'},
+          ),
+        );
+        expect(regions.last, equals('cn-zh'));
+
+        final toolEn = WebSearchTool(
+          _MockSettingsService('en'),
+          (query,
+              {required backend, required region, required maxResults}) async {
+            regions.add(region);
+            return _mockResult('Result');
+          },
+          true,
+        );
+        expect(toolEn.detectLanguageIsChinese('中文测试'), isFalse);
+        await toolEn.execute(
+          ToolCall(
+            id: 'web_explicit_en',
+            name: 'web_search',
+            arguments: const {'query': '中文测试'},
+          ),
+        );
+        expect(regions.last, equals('us-en'));
+      });
+
+      test(
+          'Non-web platform with follow-system settings executes safely without crash',
+          () async {
+        final regions = <String>[];
+        final tool = WebSearchTool(
+          _MockSettingsService(null),
+          (query,
+              {required backend, required region, required maxResults}) async {
+            regions.add(region);
+            return _mockResult('Result');
+          },
+          false,
+        );
+
+        final result = await tool.execute(
+          ToolCall(
+            id: 'non_web_system',
+            name: 'web_search',
+            arguments: const {'query': '测试 query'},
+          ),
+        );
+        expect(result.isError, isFalse);
+        expect(regions.length, equals(1));
+      });
+    });
   });
 }
