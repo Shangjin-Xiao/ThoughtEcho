@@ -38,6 +38,7 @@ import '../services/ai_service.dart';
 import '../services/agent_tools/ask_user_tool.dart';
 import '../services/agent_tools/propose_note_edit_tool.dart';
 import '../services/chat_session_service.dart';
+import '../services/biometric_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
