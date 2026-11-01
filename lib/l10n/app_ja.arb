@@ -25,6 +25,7 @@
   "languageSettings": "言語 / Language",
   "languageFollowSystem": "システムに従う",
   "languageChinese": "简体中文",
+  "languageTraditionalChinese": "繁体字中国語",
   "languageEnglish": "English",
   "languageJapanese": "日本語",
   "languageKorean": "한국어",
@@ -1957,6 +1958,18 @@
   "mergeImport": "マージインポート",
   "mergeImportDesc": "既存データを維持し、新しいデータと統合します",
   "restoreSuccess": "復元成功！",
+  "importCleanupNotice": "インポートが完了しましたが、認識できない {sanitized} 箇所のフィールド値をスキップし、本文が空の {skipped} 件のノートはインポートされませんでした。これらは ThoughtEcho 以外で作成されたデータです。",
+  "@importCleanupNotice": {
+    "description": "导入后提示：备份文件里含有本应用无法识别的字段值或空笔记",
+    "placeholders": {
+      "sanitized": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
   "mergeImportHint": "データをマージします：",
   "mergeImportReversible": "この操作は可逆的です。",
   "confirmRestoreBtn": "復元実行",
@@ -2387,6 +2400,7 @@
   "editNoteMenu": "編集",
   "askAIMenu": "AIに質問",
   "generateCardShareMenu": "カード共有",
+  "copyTextMenu": "テキストをコピー",
   "deleteNoteMenu": "削除",
   "doubleTapToViewFull": "ダブルタップで全画面",
   "logLevel": "レベル: {level}",
@@ -2700,6 +2714,7 @@
     }
   },
   "cannotGetAddress": "住所取得不可",
+  "locationUpdateTimeout": "位置情報の取得がタイムアウトしました。ネットワーク接続を確認してください",
   "updateFailed": "失敗: {error}",
   "@updateFailed": {
     "placeholders": {
@@ -2999,6 +3014,14 @@
   "featureInDevelopment": "開発中...",
   "selectFromFiles": "ファイルから選択",
   "supportsLargeFiles": "大容量対応",
+  "mediaUrlTooLarge": "ファイルサイズが URL インポートの上限（{maxSizeMb} MB）を超えています。より小さいファイルを選択してください。",
+  "@mediaUrlTooLarge": {
+    "placeholders": {
+      "maxSizeMb": {
+        "type": "int"
+      }
+    }
+  },
   "unifiedMediaImportImportMedia": "{mediaType}をインポート",
   "@unifiedMediaImportImportMedia": {
     "placeholders": {
@@ -3627,11 +3650,81 @@
   "newChat": "新規チャット",
   "deleteChat": "チャットを削除",
   "deleteChatConfirm": "この会話を削除しますか？すべてのメッセージが削除されます。",
+  "deselectAll": "すべて選択解除",
+  "multiSelectChats": "選択",
+  "selectedChatCount": "{count, plural, =1{1件選択中} other{{count}件選択中}}",
+  "@selectedChatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedChats": "選択した対話を削除",
+  "deleteSelectedChatsConfirm": "{count, plural, =1{選択した1件の対話を削除してもよろしいですか？この操作は取り消せません。} other{選択した{count}件の対話を削除してもよろしいですか？この操作は取り消せません。}}",
+  "@deleteSelectedChatsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteChatsSuccess": "{count, plural, =1{1件の対話を削除しました} other{{count}件の対話を削除しました}}",
+  "@deleteChatsSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noChats": "チャットはまだありません",
   "mapPickerTitle": "場所を選択",
+  "nearbyLocationTitle": "現在地",
   "mapPickerCurrentLocation": "現在地",
   "mapPickerConfirm": "場所を確認",
   "longPressForMapPicker": "長押しして詳細な場所を選択",
+  "longPressForNearbyPicker": "長押しで周辺の場所を選択",
+  "onlinePlaceSearchUnavailable": "オンライン地点検索を利用できません",
+  "offlineCoordinates": "オフライン座標",
+  "mapPickerSearchHint": "場所や建物を検索...",
+  "mapPickerSearchResults": "検索結果",
+  "mapPickerSearching": "周辺の場所を検索しています...",
+  "mapPickerNoResults": "一致する場所が見つかりません。地図をタップして地点を指定してください",
+  "mapPickerSelectedPoint": "選択した地点",
+  "mapPickerResolvingPoint": "住所を取得しています...",
+  "mapPickerUnnamedPoint": "名称未設定の地点",
+  "mapPickerLocateMe": "現在地に移動",
+  "mapPickerCurrentLocationSubtitle": "デバイスの現在地",
+  "mapPickerDistanceMeters": "{distance} m",
+  "@mapPickerDistanceMeters": {
+    "description": "地图选点页搜索结果与选点之间的距离（米）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerDistanceKilometers": "{distance} km",
+  "@mapPickerDistanceKilometers": {
+    "description": "地图选点页搜索结果与选点之间的距离（公里）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapMemoryEmptyHint": "位置情報付きのノートがまだありません。ノート作成時に位置情報を有効にすると、地図上で振り返ることができます。",
+  "mapMemoryLoadFailed": "地図の思い出を読み込めませんでした",
+  "mapMemoryResetView": "表示をリセット",
+  "mapMemoryPlaceCount": "位置情報付きのノート {count} 件",
+  "@mapMemoryPlaceCount": {
+    "description": "地图回忆页顶部提示里带坐标的笔记条数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "poiNameLabel": "詳細な場所",
   "explore": "探索",
   "exploreMapMemory": "マップの記憶",
@@ -3667,9 +3760,17 @@
   "smartPushPeriodNight": "夜間",
   "settingsSentryTitle": "診断データを送信して改善に協力",
   "settingsSentryDesc": "デフォルトではオフです。手動で有効にすると、エラーログ、デバイス情報、ページ、通常のネットワークリクエストおよびメインデータベースのパフォーマンスデータが送信されます。AI リクエストは含まれません。データベース監視は SQL テンプレートと所要時間のみを記録し、ノートの内容やクエリパラメータは一切送信しません。",
+  "settingsTelemetryTitle": "匿名機能改善プログラムに参加",
+  "settingsTelemetryDesc": "デフォルトではオフです。有効にすると、開発の優先順位を判断するために匿名の機能利用頻度（機能の利用割合など）のみを収集します。ノート本文や検索キーワードなどの個人情報は一切収集しません。",
   "sentryRestartHint": "設定が保存されました。再起動後に反映されます",
   "sentryDisclosureTitle": "プライバシーポリシーが更新されました",
   "sentryDisclosureGotIt": "了解しました",
+  "learnMoreDataCollection": "収集の詳細と匿名化ソースコードを確認",
+  "dataCollectionDisclosureTitle": "データ収集とオープンソース匿名化について",
+  "dataCollectionDisclosureContent": "【方針と目的】\nThoughtEcho（心跡）はオープンソースかつローカルファーストのノートアプリです。すべての外部データ収集機能は【デフォルトで無効】になっています。手動で有効にした場合でも、データの最小化と端末内での厳格な匿名化を徹底しています。\n\n1. エラー診断とパフォーマンス監視（Sentry）\n• 目的：クラッシュ時のスタックトレースを収集し、深刻な強制終了やフリーズ、互換性の問題を特定・修正するとともに、パフォーマンス追跡によって画面の読み込み速度や快適さを向上させます。\n• 収集内容：クラッシュのスタックトレース、エラー種別、OSバージョン、端末モデル、ランダム生成されたインストール識別子（ハードウェア情報には紐づきません）、パフォーマンス指標（画面読み込み時間、匿名化されたデータベース操作種別、リクエスト先のドメインとパス、iOSでのCPUプロファイリング）。\n• 匿名化の仕組み：データ送信前に、端末上で正規表現を用いてSQL文内の検索テキストやパラメータ、URLクエリパラメータを自動除去し、スクリーンショットや画面録画を強制的に無効化します。\n\n2. 匿名機能改善プログラム（Aptabase）\n• 目的：各機能の利用頻度や傾向（カードテンプレートの好み、レイアウトの選択など）を把握し、今後の開発ロードマップを計画します。\n• 収集内容：匿名の機能タップや画面アクセスイベント、OS環境とバージョン、言語・地域設定、アプリのバージョン、起動ごとの一時的なセッションID（アプリ終了時に破棄）、通信経路からサーバーが推定する大まかな国・地域（IPアドレスは保存されません）。\n• プライバシー保護：プライバシーを重視した軽量オープンソース分析サービス「Aptabase」を採用しており、Cookieは使用せず、アプリ間トラッキングや端末のフィンガープリント取得、個人のプロファイリングは一切行いません。\n\n3. 決して収集しない厳格な境界（安全への約束）\n• ノート本文、リッチテキストDelta JSON、画像や音声などの添付ファイル\n• タグ名、引用元、カテゴリ、検索キーワード\n• AIとの対話履歴、プロンプト内容、サードパーティAPIキー\n• 個人を特定できる情報（氏名、メールアドレス、電話番号など）。診断および統計サービスはIPアドレスを保存しません\n\n4. オープンソースによる透明性と検証\nThoughtEchoのすべてのデータ匿名化および通信コードは完全にオープンソースとして公開されており、誰でもコード実装を確認できます。",
+  "viewSentrySourceCode": "Sentry 匿名化コード",
+  "viewAptabaseSourceCode": "Aptabase ソースコード",
+  "viewPrivacyPolicy": "プライバシーポリシー",
   "onboardingUpdateFailed": "データの更新に失敗しましたが、アプリの利用はそのまま継続できます",
   "onboardingUpdateProcessFailed": "更新処理に失敗しました。アプリを再起動してください",
   "settingsPrivacyPolicy": "プライバシーポリシー",
@@ -4325,6 +4426,40 @@
     }
   },
   "agentPreparedSuggestionCard": "Suggestion ready",
+  "agentAskingUser": "質問しています...",
+  "agentAskUserTitleThoughter": "Thoughter からの質問",
+  "agentAskUserTitleThoughterMulti": "Thoughter から {count} 件の質問",
+  "@agentAskUserTitleThoughterMulti": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserCustomHint": "または回答を入力...",
+  "agentAskUserUnanswered": "未回答",
+  "agentAskUserStepOf": "質問 {index} / {total}",
+  "@agentAskUserStepOf": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserPrev": "前へ",
+  "agentAskUserNext": "次へ",
+  "agentAskUserReviewTitle": "回答を確認して送信",
+  "agentAskUserSubmitAll": "すべて送信",
+  "agentAskUserEditAnswer": "変更",
+  "agentAskUserIncompleteHint": "未回答の質問があります",
+  "agentAskUserCancelled": "質問をスキップしました",
+  "agentAskUserSelectedPrefix": "選択中: ",
+  "agentAskUserCustomPrefix": "カスタム: ",
+  "agentAskUserSingleSelectHint": "選択肢をタップして回答",
+  "agentAskUserMultiSelectHint": "複数選択可。「次へ」をタップして確認",
   "agentToolStepFinished": "Done",
   "agentToolStepDidNotFinish": "Failed",
   "agentMemorySaved": "Memory saved",
@@ -4581,12 +4716,31 @@
   "agentMemoryNoticeDisable": "Don't remember",
   "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
   "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
+  "dreamingEnableTitle": "Dreaming 整理を有効にする",
+  "dreamingEnableDesc": "Thoughter がバックグラウンドでノートを整理し、ユーザーの傾向を分析することを許可します",
+  "dreamingOnIdleTitle": "アイドル時に自動整理",
+  "dreamingOnIdleDesc": "操作を停止して30秒後、ネットワークが空いているときに静かに整理を開始します",
+  "dreamingAfterInsightTitle": "定期インサイト後に整理",
+  "dreamingAfterInsightDesc": "定期インサイトの生成が完了した後、最近のノートからユーザー像を更新します",
+  "dreamingSwitchFailed": "Dreaming の設定を保存できませんでした。もう一度お試しください",
   "releaseNotesTitle": "What's New",
   "releaseNotesUpgradeLede": "Here's what has been added since you last used the app.",
   "releaseNotesCurrentLede": "Here's what this version adds.",
   "releaseNotesHighlights": "Highlights",
   "releaseNotesGetStarted": "Get started",
   "releaseNotesViewDetailedChangelog": "View more improvements on GitHub Releases",
+  "releaseFootprintsTitle": "足跡と地図の思い出",
+  "releaseFootprintsLede": "ノートを書いた場所を記録し、その場所ごとに過去の記録を振り返りましょう。",
+  "releaseFootprintsPickerTitle": "周辺の場所の選択",
+  "releaseFootprintsPickerDesc": "周辺の場所を検索し、「市区町村」のわかりやすい地名に自動整理されるため、手軽に位置を記録できます。",
+  "releaseFootprintsMemoryTitle": "地図の足跡",
+  "releaseFootprintsMemoryDesc": "「探索」画面で地図を開き、様々な場所で綴った心跡を巡ることができます。",
+  "releaseDreamingTitle": "Thoughter Dreaming",
+  "releaseDreamingLede": "バックグラウンドで執筆の好みや傾向を静かに分析し、より自然な対話を実現します。",
+  "releaseDreamingIdleTitle": "アイドル時の整理",
+  "releaseDreamingIdleDesc": "アプリを使用していない間に執筆傾向を整理するため、記録の流れを妨げません。",
+  "releaseDreamingControlTitle": "自由なコントロール",
+  "releaseDreamingControlDesc": "記憶は端末内に安全に保存され、いつでも閲覧・編集・消去できます。",
   "releaseThoughterTitle": "Thoughter: a thinking partner inside your notebook",
   "releaseThoughterLede": "From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
   "releaseThoughterSearchTitle": "Smart retrieval across your notes",
@@ -4610,10 +4764,140 @@
   "releaseMediaDisplayTitle": "Cleaner Media Layout",
   "releaseMediaDisplayLede": "Photos in the note list now sit neatly as right-side thumbnails; double-tap any card to expand full text and images.",
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
+  "releasePrivacyNotice": "プライバシーポリシーを更新し、匿名機能改善プログラム（Aptabase）に関するデータ説明を追加しました。完全なポリシーは「設定 › フィードバックと連絡先」のデータ説明で確認できます。どちらの機能もデフォルトで無効です。",
   "settingsReleaseNotes": "What's New",
   "settingsReleaseNotesDesc": "See what this version adds",
   "generatingInsightsForRange": "{period}のインサイトを生成中...",
   "exploreSummarizeRange": "{period}をまとめる",
   "exploreSummarizeRangePrompt": "{period}の記録をまとめてください。注目すべき点はありますか？",
-  "noNotesInRange": "{period}の記録はまだありません"
+  "noNotesInRange": "{period}の記録はまだありません",
+  "agentMemoryManageTitle": "記憶を管理",
+  "agentMemoryManageSubtitle": "Thoughter が覚えた特徴や根拠を確認・修正・管理します",
+  "agentMemoryPageTitle": "Thoughter の記憶",
+  "agentMemoryResonanceSummary": "特徴 {profileCount} 件 · 近況 {sliceCount} 件 · 詳細 {factCount} 件",
+  "@agentMemoryResonanceSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "sliceCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCognitiveLoad": "記憶容量",
+  "agentMemoryBudgetNormal": "容量に余裕があり、対話やインスピレーションが快適に機能します",
+  "agentMemoryBudgetNearFull": "上限に近づいています。最新の特徴が優先して保持されます",
+  "agentMemoryTabAll": "すべて",
+  "agentMemoryTabProfile": "特徴",
+  "agentMemoryTabPulse": "最近の様子",
+  "agentMemoryTabFacts": "記憶の詳細",
+  "agentMemoryTabHistory": "履歴",
+  "agentMemorySearchHint": "記憶やキーワードを検索...",
+  "agentMemoryKindIdentity": "アイデンティティ",
+  "agentMemoryKindPreference": "コンテンツの好み",
+  "agentMemoryKindStyle": "表現スタイル",
+  "agentMemoryKindFeedback": "修正フィードバック",
+  "agentMemoryKindTaste": "抜粋の嗜好",
+  "agentMemoryKindVoice": "執筆のトーン",
+  "agentMemorySourceDreaming": "ノートから抽出",
+  "agentMemorySourceThoughter": "対話から記憶",
+  "agentMemorySourceUser": "手動で追加",
+  "agentMemoryStatusActive": "有効",
+  "agentMemoryStatusSuperseded": "アーカイブ済み",
+  "agentMemoryEvidenceTitle": "関連ノート {count} 件",
+  "@agentMemoryEvidenceTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEvidenceViewNote": "ノートを表示",
+  "agentMemoryEvidenceNoteDeleted": "元のノートは削除されました",
+  "agentMemoryPulseExpiresIn": "残り {days} 日",
+  "@agentMemoryPulseExpiresIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryPulseExpiresToday": "本日期限切れ",
+  "agentMemoryPulseTtlNotice": "最近の様子は2週間で自然に薄れ、記憶をすっきりと保ちます",
+  "agentMemoryFactImportance": "重要度 {score}/10",
+  "@agentMemoryFactImportance": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryFactRecalledTimes": "{count} 回想起",
+  "@agentMemoryFactRecalledTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEditDirectiveTitle": "記憶の特徴を修正",
+  "agentMemoryEditDirectiveHint": "例：簡潔な文で返答し、余白を大切にする",
+  "agentMemoryEditSave": "変更を保存",
+  "agentMemoryEditSuccess": "記憶を更新しました",
+  "agentMemoryForgetConfirmTitle": "この記憶を忘れさせますか？",
+  "agentMemoryForgetConfirmBody": "忘却すると、Thoughter は対話や日々のヒント、定期インサイトでこの内容を参照しなくなります。",
+  "agentMemoryForgetAction": "忘れる",
+  "agentMemoryForgotten": "記憶を忘れました",
+  "agentMemoryCompactTitle": "記憶を整理",
+  "agentMemoryCompactConfirm": "期限切れの近況、古い履歴、重要度の低い詳細を自動的に整理します。続行しますか？",
+  "agentMemoryCompactDone": "期限切れの記憶 {count} 件を整理しました",
+  "@agentMemoryCompactDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCompactNoop": "記憶は整理されており、クリーンアップの必要はありません",
+  "agentMemoryAddTitle": "Thoughter に新しい特徴を教える",
+  "agentMemoryAddKind": "特徴の分類",
+  "agentMemoryAddDirective": "記憶の内容（明確な指示として記入）",
+  "agentMemoryAddHint": "例：私のことは「旅人」と呼び、文学や哲学について語るのを好む",
+  "agentMemoryAddSuccess": "新しい特徴を記録しました",
+  "agentMemoryEmpty": "一致する記憶がありません",
+  "agentMemoryEmptyDesc": "Thoughter と対話すると、あなたの好みや習慣が自然に記録されます",
+  "agentMemoryCharsCount": "{usedChars} / {maxChars} 文字",
+  "@agentMemoryCharsCount": {
+    "placeholders": {
+      "usedChars": {
+        "type": "int"
+      },
+      "maxChars": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEntriesCount": "{usedEntries} / {maxEntries} 件",
+  "@agentMemoryEntriesCount": {
+    "placeholders": {
+      "usedEntries": {
+        "type": "int"
+      },
+      "maxEntries": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryObservationTime": "記録日時: {time}",
+  "@agentMemoryObservationTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }
