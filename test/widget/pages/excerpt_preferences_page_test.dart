@@ -215,7 +215,8 @@ void main() {
         locale: const Locale('zh'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const PreferencesDetailPage(),
+        // 测试跑在宿主机上，显式声明支持摘录入口，否则开关会按平台被隐藏。
+        home: const PreferencesDetailPage(excerptIntentSupported: true),
       ),
     );
   }

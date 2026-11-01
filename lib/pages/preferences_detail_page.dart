@@ -16,7 +16,11 @@ import '../theme/theme_style.dart';
 
 /// 二级设置页：整合常用偏好与AI快捷开关
 class PreferencesDetailPage extends StatefulWidget {
-  const PreferencesDetailPage({super.key});
+  /// [excerptIntentSupported] 只给测试用：不传就按真实平台判断
+  /// （「摘录到心迹」只有 Android 原生侧实现）。
+  const PreferencesDetailPage({super.key, this.excerptIntentSupported});
+
+  final bool? excerptIntentSupported;
 
   @override
   State<PreferencesDetailPage> createState() => _PreferencesDetailPageState();
@@ -210,7 +214,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                 ),
                 _buildDivider(),
                 // 「摘录到心迹」只有 Android 原生侧实现，其他平台不展示该开关。
-                if (const ExcerptIntentService().isSupported) ...[
+                if (ExcerptIntentService(
+                  supported: widget.excerptIntentSupported,
+                ).isSupported) ...[
                   _buildSwitchTile(
                     context: context,
                     title: l10n.excerptIntentEnabled,
