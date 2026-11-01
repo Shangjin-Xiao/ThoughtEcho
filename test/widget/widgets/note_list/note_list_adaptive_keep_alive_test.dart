@@ -93,6 +93,39 @@ void main() {
     // 位于顶部的卡片（视口半径内）应保持 keepAlive
     expect((keepAliveWidgets.first as dynamic).keepAlive, isTrue);
 
+    // 滑动跳过前几个普通条目至第 10 项附近
+    // 旧半径 18 会将已划出视口的普通第 0 项持续保留在树中；
+    // 而自适应半径（3~5）则会及时释放离屏普通卡片，配合 Flutter 基础视口回收机制释放。
+    await tester.drag(find.byType(ListView), const Offset(0, -1500));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // 普通卡片第 0 项已滑出保留窗口，被基础视口回收机制释放，不再保留在活动树中
+    expect(
+      find.byKey(const ValueKey('note_item_motion_long-note-0')),
+      findsNothing,
+    );
+
+    // 滚动至第 20 条富媒体卡片附近
+    await tester.drag(find.byType(ListView), const Offset(0, -1500));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // 富媒体卡片已挂载且始终保持 keepAlive
+    final mediaFinder = find.byKey(
+      const ValueKey('note_item_motion_long-note-20'),
+    );
+    expect(mediaFinder, findsOneWidget);
+    final keepAliveMedia = tester.widget(
+      find.descendant(
+        of: mediaFinder,
+        matching: find.byWidgetPredicate(
+          (w) => w.runtimeType.toString() == '_NoteListItemKeepAlive',
+        ),
+      ),
+    );
+    expect((keepAliveMedia as dynamic).keepAlive, isTrue);
+
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 2));
   });
