@@ -449,12 +449,19 @@ def infer_aliases_from_notes(notes, nickname=""):
 # -----------------------------------------------------------------------------
 # LLM 客户端与请求控速（Pacing & Exponential Backoff）
 # -----------------------------------------------------------------------------
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Never forward the bearer token or prompt to a redirect destination.
+        return None
+
+
 class ResilientGeminiClient:
     def __init__(self, api_key, base_url, preferred_models):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         if not self.base_url.startswith("https://"):
             raise ValueError(f"Insecure benchmark base_url rejected: {self.base_url}. HTTPS is required.")
+        self._opener = urllib.request.build_opener(_NoRedirectHandler())
         self.models = preferred_models
         self.active_model_idx = 0
         self.last_request_time = 0
@@ -495,7 +502,7 @@ class ResilientGeminiClient:
 
                 try:
                     start_t = time.time()
-                    with urllib.request.urlopen(req, timeout=45) as resp:
+                    with self._opener.open(req, timeout=45) as resp:
                         data = json.loads(resp.read().decode("utf-8"))
                         self.last_request_time = time.time()
                         self.active_model_idx = model_idx
@@ -506,6 +513,8 @@ class ResilientGeminiClient:
                         body = e.read().decode("utf-8")
                     except Exception:
                         pass
+                    finally:
+                        e.close()
                     print(f"⚠️ [{model_name}] HTTP {e.code} (attempt {attempt+1}/{max_retries}): {e.reason} {body[:120]}")
 
                     if e.code in (429, 503, 500):
