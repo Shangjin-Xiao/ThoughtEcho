@@ -104,6 +104,7 @@ void main() {
 
       expect(settings.providers.length, 1);
       expect(settings.providers.first.id, 'provider_test');
+      expect(settings.providers.first.apiKey, isEmpty);
       expect(settings.currentProviderId, 'provider_test');
       expect(settings.enableFailover, isFalse);
       expect(settings.currentProvider?.id, 'provider_test');
@@ -209,6 +210,10 @@ void main() {
       final restored = MultiAISettings.fromJson(json);
       expect(restored.providers.length, settings.providers.length);
       expect(restored.providers.first.id, settings.providers.first.id);
+      expect(restored.providers.first.name, settings.providers.first.name);
+      expect(restored.providers.first.apiUrl, settings.providers.first.apiUrl);
+      expect(restored.providers.first.model, settings.providers.first.model);
+      expect(restored.providers.first.apiKey, isEmpty);
       expect(restored.currentProviderId, settings.currentProviderId);
       expect(restored.enableFailover, settings.enableFailover);
       expect(restored.currentProvider?.id, settings.currentProvider?.id);
@@ -248,28 +253,33 @@ void main() {
       const initial = MultiAISettings(
         providers: [provider1],
         currentProviderId: 'p1',
-        enableFailover: true,
+        enableFailover: false,
       );
 
       final copy1 = initial.copyWith(providers: [provider1, provider2]);
       expect(copy1.providers.length, 2);
       expect(copy1.currentProviderId, 'p1');
-      expect(copy1.enableFailover, isTrue);
+      expect(copy1.enableFailover, isFalse);
 
       final copy2 = initial.copyWith(currentProviderId: 'p2');
       expect(copy2.providers.length, 1);
       expect(copy2.currentProviderId, 'p2');
-      expect(copy2.enableFailover, isTrue);
+      expect(copy2.enableFailover, isFalse);
 
-      final copy3 = initial.copyWith(enableFailover: false);
+      final copy3 = initial.copyWith(enableFailover: true);
       expect(copy3.providers.length, 1);
       expect(copy3.currentProviderId, 'p1');
-      expect(copy3.enableFailover, isFalse);
+      expect(copy3.enableFailover, isTrue);
+
+      final copyNullId = initial.copyWith(currentProviderId: null);
+      expect(copyNullId.providers.length, 1);
+      expect(copyNullId.currentProviderId, isNull);
+      expect(copyNullId.enableFailover, isFalse);
 
       final copyNone = initial.copyWith();
       expect(copyNone.providers.length, 1);
       expect(copyNone.currentProviderId, 'p1');
-      expect(copyNone.enableFailover, isTrue);
+      expect(copyNone.enableFailover, isFalse);
     });
   });
 }

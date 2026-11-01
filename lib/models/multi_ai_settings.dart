@@ -64,14 +64,18 @@ class MultiAISettings {
     };
   }
 
+  static const Object _sentinel = Object();
+
   MultiAISettings copyWith({
     List<AIProviderSettings>? providers,
-    String? currentProviderId,
+    Object? currentProviderId = _sentinel,
     bool? enableFailover,
   }) {
     return MultiAISettings(
       providers: providers ?? this.providers,
-      currentProviderId: currentProviderId ?? this.currentProviderId,
+      currentProviderId: identical(currentProviderId, _sentinel)
+          ? this.currentProviderId
+          : currentProviderId as String?,
       enableFailover: enableFailover ?? this.enableFailover,
     );
   }
