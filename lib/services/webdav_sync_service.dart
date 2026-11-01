@@ -563,15 +563,8 @@ class WebDAVSyncService extends ChangeNotifier {
           remoteSyncFile,
         );
       } finally {
-        // 清理本轮同步的工作目录
-        try {
-          if (await workDir.exists()) await workDir.delete(recursive: true);
-        } catch (e) {
-          logWarning(
-            '清理 WebDAV 同步工作目录失败: $e',
-            source: 'WebDAVSyncService',
-          );
-        }
+        // 清理本轮同步的工作目录（含完整笔记快照，必须删除）
+        await _cleanupSyncWorkDirectory(workDir);
       }
 
       // 7. 更新同步状态。笔记数据已完整同步，水位线可以前推；
@@ -906,6 +899,38 @@ class WebDAVSyncService extends ChangeNotifier {
       await root.create(recursive: true);
     }
     return root.createTemp('run_');
+  }
+
+  static const int _maxWorkDirCleanupRetries = 3;
+
+  /// 删除本轮同步工作目录。失败时以 error 级别上报（附路径与堆栈），
+  /// 并按指数退避安排有上限的重试；下次同步开始时也会再次清理遗留目录。
+  /// 笔记数据此时已上传成功，因此不让清理失败改写同步结果。
+  Future<void> _cleanupSyncWorkDirectory(
+    Directory workDir, {
+    int attempt = 0,
+  }) async {
+    try {
+      if (await workDir.exists()) await workDir.delete(recursive: true);
+    } catch (e, stack) {
+      final canRetry = attempt < _maxWorkDirCleanupRetries;
+      logError(
+        '清理 WebDAV 同步工作目录失败: ${workDir.path}'
+        '（第 ${attempt + 1} 次${canRetry ? '，稍后重试' : '，已达重试上限，等待下次同步清理'}）',
+        error: e,
+        stackTrace: stack,
+        source: 'WebDAVSyncService',
+      );
+      if (canRetry) {
+        final delay = Duration(seconds: 5 * (1 << attempt));
+        Future<void>.delayed(delay, () async {
+          // 同步进行中时，新一轮同步会在开始时统一清理遗留目录
+          if (!_isSyncExecuting) {
+            await _cleanupSyncWorkDirectory(workDir, attempt: attempt + 1);
+          }
+        });
+      }
+    }
   }
 
   /// 是否为同步包中的数据条目。兼容旧版本/其他导出路径产生的
