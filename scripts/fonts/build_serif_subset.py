@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import tempfile
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -155,54 +156,54 @@ def main() -> None:
     parser.add_argument(
         "--work-dir",
         default=None,
-        help="下载与中间产物目录，默认使用系统临时目录",
+        help="临时工作目录的父目录，默认使用系统临时目录；中间产物在退出时清理",
     )
     args = parser.parse_args()
 
-    import tempfile
+    if args.work_dir:
+        Path(args.work_dir).mkdir(parents=True, exist_ok=True)
 
-    work_dir = (
-        Path(args.work_dir)
-        if args.work_dir
-        else Path(tempfile.gettempdir()) / "thoughtecho-fonts"
-    )
-    work_dir.mkdir(parents=True, exist_ok=True)
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    # 每次独占私有目录，避免复用共享临时目录中预先放置的文件或符号链接。
+    with tempfile.TemporaryDirectory(
+        prefix="thoughtecho-fonts-", dir=args.work_dir or None
+    ) as temp_dir:
+        work_dir = Path(temp_dir)
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    source_font = work_dir / "NotoSerifSC-VF.ttf"
-    download(SOURCE_FONT_URL, source_font)
-    download(SOURCE_LICENSE_URL, OUT_LICENSE)
+        source_font = work_dir / "NotoSerifSC-VF.ttf"
+        download(SOURCE_FONT_URL, source_font)
+        download(SOURCE_LICENSE_URL, OUT_LICENSE)
 
-    charset = build_charset(args.traditional)
-    charset_file = work_dir / "charset.txt"
-    charset_file.write_text(charset, encoding="utf-8")
-    print(f"字符集：{len(charset)} 个字符"
-          f"（{'含繁体' if args.traditional else '简体'}）")
+        charset = build_charset(args.traditional)
+        charset_file = work_dir / "charset.txt"
+        charset_file.write_text(charset, encoding="utf-8")
+        print(f"字符集：{len(charset)} 个字符"
+              f"（{'含繁体' if args.traditional else '简体'}）")
 
-    # 直接调 fontTools 的 Python API，不起子进程：pyftsubset / fonttools 是否在
-    # PATH 上取决于安装方式，而且子进程那条路要么被静态分析盯上、要么得靠
-    # 抑制注释糊过去。库调用没有这些问题，报错也直接是 Python 异常。
-    subset_file = work_dir / "subset.ttf"
-    ft_subset.main([
-        str(source_font),
-        f"--text-file={charset_file}",
-        f"--output-file={subset_file}",
-        f"--layout-features={LAYOUT_FEATURES}",
-        "--no-hinting",
-    ])
+        # 直接调 fontTools 的 Python API，不起子进程：pyftsubset / fonttools 是否在
+        # PATH 上取决于安装方式，而且子进程那条路要么被静态分析盯上、要么得靠
+        # 抑制注释糊过去。库调用没有这些问题，报错也直接是 Python 异常。
+        subset_file = work_dir / "subset.ttf"
+        ft_subset.main([
+            str(source_font),
+            f"--text-file={charset_file}",
+            f"--output-file={subset_file}",
+            f"--layout-features={LAYOUT_FEATURES}",
+            "--no-hinting",
+        ])
 
-    # 收窄字重轴，顺带把默认实例定到 400 并刷新 name 表。
-    ft_instancer.main([
-        str(subset_file),
-        WEIGHT_RANGE,
-        "-o", str(OUT_FONT),
-        "--update-name-table",
-    ])
+        # 收窄字重轴，顺带把默认实例定到 400 并刷新 name 表。
+        ft_instancer.main([
+            str(subset_file),
+            WEIGHT_RANGE,
+            "-o", str(OUT_FONT),
+            "--update-name-table",
+        ])
 
-    fix_name_table(OUT_FONT)
+        fix_name_table(OUT_FONT)
 
-    size_mb = OUT_FONT.stat().st_size / 1024 / 1024
-    print(f"产物：{OUT_FONT.relative_to(REPO_ROOT)}  {size_mb:.2f} MB")
+        size_mb = OUT_FONT.stat().st_size / 1024 / 1024
+        print(f"产物：{OUT_FONT.relative_to(REPO_ROOT)}  {size_mb:.2f} MB")
 
 
 if __name__ == "__main__":
