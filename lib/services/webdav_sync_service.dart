@@ -451,12 +451,10 @@ class WebDAVSyncService extends ChangeNotifier {
     try {
       // 0. 先确认本地主库可用（必要时会等待/重新初始化）。若主库启动失败，
       // 在这里整体失败并记录一次错误，而不是在后续每个媒体文件上各抛一次。
-      // 先 await init()：safeDatabase 在 init() 赋值 _database 后、schema 修复与
-      // 迁移完成前就会返回句柄；若随后初始化失败，该句柄会被关闭。init() 在已
-      // 完成时立即返回，进行中时等待并向上抛出初始化失败。
+      // ensureReadyDatabase() 会等待进行中的初始化完成（并传播失败），且在数据
+      // 目录迁移持有关闭状态时直接拒绝，不会重新打开旧路径数据库。
       final dbService = DatabaseService();
-      await dbService.init();
-      final localDb = await dbService.safeDatabase;
+      final localDb = await dbService.ensureReadyDatabase();
 
       final dio = await _createDio(_url, _username, password);
 
