@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
@@ -344,6 +348,96 @@ void main() {
 
       // Floating action button should be present
       expect(find.byType(FloatingActionButton), findsOneWidget);
+    });
+
+    testWidgets(
+        'should isolate DailyQuoteView and HomeDailyPromptPanel within independent RepaintBoundary nodes',
+        (WidgetTester tester) async {
+      await pumpHomePage(tester);
+
+      final dailyQuoteFinder = find.byType(DailyQuoteView);
+      final promptPanelFinder = find.byType(HomeDailyPromptPanel);
+
+      expect(dailyQuoteFinder, findsOneWidget);
+      expect(promptPanelFinder, findsOneWidget);
+
+      final dailyQuoteRender = tester.renderObject(dailyQuoteFinder);
+      expect(dailyQuoteRender.parent, isA<RenderRepaintBoundary>());
+      final RenderRepaintBoundary dailyQuoteBoundary =
+          dailyQuoteRender.parent! as RenderRepaintBoundary;
+      expect(dailyQuoteBoundary.isRepaintBoundary, isTrue);
+
+      final promptPanelRender = tester.renderObject(promptPanelFinder);
+      expect(promptPanelRender.parent, isA<RenderRepaintBoundary>());
+      final RenderRepaintBoundary promptPanelBoundary =
+          promptPanelRender.parent! as RenderRepaintBoundary;
+      expect(promptPanelBoundary.isRepaintBoundary, isTrue);
+
+      expect(identical(dailyQuoteBoundary, promptPanelBoundary), isFalse);
+
+      // Verify each RepaintBoundary owns an independent OffsetLayer
+      expect(dailyQuoteBoundary.debugLayer, isA<OffsetLayer>());
+      expect(promptPanelBoundary.debugLayer, isA<OffsetLayer>());
+      expect(
+          identical(
+              dailyQuoteBoundary.debugLayer, promptPanelBoundary.debugLayer),
+          isFalse);
+
+      // Verify guide keys remain functional
+      final promptPanelWidget =
+          tester.widget<HomeDailyPromptPanel>(promptPanelFinder);
+      expect(
+          promptPanelWidget.key, isA<GlobalKey<HomeDailyPromptPanelState>>());
+      final promptKey =
+          promptPanelWidget.key! as GlobalKey<HomeDailyPromptPanelState>;
+      expect(promptKey.currentState, isNotNull);
+
+      // Verify repaint boundary isolation: marking dailyQuoteRender as dirty terminates at boundary
+      dailyQuoteRender.markNeedsPaint();
+      expect(dailyQuoteBoundary.debugNeedsPaint, isTrue);
+      expect(dailyQuoteBoundary.parent!.debugNeedsPaint, isFalse);
+      expect(promptPanelBoundary.debugNeedsPaint, isFalse);
+
+      await tester.pump();
+      expect(dailyQuoteBoundary.debugNeedsPaint, isFalse);
+
+      // Verify repaint boundary isolation: marking promptPanelRender as dirty terminates at boundary
+      promptPanelRender.markNeedsPaint();
+      expect(promptPanelBoundary.debugNeedsPaint, isTrue);
+      expect(promptPanelBoundary.parent!.debugNeedsPaint, isFalse);
+      expect(dailyQuoteBoundary.debugNeedsPaint, isFalse);
+
+      await tester.pump();
+      expect(promptPanelBoundary.debugNeedsPaint, isFalse);
+
+      // Verify AppBar / weather state changes do not mark cards as needing paint
+      mockWeatherService.notifyListeners();
+      await tester.pump();
+      expect(dailyQuoteBoundary.debugNeedsPaint, isFalse);
+      expect(promptPanelBoundary.debugNeedsPaint, isFalse);
+
+      // Export screenshots of isolated repaint boundaries for verification
+      await tester.runAsync(() async {
+        final dailyQuoteImage =
+            await dailyQuoteBoundary.toImage(pixelRatio: 2.0);
+        final dailyQuoteByteData =
+            await dailyQuoteImage.toByteData(format: ui.ImageByteFormat.png);
+        dailyQuoteImage.dispose();
+        if (dailyQuoteByteData != null) {
+          File('/tmp/daily_quote_isolated_boundary.png')
+              .writeAsBytesSync(dailyQuoteByteData.buffer.asUint8List());
+        }
+
+        final promptPanelImage =
+            await promptPanelBoundary.toImage(pixelRatio: 2.0);
+        final promptPanelByteData =
+            await promptPanelImage.toByteData(format: ui.ImageByteFormat.png);
+        promptPanelImage.dispose();
+        if (promptPanelByteData != null) {
+          File('/tmp/daily_prompt_panel_isolated_boundary.png')
+              .writeAsBytesSync(promptPanelByteData.buffer.asUint8List());
+        }
+      });
     });
 
     testWidgets('should navigate to NoteListView when second tab is tapped',

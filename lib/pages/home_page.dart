@@ -948,24 +948,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         ? 0.55
                                         : 0.50), // 极小屏幕调整比例
                               ),
-                              child: DailyQuoteView(
-                                key: _dailyQuoteViewKey,
-                                onAddQuote:
-                                    (content, author, work, hitokotoData) =>
-                                        _showAddQuoteDialog(
-                                  prefilledContent: content,
-                                  prefilledAuthor: author,
-                                  prefilledWork: work,
-                                  hitokotoData: hitokotoData,
+                              child: RepaintBoundary(
+                                child: DailyQuoteView(
+                                  key: _dailyQuoteViewKey,
+                                  onAddQuote:
+                                      (content, author, work, hitokotoData) =>
+                                          _showAddQuoteDialog(
+                                    prefilledContent: content,
+                                    prefilledAuthor: author,
+                                    prefilledWork: work,
+                                    hitokotoData: hitokotoData,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                          HomeDailyPromptPanel(
-                            key: _dailyPromptPanelKey,
-                            screenWidth: screenWidth,
-                            isSmallScreen: isSmallScreen,
-                            isVerySmallScreen: isVerySmallScreen,
+                          RepaintBoundary(
+                            child: HomeDailyPromptPanel(
+                              key: _dailyPromptPanelKey,
+                              screenWidth: screenWidth,
+                              isSmallScreen: isSmallScreen,
+                              isVerySmallScreen: isVerySmallScreen,
+                            ),
                           ),
                         ],
                       ),
