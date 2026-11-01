@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +9,7 @@ import 'package:thoughtecho/providers/app_providers.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
+import 'package:thoughtecho/services/agent_tools/ask_user_tool.dart';
 import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/ai_service.dart';
@@ -217,6 +220,111 @@ void main() {
       agent.dispose();
     });
 
+    test(
+        'AgentService.updateDependencies reuses existing AskUserTool instance and preserves prompt handler',
+        () async {
+      final s1 = _FakeSettingsService();
+      final s2 = _FakeSettingsService();
+      final initialAskUser = AskUserTool();
+      final agent = AgentService(
+        settingsService: s1,
+        tools: [initialAskUser, _DummyTool('tool_1')],
+      );
+
+      var handlerInvoked = false;
+      agent.setAskUserHandler((request) async {
+        handlerInvoked = true;
+        return AskUserResponse.cancelled();
+      });
+
+      final newAskUser = AskUserTool();
+      agent.updateDependencies(
+        settingsService: s2,
+        tools: [newAskUser, _DummyTool('tool_2')],
+      );
+
+      // AskUserTool instance must be preserved across in-place dependency updates
+      final currentAskUser = agent.findTool<AskUserTool>();
+      expect(identical(currentAskUser, initialAskUser), isTrue);
+      expect(identical(currentAskUser, newAskUser), isFalse);
+
+      // Verify the handler registered before updateDependencies remains active
+      await currentAskUser?.execute(
+        ToolCall(
+          id: 'call_test',
+          name: 'ask_user',
+          arguments: {
+            'questions': [
+              {
+                'question': 'Are you sure?',
+                'options': [
+                  {'label': 'Yes'},
+                  {'label': 'No'},
+                ],
+              }
+            ],
+          },
+        ),
+      );
+      expect(handlerInvoked, isTrue);
+
+      agent.dispose();
+    });
+
+    test(
+        'AgentService preserves AskUserTool active prompt and allows cancellation after updateDependencies',
+        () async {
+      final s1 = _FakeSettingsService();
+      final s2 = _FakeSettingsService();
+      final initialAskUser = AskUserTool();
+      final agent = AgentService(
+        settingsService: s1,
+        tools: [initialAskUser],
+      );
+
+      final userChoiceCompleter = Completer<AskUserResponse>();
+      agent.setAskUserHandler((request) => userChoiceCompleter.future);
+
+      final executeFuture = agent.findTool<AskUserTool>()!.execute(
+            ToolCall(
+              id: 'prompt_1',
+              name: 'ask_user',
+              arguments: {
+                'questions': [
+                  {
+                    'question': 'Confirm?',
+                    'options': [
+                      {'label': 'A'},
+                      {'label': 'B'},
+                    ],
+                  }
+                ],
+              },
+            ),
+          );
+
+      // Verify active prompt is waiting
+      expect(initialAskUser.hasActivePrompt, isTrue);
+
+      // Update dependencies while prompt is active
+      agent.updateDependencies(
+        settingsService: s2,
+        tools: [AskUserTool()],
+      );
+
+      // Active prompt is still held by the preserved tool
+      expect(agent.findTool<AskUserTool>()!.hasActivePrompt, isTrue);
+
+      // Cancel through tool cancellation (as happens on stop/cancellation)
+      agent.tools.first.cancel();
+
+      final result = await executeFuture;
+      expect(result.content, contains('用户取消了本次选择'));
+      expect(initialAskUser.hasActivePrompt, isFalse);
+
+      agent.dispose();
+    });
+
     test('AIService.updateDependencies updates settings and memory in-place',
         () {
       final s1 = _FakeSettingsService();
@@ -371,9 +479,11 @@ void main() {
       final initialTools = initialAgent.tools;
       final initialBackup = initialNoteSync.backupService;
 
-      // Find an AgentTool to verify it exists
+      // Find AgentTools to verify their lifecycle
       final initialExploreTool = initialAgent.findTool<ExploreNotesTool>();
+      final initialAskUserTool = initialAgent.findTool<AskUserTool>();
       expect(initialExploreTool, isNotNull);
+      expect(initialAskUserTool, isNotNull);
 
       // 1. Trigger SettingsService notifyListeners()
       settingsService.notifyListeners();
@@ -407,6 +517,12 @@ void main() {
           isFalse,
           reason:
               'Tools inside AgentService must be newly constructed instances');
+      expect(
+          identical(
+              initialAskUserTool, agentAfterSettings.findTool<AskUserTool>()),
+          isTrue,
+          reason:
+              'AskUserTool instance must be preserved across settings update');
       expect(identical(initialBackup, noteSyncAfterSettings.backupService),
           isFalse,
           reason: 'NoteSyncService._backupService must be updated');
@@ -436,6 +552,11 @@ void main() {
               agentAfterDb.findTool<ExploreNotesTool>()),
           isFalse,
           reason: 'ExploreNotesTool must be replaced again on DB update');
+      expect(
+          identical(initialAskUserTool, agentAfterDb.findTool<AskUserTool>()),
+          isTrue,
+          reason:
+              'AskUserTool instance must remain preserved across DB update');
       expect(identical(backupAfterSettings, noteSyncAfterDb.backupService),
           isFalse,
           reason:

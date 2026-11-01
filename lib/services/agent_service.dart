@@ -238,15 +238,24 @@ class AgentService extends ChangeNotifier {
   /// 原位更新依赖引用（SettingsService、AgentMemoryService 及 AgentTool 列表）。
   ///
   /// 同步且幂等，不关闭现有事件流，不中断运行状态，亦不触发额外的 notifyListeners()。
+  /// 工具列表中复用现有的 [AskUserTool] 实例，以保证正在进行中的用户提示处理器及取消链路不被中断。
   void updateDependencies({
     required SettingsService settingsService,
     required List<AgentTool> tools,
     AgentMemoryService? memoryService,
   }) {
+    final existingAskUserTool = findTool<AskUserTool>();
     _settingsService = settingsService;
     _memoryService = memoryService;
     _tools = List<AgentTool>.unmodifiable(
-      tools.map(_withTruncation),
+      tools.map<AgentTool>((tool) {
+        final isAskUser = tool is AskUserTool ||
+            (tool is TruncatingAgentTool && tool.inner is AskUserTool);
+        if (isAskUser && existingAskUserTool != null) {
+          return existingAskUserTool;
+        }
+        return tool;
+      }).map(_withTruncation),
     );
   }
 
