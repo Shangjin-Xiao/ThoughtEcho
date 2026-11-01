@@ -125,14 +125,18 @@ class AgentNoteContext {
 class AgentService extends ChangeNotifier {
   static const String agentToolCallPrefix = 'agentToolCall:';
 
-  final SettingsService _settingsService;
+  SettingsService _settingsService;
   final APIKeyManager _apiKeyManager = APIKeyManager();
   final AIRequestHelper _requestHelper = AIRequestHelper();
-  final List<AgentTool> _tools;
-  final AgentMemoryService? _memoryService;
+  List<AgentTool> _tools;
+  AgentMemoryService? _memoryService;
   final AgentCompletionRequester? _completionRequester;
   final AgentApiKeyResolver? _apiKeyResolver;
   final AgentRequestObserver? _requestObserver;
+
+  SettingsService get settingsService => _settingsService;
+  AgentMemoryService? get memoryService => _memoryService;
+  List<AgentTool> get tools => _tools;
 
   final StreamController<AgentEvent> _eventController =
       StreamController<AgentEvent>.broadcast(sync: true);
@@ -230,6 +234,30 @@ class AgentService extends ChangeNotifier {
         _apiKeyResolver = apiKeyResolver,
         _requestObserver = requestObserver,
         _singleToolTimeout = singleToolTimeout;
+
+  /// 原位更新依赖引用（SettingsService、AgentMemoryService 及 AgentTool 列表）。
+  ///
+  /// 同步且幂等，不关闭现有事件流，不中断运行状态，亦不触发额外的 notifyListeners()。
+  /// 工具列表中复用现有的 [AskUserTool] 实例，以保证正在进行中的用户提示处理器及取消链路不被中断。
+  void updateDependencies({
+    required SettingsService settingsService,
+    required List<AgentTool> tools,
+    AgentMemoryService? memoryService,
+  }) {
+    final existingAskUserTool = findTool<AskUserTool>();
+    _settingsService = settingsService;
+    _memoryService = memoryService;
+    _tools = List<AgentTool>.unmodifiable(
+      tools.map<AgentTool>((tool) {
+        final isAskUser = tool is AskUserTool ||
+            (tool is TruncatingAgentTool && tool.inner is AskUserTool);
+        if (isAskUser && existingAskUserTool != null) {
+          return existingAskUserTool;
+        }
+        return tool;
+      }).map(_withTruncation),
+    );
+  }
 
   /// 请求停止当前 run。
   ///

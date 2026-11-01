@@ -46,9 +46,15 @@ class SyncIntentApproval {
 /// 集成LocalSend的核心功能，实现设备间的笔记数据同步
 /// 使用备份还原机制进行数据传输和合并
 class NoteSyncService extends ChangeNotifier {
-  final BackupService _backupService;
-  final DatabaseService _databaseService;
-  final SettingsService _settingsService;
+  BackupService _backupService;
+  DatabaseService _databaseService;
+  SettingsService _settingsService;
+  AIAnalysisDatabaseService _aiAnalysisDbService;
+
+  BackupService get backupService => _backupService;
+  DatabaseService get databaseService => _databaseService;
+  SettingsService get settingsService => _settingsService;
+  AIAnalysisDatabaseService get aiAnalysisDbService => _aiAnalysisDbService;
 
   // LocalSend核心组件
   ThoughtEchoDiscoveryService? _discoveryService;
@@ -106,9 +112,26 @@ class NoteSyncService extends ChangeNotifier {
     required AIAnalysisDatabaseService aiAnalysisDbService,
   })  : _backupService = backupService,
         _databaseService = databaseService,
-        _settingsService = settingsService {
+        _settingsService = settingsService,
+        _aiAnalysisDbService = aiAnalysisDbService {
     AppLogger.d('NoteSyncService 构造函数完成', source: 'NoteSyncService');
   }
+
+  /// 原位更新依赖引用（BackupService、DatabaseService、SettingsService、AIAnalysisDatabaseService）。
+  ///
+  /// 同步且幂等，不触发额外的 notifyListeners()。
+  void updateDependencies({
+    required BackupService backupService,
+    required DatabaseService databaseService,
+    required SettingsService settingsService,
+    required AIAnalysisDatabaseService aiAnalysisDbService,
+  }) {
+    _backupService = backupService;
+    _databaseService = databaseService;
+    _settingsService = settingsService;
+    _aiAnalysisDbService = aiAnalysisDbService;
+  }
+
   bool get skipSyncConfirmation => _settingsService.syncSkipConfirm;
 
   @visibleForTesting
