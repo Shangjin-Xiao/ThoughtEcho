@@ -25,6 +25,7 @@
   "languageSettings": "Langue",
   "languageFollowSystem": "Suivre le système",
   "languageChinese": "简体中文",
+  "languageTraditionalChinese": "Chinois traditionnel",
   "languageEnglish": "English",
   "languageJapanese": "Japonais",
   "languageKorean": "Coréen",
@@ -1950,6 +1951,18 @@
   "mergeImport": "Fusionner l'importation (stratégie LWW)",
   "mergeImportDesc": "Conservez les données existantes et fusionnez avec les données de sauvegarde au moment de la mise à jour",
   "restoreSuccess": "Données restaurées avec succès ! Toutes les données ont été mises à jour.",
+  "importCleanupNotice": "Importation terminée, mais {sanitized} valeur(s) de champ non reconnue(s) ont été ignorée(s) et {skipped} note(s) au contenu vide n'ont pas été importée(s). Ces données ne proviennent pas de ThoughtEcho.",
+  "@importCleanupNotice": {
+    "description": "导入后提示：备份文件里含有本应用无法识别的字段值或空笔记",
+    "placeholders": {
+      "sanitized": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
   "mergeImportHint": "Cette opération conservera les données actuelles et fusionnera avec les données de sauvegarde :",
   "mergeImportReversible": "Cette opération est réversible : vous pouvez importer une sauvegarde par écrasement ou poursuivre la fusion.",
   "confirmRestoreBtn": "Confirmer la restauration",
@@ -2380,6 +2393,7 @@
   "editNoteMenu": "Modifier la note",
   "askAIMenu": "Demandez à l'IA",
   "generateCardShareMenu": "Générer une carte",
+  "copyTextMenu": "Copier le texte",
   "deleteNoteMenu": "Supprimer la note",
   "doubleTapToViewFull": "Appuyez deux fois pour afficher l'intégralité",
   "logLevel": "Niveau : {level}",
@@ -2686,6 +2700,7 @@
     }
   },
   "cannotGetAddress": "Impossible d'obtenir l'adresse, veuillez vérifier le réseau",
+  "locationUpdateTimeout": "Le délai d'obtention de la localisation a expiré. Veuillez vérifier votre connexion réseau.",
   "updateFailed": "Échec de la mise à jour : {error}",
   "@updateFailed": {
     "placeholders": {
@@ -2985,6 +3000,14 @@
   "featureInDevelopment": "Fonctionnalité de partage en cours de développement...",
   "selectFromFiles": "Sélectionner parmi les fichiers",
   "supportsLargeFiles": "Prend en charge les fichiers volumineux avec une gestion sécurisée de la mémoire",
+  "mediaUrlTooLarge": "Le fichier dépasse la limite de {maxSizeMb} Mo pour l'importation par URL. Veuillez choisir un fichier plus petit.",
+  "@mediaUrlTooLarge": {
+    "placeholders": {
+      "maxSizeMb": {
+        "type": "int"
+      }
+    }
+  },
   "unifiedMediaImportImportMedia": "Importer {mediaType}",
   "@unifiedMediaImportImportMedia": {
     "placeholders": {
@@ -3609,11 +3632,81 @@
   "newChat": "Nouveau chat",
   "deleteChat": "Supprimer le chat",
   "deleteChatConfirm": "Supprimer cette conversation ? Tous les messages seront supprimés.",
+  "deselectAll": "Tout désélectionner",
+  "multiSelectChats": "Sélectionner",
+  "selectedChatCount": "{count, plural, =1{1 sélectionné} other{{count} sélectionnés}}",
+  "@selectedChatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedChats": "Supprimer les conversations sélectionnées",
+  "deleteSelectedChatsConfirm": "Êtes-vous sûr de vouloir supprimer {count, plural, =1{la conversation sélectionnée} other{les {count} conversations sélectionnées}} ? Cette action est irréversible.",
+  "@deleteSelectedChatsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteChatsSuccess": "{count, plural, =1{1 conversation supprimée} other{{count} conversations supprimées}}",
+  "@deleteChatsSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noChats": "Pas encore de conversations",
   "mapPickerTitle": "Sélectionner l'emplacement",
+  "nearbyLocationTitle": "Emplacement",
   "mapPickerCurrentLocation": "Position actuelle",
   "mapPickerConfirm": "Confirmer la sélection",
   "longPressForMapPicker": "Appuyez longuement pour un emplacement précis",
+  "longPressForNearbyPicker": "Appui long pour choisir un lieu à proximité",
+  "onlinePlaceSearchUnavailable": "La recherche de lieux en ligne n'est pas disponible",
+  "offlineCoordinates": "Coordonnées hors ligne",
+  "mapPickerSearchHint": "Rechercher un lieu ou un repère...",
+  "mapPickerSearchResults": "Résultats de recherche",
+  "mapPickerSearching": "Recherche de lieux à proximité en cours...",
+  "mapPickerNoResults": "Aucun lieu trouvé. Touchez la carte pour sélectionner un point.",
+  "mapPickerSelectedPoint": "Lieu sélectionné",
+  "mapPickerResolvingPoint": "Résolution de l'adresse en cours...",
+  "mapPickerUnnamedPoint": "Lieu sans nom",
+  "mapPickerLocateMe": "Centrer sur ma position",
+  "mapPickerCurrentLocationSubtitle": "Enregistre uniquement la ville et le quartier, pas un lieu précis",
+  "mapPickerDistanceMeters": "{distance} m",
+  "@mapPickerDistanceMeters": {
+    "description": "地图选点页搜索结果与选点之间的距离（米）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerDistanceKilometers": "{distance} km",
+  "@mapPickerDistanceKilometers": {
+    "description": "地图选点页搜索结果与选点之间的距离（公里）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapMemoryEmptyHint": "Aucune note avec un emplacement pour l'instant. Activez la localisation lors de la rédaction pour retrouver vos notes sur la carte.",
+  "mapMemoryLoadFailed": "Impossible de charger les souvenirs sur la carte",
+  "mapMemoryResetView": "Réinitialiser la vue",
+  "mapMemoryPlaceCount": "{count} notes avec un emplacement",
+  "@mapMemoryPlaceCount": {
+    "description": "地图回忆页顶部提示里带坐标的笔记条数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "poiNameLabel": "Emplacement précis",
   "explore": "Explorer",
   "exploreMapMemory": "Souvenirs de carte",
@@ -3649,9 +3742,17 @@
   "smartPushPeriodNight": "Nuit",
   "settingsSentryTitle": "Envoyer des données de diagnostic pour aider à améliorer",
   "settingsSentryDesc": "Désactivé par défaut. Lorsqu'il est activé, envoie les piles d'erreurs, les informations sur l'appareil, les performances des pages, les requêtes réseau ordinaires et les performances de la base de données principale. Les requêtes IA sont exclues ; la base de données enregistre uniquement les modèles SQL et le temps d'exécution, sans jamais envoyer le contenu des notes ni les paramètres de requête.",
+  "settingsTelemetryTitle": "Participer au programme d'amélioration anonyme",
+  "settingsTelemetryDesc": "Désactivé par défaut. Lorsqu'il est activé, recueille uniquement la fréquence d'utilisation anonyme des fonctionnalités pour planifier les priorités de développement. Ne collecte jamais le contenu des notes, les termes de recherche ni aucune donnée personnelle.",
   "sentryRestartHint": "Paramètres enregistrés, effectif après redémarrage",
   "sentryDisclosureTitle": "Politique de confidentialité mise à jour",
   "sentryDisclosureGotIt": "J'ai compris",
+  "learnMoreDataCollection": "Voir les détails et le code source d'anonymisation",
+  "dataCollectionDisclosureTitle": "Collecte de données et anonymisation open source",
+  "dataCollectionDisclosureContent": "[Principes directeurs]\nThoughtEcho est une application de prise de notes open source et locale d'abord. Toutes les fonctionnalités externes de collecte de données sont [désactivées par défaut]. Même si vous les activez manuellement, nous appliquons rigoureusement les principes de minimisation des données et d'anonymisation stricte sur l'appareil.\n\n1. Diagnostic d'erreurs et suivi des performances (Sentry)\n• Objectif : capturer les traces de pile lors des plantages pour résoudre les dysfonctionnements critiques, les blocages et les bugs de compatibilité, et analyser la rapidité de chargement des pages.\n• Données recueillies : traces de pile des plantages, types d'erreurs, version du système d'exploitation, modèle de l'appareil, identifiant d'installation généré aléatoirement (non lié au matériel), métriques de performance (temps de chargement des pages, types d'opérations de base de données anonymisés, domaines et chemins des requêtes réseau, profilage CPU sur iOS).\n• Mécanisme d'anonymisation : avant l'envoi, les requêtes SQL sont automatiquement nettoyées par expressions régulières pour retirer les textes de recherche et paramètres, les paramètres d'URL sont supprimés, et les captures d'écran sont strictement désactivées.\n\n2. Programme d'amélioration anonyme (Aptabase)\n• Objectif : mesurer la fréquence d'utilisation des fonctionnalités (ex. modèles de cartes préférés, styles de mise en page) pour guider le développement.\n• Données recueillies : clics et ouvertures de pages anonymes, plateforme et version du système, langue/région, version de l'application, identifiant de session temporaire (effacé à la fermeture), pays/région approximatif déduit lors du transport (l'adresse IP n'est pas conservée).\n• Respect de la vie privée : propulsé par Aptabase, un service d'analyse léger et open source axé sur la confidentialité. Aucun cookie n'est utilisé, aucun suivi inter-applications, aucune empreinte numérique de l'appareil ni aucun profilage individuel.\n\n3. Limites absolues : ce qui n'est JAMAIS collecté\n• Contenu des notes, JSON Delta en texte enrichi, images et enregistrements audio joints\n• Noms de balises, sources, catégories, mots-clés de recherche\n• Historique des conversations avec l'IA, invites (prompts) et clés d'API tierces\n• Informations personnelles identifiables (nom, e-mail, téléphone, etc.) ; les services de diagnostic et de télémétrie ne stockent pas votre adresse IP\n\n4. Transparence open source et audit du code\nL'ensemble du code d'anonymisation et des requêtes réseau de ThoughtEcho est entièrement open source sur GitHub pour vérification publique.",
+  "viewSentrySourceCode": "Code d'anonymisation Sentry",
+  "viewAptabaseSourceCode": "Code source Aptabase",
+  "viewPrivacyPolicy": "Politique de confidentialité",
   "onboardingUpdateFailed": "La mise à jour a échoué, mais vous pouvez toujours continuer à utiliser l'application",
   "onboardingUpdateProcessFailed": "Le traitement de la mise à jour a échoué, veuillez redémarrer l'application",
   "settingsPrivacyPolicy": "Politique de confidentialité",
@@ -4318,6 +4419,40 @@
     }
   },
   "agentPreparedSuggestionCard": "Suggestion ready",
+  "agentAskingUser": "En attente de votre réponse...",
+  "agentAskUserTitleThoughter": "Thoughter a une question",
+  "agentAskUserTitleThoughterMulti": "Thoughter a {count} questions",
+  "@agentAskUserTitleThoughterMulti": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserCustomHint": "Saisissez votre réponse… (la saisie efface la sélection ci-dessus)",
+  "agentAskUserUnanswered": "Pas encore répondu",
+  "agentAskUserStepOf": "Question {index} sur {total}",
+  "@agentAskUserStepOf": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserPrev": "Précédent",
+  "agentAskUserNext": "Suivant",
+  "agentAskUserReviewTitle": "Vérifier et envoyer",
+  "agentAskUserSubmitAll": "Tout envoyer",
+  "agentAskUserEditAnswer": "Modifier",
+  "agentAskUserIncompleteHint": "Certaines questions n'ont pas encore de réponse",
+  "agentAskUserCancelled": "Questions ignorées",
+  "agentAskUserSelectedPrefix": "Sélectionné : ",
+  "agentAskUserCustomPrefix": "Personnalisé : ",
+  "agentAskUserSingleSelectHint": "Touchez une option pour répondre",
+  "agentAskUserMultiSelectHint": "Sélection multiple possible. Appuyez sur Suivant pour continuer",
   "agentToolStepFinished": "Done",
   "agentToolStepDidNotFinish": "Failed",
   "agentMemorySaved": "Memory saved",
@@ -4574,12 +4709,31 @@
   "agentMemoryNoticeDisable": "Don't remember",
   "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
   "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
+  "dreamingEnableTitle": "Activer le Dreaming",
+  "dreamingEnableDesc": "Autoriser Thoughter à affiner votre profil à long terme au moment opportun",
+  "dreamingOnIdleTitle": "Organiser en période d'inactivité",
+  "dreamingOnIdleDesc": "Tente une exécution discrète quelques secondes après le lancement de l'application si les conditions de Dreaming sont remplies",
+  "dreamingAfterInsightTitle": "Affiner après les aperçus périodiques",
+  "dreamingAfterInsightDesc": "Mettre à jour votre profil à partir des notes récentes une fois l'analyse prête",
+  "dreamingSwitchFailed": "Impossible d'enregistrer le paramètre Dreaming. Veuillez réessayer.",
   "releaseNotesTitle": "What's New",
   "releaseNotesUpgradeLede": "Here's what has been added since you last used the app.",
   "releaseNotesCurrentLede": "Here's what this version adds.",
   "releaseNotesHighlights": "Highlights",
   "releaseNotesGetStarted": "Get started",
   "releaseNotesViewDetailedChangelog": "View more improvements on GitHub Releases",
+  "releaseFootprintsTitle": "Empreintes et souvenirs sur la carte",
+  "releaseFootprintsLede": "Enregistrez le lieu où vous avez rédigé vos notes et revivez vos souvenirs par endroit.",
+  "releaseFootprintsPickerTitle": "Lieux à proximité",
+  "releaseFootprintsPickerDesc": "Recherchez les lieux à proximité avec des libellés clairs (ville et quartier) pour faciliter le géoréférencement.",
+  "releaseFootprintsMemoryTitle": "Souvenirs cartographiques",
+  "releaseFootprintsMemoryDesc": "Ouvrez la carte dans Explorer pour redécouvrir les pensées rédigées au fil de vos déplacements.",
+  "releaseDreamingTitle": "Thoughter Dreaming",
+  "releaseDreamingLede": "Affine discrètement vos préférences en arrière-plan pour mieux accompagner votre écriture.",
+  "releaseDreamingIdleTitle": "Réflexion en veille",
+  "releaseDreamingIdleDesc": "Synthétise vos habitudes d'écriture lorsque l'application est inactive, sans interrompre votre élan.",
+  "releaseDreamingControlTitle": "Contrôle total",
+  "releaseDreamingControlDesc": "Les mémoires restent isolées sur votre appareil. Consultez-les, modifiez-les ou effacez-les à tout moment.",
   "releaseThoughterTitle": "Thoughter: a thinking partner inside your notebook",
   "releaseThoughterLede": "From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
   "releaseThoughterSearchTitle": "Smart retrieval across your notes",
@@ -4603,10 +4757,140 @@
   "releaseMediaDisplayTitle": "Cleaner Media Layout",
   "releaseMediaDisplayLede": "Photos in the note list now sit neatly as right-side thumbnails; double-tap any card to expand full text and images.",
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
+  "releasePrivacyNotice": "Politique de confidentialité mise à jour avec des détails sur le programme d'amélioration anonyme (Aptabase). Retrouvez la politique complète via Paramètres › Commentaires et contact ; les deux options restent désactivées par défaut.",
   "settingsReleaseNotes": "What's New",
   "settingsReleaseNotesDesc": "See what this version adds",
   "generatingInsightsForRange": "Génération d'aperçus pour {period}...",
   "exploreSummarizeRange": "Résumer {period}",
   "exploreSummarizeRangePrompt": "Résume mes notes de {period} — quels sont les points marquants ?",
-  "noNotesInRange": "Aucune note pour {period}"
+  "noNotesInRange": "Aucune note pour {period}",
+  "agentMemoryManageTitle": "Gérer la mémoire",
+  "agentMemoryManageSubtitle": "Consulter, corriger et gérer les traits et indices mémorisés par Thoughter",
+  "agentMemoryPageTitle": "Mémoire de Thoughter",
+  "agentMemoryResonanceSummary": "{profileCount} traits · {sliceCount} états récents · {factCount} faits",
+  "@agentMemoryResonanceSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "sliceCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCognitiveLoad": "Capacité de mémoire",
+  "agentMemoryBudgetNormal": "Capacité mémoire optimale",
+  "agentMemoryBudgetNearFull": "Proche de la limite de capacité, les traits les plus récents sont priorisés",
+  "agentMemoryTabAll": "Tout",
+  "agentMemoryTabProfile": "Traits",
+  "agentMemoryTabPulse": "État récent",
+  "agentMemoryTabFacts": "Faits marquants",
+  "agentMemoryTabHistory": "Historique",
+  "agentMemorySearchHint": "Rechercher dans les souvenirs ou par mots-clés...",
+  "agentMemoryKindIdentity": "Identité",
+  "agentMemoryKindPreference": "Préférence",
+  "agentMemoryKindStyle": "Style",
+  "agentMemoryKindFeedback": "Rétroaction",
+  "agentMemoryKindTaste": "Goûts de lecture",
+  "agentMemoryKindVoice": "Voix d'écriture",
+  "agentMemorySourceDreaming": "Synthétisé à partir des notes",
+  "agentMemorySourceThoughter": "Mémorisé en conversation",
+  "agentMemorySourceUser": "Ajouté par l'utilisateur",
+  "agentMemoryStatusActive": "Actif",
+  "agentMemoryStatusSuperseded": "Archivé",
+  "agentMemoryEvidenceTitle": "{count} notes associées",
+  "@agentMemoryEvidenceTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEvidenceViewNote": "Voir la note",
+  "agentMemoryEvidenceNoteDeleted": "Note originale supprimée",
+  "agentMemoryPulseExpiresIn": "{days} jours restants",
+  "@agentMemoryPulseExpiresIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryPulseExpiresToday": "Expire aujourd'hui",
+  "agentMemoryPulseTtlNotice": "L'état récent s'estompe naturellement après 14 jours pour garder une mémoire épurée",
+  "agentMemoryFactImportance": "Importance {score}/10",
+  "@agentMemoryFactImportance": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryFactRecalledTimes": "Rappelé {count} fois",
+  "@agentMemoryFactRecalledTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEditDirectiveTitle": "Modifier le trait de mémoire",
+  "agentMemoryEditDirectiveHint": "ex. Réponses concises avec des respirations naturelles",
+  "agentMemoryEditSave": "Enregistrer les modifications",
+  "agentMemoryEditSuccess": "Mémoire mise à jour",
+  "agentMemoryForgetConfirmTitle": "Oublier ce souvenir ?",
+  "agentMemoryForgetConfirmBody": "Une fois oublié, Thoughter ne fera plus référence à ce trait dans les conversations, les invites quotidiennes ou les aperçus.",
+  "agentMemoryForgetAction": "Oublier",
+  "agentMemoryForgotten": "Mémoire oubliée",
+  "agentMemoryCompactTitle": "Ranger la mémoire",
+  "agentMemoryCompactConfirm": "Cela nettoiera les états récents expirés, l'historique obsolète et les détails de faible importance. Continuer ?",
+  "agentMemoryCompactDone": "{count} entrées obsolètes nettoyées",
+  "@agentMemoryCompactDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCompactNoop": "La mémoire est déjà ordonnée, aucun nettoyage nécessaire",
+  "agentMemoryAddTitle": "Enseigner un trait à Thoughter",
+  "agentMemoryAddKind": "Catégorie de trait",
+  "agentMemoryAddDirective": "Contenu de la consigne",
+  "agentMemoryAddHint": "ex. Appelle-moi Voyageur, j'aime parler de littérature et de philosophie",
+  "agentMemoryAddSuccess": "Nouveau trait enregistré",
+  "agentMemoryEmpty": "Aucun souvenir correspondant",
+  "agentMemoryEmptyDesc": "Discutez avec Thoughter et il retiendra naturellement vos habitudes et préférences",
+  "agentMemoryCharsCount": "{usedChars} / {maxChars} caractères",
+  "@agentMemoryCharsCount": {
+    "placeholders": {
+      "usedChars": {
+        "type": "int"
+      },
+      "maxChars": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEntriesCount": "{usedEntries} / {maxEntries} éléments",
+  "@agentMemoryEntriesCount": {
+    "placeholders": {
+      "usedEntries": {
+        "type": "int"
+      },
+      "maxEntries": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryObservationTime": "Observé le {time}",
+  "@agentMemoryObservationTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

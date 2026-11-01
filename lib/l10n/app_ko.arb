@@ -25,6 +25,7 @@
   "languageSettings": "언어",
   "languageFollowSystem": "시스템 설정 따름",
   "languageChinese": "중국어(간체)",
+  "languageTraditionalChinese": "번체 중국어",
   "languageEnglish": "영어",
   "languageJapanese": "일본어",
   "languageKorean": "한국어",
@@ -1957,6 +1958,18 @@
   "mergeImport": "병합 가져오기(LWW 전략)",
   "mergeImportDesc": "업데이트 시점에 따라 기존 데이터를 유지하고 백업 데이터와 병합",
   "restoreSuccess": "데이터가 성공적으로 복원되었습니다! 모든 데이터가 업데이트되었습니다.",
+  "importCleanupNotice": "가져오기가 완료되었으나 인식할 수 없는 필드 값 {sanitized}개를 건너뛰었으며, 본문이 비어 있는 {skipped}개의 노트는 가져오지 않았습니다. 이 데이터는 ThoughtEcho에서 생성된 것이 아닙니다.",
+  "@importCleanupNotice": {
+    "description": "导入后提示：备份文件里含有本应用无法识别的字段值或空笔记",
+    "placeholders": {
+      "sanitized": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
   "mergeImportHint": "이 작업은 현재 데이터를 유지하고 백업 데이터와 병합합니다.",
   "mergeImportReversible": "이 작업은 되돌릴 수 있습니다. 덮어쓰기 백업을 가져오거나 다시 병합을 계속할 수 있습니다.",
   "confirmRestoreBtn": "복원 확인",
@@ -2387,6 +2400,7 @@
   "editNoteMenu": "메모 편집",
   "askAIMenu": "AI에게 물어보세요",
   "generateCardShareMenu": "카드 생성",
+  "copyTextMenu": "텍스트 복사",
   "deleteNoteMenu": "메모 삭제",
   "doubleTapToViewFull": "전체 내용을 보려면 두 번 탭하세요.",
   "logLevel": "Level: {level}",
@@ -2700,6 +2714,7 @@
     }
   },
   "cannotGetAddress": "주소를 가져올 수 없습니다. 네트워크를 확인하세요.",
+  "locationUpdateTimeout": "위치 요청 시간이 초과되었습니다. 네트워크 연결을 확인하세요",
   "updateFailed": "Update failed: {error}",
   "@updateFailed": {
     "placeholders": {
@@ -2999,6 +3014,14 @@
   "featureInDevelopment": "개발 중인 기능 공유...",
   "selectFromFiles": "파일에서 선택",
   "supportsLargeFiles": "메모리 안전 처리로 대용량 파일 지원",
+  "mediaUrlTooLarge": "파일 크기가 URL 가져오기 제한인 {maxSizeMb} MB를 초과합니다. 더 작은 파일을 선택해 주세요.",
+  "@mediaUrlTooLarge": {
+    "placeholders": {
+      "maxSizeMb": {
+        "type": "int"
+      }
+    }
+  },
   "unifiedMediaImportImportMedia": "Import {mediaType}",
   "@unifiedMediaImportImportMedia": {
     "placeholders": {
@@ -3623,11 +3646,81 @@
   "newChat": "새 대화",
   "deleteChat": "대화 삭제",
   "deleteChatConfirm": "이 대화를 삭제하시겠습니까? 모든 메시지가 삭제됩니다.",
+  "deselectAll": "전체 선택 해제",
+  "multiSelectChats": "선택",
+  "selectedChatCount": "{count, plural, =1{1개 선택됨} other{{count}개 선택됨}}",
+  "@selectedChatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedChats": "선택한 대화 삭제",
+  "deleteSelectedChatsConfirm": "{count, plural, =1{선택한 대화를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.} other{선택한 {count}개의 대화를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.}}",
+  "@deleteSelectedChatsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteChatsSuccess": "{count, plural, =1{1개의 대화가 삭제되었습니다} other{{count}개의 대화가 삭제되었습니다}}",
+  "@deleteChatsSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noChats": "대화가 없습니다",
   "mapPickerTitle": "위치 선택",
+  "nearbyLocationTitle": "현재 위치",
   "mapPickerCurrentLocation": "현재 위치",
   "mapPickerConfirm": "위치 확인",
   "longPressForMapPicker": "길게 눌러 정밀한 위치 선택",
+  "longPressForNearbyPicker": "길게 눌러 주변 위치 선택",
+  "onlinePlaceSearchUnavailable": "온라인 장소 검색을 사용할 수 없습니다",
+  "offlineCoordinates": "오프라인 좌표",
+  "mapPickerSearchHint": "장소 또는 건물 검색...",
+  "mapPickerSearchResults": "검색 결과",
+  "mapPickerSearching": "주변 장소를 검색하는 중...",
+  "mapPickerNoResults": "일치하는 장소를 찾을 수 없습니다. 지도를 탭하여 직접 선택하세요",
+  "mapPickerSelectedPoint": "선택한 위치",
+  "mapPickerResolvingPoint": "주소를 확인하는 중...",
+  "mapPickerUnnamedPoint": "이름 없는 위치",
+  "mapPickerLocateMe": "현재 위치로 이동",
+  "mapPickerCurrentLocationSubtitle": "도시 및 시·구만 기록하며 구체적인 장소는 기록하지 않습니다",
+  "mapPickerDistanceMeters": "{distance}m",
+  "@mapPickerDistanceMeters": {
+    "description": "地图选点页搜索结果与选点之间的距离（米）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerDistanceKilometers": "{distance}km",
+  "@mapPickerDistanceKilometers": {
+    "description": "地图选点页搜索结果与选点之间的距离（公里）",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapMemoryEmptyHint": "아직 위치가 기록된 노트가 없습니다. 노트를 작성할 때 위치를 추가하면 지도에서 돌아볼 수 있습니다.",
+  "mapMemoryLoadFailed": "지도 메모리를 불러오지 못했습니다",
+  "mapMemoryResetView": "뷰 초기화",
+  "mapMemoryPlaceCount": "위치가 있는 노트 {count}개",
+  "@mapMemoryPlaceCount": {
+    "description": "地图回忆页顶部提示里带坐标的笔记条数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "poiNameLabel": "정밀 위치",
   "explore": "탐색",
   "exploreMapMemory": "지도 기억",
@@ -3663,9 +3756,17 @@
   "smartPushPeriodNight": "야간",
   "settingsSentryTitle": "진단 데이터 전송하여 개선에 참여",
   "settingsSentryDesc": "기본적으로 꺼져 있습니다. 수동으로 켜면 오류 스택, 기기 정보, 페이지, 일반 네트워크 요청 및 메인 데이터베이스 성능 데이터가 전송됩니다. AI 요청은 포함되지 않으며, 데이터베이스 모니터링은 SQL 템플릿과 소요 시간만 기록하고 메모 내용이나 쿼리 매개변수는 절대 전송하지 않습니다.",
+  "settingsTelemetryTitle": "익명 기능 개선 프로그램 참여",
+  "settingsTelemetryDesc": "기본적으로 꺼져 있습니다. 활성화하면 개발 우선순위를 정하기 위해 익명의 기능 사용 빈도(기능 사용 비율 등)만 수집합니다. 노트 본문이나 검색어 등 개인 정보는 절대 수집하지 않습니다.",
   "sentryRestartHint": "설정이 저장되었습니다. 재부팅 후 적용됩니다.",
   "sentryDisclosureTitle": "개인정보 처리방침 업데이트됨",
   "sentryDisclosureGotIt": "확인했습니다",
+  "learnMoreDataCollection": "수집 상세 내역 및 비식별화 소스 코드 보기",
+  "dataCollectionDisclosureTitle": "데이터 수집 및 오픈소스 비식별화 안내",
+  "dataCollectionDisclosureContent": "【운영 방침】\nThoughtEcho(심적)는 오픈소스 기반의 로컬 우선 기록 앱입니다. 모든 외부 데이터 수집 기능은 【기본적으로 꺼짐】 상태입니다. 수동으로 활성화하더라도 데이터 최소화 및 로컬 상의 강력한 비식별화 원칙을 엄격히 준수합니다.\n\n1. 오류 진단 및 성능 모니터링 (Sentry)\n• 목적: 앱 비정상 종료 시의 스택 트레이스를 수집하여 치명적인 충돌, 멈춤 및 호환성 버그를 해결하고, 성능 추적을 통해 화면 로딩 시간과 반응성을 개선합니다.\n• 수집 항목: 충돌 스택 트레이스, 오류 유형, OS 버전, 기기 모델, 무작위 생성 설치 식별자(하드웨어 정보와 무관), 성능 지표(화면 로딩 시간, 비식별화된 데이터베이스 작업 유형, 네트워크 요청 도메인 및 경로, iOS의 CPU 프로파일링).\n• 비식별화 메커니즘: 데이터 전송 전 기기 내에서 정규식을 통해 SQL 쿼리 본문과 매개변수, URL 쿼리 파라미터를 자동으로 제거하며 스크린샷 및 화면 녹화를 강제로 비활성화합니다.\n\n2. 익명 기능 개선 프로그램 (Aptabase)\n• 목적: 각 기능의 사용 빈도와 관심도(예: 카드 템플릿 선호도, 조판 스타일 선택)를 파악하여 개발 우선순위를 체계적으로 수립합니다.\n• 수집 항목: 익명의 기능 클릭 및 화면 방문 이벤트, OS 플랫폼 및 버전, 언어/지역, 앱 버전, 앱 실행별 임시 세션 ID(종료 시 소멸), 전송 계층에서 서버가 추론하는 대략적인 국가/지역(IP는 저장되지 않음).\n• 프라이버시 보호: 프라이버시를 중시하는 경량 오픈소스 분석 서비스 Aptabase를 사용하며, 쿠키를 사용하지 않고 앱 간 추적, 기기 핑거프린팅, 사용자 프로파일링을 전혀 수행하지 않습니다.\n\n3. 절대 수집하지 않는 데이터 범위 (엄격한 원칙)\n• 노트 본문, 리치 텍스트 Delta JSON, 이미지 및 오디오 첨부 파일\n• 태그 이름, 출처, 카테고리, 검색 키워드\n• AI 대화 기록, 프롬프트 내용 및 타사 API 키\n• 개인 식별 정보(이름, 이메일, 전화번호 등). 진단 및 통계 서비스는 사용자의 IP 주소를 저장하지 않습니다\n\n4. 오픈소스 투명성 및 코드 검증\nThoughtEcho의 모든 데이터 비식별화 및 네트워크 요청 코드는 오픈소스로 투명하게 공개되어 누구나 구현 방식을 검증할 수 있습니다.",
+  "viewSentrySourceCode": "Sentry 비식별화 소스 코드",
+  "viewAptabaseSourceCode": "Aptabase 소스 코드",
+  "viewPrivacyPolicy": "개인정보 처리방침",
   "onboardingUpdateFailed": "데이터 업데이트에 실패했지만 앱을 계속 사용할 수 있습니다",
   "onboardingUpdateProcessFailed": "업데이트 처리에 실패했습니다. 앱을 다시 시작해 주세요",
   "settingsPrivacyPolicy": "개인정보 처리방침",
@@ -4325,6 +4426,40 @@
     }
   },
   "agentPreparedSuggestionCard": "Suggestion ready",
+  "agentAskingUser": "질문하는 중...",
+  "agentAskUserTitleThoughter": "Thoughter의 질문",
+  "agentAskUserTitleThoughterMulti": "Thoughter의 {count}개 질문",
+  "@agentAskUserTitleThoughterMulti": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserCustomHint": "답변을 입력하세요… (입력 시 위의 선택이 해제됩니다)",
+  "agentAskUserUnanswered": "미답변",
+  "agentAskUserStepOf": "질문 {index} / {total}",
+  "@agentAskUserStepOf": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "agentAskUserPrev": "이전",
+  "agentAskUserNext": "다음",
+  "agentAskUserReviewTitle": "답변 확인 및 제출",
+  "agentAskUserSubmitAll": "모두 제출",
+  "agentAskUserEditAnswer": "수정",
+  "agentAskUserIncompleteHint": "아직 답변하지 않은 질문이 있습니다",
+  "agentAskUserCancelled": "질문 응답이 취소되었습니다",
+  "agentAskUserSelectedPrefix": "선택됨: ",
+  "agentAskUserCustomPrefix": "사용자 지정: ",
+  "agentAskUserSingleSelectHint": "항목을 탭하여 답변",
+  "agentAskUserMultiSelectHint": "다중 선택 가능. '다음'을 탭하여 계속",
   "agentToolStepFinished": "Done",
   "agentToolStepDidNotFinish": "Failed",
   "agentMemorySaved": "Memory saved",
@@ -4581,12 +4716,31 @@
   "agentMemoryNoticeDisable": "Don't remember",
   "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
   "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
+  "dreamingEnableTitle": "Dreaming 정리 활성화",
+  "dreamingEnableDesc": "Thoughter가 적절한 시점에 장기 프로필을 다듬도록 허용합니다",
+  "dreamingOnIdleTitle": "유휴 시 자동 정리",
+  "dreamingOnIdleDesc": "앱 시작 후 설정된 조건을 충족하면 가볍게 프로필을 다듬습니다",
+  "dreamingAfterInsightTitle": "정기 인사이트 후 정리",
+  "dreamingAfterInsightDesc": "정기 인사이트가 완료된 후 최근 노트에서 프로필을 업데이트합니다",
+  "dreamingSwitchFailed": "Dreaming 설정을 저장하지 못했습니다. 다시 시도해 주세요.",
   "releaseNotesTitle": "What's New",
   "releaseNotesUpgradeLede": "Here's what has been added since you last used the app.",
   "releaseNotesCurrentLede": "Here's what this version adds.",
   "releaseNotesHighlights": "Highlights",
   "releaseNotesGetStarted": "Get started",
   "releaseNotesViewDetailedChangelog": "View more improvements on GitHub Releases",
+  "releaseFootprintsTitle": "발자국 및 지도 메모리",
+  "releaseFootprintsLede": "글을 작성한 장소를 기록하고, 장소별로 지난 노트를 되돌아보세요.",
+  "releaseFootprintsPickerTitle": "주변 장소 선택",
+  "releaseFootprintsPickerDesc": "주변 장소를 검색하면 깔끔한 시·구 레이블로 자동 정리되어 위치 기록이 훨씬 간편해집니다.",
+  "releaseFootprintsMemoryTitle": "지도 발자국 추억",
+  "releaseFootprintsMemoryDesc": "'탐색' 탭에서 지도를 열어 여러 장소에서 남긴 기록을 둘러보세요.",
+  "releaseDreamingTitle": "Thoughter Dreaming",
+  "releaseDreamingLede": "백그라운드에서 작성 스타일과 선호도를 분석하여 더 알맞은 대화를 제공합니다.",
+  "releaseDreamingIdleTitle": "유휴 시 정리",
+  "releaseDreamingIdleDesc": "앱이 유휴 상태일 때 작성 습관을 정리하므로 현재의 기록 흐름을 방해하지 않습니다.",
+  "releaseDreamingControlTitle": "자유로운 제어",
+  "releaseDreamingControlDesc": "기억은 기기 내에 독립적으로 저장되며 언제든지 확인, 수정 또는 초기화할 수 있습니다.",
   "releaseThoughterTitle": "Thoughter: a thinking partner inside your notebook",
   "releaseThoughterLede": "From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
   "releaseThoughterSearchTitle": "Smart retrieval across your notes",
@@ -4610,10 +4764,140 @@
   "releaseMediaDisplayTitle": "Cleaner Media Layout",
   "releaseMediaDisplayLede": "Photos in the note list now sit neatly as right-side thumbnails; double-tap any card to expand full text and images.",
   "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
+  "releasePrivacyNotice": "개인정보 처리방침이 업데이트되어 익명 기능 개선 프로그램(Aptabase)에 관한 데이터 설명이 추가되었습니다. 전체 방침은 '설정 › 피드백 및 연락처'의 데이터 설명에서 확인하실 수 있으며, 두 스위치 모두 기본적으로 꺼져 있습니다.",
   "settingsReleaseNotes": "What's New",
   "settingsReleaseNotesDesc": "See what this version adds",
   "generatingInsightsForRange": "{period} 인사이트 생성 중...",
   "exploreSummarizeRange": "{period} 요약",
   "exploreSummarizeRangePrompt": "{period}의 기록을 요약해 주세요. 눈에 띄는 점이 있나요?",
-  "noNotesInRange": "{period}에 기록이 없습니다"
+  "noNotesInRange": "{period}에 기록이 없습니다",
+  "agentMemoryManageTitle": "기억 관리",
+  "agentMemoryManageSubtitle": "Thoughter가 기억한 특성과 근거를 확인, 수정 및 관리합니다",
+  "agentMemoryPageTitle": "Thoughter 기억",
+  "agentMemoryResonanceSummary": "프로필 {profileCount}개 · 최근 상태 {sliceCount}개 · 세부 정보 {factCount}개",
+  "@agentMemoryResonanceSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "sliceCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCognitiveLoad": "기억 용량",
+  "agentMemoryBudgetNormal": "기억 공간이 충분하여 원활하게 대화와 영감을 나눌 수 있습니다",
+  "agentMemoryBudgetNearFull": "기억 상한에 도달해 갑니다. 최신 특성이 우선 유지됩니다",
+  "agentMemoryTabAll": "전체",
+  "agentMemoryTabProfile": "프로필 특성",
+  "agentMemoryTabPulse": "최근 상태",
+  "agentMemoryTabFacts": "기억 세부 정보",
+  "agentMemoryTabHistory": "변경 이력",
+  "agentMemorySearchHint": "기억 또는 키워드 검색...",
+  "agentMemoryKindIdentity": "기본 신원",
+  "agentMemoryKindPreference": "콘텐츠 선호도",
+  "agentMemoryKindStyle": "표현 스타일",
+  "agentMemoryKindFeedback": "교정 피드백",
+  "agentMemoryKindTaste": "인용 취향",
+  "agentMemoryKindVoice": "글쓰기 어조",
+  "agentMemorySourceDreaming": "노트에서 도출",
+  "agentMemorySourceThoughter": "대화에서 기억함",
+  "agentMemorySourceUser": "직접 추가함",
+  "agentMemoryStatusActive": "활성",
+  "agentMemoryStatusSuperseded": "보관됨",
+  "agentMemoryEvidenceTitle": "연결된 노트 {count}개",
+  "@agentMemoryEvidenceTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEvidenceViewNote": "노트 보기",
+  "agentMemoryEvidenceNoteDeleted": "원본 노트가 삭제되었습니다",
+  "agentMemoryPulseExpiresIn": "{days}일 남음",
+  "@agentMemoryPulseExpiresIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryPulseExpiresToday": "오늘 만료",
+  "agentMemoryPulseTtlNotice": "최근 상태는 14일 후 자연스럽게 사라져 기억을 깔끔하게 유지합니다",
+  "agentMemoryFactImportance": "중요도 {score}/10",
+  "@agentMemoryFactImportance": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryFactRecalledTimes": "{count}회 기억됨",
+  "@agentMemoryFactRecalledTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEditDirectiveTitle": "기억 특성 수정",
+  "agentMemoryEditDirectiveHint": "예: 답변은 간결하게 끊어 쓰고 여백을 둘 것",
+  "agentMemoryEditSave": "수정 사항 저장",
+  "agentMemoryEditSuccess": "기억을 수정했습니다",
+  "agentMemoryForgetConfirmTitle": "Thoughter가 이 기억을 잊게 할까요?",
+  "agentMemoryForgetConfirmBody": "잊어버리면 Thoughter는 대화, 일일 프롬프트 및 정기 인사이트에서 이 내용을 더 이상 참조하지 않습니다.",
+  "agentMemoryForgetAction": "잊기",
+  "agentMemoryForgotten": "기억을 삭제했습니다",
+  "agentMemoryCompactTitle": "기억 정리",
+  "agentMemoryCompactConfirm": "만료된 최근 상태, 오래된 프로필 기록 및 중요도가 낮은 세부 정보를 자동으로 정리합니다. 계속하시겠습니까?",
+  "agentMemoryCompactDone": "오래된 기억 {count}개를 정리했습니다",
+  "@agentMemoryCompactDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryCompactNoop": "기억 저장소가 깔끔하여 정리할 필요가 없습니다",
+  "agentMemoryAddTitle": "Thoughter에게 새로운 특성 알려주기",
+  "agentMemoryAddKind": "특성 분류",
+  "agentMemoryAddDirective": "기억 내용 (명확한 지침 형태로 작성)",
+  "agentMemoryAddHint": "예: 나를 방랑자라고 부르고 문학과 실존주의에 대해 이야기하기를 좋아함",
+  "agentMemoryAddSuccess": "새 특성을 기억했습니다",
+  "agentMemoryEmpty": "일치하는 기억이 없습니다",
+  "agentMemoryEmptyDesc": "Thoughter와 대화를 나누면 선호도와 습관을 자연스럽게 기억합니다",
+  "agentMemoryCharsCount": "{usedChars} / {maxChars} 자",
+  "@agentMemoryCharsCount": {
+    "placeholders": {
+      "usedChars": {
+        "type": "int"
+      },
+      "maxChars": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryEntriesCount": "{usedEntries} / {maxEntries} 개",
+  "@agentMemoryEntriesCount": {
+    "placeholders": {
+      "usedEntries": {
+        "type": "int"
+      },
+      "maxEntries": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryObservationTime": "관찰 일시: {time}",
+  "@agentMemoryObservationTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }
