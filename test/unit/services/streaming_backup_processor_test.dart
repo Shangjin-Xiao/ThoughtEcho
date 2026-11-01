@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,6 +32,104 @@ void main() {
     await file.writeAsBytes(ZipEncoder().encode(archive));
     return file.path;
   }
+
+  // The import contract caps expanded backup JSON at 32 MiB. Whitespace keeps
+  // fixtures valid JSON without constructing a large decoded object graph.
+  const jsonLimit = 32 * 1024 * 1024;
+
+  Future<String> createSizedJsonBackup({
+    required int size,
+    int? declaredSize,
+    String name = 'backup_data.json',
+    CompressionType compression = CompressionType.deflate,
+    bool symbolicLink = false,
+  }) async {
+    final content = Uint8List(size)..fillRange(0, size, 0x20);
+    content[0] = 0x7b;
+    content[1] = 0x7d;
+    final archive = Archive()
+      ..addFile(ArchiveFile(name, size, content)..compression = compression)
+      ..addFile(ArchiveFile.string('media/images/photo.png', 'image'));
+    final bytes = ZipEncoder().encodeBytes(archive);
+    final view = ByteData.sublistView(bytes);
+    final centralOffset = view.getUint32(bytes.length - 6, Endian.little);
+    if (declaredSize != null) {
+      // Alter both local and central sizes while preserving the compressed data.
+      view.setUint32(22, declaredSize, Endian.little);
+      view.setUint32(centralOffset + 24, declaredSize, Endian.little);
+    }
+    if (symbolicLink) {
+      view.setUint16(centralOffset + 4, 0x0314, Endian.little);
+      view.setUint32(centralOffset + 38, 0xa1ff << 16, Endian.little);
+    }
+    final file = File(p.join(temporary.path, 'sized.zip'));
+    await file.writeAsBytes(bytes);
+    return file.path;
+  }
+
+  final exceedsJsonLimit = isA<FormatException>().having(
+    (error) => error.message,
+    'message',
+    contains('32 MiB'),
+  );
+
+  for (final name in ['backup_data.json', 'legacy/data.json']) {
+    test('restore rejects oversized declared JSON in $name', () async {
+      final backup = await createSizedJsonBackup(
+        size: 2,
+        declaredSize: jsonLimit + 1,
+        name: name,
+      );
+
+      await expectLater(
+        StreamingBackupProcessor.processZipBackupStreaming(backup),
+        throwsA(exceedsJsonLimit),
+      );
+      expect(
+        await StreamingBackupProcessor.validateBackupFile(backup),
+        isFalse,
+      );
+      expect(await documents.list(recursive: true).toList(), isEmpty);
+    });
+  }
+
+  for (final compression in CompressionType.values) {
+    test('restore limits actual JSON output for $compression', () async {
+      final backup = await createSizedJsonBackup(
+        size: jsonLimit + 1,
+        declaredSize: 2,
+        compression: compression,
+      );
+
+      await expectLater(
+        StreamingBackupProcessor.processZipBackupStreaming(backup),
+        throwsA(exceedsJsonLimit),
+      );
+      expect(await documents.list(recursive: true).toList(), isEmpty);
+    });
+  }
+
+  test('restore accepts JSON exactly at the expanded byte limit', () async {
+    final backup = await createSizedJsonBackup(size: jsonLimit);
+
+    final data = await StreamingBackupProcessor.processZipBackupStreaming(
+      backup,
+      extractMediaFiles: false,
+    );
+
+    expect(data, isEmpty);
+  });
+
+  test('validation and restore reject symbolic link JSON entries', () async {
+    final backup = await createSizedJsonBackup(size: 2, symbolicLink: true);
+
+    expect(await StreamingBackupProcessor.validateBackupFile(backup), isFalse);
+    await expectLater(
+      StreamingBackupProcessor.processZipBackupStreaming(backup),
+      throwsException,
+    );
+    expect(await documents.list(recursive: true).toList(), isEmpty);
+  });
 
   test(
     'restore preserves application files and only writes managed media',
