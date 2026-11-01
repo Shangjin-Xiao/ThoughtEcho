@@ -96,3 +96,7 @@
 ## 2026-10-25 - 🗃️ 黑匣: [完善 DatabaseQuoteCrud 模块的结构化日志与脱敏拦截]
 **异常:** [DatabaseQuoteCrudMixin 在保存、按 ID 获取以及获取所有笔记失败时存在两类隐患：1. `addQuote` 处在 `_executeWithLock` 锁执行器内部，而锁执行器本身已具备错误捕获与堆栈日志记录，若内部再捕获并 rethrow 会造成重复日志记录及双重 Sentry 上报；2. `getQuoteById` 和 `getAllQuotes` 捕获异常时若将原始异常对象 `e` 直接传给 `logError`，其可能携带未脱敏的 SQL 参数、解析异常明文或外部数据字段，有泄露隐私信息的风险。]
 **拦截:** [1. 移除 `addQuote` 内部冗余的 catch/logError 块，统一由 `_executeWithLock` 处理和记录，避免重复日志与 Sentry 双重上报；2. 在 `getQuoteById` 与 `getAllQuotes` 中对错误对象进行脱敏，使用 `error: e.runtimeType` 代替原始异常对象 `e`，同时完整保留 `stackTrace: stackTrace` 与模块来源标识 `source: 'DatabaseQuoteCrudMixin'`，在确保可观测性与堆栈可追溯的前提下彻底防止敏感字段外泄。]
+
+## 2025-10-25 - 🗃️ 黑匣: [完善 AIAnnualReportWebView 模块的结构化日志]
+**异常:** [AIAnnualReportWebView 模块在处理创建临时 HTTP 服务器、启动服务器失败以及尝试关闭服务器发生的异常时，使用了空捕获 `catch (e)` 和不完整的 `catch (serverError)` 块，并只用 `debugPrint` 进行了极为简略粗糙的日志打印。这不仅屏蔽了底层的异常细节以及丢失了错误堆栈上下文(StackTrace)，还导致如果由于权限问题或端口占用导致本地临时服务器报错时，很难定位线上故障的原因。]
+**拦截:** [已将上述流程中打开与关闭浏览器及临时 HTTP 服务器处的异常拦截升级，将 `catch (e)` / `catch (serverError)` 替换为结构化的 `catch (e, stack)` / `catch (serverError, stack)` 捕获完整异常与堆栈。同时使用 `AppLogger.e` 进行记录，注入了描述信息、具体的错误对象以及明确的日志来源标识 (`source: 'AIAnnualReportWebView'`)。确认修改不超过 50 行，并且没有记录任何涉及到年度报告内容的敏感隐私数据。]

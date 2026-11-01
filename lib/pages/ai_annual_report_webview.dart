@@ -560,8 +560,13 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         try {
           await _openInBrowserViaTempServer(contentToWrite);
           return;
-        } catch (serverError) {
-          debugPrint('HTTP服务器方式失败: $serverError');
+        } catch (serverError, stack) {
+          AppLogger.e(
+            'HTTP服务器方式失败',
+            error: serverError,
+            stackTrace: stack,
+            source: 'AIAnnualReportWebView',
+          );
           // 服务器方式失败，继续尝试其他方法
         }
       }
@@ -651,19 +656,34 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           try {
             server?.close(force: true);
             debugPrint('临时报告服务器已自动关闭');
-          } catch (e) {
-            debugPrint('[AIAnnualReportWebView] server close error: $e');
+          } catch (e, stack) {
+            AppLogger.e(
+              'server close error',
+              error: e,
+              stackTrace: stack,
+              source: 'AIAnnualReportWebView',
+            );
           }
         });
 
         return; // 成功打开，直接返回
       }
-    } catch (e) {
-      debugPrint('HTTP服务器方式打开失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        'HTTP服务器方式打开失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AIAnnualReportWebView',
+      );
       try {
         server?.close(force: true);
-      } catch (e) {
-        debugPrint('[AIAnnualReportWebView] server close error: $e');
+      } catch (e, stack2) {
+        AppLogger.e(
+          'server close error after failure',
+          error: e,
+          stackTrace: stack2,
+          source: 'AIAnnualReportWebView',
+        );
       }
       // 继续执行后续的Fallback逻辑
     }

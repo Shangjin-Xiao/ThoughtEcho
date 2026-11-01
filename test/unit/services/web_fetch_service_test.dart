@@ -1,4 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:thoughtecho/services/web_fetch_service.dart';
 
 void main() {
@@ -7,6 +13,78 @@ void main() {
 
     setUp(() {
       service = WebFetchService();
+    });
+
+    group('Redirect response bodies', () {
+      for (final scenario in [
+        for (final status in [301, 302, 303, 307, 308])
+          (status: status, location: '/article', error: null),
+        (status: 302, location: null, error: '缺少 Location'),
+        (status: 302, location: '   ', error: '缺少 Location'),
+        (
+          status: 302,
+          location: 'http://127.0.0.1/private',
+          error: '安全限制',
+        ),
+      ]) {
+        test('${scenario.status} ${scenario.location} skips gzip decoding',
+            () async {
+          var compressedBytesRead = 0;
+          var cancelled = false;
+          final redirectBody = StreamController<List<int>>(
+            onCancel: () => cancelled = true,
+          );
+          // Model the native client's lazy gzip decoding of a large body.
+          redirectBody.add(gzip.encode(List<int>.filled(4 * 1024 * 1024, 65)));
+          unawaited(redirectBody.close());
+          final requestedUrls = <Uri>[];
+          final client = MockClient.streaming((request, body) async {
+            await body.toBytes();
+            requestedUrls.add(request.url);
+            if (request.url.path == '/start') {
+              return http.StreamedResponse(
+                redirectBody.stream.map((chunk) {
+                  compressedBytesRead += chunk.length;
+                  return chunk;
+                }).transform(gzip.decoder),
+                scenario.status,
+                headers: {
+                  if (scenario.location != null) 'location': scenario.location!,
+                  'content-encoding': 'gzip',
+                },
+              );
+            }
+            return http.StreamedResponse(
+              Stream.value(utf8.encode('<p>Fetched article</p>')),
+              200,
+              headers: {'content-type': 'text/html; charset=utf-8'},
+            );
+          });
+          addTearDown(client.close);
+
+          final result = http.runWithClient(
+            () => service.fetchText('http://203.0.113.1/start'),
+            () => client,
+          );
+          if (scenario.error == null) {
+            expect(await result, 'Fetched article');
+            expect(requestedUrls, [
+              Uri.parse('http://203.0.113.1/start'),
+              Uri.parse('http://203.0.113.1/article'),
+            ]);
+          } else {
+            await expectLater(
+                result,
+                throwsA(predicate<Object>(
+                  (error) => error.toString().contains(scenario.error!),
+                )));
+            expect(requestedUrls, hasLength(1));
+          }
+          expect(cancelled, isTrue);
+          expect(compressedBytesRead, 0,
+              reason: 'Unused redirect bodies must not reach the gzip decoder');
+        });
+      }
     });
 
     group('SSRF Protection', () {
