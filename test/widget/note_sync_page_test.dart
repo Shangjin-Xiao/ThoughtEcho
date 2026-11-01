@@ -419,6 +419,7 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
 
       expect(state.debugAnimationGeneration, 2);
+      expect(state.debugScrollController.position.pixels, greaterThan(0));
 
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 3));
