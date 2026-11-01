@@ -33,7 +33,7 @@ abstract final class OsmMapLayers {
 
   /// 瓦片层。作为 [FlutterMap] 的第一个 child。
   /// 配置持久化磁盘瓦片缓存，并启用扩大预缓冲 (panBuffer: 2) 与全球镜像兜底 (fallbackUrl)，
-  /// 在主源错误阻断时自动降级，平移时提前加载周边瓦片以减少灰块。
+  /// 添加 300ms 渐显过渡 (TileDisplay.fadeIn)，在主源错误阻断时自动降级，平移时提前加载周边瓦片以减少灰块。
   /// 根据当前主题 brightness 动态配置 tileBuilder（暗色模式下应用 [darkModeTileBuilder] 滤镜）。
   ///
   /// 暗色滤镜是在 Widget 渲染层（[darkModeTileBuilder]）通过色彩矩阵动态应用的，
@@ -44,6 +44,9 @@ abstract final class OsmMapLayers {
         userAgentPackageName: _packageName,
         maxNativeZoom: _maxNativeZoom,
         panBuffer: 2,
+        tileDisplay: const TileDisplay.fadeIn(
+          duration: Duration(milliseconds: 300),
+        ),
         tileBuilder: Theme.of(context).brightness == Brightness.dark
             ? darkModeTileBuilder
             : null,
