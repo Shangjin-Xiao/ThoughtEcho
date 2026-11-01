@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
@@ -104,7 +108,8 @@ class _MockWeatherService extends ChangeNotifier implements WeatherService {
   String get temperature => _temperature;
 
   @override
-  String getFormattedWeather(AppLocalizations l10n) => '$_weather $_temperature';
+  String getFormattedWeather(AppLocalizations l10n) =>
+      '$_weather $_temperature';
 
   @override
   IconData getWeatherIconData() => Icons.wb_sunny;
@@ -675,6 +680,74 @@ void main() {
         isTrue,
         reason: 'Selecting weather caused full dialog rebuild',
       );
+    });
+
+    testWidgets(
+        'renders and captures screenshot of AddNoteDialog with location and weather chips',
+        (tester) async {
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<SettingsService>.value(
+              value: _MockSettingsService(),
+            ),
+            ChangeNotifierProvider<LocationService>.value(
+              value: _MockLocationService(),
+            ),
+            ChangeNotifierProvider<WeatherService>.value(
+              value: _MockWeatherService(),
+            ),
+            ChangeNotifierProvider<DatabaseService>.value(
+              value: _MockDatabaseService(),
+            ),
+            ChangeNotifierProvider<FeatureGuideService>.value(
+              value: _MockFeatureGuideService(),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => Dialog(
+                      child: AddNoteDialog(
+                        tags: const [],
+                        prefilledContent: '快捷记事弹窗隔离重绘测试',
+                        onSave: (quote) {},
+                      ),
+                    ),
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LocationChipWidget), findsOneWidget);
+      expect(find.byType(WeatherChipWidget), findsOneWidget);
+
+      final renderObject =
+          find.byType(RepaintBoundary).first.evaluate().single.renderObject!;
+      final layer = renderObject.debugLayer! as OffsetLayer;
+      await tester.runAsync(() async {
+        final image =
+            await layer.toImage(renderObject.paintBounds, pixelRatio: 2.0);
+        final png = await image.toByteData(format: ui.ImageByteFormat.png);
+        image.dispose();
+        if (png != null) {
+          File('/tmp/location_weather_chips.png')
+              .writeAsBytesSync(png.buffer.asUint8List());
+        }
+      });
     });
   });
 }

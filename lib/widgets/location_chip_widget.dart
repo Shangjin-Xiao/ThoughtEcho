@@ -77,8 +77,7 @@ class LocationChipWidget extends StatelessWidget {
         controller.newLocation,
       );
     }
-    if (controller.newLocation != null &&
-        controller.newLocation!.isNotEmpty) {
+    if (controller.newLocation != null && controller.newLocation!.isNotEmpty) {
       return LocationService.formatLocationForDisplay(controller.newLocation);
     }
     if (controller.newLatitude != null && controller.newLongitude != null) {
