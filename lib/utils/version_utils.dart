@@ -28,11 +28,14 @@ int compareVersions(String a, String b) {
   return 0;
 }
 
+final RegExp _vPrefixRegex = RegExp(r'^v', caseSensitive: false);
+final RegExp _plusMinusRegex = RegExp(r'[+-]');
+
 List<int> _parse(String version) {
   final core = version
       .trim()
-      .replaceFirst(RegExp(r'^v', caseSensitive: false), '')
-      .split(RegExp(r'[+-]'))
+      .replaceFirst(_vPrefixRegex, '')
+      .split(_plusMinusRegex)
       .first;
   return core.split('.').map((part) => int.tryParse(part) ?? 0).toList();
 }
