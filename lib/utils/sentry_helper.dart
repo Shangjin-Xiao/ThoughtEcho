@@ -531,6 +531,47 @@ class SentryHelper {
   static Future<void>? _initialization;
   static Future<void>? _closing;
 
+  @visibleForTesting
+  static Future<SentryId> Function(
+    dynamic throwable, {
+    dynamic stackTrace,
+    Hint? hint,
+    ScopeCallback? withScope,
+  })? onCaptureExceptionForTesting;
+
+  /// 捕获并上报异常到 Sentry。
+  ///
+  /// 若配置了 [onCaptureExceptionForTesting]，则优先回调测试钩子。
+  /// 遵循隐私第一原则，调用方应确保存储层故障不上报敏感记忆数据，但完整记录报错堆栈。
+  static Future<SentryId> captureException(
+    dynamic throwable, {
+    dynamic stackTrace,
+    Hint? hint,
+    ScopeCallback? withScope,
+  }) async {
+    final testHandler = onCaptureExceptionForTesting;
+    if (testHandler != null) {
+      return testHandler(
+        throwable,
+        stackTrace: stackTrace,
+        hint: hint,
+        withScope: withScope,
+      );
+    }
+    if (!Sentry.isEnabled) return SentryId.empty();
+    try {
+      return await Sentry.captureException(
+        throwable,
+        stackTrace: stackTrace,
+        hint: hint,
+        withScope: withScope,
+      );
+    } catch (e) {
+      logWarning('Sentry captureException 失败: $e', source: 'Sentry');
+      return SentryId.empty();
+    }
+  }
+
   static bool get isInitialized => _initialized;
 
   /// 获取 Sentry 路由观察者

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../constants/app_constants.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/agent_memory.dart';
 import '../../services/agent_memory_service.dart';
@@ -41,6 +44,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
+  Timer? _searchTelemetryTimer;
   Future<_MemoryBundle>? _bundleFuture;
 
   @override
@@ -62,6 +66,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
 
   @override
   void dispose() {
+    _searchTelemetryTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -86,8 +91,20 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
                   border: InputBorder.none,
                 ),
                 onChanged: (val) {
+                  final trimmed = val.trim();
+                  _searchTelemetryTimer?.cancel();
+                  if (trimmed.isNotEmpty) {
+                    _searchTelemetryTimer = Timer(
+                      AppConstants.searchDebounceDelay,
+                      () {
+                        if (mounted) {
+                          AptabaseHelper.trackEvent('agent_memory_search');
+                        }
+                      },
+                    );
+                  }
                   setState(() {
-                    _searchQuery = val.trim().toLowerCase();
+                    _searchQuery = trimmed.toLowerCase();
                     _refreshBundle();
                   });
                 },
@@ -101,6 +118,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
               setState(() {
                 if (_isSearching) {
                   _isSearching = false;
+                  _searchTelemetryTimer?.cancel();
                   _searchController.clear();
                   _searchQuery = '';
                   _refreshBundle();
@@ -385,6 +403,10 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         try {
           final success = await memoryService.forgetProfile(entry.id);
           if (context.mounted && success) {
+            AptabaseHelper.trackEvent('agent_memory_delete', {
+              'type': 'profile',
+              'kind': entry.kind.storageValue,
+            });
             AppSnackBar.success(
               context,
               AppLocalizations.of(context).agentMemoryForgotten,
@@ -424,6 +446,9 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         try {
           final success = await memoryService.clearRecentSlice(id: slice.id);
           if (context.mounted && success) {
+            AptabaseHelper.trackEvent('agent_memory_delete', {
+              'type': 'slice',
+            });
             AppSnackBar.success(
               context,
               AppLocalizations.of(context).agentMemoryForgotten,
@@ -463,6 +488,9 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         try {
           final success = await memoryService.forgetFact(fact.id);
           if (context.mounted && success) {
+            AptabaseHelper.trackEvent('agent_memory_delete', {
+              'type': 'fact',
+            });
             AppSnackBar.success(
               context,
               AppLocalizations.of(context).agentMemoryForgotten,

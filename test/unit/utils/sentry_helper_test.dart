@@ -1086,6 +1086,69 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sanitized?.request?.headers, isEmpty);
     });
   });
+
+  group('SentryHelper.captureException', () {
+    tearDown(() {
+      SentryHelper.onCaptureExceptionForTesting = null;
+    });
+
+    test('invokes onCaptureExceptionForTesting when set including withScope',
+        () async {
+      dynamic capturedThrowable;
+      dynamic capturedStackTrace;
+      Hint? capturedHint;
+      ScopeCallback? capturedWithScope;
+      final expectedId = SentryId.newId();
+
+      SentryHelper.onCaptureExceptionForTesting = (
+        throwable, {
+        stackTrace,
+        hint,
+        withScope,
+      }) async {
+        capturedThrowable = throwable;
+        capturedStackTrace = stackTrace;
+        capturedHint = hint;
+        capturedWithScope = withScope;
+        return expectedId;
+      };
+
+      final error = StateError('db_error');
+      final stackTrace = StackTrace.current;
+      final hint = Hint.withMap({'operation': 'test_op'});
+
+      final sentryId = await SentryHelper.captureException(
+        error,
+        stackTrace: stackTrace,
+        hint: hint,
+        withScope: (scope) {
+          scope.setTag('operation', 'test_op');
+          scope.setTag('source', 'AgentMemoryService');
+        },
+      );
+
+      expect(sentryId, equals(expectedId));
+      expect(capturedThrowable, equals(error));
+      expect(capturedStackTrace, equals(stackTrace));
+      expect(capturedHint?.get('operation'), equals('test_op'));
+      expect(capturedWithScope, isNotNull);
+
+      final scope = Scope(SentryOptions(dsn: ''));
+      capturedWithScope!(scope);
+      expect(scope.tags['operation'], equals('test_op'));
+      expect(scope.tags['source'], equals('AgentMemoryService'));
+    });
+
+    test('returns SentryId.empty() when not enabled and no handler set',
+        () async {
+      SentryHelper.onCaptureExceptionForTesting = null;
+      final sentryId = await SentryHelper.captureException(
+        Exception('some_error'),
+        stackTrace: StackTrace.current,
+      );
+      expect(sentryId, equals(SentryId.empty()));
+    });
+  });
 }
 
 /// 造一个和 `note_list_scroll.dart` 收尾时形状一致的滚动会话事务。
