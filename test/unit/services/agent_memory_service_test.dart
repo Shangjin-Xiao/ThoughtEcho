@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
-import 'package:thoughtecho/utils/sentry_helper.dart';
 
 import '../../test_harness.dart';
 
@@ -1123,8 +1123,8 @@ void main() {
   group('AgentMemoryService 遥测与异常捕获', () {
     late AgentMemoryService memory;
     late SettingsService settingsService;
+    late _FakeUnifiedLogService fakeLogService;
     final trackedEvents = <Map<String, dynamic>>[];
-    final capturedExceptions = <Map<String, dynamic>>[];
 
     setUp(() async {
       await MMKVService().clear();
@@ -1137,7 +1137,8 @@ void main() {
       );
 
       trackedEvents.clear();
-      capturedExceptions.clear();
+      fakeLogService = _FakeUnifiedLogService();
+      AppLogger.serviceForTesting = fakeLogService;
 
       AptabaseHelper.onTrackEventForTesting = (eventName, props) {
         trackedEvents.add({
@@ -1145,29 +1146,12 @@ void main() {
           'props': props != null ? Map<String, Object>.from(props) : null,
         });
       };
-
-      SentryHelper.onCaptureExceptionForTesting = (
-        throwable, {
-        stackTrace,
-        hint,
-        withScope,
-      }) async {
-        final scope = Scope(SentryOptions(dsn: ''));
-        withScope?.call(scope);
-        capturedExceptions.add({
-          'throwable': throwable,
-          'stackTrace': stackTrace,
-          'hint': hint,
-          'scope': scope,
-        });
-        return SentryId.newId();
-      };
     });
 
     tearDown(() async {
       AptabaseHelper.onTrackEventForTesting = null;
-      SentryHelper.onCaptureExceptionForTesting = null;
       memory.dispose();
+      AppLogger.initialize();
     });
 
     test('rememberProfile 记录 agent_memory_remember 且携带类别', () async {
@@ -1234,7 +1218,7 @@ void main() {
       expect(props.values.every((v) => v is int), isTrue);
     });
 
-    test('存储层异常通过 SentryHelper 捕获并附带脱敏异常与 Scope Tags', () {
+    test('存储层异常统一由 logError 记录，不直接调用 SentryHelper', () {
       final rawError = StateError(
         'disk I/O failure with sensitive data: "secret user memory directive"',
       );
@@ -1242,23 +1226,62 @@ void main() {
 
       memory.reportDatabaseErrorForTesting('testOperation', rawError, stack);
 
-      expect(capturedExceptions, hasLength(1));
-      final captured = capturedExceptions.first;
-      // 绝不上报包含用户敏感记忆内容的原始异常
-      expect(captured['throwable'], isA<StateError>());
-      final reportedError = captured['throwable'] as StateError;
-      expect(
-        reportedError.message,
-        equals('AgentMemoryService database operation failed'),
-      );
-      expect(reportedError.message, isNot(contains('secret')));
-      expect(captured['stackTrace'], equals(stack));
-
-      // 验证通过 Scope tags 上报 operation 与 source
-      final scope = captured['scope'] as Scope?;
-      expect(scope, isNotNull);
-      expect(scope!.tags['operation'], equals('testOperation'));
-      expect(scope.tags['source'], equals('AgentMemoryService'));
+      expect(fakeLogService.logRecords, hasLength(1));
+      final record = fakeLogService.logRecords.first;
+      expect(record['level'], equals(UnifiedLogLevel.error));
+      expect(record['message'], equals('testOperation失败'));
+      expect(record['source'], equals('AgentMemoryService'));
+      expect(record['error'], equals(rawError));
+      expect(record['stackTrace'], equals(stack));
     });
   });
+}
+
+class _FakeUnifiedLogService implements UnifiedLogService {
+  final List<Map<String, dynamic>> logRecords = [];
+
+  @override
+  void verbose(String message,
+          {String? source, Object? error, StackTrace? stackTrace}) =>
+      log(UnifiedLogLevel.verbose, message,
+          source: source, error: error, stackTrace: stackTrace);
+
+  @override
+  void debug(String message,
+          {String? source, Object? error, StackTrace? stackTrace}) =>
+      log(UnifiedLogLevel.debug, message,
+          source: source, error: error, stackTrace: stackTrace);
+
+  @override
+  void info(String message,
+          {String? source, Object? error, StackTrace? stackTrace}) =>
+      log(UnifiedLogLevel.info, message,
+          source: source, error: error, stackTrace: stackTrace);
+
+  @override
+  void warning(String message,
+          {String? source, Object? error, StackTrace? stackTrace}) =>
+      log(UnifiedLogLevel.warning, message,
+          source: source, error: error, stackTrace: stackTrace);
+
+  @override
+  void error(String message,
+          {String? source, Object? error, StackTrace? stackTrace}) =>
+      log(UnifiedLogLevel.error, message,
+          source: source, error: error, stackTrace: stackTrace);
+
+  @override
+  void log(UnifiedLogLevel level, String message,
+      {String? source, Object? error, StackTrace? stackTrace}) {
+    logRecords.add({
+      'level': level,
+      'message': message,
+      'source': source,
+      'error': error,
+      'stackTrace': stackTrace,
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

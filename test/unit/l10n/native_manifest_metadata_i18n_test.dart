@@ -101,7 +101,9 @@ void main() {
       expect(block0804, contains('VALUE "ProductName", "心迹"'));
     });
 
-    test('Web Manifest files provide English default and Chinese variant', () {
+    test(
+        'Web Manifest file provides static ThoughtEcho metadata and no Chinese variant',
+        () {
       final defaultManifest =
           jsonDecode(File('web/manifest.json').readAsStringSync())
               as Map<String, dynamic>;
@@ -109,16 +111,15 @@ void main() {
       expect(defaultManifest['short_name'], 'ThoughtEcho');
       expect(defaultManifest['description'], isNotEmpty);
 
-      final zhManifest =
-          jsonDecode(File('web/manifest.zh.json').readAsStringSync())
-              as Map<String, dynamic>;
-      expect(zhManifest['name'], '心迹');
-      expect(zhManifest['short_name'], '心迹');
-      expect(zhManifest['description'], '一款帮助你记录笔记和思想的应用');
+      expect(
+        File('web/manifest.zh.json').existsSync(),
+        isFalse,
+        reason: 'AGENTS.md prohibits adding Web multilingual variants',
+      );
     });
 
     test(
-        'Web index.html defaults to English and includes dynamic language detection script',
+        'Web index.html maintains static metadata without dynamic language script',
         () {
       final htmlContent = File('web/index.html').readAsStringSync();
 
@@ -131,9 +132,8 @@ void main() {
       expect(
           htmlContent, contains('<link rel="manifest" href="manifest.json">'));
 
-      expect(htmlContent, contains('navigator.language'));
-      expect(htmlContent, contains('manifest.zh.json'));
-      expect(htmlContent, contains('心迹'));
+      expect(htmlContent, isNot(contains('manifest.zh.json')));
+      expect(htmlContent, isNot(contains('navigator.language')));
     });
   });
 }

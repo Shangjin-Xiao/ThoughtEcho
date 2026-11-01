@@ -10,7 +10,6 @@ import 'package:uuid/uuid.dart';
 import '../models/agent_memory.dart';
 import '../utils/app_logger.dart';
 import '../utils/aptabase_helper.dart';
-import '../utils/sentry_helper.dart';
 import '../utils/sqlite_type_utils.dart';
 import '../utils/untrusted_text.dart';
 import 'data_directory_service.dart';
@@ -203,14 +202,6 @@ class AgentMemoryService extends ChangeNotifier {
       error: error,
       stackTrace: stackTrace,
       source: 'AgentMemoryService',
-    );
-    SentryHelper.captureException(
-      StateError('AgentMemoryService database operation failed'),
-      stackTrace: stackTrace,
-      withScope: (scope) {
-        scope.setTag('operation', operation);
-        scope.setTag('source', 'AgentMemoryService');
-      },
     );
   }
 
