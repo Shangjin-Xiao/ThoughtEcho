@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -194,12 +193,12 @@ class AgentMemoryService extends ChangeNotifier {
       source: 'AgentMemoryService',
     );
     SentryHelper.captureException(
-      error,
+      StateError('AgentMemoryService database operation failed'),
       stackTrace: stackTrace,
-      hint: Hint.withMap({
-        'operation': operation,
-        'source': 'AgentMemoryService',
-      }),
+      withScope: (scope) {
+        scope.setTag('operation', operation);
+        scope.setTag('source', 'AgentMemoryService');
+      },
     );
   }
 

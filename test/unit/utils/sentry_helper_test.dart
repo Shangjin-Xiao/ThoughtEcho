@@ -521,10 +521,12 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       SentryHelper.onCaptureExceptionForTesting = null;
     });
 
-    test('invokes onCaptureExceptionForTesting when set', () async {
+    test('invokes onCaptureExceptionForTesting when set including withScope',
+        () async {
       dynamic capturedThrowable;
       dynamic capturedStackTrace;
       Hint? capturedHint;
+      ScopeCallback? capturedWithScope;
       final expectedId = SentryId.newId();
 
       SentryHelper.onCaptureExceptionForTesting = (
@@ -536,6 +538,7 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
         capturedThrowable = throwable;
         capturedStackTrace = stackTrace;
         capturedHint = hint;
+        capturedWithScope = withScope;
         return expectedId;
       };
 
@@ -547,12 +550,22 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
         error,
         stackTrace: stackTrace,
         hint: hint,
+        withScope: (scope) {
+          scope.setTag('operation', 'test_op');
+          scope.setTag('source', 'AgentMemoryService');
+        },
       );
 
       expect(sentryId, equals(expectedId));
       expect(capturedThrowable, equals(error));
       expect(capturedStackTrace, equals(stackTrace));
       expect(capturedHint?.get('operation'), equals('test_op'));
+      expect(capturedWithScope, isNotNull);
+
+      final scope = Scope(SentryOptions(dsn: ''));
+      capturedWithScope!(scope);
+      expect(scope.tags['operation'], equals('test_op'));
+      expect(scope.tags['source'], equals('AgentMemoryService'));
     });
 
     test('returns SentryId.empty() when not enabled and no handler set',

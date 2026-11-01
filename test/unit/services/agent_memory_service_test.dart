@@ -1035,10 +1035,13 @@ void main() {
         hint,
         withScope,
       }) async {
+        final scope = Scope(SentryOptions(dsn: ''));
+        withScope?.call(scope);
         capturedExceptions.add({
           'throwable': throwable,
           'stackTrace': stackTrace,
           'hint': hint,
+          'scope': scope,
         });
         return SentryId.newId();
       };
@@ -1114,19 +1117,31 @@ void main() {
       expect(props.values.every((v) => v is int), isTrue);
     });
 
-    test('存储层异常通过 SentryHelper 捕获并附带脱敏操作提示', () {
-      final error = StateError('disk I/O failure');
+    test('存储层异常通过 SentryHelper 捕获并附带脱敏异常与 Scope Tags', () {
+      final rawError = StateError(
+        'disk I/O failure with sensitive data: "secret user memory directive"',
+      );
       final stack = StackTrace.current;
 
-      memory.reportDatabaseErrorForTesting('testOperation', error, stack);
+      memory.reportDatabaseErrorForTesting('testOperation', rawError, stack);
 
       expect(capturedExceptions, hasLength(1));
       final captured = capturedExceptions.first;
-      expect(captured['throwable'], equals(error));
+      // 绝不上报包含用户敏感记忆内容的原始异常
+      expect(captured['throwable'], isA<StateError>());
+      final reportedError = captured['throwable'] as StateError;
+      expect(
+        reportedError.message,
+        equals('AgentMemoryService database operation failed'),
+      );
+      expect(reportedError.message, isNot(contains('secret')));
       expect(captured['stackTrace'], equals(stack));
-      final hint = captured['hint'] as Hint?;
-      expect(hint?.get('operation'), equals('testOperation'));
-      expect(hint?.get('source'), equals('AgentMemoryService'));
+
+      // 验证通过 Scope tags 上报 operation 与 source
+      final scope = captured['scope'] as Scope?;
+      expect(scope, isNotNull);
+      expect(scope!.tags['operation'], equals('testOperation'));
+      expect(scope.tags['source'], equals('AgentMemoryService'));
     });
   });
 }

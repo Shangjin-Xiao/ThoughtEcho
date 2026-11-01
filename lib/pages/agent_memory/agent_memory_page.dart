@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../constants/app_constants.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/agent_memory.dart';
 import '../../services/agent_memory_service.dart';
@@ -41,6 +44,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
+  Timer? _searchTelemetryTimer;
   Future<_MemoryBundle>? _bundleFuture;
 
   @override
@@ -62,6 +66,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
 
   @override
   void dispose() {
+    _searchTelemetryTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -87,8 +92,16 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
                 ),
                 onChanged: (val) {
                   final trimmed = val.trim();
+                  _searchTelemetryTimer?.cancel();
                   if (trimmed.isNotEmpty) {
-                    AptabaseHelper.trackEvent('agent_memory_search');
+                    _searchTelemetryTimer = Timer(
+                      AppConstants.searchDebounceDelay,
+                      () {
+                        if (mounted) {
+                          AptabaseHelper.trackEvent('agent_memory_search');
+                        }
+                      },
+                    );
                   }
                   setState(() {
                     _searchQuery = trimmed.toLowerCase();
@@ -105,6 +118,7 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
               setState(() {
                 if (_isSearching) {
                   _isSearching = false;
+                  _searchTelemetryTimer?.cancel();
                   _searchController.clear();
                   _searchQuery = '';
                   _refreshBundle();

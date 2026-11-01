@@ -516,7 +516,7 @@ void main() {
       expect(find.byType(AgentMemoryPage), findsOneWidget);
     });
 
-    testWidgets('搜索框输入触发 agent_memory_search 匿名遥测', (tester) async {
+    testWidgets('搜索框输入触发 agent_memory_search 匿名遥测并支持 300ms 防抖', (tester) async {
       final trackedEvents = <Map<String, dynamic>>[];
       AptabaseHelper.onTrackEventForTesting = (eventName, props) {
         trackedEvents.add({
@@ -541,16 +541,94 @@ void main() {
       await tester.tap(find.byIcon(Icons.search));
       await tester.pumpAndSettle();
 
-      // 输入搜索词
-      await tester.enterText(find.byType(TextField), '架构');
-      await tester.pumpAndSettle();
+      // 输入第一个字：防抖时间内不应立即触发遥测
+      await tester.enterText(find.byType(TextField), '架');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
 
+      // 继续输入第二个字：重置防抖计时器
+      await tester.enterText(find.byType(TextField), '架构');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
+
+      // 防抖时间到期后触发一次遥测
+      await tester.pump(const Duration(milliseconds: 200));
       final searchEvents = trackedEvents
           .where((e) => e['eventName'] == 'agent_memory_search')
           .toList();
-      expect(searchEvents, isNotEmpty);
+      expect(searchEvents, hasLength(1));
       // 绝不上报搜索内容
       expect(searchEvents.first['props'], isNull);
+
+      // 输入清空为 "" 时取消计时器，不应触发新的遥测
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        hasLength(1),
+      );
+
+      for (var i = 0; i < 6; i++) {
+        await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('搜索框输入未过防抖时间即关闭搜索时不触发 agent_memory_search 遥测', (tester) async {
+      final trackedEvents = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props,
+        });
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      _setLargeSurfaceSize(tester);
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      // 打开搜索并输入
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '临时输入');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 在防抖未触发时点击取消关闭搜索框
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pump();
+      for (var i = 0; i < 6; i++) {
+        await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pumpAndSettle();
+
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
     });
 
     testWidgets('编辑画像指令成功时触发 agent_memory_edit 匿名遥测', (tester) async {
