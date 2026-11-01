@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
+import 'package:thoughtecho/utils/sentry_helper.dart';
 
 import '../../test_harness.dart';
 
@@ -997,6 +1000,133 @@ void main() {
       expect(refreshedFacts.first.recallCount, greaterThanOrEqualTo(1));
 
       await memory.clearAll();
+    });
+  });
+
+  group('AgentMemoryService 遥测与异常捕获', () {
+    late AgentMemoryService memory;
+    late SettingsService settingsService;
+    final trackedEvents = <Map<String, dynamic>>[];
+    final capturedExceptions = <Map<String, dynamic>>[];
+
+    setUp(() async {
+      await MMKVService().clear();
+      SharedPreferences.resetStatic();
+      SharedPreferences.setMockInitialValues({});
+      settingsService = SettingsService(await SharedPreferences.getInstance());
+      memory = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: inMemoryDatabasePath,
+      );
+
+      trackedEvents.clear();
+      capturedExceptions.clear();
+
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props != null ? Map<String, Object>.from(props) : null,
+        });
+      };
+
+      SentryHelper.onCaptureExceptionForTesting = (
+        throwable, {
+        stackTrace,
+        hint,
+        withScope,
+      }) async {
+        capturedExceptions.add({
+          'throwable': throwable,
+          'stackTrace': stackTrace,
+          'hint': hint,
+        });
+        return SentryId.newId();
+      };
+    });
+
+    tearDown(() async {
+      AptabaseHelper.onTrackEventForTesting = null;
+      SentryHelper.onCaptureExceptionForTesting = null;
+      memory.dispose();
+    });
+
+    test('rememberProfile 记录 agent_memory_remember 且携带类别', () async {
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.preference,
+        directive: '偏好代码简洁',
+      );
+
+      final event = trackedEvents.firstWhere(
+        (e) => e['eventName'] == 'agent_memory_remember',
+      );
+      expect(event['props'], equals({'kind': 'preference'}));
+    });
+
+    test('clearAll 记录 agent_memory_clear_all 且不携带敏感内容', () async {
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.style,
+        directive: '喜欢使用中文输出',
+      );
+      trackedEvents.clear();
+
+      await memory.clearAll();
+
+      final event = trackedEvents.firstWhere(
+        (e) => e['eventName'] == 'agent_memory_clear_all',
+      );
+      expect(event['props'], isNull);
+    });
+
+    test('compactAndPrune 记录 agent_memory_compact 且上报脱敏剪裁度量', () async {
+      await memory.compactAndPrune();
+
+      final event = trackedEvents.firstWhere(
+        (e) => e['eventName'] == 'agent_memory_compact',
+      );
+      final props = event['props'] as Map<String, Object>;
+      expect(props.containsKey('expired_slices'), isTrue);
+      expect(props.containsKey('superseded_profiles'), isTrue);
+      expect(props.containsKey('decayed_facts'), isTrue);
+      expect(props.containsKey('duplicates_pruned'), isTrue);
+      expect(props.containsKey('total_pruned'), isTrue);
+      for (final value in props.values) {
+        expect(value, isA<int>());
+      }
+    });
+
+    test('searchFacts 记录 agent_memory_search_facts 且仅包含计数不包含查询文本', () async {
+      await memory.addFact(
+        content: '熟练掌握 Dart 和 Flutter 开发',
+        importance: 8,
+      );
+      trackedEvents.clear();
+
+      await memory.searchFacts('Flutter 开发');
+
+      final event = trackedEvents.firstWhere(
+        (e) => e['eventName'] == 'agent_memory_search_facts',
+      );
+      final props = event['props'] as Map<String, Object>;
+      expect(props['hit_count'], equals(1));
+      expect(props['keyword_count'], greaterThanOrEqualTo(1));
+      expect(props.containsKey('query'), isFalse);
+      expect(props.containsKey('keyword'), isFalse);
+      expect(props.values.every((v) => v is int), isTrue);
+    });
+
+    test('存储层异常通过 SentryHelper 捕获并附带脱敏操作提示', () {
+      final error = StateError('disk I/O failure');
+      final stack = StackTrace.current;
+
+      memory.reportDatabaseErrorForTesting('testOperation', error, stack);
+
+      expect(capturedExceptions, hasLength(1));
+      final captured = capturedExceptions.first;
+      expect(captured['throwable'], equals(error));
+      expect(captured['stackTrace'], equals(stack));
+      final hint = captured['hint'] as Hint?;
+      expect(hint?.get('operation'), equals('testOperation'));
+      expect(hint?.get('source'), equals('AgentMemoryService'));
     });
   });
 }

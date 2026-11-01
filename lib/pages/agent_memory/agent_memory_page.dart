@@ -86,8 +86,12 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
                   border: InputBorder.none,
                 ),
                 onChanged: (val) {
+                  final trimmed = val.trim();
+                  if (trimmed.isNotEmpty) {
+                    AptabaseHelper.trackEvent('agent_memory_search');
+                  }
                   setState(() {
-                    _searchQuery = val.trim().toLowerCase();
+                    _searchQuery = trimmed.toLowerCase();
                     _refreshBundle();
                   });
                 },
@@ -385,6 +389,10 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         try {
           final success = await memoryService.forgetProfile(entry.id);
           if (context.mounted && success) {
+            AptabaseHelper.trackEvent('agent_memory_delete', {
+              'type': 'profile',
+              'kind': entry.kind.storageValue,
+            });
             AppSnackBar.success(
               context,
               AppLocalizations.of(context).agentMemoryForgotten,
@@ -424,6 +432,9 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         try {
           final success = await memoryService.clearRecentSlice(id: slice.id);
           if (context.mounted && success) {
+            AptabaseHelper.trackEvent('agent_memory_delete', {
+              'type': 'slice',
+            });
             AppSnackBar.success(
               context,
               AppLocalizations.of(context).agentMemoryForgotten,
@@ -463,6 +474,9 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
         try {
           final success = await memoryService.forgetFact(fact.id);
           if (context.mounted && success) {
+            AptabaseHelper.trackEvent('agent_memory_delete', {
+              'type': 'fact',
+            });
             AppSnackBar.success(
               context,
               AppLocalizations.of(context).agentMemoryForgotten,
