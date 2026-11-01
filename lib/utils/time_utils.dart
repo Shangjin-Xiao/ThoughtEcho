@@ -6,8 +6,8 @@ import '../gen_l10n/app_localizations.dart';
 class TimeUtils {
   /// 获取当前时间段描述（晨曦、上午、午后、黄昏、夜晚、深夜）
   /// 获取当前时间段的英文 Key
-  static String getCurrentDayPeriodKey() {
-    final now = TimeOfDay.now();
+  static String getCurrentDayPeriodKey([TimeOfDay? time]) {
+    final now = time ?? TimeOfDay.now();
     final hour = now.hour;
 
     if (hour >= 5 && hour < 8) {

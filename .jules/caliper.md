@@ -141,3 +141,7 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-10-27 - [补充 LocationWeatherHelper.fetchLocation 的测试]
 **盲点:** `LocationWeatherHelper.fetchLocation` 在提供 `includePoi` 参数后，获取 poiName 的分支逻辑缺少单元测试覆盖。
 **对策:** 在 `test/unit/utils/location_weather_helper_test.dart` 中为 `fetchLocation` 新增指定 `includePoi: true` 的相关测试断言。通过模拟 `MockLocationService.currentPoiName` 以及修改现有的 `test` 中断言，确保 fetch 的 `LocationSnapshot` 中能正确组装或缺失 `poiName` 属性。在修改现有测试参数时，注意具名参数必须以参数名对应。
+
+## 2026-11-01 - [补充 TimeUtils.getCurrentDayPeriodKey 的测试]
+**盲点:** `TimeUtils.getCurrentDayPeriodKey` 用于决定笔记与问候语的时段 Key（晨曦、上午、午后、黄昏、夜晚、深夜），直接绑定 `TimeOfDay.now()` 且缺乏测试覆盖，导致无法在单测中验证时段边界划分与跨天边界的正确性。
+**对策:** 为 `getCurrentDayPeriodKey([TimeOfDay? time])` 引入可选时间参数作为注入点，在保持原无参调用兼容的同时，在 `test/unit/utils/time_utils_test.dart` 中增加对 6 大时段所有边界点（00:00, 04:59, 05:00, 07:59, 08:00, 11:59, 12:00, 16:59, 17:00, 19:59, 20:00, 22:59, 23:00, 23:59）以及无参调用的确定性测试覆盖。
