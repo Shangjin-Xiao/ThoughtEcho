@@ -1448,12 +1448,16 @@ class DatabaseBackupService {
             (quoteData['deleted_at'] as String).isEmpty)) {
       final lastModified = quoteData['last_modified']?.toString();
       final date = quoteData['date']?.toString();
-      quoteData['deleted_at'] =
-          (lastModified != null && lastModified.isNotEmpty)
-              ? lastModified
-              : (date != null && date.isNotEmpty)
-                  ? date
-                  : DateTime.now().toUtc().toIso8601String();
+      final candidate = (lastModified != null && lastModified.isNotEmpty)
+          ? lastModified
+          : (date != null && date.isNotEmpty)
+              ? date
+              : null;
+      if (candidate != null && DateTime.tryParse(candidate) != null) {
+        quoteData['deleted_at'] = candidate;
+      } else {
+        quoteData['deleted_at'] = DateTime.now().toUtc().toIso8601String();
+      }
     }
   }
 
