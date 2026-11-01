@@ -140,8 +140,13 @@ class _TagsStateNotifier extends ChangeNotifier {
   }
 
   void updateSelection(List<String> newSelection) {
+    if (identical(_selectedTagIds, newSelection)) {
+      notifyListeners();
+      return;
+    }
+    final items = List<String>.from(newSelection);
     _selectedTagIds.clear();
-    _selectedTagIds.addAll(newSelection);
+    _selectedTagIds.addAll(items);
     notifyListeners();
   }
 
@@ -2507,7 +2512,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                           Listenable.merge([_tagsNotifier, _controller]),
                       builder: (context, _) {
                         return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
