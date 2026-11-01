@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:archive/archive_io.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 
@@ -87,6 +89,71 @@ void main() {
       expect(zipInfo!.fileCount, equals(2));
       expect(zipInfo.uncompressedSize, equals(10));
       expect(zipInfo.fileNames, containsAll(['f1.txt', 'f2.txt']));
+    });
+
+    test(
+        'extractZipStreaming successfully extracts archive and reports progress',
+        () async {
+      final file1 = File('${tempDir.path}/src1.txt')
+        ..writeAsStringSync('hello');
+      final file2 = File('${tempDir.path}/src2.txt')
+        ..writeAsStringSync('world');
+
+      final zipPath = '${tempDir.path}/extract_stream.zip';
+      final extractTargetDir = '${tempDir.path}/extracted';
+
+      await ZipStreamProcessor.createZipStreaming(zipPath, {
+        'src1.txt': file1.path,
+        'src2.txt': file2.path,
+      });
+
+      int progressCurrent = 0;
+      int progressTotal = 0;
+
+      await ZipStreamProcessor.extractZipStreaming(
+        zipPath,
+        extractTargetDir,
+        onProgress: (current, total) {
+          progressCurrent = current;
+          progressTotal = total;
+        },
+      );
+
+      expect(progressCurrent, equals(2));
+      expect(progressTotal, equals(2));
+      expect(File('$extractTargetDir/src1.txt').readAsStringSync(), 'hello');
+      expect(File('$extractTargetDir/src2.txt').readAsStringSync(), 'world');
+    });
+
+    test('extractZipStreaming releases file handles on corrupted zip exception',
+        () async {
+      final corruptedZip = File('${tempDir.path}/corrupted.zip');
+      final archive = Archive();
+      final data = Uint8List.fromList(List.generate(1000, (i) => i % 256));
+      final file = ArchiveFile('test.txt', data.length, data)
+        ..compression = CompressionType.deflate;
+      archive.addFile(file);
+      final zipBytes = ZipEncoder().encode(archive);
+
+      // Corrupt the deflated stream payload inside the zip bytes
+      for (int i = 40; i < 60 && i < zipBytes.length; i++) {
+        zipBytes[i] = 0xFF;
+      }
+      corruptedZip.writeAsBytesSync(zipBytes);
+
+      final extractTargetDir = '${tempDir.path}/corrupted_extracted';
+
+      await expectLater(
+        ZipStreamProcessor.extractZipStreaming(
+          corruptedZip.path,
+          extractTargetDir,
+        ),
+        throwsA(isA<Exception>()),
+      );
+
+      // Verify that the file handle was released and the zip file can be deleted/modified immediately
+      expect(() => corruptedZip.deleteSync(), returnsNormally);
+      expect(await corruptedZip.exists(), isFalse);
     });
   });
 

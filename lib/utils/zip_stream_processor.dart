@@ -255,57 +255,57 @@ class ZipStreamProcessor {
     final String zipPath = args['zipPath'];
     final String extractPath = args['extractPath'];
 
+    InputFileStream? inputStream;
     try {
-      try {
-        final decoder = ZipDecoder();
+      final decoder = ZipDecoder();
 
-        // 使用 InputFileStream 流式读取 ZIP，不将整个文件加载到内存
-        final inputStream = InputFileStream(zipPath);
-        final archive = decoder.decodeStream(inputStream);
+      // 使用 InputFileStream 流式读取 ZIP，不将整个文件加载到内存
+      inputStream = InputFileStream(zipPath);
+      final archive = decoder.decodeStream(inputStream);
 
-        final filesToProcess =
-            archive.files.where((file) => file.isFile).toList();
-        final totalFiles = filesToProcess.length;
-        sendPort.send(totalFiles); // 1. 发送总文件数
+      final filesToProcess =
+          archive.files.where((file) => file.isFile).toList();
+      final totalFiles = filesToProcess.length;
+      sendPort.send(totalFiles); // 1. 发送总文件数
 
-        int processedCount = 0;
-        for (final file in filesToProcess) {
-          final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
-          final platformSubPath = posixName.replaceAll('/', path.separator);
-          final outputPath = path.join(extractPath, platformSubPath);
+      int processedCount = 0;
+      for (final file in filesToProcess) {
+        final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
+        final platformSubPath = posixName.replaceAll('/', path.separator);
+        final outputPath = path.join(extractPath, platformSubPath);
 
-          // 安全检查：防止Zip Slip路径穿越漏洞
-          PathSecurityUtils.validateExtractionPath(outputPath, extractPath);
+        // 安全检查：防止Zip Slip路径穿越漏洞
+        PathSecurityUtils.validateExtractionPath(outputPath, extractPath);
 
-          // 确保目录存在
-          final outputDir = Directory(File(outputPath).parent.path);
-          if (!await outputDir.exists()) {
-            await outputDir.create(recursive: true);
-          }
-
-          // 使用 OutputFileStream 直接写入磁盘，不经过内存中转
-          final outputStream = OutputFileStream(outputPath);
-          file.writeContent(outputStream);
-          outputStream.closeSync();
-
-          processedCount++;
-          sendPort.send(processedCount); // 2. 发送当前进度
-
-          // 每处理5个文件，给系统一个喘息的机会
-          if (processedCount % 5 == 0) {
-            await Future.delayed(const Duration(milliseconds: 10));
-          }
+        // 确保目录存在
+        final outputDir = Directory(File(outputPath).parent.path);
+        if (!await outputDir.exists()) {
+          await outputDir.create(recursive: true);
         }
 
-        inputStream.closeSync();
-      } catch (e, s) {
-        sendPort.send({'error': e.toString(), 'stackTrace': s.toString()});
-        rethrow;
+        // 使用 OutputFileStream 直接写入磁盘，不经过内存中转
+        OutputFileStream? outputStream;
+        try {
+          outputStream = OutputFileStream(outputPath);
+          file.writeContent(outputStream);
+        } finally {
+          outputStream?.closeSync();
+        }
+
+        processedCount++;
+        sendPort.send(processedCount); // 2. 发送当前进度
+
+        // 每处理5个文件，给系统一个喘息的机会
+        if (processedCount % 5 == 0) {
+          await Future.delayed(const Duration(milliseconds: 10));
+        }
       }
 
       sendPort.send('done'); // 3. 发送完成信号
     } catch (e, s) {
       sendPort.send({'error': e.toString(), 'stackTrace': s.toString()});
+    } finally {
+      inputStream?.closeSync();
     }
   }
 
