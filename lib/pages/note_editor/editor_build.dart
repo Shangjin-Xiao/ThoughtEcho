@@ -110,124 +110,124 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
         body: SafeArea(
           child: Stack(
             children: [
-              RepaintBoundary(
-                child: Column(
-                  children: [
-                    UnifiedQuillToolbar(
-                      key: _toolbarGuideKey, // 新增：用于气泡定位
-                      controller: _editorState.controller,
-                      onMediaImported: (String filePath) {
-                        _mediaState.recordImportedMedia(filePath);
-                      },
-                    ),
-                    if (_metadataState.selectedTagIds.isNotEmpty ||
-                        _metadataState.selectedColorHex != null ||
-                        _metadataState.showLocation ||
-                        _metadataState.showWeather ||
-                        (_metadataState.currentAiAnalysis != null &&
-                            _metadataState.currentAiAnalysis!.isNotEmpty))
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: theme.colorScheme.outlineVariant
-                                  .applyOpacity(0.1),
-                              width: 1,
-                            ),
+              Column(
+                children: [
+                  UnifiedQuillToolbar(
+                    key: _toolbarGuideKey, // 新增：用于气泡定位
+                    controller: _editorState.controller,
+                    onMediaImported: (String filePath) {
+                      _mediaState.recordImportedMedia(filePath);
+                    },
+                  ),
+                  if (_metadataState.selectedTagIds.isNotEmpty ||
+                      _metadataState.selectedColorHex != null ||
+                      _metadataState.showLocation ||
+                      _metadataState.showWeather ||
+                      (_metadataState.currentAiAnalysis != null &&
+                          _metadataState.currentAiAnalysis!.isNotEmpty))
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: theme.colorScheme.outlineVariant
+                                .applyOpacity(0.1),
+                            width: 1,
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            if (_metadataState.selectedTagIds.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: Chip(
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  label: Text(
-                                    l10n.tagsCount(
-                                        _metadataState.selectedTagIds.length),
-                                  ),
-                                  avatar: Icon(Icons.tag, size: 16),
+                      ),
+                      child: Row(
+                        children: [
+                          if (_metadataState.selectedTagIds.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Chip(
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                label: Text(
+                                  l10n.tagsCount(
+                                      _metadataState.selectedTagIds.length),
                                 ),
-                              ),
-                            if (_metadataState.selectedColorHex != null)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: Color(
-                                      int.parse(
-                                            _metadataState.selectedColorHex!
-                                                .substring(1),
-                                            radix: 16,
-                                          ) |
-                                          0xFF000000,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: theme.colorScheme.outline
-                                          .applyOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  key: ValueKey(
-                                    'color-indicator-$_metadataState.selectedColorHex',
-                                  ),
-                                ),
-                              ),
-                            if (_metadataState.showLocation &&
-                                (_metadataState.location != null ||
-                                    (_metadataState.latitude != null &&
-                                        _metadataState.longitude != null)))
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: Icon(
-                                  Icons.location_on,
-                                  size: 16,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            if (_metadataState.showWeather &&
-                                _metadataState.weather != null)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: Icon(
-                                  _getWeatherIcon(_metadataState.weather!),
-                                  size: 16,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            if (_metadataState.currentAiAnalysis != null &&
-                                _metadataState.currentAiAnalysis!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: Icon(
-                                  Icons.auto_awesome,
-                                  size: 16,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            const Spacer(),
-                            TextButton(
-                              onPressed: () => _showMetadataDialog(context),
-                              child: Text(
-                                l10n.editMetadata,
-                                style: TextStyle(fontSize: 12),
+                                avatar: Icon(Icons.tag, size: 16),
                               ),
                             ),
-                          ],
-                        ),
+                          if (_metadataState.selectedColorHex != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: Color(
+                                    int.parse(
+                                          _metadataState.selectedColorHex!
+                                              .substring(1),
+                                          radix: 16,
+                                        ) |
+                                        0xFF000000,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outline
+                                        .applyOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                key: ValueKey(
+                                  'color-indicator-$_metadataState.selectedColorHex',
+                                ),
+                              ),
+                            ),
+                          if (_metadataState.showLocation &&
+                              (_metadataState.location != null ||
+                                  (_metadataState.latitude != null &&
+                                      _metadataState.longitude != null)))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(
+                                Icons.location_on,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          if (_metadataState.showWeather &&
+                              _metadataState.weather != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(
+                                _getWeatherIcon(_metadataState.weather!),
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          if (_metadataState.currentAiAnalysis != null &&
+                              _metadataState.currentAiAnalysis!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(
+                                Icons.auto_awesome,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () => _showMetadataDialog(context),
+                            child: Text(
+                              l10n.editMetadata,
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
                       ),
-                    Expanded(
+                    ),
+                  Expanded(
+                    child: RepaintBoundary(
                       child: Container(
                         color: theme.colorScheme.surface,
                         padding: const EdgeInsets.all(16),
@@ -266,8 +266,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               _EditorSaveOverlay(mediaState: _mediaState),
             ],

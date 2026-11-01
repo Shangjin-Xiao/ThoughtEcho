@@ -30,44 +30,46 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-            width: 1,
+    return RepaintBoundary(
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          border: Border(
+            bottom: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
+            ),
           ),
         ),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
-          children: [
-            ..._buildHistoryGroup(),
-            _buildDivider(),
-            ..._buildBasicFormatGroup(),
-            _buildDivider(),
-            ..._buildHeaderGroup(),
-            _buildDivider(),
-            ..._buildFontGroup(),
-            _buildDivider(),
-            ..._buildColorGroup(),
-            _buildDivider(),
-            ..._buildAlignmentGroup(),
-            _buildDivider(),
-            ..._buildListGroup(),
-            _buildDivider(),
-            ..._buildQuoteAndCodeGroup(),
-            _buildDivider(),
-            ..._buildLinkGroup(),
-            _buildDivider(),
-            ..._buildMediaGroup(context),
-            _buildDivider(),
-            ..._buildMiscGroup(),
-          ],
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              ..._buildHistoryGroup(),
+              _buildDivider(),
+              ..._buildBasicFormatGroup(),
+              _buildDivider(),
+              ..._buildHeaderGroup(),
+              _buildDivider(),
+              ..._buildFontGroup(),
+              _buildDivider(),
+              ..._buildColorGroup(),
+              _buildDivider(),
+              ..._buildAlignmentGroup(),
+              _buildDivider(),
+              ..._buildListGroup(),
+              _buildDivider(),
+              ..._buildQuoteAndCodeGroup(),
+              _buildDivider(),
+              ..._buildLinkGroup(),
+              _buildDivider(),
+              ..._buildMediaGroup(context),
+              _buildDivider(),
+              ..._buildMiscGroup(),
+            ],
+          ),
         ),
       ),
     );
