@@ -283,4 +283,81 @@ void main() {
     expect(appTheme.themeStyle, ThemeStyle.defaultStyle);
     expect(appTheme.themeMode, ThemeMode.light);
   });
+
+  test('setDynamicColorEnabled 原子化更新状态并仅触发一次通知', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    // 先设置为使用自定义颜色
+    await appTheme.setCustomColorEnabled(Colors.purple);
+    expect(appTheme.useCustomColor, isTrue);
+    expect(appTheme.useDynamicColor, isFalse);
+    expect(appTheme.customColor, Colors.purple);
+
+    // 监听通知次数
+    int notifyCount = 0;
+    appTheme.addListener(() {
+      notifyCount++;
+      // 通知触发时，内存中的两个状态必须已经同步更新完毕，无中间未决状态
+      expect(appTheme.useDynamicColor, isTrue);
+      expect(appTheme.useCustomColor, isFalse);
+    });
+
+    await appTheme.setDynamicColorEnabled(true);
+
+    expect(notifyCount, 1);
+    expect(appTheme.useDynamicColor, isTrue);
+    expect(appTheme.useCustomColor, isFalse);
+    expect(storage.getBool('use_dynamic_color'), isTrue);
+    expect(storage.getBool('use_custom_color'), isFalse);
+  });
+
+  test('setCustomColorEnabled 原子化更新颜色与互斥开关并仅触发一次通知', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    // 先设置为动态取色
+    await appTheme.setDynamicColorEnabled(true);
+    expect(appTheme.useDynamicColor, isTrue);
+    expect(appTheme.useCustomColor, isFalse);
+
+    int notifyCount = 0;
+    appTheme.addListener(() {
+      notifyCount++;
+      // 通知触发时状态已经原子完成
+      expect(appTheme.useCustomColor, isTrue);
+      expect(appTheme.customColor, Colors.orange);
+      expect(appTheme.useDynamicColor, isFalse);
+    });
+
+    await appTheme.setCustomColorEnabled(Colors.orange);
+
+    expect(notifyCount, 1);
+    expect(appTheme.useCustomColor, isTrue);
+    expect(appTheme.customColor, Colors.orange);
+    expect(appTheme.useDynamicColor, isFalse);
+    expect(storage.getBool('use_custom_color'), isTrue);
+    expect(storage.getBool('use_dynamic_color'), isFalse);
+    expect(storage.getInt('custom_color'), Colors.orange.toARGB32());
+
+    // 禁用自定义颜色
+    int disableNotifyCount = 0;
+    appTheme.addListener(() {
+      disableNotifyCount++;
+      expect(appTheme.useCustomColor, isFalse);
+      expect(appTheme.customColor, Colors.orange); // 保留记忆
+    });
+
+    await appTheme.setCustomColorEnabled(null);
+    expect(disableNotifyCount, 1);
+    expect(appTheme.useCustomColor, isFalse);
+    expect(appTheme.customColor, Colors.orange);
+    expect(storage.getBool('use_custom_color'), isFalse);
+  });
 }

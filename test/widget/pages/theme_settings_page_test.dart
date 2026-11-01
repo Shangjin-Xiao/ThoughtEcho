@@ -297,5 +297,70 @@ void main() {
       // 不是叠加。
       expect(find.text(l10n.themeAccent), findsNothing);
     });
+
+    testWidgets(
+        'switches between dynamic color and custom color seamlessly without rollback',
+        (tester) async {
+      final appTheme = AppTheme();
+      await appTheme.setThemeStyle(ThemeStyle.material);
+
+      await tester.pumpWidget(buildTestApp(appTheme));
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThemeSettingsPage)),
+      );
+
+      // 滚动到自定义颜色开关可见
+      await tester.scrollUntilVisible(
+        find.text(l10n.useCustomThemeColor),
+        200,
+      );
+      await tester.pumpAndSettle();
+
+      // 第一个 Switch 为自定义主题色开关，第二个 Switch 为动态取色开关
+      final customColorSwitchFinder = find.byType(Switch).first;
+      final dynamicColorSwitchFinder = find.byType(Switch).at(1);
+
+      // 初始状态：动态取色开启，自定义颜色关闭
+      expect(tester.widget<Switch>(customColorSwitchFinder).value, isFalse);
+      expect(tester.widget<Switch>(dynamicColorSwitchFinder).value, isTrue);
+
+      // 开启自定义颜色
+      await tester.tap(customColorSwitchFinder);
+      await tester.pumpAndSettle();
+
+      expect(appTheme.useCustomColor, isTrue);
+      expect(tester.widget<Switch>(customColorSwitchFinder).value, isTrue);
+      // 开启自定义颜色后，动态取色开关状态为关闭
+      expect(tester.widget<Switch>(dynamicColorSwitchFinder).value, isFalse);
+
+      // 切换开启动态取色：应原子化关闭自定义颜色，绝不发生回滚
+      await tester.ensureVisible(dynamicColorSwitchFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(dynamicColorSwitchFinder);
+      await tester.pumpAndSettle();
+
+      expect(appTheme.useDynamicColor, isTrue);
+      expect(appTheme.useCustomColor, isFalse);
+      expect(tester.widget<Switch>(customColorSwitchFinder).value, isFalse);
+      expect(tester.widget<Switch>(dynamicColorSwitchFinder).value, isTrue);
+
+      // 再次启用自定义颜色并选中预设色
+      await tester.tap(customColorSwitchFinder);
+      await tester.pumpAndSettle();
+
+      final greenSwatch = findColorSwatch(Colors.green).first;
+      await tester.ensureVisible(greenSwatch);
+      await tester.pumpAndSettle();
+      await tester.tap(greenSwatch);
+      await tester.pumpAndSettle();
+
+      expect(appTheme.useCustomColor, isTrue);
+      expect(appTheme.customColor, Colors.green);
+      expect(appTheme.useDynamicColor, isFalse);
+      expect(tester.widget<Switch>(customColorSwitchFinder).value, isTrue);
+      expect(tester.widget<Switch>(dynamicColorSwitchFinder).value, isFalse);
+    });
   });
 }
