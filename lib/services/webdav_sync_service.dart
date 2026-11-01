@@ -922,15 +922,33 @@ class WebDAVSyncService extends ChangeNotifier {
         source: 'WebDAVSyncService',
       );
       if (canRetry) {
-        final delay = Duration(seconds: 5 * (1 << attempt));
-        Future<void>.delayed(delay, () async {
-          // 同步进行中时，新一轮同步会在开始时统一清理遗留目录
-          if (!_isSyncExecuting) {
-            await _cleanupSyncWorkDirectory(workDir, attempt: attempt + 1);
-          }
-        });
+        _scheduleWorkDirCleanupRetry(
+          workDir,
+          nextAttempt: attempt + 1,
+          delay: Duration(seconds: 5 * (1 << attempt)),
+        );
       }
     }
+  }
+
+  /// 安排一次清理重试。若到期时有同步正在执行，不丢弃本次重试，
+  /// 而是按相同间隔顺延（不计入重试次数），直到同步结束后再删除。
+  void _scheduleWorkDirCleanupRetry(
+    Directory workDir, {
+    required int nextAttempt,
+    required Duration delay,
+  }) {
+    Future<void>.delayed(delay, () async {
+      if (_isSyncExecuting) {
+        _scheduleWorkDirCleanupRetry(
+          workDir,
+          nextAttempt: nextAttempt,
+          delay: delay,
+        );
+        return;
+      }
+      await _cleanupSyncWorkDirectory(workDir, attempt: nextAttempt);
+    });
   }
 
   /// 是否为同步包中的数据条目。兼容旧版本/其他导出路径产生的
