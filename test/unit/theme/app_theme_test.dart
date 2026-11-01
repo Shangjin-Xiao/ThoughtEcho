@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show Colors, ThemeMode;
+import 'package:flutter/material.dart' show Color, Colors, ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
@@ -297,18 +297,18 @@ void main() {
     expect(appTheme.useDynamicColor, isFalse);
     expect(appTheme.customColor, Colors.purple);
 
-    // 监听通知次数
-    int notifyCount = 0;
-    appTheme.addListener(() {
-      notifyCount++;
-      // 通知触发时，内存中的两个状态必须已经同步更新完毕，无中间未决状态
-      expect(appTheme.useDynamicColor, isTrue);
-      expect(appTheme.useCustomColor, isFalse);
-    });
+    // 记录每次通知时的状态快照
+    final snapshots = <(bool, bool)>[];
+    void listener() {
+      snapshots.add((appTheme.useDynamicColor, appTheme.useCustomColor));
+    }
+
+    appTheme.addListener(listener);
 
     await appTheme.setDynamicColorEnabled(true);
+    appTheme.removeListener(listener);
 
-    expect(notifyCount, 1);
+    expect(snapshots, [(true, false)]);
     expect(appTheme.useDynamicColor, isTrue);
     expect(appTheme.useCustomColor, isFalse);
     expect(storage.getBool('use_dynamic_color'), isTrue);
@@ -327,18 +327,21 @@ void main() {
     expect(appTheme.useDynamicColor, isTrue);
     expect(appTheme.useCustomColor, isFalse);
 
-    int notifyCount = 0;
-    appTheme.addListener(() {
-      notifyCount++;
-      // 通知触发时状态已经原子完成
-      expect(appTheme.useCustomColor, isTrue);
-      expect(appTheme.customColor, Colors.orange);
-      expect(appTheme.useDynamicColor, isFalse);
-    });
+    final enableSnapshots = <(bool, Color?, bool)>[];
+    void enableListener() {
+      enableSnapshots.add((
+        appTheme.useCustomColor,
+        appTheme.customColor,
+        appTheme.useDynamicColor,
+      ));
+    }
+
+    appTheme.addListener(enableListener);
 
     await appTheme.setCustomColorEnabled(Colors.orange);
+    appTheme.removeListener(enableListener);
 
-    expect(notifyCount, 1);
+    expect(enableSnapshots, [(true, Colors.orange, false)]);
     expect(appTheme.useCustomColor, isTrue);
     expect(appTheme.customColor, Colors.orange);
     expect(appTheme.useDynamicColor, isFalse);
@@ -347,15 +350,17 @@ void main() {
     expect(storage.getInt('custom_color'), Colors.orange.toARGB32());
 
     // 禁用自定义颜色
-    int disableNotifyCount = 0;
-    appTheme.addListener(() {
-      disableNotifyCount++;
-      expect(appTheme.useCustomColor, isFalse);
-      expect(appTheme.customColor, Colors.orange); // 保留记忆
-    });
+    final disableSnapshots = <(bool, Color?)>[];
+    void disableListener() {
+      disableSnapshots.add((appTheme.useCustomColor, appTheme.customColor));
+    }
+
+    appTheme.addListener(disableListener);
 
     await appTheme.setCustomColorEnabled(null);
-    expect(disableNotifyCount, 1);
+    appTheme.removeListener(disableListener);
+
+    expect(disableSnapshots, [(false, Colors.orange)]); // 保留记忆
     expect(appTheme.useCustomColor, isFalse);
     expect(appTheme.customColor, Colors.orange);
     expect(storage.getBool('use_custom_color'), isFalse);
