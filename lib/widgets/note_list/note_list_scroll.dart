@@ -84,6 +84,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     final keepAliveCenterIndex = _estimatedScrollCenterIndex();
     final quoteItemStats = QuoteItemWidget.getCacheStats();
     final expandable = quoteItemStats['expandableCount'] ?? 0;
+    final keepAliveRadius = _adaptiveKeepAliveRadius;
+    final keepAliveWindowCapacity = keepAliveRadius * 2 + 1;
 
     for (var index = 0; index < _quotes.length; index++) {
       final quote = _quotes[index];
@@ -101,10 +103,8 @@ extension _NoteListScrollExtension on NoteListViewState {
       if (NoteListView.shouldKeepAliveQuoteItem(quote)) {
         pinnedKeepAlive++;
         keepAlive++;
-      } else if (_quotes.length <=
-              NoteListViewState._plainKeepAliveWindowRadius * 2 + 1 ||
-          (index - keepAliveCenterIndex).abs() <=
-              NoteListViewState._plainKeepAliveWindowRadius) {
+      } else if (_quotes.length <= keepAliveWindowCapacity ||
+          (index - keepAliveCenterIndex).abs() <= keepAliveRadius) {
         keepAlive++;
       }
     }

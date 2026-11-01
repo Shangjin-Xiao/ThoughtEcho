@@ -911,14 +911,13 @@ extension _NoteListItemsExtension on NoteListViewState {
       return true;
     }
 
-    if (_quotes.length <=
-        NoteListViewState._plainKeepAliveWindowRadius * 2 + 1) {
+    final radius = _adaptiveKeepAliveRadius;
+    if (_quotes.length <= radius * 2 + 1) {
       return true;
     }
 
     final centerIndex = _estimatedScrollCenterIndex();
-    return (index - centerIndex).abs() <=
-        NoteListViewState._plainKeepAliveWindowRadius;
+    return (index - centerIndex).abs() <= radius;
   }
 
   int _estimatedScrollCenterIndex() {

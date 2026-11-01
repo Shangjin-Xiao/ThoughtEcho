@@ -135,6 +135,45 @@ class NoteListView extends StatefulWidget {
 
     return QuoteItemWidget.needsExpansionFor(quote);
   }
+
+  /// 最小自适应保留半径（单侧至少 3 条，总计 7 条，防止极速滑动白屏）。
+  static const int minPlainKeepAliveRadius = 3;
+
+  /// 最大自适应保留半径（单侧最多 5 条，总计 11 条，精简常驻 Element 树开销）。
+  static const int maxPlainKeepAliveRadius = 5;
+
+  /// 默认自适应保留半径（单侧 4 条，总计 9 条）。
+  static const int defaultPlainKeepAliveRadius = 4;
+
+  /// 估计的单张普通卡片默认平均高度（dp）。
+  static const double estimatedCardAverageHeight = 180.0;
+
+  /// 基于视口尺寸（[viewportDimension]）与卡片平均高度（[averageCardHeight]）
+  /// 动态计算普通卡片的自适应保留半径（单侧 3~5 条，总计 7~11 条）。
+  static int calculateAdaptiveKeepAliveRadius({
+    double? viewportDimension,
+    double? averageCardHeight,
+    double viewportFactor = 1.0,
+  }) {
+    if (viewportDimension == null ||
+        !viewportDimension.isFinite ||
+        viewportDimension <= 0) {
+      return defaultPlainKeepAliveRadius;
+    }
+
+    final cardHeight = (averageCardHeight != null &&
+            averageCardHeight.isFinite &&
+            averageCardHeight > 0)
+        ? averageCardHeight
+        : estimatedCardAverageHeight;
+
+    final double effectiveFactor =
+        (viewportFactor.isFinite && viewportFactor > 0) ? viewportFactor : 1.0;
+
+    final cardsPerViewport = (viewportDimension * effectiveFactor) / cardHeight;
+    final radius = cardsPerViewport.round();
+    return radius.clamp(minPlainKeepAliveRadius, maxPlainKeepAliveRadius);
+  }
 }
 
 class NoteListViewState extends State<NoteListView>
@@ -251,7 +290,36 @@ class NoteListViewState extends State<NoteListView>
   /// 数据事件里「内容没变、于是沿用旧实例」的行数，
   /// 见 `_reuseUnchangedQuoteInstances`。日志里的 `reuse=`。
   int _quoteInstanceReuseCount = 0;
-  static const int _plainKeepAliveWindowRadius = 18;
+
+  /// 动态计算自适应普通卡片保留半径（单侧 3~5 条，总计 7~11 条）。
+  ///
+  /// 根据当前视口高度（`viewportDimension`）与卡片平均高度动态适配，
+  /// 相比硬编码 18 条将离屏普通卡片 Element 树常驻量降低 70% 以上。
+  int get _adaptiveKeepAliveRadius {
+    final position = _safeScrollPosition;
+    final viewport = (position != null &&
+            position.hasContentDimensions &&
+            position.viewportDimension > 0)
+        ? position.viewportDimension
+        : (mounted ? MediaQuery.maybeSizeOf(context)?.height : null);
+
+    double? dynamicAverageHeight;
+    if (position != null &&
+        position.hasContentDimensions &&
+        position.maxScrollExtent > 0 &&
+        _quotes.isNotEmpty) {
+      final totalExtent = position.maxScrollExtent + position.viewportDimension;
+      final calculated = totalExtent / _quotes.length;
+      if (calculated.isFinite && calculated > 0) {
+        dynamicAverageHeight = calculated.clamp(100.0, 400.0);
+      }
+    }
+
+    return NoteListView.calculateAdaptiveKeepAliveRadius(
+      viewportDimension: viewport,
+      averageCardHeight: dynamicAverageHeight,
+    );
+  }
 
   // 空闲预取：首屏就绪后趁列表静止把后续几页提前取好，
   // 让首次快速下滑不在滚动帧内触发分页（数据事件→整列表重建的级联）。
