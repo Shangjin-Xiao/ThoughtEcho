@@ -279,6 +279,122 @@ void main() {
         await tester.pump(const Duration(seconds: 2));
       },
     );
+
+    testWidgets(
+      'animates filter bar expansion and collapse using SizeTransition with RepaintBoundary layer isolation',
+      (tester) async {
+        final databaseService = _FakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        Widget buildApp(List<String> selectedTags) {
+          return _FilterTestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: [
+              NoteTag(id: 'tag-1', name: '工作', iconName: '💼'),
+            ],
+            selectedTagIds: selectedTags,
+            selectedWeathers: const [],
+            selectedDayPeriods: const [],
+          );
+        }
+
+        // Start with no filters selected
+        await tester.pumpWidget(buildApp([]));
+        await tester.pump();
+
+        // SizeTransition should exist with sizeFactor 0.0 or SizedBox.shrink when no filters
+        expect(find.byType(SizeTransition), findsNothing);
+
+        // Add a tag filter -> expand filter display
+        await tester.pumpWidget(buildApp(['tag-1']));
+        await tester.pump(); // Start animation (t=0ms)
+
+        expect(find.byType(SizeTransition), findsOneWidget);
+        expect(
+          find.ancestor(
+            of: find.byType(SizeTransition),
+            matching: find.byType(RepaintBoundary),
+          ),
+          findsAtLeastNWidgets(1),
+        );
+
+        final SizeTransition sizeTransition1 =
+            tester.widget(find.byType(SizeTransition));
+        expect(sizeTransition1.sizeFactor.value, 0.0);
+
+        // Advance 150ms -> sizeFactor ~ 0.5
+        await tester.pump(const Duration(milliseconds: 150));
+        final SizeTransition sizeTransition2 =
+            tester.widget(find.byType(SizeTransition));
+        expect(sizeTransition2.sizeFactor.value, greaterThan(0.0));
+        expect(sizeTransition2.sizeFactor.value, lessThan(1.0));
+
+        // Advance past 300ms -> sizeFactor = 1.0
+        await tester.pump(const Duration(milliseconds: 200));
+        final SizeTransition sizeTransition3 =
+            tester.widget(find.byType(SizeTransition));
+        expect(sizeTransition3.sizeFactor.value, 1.0);
+
+        // Remove tag filter -> reverse animation collapse
+        await tester.pumpWidget(buildApp([]));
+        await tester.pump(); // t=0ms of reverse
+
+        final SizeTransition sizeTransition4 =
+            tester.widget(find.byType(SizeTransition));
+        expect(sizeTransition4.sizeFactor.value, 1.0);
+
+        // Mid-way through collapse (150ms)
+        await tester.pump(const Duration(milliseconds: 150));
+        final SizeTransition sizeTransition5 =
+            tester.widget(find.byType(SizeTransition));
+        expect(sizeTransition5.sizeFactor.value, lessThan(1.0));
+        expect(sizeTransition5.sizeFactor.value, greaterThan(0.0));
+
+        // Finish collapse animation (past 300ms)
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(find.byType(SizeTransition), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'verifies RepaintBoundary layer isolation on Expanded note list area',
+      (tester) async {
+        final databaseService = _FakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _FilterTestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: [
+              NoteTag(id: 'tag-1', name: '工作', iconName: '💼'),
+            ],
+            selectedTagIds: const ['tag-1'],
+            selectedWeathers: const [],
+            selectedDayPeriods: const [],
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Find RepaintBoundary wrapping the note list animation layer
+        final listOpacityFinder = find.byType(AnimatedOpacity);
+        expect(listOpacityFinder, findsAtLeastNWidgets(1));
+
+        final repaintBoundaryUnderList = find.ancestor(
+          of: listOpacityFinder,
+          matching: find.byType(RepaintBoundary),
+        );
+        expect(repaintBoundaryUnderList, findsAtLeastNWidgets(1));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
   });
 }
 

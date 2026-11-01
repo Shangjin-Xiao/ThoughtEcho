@@ -192,26 +192,28 @@ extension _NoteListItemsExtension on NoteListViewState {
                 // AnimatedOpacity: 搜索时列表轻微变淡提示"更新中"，结果到达后淡入恢复
                 // AnimatedSwitcher: 处理 loading/empty/no_results/results 之间的状态切换
                 Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
-                    ),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      opacity: _isSearchUpdating ? 0.7 : 1.0,
-                      child: AnimatedSwitcher(
+                  child: RepaintBoundary(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                      ),
+                      child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 200),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        // 双向交叉淡化：旧内容快速淡出、新内容淡入，
-                        // 避免被硬切（opacity 直接归零）造成的生硬感。
-                        // 注意：results→results 不再切换（key 固定），这里只处理
-                        // loading / empty / no_results / results 之间的状态切换，
-                        // 因此不会再出现两个 ListView 同时挂在同一个滚动控制器上。
-                        transitionBuilder: (child, animation) =>
-                            FadeTransition(opacity: animation, child: child),
-                        child: _buildNoteList(theme, noteInsertAnimationType),
+                        curve: Curves.easeOut,
+                        opacity: _isSearchUpdating ? 0.7 : 1.0,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          // 双向交叉淡化：旧内容快速淡出、新内容淡入，
+                          // 避免被硬切（opacity 直接归零）造成的生硬感。
+                          // 注意：results→results 不再切换（key 固定），这里只处理
+                          // loading / empty / no_results / results 之间的状态切换，
+                          // 因此不会再出现两个 ListView 同时挂在同一个滚动控制器上。
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(opacity: animation, child: child),
+                          child: _buildNoteList(theme, noteInsertAnimationType),
+                        ),
                       ),
                     ),
                   ),
