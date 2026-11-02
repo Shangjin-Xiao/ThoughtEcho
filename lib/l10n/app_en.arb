@@ -4933,7 +4933,19 @@
     }
   },
   "lottieSearchLoading": "Searching...",
+  "@lottieSearchLoading": {
+    "description": "Lottie animation description for search loading"
+  },
   "lottieWeatherSearchLoading": "Searching weather...",
+  "@lottieWeatherSearchLoading": {
+    "description": "Lottie animation description for weather search loading"
+  },
   "lottieCustomLoading": "Loading...",
-  "lottieNotFound": "No content found"
+  "@lottieCustomLoading": {
+    "description": "Lottie animation description for custom loading"
+  },
+  "lottieNotFound": "No content found",
+  "@lottieNotFound": {
+    "description": "Lottie animation description for not found"
+  }
 }

@@ -64,3 +64,7 @@
 1. 对于带参数的动态文本，必须使用带占位符的 ARB 结构（例如 `{mediaType}`）。
 2. 在 `app_zh.arb` 和 `app_en.arb` 中统一添加格式化的带参数翻译。
 3. 替换代码中的插值拼接为完整的 i18n 函数调用，如 `l10n.unifiedMediaImportSelectMediaFile(_getMediaTypeName(widget.mediaType))`，确保整体句式结构能够自然适应不同语言的语序。
+
+## 2024-05-24 - 补全多语言词条
+**发现:** 英文翻译文件 en.arb 缺少了中文字典中的一些元数据描述（@lottie...）。
+**规则:** 所有新增的国际化词条都应该在各语言文件中同步元数据，以保证生成的代码一致性。
