@@ -33,7 +33,9 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: colorScheme.primary,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).buttonRadius,
+                  ),
                 ),
                 child: Icon(
                   Icons.format_quote_rounded,
