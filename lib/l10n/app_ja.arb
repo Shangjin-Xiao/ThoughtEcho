@@ -3369,7 +3369,7 @@
   "localAIEnabledDesc": "オンデバイスAIを使用",
   "localAIInputEnhancement": "入力拡張",
   "localAISpeechToText": "音声文字変換",
-  "localAISpeechToTextDesc": "FAB長押し",
+  "localAISpeechToTextDesc": "ホーム画面下部の追加ボタンを長押しして音声を文字起こし",
   "localAIOCR": "OCR",
   "localAIOCRDesc": "画像から文字抽出",
   "localAICorrection": "AI補正",

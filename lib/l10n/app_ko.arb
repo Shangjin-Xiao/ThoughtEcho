@@ -3369,7 +3369,7 @@
   "localAIEnabledDesc": "온디바이스 AI 기능 켜기",
   "localAIInputEnhancement": "입력 향상",
   "localAISpeechToText": "음성을 텍스트로",
-  "localAISpeechToTextDesc": "녹음하고 스크립트를 작성하려면 FAB를 길게 누르세요.",
+  "localAISpeechToTextDesc": "홈 화면 하단의 추가 버튼을 길게 눌러 음성을 텍스트로 변환",
   "localAIOCR": "OCR 텍스트 인식",
   "localAIOCRDesc": "이미지에서 텍스트 추출",
   "localAICorrection": "AI 교정",
