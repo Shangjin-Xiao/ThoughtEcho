@@ -609,9 +609,18 @@ class BackupService {
       // 恢复设置（使用现有的方法）
       if (backupData.containsKey('settings')) {
         logDebug('恢复设置数据...');
-        await _settingsService.restoreAllSettingsFromBackup(
-          backupData['settings'] as Map<String, dynamic>,
-        );
+        final rawSettings = backupData['settings'];
+        if (rawSettings is Map) {
+          final settingsMap = rawSettings is Map<String, dynamic>
+              ? rawSettings
+              : rawSettings.map((k, v) => MapEntry(k.toString(), v));
+          await _settingsService.restoreAllSettingsFromBackup(settingsMap);
+        } else if (rawSettings != null) {
+          logWarning(
+            '跳过非 Map 格式的 settings 备份节点 (${rawSettings.runtimeType})',
+            source: 'BackupService',
+          );
+        }
       }
 
       cancelToken?.throwIfCancelled();
