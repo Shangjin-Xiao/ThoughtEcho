@@ -53,14 +53,13 @@
 
 - 💡 **自动开启**：如果您是新用户，首次成功配置并保存任意 AI 服务后，应用会自动为您开启「每日提示」、「今日思考」与「AI 生成卡片」功能。
 
-### 推荐：Ollama 云端（新手首选）
+### Ollama 云端
 
-Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**，是第一次配置 AI 的
-最省事选择。
+Ollama 官方提供了云端 API 服务，支持直接调用多种主流开源模型。
 
 1. 打开 [ollama.com](https://ollama.com) 注册账号
 2. 进入 [API Keys 页面](https://ollama.com/settings/keys) 创建一个密钥并复制
-3. 回到心迹：「设置」→「AI 设置」→ 点「一键添加」（首次配置时会直接显示在页面上）
+3. 回到心迹：「设置」→「AI 设置」→ 点右上角「+」或「添加服务商」并选择「Ollama 云端」
 4. 把密钥粘进 API Key 输入框
 5. 点「测试连接」，成功后点「保存」
 
@@ -73,7 +72,7 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 
 | 服务商         | 说明                                      |
 | -------------- | ----------------------------------------- |
-| Ollama 云端    | 免费额度充足，推荐新手                    |
+| Ollama 云端    | 官方云端接口，支持多种开源模型            |
 | OpenAI         | 官方接口，需要海外支付方式                |
 | OpenRouter     | 一个 Key 调用 Claude、Gemini 等上百个模型 |
 | DeepSeek       | 国内直连，价格低，中文表现好              |
@@ -919,15 +918,13 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 
 - 💡 **Auto-Enable**: For new users, successfully configuring and saving any AI service for the first time will automatically enable "Daily Prompt", "Today's Thoughts", and "AI Card Generation" features.
 
-### Recommended: Ollama Cloud (best first choice)
+### Ollama Cloud
 
-Ollama Cloud works right after sign-up, has a generous free tier and **requires no
-payment method**. It is the easiest way to get AI running.
+Ollama provides an official cloud API service that hosts various open-source models.
 
 1. Sign up at [ollama.com](https://ollama.com)
 2. Create and copy a key on the [API Keys page](https://ollama.com/settings/keys)
-3. In ThoughtEcho: Settings → AI Settings → tap "Add it" (shown right on the page
-   before anything is configured)
+3. In ThoughtEcho: Settings → AI Settings → tap "Add Provider" and select "Ollama Cloud"
 4. Paste the key into the API Key field
 5. Tap "Test connection", then "Save"
 
@@ -941,7 +938,7 @@ templates are built in:
 
 | Provider        | Notes                                                   |
 | --------------- | ------------------------------------------------------- |
-| Ollama Cloud    | Generous free tier, recommended                         |
+| Ollama Cloud    | Official cloud API with various open-source models      |
 | OpenAI          | Official API, needs an international payment method     |
 | OpenRouter      | One key for hundreds of models, incl. Claude and Gemini |
 | DeepSeek        | Low cost, strong Chinese performance                    |

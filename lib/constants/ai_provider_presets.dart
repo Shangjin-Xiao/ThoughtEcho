@@ -129,7 +129,6 @@ class AIProviderPresets {
   const AIProviderPresets._();
 
   static const List<AIProviderPreset> all = [
-    // 首推：免费额度充足，注册即可用，是普通用户成本最低的入口。
     AIProviderPreset(
       id: 'ollama_cloud',
       apiUrl: 'https://ollama.com/v1',
@@ -142,7 +141,6 @@ class AIProviderPresets {
         'minimax-m3:cloud',
       ],
       consoleUrl: 'https://ollama.com/settings/keys',
-      recommended: true,
     ),
     AIProviderPreset(
       id: 'openai',
@@ -245,8 +243,12 @@ class AIProviderPresets {
     ),
   ];
 
-  static AIProviderPreset get recommended =>
-      all.firstWhere((preset) => preset.recommended);
+  static AIProviderPreset? get recommended {
+    for (final preset in all) {
+      if (preset.recommended) return preset;
+    }
+    return null;
+  }
 
   static AIProviderPreset? byId(String id) {
     for (final preset in all) {

@@ -4645,7 +4645,7 @@
   "aiProviderDashScope": "阿里雲百鍊",
   "aiProviderVolcengine": "火山方舟",
   "aiProviderGemini": "Google Gemini",
-  "presetDescOllamaCloud": "免費額度充足，註冊就能用，推薦第一次配置的使用者選它",
+  "presetDescOllamaCloud": "Ollama 官方雲端介面，提供多種開源模型",
   "presetDescOpenAI": "OpenAI 官方介面，需要海外支付方式",
   "presetDescOpenRouter": "一個 Key 呼叫 Claude、Gemini 等上百個模型",
   "presetDescDeepSeek": "國內直連，價格低，中文表現好",

@@ -245,8 +245,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
         children: [
           if (!hasProviders) ...[
             _buildEmptyState(context),
-            const SizedBox(height: 12),
-            _buildOllamaCloudTip(context),
           ] else ...[
             _buildSectionTitle(context, l10n.aiServicesSectionTitle),
             const SizedBox(height: 8),
@@ -343,56 +341,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 onPressed: () => _openEditor(),
                 icon: const Icon(Icons.add),
                 label: Text(l10n.addAiService),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 首次配置时把推荐入口摆在明面上，省掉「该选哪家」的决策成本。
-  Widget _buildOllamaCloudTip(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final semantic = AppSemanticColors.of(context);
-    final preset = AIProviderPresets.recommended;
-
-    return Card(
-      color: semantic.successContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.star_outline, color: semantic.onSuccessContainer),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    l10n.ollamaCloudTipTitle,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: semantic.onSuccessContainer,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.ollamaCloudTipBody,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: semantic.onSuccessContainer,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: FilledButton.tonalIcon(
-                onPressed: () => _openEditor(initialPreset: preset),
-                icon: const Icon(Icons.bolt),
-                label: Text(l10n.ollamaCloudTipAction),
               ),
             ),
           ],
@@ -716,7 +664,7 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
           ),
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.psychology_alt_outlined),
+            leading: const Icon(Icons.auto_stories_outlined),
             title: Text(l10n.agentMemoryManageTitle),
             subtitle: Text(l10n.agentMemoryManageSubtitle),
             trailing: const Icon(Icons.chevron_right),

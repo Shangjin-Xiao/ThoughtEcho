@@ -9,11 +9,11 @@ void main() {
       expect(ids.toSet().length, ids.length);
     });
 
-    test('exactly one preset is marked as recommended', () {
+    test('no preset is marked as recommended by default', () {
       final recommended =
           AIProviderPresets.all.where((p) => p.recommended).toList();
-      expect(recommended, hasLength(1));
-      expect(AIProviderPresets.recommended.id, 'ollama_cloud');
+      expect(recommended, isEmpty);
+      expect(AIProviderPresets.recommended, isNull);
     });
 
     test('Ollama Cloud points at the documented endpoint', () {

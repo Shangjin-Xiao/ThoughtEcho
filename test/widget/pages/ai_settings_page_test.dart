@@ -144,15 +144,15 @@ void main() {
       await TestHarness.tearDown();
     });
 
-    testWidgets('shows the empty state and the recommended Ollama Cloud entry',
+    testWidgets('shows the empty state when no providers are configured',
         (tester) async {
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
       expect(find.text(l10n.aiServiceEmptyTitle), findsOneWidget);
-      expect(find.text(l10n.ollamaCloudTipTitle), findsOneWidget);
-      expect(find.text(l10n.ollamaCloudTipAction), findsOneWidget);
+      expect(find.text(l10n.ollamaCloudTipTitle), findsNothing);
+      expect(find.text(l10n.ollamaCloudTipAction), findsNothing);
     });
 
     testWidgets(

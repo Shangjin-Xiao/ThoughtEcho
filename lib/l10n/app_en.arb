@@ -4641,7 +4641,7 @@
   "aiProviderDashScope": "Alibaba Bailian",
   "aiProviderVolcengine": "Volcengine Ark",
   "aiProviderGemini": "Google Gemini",
-  "presetDescOllamaCloud": "Generous free tier, works right after sign-up. Best first choice.",
+  "presetDescOllamaCloud": "Official Ollama cloud API with various open-source models.",
   "presetDescOpenAI": "Official OpenAI API. Requires an international payment method.",
   "presetDescOpenRouter": "One key for hundreds of models, including Claude and Gemini.",
   "presetDescDeepSeek": "Low cost, strong Chinese performance.",
