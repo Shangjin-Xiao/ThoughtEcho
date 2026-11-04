@@ -316,8 +316,9 @@ class MediaFileService {
       final file = File(filePath);
       final stat = await file.stat();
       return stat.size;
-    } catch (e) {
-      debugPrint('获取文件大小失败: $e');
+    } catch (e, stackTrace) {
+      logError('获取文件大小失败: $filePath',
+          error: e, stackTrace: stackTrace, source: 'MediaFileService');
       return 0;
     }
   }
@@ -511,8 +512,9 @@ class MediaFileService {
           // 路径遍历防护：使用 PathSecurityUtils 深度验证
           try {
             PathSecurityUtils.validateExtractionPath(targetPath, appDir.path);
-          } catch (e) {
-            debugPrint('路径安全检查失败，跳过: $relativePath ($e)');
+          } catch (e, stackTrace) {
+            logError('路径安全检查失败，跳过: $relativePath',
+                error: e, stackTrace: stackTrace, source: 'MediaFileService');
             continue;
           }
 
@@ -546,16 +548,18 @@ class MediaFileService {
 
           processedFiles++;
           onProgress?.call(processedFiles, totalFiles);
-        } catch (e) {
-          debugPrint('恢复单个文件失败: ${file.path}, 错误: $e');
+        } catch (e, stackTrace) {
+          logError('恢复单个文件失败: ${file.path}',
+              error: e, stackTrace: stackTrace, source: 'MediaFileService');
           // 继续处理其他文件，不因单个文件失败而中断整个恢复过程
         }
       }
 
-      debugPrint('媒体文件恢复完成，成功恢复 $processedFiles/$totalFiles 个文件');
+      logDebug('媒体文件恢复完成，成功恢复 $processedFiles/$totalFiles 个文件');
       return true;
-    } catch (e) {
-      debugPrint('恢复媒体文件失败: $e');
+    } catch (e, stackTrace) {
+      logError('恢复媒体文件失败: $backupMediaDir',
+          error: e, stackTrace: stackTrace, source: 'MediaFileService');
       return false;
     }
   }

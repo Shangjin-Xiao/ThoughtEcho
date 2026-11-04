@@ -100,3 +100,7 @@
 ## 2025-10-25 - 🗃️ 黑匣: [完善 AIAnnualReportWebView 模块的结构化日志]
 **异常:** [AIAnnualReportWebView 模块在处理创建临时 HTTP 服务器、启动服务器失败以及尝试关闭服务器发生的异常时，使用了空捕获 `catch (e)` 和不完整的 `catch (serverError)` 块，并只用 `debugPrint` 进行了极为简略粗糙的日志打印。这不仅屏蔽了底层的异常细节以及丢失了错误堆栈上下文(StackTrace)，还导致如果由于权限问题或端口占用导致本地临时服务器报错时，很难定位线上故障的原因。]
 **拦截:** [已将上述流程中打开与关闭浏览器及临时 HTTP 服务器处的异常拦截升级，将 `catch (e)` / `catch (serverError)` 替换为结构化的 `catch (e, stack)` / `catch (serverError, stack)` 捕获完整异常与堆栈。同时使用 `AppLogger.e` 进行记录，注入了描述信息、具体的错误对象以及明确的日志来源标识 (`source: 'AIAnnualReportWebView'`)。确认修改不超过 50 行，并且没有记录任何涉及到年度报告内容的敏感隐私数据。]
+
+## 2025-10-25 - 🗃️ 黑匣: [完善 MediaFileService 模块媒体恢复的结构化日志]
+**异常:** [MediaFileService 模块在 `restoreMediaFiles` (恢复备份媒体文件) 及 `getFileSizeSecurely` 过程中发生异常时，使用了空捕获 `catch (e)` 块，并仅用 `debugPrint` 进行了粗糙打印。这屏蔽了关键的文件 I/O 错误细节、丢失了堆栈上下文(StackTrace)，并掩盖了单文件恢复失败或路径安全校验失败的原因，使线上文件系统读写故障极难排查。]
+**拦截:** [已将相关异常捕获升级为结构化的 `catch (e, stackTrace)`。使用全局统一的 `logError` (AppLogger) 替代 `debugPrint` 进行上报，注入了 `error`、`stackTrace` 以及明确的模块来源 `source: "MediaFileService"`。确保错误上报时具备完备上下文，且仅记录异常状态，绝未包含任何用户凭据或隐私内容数据。]
