@@ -138,6 +138,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
     final expandMissesBefore = QuoteContent.debugExpansionMissCount;
     final planMissesBefore = CollapsedRichTextPlanCache.missCount;
 
+    final tagMap = _obtainTagMap();
     final stopwatch = Stopwatch()..start();
     while (stopwatch.elapsedMicroseconds <
         NoteListViewState._idleWarmupBudgetMicros) {
@@ -151,6 +152,8 @@ extension _NoteListWarmupExtension on NoteListViewState {
         mediaStyle: mediaStyle,
         prioritizeBoldContent: prioritizeBoldContent,
         showExactTime: showExactTime,
+        tagMap: tagMap,
+        selectedTagIds: widget.selectedTagIds,
       );
       _warmCollapsedMediaImage(
         quote: quote,
