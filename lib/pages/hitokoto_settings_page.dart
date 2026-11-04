@@ -9,6 +9,7 @@ import '../services/api_key_manager.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../theme/theme_style.dart';
+import '../widgets/app_snackbar.dart';
 
 part 'hitokoto_settings_page_layout_sections.dart';
 part 'hitokoto_settings_page_info_sections.dart';
@@ -129,7 +130,6 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     final result = await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
@@ -162,12 +162,13 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
 
     controller.dispose();
-    if (result == null) return;
+    if (result == null || !mounted) return;
 
     final trimmed = result.trim();
     if (trimmed.isNotEmpty && !apiKeyManager.isValidApiKeyFormat(trimmed)) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.dailyQuoteApiNinjasApiKeyInvalid)),
+      AppSnackBar.error(
+        context,
+        l10n.dailyQuoteApiNinjasApiKeyInvalid,
       );
       return;
     }
@@ -214,40 +215,12 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
 
   void _showSavedSnackBar() {
     final l10n = AppLocalizations.of(context);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              Icons.check_circle,
-              color: Theme.of(context).colorScheme.onInverseSurface,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Text(l10n.settingsSaved),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.inverseSurface,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
-        ),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    AppSnackBar.success(context, l10n.settingsSaved);
   }
 
   void _showSaveFailedSnackBar(Object error) {
     final l10n = AppLocalizations.of(context);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.saveFailed(error.toString())),
-      ),
-    );
+    AppSnackBar.error(context, l10n.saveFailed(error.toString()));
   }
 
   // 保存选择的类型
