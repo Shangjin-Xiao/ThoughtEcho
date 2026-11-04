@@ -75,8 +75,31 @@ class MockDatabaseService extends ChangeNotifier implements DatabaseService {
 }
 
 class MockSettingsService extends ChangeNotifier implements SettingsService {
+  bool _showFavoriteButton = true;
   @override
-  bool get showFavoriteButton => true;
+  bool get showFavoriteButton => _showFavoriteButton;
+
+  @override
+  Future<void> setShowFavoriteButton(bool value) async {
+    if (_showFavoriteButton != value) {
+      _showFavoriteButton = value;
+      notifyListeners();
+    }
+  }
+
+  void notifyUnrelatedChange() {
+    notifyListeners();
+  }
+
+  String _exploreSelectedPeriod = 'week';
+  @override
+  String get exploreSelectedPeriod => _exploreSelectedPeriod;
+  @override
+  Future<void> setExploreSelectedPeriod(String period) async {
+    _exploreSelectedPeriod = period;
+    notifyListeners();
+  }
+
   @override
   bool get todayThoughtsUseAI => false;
   @override
@@ -614,6 +637,66 @@ void main() {
       expect(titleSize.width, greaterThan(80));
       expect(chipSize.width, lessThanOrEqualTo(320 - titleSize.width - 8));
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'should only rebuild NoteListView when showFavoriteButton changes, not on unrelated SettingsService notifications',
+        (WidgetTester tester) async {
+      await pumpHomePage(tester);
+
+      // Tap the second tab (Notes)
+      await tester.tap(find.byIcon(Icons.book_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NoteListView), findsOneWidget);
+      final initialNoteListView =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(initialNoteListView.onFavorite, isNotNull);
+      expect(initialNoteListView.onLongPressFavorite, isNotNull);
+
+      // Trigger unrelated SettingsService notifications (e.g. sync progress, auto backup)
+      mockSettingsService.notifyUnrelatedChange();
+      await tester.pump();
+
+      // NoteListView widget instance should remain identical because Selector did not re-run builder
+      final noteListViewAfterUnrelated =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(
+        identical(noteListViewAfterUnrelated, initialNoteListView),
+        isTrue,
+        reason:
+            'NoteListView should not rebuild on unrelated SettingsService updates',
+      );
+
+      // Toggle showFavoriteButton to false
+      mockSettingsService.setShowFavoriteButton(false);
+      await tester.pump();
+
+      final noteListViewDisabled =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(
+        identical(noteListViewDisabled, initialNoteListView),
+        isFalse,
+        reason:
+            'NoteListView should rebuild when showFavoriteButton setting changes',
+      );
+      expect(noteListViewDisabled.onFavorite, isNull);
+      expect(noteListViewDisabled.onLongPressFavorite, isNull);
+
+      // Toggle showFavoriteButton back to true
+      mockSettingsService.setShowFavoriteButton(true);
+      await tester.pump();
+
+      final noteListViewEnabled =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(
+        identical(noteListViewEnabled, noteListViewDisabled),
+        isFalse,
+        reason:
+            'NoteListView should rebuild when showFavoriteButton is re-enabled',
+      );
+      expect(noteListViewEnabled.onFavorite, isNotNull);
+      expect(noteListViewEnabled.onLongPressFavorite, isNotNull);
     });
   });
 }
