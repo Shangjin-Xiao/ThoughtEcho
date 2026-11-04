@@ -3645,7 +3645,7 @@
   "localAIEnabledDesc": "开启后可使用设备端 AI 功能",
   "localAIInputEnhancement": "输入增强",
   "localAISpeechToText": "语音转文字",
-  "localAISpeechToTextDesc": "长按 FAB 录制语音并转换为文字",
+  "localAISpeechToTextDesc": "长按首页底部添加按钮，快速录音并转为文字",
   "localAIOCR": "OCR 文字识别",
   "localAIOCRDesc": "从图片中提取文字内容",
   "localAICorrection": "AI 识别纠错",

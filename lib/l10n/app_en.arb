@@ -3654,7 +3654,7 @@
   "localAIEnabledDesc": "Turn on on-device AI features",
   "localAIInputEnhancement": "Input Enhancement",
   "localAISpeechToText": "Speech to Text",
-  "localAISpeechToTextDesc": "Long press FAB to record and transcribe",
+  "localAISpeechToTextDesc": "Press and hold the add button on the home screen to transcribe voice",
   "localAIOCR": "OCR Text Recognition",
   "localAIOCRDesc": "Extract text from images",
   "localAICorrection": "AI Correction",

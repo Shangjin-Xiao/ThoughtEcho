@@ -3355,7 +3355,7 @@
   "localAIEnabledDesc": "Activer les fonctionnalités d'IA sur l'appareil",
   "localAIInputEnhancement": "Amélioration de l'entrée",
   "localAISpeechToText": "Parole en texte",
-  "localAISpeechToTextDesc": "Appuyez longuement sur FAB pour enregistrer et transcrire",
+  "localAISpeechToTextDesc": "Appuyez longuement sur le bouton d'ajout au bas de l'écran d'accueil pour transcrire la voix",
   "localAIOCR": "Reconnaissance de texte OCR",
   "localAIOCRDesc": "Extraire le texte des images",
   "localAICorrection": "Correction de l'IA",

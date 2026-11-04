@@ -3649,7 +3649,7 @@
   "localAIEnabledDesc": "開啟後可使用裝置端 AI 功能",
   "localAIInputEnhancement": "輸入增強",
   "localAISpeechToText": "語音轉文字",
-  "localAISpeechToTextDesc": "長按 FAB 錄製語音並轉換為文字",
+  "localAISpeechToTextDesc": "長按首頁底部新增按鈕，快速錄音並轉為文字",
   "localAIOCR": "OCR 文字識別",
   "localAIOCRDesc": "從圖片中提取文字內容",
   "localAICorrection": "AI 識別糾錯",
