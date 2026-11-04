@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,6 +32,45 @@ class _FakeDatabaseService extends ChangeNotifier
 
   @override
   Future<List<NoteTag>> getTags() async => const [];
+}
+
+class _TrackingAgentMemoryService extends AgentMemoryService {
+  _TrackingAgentMemoryService({
+    required super.settingsService,
+    super.databasePath,
+  });
+
+  int allProfileEntriesCalls = 0;
+  int activeRecentSlicesCalls = 0;
+  int allFactsCalls = 0;
+  Completer<void>? onAllProfileEntriesCompleter;
+
+  @override
+  Future<List<AgentMemoryProfileEntry>> allProfileEntries() async {
+    allProfileEntriesCalls++;
+    if (onAllProfileEntriesCompleter != null) {
+      await onAllProfileEntriesCompleter!.future;
+    }
+    return super.allProfileEntries();
+  }
+
+  @override
+  Future<List<AgentMemoryRecentSlice>> activeRecentSlices({
+    DateTime? now,
+    int limit = AgentMemoryRecentSlice.maxRecentSlices,
+  }) {
+    activeRecentSlicesCalls++;
+    return super.activeRecentSlices(now: now, limit: limit);
+  }
+
+  @override
+  Future<List<AgentMemoryFact>> allFacts({
+    int limit = AgentMemoryService.factsCapacity,
+    String? query,
+  }) {
+    allFactsCalls++;
+    return super.allFacts(limit: limit, query: query);
+  }
 }
 
 Widget _buildWrapper({
@@ -172,7 +212,7 @@ void main() {
       await settingsService.setAgentMemoryEnabled(true);
       await settingsService.setUserNickname('阿澈');
 
-      memoryService = AgentMemoryService(
+      memoryService = _TrackingAgentMemoryService(
         settingsService: settingsService,
         databasePath: inMemoryDatabasePath,
       );
@@ -634,6 +674,294 @@ void main() {
         trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
         isEmpty,
       );
+    });
+
+    testWidgets('高频快速输入时防抖抑制中间异步查询与埋点，仅最后一次生效', (tester) async {
+      final trackedEvents = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props,
+        });
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.identity,
+          directive: '精通跨平台架构设计',
+        );
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.preference,
+          directive: '喜好浅色主题与极简排版',
+        );
+        await memoryService.addFact(
+          content: '常读操作系统底层原理',
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      expect(find.text('精通跨平台架构设计'), findsOneWidget);
+      expect(find.text('喜好浅色主题与极简排版'), findsOneWidget);
+      expect(find.text('常读操作系统底层原理'), findsOneWidget);
+
+      final trackingService = memoryService as _TrackingAgentMemoryService;
+      final initialFactCalls = trackingService.allFactsCalls;
+
+      // 打开搜索框
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+
+      // 高频连续输入：第 1 次输入 '架'
+      await tester.enterText(find.byType(TextField), '架');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 高频连续输入：第 2 次输入 '架构'
+      await tester.enterText(find.byType(TextField), '架构');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 高频连续输入：第 3 次输入 '极简'
+      await tester.enterText(find.byType(TextField), '极简');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 在 300ms 防抖未到期前：未发起新的数据库查询，旧条目依然全部展示，无遥测
+      expect(trackingService.allFactsCalls, equals(initialFactCalls));
+      expect(find.text('精通跨平台架构设计'), findsOneWidget);
+      expect(find.text('喜好浅色主题与极简排版'), findsOneWidget);
+      expect(find.text('常读操作系统底层原理'), findsOneWidget);
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
+
+      // 防抖到期后（300ms）：仅最后一次输入触发异步查询与埋点
+      await tester.pump(const Duration(milliseconds: 250));
+      await _waitForWidgetGone(tester, find.text('精通跨平台架构设计'));
+      await _waitForWidgetGone(tester, find.text('常读操作系统底层原理'));
+
+      // 验证仅触发了一次遥测
+      final searchEvents = trackedEvents
+          .where((e) => e['eventName'] == 'agent_memory_search')
+          .toList();
+      expect(searchEvents, hasLength(1));
+      expect(searchEvents.first['props'], isNull);
+
+      // 验证仅最后一次生效，页面展示仅匹配 '极简' 的条目
+      expect(find.text('喜好浅色主题与极简排版'), findsOneWidget);
+      expect(find.text('精通跨平台架构设计'), findsNothing);
+      expect(find.text('常读操作系统底层原理'), findsNothing);
+    });
+
+    testWidgets('防抖期内快速清空输入框立即取消待执行任务并即时刷新全部条目', (tester) async {
+      final trackedEvents = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props,
+        });
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.identity,
+          directive: '资深全栈工程师',
+        );
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.preference,
+          directive: '只喝意式浓缩咖啡',
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      // 打开搜索框
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+
+      // 先输入并让防抖生效过滤到只剩咖啡
+      await tester.enterText(find.byType(TextField), '咖啡');
+      await tester.pump(const Duration(milliseconds: 350));
+      await _waitForWidgetGone(tester, find.text('资深全栈工程师'));
+      expect(find.text('只喝意式浓缩咖啡'), findsOneWidget);
+      expect(find.text('资深全栈工程师'), findsNothing);
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        hasLength(1),
+      );
+
+      // 输入新的内容 '资深'，防抖期内（100ms）未到期
+      await tester.enterText(find.byType(TextField), '资深');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 立即清空输入框为 ''
+      await tester.enterText(find.byType(TextField), '');
+      await _waitForWidget(tester, find.text('资深全栈工程师'));
+
+      // 验证无需等待 300ms 防抖，即时恢复全部条目
+      expect(find.text('资深全栈工程师'), findsOneWidget);
+      expect(find.text('只喝意式浓缩咖啡'), findsOneWidget);
+
+      // 即使度过后续 350ms，pending 的任务已被取消，不会有新的遥测产生
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        hasLength(1),
+      );
+    });
+
+    testWidgets('防抖期内关闭搜索或页面销毁时取消定时器并作废旧请求', (tester) async {
+      final trackedEvents = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (eventName, props) {
+        trackedEvents.add({
+          'eventName': eventName,
+          'props': props,
+        });
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.identity,
+          directive: '全栈开发者',
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      // 1. 测试在防抖期间点击取消/关闭搜索
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '待作废输入');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 点击关闭图标取消搜索
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pump();
+      await _settleWithRealAsync(tester);
+
+      // 验证未触发遥测且输入框已关闭
+      expect(find.byType(TextField), findsNothing);
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
+
+      // 2. 测试在防抖期间销毁页面（dispose）
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '销毁前输入');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // 卸载页面，触发 dispose
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 350));
+
+      // 验证未发生未捕获异常且无多余遥测
+      expect(
+        trackedEvents.where((e) => e['eventName'] == 'agent_memory_search'),
+        isEmpty,
+      );
+    });
+
+    testWidgets('过时的异步查询请求在返回后命中版本号不匹配并早退中断后续查询', (tester) async {
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.identity,
+          directive: '资深全栈工程师',
+        );
+        await memoryService.addFact(content: '熟练掌握并发编程');
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      final trackingService = memoryService as _TrackingAgentMemoryService;
+      trackingService.allProfileEntriesCalls = 0;
+      trackingService.activeRecentSlicesCalls = 0;
+      trackingService.allFactsCalls = 0;
+
+      // 打开搜索框
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+
+      // 设置第一个请求在 allProfileEntries 处被暂停
+      final profileCompleter = Completer<void>();
+      trackingService.onAllProfileEntriesCompleter = profileCompleter;
+
+      // 触发第 1 个搜索输入并等待防抖触发
+      await tester.enterText(find.byType(TextField), '并发');
+      await tester.pump(const Duration(milliseconds: 350));
+      // 此时第 1 个请求正在 await profileCompleter.future
+      expect(trackingService.allProfileEntriesCalls, equals(1));
+      expect(trackingService.activeRecentSlicesCalls, equals(0));
+
+      // 快速清空搜索触发第 2 个即时请求，此时 _bundleRequestId 被递增，作废第 1 个请求
+      // 清除暂停拦截器让第 2 个请求及后续调用正常通过
+      trackingService.onAllProfileEntriesCompleter = null;
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pump();
+
+      // 现在释放第 1 个请求
+      profileCompleter.complete();
+
+      // 等待第 2 个有效请求在 real async 下完成各步骤数据库查询
+      for (var i = 0; i < 8; i++) {
+        await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pumpAndSettle();
+
+      // 验证第 1 个请求因为版本号不匹配而早退，其后续的 activeRecentSlices 与 allFacts 并未被多余执行
+      // 总共只有第 2 个有效请求完整执行了 activeRecentSlices 与 allFacts 各 1 次
+      expect(trackingService.activeRecentSlicesCalls, equals(1));
+      expect(trackingService.allFactsCalls, equals(1));
     });
 
     testWidgets('编辑画像指令成功时触发 agent_memory_edit 匿名遥测', (tester) async {
