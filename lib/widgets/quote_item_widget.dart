@@ -916,8 +916,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       duration: QuoteItemWidget.expandCollapseDuration,
       curve: QuoteItemWidget._expandCurve,
       alignment: Alignment.topLeft,
-      clipBehavior: Clip.none,
-      child: content,
+      clipBehavior: Clip.hardEdge,
+      child: RepaintBoundary(child: content),
     );
   }
 
@@ -1787,20 +1787,24 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final shouldAnimateCardShell = widget.selectionMode || isExpanded;
     final Widget card;
     if (shouldAnimateCardShell) {
-      card = AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: cardMargin,
-        decoration: cardDecoration,
-        child: RepaintBoundary(
-          child: cardChild,
+      card = RepaintBoundary(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: cardMargin,
+          decoration: cardDecoration,
+          child: RepaintBoundary(
+            child: cardChild,
+          ),
         ),
       );
     } else {
       // 性能优化（第一步）：折叠态静态卡片用 RepaintBoundary 隔离绘制。
       // 卡片阴影（BoxShadow 高斯模糊）与渐变属于静态像素，套重绘边界后
       // 其栅格结果可被缓存，滚动时仅做位移合成，避免每帧重新栅格化阴影。
-      // 展开/选择态在 AnimatedContainer 的 child 处额外包裹 RepaintBoundary，
-      // 隔离外壳补间动画对内部复杂富文本/图片子树的重绘影响。
+      // 展开/选择态外层统一包裹 RepaintBoundary 固化绘制边界，
+      // 并在 AnimatedContainer 的 child 处额外包裹 RepaintBoundary，
+      // 既阻断外壳补间动画对父级列表与相邻兄弟卡片的重绘传播，
+      // 又隔离外壳补间动画对内部复杂富文本/图片子树的重绘影响。
       card = RepaintBoundary(
         child: Container(
           margin: cardMargin,
