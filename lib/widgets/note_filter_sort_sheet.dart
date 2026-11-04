@@ -14,7 +14,7 @@ import 'interactive_animated_filter_chip.dart';
 
 class NoteFilterSortSheet extends StatefulWidget {
   final List<NoteTag> allTags;
-  final List<String> selectedTagIds;
+  final List<String>? selectedTagIds;
   final String sortType;
   final bool sortAscending;
   final List<String>? selectedWeathers;
@@ -31,7 +31,7 @@ class NoteFilterSortSheet extends StatefulWidget {
   const NoteFilterSortSheet({
     super.key,
     required this.allTags,
-    required this.selectedTagIds,
+    this.selectedTagIds = const [],
     required this.sortType,
     required this.sortAscending,
     this.selectedWeathers,
@@ -67,6 +67,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   late bool _tempSortAscending;
   late Set<String> _tempSelectedWeathers;
   late Set<String> _tempSelectedDayPeriods;
+  bool _hasExplicitlyReset = false;
 
   // 性能优化：缓存常用数据
   late final List<String> _weatherCategories;
@@ -83,7 +84,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   @override
   void initState() {
     super.initState();
-    _tempSelectedTagIds = List.from(widget.selectedTagIds);
+    _tempSelectedTagIds = widget.selectedTagIds != null
+        ? List.from(widget.selectedTagIds!)
+        : <String>[];
     _tempSortType = widget.sortType;
     _tempSortAscending = widget.sortAscending;
     _tempSelectedWeathers = widget.selectedWeathers != null
@@ -158,6 +161,10 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                   Text(l10n.filterAndSort, style: theme.textTheme.titleMedium),
                   TextButton(
                     onPressed: () {
+                      // 避免在已重置为默认状态时快速重复点击产生冗余状态抖动
+                      if (_hasExplicitlyReset && _isDefaultState()) {
+                        return;
+                      }
                       _triggerHaptic(HapticFeedback.lightImpact);
                       setState(() {
                         _tempSelectedTagIds.clear();
@@ -165,6 +172,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                         _tempSortAscending = false;
                         _tempSelectedWeathers.clear();
                         _tempSelectedDayPeriods.clear();
+                        _hasExplicitlyReset = true;
                       });
                     },
                     child: Text(l10n.resetFilter),
@@ -411,6 +419,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
 
     // 更新选择状态
     setState(() {
+      _hasExplicitlyReset = false;
       if (selected) {
         _tempSelectedTagIds.add(tag.id);
       } else {
@@ -451,6 +460,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           onSelected: (selected) {
             _triggerHaptic(HapticFeedback.selectionClick);
             setState(() {
+              _hasExplicitlyReset = false;
               final categoryKeys =
                   WeatherService.getWeatherKeysByFilterCategory(
                 filterCategory,
@@ -501,6 +511,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           onSelected: (selected) {
             _triggerHaptic(HapticFeedback.selectionClick);
             setState(() {
+              _hasExplicitlyReset = false;
               if (selected) {
                 _tempSelectedDayPeriods.add(periodKey);
               } else {
@@ -523,6 +534,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           groupValue: _tempSortType,
           onChanged: (value) {
             setState(() {
+              _hasExplicitlyReset = false;
               _tempSortType = value!;
             });
           },
@@ -544,6 +556,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           contentPadding: EdgeInsets.zero,
           onChanged: (value) {
             setState(() {
+              _hasExplicitlyReset = false;
               _tempSortAscending = value;
             });
           },
@@ -552,9 +565,22 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     );
   }
 
+  /// 检查当前筛选状态是否为默认状态
+  bool _isDefaultState() {
+    return _tempSelectedTagIds.isEmpty &&
+        _tempSortType == 'time' &&
+        !_tempSortAscending &&
+        _tempSelectedWeathers.isEmpty &&
+        _tempSelectedDayPeriods.isEmpty;
+  }
+
   /// 优化：检查是否有筛选条件变化
   bool _hasChanges() {
-    return !_areListsEqual(_tempSelectedTagIds, widget.selectedTagIds) ||
+    return _hasExplicitlyReset ||
+        !_areSetsEqual(
+          _tempSelectedTagIds.toSet(),
+          widget.selectedTagIds?.toSet() ?? {},
+        ) ||
         _tempSortType != widget.sortType ||
         _tempSortAscending != widget.sortAscending ||
         !_areSetsEqual(
@@ -565,15 +591,6 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           _tempSelectedDayPeriods,
           widget.selectedDayPeriods?.toSet() ?? {},
         );
-  }
-
-  /// 优化：辅助方法：比较两个列表是否相等
-  bool _areListsEqual(List<String> list1, List<String> list2) {
-    if (list1.length != list2.length) return false;
-    for (int i = 0; i < list1.length; i++) {
-      if (list1[i] != list2[i]) return false;
-    }
-    return true;
   }
 
   /// 优化：辅助方法：比较两个集合是否相等
