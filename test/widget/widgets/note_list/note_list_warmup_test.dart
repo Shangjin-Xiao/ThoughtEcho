@@ -536,6 +536,69 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await databaseService.disposeStream();
   });
+
+  testWidgets(
+    '静止期扩充缓存区由 ValueNotifier 局部驱动，不触发 NoteListViewState 全量重构',
+    (tester) async {
+      final databaseService = _StreamingFakeDatabaseService();
+      final quotes = [
+        for (var i = 0; i < 20; i++)
+          Quote(
+            id: 'idle-boost-$i',
+            content: '这是第 $i 条用于测试缓存区步进扩充的普通笔记正文。',
+            date: DateTime(2025, 6, 21, 9, i).toIso8601String(),
+            editSource: 'inline',
+            dayPeriod: 'morning',
+          ),
+      ];
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: _FakeSettingsService(),
+        ),
+      );
+      await tester.pump();
+      databaseService.emit(quotes, hasMore: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final state = tester.state<NoteListViewState>(find.byType(NoteListView));
+      final baseListView = tester.widget<ListView>(find.byType(ListView));
+      final initialCacheExtent = baseListView.cacheExtent!;
+      expect(state.idleCacheExtentBoostNotifierForTest.value, 0.0);
+
+      final stateUpdateCountBefore = state.stateUpdateCountForTest;
+
+      // 静止期：预热测量后一级一级把缓存区往外撑（0 -> 400 -> 800 -> 1200 -> 1600）
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      // 验证 ValueNotifier 扩充至上限 1600px
+      expect(state.idleCacheExtentBoostNotifierForTest.value, 1600.0);
+
+      // 验证全量 state 更新次数在缓存区扩充期间保持不变（0 次新增）
+      expect(
+        state.stateUpdateCountForTest,
+        equals(stateUpdateCountBefore),
+        reason: '_growIdleCacheExtent 步进期间 _stateUpdateCount 不应递增',
+      );
+
+      // 验证 ListView.builder 的 cacheExtent 随 ValueNotifier 正确扩充至基础高度 + 1600px
+      final finalListView = tester.widget<ListView>(find.byType(ListView));
+      expect(
+        finalListView.cacheExtent,
+        equals(initialCacheExtent + 1600.0),
+        reason:
+            'ListView.builder 的 cacheExtent 随 ValueNotifier 正确递增至基础高度 + 1600px',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+      await databaseService.disposeStream();
+    },
+  );
 }
 
 class _TestApp extends StatelessWidget {

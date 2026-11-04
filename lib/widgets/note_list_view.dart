@@ -316,7 +316,16 @@ class NoteListViewState extends State<NoteListView>
   ///
   /// 测量预热只能把「量」提前；卡片的**挂载**只有 Viewport 在它进入缓存区时才会
   /// 做。把缓存区在静止期一级一级撑大，这批挂载就落进空闲帧，下次滑过去时是现成的。
-  double _idleCacheExtentBoostPx = 0;
+  /// 采用 ValueNotifier 隔离管理局部数值变动，避免调用 setState 重建全量列表树。
+  final ValueNotifier<double> _idleCacheExtentBoostNotifier =
+      ValueNotifier<double>(0.0);
+
+  @visibleForTesting
+  ValueNotifier<double> get idleCacheExtentBoostNotifierForTest =>
+      _idleCacheExtentBoostNotifier;
+
+  @visibleForTesting
+  int get stateUpdateCountForTest => _stateUpdateCount;
 
   /// 每级撑开的量。一步大约一张卡片：每撑一步都要跑一次布局并建出那几张卡片，
   /// 一次撑到位就是一个上百毫秒的长任务，正好撞上用户重新开始滑。
@@ -973,6 +982,7 @@ class NoteListViewState extends State<NoteListView>
     }
     _expansionNotifiers.clear();
     _loadMoreIndicator.dispose();
+    _idleCacheExtentBoostNotifier.dispose();
 
     // 修复问题3：移除页面切换时的缓存清空，保留缓存以提升返回体验
     // QuoteContent.resetCaches(); // 缓存将由 LRU 自动管理
