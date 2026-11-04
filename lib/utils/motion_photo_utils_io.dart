@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
@@ -22,33 +22,11 @@ class _IOMotionPhotoUtils extends MotionPhotoUtils {
 
   @override
   Future<MotionPhotoInfo?> detect(String filePath) async {
-    final file = File(filePath);
-    if (!await file.exists()) {
+    try {
+      return await compute(_detectMotionPhotoInWorker, filePath);
+    } catch (_) {
       return null;
     }
-
-    final bytes = await file.readAsBytes();
-    if (bytes.length < 32) {
-      return null;
-    }
-
-    final attributes = _extractXmpAttributes(bytes);
-    final xmpInfo = _extractVideoInfoFromAttributes(attributes, bytes.length);
-    if (xmpInfo != null) {
-      return xmpInfo;
-    }
-
-    final mp4HeaderOffset = _findLastPattern(bytes, _ftypPattern);
-    if (mp4HeaderOffset == null || mp4HeaderOffset < 4) {
-      return null;
-    }
-
-    final start = mp4HeaderOffset - 4;
-    if (start >= bytes.length - 8) {
-      return null;
-    }
-
-    return MotionPhotoInfo(videoStart: start, videoEnd: bytes.length);
   }
 
   @override
@@ -95,6 +73,42 @@ class _IOMotionPhotoUtils extends MotionPhotoUtils {
     if (await file.exists()) {
       await file.delete();
     }
+  }
+}
+
+MotionPhotoInfo? _detectMotionPhotoInWorker(String filePath) {
+  try {
+    final file = File(filePath);
+    if (!file.existsSync()) {
+      return null;
+    }
+
+    final bytes = file.readAsBytesSync();
+    if (bytes.length < 32) {
+      return null;
+    }
+
+    final attributes = _extractXmpAttributes(bytes);
+    final xmpInfo = _extractVideoInfoFromAttributes(attributes, bytes.length);
+    if (xmpInfo != null) {
+      return xmpInfo;
+    }
+
+    final mp4HeaderOffset = _findLastPattern(bytes, _ftypPattern);
+    if (mp4HeaderOffset == null || mp4HeaderOffset < 4) {
+      return null;
+    }
+
+    final start = mp4HeaderOffset - 4;
+    if (start >= bytes.length - 8) {
+      return null;
+    }
+
+    return MotionPhotoInfo(videoStart: start, videoEnd: bytes.length);
+  } on FileSystemException {
+    return null;
+  } catch (_) {
+    return null;
   }
 }
 
