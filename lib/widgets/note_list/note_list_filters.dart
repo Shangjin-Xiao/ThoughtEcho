@@ -326,16 +326,18 @@ class AnimatedFilterChip extends StatelessWidget {
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
       tween: Tween(begin: 0.0, end: 1.0),
-      child: child,
-      builder: (context, value, child) {
+      child: RepaintBoundary(child: child),
+      builder: (context, value, animChild) {
         if (value >= 1.0) {
-          return child!;
+          return child;
         }
-        return Opacity(
-          opacity: value,
-          child: Transform.scale(
-            scale: 0.8 + (0.2 * value),
-            child: child,
+        return RepaintBoundary(
+          child: Opacity(
+            opacity: value,
+            child: Transform.scale(
+              scale: 0.8 + (0.2 * value),
+              child: animChild,
+            ),
           ),
         );
       },

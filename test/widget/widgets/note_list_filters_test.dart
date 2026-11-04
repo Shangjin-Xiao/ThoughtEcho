@@ -46,6 +46,13 @@ void main() {
           ),
           findsOneWidget,
         );
+        expect(
+          find.descendant(
+            of: find.byType(AnimatedFilterChip),
+            matching: find.byType(RepaintBoundary),
+          ),
+          findsNWidgets(2),
+        );
 
         // Pump mid-way through 250ms animation (e.g. 100ms)
         await tester.pump(const Duration(milliseconds: 100));
@@ -62,6 +69,13 @@ void main() {
             matching: find.byType(Transform),
           ),
           findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(AnimatedFilterChip),
+            matching: find.byType(RepaintBoundary),
+          ),
+          findsNWidgets(2),
         );
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -85,7 +99,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         expect(find.text('Test Chip'), findsOneWidget);
-        // Verify Opacity and Transform are no longer wrapping the child under AnimatedFilterChip
+        // Verify Opacity, Transform and RepaintBoundary are no longer wrapping the child under AnimatedFilterChip
         expect(
           find.descendant(
             of: find.byType(AnimatedFilterChip),
@@ -97,6 +111,13 @@ void main() {
           find.descendant(
             of: find.byType(AnimatedFilterChip),
             matching: find.byType(Transform),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(AnimatedFilterChip),
+            matching: find.byType(RepaintBoundary),
           ),
           findsNothing,
         );
@@ -152,6 +173,13 @@ void main() {
           find.descendant(
             of: find.byType(AnimatedFilterChip),
             matching: find.byType(Transform),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(AnimatedFilterChip),
+            matching: find.byType(RepaintBoundary),
           ),
           findsNothing,
         );
@@ -256,6 +284,13 @@ void main() {
 
         expect(find.byKey(const ValueKey('tag_tag-1')), findsOneWidget);
         expect(find.byKey(const ValueKey('tag_tag-2')), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(AnimatedFilterChip),
+            matching: find.byType(RepaintBoundary),
+          ),
+          findsNWidgets(4),
+        );
 
         // Rapidly remove tag-1 before animation finishes
         await tester.pumpWidget(buildApp(['tag-2']));
@@ -271,6 +306,13 @@ void main() {
           find.descendant(
             of: find.byType(AnimatedFilterChip),
             matching: find.byType(Opacity),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(AnimatedFilterChip),
+            matching: find.byType(RepaintBoundary),
           ),
           findsNothing,
         );
