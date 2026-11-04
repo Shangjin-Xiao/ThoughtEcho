@@ -125,8 +125,10 @@ extension _ExploreTimeSelector on _ExplorePageState {
           _selectedPeriod = value;
           _selectedDate = now;
         });
-        unawaited(
-            context.read<SettingsService>().setExploreSelectedPeriod(value));
+        try {
+          unawaited(
+              context.read<SettingsService>().setExploreSelectedPeriod(value));
+        } catch (_) {}
         _loadPeriodData();
       },
       child: Text(

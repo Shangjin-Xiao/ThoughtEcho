@@ -162,6 +162,10 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   @override
   Future<void> resetAnniversaryParticipation() async {}
   @override
+  String get exploreSelectedPeriod => 'week';
+  @override
+  Future<void> setExploreSelectedPeriod(String period) async {}
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
