@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../gen_l10n/app_localizations.dart';
 import '../services/api_key_manager.dart';
+import '../utils/i18n_language.dart';
 import '../services/connectivity_service.dart';
 import '../services/database_service.dart';
 import '../services/network_service.dart';
@@ -113,8 +114,7 @@ class ApiService {
   static String recommendedDailyQuoteProviderForLanguage(
     String? languageCode,
   ) {
-    final normalizedLanguageCode =
-        (languageCode ?? '').toLowerCase().split(RegExp(r'[_-]')).first;
+    final normalizedLanguageCode = I18nLanguage.base(languageCode);
     switch (normalizedLanguageCode) {
       case 'zh':
         return hitokotoProvider;

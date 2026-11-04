@@ -6,6 +6,7 @@ import 'dart:convert';
 // 导入数学库，用于三角函数计算
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 import '../utils/app_logger.dart'; // 导入日志工具
+import '../utils/i18n_language.dart';
 
 /// 本地地理编码服务类
 /// 优先使用系统级SDK获取地理位置并进行反向地理编码
@@ -363,7 +364,7 @@ class LocalGeocodingService {
   /// 根据语言代码构建系统地理编码使用的 locale identifier
   /// 格式: languageCode_countryCode (如 'zh_CN', 'en_US', 'ja_JP')
   static String _buildLocaleIdentifier(String? localeCode) {
-    final lang = (localeCode ?? '').toLowerCase().split(RegExp(r'[_-]')).first;
+    final lang = I18nLanguage.base(localeCode);
     switch (lang) {
       case 'zh':
         return 'zh_CN';

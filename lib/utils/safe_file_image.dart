@@ -50,12 +50,15 @@ class MissingMediaFileReporter {
   static final Set<String> _reportedPaths = <String>{};
   static bool _capLogged = false;
 
+  /// 预编译路径分隔符正则表达式，避免在高频日志脱敏与错误处理中重复分配和编译
+  static final RegExp _pathSeparatorRegex = RegExp(r'[\\/]');
+
   /// Removes the device-specific prefix from [path] and keeps only
   /// `media/<subfolder>/<file>` (or just the file name if not recognized).
   static String redact(String path) {
     final tail = MediaPathResolver.mediaRelativeTail(path);
     if (tail != null) return tail;
-    final segments = path.split(RegExp(r'[\\/]'));
+    final segments = path.split(_pathSeparatorRegex);
     return segments.isEmpty ? path : segments.last;
   }
 
