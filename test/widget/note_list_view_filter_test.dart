@@ -440,6 +440,12 @@ void main() {
 
       expect(
         delegate.findChildIndexCallback!(
+          const ValueKey<String>('note-list-row-quote-1'),
+        ),
+        0,
+      );
+      expect(
+        delegate.findChildIndexCallback!(
           const ValueKey<String>('note-list-row-quote-2'),
         ),
         1,
@@ -449,6 +455,193 @@ void main() {
           const ValueKey<String>('note-list-row-quote-3'),
         ),
         2,
+      );
+
+      // 无数据变更时多次 pump 验证缓存实例恒定（零重新分配）
+      final state = tester.state<NoteListViewState>(find.byType(NoteListView));
+      final initialMap = state.rowIndexByKey;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(identical(state.rowIndexByKey, initialMap), isTrue);
+
+      // 删除中间笔记 quote-2，触发折叠动画并等待移除落地
+      final item2 = tester.widget<QuoteItemWidget>(
+        find.byWidgetPredicate(
+          (w) => w is QuoteItemWidget && w.quote.id == 'quote-2',
+        ),
+      );
+      item2.onDelete();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // 验证删除后：quote-2 被清除，后续 quote-3 索引位移更新为 1
+      final updatedListView = tester.widget<ListView>(find.byType(ListView));
+      final updatedDelegate =
+          updatedListView.childrenDelegate as SliverChildBuilderDelegate;
+      expect(
+        updatedDelegate.findChildIndexCallback!(
+          const ValueKey<String>('note-list-row-quote-1'),
+        ),
+        0,
+      );
+      expect(
+        updatedDelegate.findChildIndexCallback!(
+          const ValueKey<String>('note-list-row-quote-2'),
+        ),
+        isNull,
+      );
+      expect(
+        updatedDelegate.findChildIndexCallback!(
+          const ValueKey<String>('note-list-row-quote-3'),
+        ),
+        1,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets(
+      'incrementally appends row index cache on multi-page load more',
+      (tester) async {
+        final databaseService = _PagingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+          ),
+        );
+
+        databaseService.emitInitialPage();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final state =
+            tester.state<NoteListViewState>(find.byType(NoteListView));
+        final initialMap = state.rowIndexByKey;
+        expect(initialMap.length, 20);
+
+        var listView = tester.widget<ListView>(find.byType(ListView));
+        var delegate = listView.childrenDelegate as SliverChildBuilderDelegate;
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-0'),
+          ),
+          0,
+        );
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-19'),
+          ),
+          19,
+        );
+
+        // 触发加载下一页（追加 20 条，共 40 条）
+        await databaseService.loadMoreQuotes();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(state.rowIndexByKey.length, 40);
+        // 增量追加保持原 Map 实例恒定
+        expect(identical(state.rowIndexByKey, initialMap), isTrue);
+
+        listView = tester.widget<ListView>(find.byType(ListView));
+        delegate = listView.childrenDelegate as SliverChildBuilderDelegate;
+
+        // 验证原有的前 20 条索引不变
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-0'),
+          ),
+          0,
+        );
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-19'),
+          ),
+          19,
+        );
+        // 验证新追加的笔记索引正确递增
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-20'),
+          ),
+          20,
+        );
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-39'),
+          ),
+          39,
+        );
+
+        // 未知或非法 key 回退为 null
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-non-existent'),
+          ),
+          isNull,
+        );
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<int>(42),
+          ),
+          isNull,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets('handles empty list and null id edge cases in row index cache',
+        (
+      tester,
+    ) async {
+      final databaseService = _DelayedFakeDatabaseService();
+      final settingsService = _FakeSettingsService();
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          tags: const [],
+        ),
+      );
+
+      // 初始空列表阶段
+      final state = tester.state<NoteListViewState>(find.byType(NoteListView));
+      expect(state.rowIndexByKey, isEmpty);
+
+      // 发射带有 id == null 的笔记
+      databaseService.emitQuotes([
+        Quote(
+          content: '无 ID 笔记',
+          date: '2026-03-29T12:00:00.000',
+        ),
+        Quote(
+          id: 'quote-valid',
+          content: '有效笔记',
+          date: DateTime(2026, 3, 29, 11).toIso8601String(),
+        ),
+      ]);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final listView = tester.widget<ListView>(find.byType(ListView));
+      final delegate = listView.childrenDelegate as SliverChildBuilderDelegate;
+
+      // 带有 id == null 的笔记不入表，有效笔记索引为 1
+      expect(state.rowIndexByKey.containsKey('note-list-row-null'), isFalse);
+      expect(
+        delegate.findChildIndexCallback!(
+          const ValueKey<String>('note-list-row-quote-valid'),
+        ),
+        1,
       );
 
       await tester.pumpWidget(const SizedBox.shrink());

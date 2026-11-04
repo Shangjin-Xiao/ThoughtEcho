@@ -437,10 +437,6 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 优化：提前创建标签映射，避免在 item builder 中重复计算
     // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
     final tagMap = _obtainTagMap();
-    final rowIndexByKey = <String, int>{
-      for (var i = 0; i < _quotes.length; i++)
-        if (_quotes[i].id case final id?) 'note-list-row-$id': i,
-    };
 
     return NotificationListener<ScrollNotification>(
       key: resultsKey,
@@ -535,7 +531,7 @@ extension _NoteListItemsExtension on NoteListViewState {
             ),
             findChildIndexCallback: (key) {
               if (key is ValueKey<String>) {
-                return rowIndexByKey[key.value];
+                return _rowIndexByKey[key.value];
               }
               return null;
             },
