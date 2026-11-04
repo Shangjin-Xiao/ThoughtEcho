@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/utils/quill_editor_extensions.dart';
+import 'package:thoughtecho/widgets/media_player_widget.dart';
 
 /// 富文本段落基准样式不能跟着调用点在树里的深浅变。
 ///
@@ -219,6 +222,199 @@ void main() {
         imageBuilderWithoutMenu.runtimeType.toString(),
         '_OptimizedImageEmbedBuilder',
       );
+    });
+
+    testWidgets('_CustomVideoEmbedBuilder 构建的组件外层包含 RepaintBoundary 进行重绘隔离',
+        (tester) async {
+      final builders = QuillEditorExtensions.getEmbedBuilders();
+      final videoBuilder = builders.firstWhere((b) => b.key == 'video');
+
+      final controller = quill.QuillController.basic();
+      addTearDown(controller.dispose);
+      final embedNode =
+          quill.Embed(quill.BlockEmbed.video('https://example.com/test.mp4'));
+      // ignore: invalid_use_of_internal_member
+      final embedContext = quill.EmbedContext(
+        controller: controller,
+        node: embedNode,
+        readOnly: false,
+        inline: false,
+        textStyle: const TextStyle(),
+      );
+
+      late Widget builtWidget;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                builtWidget = videoBuilder.build(context, embedContext);
+                return builtWidget;
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(builtWidget, isA<RepaintBoundary>());
+
+      final videoFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is MediaPlayerWidget && widget.mediaType == MediaType.video,
+      );
+      expect(videoFinder, findsOneWidget);
+
+      final videoRepaintBoundaryFinder = find.ancestor(
+        of: videoFinder,
+        matching: find.byType(RepaintBoundary),
+      );
+      expect(videoRepaintBoundaryFinder, findsWidgets);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 600));
+    });
+
+    testWidgets('_CustomAudioEmbedBuilder 构建的组件外层包含 RepaintBoundary 进行重绘隔离',
+        (tester) async {
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        if (details.exceptionAsString().contains('A RenderFlex overflowed')) {
+          return;
+        }
+        originalOnError?.call(details);
+      };
+      addTearDown(() {
+        FlutterError.onError = originalOnError;
+      });
+
+      final builders = QuillEditorExtensions.getEmbedBuilders();
+      final audioBuilder = builders.firstWhere((b) => b.key == 'audio');
+
+      final controller = quill.QuillController.basic();
+      addTearDown(controller.dispose);
+      final embedNode = quill.Embed(
+        quill.BlockEmbed('audio', 'https://example.com/test.mp3'),
+      );
+      // ignore: invalid_use_of_internal_member
+      final embedContext = quill.EmbedContext(
+        controller: controller,
+        node: embedNode,
+        readOnly: false,
+        inline: false,
+        textStyle: const TextStyle(),
+      );
+
+      late Widget builtWidget;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                builtWidget = audioBuilder.build(context, embedContext);
+                return builtWidget;
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(builtWidget, isA<RepaintBoundary>());
+
+      final audioFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is MediaPlayerWidget && widget.mediaType == MediaType.audio,
+      );
+      expect(audioFinder, findsOneWidget);
+
+      final audioRepaintBoundaryFinder = find.ancestor(
+        of: audioFinder,
+        matching: find.byType(RepaintBoundary),
+      );
+      expect(audioRepaintBoundaryFinder, findsWidgets);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 600));
+    });
+
+    testWidgets('QuillEditor 中嵌入音视频媒体卡片均具有 RepaintBoundary 绘制边界',
+        (tester) async {
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        if (details.exceptionAsString().contains('A RenderFlex overflowed')) {
+          return;
+        }
+        originalOnError?.call(details);
+      };
+      addTearDown(() {
+        FlutterError.onError = originalOnError;
+      });
+
+      final doc = quill.Document();
+      doc.insert(0, quill.BlockEmbed.video('https://example.com/test.mp4'));
+      doc.insert(1, '\n');
+      doc.insert(2, quill.BlockEmbed('audio', 'https://example.com/test.mp3'));
+      doc.insert(3, '\n');
+
+      final controller = quill.QuillController(
+        document: doc,
+        selection: const TextSelection.collapsed(offset: 0),
+      );
+      addTearDown(controller.dispose);
+
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: quill.QuillEditor(
+              controller: controller,
+              scrollController: scrollController,
+              focusNode: focusNode,
+              config: quill.QuillEditorConfig(
+                embedBuilders: QuillEditorExtensions.getEmbedBuilders(),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final videoFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is MediaPlayerWidget && widget.mediaType == MediaType.video,
+      );
+      expect(videoFinder, findsOneWidget);
+      expect(
+        find.ancestor(
+          of: videoFinder,
+          matching: find.byType(RepaintBoundary),
+        ),
+        findsWidgets,
+      );
+
+      final audioFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is MediaPlayerWidget && widget.mediaType == MediaType.audio,
+      );
+      expect(audioFinder, findsOneWidget);
+      expect(
+        find.ancestor(
+          of: audioFinder,
+          matching: find.byType(RepaintBoundary),
+        ),
+        findsWidgets,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 600));
     });
   });
 }
