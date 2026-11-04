@@ -130,7 +130,6 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     final result = await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
@@ -163,12 +162,13 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
 
     controller.dispose();
-    if (result == null) return;
+    if (result == null || !mounted) return;
 
     final trimmed = result.trim();
     if (trimmed.isNotEmpty && !apiKeyManager.isValidApiKeyFormat(trimmed)) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.dailyQuoteApiNinjasApiKeyInvalid)),
+      AppSnackBar.error(
+        context,
+        l10n.dailyQuoteApiNinjasApiKeyInvalid,
       );
       return;
     }
