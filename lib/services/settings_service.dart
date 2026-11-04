@@ -37,6 +37,7 @@ class SettingsService extends ChangeNotifier {
   static const String _localAiSettingsKey = 'local_ai_settings'; // 新增本地AI设置
   static const String _appSettingsKey = 'app_settings';
   static const String _exploreAiAssistantModeKey = 'explore_ai_assistant_mode';
+  static const String _exploreSelectedPeriodKey = 'explore_selected_period';
   static const String _noteAiAssistantModeKey = 'note_ai_assistant_mode';
   static const String _themeModeKey = 'theme_mode';
   // 旧Key，用于迁移检查，迁移完成后可以考虑移除
@@ -475,6 +476,21 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setNoteAiAssistantMode(ThoughterPageMode mode) async {
     await _mmkv.setString(_noteAiAssistantModeKey, mode.storageValue);
+    notifyListeners();
+  }
+
+  /// 探索页选中的周期类型（'week', 'month', 'year'），记住用户上次的选择。
+  String get exploreSelectedPeriod {
+    final period = _mmkv.getString(_exploreSelectedPeriodKey);
+    if (period == 'month' || period == 'year' || period == 'week') {
+      return period!;
+    }
+    return 'week';
+  }
+
+  Future<void> setExploreSelectedPeriod(String period) async {
+    if (period != 'week' && period != 'month' && period != 'year') return;
+    await _mmkv.setString(_exploreSelectedPeriodKey, period);
     notifyListeners();
   }
 

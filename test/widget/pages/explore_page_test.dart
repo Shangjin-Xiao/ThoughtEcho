@@ -94,6 +94,17 @@ class _FakeChatSessionService extends ChatSessionService {
 }
 
 class _ReportSettingsService extends ChangeNotifier implements SettingsService {
+  String _exploreSelectedPeriod = 'week';
+
+  @override
+  String get exploreSelectedPeriod => _exploreSelectedPeriod;
+
+  @override
+  Future<void> setExploreSelectedPeriod(String period) async {
+    _exploreSelectedPeriod = period;
+    notifyListeners();
+  }
+
   @override
   bool get reportInsightsUseAI => false;
 
@@ -451,5 +462,34 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
     await tester.pumpAndSettle();
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('initializes with saved exploreSelectedPeriod from settings',
+      (tester) async {
+    final settings = _ReportSettingsService();
+    await settings.setExploreSelectedPeriod('month');
+    final database = _EmptyPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('本月'), findsOneWidget);
   });
 }

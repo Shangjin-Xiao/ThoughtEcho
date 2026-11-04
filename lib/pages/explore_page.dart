@@ -119,6 +119,7 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   void initState() {
     super.initState();
+    _selectedPeriod = context.read<SettingsService>().exploreSelectedPeriod;
     _loadPeriodData();
     _loadRecentSessions();
     WidgetsBinding.instance.addPostFrameCallback((_) {

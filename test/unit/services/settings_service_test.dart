@@ -37,6 +37,17 @@ void main() {
       await TestHarness.tearDown();
     });
 
+    test('exploreSelectedPeriod defaults to week and persists valid periods',
+        () async {
+      expect(settingsService.exploreSelectedPeriod, 'week');
+      await settingsService.setExploreSelectedPeriod('month');
+      expect(settingsService.exploreSelectedPeriod, 'month');
+      await settingsService.setExploreSelectedPeriod('year');
+      expect(settingsService.exploreSelectedPeriod, 'year');
+      await settingsService.setExploreSelectedPeriod('invalid');
+      expect(settingsService.exploreSelectedPeriod, 'year');
+    });
+
     test('should create SettingsService instance', () {
       expect(settingsService, isNotNull);
     });
