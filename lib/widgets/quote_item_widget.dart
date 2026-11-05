@@ -916,7 +916,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       duration: QuoteItemWidget.expandCollapseDuration,
       curve: QuoteItemWidget._expandCurve,
       alignment: Alignment.topLeft,
-      clipBehavior: Clip.hardEdge,
+      clipBehavior: Clip.none,
       child: RepaintBoundary(child: content),
     );
   }
@@ -1785,27 +1785,33 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     // 铺满整张卡会穿过头部元信息、图片和按钮行。这层保持纯壳，
     // 折叠态卡片的 RepaintBoundary 缓存收益也就不受影响。
     final shouldAnimateCardShell = widget.selectionMode || isExpanded;
-    final Widget cardBody = shouldAnimateCardShell
-        ? AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: cardMargin,
-            decoration: cardDecoration,
-            child: cardChild,
-          )
-        : Container(
-            margin: cardMargin,
-            decoration: cardDecoration,
-            child: cardChild,
-          );
+    final Widget card;
+    if (shouldAnimateCardShell) {
+      card = AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: cardMargin,
+        decoration: cardDecoration,
+        child: RepaintBoundary(
+          child: cardChild,
+        ),
+      );
+    } else {
+      // 性能优化（第一步）：折叠态静态卡片用 RepaintBoundary 隔离绘制。
+      // 卡片阴影（BoxShadow 高斯模糊）与渐变属于静态像素，套重绘边界后
+      // 其栅格结果可被缓存，滚动时仅做位移合成，避免每帧重新栅格化阴影。
+      // 展开/选择态在 AnimatedContainer 的 child 处额外包裹 RepaintBoundary，
+      // 隔离外壳补间动画对内部复杂富文本/图片子树的重绘影响，
+      // 并避免在 AnimatedContainer 外层重复嵌套 RepaintBoundary 增加合成与显存开销。
+      card = RepaintBoundary(
+        child: Container(
+          margin: cardMargin,
+          decoration: cardDecoration,
+          child: cardChild,
+        ),
+      );
+    }
 
-    // 性能优化：卡片外壳统一使用单一 RepaintBoundary 固化绘制边界。
-    // 卡片阴影（BoxShadow 高斯模糊）与渐变属于静态像素，套重绘边界后
-    // 其栅格结果可被缓存，滚动时仅做位移合成，避免每帧重新栅格化阴影；
-    // 同时阻断展开态与选择态外壳补间动画对父级列表与相邻兄弟卡片的重绘传播。
-    // AnimatedContainer 内部不再重复嵌套 RepaintBoundary，避免冗余图层分配。
-    return RepaintBoundary(
-      child: cardBody,
-    );
+    return card;
   }
 }
 

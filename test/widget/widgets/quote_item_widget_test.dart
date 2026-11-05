@@ -312,8 +312,8 @@ void main() {
       expect(find.byType(AnimatedContainer), findsOneWidget);
       final animatedContainerWidget =
           tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
-      // 外层统一包裹 RepaintBoundary 隔离外壳，内部不再重复嵌套 RepaintBoundary
-      expect(animatedContainerWidget.child, isNot(isA<RepaintBoundary>()));
+      // AnimatedContainer 内部包含 RepaintBoundary 隔离内容，外层不再多余包裹 RepaintBoundary
+      expect(animatedContainerWidget.child, isA<RepaintBoundary>());
 
       final cardShellBoundary = find.descendant(
         of: find.byType(QuoteItemWidget),
@@ -322,15 +322,16 @@ void main() {
           matching: find.byType(RepaintBoundary),
         ),
       );
-      expect(cardShellBoundary, findsOneWidget);
+      expect(cardShellBoundary, findsNothing);
 
       final animatedSizeWidget =
           tester.widget<AnimatedSize>(find.byType(AnimatedSize));
-      expect(animatedSizeWidget.clipBehavior, equals(Clip.hardEdge));
+      expect(animatedSizeWidget.clipBehavior, equals(Clip.none));
       expect(animatedSizeWidget.child, isA<RepaintBoundary>());
     });
 
-    testWidgets('选择态卡片外层包含 RepaintBoundary 隔离外壳且避免内部重复嵌套', (tester) async {
+    testWidgets('选择态卡片在 AnimatedContainer 中包含 RepaintBoundary 隔离外壳且避免外层重复嵌套',
+        (tester) async {
       final quote = _buildQuote(
         content: '选择态笔记内容',
         editSource: 'inline',
@@ -368,8 +369,8 @@ void main() {
       expect(find.byType(AnimatedContainer), findsOneWidget);
       final containerWidget =
           tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
-      // 外层统一包裹 RepaintBoundary 隔离外壳，内部不再重复嵌套 RepaintBoundary
-      expect(containerWidget.child, isNot(isA<RepaintBoundary>()));
+      // AnimatedContainer 内部包含 RepaintBoundary 隔离内容，外层不再多余包裹 RepaintBoundary
+      expect(containerWidget.child, isA<RepaintBoundary>());
 
       final cardShellBoundary = find.descendant(
         of: find.byType(QuoteItemWidget),
@@ -378,7 +379,7 @@ void main() {
           matching: find.byType(RepaintBoundary),
         ),
       );
-      expect(cardShellBoundary, findsOneWidget);
+      expect(cardShellBoundary, findsNothing);
     });
 
     testWidgets('默认状态下展示截断内容并显示提示', (tester) async {
@@ -951,7 +952,7 @@ void main() {
 
       final animatedSizeBeforeToggle =
           tester.widget<AnimatedSize>(find.byType(AnimatedSize));
-      expect(animatedSizeBeforeToggle.clipBehavior, equals(Clip.hardEdge));
+      expect(animatedSizeBeforeToggle.clipBehavior, equals(Clip.none));
       expect(animatedSizeBeforeToggle.child, isA<RepaintBoundary>());
 
       final contentGesture = find.byKey(
@@ -968,12 +969,11 @@ void main() {
 
       final animatedSizeAfterToggle =
           tester.widget<AnimatedSize>(find.byType(AnimatedSize));
-      expect(animatedSizeAfterToggle.clipBehavior, equals(Clip.hardEdge));
+      expect(animatedSizeAfterToggle.clipBehavior, equals(Clip.none));
       expect(animatedSizeAfterToggle.child, isA<RepaintBoundary>());
     });
 
-    testWidgets(
-        '折叠与展开状态下正文子树 AnimatedSize 均使用 Clip.hardEdge 且包裹 RepaintBoundary',
+    testWidgets('折叠与展开状态下正文子树 AnimatedSize 均使用 Clip.none 且包裹 RepaintBoundary',
         (tester) async {
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),
@@ -1012,19 +1012,31 @@ void main() {
         final animatedSizeFinder = find.byType(AnimatedSize);
         expect(animatedSizeFinder, findsOneWidget);
         final animatedSize = tester.widget<AnimatedSize>(animatedSizeFinder);
-        expect(animatedSize.clipBehavior, equals(Clip.hardEdge));
+        expect(animatedSize.clipBehavior, equals(Clip.none));
         expect(animatedSize.child, isA<RepaintBoundary>());
 
-        final cardShellBoundary = find.descendant(
-          of: find.byType(QuoteItemWidget),
-          matching: find.ancestor(
-            of: isExpanded
-                ? find.byType(AnimatedContainer)
-                : find.byType(Container),
-            matching: find.byType(RepaintBoundary),
-          ),
-        );
-        expect(cardShellBoundary, findsWidgets);
+        if (isExpanded) {
+          final animatedContainer =
+              tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+          expect(animatedContainer.child, isA<RepaintBoundary>());
+          final outerShellBoundary = find.descendant(
+            of: find.byType(QuoteItemWidget),
+            matching: find.ancestor(
+              of: find.byType(AnimatedContainer),
+              matching: find.byType(RepaintBoundary),
+            ),
+          );
+          expect(outerShellBoundary, findsNothing);
+        } else {
+          final cardShellBoundary = find.descendant(
+            of: find.byType(QuoteItemWidget),
+            matching: find.ancestor(
+              of: find.byType(Container),
+              matching: find.byType(RepaintBoundary),
+            ),
+          );
+          expect(cardShellBoundary, findsWidgets);
+        }
       }
     });
 
