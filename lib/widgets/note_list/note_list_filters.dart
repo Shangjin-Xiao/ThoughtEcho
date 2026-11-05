@@ -326,7 +326,7 @@ class AnimatedFilterChip extends StatelessWidget {
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
       tween: Tween(begin: 0.0, end: 1.0),
-      child: RepaintBoundary(child: child),
+      child: child,
       builder: (context, value, animChild) {
         if (value >= 1.0) {
           return child;

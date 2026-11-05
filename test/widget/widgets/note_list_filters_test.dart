@@ -52,7 +52,15 @@ void main() {
             of: find.byType(AnimatedFilterChip),
             matching: find.byType(RepaintBoundary),
           ),
-          findsNWidgets(2),
+          findsOneWidget,
+        );
+        // Verify no redundant nested inner RepaintBoundary inside Opacity
+        expect(
+          find.descendant(
+            of: find.byType(Opacity),
+            matching: find.byType(RepaintBoundary),
+          ),
+          findsNothing,
         );
 
         // Pump mid-way through 250ms animation (e.g. 100ms)
@@ -76,7 +84,14 @@ void main() {
             of: find.byType(AnimatedFilterChip),
             matching: find.byType(RepaintBoundary),
           ),
-          findsNWidgets(2),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(Opacity),
+            matching: find.byType(RepaintBoundary),
+          ),
+          findsNothing,
         );
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -166,7 +181,7 @@ void main() {
             matching: find.byType(RepaintBoundary),
           ),
         );
-        expect(boundaries0.length, 2);
+        expect(boundaries0.length, 1);
         for (final boundary in boundaries0) {
           expect(boundary.isRepaintBoundary, isTrue);
         }
@@ -203,7 +218,7 @@ void main() {
             matching: find.byType(RepaintBoundary),
           ),
         );
-        expect(boundaries100.length, 2);
+        expect(boundaries100.length, 1);
         for (final boundary in boundaries100) {
           expect(boundary.isRepaintBoundary, isTrue);
         }
@@ -242,7 +257,7 @@ void main() {
             of: find.byType(AnimatedFilterChip),
             matching: find.byType(RepaintBoundary),
           ),
-          findsNWidgets(2),
+          findsOneWidget,
         );
 
         // Rebuild with updated child while animation is midway
@@ -262,7 +277,7 @@ void main() {
             of: find.byType(AnimatedFilterChip),
             matching: find.byType(RepaintBoundary),
           ),
-          findsNWidgets(2),
+          findsOneWidget,
         );
 
         // Complete animation
@@ -400,13 +415,13 @@ void main() {
           ),
           findsNothing,
         );
-        // Chip 2 has 2 RepaintBoundary layers for its entry animation
+        // Chip 2 has 1 RepaintBoundary layer for its entry animation
         expect(
           find.descendant(
             of: chip2Finder,
             matching: find.byType(RepaintBoundary),
           ),
-          findsNWidgets(2),
+          findsOneWidget,
         );
 
         // Advance 100ms
@@ -423,7 +438,7 @@ void main() {
             of: chip2Finder,
             matching: find.byType(RepaintBoundary),
           ),
-          findsNWidgets(2),
+          findsOneWidget,
         );
 
         // Advance past chip 2 completion
@@ -610,7 +625,7 @@ void main() {
             of: find.byType(AnimatedFilterChip),
             matching: find.byType(RepaintBoundary),
           ),
-          findsNWidgets(4),
+          findsNWidgets(2),
         );
 
         // Rapidly remove tag-1 before animation finishes
