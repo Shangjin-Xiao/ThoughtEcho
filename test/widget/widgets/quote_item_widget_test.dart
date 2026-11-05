@@ -312,7 +312,8 @@ void main() {
       expect(find.byType(AnimatedContainer), findsOneWidget);
       final animatedContainerWidget =
           tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
-      expect(animatedContainerWidget.child, isA<RepaintBoundary>());
+      // 外层统一包裹 RepaintBoundary 隔离外壳，内部不再重复嵌套 RepaintBoundary
+      expect(animatedContainerWidget.child, isNot(isA<RepaintBoundary>()));
 
       final cardShellBoundary = find.descendant(
         of: find.byType(QuoteItemWidget),
@@ -329,8 +330,7 @@ void main() {
       expect(animatedSizeWidget.child, isA<RepaintBoundary>());
     });
 
-    testWidgets('选择态卡片在 AnimatedContainer 中包含 RepaintBoundary 隔离外壳',
-        (tester) async {
+    testWidgets('选择态卡片外层包含 RepaintBoundary 隔离外壳且避免内部重复嵌套', (tester) async {
       final quote = _buildQuote(
         content: '选择态笔记内容',
         editSource: 'inline',
@@ -368,7 +368,8 @@ void main() {
       expect(find.byType(AnimatedContainer), findsOneWidget);
       final containerWidget =
           tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
-      expect(containerWidget.child, isA<RepaintBoundary>());
+      // 外层统一包裹 RepaintBoundary 隔离外壳，内部不再重复嵌套 RepaintBoundary
+      expect(containerWidget.child, isNot(isA<RepaintBoundary>()));
 
       final cardShellBoundary = find.descendant(
         of: find.byType(QuoteItemWidget),
