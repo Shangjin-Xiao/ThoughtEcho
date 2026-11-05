@@ -103,6 +103,36 @@ Quote _richQuote() => Quote(
       temperature: '21°C',
     );
 
+final Map<String, NoteTag> _sampleTagMap = {
+  'tag-regular': NoteTag(
+    id: 'tag-regular',
+    name: '工作笔记',
+  ),
+  'tag-emoji': NoteTag(
+    id: 'tag-emoji',
+    name: '旅行随想',
+    iconName: '✈️',
+  ),
+};
+
+Quote _regularTagQuote() => Quote(
+      id: 'tag-regular-1',
+      content: List.filled(8, _longChunk).join('\n'),
+      date: DateTime(2025, 6, 21, 9).toIso8601String(),
+      editSource: 'inline',
+      dayPeriod: 'morning',
+      tagIds: const ['tag-regular'],
+    );
+
+Quote _emojiTagQuote() => Quote(
+      id: 'tag-emoji-1',
+      content: List.filled(8, _longChunk).join('\n'),
+      date: DateTime(2025, 6, 21, 9).toIso8601String(),
+      editSource: 'inline',
+      dayPeriod: 'morning',
+      tagIds: const ['tag-emoji'],
+    );
+
 int _planMisses() => (QuoteContent.debugCacheStats()['plan']
     as Map<String, dynamic>)['missCount'] as int;
 
@@ -117,6 +147,12 @@ int _expansionCacheSize() => (QuoteContent.debugCacheStats()['expansion']
 int _headerMisses() =>
     QuoteItemWidget.getHeaderTextWidthCacheStats()['cacheMisses']!;
 
+/// 标签测宽（常规标签名与 Emoji 图标）的未命中次数。
+int _tagMisses() => QuoteItemWidget.getTagTextWidthCacheStats()['cacheMisses']!;
+
+/// 标签测宽缓存命中次数。
+int _tagHits() => QuoteItemWidget.getTagTextWidthCacheStats()['cacheHits']!;
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -130,6 +166,9 @@ void main() {
     WidgetTester tester,
     Quote quote, {
     required Key key,
+    Map<String, NoteTag> tagMap = const {},
+    List<String> selectedTagIds = const [],
+    Widget Function(NoteTag)? tagBuilder,
   }) async {
     late BuildContext captured;
     await tester.pumpWidget(
@@ -149,7 +188,9 @@ void main() {
                 return QuoteItemWidget(
                   key: key,
                   quote: quote,
-                  tagMap: const {},
+                  tagMap: tagMap,
+                  selectedTagIds: selectedTagIds,
+                  tagBuilder: tagBuilder,
                   isExpanded: false,
                   onToggleExpanded: (_) {},
                   onEdit: () {},
@@ -170,15 +211,49 @@ void main() {
     return captured;
   }
 
-  for (final entry in <String, ({Quote Function() build, bool warmsPlan})>{
-    '纯文本': (build: _plainQuote, warmsPlan: false),
-    '富文本': (build: _richQuote, warmsPlan: true),
+  for (final entry in <String,
+      ({
+    Quote Function() build,
+    bool warmsPlan,
+    Map<String, NoteTag> tagMap,
+    bool hasTags,
+  })>{
+    '纯文本': (
+      build: _plainQuote,
+      warmsPlan: false,
+      tagMap: const <String, NoteTag>{},
+      hasTags: false,
+    ),
+    '富文本': (
+      build: _richQuote,
+      warmsPlan: true,
+      tagMap: const <String, NoteTag>{},
+      hasTags: false,
+    ),
+    '常规标签': (
+      build: _regularTagQuote,
+      warmsPlan: false,
+      tagMap: _sampleTagMap,
+      hasTags: true,
+    ),
+    'Emoji 标签': (
+      build: _emojiTagQuote,
+      warmsPlan: false,
+      tagMap: _sampleTagMap,
+      hasTags: true,
+    ),
   }.entries) {
     testWidgets('预热过的${entry.key}卡片建出来时一次未命中都不再产生', (tester) async {
       final quote = entry.value.build();
+      final tagMap = entry.value.tagMap;
 
       // 先真的建一次，拿到卡片正文区的实际布局宽度。
-      final context = await pumpCard(tester, quote, key: const ValueKey('a'));
+      final context = await pumpCard(
+        tester,
+        quote,
+        key: const ValueKey('a'),
+        tagMap: tagMap,
+      );
       final width = QuoteItemWidget.lastCollapsedContentWidth;
       expect(width, isNotNull, reason: '卡片建出来后必须回填正文布局宽度');
       expect(width, greaterThan(0));
@@ -194,11 +269,13 @@ void main() {
         mediaStyle: NoteCardMediaStyle.thumbnail,
         prioritizeBoldContent: false,
         showExactTime: false,
+        tagMap: tagMap,
       );
 
       final planMissesAfterWarmup = _planMisses();
       final expansionMissesAfterWarmup = _expansionMisses();
       final headerMissesAfterWarmup = _headerMisses();
+      final tagMissesAfterWarmup = _tagMisses();
       expect(
         headerMissesAfterWarmup,
         greaterThan(0),
@@ -216,9 +293,21 @@ void main() {
           reason: '富文本的预热必须真的跑过折叠排版',
         );
       }
+      if (entry.value.hasTags) {
+        expect(
+          tagMissesAfterWarmup,
+          greaterThan(0),
+          reason: '预热必须真的量过标签文字与Emoji',
+        );
+      }
 
       // 换 key 强制整棵子树重建：折叠判定和折叠排版都会重新问一次缓存。
-      await pumpCard(tester, quote, key: const ValueKey('b'));
+      await pumpCard(
+        tester,
+        quote,
+        key: const ValueKey('b'),
+        tagMap: tagMap,
+      );
 
       expect(
         _expansionMisses(),
@@ -235,8 +324,157 @@ void main() {
         headerMissesAfterWarmup,
         reason: '头部测宽的键和预热对不上',
       );
+      expect(
+        _tagMisses(),
+        tagMissesAfterWarmup,
+        reason: '标签测宽的键和预热对不上',
+      );
+      if (entry.value.hasTags) {
+        expect(
+          _tagMisses() - tagMissesAfterWarmup,
+          0,
+          reason: '预热过的卡片重新建出时标签测宽未命中数必须为 0',
+        );
+        expect(
+          _tagHits(),
+          greaterThan(0),
+          reason: '预热过的卡片重新建出时必须命中标签测宽缓存',
+        );
+      }
     });
   }
+
+  testWidgets('自定义 tagBuilder 存在时跳过标签测宽预热', (tester) async {
+    final quote = _regularTagQuote();
+    final context = await pumpCard(
+      tester,
+      quote,
+      key: const ValueKey('tag-builder-a'),
+      tagMap: _sampleTagMap,
+      tagBuilder: (tag) => Text(tag.name),
+    );
+    final width = QuoteItemWidget.lastCollapsedContentWidth!;
+
+    QuoteContent.clearCacheForTesting();
+    QuoteItemWidget.clearExpansionCacheForTest();
+
+    QuoteItemWidget.warmCollapsedMeasurements(
+      context: context,
+      quote: quote,
+      contentMaxWidth: width,
+      mediaStyle: NoteCardMediaStyle.thumbnail,
+      prioritizeBoldContent: false,
+      showExactTime: false,
+      tagMap: _sampleTagMap,
+      tagBuilder: (tag) => Text(tag.name),
+    );
+
+    expect(
+      _tagMisses(),
+      0,
+      reason: 'tagBuilder != null 时应跳过标签测宽预热',
+    );
+  });
+
+  testWidgets('tagMap 缺失标签 ID 时回退 unknownTag 兜底预热且键一致', (tester) async {
+    final quote = Quote(
+      id: 'missing-tag-quote',
+      content: List.filled(8, _longChunk).join('\n'),
+      date: DateTime(2025, 6, 21, 9).toIso8601String(),
+      editSource: 'inline',
+      dayPeriod: 'morning',
+      tagIds: const ['tag-non-existent'],
+    );
+    final context = await pumpCard(
+      tester,
+      quote,
+      key: const ValueKey('missing-tag-a'),
+      tagMap: const {},
+    );
+    final width = QuoteItemWidget.lastCollapsedContentWidth!;
+
+    QuoteContent.clearCacheForTesting();
+    QuoteItemWidget.clearExpansionCacheForTest();
+
+    QuoteItemWidget.warmCollapsedMeasurements(
+      context: context,
+      quote: quote,
+      contentMaxWidth: width,
+      mediaStyle: NoteCardMediaStyle.thumbnail,
+      prioritizeBoldContent: false,
+      showExactTime: false,
+      tagMap: const {},
+    );
+
+    final tagMissesAfterWarmup = _tagMisses();
+    expect(tagMissesAfterWarmup, greaterThan(0),
+        reason: '兜底 unknownTag 预热也会测宽一次');
+
+    await pumpCard(
+      tester,
+      quote,
+      key: const ValueKey('missing-tag-b'),
+      tagMap: const {},
+    );
+
+    expect(
+      _tagMisses(),
+      tagMissesAfterWarmup,
+      reason: '兜底 unknownTag 重新渲染时未命中数不应增加',
+    );
+    expect(
+      _tagHits(),
+      greaterThan(0),
+      reason: '兜底 unknownTag 重新渲染必须命中预热缓存',
+    );
+  });
+
+  testWidgets('标签测宽缓存清理后重新建出必须产生新的未命中', (tester) async {
+    final quote = _regularTagQuote();
+    final context = await pumpCard(
+      tester,
+      quote,
+      key: const ValueKey('cache-clear-a'),
+      tagMap: _sampleTagMap,
+    );
+    final width = QuoteItemWidget.lastCollapsedContentWidth!;
+
+    QuoteContent.clearCacheForTesting();
+    QuoteItemWidget.clearExpansionCacheForTest();
+
+    QuoteItemWidget.warmCollapsedMeasurements(
+      context: context,
+      quote: quote,
+      contentMaxWidth: width,
+      mediaStyle: NoteCardMediaStyle.thumbnail,
+      prioritizeBoldContent: false,
+      showExactTime: false,
+      tagMap: _sampleTagMap,
+    );
+    final tagMissesAfterWarmup = _tagMisses();
+    expect(tagMissesAfterWarmup, greaterThan(0));
+
+    // 清理测宽缓存
+    QuoteItemWidget.clearHeaderTextWidthCache();
+    final clearedStats = QuoteItemWidget.getTagTextWidthCacheStats();
+    expect(clearedStats['cacheSize'], 0);
+    expect(clearedStats['cacheMisses'], 0);
+    expect(clearedStats['cacheHits'], 0);
+
+    // 重新建出卡片，未预热状态下应重新产生未命中
+    await pumpCard(
+      tester,
+      quote,
+      key: const ValueKey('cache-clear-b'),
+      tagMap: _sampleTagMap,
+    );
+
+    expect(
+      _tagMisses(),
+      greaterThan(0),
+      reason: '缓存清理后重新构建卡片应重新产生未命中',
+    );
+  });
 
   testWidgets('测量缓存被清空后，回到前台必须重新预热', (tester) async {
     // App 进后台时 `main.dart` 会把 QuoteContent 的测量缓存整排清掉（省内存）。

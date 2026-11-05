@@ -146,6 +146,9 @@ class QuoteItemWidget extends StatefulWidget {
   // 缓存按文本做键 ⇒ 首次必然未命中。它是首滑成本的另一个嫌疑人，一并计量。
   static int _headerTextWidthWorkMicros = 0;
   static int _headerTextWidthWorstWorkMicros = 0;
+  static int _tagTextWidthCacheHits = 0;
+  static int _tagTextWidthCacheMisses = 0;
+  static int _tagTextWidthWorkMicros = 0;
 
   /// 清理折叠判断缓存，常用于测试或手动刷新场景。
   static void clearExpansionCache() {
@@ -153,13 +156,16 @@ class QuoteItemWidget extends StatefulWidget {
     _cacheHitCount = 0;
   }
 
-  /// 清理列表卡片头部文本测宽缓存，常用于测试或主题/字体变化后的兜底刷新。
+  /// 清理列表卡片头部与标签文本测宽缓存，常用于测试或主题/字体变化后的兜底刷新。
   static void clearHeaderTextWidthCache() {
     _headerTextWidthCache.clear();
     _headerTextWidthCacheHits = 0;
     _headerTextWidthCacheMisses = 0;
     _headerTextWidthWorkMicros = 0;
     _headerTextWidthWorstWorkMicros = 0;
+    _tagTextWidthCacheHits = 0;
+    _tagTextWidthCacheMisses = 0;
+    _tagTextWidthWorkMicros = 0;
   }
 
   /// 获取折叠缓存当前状态，便于调试观察命中率。
@@ -177,6 +183,8 @@ class QuoteItemWidget extends StatefulWidget {
       'headerMisses': _headerTextWidthCacheMisses,
       'headerWorkMicros': _headerTextWidthWorkMicros,
       'headerWorstWorkMicros': _headerTextWidthWorstWorkMicros,
+      'tagMisses': _tagTextWidthCacheMisses,
+      'tagWorkMicros': _tagTextWidthWorkMicros,
     };
   }
 
@@ -188,6 +196,21 @@ class QuoteItemWidget extends StatefulWidget {
         'workMicros': _headerTextWidthWorkMicros,
         'worstWorkMicros': _headerTextWidthWorstWorkMicros,
       };
+
+  @visibleForTesting
+  static Map<String, int> getTagTextWidthCacheStats() => {
+        'cacheSize': _headerTextWidthCache.length,
+        'cacheHits': _tagTextWidthCacheHits,
+        'cacheMisses': _tagTextWidthCacheMisses,
+        'workMicros': _tagTextWidthWorkMicros,
+      };
+
+  @visibleForTesting
+  static void resetTagTextWidthCacheStats() {
+    _tagTextWidthCacheHits = 0;
+    _tagTextWidthCacheMisses = 0;
+    _tagTextWidthWorkMicros = 0;
+  }
 
   /// 测试辅助方法：把卡片持有的静态可变状态一次清干净。
   ///
@@ -288,10 +311,10 @@ class QuoteItemWidget extends StatefulWidget {
 
   /// 单行文字测宽（带缓存）。
   ///
-  /// [countAsHeader] 决定这次测量算不算进 `headerWorkUs` / `headerMiss` 这两个
-  /// 性能计数器。它们的口径是「日期/位置/天气」那三段。标签估宽复用同一张缓存表
-  /// 没问题，但**不能混进同一组计数器**，否则下一轮复测会对着一个变了口径的数字
-  /// 下结论。
+  /// [countAsHeader] 决定这次测量算进头部指标（`headerWorkUs` / `headerMiss`）
+  /// 还是标签指标（`tagWorkUs` / `tagMiss`）。它们的口径分别对应「日期/位置/天气」
+  /// 和底栏「标签条」。标签估宽复用同一张缓存表，但记入独立专属的标签计数器，
+  /// 避免污染原有头部文字度量口径。
   static double measureSingleLineTextWidth(
     BuildContext context,
     String text,
@@ -312,6 +335,8 @@ class QuoteItemWidget extends StatefulWidget {
     if (cached != null) {
       if (countAsHeader) {
         _headerTextWidthCacheHits++;
+      } else {
+        _tagTextWidthCacheHits++;
       }
       _headerTextWidthCache[cacheKey] = cached;
       return cached;
@@ -319,6 +344,8 @@ class QuoteItemWidget extends StatefulWidget {
 
     if (countAsHeader) {
       _headerTextWidthCacheMisses++;
+    } else {
+      _tagTextWidthCacheMisses++;
     }
     final stopwatch = Stopwatch()..start();
     final textPainter = TextPainter(
@@ -344,6 +371,8 @@ class QuoteItemWidget extends StatefulWidget {
       if (stopwatch.elapsedMicroseconds > _headerTextWidthWorstWorkMicros) {
         _headerTextWidthWorstWorkMicros = stopwatch.elapsedMicroseconds;
       }
+    } else {
+      _tagTextWidthWorkMicros += stopwatch.elapsedMicroseconds;
     }
     if (_headerTextWidthCache.length >= _maxHeaderTextWidthCacheSize) {
       final keysToRemove = _headerTextWidthCache.keys
@@ -357,6 +386,51 @@ class QuoteItemWidget extends StatefulWidget {
     return width;
   }
 
+  /// 对标签ID列表进行排序，优先显示匹配筛选条件的标签
+  static List<String> _getSortedTagIds(
+    List<String> tagIds,
+    List<String> selectedTagIds,
+  ) {
+    if (selectedTagIds.isEmpty) {
+      // 没有筛选条件时，按原顺序返回
+      return tagIds;
+    }
+
+    // 将标签分为两组：匹配筛选条件的和其他的
+    final matchedTags = <String>[];
+    final otherTags = <String>[];
+
+    for (final tagId in tagIds) {
+      if (selectedTagIds.contains(tagId)) {
+        matchedTags.add(tagId);
+      } else {
+        otherTags.add(tagId);
+      }
+    }
+
+    // 先显示匹配的标签，再显示其他标签
+    return [...matchedTags, ...otherTags];
+  }
+
+  /// 标签胶囊的文字样式。估宽、渲染与预热**必须共用这一处**：两边样式差一点，
+  /// 估出来的宽度就不是真实宽度，放不下也会被判成放得下。
+  ///
+  /// 基准是 `labelSmall`（11sp 黑体）而不是 `bodySmall`。胶囊是界面标签，
+  /// 按 `AppTheme._applyStyleTypography` 定的全局规则，11–14sp 的功能性文字一律
+  /// 留在黑体上——原来拿 `bodySmall` 再写死 11sp，等于在衬线风格下把中文宋体
+  /// 缩到 11sp 去渲染，正是那条规则要避开的字号区间，标签糊成一团。
+  /// 顺带也不用再写死字号：`labelSmall` 本来就是 11。
+  static TextStyle? _tagChipTextStyle(
+    ThemeData theme,
+    Color secondaryTextColor, {
+    required bool isFilteredTag,
+  }) {
+    return theme.textTheme.labelSmall?.copyWith(
+      color: secondaryTextColor,
+      fontWeight: isFilteredTag ? FontWeight.w600 : FontWeight.w500,
+    );
+  }
+
   /// 返回这条笔记的右侧缩略图这次会画多大，不画时为 null。调用方要按这个尺寸
   /// 预解码，见 [QuoteContent.warmCollapsedLayout]。
   static double? warmCollapsedMeasurements({
@@ -366,6 +440,9 @@ class QuoteItemWidget extends StatefulWidget {
     required String mediaStyle,
     required bool prioritizeBoldContent,
     required bool showExactTime,
+    Map<String, NoteTag>? tagMap,
+    List<String> selectedTagIds = const [],
+    Widget Function(NoteTag)? tagBuilder,
   }) {
     if (!contentMaxWidth.isFinite || contentMaxWidth <= 0) return null;
 
@@ -394,6 +471,47 @@ class QuoteItemWidget extends StatefulWidget {
 
     final theme = Theme.of(context);
     final colors = QuoteCardColors.fromHex(quote.colorHex, theme.colorScheme);
+
+    // 标签测宽预热：若未使用自定义 tagBuilder 且存在标签，预热标签文本与 Emoji 图标测宽。
+    if (tagBuilder == null && quote.tagIds.isNotEmpty) {
+      final l10n = AppLocalizations.of(context);
+      final secondaryTextColor = colors.secondaryTextColor;
+      final sortedTagIds = _getSortedTagIds(
+        quote.tagIds,
+        selectedTagIds,
+      );
+      for (final tagId in sortedTagIds) {
+        final tag = tagMap?[tagId] ??
+            NoteTag(
+              id: tagId,
+              name: l10n.unknownTag,
+            );
+        final isFilteredTag = selectedTagIds.contains(tagId);
+        final textStyle = _tagChipTextStyle(
+          theme,
+          secondaryTextColor,
+          isFilteredTag: isFilteredTag,
+        );
+        final iconName = tag.iconName;
+        final hasIcon = iconName != null && iconName.isNotEmpty;
+        final isEmojiIcon = hasIcon && IconUtils.isEmoji(iconName);
+
+        if (hasIcon && isEmojiIcon) {
+          measureSingleLineTextWidth(
+            context,
+            IconUtils.getDisplayIcon(iconName),
+            const TextStyle(fontSize: 12),
+            countAsHeader: false,
+          );
+        }
+        measureSingleLineTextWidth(
+          context,
+          tag.localizedName(l10n),
+          textStyle ?? const TextStyle(),
+          countAsHeader: false,
+        );
+      }
+    }
     final style = collapsedContentStyle(theme, colors.primaryTextColor);
 
     QuoteContent.exceedsCollapsedHeightForLayout(
@@ -521,27 +639,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   List<String> _getSortedTagIds(
     List<String> tagIds,
     List<String> selectedTagIds,
-  ) {
-    if (selectedTagIds.isEmpty) {
-      // 没有筛选条件时，按原顺序返回
-      return tagIds;
-    }
-
-    // 将标签分为两组：匹配筛选条件的和其他的
-    final matchedTags = <String>[];
-    final otherTags = <String>[];
-
-    for (final tagId in tagIds) {
-      if (selectedTagIds.contains(tagId)) {
-        matchedTags.add(tagId);
-      } else {
-        otherTags.add(tagId);
-      }
-    }
-
-    // 先显示匹配的标签，再显示其他标签
-    return [...matchedTags, ...otherTags];
-  }
+  ) =>
+      QuoteItemWidget._getSortedTagIds(tagIds, selectedTagIds);
 
   // 根据天气key获取图标
   IconData _getWeatherIcon(String weatherKey) {
@@ -977,24 +1076,17 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   /// 标签条容不下时才退回滚动视图的余量。
   static const double _tagStripFitMargin = 4.0;
 
-  /// 标签胶囊的文字样式。估宽和渲染**必须共用这一处**：两边样式差一点，
-  /// 估出来的宽度就不是真实宽度，放不下也会被判成放得下。
-  ///
-  /// 基准是 `labelSmall`（11sp 黑体）而不是 `bodySmall`。胶囊是界面标签，
-  /// 按 `AppTheme._applyStyleTypography` 定的全局规则，11–14sp 的功能性文字一律
-  /// 留在黑体上——原来拿 `bodySmall` 再写死 11sp，等于在衬线风格下把中文宋体
-  /// 缩到 11sp 去渲染，正是那条规则要避开的字号区间，标签糊成一团。
-  /// 顺带也不用再写死字号：`labelSmall` 本来就是 11。
+  /// 标签胶囊的文字样式，转发到 [QuoteItemWidget._tagChipTextStyle]。
   TextStyle? _tagChipTextStyle(
     ThemeData theme,
     Color secondaryTextColor, {
     required bool isFilteredTag,
-  }) {
-    return theme.textTheme.labelSmall?.copyWith(
-      color: secondaryTextColor,
-      fontWeight: isFilteredTag ? FontWeight.w600 : FontWeight.w500,
-    );
-  }
+  }) =>
+      QuoteItemWidget._tagChipTextStyle(
+        theme,
+        secondaryTextColor,
+        isFilteredTag: isFilteredTag,
+      );
 
   /// 标签条。
   ///
