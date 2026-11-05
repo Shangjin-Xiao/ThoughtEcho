@@ -54,7 +54,12 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
   void initState() {
     super.initState();
     _localFilePath = _resolveLocalFilePath(widget.imageUrl);
-    unawaited(_checkMotionPhotoAvailability());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      unawaited(_checkMotionPhotoAvailability());
+    });
   }
 
   @override
@@ -69,7 +74,7 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
       _localFilePath != null;
 
   Future<void> _checkMotionPhotoAvailability() async {
-    if (!_canCheckMotionPhoto) {
+    if (!mounted || !_canCheckMotionPhoto) {
       return;
     }
 
@@ -86,6 +91,9 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
         _motionInfo = info;
       });
     } catch (error, stackTrace) {
+      if (!mounted) {
+        return;
+      }
       logError(
         '检测动态照片失败: ${widget.imageUrl}',
         error: error,
