@@ -172,6 +172,67 @@ void main() {
       expect(stats['cacheHits'], greaterThanOrEqualTo(1));
     });
 
+    testWidgets('重复卡片标签文本测宽复用缓存并正确记录标签度量', (tester) async {
+      final tagMap = {
+        'tag-1': NoteTag(id: 'tag-1', name: '标签一'),
+        'tag-2': NoteTag(id: 'tag-2', name: '标签二', iconName: '🚀'),
+      };
+      final quote = _buildQuote(
+        id: 'same-tags-1',
+        editSource: 'inline',
+      ).copyWith(tagIds: const ['tag-1', 'tag-2']);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: Column(
+                children: [
+                  QuoteItemWidget(
+                    quote: quote,
+                    tagMap: tagMap,
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                  QuoteItemWidget(
+                    quote: quote.copyWith(id: 'same-tags-2'),
+                    tagMap: tagMap,
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final tagStats = QuoteItemWidget.getTagTextWidthCacheStats();
+      expect(tagStats['cacheSize'], greaterThanOrEqualTo(1));
+      expect(tagStats['cacheMisses'], greaterThanOrEqualTo(1));
+      expect(tagStats['cacheHits'], greaterThanOrEqualTo(1));
+      expect(tagStats['workMicros'], greaterThanOrEqualTo(0));
+
+      final allStats = QuoteItemWidget.getCacheStats();
+      expect(allStats['tagMisses'], tagStats['cacheMisses']);
+      expect(allStats['tagWorkMicros'], tagStats['workMicros']);
+    });
+
     testWidgets('普通折叠卡片使用非动画外壳', (tester) async {
       final quote = _buildQuote(editSource: 'inline');
 

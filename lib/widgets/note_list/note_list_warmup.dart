@@ -138,6 +138,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
     final expandMissesBefore = QuoteContent.debugExpansionMissCount;
     final planMissesBefore = CollapsedRichTextPlanCache.missCount;
 
+    final tagMap = _obtainTagMap();
     final stopwatch = Stopwatch()..start();
     while (stopwatch.elapsedMicroseconds <
         NoteListViewState._idleWarmupBudgetMicros) {
@@ -151,6 +152,8 @@ extension _NoteListWarmupExtension on NoteListViewState {
         mediaStyle: mediaStyle,
         prioritizeBoldContent: prioritizeBoldContent,
         showExactTime: showExactTime,
+        tagMap: tagMap,
+        selectedTagIds: widget.selectedTagIds,
       );
       _warmCollapsedMediaImage(
         quote: quote,
@@ -191,7 +194,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
   /// **一次只撑一级**：每撑一级都要跑一次布局并把新进缓存区的那几张卡片建出来，
   /// 一次撑到位就是一个上百毫秒的长任务，用户正好这时开始滑就白优化了。
   bool _growIdleCacheExtent() {
-    if (_idleCacheExtentBoostPx >=
+    if (_idleCacheExtentBoostNotifier.value >=
         NoteListViewState._maxIdleCacheExtentBoostPx) {
       return false;
     }
@@ -208,11 +211,9 @@ extension _NoteListWarmupExtension on NoteListViewState {
       return false;
     }
 
-    _updateState(() {
-      _idleCacheExtentBoostPx =
-          (_idleCacheExtentBoostPx + NoteListViewState._idleCacheExtentStepPx)
-              .clamp(0.0, NoteListViewState._maxIdleCacheExtentBoostPx);
-    });
+    _idleCacheExtentBoostNotifier.value = (_idleCacheExtentBoostNotifier.value +
+            NoteListViewState._idleCacheExtentStepPx)
+        .clamp(0.0, NoteListViewState._maxIdleCacheExtentBoostPx);
     return true;
   }
 
