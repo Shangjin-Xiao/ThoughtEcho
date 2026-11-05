@@ -44,7 +44,8 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
-  Timer? _searchTelemetryTimer;
+  Timer? _searchDebounceTimer;
+  int _bundleRequestId = 0;
   Future<_MemoryBundle>? _bundleFuture;
 
   @override
@@ -61,12 +62,14 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
 
   void _refreshBundle() {
     final memoryService = context.read<AgentMemoryService>();
-    _bundleFuture = _loadBundle(memoryService, _searchQuery);
+    final requestId = ++_bundleRequestId;
+    _bundleFuture = _loadBundle(memoryService, _searchQuery, requestId);
   }
 
   @override
   void dispose() {
-    _searchTelemetryTimer?.cancel();
+    _searchDebounceTimer?.cancel();
+    _bundleRequestId++;
     _searchController.dispose();
     super.dispose();
   }
@@ -92,21 +95,25 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
                 ),
                 onChanged: (val) {
                   final trimmed = val.trim();
-                  _searchTelemetryTimer?.cancel();
-                  if (trimmed.isNotEmpty) {
-                    _searchTelemetryTimer = Timer(
-                      AppConstants.searchDebounceDelay,
-                      () {
-                        if (mounted) {
-                          AptabaseHelper.trackEvent('agent_memory_search');
-                        }
-                      },
-                    );
+                  _searchDebounceTimer?.cancel();
+                  if (trimmed.isEmpty) {
+                    setState(() {
+                      _searchQuery = '';
+                      _refreshBundle();
+                    });
+                    return;
                   }
-                  setState(() {
-                    _searchQuery = trimmed.toLowerCase();
-                    _refreshBundle();
-                  });
+                  _searchDebounceTimer = Timer(
+                    AppConstants.searchDebounceDelay,
+                    () {
+                      if (!mounted) return;
+                      AptabaseHelper.trackEvent('agent_memory_search');
+                      setState(() {
+                        _searchQuery = trimmed.toLowerCase();
+                        _refreshBundle();
+                      });
+                    },
+                  );
                 },
               )
             : Text(l10n.agentMemoryPageTitle),
@@ -118,7 +125,8 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
               setState(() {
                 if (_isSearching) {
                   _isSearching = false;
-                  _searchTelemetryTimer?.cancel();
+                  _searchDebounceTimer?.cancel();
+                  _bundleRequestId++;
                   _searchController.clear();
                   _searchQuery = '';
                   _refreshBundle();
@@ -206,7 +214,9 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              final future = _loadBundle(memoryService, _searchQuery);
+              final requestId = ++_bundleRequestId;
+              final future =
+                  _loadBundle(memoryService, _searchQuery, requestId);
               setState(() => _bundleFuture = future);
               await future;
             },
@@ -517,10 +527,22 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
   Future<_MemoryBundle> _loadBundle(
     AgentMemoryService memoryService,
     String query,
+    int requestId,
   ) async {
     final allProfiles = await memoryService.allProfileEntries();
+    if (!mounted || requestId != _bundleRequestId) {
+      return const _MemoryBundle(profiles: [], slices: [], facts: []);
+    }
+
     final allSlices = await memoryService.activeRecentSlices();
+    if (!mounted || requestId != _bundleRequestId) {
+      return const _MemoryBundle(profiles: [], slices: [], facts: []);
+    }
+
     final allFacts = await memoryService.allFacts(query: query);
+    if (!mounted || requestId != _bundleRequestId) {
+      return const _MemoryBundle(profiles: [], slices: [], facts: []);
+    }
 
     if (query.isEmpty) {
       return _MemoryBundle(
