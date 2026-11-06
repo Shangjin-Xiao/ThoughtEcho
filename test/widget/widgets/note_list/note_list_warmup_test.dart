@@ -790,10 +790,12 @@ void main() {
           ),
       ];
 
+      final favoriteGuideKey = GlobalKey();
       await tester.pumpWidget(
         _TestApp(
           databaseService: databaseService,
           settingsService: _FakeSettingsService(),
+          favoriteButtonGuideKey: favoriteGuideKey,
         ),
       );
       await tester.pump();
@@ -832,6 +834,13 @@ void main() {
             'ListView.builder 的 cacheExtent 随 ValueNotifier 正确递增至基础高度 + 1600px',
       );
 
+      // 回归断言：局部扩充缓存区后，首张卡片的引导 GlobalKey 必须始终保留有效上下文，不得被赋空脱落
+      expect(
+        favoriteGuideKey.currentContext,
+        isNotNull,
+        reason: 'notifier 触发局部重建后首卡引导 key 丢失',
+      );
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 2));
       await databaseService.disposeStream();
@@ -843,10 +852,12 @@ class _TestApp extends StatelessWidget {
   const _TestApp({
     required this.databaseService,
     required this.settingsService,
+    this.favoriteButtonGuideKey,
   });
 
   final DatabaseService databaseService;
   final SettingsService settingsService;
+  final GlobalKey? favoriteButtonGuideKey;
 
   @override
   Widget build(BuildContext context) {
@@ -862,6 +873,8 @@ class _TestApp extends StatelessWidget {
         locale: const Locale('zh'),
         home: Material(
           child: NoteListView(
+            favoriteButtonGuideKey: favoriteButtonGuideKey,
+            onFavorite: (_) {},
             tags: const <NoteTag>[],
             selectedTagIds: const [],
             onTagSelectionChanged: (_) {},
