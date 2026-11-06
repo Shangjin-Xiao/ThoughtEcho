@@ -819,7 +819,12 @@ void main() {
 
       // 立即清空输入框为 ''
       await tester.enterText(find.byType(TextField), '');
-      await _waitForWidget(tester, find.text('资深全栈工程师'));
+      // 只等待真实时间内的异步查询完成，不推进 fake 时间，300ms 防抖计时器仍未到期
+      for (var i = 0; i < 15 && find.text('资深全栈工程师').evaluate().isEmpty; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+      }
 
       // 验证无需等待 300ms 防抖，即时恢复全部条目
       expect(find.text('资深全栈工程师'), findsOneWidget);

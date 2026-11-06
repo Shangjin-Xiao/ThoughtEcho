@@ -107,8 +107,6 @@ MotionPhotoInfo? _detectMotionPhotoInWorker(String filePath) {
     return MotionPhotoInfo(videoStart: start, videoEnd: bytes.length);
   } on FileSystemException {
     return null;
-  } catch (_) {
-    return null;
   }
 }
 
