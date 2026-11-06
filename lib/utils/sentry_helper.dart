@@ -415,20 +415,35 @@ final _spanWordSplitPattern = RegExp(
   r'[_\.\-\s]+|(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])',
 );
 
+final _sensitiveSpanKeyCache = <String, bool>{};
+
 bool _isSensitiveSpanKey(String key) {
+  final cached = _sensitiveSpanKeyCache[key];
+  if (cached != null) return cached;
+
   final words =
       key.split(_spanWordSplitPattern).map((w) => w.toLowerCase()).toList();
-  if (words.isNotEmpty && _spanMetricSuffixes.contains(words.last)) {
-    return false;
-  }
-  for (var i = 0; i < words.length; i++) {
-    final w = words[i];
-    if (_spanSensitiveWords.contains(w)) return true;
-    if (w == 'api' && i + 1 < words.length && words[i + 1] == 'key') {
-      return true;
+
+  bool result = false;
+  if (words.isEmpty || !_spanMetricSuffixes.contains(words.last)) {
+    for (var i = 0; i < words.length; i++) {
+      final w = words[i];
+      if (_spanSensitiveWords.contains(w)) {
+        result = true;
+        break;
+      }
+      if (w == 'api' && i + 1 < words.length && words[i + 1] == 'key') {
+        result = true;
+        break;
+      }
     }
   }
-  return false;
+
+  if (_sensitiveSpanKeyCache.length < 1000) {
+    _sensitiveSpanKeyCache[key] = result;
+  }
+
+  return result;
 }
 
 dynamic _sanitizeSpanValue(dynamic value, {String? key}) {
