@@ -329,7 +329,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
 
   Future<void> _launchOnlineDocs() async {
     final l10n = AppLocalizations.of(context);
-    const url = 'https://shangjin-xiao.github.io/ThoughtEcho/user-guide.html';
+    const url = 'https://note.shangjinyun.cn/user-guide.html';
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
