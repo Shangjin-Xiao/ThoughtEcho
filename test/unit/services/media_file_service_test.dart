@@ -268,6 +268,29 @@ void main() {
       expect(success, isFalse);
     });
 
+    test('restoreMediaFiles 包含无法读取的文件时继续恢复其他文件不中断', () async {
+      final backupDir =
+          await TestHarness.createTempDirectory('backup_media_fail_test');
+      final validFile = File(path.join(backupDir.path, 'media', 'valid.jpg'));
+      await validFile.parent.create(recursive: true);
+      await validFile.writeAsString('valid content');
+
+      // Create a directory where a file should be, triggering an error during copy/length
+      final invalidFileDir =
+          Directory(path.join(backupDir.path, 'media', 'invalid.jpg'));
+      await invalidFileDir.create(recursive: true);
+
+      final success = await MediaFileService.restoreMediaFiles(backupDir.path);
+
+      expect(success,
+          isTrue); // Should complete successfully despite individual file failure
+
+      final appDocsDir = TestHarness.applicationDocumentsDirectory;
+      final restoredValid =
+          File(path.join(appDocsDir.path, 'media', 'valid.jpg'));
+      expect(restoredValid.existsSync(), isTrue);
+    });
+
     test('importLargeFileSecurely 导入文件到目标目录', () async {
       final sourceFile =
           await createTestFile('large.dat', content: 'large content');
