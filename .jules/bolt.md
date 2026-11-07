@@ -336,3 +336,11 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** 在高频文本处理、历史对话摘要、版本号比较以及系统提示词文本处理方法（如 `AgentHistoryBuilder._truncate`、`compareVersions` 与 `AIPromptManager.formatLocalReportInsight`）中，内联调用 `RegExp(...)` 会在每次调用时重新分配和编译正则表达式对象。将其提取为静态/文件级只读变量可在保持现有代码语义与行为完全一致的前提下，消除重复正则编译和垃圾回收（GC）开销。
 
 **Action:** 将 `AgentHistoryBuilder` 中的 `_whitespaceRegex`、`version_utils.dart` 中的 `_vPrefixRegex` 与 `_plusMinusRegex`，以及 `AIPromptManager` 中的 `_leadingHashRegex` 提取为 `static final RegExp` 或 `final RegExp` 只读对象，并在新增的 `test/performance/utils_regex_benchmark_test.dart` 性能基准测试中验证通过。
+
+## 2026-11-03 - 优化媒体路径脱敏与多语言提取中的正则表达式重复编译与对象分配
+
+**Learning:**
+在错误脱敏和上报（如 `MissingMediaFileReporter.redact`）以及各服务语言参数归一化（如 `recommendedDailyQuoteProviderForLanguage`、`_buildLocaleIdentifier`）等高频路径中，内联调用 `RegExp(r'[\\/]')` 或 `split(RegExp(r'[_-]'))` 会在每次函数执行时重新分配和编译正则表达式对象，同时造成多余的临时列表开销。将路径分隔符提取为类级 `static final RegExp` 静态常量，并统一复用底层已预编译静态正则的工具方法 `I18nLanguage.base`，能够在统一多语言解析逻辑的同时彻底消除重复编译开销与 GC 压力。
+
+**Action:**
+在 `lib/utils/safe_file_image.dart` 中提取 `MissingMediaFileReporter._pathSeparatorRegex`；在 `lib/services/api_service.dart` 和 `lib/services/local_geocoding_service.dart` 中使用 `I18nLanguage.base` 替换原内联 `split(RegExp(r'[_-]'))`。在 `test/performance/utils_regex_benchmark_test.dart` 基准测试中验证通过，50,000 次执行稳定高效，有效避免了高频调用时的重复编译和不必要的内存分配。
