@@ -106,7 +106,7 @@ class _MmkvMigrationDiagnosticPageState
         context,
         isZh
             ? '重新执行迁移失败，请查看应用日志'
-            : 'Migration failed, please check app logs',
+            : 'Migration re-run failed, please check app logs',
       );
     }
   }
@@ -277,6 +277,7 @@ class _MmkvMigrationDiagnosticPageState
     bool isZh,
   ) {
     final shapeTokens = AppShapeTokens.of(context);
+    final btnRadius = BorderRadius.circular(shapeTokens.buttonRadius);
     final binary = report.primaryBinaryResult;
     final crcStatus = !binary.fileExists
         ? (isZh ? '无 mmkv.default 文件' : 'No mmkv.default file')
@@ -368,7 +369,7 @@ class _MmkvMigrationDiagnosticPageState
                 padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+                  borderRadius: btnRadius,
                 ),
                 child: Text(
                   binary.warnings.join('\n'),
@@ -392,6 +393,7 @@ class _MmkvMigrationDiagnosticPageState
   ) {
     final semantic = AppSemanticColors.of(context);
     final shapeTokens = AppShapeTokens.of(context);
+    final btnRadius = BorderRadius.circular(shapeTokens.buttonRadius);
     final binaryKeyCount = report.primaryBinaryResult.entries.length;
     final nativeKeyCount =
         report.comparisons.where((c) => c.presentInNative).length;
@@ -443,9 +445,7 @@ class _MmkvMigrationDiagnosticPageState
                   ),
                   decoration: BoxDecoration(
                     color: badgeBg,
-                    borderRadius: BorderRadius.circular(
-                      shapeTokens.buttonRadius,
-                    ),
+                    borderRadius: btnRadius,
                   ),
                   child: Text(
                     allClean
@@ -494,7 +494,6 @@ class _MmkvMigrationDiagnosticPageState
   }
 
   Widget _buildActionRow(BuildContext context, bool isZh) {
-    final canCopy = !_loading && _report != null;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -507,7 +506,7 @@ class _MmkvMigrationDiagnosticPageState
         ),
         OutlinedButton.icon(
           key: const Key('mmkv_diagnostic_copy_json_action_button'),
-          onPressed: canCopy ? _handleCopyJson : null,
+          onPressed: (_loading || _report == null) ? null : _handleCopyJson,
           icon: const Icon(Icons.copy_all_outlined),
           label: Text(isZh ? '复制诊断 JSON' : 'Copy Diagnostic JSON'),
         ),
@@ -574,6 +573,7 @@ class _MmkvMigrationDiagnosticPageState
   ) {
     final semantic = AppSemanticColors.of(context);
     final shapeTokens = AppShapeTokens.of(context);
+    final btnRadius = BorderRadius.circular(shapeTokens.buttonRadius);
     final spOnly = entry.presentInSharedPrefs &&
         !entry.presentInBinary &&
         !entry.presentInNative;
@@ -618,7 +618,7 @@ class _MmkvMigrationDiagnosticPageState
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: statusBg,
-            borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
+            borderRadius: btnRadius,
           ),
           child: Text(
             statusLabel,
