@@ -18,9 +18,11 @@ void main() {
 
   Widget buildSheet({
     List<NoteTag>? tags,
-    List<String> selectedTagIds = const [],
+    List<String>? selectedTagIds = const [],
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    String sortType = 'time',
+    bool sortAscending = false,
     void Function(
       List<String> tagIds,
       String sortType,
@@ -37,8 +39,8 @@ void main() {
         body: NoteFilterSortSheet(
           allTags: tags ?? testTags,
           selectedTagIds: selectedTagIds,
-          sortType: 'time',
-          sortAscending: false,
+          sortType: sortType,
+          sortAscending: sortAscending,
           selectedWeathers: selectedWeathers ?? ['sunny'],
           selectedDayPeriods: selectedDayPeriods ?? ['morning'],
           onApply: onApply ?? (_, __, ___, ____, _____) {},
@@ -287,6 +289,273 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(applyButton);
       await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+        'modifying default filter and resetting keeps Apply button enabled and calls onApply',
+        (tester) async {
+      List<String>? appliedTags;
+      String? appliedSortType;
+      bool? appliedSortAsc;
+      List<String>? appliedWeathers;
+      List<String>? appliedPeriods;
+
+      await tester.pumpWidget(
+        buildSheet(
+          selectedTagIds: const [],
+          selectedWeathers: const [],
+          selectedDayPeriods: const [],
+          onApply: (tags, sortType, sortAsc, weathers, periods) {
+            appliedTags = tags;
+            appliedSortType = sortType;
+            appliedSortAsc = sortAsc;
+            appliedWeathers = weathers;
+            appliedPeriods = periods;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final applyButtonFinder = find.byType(FilledButton);
+      // Initially, Apply button should be disabled
+      expect(tester.widget<FilledButton>(applyButtonFinder).onPressed, isNull);
+
+      // Modify by selecting 'Work'
+      final workChip = find.widgetWithText(FilterChip, 'Work');
+      await tester.ensureVisible(workChip);
+      await tester.pumpAndSettle();
+      await tester.tap(workChip);
+      await tester.pumpAndSettle();
+
+      // Apply button should be enabled after modification
+      expect(
+        tester.widget<FilledButton>(applyButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      // Tap Reset button
+      final resetButton = find.widgetWithText(TextButton, '重置');
+      await tester.ensureVisible(resetButton);
+      await tester.pumpAndSettle();
+      await tester.tap(resetButton);
+      await tester.pumpAndSettle();
+
+      // Even though temp matches initial default parameters, explicit reset must keep Apply enabled
+      expect(
+        tester.widget<FilledButton>(applyButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      // Tapping Apply triggers onApply callback with default parameters
+      await tester.ensureVisible(applyButtonFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(applyButtonFinder);
+      await tester.pumpAndSettle();
+
+      expect(appliedTags, isEmpty);
+      expect(appliedSortType, equals('time'));
+      expect(appliedSortAsc, isFalse);
+      expect(appliedWeathers, isEmpty);
+      expect(appliedPeriods, isEmpty);
+    });
+
+    testWidgets(
+        'unchecking and re-checking tag does not trigger false-positive Apply button enablement (unordered Set equality)',
+        (tester) async {
+      await tester.pumpWidget(
+        buildSheet(
+          selectedTagIds: const ['tag_1', 'tag_2'],
+          selectedWeathers: const [],
+          selectedDayPeriods: const [],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final applyButtonFinder = find.byType(FilledButton);
+      // Initially disabled
+      expect(tester.widget<FilledButton>(applyButtonFinder).onPressed, isNull);
+
+      // Uncheck 'Work' ('tag_1')
+      final workChip = find.widgetWithText(FilterChip, 'Work');
+      await tester.ensureVisible(workChip);
+      await tester.pumpAndSettle();
+      await tester.tap(workChip);
+      await tester.pumpAndSettle();
+
+      // Changes exist, Apply is enabled
+      expect(
+        tester.widget<FilledButton>(applyButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      // Re-check 'Work' ('tag_1') -> internal list order becomes ['tag_2', 'tag_1']
+      await tester.ensureVisible(workChip);
+      await tester.pumpAndSettle();
+      await tester.tap(workChip);
+      await tester.pumpAndSettle();
+
+      // Set equality recognizes {'tag_2', 'tag_1'} == {'tag_1', 'tag_2'}, Apply button is disabled
+      expect(tester.widget<FilledButton>(applyButtonFinder).onPressed, isNull);
+    });
+
+    testWidgets(
+        'unchecking and re-checking single tag resets Apply button to disabled',
+        (tester) async {
+      await tester.pumpWidget(
+        buildSheet(
+          selectedTagIds: const ['tag_1'],
+          selectedWeathers: const [],
+          selectedDayPeriods: const [],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final applyButtonFinder = find.byType(FilledButton);
+      expect(tester.widget<FilledButton>(applyButtonFinder).onPressed, isNull);
+
+      final workChip = find.widgetWithText(FilterChip, 'Work');
+      await tester.ensureVisible(workChip);
+      await tester.pumpAndSettle();
+      await tester.tap(workChip);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<FilledButton>(applyButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      await tester.ensureVisible(workChip);
+      await tester.pumpAndSettle();
+      await tester.tap(workChip);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<FilledButton>(applyButtonFinder).onPressed, isNull);
+    });
+
+    testWidgets(
+        'manually re-checking options back to initial config after reset clears dirty state and disables Apply',
+        (tester) async {
+      await tester.pumpWidget(
+        buildSheet(
+          selectedTagIds: const ['tag_1'],
+          selectedWeathers: const [],
+          selectedDayPeriods: const [],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final applyButtonFinder = find.byType(FilledButton);
+      expect(tester.widget<FilledButton>(applyButtonFinder).onPressed, isNull);
+
+      // Tap Reset
+      final resetButton = find.widgetWithText(TextButton, '重置');
+      await tester.ensureVisible(resetButton);
+      await tester.pumpAndSettle();
+      await tester.tap(resetButton);
+      await tester.pumpAndSettle();
+
+      // Apply is enabled after reset
+      expect(
+        tester.widget<FilledButton>(applyButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      // Manually select 'Work' ('tag_1') again, returning to initial config
+      final workChip = find.widgetWithText(FilterChip, 'Work');
+      await tester.ensureVisible(workChip);
+      await tester.pumpAndSettle();
+      await tester.tap(workChip);
+      await tester.pumpAndSettle();
+
+      // Should synchronously reset _hasExplicitlyReset and disable Apply to prevent invalid submission
+      expect(tester.widget<FilledButton>(applyButtonFinder).onPressed, isNull);
+    });
+
+    testWidgets(
+        'rapid repeated clicks on reset button avoid redundant haptics and state jitter',
+        (tester) async {
+      await tester.pumpWidget(
+        buildSheet(
+          selectedTagIds: const ['tag_1'],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      hapticCalls.clear();
+      final resetButton = find.widgetWithText(TextButton, '重置');
+      await tester.ensureVisible(resetButton);
+      await tester.pumpAndSettle();
+
+      // First click
+      await tester.tap(resetButton);
+      await tester.pumpAndSettle();
+
+      expect(
+        hapticCalls.where(
+          (call) =>
+              call.method == 'HapticFeedback.vibrate' &&
+              call.arguments == 'HapticFeedbackType.lightImpact',
+        ),
+        hasLength(1),
+      );
+
+      // Second click in rapid succession
+      hapticCalls.clear();
+      await tester.tap(resetButton);
+      await tester.pumpAndSettle();
+
+      // Redundant click should be ignored
+      expect(hapticCalls, isEmpty);
+    });
+
+    testWidgets(
+        'external null selectedTagIds is safely handled without throwing',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: NoteFilterSortSheet(
+              allTags: testTags,
+              selectedTagIds: null,
+              sortType: 'time',
+              sortAscending: false,
+              onApply: (_, __, ___, ____, _____) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final workChip = find.widgetWithText(FilterChip, 'Work');
+      expect(workChip, findsOneWidget);
+
+      final applyButtonFinder = find.byType(FilledButton);
+      // Initially disabled
+      expect(tester.widget<FilledButton>(applyButtonFinder).onPressed, isNull);
+
+      // Select tag
+      await tester.ensureVisible(workChip);
+      await tester.pumpAndSettle();
+      await tester.tap(workChip);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<FilledButton>(applyButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      // Reset
+      final resetButton = find.widgetWithText(TextButton, '重置');
+      await tester.ensureVisible(resetButton);
+      await tester.pumpAndSettle();
+      await tester.tap(resetButton);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<FilledButton>(applyButtonFinder).onPressed,
+        isNotNull,
+      );
     });
   });
 }
