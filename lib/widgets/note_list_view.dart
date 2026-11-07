@@ -200,6 +200,47 @@ class NoteListViewState extends State<NoteListView>
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
 
+  /// 行键到列表行索引位置的持久映射缓存，避免在 build() 中逐帧重复构造。
+  Map<String, int> _rowIndexByKey = {};
+
+  @visibleForTesting
+  Map<String, int> get rowIndexByKey => _rowIndexByKey;
+
+  /// 全量重新构建行键索引映射缓存。
+  void _rebuildRowIndexByKey() {
+    _rowIndexByKey = <String, int>{
+      for (var i = 0; i < _quotes.length; i++)
+        if (_quotes[i].id case final id?) 'note-list-row-$id': i,
+    };
+  }
+
+  /// 针对分页加载场景增量追加行键索引映射缓存。
+  void _appendRowIndexByKey([Iterable<Quote>? quotes, int? startIndex]) {
+    final start = startIndex ??
+        (quotes != null
+            ? (_quotes.length >= quotes.length &&
+                    _quotes.length > _rowIndexByKey.length
+                ? _quotes.length - quotes.length
+                : _quotes.length)
+            : _rowIndexByKey.length);
+    final targetQuotes = quotes ?? _quotes.skip(start);
+
+    var index = start;
+    for (final quote in targetQuotes) {
+      if (quote.id case final id?) {
+        _rowIndexByKey['note-list-row-$id'] = index;
+      }
+      index++;
+    }
+  }
+
+  @visibleForTesting
+  void rebuildRowIndexByKey() => _rebuildRowIndexByKey();
+
+  @visibleForTesting
+  void appendRowIndexByKey([Iterable<Quote>? quotes, int? startIndex]) =>
+      _appendRowIndexByKey(quotes, startIndex);
+
   /// 按笔记 ID 记住上次建出来的卡片 widget，见 [_obtainQuoteItem]。
   ///
   /// 入参没变时返回同一个实例，`Element.updateChild` 会整棵子树短路掉 ——
@@ -1002,6 +1043,7 @@ class NoteListViewState extends State<NoteListView>
 
   Future<void> resetAndLoad() async {
     _quotes.clear();
+    _rebuildRowIndexByKey();
     _hasMore = true;
     _loadMore();
   }
@@ -1095,6 +1137,7 @@ class NoteListViewState extends State<NoteListView>
     if (mounted) {
       _updateState(() {
         _quotes.removeWhere((q) => q.id == quoteId);
+        _rebuildRowIndexByKey();
       });
     }
     widget.onDelete(quote);

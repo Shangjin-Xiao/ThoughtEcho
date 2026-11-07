@@ -72,6 +72,14 @@ extension _NoteListDataStreamExtension on NoteListViewState {
     return true;
   }
 
+  bool _isAppendedQuoteList(List<Quote> list) {
+    if (list.length <= _quotes.length || _quotes.isEmpty) return false;
+    for (var i = 0; i < _quotes.length; i++) {
+      if (!identical(list[i], _quotes[i])) return false;
+    }
+    return true;
+  }
+
   void _scheduleExpandableQuoteCheck() {
     // **不要**在这里把 _hasExpandableQuoteCached 清成 false。清了之后下面那句
     // `_hasExpandableQuoteCached != hasExpandable` 比的是刚清掉的值而不是旧答案，
@@ -204,11 +212,20 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (quotesUnchanged) {
             _isLoading = isLoadMorePage;
           } else {
+            final oldLength = _quotes.length;
+            final canAppend = oldLength > 0 &&
+                list.length > oldLength &&
+                _isAppendedQuoteList(list);
             final applyStopwatch = Stopwatch()..start();
             _updateState(() {
               _quotes
                 ..clear()
                 ..addAll(list);
+              if (canAppend) {
+                _appendRowIndexByKey(list.skip(oldLength), oldLength);
+              } else {
+                _rebuildRowIndexByKey();
+              }
               _hasMore = dbHasMore;
               _isLoading = isLoadMorePage;
               _pruneExpansionControllers();
@@ -518,11 +535,21 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (quotesUnchanged) {
             _isLoading = isLoadMorePage;
           } else {
+            final oldLength = _quotes.length;
+            final canAppend = !pendingScrollToTop &&
+                oldLength > 0 &&
+                list.length > oldLength &&
+                _isAppendedQuoteList(list);
             final applyStopwatch = Stopwatch()..start();
             _updateState(() {
               _quotes
                 ..clear()
                 ..addAll(list);
+              if (canAppend) {
+                _appendRowIndexByKey(list.skip(oldLength), oldLength);
+              } else {
+                _rebuildRowIndexByKey();
+              }
               _hasMore = dbHasMore;
               _isLoading = isLoadMorePage;
               _pruneExpansionControllers();
