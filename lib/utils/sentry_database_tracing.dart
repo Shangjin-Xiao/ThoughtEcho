@@ -1,3 +1,5 @@
+// ignore_for_file: experimental_member_use
+
 import 'package:sentry_sqflite/sentry_sqflite.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -8,22 +10,47 @@ class SentryDatabaseTracing {
   SentryDatabaseTracing._();
 
   static bool _enabled = false;
+  static final Expando<Database> _originalDatabases =
+      Expando<Database>('sentry_original_databases');
+
+  static bool get isEnabled => _enabled;
 
   /// 根据用户明确授权配置主数据库性能追踪。
-  ///
-  /// 仅影响之后打开的主数据库连接，避免运行时热替换现有连接。
   static void configure({required bool enabled}) {
     _enabled = enabled;
   }
 
-  /// 仅在用户明确授权后包装主笔记数据库。
+  /// 仅在用户明确授权后包装主笔记数据库，并记录原始原生句柄。
   static Database wrapMainDatabase(Database database) {
-    // ignore: experimental_member_use
     final isSentryDb = database is SentryDatabase;
     if (!_enabled || isSentryDb) {
       return database;
     }
-    // ignore: experimental_member_use
-    return SentryDatabase(database);
+    final wrapped = SentryDatabase(database);
+    _originalDatabases[wrapped] = database;
+    return wrapped;
+  }
+
+  /// 将 [SentryDatabase] 解包还原为原生 [Database] 句柄。
+  static Database unwrapMainDatabase(Database database) {
+    if (database is! SentryDatabase) {
+      return database;
+    }
+
+    final original = _originalDatabases[database];
+    if (original != null) {
+      return original;
+    }
+
+    // 回退方案：通过 SentryDatabase 内部引用的原生 db 句柄进行解包
+    try {
+      // ignore: avoid_dynamic_calls
+      final dynamic candidate = (database as dynamic).db;
+      if (candidate is Database) {
+        return candidate;
+      }
+    } catch (_) {}
+
+    return database;
   }
 }

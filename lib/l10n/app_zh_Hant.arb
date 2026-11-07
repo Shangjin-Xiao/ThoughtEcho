@@ -11,6 +11,7 @@
   "settingsTelemetryTitle": "參與匿名功能改進計劃",
   "settingsTelemetryDesc": "預設關閉。開啟後僅收集匿名功能使用頻次（如功能使用比例），幫助規劃開發優先順序。絕不收集筆記正文、搜尋詞等任何個人隱私。",
   "sentryRestartHint": "設定已儲存，重啟應用後生效",
+  "sentryDeactivatedHint": "設定已儲存，當前工作階段診斷已即時停用",
   "sentryDisclosureTitle": "隱私政策已更新",
   "sentryDisclosureMessage": "心跡隱私政策已更新，您可以在官網檢視。\n\n為幫助排查應用閃退與改進使用體驗，我們新增了錯誤診斷日誌收集。為保護您的隱私，該功能預設關閉，您可隨時在“設定 -> 反饋與聯絡”中按需開啟。\n\n隱私政策連結：https://note.shangjinyun.cn/privacy.html",
   "sentryDisclosureGotIt": "我知道了",

@@ -3771,6 +3771,7 @@
   "settingsTelemetryTitle": "匿名機能改善プログラムに参加",
   "settingsTelemetryDesc": "デフォルトではオフです。有効にすると、開発の優先順位を判断するために匿名の機能利用頻度（機能の利用割合など）のみを収集します。ノート本文や検索キーワードなどの個人情報は一切収集しません。",
   "sentryRestartHint": "設定が保存されました。再起動後に反映されます",
+  "sentryDeactivatedHint": "設定が保存されました。現在のセッションの診断は即座に停止されました",
   "sentryDisclosureTitle": "プライバシーポリシーが更新されました",
   "sentryDisclosureGotIt": "了解しました",
   "learnMoreDataCollection": "収集の詳細と匿名化ソースコードを確認",

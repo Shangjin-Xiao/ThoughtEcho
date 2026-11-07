@@ -16,6 +16,7 @@ import '../models/thoughter_entry.dart'; // 新增 ThoughterPageMode
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
+import 'package:thoughtecho/utils/http_utils.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/utils/sentry_network_tracing.dart';
@@ -24,8 +25,10 @@ import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
 import '../theme/theme_style.dart';
+import 'database_service.dart';
 import 'excerpt_intent_service.dart';
 import 'location_service.dart';
+import 'network_service.dart';
 
 class SettingsService extends ChangeNotifier {
   static const ExcerptIntentService _excerptIntentService =
@@ -502,6 +505,9 @@ class SettingsService extends ChangeNotifier {
     SentryDatabaseTracing.configure(enabled: enabled);
     SentryNetworkTracing.configure(enabled: enabled);
     SentryHelper.startIfEnabled(enabled);
+    NetworkService.instance.syncSentryTracing(enabled);
+    HttpUtils.syncSentryTracing(enabled);
+    DatabaseService.instance.syncSentryTracing(enabled);
     // 只上报开关状态布尔值，不涉及任何诊断内容。
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'toggle_setting',

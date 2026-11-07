@@ -936,6 +936,19 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     return SentryDatabaseTracing.wrapMainDatabase(database);
   }
 
+  /// 运行时热同步 Sentry 数据库性能追踪。
+  void syncSentryTracing(bool enabled) {
+    final currentDb = _database;
+    if (currentDb == null || !currentDb.isOpen) {
+      return;
+    }
+    if (enabled) {
+      _database = SentryDatabaseTracing.wrapMainDatabase(currentDb);
+    } else {
+      _database = SentryDatabaseTracing.unwrapMainDatabase(currentDb);
+    }
+  }
+
   /// 验证外键约束是否已启用
   Future<void> _verifyForeignKeysEnabled(Database db) async {
     await _schemaLifecycle.verifyForeignKeysEnabled(db);
@@ -1260,6 +1273,7 @@ class DatabaseService extends _DatabaseServiceBase
         _DatabaseMigrationMixin {
   static final DatabaseService _instance = DatabaseService._internal();
   factory DatabaseService() => _instance;
+  static DatabaseService get instance => _instance;
 
   /// 依赖反转：UI 层（QuoteContent 等）在应用启动时注册缓存失效回调。
   /// 数据层不得 import widgets —— 这里只暴露钩子，未注册时为 no-op。

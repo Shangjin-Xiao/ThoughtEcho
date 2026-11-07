@@ -56,6 +56,17 @@ class HttpUtils {
       ),
     );
     SentryNetworkTracing.addToGeneralDioIfEnabled(dio);
+  }
+
+  /// 运行时热同步 Sentry 性能追踪。
+  static void syncSentryTracing(bool enabled) {
+    final dio = _dioInstance;
+    if (dio == null) return;
+    if (enabled) {
+      SentryNetworkTracing.mount(dio);
+    } else {
+      SentryNetworkTracing.unmount(dio);
+    }
   } // 兼容旧的http.Response格式
 
   @visibleForTesting

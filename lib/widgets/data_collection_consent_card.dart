@@ -69,7 +69,8 @@ class DataCollectionConsentCard extends StatelessWidget {
                   context,
                   action: () => settingsService.setSentryEnabled(enabled),
                   logAction: 'DataCollectionConsent.setSentryEnabled',
-                  successMessage: l10n.sentryRestartHint,
+                  successMessage:
+                      enabled ? l10n.settingsSaved : l10n.sentryDeactivatedHint,
                 ),
               ),
               const Divider(indent: 16, endIndent: 16, height: 1),
