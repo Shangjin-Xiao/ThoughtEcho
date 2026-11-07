@@ -984,8 +984,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ),
             ),
             // 笔记列表页
-            Consumer<SettingsService>(
-              builder: (context, settingsService, child) {
+            Selector<SettingsService, bool>(
+              selector: (context, settings) => settings.showFavoriteButton,
+              builder: (context, showFavoriteButton, child) {
                 return Consumer<NoteSearchController>(
                   builder: (context, searchController, child) {
                     return NoteListView(
@@ -1006,10 +1007,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       onDelete: _deleteQuote,
                       onAskAI: _showAIQuestionDialog,
                       onGenerateCard: _generateAICard,
-                      onFavorite: settingsService.showFavoriteButton
+                      onFavorite: showFavoriteButton
                           ? _handleFavoriteClick
                           : null, // 根据设置控制心形按钮显示
-                      onLongPressFavorite: settingsService.showFavoriteButton
+                      onLongPressFavorite: showFavoriteButton
                           ? _handleLongPressFavorite
                           : null, // 长按清除收藏
                       isLoadingTags: _pageController.isLoadingTags, // 传递标签加载状态
