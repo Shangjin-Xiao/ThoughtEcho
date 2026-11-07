@@ -4939,5 +4939,13 @@
   "lottieSearchLoading": "搜尋中...",
   "lottieWeatherSearchLoading": "天氣搜尋中...",
   "lottieCustomLoading": "載入中...",
-  "lottieNotFound": "未找到相關內容"
+  "lottieNotFound": "未找到相關內容",
+  "mmkvDiagnosticTitle": "MMKV 遷移與解析診斷",
+  "@mmkvDiagnosticTitle": {
+    "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticSubtitle": "查看鍵值遷移狀態，比對原生 MMKV 與手寫二進制解析結果",
+  "@mmkvDiagnosticSubtitle": {
+    "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  }
 }
