@@ -182,5 +182,10 @@ void main() {
       expect(result.statusCode, 200);
       expect(result.body, 'null');
     });
+
+    test('syncSentryTracing executes safely without throwing', () {
+      expect(() => HttpUtils.syncSentryTracing(true), returnsNormally);
+      expect(() => HttpUtils.syncSentryTracing(false), returnsNormally);
+    });
   });
 }

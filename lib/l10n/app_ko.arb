@@ -3767,6 +3767,7 @@
   "settingsTelemetryTitle": "익명 기능 개선 프로그램 참여",
   "settingsTelemetryDesc": "기본적으로 꺼져 있습니다. 활성화하면 개발 우선순위를 정하기 위해 익명의 기능 사용 빈도(기능 사용 비율 등)만 수집합니다. 노트 본문이나 검색어 등 개인 정보는 절대 수집하지 않습니다.",
   "sentryRestartHint": "설정이 저장되었습니다. 재부팅 후 적용됩니다.",
+  "sentryDeactivatedHint": "설정이 저장되었습니다. 현재 세션의 진단이 즉시 중단되었습니다",
   "sentryDisclosureTitle": "개인정보 처리방침 업데이트됨",
   "sentryDisclosureGotIt": "확인했습니다",
   "learnMoreDataCollection": "수집 상세 내역 및 비식별화 소스 코드 보기",

@@ -1,3 +1,5 @@
+// ignore_for_file: experimental_member_use
+
 /// Basic unit tests for SettingsService
 library;
 
@@ -12,9 +14,13 @@ import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
+import 'package:sentry_sqflite/sentry_sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/services/api_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
@@ -400,6 +406,52 @@ void main() {
       expect(rebuiltService.appSettings.sentryEnabled, isTrue);
       expect(rebuiltService.appSettings.sentryDisclosureShown, isTrue);
     });
+
+    test(
+      'setSentryEnabled links NetworkService and DatabaseService runtime sync',
+      () async {
+        // Initialize NetworkService
+        await NetworkService.instance.init();
+        final generalDio = NetworkService.instance.generalDio;
+
+        // Initialize DatabaseService with a test database
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+        final rawDb = await databaseFactory.openDatabase(inMemoryDatabasePath);
+        DatabaseService.setTestDatabase(rawDb);
+
+        try {
+          // Enable Sentry
+          await settingsService.setSentryEnabled(true);
+          expect(settingsService.sentryEnabled, isTrue);
+          expect(
+            generalDio.interceptors.any(
+              (i) => i.runtimeType.toString() == 'FailedRequestInterceptor',
+            ),
+            isTrue,
+          );
+          expect(DatabaseService.instance.database, isA<SentryDatabase>());
+
+          // Disable Sentry -> verify runtime cleanup
+          await settingsService.setSentryEnabled(false);
+          expect(settingsService.sentryEnabled, isFalse);
+          expect(
+            generalDio.interceptors.any(
+              (i) => i.runtimeType.toString() == 'FailedRequestInterceptor',
+            ),
+            isFalse,
+          );
+          expect(
+            DatabaseService.instance.database,
+            isNot(isA<SentryDatabase>()),
+          );
+          expect(DatabaseService.instance.database, same(rawDb));
+        } finally {
+          DatabaseService.clearTestDatabase();
+          await rawDb.close();
+        }
+      },
+    );
 
     test('should persist telemetry settings changes', () async {
       await settingsService.setTelemetryEnabled(false);

@@ -84,6 +84,16 @@ class NetworkService {
     SentryNetworkTracing.addToGeneralDioIfEnabled(_generalDio);
   }
 
+  /// 运行时热同步 Sentry 性能追踪。
+  void syncSentryTracing(bool enabled) {
+    if (!_initialized) return;
+    if (enabled) {
+      SentryNetworkTracing.mount(_generalDio);
+    } else {
+      SentryNetworkTracing.unmount(_generalDio);
+    }
+  }
+
   /// 配置AI专用Dio实例
   void _configureAIDio() {
     _aiDio.options.connectTimeout = const Duration(seconds: 30);

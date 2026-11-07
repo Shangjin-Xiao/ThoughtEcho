@@ -59,5 +59,41 @@ void main() {
 
       expect(SentryDatabaseTracing.wrapMainDatabase(database), same(database));
     });
+
+    test(
+        'unwrapMainDatabase restores original Database and allows SQL read/write',
+        () async {
+      SentryDatabaseTracing.configure(enabled: true);
+      final traced = SentryDatabaseTracing.wrapMainDatabase(database);
+      expect(traced, isA<SentryDatabase>());
+      expect(traced, isNot(same(database)));
+
+      final unwrapped = SentryDatabaseTracing.unwrapMainDatabase(traced);
+      expect(unwrapped, same(database));
+      expect(unwrapped, isNot(isA<SentryDatabase>()));
+
+      // Verify that SQL operations succeed on unwrapped instance
+      await unwrapped.insert('notes', {'content': 'written after unwrap'});
+      final rows = await unwrapped.query('notes');
+      expect(rows, hasLength(2));
+      expect(rows.any((r) => r['content'] == 'written after unwrap'), isTrue);
+    });
+
+    test(
+        'unwrapMainDatabase is idempotent and handles non-wrapped databases safely',
+        () {
+      // Non-wrapped database returns itself
+      expect(
+          SentryDatabaseTracing.unwrapMainDatabase(database), same(database));
+
+      // Multiple unwraps return the original
+      SentryDatabaseTracing.configure(enabled: true);
+      final traced = SentryDatabaseTracing.wrapMainDatabase(database);
+      final unwrapped1 = SentryDatabaseTracing.unwrapMainDatabase(traced);
+      final unwrapped2 = SentryDatabaseTracing.unwrapMainDatabase(unwrapped1);
+
+      expect(unwrapped1, same(database));
+      expect(unwrapped2, same(database));
+    });
   });
 }

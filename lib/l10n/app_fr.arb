@@ -3753,6 +3753,7 @@
   "settingsTelemetryTitle": "Participer au programme d'amélioration anonyme",
   "settingsTelemetryDesc": "Désactivé par défaut. Lorsqu'il est activé, recueille uniquement la fréquence d'utilisation anonyme des fonctionnalités pour planifier les priorités de développement. Ne collecte jamais le contenu des notes, les termes de recherche ni aucune donnée personnelle.",
   "sentryRestartHint": "Paramètres enregistrés, effectif après redémarrage",
+  "sentryDeactivatedHint": "Paramètres enregistrés, les diagnostics sont immédiatement arrêtés pour cette session",
   "sentryDisclosureTitle": "Politique de confidentialité mise à jour",
   "sentryDisclosureGotIt": "J'ai compris",
   "learnMoreDataCollection": "Voir les détails et le code source d'anonymisation",
