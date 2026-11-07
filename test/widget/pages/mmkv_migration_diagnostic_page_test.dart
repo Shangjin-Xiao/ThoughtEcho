@@ -17,6 +17,7 @@ void main() {
     tempDir = await Directory.systemTemp.createTemp('mmkv_diag_widget_test_');
     SharedPreferences.setMockInitialValues({
       'custom_data_directory_path': '/sp/only/path',
+      'ai_settings': '{"apiKey":"sk-secret-12345"}',
     });
     MMKVService().resetForTesting();
   });
@@ -35,7 +36,8 @@ void main() {
       final encoder = MmkvBinaryEncoder()
         ..writeString('theme_style', 'paper')
         ..writeBool('app_installed_v2', true)
-        ..writeInt('custom_color', 0xFF336699);
+        ..writeInt('custom_color', 0xFF336699)
+        ..writeString('ai_settings', '{"apiKey":"sk-secret-12345"}');
 
       await File(mmkvPath).writeAsBytes(
         encoder.toFileBytes(minTotalSize: 4096),
@@ -68,7 +70,8 @@ void main() {
         find.byKey(const Key('mmkv_diagnostic_summary_card')),
         findsOneWidget,
       );
-      expect(find.textContaining('100% 一致'), findsOneWidget);
+      expect(find.textContaining('100% 一致 ('), findsOneWidget);
+      expect(find.textContaining('sk-secret-12345'), findsNothing);
 
       // Filter by Bool
       final boolFilter = find.byKey(const Key('mmkv_filter_boolType'));

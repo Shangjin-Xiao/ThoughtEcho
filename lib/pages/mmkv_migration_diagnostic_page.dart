@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import '../services/mmkv_service.dart';
 import '../theme/app_semantic_colors.dart';
+import '../theme/theme_style.dart';
+import '../utils/app_logger.dart';
 import '../utils/mmkv_ffi_fix.dart';
 import '../widgets/app_snackbar.dart';
 
@@ -57,7 +59,12 @@ class _MmkvMigrationDiagnosticPageState
         _report = report;
         _loading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError(
+        'MmkvMigrationDiagnosticPage: 生成诊断报告失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         _error = e;
@@ -85,14 +92,21 @@ class _MmkvMigrationDiagnosticPageState
             ? '已重新执行三通道迁移并刷新校验结果'
             : 'Re-ran 3-channel migration and refreshed report',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError(
+        'MmkvMigrationDiagnosticPage: 重新执行迁移失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         _loading = false;
       });
       AppSnackBar.error(
         context,
-        isZh ? '重新执行迁移失败: $e' : 'Migration failed: $e',
+        isZh
+            ? '重新执行迁移失败，请查看应用日志'
+            : 'Migration failed, please check app logs',
       );
     }
   }
@@ -198,8 +212,8 @@ class _MmkvMigrationDiagnosticPageState
               const SizedBox(height: 12),
               Text(
                 isZh
-                    ? '生成诊断报告失败：$_error'
-                    : 'Failed to generate diagnostic report: $_error',
+                    ? '生成诊断报告失败，请重试或查看应用日志'
+                    : 'Failed to generate diagnostic report, please retry',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -262,6 +276,7 @@ class _MmkvMigrationDiagnosticPageState
     MmkvDiagnosticReport report,
     bool isZh,
   ) {
+    final shapeTokens = AppShapeTokens.of(context);
     final binary = report.primaryBinaryResult;
     final crcStatus = !binary.fileExists
         ? (isZh ? '无 mmkv.default 文件' : 'No mmkv.default file')
@@ -274,6 +289,7 @@ class _MmkvMigrationDiagnosticPageState
             : binary.crcMatched == false
                 ? (isZh ? 'CRC32 不匹配' : 'CRC32 Mismatch')
                 : (isZh ? '无 .crc 伴随文件' : 'No .crc file');
+    final crcHex = binary.computedCrc32.toRadixString(16);
 
     return Card(
       key: const Key('mmkv_diagnostic_overview_card'),
@@ -291,7 +307,9 @@ class _MmkvMigrationDiagnosticPageState
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isZh ? '运行环境与二进制文件概览' : 'Environment & Binary File Overview',
+                    isZh
+                        ? '运行环境与二进制文件概览'
+                        : 'Environment & Binary File Overview',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -299,7 +317,7 @@ class _MmkvMigrationDiagnosticPageState
                 ),
               ],
             ),
-            const Divider(height: 20),
+            const Divider(height: 16),
             _buildInfoRow(
               theme,
               isZh ? '运行平台 / 位宽' : 'Platform / VM Bits',
@@ -334,13 +352,14 @@ class _MmkvMigrationDiagnosticPageState
             _buildInfoRow(
               theme,
               isZh ? 'CRC32 校验状态' : 'CRC32 Status',
-              '$crcStatus (0x${binary.computedCrc32.toRadixString(16)})',
+              '$crcStatus (0x$crcHex)',
             ),
             _buildInfoRow(
               theme,
               isZh ? '手写解析耗时 / 记录数' : 'Binary Parse Time / Records',
               '${binary.parseDurationMicroseconds} µs '
-              '(${binary.entries.length} keys, ${binary.tombstoneRecordsRead} tombstones)',
+              '(${binary.entries.length} keys, '
+              '${binary.tombstoneRecordsRead} tombstones)',
             ),
             if (binary.warnings.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -349,7 +368,7 @@ class _MmkvMigrationDiagnosticPageState
                 padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
                 ),
                 child: Text(
                   binary.warnings.join('\n'),
@@ -372,6 +391,7 @@ class _MmkvMigrationDiagnosticPageState
     bool isZh,
   ) {
     final semantic = AppSemanticColors.of(context);
+    final shapeTokens = AppShapeTokens.of(context);
     final binaryKeyCount = report.primaryBinaryResult.entries.length;
     final nativeKeyCount =
         report.comparisons.where((c) => c.presentInNative).length;
@@ -390,6 +410,7 @@ class _MmkvMigrationDiagnosticPageState
     final badgeFg = allClean
         ? semantic.onSuccessContainer
         : theme.colorScheme.onErrorContainer;
+    final nativePart = report.nativeMmkvAvailable ? '$nativeKeyCount' : '-';
 
     return Card(
       key: const Key('mmkv_diagnostic_summary_card'),
@@ -417,12 +438,14 @@ class _MmkvMigrationDiagnosticPageState
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
+                    horizontal: 12,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: badgeBg,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(
+                      shapeTokens.buttonRadius,
+                    ),
                   ),
                   child: Text(
                     allClean
@@ -440,11 +463,13 @@ class _MmkvMigrationDiagnosticPageState
                 ),
               ],
             ),
-            const Divider(height: 20),
+            const Divider(height: 16),
             _buildInfoRow(
               theme,
-              isZh ? '存储源键总数 (Binary / Native / SP)' : 'Key Counts (Binary / Native / SP)',
-              '$binaryKeyCount / ${report.nativeMmkvAvailable ? nativeKeyCount : '-'} / $spKeyCount',
+              isZh
+                  ? '存储源键总数 (Binary / Native / SP)'
+                  : 'Key Counts (Binary / Native / SP)',
+              '$binaryKeyCount / $nativePart / $spKeyCount',
             ),
             _buildInfoRow(
               theme,
@@ -469,6 +494,7 @@ class _MmkvMigrationDiagnosticPageState
   }
 
   Widget _buildActionRow(BuildContext context, bool isZh) {
+    final canCopy = !_loading && _report != null;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -481,7 +507,7 @@ class _MmkvMigrationDiagnosticPageState
         ),
         OutlinedButton.icon(
           key: const Key('mmkv_diagnostic_copy_json_action_button'),
-          onPressed: (_loading || _report == null) ? null : _handleCopyJson,
+          onPressed: canCopy ? _handleCopyJson : null,
           icon: const Icon(Icons.copy_all_outlined),
           label: Text(isZh ? '复制诊断 JSON' : 'Copy Diagnostic JSON'),
         ),
@@ -513,7 +539,7 @@ class _MmkvMigrationDiagnosticPageState
       ),
       (MmkvDiagnosticFilter.stringType, 'String'),
       (MmkvDiagnosticFilter.boolType, 'Bool'),
-      (MmkvDiagnosticFilter.intType, 'Int'),
+      (MmkvDiagnosticFilter.intType, 'Int / Double'),
     ];
 
     return SingleChildScrollView(
@@ -547,6 +573,7 @@ class _MmkvMigrationDiagnosticPageState
     bool isZh,
   ) {
     final semantic = AppSemanticColors.of(context);
+    final shapeTokens = AppShapeTokens.of(context);
     final spOnly = entry.presentInSharedPrefs &&
         !entry.presentInBinary &&
         !entry.presentInNative;
@@ -588,10 +615,10 @@ class _MmkvMigrationDiagnosticPageState
           ),
         ),
         trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: statusBg,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
           ),
           child: Text(
             statusLabel,
@@ -632,7 +659,7 @@ class _MmkvMigrationDiagnosticPageState
 
   Widget _buildInfoRow(ThemeData theme, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -662,7 +689,7 @@ class _MmkvMigrationDiagnosticPageState
 
   Widget _buildValuePreviewRow(ThemeData theme, String source, String value) {
     return Padding(
-      padding: const EdgeInsets.only(top: 6.0),
+      padding: const EdgeInsets.only(top: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/utils/mmkv_binary_reader.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/utils/platform_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -94,10 +95,29 @@ void main() {
     test(
       'Channel 3 heals app_installed_v2 and app_settings when populated thoughtecho.db exists on disk',
       () async {
+        // 1. An all-zero 16KB file without SQLite magic header must NOT trigger self-healing
         SharedPreferences.setMockInitialValues({});
+        final corruptedDbPath = '${tempDir.path}/corrupted_thoughtecho.db';
+        await File(corruptedDbPath).writeAsBytes(Uint8List(16384));
+
+        final safeMmkvCorrupted = SafeMMKV()
+          ..configureForTesting(
+            candidateMmkvFiles: ['${tempDir.path}/nonexistent_mmkv.default'],
+            candidateDbPaths: [corruptedDbPath],
+            forceNativeMmkvSupport: false,
+          );
+        await safeMmkvCorrupted.initialize();
+        expect(safeMmkvCorrupted.getBool('app_installed_v2'), isNull);
+
+        // 2. A valid >8KB SQLite file with "SQLite format 3\0" header heals flags & preserves sentryDisclosureShown
+        SharedPreferences.setMockInitialValues({
+          'app_settings': json.encode({'sentryDisclosureShown': false}),
+        });
         final fakeDbPath = '${tempDir.path}/thoughtecho.db';
-        // Write > 8192 bytes to simulate a populated SQLite database
-        await File(fakeDbPath).writeAsBytes(Uint8List(16384));
+        final validDbBytes = Uint8List(16384);
+        final magic = ascii.encode('SQLite format 3\x00');
+        validDbBytes.setRange(0, magic.length, magic);
+        await File(fakeDbPath).writeAsBytes(validDbBytes);
 
         final safeMmkv = SafeMMKV()
           ..configureForTesting(
@@ -117,7 +137,7 @@ void main() {
         expect(appSettingsRaw, isNotNull);
         final decoded = json.decode(appSettingsRaw!) as Map<String, dynamic>;
         expect(decoded['hasCompletedOnboarding'], isTrue);
-        expect(decoded['sentryDisclosureShown'], isTrue);
+        expect(decoded['sentryDisclosureShown'], isFalse);
         expect(
           safeMmkv.lastMigrationSnapshot?.healedFromSqliteCount,
           equals(5),
@@ -150,6 +170,11 @@ void main() {
         expect(service.getDouble('ratio_c'), closeTo(3.14, 1e-9));
         expect(service.getStringList('list_d'), equals(['x', 'y']));
         expect(service.getJson('json_e'), equals({'ok': 1}));
+
+        final arch = await PlatformHelper.getCpuArchitecture();
+        final expectedArch =
+            PlatformHelper.pointerBits == 64 ? '64-bit' : '32-bit';
+        expect(arch, equals(expectedArch));
       },
     );
   });

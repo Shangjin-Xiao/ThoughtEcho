@@ -32,8 +32,8 @@ class MmkvCrcMetaInfo {
     this.flags = 0,
   });
 
-  /// True when MMKV meta flags indicate AES CFB-128 encryption is enabled.
-  bool get isEncrypted => (flags & 0x01) != 0;
+  /// MMKV configures AES encryption out-of-band via `cryptKey`, not `m_flags` bit 0.
+  bool get isEncrypted => false;
 
   Map<String, Object?> toJson() => {
         'crcDigest': crcDigest,
@@ -354,8 +354,8 @@ class MmkvBinaryReader {
     final lastActualSize = bd.getUint32(32, Endian.little);
     final lastCrcDigest = bd.getUint32(36, Endian.little);
     var flags = 0;
-    if (crcBytes.length >= 112) {
-      flags = bd.getUint64(104, Endian.little);
+    if (crcBytes.length >= 48) {
+      flags = bd.getUint64(40, Endian.little);
     }
     return MmkvCrcMetaInfo(
       crcDigest: crcDigest,
@@ -585,16 +585,23 @@ class MmkvBinaryReader {
     }
 
     final decodedEntries = <String, Object?>{};
-    for (final entry in rawMap.entries) {
-      try {
-        decodedEntries[entry.key] = decodeValueForKey(
-          entry.key,
-          entry.value,
-          warnings: warnings,
-        );
-      } catch (e) {
-        warnings.add('Failed to decode value for key "${entry.key}": $e');
-        decodedEntries[entry.key] = entry.value;
+    if (crcMeta != null && crcMatched == false) {
+      warnings.add(
+        'Both primary and lastConfirmed CRC32 checks failed; '
+        'discarding ${rawMap.length} unverified entries.',
+      );
+    } else {
+      for (final entry in rawMap.entries) {
+        try {
+          decodedEntries[entry.key] = decodeValueForKey(
+            entry.key,
+            entry.value,
+            warnings: warnings,
+          );
+        } catch (e) {
+          warnings.add('Failed to decode value for key "${entry.key}": $e');
+          decodedEntries[entry.key] = entry.value;
+        }
       }
     }
 
@@ -735,6 +742,7 @@ class MmkvBinaryReader {
               key.startsWith('has_'))) {
         return byte != 0;
       }
+      // Unschematized 1-byte 0x00 defaults to int 0 (all known string keys are in MmkvKeySchema).
       if (byte < 0x80) {
         return byte;
       }
@@ -923,7 +931,7 @@ class MmkvBinaryEncoder {
     return out;
   }
 
-  /// Builds a matching `mmkv.default.crc` 4096-byte metadata buffer.
+  /// Builds a matching `mmkv.default.crc` 128-byte metadata buffer.
   Uint8List toCrcBytes({
     int version = 4,
     int sequence = 1,
@@ -945,7 +953,7 @@ class MmkvBinaryEncoder {
     bd.setUint32(28, actualSize, Endian.little);
     bd.setUint32(32, lastActualSize ?? actualSize, Endian.little);
     bd.setUint32(36, lastCrcDigest ?? crcDigest, Endian.little);
-    bd.setUint64(104, flags, Endian.little);
+    bd.setUint64(40, flags, Endian.little);
     return out;
   }
 

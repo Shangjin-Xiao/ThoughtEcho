@@ -139,46 +139,49 @@ class MmkvDiagnosticReport {
     required this.diffCount,
   });
 
-  Map<String, Object?> toRedactedJson() => {
-        'generatedAt': generatedAt.toIso8601String(),
-        'platformName': platformName,
-        'pointerBits': pointerBits,
-        'is64BitProcess': is64BitProcess,
-        'nativeMmkvAvailable': nativeMmkvAvailable,
-        'kvEngineMigrated': kvEngineMigrated,
-        'migrationSnapshot': migrationSnapshot?.toJson(),
-        'primaryBinaryFile': {
-          'fileExists': primaryBinaryResult.fileExists,
-          'filePath': primaryBinaryResult.filePath,
-          'fileByteLength': primaryBinaryResult.fileByteLength,
-          'actualSize': primaryBinaryResult.actualSize,
-          'itemSizeHolder': primaryBinaryResult.itemSizeHolder,
-          'computedCrc32':
-              '0x${primaryBinaryResult.computedCrc32.toRadixString(16)}',
-          'crcMatched': primaryBinaryResult.crcMatched,
-          'usedLastConfirmed': primaryBinaryResult.usedLastConfirmed,
-          'crcMeta': primaryBinaryResult.crcMeta?.toJson(),
-          'entryCount': primaryBinaryResult.entries.length,
-          'totalRecordsRead': primaryBinaryResult.totalRecordsRead,
-          'tombstoneRecordsRead': primaryBinaryResult.tombstoneRecordsRead,
-          'parseDurationMicroseconds':
-              primaryBinaryResult.parseDurationMicroseconds,
-          'warnings': primaryBinaryResult.warnings,
+  Map<String, Object?> toRedactedJson() {
+    final secondary = secondaryBinaryResult;
+    return {
+      'generatedAt': generatedAt.toIso8601String(),
+      'platformName': platformName,
+      'pointerBits': pointerBits,
+      'is64BitProcess': is64BitProcess,
+      'nativeMmkvAvailable': nativeMmkvAvailable,
+      'kvEngineMigrated': kvEngineMigrated,
+      'migrationSnapshot': migrationSnapshot?.toJson(),
+      'primaryBinaryFile': {
+        'fileExists': primaryBinaryResult.fileExists,
+        'filePath': primaryBinaryResult.filePath,
+        'fileByteLength': primaryBinaryResult.fileByteLength,
+        'actualSize': primaryBinaryResult.actualSize,
+        'itemSizeHolder': primaryBinaryResult.itemSizeHolder,
+        'computedCrc32':
+            '0x${primaryBinaryResult.computedCrc32.toRadixString(16)}',
+        'crcMatched': primaryBinaryResult.crcMatched,
+        'usedLastConfirmed': primaryBinaryResult.usedLastConfirmed,
+        'crcMeta': primaryBinaryResult.crcMeta?.toJson(),
+        'entryCount': primaryBinaryResult.entries.length,
+        'totalRecordsRead': primaryBinaryResult.totalRecordsRead,
+        'tombstoneRecordsRead': primaryBinaryResult.tombstoneRecordsRead,
+        'parseDurationMicroseconds':
+            primaryBinaryResult.parseDurationMicroseconds,
+        'warnings': primaryBinaryResult.warnings,
+      },
+      if (secondary != null && secondary.fileExists)
+        'secondaryBinaryFile': {
+          'fileExists': secondary.fileExists,
+          'filePath': secondary.filePath,
+          'fileByteLength': secondary.fileByteLength,
+          'actualSize': secondary.actualSize,
+          'entryCount': secondary.entries.length,
+          'crcMatched': secondary.crcMatched,
+          'warnings': secondary.warnings,
         },
-        if (secondaryBinaryResult != null && secondaryBinaryResult!.fileExists)
-          'secondaryBinaryFile': {
-            'fileExists': secondaryBinaryResult!.fileExists,
-            'filePath': secondaryBinaryResult!.filePath,
-            'fileByteLength': secondaryBinaryResult!.fileByteLength,
-            'actualSize': secondaryBinaryResult!.actualSize,
-            'entryCount': secondaryBinaryResult!.entries.length,
-            'crcMatched': secondaryBinaryResult!.crcMatched,
-            'warnings': secondaryBinaryResult!.warnings,
-          },
-        'consistentCount': consistentCount,
-        'diffCount': diffCount,
-        'comparisons': comparisons.map((e) => e.toRedactedJson()).toList(),
-      };
+      'consistentCount': consistentCount,
+      'diffCount': diffCount,
+      'comparisons': comparisons.map((e) => e.toRedactedJson()).toList(),
+    };
+  }
 }
 
 Object? _redactSensitiveValue(String key, Object? value) {
@@ -189,6 +192,8 @@ Object? _redactSensitiveValue(String key, Object? value) {
       lowerKey.contains('secret') ||
       lowerKey.contains('token') ||
       lowerKey.contains('password') ||
+      lowerKey.contains('cities') ||
+      key == 'recent_cities_json_v1' ||
       key == 'provider_api_keys' ||
       key == 'webdav_url' ||
       key == 'webdav_username' ||
@@ -204,7 +209,8 @@ Object? _redactSensitiveValue(String key, Object? value) {
     final crc = MmkvBinaryReader.computeCrc32(
       Uint8List.fromList(utf8.encode(str)),
     );
-    return '<redacted content: len=${str.length}, crc32=0x${crc.toRadixString(16)}>';
+    final hexCrc = crc.toRadixString(16);
+    return '<redacted content: len=${str.length}, crc32=0x$hexCrc>';
   }
   if (value is String &&
       (key == 'ai_settings' ||
@@ -215,7 +221,7 @@ Object? _redactSensitiveValue(String key, Object? value) {
       final decoded = json.decode(value);
       return json.encode(_redactJsonStructure(decoded));
     } catch (_) {
-      return value;
+      return '<redacted-json (len=${value.length})>';
     }
   }
   if (value is Uint8List) {
@@ -249,7 +255,7 @@ Object? _redactJsonStructure(Object? node) {
   return node;
 }
 
-/// 安全的 KV 存储包装类（Phase 1：以 SharedPreferences 为主存储 + 原生 MMKV 双写镜像 + 纯 Dart 二进制解析迁移）
+/// 安全的 KV 存储包装类（Phase 1：SharedPreferences 主存 + 原生 MMKV 镜像 + 纯 Dart 解析迁移）
 class SafeMMKV {
   static final SafeMMKV _instance = SafeMMKV._internal();
   factory SafeMMKV() => _instance;
@@ -349,31 +355,43 @@ class SafeMMKV {
           _legacyMmkvAdapter = mmkvAdapter;
           logDebug('SafeMMKV: 已挂载原生 MMKVAdapter 作为过渡期双写镜像与比对源');
         } catch (e) {
-          logDebug('SafeMMKV: 原生 MMKVAdapter 挂载失败（将仅使用纯 Dart 二进制解析器迁移）: $e');
+          logDebug('SafeMMKV: 原生 MMKVAdapter 挂载失败，将仅使用纯 Dart 解析器: $e');
           _legacyMmkvAdapter = null;
         }
       }
 
-      // 3. 若尚未完成引擎迁移，执行三通道幂等迁移
-      final alreadyMigrated = _storage!.getBool(kKvEngineMigratedKey) == true;
-      if (!alreadyMigrated) {
-        await _performMigration(wasAlreadyMigrated: false);
-      } else {
-        final candidateFiles = await PlatformHelper.resolveCandidateMmkvFiles(
-          customPaths: _testCandidateMmkvFiles,
-        );
-        _lastMigrationSnapshot = MmkvMigrationSnapshot(
-          migratedAt: DateTime.now(),
-          wasAlreadyMigrated: true,
-          nativeMmkvAvailable: _legacyMmkvAdapter != null,
-          migratedFromNativeCount: 0,
-          migratedFromBinaryCount: 0,
-          healedFromSqliteCount: 0,
-          preservedSharedPrefsOnlyCount: _storage!.getKeys().length,
-          primaryMmkvFilePath:
-              candidateFiles.isNotEmpty ? candidateFiles.first : null,
-          migrationDurationMicroseconds: 0,
-          warnings: const [],
+      // 3. 若尚未完成引擎迁移，执行三通道幂等迁移（迁移异常绝不降级已就绪的 SharedPreferences）
+      try {
+        final storage = _storage!;
+        final alreadyMigrated = storage.getBool(kKvEngineMigratedKey) == true;
+        if (!alreadyMigrated) {
+          await _performMigration(wasAlreadyMigrated: false);
+        } else {
+          final files = await PlatformHelper.resolveCandidateMmkvFiles(
+            customPaths: _testCandidateMmkvFiles,
+          );
+          String? primaryPath;
+          if (files.isNotEmpty) {
+            primaryPath = files.first;
+          }
+          _lastMigrationSnapshot = MmkvMigrationSnapshot(
+            migratedAt: DateTime.now(),
+            wasAlreadyMigrated: true,
+            nativeMmkvAvailable: _legacyMmkvAdapter != null,
+            migratedFromNativeCount: 0,
+            migratedFromBinaryCount: 0,
+            healedFromSqliteCount: 0,
+            preservedSharedPrefsOnlyCount: storage.getKeys().length,
+            primaryMmkvFilePath: primaryPath,
+            migrationDurationMicroseconds: 0,
+            warnings: const [],
+          );
+        }
+      } catch (e, stackTrace) {
+        logError(
+          'SafeMMKV: 迁移过程发生异常，保留 SharedPreferences 主存储: $e',
+          error: e,
+          stackTrace: stackTrace,
         );
       }
 
@@ -410,17 +428,73 @@ class SafeMMKV {
   /// 手动或自动执行从 MMKV（原生 + 纯 Dart 二进制解析 + SQLite 自愈）到 SharedPreferences 的幂等迁移。
   Future<MmkvMigrationSnapshot> runMigration({bool force = false}) async {
     _ensureInitialized();
-    if (!force && _storage!.getBool(kKvEngineMigratedKey) == true) {
+    final alreadyMigrated = _storage!.getBool(kKvEngineMigratedKey) == true;
+    if (!force && alreadyMigrated && _lastMigrationSnapshot != null) {
       return _lastMigrationSnapshot!;
     }
-    return _performMigration(wasAlreadyMigrated: false);
+    return _performMigration(wasAlreadyMigrated: alreadyMigrated);
+  }
+
+  /// 按优先级扫描候选 `mmkv.default` 文件，选择首个通过 CRC 校验且含有效数据的文件作为主二进制源。
+  Future<_BinaryCandidateSelection> _selectBinaryCandidates(
+    List<String> candidateFiles,
+  ) async {
+    if (candidateFiles.isEmpty) {
+      return _BinaryCandidateSelection(
+        primary: MmkvParseResult.notFound('<unavailable>'),
+        secondary: null,
+        warnings: <String>[],
+      );
+    }
+
+    MmkvParseResult? validPrimary;
+    MmkvParseResult? secondaryExisting;
+    MmkvParseResult? firstExisting;
+    final warnings = <String>[];
+
+    for (final path in candidateFiles) {
+      final res = await MmkvBinaryReader.parseFile(path);
+      if (!res.fileExists) continue;
+      firstExisting ??= res;
+      warnings.addAll(res.warnings);
+
+      final isValidData = res.crcMatched != false &&
+          res.actualSize > 4 &&
+          res.entries.isNotEmpty;
+      if (validPrimary == null && isValidData) {
+        validPrimary = res;
+      } else {
+        secondaryExisting ??= res;
+      }
+    }
+
+    if (validPrimary != null) {
+      return _BinaryCandidateSelection(
+        primary: validPrimary,
+        secondary: secondaryExisting,
+        warnings: warnings,
+      );
+    }
+    if (firstExisting != null) {
+      final isSame = identical(secondaryExisting, firstExisting);
+      final sec = isSame ? null : secondaryExisting;
+      return _BinaryCandidateSelection(
+        primary: firstExisting,
+        secondary: sec,
+        warnings: warnings,
+      );
+    }
+    return _BinaryCandidateSelection(
+      primary: MmkvParseResult.notFound(candidateFiles.first),
+      secondary: null,
+      warnings: warnings,
+    );
   }
 
   Future<MmkvMigrationSnapshot> _performMigration({
     required bool wasAlreadyMigrated,
   }) async {
     final stopwatch = Stopwatch()..start();
-    final warnings = <String>[];
     final storage = _storage!;
     final existingSpKeys = storage.getKeys();
 
@@ -428,24 +502,20 @@ class SafeMMKV {
     final candidateFiles = await PlatformHelper.resolveCandidateMmkvFiles(
       customPaths: _testCandidateMmkvFiles,
     );
+    final selected = await _selectBinaryCandidates(candidateFiles);
+    final primaryBinary = selected.primary;
+    final warnings = List<String>.from(selected.warnings);
+
     final binaryMergedEntries = <String, Object?>{};
     String? activeMmkvPath;
-
-    // 逆序合并候选文件，使优先级最高的文件（index 0：app_flutter/mmkv/mmkv.default）覆盖次级目录；
-    // 注意：MMKV 空字典文件的 actualSize 为 4（仅含 4 字节 ItemSizeHolder），仅当 actualSize > 4
-    // 且 entries 非空时才视为有效数据文件。
-    for (var i = candidateFiles.length - 1; i >= 0; i--) {
-      final path = candidateFiles[i];
-      final parseResult = await MmkvBinaryReader.parseFile(path);
-      if (parseResult.fileExists) {
-        activeMmkvPath ??= path;
-        warnings.addAll(parseResult.warnings);
-        if (parseResult.actualSize > 4 && parseResult.entries.isNotEmpty) {
-          activeMmkvPath = path;
-          for (final entry in parseResult.entries.entries) {
-            if (entry.value != null) {
-              binaryMergedEntries[entry.key] = entry.value;
-            }
+    if (primaryBinary.fileExists) {
+      activeMmkvPath = primaryBinary.filePath;
+      if (primaryBinary.crcMatched != false &&
+          primaryBinary.actualSize > 4 &&
+          primaryBinary.entries.isNotEmpty) {
+        for (final entry in primaryBinary.entries.entries) {
+          if (entry.value != null) {
+            binaryMergedEntries[entry.key] = entry.value;
           }
         }
       }
@@ -453,13 +523,14 @@ class SafeMMKV {
 
     // 通道 1：从原生 MMKVAdapter 读取所有键（若当前设备支持）
     final nativeEntries = <String, Object?>{};
-    if (_legacyMmkvAdapter != null) {
+    final legacy = _legacyMmkvAdapter;
+    if (legacy != null) {
       try {
-        final keys = _legacyMmkvAdapter!.getKeys();
+        final keys = legacy.getKeys();
         for (final key in keys) {
           if (key.isEmpty) continue;
           final val = _readTypedFromAdapter(
-            _legacyMmkvAdapter!,
+            legacy,
             key,
             fallbackHint: binaryMergedEntries[key],
           );
@@ -486,6 +557,11 @@ class SafeMMKV {
       final value = entry.value;
       if (value == null) continue;
 
+      // 若已完成过首次迁移（如从诊断页手动重新触发），仅回填缺失键，不覆盖主存已有新值
+      if (wasAlreadyMigrated && existingSpKeys.contains(key)) {
+        continue;
+      }
+
       final written = await _writeTypedToAdapter(storage, key, value);
       if (written) {
         if (nativeEntries.containsKey(key)) {
@@ -497,9 +573,9 @@ class SafeMMKV {
       }
 
       // 如果过渡期原生 MMKV 中缺失了二进制解析出的键，也同步回填
-      if (_legacyMmkvAdapter != null && !nativeEntries.containsKey(key)) {
+      if (legacy != null && !nativeEntries.containsKey(key)) {
         try {
-          await _writeTypedToAdapter(_legacyMmkvAdapter!, key, value);
+          await _writeTypedToAdapter(legacy, key, value);
         } catch (_) {}
       }
     }
@@ -507,19 +583,19 @@ class SafeMMKV {
     // 通道 3：SQLite `thoughtecho.db` 启发式老用户自愈
     var healedFromSqliteCount = 0;
     if (storage.getBool('app_installed_v2') != true) {
-      final customDataDir = storage.getString('custom_data_directory_path');
-      final hasPopulatedDb =
-          await PlatformHelper.hasPopulatedThoughtEchoDatabase(
-        customDbPaths: _testCandidateDbPaths,
-        customDataDirectoryPath: customDataDir,
+      final customDir = storage.getString('custom_data_directory_path');
+      final dbPaths = _testCandidateDbPaths;
+      final hasDb = await PlatformHelper.hasPopulatedThoughtEchoDatabase(
+        customDbPaths: dbPaths,
+        customDataDirectoryPath: customDir,
       );
-      if (hasPopulatedDb) {
+      if (hasDb) {
         await storage.setBool('app_installed_v2', true);
         await storage.setBool('initial_database_setup_complete', true);
         await storage.setBool('database_migration_complete', true);
         await storage.setBool('hasCompletedOnboarding', true);
 
-        // 确保 app_settings JSON 中的 hasCompletedOnboarding 也为 true 且通过 _validateAppSettings 校验
+        // 确保 app_settings 中的 hasCompletedOnboarding 为 true，保留已有 sentryDisclosureShown
         Map<String, Object?> appSettingsMap = {
           'hitokotoType': 'a,b,c,d,e,f,g,h,i,j,k,l',
           'dailyQuoteProvider': 'hitokoto',
@@ -527,17 +603,20 @@ class SafeMMKV {
           'hasCompletedOnboarding': true,
           'sentryDisclosureShown': true,
         };
-        final existingAppSettingsJson = storage.getString('app_settings');
-        if (existingAppSettingsJson != null &&
-            existingAppSettingsJson.isNotEmpty) {
+        final existingJson = storage.getString('app_settings');
+        if (existingJson != null && existingJson.isNotEmpty) {
           try {
-            final decoded = json.decode(existingAppSettingsJson);
+            final decoded = json.decode(existingJson);
             if (decoded is Map) {
+              final existingMap = Map<String, Object?>.from(decoded);
+              final hasSentry = existingMap.containsKey(
+                'sentryDisclosureShown',
+              );
               appSettingsMap = {
                 ...appSettingsMap,
-                ...Map<String, Object?>.from(decoded),
+                ...existingMap,
                 'hasCompletedOnboarding': true,
-                'sentryDisclosureShown': true,
+                if (!hasSentry) 'sentryDisclosureShown': true,
               };
             }
           } catch (_) {}
@@ -545,16 +624,13 @@ class SafeMMKV {
         final patchedAppSettingsJson = json.encode(appSettingsMap);
         await storage.setString('app_settings', patchedAppSettingsJson);
 
-        if (_legacyMmkvAdapter != null) {
+        if (legacy != null) {
           try {
-            await _legacyMmkvAdapter!.setBool('app_installed_v2', true);
-            await _legacyMmkvAdapter!
-                .setBool('initial_database_setup_complete', true);
-            await _legacyMmkvAdapter!
-                .setBool('database_migration_complete', true);
-            await _legacyMmkvAdapter!.setBool('hasCompletedOnboarding', true);
-            await _legacyMmkvAdapter!
-                .setString('app_settings', patchedAppSettingsJson);
+            await legacy.setBool('app_installed_v2', true);
+            await legacy.setBool('initial_database_setup_complete', true);
+            await legacy.setBool('database_migration_complete', true);
+            await legacy.setBool('hasCompletedOnboarding', true);
+            await legacy.setString('app_settings', patchedAppSettingsJson);
           } catch (_) {}
         }
         healedFromSqliteCount = 5;
@@ -567,31 +643,36 @@ class SafeMMKV {
     // 标记迁移完成（同时写入新旧两个标记键，防止 SettingsService._migrateDataIfNeeded 逆向覆盖）
     await storage.setBool(kLegacyMmkvMigrationCompleteKey, true);
     await storage.setBool(kKvEngineMigratedKey, true);
-    if (_legacyMmkvAdapter != null) {
+    if (legacy != null) {
       try {
-        await _legacyMmkvAdapter!.setBool(
-          kLegacyMmkvMigrationCompleteKey,
-          true,
-        );
-        await _legacyMmkvAdapter!.setBool(kKvEngineMigratedKey, true);
+        await legacy.setBool(kLegacyMmkvMigrationCompleteKey, true);
+        await legacy.setBool(kKvEngineMigratedKey, true);
       } catch (_) {}
     }
 
-    final preservedSpOnlyCount = existingSpKeys
-        .where((k) => !combinedMmkvEntries.containsKey(k))
-        .length;
+    var preservedSpOnlyCount = 0;
+    for (final k in existingSpKeys) {
+      if (!combinedMmkvEntries.containsKey(k)) {
+        preservedSpOnlyCount++;
+      }
+    }
+
+    String? fallbackPath;
+    if (candidateFiles.isNotEmpty) {
+      fallbackPath = candidateFiles.first;
+    }
+    final resolvedPrimaryPath = activeMmkvPath ?? fallbackPath;
 
     stopwatch.stop();
     final snapshot = MmkvMigrationSnapshot(
       migratedAt: DateTime.now(),
       wasAlreadyMigrated: wasAlreadyMigrated,
-      nativeMmkvAvailable: _legacyMmkvAdapter != null,
+      nativeMmkvAvailable: legacy != null,
       migratedFromNativeCount: migratedFromNativeCount,
       migratedFromBinaryCount: migratedFromBinaryCount,
       healedFromSqliteCount: healedFromSqliteCount,
       preservedSharedPrefsOnlyCount: preservedSpOnlyCount,
-      primaryMmkvFilePath: activeMmkvPath ??
-          (candidateFiles.isNotEmpty ? candidateFiles.first : null),
+      primaryMmkvFilePath: resolvedPrimaryPath,
       migrationDurationMicroseconds: stopwatch.elapsedMicroseconds,
       warnings: warnings,
     );
@@ -652,6 +733,9 @@ class SafeMMKV {
     Object value,
   ) async {
     try {
+      if (value is Uint8List) {
+        return false;
+      }
       final schemaType = MmkvKeySchema.typeForKey(key);
       if (schemaType == MmkvValueType.stringList) {
         if (value is List<String>) {
@@ -711,42 +795,21 @@ class SafeMMKV {
     final candidateFiles = await PlatformHelper.resolveCandidateMmkvFiles(
       customPaths: _testCandidateMmkvFiles,
     );
-
-    MmkvParseResult primaryBinaryResult;
-    MmkvParseResult? secondaryBinaryResult;
-
-    if (candidateFiles.isEmpty) {
-      primaryBinaryResult = MmkvParseResult.notFound('<unavailable>');
-    } else {
-      primaryBinaryResult =
-          await MmkvBinaryReader.parseFile(candidateFiles.first);
-      if (candidateFiles.length > 1) {
-        final second = await MmkvBinaryReader.parseFile(candidateFiles[1]);
-        if (second.fileExists) {
-          secondaryBinaryResult = second;
-        }
-      }
-      // 如果主路径文件不存在但次级路径存在，提升次级路径为主展示结果
-      if (!primaryBinaryResult.fileExists &&
-          secondaryBinaryResult != null &&
-          secondaryBinaryResult.fileExists) {
-        primaryBinaryResult = secondaryBinaryResult;
-        secondaryBinaryResult = null;
-      }
-    }
+    final selected = await _selectBinaryCandidates(candidateFiles);
+    final primaryBinaryResult = selected.primary;
+    final secondaryBinaryResult = selected.secondary;
 
     final binaryEntries = primaryBinaryResult.entries;
-    final nativeKeys = _legacyMmkvAdapter != null
-        ? _legacyMmkvAdapter!.getKeys()
-        : <String>{};
+    final legacy = _legacyMmkvAdapter;
+    final nativeKeys = legacy != null ? legacy.getKeys() : <String>{};
     final spKeys = storage.getKeys();
 
     final allKeys = <String>{
       ...binaryEntries.keys,
       ...nativeKeys,
       ...spKeys,
-    }.where((k) => k.isNotEmpty).toList()
-      ..sort();
+    }.where((k) => k.isNotEmpty).toList();
+    allKeys.sort();
 
     final comparisons = <MmkvKeyComparisonEntry>[];
     var consistentCount = 0;
@@ -757,33 +820,39 @@ class SafeMMKV {
       final binaryVal = binaryEntries[key];
 
       final presentInSp = spKeys.contains(key);
-      final spVal = presentInSp
-          ? _readTypedFromAdapter(storage, key, fallbackHint: binaryVal)
-          : null;
+      Object? spVal;
+      if (presentInSp) {
+        spVal = _readTypedFromAdapter(storage, key, fallbackHint: binaryVal);
+      }
 
-      final presentInNative =
-          _legacyMmkvAdapter != null && nativeKeys.contains(key);
-      final nativeVal = presentInNative
-          ? _readTypedFromAdapter(
-              _legacyMmkvAdapter!,
-              key,
-              fallbackHint: binaryVal ?? spVal,
-            )
-          : null;
+      final presentInNative = legacy != null && nativeKeys.contains(key);
+      Object? nativeVal;
+      if (presentInNative) {
+        nativeVal = _readTypedFromAdapter(
+          legacy,
+          key,
+          fallbackHint: binaryVal ?? spVal,
+        );
+      }
 
-      final valueType = _describeValueType(
-        key,
-        spVal ?? binaryVal ?? nativeVal,
-      );
+      final sampleVal = spVal ?? binaryVal ?? nativeVal;
+      final valueType = _describeValueType(key, sampleVal);
 
-      final binaryMatchesSp = presentInBinary
-          ? _valuesEqual(binaryVal, spVal)
-          : presentInSp;
+      bool binaryMatchesSp;
+      if (presentInBinary) {
+        binaryMatchesSp = _valuesEqual(binaryVal, spVal);
+      } else {
+        binaryMatchesSp = presentInSp;
+      }
 
-      final nativeMatchesBinary = _legacyMmkvAdapter != null
-          ? (presentInNative == presentInBinary &&
-              _valuesEqual(nativeVal, binaryVal))
-          : binaryMatchesSp;
+      bool nativeMatchesBinary;
+      if (legacy != null) {
+        final samePresence = presentInNative == presentInBinary;
+        final valuesMatch = _valuesEqual(nativeVal, binaryVal);
+        nativeMatchesBinary = samePresence && valuesMatch;
+      } else {
+        nativeMatchesBinary = binaryMatchesSp;
+      }
 
       // 判断该键在所有已存在的存储源中是否一致：
       // 1. 若二进制文件中有该键，SharedPreferences 中必须存在且值完全相等；
@@ -791,8 +860,8 @@ class SafeMMKV {
       // 3. 若某键仅存在于 SharedPreferences（例如桌面端/32位设备或仅写入 SP 的键），视为一致。
       bool allConsistent;
       if (presentInBinary) {
-        allConsistent = binaryMatchesSp &&
-            (!presentInNative || _valuesEqual(nativeVal, binaryVal));
+        final nativeOk = !presentInNative || _valuesEqual(nativeVal, binaryVal);
+        allConsistent = binaryMatchesSp && nativeOk;
       } else if (presentInNative) {
         allConsistent = _valuesEqual(nativeVal, spVal);
       } else {
@@ -1051,12 +1120,12 @@ class SafeMMKV {
     final result = await _storage!.clear();
     await _storage!.setBool(kLegacyMmkvMigrationCompleteKey, true);
     await _storage!.setBool(kKvEngineMigratedKey, true);
-    if (_legacyMmkvAdapter != null) {
+    final legacy = _legacyMmkvAdapter;
+    if (legacy != null) {
       try {
-        await _legacyMmkvAdapter!.clear();
-        await _legacyMmkvAdapter!
-            .setBool(kLegacyMmkvMigrationCompleteKey, true);
-        await _legacyMmkvAdapter!.setBool(kKvEngineMigratedKey, true);
+        await legacy.clear();
+        await legacy.setBool(kLegacyMmkvMigrationCompleteKey, true);
+        await legacy.setBool(kKvEngineMigratedKey, true);
       } catch (e) {
         logDebug('SafeMMKV: MMKV 镜像清空 clear() 失败: $e');
       }
@@ -1069,6 +1138,18 @@ class SafeMMKV {
     _ensureInitialized();
     return _storage!.getKeys();
   }
+}
+
+class _BinaryCandidateSelection {
+  final MmkvParseResult primary;
+  final MmkvParseResult? secondary;
+  final List<String> warnings;
+
+  const _BinaryCandidateSelection({
+    required this.primary,
+    required this.secondary,
+    required this.warnings,
+  });
 }
 
 /// 内存存储适配器（作为最终回退与测试桩）

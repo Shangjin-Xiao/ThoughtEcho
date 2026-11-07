@@ -112,6 +112,8 @@ class PlatformHelper {
       } catch (_) {}
     }
 
+    const sqliteMagic = 'SQLite format 3\x00';
+
     for (final dbPath in candidates) {
       try {
         final file = File(dbPath);
@@ -120,7 +122,23 @@ class PlatformHelper {
           // Empty or uninitialized SQLite file is <= 4096 bytes; a populated
           // ThoughtEcho database with tables/migrations is > 8192 bytes.
           if (stat.size > 8192) {
-            return true;
+            final headerBuilder = BytesBuilder(copy: false);
+            await for (final chunk in file.openRead(0, 16)) {
+              headerBuilder.add(chunk);
+            }
+            final header = headerBuilder.takeBytes();
+            if (header.length >= 16) {
+              var matchesHeader = true;
+              for (var i = 0; i < 16; i++) {
+                if (header[i] != sqliteMagic.codeUnitAt(i)) {
+                  matchesHeader = false;
+                  break;
+                }
+              }
+              if (matchesHeader) {
+                return true;
+              }
+            }
           }
         }
       } catch (_) {}

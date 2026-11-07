@@ -1972,7 +1972,9 @@ class SettingsService extends ChangeNotifier {
       // 恢复主题风格与墨色配置（防御性解析）
       if (backupData.containsKey('theme_style')) {
         final rawStyle = backupData['theme_style'];
-        if (rawStyle is String && rawStyle.trim().isNotEmpty) {
+        if (rawStyle == null) {
+          await _mmkv.remove(ThemeStyle.storageKey);
+        } else if (rawStyle is String && rawStyle.trim().isNotEmpty) {
           await _mmkv.setString(
             ThemeStyle.storageKey,
             ThemeStyle.fromName(rawStyle.trim()).name,
@@ -1995,7 +1997,9 @@ class SettingsService extends ChangeNotifier {
       }
       if (backupData.containsKey('custom_color')) {
         final rawColor = backupData['custom_color'];
-        if (rawColor is int) {
+        if (rawColor == null) {
+          await _mmkv.remove('custom_color');
+        } else if (rawColor is int) {
           await _mmkv.setInt('custom_color', rawColor);
         } else if (rawColor is num && rawColor.isFinite && rawColor % 1 == 0) {
           await _mmkv.setInt('custom_color', rawColor.toInt());
@@ -2003,13 +2007,17 @@ class SettingsService extends ChangeNotifier {
       }
       if (backupData.containsKey('use_custom_color')) {
         final rawUseCustom = backupData['use_custom_color'];
-        if (rawUseCustom is bool) {
+        if (rawUseCustom == null) {
+          await _mmkv.remove('use_custom_color');
+        } else if (rawUseCustom is bool) {
           await _mmkv.setBool('use_custom_color', rawUseCustom);
         }
       }
       if (backupData.containsKey('use_dynamic_color')) {
         final rawUseDynamic = backupData['use_dynamic_color'];
-        if (rawUseDynamic is bool) {
+        if (rawUseDynamic == null) {
+          await _mmkv.remove('use_dynamic_color');
+        } else if (rawUseDynamic is bool) {
           await _mmkv.setBool('use_dynamic_color', rawUseDynamic);
         }
       }
