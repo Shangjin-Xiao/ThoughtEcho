@@ -213,13 +213,15 @@ class _CustomVideoEmbedBuilder extends quill.EmbedBuilder {
   Widget build(BuildContext context, quill.EmbedContext embedContext) {
     final videoUrl = embedContext.node.value.data as String;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      child: MediaPlayerWidget(
-        filePath: videoUrl,
-        mediaType: MediaType.video,
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: 200,
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8.0),
+        child: MediaPlayerWidget(
+          filePath: videoUrl,
+          mediaType: MediaType.video,
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: 200,
+        ),
       ),
     );
   }
@@ -234,13 +236,15 @@ class _CustomAudioEmbedBuilder extends quill.EmbedBuilder {
   Widget build(BuildContext context, quill.EmbedContext embedContext) {
     final audioUrl = embedContext.node.value.data as String;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      child: MediaPlayerWidget(
-        filePath: audioUrl,
-        mediaType: MediaType.audio,
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: 120,
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8.0),
+        child: MediaPlayerWidget(
+          filePath: audioUrl,
+          mediaType: MediaType.audio,
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: 120,
+        ),
       ),
     );
   }
