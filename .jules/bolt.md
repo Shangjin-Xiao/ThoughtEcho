@@ -343,4 +343,4 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 在错误脱敏和上报（如 `MissingMediaFileReporter.redact`）以及各服务语言参数归一化（如 `recommendedDailyQuoteProviderForLanguage`、`_buildLocaleIdentifier`）等高频路径中，内联调用 `RegExp(r'[\\/]')` 或 `split(RegExp(r'[_-]'))` 会在每次函数执行时重新分配和编译正则表达式对象，同时造成多余的临时列表开销。将路径分隔符提取为类级 `static final RegExp` 静态常量，并统一复用底层已预编译静态正则的工具方法 `I18nLanguage.base`，能够在统一多语言解析逻辑的同时彻底消除重复编译开销与 GC 压力。
 
 **Action:**
-在 `lib/utils/safe_file_image.dart` 中提取 `MissingMediaFileReporter._pathSeparatorRegex`；在 `lib/services/api_service.dart` 和 `lib/services/local_geocoding_service.dart` 中使用 `I18nLanguage.base` 替换原内联 `split(RegExp(r'[_-]'))`，在 `test/performance/utils_regex_benchmark_test.dart` 中补充基准测试验证，50,000 次执行耗时大幅压缩且保持零内存泄漏。
+在 `lib/utils/safe_file_image.dart` 中提取 `MissingMediaFileReporter._pathSeparatorRegex`；在 `lib/services/api_service.dart` 和 `lib/services/local_geocoding_service.dart` 中使用 `I18nLanguage.base` 替换原内联 `split(RegExp(r'[_-]'))`。在 `test/performance/utils_regex_benchmark_test.dart` 基准测试中验证通过，50,000 次执行稳定高效，有效避免了高频调用时的重复编译和不必要的内存分配。
