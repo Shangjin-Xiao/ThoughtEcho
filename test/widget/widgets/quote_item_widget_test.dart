@@ -373,10 +373,25 @@ void main() {
       expect(find.byType(AnimatedContainer), findsOneWidget);
       final animatedContainerWidget =
           tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      // AnimatedContainer 内部包含 RepaintBoundary 隔离内容，外层不再多余包裹 RepaintBoundary
       expect(animatedContainerWidget.child, isA<RepaintBoundary>());
+
+      final cardShellBoundary = find.descendant(
+        of: find.byType(QuoteItemWidget),
+        matching: find.ancestor(
+          of: find.byType(AnimatedContainer),
+          matching: find.byType(RepaintBoundary),
+        ),
+      );
+      expect(cardShellBoundary, findsNothing);
+
+      final animatedSizeWidget =
+          tester.widget<AnimatedSize>(find.byType(AnimatedSize));
+      expect(animatedSizeWidget.clipBehavior, equals(Clip.none));
+      expect(animatedSizeWidget.child, isA<RepaintBoundary>());
     });
 
-    testWidgets('选择态卡片在 AnimatedContainer 中包含 RepaintBoundary 隔离外壳',
+    testWidgets('选择态卡片在 AnimatedContainer 中包含 RepaintBoundary 隔离外壳且避免外层重复嵌套',
         (tester) async {
       final quote = _buildQuote(
         content: '选择态笔记内容',
@@ -415,7 +430,17 @@ void main() {
       expect(find.byType(AnimatedContainer), findsOneWidget);
       final containerWidget =
           tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      // AnimatedContainer 内部包含 RepaintBoundary 隔离内容，外层不再多余包裹 RepaintBoundary
       expect(containerWidget.child, isA<RepaintBoundary>());
+
+      final cardShellBoundary = find.descendant(
+        of: find.byType(QuoteItemWidget),
+        matching: find.ancestor(
+          of: find.byType(AnimatedContainer),
+          matching: find.byType(RepaintBoundary),
+        ),
+      );
+      expect(cardShellBoundary, findsNothing);
     });
 
     testWidgets('默认状态下展示截断内容并显示提示', (tester) async {
@@ -986,6 +1011,11 @@ void main() {
 
       expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
 
+      final animatedSizeBeforeToggle =
+          tester.widget<AnimatedSize>(find.byType(AnimatedSize));
+      expect(animatedSizeBeforeToggle.clipBehavior, equals(Clip.none));
+      expect(animatedSizeBeforeToggle.child, isA<RepaintBoundary>());
+
       final contentGesture = find.byKey(
         const ValueKey('quote_item.double_tap_region'),
       );
@@ -997,6 +1027,78 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(toggled, isTrue);
+
+      final animatedSizeAfterToggle =
+          tester.widget<AnimatedSize>(find.byType(AnimatedSize));
+      expect(animatedSizeAfterToggle.clipBehavior, equals(Clip.none));
+      expect(animatedSizeAfterToggle.child, isA<RepaintBoundary>());
+    });
+
+    testWidgets('折叠与展开状态下正文子树 AnimatedSize 均使用 Clip.none 且包裹 RepaintBoundary',
+        (tester) async {
+      final quote = _buildQuote(
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+      );
+
+      for (final isExpanded in [false, true]) {
+        await tester.pumpWidget(
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _FakeSettingsService(),
+            child: MaterialApp(
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: const Locale('zh'),
+              home: Material(
+                child: QuoteItemWidget(
+                  quote: quote,
+                  tagMap: const {},
+                  isExpanded: isExpanded,
+                  onToggleExpanded: (_) {},
+                  onEdit: () {},
+                  onDelete: () {},
+                  onAskAI: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final animatedSizeFinder = find.byType(AnimatedSize);
+        expect(animatedSizeFinder, findsOneWidget);
+        final animatedSize = tester.widget<AnimatedSize>(animatedSizeFinder);
+        expect(animatedSize.clipBehavior, equals(Clip.none));
+        expect(animatedSize.child, isA<RepaintBoundary>());
+
+        if (isExpanded) {
+          final animatedContainer =
+              tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+          expect(animatedContainer.child, isA<RepaintBoundary>());
+          final outerShellBoundary = find.descendant(
+            of: find.byType(QuoteItemWidget),
+            matching: find.ancestor(
+              of: find.byType(AnimatedContainer),
+              matching: find.byType(RepaintBoundary),
+            ),
+          );
+          expect(outerShellBoundary, findsNothing);
+        } else {
+          final cardShellBoundary = find.descendant(
+            of: find.byType(QuoteItemWidget),
+            matching: find.ancestor(
+              of: find.byType(Container),
+              matching: find.byType(RepaintBoundary),
+            ),
+          );
+          expect(cardShellBoundary, findsWidgets);
+        }
+      }
     });
 
     testWidgets('双击时显示高亮反馈', (tester) async {

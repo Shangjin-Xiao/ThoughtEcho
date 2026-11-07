@@ -1016,7 +1016,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       curve: QuoteItemWidget._expandCurve,
       alignment: Alignment.topLeft,
       clipBehavior: Clip.none,
-      child: content,
+      child: RepaintBoundary(child: content),
     );
   }
 
@@ -1892,7 +1892,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       // 卡片阴影（BoxShadow 高斯模糊）与渐变属于静态像素，套重绘边界后
       // 其栅格结果可被缓存，滚动时仅做位移合成，避免每帧重新栅格化阴影。
       // 展开/选择态在 AnimatedContainer 的 child 处额外包裹 RepaintBoundary，
-      // 隔离外壳补间动画对内部复杂富文本/图片子树的重绘影响。
+      // 隔离外壳补间动画对内部复杂富文本/图片子树的重绘影响，
+      // 并避免在 AnimatedContainer 外层重复嵌套 RepaintBoundary 增加合成与显存开销。
       card = RepaintBoundary(
         child: Container(
           margin: cardMargin,
