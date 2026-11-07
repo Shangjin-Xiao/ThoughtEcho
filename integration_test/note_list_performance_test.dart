@@ -241,7 +241,7 @@ Widget _buildBenchmarkApp(List<Quote> quotes, {bool probeItemLayouts = false}) {
         body: ListView.builder(
           key: _listKey,
           addSemanticIndexes: false,
-          cacheExtent: 800.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(800.0),
           itemCount: quotes.length,
           itemBuilder: (BuildContext context, int index) {
             final Widget item = QuoteItemWidget(
