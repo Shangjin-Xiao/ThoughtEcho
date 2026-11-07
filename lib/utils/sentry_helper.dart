@@ -415,20 +415,43 @@ final _spanWordSplitPattern = RegExp(
   r'[_\.\-\s]+|(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])',
 );
 
+const _maxSensitiveKeyCacheSize = 1000;
+const _maxCachedKeyLength = 128;
+
+final _sensitiveSpanKeyCache = <String, bool>{};
+
 bool _isSensitiveSpanKey(String key) {
+  final cacheKey = key.length > _maxCachedKeyLength
+      ? key.substring(0, _maxCachedKeyLength)
+      : key;
+
+  final cached = _sensitiveSpanKeyCache[cacheKey];
+  if (cached != null) return cached;
+
   final words =
       key.split(_spanWordSplitPattern).map((w) => w.toLowerCase()).toList();
-  if (words.isNotEmpty && _spanMetricSuffixes.contains(words.last)) {
-    return false;
-  }
-  for (var i = 0; i < words.length; i++) {
-    final w = words[i];
-    if (_spanSensitiveWords.contains(w)) return true;
-    if (w == 'api' && i + 1 < words.length && words[i + 1] == 'key') {
-      return true;
+
+  bool result = false;
+  if (words.isEmpty || !_spanMetricSuffixes.contains(words.last)) {
+    for (var i = 0; i < words.length; i++) {
+      final w = words[i];
+      if (_spanSensitiveWords.contains(w)) {
+        result = true;
+        break;
+      }
+      if (w == 'api' && i + 1 < words.length && words[i + 1] == 'key') {
+        result = true;
+        break;
+      }
     }
   }
-  return false;
+
+  if (_sensitiveSpanKeyCache.length >= _maxSensitiveKeyCacheSize) {
+    _sensitiveSpanKeyCache.remove(_sensitiveSpanKeyCache.keys.first);
+  }
+  _sensitiveSpanKeyCache[cacheKey] = result;
+
+  return result;
 }
 
 dynamic _sanitizeSpanValue(dynamic value, {String? key}) {

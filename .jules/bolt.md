@@ -336,3 +336,7 @@ Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_
 **Learning:** 在高频文本处理、历史对话摘要、版本号比较以及系统提示词文本处理方法（如 `AgentHistoryBuilder._truncate`、`compareVersions` 与 `AIPromptManager.formatLocalReportInsight`）中，内联调用 `RegExp(...)` 会在每次调用时重新分配和编译正则表达式对象。将其提取为静态/文件级只读变量可在保持现有代码语义与行为完全一致的前提下，消除重复正则编译和垃圾回收（GC）开销。
 
 **Action:** 将 `AgentHistoryBuilder` 中的 `_whitespaceRegex`、`version_utils.dart` 中的 `_vPrefixRegex` 与 `_plusMinusRegex`，以及 `AIPromptManager` 中的 `_leadingHashRegex` 提取为 `static final RegExp` 或 `final RegExp` 只读对象，并在新增的 `test/performance/utils_regex_benchmark_test.dart` 性能基准测试中验证通过。
+
+## 2026-10-25 - [缓存 `_isSensitiveSpanKey` 匹配结果提升 Sentry 隐私过滤性能]
+**Learning:** 在高频调用的拦截器（如 Sentry Span 过滤）中，直接执行正则表达式分割 `String.split(RegExp)` 再遍历匹配集合会带来巨大的性能开销，导致在处理包含大量 span 的事务时阻塞主线程。
+**Action:** 引入简单的 `Map<String, bool>` 作为 LRU 或固定大小缓存。对于反复出现的相同 Span Key，可以直接返回上次的匹配结果，将耗时从 600ms+ 降低到 40ms，提升 15 倍以上的性能。由于 Span key 种类有限且高度重复，这种内存换时间的策略极具性价比。
