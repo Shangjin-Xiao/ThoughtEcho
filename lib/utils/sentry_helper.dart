@@ -415,10 +415,17 @@ final _spanWordSplitPattern = RegExp(
   r'[_\.\-\s]+|(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])',
 );
 
+const _maxSensitiveKeyCacheSize = 1000;
+const _maxCachedKeyLength = 128;
+
 final _sensitiveSpanKeyCache = <String, bool>{};
 
 bool _isSensitiveSpanKey(String key) {
-  final cached = _sensitiveSpanKeyCache[key];
+  final cacheKey = key.length > _maxCachedKeyLength
+      ? key.substring(0, _maxCachedKeyLength)
+      : key;
+
+  final cached = _sensitiveSpanKeyCache[cacheKey];
   if (cached != null) return cached;
 
   final words =
@@ -439,9 +446,10 @@ bool _isSensitiveSpanKey(String key) {
     }
   }
 
-  if (_sensitiveSpanKeyCache.length < 1000) {
-    _sensitiveSpanKeyCache[key] = result;
+  if (_sensitiveSpanKeyCache.length >= _maxSensitiveKeyCacheSize) {
+    _sensitiveSpanKeyCache.remove(_sensitiveSpanKeyCache.keys.first);
   }
+  _sensitiveSpanKeyCache[cacheKey] = result;
 
   return result;
 }
