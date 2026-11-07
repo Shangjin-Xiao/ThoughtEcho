@@ -61,5 +61,44 @@ void main() {
       expect(count, iterations);
       expect(stopwatch.elapsedMicroseconds, isPositive);
     });
+
+    test('hasSameContentAs repeated calls benchmark', () {
+      final q1 = Quote(
+        id: 'q-1',
+        content: '这是一条用于基准测试的笔记正文',
+        date: '2026-08-23T09:00:00.000',
+        tagIds: const ['tag-a', 'tag-b'],
+        keywords: const ['benchmark', 'test'],
+        sourceAuthor: '作者名',
+        sourceWork: '作品名',
+        lastModified: '2026-08-23T10:00:00.000',
+        favoriteCount: 5,
+        colorHex: '#123456',
+      );
+      final q2 = Quote(
+        id: 'q-1',
+        content: '这是一条用于基准测试的笔记正文',
+        date: '2026-08-23T09:00:00.000',
+        tagIds: const ['tag-a', 'tag-b'],
+        keywords: const ['benchmark', 'test'],
+        sourceAuthor: '作者名',
+        sourceWork: '作品名',
+        lastModified: '2026-08-23T10:00:00.000',
+        favoriteCount: 5,
+        colorHex: '#123456',
+      );
+
+      final Stopwatch stopwatch = Stopwatch()..start();
+
+      const iterations = 50000;
+      int matchCount = 0;
+      for (int i = 0; i < iterations; i++) {
+        if (q1.hasSameContentAs(q2)) matchCount++;
+      }
+
+      stopwatch.stop();
+      expect(matchCount, iterations);
+      expect(stopwatch.elapsedMicroseconds, isPositive);
+    });
   });
 }

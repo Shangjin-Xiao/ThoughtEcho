@@ -1012,21 +1012,63 @@ class Quote {
   /// 需要后者：数据库每次重新查询都会造一批全新的 [Quote] 对象，内容一个字没改
   /// 身份却全变了，按 `identical` 判断的卡片记忆化于是整屏失效。
   ///
-  /// 判据是「持久化的全部字段」：[toJson] 覆盖 quotes 表那一行，[tagIds] 补上走
-  /// 关联表、因而不在 [toJson] 里的标签。新增持久化字段时本来就要同步 [toJson]
-  /// （见 AGENTS.md），这里跟着自动生效 —— 不再单列一份会漏掉新字段的清单。
+  /// 采用零临时对象分配的就地逐字段比对，与 [toJson] 及 [tagIds] 的持久化语义完全等价：
+  /// - 编排短路比对顺序：首先判定 `identical` 与 `id`，再优先比对高频变动的标量字段，
+  ///   随后比对来源映射字段，最后比对长文本与列表，最大化提前短路退出概率并彻底消除比对阶段的 GC 压力。
   bool hasSameContentAs(Quote other) {
     if (identical(this, other)) return true;
-    if (other.id != id) return false;
-    if (other.tagIds.length != tagIds.length) return false;
-    for (var i = 0; i < tagIds.length; i++) {
-      if (other.tagIds[i] != tagIds[i]) return false;
-    }
-    final mine = toJson();
-    final theirs = other.toJson();
-    if (mine.length != theirs.length) return false;
-    for (final entry in mine.entries) {
-      if (theirs[entry.key] != entry.value) return false;
+    if (id != other.id) return false;
+
+    // 优先比对高频变动的标量字段（短路概率最高且开销最低）
+    if (lastModified != other.lastModified) return false;
+    if (favoriteCount != other.favoriteCount) return false;
+    if (isDeleted != other.isDeleted) return false;
+    if (deletedAt != other.deletedAt) return false;
+    if (content != other.content) return false;
+    if (colorHex != other.colorHex) return false;
+    if (dayPeriod != other.dayPeriod) return false;
+    if (weather != other.weather) return false;
+    if (temperature != other.temperature) return false;
+    if (editSource != other.editSource) return false;
+    if (categoryId != other.categoryId) return false;
+    if (sentiment != other.sentiment) return false;
+    if (date != other.date) return false;
+    if (latitude != other.latitude) return false;
+    if (longitude != other.longitude) return false;
+    if (location != other.location) return false;
+    if (poiName != other.poiName) return false;
+
+    // 出处相关字段：
+    // 若 sourceAuthor 或 sourceWork 存在且非空，toJson['source'] 为派生值，
+    // 其语义已由 sourceAuthor 与 sourceWork 严格决定；
+    // 仅在两者均为空时，toJson['source'] 回退至底层 _source。
+    if (sourceAuthor != other.sourceAuthor) return false;
+    if (sourceWork != other.sourceWork) return false;
+    if (!_hasDerivedSource() && _source != other._source) return false;
+
+    // 长文本与复杂字符串字段
+    if (summary != other.summary) return false;
+    if (aiAnalysis != other.aiAnalysis) return false;
+    if (deltaContent != other.deltaContent) return false;
+
+    // 列表字段（零分配逐元素比对）
+    if (!_stringListsEqual(tagIds, other.tagIds)) return false;
+    if (!_stringListsEqual(keywords, other.keywords)) return false;
+
+    return true;
+  }
+
+  bool _hasDerivedSource() {
+    return (sourceAuthor != null && sourceAuthor!.isNotEmpty) ||
+        (sourceWork != null && sourceWork!.isNotEmpty);
+  }
+
+  static bool _stringListsEqual(List<String>? a, List<String>? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
     }
     return true;
   }
