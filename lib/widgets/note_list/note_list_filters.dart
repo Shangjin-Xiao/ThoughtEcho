@@ -336,7 +336,7 @@ class AnimatedFilterChip extends StatelessWidget {
             opacity: value,
             child: Transform.scale(
               scale: 0.8 + (0.2 * value),
-              child: animChild,
+              child: RepaintBoundary(child: animChild),
             ),
           ),
         );
