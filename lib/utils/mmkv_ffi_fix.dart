@@ -310,7 +310,6 @@ class SafeMMKV {
   }
 
   /// 重置测试状态。
-  @visibleForTesting
   void resetForTesting() {
     configureForTesting();
   }
