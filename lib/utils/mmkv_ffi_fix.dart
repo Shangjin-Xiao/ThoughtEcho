@@ -620,9 +620,7 @@ class SafeMMKV {
 
     // 通道 3：SQLite `thoughtecho.db` 启发式老用户自愈
     var healedFromSqliteCount = 0;
-    final needsOnboardingHeal = storage.getBool('app_installed_v2') != true ||
-        storage.getBool('hasCompletedOnboarding') != true ||
-        storage.getBool('initial_database_setup_complete') != true;
+    final needsOnboardingHeal = storage.getBool('app_installed_v2') != true;
     if (needsOnboardingHeal) {
       final customDir = storage.getString('custom_data_directory_path');
       final dbPaths = _testCandidateDbPaths;

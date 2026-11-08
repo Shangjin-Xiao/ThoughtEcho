@@ -190,14 +190,14 @@ void main() {
       'decodes static raw byte fixture without MmkvBinaryEncoder',
       () {
         // Handcrafted raw wire-format bytes conforming to Tencent MMKV specification:
-        // ItemSizeHolder: varint32 (0x00)
+        // ItemSizeHolder: varint32 (0x00FFFFFF: 0xff, 0xff, 0xff, 0x07)
         // Record 1: key="lang" (len 4), string="zh" (container len 3: innerLen 2 + 'zh')
         // Record 2: key="is_active" (len 9), bool=true (container len 1: byte 1)
         // Record 3: key="deleted_key" (len 11), tombstone (valueLen 0)
         // Record 4: key="counter" (len 7), int64=-1 (container len 10: 10-byte varint)
         final payload = <int>[
           // ItemSizeHolder varint32
-          0x00,
+          0xff, 0xff, 0xff, 0x07,
           // Record 1
           0x04, 0x6c, 0x61, 0x6e, 0x67, 0x03, 0x02, 0x7a, 0x68,
           // Record 2
@@ -243,6 +243,7 @@ void main() {
         expect(result.fileExists, isTrue);
         expect(result.crcMatched, isTrue);
         expect(result.actualSize, equals(actualSize));
+        expect(result.itemSizeHolder, equals(0x00FFFFFF));
         expect(result.tombstoneRecordsRead, equals(1));
         expect(result.tombstonedKeys, contains('deleted_key'));
         expect(result.entries.containsKey('deleted_key'), isFalse);
