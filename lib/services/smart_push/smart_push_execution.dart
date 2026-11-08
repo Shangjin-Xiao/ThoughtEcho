@@ -13,6 +13,10 @@ extension SmartPushExecution on SmartPushService {
     String? triggerKind,
   }) async {
     final now = DateTime.now();
+    // 刷新跨 Isolate 存储，确保前台能读取到后台任务写入的最新推送历史与每日一言标记
+    try {
+      await _mmkv.reload();
+    } catch (_) {}
     AppLogger.i(
       '开始检查推送条件 (isBackground: $isBackground, triggerKind: $triggerKind, time: ${now.hour}:${now.minute})',
     );

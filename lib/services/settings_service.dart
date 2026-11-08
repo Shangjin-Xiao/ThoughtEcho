@@ -24,6 +24,7 @@ import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
 import '../theme/theme_style.dart';
+import '../theme/app_theme.dart';
 import 'excerpt_intent_service.dart';
 import 'location_service.dart';
 
@@ -2052,6 +2053,10 @@ class SettingsService extends ChangeNotifier {
           await _mmkv.setString(_deviceIdKey, remoteId.trim());
         }
       }
+
+      try {
+        await AppTheme().reloadThemeFromStorage();
+      } catch (_) {}
 
       notifyListeners();
       logDebug('设置数据恢复完成');

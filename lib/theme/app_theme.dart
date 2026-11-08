@@ -616,6 +616,21 @@ class AppTheme with ChangeNotifier {
     }
   }
 
+  /// 重新从持久化存储加载所有主题配置（用于备份恢复后刷新界面）
+  Future<void> reloadThemeFromStorage() async {
+    try {
+      _loadCustomColor();
+      _loadThemeMode();
+      await _loadThemeStyle();
+      await _loadThemeAccents();
+      _loadDynamicColorSettings();
+      _clearThemeCache();
+      notifyListeners();
+    } catch (e, stack) {
+      logError('重载主题配置失败', error: e, stackTrace: stack, source: 'AppTheme');
+    }
+  }
+
   // 更新动态颜色方案
   void updateDynamicColorScheme(
     ColorScheme? lightScheme,

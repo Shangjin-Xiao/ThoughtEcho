@@ -729,6 +729,24 @@ class MmkvBinaryReader {
           final strBytes = reader.readBytes(innerLen);
           final str = utf8.decode(strBytes);
           return str;
+        } else if (innerLen == 0 &&
+            (key.contains('name') ||
+                key.contains('desc') ||
+                key.contains('path') ||
+                key.contains('title') ||
+                key.contains('url') ||
+                key.contains('text') ||
+                key.contains('msg') ||
+                key.contains('content') ||
+                key.contains('prompt') ||
+                key.contains('query') ||
+                key.contains('key') ||
+                key.contains('token') ||
+                key.contains('style') ||
+                key.contains('mode') ||
+                key.endsWith('_str') ||
+                key.endsWith('_json'))) {
+          return '';
         }
       }
     } catch (_) {
@@ -951,7 +969,7 @@ class MmkvBinaryEncoder {
     final actualSize = overrideActualSize ?? payloadBytes.length;
     final crcDigest =
         overrideCrcDigest ?? MmkvBinaryReader.computeCrc32(payloadBytes);
-    final out = Uint8List(128);
+    final out = Uint8List(4096);
     final bd = ByteData.sublistView(out);
     bd.setUint32(0, crcDigest, Endian.little);
     bd.setUint32(4, version, Endian.little);

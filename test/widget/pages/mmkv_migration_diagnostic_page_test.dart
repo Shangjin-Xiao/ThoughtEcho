@@ -8,14 +8,16 @@ import 'package:thoughtecho/pages/mmkv_migration_diagnostic_page.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/utils/mmkv_binary_reader.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import '../../test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late Directory tempDir;
 
-  setUp(() {
-    tempDir = Directory.systemTemp.createTempSync('mmkv_diag_widget_test_');
+  setUp(() async {
+    await TestHarness.initialize();
+    tempDir = await TestHarness.createTempDirectory('mmkv_diag_widget_test');
     SharedPreferences.setMockInitialValues({
       'custom_data_directory_path': '/sp/only/path',
       'ai_settings': '{"apiKey":"sk-secret-12345"}',
@@ -23,11 +25,9 @@ void main() {
     MMKVService().resetForTesting();
   });
 
-  tearDown(() {
+  tearDown(() async {
     MMKVService().resetForTesting();
-    if (tempDir.existsSync()) {
-      tempDir.deleteSync(recursive: true);
-    }
+    await TestHarness.deleteTempDirectory(tempDir);
   });
 
   testWidgets(

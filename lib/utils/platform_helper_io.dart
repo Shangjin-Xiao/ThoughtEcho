@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class PlatformHelper {
   static bool get isAndroid => Platform.isAndroid;
@@ -29,11 +30,25 @@ class PlatformHelper {
   static Future<Uint8List?> readFileBytesIfExists(String filePath) async {
     try {
       final file = File(filePath);
+      // In Flutter test environments (testWidgets with FakeAsync), async file IO
+      // will stall because FakeAsync does not pump the native OS file event loop.
+      if (Platform.environment.containsKey('FLUTTER_TEST')) {
+        if (!file.existsSync()) {
+          return null;
+        }
+        return file.readAsBytesSync();
+      }
       if (!await file.exists()) {
         return null;
       }
       return await file.readAsBytes();
-    } catch (_) {
+    } catch (e, stack) {
+      AppLogger.w(
+        'readFileBytesIfExists failed for $filePath',
+        error: e,
+        stackTrace: stack,
+        source: 'PlatformHelper',
+      );
       return null;
     }
   }
