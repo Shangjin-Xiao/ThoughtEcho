@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,8 +14,8 @@ void main() {
 
   late Directory tempDir;
 
-  setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('mmkv_diag_widget_test_');
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('mmkv_diag_widget_test_');
     SharedPreferences.setMockInitialValues({
       'custom_data_directory_path': '/sp/only/path',
       'ai_settings': '{"apiKey":"sk-secret-12345"}',
@@ -22,16 +23,23 @@ void main() {
     MMKVService().resetForTesting();
   });
 
-  tearDown(() async {
+  tearDown(() {
     MMKVService().resetForTesting();
-    if (await tempDir.exists()) {
-      await tempDir.delete(recursive: true);
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
     }
   });
 
   testWidgets(
     'MmkvMigrationDiagnosticPage displays overview, 100% consistency badge, and filters keys',
     (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       final mmkvPath = '${tempDir.path}/mmkv.default';
       final encoder = MmkvBinaryEncoder()
         ..writeString('theme_style', 'paper')
@@ -39,10 +47,10 @@ void main() {
         ..writeInt('custom_color', 0xFF336699)
         ..writeString('ai_settings', '{"apiKey":"sk-secret-12345"}');
 
-      await File(mmkvPath).writeAsBytes(
+      File(mmkvPath).writeAsBytesSync(
         encoder.toFileBytes(minTotalSize: 4096),
       );
-      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+      File('$mmkvPath.crc').writeAsBytesSync(encoder.toCrcBytes());
 
       SafeMMKV().configureForTesting(
         candidateMmkvFiles: [mmkvPath],
@@ -72,6 +80,11 @@ void main() {
       );
       expect(find.textContaining('100% 一致 ('), findsOneWidget);
       expect(find.textContaining('sk-secret-12345'), findsNothing);
+
+      final report = await MMKVService().collectDiagnosticReport();
+      final reportJson = json.encode(report.toRedactedJson());
+      expect(reportJson, contains('ai_settings'));
+      expect(reportJson, isNot(contains('sk-secret-12345')));
 
       // Filter by Bool
       final boolFilter = find.byKey(const Key('mmkv_filter_boolType'));

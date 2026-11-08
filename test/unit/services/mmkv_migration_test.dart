@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_binary_reader.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/platform_helper.dart';
@@ -175,6 +176,88 @@ void main() {
         final expectedArch =
             PlatformHelper.pointerBits == 64 ? '64-bit' : '32-bit';
         expect(arch, equals(expectedArch));
+      },
+    );
+
+    test(
+      'merges entries across candidate MMKV files and respects tombstones from primary candidate',
+      () async {
+        final primaryPath = '${tempDir.path}/primary_mmkv.default';
+        final secondaryPath = '${tempDir.path}/secondary_mmkv.default';
+
+        final primaryEncoder = MmkvBinaryEncoder()
+          ..writeString('theme_style', 'paper')
+          ..writeBool('app_installed_v2', true)
+          ..writeTombstone('deleted_flag');
+        File(primaryPath).writeAsBytesSync(
+          primaryEncoder.toFileBytes(minTotalSize: 4096),
+        );
+        File('$primaryPath.crc').writeAsBytesSync(primaryEncoder.toCrcBytes());
+
+        final secondaryEncoder = MmkvBinaryEncoder()
+          ..writeString('theme_style', 'plain')
+          ..writeBool('deleted_flag', true)
+          ..writeString('secondary_only_key', 'rescued_value');
+        File(secondaryPath).writeAsBytesSync(
+          secondaryEncoder.toFileBytes(minTotalSize: 4096),
+        );
+        File('$secondaryPath.crc')
+            .writeAsBytesSync(secondaryEncoder.toCrcBytes());
+
+        final safeMmkv = SafeMMKV()
+          ..configureForTesting(
+            candidateMmkvFiles: [primaryPath, secondaryPath],
+            forceNativeMmkvSupport: false,
+          );
+
+        await safeMmkv.initialize();
+
+        expect(safeMmkv.getString('theme_style'), equals('paper'));
+        expect(
+            safeMmkv.getString('secondary_only_key'), equals('rescued_value'));
+        expect(safeMmkv.getBool('deleted_flag'), isNull);
+      },
+    );
+
+    test(
+      'SettingsService.restoreAllSettingsFromBackup restores theme and push settings and notifies listeners',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final settingsService = SettingsService(prefs);
+        var notified = false;
+        settingsService.addListener(() {
+          notified = true;
+        });
+
+        final backupData = {
+          'theme_style': 'paper',
+          'theme_accent_material': 'emerald',
+          'theme_accent_paper': 'bamboo',
+          'theme_accent_plain': 'slate',
+          'custom_color': 0xFF112233,
+          'use_custom_color': true,
+          'use_dynamic_color': false,
+          'smart_push_settings_v2': {
+            'enabled': true,
+            'intervalHours': 6,
+          },
+        };
+
+        await settingsService.restoreAllSettingsFromBackup(backupData);
+
+        expect(notified, isTrue);
+        final mmkv = MMKVService();
+        expect(mmkv.getString('theme_style'), equals('paper'));
+        expect(mmkv.getString('theme_accent_material'), equals('emerald'));
+        expect(mmkv.getString('theme_accent_paper'), equals('bamboo'));
+        expect(mmkv.getString('theme_accent_plain'), equals('slate'));
+        expect(mmkv.getInt('custom_color'), equals(0xFF112233));
+        expect(mmkv.getBool('use_custom_color'), isTrue);
+        expect(mmkv.getBool('use_dynamic_color'), isFalse);
+        expect(
+          mmkv.getString('smart_push_settings_v2'),
+          contains('"enabled":true'),
+        );
       },
     );
   });

@@ -146,10 +146,6 @@ class _MmkvMigrationDiagnosticPageState
     return e.valueType == 'String' || e.valueType == 'List<String>';
   }
 
-  bool _isNumericEntry(MmkvKeyComparisonEntry e) {
-    return e.valueType == 'int' || e.valueType == 'double';
-  }
-
   List<MmkvKeyComparisonEntry> _filteredEntries(
     List<MmkvKeyComparisonEntry> all,
   ) {
@@ -165,7 +161,7 @@ class _MmkvMigrationDiagnosticPageState
       case MmkvDiagnosticFilter.boolType:
         return all.where((e) => e.valueType == 'bool').toList();
       case MmkvDiagnosticFilter.intType:
-        return all.where(_isNumericEntry).toList();
+        return all.where((e) => e.valueType == 'int').toList();
     }
   }
 
@@ -593,7 +589,7 @@ class _MmkvMigrationDiagnosticPageState
       (MmkvDiagnosticFilter.spOnly, spOnlyLabel),
       (MmkvDiagnosticFilter.stringType, 'String'),
       (MmkvDiagnosticFilter.boolType, 'Bool'),
-      (MmkvDiagnosticFilter.intType, 'Int / Double'),
+      (MmkvDiagnosticFilter.intType, 'Int'),
     ];
 
     return SingleChildScrollView(

@@ -29,10 +29,10 @@ class PlatformHelper {
   static Future<Uint8List?> readFileBytesIfExists(String filePath) async {
     try {
       final file = File(filePath);
-      if (!await file.exists()) {
+      if (!file.existsSync()) {
         return null;
       }
-      return await file.readAsBytes();
+      return file.readAsBytesSync();
     } catch (_) {
       return null;
     }
@@ -117,32 +117,34 @@ class PlatformHelper {
     for (final dbPath in candidates) {
       try {
         final file = File(dbPath);
-        if (await file.exists()) {
-          final stat = await file.stat();
+        if (file.existsSync()) {
+          final stat = file.statSync();
           // Empty or uninitialized SQLite file is <= 4096 bytes; a populated
           // ThoughtEcho database with tables/migrations is > 8192 bytes.
           if (stat.size > 8192) {
-            final headerBuilder = BytesBuilder(copy: false);
-            await for (final chunk in file.openRead(0, 16)) {
-              headerBuilder.add(chunk);
-            }
-            final header = headerBuilder.takeBytes();
-            if (header.length >= 16) {
-              var matchesHeader = true;
-              for (var i = 0; i < 16; i++) {
-                if (header[i] != sqliteMagic.codeUnitAt(i)) {
-                  matchesHeader = false;
-                  break;
+            final raf = file.openSync(mode: FileMode.read);
+            try {
+              final header = raf.readSync(16);
+              if (header.length >= 16) {
+                var matchesHeader = true;
+                for (var i = 0; i < 16; i++) {
+                  if (header[i] != sqliteMagic.codeUnitAt(i)) {
+                    matchesHeader = false;
+                    break;
+                  }
+                }
+                if (matchesHeader) {
+                  return true;
                 }
               }
-              if (matchesHeader) {
-                return true;
-              }
+            } finally {
+              raf.closeSync();
             }
           }
         }
       } catch (_) {}
     }
+
     return false;
   }
 }

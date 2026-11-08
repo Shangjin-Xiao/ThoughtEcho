@@ -62,6 +62,7 @@ class MmkvParseResult {
   final Map<String, Uint8List> rawEntries;
   final int totalRecordsRead;
   final int tombstoneRecordsRead;
+  final Set<String> tombstonedKeys;
   final List<String> warnings;
   final int parseDurationMicroseconds;
 
@@ -79,6 +80,7 @@ class MmkvParseResult {
     required this.rawEntries,
     this.totalRecordsRead = 0,
     this.tombstoneRecordsRead = 0,
+    this.tombstonedKeys = const <String>{},
     required this.warnings,
     required this.parseDurationMicroseconds,
   });
@@ -516,6 +518,7 @@ class MmkvBinaryReader {
     final reader = _CodedInputReader(dataBytes, 4, 4 + actualSize);
     int? itemSizeHolder;
     final rawMap = <String, Uint8List>{};
+    final tombstoneKeys = <String>{};
     var totalRecords = 0;
     var tombstoneRecords = 0;
 
@@ -568,12 +571,14 @@ class MmkvBinaryReader {
           // Tombstone record (MMKV::removeValueForKey writes a 0-length value holder)
           if (key.isNotEmpty) {
             rawMap.remove(key);
+            tombstoneKeys.add(key);
           }
           tombstoneRecords++;
         } else {
           final valueBytes = reader.readBytes(valueLen);
           if (key.isNotEmpty) {
             rawMap[key] = valueBytes;
+            tombstoneKeys.remove(key);
           }
         }
       }
@@ -620,6 +625,7 @@ class MmkvBinaryReader {
       rawEntries: rawMap,
       totalRecordsRead: totalRecords,
       tombstoneRecordsRead: tombstoneRecords,
+      tombstonedKeys: Set<String>.unmodifiable(tombstoneKeys),
       warnings: warnings,
       parseDurationMicroseconds: stopwatch.elapsedMicroseconds,
     );

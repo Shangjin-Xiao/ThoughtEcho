@@ -2053,6 +2053,7 @@ class SettingsService extends ChangeNotifier {
         }
       }
 
+      notifyListeners();
       logDebug('设置数据恢复完成');
     } catch (e) {
       AppLogger.e('设置数据恢复失败', error: e, source: 'SettingsService');

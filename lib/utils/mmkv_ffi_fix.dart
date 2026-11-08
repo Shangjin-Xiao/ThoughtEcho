@@ -440,13 +440,14 @@ class SafeMMKV {
   ) async {
     if (candidateFiles.isEmpty) {
       return _BinaryCandidateSelection(
+        validCandidates: const [],
         primary: MmkvParseResult.notFound('<unavailable>'),
         secondary: null,
         warnings: <String>[],
       );
     }
 
-    MmkvParseResult? validPrimary;
+    final validCandidates = <MmkvParseResult>[];
     MmkvParseResult? secondaryExisting;
     MmkvParseResult? firstExisting;
     final warnings = <String>[];
@@ -460,17 +461,21 @@ class SafeMMKV {
       final isValidData = res.crcMatched != false &&
           res.actualSize > 4 &&
           res.entries.isNotEmpty;
-      if (validPrimary == null && isValidData) {
-        validPrimary = res;
+      if (isValidData) {
+        validCandidates.add(res);
       } else {
         secondaryExisting ??= res;
       }
     }
 
-    if (validPrimary != null) {
+    if (validCandidates.isNotEmpty) {
+      final primary = validCandidates.first;
+      final secondary =
+          validCandidates.length > 1 ? validCandidates[1] : secondaryExisting;
       return _BinaryCandidateSelection(
-        primary: validPrimary,
-        secondary: secondaryExisting,
+        validCandidates: validCandidates,
+        primary: primary,
+        secondary: secondary,
         warnings: warnings,
       );
     }
@@ -478,12 +483,14 @@ class SafeMMKV {
       final isSame = identical(secondaryExisting, firstExisting);
       final sec = isSame ? null : secondaryExisting;
       return _BinaryCandidateSelection(
+        validCandidates: const [],
         primary: firstExisting,
         secondary: sec,
         warnings: warnings,
       );
     }
     return _BinaryCandidateSelection(
+      validCandidates: const [],
       primary: MmkvParseResult.notFound(candidateFiles.first),
       secondary: null,
       warnings: warnings,
@@ -506,18 +513,32 @@ class SafeMMKV {
     final warnings = List<String>.from(selected.warnings);
 
     final binaryMergedEntries = <String, Object?>{};
+    final tombstones = <String>{};
     String? activeMmkvPath;
-    if (primaryBinary.fileExists) {
-      activeMmkvPath = primaryBinary.filePath;
-      if (primaryBinary.crcMatched != false &&
-          primaryBinary.actualSize > 4 &&
-          primaryBinary.entries.isNotEmpty) {
-        for (final entry in primaryBinary.entries.entries) {
-          if (entry.value != null) {
-            binaryMergedEntries[entry.key] = entry.value;
-          }
+
+    final candidatesToMerge = selected.validCandidates.isNotEmpty
+        ? selected.validCandidates
+        : (primaryBinary.fileExists
+            ? [primaryBinary]
+            : const <MmkvParseResult>[]);
+
+    for (final candidate in candidatesToMerge) {
+      if (candidate.crcMatched == false ||
+          candidate.actualSize <= 4 ||
+          candidate.entries.isEmpty) {
+        continue;
+      }
+      activeMmkvPath ??= candidate.filePath;
+      for (final entry in candidate.entries.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        if (value != null &&
+            !binaryMergedEntries.containsKey(key) &&
+            !tombstones.contains(key)) {
+          binaryMergedEntries[key] = value;
         }
       }
+      tombstones.addAll(candidate.tombstonedKeys);
     }
 
     // 通道 1：从原生 MMKVAdapter 读取所有键（若当前设备支持）
@@ -1140,11 +1161,13 @@ class SafeMMKV {
 }
 
 class _BinaryCandidateSelection {
+  final List<MmkvParseResult> validCandidates;
   final MmkvParseResult primary;
   final MmkvParseResult? secondary;
   final List<String> warnings;
 
   const _BinaryCandidateSelection({
+    this.validCandidates = const [],
     required this.primary,
     required this.secondary,
     required this.warnings,
@@ -1297,9 +1320,10 @@ class SharedPrefsAdapter implements StorageAdapter {
   @override
   String? getString(String key) {
     final raw = prefs.get(key);
+    if (raw == null) return null;
     if (raw is String) return raw;
     if (raw is List) return json.encode(raw);
-    return null;
+    throw TypeError();
   }
 
   @override
@@ -1310,8 +1334,9 @@ class SharedPrefsAdapter implements StorageAdapter {
   @override
   int? getInt(String key) {
     final raw = prefs.get(key);
+    if (raw == null) return null;
     if (raw is int) return raw;
-    return null;
+    throw TypeError();
   }
 
   @override
@@ -1322,9 +1347,10 @@ class SharedPrefsAdapter implements StorageAdapter {
   @override
   double? getDouble(String key) {
     final raw = prefs.get(key);
+    if (raw == null) return null;
     if (raw is double) return raw;
     if (raw is int) return raw.toDouble();
-    return null;
+    throw TypeError();
   }
 
   @override
@@ -1335,9 +1361,9 @@ class SharedPrefsAdapter implements StorageAdapter {
   @override
   bool? getBool(String key) {
     final raw = prefs.get(key);
+    if (raw == null) return null;
     if (raw is bool) return raw;
-    if (raw is int) return raw != 0;
-    return null;
+    throw TypeError();
   }
 
   @override
