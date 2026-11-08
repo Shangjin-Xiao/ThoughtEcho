@@ -311,6 +311,20 @@ String _sanitizeAuthHeadersInText(String text) {
   return result;
 }
 
+/// Quoted JSON string values for credential keys (including escaped characters):
+/// e.g. {"api_key": "secret", "authToken": "secret\"with\\escapes"}
+final _jsonApiKeyStringPattern = RegExp(
+  r'''"(api[_-]?key|apikey|x[_-]api[_-]key|access[_-]?token|secret[_-]?key|auth[_-]?token|private[_-]?key)"(\s*:\s*)"(?:[^"\\]|\\.)*"''',
+  caseSensitive: false,
+);
+
+/// Single-quoted JSON-like string values for credential keys:
+/// e.g. {'api_key': 'secret', 'authToken': 'secret\'with\\escapes'}
+final _singleQuotedApiKeyStringPattern = RegExp(
+  r"""'(api[_-]?key|apikey|x[_-]api[_-]key|access[_-]?token|secret[_-]?key|auth[_-]?token|private[_-]?key)'(\s*:\s*)'(?:[^'\\]|\\.)*'""",
+  caseSensitive: false,
+);
+
 /// API key key-value pairs (in headers, JSON, query, config, or error texts):
 /// e.g. api_key: "secret", "apiKey": "secret", x-api-key: secret, api_key=secret
 final _apiKeyKeyValuePattern = RegExp(
@@ -326,7 +340,13 @@ final _standaloneApiKeyPattern = RegExp(
 );
 
 String _sanitizeApiKeysInText(String text) {
-  var result = text.replaceAllMapped(_apiKeyKeyValuePattern, (match) {
+  var result = text.replaceAllMapped(_jsonApiKeyStringPattern, (match) {
+    return '"${match.group(1)}"${match.group(2)}"[redacted]"';
+  });
+  result = result.replaceAllMapped(_singleQuotedApiKeyStringPattern, (match) {
+    return "'${match.group(1)}'${match.group(2)}'[redacted]'";
+  });
+  result = result.replaceAllMapped(_apiKeyKeyValuePattern, (match) {
     final key = match.group(1)!;
     final sep = match.group(2)!;
     final quote = match.group(3) ?? '';
@@ -533,14 +553,19 @@ void _sanitizeSentryMetadata(SentryEvent event) {
     try {
       final sanitizedExtra =
           _sanitizeGenericData(extra) as Map<String, dynamic>;
-      try {
-        extra.clear();
-        extra.addAll(sanitizedExtra);
-      } catch (_) {
-        // ignore: deprecated_member_use
-        event.extra = sanitizedExtra;
-      }
-    } catch (_) {}
+      // ignore: deprecated_member_use
+      event.extra = sanitizedExtra;
+    } catch (e, stackTrace) {
+      logError(
+        'Failed to sanitize Sentry extra metadata: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'Sentry',
+      );
+      // Drop the affected entry without mutating potentially unmodifiable maps
+      // ignore: deprecated_member_use
+      event.extra = null;
+    }
   }
 
   final contexts = event.contexts;
@@ -554,13 +579,29 @@ void _sanitizeSentryMetadata(SentryEvent event) {
     if (value is Map) {
       try {
         contexts[key] = _sanitizeGenericData(value);
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        contexts.remove(key);
+        logError(
+          'Failed to sanitize Sentry context entry $key: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'Sentry',
+        );
+      }
     } else if (value is String) {
       contexts[key] = sanitizeSentryNonSqlText(value);
     } else if (value is List) {
       try {
         contexts[key] = _sanitizeGenericData(value);
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        contexts.remove(key);
+        logError(
+          'Failed to sanitize Sentry context entry $key: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'Sentry',
+        );
+      }
     } else if (value is SentryResponse) {
       contexts[key] = SentryResponse(
         statusCode: value.statusCode,
@@ -579,7 +620,15 @@ void _sanitizeSentryMetadata(SentryEvent event) {
       } catch (_) {
         contexts.trace?.data = sanitizedTrace;
       }
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      logError(
+        'Failed to sanitize Sentry trace data: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'Sentry',
+      );
+      contexts.trace?.data = null;
+    }
   }
 
   final tags = event.tags;
@@ -599,12 +648,22 @@ void _sanitizeSentryMetadata(SentryEvent event) {
 }
 
 SentryEvent? sanitizeSentryEvent(SentryEvent event, Hint hint) {
-  _sanitizeSentryRequest(event);
-  _sanitizeSentryExceptions(event);
-  _sanitizeSentryMessage(event);
-  _sanitizeSentryHint(hint);
-  _sanitizeSentryMetadata(event);
-  return event;
+  try {
+    _sanitizeSentryRequest(event);
+    _sanitizeSentryExceptions(event);
+    _sanitizeSentryMessage(event);
+    _sanitizeSentryHint(hint);
+    _sanitizeSentryMetadata(event);
+    return event;
+  } catch (e, stackTrace) {
+    logError(
+      'Failed to sanitize Sentry event: $e',
+      error: e,
+      stackTrace: stackTrace,
+      source: 'Sentry',
+    );
+    return null;
+  }
 }
 
 void _sanitizeSentryRequest(SentryEvent event) {

@@ -1,5 +1,6 @@
 // ignore_for_file: experimental_member_use, deprecated_member_use
 
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -1441,6 +1442,110 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(hint.get('non_string_val'), 12345);
       expect(hint.get('bool_val'), false);
     });
+
+    test(
+        'redacts quoted JSON string values for credential keys including escaped characters',
+        () {
+      // 1. Quoted JSON credential keys (e.g. api_key, authToken)
+      const jsonText =
+          '{"api_key": "secret123", "authToken": "token456", "safe": "value"}';
+      expect(
+        sanitizeSentryNonSqlText(jsonText),
+        '{"api_key": "[redacted]", "authToken": "[redacted]", "safe": "value"}',
+      );
+
+      // 2. Escaped characters inside quoted values
+      const jsonWithEscapes =
+          '{"api_key": "secret\\"with\\\\escapes\\nand\\"quotes", "authToken": "token\\"xyz"}';
+      expect(
+        sanitizeSentryNonSqlText(jsonWithEscapes),
+        '{"api_key": "[redacted]", "authToken": "[redacted]"}',
+      );
+
+      // 3. Various credential key name formats in JSON
+      const jsonVariousKeys =
+          '{"access_token": "tok1", "secret_key": "sec2", "apiKey": "key3", "x-api-key": "xkey4", "private_key": "priv5"}';
+      expect(
+        sanitizeSentryNonSqlText(jsonVariousKeys),
+        '{"access_token": "[redacted]", "secret_key": "[redacted]", "apiKey": "[redacted]", "x-api-key": "[redacted]", "private_key": "[redacted]"}',
+      );
+
+      // 4. Preserves unquoted / key-value format handling
+      const plainKeyValue =
+          'Error with api_key: secret_val, x-api-key: secret_x, api_key=secret_eq, and sk-ant-api03-1234567890123456';
+      expect(
+        sanitizeSentryNonSqlText(plainKeyValue),
+        'Error with api_key: [redacted], x-api-key: [redacted], api_key=[redacted], and [redacted]',
+      );
+
+      // 5. End-to-end via sanitizeSentryEvent in exception value
+      final event = SentryEvent(
+        exceptions: [
+          SentryException(
+            type: 'ApiException',
+            value:
+                'Request failed with body: {"api_key": "my_secret_key", "authToken": "secret\\"with\\\\escapes"}',
+          ),
+        ],
+      );
+      final sanitized = sanitizeSentryEvent(event, Hint());
+      expect(
+        sanitized?.exceptions?.single.value,
+        'Request failed with body: {"api_key": "[redacted]", "authToken": "[redacted]"}',
+      );
+    });
+
+    test(
+        'handles metadata sanitization failures by dropping affected entry without mutating unmodifiable maps',
+        () {
+      // 1. Unmodifiable map in extra is sanitized cleanly without mutating original map
+      final unmodifiableExtra =
+          Map<String, dynamic>.unmodifiable(<String, dynamic>{
+        'token': 'sensitive_secret_token',
+        'safe_key': 'safe_value',
+        'destination': '/Users/developer/file.txt',
+      });
+      final eventWithUnmodifiable = SentryEvent();
+      eventWithUnmodifiable.extra = unmodifiableExtra;
+      final sanitizedUnmodifiable =
+          sanitizeSentryEvent(eventWithUnmodifiable, Hint());
+      expect(sanitizedUnmodifiable, isNotNull);
+      expect(sanitizedUnmodifiable?.extra, isNotNull);
+      expect(sanitizedUnmodifiable?.extra, isNot(contains('token')));
+      expect(sanitizedUnmodifiable?.extra?['safe_key'], 'safe_value');
+      expect(sanitizedUnmodifiable?.extra?['destination'], '[path]');
+      // The original unmodifiable map must remain unchanged
+      expect(unmodifiableExtra['token'], 'sensitive_secret_token');
+
+      // 2. Failure in extra metadata sanitization drops the affected entry (event.extra becomes null)
+      final throwingMap = _ThrowingMap(<String, dynamic>{'token': 'secret'});
+      final eventWithThrowingExtra = SentryEvent(
+        message: SentryMessage('Event message is preserved'),
+      );
+      eventWithThrowingExtra.extra = throwingMap;
+      final sanitizedThrowingExtra =
+          sanitizeSentryEvent(eventWithThrowingExtra, Hint());
+      expect(sanitizedThrowingExtra, isNotNull);
+      // The affected entry (extra) is dropped rather than returned unsanitized
+      expect(sanitizedThrowingExtra?.extra, isNull);
+      expect(
+        sanitizedThrowingExtra?.message?.formatted,
+        'Event message is preserved',
+      );
+
+      // 3. Failure in contexts entry drops only the affected context entry
+      final eventWithThrowingContext = SentryEvent(
+        contexts: Contexts(
+          device: SentryDevice(name: 'Safe Device'),
+        ),
+      );
+      eventWithThrowingContext.contexts['faulty'] = throwingMap;
+      final sanitizedContext =
+          sanitizeSentryEvent(eventWithThrowingContext, Hint());
+      expect(sanitizedContext, isNotNull);
+      expect(sanitizedContext?.contexts.containsKey('faulty'), isFalse);
+      expect(sanitizedContext?.contexts.device?.name, 'Safe Device');
+    });
     tearDown(() {
       SentryHelper.onCaptureExceptionForTesting = null;
     });
@@ -1530,5 +1635,24 @@ class _MockSentryTransport implements Transport {
   Future<SentryId?> send(SentryEnvelope envelope) async {
     envelopes.add(envelope);
     return SentryId.newId();
+  }
+}
+
+class _ThrowingMap extends MapView<String, dynamic> {
+  _ThrowingMap(super.map);
+
+  @override
+  void forEach(void Function(String key, dynamic value) action) {
+    throw StateError('Simulated traversal error');
+  }
+
+  @override
+  Iterable<MapEntry<String, dynamic>> get entries {
+    throw StateError('Simulated traversal error');
+  }
+
+  @override
+  void clear() {
+    throw UnsupportedError('Cannot modify unmodifiable map');
   }
 }
