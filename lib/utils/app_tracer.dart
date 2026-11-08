@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:thoughtecho/utils/sanitization_utils.dart';
 
 /// 记录页一次滚动会话的事务名。
 ///
@@ -11,116 +12,13 @@ const String scrollSessionTraceName = 'ThoughtEcho.NoteListView.scrollSession';
 const String scrollSessionFinalizeTraceName =
     '$scrollSessionTraceName.finalize';
 
-final _tracerSensitiveWords = <String>{
-  'content',
-  'text',
-  'query',
-  'title',
-  'password',
-  'token',
-  'secret',
-  'authorization',
-  'auth',
-  'authentication',
-  'credential',
-  'credentials',
-  'apikey',
-};
-
-final _tracerMetricSuffixes = <String>{
-  'length',
-  'count',
-  'size',
-  'bytes',
-  'duration',
-  'ms',
-  'overhead',
-};
-
-final _tracerWordSplitPattern = RegExp(
-  r'[_\.\-\s]+|(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])',
-);
-
-bool _isSensitiveTracerKey(String key) {
-  final words =
-      key.split(_tracerWordSplitPattern).map((w) => w.toLowerCase()).toList();
-  if (words.isNotEmpty && _tracerMetricSuffixes.contains(words.last)) {
-    return false;
-  }
-  for (var i = 0; i < words.length; i++) {
-    final w = words[i];
-    if (_tracerSensitiveWords.contains(w)) return true;
-    if (w == 'api' && i + 1 < words.length && words[i + 1] == 'key') {
-      return true;
-    }
-  }
-  return false;
-}
-
-const _tracerAllowedUrlSchemes = <String>{'http', 'https', 'file'};
-
-bool _isTracerLikelyUrl(String value, [String? key]) {
-  if (key == 'url') return true;
-  if (value.contains('://')) return true;
-  final uri = Uri.tryParse(value);
-  if (uri != null && uri.hasScheme) {
-    return _tracerAllowedUrlSchemes.contains(uri.scheme.toLowerCase());
-  }
-  return false;
-}
-
-Object? _sanitizeTracerValue(Object? value, [String? key]) {
-  if (value is String) {
-    if (_isTracerLikelyUrl(value, key)) {
-      final uri = Uri.tryParse(value);
-      if (uri != null) {
-        if (!uri.hasScheme) {
-          return uri.path;
-        }
-        return Uri(
-          scheme: uri.scheme,
-          host: uri.host,
-          port: uri.hasPort ? uri.port : null,
-          path: uri.path,
-        ).toString();
-      }
-    }
-    return value;
-  }
-  if (value is Map) {
-    final result = <dynamic, dynamic>{};
-    for (final entry in value.entries) {
-      final k = entry.key;
-      if (k is String) {
-        if (k == 'http.query' ||
-            k == 'http.fragment' ||
-            _isSensitiveTracerKey(k)) {
-          continue;
-        }
-        result[k] = _sanitizeTracerValue(entry.value, k);
-      } else {
-        result[k] = _sanitizeTracerValue(entry.value);
-      }
-    }
-    return result;
-  }
-  if (value is List) {
-    final result = <dynamic>[];
-    for (final item in value) {
-      result.add(_sanitizeTracerValue(item));
-    }
-    return result;
-  }
-  return value;
-}
-
 void _applySafeSpanData(ISentrySpan? span, Map<String, Object?>? arguments) {
   if (span == null || arguments == null) return;
   for (final entry in arguments.entries) {
-    if (_isSensitiveTracerKey(entry.key)) {
+    if (isSensitiveKey(entry.key)) {
       continue;
     }
-    final sanitizedValue = _sanitizeTracerValue(entry.value, entry.key);
+    final sanitizedValue = sanitizeDataValue(entry.value, key: entry.key);
     span.setData(entry.key, sanitizedValue);
   }
 }
