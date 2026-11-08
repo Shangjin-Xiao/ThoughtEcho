@@ -113,11 +113,19 @@ void main() {
       ).firstMatch(buildGradle);
       expect(playFlavorMatch, isNotNull);
       final playBody = playFlavorMatch!.group(1)!;
-      expect(playBody, contains("abiFilters 'arm64-v8a'"));
+      final playAbiMatch =
+          RegExp(r"abiFilters\s+'([^']+)'").firstMatch(playBody);
+      expect(playAbiMatch, isNotNull);
+      expect(playAbiMatch!.group(1), equals('arm64-v8a'));
+      expect(playBody, isNot(contains('armeabi-v7a')));
       final playPlaceholders = playFlavorMatch.group(2)!;
       expect(playPlaceholders, contains("'vmSafeMode': 'false'"));
       expect(playPlaceholders, contains("'enableSoftwareRendering': 'false'"));
       expect(playPlaceholders, contains("'enableImpeller': 'true'"));
+
+      final gradleProperties =
+          File('android/gradle.properties').readAsStringSync();
+      expect(gradleProperties, contains('disable-abi-filtering=true'));
     });
 
     test('lets release CI build either or both ABI flavors', () {
