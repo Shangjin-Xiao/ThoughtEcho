@@ -48,6 +48,7 @@ import 'package:thoughtecho/services/background_push_handler.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'core/config/distribution_config.dart';
 import 'utils/app_logger.dart';
 import 'utils/app_navigator_key.dart';
 import 'utils/app_widgets_binding.dart';
@@ -329,7 +330,9 @@ Future<void> main() async {
         Future.microtask(() async {
           try {
             // 启动时清理旧的 APK 安装包
-            if (!kIsWeb && Platform.isAndroid) {
+            if (!kIsWeb &&
+                Platform.isAndroid &&
+                DistributionConfig.supportsApkSelfUpdate) {
               logDebug('启动清理旧安装包逻辑...');
               await ApkDownloadService.cleanupApkFiles();
             }

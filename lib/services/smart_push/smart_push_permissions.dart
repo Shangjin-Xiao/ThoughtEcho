@@ -108,6 +108,7 @@ extension SmartPushPermissions on SmartPushService {
   /// 返回 true 表示已豁免电池优化（推送可以正常工作）
   /// 返回 false 表示未豁免（可能导致推送被系统杀死）
   Future<bool> checkBatteryOptimizationExempted() async {
+    if (!DistributionConfig.supportsBatteryOptimizationExemption) return true;
     if (!PlatformHelper.isAndroid) return true;
 
     try {
@@ -125,6 +126,7 @@ extension SmartPushPermissions on SmartPushService {
   ///
   /// 会弹出系统对话框让用户确认
   Future<bool> requestBatteryOptimizationExemption() async {
+    if (!DistributionConfig.supportsBatteryOptimizationExemption) return false;
     if (!PlatformHelper.isAndroid) return true;
 
     try {

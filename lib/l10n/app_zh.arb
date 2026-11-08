@@ -2739,6 +2739,14 @@
       }
     }
   },
+  "updateOpenGooglePlayFailed": "打开Google Play商店失败: {error}",
+  "@updateOpenGooglePlayFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "updateOpenLinkFailed": "打开下载链接失败: {error}",
   "@updateOpenLinkFailed": {
     "placeholders": {
