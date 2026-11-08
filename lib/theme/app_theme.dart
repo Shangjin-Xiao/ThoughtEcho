@@ -9,6 +9,26 @@ import 'app_semantic_colors.dart';
 import 'theme_style.dart';
 
 class AppTheme with ChangeNotifier {
+  static AppTheme? _currentInstance;
+  static AppTheme? get currentInstance => _currentInstance;
+
+  /// 从存储重载当前活跃实例的主题配置
+  static Future<void> reloadCurrentInstance() async {
+    await _currentInstance?.reloadThemeFromStorage();
+  }
+
+  AppTheme() {
+    _currentInstance = this;
+  }
+
+  @override
+  void dispose() {
+    if (_currentInstance == this) {
+      _currentInstance = null;
+    }
+    super.dispose();
+  }
+
   // Windows 平台字体配置
   // 使用 Microsoft YaHei UI 作为首选字体，它在 Windows 上对各种字重支持更好
   static const List<String> _windowsFontFamilyFallback = [

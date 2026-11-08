@@ -365,4 +365,33 @@ void main() {
     expect(appTheme.customColor, Colors.orange);
     expect(storage.getBool('use_custom_color'), isFalse);
   });
+
+  test('reloadThemeFromStorage 重新从持久化存储加载配置并通知监听者', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+
+    // 模拟备份恢复在底层写入了全新主题配置
+    await storage.setString(ThemeStyle.storageKey, ThemeStyle.plain.name);
+    await storage.setInt('custom_color', Colors.purple.toARGB32());
+    await storage.setBool('use_custom_color', true);
+    await storage.setBool('use_dynamic_color', false);
+
+    var notified = false;
+    void listener() {
+      notified = true;
+    }
+
+    appTheme.addListener(listener);
+    await appTheme.reloadThemeFromStorage();
+    appTheme.removeListener(listener);
+
+    expect(notified, isTrue);
+    expect(appTheme.themeStyle, ThemeStyle.plain);
+    expect(appTheme.customColor, const Color(0xff9c27b0));
+    expect(appTheme.useCustomColor, isTrue);
+    expect(appTheme.useDynamicColor, isFalse);
+  });
 }

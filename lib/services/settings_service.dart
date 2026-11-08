@@ -27,6 +27,7 @@ import '../theme/theme_style.dart';
 import '../theme/app_theme.dart';
 import 'excerpt_intent_service.dart';
 import 'location_service.dart';
+import 'smart_push_service.dart';
 
 class SettingsService extends ChangeNotifier {
   static const ExcerptIntentService _excerptIntentService =
@@ -2055,7 +2056,11 @@ class SettingsService extends ChangeNotifier {
       }
 
       try {
-        await AppTheme().reloadThemeFromStorage();
+        await AppTheme.reloadCurrentInstance();
+      } catch (_) {}
+
+      try {
+        await SmartPushService.reloadCurrentInstance();
       } catch (_) {}
 
       notifyListeners();

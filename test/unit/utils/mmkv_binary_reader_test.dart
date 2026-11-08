@@ -185,5 +185,71 @@ void main() {
         }
       },
     );
+
+    test(
+      'decodes static raw byte fixture without MmkvBinaryEncoder',
+      () {
+        // Handcrafted raw wire-format bytes conforming to Tencent MMKV specification:
+        // ItemSizeHolder: varint32 (0x00)
+        // Record 1: key="lang" (len 4), string="zh" (container len 3: innerLen 2 + 'zh')
+        // Record 2: key="is_active" (len 9), bool=true (container len 1: byte 1)
+        // Record 3: key="deleted_key" (len 11), tombstone (valueLen 0)
+        // Record 4: key="counter" (len 7), int64=-1 (container len 10: 10-byte varint)
+        final payload = <int>[
+          // ItemSizeHolder varint32
+          0x00,
+          // Record 1
+          0x04, 0x6c, 0x61, 0x6e, 0x67, 0x03, 0x02, 0x7a, 0x68,
+          // Record 2
+          0x09, 0x69, 0x73, 0x5f, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x01,
+          0x01,
+          // Record 3 (Tombstone)
+          0x0b, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x5f, 0x6b, 0x65,
+          0x79, 0x00,
+          // Record 4 (int64 = -1)
+          0x07, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x65, 0x72, 0x0a,
+          0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01,
+        ];
+        final actualSize = payload.length;
+
+        // Allocate 4096-byte file with 4-byte little-endian size header
+        final rawFile = Uint8List(4096);
+        final fileData = ByteData.sublistView(rawFile);
+        fileData.setUint32(0, actualSize, Endian.little);
+        rawFile.setRange(4, 4 + actualSize, payload);
+
+        // CRC32 over the payload (bytes 4 .. 4+actualSize)
+        final payloadCrc = MmkvBinaryReader.computeCrc32(
+          Uint8List.fromList(payload),
+        );
+
+        // Allocate 4096-byte CRC meta file conforming to MMKVMetaInfo layout
+        final rawCrc = Uint8List(4096);
+        final crcData = ByteData.sublistView(rawCrc);
+        crcData.setUint32(0, payloadCrc, Endian.little); // crcDigest
+        crcData.setUint32(4, 1, Endian.little); // version
+        crcData.setUint32(8, 1, Endian.little); // sequence
+        // 12..27 is m_vector[16]
+        crcData.setUint32(28, actualSize, Endian.little); // actualSize
+        crcData.setUint32(32, actualSize, Endian.little); // lastActualSize
+        crcData.setUint32(36, payloadCrc, Endian.little); // lastCrcDigest
+
+        final result = MmkvBinaryReader.parseBytes(
+          rawFile,
+          crcBytes: rawCrc,
+          filePath: '/independent/fixture/mmkv.default',
+        );
+
+        expect(result.fileExists, isTrue);
+        expect(result.crcMatched, isTrue);
+        expect(result.actualSize, equals(actualSize));
+        expect(result.tombstoneRecordsRead, equals(1));
+        expect(result.tombstonedKeys, contains('deleted_key'));
+        expect(result.entries.containsKey('deleted_key'), isFalse);
+        expect(result.entries['lang'], equals('zh'));
+        expect(result.entries['is_active'], isTrue);
+        expect(result.entries['counter'], equals(-1));
+      },
+    );
   });
 }

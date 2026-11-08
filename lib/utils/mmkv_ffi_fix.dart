@@ -215,8 +215,11 @@ Object? _redactSensitiveValue(String key, Object? value) {
   if (value is String &&
       (key == 'ai_settings' ||
           key == 'multi_ai_settings' ||
+          key == 'weather_cache' ||
           value.contains('apiKey') ||
-          value.contains('api_key'))) {
+          value.contains('api_key') ||
+          value.contains('latitude') ||
+          value.contains('longitude'))) {
     try {
       final decoded = json.decode(value);
       return json.encode(_redactJsonStructure(decoded));
@@ -240,7 +243,13 @@ Object? _redactJsonStructure(Object? node) {
           lower.contains('api_key') ||
           lower.contains('secret') ||
           lower.contains('token') ||
-          lower.contains('password')) {
+          lower.contains('password') ||
+          lower.contains('latitude') ||
+          lower.contains('longitude') ||
+          lower.contains('city') ||
+          lower == 'lat' ||
+          lower == 'lon' ||
+          lower == 'lng') {
         final strVal = entry.value?.toString() ?? '';
         result[k] = strVal.isEmpty ? '' : '***REDACTED***';
       } else {
@@ -460,7 +469,7 @@ class SafeMMKV {
 
       final isValidData = res.crcMatched != false &&
           res.actualSize > 4 &&
-          res.entries.isNotEmpty;
+          (res.entries.isNotEmpty || res.tombstonedKeys.isNotEmpty);
       if (isValidData) {
         validCandidates.add(res);
       } else {
@@ -525,7 +534,7 @@ class SafeMMKV {
     for (final candidate in candidatesToMerge) {
       if (candidate.crcMatched == false ||
           candidate.actualSize <= 4 ||
-          candidate.entries.isEmpty) {
+          (candidate.entries.isEmpty && candidate.tombstonedKeys.isEmpty)) {
         continue;
       }
       activeMmkvPath ??= candidate.filePath;
@@ -600,9 +609,21 @@ class SafeMMKV {
       }
     }
 
+    // 应用已确认的 MMKV tombstone 删除记录，避免切换主存后已删除的键在 SharedPreferences 中复活
+    if (!wasAlreadyMigrated) {
+      for (final tombstoneKey in tombstones) {
+        if (!combinedMmkvEntries.containsKey(tombstoneKey)) {
+          await storage.remove(tombstoneKey);
+        }
+      }
+    }
+
     // 通道 3：SQLite `thoughtecho.db` 启发式老用户自愈
     var healedFromSqliteCount = 0;
-    if (storage.getBool('app_installed_v2') != true) {
+    final needsOnboardingHeal = storage.getBool('app_installed_v2') != true ||
+        storage.getBool('hasCompletedOnboarding') != true ||
+        storage.getBool('initial_database_setup_complete') != true;
+    if (needsOnboardingHeal) {
       final customDir = storage.getString('custom_data_directory_path');
       final dbPaths = _testCandidateDbPaths;
       final hasDb = await PlatformHelper.hasPopulatedThoughtEchoDatabase(
