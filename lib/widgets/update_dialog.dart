@@ -9,6 +9,7 @@ import '../services/apk_download_service.dart';
 import '../services/version_check_service.dart';
 import '../theme/theme_style.dart';
 import 'app_snackbar.dart';
+import '../core/config/distribution_config.dart';
 
 /// 更新按钮类型枚举
 enum UpdateButtonType {
@@ -555,9 +556,13 @@ class UpdateBottomSheet extends StatelessWidget {
   ) async {
     // 根据平台确定更新按钮的文本和图标
     final isWindows = defaultTargetPlatform == TargetPlatform.windows;
+    final isPlayStore = defaultTargetPlatform == TargetPlatform.android &&
+        DistributionConfig.isPlayStore;
     final l10n = AppLocalizations.of(context);
-    final updateButtonLabel = isWindows ? l10n.updateGoToStore : l10n.updateNow;
-    final updateButtonIcon = isWindows ? Icons.store : Icons.download;
+    final updateButtonLabel =
+        (isWindows || isPlayStore) ? l10n.updateGoToStore : l10n.updateNow;
+    final updateButtonIcon =
+        (isWindows || isPlayStore) ? Icons.store : Icons.download;
 
     // 按钮配置：永久忽略、查看详情、立即更新/前往商店
     final buttons = [
@@ -621,6 +626,9 @@ class UpdateBottomSheet extends StatelessWidget {
     if (isWindows) {
       // Windows平台：跳转到Microsoft Store
       await _openMicrosoftStore(context);
+    } else if (isAndroid && DistributionConfig.isPlayStore) {
+      // Google Play平台：跳转到Google Play商店
+      await _openGooglePlayStore(context);
     } else if (isAndroid) {
       // Android平台：下载APK
       if (versionInfo.apkDownloadUrl != null) {
@@ -636,6 +644,34 @@ class UpdateBottomSheet extends StatelessWidget {
     } else {
       // 其他平台：打开浏览器下载
       await _openDownloadUrl(context, versionInfo.downloadUrl);
+    }
+  }
+
+  /// 打开Google Play商店
+  static Future<void> _openGooglePlayStore(BuildContext context) async {
+    const String marketUrl = 'market://details?id=com.shangjin.thoughtecho';
+    const String webUrl =
+        'https://play.google.com/store/apps/details?id=com.shangjin.thoughtecho';
+
+    try {
+      final uri = Uri.parse(marketUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        final webUri = Uri.parse(webUrl);
+        if (await canLaunchUrl(webUri)) {
+          await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('Cannot open Google Play Store');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppSnackBar.error(
+          context,
+          AppLocalizations.of(context).updateOpenStoreFailed(e.toString()),
+        );
+      }
     }
   }
 
