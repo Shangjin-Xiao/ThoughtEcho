@@ -48,7 +48,6 @@ bool isSensitiveKey(
 }) {
   final words = key
       .split(sanitizationWordSplitPattern)
-      .where((w) => w.isNotEmpty)
       .map((w) => w.toLowerCase())
       .toList();
   if (words.isNotEmpty && metricSuffixes.contains(words.last)) {
@@ -125,7 +124,7 @@ Object? sanitizeDataValue(
   if (value is List) {
     final result = <dynamic>[];
     for (final item in value) {
-      result.add(sanitizeDataValue(item, isSensitive: isSensitive));
+      result.add(sanitizeDataValue(item, key: key, isSensitive: isSensitive));
     }
     return result;
   }

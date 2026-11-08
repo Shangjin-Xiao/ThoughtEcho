@@ -63,6 +63,12 @@ void main() {
           isFalse,
         );
       });
+
+      test('identifies sensitive keys ending with delimiter as sensitive', () {
+        expect(isSensitiveKey('password_length_'), isTrue);
+        expect(isSensitiveKey('secret_count_'), isTrue);
+        expect(isSensitiveKey('token_size-'), isTrue);
+      });
     });
 
     group('isLikelyUrl and sanitizeUrl', () {
@@ -78,9 +84,14 @@ void main() {
         expect(isLikelyUrl('/relative/path/without/url/key'), isFalse);
       });
 
-      test('sanitizeUrl handles null and invalid urls', () {
+      test('sanitizeUrl returns null and empty input unchanged', () {
         expect(sanitizeUrl(null), isNull);
         expect(sanitizeUrl(''), '');
+      });
+
+      test('sanitizeUrl returns invalid uri unchanged when parsing fails', () {
+        const malformedUrl = 'http://[invalid-host:8080/path';
+        expect(sanitizeUrl(malformedUrl), malformedUrl);
       });
 
       test('sanitizeUrl scrubs queries and fragments from http/https URLs', () {
@@ -257,6 +268,18 @@ void main() {
 
         expect(sanitized, isNot(contains('custom_secret')));
         expect(sanitized['normal_key'], 'visible');
+      });
+
+      test('sanitizes relative URLs in List when key is url', () {
+        final list = <dynamic>[
+          '/api/v1/resource?token=secret123#frag',
+          '/api/v2/items?key=val',
+        ];
+        final sanitized = sanitizeDataValue(list, key: 'url') as List<dynamic>;
+        expect(sanitized, [
+          '/api/v1/resource',
+          '/api/v2/items',
+        ]);
       });
     });
   });

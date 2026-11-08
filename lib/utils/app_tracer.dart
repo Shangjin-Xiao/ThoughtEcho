@@ -15,7 +15,9 @@ const String scrollSessionFinalizeTraceName =
 void _applySafeSpanData(ISentrySpan? span, Map<String, Object?>? arguments) {
   if (span == null || arguments == null) return;
   for (final entry in arguments.entries) {
-    if (isSensitiveKey(entry.key)) {
+    if (entry.key == 'http.query' ||
+        entry.key == 'http.fragment' ||
+        isSensitiveKey(entry.key)) {
       continue;
     }
     final sanitizedValue = sanitizeDataValue(entry.value, key: entry.key);
