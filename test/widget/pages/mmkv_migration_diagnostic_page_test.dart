@@ -56,7 +56,9 @@ void main() {
         candidateMmkvFiles: [mmkvPath],
         forceNativeMmkvSupport: false,
       );
-      await MMKVService().init();
+      await tester.runAsync(() async {
+        await MMKVService().init();
+      });
 
       await tester.pumpWidget(
         const MaterialApp(
@@ -66,7 +68,14 @@ void main() {
           home: MmkvMigrationDiagnosticPage(),
         ),
       );
-
+      for (var i = 0; i < 50; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.byType(CircularProgressIndicator).evaluate().isEmpty) {
+          break;
+        }
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      }
       await tester.pumpAndSettle();
 
       // Overview & Summary cards render
@@ -81,7 +90,10 @@ void main() {
       expect(find.textContaining('100% 一致 ('), findsOneWidget);
       expect(find.textContaining('sk-secret-12345'), findsNothing);
 
-      final report = await MMKVService().collectDiagnosticReport();
+      late final MmkvDiagnosticReport report;
+      await tester.runAsync(() async {
+        report = await MMKVService().collectDiagnosticReport();
+      });
       final reportJson = json.encode(report.toRedactedJson());
       expect(reportJson, contains('ai_settings'));
       expect(reportJson, isNot(contains('sk-secret-12345')));

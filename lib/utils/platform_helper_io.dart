@@ -29,10 +29,10 @@ class PlatformHelper {
   static Future<Uint8List?> readFileBytesIfExists(String filePath) async {
     try {
       final file = File(filePath);
-      if (!file.existsSync()) {
+      if (!await file.exists()) {
         return null;
       }
-      return file.readAsBytesSync();
+      return await file.readAsBytes();
     } catch (_) {
       return null;
     }

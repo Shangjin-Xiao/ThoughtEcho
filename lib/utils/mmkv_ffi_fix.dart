@@ -1320,10 +1320,8 @@ class SharedPrefsAdapter implements StorageAdapter {
   @override
   String? getString(String key) {
     final raw = prefs.get(key);
-    if (raw == null) return null;
-    if (raw is String) return raw;
     if (raw is List) return json.encode(raw);
-    throw TypeError();
+    return prefs.getString(key);
   }
 
   @override
@@ -1333,10 +1331,7 @@ class SharedPrefsAdapter implements StorageAdapter {
 
   @override
   int? getInt(String key) {
-    final raw = prefs.get(key);
-    if (raw == null) return null;
-    if (raw is int) return raw;
-    throw TypeError();
+    return prefs.getInt(key);
   }
 
   @override
@@ -1346,11 +1341,7 @@ class SharedPrefsAdapter implements StorageAdapter {
 
   @override
   double? getDouble(String key) {
-    final raw = prefs.get(key);
-    if (raw == null) return null;
-    if (raw is double) return raw;
-    if (raw is int) return raw.toDouble();
-    throw TypeError();
+    return prefs.getDouble(key);
   }
 
   @override
@@ -1360,10 +1351,7 @@ class SharedPrefsAdapter implements StorageAdapter {
 
   @override
   bool? getBool(String key) {
-    final raw = prefs.get(key);
-    if (raw == null) return null;
-    if (raw is bool) return raw;
-    throw TypeError();
+    return prefs.getBool(key);
   }
 
   @override
