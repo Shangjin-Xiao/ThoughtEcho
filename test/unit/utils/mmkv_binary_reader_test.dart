@@ -105,6 +105,106 @@ void main() {
       },
     );
 
+    test('CRC32 agrees with the standard check vector and subranges', () {
+      final bytes = Uint8List.fromList(ascii.encode('x123456789y'));
+      expect(MmkvBinaryReader.computeCrc32(bytes, 1, 9), 0xcbf43926);
+      expect(MmkvBinaryReader.computeCrc32(Uint8List(0)), 0);
+      expect(MmkvBinaryReader.computeCrc32(bytes, 3, 0), 0);
+      expect(() => MmkvBinaryReader.computeCrc32(bytes, -1), throwsRangeError);
+      expect(() => MmkvBinaryReader.computeCrc32(bytes, 0, 12),
+          throwsRangeError);
+    });
+
+    for (final length in [0, 1, 2, 3]) {
+      test('handles a $length-byte incomplete file without reading a header', () {
+        final result = MmkvBinaryReader.parseBytes(Uint8List(length));
+        expect(result.fileExists, isTrue);
+        expect(result.actualSize, 0);
+        expect(result.entries, isEmpty);
+        expect(result.crcMatched, isNull);
+        if (length > 0) expect(result.warnings, isNotEmpty);
+      });
+    }
+
+    test('ignores records outside the declared payload size', () {
+      final first = MmkvBinaryEncoder()..writeString('theme_style', 'paper');
+      final all = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'paper')
+        ..writeString('theme_mode', 'dark');
+      final bytes = all.toFileBytes();
+      final size = ByteData.sublistView(first.toFileBytes())
+          .getUint32(0, Endian.little);
+      ByteData.sublistView(bytes).setUint32(0, size, Endian.little);
+
+      final result = MmkvBinaryReader.parseBytes(bytes);
+      expect(result.entries, {'theme_style': 'paper'});
+      expect(result.totalRecordsRead, 1);
+    });
+
+    test('discards decoded entries when both CRC checks fail', () {
+      final encoder = MmkvBinaryEncoder()..writeString('theme_style', 'paper');
+      final result = MmkvBinaryReader.parseBytes(
+        encoder.toFileBytes(),
+        crcBytes: encoder.toCrcBytes(
+          overrideCrcDigest: 0xdeadbeef,
+          lastCrcDigest: 0xdeadbeef,
+        ),
+      );
+      expect(result.crcMatched, isFalse);
+      expect(result.usedLastConfirmed, isFalse);
+      expect(result.entries, isEmpty);
+      expect(result.warnings, isNotEmpty);
+    });
+
+    test('recovers last confirmed data when header exceeds physical file', () {
+      final encoder = MmkvBinaryEncoder()..writeString('theme_style', 'paper');
+      final bytes = encoder.toFileBytes();
+      ByteData.sublistView(bytes).setUint32(0, 0xffffffff, Endian.little);
+      final result = MmkvBinaryReader.parseBytes(
+        bytes,
+        crcBytes: encoder.toCrcBytes(),
+      );
+      expect(result.usedLastConfirmed, isTrue);
+      expect(result.crcMatched, isTrue);
+      expect(result.entries, {'theme_style': 'paper'});
+    });
+
+    test('a value written after a tombstone restores the key', () {
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'material')
+        ..writeTombstone('theme_style')
+        ..writeString('theme_style', 'plain');
+      final result = MmkvBinaryReader.parseBytes(encoder.toFileBytes());
+      expect(result.entries, {'theme_style': 'plain'});
+      expect(result.tombstonedKeys, isEmpty);
+      expect(result.tombstoneRecordsRead, 1);
+    });
+
+    test('schema distinguishes prefixed false bool from empty string', () {
+      final encoder = MmkvBinaryEncoder()
+        ..writeBool('flutter.use_dynamic_color', false)
+        ..writeString('flutter.theme_style', '');
+      final result = MmkvBinaryReader.parseBytes(encoder.toFileBytes());
+      expect(result.entries['flutter.use_dynamic_color'], isFalse);
+      expect(result.entries['flutter.theme_style'], '');
+    });
+
+    test('malformed typed value does not prevent recovery of later records', () {
+      // Independent wire fixture: a short double followed by a valid string.
+      final payload = <int>[
+        0xff, 0xff, 0xff, 0x07,
+        10, ...ascii.encode('font_scale'), 1, 0x7f,
+        11, ...ascii.encode('theme_style'), 6, 5, ...ascii.encode('paper'),
+      ];
+      final bytes = Uint8List(4 + payload.length);
+      ByteData.sublistView(bytes).setUint32(0, payload.length, Endian.little);
+      bytes.setRange(4, bytes.length, payload);
+      final result = MmkvBinaryReader.parseBytes(bytes);
+      expect(result.entries['font_scale'], orderedEquals([0x7f]));
+      expect(result.entries['theme_style'], 'paper');
+      expect(result.warnings, isNotEmpty);
+    });
+
     test(
       'falls back to lastConfirmed actualSize & CRC when primary CRC mismatches',
       () {

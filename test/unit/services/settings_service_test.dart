@@ -945,6 +945,103 @@ void main() {
       expect(AppTheme.currentInstance?.useDynamicColor, isFalse);
     });
 
+    test('restore removes explicitly null theme preferences', () async {
+      final mmkv = MMKVService();
+      await mmkv.setString('theme_style', 'paper');
+      await mmkv.setString('theme_accent_material', 'emerald');
+      await mmkv.setString('theme_accent_paper', 'bamboo');
+      await mmkv.setString('theme_accent_plain', 'slate');
+      await mmkv.setInt('custom_color', 42);
+      await mmkv.setBool('use_custom_color', true);
+      await mmkv.setBool('use_dynamic_color', false);
+      final cleared = <String, dynamic>{
+        'theme_style': null,
+        'theme_accent_material': null,
+        'theme_accent_paper': null,
+        'theme_accent_plain': null,
+        'custom_color': null,
+        'use_custom_color': null,
+        'use_dynamic_color': null,
+      };
+
+      await settingsService.restoreAllSettingsFromBackup(cleared);
+
+      for (final key in cleared.keys) {
+        expect(mmkv.containsKey(key), isFalse, reason: key);
+      }
+    });
+
+    test('restore normalizes unknown styles and trims accent names', () async {
+      await settingsService.restoreAllSettingsFromBackup({
+        'theme_style': ' future-unknown-style ',
+        'theme_accent_paper': ' bamboo ',
+        'custom_color': 42.0,
+      });
+      final mmkv = MMKVService();
+      expect(mmkv.getString('theme_style'), ThemeStyle.defaultStyle.name);
+      expect(mmkv.getString('theme_accent_paper'), 'bamboo');
+      expect(mmkv.getInt('custom_color'), 42);
+    });
+
+    test('restore ignores invalid theme values without erasing preferences',
+        () async {
+      final mmkv = MMKVService();
+      await mmkv.setString('theme_style', 'paper');
+      await mmkv.setString('theme_accent_paper', 'bamboo');
+      await mmkv.setInt('custom_color', 42);
+      await mmkv.setBool('use_custom_color', true);
+      await mmkv.setBool('use_dynamic_color', false);
+      await settingsService.restoreAllSettingsFromBackup({
+        'theme_style': 123,
+        'theme_accent_paper': '   ',
+        'custom_color': 42.5,
+        'use_custom_color': 'false',
+        'use_dynamic_color': 1,
+      });
+      expect(mmkv.getString('theme_style'), 'paper');
+      expect(mmkv.getString('theme_accent_paper'), 'bamboo');
+      expect(mmkv.getInt('custom_color'), 42);
+      expect(mmkv.getBool('use_custom_color'), isTrue);
+      expect(mmkv.getBool('use_dynamic_color'), isFalse);
+    });
+
+    for (final invalidPush in <Object?>[
+      null,
+      7,
+      <String>[],
+      '[]',
+      'null',
+      '{invalid-json',
+      '   ',
+    ].asMap().entries) {
+      test('restore preserves push settings for invalid payload ${invalidPush.key}',
+          () async {
+        final mmkv = MMKVService();
+        const saved = '{"enabled":false,"pushMode":0}';
+        await mmkv.setString('smart_push_settings_v2', saved);
+        await settingsService.restoreAllSettingsFromBackup({
+          'smart_push_settings_v2': invalidPush.value,
+        });
+        expect(mmkv.getString('smart_push_settings_v2'), saved);
+      });
+    }
+
+    test('restore accepts serialized push settings objects', () async {
+      await settingsService.restoreAllSettingsFromBackup({
+        'smart_push_settings_v2': ' {"enabled":false,"pushMode":1} ',
+      });
+      expect(
+        json.decode(MMKVService().getString('smart_push_settings_v2')!),
+        {'enabled': false, 'pushMode': 1},
+      );
+    });
+
+    test('backup preserves malformed push JSON for lossless export', () async {
+      await MMKVService().setString('smart_push_settings_v2', '{invalid-json');
+      final backup = settingsService.getAllSettingsForBackup();
+      expect(backup['smart_push_settings_v2'], '{invalid-json');
+    });
+
     test(
         'getAllSettingsForBackup and restoreAllSettingsFromBackup full round-trip preserves theme and smart push state',
         () async {
