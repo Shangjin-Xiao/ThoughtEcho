@@ -183,9 +183,18 @@ void main() {
       expect(result.body, 'null');
     });
 
-    test('syncSentryTracing executes safely without throwing', () {
-      expect(() => HttpUtils.syncSentryTracing(true), returnsNormally);
-      expect(() => HttpUtils.syncSentryTracing(false), returnsNormally);
+    test(
+        'syncSentryTracing changes adapter on real Dio instance and restores on disable',
+        () {
+      final realDio = Dio();
+      HttpUtils.dioInstanceForTesting = realDio;
+      final originalAdapter = realDio.httpClientAdapter;
+
+      HttpUtils.syncSentryTracing(true);
+      expect(realDio.httpClientAdapter, isNot(same(originalAdapter)));
+
+      HttpUtils.syncSentryTracing(false);
+      expect(realDio.httpClientAdapter, same(originalAdapter));
     });
   });
 }

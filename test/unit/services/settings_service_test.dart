@@ -453,6 +453,54 @@ void main() {
       },
     );
 
+    test(
+      'updateAppSettings synchronizes Sentry runtime when sentryEnabled changes',
+      () async {
+        await NetworkService.instance.init();
+        final generalDio = NetworkService.instance.generalDio;
+
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+        final rawDb = await databaseFactory.openDatabase(inMemoryDatabasePath);
+        DatabaseService.setTestDatabase(rawDb);
+
+        try {
+          await settingsService.setSentryEnabled(false);
+          expect(settingsService.sentryEnabled, isFalse);
+          expect(DatabaseService.instance.database, same(rawDb));
+
+          // Restore settings with sentryEnabled = true
+          await settingsService.updateAppSettings(
+            settingsService.appSettings.copyWith(sentryEnabled: true),
+          );
+          expect(settingsService.sentryEnabled, isTrue);
+          expect(
+            generalDio.interceptors.any(
+              (i) => i.runtimeType.toString() == 'FailedRequestInterceptor',
+            ),
+            isTrue,
+          );
+          expect(DatabaseService.instance.database, isA<SentryDatabase>());
+
+          // Restore settings with sentryEnabled = false
+          await settingsService.updateAppSettings(
+            settingsService.appSettings.copyWith(sentryEnabled: false),
+          );
+          expect(settingsService.sentryEnabled, isFalse);
+          expect(
+            generalDio.interceptors.any(
+              (i) => i.runtimeType.toString() == 'FailedRequestInterceptor',
+            ),
+            isFalse,
+          );
+          expect(DatabaseService.instance.database, same(rawDb));
+        } finally {
+          DatabaseService.clearTestDatabase();
+          await rawDb.close();
+        }
+      },
+    );
+
     test('should persist telemetry settings changes', () async {
       await settingsService.setTelemetryEnabled(false);
       expect(settingsService.telemetryEnabled, isFalse);

@@ -656,8 +656,17 @@ class SentryHelper {
         logWarning('Sentry 初始化失败: $e', source: 'BackgroundInit');
       }
     } else {
-      await _close();
+      try {
+        await _close();
+      } catch (e) {
+        logWarning('Sentry 关闭失败: $e', source: 'BackgroundInit');
+      }
     }
+  }
+
+  /// 关闭并反初始化 Sentry SDK，等待关闭完成。
+  static Future<void> close() async {
+    await _close();
   }
 
   static Future<void> _close() async {
@@ -690,6 +699,7 @@ class SentryHelper {
       logInfo('Sentry 关闭成功', source: 'BackgroundInit');
     } catch (e) {
       logWarning('Sentry 关闭失败: $e', source: 'BackgroundInit');
+      rethrow;
     } finally {
       _initialized = false;
     }

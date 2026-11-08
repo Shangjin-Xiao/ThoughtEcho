@@ -2,6 +2,7 @@
 
 import 'package:sentry_sqflite/sentry_sqflite.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 为已打开的数据库实例启用 Sentry SQL 与事务性能追踪。
 ///
@@ -49,7 +50,12 @@ class SentryDatabaseTracing {
       if (candidate is Database) {
         return candidate;
       }
-    } catch (_) {}
+    } catch (e) {
+      logWarning(
+        'Failed to unwrap SentryDatabase via fallback lookup: $e',
+        source: 'SentryDatabaseTracing',
+      );
+    }
 
     return database;
   }

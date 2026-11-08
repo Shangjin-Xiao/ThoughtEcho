@@ -1149,6 +1149,19 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sentryId, equals(SentryId.empty()));
     });
   });
+
+  group('SentryHelper lifecycle', () {
+    test('close completes safely when Sentry is not initialized', () async {
+      await expectLater(SentryHelper.close(), completes);
+    });
+
+    test('close awaits and resets initialized state', () async {
+      await SentryHelper.init();
+      expect(SentryHelper.isInitialized, isTrue);
+      await SentryHelper.close();
+      expect(SentryHelper.isInitialized, isFalse);
+    });
+  });
 }
 
 /// 造一个和 `note_list_scroll.dart` 收尾时形状一致的滚动会话事务。

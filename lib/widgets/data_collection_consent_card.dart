@@ -5,6 +5,7 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/data_collection_disclosure.dart';
 
@@ -67,7 +68,12 @@ class DataCollectionConsentCard extends StatelessWidget {
                 value: settingsService.sentryEnabled,
                 onChanged: (enabled) => _updateSetting(
                   context,
-                  action: () => settingsService.setSentryEnabled(enabled),
+                  action: () async {
+                    await settingsService.setSentryEnabled(enabled);
+                    if (!enabled) {
+                      await SentryHelper.close();
+                    }
+                  },
                   logAction: 'DataCollectionConsent.setSentryEnabled',
                   successMessage:
                       enabled ? l10n.settingsSaved : l10n.sentryDeactivatedHint,

@@ -44,7 +44,8 @@ void main() {
         isTrue,
       );
 
-      SentryNetworkTracing.unmount(dio);
+      final success = SentryNetworkTracing.unmount(dio);
+      expect(success, isTrue);
 
       expect(dio.httpClientAdapter, same(originalAdapter));
       expect(dio.transformer, same(originalTransformer));
@@ -67,13 +68,29 @@ void main() {
       expect(dio.httpClientAdapter, same(firstWrappedAdapter));
 
       // Repeated unmount calls should restore originals cleanly and not throw
-      SentryNetworkTracing.unmount(dio);
+      final success1 = SentryNetworkTracing.unmount(dio);
+      expect(success1, isTrue);
       expect(dio.httpClientAdapter, same(originalAdapter));
       expect(dio.transformer, same(originalTransformer));
 
       expect(() => SentryNetworkTracing.unmount(dio), returnsNormally);
+      expect(SentryNetworkTracing.unmount(dio), isTrue);
       expect(dio.httpClientAdapter, same(originalAdapter));
       expect(dio.transformer, same(originalTransformer));
     });
+
+    test(
+        'unmount logs warning and returns false when restoration encounters errors',
+        () {
+      final faultyDio = _FaultyInterceptorsDio();
+      final result = SentryNetworkTracing.unmount(faultyDio);
+      expect(result, isFalse);
+    });
   });
+}
+
+class _FaultyInterceptorsDio extends Fake implements Dio {
+  @override
+  Interceptors get interceptors =>
+      throw StateError('Failed interceptor access');
 }

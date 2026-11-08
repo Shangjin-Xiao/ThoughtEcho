@@ -502,12 +502,7 @@ class SettingsService extends ChangeNotifier {
   Future<void> setSentryEnabled(bool enabled) async {
     _appSettings = _appSettings.copyWith(sentryEnabled: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    SentryDatabaseTracing.configure(enabled: enabled);
-    SentryNetworkTracing.configure(enabled: enabled);
-    SentryHelper.startIfEnabled(enabled);
-    NetworkService.instance.syncSentryTracing(enabled);
-    HttpUtils.syncSentryTracing(enabled);
-    DatabaseService.instance.syncSentryTracing(enabled);
+    _syncSentryTracingState(enabled);
     // 只上报开关状态布尔值，不涉及任何诊断内容。
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'toggle_setting',
@@ -515,6 +510,15 @@ class SettingsService extends ChangeNotifier {
       'enabled': enabled,
     });
     notifyListeners();
+  }
+
+  void _syncSentryTracingState(bool enabled) {
+    SentryDatabaseTracing.configure(enabled: enabled);
+    SentryNetworkTracing.configure(enabled: enabled);
+    SentryHelper.startIfEnabled(enabled);
+    NetworkService.instance.syncSentryTracing(enabled);
+    HttpUtils.syncSentryTracing(enabled);
+    DatabaseService.instance.syncSentryTracing(enabled);
   }
 
   // 是否启用匿名功能改进统计（Aptabase）
@@ -1405,8 +1409,12 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> updateAppSettings(AppSettings settings) async {
+    final sentryChanged = _appSettings.sentryEnabled != settings.sentryEnabled;
     _appSettings = settings;
     await _mmkv.setString(_appSettingsKey, json.encode(settings.toJson()));
+    if (sentryChanged) {
+      _syncSentryTracingState(settings.sentryEnabled);
+    }
     notifyListeners();
   }
 

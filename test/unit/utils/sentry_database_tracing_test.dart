@@ -95,5 +95,33 @@ void main() {
       expect(unwrapped1, same(database));
       expect(unwrapped2, same(database));
     });
+
+    test('unwrapMainDatabase unwraps via internal db field when not in cache',
+        () {
+      // Manually constructed SentryDatabase without wrapMainDatabase caching
+      final manualWrapped = SentryDatabase(database);
+      final unwrapped = SentryDatabaseTracing.unwrapMainDatabase(manualWrapped);
+
+      expect(unwrapped, same(database));
+    });
+
+    test(
+        'unwrapMainDatabase logs warning and returns database when fallback lookup throws',
+        () {
+      final throwingDb = _ThrowingLookupSentryDatabase();
+      final result = SentryDatabaseTracing.unwrapMainDatabase(throwingDb);
+
+      expect(result, same(throwingDb));
+    });
   });
+}
+
+class _ThrowingLookupSentryDatabase extends Fake implements SentryDatabase {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.isGetter && invocation.memberName == #db) {
+      throw StateError('Simulated lookup error');
+    }
+    return super.noSuchMethod(invocation);
+  }
 }

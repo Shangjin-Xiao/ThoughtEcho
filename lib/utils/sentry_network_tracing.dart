@@ -4,6 +4,7 @@ import 'package:sentry_dio/sentry_dio.dart';
 import 'package:sentry_dio/src/failed_request_interceptor.dart';
 // ignore: implementation_imports
 import 'package:sentry_dio/src/sentry_dio_client_adapter.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 根据用户明确授权，为普通网络请求启用 Sentry 性能追踪。
 class SentryNetworkTracing {
@@ -49,21 +50,42 @@ class SentryNetworkTracing {
   }
 
   /// 卸载指定 Dio 实例上的 Sentry 拦截器、适配器与转换器并还原为原始对象。
-  static void unmount(Dio dio) {
+  /// 返回是否全部成功还原。
+  static bool unmount(Dio dio) {
+    var success = true;
     try {
       dio.interceptors.removeWhere((i) => i is FailedRequestInterceptor);
-    } catch (_) {}
+    } catch (e) {
+      success = false;
+      logWarning(
+        'Failed to remove FailedRequestInterceptor: $e',
+        source: 'SentryNetworkTracing',
+      );
+    }
     final originalAdapter = _originalAdapters.remove(dio);
     if (originalAdapter != null) {
       try {
         dio.httpClientAdapter = originalAdapter;
-      } catch (_) {}
+      } catch (e) {
+        success = false;
+        logWarning(
+          'Failed to restore httpClientAdapter: $e',
+          source: 'SentryNetworkTracing',
+        );
+      }
     }
     final originalTransformer = _originalTransformers.remove(dio);
     if (originalTransformer != null) {
       try {
         dio.transformer = originalTransformer;
-      } catch (_) {}
+      } catch (e) {
+        success = false;
+        logWarning(
+          'Failed to restore transformer: $e',
+          source: 'SentryNetworkTracing',
+        );
+      }
     }
+    return success;
   }
 }
