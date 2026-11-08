@@ -511,7 +511,7 @@ void main() {
       expect(_quote().hasSameContentAs(other), isFalse);
     });
 
-    // 卡片上画得出来的字段逐个过一遍：漏掉任何一个都会让那一处的改动
+    // 卡片与业务字段逐个过一遍：漏掉任何一个都会让那一处的改动
     // 悄悄不刷新。
     final cases = <String, Quote Function()>{
       '正文': () => _quote(content: '改过的正文'),
@@ -524,6 +524,20 @@ void main() {
       '天气': () => _quote(weather: 'sunny'),
       '出处作者': () => _quote(sourceAuthor: '某人'),
       '回收站标记': () => _quote(isDeleted: true),
+      '关键词': () => _quote(keywords: const ['keyword1']),
+      '位置': () => _quote(location: '北京市海淀区'),
+      '兴趣点名称': () => _quote(poiName: '颐和园'),
+      '编辑来源': () => _quote(editSource: 'fullscreen'),
+      '纬度': () => _quote(latitude: 39.99),
+      '经度': () => _quote(longitude: 116.31),
+      '温度': () => _quote(temperature: '24°C'),
+      '时间段': () => _quote(dayPeriod: '黄昏'),
+      '分类ID': () => _quote(categoryId: 'cat-2'),
+      '情感': () => _quote(sentiment: 'positive'),
+      '创建日期': () => _quote(date: '2026-08-24T12:00:00.000'),
+      '摘要': () => _quote(summary: '新摘要内容'),
+      'AI分析': () => _quote(aiAnalysis: '深度分析结论'),
+      '出处作品': () => _quote(sourceWork: '呐喊'),
     };
     for (final entry in cases.entries) {
       test('${entry.key}变了就必须算变了', () {
@@ -531,6 +545,125 @@ void main() {
         expect(entry.value().hasSameContentAs(_quote()), isFalse);
       });
     }
+
+    test('在已删除状态下 deletedAt 变了算变了', () {
+      final deleted1 =
+          _quote(isDeleted: true, deletedAt: '2026-08-23T10:00:00.000Z');
+      final deleted2 =
+          _quote(isDeleted: true, deletedAt: '2026-08-23T11:00:00.000Z');
+      expect(deleted1.hasSameContentAs(deleted2), isFalse);
+      expect(deleted2.hasSameContentAs(deleted1), isFalse);
+    });
+
+    group('keywords 边界情况', () {
+      test('双空均算内容未变', () {
+        final q1 = _quote(keywords: null);
+        final q2 = _quote(keywords: null);
+        expect(q1.hasSameContentAs(q2), isTrue);
+      });
+
+      test('单空算内容已变', () {
+        final qNull = _quote(keywords: null);
+        final qWith = _quote(keywords: const ['flutter']);
+        expect(qNull.hasSameContentAs(qWith), isFalse);
+        expect(qWith.hasSameContentAs(qNull), isFalse);
+      });
+
+      test('不同长度算内容已变', () {
+        final q1 = _quote(keywords: const ['flutter']);
+        final q2 = _quote(keywords: const ['flutter', 'dart']);
+        expect(q1.hasSameContentAs(q2), isFalse);
+        expect(q2.hasSameContentAs(q1), isFalse);
+      });
+
+      test('相同元素乱序算内容已变（与 toJson comma-separated 语义一致）', () {
+        final q1 = _quote(keywords: const ['dart', 'flutter']);
+        final q2 = _quote(keywords: const ['flutter', 'dart']);
+        expect(q1.hasSameContentAs(q2), isFalse);
+        expect(q2.hasSameContentAs(q1), isFalse);
+      });
+
+      test('相同元素相同顺序算内容未变', () {
+        final q1 = _quote(keywords: const ['dart', 'flutter']);
+        final q2 = _quote(keywords: const ['dart', 'flutter']);
+        expect(q1.hasSameContentAs(q2), isTrue);
+      });
+    });
+
+    group('source 派生属性与底层映射', () {
+      test('sourceAuthor 与 sourceWork 存在时，派生 source 相同即便 _source 不同也算未变', () {
+        final q1 = Quote(
+          id: 'q-1',
+          content: '正文',
+          date: '2026-08-23T09:00:00.000',
+          sourceAuthor: '鲁迅',
+          sourceWork: '狂人日记',
+          source: '不同原始来源1',
+        );
+        final q2 = Quote(
+          id: 'q-1',
+          content: '正文',
+          date: '2026-08-23T09:00:00.000',
+          sourceAuthor: '鲁迅',
+          sourceWork: '狂人日记',
+          source: '不同原始来源2',
+        );
+        expect(q1.hasSameContentAs(q2), isTrue);
+        expect(q2.hasSameContentAs(q1), isTrue);
+      });
+
+      test('sourceAuthor 与 sourceWork 均为空时，底层 _source 变了算变了', () {
+        final q1 = Quote(
+          id: 'q-1',
+          content: '正文',
+          date: '2026-08-23T09:00:00.000',
+          source: '来源A',
+        );
+        final q2 = Quote(
+          id: 'q-1',
+          content: '正文',
+          date: '2026-08-23T09:00:00.000',
+          source: '来源B',
+        );
+        expect(q1.hasSameContentAs(q2), isFalse);
+        expect(q2.hasSameContentAs(q1), isFalse);
+      });
+
+      test('sourceAuthor 与 sourceWork 均为空时，底层 _source 相同算未变', () {
+        final q1 = Quote(
+          id: 'q-1',
+          content: '正文',
+          date: '2026-08-23T09:00:00.000',
+          source: '来源A',
+        );
+        final q2 = Quote(
+          id: 'q-1',
+          content: '正文',
+          date: '2026-08-23T09:00:00.000',
+          source: '来源A',
+        );
+        expect(q1.hasSameContentAs(q2), isTrue);
+      });
+
+      test('派生 source 与原始 source 即使字符串表现相同，字段结构不同也算变了', () {
+        final qDerived = Quote(
+          id: 'q-1',
+          content: '正文',
+          date: '2026-08-23T09:00:00.000',
+          sourceAuthor: '鲁迅',
+          sourceWork: '狂人日记',
+        );
+        final qRaw = Quote(
+          id: 'q-1',
+          content: '正文',
+          date: '2026-08-23T09:00:00.000',
+          source: '鲁迅 - 狂人日记',
+        );
+        expect(qDerived.source, equals(qRaw.source));
+        expect(qDerived.hasSameContentAs(qRaw), isFalse);
+        expect(qRaw.hasSameContentAs(qDerived), isFalse);
+      });
+    });
 
     test('== 只比 id，不能拿来当「没变」的判据', () {
       final edited = _quote(content: '改过的正文');
@@ -626,26 +759,58 @@ void main() {
 /// [Quote.hasSameContentAs] 决定能不能沿用旧实例 —— 判错一次的后果是卡片
 /// **永远停在旧内容上**，所以每一个会被卡片画出来的字段都要能把它判成「变了」。
 Quote _quote({
+  String? id,
   String? content,
-  List<String>? tagIds,
-  String? colorHex,
-  String? deltaContent,
-  int? favoriteCount,
-  String? lastModified,
-  String? weather,
+  String? date,
+  String? source,
   String? sourceAuthor,
+  String? sourceWork,
+  List<String>? tagIds,
+  String? aiAnalysis,
+  String? sentiment,
+  List<String>? keywords,
+  String? summary,
+  String? categoryId,
+  String? colorHex,
+  String? location,
+  double? latitude,
+  double? longitude,
+  String? poiName,
+  String? weather,
+  String? temperature,
+  String? editSource,
+  String? deltaContent,
+  String? dayPeriod,
+  String? lastModified,
+  int? favoriteCount,
   bool? isDeleted,
+  String? deletedAt,
 }) =>
     Quote(
-      id: 'q-1',
+      id: id ?? 'q-1',
       content: content ?? '原始正文',
-      date: '2026-08-23T09:00:00.000',
-      tagIds: tagIds ?? const ['tag-a'],
-      colorHex: colorHex,
-      deltaContent: deltaContent,
-      favoriteCount: favoriteCount ?? 0,
-      lastModified: lastModified,
-      weather: weather,
+      date: date ?? '2026-08-23T09:00:00.000',
+      source: source,
       sourceAuthor: sourceAuthor,
+      sourceWork: sourceWork,
+      tagIds: tagIds ?? const ['tag-a'],
+      aiAnalysis: aiAnalysis,
+      sentiment: sentiment,
+      keywords: keywords,
+      summary: summary,
+      categoryId: categoryId,
+      colorHex: colorHex,
+      location: location,
+      latitude: latitude,
+      longitude: longitude,
+      poiName: poiName,
+      weather: weather,
+      temperature: temperature,
+      editSource: editSource,
+      deltaContent: deltaContent,
+      dayPeriod: dayPeriod,
+      lastModified: lastModified,
+      favoriteCount: favoriteCount ?? 0,
       isDeleted: isDeleted ?? false,
+      deletedAt: deletedAt,
     );
