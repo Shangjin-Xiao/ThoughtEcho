@@ -11,7 +11,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
   ///
   /// 直接委托 [Quote.hasSameContentAs] 逐字段比较而不是挑几个字段：挑字段的写法一旦漏掉展示用
   /// 的列（weather、day_period、location……）就会把真实更新误判成"没变"从而
-  /// 吞掉推送，而且新增字段时没人会记得同步这里。`hasSameContentAs` 覆盖所有持久化字段，
+  /// 吞掉推送，而且新增字段时没人会记得同步这里。[Quote.hasSameContentAs] 覆盖所有持久化字段
+  /// （由 `test/unit/models/quote_has_same_content_as_test.dart` 自动化守卫验证），
   /// 天然不会漏；`tagIds` 也由它一并零分配比对。
   ///
   /// 只在刷新路径上跑一次，不在滚动帧里，这点比较开销远小于一次整表重建。

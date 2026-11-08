@@ -420,4 +420,107 @@ void main() {
       expect(identical(widgetC2, widgetC3), isTrue);
     });
   });
+
+  group('NoteListViewState 记忆化测试属性暴露', () {
+    test('初始状态为空 Map 与计数 0，并能正常存取 QuoteItemMemo 实例', () {
+      final state = NoteListViewState();
+      expect(state.quoteItemMemosForTest, isEmpty);
+      expect(state.quoteItemMemoHitsForTest, 0);
+      expect(state.quoteItemMemoMissesForTest, 0);
+
+      final memo = QuoteItemMemo(
+        widget: const SizedBox(),
+        quote: _createQuote('test-1'),
+        isFirstItem: true,
+        tagMap: const {},
+        selectedTagIds: const [],
+        isExpanded: false,
+        isSelected: false,
+        selectionMode: false,
+        hasGenerateCard: false,
+        hasFavorite: false,
+        hasLongPressFavorite: false,
+        favoriteGuideKey: null,
+        moreGuideKey: null,
+        foldGuideKey: null,
+      );
+
+      state.quoteItemMemosForTest['test-1'] = memo;
+      expect(state.quoteItemMemosForTest['test-1'], same(memo));
+      expect(state.quoteItemMemosForTest.length, 1);
+    });
+  });
+
+  group('折叠回调动态行号解析逻辑 (dynamicIndex resolution)', () {
+    int resolveTargetIndex({
+      required List<Quote> quotes,
+      required String quoteId,
+      required int capturedIndex,
+    }) {
+      final dynamicIndex = quotes.indexWhere((q) => q.id == quoteId);
+      return dynamicIndex != -1 ? dynamicIndex : capturedIndex;
+    }
+
+    test('When quote list has not shifted, returns same index', () {
+      final quotes = [
+        _createQuote('quote-0'),
+        _createQuote('quote-1'),
+        _createQuote('quote-2'),
+      ];
+      final targetIndex = resolveTargetIndex(
+        quotes: quotes,
+        quoteId: 'quote-1',
+        capturedIndex: 1,
+      );
+      expect(targetIndex, equals(1));
+    });
+
+    test(
+        'When items are inserted before the quote, dynamic index resolves to shifted index',
+        () {
+      final quotes = [
+        _createQuote('quote-inserted'),
+        _createQuote('quote-0'),
+        _createQuote('quote-1'),
+        _createQuote('quote-2'),
+      ];
+      final targetIndex = resolveTargetIndex(
+        quotes: quotes,
+        quoteId: 'quote-1',
+        capturedIndex: 1,
+      );
+      expect(targetIndex, equals(2));
+    });
+
+    test(
+        'When items before the quote are deleted, dynamic index resolves to shifted index',
+        () {
+      final quotes = [
+        _createQuote('quote-1'),
+        _createQuote('quote-2'),
+      ];
+      final targetIndex = resolveTargetIndex(
+        quotes: quotes,
+        quoteId: 'quote-1',
+        capturedIndex: 1,
+      );
+      expect(targetIndex, equals(0));
+    });
+
+    test(
+        'When the quote itself was deleted, gracefully falls back to the captured index to prevent negative indexing',
+        () {
+      final quotes = [
+        _createQuote('quote-0'),
+        _createQuote('quote-2'),
+      ];
+      final targetIndex = resolveTargetIndex(
+        quotes: quotes,
+        quoteId: 'quote-1',
+        capturedIndex: 1,
+      );
+      expect(targetIndex, equals(1));
+      expect(targetIndex >= 0, isTrue);
+    });
+  });
 }

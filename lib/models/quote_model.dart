@@ -1015,6 +1015,9 @@ class Quote {
   /// 采用零临时对象分配的就地逐字段比对，与 [toJson] 及 [tagIds] 的持久化语义完全等价：
   /// - 编排短路比对顺序：首先判定 `identical` 与 `id`，再优先比对高频变动的标量字段，
   ///   随后比对来源映射字段，最后比对长文本与列表，最大化提前短路退出概率并彻底消除比对阶段的 GC 压力。
+  ///
+  /// 注意：任何新添加的持久化字段必须同步更新 [toJson] 与 [hasSameContentAs]，
+  /// 并通过 `test/unit/models/quote_has_same_content_as_test.dart` 的持久化字段守卫测试进行验证。
   bool hasSameContentAs(Quote other) {
     if (identical(this, other)) return true;
     if (id != other.id) return false;
