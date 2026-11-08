@@ -814,11 +814,12 @@ extension _NoteListItemsExtension on NoteListViewState {
     required GlobalKey? moreGuideKey,
     required GlobalKey? foldGuideKey,
   }) {
+    final isFirstItem = index == 0;
     final cached = _quoteItemMemos[quoteId];
     if (cached != null &&
         cached.matches(
           quote: quote,
-          index: index,
+          isFirstItem: isFirstItem,
           tagMap: tagMap,
           selectedTagIds: widget.selectedTagIds,
           isExpanded: isExpanded,
@@ -844,7 +845,8 @@ extension _NoteListItemsExtension on NoteListViewState {
       isSelected: isSelected,
       selectionMode: _isExportMode,
       // 首条与搜索框之间只隔这一层卡片上边距。
-      topMarginOverride: index == 0 ? QuoteItemWidget.firstItemTopMargin : null,
+      topMarginOverride:
+          isFirstItem ? QuoteItemWidget.firstItemTopMargin : null,
       onToggleExpanded: (expanded) {
         if (expansionNotifier.value != expanded) {
           expansionNotifier.value = expanded;
@@ -860,8 +862,14 @@ extension _NoteListItemsExtension on NoteListViewState {
             if (!mounted) return;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
+              final dynamicIndex = _quotes.indexWhere((q) => q.id == quoteId);
+              final targetIndex = dynamicIndex != -1 ? dynamicIndex : index;
               unawaited(
-                _positionAndAlignQuote(quoteId, index, forceAlignToTop: false),
+                _positionAndAlignQuote(
+                  quoteId,
+                  targetIndex,
+                  forceAlignToTop: false,
+                ),
               );
             });
           });
@@ -898,7 +906,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     _quoteItemMemos[quoteId] = _QuoteItemMemo(
       widget: built,
       quote: quote,
-      index: index,
+      isFirstItem: isFirstItem,
       tagMap: tagMap,
       selectedTagIds: widget.selectedTagIds,
       isExpanded: isExpanded,
@@ -1577,12 +1585,13 @@ class _SlowItemLayoutSample {
 ///
 /// 存的是"上次用什么入参建出了哪个 widget"。字段就是那张键 —— 加参数时必须同步
 /// 加到这里，漏一个就会让卡片停在旧数据上。
+@visibleForTesting
 @immutable
-class _QuoteItemMemo {
-  const _QuoteItemMemo({
+class QuoteItemMemo {
+  const QuoteItemMemo({
     required this.widget,
     required this.quote,
-    required this.index,
+    required this.isFirstItem,
     required this.tagMap,
     required this.selectedTagIds,
     required this.isExpanded,
@@ -1598,7 +1607,7 @@ class _QuoteItemMemo {
 
   final Widget widget;
   final Quote quote;
-  final int index;
+  final bool isFirstItem;
   final Map<String, NoteTag> tagMap;
   final List<String> selectedTagIds;
   final bool isExpanded;
@@ -1616,7 +1625,7 @@ class _QuoteItemMemo {
   /// 每次父级重建都全部失效 —— 而那正是最需要命中的场合。
   bool matches({
     required Quote quote,
-    required int index,
+    required bool isFirstItem,
     required Map<String, NoteTag> tagMap,
     required List<String> selectedTagIds,
     required bool isExpanded,
@@ -1630,7 +1639,7 @@ class _QuoteItemMemo {
     required GlobalKey? foldGuideKey,
   }) {
     if (!identical(this.quote, quote) ||
-        this.index != index ||
+        this.isFirstItem != isFirstItem ||
         !identical(this.tagMap, tagMap) ||
         this.isExpanded != isExpanded ||
         this.isSelected != isSelected ||
@@ -1651,3 +1660,5 @@ class _QuoteItemMemo {
     return true;
   }
 }
+
+typedef _QuoteItemMemo = QuoteItemMemo;

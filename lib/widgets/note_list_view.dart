@@ -250,6 +250,15 @@ class NoteListViewState extends State<NoteListView>
   int _quoteItemMemoHits = 0;
   int _quoteItemMemoMisses = 0;
 
+  @visibleForTesting
+  Map<String, QuoteItemMemo> get quoteItemMemosForTest => _quoteItemMemos;
+
+  @visibleForTesting
+  int get quoteItemMemoHitsForTest => _quoteItemMemoHits;
+
+  @visibleForTesting
+  int get quoteItemMemoMissesForTest => _quoteItemMemoMisses;
+
   /// 标签映射表及其来源，见 [_obtainTagMap]。
   List<NoteTag>? _tagMapSource;
   Map<String, NoteTag>? _tagMapCache;

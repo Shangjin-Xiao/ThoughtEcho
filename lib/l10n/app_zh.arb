@@ -4948,5 +4948,13 @@
   "lottieNotFound": "未找到相关内容",
   "@lottieNotFound": {
     "description": "Lottie animation description for not found"
+  },
+  "mmkvDiagnosticTitle": "MMKV 迁移与解析诊断",
+  "@mmkvDiagnosticTitle": {
+    "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticSubtitle": "查看键值迁移状态，比对原生 MMKV、手写二进制解析结果与 SharedPreferences",
+  "@mmkvDiagnosticSubtitle": {
+    "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
   }
 }

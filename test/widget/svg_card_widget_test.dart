@@ -102,6 +102,12 @@ void main() {
     );
     expect(opacityFinder, findsOneWidget);
 
+    final scaleFinder = find.ancestor(
+      of: opacityFinder,
+      matching: find.byType(Transform),
+    );
+    expect(scaleFinder, findsOneWidget);
+
     final initialOpacity = tester.widget<Opacity>(opacityFinder);
     expect(initialOpacity.opacity, equals(0.0));
 
@@ -126,8 +132,20 @@ void main() {
     // Settle animation to completion (300ms)
     await tester.pumpAndSettle();
 
-    final finalOpacity = tester.widget<Opacity>(opacityFinder);
-    expect(finalOpacity.opacity, equals(1.0));
+    // After entrance animation finishes, temporary Opacity and Transform scale layers are stripped
+    expect(opacityFinder, findsNothing);
+    expect(scaleFinder, findsNothing);
+
+    // Verify GeneratedCardWidget is wrapped in RepaintBoundary for paint isolation
+    final repaintBoundaryFinder = find.ancestor(
+      of: cardFinder,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is RepaintBoundary && widget.child is GeneratedCardWidget,
+      ),
+    );
+    expect(repaintBoundaryFinder, findsOneWidget);
+
     final finalCardWidget = tester.widget<GeneratedCardWidget>(cardFinder);
     expect(finalCardWidget, same(initialCardWidget));
     expect(find.byType(GeneratedCardWidget), findsOneWidget);

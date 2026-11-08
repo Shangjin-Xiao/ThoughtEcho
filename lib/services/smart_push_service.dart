@@ -98,6 +98,14 @@ class SmartPushService extends ChangeNotifier {
   static const String _todayDailyQuotePushedKey =
       'smart_push_today_daily_quote_pushed';
 
+  static SmartPushService? _currentInstance;
+  static SmartPushService? get currentInstance => _currentInstance;
+
+  /// 重载当前前台实例的设置并重新调度推送
+  static Future<void> reloadCurrentInstance() async {
+    await _currentInstance?.reloadFromStorage();
+  }
+
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
 
@@ -160,6 +168,15 @@ class SmartPushService extends ChangeNotifier {
             notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
         _weatherService = weatherService {
     _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
+    _currentInstance = this;
+  }
+
+  @override
+  void dispose() {
+    if (_currentInstance == this) {
+      _currentInstance = null;
+    }
+    super.dispose();
   }
 
   bool _notificationPluginReady = false;
@@ -534,6 +551,31 @@ class SmartPushService extends ChangeNotifier {
     } catch (e, stack) {
       AppLogger.e('保存智能推送设置失败', error: e, stackTrace: stack);
       rethrow;
+    }
+  }
+
+  /// 从持久化存储重新加载设置并重新计算调度任务（用于备份恢复或跨 Isolate 数据同步）
+  Future<void> reloadFromStorage() async {
+    try {
+      await _loadSettings();
+      notifyListeners();
+      if (_settings.enabled || _settings.dailyQuotePushEnabled) {
+        await scheduleNextPush();
+
+        if (PlatformHelper.isAndroid) {
+          final canScheduleExact = await _canScheduleExactAlarms();
+          if (canScheduleExact) {
+            await _cancelPeriodicFallbackTask();
+          } else {
+            await _registerPeriodicFallbackTask();
+          }
+        }
+      } else {
+        await _cancelAllSchedules();
+      }
+      AppLogger.i('智能推送服务已从存储重新加载并更新调度');
+    } catch (e, stack) {
+      AppLogger.w('从存储重新加载智能推送设置失败', error: e, stackTrace: stack);
     }
   }
 

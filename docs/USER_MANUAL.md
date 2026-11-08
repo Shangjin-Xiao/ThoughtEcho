@@ -1,6 +1,6 @@
 # 用户手册 / User Manual
 
-[中文版](#-中文版本) | [English Version](#-english-version) | [网页版 / Web Version](https://shangjin-xiao.github.io/ThoughtEcho/user-guide.html)
+[中文版](#-中文版本) | [English Version](#-english-version) | [网页版 / Web Version](https://note.shangjinyun.cn/user-guide.html)
 
 ---
 

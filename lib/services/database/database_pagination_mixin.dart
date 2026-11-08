@@ -9,10 +9,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
 
   /// 判断刷新前后的可见列表是否逐条完全一致。
   ///
-  /// 用 [Quote.toJson] 逐字段比较而不是挑几个字段：挑字段的写法一旦漏掉展示用
+  /// 直接委托 [Quote.hasSameContentAs] 逐字段比较而不是挑几个字段：挑字段的写法一旦漏掉展示用
   /// 的列（weather、day_period、location……）就会把真实更新误判成"没变"从而
-  /// 吞掉推送，而且新增字段时没人会记得同步这里。`toJson` 覆盖所有持久化字段，
-  /// 天然不会漏；`tagIds` 不在 `toJson` 里，单独比。
+  /// 吞掉推送，而且新增字段时没人会记得同步这里。[Quote.hasSameContentAs] 覆盖所有持久化字段
+  /// （由 `test/unit/models/quote_has_same_content_as_test.dart` 自动化守卫验证），
+  /// 天然不会漏；`tagIds` 也由它一并零分配比对。
   ///
   /// 只在刷新路径上跑一次，不在滚动帧里，这点比较开销远小于一次整表重建。
   bool _quoteListsEquivalent(List<Quote> previous, List<Quote> current) {
@@ -20,27 +21,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     if (previous.isEmpty) return false;
     if (previous.length != current.length) return false;
     for (var i = 0; i < previous.length; i++) {
-      if (!_quoteEquivalent(previous[i], current[i])) return false;
-    }
-    return true;
-  }
-
-  bool _quoteEquivalent(Quote a, Quote b) {
-    if (identical(a, b)) return true;
-
-    final aTags = a.tagIds;
-    final bTags = b.tagIds;
-    if (aTags.length != bTags.length) return false;
-    for (var i = 0; i < aTags.length; i++) {
-      if (aTags[i] != bTags[i]) return false;
-    }
-
-    final aJson = a.toJson();
-    final bJson = b.toJson();
-    if (aJson.length != bJson.length) return false;
-    for (final entry in aJson.entries) {
-      if (!bJson.containsKey(entry.key)) return false;
-      if (bJson[entry.key] != entry.value) return false;
+      if (!previous[i].hasSameContentAs(current[i])) return false;
     }
     return true;
   }

@@ -1,58 +1,86 @@
-// filepath: /workspaces/ThoughtEcho/lib/services/mmkv_service.dart
 import 'dart:async';
 import 'dart:convert';
-import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
+import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
+import '../utils/mmkv_ffi_fix.dart';
 
-/// 修复：MMKV存储服务，增加并发控制和错误恢复
+/// KV 存储服务门面（保持 MMKVService 签名 100% 兼容，内部委托给 SafeMMKV）
 class MMKVService {
   static final MMKVService _instance = MMKVService._internal();
 
   factory MMKVService() => _instance;
 
-  SafeMMKV? _storage; // 使用我们的安全包装类
+  SafeMMKV? _storage;
   bool _isInitialized = false;
   bool _isInitializing = false;
   Completer<void>? _initCompleter;
 
   MMKVService._internal();
 
-  /// 修复：初始化MMKV存储，增加并发控制
+  /// 重置测试状态（连同底层 SafeMMKV 一并重置）
+  @visibleForTesting
+  void resetForTesting() {
+    _isInitialized = false;
+    _isInitializing = false;
+    _initCompleter = null;
+    _storage = null;
+    SafeMMKV().resetForTesting();
+  }
+
+  /// 初始化 KV 存储，增加并发控制
   Future<void> init() async {
     if (_isInitialized) return;
 
-    // 防止并发初始化
     if (_isInitializing) {
       await _initCompleter?.future;
       return;
     }
 
     _isInitializing = true;
-    _initCompleter = Completer<void>();
+    final completer = Completer<void>();
+    _initCompleter = completer;
 
     try {
-      _storage = SafeMMKV(); // 使用安全包装类
-      await _storage!.initialize(); // 初始化存储
-      logDebug('MMKV已初始化，使用安全包装');
+      _storage = SafeMMKV();
+      await _storage!.initialize();
+      logDebug('MMKVService 已初始化（SafeMMKV Phase 1 引擎）');
       _isInitialized = true;
       _isInitializing = false;
-      _initCompleter!.complete();
+      completer.complete();
     } catch (e) {
       _isInitializing = false;
-      _initCompleter!.completeError(e);
-      logDebug('初始化MMKV失败: $e');
+      completer.completeError(e);
+      logDebug('初始化 MMKVService 失败: $e');
       rethrow;
     }
   }
 
-  /// 修复：确保MMKV已初始化，支持自动初始化
+  /// 确保已初始化，支持自动初始化
   Future<void> _ensureInitialized() async {
-    if (!_isInitialized) {
+    if (!_isInitialized || _storage == null) {
       await init();
     }
   }
 
-  /// 修复：带重试机制的操作执行器
+  /// 刷新跨 Isolate 的最新持久化数据
+  Future<void> reload() async {
+    await _ensureInitialized();
+    await _storage!.reload();
+  }
+
+  /// 获取诊断报告（供开发者设置「MMKV 迁移与解析诊断」页面使用）
+  Future<MmkvDiagnosticReport> collectDiagnosticReport() async {
+    await _ensureInitialized();
+    return _storage!.collectDiagnosticReport();
+  }
+
+  /// 手动触发迁移或重新校验迁移
+  Future<MmkvMigrationSnapshot> runMigration({bool force = false}) async {
+    await _ensureInitialized();
+    return _storage!.runMigration(force: force);
+  }
+
+  /// 带重试机制的操作执行器
   Future<T> _executeWithRetry<T>(
     Future<T> Function() operation, {
     int maxRetries = 3,
@@ -73,7 +101,7 @@ class MMKVService {
     throw Exception('操作重试失败');
   }
 
-  /// 修复：存储字符串值，增加重试机制
+  /// 存储字符串值，增加重试机制
   Future<bool> setString(String key, String value) async {
     await _ensureInitialized();
     return _executeWithRetry(() async {
@@ -81,10 +109,10 @@ class MMKVService {
     });
   }
 
-  /// 修复：获取字符串值，增加错误恢复
+  /// 获取字符串值
   String? getString(String key) {
     try {
-      if (!_isInitialized) {
+      if (!_isInitialized || _storage == null) {
         logDebug('MMKV未初始化，无法获取字符串值');
         return null;
       }
@@ -95,9 +123,9 @@ class MMKVService {
     }
   }
 
-  /// 存储布尔值
+  /// 存储布尔值（修复：补齐 await _ensureInitialized()）
   Future<bool> setBool(String key, bool value) async {
-    _ensureInitialized();
+    await _ensureInitialized();
     try {
       return await _storage!.setBool(key, value);
     } catch (e) {
@@ -108,8 +136,11 @@ class MMKVService {
 
   /// 获取布尔值
   bool? getBool(String key) {
-    _ensureInitialized();
     try {
+      if (!_isInitialized || _storage == null) {
+        logDebug('MMKV未初始化，无法获取布尔值');
+        return null;
+      }
       return _storage!.getBool(key);
     } catch (e) {
       logDebug('MMKV获取布尔值失败: $e');
@@ -117,9 +148,9 @@ class MMKVService {
     }
   }
 
-  /// 存储整数值
+  /// 存储整数值（修复：补齐 await _ensureInitialized()）
   Future<bool> setInt(String key, int value) async {
-    _ensureInitialized();
+    await _ensureInitialized();
     try {
       return await _storage!.setInt(key, value);
     } catch (e) {
@@ -130,8 +161,11 @@ class MMKVService {
 
   /// 获取整数值
   int? getInt(String key) {
-    _ensureInitialized();
     try {
+      if (!_isInitialized || _storage == null) {
+        logDebug('MMKV未初始化，无法获取整数值');
+        return null;
+      }
       return _storage!.getInt(key);
     } catch (e) {
       logDebug('MMKV获取整数值失败: $e');
@@ -139,9 +173,9 @@ class MMKVService {
     }
   }
 
-  /// 存储双精度浮点值
+  /// 存储双精度浮点值（修复：补齐 await _ensureInitialized()）
   Future<bool> setDouble(String key, double value) async {
-    _ensureInitialized();
+    await _ensureInitialized();
     try {
       return await _storage!.setDouble(key, value);
     } catch (e) {
@@ -152,8 +186,11 @@ class MMKVService {
 
   /// 获取双精度浮点值
   double? getDouble(String key) {
-    _ensureInitialized();
     try {
+      if (!_isInitialized || _storage == null) {
+        logDebug('MMKV未初始化，无法获取浮点值');
+        return null;
+      }
       return _storage!.getDouble(key);
     } catch (e) {
       logDebug('MMKV获取浮点值失败: $e');
@@ -161,9 +198,9 @@ class MMKVService {
     }
   }
 
-  /// 存储字符串列表
+  /// 存储字符串列表（修复：补齐 await _ensureInitialized()）
   Future<bool> setStringList(String key, List<String> value) async {
-    _ensureInitialized();
+    await _ensureInitialized();
     try {
       return await _storage!.setStringList(key, value);
     } catch (e) {
@@ -174,8 +211,11 @@ class MMKVService {
 
   /// 获取字符串列表
   List<String>? getStringList(String key) {
-    _ensureInitialized();
     try {
+      if (!_isInitialized || _storage == null) {
+        logDebug('MMKV未初始化，无法获取字符串列表');
+        return null;
+      }
       return _storage!.getStringList(key);
     } catch (e) {
       logDebug('MMKV获取字符串列表失败: $e');
@@ -183,9 +223,9 @@ class MMKVService {
     }
   }
 
-  /// 存储JSON对象（Map或List）
+  /// 存储JSON对象（Map或List）（修复：补齐 await _ensureInitialized()）
   Future<bool> setJson(String key, dynamic value) async {
-    _ensureInitialized();
+    await _ensureInitialized();
     try {
       final jsonStr = json.encode(value);
       return await setString(key, jsonStr);
@@ -197,8 +237,11 @@ class MMKVService {
 
   /// 获取JSON对象
   dynamic getJson(String key) {
-    _ensureInitialized();
     try {
+      if (!_isInitialized || _storage == null) {
+        logDebug('MMKV未初始化，无法获取JSON对象');
+        return null;
+      }
       final jsonStr = getString(key);
       if (jsonStr == null) return null;
       return json.decode(jsonStr);
@@ -210,8 +253,11 @@ class MMKVService {
 
   /// 检查键是否存在
   bool containsKey(String key) {
-    _ensureInitialized();
     try {
+      if (!_isInitialized || _storage == null) {
+        logDebug('MMKV未初始化，无法检查键');
+        return false;
+      }
       return _storage!.containsKey(key);
     } catch (e) {
       logDebug('MMKV检查键失败: $e');
@@ -219,9 +265,9 @@ class MMKVService {
     }
   }
 
-  /// 删除指定键的值
+  /// 删除指定键的值（修复：补齐 await _ensureInitialized()）
   Future<bool> remove(String key) async {
-    _ensureInitialized();
+    await _ensureInitialized();
     try {
       return await _storage!.remove(key);
     } catch (e) {
@@ -230,9 +276,9 @@ class MMKVService {
     }
   }
 
-  /// 清除所有存储的值
+  /// 清除所有存储的值（修复：补齐 await _ensureInitialized()）
   Future<bool> clear() async {
-    _ensureInitialized();
+    await _ensureInitialized();
     try {
       return await _storage!.clear();
     } catch (e) {
@@ -243,8 +289,11 @@ class MMKVService {
 
   /// 获取所有键
   List<String> getAllKeys() {
-    _ensureInitialized();
     try {
+      if (!_isInitialized || _storage == null) {
+        logDebug('MMKV未初始化，无法获取所有键');
+        return [];
+      }
       final keys = _storage!.getKeys();
       return keys.map((e) => e.toString()).toList();
     } catch (e) {

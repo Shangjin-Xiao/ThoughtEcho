@@ -41,7 +41,7 @@
     <a href="README_KO.md"><b>한국어</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>公式サイト</b></a> •
     <a href="docs/USER_MANUAL.md"><b>ユーザーマニュアル</b></a> •
-    <a href="https://shangjin-xiao.github.io/ThoughtEcho/user-guide.html"><b>Webガイド</b></a>
+    <a href="https://note.shangjinyun.cn/user-guide.html"><b>Webガイド</b></a>
   </p>
 
   <h3>📥 ダウンロード</h3>

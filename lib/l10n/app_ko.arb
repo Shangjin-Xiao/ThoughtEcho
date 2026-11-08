@@ -4912,5 +4912,13 @@
   "lottieSearchLoading": "검색 중...",
   "lottieWeatherSearchLoading": "날씨 검색 중...",
   "lottieCustomLoading": "로딩 중...",
-  "lottieNotFound": "관련 내용을 찾을 수 없습니다"
+  "lottieNotFound": "관련 내용을 찾을 수 없습니다",
+  "mmkvDiagnosticTitle": "MMKV 마이그레이션 및 파서 진단",
+  "@mmkvDiagnosticTitle": {
+    "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticSubtitle": "KV 마이그레이션 상태 확인 및 Native MMKV, 수동 바이너리 파서, SharedPreferences 비교",
+  "@mmkvDiagnosticSubtitle": {
+    "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  }
 }

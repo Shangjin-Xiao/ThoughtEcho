@@ -767,8 +767,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // 应用回到前台时自动同步 WebDAV
+    // 应用回到前台时自动同步 WebDAV 并刷新跨进程/跨 Isolate 存储缓存
     if (state == AppLifecycleState.resumed) {
+      SafeMMKV().reload();
       logDebug('应用回到前台，触发 WebDAV 后台同步...', source: 'AppLifecycle');
       Future.microtask(() {
         try {
