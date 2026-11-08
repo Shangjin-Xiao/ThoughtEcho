@@ -507,41 +507,37 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                     ),
 
                   // 电池优化豁免
-                  _buildPermissionItem(
-                    icon: Icons.battery_saver_outlined,
-                    title: l10n.smartPushBatteryOptimization,
-                    isGranted: status.batteryOptimizationExempted,
-                    onTap: status.batteryOptimizationExempted
-                        ? null
-                        : () async {
-                            try {
-                              final smartPushService =
-                                  context.read<SmartPushService>();
-                              await smartPushService
-                                  .requestBatteryOptimizationExemption();
-                              _updateState(() {});
-                            } catch (e, stack) {
-                              logError(
-                                '请求电池优化豁免失败',
-                                error: e,
-                                stackTrace: stack,
-                                source: 'SmartPushSettingsPage',
-                              );
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    l10n.smartPushPermissionRequired,
-                                  ),
-                                  backgroundColor: colorScheme.error,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          },
-                    theme: theme,
-                    colorScheme: colorScheme,
-                  ),
+                  if (DistributionConfig.supportsBatteryOptimizationExemption)
+                    _buildPermissionItem(
+                      icon: Icons.battery_saver_outlined,
+                      title: l10n.smartPushBatteryOptimization,
+                      isGranted: status.batteryOptimizationExempted,
+                      onTap: status.batteryOptimizationExempted
+                          ? null
+                          : () async {
+                              try {
+                                final smartPushService =
+                                    context.read<SmartPushService>();
+                                await smartPushService
+                                    .requestBatteryOptimizationExemption();
+                                _updateState(() {});
+                              } catch (e, stack) {
+                                logError(
+                                  '请求电池优化豁免失败',
+                                  error: e,
+                                  stackTrace: stack,
+                                  source: 'SmartPushSettingsPage',
+                                );
+                                if (!context.mounted) return;
+                                AppSnackBar.error(
+                                  context,
+                                  l10n.smartPushPermissionRequired,
+                                );
+                              }
+                            },
+                      theme: theme,
+                      colorScheme: colorScheme,
+                    ),
 
                   // 自启动权限（如果是需要的厂商）
                   if (status.needsAutoStartPermission)

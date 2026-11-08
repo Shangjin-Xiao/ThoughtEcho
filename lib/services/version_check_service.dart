@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:thoughtecho/core/config/distribution_config.dart';
 import '../utils/app_logger.dart';
 import '../utils/version_utils.dart';
 
@@ -270,6 +271,11 @@ class VersionCheckService {
     Function(VersionInfo)? onUpdateAvailable,
     Duration delay = _backgroundCheckDelay,
   }) async {
+    if (DistributionConfig.isPlayStore) {
+      logDebug('Google Play 渠道跳过 GitHub 后台更新检查');
+      return;
+    }
+
     // 延迟执行，避免影响应用启动
     await Future.delayed(delay);
 

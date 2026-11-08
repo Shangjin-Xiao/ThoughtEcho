@@ -89,7 +89,11 @@ void main() {
     test('defines isolated 64-bit and ARM32 compatibility flavors', () {
       final buildGradle = File('android/app/build.gradle').readAsStringSync();
 
-      expect(buildGradle, contains("flavorDimensions 'abi'"));
+      expect(
+        buildGradle.contains("flavorDimensions 'distribution'") ||
+            buildGradle.contains('flavorDimensions "distribution"'),
+        isTrue,
+      );
       expect(buildGradle, contains('standard64 {'));
       expect(buildGradle, contains("abiFilters 'arm64-v8a'"));
       expect(buildGradle, contains("'vmSafeMode': 'false'"));
@@ -103,6 +107,36 @@ void main() {
       expect(buildGradle, contains("'vmSafeMode': 'true'"));
       expect(buildGradle, contains("'enableSoftwareRendering': 'true'"));
       expect(buildGradle, contains("'enableImpeller': 'false'"));
+      expect(buildGradle, contains('play {'));
+      final playFlavorMatch = RegExp(
+        r'play\s*\{([\s\S]*?)manifestPlaceholders\s*=\s*\[([\s\S]*?)\]',
+      ).firstMatch(buildGradle);
+      expect(playFlavorMatch, isNotNull);
+      final playBody = playFlavorMatch!.group(1)!;
+      final playAbiMatch =
+          RegExp(r'abiFilters\s+([^\r\n]+)').firstMatch(playBody);
+      expect(playAbiMatch, isNotNull);
+      final configuredAbis = RegExp(r"'([^']+)'")
+          .allMatches(playAbiMatch!.group(1)!)
+          .map((m) => m.group(1)!)
+          .toList();
+      expect(configuredAbis, equals(['arm64-v8a']));
+      final playPlaceholders = playFlavorMatch.group(2)!;
+      expect(playPlaceholders, contains("'vmSafeMode': 'false'"));
+      expect(playPlaceholders, contains("'enableSoftwareRendering': 'false'"));
+      expect(playPlaceholders, contains("'enableImpeller': 'true'"));
+
+      final gradleProperties =
+          File('android/gradle.properties').readAsStringSync();
+      expect(
+        gradleProperties,
+        matches(
+          RegExp(
+            r'^[ \t]*disable-abi-filtering[ \t]*=[ \t]*true[ \t]*$',
+            multiLine: true,
+          ),
+        ),
+      );
     });
 
     test('lets release CI build either or both ABI flavors', () {

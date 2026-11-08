@@ -146,5 +146,13 @@
   "mmkvDiagnosticSubtitle": "KV-Migrationsstatus prüfen und nativen MMKV, Dart-Binärparser sowie SharedPreferences vergleichen",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  },
+  "updateOpenGooglePlayFailed": "Google Play Store konnte nicht geöffnet werden: {error}",
+  "@updateOpenGooglePlayFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

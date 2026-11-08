@@ -27,7 +27,7 @@ on:
           - both
           - arm32Compat
       build_aab:
-        description: '额外构建 Google Play 用的 AAB（仅 standard64 + release）'
+        description: '额外构建 Google Play 用的 AAB（仅 play 变体 + release）'
         required: false
         default: false
         type: boolean
@@ -50,7 +50,7 @@ on:
         default: 'standard64'
         type: string
       build_aab:
-        description: '额外构建 Google Play 用的 AAB（仅 standard64 + release）'
+        description: '额外构建 Google Play 用的 AAB（仅 play 变体 + release）'
         required: false
         default: false
         type: boolean
@@ -241,8 +241,8 @@ jobs:
 
       # Google Play 只收 AAB，且要求应用支持 64 位；arm32Compat 是纯 32 位的
       # 兼容变体（关 Impeller、开软件渲染），单独打成 AAB 上传也会被拒，
-      # 所以这里只出 standard64 这一个 arm64-v8a 的 AAB。
-      - name: 构建 AAB (standard64)
+      # 所以这里使用 play 变体构建合规 AAB。
+      - name: 构建 AAB (play)
         id: aab
         # 注意不能写 inputs.build_aab == null 做兜底：GitHub 表达式比较会把
         # 两边转成数字，false 和 null 都是 0，关掉开关照样会跑这一步。
@@ -273,17 +273,18 @@ jobs:
           base_code=$(( major * 100000 + minor * 1000 + patch * 10 ))
           BUILD_NUMBER=$(( base_code + ${{ github.run_number }} ))
 
-          # 与 APK 走同一套 flavor/签名/ABI 参数，只换产物格式
+          # 使用 play flavor 构建 Google Play AAB
           flutter build appbundle --release \
-            --flavor standard64 \
+            --flavor play \
             --target-platform=android-arm64 \
             --android-project-arg=disable-abi-filtering=true \
             --build-number="$BUILD_NUMBER" \
             --build-name="$VERSION_NAME" \
+            --dart-define=DISTRIBUTION_CHANNEL=play \
             --dart-define=SENTRY_DSN="$SENTRY_DSN" \
             --dart-define=APTABASE_APP_KEY="$APTABASE_APP_KEY"
 
-          # 产物在 build/app/outputs/bundle/standard64Release/ 下，
+          # 产物在 build/app/outputs/bundle/playRelease/ 下，
           # 文件名跟着 flavor 走，这里直接按扩展名找，免得改名就断
           aab_path="$(find build/app/outputs/bundle -type f -name '*.aab' | head -n 1)"
           if [[ -z "$aab_path" ]]; then
@@ -293,7 +294,7 @@ jobs:
 
           mkdir -p build/app/outputs/release-artifacts
           cp -v "$aab_path" \
-            "build/app/outputs/release-artifacts/thoughtecho-standard64-release.aab"
+            "build/app/outputs/release-artifacts/thoughtecho-play-release.aab"
 
       # archive: false 时 upload-artifact 只接受单个文件，
       # build_variant=both 会产出两个 APK，因此按变体分开上传。
@@ -317,12 +318,12 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: 上传 AAB (standard64)
+      - name: 上传 AAB (play)
         if: ${{ steps.aab.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
-          name: app-release-standard64-aab
-          path: build/app/outputs/release-artifacts/thoughtecho-standard64-release.aab
+          name: app-release-play-aab
+          path: build/app/outputs/release-artifacts/thoughtecho-play-release.aab
           archive: false
           if-no-files-found: error
           retention-days: 30
