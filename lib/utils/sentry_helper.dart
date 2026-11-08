@@ -666,6 +666,7 @@ class SentryHelper {
 
   /// 关闭并反初始化 Sentry SDK，等待关闭完成。
   static Future<void> close() async {
+    _desiredEnabled = false;
     await _close();
   }
 

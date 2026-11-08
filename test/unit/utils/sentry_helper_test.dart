@@ -1161,6 +1161,13 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       await SentryHelper.close();
       expect(SentryHelper.isInitialized, isFalse);
     });
+
+    test('close shuts down after initIfEnabled(true)', () async {
+      await SentryHelper.initIfEnabled(true);
+      expect(SentryHelper.isInitialized, isTrue);
+      await SentryHelper.close();
+      expect(SentryHelper.isInitialized, isFalse);
+    });
   });
 }
 
