@@ -647,32 +647,57 @@ class UpdateBottomSheet extends StatelessWidget {
     }
   }
 
+  /// 统一处理应用商店协议跳转与网页回退逻辑
+  static Future<void> _openStoreWithWebFallback({
+    required BuildContext context,
+    required Uri storeUri,
+    required Uri webUri,
+    required String Function(AppLocalizations l10n, Object error) errorMessage,
+  }) async {
+    try {
+      var launched = false;
+      try {
+        launched = await launchUrl(
+          storeUri,
+          mode: LaunchMode.externalApplication,
+        );
+      } catch (_) {
+        launched = false;
+      }
+
+      if (!launched) {
+        final webLaunched = await launchUrl(
+          webUri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!webLaunched) {
+          throw Exception('Failed to launch fallback URL');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context);
+        AppSnackBar.error(
+          context,
+          errorMessage(l10n, e),
+        );
+      }
+    }
+  }
+
   /// 打开Google Play商店
   static Future<void> _openGooglePlayStore(BuildContext context) async {
     const String marketUrl = 'market://details?id=com.shangjin.thoughtecho';
     const String webUrl =
         'https://play.google.com/store/apps/details?id=com.shangjin.thoughtecho';
 
-    try {
-      final uri = Uri.parse(marketUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        final webUri = Uri.parse(webUrl);
-        if (await canLaunchUrl(webUri)) {
-          await launchUrl(webUri, mode: LaunchMode.externalApplication);
-        } else {
-          throw Exception('Cannot open Google Play Store');
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        AppSnackBar.error(
-          context,
-          AppLocalizations.of(context).updateOpenStoreFailed(e.toString()),
-        );
-      }
-    }
+    await _openStoreWithWebFallback(
+      context: context,
+      storeUri: Uri.parse(marketUrl),
+      webUri: Uri.parse(webUrl),
+      errorMessage: (l10n, error) =>
+          l10n.updateOpenGooglePlayFailed(error.toString()),
+    );
   }
 
   /// 打开Microsoft Store
@@ -681,30 +706,16 @@ class UpdateBottomSheet extends StatelessWidget {
     // 这里需要替换为实际的应用ProductId
     const String microsoftStoreUrl =
         'ms-windows-store://pdp/?productId=9NC7GDG6KFMC';
+    const String webStoreUrl =
+        'https://www.microsoft.com/store/apps/9NC7GDG6KFMC';
 
-    try {
-      final uri = Uri.parse(microsoftStoreUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        // 如果Store协议不可用，回退到网页版
-        const String webStoreUrl =
-            'https://www.microsoft.com/store/apps/9NC7GDG6KFMC';
-        final webUri = Uri.parse(webStoreUrl);
-        if (await canLaunchUrl(webUri)) {
-          await launchUrl(webUri, mode: LaunchMode.externalApplication);
-        } else {
-          throw Exception('Cannot open Microsoft Store');
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        AppSnackBar.error(
-          context,
-          AppLocalizations.of(context).updateOpenStoreFailed(e.toString()),
-        );
-      }
-    }
+    await _openStoreWithWebFallback(
+      context: context,
+      storeUri: Uri.parse(microsoftStoreUrl),
+      webUri: Uri.parse(webStoreUrl),
+      errorMessage: (l10n, error) =>
+          l10n.updateOpenStoreFailed(error.toString()),
+    );
   }
 
   /// 打开下载链接（实例方法）

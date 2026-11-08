@@ -27,7 +27,7 @@ on:
           - both
           - arm32Compat
       build_aab:
-        description: '额外构建 Google Play 用的 AAB（仅 standard64 + release）'
+        description: '额外构建 Google Play 用的 AAB（仅 play 变体 + release）'
         required: false
         default: false
         type: boolean
@@ -50,7 +50,7 @@ on:
         default: 'standard64'
         type: string
       build_aab:
-        description: '额外构建 Google Play 用的 AAB（仅 standard64 + release）'
+        description: '额外构建 Google Play 用的 AAB（仅 play 变体 + release）'
         required: false
         default: false
         type: boolean

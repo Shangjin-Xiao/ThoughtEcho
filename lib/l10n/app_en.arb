@@ -2733,6 +2733,14 @@
       }
     }
   },
+  "updateOpenGooglePlayFailed": "Failed to open Google Play Store: {error}",
+  "@updateOpenGooglePlayFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "updateOpenLinkFailed": "Failed to open download link: {error}",
   "@updateOpenLinkFailed": {
     "placeholders": {

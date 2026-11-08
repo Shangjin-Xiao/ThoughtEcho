@@ -109,10 +109,12 @@ void main() {
       expect(buildGradle, contains("'enableImpeller': 'false'"));
       expect(buildGradle, contains('play {'));
       final playFlavorMatch = RegExp(
-        r'play\s*\{[\s\S]*?manifestPlaceholders\s*=\s*\[([\s\S]*?)\]',
+        r'play\s*\{([\s\S]*?)manifestPlaceholders\s*=\s*\[([\s\S]*?)\]',
       ).firstMatch(buildGradle);
       expect(playFlavorMatch, isNotNull);
-      final playPlaceholders = playFlavorMatch!.group(1)!;
+      final playBody = playFlavorMatch!.group(1)!;
+      expect(playBody, contains("abiFilters 'arm64-v8a'"));
+      final playPlaceholders = playFlavorMatch.group(2)!;
       expect(playPlaceholders, contains("'vmSafeMode': 'false'"));
       expect(playPlaceholders, contains("'enableSoftwareRendering': 'false'"));
       expect(playPlaceholders, contains("'enableImpeller': 'true'"));

@@ -2551,6 +2551,14 @@
       }
     }
   },
+  "updateOpenGooglePlayFailed": "Échec de l'ouverture du Google Play Store : {error}",
+  "@updateOpenGooglePlayFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "updateOpenLinkFailed": "Échec de l'ouverture du lien de téléchargement : {error}",
   "@updateOpenLinkFailed": {
     "placeholders": {

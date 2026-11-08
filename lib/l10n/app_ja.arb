@@ -2558,6 +2558,14 @@
       }
     }
   },
+  "updateOpenGooglePlayFailed": "Google Playストアを開けません: {error}",
+  "@updateOpenGooglePlayFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "updateOpenLinkFailed": "リンク失敗: {error}",
   "@updateOpenLinkFailed": {
     "placeholders": {

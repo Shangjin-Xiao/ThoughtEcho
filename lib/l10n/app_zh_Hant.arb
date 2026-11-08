@@ -2743,6 +2743,14 @@
       }
     }
   },
+  "updateOpenGooglePlayFailed": "開啟Google Play商店失敗: {error}",
+  "@updateOpenGooglePlayFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "updateOpenLinkFailed": "開啟下載連結失敗: {error}",
   "@updateOpenLinkFailed": {
     "placeholders": {
