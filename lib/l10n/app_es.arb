@@ -138,5 +138,13 @@
   "lottieSearchLoading": "Buscando...",
   "lottieWeatherSearchLoading": "Buscando el tiempo...",
   "lottieCustomLoading": "Cargando...",
-  "lottieNotFound": "No se encontró contenido"
+  "lottieNotFound": "No se encontró contenido",
+  "mmkvDiagnosticTitle": "Diagnóstico de migración y analizador MMKV",
+  "@mmkvDiagnosticTitle": {
+    "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticSubtitle": "Inspeccionar el estado de migración KV y comparar MMKV nativo, analizador binario Dart y SharedPreferences",
+  "@mmkvDiagnosticSubtitle": {
+    "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  }
 }

@@ -24,8 +24,10 @@ import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
 import '../theme/theme_style.dart';
+import '../theme/app_theme.dart';
 import 'excerpt_intent_service.dart';
 import 'location_service.dart';
+import 'smart_push_service.dart';
 
 class SettingsService extends ChangeNotifier {
   static const ExcerptIntentService _excerptIntentService =
@@ -1335,8 +1337,13 @@ class SettingsService extends ChangeNotifier {
 
   // 将数据从SharedPreferences迁移到MMKV (只在首次升级后执行一次)
   Future<void> _migrateDataIfNeeded() async {
-    // 检查是否已经完成迁移
-    if (_mmkv.getBool(_migrationCompleteKey) == true) {
+    // 若 SafeMMKV Phase 1 引擎已完成迁移，或历史迁移标记已完成，则不再执行旧版逆向迁移，
+    // 防止 SharedPreferences 中残留的远古旧值反向覆盖刚从 MMKV 迁移出的最新设置。
+    if (_mmkv.getBool('kv_engine_migrated_v1') == true ||
+        _mmkv.getBool(_migrationCompleteKey) == true) {
+      if (_mmkv.getBool(_migrationCompleteKey) != true) {
+        await _mmkv.setBool(_migrationCompleteKey, true);
+      }
       logDebug('数据迁移已完成，不再重复执行');
       return;
     }
@@ -1753,14 +1760,30 @@ class SettingsService extends ChangeNotifier {
 
   /// 获取所有设置数据用于备份
   Map<String, dynamic> getAllSettingsForBackup() {
-    return {
+    final backup = <String, dynamic>{
       'ai_settings': _aiSettings.toJson(),
       'multi_ai_settings': _multiAISettings.toJson(),
       'local_ai_settings': _localAISettings.toJson(),
       'app_settings': _appSettings.toJson(),
       'theme_mode': _themeMode.index,
       'device_id': getOrCreateDeviceId(),
+      'theme_style': _mmkv.getString(ThemeStyle.storageKey),
+      'theme_accent_material': _mmkv.getString('theme_accent_material'),
+      'theme_accent_paper': _mmkv.getString('theme_accent_paper'),
+      'theme_accent_plain': _mmkv.getString('theme_accent_plain'),
+      'custom_color': _mmkv.getInt('custom_color'),
+      'use_custom_color': _mmkv.getBool('use_custom_color'),
+      'use_dynamic_color': _mmkv.getBool('use_dynamic_color'),
     };
+    final smartPushRaw = _mmkv.getString('smart_push_settings_v2');
+    if (smartPushRaw != null && smartPushRaw.isNotEmpty) {
+      try {
+        backup['smart_push_settings_v2'] = json.decode(smartPushRaw);
+      } catch (_) {
+        backup['smart_push_settings_v2'] = smartPushRaw;
+      }
+    }
+    return backup;
   }
 
   /// 从备份数据恢复所有设置
@@ -1948,6 +1971,80 @@ class SettingsService extends ChangeNotifier {
         }
       }
 
+      // 恢复主题风格与墨色配置（防御性解析）
+      if (backupData.containsKey('theme_style')) {
+        final rawStyle = backupData['theme_style'];
+        if (rawStyle == null) {
+          await _mmkv.remove(ThemeStyle.storageKey);
+        } else if (rawStyle is String && rawStyle.trim().isNotEmpty) {
+          await _mmkv.setString(
+            ThemeStyle.storageKey,
+            ThemeStyle.fromName(rawStyle.trim()).name,
+          );
+        }
+      }
+      for (final accentKey in const [
+        'theme_accent_material',
+        'theme_accent_paper',
+        'theme_accent_plain',
+      ]) {
+        if (backupData.containsKey(accentKey)) {
+          final rawAccent = backupData[accentKey];
+          if (rawAccent == null) {
+            await _mmkv.remove(accentKey);
+          } else if (rawAccent is String && rawAccent.trim().isNotEmpty) {
+            await _mmkv.setString(accentKey, rawAccent.trim());
+          }
+        }
+      }
+      if (backupData.containsKey('custom_color')) {
+        final rawColor = backupData['custom_color'];
+        if (rawColor == null) {
+          await _mmkv.remove('custom_color');
+        } else if (rawColor is int) {
+          await _mmkv.setInt('custom_color', rawColor);
+        } else if (rawColor is num && rawColor.isFinite && rawColor % 1 == 0) {
+          await _mmkv.setInt('custom_color', rawColor.toInt());
+        }
+      }
+      if (backupData.containsKey('use_custom_color')) {
+        final rawUseCustom = backupData['use_custom_color'];
+        if (rawUseCustom == null) {
+          await _mmkv.remove('use_custom_color');
+        } else if (rawUseCustom is bool) {
+          await _mmkv.setBool('use_custom_color', rawUseCustom);
+        }
+      }
+      if (backupData.containsKey('use_dynamic_color')) {
+        final rawUseDynamic = backupData['use_dynamic_color'];
+        if (rawUseDynamic == null) {
+          await _mmkv.remove('use_dynamic_color');
+        } else if (rawUseDynamic is bool) {
+          await _mmkv.setBool('use_dynamic_color', rawUseDynamic);
+        }
+      }
+
+      // 恢复智能推送设置
+      if (backupData.containsKey('smart_push_settings_v2')) {
+        final rawSmartPush = backupData['smart_push_settings_v2'];
+        if (rawSmartPush is Map) {
+          await _mmkv.setString(
+            'smart_push_settings_v2',
+            json.encode(rawSmartPush),
+          );
+        } else if (rawSmartPush is String && rawSmartPush.trim().isNotEmpty) {
+          try {
+            final decoded = json.decode(rawSmartPush);
+            if (decoded is Map) {
+              await _mmkv.setString(
+                'smart_push_settings_v2',
+                json.encode(decoded),
+              );
+            }
+          } catch (_) {}
+        }
+      }
+
       // 恢复/记录 device_id（不覆盖本地已有，仅在本地不存在时写入，保持源ID可用于审计）
       if (backupData.containsKey('device_id')) {
         final remoteId = backupData['device_id'];
@@ -1958,6 +2055,15 @@ class SettingsService extends ChangeNotifier {
         }
       }
 
+      try {
+        await AppTheme.reloadCurrentInstance();
+      } catch (_) {}
+
+      try {
+        await SmartPushService.reloadCurrentInstance();
+      } catch (_) {}
+
+      notifyListeners();
       logDebug('设置数据恢复完成');
     } catch (e) {
       AppLogger.e('设置数据恢复失败', error: e, source: 'SettingsService');

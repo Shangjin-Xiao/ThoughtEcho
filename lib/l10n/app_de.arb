@@ -138,5 +138,13 @@
   "lottieSearchLoading": "Suche läuft...",
   "lottieWeatherSearchLoading": "Wettersuche läuft...",
   "lottieCustomLoading": "Wird geladen...",
-  "lottieNotFound": "Keine Inhalte gefunden"
+  "lottieNotFound": "Keine Inhalte gefunden",
+  "mmkvDiagnosticTitle": "MMKV-Migrations- & Parser-Diagnose",
+  "@mmkvDiagnosticTitle": {
+    "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticSubtitle": "KV-Migrationsstatus prüfen und nativen MMKV, Dart-Binärparser sowie SharedPreferences vergleichen",
+  "@mmkvDiagnosticSubtitle": {
+    "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  }
 }

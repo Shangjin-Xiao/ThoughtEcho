@@ -11,6 +11,7 @@ import 'ai_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
 import 'logs_settings_page.dart';
+import 'mmkv_migration_diagnostic_page.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/version_check_service.dart';
@@ -1085,6 +1086,23 @@ class SettingsPageState extends State<SettingsPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const LogsSettingsPage(),
+                    ),
+                  );
+                },
+              ),
+
+              // MMKV 迁移与解析诊断入口
+              ListTile(
+                key: const Key('settings_lab_mmkv_diagnostic_tile'),
+                title: Text(l10n.mmkvDiagnosticTitle),
+                subtitle: Text(l10n.mmkvDiagnosticSubtitle),
+                leading: const Icon(Icons.storage_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MmkvMigrationDiagnosticPage(),
                     ),
                   );
                 },
