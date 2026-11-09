@@ -68,3 +68,9 @@
 ## 2024-05-24 - 补全多语言词条
 **发现:** 英文翻译文件 lib/l10n/app_en.arb 缺少了中文字典中的一些元数据描述（@lottie...）。
 **规则:** 所有新增的国际化词条都应该在各语言文件中同步元数据，以保证生成的代码一致性。
+
+## 2024-11-20 - [提取 mmkv_migration_diagnostic_page.dart 的硬编码中文字符串]
+**发现:** 在 `lib/pages/mmkv_migration_diagnostic_page.dart` 中存在多处硬编码文本，如：`Text(isZh ? '重试' : 'Retry')`，`Text(isZh ? '重新执行迁移' : 'Re-run Migration')` 和 `Text(isZh ? '复制诊断 JSON' : 'Copy Diagnostic JSON')`。
+**规则:**
+- 寻找现存翻译键值复用，例如：将 `重试` 替换为已存在的 `retry` 键值。
+- 对于缺失项，新增 `mmkvDiagnosticRerunMigration` ("重新执行迁移" / "Re-run Migration") 和 `mmkvDiagnosticCopyJson` ("复制诊断 JSON" / "Copy Diagnostic JSON") 到各语言 `arb` 文件中，并遵循极简风格翻译。

@@ -2136,8 +2136,12 @@
   "@importCleanupNotice": {
     "description": "Shown after an import when the backup file contained values this app cannot recognize or empty notes",
     "placeholders": {
-      "sanitized": { "type": "int" },
-      "skipped": { "type": "int" }
+      "sanitized": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
     }
   },
   "mergeImportHint": "This operation will keep current data and merge with backup data:",
@@ -4963,5 +4967,13 @@
   "mmkvDiagnosticSubtitle": "Inspect KV migration status and compare Native MMKV, Dart binary parser, and SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticRerunMigration": "Re-run Migration",
+  "@mmkvDiagnosticRerunMigration": {
+    "description": "Button label to re-run MMKV migration"
+  },
+  "mmkvDiagnosticCopyJson": "Copy Diagnostic JSON",
+  "@mmkvDiagnosticCopyJson": {
+    "description": "Button label to copy diagnostic JSON"
   }
 }
