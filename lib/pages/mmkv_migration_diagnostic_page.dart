@@ -560,7 +560,8 @@ class _MmkvMigrationDiagnosticPageState
           key: const Key('mmkv_diagnostic_rerun_migration_button'),
           onPressed: _loading ? null : _handleRerunMigration,
           icon: const Icon(Icons.sync),
-          label: Text(AppLocalizations.of(context).mmkvDiagnosticRerunMigration),
+          label:
+              Text(AppLocalizations.of(context).mmkvDiagnosticRerunMigration),
         ),
         OutlinedButton.icon(
           key: const Key('mmkv_diagnostic_copy_json_action_button'),
