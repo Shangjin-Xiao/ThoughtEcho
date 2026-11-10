@@ -193,8 +193,8 @@
     }
   },
   "emergencyRecoveryTitle": "心迹 - 数据恢复",
-  "emergencyRecoveryHeading": "数据库初始化失败",
-  "emergencyRecoveryDescription": "应用无法正常启动。可能是数据库损坏或无法访问。\n\n您可以尝试备份现有数据以防数据丢失，或尝试重新启动应用。",
+  "emergencyRecoveryHeading": "笔记数据暂不可用",
+  "emergencyRecoveryDescription": "应用暂时无法读取本地笔记记录。\n\n为确保数据安全，建议先备份现有记录，或尝试重新载入应用。",
   "emergencyBackupAndRestoreButton": "备份和恢复数据",
   "emergencyTryRestartAppButton": "尝试重新启动应用",
   "emergencyReinitializeFailed": "重新初始化失败: {error}",
@@ -216,7 +216,7 @@
   "emergencyPersistentIssueHint": "如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。",
   "emergencyBackupPageTitle": "紧急数据恢复",
   "emergencyBackupToolTitle": "数据紧急恢复工具",
-  "emergencyBackupToolDesc": "由于应用发生了严重错误，您可以尝试：\n\n1. 导出数据库文件 - 导出原始数据库文件供专业人员恢复\n2. 尝试查看备份恢复页 - 注意：由于数据库可能损坏，此功能可能无法正常工作",
+  "emergencyBackupToolDesc": "若应用出现异常，建议按以下步骤排查与挽救数据：\n\n1. 导出原始数据文件 —— 将当前本地数据另存到下载目录，以便后续分析与恢复\n2. 尝试打开标准备份还原 —— 前往备份页导入历史备份或尝试直接还原",
   "emergencyProcessing": "正在处理...",
   "emergencyExportDatabaseButton": "导出数据库文件",
   "emergencyOpenBackupPageButton": "尝试打开标准备份还原页面",
@@ -228,7 +228,7 @@
       }
     }
   },
-  "emergencyExportHint": "提示: 导出的数据文件可用于技术支持与专业恢复。",
+  "emergencyExportHint": "提示: 导出的数据文件完整保留了本地记录，可用于排查问题或协助数据恢复。",
   "emergencyLocatingDatabase": "正在定位数据库文件...",
   "emergencyDatabaseNotFound": "未找到数据库文件",
   "emergencyPreparingExport": "正在准备导出...",
