@@ -93,7 +93,8 @@ void main() {
     },
   );
 
-  test('syncQuoteMediaReferencesBatch replaces stale refs for many quotes '
+  test(
+      'syncQuoteMediaReferencesBatch replaces stale refs for many quotes '
       'in one pass', () async {
     // Arrange: stale references for quotes in the batch, plus one outside it
     for (var i = 0; i < 3; i++) {
@@ -126,15 +127,40 @@ void main() {
         date: DateTime.now().toIso8601String(),
       ),
     );
+    for (final quote in quotes) {
+      await db.insert('quotes', {
+        'id': quote.id,
+        'content': quote.content,
+        'delta_content': quote.deltaContent,
+        'date': quote.date,
+      });
+    }
+    // Permanently deleted after the page was read: not present in quotes
+    final deletedQuote = Quote(
+      id: 'deleted_quote',
+      content: 'Deleted content',
+      deltaContent: jsonEncode([
+        {
+          'insert': {'image': '/tmp/test_app_docs/media/deleted.png'},
+        },
+      ]),
+      date: DateTime.now().toIso8601String(),
+    );
 
     // Act
     final synced = await MediaReferenceService.syncQuoteMediaReferencesBatch(
-      quotes,
+      [...quotes, deletedQuote],
       cachedAppPath: '/tmp/test_app_docs',
     );
 
     // Assert
     expect(synced, quotes.length);
+    final deletedRows = await db.query(
+      'media_references',
+      where: 'quote_id = ?',
+      whereArgs: ['deleted_quote'],
+    );
+    expect(deletedRows, isEmpty);
     final staleRows = await db.query(
       'media_references',
       where: "file_path LIKE 'media/stale_%'",
@@ -181,10 +207,10 @@ void main() {
 
       final deletedCount =
           await MediaReferenceService.quickCheckAndDeleteOrphans([
-            orphanFile.path,
-            storedRefFile.path,
-            contentRefFile.path,
-          ], cachedAppPath: '/tmp/test_app_docs');
+        orphanFile.path,
+        storedRefFile.path,
+        contentRefFile.path,
+      ], cachedAppPath: '/tmp/test_app_docs');
 
       expect(deletedCount, 1);
       expect(orphanFile.existsSync(), isFalse);
@@ -221,8 +247,8 @@ void main() {
 
       final deletedCount =
           await MediaReferenceService.quickCheckAndDeleteOrphans([
-            referencedFile.path,
-          ], cachedAppPath: '/tmp/test_app_docs');
+        referencedFile.path,
+      ], cachedAppPath: '/tmp/test_app_docs');
 
       expect(deletedCount, 0);
       expect(referencedFile.existsSync(), isTrue);
