@@ -18,12 +18,15 @@ class MockAIService extends Mock implements AIService {
     bool updateDailyUsage = true,
   }) {
     return super.noSuchMethod(
-      Invocation.method(#analyzeSource, [content], {
+      Invocation.method(#analyzeSource, [
+        content
+      ], {
         #existingAuthor: existingAuthor,
         #existingWork: existingWork,
         #updateDailyUsage: updateDailyUsage,
       }),
-      returnValue: Future.value(jsonEncode({'author': 'a', 'work': 'b', 'confidence': 90})),
+      returnValue: Future.value(
+          jsonEncode({'author': 'a', 'work': 'b', 'confidence': 90})),
     );
   }
 
@@ -33,7 +36,9 @@ class MockAIService extends Mock implements AIService {
     bool updateDailyUsage = true,
   }) {
     return super.noSuchMethod(
-      Invocation.method(#streamPolishText, [text], {
+      Invocation.method(#streamPolishText, [
+        text
+      ], {
         #updateDailyUsage: updateDailyUsage,
       }),
       returnValue: Stream.value('polished'),
@@ -46,7 +51,9 @@ class MockAIService extends Mock implements AIService {
     bool updateDailyUsage = true,
   }) {
     return super.noSuchMethod(
-      Invocation.method(#streamContinueText, [text], {
+      Invocation.method(#streamContinueText, [
+        text
+      ], {
         #updateDailyUsage: updateDailyUsage,
       }),
       returnValue: Stream.value('continued'),
@@ -60,7 +67,9 @@ class MockAIService extends Mock implements AIService {
     bool updateDailyUsage = true,
   }) {
     return super.noSuchMethod(
-      Invocation.method(#streamSummarizeNote, [note], {
+      Invocation.method(#streamSummarizeNote, [
+        note
+      ], {
         #tagNames: tagNames,
         #updateDailyUsage: updateDailyUsage,
       }),
@@ -92,21 +101,22 @@ void main() {
       );
     }
 
-    testWidgets('analyzeSource should show pleaseEnterContent snackbar when content is empty', (WidgetTester tester) async {
+    testWidgets(
+        'analyzeSource should show pleaseEnterContent snackbar when content is empty',
+        (WidgetTester tester) async {
       final contentController = TextEditingController();
       final authorController = TextEditingController();
       final workController = TextEditingController();
 
-      await tester.pumpWidget(createWidgetUnderTest(Builder(
-        builder: (context) {
-          return ElevatedButton(
-            onPressed: () {
-              AiDialogHelper(context).analyzeSource(contentController, authorController, workController);
-            },
-            child: const Text('Analyze'),
-          );
-        }
-      )));
+      await tester.pumpWidget(createWidgetUnderTest(Builder(builder: (context) {
+        return ElevatedButton(
+          onPressed: () {
+            AiDialogHelper(context).analyzeSource(
+                contentController, authorController, workController);
+          },
+          child: const Text('Analyze'),
+        );
+      })));
 
       await tester.tap(find.text('Analyze'));
       await tester.pumpAndSettle();
@@ -114,7 +124,8 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
 
-    testWidgets('analyzeSource should call aiService and show loading dialog', (WidgetTester tester) async {
+    testWidgets('analyzeSource should call aiService and show loading dialog',
+        (WidgetTester tester) async {
       final contentController = TextEditingController(text: 'test content');
       final authorController = TextEditingController(text: 'test author');
       final workController = TextEditingController(text: 'test work');
@@ -127,39 +138,39 @@ void main() {
         existingWork: 'test work',
       )).thenAnswer((_) => completer.future);
 
-      await tester.pumpWidget(createWidgetUnderTest(Builder(
-        builder: (context) {
-          return ElevatedButton(
-            onPressed: () {
-              AiDialogHelper(context).analyzeSource(contentController, authorController, workController);
-            },
-            child: const Text('Analyze'),
-          );
-        }
-      )));
+      await tester.pumpWidget(createWidgetUnderTest(Builder(builder: (context) {
+        return ElevatedButton(
+          onPressed: () {
+            AiDialogHelper(context).analyzeSource(
+                contentController, authorController, workController);
+          },
+          child: const Text('Analyze'),
+        );
+      })));
 
       await tester.tap(find.text('Analyze'));
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-      completer.complete(jsonEncode({'author': 'a', 'work': 'b', 'confidence': 90}));
+      completer
+          .complete(jsonEncode({'author': 'a', 'work': 'b', 'confidence': 90}));
       await tester.pumpAndSettle();
     });
 
-    testWidgets('polishText should show pleaseEnterContent snackbar when content is empty', (WidgetTester tester) async {
+    testWidgets(
+        'polishText should show pleaseEnterContent snackbar when content is empty',
+        (WidgetTester tester) async {
       final contentController = TextEditingController();
 
-      await tester.pumpWidget(createWidgetUnderTest(Builder(
-        builder: (context) {
-          return ElevatedButton(
-            onPressed: () {
-              AiDialogHelper(context).polishText(contentController);
-            },
-            child: const Text('Polish'),
-          );
-        }
-      )));
+      await tester.pumpWidget(createWidgetUnderTest(Builder(builder: (context) {
+        return ElevatedButton(
+          onPressed: () {
+            AiDialogHelper(context).polishText(contentController);
+          },
+          child: const Text('Polish'),
+        );
+      })));
 
       await tester.tap(find.text('Polish'));
       await tester.pumpAndSettle();
@@ -167,19 +178,19 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
 
-    testWidgets('continueText should show pleaseEnterContent snackbar when content is empty', (WidgetTester tester) async {
+    testWidgets(
+        'continueText should show pleaseEnterContent snackbar when content is empty',
+        (WidgetTester tester) async {
       final contentController = TextEditingController();
 
-      await tester.pumpWidget(createWidgetUnderTest(Builder(
-        builder: (context) {
-          return ElevatedButton(
-            onPressed: () {
-              AiDialogHelper(context).continueText(contentController);
-            },
-            child: const Text('Continue'),
-          );
-        }
-      )));
+      await tester.pumpWidget(createWidgetUnderTest(Builder(builder: (context) {
+        return ElevatedButton(
+          onPressed: () {
+            AiDialogHelper(context).continueText(contentController);
+          },
+          child: const Text('Continue'),
+        );
+      })));
 
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
@@ -187,19 +198,20 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
 
-    testWidgets('analyzeContent should show pleaseEnterContent snackbar when quote content is empty', (WidgetTester tester) async {
-      final quote = Quote(id: '1', content: '', date: DateTime.now().toIso8601String());
+    testWidgets(
+        'analyzeContent should show pleaseEnterContent snackbar when quote content is empty',
+        (WidgetTester tester) async {
+      final quote =
+          Quote(id: '1', content: '', date: DateTime.now().toIso8601String());
 
-      await tester.pumpWidget(createWidgetUnderTest(Builder(
-        builder: (context) {
-          return ElevatedButton(
-            onPressed: () {
-              AiDialogHelper(context).analyzeContent(quote, onFinish: (_) {});
-            },
-            child: const Text('Analyze Content'),
-          );
-        }
-      )));
+      await tester.pumpWidget(createWidgetUnderTest(Builder(builder: (context) {
+        return ElevatedButton(
+          onPressed: () {
+            AiDialogHelper(context).analyzeContent(quote, onFinish: (_) {});
+          },
+          child: const Text('Analyze Content'),
+        );
+      })));
 
       await tester.tap(find.text('Analyze Content'));
       await tester.pumpAndSettle();
