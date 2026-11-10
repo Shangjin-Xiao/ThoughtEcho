@@ -56,8 +56,7 @@ class MediaReferenceService {
   static int countFromRowsForTest(
     List<Map<String, Object?>> rows, [
     String key = 'count',
-  ]) =>
-      _countFromRows(rows, key);
+  ]) => _countFromRows(rows, key);
 
   /// 获取数据库实例
   ///
@@ -310,18 +309,15 @@ class MediaReferenceService {
 
       if (uniqueIds.length <= maxChunkSize) {
         // 没超 SQLite 参数上限就不必付 Batch 的分配和事务开销
-        _collectReferencedFiles(
-          [
-            await db.query(
-              _tableName,
-              columns: ['quote_id', 'file_path'],
-              where:
-                  'quote_id IN (${List.filled(uniqueIds.length, '?').join(',')})',
-              whereArgs: uniqueIds,
-            ),
-          ],
-          grouped,
-        );
+        _collectReferencedFiles([
+          await db.query(
+            _tableName,
+            columns: ['quote_id', 'file_path'],
+            where:
+                'quote_id IN (${List.filled(uniqueIds.length, '?').join(',')})',
+            whereArgs: uniqueIds,
+          ),
+        ], grouped);
       } else {
         // 超上限必须分块。逐块 await 是 N 次数据库往返，打包成一次提交压到 1 次；
         // 未开 continueOnError 时任一块查询失败整个 batch 抛出去，不会静默少数据。
@@ -481,9 +477,11 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs = storedVariants != null &&
+      final hasStoredRefs =
+          storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs = quoteVariants != null &&
+      final hasQuoteRefs =
+          quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       if (hasQuoteRefs) {
@@ -563,7 +561,7 @@ class MediaReferenceService {
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
-      _fetchStoredReferenceIndex() async {
+  _fetchStoredReferenceIndex() async {
     final db = await database;
     final rows = await db.query(_tableName, columns: ['file_path', 'quote_id']);
 
@@ -589,7 +587,7 @@ class MediaReferenceService {
 
   /// 流式收集引用索引，避免一次性加载全部笔记，防止内存溢出
   static Future<Map<String, Map<String, Set<String>>>>
-      _collectQuoteReferenceIndex() async {
+  _collectQuoteReferenceIndex() async {
     final databaseService = DatabaseService();
     final index = <String, Map<String, Set<String>>>{};
     const int pageSize = 200;
@@ -629,10 +627,7 @@ class MediaReferenceService {
             key,
             () => <String, Set<String>>{},
           );
-          final quoteSet = variants.putIfAbsent(
-            variantPath,
-            () => <String>{},
-          );
+          final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
           quoteSet.add(quoteId);
         }
 
@@ -741,7 +736,8 @@ class MediaReferenceService {
   }) async {
     try {
       // 获取应用目录路径缓存
-      final appPath = cachedAppPath ??
+      final appPath =
+          cachedAppPath ??
           path.normalize((await getApplicationDocumentsDirectory()).path);
 
       final normalizedPath = await _normalizeFilePath(
@@ -774,11 +770,7 @@ class MediaReferenceService {
         // 自动修复逻辑：重建引用记录
         for (final quoteId in quoteIdsWithFile) {
           if (quoteId.isNotEmpty) {
-            await addReference(
-              normalizedPath,
-              quoteId,
-              cachedAppPath: appPath,
-            );
+            await addReference(normalizedPath, quoteId, cachedAppPath: appPath);
           }
         }
         return false;
@@ -813,7 +805,8 @@ class MediaReferenceService {
     if (uniquePaths.isEmpty) return 0;
 
     try {
-      final appPath = cachedAppPath ??
+      final appPath =
+          cachedAppPath ??
           path.normalize((await getApplicationDocumentsDirectory()).path);
 
       final candidatesByKey = <String, _OrphanCandidate>{};
@@ -859,9 +852,11 @@ class MediaReferenceService {
 
       var deletedCount = 0;
       final orphanCandidates = candidates
-          .where((candidate) =>
-              !storedKeys.contains(candidate.canonicalKey) &&
-              !quoteRefs.containsKey(candidate.canonicalKey))
+          .where(
+            (candidate) =>
+                !storedKeys.contains(candidate.canonicalKey) &&
+                !quoteRefs.containsKey(candidate.canonicalKey),
+          )
           .toList(growable: false);
 
       const chunkSize = 50;
@@ -973,7 +968,7 @@ class MediaReferenceService {
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
-      _findQuoteReferencesForCandidates(
+  _findQuoteReferencesForCandidates(
     Database db,
     List<_OrphanCandidate> candidates,
   ) async {
@@ -1049,7 +1044,8 @@ class MediaReferenceService {
   }) async {
     try {
       // 获取应用目录路径缓存
-      final appPath = cachedAppPath ??
+      final appPath =
+          cachedAppPath ??
           path.normalize((await getApplicationDocumentsDirectory()).path);
 
       final snapshot = await _buildReferenceSnapshot();
@@ -1062,9 +1058,11 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs = storedVariants != null &&
+      final hasStoredRefs =
+          storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs = quoteVariants != null &&
+      final hasQuoteRefs =
+          quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       // 如果在笔记内容中找到引用，先尝试修复缺失的引用记录
@@ -1183,8 +1181,9 @@ class MediaReferenceService {
     String appPath = cachedAppPath ?? '';
     if (appPath.isEmpty) {
       try {
-        appPath =
-            path.normalize((await getApplicationDocumentsDirectory()).path);
+        appPath = path.normalize(
+          (await getApplicationDocumentsDirectory()).path,
+        );
       } catch (e) {
         logDebug('获取应用文档目录失败: $e');
         appPath = '';
@@ -1207,7 +1206,8 @@ class MediaReferenceService {
       }
 
       // 获取应用目录路径缓存，避免循环中多次获取
-      final appPath = cachedAppPath ??
+      final appPath =
+          cachedAppPath ??
           path.normalize((await getApplicationDocumentsDirectory()).path);
 
       // 先移除该笔记的所有现有引用
@@ -1227,15 +1227,12 @@ class MediaReferenceService {
           mediaPath,
           cachedAppPath: appPath,
         );
-        batch.insert(
-            _tableName,
-            {
-              'id': const Uuid().v4(),
-              'file_path': normalizedPath,
-              'quote_id': quoteId,
-              'created_at': DateTime.now().toIso8601String(),
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore);
+        batch.insert(_tableName, {
+          'id': const Uuid().v4(),
+          'file_path': normalizedPath,
+          'quote_id': quoteId,
+          'created_at': DateTime.now().toIso8601String(),
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
       if (mediaPaths.isNotEmpty) {
         await batch.commit(noResult: true);
@@ -1263,7 +1260,8 @@ class MediaReferenceService {
       }
 
       // 获取应用目录路径缓存，避免循环中多次获取
-      final appPath = cachedAppPath ??
+      final appPath =
+          cachedAppPath ??
           path.normalize((await getApplicationDocumentsDirectory()).path);
 
       // 先移除该笔记的所有现有引用
@@ -1282,15 +1280,12 @@ class MediaReferenceService {
           mediaPath,
           cachedAppPath: appPath,
         );
-        batch.insert(
-            _tableName,
-            {
-              'id': const Uuid().v4(),
-              'file_path': normalizedPath,
-              'quote_id': quoteId,
-              'created_at': DateTime.now().toIso8601String(),
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore);
+        batch.insert(_tableName, {
+          'id': const Uuid().v4(),
+          'file_path': normalizedPath,
+          'quote_id': quoteId,
+          'created_at': DateTime.now().toIso8601String(),
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
       if (mediaPaths.isNotEmpty) {
         await batch.commit(noResult: true);
@@ -1368,8 +1363,9 @@ class MediaReferenceService {
       if (cachedAppPath != null) {
         return normalizeFilePathSync(filePath, cachedAppPath: cachedAppPath);
       }
-      final appPath =
-          path.normalize((await getApplicationDocumentsDirectory()).path);
+      final appPath = path.normalize(
+        (await getApplicationDocumentsDirectory()).path,
+      );
       return normalizeFilePathSync(filePath, cachedAppPath: appPath);
     } catch (e) {
       logDebug('标准化文件路径失败: $e');
@@ -1418,6 +1414,77 @@ class MediaReferenceService {
     }
   }
 
+  /// 批量同步多条笔记的媒体文件引用（单事务）
+  ///
+  /// 先用 `quote_id IN (...)` 一次性删除这批笔记的旧引用，再用一个 batch
+  /// 插入全部新引用，数据库往返次数不随笔记数量线性增长。
+  /// 返回成功同步的笔记数量（ID 为空的笔记会被跳过）。
+  static Future<int> syncQuoteMediaReferencesBatch(
+    List<Quote> quotes, {
+    String? cachedAppPath,
+  }) async {
+    final validQuotes = quotes
+        .where((q) => q.id != null)
+        .toList(growable: false);
+    if (validQuotes.isEmpty) return 0;
+
+    final appPath =
+        cachedAppPath ??
+        path.normalize((await getApplicationDocumentsDirectory()).path);
+
+    // 在事务外完成纯计算，缩短持有写锁的时间
+    final createdAt = DateTime.now().toIso8601String();
+    final rows = <Map<String, Object?>>[];
+    for (final quote in validQuotes) {
+      final mediaPaths = extractMediaPathsFromQuoteSync(
+        quote,
+        cachedAppPath: appPath,
+      );
+      for (final mediaPath in mediaPaths) {
+        rows.add({
+          'id': const Uuid().v4(),
+          'file_path': normalizeFilePathSync(mediaPath, cachedAppPath: appPath),
+          'quote_id': quote.id,
+          'created_at': createdAt,
+        });
+      }
+    }
+
+    final quoteIds = validQuotes.map((q) => q.id!).toList(growable: false);
+    final db = await database;
+    await db.transaction((txn) async {
+      // SQLite 参数上限保守取 500
+      const int maxParams = 500;
+      for (var i = 0; i < quoteIds.length; i += maxParams) {
+        final idChunk = quoteIds.sublist(
+          i,
+          math.min(i + maxParams, quoteIds.length),
+        );
+        final placeholders = List.filled(idChunk.length, '?').join(',');
+        await txn.delete(
+          _tableName,
+          where: 'quote_id IN ($placeholders)',
+          whereArgs: idChunk,
+        );
+      }
+
+      if (rows.isNotEmpty) {
+        final batch = txn.batch();
+        for (final row in rows) {
+          batch.insert(
+            _tableName,
+            row,
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        }
+        await batch.commit(noResult: true);
+      }
+    });
+
+    logDebug('批量同步媒体文件引用完成: ${validQuotes.length} 条笔记, 共 ${rows.length} 个引用');
+    return validQuotes.length;
+  }
+
   /// 迁移现有笔记的媒体文件引用
   static Future<int> migrateExistingQuotes() async {
     try {
@@ -1443,26 +1510,16 @@ class MediaReferenceService {
         );
         if (quotes.isEmpty) break;
 
-        // 限制并发数量，避免内存溢出和数据库锁定
-        const int chunkSize = 50;
-        final quotesList = quotes.toList(growable: false);
-        int pageMigratedCount = 0;
-        for (var i = 0; i < quotesList.length; i += chunkSize) {
-          final chunk = quotesList.skip(i).take(chunkSize);
-          final results = await Future.wait(
-            chunk.map((quote) async {
-              return await syncQuoteMediaReferences(
-                quote,
-                cachedAppPath: appPath,
-              );
-            }),
-          );
-          pageMigratedCount += results.where((success) => success).length;
-
-          // 让出事件循环，避免长时间阻塞
-          await Future.delayed(Duration.zero);
-        }
+        // 整页在单个事务内批量重建：一次 IN 删除 + 一次 batch 插入，
+        // 避免逐条笔记 DELETE/INSERT 造成的 N+1 往返与并发写锁竞争。
+        final pageMigratedCount = await syncQuoteMediaReferencesBatch(
+          quotes,
+          cachedAppPath: appPath,
+        );
         migratedCount += pageMigratedCount;
+
+        // 让出事件循环，避免长时间阻塞
+        await Future.delayed(Duration.zero);
 
         offset += quotes.length;
         if (quotes.length < pageSize) break;
@@ -1470,8 +1527,13 @@ class MediaReferenceService {
 
       logDebug('迁移完成，共处理 $migratedCount 个笔记');
       return migratedCount;
-    } catch (e) {
-      logDebug('迁移现有笔记媒体文件引用失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '迁移现有笔记媒体文件引用失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
       return 0;
     }
   }
