@@ -310,18 +310,15 @@ class MediaReferenceService {
 
       if (uniqueIds.length <= maxChunkSize) {
         // 没超 SQLite 参数上限就不必付 Batch 的分配和事务开销
-        _collectReferencedFiles(
-          [
-            await db.query(
-              _tableName,
-              columns: ['quote_id', 'file_path'],
-              where:
-                  'quote_id IN (${List.filled(uniqueIds.length, '?').join(',')})',
-              whereArgs: uniqueIds,
-            ),
-          ],
-          grouped,
-        );
+        _collectReferencedFiles([
+          await db.query(
+            _tableName,
+            columns: ['quote_id', 'file_path'],
+            where:
+                'quote_id IN (${List.filled(uniqueIds.length, '?').join(',')})',
+            whereArgs: uniqueIds,
+          ),
+        ], grouped);
       } else {
         // 超上限必须分块。逐块 await 是 N 次数据库往返，打包成一次提交压到 1 次；
         // 未开 continueOnError 时任一块查询失败整个 batch 抛出去，不会静默少数据。
@@ -629,10 +626,7 @@ class MediaReferenceService {
             key,
             () => <String, Set<String>>{},
           );
-          final quoteSet = variants.putIfAbsent(
-            variantPath,
-            () => <String>{},
-          );
+          final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
           quoteSet.add(quoteId);
         }
 
@@ -774,11 +768,7 @@ class MediaReferenceService {
         // 自动修复逻辑：重建引用记录
         for (final quoteId in quoteIdsWithFile) {
           if (quoteId.isNotEmpty) {
-            await addReference(
-              normalizedPath,
-              quoteId,
-              cachedAppPath: appPath,
-            );
+            await addReference(normalizedPath, quoteId, cachedAppPath: appPath);
           }
         }
         return false;
@@ -859,9 +849,11 @@ class MediaReferenceService {
 
       var deletedCount = 0;
       final orphanCandidates = candidates
-          .where((candidate) =>
-              !storedKeys.contains(candidate.canonicalKey) &&
-              !quoteRefs.containsKey(candidate.canonicalKey))
+          .where(
+            (candidate) =>
+                !storedKeys.contains(candidate.canonicalKey) &&
+                !quoteRefs.containsKey(candidate.canonicalKey),
+          )
           .toList(growable: false);
 
       const chunkSize = 50;
@@ -1183,8 +1175,9 @@ class MediaReferenceService {
     String appPath = cachedAppPath ?? '';
     if (appPath.isEmpty) {
       try {
-        appPath =
-            path.normalize((await getApplicationDocumentsDirectory()).path);
+        appPath = path.normalize(
+          (await getApplicationDocumentsDirectory()).path,
+        );
       } catch (e) {
         logDebug('获取应用文档目录失败: $e');
         appPath = '';
@@ -1368,8 +1361,9 @@ class MediaReferenceService {
       if (cachedAppPath != null) {
         return normalizeFilePathSync(filePath, cachedAppPath: cachedAppPath);
       }
-      final appPath =
-          path.normalize((await getApplicationDocumentsDirectory()).path);
+      final appPath = path.normalize(
+        (await getApplicationDocumentsDirectory()).path,
+      );
       return normalizeFilePathSync(filePath, cachedAppPath: appPath);
     } catch (e) {
       logDebug('标准化文件路径失败: $e');
@@ -1418,6 +1412,95 @@ class MediaReferenceService {
     }
   }
 
+  /// 批量同步多条笔记的媒体文件引用（单事务）
+  ///
+  /// 先用 `quote_id IN (...)` 一次性删除这批笔记的旧引用，再用一个 batch
+  /// 插入全部新引用，数据库往返次数不随笔记数量线性增长。
+  /// 返回成功同步的笔记数量（ID 为空的笔记会被跳过）。
+  static Future<int> syncQuoteMediaReferencesBatch(
+    List<Quote> quotes, {
+    String? cachedAppPath,
+  }) async {
+    final validQuotes =
+        quotes.where((q) => q.id != null).toList(growable: false);
+    if (validQuotes.isEmpty) return 0;
+
+    final appPath = cachedAppPath ??
+        path.normalize((await getApplicationDocumentsDirectory()).path);
+
+    // 在事务外完成纯计算，缩短持有写锁的时间
+    final createdAt = DateTime.now().toIso8601String();
+    final rows = <Map<String, Object?>>[];
+    for (final quote in validQuotes) {
+      final mediaPaths = extractMediaPathsFromQuoteSync(
+        quote,
+        cachedAppPath: appPath,
+      );
+      for (final mediaPath in mediaPaths) {
+        rows.add({
+          'id': const Uuid().v4(),
+          'file_path': normalizeFilePathSync(mediaPath, cachedAppPath: appPath),
+          'quote_id': quote.id,
+          'created_at': createdAt,
+        });
+      }
+    }
+
+    final quoteIds = validQuotes.map((q) => q.id!).toList(growable: false);
+    final db = await database;
+    var syncedCount = 0;
+    await db.transaction((txn) async {
+      // SQLite 参数上限保守取 500
+      const int maxParams = 500;
+      // 读出分页后笔记可能已被永久删除（如回收站清理），向其插入引用会触发
+      // 外键错误并回滚整页，因此在同一事务内确认笔记仍存在。
+      final existingIds = <String>{};
+      for (var i = 0; i < quoteIds.length; i += maxParams) {
+        final idChunk = quoteIds.sublist(
+          i,
+          math.min(i + maxParams, quoteIds.length),
+        );
+        final placeholders = List.filled(idChunk.length, '?').join(',');
+        final existingRows = await txn.query(
+          'quotes',
+          columns: ['id'],
+          where: 'id IN ($placeholders)',
+          whereArgs: idChunk,
+        );
+        existingIds.addAll(existingRows.map((r) => r['id'] as String));
+        await txn.delete(
+          _tableName,
+          where: 'quote_id IN ($placeholders)',
+          whereArgs: idChunk,
+        );
+      }
+
+      final skipped = quoteIds.length - existingIds.length;
+      if (skipped > 0) {
+        logDebug('批量同步媒体引用时跳过 $skipped 条已不存在的笔记');
+      }
+      syncedCount = existingIds.length;
+
+      final liveRows = rows
+          .where((row) => existingIds.contains(row['quote_id']))
+          .toList(growable: false);
+      if (liveRows.isNotEmpty) {
+        final batch = txn.batch();
+        for (final row in liveRows) {
+          batch.insert(
+            _tableName,
+            row,
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        }
+        await batch.commit(noResult: true);
+      }
+    });
+
+    logDebug('批量同步媒体文件引用完成: $syncedCount 条笔记');
+    return syncedCount;
+  }
+
   /// 迁移现有笔记的媒体文件引用
   static Future<int> migrateExistingQuotes() async {
     try {
@@ -1443,26 +1526,16 @@ class MediaReferenceService {
         );
         if (quotes.isEmpty) break;
 
-        // 限制并发数量，避免内存溢出和数据库锁定
-        const int chunkSize = 50;
-        final quotesList = quotes.toList(growable: false);
-        int pageMigratedCount = 0;
-        for (var i = 0; i < quotesList.length; i += chunkSize) {
-          final chunk = quotesList.skip(i).take(chunkSize);
-          final results = await Future.wait(
-            chunk.map((quote) async {
-              return await syncQuoteMediaReferences(
-                quote,
-                cachedAppPath: appPath,
-              );
-            }),
-          );
-          pageMigratedCount += results.where((success) => success).length;
-
-          // 让出事件循环，避免长时间阻塞
-          await Future.delayed(Duration.zero);
-        }
+        // 整页在单个事务内批量重建：一次 IN 删除 + 一次 batch 插入，
+        // 避免逐条笔记 DELETE/INSERT 造成的 N+1 往返与并发写锁竞争。
+        final pageMigratedCount = await syncQuoteMediaReferencesBatch(
+          quotes,
+          cachedAppPath: appPath,
+        );
         migratedCount += pageMigratedCount;
+
+        // 让出事件循环，避免长时间阻塞
+        await Future.delayed(Duration.zero);
 
         offset += quotes.length;
         if (quotes.length < pageSize) break;
@@ -1470,8 +1543,13 @@ class MediaReferenceService {
 
       logDebug('迁移完成，共处理 $migratedCount 个笔记');
       return migratedCount;
-    } catch (e) {
-      logDebug('迁移现有笔记媒体文件引用失败: $e');
+    } catch (e, stackTrace) {
+      logError(
+        '迁移现有笔记媒体文件引用失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
       return 0;
     }
   }
