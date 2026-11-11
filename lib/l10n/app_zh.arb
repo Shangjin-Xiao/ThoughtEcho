@@ -2142,8 +2142,12 @@
   "@importCleanupNotice": {
     "description": "导入后提示：备份文件里含有本应用无法识别的字段值或空笔记",
     "placeholders": {
-      "sanitized": { "type": "int" },
-      "skipped": { "type": "int" }
+      "sanitized": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
     }
   },
   "mergeImportHint": "此操作将保留当前数据，并与备份数据进行合并：",
@@ -4963,5 +4967,7 @@
   "mmkvDiagnosticSubtitle": "查看键值迁移状态，比对原生 MMKV、手写二进制解析结果与 SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
-  }
+  },
+  "mmkvDiagnosticRerunMigration": "重新执行迁移",
+  "mmkvDiagnosticCopyJson": "复制诊断 JSON"
 }

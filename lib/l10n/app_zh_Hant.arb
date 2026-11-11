@@ -4955,5 +4955,7 @@
   "mmkvDiagnosticSubtitle": "查看鍵值遷移狀態，比對原生 MMKV、手寫二進制解析結果與 SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
-  }
+  },
+  "mmkvDiagnosticRerunMigration": "重新執行遷移",
+  "mmkvDiagnosticCopyJson": "複製診斷 JSON"
 }

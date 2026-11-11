@@ -224,7 +224,7 @@ class _MmkvMigrationDiagnosticPageState
               FilledButton.icon(
                 onPressed: _loadReport,
                 icon: const Icon(Icons.refresh),
-                label: Text(isZh ? '重试' : 'Retry'),
+                label: Text(AppLocalizations.of(context).retry),
               ),
             ],
           ),
@@ -560,13 +560,14 @@ class _MmkvMigrationDiagnosticPageState
           key: const Key('mmkv_diagnostic_rerun_migration_button'),
           onPressed: _loading ? null : _handleRerunMigration,
           icon: const Icon(Icons.sync),
-          label: Text(isZh ? '重新执行迁移' : 'Re-run Migration'),
+          label:
+              Text(AppLocalizations.of(context).mmkvDiagnosticRerunMigration),
         ),
         OutlinedButton.icon(
           key: const Key('mmkv_diagnostic_copy_json_action_button'),
           onPressed: (_loading || _report == null) ? null : _handleCopyJson,
           icon: const Icon(Icons.copy_all_outlined),
-          label: Text(isZh ? '复制诊断 JSON' : 'Copy Diagnostic JSON'),
+          label: Text(AppLocalizations.of(context).mmkvDiagnosticCopyJson),
         ),
       ],
     );
