@@ -7,6 +7,7 @@ import '../services/database_service.dart';
 import '../services/network_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/http_response.dart';
+import '../utils/i18n_language.dart';
 
 part 'api_service_daily_quote_fallback.dart';
 part 'api_service_daily_quote_remote.dart';
@@ -113,8 +114,7 @@ class ApiService {
   static String recommendedDailyQuoteProviderForLanguage(
     String? languageCode,
   ) {
-    final normalizedLanguageCode =
-        (languageCode ?? '').toLowerCase().split(RegExp(r'[_-]')).first;
+    final normalizedLanguageCode = I18nLanguage.base(languageCode);
     switch (normalizedLanguageCode) {
       case 'zh':
         return hitokotoProvider;

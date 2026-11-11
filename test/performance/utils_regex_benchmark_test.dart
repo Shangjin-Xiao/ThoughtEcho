@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/utils/agent_history_builder.dart';
 import 'package:thoughtecho/utils/ai_prompt_manager.dart';
+import 'package:thoughtecho/utils/safe_file_image.dart';
 import 'package:thoughtecho/utils/version_utils.dart';
 import 'package:thoughtecho/models/chat_message.dart';
 
@@ -56,6 +58,29 @@ void main() {
     insightStopwatch.stop();
     print(
         'formatLocalReportInsight $iterations times elapsed: ${insightStopwatch.elapsedMilliseconds} ms');
+
+    // 4. MissingMediaFileReporter redact benchmark
+    final redactStopwatch = Stopwatch()..start();
+    for (var i = 0; i < iterations; i++) {
+      MissingMediaFileReporter.redact(
+          '/var/mobile/Containers/Data/Application/123/Documents/image_$i.png');
+      MissingMediaFileReporter.redact(
+          'C:\\Users\\User\\AppData\\Local\\ThoughtEcho\\media_$i.jpg');
+    }
+    redactStopwatch.stop();
+    print(
+        'MissingMediaFileReporter.redact $iterations times elapsed: ${redactStopwatch.elapsedMilliseconds} ms');
+
+    // 5. ApiService recommendedDailyQuoteProviderForLanguage benchmark
+    final quoteProviderStopwatch = Stopwatch()..start();
+    for (var i = 0; i < iterations; i++) {
+      ApiService.recommendedDailyQuoteProviderForLanguage('zh_CN');
+      ApiService.recommendedDailyQuoteProviderForLanguage('ja-JP');
+      ApiService.recommendedDailyQuoteProviderForLanguage('en_US');
+    }
+    quoteProviderStopwatch.stop();
+    print(
+        'recommendedDailyQuoteProviderForLanguage $iterations times elapsed: ${quoteProviderStopwatch.elapsedMilliseconds} ms');
 
     // Verify correct logic output
     expect(compareVersions('v1.2.3', '1.2.3'), 0);
