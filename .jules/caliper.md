@@ -149,3 +149,6 @@ Database owner-boundary 测试验证；未来新增默认值测试必须保护�
 ## 2026-11-01 - [补充 TimeUtils.getCurrentDayPeriodKey 的测试]
 **盲点:** `TimeUtils.getCurrentDayPeriodKey` 用于决定笔记与问候语的时段 Key（晨曦、上午、午后、黄昏、夜晚、深夜），直接绑定 `TimeOfDay.now()` 且缺乏测试覆盖，导致无法在单测中验证时段边界划分与跨天边界的正确性。
 **对策:** 为 `getCurrentDayPeriodKey([TimeOfDay? time])` 引入可选时间参数作为注入点，在保持原无参调用兼容的同时，在 `test/unit/utils/time_utils_test.dart` 中增加对 6 大时段所有边界点（00:00, 04:59, 05:00, 07:59, 08:00, 11:59, 12:00, 16:59, 17:00, 19:59, 20:00, 22:59, 23:00, 23:59）以及无参调用的确定性测试覆盖。
+## 2024-05-18 - 补充 AiDialogHelper 的测试
+**盲点:** `AiDialogHelper` 中的弹窗逻辑和异常判断缺乏测试覆盖。特别是输入为空的情况和加载动画的展示状态没有单独验证。
+**对策:** 添加关于各方法 (`analyzeSource`, `polishText`, `continueText`, `analyzeContent`) 的空输入边界断言，并使用 Completer 对 `analyzeSource` 验证其在完成前的 Loading 弹窗，确保视图层状态变更符合预期。
