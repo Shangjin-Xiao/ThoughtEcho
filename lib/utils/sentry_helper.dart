@@ -205,10 +205,11 @@ String _sanitizeFileUrisInText(String text) {
   result = result.replaceAllMapped(_unquotedFileUriPattern, (match) {
     var p = match.group(0)!;
     var suffix = '';
-    while (p.length > 1 &&
+    while (p.length > 2 &&
         (p.endsWith('.') ||
             p.endsWith(',') ||
             p.endsWith(';') ||
+            p.endsWith(':') ||
             p.endsWith(')') ||
             p.endsWith(']'))) {
       suffix = p[p.length - 1] + suffix;
@@ -224,10 +225,11 @@ String _sanitizePathsInText(String text) {
   result = result.replaceAllMapped(_unquotedLocalPathPattern, (match) {
     var p = match.group(0)!;
     var suffix = '';
-    while (p.length > 1 &&
+    while (p.length > 2 &&
         (p.endsWith('.') ||
             p.endsWith(',') ||
             p.endsWith(';') ||
+            p.endsWith(':') ||
             p.endsWith(')') ||
             p.endsWith(']'))) {
       suffix = p[p.length - 1] + suffix;
@@ -247,29 +249,186 @@ String _sanitizeUrlsInText(String text) {
   });
 }
 
-/// 对非 SQL 文本进行脱敏（清洗本地 file: URI、URL 参数与本地系统绝对路径）。
+/// 1. Quoted Authorization header or scheme:
+/// e.g. "Bearer 对不起，风太大了，我听不清。——皇昴流《东京巴比伦》"
+/// e.g. "Authorization: Basic dXNlcjpwYXNz"
+final _quotedAuthHeaderPattern = RegExp(
+  r'''(?<=["'])\s*(?:(authorization\s*:\s*)?(Bearer|Basic))\s+[^"'\r\n]+(?=["'])''',
+  caseSensitive: false,
+);
+
+/// 2. Unquoted Authorization header:
+/// e.g. Authorization: Bearer abc123
+/// e.g. Authorization: Basic dXNlcjpwYXNz
+final _unquotedAuthHeaderPattern = RegExp(
+  r'''\b(authorization\s*:\s*)(Bearer|Basic)\s+[^\s"'\r\n,;]+''',
+  caseSensitive: false,
+);
+
+/// 3. Multiline header value followed by caret marker (e.g. FormatException output):
+/// Bearer 对不起，风太大了，我听不清。——皇昴流《东京巴比伦》
+///        ^
+final _multilineAuthSchemePattern = RegExp(
+  r'''^(\s*(?:authorization\s*:\s*)?(?:Bearer|Basic)\s+).+(?=\r?\n\s*\^)''',
+  multiLine: true,
+  caseSensitive: false,
+);
+
+/// 4. Inline Bearer token:
+final _inlineBearerPattern = RegExp(
+  r'''\b(Bearer)\s+([a-zA-Z0-9_\-\.\+/=~]{4,})(?=\s|["',;}\]]|$)''',
+  caseSensitive: false,
+);
+
+/// 5. Inline Basic credentials:
+final _inlineBasicPattern = RegExp(
+  r'''\b(Basic)\s+([A-Za-z0-9+/]{4,}={0,2})(?=\s|["',;}\]]|$)''',
+  caseSensitive: false,
+);
+
+String _sanitizeAuthHeadersInText(String text) {
+  var result = text.replaceAllMapped(_quotedAuthHeaderPattern, (match) {
+    final prefix = match.group(1) ?? '';
+    final scheme = match.group(2) ?? '';
+    return '$prefix$scheme [redacted]';
+  });
+  result = result.replaceAllMapped(_unquotedAuthHeaderPattern, (match) {
+    final prefix = match.group(1) ?? '';
+    final scheme = match.group(2) ?? '';
+    return '$prefix$scheme [redacted]';
+  });
+  result = result.replaceAllMapped(_multilineAuthSchemePattern, (match) {
+    final prefix = match.group(1) ?? '';
+    if (prefix.trimRight().endsWith('[redacted]')) return match.group(0)!;
+    return '$prefix[redacted]';
+  });
+  result = result.replaceAllMapped(_inlineBearerPattern, (match) {
+    return '${match.group(1)} [redacted]';
+  });
+  result = result.replaceAllMapped(_inlineBasicPattern, (match) {
+    return '${match.group(1)} [redacted]';
+  });
+  return result;
+}
+
+/// Quoted JSON string values for credential keys (including escaped characters):
+/// e.g. {"api_key": "secret", "authToken": "secret\"with\\escapes"}
+final _jsonApiKeyStringPattern = RegExp(
+  r'''"(api[_-]?key|apikey|x[_-]api[_-]key|access[_-]?token|secret[_-]?key|auth[_-]?token|private[_-]?key)"(\s*:\s*)"(?:[^"\\]|\\.)*"''',
+  caseSensitive: false,
+);
+
+/// Single-quoted JSON-like string values for credential keys:
+/// e.g. {'api_key': 'secret', 'authToken': 'secret\'with\\escapes'}
+final _singleQuotedApiKeyStringPattern = RegExp(
+  r"""'(api[_-]?key|apikey|x[_-]api[_-]key|access[_-]?token|secret[_-]?key|auth[_-]?token|private[_-]?key)'(\s*:\s*)'(?:[^'\\]|\\.)*'""",
+  caseSensitive: false,
+);
+
+/// API key key-value pairs (in headers, JSON, query, config, or error texts):
+/// e.g. api_key: "secret", "apiKey": "secret", x-api-key: secret, api_key=secret
+final _apiKeyKeyValuePattern = RegExp(
+  r'''\b(api[_-]?key|apikey|x[_-]api[_-]key|access[_-]?token|secret[_-]?key|auth[_-]?token|private[_-]?key)(\s*[:=]\s*)(['"]?)([^\s"',;}\]]+)\3''',
+  caseSensitive: false,
+);
+
+/// Standalone known API key formats:
+/// - OpenAI/Anthropic/Groq etc: sk-..., sk_live_..., sk_test_...
+/// - Google Gemini: AIza...
+final _standaloneApiKeyPattern = RegExp(
+  r'''\b(?:sk|pk|rk)_(?:live|test)_[a-zA-Z0-9]{14,}\b|\bsk-[a-zA-Z0-9_\-]{16,}\b|\bAIza[0-9A-Za-z\-_]{30,45}\b''',
+);
+
+String _sanitizeApiKeysInText(String text) {
+  var result = text.replaceAllMapped(_jsonApiKeyStringPattern, (match) {
+    return '"${match.group(1)}"${match.group(2)}"[redacted]"';
+  });
+  result = result.replaceAllMapped(_singleQuotedApiKeyStringPattern, (match) {
+    return "'${match.group(1)}'${match.group(2)}'[redacted]'";
+  });
+  result = result.replaceAllMapped(_apiKeyKeyValuePattern, (match) {
+    final key = match.group(1)!;
+    final sep = match.group(2)!;
+    final quote = match.group(3) ?? '';
+    final val = match.group(4) ?? '';
+    if (val == '[redacted]') return match.group(0)!;
+    return '$key$sep$quote[redacted]$quote';
+  });
+  result =
+      result.replaceAllMapped(_standaloneApiKeyPattern, (_) => '[redacted]');
+  return result;
+}
+
+/// JSON string values for sensitive AI / user fields:
+/// "prompt": "...", "content": "...", "messages": "..."
+final _jsonSensitiveStringFieldPattern = RegExp(
+  r'''"(prompt|system_prompt|content|deltaContent|messages)"\s*:\s*"(?:[^"\\]|\\.)*"''',
+  caseSensitive: false,
+);
+
+/// JSON structured (array/object) values for sensitive AI / user fields:
+/// "messages": [...], "prompt": [...]
+final _jsonSensitiveStructureFieldPattern = RegExp(
+  r'''"(prompt|system_prompt|content|deltaContent|messages)"\s*:\s*(\[[^\]\r\n]*\]|\{[^\}\r\n]*\})''',
+  caseSensitive: false,
+);
+
+String _sanitizeAiFieldsInText(String text) {
+  var result = text.replaceAllMapped(_jsonSensitiveStringFieldPattern, (match) {
+    final key = match.group(1)!;
+    return '"$key": "[redacted]"';
+  });
+  result =
+      result.replaceAllMapped(_jsonSensitiveStructureFieldPattern, (match) {
+    final key = match.group(1)!;
+    return '"$key": "[redacted]"';
+  });
+  return result;
+}
+
+/// 对非 SQL 文本进行脱敏（清洗本地 file: URI、URL 参数、本地系统绝对路径、HTTP Authorization 凭据、API Key 以及 AI 敏感字段）。
 String sanitizeSentryNonSqlText(String text) {
-  final fileUriSanitized = _sanitizeFileUrisInText(text);
-  final urlSanitized = _sanitizeUrlsInText(fileUriSanitized);
-  return _sanitizePathsInText(urlSanitized);
+  if (text.isEmpty) return text;
+  var result = _sanitizeFileUrisInText(text);
+  result = _sanitizeUrlsInText(result);
+  result = _sanitizePathsInText(result);
+  result = _sanitizeAuthHeadersInText(result);
+  result = _sanitizeApiKeysInText(result);
+  result = _sanitizeAiFieldsInText(result);
+  return result;
 }
 
 const _sensitiveBreadcrumbDataKeys = <String>[
   'query',
   'search',
   'file_path',
+  'filepath',
   'path',
   'text',
   'content',
   'prompt',
+  'system_prompt',
+  'messages',
+  'delta',
+  'deltacontent',
   'token',
   'secret',
   'auth',
+  'authorization',
+  'password',
+  'apikey',
+  'api_key',
+  'credential',
   'fragment',
 ];
 
-bool _isSensitiveBreadcrumbKey(String key) {
+bool _isSensitiveDataKey(String key) {
   final lowerKey = key.toLowerCase();
+  final words =
+      key.split(_spanWordSplitPattern).map((w) => w.toLowerCase()).toList();
+  if (words.isNotEmpty && _spanMetricSuffixes.contains(words.last)) {
+    return false;
+  }
   for (final pattern in _sensitiveBreadcrumbDataKeys) {
     if (lowerKey.contains(pattern)) {
       return true;
@@ -278,42 +437,233 @@ bool _isSensitiveBreadcrumbKey(String key) {
   return false;
 }
 
-dynamic _sanitizeBreadcrumbDataValue(dynamic value) {
+bool _isSensitiveBreadcrumbKey(String key) => _isSensitiveDataKey(key);
+
+dynamic _sanitizeGenericData(dynamic value) {
   if (value is String) {
     return sanitizeSentryNonSqlText(value);
   }
   if (value is Map) {
     final sanitizedMap = <String, dynamic>{};
     for (final entry in value.entries) {
-      final key = entry.key.toString();
-      if (_isSensitiveBreadcrumbKey(key)) {
+      final entryKey = entry.key.toString();
+      if (_isSensitiveDataKey(entryKey)) {
         continue;
       }
-      sanitizedMap[key] = _sanitizeBreadcrumbDataValue(entry.value);
+      sanitizedMap[entryKey] = _sanitizeGenericData(entry.value);
     }
     return sanitizedMap;
   }
   if (value is List) {
-    return value.map(_sanitizeBreadcrumbDataValue).toList();
+    return value.map((item) => _sanitizeGenericData(item)).toList();
   }
   return value;
 }
 
-SentryEvent? sanitizeSentryEvent(SentryEvent event, Hint hint) {
-  _sanitizeSentryRequest(event);
-  // SDK processors flatten nested causes before this transmission boundary.
+dynamic _sanitizeBreadcrumbDataValue(dynamic value) =>
+    _sanitizeGenericData(value);
+
+void _sanitizeSentryExceptions(SentryEvent event) {
   for (final exception in event.exceptions ?? <SentryException>[]) {
     final value = exception.value;
-    if (value == null) continue;
-    exception.value = value.replaceAllMapped(_exceptionUrlPattern, (match) {
-      final url = match.group(0)!;
-      // Do not retain a sensitive URL when parsing fails.
-      return Uri.tryParse(url) == null
-          ? '[invalid URL]'
-          : sanitizeSentryUrl(url)!;
-    });
+    if (value != null && value.isNotEmpty) {
+      exception.value = sanitizeSentryNonSqlText(value);
+    }
   }
-  return event;
+}
+
+void _sanitizeSentryMessage(SentryEvent event) {
+  final message = event.message;
+  if (message == null) return;
+
+  if (message.formatted.isNotEmpty) {
+    message.formatted = sanitizeSentryNonSqlText(message.formatted);
+  }
+  final template = message.template;
+  if (template != null && template.isNotEmpty) {
+    message.template = sanitizeSentryNonSqlText(template);
+  }
+  final params = message.params;
+  if (params != null && params.isNotEmpty) {
+    message.params = params.map((param) {
+      if (param is String) {
+        return sanitizeSentryNonSqlText(param);
+      }
+      if (param is Map || param is List) {
+        return _sanitizeGenericData(param);
+      }
+      return param;
+    }).toList();
+  }
+}
+
+void _sanitizeSentryHint(Hint hint) {
+  const commonHintKeys = <String>[
+    'message',
+    'source',
+    'log',
+    'error',
+    'description',
+    'reason',
+    'detail',
+    'details',
+    'operation',
+    'filePath',
+    'file_path',
+    'path',
+    'query',
+    'text',
+    'content',
+    'prompt',
+    'system_prompt',
+    'messages',
+    'delta',
+    'token',
+    'secret',
+    'auth',
+    'authorization',
+    'apiKey',
+    'api_key',
+    'password',
+    'credential',
+    'credentials',
+  ];
+
+  for (final key in commonHintKeys) {
+    try {
+      final value = hint.get(key);
+      if (value == null) continue;
+      if (_isSensitiveDataKey(key)) {
+        hint.remove(key);
+      } else if (value is String) {
+        hint.set(key, sanitizeSentryNonSqlText(value));
+      } else if (value is Map || value is List) {
+        hint.set(key, _sanitizeGenericData(value));
+      }
+    } catch (_) {
+      // Safe fallback on non-standard hint entries
+    }
+  }
+}
+
+void _sanitizeSentryMetadata(SentryEvent event) {
+  // ignore: deprecated_member_use
+  final extra = event.extra;
+  if (extra != null && extra.isNotEmpty) {
+    try {
+      final sanitizedExtra =
+          _sanitizeGenericData(extra) as Map<String, dynamic>;
+      // ignore: deprecated_member_use
+      event.extra = sanitizedExtra;
+    } catch (e, stackTrace) {
+      logError(
+        'Failed to sanitize Sentry extra metadata: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'Sentry',
+      );
+      // Drop the affected entry without mutating potentially unmodifiable maps
+      // ignore: deprecated_member_use
+      event.extra = null;
+    }
+  }
+
+  final contexts = event.contexts;
+  final keys = contexts.keys.toList();
+  for (final key in keys) {
+    if (_isSensitiveDataKey(key)) {
+      contexts.remove(key);
+      continue;
+    }
+    final value = contexts[key];
+    if (value is Map) {
+      try {
+        contexts[key] = _sanitizeGenericData(value);
+      } catch (e, stackTrace) {
+        contexts.remove(key);
+        logError(
+          'Failed to sanitize Sentry context entry $key: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'Sentry',
+        );
+      }
+    } else if (value is String) {
+      contexts[key] = sanitizeSentryNonSqlText(value);
+    } else if (value is List) {
+      try {
+        contexts[key] = _sanitizeGenericData(value);
+      } catch (e, stackTrace) {
+        contexts.remove(key);
+        logError(
+          'Failed to sanitize Sentry context entry $key: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'Sentry',
+        );
+      }
+    } else if (value is SentryResponse) {
+      contexts[key] = SentryResponse(
+        statusCode: value.statusCode,
+        bodySize: value.bodySize,
+      );
+    }
+  }
+
+  final traceData = contexts.trace?.data;
+  if (traceData != null) {
+    try {
+      final sanitizedTrace = _sanitizeSpanData(traceData);
+      try {
+        traceData.clear();
+        traceData.addAll(sanitizedTrace);
+      } catch (_) {
+        contexts.trace?.data = sanitizedTrace;
+      }
+    } catch (e, stackTrace) {
+      logError(
+        'Failed to sanitize Sentry trace data: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'Sentry',
+      );
+      contexts.trace?.data = null;
+    }
+  }
+
+  final tags = event.tags;
+  if (tags != null && tags.isNotEmpty) {
+    final sanitizedTags = <String, String>{};
+    for (final entry in tags.entries) {
+      if (_isSensitiveDataKey(entry.key)) continue;
+      sanitizedTags[entry.key] = sanitizeSentryNonSqlText(entry.value);
+    }
+    try {
+      tags.clear();
+      tags.addAll(sanitizedTags);
+    } catch (_) {
+      event.tags = sanitizedTags;
+    }
+  }
+}
+
+SentryEvent? sanitizeSentryEvent(SentryEvent event, Hint hint) {
+  try {
+    _sanitizeSentryRequest(event);
+    _sanitizeSentryExceptions(event);
+    _sanitizeSentryMessage(event);
+    _sanitizeSentryHint(hint);
+    _sanitizeSentryMetadata(event);
+    return event;
+  } catch (e, stackTrace) {
+    logError(
+      'Failed to sanitize Sentry event: $e',
+      error: e,
+      stackTrace: stackTrace,
+      source: 'Sentry',
+    );
+    return null;
+  }
 }
 
 void _sanitizeSentryRequest(SentryEvent event) {

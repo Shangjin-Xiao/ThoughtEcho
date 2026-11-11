@@ -1,5 +1,6 @@
-// ignore_for_file: experimental_member_use
+// ignore_for_file: experimental_member_use, deprecated_member_use
 
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -1085,9 +1086,466 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       expect(sanitized?.request?.data, isNull);
       expect(sanitized?.request?.headers, isEmpty);
     });
-  });
 
-  group('SentryHelper.captureException', () {
+    test(
+        'sanitizes multi-platform absolute local file paths in exception values and event message',
+        () {
+      final exceptions = [
+        SentryException(
+          type: 'PathNotFoundException',
+          value:
+              r'Cannot open C:\Users\developer\AppData\Local\ThoughtEcho\quotes.db: file not found',
+        ),
+        SentryException(
+          type: 'FileSystemException',
+          value:
+              'Failed reading /Users/developer/Documents/ThoughtEcho/notes.db: Permission denied',
+        ),
+        SentryException(
+          type: 'StorageException',
+          value:
+              'Android DB unavailable at /data/user/0/com.thoughtecho/databases/app.db',
+        ),
+        SentryException(
+          type: 'StorageException',
+          value:
+              'Linux config missing at /home/developer/.config/thoughtecho/app.conf',
+        ),
+        SentryException(
+          type: 'StorageException',
+          value:
+              'iOS container missing at /private/var/mobile/Containers/Data/notes.db',
+        ),
+        SentryException(
+          type: 'StorageException',
+          value: 'Mounted path missing at /mnt/developer/storage/notes.db',
+        ),
+        SentryException(
+          type: 'UriException',
+          value:
+              'Failed loading file:///Users/developer/data.txt and file:///C:/Users/developer/notes.txt',
+        ),
+      ];
+
+      final event = SentryEvent(
+        exceptions: exceptions,
+        message: SentryMessage(
+          'Export error writing to /Users/developer/backup.json',
+          template: 'Export error writing to /Users/developer/backup.json',
+          params: ['/home/developer/out.txt'],
+        ),
+      );
+
+      final sanitized = sanitizeSentryEvent(event, Hint());
+
+      expect(
+        sanitized?.exceptions?[0].value,
+        'Cannot open [path]: file not found',
+      );
+      expect(sanitized?.exceptions?[0].type, 'PathNotFoundException');
+      expect(
+        sanitized?.exceptions?[1].value,
+        'Failed reading [path]: Permission denied',
+      );
+      expect(sanitized?.exceptions?[1].type, 'FileSystemException');
+      expect(
+        sanitized?.exceptions?[2].value,
+        'Android DB unavailable at [path]',
+      );
+      expect(
+        sanitized?.exceptions?[3].value,
+        'Linux config missing at [path]',
+      );
+      expect(
+        sanitized?.exceptions?[4].value,
+        'iOS container missing at [path]',
+      );
+      expect(
+        sanitized?.exceptions?[5].value,
+        'Mounted path missing at [path]',
+      );
+      expect(
+        sanitized?.exceptions?[6].value,
+        'Failed loading [path] and [path]',
+      );
+      expect(
+        sanitized?.message?.formatted,
+        'Export error writing to [path]',
+      );
+      expect(
+        sanitized?.message?.template,
+        'Export error writing to [path]',
+      );
+      expect(
+        sanitized?.message?.params,
+        ['[path]'],
+      );
+    });
+
+    test(
+        'sanitizes WebDAV Basic authentication credentials and URLs in error events',
+        () {
+      final event = SentryEvent(
+        exceptions: [
+          SentryException(
+            type: 'DioException',
+            value: 'DioException [bad response]: 401 Unauthorized for '
+                'https://user:secret123@webdav.example.com:8443/remote.php/webdav/backup.json '
+                'with Authorization: Basic dXNlcjpzZWNyZXQxMjM= and header "Basic dXNlcjpzZWNyZXQxMjM="',
+          ),
+          SentryException(
+            type: 'HttpException',
+            value:
+                'Basic dXNlcjpzZWNyZXQxMjM= failed authentication at https://dav.example.com',
+          ),
+        ],
+      );
+
+      final sanitized = sanitizeSentryEvent(event, Hint());
+
+      final ex0 = sanitized?.exceptions?[0];
+      expect(ex0?.type, 'DioException');
+      expect(ex0?.value, isNot(contains('secret123')));
+      expect(ex0?.value, isNot(contains('user:')));
+      expect(ex0?.value, isNot(contains('dXNlcjpzZWNyZXQxMjM=')));
+      expect(
+        ex0?.value,
+        contains(
+            'https://webdav.example.com:8443/remote.php/webdav/backup.json'),
+      );
+      expect(ex0?.value, contains('Authorization: Basic [redacted]'));
+      expect(ex0?.value, contains('"Basic [redacted]"'));
+
+      final ex1 = sanitized?.exceptions?[1];
+      expect(ex1?.type, 'HttpException');
+      expect(ex1?.value, isNot(contains('dXNlcjpzZWNyZXQxMjM=')));
+      expect(
+        ex1?.value,
+        contains(
+            'Basic [redacted] failed authentication at https://dav.example.com'),
+      );
+    });
+
+    test(
+        'reproduces and sanitizes THOUGHTECHO-5S HTTP Bearer authorization header leak',
+        () {
+      const sensitiveQuote = '对不起，风太大了，我听不清。——皇昴流《东京巴比伦》';
+      final rawException = 'FormatException: Invalid HTTP header field value: '
+          '"Bearer $sensitiveQuote" (at character 8)\n'
+          'Bearer $sensitiveQuote\n'
+          '       ^';
+
+      final event = SentryEvent(
+        exceptions: [
+          SentryException(
+            type: 'FormatException',
+            value: rawException,
+          ),
+        ],
+      );
+
+      final sanitized = sanitizeSentryEvent(event, Hint());
+
+      final ex = sanitized?.exceptions?.single;
+      expect(ex?.type, 'FormatException');
+      expect(ex?.value, isNot(contains(sensitiveQuote)));
+      expect(
+        ex?.value,
+        'FormatException: Invalid HTTP header field value: "Bearer [redacted]" (at character 8)\n'
+        'Bearer [redacted]\n'
+        '       ^',
+      );
+    });
+
+    test(
+        'reproduces and sanitizes THOUGHTECHO-5Y third-party AI error and response body leak',
+        () {
+      final rawAiException =
+          'ApiException: Add usage credits or subscribe and save up to 66%: '
+          'https://ollama.com/plans?token=secret123#plans (ref: req_1793787470276_ce9a1100) '
+          '(status: 402, type: api_error, request_id: req_1793787470276_ce9a1100)';
+
+      final rawAiPayloadException = 'ApiException: OpenAI request failed: '
+          '{"error": {"message": "Invalid API key provided: sk-proj-1234567890abcdefghijklmnopqrstuvwxyz", '
+          '"type": "invalid_request_error"}, '
+          '"prompt": "User private diary note content", '
+          '"messages": [{"role": "user", "content": "Sensitive conversation"}], '
+          '"content": "Secret note body content", '
+          '"deltaContent": "[{\\"insert\\":\\"private\\"}]"}';
+
+      final rawGeminiException =
+          'ApiException: Request to Gemini failed with key AIzaSyD-1234567890abcdefghijklmnopqrstuv '
+          'and header x-api-key: secret_api_key_456 and api_key="test_key_789"';
+
+      final event = SentryEvent(
+        exceptions: [
+          SentryException(type: 'ApiException', value: rawAiException),
+          SentryException(type: 'ApiException', value: rawAiPayloadException),
+          SentryException(type: 'ApiException', value: rawGeminiException),
+        ],
+      );
+
+      final sanitized = sanitizeSentryEvent(event, Hint());
+
+      final ex0 = sanitized?.exceptions?[0];
+      expect(ex0?.type, 'ApiException');
+      expect(ex0?.value, isNot(contains('secret123')));
+      expect(ex0?.value, isNot(contains('#plans')));
+      expect(
+        ex0?.value,
+        'ApiException: Add usage credits or subscribe and save up to 66%: '
+        'https://ollama.com/plans (ref: req_1793787470276_ce9a1100) '
+        '(status: 402, type: api_error, request_id: req_1793787470276_ce9a1100)',
+      );
+
+      final ex1 = sanitized?.exceptions?[1];
+      expect(ex1?.type, 'ApiException');
+      expect(ex1?.value,
+          isNot(contains('sk-proj-1234567890abcdefghijklmnopqrstuvwxyz')));
+      expect(ex1?.value, isNot(contains('User private diary note content')));
+      expect(ex1?.value, isNot(contains('Sensitive conversation')));
+      expect(ex1?.value, isNot(contains('Secret note body content')));
+      expect(ex1?.value, isNot(contains('private')));
+      expect(ex1?.value,
+          contains('"message": "Invalid API key provided: [redacted]"'));
+      expect(ex1?.value, contains('"prompt": "[redacted]"'));
+      expect(ex1?.value, contains('"messages": "[redacted]"'));
+      expect(ex1?.value, contains('"content": "[redacted]"'));
+      expect(ex1?.value, contains('"deltaContent": "[redacted]"'));
+
+      final ex2 = sanitized?.exceptions?[2];
+      expect(ex2?.type, 'ApiException');
+      expect(ex2?.value,
+          isNot(contains('AIzaSyD-1234567890abcdefghijklmnopqrstuv')));
+      expect(ex2?.value, isNot(contains('secret_api_key_456')));
+      expect(ex2?.value, isNot(contains('test_key_789')));
+      expect(ex2?.value, contains('key [redacted]'));
+      expect(ex2?.value, contains('x-api-key: [redacted]'));
+      expect(ex2?.value, contains('api_key="[redacted]"'));
+    });
+
+    test(
+        'sanitizes Hint context storage data and metadata extra/contexts recursively',
+        () {
+      final hint = Hint.withMap({
+        'message':
+            'UnifiedLogService: Failed sync at /data/user/0/com.thoughtecho/app.db '
+                'with Authorization: Basic dXNlcjpwYXNz and apiKey="sk-secret123456789"',
+        'source': 'UnifiedLogService',
+        'token': 'private_hint_token',
+        'prompt': 'secret prompt in hint',
+        'details': {
+          'destination_dir': '/Users/developer/notes.db',
+          'secret_key': 'hint_secret_val',
+          'metric': 42,
+        },
+      });
+
+      final event = SentryEvent(
+        extra: {
+          'file_path': '/home/developer/app.json',
+          'destination': '/data/user/0/com.thoughtecho/files',
+          'api_key': 'super_secret_extra_key',
+          'normal_count': 12,
+          'nested_meta': {
+            'content': 'private extra content',
+            'url': 'https://api.example.com/v1?token=extra_secret#section',
+            'safe_flag': true,
+          },
+        },
+        contexts: Contexts(
+          device: SentryDevice(name: 'Test Device'),
+        ),
+      );
+      event.contexts['custom'] = {
+        'path': r'C:\Users\developer\secret.txt',
+        'password': 'my_password',
+        'endpoint': 'https://dav.example.com/item?auth=yes',
+        'status': 'error',
+      };
+
+      final sanitized = sanitizeSentryEvent(event, hint);
+
+      // Hint assertions
+      expect(hint.get('token'), isNull);
+      expect(hint.get('prompt'), isNull);
+      expect(hint.get('source'), 'UnifiedLogService');
+      final hintMsg = hint.get('message') as String;
+      expect(hintMsg, isNot(contains('/data/user/0')));
+      expect(hintMsg, isNot(contains('dXNlcjpwYXNz')));
+      expect(hintMsg, isNot(contains('sk-secret123456789')));
+      expect(
+        hintMsg,
+        'UnifiedLogService: Failed sync at [path] '
+        'with Authorization: Basic [redacted] and apiKey="[redacted]"',
+      );
+      final hintDetails = hint.get('details') as Map<String, dynamic>;
+      expect(hintDetails['destination_dir'], '[path]');
+      expect(hintDetails, isNot(contains('secret_key')));
+      expect(hintDetails['metric'], 42);
+
+      // Extra assertions
+      final extra = sanitized?.extra;
+      expect(extra, isNotNull);
+      expect(extra, isNot(contains('file_path')));
+      expect(extra, isNot(contains('api_key')));
+      expect(extra?['destination'], '[path]');
+      expect(extra?['normal_count'], 12);
+      final nestedMeta = extra?['nested_meta'] as Map<String, dynamic>;
+      expect(nestedMeta, isNot(contains('content')));
+      expect(nestedMeta['url'], 'https://api.example.com/v1');
+      expect(nestedMeta['safe_flag'], isTrue);
+
+      // Contexts assertions
+      final customContext =
+          sanitized?.contexts['custom'] as Map<String, dynamic>;
+      expect(customContext, isNot(contains('path')));
+      expect(customContext, isNot(contains('password')));
+      expect(customContext['endpoint'], 'https://dav.example.com/item');
+      expect(customContext['status'], 'error');
+    });
+
+    test(
+        'handles edge cases gracefully: null values, empty strings, and malformed inputs',
+        () {
+      final event = SentryEvent(
+        exceptions: [
+          SentryException(type: 'EmptyException', value: ''),
+          SentryException(type: 'NullException', value: null),
+          SentryException(
+            type: 'MalformedException',
+            value: 'Normal error with no secrets: {"incomplete json',
+          ),
+        ],
+        message: SentryMessage(''),
+      );
+
+      final hint = Hint.withMap({
+        'message': '',
+        'non_string_val': 12345,
+        'bool_val': false,
+      });
+
+      expect(() => sanitizeSentryEvent(event, hint), returnsNormally);
+
+      final sanitized = sanitizeSentryEvent(event, hint);
+      expect(sanitized?.exceptions?[0].value, '');
+      expect(sanitized?.exceptions?[0].type, 'EmptyException');
+      expect(sanitized?.exceptions?[1].value, isNull);
+      expect(sanitized?.exceptions?[1].type, 'NullException');
+      expect(
+        sanitized?.exceptions?[2].value,
+        'Normal error with no secrets: {"incomplete json',
+      );
+      expect(sanitized?.message?.formatted, '');
+      expect(hint.get('message'), '');
+      expect(hint.get('non_string_val'), 12345);
+      expect(hint.get('bool_val'), false);
+    });
+
+    test(
+        'redacts quoted JSON string values for credential keys including escaped characters',
+        () {
+      // 1. Quoted JSON credential keys (e.g. api_key, authToken)
+      const jsonText =
+          '{"api_key": "secret123", "authToken": "token456", "safe": "value"}';
+      expect(
+        sanitizeSentryNonSqlText(jsonText),
+        '{"api_key": "[redacted]", "authToken": "[redacted]", "safe": "value"}',
+      );
+
+      // 2. Escaped characters inside quoted values
+      const jsonWithEscapes =
+          '{"api_key": "secret\\"with\\\\escapes\\nand\\"quotes", "authToken": "token\\"xyz"}';
+      expect(
+        sanitizeSentryNonSqlText(jsonWithEscapes),
+        '{"api_key": "[redacted]", "authToken": "[redacted]"}',
+      );
+
+      // 3. Various credential key name formats in JSON
+      const jsonVariousKeys =
+          '{"access_token": "tok1", "secret_key": "sec2", "apiKey": "key3", "x-api-key": "xkey4", "private_key": "priv5"}';
+      expect(
+        sanitizeSentryNonSqlText(jsonVariousKeys),
+        '{"access_token": "[redacted]", "secret_key": "[redacted]", "apiKey": "[redacted]", "x-api-key": "[redacted]", "private_key": "[redacted]"}',
+      );
+
+      // 4. Preserves unquoted / key-value format handling
+      const plainKeyValue =
+          'Error with api_key: secret_val, x-api-key: secret_x, api_key=secret_eq, and sk-ant-api03-1234567890123456';
+      expect(
+        sanitizeSentryNonSqlText(plainKeyValue),
+        'Error with api_key: [redacted], x-api-key: [redacted], api_key=[redacted], and [redacted]',
+      );
+
+      // 5. End-to-end via sanitizeSentryEvent in exception value
+      final event = SentryEvent(
+        exceptions: [
+          SentryException(
+            type: 'ApiException',
+            value:
+                'Request failed with body: {"api_key": "my_secret_key", "authToken": "secret\\"with\\\\escapes"}',
+          ),
+        ],
+      );
+      final sanitized = sanitizeSentryEvent(event, Hint());
+      expect(
+        sanitized?.exceptions?.single.value,
+        'Request failed with body: {"api_key": "[redacted]", "authToken": "[redacted]"}',
+      );
+    });
+
+    test(
+        'handles metadata sanitization failures by dropping affected entry without mutating unmodifiable maps',
+        () {
+      // 1. Unmodifiable map in extra is sanitized cleanly without mutating original map
+      final unmodifiableExtra =
+          Map<String, dynamic>.unmodifiable(<String, dynamic>{
+        'token': 'sensitive_secret_token',
+        'safe_key': 'safe_value',
+        'destination': '/Users/developer/file.txt',
+      });
+      final eventWithUnmodifiable = SentryEvent();
+      eventWithUnmodifiable.extra = unmodifiableExtra;
+      final sanitizedUnmodifiable =
+          sanitizeSentryEvent(eventWithUnmodifiable, Hint());
+      expect(sanitizedUnmodifiable, isNotNull);
+      expect(sanitizedUnmodifiable?.extra, isNotNull);
+      expect(sanitizedUnmodifiable?.extra, isNot(contains('token')));
+      expect(sanitizedUnmodifiable?.extra?['safe_key'], 'safe_value');
+      expect(sanitizedUnmodifiable?.extra?['destination'], '[path]');
+      // The original unmodifiable map must remain unchanged
+      expect(unmodifiableExtra['token'], 'sensitive_secret_token');
+
+      // 2. Failure in extra metadata sanitization drops the affected entry (event.extra becomes null)
+      final throwingMap = _ThrowingMap(<String, dynamic>{'token': 'secret'});
+      final eventWithThrowingExtra = SentryEvent(
+        message: SentryMessage('Event message is preserved'),
+      );
+      eventWithThrowingExtra.extra = throwingMap;
+      final sanitizedThrowingExtra =
+          sanitizeSentryEvent(eventWithThrowingExtra, Hint());
+      expect(sanitizedThrowingExtra, isNotNull);
+      // The affected entry (extra) is dropped rather than returned unsanitized
+      expect(sanitizedThrowingExtra?.extra, isNull);
+      expect(
+        sanitizedThrowingExtra?.message?.formatted,
+        'Event message is preserved',
+      );
+
+      // 3. Failure in contexts entry drops only the affected context entry
+      final eventWithThrowingContext = SentryEvent(
+        contexts: Contexts(
+          device: SentryDevice(name: 'Safe Device'),
+        ),
+      );
+      eventWithThrowingContext.contexts['faulty'] = throwingMap;
+      final sanitizedContext =
+          sanitizeSentryEvent(eventWithThrowingContext, Hint());
+      expect(sanitizedContext, isNotNull);
+      expect(sanitizedContext?.contexts.containsKey('faulty'), isFalse);
+      expect(sanitizedContext?.contexts.device?.name, 'Safe Device');
+    });
     tearDown(() {
       SentryHelper.onCaptureExceptionForTesting = null;
     });
@@ -1177,5 +1635,24 @@ class _MockSentryTransport implements Transport {
   Future<SentryId?> send(SentryEnvelope envelope) async {
     envelopes.add(envelope);
     return SentryId.newId();
+  }
+}
+
+class _ThrowingMap extends MapView<String, dynamic> {
+  _ThrowingMap(super.map);
+
+  @override
+  void forEach(void Function(String key, dynamic value) action) {
+    throw StateError('Simulated traversal error');
+  }
+
+  @override
+  Iterable<MapEntry<String, dynamic>> get entries {
+    throw StateError('Simulated traversal error');
+  }
+
+  @override
+  void clear() {
+    throw UnsupportedError('Cannot modify unmodifiable map');
   }
 }
