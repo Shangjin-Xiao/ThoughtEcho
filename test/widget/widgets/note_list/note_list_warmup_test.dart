@@ -805,7 +805,7 @@ void main() {
 
       final state = tester.state<NoteListViewState>(find.byType(NoteListView));
       final baseListView = tester.widget<ListView>(find.byType(ListView));
-      final initialCacheExtent = baseListView.cacheExtent!;
+      final initialCacheExtent = baseListView.scrollCacheExtent!.value;
       expect(state.idleCacheExtentBoostNotifierForTest.value, 0.0);
 
       final stateUpdateCountBefore = state.stateUpdateCountForTest;
@@ -825,13 +825,13 @@ void main() {
         reason: '_growIdleCacheExtent 步进期间 _stateUpdateCount 不应递增',
       );
 
-      // 验证 ListView.builder 的 cacheExtent 随 ValueNotifier 正确扩充至基础高度 + 1600px
+      // 验证 ListView.builder 的 scrollCacheExtent 随 ValueNotifier 正确扩充至基础高度 + 1600px
       final finalListView = tester.widget<ListView>(find.byType(ListView));
       expect(
-        finalListView.cacheExtent,
+        finalListView.scrollCacheExtent!.value,
         equals(initialCacheExtent + 1600.0),
         reason:
-            'ListView.builder 的 cacheExtent 随 ValueNotifier 正确递增至基础高度 + 1600px',
+            'ListView.builder 的 scrollCacheExtent 随 ValueNotifier 正确递增至基础高度 + 1600px',
       );
 
       // 回归断言：局部扩充缓存区后，首张卡片的引导 GlobalKey 必须始终保留有效上下文，不得被赋空脱落

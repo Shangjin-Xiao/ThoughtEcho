@@ -419,7 +419,7 @@ class _FilterDisplayContainerState extends State<_FilterDisplayContainer>
         return RepaintBoundary(
           child: SizeTransition(
             sizeFactor: _animation,
-            axisAlignment: -1.0,
+            alignment: Alignment.topCenter,
             child: displayChild,
           ),
         );
