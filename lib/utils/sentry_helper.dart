@@ -399,9 +399,11 @@ const _sensitiveBreadcrumbDataKeys = <String>[
 
 bool _isSensitiveDataKey(String key) {
   final lowerKey = key.toLowerCase();
-  final words =
-      key.split(_spanWordSplitPattern).map((w) => w.toLowerCase()).toList();
-  if (words.isNotEmpty && _spanMetricSuffixes.contains(words.last)) {
+  final words = key
+      .split(sanitizationWordSplitPattern)
+      .map((w) => w.toLowerCase())
+      .toList();
+  if (words.isNotEmpty && defaultMetricSuffixes.contains(words.last)) {
     return false;
   }
   for (final pattern in _sensitiveBreadcrumbDataKeys) {
