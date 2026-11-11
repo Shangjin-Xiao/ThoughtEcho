@@ -140,8 +140,13 @@ class AINetworkManager {
         ),
       );
       return response;
-    } catch (e) {
-      logDebug('AI请求失败 for ${config.name} (${config.id}): $e');
+    } catch (e, stackTrace) {
+      logError(
+        'AI请求失败 for ${config.name} (${config.id})',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
       throw _handleError(e);
     }
   }
