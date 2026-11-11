@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../utils/lottie_animation_manager.dart';
+import 'app_loading_animation.dart';
+
+export 'app_loading_animation.dart';
 
 class AppLoadingView extends StatelessWidget {
   final double size;
   final String? message;
-  final LottieAnimationType animationType;
+  final AppLoadingStyle style;
 
   const AppLoadingView({
     this.size = 80,
     this.message,
-    this.animationType = LottieAnimationType.pulseLoading,
+    this.style = AppLoadingStyle.bookFlip,
     super.key,
   });
 
@@ -23,12 +25,14 @@ class AppLoadingView extends StatelessWidget {
         children: [
           LayoutBuilder(
             builder: (context, constraints) {
+              final availableWidth =
+                  constraints.maxWidth.isFinite ? constraints.maxWidth : 220.0;
               final s = (size.isFinite ? size : constraints.maxHeight * 0.5)
-                  .clamp(80.0, 220.0);
-              return EnhancedLottieAnimation(
-                type: animationType,
-                width: s,
-                height: s,
+                  .clamp(48.0, 220.0);
+              final effectiveWidth = s > availableWidth ? availableWidth : s;
+              return AppLoadingAnimation(
+                style: style,
+                width: effectiveWidth,
                 semanticLabel: message ?? AppLocalizations.of(context).loading,
               );
             },

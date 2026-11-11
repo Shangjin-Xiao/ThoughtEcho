@@ -2,7 +2,7 @@ part of '../note_list_view.dart';
 
 /// 列表底部"还有下一页"占位格的高度。空闲占位与加载动画共用，
 /// 保证 `_isLoading` 翻转不会改变列表总高度。
-/// 取值对齐 [AppLoadingView] 内部 Lottie 的最小尺寸（80），动画正好填满不溢出。
+/// 取值对齐 [AppLoadingView] 内部加载动画的最小尺寸（80），动画正好填满不溢出。
 const double _loadMoreFooterHeight = 80.0;
 
 /// List building, search, and item rendering for NoteListViewState.
@@ -705,7 +705,10 @@ extension _NoteListItemsExtension on NoteListViewState {
                     builder: (context, loading, _) => SizedBox(
                       height: _loadMoreFooterHeight,
                       child: loading
-                          ? const AppLoadingView(size: _loadMoreFooterHeight)
+                          ? const AppLoadingView(
+                              size: _loadMoreFooterHeight,
+                              style: AppLoadingStyle.writingLines,
+                            )
                           : null,
                     ),
                   );

@@ -3,6 +3,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
 import '../utils/lottie_animation_manager.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
+import 'app_loading_animation.dart';
 
 /// 增强的加载组件
 /// 使用Lottie动画提供更流畅的加载体验
@@ -89,10 +90,10 @@ class EnhancedLoadingWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: size ?? 80,
-              height: size ?? 80,
-              child: const CircularProgressIndicator(strokeWidth: 4),
+            AppLoadingAnimation(
+              style: AppLoadingStyle.inkWriting,
+              width: (size != null && size! >= 96) ? size! : 120.0,
+              semanticLabel: effectiveMessage,
             ),
             if (showMessage) ...[
               const SizedBox(height: 16),
@@ -117,13 +118,12 @@ class EnhancedLoadingWidget extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final s = (size ?? constraints.maxHeight * 0.5).clamp(
-                80.0,
+                48.0,
                 220.0,
               );
-              return EnhancedLottieAnimation(
-                type: animationType,
+              return AppLoadingAnimation(
+                style: AppLoadingStyle.bookFlip,
                 width: s,
-                height: s,
                 semanticLabel: effectiveMessage,
               );
             },
