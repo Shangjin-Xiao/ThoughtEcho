@@ -216,7 +216,7 @@
   "emergencyPersistentIssueHint": "If the issue persists, try reinstalling the app or contact the developer for support.",
   "emergencyBackupPageTitle": "Emergency Data Recovery",
   "emergencyBackupToolTitle": "Emergency data recovery tool",
-  "emergencyBackupToolDesc": "If the app encounters an issue, try these steps to safeguard your notes:\n\n1. Export raw data file — Save current local records to Downloads for data recovery\n2. Open backup & restore — Go to the backup page to restore from a previous backup",
+  "emergencyBackupToolDesc": "If the app encounters an issue, try these steps to safeguard your data:\n\n1. Export database file — Save a copy of the database (excludes separately stored media); the exact path is shown upon export\n2. Try opening standard backup & restore — Go to the backup page to restore from a backup (may not open if the database is damaged)",
   "emergencyProcessing": "Processing...",
   "emergencyExportDatabaseButton": "Export database file",
   "emergencyOpenBackupPageButton": "Try opening standard backup & restore",
@@ -228,7 +228,7 @@
       }
     }
   },
-  "emergencyExportHint": "Tip: The exported file preserves your local records and can be used for troubleshooting or data recovery.",
+  "emergencyExportHint": "Tip: The exported database contains note text and settings (excluding separately stored images/audio) for troubleshooting or recovery.",
   "emergencyLocatingDatabase": "Locating database file...",
   "emergencyDatabaseNotFound": "Database file not found",
   "emergencyPreparingExport": "Preparing export...",
