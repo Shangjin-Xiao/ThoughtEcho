@@ -448,6 +448,8 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
             'title': 'Confidential Title',
             'password': 'tracer_password',
             'token': 'tracer_token_value',
+            'http.query': 'auth=token123',
+            'http.fragment': 'targetSection',
             'frameJank': 1,
             'worstFrameMs': 34.0,
             'budgetMs': 16.6,
@@ -495,6 +497,8 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
         expect(traceData, isNot(contains('secret')));
         expect(traceData, isNot(contains('authorization')));
         expect(traceData, isNot(contains('search_query')));
+        expect(traceData, isNot(contains('http.query')));
+        expect(traceData, isNot(contains('http.fragment')));
         expect(traceData['frameJank'], 1);
         expect(traceData['worstFrameMs'], 34.0);
         expect(traceData['budgetMs'], 16.6);
