@@ -67,6 +67,25 @@ void main() {
         expect(called, isFalse);
       });
 
+      test('AI 未配置（无可用 API Key）时跳过，不碰模型也不推进时间戳', () async {
+        var called = false;
+        final service = DreamingService(
+          settingsService: harness.settingsService,
+          memoryService: harness.memory,
+          loadNotes: ({required start, required end, required limit}) async =>
+              sampleNotes(),
+          complete: ({required systemPrompt, required userMessage}) async {
+            called = true;
+            return goodOutput;
+          },
+          isAiAvailable: () async => false,
+        );
+
+        expect(await service.run(), DreamingOutcome.skipped);
+        expect(called, isFalse);
+        expect(harness.settingsService.lastDreamingAt, isNull);
+      });
+
       test('样本不足时跳过，不碰模型', () async {
         var called = false;
         final service = build(
@@ -144,10 +163,12 @@ void main() {
         expect(await service.run(), DreamingOutcome.updated);
 
         final profile = await harness.memory.activeProfile();
-        final taste =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.taste);
-        final voice =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.voice);
+        final taste = profile.firstWhere(
+          (e) => e.kind == AgentMemoryKind.taste,
+        );
+        final voice = profile.firstWhere(
+          (e) => e.kind == AgentMemoryKind.voice,
+        );
         expect(taste.directive, contains('哲学随笔'));
         expect(voice.directive, contains('第一人称碎句'));
         // 归因：taste 的依据只能是摘录那一组，voice 只能是原创那一组。
@@ -212,10 +233,12 @@ void main() {
         expect(capturedUserMsg, contains('摘录（7 条）'));
 
         final profile = await harness.memory.activeProfile();
-        final voice =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.voice);
-        final taste =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.taste);
+        final voice = profile.firstWhere(
+          (e) => e.kind == AgentMemoryKind.voice,
+        );
+        final taste = profile.firstWhere(
+          (e) => e.kind == AgentMemoryKind.taste,
+        );
         expect(voice.sourceNoteIds, contains('signed-1'));
         expect(voice.sourceNoteIds, contains('signed-2'));
         expect(voice.sourceNoteIds, contains('signed-3'));
@@ -341,30 +364,34 @@ void main() {
         expect(capturedUserMsg, contains('摘录（8 条）'));
 
         final profile = await harness.memory.activeProfile();
-        final voice =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.voice);
-        final taste =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.taste);
+        final voice = profile.firstWhere(
+          (e) => e.kind == AgentMemoryKind.voice,
+        );
+        final taste = profile.firstWhere(
+          (e) => e.kind == AgentMemoryKind.taste,
+        );
 
         expect(
-            voice.sourceNoteIds,
-            containsAll([
-              'che-1',
-              'che-2',
-              'che-3',
-              'che-todo',
-              'che-media',
-              'che-weather'
-            ]));
+          voice.sourceNoteIds,
+          containsAll([
+            'che-1',
+            'che-2',
+            'che-3',
+            'che-todo',
+            'che-media',
+            'che-weather',
+          ]),
+        );
         expect(
-            taste.sourceNoteIds,
-            containsAll([
-              'excerpt-camus',
-              'excerpt-camus-nowork',
-              'excerpt-churchill',
-              'excerpt-luxun',
-              'excerpt-jobs'
-            ]));
+          taste.sourceNoteIds,
+          containsAll([
+            'excerpt-camus',
+            'excerpt-camus-nowork',
+            'excerpt-churchill',
+            'excerpt-luxun',
+            'excerpt-jobs',
+          ]),
+        );
         expect(taste.sourceNoteIds, isNot(contains('che-1')));
         expect(taste.sourceNoteIds, isNot(contains('che-2')));
         expect(taste.sourceNoteIds, isNot(contains('che-3')));
@@ -472,30 +499,34 @@ void main() {
         expect(capturedUserMsg, contains('摘录（5 条）'));
 
         final profile = await harness.memory.activeProfile();
-        final voice =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.voice);
-        final taste =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.taste);
+        final voice = profile.firstWhere(
+          (e) => e.kind == AgentMemoryKind.voice,
+        );
+        final taste = profile.firstWhere(
+          (e) => e.kind == AgentMemoryKind.taste,
+        );
 
         expect(
-            voice.sourceNoteIds,
-            containsAll([
-              'lin-1',
-              'lin-2',
-              'lin-3',
-              'lin-4',
-              'lin-todo',
-              'lin-media',
-            ]));
+          voice.sourceNoteIds,
+          containsAll([
+            'lin-1',
+            'lin-2',
+            'lin-3',
+            'lin-4',
+            'lin-todo',
+            'lin-media',
+          ]),
+        );
         expect(
-            taste.sourceNoteIds,
-            containsAll([
-              'excerpt-liang',
-              'excerpt-lijie',
-              'excerpt-wang',
-              'excerpt-yuanmei',
-              'excerpt-feixiaotong',
-            ]));
+          taste.sourceNoteIds,
+          containsAll([
+            'excerpt-liang',
+            'excerpt-lijie',
+            'excerpt-wang',
+            'excerpt-yuanmei',
+            'excerpt-feixiaotong',
+          ]),
+        );
         expect(taste.sourceNoteIds, isNot(contains('lin-1')));
         expect(taste.sourceNoteIds, isNot(contains('lin-2')));
         expect(taste.sourceNoteIds, isNot(contains('lin-3')));
@@ -629,46 +660,46 @@ void main() {
       });
 
       test(
-          'LLM 返回 user_alias 时作为待确认别名持久化写入 AgentMemory，未确认前不激活高置信度 userAliases',
-          () async {
-        const outputWithAlias = '''
+        'LLM 返回 user_alias 时作为待确认别名持久化写入 AgentMemory，未确认前不激活高置信度 userAliases',
+        () async {
+          const outputWithAlias = '''
 {"taste": "摘录以古建经典为主",
  "voice": "原创为田野手札短句",
  "recent": "在平遥和徽州考察古建",
  "user_alias": "墨客"}
 ''';
-        final notes = [
-          ...sampleNotes(count: 11),
-          Quote(
-            id: 'note-moke',
-            content: '在平遥和徽州考察古建。——墨客',
-            sourceAuthor: '墨客',
-            sourceWork: '日记',
-            date: DateTime.now().toIso8601String(),
-          ),
-        ];
-        final service = build(
-          modelOutput: outputWithAlias,
-          notes: notes,
-        );
+          final notes = [
+            ...sampleNotes(count: 11),
+            Quote(
+              id: 'note-moke',
+              content: '在平遥和徽州考察古建。——墨客',
+              sourceAuthor: '墨客',
+              sourceWork: '日记',
+              date: DateTime.now().toIso8601String(),
+            ),
+          ];
+          final service = build(modelOutput: outputWithAlias, notes: notes);
 
-        final outcome = await service.run();
-        expect(outcome, DreamingOutcome.updated);
+          final outcome = await service.run();
+          expect(outcome, DreamingOutcome.updated);
 
-        final profile = await harness.memory.activeProfile();
-        final identityEntry =
-            profile.firstWhere((e) => e.kind == AgentMemoryKind.identity);
-        expect(identityEntry.directive, '待确认笔名：墨客（存疑，待确认）');
+          final profile = await harness.memory.activeProfile();
+          final identityEntry = profile.firstWhere(
+            (e) => e.kind == AgentMemoryKind.identity,
+          );
+          expect(identityEntry.directive, '待确认笔名：墨客（存疑，待确认）');
 
-        final aliases = await harness.memory.activeIdentityAliases();
-        expect(aliases, isNot(contains('墨客')));
-        expect(harness.settingsService.userAliases, isNot(contains('墨客')));
-      });
+          final aliases = await harness.memory.activeIdentityAliases();
+          expect(aliases, isNot(contains('墨客')));
+          expect(harness.settingsService.userAliases, isNot(contains('墨客')));
+        },
+      );
 
       test('同 kind 原位更新，不追加第二条', () async {
         await build(modelOutput: goodOutput).run();
-        await harness.settingsService
-            .setLastDreamingAt(DateTime.fromMillisecondsSinceEpoch(0));
+        await harness.settingsService.setLastDreamingAt(
+          DateTime.fromMillisecondsSinceEpoch(0),
+        );
 
         const second = '{"taste": "改摘诗歌了", "voice": "改写长段了"}';
         final outcome = await build(modelOutput: second).run();
@@ -676,10 +707,7 @@ void main() {
 
         final profile = await harness.memory.activeProfile();
         // 追加会在画像层堆出互相矛盾的文风描述，并挤掉别的条目。
-        expect(
-          profile.where((e) => e.kind == AgentMemoryKind.voice).length,
-          1,
-        );
+        expect(profile.where((e) => e.kind == AgentMemoryKind.voice).length, 1);
         expect(
           profile.firstWhere((e) => e.kind == AgentMemoryKind.voice).directive,
           '改写长段了',
@@ -688,16 +716,19 @@ void main() {
 
       test('结论没变时不重写，避免观察时间被刷新到「刚刚」', () async {
         await build(modelOutput: goodOutput).run();
-        final before = (await harness.memory.activeProfile())
-            .firstWhere((e) => e.kind == AgentMemoryKind.voice);
+        final before = (await harness.memory.activeProfile()).firstWhere(
+          (e) => e.kind == AgentMemoryKind.voice,
+        );
 
-        await harness.settingsService
-            .setLastDreamingAt(DateTime.fromMillisecondsSinceEpoch(0));
+        await harness.settingsService.setLastDreamingAt(
+          DateTime.fromMillisecondsSinceEpoch(0),
+        );
         // 同样的结论再跑一遍：taste/voice 都不该动，只有近况会重写。
         await build(modelOutput: goodOutput).run();
 
-        final after = (await harness.memory.activeProfile())
-            .firstWhere((e) => e.kind == AgentMemoryKind.voice);
+        final after = (await harness.memory.activeProfile()).firstWhere(
+          (e) => e.kind == AgentMemoryKind.voice,
+        );
         expect(after.id, before.id);
         expect(after.observedAt, before.observedAt);
       });
@@ -706,8 +737,9 @@ void main() {
     group('失败静默', () {
       test('模型抛异常时保留原有记忆并返回 failed', () async {
         await build(modelOutput: goodOutput).run();
-        await harness.settingsService
-            .setLastDreamingAt(DateTime.fromMillisecondsSinceEpoch(0));
+        await harness.settingsService.setLastDreamingAt(
+          DateTime.fromMillisecondsSinceEpoch(0),
+        );
 
         final service = build(
           modelOutput: '',

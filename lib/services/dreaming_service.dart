@@ -25,6 +25,9 @@ typedef DreamingCompleter = Future<String> Function({
   required String userMessage,
 });
 
+/// 检查当前是否具备调用模型的条件（已选服务商、已启用、已配置 API Key）。
+typedef DreamingAiAvailability = Future<bool> Function();
+
 /// 一轮 Dreaming 的结果。只用于测试与日志，不面向用户。
 enum DreamingOutcome {
   /// 前置门槛没过，整轮跳过。
@@ -64,10 +67,14 @@ class DreamingService {
     required AgentMemoryService memoryService,
     required DreamingNoteLoader loadNotes,
     required DreamingCompleter complete,
+    DreamingAiAvailability? isAiAvailable,
   })  : _settings = settingsService,
         _memory = memoryService,
         _loadNotes = loadNotes,
-        _complete = complete;
+        _complete = complete,
+        _isAiAvailable = isAiAvailable ?? _alwaysAvailable;
+
+  static Future<bool> _alwaysAvailable() async => true;
 
   /// 从 [DatabaseService] 与 [AIService] 装配一个实例。
   ///
@@ -95,6 +102,7 @@ class DreamingService {
         systemPrompt: systemPrompt,
         userMessage: userMessage,
       ),
+      isAiAvailable: aiService.hasValidApiKeyAsync,
     );
   }
 
@@ -102,6 +110,7 @@ class DreamingService {
   final AgentMemoryService _memory;
   final DreamingNoteLoader _loadNotes;
   final DreamingCompleter _complete;
+  final DreamingAiAvailability _isAiAvailable;
 
   /// 样本量下限。低于这个数归纳不出稳定结论，硬归纳只会产出噪声。
   static const int minNoteSample = 10;
@@ -197,6 +206,13 @@ class DreamingService {
 
     final samples = await _sample(now);
     if (samples == null) {
+      return DreamingOutcome.skipped;
+    }
+
+    // 后台任务不能假设 AI 已配置：未选服务商、服务商被禁用或未配置 API Key 时
+    // 直接跳过本轮，不推进 lastDreamingAt，配置好后下次自然重跑。
+    if (!await _isAiAvailable()) {
+      logDebug('Dreaming 跳过：当前 AI 服务商不可用或未配置 API Key');
       return DreamingOutcome.skipped;
     }
 
@@ -300,10 +316,7 @@ class DreamingService {
     );
     final newlyInferred = detailedAliases.highConfidence;
     final moderateAliases = detailedAliases.moderateConfidence;
-    final effectiveAliases = <String>{
-      ...userAliases,
-      ...newlyInferred,
-    };
+    final effectiveAliases = <String>{...userAliases, ...newlyInferred};
 
     final excerpts = <Quote>[];
     final originals = <Quote>[];
@@ -417,8 +430,10 @@ class DreamingService {
     String? field(String key, int maxChars) {
       final value = map[key];
       if (value is! String) return null;
-      final normalized =
-          AgentMemoryService.normalizeMemoryText(value, maxChars);
+      final normalized = AgentMemoryService.normalizeMemoryText(
+        value,
+        maxChars,
+      );
       if (normalized.isEmpty) return null;
       // 模型被要求无把握就填 null，但它经常改成填字符串 "null" / "无"。
       // 这些当成没有，否则会把"无"当作一条正经结论写进画像。
@@ -575,9 +590,7 @@ class DreamingService {
     String? defaultAuthor,
     String? defaultSource,
   }) {
-    final result = <String>{
-      if (explicitAliases != null) ...explicitAliases,
-    };
+    final result = <String>{if (explicitAliases != null) ...explicitAliases};
 
     final authorStats =
         <String, ({int count, int selfMarkerCount, int externalWorkCount})>{};
@@ -648,8 +661,10 @@ class DreamingService {
         isPersonalWork = false;
       } else {
         final lowerWork = cleanWork.toLowerCase();
-        if (Quote.isBuiltinPersonalWork(cleanWork,
-            defaultSource: defaultSource)) {
+        if (Quote.isBuiltinPersonalWork(
+          cleanWork,
+          defaultSource: defaultSource,
+        )) {
           isPersonalWork = true;
         } else if (lowerWork.contains(lowerAuthor) &&
             (hasSignatureInContent || hasPersonalArtifacts)) {
@@ -746,12 +761,7 @@ class _DreamingSamples {
 }
 
 class _DreamingResult {
-  const _DreamingResult({
-    this.taste,
-    this.voice,
-    this.recent,
-    this.userAlias,
-  });
+  const _DreamingResult({this.taste, this.voice, this.recent, this.userAlias});
 
   final String? taste;
   final String? voice;
