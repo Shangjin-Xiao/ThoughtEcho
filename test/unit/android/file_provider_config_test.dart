@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 import 'package:xml/xml.dart';
 
 const _androidNamespace = 'http://schemas.android.com/apk/res/android';
+const _toolsNamespace = 'http://schemas.android.com/tools';
 
 void main() {
   group('Android FileProvider config', () {
@@ -196,6 +197,86 @@ void main() {
       ).readAsStringSync();
 
       expect(application, contains('catch (t: Throwable)'));
+    });
+  });
+
+  group('Android Play API 36 and foreground service manifest config', () {
+    test('targets Android SDK 36 in build.gradle', () {
+      final buildGradle = File('android/app/build.gradle').readAsStringSync();
+
+      expect(
+        buildGradle,
+        matches(RegExp(r'^\s*targetSdkVersion\s+36\b', multiLine: true)),
+      );
+      expect(
+        buildGradle,
+        isNot(matches(RegExp(r'^\s*targetSdkVersion\s+35\b', multiLine: true))),
+      );
+    });
+
+    test('removes unused FOREGROUND_SERVICE permissions from main manifest',
+        () {
+      final mainManifestRaw =
+          File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
+      final mainManifest = XmlDocument.parse(mainManifestRaw);
+
+      final permissionNames = mainManifest
+          .findAllElements('uses-permission')
+          .map(
+            (element) => element.getAttribute(
+              'name',
+              namespace: _androidNamespace,
+            ),
+          )
+          .whereType<String>()
+          .toList();
+
+      expect(
+        permissionNames.where(
+          (name) => name.startsWith('android.permission.FOREGROUND_SERVICE'),
+        ),
+        isEmpty,
+      );
+      expect(mainManifestRaw, isNot(contains('FOREGROUND_SERVICE')));
+    });
+
+    test(
+        'strips foreground service permissions and plugin services in play manifest',
+        () {
+      final playManifest = XmlDocument.parse(
+        File('android/app/src/play/AndroidManifest.xml').readAsStringSync(),
+      );
+
+      final removedPermissions = {
+        for (final element in playManifest.findAllElements('uses-permission'))
+          if (element.getAttribute('node', namespace: _toolsNamespace) ==
+              'remove')
+            element.getAttribute('name', namespace: _androidNamespace),
+      };
+
+      expect(
+        removedPermissions,
+        containsAll(<String>[
+          'android.permission.FOREGROUND_SERVICE',
+          'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
+        ]),
+      );
+
+      final application = playManifest.findAllElements('application').single;
+      final removedServices = {
+        for (final element in application.findElements('service'))
+          if (element.getAttribute('node', namespace: _toolsNamespace) ==
+              'remove')
+            element.getAttribute('name', namespace: _androidNamespace),
+      };
+
+      expect(
+        removedServices,
+        containsAll(<String>[
+          'com.baseflow.geolocator.GeolocatorLocationService',
+          'androidx.work.impl.foreground.SystemForegroundService',
+        ]),
+      );
     });
   });
 }
