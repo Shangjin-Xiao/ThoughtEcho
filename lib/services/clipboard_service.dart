@@ -8,7 +8,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
 import '../utils/aptabase_helper.dart';
-import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
+import 'app_preferences_service.dart';
 
 /// 用户接受剪贴板摘录后的回调：交给页面用它自己的新增笔记入口打开编辑器，
 /// 服务本身不负责建编辑器、也不负责存库。
@@ -33,8 +33,7 @@ class ClipboardService extends ChangeNotifier {
   @visibleForTesting
   bool get shouldSkipNextClipboardCheck => _skipNextClipboardCheck;
 
-  // 使用安全包装类替代直接的MMKV
-  SafeMMKV? _storage;
+  AppPreferencesService? _storage;
 
   // 构造函数
   ClipboardService();
@@ -57,8 +56,8 @@ class ClipboardService extends ChangeNotifier {
   // 初始化首选项
   Future<void> _initPreferences() async {
     try {
-      _storage = SafeMMKV();
-      await _storage!.initialize();
+      _storage = AppPreferencesService();
+      await _storage!.init();
       _loadPreferences();
       logDebug('剪贴板服务初始化完成，监控状态: $_enableClipboardMonitoring');
     } catch (e) {

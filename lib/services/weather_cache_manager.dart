@@ -1,5 +1,5 @@
 import 'dart:convert';
-import '../utils/mmkv_ffi_fix.dart';
+import 'app_preferences_service.dart';
 import '../models/weather_data.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -9,7 +9,7 @@ class WeatherCacheManager {
   static const String _cacheExpiryKey = 'weather_cache_expiry';
   static const Duration _defaultCacheDuration = Duration(hours: 3);
 
-  SafeMMKV? _storage;
+  AppPreferencesService? _storage;
   bool _isInitialized = false;
 
   /// 初始化缓存管理器
@@ -17,8 +17,8 @@ class WeatherCacheManager {
     if (_isInitialized) return;
 
     try {
-      _storage = SafeMMKV();
-      await _storage!.initialize();
+      _storage = AppPreferencesService();
+      await _storage!.init();
       _isInitialized = true;
       logDebug('天气缓存管理器初始化完成');
     } catch (e) {

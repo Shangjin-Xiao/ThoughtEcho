@@ -17,7 +17,7 @@ import 'package:xml/xml_events.dart';
 import '../services/connectivity_service.dart';
 import '../services/database_service.dart';
 import '../services/media_reference_service.dart';
-import '../services/mmkv_service.dart';
+import '../services/app_preferences_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/lww_utils.dart';
 
@@ -112,7 +112,7 @@ class WebDAVSyncService extends ChangeNotifier {
   WebDAVSyncService.forTesting() : this._internal();
 
   // 核心存储与安全服务
-  final MMKVService _mmkv = MMKVService();
+  final AppPreferencesService _mmkv = AppPreferencesService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   // WebDAV 状态

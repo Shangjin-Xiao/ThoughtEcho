@@ -2,7 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
-import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
+import '../services/app_preferences_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'app_semantic_colors.dart';
@@ -389,7 +389,7 @@ class AppTheme with ChangeNotifier {
   /// 墨色还是「全局一支」时用的那个键。只在迁移时读一次，读完就删。
   static const String _legacyThemeAccentKey = 'theme_accent';
 
-  SafeMMKV? _storage;
+  AppPreferencesService? _storage;
   Color? _customColor;
   bool _useCustomColor = false;
   bool _useDynamicColor = true; // 默认启用动态取色
@@ -597,8 +597,8 @@ class AppTheme with ChangeNotifier {
     if (_hasInitialized) return; // 防止重复初始化
 
     try {
-      _storage = SafeMMKV();
-      await _storage!.initialize();
+      _storage = AppPreferencesService();
+      await _storage!.init();
       _loadCustomColor();
       _loadThemeMode();
       // 墨色按风格分开存，加载和旧值迁移都要用到已加载的风格，顺序不能调换。
@@ -942,11 +942,17 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载自定义颜色设置
   void _loadCustomColor() {
     try {
+      final hasCustomColorKey = _storage?.containsKey(_customColorKey) ?? false;
       final colorValue = _storage?.getInt(_customColorKey);
       if (colorValue != null) {
         _customColor = Color(
           colorValue,
         ); // This is correct for reconstructing Color from ARGB int
+      } else if (hasCustomColorKey) {
+        // 键存在但无法按 int 读取（例如类型损坏）时回退默认颜色并禁用自定义颜色
+        _customColor = Colors.blue;
+        _useCustomColor = false;
+        return;
       }
       _useCustomColor = _storage?.getBool(_useCustomColorKey) ?? false;
     } catch (e, stack) {
@@ -1104,7 +1110,7 @@ class AppTheme with ChangeNotifier {
     await _removeLegacyThemeAccent(storage);
   }
 
-  Future<void> _removeLegacyThemeAccent(SafeMMKV storage) async {
+  Future<void> _removeLegacyThemeAccent(AppPreferencesService storage) async {
     try {
       await storage
           .remove(_legacyThemeAccentKey)

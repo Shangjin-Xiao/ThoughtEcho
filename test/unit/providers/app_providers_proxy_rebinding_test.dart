@@ -403,16 +403,27 @@ void main() {
       expect(s2.identityAliasesProvider, isNotNull);
     });
 
-    test('InsightHistoryService.updateDependencies updates settings in-place',
+    test(
+        'InsightHistoryService.updateDependencies updates settings and aiAnalysisDbService in-place',
         () {
       final s1 = _FakeSettingsService();
       final s2 = _FakeSettingsService();
+      final db1 = _FakeAIAnalysisDatabaseService();
+      final db2 = _FakeAIAnalysisDatabaseService();
 
-      final insightService = InsightHistoryService(settingsService: s1);
+      final insightService = InsightHistoryService(
+        settingsService: s1,
+        aiAnalysisDbService: db1,
+      );
       expect(insightService.settingsService, equals(s1));
+      expect(insightService.aiAnalysisDbService, equals(db1));
 
-      insightService.updateDependencies(settingsService: s2);
+      insightService.updateDependencies(
+        settingsService: s2,
+        aiAnalysisDbService: db2,
+      );
       expect(insightService.settingsService, equals(s2));
+      expect(insightService.aiAnalysisDbService, equals(db2));
     });
   });
 

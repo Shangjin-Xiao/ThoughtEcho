@@ -9,7 +9,7 @@ import '../utils/app_logger.dart';
 import '../utils/media_path_resolver.dart';
 import 'database_service.dart';
 import 'media_reference_service.dart';
-import 'mmkv_service.dart';
+import 'app_preferences_service.dart';
 
 /// 笔记媒体路径存量修复。
 ///
@@ -32,14 +32,14 @@ class MediaPathRepairService {
   /// 应用文档目录相对上次运行发生变化时执行一次修复。
   ///
   /// 首次运行（没有历史记录）同样会扫描一次：老用户的库里可能已经存在从其它
-  /// 设备同步进来的失效路径。之后每次启动只是一次 MMKV 读取，命中即返回。
+  /// 设备同步进来的失效路径。之后每次启动只是一次 KV 读取，命中即返回。
   static Future<MediaPathRepairReport> repairIfBaseDirChanged({
     Database? database,
-    MMKVService? mmkvService,
+    AppPreferencesService? mmkvService,
     String? appPath,
   }) async {
     try {
-      final mmkv = mmkvService ?? MMKVService();
+      final mmkv = mmkvService ?? AppPreferencesService();
       await mmkv.init();
 
       final currentPath = p.normalize(

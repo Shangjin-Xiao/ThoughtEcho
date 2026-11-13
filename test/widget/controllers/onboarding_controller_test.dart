@@ -9,6 +9,7 @@ import 'package:thoughtecho/config/onboarding_config.dart';
 import 'package:thoughtecho/controllers/onboarding_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/ai_analysis_model.dart';
+import 'package:thoughtecho/models/periodic_insight.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
@@ -129,6 +130,28 @@ class FakeAIAnalysisDatabaseService extends ChangeNotifier
   @override
   Future<List<AIAnalysis>> searchAnalysesByType(String analysisType) async =>
       [];
+
+  @override
+  Future<List<PeriodicInsight>> getPeriodicInsights({int limit = 50}) async =>
+      [];
+
+  @override
+  Future<void> savePeriodicInsight(
+    PeriodicInsight item, {
+    int maxRetention = 50,
+  }) async {}
+
+  @override
+  Future<void> importPeriodicInsights(
+    List<PeriodicInsight> items, {
+    int maxRetention = 50,
+  }) async {}
+
+  @override
+  Future<int> deletePeriodicInsightsOlderThan(DateTime cutoff) async => 0;
+
+  @override
+  Future<void> deleteAllPeriodicInsights() async {}
 
   @override
   Future<Database> get database => throw UnimplementedError();

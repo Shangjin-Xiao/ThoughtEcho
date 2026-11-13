@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart' as logging;
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/log_service.dart' as old_log;
 import 'package:thoughtecho/utils/global_exception_handler.dart';
@@ -333,8 +333,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       await _initializeLoggingFlutter();
 
       // 初始化 SafeMMKV 并加载日志级别设置
-      final mmkv = SafeMMKV();
-      await mmkv.initialize();
+      final mmkv = AppPreferencesService();
+      await mmkv.init();
 
       // 从 MMKV 加载日志级别
       final levelIndex = mmkv.getInt(_logLevelKey);
@@ -743,7 +743,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       _currentLevel = newLevel;
 
       try {
-        final mmkv = SafeMMKV();
+        final mmkv = AppPreferencesService();
         await mmkv.setInt(_logLevelKey, newLevel.index);
         // 标记用户已手动设置过日志级别，后续启动不会自动重置
         await mmkv.setBool(_logLevelUserSetKey, true);

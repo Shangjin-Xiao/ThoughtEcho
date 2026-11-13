@@ -12,7 +12,7 @@ import '../services/migration_service.dart';
 import '../services/settings_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/database_service.dart';
-import '../services/mmkv_service.dart';
+import '../services/app_preferences_service.dart';
 import '../services/ai_analysis_database_service.dart';
 import '../utils/app_logger.dart';
 
@@ -40,7 +40,7 @@ class OnboardingController extends ChangeNotifier {
     try {
       final databaseService = context.read<DatabaseService>();
       final settingsService = context.read<SettingsService>();
-      final mmkvService = context.read<MMKVService>();
+      final mmkvService = context.read<AppPreferencesService>();
       final clipboardService = context.read<ClipboardService>();
       final aiAnalysisDbService = context.read<AIAnalysisDatabaseService>();
 

@@ -7,12 +7,22 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/pages/thoughter_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/draft_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
+
+Future<void> _flushDraftIo(WidgetTester tester) async {
+  for (var i = 0; i < 4; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 30)),
+    );
+    await tester.pump();
+  }
+}
 
 class _MockSettingsService extends ChangeNotifier implements SettingsService {
   @override
@@ -90,6 +100,11 @@ void main() {
   setUp(() async {
     databaseService = _MockDatabaseService();
     await MMKVService().clear();
+    await DraftService().deleteAllDrafts();
+  });
+
+  tearDownAll(() async {
+    await DraftService().resetForTesting();
   });
 
   Widget buildTestWidget({Quote? initialQuote, String initialContent = ''}) {
@@ -159,6 +174,7 @@ void main() {
       final saveAndContinueBtn = find.text(l10n.saveAndContinue);
       expect(saveAndContinueBtn, findsOneWidget);
       await tester.tap(saveAndContinueBtn);
+      await _flushDraftIo(tester);
       await tester.pumpAndSettle();
 
       // Verify note was saved
@@ -227,6 +243,7 @@ void main() {
 
       // Tap Save button in AppBar
       await tester.tap(find.byIcon(Icons.save));
+      await _flushDraftIo(tester);
       await tester.pumpAndSettle();
 
       // Verify note was saved and editor was popped
@@ -262,6 +279,7 @@ void main() {
 
       // Tap Save button in dialog ("保存并退出")
       await tester.tap(find.text(l10n.saveAndExit));
+      await _flushDraftIo(tester);
       await tester.pumpAndSettle();
 
       // Verify note was saved and editor was popped

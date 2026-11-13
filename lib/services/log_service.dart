@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:flutter/scheduler.dart';
 import '../utils/app_logger.dart';
@@ -184,8 +184,8 @@ class LogService with ChangeNotifier {
 
     try {
       // 初始化 SafeMMKV 并加载日志级别设置
-      final mmkv = SafeMMKV();
-      await mmkv.initialize();
+      final mmkv = AppPreferencesService();
+      await mmkv.init();
 
       // 从 MMKV 加载日志级别
       final levelIndex = mmkv.getInt(_logLevelKey);
@@ -337,7 +337,7 @@ class LogService with ChangeNotifier {
       _currentLevel = newLevel;
 
       try {
-        final mmkv = SafeMMKV();
+        final mmkv = AppPreferencesService();
         await mmkv.setInt(_logLevelKey, newLevel.index);
 
         log(

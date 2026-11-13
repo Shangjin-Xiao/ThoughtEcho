@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import '../services/mmkv_service.dart';
+import '../services/app_preferences_service.dart';
 import '../theme/app_semantic_colors.dart';
 import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
@@ -24,7 +24,7 @@ enum MmkvDiagnosticFilter {
 /// migration status and verifying 1:1 parity between Native MMKV, the pure-Dart
 /// `MmkvBinaryReader`, and `SharedPreferences`.
 class MmkvMigrationDiagnosticPage extends StatefulWidget {
-  final MMKVService? mmkvService;
+  final AppPreferencesService? mmkvService;
 
   const MmkvMigrationDiagnosticPage({super.key, this.mmkvService});
 
@@ -35,7 +35,7 @@ class MmkvMigrationDiagnosticPage extends StatefulWidget {
 
 class _MmkvMigrationDiagnosticPageState
     extends State<MmkvMigrationDiagnosticPage> {
-  late final MMKVService _mmkvService;
+  late final AppPreferencesService _mmkvService;
   MmkvDiagnosticReport? _report;
   Object? _error;
   bool _loading = true;
@@ -44,7 +44,7 @@ class _MmkvMigrationDiagnosticPageState
   @override
   void initState() {
     super.initState();
-    _mmkvService = widget.mmkvService ?? MMKVService();
+    _mmkvService = widget.mmkvService ?? AppPreferencesService();
     _loadReport();
   }
 

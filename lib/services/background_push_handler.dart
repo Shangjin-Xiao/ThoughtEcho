@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
@@ -23,10 +23,10 @@ const String kPeriodicCheckTask = 'com.shangjin.thoughtecho.periodicCheck';
 
 /// 封装集中式后台监控初始化函数
 ///
-/// 从 MMKV 读取设置，配置 Sentry（数据库与网络追踪）和 Aptabase 统计，
+/// 从 KV 存储读取设置，配置 Sentry（数据库与网络追踪）和 Aptabase 统计，
 /// 并初始化全局未捕获异常处理器 GlobalExceptionHandler 与 PlatformDispatcher.instance.onError，
 /// 消除后台 Isolate 监控盲区。
-void initBackgroundMonitoring(MMKVService mmkvService) {
+void initBackgroundMonitoring(AppPreferencesService mmkvService) {
   // 1. 初始化全局异常处理器与 PlatformDispatcher 未捕获异常回调
   try {
     GlobalExceptionHandler.initialize();
@@ -98,7 +98,7 @@ void callbackDispatcher() {
 
     try {
       // 3. 初始化基础服务
-      final mmkvService = MMKVService();
+      final mmkvService = AppPreferencesService();
       await mmkvService.init();
 
       // 初始化后台集中监控
@@ -182,7 +182,7 @@ void backgroundPushCallback(int id) async {
   try {
     // 3. 初始化基础服务
     AppLogger.i('正在初始化后台基础服务...');
-    final mmkvService = MMKVService();
+    final mmkvService = AppPreferencesService();
     await mmkvService.init();
     AppLogger.d('MMKV 初始化完成');
 
@@ -266,7 +266,7 @@ Future<void> backgroundPeriodicCheck() async {
   AppLogger.i('后台周期性检查启动');
 
   try {
-    final mmkvService = MMKVService();
+    final mmkvService = AppPreferencesService();
     await mmkvService.init();
 
     // 初始化后台集中监控

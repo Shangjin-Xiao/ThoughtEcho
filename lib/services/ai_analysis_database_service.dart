@@ -7,6 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/ai_analysis_model.dart';
+import '../models/periodic_insight.dart';
 import 'package:uuid/uuid.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -16,6 +17,7 @@ import 'package:thoughtecho/utils/app_logger.dart';
 class AIAnalysisDatabaseService extends ChangeNotifier {
   static Database? _database;
   static Completer<Database>? _initCompleter; // 修复：添加 Completer 防止竞态条件
+  static const String _periodicInsightsTable = 'periodic_insights';
   final _uuid = const Uuid();
 
   // 内存存储，用于 Web 平台或调试存储
@@ -77,9 +79,12 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       _database = await databaseFactory.openDatabase(
         await _getDatabasePath(),
         options: OpenDatabaseOptions(
-          version: 1,
+          version: 2,
           onCreate: _createDatabase,
           onUpgrade: _onUpgradeDatabase,
+          onOpen: (db) async {
+            await _ensurePeriodicInsightsSchema(db);
+          },
         ),
       );
 
@@ -117,6 +122,29 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         quote_count INTEGER
       )
     ''');
+    await _ensurePeriodicInsightsSchema(db);
+  }
+
+  Future<void> _ensurePeriodicInsightsSchema(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_periodicInsightsTable(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        insight TEXT NOT NULL,
+        period_type TEXT NOT NULL,
+        period_label TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        is_ai_generated INTEGER NOT NULL DEFAULT 1,
+        data_signature TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_periodic_insights_created_at
+      ON $_periodicInsightsTable(created_at DESC, id DESC)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_periodic_insights_signature
+      ON $_periodicInsightsTable(data_signature)
+    ''');
   }
 
   /// 数据库升级处理
@@ -125,9 +153,8 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     int oldVersion,
     int newVersion,
   ) async {
-    // 这里处理未来可能的数据库升级逻辑
     if (oldVersion < 2) {
-      // 版本1到版本2的迁移代码（如果需要）
+      await _ensurePeriodicInsightsSchema(db);
     }
   }
 
@@ -699,6 +726,141 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       );
       return 0;
     }
+  }
+
+  /// 获取周期洞察历史记录（按创建时间倒序）
+  Future<List<PeriodicInsight>> getPeriodicInsights({int limit = 50}) async {
+    try {
+      final db = await database;
+      final rows = await db.query(
+        _periodicInsightsTable,
+        orderBy: 'created_at DESC, id DESC',
+        limit: limit > 0 ? limit : null,
+      );
+      final insights = <PeriodicInsight>[];
+      for (final row in rows) {
+        try {
+          insights.add(PeriodicInsight.fromDbMap(row));
+        } catch (e) {
+          AppLogger.w(
+            'getPeriodicInsights: 跳过损坏的周期洞察行 (id: ${row['id']}): $e',
+            source: 'AIAnalysisDB',
+          );
+        }
+      }
+      return insights;
+    } catch (e, stackTrace) {
+      AppLogger.w(
+        '获取周期洞察历史失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AIAnalysisDB',
+      );
+      return const <PeriodicInsight>[];
+    }
+  }
+
+  /// 保存单条周期洞察（若存在相同 dataSignature 则覆盖，并按 maxRetention 裁剪上限）
+  Future<void> savePeriodicInsight(
+    PeriodicInsight item, {
+    int maxRetention = 50,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final signature = item.dataSignature;
+      if (signature != null && signature.isNotEmpty) {
+        await txn.delete(
+          _periodicInsightsTable,
+          where: 'data_signature = ?',
+          whereArgs: [signature],
+        );
+      }
+      await txn.insert(_periodicInsightsTable, item.toDbMap());
+      if (maxRetention > 0) {
+        await txn.rawDelete(
+          '''
+          DELETE FROM $_periodicInsightsTable
+          WHERE id NOT IN (
+            SELECT id FROM $_periodicInsightsTable
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+          )
+          ''',
+          [maxRetention],
+        );
+      }
+    });
+  }
+
+  /// 批量导入周期洞察（用于从 KV 存储一次性幂等迁移）
+  Future<void> importPeriodicInsights(
+    List<PeriodicInsight> items, {
+    int maxRetention = 50,
+  }) async {
+    if (items.isEmpty) return;
+
+    final db = await database;
+    await db.transaction((txn) async {
+      final existingRows = await txn.query(
+        _periodicInsightsTable,
+        columns: ['data_signature'],
+        where: 'data_signature IS NOT NULL AND length(data_signature) > 0',
+      );
+      final existingSignatures = existingRows
+          .map((row) => row['data_signature']?.toString())
+          .whereType<String>()
+          .toSet();
+
+      final sorted = List<PeriodicInsight>.from(items)
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+      final seenSignatures = <String>{};
+      final deduped = <PeriodicInsight>[];
+      // 从新到旧筛选唯一 signature，再按从旧到新插入
+      for (final item in sorted.reversed) {
+        final sig = item.dataSignature;
+        if (sig != null && sig.isNotEmpty) {
+          if (existingSignatures.contains(sig) || !seenSignatures.add(sig)) {
+            continue;
+          }
+        }
+        deduped.add(item);
+      }
+
+      for (final item in deduped.reversed) {
+        await txn.insert(_periodicInsightsTable, item.toDbMap());
+      }
+
+      if (maxRetention > 0) {
+        await txn.rawDelete(
+          '''
+          DELETE FROM $_periodicInsightsTable
+          WHERE id NOT IN (
+            SELECT id FROM $_periodicInsightsTable
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+          )
+          ''',
+          [maxRetention],
+        );
+      }
+    });
+  }
+
+  /// 删除早于 [cutoff] 的周期洞察记录
+  Future<int> deletePeriodicInsightsOlderThan(DateTime cutoff) async {
+    final db = await database;
+    return db.delete(
+      _periodicInsightsTable,
+      where: 'created_at < ?',
+      whereArgs: [cutoff.toIso8601String()],
+    );
+  }
+
+  /// 清空所有周期洞察记录
+  Future<void> deleteAllPeriodicInsights() async {
+    final db = await database;
+    await db.delete(_periodicInsightsTable);
   }
 
   @override

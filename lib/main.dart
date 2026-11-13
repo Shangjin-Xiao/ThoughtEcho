@@ -25,7 +25,7 @@ import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
@@ -216,7 +216,7 @@ Future<void> main() async {
       };
       try {
         // 并行初始化无依赖关系的服务，加速启动
-        final mmkvService = MMKVService();
+        final mmkvService = AppPreferencesService();
         late final SettingsService settingsService;
         late final PackageInfo packageInfo;
         await Future.wait([

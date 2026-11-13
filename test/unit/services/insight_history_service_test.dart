@@ -1,42 +1,55 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
 void main() {
   group('InsightHistoryService Tests', () {
     late InsightHistoryService insightHistoryService;
-    late MMKVService mmkvService;
+    late AppPreferencesService prefsService;
     late SettingsService settingsService;
+    late AIAnalysisDatabaseService aiDbService;
 
     setUpAll(() async {
       await TestHarness.initialize();
-      await MMKVService().init();
+      await AppPreferencesService().init();
+      aiDbService = AIAnalysisDatabaseService();
+      await aiDbService.init();
     });
 
     setUp(() async {
-      mmkvService = MMKVService();
-      await mmkvService.clear();
+      prefsService = AppPreferencesService();
+      await prefsService.clear();
+      await aiDbService.deleteAllPeriodicInsights();
       SharedPreferences.resetStatic();
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({kKvEngineMigratedKey: true});
+      prefsService.resetForTesting();
+      await prefsService.init();
       final prefs = await SharedPreferences.getInstance();
 
       settingsService = SettingsService(prefs);
 
       insightHistoryService = InsightHistoryService(
         settingsService: settingsService,
+        aiAnalysisDbService: aiDbService,
       );
-      await Future<void>.delayed(Duration.zero);
+      await insightHistoryService.ensureLoaded();
     });
 
     tearDown(SharedPreferences.resetStatic);
-    tearDownAll(TestHarness.tearDown);
+    tearDownAll(() async {
+      await aiDbService.closeDatabase();
+      await TestHarness.tearDown();
+    });
 
     test('should add and retrieve insights', () async {
-      // 添加一个洞察
       await insightHistoryService.addInsight(
         insight: '测试洞察：这周的记录显示了积极的成长趋势',
         periodType: 'week',
@@ -44,7 +57,6 @@ void main() {
         isAiGenerated: true,
       );
 
-      // 验证洞察已添加
       expect(insightHistoryService.insights.length, 1);
       expect(
         insightHistoryService.insights.first.insight,
@@ -52,10 +64,24 @@ void main() {
       );
       expect(insightHistoryService.insights.first.periodType, 'week');
       expect(insightHistoryService.insights.first.isAiGenerated, true);
+
+      // Should NOT be stored back in KV storage
+      expect(prefsService.containsKey('periodic_insights_history'), isFalse);
+
+      // Reopen via a new InsightHistoryService instance to verify SQLite persistence
+      final reloadedService = InsightHistoryService(
+        settingsService: settingsService,
+        aiAnalysisDbService: aiDbService,
+      );
+      await reloadedService.ensureLoaded();
+      expect(reloadedService.insights.length, 1);
+      expect(
+        reloadedService.insights.first.insight,
+        '测试洞察：这周的记录显示了积极的成长趋势',
+      );
     });
 
     test('should get recent period insight', () async {
-      // 添加一个最近的洞察
       await insightHistoryService.addInsight(
         insight: '月度总结：你在反思中找到了内心的平静',
         periodType: 'month',
@@ -63,13 +89,11 @@ void main() {
         isAiGenerated: true,
       );
 
-      // 获取最近洞察
       final recentInsight = insightHistoryService.getRecentPeriodInsight();
       expect(recentInsight, '月度总结：你在反思中找到了内心的平静');
     });
 
     test('should format insight for daily prompt', () async {
-      // 添加洞察
       await insightHistoryService.addInsight(
         insight: '这周你展现了坚持的力量',
         periodType: 'week',
@@ -77,7 +101,6 @@ void main() {
         isAiGenerated: true,
       );
 
-      // 获取格式化的提示
       final formattedPrompt =
           await insightHistoryService.formatRecentInsightsForDailyPrompt();
 
@@ -87,7 +110,6 @@ void main() {
     });
 
     test('should not save non-AI insights', () async {
-      // 尝试添加非AI生成的洞察
       await insightHistoryService.addInsight(
         insight: '本地生成的洞察',
         periodType: 'week',
@@ -95,12 +117,20 @@ void main() {
         isAiGenerated: false,
       );
 
-      // 验证没有被保存
       expect(insightHistoryService.insights.length, 0);
     });
 
     test('should clean old insights', () async {
-      // 添加最近的洞察
+      final oldInsight = PeriodicInsight(
+        insight: '四个月前的洞察',
+        periodType: 'month',
+        periodLabel: '上季',
+        createdAt: DateTime.now().subtract(const Duration(days: 120)),
+        isAiGenerated: true,
+        dataSignature: 'old_sig',
+      );
+      await aiDbService.savePeriodicInsight(oldInsight);
+
       await insightHistoryService.addInsight(
         insight: '最近的洞察',
         periodType: 'week',
@@ -108,12 +138,17 @@ void main() {
         isAiGenerated: true,
       );
 
-      // 清理过期洞察
-      await insightHistoryService.cleanOldInsights();
+      final reloaded = InsightHistoryService(
+        settingsService: settingsService,
+        aiAnalysisDbService: aiDbService,
+      );
+      await reloaded.ensureLoaded();
+      expect(reloaded.insights.length, 2);
 
-      // 验证最近的洞察仍然存在
-      expect(insightHistoryService.insights.length, 1);
-      expect(insightHistoryService.insights.first.insight, '最近的洞察');
+      await reloaded.cleanOldInsights();
+
+      expect(reloaded.insights.length, 1);
+      expect(reloaded.insights.first.insight, '最近的洞察');
     });
 
     test('same signature replaces instead of piling up', () async {
@@ -127,7 +162,6 @@ void main() {
         );
       }
 
-      // 同一份数据只留最新的一条，不能攒成 5 条把 50 条上限吃光
       expect(insightHistoryService.insights.length, 1);
       expect(insightHistoryService.insights.first.insight, '第4次生成');
     });
@@ -163,12 +197,10 @@ void main() {
         isAiGenerated: true,
       );
 
-      // 没带签名的记录不该被空签名查询命中
       expect(insightHistoryService.getInsightBySignature(''), isNull);
     });
 
     test('previous-insight context keeps one entry per period', () async {
-      // 同一周重复生成过三次（历史数据里可能还留着这种重复）
       for (var i = 0; i < 3; i++) {
         await insightHistoryService.addInsight(
           insight: '本周第$i版',
@@ -186,14 +218,11 @@ void main() {
 
       final context = insightHistoryService.getPreviousInsightsContext();
 
-      // 每个周期只取一条，否则模型就是在参考自己刚写过的东西
       expect(context.contains('上周那版'), true);
       expect('本周第'.allMatches(context).length, 1);
     });
 
     test('context dedups a period even when signatures differ', () async {
-      // 换模型或改提示词版本会让同一周产生不同签名。按签名去重的话两版都会
-      // 进上下文，模型就收到了同一周的两种说法。
       await insightHistoryService.addInsight(
         insight: '旧模型那版',
         periodType: 'week',
@@ -209,13 +238,55 @@ void main() {
         dataSignature: 'week_range_p2_claude',
       );
 
-      // 两条都留在历史里（签名不同，不该互相顶掉）
       expect(insightHistoryService.insights.length, 2);
 
-      // 但喂回给模型的上下文里，这个周期只出现最新的一条
       final context = insightHistoryService.getPreviousInsightsContext();
       expect(context.contains('新模型那版'), true);
       expect(context.contains('旧模型那版'), false);
+    });
+
+    test(
+        'migrates legacy KV periodic_insights_history to SQLite and removes key',
+        () async {
+      await aiDbService.deleteAllPeriodicInsights();
+      SharedPreferences.resetStatic();
+      SharedPreferences.setMockInitialValues({
+        kKvEngineMigratedKey: true,
+        'periodic_insights_history': json.encode([
+          {
+            'insight': '历史洞察A',
+            'periodType': 'week',
+            'periodLabel': '第1周',
+            'createdAt': '2026-07-01T10:00:00.000Z',
+            'isAiGenerated': true,
+            'dataSignature': 'legacy_sig_a',
+          },
+          {
+            'insight': '历史洞察B',
+            'periodType': 'month',
+            'periodLabel': '7月',
+            'createdAt': '2026-07-15T10:00:00.000Z',
+            'isAiGenerated': true,
+            'dataSignature': 'legacy_sig_b',
+          },
+        ]),
+      });
+      prefsService.resetForTesting();
+      await prefsService.init();
+      final prefs = await SharedPreferences.getInstance();
+      final freshSettings = SettingsService(prefs);
+
+      final migratedService = InsightHistoryService(
+        settingsService: freshSettings,
+        aiAnalysisDbService: aiDbService,
+      );
+      await migratedService.ensureLoaded();
+
+      expect(migratedService.insights.length, 2);
+      expect(migratedService.insights.first.insight, '历史洞察B');
+      expect(migratedService.insights.last.insight, '历史洞察A');
+      expect(prefsService.containsKey('periodic_insights_history'), isFalse);
+      expect(prefsService.getBool(kPeriodicInsightsSqliteMigratedKey), isTrue);
     });
   });
 }

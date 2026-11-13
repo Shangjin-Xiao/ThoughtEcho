@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:thoughtecho/models/periodic_insight.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 
 class FakePathProviderPlatform extends Fake
@@ -50,6 +51,7 @@ void main() {
 
     tearDown(() async {
       await service.deleteAllAnalyses();
+      await service.deleteAllPeriodicInsights();
       await service.closeDatabase();
 
       final docDbPath = p.join(tempDir.path, 'ai_analyses.db');
@@ -231,6 +233,127 @@ void main() {
       // searchAnalyses 应该也能安全过滤坏行
       final searchResults = await service.searchAnalyses('Title');
       expect(searchResults.any((a) => a.id == 'valid-row'), isTrue);
+    });
+
+    test(
+        'periodic_insights CRUD, signature deduplication, 50-item cap, and deleteAllAnalyses isolation',
+        () async {
+      final base = DateTime(2026, 8, 1);
+
+      // 保存 55 条，验证保留最新 50 条
+      for (var i = 0; i < 55; i++) {
+        await service.savePeriodicInsight(
+          PeriodicInsight(
+            insight: 'Insight $i',
+            periodType: 'week',
+            periodLabel: '2026年第${(i % 4) + 1}周',
+            createdAt: base.add(Duration(hours: i)),
+            isAiGenerated: true,
+            dataSignature: 'sig_$i',
+          ),
+        );
+      }
+
+      final afterCap = await service.getPeriodicInsights(limit: 100);
+      expect(afterCap.length, equals(50));
+      expect(afterCap.first.insight, equals('Insight 54'));
+      expect(afterCap.last.insight, equals('Insight 5'));
+
+      // 相同 dataSignature 应覆盖旧记录，不产生重复条目
+      await service.savePeriodicInsight(
+        PeriodicInsight(
+          insight: 'Insight 54 updated',
+          periodType: 'week',
+          periodLabel: '2026年第3周',
+          createdAt: base.add(const Duration(hours: 60)),
+          isAiGenerated: true,
+          dataSignature: 'sig_54',
+        ),
+      );
+      final afterDedup = await service.getPeriodicInsights(limit: 100);
+      expect(afterDedup.length, equals(50));
+      expect(
+        afterDedup.where((e) => e.dataSignature == 'sig_54').single.insight,
+        equals('Insight 54 updated'),
+      );
+
+      // 删除早于某个时间点的记录
+      final removed = await service.deletePeriodicInsightsOlderThan(
+        base.add(const Duration(hours: 50)),
+      );
+      expect(removed, equals(45));
+      final remaining = await service.getPeriodicInsights(limit: 100);
+      expect(remaining.length, equals(5));
+
+      // deleteAllAnalyses 不得清空 periodic_insights
+      await service.deleteAllAnalyses();
+      final stillThere = await service.getPeriodicInsights(limit: 100);
+      expect(stillThere.length, equals(5));
+    });
+
+    test(
+        'upgrades v1 database to v2 preserving ai_analyses and creating periodic_insights',
+        () async {
+      await service.closeDatabase();
+
+      final dbPath = p.join(tempDir.path, 'ai_analyses.db');
+      if (File(dbPath).existsSync()) {
+        File(dbPath).deleteSync();
+      }
+
+      // 构造 v1 数据库（仅有 ai_analyses，无 periodic_insights）
+      final v1Db = await databaseFactory.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(
+          version: 1,
+          onCreate: (db, version) async {
+            await db.execute('''
+              CREATE TABLE ai_analyses(
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                analysis_type TEXT NOT NULL,
+                analysis_style TEXT NOT NULL,
+                custom_prompt TEXT,
+                created_at TEXT NOT NULL,
+                related_quote_ids TEXT,
+                quote_count INTEGER
+              )
+            ''');
+          },
+        ),
+      );
+      await v1Db.insert('ai_analyses', {
+        'id': 'v1-analysis-1',
+        'title': 'V1 Analysis',
+        'content': 'Preserved content',
+        'analysis_type': 'comprehensive',
+        'analysis_style': 'professional',
+        'created_at': DateTime(2026, 7, 1).toIso8601String(),
+        'quote_count': 3,
+      });
+      await v1Db.close();
+
+      // 用 AIAnalysisDatabaseService 重新打开触发 v1 -> v2 升级
+      await service.init();
+      final migratedAnalyses = await service.getAllAnalyses();
+      expect(migratedAnalyses.length, equals(1));
+      expect(migratedAnalyses.first.id, equals('v1-analysis-1'));
+      expect(migratedAnalyses.first.title, equals('V1 Analysis'));
+
+      await service.savePeriodicInsight(
+        PeriodicInsight(
+          insight: 'Post-upgrade insight',
+          periodType: 'month',
+          periodLabel: '2026年7月',
+          createdAt: DateTime(2026, 8, 1),
+          isAiGenerated: false,
+          dataSignature: 'upgrade_sig',
+        ),
+      );
+      final insights = await service.getPeriodicInsights();
+      expect(insights.length, equals(1));
+      expect(insights.first.insight, equals('Post-upgrade insight'));
     });
   });
 }
