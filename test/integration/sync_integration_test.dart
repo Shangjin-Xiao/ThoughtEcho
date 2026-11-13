@@ -114,6 +114,23 @@ void main() {
       expect(approval.mediaManifest?.fileSizes, {'images/photo.jpg': 12});
     });
 
+    test('后台 isolate 扫描媒体清单不会捕获不可发送对象', () async {
+      final tempDir = await Directory.systemTemp.createTemp('media_manifest');
+      try {
+        final imagesDir = Directory('${tempDir.path}/images');
+        await imagesDir.create(recursive: true);
+        await File('${imagesDir.path}/photo.jpg')
+            .writeAsBytes(List.filled(12, 0));
+
+        final manifest =
+            await NoteSyncService.scanMediaManifestInIsolate(tempDir.path);
+
+        expect(manifest, isA<MediaSyncManifest>());
+      } finally {
+        await tempDir.delete(recursive: true);
+      }
+    });
+
     test('旧版同步审批响应自动使用全量媒体', () {
       final approval = NoteSyncService.parseSyncIntentApproval({
         'approved': true,
