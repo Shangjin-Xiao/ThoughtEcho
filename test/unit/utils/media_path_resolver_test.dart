@@ -36,6 +36,26 @@ void main() {
       );
     });
 
+    test('兼容历史非规范斜杠与点段路径 (media// 和 media/./)', () {
+      expect(
+        MediaPathResolver.mediaRelativeTail('media//images/a.jpg'),
+        'media/images/a.jpg',
+      );
+      expect(
+        MediaPathResolver.mediaRelativeTail(
+          '$iosOldContainer/media/./images/a.jpg',
+        ),
+        'media/images/a.jpg',
+      );
+      expect(
+        MediaPathResolver.resolveToLocal(
+          '$iosOldContainer/media//images/a.jpg',
+          iosNewContainer,
+        ),
+        '$iosNewContainer/media/images/a.jpg',
+      );
+    });
+
     test('取最靠近文件名的 media 段，避免上层同名目录误截', () {
       expect(
         MediaPathResolver.mediaRelativeTail(
@@ -47,6 +67,7 @@ void main() {
 
     test('无法识别的路径返回 null', () {
       expect(MediaPathResolver.mediaRelativeTail(''), isNull);
+      expect(MediaPathResolver.mediaRelativeTail('media/images/'), isNull);
       expect(MediaPathResolver.mediaRelativeTail('/tmp/photo.jpg'), isNull);
       // media 下的未知子目录不参与同步，不做重定基
       expect(

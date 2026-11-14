@@ -275,6 +275,38 @@ class MediaReferenceService {
     }
   }
 
+  /// 批量提取本地所有媒体引用的规范化 Posix 相对尾段集合。
+  ///
+  /// 通过单条 SQL 查询 (`SELECT DISTINCT file_path FROM media_references`) 加载全量路径，
+  /// 并在内存中通过 [MediaPathResolver.mediaRelativeTail] 统一归一化为 Posix 相对尾段，
+  /// 供 WebDAV 同步等模块进行 O(1) 复杂度的本地引用判定，避免循环逐项数据库查询及全表扫描。
+  static Future<Set<String>> getAllReferencedMediaTailSet() async {
+    try {
+      final db = await database;
+      final rows = await db.rawQuery(
+        'SELECT DISTINCT file_path FROM $_tableName',
+      );
+      final tailSet = <String>{};
+      for (final row in rows) {
+        final rawPath = row['file_path'] as String?;
+        if (rawPath == null || rawPath.isEmpty) continue;
+        final tail = MediaPathResolver.mediaRelativeTail(rawPath);
+        if (tail != null) {
+          tailSet.add(tail);
+        }
+      }
+      return tailSet;
+    } catch (e, stackTrace) {
+      logError(
+        '批量提取所有媒体相对路径尾段失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
+      rethrow;
+    }
+  }
+
   /// 获取笔记引用的所有媒体文件
   static Future<List<String>> getReferencedFiles(String quoteId) async {
     try {
