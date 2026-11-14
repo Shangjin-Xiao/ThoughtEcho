@@ -196,12 +196,12 @@ class DraftService {
   }
 
   Future<void> _migrateLegacyKvDraftsIfNeeded(Database db) async {
-    _legacyMigrationAttemptedInSession = true;
     try {
       final prefs = AppPreferencesService();
       await prefs.init();
       if (prefs.getBool(kDraftsSqliteMigratedKey) == true) {
         _hasPendingLegacyDrafts = false;
+        _legacyMigrationAttemptedInSession = true;
         return;
       }
 
@@ -277,6 +277,7 @@ class DraftService {
       } else {
         _hasPendingLegacyDrafts = true;
       }
+      _legacyMigrationAttemptedInSession = true;
     } catch (e, stackTrace) {
       _hasPendingLegacyDrafts = true;
       logError(
@@ -353,16 +354,21 @@ class DraftService {
 
   Future<List<Map<String, dynamic>>> _readAllPendingKvDrafts() async {
     final results = <Map<String, dynamic>>[];
-    final prefs = AppPreferencesService();
-    await prefs.init();
-    final keys = prefs.getAllKeysStrict().where((k) => k.startsWith('draft_'));
-    for (final key in keys) {
-      final normalizedId = _normalizeId(key.substring(6));
-      if (normalizedId.isEmpty) continue;
-      final data = _parseDraftData(prefs.getString(key));
-      if (data != null) {
-        results.add({'id': normalizedId, ...data});
+    try {
+      final prefs = AppPreferencesService();
+      await prefs.init();
+      final keys =
+          prefs.getAllKeysStrict().where((k) => k.startsWith('draft_'));
+      for (final key in keys) {
+        final normalizedId = _normalizeId(key.substring(6));
+        if (normalizedId.isEmpty) continue;
+        final data = _parseDraftData(prefs.getString(key));
+        if (data != null) {
+          results.add({'id': normalizedId, ...data});
+        }
       }
+    } catch (e) {
+      logDebug('读取所有待迁移 KV 草稿失败: $e');
     }
     return results;
   }

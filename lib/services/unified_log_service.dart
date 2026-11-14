@@ -741,16 +741,41 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     }
   }
 
-  int _logLevelRequestSeq = 0;
+  Future<void> _logLevelLock = Future<void>.value();
+
+  Future<T> _withLogLevelLock<T>(Future<T> Function() action) {
+    final result = Completer<T>();
+    Zone.root.run(() {
+      final completer = Completer<void>();
+      final previous = _logLevelLock;
+      _logLevelLock = completer.future;
+      previous.then((_) => action()).then(
+        (value) {
+          if (!result.isCompleted) {
+            result.complete(value);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (!result.isCompleted) {
+            result.completeError(error, stackTrace);
+          }
+        },
+      ).whenComplete(() {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      });
+    });
+    return result.future;
+  }
 
   /// 设置新的日志级别并保存
-  Future<void> setLogLevel(UnifiedLogLevel newLevel) async {
-    if (_isDisposed) return;
-    if (_currentLevel != newLevel) {
-      final oldLevel = _currentLevel;
-      final requestSeq = ++_logLevelRequestSeq;
-      _currentLevel = newLevel;
+  Future<void> setLogLevel(UnifiedLogLevel newLevel) {
+    return _withLogLevelLock(() async {
+      if (_isDisposed) return;
+      if (_currentLevel == newLevel) return;
 
+      final oldLevel = _currentLevel;
       var levelSaved = false;
       try {
         final mmkv = AppPreferencesService();
@@ -761,6 +786,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           throw StateError('保存日志级别偏好返回 false');
         }
 
+        _currentLevel = newLevel;
         // 更新 logging_flutter 的级别
         _updateLoggingFlutterLevel();
 
@@ -770,13 +796,29 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           source: 'UnifiedLogService',
         );
       } catch (e) {
-        if (requestSeq == _logLevelRequestSeq) {
-          _currentLevel = oldLevel;
-          if (levelSaved) {
-            try {
-              await AppPreferencesService()
-                  .setInt(_logLevelKey, oldLevel.index);
-            } catch (_) {}
+        _currentLevel = oldLevel;
+        if (levelSaved) {
+          try {
+            final rollbackSaved = await AppPreferencesService()
+                .setInt(_logLevelKey, oldLevel.index);
+            if (!rollbackSaved) {
+              _logger.warning(
+                '回滚日志级别偏好返回 false: $_logLevelKey -> ${oldLevel.name}',
+              );
+              log(
+                UnifiedLogLevel.warning,
+                '回滚日志级别偏好失败（返回 false）',
+                source: 'UnifiedLogService',
+              );
+            }
+          } catch (rollbackError) {
+            _logger.warning('回滚日志级别偏好失败: $rollbackError');
+            log(
+              UnifiedLogLevel.warning,
+              '回滚日志级别偏好异常',
+              error: rollbackError.toString(),
+              source: 'UnifiedLogService',
+            );
           }
         }
         _logger.warning('设置日志级别失败: $e');
@@ -797,7 +839,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           _notifyScheduled = false;
         });
       }
-    }
+    });
   }
 
   /// 清除所有内存中的日志
