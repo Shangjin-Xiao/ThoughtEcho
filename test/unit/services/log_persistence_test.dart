@@ -240,5 +240,128 @@ void main() {
       expect(saved.length, 1);
       expect(saved.first, contains('关闭前写入日志'));
     });
+
+    test('deleteOldLogs 在未超阈值时不丢弃待保存日志并在刷盘后完整持久化', () async {
+      final storage = WebLogStorage(
+        saveDebounceDuration: const Duration(milliseconds: 500),
+      );
+      await storage.initialize();
+
+      await storage.insertLog({
+        'timestamp': DateTime.now().toIso8601String(),
+        'level': 'info',
+        'message': '常规清理保留日志',
+        'source': 'RoutineCleanupTest',
+        'error': null,
+        'stack_trace': null,
+      });
+
+      // 模拟 UnifiedLogService 在批量写入后立即调用的 deleteOldLogs(1000)
+      final deleted = await storage.deleteOldLogs(1000);
+      expect(deleted, 0);
+      expect(storage.needsSaveForTesting, isTrue);
+
+      // 防抖时间内磁盘尚未刷盘
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('app_logs_storage'), isNull);
+
+      // 显式 flushLogs 应当完整写入磁盘
+      await storage.flushLogs();
+      expect(storage.needsSaveForTesting, isFalse);
+
+      final diskLogs = prefs.getStringList('app_logs_storage') ?? [];
+      expect(diskLogs.length, 1);
+      expect(diskLogs.first, contains('常规清理保留日志'));
+
+      // 验证全新实例能读取到持久化日志
+      final reloadedStorage = WebLogStorage();
+      await reloadedStorage.initialize();
+      expect(await reloadedStorage.getLogCount(), 1);
+      final reloadedLogs = await reloadedStorage.queryLogs(limit: 10);
+      expect(reloadedLogs.first['message'], contains('常规清理保留日志'));
+
+      await storage.close();
+      await reloadedStorage.close();
+    });
+
+    test('deleteOldLogs 在未超阈值时后台防抖定时器到期自动持久化', () async {
+      final storage = WebLogStorage(
+        saveDebounceDuration: const Duration(milliseconds: 50),
+      );
+      await storage.initialize();
+
+      await storage.insertLog({
+        'timestamp': DateTime.now().toIso8601String(),
+        'level': 'warning',
+        'message': '定时自动刷盘清理测试',
+        'source': 'DebounceCleanupTest',
+        'error': null,
+        'stack_trace': null,
+      });
+
+      final deleted = await storage.deleteOldLogs(1000);
+      expect(deleted, 0);
+
+      // 等待防抖定时器触发
+      await Future.delayed(const Duration(milliseconds: 80));
+
+      final prefs = await SharedPreferences.getInstance();
+      final diskLogs = prefs.getStringList('app_logs_storage') ?? [];
+      expect(diskLogs.length, 1);
+      expect(diskLogs.first, contains('定时自动刷盘清理测试'));
+
+      await storage.close();
+    });
+
+    test('持久化抛出异常时保留待保存状态且显式刷盘抛错并在重试后成功写入', () async {
+      final storage = WebLogStorage(
+        saveDebounceDuration: const Duration(milliseconds: 50),
+      );
+      await storage.initialize();
+
+      await storage.insertLog({
+        'timestamp': DateTime.now().toIso8601String(),
+        'level': 'error',
+        'message': '异常重试测试日志',
+        'source': 'RetryTest',
+        'error': null,
+        'stack_trace': null,
+      });
+
+      // 模拟持久化失败（如配额超限或存储只读）
+      storage.simulateSaveFailure = true;
+
+      // 等待后台防抖定时器执行并失败，验证不会产生未捕获的异步异常 crash
+      await Future.delayed(const Duration(milliseconds: 80));
+
+      // 失败后 _needsSave 应当被恢复为 true
+      expect(storage.needsSaveForTesting, isTrue);
+
+      // 显式调用 flushLogs 时应当向调用方抛出错误
+      expect(() => storage.flushLogs(), throwsA(isA<Exception>()));
+
+      // 待保存标记依然保持 true
+      expect(storage.needsSaveForTesting, isTrue);
+
+      // 恢复存储可写状态
+      storage.simulateSaveFailure = false;
+
+      // 再次调用 flushLogs 应当成功重试并完成刷盘
+      await storage.flushLogs();
+      expect(storage.needsSaveForTesting, isFalse);
+
+      final prefs = await SharedPreferences.getInstance();
+      final diskLogs = prefs.getStringList('app_logs_storage') ?? [];
+      expect(diskLogs.length, 1);
+      expect(diskLogs.first, contains('异常重试测试日志'));
+
+      // 重新实例化验证数据持久性
+      final reloadedStorage = WebLogStorage();
+      await reloadedStorage.initialize();
+      expect(await reloadedStorage.getLogCount(), 1);
+
+      await storage.close();
+      await reloadedStorage.close();
+    });
   });
 }

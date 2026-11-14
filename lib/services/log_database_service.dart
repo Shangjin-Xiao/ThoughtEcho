@@ -259,6 +259,12 @@ class WebLogStorage implements LogStorage {
   Future<void>? _inFlightSave;
   bool _needsSave = false;
 
+  @visibleForTesting
+  bool simulateSaveFailure = false;
+
+  @visibleForTesting
+  bool get needsSaveForTesting => _needsSave;
+
   WebLogStorage({
     this.saveDebounceDuration = defaultSaveDebounceDuration,
   });
@@ -314,9 +320,13 @@ class WebLogStorage implements LogStorage {
   }
 
   // 执行持久化任务
-  Future<void> _performSave() async {
+  Future<void> _performSave({bool rethrowOnError = false}) async {
     while (_inFlightSave != null) {
-      await _inFlightSave;
+      try {
+        await _inFlightSave;
+      } catch (_) {
+        // 等待前序写入完成或报错
+      }
     }
 
     if (!_needsSave || _logsCache == null) {
@@ -324,37 +334,46 @@ class WebLogStorage implements LogStorage {
     }
 
     final completer = Completer<void>();
+    // 监听错误避免后台异步未捕获异常导致 crash
+    completer.future.catchError((_) {});
     _inFlightSave = completer.future;
 
-    try {
-      final logsToSave = List<LogEntry>.from(_logsCache!);
-      final countToSave = _logCount;
-      _needsSave = false;
+    final logsToSave = List<LogEntry>.from(_logsCache!);
+    final countToSave = _logCount;
+    _needsSave = false;
 
+    try {
+      if (simulateSaveFailure) {
+        throw Exception('Simulated storage quota exceeded');
+      }
       final List<String> logStrings =
           logsToSave.map((log) => log.toJson()).toList();
       await _prefs.setStringList(_logStorageKey, logStrings);
       await _prefs.setInt(_logCountKey, countToSave);
       completer.complete();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _needsSave = true;
       logDebug('Web平台：保存日志失败: $e');
-      completer.complete();
+      completer.completeError(e, stackTrace);
+      if (rethrowOnError) {
+        rethrow;
+      }
     } finally {
       _inFlightSave = null;
     }
   }
 
   // 同步等待未完成持久化任务并立即刷盘
-  Future<void> _flushPendingSave() async {
+  Future<void> _flushPendingSave({bool rethrowOnError = false}) async {
     if (!_initialized) return;
     _saveTimer?.cancel();
     _saveTimer = null;
-    await _performSave();
+    await _performSave(rethrowOnError: rethrowOnError);
   }
 
   /// 强制立即刷盘，持久化全部内存日志到 SharedPreferences
   Future<void> flushLogs() async {
-    await _flushPendingSave();
+    await _flushPendingSave(rethrowOnError: true);
   }
 
   // 保存所有日志到 SharedPreferences
@@ -463,28 +482,40 @@ class WebLogStorage implements LogStorage {
   @override
   Future<int> deleteOldLogs(int maxLogCount) async {
     await _ensureInitialized();
-    _cancelPendingSave();
-    while (_inFlightSave != null) {
-      await _inFlightSave;
-    }
-    _cancelPendingSave();
-
-    var logs = _logsCache ?? [];
+    final logs = _logsCache ?? [];
 
     if (logs.length <= maxLogCount) {
       return 0;
     }
 
-    // 按时间排序（最旧的在前）
-    logs.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    while (_inFlightSave != null) {
+      try {
+        await _inFlightSave;
+      } catch (_) {}
+    }
 
-    final deleteCount = logs.length - maxLogCount;
-    _logsCache = logs.sublist(deleteCount); // 保留最新的 maxLogCount 条
+    final currentLogs = _logsCache ?? [];
+    if (currentLogs.length <= maxLogCount) {
+      return 0;
+    }
+
+    // 按时间升序排序（最旧的在前面）
+    currentLogs.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    final deleteCount = currentLogs.length - maxLogCount;
+    _logsCache = currentLogs.sublist(deleteCount); // 保留最新的 maxLogCount 条
     _logCount = _logsCache!.length;
 
-    await _saveLogs(_logsCache!);
-    await _prefs.setInt(_logCountKey, _logCount);
-    _needsSave = false;
+    try {
+      await _saveLogs(_logsCache!);
+      await _prefs.setInt(_logCountKey, _logCount);
+      _needsSave = false;
+    } catch (e) {
+      _needsSave = true;
+      rethrow;
+    }
 
     return deleteCount;
   }
@@ -494,7 +525,9 @@ class WebLogStorage implements LogStorage {
     await _ensureInitialized();
     _cancelPendingSave();
     while (_inFlightSave != null) {
-      await _inFlightSave;
+      try {
+        await _inFlightSave;
+      } catch (_) {}
     }
     _cancelPendingSave();
 
@@ -521,7 +554,7 @@ class WebLogStorage implements LogStorage {
 
   @override
   Future<void> close() async {
-    await _flushPendingSave();
+    await _flushPendingSave(rethrowOnError: true);
   }
 }
 
