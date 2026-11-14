@@ -776,14 +776,23 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       if (_currentLevel == newLevel) return;
 
       final oldLevel = _currentLevel;
-      var levelSaved = false;
+      final mmkv = AppPreferencesService();
+      bool? previousUserHasSet;
+      var levelAttempted = false;
+      var userSetAttempted = false;
       try {
-        final mmkv = AppPreferencesService();
-        levelSaved = await mmkv.setInt(_logLevelKey, newLevel.index);
-        // 标记用户已手动设置过日志级别，后续启动不会自动重置
-        final userSetSaved = await mmkv.setBool(_logLevelUserSetKey, true);
-        if (!levelSaved || !userSetSaved) {
+        await mmkv.init();
+        previousUserHasSet = mmkv.getBool(_logLevelUserSetKey);
+        levelAttempted = true;
+        final levelSaved = await mmkv.setInt(_logLevelKey, newLevel.index);
+        if (!levelSaved) {
           throw StateError('保存日志级别偏好返回 false');
+        }
+        // 标记用户已手动设置过日志级别，后续启动不会自动重置
+        userSetAttempted = true;
+        final userSetSaved = await mmkv.setBool(_logLevelUserSetKey, true);
+        if (!userSetSaved) {
+          throw StateError('保存用户日志级别设置标记返回 false');
         }
 
         _currentLevel = newLevel;
@@ -797,10 +806,10 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         );
       } catch (e) {
         _currentLevel = oldLevel;
-        if (levelSaved) {
+        if (levelAttempted) {
           try {
-            final rollbackSaved = await AppPreferencesService()
-                .setInt(_logLevelKey, oldLevel.index);
+            final rollbackSaved =
+                await mmkv.setInt(_logLevelKey, oldLevel.index);
             if (!rollbackSaved) {
               _logger.warning(
                 '回滚日志级别偏好返回 false: $_logLevelKey -> ${oldLevel.name}',
@@ -816,6 +825,29 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
             log(
               UnifiedLogLevel.warning,
               '回滚日志级别偏好异常',
+              error: rollbackError.toString(),
+              source: 'UnifiedLogService',
+            );
+          }
+        }
+        if (userSetAttempted) {
+          try {
+            final userSetRestored = previousUserHasSet == null
+                ? await mmkv.remove(_logLevelUserSetKey)
+                : await mmkv.setBool(_logLevelUserSetKey, previousUserHasSet);
+            if (!userSetRestored) {
+              _logger.warning('回滚用户日志级别设置标记返回 false: $_logLevelUserSetKey');
+              log(
+                UnifiedLogLevel.warning,
+                '回滚用户日志级别设置标记失败（返回 false）',
+                source: 'UnifiedLogService',
+              );
+            }
+          } catch (rollbackError) {
+            _logger.warning('回滚用户日志级别设置标记失败: $rollbackError');
+            log(
+              UnifiedLogLevel.warning,
+              '回滚用户日志级别设置标记异常',
               error: rollbackError.toString(),
               source: 'UnifiedLogService',
             );

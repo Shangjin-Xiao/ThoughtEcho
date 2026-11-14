@@ -309,12 +309,25 @@ void main() {
       expect(service.currentLevel, UnifiedLogLevel.info);
       expect(logging.Logger.root.level, logging.Level.INFO);
 
+      // Pretend user_set flag was previously absent, and fail writing it
+      adapter.values.remove('log_level_user_set');
       adapter.onSetBool = (key, value) async => false;
 
       await service.setLogLevel(UnifiedLogLevel.debug);
 
       expect(service.currentLevel, UnifiedLogLevel.info);
       expect(logging.Logger.root.level, logging.Level.INFO);
+      expect(
+        adapter.values['log_level'],
+        UnifiedLogLevel.info.index,
+      );
+      expect(adapter.values.containsKey('log_level_user_set'), isFalse);
+
+      // Also verify non-null false user_set flag is restored when setBool fails on true
+      adapter.values['log_level_user_set'] = false;
+      adapter.onSetBool = (key, value) async => !value;
+      await service.setLogLevel(UnifiedLogLevel.debug);
+      expect(adapter.values['log_level_user_set'], isFalse);
       expect(
         adapter.values['log_level'],
         UnifiedLogLevel.info.index,
