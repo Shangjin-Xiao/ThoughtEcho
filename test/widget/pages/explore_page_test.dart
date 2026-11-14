@@ -409,11 +409,72 @@ void main() {
       equals(1),
     );
 
+    // 入场动效进行期间（150ms）：存在 Opacity 与 Transform 且内部包裹 RepaintBoundary 隔离
+    await tester.pump(const Duration(milliseconds: 150));
+    final entranceBuilder = find.byType(TweenAnimationBuilder<double>);
+    final entranceOpacity = find.descendant(
+      of: entranceBuilder,
+      matching: find.byType(Opacity),
+    );
+    final entranceTransform = find.descendant(
+      of: entranceOpacity,
+      matching: find.byType(Transform),
+    );
+    final entranceRepaintBoundary = find.descendant(
+      of: entranceTransform,
+      matching: find.byType(RepaintBoundary),
+    );
+
+    expect(entranceOpacity, findsOneWidget);
+    expect(entranceTransform, findsOneWidget);
+    expect(entranceRepaintBoundary, findsOneWidget);
+    expect(
+      find.descendant(
+        of: entranceRepaintBoundary,
+        matching: find.text(l10n.dataOverview),
+      ),
+      findsOneWidget,
+    );
+
     // 300ms 之后必须完全落位
-    await tester.pump(const Duration(milliseconds: 320));
+    await tester.pump(const Duration(milliseconds: 170));
     expect(tester.binding.hasScheduledFrame, isFalse);
 
     await tester.pumpAndSettle();
+
+    // 动画完成后完成态解构：_buildEntrance 生成的 Opacity 与 Transform 节点被正确解构移除，
+    // RepaintBoundary 持续保护概览内容
+    expect(
+      find.descendant(
+        of: entranceBuilder,
+        matching: find.byType(Opacity),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.ancestor(
+        of: find.byType(RepaintBoundary),
+        matching: find.descendant(
+          of: entranceBuilder,
+          matching: find.byType(Transform),
+        ),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: entranceBuilder,
+        matching: find.byType(RepaintBoundary),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(RepaintBoundary),
+        matching: find.text(l10n.dataOverview),
+      ),
+      findsOneWidget,
+    );
   });
 
   // 回归：数据库在启动/同步期间会连续 notifyListeners 多次。

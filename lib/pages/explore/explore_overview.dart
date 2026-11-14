@@ -88,8 +88,9 @@ extension _ExploreOverview on _ExplorePageState {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
       tween: Tween(begin: 0.0, end: 1.0),
-      child: child,
+      child: RepaintBoundary(child: child),
       builder: (context, value, child) {
+        if (value >= 1.0) return child!;
         return Opacity(
           opacity: value,
           child: Transform.translate(
