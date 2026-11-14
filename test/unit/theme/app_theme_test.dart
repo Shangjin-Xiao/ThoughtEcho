@@ -427,5 +427,16 @@ void main() {
     expect(appTheme.customColor, Colors.blue);
     expect(appTheme.useCustomColor, isFalse);
     expect(appTheme.useDynamicColor, isTrue);
+
+    // 删除 custom_color 键并保留 use_custom_color=true 时，应回退到默认蓝色且保留开关状态
+    await storage.setInt('custom_color', Colors.purple.toARGB32());
+    await storage.setBool('use_custom_color', true);
+    await appTheme.reloadThemeFromStorage();
+    expect(appTheme.customColor, const Color(0xff9c27b0));
+
+    await storage.remove('custom_color');
+    await appTheme.reloadThemeFromStorage();
+    expect(appTheme.customColor, Colors.blue);
+    expect(appTheme.useCustomColor, isTrue);
   });
 }

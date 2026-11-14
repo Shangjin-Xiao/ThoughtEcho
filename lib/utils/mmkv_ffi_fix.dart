@@ -1213,13 +1213,22 @@ class SafeMMKV {
     final preserveInsightsMigrated =
         _storage!.getBool(kPeriodicInsightsSqliteMigratedKey) == true;
     final result = await _storage!.clear();
-    await _storage!.setBool(kLegacyMmkvMigrationCompleteKey, true);
-    await _storage!.setBool(kKvEngineMigratedKey, true);
+    var restoredOk = await _storage!.setBool(
+      kLegacyMmkvMigrationCompleteKey,
+      true,
+    );
+    restoredOk =
+        await _storage!.setBool(kKvEngineMigratedKey, true) && restoredOk;
     if (preserveDraftsMigrated) {
-      await _storage!.setBool(kDraftsSqliteMigratedKey, true);
+      restoredOk =
+          await _storage!.setBool(kDraftsSqliteMigratedKey, true) && restoredOk;
     }
     if (preserveInsightsMigrated) {
-      await _storage!.setBool(kPeriodicInsightsSqliteMigratedKey, true);
+      restoredOk = await _storage!.setBool(
+            kPeriodicInsightsSqliteMigratedKey,
+            true,
+          ) &&
+          restoredOk;
     }
     final legacy = _legacyMmkvAdapter;
     if (legacy != null) {
@@ -1237,7 +1246,7 @@ class SafeMMKV {
         logDebug('SafeMMKV: MMKV 镜像清空 clear() 失败: $e');
       }
     }
-    return result;
+    return result && restoredOk;
   }
 
   /// 获取所有键名

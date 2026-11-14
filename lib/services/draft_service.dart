@@ -31,6 +31,7 @@ class DraftService {
   Database? _database;
   String? _testDatabasePath;
   bool _hasPendingLegacyDrafts = false;
+  bool _legacyMigrationAttemptedInSession = false;
   Future<void> _dbLock = Future<void>.value();
 
   Future<T> _withDbLock<T>(Future<T> Function() action) {
@@ -83,6 +84,7 @@ class DraftService {
       _database = null;
       _testDatabasePath = null;
       _hasPendingLegacyDrafts = false;
+      _legacyMigrationAttemptedInSession = false;
       if (db != null && db.isOpen) {
         try {
           await db.close();
@@ -187,11 +189,14 @@ class DraftService {
 
   Future<Database> _ensureDatabaseAndMigrated() async {
     final db = await _openDatabase();
-    await _migrateLegacyKvDraftsIfNeeded(db);
+    if (!_legacyMigrationAttemptedInSession) {
+      await _migrateLegacyKvDraftsIfNeeded(db);
+    }
     return db;
   }
 
   Future<void> _migrateLegacyKvDraftsIfNeeded(Database db) async {
+    _legacyMigrationAttemptedInSession = true;
     try {
       final prefs = AppPreferencesService();
       await prefs.init();
@@ -201,7 +206,7 @@ class DraftService {
       }
 
       final legacyKeys = prefs
-          .getAllKeys()
+          .getAllKeysStrict()
           .where((k) => k.startsWith('draft_'))
           .toList(growable: false);
 
@@ -284,55 +289,54 @@ class DraftService {
   }
 
   Future<void> _removeMatchingPendingKvDrafts(String normalizedId) async {
-    try {
-      final prefs = AppPreferencesService();
-      await prefs.init();
-      if (prefs.getBool(kDraftsSqliteMigratedKey) == true &&
-          !_hasPendingLegacyDrafts) {
-        return;
+    final prefs = AppPreferencesService();
+    await prefs.init();
+    if (prefs.getBool(kDraftsSqliteMigratedKey) == true &&
+        !_hasPendingLegacyDrafts) {
+      return;
+    }
+    final keys = prefs
+        .getAllKeysStrict()
+        .where(
+          (k) =>
+              k.startsWith('draft_') &&
+              _normalizeId(k.substring(6)) == normalizedId,
+        )
+        .toList(growable: false);
+    for (final key in keys) {
+      final removed = await prefs.remove(key);
+      if (!removed) {
+        throw StateError('删除待迁移 KV 草稿键失败: $key');
       }
-      final keys = prefs
-          .getAllKeys()
-          .where(
-            (k) =>
-                k.startsWith('draft_') &&
-                _normalizeId(k.substring(6)) == normalizedId,
-          )
-          .toList(growable: false);
-      for (final key in keys) {
-        await prefs.remove(key);
-      }
-    } catch (e) {
-      logDebug('清理待迁移 KV 草稿键失败: $e');
     }
   }
 
   Future<void> _removeAllPendingKvDrafts() async {
     final prefs = AppPreferencesService();
     await prefs.init();
+    if (prefs.getBool(kDraftsSqliteMigratedKey) == true &&
+        !_hasPendingLegacyDrafts) {
+      return;
+    }
     final keys = prefs
-        .getAllKeys()
+        .getAllKeysStrict()
         .where((k) => k.startsWith('draft_'))
         .toList(growable: false);
-    var allRemoved = true;
     for (final key in keys) {
       if (!await prefs.remove(key)) {
-        allRemoved = false;
+        _hasPendingLegacyDrafts = true;
+        throw StateError('删除待迁移 KV 草稿键失败: $key');
       }
     }
-    if (allRemoved) {
-      final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
-      _hasPendingLegacyDrafts = !flagSaved;
-    } else {
-      _hasPendingLegacyDrafts = true;
-    }
+    final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
+    _hasPendingLegacyDrafts = !flagSaved;
   }
 
   Future<Map<String, dynamic>?> _readPendingKvDraft(String normalizedId) async {
     try {
       final prefs = AppPreferencesService();
       await prefs.init();
-      final keys = prefs.getAllKeys().where(
+      final keys = prefs.getAllKeysStrict().where(
             (k) =>
                 k.startsWith('draft_') &&
                 _normalizeId(k.substring(6)) == normalizedId,
@@ -351,7 +355,7 @@ class DraftService {
     final results = <Map<String, dynamic>>[];
     final prefs = AppPreferencesService();
     await prefs.init();
-    final keys = prefs.getAllKeys().where((k) => k.startsWith('draft_'));
+    final keys = prefs.getAllKeysStrict().where((k) => k.startsWith('draft_'));
     for (final key in keys) {
       final normalizedId = _normalizeId(key.substring(6));
       if (normalizedId.isEmpty) continue;
@@ -657,7 +661,7 @@ class DraftService {
           final prefs = AppPreferencesService();
           await prefs.init();
           final pendingKeys =
-              prefs.getAllKeys().where((k) => k.startsWith('draft_'));
+              prefs.getAllKeysStrict().where((k) => k.startsWith('draft_'));
           for (final key in pendingKeys) {
             final raw = prefs.getString(key);
             if (raw == null) {

@@ -741,16 +741,20 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     }
   }
 
+  int _logLevelRequestSeq = 0;
+
   /// 设置新的日志级别并保存
   Future<void> setLogLevel(UnifiedLogLevel newLevel) async {
     if (_isDisposed) return;
     if (_currentLevel != newLevel) {
       final oldLevel = _currentLevel;
+      final requestSeq = ++_logLevelRequestSeq;
       _currentLevel = newLevel;
 
+      var levelSaved = false;
       try {
         final mmkv = AppPreferencesService();
-        final levelSaved = await mmkv.setInt(_logLevelKey, newLevel.index);
+        levelSaved = await mmkv.setInt(_logLevelKey, newLevel.index);
         // 标记用户已手动设置过日志级别，后续启动不会自动重置
         final userSetSaved = await mmkv.setBool(_logLevelUserSetKey, true);
         if (!levelSaved || !userSetSaved) {
@@ -766,7 +770,15 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           source: 'UnifiedLogService',
         );
       } catch (e) {
-        _currentLevel = oldLevel;
+        if (requestSeq == _logLevelRequestSeq) {
+          _currentLevel = oldLevel;
+          if (levelSaved) {
+            try {
+              await AppPreferencesService()
+                  .setInt(_logLevelKey, oldLevel.index);
+            } catch (_) {}
+          }
+        }
         _logger.warning('设置日志级别失败: $e');
         log(
           UnifiedLogLevel.error,

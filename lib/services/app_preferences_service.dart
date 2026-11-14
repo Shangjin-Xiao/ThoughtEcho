@@ -311,4 +311,12 @@ class AppPreferencesService {
       return [];
     }
   }
+
+  /// 严格获取所有键（未初始化或枚举失败时抛出异常，供迁移阶段避免把失败误判为空集合）
+  List<String> getAllKeysStrict() {
+    if (!_hasInitializedStorage) {
+      throw StateError('KV存储未初始化，无法枚举所有键');
+    }
+    return _storage!.getKeys().map((e) => e.toString()).toList();
+  }
 }
