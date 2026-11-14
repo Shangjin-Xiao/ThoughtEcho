@@ -193,8 +193,8 @@
     }
   },
   "emergencyRecoveryTitle": "ThoughtEcho - Data Recovery",
-  "emergencyRecoveryHeading": "Database initialization failed",
-  "emergencyRecoveryDescription": "The app cannot start normally. The database may be corrupted or inaccessible.\n\nYou can try backing up existing data to prevent loss, or try restarting the app.",
+  "emergencyRecoveryHeading": "Note Data Unavailable",
+  "emergencyRecoveryDescription": "ThoughtEcho cannot access your local notes right now.\n\nTo keep your notes safe, we recommend backing up existing records first, or restarting the app.",
   "emergencyBackupAndRestoreButton": "Backup & restore data",
   "emergencyTryRestartAppButton": "Try restarting the app",
   "emergencyReinitializeFailed": "Reinitialize failed: {error}",
@@ -216,7 +216,7 @@
   "emergencyPersistentIssueHint": "If the issue persists, try reinstalling the app or contact the developer for support.",
   "emergencyBackupPageTitle": "Emergency Data Recovery",
   "emergencyBackupToolTitle": "Emergency data recovery tool",
-  "emergencyBackupToolDesc": "Due to a critical error, you can try:\n\n1. Export database file - export the raw database file for professional recovery\n2. Try opening the backup & restore page - note: this may not work if the database is damaged",
+  "emergencyBackupToolDesc": "If the app encounters an issue, try these steps to safeguard your data:\n\n1. Export database file — Save a copy of the database (excludes separately stored media); the exact path is shown upon export\n2. Try opening standard backup & restore — Go to the backup page to restore from a backup (may not open if the database is damaged)",
   "emergencyProcessing": "Processing...",
   "emergencyExportDatabaseButton": "Export database file",
   "emergencyOpenBackupPageButton": "Try opening standard backup & restore",
@@ -228,7 +228,7 @@
       }
     }
   },
-  "emergencyExportHint": "Tip: The exported database file can be used for technical support and data recovery.",
+  "emergencyExportHint": "Tip: The exported database contains note text and settings (excluding separately stored images/audio) for troubleshooting or recovery.",
   "emergencyLocatingDatabase": "Locating database file...",
   "emergencyDatabaseNotFound": "Database file not found",
   "emergencyPreparingExport": "Preparing export...",

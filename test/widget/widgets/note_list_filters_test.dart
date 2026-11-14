@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
@@ -1072,6 +1073,112 @@ void main() {
             matching: find.byType(RepaintBoundary),
           ),
           findsNothing,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+  });
+
+  group('NoteListView root layout and responsive constraints', () {
+    testWidgets(
+      'does not wrap note list root in LayoutBuilder and applies mobile constraints',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final databaseService = _FakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _FilterTestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: [
+              NoteTag(id: 'tag-1', name: '工作', iconName: '💼'),
+            ],
+            selectedTagIds: const ['tag-1'],
+            selectedWeathers: const [],
+            selectedDayPeriods: const [],
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        // 验证 NoteListView 根部层级中不再存在 LayoutBuilder 节点
+        expect(
+          find.descendant(
+            of: find.byType(NoteListView),
+            matching: find.byType(LayoutBuilder),
+          ),
+          findsNothing,
+        );
+
+        // 验证移动端下 ConstrainedBox 的 maxWidth 约束按屏幕宽度生效 (400)
+        final constrainedBoxes = tester.widgetList<ConstrainedBox>(
+          find.descendant(
+            of: find.byType(NoteListView),
+            matching: find.byType(ConstrainedBox),
+          ),
+        );
+        expect(constrainedBoxes, isNotEmpty);
+        expect(constrainedBoxes.first.constraints.maxWidth, 400.0);
+
+        // 验证根节点 Container 包含主题背景色
+        final containers = tester.widgetList<Container>(
+          find.descendant(
+            of: find.byType(NoteListView),
+            matching: find.byType(Container),
+          ),
+        );
+        expect(containers, isNotEmpty);
+        expect(containers.first.color, isNotNull);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'applies tabletMaxContentWidth constraints when viewport exceeds tabletMinWidth',
+      (tester) async {
+        tester.view.physicalSize = const Size(1000, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final databaseService = _FakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _FilterTestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: [
+              NoteTag(id: 'tag-1', name: '工作', iconName: '💼'),
+            ],
+            selectedTagIds: const ['tag-1'],
+            selectedWeathers: const [],
+            selectedDayPeriods: const [],
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        // 验证平板端下 ConstrainedBox 的 maxWidth 约束为 tabletMaxContentWidth (800)
+        final constrainedBoxes = tester.widgetList<ConstrainedBox>(
+          find.descendant(
+            of: find.byType(NoteListView),
+            matching: find.byType(ConstrainedBox),
+          ),
+        );
+        expect(constrainedBoxes, isNotEmpty);
+        expect(
+          constrainedBoxes.first.constraints.maxWidth,
+          AppConstants.tabletMaxContentWidth,
         );
 
         await tester.pumpWidget(const SizedBox.shrink());
