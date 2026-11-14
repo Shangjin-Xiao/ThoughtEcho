@@ -705,9 +705,11 @@ extension _NoteListItemsExtension on NoteListViewState {
                     builder: (context, loading, _) => SizedBox(
                       height: _loadMoreFooterHeight,
                       child: loading
-                          ? const AppLoadingView(
-                              size: _loadMoreFooterHeight,
-                              style: AppLoadingStyle.writingLines,
+                          ? const RepaintBoundary(
+                              child: AppLoadingView(
+                                size: _loadMoreFooterHeight,
+                                style: AppLoadingStyle.writingLines,
+                              ),
                             )
                           : null,
                     ),
