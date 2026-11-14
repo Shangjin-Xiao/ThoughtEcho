@@ -434,6 +434,196 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
     final tagMap = _obtainTagMap();
 
+    final rebuildToken = _NoteListRebuildToken(
+      quotes: List<Quote>.of(_quotes),
+      hasMore: _hasMore,
+      isExportMode: _isExportMode,
+      selectedExportNoteIds: Set<String>.of(_selectedExportNoteIds),
+      tagMap: tagMap,
+      selectedTagIds: widget.selectedTagIds,
+      positioningQuoteId: _positioningQuoteId,
+      animatingQuoteVersions: Map<String, int>.of(_animatingQuoteVersions),
+      structuralInsertQuoteIds: Set<String>.of(_structuralInsertQuoteIds),
+      deletingQuoteIds: Set<String>.of(_deletingQuoteIds),
+      hasFavoriteCallback: widget.onFavorite != null,
+      hasGenerateCardCallback: widget.onGenerateCard != null,
+      hasLongPressFavoriteCallback: widget.onLongPressFavorite != null,
+      favoriteButtonGuideKey: widget.favoriteButtonGuideKey,
+      moreButtonGuideKey: widget.moreButtonGuideKey,
+      foldToggleGuideKey: widget.foldToggleGuideKey,
+    );
+
+    var favoriteGuideAssigned = false;
+    var moreGuideAssigned = false;
+    var foldGuideAssigned = false;
+
+    final childrenDelegate = _NoteListChildBuilderDelegate(
+      (context, index) {
+        if (index < _quotes.length) {
+          return _traceNoteListItemBuild(
+            index: index,
+            quote: _quotes[index],
+            builder: () {
+              final quote = _quotes[index];
+              if (quote.id == null) {
+                logDebug('笔记缺少ID，跳过扩展状态管理', source: 'NoteListView');
+                return const SizedBox.shrink();
+              }
+
+              final quoteId = quote.id!;
+              final itemKey = quoteId == _positioningQuoteId
+                  ? _positioningItemKey
+                  : ValueKey<String>('note-list-row-$quoteId');
+
+              final bool shouldCheckExpansionForGuide =
+                  !foldGuideAssigned && widget.foldToggleGuideKey != null;
+              final bool needsExpansion = shouldCheckExpansionForGuide
+                  ? QuoteItemWidget.needsExpansionFor(quote)
+                  : false;
+
+              final attachFavoriteGuideKey = !favoriteGuideAssigned &&
+                  widget.favoriteButtonGuideKey != null &&
+                  widget.onFavorite != null;
+              final attachMoreGuideKey =
+                  !moreGuideAssigned && widget.moreButtonGuideKey != null;
+              final attachFoldGuideKey = !foldGuideAssigned &&
+                  widget.foldToggleGuideKey != null &&
+                  needsExpansion;
+
+              if (attachFavoriteGuideKey) {
+                favoriteGuideAssigned = true;
+              }
+
+              if (attachMoreGuideKey) {
+                moreGuideAssigned = true;
+              }
+
+              if (attachFoldGuideKey) {
+                foldGuideAssigned = true;
+              }
+
+              final expansionNotifier = _obtainExpansionNotifier(quoteId);
+              _expandedItems.putIfAbsent(
+                quoteId,
+                () => expansionNotifier.value,
+              );
+
+              final isSelected = _selectedExportNoteIds.contains(quoteId);
+
+              final insertAnimationVersion = _animatingQuoteVersions[quoteId];
+              final isStructuralInsert = _structuralInsertQuoteIds.contains(
+                quoteId,
+              );
+
+              Widget itemWidget = ValueListenableBuilder<bool>(
+                valueListenable: expansionNotifier,
+                builder: (context, isExpanded, child) => _obtainQuoteItem(
+                  quoteId: quoteId,
+                  quote: quote,
+                  index: index,
+                  tagMap: tagMap,
+                  isExpanded: isExpanded,
+                  isSelected: isSelected,
+                  expansionNotifier: expansionNotifier,
+                  favoriteGuideKey: attachFavoriteGuideKey
+                      ? widget.favoriteButtonGuideKey
+                      : null,
+                  moreGuideKey:
+                      attachMoreGuideKey ? widget.moreButtonGuideKey : null,
+                  foldGuideKey:
+                      attachFoldGuideKey ? widget.foldToggleGuideKey : null,
+                ),
+              );
+              final keepAliveItem = _shouldKeepAliveNoteListItem(
+                index,
+                quote,
+              );
+
+              itemWidget = Stack(
+                children: [
+                  itemWidget,
+                  if (_isExportMode)
+                    Positioned.fill(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _toggleExportSelection(quoteId),
+                          borderRadius: BorderRadius.circular(
+                            AppShapeTokens.of(context).cardRadius,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+
+              itemWidget = _NoteListItemKeepAlive(
+                keepAlive: keepAliveItem,
+                child: itemWidget,
+              );
+
+              // 动效层常驻：入场和删除都在这一层里播，动画开始/结束都不改变
+              // widget 树形状，卡片子树不会因为包装层进出而重新挂载。
+              itemWidget = NoteItemMotion(
+                key: ValueKey('note_item_motion_$quoteId'),
+                insertVersion: insertAnimationVersion,
+                insertAnimationType: noteInsertAnimationType,
+                animateInsertLayout: isStructuralInsert,
+                isDeleting: _deletingQuoteIds.contains(quoteId),
+                onInsertCompleted: (version) =>
+                    _handleInsertAnimationCompleted(quoteId, version),
+                onDeleteCompleted: () => _finishNoteDelete(quote),
+                child: itemWidget,
+              );
+
+              return KeyedSubtree(
+                key: itemKey,
+                child: _wrapNoteListItemPerfProbe(
+                  quote: quote,
+                  index: index,
+                  child: itemWidget,
+                ),
+              );
+            },
+          );
+        }
+        // 底部加载指示器：仅在主动加载时显示动画，
+        // 空闲态用透明占位确保 itemCount 正确以触发自动加载。
+        //
+        // 由 _loadMoreIndicator 驱动，切换只重建这一格，不牵动整列表；
+        // 也保证加载结束后指示器一定会收起（不再依赖别处恰好有 setState）。
+        //
+        // 两种状态必须同高。此前空闲占位 48、加载态是 80 的 Lottie 外加
+        // 上下各 16 的内边距（合计 112）——每翻转一次列表总高就跳 64 像素，
+        // 正在底部附近滑动时就是肉眼可见的"列表抖一下/飞一下"。
+        // 这一格永远处在"还有下一页"的过渡区，等高之后用户察觉不到差异。
+        return ValueListenableBuilder<bool>(
+          valueListenable: _loadMoreIndicator,
+          builder: (context, loading, _) => SizedBox(
+            height: _loadMoreFooterHeight,
+            child: loading
+                ? const AppLoadingView(
+                    size: _loadMoreFooterHeight,
+                    style: AppLoadingStyle.writingLines,
+                  )
+                : null,
+          ),
+        );
+      },
+      rebuildToken: rebuildToken,
+      findChildIndexCallback: (key) {
+        if (key is ValueKey<String>) {
+          return _rowIndexByKey[key.value];
+        }
+        return null;
+      },
+      childCount: _quotes.length + (_hasMore ? 1 : 0),
+      addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
+      addRepaintBoundaries: true, // 性能优化：减少重绘范围
+      addSemanticIndexes: false, // 性能权衡：关闭所有列表项的自动顺序语义索引
+    );
+    _currentChildDelegate = childrenDelegate;
+
     return NotificationListener<ScrollNotification>(
       key: resultsKey,
       onNotification: (ScrollNotification notification) {
@@ -513,11 +703,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           child: ValueListenableBuilder<double>(
             valueListenable: _idleCacheExtentBoostNotifier,
             builder: (context, idleCacheExtentBoostPx, _) {
-              // 每次 notifier 触发局部重建时重置引导 key 分配标记，避免旧状态导致 GlobalKey 脱落
-              var favoriteGuideAssigned = false;
-              var moreGuideAssigned = false;
-              var foldGuideAssigned = false;
-              return ListView.builder(
+              return ListView.custom(
                 controller: _scrollController, // 添加滚动控制器
                 // 必须显式给 padding。padding 为 null 时 BoxScrollView 会把
                 // MediaQuery.padding 的主轴部分包成 SliverPadding "帮忙"避开系统栏——
@@ -532,16 +718,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.paddingOf(context).bottom,
                 ),
-                findChildIndexCallback: (key) {
-                  if (key is ValueKey<String>) {
-                    return _rowIndexByKey[key.value];
-                  }
-                  return null;
-                },
                 physics: const AlwaysScrollableScrollPhysics(),
-                addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
-                addRepaintBoundaries: true, // 性能优化：减少重绘范围
-                addSemanticIndexes: false, // 性能权衡：关闭所有列表项的自动顺序语义索引
                 // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
                 // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿。
                 // 静止期还会在这个基础上一级一级往上撑，把下一屏卡片的挂载挪进空闲帧，
@@ -551,168 +728,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                       idleCacheExtentBoostPx,
                 ),
                 semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
-                itemCount: _quotes.length + (_hasMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index < _quotes.length) {
-                    return _traceNoteListItemBuild(
-                      index: index,
-                      quote: _quotes[index],
-                      builder: () {
-                        final quote = _quotes[index];
-                        if (quote.id == null) {
-                          logDebug('笔记缺少ID，跳过扩展状态管理', source: 'NoteListView');
-                          return const SizedBox.shrink();
-                        }
-
-                        final quoteId = quote.id!;
-                        final itemKey = quoteId == _positioningQuoteId
-                            ? _positioningItemKey
-                            : ValueKey<String>('note-list-row-$quoteId');
-
-                        final bool shouldCheckExpansionForGuide =
-                            !foldGuideAssigned &&
-                                widget.foldToggleGuideKey != null;
-                        final bool needsExpansion = shouldCheckExpansionForGuide
-                            ? QuoteItemWidget.needsExpansionFor(quote)
-                            : false;
-
-                        final attachFavoriteGuideKey = !favoriteGuideAssigned &&
-                            widget.favoriteButtonGuideKey != null &&
-                            widget.onFavorite != null;
-                        final attachMoreGuideKey = !moreGuideAssigned &&
-                            widget.moreButtonGuideKey != null;
-                        final attachFoldGuideKey = !foldGuideAssigned &&
-                            widget.foldToggleGuideKey != null &&
-                            needsExpansion;
-
-                        if (attachFavoriteGuideKey) {
-                          favoriteGuideAssigned = true;
-                        }
-
-                        if (attachMoreGuideKey) {
-                          moreGuideAssigned = true;
-                        }
-
-                        if (attachFoldGuideKey) {
-                          foldGuideAssigned = true;
-                        }
-
-                        final expansionNotifier =
-                            _obtainExpansionNotifier(quoteId);
-                        _expandedItems.putIfAbsent(
-                          quoteId,
-                          () => expansionNotifier.value,
-                        );
-
-                        final isSelected =
-                            _selectedExportNoteIds.contains(quoteId);
-
-                        final insertAnimationVersion =
-                            _animatingQuoteVersions[quoteId];
-                        final isStructuralInsert =
-                            _structuralInsertQuoteIds.contains(
-                          quoteId,
-                        );
-
-                        Widget itemWidget = ValueListenableBuilder<bool>(
-                          valueListenable: expansionNotifier,
-                          builder: (context, isExpanded, child) =>
-                              _obtainQuoteItem(
-                            quoteId: quoteId,
-                            quote: quote,
-                            index: index,
-                            tagMap: tagMap,
-                            isExpanded: isExpanded,
-                            isSelected: isSelected,
-                            expansionNotifier: expansionNotifier,
-                            favoriteGuideKey: attachFavoriteGuideKey
-                                ? widget.favoriteButtonGuideKey
-                                : null,
-                            moreGuideKey: attachMoreGuideKey
-                                ? widget.moreButtonGuideKey
-                                : null,
-                            foldGuideKey: attachFoldGuideKey
-                                ? widget.foldToggleGuideKey
-                                : null,
-                          ),
-                        );
-                        final keepAliveItem = _shouldKeepAliveNoteListItem(
-                          index,
-                          quote,
-                        );
-
-                        itemWidget = Stack(
-                          children: [
-                            itemWidget,
-                            if (_isExportMode)
-                              Positioned.fill(
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () =>
-                                        _toggleExportSelection(quoteId),
-                                    borderRadius: BorderRadius.circular(
-                                      AppShapeTokens.of(context).cardRadius,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-
-                        itemWidget = _NoteListItemKeepAlive(
-                          keepAlive: keepAliveItem,
-                          child: itemWidget,
-                        );
-
-                        // 动效层常驻：入场和删除都在这一层里播，动画开始/结束都不改变
-                        // widget 树形状，卡片子树不会因为包装层进出而重新挂载。
-                        itemWidget = NoteItemMotion(
-                          key: ValueKey('note_item_motion_$quoteId'),
-                          insertVersion: insertAnimationVersion,
-                          insertAnimationType: noteInsertAnimationType,
-                          animateInsertLayout: isStructuralInsert,
-                          isDeleting: _deletingQuoteIds.contains(quoteId),
-                          onInsertCompleted: (version) =>
-                              _handleInsertAnimationCompleted(quoteId, version),
-                          onDeleteCompleted: () => _finishNoteDelete(quote),
-                          child: itemWidget,
-                        );
-
-                        return KeyedSubtree(
-                          key: itemKey,
-                          child: _wrapNoteListItemPerfProbe(
-                            quote: quote,
-                            index: index,
-                            child: itemWidget,
-                          ),
-                        );
-                      },
-                    );
-                  }
-                  // 底部加载指示器：仅在主动加载时显示动画，
-                  // 空闲态用透明占位确保 itemCount 正确以触发自动加载。
-                  //
-                  // 由 _loadMoreIndicator 驱动，切换只重建这一格，不牵动整列表；
-                  // 也保证加载结束后指示器一定会收起（不再依赖别处恰好有 setState）。
-                  //
-                  // 两种状态必须同高。此前空闲占位 48、加载态是 80 的 Lottie 外加
-                  // 上下各 16 的内边距（合计 112）——每翻转一次列表总高就跳 64 像素，
-                  // 正在底部附近滑动时就是肉眼可见的"列表抖一下/飞一下"。
-                  // 这一格永远处在"还有下一页"的过渡区，等高之后用户察觉不到差异。
-                  return ValueListenableBuilder<bool>(
-                    valueListenable: _loadMoreIndicator,
-                    builder: (context, loading, _) => SizedBox(
-                      height: _loadMoreFooterHeight,
-                      child: loading
-                          ? const AppLoadingView(
-                              size: _loadMoreFooterHeight,
-                              style: AppLoadingStyle.writingLines,
-                            )
-                          : null,
-                    ),
-                  );
-                },
+                childrenDelegate: childrenDelegate,
               );
             },
           ),
@@ -1664,3 +1680,145 @@ class QuoteItemMemo {
 }
 
 typedef _QuoteItemMemo = QuoteItemMemo;
+
+/// 笔记列表重建令牌，封装决定列表子项展示状态的数据版本标识。
+@immutable
+class _NoteListRebuildToken {
+  const _NoteListRebuildToken({
+    required this.quotes,
+    required this.hasMore,
+    required this.isExportMode,
+    required this.selectedExportNoteIds,
+    required this.tagMap,
+    required this.selectedTagIds,
+    this.positioningQuoteId,
+    required this.animatingQuoteVersions,
+    required this.structuralInsertQuoteIds,
+    required this.deletingQuoteIds,
+    required this.hasFavoriteCallback,
+    required this.hasGenerateCardCallback,
+    required this.hasLongPressFavoriteCallback,
+    this.favoriteButtonGuideKey,
+    this.moreButtonGuideKey,
+    this.foldToggleGuideKey,
+  });
+
+  final List<Quote> quotes;
+  final bool hasMore;
+  final bool isExportMode;
+  final Set<String> selectedExportNoteIds;
+  final Map<String, NoteTag> tagMap;
+  final List<String> selectedTagIds;
+  final String? positioningQuoteId;
+  final Map<String, int> animatingQuoteVersions;
+  final Set<String> structuralInsertQuoteIds;
+  final Set<String> deletingQuoteIds;
+  final bool hasFavoriteCallback;
+  final bool hasGenerateCardCallback;
+  final bool hasLongPressFavoriteCallback;
+  final GlobalKey? favoriteButtonGuideKey;
+  final GlobalKey? moreButtonGuideKey;
+  final GlobalKey? foldToggleGuideKey;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! _NoteListRebuildToken) return false;
+    if (hasMore != other.hasMore) return false;
+    if (isExportMode != other.isExportMode) return false;
+    if (hasFavoriteCallback != other.hasFavoriteCallback) return false;
+    if (hasGenerateCardCallback != other.hasGenerateCardCallback) return false;
+    if (hasLongPressFavoriteCallback != other.hasLongPressFavoriteCallback) {
+      return false;
+    }
+    if (!identical(favoriteButtonGuideKey, other.favoriteButtonGuideKey)) {
+      return false;
+    }
+    if (!identical(moreButtonGuideKey, other.moreButtonGuideKey)) return false;
+    if (!identical(foldToggleGuideKey, other.foldToggleGuideKey)) return false;
+    if (positioningQuoteId != other.positioningQuoteId) return false;
+    if (!setEquals(selectedExportNoteIds, other.selectedExportNoteIds)) {
+      return false;
+    }
+    if (!setEquals(structuralInsertQuoteIds, other.structuralInsertQuoteIds)) {
+      return false;
+    }
+    if (!setEquals(deletingQuoteIds, other.deletingQuoteIds)) {
+      return false;
+    }
+    if (!mapEquals(animatingQuoteVersions, other.animatingQuoteVersions)) {
+      return false;
+    }
+    if (!listEquals(selectedTagIds, other.selectedTagIds)) return false;
+    if (!_isSameTagMap(tagMap, other.tagMap)) return false;
+    if (!_quotesEqual(quotes, other.quotes)) return false;
+    return true;
+  }
+
+  static bool _isSameTagMap(Map<String, NoteTag> a, Map<String, NoteTag> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!identical(entry.value, b[entry.key])) return false;
+    }
+    return true;
+  }
+
+  static bool _quotesEqual(List<Quote> a, List<Quote> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!identical(a[i], b[i]) && !a[i].hasSameContentAs(b[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        quotes.length,
+        hasMore,
+        isExportMode,
+        selectedExportNoteIds.length,
+        tagMap.length,
+      );
+}
+
+/// 受控的笔记列表代理子类，覆写 [shouldRebuild] 进行数据脏检查拦截。
+/// 仅当笔记数据源、选中态或排版标签变化时返回 true，缓存区单纯步进时返回 false。
+class _NoteListChildBuilderDelegate extends SliverChildBuilderDelegate {
+  final _NoteListRebuildToken rebuildToken;
+  final Set<int> _builtIndices = <int>{};
+  int _mountedItemRebuildCount = 0;
+
+  int get mountedItemRebuildCount => _mountedItemRebuildCount;
+
+  _NoteListChildBuilderDelegate(
+    super.builder, {
+    super.findChildIndexCallback,
+    super.childCount,
+    super.addAutomaticKeepAlives = true,
+    super.addRepaintBoundaries = true,
+    super.addSemanticIndexes = true,
+    required this.rebuildToken,
+  });
+
+  @override
+  Widget? build(BuildContext context, int index) {
+    if (_builtIndices.contains(index)) {
+      _mountedItemRebuildCount++;
+    } else {
+      _builtIndices.add(index);
+    }
+    return super.build(context, index);
+  }
+
+  @override
+  bool shouldRebuild(covariant SliverChildBuilderDelegate oldDelegate) {
+    if (oldDelegate is _NoteListChildBuilderDelegate) {
+      return rebuildToken != oldDelegate.rebuildToken;
+    }
+    return super.shouldRebuild(oldDelegate);
+  }
+}

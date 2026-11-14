@@ -377,6 +377,12 @@ class NoteListViewState extends State<NoteListView>
   @visibleForTesting
   int get stateUpdateCountForTest => _stateUpdateCount;
 
+  _NoteListChildBuilderDelegate? _currentChildDelegate;
+
+  @visibleForTesting
+  int get mountedItemRebuildCountForTest =>
+      _currentChildDelegate?.mountedItemRebuildCount ?? 0;
+
   /// 每级撑开的量。一步大约一张卡片：每撑一步都要跑一次布局并建出那几张卡片，
   /// 一次撑到位就是一个上百毫秒的长任务，正好撞上用户重新开始滑。
   static const double _idleCacheExtentStepPx = 400;

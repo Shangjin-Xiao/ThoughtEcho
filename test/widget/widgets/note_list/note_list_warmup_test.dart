@@ -14,6 +14,7 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
+import 'package:thoughtecho/widgets/note_list/note_item_motion.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
@@ -809,6 +810,10 @@ void main() {
       expect(state.idleCacheExtentBoostNotifierForTest.value, 0.0);
 
       final stateUpdateCountBefore = state.stateUpdateCountForTest;
+      final mountedRebuildCountBefore = state.mountedItemRebuildCountForTest;
+      expect(mountedRebuildCountBefore, 0);
+      final firstMotionBefore =
+          tester.widget<NoteItemMotion>(find.byType(NoteItemMotion).first);
 
       // 静止期：预热测量后一级一级把缓存区往外撑（0 -> 400 -> 800 -> 1200 -> 1600）
       for (var i = 0; i < 60; i++) {
@@ -825,13 +830,30 @@ void main() {
         reason: '_growIdleCacheExtent 步进期间 _stateUpdateCount 不应递增',
       );
 
-      // 验证 ListView.builder 的 scrollCacheExtent 随 ValueNotifier 正确扩充至基础高度 + 1600px
+      // 验证在 _idleCacheExtentBoostNotifier 从 0 逐步递增至 1600px 的 4 轮步进过程中，
+      // 已挂载卡片的 itemBuilder 触发计数为 0
+      expect(
+        state.mountedItemRebuildCountForTest,
+        0,
+        reason: '缓存区步进期间已挂载卡片的 itemBuilder 触发计数应为 0',
+      );
+      expect(
+        identical(
+          tester.widget<NoteItemMotion>(find.byType(NoteItemMotion).first),
+          firstMotionBefore,
+        ),
+        isTrue,
+        reason: '已挂载的首张卡片在缓存区步进期间不应重新构造',
+      );
+
+      // 验证 ListView 仍正常匹配且 scrollCacheExtent 随 ValueNotifier 正确扩充至基础高度 + 1600px
+      expect(find.byType(ListView), findsOneWidget);
       final finalListView = tester.widget<ListView>(find.byType(ListView));
       expect(
         finalListView.scrollCacheExtent!.value,
         equals(initialCacheExtent + 1600.0),
         reason:
-            'ListView.builder 的 scrollCacheExtent 随 ValueNotifier 正确递增至基础高度 + 1600px',
+            'ListView 的 scrollCacheExtent 随 ValueNotifier 正确递增至基础高度 + 1600px',
       );
 
       // 回归断言：局部扩充缓存区后，首张卡片的引导 GlobalKey 必须始终保留有效上下文，不得被赋空脱落
