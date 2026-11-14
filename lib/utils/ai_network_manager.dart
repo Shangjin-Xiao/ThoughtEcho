@@ -141,13 +141,11 @@ class AINetworkManager {
       );
       return response;
     } catch (e, stackTrace) {
-      logError(
-        'AI请求失败 for ${config.name} (${config.id})',
-        error: e,
+      throw _handleError(
+        e,
         stackTrace: stackTrace,
-        source: 'AINetworkManager',
+        requestContext: '${config.name} (${config.id})',
       );
-      throw _handleError(e);
     }
   }
 
@@ -536,15 +534,41 @@ class AINetworkManager {
   }
 
   /// 处理错误
-  static Exception _handleError(dynamic error) {
+  static Exception _handleError(
+    dynamic error, {
+    StackTrace? stackTrace,
+    String? requestContext,
+  }) {
+    final contextSuffix = requestContext != null ? ' for $requestContext' : '';
+
+    if (error is! DioException) {
+      logError(
+        'AI请求失败$contextSuffix',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
+      return error is Exception ? error : Exception(error.toString());
+    }
+
     final statusCode = error.response?.statusCode;
     final errorBody = error.response?.data?.toString() ?? error.message ?? '';
 
     if (statusCode == 401) {
-      logError('AI Request Error: 401 Unauthorized', error: error);
+      logError(
+        'AI Request Error: 401 Unauthorized$contextSuffix',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
       return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
     } else if (statusCode == 429) {
-      logError('AI Request Error: 429 Too Many Requests', error: error);
+      logError(
+        'AI Request Error: 429 Too Many Requests$contextSuffix',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
       return Exception('API调用频率超限 (429)，请稍后重试');
     } else if (statusCode == 500) {
       String errorMessage = 'AI服务器内部错误 (500)';
@@ -557,14 +581,24 @@ class AINetworkManager {
             errorMessage += '：${errorInfo['message']}';
           }
         }
-      } catch (e) {
+      } catch (e, parseStack) {
         if (errorBody.contains('model')) {
           errorMessage += '：可能是模型不存在或不可用';
         }
-        logError('Failed to parse 500 error body JSON', error: e);
+        logError(
+          'Failed to parse 500 error body JSON',
+          error: e,
+          stackTrace: parseStack,
+          source: 'AINetworkManager',
+        );
       }
 
-      logError('AI Request Error: 500 Internal Server Error', error: error);
+      logError(
+        'AI Request Error: 500 Internal Server Error$contextSuffix',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
       return Exception(
         '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
       );
@@ -573,13 +607,20 @@ class AINetworkManager {
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.connectionError) {
       logError(
-        'AI Request Error: Connection/Timeout Error (${error.type.name})',
+        'AI Request Error: Connection/Timeout Error (${error.type.name})$contextSuffix',
         error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
       );
       return Exception('网络连接超时，请检查网络设置或稍后重试');
     }
 
-    logError('AI Request Error: Unknown DioException', error: error);
+    logError(
+      'AI Request Error: Unknown DioException$contextSuffix',
+      error: error,
+      stackTrace: stackTrace,
+      source: 'AINetworkManager',
+    );
     return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
   }
 

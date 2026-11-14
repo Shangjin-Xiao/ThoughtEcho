@@ -102,5 +102,5 @@
 **拦截:** [已将上述流程中打开与关闭浏览器及临时 HTTP 服务器处的异常拦截升级，将 `catch (e)` / `catch (serverError)` 替换为结构化的 `catch (e, stack)` / `catch (serverError, stack)` 捕获完整异常与堆栈。同时使用 `AppLogger.e` 进行记录，注入了描述信息、具体的错误对象以及明确的日志来源标识 (`source: 'AIAnnualReportWebView'`)。确认修改不超过 50 行，并且没有记录任何涉及到年度报告内容的敏感隐私数据。]
 
 ## 2025-10-25 - 🗃️ 黑匣: [完善 AI 网络模块的结构化日志]
-**异常:** [AINetworkManager 模块在处理底层网络请求以及解析流式请求的过程中，如果发生了抛出异常，如请求报错或者JSON解析异常，只使用了 `logDebug` 进行了最粗糙的字符串拼接打印。这使得排查AI流式请求、网络断开等业务阻断问题时，完全丢失了底层的错误堆栈信息 (stackTrace) 以及具体的上下文，使得故障追溯变得极其困难。]
-**拦截:** [已将上述流程中的 `catch (e)` 升级为 `catch (e, stackTrace)`，并将其中的 `logDebug` 统一替换为带有堆栈和模块标识的 `logError`，注入了具体的异常对象、堆栈轨迹以及明确的模块来源 `source: 'AINetworkManager'`。已确认修改不会阻断正常的业务（如错误会被继续通过 `_handleError` 往上抛），同时确认所有记录均只包含系统抛出的异常信息，未记录任何包含用户请求的具体提示词内容等敏感隐私数据。]
+**异常:** [AINetworkManager 模块在 `_makeBaseRequest` 捕获底层请求或校验异常时，原实现仅使用 `logDebug` 打印字符串，丢失了错误堆栈信息 (stackTrace) 与模块来源标识；同时若外层与 `_handleError` 分别调用 `logError`，会导致单次请求失败产生重复错误日志与双重 Sentry 上报，且非 `DioException` 异常进入 `_handleError` 时缺少类型保护。]
+**拦截:** [已将 `_makeBaseRequest` 的异常捕获升级为 `catch (e, stackTrace)`，并将 `stackTrace` 与 `requestContext` 透传至 `_handleError` 统一记录单次 `logError(..., source: 'AINetworkManager')`（同时为非 `DioException` 异常补充安全分支）；流式解析中的既有 `logDebug` 保持未改。]
