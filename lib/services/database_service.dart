@@ -27,7 +27,7 @@ import '../utils/sqlite_type_utils.dart';
 import 'large_file_manager.dart';
 import 'media_path_repair_service.dart';
 import 'media_reference_service.dart';
-import 'mmkv_service.dart';
+import 'app_preferences_service.dart';
 import 'unified_log_service.dart';
 import 'location_service.dart';
 import '../models/import_cleanup_stats.dart';
@@ -1202,13 +1202,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   Future<int?> _resolveTrashRetentionDays() async {
     try {
-      final mmkv = MMKVService();
-      await mmkv.init();
-      var appSettingsJson = mmkv.getString('app_settings');
-      if (appSettingsJson == null || appSettingsJson.isEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        appSettingsJson = prefs.getString('app_settings');
-      }
+      final prefs = AppPreferencesService();
+      await prefs.init();
+      final appSettingsJson = prefs.getString('app_settings');
       if (appSettingsJson == null || appSettingsJson.isEmpty) {
         return 30;
       }

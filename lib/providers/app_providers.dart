@@ -11,7 +11,7 @@ import '../services/database_service.dart';
 import '../services/feature_guide_service.dart';
 import '../services/insight_history_service.dart';
 import '../services/location_service.dart';
-import '../services/mmkv_service.dart';
+import '../services/app_preferences_service.dart';
 import '../services/note_sync_service.dart';
 import '../services/settings_service.dart';
 import '../services/smart_push_service.dart';
@@ -104,7 +104,7 @@ List<SingleChildWidget> buildAppProviders({
   required FeatureGuideService featureGuideService,
   required SmartPushService smartPushService,
   required ChatSessionService chatSessionService,
-  required MMKVService mmkvService,
+  required AppPreferencesService mmkvService,
   required ValueNotifier<bool> servicesInitialized,
 }) {
   return [
@@ -168,14 +168,27 @@ List<SingleChildWidget> buildAppProviders({
     ),
     ChangeNotifierProvider(create: (_) => NoteSearchController()),
     ChangeNotifierProvider(create: (_) => WebDAVSyncService()),
-    ChangeNotifierProxyProvider<SettingsService, InsightHistoryService>(
+    ChangeNotifierProxyProvider2<SettingsService, AIAnalysisDatabaseService,
+        InsightHistoryService>(
       create: (context) => InsightHistoryService(
         settingsService: context.read<SettingsService>(),
+        aiAnalysisDbService: context.read<AIAnalysisDatabaseService>(),
       ),
-      update: (context, settingsService, insightHistoryService) =>
+      update: (
+        context,
+        settingsService,
+        aiAnalysisDbService,
+        insightHistoryService,
+      ) =>
           (insightHistoryService
-            ?..updateDependencies(settingsService: settingsService)) ??
-          InsightHistoryService(settingsService: settingsService),
+            ?..updateDependencies(
+              settingsService: settingsService,
+              aiAnalysisDbService: aiAnalysisDbService,
+            )) ??
+          InsightHistoryService(
+            settingsService: settingsService,
+            aiAnalysisDbService: aiAnalysisDbService,
+          ),
     ),
     Provider.value(value: mmkvService), // 使用 Provider.value 提供 MMKVService
     // 提供初始化状态的值（debug 下必须使用 ListenableProvider）

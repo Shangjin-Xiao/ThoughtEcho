@@ -26,6 +26,28 @@ const String kKvEngineMigratedKey = 'kv_engine_migrated_v1';
 /// 兼容旧版 SettingsService 的迁移完成标记键。
 const String kLegacyMmkvMigrationCompleteKey = 'mmkv_migration_complete';
 
+/// 标记笔记草稿已从 KV 存储迁移至独立 SQLite `drafts.db`。
+const String kDraftsSqliteMigratedKey = 'drafts_sqlite_migrated_v1';
+
+/// 标记周期洞察历史已从 KV 存储迁移至 `ai_analyses.db`。
+const String kPeriodicInsightsSqliteMigratedKey =
+    'periodic_insights_sqlite_migrated_v1';
+
+/// 判断键是否已由 SQLite 接管并从 KV 存储退役。
+bool isKvKeyRetiredToSqlite(
+  String key, {
+  required bool draftsMigrated,
+  required bool periodicInsightsMigrated,
+}) {
+  if (draftsMigrated && key.startsWith('draft_')) {
+    return true;
+  }
+  if (periodicInsightsMigrated && key == 'periodic_insights_history') {
+    return true;
+  }
+  return false;
+}
+
 /// 最近一次迁移执行的统计快照。
 class MmkvMigrationSnapshot {
   final DateTime migratedAt;
@@ -292,6 +314,9 @@ class SafeMMKV {
 
   /// 最近一次迁移快照（供诊断页展示）
   MmkvMigrationSnapshot? get lastMigrationSnapshot => _lastMigrationSnapshot;
+
+  /// 当前底层存储是否已完成初始化
+  bool get isInitialized => _initialized;
 
   /// 当前进程是否启用了原生 MMKV 适配器镜像
   bool get isNativeMmkvActive => _legacyMmkvAdapter != null;
@@ -578,6 +603,10 @@ class SafeMMKV {
       ...nativeEntries,
     };
 
+    final draftsMigrated = storage.getBool(kDraftsSqliteMigratedKey) == true;
+    final periodicInsightsMigrated =
+        storage.getBool(kPeriodicInsightsSqliteMigratedKey) == true;
+
     var migratedFromBinaryCount = 0;
     var migratedFromNativeCount = 0;
 
@@ -585,6 +614,14 @@ class SafeMMKV {
       final key = entry.key;
       final value = entry.value;
       if (value == null) continue;
+
+      if (isKvKeyRetiredToSqlite(
+        key,
+        draftsMigrated: draftsMigrated,
+        periodicInsightsMigrated: periodicInsightsMigrated,
+      )) {
+        continue;
+      }
 
       // 若已完成过首次迁移（如从诊断页手动重新触发），仅回填缺失键，不覆盖主存已有新值
       if (wasAlreadyMigrated && existingSpKeys.contains(key)) {
@@ -842,6 +879,9 @@ class SafeMMKV {
     final legacy = _legacyMmkvAdapter;
     final nativeKeys = legacy != null ? legacy.getKeys() : <String>{};
     final spKeys = storage.getKeys();
+    final draftsMigrated = storage.getBool(kDraftsSqliteMigratedKey) == true;
+    final periodicInsightsMigrated =
+        storage.getBool(kPeriodicInsightsSqliteMigratedKey) == true;
 
     final allKeys = <String>{
       ...binaryEntries.keys,
@@ -855,6 +895,11 @@ class SafeMMKV {
     var diffCount = 0;
 
     for (final key in allKeys) {
+      final retiredToSqlite = isKvKeyRetiredToSqlite(
+        key,
+        draftsMigrated: draftsMigrated,
+        periodicInsightsMigrated: periodicInsightsMigrated,
+      );
       final presentInBinary = binaryEntries.containsKey(key);
       final binaryVal = binaryEntries[key];
 
@@ -878,14 +923,18 @@ class SafeMMKV {
       final valueType = _describeValueType(key, sampleVal);
 
       bool binaryMatchesSp;
-      if (presentInBinary) {
+      if (retiredToSqlite && !presentInSp && !presentInNative) {
+        binaryMatchesSp = true;
+      } else if (presentInBinary) {
         binaryMatchesSp = _valuesEqual(binaryVal, spVal);
       } else {
         binaryMatchesSp = presentInSp;
       }
 
       bool nativeMatchesBinary;
-      if (legacy != null) {
+      if (retiredToSqlite && !presentInSp && !presentInNative) {
+        nativeMatchesBinary = true;
+      } else if (legacy != null) {
         final samePresence = presentInNative == presentInBinary;
         final valuesMatch = _valuesEqual(nativeVal, binaryVal);
         nativeMatchesBinary = samePresence && valuesMatch;
@@ -894,11 +943,14 @@ class SafeMMKV {
       }
 
       // 判断该键在所有已存在的存储源中是否一致：
-      // 1. 若二进制文件中有该键，SharedPreferences 中必须存在且值完全相等；
-      // 2. 若原生 MMKV 可用且包含该键，它与二进制解析器的结果也必须完全相等；
-      // 3. 若某键仅存在于 SharedPreferences（例如桌面端/32位设备或仅写入 SP 的键），视为一致。
+      // 1. 若该键已由 SQLite 接管且已从 SP 与原生 MMKV 清理，仅残留于历史只读二进制文件，视为一致；
+      // 2. 若二进制文件中有该键，SharedPreferences 中必须存在且值完全相等；
+      // 3. 若原生 MMKV 可用且包含该键，它与二进制解析器的结果也必须完全相等；
+      // 4. 若某键仅存在于 SharedPreferences（例如桌面端/32位设备或仅写入 SP 的键），视为一致。
       bool allConsistent;
-      if (presentInBinary) {
+      if (retiredToSqlite && !presentInSp && !presentInNative) {
+        allConsistent = true;
+      } else if (presentInBinary) {
         final nativeOk = !presentInNative || _valuesEqual(nativeVal, binaryVal);
         allConsistent = binaryMatchesSp && nativeOk;
       } else if (presentInNative) {
@@ -1153,23 +1205,48 @@ class SafeMMKV {
     return result;
   }
 
-  /// 清除所有值（保留迁移完成水位线）
+  /// 清除所有值（保留迁移完成水位线与已接管的 SQLite 迁移标记）
   Future<bool> clear() async {
     _ensureInitialized();
+    final preserveDraftsMigrated =
+        _storage!.getBool(kDraftsSqliteMigratedKey) == true;
+    final preserveInsightsMigrated =
+        _storage!.getBool(kPeriodicInsightsSqliteMigratedKey) == true;
     final result = await _storage!.clear();
-    await _storage!.setBool(kLegacyMmkvMigrationCompleteKey, true);
-    await _storage!.setBool(kKvEngineMigratedKey, true);
+    var restoredOk = await _storage!.setBool(
+      kLegacyMmkvMigrationCompleteKey,
+      true,
+    );
+    restoredOk =
+        await _storage!.setBool(kKvEngineMigratedKey, true) && restoredOk;
+    if (preserveDraftsMigrated) {
+      restoredOk =
+          await _storage!.setBool(kDraftsSqliteMigratedKey, true) && restoredOk;
+    }
+    if (preserveInsightsMigrated) {
+      restoredOk = await _storage!.setBool(
+            kPeriodicInsightsSqliteMigratedKey,
+            true,
+          ) &&
+          restoredOk;
+    }
     final legacy = _legacyMmkvAdapter;
     if (legacy != null) {
       try {
         await legacy.clear();
         await legacy.setBool(kLegacyMmkvMigrationCompleteKey, true);
         await legacy.setBool(kKvEngineMigratedKey, true);
+        if (preserveDraftsMigrated) {
+          await legacy.setBool(kDraftsSqliteMigratedKey, true);
+        }
+        if (preserveInsightsMigrated) {
+          await legacy.setBool(kPeriodicInsightsSqliteMigratedKey, true);
+        }
       } catch (e) {
         logDebug('SafeMMKV: MMKV 镜像清空 clear() 失败: $e');
       }
     }
-    return result;
+    return result && restoredOk;
   }
 
   /// 获取所有键名

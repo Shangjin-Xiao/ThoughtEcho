@@ -22,7 +22,7 @@ import 'package:thoughtecho/utils/sentry_network_tracing.dart';
 
 import '../utils/lww_utils.dart';
 
-import '../services/mmkv_service.dart';
+import '../services/app_preferences_service.dart';
 import '../theme/theme_style.dart';
 import '../theme/app_theme.dart';
 import 'excerpt_intent_service.dart';
@@ -62,7 +62,8 @@ class SettingsService extends ChangeNotifier {
   /// 周期报告 AI 洞察在下次保存 AI 设置时又打开。
   static const String _aiAutoEnablePendingKey = 'ai_auto_enable_pending_v1';
   final SharedPreferences _prefs; // 保留以支持数据迁移
-  final MMKVService _mmkv = MMKVService(); // 使用MMKV作为主要存储
+  final AppPreferencesService _mmkv =
+      AppPreferencesService(); // 使用 KV 首选项服务作为主要存储
   Completer<void>? _saveMultiAiLock;
   AISettings _aiSettings = AISettings(apiKey: '');
   AppSettings _appSettings = AppSettings.defaultSettings();
@@ -2124,6 +2125,16 @@ class SettingsService extends ChangeNotifier {
   Future<void> setCustomString(String key, String value) async {
     await _mmkv.init();
     await _mmkv.setString(key, value);
+  }
+
+  /// 删除自定义设置键
+  Future<bool> removeCustomKey(String key) async {
+    await _mmkv.init();
+    final removed = await _mmkv.remove(key);
+    if (!removed) {
+      logWarning('删除自定义设置键失败: $key', source: 'SettingsService');
+    }
+    return removed;
   }
 
   /// 迁移遗留的明文API密钥到安全存储，并彻底清理 SharedPreferences 与 MMKV 中的明文密钥

@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
-import '../services/mmkv_service.dart';
+import '../services/app_preferences_service.dart';
 import '../services/webdav_sync_service.dart';
 import '../utils/lww_utils.dart';
 import '../utils/app_logger.dart';
@@ -77,9 +77,9 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 
   /// 弹出实验性功能预览提示（符合国际化，支持临时关闭或永久忽略）
   Future<void> _showExperimentalWarningIfNeeded() async {
-    final mmkv = MMKVService();
+    final prefs = AppPreferencesService();
     final ignoreWarning =
-        mmkv.getBool('webdav_ignore_experimental_warning') ?? false;
+        prefs.getBool('webdav_ignore_experimental_warning') ?? false;
     if (ignoreWarning) return;
 
     if (!mounted) return;
@@ -105,8 +105,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
           actions: [
             TextButton(
               onPressed: () async {
-                final mmkv = MMKVService();
-                await mmkv.setBool('webdav_ignore_experimental_warning', true);
+                final prefs = AppPreferencesService();
+                await prefs.setBool('webdav_ignore_experimental_warning', true);
                 if (context.mounted) {
                   Navigator.pop(context);
                 }

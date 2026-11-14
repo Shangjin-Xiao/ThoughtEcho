@@ -1,66 +1,41 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import '../models/periodic_insight.dart';
 import '../utils/app_logger.dart';
+import '../utils/mmkv_ffi_fix.dart' show kPeriodicInsightsSqliteMigratedKey;
+import 'ai_analysis_database_service.dart';
+import 'app_preferences_service.dart';
 import 'settings_service.dart';
 
-/// 周期洞察记录
-class PeriodicInsight {
-  final String insight;
-  final String periodType; // 'week', 'month', 'year'
-  final String periodLabel; // '本周', '本月', '2024年'
-  final DateTime createdAt;
-  final bool isAiGenerated; // 区分AI生成和本地生成
-  final String? dataSignature; // 数据签名，用于去重
-
-  PeriodicInsight({
-    required this.insight,
-    required this.periodType,
-    required this.periodLabel,
-    required this.createdAt,
-    required this.isAiGenerated,
-    this.dataSignature,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'insight': insight,
-      'periodType': periodType,
-      'periodLabel': periodLabel,
-      'createdAt': createdAt.toIso8601String(),
-      'isAiGenerated': isAiGenerated,
-      if (dataSignature != null) 'dataSignature': dataSignature,
-    };
-  }
-
-  static PeriodicInsight fromJson(Map<String, dynamic> json) {
-    return PeriodicInsight(
-      insight: json['insight'] ?? '',
-      periodType: json['periodType'] ?? '',
-      periodLabel: json['periodLabel'] ?? '',
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
-      isAiGenerated: json['isAiGenerated'] ?? false,
-      dataSignature: json['dataSignature'],
-    );
-  }
-}
+export '../models/periodic_insight.dart';
 
 /// 周期洞察历史服务
-/// 专门用于保存和管理周期报告中AI生成的洞察
+/// 专门用于保存和管理周期报告中AI生成的洞察（持久化于 `ai_analyses.db` 的 `periodic_insights` 表）
 class InsightHistoryService extends ChangeNotifier {
   static const String _storageKey = 'periodic_insights_history';
   static const int _maxInsights = 50; // 最多保存50条洞察
 
   SettingsService _settingsService;
+  AIAnalysisDatabaseService _aiAnalysisDbService;
   List<PeriodicInsight> _insights = [];
+  Future<void>? _loadFuture;
+  bool _hasLoaded = false;
 
   SettingsService get settingsService => _settingsService;
+  AIAnalysisDatabaseService get aiAnalysisDbService => _aiAnalysisDbService;
 
-  /// 原位更新依赖引用（SettingsService）。
+  /// 原位更新依赖引用（SettingsService / AIAnalysisDatabaseService）。
   ///
   /// 同步且幂等，不触发额外的 notifyListeners()。
-  void updateDependencies({required SettingsService settingsService}) {
+  void updateDependencies({
+    required SettingsService settingsService,
+    AIAnalysisDatabaseService? aiAnalysisDbService,
+  }) {
     _settingsService = settingsService;
+    if (aiAnalysisDbService != null) {
+      _aiAnalysisDbService = aiAnalysisDbService;
+    }
   }
 
   /// 一条 AI 洞察成功落库后触发的后台归纳。
@@ -70,32 +45,161 @@ class InsightHistoryService extends ChangeNotifier {
   /// 记忆库）。由 Provider 装配时把这根线接上。
   Future<void> Function()? onAiInsightPersisted;
 
-  InsightHistoryService({required SettingsService settingsService})
-      : _settingsService = settingsService {
-    _loadInsights();
+  InsightHistoryService({
+    required SettingsService settingsService,
+    AIAnalysisDatabaseService? aiAnalysisDbService,
+  })  : _settingsService = settingsService,
+        _aiAnalysisDbService =
+            aiAnalysisDbService ?? AIAnalysisDatabaseService() {
+    _loadFuture = _runInitialLoad();
   }
 
   List<PeriodicInsight> get insights => List.unmodifiable(_insights);
 
-  /// 加载已保存的洞察
-  Future<void> _loadInsights() async {
-    try {
-      final jsonString = await _settingsService.getCustomString(_storageKey);
-      if (jsonString != null && jsonString.isNotEmpty) {
-        final List<dynamic> jsonList = json.decode(jsonString);
-        _insights =
-            jsonList.map((json) => PeriodicInsight.fromJson(json)).toList();
+  /// 确保首次加载与历史 KV 迁移已完成；若上次 SQLite 读取失败，后续调用会重试。
+  Future<void> ensureLoaded() async {
+    if (_hasLoaded) return;
+    await (_loadFuture ??= _runInitialLoad());
+  }
 
-        // 按时间倒序排列
-        _insights.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  Future<void> _runInitialLoad() async {
+    try {
+      final loaded = await _loadInsights();
+      if (loaded) {
+        _hasLoaded = true;
       }
+    } finally {
+      _loadFuture = null;
+    }
+  }
+
+  /// 加载已保存的洞察（必要时先尝试历史 KV 到 SQLite 的幂等迁移；迁移失败不阻断 SQLite 读取）
+  Future<bool> _loadInsights() async {
+    try {
+      await _migrateLegacyKvIfNeeded();
     } catch (e, stack) {
-      AppLogger.e('加载洞察历史失败',
-          error: e, stackTrace: stack, source: 'InsightHistoryService');
+      AppLogger.e(
+        '迁移历史周期洞察 KV 数据失败，继续从 SQLite 加载已有记录',
+        error: e,
+        stackTrace: stack,
+        source: 'InsightHistoryService',
+      );
+    }
+
+    try {
+      final loaded = await _aiAnalysisDbService.getPeriodicInsights(
+        limit: _maxInsights,
+      );
+      _insights = List<PeriodicInsight>.from(loaded);
+      // 确保内存列表严格按时间倒序排列
+      _insights.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return true;
+    } catch (e, stack) {
+      AppLogger.e(
+        '加载洞察历史失败',
+        error: e,
+        stackTrace: stack,
+        source: 'InsightHistoryService',
+      );
       _insights = [];
+      return false;
     } finally {
       notifyListeners();
     }
+  }
+
+  Future<void> _migrateLegacyKvIfNeeded() async {
+    final prefs = AppPreferencesService();
+    var prefsReady = false;
+    try {
+      await prefs.init();
+      prefsReady = true;
+      if (prefs.getBool(kPeriodicInsightsSqliteMigratedKey) == true) {
+        return;
+      }
+    } catch (e) {
+      // 无 SharedPreferences mock 的精简组件测试会走到这里，继续通过 SettingsService 检查
+      AppLogger.w(
+        '检查周期洞察迁移标记失败: $e',
+        source: 'InsightHistoryService',
+      );
+    }
+
+    final jsonString = await _settingsService.getCustomString(_storageKey);
+    if (jsonString != null && jsonString.isNotEmpty) {
+      final dynamic decoded = json.decode(jsonString);
+      if (decoded is! List) {
+        throw const FormatException(
+          'Legacy periodic_insights_history payload is not a JSON list',
+        );
+      }
+
+      final legacyItems = <PeriodicInsight>[];
+      var skippedCount = 0;
+      for (var i = 0; i < decoded.length; i++) {
+        final rawItem = decoded[i];
+        if (rawItem is! Map) {
+          skippedCount++;
+          AppLogger.w(
+            '迁移历史洞察跳过非 Map 条目 (index: $i)',
+            source: 'InsightHistoryService',
+          );
+          continue;
+        }
+        try {
+          legacyItems.add(
+            PeriodicInsight.fromJson(
+              rawItem.map((k, v) => MapEntry(k.toString(), v)),
+            ),
+          );
+        } catch (e) {
+          skippedCount++;
+          AppLogger.w(
+            '迁移历史洞察跳过损坏记录 (index: $i): $e',
+            source: 'InsightHistoryService',
+          );
+        }
+      }
+
+      if (legacyItems.isNotEmpty) {
+        await _aiAnalysisDbService.importPeriodicInsights(
+          legacyItems,
+          maxRetention: _maxInsights,
+        );
+      }
+
+      // 仅当全部条目解析且导入成功时才清理旧键和设置迁移标记，避免丢失未迁移或损坏数据
+      if (skippedCount > 0) {
+        AppLogger.w(
+          '历史洞察迁移跳过 $skippedCount 条损坏记录，保留原 KV 键不标记完成',
+          source: 'InsightHistoryService',
+        );
+        return;
+      }
+
+      final removed = await _removeLegacyStorageKey(prefs, prefsReady);
+      if (!removed) {
+        AppLogger.w(
+          '清理历史周期洞察 KV 键失败，暂不设置迁移完成标记',
+          source: 'InsightHistoryService',
+        );
+        return;
+      }
+    }
+
+    if (prefsReady) {
+      await prefs.setBool(kPeriodicInsightsSqliteMigratedKey, true);
+    }
+  }
+
+  Future<bool> _removeLegacyStorageKey(
+    AppPreferencesService prefs,
+    bool prefsReady,
+  ) async {
+    if (prefsReady) {
+      return await prefs.remove(_storageKey);
+    }
+    return await _settingsService.removeCustomKey(_storageKey);
   }
 
   /// 保存洞察到历史记录
@@ -115,6 +219,8 @@ class InsightHistoryService extends ChangeNotifier {
       // 只保存AI生成的洞察
       if (!isAiGenerated) return;
 
+      await ensureLoaded();
+
       final newInsight = PeriodicInsight(
         insight: insight,
         periodType: periodType,
@@ -122,6 +228,12 @@ class InsightHistoryService extends ChangeNotifier {
         createdAt: DateTime.now(),
         isAiGenerated: isAiGenerated,
         dataSignature: dataSignature,
+      );
+
+      // 先落库持久化，成功后再更新内存列表并通知监听器
+      await _aiAnalysisDbService.savePeriodicInsight(
+        newInsight,
+        maxRetention: _maxInsights,
       );
 
       if (dataSignature != null && dataSignature.isNotEmpty) {
@@ -134,12 +246,15 @@ class InsightHistoryService extends ChangeNotifier {
         _insights = _insights.take(_maxInsights).toList();
       }
 
-      await _saveInsights();
       notifyListeners();
       _triggerBackgroundConsolidation();
     } catch (e, stack) {
-      AppLogger.e('保存洞察失败',
-          error: e, stackTrace: stack, source: 'InsightHistoryService');
+      AppLogger.e(
+        '保存洞察失败',
+        error: e,
+        stackTrace: stack,
+        source: 'InsightHistoryService',
+      );
     }
   }
 
@@ -162,18 +277,6 @@ class InsightHistoryService extends ChangeNotifier {
         );
       }),
     );
-  }
-
-  /// 保存到存储
-  Future<void> _saveInsights() async {
-    try {
-      final jsonList = _insights.map((insight) => insight.toJson()).toList();
-      final jsonString = json.encode(jsonList);
-      await _settingsService.setCustomString(_storageKey, jsonString);
-    } catch (e, stack) {
-      AppLogger.e('保存洞察到存储失败',
-          error: e, stackTrace: stack, source: 'InsightHistoryService');
-    }
   }
 
   /// 根据数据签名获取洞察
@@ -211,10 +314,6 @@ class InsightHistoryService extends ChangeNotifier {
     if (weeklyInsights.isEmpty) return '';
 
     final buffer = StringBuffer();
-    // 移除这行重复的标题，因为 AIPromptManager 已经添加了【历史洞察参考】标题
-    // buffer.writeln('【历史洞察参考】');
-    // buffer.writeln('以下是该用户之前的周期性洞察记录，可帮助你了解其长期思考模式：');
-
     // 直接输出内容，让 PromptManager 统一控制标题格式
     for (var i = 0; i < weeklyInsights.length; i++) {
       final insight = weeklyInsights[i];
@@ -274,10 +373,7 @@ class InsightHistoryService extends ChangeNotifier {
 
   /// 为今日思考提示词格式化最近洞察
   Future<String> formatRecentInsightsForDailyPrompt() async {
-    // 确保已加载数据
-    if (_insights.isEmpty) {
-      await _loadInsights();
-    }
+    await ensureLoaded();
 
     final recentInsight = getRecentPeriodInsight();
     return formatInsightForPrompt(recentInsight);
@@ -285,16 +381,27 @@ class InsightHistoryService extends ChangeNotifier {
 
   /// 清除过期的洞察（超过3个月）
   Future<void> cleanOldInsights() async {
-    final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
-    final originalLength = _insights.length;
+    try {
+      await ensureLoaded();
+      final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
+      final deletedCount = await _aiAnalysisDbService
+          .deletePeriodicInsightsOlderThan(threeMonthsAgo);
+      final originalLength = _insights.length;
 
-    _insights.removeWhere(
-      (insight) => insight.createdAt.isBefore(threeMonthsAgo),
-    );
+      _insights.removeWhere(
+        (insight) => insight.createdAt.isBefore(threeMonthsAgo),
+      );
 
-    if (_insights.length != originalLength) {
-      await _saveInsights();
-      notifyListeners();
+      if (deletedCount > 0 || _insights.length != originalLength) {
+        notifyListeners();
+      }
+    } catch (e, stack) {
+      AppLogger.e(
+        '清理过期洞察失败',
+        error: e,
+        stackTrace: stack,
+        source: 'InsightHistoryService',
+      );
     }
   }
 }

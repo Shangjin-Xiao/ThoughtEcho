@@ -90,6 +90,25 @@ class _TestFeatureGuideService extends FeatureGuideService {
   Future<void> resetAllGuides() async {}
 }
 
+Future<void> _flushDraftIo(WidgetTester tester) async {
+  // sqflite_common_ffi runs on a background isolate; drain FakeAsync microtasks
+  // then await the actual DraftService DB queue signal instead of fixed wall time.
+  await tester.pump();
+  await tester.runAsync(() => DraftService().waitForIdleForTesting());
+  await tester.pump();
+  await tester.runAsync(() => DraftService().waitForIdleForTesting());
+  await tester.pump();
+}
+
+Future<T> _runDbAfterFlush<T>(
+  WidgetTester tester,
+  Future<T> Function() action,
+) async {
+  await _flushDraftIo(tester);
+  final result = await tester.runAsync(action);
+  return result as T;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -115,6 +134,12 @@ void main() {
     );
     mmkvService = MMKVService();
     await mmkvService.clear();
+    await draftService.deleteAllDrafts();
+  });
+
+  tearDownAll(() async {
+    await draftService.resetForTesting();
+    await TestHarness.tearDown();
   });
 
   testWidgets('clearing the editor body removes the recoverable draft', (
@@ -160,7 +185,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 3));
 
-    final savedDraft = await draftService.getLatestDraft();
+    final savedDraft = await _runDbAfterFlush(
+      tester,
+      () => draftService.getLatestDraft(),
+    );
     expect(savedDraft, isNotNull);
     expect(savedDraft!['plainText'], 'Draft body');
 
@@ -169,7 +197,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 3));
 
-    expect(await draftService.getLatestDraft(), isNull);
+    final clearedDraft = await _runDbAfterFlush(
+      tester,
+      () => draftService.getLatestDraft(),
+    );
+    expect(clearedDraft, isNull);
   });
 
   testWidgets('new note drafts from separate editor sessions use unique keys', (
@@ -209,6 +241,7 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 3));
+      await _flushDraftIo(tester);
     }
 
     await pumpEditor('First independent draft');
@@ -217,10 +250,10 @@ void main() {
 
     await pumpEditor('Second independent draft');
 
-    final draftKeys = mmkvService
-        .getAllKeys()
-        .where((key) => key.startsWith('draft_new_note_'))
-        .toList();
+    final draftKeys = await _runDbAfterFlush(tester, () async {
+      final ids = await draftService.getAllDraftIds();
+      return ids.where((id) => id.startsWith('new_note_')).toList();
+    });
     expect(draftKeys, hasLength(2));
   });
 
@@ -278,6 +311,7 @@ void main() {
     expect(find.byType(NoteFullEditorPage), findsOneWidget);
 
     await tester.binding.handlePopRoute();
+    await _flushDraftIo(tester);
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsNothing);
@@ -452,17 +486,21 @@ void main() {
     // Find and tap Discard button
     final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
     await tester.tap(find.text(l10n.discardChanges));
+    await _flushDraftIo(tester);
     await tester.pumpAndSettle();
 
     // Ensure 3 seconds elapse for any potential pending timer to fire
     await tester.pump(const Duration(seconds: 3));
 
-    final draft = await draftService.getLatestDraft();
+    final draft = await _runDbAfterFlush(
+      tester,
+      () => draftService.getLatestDraft(),
+    );
     expect(draft, isNull);
   });
 
   testWidgets(
-      'saving and exiting immediately after typing saves to DB and leaves no draft in MMKV',
+      'saving and exiting immediately after typing saves to DB and leaves no draft in storage',
       (
     tester,
   ) async {
@@ -530,12 +568,16 @@ void main() {
 
     expect(slowDatabaseService.addQuoteCallCount, 1);
     slowDatabaseService.completeSave();
+    await _flushDraftIo(tester);
     await tester.pumpAndSettle();
 
     // Ensure 3 seconds elapse for any potential pending draft timer to fire
     await tester.pump(const Duration(seconds: 3));
 
-    final draft = await draftService.getLatestDraft();
+    final draft = await _runDbAfterFlush(
+      tester,
+      () => draftService.getLatestDraft(),
+    );
     expect(draft, isNull);
   });
 
@@ -602,12 +644,16 @@ void main() {
 
     final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
     await tester.tap(find.text(l10n.discardChanges));
+    await _flushDraftIo(tester);
     await tester.pumpAndSettle();
 
     // Wait and verify no draft was written or recreated
     await tester.pump(const Duration(seconds: 3));
 
-    final draft = await draftService.getLatestDraft();
+    final draft = await _runDbAfterFlush(
+      tester,
+      () => draftService.getLatestDraft(),
+    );
     expect(draft, isNull);
   });
 }

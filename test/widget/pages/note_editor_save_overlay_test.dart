@@ -8,12 +8,21 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/draft_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
+
+Future<void> _flushDraftIo(WidgetTester tester) async {
+  await tester.pump();
+  await tester.runAsync(() => DraftService().waitForIdleForTesting());
+  await tester.pump();
+  await tester.runAsync(() => DraftService().waitForIdleForTesting());
+  await tester.pump();
+}
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
@@ -71,8 +80,13 @@ void main() {
     await MMKVService().init();
   });
 
-  setUp(() {
+  setUp(() async {
     databaseService = _TestDatabaseService();
+    await DraftService().deleteAllDrafts();
+  });
+
+  tearDownAll(() async {
+    await DraftService().resetForTesting();
   });
 
   testWidgets(
@@ -119,6 +133,7 @@ void main() {
 
     // Complete saving
     saveCompleter.complete();
+    await _flushDraftIo(tester);
     await tester.pumpAndSettle();
 
     // After completion, overlay should disappear

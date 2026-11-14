@@ -14,7 +14,7 @@ import 'ai_settings_page.dart';
 import '../services/migration_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
-import '../services/mmkv_service.dart';
+import '../services/app_preferences_service.dart';
 import '../services/ai_analysis_database_service.dart';
 import '../utils/app_logger.dart';
 import '../constants/app_constants.dart';
@@ -162,7 +162,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       final migrationService = MigrationService(
         databaseService: context.read<DatabaseService>(),
         settingsService: context.read<SettingsService>(),
-        mmkvService: context.read<MMKVService>(),
+        mmkvService: context.read<AppPreferencesService>(),
       );
 
       final result = await migrationService.performMigration();

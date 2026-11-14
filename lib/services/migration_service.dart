@@ -2,7 +2,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import 'database_service.dart';
 import 'settings_service.dart';
-import 'mmkv_service.dart';
+import 'app_preferences_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/version_utils.dart';
 
@@ -16,7 +16,7 @@ import '../utils/version_utils.dart';
 class MigrationService {
   final DatabaseService _databaseService;
   final SettingsService _settingsService;
-  final MMKVService _mmkvService;
+  final AppPreferencesService _mmkvService;
   final PackageInfo? _packageInfo;
 
   static const String _keyLastRunVersion = 'lastRunVersionBuildNumber';
@@ -25,7 +25,7 @@ class MigrationService {
   MigrationService({
     required DatabaseService databaseService,
     required SettingsService settingsService,
-    required MMKVService mmkvService,
+    required AppPreferencesService mmkvService,
     PackageInfo? packageInfo,
   })  : _databaseService = databaseService,
         _settingsService = settingsService,

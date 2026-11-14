@@ -21,7 +21,7 @@ import '../utils/app_navigator_key.dart';
 import 'api_service.dart';
 import 'clipboard_service.dart';
 import 'database_service.dart';
-import 'mmkv_service.dart';
+import 'app_preferences_service.dart';
 import 'location_service.dart';
 import 'weather_service.dart';
 import '../utils/app_logger.dart';
@@ -56,7 +56,7 @@ part 'smart_push/smart_push_permissions.dart';
 /// - 效果追踪：Time-to-Open, 交互反馈学习
 class SmartPushService extends ChangeNotifier {
   final DatabaseService _databaseService;
-  final MMKVService _mmkv;
+  final AppPreferencesService _mmkv;
   final LocationService _locationService;
   final FlutterLocalNotificationsPlugin _notificationsPlugin;
   WeatherService? _weatherService;
@@ -158,13 +158,13 @@ class SmartPushService extends ChangeNotifier {
   SmartPushService({
     required DatabaseService databaseService,
     required LocationService locationService,
-    MMKVService? mmkvService,
+    AppPreferencesService? mmkvService,
     FlutterLocalNotificationsPlugin? notificationsPlugin,
     WeatherService? weatherService,
     SmartPushAnalytics? analytics,
   })  : _databaseService = databaseService,
         _locationService = locationService,
-        _mmkv = mmkvService ?? MMKVService(),
+        _mmkv = mmkvService ?? AppPreferencesService(),
         _notificationsPlugin =
             notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
         _weatherService = weatherService {

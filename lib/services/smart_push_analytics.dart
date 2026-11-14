@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/smart_push_settings.dart';
 import '../utils/string_utils.dart';
 import '../utils/app_logger.dart';
-import 'mmkv_service.dart';
+import 'app_preferences_service.dart';
 
 /// 推送检查结果
 class PushCheckResult {
@@ -45,7 +45,7 @@ class PushAllowance {
 
 /// SOTA 智能推送分析服务
 class SmartPushAnalytics extends ChangeNotifier {
-  final MMKVService _mmkv;
+  final AppPreferencesService _mmkv;
   final Random _random = Random();
 
   // 存储键
@@ -90,8 +90,8 @@ class SmartPushAnalytics extends ChangeNotifier {
     'pastNote',
   ];
 
-  SmartPushAnalytics({MMKVService? mmkvService})
-      : _mmkv = mmkvService ?? MMKVService();
+  SmartPushAnalytics({AppPreferencesService? mmkvService})
+      : _mmkv = mmkvService ?? AppPreferencesService();
 
   // ============================================================
   // 1. 响应性热图 - 用户 App 打开时间分析

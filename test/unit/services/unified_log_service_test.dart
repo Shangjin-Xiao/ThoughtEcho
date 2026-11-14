@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart' as logging;
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
@@ -27,6 +31,91 @@ class _RecordingDatabase implements Database {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeStorageAdapter implements StorageAdapter {
+  final Map<String, Object?> values = {
+    kKvEngineMigratedKey: true,
+    kLegacyMmkvMigrationCompleteKey: true,
+  };
+
+  Future<bool> Function(String key, int value)? onSetInt;
+  Future<bool> Function(String key, bool value)? onSetBool;
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<bool> setString(String key, String value) async {
+    values[key] = value;
+    return true;
+  }
+
+  @override
+  String? getString(String key) => values[key] as String?;
+
+  @override
+  Future<bool> setInt(String key, int value) async {
+    if (onSetInt != null) {
+      final ok = await onSetInt!(key, value);
+      if (!ok) return false;
+    }
+    values[key] = value;
+    return true;
+  }
+
+  @override
+  int? getInt(String key) => values[key] as int?;
+
+  @override
+  Future<bool> setDouble(String key, double value) async {
+    values[key] = value;
+    return true;
+  }
+
+  @override
+  double? getDouble(String key) => values[key] as double?;
+
+  @override
+  Future<bool> setBool(String key, bool value) async {
+    if (onSetBool != null) {
+      final ok = await onSetBool!(key, value);
+      if (!ok) return false;
+    }
+    values[key] = value;
+    return true;
+  }
+
+  @override
+  bool? getBool(String key) => values[key] as bool?;
+
+  @override
+  Future<bool> setStringList(String key, List<String> value) async {
+    values[key] = List<String>.from(value);
+    return true;
+  }
+
+  @override
+  List<String>? getStringList(String key) =>
+      (values[key] as List<String>?)?.toList();
+
+  @override
+  bool containsKey(String key) => values.containsKey(key);
+
+  @override
+  Future<bool> remove(String key) async {
+    values.remove(key);
+    return true;
+  }
+
+  @override
+  Future<bool> clear() async {
+    values.clear();
+    return true;
+  }
+
+  @override
+  Set<String> getKeys() => values.keys.toSet();
 }
 
 void main() {
@@ -195,6 +284,144 @@ void main() {
           reason: 'Severe log with exception should be captured by Sentry');
 
       Sentry.close();
+    });
+
+    test(
+        'setLogLevel rolls back memory, persisted level, and logger when userSet write returns false',
+        () async {
+      final adapter = _FakeStorageAdapter();
+      AppPreferencesService().resetForTesting();
+      SafeMMKV().configureForTesting(
+        primaryAdapter: adapter,
+        candidateMmkvFiles: const [],
+        forceNativeMmkvSupport: false,
+      );
+      await AppPreferencesService().init();
+      addTearDown(() async {
+        adapter.onSetBool = null;
+        adapter.onSetInt = null;
+        await service.setLogLevel(UnifiedLogLevel.info);
+        AppPreferencesService().resetForTesting();
+      });
+
+      await service.setLogLevel(UnifiedLogLevel.error);
+      await service.setLogLevel(UnifiedLogLevel.info);
+      expect(service.currentLevel, UnifiedLogLevel.info);
+      expect(logging.Logger.root.level, logging.Level.INFO);
+
+      // Pretend user_set flag was previously absent, and fail writing it
+      adapter.values.remove('log_level_user_set');
+      adapter.onSetBool = (key, value) async => false;
+
+      await service.setLogLevel(UnifiedLogLevel.debug);
+
+      expect(service.currentLevel, UnifiedLogLevel.info);
+      expect(logging.Logger.root.level, logging.Level.INFO);
+      expect(
+        adapter.values['log_level'],
+        UnifiedLogLevel.info.index,
+      );
+      expect(adapter.values.containsKey('log_level_user_set'), isFalse);
+
+      // Also verify non-null false user_set flag is restored when setBool fails on true
+      adapter.values['log_level_user_set'] = false;
+      adapter.onSetBool = (key, value) async => !value;
+      await service.setLogLevel(UnifiedLogLevel.debug);
+      expect(adapter.values['log_level_user_set'], isFalse);
+      expect(
+        adapter.values['log_level'],
+        UnifiedLogLevel.info.index,
+      );
+    });
+
+    test('setLogLevel logs warning when preference rollback itself fails',
+        () async {
+      final adapter = _FakeStorageAdapter();
+      AppPreferencesService().resetForTesting();
+      SafeMMKV().configureForTesting(
+        primaryAdapter: adapter,
+        candidateMmkvFiles: const [],
+        forceNativeMmkvSupport: false,
+      );
+      await AppPreferencesService().init();
+      addTearDown(() async {
+        adapter.onSetBool = null;
+        adapter.onSetInt = null;
+        await service.setLogLevel(UnifiedLogLevel.info);
+        AppPreferencesService().resetForTesting();
+      });
+
+      await service.setLogLevel(UnifiedLogLevel.error);
+      await service.setLogLevel(UnifiedLogLevel.info);
+      service.clearMemoryLogs();
+
+      var setIntCalls = 0;
+      adapter.onSetInt = (key, value) async {
+        setIntCalls++;
+        // First write succeeds (newLevel), rollback write returns false
+        return setIntCalls == 1;
+      };
+      adapter.onSetBool = (key, value) async => false;
+
+      await service.setLogLevel(UnifiedLogLevel.debug);
+
+      expect(service.currentLevel, UnifiedLogLevel.info);
+      expect(
+        service.logs.any(
+          (entry) =>
+              entry.level == UnifiedLogLevel.warning &&
+              entry.message.contains('回滚日志级别偏好失败'),
+        ),
+        isTrue,
+      );
+    });
+
+    test(
+        'overlapping setLogLevel calls serialize so an earlier failure cannot overwrite a later success',
+        () async {
+      final adapter = _FakeStorageAdapter();
+      AppPreferencesService().resetForTesting();
+      SafeMMKV().configureForTesting(
+        primaryAdapter: adapter,
+        candidateMmkvFiles: const [],
+        forceNativeMmkvSupport: false,
+      );
+      await AppPreferencesService().init();
+      addTearDown(() async {
+        adapter.onSetBool = null;
+        adapter.onSetInt = null;
+        await service.setLogLevel(UnifiedLogLevel.info);
+        AppPreferencesService().resetForTesting();
+      });
+
+      await service.setLogLevel(UnifiedLogLevel.error);
+      await service.setLogLevel(UnifiedLogLevel.info);
+
+      final firstAttemptGate = Completer<void>();
+      var boolAttempt = 0;
+      adapter.onSetBool = (key, value) async {
+        boolAttempt++;
+        if (boolAttempt == 1) {
+          await firstAttemptGate.future;
+          return false;
+        }
+        return true;
+      };
+
+      final first = service.setLogLevel(UnifiedLogLevel.debug);
+      final second = service.setLogLevel(UnifiedLogLevel.warning);
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      firstAttemptGate.complete();
+      await Future.wait([first, second]);
+
+      expect(service.currentLevel, UnifiedLogLevel.warning);
+      expect(logging.Logger.root.level, logging.Level.WARNING);
+      expect(
+        adapter.values['log_level'],
+        UnifiedLogLevel.warning.index,
+      );
+      expect(adapter.values['log_level_user_set'], isTrue);
     });
   });
 }

@@ -504,5 +504,72 @@ void main() {
         contains('"enabled":true'),
       );
     });
+
+    test('AppPreferencesService and MMKVService resolve to the same singleton',
+        () {
+      expect(identical(AppPreferencesService(), MMKVService()), isTrue);
+      expect(AppPreferencesService(), isA<MMKVService>());
+    });
+
+    test(
+        'force migration does not resurrect retired SQLite keys and diagnostics treats binary-only retired keys as consistent',
+        () async {
+      final path = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'paper')
+        ..writeString('draft_legacy_1', '{"plainText":"old draft"}')
+        ..writeString(
+          'periodic_insights_history',
+          '[{"insight":"old","periodType":"week","periodLabel":"W1","createdAt":"2026-07-01T00:00:00.000","isAiGenerated":true}]',
+        );
+      await File(path).writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$path.crc').writeAsBytes(encoder.toCrcBytes());
+
+      SharedPreferences.setMockInitialValues({
+        kKvEngineMigratedKey: true,
+        kDraftsSqliteMigratedKey: true,
+        kPeriodicInsightsSqliteMigratedKey: true,
+        'theme_style': 'paper',
+      });
+
+      final storage = SafeMMKV()
+        ..configureForTesting(
+          candidateMmkvFiles: [path],
+          candidateDbPaths: const [],
+          forceNativeMmkvSupport: false,
+        );
+      await storage.initialize();
+
+      // Already retired keys must stay absent after init & forced migration
+      final snapshot = await storage.runMigration(force: true);
+      expect(snapshot.migratedFromBinaryCount, equals(0));
+      expect(storage.containsKey('draft_legacy_1'), isFalse);
+      expect(storage.containsKey('periodic_insights_history'), isFalse);
+
+      // Diagnostic report must treat retired binary-only keys as consistent
+      final report = await storage.collectDiagnosticReport();
+      expect(report.diffCount, equals(0));
+      final retiredDraftEntry = report.comparisons.singleWhere(
+        (entry) => entry.key == 'draft_legacy_1',
+      );
+      expect(retiredDraftEntry.allConsistent, isTrue);
+      expect(retiredDraftEntry.nativeMatchesBinary, isTrue);
+      final retiredInsightEntry = report.comparisons.singleWhere(
+        (entry) => entry.key == 'periodic_insights_history',
+      );
+      expect(retiredInsightEntry.allConsistent, isTrue);
+      expect(retiredInsightEntry.nativeMatchesBinary, isTrue);
+
+      // Clearing storage preserves SQLite takeover watermarks and prevents resurrection
+      expect(await storage.clear(), isTrue);
+      expect(storage.getBool(kDraftsSqliteMigratedKey), isTrue);
+      expect(storage.getBool(kPeriodicInsightsSqliteMigratedKey), isTrue);
+      final afterClearSnapshot = await storage.runMigration(force: true);
+      // 仅非退役键 theme_style 被迁移，已由 SQLite 接管的草稿/洞察键不得复活
+      expect(afterClearSnapshot.migratedFromBinaryCount, equals(1));
+      expect(storage.getString('theme_style'), equals('paper'));
+      expect(storage.containsKey('draft_legacy_1'), isFalse);
+      expect(storage.containsKey('periodic_insights_history'), isFalse);
+    });
   });
 }

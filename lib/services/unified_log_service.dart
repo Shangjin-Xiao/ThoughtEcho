@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart' as logging;
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/log_service.dart' as old_log;
 import 'package:thoughtecho/utils/global_exception_handler.dart';
@@ -333,8 +333,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       await _initializeLoggingFlutter();
 
       // 初始化 SafeMMKV 并加载日志级别设置
-      final mmkv = SafeMMKV();
-      await mmkv.initialize();
+      final mmkv = AppPreferencesService();
+      await mmkv.init();
 
       // 从 MMKV 加载日志级别
       final levelIndex = mmkv.getInt(_logLevelKey);
@@ -357,12 +357,18 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
             );
           }
           _currentLevel = UnifiedLogLevel.info;
-          await mmkv.setInt(_logLevelKey, _currentLevel.index);
+          final saved = await mmkv.setInt(_logLevelKey, _currentLevel.index);
+          if (!saved) {
+            _logger.warning('保存重置日志级别失败');
+          }
         }
       } else {
         // 首次启动或无效值时，使用默认的info级别
         _currentLevel = UnifiedLogLevel.info;
-        await mmkv.setInt(_logLevelKey, _currentLevel.index);
+        final saved = await mmkv.setInt(_logLevelKey, _currentLevel.index);
+        if (!saved) {
+          _logger.warning('保存默认日志级别失败');
+        }
       }
 
       // 设置 logging_flutter 的日志级别
@@ -735,19 +741,61 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     }
   }
 
+  Future<void> _logLevelLock = Future<void>.value();
+
+  Future<T> _withLogLevelLock<T>(Future<T> Function() action) {
+    final result = Completer<T>();
+    Zone.root.run(() {
+      final completer = Completer<void>();
+      final previous = _logLevelLock;
+      _logLevelLock = completer.future;
+      previous.then((_) => action()).then(
+        (value) {
+          if (!result.isCompleted) {
+            result.complete(value);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (!result.isCompleted) {
+            result.completeError(error, stackTrace);
+          }
+        },
+      ).whenComplete(() {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      });
+    });
+    return result.future;
+  }
+
   /// 设置新的日志级别并保存
-  Future<void> setLogLevel(UnifiedLogLevel newLevel) async {
-    if (_isDisposed) return;
-    if (_currentLevel != newLevel) {
+  Future<void> setLogLevel(UnifiedLogLevel newLevel) {
+    return _withLogLevelLock(() async {
+      if (_isDisposed) return;
+      if (_currentLevel == newLevel) return;
+
       final oldLevel = _currentLevel;
-      _currentLevel = newLevel;
-
+      final mmkv = AppPreferencesService();
+      bool? previousUserHasSet;
+      var levelAttempted = false;
+      var userSetAttempted = false;
       try {
-        final mmkv = SafeMMKV();
-        await mmkv.setInt(_logLevelKey, newLevel.index);
+        await mmkv.init();
+        previousUserHasSet = mmkv.getBool(_logLevelUserSetKey);
+        levelAttempted = true;
+        final levelSaved = await mmkv.setInt(_logLevelKey, newLevel.index);
+        if (!levelSaved) {
+          throw StateError('保存日志级别偏好返回 false');
+        }
         // 标记用户已手动设置过日志级别，后续启动不会自动重置
-        await mmkv.setBool(_logLevelUserSetKey, true);
+        userSetAttempted = true;
+        final userSetSaved = await mmkv.setBool(_logLevelUserSetKey, true);
+        if (!userSetSaved) {
+          throw StateError('保存用户日志级别设置标记返回 false');
+        }
 
+        _currentLevel = newLevel;
         // 更新 logging_flutter 的级别
         _updateLoggingFlutterLevel();
 
@@ -757,6 +805,54 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           source: 'UnifiedLogService',
         );
       } catch (e) {
+        _currentLevel = oldLevel;
+        if (levelAttempted) {
+          try {
+            final rollbackSaved =
+                await mmkv.setInt(_logLevelKey, oldLevel.index);
+            if (!rollbackSaved) {
+              _logger.warning(
+                '回滚日志级别偏好返回 false: $_logLevelKey -> ${oldLevel.name}',
+              );
+              log(
+                UnifiedLogLevel.warning,
+                '回滚日志级别偏好失败（返回 false）',
+                source: 'UnifiedLogService',
+              );
+            }
+          } catch (rollbackError) {
+            _logger.warning('回滚日志级别偏好失败: $rollbackError');
+            log(
+              UnifiedLogLevel.warning,
+              '回滚日志级别偏好异常',
+              error: rollbackError.toString(),
+              source: 'UnifiedLogService',
+            );
+          }
+        }
+        if (userSetAttempted) {
+          try {
+            final userSetRestored = previousUserHasSet == null
+                ? await mmkv.remove(_logLevelUserSetKey)
+                : await mmkv.setBool(_logLevelUserSetKey, previousUserHasSet);
+            if (!userSetRestored) {
+              _logger.warning('回滚用户日志级别设置标记返回 false: $_logLevelUserSetKey');
+              log(
+                UnifiedLogLevel.warning,
+                '回滚用户日志级别设置标记失败（返回 false）',
+                source: 'UnifiedLogService',
+              );
+            }
+          } catch (rollbackError) {
+            _logger.warning('回滚用户日志级别设置标记失败: $rollbackError');
+            log(
+              UnifiedLogLevel.warning,
+              '回滚用户日志级别设置标记异常',
+              error: rollbackError.toString(),
+              source: 'UnifiedLogService',
+            );
+          }
+        }
         _logger.warning('设置日志级别失败: $e');
         log(
           UnifiedLogLevel.error,
@@ -775,7 +871,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           _notifyScheduled = false;
         });
       }
-    }
+    });
   }
 
   /// 清除所有内存中的日志

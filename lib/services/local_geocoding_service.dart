@@ -4,7 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'dart:convert';
 // 导入数学库，用于三角函数计算
-import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
+import 'app_preferences_service.dart';
 import '../utils/app_logger.dart'; // 导入日志工具
 import '../utils/i18n_language.dart';
 
@@ -224,8 +224,8 @@ class LocalGeocodingService {
   ) async {
     try {
       // 使用MMKV
-      final storage = SafeMMKV();
-      await storage.initialize(); // 确保初始化
+      final storage = AppPreferencesService();
+      await storage.init();
       final cacheJson = storage.getString(_geocodeCacheKey);
 
       if (cacheJson != null) {
@@ -304,8 +304,8 @@ class LocalGeocodingService {
   ) async {
     try {
       // 使用MMKV
-      final storage = SafeMMKV();
-      await storage.initialize(); // 确保初始化
+      final storage = AppPreferencesService();
+      await storage.init();
       Map<String, dynamic> cacheData = {};
 
       // 读取现有缓存

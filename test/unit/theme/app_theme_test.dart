@@ -394,4 +394,49 @@ void main() {
     expect(appTheme.useCustomColor, isTrue);
     expect(appTheme.useDynamicColor, isFalse);
   });
+
+  test('reloadThemeFromStorage 遇到类型损坏或缺失键时显式回退默认值，不保留陈旧状态', () async {
+    final storage = SafeMMKV();
+    await storage.initialize();
+
+    // 先设置为非默认值并加载
+    await storage.setString('theme_mode', 'dark');
+    await storage.setString(ThemeStyle.storageKey, ThemeStyle.plain.name);
+    await storage.setInt('custom_color', Colors.purple.toARGB32());
+    await storage.setBool('use_custom_color', true);
+    await storage.setBool('use_dynamic_color', false);
+
+    final appTheme = AppTheme();
+    await appTheme.initialize();
+    expect(appTheme.themeMode, ThemeMode.dark);
+    expect(appTheme.themeStyle, ThemeStyle.plain);
+    expect(appTheme.useDynamicColor, isFalse);
+
+    // 模拟恢复了损坏类型的配置（且即使无 app_installed_v2 也不得误切 freshInstallStyle）
+    await storage.remove('app_installed_v2');
+    await storage.remove('app_settings');
+    await storage.setInt('theme_mode', 999);
+    await storage.setInt(ThemeStyle.storageKey, 888);
+    await storage.setString('custom_color', 'not_an_int');
+    await storage.setString('use_dynamic_color', 'not_a_bool');
+
+    await appTheme.reloadThemeFromStorage();
+
+    expect(appTheme.themeMode, ThemeMode.system);
+    expect(appTheme.themeStyle, ThemeStyle.defaultStyle);
+    expect(appTheme.customColor, Colors.blue);
+    expect(appTheme.useCustomColor, isFalse);
+    expect(appTheme.useDynamicColor, isTrue);
+
+    // 删除 custom_color 键并保留 use_custom_color=true 时，应回退到默认蓝色且保留开关状态
+    await storage.setInt('custom_color', Colors.purple.toARGB32());
+    await storage.setBool('use_custom_color', true);
+    await appTheme.reloadThemeFromStorage();
+    expect(appTheme.customColor, const Color(0xff9c27b0));
+
+    await storage.remove('custom_color');
+    await appTheme.reloadThemeFromStorage();
+    expect(appTheme.customColor, Colors.blue);
+    expect(appTheme.useCustomColor, isTrue);
+  });
 }

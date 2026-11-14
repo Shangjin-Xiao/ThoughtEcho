@@ -117,6 +117,8 @@ class MmkvKeySchema {
     'database_migration_complete',
     'mmkv_migration_complete',
     'kv_engine_migrated_v1',
+    'drafts_sqlite_migrated_v1',
+    'periodic_insights_sqlite_migrated_v1',
     'ai_auto_enable_pending_v1',
     'agent_memory_enabled',
     'agent_memory_notice_shown',
