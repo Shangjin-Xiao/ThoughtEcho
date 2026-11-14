@@ -43,328 +43,321 @@ extension _NoteListItemsExtension on NoteListViewState {
     final maxWidth = isTablet ? AppConstants.tabletMaxContentWidth : width;
     final horizontalPadding = isTablet ? 16.0 : 8.0;
 
-    // 布局构建
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 主体内容 - 底色由主题下发：手工色板用自己的纸色，material 保持原算法。
-        final backgroundColor = AppSurfaceTokens.of(context).noteList;
+    // 主体内容 - 底色由主题下发：手工色板用自己的纸色，material 保持原算法。
+    final backgroundColor = AppSurfaceTokens.of(context).noteList;
 
-        Widget mainContent = Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
-            child: Column(
-              children: [
-                // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
-                // 使用 AnimatedOpacity 保持布局树稳定，避免 ListView 滚动跳动
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  opacity: _isExportMode ? 0.0 : 1.0,
-                  child: IgnorePointer(
-                    ignoring: _isExportMode,
-                    child: Container(
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        topPadding + 8.0,
-                        horizontalPadding,
-                        0,
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocusNode,
-                        onChanged: _onSearchChanged,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _searchFocusNode.unfocus(),
-                        decoration: InputDecoration(
-                          hintText: l10n.searchNotes,
-                          isDense: true,
-                          filled: true,
-                          fillColor: AppSurfaceTokens.of(context).searchBox,
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 筛选按钮
-                              IconButton(
-                                key: widget.filterButtonKey, // 功能引导 key
-                                icon: const Icon(Icons.tune),
-                                tooltip: l10n.filterAndSortTooltip,
-                                onPressed: () {
-                                  final settings =
-                                      context.read<SettingsService>();
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerLowest,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(
-                                          AppShapeTokens.of(
-                                            context,
-                                          ).dialogRadius,
-                                        ),
-                                      ),
-                                    ),
-                                    builder: (context) => NoteFilterSortSheet(
-                                      allTags: _effectiveTags,
-                                      selectedTagIds: widget.selectedTagIds,
-                                      sortType: widget.sortType,
-                                      sortAscending: widget.sortAscending,
-                                      selectedWeathers: widget.selectedWeathers,
-                                      selectedDayPeriods:
-                                          widget.selectedDayPeriods,
-                                      requireBiometricForHidden:
-                                          settings.requireBiometricForHidden,
-                                      onApply: (
-                                        tagIds,
-                                        sortType,
-                                        sortAscending,
-                                        selectedWeathers,
-                                        selectedDayPeriods,
-                                      ) {
-                                        widget.onTagSelectionChanged(
-                                          tagIds,
-                                        );
-                                        widget.onSortChanged(
-                                          sortType,
-                                          sortAscending,
-                                        );
-                                        widget.onFilterChanged(
-                                          selectedWeathers,
-                                          selectedDayPeriods,
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 10,
-                            horizontal: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              shape.inputRadius,
-                            ),
-                            borderSide: BorderSide(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outline.withValues(alpha: 0.28),
-                              width: 1,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              shape.inputRadius,
-                            ),
-                            borderSide: BorderSide(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outline.withValues(alpha: 0.20),
-                              width: 1,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              shape.inputRadius,
-                            ),
-                            borderSide: BorderSide(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primary.withValues(alpha: 0.65),
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // 筛选条件展示区域
-                _buildFilterDisplay(theme, horizontalPadding),
-
-                // 笔记列表 - 搜索过渡动画 + 状态切换动画
-                // AnimatedOpacity: 搜索时列表轻微变淡提示"更新中"，结果到达后淡入恢复
-                // AnimatedSwitcher: 处理 loading/empty/no_results/results 之间的状态切换
-                Expanded(
-                  child: RepaintBoundary(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                      ),
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOut,
-                        opacity: _isSearchUpdating ? 0.7 : 1.0,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          switchInCurve: Curves.easeOut,
-                          switchOutCurve: Curves.easeIn,
-                          // 双向交叉淡化：旧内容快速淡出、新内容淡入，
-                          // 避免被硬切（opacity 直接归零）造成的生硬感。
-                          // 注意：results→results 不再切换（key 固定），这里只处理
-                          // loading / empty / no_results / results 之间的状态切换，
-                          // 因此不会再出现两个 ListView 同时挂在同一个滚动控制器上。
-                          transitionBuilder: (child, animation) =>
-                              FadeTransition(opacity: animation, child: child),
-                          child: _buildNoteList(theme, noteInsertAnimationType),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-
-        mainContent = Stack(
+    Widget mainContent = Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Column(
           children: [
-            mainContent,
-            // 顶部悬浮控制栏
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic,
-              top: _isExportMode ? topPadding + 8.0 : -(topPadding + 80.0),
-              left: horizontalPadding,
-              right: horizontalPadding,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 250),
-                opacity: _isExportMode ? 1.0 : 0.0,
-                child: IgnorePointer(
-                  ignoring: !_isExportMode,
-                  child: Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(shape.cardRadius),
-                      boxShadow: shape.restShadow,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            _updateState(() {
-                              _isExportMode = false;
-                              _selectedExportNoteIds.clear();
-                            });
-                          },
-                          child: Text(l10n.cancel),
-                        ),
-                        const Spacer(),
-                        Text(
-                          "${l10n.pdfExportSelectionMode} (${_selectedExportNoteIds.length})",
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: _selectAllVisibleNotes,
-                          child: Text(
-                            _selectedExportNoteIds.containsAll(
-                              _quotes.map((q) => q.id).whereType<String>(),
-                            )
-                                ? l10n.prefClearAll
-                                : l10n.prefSelectAll,
+            // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
+            // 使用 AnimatedOpacity 保持布局树稳定，避免 ListView 滚动跳动
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              opacity: _isExportMode ? 0.0 : 1.0,
+              child: IgnorePointer(
+                ignoring: _isExportMode,
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    topPadding + 8.0,
+                    horizontalPadding,
+                    0,
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: _onSearchChanged,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _searchFocusNode.unfocus(),
+                    decoration: InputDecoration(
+                      hintText: l10n.searchNotes,
+                      isDense: true,
+                      filled: true,
+                      fillColor: AppSurfaceTokens.of(context).searchBox,
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 筛选按钮
+                          IconButton(
+                            key: widget.filterButtonKey, // 功能引导 key
+                            icon: const Icon(Icons.tune),
+                            tooltip: l10n.filterAndSortTooltip,
+                            onPressed: () {
+                              final settings = context.read<SettingsService>();
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerLowest,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(
+                                      AppShapeTokens.of(
+                                        context,
+                                      ).dialogRadius,
+                                    ),
+                                  ),
+                                ),
+                                builder: (context) => NoteFilterSortSheet(
+                                  allTags: _effectiveTags,
+                                  selectedTagIds: widget.selectedTagIds,
+                                  sortType: widget.sortType,
+                                  sortAscending: widget.sortAscending,
+                                  selectedWeathers: widget.selectedWeathers,
+                                  selectedDayPeriods: widget.selectedDayPeriods,
+                                  requireBiometricForHidden:
+                                      settings.requireBiometricForHidden,
+                                  onApply: (
+                                    tagIds,
+                                    sortType,
+                                    sortAscending,
+                                    selectedWeathers,
+                                    selectedDayPeriods,
+                                  ) {
+                                    widget.onTagSelectionChanged(
+                                      tagIds,
+                                    );
+                                    widget.onSortChanged(
+                                      sortType,
+                                      sortAscending,
+                                    );
+                                    widget.onFilterChanged(
+                                      selectedWeathers,
+                                      selectedDayPeriods,
+                                    );
+                                  },
+                                ),
+                              );
+                            },
                           ),
+                        ],
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          shape.inputRadius,
                         ),
-                      ],
+                        borderSide: BorderSide(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withValues(alpha: 0.28),
+                          width: 1,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          shape.inputRadius,
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withValues(alpha: 0.20),
+                          width: 1,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          shape.inputRadius,
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.65),
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            // 底部悬浮控制栏
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic,
-              bottom: _isExportMode ? 16.0 : -100.0,
-              left: horizontalPadding,
-              right: horizontalPadding,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 250),
-                opacity: _isExportMode ? 1.0 : 0.0,
-                child: IgnorePointer(
-                  ignoring: !_isExportMode,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(shape.cardRadius),
-                      boxShadow: shape.raisedShadow,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _selectSameMonthNotes,
-                            icon: const Icon(
-                              Icons.calendar_month_outlined,
-                              size: 18,
-                            ),
-                            label: Text(
-                              l10n.selectSameMonth,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _selectSameCategoryNotes,
-                            icon: const Icon(Icons.label_outline, size: 18),
-                            label: Text(
-                              l10n.selectSameCategory,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _selectedExportNoteIds.isEmpty
-                                ? null
-                                : _exportSelectedNotesToPdf,
-                            icon: const Icon(Icons.picture_as_pdf, size: 18),
-                            label: Text(
-                              l10n.exportSelected(
-                                _selectedExportNoteIds.length,
-                              ),
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
+
+            // 筛选条件展示区域
+            _buildFilterDisplay(theme, horizontalPadding),
+
+            // 笔记列表 - 搜索过渡动画 + 状态切换动画
+            // AnimatedOpacity: 搜索时列表轻微变淡提示"更新中"，结果到达后淡入恢复
+            // AnimatedSwitcher: 处理 loading/empty/no_results/results 之间的状态切换
+            Expanded(
+              child: RepaintBoundary(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                  ),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    opacity: _isSearchUpdating ? 0.7 : 1.0,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      // 双向交叉淡化：旧内容快速淡出、新内容淡入，
+                      // 避免被硬切（opacity 直接归零）造成的生硬感。
+                      // 注意：results→results 不再切换（key 固定），这里只处理
+                      // loading / empty / no_results / results 之间的状态切换，
+                      // 因此不会再出现两个 ListView 同时挂在同一个滚动控制器上。
+                      transitionBuilder: (child, animation) =>
+                          FadeTransition(opacity: animation, child: child),
+                      child: _buildNoteList(theme, noteInsertAnimationType),
                     ),
                   ),
                 ),
               ),
             ),
           ],
-        );
-
-        return Container(color: backgroundColor, child: mainContent);
-      },
+        ),
+      ),
     );
+
+    mainContent = Stack(
+      children: [
+        mainContent,
+        // 顶部悬浮控制栏
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          top: _isExportMode ? topPadding + 8.0 : -(topPadding + 80.0),
+          left: horizontalPadding,
+          right: horizontalPadding,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 250),
+            opacity: _isExportMode ? 1.0 : 0.0,
+            child: IgnorePointer(
+              ignoring: !_isExportMode,
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(shape.cardRadius),
+                  boxShadow: shape.restShadow,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        _updateState(() {
+                          _isExportMode = false;
+                          _selectedExportNoteIds.clear();
+                        });
+                      },
+                      child: Text(l10n.cancel),
+                    ),
+                    const Spacer(),
+                    Text(
+                      "${l10n.pdfExportSelectionMode} (${_selectedExportNoteIds.length})",
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _selectAllVisibleNotes,
+                      child: Text(
+                        _selectedExportNoteIds.containsAll(
+                          _quotes.map((q) => q.id).whereType<String>(),
+                        )
+                            ? l10n.prefClearAll
+                            : l10n.prefSelectAll,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 底部悬浮控制栏
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          bottom: _isExportMode ? 16.0 : -100.0,
+          left: horizontalPadding,
+          right: horizontalPadding,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 250),
+            opacity: _isExportMode ? 1.0 : 0.0,
+            child: IgnorePointer(
+              ignoring: !_isExportMode,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(shape.cardRadius),
+                  boxShadow: shape.raisedShadow,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _selectSameMonthNotes,
+                        icon: const Icon(
+                          Icons.calendar_month_outlined,
+                          size: 18,
+                        ),
+                        label: Text(
+                          l10n.selectSameMonth,
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _selectSameCategoryNotes,
+                        icon: const Icon(Icons.label_outline, size: 18),
+                        label: Text(
+                          l10n.selectSameCategory,
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _selectedExportNoteIds.isEmpty
+                            ? null
+                            : _exportSelectedNotesToPdf,
+                        icon: const Icon(Icons.picture_as_pdf, size: 18),
+                        label: Text(
+                          l10n.exportSelected(
+                            _selectedExportNoteIds.length,
+                          ),
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    return Container(color: backgroundColor, child: mainContent);
   }
 
   Widget _buildNoteList(ThemeData theme, String noteInsertAnimationType) {
@@ -434,6 +427,36 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
     final tagMap = _obtainTagMap();
 
+    String? favoriteGuideQuoteId;
+    String? moreGuideQuoteId;
+    String? foldGuideQuoteId;
+    final needFavoriteGuide =
+        widget.favoriteButtonGuideKey != null && widget.onFavorite != null;
+    final needMoreGuide = widget.moreButtonGuideKey != null;
+    final needFoldGuide = widget.foldToggleGuideKey != null;
+    if (needFavoriteGuide || needMoreGuide || needFoldGuide) {
+      for (final q in _quotes) {
+        final id = q.id;
+        if (id == null) continue;
+        if (needFavoriteGuide && favoriteGuideQuoteId == null) {
+          favoriteGuideQuoteId = id;
+        }
+        if (needMoreGuide && moreGuideQuoteId == null) {
+          moreGuideQuoteId = id;
+        }
+        if (needFoldGuide &&
+            foldGuideQuoteId == null &&
+            QuoteItemWidget.needsExpansionFor(q)) {
+          foldGuideQuoteId = id;
+        }
+        if ((!needFavoriteGuide || favoriteGuideQuoteId != null) &&
+            (!needMoreGuide || moreGuideQuoteId != null) &&
+            (!needFoldGuide || foldGuideQuoteId != null)) {
+          break;
+        }
+      }
+    }
+
     final rebuildToken = _NoteListRebuildToken(
       quotes: List<Quote>.of(_quotes),
       hasMore: _hasMore,
@@ -442,6 +465,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       tagMap: tagMap,
       selectedTagIds: widget.selectedTagIds,
       positioningQuoteId: _positioningQuoteId,
+      positioningItemKey: _positioningItemKey,
+      firstOpenScrollPerfEnabled: _firstOpenScrollPerfEnabled,
+      insertAnimationType: noteInsertAnimationType,
+      exportCardRadius: AppShapeTokens.of(context).cardRadius,
       animatingQuoteVersions: Map<String, int>.of(_animatingQuoteVersions),
       structuralInsertQuoteIds: Set<String>.of(_structuralInsertQuoteIds),
       deletingQuoteIds: Set<String>.of(_deletingQuoteIds),
@@ -451,11 +478,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       favoriteButtonGuideKey: widget.favoriteButtonGuideKey,
       moreButtonGuideKey: widget.moreButtonGuideKey,
       foldToggleGuideKey: widget.foldToggleGuideKey,
+      favoriteGuideQuoteId: favoriteGuideQuoteId,
+      moreGuideQuoteId: moreGuideQuoteId,
+      foldGuideQuoteId: foldGuideQuoteId,
     );
-
-    var favoriteGuideAssigned = false;
-    var moreGuideAssigned = false;
-    var foldGuideAssigned = false;
 
     final childrenDelegate = _NoteListChildBuilderDelegate(
       (context, index) {
@@ -475,32 +501,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                   ? _positioningItemKey
                   : ValueKey<String>('note-list-row-$quoteId');
 
-              final bool shouldCheckExpansionForGuide =
-                  !foldGuideAssigned && widget.foldToggleGuideKey != null;
-              final bool needsExpansion = shouldCheckExpansionForGuide
-                  ? QuoteItemWidget.needsExpansionFor(quote)
-                  : false;
-
-              final attachFavoriteGuideKey = !favoriteGuideAssigned &&
-                  widget.favoriteButtonGuideKey != null &&
-                  widget.onFavorite != null;
-              final attachMoreGuideKey =
-                  !moreGuideAssigned && widget.moreButtonGuideKey != null;
-              final attachFoldGuideKey = !foldGuideAssigned &&
-                  widget.foldToggleGuideKey != null &&
-                  needsExpansion;
-
-              if (attachFavoriteGuideKey) {
-                favoriteGuideAssigned = true;
-              }
-
-              if (attachMoreGuideKey) {
-                moreGuideAssigned = true;
-              }
-
-              if (attachFoldGuideKey) {
-                foldGuideAssigned = true;
-              }
+              final attachFavoriteGuideKey = quoteId == favoriteGuideQuoteId;
+              final attachMoreGuideKey = quoteId == moreGuideQuoteId;
+              final attachFoldGuideKey = quoteId == foldGuideQuoteId;
 
               final expansionNotifier = _obtainExpansionNotifier(quoteId);
               _expandedItems.putIfAbsent(
@@ -602,9 +605,11 @@ extension _NoteListItemsExtension on NoteListViewState {
           builder: (context, loading, _) => SizedBox(
             height: _loadMoreFooterHeight,
             child: loading
-                ? const AppLoadingView(
-                    size: _loadMoreFooterHeight,
-                    style: AppLoadingStyle.writingLines,
+                ? const RepaintBoundary(
+                    child: AppLoadingView(
+                      size: _loadMoreFooterHeight,
+                      style: AppLoadingStyle.writingLines,
+                    ),
                   )
                 : null,
           ),
@@ -1692,6 +1697,10 @@ class _NoteListRebuildToken {
     required this.tagMap,
     required this.selectedTagIds,
     this.positioningQuoteId,
+    required this.positioningItemKey,
+    required this.firstOpenScrollPerfEnabled,
+    required this.insertAnimationType,
+    required this.exportCardRadius,
     required this.animatingQuoteVersions,
     required this.structuralInsertQuoteIds,
     required this.deletingQuoteIds,
@@ -1701,6 +1710,9 @@ class _NoteListRebuildToken {
     this.favoriteButtonGuideKey,
     this.moreButtonGuideKey,
     this.foldToggleGuideKey,
+    this.favoriteGuideQuoteId,
+    this.moreGuideQuoteId,
+    this.foldGuideQuoteId,
   });
 
   final List<Quote> quotes;
@@ -1710,6 +1722,10 @@ class _NoteListRebuildToken {
   final Map<String, NoteTag> tagMap;
   final List<String> selectedTagIds;
   final String? positioningQuoteId;
+  final GlobalKey? positioningItemKey;
+  final bool firstOpenScrollPerfEnabled;
+  final String insertAnimationType;
+  final double exportCardRadius;
   final Map<String, int> animatingQuoteVersions;
   final Set<String> structuralInsertQuoteIds;
   final Set<String> deletingQuoteIds;
@@ -1719,6 +1735,9 @@ class _NoteListRebuildToken {
   final GlobalKey? favoriteButtonGuideKey;
   final GlobalKey? moreButtonGuideKey;
   final GlobalKey? foldToggleGuideKey;
+  final String? favoriteGuideQuoteId;
+  final String? moreGuideQuoteId;
+  final String? foldGuideQuoteId;
 
   @override
   bool operator ==(Object other) {
@@ -1726,9 +1745,17 @@ class _NoteListRebuildToken {
     if (other is! _NoteListRebuildToken) return false;
     if (hasMore != other.hasMore) return false;
     if (isExportMode != other.isExportMode) return false;
+    if (firstOpenScrollPerfEnabled != other.firstOpenScrollPerfEnabled) {
+      return false;
+    }
+    if (insertAnimationType != other.insertAnimationType) return false;
+    if (exportCardRadius != other.exportCardRadius) return false;
     if (hasFavoriteCallback != other.hasFavoriteCallback) return false;
     if (hasGenerateCardCallback != other.hasGenerateCardCallback) return false;
     if (hasLongPressFavoriteCallback != other.hasLongPressFavoriteCallback) {
+      return false;
+    }
+    if (!identical(positioningItemKey, other.positioningItemKey)) {
       return false;
     }
     if (!identical(favoriteButtonGuideKey, other.favoriteButtonGuideKey)) {
@@ -1737,6 +1764,9 @@ class _NoteListRebuildToken {
     if (!identical(moreButtonGuideKey, other.moreButtonGuideKey)) return false;
     if (!identical(foldToggleGuideKey, other.foldToggleGuideKey)) return false;
     if (positioningQuoteId != other.positioningQuoteId) return false;
+    if (favoriteGuideQuoteId != other.favoriteGuideQuoteId) return false;
+    if (moreGuideQuoteId != other.moreGuideQuoteId) return false;
+    if (foldGuideQuoteId != other.foldGuideQuoteId) return false;
     if (!setEquals(selectedExportNoteIds, other.selectedExportNoteIds)) {
       return false;
     }
@@ -1780,8 +1810,14 @@ class _NoteListRebuildToken {
         quotes.length,
         hasMore,
         isExportMode,
+        firstOpenScrollPerfEnabled,
+        insertAnimationType,
+        exportCardRadius,
         selectedExportNoteIds.length,
         tagMap.length,
+        favoriteGuideQuoteId,
+        moreGuideQuoteId,
+        foldGuideQuoteId,
       );
 }
 

@@ -868,6 +868,81 @@ void main() {
       await databaseService.disposeStream();
     },
   );
+
+  testWidgets(
+    '父级重建后继续扩充缓存区并滚动构建新卡片，不重复分配引导 GlobalKey',
+    (tester) async {
+      final databaseService = _StreamingFakeDatabaseService();
+      final settingsService = _FakeSettingsService();
+      final quotes = [
+        for (var i = 0; i < 30; i++)
+          Quote(
+            id: 'guide-safe-$i',
+            content: '第 $i 条用于验证引导 GlobalKey 在父级重建及后续构建新行时不发生冲突的笔记正文。',
+            date: DateTime(2025, 6, 21, 9, i).toIso8601String(),
+            editSource: 'inline',
+            dayPeriod: 'morning',
+          ),
+      ];
+
+      final favoriteGuideKey = GlobalKey();
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(400, 800),
+            padding: EdgeInsets.only(top: 10),
+          ),
+          child: _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            favoriteButtonGuideKey: favoriteGuideKey,
+          ),
+        ),
+      );
+      await tester.pump();
+      databaseService.emit(quotes, hasMore: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(favoriteGuideKey.currentContext, isNotNull);
+      final initialFavoriteContext = favoriteGuideKey.currentContext;
+
+      // 触发父级重建（MediaQuery.padding 变化导致 NoteListViewState.build 重新生成 delegate，但 rebuildToken 不变）
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(400, 800),
+            padding: EdgeInsets.only(top: 20),
+          ),
+          child: _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            favoriteButtonGuideKey: favoriteGuideKey,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 继续步进扩充缓存区并向下滚动以构建后续未挂载卡片
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.drag(find.byType(ListView), const Offset(0, -1200));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tester.takeException(), isNull);
+      expect(favoriteGuideKey.currentContext, isNotNull);
+      expect(
+        identical(favoriteGuideKey.currentContext, initialFavoriteContext),
+        isTrue,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+      await databaseService.disposeStream();
+    },
+  );
 }
 
 class _TestApp extends StatelessWidget {

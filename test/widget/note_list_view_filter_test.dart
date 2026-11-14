@@ -1017,14 +1017,28 @@ void main() {
       _dispatchPreloadScrollUpdate(listViewContext);
       await tester.pump();
 
-      // 分页进行中：底部那一格显示加载动画。
+      // 分页进行中：底部那一格显示加载动画，且外层包裹 RepaintBoundary 建立防御性图层隔离。
       expect(find.byType(AppLoadingView), findsOneWidget);
+      final footerBox = tester.widget<SizedBox>(
+        find.byWidgetPredicate(
+          (w) => w is SizedBox && w.height == 80.0 && w.child != null,
+        ),
+      );
+      expect(footerBox.child, isA<RepaintBoundary>());
+      final footerBoundary = footerBox.child! as RepaintBoundary;
+      expect(footerBoundary.child, isA<AppLoadingView>());
 
       // 收尾闸门（320ms）走完后必须收起。此前这一步在"列表仍在滚动"时
       // 只改字段、不触发重建，若之后恰好没有别的 setState，
       // 转圈就会一直挂在列表底部收不回去。
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(AppLoadingView), findsNothing);
+      final idleFooterBox = tester.widget<SizedBox>(
+        find.byWidgetPredicate(
+          (w) => w is SizedBox && w.height == 80.0,
+        ),
+      );
+      expect(idleFooterBox.child, isNull);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 2));

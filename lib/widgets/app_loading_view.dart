@@ -18,38 +18,42 @@ class AppLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final availableWidth =
-                  constraints.maxWidth.isFinite ? constraints.maxWidth : 220.0;
-              final s = (size.isFinite ? size : constraints.maxHeight * 0.5)
-                  .clamp(48.0, 220.0);
-              final effectiveWidth = s > availableWidth ? availableWidth : s;
-              return AppLoadingAnimation(
-                style: style,
-                width: effectiveWidth,
-                semanticLabel: message ?? AppLocalizations.of(context).loading,
-              );
-            },
-          ),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              message!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-              textAlign: TextAlign.center,
+    return RepaintBoundary(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth.isFinite
+                    ? constraints.maxWidth
+                    : 220.0;
+                final s = (size.isFinite ? size : constraints.maxHeight * 0.5)
+                    .clamp(48.0, 220.0);
+                final effectiveWidth = s > availableWidth ? availableWidth : s;
+                return AppLoadingAnimation(
+                  style: style,
+                  width: effectiveWidth,
+                  semanticLabel:
+                      message ?? AppLocalizations.of(context).loading,
+                );
+              },
             ),
+            if (message != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                message!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -91,28 +95,30 @@ class AppInlineLoadingIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolved = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CircularProgressIndicator(
-        strokeWidth: strokeWidth,
-        valueColor: AlwaysStoppedAnimation<Color>(resolved),
-        // 下面四个都是在退掉 M3「表现力」版转圈的默认造型（主题里
-        // year2023: false）。那套默认值是给 40 点的独立转圈设计的，缩到
-        // 16 点、挤在一行状态文字前面时全都变成噪声：
-        //
-        // - backgroundColor：默认会画一圈 primary 淡色轨道。这颗圈的前景是
-        //   onSurfaceVariant（跟着状态文字走），轨道却是主题色——一行里两支
-        //   墨，读起来像个彩色小甜甜圈，而不是"正在进行"。
-        // - trackGap：轨道和圆弧之间还留一道缺口，16 点上那道缺口和线宽同级。
-        // - padding：M3 默认在转圈外面再垫 4 点。塞进 16 的盒子里只剩 8 点的
-        //   圆弧——旁边完成态的 Icons.check 是 16 的字形，两者一换就跳一下，
-        //   这正是"转圈和 √ 不匹配"的来源。
-        // - strokeCap：圆头，和图标字形的收笔是一路的。
-        backgroundColor: Colors.transparent,
-        trackGap: 0,
-        padding: EdgeInsets.zero,
-        strokeCap: StrokeCap.round,
+    return RepaintBoundary(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CircularProgressIndicator(
+          strokeWidth: strokeWidth,
+          valueColor: AlwaysStoppedAnimation<Color>(resolved),
+          // 下面四个都是在退掉 M3「表现力」版转圈的默认造型（主题里
+          // year2023: false）。那套默认值是给 40 点的独立转圈设计的，缩到
+          // 16 点、挤在一行状态文字前面时全都变成噪声：
+          //
+          // - backgroundColor：默认会画一圈 primary 淡色轨道。这颗圈的前景是
+          //   onSurfaceVariant（跟着状态文字走），轨道却是主题色——一行里两支
+          //   墨，读起来像个彩色小甜甜圈，而不是"正在进行"。
+          // - trackGap：轨道和圆弧之间还留一道缺口，16 点上那道缺口和线宽同级。
+          // - padding：M3 默认在转圈外面再垫 4 点。塞进 16 的盒子里只剩 8 点的
+          //   圆弧——旁边完成态的 Icons.check 是 16 的字形，两者一换就跳一下，
+          //   这正是"转圈和 √ 不匹配"的来源。
+          // - strokeCap：圆头，和图标字形的收笔是一路的。
+          backgroundColor: Colors.transparent,
+          trackGap: 0,
+          padding: EdgeInsets.zero,
+          strokeCap: StrokeCap.round,
+        ),
       ),
     );
   }
