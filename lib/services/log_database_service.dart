@@ -242,17 +242,43 @@ class InMemoryLogStorage implements LogStorage {
   Future<void> close() async {}
 }
 
-/// Web 平台的日志存储实现（使用 SharedPreferences）
+/// Web 平台的日志存储实现（使用 SharedPreferences 与内存缓存、防抖持久化）
 class WebLogStorage implements LogStorage {
   static const String _logStorageKey = 'app_logs_storage';
   static const String _logCountKey = 'app_logs_count';
+  static const Duration defaultSaveDebounceDuration =
+      Duration(milliseconds: 500);
+
+  final Duration saveDebounceDuration;
   late SharedPreferences _prefs;
   bool _initialized = false;
+
+  List<LogEntry>? _logsCache;
+  int _logCount = 0;
+  Timer? _saveTimer;
+  Future<void>? _inFlightSave;
+  bool _needsSave = false;
+
+  WebLogStorage({
+    this.saveDebounceDuration = defaultSaveDebounceDuration,
+  });
 
   @override
   Future<void> initialize() async {
     if (_initialized) return;
     _prefs = await SharedPreferences.getInstance();
+
+    final List<String> logStrings = _prefs.getStringList(_logStorageKey) ?? [];
+    final List<LogEntry> logs = [];
+    for (final str in logStrings) {
+      try {
+        logs.add(LogEntry.fromJson(str));
+      } catch (e) {
+        logDebug('Web平台：跳过损坏的日志条目: $e');
+      }
+    }
+    _logsCache = logs;
+    _logCount = _prefs.getInt(_logCountKey) ?? _logsCache!.length;
     _initialized = true;
     logDebug('Web平台：初始化日志存储 (SharedPreferences)');
   }
@@ -264,11 +290,71 @@ class WebLogStorage implements LogStorage {
     }
   }
 
-  // 从 SharedPreferences 获取所有日志
+  // 获取所有日志（优先直接返回内存缓存）
   Future<List<LogEntry>> _getAllLogs() async {
     await _ensureInitialized();
-    final List<String> logStrings = _prefs.getStringList(_logStorageKey) ?? [];
-    return logStrings.map((str) => LogEntry.fromJson(str)).toList();
+    return _logsCache!;
+  }
+
+  // 触发后台防抖刷盘
+  void _scheduleSave() {
+    _needsSave = true;
+    _saveTimer?.cancel();
+    _saveTimer = Timer(saveDebounceDuration, () {
+      _saveTimer = null;
+      _performSave();
+    });
+  }
+
+  // 取消待执行的防抖刷盘任务
+  void _cancelPendingSave() {
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    _needsSave = false;
+  }
+
+  // 执行持久化任务
+  Future<void> _performSave() async {
+    while (_inFlightSave != null) {
+      await _inFlightSave;
+    }
+
+    if (!_needsSave || _logsCache == null) {
+      return;
+    }
+
+    final completer = Completer<void>();
+    _inFlightSave = completer.future;
+
+    try {
+      final logsToSave = List<LogEntry>.from(_logsCache!);
+      final countToSave = _logCount;
+      _needsSave = false;
+
+      final List<String> logStrings =
+          logsToSave.map((log) => log.toJson()).toList();
+      await _prefs.setStringList(_logStorageKey, logStrings);
+      await _prefs.setInt(_logCountKey, countToSave);
+      completer.complete();
+    } catch (e) {
+      logDebug('Web平台：保存日志失败: $e');
+      completer.complete();
+    } finally {
+      _inFlightSave = null;
+    }
+  }
+
+  // 同步等待未完成持久化任务并立即刷盘
+  Future<void> _flushPendingSave() async {
+    if (!_initialized) return;
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    await _performSave();
+  }
+
+  /// 强制立即刷盘，持久化全部内存日志到 SharedPreferences
+  Future<void> flushLogs() async {
+    await _flushPendingSave();
   }
 
   // 保存所有日志到 SharedPreferences
@@ -281,30 +367,29 @@ class WebLogStorage implements LogStorage {
   @override
   Future<int> insertLog(Map<String, dynamic> log) async {
     await _ensureInitialized();
-    final logs = await _getAllLogs();
     final logEntry = LogEntry.fromMap(log);
-    logs.add(logEntry);
+    _logsCache!.add(logEntry);
 
     // 更新计数器
-    final count = _prefs.getInt(_logCountKey) ?? 0;
-    await _prefs.setInt(_logCountKey, count + 1);
+    _logCount++;
+    await _prefs.setInt(_logCountKey, _logCount);
 
-    await _saveLogs(logs);
-    return count + 1; // 返回ID
+    _scheduleSave();
+    return _logCount; // 返回ID
   }
 
   @override
   Future<void> insertLogs(List<Map<String, dynamic>> logs) async {
+    if (logs.isEmpty) return;
     await _ensureInitialized();
-    final existingLogs = await _getAllLogs();
     final newLogs = logs.map((log) => LogEntry.fromMap(log)).toList();
-    existingLogs.addAll(newLogs);
+    _logsCache!.addAll(newLogs);
 
     // 更新计数器
-    final count = _prefs.getInt(_logCountKey) ?? 0;
-    await _prefs.setInt(_logCountKey, count + logs.length);
+    _logCount += logs.length;
+    await _prefs.setInt(_logCountKey, _logCount);
 
-    await _saveLogs(existingLogs);
+    _scheduleSave();
   }
 
   @override
@@ -318,7 +403,7 @@ class WebLogStorage implements LogStorage {
     int offset = 0,
     String orderBy = 'timestamp DESC',
   }) async {
-    var logs = await _getAllLogs();
+    var logs = List<LogEntry>.from(await _getAllLogs());
 
     // 应用过滤条件
     if (level != null && level.isNotEmpty) {
@@ -372,13 +457,19 @@ class WebLogStorage implements LogStorage {
   @override
   Future<int> getLogCount() async {
     await _ensureInitialized();
-    return _prefs.getInt(_logCountKey) ?? 0;
+    return _logCount;
   }
 
   @override
   Future<int> deleteOldLogs(int maxLogCount) async {
     await _ensureInitialized();
-    var logs = await _getAllLogs();
+    _cancelPendingSave();
+    while (_inFlightSave != null) {
+      await _inFlightSave;
+    }
+    _cancelPendingSave();
+
+    var logs = _logsCache ?? [];
 
     if (logs.length <= maxLogCount) {
       return 0;
@@ -388,10 +479,12 @@ class WebLogStorage implements LogStorage {
     logs.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     final deleteCount = logs.length - maxLogCount;
-    logs = logs.sublist(deleteCount); // 保留最新的 maxLogCount 条
+    _logsCache = logs.sublist(deleteCount); // 保留最新的 maxLogCount 条
+    _logCount = _logsCache!.length;
 
-    await _saveLogs(logs);
-    await _prefs.setInt(_logCountKey, logs.length);
+    await _saveLogs(_logsCache!);
+    await _prefs.setInt(_logCountKey, _logCount);
+    _needsSave = false;
 
     return deleteCount;
   }
@@ -399,7 +492,15 @@ class WebLogStorage implements LogStorage {
   @override
   Future<int> clearAllLogs() async {
     await _ensureInitialized();
+    _cancelPendingSave();
+    while (_inFlightSave != null) {
+      await _inFlightSave;
+    }
+    _cancelPendingSave();
+
     final count = await getLogCount();
+    _logsCache?.clear();
+    _logCount = 0;
     await _prefs.remove(_logStorageKey);
     await _prefs.remove(_logCountKey);
     return count;
@@ -407,7 +508,7 @@ class WebLogStorage implements LogStorage {
 
   @override
   Future<List<Map<String, dynamic>>> getRecentLogs(int limit) async {
-    var logs = await _getAllLogs();
+    var logs = List<LogEntry>.from(await _getAllLogs());
 
     // 按时间降序排序（最新的在前）
     logs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -420,7 +521,7 @@ class WebLogStorage implements LogStorage {
 
   @override
   Future<void> close() async {
-    // SharedPreferences 不需要关闭
+    await _flushPendingSave();
   }
 }
 
