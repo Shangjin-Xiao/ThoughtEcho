@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:thoughtecho/utils/dio_performance_interceptor.dart';
 import 'package:flutter/foundation.dart';
+
 import 'ai_endpoint_security.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
@@ -10,6 +12,7 @@ import '../models/multi_ai_settings.dart' as multi_ai;
 import '../models/ai_config.dart';
 import '../services/api_key_manager.dart';
 import 'api_key_debugger.dart';
+
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 统一的AI网络请求管理器
@@ -59,13 +62,19 @@ class AINetworkManager {
     );
   }
 
+  /// 测试注入 Dio 实例
+  @visibleForTesting
+  static set dioInstanceForTesting(Dio? dio) {
+    _dioInstance = dio;
+  }
+
   /// 重置Dio实例
   static void resetDio() {
     _dioInstance?.close();
     _dioInstance = null;
   }
 
-  /// 通用AI请求方法
+  /// 通用AI请求方法（自动处理并记录异常）
   static Future<Response> _makeBaseRequest({
     required AIConfig config,
     required Map<String, dynamic> data,
@@ -74,76 +83,94 @@ class AINetworkManager {
     Duration? timeout,
   }) async {
     try {
-      final headers = config.buildHeaders();
-      final adjustedData = config.adjustData(data);
-      final finalUrl =
-          urlOverride?.isNotEmpty == true ? urlOverride! : config.apiUrl;
-
-      // 调试信息：检查stream参数类型
-      if (adjustedData.containsKey('stream')) {
-        logDebug(
-          'Stream parameter type: ${adjustedData['stream'].runtimeType}, value: ${adjustedData['stream']}',
-        );
-        // 确保stream参数是boolean类型
-        final streamValue = adjustedData['stream'];
-        if (streamValue is String) {
-          logDebug(
-            'Warning: stream parameter is String, converting to boolean',
-          );
-          adjustedData['stream'] = streamValue.toLowerCase() == 'true';
-        } else if (streamValue is! bool) {
-          logDebug(
-            'Warning: stream parameter is not boolean (${streamValue.runtimeType}), setting to true',
-          );
-          adjustedData['stream'] = true;
-        }
-      }
-
-      // 验证其他关键参数的类型
-      if (adjustedData.containsKey('temperature') &&
-          adjustedData['temperature'] is! num) {
-        logDebug('Warning: temperature parameter type issue, fixing');
-        adjustedData['temperature'] = 0.7;
-      }
-      if (adjustedData.containsKey('max_tokens') &&
-          adjustedData['max_tokens'] is! int) {
-        logDebug('Warning: max_tokens parameter type issue, fixing');
-        adjustedData['max_tokens'] = 1000;
-      }
-
-      // 验证JSON编码是否会出错
-      try {
-        final testJson = jsonEncode(adjustedData);
-        logDebug('JSON编码测试成功，数据长度: ${testJson.length}');
-      } catch (e) {
-        logDebug('JSON编码测试失败: $e');
-        logDebug('数据类型检查:');
-        adjustedData.forEach((key, value) {
-          logDebug('  $key: ${value.runtimeType} = $value');
-        });
-        throw Exception('请求数据JSON编码失败: $e');
-      }
-
-      // 判据见 [isSecureAiEndpoint]，和设置页的校验器、NetworkService 同一条。
-      final uri = Uri.parse(finalUrl);
-      if (!isSecureAiEndpoint(uri)) {
-        throw Exception('非安全URL: 公网请求必须使用 HTTPS');
-      }
-
-      final response = await _dio.post(
-        finalUrl,
-        data: adjustedData,
-        options: Options(
-          headers: headers,
-          responseType: responseType,
-          receiveTimeout: timeout ?? const Duration(seconds: 300),
-        ),
+      return await _makeBaseRequestRaw(
+        config: config,
+        data: data,
+        responseType: responseType,
+        urlOverride: urlOverride,
+        timeout: timeout,
       );
-      return response;
-    } catch (e) {
-      logDebug('AI请求失败 for ${config.name} (${config.id}): $e');
-      throw _handleError(e);
+    } catch (e, stackTrace) {
+      throw _handleError(
+        e,
+        stackTrace: stackTrace,
+        requestContext: '${config.name} (${config.id})',
+      );
     }
+  }
+
+  /// 执行基础AI请求（由调用方负责错误处理）
+  static Future<Response> _makeBaseRequestRaw({
+    required AIConfig config,
+    required Map<String, dynamic> data,
+    required ResponseType responseType,
+    String? urlOverride,
+    Duration? timeout,
+  }) async {
+    final headers = config.buildHeaders();
+    final adjustedData = config.adjustData(data);
+    final finalUrl =
+        urlOverride?.isNotEmpty == true ? urlOverride! : config.apiUrl;
+
+    // 调试信息：检查stream参数类型
+    if (adjustedData.containsKey('stream')) {
+      logDebug(
+        'Stream parameter type: ${adjustedData['stream'].runtimeType}, value: ${adjustedData['stream']}',
+      );
+      // 确保stream参数是boolean类型
+      final streamValue = adjustedData['stream'];
+      if (streamValue is String) {
+        logDebug('Warning: stream parameter is String, converting to boolean');
+        adjustedData['stream'] = streamValue.toLowerCase() == 'true';
+      } else if (streamValue is! bool) {
+        logDebug(
+          'Warning: stream parameter is not boolean (${streamValue.runtimeType}), setting to true',
+        );
+        adjustedData['stream'] = true;
+      }
+    }
+
+    // 验证其他关键参数的类型
+    if (adjustedData.containsKey('temperature') &&
+        adjustedData['temperature'] is! num) {
+      logDebug('Warning: temperature parameter type issue, fixing');
+      adjustedData['temperature'] = 0.7;
+    }
+    if (adjustedData.containsKey('max_tokens') &&
+        adjustedData['max_tokens'] is! int) {
+      logDebug('Warning: max_tokens parameter type issue, fixing');
+      adjustedData['max_tokens'] = 1000;
+    }
+
+    // 验证JSON编码是否会出错
+    try {
+      final testJson = jsonEncode(adjustedData);
+      logDebug('JSON编码测试成功，数据长度: ${testJson.length}');
+    } catch (e) {
+      logDebug('JSON编码测试失败: $e');
+      logDebug('数据类型检查:');
+      adjustedData.forEach((key, value) {
+        logDebug('  $key: ${value.runtimeType} = $value');
+      });
+      throw Exception('请求数据JSON编码失败: $e');
+    }
+
+    // 判据见 [isSecureAiEndpoint]，和设置页的校验器、NetworkService 同一条。
+    final uri = Uri.parse(finalUrl);
+    if (!isSecureAiEndpoint(uri)) {
+      throw Exception('非安全URL: 公网请求必须使用 HTTPS');
+    }
+
+    final response = await _dio.post(
+      finalUrl,
+      data: adjustedData,
+      options: Options(
+        headers: headers,
+        responseType: responseType,
+        receiveTimeout: timeout ?? const Duration(seconds: 300),
+      ),
+    );
+    return response;
   }
 
   /// 发送普通AI请求
@@ -207,6 +234,7 @@ class AINetworkManager {
         onData,
         onComplete,
         onError,
+        requestContext: '${providerWithApiKey.name} (${providerWithApiKey.id})',
       );
     } else if (multiSettings != null) {
       return await _makeStreamRequestWithFailover(
@@ -219,8 +247,9 @@ class AINetworkManager {
         timeout,
       );
     } else if (legacySettings != null) {
+      final legacyConfig = LegacyAIConfigWrapper(legacySettings);
       final response = await _makeBaseRequest(
-        config: LegacyAIConfigWrapper(legacySettings),
+        config: legacyConfig,
         data: {...data, 'stream': true},
         responseType: ResponseType.stream,
         urlOverride: url.isNotEmpty ? url : null,
@@ -231,6 +260,7 @@ class AINetworkManager {
         onData,
         onComplete,
         onError,
+        requestContext: '${legacyConfig.name} (${legacyConfig.id})',
       );
     } else {
       throw Exception('未提供有效的AI设置');
@@ -262,17 +292,21 @@ class AINetworkManager {
         final providerWithApiKey = await _loadApiKeyForProvider(
           currentProvider,
         );
-        return await _makeBaseRequest(
+        return await _makeBaseRequestRaw(
           config: providerWithApiKey,
           data: data,
           responseType: ResponseType.json,
           urlOverride: url.isNotEmpty ? url : null,
           timeout: timeout,
         );
-      } catch (e) {
+      } catch (e, stackTrace) {
         logDebug('当前服务商 ${currentProvider.name} 请求失败: $e');
         _markProviderFailed(currentProvider.id);
-        lastError = _handleError(e);
+        lastError = _handleError(
+          e,
+          stackTrace: stackTrace,
+          requestContext: '${currentProvider.name} (${currentProvider.id})',
+        );
 
         if (!multiSettings.enableFailover) {
           throw lastError;
@@ -290,17 +324,21 @@ class AINetworkManager {
           logDebug('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
           final providerWithApiKey = await _loadApiKeyForProvider(provider);
-          return await _makeBaseRequest(
+          return await _makeBaseRequestRaw(
             config: providerWithApiKey,
             data: data,
             responseType: ResponseType.json,
             urlOverride: url.isNotEmpty ? url : null,
             timeout: timeout,
           );
-        } catch (e) {
+        } catch (e, stackTrace) {
           logDebug('服务商 ${provider.name} 请求失败: $e');
           _markProviderFailed(provider.id);
-          lastError = _handleError(e);
+          lastError = _handleError(
+            e,
+            stackTrace: stackTrace,
+            requestContext: '${provider.name} (${provider.id})',
+          );
           continue;
         }
       }
@@ -332,12 +370,13 @@ class AINetworkManager {
     if (currentProvider != null &&
         availableProviders.contains(currentProvider) &&
         !_isProviderInCooldown(currentProvider.id)) {
+      Exception? handledStreamError;
       try {
         // 为当前provider加载API Key
         final providerWithApiKey = await _loadApiKeyForProvider(
           currentProvider,
         );
-        final response = await _makeBaseRequest(
+        final response = await _makeBaseRequestRaw(
           config: providerWithApiKey,
           data: {...data, 'stream': true},
           responseType: ResponseType.stream,
@@ -348,13 +387,25 @@ class AINetworkManager {
           _getStreamFromResponse(response),
           onData,
           onComplete,
-          onError,
+          (err) {
+            handledStreamError = err;
+            onError(err);
+          },
+          requestContext:
+              '${providerWithApiKey.name} (${providerWithApiKey.id})',
         );
         return;
-      } catch (e) {
+      } catch (e, stackTrace) {
         logDebug('当前服务商 ${currentProvider.name} 流式请求失败: $e');
         _markProviderFailed(currentProvider.id);
-        lastError = _handleError(e);
+        lastError = identical(e, handledStreamError)
+            ? handledStreamError!
+            : _handleError(
+                e,
+                stackTrace: stackTrace,
+                requestContext:
+                    '${currentProvider.name} (${currentProvider.id})',
+              );
 
         if (!multiSettings.enableFailover) {
           throw lastError;
@@ -368,11 +419,12 @@ class AINetworkManager {
         if (provider.id == currentProvider?.id) continue;
         if (_isProviderInCooldown(provider.id)) continue;
 
+        Exception? handledStreamError;
         try {
           logDebug('尝试切换到服务商: ${provider.name}');
           // 为故障转移的provider加载API Key
           final providerWithApiKey = await _loadApiKeyForProvider(provider);
-          final response = await _makeBaseRequest(
+          final response = await _makeBaseRequestRaw(
             config: providerWithApiKey,
             data: {...data, 'stream': true},
             responseType: ResponseType.stream,
@@ -383,13 +435,24 @@ class AINetworkManager {
             _getStreamFromResponse(response),
             onData,
             onComplete,
-            onError,
+            (err) {
+              handledStreamError = err;
+              onError(err);
+            },
+            requestContext:
+                '${providerWithApiKey.name} (${providerWithApiKey.id})',
           );
           return;
-        } catch (e) {
+        } catch (e, stackTrace) {
           logDebug('服务商 ${provider.name} 流式请求失败: $e');
           _markProviderFailed(provider.id);
-          lastError = _handleError(e);
+          lastError = identical(e, handledStreamError)
+              ? handledStreamError!
+              : _handleError(
+                  e,
+                  stackTrace: stackTrace,
+                  requestContext: '${provider.name} (${provider.id})',
+                );
           continue;
         }
       }
@@ -425,8 +488,9 @@ class AINetworkManager {
     Stream<List<int>> stream,
     Function(String) onData,
     Function(String) onComplete,
-    Function(Exception) onError,
-  ) async {
+    Function(Exception) onError, {
+    String? requestContext,
+  }) async {
     final completer = Completer<void>();
     final buffer = StringBuffer();
     String partialLine = '';
@@ -488,11 +552,16 @@ class AINetworkManager {
           onError(Exception('流式数据处理错误: $e'));
         }
       },
-      onError: (error) {
+      onError: (error, stackTrace) {
         logDebug('流式响应错误: $error');
-        onError(_handleError(error));
+        final handledError = _handleError(
+          error,
+          stackTrace: stackTrace,
+          requestContext: requestContext,
+        );
+        onError(handledError);
         if (!completer.isCompleted) {
-          completer.completeError(_handleError(error));
+          completer.completeError(handledError);
         }
       },
       onDone: () {
@@ -531,15 +600,41 @@ class AINetworkManager {
   }
 
   /// 处理错误
-  static Exception _handleError(dynamic error) {
+  static Exception _handleError(
+    dynamic error, {
+    StackTrace? stackTrace,
+    String? requestContext,
+  }) {
+    final contextSuffix = requestContext != null ? ' for $requestContext' : '';
+
+    if (error is! DioException) {
+      logError(
+        'AI请求失败$contextSuffix',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
+      return error is Exception ? error : Exception(error.toString());
+    }
+
     final statusCode = error.response?.statusCode;
     final errorBody = error.response?.data?.toString() ?? error.message ?? '';
 
     if (statusCode == 401) {
-      logError('AI Request Error: 401 Unauthorized', error: error);
+      logError(
+        'AI Request Error: 401 Unauthorized$contextSuffix',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
       return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
     } else if (statusCode == 429) {
-      logError('AI Request Error: 429 Too Many Requests', error: error);
+      logError(
+        'AI Request Error: 429 Too Many Requests$contextSuffix',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
       return Exception('API调用频率超限 (429)，请稍后重试');
     } else if (statusCode == 500) {
       String errorMessage = 'AI服务器内部错误 (500)';
@@ -552,14 +647,24 @@ class AINetworkManager {
             errorMessage += '：${errorInfo['message']}';
           }
         }
-      } catch (e) {
+      } catch (e, parseStack) {
         if (errorBody.contains('model')) {
           errorMessage += '：可能是模型不存在或不可用';
         }
-        logError('Failed to parse 500 error body JSON', error: e);
+        logError(
+          'Failed to parse 500 error body JSON$contextSuffix',
+          error: e,
+          stackTrace: parseStack,
+          source: 'AINetworkManager',
+        );
       }
 
-      logError('AI Request Error: 500 Internal Server Error', error: error);
+      logError(
+        'AI Request Error: 500 Internal Server Error$contextSuffix',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
+      );
       return Exception(
         '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
       );
@@ -568,13 +673,20 @@ class AINetworkManager {
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.connectionError) {
       logError(
-        'AI Request Error: Connection/Timeout Error (${error.type.name})',
+        'AI Request Error: Connection/Timeout Error (${error.type.name})$contextSuffix',
         error: error,
+        stackTrace: stackTrace,
+        source: 'AINetworkManager',
       );
       return Exception('网络连接超时，请检查网络设置或稍后重试');
     }
 
-    logError('AI Request Error: Unknown DioException', error: error);
+    logError(
+      'AI Request Error: Unknown DioException$contextSuffix',
+      error: error,
+      stackTrace: stackTrace,
+      source: 'AINetworkManager',
+    );
     return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
   }
 
@@ -616,9 +728,7 @@ class AINetworkManager {
           .replaceAll('Bearer ', '')
           .replaceAll('x-api-key ', '')
           .trim();
-      logDebug(
-        '构建的请求头中的API Key: ${rawKey.isEmpty ? "空" : "已设置"}',
-      );
+      logDebug('构建的请求头中的API Key: ${rawKey.isEmpty ? "空" : "已设置"}');
 
       return providerWithApiKey;
     } catch (e) {
