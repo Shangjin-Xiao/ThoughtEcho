@@ -81,6 +81,9 @@ extension _ExploreOverview on _ExplorePageState {
   }
 
   /// 统一的入场动画：一层 300ms 的淡入 + 轻微上移。
+  ///
+  /// 使用稳定的组件层级（Opacity + Transform + RepaintBoundary），避免动效落位时
+  /// 切换根节点导致子树重建与内部状态丢失（如用户在入场期间展开的周期选择菜单）。
   Widget _buildEntrance({required Widget child}) {
     if (!_shouldAnimateOverview) return child;
     return TweenAnimationBuilder<double>(
@@ -88,7 +91,7 @@ extension _ExploreOverview on _ExplorePageState {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
       tween: Tween(begin: 0.0, end: 1.0),
-      child: child,
+      child: RepaintBoundary(child: child),
       builder: (context, value, child) {
         return Opacity(
           opacity: value,
