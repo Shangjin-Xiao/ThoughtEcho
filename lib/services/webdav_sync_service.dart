@@ -19,6 +19,7 @@ import '../services/database_service.dart';
 import '../services/media_reference_service.dart';
 import '../services/mmkv_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/bounded_executor.dart';
 import '../utils/lww_utils.dart';
 
 /// WebDAV 同步状态枚举
@@ -122,6 +123,11 @@ class WebDAVSyncService extends ChangeNotifier {
   bool _hasPendingSync = false; // 是否有排队中的同步任务
   int _pendingSyncRetryCount = 0; // 失败后追加同步的重试计数（指数退避）
   static const int _maxPendingSyncRetries = 3;
+  static const int _maxMediaDownloadConcurrency = 4;
+
+  @visibleForTesting
+  static int? mediaDownloadConcurrencyForTesting;
+
   // Sync ZIPs contain JSON only; media is transferred separately. Bound both
   // archive parsing and expanded JSON before allocating strings or objects.
   static const int _maxRemoteSyncBytes = 32 * 1024 * 1024;
@@ -1553,89 +1559,104 @@ class WebDAVSyncService extends ChangeNotifier {
     }
 
     // 4. 从云端同步本地缺失附件，或清理云端已废弃的孤儿附件（解决“无限复活”Bug）
-    for (final stdPath in remoteMediaFiles.keys) {
-      if (!localMediaMap.containsKey(stdPath)) {
-        // 下载落盘的目标路径（本机 media 目录下的绝对路径）
-        final localFileFullPath = p.join(
-          appDir.path,
-          'media',
-          stdPath.replaceAll('/', p.separator),
-        );
+    final missingRemoteFiles = remoteMediaFiles.keys
+        .where((stdPath) => !localMediaMap.containsKey(stdPath))
+        .toList(growable: false);
 
-        // 校验该云端文件是否在本地数据库中仍有被引用。
-        // 必须按"相对 media/ 的尾段"匹配：跨设备合并进来的笔记可能仍带着
-        // 其它设备的绝对路径，按本机绝对路径精确查会一律得到 0，
-        // 导致云端附件永远不被下载。
-        try {
-          final refCount =
-              await MediaReferenceService.getReferenceCountForMediaRelativePath(
-            stdPath,
+    if (missingRemoteFiles.isNotEmpty) {
+      final Set<String> referencedTailSet;
+      try {
+        referencedTailSet =
+            await MediaReferenceService.getAllReferencedMediaTailSet();
+      } catch (e) {
+        failureCount++;
+        logWarning('检查或下载附件失败 (preload): $e', source: 'WebDAVSyncService');
+        return failureCount;
+      }
+
+      final filesToDownload = <String>[];
+      for (final stdPath in missingRemoteFiles) {
+        final isReferenced = referencedTailSet.contains(stdPath) ||
+            referencedTailSet.contains('media/$stdPath');
+
+        if (isReferenced) {
+          filesToDownload.add(stdPath);
+        } else {
+          // 远端媒体删除需要完整可信的元数据与引用关系。为避免同步包损坏、
+          // 合并失败或新设备初次同步时误删云端附件，这里只跳过不再主动删除。
+          logDebug('跳过云端未引用附件删除，等待后续本地清理策略处理: $stdPath');
+        }
+      }
+
+      if (filesToDownload.isNotEmpty) {
+        final concurrency =
+            mediaDownloadConcurrencyForTesting ?? _maxMediaDownloadConcurrency;
+        final executor = BoundedExecutor(maxConcurrency: concurrency);
+
+        final results = await executor.map(filesToDownload, (stdPath) async {
+          // 下载落盘的目标路径（本机 media 目录下的绝对路径）
+          final localFileFullPath = p.join(
+            appDir.path,
+            'media',
+            stdPath.replaceAll('/', p.separator),
           );
+          final localTargetFile = File(localFileFullPath);
+          final downloadUrl =
+              '${_url}thoughtecho/media/${_encodeMediaPath(stdPath)}';
 
-          if (refCount > 0) {
-            // 该云端媒体在本地数据库有笔记引用，需从云端下载（如新设备登录同步）
-            logDebug('从云端下载本地缺失且被引用的合法附件: $stdPath');
-            final downloadUrl =
-                '${_url}thoughtecho/media/${_encodeMediaPath(stdPath)}';
-            final localTargetFile = File(localFileFullPath);
+          // 该云端媒体在本地数据库有笔记引用，需从云端下载（如新设备登录同步）
+          logDebug('从云端下载本地缺失且被引用的合法附件: $stdPath');
 
-            // 先下载到 .tmp 临时文件 + 哈希校验后再原子改名：中断的下载绝不能留下半截文件——
-            // 残缺文件下次同步会因"大小与远端不一致"被误判为本地更新而反向上传，
-            // 覆盖云端完好的原件
-            final tmpFile = File('${localTargetFile.path}.tmp');
-            try {
-              // 确保父目录存在
-              await localTargetFile.parent.create(recursive: true);
-              final downloadResponse =
-                  await dio.download(downloadUrl, tmpFile.path);
+          // 先下载到 .tmp 临时文件 + 哈希校验后再原子改名：中断的下载绝不能留下半截文件——
+          // 残缺文件下次同步会因"大小与远端不一致"被误判为本地更新而反向上传，
+          // 覆盖云端完好的原件
+          final tmpFile = File('${localTargetFile.path}.tmp');
+          try {
+            // 确保父目录存在
+            await localTargetFile.parent.create(recursive: true);
+            final downloadResponse =
+                await dio.download(downloadUrl, tmpFile.path);
 
-              // 1. 校验下载文件长度与远端一致性
-              final downloadedLen = await tmpFile.length();
-              final expectedSize = remoteMediaFiles[stdPath];
-              if (expectedSize != null &&
-                  expectedSize > 0 &&
-                  downloadedLen != expectedSize) {
-                throw Exception(
-                    '下载附件长度不一致: 本地=$downloadedLen, 期望=$expectedSize');
-              }
-              if (downloadedLen == 0) {
-                throw Exception('下载附件为空文件');
-              }
-
-              // 2. 完整哈希与 ETag 比对校验
-              await _verifyDownloadedFileHash(
-                tmpFile,
-                remoteEtag: remoteMediaEtags[stdPath],
-                responseHeaders: downloadResponse.headers.map,
-              );
-
-              // 3. 原子改名/替换
-              try {
-                await tmpFile.rename(localTargetFile.path);
-              } catch (_) {
-                await tmpFile.copy(localTargetFile.path);
-                await tmpFile.delete();
-              }
-            } catch (e) {
-              failureCount++;
-              logWarning('下载附件失败 ($stdPath): $e', source: 'WebDAVSyncService');
-              try {
-                if (await tmpFile.exists()) await tmpFile.delete();
-              } catch (_) {}
+            // 1. 校验下载文件长度与远端一致性
+            final downloadedLen = await tmpFile.length();
+            final expectedSize = remoteMediaFiles[stdPath];
+            if (expectedSize != null &&
+                expectedSize > 0 &&
+                downloadedLen != expectedSize) {
+              throw Exception('下载附件长度不一致: 本地=$downloadedLen, 期望=$expectedSize');
             }
-          } else {
-            // 远端媒体删除需要完整可信的元数据与引用关系。为避免同步包损坏、
-            // 合并失败或新设备初次同步时误删云端附件，这里只跳过不再主动删除。
-            logDebug('跳过云端未引用附件删除，等待后续本地清理策略处理: $stdPath');
+            if (downloadedLen == 0) {
+              throw Exception('下载附件为空文件');
+            }
+
+            // 2. 完整哈希与 ETag 比对校验
+            await _verifyDownloadedFileHash(
+              tmpFile,
+              remoteEtag: remoteMediaEtags[stdPath],
+              responseHeaders: downloadResponse.headers.map,
+            );
+
+            // 3. 原子改名/替换
+            try {
+              await tmpFile.rename(localTargetFile.path);
+            } catch (_) {
+              await tmpFile.copy(localTargetFile.path);
+              await tmpFile.delete();
+            }
+            return true;
+          } catch (e) {
+            logWarning('下载附件失败 ($stdPath): $e', source: 'WebDAVSyncService');
+            try {
+              if (await tmpFile.exists()) await tmpFile.delete();
+            } catch (_) {}
+            return false;
           }
-        } catch (e) {
-          // 这里只会捕获本地引用计数查询的失败（下载失败已在内层单独处理）。
-          // 数据库不可用是全局性问题，逐个文件重试只会刷出大量相同错误，
-          // 因此记录后停止媒体循环；返回失败计数让 triggerSync 继续上传笔记，
-          // 并按"媒体附件传输失败"标记本轮同步状态。
-          failureCount++;
-          logWarning('检查或下载附件失败 ($stdPath): $e', source: 'WebDAVSyncService');
-          return failureCount;
+        });
+
+        for (final success in results) {
+          if (!success) {
+            failureCount++;
+          }
         }
       }
     }
@@ -1920,6 +1941,14 @@ class WebDAVSyncService extends ChangeNotifier {
   static String? mediaFolderFromRelativePathForTesting(String stdPath) {
     return _mediaFolderFromRelativePath(stdPath);
   }
+
+  @visibleForTesting
+  void setUrlForTesting(String url) {
+    _url = url.endsWith('/') ? url : '$url/';
+  }
+
+  @visibleForTesting
+  Future<int> syncMediaFilesForTesting(Dio dio) => _syncMediaFiles(dio);
 
   /// 流式写入本地同步数据到临时 JSON 文件
   ///

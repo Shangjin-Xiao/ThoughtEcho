@@ -194,6 +194,68 @@ void main() {
     });
   });
 
+  group('getAllReferencedMediaTailSet', () {
+    test('空数据库返回空集合', () async {
+      final tailSet =
+          await MediaReferenceService.getAllReferencedMediaTailSet();
+      expect(tailSet, isEmpty);
+    });
+
+    test('全量预加载标准路径、老版本外来路径与 Windows 路径并标准化为 Posix 尾段', () async {
+      await db.insert('media_references', {
+        'id': 'r1',
+        'file_path': 'media/images/local_standard.jpg',
+        'quote_id': 'q1',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await db.insert('media_references', {
+        'id': 'r2',
+        'file_path': '$androidDocs/media/images/android_imported.png',
+        'quote_id': 'q1',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await db.insert('media_references', {
+        'id': 'r3',
+        'file_path': r'C:\Users\User\Documents\media\videos\win_clip.mp4',
+        'quote_id': 'q1',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await db.insert('media_references', {
+        'id': 'r4',
+        'file_path': r'media\audios\voice.m4a',
+        'quote_id': 'q1',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      // 无效/非媒体路径不应混入
+      await db.insert('media_references', {
+        'id': 'r5',
+        'file_path': '/var/mobile/docs/other_file.txt',
+        'quote_id': 'q1',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      final tailSet =
+          await MediaReferenceService.getAllReferencedMediaTailSet();
+
+      // 验证包含规范化的 Posix 相对尾段格式
+      expect(tailSet.contains('media/images/local_standard.jpg'), isTrue);
+      expect(tailSet.contains('media/images/android_imported.png'), isTrue);
+      expect(tailSet.contains('media/videos/win_clip.mp4'), isTrue);
+      expect(tailSet.contains('media/audios/voice.m4a'), isTrue);
+
+      expect(tailSet.contains('other_file.txt'), isFalse);
+      expect(tailSet.contains('images/not_exist.jpg'), isFalse);
+    });
+
+    test('数据库查询异常时向上抛出异常', () async {
+      await db.close();
+      expect(
+        () => MediaReferenceService.getAllReferencedMediaTailSet(),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
   group('countFromRowsForTest', () {
     test('空列表返回 0', () {
       expect(MediaReferenceService.countFromRowsForTest([]), 0);

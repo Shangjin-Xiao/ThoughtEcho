@@ -35,21 +35,68 @@ class MediaPathResolver {
   static String? mediaRelativeTail(String rawPath) {
     if (rawPath.isEmpty) return null;
 
-    final unified = rawPath.trim().replaceAll('\\', '/');
-    final segments = unified
-        .split('/')
-        .where((segment) => segment.isNotEmpty && segment != '.')
-        .toList();
+    final trimmed = rawPath.trim();
+    if (trimmed.isEmpty) return null;
 
-    // 从后往前找，命中最靠近文件名的那一组 media/<子目录>，避免用户目录里
-    // 恰好也叫 media 的上层目录造成误截。
-    for (var i = segments.length - 3; i >= 0; i--) {
-      if (segments[i] != _mediaFolder) continue;
-      if (!mediaSubFolders.contains(segments[i + 1])) continue;
+    final unified =
+        trimmed.contains(r'\') ? trimmed.replaceAll(r'\', '/') : trimmed;
 
-      final tail = segments.sublist(i);
-      if (tail.contains('..')) return null;
-      return tail.join('/');
+    const mediaPrefix = '$_mediaFolder/';
+    var searchPos = unified.length;
+    while (searchPos >= mediaPrefix.length) {
+      final idx = unified.lastIndexOf(mediaPrefix, searchPos);
+      if (idx == -1) break;
+
+      // 确保 media 是一个完整路径段（位于开头或前导为 /）
+      if (idx > 0 && unified.codeUnitAt(idx - 1) != 47 /* '/' */) {
+        searchPos = idx - 1;
+        continue;
+      }
+
+      final afterStart = idx + mediaPrefix.length;
+      final firstSlash = unified.indexOf('/', afterStart);
+      if (firstSlash == -1 || firstSlash == afterStart) {
+        searchPos = idx - 1;
+        continue;
+      }
+
+      final subFolder = unified.substring(afterStart, firstSlash);
+      if (!mediaSubFolders.contains(subFolder)) {
+        searchPos = idx - 1;
+        continue;
+      }
+
+      final after = unified.substring(afterStart);
+
+      // 快速路径：若不含连续斜杠、点段或路径遍历，直接复用
+      if (!after.contains('..') &&
+          !after.contains('//') &&
+          !after.contains('/./') &&
+          !after.endsWith('/.')) {
+        return idx == 0 ? unified : '$_mediaFolder/$after';
+      }
+
+      final rawSegments = after.split('/');
+      final segments = <String>[];
+      var hasDotDot = false;
+      for (final s in rawSegments) {
+        if (s.isEmpty || s == '.') continue;
+        if (s == '..') {
+          hasDotDot = true;
+          break;
+        }
+        segments.add(s);
+      }
+
+      if (hasDotDot) {
+        return null;
+      }
+
+      if (segments.length >= 2 && mediaSubFolders.contains(segments[0])) {
+        return '$_mediaFolder/${segments.join('/')}';
+      }
+
+      searchPos = idx - 1;
     }
 
     return null;
