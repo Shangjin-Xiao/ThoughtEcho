@@ -102,5 +102,5 @@
 **拦截:** [已将上述流程中打开与关闭浏览器及临时 HTTP 服务器处的异常拦截升级，将 `catch (e)` / `catch (serverError)` 替换为结构化的 `catch (e, stack)` / `catch (serverError, stack)` 捕获完整异常与堆栈。同时使用 `AppLogger.e` 进行记录，注入了描述信息、具体的错误对象以及明确的日志来源标识 (`source: 'AIAnnualReportWebView'`)。确认修改不超过 50 行，并且没有记录任何涉及到年度报告内容的敏感隐私数据。]
 
 ## 2025-10-25 - 🗃️ 黑匣: [完善 AI 网络模块的结构化日志]
-**异常:** [AINetworkManager 模块在 `_makeBaseRequest` 捕获底层请求或校验异常时，原实现仅使用 `logDebug` 打印字符串，丢失了错误堆栈信息 (stackTrace) 与模块来源标识；同时若外层与 `_handleError` 分别调用 `logError`，会导致单次请求失败产生重复错误日志与双重 Sentry 上报，且非 `DioException` 异常进入 `_handleError` 时缺少类型保护。]
-**拦截:** [已将 `_makeBaseRequest` 的异常捕获升级为 `catch (e, stackTrace)`，并将 `stackTrace` 与 `requestContext` 透传至 `_handleError` 统一记录单次 `logError(..., source: 'AINetworkManager')`（同时为非 `DioException` 异常补充安全分支）；流式解析中的既有 `logDebug` 保持未改。]
+**异常:** [AINetworkManager 模块在 `_makeBaseRequest`、多服务商故障转移与流式 `onError` 回调中捕获异常时，丢失了错误堆栈信息 (stackTrace)、请求上下文与模块来源标识；流式 `onError` 与外层故障转移重复调用 `_handleError` 会导致单次失败产生重复错误日志与双重 Sentry 上报，500 错误体 JSON 解析日志缺少请求上下文，且非 `DioException` 异常进入 `_handleError` 时缺少类型保护。]
+**拦截:** [已将 `_makeBaseRequest`、故障转移循环与流式 `onError` 统一升级为捕获 `(error, stackTrace)` 并附带 `requestContext` 交由 `_handleError` 单次记录 `logError(..., source: 'AINetworkManager')`（同时为非 `DioException` 异常补充安全分支、为 500 解析失败日志补充上下文后缀，并消除流式 `onError` 与故障转移的重复 `_handleError` 调用）；流式数据块解析中的既有 `logDebug` 保持未改。]
