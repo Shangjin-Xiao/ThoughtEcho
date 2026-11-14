@@ -492,7 +492,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             TextButton(
               onPressed: () {
                 // 用户选择丢弃，删除所有草稿，避免重复提示
-                DraftService().deleteAllDrafts();
+                unawaited(
+                  DraftService().deleteAllDrafts().catchError((Object e) {
+                    logDebug('丢弃所有草稿失败: $e');
+                  }),
+                );
                 Navigator.pop(ctx, false);
               },
               child: Text(

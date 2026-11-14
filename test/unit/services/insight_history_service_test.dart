@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
@@ -68,7 +69,9 @@ void main() {
       // Should NOT be stored back in KV storage
       expect(prefsService.containsKey('periodic_insights_history'), isFalse);
 
-      // Reopen via a new InsightHistoryService instance to verify SQLite persistence
+      // Reopen database & service to verify true SQLite persistence
+      await aiDbService.closeDatabase();
+      await aiDbService.init();
       final reloadedService = InsightHistoryService(
         settingsService: settingsService,
         aiAnalysisDbService: aiDbService,
@@ -288,5 +291,109 @@ void main() {
       expect(prefsService.containsKey('periodic_insights_history'), isFalse);
       expect(prefsService.getBool(kPeriodicInsightsSqliteMigratedKey), isTrue);
     });
+
+    test(
+        'partial corrupt legacy KV entries preserve KV key without blocking valid or SQLite insights',
+        () async {
+      await aiDbService.deleteAllPeriodicInsights();
+      await aiDbService.savePeriodicInsight(
+        PeriodicInsight(
+          insight: 'SQLite已有洞察',
+          periodType: 'week',
+          periodLabel: '本周',
+          createdAt: DateTime(2026, 8, 10),
+          isAiGenerated: true,
+          dataSignature: 'sqlite_existing',
+        ),
+      );
+
+      SharedPreferences.resetStatic();
+      SharedPreferences.setMockInitialValues({
+        kKvEngineMigratedKey: true,
+        'periodic_insights_history': json.encode([
+          {
+            'insight': '有效旧洞察',
+            'periodType': 'week',
+            'periodLabel': '第1周',
+            'createdAt': '2026-07-01T10:00:00.000Z',
+            'isAiGenerated': true,
+            'dataSignature': 'valid_legacy_sig',
+          },
+          {
+            'insight': 12345, // 类型损坏
+            'createdAt': 'invalid-date',
+          },
+          'not_a_map',
+        ]),
+      });
+      prefsService.resetForTesting();
+      await prefsService.init();
+      final prefs = await SharedPreferences.getInstance();
+      final freshSettings = SettingsService(prefs);
+
+      final service = InsightHistoryService(
+        settingsService: freshSettings,
+        aiAnalysisDbService: aiDbService,
+      );
+      await service.ensureLoaded();
+
+      // 既有 SQLite 记录与有效旧记录均可读取
+      expect(
+        service.insights.map((e) => e.insight),
+        containsAll(['SQLite已有洞察', '有效旧洞察']),
+      );
+      // 因存在损坏条目，原 KV 键保留且未设置迁移完成标记
+      expect(prefsService.containsKey('periodic_insights_history'), isTrue);
+      expect(
+        prefsService.getBool(kPeriodicInsightsSqliteMigratedKey),
+        isNot(isTrue),
+      );
+    });
+
+    test('retries ensureLoaded after an initial database failure', () async {
+      await aiDbService.deleteAllPeriodicInsights();
+      await aiDbService.savePeriodicInsight(
+        PeriodicInsight(
+          insight: '恢复后可读洞察',
+          periodType: 'week',
+          periodLabel: '本周',
+          createdAt: DateTime(2026, 8, 12),
+          isAiGenerated: true,
+          dataSignature: 'retry_sig',
+        ),
+      );
+
+      final dbFake = _FlakyInsightDatabaseService(aiDbService);
+      final service = InsightHistoryService(
+        settingsService: settingsService,
+        aiAnalysisDbService: dbFake,
+      );
+      await service.ensureLoaded();
+      expect(service.insights, isEmpty);
+
+      dbFake.shouldFailQuery = false;
+      await service.ensureLoaded();
+      expect(service.insights.length, 1);
+      expect(service.insights.first.insight, '恢复后可读洞察');
+    });
   });
+}
+
+class _FlakyInsightDatabaseService extends ChangeNotifier
+    implements AIAnalysisDatabaseService {
+  final AIAnalysisDatabaseService _delegate;
+  bool shouldFailQuery = true;
+
+  _FlakyInsightDatabaseService(this._delegate);
+
+  @override
+  Future<List<PeriodicInsight>> getPeriodicInsights({int limit = 50}) async {
+    if (shouldFailQuery) {
+      throw StateError('Simulated transient DB error');
+    }
+    return _delegate.getPeriodicInsights(limit: limit);
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

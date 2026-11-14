@@ -35,7 +35,37 @@ import workmanager_apple // iOS 上 workmanager 包名为 workmanager_apple
     // iOS 后台任务需要显式设置 minimumBackgroundFetchInterval
     // 设置为 minimum 以尽可能频繁地检查（实际由系统控制）
     UIApplication.shared.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
-    
+
+    if let registrar = self.registrar(forPlugin: "ThoughtEchoFileAttributes") {
+      let channel = FlutterMethodChannel(
+        name: "com.shangjin.thoughtecho/file_attributes",
+        binaryMessenger: registrar.messenger()
+      )
+      channel.setMethodCallHandler { call, result in
+        guard call.method == "excludeFromBackup",
+              let args = call.arguments as? [String: Any],
+              let path = args["path"] as? String else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        var url = URL(fileURLWithPath: path)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        do {
+          try url.setResourceValues(values)
+          result(true)
+        } catch {
+          result(
+            FlutterError(
+              code: "BACKUP_EXCLUDE_FAILED",
+              message: error.localizedDescription,
+              details: nil
+            )
+          )
+        }
+      }
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

@@ -953,6 +953,8 @@ class AppTheme with ChangeNotifier {
         _customColor = Colors.blue;
         _useCustomColor = false;
         return;
+      } else {
+        _customColor = Colors.blue;
       }
       _useCustomColor = _storage?.getBool(_useCustomColorKey) ?? false;
     } catch (e, stack) {
@@ -970,9 +972,15 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载主题模式
   void _loadThemeMode() {
     try {
+      final hasModeKey = _storage?.containsKey(_themeModeKey) ?? false;
       final modeString = _storage?.getString(_themeModeKey);
       if (modeString != null) {
         _themeMode = ThemeMode.values.byName(modeString);
+      } else {
+        if (hasModeKey) {
+          logWarning('主题模式存储数据类型损坏，回退到系统默认模式', source: 'AppTheme');
+        }
+        _themeMode = ThemeMode.system;
       }
     } catch (e, stack) {
       logError(
@@ -988,9 +996,15 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载主题风格
   Future<void> _loadThemeStyle() async {
     try {
+      final hasStyleKey = _storage?.containsKey(_themeStyleKey) ?? false;
       final styleName = _storage?.getString(_themeStyleKey);
       if (styleName != null) {
         _themeStyle = ThemeStyle.fromName(styleName);
+      } else if (hasStyleKey) {
+        // 键存在但按 String 读取返回 null（例如数据类型损坏），显式回退到默认风格，
+        // 不能误判为「全新安装」而切到 freshInstallStyle。
+        logWarning('主题风格存储数据类型损坏，回退到默认风格', source: 'AppTheme');
+        _themeStyle = ThemeStyle.defaultStyle;
       } else {
         // 没存过风格。正常路径下全新安装的默认值（信笺）已经由
         // SettingsService 在识别到首次安装的那一刻种进同一个键了，
@@ -1123,9 +1137,15 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载动态取色设置
   void _loadDynamicColorSettings() {
     try {
+      final hasKey = _storage?.containsKey(_useDynamicColorKey) ?? false;
       final useDynamic = _storage?.getBool(_useDynamicColorKey);
       if (useDynamic != null) {
         _useDynamicColor = useDynamic;
+      } else {
+        if (hasKey) {
+          logWarning('动态取色存储数据类型损坏，回退到默认开启', source: 'AppTheme');
+        }
+        _useDynamicColor = true;
       }
     } catch (e, stack) {
       logError(

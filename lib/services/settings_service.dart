@@ -2128,9 +2128,13 @@ class SettingsService extends ChangeNotifier {
   }
 
   /// 删除自定义设置键
-  Future<void> removeCustomKey(String key) async {
+  Future<bool> removeCustomKey(String key) async {
     await _mmkv.init();
-    await _mmkv.remove(key);
+    final removed = await _mmkv.remove(key);
+    if (!removed) {
+      logWarning('删除自定义设置键失败: $key', source: 'SettingsService');
+    }
+    return removed;
   }
 
   /// 迁移遗留的明文API密钥到安全存储，并彻底清理 SharedPreferences 与 MMKV 中的明文密钥

@@ -932,7 +932,9 @@ class SafeMMKV {
       }
 
       bool nativeMatchesBinary;
-      if (legacy != null) {
+      if (retiredToSqlite && !presentInSp && !presentInNative) {
+        nativeMatchesBinary = true;
+      } else if (legacy != null) {
         final samePresence = presentInNative == presentInBinary;
         final valuesMatch = _valuesEqual(nativeVal, binaryVal);
         nativeMatchesBinary = samePresence && valuesMatch;
@@ -1203,18 +1205,34 @@ class SafeMMKV {
     return result;
   }
 
-  /// 清除所有值（保留迁移完成水位线）
+  /// 清除所有值（保留迁移完成水位线与已接管的 SQLite 迁移标记）
   Future<bool> clear() async {
     _ensureInitialized();
+    final preserveDraftsMigrated =
+        _storage!.getBool(kDraftsSqliteMigratedKey) == true;
+    final preserveInsightsMigrated =
+        _storage!.getBool(kPeriodicInsightsSqliteMigratedKey) == true;
     final result = await _storage!.clear();
     await _storage!.setBool(kLegacyMmkvMigrationCompleteKey, true);
     await _storage!.setBool(kKvEngineMigratedKey, true);
+    if (preserveDraftsMigrated) {
+      await _storage!.setBool(kDraftsSqliteMigratedKey, true);
+    }
+    if (preserveInsightsMigrated) {
+      await _storage!.setBool(kPeriodicInsightsSqliteMigratedKey, true);
+    }
     final legacy = _legacyMmkvAdapter;
     if (legacy != null) {
       try {
         await legacy.clear();
         await legacy.setBool(kLegacyMmkvMigrationCompleteKey, true);
         await legacy.setBool(kKvEngineMigratedKey, true);
+        if (preserveDraftsMigrated) {
+          await legacy.setBool(kDraftsSqliteMigratedKey, true);
+        }
+        if (preserveInsightsMigrated) {
+          await legacy.setBool(kPeriodicInsightsSqliteMigratedKey, true);
+        }
       } catch (e) {
         logDebug('SafeMMKV: MMKV 镜像清空 clear() 失败: $e');
       }

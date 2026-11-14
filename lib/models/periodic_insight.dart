@@ -28,13 +28,55 @@ class PeriodicInsight {
   }
 
   static PeriodicInsight fromJson(Map<String, dynamic> json) {
+    final rawInsight = json['insight'];
+    if (rawInsight is! String || rawInsight.isEmpty) {
+      throw const FormatException('Invalid insight in PeriodicInsight JSON');
+    }
+
+    final rawCreatedAt = json['createdAt'];
+    final parsedCreatedAt =
+        rawCreatedAt is String ? DateTime.tryParse(rawCreatedAt) : null;
+    if (parsedCreatedAt == null) {
+      throw const FormatException('Invalid createdAt in PeriodicInsight JSON');
+    }
+
+    final rawPeriodType = json['periodType'];
+    if (rawPeriodType != null && rawPeriodType is! String) {
+      throw const FormatException('Invalid periodType in PeriodicInsight JSON');
+    }
+
+    final rawPeriodLabel = json['periodLabel'];
+    if (rawPeriodLabel != null && rawPeriodLabel is! String) {
+      throw const FormatException(
+        'Invalid periodLabel in PeriodicInsight JSON',
+      );
+    }
+
+    final rawIsAi = json['isAiGenerated'];
+    final bool isAi;
+    if (rawIsAi == null) {
+      isAi = false;
+    } else if (rawIsAi is bool) {
+      isAi = rawIsAi;
+    } else if (rawIsAi is int) {
+      isAi = rawIsAi != 0;
+    } else {
+      throw const FormatException(
+        'Invalid isAiGenerated in PeriodicInsight JSON',
+      );
+    }
+
+    final rawSignature = json['dataSignature'];
+    final String? signature =
+        rawSignature is String && rawSignature.isNotEmpty ? rawSignature : null;
+
     return PeriodicInsight(
-      insight: json['insight'] ?? '',
-      periodType: json['periodType'] ?? '',
-      periodLabel: json['periodLabel'] ?? '',
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
-      isAiGenerated: json['isAiGenerated'] ?? false,
-      dataSignature: json['dataSignature'],
+      insight: rawInsight,
+      periodType: (rawPeriodType as String?) ?? '',
+      periodLabel: (rawPeriodLabel as String?) ?? '',
+      createdAt: parsedCreatedAt,
+      isAiGenerated: isAi,
+      dataSignature: signature,
     );
   }
 
@@ -50,6 +92,20 @@ class PeriodicInsight {
   }
 
   static PeriodicInsight fromDbMap(Map<String, Object?> row) {
+    final rawInsight = row['insight'];
+    if (rawInsight is! String || rawInsight.isEmpty) {
+      throw const FormatException('Invalid insight in periodic_insights row');
+    }
+
+    final rawCreatedAt = row['created_at'];
+    final parsedCreatedAt =
+        rawCreatedAt is String ? DateTime.tryParse(rawCreatedAt) : null;
+    if (parsedCreatedAt == null) {
+      throw const FormatException(
+        'Invalid created_at in periodic_insights row',
+      );
+    }
+
     final rawIsAi = row['is_ai_generated'];
     final bool isAi;
     if (rawIsAi is int) {
@@ -61,11 +117,10 @@ class PeriodicInsight {
     }
 
     return PeriodicInsight(
-      insight: row['insight']?.toString() ?? '',
+      insight: rawInsight,
       periodType: row['period_type']?.toString() ?? '',
       periodLabel: row['period_label']?.toString() ?? '',
-      createdAt: DateTime.tryParse(row['created_at']?.toString() ?? '') ??
-          DateTime.now(),
+      createdAt: parsedCreatedAt,
       isAiGenerated: isAi,
       dataSignature: row['data_signature']?.toString(),
     );

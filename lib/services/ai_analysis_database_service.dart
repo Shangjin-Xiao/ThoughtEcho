@@ -730,34 +730,24 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
   /// 获取周期洞察历史记录（按创建时间倒序）
   Future<List<PeriodicInsight>> getPeriodicInsights({int limit = 50}) async {
-    try {
-      final db = await database;
-      final rows = await db.query(
-        _periodicInsightsTable,
-        orderBy: 'created_at DESC, id DESC',
-        limit: limit > 0 ? limit : null,
-      );
-      final insights = <PeriodicInsight>[];
-      for (final row in rows) {
-        try {
-          insights.add(PeriodicInsight.fromDbMap(row));
-        } catch (e) {
-          AppLogger.w(
-            'getPeriodicInsights: 跳过损坏的周期洞察行 (id: ${row['id']}): $e',
-            source: 'AIAnalysisDB',
-          );
-        }
+    final db = await database;
+    final rows = await db.query(
+      _periodicInsightsTable,
+      orderBy: 'created_at DESC, id DESC',
+      limit: limit > 0 ? limit : null,
+    );
+    final insights = <PeriodicInsight>[];
+    for (final row in rows) {
+      try {
+        insights.add(PeriodicInsight.fromDbMap(row));
+      } catch (e) {
+        AppLogger.w(
+          'getPeriodicInsights: 跳过损坏的周期洞察行 (id: ${row['id']}): $e',
+          source: 'AIAnalysisDB',
+        );
       }
-      return insights;
-    } catch (e, stackTrace) {
-      AppLogger.w(
-        '获取周期洞察历史失败: $e',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'AIAnalysisDB',
-      );
-      return const <PeriodicInsight>[];
     }
+    return insights;
   }
 
   /// 保存单条周期洞察（若存在相同 dataSignature 则覆盖，并按 maxRetention 裁剪上限）
@@ -792,6 +782,25 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     });
   }
 
+  String _periodicInsightFingerprint({
+    required String periodType,
+    required String periodLabel,
+    required String createdAtIso,
+    required bool isAiGenerated,
+    required String insight,
+  }) {
+    final normalizedDate =
+        DateTime.tryParse(createdAtIso)?.toUtc().toIso8601String() ??
+            createdAtIso;
+    return jsonEncode([
+      periodType,
+      periodLabel,
+      normalizedDate,
+      isAiGenerated,
+      insight,
+    ]);
+  }
+
   /// 批量导入周期洞察（用于从 KV 存储一次性幂等迁移）
   Future<void> importPeriodicInsights(
     List<PeriodicInsight> items, {
@@ -803,24 +812,58 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     await db.transaction((txn) async {
       final existingRows = await txn.query(
         _periodicInsightsTable,
-        columns: ['data_signature'],
-        where: 'data_signature IS NOT NULL AND length(data_signature) > 0',
+        columns: [
+          'insight',
+          'period_type',
+          'period_label',
+          'created_at',
+          'is_ai_generated',
+          'data_signature',
+        ],
       );
-      final existingSignatures = existingRows
-          .map((row) => row['data_signature']?.toString())
-          .whereType<String>()
-          .toSet();
+      final existingSignatures = <String>{};
+      final existingFingerprints = <String>{};
+      for (final row in existingRows) {
+        final sig = row['data_signature']?.toString();
+        if (sig != null && sig.isNotEmpty) {
+          existingSignatures.add(sig);
+        }
+        final rawIsAi = row['is_ai_generated'];
+        final isAi = rawIsAi is int ? rawIsAi != 0 : (rawIsAi == true);
+        existingFingerprints.add(
+          _periodicInsightFingerprint(
+            periodType: row['period_type']?.toString() ?? '',
+            periodLabel: row['period_label']?.toString() ?? '',
+            createdAtIso: row['created_at']?.toString() ?? '',
+            isAiGenerated: isAi,
+            insight: row['insight']?.toString() ?? '',
+          ),
+        );
+      }
 
       final sorted = List<PeriodicInsight>.from(items)
         ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
       final seenSignatures = <String>{};
+      final seenFingerprints = <String>{};
       final deduped = <PeriodicInsight>[];
-      // 从新到旧筛选唯一 signature，再按从旧到新插入
+      // 从新到旧筛选唯一 signature（无 signature 时用内容/时间指纹去重），再按从旧到新插入
       for (final item in sorted.reversed) {
         final sig = item.dataSignature;
         if (sig != null && sig.isNotEmpty) {
           if (existingSignatures.contains(sig) || !seenSignatures.add(sig)) {
+            continue;
+          }
+        } else {
+          final fingerprint = _periodicInsightFingerprint(
+            periodType: item.periodType,
+            periodLabel: item.periodLabel,
+            createdAtIso: item.createdAt.toIso8601String(),
+            isAiGenerated: item.isAiGenerated,
+            insight: item.insight,
+          );
+          if (existingFingerprints.contains(fingerprint) ||
+              !seenFingerprints.add(fingerprint)) {
             continue;
           }
         }

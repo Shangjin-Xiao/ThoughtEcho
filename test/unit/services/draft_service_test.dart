@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/draft_service.dart';
@@ -171,6 +174,50 @@ void main() {
       expect(prefsService.containsKey('draft_legacy_empty'), isFalse);
       expect(prefsService.getString('unrelated_pref'), 'keep_me');
       expect(prefsService.getBool(kDraftsSqliteMigratedKey), isTrue);
+
+      // drafts.db must live under ApplicationSupport/drafts/drafts.db, not Documents
+      final supportDir = await getApplicationSupportDirectory();
+      final docsDir = await getApplicationDocumentsDirectory();
+      expect(
+        File(p.join(supportDir.path, 'drafts', 'drafts.db')).existsSync(),
+        isTrue,
+      );
+      expect(File(p.join(docsDir.path, 'drafts.db')).existsSync(), isFalse);
+    });
+
+    test(
+        'partial KV migration preserves unreadable or unparseable keys without setting migrated flag',
+        () async {
+      await draftService.resetForTesting();
+      SharedPreferences.setMockInitialValues({
+        kKvEngineMigratedKey: true,
+        'draft_valid_1': jsonEncode({
+          'plainText': 'Valid legacy draft',
+          'timestamp': '2026-04-03T08:00:00.000Z',
+        }),
+        'draft_corrupt_json': '{not-valid-json',
+        'draft_wrong_type': 42,
+        'draft_': jsonEncode({'plainText': 'Empty normalized id'}),
+      });
+      prefsService.resetForTesting();
+      await prefsService.init();
+
+      final valid = await draftService.getDraft('valid_1');
+      expect(valid, isNotNull);
+      expect(valid!['plainText'], 'Valid legacy draft');
+
+      // Valid key migrated & cleaned up; invalid/unreadable keys preserved; flag stays unset
+      expect(prefsService.containsKey('draft_valid_1'), isFalse);
+      expect(prefsService.containsKey('draft_corrupt_json'), isTrue);
+      expect(prefsService.containsKey('draft_wrong_type'), isTrue);
+      expect(prefsService.containsKey('draft_'), isTrue);
+      expect(prefsService.getBool(kDraftsSqliteMigratedKey), isNot(isTrue));
+
+      // Unreadable pending KV key must abort media scan instead of returning partial paths
+      await expectLater(
+        draftService.getAllMediaPathsInDrafts(),
+        throwsStateError,
+      );
     });
   });
 }

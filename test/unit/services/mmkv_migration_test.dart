@@ -553,10 +553,23 @@ void main() {
         (entry) => entry.key == 'draft_legacy_1',
       );
       expect(retiredDraftEntry.allConsistent, isTrue);
+      expect(retiredDraftEntry.nativeMatchesBinary, isTrue);
       final retiredInsightEntry = report.comparisons.singleWhere(
         (entry) => entry.key == 'periodic_insights_history',
       );
       expect(retiredInsightEntry.allConsistent, isTrue);
+      expect(retiredInsightEntry.nativeMatchesBinary, isTrue);
+
+      // Clearing storage preserves SQLite takeover watermarks and prevents resurrection
+      expect(await storage.clear(), isTrue);
+      expect(storage.getBool(kDraftsSqliteMigratedKey), isTrue);
+      expect(storage.getBool(kPeriodicInsightsSqliteMigratedKey), isTrue);
+      final afterClearSnapshot = await storage.runMigration(force: true);
+      // 仅非退役键 theme_style 被迁移，已由 SQLite 接管的草稿/洞察键不得复活
+      expect(afterClearSnapshot.migratedFromBinaryCount, equals(1));
+      expect(storage.getString('theme_style'), equals('paper'));
+      expect(storage.containsKey('draft_legacy_1'), isFalse);
+      expect(storage.containsKey('periodic_insights_history'), isFalse);
     });
   });
 }

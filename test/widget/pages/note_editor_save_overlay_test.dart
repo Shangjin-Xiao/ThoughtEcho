@@ -17,12 +17,11 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import '../../test_harness.dart';
 
 Future<void> _flushDraftIo(WidgetTester tester) async {
-  for (var i = 0; i < 4; i++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 30)),
-    );
-    await tester.pump();
-  }
+  await tester.pump();
+  await tester.runAsync(() => DraftService().waitForIdleForTesting());
+  await tester.pump();
+  await tester.runAsync(() => DraftService().waitForIdleForTesting());
+  await tester.pump();
 }
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {

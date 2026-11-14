@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -21,11 +22,15 @@ class DraftService {
   DraftService._internal();
 
   static const String _databaseFileName = 'drafts.db';
+  static const String _databaseDirectoryName = 'drafts';
   static const String _tableName = 'note_drafts';
   static const int _schemaVersion = 1;
+  static const MethodChannel _fileAttributesChannel =
+      MethodChannel('com.shangjin.thoughtecho/file_attributes');
 
   Database? _database;
   String? _testDatabasePath;
+  bool _hasPendingLegacyDrafts = false;
   Future<void> _dbLock = Future<void>.value();
 
   Future<T> _withDbLock<T>(Future<T> Function() action) {
@@ -64,6 +69,12 @@ class DraftService {
     _testDatabasePath = databasePath;
   }
 
+  /// 仅供测试等待当前排队中的草稿数据库操作全部完成。
+  @visibleForTesting
+  Future<void> waitForIdleForTesting() {
+    return _withDbLock(() async {});
+  }
+
   /// 仅供测试关闭数据库连接并重置内部状态。
   @visibleForTesting
   Future<void> resetForTesting() {
@@ -71,6 +82,7 @@ class DraftService {
       final db = _database;
       _database = null;
       _testDatabasePath = null;
+      _hasPendingLegacyDrafts = false;
       if (db != null && db.isOpen) {
         try {
           await db.close();
@@ -86,8 +98,39 @@ class DraftService {
     if (customPath != null && customPath.isNotEmpty) {
       return customPath;
     }
-    final documentsDir = await getApplicationDocumentsDirectory();
-    return p.join(documentsDir.path, _databaseFileName);
+    final supportDir = await getApplicationSupportDirectory();
+    return p.join(supportDir.path, _databaseDirectoryName, _databaseFileName);
+  }
+
+  Future<void> _excludeFromIosBackupIfNeeded(String targetPath) async {
+    if (kIsWeb || !Platform.isIOS) return;
+    try {
+      await _fileAttributesChannel.invokeMethod<bool>(
+        'excludeFromBackup',
+        {'path': targetPath},
+      );
+    } on MissingPluginException {
+      // 测试环境或未注册原生通道时忽略
+    } catch (e) {
+      logDebug('DraftService 设置 iOS 不备份属性失败: $e');
+    }
+  }
+
+  Future<void> _excludeDatabaseFilesFromIosBackup(String dbPath) async {
+    if (kIsWeb || !Platform.isIOS || dbPath == inMemoryDatabasePath) return;
+    final candidates = <String>[
+      p.dirname(dbPath),
+      dbPath,
+      '$dbPath-wal',
+      '$dbPath-shm',
+      '$dbPath-journal',
+    ];
+    for (final candidate in candidates) {
+      final type = FileSystemEntity.typeSync(candidate);
+      if (type != FileSystemEntityType.notFound) {
+        await _excludeFromIosBackupIfNeeded(candidate);
+      }
+    }
   }
 
   Future<Database> _openDatabase() async {
@@ -110,6 +153,7 @@ class DraftService {
       if (!dir.existsSync()) {
         dir.createSync(recursive: true);
       }
+      await _excludeFromIosBackupIfNeeded(dir.path);
     }
 
     final db = await databaseFactory.openDatabase(
@@ -121,6 +165,7 @@ class DraftService {
       ),
     );
     _database = db;
+    await _excludeDatabaseFilesFromIosBackup(dbPath);
     return db;
   }
 
@@ -151,6 +196,7 @@ class DraftService {
       final prefs = AppPreferencesService();
       await prefs.init();
       if (prefs.getBool(kDraftsSqliteMigratedKey) == true) {
+        _hasPendingLegacyDrafts = false;
         return;
       }
 
@@ -159,14 +205,39 @@ class DraftService {
           .where((k) => k.startsWith('draft_'))
           .toList(growable: false);
 
+      var allMigrated = true;
       if (legacyKeys.isNotEmpty) {
         final rowsToInsert = <Map<String, Object?>>[];
+        final migratedKeys = <String>[];
         for (final key in legacyKeys) {
           final raw = prefs.getString(key);
+          if (raw == null) {
+            allMigrated = false;
+            logWarning(
+              'DraftService: 跳过无法按字符串读取的历史草稿键 $key（保留原键）',
+              source: 'DraftService',
+            );
+            continue;
+          }
           final data = _parseDraftData(raw);
-          if (data == null) continue;
+          if (data == null) {
+            allMigrated = false;
+            logWarning(
+              'DraftService: 跳过 JSON 解析失败的历史草稿键 $key（保留原键）',
+              source: 'DraftService',
+            );
+            continue;
+          }
           final normalizedId = _normalizeId(key.substring(6));
-          if (normalizedId.isEmpty) continue;
+          if (normalizedId.isEmpty) {
+            allMigrated = false;
+            logWarning(
+              'DraftService: 跳过规范化后 ID 为空的历史草稿键 $key（保留原键）',
+              source: 'DraftService',
+            );
+            continue;
+          }
+          migratedKeys.add(key);
           rowsToInsert.add(_buildRow(normalizedId, data));
         }
 
@@ -184,21 +255,112 @@ class DraftService {
           });
         }
 
-        for (final key in legacyKeys) {
-          await prefs.remove(key);
+        for (final key in migratedKeys) {
+          final removed = await prefs.remove(key);
+          if (!removed) {
+            allMigrated = false;
+          }
         }
-        logDebug('DraftService 已迁移并清理 ${legacyKeys.length} 个历史 KV 草稿键');
+        if (migratedKeys.isNotEmpty) {
+          logDebug('DraftService 已迁移并清理 ${migratedKeys.length} 个历史 KV 草稿键');
+        }
       }
 
-      await prefs.setBool(kDraftsSqliteMigratedKey, true);
+      if (allMigrated) {
+        final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
+        _hasPendingLegacyDrafts = !flagSaved;
+      } else {
+        _hasPendingLegacyDrafts = true;
+      }
     } catch (e, stackTrace) {
+      _hasPendingLegacyDrafts = true;
       logError(
-        '迁移历史 KV 草稿失败（保留现有 SQLite 草稿并稍后重试）',
+        '迁移历史 KV 草稿失败（保留现有 SQLite 草稿与未迁移 KV 键并稍后重试）',
         error: e,
         stackTrace: stackTrace,
         source: 'DraftService',
       );
     }
+  }
+
+  Future<void> _removeMatchingPendingKvDrafts(String normalizedId) async {
+    try {
+      final prefs = AppPreferencesService();
+      await prefs.init();
+      if (prefs.getBool(kDraftsSqliteMigratedKey) == true &&
+          !_hasPendingLegacyDrafts) {
+        return;
+      }
+      final keys = prefs
+          .getAllKeys()
+          .where(
+            (k) =>
+                k.startsWith('draft_') &&
+                _normalizeId(k.substring(6)) == normalizedId,
+          )
+          .toList(growable: false);
+      for (final key in keys) {
+        await prefs.remove(key);
+      }
+    } catch (e) {
+      logDebug('清理待迁移 KV 草稿键失败: $e');
+    }
+  }
+
+  Future<void> _removeAllPendingKvDrafts() async {
+    final prefs = AppPreferencesService();
+    await prefs.init();
+    final keys = prefs
+        .getAllKeys()
+        .where((k) => k.startsWith('draft_'))
+        .toList(growable: false);
+    var allRemoved = true;
+    for (final key in keys) {
+      if (!await prefs.remove(key)) {
+        allRemoved = false;
+      }
+    }
+    if (allRemoved) {
+      final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
+      _hasPendingLegacyDrafts = !flagSaved;
+    } else {
+      _hasPendingLegacyDrafts = true;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _readPendingKvDraft(String normalizedId) async {
+    try {
+      final prefs = AppPreferencesService();
+      await prefs.init();
+      final keys = prefs.getAllKeys().where(
+            (k) =>
+                k.startsWith('draft_') &&
+                _normalizeId(k.substring(6)) == normalizedId,
+          );
+      for (final key in keys) {
+        final data = _parseDraftData(prefs.getString(key));
+        if (data != null) return data;
+      }
+    } catch (e) {
+      logDebug('读取待迁移 KV 草稿失败: $e');
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> _readAllPendingKvDrafts() async {
+    final results = <Map<String, dynamic>>[];
+    final prefs = AppPreferencesService();
+    await prefs.init();
+    final keys = prefs.getAllKeys().where((k) => k.startsWith('draft_'));
+    for (final key in keys) {
+      final normalizedId = _normalizeId(key.substring(6));
+      if (normalizedId.isEmpty) continue;
+      final data = _parseDraftData(prefs.getString(key));
+      if (data != null) {
+        results.add({'id': normalizedId, ...data});
+      }
+    }
+    return results;
   }
 
   Map<String, Object?> _buildRow(String id, Map<String, dynamic> data) {
@@ -257,6 +419,9 @@ class DraftService {
           _buildRow(normalizedId, data),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
+        if (_hasPendingLegacyDrafts) {
+          await _removeMatchingPendingKvDrafts(normalizedId);
+        }
         logDebug('草稿已保存: $id (SQLite)');
       } catch (e, stackTrace) {
         logError(
@@ -265,6 +430,7 @@ class DraftService {
           stackTrace: stackTrace,
           source: 'DraftService',
         );
+        rethrow;
       }
     });
   }
@@ -282,8 +448,13 @@ class DraftService {
           whereArgs: [normalizedId],
           limit: 1,
         );
-        if (rows.isEmpty) return null;
-        return _parseDraftData(rows.first['payload_json']);
+        if (rows.isNotEmpty) {
+          return _parseDraftData(rows.first['payload_json']);
+        }
+        if (_hasPendingLegacyDrafts) {
+          return await _readPendingKvDraft(normalizedId);
+        }
+        return null;
       } catch (e, stackTrace) {
         logError(
           '读取草稿失败: $id',
@@ -300,13 +471,14 @@ class DraftService {
   Future<void> deleteDraft(String id) {
     return _withDbLock(() async {
       try {
-        final db = await _ensureDatabaseAndMigrated();
         final normalizedId = _normalizeId(id);
+        final db = await _ensureDatabaseAndMigrated();
         await db.delete(
           _tableName,
           where: 'id = ?',
           whereArgs: [normalizedId],
         );
+        await _removeMatchingPendingKvDrafts(normalizedId);
         logDebug('草稿已删除: $id (SQLite)');
       } catch (e, stackTrace) {
         logError(
@@ -315,6 +487,7 @@ class DraftService {
           stackTrace: stackTrace,
           source: 'DraftService',
         );
+        rethrow;
       }
     });
   }
@@ -325,6 +498,7 @@ class DraftService {
       try {
         final db = await _ensureDatabaseAndMigrated();
         await db.delete(_tableName);
+        await _removeAllPendingKvDrafts();
         logDebug('所有草稿已删除 (SQLite)');
       } catch (e, stackTrace) {
         logError(
@@ -333,6 +507,7 @@ class DraftService {
           stackTrace: stackTrace,
           source: 'DraftService',
         );
+        rethrow;
       }
     });
   }
@@ -350,7 +525,11 @@ class DraftService {
           whereArgs: [normalizedId],
           limit: 1,
         );
-        return rows.isNotEmpty;
+        if (rows.isNotEmpty) return true;
+        if (_hasPendingLegacyDrafts) {
+          return await _readPendingKvDraft(normalizedId) != null;
+        }
+        return false;
       } catch (e, stackTrace) {
         logError(
           '检查草稿是否存在失败: $id',
@@ -373,10 +552,20 @@ class DraftService {
           columns: ['id'],
           orderBy: 'updated_at_ms DESC, rowid DESC',
         );
-        return rows
+        final ids = rows
             .map((r) => r['id']?.toString() ?? '')
             .where((id) => id.isNotEmpty)
-            .toList(growable: false);
+            .toList();
+        if (_hasPendingLegacyDrafts) {
+          final seen = ids.toSet();
+          for (final kvDraft in await _readAllPendingKvDrafts()) {
+            final id = kvDraft['id']?.toString() ?? '';
+            if (id.isNotEmpty && seen.add(id)) {
+              ids.add(id);
+            }
+          }
+        }
+        return ids;
       } catch (e, stackTrace) {
         logError(
           '获取所有草稿 ID 失败',
@@ -402,17 +591,35 @@ class DraftService {
           orderBy: 'updated_at_ms DESC, rowid DESC',
           limit: 1,
         );
-        if (rows.isEmpty) return null;
+        Map<String, dynamic>? latest;
+        DateTime? latestTime;
+        if (rows.isNotEmpty) {
+          final row = rows.first;
+          final id = row['id']?.toString();
+          final data = _parseDraftData(row['payload_json']);
+          if (id != null && id.isNotEmpty && data != null) {
+            latest = {'id': id, ...data};
+            final ts = data['timestamp']?.toString();
+            latestTime = ts != null ? DateTime.tryParse(ts) : null;
+          }
+        }
 
-        final row = rows.first;
-        final id = row['id']?.toString();
-        final data = _parseDraftData(row['payload_json']);
-        if (id == null || id.isEmpty || data == null) return null;
-
-        return {
-          'id': id,
-          ...data,
-        };
+        if (_hasPendingLegacyDrafts) {
+          for (final kvDraft in await _readAllPendingKvDrafts()) {
+            final plainText = kvDraft['plainText'];
+            if (plainText is! String || plainText.trim().isEmpty) continue;
+            final hasUser = kvDraft['hasUserContent'];
+            if (hasUser is bool && !hasUser) continue;
+            final tsStr = kvDraft['timestamp']?.toString();
+            final ts = tsStr != null ? DateTime.tryParse(tsStr) : null;
+            if (ts == null) continue;
+            if (latestTime == null || ts.isAfter(latestTime)) {
+              latest = kvDraft;
+              latestTime = ts;
+            }
+          }
+        }
+        return latest;
       } catch (e, stackTrace) {
         logError(
           '获取最新草稿失败',
@@ -440,20 +647,27 @@ class DraftService {
           try {
             final data = _parseDraftData(row['payload_json']);
             if (data == null) continue;
-
-            if (data.containsKey('deltaContent')) {
-              final deltaContent = data['deltaContent'];
-              if (deltaContent is String) {
-                try {
-                  final delta = jsonDecode(deltaContent);
-                  _extractMediaFromDelta(delta, mediaPaths);
-                } catch (e) {
-                  logDebug('[DraftService] delta content parse failed: $e');
-                }
-              }
-            }
+            _collectMediaPathsFromDraftData(data, mediaPaths);
           } catch (e) {
             logDebug('扫描草稿媒体失败: $id, $e');
+          }
+        }
+
+        if (_hasPendingLegacyDrafts) {
+          final prefs = AppPreferencesService();
+          await prefs.init();
+          final pendingKeys =
+              prefs.getAllKeys().where((k) => k.startsWith('draft_'));
+          for (final key in pendingKeys) {
+            final raw = prefs.getString(key);
+            if (raw == null) {
+              throw StateError('无法读取待迁移草稿 $key，中止媒体扫描以防误删附件');
+            }
+            final data = _parseDraftData(raw);
+            if (data == null) {
+              throw StateError('无法解析待迁移草稿 $key，中止媒体扫描以防误删附件');
+            }
+            _collectMediaPathsFromDraftData(data, mediaPaths);
           }
         }
       } catch (e, stackTrace) {
@@ -463,9 +677,27 @@ class DraftService {
           stackTrace: stackTrace,
           source: 'DraftService',
         );
+        rethrow;
       }
       return mediaPaths;
     });
+  }
+
+  void _collectMediaPathsFromDraftData(
+    Map<String, dynamic> data,
+    Set<String> mediaPaths,
+  ) {
+    if (data.containsKey('deltaContent')) {
+      final deltaContent = data['deltaContent'];
+      if (deltaContent is String) {
+        try {
+          final delta = jsonDecode(deltaContent);
+          _extractMediaFromDelta(delta, mediaPaths);
+        } catch (e) {
+          logDebug('[DraftService] delta content parse failed: $e');
+        }
+      }
+    }
   }
 
   void _extractMediaFromDelta(dynamic delta, Set<String> paths) {

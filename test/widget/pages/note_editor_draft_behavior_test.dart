@@ -91,14 +91,13 @@ class _TestFeatureGuideService extends FeatureGuideService {
 }
 
 Future<void> _flushDraftIo(WidgetTester tester) async {
-  // sqflite_common_ffi runs on a background isolate; pump real wall time so the
-  // worker replies, then drain FakeAsync microtasks so continuations/locks settle.
-  for (var i = 0; i < 3; i++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 30)),
-    );
-    await tester.pump();
-  }
+  // sqflite_common_ffi runs on a background isolate; drain FakeAsync microtasks
+  // then await the actual DraftService DB queue signal instead of fixed wall time.
+  await tester.pump();
+  await tester.runAsync(() => DraftService().waitForIdleForTesting());
+  await tester.pump();
+  await tester.runAsync(() => DraftService().waitForIdleForTesting());
+  await tester.pump();
 }
 
 Future<T> _runDbAfterFlush<T>(

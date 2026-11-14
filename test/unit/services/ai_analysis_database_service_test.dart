@@ -294,9 +294,9 @@ void main() {
     test(
         'upgrades v1 database to v2 preserving ai_analyses and creating periodic_insights',
         () async {
+      final dbPath = (await service.database).path;
       await service.closeDatabase();
 
-      final dbPath = p.join(tempDir.path, 'ai_analyses.db');
       if (File(dbPath).existsSync()) {
         File(dbPath).deleteSync();
       }
@@ -354,6 +354,52 @@ void main() {
       final insights = await service.getPeriodicInsights();
       expect(insights.length, equals(1));
       expect(insights.first.insight, equals('Post-upgrade insight'));
+    });
+
+    test(
+        'importPeriodicInsights deduplicates legacy insights without dataSignature and skips corrupt DB timestamps',
+        () async {
+      final legacyCreatedAt = DateTime.utc(2026, 6, 1, 12, 0);
+      final items = [
+        PeriodicInsight(
+          insight: 'Legacy without signature 1',
+          periodType: 'week',
+          periodLabel: '2026年第22周',
+          createdAt: legacyCreatedAt,
+          isAiGenerated: true,
+          dataSignature: null,
+        ),
+        PeriodicInsight(
+          insight: 'Legacy without signature 2',
+          periodType: 'month',
+          periodLabel: '6月',
+          createdAt: legacyCreatedAt.add(const Duration(days: 1)),
+          isAiGenerated: true,
+          dataSignature: '',
+        ),
+      ];
+
+      await service.importPeriodicInsights(items);
+      await service.importPeriodicInsights(items);
+
+      final db = await service.database;
+      await db.insert('periodic_insights', {
+        'insight': 'Corrupt timestamp row',
+        'period_type': 'week',
+        'period_label': '本周',
+        'created_at': 'not-a-timestamp',
+        'is_ai_generated': 1,
+        'data_signature': 'corrupt_sig',
+      });
+
+      final loaded = await service.getPeriodicInsights(limit: 100);
+      expect(loaded.length, equals(2));
+      expect(
+        loaded.map((e) => e.insight),
+        containsAll(
+          ['Legacy without signature 1', 'Legacy without signature 2'],
+        ),
+      );
     });
   });
 }

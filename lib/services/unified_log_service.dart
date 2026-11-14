@@ -357,12 +357,18 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
             );
           }
           _currentLevel = UnifiedLogLevel.info;
-          await mmkv.setInt(_logLevelKey, _currentLevel.index);
+          final saved = await mmkv.setInt(_logLevelKey, _currentLevel.index);
+          if (!saved) {
+            _logger.warning('保存重置日志级别失败');
+          }
         }
       } else {
         // 首次启动或无效值时，使用默认的info级别
         _currentLevel = UnifiedLogLevel.info;
-        await mmkv.setInt(_logLevelKey, _currentLevel.index);
+        final saved = await mmkv.setInt(_logLevelKey, _currentLevel.index);
+        if (!saved) {
+          _logger.warning('保存默认日志级别失败');
+        }
       }
 
       // 设置 logging_flutter 的日志级别
@@ -744,9 +750,12 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
       try {
         final mmkv = AppPreferencesService();
-        await mmkv.setInt(_logLevelKey, newLevel.index);
+        final levelSaved = await mmkv.setInt(_logLevelKey, newLevel.index);
         // 标记用户已手动设置过日志级别，后续启动不会自动重置
-        await mmkv.setBool(_logLevelUserSetKey, true);
+        final userSetSaved = await mmkv.setBool(_logLevelUserSetKey, true);
+        if (!levelSaved || !userSetSaved) {
+          throw StateError('保存日志级别偏好返回 false');
+        }
 
         // 更新 logging_flutter 的级别
         _updateLoggingFlutterLevel();
@@ -757,6 +766,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           source: 'UnifiedLogService',
         );
       } catch (e) {
+        _currentLevel = oldLevel;
         _logger.warning('设置日志级别失败: $e');
         log(
           UnifiedLogLevel.error,

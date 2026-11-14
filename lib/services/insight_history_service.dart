@@ -20,6 +20,7 @@ class InsightHistoryService extends ChangeNotifier {
   AIAnalysisDatabaseService _aiAnalysisDbService;
   List<PeriodicInsight> _insights = [];
   Future<void>? _loadFuture;
+  bool _hasLoaded = false;
 
   SettingsService get settingsService => _settingsService;
   AIAnalysisDatabaseService get aiAnalysisDbService => _aiAnalysisDbService;
@@ -50,26 +51,49 @@ class InsightHistoryService extends ChangeNotifier {
   })  : _settingsService = settingsService,
         _aiAnalysisDbService =
             aiAnalysisDbService ?? AIAnalysisDatabaseService() {
-    _loadFuture = _loadInsights();
+    _loadFuture = _runInitialLoad();
   }
 
   List<PeriodicInsight> get insights => List.unmodifiable(_insights);
 
-  /// 确保首次加载与历史 KV 迁移已完成。
+  /// 确保首次加载与历史 KV 迁移已完成；若上次 SQLite 读取失败，后续调用会重试。
   Future<void> ensureLoaded() async {
-    await (_loadFuture ??= _loadInsights());
+    if (_hasLoaded) return;
+    await (_loadFuture ??= _runInitialLoad());
   }
 
-  /// 加载已保存的洞察（必要时先完成一次历史 KV 到 SQLite 的幂等迁移）
-  Future<void> _loadInsights() async {
+  Future<void> _runInitialLoad() async {
+    try {
+      final loaded = await _loadInsights();
+      if (loaded) {
+        _hasLoaded = true;
+      }
+    } finally {
+      _loadFuture = null;
+    }
+  }
+
+  /// 加载已保存的洞察（必要时先尝试历史 KV 到 SQLite 的幂等迁移；迁移失败不阻断 SQLite 读取）
+  Future<bool> _loadInsights() async {
     try {
       await _migrateLegacyKvIfNeeded();
+    } catch (e, stack) {
+      AppLogger.e(
+        '迁移历史周期洞察 KV 数据失败，继续从 SQLite 加载已有记录',
+        error: e,
+        stackTrace: stack,
+        source: 'InsightHistoryService',
+      );
+    }
+
+    try {
       final loaded = await _aiAnalysisDbService.getPeriodicInsights(
         limit: _maxInsights,
       );
       _insights = List<PeriodicInsight>.from(loaded);
       // 确保内存列表严格按时间倒序排列
       _insights.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return true;
     } catch (e, stack) {
       AppLogger.e(
         '加载洞察历史失败',
@@ -78,6 +102,7 @@ class InsightHistoryService extends ChangeNotifier {
         source: 'InsightHistoryService',
       );
       _insights = [];
+      return false;
     } finally {
       notifyListeners();
     }
@@ -103,23 +128,63 @@ class InsightHistoryService extends ChangeNotifier {
     final jsonString = await _settingsService.getCustomString(_storageKey);
     if (jsonString != null && jsonString.isNotEmpty) {
       final dynamic decoded = json.decode(jsonString);
-      if (decoded is List && decoded.isNotEmpty) {
-        final legacyItems = decoded
-            .whereType<Map>()
-            .map(
-              (item) => PeriodicInsight.fromJson(
-                item.map((k, v) => MapEntry(k.toString(), v)),
-              ),
-            )
-            .toList(growable: false);
-        if (legacyItems.isNotEmpty) {
-          await _aiAnalysisDbService.importPeriodicInsights(
-            legacyItems,
-            maxRetention: _maxInsights,
+      if (decoded is! List) {
+        throw const FormatException(
+          'Legacy periodic_insights_history payload is not a JSON list',
+        );
+      }
+
+      final legacyItems = <PeriodicInsight>[];
+      var skippedCount = 0;
+      for (var i = 0; i < decoded.length; i++) {
+        final rawItem = decoded[i];
+        if (rawItem is! Map) {
+          skippedCount++;
+          AppLogger.w(
+            '迁移历史洞察跳过非 Map 条目 (index: $i)',
+            source: 'InsightHistoryService',
+          );
+          continue;
+        }
+        try {
+          legacyItems.add(
+            PeriodicInsight.fromJson(
+              rawItem.map((k, v) => MapEntry(k.toString(), v)),
+            ),
+          );
+        } catch (e) {
+          skippedCount++;
+          AppLogger.w(
+            '迁移历史洞察跳过损坏记录 (index: $i): $e',
+            source: 'InsightHistoryService',
           );
         }
       }
-      await _removeLegacyStorageKey(prefs, prefsReady);
+
+      if (legacyItems.isNotEmpty) {
+        await _aiAnalysisDbService.importPeriodicInsights(
+          legacyItems,
+          maxRetention: _maxInsights,
+        );
+      }
+
+      // 仅当全部条目解析且导入成功时才清理旧键和设置迁移标记，避免丢失未迁移或损坏数据
+      if (skippedCount > 0) {
+        AppLogger.w(
+          '历史洞察迁移跳过 $skippedCount 条损坏记录，保留原 KV 键不标记完成',
+          source: 'InsightHistoryService',
+        );
+        return;
+      }
+
+      final removed = await _removeLegacyStorageKey(prefs, prefsReady);
+      if (!removed) {
+        AppLogger.w(
+          '清理历史周期洞察 KV 键失败，暂不设置迁移完成标记',
+          source: 'InsightHistoryService',
+        );
+        return;
+      }
     }
 
     if (prefsReady) {
@@ -127,15 +192,14 @@ class InsightHistoryService extends ChangeNotifier {
     }
   }
 
-  Future<void> _removeLegacyStorageKey(
+  Future<bool> _removeLegacyStorageKey(
     AppPreferencesService prefs,
     bool prefsReady,
   ) async {
     if (prefsReady) {
-      await prefs.remove(_storageKey);
-      return;
+      return await prefs.remove(_storageKey);
     }
-    await _settingsService.removeCustomKey(_storageKey);
+    return await _settingsService.removeCustomKey(_storageKey);
   }
 
   /// 保存洞察到历史记录
