@@ -987,8 +987,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             Selector<SettingsService, bool>(
               selector: (context, settings) => settings.showFavoriteButton,
               builder: (context, showFavoriteButton, child) {
-                return Consumer<NoteSearchController>(
-                  builder: (context, searchController, child) {
+                return Selector<NoteSearchController, String>(
+                  selector: (context, searchController) =>
+                      searchController.searchQuery,
+                  builder: (context, searchQuery, child) {
                     return NoteListView(
                       key: _noteListViewKey, // 绑定全局Key
                       tags: _pageController.tags,
@@ -996,12 +998,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       onTagSelectionChanged: (tagIds) {
                         _pageController.setSelectedTagIds(tagIds);
                       },
-                      searchQuery: searchController.searchQuery,
+                      searchQuery: searchQuery,
                       sortType: _pageController.sortType,
                       sortAscending: _pageController.sortAscending,
                       onSortChanged: _handleSortChanged,
                       onSearchChanged: (query) {
-                        searchController.updateSearch(query);
+                        context
+                            .read<NoteSearchController>()
+                            .updateSearch(query);
                       },
                       onEdit: _showEditQuoteDialog,
                       onDelete: _deleteQuote,

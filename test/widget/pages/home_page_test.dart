@@ -167,12 +167,37 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
 
 class MockSearchController extends ChangeNotifier
     implements NoteSearchController {
+  String _searchQuery = '';
+  bool _isSearching = false;
+  String? _searchError;
+
   @override
-  String get searchQuery => '';
+  String get searchQuery => _searchQuery;
   @override
-  bool get isSearching => false;
+  bool get isSearching => _isSearching;
   @override
-  String? get searchError => null;
+  String? get searchError => _searchError;
+
+  @override
+  void setSearchState(bool isSearching) {
+    if (_isSearching != isSearching) {
+      _isSearching = isSearching;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void updateSearch(String query) {
+    if (_searchQuery != query) {
+      _searchQuery = query;
+      notifyListeners();
+    }
+  }
+
+  void notifyUnrelatedChange() {
+    notifyListeners();
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -697,6 +722,70 @@ void main() {
       );
       expect(noteListViewEnabled.onFavorite, isNotNull);
       expect(noteListViewEnabled.onLongPressFavorite, isNotNull);
+    });
+
+    testWidgets(
+        'should only rebuild NoteListView when searchQuery changes, not on unrelated NoteSearchController notifications',
+        (WidgetTester tester) async {
+      await pumpHomePage(tester);
+
+      // Tap the second tab (Notes)
+      await tester.tap(find.byIcon(Icons.book_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NoteListView), findsOneWidget);
+      final initialNoteListView =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(initialNoteListView.searchQuery, '');
+
+      // Trigger unrelated NoteSearchController notifications (e.g. setSearchState or notifyUnrelatedChange)
+      mockSearchController.setSearchState(true);
+      await tester.pump();
+
+      // NoteListView widget instance should remain identical because Selector did not re-run builder
+      final noteListViewAfterSearchState =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(
+        identical(noteListViewAfterSearchState, initialNoteListView),
+        isTrue,
+        reason:
+            'NoteListView should not rebuild on NoteSearchController search state changes',
+      );
+
+      mockSearchController.notifyUnrelatedChange();
+      await tester.pump();
+
+      final noteListViewAfterUnrelated =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(
+        identical(noteListViewAfterUnrelated, initialNoteListView),
+        isTrue,
+        reason:
+            'NoteListView should not rebuild on unrelated NoteSearchController notifications',
+      );
+
+      // Change searchQuery
+      mockSearchController.updateSearch('flutter');
+      await tester.pump();
+
+      final noteListViewAfterQuery =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(
+        identical(noteListViewAfterQuery, initialNoteListView),
+        isFalse,
+        reason:
+            'NoteListView should rebuild when NoteSearchController searchQuery changes',
+      );
+      expect(noteListViewAfterQuery.searchQuery, 'flutter');
+
+      // Test onSearchChanged callback invokes updateSearch
+      noteListViewAfterQuery.onSearchChanged('dart');
+      await tester.pump();
+
+      expect(mockSearchController.searchQuery, 'dart');
+      final noteListViewAfterCallback =
+          tester.widget<NoteListView>(find.byType(NoteListView));
+      expect(noteListViewAfterCallback.searchQuery, 'dart');
     });
   });
 }
