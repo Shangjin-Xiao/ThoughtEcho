@@ -157,7 +157,19 @@ class NoteSyncService extends ChangeNotifier {
     );
   }
 
+  /// 在后台 isolate 中扫描媒体清单。
+  ///
+  /// 必须是 static：实例方法内创建的闭包可能捕获 `this`（含 Completer 等
+  /// 不可跨 isolate 发送的对象），导致 Isolate.run 抛出 ArgumentError。
   @visibleForTesting
+  static Future<MediaSyncManifest> scanMediaManifestInIsolate(
+    String mediaDirPath,
+  ) {
+    return Isolate.run(
+      () => MediaSyncManifest.scan(Directory(mediaDirPath)),
+    );
+  }
+
   static SyncIntentApproval parseSyncIntentApproval(
     Map<String, dynamic> response,
   ) {
@@ -271,11 +283,7 @@ class NoteSyncService extends ChangeNotifier {
         onMediaManifestRequested: () async {
           final appDir = await getApplicationDocumentsDirectory();
           final mediaDirPath = p.join(appDir.path, 'media');
-          return await Isolate.run(() async {
-            return await MediaSyncManifest.scan(
-              Directory(mediaDirPath),
-            );
-          });
+          return await scanMediaManifestInIsolate(mediaDirPath);
         },
       );
       final actualPort = _localSendServer!.port;
@@ -653,7 +661,9 @@ class NoteSyncService extends ChangeNotifier {
         throw Exception('目标设备不支持同步审批 (${response.statusCode})');
       }
       final responseData = response.data ?? const {};
-      return await Isolate.run(() => parseSyncIntentApproval(responseData));
+      // 直接在当前 isolate 解析：负载很小，且在实例方法内向 Isolate.run 传入闭包
+      // 会捕获 this（NoteSyncService，含 Completer 等不可发送对象）导致崩溃。
+      return parseSyncIntentApproval(responseData);
     } finally {
       dio.close(force: true);
     }
