@@ -442,39 +442,77 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // 动画完成后完成态解构：_buildEntrance 生成的 Opacity 与 Transform 节点被正确解构移除，
-    // RepaintBoundary 持续保护概览内容
+    // 动效落位后保持稳定的组件层级：Opacity 与 Transform 不解构移除，
+    // 避免切换根节点导致子树卸载重建与内部状态丢失（RenderOpacity(1.0) 已跳过 saveLayer）；
+    // RepaintBoundary 持续保护概览内容。
+    expect(entranceOpacity, findsOneWidget);
+    expect(tester.widget<Opacity>(entranceOpacity).opacity, equals(1.0));
+    expect(entranceTransform, findsOneWidget);
+    expect(
+      tester.widget<Transform>(entranceTransform).transform,
+      equals(Matrix4.translationValues(0, 0, 0)),
+    );
+    expect(entranceRepaintBoundary, findsOneWidget);
     expect(
       find.descendant(
-        of: entranceBuilder,
-        matching: find.byType(Opacity),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.ancestor(
-        of: find.byType(RepaintBoundary),
-        matching: find.descendant(
-          of: entranceBuilder,
-          matching: find.byType(Transform),
-        ),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.descendant(
-        of: entranceBuilder,
-        matching: find.byType(RepaintBoundary),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(RepaintBoundary),
+        of: entranceRepaintBoundary,
         matching: find.text(l10n.dataOverview),
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      'period selection menu opened during entrance animation stays open across animation completion',
+      (tester) async {
+    final settings = _ReportSettingsService();
+    final database = _EmptyPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    final context = tester.element(find.byType(ExplorePage));
+    final l10n = AppLocalizations.of(context);
+
+    // 入场动效进行中（150ms），此时用户点击周期选择菜单
+    await tester.pump(const Duration(milliseconds: 150));
+    final periodPickerFinder = find.byType(MenuAnchor);
+    expect(periodPickerFinder, findsOneWidget);
+    await tester.tap(periodPickerFinder);
+    await tester.pump();
+
+    // 菜单已展开，出现菜单选项
+    expect(find.text(l10n.thisMonth), findsOneWidget);
+
+    // 动效完成落位（超过 300ms）
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+
+    // 菜单不应因动画完成而被重构卸载，仍然保持展开
+    expect(find.text(l10n.thisMonth), findsOneWidget);
+
+    // 用户可正常点击菜单项切换周期
+    await tester.tap(find.text(l10n.thisMonth));
+    await tester.pumpAndSettle();
+    expect(settings.exploreSelectedPeriod, equals('month'));
   });
 
   // 回归：数据库在启动/同步期间会连续 notifyListeners 多次。
