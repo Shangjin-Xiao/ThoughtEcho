@@ -394,15 +394,8 @@ extension _NoteListItemsExtension on NoteListViewState {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 32),
-              SizedBox(
-                width: 180,
-                height: 180,
-                child: EnhancedLottieAnimation(
-                  type: LottieAnimationType.notFound,
-                  width: 180,
-                  height: 180,
-                ),
-              ),
+              // 动画仅作装饰，读屏读下方的标题与说明即可。
+              const AppEmptyAnimation(width: 180),
               const SizedBox(height: 16),
               Text(
                 l10n.noteSearchEmptyTitle,
@@ -411,10 +404,10 @@ extension _NoteListItemsExtension on NoteListViewState {
               const SizedBox(height: 8),
               Text(
                 l10n.noteSearchEmptySubtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
             ],
