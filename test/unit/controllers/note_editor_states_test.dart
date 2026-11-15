@@ -705,6 +705,99 @@ void main() {
       state.dispose();
     });
 
+    test(
+        'restoring text back to saved baseline in the same synchronous turn leaves state clean',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_restore_sync_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // Modify and immediately restore within the same synchronous turn
+      state.controller.replaceText(0, 1, 'z', null);
+      state.controller.replaceText(0, 1, 'a', null);
+
+      // Drain queued stream change events
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isFalse);
+      expect(state.controller.document.toPlainText(), 'abc\n');
+      state.dispose();
+    });
+
+    test(
+        'restoring text back to saved baseline across separate turns restores clean state',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_restore_async_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      state.controller.replaceText(0, 1, 'z', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      state.controller.replaceText(0, 1, 'a', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'calling markClean synchronously right after text edit does not get overridden by stream event',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_mark_clean_sync_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      state.controller.replaceText(0, 1, 'z', null);
+      state.markClean();
+
+      // Drain stream events
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isFalse);
+      state.dispose();
+    });
+
     test('typing during media file replacement preserves newly typed text',
         () async {
       final doc = quill.Document()..insert(0, 'Text before media\n');

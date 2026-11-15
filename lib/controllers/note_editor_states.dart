@@ -132,33 +132,29 @@ class NoteEditorState extends ChangeNotifier {
     _documentVersion++;
     final currentLength = _controller.document.length;
 
-    if (_isDirty) {
-      if (currentLength != _savedDocumentLength) {
-        return;
-      }
-      final currentDelta = _controller.document.toDelta();
-      final savedDelta = _savedDocumentDelta;
-      if (savedDelta != null && currentDelta == savedDelta) {
-        _isDirty = false;
-        _savedDocumentVersion = _documentVersion;
+    if (currentLength != _savedDocumentLength) {
+      if (!_isDirty) {
+        _isDirty = true;
         notifyListeners();
       }
-      return;
-    }
-
-    if (currentLength != _savedDocumentLength) {
-      _isDirty = true;
-      notifyListeners();
       return;
     }
 
     final currentDelta = _controller.document.toDelta();
     final savedDelta = _savedDocumentDelta;
     if (savedDelta != null && currentDelta == savedDelta) {
+      _savedDocumentVersion = _documentVersion;
+      if (_isDirty) {
+        _isDirty = false;
+        notifyListeners();
+      }
       return;
     }
-    _isDirty = true;
-    notifyListeners();
+
+    if (!_isDirty) {
+      _isDirty = true;
+      notifyListeners();
+    }
   }
 
   void incrementSessionGeneration() {
