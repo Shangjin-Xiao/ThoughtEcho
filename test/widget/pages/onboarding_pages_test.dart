@@ -18,7 +18,9 @@ import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:lottie/lottie.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
+import 'package:thoughtecho/widgets/app_loading_view.dart';
 import 'package:thoughtecho/widgets/onboarding/appearance_page_view.dart';
 import 'package:thoughtecho/widgets/onboarding/onboarding_section.dart';
 import 'package:thoughtecho/widgets/onboarding/page_views.dart';
@@ -488,6 +490,66 @@ void main() {
       // 卸载组件，阻止 1500ms 后的 _navigateToHome 在缺少 HomePage Provider 的测试环境下报错，并清理 Timer
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(milliseconds: 1000));
+    });
+  });
+
+  group('OnboardingPage 加载动画迁移验证', () {
+    testWidgets('初始化未完成时使用 AppLoadingAnimation(bookFlip) 而非 Lottie',
+        (tester) async {
+      final settingsService = await SettingsService.create();
+      final servicesInitializedNotifier = ValueNotifier<bool>(false);
+
+      await tester.pumpWidget(
+        buildOnboardingPageHost(
+          settingsService: settingsService,
+          servicesInitializedNotifier: servicesInitializedNotifier,
+          child: const OnboardingPage(),
+        ),
+      );
+      await tester.pump();
+
+      final animFinder = find.byType(AppLoadingAnimation);
+      expect(animFinder, findsOneWidget);
+      expect(
+        tester.widget<AppLoadingAnimation>(animFinder).style,
+        AppLoadingStyle.bookFlip,
+      );
+      expect(find.byType(Lottie), findsNothing);
+
+      // 清理初始化 500ms 延迟定时器
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 600));
+    });
+
+    testWidgets('更新完成页使用 AppLoadingAnimation(inkDrop) 而非 Lottie',
+        (tester) async {
+      final settingsService = await SettingsService.create();
+      final servicesInitializedNotifier = ValueNotifier<bool>(true);
+
+      await tester.pumpWidget(
+        buildOnboardingPageHost(
+          settingsService: settingsService,
+          servicesInitializedNotifier: servicesInitializedNotifier,
+          child: const OnboardingPage(
+            showUpdateReady: true,
+            showFullOnboarding: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final animFinder = find.byType(AppLoadingAnimation);
+      expect(animFinder, findsOneWidget);
+      expect(
+        tester.widget<AppLoadingAnimation>(animFinder).style,
+        AppLoadingStyle.inkDrop,
+      );
+      expect(find.byType(Lottie), findsNothing);
+
+      // 清理 1500ms 后的自动跳转定时器
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 1600));
     });
   });
 }

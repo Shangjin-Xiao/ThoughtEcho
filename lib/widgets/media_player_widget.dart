@@ -5,8 +5,9 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:video_player/video_player.dart';
+
 import '../constants/app_constants.dart';
-import '../utils/lottie_animation_manager.dart';
+import 'app_loading_view.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/app_semantic_colors.dart';
 import 'app_snackbar.dart';
@@ -191,9 +192,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         materialProgressColors: ChewieProgressColors(
           playedColor: Theme.of(context).colorScheme.primary,
           handleColor: Theme.of(context).colorScheme.primary,
-          backgroundColor: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest,
+          backgroundColor:
+              Theme.of(context).colorScheme.surfaceContainerHighest,
           bufferedColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         // 自定义控制栏选项
@@ -444,8 +444,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           height: widget.height ?? 200,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainer,
-            borderRadius:
-                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+            borderRadius: BorderRadius.circular(
+              AppShapeTokens.of(context).cardRadius,
+            ),
             border: Border.all(
               color:
                   Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
@@ -466,9 +467,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                       Text(
                         l10n.clickToPlayVideo,
                         style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -488,8 +490,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       width: widget.width ?? 300,
       height: widget.height ?? 200,
       decoration: BoxDecoration(
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        borderRadius: BorderRadius.circular(
+          AppShapeTokens.of(context).cardRadius,
+        ),
         boxShadow: AppShapeTokens.of(context).restShadow,
       ),
       clipBehavior: Clip.antiAlias,
@@ -511,8 +514,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       height: widget.height ?? 200,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        borderRadius: BorderRadius.circular(
+          AppShapeTokens.of(context).cardRadius,
+        ),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
@@ -522,11 +526,15 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         children: [
           LayoutBuilder(
             builder: (context, constraints) {
-              final s = (constraints.maxHeight * 0.4).clamp(48.0, 120.0);
-              return EnhancedLottieAnimation(
-                type: LottieAnimationType.pulseLoading,
-                width: s,
-                height: s,
+              final availableWidth =
+                  constraints.maxWidth.isFinite ? constraints.maxWidth : 120.0;
+              final targetHeight = widget.height ?? 200.0;
+              final s = (targetHeight * 0.45).clamp(48.0, 120.0);
+              final effectiveWidth = s > availableWidth ? availableWidth : s;
+              return AppLoadingAnimation(
+                style: AppLoadingStyle.bookFlip,
+                width: effectiveWidth,
+                semanticLabel: l10n.loadingVideo,
               );
             },
           ),
@@ -534,9 +542,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           Text(
             l10n.loadingVideo,
             style: TextStyle(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -551,8 +560,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        borderRadius: BorderRadius.circular(
+          AppShapeTokens.of(context).cardRadius,
+        ),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
@@ -592,9 +602,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     Text(
                       _formatDuration(_duration),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
                           ),
                     ),
                   ],
@@ -607,9 +618,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                   return IconButton(
                     icon: Icon(
                       Icons.more_vert,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                     tooltip: AppLocalizations.of(context).moreOptions,
                     onPressed: () {
@@ -680,9 +692,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                         ),
                     onChanged: _onAudioSeek,
                     activeColor: Theme.of(context).colorScheme.primary,
-                    inactiveColor: Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.3),
+                    inactiveColor: Theme.of(context)
+                        .colorScheme
+                        .outline
+                        .withValues(alpha: 0.3),
                   ),
                 ),
               ),
@@ -855,9 +868,12 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
             ),
           ),
           Expanded(
-            child: Text(value,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            child: Text(
+              value,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
         ],
       ),

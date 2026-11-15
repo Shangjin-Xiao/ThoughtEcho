@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../gen_l10n/app_localizations.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../theme/theme_style.dart';
+import 'app_loading_animation.dart';
 
 /// 增强的AI加载对话框
-/// 使用高质量的Lottie动画提供更好的用户体验
+/// 使用心迹自绘加载动画提供更好的用户体验
 class EnhancedAILoadingDialog extends StatelessWidget {
   final String? message;
   final LottieAnimationType animationType;
@@ -86,8 +88,9 @@ class EnhancedAILoadingDialog extends StatelessWidget {
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius:
-              BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
+          borderRadius: BorderRadius.circular(
+            AppShapeTokens.of(context).dialogRadius,
+          ),
           boxShadow: AppShapeTokens.of(context).raisedShadow,
         ),
         child: Column(
@@ -95,20 +98,18 @@ class EnhancedAILoadingDialog extends StatelessWidget {
           children: [
             LayoutBuilder(
               builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth.isFinite
+                    ? constraints.maxWidth
+                    : 220.0;
                 final s = (constraints.maxHeight * 0.5).clamp(120.0, 220.0);
-                if (animationType == LottieAnimationType.aiThinking) {
-                  return SizedBox(
-                    width: s,
-                    height: s,
-                    child: const CircularProgressIndicator(strokeWidth: 4),
-                  );
-                } else {
-                  return EnhancedLottieAnimation(
-                    type: animationType,
-                    width: s,
-                    height: s,
-                  );
-                }
+                final effectiveWidth = s > availableWidth ? availableWidth : s;
+                return AppLoadingAnimation(
+                  style: animationType == LottieAnimationType.aiThinking
+                      ? AppLoadingStyle.inkWriting
+                      : AppLoadingStyle.bookFlip,
+                  width: effectiveWidth,
+                  semanticLabel: message,
+                );
               },
             ),
             if (message != null) ...[
@@ -172,22 +173,29 @@ class EnhancedAIProgressDialog extends StatelessWidget {
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius:
-              BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
+          borderRadius: BorderRadius.circular(
+            AppShapeTokens.of(context).dialogRadius,
+          ),
           boxShadow: AppShapeTokens.of(context).raisedShadow,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Lottie动画
-            EnhancedLottieAnimation(type: animationType, width: 80, height: 80),
+            AppLoadingAnimation(
+              style: animationType == LottieAnimationType.aiThinking
+                  ? AppLoadingStyle.inkWriting
+                  : AppLoadingStyle.bookFlip,
+              width: 80,
+              semanticLabel: message,
+            ),
 
             if (message != null) ...[
               const SizedBox(height: 20),
               Text(
                 message!,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(color: theme.colorScheme.onSurface),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],

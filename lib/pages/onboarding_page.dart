@@ -19,7 +19,7 @@ import '../services/ai_analysis_database_service.dart';
 import '../utils/app_logger.dart';
 import '../constants/app_constants.dart';
 import 'home_page.dart';
-import '../utils/lottie_animation_manager.dart';
+import '../widgets/app_loading_view.dart';
 import '../theme/theme_style.dart';
 
 /// 重构后的新用户引导页面
@@ -260,19 +260,24 @@ class _OnboardingPageState extends State<OnboardingPage>
           children: [
             LayoutBuilder(
               builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth.isFinite
+                    ? constraints.maxWidth
+                    : 220.0;
                 final s = (constraints.maxHeight * 0.4).clamp(48.0, 100.0);
-                return EnhancedLottieAnimation(
-                  type: LottieAnimationType.pulseLoading,
-                  width: s,
-                  height: s,
+                final effectiveWidth = s > availableWidth ? availableWidth : s;
+                return AppLoadingAnimation(
+                  style: AppLoadingStyle.bookFlip,
+                  width: effectiveWidth,
                   semanticLabel:
                       AppLocalizations.of(context).onboardingPreparing,
                 );
               },
             ),
             const SizedBox(height: 20),
-            Text(AppLocalizations.of(context).onboardingPreparing,
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context).onboardingPreparing,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ],
         ),
       ),
@@ -297,10 +302,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 20),
-              Text(
-                l10n.onboardingError,
-                style: theme.textTheme.headlineSmall,
-              ),
+              Text(l10n.onboardingError, style: theme.textTheme.headlineSmall),
               const SizedBox(height: 12),
               Text(
                 _errorMessage!,
@@ -310,9 +312,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: _navigateToHome,
-                child: Text(
-                  l10n.onboardingContinueUsing,
-                ),
+                child: Text(l10n.onboardingContinueUsing),
               ),
             ],
           ),
@@ -335,16 +335,13 @@ class _OnboardingPageState extends State<OnboardingPage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.upgrade,
-                  size: 80,
-                  color: theme.colorScheme.primary,
-                ),
+                Icon(Icons.upgrade, size: 80, color: theme.colorScheme.primary),
                 const SizedBox(height: 32),
                 Text(
                   AppLocalizations.of(context).onboardingUpdateComplete,
-                  style: theme.textTheme.headlineMedium
-                      ?.copyWith(color: theme.colorScheme.primary),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -356,10 +353,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                 // 这一页只在 _errorMessage == null 时才会被 build() 选中
                 // （出错走 _buildErrorView），迁移完成后必定自动跳转，
                 // 所以这里不需要显式的进入按钮。
-                const EnhancedLottieAnimation(
-                  type: LottieAnimationType.pulseLoading,
-                  width: 60,
-                  height: 60,
+                const AppLoadingAnimation(
+                  style: AppLoadingStyle.inkDrop,
+                  width: 72,
                 ),
               ],
             ),
@@ -536,15 +532,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ? () => _completeOnboarding(controller)
                       : controller.nextPage),
               icon: state.isCompleting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: EnhancedLottieAnimation(
-                        type: LottieAnimationType.loading,
-                        width: 18,
-                        height: 18,
-                      ),
-                    )
+                  ? const AppInlineLoadingIndicator(size: 16, strokeWidth: 2)
                   : Icon(
                       isLastPage ? Icons.check : Icons.arrow_forward,
                       size: 18,
@@ -590,10 +578,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const EnhancedLottieAnimation(
-                        type: LottieAnimationType.loading,
-                        width: 60,
-                        height: 60,
+                      AppLoadingAnimation(
+                        style: AppLoadingStyle.bookFlip,
+                        width: 80,
+                        semanticLabel:
+                            AppLocalizations.of(context).onboardingInitializing,
                       ),
                       const SizedBox(height: 16),
                       Text(AppLocalizations.of(context).onboardingInitializing),
@@ -629,9 +618,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  ).onboardingInitFailed,
+                                  AppLocalizations.of(context)
+                                      .onboardingInitFailed,
                                 ),
                                 duration: AppConstants.snackBarDurationError,
                               ),
