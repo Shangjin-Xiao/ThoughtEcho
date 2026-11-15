@@ -5,273 +5,292 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
   Widget _buildEditorPage(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) {
-          return;
-        }
-        // 有未保存的内容，提示用户
-        final hasUnsavedChanges = _hasUnsavedChanges();
-        if (!hasUnsavedChanges) {
-          if (context.mounted) {
-            // 没有未保存的更改，安全退出并清理草稿
-            await _clearDraft();
-            if (context.mounted) {
-              Navigator.pop(context);
-            }
-          }
-          return;
-        }
-
-        // 返回值: null=继续编辑, true=放弃更改, 'save'=保存并退出
-        final dialogResult = await showDialog<dynamic>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(l10n.unsavedChangesTitle),
-            content: Text(l10n.unsavedChangesDesc),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, null),
-                child: Text(l10n.continueEditing),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(
-                  l10n.discardChanges,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, 'save'),
-                child: Text(l10n.saveAndExit),
-              ),
-            ],
-          ),
-        );
-
-        if (dialogResult == true) {
-          if (context.mounted) {
-            // 用户选择放弃更改，清理草稿
-            await _clearDraft();
-            if (context.mounted) {
-              Navigator.pop(context);
-            }
-          }
-        } else if (dialogResult == 'save') {
-          // 用户选择保存并退出
-          await _saveContent();
-        }
-        // dialogResult == null: 继续编辑，不做任何操作
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
+          _saveContent(popOnSuccess: false);
+        },
+        const SingleActivator(LogicalKeyboardKey.keyS, meta: true): () {
+          _saveContent(popOnSuccess: false);
+        },
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          Navigator.maybePop(context);
+        },
       },
-      child: Scaffold(
-        backgroundColor: theme.colorScheme.surface,
-        appBar: AppBar(
-          title: const SizedBox.shrink(),
-          actions: [
-            IconButton(
-              key: _metadataButtonKey, // 功能引导 key
-              icon: Icon(Icons.edit_note),
-              tooltip: l10n.editMetadataShort,
-              onPressed: () => _showMetadataDialog(context),
-            ),
-            IconButton(
-              icon: Icon(Icons.auto_awesome),
-              tooltip: l10n.aiAssistantLabel,
-              onPressed: () => _showAIOptions(context),
-            ),
-            ListenableBuilder(
-              listenable: _mediaState,
-              builder: (context, _) {
-                return IconButton(
-                  icon: _editorState.isLoadingFullQuote
-                      ? SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant, // 适配 AppBar 颜色
-                          ),
-                        )
-                      : Icon(Icons.save),
-                  tooltip: l10n.save,
-                  onPressed:
-                      _editorState.isLoadingFullQuote || _mediaState.isSaving
-                          ? null
-                          : _saveContent,
-                );
-              },
-            ),
-          ],
-          automaticallyImplyLeading: true,
-        ),
-        body: SafeArea(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  UnifiedQuillToolbar(
-                    key: _toolbarGuideKey, // 新增：用于气泡定位
-                    controller: _editorState.controller,
-                    onMediaImported: (String filePath) {
-                      _mediaState.recordImportedMedia(filePath);
-                    },
+      child: FocusScope(
+        autofocus: true,
+        child: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) {
+              return;
+            }
+            // 有未保存的内容，提示用户
+            final hasUnsavedChanges = _hasUnsavedChanges();
+            if (!hasUnsavedChanges) {
+              if (context.mounted) {
+                // 没有未保存的更改，安全退出并清理草稿
+                await _clearDraft();
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              }
+              return;
+            }
+
+            // 返回值: null=继续编辑, true=放弃更改, 'save'=保存并退出
+            final dialogResult = await showDialog<dynamic>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.unsavedChangesTitle),
+                content: Text(l10n.unsavedChangesDesc),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, null),
+                    child: Text(l10n.continueEditing),
                   ),
-                  if (_metadataState.selectedTagIds.isNotEmpty ||
-                      _metadataState.selectedColorHex != null ||
-                      _metadataState.showLocation ||
-                      _metadataState.showWeather ||
-                      (_metadataState.currentAiAnalysis != null &&
-                          _metadataState.currentAiAnalysis!.isNotEmpty))
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: theme.colorScheme.outlineVariant
-                                .applyOpacity(0.1),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          if (_metadataState.selectedTagIds.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Chip(
-                                visualDensity: VisualDensity.compact,
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                                label: Text(
-                                  l10n.tagsCount(
-                                      _metadataState.selectedTagIds.length),
-                                ),
-                                avatar: Icon(Icons.tag, size: 16),
-                              ),
-                            ),
-                          if (_metadataState.selectedColorHex != null)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: Color(
-                                    int.parse(
-                                          _metadataState.selectedColorHex!
-                                              .substring(1),
-                                          radix: 16,
-                                        ) |
-                                        0xFF000000,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: theme.colorScheme.outline
-                                        .applyOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                key: ValueKey(
-                                  'color-indicator-$_metadataState.selectedColorHex',
-                                ),
-                              ),
-                            ),
-                          if (_metadataState.showLocation &&
-                              (_metadataState.location != null ||
-                                  (_metadataState.latitude != null &&
-                                      _metadataState.longitude != null)))
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Icon(
-                                Icons.location_on,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          if (_metadataState.showWeather &&
-                              _metadataState.weather != null)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Icon(
-                                _getWeatherIcon(_metadataState.weather!),
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          if (_metadataState.currentAiAnalysis != null &&
-                              _metadataState.currentAiAnalysis!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Icon(
-                                Icons.auto_awesome,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () => _showMetadataDialog(context),
-                            child: Text(
-                              l10n.editMetadata,
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: Text(
+                      l10n.discardChanges,
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
-                  Expanded(
-                    child: RepaintBoundary(
-                      child: Container(
-                        color: theme.colorScheme.surface,
-                        padding: const EdgeInsets.all(16),
-                        child: ScrollConfiguration(
-                          behavior: const EditorScrollBehavior(),
-                          child: quill.QuillEditor(
-                            controller: _editorState.controller,
-                            scrollController: _editorState.scrollController,
-                            focusNode: _editorState.focusNode,
-                            config: quill.QuillEditorConfig(
-                              // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
-                              // 卡片里的正文挤得多——同一条笔记「写的时候」和
-                              // 「读的时候」行距不一样。两边共用同一套令牌纠正。
-                              customStyles: QuillThemeTypography.paragraphOnly(
-                                QuillThemeTypography.paragraphStyle(context),
-                                boldWeight:
-                                    QuillThemeTypography.boldWeight(context),
-                              ),
-                              embedBuilders: kIsWeb
-                                  ? FlutterQuillEmbeds.editorWebBuilders()
-                                  : QuillEditorExtensions.getEmbedBuilders(
-                                      optimizedImages: true,
-                                      enableEditorMenu: true,
-                                    ),
-                              placeholder: AppLocalizations.of(
-                                context,
-                              ).fullscreenEditorPlaceholder,
-                              padding: const EdgeInsets.all(16),
-                              autoFocus: false,
-                              expands: false,
-                              scrollable: true,
-                              enableInteractiveSelection: true,
-                              enableSelectionToolbar: true,
-                              showCursor: true,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, 'save'),
+                    child: Text(l10n.saveAndExit),
                   ),
                 ],
               ),
-              _EditorSaveOverlay(mediaState: _mediaState),
-            ],
+            );
+
+            if (dialogResult == true) {
+              if (context.mounted) {
+                // 用户选择放弃更改，清理草稿
+                await _clearDraft();
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              }
+            } else if (dialogResult == 'save') {
+              // 用户选择保存并退出
+              await _saveContent();
+            }
+            // dialogResult == null: 继续编辑，不做任何操作
+          },
+          child: Scaffold(
+            backgroundColor: theme.colorScheme.surface,
+            appBar: AppBar(
+              title: const SizedBox.shrink(),
+              actions: [
+                IconButton(
+                  key: _metadataButtonKey, // 功能引导 key
+                  icon: Icon(Icons.edit_note),
+                  tooltip: l10n.editMetadataShort,
+                  onPressed: () => _showMetadataDialog(context),
+                ),
+                IconButton(
+                  icon: Icon(Icons.auto_awesome),
+                  tooltip: l10n.aiAssistantLabel,
+                  onPressed: () => _showAIOptions(context),
+                ),
+                ListenableBuilder(
+                  listenable: _mediaState,
+                  builder: (context, _) {
+                    return IconButton(
+                      icon: _editorState.isLoadingFullQuote
+                          ? SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant, // 适配 AppBar 颜色
+                              ),
+                            )
+                          : Icon(Icons.save),
+                      tooltip: l10n.save,
+                      onPressed: _editorState.isLoadingFullQuote ||
+                              _mediaState.isSaving
+                          ? null
+                          : _saveContent,
+                    );
+                  },
+                ),
+              ],
+              automaticallyImplyLeading: true,
+            ),
+            body: SafeArea(
+              child: Stack(
+                children: [
+                  Column(
+                    children: [
+                      UnifiedQuillToolbar(
+                        key: _toolbarGuideKey, // 新增：用于气泡定位
+                        controller: _editorState.controller,
+                        onMediaImported: (String filePath) {
+                          _mediaState.recordImportedMedia(filePath);
+                        },
+                      ),
+                      if (_metadataState.selectedTagIds.isNotEmpty ||
+                          _metadataState.selectedColorHex != null ||
+                          _metadataState.showLocation ||
+                          _metadataState.showWeather ||
+                          (_metadataState.currentAiAnalysis != null &&
+                              _metadataState.currentAiAnalysis!.isNotEmpty))
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            border: Border(
+                              bottom: BorderSide(
+                                color: theme.colorScheme.outlineVariant
+                                    .applyOpacity(0.1),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              if (_metadataState.selectedTagIds.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Chip(
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    label: Text(
+                                      l10n.tagsCount(
+                                          _metadataState.selectedTagIds.length),
+                                    ),
+                                    avatar: Icon(Icons.tag, size: 16),
+                                  ),
+                                ),
+                              if (_metadataState.selectedColorHex != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Container(
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      color: Color(
+                                        int.parse(
+                                              _metadataState.selectedColorHex!
+                                                  .substring(1),
+                                              radix: 16,
+                                            ) |
+                                            0xFF000000,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: theme.colorScheme.outline
+                                            .applyOpacity(0.2),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    key: ValueKey(
+                                      'color-indicator-$_metadataState.selectedColorHex',
+                                    ),
+                                  ),
+                                ),
+                              if (_metadataState.showLocation &&
+                                  (_metadataState.location != null ||
+                                      (_metadataState.latitude != null &&
+                                          _metadataState.longitude != null)))
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Icon(
+                                    Icons.location_on,
+                                    size: 16,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              if (_metadataState.showWeather &&
+                                  _metadataState.weather != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Icon(
+                                    _getWeatherIcon(_metadataState.weather!),
+                                    size: 16,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              if (_metadataState.currentAiAnalysis != null &&
+                                  _metadataState.currentAiAnalysis!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Icon(
+                                    Icons.auto_awesome,
+                                    size: 16,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              const Spacer(),
+                              TextButton(
+                                onPressed: () => _showMetadataDialog(context),
+                                child: Text(
+                                  l10n.editMetadata,
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Expanded(
+                        child: RepaintBoundary(
+                          child: Container(
+                            color: theme.colorScheme.surface,
+                            padding: const EdgeInsets.all(16),
+                            child: ScrollConfiguration(
+                              behavior: const EditorScrollBehavior(),
+                              child: quill.QuillEditor(
+                                controller: _editorState.controller,
+                                scrollController: _editorState.scrollController,
+                                focusNode: _editorState.focusNode,
+                                config: quill.QuillEditorConfig(
+                                  // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
+                                  // 卡片里的正文挤得多——同一条笔记「写的时候」和
+                                  // 「读的时候」行距不一样。两边共用同一套令牌纠正。
+                                  customStyles:
+                                      QuillThemeTypography.paragraphOnly(
+                                    QuillThemeTypography.paragraphStyle(
+                                        context),
+                                    boldWeight: QuillThemeTypography.boldWeight(
+                                        context),
+                                  ),
+                                  embedBuilders: kIsWeb
+                                      ? FlutterQuillEmbeds.editorWebBuilders()
+                                      : QuillEditorExtensions.getEmbedBuilders(
+                                          optimizedImages: true,
+                                          enableEditorMenu: true,
+                                        ),
+                                  placeholder: AppLocalizations.of(
+                                    context,
+                                  ).fullscreenEditorPlaceholder,
+                                  padding: const EdgeInsets.all(16),
+                                  autoFocus: false,
+                                  expands: false,
+                                  scrollable: true,
+                                  enableInteractiveSelection: true,
+                                  enableSelectionToolbar: true,
+                                  showCursor: true,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  _EditorSaveOverlay(mediaState: _mediaState),
+                ],
+              ),
+            ),
           ),
         ),
       ),

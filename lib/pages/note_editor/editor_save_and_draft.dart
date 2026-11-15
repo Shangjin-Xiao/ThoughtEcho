@@ -242,8 +242,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
+    final baseQuote = _editorState.fullInitialQuote ?? widget.initialQuote;
     if (_metadataState.hasChanges(
-      isExistingNote: widget.initialQuote != null,
+      isExistingNote: baseQuote != null,
     )) {
       return true;
     }
@@ -254,7 +255,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   Future<bool> _saveContent({bool popOnSuccess = true}) async {
     // Set the guard before the first await so every save entry point, including
     // the app-bar action, is protected from rapid repeated taps.
-    if (_mediaState.isSaving) return false;
+    if (_mediaState.isSaving || _editorState.isLoadingFullQuote) return false;
 
     _editorState.cancelDraftSave();
     _editorState.draftLoaded = false;
@@ -389,7 +390,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     );
 
     try {
-      logDebug('保存笔记: ID=${quote.id}, 是否为更新模式=${widget.initialQuote != null}');
+      logDebug('保存笔记: ID=${quote.id}, 是否为更新模式=${baseQuote?.id != null}');
       logDebug(
         '笔记内容长度: ${quote.content.length}, 富文本长度: ${quote.deltaContent?.length ?? 0}',
       );
@@ -401,8 +402,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         );
       }
 
-      if (widget.initialQuote != null && widget.initialQuote?.id != null) {
-        // 只有当initialQuote存在且有ID时，才更新现有笔记
+      if (baseQuote?.id != null) {
+        // 只有当baseQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
         final updateResult = await db.updateQuote(quote);
         if (updateResult != QuoteUpdateResult.updated) {
@@ -420,6 +421,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         await _clearDraft();
         _mediaState.markSavedSuccessfully();
         _editorState.markDraftSaved();
+        _metadataState.captureInitialSnapshot();
         saveSucceeded = true;
         widget.onSaved?.call(quote);
         if (mounted) {
@@ -436,10 +438,12 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       } else {
         logDebug('添加新笔记');
         await db.addQuote(quote);
+        _editorState.setFullInitialQuote(quote);
         _editorState.cancelDraftSave();
         await _clearDraft();
         _mediaState.markSavedSuccessfully();
         _editorState.markDraftSaved();
+        _metadataState.captureInitialSnapshot();
         saveSucceeded = true;
         widget.onSaved?.call(quote);
         if (mounted) {
