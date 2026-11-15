@@ -402,8 +402,8 @@ void main() {
     });
   });
 
-  group('欢迎屏 · 隐私政策链接', () {
-    testWidgets('展示隐私政策链接入口', (tester) async {
+  group('欢迎屏 · 隐私政策与用户协议链接', () {
+    testWidgets('同时展示隐私政策与用户协议入口', (tester) async {
       final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
       await tester.pumpWidget(buildWelcomePage());
@@ -411,6 +411,8 @@ void main() {
 
       expect(find.text(l10n.settingsPrivacyPolicy), findsOneWidget);
       expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
+      expect(find.text(l10n.settingsTermsOfService), findsOneWidget);
+      expect(find.byIcon(Icons.description_outlined), findsOneWidget);
     });
   });
 

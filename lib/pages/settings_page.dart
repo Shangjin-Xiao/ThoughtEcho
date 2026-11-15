@@ -56,6 +56,7 @@ class SettingsPageState extends State<SettingsPage> {
   final String _projectUrl = 'https://github.com/Shangjin-Xiao/ThoughtEcho';
   final String _websiteUrl = 'https://note.shangjinyun.cn/';
   final String _privacyUrl = AppConstants.privacyPolicyUrl;
+  final String _termsUrl = AppConstants.termsOfServiceUrl;
   // --- 链接地址结束 ---
   final TextEditingController _locationController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -871,6 +872,13 @@ class SettingsPageState extends State<SettingsPage> {
                                     icon: Icons.privacy_tip_outlined,
                                     text: l10n.settingsPrivacyPolicy,
                                     onTap: () => _launchUrl(_privacyUrl),
+                                    isExternal: true,
+                                  ),
+                                  _buildAboutEntry(
+                                    context: context,
+                                    icon: Icons.description_outlined,
+                                    text: l10n.settingsTermsOfService,
+                                    onTap: () => _launchUrl(_termsUrl),
                                     isExternal: true,
                                   ),
                                 ],

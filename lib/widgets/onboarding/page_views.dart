@@ -31,9 +31,6 @@ class _WelcomePageViewState extends State<WelcomePageView>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  /// 与设置页关于对话框保持一致的上架隐私政策地址。
-  static const String _privacyUrl = AppConstants.privacyPolicyUrl;
-
   @override
   void initState() {
     super.initState();
@@ -91,25 +88,44 @@ class _WelcomePageViewState extends State<WelcomePageView>
     _selectLanguage(selected);
   }
 
-  Future<void> _openPrivacyPolicy() async {
-    final uri = Uri.parse(_privacyUrl);
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
       AppSnackBar.error(
         context,
-        AppLocalizations.of(context).cannotOpenLink(_privacyUrl),
+        AppLocalizations.of(context).cannotOpenLink(url),
       );
     }
   }
 
   /// 第一屏底部的小字入口：只查看、不勾选，不阻塞进入应用。
-  Widget _buildPrivacyLink() {
+  Widget _buildLegalLinks(ThemeData theme) {
     final l10n = AppLocalizations.of(context);
     return Center(
-      child: TextButton.icon(
-        onPressed: _openPrivacyPolicy,
-        icon: const Icon(Icons.privacy_tip_outlined, size: 16),
-        label: Text(l10n.settingsPrivacyPolicy),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 4,
+        runSpacing: 4,
+        children: [
+          TextButton.icon(
+            onPressed: () => _openExternalUrl(AppConstants.privacyPolicyUrl),
+            icon: const Icon(Icons.privacy_tip_outlined, size: 16),
+            label: Text(l10n.settingsPrivacyPolicy),
+          ),
+          Text(
+            '·',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => _openExternalUrl(AppConstants.termsOfServiceUrl),
+            icon: const Icon(Icons.description_outlined, size: 16),
+            label: Text(l10n.settingsTermsOfService),
+          ),
+        ],
       ),
     );
   }
@@ -146,7 +162,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
                 const SizedBox(height: 48),
                 _buildLanguageTile(theme),
                 const SizedBox(height: 16),
-                _buildPrivacyLink(),
+                _buildLegalLinks(theme),
                 // 给底部悬浮导航条让位，避免小屏上链接被压住够不着。
                 const SizedBox(height: 80),
               ],

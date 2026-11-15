@@ -101,4 +101,8 @@ class AppConstants {
   /// 官方隐私政策统一地址
   static const String privacyPolicyUrl =
       'https://note.shangjinyun.cn/privacy.html';
+
+  /// 官方用户协议统一地址
+  static const String termsOfServiceUrl =
+      'https://note.shangjinyun.cn/terms.html';
 }

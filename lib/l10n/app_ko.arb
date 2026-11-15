@@ -4929,5 +4929,6 @@
   "backupScopeExcludedDrafts": "저장되지 않은 편집 초안: 아직 노트로 저장하지 않은 초안은 백업되지 않습니다.",
   "backupScopeExcludedChatsAndMemory": "AI 대화 기록 및 메모리: AI 채팅 내역과 메모리 프로필은 현재 기기에만 남습니다.",
   "backupScopeExcludedInsightsAndLogs": "주기 인사이트 캐시, 미참조 파일 및 로그: 캐시된 주기 인사이트, 어떤 노트에도 연결되지 않은 미디어 파일, 진단 로그는 제외됩니다.",
-  "backupScopeRestoreModeNote": "안내: 덮어쓰기 복원은 노트, 미디어(ZIP), 설정, 저장된 AI 분석 보고서를 모두 복원합니다. 스마트 병합은 노트, 태그, 미디어(ZIP), 휴지통 보관 기간만 병합하고 현재 기기의 설정과 AI 분석 보고서는 유지합니다. WebDAV 동기화는 노트, 태그, 삭제 기록, 미디어만 동기화하며 설정과 AI 보고서는 동기화하지 않습니다."
+  "backupScopeRestoreModeNote": "안내: 덮어쓰기 복원은 노트, 미디어(ZIP), 설정, 저장된 AI 분석 보고서를 모두 복원합니다. 스마트 병합은 노트, 태그, 미디어(ZIP), 휴지통 보관 기간만 병합하고 현재 기기의 설정과 AI 분석 보고서는 유지합니다. WebDAV 동기화는 노트, 태그, 삭제 기록, 미디어만 동기화하며 설정과 AI 보고서는 동기화하지 않습니다.",
+  "settingsTermsOfService": "이용약관"
 }

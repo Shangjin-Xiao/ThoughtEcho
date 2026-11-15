@@ -184,6 +184,9 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: artifacts
+          # 各平台均以 archive: false 直接上传单个成品文件（含 Windows 便携版 .zip），
+          # 必须跳过自动解压，否则 .zip 会被解成目录导致后续找不到 .zip 资产。
+          skip-decompress: true
 
       - name: 归集待发布文件
         id: collect

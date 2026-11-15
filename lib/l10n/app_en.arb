@@ -4965,5 +4965,6 @@
   "backupScopeExcludedDrafts": "Unsaved editor drafts: drafts not yet saved as notes are not backed up.",
   "backupScopeExcludedChatsAndMemory": "AI chat history & agent memory: conversations and memory profiles stay on this device only.",
   "backupScopeExcludedInsightsAndLogs": "Periodic insight caches, unreferenced files & logs: cached periodic insights, orphaned media files not linked to any note, and diagnostic logs are excluded.",
-  "backupScopeRestoreModeNote": "Note: Overwrite restore restores notes, media (ZIP), settings, and saved AI analysis reports. Merge import only merges notes, tags, media (ZIP), and trash retention while keeping your current settings and AI analysis reports. WebDAV sync only syncs notes, tags, deletion records, and media files (not settings or AI reports)."
+  "backupScopeRestoreModeNote": "Note: Overwrite restore restores notes, media (ZIP), settings, and saved AI analysis reports. Merge import only merges notes, tags, media (ZIP), and trash retention while keeping your current settings and AI analysis reports. WebDAV sync only syncs notes, tags, deletion records, and media files (not settings or AI reports).",
+  "settingsTermsOfService": "Terms of Service"
 }
