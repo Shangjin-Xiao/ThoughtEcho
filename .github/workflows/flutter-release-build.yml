@@ -78,6 +78,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 设置 Java 环境
         uses: actions/setup-java@v4
@@ -169,11 +171,65 @@ jobs:
       - name: 静态分析
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
+      - name: 计算 Android 构建号
+        id: build_version
+        env:
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+){0,2}(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "::error::Invalid version_name format: $VERSION_NAME (expected X.Y.Z or X.Y.Z-suffix)"
+            exit 1
+          fi
+
+          if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+            echo "::error::Git repository is shallow; fetch-depth: 0 is required for versionCode calculation."
+            exit 1
+          fi
+
+          core_version="${VERSION_NAME%%-*}"
+          major=0
+          minor=0
+          patch=0
+          if [[ "$core_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            major=$((10#${BASH_REMATCH[1]}))
+            minor=$((10#${BASH_REMATCH[2]}))
+            patch=$((10#${BASH_REMATCH[3]}))
+          elif [[ "$core_version" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+            major=$((10#${BASH_REMATCH[1]}))
+            minor=$((10#${BASH_REMATCH[2]}))
+          elif [[ "$core_version" =~ ^([0-9]+)$ ]]; then
+            major=$((10#${BASH_REMATCH[1]}))
+          fi
+
+          if (( major > 20 || minor >= 100 || patch >= 100 )); then
+            echo "::error::Version numbers out of range for versionCode formula: $major.$minor.$patch (expected major<=20, minor<100, patch<100)"
+            exit 1
+          fi
+
+          commit_count_raw="$(git rev-list --count HEAD)"
+          if [[ ! "$commit_count_raw" =~ ^[0-9]+$ ]]; then
+            echo "::error::Unexpected commit count: $commit_count_raw"
+            exit 1
+          fi
+          commit_count=$((10#$commit_count_raw))
+          if (( commit_count <= 0 || commit_count >= 10000 )); then
+            echo "::error::commit_count out of safe bounds (1..9999): $commit_count"
+            exit 1
+          fi
+
+          # 统一使用语义化版本号 + 全局单调递增的总提交数，避免不同 workflow 的 run_number 分裂与位宽溢出
+          build_number=$(( major * 100000000 + minor * 1000000 + patch * 10000 + commit_count ))
+          echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
+          echo "计算得到 Android versionCode (build-number): $build_number (version=$major.$minor.$patch, commit_count=$commit_count)"
+
       - name: 构建 APK
         env:
           BUILD_MODE: ${{ inputs.build_mode || 'release' }}
           BUILD_VARIANT: ${{ inputs.build_variant || 'both' }}
           VERSION_NAME: ${{ inputs.version_name }}
+          BUILD_NUMBER: ${{ steps.build_version.outputs.build_number }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
         run: |
@@ -186,32 +242,8 @@ jobs:
             echo "Error: Invalid build_variant: $BUILD_VARIANT"
             exit 1
           fi
-          # 验证 VERSION_NAME 是否符合合法格式
-          if [[ ! "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9.-]+)?$ ]]; then
-            echo "Error: Invalid version_name format: $VERSION_NAME"
-            exit 1
-          fi
           mkdir -p build/app/outputs/release-artifacts
-
-          # 解析 VERSION_NAME 计算安全的 Android versionCode (build-number)
-          # 规则：MAJOR * 100000 + MINOR * 1000 + PATCH * 10 + RUN_NUMBER
-          # 避免跨 workflow 触发时 run_number 重置导致 versionCode 倒退 (< 899)
-          major=0
-          minor=0
-          patch=0
-          if [[ "$VERSION_NAME" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            major="${BASH_REMATCH[1]}"
-            minor="${BASH_REMATCH[2]}"
-            patch="${BASH_REMATCH[3]}"
-          elif [[ "$VERSION_NAME" =~ ^([0-9]+)\.([0-9]+) ]]; then
-            major="${BASH_REMATCH[1]}"
-            minor="${BASH_REMATCH[2]}"
-          elif [[ "$VERSION_NAME" =~ ^([0-9]+) ]]; then
-            major="${BASH_REMATCH[1]}"
-          fi
-          base_code=$(( major * 100000 + minor * 1000 + patch * 10 ))
-          BUILD_NUMBER=$(( base_code + ${{ github.run_number }} ))
-          echo "计算得到 Android versionCode (build-number): $BUILD_NUMBER"
+          echo "使用统一 Android versionCode (build-number): $BUILD_NUMBER"
 
           build_flavor() {
             local FLAVOR="$1"
@@ -252,26 +284,11 @@ jobs:
               && (inputs.build_variant || 'both') != 'arm32Compat' }}
         env:
           VERSION_NAME: ${{ inputs.version_name }}
+          BUILD_NUMBER: ${{ steps.build_version.outputs.build_number }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
         run: |
           set -euo pipefail
-
-          major=0
-          minor=0
-          patch=0
-          if [[ "$VERSION_NAME" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            major="${BASH_REMATCH[1]}"
-            minor="${BASH_REMATCH[2]}"
-            patch="${BASH_REMATCH[3]}"
-          elif [[ "$VERSION_NAME" =~ ^([0-9]+)\.([0-9]+) ]]; then
-            major="${BASH_REMATCH[1]}"
-            minor="${BASH_REMATCH[2]}"
-          elif [[ "$VERSION_NAME" =~ ^([0-9]+) ]]; then
-            major="${BASH_REMATCH[1]}"
-          fi
-          base_code=$(( major * 100000 + minor * 1000 + patch * 10 ))
-          BUILD_NUMBER=$(( base_code + ${{ github.run_number }} ))
 
           # 使用 play flavor 构建 Google Play AAB
           flutter build appbundle --release \

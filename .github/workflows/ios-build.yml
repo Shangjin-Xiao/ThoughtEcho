@@ -53,6 +53,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
         
       - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
@@ -78,19 +80,39 @@ jobs:
         run: flutter clean
         
       - name: 构建 iOS 应用包 (无签名)
+        id: build_ios
         env:
           VERSION_NAME: ${{ inputs.version_name }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
         run: |
+          set -euo pipefail
+
           # workflow_dispatch 与 workflow_call 统一使用传入的三段式数字版本，
           # 避免从 tag 发布时 IPA 回落到 pubspec.yaml 的版本导致与 Release 不一致。
           if [[ ! "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
             echo "Error: Invalid version_name format for iOS: $VERSION_NAME. Must contain only 1-3 dot-separated numbers."
             exit 1
           fi
+          if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+            echo "::error::Git repository is shallow; fetch-depth: 0 is required for iOS build-number calculation."
+            exit 1
+          fi
+          commit_count_raw="$(git rev-list --count HEAD)"
+          if [[ ! "$commit_count_raw" =~ ^[0-9]+$ ]]; then
+            echo "::error::Unexpected commit count: $commit_count_raw"
+            exit 1
+          fi
+          BUILD_NUMBER=$((10#$commit_count_raw))
+          if (( BUILD_NUMBER <= 0 )); then
+            echo "::error::Invalid commit_count for iOS build-number: $BUILD_NUMBER"
+            exit 1
+          fi
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "计算得到 iOS CFBundleVersion (build-number): $BUILD_NUMBER"
+
           flutter build ios --release --no-codesign --no-tree-shake-icons \
-            --build-number="${{ github.run_number }}" \
+            --build-number="$BUILD_NUMBER" \
             --build-name="$VERSION_NAME" \
             --dart-define=SENTRY_DSN="$SENTRY_DSN" \
             --dart-define=APTABASE_APP_KEY="$APTABASE_APP_KEY"
@@ -178,7 +200,7 @@ jobs:
       - name: 上传未签名的 IPA 文件
         uses: actions/upload-artifact@v7
         with:
-          name: ThoughtEcho-iOS-unsigned-${{ github.run_number }}
+          name: ThoughtEcho-iOS-unsigned-${{ steps.build_ios.outputs.build_number }}
           path: build/ipa/ThoughtEcho-unsigned.ipa
           archive: false
           if-no-files-found: error
@@ -197,9 +219,9 @@ jobs:
           ================================
           构建日期: $(date '+%Y-%m-%d %H:%M:%S')
           Flutter 版本: $(flutter --version | head -n 1)
-          应用版本: ${VERSION_NAME}+${{ github.run_number }}
+          应用版本: ${VERSION_NAME}+${{ steps.build_ios.outputs.build_number }}
           Bundle ID: com.shangjin.thoughtecho
-          构建编号: ${{ github.run_number }}
+          构建编号: ${{ steps.build_ios.outputs.build_number }}
           
           注意事项:
           ========
@@ -224,7 +246,7 @@ jobs:
       - name: 上传构建信息
         uses: actions/upload-artifact@v7
         with:
-          name: build-info-${{ github.run_number }}
+          name: build-info-${{ steps.build_ios.outputs.build_number }}
           path: build/ipa/build-info.txt
           archive: false
           if-no-files-found: error
