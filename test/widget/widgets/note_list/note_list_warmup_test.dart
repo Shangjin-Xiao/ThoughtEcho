@@ -943,6 +943,64 @@ void main() {
       await databaseService.disposeStream();
     },
   );
+
+  testWidgets(
+    'selectedTagIds 原地变更后 rebuildToken 与 item memo 仍能检测差异并触发卡片重建',
+    (tester) async {
+      final databaseService = _StreamingFakeDatabaseService();
+      final settingsService = _FakeSettingsService();
+      final mutableSelectedTagIds = <String>[];
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          selectedTagIds: mutableSelectedTagIds,
+        ),
+      );
+      await tester.pump();
+      databaseService.emit([_regularTagQuote()], hasMore: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final state = tester.state<NoteListViewState>(find.byType(NoteListView));
+      final rebuildsBefore = state.mountedItemRebuildCountForTest;
+      expect(
+        tester
+            .widget<QuoteItemWidget>(find.byType(QuoteItemWidget).first)
+            .selectedTagIds,
+        isEmpty,
+      );
+
+      // 原地修改同一 List 实例，模拟调用方直接变更列表引用内容
+      mutableSelectedTagIds.add('tag-regular');
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          selectedTagIds: mutableSelectedTagIds,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        state.mountedItemRebuildCountForTest,
+        greaterThan(rebuildsBefore),
+        reason: 'selectedTagIds 原地变更时应触发已挂载卡片重新构建',
+      );
+      expect(
+        tester
+            .widget<QuoteItemWidget>(find.byType(QuoteItemWidget).first)
+            .selectedTagIds,
+        equals(['tag-regular']),
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+      await databaseService.disposeStream();
+    },
+  );
 }
 
 class _TestApp extends StatelessWidget {
@@ -950,11 +1008,13 @@ class _TestApp extends StatelessWidget {
     required this.databaseService,
     required this.settingsService,
     this.favoriteButtonGuideKey,
+    this.selectedTagIds = const [],
   });
 
   final DatabaseService databaseService;
   final SettingsService settingsService;
   final GlobalKey? favoriteButtonGuideKey;
+  final List<String> selectedTagIds;
 
   @override
   Widget build(BuildContext context) {
@@ -973,7 +1033,7 @@ class _TestApp extends StatelessWidget {
             favoriteButtonGuideKey: favoriteButtonGuideKey,
             onFavorite: (_) {},
             tags: const <NoteTag>[],
-            selectedTagIds: const [],
+            selectedTagIds: selectedTagIds,
             onTagSelectionChanged: (_) {},
             searchQuery: '',
             sortType: 'time',

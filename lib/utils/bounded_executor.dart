@@ -8,7 +8,15 @@ class BoundedExecutor {
   /// 最大并发数
   final int maxConcurrency;
 
-  BoundedExecutor({this.maxConcurrency = 4}) : assert(maxConcurrency > 0);
+  BoundedExecutor({this.maxConcurrency = 4}) {
+    if (maxConcurrency <= 0) {
+      throw ArgumentError.value(
+        maxConcurrency,
+        'maxConcurrency',
+        'must be greater than 0',
+      );
+    }
+  }
 
   /// 以受控的并发数映射执行 [items] 的异步操作 [action]。
   ///

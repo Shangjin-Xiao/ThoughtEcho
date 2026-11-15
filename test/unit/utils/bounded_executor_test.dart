@@ -66,6 +66,11 @@ void main() {
       expect(completed.length, equals(9));
       expect(completed.contains(3), isFalse);
     });
+
+    test('maxConcurrency 小于等于 0 时在运行时抛出 ArgumentError', () {
+      expect(() => BoundedExecutor(maxConcurrency: 0), throwsArgumentError);
+      expect(() => BoundedExecutor(maxConcurrency: -2), throwsArgumentError);
+    });
   });
 }
 
