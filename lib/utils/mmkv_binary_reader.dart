@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'platform_helper.dart';
 
 /// Value types stored inside a Tencent MMKV v1.3.x data file.
@@ -193,9 +194,7 @@ class MmkvKeySchema {
     'last_backup_timestamp',
   };
 
-  static const Set<String> doubleKeys = {
-    'font_scale',
-  };
+  static const Set<String> doubleKeys = {'font_scale'};
 
   static const Set<String> stringListKeys = {
     'app_logs',
@@ -377,20 +376,31 @@ class MmkvBinaryReader {
     String mmkvFilePath, {
     String? crcFilePath,
   }) async {
-    final dataBytes = await PlatformHelper.readFileBytesIfExists(mmkvFilePath);
+    var dataBytes = await PlatformHelper.readFileBytesIfExists(mmkvFilePath);
+    var resolvedCrcPath = crcFilePath ?? '$mmkvFilePath.crc';
+    Uint8List? crcBytes;
+
+    if (dataBytes == null && !mmkvFilePath.endsWith('.migrated.bak')) {
+      final bakPath = '$mmkvFilePath.migrated.bak';
+      dataBytes = await PlatformHelper.readFileBytesIfExists(bakPath);
+      if (dataBytes != null) {
+        resolvedCrcPath = crcFilePath ?? '$bakPath.crc';
+        crcBytes = await PlatformHelper.readFileBytesIfExists(resolvedCrcPath);
+        if (crcBytes == null && crcFilePath == null) {
+          crcBytes = await PlatformHelper.readFileBytesIfExists(
+            '$mmkvFilePath.crc',
+          );
+        }
+      }
+    } else if (dataBytes != null) {
+      crcBytes = await PlatformHelper.readFileBytesIfExists(resolvedCrcPath);
+    }
+
     if (dataBytes == null) {
       return MmkvParseResult.notFound(mmkvFilePath);
     }
 
-    final resolvedCrcPath = crcFilePath ?? '$mmkvFilePath.crc';
-    final crcBytes =
-        await PlatformHelper.readFileBytesIfExists(resolvedCrcPath);
-
-    return parseBytes(
-      dataBytes,
-      crcBytes: crcBytes,
-      filePath: mmkvFilePath,
-    );
+    return parseBytes(dataBytes, crcBytes: crcBytes, filePath: mmkvFilePath);
   }
 
   /// Parses an in-memory `mmkv.default` buffer and optional `mmkv.default.crc` buffer.
@@ -467,8 +477,11 @@ class MmkvBinaryReader {
         } else if (crcMeta.lastActualSize > 0 &&
             crcMeta.lastActualSize <= dataBytes.length - 4) {
           // Try falling back to lastActualSize / lastCrcDigest just like MMKV C++ checkLoadCRC()
-          final fallbackCrc =
-              computeCrc32(dataBytes, 4, crcMeta.lastActualSize);
+          final fallbackCrc = computeCrc32(
+            dataBytes,
+            4,
+            crcMeta.lastActualSize,
+          );
           if (fallbackCrc == crcMeta.lastCrcDigest) {
             actualSize = crcMeta.lastActualSize;
             computedCrc32 = fallbackCrc;

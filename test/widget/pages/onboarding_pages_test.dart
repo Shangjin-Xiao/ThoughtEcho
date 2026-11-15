@@ -12,9 +12,9 @@ import 'package:thoughtecho/models/onboarding_models.dart';
 import 'package:thoughtecho/pages/onboarding_page.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/api_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
@@ -98,7 +98,7 @@ void main() {
           value: _FakeDatabaseServiceForOnboardingPage(),
         ),
         ChangeNotifierProvider<SettingsService>.value(value: settingsService),
-        Provider<MMKVService>.value(value: MMKVService()),
+        Provider<AppPreferencesService>.value(value: AppPreferencesService()),
         ChangeNotifierProvider<ClipboardService>.value(
           value: ClipboardService(),
         ),

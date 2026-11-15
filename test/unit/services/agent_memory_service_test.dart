@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -394,11 +394,11 @@ void main() {
 
     setUpAll(() async {
       await TestHarness.initialize();
-      await MMKVService().init();
+      await AppPreferencesService().init();
     });
 
     setUp(() async {
-      await MMKVService().clear();
+      await AppPreferencesService().clear();
       SharedPreferences.resetStatic();
       SharedPreferences.setMockInitialValues({});
       settingsService = SettingsService(await SharedPreferences.getInstance());
@@ -1127,7 +1127,7 @@ void main() {
     final trackedEvents = <Map<String, dynamic>>[];
 
     setUp(() async {
-      await MMKVService().clear();
+      await AppPreferencesService().clear();
       SharedPreferences.resetStatic();
       SharedPreferences.setMockInitialValues({});
       settingsService = SettingsService(await SharedPreferences.getInstance());

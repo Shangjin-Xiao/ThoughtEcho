@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../utils/mmkv_ffi_fix.dart'; // 保留引用用于迁移
+
+import 'app_preferences_service.dart';
+
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 安全存储服务，专门用于存储多供应商API密钥
@@ -11,7 +14,7 @@ class SecureStorageService {
       SecureStorageService._internal();
   static const String _providerApiKeysKey = 'provider_api_keys';
 
-  // 使用 FlutterSecureStorage 替代 SafeMMKV
+  // 使用 FlutterSecureStorage 替代轻量 KV 存储
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Completer<void>? _initCompleter;
@@ -55,8 +58,8 @@ class SecureStorageService {
   Future<void> _migrateLegacyData() async {
     try {
       // 使用局部变量，避免保存冗余的字段
-      final legacyStorage = SafeMMKV();
-      await legacyStorage.initialize();
+      final legacyStorage = AppPreferencesService();
+      await legacyStorage.init();
 
       final oldData = legacyStorage.getString(_providerApiKeysKey);
 
@@ -88,7 +91,9 @@ class SecureStorageService {
             logDebug('遗留不安全数据已清除');
           } catch (e) {
             // 这是一个严重的安全隐患，但不能让应用崩溃
-            logDebug('CRITICAL: 删除遗留不安全数据失败! 密钥仍可能存在于 SafeMMKV 中: $e');
+            logDebug(
+              'CRITICAL: 删除遗留不安全数据失败! 密钥仍可能存在于 AppPreferencesService 中: $e',
+            );
           }
         }
       }

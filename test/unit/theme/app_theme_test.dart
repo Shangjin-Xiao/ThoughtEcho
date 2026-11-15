@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart' show Color, Colors, ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
@@ -14,16 +14,16 @@ import '../../test_harness.dart';
 /// 从此再也见不到——[ThemeStyle.defaultAccent] 给每套风格配默认墨的意义
 /// （「这套纸配这支墨最好看」）被一次全局选择永久盖掉。
 ///
-/// 存储只在这一个文件里碰：`SafeMMKV` 是单例，`SharedPrefsAdapter` 还会把
+/// 存储只在这一个文件里碰：`AppPreferencesService` 是单例，`SharedPrefsAdapter` 还会把
 /// `SharedPreferences` 实例缓存下来，同一个 isolate 里换一套 mock 值是不生效的。
 /// 所以 mock 初值只在 `setUpAll` 给一次。
 ///
 /// **但用到存储的用例必须各自把前置状态写全，不能接着上一个用例留下的状态往下写。**
 /// CI 是分片跑的（`flutter test --shard-index/--total-shards`），同一个文件里的用例
 /// 会落到不同进程，「上一个用例已经 initialize 过存储」这个假设在那边不成立——
-/// 之前就是这么挂的：单跑第三个用例时 `SafeMMKV` 还没初始化，直接抛
-/// `Bad state: SafeMMKV 尚未初始化`。所以下面每个碰存储的用例都自己
-/// `SafeMMKV().initialize()`（幂等）并把要用到的键逐个写定。
+/// 之前就是这么挂的：单跑第三个用例时 `AppPreferencesService` 还没初始化，无法读取
+/// 持久化状态。所以下面每个碰存储的用例都自己 `AppPreferencesService().initialize()`
+/// （幂等）并把要用到的键逐个写定。
 ///
 /// 其余用例一律走「没有存储」的内存路径。
 void main() {
@@ -66,7 +66,7 @@ void main() {
     // 纸墨从没被单独选过，回到它自己的赭石，而不是继续吃素笺那支。
     expect(appTheme.accentFor(ThemeStyle.paper), ThemeAccent.umber);
 
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     expect(
       storage.getString('theme_accent_${ThemeStyle.plain.name}'),
       ThemeAccent.indigo.name,
@@ -88,7 +88,7 @@ void main() {
     // 迁移写盘成功、删旧键失败，是会发生的：_removeLegacyThemeAccent 只记警告。
     // 这时存储里同时留着「按风格的墨色」和「旧的全局键」——下面把这个状态**写全**，
     // 不依赖上一个用例（分片时它可能根本不在这个进程里跑，见文件头注释）。
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
     // 素笺上一轮迁移成功了。
     await storage.setString(
@@ -115,7 +115,7 @@ void main() {
   });
 
   test('全新安装时，默认加载心迹/信笺主题（ThemeStyle.paper）', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
     await storage.remove('theme_style');
     await storage.remove('app_installed_v2');
@@ -129,7 +129,7 @@ void main() {
   });
 
   test('旧用户（已安装/已有设置）未配置风格时保留在 material', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
     await storage.remove('theme_style');
     await storage.setBool('app_installed_v2', true);
@@ -141,7 +141,7 @@ void main() {
   });
 
   test('app_settings 单独存在时的非全新安装分支，未配置风格时保留在 material', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
     await storage.remove('theme_style');
     await storage.remove('app_installed_v2');
@@ -188,7 +188,7 @@ void main() {
   });
 
   test('setThemeAccent 切换非默认墨色上报统计，选中已生效的默认墨色抑制上报', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
     await storage.remove('theme_accent');
     await storage.setString('theme_style', ThemeStyle.paper.name);
@@ -242,7 +242,7 @@ void main() {
   });
 
   test('主题模式存储值损坏时回退到 ThemeMode.system，且不影响其他有效配置', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
     await storage.setString('theme_mode', 'invalid_corrupted_theme_mode');
     await storage.setString('theme_style', ThemeStyle.paper.name);
@@ -255,7 +255,7 @@ void main() {
   });
 
   test('自定义颜色存储值损坏时回退到默认颜色，且不影响其他有效配置', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
     await storage.setString('theme_mode', 'dark');
     // 通过 storage.setString 写入字符串类型值，使 getInt('custom_color') 抛出 TypeError
@@ -270,7 +270,7 @@ void main() {
   });
 
   test('主题风格存储数据类型损坏时回退到 ThemeStyle.defaultStyle，且不影响其他有效配置', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
     await storage.remove('custom_color');
     await storage.setString('theme_mode', 'light');
@@ -285,7 +285,7 @@ void main() {
   });
 
   test('setDynamicColorEnabled 原子化更新状态并仅触发一次通知', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
 
     final appTheme = AppTheme();
@@ -316,7 +316,7 @@ void main() {
   });
 
   test('setCustomColorEnabled 原子化更新颜色与互斥开关并仅触发一次通知', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
 
     final appTheme = AppTheme();
@@ -367,7 +367,7 @@ void main() {
   });
 
   test('reloadThemeFromStorage 重新从持久化存储加载配置并通知监听者', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
 
     final appTheme = AppTheme();
@@ -396,7 +396,7 @@ void main() {
   });
 
   test('reloadThemeFromStorage 遇到类型损坏或缺失键时显式回退默认值，不保留陈旧状态', () async {
-    final storage = SafeMMKV();
+    final storage = AppPreferencesService();
     await storage.initialize();
 
     // 先设置为非默认值并加载

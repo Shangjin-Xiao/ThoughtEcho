@@ -1,23 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/migration_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
-class FakeMMKVService implements MMKVService {
+class FakeAppPreferencesService implements AppPreferencesService {
   final Map<String, dynamic> _data = {};
 
-  FakeMMKVService([Map<String, dynamic>? initialData]) {
+  FakeAppPreferencesService([Map<String, dynamic>? initialData]) {
     if (initialData != null) {
       _data.addAll(initialData);
     }
   }
 
   @override
-  String? getString(String key, {String? defaultValue}) {
-    return _data[key] as String? ?? defaultValue;
-  }
+  String? getString(String key) => _data[key] as String?;
 
   @override
   Future<bool> setString(String key, String value) async {
@@ -120,18 +118,19 @@ void main() {
 
   late FakeDatabaseService dbService;
   late FakeSettingsService settingsService;
-  late FakeMMKVService mmkvService;
+  late FakeAppPreferencesService mmkvService;
 
   setUp(() {
     dbService = FakeDatabaseService();
     settingsService = FakeSettingsService(initialDatabaseSetupComplete: true);
-    mmkvService = FakeMMKVService();
+    mmkvService = FakeAppPreferencesService();
   });
 
   group('MigrationService needsMigration', () {
     test('当 packageInfo.buildNumber 为 4.0.0-beta.1 时能正确识别需要迁移', () async {
       // 场景：历史记录为旧版本 11，当前构建号采用 4.0.0-beta.1
-      mmkvService = FakeMMKVService({'lastRunVersionBuildNumber': '11'});
+      mmkvService =
+          FakeAppPreferencesService({'lastRunVersionBuildNumber': '11'});
       final packageInfo = createPackageInfo(
         version: '1.0.0',
         buildNumber: '4.0.0-beta.1',
@@ -175,7 +174,8 @@ void main() {
       ];
 
       for (final item in formats) {
-        final mockMmkv = FakeMMKVService({'lastRunVersionBuildNumber': '11'});
+        final mockMmkv =
+            FakeAppPreferencesService({'lastRunVersionBuildNumber': '11'});
         final mockDb = FakeDatabaseService();
         final mockSettings = FakeSettingsService(
           initialDatabaseSetupComplete: true,
@@ -217,7 +217,8 @@ void main() {
     });
 
     test('向后兼容：已在构建号 12 运行过的用户重启时不重复迁移', () async {
-      mmkvService = FakeMMKVService({'lastRunVersionBuildNumber': '12'});
+      mmkvService =
+          FakeAppPreferencesService({'lastRunVersionBuildNumber': '12'});
       final packageInfo = createPackageInfo(
         version: '1.0.0',
         buildNumber: '12',
@@ -233,7 +234,8 @@ void main() {
     });
 
     test('向后兼容：从旧版构建号 12 升级到 4.0.0 正确触发迁移', () async {
-      mmkvService = FakeMMKVService({'lastRunVersionBuildNumber': '12'});
+      mmkvService =
+          FakeAppPreferencesService({'lastRunVersionBuildNumber': '12'});
       final packageInfo = createPackageInfo(
         version: '4.0.0',
         buildNumber: '1',
@@ -249,7 +251,8 @@ void main() {
     });
 
     test('旧版构建号低于阈值（如从 10 升级到 11）不触发迁移', () async {
-      mmkvService = FakeMMKVService({'lastRunVersionBuildNumber': '10'});
+      mmkvService =
+          FakeAppPreferencesService({'lastRunVersionBuildNumber': '10'});
       final packageInfo = createPackageInfo(
         version: '1.0.0',
         buildNumber: '11',
@@ -265,8 +268,8 @@ void main() {
     });
 
     test('预发布版本演进（4.0.0-beta.1 升级至 4.0.0-beta.2 与正式版）能正确触发迁移', () async {
-      mmkvService =
-          FakeMMKVService({'lastRunVersionBuildNumber': '4.0.0-beta.1'});
+      mmkvService = FakeAppPreferencesService(
+          {'lastRunVersionBuildNumber': '4.0.0-beta.1'});
       final beta2Package = createPackageInfo(
         version: '4.0.0',
         buildNumber: '4.0.0-beta.2',
@@ -344,7 +347,8 @@ void main() {
     });
 
     test('getCurrentVersion 返回符合预期的规范化版本信息', () async {
-      mmkvService = FakeMMKVService({'lastRunVersionBuildNumber': '12'});
+      mmkvService =
+          FakeAppPreferencesService({'lastRunVersionBuildNumber': '12'});
       final packageInfo = createPackageInfo(
         version: '4.0.0',
         buildNumber: '4.0.0-beta.1',

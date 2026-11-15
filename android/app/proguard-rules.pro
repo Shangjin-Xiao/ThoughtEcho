@@ -95,10 +95,6 @@
 -keep class io.flutter.plugin.common.** { *; }
 -keep class io.flutter.plugin.platform.** { *; }
 
-# MMKV库兼容性
--keep class com.tencent.mmkv.** { *; }
--dontwarn com.tencent.mmkv.**
-
 # 32位设备内存优化
 -dontoptimize
 -dontpreverify

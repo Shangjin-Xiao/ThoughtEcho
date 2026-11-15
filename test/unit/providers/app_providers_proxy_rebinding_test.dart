@@ -21,7 +21,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
@@ -143,7 +143,7 @@ class _FakeChatSessionService extends ChangeNotifier
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeMMKVService implements MMKVService {
+class _FakeAppPreferencesService implements AppPreferencesService {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -443,7 +443,7 @@ void main() {
       final featureGuideService = _FakeFeatureGuideService();
       final smartPushService = _FakeSmartPushService();
       final chatSessionService = _FakeChatSessionService();
-      final mmkvService = _FakeMMKVService();
+      final mmkvService = _FakeAppPreferencesService();
       final servicesInitialized = ValueNotifier<bool>(true);
 
       late BuildContext capturedContext;

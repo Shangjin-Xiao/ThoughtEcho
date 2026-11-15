@@ -24,7 +24,7 @@ void main() {
       // 2. Dynamic prefix key (draft_*)
       encoder.writeString('draft_note_123', '{"plainText":"草稿内容"}');
 
-      // 3. StringList encoded as JSON array string (matching MMKVAdapter.setStringList)
+      // 3. StringList encoded as JSON array string (matching legacy MMKV StringList wire format)
       encoder.writeString('favorite_tags', json.encode(['哲学', '思考', 'AI']));
 
       // 4. Booleans
@@ -351,6 +351,33 @@ void main() {
       expect(result.entries['lang'], equals('zh'));
       expect(result.entries['is_active'], isTrue);
       expect(result.entries['counter'], equals(-1));
+    });
+
+    test(
+        'parseFile transparently falls back to .migrated.bak when original mmkv.default was archived',
+        () async {
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'paper')
+        ..writeBool('app_installed_v2', true)
+        ..writeInt('custom_color', 0xFF112233);
+
+      final tempDir = await Directory.systemTemp.createTemp('mmkv_bak_reader_');
+      try {
+        final originalPath = '${tempDir.path}/mmkv.default';
+        await File('$originalPath.migrated.bak')
+            .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+        await File('$originalPath.migrated.bak.crc')
+            .writeAsBytes(encoder.toCrcBytes());
+
+        final result = await MmkvBinaryReader.parseFile(originalPath);
+        expect(result.fileExists, isTrue);
+        expect(result.crcMatched, isTrue);
+        expect(result.entries['theme_style'], equals('paper'));
+        expect(result.entries['app_installed_v2'], isTrue);
+        expect(result.entries['custom_color'], equals(0xFF112233));
+      } finally {
+        await tempDir.delete(recursive: true);
+      }
     });
   });
 }

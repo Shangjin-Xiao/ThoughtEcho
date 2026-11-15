@@ -8,9 +8,9 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/media_reference_service.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 class _MockPathProvider extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -124,9 +124,9 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    final safeMMKV = SafeMMKV();
-    await safeMMKV.initialize();
-    await safeMMKV.clear();
+    final appPrefs = AppPreferencesService();
+    await appPrefs.init();
+    await appPrefs.clear();
 
     tempDir = await Directory.systemTemp.createTemp('webdav_pipeline_test');
     mediaDir = Directory(p.join(tempDir.path, 'media'));

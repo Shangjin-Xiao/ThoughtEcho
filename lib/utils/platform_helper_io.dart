@@ -1,6 +1,7 @@
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -50,6 +51,107 @@ class PlatformHelper {
         source: 'PlatformHelper',
       );
       return null;
+    }
+  }
+
+  static Future<bool> _deleteIfExists(File file, {required bool syncIo}) async {
+    if (syncIo) {
+      if (!file.existsSync()) {
+        return false;
+      }
+      file.deleteSync();
+      return true;
+    }
+    if (!await file.exists()) {
+      return false;
+    }
+    await file.delete();
+    return true;
+  }
+
+  static Future<void> _renameFile(
+    File src,
+    String destPath, {
+    required bool syncIo,
+  }) async {
+    await _deleteIfExists(File(destPath), syncIo: syncIo);
+    if (syncIo) {
+      src.renameSync(destPath);
+      return;
+    }
+    await src.rename(destPath);
+  }
+
+  /// Archives a migrated `mmkv.default` file (and its `.crc` sibling) to
+  /// `*.migrated.bak`, or wipes all plaintext copies when [wipePlaintext] is true.
+  static Future<bool> archiveOrWipeMmkvFile(
+    String mmkvFilePath, {
+    required bool wipePlaintext,
+  }) async {
+    try {
+      final syncIo = Platform.environment.containsKey('FLUTTER_TEST');
+
+      if (mmkvFilePath.endsWith('.migrated.bak')) {
+        if (!wipePlaintext) {
+          return false;
+        }
+        var anyDeleted = false;
+        if (await _deleteIfExists(File(mmkvFilePath), syncIo: syncIo)) {
+          anyDeleted = true;
+        }
+        if (await _deleteIfExists(File('$mmkvFilePath.crc'), syncIo: syncIo)) {
+          anyDeleted = true;
+        }
+        return anyDeleted;
+      }
+
+      if (wipePlaintext) {
+        var anyDeleted = false;
+        if (await _deleteIfExists(File(mmkvFilePath), syncIo: syncIo)) {
+          anyDeleted = true;
+        }
+        if (await _deleteIfExists(File('$mmkvFilePath.crc'), syncIo: syncIo)) {
+          anyDeleted = true;
+        }
+        if (await _deleteIfExists(
+          File('$mmkvFilePath.migrated.bak'),
+          syncIo: syncIo,
+        )) {
+          anyDeleted = true;
+        }
+        if (await _deleteIfExists(
+          File('$mmkvFilePath.migrated.bak.crc'),
+          syncIo: syncIo,
+        )) {
+          anyDeleted = true;
+        }
+        return anyDeleted;
+      }
+
+      final srcFile = File(mmkvFilePath);
+      final srcExists = syncIo ? srcFile.existsSync() : await srcFile.exists();
+      if (!srcExists) {
+        return false;
+      }
+      await _renameFile(srcFile, '$mmkvFilePath.migrated.bak', syncIo: syncIo);
+      final crcFile = File('$mmkvFilePath.crc');
+      final crcExists = syncIo ? crcFile.existsSync() : await crcFile.exists();
+      if (crcExists) {
+        await _renameFile(
+          crcFile,
+          '$mmkvFilePath.migrated.bak.crc',
+          syncIo: syncIo,
+        );
+      }
+      return true;
+    } catch (e, stack) {
+      AppLogger.w(
+        'archiveOrWipeMmkvFile failed for $mmkvFilePath',
+        error: e,
+        stackTrace: stack,
+        source: 'PlatformHelper',
+      );
+      return false;
     }
   }
 

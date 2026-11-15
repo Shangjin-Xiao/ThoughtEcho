@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:thoughtecho/utils/platform_io_stub.dart'
     if (dart.library.io) 'dart:io';
 
@@ -38,7 +39,6 @@ import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/utils/app_scroll_behavior.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/utils/sentry_network_tracing.dart';
@@ -48,6 +48,7 @@ import 'package:thoughtecho/services/background_push_handler.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+
 import 'core/config/distribution_config.dart';
 import 'utils/app_logger.dart';
 import 'utils/app_navigator_key.dart';
@@ -230,9 +231,9 @@ Future<void> main() async {
         SentryDatabaseTracing.configure(enabled: settingsService.sentryEnabled);
         SentryNetworkTracing.configure(enabled: settingsService.sentryEnabled);
         SentryHelper.startIfEnabled(settingsService.sentryEnabled);
-        unawaited(AptabaseHelper.configure(
-          enabled: settingsService.telemetryEnabled,
-        ));
+        unawaited(
+          AptabaseHelper.configure(enabled: settingsService.telemetryEnabled),
+        );
         await NetworkService.instance.init();
 
         final String currentVersion = packageInfo.version;
@@ -275,7 +276,7 @@ Future<void> main() async {
 
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
-        final featureGuideService = FeatureGuideService(SafeMMKV());
+        final featureGuideService = FeatureGuideService(mmkvService);
         final chatSessionService = ChatSessionService();
 
         // 创建智能推送服务实例
@@ -772,9 +773,18 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // 应用回到前台时自动同步 WebDAV 并刷新跨进程/跨 Isolate 存储缓存
     if (state == AppLifecycleState.resumed) {
-      SafeMMKV().reload();
-      logDebug('应用回到前台，触发 WebDAV 后台同步...', source: 'AppLifecycle');
-      Future.microtask(() {
+      Future.microtask(() async {
+        try {
+          await AppPreferencesService().reload();
+        } catch (e, stackTrace) {
+          AppLogger.e(
+            '应用回到前台刷新配置缓存失败',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'AppLifecycle',
+          );
+        }
+        logDebug('应用回到前台，触发 WebDAV 后台同步...', source: 'AppLifecycle');
         try {
           final webdav = WebDAVSyncService();
           if (webdav.enabled && webdav.syncOnOpenOrForeground) {
@@ -851,9 +861,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ? const OnboardingPage() // 使用新的引导页面
                   : widget.isEmergencyMode
                       ? const EmergencyRecoveryPage()
-                      : HomePage(
-                          initialPage: defaultStartPage,
-                        ),
+                      : HomePage(initialPage: defaultStartPage),
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,

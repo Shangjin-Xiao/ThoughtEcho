@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -178,8 +179,9 @@ class _LicensePageState extends State<LicensePage> {
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(color: theme.colorScheme.primary),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ],
             ),
@@ -216,9 +218,9 @@ class _LicensePageState extends State<LicensePage> {
         _buildAttributionRow(
           context: context,
           title: l10n.localStorage,
-          name: 'MMKV',
-          url: 'https://github.com/Tencent/MMKV',
-          description: 'BSD-3-Clause',
+          name: 'sqflite & shared_preferences',
+          url: 'https://pub.dev/packages/sqflite',
+          description: 'BSD-2-Clause / BSD-3-Clause',
         ),
         // 手工风格的正文字体随包分发（assets/fonts/），OFL 要求随附许可证副本，
         // 这一条是给用户看的出处说明；许可证全文在 assets/fonts/OFL.txt。
@@ -277,9 +279,7 @@ class _LicensePageState extends State<LicensePage> {
           ),
           icon: const Icon(Icons.open_in_new),
           label: Text(l10n.viewFullDependencyList),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(40),
-          ),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(40)),
         ),
         const SizedBox(height: 8),
         Text(
@@ -356,9 +356,7 @@ class _LicensePageState extends State<LicensePage> {
           },
           icon: const Icon(Icons.article_outlined),
           label: Text(l10n.viewSystemLicenses),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(44),
-          ),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
         ),
       ],
     );
@@ -405,9 +403,10 @@ class _ProgressiveSystemLicensesPageState
       final merged = _mergeEntries(list);
       // 按包名排序
       merged.sort(
-        (a, b) => a.packages.join('').toLowerCase().compareTo(
-              b.packages.join('').toLowerCase(),
-            ),
+        (a, b) => a.packages
+            .join('')
+            .toLowerCase()
+            .compareTo(b.packages.join('').toLowerCase()),
       );
       if (mounted) {
         setState(() {
@@ -485,15 +484,17 @@ class _ProgressiveSystemLicensesPageState
           elevation: 0,
           color: Theme.of(context).colorScheme.surfaceContainerLow,
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+            borderRadius: BorderRadius.circular(
+              AppShapeTokens.of(context).cardRadius,
+            ),
             side: BorderSide(
               color: Theme.of(context).colorScheme.outlineVariant,
             ),
           ),
           child: InkWell(
-            borderRadius:
-                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+            borderRadius: BorderRadius.circular(
+              AppShapeTokens.of(context).cardRadius,
+            ),
             onTap: () {
               Navigator.push(
                 context,
@@ -510,9 +511,8 @@ class _ProgressiveSystemLicensesPageState
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primaryContainer,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
                     foregroundColor:
                         Theme.of(context).colorScheme.onPrimaryContainer,
                     radius: 24,
@@ -543,8 +543,10 @@ class _ProgressiveSystemLicensesPageState
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ],
               ),
             ),

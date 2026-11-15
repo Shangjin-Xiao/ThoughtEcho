@@ -4909,9 +4909,17 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "KV 移行状態の確認と Native MMKV・独自バイナリパーサー・SharedPreferences の比較",
+  "mmkvDiagnosticSubtitle": "KV 移行状態の確認と独自バイナリパーサー・SharedPreferences の比較",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticRerunMigration": "移行を再実行",
+  "@mmkvDiagnosticRerunMigration": {
+    "description": "Button label for MMKV migration diagnostics"
+  },
+  "mmkvDiagnosticCopyJson": "診断 JSON をコピー",
+  "@mmkvDiagnosticCopyJson": {
+    "description": "Button label for MMKV migration diagnostics"
   },
   "settingsSentryDetail": "• 送信タイミング：有効時にアプリが終了または重くなった場合のみ\n• 含まれる情報：エラーの種類と発生箇所、端末モデル、OS・アプリバージョン、画面の読み込み速度\n• 範囲：動作診断のみに限定され、入力内容や機密パラメータは自動で除外されます",
   "settingsTelemetryDetail": "• 集計対象：機能のタップ回数や画面閲覧数（例：選ばれるカードスタイル）\n• 付帯情報：OSバージョン、言語、アプリバージョン、終了時に消去される一時セッションID\n• プライバシー方針：Cookie不使用、アプリ間追跡なし、IPアドレス非保存",

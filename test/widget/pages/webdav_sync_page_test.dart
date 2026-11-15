@@ -6,9 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/pages/webdav_sync_page.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
@@ -53,14 +52,12 @@ void main() {
     // Mock SharedPreferences
     SharedPreferences.setMockInitialValues({});
 
-    // 初始化 MMKV
-    final mmkv = MMKVService();
-    await mmkv.init();
-
-    final safeMMKV = SafeMMKV();
-    await safeMMKV.initialize();
-    await safeMMKV.clear();
-    await safeMMKV.setBool('webdav_ignore_experimental_warning', true);
+    // 初始化偏好存储
+    final prefs = AppPreferencesService();
+    prefs.resetForTesting();
+    await prefs.init();
+    await prefs.clear();
+    await prefs.setBool('webdav_ignore_experimental_warning', true);
 
     // Mock FlutterSecureStorage
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

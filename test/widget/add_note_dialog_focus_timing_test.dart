@@ -9,9 +9,9 @@ import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 void main() {
@@ -560,7 +560,7 @@ void main() {
 }
 
 class _MockFeatureGuideService extends FeatureGuideService {
-  _MockFeatureGuideService() : super(SafeMMKV());
+  _MockFeatureGuideService() : super(AppPreferencesService());
 
   @override
   bool hasShown(String guideId) => true;

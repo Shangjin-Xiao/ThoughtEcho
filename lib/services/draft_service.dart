@@ -9,7 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../utils/app_logger.dart';
-import '../utils/mmkv_ffi_fix.dart' show kDraftsSqliteMigratedKey;
 import 'app_preferences_service.dart';
 
 /// 笔记草稿持久化服务（基于独立本地 SQLite `drafts.db`）
@@ -25,8 +24,9 @@ class DraftService {
   static const String _databaseDirectoryName = 'drafts';
   static const String _tableName = 'note_drafts';
   static const int _schemaVersion = 1;
-  static const MethodChannel _fileAttributesChannel =
-      MethodChannel('com.shangjin.thoughtecho/file_attributes');
+  static const MethodChannel _fileAttributesChannel = MethodChannel(
+    'com.shangjin.thoughtecho/file_attributes',
+  );
 
   Database? _database;
   String? _testDatabasePath;
@@ -107,10 +107,9 @@ class DraftService {
   Future<void> _excludeFromIosBackupIfNeeded(String targetPath) async {
     if (kIsWeb || !Platform.isIOS) return;
     try {
-      await _fileAttributesChannel.invokeMethod<bool>(
-        'excludeFromBackup',
-        {'path': targetPath},
-      );
+      await _fileAttributesChannel.invokeMethod<bool>('excludeFromBackup', {
+        'path': targetPath,
+      });
     } on MissingPluginException {
       // 测试环境或未注册原生通道时忽略
     } catch (e) {
@@ -357,8 +356,9 @@ class DraftService {
     try {
       final prefs = AppPreferencesService();
       await prefs.init();
-      final keys =
-          prefs.getAllKeysStrict().where((k) => k.startsWith('draft_'));
+      final keys = prefs.getAllKeysStrict().where(
+            (k) => k.startsWith('draft_'),
+          );
       for (final key in keys) {
         final normalizedId = _normalizeId(key.substring(6));
         if (normalizedId.isEmpty) continue;
@@ -483,11 +483,7 @@ class DraftService {
       try {
         final normalizedId = _normalizeId(id);
         final db = await _ensureDatabaseAndMigrated();
-        await db.delete(
-          _tableName,
-          where: 'id = ?',
-          whereArgs: [normalizedId],
-        );
+        await db.delete(_tableName, where: 'id = ?', whereArgs: [normalizedId]);
         await _removeMatchingPendingKvDrafts(normalizedId);
         logDebug('草稿已删除: $id (SQLite)');
       } catch (e, stackTrace) {
@@ -666,8 +662,9 @@ class DraftService {
         if (_hasPendingLegacyDrafts) {
           final prefs = AppPreferencesService();
           await prefs.init();
-          final pendingKeys =
-              prefs.getAllKeysStrict().where((k) => k.startsWith('draft_'));
+          final pendingKeys = prefs.getAllKeysStrict().where(
+                (k) => k.startsWith('draft_'),
+              );
           for (final key in pendingKeys) {
             final raw = prefs.getString(key);
             if (raw == null) {

@@ -4937,7 +4937,7 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "Inspect KV migration status and compare Native MMKV, Dart binary parser, and SharedPreferences",
+  "mmkvDiagnosticSubtitle": "Inspect KV migration status and compare Dart binary parser with SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
   },

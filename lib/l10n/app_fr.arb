@@ -4902,9 +4902,17 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "Vérifier l'état de migration KV et comparer MMKV natif, l'analyseur binaire Dart et SharedPreferences",
+  "mmkvDiagnosticSubtitle": "Vérifier l'état de migration KV et comparer l'analyseur binaire Dart avec SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticRerunMigration": "Relancer la migration",
+  "@mmkvDiagnosticRerunMigration": {
+    "description": "Button label for MMKV migration diagnostics"
+  },
+  "mmkvDiagnosticCopyJson": "Copier le JSON de diagnostic",
+  "@mmkvDiagnosticCopyJson": {
+    "description": "Button label for MMKV migration diagnostics"
   },
   "settingsSentryDetail": "• Déclenchement : uniquement si activé et lorsqu'un plantage ou une lenteur survient\n• Inclus : type et emplacement de l'erreur dans l'app, modèle d'appareil, version du système et de l'app, vitesse de chargement\n• Portée : diagnostic technique uniquement ; les saisies et paramètres sensibles sont automatiquement omis",
   "settingsTelemetryDetail": "• Ce qui est compté : clics et visites de pages anonymes (ex. modèles de cartes préférés)\n• Inclus : version du système, langue, version de l'app et identifiant de session temporaire effacé à la fermeture\n• Approche : sans cookies, sans suivi inter-applications et sans stockage d'adresse IP",

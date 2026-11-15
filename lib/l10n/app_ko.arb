@@ -4909,9 +4909,17 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "KV 마이그레이션 상태 확인 및 Native MMKV, 수동 바이너리 파서, SharedPreferences 비교",
+  "mmkvDiagnosticSubtitle": "KV 마이그레이션 상태 확인 및 수동 바이너리 파서와 SharedPreferences 비교",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticRerunMigration": "마이그레이션 다시 실행",
+  "@mmkvDiagnosticRerunMigration": {
+    "description": "Button label for MMKV migration diagnostics"
+  },
+  "mmkvDiagnosticCopyJson": "진단 JSON 복사",
+  "@mmkvDiagnosticCopyJson": {
+    "description": "Button label for MMKV migration diagnostics"
   },
   "settingsSentryDetail": "• 전송 시점: 기능이 켜진 상태에서 충돌이나 지연이 발생할 때만 전송\n• 포함 정보: 오류 유형과 발생 위치, 기기 모델, OS·앱 버전, 화면 로딩 속도\n• 범위: 앱 동작 진단 전용으로, 입력 내용과 민감한 매개변수는 자동으로 제외됩니다",
   "settingsTelemetryDetail": "• 집계 항목: 익명의 기능 클릭 수 및 화면 방문 횟수(예: 선호하는 카드 스타일)\n• 부가 정보: OS 버전, 언어, 앱 버전, 앱 종료 시 사라지는 임시 세션 ID\n• 개인정보 보호 방식: 쿠키 미사용, 앱 간 추적 없음, IP 주소 저장 안 함",
