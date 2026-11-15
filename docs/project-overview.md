@@ -110,7 +110,7 @@
 | 高性能存储 | mmkv | 高性能键值对存储（支持 32 位设备回退） |
 | 富文本编辑 | flutter_quill | 富文本编辑器（Quill Delta JSON） |
 | 列表分页 | infinite_scroll_pagination | 笔记列表高性能流式分页 |
-| 动画与视觉 | lottie / flutter_svg | Lottie 动画与 SVG 矢量图渲染 |
+| 动画与视觉 | CustomPainter / flutter_svg | 自绘动画与 SVG 矢量图渲染 |
 | 媒体与音频 | video_player / chewie / audioplayers / photo_view | 多媒体预览与播放 |
 | 导出与打印 | pdf / printing | A4 / 便签纸 PDF 导出与打印支持 |
 | 错误监控 | sentry_flutter / sentry_dio / sentry_sqflite | Sentry 异常与网络性能追踪 |

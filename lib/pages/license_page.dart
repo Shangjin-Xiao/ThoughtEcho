@@ -72,13 +72,6 @@ class _LicensePageState extends State<LicensePage> {
           const SizedBox(height: 16),
           _buildSectionCard(
             context,
-            title: l10n.lottieAnimationLicense,
-            icon: Icons.animation_outlined,
-            content: _buildLottieSection(context),
-          ),
-          const SizedBox(height: 16),
-          _buildSectionCard(
-            context,
             title: l10n.systemLicenses,
             icon: Icons.article_outlined,
             content: _buildSystemLicensesSection(context),
@@ -198,49 +191,6 @@ class _LicensePageState extends State<LicensePage> {
     );
   }
 
-  Widget _buildLottieSection(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(l10n.lottieFilesCredits, style: const TextStyle(fontSize: 14)),
-        const SizedBox(height: 12),
-        _buildLottieAttribution(
-          context: context,
-          title: l10n.searchLoadingAnimation,
-          creator: 'LottieFiles',
-          url: 'https://lottiefiles.com/animations/search-loading',
-        ),
-        _buildLottieAttribution(
-          context: context,
-          title: l10n.weatherSearchAnimation,
-          creator: 'LottieFiles',
-          url: 'https://lottiefiles.com/animations/weather-search',
-        ),
-        _buildLottieAttribution(
-          context: context,
-          title: l10n.aiThinkingAnimation,
-          creator: 'LottieFiles',
-          url: 'https://lottiefiles.com/animations/ai-loading',
-        ),
-        _buildLottieAttribution(
-          context: context,
-          title: l10n.noResultsAnimation,
-          creator: 'LottieFiles',
-          url: 'https://lottiefiles.com/animations/not-found',
-        ),
-        const SizedBox(height: 12),
-        Text(
-          l10n.thankLottieFiles,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildAcknowledgementsSection(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Column(
@@ -261,13 +211,6 @@ class _LicensePageState extends State<LicensePage> {
           title: l10n.stateManagement,
           name: 'Provider',
           url: 'https://pub.dev/packages/provider',
-          description: 'MIT',
-        ),
-        _buildAttributionRow(
-          context: context,
-          title: l10n.animationSupport,
-          name: 'Lottie (lottie_flutter / lottie)',
-          url: 'https://pub.dev/packages/lottie',
           description: 'MIT',
         ),
         _buildAttributionRow(
@@ -418,47 +361,6 @@ class _LicensePageState extends State<LicensePage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLottieAttribution({
-    required BuildContext context,
-    required String title,
-    required String creator,
-    required String url,
-  }) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Icon(Icons.animation_outlined,
-              size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                InkWell(
-                  onTap: () => _launchUrl(url),
-                  child: Text(
-                    '${l10n.sourceLabel} $creator',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.primary,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

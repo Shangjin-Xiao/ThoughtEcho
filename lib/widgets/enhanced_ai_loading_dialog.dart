@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../gen_l10n/app_localizations.dart';
-import '../utils/lottie_animation_manager.dart';
 import '../theme/theme_style.dart';
 import 'app_loading_animation.dart';
 
@@ -9,13 +8,13 @@ import 'app_loading_animation.dart';
 /// 使用心迹自绘加载动画提供更好的用户体验
 class EnhancedAILoadingDialog extends StatelessWidget {
   final String? message;
-  final LottieAnimationType animationType;
+  final AppLoadingStyle style;
   final bool barrierDismissible;
 
   const EnhancedAILoadingDialog({
     super.key,
     this.message,
-    this.animationType = LottieAnimationType.aiThinking,
+    this.style = AppLoadingStyle.inkWriting,
     this.barrierDismissible = false,
   });
 
@@ -31,7 +30,7 @@ class EnhancedAILoadingDialog extends StatelessWidget {
       barrierDismissible: barrierDismissible,
       builder: (context) => EnhancedAILoadingDialog(
         message: message ?? l10n.aiThinkingProgress,
-        animationType: LottieAnimationType.aiThinking,
+        style: AppLoadingStyle.inkWriting,
         barrierDismissible: barrierDismissible,
       ),
     );
@@ -49,7 +48,7 @@ class EnhancedAILoadingDialog extends StatelessWidget {
       barrierDismissible: barrierDismissible,
       builder: (context) => EnhancedAILoadingDialog(
         message: message ?? l10n.processingData,
-        animationType: LottieAnimationType.modernLoading,
+        style: AppLoadingStyle.bookFlip,
         barrierDismissible: barrierDismissible,
       ),
     );
@@ -67,7 +66,7 @@ class EnhancedAILoadingDialog extends StatelessWidget {
       barrierDismissible: barrierDismissible,
       builder: (context) => EnhancedAILoadingDialog(
         message: message ?? l10n.analyzingContent,
-        animationType: LottieAnimationType.aiThinking,
+        style: AppLoadingStyle.inkWriting,
         barrierDismissible: barrierDismissible,
       ),
     );
@@ -104,9 +103,7 @@ class EnhancedAILoadingDialog extends StatelessWidget {
                 final s = (constraints.maxHeight * 0.5).clamp(120.0, 220.0);
                 final effectiveWidth = s > availableWidth ? availableWidth : s;
                 return AppLoadingAnimation(
-                  style: animationType == LottieAnimationType.aiThinking
-                      ? AppLoadingStyle.inkWriting
-                      : AppLoadingStyle.bookFlip,
+                  style: style,
                   width: effectiveWidth,
                   semanticLabel: message,
                 );
@@ -131,14 +128,14 @@ class EnhancedAILoadingDialog extends StatelessWidget {
 class EnhancedAIProgressDialog extends StatelessWidget {
   final String? message;
   final double? progress;
-  final LottieAnimationType animationType;
+  final AppLoadingStyle style;
   final bool barrierDismissible;
 
   const EnhancedAIProgressDialog({
     super.key,
     this.message,
     this.progress,
-    this.animationType = LottieAnimationType.modernLoading,
+    this.style = AppLoadingStyle.bookFlip,
     this.barrierDismissible = false,
   });
 
@@ -147,7 +144,7 @@ class EnhancedAIProgressDialog extends StatelessWidget {
     BuildContext context, {
     String? message,
     double? progress,
-    LottieAnimationType animationType = LottieAnimationType.modernLoading,
+    AppLoadingStyle style = AppLoadingStyle.bookFlip,
     bool barrierDismissible = false,
   }) {
     return showDialog(
@@ -156,7 +153,7 @@ class EnhancedAIProgressDialog extends StatelessWidget {
       builder: (context) => EnhancedAIProgressDialog(
         message: message,
         progress: progress,
-        animationType: animationType,
+        style: style,
         barrierDismissible: barrierDismissible,
       ),
     );
@@ -182,9 +179,7 @@ class EnhancedAIProgressDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             AppLoadingAnimation(
-              style: animationType == LottieAnimationType.aiThinking
-                  ? AppLoadingStyle.inkWriting
-                  : AppLoadingStyle.bookFlip,
+              style: style,
               width: 80,
               semanticLabel: message,
             ),

@@ -71,32 +71,41 @@ void main() {
 
     testWidgets('未传 semanticLabel 时作为装饰排除在语义树外', (tester) async {
       final handle = tester.ensureSemantics();
-      await tester.pumpWidget(
-        _buildTestApp(
-          disableAnimations: true,
-          child: const AppEmptyAnimation(),
-        ),
-      );
-      expect(
-        find.descendant(
-          of: find.byType(AppEmptyAnimation),
-          matching: find.byType(ExcludeSemantics),
-        ),
-        findsOneWidget,
-      );
-      handle.dispose();
+      try {
+        await tester.pumpWidget(
+          _buildTestApp(
+            disableAnimations: true,
+            child: const AppEmptyAnimation(),
+          ),
+        );
+        final node = tester.getSemantics(find.byType(AppEmptyAnimation));
+        expect(node.label, isEmpty);
+        expect(node.childrenCount, 0);
+        expect(
+          find.descendant(
+            of: find.byType(AppEmptyAnimation),
+            matching: find.bySemanticsLabel(RegExp('.+')),
+          ),
+          findsNothing,
+        );
+      } finally {
+        handle.dispose();
+      }
     });
 
     testWidgets('传入 semanticLabel 时可被读屏找到', (tester) async {
       final handle = tester.ensureSemantics();
-      await tester.pumpWidget(
-        _buildTestApp(
-          disableAnimations: true,
-          child: const AppEmptyAnimation(semanticLabel: '没有找到相关内容'),
-        ),
-      );
-      expect(find.bySemanticsLabel('没有找到相关内容'), findsOneWidget);
-      handle.dispose();
+      try {
+        await tester.pumpWidget(
+          _buildTestApp(
+            disableAnimations: true,
+            child: const AppEmptyAnimation(semanticLabel: '没有找到相关内容'),
+          ),
+        );
+        expect(find.bySemanticsLabel('没有找到相关内容'), findsOneWidget);
+      } finally {
+        handle.dispose();
+      }
     });
   });
 }

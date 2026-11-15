@@ -18,7 +18,6 @@ import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
-import 'package:lottie/lottie.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
 import 'package:thoughtecho/widgets/app_loading_view.dart';
 import 'package:thoughtecho/widgets/onboarding/appearance_page_view.dart';
@@ -514,7 +513,6 @@ void main() {
         tester.widget<AppLoadingAnimation>(animFinder).style,
         AppLoadingStyle.bookFlip,
       );
-      expect(find.byType(Lottie), findsNothing);
 
       // 清理初始化 500ms 延迟定时器
       await tester.pumpWidget(const SizedBox());
@@ -545,7 +543,6 @@ void main() {
         tester.widget<AppLoadingAnimation>(animFinder).style,
         AppLoadingStyle.inkDrop,
       );
-      expect(find.byType(Lottie), findsNothing);
 
       // 清理 1500ms 后的自动跳转定时器
       await tester.pumpWidget(const SizedBox());

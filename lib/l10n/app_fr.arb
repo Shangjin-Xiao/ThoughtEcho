@@ -2446,12 +2446,10 @@
   },
   "licenseFileNotFound": "Fichier de LICENCE d'application introuvable.",
   "openSourceAcknowledgements": "Bibliothèques Open Source et remerciements",
-  "lottieAnimationLicense": "Licence d'animation Lottie",
   "systemLicenses": "Licences système",
   "openSourceDesc": "Cette application est construite sur le framework Flutter, utilisant et remerciant les bibliothèques et services open source suivants :",
   "framework": "Cadre",
   "stateManagement": "Gestion de l'État",
-  "animationSupport": "Prise en charge des animations",
   "localStorage": "Stockage local",
   "readingFont": "Police de lecture",
   "syncIntegrationNote": "Remarque sur l'intégration de la synchronisation :",
@@ -2461,13 +2459,6 @@
   "dailyQuoteApi": "Fournisseur du texte quotidien",
   "viewFullDependencyList": "Afficher la liste complète des dépendances",
   "thankOpenSourceContributors": "Merci à tous les projets open source et aux contributeurs de la communauté. Ces outils et services rendent cette application possible. Veuillez vous référer au référentiel de chaque projet ou à la page de gestion des packages pour les licences spécifiques.",
-  "lottieFilesCredits": "Cette application utilise les ressources d'animation de LottieFiles :",
-  "searchLoadingAnimation": "Rechercher Chargement de l'animation",
-  "weatherSearchAnimation": "Animation de recherche météo",
-  "aiThinkingAnimation": "Animation de réflexion IA",
-  "noResultsAnimation": "Aucun résultat Animation",
-  "thankLottieFiles": "Merci à LottieFiles pour avoir fourni des ressources d'animation de qualité.",
-  "sourceLabel": "Source:",
   "systemLicensesDesc": "Les licences système incluent les licences du SDK Flutter et des packages de dépendances. Cliquez sur le bouton ci-dessous pour afficher la liste complète.",
   "viewSystemLicenses": "Afficher les licences système",
   "expandCollapseAll": "Développer/Réduire tout",
@@ -4909,10 +4900,6 @@
       }
     }
   },
-  "lottieSearchLoading": "Recherche en cours...",
-  "lottieWeatherSearchLoading": "Recherche météo en cours...",
-  "lottieCustomLoading": "Chargement...",
-  "lottieNotFound": "Aucun contenu trouvé",
   "mmkvDiagnosticTitle": "Diagnostic de migration et d'analyse MMKV",
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"

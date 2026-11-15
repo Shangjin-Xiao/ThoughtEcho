@@ -135,10 +135,6 @@
       }
     }
   },
-  "lottieSearchLoading": "Suche läuft...",
-  "lottieWeatherSearchLoading": "Wettersuche läuft...",
-  "lottieCustomLoading": "Wird geladen...",
-  "lottieNotFound": "Keine Inhalte gefunden",
   "mmkvDiagnosticTitle": "MMKV-Migrations- & Parser-Diagnose",
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"

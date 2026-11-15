@@ -2632,12 +2632,10 @@
   },
   "licenseFileNotFound": "App LICENSE file not found.",
   "openSourceAcknowledgements": "Open Source Libraries & Acknowledgements",
-  "lottieAnimationLicense": "Lottie Animation License",
   "systemLicenses": "System Licenses",
   "openSourceDesc": "This app is built on the Flutter framework, using and thanking the following open source libraries and services:",
   "framework": "Framework",
   "stateManagement": "State Management",
-  "animationSupport": "Animation Support",
   "localStorage": "Local Storage",
   "readingFont": "Reading Font",
   "syncIntegrationNote": "Sync integration note:",
@@ -2647,13 +2645,6 @@
   "dailyQuoteApi": "Daily Quote Service Provider",
   "viewFullDependencyList": "View Full Dependency List",
   "thankOpenSourceContributors": "Thanks to all open source projects and community contributors. These tools and services make this app possible. Please refer to each project's repository or package management page for specific licenses.",
-  "lottieFilesCredits": "This app uses animation resources from LottieFiles:",
-  "searchLoadingAnimation": "Search Loading Animation",
-  "weatherSearchAnimation": "Weather Search Animation",
-  "aiThinkingAnimation": "AI Thinking Animation",
-  "noResultsAnimation": "No Results Animation",
-  "thankLottieFiles": "Thanks to LottieFiles for providing quality animation resources.",
-  "sourceLabel": "Source:",
   "systemLicensesDesc": "System licenses include Flutter SDK and dependency package licenses. Click the button below to view the full list.",
   "viewSystemLicenses": "View System Licenses",
   "expandCollapseAll": "Expand/Collapse All",
@@ -4943,22 +4934,6 @@
         "type": "String"
       }
     }
-  },
-  "lottieSearchLoading": "Searching...",
-  "@lottieSearchLoading": {
-    "description": "Lottie animation description for search loading"
-  },
-  "lottieWeatherSearchLoading": "Searching weather...",
-  "@lottieWeatherSearchLoading": {
-    "description": "Lottie animation description for weather search loading"
-  },
-  "lottieCustomLoading": "Loading...",
-  "@lottieCustomLoading": {
-    "description": "Lottie animation description for custom loading"
-  },
-  "lottieNotFound": "No content found",
-  "@lottieNotFound": {
-    "description": "Lottie animation description for not found"
   },
   "mmkvDiagnosticTitle": "MMKV Migration & Parser Diagnostics",
   "@mmkvDiagnosticTitle": {

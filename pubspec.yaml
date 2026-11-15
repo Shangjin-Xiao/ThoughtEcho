@@ -41,7 +41,6 @@ dependencies:
   ffi: ^2.1.0 # 显式添加FFI依赖，确保与最新的Dart兼容
   sqflite_common_ffi_web: ^1.0.1+2
   flex_color_picker: ^3.4.1
-  lottie: ^3.3.2
   flutter_svg: ^2.2.4
   dynamic_color: ^1.6.6
   # 交接文档记着「必须 ≥ 11.5.1」（Flutter 3.44.x 给 TextInputClient 加了
@@ -196,7 +195,6 @@ flutter:
   # 确保应用可以使用Material Design图标
   uses-material-design: true
   assets:
-    - assets/lottie/
     - assets/svg/
     - assets/icon.png
     - assets/icon_ios_full.png

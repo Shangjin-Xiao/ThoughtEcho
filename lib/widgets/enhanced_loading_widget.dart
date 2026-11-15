@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
-import '../utils/lottie_animation_manager.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'app_loading_animation.dart';
 
 /// 增强的加载组件
-/// 使用Lottie动画提供更流畅的加载体验
+/// 使用心迹自绘加载动画提供流畅的加载体验
 class EnhancedLoadingWidget extends StatelessWidget {
   final String? message;
-  final LottieAnimationType animationType;
+  final AppLoadingStyle style;
   final double? size;
   final Color? textColor;
   final TextStyle? textStyle;
@@ -20,7 +19,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
   const EnhancedLoadingWidget({
     super.key,
     this.message,
-    this.animationType = LottieAnimationType.pulseLoading,
+    this.style = AppLoadingStyle.bookFlip,
     this.size,
     this.textColor,
     this.textStyle,
@@ -32,7 +31,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
   /// 创建简单的加载动画（仅动画，无文本）
   const EnhancedLoadingWidget.simple({
     super.key,
-    this.animationType = LottieAnimationType.customLoading,
+    this.style = AppLoadingStyle.bookFlip,
     this.size = 60,
   })  : message = null,
         textColor = null,
@@ -45,7 +44,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
   const EnhancedLoadingWidget.fullScreen({
     super.key,
     this.message,
-    this.animationType = LottieAnimationType.pulseLoading,
+    this.style = AppLoadingStyle.bookFlip,
     this.textColor,
     this.textStyle,
   })  : size = 120,
@@ -57,7 +56,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
   const EnhancedLoadingWidget.dialog({
     super.key,
     this.message,
-    this.animationType = LottieAnimationType.customLoading,
+    this.style = AppLoadingStyle.bookFlip,
   })  : size = 80,
         textColor = null,
         textStyle = null,
@@ -67,7 +66,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
 
   /// EnhancedLoadingWidget.thinking 改为原生思考动画
   const EnhancedLoadingWidget.thinking({super.key, this.message})
-      : animationType = LottieAnimationType.aiThinking,
+      : style = AppLoadingStyle.inkWriting,
         size = 80,
         textColor = null,
         textStyle = null,
@@ -83,7 +82,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
     final effectiveTextColor = textColor ?? theme.colorScheme.onSurface;
     final effectiveTextStyle = textStyle ??
         theme.textTheme.bodyMedium?.copyWith(color: effectiveTextColor);
-    if (animationType == LottieAnimationType.aiThinking) {
+    if (style == AppLoadingStyle.inkWriting) {
       return Padding(
         padding: padding ?? EdgeInsets.zero,
         child: Column(
@@ -122,7 +121,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
                 220.0,
               );
               return AppLoadingAnimation(
-                style: AppLoadingStyle.bookFlip,
+                style: style,
                 width: s,
                 semanticLabel: effectiveMessage,
               );
@@ -145,14 +144,13 @@ class EnhancedLoadingWidget extends StatelessWidget {
   /// 可见文案与无障碍标签共用的本地化回退文案
   String _localizedMessage(AppLocalizations l10n) {
     if (message != null) return message!;
-    switch (animationType) {
-      case LottieAnimationType.aiThinking:
+    switch (style) {
+      case AppLoadingStyle.inkWriting:
         return l10n.aiThinkingProgress;
-      case LottieAnimationType.loading:
-      case LottieAnimationType.pulseLoading:
+      case AppLoadingStyle.bookFlip:
+      case AppLoadingStyle.inkDrop:
+      case AppLoadingStyle.writingLines:
         return l10n.loadingInProgress;
-      default:
-        return l10n.pleaseWait;
     }
   }
 }
@@ -322,20 +320,20 @@ class EmptyStateWidget extends StatelessWidget {
 /// 加载对话框
 class LoadingDialog extends StatelessWidget {
   final String? message;
-  final LottieAnimationType animationType;
+  final AppLoadingStyle style;
   final bool barrierDismissible;
 
   const LoadingDialog({
     super.key,
     this.message,
-    this.animationType = LottieAnimationType.customLoading,
+    this.style = AppLoadingStyle.bookFlip,
     this.barrierDismissible = false,
   });
 
   static Future<void> show(
     BuildContext context, {
     String? message,
-    LottieAnimationType animationType = LottieAnimationType.customLoading,
+    AppLoadingStyle style = AppLoadingStyle.bookFlip,
     bool barrierDismissible = false,
   }) {
     return showDialog(
@@ -343,7 +341,7 @@ class LoadingDialog extends StatelessWidget {
       barrierDismissible: barrierDismissible,
       builder: (context) => LoadingDialog(
         message: message,
-        animationType: animationType,
+        style: style,
         barrierDismissible: barrierDismissible,
       ),
     );
@@ -366,7 +364,7 @@ class LoadingDialog extends StatelessWidget {
         ),
         child: EnhancedLoadingWidget.dialog(
           message: message,
-          animationType: animationType,
+          style: style,
         ),
       ),
     );

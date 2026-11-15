@@ -2638,12 +2638,10 @@
   },
   "licenseFileNotFound": "未找到本程序 LICENSE 文件。",
   "openSourceAcknowledgements": "开源库与鸣谢",
-  "lottieAnimationLicense": "Lottie 动画许可",
   "systemLicenses": "系统许可证",
   "openSourceDesc": "本应用基于 Flutter 框架构建，使用并感谢下列开源库与服务：",
   "framework": "框架",
   "stateManagement": "状态管理",
-  "animationSupport": "动画支持",
   "localStorage": "本地存储",
   "readingFont": "阅读字体",
   "syncIntegrationNote": "同步功能集成说明：",
@@ -2653,13 +2651,6 @@
   "dailyQuoteApi": "每日一言服务提供方",
   "viewFullDependencyList": "查看完整依赖列表",
   "thankOpenSourceContributors": "感谢所有开源项目与社区贡献者，正是这些工具和服务让本应用成为可能。具体许可证请以各项目仓库或包管理页面为准。",
-  "lottieFilesCredits": "应用使用了来自 LottieFiles 的动画资源：",
-  "searchLoadingAnimation": "搜索加载动画",
-  "weatherSearchAnimation": "天气搜索动画",
-  "aiThinkingAnimation": "AI思考动画",
-  "noResultsAnimation": "搜索无结果动画",
-  "thankLottieFiles": "感谢 LottieFiles 提供优质的动画资源。",
-  "sourceLabel": "来源:",
   "systemLicensesDesc": "系统许可证包括 Flutter SDK 及依赖包的许可证，点击下方按钮查看完整列表。",
   "viewSystemLicenses": "查看系统许可证",
   "expandCollapseAll": "全部展开/折叠",
@@ -4943,22 +4934,6 @@
         "type": "String"
       }
     }
-  },
-  "lottieSearchLoading": "搜索中...",
-  "@lottieSearchLoading": {
-    "description": "Lottie animation description for search loading"
-  },
-  "lottieWeatherSearchLoading": "天气搜索中...",
-  "@lottieWeatherSearchLoading": {
-    "description": "Lottie animation description for weather search loading"
-  },
-  "lottieCustomLoading": "加载中...",
-  "@lottieCustomLoading": {
-    "description": "Lottie animation description for custom loading"
-  },
-  "lottieNotFound": "未找到相关内容",
-  "@lottieNotFound": {
-    "description": "Lottie animation description for not found"
   },
   "mmkvDiagnosticTitle": "MMKV 迁移与解析诊断",
   "@mmkvDiagnosticTitle": {

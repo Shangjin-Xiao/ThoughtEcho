@@ -2453,12 +2453,10 @@
   },
   "licenseFileNotFound": "앱 라이선스 파일을 찾을 수 없습니다.",
   "openSourceAcknowledgements": "오픈 소스 라이브러리 및 감사의 말",
-  "lottieAnimationLicense": "로티 애니메이션 라이선스",
   "systemLicenses": "시스템 라이센스",
   "openSourceDesc": "이 앱은 Flutter 프레임워크를 기반으로 구축되었으며 다음 오픈 소스 라이브러리 및 서비스를 사용하고 있습니다.",
   "framework": "뼈대",
   "stateManagement": "상태 관리",
-  "animationSupport": "애니메이션 지원",
   "localStorage": "로컬 저장소",
   "readingFont": "본문 글꼴",
   "syncIntegrationNote": "동기화 통합 참고사항:",
@@ -2468,13 +2466,6 @@
   "dailyQuoteApi": "일일 문구 서비스 제공처",
   "viewFullDependencyList": "전체 종속성 목록 보기",
   "thankOpenSourceContributors": "모든 오픈 소스 프로젝트와 커뮤니티 기여자에게 감사드립니다. 이러한 도구와 서비스를 통해 이 앱이 가능해졌습니다. 특정 라이선스에 대해서는 각 프로젝트의 저장소 또는 패키지 관리 페이지를 참조하세요.",
-  "lottieFilesCredits": "이 앱은 LottieFiles의 애니메이션 리소스를 사용합니다.",
-  "searchLoadingAnimation": "검색 로딩 애니메이션",
-  "weatherSearchAnimation": "날씨 검색 애니메이션",
-  "aiThinkingAnimation": "AI 사고 애니메이션",
-  "noResultsAnimation": "결과 없음 애니메이션",
-  "thankLottieFiles": "고품질 애니메이션 리소스를 제공한 LottieFiles에 감사드립니다.",
-  "sourceLabel": "원천:",
   "systemLicensesDesc": "시스템 라이선스에는 Flutter SDK 및 종속성 패키지 라이선스가 포함됩니다. 전체 목록을 보려면 아래 버튼을 클릭하세요.",
   "viewSystemLicenses": "시스템 라이선스 보기",
   "expandCollapseAll": "모두 펼치기/접기",
@@ -4916,10 +4907,6 @@
       }
     }
   },
-  "lottieSearchLoading": "검색 중...",
-  "lottieWeatherSearchLoading": "날씨 검색 중...",
-  "lottieCustomLoading": "로딩 중...",
-  "lottieNotFound": "관련 내용을 찾을 수 없습니다",
   "mmkvDiagnosticTitle": "MMKV 마이그레이션 및 파서 진단",
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"

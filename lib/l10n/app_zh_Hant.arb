@@ -2638,12 +2638,10 @@
   },
   "licenseFileNotFound": "未找到本程式 LICENSE 檔案。",
   "openSourceAcknowledgements": "開源庫與鳴謝",
-  "lottieAnimationLicense": "Lottie 動畫許可",
   "systemLicenses": "系統許可證",
   "openSourceDesc": "本應用基於 Flutter 框架構建，使用並感謝下列開源庫與服務：",
   "framework": "框架",
   "stateManagement": "狀態管理",
-  "animationSupport": "動畫支援",
   "localStorage": "本地儲存",
   "readingFont": "閱讀字型",
   "syncIntegrationNote": "同步功能整合說明：",
@@ -2653,13 +2651,6 @@
   "dailyQuoteApi": "每日一言服務提供方",
   "viewFullDependencyList": "檢視完整依賴列表",
   "thankOpenSourceContributors": "感謝所有開源專案與社群貢獻者，正是這些工具和服務讓本應用成為可能。具體許可證請以各專案倉庫或包管理頁面為準。",
-  "lottieFilesCredits": "應用使用了來自 LottieFiles 的動畫資源：",
-  "searchLoadingAnimation": "搜尋載入動畫",
-  "weatherSearchAnimation": "天氣搜尋動畫",
-  "aiThinkingAnimation": "AI思考動畫",
-  "noResultsAnimation": "搜尋無結果動畫",
-  "thankLottieFiles": "感謝 LottieFiles 提供優質的動畫資源。",
-  "sourceLabel": "來源:",
   "systemLicensesDesc": "系統許可證包括 Flutter SDK 及依賴包的許可證，點選下方按鈕檢視完整列表。",
   "viewSystemLicenses": "檢視系統許可證",
   "expandCollapseAll": "全部展開/摺疊",
@@ -4944,10 +4935,6 @@
       }
     }
   },
-  "lottieSearchLoading": "搜尋中...",
-  "lottieWeatherSearchLoading": "天氣搜尋中...",
-  "lottieCustomLoading": "載入中...",
-  "lottieNotFound": "未找到相關內容",
   "mmkvDiagnosticTitle": "MMKV 遷移與解析診斷",
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
