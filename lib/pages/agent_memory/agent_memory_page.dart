@@ -9,6 +9,7 @@ import '../../models/agent_memory.dart';
 import '../../services/agent_memory_service.dart';
 import '../../theme/theme_style.dart';
 import '../../utils/aptabase_helper.dart';
+import '../../widgets/app_empty_animation.dart';
 import '../../widgets/app_empty_view.dart';
 import '../../widgets/app_error_view.dart';
 import '../../widgets/app_loading_view.dart';
@@ -365,6 +366,41 @@ class _AgentMemoryPageState extends State<AgentMemoryPage> {
     }
 
     if (items.isEmpty) {
+      final isFiltered =
+          _searchQuery.trim().isNotEmpty || _currentFilter != _MemoryFilter.all;
+      if (isFiltered) {
+        final theme = Theme.of(context);
+        return SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AppEmptyAnimation(width: 160),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.agentMemoryEmpty,
+                    style: theme.textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  if (_searchQuery.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.noteSearchEmptySubtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      }
       return SliverFillRemaining(
         hasScrollBody: false,
         child: AppEmptyView(

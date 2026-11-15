@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
+import '../widgets/app_empty_animation.dart';
 
 /// Data model for a chapter in the user guide
 class GuideChapter {
@@ -458,25 +459,25 @@ class _UserGuidePageState extends State<UserGuidePage> {
                     // Content
                     if (_filteredChapters.isEmpty)
                       SliverFillRemaining(
+                        hasScrollBody: false,
                         child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off_rounded,
-                                size: 64,
-                                color:
-                                    colorScheme.outline.withValues(alpha: 0.5),
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                l10n.userGuideNoResults,
-                                style: TextStyle(
-                                  color: colorScheme.outline,
-                                  fontSize: 16,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 24,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const AppEmptyAnimation(width: 160),
+                                const SizedBox(height: 16),
+                                Text(
+                                  l10n.userGuideNoResults,
+                                  style: theme.textTheme.titleMedium,
+                                  textAlign: TextAlign.center,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       )

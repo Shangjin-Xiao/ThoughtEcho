@@ -8,7 +8,7 @@ import '../services/location_service.dart';
 import '../services/place_search_service.dart';
 import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
-import '../widgets/app_empty_view.dart';
+import '../widgets/app_empty_animation.dart';
 import '../widgets/app_loading_view.dart';
 
 /// 位置选择结果。
@@ -819,8 +819,23 @@ class _NearbyLocationPickerState extends State<NearbyLocationPicker> {
     }
 
     if (_searchResults.isEmpty) {
-      return AppEmptyView(
-        text: l10n.mapPickerNoResults,
+      return Center(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppEmptyAnimation(width: 150),
+              const SizedBox(height: 16),
+              Text(
+                l10n.mapPickerNoResults,
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       );
     }
 

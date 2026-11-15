@@ -5,6 +5,8 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/pages/thoughter/session_history_page.dart';
+import 'package:thoughtecho/widgets/app_empty_animation.dart';
+import 'package:thoughtecho/widgets/app_empty_view.dart';
 
 import '../test_harness.dart';
 
@@ -79,11 +81,20 @@ class _FakeChatSessionService extends ChatSessionService {
   }
 }
 
-Widget _buildTestApp(SessionHistoryPage child) {
+Widget _buildTestApp(
+  SessionHistoryPage child, {
+  bool disableAnimations = false,
+}) {
   return MaterialApp(
     locale: const Locale('zh'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    builder: (context, wrapped) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        disableAnimations: disableAnimations,
+      ),
+      child: wrapped!,
+    ),
     home: child,
   );
 }
@@ -534,5 +545,74 @@ void main() {
 
     final slidableAfterExit = tester.widget<Slidable>(find.byType(Slidable));
     expect(slidableAfterExit.enabled, isTrue);
+  });
+
+  testWidgets('shows AppEmptyView when session list is genuinely empty',
+      (tester) async {
+    final service = _FakeChatSessionService(
+      sessions: [],
+      messageCounts: const {},
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+        disableAnimations: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SessionHistoryPage)),
+    );
+    expect(find.byType(AppEmptyView), findsOneWidget);
+    expect(find.byType(AppEmptyAnimation), findsNothing);
+    expect(find.text(l10n.noChats), findsOneWidget);
+  });
+
+  testWidgets(
+      'shows AppEmptyAnimation when search returns no matching sessions',
+      (tester) async {
+    final now = DateTime(2026, 4, 18, 12);
+    final service = _FakeChatSessionService(
+      sessions: [
+        _session(id: 's1', title: '日常随笔对话', lastActiveAt: now),
+      ],
+      messageCounts: const {'s1': 2},
+      searchResults: const [],
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+        disableAnimations: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(SearchBar), '不存在的会话关键词');
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SessionHistoryPage)),
+    );
+    expect(find.byType(AppEmptyAnimation), findsOneWidget);
+    expect(find.byType(AppEmptyView), findsNothing);
+    expect(find.text(l10n.userGuideNoResults), findsOneWidget);
+    expect(find.text(l10n.noteSearchEmptySubtitle), findsOneWidget);
   });
 }

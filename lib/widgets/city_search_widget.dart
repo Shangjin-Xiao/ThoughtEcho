@@ -9,7 +9,7 @@ import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../theme/theme_style.dart';
-import '../widgets/app_empty_view.dart';
+import '../widgets/app_empty_animation.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_snackbar.dart';
 
@@ -622,9 +622,30 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     final results = locationService.searchResults;
 
     if (results.isEmpty) {
-      return AppEmptyView(
-        text: l10n.noCityFound,
-        message: l10n.tryDifferentKeywords,
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppEmptyAnimation(width: 120),
+              const SizedBox(height: 12),
+              Text(
+                l10n.noCityFound,
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.tryDifferentKeywords,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       );
     }
 

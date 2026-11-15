@@ -8,6 +8,8 @@ import 'package:thoughtecho/pages/nearby_location_picker.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/place_search_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/widgets/app_empty_animation.dart';
+import 'package:thoughtecho/widgets/app_empty_view.dart';
 import 'package:thoughtecho/widgets/app_loading_view.dart';
 
 import '../../test_harness.dart';
@@ -155,11 +157,18 @@ class _FakeLocationService extends ChangeNotifier implements LocationService {
 
 Widget _wrapPicker({
   required Widget child,
+  bool disableAnimations = false,
 }) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('zh'),
+    builder: (context, wrapped) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        disableAnimations: disableAnimations,
+      ),
+      child: wrapped!,
+    ),
     home: child,
   );
 }
@@ -570,7 +579,7 @@ void main() {
     expect(find.text('故宫角楼'), findsOneWidget);
   });
 
-  testWidgets('搜索无匹配结果时展示 mapPickerNoResults 空状态提示',
+  testWidgets('搜索无匹配结果时展示 AppEmptyAnimation 与 mapPickerNoResults 提示',
       (WidgetTester tester) async {
     final fakeLoc = _FakeLocationService();
     final fakeSearch = _FakePlaceSearchService(
@@ -585,6 +594,7 @@ void main() {
     );
 
     await tester.pumpWidget(_wrapPicker(
+      disableAnimations: true,
       child: NearbyLocationPicker(
         locationService: fakeLoc,
         placeSearchService: fakeSearch,
@@ -596,7 +606,36 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
 
+    expect(find.byType(AppEmptyAnimation), findsOneWidget);
+    expect(find.byType(AppEmptyView), findsNothing);
     expect(find.text('没有找到相关地点'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('短视口下搜索地点无结果不发生溢出', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 420);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final fakeLoc = _FakeLocationService();
+    final fakeSearch = _FakePlaceSearchService(searchResults: []);
+
+    await tester.pumpWidget(_wrapPicker(
+      disableAnimations: true,
+      child: NearbyLocationPicker(
+        locationService: fakeLoc,
+        placeSearchService: fakeSearch,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '火星基地');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppEmptyAnimation), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('键盘提交 searchAction 立即触发搜索，无需等待 400ms 防抖延迟',

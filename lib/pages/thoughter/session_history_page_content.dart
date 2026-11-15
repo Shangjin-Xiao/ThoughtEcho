@@ -4,6 +4,33 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
   Widget _buildEmptyState(ThemeData theme, AppLocalizations l10n) =>
       AppEmptyView(text: l10n.noChats);
 
+  Widget _buildSearchEmptyState(ThemeData theme, AppLocalizations l10n) =>
+      Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppEmptyAnimation(width: 160),
+              const SizedBox(height: 16),
+              Text(
+                l10n.userGuideNoResults,
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.noteSearchEmptySubtitle,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+
   Widget _buildSearchResultsList(
     BuildContext context,
     List<ChatSessionSearchResult> results,

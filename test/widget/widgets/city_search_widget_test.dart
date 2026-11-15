@@ -10,6 +10,9 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/constants/app_constants.dart';
+import 'package:thoughtecho/widgets/app_empty_animation.dart';
+import 'package:thoughtecho/widgets/app_empty_view.dart';
 import 'package:thoughtecho/widgets/app_loading_view.dart';
 import 'package:thoughtecho/widgets/city_search_widget.dart';
 
@@ -129,6 +132,7 @@ Widget _buildTestApp({
   required MockWeatherService weatherService,
   required MockSettingsService settingsService,
   VoidCallback? onSuccess,
+  bool disableAnimations = false,
 }) {
   return MultiProvider(
     providers: [
@@ -146,6 +150,12 @@ Widget _buildTestApp({
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('zh'),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          disableAnimations: disableAnimations,
+        ),
+        child: child!,
+      ),
       home: Scaffold(
         body: CitySearchWidget(
           weatherController: controller,
@@ -263,5 +273,62 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsNothing);
     expect(find.byType(AppLoadingView), findsOneWidget);
     expect(find.text('搜索城市中...'), findsOneWidget);
+  });
+
+  testWidgets('renders AppEmptyAnimation when city search returns no results',
+      (tester) async {
+    when(mockLocationService.isSearching).thenReturn(false);
+    when(mockLocationService.searchResults).thenReturn(<CityInfo>[]);
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        controller: controller,
+        locationService: mockLocationService,
+        weatherService: mockWeatherService,
+        settingsService: mockSettingsService,
+        disableAnimations: true,
+      ),
+    );
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), '不存在的城市xyz');
+    await tester.pump(AppConstants.searchDebounceDelay);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppEmptyAnimation), findsOneWidget);
+    expect(find.byType(AppEmptyView), findsNothing);
+    expect(find.text('没有找到匹配的城市'), findsOneWidget);
+    expect(find.text('尝试使用不同的关键词或城市名称'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'city search no-results state does not overflow in compact height',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 420);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    when(mockLocationService.isSearching).thenReturn(false);
+    when(mockLocationService.searchResults).thenReturn(<CityInfo>[]);
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        controller: controller,
+        locationService: mockLocationService,
+        weatherService: mockWeatherService,
+        settingsService: mockSettingsService,
+        disableAnimations: true,
+      ),
+    );
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), '不存在的城市xyz');
+    await tester.pump(AppConstants.searchDebounceDelay);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppEmptyAnimation), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

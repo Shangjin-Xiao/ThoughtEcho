@@ -16,6 +16,9 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
+import 'package:thoughtecho/constants/app_constants.dart';
+import 'package:thoughtecho/widgets/app_empty_animation.dart';
+import 'package:thoughtecho/widgets/app_empty_view.dart';
 import 'package:thoughtecho/widgets/app_loading_view.dart';
 
 import '../../test_harness.dart';
@@ -78,6 +81,7 @@ Widget _buildWrapper({
   required SettingsService settingsService,
   required AgentMemoryService memoryService,
   DatabaseService? databaseService,
+  bool disableAnimations = false,
 }) {
   return MultiProvider(
     providers: [
@@ -90,6 +94,12 @@ Widget _buildWrapper({
       locale: const Locale('zh'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, wrapped) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          disableAnimations: disableAnimations,
+        ),
+        child: wrapped!,
+      ),
       theme: ThemeData(
         useMaterial3: true,
         extensions: [
@@ -1061,6 +1071,87 @@ void main() {
             'type': 'profile',
             'kind': 'taste',
           }));
+    });
+
+    testWidgets('记忆库真正为空时保留 AppEmptyView 而非 AppEmptyAnimation', (tester) async {
+      _setLargeSurfaceSize(tester);
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+          disableAnimations: true,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      expect(find.byType(AppEmptyView), findsOneWidget);
+      expect(find.byType(AppEmptyAnimation), findsNothing);
+      expect(find.text('暂无匹配的记忆'), findsOneWidget);
+    });
+
+    testWidgets('切换至空分类过滤器时展示 AppEmptyAnimation 而非 AppEmptyView',
+        (tester) async {
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.style,
+          directive: '喜欢简洁回答',
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+          disableAnimations: true,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      await tester.tap(find.text('近期状态 (0)'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppEmptyAnimation), findsOneWidget);
+      expect(find.byType(AppEmptyView), findsNothing);
+      expect(find.text('暂无匹配的记忆'), findsOneWidget);
+      expect(find.text('尝试使用其他关键词或检查拼写'), findsNothing);
+    });
+
+    testWidgets('搜索无匹配记忆时展示 AppEmptyAnimation 与提示文案', (tester) async {
+      _setLargeSurfaceSize(tester);
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.style,
+          directive: '喜欢简洁回答',
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: const AgentMemoryPage(),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+          disableAnimations: true,
+        ),
+      );
+      await _settleWithRealAsync(tester);
+
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '完全不存在的关键词xyz');
+      await tester.pump(AppConstants.searchDebounceDelay);
+      await _waitForWidget(tester, find.byType(AppEmptyAnimation));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppEmptyAnimation), findsOneWidget);
+      expect(find.byType(AppEmptyView), findsNothing);
+      expect(find.text('暂无匹配的记忆'), findsOneWidget);
+      expect(find.text('尝试使用其他关键词或检查拼写'), findsOneWidget);
     });
   });
 }

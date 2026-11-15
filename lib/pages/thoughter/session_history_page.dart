@@ -11,6 +11,7 @@ import '../../theme/app_semantic_colors.dart';
 import '../../theme/theme_style.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/time_utils.dart';
+import '../../widgets/app_empty_animation.dart';
 import '../../widgets/app_empty_view.dart';
 import '../../widgets/app_loading_view.dart';
 import '../../widgets/app_snackbar.dart';
@@ -483,7 +484,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
     if (_searchQuery.isNotEmpty) {
       final results = _searchResults;
       if (results == null || results.isEmpty) {
-        return _buildEmptyState(theme, l10n);
+        return _buildSearchEmptyState(theme, l10n);
       }
       return _buildSearchResultsList(context, results, theme, l10n);
     }
