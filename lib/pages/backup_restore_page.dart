@@ -1,5 +1,7 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+
 import '../gen_l10n/app_localizations.dart';
 import '../models/merge_report.dart';
 import '../services/backup_service.dart';
@@ -10,11 +12,13 @@ import '../utils/backup_progress_update_gate.dart';
 import '../utils/stream_file_selector.dart';
 import '../utils/time_utils.dart';
 import '../widgets/app_snackbar.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
+import 'package:thoughtecho/theme/theme_style.dart';
 
 /// 备份与还原页面
 ///
@@ -56,6 +60,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             const SizedBox(height: 24),
             _buildRestoreSection(),
             const SizedBox(height: 24),
+            _buildBackupScopeSection(),
+            const SizedBox(height: 24),
             _buildInfoSection(),
           ],
         ),
@@ -81,9 +87,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 const SizedBox(width: 8),
                 Text(
                   l10n.dataBackup,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ],
             ),
@@ -161,9 +165,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             Text(
               _includeMediaFiles ? l10n.backupFormatZip : l10n.backupFormatJson,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
             ),
           ],
@@ -190,9 +195,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 const SizedBox(width: 8),
                 Text(
                   l10n.dataRestore,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ],
             ),
@@ -248,9 +251,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             Text(
               l10n.supportedBackupFormats,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
             ),
           ],
@@ -259,13 +263,150 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     );
   }
 
+  /// 构建备份范围说明区域（核实自 BackupService / SettingsService / WebDAVSyncService）
+  Widget _buildBackupScopeSection() {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final semanticColors = AppSemanticColors.of(context);
+    final shapeTokens = AppShapeTokens.of(context);
+
+    return Card(
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        shape: const Border(),
+        collapsedShape: const Border(),
+        leading: Icon(Icons.checklist_rtl_outlined, color: colorScheme.primary),
+        title: Text(l10n.backupScopeTitle, style: theme.textTheme.titleMedium),
+        subtitle: Text(
+          l10n.backupScopeSubtitle,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          _buildScopeGroupHeader(
+            icon: Icons.check_circle_outline,
+            color: semanticColors.success,
+            title: l10n.backupScopeIncludedHeader,
+          ),
+          const SizedBox(height: 8),
+          _buildScopeBullet(
+            l10n.backupScopeIncludedNotes,
+            bulletColor: semanticColors.success,
+          ),
+          _buildScopeBullet(
+            l10n.backupScopeIncludedMedia,
+            bulletColor: semanticColors.success,
+          ),
+          _buildScopeBullet(
+            l10n.backupScopeIncludedSettings,
+            bulletColor: semanticColors.success,
+          ),
+          _buildScopeBullet(
+            l10n.backupScopeIncludedAiAnalyses,
+            bulletColor: semanticColors.success,
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          _buildScopeGroupHeader(
+            icon: Icons.remove_circle_outline,
+            color: colorScheme.onSurfaceVariant,
+            title: l10n.backupScopeExcludedHeader,
+          ),
+          const SizedBox(height: 8),
+          _buildScopeBullet(
+            l10n.backupScopeExcludedCredentials,
+            bulletColor: colorScheme.onSurfaceVariant,
+          ),
+          _buildScopeBullet(
+            l10n.backupScopeExcludedDrafts,
+            bulletColor: colorScheme.onSurfaceVariant,
+          ),
+          _buildScopeBullet(
+            l10n.backupScopeExcludedChatsAndMemory,
+            bulletColor: colorScheme.onSurfaceVariant,
+          ),
+          _buildScopeBullet(
+            l10n.backupScopeExcludedInsightsAndLogs,
+            bulletColor: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.45,
+              ),
+              borderRadius: BorderRadius.circular(shapeTokens.inputRadius),
+            ),
+            child: Text(
+              l10n.backupScopeRestoreModeNote,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScopeGroupHeader({
+    required IconData icon,
+    required Color color,
+    required String title,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 6),
+        Text(title, style: theme.textTheme.titleSmall?.copyWith(color: color)),
+      ],
+    );
+  }
+
+  Widget _buildScopeBullet(String text, {required Color bulletColor}) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 4,
+            height: 4,
+            margin: const EdgeInsets.only(top: 7, right: 8),
+            decoration: BoxDecoration(
+              color: bulletColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 构建信息区域
   Widget _buildInfoSection() {
     final l10n = AppLocalizations.of(context);
     return Card(
-      color: Theme.of(
-        context,
-      ).colorScheme.errorContainer.withValues(alpha: 0.1),
+      color:
+          Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -402,10 +543,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
 
       if (backupPath != null) {
-        AptabaseHelper.trackEvent(
-          'feature_used',
-          {'action': 'export_text_backup'},
-        );
+        AptabaseHelper.trackEvent('feature_used', {
+          'action': 'export_text_backup',
+        });
       }
 
       // 导出完成后上报富文本路径转换失败（不静默降级）
@@ -418,10 +558,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                     : '');
         _showErrorDialog(
           l10n.backupCompleteWithWarnings,
-          l10n.backupDeltaFailuresMessage(
-            deltaFailures.length,
-            affectedIds,
-          ),
+          l10n.backupDeltaFailuresMessage(deltaFailures.length, affectedIds),
         );
       }
     } catch (e, stackTrace) {
@@ -621,10 +758,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
 
       if (report != null) {
-        AptabaseHelper.trackEvent(
-          'feature_used',
-          {'action': useMerge ? 'merge_backup' : 'restore_backup'},
-        );
+        AptabaseHelper.trackEvent('feature_used', {
+          'action': useMerge ? 'merge_backup' : 'restore_backup',
+        });
       }
 
       if (mounted) {
@@ -674,9 +810,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           errorMessage = l10n.restoreFailedCorrupt;
         } else if (e.toString().contains('has no column named')) {
           // 修复：专门处理字段名不匹配的错误
-          final columnMatch = RegExp(
-            r'has no column named (\w+)',
-          ).firstMatch(e.toString());
+          final columnMatch =
+              RegExp(r'has no column named (\w+)').firstMatch(e.toString());
           final columnName = columnMatch?.group(1) ?? l10n.unknownTag;
 
           errorMessage = '''${l10n.restoreFailedCorrupt}
@@ -734,8 +869,10 @@ Details: $e''';
           builder: (context) => AlertDialog(
             title: Row(
               children: [
-                Icon(Icons.warning_amber,
-                    color: AppSemanticColors.of(context).warning),
+                Icon(
+                  Icons.warning_amber,
+                  color: AppSemanticColors.of(context).warning,
+                ),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -847,12 +984,7 @@ Details: $e''';
           children: [
             Icon(Icons.error, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                title,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: Text(message),

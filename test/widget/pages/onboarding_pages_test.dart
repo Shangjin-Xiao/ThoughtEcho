@@ -97,21 +97,15 @@ void main() {
         ChangeNotifierProvider<DatabaseService>.value(
           value: _FakeDatabaseServiceForOnboardingPage(),
         ),
-        ChangeNotifierProvider<SettingsService>.value(
-          value: settingsService,
-        ),
-        Provider<MMKVService>.value(
-          value: MMKVService(),
-        ),
+        ChangeNotifierProvider<SettingsService>.value(value: settingsService),
+        Provider<MMKVService>.value(value: MMKVService()),
         ChangeNotifierProvider<ClipboardService>.value(
           value: ClipboardService(),
         ),
         ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
           value: _FakeAIAnalysisDatabaseService(),
         ),
-        ChangeNotifierProvider<AppTheme>(
-          create: (_) => AppTheme(),
-        ),
+        ChangeNotifierProvider<AppTheme>(create: (_) => AppTheme()),
         ChangeNotifierProvider<ValueNotifier<bool>>.value(
           value: servicesInitializedNotifier ?? ValueNotifier<bool>(true),
         ),
@@ -167,9 +161,7 @@ void main() {
   }
 
   /// 欢迎屏（index 0）。
-  Widget buildWelcomePage({
-    OnboardingController? controller,
-  }) {
+  Widget buildWelcomePage({OnboardingController? controller}) {
     final c = controller ?? OnboardingController();
     return ChangeNotifierProvider<OnboardingController>.value(
       value: c,
@@ -356,8 +348,9 @@ void main() {
       expect(checkbox.value, isFalse);
     });
 
-    testWidgets('点按匿名改进计划开关触发 onPreferenceChanged 开启 telemetryEnabled',
-        (tester) async {
+    testWidgets('点按匿名改进计划开关触发 onPreferenceChanged 开启 telemetryEnabled', (
+      tester,
+    ) async {
       final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
       final changes = <String, dynamic>{};
 
@@ -386,6 +379,26 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(changes['telemetryEnabled'], isTrue);
+    });
+
+    testWidgets('点按展开按钮才显示诊断与体验改进详情', (tester) async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+
+      await tester.pumpWidget(buildPreferencesPage());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settingsSentryDetail), findsNothing);
+      expect(find.text(l10n.settingsTelemetryDetail), findsNothing);
+
+      final expandButtons = find.text(l10n.dataCollectionExpandDetails);
+      expect(expandButtons, findsNWidgets(2));
+
+      await tester.ensureVisible(expandButtons.first);
+      await tester.tap(expandButtons.first);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settingsSentryDetail), findsOneWidget);
+      expect(find.text(l10n.settingsTelemetryDetail), findsNothing);
     });
   });
 
@@ -493,8 +506,9 @@ void main() {
   });
 
   group('OnboardingPage 加载动画迁移验证', () {
-    testWidgets('初始化未完成时使用 AppLoadingAnimation(bookFlip) 而非 Lottie',
-        (tester) async {
+    testWidgets('初始化未完成时使用 AppLoadingAnimation(bookFlip) 而非 Lottie', (
+      tester,
+    ) async {
       final settingsService = await SettingsService.create();
       final servicesInitializedNotifier = ValueNotifier<bool>(false);
 
@@ -519,8 +533,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
     });
 
-    testWidgets('更新完成页使用 AppLoadingAnimation(inkDrop) 而非 Lottie',
-        (tester) async {
+    testWidgets('更新完成页使用 AppLoadingAnimation(inkDrop) 而非 Lottie', (
+      tester,
+    ) async {
       final settingsService = await SettingsService.create();
       final servicesInitializedNotifier = ValueNotifier<bool>(true);
 

@@ -33,12 +33,8 @@ void main() {
     Widget buildApp() {
       return MultiProvider(
         providers: [
-          ChangeNotifierProvider<SettingsService>.value(
-            value: settingsService,
-          ),
-          ChangeNotifierProvider<AppTheme>.value(
-            value: AppTheme(),
-          ),
+          ChangeNotifierProvider<SettingsService>.value(value: settingsService),
+          ChangeNotifierProvider<AppTheme>.value(value: AppTheme()),
         ],
         child: const MaterialApp(
           locale: Locale('zh'),
@@ -54,47 +50,68 @@ void main() {
       );
     }
 
-    testWidgets('renders Sentry and Telemetry tiles and disclosure buttons',
-        (tester) async {
-      useTallSurface(tester);
-      await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'renders calm summary by default and reveals details only on tap',
+      (tester) async {
+        useTallSurface(tester);
+        await tester.pumpWidget(buildApp());
+        await tester.pumpAndSettle();
 
-      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+        final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
-      expect(find.text(l10n.settingsSentryTitle), findsOneWidget);
-      expect(find.text(l10n.settingsTelemetryTitle), findsOneWidget);
-      expect(find.text(l10n.learnMoreDataCollection), findsOneWidget);
-    });
+        expect(find.text(l10n.settingsSentryTitle), findsOneWidget);
+        expect(find.text(l10n.settingsSentryDesc), findsOneWidget);
+        expect(find.text(l10n.settingsTelemetryTitle), findsOneWidget);
+        expect(find.text(l10n.settingsTelemetryDesc), findsOneWidget);
+        expect(find.text(l10n.learnMoreDataCollection), findsOneWidget);
+        expect(find.text(l10n.dataCollectionExpandDetails), findsNWidgets(2));
+
+        // Detailed bullet lists are collapsed by default.
+        expect(find.text(l10n.settingsSentryDetail), findsNothing);
+        expect(find.text(l10n.settingsTelemetryDetail), findsNothing);
+
+        // Tap first "See what's included" toggle to expand Sentry details.
+        await tester.tap(find.text(l10n.dataCollectionExpandDetails).first);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.settingsSentryDetail), findsOneWidget);
+        expect(find.text(l10n.settingsTelemetryDetail), findsNothing);
+        expect(find.text(l10n.dataCollectionCollapseDetails), findsOneWidget);
+
+        // Tap collapse toggle to hide details again.
+        await tester.tap(find.text(l10n.dataCollectionCollapseDetails));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.settingsSentryDetail), findsNothing);
+      },
+    );
 
     testWidgets(
-        'shows unified data collection details dialog covering both Sentry and Aptabase and dismisses',
-        (tester) async {
-      useTallSurface(tester);
-      await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle();
+      'shows user-friendly privacy dialog without developer source links and dismisses',
+      (tester) async {
+        useTallSurface(tester);
+        await tester.pumpWidget(buildApp());
+        await tester.pumpAndSettle();
 
-      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+        final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
-      // 两个开关共用同一个「查看收集详情与脱敏源码」按钮。
-      final button = find.text(l10n.learnMoreDataCollection);
-      expect(button, findsOneWidget);
-      await tester.tap(button);
-      await tester.pumpAndSettle();
+        final button = find.text(l10n.learnMoreDataCollection);
+        expect(button, findsOneWidget);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
 
-      // Verify dialog is shown explaining both Sentry and Aptabase
-      expect(find.text(l10n.dataCollectionDisclosureTitle), findsOneWidget);
-      expect(find.text(l10n.dataCollectionDisclosureContent), findsOneWidget);
-      expect(find.text(l10n.viewSentrySourceCode), findsOneWidget);
-      expect(find.text(l10n.viewAptabaseSourceCode), findsOneWidget);
-      expect(find.text(l10n.viewPrivacyPolicy), findsOneWidget);
+        expect(find.text(l10n.dataCollectionDisclosureTitle), findsOneWidget);
+        expect(find.text(l10n.dataCollectionDisclosureContent), findsOneWidget);
+        expect(find.text(l10n.viewPrivacyPolicy), findsOneWidget);
+        expect(find.textContaining('脱敏源码'), findsNothing);
+        expect(find.textContaining('Aptabase 源码'), findsNothing);
 
-      // Dismiss dialog
-      await tester.tap(find.text(l10n.sentryDisclosureGotIt));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.sentryDisclosureGotIt));
+        await tester.pumpAndSettle();
 
-      expect(find.text(l10n.dataCollectionDisclosureTitle), findsNothing);
-    });
+        expect(find.text(l10n.dataCollectionDisclosureTitle), findsNothing);
+      },
+    );
 
     testWidgets('toggling telemetry switches preference value', (tester) async {
       useTallSurface(tester);
@@ -110,11 +127,9 @@ void main() {
       );
       expect(telemetryTile, findsOneWidget);
 
-      // Tap the switch
-      await tester.tap(find.descendant(
-        of: telemetryTile,
-        matching: find.byType(Switch),
-      ));
+      await tester.tap(
+        find.descendant(of: telemetryTile, matching: find.byType(Switch)),
+      );
       await tester.pumpAndSettle();
 
       expect(settingsService.telemetryEnabled, isTrue);

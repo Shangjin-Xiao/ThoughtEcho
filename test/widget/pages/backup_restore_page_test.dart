@@ -27,16 +27,19 @@ class _MockBackupService extends Mock implements BackupService {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('BackupRestorePage renders backup section correctly', (
+  testWidgets('BackupRestorePage renders backup section and expandable scope', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final mockBackupService = _MockBackupService();
 
     await tester.pumpWidget(
       MultiProvider(
-        providers: [
-          Provider<BackupService>.value(value: mockBackupService),
-        ],
+        providers: [Provider<BackupService>.value(value: mockBackupService)],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -48,7 +51,32 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('数据备份'), findsOneWidget);
-    expect(find.text('创建备份'), findsOneWidget);
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+
+    expect(find.text(l10n.dataBackup), findsOneWidget);
+    expect(find.text(l10n.createBackup), findsOneWidget);
+    expect(find.text(l10n.backupScopeTitle), findsOneWidget);
+    expect(find.text(l10n.backupScopeSubtitle), findsOneWidget);
+
+    // Scope details start collapsed.
+    expect(find.text(l10n.backupScopeIncludedHeader), findsNothing);
+    expect(find.text(l10n.backupScopeExcludedHeader), findsNothing);
+
+    // Expand scope card to verify included/excluded items.
+    await tester.tap(find.text(l10n.backupScopeTitle));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.backupScopeIncludedHeader), findsOneWidget);
+    expect(find.text(l10n.backupScopeIncludedNotes), findsOneWidget);
+    expect(find.text(l10n.backupScopeIncludedMedia), findsOneWidget);
+    expect(find.text(l10n.backupScopeIncludedSettings), findsOneWidget);
+    expect(find.text(l10n.backupScopeIncludedAiAnalyses), findsOneWidget);
+
+    expect(find.text(l10n.backupScopeExcludedHeader), findsOneWidget);
+    expect(find.text(l10n.backupScopeExcludedCredentials), findsOneWidget);
+    expect(find.text(l10n.backupScopeExcludedDrafts), findsOneWidget);
+    expect(find.text(l10n.backupScopeExcludedChatsAndMemory), findsOneWidget);
+    expect(find.text(l10n.backupScopeExcludedInsightsAndLogs), findsOneWidget);
+    expect(find.text(l10n.backupScopeRestoreModeNote), findsOneWidget);
   });
 }

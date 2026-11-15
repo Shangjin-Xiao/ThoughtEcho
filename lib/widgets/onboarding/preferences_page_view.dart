@@ -7,6 +7,7 @@ import '../../gen_l10n/app_localizations.dart';
 import '../../models/onboarding_models.dart';
 import '../../services/location_service.dart';
 import '../app_snackbar.dart';
+import '../data_collection_disclosure.dart';
 import '../../theme/theme_style.dart';
 import 'onboarding_section.dart';
 
@@ -42,18 +43,12 @@ class PreferencesPageView extends StatelessWidget {
           state: state,
           onPreferenceChanged: onPreferenceChanged,
         ),
-        _SentrySection(
-          state: state,
-          onPreferenceChanged: onPreferenceChanged,
-        ),
+        _SentrySection(state: state, onPreferenceChanged: onPreferenceChanged),
         _TelemetrySection(
           state: state,
           onPreferenceChanged: onPreferenceChanged,
         ),
-        _AiSection(
-          state: state,
-          onPreferenceChanged: onPreferenceChanged,
-        ),
+        _AiSection(state: state, onPreferenceChanged: onPreferenceChanged),
       ],
     );
   }
@@ -71,8 +66,10 @@ class _StartPageSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preference =
-        OnboardingConfig.preferenceByKey(context, 'defaultStartPage');
+    final preference = OnboardingConfig.preferenceByKey(
+      context,
+      'defaultStartPage',
+    );
     if (preference == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
@@ -174,8 +171,10 @@ class _LocationSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preference =
-        OnboardingConfig.preferenceByKey(context, 'locationService');
+    final preference = OnboardingConfig.preferenceByKey(
+      context,
+      'locationService',
+    );
     if (preference == null) return const SizedBox.shrink();
 
     final value = state.getPreference<bool>('locationService') ??
@@ -211,12 +210,16 @@ class _SentrySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preference =
-        OnboardingConfig.preferenceByKey(context, 'sentryEnabled');
+    final preference = OnboardingConfig.preferenceByKey(
+      context,
+      'sentryEnabled',
+    );
     if (preference == null) return const SizedBox.shrink();
 
     final value = state.getPreference<bool>('sentryEnabled') ??
         preference.defaultValue as bool;
+
+    final l10n = AppLocalizations.of(context);
 
     return OnboardingSection(
       icon: Icons.bug_report_outlined,
@@ -226,6 +229,7 @@ class _SentrySection extends StatelessWidget {
         value: value,
         onChanged: (newValue) => onPreferenceChanged('sentryEnabled', newValue),
       ),
+      child: ExpandablePrivacyDetail(detailText: l10n.settingsSentryDetail),
     );
   }
 }
@@ -242,10 +246,13 @@ class _TelemetrySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preference =
-        OnboardingConfig.preferenceByKey(context, 'telemetryEnabled');
+    final preference = OnboardingConfig.preferenceByKey(
+      context,
+      'telemetryEnabled',
+    );
     if (preference == null) return const SizedBox.shrink();
 
+    final l10n = AppLocalizations.of(context);
     final value = state.getPreference<bool>('telemetryEnabled') ??
         preference.defaultValue as bool;
 
@@ -258,6 +265,7 @@ class _TelemetrySection extends StatelessWidget {
         onChanged: (newValue) =>
             onPreferenceChanged('telemetryEnabled', newValue),
       ),
+      child: ExpandablePrivacyDetail(detailText: l10n.settingsTelemetryDetail),
     );
   }
 }
@@ -265,10 +273,7 @@ class _TelemetrySection extends StatelessWidget {
 /// AI 说明卡。只解释 AI 能做什么、需要自备服务，并提供一个「完成后带我去配置」的开关；
 /// 引导过程中不跳出去，跳出去就回不到这一屏了。
 class _AiSection extends StatelessWidget {
-  const _AiSection({
-    required this.state,
-    required this.onPreferenceChanged,
-  });
+  const _AiSection({required this.state, required this.onPreferenceChanged});
 
   final OnboardingState state;
   final void Function(String key, dynamic value) onPreferenceChanged;
@@ -299,7 +304,9 @@ class _AiSection extends StatelessWidget {
                 Checkbox(
                   value: checked,
                   onChanged: (value) => onPreferenceChanged(
-                      'openAiSettingsAfter', value ?? false),
+                    'openAiSettingsAfter',
+                    value ?? false,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Expanded(

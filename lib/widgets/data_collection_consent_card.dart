@@ -8,9 +8,9 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/data_collection_disclosure.dart';
 
-/// 数据收集开关合集卡：诊断数据与体验改进计划两个开关 + 一个共用的说明按钮。
+/// 体验与故障改进开关卡片：默认仅展示简短安心说明，点按后可展开详细条目。
 ///
-/// 反馈与联系页和更新说明页共用这一份，避免两处各放一个「查看收集详情」按钮。
+/// 反馈与联系页和更新说明页共用这一份，避免两处界面与文案漂移。
 class DataCollectionConsentCard extends StatelessWidget {
   const DataCollectionConsentCard({super.key});
 
@@ -51,6 +51,7 @@ class DataCollectionConsentCard extends StatelessWidget {
         builder: (context, settingsService, _) {
           return Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SwitchListTile(
                 title: Text(l10n.settingsSentryTitle),
@@ -72,6 +73,10 @@ class DataCollectionConsentCard extends StatelessWidget {
                   successMessage: l10n.sentryRestartHint,
                 ),
               ),
+              ExpandablePrivacyDetail(
+                detailText: l10n.settingsSentryDetail,
+                padding: const EdgeInsets.fromLTRB(56, 0, 16, 10),
+              ),
               const Divider(indent: 16, endIndent: 16, height: 1),
               SwitchListTile(
                 title: Text(l10n.settingsTelemetryTitle),
@@ -92,13 +97,17 @@ class DataCollectionConsentCard extends StatelessWidget {
                   logAction: 'DataCollectionConsent.setTelemetryEnabled',
                 ),
               ),
+              ExpandablePrivacyDetail(
+                detailText: l10n.settingsTelemetryDetail,
+                padding: const EdgeInsets.fromLTRB(56, 0, 16, 4),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton.icon(
-                      icon: const Icon(Icons.info_outline, size: 16),
+                      icon: const Icon(Icons.shield_outlined, size: 16),
                       label: Text(l10n.learnMoreDataCollection),
                       style: TextButton.styleFrom(
                         visualDensity: VisualDensity.compact,
