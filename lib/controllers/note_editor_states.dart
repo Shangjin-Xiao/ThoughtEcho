@@ -20,7 +20,6 @@ class NoteEditorState extends ChangeNotifier {
         _controller = quill.QuillController.basic() {
     _savedDocumentDelta = _controller.document.toDelta();
     _savedDocumentLength = _getDeltaCharacterLength(_savedDocumentDelta!);
-    _lastKnownDocDelta = _savedDocumentDelta;
     _baselineWindowDelta = _savedDocumentDelta;
     _subscribeToDocChanges();
   }
@@ -48,7 +47,6 @@ class NoteEditorState extends ChangeNotifier {
   Delta? _savedDocumentDelta;
   int _savedDocumentLength = 0;
   Delta? _baselineWindowDelta;
-  Delta? _lastKnownDocDelta;
 
   static int _getDeltaCharacterLength(Delta delta) {
     int len = 0;
@@ -107,7 +105,6 @@ class NoteEditorState extends ChangeNotifier {
     final delta = _controller.document.toDelta();
     _savedDocumentDelta = delta;
     _savedDocumentLength = _getDeltaCharacterLength(delta);
-    _lastKnownDocDelta = delta;
   }
 
   void markClean() {
@@ -117,61 +114,49 @@ class NoteEditorState extends ChangeNotifier {
     final delta = _controller.document.toDelta();
     _savedDocumentDelta = delta;
     _savedDocumentLength = _getDeltaCharacterLength(delta);
-    _lastKnownDocDelta = delta;
   }
 
+  StreamSubscription<quill.DocChange>? _docChangeSubscription;
+
   void _subscribeToDocChanges() {
-    _controller.addListener(_onDocChanged);
+    _docChangeSubscription = _controller.document.changes.listen(_onDocChanged);
   }
 
   void _unsubscribeFromDocChanges() {
-    _controller.removeListener(_onDocChanged);
+    _docChangeSubscription?.cancel();
+    _docChangeSubscription = null;
   }
 
-  void _onDocChanged() {
+  void _onDocChanged(quill.DocChange change) {
     if (_disposed) return;
+    _documentVersion++;
     final currentLength = _controller.document.length;
 
     if (_isDirty) {
       if (currentLength != _savedDocumentLength) {
-        _documentVersion++;
         return;
       }
       final currentDelta = _controller.document.toDelta();
       final savedDelta = _savedDocumentDelta;
       if (savedDelta != null && currentDelta == savedDelta) {
-        _lastKnownDocDelta = currentDelta;
-        _documentVersion++;
         _isDirty = false;
         _savedDocumentVersion = _documentVersion;
         notifyListeners();
-        return;
       }
-      if (_lastKnownDocDelta != null && _lastKnownDocDelta == currentDelta) {
-        return;
-      }
-      _lastKnownDocDelta = currentDelta;
-      _documentVersion++;
       return;
     }
 
     if (currentLength != _savedDocumentLength) {
-      _documentVersion++;
       _isDirty = true;
       notifyListeners();
       return;
     }
 
     final currentDelta = _controller.document.toDelta();
-    if (_lastKnownDocDelta != null && _lastKnownDocDelta == currentDelta) {
-      return;
-    }
-    _lastKnownDocDelta = currentDelta;
     final savedDelta = _savedDocumentDelta;
     if (savedDelta != null && currentDelta == savedDelta) {
       return;
     }
-    _documentVersion++;
     _isDirty = true;
     notifyListeners();
   }
@@ -218,7 +203,6 @@ class NoteEditorState extends ChangeNotifier {
       _controller.addListener(draftChangeListener);
     }
     _subscribeToDocChanges();
-    _lastKnownDocDelta = _controller.document.toDelta();
 
     if (savedDocumentDelta != null) {
       _savedDocumentDelta = savedDocumentDelta;
