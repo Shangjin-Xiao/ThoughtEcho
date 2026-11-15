@@ -385,10 +385,8 @@ void main() {
       );
       expect(cardShellBoundary, findsNothing);
 
-      final animatedSizeWidget =
-          tester.widget<AnimatedSize>(find.byType(AnimatedSize));
-      expect(animatedSizeWidget.clipBehavior, equals(Clip.none));
-      expect(animatedSizeWidget.child, isA<RepaintBoundary>());
+      // 静态展开卡片直出 RepaintBoundary，不常驻挂载 AnimatedSize 动画机件
+      expect(find.byType(AnimatedSize), findsNothing);
     });
 
     testWidgets('选择态卡片在 AnimatedContainer 中包含 RepaintBoundary 隔离外壳且避免外层重复嵌套',
@@ -1011,10 +1009,8 @@ void main() {
 
       expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
 
-      final animatedSizeBeforeToggle =
-          tester.widget<AnimatedSize>(find.byType(AnimatedSize));
-      expect(animatedSizeBeforeToggle.clipBehavior, equals(Clip.none));
-      expect(animatedSizeBeforeToggle.child, isA<RepaintBoundary>());
+      // 静态展示时未激活尺寸过渡，不挂载 AnimatedSize
+      expect(find.byType(AnimatedSize), findsNothing);
 
       final contentGesture = find.byKey(
         const ValueKey('quote_item.double_tap_region'),
@@ -1024,23 +1020,30 @@ void main() {
       await tester.pump(const Duration(milliseconds: 40));
       await tester.tap(contentGesture);
       await tester.pump();
+
+      // 双击第一阶段：激活过渡守卫，挂载 AnimatedSize 捕获起始尺寸
+      final animatedSizeDuringToggle =
+          tester.widget<AnimatedSize>(find.byType(AnimatedSize));
+      expect(animatedSizeDuringToggle.clipBehavior, equals(Clip.none));
+      expect(animatedSizeDuringToggle.child, isA<RepaintBoundary>());
+
+      // 进入下一帧回调，通知展开
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(toggled, isTrue);
 
-      final animatedSizeAfterToggle =
-          tester.widget<AnimatedSize>(find.byType(AnimatedSize));
-      expect(animatedSizeAfterToggle.clipBehavior, equals(Clip.none));
-      expect(animatedSizeAfterToggle.child, isA<RepaintBoundary>());
+      // 过渡结束后自动卸载 AnimatedSize
+      expect(find.byType(AnimatedSize), findsNothing);
     });
 
-    testWidgets('折叠与展开状态下正文子树 AnimatedSize 均使用 Clip.none 且包裹 RepaintBoundary',
-        (tester) async {
+    testWidgets('静态折叠与展开卡片不挂载 AnimatedSize，双击过渡期执行补间并在完成后自动卸载', (tester) async {
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),
         editSource: 'inline',
       );
 
+      // 1. 验证静态折叠与展开态均直出 RepaintBoundary，不常驻 AnimatedSize
       for (final isExpanded in [false, true]) {
         await tester.pumpWidget(
           ChangeNotifierProvider<SettingsService>.value(
@@ -1070,11 +1073,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final animatedSizeFinder = find.byType(AnimatedSize);
-        expect(animatedSizeFinder, findsOneWidget);
-        final animatedSize = tester.widget<AnimatedSize>(animatedSizeFinder);
-        expect(animatedSize.clipBehavior, equals(Clip.none));
-        expect(animatedSize.child, isA<RepaintBoundary>());
+        // 静态卡片不挂载 AnimatedSize
+        expect(find.byType(AnimatedSize), findsNothing);
 
         if (isExpanded) {
           final animatedContainer =
@@ -1099,6 +1099,152 @@ void main() {
           expect(cardShellBoundary, findsWidgets);
         }
       }
+
+      // 2. 真实双击展开与收起交互：两阶段调度、尺寸过渡补间与 onEnd 自动卸载
+      bool currentExpanded = false;
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: SingleChildScrollView(
+                child: StatefulBuilder(
+                  builder: (context, setState) {
+                    return QuoteItemWidget(
+                      quote: quote,
+                      tagMap: const {},
+                      isExpanded: currentExpanded,
+                      onToggleExpanded: (val) {
+                        setState(() {
+                          currentExpanded = val;
+                        });
+                      },
+                      onEdit: () {},
+                      onDelete: () {},
+                      onAskAI: () {},
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AnimatedSize), findsNothing);
+      final initialHeight = tester.getSize(find.byType(QuoteItemWidget)).height;
+
+      final contentGesture = find.byKey(
+        const ValueKey('quote_item.double_tap_region'),
+      );
+
+      // 第一阶段：双击后挂载 AnimatedSize 并捕获起始尺寸
+      await tester.tap(contentGesture);
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(contentGesture);
+      await tester.pump();
+
+      expect(find.byType(AnimatedSize), findsOneWidget);
+      final animatedSize =
+          tester.widget<AnimatedSize>(find.byType(AnimatedSize));
+      expect(animatedSize.clipBehavior, equals(Clip.none));
+      expect(animatedSize.child, isA<RepaintBoundary>());
+
+      // 第二阶段：展开状态生效，正文尺寸开始补间过渡
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(find.byType(AnimatedSize), findsOneWidget);
+
+      // 动画完成后通过 onEnd 回调自动卸载 AnimatedSize
+      await tester.pumpAndSettle();
+      expect(currentExpanded, isTrue);
+      expect(find.byType(AnimatedSize), findsNothing);
+      final expandedHeight =
+          tester.getSize(find.byType(QuoteItemWidget)).height;
+      expect(expandedHeight, greaterThan(initialHeight));
+
+      // 3. 快速连续双击边缘场景：过渡中反向折叠平滑过渡
+      await tester.tap(contentGesture);
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(contentGesture);
+      await tester.pump();
+      expect(find.byType(AnimatedSize), findsOneWidget);
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      // 动画中途再次双击反向收回
+      await tester.tap(contentGesture);
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(contentGesture);
+      await tester.pump();
+
+      await tester.pumpAndSettle();
+      expect(find.byType(AnimatedSize), findsNothing);
+    });
+
+    testWidgets('外部直接变更 isExpanded 时短时激活过渡守卫并在下一帧安全卸载', (tester) async {
+      final quote = _buildQuote(
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+      );
+
+      bool expanded = false;
+      late StateSetter parentSetState;
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  parentSetState = setState;
+                  return QuoteItemWidget(
+                    quote: quote,
+                    tagMap: const {},
+                    isExpanded: expanded,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(AnimatedSize), findsNothing);
+
+      // 外部更新 isExpanded
+      parentSetState(() {
+        expanded = true;
+      });
+      await tester.pump();
+      // 在当帧短时激活过渡守卫
+      expect(find.byType(AnimatedSize), findsOneWidget);
+
+      // 下一帧 postFrameCallback 之后安全卸载
+      await tester.pumpAndSettle();
+      expect(find.byType(AnimatedSize), findsNothing);
     });
 
     testWidgets('双击时显示高亮反馈', (tester) async {

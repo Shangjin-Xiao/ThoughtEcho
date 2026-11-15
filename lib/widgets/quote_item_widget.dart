@@ -585,6 +585,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   Animation<double>? _scaleAnimation;
   Animation<double>? _highlightProgress;
 
+  /// 正文尺寸折叠/展开过渡态守卫。
+  ///
+  /// 遵循 `lib/widgets/AGENTS.md` 规范：静态卡片一律不挂动画机件。
+  /// 仅在双击或外部驱动展开/收起过渡期间挂载 [AnimatedSize]，动画完成触发
+  /// [onEnd] 回调后复位并卸载，消除静态展示与列表滑动时的持续布局与 Ticker 开销。
+  bool _isSizeTransitionActive = false;
+
   void _ensureDoubleTapController() {
     if (_doubleTapController != null) return;
 
@@ -630,8 +637,25 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   }
 
   @override
+  void didUpdateWidget(QuoteItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isExpanded != widget.isExpanded && !_isSizeTransitionActive) {
+      _isSizeTransitionActive = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_isSizeTransitionActive) {
+          setState(() {
+            _isSizeTransitionActive = false;
+          });
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _doubleTapController?.dispose();
+    _isSizeTransitionActive = false;
     super.dispose();
   }
 
@@ -670,7 +694,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     if (controller == null) {
       // 这张卡片第一次被双击：现在才建动画机件，并借这次 setState 把
       // AnimatedBuilder 插进树里（见 [_ensureDoubleTapController]）。
-      setState(_ensureDoubleTapController);
+      _ensureDoubleTapController();
       _doubleTapController!.forward(from: 0.0);
     } else {
       controller.stop();
@@ -679,7 +703,32 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     Feedback.forTap(context);
 
-    widget.onToggleExpanded(!isExpanded);
+    if (_isSizeTransitionActive) {
+      // 正在过渡中再次双击：AnimatedSize 已挂载，直接应用反向状态以平滑过渡
+      if (controller == null) {
+        setState(() {});
+      }
+      widget.onToggleExpanded(!isExpanded);
+    } else {
+      // 第一阶段：激活过渡守卫挂载 AnimatedSize，捕获起始尺寸
+      setState(() {
+        _isSizeTransitionActive = true;
+      });
+      // 第二阶段：在下一帧应用展开/收起状态，触发平滑尺寸过渡
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.onToggleExpanded(!isExpanded);
+        // 安全兜底：如果外部未响应展开状态变更，在下一帧安全复位守卫
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (_isSizeTransitionActive && widget.isExpanded == isExpanded) {
+            setState(() {
+              _isSizeTransitionActive = false;
+            });
+          }
+        });
+      });
+    }
   }
 
   bool _needsExpansionForLayout(
@@ -1005,10 +1054,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             child: child,
           );
 
-    if (!canToggle) {
-      // 不可展开的卡片正文高度是静态的，没有任何东西需要 AnimatedSize 去补间；
-      // 它自带一个 Ticker 和一个额外的 RenderObject，白挂在每张卡片上。
-      return content;
+    if (!_isSizeTransitionActive || !canToggle) {
+      // 未处于过渡态或不可展开的卡片直接返回静态 RepaintBoundary 隔离内容；
+      // 避免静态卡片与列表滑动时底层 RenderAnimatedSize 常驻导致的持续尺寸对比与 Ticker 开销。
+      return RepaintBoundary(child: content);
     }
 
     return AnimatedSize(
@@ -1016,8 +1065,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       curve: QuoteItemWidget._expandCurve,
       alignment: Alignment.topLeft,
       clipBehavior: Clip.none,
+      onEnd: _handleSizeTransitionEnd,
       child: RepaintBoundary(child: content),
     );
+  }
+
+  void _handleSizeTransitionEnd() {
+    if (!mounted) return;
+    if (_isSizeTransitionActive) {
+      setState(() {
+        _isSizeTransitionActive = false;
+      });
+    }
   }
 
   /// 三个动画对象由 [_ensureDoubleTapController] 一次性建出，调用方传进来，
