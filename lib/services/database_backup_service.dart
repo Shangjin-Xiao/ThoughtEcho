@@ -1079,10 +1079,11 @@ class DatabaseBackupService {
         }
 
         // 提取并解析 tag_ids (字符串或列表)，稍后写入 quote_tags
-        final hasTagIdsField = quoteData.containsKey('tag_ids');
+        final rawTagIds = quoteData['tag_ids'];
+        final hasTagIdsField = rawTagIds is String || rawTagIds is List;
         List<String> parsedTagIds = [];
-        if (hasTagIdsField) {
-          final raw = quoteData['tag_ids'];
+        if (quoteData.containsKey('tag_ids')) {
+          final raw = rawTagIds;
           if (raw is String) {
             if (raw.isNotEmpty) {
               parsedTagIds =

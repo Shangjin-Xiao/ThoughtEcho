@@ -612,7 +612,7 @@ void main() {
         await pumpUi(tester);
 
         expect(find.byType(AlertDialog), findsOneWidget);
-        final endpointFinder = find.text('fe80::1234:5678:9abc:def0:53320');
+        final endpointFinder = find.text('[fe80::1234:5678:9abc:def0]:53320');
         expect(endpointFinder, findsOneWidget);
         expect(tester.getSize(endpointFinder).height, greaterThan(28));
         expect(tester.takeException(), isNull);

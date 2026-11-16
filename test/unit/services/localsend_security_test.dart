@@ -1365,11 +1365,17 @@ void main() {
         discoveryMethods: const {},
       );
 
+      final progressReports = <int>[];
       final sid = await provider.startSession(
         target: target,
         files: [sourceFile],
+        onProgress: (sent, _) => progressReports.add(sent),
       );
 
+      for (int idx = 1; idx < progressReports.length; idx++) {
+        expect(progressReports[idx],
+            greaterThanOrEqualTo(progressReports[idx - 1]));
+      }
       expect(approvalCalls, 2);
       expect(uploadHttpAttempts, 2);
       expect(receivedSenderPorts, [53321, 53321]);

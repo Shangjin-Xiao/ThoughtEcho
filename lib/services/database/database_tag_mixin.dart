@@ -320,14 +320,23 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
     final db = database;
 
     await db.transaction((txn) async {
-      final nowIso = DateTime.now().toUtc().toIso8601String();
+      final nowUtc = DateTime.now().toUtc();
+
+      String nextModifiedFor(String? existingTs) {
+        final parsed =
+            existingTs != null ? DateTime.tryParse(existingTs)?.toUtc() : null;
+        if (parsed != null && !parsed.isBefore(nowUtc)) {
+          return parsed.add(const Duration(milliseconds: 1)).toIso8601String();
+        }
+        return nowUtc.toIso8601String();
+      }
 
       // 1. 检查是否有笔记使用此标签（category_id 或 quote_tags）
       final quotesUsingCategory = await txn.query(
         'quotes',
         where: 'category_id = ?',
         whereArgs: [id],
-        columns: ['id'],
+        columns: ['id', 'last_modified'],
       );
       final quoteTagRows = await txn.query(
         'quote_tags',
@@ -345,17 +354,24 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
           if (row['quote_id'] != null) row['quote_id'].toString(),
       }.difference(categoryQuoteIds).toList();
 
-      // 2. 清理使用此标签的笔记的category_id字段并推进 last_modified 以触发同步传播
+      // 2. 清理使用此标签的笔记的category_id字段并单调推进 last_modified 以触发同步传播
       if (quotesUsingCategory.isNotEmpty) {
-        await txn.update(
-          'quotes',
-          {
-            'category_id': null,
-            'last_modified': nowIso,
-          },
-          where: 'category_id = ?',
-          whereArgs: [id],
-        );
+        final catBatch = txn.batch();
+        for (final row in quotesUsingCategory) {
+          final qId = row['id']?.toString();
+          if (qId == null) continue;
+          catBatch.update(
+            'quotes',
+            {
+              'category_id': null,
+              'last_modified':
+                  nextModifiedFor(row['last_modified']?.toString()),
+            },
+            where: 'id = ?',
+            whereArgs: [qId],
+          );
+        }
+        await catBatch.commit(noResult: true);
         logDebug('已清理 ${quotesUsingCategory.length} 条笔记的标签关联');
       }
 
@@ -370,7 +386,7 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         logDebug('已删除 $deletedTagRelations 条标签关联记录');
       }
 
-      // 推进仅通过 quote_tags 关联该标签的笔记 last_modified，确保 LWW 同步能感知删标签
+      // 推进仅通过 quote_tags 关联该标签的笔记 last_modified，确保 LWW 同步能感知删标签且不回退已有时间戳
       const int chunkSize = 400;
       for (int i = 0; i < tagOnlyQuoteIds.length; i += chunkSize) {
         final end = (i + chunkSize < tagOnlyQuoteIds.length)
@@ -378,12 +394,26 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
             : tagOnlyQuoteIds.length;
         final chunk = tagOnlyQuoteIds.sublist(i, end);
         final placeholders = List.filled(chunk.length, '?').join(',');
-        await txn.update(
+        final rows = await txn.query(
           'quotes',
-          {'last_modified': nowIso},
+          columns: ['id', 'last_modified'],
           where: 'id IN ($placeholders)',
           whereArgs: chunk,
         );
+        final tagBatch = txn.batch();
+        for (final row in rows) {
+          final qId = row['id']?.toString();
+          if (qId == null) continue;
+          tagBatch.update(
+            'quotes',
+            {
+              'last_modified': nextModifiedFor(row['last_modified']?.toString())
+            },
+            where: 'id = ?',
+            whereArgs: [qId],
+          );
+        }
+        await tagBatch.commit(noResult: true);
       }
 
       // 4. 最后删除标签本身

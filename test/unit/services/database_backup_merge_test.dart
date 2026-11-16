@@ -945,6 +945,46 @@ void main() {
       expect(remainingTags, isEmpty);
     });
 
+    test('远程更新包含非字符串/非列表的 tag_ids: null 时，不误删本地 quote_tags', () async {
+      await db.insert('categories', {
+        'id': 'cat_keep_null',
+        'name': 'Keep Tag',
+        'last_modified': '2026-01-01T00:00:00.000Z',
+      });
+      await db.insert('quotes', {
+        'id': 'quote_tag_null',
+        'content': 'Tagged quote',
+        'date': '2026-01-01T00:00:00.000Z',
+        'last_modified': '2026-01-01T00:00:00.000Z',
+        'category_id': 'cat_keep_null',
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'quote_tag_null',
+        'tag_id': 'cat_keep_null',
+      });
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [
+          {
+            'id': 'quote_tag_null',
+            'content': 'Tagged quote updated',
+            'date': '2026-01-01T00:00:00.000Z',
+            'last_modified': '2026-01-02T00:00:00.000Z',
+            'tag_ids': null,
+          },
+        ],
+      });
+
+      expect(report.updatedQuotes, 1);
+      final remainingTags = await db.query(
+        'quote_tags',
+        where: 'quote_id = ?',
+        whereArgs: ['quote_tag_null'],
+      );
+      expect(remainingTags, hasLength(1));
+    });
+
     test('全量恢复 (clearExisting: true) 同样拒绝超前24小时的未来 tombstone', () async {
       final now = DateTime.now().toUtc();
       final futureDeleteTs =

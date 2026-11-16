@@ -265,7 +265,9 @@ class LWWDecisionMaker {
       );
     }
 
-    if (localIsExcessiveFuture && LWWUtils.isValidTimestamp(remoteTimestamp)) {
+    if (localIsExcessiveFuture &&
+        LWWUtils.isValidTimestamp(remoteTimestamp) &&
+        !LWWUtils.isDefaultTimestamp(remoteTimestamp)) {
       return LWWMergeDecision(
         decision: LWWDecision.useRemote,
         reason: 'Local时间戳超前超过24小时，允许正常Remote数据覆盖 ($localTimestamp)',

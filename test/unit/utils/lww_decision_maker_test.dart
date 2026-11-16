@@ -140,6 +140,13 @@ void main() {
           now: refNow,
         );
         expect(invalidRemote.decision, LWWDecision.useLocal);
+
+        final defaultFallbackRemote = LWWDecisionMaker.makeDecision(
+          localTimestamp: futureLocal,
+          remoteTimestamp: '1970-01-01T00:00:00.000Z',
+          now: refNow,
+        );
+        expect(defaultFallbackRemote.decision, LWWDecision.useLocal);
       },
     );
   });

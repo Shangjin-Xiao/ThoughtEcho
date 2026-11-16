@@ -1164,10 +1164,15 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                                 senderFingerprint != null &&
                                                     senderFingerprint
                                                         .isNotEmpty;
+                                            final formattedIp = (hasSenderIp &&
+                                                    senderIp.contains(':') &&
+                                                    !senderIp.startsWith('['))
+                                                ? '[$senderIp]'
+                                                : senderIp;
                                             final endpoint = hasSenderIp
                                                 ? ((senderPort != null &&
                                                         senderPort > 0)
-                                                    ? '$senderIp:$senderPort'
+                                                    ? '$formattedIp:$senderPort'
                                                     : senderIp)
                                                 : null;
                                             return Column(

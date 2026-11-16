@@ -147,6 +147,8 @@ class LocalSendProvider {
       },
     );
 
+    _throwIfCancelled(sessionId);
+
     final url = ApiRoute.prepareUpload.target(target);
     logInfo(
       'send_prepare target=${target.ip}:${target.port} url=$url session=$sessionId',
@@ -254,6 +256,7 @@ class LocalSendProvider {
         totalSize += sizes.fold<int>(0, (sum, size) => sum + size);
       }
       int completedBytes = 0;
+      int maxReportedBytes = 0;
       for (int i = 0; i < initialSession.files.length; i++) {
         _throwIfCancelled(sessionId);
         final currentSession = _sessions[sessionId] ?? initialSession;
@@ -286,10 +289,14 @@ class LocalSendProvider {
           fileSize,
           onAttemptProgress: (attemptSent) {
             if (onProgress != null) {
-              onProgress(
-                completedBytes + attemptSent,
-                totalSize == 0 ? 1 : totalSize,
-              );
+              final nextReported = completedBytes + attemptSent;
+              if (nextReported > maxReportedBytes) {
+                maxReportedBytes = nextReported;
+                onProgress(
+                  maxReportedBytes,
+                  totalSize == 0 ? 1 : totalSize,
+                );
+              }
             }
           },
         );
