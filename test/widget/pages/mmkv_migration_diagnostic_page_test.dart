@@ -144,8 +144,43 @@ void main() {
         find.byKey(const Key('mmkv_key_tile_custom_data_directory_path')),
         findsOneWidget,
       );
+    },
+  );
 
-      // Tap re-run migration button
+  testWidgets(
+    'MmkvMigrationDiagnosticPage re-runs migration and shows localized feedback',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'paper')
+        ..writeBool('app_installed_v2', true);
+      File(mmkvPath).writeAsBytesSync(encoder.toFileBytes(minTotalSize: 4096));
+      File('$mmkvPath.crc').writeAsBytesSync(encoder.toCrcBytes());
+
+      AppPreferencesService().configureForTesting(
+        candidateMmkvFiles: [mmkvPath],
+      );
+      await tester.runAsync(() async {
+        await AppPreferencesService().init();
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('fr'),
+          home: MmkvMigrationDiagnosticPage(),
+        ),
+      );
+      await waitForLoading(tester);
+
       final rerunButton = find.byKey(
         const Key('mmkv_diagnostic_rerun_migration_button'),
       );
@@ -155,18 +190,66 @@ void main() {
       await waitForLoading(tester);
 
       expect(
-        find.byKey(const Key('mmkv_diagnostic_overview_card')),
-        findsOneWidget,
-      );
-      expect(
         find.byKey(const Key('mmkv_diagnostic_summary_card')),
         findsOneWidget,
       );
-      expect(find.textContaining('100% 一致 ('), findsOneWidget);
-      expect(find.textContaining('sk-secret-12345'), findsNothing);
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.text('Migration relancée et rapport actualisé'),
+        findsOneWidget,
+      );
+      expect(find.text('Résumé de cohérence du stockage'), findsOneWidget);
+    },
+  );
 
-      // Tap copy diagnostic JSON button
+  testWidgets(
+    'MmkvMigrationDiagnosticPage copies redacted diagnostic JSON to clipboard',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      String? copiedClipboardText;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (
+        MethodCall methodCall,
+      ) async {
+        if (methodCall.method == 'Clipboard.setData') {
+          copiedClipboardText = (methodCall.arguments
+              as Map<Object?, Object?>)['text'] as String?;
+          return null;
+        }
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()..writeString('theme_style', 'paper');
+      File(mmkvPath).writeAsBytesSync(encoder.toFileBytes(minTotalSize: 4096));
+      File('$mmkvPath.crc').writeAsBytesSync(encoder.toCrcBytes());
+
+      AppPreferencesService().configureForTesting(
+        candidateMmkvFiles: [mmkvPath],
+      );
+      await tester.runAsync(() async {
+        await AppPreferencesService().init();
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('zh'),
+          home: MmkvMigrationDiagnosticPage(),
+        ),
+      );
+      await waitForLoading(tester);
+
       final copyJsonButton = find.byKey(
         const Key('mmkv_diagnostic_copy_json_action_button'),
       );

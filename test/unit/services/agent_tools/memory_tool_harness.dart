@@ -31,9 +31,11 @@ class MemoryToolHarness {
   }
 
   Future<void> setUp() async {
-    await AppPreferencesService().clear();
     SharedPreferences.resetStatic();
     SharedPreferences.setMockInitialValues({});
+    AppPreferencesService().resetForTesting();
+    await AppPreferencesService().init();
+    await AppPreferencesService().clear();
     settingsService = SettingsService(await SharedPreferences.getInstance());
     memory = AgentMemoryService(
       settingsService: settingsService,

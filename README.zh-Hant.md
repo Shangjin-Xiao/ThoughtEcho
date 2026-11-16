@@ -66,7 +66,7 @@
 
 ## 🌟 為什麼選擇 ThoughtEcho？
 
-- 🔒 **本機優先與隱私保障 (Local-First & Privacy)**：100% 資料自主掌控，採用 SQLite、SharedPreferences 與 flutter_secure_storage 於本機安全儲存。敏感筆記支援隱藏標籤並可透過生物辨識（指紋 / 臉部辨識 Face ID）防護解鎖。無任何追蹤行為，絕無強制雲端綁定。
+- 🔒 **本機優先與隱私保障 (Local-First & Privacy)**：100% 資料自主掌控，採用 SQLite 與 SharedPreferences 於本機儲存，金鑰等敏感資料則透過 flutter_secure_storage 加密保存。敏感筆記支援隱藏標籤並可透過生物辨識（指紋 / 臉部辨識 Face ID）防護解鎖。無任何追蹤行為，絕無強制雲端綁定。
 - 💡 **Thoughter 智慧代理與長期記憶 (Thoughter AI Agent & Long-Term Memory)**：多服務商 AI 架構（支援 OpenAI、DeepSeek、Ollama、Gemini、Claude、OpenRouter、SiliconFlow 等）。內建具備跨對話長期記憶庫的自主 Thoughter Agent，深度理解你的寫作風格與思考習慣。
 - ✍️ **豐富多媒體與情境感知 (Rich Multimedia & Context Capture)**：Quill 富文本排版，支援圖片、音訊與影片附件。自動感知並記錄地理逆編碼位置、即時天氣與不同時段的靈感當下情境。
 - 📊 **週期洞察與精美卡片 (Periodic Insights & Card Generation)**：自動生成每週與每月深度反思洞察、年度回顧報告、思考脈絡與寫作趨勢分析，並支援一鍵生成 AI 名言精美分享卡片。

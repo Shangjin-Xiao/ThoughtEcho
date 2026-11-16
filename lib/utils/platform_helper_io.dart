@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
@@ -54,6 +55,10 @@ class PlatformHelper {
     }
   }
 
+  static final Map<String, Future<void>> _archiveLocks =
+      <String, Future<void>>{};
+  static int _archiveStageSeq = 0;
+
   static Future<bool> _deleteIfExists(File file, {required bool syncIo}) async {
     if (syncIo) {
       if (!file.existsSync()) {
@@ -69,17 +74,112 @@ class PlatformHelper {
     return true;
   }
 
-  static Future<void> _renameFile(
-    File src,
+  static Future<bool> _archiveSiblingFile(
+    String srcPath,
     String destPath, {
     required bool syncIo,
   }) async {
-    await _deleteIfExists(File(destPath), syncIo: syncIo);
-    if (syncIo) {
-      src.renameSync(destPath);
-      return;
+    final srcFile = File(srcPath);
+    final srcExists = syncIo ? srcFile.existsSync() : await srcFile.exists();
+    if (!srcExists) {
+      return false;
     }
-    await src.rename(destPath);
+
+    // Atomically claim the source file via a unique staging name before touching
+    // any existing destination backup, so concurrent isolates can never delete
+    // another isolate's newly archived `.migrated.bak` when the source is gone.
+    final seq = ++_archiveStageSeq;
+    final stagePath = '$srcPath.archiving.$pid.$seq';
+    final File stagedFile;
+    try {
+      stagedFile = syncIo
+          ? srcFile.renameSync(stagePath)
+          : await srcFile.rename(stagePath);
+    } on PathNotFoundException {
+      return false;
+    }
+
+    try {
+      await _deleteIfExists(File(destPath), syncIo: syncIo);
+      if (syncIo) {
+        stagedFile.renameSync(destPath);
+      } else {
+        await stagedFile.rename(destPath);
+      }
+      return true;
+    } catch (e) {
+      // Best-effort restore of the staged source if moving into destPath failed.
+      try {
+        final stillStaged =
+            syncIo ? stagedFile.existsSync() : await stagedFile.exists();
+        final srcBackExists =
+            syncIo ? srcFile.existsSync() : await srcFile.exists();
+        if (stillStaged && !srcBackExists) {
+          if (syncIo) {
+            stagedFile.renameSync(srcPath);
+          } else {
+            await stagedFile.rename(srcPath);
+          }
+        }
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
+  static Future<T> _withArchiveFileLock<T>(
+    String basePath, {
+    required bool syncIo,
+    required Future<T> Function() action,
+  }) async {
+    final normalized = p.normalize(basePath);
+    final previous = _archiveLocks[normalized] ?? Future<void>.value();
+    final turnCompleter = Completer<void>();
+    _archiveLocks[normalized] = turnCompleter.future;
+
+    try {
+      await previous;
+    } catch (_) {}
+
+    final lockFile = File('$normalized.migration.lock');
+    var lockAcquired = false;
+    try {
+      for (var attempt = 0; attempt < 50; attempt++) {
+        try {
+          lockFile.createSync(recursive: true, exclusive: true);
+          lockAcquired = true;
+          break;
+        } on FileSystemException {
+          try {
+            if (lockFile.existsSync()) {
+              final modified = lockFile.statSync().modified;
+              if (DateTime.now().difference(modified) >
+                  const Duration(seconds: 30)) {
+                lockFile.deleteSync();
+                continue;
+              }
+            }
+          } catch (_) {}
+          if (syncIo) {
+            // In FLUTTER_TEST FakeAsync, avoid unbounded async timer stalls.
+            break;
+          }
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+      }
+      return await action();
+    } finally {
+      if (lockAcquired) {
+        try {
+          if (lockFile.existsSync()) {
+            lockFile.deleteSync();
+          }
+        } catch (_) {}
+      }
+      if (identical(_archiveLocks[normalized], turnCompleter.future)) {
+        _archiveLocks.remove(normalized);
+      }
+      turnCompleter.complete();
+    }
   }
 
   /// Archives a migrated `mmkv.default` file (and its `.crc` sibling) to
@@ -90,60 +190,76 @@ class PlatformHelper {
   }) async {
     try {
       final syncIo = Platform.environment.containsKey('FLUTTER_TEST');
+      final basePath = mmkvFilePath.endsWith('.migrated.bak')
+          ? mmkvFilePath.substring(
+              0,
+              mmkvFilePath.length - '.migrated.bak'.length,
+            )
+          : mmkvFilePath;
 
-      if (mmkvFilePath.endsWith('.migrated.bak')) {
-        if (!wipePlaintext) {
-          return false;
-        }
-        var anyDeleted = false;
-        if (await _deleteIfExists(File(mmkvFilePath), syncIo: syncIo)) {
-          anyDeleted = true;
-        }
-        if (await _deleteIfExists(File('$mmkvFilePath.crc'), syncIo: syncIo)) {
-          anyDeleted = true;
-        }
-        return anyDeleted;
-      }
+      return await _withArchiveFileLock<bool>(
+        basePath,
+        syncIo: syncIo,
+        action: () async {
+          if (mmkvFilePath.endsWith('.migrated.bak')) {
+            if (!wipePlaintext) {
+              return false;
+            }
+            var anyDeleted = false;
+            if (await _deleteIfExists(File(mmkvFilePath), syncIo: syncIo)) {
+              anyDeleted = true;
+            }
+            if (await _deleteIfExists(
+              File('$mmkvFilePath.crc'),
+              syncIo: syncIo,
+            )) {
+              anyDeleted = true;
+            }
+            return anyDeleted;
+          }
 
-      if (wipePlaintext) {
-        var anyDeleted = false;
-        if (await _deleteIfExists(File(mmkvFilePath), syncIo: syncIo)) {
-          anyDeleted = true;
-        }
-        if (await _deleteIfExists(File('$mmkvFilePath.crc'), syncIo: syncIo)) {
-          anyDeleted = true;
-        }
-        if (await _deleteIfExists(
-          File('$mmkvFilePath.migrated.bak'),
-          syncIo: syncIo,
-        )) {
-          anyDeleted = true;
-        }
-        if (await _deleteIfExists(
-          File('$mmkvFilePath.migrated.bak.crc'),
-          syncIo: syncIo,
-        )) {
-          anyDeleted = true;
-        }
-        return anyDeleted;
-      }
+          if (wipePlaintext) {
+            var anyDeleted = false;
+            if (await _deleteIfExists(File(mmkvFilePath), syncIo: syncIo)) {
+              anyDeleted = true;
+            }
+            if (await _deleteIfExists(
+              File('$mmkvFilePath.crc'),
+              syncIo: syncIo,
+            )) {
+              anyDeleted = true;
+            }
+            if (await _deleteIfExists(
+              File('$mmkvFilePath.migrated.bak'),
+              syncIo: syncIo,
+            )) {
+              anyDeleted = true;
+            }
+            if (await _deleteIfExists(
+              File('$mmkvFilePath.migrated.bak.crc'),
+              syncIo: syncIo,
+            )) {
+              anyDeleted = true;
+            }
+            return anyDeleted;
+          }
 
-      final srcFile = File(mmkvFilePath);
-      final srcExists = syncIo ? srcFile.existsSync() : await srcFile.exists();
-      if (!srcExists) {
-        return false;
-      }
-      await _renameFile(srcFile, '$mmkvFilePath.migrated.bak', syncIo: syncIo);
-      final crcFile = File('$mmkvFilePath.crc');
-      final crcExists = syncIo ? crcFile.existsSync() : await crcFile.exists();
-      if (crcExists) {
-        await _renameFile(
-          crcFile,
-          '$mmkvFilePath.migrated.bak.crc',
-          syncIo: syncIo,
-        );
-      }
-      return true;
+          final archivedMain = await _archiveSiblingFile(
+            mmkvFilePath,
+            '$mmkvFilePath.migrated.bak',
+            syncIo: syncIo,
+          );
+          if (!archivedMain) {
+            return false;
+          }
+          await _archiveSiblingFile(
+            '$mmkvFilePath.crc',
+            '$mmkvFilePath.migrated.bak.crc',
+            syncIo: syncIo,
+          );
+          return true;
+        },
+      );
     } catch (e, stack) {
       AppLogger.w(
         'archiveOrWipeMmkvFile failed for $mmkvFilePath',

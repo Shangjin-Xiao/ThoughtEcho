@@ -4938,5 +4938,21 @@
   "backupScopeExcludedChatsAndMemory": "AIチャット履歴とメモリ：AIとの会話やメモリプロファイルは現在の端末にのみ保存されます。",
   "backupScopeExcludedInsightsAndLogs": "定期インサイトキャッシュ、未参照ファイル、ログ：定期インサイトのキャッシュ、どのノートにも使われていないメディアファイル、診断ログは含まれません。",
   "backupScopeRestoreModeNote": "ヒント：上書き復元ではノート・メディア（ZIP）・設定・保存済みAI分析レポートが復元されます。マージ復元ではノート・タグ・メディア（ZIP）・ゴミ箱保持日数のみ統合し、現在の設定とAI分析レポートは保持されます。WebDAV同期はノート・タグ・削除履歴・メディアのみ同期し、設定やAIレポートは同期しません。",
-  "settingsTermsOfService": "利用規約"
+  "settingsTermsOfService": "利用規約",
+  "mmkvDiagnosticRerunSuccess": "移行を再実行してレポートを更新しました",
+  "@mmkvDiagnosticRerunSuccess": {
+    "description": "SnackBar success message after re-running MMKV migration"
+  },
+  "mmkvDiagnosticConsistencySummaryTitle": "ストレージ整合性サマリー",
+  "@mmkvDiagnosticConsistencySummaryTitle": {
+    "description": "Card title for storage consistency summary"
+  },
+  "mmkvDiagnosticKeyCountBinarySp": "キー総数 (Binary / SP)",
+  "@mmkvDiagnosticKeyCountBinarySp": {
+    "description": "Label for binary and SharedPreferences key counts"
+  },
+  "mmkvDiagnosticSpCoverage": "SharedPreferences 移行カバレッジ",
+  "@mmkvDiagnosticSpCoverage": {
+    "description": "Label for SharedPreferences migration coverage"
+  }
 }

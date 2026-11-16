@@ -30,7 +30,14 @@ class FeatureGuideService extends ChangeNotifier {
   /// 标记某个引导已显示
   Future<void> markAsShown(String guideId) async {
     try {
-      await _storage.setBool('$_keyPrefix$guideId', true);
+      final saved = await _storage.setBool('$_keyPrefix$guideId', true);
+      if (!saved) {
+        logError(
+          '保存引导状态失败: setBool returned false for $_keyPrefix$guideId',
+          source: 'FeatureGuideService',
+        );
+        return;
+      }
       notifyListeners();
       debugPrint('功能引导已标记: $guideId');
     } catch (e, stackTrace) {
@@ -46,7 +53,14 @@ class FeatureGuideService extends ChangeNotifier {
   /// 重置某个引导（用于测试或重新显示）
   Future<void> resetGuide(String guideId) async {
     try {
-      await _storage.remove('$_keyPrefix$guideId');
+      final removed = await _storage.remove('$_keyPrefix$guideId');
+      if (!removed) {
+        logError(
+          '重置引导状态失败: remove returned false for $_keyPrefix$guideId',
+          source: 'FeatureGuideService',
+        );
+        return;
+      }
       notifyListeners();
       debugPrint('功能引导已重置: $guideId');
     } catch (e, stackTrace) {
@@ -63,10 +77,21 @@ class FeatureGuideService extends ChangeNotifier {
   Future<void> resetAllGuides() async {
     try {
       final keys = _storage.getAllKeys();
+      var allRemoved = true;
       for (final key in keys) {
         if (key.startsWith(_keyPrefix)) {
-          await _storage.remove(key);
+          final removed = await _storage.remove(key);
+          if (!removed) {
+            allRemoved = false;
+            logError(
+              '重置所有引导失败: remove returned false for $key',
+              source: 'FeatureGuideService',
+            );
+          }
         }
+      }
+      if (!allRemoved) {
+        return;
       }
       notifyListeners();
       debugPrint('所有功能引导已重置');

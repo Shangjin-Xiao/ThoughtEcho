@@ -8,15 +8,16 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/app_preferences_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 void main() {
-  testWidgets('delays content focus until bottom sheet entrance settles',
-      (tester) async {
+  testWidgets('delays content focus until bottom sheet entrance settles', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -38,10 +39,8 @@ void main() {
                   showModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
-                    builder: (context) => AddNoteDialog(
-                      tags: const [],
-                      onSave: (_) {},
-                    ),
+                    builder: (context) =>
+                        AddNoteDialog(tags: const [], onSave: (_) {}),
                   );
                 },
                 child: const Text('open'),
@@ -70,8 +69,9 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('focuses after the sheet entrance settles by default',
-      (tester) async {
+  testWidgets('focuses after the sheet entrance settles by default', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ChangeNotifierProvider<FeatureGuideService>(
         create: (_) => _MockFeatureGuideService(),
@@ -86,10 +86,8 @@ void main() {
                   showModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
-                    builder: (context) => AddNoteDialog(
-                      tags: const [],
-                      onSave: (_) {},
-                    ),
+                    builder: (context) =>
+                        AddNoteDialog(tags: const [], onSave: (_) {}),
                   );
                 },
                 child: const Text('open'),
@@ -111,8 +109,9 @@ void main() {
     expect(contentField.focusNode?.hasFocus, isTrue);
   });
 
-  testWidgets('renders secondary controls with the initial dialog frame',
-      (tester) async {
+  testWidgets('renders secondary controls with the initial dialog frame', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ChangeNotifierProvider<FeatureGuideService>(
         create: (_) => _MockFeatureGuideService(),
@@ -121,10 +120,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),
           home: Scaffold(
-            body: AddNoteDialog(
-              tags: const [],
-              onSave: (_) {},
-            ),
+            body: AddNoteDialog(tags: const [], onSave: (_) {}),
           ),
         ),
       ),
@@ -133,51 +129,55 @@ void main() {
     expect(find.byType(AddNoteDialog), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(3));
     expect(
-        find.byKey(const ValueKey('add_note_location_chip')), findsOneWidget);
-
-    await tester.pump(const Duration(milliseconds: 200));
-
-    expect(
-        find.byKey(const ValueKey('add_note_location_chip')), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 1));
-  });
-
-  testWidgets('disables add info chip checkmarks to avoid keyboard jank flash',
-      (tester) async {
-    await tester.pumpWidget(
-      ChangeNotifierProvider<FeatureGuideService>(
-        create: (_) => _MockFeatureGuideService(),
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
-          home: Scaffold(
-            body: AddNoteDialog(
-              tags: const [],
-              onSave: (_) {},
-            ),
-          ),
-        ),
-      ),
+      find.byKey(const ValueKey('add_note_location_chip')),
+      findsOneWidget,
     );
 
     await tester.pump(const Duration(milliseconds: 200));
 
-    for (final key in const [
-      ValueKey('add_note_location_chip'),
-      ValueKey('add_note_weather_chip'),
-      ValueKey('add_note_color_chip'),
-    ]) {
-      final chip = tester.widget<FilterChip>(find.byKey(key));
-      expect(chip.showCheckmark, isFalse);
-    }
+    expect(
+      find.byKey(const ValueKey('add_note_location_chip')),
+      findsOneWidget,
+    );
 
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('ignores repeated save taps while create is in progress',
-      (tester) async {
+  testWidgets(
+    'disables add info chip checkmarks to avoid keyboard jank flash',
+    (tester) async {
+      await tester.pumpWidget(
+        ChangeNotifierProvider<FeatureGuideService>(
+          create: (_) => _MockFeatureGuideService(),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(
+              body: AddNoteDialog(tags: const [], onSave: (_) {}),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 200));
+
+      for (final key in const [
+        ValueKey('add_note_location_chip'),
+        ValueKey('add_note_weather_chip'),
+        ValueKey('add_note_color_chip'),
+      ]) {
+        final chip = tester.widget<FilterChip>(find.byKey(key));
+        expect(chip.showCheckmark, isFalse);
+      }
+
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
+
+  testWidgets('ignores repeated save taps while create is in progress', (
+    tester,
+  ) async {
     final databaseService = _SlowDatabaseService();
 
     await tester.pumpWidget(
@@ -186,9 +186,7 @@ void main() {
           ChangeNotifierProvider<FeatureGuideService>(
             create: (_) => _MockFeatureGuideService(),
           ),
-          ChangeNotifierProvider<DatabaseService>.value(
-            value: databaseService,
-          ),
+          ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -228,9 +226,7 @@ void main() {
           ChangeNotifierProvider<FeatureGuideService>(
             create: (_) => _MockFeatureGuideService(),
           ),
-          ChangeNotifierProvider<DatabaseService>.value(
-            value: databaseService,
-          ),
+          ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -270,8 +266,9 @@ void main() {
     databaseService.completeSave();
   });
 
-  testWidgets('applies state changes right after the entrance settles',
-      (tester) async {
+  testWidgets('applies state changes right after the entrance settles', (
+    tester,
+  ) async {
     final initialQuote = Quote(
       id: 'quote-color',
       content: '已有内容',
@@ -317,14 +314,18 @@ void main() {
 
     const colorChipKey = ValueKey('add_note_color_chip');
     expect(
-        tester.widget<FilterChip>(find.byKey(colorChipKey)).selected, isTrue);
+      tester.widget<FilterChip>(find.byKey(colorChipKey)).selected,
+      isTrue,
+    );
 
     // 焦点请求之后主体一度被按定时器冻住，这一下 setState 会被吞掉直到冻结到期。
     await tester.tap(find.byKey(colorChipKey));
     await tester.pump();
 
     expect(
-        tester.widget<FilterChip>(find.byKey(colorChipKey)).selected, isFalse);
+      tester.widget<FilterChip>(find.byKey(colorChipKey)).selected,
+      isFalse,
+    );
 
     await tester.pump(const Duration(seconds: 2));
   });
@@ -348,10 +349,8 @@ void main() {
                   showModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
-                    builder: (_) => AddNoteDialog(
-                      tags: const [],
-                      onSave: (_) {},
-                    ),
+                    builder: (_) =>
+                        AddNoteDialog(tags: const [], onSave: (_) {}),
                   );
                 },
                 child: const Text('open'),
@@ -390,8 +389,9 @@ void main() {
     expect(find.byType(AddNoteDialog), findsNothing);
   });
 
-  testWidgets('repeated cancel taps stack only one confirmation',
-      (tester) async {
+  testWidgets('repeated cancel taps stack only one confirmation', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -410,10 +410,8 @@ void main() {
                   showModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
-                    builder: (_) => AddNoteDialog(
-                      tags: const [],
-                      onSave: (_) {},
-                    ),
+                    builder: (_) =>
+                        AddNoteDialog(tags: const [], onSave: (_) {}),
                   );
                 },
                 child: const Text('open'),
@@ -430,8 +428,9 @@ void main() {
     await tester.pump();
 
     // 确认框还没盖上来之前「取消」仍可点，连点两下不能叠出两个确认框。
-    final cancelButton =
-        tester.widget<FilledButton>(find.widgetWithText(FilledButton, '取消'));
+    final cancelButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '取消'),
+    );
     cancelButton.onPressed!();
     cancelButton.onPressed!();
     await tester.pumpAndSettle();
@@ -448,8 +447,9 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
-  testWidgets('cancel then save-and-exit saves once and closes',
-      (tester) async {
+  testWidgets('cancel then save-and-exit saves once and closes', (
+    tester,
+  ) async {
     final savedQuotes = <Quote>[];
 
     await tester.pumpWidget(
@@ -470,10 +470,8 @@ void main() {
                   showModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
-                    builder: (_) => AddNoteDialog(
-                      tags: const [],
-                      onSave: savedQuotes.add,
-                    ),
+                    builder: (_) =>
+                        AddNoteDialog(tags: const [], onSave: savedQuotes.add),
                   );
                 },
                 child: const Text('open'),
@@ -500,63 +498,63 @@ void main() {
     expect(savedQuotes.single.content, '保存并退出的内容');
   });
 
-  testWidgets('does not warn about unsaved changes when editing unchanged note',
-      (tester) async {
-    final initialQuote = Quote(
-      id: 'quote-1',
-      content: '已有内容',
-      date: DateTime(2026).toIso8601String(),
-      sourceAuthor: '作者',
-      sourceWork: '出处',
-      tagIds: const ['tag-1'],
-      colorHex: '#336699',
-    );
-    final tags = [
-      NoteTag(id: 'tag-1', name: '标签', iconName: 'tag'),
-    ];
+  testWidgets(
+    'does not warn about unsaved changes when editing unchanged note',
+    (tester) async {
+      final initialQuote = Quote(
+        id: 'quote-1',
+        content: '已有内容',
+        date: DateTime(2026).toIso8601String(),
+        sourceAuthor: '作者',
+        sourceWork: '出处',
+        tagIds: const ['tag-1'],
+        colorHex: '#336699',
+      );
+      final tags = [NoteTag(id: 'tag-1', name: '标签', iconName: 'tag')];
 
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<FeatureGuideService>(
-            create: (_) => _MockFeatureGuideService(),
-          ),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (_) => AddNoteDialog(
-                      initialQuote: initialQuote,
-                      tags: tags,
-                      onSave: (_) {},
-                    ),
-                  );
-                },
-                child: const Text('open'),
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<FeatureGuideService>(
+              create: (_) => _MockFeatureGuideService(),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () {
+                    showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => AddNoteDialog(
+                        initialQuote: initialQuote,
+                        tags: tags,
+                        onSave: (_) {},
+                      ),
+                    );
+                  },
+                  child: const Text('open'),
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
 
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
 
-    expect(find.text('未保存的内容'), findsNothing);
-    expect(find.byType(AddNoteDialog), findsNothing);
-  });
+      expect(find.text('未保存的内容'), findsNothing);
+      expect(find.byType(AddNoteDialog), findsNothing);
+    },
+  );
 }
 
 class _MockFeatureGuideService extends FeatureGuideService {

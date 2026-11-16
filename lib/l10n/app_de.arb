@@ -150,5 +150,21 @@
         "type": "String"
       }
     }
+  },
+  "mmkvDiagnosticRerunSuccess": "Migration erneut ausgeführt und Bericht aktualisiert",
+  "@mmkvDiagnosticRerunSuccess": {
+    "description": "SnackBar success message after re-running MMKV migration"
+  },
+  "mmkvDiagnosticConsistencySummaryTitle": "Speicherkonsistenz-Übersicht",
+  "@mmkvDiagnosticConsistencySummaryTitle": {
+    "description": "Card title for storage consistency summary"
+  },
+  "mmkvDiagnosticKeyCountBinarySp": "Schlüsselanzahl (Binary / SP)",
+  "@mmkvDiagnosticKeyCountBinarySp": {
+    "description": "Label for binary and SharedPreferences key counts"
+  },
+  "mmkvDiagnosticSpCoverage": "SharedPreferences-Migrationsabdeckung",
+  "@mmkvDiagnosticSpCoverage": {
+    "description": "Label for SharedPreferences migration coverage"
   }
 }

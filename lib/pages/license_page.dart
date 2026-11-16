@@ -218,9 +218,16 @@ class _LicensePageState extends State<LicensePage> {
         _buildAttributionRow(
           context: context,
           title: l10n.localStorage,
-          name: 'sqflite & shared_preferences',
+          name: 'sqflite',
           url: 'https://pub.dev/packages/sqflite',
-          description: 'BSD-2-Clause / BSD-3-Clause',
+          description: 'BSD-2-Clause',
+        ),
+        _buildAttributionRow(
+          context: context,
+          title: l10n.localStorage,
+          name: 'shared_preferences',
+          url: 'https://pub.dev/packages/shared_preferences',
+          description: 'BSD-3-Clause',
         ),
         // 手工风格的正文字体随包分发（assets/fonts/），OFL 要求随附许可证副本，
         // 这一条是给用户看的出处说明；许可证全文在 assets/fonts/OFL.txt。

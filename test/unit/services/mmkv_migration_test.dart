@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/services/app_preferences_service.dart';
+import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_binary_reader.dart';
 import 'package:thoughtecho/utils/platform_helper.dart';
@@ -13,10 +14,19 @@ import 'package:thoughtecho/utils/platform_helper.dart';
 import '../../test_harness.dart';
 
 class _CountingStorageAdapter implements StorageAdapter {
-  _CountingStorageAdapter({this.initGate});
+  _CountingStorageAdapter({
+    this.initGate,
+    this.throwOnInit = false,
+    this.failingWriteKeys = const <String>{},
+    this.failingRemoveKeys = const <String>{},
+  });
 
   final Future<void>? initGate;
+  final bool throwOnInit;
+  final Set<String> failingWriteKeys;
+  final Set<String> failingRemoveKeys;
   final Map<String, Object?> _data = {};
+  final Map<String, int> writeCounts = {};
   int initializeCount = 0;
 
   @override
@@ -25,12 +35,19 @@ class _CountingStorageAdapter implements StorageAdapter {
     if (initGate != null) {
       await initGate;
     }
+    if (throwOnInit) {
+      throw StateError('Simulated storage init failure');
+    }
   }
 
   Future<void> reload() async {}
 
   @override
   Future<bool> setString(String key, String value) async {
+    writeCounts[key] = (writeCounts[key] ?? 0) + 1;
+    if (failingWriteKeys.contains(key)) {
+      return false;
+    }
     _data[key] = value;
     return true;
   }
@@ -67,6 +84,10 @@ class _CountingStorageAdapter implements StorageAdapter {
 
   @override
   Future<bool> setBool(String key, bool value) async {
+    writeCounts[key] = (writeCounts[key] ?? 0) + 1;
+    if (failingWriteKeys.contains(key)) {
+      return false;
+    }
     _data[key] = value;
     return true;
   }
@@ -94,6 +115,9 @@ class _CountingStorageAdapter implements StorageAdapter {
 
   @override
   Future<bool> remove(String key) async {
+    if (failingRemoveKeys.contains(key)) {
+      return false;
+    }
     _data.remove(key);
     return true;
   }
@@ -153,9 +177,7 @@ void main() {
       await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
 
       final appPrefs = AppPreferencesService()
-        ..configureForTesting(
-          candidateMmkvFiles: [mmkvPath],
-        );
+        ..configureForTesting(candidateMmkvFiles: [mmkvPath]);
 
       await appPrefs.initialize();
 
@@ -493,9 +515,7 @@ void main() {
       SharedPreferences.setMockInitialValues({kKvEngineMigratedKey: true});
       final service = AppPreferencesService();
       service.resetForTesting();
-      service.configureForTesting(
-        candidateMmkvFiles: const [],
-      );
+      service.configureForTesting(candidateMmkvFiles: const []);
 
       // Call setBool, setInt, setDouble, setStringList, setJson without calling service.init() first
       expect(await service.setBool('flag_a', true), isTrue);
@@ -540,9 +560,7 @@ void main() {
           .writeAsBytesSync(secondaryEncoder.toCrcBytes());
 
       final appPrefs = AppPreferencesService()
-        ..configureForTesting(
-          candidateMmkvFiles: [primaryPath, secondaryPath],
-        );
+        ..configureForTesting(candidateMmkvFiles: [primaryPath, secondaryPath]);
 
       await appPrefs.initialize();
 
@@ -591,7 +609,9 @@ void main() {
 
     test('AppPreferencesService resolves to the same singleton', () {
       expect(
-          identical(AppPreferencesService(), AppPreferencesService()), isTrue);
+        identical(AppPreferencesService(), AppPreferencesService()),
+        isTrue,
+      );
     });
 
     test(
@@ -644,6 +664,12 @@ void main() {
       expect(await storage.clear(), isTrue);
       expect(storage.getBool(kDraftsSqliteMigratedKey), isTrue);
       expect(storage.getBool(kPeriodicInsightsSqliteMigratedKey), isTrue);
+      // Re-run with archived .migrated.bak only must not resurrect anything
+      final afterArchiveSnapshot = await storage.runMigration(force: true);
+      expect(afterArchiveSnapshot.migratedFromBinaryCount, equals(0));
+      // Even if an active mmkv.default is present after clear(), retired SQLite keys stay absent
+      await File(path).writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$path.crc').writeAsBytes(encoder.toCrcBytes());
       final afterClearSnapshot = await storage.runMigration(force: true);
       // 仅非退役键 theme_style 被迁移，已由 SQLite 接管的草稿/洞察键不得复活
       expect(afterClearSnapshot.migratedFromBinaryCount, equals(1));
@@ -811,39 +837,44 @@ void main() {
       }
     });
 
-    test('reload refreshes values updated externally in SharedPreferences',
-        () async {
-      SharedPreferences.setMockInitialValues({
-        kKvEngineMigratedKey: true,
-        'external_string': 'initial',
-      });
+    test(
+      'reload refreshes values updated externally in SharedPreferences',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          kKvEngineMigratedKey: true,
+          'external_string': 'initial',
+        });
 
-      final service = AppPreferencesService()
-        ..configureForTesting(
-          candidateMmkvFiles: const [],
-          candidateDbPaths: const [],
+        final service = AppPreferencesService()
+          ..configureForTesting(
+            candidateMmkvFiles: const [],
+            candidateDbPaths: const [],
+          );
+        await service.init();
+        expect(service.getString('external_string'), equals('initial'));
+
+        // Simulate an external isolate writing to the underlying SharedPreferences store
+        SharedPreferences.resetStatic();
+        final externalPrefs = await SharedPreferences.getInstance();
+        await externalPrefs.setString(
+          'external_string',
+          'updated_from_outside',
         );
-      await service.init();
-      expect(service.getString('external_string'), equals('initial'));
+        await externalPrefs.setInt('external_counter', 99);
 
-      // Simulate an external isolate writing to the underlying SharedPreferences store
-      SharedPreferences.resetStatic();
-      final externalPrefs = await SharedPreferences.getInstance();
-      await externalPrefs.setString('external_string', 'updated_from_outside');
-      await externalPrefs.setInt('external_counter', 99);
+        // Cached adapter retains stale snapshot until reload() is called
+        expect(service.getString('external_string'), equals('initial'));
+        expect(service.getInt('external_counter'), isNull);
 
-      // Cached adapter retains stale snapshot until reload() is called
-      expect(service.getString('external_string'), equals('initial'));
-      expect(service.getInt('external_counter'), isNull);
+        await service.reload();
 
-      await service.reload();
-
-      expect(
-        service.getString('external_string'),
-        equals('updated_from_outside'),
-      );
-      expect(service.getInt('external_counter'), equals(99));
-    });
+        expect(
+          service.getString('external_string'),
+          equals('updated_from_outside'),
+        );
+        expect(service.getInt('external_counter'), equals(99));
+      },
+    );
 
     test(
         'concurrent init() calls complete safely without re-running initialization',
@@ -887,8 +918,10 @@ void main() {
           .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
       await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
 
+      final adapter = _CountingStorageAdapter();
       final service = AppPreferencesService()
         ..configureForTesting(
+          primaryAdapter: adapter,
           candidateMmkvFiles: [mmkvPath],
           candidateDbPaths: const [],
         );
@@ -900,6 +933,10 @@ void main() {
       ]);
 
       expect(service.isInitialized, isTrue);
+      expect(adapter.initializeCount, equals(1));
+      expect(adapter.writeCounts['theme_style'], equals(1));
+      expect(adapter.writeCounts['app_installed_v2'], equals(1));
+      expect(adapter.writeCounts[kKvEngineMigratedKey], equals(1));
       expect(service.getString('theme_style'), equals('paper'));
       expect(service.getBool('app_installed_v2'), isTrue);
       expect(File('$mmkvPath.migrated.bak').existsSync(), isTrue);
@@ -920,10 +957,7 @@ void main() {
       expect(await service.setBool('rt_bool', true), isTrue);
       expect(await service.setInt('rt_int', 2026), isTrue);
       expect(await service.setDouble('rt_double', 2.71828), isTrue);
-      expect(
-        await service.setStringList('rt_list', ['alpha', 'beta']),
-        isTrue,
-      );
+      expect(await service.setStringList('rt_list', ['alpha', 'beta']), isTrue);
       expect(
         await service.setJson('rt_json', {
           'nested': {'count': 3},
@@ -972,6 +1006,234 @@ void main() {
       expect(service.containsKey('rt_str'), isFalse);
       expect(service.getString('rt_str'), isNull);
       expect(service.getAllKeys(), isNot(contains('rt_str')));
+    });
+
+    test(
+        'partial migration write failure omits watermark and keeps source MMKV file for retry',
+        () async {
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-retry-secret"}')
+        ..writeString('theme_style', 'paper')
+        ..writeBool('app_installed_v2', true);
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final failingAdapter = _CountingStorageAdapter(
+        failingWriteKeys: {'theme_style'},
+      );
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          primaryAdapter: failingAdapter,
+          candidateMmkvFiles: [mmkvPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      // Watermark must not be set and source file must remain on disk when any write fails.
+      expect(service.getBool(kKvEngineMigratedKey), isNull);
+      expect(File(mmkvPath).existsSync(), isTrue);
+      expect(
+        service.lastMigrationSnapshot?.warnings,
+        anyElement(contains('partial write failure')),
+      );
+
+      // Next launch with healthy storage retries cleanly and wipes credential-bearing file.
+      service.resetForTesting();
+      service.configureForTesting(
+        candidateMmkvFiles: [mmkvPath],
+        candidateDbPaths: const [],
+      );
+      await service.init();
+      expect(service.getBool(kKvEngineMigratedKey), isTrue);
+      expect(service.getString('theme_style'), equals('paper'));
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
+    });
+
+    test(
+        'alreadyMigrated initialization wipes residual credential-bearing mmkv.default and .migrated.bak',
+        () async {
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('ai_settings', '{"apiKey":"sk-residual-secret"}')
+        ..writeString('theme_style', 'paper');
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final secretBackupPath = '${tempDir.path}/legacy2.default';
+      final secretEncoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-stale-backup"}');
+      await File('$secretBackupPath.migrated.bak')
+          .writeAsBytes(secretEncoder.toFileBytes(minTotalSize: 4096));
+      await File('$secretBackupPath.migrated.bak.crc')
+          .writeAsBytes(secretEncoder.toCrcBytes());
+
+      SharedPreferences.setMockInitialValues({kKvEngineMigratedKey: true});
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [mmkvPath, secretBackupPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.crc').existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
+      expect(File('$secretBackupPath.migrated.bak').existsSync(), isFalse);
+      expect(File('$secretBackupPath.migrated.bak.crc').existsSync(), isFalse);
+    });
+
+    test(
+        'tombstoned or overwritten plaintext credentials trigger full wipe instead of .migrated.bak archive',
+        () async {
+      final tombstonedPath = '${tempDir.path}/tombstoned.default';
+      final tombEncoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-deleted-secret"}')
+        ..writeTombstone('provider_api_keys')
+        ..writeString('theme_style', 'plain');
+      await File(tombstonedPath)
+          .writeAsBytes(tombEncoder.toFileBytes(minTotalSize: 4096));
+      await File('$tombstonedPath.crc').writeAsBytes(tombEncoder.toCrcBytes());
+
+      final overwrittenPath = '${tempDir.path}/overwritten.default';
+      final overEncoder = MmkvBinaryEncoder()
+        ..writeString(
+          'ai_settings',
+          '{"apiKey":"sk-overwritten-secret","model":"gpt-4o"}',
+        )
+        ..writeString('ai_settings', '{"apiKey":"","model":"gpt-4o"}')
+        ..writeString('theme_mode', 'dark');
+      await File(overwrittenPath)
+          .writeAsBytes(overEncoder.toFileBytes(minTotalSize: 4096));
+      await File('$overwrittenPath.crc').writeAsBytes(overEncoder.toCrcBytes());
+
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [tombstonedPath, overwrittenPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      expect(service.getString('theme_style'), equals('plain'));
+      expect(service.getString('theme_mode'), equals('dark'));
+      expect(File(tombstonedPath).existsSync(), isFalse);
+      expect(File('$tombstonedPath.migrated.bak').existsSync(), isFalse);
+      expect(File(overwrittenPath).existsSync(), isFalse);
+      expect(File('$overwrittenPath.migrated.bak').existsSync(), isFalse);
+    });
+
+    test(
+        'init() rethrows primary storage initialization error instead of silent memory fallback',
+        () async {
+      final failingAdapter = _CountingStorageAdapter(throwOnInit: true);
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          primaryAdapter: failingAdapter,
+          candidateMmkvFiles: const [],
+          candidateDbPaths: const [],
+        );
+
+      await expectLater(service.init(), throwsStateError);
+      expect(service.isInitialized, isFalse);
+    });
+
+    test(
+        'forced re-migration ignores .migrated.bak and diagnostic report preserves secondary invalid candidate',
+        () async {
+      final primaryPath = '${tempDir.path}/primary.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'paper')
+        ..writeString('deleted_after_migration', 'should_not_resurrect');
+      await File(primaryPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$primaryPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [primaryPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+      expect(
+        service.getString('deleted_after_migration'),
+        equals('should_not_resurrect'),
+      );
+
+      // User deletes key after migration; archived .migrated.bak still holds it.
+      await service.remove('deleted_after_migration');
+      await service.runMigration(force: true);
+      expect(service.containsKey('deleted_after_migration'), isFalse);
+
+      // Verify two invalid candidates expose both primary and secondary in diagnostic report.
+      final invalid1 = '${tempDir.path}/invalid1.default';
+      final invalid2 = '${tempDir.path}/invalid2.default';
+      await File(invalid1).writeAsBytes([1, 2]);
+      await File(invalid2).writeAsBytes([3, 4]);
+
+      service.resetForTesting();
+      service.configureForTesting(
+        candidateMmkvFiles: [invalid1, invalid2],
+        candidateDbPaths: const [],
+      );
+      await service.init();
+      final report = await service.collectDiagnosticReport();
+      expect(report.primaryBinaryResult.filePath, equals(invalid1));
+      expect(report.secondaryBinaryResult, isNotNull);
+      expect(report.secondaryBinaryResult!.filePath, equals(invalid2));
+    });
+
+    test(
+        'PlatformHelper.archiveOrWipeMmkvFile preserves .migrated.bak under concurrent calls',
+        () async {
+      final mmkvPath = '${tempDir.path}/concurrent_archive.default';
+      final encoder = MmkvBinaryEncoder()..writeString('theme_style', 'paper');
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final results = await Future.wait([
+        PlatformHelper.archiveOrWipeMmkvFile(mmkvPath, wipePlaintext: false),
+        PlatformHelper.archiveOrWipeMmkvFile(mmkvPath, wipePlaintext: false),
+        PlatformHelper.archiveOrWipeMmkvFile(mmkvPath, wipePlaintext: false),
+      ]);
+
+      expect(results.where((ok) => ok).length, equals(1));
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isTrue);
+      expect(File('$mmkvPath.migrated.bak.crc').existsSync(), isTrue);
+    });
+
+    test(
+        'FeatureGuideService does not notify listeners when underlying storage write or remove fails',
+        () async {
+      final adapter = _CountingStorageAdapter(
+        failingWriteKeys: {'feature_guide_shown_intro'},
+        failingRemoveKeys: {'feature_guide_shown_existing'},
+      );
+      await adapter.setBool('feature_guide_shown_existing', true);
+
+      final appPrefs = AppPreferencesService()
+        ..configureForTesting(
+          primaryAdapter: adapter,
+          candidateMmkvFiles: const [],
+          candidateDbPaths: const [],
+        );
+      await appPrefs.init();
+
+      final guideService = FeatureGuideService(appPrefs);
+      var notifications = 0;
+      guideService.addListener(() => notifications++);
+
+      await guideService.markAsShown('intro');
+      await guideService.resetGuide('existing');
+      await guideService.resetAllGuides();
+
+      expect(notifications, equals(0));
+      expect(guideService.hasShown('intro'), isFalse);
+      expect(guideService.hasShown('existing'), isTrue);
     });
   });
 }

@@ -326,6 +326,7 @@ class AppPreferencesService {
 
     _isInitializing = true;
     final completer = Completer<void>();
+    completer.future.ignore();
     _initCompleter = completer;
 
     try {
@@ -348,6 +349,7 @@ class AppPreferencesService {
           final files = await PlatformHelper.resolveCandidateMmkvFiles(
             customPaths: _testCandidateMmkvFiles,
           );
+          final cleanupWarnings = await _wipeResidualCredentialMmkvFiles(files);
           final primaryPath = files.isNotEmpty ? files.first : null;
           _lastMigrationSnapshot = MmkvMigrationSnapshot(
             migratedAt: DateTime.now(),
@@ -357,7 +359,7 @@ class AppPreferencesService {
             preservedSharedPrefsOnlyCount: storage.getKeys().length,
             primaryMmkvFilePath: primaryPath,
             migrationDurationMicroseconds: 0,
-            warnings: const [],
+            warnings: cleanupWarnings,
           );
         }
       } catch (e, stackTrace) {
@@ -372,19 +374,19 @@ class AppPreferencesService {
       _isInitializing = false;
       completer.complete();
       logDebug('AppPreferencesService 已初始化（SharedPreferences 引擎）');
-    } catch (e) {
-      logDebug('初始化 AppPreferencesService 失败: $e');
-      try {
-        _storage = _InMemoryStorageAdapter();
-        await _storage!.initialize();
-        _initialized = true;
-        _isInitializing = false;
-        completer.complete();
-      } catch (e2) {
-        _isInitializing = false;
-        completer.completeError(e2);
-        rethrow;
+    } catch (e, stackTrace) {
+      _isInitializing = false;
+      _storage = null;
+      logError(
+        '初始化 AppPreferencesService 失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AppPreferencesService',
+      );
+      if (!completer.isCompleted) {
+        completer.completeError(e, stackTrace);
       }
+      rethrow;
     }
   }
 
@@ -417,10 +419,58 @@ class AppPreferencesService {
     return _performMigration(wasAlreadyMigrated: alreadyMigrated);
   }
 
-  /// 按优先级扫描候选 `mmkv.default` 文件，选择首个通过 CRC 校验且含有效数据的文件作为主二进制源。
-  Future<_BinaryCandidateSelection> _selectBinaryCandidates(
+  /// 对已迁移安装，幂等擦除仍滞留磁盘且包含明文或历史凭据的遗留 `mmkv.default` / `.migrated.bak`。
+  Future<List<String>> _wipeResidualCredentialMmkvFiles(
     List<String> candidateFiles,
   ) async {
+    final warnings = <String>[];
+    for (final path in candidateFiles) {
+      final activeRes = await MmkvBinaryReader.parseFile(
+        path,
+        allowMigratedBackupFallback: false,
+      );
+      if (activeRes.fileExists && _shouldWipeMmkvFile(activeRes)) {
+        final ok = await PlatformHelper.archiveOrWipeMmkvFile(
+          activeRes.filePath,
+          wipePlaintext: true,
+        );
+        if (!ok &&
+            await PlatformHelper.readFileBytesIfExists(activeRes.filePath) !=
+                null) {
+          warnings.add(
+            'Failed to wipe credential-bearing legacy MMKV file at ${activeRes.filePath}.',
+          );
+        }
+      }
+
+      if (!path.endsWith('.migrated.bak')) {
+        final bakPath = '$path.migrated.bak';
+        final bakRes = await MmkvBinaryReader.parseFile(
+          bakPath,
+          allowMigratedBackupFallback: false,
+        );
+        if (bakRes.fileExists && _shouldWipeMmkvFile(bakRes)) {
+          final ok = await PlatformHelper.archiveOrWipeMmkvFile(
+            bakPath,
+            wipePlaintext: true,
+          );
+          if (!ok &&
+              await PlatformHelper.readFileBytesIfExists(bakPath) != null) {
+            warnings.add(
+              'Failed to wipe credential-bearing backup file at $bakPath.',
+            );
+          }
+        }
+      }
+    }
+    return warnings;
+  }
+
+  /// 按优先级扫描候选 `mmkv.default` 文件，选择首个通过 CRC 校验且含有效数据的文件作为主二进制源。
+  Future<_BinaryCandidateSelection> _selectBinaryCandidates(
+    List<String> candidateFiles, {
+    bool allowMigratedBackupFallback = false,
+  }) async {
     if (candidateFiles.isEmpty) {
       return _BinaryCandidateSelection(
         validCandidates: const [],
@@ -431,14 +481,15 @@ class AppPreferencesService {
     }
 
     final validCandidates = <MmkvParseResult>[];
-    MmkvParseResult? secondaryExisting;
-    MmkvParseResult? firstExisting;
+    final existingInvalid = <MmkvParseResult>[];
     final warnings = <String>[];
 
     for (final path in candidateFiles) {
-      final res = await MmkvBinaryReader.parseFile(path);
+      final res = await MmkvBinaryReader.parseFile(
+        path,
+        allowMigratedBackupFallback: allowMigratedBackupFallback,
+      );
       if (!res.fileExists) continue;
-      firstExisting ??= res;
       warnings.addAll(res.warnings);
 
       final isValidData = res.crcMatched != false &&
@@ -447,14 +498,15 @@ class AppPreferencesService {
       if (isValidData) {
         validCandidates.add(res);
       } else {
-        secondaryExisting ??= res;
+        existingInvalid.add(res);
       }
     }
 
     if (validCandidates.isNotEmpty) {
       final primary = validCandidates.first;
-      final secondary =
-          validCandidates.length > 1 ? validCandidates[1] : secondaryExisting;
+      final secondary = validCandidates.length > 1
+          ? validCandidates[1]
+          : (existingInvalid.isNotEmpty ? existingInvalid.first : null);
       return _BinaryCandidateSelection(
         validCandidates: validCandidates,
         primary: primary,
@@ -462,13 +514,11 @@ class AppPreferencesService {
         warnings: warnings,
       );
     }
-    if (firstExisting != null) {
-      final isSame = identical(secondaryExisting, firstExisting);
-      final sec = isSame ? null : secondaryExisting;
+    if (existingInvalid.isNotEmpty) {
       return _BinaryCandidateSelection(
         validCandidates: const [],
-        primary: firstExisting,
-        secondary: sec,
+        primary: existingInvalid.first,
+        secondary: existingInvalid.length > 1 ? existingInvalid[1] : null,
         warnings: warnings,
       );
     }
@@ -491,7 +541,10 @@ class AppPreferencesService {
     final candidateFiles = await PlatformHelper.resolveCandidateMmkvFiles(
       customPaths: _testCandidateMmkvFiles,
     );
-    final selected = await _selectBinaryCandidates(candidateFiles);
+    final selected = await _selectBinaryCandidates(
+      candidateFiles,
+      allowMigratedBackupFallback: false,
+    );
     final primaryBinary = selected.primary;
     final warnings = List<String>.from(selected.warnings);
 
@@ -531,6 +584,7 @@ class AppPreferencesService {
         storage.getBool(kPeriodicInsightsSqliteMigratedKey) == true;
 
     var migratedFromBinaryCount = 0;
+    var allRequiredWritesSucceeded = true;
 
     for (final entry in binaryMergedEntries.entries) {
       final key = entry.key;
@@ -553,6 +607,11 @@ class AppPreferencesService {
       final written = await _writeTypedToAdapter(storage, key, value);
       if (written) {
         migratedFromBinaryCount++;
+      } else {
+        allRequiredWritesSucceeded = false;
+        warnings.add(
+          'Failed to persist migrated key "$key" to SharedPreferences.',
+        );
       }
     }
 
@@ -560,7 +619,13 @@ class AppPreferencesService {
     if (!wasAlreadyMigrated) {
       for (final tombstoneKey in tombstones) {
         if (!binaryMergedEntries.containsKey(tombstoneKey)) {
-          await storage.remove(tombstoneKey);
+          final removed = await storage.remove(tombstoneKey);
+          if (!removed) {
+            allRequiredWritesSucceeded = false;
+            warnings.add(
+              'Failed to apply tombstone deletion for key "$tombstoneKey".',
+            );
+          }
         }
       }
     }
@@ -576,11 +641,6 @@ class AppPreferencesService {
         customDataDirectoryPath: customDir,
       );
       if (hasDb) {
-        await storage.setBool('app_installed_v2', true);
-        await storage.setBool('initial_database_setup_complete', true);
-        await storage.setBool('database_migration_complete', true);
-        await storage.setBool('hasCompletedOnboarding', true);
-
         // 确保 app_settings 中的 hasCompletedOnboarding 为 true，保留已有 sentryDisclosureShown
         Map<String, Object?> appSettingsMap = {
           'hitokotoType': 'a,b,c,d,e,f,g,h,i,j,k,l',
@@ -608,27 +668,83 @@ class AppPreferencesService {
           } catch (_) {}
         }
         final patchedAppSettingsJson = json.encode(appSettingsMap);
-        await storage.setString('app_settings', patchedAppSettingsJson);
 
-        healedFromSqliteCount = 5;
-        logDebug(
-          'AppPreferencesService: 检测到非空 thoughtecho.db，已自动自愈安装、数据库初始化与引导完成标记',
-        );
+        var healedWrites = 0;
+        var healSucceeded = true;
+        for (final flagKey in const [
+          'app_installed_v2',
+          'initial_database_setup_complete',
+          'database_migration_complete',
+          'hasCompletedOnboarding',
+        ]) {
+          if (await storage.setBool(flagKey, true)) {
+            healedWrites++;
+          } else {
+            healSucceeded = false;
+          }
+        }
+        if (await storage.setString('app_settings', patchedAppSettingsJson)) {
+          healedWrites++;
+        } else {
+          healSucceeded = false;
+        }
+        healedFromSqliteCount = healedWrites;
+        if (!healSucceeded) {
+          allRequiredWritesSucceeded = false;
+          warnings.add('SQLite heuristic healing partially failed.');
+        } else {
+          logDebug(
+            'AppPreferencesService: 检测到非空 thoughtecho.db，已自动自愈安装、数据库初始化与引导完成标记',
+          );
+        }
       }
     }
 
-    // 标记迁移完成（同时写入新旧两个标记键，防止 SettingsService._migrateDataIfNeeded 逆向覆盖）
-    await storage.setBool(kLegacyMmkvMigrationCompleteKey, true);
-    await storage.setBool(kKvEngineMigratedKey, true);
+    if (allRequiredWritesSucceeded) {
+      // 先归档或擦除已处理的 MMKV 二进制文件，全部完成后再写入完成水位线
+      var cleanupSucceeded = true;
+      for (final candidate in processedCandidates) {
+        if (candidate.fileExists) {
+          final wipedOrArchived = await PlatformHelper.archiveOrWipeMmkvFile(
+            candidate.filePath,
+            wipePlaintext: _shouldWipeMmkvFile(candidate),
+          );
+          if (!wipedOrArchived &&
+              await PlatformHelper.readFileBytesIfExists(candidate.filePath) !=
+                  null) {
+            cleanupSucceeded = false;
+            warnings.add(
+              'Failed to archive or wipe legacy MMKV file at ${candidate.filePath}.',
+            );
+          }
+        }
+      }
+      final residualWarnings =
+          await _wipeResidualCredentialMmkvFiles(candidateFiles);
+      if (residualWarnings.isNotEmpty) {
+        cleanupSucceeded = false;
+        warnings.addAll(residualWarnings);
+      }
 
-    // 迁移与水位线落盘后，归档或擦除已处理的 MMKV 二进制文件
-    for (final candidate in processedCandidates) {
-      if (candidate.fileExists) {
-        await PlatformHelper.archiveOrWipeMmkvFile(
-          candidate.filePath,
-          wipePlaintext: _containsPlaintextApiKeys(candidate.entries),
+      if (cleanupSucceeded) {
+        // 标记迁移完成（同时写入新旧两个标记键，防止 SettingsService._migrateDataIfNeeded 逆向覆盖）
+        final legacyMarkOk = await storage.setBool(
+          kLegacyMmkvMigrationCompleteKey,
+          true,
+        );
+        final engineMarkOk = await storage.setBool(kKvEngineMigratedKey, true);
+        if (!legacyMarkOk || !engineMarkOk) {
+          warnings.add('Failed to persist migration completion watermark.');
+        }
+      } else {
+        warnings.add(
+          'Skipped migration completion watermark because legacy MMKV cleanup did not finish.',
         );
       }
+    } else {
+      warnings.add(
+        'Skipped migration completion watermark and legacy file cleanup due to partial write failure.',
+      );
     }
 
     var preservedSpOnlyCount = 0;
@@ -657,6 +773,33 @@ class AppPreferencesService {
     );
     _lastMigrationSnapshot = snapshot;
     return snapshot;
+  }
+
+  static bool _shouldWipeMmkvFile(MmkvParseResult candidate) {
+    if (_containsPlaintextApiKeys(candidate.entries)) {
+      return true;
+    }
+    if (candidate.hasHistoricalPlaintextCredentials) {
+      return true;
+    }
+    bool isCredentialKey(String key) {
+      final lower = key.toLowerCase();
+      return lower == 'provider_api_keys' ||
+          lower == 'ai_settings' ||
+          lower == 'multi_ai_settings' ||
+          lower.contains('api_key') ||
+          lower.contains('apikey');
+    }
+
+    if (candidate.tombstonedKeys.any(isCredentialKey)) {
+      return true;
+    }
+    return candidate.seenKeys.any((key) {
+      final lower = key.toLowerCase();
+      return lower == 'provider_api_keys' ||
+          lower.contains('api_key') ||
+          lower.contains('apikey');
+    });
   }
 
   static bool _containsPlaintextApiKeys(Map<String, Object?> entries) {
@@ -834,7 +977,10 @@ class AppPreferencesService {
     final candidateFiles = await PlatformHelper.resolveCandidateMmkvFiles(
       customPaths: _testCandidateMmkvFiles,
     );
-    final selected = await _selectBinaryCandidates(candidateFiles);
+    final selected = await _selectBinaryCandidates(
+      candidateFiles,
+      allowMigratedBackupFallback: true,
+    );
     final primaryBinaryResult = selected.primary;
     final secondaryBinaryResult = selected.secondary;
 
@@ -1270,96 +1416,6 @@ class _BinaryCandidateSelection {
     required this.secondary,
     required this.warnings,
   });
-}
-
-/// 内存存储适配器（作为最终回退与测试桩）
-class _InMemoryStorageAdapter implements StorageAdapter {
-  final Map<String, dynamic> _data = {};
-
-  @override
-  Future<void> initialize() async {}
-
-  @override
-  Future<bool> setString(String key, String value) async {
-    _data[key] = value;
-    return true;
-  }
-
-  @override
-  String? getString(String key) {
-    final value = _data[key];
-    return value is String ? value : null;
-  }
-
-  @override
-  Future<bool> setInt(String key, int value) async {
-    _data[key] = value;
-    return true;
-  }
-
-  @override
-  int? getInt(String key) {
-    final value = _data[key];
-    return value is int ? value : null;
-  }
-
-  @override
-  Future<bool> setDouble(String key, double value) async {
-    _data[key] = value;
-    return true;
-  }
-
-  @override
-  double? getDouble(String key) {
-    final value = _data[key];
-    return value is double ? value : null;
-  }
-
-  @override
-  Future<bool> setBool(String key, bool value) async {
-    _data[key] = value;
-    return true;
-  }
-
-  @override
-  bool? getBool(String key) {
-    final value = _data[key];
-    return value is bool ? value : null;
-  }
-
-  @override
-  Future<bool> setStringList(String key, List<String> value) async {
-    _data[key] = List<String>.from(value);
-    return true;
-  }
-
-  @override
-  List<String>? getStringList(String key) {
-    final value = _data[key];
-    return value is List<String> ? value : null;
-  }
-
-  @override
-  bool containsKey(String key) {
-    return _data.containsKey(key);
-  }
-
-  @override
-  Future<bool> remove(String key) async {
-    _data.remove(key);
-    return true;
-  }
-
-  @override
-  Future<bool> clear() async {
-    _data.clear();
-    return true;
-  }
-
-  @override
-  Set<String> getKeys() {
-    return _data.keys.toSet();
-  }
 }
 
 /// 存储适配器接口

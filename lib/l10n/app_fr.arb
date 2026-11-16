@@ -4931,5 +4931,21 @@
   "backupScopeExcludedChatsAndMemory": "Historique des discussions IA et mémoire de l'agent : les conversations et profils mémoire restent uniquement sur cet appareil.",
   "backupScopeExcludedInsightsAndLogs": "Caches d'aperçus périodiques, fichiers orphelins et journaux : les aperçus en cache, médias non liés à une note et journaux de diagnostic sont exclus.",
   "backupScopeRestoreModeNote": "Remarque : la restauration par remplacement rétablit les notes, médias (ZIP), réglages et rapports IA enregistrés. L'importation par fusion ne fusionne que les notes, étiquettes, médias (ZIP) et durée de rétention de la corbeille, en conservant vos réglages et rapports IA actuels. La synchronisation WebDAV ne synchronise que les notes, étiquettes, suppressions et médias (sans les réglages ni les rapports IA).",
-  "settingsTermsOfService": "Conditions d'utilisation"
+  "settingsTermsOfService": "Conditions d'utilisation",
+  "mmkvDiagnosticRerunSuccess": "Migration relancée et rapport actualisé",
+  "@mmkvDiagnosticRerunSuccess": {
+    "description": "SnackBar success message after re-running MMKV migration"
+  },
+  "mmkvDiagnosticConsistencySummaryTitle": "Résumé de cohérence du stockage",
+  "@mmkvDiagnosticConsistencySummaryTitle": {
+    "description": "Card title for storage consistency summary"
+  },
+  "mmkvDiagnosticKeyCountBinarySp": "Nombre de clés (Binary / SP)",
+  "@mmkvDiagnosticKeyCountBinarySp": {
+    "description": "Label for binary and SharedPreferences key counts"
+  },
+  "mmkvDiagnosticSpCoverage": "Couverture de migration SharedPreferences",
+  "@mmkvDiagnosticSpCoverage": {
+    "description": "Label for SharedPreferences migration coverage"
+  }
 }

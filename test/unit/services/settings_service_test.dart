@@ -2,6 +2,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +19,7 @@ import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:thoughtecho/utils/mmkv_binary_reader.dart';
 
 import '../../test_harness.dart';
 
@@ -442,7 +444,9 @@ void main() {
         await SettingsService.create();
 
         expect(
-            AppPreferencesService().getString(ThemeStyle.storageKey), isNull);
+          AppPreferencesService().getString(ThemeStyle.storageKey),
+          isNull,
+        );
       });
 
       test('已经有风格取值时不覆盖', () async {
@@ -543,35 +547,50 @@ void main() {
     );
 
     test(
-        'legacy multi-provider API keys in MMKV or SharedPreferences should migrate to APIKeyManager and scrub',
+        'legacy multi-provider API keys in MMKV binary file should migrate through AppPreferencesService to APIKeyManager and scrub',
         () async {
-      final mmkv = AppPreferencesService();
+      final tempDir = await TestHarness.createTempDirectory(
+        'settings_mmkv_key',
+      );
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final legacyMultiJson = json.encode({
+        'currentProviderId': 'openai',
+        'providers': [
+          {
+            'id': 'openai',
+            'name': 'OpenAI',
+            'apiKey': 'sk-legacy-openai-key-12345',
+            'apiUrl': 'https://api.openai.com/v1',
+            'model': 'gpt-4o',
+            'isEnabled': true,
+          },
+        ],
+      });
+
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('multi_ai_settings', legacyMultiJson);
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      SharedPreferences.setMockInitialValues({});
+      final appPrefs = AppPreferencesService()
+        ..resetForTesting()
+        ..configureForTesting(
+          candidateMmkvFiles: [mmkvPath],
+          candidateDbPaths: const [],
+        );
+      await appPrefs.init();
       final prefs = await SharedPreferences.getInstance();
 
-      final legacyMultiJson = '''
-      {
-        "currentProviderId": "openai",
-        "providers": [
-          {
-            "id": "openai",
-            "name": "OpenAI",
-            "apiKey": "sk-legacy-openai-key-12345",
-            "apiUrl": "https://api.openai.com/v1",
-            "model": "gpt-4o",
-            "isEnabled": true
-          }
-        ]
-      }
-      ''';
-
-      await mmkv.setString('multi_ai_settings', legacyMultiJson);
-      await prefs.setString('multi_ai_settings', legacyMultiJson);
       addTearDown(() async {
-        await mmkv.remove('multi_ai_settings');
-        await mmkv.remove('ai_settings');
-        await mmkv.remove('ai_auto_enable_pending_v1');
+        await appPrefs.remove('multi_ai_settings');
+        await appPrefs.remove('ai_settings');
+        await appPrefs.remove('ai_auto_enable_pending_v1');
         await prefs.remove('multi_ai_settings');
         await prefs.remove('ai_settings');
+        appPrefs.resetForTesting();
+        await TestHarness.deleteTempDirectory(tempDir);
       });
 
       final rebuiltService = await SettingsService.create();
@@ -579,12 +598,14 @@ void main() {
 
       expect(key, equals('sk-legacy-openai-key-12345'));
 
-      final storedMmkv = mmkv.getString('multi_ai_settings') ?? '';
+      final storedAppPrefs = appPrefs.getString('multi_ai_settings') ?? '';
       final storedPrefs = prefs.getString('multi_ai_settings') ?? '';
 
-      expect(storedMmkv.contains('sk-legacy-openai-key-12345'), isFalse);
+      expect(storedAppPrefs.contains('sk-legacy-openai-key-12345'), isFalse);
       expect(storedPrefs.contains('sk-legacy-openai-key-12345'), isFalse);
       expect(rebuiltService.multiAISettings.providers.first.apiKey, isEmpty);
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
     });
 
     test(
@@ -1036,17 +1057,18 @@ void main() {
         'smart_push_settings_v2': ' {"enabled":false,"pushMode":1} ',
       });
       expect(
-          json.decode(
-              AppPreferencesService().getString('smart_push_settings_v2')!),
-          {
-            'enabled': false,
-            'pushMode': 1,
-          });
+        json.decode(
+          AppPreferencesService().getString('smart_push_settings_v2')!,
+        ),
+        {'enabled': false, 'pushMode': 1},
+      );
     });
 
     test('backup preserves malformed push JSON for lossless export', () async {
-      await AppPreferencesService()
-          .setString('smart_push_settings_v2', '{invalid-json');
+      await AppPreferencesService().setString(
+        'smart_push_settings_v2',
+        '{invalid-json',
+      );
       final backup = settingsService.getAllSettingsForBackup();
       expect(backup['smart_push_settings_v2'], '{invalid-json');
     });

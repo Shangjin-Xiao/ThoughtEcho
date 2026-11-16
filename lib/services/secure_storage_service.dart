@@ -87,7 +87,12 @@ class SecureStorageService {
         // 只有在数据成功转移或确认为多余时，才删除旧的不安全数据
         if (copySuccess) {
           try {
-            await legacyStorage.remove(_providerApiKeysKey);
+            final removed = await legacyStorage.remove(_providerApiKeysKey);
+            if (!removed) {
+              throw StateError(
+                'AppPreferencesService.remove($_providerApiKeysKey) returned false',
+              );
+            }
             logDebug('遗留不安全数据已清除');
           } catch (e) {
             // 这是一个严重的安全隐患，但不能让应用崩溃

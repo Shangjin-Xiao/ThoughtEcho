@@ -88,12 +88,10 @@ class _MmkvMigrationDiagnosticPageState
         _report = report;
         _loading = false;
       });
-      final okMsg = _tr(
-        isZh,
-        '已重新执行迁移并刷新校验结果',
-        'Re-ran migration and refreshed report',
+      AppSnackBar.success(
+        context,
+        AppLocalizations.of(context).mmkvDiagnosticRerunSuccess,
       );
-      AppSnackBar.success(context, okMsg);
     } catch (e, stackTrace) {
       logError(
         'MmkvMigrationDiagnosticPage: 重新执行迁移失败: $e',
@@ -434,16 +432,9 @@ class _MmkvMigrationDiagnosticPageState
       badgeText = isZh ? '发现 $diffs 项差异' : '$diffs Diff(s)';
     }
 
-    final keyCountLabel = _tr(
-      isZh,
-      '存储源键总数 (Binary / SP)',
-      'Key Counts (Binary / SP)',
-    );
-    final spCoverageLabel = _tr(
-      isZh,
-      'SharedPreferences 迁移覆盖率',
-      'SharedPreferences Migration Coverage',
-    );
+    final l10n = AppLocalizations.of(context);
+    final keyCountLabel = l10n.mmkvDiagnosticKeyCountBinarySp;
+    final spCoverageLabel = l10n.mmkvDiagnosticSpCoverage;
 
     return Card(
       key: const Key('mmkv_diagnostic_summary_card'),
@@ -461,7 +452,7 @@ class _MmkvMigrationDiagnosticPageState
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isZh ? '存储一致性比对大盘' : 'Storage Consistency Summary',
+                    l10n.mmkvDiagnosticConsistencySummaryTitle,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
