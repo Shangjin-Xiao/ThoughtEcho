@@ -65,6 +65,19 @@ void main() {
       );
     });
 
+    test('尾部斜杠会被归一化', () {
+      expect(
+        MediaPathResolver.mediaRelativeTail('media/images/a.jpg/'),
+        'media/images/a.jpg',
+      );
+      expect(
+        MediaPathResolver.mediaRelativeTail(
+          '/storage/emulated/0/Documents/media/images/a.jpg///',
+        ),
+        'media/images/a.jpg',
+      );
+    });
+
     test('无法识别的路径返回 null', () {
       expect(MediaPathResolver.mediaRelativeTail(''), isNull);
       expect(MediaPathResolver.mediaRelativeTail('media/images/'), isNull);

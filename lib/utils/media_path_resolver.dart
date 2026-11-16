@@ -38,8 +38,15 @@ class MediaPathResolver {
     final trimmed = rawPath.trim();
     if (trimmed.isEmpty) return null;
 
-    final unified =
+    var unified =
         trimmed.contains(r'\') ? trimmed.replaceAll(r'\', '/') : trimmed;
+    var end = unified.length;
+    while (end > 1 && unified.codeUnitAt(end - 1) == 47 /* '/' */) {
+      end--;
+    }
+    if (end != unified.length) {
+      unified = unified.substring(0, end);
+    }
 
     // 快速路径：不含连续斜杠、点段或路径遍历时，直接定位最靠近文件名的 media/<子目录>/<文件名>
     if (!unified.contains('..') &&
