@@ -100,17 +100,20 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     final currentTime = now ?? _nowProvider();
     final key = '$ip:$port';
     final lastSeen = _endpointLastPacketTime[key];
-    if (lastSeen != null &&
-        currentTime.difference(lastSeen) < endpointRateLimitWindow) {
+    final elapsed = lastSeen == null ? null : currentTime.difference(lastSeen);
+    if (elapsed != null &&
+        elapsed >= Duration.zero &&
+        elapsed < endpointRateLimitWindow) {
       return false;
     }
 
     // Remove before re-inserting so Dart's LinkedHashMap updates recency order.
     _endpointLastPacketTime.remove(key);
     if (_endpointLastPacketTime.length >= maxRateLimitEndpoints) {
-      _endpointLastPacketTime.removeWhere(
-        (_, ts) => currentTime.difference(ts) >= endpointRateLimitWindow,
-      );
+      _endpointLastPacketTime.removeWhere((_, ts) {
+        final age = currentTime.difference(ts);
+        return age.isNegative || age >= endpointRateLimitWindow;
+      });
       while (_endpointLastPacketTime.length >= maxRateLimitEndpoints) {
         _endpointLastPacketTime.remove(_endpointLastPacketTime.keys.first);
       }

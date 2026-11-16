@@ -320,19 +320,39 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
     final db = database;
 
     await db.transaction((txn) async {
-      // 1. 检查是否有笔记使用此标签
+      final nowIso = DateTime.now().toUtc().toIso8601String();
+
+      // 1. 检查是否有笔记使用此标签（category_id 或 quote_tags）
       final quotesUsingCategory = await txn.query(
         'quotes',
         where: 'category_id = ?',
         whereArgs: [id],
         columns: ['id'],
       );
+      final quoteTagRows = await txn.query(
+        'quote_tags',
+        where: 'tag_id = ?',
+        whereArgs: [id],
+        columns: ['quote_id'],
+      );
 
-      // 2. 清理使用此标签的笔记的category_id字段
+      final categoryQuoteIds = {
+        for (final row in quotesUsingCategory)
+          if (row['id'] != null) row['id'].toString(),
+      };
+      final tagOnlyQuoteIds = {
+        for (final row in quoteTagRows)
+          if (row['quote_id'] != null) row['quote_id'].toString(),
+      }.difference(categoryQuoteIds).toList();
+
+      // 2. 清理使用此标签的笔记的category_id字段并推进 last_modified 以触发同步传播
       if (quotesUsingCategory.isNotEmpty) {
         await txn.update(
           'quotes',
-          {'category_id': null},
+          {
+            'category_id': null,
+            'last_modified': nowIso,
+          },
           where: 'category_id = ?',
           whereArgs: [id],
         );
@@ -348,6 +368,22 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
 
       if (deletedTagRelations > 0) {
         logDebug('已删除 $deletedTagRelations 条标签关联记录');
+      }
+
+      // 推进仅通过 quote_tags 关联该标签的笔记 last_modified，确保 LWW 同步能感知删标签
+      const int chunkSize = 400;
+      for (int i = 0; i < tagOnlyQuoteIds.length; i += chunkSize) {
+        final end = (i + chunkSize < tagOnlyQuoteIds.length)
+            ? i + chunkSize
+            : tagOnlyQuoteIds.length;
+        final chunk = tagOnlyQuoteIds.sublist(i, end);
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        await txn.update(
+          'quotes',
+          {'last_modified': nowIso},
+          where: 'id IN ($placeholders)',
+          whereArgs: chunk,
+        );
       }
 
       // 4. 最后删除标签本身

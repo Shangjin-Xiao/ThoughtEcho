@@ -297,7 +297,7 @@ class LocalSendServer {
                   parsedReqPort >= 1 &&
                   parsedReqPort <= 65535)
               ? parsedReqPort
-              : request.connectionInfo?.remotePort;
+              : null;
           final rawFingerprint = req['fingerprint']?.toString().trim();
           final senderFingerprint =
               (rawFingerprint != null && rawFingerprint.isNotEmpty)

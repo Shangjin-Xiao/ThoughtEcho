@@ -301,8 +301,9 @@ class NoteSyncService extends ChangeNotifier {
       );
       logInfo('sync_server_started port=$actualPort', source: 'LocalSend');
 
-      // 设置设备发现服务的实际端口
+      // 设置设备发现服务与发送服务的实际端口
       _discoveryService!.setServerPort(actualPort);
+      _localSendProvider!.localPort = actualPort;
 
       // 启动设备发现
       await _discoveryService!.startDiscovery();
@@ -532,6 +533,9 @@ class NoteSyncService extends ChangeNotifier {
 
       // 4. 发送文件 (使用LocalSend的优质代码)
       // 使用已验证的 backupFile
+      if (_localSendServer != null) {
+        _localSendProvider!.localPort = _localSendServer!.port;
+      }
       final sessionId = await _localSendProvider!.startSession(
         target: targetDevice,
         files: [backupFile],
@@ -1265,7 +1269,7 @@ class CrossFile {
   factory CrossFile.fromFile(File file) {
     return CrossFile(
       path: file.path,
-      name: file.path.split('/').last,
+      name: LocalSendProvider.extractFileName(file.path),
       size: file.lengthSync(),
     );
   }

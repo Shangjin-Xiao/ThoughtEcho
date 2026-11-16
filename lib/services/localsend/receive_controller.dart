@@ -64,10 +64,10 @@ class ReceiveController {
   )? onSenderInfoReceived;
   final DateTime Function() _now;
   final Map<String, ReceiveSession> _sessions = {};
+  final Map<String, int> _activeUploads = {};
   final Duration sessionTimeout = const Duration(minutes: 2);
   Timer? _gcTimer;
   String? _cachedFingerprint; // initialized explicitly before serving info
-  int _tempFileSequence = 0;
 
   ReceiveController({
     this.onFileReceived,
@@ -89,6 +89,7 @@ class ReceiveController {
       });
       for (final id in toRemove) {
         _sessions.remove(id);
+        _activeUploads.remove(id);
       }
     });
   }
@@ -161,7 +162,7 @@ class ReceiveController {
       final effectivePort =
           (infoPort != null && infoPort > 0 && infoPort <= 65535)
               ? infoPort
-              : remotePort;
+              : null;
       final trimmedFp = prepareRequest.info.fingerprint?.trim();
       final effectiveFp =
           (trimmedFp != null && trimmedFp.isNotEmpty) ? trimmedFp : null;
@@ -274,9 +275,23 @@ class ReceiveController {
     String token,
     HttpRequest request,
   ) async {
+    Directory? uploadTempDir;
     File? tempFile;
     RandomAccessFile? raf;
     var tokenConsumed = false;
+    var uploadCounted = false;
+
+    void releaseActiveUpload() {
+      if (!uploadCounted) return;
+      uploadCounted = false;
+      final active = _activeUploads[sessionId] ?? 0;
+      if (active <= 1) {
+        _activeUploads.remove(sessionId);
+      } else {
+        _activeUploads[sessionId] = active - 1;
+      }
+    }
+
     try {
       logInfo(
         'recv_upload_start session=$sessionId fileId=$fileId',
@@ -292,6 +307,8 @@ class ReceiveController {
       // Consume single-use token before any async I/O to prevent replay/races.
       final remainingTokens = Map<String, String>.from(currentTokens)
         ..remove(fileId);
+      _activeUploads[sessionId] = (_activeUploads[sessionId] ?? 0) + 1;
+      uploadCounted = true;
       _sessions[sessionId] = session.copyWith(fileTokens: remainingTokens);
       tokenConsumed = true;
 
@@ -315,21 +332,17 @@ class ReceiveController {
         throw Exception('Blocked file type');
       }
 
-      final tempDir = Directory.systemTemp;
+      uploadTempDir =
+          await Directory.systemTemp.createTemp('thoughtecho_recv_');
       final sanitizedName = _sanitizeFileName(fileName);
-      final timestamp = _now().millisecondsSinceEpoch;
-      final seq = _tempFileSequence++;
-      final targetPath = p.join(
-        tempDir.path,
-        'thoughtecho_${timestamp}_${seq}_$sanitizedName',
-      );
+      final targetPath = p.join(uploadTempDir.path, sanitizedName);
       if (!p.isWithin(
-        p.canonicalize(tempDir.path),
+        p.canonicalize(uploadTempDir.path),
         p.canonicalize(targetPath),
       )) {
         throw Exception('Invalid file path');
       }
-      tempFile = File(targetPath);
+      tempFile = await File(targetPath).create(exclusive: true);
       raf = await tempFile.open(mode: FileMode.write);
 
       int received = 0;
@@ -405,25 +418,34 @@ class ReceiveController {
 
       // Check after the final I/O and preserve the live session before dispatch.
       final currentSession = _requireSendingSession(sessionId);
+      releaseActiveUpload();
       final updatedCompleted = Set<String>.from(currentSession.completedFileIds)
         ..add(fileId);
-      final isSessionComplete =
-          updatedCompleted.length >= currentSession.files.length &&
-              (currentSession.fileTokens?.isEmpty ?? true);
+      final noTokensLeft = currentSession.fileTokens?.isEmpty ?? true;
+      final noActiveUploads = (_activeUploads[sessionId] ?? 0) == 0;
+      final allFilesSettled = noTokensLeft &&
+          noActiveUploads &&
+          (updatedCompleted.length + currentSession.failedFileIds.length >=
+              currentSession.files.length);
+      final nextStatus = !allFilesSettled
+          ? SessionStatus.sending
+          : (currentSession.failedFileIds.isNotEmpty
+              ? SessionStatus.finishedWithErrors
+              : SessionStatus.finished);
       _sessions[sessionId] = currentSession.copyWith(
         completedFileIds: updatedCompleted,
-        status:
-            isSessionComplete ? SessionStatus.finished : SessionStatus.sending,
+        status: nextStatus,
         lastActivity: _now(),
       );
 
       if (onFileReceived != null) {
         onFileReceived!(tempFile.path);
-        final deletePath = tempFile.path;
+        final cleanupDir = uploadTempDir;
         Future.delayed(const Duration(seconds: 30), () async {
           try {
-            final f = File(deletePath);
-            if (await f.exists()) await f.delete();
+            if (await cleanupDir.exists()) {
+              await cleanupDir.delete(recursive: true);
+            }
           } catch (e, stack) {
             logError(
               '[ReceiveController] temp file cleanup failed',
@@ -433,6 +455,11 @@ class ReceiveController {
             );
           }
         });
+      } else {
+        // No receiver callback to consume tempFile; clean up immediately.
+        if (await uploadTempDir.exists()) {
+          await uploadTempDir.delete(recursive: true);
+        }
       }
 
       logInfo(
@@ -447,13 +474,23 @@ class ReceiveController {
         'size': finalSize,
       };
     } catch (e, stack) {
+      releaseActiveUpload();
       if (tokenConsumed) {
         final currentSession = _sessions[sessionId];
-        if (currentSession != null &&
-            currentSession.status == SessionStatus.sending &&
-            (currentSession.fileTokens?.isEmpty ?? true)) {
+        if (currentSession != null) {
+          final updatedFailed = Set<String>.from(currentSession.failedFileIds)
+            ..add(fileId);
+          final noTokensLeft = currentSession.fileTokens?.isEmpty ?? true;
+          final noActiveUploads = (_activeUploads[sessionId] ?? 0) == 0;
+          final shouldFinalizeError =
+              currentSession.status == SessionStatus.sending &&
+                  noTokensLeft &&
+                  noActiveUploads;
           _sessions[sessionId] = currentSession.copyWith(
-            status: SessionStatus.finishedWithErrors,
+            failedFileIds: updatedFailed,
+            status: shouldFinalizeError
+                ? SessionStatus.finishedWithErrors
+                : currentSession.status,
             lastActivity: _now(),
           );
         }
@@ -475,7 +512,9 @@ class ReceiveController {
         );
       }
       try {
-        if (tempFile != null && await tempFile.exists()) {
+        if (uploadTempDir != null && await uploadTempDir.exists()) {
+          await uploadTempDir.delete(recursive: true);
+        } else if (tempFile != null && await tempFile.exists()) {
           await tempFile.delete();
         }
       } catch (e, stack) {
@@ -487,6 +526,8 @@ class ReceiveController {
         );
       }
       throw Exception('Upload failed: $e');
+    } finally {
+      releaseActiveUpload();
     }
   }
 
@@ -545,6 +586,7 @@ class ReceiveController {
   /// Dispose resources
   void dispose() {
     _sessions.clear();
+    _activeUploads.clear();
     _gcTimer?.cancel();
   }
 }
@@ -557,6 +599,7 @@ class ReceiveSession {
   final SessionStatus status;
   final Map<String, String>? fileTokens;
   final Set<String> completedFileIds;
+  final Set<String> failedFileIds;
   final DateTime lastActivity;
 
   const ReceiveSession({
@@ -566,6 +609,7 @@ class ReceiveSession {
     required this.status,
     this.fileTokens,
     this.completedFileIds = const {},
+    this.failedFileIds = const {},
     required this.lastActivity,
   });
 
@@ -576,6 +620,7 @@ class ReceiveSession {
     SessionStatus? status,
     Map<String, String>? fileTokens,
     Set<String>? completedFileIds,
+    Set<String>? failedFileIds,
     DateTime? lastActivity,
   }) {
     return ReceiveSession(
@@ -585,6 +630,7 @@ class ReceiveSession {
       status: status ?? this.status,
       fileTokens: fileTokens ?? this.fileTokens,
       completedFileIds: completedFileIds ?? this.completedFileIds,
+      failedFileIds: failedFileIds ?? this.failedFileIds,
       lastActivity: lastActivity ?? this.lastActivity,
     );
   }

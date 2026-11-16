@@ -246,10 +246,29 @@ class LWWDecisionMaker {
     // 检测时钟偏移
     final clockSkew = LWWUtils.detectClockSkew(remoteTimestamp, now: refNow);
 
-    if (LWWUtils.isExcessiveFutureTimestamp(remoteTimestamp, now: refNow)) {
+    final remoteIsExcessiveFuture = LWWUtils.isExcessiveFutureTimestamp(
+      remoteTimestamp,
+      now: refNow,
+    );
+    final localIsExcessiveFuture = LWWUtils.isExcessiveFutureTimestamp(
+      localTimestamp,
+      now: refNow,
+    );
+
+    if (remoteIsExcessiveFuture) {
       return LWWMergeDecision(
         decision: LWWDecision.useLocal,
         reason: 'Remote时间戳超前超过24小时，拒绝未来时间戳覆盖 ($remoteTimestamp)',
+        localTimestamp: localTimestamp,
+        remoteTimestamp: remoteTimestamp,
+        clockSkew: clockSkew,
+      );
+    }
+
+    if (localIsExcessiveFuture && LWWUtils.isValidTimestamp(remoteTimestamp)) {
+      return LWWMergeDecision(
+        decision: LWWDecision.useRemote,
+        reason: 'Local时间戳超前超过24小时，允许正常Remote数据覆盖 ($localTimestamp)',
         localTimestamp: localTimestamp,
         remoteTimestamp: remoteTimestamp,
         clockSkew: clockSkew,

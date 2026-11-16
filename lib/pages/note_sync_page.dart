@@ -1194,7 +1194,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                                   Padding(
                                                     padding:
                                                         const EdgeInsets.only(
-                                                      top: 6,
+                                                      top: 8,
                                                     ),
                                                     child: Wrap(
                                                       spacing: 8,
@@ -1222,21 +1222,24 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                                               const SizedBox(
                                                                 width: 4,
                                                               ),
-                                                              Text(
-                                                                endpoint,
-                                                                style: Theme.of(
-                                                                  context,
-                                                                )
-                                                                    .textTheme
-                                                                    .bodySmall
-                                                                    ?.copyWith(
-                                                                      color: Theme
-                                                                              .of(
-                                                                        context,
-                                                                      )
-                                                                          .colorScheme
-                                                                          .onSurfaceVariant,
-                                                                    ),
+                                                              Flexible(
+                                                                child: Text(
+                                                                  endpoint,
+                                                                  softWrap:
+                                                                      true,
+                                                                  style: Theme
+                                                                          .of(
+                                                                    context,
+                                                                  )
+                                                                      .textTheme
+                                                                      .bodySmall
+                                                                      ?.copyWith(
+                                                                        color: Theme
+                                                                            .of(
+                                                                          context,
+                                                                        ).colorScheme.onSurfaceVariant,
+                                                                      ),
+                                                                ),
                                                               ),
                                                             ],
                                                           ),

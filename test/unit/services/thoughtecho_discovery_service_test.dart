@@ -302,5 +302,34 @@ void main() {
       await service.stopDiscovery();
       expect(service.trackedRateLimitEndpointCountForTesting, 0);
     });
+
+    test(
+      'shouldAcceptDatagramFromEndpoint recovers immediately on backward clock adjustment',
+      () {
+        expect(
+          service.shouldAcceptDatagramFromEndpoint('192.168.1.77', 53317),
+          isTrue,
+        );
+
+        // System clock rolls back 1 hour: must NOT drop packets for 1 hour.
+        currentTime = currentTime.subtract(const Duration(hours: 1));
+        expect(
+          service.shouldAcceptDatagramFromEndpoint('192.168.1.77', 53317),
+          isTrue,
+        );
+
+        // Rate limiting resumes relative to the new rolled-back timestamp.
+        currentTime = currentTime.add(const Duration(milliseconds: 100));
+        expect(
+          service.shouldAcceptDatagramFromEndpoint('192.168.1.77', 53317),
+          isFalse,
+        );
+        currentTime = currentTime.add(const Duration(milliseconds: 500));
+        expect(
+          service.shouldAcceptDatagramFromEndpoint('192.168.1.77', 53317),
+          isTrue,
+        );
+      },
+    );
   });
 }

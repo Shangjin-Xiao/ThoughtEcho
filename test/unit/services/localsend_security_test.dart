@@ -3,7 +3,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/models/session_status.dart';
 import 'package:thoughtecho/services/localsend/receive_controller.dart';
 import 'package:thoughtecho/services/media_sync_manifest.dart';
@@ -588,7 +592,7 @@ void main() {
           received[0], ('intent-with-port', '127.0.0.1', 53325, 'fp-sync-1'));
       expect(received[1].$1, 'intent-fallback-port');
       expect(received[1].$2, '127.0.0.1');
-      expect(received[1].$3, inInclusiveRange(1, 65535));
+      expect(received[1].$3, isNull);
       expect(received[1].$4, isNull);
     });
 
@@ -663,7 +667,7 @@ void main() {
         expect(received[0], (sid1, '127.0.0.1', 53329, 'fp-prep-1'));
         expect(received[1].$1, sid2);
         expect(received[1].$2, '127.0.0.1');
-        expect(received[1].$3, inInclusiveRange(1, 65535));
+        expect(received[1].$3, isNull);
         expect(received[1].$4, isNull);
       });
     }
@@ -673,7 +677,12 @@ void main() {
     void cleanupReceivedFile(String path) {
       addTearDown(() async {
         final file = File(path);
-        if (await file.exists()) {
+        final parent = file.parent;
+        if (p.basename(parent.path).startsWith('thoughtecho_recv_')) {
+          if (await parent.exists()) {
+            await parent.delete(recursive: true);
+          }
+        } else if (await file.exists()) {
           await file.delete();
         }
       });
@@ -1074,6 +1083,384 @@ void main() {
         );
         expect(res['size'], 4, reason: 'Expected $allowedName to succeed');
       }
+    });
+
+    test(
+        'sequential failure then success on remaining file finalizes session as finishedWithErrors',
+        () async {
+      final controller = ReceiveController(
+        onApprovalNeeded: (_, __, ___) async => true,
+        onFileReceived: cleanupReceivedFile,
+      );
+      addTearDown(controller.dispose);
+
+      final prep = await controller.handlePrepareUpload(
+        buildPreparePayload(
+          files: {
+            'file-1': {
+              'id': 'file-1',
+              'fileName': 'one.txt',
+              'size': 4,
+              'fileType': 'text/plain',
+            },
+            'file-2': {
+              'id': 'file-2',
+              'fileName': 'two.txt',
+              'size': 4,
+              'fileType': 'text/plain',
+            },
+          },
+        ),
+      );
+      final sid = prep['sessionId'] as String;
+      final tok1 = prep['files']['file-1'] as String;
+      final tok2 = prep['files']['file-2'] as String;
+
+      await expectLater(
+        controller.handleFileUpload(
+          sid,
+          'file-1',
+          tok1,
+          _FakeUploadRequest(body: const Stream<Uint8List>.empty()),
+        ),
+        throwsException,
+      );
+      expect(controller.getSession(sid)!.status, SessionStatus.sending);
+      expect(controller.getSession(sid)!.failedFileIds, {'file-1'});
+
+      final res2 = await controller.handleFileUpload(
+        sid,
+        'file-2',
+        tok2,
+        _FakeUploadRequest(),
+      );
+      expect(res2['size'], 4);
+      final settled = controller.getSession(sid)!;
+      expect(settled.status, SessionStatus.finishedWithErrors);
+      expect(settled.completedFileIds, {'file-2'});
+      expect(settled.failedFileIds, {'file-1'});
+    });
+
+    test(
+        'concurrent multi-file failure does not abort sibling streaming upload',
+        () async {
+      final receivedPaths = <String>[];
+      final controller = ReceiveController(
+        onApprovalNeeded: (_, __, ___) async => true,
+        onFileReceived: (path) {
+          receivedPaths.add(path);
+          cleanupReceivedFile(path);
+        },
+      );
+      addTearDown(controller.dispose);
+
+      final prep = await controller.handlePrepareUpload(
+        buildPreparePayload(
+          files: {
+            'file-1': {
+              'id': 'file-1',
+              'fileName': 'fail.txt',
+              'size': 4,
+              'fileType': 'text/plain',
+            },
+            'file-2': {
+              'id': 'file-2',
+              'fileName': 'ok.txt',
+              'size': 4,
+              'fileType': 'text/plain',
+            },
+          },
+        ),
+      );
+      final sid = prep['sessionId'] as String;
+      final tok1 = prep['files']['file-1'] as String;
+      final tok2 = prep['files']['file-2'] as String;
+
+      final stream1 = StreamController<Uint8List>();
+      final stream2 = StreamController<Uint8List>();
+
+      final upload1 = controller.handleFileUpload(
+        sid,
+        'file-1',
+        tok1,
+        _FakeUploadRequest(body: stream1.stream),
+      );
+      final upload2 = controller.handleFileUpload(
+        sid,
+        'file-2',
+        tok2,
+        _FakeUploadRequest(body: stream2.stream),
+      );
+
+      // Both tokens are now consumed and both uploads are streaming.
+      stream2.add(Uint8List.fromList([1, 2]));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(controller.getSession(sid)!.fileTokens, isEmpty);
+
+      // Fail upload1 while upload2 is still mid-stream.
+      stream1.addError(const SocketException('simulated disconnect'));
+      await stream1.close();
+      await expectLater(upload1, throwsException);
+
+      // Session MUST remain sending so sibling upload2 is not aborted!
+      expect(controller.getSession(sid)!.status, SessionStatus.sending);
+      expect(controller.getSession(sid)!.failedFileIds, {'file-1'});
+
+      // Complete upload2 cleanly.
+      stream2.add(Uint8List.fromList([3, 4]));
+      await stream2.close();
+      final res2 = await upload2;
+      expect(res2['size'], 4);
+
+      final finalSession = controller.getSession(sid)!;
+      expect(finalSession.status, SessionStatus.finishedWithErrors);
+      expect(finalSession.completedFileIds, {'file-2'});
+      expect(finalSession.failedFileIds, {'file-1'});
+      expect(receivedPaths, hasLength(1));
+      expect(
+        p.basename(File(receivedPaths.single).parent.path),
+        startsWith('thoughtecho_recv_'),
+      );
+    });
+  });
+
+  group('LocalSendProvider & Windows Path / Retry Recovery', () {
+    test(
+        'extractFileName strips Windows backslash and POSIX directory prefixes',
+        () {
+      expect(
+        LocalSendProvider.extractFileName(
+          r'C:\Temp\thoughtecho_backup_123.zip',
+        ),
+        'thoughtecho_backup_123.zip',
+      );
+      expect(
+        LocalSendProvider.extractFileName(r'\\server\share\notes.json'),
+        'notes.json',
+      );
+      expect(
+        LocalSendProvider.extractFileName('/tmp/thoughtecho_backup_123.zip'),
+        'thoughtecho_backup_123.zip',
+      );
+    });
+
+    test(
+        'startSession forwards localPort and recovers from consumed-token disconnect via re-prepare and re-approval',
+        () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      final originalOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = originalOverrides);
+
+      final tempDir = await Directory.systemTemp.createTemp('ls_retry_test_');
+      addTearDown(() async {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final sourceFile = File(p.join(tempDir.path, 'backup_payload.zip'));
+      await sourceFile.writeAsBytes(List<int>.generate(64, (i) => i));
+
+      final receivedFiles = <String>[];
+      final receivedSenderPorts = <int?>[];
+      var approvalCalls = 0;
+      var uploadHttpAttempts = 0;
+
+      final controller = ReceiveController(
+        onSenderInfoReceived: (_, __, port, ___) {
+          receivedSenderPorts.add(port);
+        },
+        onApprovalNeeded: (_, __, ___) async {
+          approvalCalls++;
+          return true;
+        },
+        onFileReceived: (path) {
+          receivedFiles.add(path);
+          addTearDown(() async {
+            final f = File(path);
+            if (await f.parent.exists()) {
+              await f.parent.delete(recursive: true);
+            }
+          });
+        },
+      );
+      addTearDown(controller.dispose);
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+
+      server.listen((HttpRequest request) async {
+        final path = request.uri.path;
+        if (path == '/api/localsend/v2/info') {
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(controller.handleInfoRequest()));
+          await request.response.close();
+          return;
+        }
+        if (path == '/api/localsend/v2/prepare-upload') {
+          final raw = await utf8.decoder.bind(request).join();
+          final payload = jsonDecode(raw) as Map<String, dynamic>;
+          final res = await controller.handlePrepareUpload(
+            payload,
+            remoteIp: request.connectionInfo?.remoteAddress.address,
+            remotePort: request.connectionInfo?.remotePort,
+          );
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(res));
+          await request.response.close();
+          return;
+        }
+        if (path == '/api/localsend/v2/upload') {
+          uploadHttpAttempts++;
+          final sid = request.uri.queryParameters['sessionId']!;
+          final fid = request.uri.queryParameters['fileId']!;
+          final tok = request.uri.queryParameters['token']!;
+          if (uploadHttpAttempts == 1) {
+            // Simulate token consumed then connection dropped mid-stream.
+            await request.drain<void>();
+            try {
+              await controller.handleFileUpload(
+                sid,
+                fid,
+                tok,
+                _FakeUploadRequest(body: const Stream<Uint8List>.empty()),
+              );
+            } catch (_) {}
+            request.response.statusCode = HttpStatus.internalServerError;
+            request.response.write(jsonEncode({'error': 'simulated drop'}));
+            await request.response.close();
+            return;
+          }
+          final res = await controller.handleFileUpload(sid, fid, tok, request);
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(res));
+          await request.response.close();
+          return;
+        }
+        request.response.statusCode = HttpStatus.notFound;
+        await request.response.close();
+      });
+
+      final provider = LocalSendProvider(
+        localPort: 53321,
+        retryBaseDelay: const Duration(milliseconds: 10),
+      );
+      addTearDown(provider.dispose);
+
+      final target = Device(
+        signalingId: null,
+        ip: '127.0.0.1',
+        version: '2.1',
+        port: server.port,
+        https: false,
+        fingerprint: 'receiver-fp',
+        alias: 'Receiver',
+        deviceModel: 'Model',
+        deviceType: DeviceType.desktop,
+        download: true,
+        discoveryMethods: const {},
+      );
+
+      final sid = await provider.startSession(
+        target: target,
+        files: [sourceFile],
+      );
+
+      expect(approvalCalls, 2);
+      expect(uploadHttpAttempts, 2);
+      expect(receivedSenderPorts, [53321, 53321]);
+      expect(receivedFiles, hasLength(1));
+      expect(await File(receivedFiles.single).length(), 64);
+      expect(provider.getSession(sid)!.status, SessionStatus.finished);
+    });
+
+    test(
+        'startSession stops retrying immediately when re-prepare is rejected by receiver',
+        () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      final originalOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = originalOverrides);
+
+      final tempDir = await Directory.systemTemp.createTemp('ls_reject_test_');
+      addTearDown(() async {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final sourceFile = File(p.join(tempDir.path, 'backup_payload.zip'));
+      await sourceFile.writeAsBytes(List<int>.generate(16, (i) => i));
+
+      var approvalCalls = 0;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+
+      server.listen((HttpRequest request) async {
+        final path = request.uri.path;
+        if (path == '/api/localsend/v2/info') {
+          request.response.statusCode = HttpStatus.ok;
+          request.response.write(jsonEncode({'alias': 'Peer'}));
+          await request.response.close();
+          return;
+        }
+        if (path == '/api/localsend/v2/prepare-upload') {
+          await request.drain<void>();
+          approvalCalls++;
+          if (approvalCalls == 1) {
+            request.response.statusCode = HttpStatus.ok;
+            request.response.write(
+              jsonEncode({
+                'sessionId': 'remote-s1',
+                'files': {'file_0': 'tok-1'},
+              }),
+            );
+          } else {
+            request.response.statusCode = HttpStatus.internalServerError;
+            request.response.write(jsonEncode({'error': 'Exception: 接收端已拒绝'}));
+          }
+          await request.response.close();
+          return;
+        }
+        if (path == '/api/localsend/v2/upload') {
+          await request.drain<void>();
+          request.response.statusCode = HttpStatus.internalServerError;
+          request.response.write(jsonEncode({'error': 'transient error'}));
+          await request.response.close();
+          return;
+        }
+        request.response.statusCode = HttpStatus.notFound;
+        await request.response.close();
+      });
+
+      final provider = LocalSendProvider(
+        retryBaseDelay: const Duration(milliseconds: 10),
+      );
+      addTearDown(provider.dispose);
+
+      final target = Device(
+        signalingId: null,
+        ip: '127.0.0.1',
+        version: '2.1',
+        port: server.port,
+        https: false,
+        fingerprint: 'receiver-fp',
+        alias: 'Receiver',
+        deviceModel: 'Model',
+        deviceType: DeviceType.desktop,
+        download: true,
+        discoveryMethods: const {},
+      );
+
+      await expectLater(
+        provider.startSession(target: target, files: [sourceFile]),
+        throwsException,
+      );
+      expect(approvalCalls, 2);
     });
   });
 }

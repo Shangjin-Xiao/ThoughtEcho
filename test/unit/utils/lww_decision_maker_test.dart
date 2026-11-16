@@ -97,5 +97,50 @@ void main() {
       expect(decision.shouldUseRemote, isTrue);
       expect(decision.clockSkew, const Duration(hours: 23));
     });
+
+    test(
+      'allows valid normal remote update to heal corrupted future local timestamp',
+      () {
+        final refNow = DateTime.utc(2026, 6, 1, 12, 0, 0);
+        final futureLocal =
+            refNow.add(const Duration(days: 365)).toIso8601String();
+        final normalRemote =
+            refNow.subtract(const Duration(minutes: 10)).toIso8601String();
+
+        final decision = LWWDecisionMaker.makeDecision(
+          localTimestamp: futureLocal,
+          remoteTimestamp: normalRemote,
+          now: refNow,
+        );
+
+        expect(decision.decision, LWWDecision.useRemote);
+        expect(decision.shouldUseRemote, isTrue);
+      },
+    );
+
+    test(
+      'keeps corrupted future local when remote is also excessive future or invalid',
+      () {
+        final refNow = DateTime.utc(2026, 6, 1, 12, 0, 0);
+        final futureLocal =
+            refNow.add(const Duration(days: 365)).toIso8601String();
+        final futureRemote =
+            refNow.add(const Duration(days: 30)).toIso8601String();
+
+        final bothFuture = LWWDecisionMaker.makeDecision(
+          localTimestamp: futureLocal,
+          remoteTimestamp: futureRemote,
+          now: refNow,
+        );
+        expect(bothFuture.decision, LWWDecision.useLocal);
+
+        final invalidRemote = LWWDecisionMaker.makeDecision(
+          localTimestamp: futureLocal,
+          remoteTimestamp: '',
+          now: refNow,
+        );
+        expect(invalidRemote.decision, LWWDecision.useLocal);
+      },
+    );
   });
 }

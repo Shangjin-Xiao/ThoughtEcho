@@ -563,5 +563,60 @@ void main() {
       expect(find.text('192.168.1.60'), findsOneWidget);
       expect(find.textContaining('#'), findsNothing);
     });
+
+    testWidgets(
+      '等待用户确认对话框在窄屏与大字号下对长端点自动换行而不溢出',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(320, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        when(mockSyncService.syncStatus).thenReturn(SyncStatus.receiving);
+        when(mockSyncService.awaitingUserApproval).thenReturn(true);
+        when(mockSyncService.receiveSenderAlias).thenReturn('Long Sender');
+        when(
+          mockSyncService.receiveSenderIp,
+        ).thenReturn('fe80::1234:5678:9abc:def0');
+        when(mockSyncService.receiveSenderPort).thenReturn(53320);
+        when(
+          mockSyncService.receiveSenderFingerprint,
+        ).thenReturn('sender-device-abcdef');
+        when(mockSyncService.skipSyncConfirmation).thenReturn(false);
+
+        await tester.pumpWidget(
+          ChangeNotifierProvider<NoteSyncService>.value(
+            value: mockSyncService,
+            child: MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('en', ''),
+                Locale('zh', ''),
+              ],
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: const TextScaler.linear(1.6),
+                ),
+                child: child!,
+              ),
+              home: const NoteSyncPage(),
+            ),
+          ),
+        );
+        await pumpUi(tester);
+
+        expect(find.byType(AlertDialog), findsOneWidget);
+        final endpointFinder = find.text('fe80::1234:5678:9abc:def0:53320');
+        expect(endpointFinder, findsOneWidget);
+        expect(tester.getSize(endpointFinder).height, greaterThan(28));
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
