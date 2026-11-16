@@ -463,6 +463,104 @@ void main() {
         expect(cache.hashComputeCount, 1);
       },
     );
+
+    test(
+        'getOrCompute never promotes unsynced sha256 into syncedSha256 on mtime change',
+        () async {
+      final cache = MediaFingerprintCache(directory: tempDir);
+      final t1 = DateTime.utc(2026, 5, 1, 10, 0, 0);
+      final t2 = t1.add(const Duration(seconds: 5));
+      final payload = utf8.encode('unsynced-payload-bytes');
+      final file = await writeMediaFile(
+        'images/unsynced_retry.png',
+        payload,
+        modifiedAt: t1,
+      );
+
+      final first = await cache.getOrCompute('images/unsynced_retry.png', file);
+      expect(first.syncedSha256, isNull);
+
+      // Simulate failed upload followed by mtime-only touch of same bytes
+      await file.setLastModified(t2);
+      final second = await cache.getOrCompute(
+        'images/unsynced_retry.png',
+        file,
+      );
+      expect(second.sha256, first.sha256);
+      expect(second.syncedSha256, isNull);
+      expect(second.syncedRemoteEtag, isNull);
+    });
+
+    test(
+        'buildRemoteScope normalizes URLs and load clears sync baselines on scope change',
+        () async {
+      final scopeA1 = MediaFingerprintCache.buildRemoteScope(
+        serverUrl: 'https://DAV.Example.com:443/dav/',
+        username: 'alice',
+      );
+      final scopeA2 = MediaFingerprintCache.buildRemoteScope(
+        serverUrl: 'https://dav.example.com/dav///',
+        username: ' alice ',
+      );
+      final scopeB = MediaFingerprintCache.buildRemoteScope(
+        serverUrl: 'https://dav.example.com/dav/',
+        username: 'bob',
+      );
+      final scopeC = MediaFingerprintCache.buildRemoteScope(
+        serverUrl: 'https://other.example.com/dav/',
+        username: 'alice',
+      );
+
+      expect(scopeA1, isNotNull);
+      expect(scopeA1, scopeA2);
+      expect(scopeA1, isNot(scopeB));
+      expect(scopeA1, isNot(scopeC));
+
+      final mtime = DateTime.utc(2026, 5, 2, 12, 0, 0);
+      final file = await writeMediaFile(
+        'images/scoped.jpg',
+        utf8.encode('scoped-bytes'),
+        modifiedAt: mtime,
+      );
+
+      final cacheA = MediaFingerprintCache(
+        directory: tempDir,
+        remoteScope: scopeA1,
+      );
+      await cacheA.load();
+      await cacheA.markSynced(
+        'images/scoped.jpg',
+        file,
+        remoteEtag: '"server-a-etag"',
+      );
+      await cacheA.save();
+
+      // Loading with same normalized scope retains synced baseline
+      final reloadedA = MediaFingerprintCache(
+        directory: tempDir,
+        remoteScope: scopeA2,
+      );
+      await reloadedA.load();
+      expect(reloadedA.isDirty, isFalse);
+      expect(
+        reloadedA.peek('images/scoped.jpg')?.syncedRemoteEtag,
+        'server-a-etag',
+      );
+      expect(reloadedA.peek('images/scoped.jpg')?.syncedSha256, isNotNull);
+
+      // Switching to scopeB clears sync baselines while preserving local hash
+      final cacheB = MediaFingerprintCache(
+        directory: tempDir,
+        remoteScope: scopeB,
+      );
+      await cacheB.load();
+      expect(cacheB.isDirty, isTrue);
+      final entryB = cacheB.peek('images/scoped.jpg');
+      expect(entryB, isNotNull);
+      expect(entryB!.sha256, isNotEmpty);
+      expect(entryB.syncedSha256, isNull);
+      expect(entryB.syncedRemoteEtag, isNull);
+    });
   });
 
   group('MediaFingerprintCache persistence and recovery', () {
@@ -654,7 +752,16 @@ void main() {
         await cache.load();
         expect(cache.length, 0);
         expect(cache.isDirty, isTrue);
-        expect(logService.records.length, greaterThanOrEqualTo(2));
+        final warningLogs = logService.records
+            .where(
+              (r) =>
+                  r.level == UnifiedLogLevel.warning &&
+                  r.source == 'MediaFingerprintCache',
+            )
+            .toList();
+        expect(warningLogs, hasLength(2));
+        expect(warningLogs[0].message, contains('媒体指纹缓存损坏，已重置缓存'));
+        expect(warningLogs[1].message, contains('媒体指纹缓存损坏，已重置缓存'));
       },
     );
 

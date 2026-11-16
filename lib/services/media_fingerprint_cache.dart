@@ -148,17 +148,28 @@ class MediaFingerprintCache {
   static const int _cacheFormatVersion = 1;
   static const String _logSource = 'MediaFingerprintCache';
 
-  MediaFingerprintCache({File? cacheFile, Directory? directory})
-      : _cacheFile = cacheFile,
-        _directory = directory;
+  MediaFingerprintCache({
+    File? cacheFile,
+    Directory? directory,
+    String? remoteScope,
+  })  : _cacheFile = cacheFile,
+        _directory = directory,
+        _remoteScope = (remoteScope != null && remoteScope.trim().isNotEmpty)
+            ? remoteScope.trim()
+            : null;
 
   final File? _cacheFile;
   final Directory? _directory;
+  final String? _remoteScope;
+  String? _loadedRemoteScope;
   File? _resolvedFile;
 
   final Map<String, MediaFingerprintEntry> _entries =
       <String, MediaFingerprintEntry>{};
   bool _isDirty = false;
+
+  @visibleForTesting
+  static Future<void> Function(File file)? readGuardForTesting;
 
   @visibleForTesting
   int hashComputeCount = 0;
@@ -172,6 +183,46 @@ class MediaFingerprintCache {
   bool get isDirty => _isDirty;
 
   int get length => _entries.length;
+
+  String? get remoteScope => _remoteScope;
+
+  @visibleForTesting
+  String? get loadedRemoteScope => _loadedRemoteScope;
+
+  /// Normalizes a WebDAV server URL into a canonical scope identifier component.
+  static String normalizeRemoteUrl(String serverUrl) {
+    final trimmed = serverUrl.trim();
+    if (trimmed.isEmpty) return '';
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.hasScheme && uri.hasAuthority) {
+      final scheme = uri.scheme.toLowerCase();
+      final host = uri.host.toLowerCase();
+      final isDefaultPort = !uri.hasPort ||
+          (scheme == 'https' && uri.port == 443) ||
+          (scheme == 'http' && uri.port == 80);
+      final portPart = isDefaultPort ? '' : ':${uri.port}';
+      final collapsedPath = uri.path.replaceAll(RegExp(r'/+'), '/');
+      final normalizedPath = collapsedPath.replaceAll(RegExp(r'/+$'), '');
+      return '$scheme://$host$portPart$normalizedPath';
+    }
+    return trimmed.replaceAll(RegExp(r'/+$'), '').toLowerCase();
+  }
+
+  /// Builds a deterministic, privacy-preserving scope key bound to the
+  /// normalized WebDAV [serverUrl] and [username]. Returns `null` when both are
+  /// empty.
+  static String? buildRemoteScope({
+    required String serverUrl,
+    String username = '',
+  }) {
+    final normalizedUrl = normalizeRemoteUrl(serverUrl);
+    final normalizedUser = username.trim();
+    if (normalizedUrl.isEmpty && normalizedUser.isEmpty) {
+      return null;
+    }
+    final payload = '$normalizedUrl\u0000$normalizedUser';
+    return sha256.convert(utf8.encode(payload)).toString();
+  }
 
   /// Returns whether [raw] uses HTTP weak ETag syntax (`W/"..."` / `w/"..."`).
   static bool isWeakEtag(String? raw) {
@@ -217,66 +268,165 @@ class MediaFingerprintCache {
     final target = await _resolveTargetFile();
     if (!await target.exists()) {
       _entries.clear();
+      _loadedRemoteScope = null;
       _isDirty = false;
       return;
     }
 
     try {
       final content = await target.readAsString();
-      final decoded = jsonDecode(content);
-      if (decoded is! Map) {
-        throw const FormatException('顶层 JSON 结构不是对象');
-      }
-
-      final Map<dynamic, dynamic> rawEntries;
-      if (decoded.containsKey('entries')) {
-        if (decoded.containsKey('version') &&
-            decoded['version'] != _cacheFormatVersion) {
-          throw FormatException('不支持的缓存版本: ${decoded['version']}');
-        }
-        final entriesNode = decoded['entries'];
-        if (entriesNode is! Map) {
-          throw const FormatException('entries 字段不是对象');
-        }
-        rawEntries = entriesNode;
-      } else if (decoded.containsKey('version')) {
-        throw const FormatException('缺少 entries 字段');
-      } else {
-        rawEntries = decoded;
-      }
-
-      final nextEntries = <String, MediaFingerprintEntry>{};
-      var hadMalformedEntry = false;
-
-      for (final pair in rawEntries.entries) {
-        final rawKey = pair.key;
-        final rawValue = pair.value;
-        if (rawKey is! String || rawKey.trim().isEmpty || rawValue is! Map) {
-          hadMalformedEntry = true;
-          logWarning('跳过损坏的媒体指纹缓存条目 ($rawKey)', source: _logSource);
-          continue;
-        }
-
-        final normalizedKey = _normalizePath(rawKey);
-        try {
-          final entry = MediaFingerprintEntry.fromJson(
-            Map<String, dynamic>.from(rawValue),
-          );
-          nextEntries[normalizedKey] = entry;
-        } catch (e) {
-          hadMalformedEntry = true;
-          logWarning('跳过损坏的媒体指纹缓存条目 ($normalizedKey): $e', source: _logSource);
-        }
-      }
-
-      _entries
-        ..clear()
-        ..addAll(nextEntries);
-      _isDirty = hadMalformedEntry;
+      _loadFromJsonString(content);
     } catch (e) {
       logWarning('媒体指纹缓存损坏，已重置缓存: $e', source: _logSource);
       _entries.clear();
+      _loadedRemoteScope = null;
       _isDirty = true;
+    }
+  }
+
+  void _loadFromJsonString(String content) {
+    final decoded = jsonDecode(content);
+    if (decoded is! Map) {
+      throw const FormatException('顶层 JSON 结构不是对象');
+    }
+
+    String? loadedScope;
+    final Map<dynamic, dynamic> rawEntries;
+    if (decoded.containsKey('entries')) {
+      if (decoded.containsKey('version') &&
+          decoded['version'] != _cacheFormatVersion) {
+        throw FormatException('不支持的缓存版本: ${decoded['version']}');
+      }
+      final entriesNode = decoded['entries'];
+      if (entriesNode is! Map) {
+        throw const FormatException('entries 字段不是对象');
+      }
+      final rawScope = decoded['remoteScope'];
+      if (rawScope != null && rawScope is! String) {
+        throw const FormatException('remoteScope 字段不是字符串');
+      }
+      if (rawScope is String && rawScope.trim().isNotEmpty) {
+        loadedScope = rawScope.trim();
+      }
+      rawEntries = entriesNode;
+    } else if (decoded.containsKey('version')) {
+      throw const FormatException('缺少 entries 字段');
+    } else {
+      rawEntries = decoded;
+    }
+
+    final nextEntries = <String, MediaFingerprintEntry>{};
+    var hadMalformedEntry = false;
+
+    for (final pair in rawEntries.entries) {
+      final rawKey = pair.key;
+      final rawValue = pair.value;
+      if (rawKey is! String || rawKey.trim().isEmpty || rawValue is! Map) {
+        hadMalformedEntry = true;
+        logWarning('跳过损坏的媒体指纹缓存条目 ($rawKey)', source: _logSource);
+        continue;
+      }
+
+      final normalizedKey = _normalizePath(rawKey);
+      try {
+        final entry = MediaFingerprintEntry.fromJson(
+          Map<String, dynamic>.from(rawValue),
+        );
+        nextEntries[normalizedKey] = entry;
+      } catch (e) {
+        hadMalformedEntry = true;
+        logWarning('跳过损坏的媒体指纹缓存条目 ($normalizedKey): $e', source: _logSource);
+      }
+    }
+
+    _loadedRemoteScope = loadedScope;
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _isDirty = hadMalformedEntry;
+
+    if (_remoteScope != null && _loadedRemoteScope != _remoteScope) {
+      clearSyncBaselines();
+      _isDirty = true;
+    }
+  }
+
+  String _encodeToJson() {
+    final effectiveScope = _remoteScope ?? _loadedRemoteScope;
+    return jsonEncode(<String, dynamic>{
+      'version': _cacheFormatVersion,
+      if (effectiveScope != null) 'remoteScope': effectiveScope,
+      'entries': _entries.map((key, value) => MapEntry(key, value.toJson())),
+    });
+  }
+
+  /// Clears remote sync baselines (`syncedSha256` and `syncedRemoteEtag`)
+  /// across all cached entries while preserving local file cryptographic
+  /// digests so switching WebDAV servers/accounts never reuses stale baselines.
+  void clearSyncBaselines() {
+    var clearedAny = false;
+    for (final key in _entries.keys.toList(growable: false)) {
+      final entry = _entries[key]!;
+      if (entry.syncedSha256 != null || entry.syncedRemoteEtag != null) {
+        _entries[key] = MediaFingerprintEntry(
+          fileSize: entry.fileSize,
+          lastModifiedEpochMs: entry.lastModifiedEpochMs,
+          sha256: entry.sha256,
+          md5: entry.md5,
+        );
+        clearedAny = true;
+      }
+    }
+    if (clearedAny) {
+      _isDirty = true;
+    }
+  }
+
+  /// Synchronously resets cached sync baselines inside [directory] when the
+  /// target WebDAV scope changes, avoiding async `dart:io` waits during
+  /// settings updates or widget-test fake-async frames.
+  static void resetBaselinesOnScopeChangeSync(
+    Directory directory, {
+    String? nextScope,
+  }) {
+    final target = File(p.join(directory.path, defaultCacheFileName));
+    if (!target.existsSync()) return;
+
+    final cache = MediaFingerprintCache(
+      cacheFile: target,
+      remoteScope: nextScope,
+    );
+    try {
+      final content = target.readAsStringSync();
+      cache._loadFromJsonString(content);
+    } catch (e) {
+      logWarning('媒体指纹缓存损坏，已重置缓存: $e', source: _logSource);
+      cache._entries.clear();
+      cache._loadedRemoteScope = null;
+      cache._isDirty = true;
+    }
+    if (nextScope == null) {
+      cache.clearSyncBaselines();
+    }
+    if (!cache._isDirty) return;
+
+    final tmpFile = File('${target.path}.tmp');
+    target.parent.createSync(recursive: true);
+    try {
+      tmpFile.writeAsStringSync(cache._encodeToJson(), flush: true);
+      try {
+        tmpFile.renameSync(target.path);
+      } catch (_) {
+        tmpFile.copySync(target.path);
+        tmpFile.deleteSync();
+      }
+    } catch (_) {
+      try {
+        if (tmpFile.existsSync()) {
+          tmpFile.deleteSync();
+        }
+      } catch (_) {}
+      rethrow;
     }
   }
 
@@ -289,10 +439,7 @@ class MediaFingerprintCache {
     final tmpFile = File('${target.path}.tmp');
     await target.parent.create(recursive: true);
 
-    final encoded = jsonEncode(<String, dynamic>{
-      'version': _cacheFormatVersion,
-      'entries': _entries.map((key, value) => MapEntry(key, value.toJson())),
-    });
+    final encoded = _encodeToJson();
 
     try {
       await tmpFile.writeAsString(encoded, flush: true);
@@ -325,7 +472,8 @@ class MediaFingerprintCache {
   /// Returns a valid cached entry when [fileSize] and [lastModifiedEpochMs]
   /// match, lazily computing MD5 if [requireMd5] is `true` and MD5 is absent.
   /// On miss or stat mismatch, streams SHA-256 (and MD5 when [requireMd5] is
-  /// `true`) while preserving any prior sync baseline (`syncedSha256` / ETag).
+  /// `true`) while preserving only an explicitly recorded prior sync baseline
+  /// (`syncedSha256` / ETag).
   Future<MediaFingerprintEntry> getOrCompute(
     String relativePath,
     File file, {
@@ -361,7 +509,7 @@ class MediaFingerprintCache {
       lastModifiedEpochMs: mtimeMs,
       sha256: computedSha256,
       md5: computedMd5,
-      syncedSha256: existing?.syncedSha256 ?? existing?.sha256,
+      syncedSha256: existing?.syncedSha256,
       syncedRemoteEtag: existing?.syncedRemoteEtag,
     );
     _entries[key] = entry;
@@ -440,6 +588,9 @@ class MediaFingerprintCache {
   }
 
   Future<String> _computeStreamingSha256(File file) async {
+    if (readGuardForTesting != null) {
+      await readGuardForTesting!(file);
+    }
     final digest = await sha256.bind(file.openRead()).first;
     hashComputeCount++;
     sha256ComputeCount++;
@@ -447,6 +598,9 @@ class MediaFingerprintCache {
   }
 
   Future<String> _computeStreamingMd5(File file) async {
+    if (readGuardForTesting != null) {
+      await readGuardForTesting!(file);
+    }
     final digest = await md5.bind(file.openRead()).first;
     hashComputeCount++;
     md5ComputeCount++;

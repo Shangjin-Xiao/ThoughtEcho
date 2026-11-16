@@ -18,8 +18,9 @@ import 'package:thoughtecho/utils/app_logger.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const MethodChannel secureStorageChannel =
-      MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  const MethodChannel secureStorageChannel = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
 
   final Map<String, String> secureStorage = {};
   late AppPreferencesService appPrefs;
@@ -37,27 +38,26 @@ void main() {
 
     // Mock FlutterSecureStorage 方法通道
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      secureStorageChannel,
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'read') {
-          return secureStorage[methodCall.arguments['key']];
-        }
-        if (methodCall.method == 'write') {
-          secureStorage[methodCall.arguments['key']] =
-              methodCall.arguments['value'];
-          return null;
-        }
-        if (methodCall.method == 'delete') {
-          secureStorage.remove(methodCall.arguments['key']);
-          return null;
-        }
-        if (methodCall.method == 'readAll') {
-          return secureStorage;
-        }
+        .setMockMethodCallHandler(secureStorageChannel, (
+      MethodCall methodCall,
+    ) async {
+      if (methodCall.method == 'read') {
+        return secureStorage[methodCall.arguments['key']];
+      }
+      if (methodCall.method == 'write') {
+        secureStorage[methodCall.arguments['key']] =
+            methodCall.arguments['value'];
         return null;
-      },
-    );
+      }
+      if (methodCall.method == 'delete') {
+        secureStorage.remove(methodCall.arguments['key']);
+        return null;
+      }
+      if (methodCall.method == 'readAll') {
+        return secureStorage;
+      }
+      return null;
+    });
   });
 
   test(
@@ -70,18 +70,17 @@ void main() {
 
       // Mock secureStorage to throw an exception on read
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        secureStorageChannel,
-        (MethodCall methodCall) async {
-          if (methodCall.method == 'read') {
-            throw PlatformException(
-              code: 'READ_FAILED',
-              message: 'Failed to read from secure storage',
-            );
-          }
-          return null;
-        },
-      );
+          .setMockMethodCallHandler(secureStorageChannel, (
+        MethodCall methodCall,
+      ) async {
+        if (methodCall.method == 'read') {
+          throw PlatformException(
+            code: 'READ_FAILED',
+            message: 'Failed to read from secure storage',
+          );
+        }
+        return null;
+      });
 
       final password = await service.getPassword();
       expect(password, isNull);
@@ -101,47 +100,49 @@ void main() {
     }
   });
 
-  test('WebDAVSyncService should initialize and save settings correctly',
-      () async {
-    final service = WebDAVSyncService();
+  test(
+    'WebDAVSyncService should initialize and save settings correctly',
+    () async {
+      final service = WebDAVSyncService();
 
-    // 测试默认配置
-    expect(service.enabled, false);
-    expect(service.provider, 'custom');
-    expect(service.url, '');
-    expect(service.username, '');
-    expect(service.syncOnOpenOrForeground, true);
-    expect(service.syncOnLaunch, true);
-    expect(service.syncOnChange, true);
+      // 测试默认配置
+      expect(service.enabled, false);
+      expect(service.provider, 'custom');
+      expect(service.url, '');
+      expect(service.username, '');
+      expect(service.syncOnOpenOrForeground, true);
+      expect(service.syncOnLaunch, true);
+      expect(service.syncOnChange, true);
 
-    // 保存新配置并包含密码
-    await service.saveSettings(
-      enabled: true,
-      provider: 'nutstore',
-      url: 'https://dav.jianguoyun.com/dav',
-      username: 'user@example.com',
-      password: 'my-app-token-123',
-      syncOnLaunch: false,
-      syncOnChange: true,
-      syncOnCellular: false,
-      syncNotesOnlyOnCellular: false,
-    );
+      // 保存新配置并包含密码
+      await service.saveSettings(
+        enabled: true,
+        provider: 'nutstore',
+        url: 'https://dav.jianguoyun.com/dav',
+        username: 'user@example.com',
+        password: 'my-app-token-123',
+        syncOnLaunch: false,
+        syncOnChange: true,
+        syncOnCellular: false,
+        syncNotesOnlyOnCellular: false,
+      );
 
-    // 检查缓存状态是否更新
-    expect(service.enabled, true);
-    expect(service.provider, 'nutstore');
-    // 服务自动在 URL 后附加斜杠
-    expect(service.url, 'https://dav.jianguoyun.com/dav/');
-    expect(service.username, 'user@example.com');
-    expect(service.syncOnOpenOrForeground, false);
-    expect(service.syncOnLaunch, false);
-    expect(service.syncOnChange, true);
+      // 检查缓存状态是否更新
+      expect(service.enabled, true);
+      expect(service.provider, 'nutstore');
+      // 服务自动在 URL 后附加斜杠
+      expect(service.url, 'https://dav.jianguoyun.com/dav/');
+      expect(service.username, 'user@example.com');
+      expect(service.syncOnOpenOrForeground, false);
+      expect(service.syncOnLaunch, false);
+      expect(service.syncOnChange, true);
 
-    // 检查密码是否被加密安全存储
-    final savedPassword = await service.getPassword();
-    expect(savedPassword, 'my-app-token-123');
-    expect(secureStorage['webdav_password'], 'my-app-token-123');
-  });
+      // 检查密码是否被加密安全存储
+      final savedPassword = await service.getPassword();
+      expect(savedPassword, 'my-app-token-123');
+      expect(secureStorage['webdav_password'], 'my-app-token-123');
+    },
+  );
 
   test(
       'WebDAVSyncService should transition status correctly during sync initialization',
@@ -175,11 +176,13 @@ void main() {
         syncOnCellular: false,
         syncNotesOnlyOnCellular: false,
       ),
-      throwsA(isA<Exception>().having(
-        (e) => e.toString(),
-        'message',
-        contains('HTTPS is required to protect WebDAV credentials'),
-      )),
+      throwsA(
+        isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          contains('HTTPS is required to protect WebDAV credentials'),
+        ),
+      ),
     );
 
     // 当 enabled = false 时，应当允许用户暂存设置而不被阻止
@@ -197,25 +200,31 @@ void main() {
     expect(service.url, 'http://insecure.server.local/dav/');
   });
 
-  test('WebDAVSyncService should enforce HTTPS strictly on testConnection',
-      () async {
-    final service = WebDAVSyncService();
+  test(
+    'WebDAVSyncService should enforce HTTPS strictly on testConnection',
+    () async {
+      final service = WebDAVSyncService();
 
-    // The testConnection method catches exceptions and returns false.
-    // Instead of throwsA, we should test the boolean result.
-    final result = await service.testConnection(
-        'http://insecure.server.local/dav/', 'user', 'pass');
-    expect(result, isFalse);
-  });
+      // The testConnection method catches exceptions and returns false.
+      // Instead of throwsA, we should test the boolean result.
+      final result = await service.testConnection(
+        'http://insecure.server.local/dav/',
+        'user',
+        'pass',
+      );
+      expect(result, isFalse);
+    },
+  );
 
   test('buildBasicAuthHeader correctly encodes credentials', () {
     final header = WebDAVSyncService.buildBasicAuthHeader('user', 'pass');
     expect(header, 'Basic dXNlcjpwYXNz');
   });
 
-  test('WebDAV media parser should extract existing remote files and sizes',
-      () {
-    const xml = '''
+  test(
+    'WebDAV media parser should extract existing remote files and sizes',
+    () {
+      const xml = '''
 <?xml version="1.0" encoding="utf-8"?>
 <d:multistatus xmlns:d="DAV:">
   <d:response>
@@ -233,13 +242,14 @@ void main() {
 </d:multistatus>
 ''';
 
-    final files = WebDAVSyncService.extractRemoteMediaFilesForTesting(xml);
+      final files = WebDAVSyncService.extractRemoteMediaFilesForTesting(xml);
 
-    expect(files, {
-      'images/1700000000000_图.png': 12345,
-      'videos/movie.mp4': 99,
-    });
-  });
+      expect(files, {
+        'images/1700000000000_图.png': 12345,
+        'videos/movie.mp4': 99,
+      });
+    },
+  );
 
   test(
       'WebDAV media parser should tolerate whitespace in getcontentlength and trim etags',
@@ -289,107 +299,104 @@ void main() {
   });
 
   test(
-      'mediaRelativePathFromHref should normalize paths and block path traversal',
-      () {
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/photo.png',
-      ),
-      'images/photo.png',
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/./photo.png',
-      ),
-      'images/photo.png',
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/sub/../photo.png',
-      ),
-      'images/photo.png',
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/../videos/photo.png',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/../../etc/passwd',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/photo.png\x00.zip',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/..\\..\\secret.txt',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/photo.png?token=secret#section',
-      ),
-      'images/photo.png',
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        'https://example.com/dav/thoughtecho/media/images/photo.png?token=secret#section',
-      ),
-      'images/photo.png',
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/%252e%252e/secret.txt',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/%252fetc/passwd',
-      ),
-      isNull,
-    );
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/%255csecret.txt',
-      ),
-      isNull,
-    );
-    // 双重编码的无害字符按单次解码还原，与 _encodeMediaPath 往返一致
-    //（本地 images/%41.png 上传为 images/%2541.png，解回仍是 %41.png）。
-    expect(
-      WebDAVSyncService.mediaRelativePathFromHrefForTesting(
-        '/dav/thoughtecho/media/images/%2541.png',
-      ),
-      'images/%41.png',
-    );
-  });
+    'mediaRelativePathFromHref should normalize paths and block path traversal',
+    () {
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/photo.png',
+        ),
+        'images/photo.png',
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/./photo.png',
+        ),
+        'images/photo.png',
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/sub/../photo.png',
+        ),
+        'images/photo.png',
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/../videos/photo.png',
+        ),
+        isNull,
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/../../etc/passwd',
+        ),
+        isNull,
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/photo.png\x00.zip',
+        ),
+        isNull,
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/..\\..\\secret.txt',
+        ),
+        isNull,
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/',
+        ),
+        isNull,
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/photo.png?token=secret#section',
+        ),
+        'images/photo.png',
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          'https://example.com/dav/thoughtecho/media/images/photo.png?token=secret#section',
+        ),
+        'images/photo.png',
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/%252e%252e/secret.txt',
+        ),
+        isNull,
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/%252fetc/passwd',
+        ),
+        isNull,
+      );
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/%255csecret.txt',
+        ),
+        isNull,
+      );
+      // 双重编码的无害字符按单次解码还原，与 _encodeMediaPath 往返一致
+      //（本地 images/%41.png 上传为 images/%2541.png，解回仍是 %41.png）。
+      expect(
+        WebDAVSyncService.mediaRelativePathFromHrefForTesting(
+          '/dav/thoughtecho/media/images/%2541.png',
+        ),
+        'images/%41.png',
+      );
+    },
+  );
 
   test('encodeMediaPath should encode special characters in path segments', () {
     expect(
-      WebDAVSyncService.encodeMediaPathForTesting(
-        'images/my photo #1?.jpg',
-      ),
+      WebDAVSyncService.encodeMediaPathForTesting('images/my photo #1?.jpg'),
       'images/my%20photo%20%231%3F.jpg',
     );
     expect(
-      WebDAVSyncService.encodeMediaPathForTesting(
-        'audios/voice memo (1).mp3',
-      ),
+      WebDAVSyncService.encodeMediaPathForTesting('audios/voice memo (1).mp3'),
       'audios/voice%20memo%20(1).mp3',
     );
   });
@@ -585,14 +592,12 @@ void main() {
   </${prefix}response>
 </${prefix}multistatus>
 ''';
-        expect(
-          WebDAVSyncService.extractRemoteMediaFilesForTesting(xml),
-          {'images/a&b.png': 42},
-        );
-        expect(
-          WebDAVSyncService.extractRemoteMediaEtagsForTesting(xml),
-          {'images/a&b.png': '"media-etag"'},
-        );
+        expect(WebDAVSyncService.extractRemoteMediaFilesForTesting(xml), {
+          'images/a&b.png': 42,
+        });
+        expect(WebDAVSyncService.extractRemoteMediaEtagsForTesting(xml), {
+          'images/a&b.png': '"media-etag"',
+        });
         expect(
           WebDAVSyncService.isTargetSyncFilePropfindResponseForTesting(
             xml,
@@ -628,8 +633,9 @@ void main() {
       AppLogger.serviceForTesting = logService;
       try {
         const invalidJson = 'invalid json {';
-        final result =
-            WebDAVSyncService.prependConflictPrefixToDelta(invalidJson);
+        final result = WebDAVSyncService.prependConflictPrefixToDelta(
+          invalidJson,
+        );
         expect(result, invalidJson);
 
         final errorLogs = logService.records
@@ -649,13 +655,15 @@ void main() {
       AppLogger.serviceForTesting = logService;
       try {
         const invalidStructure = '{"ops":"not-a-list"}';
-        final result =
-            WebDAVSyncService.prependConflictPrefixToDelta(invalidStructure);
+        final result = WebDAVSyncService.prependConflictPrefixToDelta(
+          invalidStructure,
+        );
         expect(result, invalidStructure);
 
         const numberJson = '42';
-        final numResult =
-            WebDAVSyncService.prependConflictPrefixToDelta(numberJson);
+        final numResult = WebDAVSyncService.prependConflictPrefixToDelta(
+          numberJson,
+        );
         expect(numResult, numberJson);
 
         final warningLogs = logService.records
@@ -751,15 +759,17 @@ void main() {
 </d:multistatus>
 ''';
 
-      final details =
-          WebDAVSyncService.extractRemoteMediaDetailsForTesting(xml);
+      final details = WebDAVSyncService.extractRemoteMediaDetailsForTesting(
+        xml,
+      );
       expect(
-          details.keys,
-          containsAll([
-            'images/rfc1123.png',
-            'videos/iso.mp4',
-            'audios/bad_date.mp3',
-          ]));
+        details.keys,
+        containsAll([
+          'images/rfc1123.png',
+          'videos/iso.mp4',
+          'audios/bad_date.mp3',
+        ]),
+      );
 
       expect(details['images/rfc1123.png']!.length, 1024);
       expect(details['images/rfc1123.png']!.etag, '"abc123"');
@@ -811,50 +821,51 @@ void main() {
     }
 
     test(
-        'L1: missing remote, null length, or size mismatch uploads with 0 hashes',
-        () async {
-      final file = await writeMediaFile('images/l1.png', 'hello-world');
-      final size = await file.length();
+      'L1: missing remote, null length, or size mismatch uploads with 0 hashes',
+      () async {
+        final file = await writeMediaFile('images/l1.png', 'hello-world');
+        final size = await file.length();
 
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/l1.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: const {},
-          fingerprintCache: cache,
-        ),
-        isTrue,
-      );
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/l1.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: const {
-            'images/l1.png': RemoteMediaFileInfo(length: null),
-          },
-          fingerprintCache: cache,
-        ),
-        isTrue,
-      );
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/l1.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/l1.png': RemoteMediaFileInfo(length: size + 1),
-          },
-          fingerprintCache: cache,
-        ),
-        isTrue,
-      );
-      expect(cache.hashComputeCount, 0);
-    });
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/l1.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: const {},
+            fingerprintCache: cache,
+          ),
+          isTrue,
+        );
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/l1.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: const {
+              'images/l1.png': RemoteMediaFileInfo(length: null),
+            },
+            fingerprintCache: cache,
+          ),
+          isTrue,
+        );
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/l1.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/l1.png': RemoteMediaFileInfo(length: size + 1),
+            },
+            fingerprintCache: cache,
+          ),
+          isTrue,
+        );
+        expect(cache.hashComputeCount, 0);
+      },
+    );
 
     test(
-        'L2: matching size and local mtime within +2s skew skips with 0 hashes',
+        'L2: empty cache enters L3 to build baseline, then matching stat skips with 0 hashes',
         () async {
       final remoteTime = DateTime.utc(2026, 5, 1, 12, 0, 0);
       final file = await writeMediaFile(
@@ -864,6 +875,38 @@ void main() {
       );
       final size = await file.length();
 
+      // First encounter without cache must not silently skip at L2 without a baseline:
+      // if remote carries a different SHA-256 ETag within the +2s skew window, it uploads.
+      final diffRemoteSha = 'f' * 64;
+      expect(
+        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+          stdPath: 'images/l2.png',
+          localFile: file,
+          localSize: size,
+          remoteMediaDetails: {
+            'images/l2.png': RemoteMediaFileInfo(
+              length: size,
+              etag: '"$diffRemoteSha"',
+              lastModified: remoteTime,
+            ),
+          },
+          fingerprintCache: cache,
+        ),
+        isTrue,
+      );
+      expect(cache.hashComputeCount, 1);
+
+      // Simulate completed sync establishing the baseline
+      await cache.markSynced(
+        'images/l2.png',
+        file,
+        remoteEtag: '"opaque-l2-v1"',
+        knownSize: size,
+        knownLastModified: remoteTime.add(const Duration(seconds: 2)),
+      );
+      final hashesAfterBaseline = cache.hashComputeCount;
+
+      // Subsequent run with synced baseline + mtime within +2s skips at L2 with 0 new hashes
       final shouldUpload =
           await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
         stdPath: 'images/l2.png',
@@ -879,7 +922,7 @@ void main() {
       );
 
       expect(shouldUpload, isFalse);
-      expect(cache.hashComputeCount, 0);
+      expect(cache.hashComputeCount, hashesAfterBaseline);
     });
 
     test(
@@ -903,11 +946,7 @@ void main() {
       );
 
       // Same-size in-place edit whose mtime is still older than remoteTime + 2s
-      await writeMediaFile(
-        'images/in_place.png',
-        'content-bbbb',
-        modified: t2,
-      );
+      await writeMediaFile('images/in_place.png', 'content-bbbb', modified: t2);
 
       final shouldUploadAfterStatChange =
           await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
@@ -944,236 +983,241 @@ void main() {
     });
 
     test(
-        'L3: SHA-256 ETag detects same-size difference and hits cache on repeat',
-        () async {
-      final contentA = 'alpha-12345';
-      final contentB = 'bravo-12345';
-      expect(contentA.length, contentB.length);
+      'L3: SHA-256 ETag detects same-size difference and hits cache on repeat',
+      () async {
+        final contentA = 'alpha-12345';
+        final contentB = 'bravo-12345';
+        expect(contentA.length, contentB.length);
 
-      final shaA = crypto.sha256.convert(utf8.encode(contentA)).toString();
-      final shaB = crypto.sha256.convert(utf8.encode(contentB)).toString();
-      final t1 = DateTime.utc(2026, 5, 2, 8, 0, 0);
-      final file = await writeMediaFile(
-        'images/sha_etag.png',
-        contentA,
-        modified: t1,
-      );
-      final size = await file.length();
+        final shaA = crypto.sha256.convert(utf8.encode(contentA)).toString();
+        final shaB = crypto.sha256.convert(utf8.encode(contentB)).toString();
+        final t1 = DateTime.utc(2026, 5, 2, 8, 0, 0);
+        final file = await writeMediaFile(
+          'images/sha_etag.png',
+          contentA,
+          modified: t1,
+        );
+        final size = await file.length();
 
-      // Match -> skip, computes SHA-256 once
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/sha_etag.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/sha_etag.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"${shaA.toUpperCase()}"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isFalse,
-      );
-      expect(cache.sha256ComputeCount, 1);
-      expect(cache.md5ComputeCount, 0);
+        // Match -> skip, computes SHA-256 once
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/sha_etag.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/sha_etag.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"${shaA.toUpperCase()}"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isFalse,
+        );
+        expect(cache.sha256ComputeCount, 1);
+        expect(cache.md5ComputeCount, 0);
 
-      // Repeat -> cache hit, 0 new hashes
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/sha_etag.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/sha_etag.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"$shaA"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isFalse,
-      );
-      expect(cache.hashComputeCount, 1);
+        // Repeat -> cache hit, 0 new hashes
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/sha_etag.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/sha_etag.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"$shaA"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isFalse,
+        );
+        expect(cache.hashComputeCount, 1);
 
-      // Different remote SHA-256 with same size -> upload
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/sha_etag.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/sha_etag.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"$shaB"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isTrue,
-      );
-      expect(cache.hashComputeCount, 1);
-    });
+        // Different remote SHA-256 with same size -> upload
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/sha_etag.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/sha_etag.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"$shaB"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isTrue,
+        );
+        expect(cache.hashComputeCount, 1);
+      },
+    );
 
-    test('L3: MD5 ETag computes lazy MD5 and detects same-size difference',
-        () async {
-      final contentA = 'md5-alpha-01';
-      final contentB = 'md5-bravo-02';
-      expect(contentA.length, contentB.length);
+    test(
+      'L3: MD5 ETag computes lazy MD5 and detects same-size difference',
+      () async {
+        final contentA = 'md5-alpha-01';
+        final contentB = 'md5-bravo-02';
+        expect(contentA.length, contentB.length);
 
-      final md5A = crypto.md5.convert(utf8.encode(contentA)).toString();
-      final md5B = crypto.md5.convert(utf8.encode(contentB)).toString();
-      final file = await writeMediaFile('images/md5_etag.png', contentA);
-      final size = await file.length();
+        final md5A = crypto.md5.convert(utf8.encode(contentA)).toString();
+        final md5B = crypto.md5.convert(utf8.encode(contentB)).toString();
+        final file = await writeMediaFile('images/md5_etag.png', contentA);
+        final size = await file.length();
 
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/md5_etag.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/md5_etag.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"${md5A.toUpperCase()}"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isFalse,
-      );
-      expect(cache.sha256ComputeCount, 1);
-      expect(cache.md5ComputeCount, 1);
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/md5_etag.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/md5_etag.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"${md5A.toUpperCase()}"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isFalse,
+        );
+        expect(cache.sha256ComputeCount, 1);
+        expect(cache.md5ComputeCount, 1);
 
-      // Cache hit with MD5 ETag
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/md5_etag.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/md5_etag.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"$md5A"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isFalse,
-      );
-      expect(cache.hashComputeCount, 2);
+        // Cache hit with MD5 ETag
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/md5_etag.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/md5_etag.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"$md5A"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isFalse,
+        );
+        expect(cache.hashComputeCount, 2);
 
-      // Different MD5 ETag -> upload
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/md5_etag.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/md5_etag.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"$md5B"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isTrue,
-      );
-    });
+        // Different MD5 ETag -> upload
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/md5_etag.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/md5_etag.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"$md5B"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isTrue,
+        );
+      },
+    );
 
-    test('L3: opaque strong ETag requires recorded ETag and unchanged SHA-256',
-        () async {
-      final t1 = DateTime.utc(2026, 5, 3, 10, 0, 0);
-      final file = await writeMediaFile(
-        'images/opaque.png',
-        'opaque-payload-1',
-        modified: t1,
-      );
-      final size = await file.length();
+    test(
+      'L3: opaque strong ETag requires recorded ETag and unchanged SHA-256',
+      () async {
+        final t1 = DateTime.utc(2026, 5, 3, 10, 0, 0);
+        final file = await writeMediaFile(
+          'images/opaque.png',
+          'opaque-payload-1',
+          modified: t1,
+        );
+        final size = await file.length();
 
-      // Unsynced opaque ETag -> upload
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/opaque.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/opaque.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"inode-100"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isTrue,
-      );
+        // Unsynced opaque ETag -> upload
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/opaque.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/opaque.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"inode-100"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isTrue,
+        );
 
-      await cache.markSynced(
-        'images/opaque.png',
-        file,
-        remoteEtag: '"inode-100"',
-        knownSize: size,
-        knownLastModified: t1,
-      );
-      final countAfterSync = cache.hashComputeCount;
+        await cache.markSynced(
+          'images/opaque.png',
+          file,
+          remoteEtag: '"inode-100"',
+          knownSize: size,
+          knownLastModified: t1,
+        );
+        final countAfterSync = cache.hashComputeCount;
 
-      // Same opaque ETag and unchanged local file -> skip via cache hit
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/opaque.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/opaque.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"inode-100"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isFalse,
-      );
-      expect(cache.hashComputeCount, countAfterSync);
+        // Same opaque ETag and unchanged local file -> skip via cache hit
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/opaque.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/opaque.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"inode-100"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isFalse,
+        );
+        expect(cache.hashComputeCount, countAfterSync);
 
-      // Remote opaque ETag changed -> upload
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/opaque.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/opaque.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"inode-200"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isTrue,
-      );
+        // Remote opaque ETag changed -> upload
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/opaque.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/opaque.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"inode-200"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isTrue,
+        );
 
-      // Local same-size overwrite -> upload even if remote ETag stayed "inode-100"
-      await writeMediaFile(
-        'images/opaque.png',
-        'opaque-payload-2',
-        modified: t1.add(const Duration(seconds: 5)),
-      );
-      expect(
-        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
-          stdPath: 'images/opaque.png',
-          localFile: file,
-          localSize: size,
-          remoteMediaDetails: {
-            'images/opaque.png': RemoteMediaFileInfo(
-              length: size,
-              etag: '"inode-100"',
-            ),
-          },
-          fingerprintCache: cache,
-        ),
-        isTrue,
-      );
-    });
+        // Local same-size overwrite -> upload even if remote ETag stayed "inode-100"
+        await writeMediaFile(
+          'images/opaque.png',
+          'opaque-payload-2',
+          modified: t1.add(const Duration(seconds: 5)),
+        );
+        expect(
+          await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+            stdPath: 'images/opaque.png',
+            localFile: file,
+            localSize: size,
+            remoteMediaDetails: {
+              'images/opaque.png': RemoteMediaFileInfo(
+                length: size,
+                etag: '"inode-100"',
+              ),
+            },
+            fingerprintCache: cache,
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test(
         'L3 safe degradation: weak or missing ETag records baseline and detects same-size local edits',
@@ -1279,6 +1323,157 @@ void main() {
         isTrue,
       );
     });
+
+    test(
+        'L3: opaque 32-hex and 64-hex ETags converge via syncedRemoteEtag without re-uploading unchanged files',
+        () async {
+      final t1 = DateTime.utc(2026, 5, 5, 10, 0, 0);
+      final file = await writeMediaFile(
+        'images/opaque_hex.png',
+        'opaque-hex-payload-v1',
+        modified: t1,
+      );
+      final size = await file.length();
+      const opaqueHex32 = '"0123456789abcdef0123456789abcdef"';
+      const opaqueHex64 =
+          '"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"';
+
+      for (final opaqueEtag in const [opaqueHex32, opaqueHex64]) {
+        final scopedDir = await Directory.systemTemp.createTemp(
+          'webdav_opaque_hex_',
+        );
+        try {
+          final scopedCache = MediaFingerprintCache(directory: scopedDir);
+          await scopedCache.load();
+
+          // First encounter with opaque hex ETag != file digest -> upload once
+          expect(
+            await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+              stdPath: 'images/opaque_hex.png',
+              localFile: file,
+              localSize: size,
+              remoteMediaDetails: {
+                'images/opaque_hex.png': RemoteMediaFileInfo(
+                  length: size,
+                  etag: opaqueEtag,
+                ),
+              },
+              fingerprintCache: scopedCache,
+            ),
+            isTrue,
+          );
+
+          await scopedCache.markSynced(
+            'images/opaque_hex.png',
+            file,
+            remoteEtag: opaqueEtag,
+            knownSize: size,
+            knownLastModified: t1,
+          );
+          final hashesAfterSync = scopedCache.hashComputeCount;
+
+          // Subsequent run with same opaque hex ETag -> must skip with 0 new hashes
+          expect(
+            await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+              stdPath: 'images/opaque_hex.png',
+              localFile: file,
+              localSize: size,
+              remoteMediaDetails: {
+                'images/opaque_hex.png': RemoteMediaFileInfo(
+                  length: size,
+                  etag: opaqueEtag,
+                ),
+              },
+              fingerprintCache: scopedCache,
+            ),
+            isFalse,
+          );
+          expect(scopedCache.hashComputeCount, hashesAfterSync);
+
+          // Same-size local edit -> must upload even though ETag stayed the same
+          await writeMediaFile(
+            'images/opaque_hex.png',
+            'opaque-hex-payload-v2',
+            modified: t1.add(const Duration(seconds: 5)),
+          );
+          expect(
+            await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+              stdPath: 'images/opaque_hex.png',
+              localFile: file,
+              localSize: size,
+              remoteMediaDetails: {
+                'images/opaque_hex.png': RemoteMediaFileInfo(
+                  length: size,
+                  etag: opaqueEtag,
+                ),
+              },
+              fingerprintCache: scopedCache,
+            ),
+            isTrue,
+          );
+        } finally {
+          await writeMediaFile(
+            'images/opaque_hex.png',
+            'opaque-hex-payload-v1',
+            modified: t1,
+          );
+          await scopedDir.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        'L3: failed upload followed by mtime-only touch still retries upload on weak-ETag server',
+        () async {
+      final remoteTime = DateTime.utc(2026, 5, 6, 8, 0, 0);
+      final t1 = remoteTime.add(const Duration(seconds: 10));
+      final t2 = t1.add(const Duration(seconds: 10));
+      final file = await writeMediaFile(
+        'images/failed_retry.png',
+        'unsynced-local-bytes',
+        modified: t1,
+      );
+      final size = await file.length();
+
+      // Run 1: triggers upload and caches sha256 with syncedSha256 == null
+      expect(
+        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+          stdPath: 'images/failed_retry.png',
+          localFile: file,
+          localSize: size,
+          remoteMediaDetails: {
+            'images/failed_retry.png': RemoteMediaFileInfo(
+              length: size,
+              etag: 'W/"weak-1"',
+              lastModified: remoteTime,
+            ),
+          },
+          fingerprintCache: cache,
+        ),
+        isTrue,
+      );
+      expect(cache.peek('images/failed_retry.png')?.syncedSha256, isNull);
+
+      // Simulate failed PUT followed by touching mtime without changing bytes
+      await file.setLastModified(t2);
+      expect(
+        await WebDAVSyncService.shouldUploadMediaFileWithCacheForTesting(
+          stdPath: 'images/failed_retry.png',
+          localFile: file,
+          localSize: size,
+          remoteMediaDetails: {
+            'images/failed_retry.png': RemoteMediaFileInfo(
+              length: size,
+              etag: 'W/"weak-1"',
+              lastModified: remoteTime,
+            ),
+          },
+          fingerprintCache: cache,
+        ),
+        isTrue,
+      );
+      expect(cache.peek('images/failed_retry.png')?.syncedSha256, isNull);
+    });
   });
 
   group('Hardened _verifyDownloadedFileHash', () {
@@ -1311,69 +1506,73 @@ void main() {
       }
     });
 
-    test('validates x-checksum-sha256 and x-amz-meta-sha256 in hex and Base64',
-        () async {
-      await WebDAVSyncService.verifyDownloadedFileHashForTesting(
-        sampleFile,
-        responseHeaders: {
-          'X-Checksum-Sha256': ['"sha256=${sampleSha256Hex.toUpperCase()}"'],
-        },
-      );
-      await WebDAVSyncService.verifyDownloadedFileHashForTesting(
-        sampleFile,
-        responseHeaders: {
-          'x-amz-meta-sha256': [sampleSha256Base64],
-        },
-      );
-      await WebDAVSyncService.verifyDownloadedFileHashForTesting(
-        sampleFile,
-        responseHeaders: {
-          'x-checksum-sha256': ['sha256="$sampleSha256Base64"'],
-        },
-      );
-    });
+    test(
+      'validates x-checksum-sha256 and x-amz-meta-sha256 in hex and Base64',
+      () async {
+        await WebDAVSyncService.verifyDownloadedFileHashForTesting(
+          sampleFile,
+          responseHeaders: {
+            'X-Checksum-Sha256': ['"sha256=${sampleSha256Hex.toUpperCase()}"'],
+          },
+        );
+        await WebDAVSyncService.verifyDownloadedFileHashForTesting(
+          sampleFile,
+          responseHeaders: {
+            'x-amz-meta-sha256': [sampleSha256Base64],
+          },
+        );
+        await WebDAVSyncService.verifyDownloadedFileHashForTesting(
+          sampleFile,
+          responseHeaders: {
+            'x-checksum-sha256': ['sha256="$sampleSha256Base64"'],
+          },
+        );
+      },
+    );
 
-    test('throws on SHA-256 mismatch or malformed SHA-256 checksum header',
-        () async {
-      await expectLater(
-        WebDAVSyncService.verifyDownloadedFileHashForTesting(
-          sampleFile,
-          responseHeaders: {
-            'x-checksum-sha256': ['0' * 64],
-          },
-        ),
-        throwsException,
-      );
-      await expectLater(
-        WebDAVSyncService.verifyDownloadedFileHashForTesting(
-          sampleFile,
-          responseHeaders: {
-            'x-amz-meta-sha256': [base64Encode(List<int>.filled(32, 7))],
-          },
-        ),
-        throwsException,
-      );
-      await expectLater(
-        WebDAVSyncService.verifyDownloadedFileHashForTesting(
-          sampleFile,
-          responseHeaders: {
-            'x-checksum-sha256': ['not-valid-sha256'],
-          },
-        ),
-        throwsFormatException,
-      );
-      await expectLater(
-        WebDAVSyncService.verifyDownloadedFileHashForTesting(
-          sampleFile,
-          responseHeaders: {
-            'x-amz-meta-sha256': [
-              base64Encode([1, 2, 3])
-            ],
-          },
-        ),
-        throwsFormatException,
-      );
-    });
+    test(
+      'throws on SHA-256 mismatch or malformed SHA-256 checksum header',
+      () async {
+        await expectLater(
+          WebDAVSyncService.verifyDownloadedFileHashForTesting(
+            sampleFile,
+            responseHeaders: {
+              'x-checksum-sha256': ['0' * 64],
+            },
+          ),
+          throwsException,
+        );
+        await expectLater(
+          WebDAVSyncService.verifyDownloadedFileHashForTesting(
+            sampleFile,
+            responseHeaders: {
+              'x-amz-meta-sha256': [base64Encode(List<int>.filled(32, 7))],
+            },
+          ),
+          throwsException,
+        );
+        await expectLater(
+          WebDAVSyncService.verifyDownloadedFileHashForTesting(
+            sampleFile,
+            responseHeaders: {
+              'x-checksum-sha256': ['not-valid-sha256'],
+            },
+          ),
+          throwsFormatException,
+        );
+        await expectLater(
+          WebDAVSyncService.verifyDownloadedFileHashForTesting(
+            sampleFile,
+            responseHeaders: {
+              'x-amz-meta-sha256': [
+                base64Encode([1, 2, 3]),
+              ],
+            },
+          ),
+          throwsFormatException,
+        );
+      },
+    );
 
     test(
         'validates content-md5 in 32-hex and 16-byte Base64 and rejects malformed/mismatch',
@@ -1411,38 +1610,79 @@ void main() {
       );
     });
 
-    test('verifies strong 64-hex and 32-hex ETags and throws on mismatch',
+    test(
+        'allows valid explicit checksum download even when strong ETag is opaque 32/64-hex, while still enforcing ETag consistency',
         () async {
+      const opaque32Hex = '"0123456789abcdef0123456789abcdef"';
+      const opaque64Hex =
+          '"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"';
+
       await WebDAVSyncService.verifyDownloadedFileHashForTesting(
         sampleFile,
-        remoteEtag: '"$sampleSha256Hex"',
+        remoteEtag: opaque32Hex,
         responseHeaders: {
           'x-checksum-sha256': [sampleSha256Hex],
-          'etag': ['"${sampleSha256Hex.toUpperCase()}"'],
+          'etag': [opaque32Hex],
         },
       );
+
       await WebDAVSyncService.verifyDownloadedFileHashForTesting(
         sampleFile,
-        remoteEtag: '"$sampleMd5Hex"',
+        remoteEtag: opaque64Hex,
+        responseHeaders: {
+          'content-md5': [sampleMd5Base64],
+          'etag': [opaque64Hex],
+        },
       );
 
+      // ETag consistency between PROPFIND and GET header must still fail when mismatched
       await expectLater(
         WebDAVSyncService.verifyDownloadedFileHashForTesting(
           sampleFile,
-          remoteEtag: '"${'a' * 64}"',
-        ),
-        throwsException,
-      );
-      await expectLater(
-        WebDAVSyncService.verifyDownloadedFileHashForTesting(
-          sampleFile,
+          remoteEtag: opaque32Hex,
           responseHeaders: {
-            'etag': ['"${'b' * 32}"'],
+            'x-checksum-sha256': [sampleSha256Hex],
+            'etag': ['"fedcba9876543210fedcba9876543210"'],
           },
         ),
         throwsException,
       );
     });
+
+    test(
+      'verifies strong 64-hex and 32-hex ETags and throws on mismatch',
+      () async {
+        await WebDAVSyncService.verifyDownloadedFileHashForTesting(
+          sampleFile,
+          remoteEtag: '"$sampleSha256Hex"',
+          responseHeaders: {
+            'x-checksum-sha256': [sampleSha256Hex],
+            'etag': ['"${sampleSha256Hex.toUpperCase()}"'],
+          },
+        );
+        await WebDAVSyncService.verifyDownloadedFileHashForTesting(
+          sampleFile,
+          remoteEtag: '"$sampleMd5Hex"',
+        );
+
+        await expectLater(
+          WebDAVSyncService.verifyDownloadedFileHashForTesting(
+            sampleFile,
+            remoteEtag: '"${'a' * 64}"',
+          ),
+          throwsException,
+        );
+        await expectLater(
+          WebDAVSyncService.verifyDownloadedFileHashForTesting(
+            sampleFile,
+            responseHeaders: {
+              'etag': ['"${'b' * 32}"'],
+            },
+          ),
+          throwsException,
+        );
+      },
+    );
 
     test(
         'throws when strong header ETag conflicts with strong PROPFIND remoteEtag',
@@ -1523,8 +1763,9 @@ void main() {
     test(
         'syncMediaFiles uploads new file, saves cache, skips on next sync, and re-uploads on same-size edit',
         () async {
-      final mediaImage =
-          File(p.join(tempDir.path, 'media', 'images', 'note_pic.png'));
+      final mediaImage = File(
+        p.join(tempDir.path, 'media', 'images', 'note_pic.png'),
+      );
       await mediaImage.parent.create(recursive: true);
       const v1 = 'payload-v1-000';
       const v2 = 'payload-v2-999';
@@ -1543,8 +1784,7 @@ void main() {
       dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
         if (options.method == 'PROPFIND') {
           if (options.path.contains('/images/') && remoteExists) {
-            return ResponseBody.fromString(
-              '''
+            return ResponseBody.fromString('''
 <?xml version="1.0" encoding="utf-8"?>
 <d:multistatus xmlns:d="DAV:">
   <d:response>
@@ -1558,9 +1798,7 @@ void main() {
     </d:propstat>
   </d:response>
 </d:multistatus>
-''',
-              207,
-            );
+''', 207);
           }
           return ResponseBody.fromString(
             '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>',
@@ -1603,8 +1841,7 @@ void main() {
       expect(await service.syncMediaFilesForTesting(dio), 0);
       expect(uploadedPaths, hasLength(1));
 
-      // Run 3: same-size local edit triggers re-upload
-      remoteEtag = '"opaque-v2"';
+      // Run 3: same-size local edit triggers re-upload even when remote ETag stayed opaque-v1
       await mediaImage.writeAsString(v2, flush: true);
       await mediaImage.setLastModified(t1.add(const Duration(seconds: 10)));
 
@@ -1615,15 +1852,16 @@ void main() {
       await cacheAfterRun3.load();
       expect(
         cacheAfterRun3.peek('images/note_pic.png')?.syncedRemoteEtag,
-        'opaque-v2',
+        'opaque-v1',
       );
     });
 
     test(
         'download preserves existing target file and cleans .tmp when hash verification fails',
         () async {
-      final targetFile =
-          File(p.join(tempDir.path, 'media', 'images', 'guarded.png'));
+      final targetFile = File(
+        p.join(tempDir.path, 'media', 'images', 'guarded.png'),
+      );
       await targetFile.parent.create(recursive: true);
       await targetFile.writeAsString('intact-original-bytes', flush: true);
       final tmpFile = File('${targetFile.path}.tmp');
@@ -1662,8 +1900,9 @@ void main() {
     test(
         'syncMediaFiles prunes deleted local files, updates skipped-upload baseline, and marks downloaded files synced',
         () async {
-      final localFile =
-          File(p.join(tempDir.path, 'media', 'images', 'baseline_fill.png'));
+      final localFile = File(
+        p.join(tempDir.path, 'media', 'images', 'baseline_fill.png'),
+      );
       await localFile.parent.create(recursive: true);
       const localBytes = 'baseline-fill-content';
       final t1 = DateTime.utc(2026, 6, 2, 10, 0, 0);
@@ -1699,8 +1938,7 @@ void main() {
       dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
         if (options.method == 'PROPFIND') {
           if (options.path.contains('/images/')) {
-            return ResponseBody.fromString(
-              '''
+            return ResponseBody.fromString('''
 <?xml version="1.0" encoding="utf-8"?>
 <d:multistatus xmlns:d="DAV:">
   <d:response>
@@ -1713,9 +1951,7 @@ void main() {
     </d:propstat>
   </d:response>
 </d:multistatus>
-''',
-              207,
-            );
+''', 207);
           }
           return ResponseBody.fromString(
             '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>',
@@ -1764,6 +2000,409 @@ void main() {
         dlCache.peek('images/from_remote.png')?.syncedSha256,
         crypto.sha256.convert(utf8.encode('downloaded-media-ok')).toString(),
       );
+    });
+
+    test(
+        'switching WebDAV server or account via saveSettings isolates sync baselines',
+        () async {
+      final mediaFile = File(
+        p.join(tempDir.path, 'media', 'images', 'server_switch.png'),
+      );
+      await mediaFile.parent.create(recursive: true);
+      const payload = 'server-switch-media-bytes';
+      final t1 = DateTime.utc(2026, 6, 3, 10, 0, 0);
+      await mediaFile.writeAsString(payload, flush: true);
+      await mediaFile.setLastModified(t1);
+
+      final uploadedToServerA = <String>[];
+      final uploadedToServerB = <String>[];
+      var remoteHasOnA = false;
+      var remoteHasOnB = true;
+
+      final dio = Dio();
+      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+        final host = options.uri.host;
+        if (options.method == 'PROPFIND') {
+          if (options.path.contains('/images/')) {
+            final exists =
+                host == 'dav-a.example.com' ? remoteHasOnA : remoteHasOnB;
+            if (!exists) {
+              return ResponseBody.fromString(
+                '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>',
+                207,
+              );
+            }
+            return ResponseBody.fromString('''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/server_switch.png</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getcontentlength>${payload.length}</d:getcontentlength>
+        <d:getetag>"$host-etag-v1"</d:getetag>
+        <d:getlastmodified>Thu, 04 Jun 2026 10:00:00 GMT</d:getlastmodified>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''', 207);
+          }
+          return ResponseBody.fromString(
+            '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>',
+            207,
+          );
+        }
+        if (options.method == 'PUT') {
+          if (host == 'dav-a.example.com') {
+            uploadedToServerA.add(options.path);
+            remoteHasOnA = true;
+          } else {
+            uploadedToServerB.add(options.path);
+            remoteHasOnB = true;
+          }
+          return ResponseBody.fromString(
+            '',
+            201,
+            headers: {
+              'etag': ['"$host-etag-v1"'],
+            },
+          );
+        }
+        return ResponseBody.fromString('', 404);
+      });
+
+      final service = WebDAVSyncService();
+      await service.saveSettings(
+        enabled: true,
+        provider: 'custom',
+        url: 'https://dav-a.example.com/dav/',
+        username: 'alice',
+        syncOnLaunch: true,
+        syncOnChange: true,
+        syncOnCellular: false,
+        syncNotesOnlyOnCellular: false,
+      );
+
+      expect(await service.syncMediaFilesForTesting(dio), 0);
+      expect(uploadedToServerA, hasLength(1));
+
+      // Switch to server B which already has a same-size, newer-mtime file with a different ETag
+      await service.saveSettings(
+        enabled: true,
+        provider: 'custom',
+        url: 'https://dav-b.example.com/dav/',
+        username: 'alice',
+        syncOnLaunch: true,
+        syncOnChange: true,
+        syncOnCellular: false,
+        syncNotesOnlyOnCellular: false,
+      );
+
+      expect(await service.syncMediaFilesForTesting(dio), 0);
+      expect(uploadedToServerB, hasLength(1));
+    });
+
+    test(
+        'PUT omitting ETag queries post-upload ETag without falling back to pre-upload ETag and converges',
+        () async {
+      final mediaFile = File(
+        p.join(tempDir.path, 'media', 'images', 'no_put_etag.png'),
+      );
+      await mediaFile.parent.create(recursive: true);
+      const v1 = 'no-put-etag-v1';
+      const v2 = 'no-put-etag-v2';
+      final t1 = DateTime.utc(2026, 6, 5, 10, 0, 0);
+      await mediaFile.writeAsString(v1, flush: true);
+      await mediaFile.setLastModified(t1);
+
+      var remoteEtag = '"opaque-1"';
+      var putCount = 0;
+
+      final dio = Dio();
+      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+        if (options.method == 'PROPFIND') {
+          if (options.path.endsWith('/images/no_put_etag.png')) {
+            return ResponseBody.fromString('''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/no_put_etag.png</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getcontentlength>${v1.length}</d:getcontentlength>
+        <d:getetag>$remoteEtag</d:getetag>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''', 207);
+          }
+          if (options.path.contains('/images/')) {
+            return ResponseBody.fromString('''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/no_put_etag.png</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getcontentlength>${v1.length}</d:getcontentlength>
+        <d:getetag>$remoteEtag</d:getetag>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''', 207);
+          }
+          return ResponseBody.fromString(
+            '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>',
+            207,
+          );
+        }
+        if (options.method == 'PUT') {
+          putCount++;
+          // Server advances opaque ETag on each PUT and omits ETag header in PUT response
+          remoteEtag = '"opaque-${putCount + 1}"';
+          return ResponseBody.fromString('', 204);
+        }
+        return ResponseBody.fromString('', 404);
+      });
+
+      final service = WebDAVSyncService();
+      service.setUrlForTesting('https://dav.example.com/dav/');
+
+      // Run 1: uploads v1 -> server advances ETag to opaque-2; post-PUT PROPFIND records opaque-2
+      expect(await service.syncMediaFilesForTesting(dio), 0);
+      expect(putCount, 1);
+
+      final cache1 = MediaFingerprintCache(directory: tempDir);
+      await cache1.load();
+      expect(
+        cache1.peek('images/no_put_etag.png')?.syncedRemoteEtag,
+        'opaque-2',
+      );
+
+      // Run 2: converges with 0 re-uploads (no Last-Modified on server)
+      expect(await service.syncMediaFilesForTesting(dio), 0);
+      expect(putCount, 1);
+
+      // Local edit -> uploads v2, server becomes opaque-3, post-PUT records opaque-3
+      await mediaFile.writeAsString(v2, flush: true);
+      await mediaFile.setLastModified(t1.add(const Duration(seconds: 5)));
+      expect(await service.syncMediaFilesForTesting(dio), 0);
+      expect(putCount, 2);
+      final cache2 = MediaFingerprintCache(directory: tempDir);
+      await cache2.load();
+      expect(
+        cache2.peek('images/no_put_etag.png')?.syncedRemoteEtag,
+        'opaque-3',
+      );
+    });
+
+    test(
+        'PUT omitting ETag when post-upload lookup is unavailable clears syncedRemoteEtag instead of saving stale ETag',
+        () async {
+      final mediaFile = File(
+        p.join(tempDir.path, 'media', 'images', 'no_etag_lookup.png'),
+      );
+      await mediaFile.parent.create(recursive: true);
+      const payload = 'no-etag-lookup-bytes';
+      await mediaFile.writeAsString(payload, flush: true);
+
+      final dio = Dio();
+      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+        if (options.method == 'PROPFIND') {
+          if (options.path.endsWith('/images/no_etag_lookup.png')) {
+            return ResponseBody.fromString('', 404);
+          }
+          if (options.path.contains('/images/')) {
+            return ResponseBody.fromString('''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/no_etag_lookup.png</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getcontentlength>${payload.length}</d:getcontentlength>
+        <d:getetag>"stale-pre-put-etag"</d:getetag>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''', 207);
+          }
+          return ResponseBody.fromString(
+            '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>',
+            207,
+          );
+        }
+        if (options.method == 'PUT') {
+          return ResponseBody.fromString('', 204);
+        }
+        return ResponseBody.fromString('', 404);
+      });
+
+      final service = WebDAVSyncService();
+      service.setUrlForTesting('https://dav.example.com/dav/');
+      expect(await service.syncMediaFilesForTesting(dio), 0);
+
+      final cache = MediaFingerprintCache(directory: tempDir);
+      await cache.load();
+      final entry = cache.peek('images/no_etag_lookup.png');
+      expect(entry, isNotNull);
+      expect(entry!.syncedSha256, isNotNull);
+      expect(entry.syncedRemoteEtag, isNull);
+    });
+
+    test(
+        'concurrent local overwrite during PUT leaves attachment unsynced so next sync uploads new bytes',
+        () async {
+      final mediaFile = File(
+        p.join(tempDir.path, 'media', 'images', 'race.png'),
+      );
+      await mediaFile.parent.create(recursive: true);
+      const v1 = 'race-bytes-v1';
+      const v2 = 'race-bytes-v2';
+      final t1 = DateTime.utc(2026, 6, 6, 10, 0, 0);
+      final t2 = t1.add(const Duration(seconds: 5));
+      await mediaFile.writeAsString(v1, flush: true);
+      await mediaFile.setLastModified(t1);
+
+      var putCount = 0;
+      var remoteExists = false;
+
+      final dio = Dio();
+      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+        if (options.method == 'PROPFIND') {
+          if (options.path.contains('/images/') && remoteExists) {
+            return ResponseBody.fromString('''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/race.png</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getcontentlength>${v1.length}</d:getcontentlength>
+        <d:getetag>"race-etag-$putCount"</d:getetag>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''', 207);
+          }
+          return ResponseBody.fromString(
+            '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>',
+            207,
+          );
+        }
+        if (options.method == 'PUT') {
+          putCount++;
+          remoteExists = true;
+          if (putCount == 1) {
+            // Simulate same-size local overwrite while PUT is in flight
+            await mediaFile.writeAsString(v2, flush: true);
+            await mediaFile.setLastModified(t2);
+          }
+          return ResponseBody.fromString(
+            '',
+            201,
+            headers: {
+              'etag': ['"race-etag-$putCount"'],
+            },
+          );
+        }
+        return ResponseBody.fromString('', 404);
+      });
+
+      final service = WebDAVSyncService();
+      service.setUrlForTesting('https://dav.example.com/dav/');
+
+      expect(await service.syncMediaFilesForTesting(dio), 0);
+      expect(putCount, 1);
+
+      final cacheAfterRace = MediaFingerprintCache(directory: tempDir);
+      await cacheAfterRace.load();
+      expect(cacheAfterRace.peek('images/race.png')?.syncedSha256, isNull);
+
+      // Next sync must re-upload v2 and mark v2 synced
+      expect(await service.syncMediaFilesForTesting(dio), 0);
+      expect(putCount, 2);
+
+      final cacheAfterRetry = MediaFingerprintCache(directory: tempDir);
+      await cacheAfterRetry.load();
+      expect(
+        cacheAfterRetry.peek('images/race.png')?.syncedSha256,
+        crypto.sha256.convert(utf8.encode(v2)).toString(),
+      );
+    });
+
+    test(
+        'unreadable attachment during L3 hash read is counted as per-file failure without aborting remaining uploads',
+        () async {
+      final badFile = File(
+        p.join(tempDir.path, 'media', 'images', 'a_unreadable.png'),
+      );
+      final goodFile = File(
+        p.join(tempDir.path, 'media', 'images', 'b_readable.png'),
+      );
+      await badFile.parent.create(recursive: true);
+      const badContent = 'bad-attachment-payload';
+      const goodContent = 'good-attachment-payload';
+      await badFile.writeAsString(badContent, flush: true);
+      await goodFile.writeAsString(goodContent, flush: true);
+
+      final uploadedPaths = <String>[];
+      MediaFingerprintCache.readGuardForTesting = (file) async {
+        if (p.basename(file.path) == 'a_unreadable.png') {
+          throw FileSystemException('Permission denied', file.path);
+        }
+      };
+      addTearDown(() => MediaFingerprintCache.readGuardForTesting = null);
+
+      final dio = Dio();
+      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+        if (options.method == 'PROPFIND') {
+          if (options.path.contains('/images/')) {
+            return ResponseBody.fromString('''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/a_unreadable.png</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getcontentlength>${badContent.length}</d:getcontentlength>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''', 207);
+          }
+          return ResponseBody.fromString(
+            '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>',
+            207,
+          );
+        }
+        if (options.method == 'PUT') {
+          uploadedPaths.add(options.path);
+          return ResponseBody.fromString(
+            '',
+            201,
+            headers: {
+              'etag': ['"good-etag"'],
+            },
+          );
+        }
+        return ResponseBody.fromString('', 404);
+      });
+
+      final service = WebDAVSyncService();
+      service.setUrlForTesting('https://dav.example.com/dav/');
+
+      final failureCount = await service.syncMediaFilesForTesting(dio);
+      expect(failureCount, 1);
+      expect(uploadedPaths, hasLength(1));
+      expect(uploadedPaths.single, endsWith('/images/b_readable.png'));
     });
   });
 }
