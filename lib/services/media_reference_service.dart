@@ -152,10 +152,12 @@ class MediaReferenceService {
         cachedAppPath: cachedAppPath,
       );
 
+      final candidates = _candidateStoredFilePaths(normalizedPath);
+      final placeholders = List.filled(candidates.length, '?').join(', ');
       final result = await db.delete(
         _tableName,
-        where: 'file_path = ? AND quote_id = ?',
-        whereArgs: [normalizedPath, quoteId],
+        where: 'file_path IN ($placeholders) AND quote_id = ?',
+        whereArgs: [...candidates, quoteId],
       );
 
       logDebug('移除媒体文件引用: $normalizedPath -> $quoteId (删除了 $result 条记录)');
@@ -199,9 +201,11 @@ class MediaReferenceService {
         cachedAppPath: cachedAppPath,
       );
 
+      final candidates = _candidateStoredFilePaths(normalizedPath);
+      final placeholders = List.filled(candidates.length, '?').join(', ');
       final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM $_tableName WHERE file_path = ?',
-        [normalizedPath],
+        'SELECT COUNT(*) as count FROM $_tableName WHERE file_path IN ($placeholders)',
+        candidates,
       );
 
       final count = _countFromRows(result);
@@ -771,7 +775,7 @@ class MediaReferenceService {
       key = key.substring(2);
     }
 
-    return key;
+    return _stripTrailingSeparators(key);
   }
 
   /// 轻量级检查单个文件是否仍被引用（双重校验：引用表 + 笔记内容）
@@ -986,8 +990,8 @@ class MediaReferenceService {
     final lookupPaths = candidates
         .expand(
           (candidate) => <String>{
-            candidate.normalizedPath,
-            candidate.canonicalKey,
+            ..._candidateStoredFilePaths(candidate.normalizedPath),
+            ..._candidateStoredFilePaths(candidate.canonicalKey),
           },
         )
         .toList(growable: false);
@@ -1366,6 +1370,15 @@ class MediaReferenceService {
     }
 
     return mediaFiles;
+  }
+
+  static List<String> _candidateStoredFilePaths(String normalizedPath) {
+    if (normalizedPath.isEmpty ||
+        normalizedPath.endsWith('/') ||
+        normalizedPath.endsWith(r'\')) {
+      return <String>[normalizedPath];
+    }
+    return <String>[normalizedPath, '$normalizedPath/', '$normalizedPath\\'];
   }
 
   static String _stripTrailingSeparators(String value) {

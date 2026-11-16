@@ -66,13 +66,15 @@ void main() {
       );
     });
 
-    test('写入路径与历史行带尾斜杠时，normalize 与引用计数仍保持一致', () async {
+    test('normalizeFilePathSync 会去掉尾部斜杠', () {
       final normalized = MediaReferenceService.normalizeFilePathSync(
         '$iosContainer/media/images/a.jpg/',
         cachedAppPath: iosContainer,
       );
       expect(normalized, 'media/images/a.jpg');
+    });
 
+    test('历史行带尾斜杠时，带或不带斜杠的查询引用计数都为 1', () async {
       await db.insert('media_references', {
         'id': 'legacy-trailing-slash',
         'file_path': '$androidDocs/media/images/legacy.jpg/',
@@ -91,6 +93,38 @@ void main() {
           'images/legacy.jpg/',
         ),
         1,
+      );
+    });
+
+    test('removeReference 与 getReferenceCount 兼容历史带尾斜杠的引用行', () async {
+      await db.insert('media_references', {
+        'id': 'legacy-rel-trailing-slash',
+        'file_path': 'media/images/legacy_rel.jpg/',
+        'quote_id': 'q1',
+        'created_at': '2026-08-21T00:00:00.000Z',
+      });
+
+      expect(
+        await MediaReferenceService.getReferenceCount(
+          '$iosContainer/media/images/legacy_rel.jpg',
+          cachedAppPath: iosContainer,
+        ),
+        1,
+      );
+      expect(
+        await MediaReferenceService.removeReference(
+          '$iosContainer/media/images/legacy_rel.jpg/',
+          'q1',
+          cachedAppPath: iosContainer,
+        ),
+        isTrue,
+      );
+      expect(
+        await MediaReferenceService.getReferenceCount(
+          '$iosContainer/media/images/legacy_rel.jpg',
+          cachedAppPath: iosContainer,
+        ),
+        0,
       );
     });
 
@@ -448,6 +482,30 @@ void main() {
         skip: Platform.isWindows
             ? 'Creating symlinks requires Windows privileges'
             : false);
+
+    test('quickCheckAndDeleteOrphans 保留被历史尾斜杠引用行保护的文件', () async {
+      final root = await Directory.systemTemp.createTemp('media_trailing_ref_');
+      addTearDown(() => root.delete(recursive: true));
+      final appDir = Directory(path.join(root.path, 'documents'));
+      final file =
+          File(path.join(appDir.path, 'media', 'images', 'protected.png'));
+      await file.parent.create(recursive: true);
+      await file.writeAsString('protected');
+
+      await db.insert('media_references', {
+        'id': 'legacy-orphan-guard',
+        'file_path': 'media/images/protected.png/',
+        'quote_id': 'q1',
+        'created_at': '2026-08-21T00:00:00.000Z',
+      });
+
+      final deleted = await MediaReferenceService.quickCheckAndDeleteOrphans(
+        [file.path],
+        cachedAppPath: appDir.path,
+      );
+      expect(deleted, 0);
+      expect(await file.exists(), isTrue);
+    });
 
     for (final linkKind in ['media root', 'subdirectory', 'file']) {
       test(
