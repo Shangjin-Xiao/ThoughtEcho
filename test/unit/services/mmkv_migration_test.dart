@@ -1020,8 +1020,9 @@ void main() {
           .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
       await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
 
+      final failingWriteKeys = <String>{'theme_style'};
       final failingAdapter = _CountingStorageAdapter(
-        failingWriteKeys: {'theme_style'},
+        failingWriteKeys: failingWriteKeys,
       );
       final service = AppPreferencesService()
         ..configureForTesting(
@@ -1039,22 +1040,21 @@ void main() {
         anyElement(contains('partial write failure')),
       );
 
-      // Simulate user updating an already-migrated key before the next retry launch.
-      final retryAdapter = _CountingStorageAdapter();
-      await retryAdapter.setString(
-          'provider_api_keys', '{"openai":"sk-updated"}');
-      await retryAdapter.setBool('app_installed_v2', true);
-      final checkpoint =
-          failingAdapter.getStringList('kv_engine_migrated_keys_v1');
+      // Simulate user updating an already-migrated key in the persisted store before retry.
       expect(
-          checkpoint, containsAll(['provider_api_keys', 'app_installed_v2']));
-      await retryAdapter.setStringList(
-          'kv_engine_migrated_keys_v1', checkpoint!);
+        failingAdapter.getStringList('kv_engine_migrated_keys_v1'),
+        containsAll(['provider_api_keys', 'app_installed_v2']),
+      );
+      await failingAdapter.setString(
+        'provider_api_keys',
+        '{"openai":"sk-updated"}',
+      );
+      failingWriteKeys.clear();
 
-      // Next launch retries only the failed key without overwriting newer user values.
+      // Next launch reuses the same persisted store and retries only the failed key.
       service.resetForTesting();
       service.configureForTesting(
-        primaryAdapter: retryAdapter,
+        primaryAdapter: failingAdapter,
         candidateMmkvFiles: [mmkvPath],
         candidateDbPaths: const [],
       );

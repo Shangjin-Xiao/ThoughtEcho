@@ -432,7 +432,9 @@ class AppPreferencesService {
         path,
         allowMigratedBackupFallback: false,
       );
-      if (activeRes.fileExists && _shouldWipeMmkvFile(activeRes)) {
+      if (activeRes.fileExists &&
+          activeRes.crcMatched != false &&
+          _shouldWipeMmkvFile(activeRes)) {
         final ok = await PlatformHelper.archiveOrWipeMmkvFile(
           activeRes.filePath,
           wipePlaintext: true,
@@ -736,6 +738,13 @@ class AppPreferencesService {
           }
         }
       }
+      final residualWarnings =
+          await _wipeResidualCredentialMmkvFiles(candidateFiles);
+      if (residualWarnings.isNotEmpty) {
+        cleanupSucceeded = false;
+        warnings.addAll(residualWarnings);
+      }
+
       if (cleanupSucceeded) {
         await storage.remove(_kKvPartialMigratedKeysKey);
         // 标记迁移完成（同时写入新旧两个标记键，防止 SettingsService._migrateDataIfNeeded 逆向覆盖）
@@ -749,10 +758,13 @@ class AppPreferencesService {
         }
       } else {
         if (!wasAlreadyMigrated && newlySucceededKeys.isNotEmpty) {
-          await storage.setStringList(
+          final savedCheckpoint = await storage.setStringList(
             _kKvPartialMigratedKeysKey,
             newlySucceededKeys.toList()..sort(),
           );
+          if (!savedCheckpoint) {
+            warnings.add('Failed to persist partial migration checkpoint.');
+          }
         }
         warnings.add(
           'Skipped migration completion watermark because legacy MMKV cleanup did not finish.',
@@ -760,10 +772,13 @@ class AppPreferencesService {
       }
     } else {
       if (!wasAlreadyMigrated && newlySucceededKeys.isNotEmpty) {
-        await storage.setStringList(
+        final savedCheckpoint = await storage.setStringList(
           _kKvPartialMigratedKeysKey,
           newlySucceededKeys.toList()..sort(),
         );
+        if (!savedCheckpoint) {
+          warnings.add('Failed to persist partial migration checkpoint.');
+        }
       }
       warnings.add(
         'Skipped migration completion watermark and legacy file cleanup due to partial write failure.',
