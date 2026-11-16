@@ -27,6 +27,12 @@ class LocalSendServer {
       _onApprovalNeeded;
   void Function(String sessionId)? _onApprovalCancelled;
   Future<MediaSyncManifest> Function()? _onMediaManifestRequested;
+  void Function(
+    String sessionId,
+    String? senderIp,
+    int? senderPort,
+    String? senderFingerprint,
+  )? _onSenderInfoReceived;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -45,6 +51,12 @@ class LocalSendServer {
         onApprovalNeeded,
     void Function(String sessionId)? onApprovalCancelled,
     Future<MediaSyncManifest> Function()? onMediaManifestRequested,
+    void Function(
+      String sessionId,
+      String? senderIp,
+      int? senderPort,
+      String? senderFingerprint,
+    )? onSenderInfoReceived,
   }) async {
     if (_isRunning) return;
 
@@ -60,12 +72,14 @@ class LocalSendServer {
     _onApprovalNeeded = onApprovalNeeded;
     _onApprovalCancelled = onApprovalCancelled;
     _onMediaManifestRequested = onMediaManifestRequested;
+    _onSenderInfoReceived = onSenderInfoReceived;
 
     _receiveController = ReceiveController(
       onFileReceived: onFileReceived,
       onReceiveProgress: onReceiveProgress,
       onSessionCreated: onReceiveSessionCreated,
       onApprovalNeeded: onApprovalNeeded,
+      onSenderInfoReceived: onSenderInfoReceived,
     );
     // ensure fingerprint ready before advertising info endpoint
     await _receiveController.initializeFingerprint();
@@ -154,10 +168,38 @@ class LocalSendServer {
         source: 'LocalSend',
       );
 
-      // Security: Reject requests from non-safe addresses (not loopback, link-local, or private)
-      if (remoteAddress != null && !_isSafeAddress(remoteAddress)) {
+      // Security: Fail closed if remoteAddress is missing or not safe (loopback, link-local, or private)
+      if (remoteAddress == null || !_isSafeAddress(remoteAddress)) {
         logSecurity(
-          'blocked_request remote=${remoteAddress.address} path=${request.uri.path}',
+          'blocked_request remote=${remoteAddress?.address ?? 'null'} path=${request.uri.path}',
+          source: 'LocalSend',
+        );
+        request.response.statusCode = HttpStatus.forbidden;
+        await request.response.close();
+        return;
+      }
+
+      // Security: Reject requests carrying a non-empty Origin header (CSRF protection)
+      final originValues = request.headers['origin'];
+      if (originValues != null &&
+          originValues.any((value) => value.trim().isNotEmpty)) {
+        logSecurity(
+          'blocked_origin_request remote=${remoteAddress.address} origin=${originValues.join(',')} path=${request.uri.path}',
+          source: 'LocalSend',
+        );
+        request.response.statusCode = HttpStatus.forbidden;
+        await request.response.close();
+        return;
+      }
+
+      // Security: Validate Host header against DNS Rebinding
+      final hostValues = request.headers[HttpHeaders.hostHeader];
+      final hostHeader = (hostValues != null && hostValues.length == 1)
+          ? hostValues.first
+          : null;
+      if (!_isValidHostHeader(hostHeader)) {
+        logSecurity(
+          'blocked_host_request remote=${remoteAddress.address} host=${hostValues?.join(',') ?? 'null'} path=${request.uri.path}',
           source: 'LocalSend',
         );
         request.response.statusCode = HttpStatus.forbidden;
@@ -241,26 +283,59 @@ class LocalSendServer {
               requestedIntentId is String && requestedIntentId.trim().isNotEmpty
                   ? requestedIntentId
                   : 'intent_${DateTime.now().millisecondsSinceEpoch}';
+          final senderIp = remoteAddress.address;
+          int? parsedReqPort;
+          final rawPort = req['port'];
+          if (rawPort is int) {
+            parsedReqPort = rawPort;
+          } else if (rawPort is num && rawPort == rawPort.toInt()) {
+            parsedReqPort = rawPort.toInt();
+          } else if (rawPort is String) {
+            parsedReqPort = int.tryParse(rawPort.trim());
+          }
+          final senderPort = (parsedReqPort != null &&
+                  parsedReqPort >= 1 &&
+                  parsedReqPort <= 65535)
+              ? parsedReqPort
+              : request.connectionInfo?.remotePort;
+          final rawFingerprint = req['fingerprint']?.toString().trim();
+          final senderFingerprint =
+              (rawFingerprint != null && rawFingerprint.isNotEmpty)
+                  ? rawFingerprint
+                  : null;
           bool approved = true;
           if (_cancelledIntentIds.remove(tempId)) {
             approved = false;
-          } else if (_onReceiveSessionCreated != null &&
-              _onApprovalNeeded != null) {
-            // 临时使用虚拟 sessionId 供审批显示大小未知
+          } else {
             try {
-              _onReceiveSessionCreated!(tempId, 0, senderAlias);
+              _onSenderInfoReceived?.call(
+                tempId,
+                senderIp,
+                senderPort,
+                senderFingerprint,
+              );
             } catch (e) {
               logDebug(
-                '[LocalSendServer] onReceiveSessionCreated callback failed: $e',
+                '[LocalSendServer] onSenderInfoReceived callback failed: $e',
               );
             }
-            try {
-              approved = await _onApprovalNeeded!(tempId, 0, senderAlias);
-            } catch (e) {
-              logDebug(
-                '[LocalSendServer] onApprovalNeeded callback failed: $e',
-              );
-              approved = false;
+            if (_onReceiveSessionCreated != null && _onApprovalNeeded != null) {
+              // 临时使用虚拟 sessionId 供审批显示大小未知
+              try {
+                _onReceiveSessionCreated!(tempId, 0, senderAlias);
+              } catch (e) {
+                logDebug(
+                  '[LocalSendServer] onReceiveSessionCreated callback failed: $e',
+                );
+              }
+              try {
+                approved = await _onApprovalNeeded!(tempId, 0, senderAlias);
+              } catch (e) {
+                logDebug(
+                  '[LocalSendServer] onApprovalNeeded callback failed: $e',
+                );
+                approved = false;
+              }
             }
           }
           MediaSyncManifest? mediaManifest;
@@ -299,6 +374,8 @@ class LocalSendServer {
           );
           responseData = await _receiveController.handlePrepareUpload(
             requestData,
+            remoteIp: remoteAddress.address,
+            remotePort: request.connectionInfo?.remotePort,
           );
           logDebug('prepare_ok', source: 'LocalSend');
         } else if ((path == '/api/localsend/v2/upload' ||
@@ -472,5 +549,96 @@ class LocalSendServer {
     }
 
     return false;
+  }
+
+  /// Validate incoming Host header against DNS Rebinding attacks.
+  bool _isValidHostHeader(String? hostHeader) =>
+      isValidHostHeaderForTesting(hostHeader);
+
+  @visibleForTesting
+  bool isValidHostHeaderForTesting(String? hostHeader) {
+    if (hostHeader == null || hostHeader.isEmpty) {
+      return false;
+    }
+
+    if (RegExp(r'[\s/\\@\x00-\x1f\x7f]').hasMatch(hostHeader)) {
+      return false;
+    }
+
+    if (hostHeader.startsWith('[')) {
+      final closeIdx = hostHeader.indexOf(']');
+      if (closeIdx <= 1) {
+        return false;
+      }
+      final ipv6Part = hostHeader.substring(1, closeIdx);
+      final rest = hostHeader.substring(closeIdx + 1);
+      if (rest.isNotEmpty) {
+        if (!rest.startsWith(':') || !_isValidPortString(rest.substring(1))) {
+          return false;
+        }
+      }
+      return _isSafeIpv6Literal(ipv6Part);
+    }
+
+    if (hostHeader.contains('[') || hostHeader.contains(']')) {
+      return false;
+    }
+
+    final firstColon = hostHeader.indexOf(':');
+    if (firstColon == -1) {
+      if (hostHeader.toLowerCase() == 'localhost') {
+        return true;
+      }
+      final addr = InternetAddress.tryParse(hostHeader);
+      return addr != null &&
+          addr.type == InternetAddressType.IPv4 &&
+          _isSafeAddress(addr);
+    }
+
+    // Multiple colons indicate a bare IPv6 literal (no port).
+    if (hostHeader.indexOf(':', firstColon + 1) != -1) {
+      return _isSafeIpv6Literal(hostHeader);
+    }
+
+    // Single colon: host:port (localhost or IPv4).
+    final hostPart = hostHeader.substring(0, firstColon);
+    final portPart = hostHeader.substring(firstColon + 1);
+    if (!_isValidPortString(portPart)) {
+      return false;
+    }
+    if (hostPart.toLowerCase() == 'localhost') {
+      return true;
+    }
+    final addr = InternetAddress.tryParse(hostPart);
+    return addr != null &&
+        addr.type == InternetAddressType.IPv4 &&
+        _isSafeAddress(addr);
+  }
+
+  bool _isValidPortString(String portPart) {
+    if (portPart.isEmpty || !RegExp(r'^[0-9]+$').hasMatch(portPart)) {
+      return false;
+    }
+    final port = int.tryParse(portPart);
+    return port != null && port >= 1 && port <= 65535;
+  }
+
+  bool _isSafeIpv6Literal(String rawIpv6) {
+    if (rawIpv6.isEmpty) {
+      return false;
+    }
+    var addressOnly = rawIpv6;
+    final zoneIdx = rawIpv6.indexOf('%');
+    if (zoneIdx != -1) {
+      final zone = rawIpv6.substring(zoneIdx + 1);
+      if (zone.isEmpty || !RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(zone)) {
+        return false;
+      }
+      addressOnly = rawIpv6.substring(0, zoneIdx);
+    }
+    final addr = InternetAddress.tryParse(addressOnly);
+    return addr != null &&
+        addr.type == InternetAddressType.IPv6 &&
+        _isSafeAddress(addr);
   }
 }

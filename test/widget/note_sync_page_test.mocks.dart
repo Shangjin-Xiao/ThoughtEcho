@@ -3,16 +3,20 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i5;
-import 'dart:ui' as _i8;
+import 'dart:async' as _i9;
+import 'dart:ui' as _i12;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i3;
+import 'package:mockito/src/dummies.dart' as _i7;
+import 'package:thoughtecho/services/ai_analysis_database_service.dart' as _i5;
+import 'package:thoughtecho/services/backup_service.dart' as _i2;
+import 'package:thoughtecho/services/database_service.dart' as _i3;
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart'
-    as _i4;
-import 'package:thoughtecho/services/localsend/models/device.dart' as _i6;
-import 'package:thoughtecho/services/media_sync_manifest.dart' as _i7;
-import 'package:thoughtecho/services/note_sync_service.dart' as _i2;
+    as _i8;
+import 'package:thoughtecho/services/localsend/models/device.dart' as _i10;
+import 'package:thoughtecho/services/media_sync_manifest.dart' as _i11;
+import 'package:thoughtecho/services/note_sync_service.dart' as _i6;
+import 'package:thoughtecho/services/settings_service.dart' as _i4;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -29,13 +33,92 @@ import 'package:thoughtecho/services/note_sync_service.dart' as _i2;
 // ignore_for_file: subtype_of_sealed_class
 // ignore_for_file: invalid_use_of_internal_member
 
+class _FakeBackupService_0 extends _i1.SmartFake implements _i2.BackupService {
+  _FakeBackupService_0(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeDatabaseService_1 extends _i1.SmartFake
+    implements _i3.DatabaseService {
+  _FakeDatabaseService_1(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeSettingsService_2 extends _i1.SmartFake
+    implements _i4.SettingsService {
+  _FakeSettingsService_2(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeAIAnalysisDatabaseService_3 extends _i1.SmartFake
+    implements _i5.AIAnalysisDatabaseService {
+  _FakeAIAnalysisDatabaseService_3(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
 /// A class which mocks [NoteSyncService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
+class MockNoteSyncService extends _i1.Mock implements _i6.NoteSyncService {
   MockNoteSyncService() {
     _i1.throwOnMissingStub(this);
   }
+
+  @override
+  _i2.BackupService get backupService => (super.noSuchMethod(
+        Invocation.getter(#backupService),
+        returnValue: _FakeBackupService_0(
+          this,
+          Invocation.getter(#backupService),
+        ),
+      ) as _i2.BackupService);
+
+  @override
+  _i3.DatabaseService get databaseService => (super.noSuchMethod(
+        Invocation.getter(#databaseService),
+        returnValue: _FakeDatabaseService_1(
+          this,
+          Invocation.getter(#databaseService),
+        ),
+      ) as _i3.DatabaseService);
+
+  @override
+  _i4.SettingsService get settingsService => (super.noSuchMethod(
+        Invocation.getter(#settingsService),
+        returnValue: _FakeSettingsService_2(
+          this,
+          Invocation.getter(#settingsService),
+        ),
+      ) as _i4.SettingsService);
+
+  @override
+  _i5.AIAnalysisDatabaseService get aiAnalysisDbService => (super.noSuchMethod(
+        Invocation.getter(#aiAnalysisDbService),
+        returnValue: _FakeAIAnalysisDatabaseService_3(
+          this,
+          Invocation.getter(#aiAnalysisDbService),
+        ),
+      ) as _i5.AIAnalysisDatabaseService);
 
   @override
   bool get awaitingUserApproval => (super.noSuchMethod(
@@ -50,15 +133,15 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as bool);
 
   @override
-  _i2.SyncStatus get syncStatus => (super.noSuchMethod(
+  _i6.SyncStatus get syncStatus => (super.noSuchMethod(
         Invocation.getter(#syncStatus),
-        returnValue: _i2.SyncStatus.idle,
-      ) as _i2.SyncStatus);
+        returnValue: _i6.SyncStatus.idle,
+      ) as _i6.SyncStatus);
 
   @override
   String get syncStatusMessage => (super.noSuchMethod(
         Invocation.getter(#syncStatusMessage),
-        returnValue: _i3.dummyValue<String>(
+        returnValue: _i7.dummyValue<String>(
           this,
           Invocation.getter(#syncStatusMessage),
         ),
@@ -77,7 +160,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as bool);
 
   @override
-  set localSendProviderForTesting(_i4.LocalSendProvider? provider) =>
+  set localSendProviderForTesting(_i8.LocalSendProvider? provider) =>
       super.noSuchMethod(
         Invocation.setter(
           #localSendProviderForTesting,
@@ -88,7 +171,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
 
   @override
   set syncIntentHandlerForTesting(
-          _i5.Future<bool> Function(_i6.Device)? value) =>
+          _i9.Future<bool> Function(_i10.Device)? value) =>
       super.noSuchMethod(
         Invocation.setter(
           #syncIntentHandlerForTesting,
@@ -98,7 +181,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       );
 
   @override
-  set receiverMediaManifestForTesting(_i7.MediaSyncManifest? value) =>
+  set receiverMediaManifestForTesting(_i11.MediaSyncManifest? value) =>
       super.noSuchMethod(
         Invocation.setter(
           #receiverMediaManifestForTesting,
@@ -114,24 +197,45 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as bool);
 
   @override
-  _i5.Future<void> initialize() => (super.noSuchMethod(
+  void updateDependencies({
+    required _i2.BackupService? backupService,
+    required _i3.DatabaseService? databaseService,
+    required _i4.SettingsService? settingsService,
+    required _i5.AIAnalysisDatabaseService? aiAnalysisDbService,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #updateDependencies,
+          [],
+          {
+            #backupService: backupService,
+            #databaseService: databaseService,
+            #settingsService: settingsService,
+            #aiAnalysisDbService: aiAnalysisDbService,
+          },
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  _i9.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
 
   @override
-  _i5.Future<void> startServer() => (super.noSuchMethod(
+  _i9.Future<void> startServer() => (super.noSuchMethod(
         Invocation.method(
           #startServer,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
 
   @override
   void approveIncoming() => super.noSuchMethod(
@@ -152,29 +256,29 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       );
 
   @override
-  _i5.Future<void> stopServer() => (super.noSuchMethod(
+  _i9.Future<void> stopServer() => (super.noSuchMethod(
         Invocation.method(
           #stopServer,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
 
   @override
-  _i5.Future<void> sendNotesToDevice(_i6.Device? targetDevice) =>
+  _i9.Future<void> sendNotesToDevice(_i10.Device? targetDevice) =>
       (super.noSuchMethod(
         Invocation.method(
           #sendNotesToDevice,
           [targetDevice],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
 
   @override
-  _i5.Future<String> createSyncPackage(
-    _i6.Device? targetDevice, {
+  _i9.Future<String> createSyncPackage(
+    _i10.Device? targetDevice, {
     bool? includeMediaFiles = true,
   }) =>
       (super.noSuchMethod(
@@ -183,7 +287,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
           [targetDevice],
           {#includeMediaFiles: includeMediaFiles},
         ),
-        returnValue: _i5.Future<String>.value(_i3.dummyValue<String>(
+        returnValue: _i9.Future<String>.value(_i7.dummyValue<String>(
           this,
           Invocation.method(
             #createSyncPackage,
@@ -191,17 +295,17 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
             {#includeMediaFiles: includeMediaFiles},
           ),
         )),
-      ) as _i5.Future<String>);
+      ) as _i9.Future<String>);
 
   @override
-  _i5.Future<void> setSkipSyncConfirmation(bool? value) => (super.noSuchMethod(
+  _i9.Future<void> setSkipSyncConfirmation(bool? value) => (super.noSuchMethod(
         Invocation.method(
           #setSkipSyncConfirmation,
           [value],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
 
   @override
   void cancelOngoingSend() => super.noSuchMethod(
@@ -222,44 +326,62 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       );
 
   @override
-  _i5.Future<void> processSyncPackage(String? backupFilePath) =>
+  _i9.Future<void> processSyncPackage(String? backupFilePath) =>
       (super.noSuchMethod(
         Invocation.method(
           #processSyncPackage,
           [backupFilePath],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
 
   @override
-  _i5.Future<List<_i6.Device>> discoverNearbyDevices({int? timeout}) =>
+  _i9.Future<List<_i10.Device>> discoverNearbyDevices({int? timeout}) =>
       (super.noSuchMethod(
         Invocation.method(
           #discoverNearbyDevices,
           [],
           {#timeout: timeout},
         ),
-        returnValue: _i5.Future<List<_i6.Device>>.value(<_i6.Device>[]),
-      ) as _i5.Future<List<_i6.Device>>);
+        returnValue: _i9.Future<List<_i10.Device>>.value(<_i10.Device>[]),
+      ) as _i9.Future<List<_i10.Device>>);
 
   @override
-  (_i5.Stream<List<_i6.Device>>, _i8.VoidCallback) discoverNearbyDevicesStream(
-          {int? timeout}) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #discoverNearbyDevicesStream,
-          [],
-          {#timeout: timeout},
-        ),
-        returnValue: (_i5.Stream<List<_i6.Device>>.empty(), () {}),
-      ) as (_i5.Stream<List<_i6.Device>>, _i8.VoidCallback));
+  (_i9.Stream<List<_i10.Device>>, _i12.VoidCallback)
+      discoverNearbyDevicesStream({int? timeout}) => (super.noSuchMethod(
+            Invocation.method(
+              #discoverNearbyDevicesStream,
+              [],
+              {#timeout: timeout},
+            ),
+            returnValue: (_i9.Stream<List<_i10.Device>>.empty(), () {}),
+          ) as (_i9.Stream<List<_i10.Device>>, _i12.VoidCallback));
 
   @override
   void dispose() => super.noSuchMethod(
         Invocation.method(
           #dispose,
           [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void debugSetReceiveSenderInfo({
+    String? senderIp,
+    int? senderPort,
+    String? senderFingerprint,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #debugSetReceiveSenderInfo,
+          [],
+          {
+            #senderIp: senderIp,
+            #senderPort: senderPort,
+            #senderFingerprint: senderFingerprint,
+          },
         ),
         returnValueForMissingStub: null,
       );
@@ -299,7 +421,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       );
 
   @override
-  void addListener(_i8.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i12.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -308,7 +430,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       );
 
   @override
-  void removeListener(_i8.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i12.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],

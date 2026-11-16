@@ -1,8 +1,54 @@
-import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
+import 'package:thoughtecho/services/localsend/models/session_status.dart';
+import 'package:thoughtecho/services/localsend/receive_controller.dart';
 import 'package:thoughtecho/services/media_sync_manifest.dart';
+
+class _FakeHttpHeaders extends Fake implements HttpHeaders {
+  _FakeHttpHeaders(this.contentType);
+
+  @override
+  final ContentType? contentType;
+}
+
+class _FakeUploadRequest extends Fake implements HttpRequest {
+  _FakeUploadRequest({
+    Stream<Uint8List>? body,
+    ContentType? contentType,
+  })  : _body = body ??
+            Stream<Uint8List>.fromIterable([
+              Uint8List.fromList([1, 2, 3, 4]),
+            ]),
+        _headers = _FakeHttpHeaders(contentType);
+
+  final Stream<Uint8List> _body;
+  final _FakeHttpHeaders _headers;
+
+  @override
+  HttpHeaders get headers => _headers;
+
+  @override
+  Stream<R> cast<R>() => _body.cast<R>();
+
+  @override
+  StreamSubscription<Uint8List> listen(
+    void Function(Uint8List event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    return _body.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+}
 
 // Extension to access private method for testing
 extension LocalSendServerTest on LocalSendServer {
@@ -262,6 +308,772 @@ void main() {
       expect(body['approved'], isFalse);
       expect(body, isNot(contains('mediaManifest')));
       expect(manifestRequests, 0);
+    });
+  });
+
+  group('LocalSendServer CSRF Origin & DNS Rebinding Host Hardening', () {
+    test('isValidHostHeaderForTesting validates allowed and blocked hosts', () {
+      final server = LocalSendServer();
+
+      final validHosts = [
+        'localhost',
+        'LOCALHOST',
+        'localhost:53320',
+        'LOCALHOST:53320',
+        'localhost:1',
+        'localhost:65535',
+        '127.0.0.1',
+        '127.0.0.1:53320',
+        '192.168.1.10:53320',
+        '10.0.0.5:8080',
+        '172.16.0.1:53320',
+        '169.254.1.1:53320',
+        '[::1]',
+        '[::1]:53320',
+        '[fe80::1]',
+        '[fe80::1]:53320',
+        '[fe80::1%eth0]:53320',
+        '[fd00::1]:53320',
+        '::1',
+        'fe80::1',
+        'fd00::1',
+      ];
+      for (final host in validHosts) {
+        expect(
+          server.isValidHostHeaderForTesting(host),
+          isTrue,
+          reason: 'Expected valid host: $host',
+        );
+      }
+
+      final invalidHosts = [
+        null,
+        '',
+        '   ',
+        'localhost ',
+        ' localhost',
+        'localhost/evil',
+        r'localhost\evil',
+        'user@localhost',
+        'localhost\r\n',
+        'evil.com',
+        'evil.com:53320',
+        'evil.localhost',
+        'evil.localhost:53320',
+        '8.8.8.8',
+        '8.8.8.8:53320',
+        '0.0.0.0:53320',
+        '[2001:4860:4860::8888]:53320',
+        '2001:4860:4860::8888',
+        '[::]',
+        'localhost:0',
+        'localhost:65536',
+        'localhost:+80',
+        'localhost:-1',
+        'localhost:abc',
+        'localhost:',
+        '[::1',
+        '::1]',
+        '[fe80::1%]:53320',
+        '[127.0.0.1]:53320',
+        '127.0.0.1:53320:80',
+      ];
+      for (final host in invalidHosts) {
+        expect(
+          server.isValidHostHeaderForTesting(host),
+          isFalse,
+          reason: 'Expected invalid host: $host',
+        );
+      }
+    });
+
+    test('rejects non-empty Origin header with 403 across endpoints', () async {
+      final server = LocalSendServer();
+      addTearDown(server.stop);
+      var approvalCalled = false;
+      await server.start(
+        port: 0,
+        onReceiveSessionCreated: (_, __, ___) {
+          approvalCalled = true;
+        },
+        onApprovalNeeded: (_, __, ___) async {
+          approvalCalled = true;
+          return true;
+        },
+      );
+
+      final client = HttpClient();
+      addTearDown(client.close);
+
+      final endpoints = [
+        ('GET', '/api/localsend/v2/info', null),
+        ('POST', '/api/localsend/v2/register', '{}'),
+        (
+          'POST',
+          '/api/thoughtecho/v1/sync-intent',
+          jsonEncode({'alias': 'Sender', 'fingerprint': 'fp'}),
+        ),
+        (
+          'POST',
+          '/api/localsend/v2/prepare-upload',
+          jsonEncode({
+            'info': {'alias': 'Sender'},
+            'files': {
+              'f1': {
+                'id': 'f1',
+                'fileName': 'note.txt',
+                'size': 4,
+                'fileType': 'text/plain',
+              },
+            },
+          }),
+        ),
+        (
+          'POST',
+          '/api/localsend/v2/upload?sessionId=s1&fileId=f1&token=t1',
+          'data',
+        ),
+      ];
+
+      for (final (method, path, body) in endpoints) {
+        for (final origin in ['https://evil.com', 'null']) {
+          final request = await client.openUrl(
+            method,
+            Uri.parse('http://127.0.0.1:${server.port}$path'),
+          );
+          request.headers.set('Origin', origin);
+          if (body != null) {
+            request.headers.contentType = ContentType.json;
+            request.write(body);
+          }
+          final response = await request.close();
+          await response.drain<void>();
+          expect(
+            response.statusCode,
+            HttpStatus.forbidden,
+            reason: 'Expected 403 for $method $path with Origin=$origin',
+          );
+        }
+      }
+      expect(approvalCalled, isFalse);
+
+      // Whitespace-only Origin header is treated as empty and allowed.
+      final okReq = await client.getUrl(
+        Uri.parse('http://127.0.0.1:${server.port}/api/localsend/v2/info'),
+      );
+      okReq.headers.set('Origin', '   ');
+      final okResp = await okReq.close();
+      await okResp.drain<void>();
+      expect(okResp.statusCode, HttpStatus.ok);
+    });
+
+    test('rejects DNS rebinding Host headers and missing Host with 403',
+        () async {
+      final server = LocalSendServer();
+      addTearDown(server.stop);
+      await server.start(port: 0);
+
+      final client = HttpClient();
+      addTearDown(client.close);
+
+      for (final badHost in [
+        'evil.com:53320',
+        '8.8.8.8:53320',
+        'evil.localhost',
+        '[2001:4860:4860::8888]:53320',
+      ]) {
+        final request = await client.getUrl(
+          Uri.parse('http://127.0.0.1:${server.port}/api/localsend/v2/info'),
+        );
+        request.headers.set(HttpHeaders.hostHeader, badHost);
+        final response = await request.close();
+        await response.drain<void>();
+        expect(
+          response.statusCode,
+          HttpStatus.forbidden,
+          reason: 'Expected 403 for Host=$badHost',
+        );
+      }
+
+      for (final goodHost in [
+        'localhost',
+        'LOCALHOST:${server.port}',
+        '127.0.0.1:${server.port}',
+        '192.168.1.10:${server.port}',
+        '[::1]:${server.port}',
+        '[fe80::1]:${server.port}',
+      ]) {
+        final request = await client.getUrl(
+          Uri.parse('http://127.0.0.1:${server.port}/api/localsend/v2/info'),
+        );
+        request.headers.set(HttpHeaders.hostHeader, goodHost);
+        final response = await request.close();
+        await response.drain<void>();
+        expect(
+          response.statusCode,
+          HttpStatus.ok,
+          reason: 'Expected 200 for Host=$goodHost',
+        );
+      }
+
+      // Raw HTTP/1.0 request with no Host header must fail closed with 403.
+      final socket = await Socket.connect('127.0.0.1', server.port);
+      addTearDown(socket.destroy);
+      socket.write('GET /api/localsend/v2/info HTTP/1.0\r\n\r\n');
+      await socket.flush();
+      final rawResponse = await utf8.decoder.bind(socket).join();
+      expect(rawResponse, startsWith('HTTP/1.0 403'));
+    });
+  });
+
+  group('LocalSendServer Sender Metadata Propagation', () {
+    test(
+        'sync-intent emits onSenderInfoReceived before onReceiveSessionCreated (explicit and fallback port)',
+        () async {
+      final server = LocalSendServer();
+      addTearDown(server.stop);
+
+      final events = <String>[];
+      final received = <(String, String?, int?, String?)>[];
+
+      await server.start(
+        port: 0,
+        onSenderInfoReceived: (sid, ip, port, fp) {
+          events.add('senderInfo:$sid');
+          received.add((sid, ip, port, fp));
+        },
+        onReceiveSessionCreated: (sid, _, __) {
+          events.add('sessionCreated:$sid');
+        },
+        onApprovalNeeded: (_, __, ___) async => true,
+      );
+
+      final client = HttpClient();
+      addTearDown(client.close);
+
+      Future<void> sendIntent(Map<String, dynamic> payload) async {
+        final req = await client.postUrl(
+          Uri.parse(
+            'http://127.0.0.1:${server.port}/api/thoughtecho/v1/sync-intent',
+          ),
+        );
+        req.headers.contentType = ContentType.json;
+        req.write(jsonEncode(payload));
+        final resp = await req.close();
+        expect(resp.statusCode, HttpStatus.ok);
+        await resp.drain<void>();
+      }
+
+      await sendIntent({
+        'intentId': 'intent-with-port',
+        'alias': 'Sender A',
+        'port': 53325,
+        'fingerprint': '  fp-sync-1  ',
+      });
+
+      await sendIntent({
+        'intentId': 'intent-fallback-port',
+        'alias': 'Sender B',
+        'fingerprint': '   ',
+      });
+
+      expect(events, [
+        'senderInfo:intent-with-port',
+        'sessionCreated:intent-with-port',
+        'senderInfo:intent-fallback-port',
+        'sessionCreated:intent-fallback-port',
+      ]);
+
+      expect(
+          received[0], ('intent-with-port', '127.0.0.1', 53325, 'fp-sync-1'));
+      expect(received[1].$1, 'intent-fallback-port');
+      expect(received[1].$2, '127.0.0.1');
+      expect(received[1].$3, inInclusiveRange(1, 65535));
+      expect(received[1].$4, isNull);
+    });
+
+    for (final route in [
+      '/api/localsend/v2/prepare-upload',
+      '/api/localsend/v1/send-request',
+    ]) {
+      test(
+          '$route emits onSenderInfoReceived before onReceiveSessionCreated (explicit and fallback port)',
+          () async {
+        final server = LocalSendServer();
+        addTearDown(server.stop);
+
+        final events = <String>[];
+        final received = <(String, String?, int?, String?)>[];
+
+        await server.start(
+          port: 0,
+          onSenderInfoReceived: (sid, ip, port, fp) {
+            events.add('senderInfo:$sid');
+            received.add((sid, ip, port, fp));
+          },
+          onReceiveSessionCreated: (sid, _, __) {
+            events.add('sessionCreated:$sid');
+          },
+          onApprovalNeeded: (_, __, ___) async => true,
+        );
+
+        final client = HttpClient();
+        addTearDown(client.close);
+
+        Future<String> sendPrepare(Map<String, dynamic> info) async {
+          final req = await client.postUrl(
+            Uri.parse('http://127.0.0.1:${server.port}$route'),
+          );
+          req.headers.contentType = ContentType.json;
+          req.write(jsonEncode({
+            'info': info,
+            'files': {
+              'f1': {
+                'id': 'f1',
+                'fileName': 'notes.json',
+                'size': 4,
+                'fileType': 'application/json',
+              },
+            },
+          }));
+          final resp = await req.close();
+          expect(resp.statusCode, HttpStatus.ok);
+          final body = jsonDecode(await utf8.decoder.bind(resp).join())
+              as Map<String, dynamic>;
+          return body['sessionId'] as String;
+        }
+
+        final sid1 = await sendPrepare({
+          'alias': 'Sender A',
+          'port': 53329,
+          'fingerprint': '  fp-prep-1  ',
+        });
+        final sid2 = await sendPrepare({
+          'alias': 'Sender B',
+          'fingerprint': '',
+        });
+
+        expect(events, [
+          'senderInfo:$sid1',
+          'sessionCreated:$sid1',
+          'senderInfo:$sid2',
+          'sessionCreated:$sid2',
+        ]);
+
+        expect(received[0], (sid1, '127.0.0.1', 53329, 'fp-prep-1'));
+        expect(received[1].$1, sid2);
+        expect(received[1].$2, '127.0.0.1');
+        expect(received[1].$3, inInclusiveRange(1, 65535));
+        expect(received[1].$4, isNull);
+      });
+    }
+  });
+
+  group('ReceiveController Hardening', () {
+    void cleanupReceivedFile(String path) {
+      addTearDown(() async {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      });
+    }
+
+    Map<String, dynamic> buildPreparePayload({
+      Map<String, Map<String, dynamic>>? files,
+    }) {
+      return {
+        'info': {
+          'alias': 'Test Sender',
+          'fingerprint': 'sender-fp',
+          'port': 53320,
+        },
+        'files': files ??
+            {
+              'file-1': {
+                'id': 'file-1',
+                'fileName': 'note.txt',
+                'size': 4,
+                'fileType': 'text/plain',
+              },
+            },
+      };
+    }
+
+    test(
+        'consumes single-use upload token on success, failure, and concurrency',
+        () async {
+      final controller = ReceiveController(
+        onApprovalNeeded: (_, __, ___) async => true,
+        onFileReceived: cleanupReceivedFile,
+      );
+      addTearDown(controller.dispose);
+
+      // 1) Replay after success on 1-file session (finished) and 2-file session (Invalid token).
+      final prepSingle = await controller.handlePrepareUpload(
+        buildPreparePayload(),
+      );
+      final singleSid = prepSingle['sessionId'] as String;
+      final singleTok = prepSingle['files']['file-1'] as String;
+
+      await controller.handleFileUpload(
+        singleSid,
+        'file-1',
+        singleTok,
+        _FakeUploadRequest(),
+      );
+      expect(
+        controller.getSession(singleSid)!.status,
+        SessionStatus.finished,
+      );
+      expect(
+        controller.getSession(singleSid)!.completedFileIds,
+        {'file-1'},
+      );
+      await expectLater(
+        controller.handleFileUpload(
+          singleSid,
+          'file-1',
+          singleTok,
+          _FakeUploadRequest(),
+        ),
+        throwsException,
+      );
+
+      final prepTwo = await controller.handlePrepareUpload(
+        buildPreparePayload(
+          files: {
+            'file-1': {
+              'id': 'file-1',
+              'fileName': 'one.txt',
+              'size': 4,
+              'fileType': 'text/plain',
+            },
+            'file-2': {
+              'id': 'file-2',
+              'fileName': 'two.txt',
+              'size': 4,
+              'fileType': 'text/plain',
+            },
+          },
+        ),
+      );
+      final twoSid = prepTwo['sessionId'] as String;
+      final twoTok1 = prepTwo['files']['file-1'] as String;
+      final twoTok2 = prepTwo['files']['file-2'] as String;
+
+      await controller.handleFileUpload(
+        twoSid,
+        'file-1',
+        twoTok1,
+        _FakeUploadRequest(),
+      );
+      expect(
+        controller.getSession(twoSid)!.status,
+        SessionStatus.sending,
+      );
+      await expectLater(
+        controller.handleFileUpload(
+          twoSid,
+          'file-1',
+          twoTok1,
+          _FakeUploadRequest(),
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Invalid token'),
+          ),
+        ),
+      );
+      await controller.handleFileUpload(
+        twoSid,
+        'file-2',
+        twoTok2,
+        _FakeUploadRequest(),
+      );
+      expect(
+        controller.getSession(twoSid)!.status,
+        SessionStatus.finished,
+      );
+      expect(
+        controller.getSession(twoSid)!.completedFileIds,
+        {'file-1', 'file-2'},
+      );
+
+      // 2) Replay after failure: empty stream consumes token and marks 1-file session finishedWithErrors.
+      final prepFail = await controller.handlePrepareUpload(
+        buildPreparePayload(),
+      );
+      final failSid = prepFail['sessionId'] as String;
+      final failTok = prepFail['files']['file-1'] as String;
+      await expectLater(
+        controller.handleFileUpload(
+          failSid,
+          'file-1',
+          failTok,
+          _FakeUploadRequest(body: const Stream<Uint8List>.empty()),
+        ),
+        throwsException,
+      );
+      expect(
+        controller.getSession(failSid)!.status,
+        SessionStatus.finishedWithErrors,
+      );
+      await expectLater(
+        controller.handleFileUpload(
+          failSid,
+          'file-1',
+          failTok,
+          _FakeUploadRequest(),
+        ),
+        throwsException,
+      );
+
+      // 2b) Replay after failure on 2-file session rejects with Invalid token without killing file-2.
+      final prepTwoFail = await controller.handlePrepareUpload(
+        buildPreparePayload(
+          files: {
+            'file-1': {
+              'id': 'file-1',
+              'fileName': 'one.txt',
+              'size': 4,
+              'fileType': 'text/plain',
+            },
+            'file-2': {
+              'id': 'file-2',
+              'fileName': 'two.txt',
+              'size': 4,
+              'fileType': 'text/plain',
+            },
+          },
+        ),
+      );
+      final twoFailSid = prepTwoFail['sessionId'] as String;
+      final twoFailTok1 = prepTwoFail['files']['file-1'] as String;
+      await expectLater(
+        controller.handleFileUpload(
+          twoFailSid,
+          'file-1',
+          twoFailTok1,
+          _FakeUploadRequest(body: const Stream<Uint8List>.empty()),
+        ),
+        throwsException,
+      );
+      expect(
+        controller.getSession(twoFailSid)!.status,
+        SessionStatus.sending,
+      );
+      await expectLater(
+        controller.handleFileUpload(
+          twoFailSid,
+          'file-1',
+          twoFailTok1,
+          _FakeUploadRequest(),
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Invalid token'),
+          ),
+        ),
+      );
+
+      // 3) Concurrent replay fails with Invalid token while original upload succeeds.
+      final prepConcurrent = await controller.handlePrepareUpload(
+        buildPreparePayload(),
+      );
+      final concSid = prepConcurrent['sessionId'] as String;
+      final concTok = prepConcurrent['files']['file-1'] as String;
+      final slowStream = StreamController<Uint8List>();
+
+      final firstUpload = controller.handleFileUpload(
+        concSid,
+        'file-1',
+        concTok,
+        _FakeUploadRequest(body: slowStream.stream),
+      );
+      final concurrentReplay = controller.handleFileUpload(
+        concSid,
+        'file-1',
+        concTok,
+        _FakeUploadRequest(),
+      );
+
+      await expectLater(
+        concurrentReplay,
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Invalid token'),
+          ),
+        ),
+      );
+
+      slowStream.add(Uint8List.fromList([1, 2, 3, 4]));
+      await slowStream.close();
+      final result = await firstUpload;
+      expect(result['size'], 4);
+      expect(
+        controller.getSession(concSid)!.status,
+        SessionStatus.finished,
+      );
+    });
+
+    test('enforces deterministic session expiry via nowProvider', () async {
+      var fakeNow = DateTime(2026, 1, 1, 12, 0, 0);
+      final controller = ReceiveController(
+        onApprovalNeeded: (_, __, ___) async => true,
+        onFileReceived: cleanupReceivedFile,
+        nowProvider: () => fakeNow,
+      );
+      addTearDown(controller.dispose);
+
+      // Within 2-minute timeout succeeds.
+      final prepValid = await controller.handlePrepareUpload(
+        buildPreparePayload(),
+      );
+      fakeNow = fakeNow.add(const Duration(minutes: 2));
+      final validRes = await controller.handleFileUpload(
+        prepValid['sessionId'] as String,
+        'file-1',
+        prepValid['files']['file-1'] as String,
+        _FakeUploadRequest(),
+      );
+      expect(validRes['size'], 4);
+
+      // Strictly past 2-minute timeout fails with Session expired and removes session.
+      final prepExpired = await controller.handlePrepareUpload(
+        buildPreparePayload(),
+      );
+      final expiredSid = prepExpired['sessionId'] as String;
+      fakeNow = fakeNow.add(const Duration(minutes: 2, seconds: 1));
+      await expectLater(
+        controller.handleFileUpload(
+          expiredSid,
+          'file-1',
+          prepExpired['files']['file-1'] as String,
+          _FakeUploadRequest(),
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Session expired'),
+          ),
+        ),
+      );
+      expect(controller.getSession(expiredSid), isNull);
+    });
+
+    test('rejects path traversal and enforces safe extension whitelist',
+        () async {
+      final controller = ReceiveController(
+        onApprovalNeeded: (_, __, ___) async => true,
+        onFileReceived: cleanupReceivedFile,
+      );
+      addTearDown(controller.dispose);
+
+      for (final badName in [
+        '../evil.zip',
+        'a/b.zip',
+        r'a\b.zip',
+        'bad\x00.zip',
+        '',
+      ]) {
+        final prep = await controller.handlePrepareUpload(
+          buildPreparePayload(
+            files: {
+              'file-1': {
+                'id': 'file-1',
+                'fileName': badName,
+                'size': 4,
+                'fileType': 'application/zip',
+              },
+            },
+          ),
+        );
+        await expectLater(
+          controller.handleFileUpload(
+            prep['sessionId'] as String,
+            'file-1',
+            prep['files']['file-1'] as String,
+            _FakeUploadRequest(),
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Invalid file name'),
+            ),
+          ),
+          reason: 'Expected Invalid file name for "$badName"',
+        );
+      }
+
+      for (final blockedName in [
+        'payload.exe',
+        'app.apk',
+        'page.html',
+        'vector.svg',
+        'script.js',
+        'no_extension',
+        '.zip',
+      ]) {
+        final prep = await controller.handlePrepareUpload(
+          buildPreparePayload(
+            files: {
+              'file-1': {
+                'id': 'file-1',
+                'fileName': blockedName,
+                'size': 4,
+                'fileType': 'application/octet-stream',
+              },
+            },
+          ),
+        );
+        await expectLater(
+          controller.handleFileUpload(
+            prep['sessionId'] as String,
+            'file-1',
+            prep['files']['file-1'] as String,
+            _FakeUploadRequest(),
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Blocked file type'),
+            ),
+          ),
+          reason: 'Expected Blocked file type for "$blockedName"',
+        );
+      }
+
+      for (final allowedName in ['backup.zip', 'photo.jpg', 'clip.mp4']) {
+        final prep = await controller.handlePrepareUpload(
+          buildPreparePayload(
+            files: {
+              'file-1': {
+                'id': 'file-1',
+                'fileName': allowedName,
+                'size': 4,
+                'fileType': 'application/octet-stream',
+              },
+            },
+          ),
+        );
+        final res = await controller.handleFileUpload(
+          prep['sessionId'] as String,
+          'file-1',
+          prep['files']['file-1'] as String,
+          _FakeUploadRequest(),
+        );
+        expect(res['size'], 4, reason: 'Expected $allowedName to succeed');
+      }
     });
   });
 }

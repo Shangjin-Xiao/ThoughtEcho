@@ -203,6 +203,132 @@ void main() {
         expect(LWWUtils.detectClockSkew(null), isNull);
         expect(LWWUtils.detectClockSkew('invalid'), isNull);
       });
+
+      test('uses deterministic now parameter when provided', () {
+        final refNow = DateTime.utc(2026, 6, 1, 12, 0, 0);
+        final sixMinsAhead =
+            refNow.add(const Duration(minutes: 6)).toIso8601String();
+        final fiveMinsAhead =
+            refNow.add(const Duration(minutes: 5)).toIso8601String();
+
+        final skew = LWWUtils.detectClockSkew(sixMinsAhead, now: refNow);
+        expect(skew, const Duration(minutes: 6));
+        expect(LWWUtils.detectClockSkew(fiveMinsAhead, now: refNow), isNull);
+      });
+    });
+
+    group('isExcessiveFutureTimestamp', () {
+      final refNow = DateTime.utc(2026, 6, 1, 12, 0, 0);
+
+      test('allows timestamps up to 24h ahead and rejects 24h + 1s ahead', () {
+        final ahead23h =
+            refNow.add(const Duration(hours: 23)).toIso8601String();
+        final ahead24hExact =
+            refNow.add(LWWUtils.maxFutureSkew).toIso8601String();
+        final ahead24h1s = refNow
+            .add(LWWUtils.maxFutureSkew + const Duration(seconds: 1))
+            .toIso8601String();
+
+        expect(
+          LWWUtils.isExcessiveFutureTimestamp(ahead23h, now: refNow),
+          isFalse,
+        );
+        expect(
+          LWWUtils.isExcessiveFutureTimestamp(ahead24hExact, now: refNow),
+          isFalse,
+        );
+        expect(
+          LWWUtils.isExcessiveFutureTimestamp(ahead24h1s, now: refNow),
+          isTrue,
+        );
+      });
+
+      test('compares timezone-offset timestamps in UTC and respects threshold',
+          () {
+        // 2026-06-02T20:00:01+08:00 == 2026-06-02T12:00:01Z (24h + 1s ahead of refNow)
+        expect(
+          LWWUtils.isExcessiveFutureTimestamp(
+            '2026-06-02T20:00:01+08:00',
+            now: refNow,
+          ),
+          isTrue,
+        );
+        // 2026-06-02T19:00:00+08:00 == 2026-06-02T11:00:00Z (23h ahead of refNow)
+        expect(
+          LWWUtils.isExcessiveFutureTimestamp(
+            '2026-06-02T19:00:00+08:00',
+            now: refNow,
+          ),
+          isFalse,
+        );
+        expect(
+          LWWUtils.isExcessiveFutureTimestamp(
+            refNow.add(const Duration(hours: 2)).toIso8601String(),
+            now: refNow,
+            threshold: const Duration(hours: 1),
+          ),
+          isTrue,
+        );
+      });
+
+      test('returns false for past, null, empty, or invalid inputs', () {
+        final past =
+            refNow.subtract(const Duration(days: 30)).toIso8601String();
+        expect(LWWUtils.isExcessiveFutureTimestamp(past, now: refNow), isFalse);
+        expect(LWWUtils.isExcessiveFutureTimestamp(null, now: refNow), isFalse);
+        expect(LWWUtils.isExcessiveFutureTimestamp('', now: refNow), isFalse);
+        expect(
+          LWWUtils.isExcessiveFutureTimestamp('not-a-timestamp', now: refNow),
+          isFalse,
+        );
+      });
+    });
+
+    group('clampFutureTimestamp', () {
+      final refNow = DateTime.utc(2026, 6, 1, 12, 0, 0);
+
+      test('clamps >24h future timestamp to now and normalizes allowed values',
+          () {
+        final ahead23h =
+            refNow.add(const Duration(hours: 23)).toIso8601String();
+        final ahead24hExact =
+            refNow.add(LWWUtils.maxFutureSkew).toIso8601String();
+        final ahead24h1s = refNow
+            .add(LWWUtils.maxFutureSkew + const Duration(seconds: 1))
+            .toIso8601String();
+
+        expect(
+          LWWUtils.clampFutureTimestamp(ahead23h, now: refNow),
+          ahead23h,
+        );
+        expect(
+          LWWUtils.clampFutureTimestamp(ahead24hExact, now: refNow),
+          ahead24hExact,
+        );
+        expect(
+          LWWUtils.clampFutureTimestamp(ahead24h1s, now: refNow),
+          refNow.toIso8601String(),
+        );
+        expect(
+          LWWUtils.clampFutureTimestamp(
+            '2026-06-01T20:00:00+08:00',
+            now: refNow,
+          ),
+          '2026-06-01T12:00:00.000Z',
+        );
+      });
+
+      test('delegates null, empty, and invalid inputs to normalizeTimestamp',
+          () {
+        expect(
+            LWWUtils.clampFutureTimestamp(null, now: refNow), defaultTimestamp);
+        expect(
+            LWWUtils.clampFutureTimestamp('', now: refNow), defaultTimestamp);
+        expect(
+          LWWUtils.clampFutureTimestamp('invalid', now: refNow),
+          defaultTimestamp,
+        );
+      });
     });
 
     group('isValidTimestamp', () {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
+import 'package:flutter/foundation.dart';
 import '../device_identity_manager.dart';
 import 'package:uuid/uuid.dart';
 
@@ -17,6 +18,35 @@ import 'package:thoughtecho/utils/app_logger.dart';
 /// Simplified receive controller for ThoughtEcho
 /// Based on LocalSend's receive_controller but with minimal dependencies
 class ReceiveController {
+  /// Safe file extensions permitted for incoming transfers.
+  static const Set<String> allowedExtensions = {
+    '.zip',
+    '.json',
+    '.db',
+    '.sqlite',
+    '.txt',
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.webp',
+    '.heic',
+    '.heif',
+    '.bmp',
+    '.mp3',
+    '.m4a',
+    '.aac',
+    '.wav',
+    '.ogg',
+    '.flac',
+    '.opus',
+    '.mp4',
+    '.mov',
+    '.webm',
+    '.mkv',
+    '.avi',
+  };
+
   final Function(String filePath)? onFileReceived;
   final void Function(int received, int total)? onReceiveProgress;
   final void Function(String sessionId, int totalBytes, String senderAlias)?
@@ -26,21 +56,31 @@ class ReceiveController {
     int totalBytes,
     String senderAlias,
   )? onApprovalNeeded; // 需要用户审批时回调，true 继续 false 取消
+  final void Function(
+    String sessionId,
+    String? senderIp,
+    int? senderPort,
+    String? senderFingerprint,
+  )? onSenderInfoReceived;
+  final DateTime Function() _now;
   final Map<String, ReceiveSession> _sessions = {};
   final Duration sessionTimeout = const Duration(minutes: 2);
   Timer? _gcTimer;
   String? _cachedFingerprint; // initialized explicitly before serving info
+  int _tempFileSequence = 0;
 
   ReceiveController({
     this.onFileReceived,
     this.onReceiveProgress,
     this.onSessionCreated,
     this.onApprovalNeeded,
-  });
+    this.onSenderInfoReceived,
+    @visibleForTesting DateTime Function()? nowProvider,
+  }) : _now = nowProvider ?? DateTime.now;
 
   void _startGcTimer() {
     _gcTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
-      final now = DateTime.now();
+      final now = _now();
       final toRemove = <String>[];
       _sessions.forEach((id, s) {
         if (now.difference(s.lastActivity).compareTo(sessionTimeout) > 0) {
@@ -85,8 +125,10 @@ class ReceiveController {
 
   /// Handle prepare upload request
   Future<Map<String, dynamic>> handlePrepareUpload(
-    Map<String, dynamic> requestData,
-  ) async {
+    Map<String, dynamic> requestData, {
+    String? remoteIp,
+    int? remotePort,
+  }) async {
     try {
       // 确保指纹已就绪
       // fingerprint already initialized by server; if null attempt once lazily
@@ -104,7 +146,7 @@ class ReceiveController {
         senderInfo: prepareRequest.info,
         files: prepareRequest.files,
         status: SessionStatus.waiting,
-        lastActivity: DateTime.now(),
+        lastActivity: _now(),
       );
 
       _sessions[sessionId] = session;
@@ -115,9 +157,34 @@ class ReceiveController {
         totalBytes += f.size;
       }
 
+      final infoPort = prepareRequest.info.port;
+      final effectivePort =
+          (infoPort != null && infoPort > 0 && infoPort <= 65535)
+              ? infoPort
+              : remotePort;
+      final trimmedFp = prepareRequest.info.fingerprint?.trim();
+      final effectiveFp =
+          (trimmedFp != null && trimmedFp.isNotEmpty) ? trimmedFp : null;
+
       // Fingerprints are public metadata, not authorization. Approve this
       // preparation and its file list even when a sync intent was approved.
       bool approved = false;
+      try {
+        onSenderInfoReceived?.call(
+          sessionId,
+          remoteIp,
+          effectivePort,
+          effectiveFp,
+        );
+      } catch (e, stack) {
+        logError(
+          '[ReceiveController] onSenderInfoReceived callback failed',
+          error: e,
+          stackTrace: stack,
+          source: 'LocalSend',
+        );
+      }
+
       // 通知 UI 有新会话（等待审批）
       try {
         onSessionCreated?.call(
@@ -159,7 +226,7 @@ class ReceiveController {
         if (currentSession != null) {
           _sessions[sessionId] = currentSession.copyWith(
             status: SessionStatus.canceledByReceiver,
-            lastActivity: DateTime.now(),
+            lastActivity: _now(),
           );
         }
         logInfo('recv_prepare_rejected session=$sessionId',
@@ -177,7 +244,7 @@ class ReceiveController {
       _sessions[sessionId] = currentSession.copyWith(
         status: SessionStatus.sending,
         fileTokens: fileTokens,
-        lastActivity: DateTime.now(),
+        lastActivity: _now(),
       );
       _startGcTimer();
 
@@ -209,15 +276,25 @@ class ReceiveController {
   ) async {
     File? tempFile;
     RandomAccessFile? raf;
+    var tokenConsumed = false;
     try {
       logInfo(
         'recv_upload_start session=$sessionId fileId=$fileId',
         source: 'LocalSend',
       );
       final session = _requireSendingSession(sessionId);
-      if (session.fileTokens?[fileId] != token) {
+      final currentTokens = session.fileTokens;
+      if (token.isEmpty ||
+          currentTokens == null ||
+          currentTokens[fileId] != token) {
         throw Exception('Invalid token');
       }
+      // Consume single-use token before any async I/O to prevent replay/races.
+      final remainingTokens = Map<String, String>.from(currentTokens)
+        ..remove(fileId);
+      _sessions[sessionId] = session.copyWith(fileTokens: remainingTokens);
+      tokenConsumed = true;
+
       final fileDto = session.files[fileId];
       if (fileDto == null) {
         throw Exception('File not found');
@@ -225,19 +302,33 @@ class ReceiveController {
       if (fileDto.size <= 0) {
         throw Exception('Invalid file size');
       }
-      final lowerName = fileDto.fileName.toLowerCase();
-      const blockedExtensions = ['.exe', '.bat', '.sh', '.cmd'];
-      if (blockedExtensions.any((b) => lowerName.endsWith(b))) {
+      final fileName = fileDto.fileName;
+      if (fileName.isEmpty ||
+          fileName.contains('..') ||
+          fileName.contains('/') ||
+          fileName.contains('\\') ||
+          fileName.contains('\x00')) {
+        throw Exception('Invalid file name');
+      }
+      final ext = p.extension(fileName).toLowerCase();
+      if (ext.isEmpty || !allowedExtensions.contains(ext)) {
         throw Exception('Blocked file type');
       }
 
       final tempDir = Directory.systemTemp;
-      final sanitizedName = _sanitizeFileName(fileDto.fileName);
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final sanitizedName = _sanitizeFileName(fileName);
+      final timestamp = _now().millisecondsSinceEpoch;
+      final seq = _tempFileSequence++;
       final targetPath = p.join(
         tempDir.path,
-        'thoughtecho_${timestamp}_$sanitizedName',
+        'thoughtecho_${timestamp}_${seq}_$sanitizedName',
       );
+      if (!p.isWithin(
+        p.canonicalize(tempDir.path),
+        p.canonicalize(targetPath),
+      )) {
+        throw Exception('Invalid file path');
+      }
       tempFile = File(targetPath);
       raf = await tempFile.open(mode: FileMode.write);
 
@@ -314,8 +405,17 @@ class ReceiveController {
 
       // Check after the final I/O and preserve the live session before dispatch.
       final currentSession = _requireSendingSession(sessionId);
-      _sessions[sessionId] =
-          currentSession.copyWith(lastActivity: DateTime.now());
+      final updatedCompleted = Set<String>.from(currentSession.completedFileIds)
+        ..add(fileId);
+      final isSessionComplete =
+          updatedCompleted.length >= currentSession.files.length &&
+              (currentSession.fileTokens?.isEmpty ?? true);
+      _sessions[sessionId] = currentSession.copyWith(
+        completedFileIds: updatedCompleted,
+        status:
+            isSessionComplete ? SessionStatus.finished : SessionStatus.sending,
+        lastActivity: _now(),
+      );
 
       if (onFileReceived != null) {
         onFileReceived!(tempFile.path);
@@ -347,6 +447,17 @@ class ReceiveController {
         'size': finalSize,
       };
     } catch (e, stack) {
+      if (tokenConsumed) {
+        final currentSession = _sessions[sessionId];
+        if (currentSession != null &&
+            currentSession.status == SessionStatus.sending &&
+            (currentSession.fileTokens?.isEmpty ?? true)) {
+          _sessions[sessionId] = currentSession.copyWith(
+            status: SessionStatus.finishedWithErrors,
+            lastActivity: _now(),
+          );
+        }
+      }
       logError(
         'recv_upload_fail session=$sessionId fileId=$fileId error=$e',
         error: e,
@@ -383,6 +494,10 @@ class ReceiveController {
     final session = _sessions[sessionId];
     if (session == null) {
       throw Exception('Session not found');
+    }
+    if (_now().difference(session.lastActivity) > sessionTimeout) {
+      _sessions.remove(sessionId);
+      throw Exception('Session expired');
     }
     if (session.status != SessionStatus.sending) {
       throw Exception('接收已取消');
@@ -441,6 +556,7 @@ class ReceiveSession {
   final Map<String, FileDto> files;
   final SessionStatus status;
   final Map<String, String>? fileTokens;
+  final Set<String> completedFileIds;
   final DateTime lastActivity;
 
   const ReceiveSession({
@@ -449,6 +565,7 @@ class ReceiveSession {
     required this.files,
     required this.status,
     this.fileTokens,
+    this.completedFileIds = const {},
     required this.lastActivity,
   });
 
@@ -458,6 +575,7 @@ class ReceiveSession {
     Map<String, FileDto>? files,
     SessionStatus? status,
     Map<String, String>? fileTokens,
+    Set<String>? completedFileIds,
     DateTime? lastActivity,
   }) {
     return ReceiveSession(
@@ -466,6 +584,7 @@ class ReceiveSession {
       files: files ?? this.files,
       status: status ?? this.status,
       fileTokens: fileTokens ?? this.fileTokens,
+      completedFileIds: completedFileIds ?? this.completedFileIds,
       lastActivity: lastActivity ?? this.lastActivity,
     );
   }

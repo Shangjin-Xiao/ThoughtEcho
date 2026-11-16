@@ -80,6 +80,9 @@ class NoteSyncService extends ChangeNotifier {
   MergeReport? _lastMergeReport; // 新增：最近一次合并报告
   String? _currentReceiveSessionId; // 当前接收会话ID
   String? _receiveSenderAlias;
+  String? _receiveSenderIp;
+  int? _receiveSenderPort;
+  String? _receiveSenderFingerprint;
   int? _pendingReceiveTotalBytes; // 等待审批大小
   bool _awaitingUserApproval = false; // 是否处于接收审批阶段
   bool _awaitingPeerApproval = false; // 发送端等待对方审批
@@ -104,6 +107,9 @@ class NoteSyncService extends ChangeNotifier {
   double get syncProgress => _syncProgress;
   MergeReport? get lastMergeReport => _lastMergeReport;
   String? get receiveSenderAlias => _receiveSenderAlias;
+  String? get receiveSenderIp => _receiveSenderIp;
+  int? get receiveSenderPort => _receiveSenderPort;
+  String? get receiveSenderFingerprint => _receiveSenderFingerprint;
 
   NoteSyncService({
     required BackupService backupService,
@@ -251,6 +257,7 @@ class NoteSyncService extends ChangeNotifier {
         },
         onReceiveProgress: _handleReceiveProgress,
         onReceiveSessionCreated: _handleReceiveSessionCreated,
+        onSenderInfoReceived: _handleReceiveSenderInfo,
         onApprovalNeeded: (sid, totalBytes, alias) async {
           // 如果设置了跳过确认,直接批准
           if (skipSyncConfirmation) {
@@ -273,6 +280,7 @@ class NoteSyncService extends ChangeNotifier {
               }
               if (_currentReceiveSessionId == sid) {
                 _awaitingUserApproval = false;
+                _clearReceiveSenderInfo();
                 _updateSyncStatus(SyncStatus.failed, '同步接收请求已超时', 0.0);
               }
               return false;
@@ -330,11 +338,14 @@ class NoteSyncService extends ChangeNotifier {
       final c = _approvalWaiters.remove(_currentReceiveSessionId!);
       c?.complete(false);
       _awaitingUserApproval = false;
+      _clearReceiveSenderInfo();
       _updateSyncStatus(
         SyncStatus.failed,
         '已拒绝来自$_receiveSenderAlias 的同步',
         0.0,
       );
+    } else {
+      _clearReceiveSenderInfo();
     }
   }
 
@@ -348,6 +359,7 @@ class NoteSyncService extends ChangeNotifier {
     }
     _approvalWaiters.clear();
     _awaitingUserApproval = false;
+    _clearReceiveSenderInfo();
 
     try {
       // 停止LocalSendServer
@@ -652,6 +664,7 @@ class NoteSyncService extends ChangeNotifier {
         data: {
           'fingerprint': fp,
           'alias': alias,
+          'port': _localSendServer?.port ?? defaultPort,
           'intentId': _currentIntentId,
         },
         options: Options(contentType: Headers.jsonContentType),
@@ -772,6 +785,7 @@ class NoteSyncService extends ChangeNotifier {
     if (waiter != null && !waiter.isCompleted) waiter.complete(false);
     if (_currentReceiveSessionId == sessionId) {
       _awaitingUserApproval = false;
+      _clearReceiveSenderInfo();
       _updateSyncStatus(SyncStatus.failed, '对方已取消同步请求', 0.0);
     }
   }
@@ -785,6 +799,7 @@ class NoteSyncService extends ChangeNotifier {
     try {
       final rc = _localSendServer?.receiveController;
       rc?.cancelSession(_currentReceiveSessionId!);
+      _clearReceiveSenderInfo();
       _updateSyncStatus(SyncStatus.failed, '接收已取消', 0.0);
     } catch (e) {
       AppLogger.e('取消接收失败: $e', error: e, source: 'NoteSyncService');
@@ -1111,6 +1126,45 @@ class NoteSyncService extends ChangeNotifier {
         _syncStatus == SyncStatus.completed;
   }
 
+  void _applyReceiveSenderInfo({
+    String? senderIp,
+    int? senderPort,
+    String? senderFingerprint,
+  }) {
+    final trimmedIp = senderIp?.trim();
+    final trimmedFingerprint = senderFingerprint?.trim();
+    _receiveSenderIp =
+        (trimmedIp != null && trimmedIp.isNotEmpty) ? trimmedIp : null;
+    _receiveSenderPort =
+        (senderPort != null && senderPort > 0) ? senderPort : null;
+    _receiveSenderFingerprint =
+        (trimmedFingerprint != null && trimmedFingerprint.isNotEmpty)
+            ? trimmedFingerprint
+            : null;
+  }
+
+  void _handleReceiveSenderInfo(
+    String sessionId,
+    String? senderIp,
+    int? senderPort,
+    String? senderFingerprint,
+  ) {
+    _applyReceiveSenderInfo(
+      senderIp: senderIp,
+      senderPort: senderPort,
+      senderFingerprint: senderFingerprint,
+    );
+    if (_currentReceiveSessionId == sessionId || _awaitingUserApproval) {
+      notifyListeners();
+    }
+  }
+
+  void _clearReceiveSenderInfo() {
+    _receiveSenderIp = null;
+    _receiveSenderPort = null;
+    _receiveSenderFingerprint = null;
+  }
+
   void _handleReceiveSessionCreated(
     String sessionId,
     int totalBytes,
@@ -1160,6 +1214,23 @@ class NoteSyncService extends ChangeNotifier {
       'RECEIVING|$fromAlias|$receivedMB|$totalMB$extra',
       0.05 + ratio * 0.75,
     );
+  }
+
+  @visibleForTesting
+  int? get debugServerPort => _localSendServer?.port;
+
+  @visibleForTesting
+  void debugSetReceiveSenderInfo({
+    String? senderIp,
+    int? senderPort,
+    String? senderFingerprint,
+  }) {
+    _applyReceiveSenderInfo(
+      senderIp: senderIp,
+      senderPort: senderPort,
+      senderFingerprint: senderFingerprint,
+    );
+    notifyListeners();
   }
 
   @visibleForTesting

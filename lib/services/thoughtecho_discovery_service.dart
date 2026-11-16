@@ -29,7 +29,11 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   static const Duration _minAnnouncementGap = Duration(seconds: 2);
   static const Duration _healthCheckInterval = Duration(seconds: 6);
   static const Duration _deviceExpiry = Duration(seconds: 40); // 设备超时移除
+  static const Duration endpointRateLimitWindow = Duration(milliseconds: 500);
+  static const int maxRateLimitEndpoints = 512;
   final Map<String, DateTime> _deviceLastSeen = {}; // 指纹->最近见到时间
+  final Map<String, DateTime> _endpointLastPacketTime = {}; // 端点->最近包时间
+  DateTime Function() _nowProvider = DateTime.now;
   int _actualServerPort = defaultPort; // 实际服务器端口
   String _deviceFingerprint = 'initializing'; // 设备指纹，异步获取
   bool _fingerprintReady = false; // 指纹是否已获取
@@ -77,6 +81,48 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   static bool shouldReplyToAnnouncement(MulticastDto dto) {
     return dto.announcement == true || dto.announce == true;
   }
+
+  @visibleForTesting
+  set nowProviderForTesting(DateTime Function() provider) {
+    _nowProvider = provider;
+  }
+
+  @visibleForTesting
+  int get trackedRateLimitEndpointCountForTesting =>
+      _endpointLastPacketTime.length;
+
+  @visibleForTesting
+  bool shouldAcceptDatagramFromEndpoint(
+    String ip,
+    int port, {
+    DateTime? now,
+  }) {
+    final currentTime = now ?? _nowProvider();
+    final key = '$ip:$port';
+    final lastSeen = _endpointLastPacketTime[key];
+    if (lastSeen != null &&
+        currentTime.difference(lastSeen) < endpointRateLimitWindow) {
+      return false;
+    }
+
+    // Remove before re-inserting so Dart's LinkedHashMap updates recency order.
+    _endpointLastPacketTime.remove(key);
+    if (_endpointLastPacketTime.length >= maxRateLimitEndpoints) {
+      _endpointLastPacketTime.removeWhere(
+        (_, ts) => currentTime.difference(ts) >= endpointRateLimitWindow,
+      );
+      while (_endpointLastPacketTime.length >= maxRateLimitEndpoints) {
+        _endpointLastPacketTime.remove(_endpointLastPacketTime.keys.first);
+      }
+    }
+
+    _endpointLastPacketTime[key] = currentTime;
+    return true;
+  }
+
+  @visibleForTesting
+  void handleMulticastMessageForTesting(Datagram datagram) =>
+      _handleMulticastMessage(datagram);
 
   /// 构造函数：开始异步获取指纹
   ThoughtEchoDiscoveryService() {
@@ -288,6 +334,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       socket.close();
     }
     _sockets.clear();
+    _endpointLastPacketTime.clear();
 
     notifyListeners();
     debugPrint('ThoughtEcho设备发现已停止');
@@ -421,6 +468,13 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
   /// 处理接收到的组播消息
   void _handleMulticastMessage(Datagram datagram) {
+    if (!shouldAcceptDatagramFromEndpoint(
+      datagram.address.address,
+      datagram.port,
+    )) {
+      return;
+    }
+
     try {
       final message = utf8.decode(datagram.data);
       if (kDebugMode) {
@@ -474,7 +528,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
       if (existingIndex == -1) {
         _devices.add(device);
-        _deviceLastSeen[device.fingerprint] = DateTime.now();
+        _deviceLastSeen[device.fingerprint] = _nowProvider();
         notifyListeners();
         if (kDebugMode) {
           debugPrint('✓ 发现新设备: ${device.alias} (${device.ip}:${device.port})');
@@ -484,7 +538,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         }
       } else {
         // 更新 last seen
-        _deviceLastSeen[device.fingerprint] = DateTime.now();
+        _deviceLastSeen[device.fingerprint] = _nowProvider();
         if (kDebugMode) {
           debugPrint('设备已存在: ${device.alias} (${device.ip}:${device.port})');
         }
@@ -690,6 +744,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   void clearDevices() {
     _devices.clear();
     _deviceLastSeen.clear();
+    _endpointLastPacketTime.clear();
     notifyListeners();
     debugPrint('已清空设备列表');
   }

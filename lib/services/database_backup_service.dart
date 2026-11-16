@@ -360,6 +360,10 @@ class DatabaseBackupService {
               continue;
             }
             final normalizedDeletedAt = LWWUtils.normalizeTimestamp(deletedAt);
+            if (!clearExisting &&
+                LWWUtils.isExcessiveFutureTimestamp(normalizedDeletedAt)) {
+              continue;
+            }
 
             final localDeletedAt = localTombstoneMap[quoteId];
             if (localDeletedAt != null &&
@@ -769,6 +773,15 @@ class DatabaseBackupService {
         }
 
         // 3. 新分类，直接插入
+        final newCategoryLastModified =
+            filteredCategoryData['last_modified']?.toString();
+        if (LWWUtils.isExcessiveFutureTimestamp(newCategoryLastModified)) {
+          final clampedLastModified = LWWUtils.clampFutureTimestamp(
+            newCategoryLastModified,
+          );
+          filteredCategoryData['last_modified'] = clampedLastModified;
+          categoryData['last_modified'] = clampedLastModified;
+        }
         batch.insert('categories', filteredCategoryData);
         idToRow[remoteId] = filteredCategoryData;
         nameLowerToRow[nameKey] = filteredCategoryData;
@@ -1166,6 +1179,10 @@ class DatabaseBackupService {
             // Missing remote timestamp must not revive a permanently deleted quote.
             reportBuilder.addSkippedQuote();
             continue;
+          } else if (LWWUtils.isExcessiveFutureTimestamp(quoteLastModified)) {
+            // Excessive future remote timestamp must not revive a permanently deleted quote.
+            reportBuilder.addSkippedQuote();
+            continue;
           } else if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
             // Tombstone is newer or equal - skip the quote
             reportBuilder.addSkippedQuote();
@@ -1186,10 +1203,26 @@ class DatabaseBackupService {
 
         // ⚡ Bolt: 使用预加载的 map 进行匹配，避免重复查询
         bool inserted = false;
+        bool shouldSyncTags = false;
         if (!idToQuote.containsKey(quoteId)) {
+          final clampNow = DateTime.now().toUtc();
+          for (final field in const ['last_modified', 'date', 'deleted_at']) {
+            final value = filteredData[field]?.toString();
+            if (value != null &&
+                value.isNotEmpty &&
+                LWWUtils.isExcessiveFutureTimestamp(value, now: clampNow)) {
+              final clamped = LWWUtils.clampFutureTimestamp(
+                value,
+                now: clampNow,
+              );
+              quoteData[field] = clamped;
+              filteredData[field] = clamped;
+            }
+          }
           batch.insert('quotes', filteredData);
           reportBuilder.addInsertedQuote();
           inserted = true;
+          shouldSyncTags = true;
           // ⚡ Bolt: 更新本地缓存以处理输入数据中的重复项
           idToQuote[quoteId] = filteredData;
         } else {
@@ -1209,6 +1242,7 @@ class DatabaseBackupService {
               whereArgs: [quoteId],
             );
             reportBuilder.addUpdatedQuote();
+            shouldSyncTags = true;
             // ⚡ Bolt: 更新本地缓存以处理输入数据中的重复项
             idToQuote[quoteId] = filteredData;
           } else if (decision.hasConflict) {
@@ -1219,7 +1253,7 @@ class DatabaseBackupService {
         }
 
         // 写入标签关联 (插入或更新场景都需要同步), 仅当存在标签
-        if (remappedTagIds.isNotEmpty) {
+        if (shouldSyncTags && remappedTagIds.isNotEmpty) {
           // 如果是更新，先清理旧关联
           if (!inserted) {
             batch.delete(
@@ -1294,7 +1328,8 @@ class DatabaseBackupService {
           quoteId.isNotEmpty &&
           incomingDeletedAt != null &&
           incomingDeletedAt.isNotEmpty &&
-          LWWUtils.isValidTimestamp(incomingDeletedAt)) {
+          LWWUtils.isValidTimestamp(incomingDeletedAt) &&
+          !LWWUtils.isExcessiveFutureTimestamp(incomingDeletedAt)) {
         validQuoteIds.add(quoteId);
       }
     }
@@ -1374,6 +1409,10 @@ class DatabaseBackupService {
         final normalizedIncoming = LWWUtils.normalizeTimestamp(
           incomingDeletedAt,
         );
+
+        if (LWWUtils.isExcessiveFutureTimestamp(normalizedIncoming)) {
+          continue;
+        }
 
         final localTombstone = localTombstoneMap[quoteId];
         if (localTombstone != null) {

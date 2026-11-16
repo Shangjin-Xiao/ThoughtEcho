@@ -1148,18 +1148,108 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                       ),
                                       SizedBox(width: 10),
                                       Expanded(
-                                        child: Text(
-                                          l10n.deviceWantsToSync(
-                                            s.receiveSenderAlias ??
-                                                l10n.unknown,
-                                          ),
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            height: 1.4,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurface,
-                                          ),
+                                        child: Builder(
+                                          builder: (context) {
+                                            final senderIp =
+                                                s.receiveSenderIp?.trim();
+                                            final senderPort =
+                                                s.receiveSenderPort;
+                                            final senderFingerprint = s
+                                                .receiveSenderFingerprint
+                                                ?.trim();
+                                            final hasSenderIp =
+                                                senderIp != null &&
+                                                    senderIp.isNotEmpty;
+                                            final hasSenderFingerprint =
+                                                senderFingerprint != null &&
+                                                    senderFingerprint
+                                                        .isNotEmpty;
+                                            final endpoint = hasSenderIp
+                                                ? ((senderPort != null &&
+                                                        senderPort > 0)
+                                                    ? '$senderIp:$senderPort'
+                                                    : senderIp)
+                                                : null;
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  l10n.deviceWantsToSync(
+                                                    s.receiveSenderAlias ??
+                                                        l10n.unknown,
+                                                  ),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface,
+                                                      ),
+                                                ),
+                                                if (hasSenderIp ||
+                                                    hasSenderFingerprint)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                      top: 6,
+                                                    ),
+                                                    child: Wrap(
+                                                      spacing: 8,
+                                                      runSpacing: 4,
+                                                      crossAxisAlignment:
+                                                          WrapCrossAlignment
+                                                              .center,
+                                                      children: [
+                                                        if (endpoint != null)
+                                                          Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              Icon(
+                                                                Icons
+                                                                    .lan_outlined,
+                                                                size: 14,
+                                                                color: Theme.of(
+                                                                  context,
+                                                                )
+                                                                    .colorScheme
+                                                                    .onSurfaceVariant,
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 4,
+                                                              ),
+                                                              Text(
+                                                                endpoint,
+                                                                style: Theme.of(
+                                                                  context,
+                                                                )
+                                                                    .textTheme
+                                                                    .bodySmall
+                                                                    ?.copyWith(
+                                                                      color: Theme
+                                                                              .of(
+                                                                        context,
+                                                                      )
+                                                                          .colorScheme
+                                                                          .onSurfaceVariant,
+                                                                    ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        if (hasSenderFingerprint)
+                                                          _buildShortFingerprint(
+                                                            senderFingerprint,
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                              ],
+                                            );
+                                          },
                                         ),
                                       ),
                                     ],
