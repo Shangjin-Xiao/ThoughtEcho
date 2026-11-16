@@ -66,6 +66,34 @@ void main() {
       );
     });
 
+    test('写入路径与历史行带尾斜杠时，normalize 与引用计数仍保持一致', () async {
+      final normalized = MediaReferenceService.normalizeFilePathSync(
+        '$iosContainer/media/images/a.jpg/',
+        cachedAppPath: iosContainer,
+      );
+      expect(normalized, 'media/images/a.jpg');
+
+      await db.insert('media_references', {
+        'id': 'legacy-trailing-slash',
+        'file_path': '$androidDocs/media/images/legacy.jpg/',
+        'quote_id': 'q1',
+        'created_at': '2026-08-21T00:00:00.000Z',
+      });
+
+      expect(
+        await MediaReferenceService.getReferenceCountForMediaRelativePath(
+          'images/legacy.jpg',
+        ),
+        1,
+      );
+      expect(
+        await MediaReferenceService.getReferenceCountForMediaRelativePath(
+          'images/legacy.jpg/',
+        ),
+        1,
+      );
+    });
+
     test('老版本写入的外来绝对路径引用行也能命中，不再漏下载', () async {
       // 老版本 _normalizeFilePath 遇到非本机前缀会原样存下来源设备的绝对路径
       expect(

@@ -853,10 +853,11 @@ extension _NoteListItemsExtension on NoteListViewState {
     }
 
     _quoteItemMemoMisses++;
+    final selectedTagIdsSnapshot = List<String>.of(widget.selectedTagIds);
     final built = QuoteItemWidget(
       quote: quote,
       tagMap: tagMap,
-      selectedTagIds: List<String>.of(widget.selectedTagIds),
+      selectedTagIds: selectedTagIdsSnapshot,
       isExpanded: isExpanded,
       isSelected: isSelected,
       selectionMode: _isExportMode,
@@ -924,7 +925,7 @@ extension _NoteListItemsExtension on NoteListViewState {
       quote: quote,
       isFirstItem: isFirstItem,
       tagMap: tagMap,
-      selectedTagIds: List<String>.of(widget.selectedTagIds),
+      selectedTagIds: selectedTagIdsSnapshot,
       isExpanded: isExpanded,
       isSelected: isSelected,
       selectionMode: _isExportMode,
