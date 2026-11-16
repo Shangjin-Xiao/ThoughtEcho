@@ -612,7 +612,11 @@ class MmkvBinaryReader {
           if (key.isNotEmpty) {
             seenKeys.add(key);
             if (!hasHistoricalPlaintextCredentials &&
-                _recordContainsPlaintextCredential(key, valueBytes)) {
+                _recordContainsPlaintextCredential(
+                  key,
+                  valueBytes,
+                  warnings: warnings,
+                )) {
               hasHistoricalPlaintextCredentials = true;
             }
             rawMap[key] = valueBytes;
@@ -682,8 +686,9 @@ class MmkvBinaryReader {
 
   static bool _recordContainsPlaintextCredential(
     String key,
-    Uint8List valueBytes,
-  ) {
+    Uint8List valueBytes, {
+    List<String>? warnings,
+  }) {
     if (!_isPotentialCredentialKey(key) || valueBytes.isEmpty) {
       return false;
     }
@@ -706,7 +711,10 @@ class MmkvBinaryReader {
           return _jsonContainsNonEmptyApiKey(jsonNode);
         }
       }
-    } catch (_) {
+    } catch (e, stackTrace) {
+      warnings?.add(
+        'Credential inspection fallback for "$key": $e\n$stackTrace',
+      );
       // Conservative fallback if a partial/unschematized credential record fails decoding.
       return true;
     }

@@ -22,6 +22,9 @@ import '../utils/platform_helper.dart';
 /// 标记 KV 存储引擎已完成从 MMKV 到 SharedPreferences 主存储的迁移。
 const String kKvEngineMigratedKey = 'kv_engine_migrated_v1';
 
+/// 记录在部分失败的冷升级迁移中已成功落盘的键集合，避免重试时覆盖用户在降级期间更新的值。
+const String _kKvPartialMigratedKeysKey = 'kv_engine_migrated_keys_v1';
+
 /// 兼容旧版 SettingsService 的迁移完成标记键。
 const String kLegacyMmkvMigrationCompleteKey = 'mmkv_migration_complete';
 
@@ -583,6 +586,13 @@ class AppPreferencesService {
     final periodicInsightsMigrated =
         storage.getBool(kPeriodicInsightsSqliteMigratedKey) == true;
 
+    final previouslyMigratedKeys = (!wasAlreadyMigrated
+            ? (storage.getStringList(_kKvPartialMigratedKeysKey) ??
+                const <String>[])
+            : const <String>[])
+        .toSet();
+    final newlySucceededKeys = <String>{...previouslyMigratedKeys};
+
     var migratedFromBinaryCount = 0;
     var allRequiredWritesSucceeded = true;
 
@@ -599,14 +609,16 @@ class AppPreferencesService {
         continue;
       }
 
-      // 若已完成过首次迁移（如从诊断页手动重新触发），仅回填缺失键，不覆盖主存已有新值
-      if (wasAlreadyMigrated && existingSpKeys.contains(key)) {
+      // 若已完成过首次迁移，或该键在上一轮部分失败的迁移中已成功写入，则保留主存中的最新值
+      if ((wasAlreadyMigrated && existingSpKeys.contains(key)) ||
+          (!wasAlreadyMigrated && previouslyMigratedKeys.contains(key))) {
         continue;
       }
 
       final written = await _writeTypedToAdapter(storage, key, value);
       if (written) {
         migratedFromBinaryCount++;
+        newlySucceededKeys.add(key);
       } else {
         allRequiredWritesSucceeded = false;
         warnings.add(
@@ -619,8 +631,13 @@ class AppPreferencesService {
     if (!wasAlreadyMigrated) {
       for (final tombstoneKey in tombstones) {
         if (!binaryMergedEntries.containsKey(tombstoneKey)) {
+          if (previouslyMigratedKeys.contains(tombstoneKey)) {
+            continue;
+          }
           final removed = await storage.remove(tombstoneKey);
-          if (!removed) {
+          if (removed) {
+            newlySucceededKeys.add(tombstoneKey);
+          } else {
             allRequiredWritesSucceeded = false;
             warnings.add(
               'Failed to apply tombstone deletion for key "$tombstoneKey".',
@@ -719,14 +736,8 @@ class AppPreferencesService {
           }
         }
       }
-      final residualWarnings =
-          await _wipeResidualCredentialMmkvFiles(candidateFiles);
-      if (residualWarnings.isNotEmpty) {
-        cleanupSucceeded = false;
-        warnings.addAll(residualWarnings);
-      }
-
       if (cleanupSucceeded) {
+        await storage.remove(_kKvPartialMigratedKeysKey);
         // 标记迁移完成（同时写入新旧两个标记键，防止 SettingsService._migrateDataIfNeeded 逆向覆盖）
         final legacyMarkOk = await storage.setBool(
           kLegacyMmkvMigrationCompleteKey,
@@ -737,11 +748,23 @@ class AppPreferencesService {
           warnings.add('Failed to persist migration completion watermark.');
         }
       } else {
+        if (!wasAlreadyMigrated && newlySucceededKeys.isNotEmpty) {
+          await storage.setStringList(
+            _kKvPartialMigratedKeysKey,
+            newlySucceededKeys.toList()..sort(),
+          );
+        }
         warnings.add(
           'Skipped migration completion watermark because legacy MMKV cleanup did not finish.',
         );
       }
     } else {
+      if (!wasAlreadyMigrated && newlySucceededKeys.isNotEmpty) {
+        await storage.setStringList(
+          _kKvPartialMigratedKeysKey,
+          newlySucceededKeys.toList()..sort(),
+        );
+      }
       warnings.add(
         'Skipped migration completion watermark and legacy file cleanup due to partial write failure.',
       );

@@ -1039,17 +1039,72 @@ void main() {
         anyElement(contains('partial write failure')),
       );
 
-      // Next launch with healthy storage retries cleanly and wipes credential-bearing file.
+      // Simulate user updating an already-migrated key before the next retry launch.
+      final retryAdapter = _CountingStorageAdapter();
+      await retryAdapter.setString(
+          'provider_api_keys', '{"openai":"sk-updated"}');
+      await retryAdapter.setBool('app_installed_v2', true);
+      final checkpoint =
+          failingAdapter.getStringList('kv_engine_migrated_keys_v1');
+      expect(
+          checkpoint, containsAll(['provider_api_keys', 'app_installed_v2']));
+      await retryAdapter.setStringList(
+          'kv_engine_migrated_keys_v1', checkpoint!);
+
+      // Next launch retries only the failed key without overwriting newer user values.
       service.resetForTesting();
       service.configureForTesting(
+        primaryAdapter: retryAdapter,
         candidateMmkvFiles: [mmkvPath],
         candidateDbPaths: const [],
       );
       await service.init();
       expect(service.getBool(kKvEngineMigratedKey), isTrue);
       expect(service.getString('theme_style'), equals('paper'));
+      expect(
+        service.getString('provider_api_keys'),
+        equals('{"openai":"sk-updated"}'),
+      );
+      expect(service.containsKey('kv_engine_migrated_keys_v1'), isFalse);
       expect(File(mmkvPath).existsSync(), isFalse);
       expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
+    });
+
+    test(
+        'corrupt-CRC credential file skipped by migration is preserved on disk and staging files are wiped when wiping plaintext',
+        () async {
+      final corruptPath = '${tempDir.path}/corrupt_secret.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-corrupt-secret"}')
+        ..writeString('theme_style', 'paper');
+      await File(corruptPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$corruptPath.crc')
+          .writeAsBytes(encoder.toCrcBytes(overrideCrcDigest: 0xDEADBEEF));
+
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [corruptPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      // Skipped crcMatched==false file must NOT be deleted when its entries were not migrated.
+      expect(service.containsKey('theme_style'), isFalse);
+      expect(File(corruptPath).existsSync(), isTrue);
+
+      // Leftover archiving staging files must be wiped by archiveOrWipeMmkvFile(wipePlaintext: true).
+      final stageFile = File('$corruptPath.archiving.1234.1');
+      final crcStageFile = File('$corruptPath.crc.archiving.1234.2');
+      await stageFile.writeAsBytes(const [1, 2, 3]);
+      await crcStageFile.writeAsBytes(const [4, 5, 6]);
+      await PlatformHelper.archiveOrWipeMmkvFile(
+        corruptPath,
+        wipePlaintext: true,
+      );
+      expect(File(corruptPath).existsSync(), isFalse);
+      expect(stageFile.existsSync(), isFalse);
+      expect(crcStageFile.existsSync(), isFalse);
     });
 
     test(

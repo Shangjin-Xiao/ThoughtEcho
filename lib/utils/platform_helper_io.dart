@@ -74,6 +74,35 @@ class PlatformHelper {
     return true;
   }
 
+  static Future<bool> _deleteStagingFiles(
+    String mmkvFilePath, {
+    required bool syncIo,
+  }) async {
+    final parentDir = File(mmkvFilePath).parent;
+    final dirExists =
+        syncIo ? parentDir.existsSync() : await parentDir.exists();
+    if (!dirExists) {
+      return false;
+    }
+    final baseName = p.basename(mmkvFilePath);
+    final mainPrefix = '$baseName.archiving.';
+    final crcPrefix = '$baseName.crc.archiving.';
+    var deletedAny = false;
+    final entities = syncIo
+        ? parentDir.listSync(followLinks: false)
+        : await parentDir.list(followLinks: false).toList();
+    for (final entity in entities) {
+      if (entity is! File) continue;
+      final name = p.basename(entity.path);
+      if (name.startsWith(mainPrefix) || name.startsWith(crcPrefix)) {
+        if (await _deleteIfExists(entity, syncIo: syncIo)) {
+          deletedAny = true;
+        }
+      }
+    }
+    return deletedAny;
+  }
+
   static Future<bool> _archiveSiblingFile(
     String srcPath,
     String destPath, {
@@ -166,6 +195,12 @@ class PlatformHelper {
           await Future<void>.delayed(const Duration(milliseconds: 10));
         }
       }
+      if (!lockAcquired) {
+        throw FileSystemException(
+          'Could not acquire MMKV migration lock',
+          lockFile.path,
+        );
+      }
       return await action();
     } finally {
       if (lockAcquired) {
@@ -239,6 +274,9 @@ class PlatformHelper {
               File('$mmkvFilePath.migrated.bak.crc'),
               syncIo: syncIo,
             )) {
+              anyDeleted = true;
+            }
+            if (await _deleteStagingFiles(mmkvFilePath, syncIo: syncIo)) {
               anyDeleted = true;
             }
             return anyDeleted;
