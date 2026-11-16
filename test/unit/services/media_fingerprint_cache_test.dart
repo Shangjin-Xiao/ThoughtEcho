@@ -510,11 +510,16 @@ void main() {
         serverUrl: 'https://other.example.com/dav/',
         username: 'alice',
       );
+      final scopeD = MediaFingerprintCache.buildRemoteScope(
+        serverUrl: 'https://dav.example.com/dav/?ns=2',
+        username: 'alice',
+      );
 
       expect(scopeA1, isNotNull);
       expect(scopeA1, scopeA2);
       expect(scopeA1, isNot(scopeB));
       expect(scopeA1, isNot(scopeC));
+      expect(scopeA1, isNot(scopeD));
 
       final mtime = DateTime.utc(2026, 5, 2, 12, 0, 0);
       final file = await writeMediaFile(

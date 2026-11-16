@@ -1654,7 +1654,13 @@ class WebDAVSyncService extends ChangeNotifier {
                 final strongResponseEtag =
                     MediaFingerprintCache.cleanStrongEtag(responseEtag);
                 final effectiveEtag = strongResponseEtag ??
-                    await _fetchRemoteStrongEtagAfterPut(dio, uploadUrl);
+                    await _fetchRemoteStrongEtagAfterPut(
+                      dio,
+                      uploadUrl,
+                      expectedSize: fileLen,
+                      expectedSha256: uploadSnapshot.sha256,
+                      expectedMd5: uploadSnapshot.md5,
+                    );
                 await fingerprintCache.markSynced(
                   stdPath,
                   file,
@@ -2177,10 +2183,46 @@ class WebDAVSyncService extends ChangeNotifier {
     return remoteSize != localSize;
   }
 
+  bool _headersConflictWithUploadSnapshot(
+    Map<String, List<String>>? headers, {
+    required int expectedSize,
+    required String expectedSha256,
+    String? expectedMd5,
+  }) {
+    final headerLenRaw =
+        _getHeaderCaseInsensitive(headers, Headers.contentLengthHeader);
+    final headerLen = headerLenRaw != null ? int.tryParse(headerLenRaw) : null;
+    if (headerLen != null && headerLen != expectedSize) {
+      return true;
+    }
+    for (final headerName in const [
+      'x-checksum-sha256',
+      'x-amz-meta-sha256',
+    ]) {
+      final raw = _getHeaderCaseInsensitive(headers, headerName);
+      if (raw == null) continue;
+      final parsed = _parseExpectedSha256Hex(raw);
+      if (parsed == null || parsed != expectedSha256.toLowerCase()) {
+        return true;
+      }
+    }
+    final rawMd5 = _getHeaderCaseInsensitive(headers, 'content-md5');
+    if (rawMd5 != null && expectedMd5 != null) {
+      final parsedMd5 = _parseExpectedMd5Hex(rawMd5);
+      if (parsedMd5 == null || parsedMd5 != expectedMd5.toLowerCase()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<String?> _fetchRemoteStrongEtagAfterPut(
     Dio dio,
-    String uploadUrl,
-  ) async {
+    String uploadUrl, {
+    required int expectedSize,
+    required String expectedSha256,
+    String? expectedMd5,
+  }) async {
     try {
       final response = await _requestPropfind(
         dio,
@@ -2190,13 +2232,30 @@ class WebDAVSyncService extends ChangeNotifier {
             status == 200 || status == 207 || status == 404 || status == 405,
       );
       if (response.statusCode == 200 || response.statusCode == 207) {
-        final headerEtag = MediaFingerprintCache.cleanStrongEtag(
-          _getHeaderCaseInsensitive(response.headers.map, 'etag'),
-        );
         final body = response.data ?? '';
         final targetResponse = _findTargetSyncFilePropfindResponse(
           body,
           uploadUrl,
+        );
+        final xmlLen = targetResponse != null
+            ? int.tryParse(
+                _extractFirstXmlTagValue(targetResponse, 'getcontentlength') ??
+                    '',
+              )
+            : null;
+        if (xmlLen != null && xmlLen != expectedSize) {
+          return null;
+        }
+        if (_headersConflictWithUploadSnapshot(
+          response.headers.map,
+          expectedSize: expectedSize,
+          expectedSha256: expectedSha256,
+          expectedMd5: expectedMd5,
+        )) {
+          return null;
+        }
+        final headerEtag = MediaFingerprintCache.cleanStrongEtag(
+          _getHeaderCaseInsensitive(response.headers.map, 'etag'),
         );
         final xmlEtag = targetResponse != null
             ? MediaFingerprintCache.cleanStrongEtag(
@@ -2206,7 +2265,9 @@ class WebDAVSyncService extends ChangeNotifier {
         final resolved = xmlEtag ?? headerEtag;
         if (resolved != null) return resolved;
       }
-    } catch (_) {}
+    } catch (e) {
+      logDebug('上传后 PROPFIND 读取远端强 ETag 失败: $e', source: 'WebDAVSyncService');
+    }
 
     try {
       final headResponse = await dio.head<void>(
@@ -2219,11 +2280,21 @@ class WebDAVSyncService extends ChangeNotifier {
       if (headResponse.statusCode != null &&
           headResponse.statusCode! >= 200 &&
           headResponse.statusCode! < 300) {
+        if (_headersConflictWithUploadSnapshot(
+          headResponse.headers.map,
+          expectedSize: expectedSize,
+          expectedSha256: expectedSha256,
+          expectedMd5: expectedMd5,
+        )) {
+          return null;
+        }
         return MediaFingerprintCache.cleanStrongEtag(
           _getHeaderCaseInsensitive(headResponse.headers.map, 'etag'),
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      logDebug('上传后 HEAD 读取远端强 ETag 失败: $e', source: 'WebDAVSyncService');
+    }
 
     return null;
   }

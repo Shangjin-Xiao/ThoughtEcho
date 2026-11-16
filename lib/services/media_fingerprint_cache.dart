@@ -203,7 +203,7 @@ class MediaFingerprintCache {
       final portPart = isDefaultPort ? '' : ':${uri.port}';
       final collapsedPath = uri.path.replaceAll(RegExp(r'/+'), '/');
       final normalizedPath = collapsedPath.replaceAll(RegExp(r'/+$'), '');
-      return '$scheme://$host$portPart$normalizedPath';
+      return '$scheme://$host$portPart$normalizedPath${uri.hasQuery ? '?${uri.query}' : ''}';
     }
     return trimmed.replaceAll(RegExp(r'/+$'), '').toLowerCase();
   }
