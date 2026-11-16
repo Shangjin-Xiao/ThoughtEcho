@@ -65,7 +65,7 @@
 
 ## 🌟 なぜ ThoughtEcho なのか？
 
-- 🔒 **ローカルファースト＆プライバシー保護**: SQLite と MMKV により、すべてのデータは端末ローカルに100%保持されます。機密ノートは非公開タグと生体認証（指紋 / Face ID / Windows Hello）で安全に保護。追跡や不要なクラウドの強制はありません。
+- 🔒 **ローカルファースト＆プライバシー保護**: すべてのデータは SQLite と SharedPreferences で端末ローカルに100%保持され、API キーなどの機密情報は flutter_secure_storage で暗号化保存されます。機密ノートは非公開タグと生体認証（指紋 / Face ID / Windows Hello）で安全に保護。追跡や不要なクラウドの強制はありません。
 - 💡 **Thoughter AI エージェント＆長期記憶**: OpenAI互換のマルチプロバイダーAIアーキテクチャ（OpenAI、DeepSeek、Ollama、Gemini、Claude、OpenRouter、SiliconFlowなど）。セッションを越えてあなたの好みを理解する自律型 Thoughter エージェントと専用の長期記憶データベースを搭載。
 - ✍️ **リッチメディア＆コンテキスト記録**: Quill によるリッチテキスト装飾とマルチメディア添付（画像・音声・動画）。位置情報、天気、時間帯などのインスピレーション・コンテキストを自動記録。
 - 📊 **定期インサイト＆シェアカード生成**: AIによる週次・月次の振り返りインサイト、年間レビューレポート、思考リズムの分析、ワンタップでの名言シェアカード生成。
@@ -134,7 +134,7 @@
     </tr>
     <tr>
       <td align="center"><b>ストレージ＆セキュリティ</b></td>
-      <td>MMKV (高性能キーバリューストレージ) + flutter_secure_storage (暗号化 API キー保存)</td>
+      <td>SQLite + SharedPreferences (ローカル保存と設定管理) + flutter_secure_storage (暗号化 API キー保存)</td>
     </tr>
     <tr>
       <td align="center"><b>マルチデバイス同期</b></td>

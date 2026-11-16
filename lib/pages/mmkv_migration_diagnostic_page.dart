@@ -1,13 +1,14 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+
 import '../services/app_preferences_service.dart';
 import '../theme/app_semantic_colors.dart';
 import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
 import '../utils/mmkv_binary_reader.dart';
-import '../utils/mmkv_ffi_fix.dart';
 import '../widgets/app_snackbar.dart';
 
 /// Filter modes for the key-by-key inspector in [MmkvMigrationDiagnosticPage].
@@ -21,8 +22,8 @@ enum MmkvDiagnosticFilter {
 }
 
 /// Developer Settings page for inspecting the MMKV -> SharedPreferences
-/// migration status and verifying 1:1 parity between Native MMKV, the pure-Dart
-/// `MmkvBinaryReader`, and `SharedPreferences`.
+/// migration status and verifying parity between the pure-Dart
+/// `MmkvBinaryReader` and `SharedPreferences`.
 class MmkvMigrationDiagnosticPage extends StatefulWidget {
   final AppPreferencesService? mmkvService;
 
@@ -87,12 +88,10 @@ class _MmkvMigrationDiagnosticPageState
         _report = report;
         _loading = false;
       });
-      final okMsg = _tr(
-        isZh,
-        '已重新执行三通道迁移并刷新校验结果',
-        'Re-ran 3-channel migration and refreshed report',
+      AppSnackBar.success(
+        context,
+        AppLocalizations.of(context).mmkvDiagnosticRerunSuccess,
       );
-      AppSnackBar.success(context, okMsg);
     } catch (e, stackTrace) {
       logError(
         'MmkvMigrationDiagnosticPage: 重新执行迁移失败: $e',
@@ -138,8 +137,7 @@ class _MmkvMigrationDiagnosticPageState
   }
 
   bool _isSpOnlyEntry(MmkvKeyComparisonEntry e) {
-    if (!e.presentInSharedPrefs) return false;
-    return !e.presentInBinary && !e.presentInNative;
+    return e.presentInSharedPrefs && !e.presentInBinary;
   }
 
   bool _isStringEntry(MmkvKeyComparisonEntry e) {
@@ -216,10 +214,7 @@ class _MmkvMigrationDiagnosticPageState
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 12),
-              Text(
-                errMsg,
-                textAlign: TextAlign.center,
-              ),
+              Text(errMsg, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _loadReport,
@@ -262,13 +257,7 @@ class _MmkvMigrationDiagnosticPageState
           )
         else
           ...filtered.map(
-            (entry) => _buildKeyComparisonTile(
-              context,
-              theme,
-              entry,
-              report.nativeMmkvAvailable,
-              isZh,
-            ),
+            (entry) => _buildKeyComparisonTile(context, theme, entry, isZh),
           ),
       ],
     );
@@ -297,13 +286,6 @@ class _MmkvMigrationDiagnosticPageState
     return isZh ? '未标记 (false)' : 'Pending (false)';
   }
 
-  String _formatNativeMirrorStatus(bool active, bool isZh) {
-    if (active) {
-      return isZh ? '已挂载 (双写与比对激活)' : 'Active (Dual-Write & Compare)';
-    }
-    return isZh ? '未挂载 (仅纯 Dart 解析 + SP)' : 'Inactive (Dart + SP)';
-  }
-
   Widget _buildOverviewCard(
     BuildContext context,
     ThemeData theme,
@@ -321,10 +303,6 @@ class _MmkvMigrationDiagnosticPageState
       'Environment & Binary File Overview',
     );
     final migratedText = _formatMigratedStatus(report.kvEngineMigrated, isZh);
-    final mirrorText = _formatNativeMirrorStatus(
-      report.nativeMmkvAvailable,
-      isZh,
-    );
     final String sizeText;
     if (binary.fileExists) {
       sizeText = '${binary.fileByteLength} B / ${binary.actualSize} B';
@@ -370,11 +348,6 @@ class _MmkvMigrationDiagnosticPageState
               theme,
               isZh ? '迁移完成标志 (kv_engine_migrated_v1)' : 'Migration Flag',
               migratedText,
-            ),
-            _buildInfoRow(
-              theme,
-              isZh ? '原生 MMKV 镜像状态' : 'Native MMKV Mirror',
-              mirrorText,
             ),
             _buildInfoRow(
               theme,
@@ -429,19 +402,13 @@ class _MmkvMigrationDiagnosticPageState
     final shapeTokens = AppShapeTokens.of(context);
     final btnRadius = BorderRadius.circular(shapeTokens.buttonRadius);
     final binaryKeyCount = report.primaryBinaryResult.entries.length;
-    var nativeKeyCount = 0;
     var spKeyCount = 0;
     var binaryMatchedSpCount = 0;
-    var binaryMatchNativeCount = 0;
 
     for (final c in report.comparisons) {
-      if (c.presentInNative) nativeKeyCount++;
       if (c.presentInSharedPrefs) spKeyCount++;
       if (c.presentInBinary && c.binaryMatchesSharedPrefs) {
         binaryMatchedSpCount++;
-      }
-      if (c.presentInBinary && c.nativeMatchesBinary) {
-        binaryMatchNativeCount++;
       }
     }
 
@@ -465,28 +432,9 @@ class _MmkvMigrationDiagnosticPageState
       badgeText = isZh ? '发现 $diffs 项差异' : '$diffs Diff(s)';
     }
 
-    final nativePart = report.nativeMmkvAvailable ? '$nativeKeyCount' : '-';
-    final keyCountLabel = _tr(
-      isZh,
-      '存储源键总数 (Binary / Native / SP)',
-      'Key Counts (Binary / Native / SP)',
-    );
-    final readerVsNativeLabel = _tr(
-      isZh,
-      '手写二进制解析 vs 原生 MMKV 匹配',
-      'Dart Binary Reader vs Native MMKV',
-    );
-    final String readerVsNativeVal;
-    if (report.nativeMmkvAvailable) {
-      readerVsNativeVal = '$binaryMatchNativeCount / $binaryKeyCount';
-    } else {
-      readerVsNativeVal = isZh ? '原生未挂载 (以 SP 对照)' : 'N/A (Compared to SP)';
-    }
-    final spCoverageLabel = _tr(
-      isZh,
-      'SharedPreferences 迁移覆盖率',
-      'SharedPreferences Migration Coverage',
-    );
+    final l10n = AppLocalizations.of(context);
+    final keyCountLabel = l10n.mmkvDiagnosticKeyCountBinarySp;
+    final spCoverageLabel = l10n.mmkvDiagnosticSpCoverage;
 
     return Card(
       key: const Key('mmkv_diagnostic_summary_card'),
@@ -504,7 +452,7 @@ class _MmkvMigrationDiagnosticPageState
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isZh ? '三方一致性比对大盘' : '3-Way Consistency Summary',
+                    l10n.mmkvDiagnosticConsistencySummaryTitle,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -533,12 +481,7 @@ class _MmkvMigrationDiagnosticPageState
             _buildInfoRow(
               theme,
               keyCountLabel,
-              '$binaryKeyCount / $nativePart / $spKeyCount',
-            ),
-            _buildInfoRow(
-              theme,
-              readerVsNativeLabel,
-              readerVsNativeVal,
+              '$binaryKeyCount / $spKeyCount',
             ),
             _buildInfoRow(
               theme,
@@ -560,8 +503,9 @@ class _MmkvMigrationDiagnosticPageState
           key: const Key('mmkv_diagnostic_rerun_migration_button'),
           onPressed: _loading ? null : _handleRerunMigration,
           icon: const Icon(Icons.sync),
-          label:
-              Text(AppLocalizations.of(context).mmkvDiagnosticRerunMigration),
+          label: Text(
+            AppLocalizations.of(context).mmkvDiagnosticRerunMigration,
+          ),
         ),
         OutlinedButton.icon(
           key: const Key('mmkv_diagnostic_copy_json_action_button'),
@@ -620,7 +564,6 @@ class _MmkvMigrationDiagnosticPageState
     BuildContext context,
     ThemeData theme,
     MmkvKeyComparisonEntry entry,
-    bool nativeAvailable,
     bool isZh,
   ) {
     final semantic = AppSemanticColors.of(context);
@@ -653,11 +596,6 @@ class _MmkvMigrationDiagnosticPageState
       redactedMap['binaryValue'],
       absentText,
     );
-    final nativePreview = _previewOrAbsent(
-      entry.presentInNative,
-      redactedMap['nativeValue'],
-      absentText,
-    );
     final spPreview = _previewOrAbsent(
       entry.presentInSharedPrefs,
       redactedMap['sharedPrefsValue'],
@@ -682,10 +620,7 @@ class _MmkvMigrationDiagnosticPageState
         ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: statusBg,
-            borderRadius: btnRadius,
-          ),
+          decoration: BoxDecoration(color: statusBg, borderRadius: btnRadius),
           child: Text(
             statusLabel,
             style: theme.textTheme.labelSmall?.copyWith(
@@ -697,8 +632,6 @@ class _MmkvMigrationDiagnosticPageState
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         children: [
           _buildValuePreviewRow(theme, 'Dart Binary Reader', binaryPreview),
-          if (nativeAvailable)
-            _buildValuePreviewRow(theme, 'Native MMKV', nativePreview),
           _buildValuePreviewRow(theme, 'SharedPreferences', spPreview),
         ],
       ),

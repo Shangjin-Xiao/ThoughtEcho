@@ -18,6 +18,13 @@ class PlatformHelper {
     return null;
   }
 
+  static Future<bool> archiveOrWipeMmkvFile(
+    String mmkvFilePath, {
+    required bool wipePlaintext,
+  }) async {
+    return false;
+  }
+
   static Future<List<String>> resolveCandidateMmkvFiles({
     List<String>? customPaths,
   }) async {

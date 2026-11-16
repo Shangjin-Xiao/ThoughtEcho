@@ -9,7 +9,7 @@
 |---|---|
 | AI 通信 | `ai_network_manager.dart`、`ai_request_helper.dart`、`ai_prompt_manager.dart` |
 | 流式/网络 | `streaming_utils.dart`、`dio_network_utils.dart`、`zip_stream_processor.dart` |
-| 平台适配 | `platform_helper.dart`、`mmkv_adapter.dart`、`optimized_image_loader.dart` |
+| 平台适配 | `platform_helper.dart`、`mmkv_binary_reader.dart`、`optimized_image_loader.dart` |
 | 内存/性能 | `device_memory_manager.dart`、`memory_optimization_helper.dart`、`safe_compute.dart` |
 | 编辑器 | `quill_editor_extensions.dart`、`quill_ai_apply_utils.dart`、`quill_delta_builder.dart` |
 | 日志/可观测性 | `app_logger.dart`、`app_tracer.dart`、`aptabase_helper.dart`、`sentry_helper.dart`、`sentry_*_tracing.dart` |

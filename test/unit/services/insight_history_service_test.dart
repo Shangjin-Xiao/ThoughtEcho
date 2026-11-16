@@ -7,7 +7,6 @@ import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 

@@ -12,9 +12,9 @@ import 'package:thoughtecho/models/ai_analysis_model.dart';
 import 'package:thoughtecho/models/periodic_insight.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/api_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
 import '../../test_harness.dart';
@@ -193,7 +193,7 @@ void main() {
         (tester) async {
       final databaseService = DatabaseService();
       final settingsService = await SettingsService.create();
-      final mmkvService = MMKVService();
+      final prefsService = AppPreferencesService();
       final clipboardService = ClipboardService();
       // 用 Fake 而非进程级单例：单例在测试间共享，dispose 会毒化后续用例
       final aiAnalysisDbService = FakeAIAnalysisDatabaseService();
@@ -205,7 +205,7 @@ void main() {
                 value: databaseService),
             ChangeNotifierProvider<SettingsService>.value(
                 value: settingsService),
-            Provider<MMKVService>.value(value: mmkvService),
+            Provider<AppPreferencesService>.value(value: prefsService),
             ChangeNotifierProvider<ClipboardService>.value(
                 value: clipboardService),
             ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
@@ -236,7 +236,7 @@ void main() {
         (tester) async {
       final databaseService = DatabaseService();
       final settingsService = await SettingsService.create();
-      final mmkvService = MMKVService();
+      final prefsService = AppPreferencesService();
       final clipboardService = ClipboardService();
       final aiAnalysisDbService = FakeAIAnalysisDatabaseService();
 
@@ -247,7 +247,7 @@ void main() {
                 value: databaseService),
             ChangeNotifierProvider<SettingsService>.value(
                 value: settingsService),
-            Provider<MMKVService>.value(value: mmkvService),
+            Provider<AppPreferencesService>.value(value: prefsService),
             ChangeNotifierProvider<ClipboardService>.value(
                 value: clipboardService),
             ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
@@ -286,7 +286,7 @@ void main() {
   group('OnboardingController page navigation (widget)', () {
     late SettingsService settingsService;
     late DatabaseService databaseService;
-    late MMKVService mmkvService;
+    late AppPreferencesService prefsService;
     late ClipboardService clipboardService;
     late FakeAIAnalysisDatabaseService aiAnalysisDbService;
 
@@ -295,7 +295,7 @@ void main() {
       sut = OnboardingController();
       databaseService = DatabaseService();
       settingsService = await SettingsService.create();
-      mmkvService = MMKVService();
+      prefsService = AppPreferencesService();
       clipboardService = ClipboardService();
       aiAnalysisDbService = FakeAIAnalysisDatabaseService();
     });
@@ -318,7 +318,7 @@ void main() {
                 value: databaseService),
             ChangeNotifierProvider<SettingsService>.value(
                 value: settingsService),
-            Provider<MMKVService>.value(value: mmkvService),
+            Provider<AppPreferencesService>.value(value: prefsService),
             ChangeNotifierProvider<ClipboardService>.value(
                 value: clipboardService),
             ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
@@ -374,7 +374,7 @@ void main() {
       () {
     late SettingsService settingsService;
     late FakeDatabaseServiceForOnboarding databaseService;
-    late MMKVService mmkvService;
+    late AppPreferencesService prefsService;
     late ClipboardService clipboardService;
     late FakeAIAnalysisDatabaseService aiAnalysisDbService;
     late ValueNotifier<bool> initializedNotifier;
@@ -393,8 +393,8 @@ void main() {
       inMemoryDb = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
       databaseService = FakeDatabaseServiceForOnboarding(inMemoryDb);
       settingsService = await SettingsService.create();
-      mmkvService = MMKVService();
-      await mmkvService.init();
+      prefsService = AppPreferencesService();
+      await prefsService.init();
       clipboardService = ClipboardService();
       aiAnalysisDbService = FakeAIAnalysisDatabaseService();
       initializedNotifier = ValueNotifier<bool>(false);
@@ -424,7 +424,7 @@ void main() {
                 value: databaseService),
             ChangeNotifierProvider<SettingsService>.value(
                 value: settingsService),
-            Provider<MMKVService>.value(value: mmkvService),
+            Provider<AppPreferencesService>.value(value: prefsService),
             ChangeNotifierProvider<ClipboardService>.value(
                 value: clipboardService),
             ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
@@ -479,7 +479,7 @@ void main() {
                 value: databaseService),
             ChangeNotifierProvider<SettingsService>.value(
                 value: settingsService),
-            Provider<MMKVService>.value(value: mmkvService),
+            Provider<AppPreferencesService>.value(value: prefsService),
             ChangeNotifierProvider<ClipboardService>.value(
                 value: clipboardService),
             ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
@@ -527,7 +527,7 @@ void main() {
                 value: databaseService),
             ChangeNotifierProvider<SettingsService>.value(
                 value: throwingSettings),
-            Provider<MMKVService>.value(value: mmkvService),
+            Provider<AppPreferencesService>.value(value: prefsService),
             ChangeNotifierProvider<ClipboardService>.value(
                 value: clipboardService),
             ChangeNotifierProvider<AIAnalysisDatabaseService>.value(
@@ -563,7 +563,7 @@ void main() {
 
   group('OnboardingController 异常处理 (widget)', () {
     late SettingsService settingsService;
-    late MMKVService mmkvService;
+    late AppPreferencesService prefsService;
     late ClipboardService clipboardService;
     void Function<T>(T)? debugCheckInvalidValueTypeBeforeTest;
 
@@ -580,8 +580,8 @@ void main() {
         buildSignature: '',
       );
       settingsService = await SettingsService.create();
-      mmkvService = MMKVService();
-      await mmkvService.init();
+      prefsService = AppPreferencesService();
+      await prefsService.init();
       clipboardService = ClipboardService();
     });
 
@@ -603,7 +603,7 @@ void main() {
             ChangeNotifierProvider<SettingsService>.value(
               value: settingsService,
             ),
-            Provider<MMKVService>.value(value: mmkvService),
+            Provider<AppPreferencesService>.value(value: prefsService),
             ChangeNotifierProvider<ClipboardService>.value(
               value: clipboardService,
             ),

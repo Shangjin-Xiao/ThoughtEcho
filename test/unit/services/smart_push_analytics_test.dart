@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/smart_push_settings.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/smart_push_analytics.dart';
 
 import '../../test_harness.dart';
@@ -9,15 +9,15 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late SmartPushAnalytics analytics;
-  late MMKVService mmkvService;
+  late AppPreferencesService mmkvService;
 
   setUpAll(() async {
     await TestHarness.initialize();
-    await MMKVService().init();
+    await AppPreferencesService().init();
   });
 
   setUp(() async {
-    mmkvService = MMKVService();
+    mmkvService = AppPreferencesService();
     await mmkvService.clear();
     analytics = SmartPushAnalytics(mmkvService: mmkvService);
   });

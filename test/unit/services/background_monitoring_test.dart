@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 import '../../test_harness.dart';
@@ -10,15 +10,15 @@ import '../../test_harness.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late MMKVService mmkvService;
+  late AppPreferencesService mmkvService;
 
   setUpAll(() async {
     await TestHarness.initialize();
-    await MMKVService().init();
+    await AppPreferencesService().init();
   });
 
   setUp(() async {
-    mmkvService = MMKVService();
+    mmkvService = AppPreferencesService();
     await mmkvService.clear();
     AppLogger.initialize();
   });

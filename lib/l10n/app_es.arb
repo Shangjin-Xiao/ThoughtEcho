@@ -139,7 +139,7 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "Inspeccionar el estado de migración KV y comparar MMKV nativo, analizador binario Dart y SharedPreferences",
+  "mmkvDiagnosticSubtitle": "Inspeccionar el estado de migración KV y comparar el analizador binario Dart con SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
   },
@@ -150,5 +150,21 @@
         "type": "String"
       }
     }
+  },
+  "mmkvDiagnosticRerunSuccess": "Migración reejecutada e informe actualizado",
+  "@mmkvDiagnosticRerunSuccess": {
+    "description": "SnackBar success message after re-running MMKV migration"
+  },
+  "mmkvDiagnosticConsistencySummaryTitle": "Resumen de coherencia de almacenamiento",
+  "@mmkvDiagnosticConsistencySummaryTitle": {
+    "description": "Card title for storage consistency summary"
+  },
+  "mmkvDiagnosticKeyCountBinarySp": "Total de claves (Binary / SP)",
+  "@mmkvDiagnosticKeyCountBinarySp": {
+    "description": "Label for binary and SharedPreferences key counts"
+  },
+  "mmkvDiagnosticSpCoverage": "Cobertura de migración de SharedPreferences",
+  "@mmkvDiagnosticSpCoverage": {
+    "description": "Label for SharedPreferences migration coverage"
   }
 }

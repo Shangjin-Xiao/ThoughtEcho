@@ -4937,7 +4937,7 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "Inspect KV migration status and compare Native MMKV, Dart binary parser, and SharedPreferences",
+  "mmkvDiagnosticSubtitle": "Inspect KV migration status and compare Dart binary parser with SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
   },
@@ -4966,5 +4966,21 @@
   "backupScopeExcludedChatsAndMemory": "AI chat history & agent memory: conversations and memory profiles stay on this device only.",
   "backupScopeExcludedInsightsAndLogs": "Periodic insight caches, unreferenced files & logs: cached periodic insights, orphaned media files not linked to any note, and diagnostic logs are excluded.",
   "backupScopeRestoreModeNote": "Note: Overwrite restore restores notes, media (ZIP), settings, and saved AI analysis reports. Merge import only merges notes, tags, media (ZIP), and trash retention while keeping your current settings and AI analysis reports. WebDAV sync only syncs notes, tags, deletion records, and media files (not settings or AI reports).",
-  "settingsTermsOfService": "Terms of Service"
+  "settingsTermsOfService": "Terms of Service",
+  "mmkvDiagnosticRerunSuccess": "Re-ran migration and refreshed report",
+  "@mmkvDiagnosticRerunSuccess": {
+    "description": "SnackBar success message after re-running MMKV migration"
+  },
+  "mmkvDiagnosticConsistencySummaryTitle": "Storage Consistency Summary",
+  "@mmkvDiagnosticConsistencySummaryTitle": {
+    "description": "Card title for storage consistency summary"
+  },
+  "mmkvDiagnosticKeyCountBinarySp": "Key Counts (Binary / SP)",
+  "@mmkvDiagnosticKeyCountBinarySp": {
+    "description": "Label for binary and SharedPreferences key counts"
+  },
+  "mmkvDiagnosticSpCoverage": "SharedPreferences Migration Coverage",
+  "@mmkvDiagnosticSpCoverage": {
+    "description": "Label for SharedPreferences migration coverage"
+  }
 }

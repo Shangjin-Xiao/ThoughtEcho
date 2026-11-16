@@ -4937,7 +4937,7 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "查看鍵值遷移狀態，比對原生 MMKV、手寫二進制解析結果與 SharedPreferences",
+  "mmkvDiagnosticSubtitle": "查看鍵值遷移狀態，比對手寫二進制解析結果與 SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
   },
@@ -4960,5 +4960,9 @@
   "backupScopeExcludedChatsAndMemory": "AI 對話與記憶檔案：AI 聊天記錄及智慧記憶僅儲存在目前裝置。",
   "backupScopeExcludedInsightsAndLogs": "週期洞察快取、孤立檔案與執行日誌：首頁/報告的週期洞察快取、未被任何筆記引用的殘留媒體檔案，以及應用診斷日誌不會打包。",
   "backupScopeRestoreModeNote": "提示：覆蓋還原會恢復筆記、媒體（ZIP）、設定與已儲存的 AI 分析報告；智慧合併僅合併筆記、標籤、媒體（ZIP）與資源回收筒保留天數，保留目前裝置的設定與 AI 分析報告。WebDAV 雲端同步僅同步筆記、標籤、刪除記錄與媒體檔案，不同步應用設定與 AI 分析報告。",
-  "settingsTermsOfService": "用戶協議"
+  "settingsTermsOfService": "用戶協議",
+  "mmkvDiagnosticRerunSuccess": "已重新執行遷移並重新整理校驗結果",
+  "mmkvDiagnosticConsistencySummaryTitle": "儲存一致性比對總覽",
+  "mmkvDiagnosticKeyCountBinarySp": "儲存源鍵總數 (Binary / SP)",
+  "mmkvDiagnosticSpCoverage": "SharedPreferences 遷移覆蓋率"
 }

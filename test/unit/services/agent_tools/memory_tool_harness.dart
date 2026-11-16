@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
 import '../../../test_harness.dart';
@@ -27,13 +27,15 @@ class MemoryToolHarness {
 
   Future<void> setUpAll() async {
     await TestHarness.initialize();
-    await MMKVService().init();
+    await AppPreferencesService().init();
   }
 
   Future<void> setUp() async {
-    await MMKVService().clear();
     SharedPreferences.resetStatic();
     SharedPreferences.setMockInitialValues({});
+    AppPreferencesService().resetForTesting();
+    await AppPreferencesService().init();
+    await AppPreferencesService().clear();
     settingsService = SettingsService(await SharedPreferences.getInstance());
     memory = AgentMemoryService(
       settingsService: settingsService,

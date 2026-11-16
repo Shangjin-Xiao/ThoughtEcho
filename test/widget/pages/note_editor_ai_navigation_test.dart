@@ -6,12 +6,11 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/pages/thoughter_page.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/draft_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
@@ -71,7 +70,7 @@ class _MockDatabaseService extends ChangeNotifier implements DatabaseService {
 }
 
 class _MockFeatureGuideService extends FeatureGuideService {
-  _MockFeatureGuideService() : super(SafeMMKV());
+  _MockFeatureGuideService() : super(AppPreferencesService());
 
   @override
   bool hasShown(String guideId) => true;
@@ -93,12 +92,12 @@ void main() {
 
   setUpAll(() async {
     await TestHarness.initialize();
-    await MMKVService().init();
+    await AppPreferencesService().init();
   });
 
   setUp(() async {
     databaseService = _MockDatabaseService();
-    await MMKVService().clear();
+    await AppPreferencesService().clear();
     await DraftService().deleteAllDrafts();
   });
 

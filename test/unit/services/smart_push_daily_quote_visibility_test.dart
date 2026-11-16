@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 
 import '../../test_harness.dart';
@@ -103,7 +103,7 @@ void main() {
   });
 }
 
-class _MemoryStorage implements MMKVService {
+class _MemoryStorage implements AppPreferencesService {
   final values = <String, String>{};
 
   @override

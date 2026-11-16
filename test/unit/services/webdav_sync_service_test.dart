@@ -1,11 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,22 +13,18 @@ void main() {
       MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
   final Map<String, String> secureStorage = {};
-  late MMKVService mmkv;
+  late AppPreferencesService appPrefs;
 
   setUp(() async {
     // 清空 Mock 存储
     secureStorage.clear();
 
-    // 初始化 SharedPreferences (为 FFI SafeMMKV 做 Mock 初始化准备)
+    // 初始化 SharedPreferences (为 AppPreferencesService 做 Mock 初始化准备)
     SharedPreferences.setMockInitialValues({});
 
-    mmkv = MMKVService();
-    await mmkv.init();
-
-    // 清空 MMKV 中的同步配置
-    final safeMMKV = SafeMMKV();
-    await safeMMKV.initialize();
-    await safeMMKV.clear();
+    appPrefs = AppPreferencesService();
+    await appPrefs.init();
+    await appPrefs.clear();
 
     // Mock FlutterSecureStorage 方法通道
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

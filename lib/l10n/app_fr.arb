@@ -4902,9 +4902,17 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "Vérifier l'état de migration KV et comparer MMKV natif, l'analyseur binaire Dart et SharedPreferences",
+  "mmkvDiagnosticSubtitle": "Vérifier l'état de migration KV et comparer l'analyseur binaire Dart avec SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
+  },
+  "mmkvDiagnosticRerunMigration": "Relancer la migration",
+  "@mmkvDiagnosticRerunMigration": {
+    "description": "Button label for MMKV migration diagnostics"
+  },
+  "mmkvDiagnosticCopyJson": "Copier le JSON de diagnostic",
+  "@mmkvDiagnosticCopyJson": {
+    "description": "Button label for MMKV migration diagnostics"
   },
   "settingsSentryDetail": "• Déclenchement : uniquement si activé et lorsqu'un plantage ou une lenteur survient\n• Inclus : type et emplacement de l'erreur dans l'app, modèle d'appareil, version du système et de l'app, vitesse de chargement\n• Portée : diagnostic technique uniquement ; les saisies et paramètres sensibles sont automatiquement omis",
   "settingsTelemetryDetail": "• Ce qui est compté : clics et visites de pages anonymes (ex. modèles de cartes préférés)\n• Inclus : version du système, langue, version de l'app et identifiant de session temporaire effacé à la fermeture\n• Approche : sans cookies, sans suivi inter-applications et sans stockage d'adresse IP",
@@ -4923,5 +4931,21 @@
   "backupScopeExcludedChatsAndMemory": "Historique des discussions IA et mémoire de l'agent : les conversations et profils mémoire restent uniquement sur cet appareil.",
   "backupScopeExcludedInsightsAndLogs": "Caches d'aperçus périodiques, fichiers orphelins et journaux : les aperçus en cache, médias non liés à une note et journaux de diagnostic sont exclus.",
   "backupScopeRestoreModeNote": "Remarque : la restauration par remplacement rétablit les notes, médias (ZIP), réglages et rapports IA enregistrés. L'importation par fusion ne fusionne que les notes, étiquettes, médias (ZIP) et durée de rétention de la corbeille, en conservant vos réglages et rapports IA actuels. La synchronisation WebDAV ne synchronise que les notes, étiquettes, suppressions et médias (sans les réglages ni les rapports IA).",
-  "settingsTermsOfService": "Conditions d'utilisation"
+  "settingsTermsOfService": "Conditions d'utilisation",
+  "mmkvDiagnosticRerunSuccess": "Migration relancée et rapport actualisé",
+  "@mmkvDiagnosticRerunSuccess": {
+    "description": "SnackBar success message after re-running MMKV migration"
+  },
+  "mmkvDiagnosticConsistencySummaryTitle": "Résumé de cohérence du stockage",
+  "@mmkvDiagnosticConsistencySummaryTitle": {
+    "description": "Card title for storage consistency summary"
+  },
+  "mmkvDiagnosticKeyCountBinarySp": "Nombre de clés (Binary / SP)",
+  "@mmkvDiagnosticKeyCountBinarySp": {
+    "description": "Label for binary and SharedPreferences key counts"
+  },
+  "mmkvDiagnosticSpCoverage": "Couverture de migration SharedPreferences",
+  "@mmkvDiagnosticSpCoverage": {
+    "description": "Label for SharedPreferences migration coverage"
+  }
 }

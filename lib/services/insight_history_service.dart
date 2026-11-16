@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+
 import '../models/periodic_insight.dart';
 import '../utils/app_logger.dart';
-import '../utils/mmkv_ffi_fix.dart' show kPeriodicInsightsSqliteMigratedKey;
 import 'ai_analysis_database_service.dart';
 import 'app_preferences_service.dart';
 import 'settings_service.dart';
@@ -119,10 +120,7 @@ class InsightHistoryService extends ChangeNotifier {
       }
     } catch (e) {
       // 无 SharedPreferences mock 的精简组件测试会走到这里，继续通过 SettingsService 检查
-      AppLogger.w(
-        '检查周期洞察迁移标记失败: $e',
-        source: 'InsightHistoryService',
-      );
+      AppLogger.w('检查周期洞察迁移标记失败: $e', source: 'InsightHistoryService');
     }
 
     final jsonString = await _settingsService.getCustomString(_storageKey);
