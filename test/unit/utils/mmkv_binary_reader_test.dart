@@ -432,6 +432,16 @@ void main() {
       expect(tombstonedRes.hasHistoricalPlaintextCredentials, isTrue);
       expect(tombstonedRes.tombstonedKeys, contains('provider_api_keys'));
       expect(tombstonedRes.seenKeys, contains('provider_api_keys'));
+
+      final malformedEncoder = MmkvBinaryEncoder()
+        ..writeString('ai_settings', '{"apiKey":"sk-do-not-leak-warning"');
+      final malformedRes = MmkvBinaryReader.parseBytes(
+        malformedEncoder.toFileBytes(minTotalSize: 4096),
+        crcBytes: malformedEncoder.toCrcBytes(),
+      );
+      expect(malformedRes.hasHistoricalPlaintextCredentials, isTrue);
+      expect(malformedRes.warnings.join('\n'),
+          isNot(contains('sk-do-not-leak-warning')));
     });
   });
 }

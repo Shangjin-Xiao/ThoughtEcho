@@ -712,8 +712,10 @@ class MmkvBinaryReader {
         }
       }
     } catch (e, stackTrace) {
+      // Log only runtimeType + stackTrace (never e.toString(), as FormatException
+      // embeds raw source text that could contain plaintext API keys).
       warnings?.add(
-        'Credential inspection fallback for "$key": $e\n$stackTrace',
+        'Credential inspection fallback for "$key" (${e.runtimeType})\n$stackTrace',
       );
       // Conservative fallback if a partial/unschematized credential record fails decoding.
       return true;
