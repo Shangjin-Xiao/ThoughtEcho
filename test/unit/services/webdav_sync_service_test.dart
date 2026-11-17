@@ -2123,7 +2123,7 @@ void main() {
       dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
         if (options.method == 'PROPFIND') {
           if (options.path.endsWith('/images/no_put_etag.png')) {
-            return ResponseBody.fromString('''
+            final xml = '''
 <?xml version="1.0" encoding="utf-8"?>
 <d:multistatus xmlns:d="DAV:">
   <d:response>
@@ -2137,7 +2137,14 @@ void main() {
     </d:propstat>
   </d:response>
 </d:multistatus>
-''', 207);
+''';
+            return ResponseBody.fromString(
+              xml,
+              207,
+              headers: {
+                Headers.contentLengthHeader: [xml.length.toString()],
+              },
+            );
           }
           if (options.path.contains('/images/')) {
             return ResponseBody.fromString('''

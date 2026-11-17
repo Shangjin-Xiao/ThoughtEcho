@@ -2185,15 +2185,18 @@ class WebDAVSyncService extends ChangeNotifier {
 
   bool _headersConflictWithUploadSnapshot(
     Map<String, List<String>>? headers, {
-    required int expectedSize,
+    int? expectedSize,
     required String expectedSha256,
     String? expectedMd5,
   }) {
-    final headerLenRaw =
-        _getHeaderCaseInsensitive(headers, Headers.contentLengthHeader);
-    final headerLen = headerLenRaw != null ? int.tryParse(headerLenRaw) : null;
-    if (headerLen != null && headerLen != expectedSize) {
-      return true;
+    if (expectedSize != null) {
+      final headerLenRaw =
+          _getHeaderCaseInsensitive(headers, Headers.contentLengthHeader);
+      final headerLen =
+          headerLenRaw != null ? int.tryParse(headerLenRaw) : null;
+      if (headerLen != null && headerLen != expectedSize) {
+        return true;
+      }
     }
     for (final headerName in const [
       'x-checksum-sha256',
@@ -2246,9 +2249,9 @@ class WebDAVSyncService extends ChangeNotifier {
         if (xmlLen != null && xmlLen != expectedSize) {
           return null;
         }
+        // PROPFIND 响应头中的 Content-Length 是 XML 响应体字节数而非远端文件大小（文件大小已由上方 getcontentlength 校验）
         if (_headersConflictWithUploadSnapshot(
           response.headers.map,
-          expectedSize: expectedSize,
           expectedSha256: expectedSha256,
           expectedMd5: expectedMd5,
         )) {
