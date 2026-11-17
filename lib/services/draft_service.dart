@@ -213,6 +213,7 @@ class DraftService {
       if (legacyKeys.isNotEmpty) {
         final rowsToInsert = <Map<String, Object?>>[];
         final migratedKeys = <String>[];
+        final seenNormalizedIds = <String>{};
         for (final key in legacyKeys) {
           final raw = prefs.getString(key);
           if (raw == null) {
@@ -237,6 +238,14 @@ class DraftService {
             allMigrated = false;
             logWarning(
               'DraftService: 跳过规范化后 ID 为空的历史草稿键 $key（保留原键）',
+              source: 'DraftService',
+            );
+            continue;
+          }
+          if (!seenNormalizedIds.add(normalizedId)) {
+            allMigrated = false;
+            logWarning(
+              'DraftService: 跳过规范化 ID 冲突的历史草稿键 $key -> $normalizedId（保留原键）',
               source: 'DraftService',
             );
             continue;
@@ -270,11 +279,12 @@ class DraftService {
         }
       }
 
-      if (allMigrated) {
+      final engineMigrated = prefs.getBool(kKvEngineMigratedKey) == true;
+      if (allMigrated && (engineMigrated || legacyKeys.isNotEmpty)) {
         final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
         _hasPendingLegacyDrafts = !flagSaved;
       } else {
-        _hasPendingLegacyDrafts = true;
+        _hasPendingLegacyDrafts = !allMigrated || !engineMigrated;
       }
       _legacyMigrationAttemptedInSession = true;
     } catch (e, stackTrace) {
@@ -328,8 +338,12 @@ class DraftService {
         throw StateError('删除待迁移 KV 草稿键失败: $key');
       }
     }
-    final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
-    _hasPendingLegacyDrafts = !flagSaved;
+    if (prefs.getBool(kKvEngineMigratedKey) == true) {
+      final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
+      _hasPendingLegacyDrafts = !flagSaved;
+    } else {
+      _hasPendingLegacyDrafts = false;
+    }
   }
 
   Future<Map<String, dynamic>?> _readPendingKvDraft(String normalizedId) async {

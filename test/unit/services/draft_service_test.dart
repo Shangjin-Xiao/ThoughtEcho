@@ -67,122 +67,129 @@ void main() {
       expect(latestDraft['plainText'], 'Newer meaningful content');
     });
 
-    test('handles non-string timestamps and non-string plainText gracefully',
-        () async {
-      await draftService.saveDraft('int-timestamp-draft', {
-        'plainText': 'Content with int timestamp',
-        'timestamp': 1711700000,
-      });
+    test(
+      'handles non-string timestamps and non-string plainText gracefully',
+      () async {
+        await draftService.saveDraft('int-timestamp-draft', {
+          'plainText': 'Content with int timestamp',
+          'timestamp': 1711700000,
+        });
 
-      final draft = await draftService.getDraft('int-timestamp-draft');
-      expect(draft, isNotNull);
-      expect(draft!['plainText'], 'Content with int timestamp');
+        final draft = await draftService.getDraft('int-timestamp-draft');
+        expect(draft, isNotNull);
+        expect(draft!['plainText'], 'Content with int timestamp');
 
-      final latest = await draftService.getLatestDraft();
-      expect(latest, isNotNull);
-      expect(latest!['id'], 'int-timestamp-draft');
-    });
+        final latest = await draftService.getLatestDraft();
+        expect(latest, isNotNull);
+        expect(latest!['id'], 'int-timestamp-draft');
+      },
+    );
 
-    test('hasDraft returns true for existing key and false for non-existing',
-        () async {
-      expect(await draftService.hasDraft('non-existent'), isFalse);
-      await draftService.saveDraft('test-draft', {'plainText': 'hello'});
-      expect(await draftService.hasDraft('test-draft'), isTrue);
-    });
+    test(
+      'hasDraft returns true for existing key and false for non-existing',
+      () async {
+        expect(await draftService.hasDraft('non-existent'), isFalse);
+        await draftService.saveDraft('test-draft', {'plainText': 'hello'});
+        expect(await draftService.hasDraft('test-draft'), isTrue);
+      },
+    );
   });
 
   group('DraftService SQLite persistence & KV migration', () {
     test(
-        'persists drafts in SQLite across service DB reset and supports delete',
-        () async {
-      await draftService.saveDraft('persist-1', {
-        'plainText': 'Persisted draft text',
-        'deltaContent': jsonEncode([
-          {
-            'insert': {'image': '/tmp/mock_image.png'}
-          },
-          {
-            'insert': {'video': '/tmp/mock_video.mp4'}
-          },
-          {
-            'insert': {
-              'custom': {'audio': '/tmp/mock_audio.m4a'}
-            }
-          },
-          {'insert': 'Persisted draft text\n'},
-        ]),
-        'timestamp': '2026-05-01T12:00:00.000Z',
-      });
+      'persists drafts in SQLite across service DB reset and supports delete',
+      () async {
+        await draftService.saveDraft('persist-1', {
+          'plainText': 'Persisted draft text',
+          'deltaContent': jsonEncode([
+            {
+              'insert': {'image': '/tmp/mock_image.png'},
+            },
+            {
+              'insert': {'video': '/tmp/mock_video.mp4'},
+            },
+            {
+              'insert': {
+                'custom': {'audio': '/tmp/mock_audio.m4a'},
+              },
+            },
+            {'insert': 'Persisted draft text\n'},
+          ]),
+          'timestamp': '2026-05-01T12:00:00.000Z',
+        });
 
-      // Drafts should NOT be written to KV storage anymore
-      expect(prefsService.containsKey('draft_persist-1'), isFalse);
+        // Drafts should NOT be written to KV storage anymore
+        expect(prefsService.containsKey('draft_persist-1'), isFalse);
 
-      // Reopen DB from disk
-      await draftService.resetForTesting();
+        // Reopen DB from disk
+        await draftService.resetForTesting();
 
-      final restored = await draftService.getDraft('persist-1');
-      expect(restored, isNotNull);
-      expect(restored!['plainText'], 'Persisted draft text');
-      expect(await draftService.getAllDraftIds(), contains('persist-1'));
+        final restored = await draftService.getDraft('persist-1');
+        expect(restored, isNotNull);
+        expect(restored!['plainText'], 'Persisted draft text');
+        expect(await draftService.getAllDraftIds(), contains('persist-1'));
 
-      final mediaPaths = await draftService.getAllMediaPathsInDrafts();
-      expect(
-        mediaPaths,
-        containsAll([
-          '/tmp/mock_image.png',
-          '/tmp/mock_video.mp4',
-          '/tmp/mock_audio.m4a',
-        ]),
-      );
+        final mediaPaths = await draftService.getAllMediaPathsInDrafts();
+        expect(
+          mediaPaths,
+          containsAll([
+            '/tmp/mock_image.png',
+            '/tmp/mock_video.mp4',
+            '/tmp/mock_audio.m4a',
+          ]),
+        );
 
-      await draftService.deleteDraft('persist-1');
-      expect(await draftService.hasDraft('persist-1'), isFalse);
-      expect(await draftService.getDraft('persist-1'), isNull);
-    });
+        await draftService.deleteDraft('persist-1');
+        expect(await draftService.hasDraft('persist-1'), isFalse);
+        expect(await draftService.getDraft('persist-1'), isNull);
+      },
+    );
 
-    test('migrates legacy KV draft_* keys into drafts.db and removes old keys',
-        () async {
-      await draftService.resetForTesting();
-      SharedPreferences.setMockInitialValues({
-        kKvEngineMigratedKey: true,
-        'draft_legacy_note_1': jsonEncode({
-          'plainText': 'Legacy draft content',
-          'timestamp': '2026-04-01T08:00:00.000Z',
-        }),
-        'draft_legacy_empty': jsonEncode({
-          'plainText': '',
-          'weather': 'cloudy',
-          'timestamp': '2026-04-02T08:00:00.000Z',
-        }),
-        'unrelated_pref': 'keep_me',
-      });
-      prefsService.resetForTesting();
-      await prefsService.init();
+    test(
+      'migrates legacy KV draft_* keys into drafts.db and removes old keys',
+      () async {
+        await draftService.resetForTesting();
+        SharedPreferences.setMockInitialValues({
+          kKvEngineMigratedKey: true,
+          'draft_legacy_note_1': jsonEncode({
+            'plainText': 'Legacy draft content',
+            'timestamp': '2026-04-01T08:00:00.000Z',
+          }),
+          'draft_legacy_empty': jsonEncode({
+            'plainText': '',
+            'weather': 'cloudy',
+            'timestamp': '2026-04-02T08:00:00.000Z',
+          }),
+          'unrelated_pref': 'keep_me',
+        });
+        prefsService.resetForTesting();
+        await prefsService.init();
 
-      final latest = await draftService.getLatestDraft();
-      expect(latest, isNotNull);
-      expect(latest!['id'], 'legacy_note_1');
-      expect(latest['plainText'], 'Legacy draft content');
+        final latest = await draftService.getLatestDraft();
+        expect(latest, isNotNull);
+        expect(latest!['id'], 'legacy_note_1');
+        expect(latest['plainText'], 'Legacy draft content');
 
-      final emptyDraft = await draftService.getDraft('legacy_empty');
-      expect(emptyDraft, isNotNull);
-      expect(emptyDraft!['weather'], 'cloudy');
+        final emptyDraft = await draftService.getDraft('legacy_empty');
+        expect(emptyDraft, isNotNull);
+        expect(emptyDraft!['weather'], 'cloudy');
 
-      // Legacy KV keys must be cleaned up and migration flag set
-      expect(prefsService.containsKey('draft_legacy_note_1'), isFalse);
-      expect(prefsService.containsKey('draft_legacy_empty'), isFalse);
-      expect(prefsService.getString('unrelated_pref'), 'keep_me');
-      expect(prefsService.getBool(kDraftsSqliteMigratedKey), isTrue);
+        // Legacy KV keys must be cleaned up and migration flag set
+        expect(prefsService.containsKey('draft_legacy_note_1'), isFalse);
+        expect(prefsService.containsKey('draft_legacy_empty'), isFalse);
+        expect(prefsService.getString('unrelated_pref'), 'keep_me');
+        expect(prefsService.getBool(kDraftsSqliteMigratedKey), isTrue);
 
-      // drafts.db must live under ApplicationSupport/drafts/drafts.db, not Documents
-      final supportDir = await getApplicationSupportDirectory();
-      final docsDir = await getApplicationDocumentsDirectory();
-      expect(
-        File(p.join(supportDir.path, 'drafts', 'drafts.db')).existsSync(),
-        isTrue,
-      );
-      expect(File(p.join(docsDir.path, 'drafts.db')).existsSync(), isFalse);
-    });
+        // drafts.db must live under ApplicationSupport/drafts/drafts.db, not Documents
+        final supportDir = await getApplicationSupportDirectory();
+        final docsDir = await getApplicationDocumentsDirectory();
+        expect(
+          File(p.join(supportDir.path, 'drafts', 'drafts.db')).existsSync(),
+          isTrue,
+        );
+        expect(File(p.join(docsDir.path, 'drafts.db')).existsSync(), isFalse);
+      },
+    );
 
     test(
         'partial KV migration preserves unreadable or unparseable keys without setting migrated flag',
@@ -217,6 +224,50 @@ void main() {
         draftService.getAllMediaPathsInDrafts(),
         throwsStateError,
       );
+    });
+
+    test(
+        'does not mark kDraftsSqliteMigratedKey when empty and kKvEngineMigratedKey is false',
+        () async {
+      await draftService.resetForTesting();
+      SharedPreferences.setMockInitialValues({});
+      prefsService.resetForTesting();
+      await prefsService.init();
+      final sp = await SharedPreferences.getInstance();
+      await sp.remove(kKvEngineMigratedKey);
+      await sp.remove(kDraftsSqliteMigratedKey);
+
+      expect(await draftService.getLatestDraft(), isNull);
+      expect(prefsService.getBool(kDraftsSqliteMigratedKey), isNot(isTrue));
+    });
+
+    test(
+        'preserves colliding legacy KV draft key instead of silently deleting both',
+        () async {
+      await draftService.resetForTesting();
+      SharedPreferences.setMockInitialValues({
+        kKvEngineMigratedKey: true,
+        'draft_foo.bar': jsonEncode({
+          'plainText': 'First draft',
+          'timestamp': '2026-04-04T08:00:00.000Z',
+        }),
+        'draft_foo_bar': jsonEncode({
+          'plainText': 'Colliding second draft',
+          'timestamp': '2026-04-04T09:00:00.000Z',
+        }),
+      });
+      prefsService.resetForTesting();
+      await prefsService.init();
+
+      final migrated = await draftService.getDraft('foo_bar');
+      expect(migrated, isNotNull);
+
+      final remainingDraftKeys = prefsService
+          .getAllKeysStrict()
+          .where((k) => k.startsWith('draft_'))
+          .toList();
+      expect(remainingDraftKeys, hasLength(1));
+      expect(prefsService.getBool(kDraftsSqliteMigratedKey), isNot(isTrue));
     });
   });
 }

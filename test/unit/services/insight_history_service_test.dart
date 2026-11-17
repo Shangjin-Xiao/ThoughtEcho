@@ -77,10 +77,7 @@ void main() {
       );
       await reloadedService.ensureLoaded();
       expect(reloadedService.insights.length, 1);
-      expect(
-        reloadedService.insights.first.insight,
-        '测试洞察：这周的记录显示了积极的成长趋势',
-      );
+      expect(reloadedService.insights.first.insight, '测试洞察：这周的记录显示了积极的成长趋势');
     });
 
     test('should get recent period insight', () async {
@@ -248,48 +245,52 @@ void main() {
     });
 
     test(
-        'migrates legacy KV periodic_insights_history to SQLite and removes key',
-        () async {
-      await aiDbService.deleteAllPeriodicInsights();
-      SharedPreferences.resetStatic();
-      SharedPreferences.setMockInitialValues({
-        kKvEngineMigratedKey: true,
-        'periodic_insights_history': json.encode([
-          {
-            'insight': '历史洞察A',
-            'periodType': 'week',
-            'periodLabel': '第1周',
-            'createdAt': '2026-07-01T10:00:00.000Z',
-            'isAiGenerated': true,
-            'dataSignature': 'legacy_sig_a',
-          },
-          {
-            'insight': '历史洞察B',
-            'periodType': 'month',
-            'periodLabel': '7月',
-            'createdAt': '2026-07-15T10:00:00.000Z',
-            'isAiGenerated': true,
-            'dataSignature': 'legacy_sig_b',
-          },
-        ]),
-      });
-      prefsService.resetForTesting();
-      await prefsService.init();
-      final prefs = await SharedPreferences.getInstance();
-      final freshSettings = SettingsService(prefs);
+      'migrates legacy KV periodic_insights_history to SQLite and removes key',
+      () async {
+        await aiDbService.deleteAllPeriodicInsights();
+        SharedPreferences.resetStatic();
+        SharedPreferences.setMockInitialValues({
+          kKvEngineMigratedKey: true,
+          'periodic_insights_history': json.encode([
+            {
+              'insight': '历史洞察A',
+              'periodType': 'week',
+              'periodLabel': '第1周',
+              'createdAt': '2026-07-01T10:00:00.000Z',
+              'isAiGenerated': true,
+              'dataSignature': 'legacy_sig_a',
+            },
+            {
+              'insight': '历史洞察B',
+              'periodType': 'month',
+              'periodLabel': '7月',
+              'createdAt': '2026-07-15T10:00:00.000Z',
+              'isAiGenerated': true,
+              'dataSignature': 'legacy_sig_b',
+            },
+          ]),
+        });
+        prefsService.resetForTesting();
+        await prefsService.init();
+        final prefs = await SharedPreferences.getInstance();
+        final freshSettings = SettingsService(prefs);
 
-      final migratedService = InsightHistoryService(
-        settingsService: freshSettings,
-        aiAnalysisDbService: aiDbService,
-      );
-      await migratedService.ensureLoaded();
+        final migratedService = InsightHistoryService(
+          settingsService: freshSettings,
+          aiAnalysisDbService: aiDbService,
+        );
+        await migratedService.ensureLoaded();
 
-      expect(migratedService.insights.length, 2);
-      expect(migratedService.insights.first.insight, '历史洞察B');
-      expect(migratedService.insights.last.insight, '历史洞察A');
-      expect(prefsService.containsKey('periodic_insights_history'), isFalse);
-      expect(prefsService.getBool(kPeriodicInsightsSqliteMigratedKey), isTrue);
-    });
+        expect(migratedService.insights.length, 2);
+        expect(migratedService.insights.first.insight, '历史洞察B');
+        expect(migratedService.insights.last.insight, '历史洞察A');
+        expect(prefsService.containsKey('periodic_insights_history'), isFalse);
+        expect(
+          prefsService.getBool(kPeriodicInsightsSqliteMigratedKey),
+          isTrue,
+        );
+      },
+    );
 
     test(
         'partial corrupt legacy KV entries preserve KV key without blocking valid or SQLite insights',
@@ -374,6 +375,31 @@ void main() {
       await service.ensureLoaded();
       expect(service.insights.length, 1);
       expect(service.insights.first.insight, '恢复后可读洞察');
+    });
+
+    test(
+        'does not set kPeriodicInsightsSqliteMigratedKey when empty and kKvEngineMigratedKey is false',
+        () async {
+      await aiDbService.deleteAllPeriodicInsights();
+      SharedPreferences.resetStatic();
+      SharedPreferences.setMockInitialValues({});
+      prefsService.resetForTesting();
+      await prefsService.init();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(kKvEngineMigratedKey);
+      await prefs.remove(kPeriodicInsightsSqliteMigratedKey);
+      final freshSettings = SettingsService(prefs);
+
+      final service = InsightHistoryService(
+        settingsService: freshSettings,
+        aiAnalysisDbService: aiDbService,
+      );
+      await service.ensureLoaded();
+
+      expect(
+        prefsService.getBool(kPeriodicInsightsSqliteMigratedKey),
+        isNot(isTrue),
+      );
     });
   });
 }

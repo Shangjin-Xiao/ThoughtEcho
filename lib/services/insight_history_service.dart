@@ -185,7 +185,9 @@ class InsightHistoryService extends ChangeNotifier {
       }
     }
 
-    if (prefsReady) {
+    if (prefsReady &&
+        (prefs.getBool(kKvEngineMigratedKey) == true ||
+            (jsonString != null && jsonString.isNotEmpty))) {
       await prefs.setBool(kPeriodicInsightsSqliteMigratedKey, true);
     }
   }
