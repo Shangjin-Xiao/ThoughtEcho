@@ -1147,5 +1147,66 @@ void main() {
         isEmpty,
       );
     });
+
+    test('deleteTag 对1小时偏移时间单调递增且对>24h未来时间重置为当前时间', () async {
+      DatabaseService.clearTestDatabase();
+      DatabaseService.setTestDatabase(db);
+      addTearDown(DatabaseService.clearTestDatabase);
+
+      final now = DateTime.now().toUtc();
+      final skewed1h = now.add(const Duration(hours: 1)).toIso8601String();
+      final corruptedFuture =
+          now.add(const Duration(days: 30)).toIso8601String();
+
+      await db.insert('categories', {
+        'id': 'cat_skew',
+        'name': 'SkewTag',
+        'last_modified': now.toIso8601String(),
+      });
+      await db.insert('quotes', {
+        'id': 'q_skew_1h',
+        'content': 'Skewed 1h',
+        'date': now.toIso8601String(),
+        'last_modified': skewed1h,
+        'category_id': 'cat_skew',
+      });
+      await db.insert('quotes', {
+        'id': 'q_corrupted_30d',
+        'content': 'Corrupted 30d',
+        'date': now.toIso8601String(),
+        'last_modified': corruptedFuture,
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'q_corrupted_30d',
+        'tag_id': 'cat_skew',
+      });
+
+      await DatabaseService().deleteTag('cat_skew');
+
+      final row1h = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['q_skew_1h'],
+      ))
+          .first;
+      final row30d = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['q_corrupted_30d'],
+      ))
+          .first;
+
+      expect(
+        DateTime.parse(row1h['last_modified'] as String)
+            .isAfter(DateTime.parse(skewed1h)),
+        isTrue,
+      );
+      expect(
+        DateTime.parse(row30d['last_modified'] as String)
+            .difference(now)
+            .inHours,
+        lessThanOrEqualTo(1),
+      );
+    });
   });
 }

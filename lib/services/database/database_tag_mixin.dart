@@ -321,15 +321,8 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
 
     await db.transaction((txn) async {
       final nowUtc = DateTime.now().toUtc();
-
-      String nextModifiedFor(String? existingTs) {
-        final parsed =
-            existingTs != null ? DateTime.tryParse(existingTs)?.toUtc() : null;
-        if (parsed != null && !parsed.isBefore(nowUtc)) {
-          return parsed.add(const Duration(milliseconds: 1)).toIso8601String();
-        }
-        return nowUtc.toIso8601String();
-      }
+      final nowIso = nowUtc.toIso8601String();
+      final maxAllowedFuture = nowUtc.add(const Duration(hours: 24));
 
       // 1. 检查是否有笔记使用此标签（category_id 或 quote_tags）
       final quotesUsingCategory = await txn.query(
@@ -345,33 +338,48 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         columns: ['quote_id'],
       );
 
-      final categoryQuoteIds = {
+      final affectedLastModified = <String, String?>{
         for (final row in quotesUsingCategory)
-          if (row['id'] != null) row['id'].toString(),
+          if (row['id'] != null)
+            row['id'].toString(): row['last_modified']?.toString(),
       };
-      final tagOnlyQuoteIds = {
-        for (final row in quoteTagRows)
-          if (row['quote_id'] != null) row['quote_id'].toString(),
-      }.difference(categoryQuoteIds).toList();
-
-      // 2. 清理使用此标签的笔记的category_id字段并单调推进 last_modified 以触发同步传播
-      if (quotesUsingCategory.isNotEmpty) {
-        final catBatch = txn.batch();
-        for (final row in quotesUsingCategory) {
-          final qId = row['id']?.toString();
-          if (qId == null) continue;
-          catBatch.update(
-            'quotes',
-            {
-              'category_id': null,
-              'last_modified':
-                  nextModifiedFor(row['last_modified']?.toString()),
-            },
-            where: 'id = ?',
-            whereArgs: [qId],
-          );
+      final tagOnlyQuoteIds = <String>[];
+      for (final row in quoteTagRows) {
+        final qId = row['quote_id']?.toString();
+        if (qId != null && !affectedLastModified.containsKey(qId)) {
+          tagOnlyQuoteIds.add(qId);
         }
-        await catBatch.commit(noResult: true);
+      }
+
+      const int chunkSize = 400;
+      for (int i = 0; i < tagOnlyQuoteIds.length; i += chunkSize) {
+        final end = (i + chunkSize < tagOnlyQuoteIds.length)
+            ? i + chunkSize
+            : tagOnlyQuoteIds.length;
+        final chunk = tagOnlyQuoteIds.sublist(i, end);
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = await txn.query(
+          'quotes',
+          columns: ['id', 'last_modified'],
+          where: 'id IN ($placeholders)',
+          whereArgs: chunk,
+        );
+        for (final row in rows) {
+          final qId = row['id']?.toString();
+          if (qId != null) {
+            affectedLastModified[qId] = row['last_modified']?.toString();
+          }
+        }
+      }
+
+      // 2. 集合化清理使用此标签的笔记的 category_id 字段
+      if (quotesUsingCategory.isNotEmpty) {
+        await txn.update(
+          'quotes',
+          {'category_id': null},
+          where: 'category_id = ?',
+          whereArgs: [id],
+        );
         logDebug('已清理 ${quotesUsingCategory.length} 条笔记的标签关联');
       }
 
@@ -386,37 +394,61 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         logDebug('已删除 $deletedTagRelations 条标签关联记录');
       }
 
-      // 推进仅通过 quote_tags 关联该标签的笔记 last_modified，确保 LWW 同步能感知删标签且不回退已有时间戳
-      const int chunkSize = 400;
-      for (int i = 0; i < tagOnlyQuoteIds.length; i += chunkSize) {
-        final end = (i + chunkSize < tagOnlyQuoteIds.length)
+      // 4. 分块集合化推进受影响笔记的 last_modified：
+      //    - 正常或超前>24h（损坏）的本地时间戳统一置为 nowIso，防止被 LWW 未来时间门禁拒收；
+      //    - 处于允许窗口内（now <= ts <= now+24h）的时间戳单调递增 +1ms，不回退。
+      final normalIds = <String>[];
+      final skewedUpdates = <MapEntry<String, String>>[];
+      for (final entry in affectedLastModified.entries) {
+        final parsed = entry.value != null
+            ? DateTime.tryParse(entry.value!)?.toUtc()
+            : null;
+        if (parsed != null &&
+            !parsed.isBefore(nowUtc) &&
+            !parsed.isAfter(maxAllowedFuture)) {
+          final bumped = parsed.add(const Duration(milliseconds: 1));
+          if (!bumped.isAfter(maxAllowedFuture)) {
+            skewedUpdates.add(MapEntry(entry.key, bumped.toIso8601String()));
+          } else {
+            normalIds.add(entry.key);
+          }
+        } else {
+          normalIds.add(entry.key);
+        }
+      }
+
+      for (int i = 0; i < normalIds.length; i += chunkSize) {
+        final end = (i + chunkSize < normalIds.length)
             ? i + chunkSize
-            : tagOnlyQuoteIds.length;
-        final chunk = tagOnlyQuoteIds.sublist(i, end);
+            : normalIds.length;
+        final chunk = normalIds.sublist(i, end);
         final placeholders = List.filled(chunk.length, '?').join(',');
-        final rows = await txn.query(
+        await txn.update(
           'quotes',
-          columns: ['id', 'last_modified'],
+          {'last_modified': nowIso},
           where: 'id IN ($placeholders)',
           whereArgs: chunk,
         );
-        final tagBatch = txn.batch();
-        for (final row in rows) {
-          final qId = row['id']?.toString();
-          if (qId == null) continue;
-          tagBatch.update(
-            'quotes',
-            {
-              'last_modified': nextModifiedFor(row['last_modified']?.toString())
-            },
-            where: 'id = ?',
-            whereArgs: [qId],
-          );
-        }
-        await tagBatch.commit(noResult: true);
       }
 
-      // 4. 最后删除标签本身
+      for (int i = 0; i < skewedUpdates.length; i += chunkSize) {
+        final end = (i + chunkSize < skewedUpdates.length)
+            ? i + chunkSize
+            : skewedUpdates.length;
+        final chunk = skewedUpdates.sublist(i, end);
+        final skewBatch = txn.batch();
+        for (final item in chunk) {
+          skewBatch.update(
+            'quotes',
+            {'last_modified': item.value},
+            where: 'id = ?',
+            whereArgs: [item.key],
+          );
+        }
+        await skewBatch.commit(noResult: true);
+      }
+
+      // 5. 最后删除标签本身
       await txn.delete('categories', where: 'id = ?', whereArgs: [id]);
     });
 
