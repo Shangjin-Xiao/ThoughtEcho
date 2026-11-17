@@ -7,6 +7,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_backup_service.dart';
 import 'package:thoughtecho/services/database_schema_manager.dart';
+import 'package:thoughtecho/services/database_service.dart';
 
 class FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -496,6 +497,716 @@ void main() {
       final quotes = await db.query('quotes');
       expect(quotes, hasLength(1));
       expect(quotes.first['content'], 'LWW 异构 Map 笔记');
+    });
+  });
+
+  group('未来时间戳防污染保护 (>24h)', () {
+    test('已存在的本地笔记与分类（按ID及同名匹配）不会被超前24小时的远端数据覆盖', () async {
+      final pastTs = DateTime.now()
+          .toUtc()
+          .subtract(const Duration(days: 5))
+          .toIso8601String();
+      final futureTs = DateTime.now()
+          .toUtc()
+          .add(const Duration(hours: 25))
+          .toIso8601String();
+
+      await db.insert('categories', {
+        'id': 'cat_id_local',
+        'name': 'LocalById',
+        'last_modified': pastTs,
+      });
+      await db.insert('categories', {
+        'id': 'cat_name_local',
+        'name': 'SameNameTag',
+        'icon_name': 'local_icon',
+        'last_modified': pastTs,
+      });
+      await db.insert('quotes', {
+        'id': 'quote_local_1',
+        'content': 'Local Intact Content',
+        'date': pastTs,
+        'last_modified': pastTs,
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'quote_local_1',
+        'tag_id': 'cat_id_local',
+      });
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [
+          {
+            'id': 'cat_id_local',
+            'name': 'HijackedByFutureId',
+            'last_modified': futureTs,
+          },
+          {
+            'id': 'cat_name_remote_other_id',
+            'name': 'samenametag',
+            'icon_name': 'hijacked_icon',
+            'last_modified': futureTs,
+          },
+        ],
+        'quotes': [
+          {
+            'id': 'quote_local_1',
+            'content': 'Hijacked Future Content',
+            'date': futureTs,
+            'last_modified': futureTs,
+            'tag_ids': 'cat_name_remote_other_id',
+          },
+        ],
+      });
+
+      expect(report.updatedCategories, 0);
+      expect(report.skippedCategories, 2);
+      expect(report.updatedQuotes, 0);
+      expect(report.skippedQuotes, 1);
+
+      final catById = (await db.query(
+        'categories',
+        where: 'id = ?',
+        whereArgs: ['cat_id_local'],
+      ))
+          .first;
+      expect(catById['name'], 'LocalById');
+
+      final catByName = (await db.query(
+        'categories',
+        where: 'id = ?',
+        whereArgs: ['cat_name_local'],
+      ))
+          .first;
+      expect(catByName['icon_name'], 'local_icon');
+
+      final quote = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['quote_local_1'],
+      ))
+          .first;
+      expect(quote['content'], 'Local Intact Content');
+      expect(quote['last_modified'], pastTs);
+
+      final tags = await db.query(
+        'quote_tags',
+        where: 'quote_id = ?',
+        whereArgs: ['quote_local_1'],
+      );
+      expect(tags, hasLength(1));
+      expect(tags.first['tag_id'], 'cat_id_local');
+    });
+
+    test('新增远端笔记与分类携带 >24h 未来时间戳时会被钳制到当前时间，确保后续本地编辑可胜出', () async {
+      final beforeImport = DateTime.now().toUtc();
+      final futureTs =
+          beforeImport.add(const Duration(days: 365)).toIso8601String();
+      final pastDate =
+          beforeImport.subtract(const Duration(days: 3)).toIso8601String();
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [
+          {
+            'id': 'cat_new_future',
+            'name': 'New Future Category',
+            'last_modified': futureTs,
+          },
+        ],
+        'quotes': [
+          {
+            'id': 'quote_new_future_all',
+            'content': 'Future Note Clamped',
+            'date': futureTs,
+            'last_modified': futureTs,
+            'is_deleted': 1,
+            'deleted_at': futureTs,
+          },
+          {
+            'id': 'quote_new_future_lastmod_only',
+            'content': 'Past Date Future LastModified',
+            'date': pastDate,
+            'last_modified': futureTs,
+          },
+        ],
+      });
+      final afterImport = DateTime.now().toUtc();
+
+      expect(report.insertedCategories, 1);
+      expect(report.insertedQuotes, 2);
+
+      void expectClampedNearNow(String? ts) {
+        expect(ts, isNotNull);
+        final parsed = DateTime.parse(ts!).toUtc();
+        expect(
+          parsed.isBefore(beforeImport.subtract(const Duration(seconds: 1))),
+          isFalse,
+        );
+        expect(
+          parsed.isAfter(afterImport.add(const Duration(seconds: 5))),
+          isFalse,
+        );
+      }
+
+      final cat = (await db.query(
+        'categories',
+        where: 'id = ?',
+        whereArgs: ['cat_new_future'],
+      ))
+          .first;
+      expectClampedNearNow(cat['last_modified'] as String?);
+
+      final q1 = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['quote_new_future_all'],
+      ))
+          .first;
+      expectClampedNearNow(q1['last_modified'] as String?);
+      expectClampedNearNow(q1['date'] as String?);
+      expectClampedNearNow(q1['deleted_at'] as String?);
+
+      final q2 = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['quote_new_future_lastmod_only'],
+      ))
+          .first;
+      expectClampedNearNow(q2['last_modified'] as String?);
+      expect(q2['date'], pastDate);
+
+      // 模拟随后发生的本地编辑，再合并一份携带旧/钳制时间戳的同步包，本地编辑应当胜出
+      final localEditTs =
+          afterImport.add(const Duration(seconds: 10)).toIso8601String();
+      await db.update(
+        'quotes',
+        {
+          'content': 'Local Edited Content',
+          'last_modified': localEditTs,
+        },
+        where: 'id = ?',
+        whereArgs: ['quote_new_future_lastmod_only'],
+      );
+
+      final followupReport = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [
+          {
+            'id': 'quote_new_future_lastmod_only',
+            'content': 'Stale Remote Content',
+            'date': pastDate,
+            'last_modified': q2['last_modified'],
+          },
+        ],
+      });
+      expect(followupReport.skippedQuotes, 1);
+      final q2After = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['quote_new_future_lastmod_only'],
+      ))
+          .first;
+      expect(q2After['content'], 'Local Edited Content');
+    });
+
+    test('超过24小时的远端 tombstone 在 LWW 合并与增量导入中均被忽略且不落库', () async {
+      final pastTs = DateTime.now()
+          .toUtc()
+          .subtract(const Duration(days: 2))
+          .toIso8601String();
+      final futureTs = DateTime.now()
+          .toUtc()
+          .add(const Duration(hours: 25))
+          .toIso8601String();
+
+      await db.insert('quotes', {
+        'id': 'quote_protected_1',
+        'content': 'Protected By Future Tombstone Guard',
+        'date': pastTs,
+        'last_modified': pastTs,
+      });
+
+      final mergeReport = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [],
+        'tombstones': [
+          {
+            'quote_id': 'quote_protected_1',
+            'deleted_at': futureTs,
+            'device_id': 'clock-skewed-peer',
+          },
+        ],
+      });
+
+      expect(mergeReport.deletedByTombstoneQuotes, 0);
+      expect(
+        await db.query(
+          'quotes',
+          where: 'id = ?',
+          whereArgs: ['quote_protected_1'],
+        ),
+        hasLength(1),
+      );
+      expect(await db.query('quote_tombstones'), isEmpty);
+
+      await service.importDataFromMap(
+        db,
+        {
+          'categories': [],
+          'quotes': [],
+          'tombstones': [
+            {
+              'quote_id': 'quote_protected_1',
+              'deleted_at': futureTs,
+              'device_id': 'clock-skewed-peer',
+            },
+          ],
+        },
+        clearExisting: false,
+      );
+
+      expect(
+        await db.query(
+          'quotes',
+          where: 'id = ?',
+          whereArgs: ['quote_protected_1'],
+        ),
+        hasLength(1),
+      );
+      expect(await db.query('quote_tombstones'), isEmpty);
+    });
+
+    test('携带 >24h 未来时间戳的远端笔记不能复活本地已删除的 tombstone', () async {
+      final pastDeleteTs = DateTime.now()
+          .toUtc()
+          .subtract(const Duration(days: 1))
+          .toIso8601String();
+      final futureTs = DateTime.now()
+          .toUtc()
+          .add(const Duration(hours: 25))
+          .toIso8601String();
+
+      await db.insert('quote_tombstones', {
+        'quote_id': 'quote_deleted_locally',
+        'deleted_at': pastDeleteTs,
+        'device_id': 'local-device',
+      });
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [
+          {
+            'id': 'quote_deleted_locally',
+            'content': 'Zombie Future Quote',
+            'date': futureTs,
+            'last_modified': futureTs,
+          },
+        ],
+      });
+
+      expect(report.insertedQuotes, 0);
+      expect(report.skippedQuotes, 1);
+      expect(
+        await db.query(
+          'quotes',
+          where: 'id = ?',
+          whereArgs: ['quote_deleted_locally'],
+        ),
+        isEmpty,
+      );
+      final tombstones = await db.query(
+        'quote_tombstones',
+        where: 'quote_id = ?',
+        whereArgs: ['quote_deleted_locally'],
+      );
+      expect(tombstones, hasLength(1));
+      expect(tombstones.first['deleted_at'], pastDeleteTs);
+    });
+
+    test('钳制新增笔记与分类的未来时间戳时计入 sanitizedFields', () async {
+      final now = DateTime.now().toUtc();
+      final futureTs = now.add(const Duration(days: 60)).toIso8601String();
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [
+          {
+            'id': 'cat_future',
+            'name': 'Future Category',
+            'last_modified': futureTs,
+          },
+        ],
+        'quotes': [
+          {
+            'id': 'quote_future_new',
+            'content': 'New Future Quote',
+            'date': futureTs,
+            'last_modified': futureTs,
+          },
+        ],
+      });
+
+      expect(report.insertedCategories, 1);
+      expect(report.insertedQuotes, 1);
+      // 1 (category.last_modified) + 2 (quote.date, quote.last_modified)
+      expect(report.sanitizedFields, 3);
+
+      final catRows = await db.query(
+        'categories',
+        where: 'id = ?',
+        whereArgs: ['cat_future'],
+      );
+      expect(
+        DateTime.parse(catRows.first['last_modified'] as String)
+            .difference(now)
+            .inHours,
+        lessThanOrEqualTo(1),
+      );
+    });
+
+    test('更新已有笔记时同样钳制未来的 deleted_at/date 并计入 sanitizedFields', () async {
+      final now = DateTime.now().toUtc();
+      final localOld = now.subtract(const Duration(hours: 2)).toIso8601String();
+      final remoteValidNewer =
+          now.subtract(const Duration(minutes: 5)).toIso8601String();
+      final futureDeletedAt =
+          now.add(const Duration(days: 365)).toIso8601String();
+
+      await db.insert('quotes', {
+        'id': 'quote_existing_update',
+        'content': 'Original',
+        'date': localOld,
+        'last_modified': localOld,
+      });
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [
+          {
+            'id': 'quote_existing_update',
+            'content': 'Updated Soft Deleted',
+            'date': localOld,
+            'last_modified': remoteValidNewer,
+            'is_deleted': 1,
+            'deleted_at': futureDeletedAt,
+          },
+        ],
+      });
+
+      expect(report.updatedQuotes, 1);
+      expect(report.sanitizedFields, 1);
+
+      final rows = await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['quote_existing_update'],
+      );
+      final clampedDeletedAt =
+          DateTime.parse(rows.first['deleted_at'] as String);
+      expect(clampedDeletedAt.difference(now).inHours, lessThanOrEqualTo(1));
+    });
+
+    test('远程更新显式清空标签时，同步清理本地 quote_tags 旧关联', () async {
+      await db.insert('categories', {
+        'id': 'cat_a',
+        'name': 'Tag A',
+        'last_modified': '2026-01-01T00:00:00.000Z',
+      });
+      await db.insert('quotes', {
+        'id': 'quote_tag_clear',
+        'content': 'Tagged quote',
+        'date': '2026-01-01T00:00:00.000Z',
+        'last_modified': '2026-01-01T00:00:00.000Z',
+        'category_id': 'cat_a',
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'quote_tag_clear',
+        'tag_id': 'cat_a',
+      });
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [
+          {
+            'id': 'quote_tag_clear',
+            'content': 'Tagged quote',
+            'date': '2026-01-01T00:00:00.000Z',
+            'last_modified': '2026-01-02T00:00:00.000Z',
+            'category_id': null,
+            'tag_ids': '',
+          },
+        ],
+      });
+
+      expect(report.updatedQuotes, 1);
+      final remainingTags = await db.query(
+        'quote_tags',
+        where: 'quote_id = ?',
+        whereArgs: ['quote_tag_clear'],
+      );
+      expect(remainingTags, isEmpty);
+    });
+
+    test('远程更新包含非字符串/非列表的 tag_ids: null 时，不误删本地 quote_tags', () async {
+      await db.insert('categories', {
+        'id': 'cat_keep_null',
+        'name': 'Keep Tag',
+        'last_modified': '2026-01-01T00:00:00.000Z',
+      });
+      await db.insert('quotes', {
+        'id': 'quote_tag_null',
+        'content': 'Tagged quote',
+        'date': '2026-01-01T00:00:00.000Z',
+        'last_modified': '2026-01-01T00:00:00.000Z',
+        'category_id': 'cat_keep_null',
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'quote_tag_null',
+        'tag_id': 'cat_keep_null',
+      });
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [
+          {
+            'id': 'quote_tag_null',
+            'content': 'Tagged quote updated',
+            'date': '2026-01-01T00:00:00.000Z',
+            'last_modified': '2026-01-02T00:00:00.000Z',
+            'tag_ids': null,
+          },
+        ],
+      });
+
+      expect(report.updatedQuotes, 1);
+      final remainingTags = await db.query(
+        'quote_tags',
+        where: 'quote_id = ?',
+        whereArgs: ['quote_tag_null'],
+      );
+      expect(remainingTags, hasLength(1));
+    });
+
+    test('全量恢复 (clearExisting: true) 同样拒绝超前24小时的未来 tombstone', () async {
+      final now = DateTime.now().toUtc();
+      final futureDeleteTs =
+          now.add(const Duration(days: 365)).toIso8601String();
+      final validPastTs =
+          now.subtract(const Duration(days: 1)).toIso8601String();
+
+      await service.importDataFromMap(
+        db,
+        {
+          'categories': [],
+          'quotes': [
+            {
+              'id': 'q_normal',
+              'content': 'Normal quote',
+              'date': validPastTs,
+              'last_modified': validPastTs,
+            },
+          ],
+          'tombstones': [
+            {
+              'quote_id': 'q_future_tombstone',
+              'deleted_at': futureDeleteTs,
+            },
+            {
+              'quote_id': 'q_valid_tombstone',
+              'deleted_at': validPastTs,
+            },
+          ],
+        },
+        clearExisting: true,
+      );
+
+      final futureRows = await db.query(
+        'quote_tombstones',
+        where: 'quote_id = ?',
+        whereArgs: ['q_future_tombstone'],
+      );
+      expect(futureRows, isEmpty);
+
+      final validRows = await db.query(
+        'quote_tombstones',
+        where: 'quote_id = ?',
+        whereArgs: ['q_valid_tombstone'],
+      );
+      expect(validRows, hasLength(1));
+    });
+
+    test('LWWDecisionMaker 与合并在本地存在异常未来时间戳时允许正常远端更新修复', () async {
+      final now = DateTime.now().toUtc();
+      final futureLocal = now.add(const Duration(days: 100)).toIso8601String();
+      final normalRemote =
+          now.subtract(const Duration(minutes: 5)).toIso8601String();
+
+      await db.insert('quotes', {
+        'id': 'q_corrupted_local',
+        'content': 'Corrupted local',
+        'date': normalRemote,
+        'last_modified': futureLocal,
+      });
+
+      final report = await service.importDataWithLWWMerge(db, {
+        'categories': [],
+        'quotes': [
+          {
+            'id': 'q_corrupted_local',
+            'content': 'Healed by remote',
+            'date': normalRemote,
+            'last_modified': normalRemote,
+          },
+        ],
+      });
+
+      expect(report.updatedQuotes, 1);
+      final rows = await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['q_corrupted_local'],
+      );
+      expect(rows.first['content'], 'Healed by remote');
+      expect(rows.first['last_modified'], normalRemote);
+    });
+
+    test('deleteTag 推进受影响笔记的 last_modified，使删标签可通过 LWW 同步到对端', () async {
+      DatabaseService.clearTestDatabase();
+      DatabaseService.setTestDatabase(db);
+      addTearDown(DatabaseService.clearTestDatabase);
+
+      const oldTs = '2026-01-01T00:00:00.000Z';
+      await db.insert('categories', {
+        'id': 'cat_del',
+        'name': 'ToDelete',
+        'last_modified': oldTs,
+      });
+      await db.insert('categories', {
+        'id': 'cat_keep',
+        'name': 'ToKeep',
+        'last_modified': oldTs,
+      });
+      await db.insert('quotes', {
+        'id': 'q_primary_cat',
+        'content': 'Primary cat note',
+        'date': oldTs,
+        'last_modified': oldTs,
+        'category_id': 'cat_del',
+      });
+      await db.insert('quotes', {
+        'id': 'q_tag_only',
+        'content': 'Tag only note',
+        'date': oldTs,
+        'last_modified': oldTs,
+        'category_id': 'cat_keep',
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'q_primary_cat',
+        'tag_id': 'cat_del',
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'q_tag_only',
+        'tag_id': 'cat_del',
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'q_tag_only',
+        'tag_id': 'cat_keep',
+      });
+
+      final dbService = DatabaseService();
+      await dbService.deleteTag('cat_del');
+
+      final q1 = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['q_primary_cat'],
+      ))
+          .first;
+      final q2 = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['q_tag_only'],
+      ))
+          .first;
+
+      expect(q1['category_id'], isNull);
+      expect(
+        DateTime.parse(q1['last_modified'] as String)
+            .isAfter(DateTime.parse(oldTs)),
+        isTrue,
+      );
+      expect(
+        DateTime.parse(q2['last_modified'] as String)
+            .isAfter(DateTime.parse(oldTs)),
+        isTrue,
+      );
+      expect(
+        await db.query(
+          'quote_tags',
+          where: 'tag_id = ?',
+          whereArgs: ['cat_del'],
+        ),
+        isEmpty,
+      );
+    });
+
+    test('deleteTag 对1小时偏移时间单调递增且对>24h未来时间重置为当前时间', () async {
+      DatabaseService.clearTestDatabase();
+      DatabaseService.setTestDatabase(db);
+      addTearDown(DatabaseService.clearTestDatabase);
+
+      final now = DateTime.now().toUtc();
+      final skewed1h = now.add(const Duration(hours: 1)).toIso8601String();
+      final corruptedFuture =
+          now.add(const Duration(days: 30)).toIso8601String();
+
+      await db.insert('categories', {
+        'id': 'cat_skew',
+        'name': 'SkewTag',
+        'last_modified': now.toIso8601String(),
+      });
+      await db.insert('quotes', {
+        'id': 'q_skew_1h',
+        'content': 'Skewed 1h',
+        'date': now.toIso8601String(),
+        'last_modified': skewed1h,
+        'category_id': 'cat_skew',
+      });
+      await db.insert('quotes', {
+        'id': 'q_corrupted_30d',
+        'content': 'Corrupted 30d',
+        'date': now.toIso8601String(),
+        'last_modified': corruptedFuture,
+      });
+      await db.insert('quote_tags', {
+        'quote_id': 'q_corrupted_30d',
+        'tag_id': 'cat_skew',
+      });
+
+      await DatabaseService().deleteTag('cat_skew');
+
+      final row1h = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['q_skew_1h'],
+      ))
+          .first;
+      final row30d = (await db.query(
+        'quotes',
+        where: 'id = ?',
+        whereArgs: ['q_corrupted_30d'],
+      ))
+          .first;
+
+      expect(
+        DateTime.parse(row1h['last_modified'] as String)
+            .isAfter(DateTime.parse(skewed1h)),
+        isTrue,
+      );
+      expect(
+        DateTime.parse(row30d['last_modified'] as String)
+            .difference(now)
+            .inHours,
+        lessThanOrEqualTo(1),
+      );
     });
   });
 }

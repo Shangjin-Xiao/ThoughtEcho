@@ -61,6 +61,48 @@ void main() {
       expect(normalized, equals('1970-01-01T00:00:00.000Z'));
     });
 
+    test('LWW 拒绝超过24小时的未来时间戳并支持新记录钳制', () {
+      final refNow = DateTime.utc(2026, 6, 1, 12, 0, 0);
+      final localTs =
+          refNow.subtract(const Duration(hours: 1)).toIso8601String();
+      final future24h1s = refNow
+          .add(LWWUtils.maxFutureSkew + const Duration(seconds: 1))
+          .toIso8601String();
+      final future23h = refNow.add(const Duration(hours: 23)).toIso8601String();
+
+      final rejected = LWWDecisionMaker.makeDecision(
+        localTimestamp: localTs,
+        remoteTimestamp: future24h1s,
+        now: refNow,
+      );
+      expect(rejected.shouldUseLocal, isTrue);
+      expect(rejected.clockSkew, greaterThan(LWWUtils.maxFutureSkew));
+
+      // 钳制后落库的时间戳回到 refNow，使后续本地编辑能够正常胜出
+      final clamped = LWWUtils.clampFutureTimestamp(future24h1s, now: refNow);
+      expect(clamped, refNow.toIso8601String());
+      final laterLocalEdit =
+          refNow.add(const Duration(seconds: 5)).toIso8601String();
+      expect(
+        LWWDecisionMaker.makeDecision(
+          localTimestamp: laterLocalEdit,
+          remoteTimestamp: clamped,
+          now: refNow,
+        ).shouldUseLocal,
+        isTrue,
+      );
+
+      // 23小时内的小幅正向时钟偏移仍允许按常规 LWW 合并
+      expect(
+        LWWDecisionMaker.makeDecision(
+          localTimestamp: localTs,
+          remoteTimestamp: future23h,
+          now: refNow,
+        ).shouldUseRemote,
+        isTrue,
+      );
+    });
+
     test('StringUtils 富文本嵌入符清理与文本预览格式化', () {
       final cleaned = StringUtils.removeObjectReplacementChar(
         'Hello\u{FFFC} World!',

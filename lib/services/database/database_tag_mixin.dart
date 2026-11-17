@@ -320,15 +320,59 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
     final db = database;
 
     await db.transaction((txn) async {
-      // 1. 检查是否有笔记使用此标签
+      final nowUtc = DateTime.now().toUtc();
+      final nowIso = nowUtc.toIso8601String();
+      final maxAllowedFuture = nowUtc.add(const Duration(hours: 24));
+
+      // 1. 检查是否有笔记使用此标签（category_id 或 quote_tags）
       final quotesUsingCategory = await txn.query(
         'quotes',
         where: 'category_id = ?',
         whereArgs: [id],
-        columns: ['id'],
+        columns: ['id', 'last_modified'],
+      );
+      final quoteTagRows = await txn.query(
+        'quote_tags',
+        where: 'tag_id = ?',
+        whereArgs: [id],
+        columns: ['quote_id'],
       );
 
-      // 2. 清理使用此标签的笔记的category_id字段
+      final affectedLastModified = <String, String?>{
+        for (final row in quotesUsingCategory)
+          if (row['id'] != null)
+            row['id'].toString(): row['last_modified']?.toString(),
+      };
+      final tagOnlyQuoteIds = <String>[];
+      for (final row in quoteTagRows) {
+        final qId = row['quote_id']?.toString();
+        if (qId != null && !affectedLastModified.containsKey(qId)) {
+          tagOnlyQuoteIds.add(qId);
+        }
+      }
+
+      const int chunkSize = 400;
+      for (int i = 0; i < tagOnlyQuoteIds.length; i += chunkSize) {
+        final end = (i + chunkSize < tagOnlyQuoteIds.length)
+            ? i + chunkSize
+            : tagOnlyQuoteIds.length;
+        final chunk = tagOnlyQuoteIds.sublist(i, end);
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = await txn.query(
+          'quotes',
+          columns: ['id', 'last_modified'],
+          where: 'id IN ($placeholders)',
+          whereArgs: chunk,
+        );
+        for (final row in rows) {
+          final qId = row['id']?.toString();
+          if (qId != null) {
+            affectedLastModified[qId] = row['last_modified']?.toString();
+          }
+        }
+      }
+
+      // 2. 集合化清理使用此标签的笔记的 category_id 字段
       if (quotesUsingCategory.isNotEmpty) {
         await txn.update(
           'quotes',
@@ -350,7 +394,61 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
         logDebug('已删除 $deletedTagRelations 条标签关联记录');
       }
 
-      // 4. 最后删除标签本身
+      // 4. 分块集合化推进受影响笔记的 last_modified：
+      //    - 正常或超前>24h（损坏）的本地时间戳统一置为 nowIso，防止被 LWW 未来时间门禁拒收；
+      //    - 处于允许窗口内（now <= ts <= now+24h）的时间戳单调递增 +1ms，不回退。
+      final normalIds = <String>[];
+      final skewedUpdates = <MapEntry<String, String>>[];
+      for (final entry in affectedLastModified.entries) {
+        final parsed = entry.value != null
+            ? DateTime.tryParse(entry.value!)?.toUtc()
+            : null;
+        if (parsed != null &&
+            !parsed.isBefore(nowUtc) &&
+            !parsed.isAfter(maxAllowedFuture)) {
+          final bumped = parsed.add(const Duration(milliseconds: 1));
+          if (!bumped.isAfter(maxAllowedFuture)) {
+            skewedUpdates.add(MapEntry(entry.key, bumped.toIso8601String()));
+          } else {
+            normalIds.add(entry.key);
+          }
+        } else {
+          normalIds.add(entry.key);
+        }
+      }
+
+      for (int i = 0; i < normalIds.length; i += chunkSize) {
+        final end = (i + chunkSize < normalIds.length)
+            ? i + chunkSize
+            : normalIds.length;
+        final chunk = normalIds.sublist(i, end);
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        await txn.update(
+          'quotes',
+          {'last_modified': nowIso},
+          where: 'id IN ($placeholders)',
+          whereArgs: chunk,
+        );
+      }
+
+      for (int i = 0; i < skewedUpdates.length; i += chunkSize) {
+        final end = (i + chunkSize < skewedUpdates.length)
+            ? i + chunkSize
+            : skewedUpdates.length;
+        final chunk = skewedUpdates.sublist(i, end);
+        final skewBatch = txn.batch();
+        for (final item in chunk) {
+          skewBatch.update(
+            'quotes',
+            {'last_modified': item.value},
+            where: 'id = ?',
+            whereArgs: [item.key],
+          );
+        }
+        await skewBatch.commit(noResult: true);
+      }
+
+      // 5. 最后删除标签本身
       await txn.delete('categories', where: 'id = ?', whereArgs: [id]);
     });
 

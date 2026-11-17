@@ -3,6 +3,7 @@
 /// 为同步功能提供安全的时间戳比较和解析功能
 class LWWUtils {
   static const String _defaultTimestamp = '1970-01-01T00:00:00.000Z';
+  static const Duration maxFutureSkew = Duration(hours: 24);
 
   /// 解析时间戳，失败时返回Unix纪元时间
   static DateTime parseTimestamp(String? timestamp) {
@@ -86,15 +87,15 @@ class LWWUtils {
 
   /// 检测可能的时钟偏移
   /// 如果remote时间戳比当前时间超前过多，可能存在时钟偏移
-  static Duration? detectClockSkew(String? remoteTimestamp) {
+  static Duration? detectClockSkew(String? remoteTimestamp, {DateTime? now}) {
     if (remoteTimestamp == null || remoteTimestamp.isEmpty) {
       return null;
     }
 
     try {
       final remoteTime = DateTime.parse(remoteTimestamp).toUtc();
-      final now = DateTime.now().toUtc();
-      final difference = remoteTime.difference(now);
+      final refNow = (now ?? DateTime.now()).toUtc();
+      final difference = remoteTime.difference(refNow);
 
       // 如果remote时间戳超前当前时间5分钟以上，认为可能存在时钟偏移
       if (difference.inMinutes > 5) {
@@ -105,6 +106,47 @@ class LWWUtils {
     } catch (e) {
       return null;
     }
+  }
+
+  /// 判断时间戳是否超前当前时间过多（严格超过 [threshold]，默认 24 小时）
+  static bool isExcessiveFutureTimestamp(
+    String? timestamp, {
+    DateTime? now,
+    Duration threshold = maxFutureSkew,
+  }) {
+    if (timestamp == null || timestamp.isEmpty) {
+      return false;
+    }
+
+    try {
+      final parsed = DateTime.parse(timestamp).toUtc();
+      final refNow = (now ?? DateTime.now()).toUtc();
+      return parsed.difference(refNow) > threshold;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 将超前过多的未来时间戳钳制到当前 UTC 时间
+  static String clampFutureTimestamp(
+    String? timestamp, {
+    DateTime? now,
+    Duration threshold = maxFutureSkew,
+  }) {
+    if (!isValidTimestamp(timestamp)) {
+      return normalizeTimestamp(timestamp);
+    }
+
+    final refNow = (now ?? DateTime.now()).toUtc();
+    if (isExcessiveFutureTimestamp(
+      timestamp,
+      now: refNow,
+      threshold: threshold,
+    )) {
+      return refNow.toIso8601String();
+    }
+
+    return normalizeTimestamp(timestamp);
   }
 
   /// 验证时间戳格式是否正确
@@ -198,9 +240,42 @@ class LWWDecisionMaker {
     String? localContent,
     String? remoteContent,
     bool checkContentSimilarity = false,
+    DateTime? now,
   }) {
+    final refNow = (now ?? DateTime.now()).toUtc();
     // 检测时钟偏移
-    final clockSkew = LWWUtils.detectClockSkew(remoteTimestamp);
+    final clockSkew = LWWUtils.detectClockSkew(remoteTimestamp, now: refNow);
+
+    final remoteIsExcessiveFuture = LWWUtils.isExcessiveFutureTimestamp(
+      remoteTimestamp,
+      now: refNow,
+    );
+    final localIsExcessiveFuture = LWWUtils.isExcessiveFutureTimestamp(
+      localTimestamp,
+      now: refNow,
+    );
+
+    if (remoteIsExcessiveFuture) {
+      return LWWMergeDecision(
+        decision: LWWDecision.useLocal,
+        reason: 'Remote时间戳超前超过24小时，拒绝未来时间戳覆盖 ($remoteTimestamp)',
+        localTimestamp: localTimestamp,
+        remoteTimestamp: remoteTimestamp,
+        clockSkew: clockSkew,
+      );
+    }
+
+    if (localIsExcessiveFuture &&
+        LWWUtils.isValidTimestamp(remoteTimestamp) &&
+        !LWWUtils.isDefaultTimestamp(remoteTimestamp)) {
+      return LWWMergeDecision(
+        decision: LWWDecision.useRemote,
+        reason: 'Local时间戳超前超过24小时，允许正常Remote数据覆盖 ($localTimestamp)',
+        localTimestamp: localTimestamp,
+        remoteTimestamp: remoteTimestamp,
+        clockSkew: clockSkew,
+      );
+    }
 
     // 比较时间戳
     final comparison = LWWUtils.compareTimestamps(

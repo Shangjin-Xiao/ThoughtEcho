@@ -360,6 +360,9 @@ class DatabaseBackupService {
               continue;
             }
             final normalizedDeletedAt = LWWUtils.normalizeTimestamp(deletedAt);
+            if (LWWUtils.isExcessiveFutureTimestamp(normalizedDeletedAt)) {
+              continue;
+            }
 
             final localDeletedAt = localTombstoneMap[quoteId];
             if (localDeletedAt != null &&
@@ -769,6 +772,16 @@ class DatabaseBackupService {
         }
 
         // 3. 新分类，直接插入
+        final newCategoryLastModified =
+            filteredCategoryData['last_modified']?.toString();
+        if (LWWUtils.isExcessiveFutureTimestamp(newCategoryLastModified)) {
+          final clampedLastModified = LWWUtils.clampFutureTimestamp(
+            newCategoryLastModified,
+          );
+          filteredCategoryData['last_modified'] = clampedLastModified;
+          categoryData['last_modified'] = clampedLastModified;
+          reportBuilder.addSanitizedField();
+        }
         batch.insert('categories', filteredCategoryData);
         idToRow[remoteId] = filteredCategoryData;
         nameLowerToRow[nameKey] = filteredCategoryData;
@@ -1066,9 +1079,11 @@ class DatabaseBackupService {
         }
 
         // 提取并解析 tag_ids (字符串或列表)，稍后写入 quote_tags
+        final rawTagIds = quoteData['tag_ids'];
+        final hasTagIdsField = rawTagIds is String || rawTagIds is List;
         List<String> parsedTagIds = [];
         if (quoteData.containsKey('tag_ids')) {
-          final raw = quoteData['tag_ids'];
+          final raw = rawTagIds;
           if (raw is String) {
             if (raw.isNotEmpty) {
               parsedTagIds =
@@ -1166,6 +1181,10 @@ class DatabaseBackupService {
             // Missing remote timestamp must not revive a permanently deleted quote.
             reportBuilder.addSkippedQuote();
             continue;
+          } else if (LWWUtils.isExcessiveFutureTimestamp(quoteLastModified)) {
+            // Excessive future remote timestamp must not revive a permanently deleted quote.
+            reportBuilder.addSkippedQuote();
+            continue;
           } else if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
             // Tombstone is newer or equal - skip the quote
             reportBuilder.addSkippedQuote();
@@ -1184,12 +1203,42 @@ class DatabaseBackupService {
         // 过滤掉远端数据中本地 schema 不认识的字段，保持向前兼容
         final filteredData = _filterKnownQuoteColumns(quoteData);
 
+        void clampFutureFieldsAndReport() {
+          final clampNow = DateTime.now().toUtc();
+          final clampedFields = <String, Object?>{};
+          for (final field in const ['last_modified', 'date', 'deleted_at']) {
+            final value = filteredData[field]?.toString();
+            if (value != null &&
+                value.isNotEmpty &&
+                LWWUtils.isExcessiveFutureTimestamp(value, now: clampNow)) {
+              final clamped = LWWUtils.clampFutureTimestamp(
+                value,
+                now: clampNow,
+              );
+              quoteData[field] = clamped;
+              filteredData[field] = clamped;
+              clampedFields[field] = value;
+            }
+          }
+          if (clampedFields.isNotEmpty) {
+            reportBuilder.addSanitizedField(clampedFields.length);
+            sanitizedFieldCount += clampedFields.length;
+            final detail = _describeSanitized(quoteId, clampedFields);
+            if (detail != null && sanitizedPreview.length < _logPreviewLimit) {
+              sanitizedPreview.add(detail);
+            }
+          }
+        }
+
         // ⚡ Bolt: 使用预加载的 map 进行匹配，避免重复查询
         bool inserted = false;
+        bool shouldSyncTags = false;
         if (!idToQuote.containsKey(quoteId)) {
+          clampFutureFieldsAndReport();
           batch.insert('quotes', filteredData);
           reportBuilder.addInsertedQuote();
           inserted = true;
+          shouldSyncTags = true;
           // ⚡ Bolt: 更新本地缓存以处理输入数据中的重复项
           idToQuote[quoteId] = filteredData;
         } else {
@@ -1202,6 +1251,7 @@ class DatabaseBackupService {
             checkContentSimilarity: true,
           );
           if (decision.shouldUseRemote) {
+            clampFutureFieldsAndReport();
             batch.update(
               'quotes',
               filteredData,
@@ -1209,6 +1259,7 @@ class DatabaseBackupService {
               whereArgs: [quoteId],
             );
             reportBuilder.addUpdatedQuote();
+            shouldSyncTags = true;
             // ⚡ Bolt: 更新本地缓存以处理输入数据中的重复项
             idToQuote[quoteId] = filteredData;
           } else if (decision.hasConflict) {
@@ -1218,8 +1269,8 @@ class DatabaseBackupService {
           }
         }
 
-        // 写入标签关联 (插入或更新场景都需要同步), 仅当存在标签
-        if (remappedTagIds.isNotEmpty) {
+        // 写入标签关联 (插入或更新场景都需要同步；更新且远程显式包含 tag_ids 时，即使为空也需清空旧关联)
+        if (shouldSyncTags && (hasTagIdsField || remappedTagIds.isNotEmpty)) {
           // 如果是更新，先清理旧关联
           if (!inserted) {
             batch.delete(
@@ -1228,33 +1279,35 @@ class DatabaseBackupService {
               whereArgs: [quoteId],
             );
           }
-          final tagIdList = remappedTagIds.toList();
-          const int chunkSize = 400;
-          for (int i = 0; i < tagIdList.length; i += chunkSize) {
-            final end = (i + chunkSize < tagIdList.length)
-                ? i + chunkSize
-                : tagIdList.length;
-            final chunk = tagIdList.sublist(i, end);
-            if (chunk.length == 1) {
-              batch.insert(
-                'quote_tags',
-                {
-                  'quote_id': quoteId,
-                  'tag_id': chunk.first,
-                },
-                conflictAlgorithm: ConflictAlgorithm.ignore,
-              );
-            } else {
-              final valuePlaceholders =
-                  List.filled(chunk.length, '(?, ?)').join(', ');
-              final args = <Object?>[];
-              for (final tagId in chunk) {
-                args.addAll([quoteId, tagId]);
+          if (remappedTagIds.isNotEmpty) {
+            final tagIdList = remappedTagIds.toList();
+            const int chunkSize = 400;
+            for (int i = 0; i < tagIdList.length; i += chunkSize) {
+              final end = (i + chunkSize < tagIdList.length)
+                  ? i + chunkSize
+                  : tagIdList.length;
+              final chunk = tagIdList.sublist(i, end);
+              if (chunk.length == 1) {
+                batch.insert(
+                  'quote_tags',
+                  {
+                    'quote_id': quoteId,
+                    'tag_id': chunk.first,
+                  },
+                  conflictAlgorithm: ConflictAlgorithm.ignore,
+                );
+              } else {
+                final valuePlaceholders =
+                    List.filled(chunk.length, '(?, ?)').join(', ');
+                final args = <Object?>[];
+                for (final tagId in chunk) {
+                  args.addAll([quoteId, tagId]);
+                }
+                batch.rawInsert(
+                  'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
+                  args,
+                );
               }
-              batch.rawInsert(
-                'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
-                args,
-              );
             }
           }
         }
@@ -1374,6 +1427,10 @@ class DatabaseBackupService {
         final normalizedIncoming = LWWUtils.normalizeTimestamp(
           incomingDeletedAt,
         );
+
+        if (LWWUtils.isExcessiveFutureTimestamp(normalizedIncoming)) {
+          continue;
+        }
 
         final localTombstone = localTombstoneMap[quoteId];
         if (localTombstone != null) {
