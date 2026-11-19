@@ -4964,5 +4964,84 @@
   "mmkvDiagnosticRerunSuccess": "已重新执行迁移并刷新校验结果",
   "mmkvDiagnosticConsistencySummaryTitle": "存储一致性比对大盘",
   "mmkvDiagnosticKeyCountBinarySp": "存储源键总数 (Binary / SP)",
-  "mmkvDiagnosticSpCoverage": "SharedPreferences 迁移覆盖率"
+  "mmkvDiagnosticSpCoverage": "SharedPreferences 迁移覆盖率",
+  "aiTaskRoutingSectionTitle": "按任务分配模型",
+  "aiTaskRoutingSectionDesc": "未单独指定的任务将自动跟随上方「正在使用」的默认服务，互不抢占。",
+  "aiTaskDailyInsightTitle": "每日心迹提示",
+  "aiTaskPeriodicInsightTitle": "周期洞察（周/月/年报）",
+  "aiTaskDreamingTitle": "记忆整理（Dreaming）",
+  "aiTaskAgentTitle": "Thoughter 对话与工具",
+  "aiTaskBadgeDailyInsight": "每日提示",
+  "aiTaskBadgePeriodicInsight": "周期洞察",
+  "aiTaskBadgeDreaming": "记忆整理",
+  "aiTaskBadgeAgent": "Thoughter",
+  "aiTaskDailyInsightHint": "高频短句生成，适合响应快、低成本的轻量模型",
+  "aiTaskPeriodicInsightHint": "汇总近期笔记脉络，适合表达流畅的均衡模型",
+  "aiTaskDreamingHint": "周期洞察落库或空闲时独立在后台提炼记忆，适合高推理能力模型",
+  "aiTaskAgentHint": "多轮对话与工具调用，建议支持工具调用与长上下文的模型",
+  "aiTaskFollowingDefault": "跟随默认（{provider}）",
+  "@aiTaskFollowingDefault": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowingDefaultUnset": "跟随默认（未配置）",
+  "aiTaskExplicitSummary": "{provider} · {model}",
+  "@aiTaskExplicitSummary": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskSelectSheetTitle": "为「{task}」选择模型",
+  "@aiTaskSelectSheetTitle": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowDefaultOption": "跟随默认服务",
+  "aiTaskFollowDefaultSubtitle": "当前默认：{provider}（{model}）",
+  "@aiTaskFollowDefaultSubtitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowDefaultUnsetSubtitle": "当前未设置默认服务",
+  "aiTaskSwitchedToDefault": "「{task}」已恢复跟随默认服务",
+  "@aiTaskSwitchedToDefault": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskSwitchedToProvider": "「{task}」已指定为 {provider}",
+  "@aiTaskSwitchedToProvider": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      },
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "thoughterModelSwitcherTooltip": "切换 Thoughter 对话模型",
+  "thoughterModelUnconfigured": "未配置模型",
+  "thoughterModelSheetTitle": "切换 Thoughter 模型",
+  "thoughterModelSheetSubtitle": "仅调整 Thoughter 对话与工具使用的模型，不影响默认服务与其他任务",
+  "thoughterManageAiServices": "管理 AI 服务配置"
 }

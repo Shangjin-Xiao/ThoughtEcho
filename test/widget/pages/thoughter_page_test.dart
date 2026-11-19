@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/thoughter_entry.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/chat_message.dart' as app_chat;
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
@@ -3624,6 +3625,103 @@ void main() {
         }),
         isFalse,
       );
+    });
+
+    testWidgets(
+        'AppBar model switcher switches AITask.agent without mutating currentProviderId and disables while loading',
+        (tester) async {
+      await settingsService.setDontShowAgentExperimentalNotice(true);
+      await settingsService.setAgentMemoryNoticeShown(true);
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_default',
+              name: 'Default Flash',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+              providerSlug: 'zhipuai',
+            ),
+            AIProviderSettings(
+              id: 'p_agent_pro',
+              name: 'Claude Sonnet',
+              apiUrl: 'https://openrouter.ai/api/v1',
+              model: 'anthropic/claude-sonnet-4-5',
+              providerSlug: 'openrouter',
+              enableThinking: true,
+            ),
+          ],
+          currentProviderId: 'p_default',
+        ),
+      );
+
+      final pendingResponse = Completer<AgentResponse>();
+      final agentService = _ControllableAgentService(
+        settingsService: settingsService,
+        responses: [pendingResponse],
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            key: ValueKey('thoughter_model_switcher_test'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Initially follows default -> displays glm-4-flash
+      final switcher = find.byKey(const ValueKey('thoughter_model_switcher'));
+      expect(switcher, findsOneWidget);
+      expect(find.text('glm-4-flash'), findsOneWidget);
+
+      // Tap switcher -> select Claude Sonnet for AITask.agent
+      await tester.tap(switcher);
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const ValueKey('thoughter_model_option_p_agent_pro')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(settingsService.multiAISettings.currentProviderId, 'p_default');
+      expect(
+        settingsService.multiAISettings.taskProviderIds[AITask.agent],
+        'p_agent_pro',
+      );
+      expect(find.text('anthropic/claude-sonnet-4-5'), findsOneWidget);
+
+      // Dismiss info SnackBar so it does not overlap the bottom composer send button
+      ScaffoldMessenger.of(tester.element(find.byType(ThoughterPage)))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+
+      // Start an in-flight agent request -> switcher must be disabled while _isLoading == true
+      await tester.enterText(find.byType(TextField), '测试流式进行中禁用切换');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed!();
+      await tester.pump();
+
+      expect(tester.widget<InkWell>(switcher).onTap, isNull);
+
+      // Complete agent request -> switcher re-enables
+      pendingResponse.complete(
+        AgentResponse(content: '已完成回复'),
+      );
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+      expect(tester.widget<InkWell>(switcher).onTap, isNotNull);
     });
   });
 }

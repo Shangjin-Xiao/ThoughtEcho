@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/constants/ai_provider_presets.dart';
+import 'package:thoughtecho/models/ai_model_metadata.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 
 void main() {
@@ -113,6 +114,28 @@ void main() {
     test('returns null for an unknown host and for empty input', () {
       expect(AIProviderPresets.matchApiUrl('https://example.com/v1'), isNull);
       expect(AIProviderPresets.matchApiUrl('   '), isNull);
+    });
+
+    test('maps cloud presets to standard models.dev provider slugs', () {
+      const expectedSlugs = <String, String>{
+        'ollama_cloud': 'ollama-cloud',
+        'openai': 'openai',
+        'openrouter': 'openrouter',
+        'deepseek': 'deepseek',
+        'siliconflow': 'siliconflow',
+        'zhipu': 'zhipuai',
+        'moonshot': 'moonshotai',
+        'dashscope': 'alibaba-cn',
+        'volcengine': 'volcengine',
+        'gemini': 'google',
+      };
+
+      for (final entry in expectedSlugs.entries) {
+        final preset = AIProviderPresets.byId(entry.key)!;
+        expect(preset.modelsDevProviderId, entry.value, reason: entry.key);
+        expect(preset.protocol, AIProtocolType.openAICompatible);
+        expect(AIProviderPresets.bySlugOrId(entry.value)?.id, entry.key);
+      }
     });
   });
 }

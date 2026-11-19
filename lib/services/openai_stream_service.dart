@@ -219,8 +219,7 @@ class OpenAIStreamService extends ChangeNotifier {
       ..removeWhere((key, _) => key.toLowerCase() == 'content-type');
 
     // OpenRouter 需要额外的头
-    if (provider.id == 'openrouter' ||
-        provider.apiUrl.contains('openrouter.ai')) {
+    if (provider.isOpenRouter) {
       headers['HTTP-Referer'] ??= 'https://thoughtecho.app';
       headers['X-Title'] ??= 'ThoughtEcho App';
     }
@@ -713,16 +712,19 @@ class OpenAIStreamService extends ChangeNotifier {
 
   /// 判断是否为 OpenRouter 提供商
   static bool _isOpenRouterProvider(AIProviderSettings provider) {
-    return provider.id == 'openrouter' ||
-        provider.apiUrl.contains('openrouter.ai');
+    return provider.isOpenRouter;
   }
 
   /// 判断是否为 Ollama 提供商
   ///
-  /// 注意：只匹配本地 Ollama（localhost/127.0.0.1）或显式 id 为 ollama 的提供商。
-  /// 远程服务如 ollama.com 上的模型不应被误判为 Ollama。
+  /// 注意：只匹配本地 Ollama（localhost/127.0.0.1）或显式 id / slug 为本地 ollama 的提供商。
+  /// 远程服务如 ollama.com 上的模型不应被误判为本地 Ollama。
   static bool _isOllamaProvider(AIProviderSettings provider) {
+    final slug = (provider.providerSlug ?? '').trim().toLowerCase();
     return provider.id == 'ollama' ||
+        provider.id == 'ollama_local' ||
+        slug == 'ollama' ||
+        slug == 'ollama_local' ||
         provider.apiUrl.contains('localhost:11434') ||
         provider.apiUrl.contains('127.0.0.1:11434');
   }

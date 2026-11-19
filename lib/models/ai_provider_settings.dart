@@ -1,4 +1,5 @@
 import 'ai_config.dart';
+import 'ai_model_metadata.dart';
 
 /// AI服务商的具体配置实现
 class AIProviderSettings implements AIConfig {
@@ -24,6 +25,15 @@ class AIProviderSettings implements AIConfig {
 
   /// null: 自动推断；true: 强制开启；false: 强制关闭
   final bool? enableThinking;
+
+  /// 目录服务商标识（与实例唯一 `id: provider_<timestamp>` 解耦，例如 `openrouter`、`openai`）。
+  final String? providerSlug;
+
+  /// 接口协议类型，为 null 时按历史规则由 `id` / `apiUrl` 自动推断。
+  final AIProtocolType? protocol;
+
+  /// 可选的 `models.dev` 模型能力与配额元数据。
+  final AIModelMetadata? modelMetadata;
 
   /// Claude 里**不**支持 extended thinking 的老型号。
   ///
@@ -53,11 +63,23 @@ class AIProviderSettings implements AIConfig {
   static final RegExp _minimaxMRegex = RegExp(r'minimax[-_.]?m[1-9]');
   static final RegExp _versionPathRegex = RegExp(r'^v\d+[a-z]*$');
 
+  String get _normalizedSlug => (providerSlug ?? '').trim().toLowerCase();
+
   /// 判断当前模型是否支持思考/推理模式。
   ///
   /// 只用来决定「深度思考」开关是否出现、以及未显式配置时的默认值；
-  /// 用户在 provider 上写死 [enableThinking] 时以用户的为准。
+  /// 用户在 provider 上强制开启 [enableThinking] 时优先返回 `true`，
+  /// 其次优先取 [modelMetadata] 的 `reasoning`，无元数据时回退正则推断。
   bool get supportsThinking {
+    if (enableThinking == true) {
+      return true;
+    }
+
+    final metadataReasoning = modelMetadata?.reasoning;
+    if (metadataReasoning != null) {
+      return metadataReasoning;
+    }
+
     final m = model.toLowerCase();
 
     // 通用标记：各家普遍把推理能力直接写进模型名
@@ -112,8 +134,7 @@ class AIProviderSettings implements AIConfig {
       return true;
     }
 
-    // 兜底：用户手动强制开启时，显示支持思考能力
-    return enableThinking == true;
+    return false;
   }
 
   const AIProviderSettings({
@@ -127,14 +148,49 @@ class AIProviderSettings implements AIConfig {
     this.hostOverride,
     this.isEnabled = true,
     this.enableThinking,
+    this.providerSlug,
+    this.protocol,
+    this.modelMetadata,
   });
 
   @override
   bool get isAnthropicMessagesApi {
-    if (id == 'anthropic') {
+    if (protocol != null) {
+      return protocol == AIProtocolType.anthropicMessages;
+    }
+    if (_normalizedSlug == 'anthropic' || id == 'anthropic') {
       return true;
     }
     return apiUrl.toLowerCase().contains('/v1/messages');
+  }
+
+  /// 是否为 OpenRouter 服务商（优先识别 [providerSlug]，兼容旧 `id` 与域名判断）。
+  bool get isOpenRouter {
+    return _normalizedSlug == 'openrouter' ||
+        id == 'openrouter' ||
+        apiUrl.toLowerCase().contains('openrouter.ai');
+  }
+
+  /// 是否为 Ollama（云端或本地）服务商。
+  bool get isOllama {
+    final lowerUrl = apiUrl.toLowerCase();
+    return _normalizedSlug == 'ollama' ||
+        _normalizedSlug == 'ollama_local' ||
+        _normalizedSlug == 'ollama_cloud' ||
+        _normalizedSlug == 'ollama-cloud' ||
+        id == 'ollama' ||
+        id == 'ollama_local' ||
+        id == 'ollama_cloud' ||
+        lowerUrl.contains('ollama.com') ||
+        lowerUrl.contains(':11434');
+  }
+
+  /// 是否为 Google Gemini 官方兼容服务。
+  bool get isGemini {
+    return _normalizedSlug == 'gemini' ||
+        _normalizedSlug == 'google' ||
+        id == 'gemini' ||
+        apiUrl.toLowerCase().contains('generativelanguage.googleapis.com');
   }
 
   /// 规范化请求 URL，兼容「base URL」与「完整 endpoint」两种输入。
@@ -161,7 +217,9 @@ class AIProviderSettings implements AIConfig {
     }
 
     // Anthropic
-    if (id == 'anthropic' || uri.host.contains('anthropic.com')) {
+    if (isAnthropicMessagesApi ||
+        (protocol == null &&
+            uri.host.toLowerCase().contains('anthropic.com'))) {
       if (path.isEmpty) {
         return uri.replace(path: '/v1/messages').toString();
       } else if (path.endsWith('/v1')) {
@@ -169,6 +227,7 @@ class AIProviderSettings implements AIConfig {
       } else if (path.endsWith('/messages')) {
         return uri.replace(path: path).toString();
       }
+      return uri.replace(path: '$path/v1/messages').toString();
     }
 
     // OpenAI 兼容：已经是完整 endpoint 就原样返回。
@@ -212,10 +271,19 @@ class AIProviderSettings implements AIConfig {
       'hostOverride': hostOverride,
       'isEnabled': isEnabled,
       'enableThinking': enableThinking,
+      'providerSlug': providerSlug,
+      'protocol': protocol?.storageKey,
+      'modelMetadata': modelMetadata?.toJson(),
     };
   }
 
   factory AIProviderSettings.fromJson(Map<String, dynamic> map) {
+    final rawSlug = map['providerSlug'];
+    final normalizedSlug =
+        rawSlug is String && rawSlug.trim().isNotEmpty ? rawSlug.trim() : null;
+    final rawProtocol = map['protocol'];
+    final rawMetadata = map['modelMetadata'];
+
     return AIProviderSettings(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
@@ -230,6 +298,13 @@ class AIProviderSettings implements AIConfig {
       hostOverride: map['hostOverride'],
       isEnabled: map['isEnabled'] ?? true,
       enableThinking: map['enableThinking'] as bool?,
+      providerSlug: normalizedSlug,
+      protocol: rawProtocol is String
+          ? AIProtocolType.fromStorageKey(rawProtocol)
+          : null,
+      modelMetadata: rawMetadata is Map
+          ? AIModelMetadata.fromJson(Map<String, dynamic>.from(rawMetadata))
+          : null,
     );
   }
 
@@ -244,6 +319,9 @@ class AIProviderSettings implements AIConfig {
     String? hostOverride,
     bool? isEnabled,
     Object? enableThinking = _copyWithUnset,
+    Object? providerSlug = _copyWithUnset,
+    Object? protocol = _copyWithUnset,
+    Object? modelMetadata = _copyWithUnset,
   }) {
     return AIProviderSettings(
       id: id ?? this.id,
@@ -258,6 +336,15 @@ class AIProviderSettings implements AIConfig {
       enableThinking: identical(enableThinking, _copyWithUnset)
           ? this.enableThinking
           : enableThinking as bool?,
+      providerSlug: identical(providerSlug, _copyWithUnset)
+          ? this.providerSlug
+          : providerSlug as String?,
+      protocol: identical(protocol, _copyWithUnset)
+          ? this.protocol
+          : protocol as AIProtocolType?,
+      modelMetadata: identical(modelMetadata, _copyWithUnset)
+          ? this.modelMetadata
+          : modelMetadata as AIModelMetadata?,
     );
   }
 
@@ -278,23 +365,20 @@ class AIProviderSettings implements AIConfig {
   @override
   Map<String, String> buildHeaders() {
     final headers = <String, String>{'Content-Type': 'application/json'};
+    final lowerUrl = apiUrl.toLowerCase();
 
-    if (apiUrl.contains('openai.com') ||
-        apiUrl.contains('openrouter.ai') ||
-        id == 'openai' ||
-        id == 'openrouter') {
-      headers['Authorization'] = 'Bearer $apiKey';
-      if (id == 'openrouter') {
-        headers['HTTP-Referer'] = 'https://thoughtecho.app';
-        headers['X-Title'] = 'ThoughtEcho App';
-      }
-    } else if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
+    if (protocol == AIProtocolType.anthropicMessages ||
+        (protocol == null &&
+            (isAnthropicMessagesApi || lowerUrl.contains('anthropic.com')))) {
       headers['x-api-key'] = apiKey;
       headers['anthropic-version'] = '2023-06-01';
-    } else if (apiUrl.contains('deepseek.com') || id == 'deepseek') {
-      headers['Authorization'] = 'Bearer $apiKey';
-    } else {
-      headers['Authorization'] = 'Bearer $apiKey';
+      return headers;
+    }
+
+    headers['Authorization'] = 'Bearer $apiKey';
+    if (isOpenRouter) {
+      headers['HTTP-Referer'] = 'https://thoughtecho.app';
+      headers['X-Title'] = 'ThoughtEcho App';
     }
 
     return headers;

@@ -8,6 +8,7 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 import '../constants/ai_provider_presets.dart';
 import '../models/agent_memory.dart';
 import '../models/ai_provider_settings.dart';
+import '../models/ai_task.dart';
 import '../models/chat_message.dart' as app_chat;
 import '../models/note_proposal_artifact.dart';
 import '../utils/ai_endpoint_security.dart';
@@ -365,6 +366,7 @@ class AgentService extends ChangeNotifier {
 
     try {
       final provider = await _getProvider();
+      final contextTokenBudget = resolveContextTokenBudget(provider);
       final memoryEnabled = _memoryService?.isEnabled ?? false;
       final memoryGeneration = _memoryService?.captureGeneration;
       final systemPrompt = buildSystemPrompt(
@@ -402,7 +404,7 @@ class AgentService extends ChangeNotifier {
         }
         if (round >= maxToolRounds) {
           _setStatus('', runId: runId);
-          pruneMessages(messages);
+          pruneMessages(messages, contextTokenBudget: contextTokenBudget);
           final summary = await _requestFinalSummary(
             provider: provider,
             messages: messages,
@@ -429,7 +431,7 @@ class AgentService extends ChangeNotifier {
         _emitEvent(AgentThinkingEvent(), runId: runId);
 
         // 每轮请求前裁剪上下文，避免工具结果无上限累积。
-        pruneMessages(messages);
+        pruneMessages(messages, contextTokenBudget: contextTokenBudget);
 
         final result = await _streamCompletion(
           provider: provider,
@@ -783,7 +785,7 @@ class AgentService extends ChangeNotifier {
 
   Future<AIProviderSettings> _getProvider() async {
     final multiSettings = _settingsService.multiAISettings;
-    final provider = multiSettings.currentProvider;
+    final provider = multiSettings.resolveProviderForTask(AITask.agent);
     if (provider == null) {
       throw const AgentRequestException(AgentFailureType.noProvider);
     }
@@ -1058,9 +1060,7 @@ class AgentService extends ChangeNotifier {
   DateTime _lastGeminiRequestTime = DateTime.fromMillisecondsSinceEpoch(0);
 
   Future<void> _paceGeminiRequestIfNeeded(AIProviderSettings provider) async {
-    final isGemini = provider.id == 'gemini' ||
-        provider.apiUrl.contains('generativelanguage.googleapis.com');
-    if (!isGemini) return;
+    if (!provider.isGemini) return;
 
     final now = DateTime.now();
     final elapsed = now.difference(_lastGeminiRequestTime).inMilliseconds;
@@ -1071,9 +1071,7 @@ class AgentService extends ChangeNotifier {
   }
 
   List<String> _modelsToTryFor(AIProviderSettings provider) {
-    final isGemini = provider.id == 'gemini' ||
-        provider.apiUrl.contains('generativelanguage.googleapis.com');
-    if (!isGemini) {
+    if (!provider.isGemini) {
       return [provider.model];
     }
     final configured = provider.model.trim();
@@ -1098,8 +1096,7 @@ class AgentService extends ChangeNotifier {
     final headers = Map<String, String>.from(provider.buildHeaders())
       ..removeWhere((key, _) => key.toLowerCase() == 'content-type');
 
-    if (provider.id == 'openrouter' ||
-        provider.apiUrl.contains('openrouter.ai')) {
+    if (provider.isOpenRouter) {
       headers['HTTP-Referer'] ??= 'https://thoughtecho.app';
       headers['X-Title'] ??= 'ThoughtEcho App';
     }
@@ -1800,6 +1797,19 @@ $memoryGuidance## 应用特性（避免重复劳动）
         (total, message) =>
             total + estimateTokens(jsonEncode(message.toJson())),
       );
+
+  /// 计算当前 provider 对应的上下文裁剪 token 预算。
+  ///
+  /// 若 `modelMetadata.contextWindow` 有效（> 0），优先使用模型真实窗口大小；
+  /// 否则回退到保守预算 [_defaultContextTokenBudget]。
+  @visibleForTesting
+  static int resolveContextTokenBudget(AIProviderSettings? provider) {
+    final contextWindow = provider?.modelMetadata?.contextWindow;
+    if (contextWindow != null && contextWindow > 0) {
+      return contextWindow;
+    }
+    return _defaultContextTokenBudget;
+  }
 
   /// 零 LLM 成本的上下文裁剪：把较早轮次的工具结果替换为一行占位符。
   ///

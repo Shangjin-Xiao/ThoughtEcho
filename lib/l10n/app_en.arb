@@ -4982,5 +4982,84 @@
   "mmkvDiagnosticSpCoverage": "SharedPreferences Migration Coverage",
   "@mmkvDiagnosticSpCoverage": {
     "description": "Label for SharedPreferences migration coverage"
-  }
+  },
+  "aiTaskRoutingSectionTitle": "Assign Models by Task",
+  "aiTaskRoutingSectionDesc": "Tasks without a dedicated assignment automatically follow your default service above.",
+  "aiTaskDailyInsightTitle": "Daily Prompt",
+  "aiTaskPeriodicInsightTitle": "Periodic Insights (Week/Month/Year)",
+  "aiTaskDreamingTitle": "Memory Consolidation (Dreaming)",
+  "aiTaskAgentTitle": "Thoughter Chat & Tools",
+  "aiTaskBadgeDailyInsight": "Daily",
+  "aiTaskBadgePeriodicInsight": "Insights",
+  "aiTaskBadgeDreaming": "Dreaming",
+  "aiTaskBadgeAgent": "Thoughter",
+  "aiTaskDailyInsightHint": "Frequent short prompts — fast, low-cost models work great",
+  "aiTaskPeriodicInsightHint": "Summarizes note patterns — balanced models with natural prose",
+  "aiTaskDreamingHint": "Consolidates memory independently in the background — reasoning models excel here",
+  "aiTaskAgentHint": "Multi-turn chat & tool use — models with tool calling and long context recommended",
+  "aiTaskFollowingDefault": "Follow default ({provider})",
+  "@aiTaskFollowingDefault": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowingDefaultUnset": "Follow default (unconfigured)",
+  "aiTaskExplicitSummary": "{provider} · {model}",
+  "@aiTaskExplicitSummary": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskSelectSheetTitle": "Model for {task}",
+  "@aiTaskSelectSheetTitle": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowDefaultOption": "Follow Default Service",
+  "aiTaskFollowDefaultSubtitle": "Current default: {provider} ({model})",
+  "@aiTaskFollowDefaultSubtitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowDefaultUnsetSubtitle": "No default service configured",
+  "aiTaskSwitchedToDefault": "{task} now follows the default service",
+  "@aiTaskSwitchedToDefault": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskSwitchedToProvider": "{task} assigned to {provider}",
+  "@aiTaskSwitchedToProvider": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      },
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "thoughterModelSwitcherTooltip": "Switch Thoughter chat model",
+  "thoughterModelUnconfigured": "No model configured",
+  "thoughterModelSheetTitle": "Switch Thoughter Model",
+  "thoughterModelSheetSubtitle": "Only changes the model for Thoughter without affecting your default service or other tasks",
+  "thoughterManageAiServices": "Manage AI Services"
 }

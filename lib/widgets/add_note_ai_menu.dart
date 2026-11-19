@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/ai_task.dart';
 import '../services/ai_service.dart';
 import '../widgets/ai_options_menu.dart';
 import '../gen_l10n/app_localizations.dart';
@@ -41,7 +42,8 @@ class AddNoteAIMenu extends StatelessWidget {
       aiService = null;
     }
 
-    final bool aiConfigured = aiService != null && aiService.hasValidApiKey();
+    final bool aiConfigured =
+        aiService != null && aiService.hasValidApiKey(task: AITask.agent);
 
     if (!aiConfigured) {
       return const SizedBox.shrink();

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/release_highlights.dart';
 import '../models/ai_settings.dart';
+import '../models/ai_task.dart';
 import '../models/anniversary_participation.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
@@ -1830,6 +1831,7 @@ class SettingsService extends ChangeNotifier {
 
         final rawProviders = multiAiSettingsJson['providers'] ??
             multiAiSettingsJson['availableProviders'];
+        final restoredProviderIdSet = <String>{};
         if (rawProviders is List) {
           final normalizedProviders = <Map<String, dynamic>>[];
           for (final item in rawProviders) {
@@ -1841,6 +1843,7 @@ class SettingsService extends ChangeNotifier {
               }
               final normalizedId = id.trim();
               itemMap['id'] = normalizedId;
+              restoredProviderIdSet.add(normalizedId);
 
               // 解析 provider 的 apiKey：
               // 若 itemMap["apiKey"] 存在但非 String，必须尝试回退到 itemMap["api_key"]；
@@ -1878,6 +1881,30 @@ class SettingsService extends ChangeNotifier {
             multiAiSettingsJson['availableProviders'] = normalizedProviders;
           }
         }
+
+        // 同步清洗校验 taskProviderIds：仅保留合法任务键名，且目标 providerId 为非空字符串并存在于恢复后的 providers 列表中
+        final rawTaskProviderIds = multiAiSettingsJson['taskProviderIds'];
+        if (rawTaskProviderIds is Map) {
+          final sanitizedTaskIds = <String, String>{};
+          for (final entry in rawTaskProviderIds.entries) {
+            final rawKey = entry.key;
+            final rawValue = entry.value;
+            if (rawKey is! String || rawValue is! String) {
+              continue;
+            }
+            final task = AITask.tryParse(rawKey);
+            final normalizedProviderId = rawValue.trim();
+            if (task != null &&
+                normalizedProviderId.isNotEmpty &&
+                restoredProviderIdSet.contains(normalizedProviderId)) {
+              sanitizedTaskIds[task.storageKey] = normalizedProviderId;
+            }
+          }
+          multiAiSettingsJson['taskProviderIds'] = sanitizedTaskIds;
+        } else {
+          multiAiSettingsJson.remove('taskProviderIds');
+        }
+
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
 
         // A backup controls provider IDs and URLs, but does not authorize sending

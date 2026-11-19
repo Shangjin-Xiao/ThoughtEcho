@@ -133,8 +133,10 @@ extension _ExploreDataLoading on _ExplorePageState {
     final rangeStart = range?.start.toIso8601String().substring(0, 10);
     final rangeEnd = range?.end.toIso8601String().substring(0, 10);
     final rangeKey = range == null ? 'all' : '$rangeStart~$rangeEnd';
-    final provider =
-        context.read<SettingsService>().multiAISettings.currentProvider;
+    final provider = context
+        .read<SettingsService>()
+        .multiAISettings
+        .resolveProviderForTask(AITask.periodicInsight);
     final model = provider?.model ?? '-';
 
     final dataSignature = [

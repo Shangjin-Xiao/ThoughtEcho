@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
+import 'package:thoughtecho/models/ai_model_metadata.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
@@ -151,6 +153,7 @@ void main() {
 
       final l10n = _l10n(tester);
       expect(find.text(l10n.aiServiceEmptyTitle), findsOneWidget);
+      expect(find.byKey(const ValueKey('ai_task_routing_card')), findsNothing);
       expect(find.text(l10n.ollamaCloudTipTitle), findsNothing);
       expect(find.text(l10n.ollamaCloudTipAction), findsNothing);
     });
@@ -243,6 +246,8 @@ void main() {
       expect(providers.first.name, '已有配置');
       expect(providers.last.name, _presetName);
       expect(providers.last.model, 'deepseek-chat');
+      expect(providers.last.providerSlug, 'deepseek');
+      expect(providers.last.protocol, AIProtocolType.openAICompatible);
       expect(providers.last.isEnabled, isTrue);
       expect(
         settingsService.multiAISettings.currentProviderId,
@@ -260,6 +265,10 @@ void main() {
               name: '本机模型',
               apiUrl: 'http://localhost:1234/v1/chat/completions',
               model: 'old-model',
+              modelMetadata: AIModelMetadata(
+                contextWindow: 65536,
+                reasoning: true,
+              ),
             ),
           ],
           currentProviderId: 'local',
@@ -289,6 +298,8 @@ void main() {
       expect(providers, hasLength(1));
       expect(providers.single.id, 'local');
       expect(providers.single.model, 'new-model');
+      expect(providers.single.modelMetadata?.contextWindow, 65536);
+      expect(providers.single.modelMetadata?.reasoning, isTrue);
     });
 
     testWidgets('memory switch defaults on and toggles off', (tester) async {
@@ -479,6 +490,113 @@ void main() {
         AptabaseHelper.onTrackEventForTesting = null;
         AIConnectionTester.testOverrideForTesting = null;
       }
+    });
+
+    testWidgets(
+        'assigns task provider via bottom sheet, shows task badge on provider tile, and cleans up on delete',
+        (tester) async {
+      final events = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (event, props) {
+        events.add({'event': event, 'props': props});
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      await APIKeyManager()
+          .saveProviderApiKey('p_default', 'sk-default-123456');
+      await APIKeyManager().saveProviderApiKey('p_dream', 'sk-dreaming-123456');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_default',
+              name: '默认轻量服务',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+              providerSlug: 'zhipuai',
+            ),
+            AIProviderSettings(
+              id: 'p_dream',
+              name: '推理专线服务',
+              apiUrl: 'https://api.deepseek.com/v1',
+              model: 'deepseek-reasoner',
+              providerSlug: 'deepseek',
+            ),
+          ],
+          currentProviderId: 'p_default',
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      expect(
+        find.byKey(const ValueKey('ai_task_routing_card')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.aiTaskFollowingDefault('默认轻量服务')),
+        findsNWidgets(4),
+      );
+
+      // Assign Dreaming to p_dream via ModalBottomSheet
+      final dreamingTile = find.byKey(const ValueKey('ai_task_tile_dreaming'));
+      await _scrollTo(tester, dreamingTile);
+      await tester.tap(dreamingTile);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('ai_task_option_p_dream')));
+      await tester.pumpAndSettle();
+
+      expect(settingsService.multiAISettings.currentProviderId, 'p_default');
+      expect(
+        settingsService.multiAISettings.taskProviderIds[AITask.dreaming],
+        'p_dream',
+      );
+      expect(
+        events.any(
+          (e) =>
+              e['event'] == 'feature_used' &&
+              e['props']?['action'] == 'ai_task_provider_select' &&
+              e['props']?['task'] == 'dreaming' &&
+              e['props']?['uses_default'] == false,
+        ),
+        isTrue,
+      );
+
+      // Scroll back up to verify provider tile badge for p_dream
+      final dreamProviderTile = find.text('推理专线服务');
+      await tester.scrollUntilVisible(
+        dreamProviderTile,
+        -200,
+        scrollable: find
+            .descendant(
+              of: find.byType(AISettingsPage),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('provider_task_badge_p_dream_dreaming')),
+        findsOneWidget,
+      );
+
+      // Delete p_dream -> taskProviderIds[dreaming] is cleaned and falls back to default
+      await tester.tap(find.byTooltip(l10n.moreOptions).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.delete));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, l10n.delete));
+      await tester.pumpAndSettle();
+
+      expect(
+        settingsService.multiAISettings.taskProviderIds
+            .containsKey(AITask.dreaming),
+        isFalse,
+      );
+      expect(settingsService.multiAISettings.currentProviderId, 'p_default');
     });
   });
 }

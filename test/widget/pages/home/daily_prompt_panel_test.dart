@@ -11,6 +11,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/ai_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import '../../../test_harness.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
@@ -19,9 +20,13 @@ class MockAIService extends ChangeNotifier implements AIService {
   bool _hasValidApiKey = true;
   Stream<String>? _mockStream;
   int streamGenerateDailyPromptCallCount = 0;
+  AITask? lastCheckedTask;
 
   @override
-  bool hasValidApiKey() => _hasValidApiKey;
+  bool hasValidApiKey({AITask? task}) {
+    lastCheckedTask = task;
+    return _hasValidApiKey;
+  }
 
   @override
   Stream<String> streamGenerateDailyPrompt(
@@ -162,6 +167,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('This is a test prompt.'), findsOneWidget);
+      expect(mockAIService.lastCheckedTask, AITask.dailyInsight);
     });
 
     testWidgets('renders a local prompt without invoking AI when unconfigured',

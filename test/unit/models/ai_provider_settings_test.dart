@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/models/ai_model_metadata.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 
 void main() {
@@ -334,6 +335,110 @@ void main() {
       );
 
       expect(provider.supportsThinking, isFalse);
+    });
+
+    test(
+        'supportsThinking prioritizes enableThinking==true, then modelMetadata.reasoning, then regex fallback',
+        () {
+      // Unknown model name with modelMetadata.reasoning == true -> true
+      const customReasoning = AIProviderSettings(
+        id: 'p_meta_true',
+        name: 'Custom Reasoning',
+        apiUrl: 'https://example.com/v1',
+        model: 'acme-thinker-v1',
+        modelMetadata: AIModelMetadata(reasoning: true),
+      );
+      expect(customReasoning.supportsThinking, isTrue);
+
+      // Regex-matched model name (qwen3) but modelMetadata.reasoning == false -> false
+      const nonReasoningOverride = AIProviderSettings(
+        id: 'p_meta_false',
+        name: 'Qwen Non-Reasoning Variant',
+        apiUrl: 'https://example.com/v1',
+        model: 'qwen3-instruct-fast',
+        modelMetadata: AIModelMetadata(reasoning: false),
+      );
+      expect(nonReasoningOverride.supportsThinking, isFalse);
+
+      // Explicit user enableThinking == true still wins even when metadata says false
+      expect(
+        nonReasoningOverride.copyWith(enableThinking: true).supportsThinking,
+        isTrue,
+      );
+    });
+  });
+
+  group('AIProviderSettings models.dev protocol & slug compatibility', () {
+    test(
+        'serializes and deserializes providerSlug, protocol, and modelMetadata',
+        () {
+      const original = AIProviderSettings(
+        id: 'provider_1700000001',
+        name: 'OpenRouter Claude',
+        apiUrl: 'https://my-gateway.example.com/v1',
+        model: 'anthropic/claude-sonnet-4-5',
+        providerSlug: 'openrouter',
+        protocol: AIProtocolType.openAICompatible,
+        modelMetadata: AIModelMetadata(
+          contextWindow: 200000,
+          maxOutputTokens: 64000,
+          reasoning: true,
+          toolCall: true,
+          supportsVision: true,
+        ),
+      );
+
+      final json = original.toJson();
+      expect(json['providerSlug'], 'openrouter');
+      expect(json['protocol'], 'openAICompatible');
+      expect(json['modelMetadata'], isA<Map<String, dynamic>>());
+
+      final restored = AIProviderSettings.fromJson(json);
+      expect(restored.providerSlug, 'openrouter');
+      expect(restored.protocol, AIProtocolType.openAICompatible);
+      expect(restored.modelMetadata, equals(original.modelMetadata));
+    });
+
+    test(
+        'buildHeaders injects OpenRouter headers when providerSlug is openrouter even with provider_<ts> id and proxy URL',
+        () {
+      const openRouterProxy = AIProviderSettings(
+        id: 'provider_1712345678',
+        name: 'My OpenRouter Proxy',
+        apiKey: 'sk-or-test',
+        apiUrl: 'https://gateway.example.com/v1/chat/completions',
+        model: 'deepseek/deepseek-r1',
+        providerSlug: 'openrouter',
+      );
+
+      final headers = openRouterProxy.buildHeaders();
+      expect(headers['Authorization'], 'Bearer sk-or-test');
+      expect(headers['HTTP-Referer'], 'https://thoughtecho.app');
+      expect(headers['X-Title'], 'ThoughtEcho App');
+    });
+
+    test(
+        'protocol anthropicMessages activates Anthropic headers and avoids /chat/completions suffix on custom gateway URL',
+        () {
+      const anthropicGateway = AIProviderSettings(
+        id: 'provider_1712349999',
+        name: 'Anthropic Enterprise Gateway',
+        apiKey: 'sk-ant-test',
+        apiUrl: 'https://llm-gateway.corp.example.com/anthropic',
+        model: 'claude-sonnet-4-5',
+        providerSlug: 'anthropic',
+        protocol: AIProtocolType.anthropicMessages,
+      );
+
+      expect(anthropicGateway.isAnthropicMessagesApi, isTrue);
+      final headers = anthropicGateway.buildHeaders();
+      expect(headers['x-api-key'], 'sk-ant-test');
+      expect(headers['anthropic-version'], '2023-06-01');
+      expect(headers.containsKey('Authorization'), isFalse);
+      expect(
+        anthropicGateway.resolveRequestUrl(anthropicGateway.apiUrl),
+        'https://llm-gateway.corp.example.com/anthropic/v1/messages',
+      );
     });
   });
 }

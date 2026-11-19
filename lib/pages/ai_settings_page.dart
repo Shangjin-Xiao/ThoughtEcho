@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../constants/ai_provider_presets.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_provider_settings.dart';
+import '../models/ai_task.dart';
 import '../models/multi_ai_settings.dart';
 import '../services/agent_memory_service.dart';
 import '../services/api_key_manager.dart';
@@ -174,24 +175,58 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     await APIKeyManager().removeProviderApiKey(provider.id);
 
-    final remaining = _multiSettings.providers
-        .where((p) => p.id != provider.id)
-        .toList(growable: false);
-    final nextCurrentId = _multiSettings.currentProviderId == provider.id
-        ? (remaining.isEmpty ? null : remaining.first.id)
-        : _multiSettings.currentProviderId;
-
     if (!mounted) return;
     await context.read<SettingsService>().saveMultiAISettings(
-          _multiSettings.copyWith(
-            providers: remaining,
-            currentProviderId: nextCurrentId,
-          ),
+          _multiSettings.withoutProvider(provider.id),
         );
 
     if (!mounted) return;
     setState(_reload);
     AppSnackBar.info(context, l10n.presetDeleted(provider.name));
+  }
+
+  Future<void> _selectProviderForTask(AITask task) async {
+    final l10n = AppLocalizations.of(context);
+    final currentExplicitId = _multiSettings.explicitProviderIdForTask(task);
+    final selected = await showModalBottomSheet<_TaskProviderSelection>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _TaskProviderPickerSheet(
+        taskTitle: _taskTitle(l10n, task),
+        multiSettings: _multiSettings,
+        hasApiKey: _hasApiKey,
+        selectedExplicitId: currentExplicitId,
+      ),
+    );
+    if (selected == null || !mounted) return;
+
+    final nextProviderId = selected.useDefault ? null : selected.providerId;
+    if (nextProviderId == currentExplicitId) return;
+
+    await context.read<SettingsService>().saveMultiAISettings(
+          _multiSettings.withTaskProvider(task, nextProviderId),
+        );
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'ai_task_provider_select',
+      'task': task.name,
+      'uses_default': nextProviderId == null,
+    });
+
+    if (!mounted) return;
+    setState(_reload);
+    final taskLabel = _taskTitle(l10n, task);
+    if (nextProviderId == null) {
+      AppSnackBar.info(context, l10n.aiTaskSwitchedToDefault(taskLabel));
+    } else {
+      final assigned = _multiSettings.explicitProviderForTask(task);
+      if (assigned != null) {
+        AppSnackBar.info(
+          context,
+          l10n.aiTaskSwitchedToProvider(taskLabel, assigned.name),
+        );
+      }
+    }
   }
 
   Future<void> _test(AIProviderSettings provider) async {
@@ -268,6 +303,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 label: Text(l10n.addAiService),
               ),
             ),
+            const SizedBox(height: 24),
+            _buildSectionTitle(context, l10n.aiTaskRoutingSectionTitle),
+            const SizedBox(height: 4),
+            Text(
+              l10n.aiTaskRoutingSectionDesc,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            _buildTaskRoutingCard(context),
           ],
           const SizedBox(height: 24),
           _buildSectionTitle(context, l10n.aiEnhancedGeneration),
@@ -358,9 +404,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final semantic = AppSemanticColors.of(context);
     final isCurrent = provider.id == _currentProvider?.id;
     final isTesting = _testing.contains(provider.id);
-    final preset = AIProviderPresets.matchApiUrl(provider.apiUrl);
+    final preset = AIProviderPresets.bySlugOrId(provider.providerSlug) ??
+        AIProviderPresets.matchApiUrl(provider.apiUrl);
     final needsKey = preset?.requiresApiKey ?? true;
     final keyOk = (_hasApiKey[provider.id] ?? false) || !needsKey;
+    final assignedTasks = _multiSettings.tasksAssignedTo(provider.id);
 
     return ListTile(
       leading: Icon(
@@ -389,6 +437,24 @@ class _AISettingsPageState extends State<AISettingsPage> {
             provider.model.isEmpty ? l10n.noProvider : provider.model,
             overflow: TextOverflow.ellipsis,
           ),
+          if (assignedTasks.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                for (final task in assignedTasks)
+                  _Badge(
+                    key: ValueKey(
+                      'provider_task_badge_${provider.id}_${task.name}',
+                    ),
+                    label: _taskBadgeLabel(l10n, task),
+                    background: theme.colorScheme.secondaryContainer,
+                    foreground: theme.colorScheme.onSecondaryContainer,
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 4),
           Row(
             children: [
@@ -461,6 +527,77 @@ class _AISettingsPageState extends State<AISettingsPage> {
       onTap: isCurrent
           ? () => _openEditor(provider: provider)
           : () => _setCurrent(provider),
+    );
+  }
+
+  Widget _buildTaskRoutingCard(BuildContext context) {
+    return Card(
+      key: const ValueKey('ai_task_routing_card'),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < AITask.values.length; i++) ...[
+            if (i > 0) const Divider(height: 1),
+            _buildTaskRoutingTile(context, AITask.values[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskRoutingTile(BuildContext context, AITask task) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final explicitProvider = _multiSettings.explicitProviderForTask(task);
+    final defaultProvider = _currentProvider;
+
+    final String statusText;
+    if (explicitProvider != null) {
+      final modelLabel = explicitProvider.model.isEmpty
+          ? l10n.noProvider
+          : explicitProvider.model;
+      statusText = l10n.aiTaskExplicitSummary(
+        explicitProvider.name,
+        modelLabel,
+      );
+    } else if (defaultProvider != null) {
+      statusText = l10n.aiTaskFollowingDefault(defaultProvider.name);
+    } else {
+      statusText = l10n.aiTaskFollowingDefaultUnset;
+    }
+
+    return ListTile(
+      key: ValueKey('ai_task_tile_${task.name}'),
+      leading: Icon(
+        _iconForTask(task),
+        color: explicitProvider != null
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant,
+      ),
+      title: Text(_taskTitle(l10n, task)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Text(
+            statusText,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: explicitProvider != null
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _taskHint(l10n, task),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _selectProviderForTask(task),
     );
   }
 
@@ -828,6 +965,7 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
 
 class _Badge extends StatelessWidget {
   const _Badge({
+    super.key,
     required this.label,
     required this.background,
     required this.foreground,
@@ -850,6 +988,192 @@ class _Badge extends StatelessWidget {
         label,
         style:
             Theme.of(context).textTheme.labelSmall?.copyWith(color: foreground),
+      ),
+    );
+  }
+}
+
+String _taskTitle(AppLocalizations l10n, AITask task) {
+  return switch (task) {
+    AITask.dailyInsight => l10n.aiTaskDailyInsightTitle,
+    AITask.periodicInsight => l10n.aiTaskPeriodicInsightTitle,
+    AITask.dreaming => l10n.aiTaskDreamingTitle,
+    AITask.agent => l10n.aiTaskAgentTitle,
+  };
+}
+
+String _taskBadgeLabel(AppLocalizations l10n, AITask task) {
+  return switch (task) {
+    AITask.dailyInsight => l10n.aiTaskBadgeDailyInsight,
+    AITask.periodicInsight => l10n.aiTaskBadgePeriodicInsight,
+    AITask.dreaming => l10n.aiTaskBadgeDreaming,
+    AITask.agent => l10n.aiTaskBadgeAgent,
+  };
+}
+
+String _taskHint(AppLocalizations l10n, AITask task) {
+  return switch (task) {
+    AITask.dailyInsight => l10n.aiTaskDailyInsightHint,
+    AITask.periodicInsight => l10n.aiTaskPeriodicInsightHint,
+    AITask.dreaming => l10n.aiTaskDreamingHint,
+    AITask.agent => l10n.aiTaskAgentHint,
+  };
+}
+
+IconData _iconForTask(AITask task) {
+  return switch (task) {
+    AITask.dailyInsight => Icons.wb_sunny_outlined,
+    AITask.periodicInsight => Icons.insights_outlined,
+    AITask.dreaming => Icons.bedtime_outlined,
+    AITask.agent => Icons.chat_bubble_outline,
+  };
+}
+
+class _TaskProviderSelection {
+  const _TaskProviderSelection.followDefault()
+      : useDefault = true,
+        providerId = null;
+
+  const _TaskProviderSelection.explicit(this.providerId) : useDefault = false;
+
+  final bool useDefault;
+  final String? providerId;
+}
+
+class _TaskProviderPickerSheet extends StatelessWidget {
+  const _TaskProviderPickerSheet({
+    required this.taskTitle,
+    required this.multiSettings,
+    required this.hasApiKey,
+    required this.selectedExplicitId,
+  });
+
+  final String taskTitle;
+  final MultiAISettings multiSettings;
+  final Map<String, bool> hasApiKey;
+  final String? selectedExplicitId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final semantic = AppSemanticColors.of(context);
+    final defaultProvider = multiSettings.currentProvider;
+    final defaultSubtitle = defaultProvider != null
+        ? l10n.aiTaskFollowDefaultSubtitle(
+            defaultProvider.name,
+            defaultProvider.model.isEmpty
+                ? l10n.noProvider
+                : defaultProvider.model,
+          )
+        : l10n.aiTaskFollowDefaultUnsetSubtitle;
+    final isFollowingDefault = selectedExplicitId == null;
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.76,
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 16),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                l10n.aiTaskSelectSheetTitle(taskTitle),
+                style: theme.textTheme.titleLarge,
+              ),
+            ),
+            ListTile(
+              key: const ValueKey('ai_task_option_default'),
+              leading: Icon(
+                Icons.sync_alt,
+                color: isFollowingDefault ? theme.colorScheme.primary : null,
+              ),
+              title: Text(l10n.aiTaskFollowDefaultOption),
+              subtitle: Text(defaultSubtitle),
+              trailing: isFollowingDefault
+                  ? Icon(Icons.check, color: theme.colorScheme.primary)
+                  : null,
+              onTap: () => Navigator.pop(
+                context,
+                const _TaskProviderSelection.followDefault(),
+              ),
+            ),
+            const Divider(height: 1),
+            for (final provider in multiSettings.providers) ...[
+              Builder(
+                builder: (context) {
+                  final preset =
+                      AIProviderPresets.bySlugOrId(provider.providerSlug) ??
+                          AIProviderPresets.matchApiUrl(provider.apiUrl);
+                  final needsKey = preset?.requiresApiKey ?? true;
+                  final keyOk = (hasApiKey[provider.id] ?? false) || !needsKey;
+                  final isSelected = selectedExplicitId == provider.id;
+
+                  return ListTile(
+                    key: ValueKey('ai_task_option_${provider.id}'),
+                    leading: Icon(
+                      Icons.dns_outlined,
+                      color: isSelected ? theme.colorScheme.primary : null,
+                    ),
+                    title: Text(
+                      provider.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          provider.model.isEmpty
+                              ? l10n.noProvider
+                              : provider.model,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              keyOk
+                                  ? Icons.verified_user_outlined
+                                  : Icons.error_outline,
+                              size: 14,
+                              color: keyOk
+                                  ? semantic.success
+                                  : theme.colorScheme.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              keyOk
+                                  ? l10n.statusKeyConfigured
+                                  : l10n.statusKeyMissing,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: keyOk
+                                    ? semantic.success
+                                    : theme.colorScheme.error,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    trailing: isSelected
+                        ? Icon(Icons.check, color: theme.colorScheme.primary)
+                        : null,
+                    enabled: provider.isEnabled,
+                    onTap: provider.isEnabled
+                        ? () => Navigator.pop(
+                              context,
+                              _TaskProviderSelection.explicit(provider.id),
+                            )
+                        : null,
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

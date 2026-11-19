@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/ai_provider_presets.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../models/ai_model_metadata.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/ai_settings.dart';
 import '../services/api_key_manager.dart';
@@ -65,7 +66,8 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       _apiUrlController.text = provider.apiUrl;
       _modelController.text = provider.model;
       _hostOverrideController.text = provider.hostOverride ?? '';
-      _preset = AIProviderPresets.matchApiUrl(provider.apiUrl);
+      _preset = AIProviderPresets.bySlugOrId(provider.providerSlug) ??
+          AIProviderPresets.matchApiUrl(provider.apiUrl);
       _loadStoredApiKey(provider.id);
     } else {
       _preset = widget.initialPreset;
@@ -143,16 +145,61 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
 
   // --- 动作 ---
 
+  ({
+    AIProviderPreset? matchedPreset,
+    String? providerSlug,
+    AIProtocolType protocol,
+  }) _resolveEndpointMetadata(String apiUrl, AIProviderSettings? existing) {
+    final trimmedUrl = apiUrl.trim();
+    final lowerUrl = trimmedUrl.toLowerCase();
+    final urlMatched = AIProviderPresets.matchApiUrl(trimmedUrl);
+    final activePreset = urlMatched ??
+        (_preset != null && _preset!.kind != AIPresetKind.custom
+            ? _preset
+            : null);
+
+    if (lowerUrl.contains('anthropic.com') ||
+        lowerUrl.contains('/v1/messages')) {
+      return (
+        matchedPreset: activePreset,
+        providerSlug: activePreset != null
+            ? (activePreset.modelsDevProviderId ?? activePreset.id)
+            : 'anthropic',
+        protocol: AIProtocolType.anthropicMessages,
+      );
+    }
+
+    if (activePreset != null) {
+      return (
+        matchedPreset: activePreset,
+        providerSlug: activePreset.modelsDevProviderId ?? activePreset.id,
+        protocol: activePreset.protocol,
+      );
+    }
+
+    final sameEndpointAsExisting =
+        existing != null && existing.apiUrl.trim() == trimmedUrl;
+    return (
+      matchedPreset: null,
+      providerSlug: sameEndpointAsExisting ? existing.providerSlug : null,
+      protocol: sameEndpointAsExisting
+          ? (existing.protocol ?? AIProtocolType.openAICompatible)
+          : AIProtocolType.openAICompatible,
+    );
+  }
+
   /// 用表单当前内容拼一个临时配置，供「测试连接」使用。
   ///
   /// 显式带上输入框里的 Key（包括空值），无需先保存，也不会重新取旧密钥。
   AIProviderSettings _buildDraftProvider() {
     final base = widget.provider;
+    final trimmedUrl = _apiUrlController.text.trim();
+    final resolved = _resolveEndpointMetadata(trimmedUrl, base);
     return AIProviderSettings(
       id: base?.id ?? 'draft_provider',
       name: _nameController.text.trim(),
       apiKey: _apiKeyController.text.trim(),
-      apiUrl: _apiUrlController.text.trim(),
+      apiUrl: trimmedUrl,
       model: _modelController.text.trim(),
       temperature: base?.temperature ?? 0.7,
       maxTokens: base?.maxTokens ?? 32000,
@@ -160,6 +207,9 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
           ? null
           : _hostOverrideController.text.trim(),
       enableThinking: base?.enableThinking,
+      providerSlug: resolved.providerSlug,
+      protocol: resolved.protocol,
+      modelMetadata: base?.modelMetadata,
     );
   }
 
@@ -227,11 +277,14 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
         _storedApiKey = enteredApiKey;
       }
 
-      final requiresApiKey = _preset?.requiresApiKey ?? true;
+      final trimmedUrl = _apiUrlController.text.trim();
+      final resolved = _resolveEndpointMetadata(trimmedUrl, existing);
+      final requiresApiKey =
+          (resolved.matchedPreset ?? _preset)?.requiresApiKey ?? true;
       final saved = AIProviderSettings(
         id: providerId,
         name: _nameController.text.trim(),
-        apiUrl: _apiUrlController.text.trim(),
+        apiUrl: trimmedUrl,
         model: _modelController.text.trim(),
         temperature: existing?.temperature ?? 0.7,
         maxTokens: existing?.maxTokens ?? 32000,
@@ -240,6 +293,9 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
             : _hostOverrideController.text.trim(),
         isEnabled: enteredApiKey.isNotEmpty || !requiresApiKey,
         enableThinking: existing?.enableThinking,
+        providerSlug: resolved.providerSlug,
+        protocol: resolved.protocol,
+        modelMetadata: existing?.modelMetadata,
       );
 
       final multiSettings = settingsService.multiAISettings;

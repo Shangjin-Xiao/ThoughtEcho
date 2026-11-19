@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
+import 'package:thoughtecho/models/ai_model_metadata.dart';
+import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 
 openai.ChatMessage _assistantToolCall(String id) =>
@@ -69,6 +71,48 @@ void main() {
       AgentService.pruneMessages(messages);
       expect(messages.first, isA<openai.SystemMessage>());
       expect(messages[1], isA<openai.UserMessage>());
+    });
+
+    test(
+        'resolveContextTokenBudget derives budget from modelMetadata.contextWindow when positive and falls back otherwise',
+        () {
+      final fallbackBudget = AgentService.resolveContextTokenBudget(null);
+      expect(fallbackBudget, 80000);
+
+      const withoutMetadata = AIProviderSettings(
+        id: 'p1',
+        name: 'No Metadata',
+        apiUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o',
+      );
+      expect(
+        AgentService.resolveContextTokenBudget(withoutMetadata),
+        fallbackBudget,
+      );
+
+      const nonPositiveMetadata = AIProviderSettings(
+        id: 'p_zero',
+        name: 'Zero Context',
+        apiUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o',
+        modelMetadata: AIModelMetadata(contextWindow: 0),
+      );
+      expect(
+        AgentService.resolveContextTokenBudget(nonPositiveMetadata),
+        fallbackBudget,
+      );
+
+      const largeContext = AIProviderSettings(
+        id: 'p2',
+        name: '200k Model',
+        apiUrl: 'https://openrouter.ai/api/v1',
+        model: 'anthropic/claude-sonnet-4-5',
+        modelMetadata: AIModelMetadata(
+          contextWindow: 200000,
+          maxOutputTokens: 16000,
+        ),
+      );
+      expect(AgentService.resolveContextTokenBudget(largeContext), 200000);
     });
   });
 }

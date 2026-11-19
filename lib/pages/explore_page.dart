@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
+import '../models/ai_task.dart';
 import '../models/weather_data.dart';
 import '../models/thoughter_entry.dart';
 import '../models/chat_session.dart';
