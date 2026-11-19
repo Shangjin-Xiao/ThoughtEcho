@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -10,10 +12,14 @@ import 'package:uuid/uuid.dart';
 import '../models/agent_memory.dart';
 import '../utils/app_logger.dart';
 import '../utils/aptabase_helper.dart';
+import '../utils/lww_utils.dart';
 import '../utils/sqlite_type_utils.dart';
 import '../utils/untrusted_text.dart';
 import 'data_directory_service.dart';
+import 'large_file_manager.dart';
 import 'settings_service.dart';
+
+part 'agent_memory_sync.dart';
 
 /// Thoughter 的长期记忆。
 ///
@@ -26,9 +32,9 @@ import 'settings_service.dart';
 /// 三套检索各管一摊，否则模型会在几个来源之间反复横跳。
 ///
 /// **独立数据库文件 `agent_memory.db`**，和聊天记录、日志、AI 分析一样不进主库：
-/// 记忆是对用户的行为画像，物理隔离让"不进备份、不跨设备同步、一键清干净"变成
-/// 文件层面的事实，而不是"备份代码恰好没导出这两张表"的隐式约定。主库的 schema
-/// 版本号也不必为了记忆往上走。
+/// 物理隔离保证了独立的 schema 演进与一键彻底清空，主库的 schema 版本号不必为了记忆
+/// 往上走；自 schema v3 起，记忆在开关开启时通过受控 JSON 段参与手动备份/恢复、
+/// LocalSend 局域网同步与 WebDAV 同步，由 [AgentMemoryService] 自管导出、合并与收敛。
 ///
 /// 检索用 `LIKE` 而不是 FTS5：条目量级是几十到几百条，`LIKE` 取候选再在 Dart 里
 /// 按 relevance × recency × importance 打分完全够用；而 FTS5 的默认分词器对中文
@@ -83,11 +89,21 @@ class AgentMemoryService extends ChangeNotifier {
   /// 记忆库自己的 schema 版本，与主库的 `schemaVersion` 无关。
   ///
   /// v2：画像层加 `source_note_ids`（Dreaming 的来源归因），并新增近况切片表。
-  static const int schemaVersion = 2;
+  /// v3：补齐同步元数据（`updated_at`、`replaces_id`、Dreaming 笔记依据、墓碑表与 `agent_memory_meta`）。
+  static const int schemaVersion = 3;
 
   static const String profileTable = 'agent_memory_profile';
   static const String factsTable = 'agent_memory_facts';
   static const String recentSliceTable = 'agent_memory_recent_slice';
+  static const String tombstonesTable = 'agent_memory_tombstones';
+  static const String metaTable = 'agent_memory_meta';
+
+  static const String metaClearedAtKey = 'cleared_at';
+  static const String metaDreamingLastRunAtKey = 'dreaming_last_run_at';
+  static const String metaDreamingBasisWatermarkKey =
+      'dreaming_basis_watermark';
+  static const String metaDreamingBasisNoteCountKey =
+      'dreaming_basis_note_count';
 
   /// 画像层注入预算。超出时按「最近观察优先」截断注入副本，**不删库里的条目**。
   static const int profileInjectionMaxEntries = 24;
@@ -139,6 +155,10 @@ class AgentMemoryService extends ChangeNotifier {
 
   bool isCaptureCurrent(int generation) =>
       !_disposed && isEnabled && generation == captureGeneration;
+
+  void _notifySyncListeners() {
+    notifyListeners();
+  }
 
   Future<Database> get _db async {
     final current = _database;
@@ -239,9 +259,9 @@ class AgentMemoryService extends ChangeNotifier {
 
   /// 记忆库固定放 documents，**不跟随可自定义的数据目录**。
   ///
-  /// 它不进备份、不进设备同步，本来就是纯本地的几百 KB；用户改数据目录是为了
-  /// 挪主库和媒体这些大件。让它待在原地，就不必接入目录迁移的挂起/复制/校验，
-  /// 也不会在旧目录留下一份没人管的画像。
+  /// 记忆库体量仅几百 KB（跨设备备份与同步走序列化 JSON 段而非裸拷库文件）；
+  /// 用户改数据目录是为了挪主库和媒体这些大件。让它待在原地，就不必接入目录迁移的
+  /// 挂起/复制/校验，也不会在旧目录留下一份没人管的画像。
   static Future<String> _defaultDatabasePath() async {
     final basePath = (await getApplicationDocumentsDirectory()).path;
     return path.join(basePath, databaseFileName);
@@ -255,10 +275,14 @@ class AgentMemoryService extends ChangeNotifier {
         kind TEXT NOT NULL,
         directive TEXT NOT NULL,
         observed_at TEXT NOT NULL,
+        updated_at TEXT,
         status TEXT NOT NULL DEFAULT 'active',
         superseded_by TEXT,
+        replaces_id TEXT,
         source TEXT,
-        source_note_ids TEXT
+        source_note_ids TEXT,
+        basis_watermark TEXT,
+        basis_note_count INTEGER
       )
     ''');
     // 事实层：不默认注入，由 `recall` 按需检索。
@@ -272,6 +296,7 @@ class AgentMemoryService extends ChangeNotifier {
         importance INTEGER NOT NULL DEFAULT 5,
         trigger_phrases TEXT,
         created_at TEXT NOT NULL,
+        updated_at TEXT,
         last_recalled_at TEXT,
         recall_count INTEGER NOT NULL DEFAULT 0,
         source_ref TEXT,
@@ -288,9 +313,48 @@ class AgentMemoryService extends ChangeNotifier {
         source_note_ids TEXT
       )
     ''');
-    // v1 → v2 的加列。建表语句里已经有这一列，所以只有升级路径会真的加上；
-    // 重复执行由下面的吞异常兜底，和整套 schema 的自愈策略保持一致。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tombstonesTable(
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        deleted_at TEXT NOT NULL,
+        PRIMARY KEY(entity_type, entity_id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $metaTable(
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+    // 增量加列：建表语句里已包含新列，升级旧库时补齐并回填。
     await _addColumnIfMissing(db, profileTable, 'source_note_ids', 'TEXT');
+    await _addColumnIfMissing(db, profileTable, 'updated_at', 'TEXT');
+    await _addColumnIfMissing(db, profileTable, 'replaces_id', 'TEXT');
+    await _addColumnIfMissing(db, profileTable, 'basis_watermark', 'TEXT');
+    await _addColumnIfMissing(db, profileTable, 'basis_note_count', 'INTEGER');
+    await _addColumnIfMissing(db, factsTable, 'updated_at', 'TEXT');
+
+    await db.execute('''
+      UPDATE $profileTable
+      SET updated_at = COALESCE(NULLIF(updated_at, ''), observed_at)
+      WHERE updated_at IS NULL OR updated_at = ''
+    ''');
+    await db.execute('''
+      UPDATE $profileTable
+      SET replaces_id = (
+        SELECT old.id FROM $profileTable old
+        WHERE old.superseded_by = $profileTable.id
+        LIMIT 1
+      )
+      WHERE replaces_id IS NULL
+    ''');
+    await db.execute('''
+      UPDATE $factsTable
+      SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at)
+      WHERE updated_at IS NULL OR updated_at = ''
+    ''');
+
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_agent_memory_profile_status '
       'ON $profileTable(status)',
@@ -593,6 +657,9 @@ class AgentMemoryService extends ChangeNotifier {
     String alias, {
     String source = 'dreaming',
     bool unconfirmed = false,
+    DateTime? observedAt,
+    String? basisWatermark,
+    int? basisNoteCount,
   }) async {
     final trimmed = alias.trim();
     if (trimmed.isEmpty) return false;
@@ -618,6 +685,9 @@ class AgentMemoryService extends ChangeNotifier {
       kind: AgentMemoryKind.identity,
       directive: directive,
       source: source,
+      observedAt: observedAt,
+      basisWatermark: basisWatermark,
+      basisNoteCount: basisNoteCount,
     );
     return true;
   }
@@ -693,7 +763,10 @@ class AgentMemoryService extends ChangeNotifier {
     String? replacesId,
     String source = 'thoughter',
     DateTime? observedAt,
+    DateTime? updatedAt,
     List<String> sourceNoteIds = const <String>[],
+    String? basisWatermark,
+    int? basisNoteCount,
   }) async {
     final normalized = _normalizeDirective(directive);
     if (normalized.isEmpty) {
@@ -701,32 +774,50 @@ class AgentMemoryService extends ChangeNotifier {
     }
 
     final db = await _db;
+    final effectiveObservedAt = observedAt ?? DateTime.now();
+    final effectiveUpdatedAt = (updatedAt ?? effectiveObservedAt).toUtc();
+    final cleanReplacesId =
+        (replacesId != null && replacesId.isNotEmpty) ? replacesId : null;
+    final cleanBasisWatermark =
+        (basisWatermark != null && basisWatermark.trim().isNotEmpty)
+            ? basisWatermark.trim()
+            : null;
     final entry = AgentMemoryProfileEntry(
       id: _uuid.v4(),
       kind: kind,
       directive: normalized,
-      observedAt: observedAt ?? DateTime.now(),
+      observedAt: effectiveObservedAt,
+      updatedAt: effectiveUpdatedAt,
+      replacesId: cleanReplacesId,
       source: source,
       sourceNoteIds: sourceNoteIds,
+      basisWatermark: cleanBasisWatermark,
+      basisNoteCount: basisNoteCount,
     );
 
     try {
       await db.transaction((txn) async {
-        if (replacesId != null && replacesId.isNotEmpty) {
+        if (cleanReplacesId != null) {
           await txn.update(
             profileTable,
             <String, Object?>{
               'status': AgentMemoryStatus.superseded.storageValue,
               'superseded_by': entry.id,
+              'updated_at': effectiveUpdatedAt.toIso8601String(),
             },
             where: 'id = ?',
-            whereArgs: <Object?>[replacesId],
+            whereArgs: <Object?>[cleanReplacesId],
           );
         }
         await txn.insert(
           profileTable,
           entry.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        await txn.delete(
+          tombstonesTable,
+          where: 'entity_type = ? AND entity_id = ?',
+          whereArgs: <Object?>['profile', entry.id],
         );
       });
     } catch (error, stackTrace) {
@@ -762,11 +853,13 @@ class AgentMemoryService extends ChangeNotifier {
     }
     try {
       final db = await _db;
+      final now = DateTime.now();
       final updated = await db.update(
         profileTable,
         <String, Object?>{
           'directive': normalized,
-          'observed_at': DateTime.now().toIso8601String(),
+          'observed_at': now.toIso8601String(),
+          'updated_at': now.toUtc().toIso8601String(),
           if (kind != null) 'kind': kind.storageValue,
         },
         where: 'id = ?',
@@ -789,11 +882,26 @@ class AgentMemoryService extends ChangeNotifier {
   Future<bool> forgetProfile(String id) async {
     try {
       final db = await _db;
-      final deleted = await db.delete(
-        profileTable,
-        where: 'id = ?',
-        whereArgs: <Object?>[id],
-      );
+      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
+      final deleted = await db.transaction<int>((txn) async {
+        final count = await txn.delete(
+          profileTable,
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+        );
+        if (count > 0) {
+          await txn.insert(
+            tombstonesTable,
+            <String, Object?>{
+              'entity_type': 'profile',
+              'entity_id': id,
+              'deleted_at': nowUtcIso,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        return count;
+      });
       if (deleted > 0) {
         _invalidateProfile();
         await activeIdentityAliases();
@@ -934,26 +1042,33 @@ class AgentMemoryService extends ChangeNotifier {
     );
     try {
       final db = await _db;
-      await db.insert(
-        recentSliceTable,
-        slice.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-
-      // 严格控制近况切片数量上限，避免切片长期积累膨胀
-      final countRows = await db.rawQuery(
-        'SELECT count(*) as count FROM $recentSliceTable WHERE expires_at > ?',
-        <Object?>[now.toIso8601String()],
-      );
-      final activeCount = safeParseInt(countRows.firstOrNull?['count']);
-      if (activeCount > AgentMemoryRecentSlice.maxRecentSlices * 2) {
-        await db.delete(
+      await db.transaction((txn) async {
+        await txn.insert(
           recentSliceTable,
-          where: 'id NOT IN (SELECT id FROM $recentSliceTable '
-              'ORDER BY observed_at DESC LIMIT ?)',
-          whereArgs: <Object?>[AgentMemoryRecentSlice.maxRecentSlices],
+          slice.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
         );
-      }
+        await txn.delete(
+          tombstonesTable,
+          where: 'entity_type = ? AND entity_id = ?',
+          whereArgs: <Object?>['slice', slice.id],
+        );
+
+        // 严格控制近况切片数量上限，避免切片长期积累膨胀（自动裁剪不写墓碑）
+        final countRows = await txn.rawQuery(
+          'SELECT count(*) as count FROM $recentSliceTable WHERE expires_at > ?',
+          <Object?>[now.toIso8601String()],
+        );
+        final activeCount = safeParseInt(countRows.firstOrNull?['count']);
+        if (activeCount > AgentMemoryRecentSlice.maxRecentSlices * 2) {
+          await txn.delete(
+            recentSliceTable,
+            where: 'id NOT IN (SELECT id FROM $recentSliceTable '
+                'ORDER BY observed_at DESC LIMIT ?)',
+            whereArgs: <Object?>[AgentMemoryRecentSlice.maxRecentSlices],
+          );
+        }
+      });
 
       notifyListeners();
       return slice;
@@ -967,11 +1082,40 @@ class AgentMemoryService extends ChangeNotifier {
   Future<bool> clearRecentSlice({String? id}) async {
     try {
       final db = await _db;
-      final deleted = await db.delete(
-        recentSliceTable,
-        where: id != null ? 'id = ?' : null,
-        whereArgs: id != null ? <Object?>[id] : null,
-      );
+      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
+      final deleted = await db.transaction<int>((txn) async {
+        final existingRows = await txn.query(
+          recentSliceTable,
+          columns: const <String>['id'],
+          where: id != null ? 'id = ?' : null,
+          whereArgs: id != null ? <Object?>[id] : null,
+        );
+        final sliceIds = existingRows
+            .map((row) => row['id'])
+            .whereType<String>()
+            .where((sliceId) => sliceId.isNotEmpty)
+            .toList(growable: false);
+        if (sliceIds.isEmpty) {
+          return 0;
+        }
+        final count = await txn.delete(
+          recentSliceTable,
+          where: id != null ? 'id = ?' : null,
+          whereArgs: id != null ? <Object?>[id] : null,
+        );
+        for (final sliceId in sliceIds) {
+          await txn.insert(
+            tombstonesTable,
+            <String, Object?>{
+              'entity_type': 'slice',
+              'entity_id': sliceId,
+              'deleted_at': nowUtcIso,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        return count;
+      });
       if (deleted > 0) {
         notifyListeners();
       }
@@ -1078,24 +1222,34 @@ class AgentMemoryService extends ChangeNotifier {
     List<String> triggerPhrases = const <String>[],
     String? sourceRef,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) async {
+    final effectiveCreatedAt = createdAt ?? DateTime.now();
     final fact = _buildFact(
       content: content,
       category: category,
       importance: importance,
       triggerPhrases: triggerPhrases,
       sourceRef: sourceRef,
-      createdAt: createdAt,
+      createdAt: effectiveCreatedAt,
+      updatedAt: (updatedAt ?? effectiveCreatedAt).toUtc(),
     );
 
     try {
       final db = await _db;
-      await db.insert(
-        factsTable,
-        fact.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      await _evictOverflowFacts();
+      await db.transaction((txn) async {
+        await txn.insert(
+          factsTable,
+          fact.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        await txn.delete(
+          tombstonesTable,
+          where: 'entity_type = ? AND entity_id = ?',
+          whereArgs: <Object?>['fact', fact.id],
+        );
+        await _evictOverflowFactsInTxn(txn);
+      });
     } catch (error, stackTrace) {
       _reportDatabaseError('addFact', error, stackTrace);
       rethrow;
@@ -1120,6 +1274,7 @@ class AgentMemoryService extends ChangeNotifier {
   }) async {
     try {
       final db = await _db;
+      final nowUtc = DateTime.now().toUtc();
       final updated = await db.transaction<AgentMemoryFact?>((txn) async {
         final rows = await txn.query(
           factsTable,
@@ -1143,6 +1298,7 @@ class AgentMemoryService extends ChangeNotifier {
           triggerPhrases: triggerPhrases,
           sourceRef: sourceRef ?? previous.sourceRef,
           createdAt: previous.createdAt,
+          updatedAt: nowUtc,
           lastRecalledAt: previous.lastRecalledAt,
           recallCount: previous.recallCount,
         );
@@ -1174,6 +1330,7 @@ class AgentMemoryService extends ChangeNotifier {
     List<String> triggerPhrases = const <String>[],
     String? sourceRef,
     DateTime? createdAt,
+    DateTime? updatedAt,
     DateTime? lastRecalledAt,
     int recallCount = 0,
   }) {
@@ -1183,11 +1340,13 @@ class AgentMemoryService extends ChangeNotifier {
     }
 
     final trimmedCategory = category?.trim() ?? '';
+    final effectiveCreatedAt = createdAt ?? DateTime.now();
 
     return AgentMemoryFact(
       id: id ?? _uuid.v4(),
       content: normalized,
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: effectiveCreatedAt,
+      updatedAt: (updatedAt ?? effectiveCreatedAt).toUtc(),
       lastRecalledAt: lastRecalledAt,
       recallCount: recallCount,
       category: trimmedCategory.isEmpty ? null : trimmedCategory,
@@ -1210,11 +1369,26 @@ class AgentMemoryService extends ChangeNotifier {
   Future<bool> forgetFact(String id) async {
     try {
       final db = await _db;
-      final deleted = await db.delete(
-        factsTable,
-        where: 'id = ?',
-        whereArgs: <Object?>[id],
-      );
+      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
+      final deleted = await db.transaction<int>((txn) async {
+        final count = await txn.delete(
+          factsTable,
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+        );
+        if (count > 0) {
+          await txn.insert(
+            tombstonesTable,
+            <String, Object?>{
+              'entity_type': 'fact',
+              'entity_id': id,
+              'deleted_at': nowUtcIso,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        return count;
+      });
       if (deleted > 0) {
         notifyListeners();
       }
@@ -1506,10 +1680,21 @@ class AgentMemoryService extends ChangeNotifier {
   Future<void> _clearAll() async {
     try {
       final db = await _db;
+      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
       await db.transaction((txn) async {
         await txn.delete(profileTable);
         await txn.delete(factsTable);
         await txn.delete(recentSliceTable);
+        await txn.delete(tombstonesTable);
+        await txn.delete(metaTable);
+        await txn.insert(
+          metaTable,
+          <String, Object?>{
+            'key': metaClearedAtKey,
+            'value': nowUtcIso,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       });
     } catch (error, stackTrace) {
       _reportDatabaseError('clearAll', error, stackTrace);
@@ -1521,6 +1706,84 @@ class AgentMemoryService extends ChangeNotifier {
     notifyListeners();
     logDebug('已清空 Thoughter 记忆', source: 'AgentMemoryService');
     AptabaseHelper.trackEvent('agent_memory_clear_all');
+  }
+
+  /// 记录最近一轮 Dreaming 运行时间及当时的笔记依据水位与数量，供同步导出使用。
+  Future<void> recordDreamingRun({
+    required DateTime runAt,
+    String? basisWatermark,
+    int? basisNoteCount,
+  }) async {
+    try {
+      final db = await _db;
+      final runAtIso = runAt.toUtc().toIso8601String();
+      final cleanWatermark =
+          (basisWatermark != null && basisWatermark.trim().isNotEmpty)
+              ? basisWatermark.trim()
+              : null;
+      await db.transaction((txn) async {
+        await txn.insert(
+          metaTable,
+          <String, Object?>{
+            'key': metaDreamingLastRunAtKey,
+            'value': runAtIso,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        if (cleanWatermark != null) {
+          await txn.insert(
+            metaTable,
+            <String, Object?>{
+              'key': metaDreamingBasisWatermarkKey,
+              'value': cleanWatermark,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        } else {
+          await txn.delete(
+            metaTable,
+            where: 'key = ?',
+            whereArgs: <Object?>[metaDreamingBasisWatermarkKey],
+          );
+        }
+        if (basisNoteCount != null) {
+          await txn.insert(
+            metaTable,
+            <String, Object?>{
+              'key': metaDreamingBasisNoteCountKey,
+              'value': basisNoteCount.toString(),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        } else {
+          await txn.delete(
+            metaTable,
+            where: 'key = ?',
+            whereArgs: <Object?>[metaDreamingBasisNoteCountKey],
+          );
+        }
+      });
+    } catch (error, stackTrace) {
+      _reportDatabaseError('recordDreamingRun', error, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> _clearDreamingMeta() async {
+    try {
+      final db = await _db;
+      await db.delete(
+        metaTable,
+        where: 'key IN (?, ?, ?)',
+        whereArgs: <Object?>[
+          metaDreamingLastRunAtKey,
+          metaDreamingBasisWatermarkKey,
+          metaDreamingBasisNoteCountKey,
+        ],
+      );
+    } catch (error, stackTrace) {
+      _reportDatabaseError('clearDreamingMeta', error, stackTrace);
+    }
   }
 
   /// 周期性记忆库压缩与精简（基于 OpenClaw / Mem0 实践，严格控制噪音与记忆膨胀）。
@@ -1568,133 +1831,12 @@ class AgentMemoryService extends ChangeNotifier {
           whereArgs: <Object?>[thirtyDaysAgo.toIso8601String()],
         );
 
-        // 4. 单例画像唯一性与同 kind 重复活跃指令去重：
-        // (a) 对 taste, voice 这类单例 kind，若存在多条 active，仅保留最新一条
-        // (b) 对同 kind 且 directive 相同的 active 条目，仅保留最新一条
-        final activeRows = await txn.query(
-          profileTable,
-          where: 'status = ?',
-          whereArgs: <Object?>[AgentMemoryStatus.active.storageValue],
-          orderBy: 'observed_at DESC',
+        // 4. 分叉收敛、单例画像唯一性、身份别名收敛与同 kind+directive 活跃指令去重（不写墓碑）
+        final convergence = await _convergeActiveProfilesInTxn(
+          txn,
+          nowUtcIso: currentTime.toUtc().toIso8601String(),
         );
-        final singletonKinds = <String>{
-          AgentMemoryKind.taste.storageValue,
-          AgentMemoryKind.voice.storageValue,
-          AgentMemoryKind.style.storageValue,
-        };
-        final seenSingletonKinds = <String, String>{}; // kind -> id
-        final seenKindDirectives =
-            <String, String>{}; // "$kind:$directive" -> id
-        final seenIdentityAliases = <String, String>{}; // lowerAlias -> id
-        final seenUnconfirmedAliases = <String, String>{}; // lowerAlias -> id
-
-        // 预先收集所有活跃的已确认别名，确保任何存疑别名（无论观察时间早晚）均能被已确认别名平滑收敛淘汰
-        final confirmedAliasToId = <String, String>{};
-        for (final row in activeRows) {
-          final id = row['id'] as String;
-          final rawKind = (row['kind'] as String? ?? '').trim();
-          final directive = (row['directive'] as String? ?? '').trim();
-          if (rawKind == AgentMemoryKind.identity.storageValue) {
-            for (final alias in extractAliasesFromDirective(directive)) {
-              confirmedAliasToId.putIfAbsent(alias.toLowerCase(), () => id);
-            }
-          }
-        }
-
-        for (final row in activeRows) {
-          final id = row['id'] as String;
-          final rawKind = (row['kind'] as String? ?? '').trim();
-          final directive = (row['directive'] as String? ?? '').trim();
-          if (directive.isEmpty) continue;
-
-          var shouldSupersede = false;
-          String? supersededById;
-
-          if (singletonKinds.contains(rawKind)) {
-            if (seenSingletonKinds.containsKey(rawKind)) {
-              shouldSupersede = true;
-              supersededById = seenSingletonKinds[rawKind];
-            } else {
-              seenSingletonKinds[rawKind] = id;
-            }
-          }
-
-          // 对 identity 类别：
-          // 1) 若包含特定已确认笔名/别名，同别名下仅保留最新一条活跃指令使矛盾指令收敛，不同别名（多画像）互不干扰
-          // 2) 若为存疑别名，若已有已确认别名或更新的存疑别名则收敛淘汰
-          // 3) 非别名通用身份自述（如职业、长期人生经历）：绝不当作单例覆盖，保留多种非冲突身份特质；
-          //    仅由下方的 seenKindDirectives 针对完全相同指令进行去重。
-          if (!shouldSupersede &&
-              rawKind == AgentMemoryKind.identity.storageValue) {
-            final confirmedAliases = extractAliasesFromDirective(directive);
-            if (confirmedAliases.isNotEmpty) {
-              for (final alias in confirmedAliases) {
-                final lowerAlias = alias.toLowerCase();
-                if (seenIdentityAliases.containsKey(lowerAlias)) {
-                  shouldSupersede = true;
-                  supersededById = seenIdentityAliases[lowerAlias];
-                  break;
-                }
-              }
-              if (!shouldSupersede) {
-                for (final alias in confirmedAliases) {
-                  seenIdentityAliases[alias.toLowerCase()] = id;
-                }
-              }
-            } else {
-              final unconfirmedAliases = extractAliasesFromDirective(
-                directive,
-                includeUnconfirmed: true,
-              );
-              if (unconfirmedAliases.isNotEmpty) {
-                for (final alias in unconfirmedAliases) {
-                  final lowerAlias = alias.toLowerCase();
-                  if (confirmedAliasToId.containsKey(lowerAlias)) {
-                    shouldSupersede = true;
-                    supersededById = confirmedAliasToId[lowerAlias];
-                    break;
-                  }
-                  if (seenUnconfirmedAliases.containsKey(lowerAlias)) {
-                    shouldSupersede = true;
-                    supersededById = seenUnconfirmedAliases[lowerAlias];
-                    break;
-                  }
-                }
-                if (!shouldSupersede) {
-                  for (final alias in unconfirmedAliases) {
-                    seenUnconfirmedAliases[alias.toLowerCase()] = id;
-                  }
-                }
-              }
-              // 非别名身份条目（职业、经历等）：不在此作为单例互相覆盖，
-              // 仅由下方的 seenKindDirectives 针对完全相同指令去重，保留多种身份特质。
-            }
-          }
-
-          final kindDirectiveKey = '$rawKind:$directive';
-          if (!shouldSupersede) {
-            if (seenKindDirectives.containsKey(kindDirectiveKey)) {
-              shouldSupersede = true;
-              supersededById = seenKindDirectives[kindDirectiveKey];
-            } else {
-              seenKindDirectives[kindDirectiveKey] = id;
-            }
-          }
-
-          if (shouldSupersede) {
-            // 重复或冲突条目原位标记为 superseded
-            await txn.update(
-              profileTable,
-              <String, Object?>{
-                'status': AgentMemoryStatus.superseded.storageValue,
-                'superseded_by': supersededById,
-              },
-              where: 'id = ?',
-              whereArgs: <Object?>[id],
-            );
-            duplicatesPruned++;
-          }
-        }
+        duplicatesPruned = convergence.supersededCount;
 
         // 5. 修剪超出容量的过旧近况切片（仅保留最新的 maxRecentSlices 条活跃切片）
         await txn.delete(
@@ -1835,50 +1977,51 @@ class AgentMemoryService extends ChangeNotifier {
     }
   }
 
-  Future<void> _evictOverflowFacts() async {
-    try {
-      final db = await _db;
-      final countRows =
-          await db.rawQuery('SELECT COUNT(*) AS c FROM $factsTable');
-      final total = (countRows.first['c'] as num?)?.toInt() ?? 0;
-      final overflowCount = total - factsCapacity;
-      if (overflowCount <= 0) {
-        return;
-      }
-
-      final rows = await db.query(factsTable);
-      final now = DateTime.now();
-      final scored = rows
-          .map(AgentMemoryFact.fromMap)
-          .map(
-            (fact) => AgentMemoryFactHit(
-              fact: fact,
-              score: scoreFact(fact, keywords: const <String>[], now: now),
-            ),
-          )
-          .toList()
-        ..sort((left, right) => left.score.compareTo(right.score));
-
-      final victims = scored
-          .take(overflowCount)
-          .map((hit) => hit.fact.id)
-          .toList(growable: false);
-      if (victims.isEmpty) {
-        return;
-      }
-      final placeholders = List<String>.filled(victims.length, '?').join(', ');
-      await db.rawDelete(
-        'DELETE FROM $factsTable WHERE id IN ($placeholders)',
-        victims,
-      );
-      logDebug(
-        '记忆事实层超出容量，淘汰 ${victims.length} 条',
-        source: 'AgentMemoryService',
-      );
-    } catch (error, stackTrace) {
-      _reportDatabaseError('evictOverflowFacts', error, stackTrace);
-      rethrow;
+  static Future<void> _evictOverflowFactsInTxn(
+    DatabaseExecutor db, {
+    DateTime? now,
+  }) async {
+    final countRows =
+        await db.rawQuery('SELECT COUNT(*) AS c FROM $factsTable');
+    final total = (countRows.first['c'] as num?)?.toInt() ?? 0;
+    final overflowCount = total - factsCapacity;
+    if (overflowCount <= 0) {
+      return;
     }
+
+    final rows = await db.query(factsTable);
+    final refNow = now ?? DateTime.now();
+    final scored = rows
+        .map(AgentMemoryFact.fromMap)
+        .map(
+          (fact) => AgentMemoryFactHit(
+            fact: fact,
+            score: scoreFact(fact, keywords: const <String>[], now: refNow),
+          ),
+        )
+        .toList()
+      ..sort((left, right) {
+        final cmp = left.score.compareTo(right.score);
+        if (cmp != 0) return cmp;
+        return right.fact.id.compareTo(left.fact.id);
+      });
+
+    final victims = scored
+        .take(overflowCount)
+        .map((hit) => hit.fact.id)
+        .toList(growable: false);
+    if (victims.isEmpty) {
+      return;
+    }
+    final placeholders = List<String>.filled(victims.length, '?').join(', ');
+    await db.rawDelete(
+      'DELETE FROM $factsTable WHERE id IN ($placeholders)',
+      victims,
+    );
+    logDebug(
+      '记忆事实层超出容量，淘汰 ${victims.length} 条',
+      source: 'AgentMemoryService',
+    );
   }
 
   String _normalizeDirective(String value) =>

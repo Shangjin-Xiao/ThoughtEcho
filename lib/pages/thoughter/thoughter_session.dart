@@ -80,8 +80,9 @@ extension _ThoughterSession on _ThoughterPageState {
     if (_messagesSessionId == sessionId) {
       if (_messages.any((msg) => msg.isUser)) return;
       unawaited(
-        _chatSessionService.deleteSession(sessionId).catchError((e) {
+        _chatSessionService.deleteEmptySession(sessionId).catchError((e) {
           logDebug('清理空会话失败: $sessionId - $e');
+          return false;
         }),
       );
       return;
@@ -111,7 +112,7 @@ extension _ThoughterSession on _ThoughterPageState {
     // 回到当前会话就不删。
     if (!mounted || _currentSessionId == sessionId) return;
     try {
-      await _chatSessionService.deleteSession(sessionId);
+      await _chatSessionService.deleteEmptySession(sessionId);
     } catch (e) {
       logDebug('清理空会话失败: $sessionId - $e');
     }

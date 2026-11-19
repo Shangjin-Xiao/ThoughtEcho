@@ -1169,9 +1169,43 @@ iOS 的 CoreText 排版引擎根本不解析通用族名 `serif`，当首选族�
 
 ---
 
+## 2026-11: AI 对话记录（`chat.db` v3）与 Thoughter 长期记忆（`agent_memory.db` v3）三端同步架构决策
+
+**决策者**: 上晋 + 核心团队  
+**类型**: 数据同步架构 / 隐私与一致性设计  
+**关联实现**: `lib/services/chat_session_sync.dart`、`lib/services/agent_memory_sync.dart`、`lib/services/assistant_data_sync_service.dart`
+
+### 背景与演进动机
+
+随着多设备（桌面端与移动端）高频交替使用，2026-08-08 首版「聊天记录与长期记忆仅留本机、换机即失忆」的权衡已成为明显体验断层：用户在另一台设备上看不到已有 AI 对话上下文，精心纠正的 Thoughter 偏好也需重复调教，且多台设备会针对同一批同步笔记各自重复运行后台 Dreaming。与此同时，API Key 与设备级应用偏好设置仍须保持不跨端同步的边界。
+
+### 核心架构决策
+
+1. **三库物理隔离保留 + 固定顺序编排（`AssistantDataSyncService`）**：
+   - 继续维持 `thoughtecho.db`、`chat.db`、`agent_memory.db` 三个独立 SQLite 文件（各自管理 SQL 与 `part` 同步文件，独立演进 schema 并保留物理级清空边界）。
+   - 单轮同步统一按 **「主库笔记提交 → 对话合并 → 长期记忆合并」** 固定顺序执行：因跨文件无法共享 SQLite 事务，对话或记忆合并异常不回滚已落盘的笔记；但在 WebDAV 链路中一旦对话或记忆合并报错，**立即中止后续本地快照打包上传与 `_lastSyncTime` 水位推进**，防止残缺本地状态覆盖云端尚未合入的数据，留待下轮幂等重试。
+   - 偏好设置 `settings` 仅进手动备份并在**覆盖恢复**时应用（补齐 `theme_style` 恢复后调用 `AppTheme.reloadFromStorage()` 即时刷新内存态闭环）；LWW 合并、LocalSend 与 WebDAV 同步绝不应用 `settings`，API Key 永不进备份或同步。
+2. **双向墓碑、空会话免墓碑与 `cleared_at` 清空屏障**：
+   - `chat.db`（v3）与 `agent_memory.db`（v3）均引入 UTC ISO-8601 `updated_at` 与独立 `*_tombstones` 表：仅用户显式删除（删会话/消息、遗忘画像/事实、主动清切片）写墓碑，后台/退出空会话清理（`deleteEmptySession`）与容量/衰减自动淘汰（`compactAndPrune`、`_evictOverflowFacts`）**不写墓碑**，确保对端有效消息与高召回事实可正常合入或复活。
+   - `agent_memory.db` 在 `agent_memory_meta` 记录 `cleared_at` 全局清空水位：合并取两端最大 `cleared_at`，自动剔除早于等于该水位的陈旧行与旧墓碑，防止被另一台离线设备把“一键清空前”的历史记忆重新灌回。
+   - 严格遵守记忆隐私开关：关闭长期记忆的设备导出时不含 `agent_memory` 段，收到远端 `agent_memory` 段时跳过合入并在 `MergeReport.assistantStats` 中显式标注。
+3. **同事务四步确定性收敛与事实召回履历保真**：
+   - 长期记忆在行级 LWW 与墓碑处理后，于同一写事务内依次执行：① 同 `replaces_id` 多活跃分叉收敛；② 单活跃类别（`taste` / `voice` / `style`）收敛；③ `identity` 确认/存疑别名与同文去重；④ 事实按规范化文本精确去重（确定性保留最早 `created_at` 及字典序最小 `id`，合并 `max(recall_count)` 与最晚 `last_recalled_at`）及容量裁剪。本地 `searchFacts` 仅更新召回计数而不刷新 `updated_at`，避免只读检索掩盖对端文本修订。
+   - 赢家优先级固定为：**用户主动写入/纠正（非 `dreaming*`） > Dreaming“看全了笔记” > 更新时间较晚 > `id` 字典序兜底**，确保任意两端以不同顺序导入均收敛至一致活跃状态。
+4. **Dreaming 笔记依据（`basis_watermark` / `basis_note_count`）“看全了”启发式判定**：
+   - `DreamingService` 采样主库未删除笔记时，记录当时的最大有效修改时间 `basis_watermark` 与未删除笔记总数 `basis_note_count`。
+   - 同步合并时，在**已完成主库笔记合并**的本地库上统计有效修改时间 `<= basis_watermark` 的未删除笔记数：若 `<= basis_note_count` 则判定对端该轮 Dreaming“看全了”当时所有笔记（后续新写的笔记 > watermark 不会误判为漏看）；若 `> basis_note_count` 说明本机合入了当时对端未见的更早离线笔记，判定为“漏看了”。
+   - 当对端 `dreaming.last_run_at` 判定为“看全了”且比本机新时，本机直接沿用该 `lastDreamingAt` 免除重复跑 LLM；当两条冲突的 Dreaming 画像均判定为“漏看了”时，先暂取较新者并将本机 `lastDreamingAt` 置空，交由后续空闲窗口基于完整合并后的笔记集重做归纳。
+
+### 结论与收益
+
+在不破坏独立 SQLite 物理隔离、不引入中心化协调服务器的前提下，打通了手动备份/恢复、LocalSend 局域网同步与 WebDAV 云同步的 AI 对话与长期记忆闭环，兼顾了跨端一致性、隐私开关边界与低成本防重复 Dreaming。
+
+---
+
 ## 历史上被后续决议推翻/修正的决策总账 (Overturned / Revised Decisions Index)
 
-为了便于开发者追溯架构演进脉络，防止重复踩坑或重新引入已被证伪的旧方案，下表汇总了 ThoughtEcho 历史上被后续 ADR 或实测结论推翻/修正的 7 项重大决策：
+为了便于开发者追溯架构演进脉络，防止重复踩坑或重新引入已被证伪的旧方案，下表汇总了 ThoughtEcho 历史上被后续 ADR 或实测结论推翻/修正的重大决策：
 
 | # | 历史原决策 / 方案设想 | 推翻/修正时间与 ADR 来源 | 最终生效的新决议与原因 |
 |:---:|---|---|---|

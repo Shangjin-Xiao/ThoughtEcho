@@ -12,6 +12,7 @@ class ChatSession {
   final String title;
   final DateTime createdAt;
   final DateTime lastActiveAt;
+  final DateTime? updatedAt;
   final List<ChatMessage> messages;
   final bool isPinned;
 
@@ -22,6 +23,7 @@ class ChatSession {
     required this.title,
     required this.createdAt,
     required this.lastActiveAt,
+    this.updatedAt,
     this.messages = const [],
     this.isPinned = false,
   });
@@ -32,16 +34,22 @@ class ChatSession {
     if (id == null || id.isEmpty) {
       throw const FormatException('ChatSession.fromMap: id 不能为空');
     }
+    final createdAt = DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+        DateTime.now();
+    final lastActiveAt =
+        DateTime.tryParse(map['last_active_at']?.toString() ?? '') ?? createdAt;
+    final rawUpdatedAt = map['updated_at']?.toString();
+    final updatedAt = (rawUpdatedAt != null && rawUpdatedAt.isNotEmpty)
+        ? DateTime.tryParse(rawUpdatedAt)
+        : null;
     return ChatSession(
       id: id,
       sessionType: map['session_type']?.toString() ?? 'note',
       noteId: map['note_id']?.toString(),
       title: map['title']?.toString() ?? '',
-      createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ??
-          DateTime.now(),
-      lastActiveAt:
-          DateTime.tryParse(map['last_active_at']?.toString() ?? '') ??
-              DateTime.now(),
+      createdAt: createdAt,
+      lastActiveAt: lastActiveAt,
+      updatedAt: updatedAt,
       isPinned: _parseBool(map['is_pinned'], defaultValue: false),
     );
   }
@@ -55,6 +63,7 @@ class ChatSession {
       'title': title,
       'created_at': createdAt.toIso8601String(),
       'last_active_at': lastActiveAt.toIso8601String(),
+      'updated_at': (updatedAt ?? lastActiveAt).toUtc().toIso8601String(),
       'is_pinned': isPinned ? 1 : 0,
     };
   }
@@ -68,6 +77,7 @@ class ChatSession {
       'title': title,
       'createdAt': createdAt.toIso8601String(),
       'lastActiveAt': lastActiveAt.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toUtc().toIso8601String(),
       'messages': messages.map((m) => m.toJson()).toList(),
       'isPinned': isPinned,
     };
@@ -102,6 +112,8 @@ class ChatSession {
       }
     }
 
+    final rawUpdatedAt =
+        (json['updatedAt'] ?? json['updated_at'])?.toString() ?? '';
     return ChatSession(
       id: json['id']?.toString() ?? '',
       sessionType: json['sessionType']?.toString() ?? 'note',
@@ -111,6 +123,8 @@ class ChatSession {
           DateTime.now(),
       lastActiveAt: DateTime.tryParse(json['lastActiveAt']?.toString() ?? '') ??
           DateTime.now(),
+      updatedAt:
+          rawUpdatedAt.isNotEmpty ? DateTime.tryParse(rawUpdatedAt) : null,
       messages: messages,
       isPinned: _parseBool(json['isPinned'], defaultValue: false),
     );
@@ -136,6 +150,7 @@ class ChatSession {
     String? title,
     DateTime? createdAt,
     DateTime? lastActiveAt,
+    DateTime? updatedAt,
     List<ChatMessage>? messages,
     bool? isPinned,
   }) {
@@ -146,6 +161,7 @@ class ChatSession {
       title: title ?? this.title,
       createdAt: createdAt ?? this.createdAt,
       lastActiveAt: lastActiveAt ?? this.lastActiveAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       messages: messages ?? this.messages,
       isPinned: isPinned ?? this.isPinned,
     );

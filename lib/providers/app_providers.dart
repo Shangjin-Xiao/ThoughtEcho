@@ -4,6 +4,7 @@ import 'package:provider/single_child_widget.dart';
 
 import '../services/ai_analysis_database_service.dart';
 import '../services/ai_service.dart';
+import '../services/assistant_data_sync_service.dart';
 import '../services/backup_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
@@ -237,13 +238,43 @@ List<SingleChildWidget> buildAppProviders({
         return dreaming;
       },
     ),
-    ProxyProvider3<DatabaseService, SettingsService, AIAnalysisDatabaseService,
-        BackupService>(
-      update: (context, dbService, settingsService, aiService, previous) =>
+    // lazy: false 确保启动自动 WebDAV 同步执行前，编排器已挂载到 WebDAVSyncService() 单例。
+    ProxyProvider4<ChatSessionService, AgentMemoryService, SettingsService,
+        DatabaseService, AssistantDataSyncService>(
+      lazy: false,
+      update: (context, chatService, memoryService, settings, db, previous) {
+        final service = (previous
+              ?..updateDependencies(
+                chatSessionService: chatService,
+                agentMemoryService: memoryService,
+                settingsService: settings,
+                databaseService: db,
+              )) ??
+            AssistantDataSyncService(
+              chatSessionService: chatService,
+              agentMemoryService: memoryService,
+              settingsService: settings,
+              databaseService: db,
+            );
+        WebDAVSyncService().attachAssistantDataSync(service);
+        return service;
+      },
+    ),
+    ProxyProvider4<DatabaseService, SettingsService, AIAnalysisDatabaseService,
+        AssistantDataSyncService, BackupService>(
+      update: (
+        context,
+        dbService,
+        settingsService,
+        aiService,
+        assistantSync,
+        previous,
+      ) =>
           BackupService(
         databaseService: dbService,
         settingsService: settingsService,
         aiAnalysisDbService: aiService,
+        assistantDataSyncService: assistantSync,
       ),
     ),
     ChangeNotifierProxyProvider4<BackupService, DatabaseService,

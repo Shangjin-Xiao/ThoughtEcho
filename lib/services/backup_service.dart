@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/assistant_data_sync_service.dart';
 import 'package:thoughtecho/services/biometric_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/utils/backup_media_processor.dart';
@@ -27,14 +28,17 @@ class BackupService {
   final DatabaseService _databaseService;
   final SettingsService _settingsService;
   final AIAnalysisDatabaseService _aiAnalysisDbService;
+  final AssistantDataSyncService? _assistantDataSyncService;
 
   BackupService({
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
+    AssistantDataSyncService? assistantDataSyncService,
   })  : _databaseService = databaseService,
         _settingsService = settingsService,
-        _aiAnalysisDbService = aiAnalysisDbService;
+        _aiAnalysisDbService = aiAnalysisDbService,
+        _assistantDataSyncService = assistantDataSyncService;
 
   /// 最近一次导出中富文本媒体路径转换失败的笔记ID列表
   ///
@@ -416,7 +420,12 @@ class BackupService {
         if (page.length < aiPageSize) break;
         await Future.delayed(const Duration(milliseconds: 1));
       }
-      sink.write(']}'); // 结束 ai_analysis 数组 + 顶层 JSON 对象
+      sink.write(']'); // 结束 ai_analysis 数组
+      await _assistantDataSyncService?.writeSections(
+        sink,
+        cancelToken: cancelToken,
+      );
+      sink.write('}'); // 结束顶层 JSON 对象
 
       await sink.flush();
       onProgress?.call(1.0);
@@ -637,6 +646,18 @@ class BackupService {
             source: 'BackupService',
           );
         }
+      }
+
+      cancelToken?.throwIfCancelled();
+
+      // 恢复对话记录与长期记忆（旧格式备份无对应键时保持本地不动）
+      if (clearExisting) {
+        await _assistantDataSyncService?.restoreSections(backupData);
+      } else {
+        await _assistantDataSyncService?.mergeSections(
+          backupData,
+          throwOnError: false,
+        );
       }
 
       logDebug('导入数据处理完成');
@@ -1048,12 +1069,25 @@ class BackupService {
       final incomingTrashSettings =
           rawTrashSettings is Map<String, dynamic> ? rawTrashSettings : null;
 
-      // 使用LWW策略合并数据
+      // 使用LWW策略合并数据（固定顺序：笔记 → 对话 → 记忆）
       onProgress?.call(60, 100);
-      final report = await _databaseService.importDataWithLWWMerge(
+      var report = await _databaseService.importDataWithLWWMerge(
         backupData.containsKey('notes') ? backupData['notes'] : backupData,
         sourceDevice: sourceDevice,
       );
+
+      if (_assistantDataSyncService != null) {
+        final assistantStats = await _assistantDataSyncService.mergeSections(
+          backupData,
+          throwOnError: false,
+        );
+        report = report.copyWith(
+          assistantStats: assistantStats,
+          errors: assistantStats.hasErrors
+              ? <String>[...report.errors, ...assistantStats.errors]
+              : report.errors,
+        );
+      }
       onProgress?.call(100, 100);
 
       // 数据库合并成功后，尝试应用设置

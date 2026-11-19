@@ -15,6 +15,7 @@ import 'package:xml/xml.dart';
 import 'package:xml/xml_events.dart';
 
 import '../services/connectivity_service.dart';
+import '../services/assistant_data_sync_service.dart';
 import '../services/database_service.dart';
 import '../services/media_fingerprint_cache.dart';
 import '../services/media_reference_service.dart';
@@ -122,6 +123,12 @@ class WebDAVSyncService extends ChangeNotifier {
   // 核心存储与安全服务
   final AppPreferencesService _mmkv = AppPreferencesService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  AssistantDataSyncService? _assistantDataSync;
+
+  /// 挂载对话记录与长期记忆同步编排服务。
+  void attachAssistantDataSync(AssistantDataSyncService? service) {
+    _assistantDataSync = service;
+  }
 
   // WebDAV 状态
   WebDAVSyncStatus _syncStatus = WebDAVSyncStatus.idle;
@@ -564,7 +571,7 @@ class WebDAVSyncService extends ChangeNotifier {
         );
       }
 
-      // 4. 合并云端数据到本地数据库
+      // 4. 合并云端数据到本地数据库（固定顺序：笔记 → 对话 → 记忆）
       if (remoteData != null) {
         logDebug('开始执行 LWW 本地智能合并...');
         final mergeReport = await dbService.importDataWithLWWMerge(
@@ -575,6 +582,13 @@ class WebDAVSyncService extends ChangeNotifier {
           throw StateError('云端数据合并失败: ${mergeReport.errors.join('; ')}');
         }
         dbService.refreshQuotes(); // 刷新 UI
+
+        if (_assistantDataSync != null) {
+          await _assistantDataSync!.mergeSections(
+            remoteData,
+            throwOnError: true,
+          );
+        }
       }
 
       // 5. 增量比对并同步大媒体附件 (Images, Videos, Audios)
@@ -1173,6 +1187,16 @@ class WebDAVSyncService extends ChangeNotifier {
           throw const _CorruptedRemoteSyncFileException('云端同步墓碑记录格式无效');
         }
       }
+    }
+
+    final chat = data['chat'];
+    if (chat != null && chat is! Map) {
+      throw const _CorruptedRemoteSyncFileException('云端同步对话数据格式无效');
+    }
+
+    final agentMemory = data['agent_memory'];
+    if (agentMemory != null && agentMemory is! Map) {
+      throw const _CorruptedRemoteSyncFileException('云端同步记忆数据格式无效');
     }
   }
 
@@ -2640,11 +2664,13 @@ class WebDAVSyncService extends ChangeNotifier {
         }
         sink.write('],');
 
-        // tombstones — 三列短字符串，数量有界
+        // tombstones — 三列短字符串，数量有界（顶层 `}` 延后到对话/记忆追加后闭合）
         final tombstones = await txn.query('quote_tombstones');
-        sink.write('"tombstones":${json.encode(tombstones)}}');
+        sink.write('"tombstones":${json.encode(tombstones)}');
       });
 
+      await _assistantDataSync?.writeSections(sink);
+      sink.write('}');
       await sink.flush();
     } finally {
       await sink.close();

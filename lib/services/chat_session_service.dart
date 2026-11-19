@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -10,8 +11,12 @@ import 'package:uuid/uuid.dart';
 import '../models/chat_message.dart';
 import '../models/chat_session.dart';
 import '../utils/app_logger.dart';
-import 'data_directory_service.dart';
+import '../utils/lww_utils.dart';
 import '../utils/sqlite_type_utils.dart';
+import 'data_directory_service.dart';
+import 'large_file_manager.dart' show CancelToken;
+
+part 'chat_session_sync.dart';
 
 class ChatSessionOverview {
   const ChatSessionOverview({
@@ -34,7 +39,8 @@ class ChatSessionService extends ChangeNotifier {
   final Completer<void> _databaseReady = Completer<void>();
   DateTime? _lastEmptySessionCleanupAt;
 
-  static const int _schemaVersion = 2;
+  static const int _schemaVersion = 3;
+  static const int schemaVersion = _schemaVersion;
   static const String _legacyMainDbMigrationKey =
       'legacy_main_db_chat_migration_complete';
   static const Duration _emptySessionCleanupInterval = Duration(minutes: 1);
@@ -56,6 +62,10 @@ class ChatSessionService extends ChangeNotifier {
     if (db != null) {
       _flushPendingWrites(db);
     }
+  }
+
+  void _notifySyncListeners() {
+    notifyListeners();
   }
 
   void _flushPendingWrites(Database db) {
@@ -182,9 +192,21 @@ class ChatSessionService extends ChangeNotifier {
               ? i + chunkSize
               : legacySessions.length;
           for (var j = i; j < end; j++) {
+            final raw = legacySessions[j];
+            final row = <String, Object?>{
+              for (final col in _chatSessionColumnWhitelist)
+                if (raw.containsKey(col)) col: raw[col],
+            };
+            final existingUpdated = row['updated_at']?.toString() ?? '';
+            if (existingUpdated.isEmpty) {
+              final lastActive = row['last_active_at']?.toString() ?? '';
+              row['updated_at'] = lastActive.isNotEmpty
+                  ? lastActive
+                  : (row['created_at']?.toString() ?? '');
+            }
             batch.insert(
               'chat_sessions',
-              legacySessions[j],
+              row,
               conflictAlgorithm: ConflictAlgorithm.ignore,
             );
           }
@@ -197,9 +219,18 @@ class ChatSessionService extends ChangeNotifier {
               ? i + chunkSize
               : legacyMessages.length;
           for (var j = i; j < end; j++) {
+            final raw = legacyMessages[j];
+            final row = <String, Object?>{
+              for (final col in _chatMessageColumnWhitelist)
+                if (raw.containsKey(col)) col: raw[col],
+            };
+            final existingUpdated = row['updated_at']?.toString() ?? '';
+            if (existingUpdated.isEmpty) {
+              row['updated_at'] = row['created_at']?.toString() ?? '';
+            }
             batch.insert(
               'chat_messages',
-              legacyMessages[j],
+              row,
               conflictAlgorithm: ConflictAlgorithm.ignore,
             );
           }
@@ -352,6 +383,7 @@ class ChatSessionService extends ChangeNotifier {
         title TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         last_active_at TEXT NOT NULL,
+        updated_at TEXT,
         is_pinned INTEGER NOT NULL DEFAULT 0
       )
     ''');
@@ -363,6 +395,7 @@ class ChatSessionService extends ChangeNotifier {
         role TEXT NOT NULL DEFAULT 'user',
         content TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
+        updated_at TEXT,
         included_in_context INTEGER NOT NULL DEFAULT 1,
         meta_json TEXT,
         content_format TEXT,
@@ -375,6 +408,15 @@ class ChatSessionService extends ChangeNotifier {
       CREATE TABLE IF NOT EXISTS chat_metadata(
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_tombstones(
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        deleted_at TEXT NOT NULL,
+        PRIMARY KEY(entity_type, entity_id)
       )
     ''');
 
@@ -410,9 +452,31 @@ class ChatSessionService extends ChangeNotifier {
     await addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
+      columnName: 'updated_at',
+      definition: 'TEXT',
+    );
+    await db.execute('''
+      UPDATE chat_sessions
+      SET updated_at = COALESCE(NULLIF(last_active_at, ''), created_at)
+      WHERE updated_at IS NULL OR updated_at = ''
+    ''');
+    await addColumnIfMissing(
+      db,
+      tableName: 'chat_sessions',
       columnName: 'is_pinned',
       definition: 'INTEGER NOT NULL DEFAULT 0',
     );
+    await addColumnIfMissing(
+      db,
+      tableName: 'chat_messages',
+      columnName: 'updated_at',
+      definition: 'TEXT',
+    );
+    await db.execute('''
+      UPDATE chat_messages
+      SET updated_at = created_at
+      WHERE updated_at IS NULL OR updated_at = ''
+    ''');
     await addColumnIfMissing(
       db,
       tableName: 'chat_messages',
@@ -521,6 +585,7 @@ class ChatSessionService extends ChangeNotifier {
       title: title,
       createdAt: now,
       lastActiveAt: now,
+      updatedAt: now.toUtc(),
     );
     try {
       await _persistOrQueueWrite((db) async {
@@ -875,23 +940,120 @@ WHERE s.id IN ($placeholders)
     }
   }
 
+  Future<void> _upsertTombstonesInTxn(
+    DatabaseExecutor txn, {
+    required String entityType,
+    required Iterable<String> entityIds,
+    required String deletedAtUtcIso,
+  }) async {
+    final ids =
+        entityIds.where((id) => id.isNotEmpty).toSet().toList(growable: false);
+    if (ids.isEmpty) return;
+    const chunkSize = 500;
+    for (var i = 0; i < ids.length; i += chunkSize) {
+      final end = (i + chunkSize < ids.length) ? i + chunkSize : ids.length;
+      final batch = txn.batch();
+      for (var j = i; j < end; j++) {
+        batch.insert(
+          'chat_tombstones',
+          {
+            'entity_type': entityType,
+            'entity_id': ids[j],
+            'deleted_at': deletedAtUtcIso,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    }
+  }
+
+  /// 清理空会话（确认会话内无用户消息时删除，且**不写墓碑**）。
+  ///
+  /// 用于页面退出时的临时空壳会话回收：不写墓碑，确保若对端同一会话已有消息，
+  /// 同步时可正常合入而不被空壳清理误杀。
+  Future<bool> deleteEmptySession(String sessionId) async {
+    if (sessionId.isEmpty) return false;
+    var deleted = false;
+    try {
+      await _persistOrQueueWrite((db) async {
+        await db.transaction((txn) async {
+          final userMsgs = await txn.query(
+            'chat_messages',
+            columns: ['id'],
+            where: 'session_id = ? AND role = ?',
+            whereArgs: [sessionId, 'user'],
+            limit: 1,
+          );
+          if (userMsgs.isNotEmpty) {
+            return;
+          }
+          await txn.delete(
+            'chat_messages',
+            where: 'session_id = ?',
+            whereArgs: [sessionId],
+          );
+          final count = await txn.delete(
+            'chat_sessions',
+            where: 'id = ?',
+            whereArgs: [sessionId],
+          );
+          deleted = count > 0;
+        });
+      }, operationName: 'ChatSessionService.deleteEmptySession');
+    } catch (e) {
+      logError(
+        'ChatSessionService.deleteEmptySession 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+    }
+    if (deleted) {
+      notifyListeners();
+    }
+    return deleted;
+  }
+
   Future<void> deleteSession(String sessionId) async {
     await deleteSessions([sessionId]);
   }
 
   /// 批量删除多个会话及其关联消息，避免多次写事务和循环通知导致的性能问题与 N+1 查询。
   Future<void> deleteSessions(List<String> sessionIds) async {
-    if (sessionIds.isEmpty) return;
+    final targetIds =
+        sessionIds.where((id) => id.isNotEmpty).toSet().toList(growable: false);
+    if (targetIds.isEmpty) return;
     try {
       await _persistOrQueueWrite((db) async {
+        final deletedAt = DateTime.now().toUtc().toIso8601String();
         await db.transaction((txn) async {
           const chunkSize = 500;
-          for (var i = 0; i < sessionIds.length; i += chunkSize) {
-            final end = (i + chunkSize < sessionIds.length)
+          for (var i = 0; i < targetIds.length; i += chunkSize) {
+            final end = (i + chunkSize < targetIds.length)
                 ? i + chunkSize
-                : sessionIds.length;
-            final chunk = sessionIds.sublist(i, end);
+                : targetIds.length;
+            final chunk = targetIds.sublist(i, end);
             final placeholders = List.filled(chunk.length, '?').join(',');
+            final msgRows = await txn.query(
+              'chat_messages',
+              columns: ['id'],
+              where: 'session_id IN ($placeholders)',
+              whereArgs: chunk,
+            );
+            final msgIds =
+                msgRows.map((r) => r['id']?.toString() ?? '').toList();
+            await _upsertTombstonesInTxn(
+              txn,
+              entityType: 'message',
+              entityIds: msgIds,
+              deletedAtUtcIso: deletedAt,
+            );
+            await _upsertTombstonesInTxn(
+              txn,
+              entityType: 'session',
+              entityIds: chunk,
+              deletedAtUtcIso: deletedAt,
+            );
             await txn.delete(
               'chat_messages',
               where: 'session_id IN ($placeholders)',
@@ -917,10 +1079,16 @@ WHERE s.id IN ($placeholders)
 
   Future<void> updateSessionTitle(String sessionId, String title) async {
     try {
+      final now = DateTime.now();
+      final nowUtcIso = now.toUtc().toIso8601String();
       await _persistOrQueueWrite((db) async {
         await db.update(
           'chat_sessions',
-          {'title': title, 'last_active_at': DateTime.now().toIso8601String()},
+          {
+            'title': title,
+            'last_active_at': now.toIso8601String(),
+            'updated_at': nowUtcIso,
+          },
           where: 'id = ?',
           whereArgs: [sessionId],
         );
@@ -937,6 +1105,7 @@ WHERE s.id IN ($placeholders)
 
   Future<void> togglePin(String sessionId) async {
     try {
+      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
       await _persistOrQueueWrite((db) async {
         final rows = await db.query(
           'chat_sessions',
@@ -948,7 +1117,10 @@ WHERE s.id IN ($placeholders)
               ((rows.first['is_pinned'] as num?)?.toInt() ?? 0) == 1;
           await db.update(
             'chat_sessions',
-            {'is_pinned': current ? 0 : 1},
+            {
+              'is_pinned': current ? 0 : 1,
+              'updated_at': nowUtcIso,
+            },
             where: 'id = ?',
             whereArgs: [sessionId],
           );
@@ -966,16 +1138,21 @@ WHERE s.id IN ($placeholders)
 
   Future<void> addMessage(String sessionId, ChatMessage message) async {
     try {
+      final now = DateTime.now();
+      final nowUtcIso = now.toUtc().toIso8601String();
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
+          final row = message.toMap(sessionId);
+          row['updated_at'] = nowUtcIso;
           await txn.insert(
             'chat_messages',
-            message.toMap(sessionId),
+            row,
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
+          // 仅刷新会话活跃时间，不刷新会话元数据 updated_at，避免覆盖对端标题/置顶修改。
           await txn.update(
             'chat_sessions',
-            {'last_active_at': DateTime.now().toIso8601String()},
+            {'last_active_at': now.toIso8601String()},
             where: 'id = ?',
             whereArgs: [sessionId],
           );
@@ -1087,13 +1264,23 @@ WHERE s.id IN ($placeholders)
   }
 
   Future<void> deleteMessage(String messageId) async {
+    if (messageId.isEmpty) return;
     try {
+      final deletedAt = DateTime.now().toUtc().toIso8601String();
       await _persistOrQueueWrite((db) async {
-        await db.delete(
-          'chat_messages',
-          where: 'id = ?',
-          whereArgs: [messageId],
-        );
+        await db.transaction((txn) async {
+          await _upsertTombstonesInTxn(
+            txn,
+            entityType: 'message',
+            entityIds: [messageId],
+            deletedAtUtcIso: deletedAt,
+          );
+          await txn.delete(
+            'chat_messages',
+            where: 'id = ?',
+            whereArgs: [messageId],
+          );
+        });
       }, operationName: 'ChatSessionService.deleteMessage');
     } catch (e) {
       logError(
@@ -1106,13 +1293,30 @@ WHERE s.id IN ($placeholders)
   }
 
   Future<void> clearMessages(String sessionId) async {
+    if (sessionId.isEmpty) return;
     try {
+      final deletedAt = DateTime.now().toUtc().toIso8601String();
       await _persistOrQueueWrite((db) async {
-        await db.delete(
-          'chat_messages',
-          where: 'session_id = ?',
-          whereArgs: [sessionId],
-        );
+        await db.transaction((txn) async {
+          final rows = await txn.query(
+            'chat_messages',
+            columns: ['id'],
+            where: 'session_id = ?',
+            whereArgs: [sessionId],
+          );
+          final msgIds = rows.map((r) => r['id']?.toString() ?? '').toList();
+          await _upsertTombstonesInTxn(
+            txn,
+            entityType: 'message',
+            entityIds: msgIds,
+            deletedAtUtcIso: deletedAt,
+          );
+          await txn.delete(
+            'chat_messages',
+            where: 'session_id = ?',
+            whereArgs: [sessionId],
+          );
+        });
       }, operationName: 'ChatSessionService.clearMessages');
     } catch (e) {
       logError(
@@ -1125,7 +1329,9 @@ WHERE s.id IN ($placeholders)
   }
 
   Future<void> deleteSessionsForNote(String noteId) async {
+    if (noteId.isEmpty) return;
     try {
+      final deletedAt = DateTime.now().toUtc().toIso8601String();
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
           // 首先通过 note_id 找到所有相关的会话 ID
@@ -1137,14 +1343,43 @@ WHERE s.id IN ($placeholders)
           );
 
           if (sessions.isNotEmpty) {
-            final sessionIds = sessions.map((s) => s['id'] as String).toList();
-            // 删除这些会话的所有消息
-            final placeholders = List.filled(sessionIds.length, '?').join(',');
-            await txn.delete(
-              'chat_messages',
-              where: 'session_id IN ($placeholders)',
-              whereArgs: sessionIds,
-            );
+            final sessionIds = sessions
+                .map((s) => s['id']?.toString() ?? '')
+                .where((id) => id.isNotEmpty)
+                .toList();
+            const chunkSize = 500;
+            for (var i = 0; i < sessionIds.length; i += chunkSize) {
+              final end = (i + chunkSize < sessionIds.length)
+                  ? i + chunkSize
+                  : sessionIds.length;
+              final chunk = sessionIds.sublist(i, end);
+              final placeholders = List.filled(chunk.length, '?').join(',');
+              final msgRows = await txn.query(
+                'chat_messages',
+                columns: ['id'],
+                where: 'session_id IN ($placeholders)',
+                whereArgs: chunk,
+              );
+              final msgIds =
+                  msgRows.map((r) => r['id']?.toString() ?? '').toList();
+              await _upsertTombstonesInTxn(
+                txn,
+                entityType: 'message',
+                entityIds: msgIds,
+                deletedAtUtcIso: deletedAt,
+              );
+              await _upsertTombstonesInTxn(
+                txn,
+                entityType: 'session',
+                entityIds: chunk,
+                deletedAtUtcIso: deletedAt,
+              );
+              await txn.delete(
+                'chat_messages',
+                where: 'session_id IN ($placeholders)',
+                whereArgs: chunk,
+              );
+            }
           }
 
           // 然后删除会话本身

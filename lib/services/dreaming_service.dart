@@ -28,6 +28,10 @@ typedef DreamingCompleter = Future<String> Function({
 /// 检查当前是否具备调用模型的条件（已选服务商、已启用、已配置 API Key）。
 typedef DreamingAiAvailability = Future<bool> Function();
 
+/// 获取当前未删除笔记的最大修改时间水位与未删除笔记总数。
+typedef DreamingBasisLoader = Future<({String? watermark, int noteCount})>
+    Function();
+
 /// 一轮 Dreaming 的结果。只用于测试与日志，不面向用户。
 enum DreamingOutcome {
   /// 前置门槛没过，整轮跳过。
@@ -68,11 +72,13 @@ class DreamingService {
     required DreamingNoteLoader loadNotes,
     required DreamingCompleter complete,
     DreamingAiAvailability? isAiAvailable,
+    DreamingBasisLoader? loadNotesBasis,
   })  : _settings = settingsService,
         _memory = memoryService,
         _loadNotes = loadNotes,
         _complete = complete,
-        _isAiAvailable = isAiAvailable ?? _alwaysAvailable;
+        _isAiAvailable = isAiAvailable ?? _alwaysAvailable,
+        _loadNotesBasis = loadNotesBasis;
 
   static Future<bool> _alwaysAvailable() async => true;
 
@@ -103,6 +109,7 @@ class DreamingService {
         userMessage: userMessage,
       ),
       isAiAvailable: aiService.hasValidApiKeyAsync,
+      loadNotesBasis: databaseService.getActiveNotesBasis,
     );
   }
 
@@ -111,6 +118,7 @@ class DreamingService {
   final DreamingNoteLoader _loadNotes;
   final DreamingCompleter _complete;
   final DreamingAiAvailability _isAiAvailable;
+  final DreamingBasisLoader? _loadNotesBasis;
 
   /// 样本量下限。低于这个数归纳不出稳定结论，硬归纳只会产出噪声。
   static const int minNoteSample = 10;
@@ -209,6 +217,10 @@ class DreamingService {
       return DreamingOutcome.skipped;
     }
 
+    // 在调用模型前采集当前未删除笔记的最大修改时间水位与未删除笔记总数，
+    // 确保依据准确反映本轮采样时刻可见的笔记集合。
+    final basis = await _loadNotesBasis?.call();
+
     // 后台任务不能假设 AI 已配置：未选服务商、服务商被禁用或未配置 API Key 时
     // 直接跳过本轮，不推进 lastDreamingAt，配置好后下次自然重跑。
     if (!await _isAiAvailable()) {
@@ -241,12 +253,17 @@ class DreamingService {
       return DreamingOutcome.skipped;
     }
 
-    final wrote = await _write(parsed, samples, now);
+    final wrote = await _write(parsed, samples, now, basis: basis);
     if (!wrote) {
       return DreamingOutcome.failed;
     }
 
     // 只有真的写进去了才推进时间戳，失败不占用最小间隔的额度。
+    await _memory.recordDreamingRun(
+      runAt: now,
+      basisWatermark: basis?.watermark,
+      basisNoteCount: basis?.noteCount,
+    );
     await _settings.setLastDreamingAt(now);
     return DreamingOutcome.updated;
   }
@@ -458,8 +475,9 @@ class DreamingService {
   Future<bool> _write(
     _DreamingResult result,
     _DreamingSamples samples,
-    DateTime now,
-  ) async {
+    DateTime now, {
+    ({String? watermark, int noteCount})? basis,
+  }) async {
     final existing = await _memory.activeProfile();
     var wrote = false;
 
@@ -483,6 +501,8 @@ class DreamingService {
         source: 'dreaming',
         observedAt: now,
         sourceNoteIds: sourceIds,
+        basisWatermark: basis?.watermark,
+        basisNoteCount: basis?.noteCount,
       );
       wrote = true;
     }
@@ -535,6 +555,9 @@ class DreamingService {
             cleanAlias,
             source: 'dreaming_ai',
             unconfirmed: true,
+            observedAt: now,
+            basisWatermark: basis?.watermark,
+            basisNoteCount: basis?.noteCount,
           );
           if (registered) wrote = true;
         } catch (e) {
@@ -552,6 +575,9 @@ class DreamingService {
           alias,
           source: 'dreaming',
           unconfirmed: false,
+          observedAt: now,
+          basisWatermark: basis?.watermark,
+          basisNoteCount: basis?.noteCount,
         );
         if (registered) wrote = true;
       } catch (e) {
@@ -568,6 +594,9 @@ class DreamingService {
           alias,
           source: 'dreaming_statistical_moderate',
           unconfirmed: true,
+          observedAt: now,
+          basisWatermark: basis?.watermark,
+          basisNoteCount: basis?.noteCount,
         );
         if (registered) wrote = true;
       } catch (e) {
