@@ -3,6 +3,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/pages/thoughter_page.dart';
@@ -37,6 +38,9 @@ class _MockSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   List<String> get defaultTagIds => const [];
+
+  @override
+  MultiAISettings get multiAISettings => const MultiAISettings();
 
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
