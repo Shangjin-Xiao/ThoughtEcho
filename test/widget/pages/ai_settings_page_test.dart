@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
@@ -117,6 +118,20 @@ Future<void> _scrollTo(WidgetTester tester, Finder target) async {
         .first,
   );
   await tester.pumpAndSettle();
+}
+
+class _FailingSaveSettingsService extends SettingsService {
+  _FailingSaveSettingsService(super.prefs);
+
+  Object? saveMultiError;
+
+  @override
+  Future<void> saveMultiAISettings(MultiAISettings settings) async {
+    if (saveMultiError != null) {
+      throw saveMultiError!;
+    }
+    return super.saveMultiAISettings(settings);
+  }
 }
 
 void main() {
@@ -255,7 +270,8 @@ void main() {
       );
     });
 
-    testWidgets('editing the current service updates it in place',
+    testWidgets(
+        'editing the current service clears stale modelMetadata on model or endpoint change, and preserves it on rename only',
         (tester) async {
       await settingsService.saveMultiAISettings(
         const MultiAISettings(
@@ -275,15 +291,53 @@ void main() {
         ),
       );
 
+      final testedDrafts = <AIProviderSettings>[];
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async {
+        testedDrafts.add(provider);
+        return 'pong';
+      };
+      addTearDown(() => AIConnectionTester.testOverrideForTesting = null);
+
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
 
-      // 点击当前配置直接进编辑页
+      // 1. 仅重命名配置（模型名与端点均未变化）-> 草稿测试连接与保存均保留 modelMetadata
       await tester.tap(find.text('本机模型'));
       await tester.pumpAndSettle();
       expect(find.text(l10n.editAiServiceTitle), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.configNameField),
+        '本机主力模型',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts.last.modelMetadata?.contextWindow, 65536);
+      expect(testedDrafts.last.modelMetadata?.reasoning, isTrue);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      var providers = settingsService.multiAISettings.providers;
+      expect(providers, hasLength(1));
+      expect(providers.single.id, 'local');
+      expect(providers.single.name, '本机主力模型');
+      expect(providers.single.model, 'old-model');
+      expect(providers.single.modelMetadata?.contextWindow, 65536);
+      expect(providers.single.modelMetadata?.reasoning, isTrue);
+
+      // 2. 更换模型名 -> 草稿测试连接与保存均清空旧 modelMetadata
+      await tester.tap(find.text('本机主力模型'));
+      await tester.pumpAndSettle();
 
       await tester.enterText(
         find.widgetWithText(TextFormField, l10n.modelNameField),
@@ -291,15 +345,57 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts.last.model, 'new-model');
+      expect(testedDrafts.last.modelMetadata, isNull);
+
       await tester.tap(find.text(l10n.save));
       await tester.pumpAndSettle();
 
-      final providers = settingsService.multiAISettings.providers;
+      providers = settingsService.multiAISettings.providers;
       expect(providers, hasLength(1));
       expect(providers.single.id, 'local');
       expect(providers.single.model, 'new-model');
-      expect(providers.single.modelMetadata?.contextWindow, 65536);
-      expect(providers.single.modelMetadata?.reasoning, isTrue);
+      expect(providers.single.modelMetadata, isNull);
+
+      // 3. 重新注入 modelMetadata 后修改接口地址 -> 草稿与保存均清空旧 modelMetadata
+      await settingsService.saveMultiAISettings(
+        MultiAISettings(
+          providers: [
+            providers.single.copyWith(
+              modelMetadata: const AIModelMetadata(
+                contextWindow: 131072,
+                reasoning: true,
+              ),
+            ),
+          ],
+          currentProviderId: 'local',
+        ),
+      );
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('本机主力模型'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.apiUrlField),
+        'http://localhost:11434/v1',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts.last.modelMetadata, isNull);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      expect(
+        settingsService.multiAISettings.providers.single.modelMetadata,
+        isNull,
+      );
     });
 
     testWidgets('memory switch defaults on and toggles off', (tester) async {
@@ -597,6 +693,123 @@ void main() {
         isFalse,
       );
       expect(settingsService.multiAISettings.currentProviderId, 'p_default');
+    });
+
+    testWidgets(
+        'selecting follow default clears persisted taskProviderIds when bound provider is disabled',
+        (tester) async {
+      await APIKeyManager()
+          .saveProviderApiKey('p_default', 'sk-default-123456');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_default',
+              name: '默认服务',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+              isEnabled: true,
+            ),
+            AIProviderSettings(
+              id: 'p_disabled',
+              name: '已停用服务',
+              apiUrl: 'https://api.deepseek.com/v1',
+              model: 'deepseek-chat',
+              isEnabled: false,
+            ),
+          ],
+          currentProviderId: 'p_default',
+          taskProviderIds: {AITask.dailyInsight: 'p_disabled'},
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final dailyTile = find.byKey(const ValueKey('ai_task_tile_dailyInsight'));
+      await _scrollTo(tester, dailyTile);
+      await tester.tap(dailyTile);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('ai_task_option_default')));
+      await tester.pumpAndSettle();
+
+      expect(
+        settingsService.multiAISettings.taskProviderIds
+            .containsKey(AITask.dailyInsight),
+        isFalse,
+      );
+    });
+
+    testWidgets(
+        'shows error SnackBar and skips telemetry when saving task provider fails',
+        (tester) async {
+      final prefs = await SharedPreferences.getInstance();
+      final failingSettings = _FailingSaveSettingsService(prefs);
+      addTearDown(failingSettings.dispose);
+
+      await APIKeyManager()
+          .saveProviderApiKey('p_default', 'sk-default-123456');
+      await APIKeyManager().saveProviderApiKey('p_alt', 'sk-alt-key-123456');
+      await failingSettings.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_default',
+              name: '默认服务',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+            ),
+            AIProviderSettings(
+              id: 'p_alt',
+              name: '备选服务',
+              apiUrl: 'https://api.deepseek.com/v1',
+              model: 'deepseek-chat',
+            ),
+          ],
+          currentProviderId: 'p_default',
+        ),
+      );
+
+      final events = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (event, props) {
+        events.add({'event': event, 'props': props});
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      await tester.pumpWidget(_wrap(failingSettings, memoryService));
+      await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
+
+      failingSettings.saveMultiError = StateError('模拟存储写入失败');
+
+      final dailyTile = find.byKey(const ValueKey('ai_task_tile_dailyInsight'));
+      await _scrollTo(tester, dailyTile);
+      await tester.tap(dailyTile);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('ai_task_option_p_alt')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining(
+          l10n.saveSettingsError('Bad state: 模拟存储写入失败'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        failingSettings.multiAISettings.taskProviderIds
+            .containsKey(AITask.dailyInsight),
+        isFalse,
+      );
+      expect(
+        events.any(
+          (e) =>
+              e['event'] == 'feature_used' &&
+              e['props']?['action'] == 'ai_task_provider_select',
+        ),
+        isFalse,
+      );
     });
   });
 }

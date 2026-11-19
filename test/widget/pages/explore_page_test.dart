@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/explore_page.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
@@ -126,6 +129,91 @@ class _ReportSettingsService extends ChangeNotifier implements SettingsService {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('SettingsService.${invocation.memberName}');
+}
+
+class _AiSignatureSettingsService extends _ReportSettingsService {
+  _AiSignatureSettingsService(this._multiAISettings);
+
+  MultiAISettings _multiAISettings;
+
+  @override
+  bool get reportInsightsUseAI => true;
+
+  @override
+  MultiAISettings get multiAISettings => _multiAISettings;
+
+  @override
+  Future<void> saveMultiAISettings(MultiAISettings settings) async {
+    _multiAISettings = settings;
+    notifyListeners();
+  }
+
+  @override
+  Future<bool> removeCustomKey(String key) async => true;
+}
+
+class _RecordingInsightHistoryService extends InsightHistoryService {
+  _RecordingInsightHistoryService({required super.settingsService});
+
+  final Map<String, PeriodicInsight> bySignature = <String, PeriodicInsight>{};
+  final List<String?> recordedSignatures = <String?>[];
+
+  @override
+  Future<void> ensureLoaded() async {}
+
+  @override
+  PeriodicInsight? getInsightBySignature(String signature) =>
+      bySignature[signature];
+
+  @override
+  Future<void> addInsight({
+    required String insight,
+    required String periodType,
+    required String periodLabel,
+    bool isAiGenerated = true,
+    String? dataSignature,
+  }) async {
+    if (!isAiGenerated) return;
+    recordedSignatures.add(dataSignature);
+    if (dataSignature != null) {
+      bySignature[dataSignature] = PeriodicInsight(
+        insight: insight,
+        periodType: periodType,
+        periodLabel: periodLabel,
+        createdAt: DateTime.now(),
+        isAiGenerated: isAiGenerated,
+        dataSignature: dataSignature,
+      );
+    }
+  }
+}
+
+class _StubPeriodicInsightAIService extends AIService {
+  _StubPeriodicInsightAIService({required super.settingsService});
+
+  int reportInsightCalls = 0;
+
+  @override
+  Stream<String> streamReportInsight({
+    required String periodLabel,
+    String? mostTimePeriod,
+    String? mostWeather,
+    String? topTag,
+    required int activeDays,
+    required int noteCount,
+    required int totalWordCount,
+    String? notesPreview,
+    String? fullNotesContent,
+    String? previousInsights,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+  }) {
+    reportInsightCalls++;
+    final active = settingsService.multiAISettings
+        .resolveProviderForTask(AITask.periodicInsight);
+    return Stream<String>.value(
+        '来自 ${active?.name} 的周期洞察 #$reportInsightCalls');
+  }
 }
 
 void main() {
@@ -590,5 +678,90 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('本月'), findsOneWidget);
+  });
+
+  testWidgets(
+      'includes provider.id in periodicInsight signature so switching same-model providers does not hit stale cache',
+      (tester) async {
+    const gatewayA = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    const gatewayB = AIProviderSettings(
+      id: 'p_gateway_b',
+      name: '网关B',
+      apiUrl: 'https://gateway-b.example/v1',
+      model: 'gpt-4o-mini',
+    );
+
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayA, gatewayB],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    final database = _CountingPeriodDatabaseService();
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _StubPeriodicInsightAIService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(aiService.reportInsightCalls, 1);
+    expect(find.textContaining('来自 网关A 的周期洞察 #1'), findsOneWidget);
+    expect(
+      insights.recordedSignatures.last,
+      endsWith('_p_gateway_a:gpt-4o-mini'),
+    );
+
+    // Switch AITask.periodicInsight to gatewayB (same model name 'gpt-4o-mini', different provider.id)
+    await settings.saveMultiAISettings(
+      settings.multiAISettings.withTaskProvider(
+        AITask.periodicInsight,
+        'p_gateway_b',
+      ),
+    );
+    // Trigger silent data reload so ExplorePage re-evaluates dataSignature
+    database.notifyDataChanged();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(aiService.reportInsightCalls, 2);
+    expect(find.textContaining('来自 网关B 的周期洞察 #2'), findsOneWidget);
+    expect(
+      insights.recordedSignatures.last,
+      endsWith('_p_gateway_b:gpt-4o-mini'),
+    );
+
+    // Switching back to gatewayA hits gatewayA's cached signature without making a 3rd AI request
+    await settings.saveMultiAISettings(
+      settings.multiAISettings.withTaskProvider(
+        AITask.periodicInsight,
+        'p_gateway_a',
+      ),
+    );
+    database.notifyDataChanged();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(aiService.reportInsightCalls, 2);
+    expect(find.textContaining('来自 网关A 的周期洞察 #1'), findsOneWidget);
   });
 }

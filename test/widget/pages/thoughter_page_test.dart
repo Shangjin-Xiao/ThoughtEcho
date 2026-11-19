@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/thoughter_entry.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
@@ -27,6 +28,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/widgets/ai/experimental_badge.dart';
 import 'package:thoughtecho/widgets/ai/note_proposal_card.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
@@ -714,6 +716,20 @@ AppLocalizations _l10n(WidgetTester tester) {
     }
   }
   return (top: top ?? -1, bottom: bottom ?? -1);
+}
+
+class _FailingSaveThoughterSettingsService extends SettingsService {
+  _FailingSaveThoughterSettingsService(super.prefs);
+
+  Object? saveMultiError;
+
+  @override
+  Future<void> saveMultiAISettings(MultiAISettings settings) async {
+    if (saveMultiError != null) {
+      throw saveMultiError!;
+    }
+    return super.saveMultiAISettings(settings);
+  }
 }
 
 void main() {
@@ -3722,6 +3738,116 @@ void main() {
       await _settleAgentTurn(tester);
       await tester.pumpAndSettle();
       expect(tester.widget<InkWell>(switcher).onTap, isNotNull);
+    });
+
+    testWidgets(
+        'AppBar model switcher clears persisted disabled binding on follow default and shows error SnackBar on save failure',
+        (tester) async {
+      final prefs = await SharedPreferences.getInstance();
+      final failingSettings = _FailingSaveThoughterSettingsService(prefs);
+      addTearDown(failingSettings.dispose);
+      await failingSettings.setDontShowAgentExperimentalNotice(true);
+      await failingSettings.setAgentMemoryNoticeShown(true);
+      await failingSettings.setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await failingSettings.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_default',
+              name: 'Default Flash',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+              isEnabled: true,
+            ),
+            AIProviderSettings(
+              id: 'p_disabled_agent',
+              name: 'Disabled Agent',
+              apiUrl: 'https://openrouter.ai/api/v1',
+              model: 'anthropic/claude-sonnet-4-5',
+              isEnabled: false,
+            ),
+            AIProviderSettings(
+              id: 'p_backup_agent',
+              name: 'Backup Agent',
+              apiUrl: 'https://api.deepseek.com/v1',
+              model: 'deepseek-chat',
+              isEnabled: true,
+            ),
+          ],
+          currentProviderId: 'p_default',
+          taskProviderIds: {AITask.agent: 'p_disabled_agent'},
+        ),
+      );
+
+      final events = <Map<String, dynamic>>[];
+      AptabaseHelper.onTrackEventForTesting = (event, props) {
+        events.add({'event': event, 'props': props});
+      };
+      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: failingSettings,
+          chatSessionService: chatSessionService,
+          child: const ThoughterPage(
+            key: ValueKey('thoughter_disabled_binding_test'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
+
+      // 1. Selecting "Follow default" removes stale disabled binding from taskProviderIds
+      final switcher = find.byKey(const ValueKey('thoughter_model_switcher'));
+      await tester.tap(switcher);
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const ValueKey('thoughter_model_option_default')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        failingSettings.multiAISettings.taskProviderIds
+            .containsKey(AITask.agent),
+        isFalse,
+      );
+
+      ScaffoldMessenger.of(tester.element(find.byType(ThoughterPage)))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+      events.clear();
+
+      // 2. When saveMultiAISettings fails, shows localized error SnackBar and skips telemetry
+      failingSettings.saveMultiError = StateError('模拟存储故障');
+      await tester.tap(switcher);
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const ValueKey('thoughter_model_option_p_backup_agent')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining(
+          l10n.saveSettingsError('Bad state: 模拟存储故障'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        failingSettings.multiAISettings.taskProviderIds
+            .containsKey(AITask.agent),
+        isFalse,
+      );
+      expect(
+        events.any(
+          (e) =>
+              e['event'] == 'feature_used' &&
+              e['props']?['action'] == 'ai_task_provider_select',
+        ),
+        isFalse,
+      );
     });
   });
 }

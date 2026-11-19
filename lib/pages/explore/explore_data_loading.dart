@@ -137,7 +137,8 @@ extension _ExploreDataLoading on _ExplorePageState {
         .read<SettingsService>()
         .multiAISettings
         .resolveProviderForTask(AITask.periodicInsight);
-    final model = provider?.model ?? '-';
+    final providerSignature =
+        provider == null ? '-' : '${provider.id}:${provider.model}';
 
     final dataSignature = [
       _selectedPeriod,
@@ -146,7 +147,7 @@ extension _ExploreDataLoading on _ExplorePageState {
       totalWords,
       contentFingerprint,
       'p${AIPromptManager.reportInsightPromptVersion}',
-      model,
+      providerSignature,
     ].join('_');
 
     final mostPeriod = periodCounts.entries.isNotEmpty

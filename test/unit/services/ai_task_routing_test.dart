@@ -432,5 +432,66 @@ void main() {
       expect(streamService.calls.last.maxTokens, 700);
       expect(streamService.calls.last.enableThinking, isFalse);
     });
+
+    test(
+        'generateSessionTitle routes via AITask.agent instead of leaking first message to default provider',
+        () async {
+      await harness.settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [defaultProvider, agentProProvider],
+          currentProviderId: 'p_default',
+          taskProviderIds: {AITask.agent: 'p_agent'},
+        ),
+      );
+
+      final keyManager = _InMemoryApiKeyManager({
+        'p_default': 'sk-default-key-1234',
+        'p_agent': 'sk-agent-private-key-1234',
+      });
+      final streamService = _CapturingOpenAIStreamService()
+        ..completionReply = '私密灵感对话标题';
+      final aiService = AIService(
+        settingsService: harness.settingsService,
+        memoryService: harness.memory,
+        apiKeyManager: keyManager,
+        openAIStreamService: streamService,
+      );
+
+      final title = await aiService.generateSessionTitle(
+        '这是一条只应发往 Thoughter 专属渠道的首条消息内容',
+      );
+
+      expect(title, '私密灵感对话标题');
+      expect(streamService.calls, hasLength(1));
+      expect(streamService.calls.single.method, 'chatCompletion');
+      expect(streamService.calls.single.provider.id, 'p_agent');
+      expect(
+        streamService.calls.single.provider.apiKey,
+        'sk-agent-private-key-1234',
+      );
+      expect(streamService.calls.single.enableThinking, isFalse);
+      expect(
+        harness.settingsService.multiAISettings.currentProviderId,
+        'p_default',
+      );
+
+      // Even when p_default has no API key, generateSessionTitle still succeeds via AITask.agent.
+      final agentOnlyKeyManager = _InMemoryApiKeyManager({
+        'p_agent': 'sk-agent-private-key-1234',
+      });
+      final agentOnlyAiService = AIService(
+        settingsService: harness.settingsService,
+        memoryService: harness.memory,
+        apiKeyManager: agentOnlyKeyManager,
+        openAIStreamService: streamService,
+      );
+      streamService.calls.clear();
+      final secondTitle = await agentOnlyAiService.generateSessionTitle(
+        '默认服务无密钥时依然通过专属服务生成标题',
+      );
+      expect(secondTitle, '私密灵感对话标题');
+      expect(streamService.calls, hasLength(1));
+      expect(streamService.calls.single.provider.id, 'p_agent');
+    });
   });
 }

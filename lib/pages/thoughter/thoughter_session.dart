@@ -324,7 +324,9 @@ extension _ThoughterSession on _ThoughterPageState {
     String sessionId,
     String firstUserMessage,
   ) {
-    _aiService.generateSessionTitle(firstUserMessage).then((title) async {
+    _aiService
+        .generateSessionTitle(firstUserMessage, task: AITask.agent)
+        .then((title) async {
       if (title.isNotEmpty && title != 'Chat') {
         await _chatSessionService.updateSessionTitle(
           sessionId,

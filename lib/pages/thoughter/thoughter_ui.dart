@@ -1948,14 +1948,26 @@ extension _ThoughterUI on _ThoughterPageState {
     }
 
     final currentMulti = settingsService.multiAISettings;
-    final currentExplicitId =
-        currentMulti.explicitProviderIdForTask(AITask.agent);
+    final persistedProviderId = currentMulti.taskProviderIds[AITask.agent];
     final nextProviderId = action.useDefault ? null : action.providerId;
-    if (nextProviderId == currentExplicitId) return;
+    if (nextProviderId == persistedProviderId) return;
 
     final updatedMulti =
         currentMulti.withTaskProvider(AITask.agent, nextProviderId);
-    await settingsService.saveMultiAISettings(updatedMulti);
+    try {
+      await settingsService.saveMultiAISettings(updatedMulti);
+    } catch (e, stack) {
+      logError(
+        '保存 Thoughter 任务模型配置失败: $e',
+        error: e,
+        stackTrace: stack,
+        source: 'ThoughterPage._showThoughterModelSwitcherSheet',
+      );
+      if (!mounted || !context.mounted) return;
+      AppSnackBar.error(context, l10n.saveSettingsError(e.toString()));
+      return;
+    }
+
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'ai_task_provider_select',
       'task': AITask.agent.name,

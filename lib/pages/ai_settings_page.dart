@@ -202,11 +202,25 @@ class _AISettingsPageState extends State<AISettingsPage> {
     if (selected == null || !mounted) return;
 
     final nextProviderId = selected.useDefault ? null : selected.providerId;
-    if (nextProviderId == currentExplicitId) return;
+    final persistedProviderId = _multiSettings.taskProviderIds[task];
+    if (nextProviderId == persistedProviderId) return;
 
-    await context.read<SettingsService>().saveMultiAISettings(
-          _multiSettings.withTaskProvider(task, nextProviderId),
-        );
+    try {
+      await context.read<SettingsService>().saveMultiAISettings(
+            _multiSettings.withTaskProvider(task, nextProviderId),
+          );
+    } catch (e, stack) {
+      logError(
+        '保存任务模型配置失败: $e',
+        error: e,
+        stackTrace: stack,
+        source: 'AISettingsPage._selectProviderForTask',
+      );
+      if (!mounted) return;
+      AppSnackBar.error(context, l10n.saveSettingsError(e.toString()));
+      return;
+    }
+
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'ai_task_provider_select',
       'task': task.name,

@@ -188,19 +188,51 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     );
   }
 
+  String? _baselineProviderSlug(AIProviderSettings existing) {
+    if (existing.providerSlug != null) {
+      return existing.providerSlug;
+    }
+    final trimmedUrl = existing.apiUrl.trim();
+    final lowerUrl = trimmedUrl.toLowerCase();
+    final matched = AIProviderPresets.matchApiUrl(trimmedUrl);
+    if (lowerUrl.contains('anthropic.com') ||
+        lowerUrl.contains('/v1/messages')) {
+      return matched != null
+          ? (matched.modelsDevProviderId ?? matched.id)
+          : 'anthropic';
+    }
+    return matched == null ? null : (matched.modelsDevProviderId ?? matched.id);
+  }
+
+  /// 仅当模型名与端点身份（URL 及解析出的 providerSlug）均未变化时保留原有 [AIModelMetadata]，
+  /// 避免更换模型或服务商后沿用过期的 `reasoning` 或 `contextWindow` 元数据。
+  AIModelMetadata? _resolvePreservedModelMetadata({
+    required AIProviderSettings? existing,
+    required String apiUrl,
+    required String model,
+    required String? resolvedProviderSlug,
+  }) {
+    if (existing == null) return null;
+    if (model.trim() != existing.model.trim()) return null;
+    if (apiUrl.trim() != existing.apiUrl.trim()) return null;
+    if (resolvedProviderSlug != _baselineProviderSlug(existing)) return null;
+    return existing.modelMetadata;
+  }
+
   /// 用表单当前内容拼一个临时配置，供「测试连接」使用。
   ///
   /// 显式带上输入框里的 Key（包括空值），无需先保存，也不会重新取旧密钥。
   AIProviderSettings _buildDraftProvider() {
     final base = widget.provider;
     final trimmedUrl = _apiUrlController.text.trim();
+    final trimmedModel = _modelController.text.trim();
     final resolved = _resolveEndpointMetadata(trimmedUrl, base);
     return AIProviderSettings(
       id: base?.id ?? 'draft_provider',
       name: _nameController.text.trim(),
       apiKey: _apiKeyController.text.trim(),
       apiUrl: trimmedUrl,
-      model: _modelController.text.trim(),
+      model: trimmedModel,
       temperature: base?.temperature ?? 0.7,
       maxTokens: base?.maxTokens ?? 32000,
       hostOverride: _hostOverrideController.text.trim().isEmpty
@@ -209,7 +241,12 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       enableThinking: base?.enableThinking,
       providerSlug: resolved.providerSlug,
       protocol: resolved.protocol,
-      modelMetadata: base?.modelMetadata,
+      modelMetadata: _resolvePreservedModelMetadata(
+        existing: base,
+        apiUrl: trimmedUrl,
+        model: trimmedModel,
+        resolvedProviderSlug: resolved.providerSlug,
+      ),
     );
   }
 
@@ -278,6 +315,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       }
 
       final trimmedUrl = _apiUrlController.text.trim();
+      final trimmedModel = _modelController.text.trim();
       final resolved = _resolveEndpointMetadata(trimmedUrl, existing);
       final requiresApiKey =
           (resolved.matchedPreset ?? _preset)?.requiresApiKey ?? true;
@@ -285,7 +323,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
         id: providerId,
         name: _nameController.text.trim(),
         apiUrl: trimmedUrl,
-        model: _modelController.text.trim(),
+        model: trimmedModel,
         temperature: existing?.temperature ?? 0.7,
         maxTokens: existing?.maxTokens ?? 32000,
         hostOverride: _hostOverrideController.text.trim().isEmpty
@@ -295,7 +333,12 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
         enableThinking: existing?.enableThinking,
         providerSlug: resolved.providerSlug,
         protocol: resolved.protocol,
-        modelMetadata: existing?.modelMetadata,
+        modelMetadata: _resolvePreservedModelMetadata(
+          existing: existing,
+          apiUrl: trimmedUrl,
+          model: trimmedModel,
+          resolvedProviderSlug: resolved.providerSlug,
+        ),
       );
 
       final multiSettings = settingsService.multiAISettings;

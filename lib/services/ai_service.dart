@@ -1636,12 +1636,15 @@ class AIService extends ChangeNotifier {
   ///
   /// 迁移到 OpenAIStreamService：使用 _chatCompletionViaOpenAI
   /// 避免 405 错误（openai_dart 正确构造 URL）。
-  Future<String> generateSessionTitle(String firstUserMessage) async {
+  Future<String> generateSessionTitle(
+    String firstUserMessage, {
+    AITask task = AITask.agent,
+  }) async {
     try {
       if (firstUserMessage.isEmpty) return 'Chat';
 
       // 优先尝试用 AI 生成标题
-      if (await hasValidApiKeyAsync()) {
+      if (await hasValidApiKeyAsync(task: task)) {
         try {
           // 限制消息长度为100字以内
           final truncated = firstUserMessage.length > 100
@@ -1649,6 +1652,7 @@ class AIService extends ChangeNotifier {
               : firstUserMessage;
 
           final title = await _chatCompletionViaOpenAI(
+            task: task,
             systemPrompt:
                 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
             userMessage: truncated,
