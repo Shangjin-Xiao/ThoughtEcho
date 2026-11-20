@@ -197,6 +197,11 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   /// 的未删除笔记总数。
   Future<int> countActiveNotesUpToWatermark(String watermark);
 
+  /// 批量统计多个水位时间点各自对应的未删除笔记总数（单次扫描 `quotes` 表，避免循环查询）。
+  Future<Map<String, int>> countActiveNotesUpToWatermarks(
+    Iterable<String> watermarks,
+  );
+
   /// 获取墓碑记录用于备份同步（永久删除的笔记 ID 列表）
   Future<List<Map<String, dynamic>>> getTombstonesForBackup();
 

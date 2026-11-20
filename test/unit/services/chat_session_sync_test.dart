@@ -803,4 +803,487 @@ void main() {
       expect(tombs.single['entity_id'], 'deleted_old_s');
     });
   });
+
+  group('审查回归：跨时区时间戳排序、离线新消息防静默丢失与同时间戳收敛', () {
+    test(
+        '问题6：UTC+8 设备 09:00+08:00 提问、UTC 设备 02:00Z 回复，双向同步后两端消息与会话排序严格一致，旧库无偏移时间自动归一化',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('chat_tz_');
+      final pathUtc8 = p.join(dir.path, 'utc8.db');
+      final pathUtc0 = p.join(dir.path, 'utc0.db');
+      final devUtc8 = ChatSessionService(databasePath: pathUtc8);
+      final devUtc0 = ChatSessionService(databasePath: pathUtc0);
+      try {
+        await devUtc8.init();
+        await devUtc0.init();
+
+        // 模拟 UTC+8 设备写入带 +08:00 偏移的历史行（2026-11-19T09:00:00+08:00 == 01:00:00Z）
+        final payloadFromUtc8 = <String, dynamic>{
+          'format': 1,
+          'sessions': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 's_cross_tz',
+              'session_type': 'agent',
+              'title': '跨时区讨论会话',
+              'created_at': '2026-11-19T09:00:00+08:00',
+              'last_active_at': '2026-11-19T09:00:00+08:00',
+              'updated_at': '2026-11-19T09:00:00+08:00',
+              'is_pinned': 0,
+            },
+            <String, Object?>{
+              'id': 's_older_utc8',
+              'session_type': 'agent',
+              'title': '更早的 UTC+8 会话',
+              // 2026-11-19T09:30:00+08:00 == 01:30:00Z，字典序 '09:30' 虽大于 '02:00Z'，但真实时间早于 02:00Z！
+              'created_at': '2026-11-19T09:30:00+08:00',
+              'last_active_at': '2026-11-19T09:30:00+08:00',
+              'updated_at': '2026-11-19T09:30:00+08:00',
+              'is_pinned': 0,
+            },
+          ],
+          'messages': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'm_question_utc8',
+              'session_id': 's_cross_tz',
+              'role': 'user',
+              'content': '来自东八区上午九点的提问',
+              'created_at': '2026-11-19T09:00:00+08:00',
+              'updated_at': '2026-11-19T09:00:00+08:00',
+            },
+            <String, Object?>{
+              'id': 'm_older_utc8_msg',
+              'session_id': 's_older_utc8',
+              'role': 'user',
+              'content': '另一条东八区会话里的用户消息',
+              'created_at': '2026-11-19T09:30:00+08:00',
+              'updated_at': '2026-11-19T09:30:00+08:00',
+            },
+          ],
+          'tombstones': const <Object?>[],
+        };
+
+        // UTC 设备在 1 小时后（2026-11-19T02:00:00Z）回复消息
+        final payloadFromUtc0 = <String, dynamic>{
+          'format': 1,
+          'sessions': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 's_cross_tz',
+              'session_type': 'agent',
+              'title': '跨时区讨论会话',
+              'created_at': '2026-11-19T01:00:00.000Z',
+              'last_active_at': '2026-11-19T02:00:00.000Z',
+              'updated_at': '2026-11-19T01:00:00.000Z',
+              'is_pinned': 0,
+            },
+          ],
+          'messages': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'm_reply_utc0',
+              'session_id': 's_cross_tz',
+              'role': 'assistant',
+              'content': '一小时后来自零时区的回复',
+              'created_at': '2026-11-19T02:00:00.000Z',
+              'updated_at': '2026-11-19T02:00:00.000Z',
+            },
+          ],
+          'tombstones': const <Object?>[],
+        };
+
+        await devUtc8.mergeChatSection(payloadFromUtc8);
+        await devUtc8.mergeChatSection(payloadFromUtc0);
+
+        await devUtc0.mergeChatSection(payloadFromUtc0);
+        await devUtc0.mergeChatSection(payloadFromUtc8);
+
+        for (final dev in <ChatSessionService>[devUtc8, devUtc0]) {
+          final msgs = await dev.getMessages('s_cross_tz');
+          expect(
+            msgs.map((m) => m.id).toList(),
+            <String>['m_question_utc8', 'm_reply_utc0'],
+          );
+          final sessions = await dev.getAllSessions();
+          // s_cross_tz 最新活跃为 02:00Z > s_older_utc8 的 01:30Z，故排在最前
+          expect(
+            sessions.map((s) => s.id).toList(),
+            <String>['s_cross_tz', 's_older_utc8'],
+          );
+        }
+
+        // 同时验证旧库遗留偏移字符串在重新打开 init 时被幂等归一化为标准 Z 格式
+        final legacyDbPath = p.join(dir.path, 'legacy_offset.db');
+        final rawLegacy = await openDatabase(
+          legacyDbPath,
+          version: 3,
+          singleInstance: false,
+          onCreate: (db, _) async {
+            await db.execute('''
+              CREATE TABLE chat_sessions (
+                id TEXT PRIMARY KEY,
+                session_type TEXT NOT NULL,
+                note_id TEXT,
+                title TEXT,
+                created_at TEXT NOT NULL,
+                last_active_at TEXT NOT NULL,
+                updated_at TEXT,
+                is_pinned INTEGER DEFAULT 0
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE chat_messages (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE chat_tombstones (
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                deleted_at TEXT NOT NULL,
+                PRIMARY KEY (entity_type, entity_id)
+              )
+            ''');
+            await db.insert('chat_sessions', <String, Object?>{
+              'id': 'legacy_s',
+              'session_type': 'agent',
+              'title': '历史偏移会话',
+              'created_at': '2026-11-19T09:00:00+08:00',
+              'last_active_at': '2026-11-19T09:00:00+08:00',
+              'updated_at': '2026-11-19T09:00:00+08:00',
+            });
+            await db.insert('chat_messages', <String, Object?>{
+              'id': 'legacy_m',
+              'session_id': 'legacy_s',
+              'role': 'user',
+              'content': '历史偏移消息',
+              'created_at': '2026-11-19T09:00:00+08:00',
+              'updated_at': '2026-11-19T09:00:00+08:00',
+            });
+          },
+        );
+        await rawLegacy.close();
+
+        final migratedService = ChatSessionService(databasePath: legacyDbPath);
+        try {
+          await migratedService.init();
+          final exported = await migratedService.exportChatSectionForTesting();
+          final sRow = (exported['sessions'] as List).single as Map;
+          final mRow = (exported['messages'] as List).single as Map;
+          expect(sRow['created_at'], '2026-11-19T01:00:00.000Z');
+          expect(mRow['created_at'], '2026-11-19T01:00:00.000Z');
+        } finally {
+          await migratedService.close();
+          migratedService.dispose();
+        }
+      } finally {
+        await devUtc8.close();
+        devUtc8.dispose();
+        await devUtc0.close();
+        devUtc0.dispose();
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        '关联隐患1：设备 A 在 T5 删除会话 S（含旧消息 M1 墓碑），设备 B 离线在 T6>T5 新增消息 M2，正反同步均保留 S 与 M2、删除 M1 并校准 last_active_at',
+        () async {
+      Future<void> runScenario({required bool aToBFirst}) async {
+        final dir = await Directory.systemTemp.createTemp('chat_resurrect_');
+        final pathA = p.join(dir.path, 'a.db');
+        final pathB = p.join(dir.path, 'b.db');
+        final devA = ChatSessionService(databasePath: pathA);
+        final devB = ChatSessionService(databasePath: pathB);
+        try {
+          await devA.init();
+          await devB.init();
+
+          // 1. 初始状态（T1）：两端均持有会话 s_shared 与首条消息 m1
+          final initPayload = <String, dynamic>{
+            'format': 1,
+            'sessions': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 's_shared',
+                'session_type': 'agent',
+                'title': '共享对话',
+                'created_at': '2026-11-10T01:00:00.000Z',
+                'last_active_at': '2026-11-10T01:00:00.000Z',
+                'updated_at': '2026-11-10T01:00:00.000Z',
+                'is_pinned': 0,
+              },
+            ],
+            'messages': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'm1_old',
+                'session_id': 's_shared',
+                'role': 'user',
+                'content': '早期消息 M1',
+                'created_at': '2026-11-10T01:00:00.000Z',
+                'updated_at': '2026-11-10T01:00:00.000Z',
+              },
+            ],
+            'tombstones': const <Object?>[],
+          };
+          await devA.restoreChatSection(initPayload);
+          await devB.restoreChatSection(initPayload);
+
+          // 2. 设备 A 在 T5 (05:00Z) 删除会话 s_shared（同时产生 s_shared 与 m1_old 的 T5 墓碑）
+          final rawA = await openDatabase(pathA, singleInstance: true);
+          await rawA
+              .delete('chat_messages', where: 'session_id = ?', whereArgs: [
+            's_shared',
+          ]);
+          await rawA.delete('chat_sessions', where: 'id = ?', whereArgs: [
+            's_shared',
+          ]);
+          await rawA.insert('chat_tombstones', <String, Object?>{
+            'entity_type': 'session',
+            'entity_id': 's_shared',
+            'deleted_at': '2026-11-10T05:00:00.000Z',
+          });
+          await rawA.insert('chat_tombstones', <String, Object?>{
+            'entity_type': 'message',
+            'entity_id': 'm1_old',
+            'deleted_at': '2026-11-10T05:00:00.000Z',
+          });
+
+          // 3. 设备 B 离线在 T6 (06:00Z > T5) 发送新消息 m2_offline_new（注意 s_shared.updated_at 仍停留在 T1！）
+          await devB.addMessage(
+            's_shared',
+            ChatMessage(
+              id: 'm2_offline_new',
+              content: '离线新发送的重要消息 M2',
+              isUser: true,
+              role: 'user',
+              timestamp: DateTime.utc(2026, 11, 10, 6, 0),
+            ),
+          );
+          final rawB = await openDatabase(pathB, singleInstance: true);
+          await rawB.update(
+            'chat_messages',
+            <String, Object?>{
+              'created_at': '2026-11-10T06:00:00.000Z',
+              'updated_at': '2026-11-10T06:00:00.000Z',
+            },
+            where: 'id = ?',
+            whereArgs: const <Object?>['m2_offline_new'],
+          );
+          await rawB.update(
+            'chat_sessions',
+            <String, Object?>{
+              'last_active_at': '2026-11-10T06:00:00.000Z',
+              'updated_at': '2026-11-10T01:00:00.000Z',
+            },
+            where: 'id = ?',
+            whereArgs: const <Object?>['s_shared'],
+          );
+
+          // 4. 双向交换快照
+          if (aToBFirst) {
+            await devB.mergeChatSection(
+              await devA.exportChatSectionForTesting(),
+            );
+            await devA.mergeChatSection(
+              await devB.exportChatSectionForTesting(),
+            );
+          } else {
+            await devA.mergeChatSection(
+              await devB.exportChatSectionForTesting(),
+            );
+            await devB.mergeChatSection(
+              await devA.exportChatSectionForTesting(),
+            );
+          }
+
+          // 5. 两端均保留 s_shared 与 m2_offline_new，删除 m1_old，且 last_active_at 校准为 06:00Z
+          for (final pPath in <String>[pathA, pathB]) {
+            final s = await querySession(pPath, 's_shared');
+            expect(s, isNotNull);
+            expect(
+              s!.lastActiveAt.toUtc().toIso8601String(),
+              '2026-11-10T06:00:00.000Z',
+            );
+          }
+          expect(
+            (await devA.getMessages('s_shared')).map((m) => m.id).toList(),
+            <String>['m2_offline_new'],
+          );
+          expect(
+            (await devB.getMessages('s_shared')).map((m) => m.id).toList(),
+            <String>['m2_offline_new'],
+          );
+        } finally {
+          await devA.close();
+          devA.dispose();
+          await devB.close();
+          devB.dispose();
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        }
+      }
+
+      await runScenario(aToBFirst: true);
+      await runScenario(aToBFirst: false);
+    });
+
+    test(
+        '关联隐患2 & 问题3：同 ID 同时间戳会话/消息平局满足交换律，删除末尾消息回退校准 last_active_at，非法 format 抛 FormatException',
+        () async {
+      // 1. 非法 format 立即抛 FormatException 且不破坏已有会话
+      final keepSession = await service.createSession(
+        sessionType: 'agent',
+        title: '受保护的本机对话',
+      );
+      for (final badFormat in <Object?>['bad', 0, -2, 1.5]) {
+        await expectLater(
+          () => service.mergeChatSection(<String, dynamic>{
+            'format': badFormat,
+            'sessions': const <Object?>[],
+          }),
+          throwsA(isA<FormatException>()),
+        );
+        await expectLater(
+          () => service.restoreChatSection(<String, dynamic>{
+            'format': badFormat,
+            'sessions': const <Object?>[],
+          }),
+          throwsA(isA<FormatException>()),
+        );
+      }
+      expect(await querySession(dbPath, keepSession.id), isNotNull);
+
+      // 2. 删除会话最后一条消息后，last_active_at 自动回退校准到剩余最新消息时间
+      await service.restoreChatSection(<String, dynamic>{
+        'format': 1,
+        'sessions': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 's_recalc',
+            'session_type': 'agent',
+            'title': '校准会话',
+            'created_at': '2026-11-10T01:00:00.000Z',
+            'last_active_at': '2026-11-10T05:00:00.000Z',
+            'updated_at': '2026-11-10T01:00:00.000Z',
+          },
+        ],
+        'messages': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 'm_first',
+            'session_id': 's_recalc',
+            'role': 'user',
+            'content': '首条保留消息',
+            'created_at': '2026-11-10T02:00:00.000Z',
+            'updated_at': '2026-11-10T02:00:00.000Z',
+          },
+          <String, Object?>{
+            'id': 'm_second_deleted',
+            'session_id': 's_recalc',
+            'role': 'assistant',
+            'content': '将被远端墓碑删除的末尾消息',
+            'created_at': '2026-11-10T05:00:00.000Z',
+            'updated_at': '2026-11-10T05:00:00.000Z',
+          },
+        ],
+      });
+      await service.mergeChatSection(<String, dynamic>{
+        'format': 1,
+        'tombstones': <Map<String, Object?>>[
+          <String, Object?>{
+            'entity_type': 'message',
+            'entity_id': 'm_second_deleted',
+            'deleted_at': '2026-11-10T06:00:00.000Z',
+          },
+        ],
+      });
+      final recalibrated = await querySession(dbPath, 's_recalc');
+      expect(
+        recalibrated!.lastActiveAt.toUtc().toIso8601String(),
+        '2026-11-10T02:00:00.000Z',
+      );
+
+      // 3. 同 ID 同时间戳会话与消息合并满足交换律（A->B == B->A）
+      final dir = await Directory.systemTemp.createTemp('chat_tie_');
+      final dev1 = ChatSessionService(databasePath: p.join(dir.path, '1.db'));
+      final dev2 = ChatSessionService(databasePath: p.join(dir.path, '2.db'));
+      try {
+        await dev1.init();
+        await dev2.init();
+        final pAlpha = <String, dynamic>{
+          'format': 1,
+          'sessions': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 's_tie',
+              'session_type': 'agent',
+              'title': '标题 Alpha',
+              'created_at': '2026-11-15T01:00:00.000Z',
+              'last_active_at': '2026-11-15T01:00:00.000Z',
+              'updated_at': '2026-11-15T02:00:00.000Z',
+              'is_pinned': 0,
+            },
+          ],
+          'messages': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'm_tie',
+              'session_id': 's_tie',
+              'role': 'assistant',
+              'content': '回复版本 Alpha',
+              'created_at': '2026-11-15T01:05:00.000Z',
+              'updated_at': '2026-11-15T02:00:00.000Z',
+            },
+          ],
+        };
+        final pBeta = <String, dynamic>{
+          'format': 1,
+          'sessions': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 's_tie',
+              'session_type': 'agent',
+              'title': '标题 Beta',
+              'created_at': '2026-11-15T09:00:00+08:00',
+              'last_active_at': '2026-11-15T09:00:00+08:00',
+              'updated_at': '2026-11-15T10:00:00+08:00',
+              'is_pinned': 1,
+            },
+          ],
+          'messages': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'm_tie',
+              'session_id': 's_tie',
+              'role': 'assistant',
+              'content': '回复版本 Beta',
+              'created_at': '2026-11-15T09:05:00+08:00',
+              'updated_at': '2026-11-15T10:00:00+08:00',
+            },
+          ],
+        };
+
+        await dev1.mergeChatSection(pAlpha);
+        await dev1.mergeChatSection(pBeta);
+
+        await dev2.mergeChatSection(pBeta);
+        await dev2.mergeChatSection(pAlpha);
+
+        final s1 = (await dev1.getAllSessions()).single;
+        final s2 = (await dev2.getAllSessions()).single;
+        expect(s1.title, s2.title);
+        expect(s1.isPinned, s2.isPinned);
+        expect(
+          (await dev1.getMessages('s_tie')).single.content,
+          (await dev2.getMessages('s_tie')).single.content,
+        );
+      } finally {
+        await dev1.close();
+        dev1.dispose();
+        await dev2.close();
+        dev2.dispose();
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+  });
 }

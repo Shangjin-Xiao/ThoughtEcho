@@ -367,6 +367,205 @@ class AgentMemoryService extends ChangeNotifier {
       'CREATE INDEX IF NOT EXISTS idx_agent_memory_facts_created_at '
       'ON $factsTable(created_at)',
     );
+
+    await _normalizeLegacyMemoryTimestamps(db);
+  }
+
+  static Future<void> _normalizeLegacyMemoryTimestamps(
+    DatabaseExecutor db,
+  ) async {
+    const chunkSize = 500;
+
+    final nonUtcProfiles = await db.query(
+      profileTable,
+      columns: const <String>['id', 'observed_at', 'updated_at'],
+      where: "observed_at NOT LIKE '%Z' OR "
+          "(updated_at IS NOT NULL AND updated_at != '' AND updated_at NOT LIKE '%Z')",
+    );
+    for (var i = 0; i < nonUtcProfiles.length; i += chunkSize) {
+      final end = (i + chunkSize < nonUtcProfiles.length)
+          ? i + chunkSize
+          : nonUtcProfiles.length;
+      final batch = db.batch();
+      var hasUpdates = false;
+      for (var j = i; j < end; j++) {
+        final row = nonUtcProfiles[j];
+        final id = row['id'] as String?;
+        if (id == null || id.isEmpty) continue;
+        final observedAt = _normalizeMemoryTimestampToUtcOrKeep(
+          row['observed_at'],
+        );
+        final updatedRaw = row['updated_at'];
+        final updatedAt = (updatedRaw is String && updatedRaw.trim().isNotEmpty)
+            ? _normalizeMemoryTimestampToUtcOrKeep(updatedRaw)
+            : observedAt;
+        if (observedAt != row['observed_at'] ||
+            updatedAt != row['updated_at']) {
+          batch.update(
+            profileTable,
+            <String, Object?>{
+              'observed_at': observedAt,
+              'updated_at': updatedAt,
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[id],
+          );
+          hasUpdates = true;
+        }
+      }
+      if (hasUpdates) {
+        await batch.commit(noResult: true);
+      }
+    }
+
+    final nonUtcFacts = await db.query(
+      factsTable,
+      columns: const <String>[
+        'id',
+        'created_at',
+        'updated_at',
+        'last_recalled_at',
+      ],
+      where: "created_at NOT LIKE '%Z' OR "
+          "(updated_at IS NOT NULL AND updated_at != '' AND updated_at NOT LIKE '%Z') OR "
+          "(last_recalled_at IS NOT NULL AND last_recalled_at != '' AND last_recalled_at NOT LIKE '%Z')",
+    );
+    for (var i = 0; i < nonUtcFacts.length; i += chunkSize) {
+      final end = (i + chunkSize < nonUtcFacts.length)
+          ? i + chunkSize
+          : nonUtcFacts.length;
+      final batch = db.batch();
+      var hasUpdates = false;
+      for (var j = i; j < end; j++) {
+        final row = nonUtcFacts[j];
+        final id = row['id'] as String?;
+        if (id == null || id.isEmpty) continue;
+        final createdAt = _normalizeMemoryTimestampToUtcOrKeep(
+          row['created_at'],
+        );
+        final updatedRaw = row['updated_at'];
+        final updatedAt = (updatedRaw is String && updatedRaw.trim().isNotEmpty)
+            ? _normalizeMemoryTimestampToUtcOrKeep(updatedRaw)
+            : createdAt;
+        final recalledRaw = row['last_recalled_at'];
+        final lastRecalledAt =
+            (recalledRaw is String && recalledRaw.trim().isNotEmpty)
+                ? _normalizeMemoryTimestampToUtcOrKeep(recalledRaw)
+                : recalledRaw;
+        if (createdAt != row['created_at'] ||
+            updatedAt != row['updated_at'] ||
+            lastRecalledAt != row['last_recalled_at']) {
+          batch.update(
+            factsTable,
+            <String, Object?>{
+              'created_at': createdAt,
+              'updated_at': updatedAt,
+              'last_recalled_at': lastRecalledAt,
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[id],
+          );
+          hasUpdates = true;
+        }
+      }
+      if (hasUpdates) {
+        await batch.commit(noResult: true);
+      }
+    }
+
+    final nonUtcSlices = await db.query(
+      recentSliceTable,
+      columns: const <String>['id', 'observed_at', 'expires_at'],
+      where: "observed_at NOT LIKE '%Z' OR expires_at NOT LIKE '%Z'",
+    );
+    for (var i = 0; i < nonUtcSlices.length; i += chunkSize) {
+      final end = (i + chunkSize < nonUtcSlices.length)
+          ? i + chunkSize
+          : nonUtcSlices.length;
+      final batch = db.batch();
+      var hasUpdates = false;
+      for (var j = i; j < end; j++) {
+        final row = nonUtcSlices[j];
+        final id = row['id'] as String?;
+        if (id == null || id.isEmpty) continue;
+        final observedAt = _normalizeMemoryTimestampToUtcOrKeep(
+          row['observed_at'],
+        );
+        final expiresAt = _normalizeMemoryTimestampToUtcOrKeep(
+          row['expires_at'],
+        );
+        if (observedAt != row['observed_at'] ||
+            expiresAt != row['expires_at']) {
+          batch.update(
+            recentSliceTable,
+            <String, Object?>{
+              'observed_at': observedAt,
+              'expires_at': expiresAt,
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[id],
+          );
+          hasUpdates = true;
+        }
+      }
+      if (hasUpdates) {
+        await batch.commit(noResult: true);
+      }
+    }
+
+    final nonUtcTombstones = await db.query(
+      tombstonesTable,
+      columns: const <String>['entity_type', 'entity_id', 'deleted_at'],
+      where: "deleted_at NOT LIKE '%Z'",
+    );
+    for (var i = 0; i < nonUtcTombstones.length; i += chunkSize) {
+      final end = (i + chunkSize < nonUtcTombstones.length)
+          ? i + chunkSize
+          : nonUtcTombstones.length;
+      final batch = db.batch();
+      var hasUpdates = false;
+      for (var j = i; j < end; j++) {
+        final row = nonUtcTombstones[j];
+        final type = row['entity_type'] as String?;
+        final id = row['entity_id'] as String?;
+        if (type == null || id == null) continue;
+        final deletedAt = _normalizeMemoryTimestampToUtcOrKeep(
+          row['deleted_at'],
+        );
+        if (deletedAt != row['deleted_at']) {
+          batch.update(
+            tombstonesTable,
+            <String, Object?>{'deleted_at': deletedAt},
+            where: 'entity_type = ? AND entity_id = ?',
+            whereArgs: <Object?>[type, id],
+          );
+          hasUpdates = true;
+        }
+      }
+      if (hasUpdates) {
+        await batch.commit(noResult: true);
+      }
+    }
+
+    final nonUtcMeta = await db.query(
+      metaTable,
+      columns: const <String>['key', 'value'],
+      where: "key IN (?, ?) AND value != '' AND value NOT LIKE '%Z'",
+      whereArgs: <Object?>[metaClearedAtKey, metaDreamingLastRunAtKey],
+    );
+    for (final row in nonUtcMeta) {
+      final key = row['key'] as String?;
+      if (key == null || key.isEmpty) continue;
+      final normalized = _normalizeMemoryTimestampToUtcOrKeep(row['value']);
+      if (normalized != row['value']) {
+        await db.update(
+          metaTable,
+          <String, Object?>{'value': normalized},
+          where: 'key = ?',
+          whereArgs: <Object?>[key],
+        );
+      }
+    }
   }
 
   static String _quoteIdentifier(String identifier) {
@@ -420,6 +619,12 @@ class AgentMemoryService extends ChangeNotifier {
     } catch (_) {
       // 列已存在。其它 DDL 失败会在后续读写时暴露，不在这里吞成静默损坏。
     }
+  }
+
+  @override
+  void notifyListeners() {
+    if (_disposed) return;
+    super.notifyListeners();
   }
 
   @override
@@ -774,7 +979,7 @@ class AgentMemoryService extends ChangeNotifier {
     }
 
     final db = await _db;
-    final effectiveObservedAt = observedAt ?? DateTime.now();
+    final effectiveObservedAt = (observedAt ?? DateTime.now()).toUtc();
     final effectiveUpdatedAt = (updatedAt ?? effectiveObservedAt).toUtc();
     final cleanReplacesId =
         (replacesId != null && replacesId.isNotEmpty) ? replacesId : null;
@@ -798,12 +1003,13 @@ class AgentMemoryService extends ChangeNotifier {
     try {
       await db.transaction((txn) async {
         if (cleanReplacesId != null) {
+          // 仅更新 status 与 superseded_by 派生状态，绝不覆盖被取代条目的原始 updated_at，
+          // 以免污染跨端冲突收敛时的真实内容修订时间。
           await txn.update(
             profileTable,
             <String, Object?>{
               'status': AgentMemoryStatus.superseded.storageValue,
               'superseded_by': entry.id,
-              'updated_at': effectiveUpdatedAt.toIso8601String(),
             },
             where: 'id = ?',
             whereArgs: <Object?>[cleanReplacesId],
@@ -853,13 +1059,16 @@ class AgentMemoryService extends ChangeNotifier {
     }
     try {
       final db = await _db;
-      final now = DateTime.now();
+      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
       final updated = await db.update(
         profileTable,
         <String, Object?>{
           'directive': normalized,
-          'observed_at': now.toIso8601String(),
-          'updated_at': now.toUtc().toIso8601String(),
+          'observed_at': nowUtcIso,
+          'updated_at': nowUtcIso,
+          'source': 'user_edit',
+          'basis_watermark': null,
+          'basis_note_count': null,
           if (kind != null) 'kind': kind.storageValue,
         },
         where: 'id = ?',
@@ -993,7 +1202,7 @@ class AgentMemoryService extends ChangeNotifier {
     if (!isEnabled) {
       return const <AgentMemoryRecentSlice>[];
     }
-    final currentTime = now ?? DateTime.now();
+    final currentTime = (now ?? DateTime.now()).toUtc();
     try {
       final db = await _db;
       final rows = await db.query(
@@ -1032,7 +1241,7 @@ class AgentMemoryService extends ChangeNotifier {
     if (normalized.isEmpty) {
       return null;
     }
-    final now = observedAt ?? DateTime.now();
+    final now = (observedAt ?? DateTime.now()).toUtc();
     final slice = AgentMemoryRecentSlice(
       id: id ?? AgentMemoryRecentSlice.singletonId,
       content: normalized,
@@ -1224,7 +1433,7 @@ class AgentMemoryService extends ChangeNotifier {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) async {
-    final effectiveCreatedAt = createdAt ?? DateTime.now();
+    final effectiveCreatedAt = (createdAt ?? DateTime.now()).toUtc();
     final fact = _buildFact(
       content: content,
       category: category,
@@ -1340,14 +1549,14 @@ class AgentMemoryService extends ChangeNotifier {
     }
 
     final trimmedCategory = category?.trim() ?? '';
-    final effectiveCreatedAt = createdAt ?? DateTime.now();
+    final effectiveCreatedAt = (createdAt ?? DateTime.now()).toUtc();
 
     return AgentMemoryFact(
       id: id ?? _uuid.v4(),
       content: normalized,
       createdAt: effectiveCreatedAt,
       updatedAt: (updatedAt ?? effectiveCreatedAt).toUtc(),
-      lastRecalledAt: lastRecalledAt,
+      lastRecalledAt: lastRecalledAt?.toUtc(),
       recallCount: recallCount,
       category: trimmedCategory.isEmpty ? null : trimmedCategory,
       importance: importance.clamp(
@@ -1703,6 +1912,9 @@ class AgentMemoryService extends ChangeNotifier {
     _invalidateProfile();
     _cachedIdentityAliases = const <String>{};
     _settingsService.refreshIdentityAliases();
+    if (_settingsService.lastDreamingAt != null) {
+      await _settingsService.setLastDreamingAt(null);
+    }
     notifyListeners();
     logDebug('已清空 Thoughter 记忆', source: 'AgentMemoryService');
     AptabaseHelper.trackEvent('agent_memory_clear_all');
@@ -1796,13 +2008,14 @@ class AgentMemoryService extends ChangeNotifier {
   Future<MemoryCompactionStats> compactAndPrune({DateTime? now}) async {
     try {
       final db = await _db;
-      final currentTime = now ?? DateTime.now();
+      final currentTime = (now ?? DateTime.now()).toUtc();
       final thirtyDaysAgo = currentTime.subtract(const Duration(days: 30));
 
       var expiredSlices = 0;
       var supersededProfiles = 0;
       var decayedFacts = 0;
       var duplicatesPruned = 0;
+      var profileStateMutated = false;
 
       await db.transaction((txn) async {
         // 1. 清理已过期的近况切片
@@ -1831,12 +2044,10 @@ class AgentMemoryService extends ChangeNotifier {
           whereArgs: <Object?>[thirtyDaysAgo.toIso8601String()],
         );
 
-        // 4. 分叉收敛、单例画像唯一性、身份别名收敛与同 kind+directive 活跃指令去重（不写墓碑）
-        final convergence = await _convergeActiveProfilesInTxn(
-          txn,
-          nowUtcIso: currentTime.toUtc().toIso8601String(),
-        );
+        // 4. 分叉收敛、单例画像唯一性、身份别名收敛与同 kind+directive 活跃指令去重（不写墓碑、不改 updated_at）
+        final convergence = await _convergeProfilesInTxn(txn);
         duplicatesPruned = convergence.supersededCount;
+        profileStateMutated = convergence.didMutate;
 
         // 5. 修剪超出容量的过旧近况切片（仅保留最新的 maxRecentSlices 条活跃切片）
         await txn.delete(
@@ -1847,7 +2058,7 @@ class AgentMemoryService extends ChangeNotifier {
         );
       });
 
-      if (duplicatesPruned > 0) {
+      if (duplicatesPruned > 0 || profileStateMutated) {
         _invalidateProfile();
         await activeIdentityAliases();
         _settingsService.refreshIdentityAliases();
@@ -1945,7 +2156,7 @@ class AgentMemoryService extends ChangeNotifier {
           for (final id in batch) {
             counts[id] = (counts[id] ?? 0) + 1;
           }
-          final nowStr = DateTime.now().toIso8601String();
+          final nowStr = DateTime.now().toUtc().toIso8601String();
 
           await db.transaction((txn) async {
             for (final entry in counts.entries) {

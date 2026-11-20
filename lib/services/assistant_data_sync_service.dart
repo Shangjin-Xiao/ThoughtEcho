@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'agent_memory_service.dart';
@@ -45,9 +46,17 @@ class AssistantDataSyncService {
   }
 
   /// 向已写出前序键值（尚未写末尾 `}`）的顶层 JSON 流追加 `chat` 与（开启时）`agent_memory` 段。
+  ///
+  /// - 手动备份 / LocalSend 默认不传 [preservedRemoteAgentMemory]：本机记忆关闭时直接省略
+  ///   `"agent_memory"` 键，绝不读取或暴露本机 `agent_memory.db`；
+  /// - WebDAV 上传共享快照时传入本轮下载且已通过结构校验的 [preservedRemoteAgentMemory]：
+  ///   若本机因记忆开关关闭跳过了远端记忆合并（[forceSkipLocalMemoryExport] 为 `true`）或导出
+  ///   当下记忆处于关闭状态，则原样写回云端原有的 `agent_memory` 段，避免抹掉其他设备的共享记忆。
   Future<void> writeSections(
     IOSink sink, {
     CancelToken? cancelToken,
+    Map<String, dynamic>? preservedRemoteAgentMemory,
+    bool forceSkipLocalMemoryExport = false,
   }) async {
     cancelToken?.throwIfCancelled();
     sink.write(',"chat":');
@@ -57,12 +66,19 @@ class AssistantDataSyncService {
     );
 
     cancelToken?.throwIfCancelled();
-    if (_agentMemoryService.isEnabled) {
+    String? encodedLocalMemory;
+    if (!forceSkipLocalMemoryExport) {
+      encodedLocalMemory = await _agentMemoryService
+          .encodeMemorySectionIfEnabled(cancelToken: cancelToken);
+    }
+
+    cancelToken?.throwIfCancelled();
+    if (encodedLocalMemory != null) {
       sink.write(',"agent_memory":');
-      await _agentMemoryService.exportMemorySectionStreaming(
-        sink,
-        cancelToken: cancelToken,
-      );
+      sink.write(encodedLocalMemory);
+    } else if (preservedRemoteAgentMemory != null) {
+      sink.write(',"agent_memory":');
+      sink.write(jsonEncode(preservedRemoteAgentMemory));
     }
   }
 
@@ -106,7 +122,7 @@ class AssistantDataSyncService {
       }
     }
 
-    // 2. 再合并长期记忆（基于已合并完成的本地主库判定 Dreaming 笔记依据）
+    // 2. 再合并长期记忆（基于已合并完成的本地主库批量判定 Dreaming 笔记依据）
     if (payload.containsKey('agent_memory') &&
         payload['agent_memory'] != null) {
       final rawMemory = payload['agent_memory'];
@@ -114,6 +130,7 @@ class AssistantDataSyncService {
         memoryStats = await _agentMemoryService.mergeMemorySection(
           rawMemory,
           isBasisCovered: _isDreamingBasisCovered,
+          checkBasisBatch: _checkDreamingBasisBatch,
         );
       } catch (e, stack) {
         final safeMsg = _sanitizeSectionError('长期记忆', e);
@@ -173,6 +190,37 @@ class AssistantDataSyncService {
         payload['agent_memory'] != null) {
       await _agentMemoryService.restoreMemorySection(payload['agent_memory']);
     }
+  }
+
+  Future<Map<(String, int), bool>> _checkDreamingBasisBatch(
+    Set<(String, int)> pairs,
+  ) async {
+    if (pairs.isEmpty) {
+      return const <(String, int), bool>{};
+    }
+    final validWatermarks = <String>{};
+    for (final (watermark, noteCount) in pairs) {
+      final trimmed = watermark.trim();
+      if (noteCount >= 0 &&
+          trimmed.isNotEmpty &&
+          DateTime.tryParse(trimmed) != null) {
+        validWatermarks.add(trimmed);
+      }
+    }
+    final countsByWatermark = validWatermarks.isEmpty
+        ? const <String, int>{}
+        : await _databaseService.countActiveNotesUpToWatermarks(
+            validWatermarks,
+          );
+    final result = <(String, int), bool>{};
+    for (final pair in pairs) {
+      final trimmed = pair.$1.trim();
+      final noteCount = pair.$2;
+      final actualCount = countsByWatermark[trimmed];
+      result[pair] =
+          noteCount >= 0 && actualCount != null && actualCount <= noteCount;
+    }
+    return result;
   }
 
   Future<bool> _isDreamingBasisCovered(

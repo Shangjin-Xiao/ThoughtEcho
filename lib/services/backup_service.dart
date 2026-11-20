@@ -17,6 +17,7 @@ import 'package:thoughtecho/utils/localization_resolver.dart';
 import 'package:thoughtecho/models/import_cleanup_stats.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'package:thoughtecho/services/media_sync_manifest.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
 import 'streaming_backup_processor.dart';
 import 'package:meta/meta.dart';
 
@@ -624,6 +625,9 @@ class BackupService {
               ? rawSettings
               : rawSettings.map((k, v) => MapEntry(k.toString(), v));
           await _settingsService.restoreAllSettingsFromBackup(settingsMap);
+          try {
+            await AppTheme.reloadCurrentInstance();
+          } catch (_) {}
         } else if (rawSettings != null) {
           logWarning(
             '跳过非 Map 格式的 settings 备份节点 (${rawSettings.runtimeType})',

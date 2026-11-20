@@ -159,7 +159,7 @@ class AgentMemoryProfileEntry {
       'id': id,
       'kind': kind.storageValue,
       'directive': directive,
-      'observed_at': observedAt.toIso8601String(),
+      'observed_at': observedAt.toUtc().toIso8601String(),
       'updated_at': (updatedAt ?? observedAt).toUtc().toIso8601String(),
       'status': status.storageValue,
       'superseded_by': supersededBy,
@@ -305,9 +305,9 @@ class AgentMemoryFact {
       'importance': importance,
       'trigger_phrases':
           triggerPhrases.isEmpty ? null : triggerPhrases.join('\n'),
-      'created_at': createdAt.toIso8601String(),
+      'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': (updatedAt ?? createdAt).toUtc().toIso8601String(),
-      'last_recalled_at': lastRecalledAt?.toIso8601String(),
+      'last_recalled_at': lastRecalledAt?.toUtc().toIso8601String(),
       'recall_count': recallCount,
       'source_ref': sourceRef,
     };
@@ -421,8 +421,8 @@ class AgentMemoryRecentSlice {
     return <String, Object?>{
       'id': id,
       'content': content,
-      'observed_at': observedAt.toIso8601String(),
-      'expires_at': expiresAt.toIso8601String(),
+      'observed_at': observedAt.toUtc().toIso8601String(),
+      'expires_at': expiresAt.toUtc().toIso8601String(),
       'source_note_ids':
           sourceNoteIds.isEmpty ? null : jsonEncode(sourceNoteIds),
     };

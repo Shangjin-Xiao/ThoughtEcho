@@ -204,6 +204,15 @@ class ChatSessionService extends ChangeNotifier {
                   ? lastActive
                   : (row['created_at']?.toString() ?? '');
             }
+            for (final timeCol in const <String>[
+              'created_at',
+              'last_active_at',
+              'updated_at',
+            ]) {
+              if (row[timeCol] is String) {
+                row[timeCol] = _normalizeChatTimestampToUtcOrKeep(row[timeCol]);
+              }
+            }
             batch.insert(
               'chat_sessions',
               row,
@@ -227,6 +236,11 @@ class ChatSessionService extends ChangeNotifier {
             final existingUpdated = row['updated_at']?.toString() ?? '';
             if (existingUpdated.isEmpty) {
               row['updated_at'] = row['created_at']?.toString() ?? '';
+            }
+            for (final timeCol in const <String>['created_at', 'updated_at']) {
+              if (row[timeCol] is String) {
+                row[timeCol] = _normalizeChatTimestampToUtcOrKeep(row[timeCol]);
+              }
             }
             batch.insert(
               'chat_messages',
@@ -517,6 +531,133 @@ class ChatSessionService extends ChangeNotifier {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_chat_messages_content ON chat_messages(content)',
     );
+
+    await _normalizeLegacyChatTimestamps(db);
+  }
+
+  Future<void> _normalizeLegacyChatTimestamps(DatabaseExecutor db) async {
+    const chunkSize = 500;
+
+    final nonUtcSessions = await db.query(
+      'chat_sessions',
+      columns: const <String>[
+        'id',
+        'created_at',
+        'last_active_at',
+        'updated_at',
+      ],
+      where: "created_at NOT LIKE '%Z' OR "
+          "last_active_at NOT LIKE '%Z' OR "
+          "(updated_at IS NOT NULL AND updated_at != '' AND updated_at NOT LIKE '%Z')",
+    );
+    for (var i = 0; i < nonUtcSessions.length; i += chunkSize) {
+      final end = (i + chunkSize < nonUtcSessions.length)
+          ? i + chunkSize
+          : nonUtcSessions.length;
+      final batch = db.batch();
+      var hasUpdates = false;
+      for (var j = i; j < end; j++) {
+        final row = nonUtcSessions[j];
+        final id = row['id'] as String?;
+        if (id == null || id.isEmpty) continue;
+        final createdAt = _normalizeChatTimestampToUtcOrKeep(row['created_at']);
+        final lastActiveAt =
+            _normalizeChatTimestampToUtcOrKeep(row['last_active_at']);
+        final updatedRaw = row['updated_at'];
+        final updatedAt = (updatedRaw is String && updatedRaw.trim().isNotEmpty)
+            ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
+            : (lastActiveAt.isNotEmpty ? lastActiveAt : createdAt);
+        if (createdAt != row['created_at'] ||
+            lastActiveAt != row['last_active_at'] ||
+            updatedAt != row['updated_at']) {
+          batch.update(
+            'chat_sessions',
+            <String, Object?>{
+              'created_at': createdAt,
+              'last_active_at': lastActiveAt,
+              'updated_at': updatedAt,
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[id],
+          );
+          hasUpdates = true;
+        }
+      }
+      if (hasUpdates) {
+        await batch.commit(noResult: true);
+      }
+    }
+
+    final nonUtcMessages = await db.query(
+      'chat_messages',
+      columns: const <String>['id', 'created_at', 'updated_at'],
+      where: "created_at NOT LIKE '%Z' OR "
+          "(updated_at IS NOT NULL AND updated_at != '' AND updated_at NOT LIKE '%Z')",
+    );
+    for (var i = 0; i < nonUtcMessages.length; i += chunkSize) {
+      final end = (i + chunkSize < nonUtcMessages.length)
+          ? i + chunkSize
+          : nonUtcMessages.length;
+      final batch = db.batch();
+      var hasUpdates = false;
+      for (var j = i; j < end; j++) {
+        final row = nonUtcMessages[j];
+        final id = row['id'] as String?;
+        if (id == null || id.isEmpty) continue;
+        final createdAt = _normalizeChatTimestampToUtcOrKeep(row['created_at']);
+        final updatedRaw = row['updated_at'];
+        final updatedAt = (updatedRaw is String && updatedRaw.trim().isNotEmpty)
+            ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
+            : createdAt;
+        if (createdAt != row['created_at'] || updatedAt != row['updated_at']) {
+          batch.update(
+            'chat_messages',
+            <String, Object?>{
+              'created_at': createdAt,
+              'updated_at': updatedAt,
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[id],
+          );
+          hasUpdates = true;
+        }
+      }
+      if (hasUpdates) {
+        await batch.commit(noResult: true);
+      }
+    }
+
+    final nonUtcTombstones = await db.query(
+      'chat_tombstones',
+      columns: const <String>['entity_type', 'entity_id', 'deleted_at'],
+      where: "deleted_at NOT LIKE '%Z'",
+    );
+    for (var i = 0; i < nonUtcTombstones.length; i += chunkSize) {
+      final end = (i + chunkSize < nonUtcTombstones.length)
+          ? i + chunkSize
+          : nonUtcTombstones.length;
+      final batch = db.batch();
+      var hasUpdates = false;
+      for (var j = i; j < end; j++) {
+        final row = nonUtcTombstones[j];
+        final type = row['entity_type'] as String?;
+        final id = row['entity_id'] as String?;
+        if (type == null || id == null) continue;
+        final deletedAt = _normalizeChatTimestampToUtcOrKeep(row['deleted_at']);
+        if (deletedAt != row['deleted_at']) {
+          batch.update(
+            'chat_tombstones',
+            <String, Object?>{'deleted_at': deletedAt},
+            where: 'entity_type = ? AND entity_id = ?',
+            whereArgs: <Object?>[type, id],
+          );
+          hasUpdates = true;
+        }
+      }
+      if (hasUpdates) {
+        await batch.commit(noResult: true);
+      }
+    }
   }
 
   String _escapeIdentifier(String identifier) {
@@ -577,7 +718,7 @@ class ChatSessionService extends ChangeNotifier {
     String? noteId,
     required String title,
   }) async {
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
     final session = ChatSession(
       id: const Uuid().v4(),
       sessionType: sessionType,
@@ -585,11 +726,17 @@ class ChatSessionService extends ChangeNotifier {
       title: title,
       createdAt: now,
       lastActiveAt: now,
-      updatedAt: now.toUtc(),
+      updatedAt: now,
     );
     try {
       await _persistOrQueueWrite((db) async {
-        await db.insert('chat_sessions', session.toMap());
+        final row = session.toMap();
+        row['created_at'] = session.createdAt.toUtc().toIso8601String();
+        row['last_active_at'] = session.lastActiveAt.toUtc().toIso8601String();
+        row['updated_at'] = (session.updatedAt ?? session.lastActiveAt)
+            .toUtc()
+            .toIso8601String();
+        await db.insert('chat_sessions', row);
       }, operationName: 'ChatSessionService.createSession');
     } catch (e) {
       logError(
@@ -896,14 +1043,14 @@ WHERE s.id IN ($placeholders)
         WHERE m.id IS NULL
       ''');
 
-      final now = DateTime.now();
+      final now = DateTime.now().toUtc();
       final idsToDelete = <String>[];
 
       for (final row in emptySessions) {
         final id = row['id'] as String;
         final createdAtStr = row['created_at'] as String?;
         if (createdAtStr != null) {
-          final createdAt = DateTime.tryParse(createdAtStr);
+          final createdAt = DateTime.tryParse(createdAtStr)?.toUtc();
           if (createdAt != null) {
             final diffMinutes = now.difference(createdAt).inMinutes;
             if (diffMinutes >= 0 && diffMinutes < 5) {
@@ -1079,14 +1226,13 @@ WHERE s.id IN ($placeholders)
 
   Future<void> updateSessionTitle(String sessionId, String title) async {
     try {
-      final now = DateTime.now();
-      final nowUtcIso = now.toUtc().toIso8601String();
+      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
       await _persistOrQueueWrite((db) async {
         await db.update(
           'chat_sessions',
           {
             'title': title,
-            'last_active_at': now.toIso8601String(),
+            'last_active_at': nowUtcIso,
             'updated_at': nowUtcIso,
           },
           where: 'id = ?',
@@ -1138,11 +1284,12 @@ WHERE s.id IN ($placeholders)
 
   Future<void> addMessage(String sessionId, ChatMessage message) async {
     try {
-      final now = DateTime.now();
-      final nowUtcIso = now.toUtc().toIso8601String();
+      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
+      final messageCreatedUtcIso = message.timestamp.toUtc().toIso8601String();
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
           final row = message.toMap(sessionId);
+          row['created_at'] = messageCreatedUtcIso;
           row['updated_at'] = nowUtcIso;
           await txn.insert(
             'chat_messages',
@@ -1152,7 +1299,7 @@ WHERE s.id IN ($placeholders)
           // 仅刷新会话活跃时间，不刷新会话元数据 updated_at，避免覆盖对端标题/置顶修改。
           await txn.update(
             'chat_sessions',
-            {'last_active_at': now.toIso8601String()},
+            {'last_active_at': nowUtcIso},
             where: 'id = ?',
             whereArgs: [sessionId],
           );

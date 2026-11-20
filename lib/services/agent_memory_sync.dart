@@ -6,6 +6,10 @@ typedef AgentMemoryBasisChecker = Future<bool> Function(
   int? basisNoteCount,
 );
 
+/// 批量判定多组 Dreaming `(basisWatermark, basisNoteCount)` 在合并后的本地主库上是否“看全了”。
+typedef AgentMemoryBatchBasisChecker = Future<Map<(String, int), bool>>
+    Function(Set<(String, int)> basisPairs);
+
 const List<String> _memoryProfileColumnWhitelist = <String>[
   'id',
   'kind',
@@ -39,6 +43,32 @@ const List<String> _memorySliceColumnWhitelist = <String>[
   'content',
   'observed_at',
   'expires_at',
+  'source_note_ids',
+];
+
+const List<String> _memoryProfileTieBreakKeys = <String>[
+  'kind',
+  'directive',
+  'observed_at',
+  'replaces_id',
+  'source',
+  'source_note_ids',
+  'basis_watermark',
+  'basis_note_count',
+];
+
+const List<String> _memoryFactTieBreakKeys = <String>[
+  'category',
+  'content',
+  'importance',
+  'trigger_phrases',
+  'created_at',
+  'source_ref',
+];
+
+const List<String> _memorySliceTieBreakKeys = <String>[
+  'expires_at',
+  'content',
   'source_note_ids',
 ];
 
@@ -101,6 +131,94 @@ DateTime? _tryParseMemoryUtc(Object? raw) {
   return DateTime.tryParse(trimmed)?.toUtc();
 }
 
+String _normalizeMemoryTimestampToUtcOrKeep(Object? raw) {
+  if (raw is! String) return '';
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return '';
+  final parsed = DateTime.tryParse(trimmed);
+  return parsed != null ? parsed.toUtc().toIso8601String() : trimmed;
+}
+
+bool _isValidMemoryFormatVersion(Object? rawFormat) {
+  if (rawFormat is int) {
+    return rawFormat > 0;
+  }
+  if (rawFormat is num) {
+    return rawFormat.isFinite &&
+        rawFormat > 0 &&
+        rawFormat == rawFormat.truncateToDouble();
+  }
+  return false;
+}
+
+void _validateMemorySectionContainers(Map<dynamic, dynamic> rawSection) {
+  final rawFormat = rawSection['format'];
+  if (rawFormat != null && !_isValidMemoryFormatVersion(rawFormat)) {
+    throw const FormatException('Invalid agent_memory.format');
+  }
+  final rawProfiles = rawSection['profile'];
+  if (rawProfiles != null && rawProfiles is! List) {
+    throw const FormatException('Invalid agent_memory.profile container');
+  }
+  final rawFacts = rawSection['facts'];
+  if (rawFacts != null && rawFacts is! List) {
+    throw const FormatException('Invalid agent_memory.facts container');
+  }
+  final rawSlices = rawSection['recent_slices'];
+  if (rawSlices != null && rawSlices is! List) {
+    throw const FormatException('Invalid agent_memory.recent_slices container');
+  }
+  final rawTombstones = rawSection['tombstones'];
+  if (rawTombstones != null && rawTombstones is! List) {
+    throw const FormatException('Invalid agent_memory.tombstones container');
+  }
+  final rawDreaming = rawSection['dreaming'];
+  if (rawDreaming != null && rawDreaming is! Map) {
+    throw const FormatException('Invalid agent_memory.dreaming container');
+  }
+  final rawClearedAt = rawSection['cleared_at'];
+  if (rawClearedAt != null) {
+    if (rawClearedAt is! String) {
+      throw const FormatException('Invalid agent_memory.cleared_at');
+    }
+    final trimmedCleared = rawClearedAt.trim();
+    if (trimmedCleared.isNotEmpty &&
+        _tryParseMemoryUtc(trimmedCleared) == null) {
+      throw const FormatException('Invalid agent_memory.cleared_at');
+    }
+  }
+}
+
+int _compareMemoryCanonicalFields(
+  Map<String, Object?> left,
+  Map<String, Object?> right,
+  List<String> keys,
+) {
+  for (final key in keys) {
+    final leftVal = left[key];
+    final rightVal = right[key];
+    if (leftVal == null && rightVal == null) continue;
+    if (leftVal == null) return -1;
+    if (rightVal == null) return 1;
+    final cmp = leftVal.toString().compareTo(rightVal.toString());
+    if (cmp != 0) return cmp;
+  }
+  return 0;
+}
+
+int _compareMemorySliceOnSameObservedAt(
+  Map<String, Object?> left,
+  Map<String, Object?> right,
+) {
+  final leftExp = _tryParseMemoryUtc(left['expires_at']);
+  final rightExp = _tryParseMemoryUtc(right['expires_at']);
+  if (leftExp != null && rightExp != null) {
+    final expCmp = leftExp.compareTo(rightExp);
+    if (expCmp != 0) return expCmp;
+  }
+  return _compareMemoryCanonicalFields(left, right, _memorySliceTieBreakKeys);
+}
+
 int? _parseMemoryOptionalInt(Object? raw) {
   if (raw == null) return null;
   if (raw is int) return raw;
@@ -122,8 +240,10 @@ DateTime _parseMemoryRowVersionUtc(Object? primary, Object? fallback) {
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 }
 
-String? _sanitizeEncodedNoteIds(Object? raw,
-    {required bool rejectInvalidType}) {
+String? _sanitizeEncodedNoteIds(
+  Object? raw, {
+  required bool rejectInvalidType,
+}) {
   if (raw == null) return null;
   if (raw is List) {
     final clean = raw
@@ -174,7 +294,7 @@ Map<String, Object?>? _sanitizeMemoryProfileRow(Object? item) {
   final observedRaw = item['observed_at'];
   final observedUtc = _tryParseMemoryUtc(observedRaw);
   if (observedUtc == null) return null;
-  final observedStr = (observedRaw as String).trim();
+  final observedStr = observedUtc.toIso8601String();
 
   final updatedRaw = item['updated_at'];
   final updatedUtc = _tryParseMemoryUtc(updatedRaw);
@@ -208,8 +328,11 @@ Map<String, Object?>? _sanitizeMemoryProfileRow(Object? item) {
   final supersededBy = optionalCleanStr(item['superseded_by'], allowAny: false);
   if (supersededBy == '\u0000') return null;
 
-  final replacesId = optionalCleanStr(item['replaces_id'], allowAny: false);
+  var replacesId = optionalCleanStr(item['replaces_id'], allowAny: false);
   if (replacesId == '\u0000') return null;
+  if (replacesId == id) {
+    replacesId = null;
+  }
 
   final source = optionalCleanStr(item['source'], allowAny: false);
   if (source == '\u0000') return null;
@@ -271,7 +394,7 @@ Map<String, Object?>? _sanitizeMemoryFactRow(Object? item) {
   final createdRaw = item['created_at'];
   final createdUtc = _tryParseMemoryUtc(createdRaw);
   if (createdUtc == null) return null;
-  final createdStr = (createdRaw as String).trim();
+  final createdStr = createdUtc.toIso8601String();
 
   final updatedRaw = item['updated_at'];
   final updatedUtc = _tryParseMemoryUtc(updatedRaw);
@@ -326,8 +449,9 @@ Map<String, Object?>? _sanitizeMemoryFactRow(Object? item) {
     if (recalledRaw is! String) return null;
     final trimmedRecalled = recalledRaw.trim();
     if (trimmedRecalled.isNotEmpty) {
-      if (_tryParseMemoryUtc(trimmedRecalled) == null) return null;
-      lastRecalledAt = trimmedRecalled;
+      final parsedRecalled = _tryParseMemoryUtc(trimmedRecalled);
+      if (parsedRecalled == null) return null;
+      lastRecalledAt = parsedRecalled.toIso8601String();
     }
   }
 
@@ -373,12 +497,14 @@ Map<String, Object?>? _sanitizeMemorySliceRow(Object? item) {
   if (content.isEmpty) return null;
 
   final observedRaw = item['observed_at'];
-  if (_tryParseMemoryUtc(observedRaw) == null) return null;
-  final observedStr = (observedRaw as String).trim();
+  final observedUtc = _tryParseMemoryUtc(observedRaw);
+  if (observedUtc == null) return null;
+  final observedStr = observedUtc.toIso8601String();
 
   final expiresRaw = item['expires_at'];
-  if (_tryParseMemoryUtc(expiresRaw) == null) return null;
-  final expiresStr = (expiresRaw as String).trim();
+  final expiresUtc = _tryParseMemoryUtc(expiresRaw);
+  if (expiresUtc == null) return null;
+  final expiresStr = expiresUtc.toIso8601String();
 
   final encodedNoteIds =
       _sanitizeEncodedNoteIds(item['source_note_ids'], rejectInvalidType: true);
@@ -421,10 +547,10 @@ Map<String, Object?> _exportWhitelistedProfile(Map<String, Object?> raw) {
   final row = <String, Object?>{
     for (final col in _memoryProfileColumnWhitelist) col: raw[col],
   };
-  final updated = row['updated_at']?.toString() ?? '';
-  if (updated.isEmpty) {
-    row['updated_at'] = row['observed_at'] ?? '';
-  }
+  final observed = _normalizeMemoryTimestampToUtcOrKeep(row['observed_at']);
+  row['observed_at'] = observed;
+  final updated = _normalizeMemoryTimestampToUtcOrKeep(row['updated_at']);
+  row['updated_at'] = updated.isNotEmpty ? updated : observed;
   return row;
 }
 
@@ -432,29 +558,35 @@ Map<String, Object?> _exportWhitelistedFact(Map<String, Object?> raw) {
   final row = <String, Object?>{
     for (final col in _memoryFactColumnWhitelist) col: raw[col],
   };
-  final updated = row['updated_at']?.toString() ?? '';
-  if (updated.isEmpty) {
-    row['updated_at'] = row['created_at'] ?? '';
+  final created = _normalizeMemoryTimestampToUtcOrKeep(row['created_at']);
+  row['created_at'] = created;
+  final updated = _normalizeMemoryTimestampToUtcOrKeep(row['updated_at']);
+  row['updated_at'] = updated.isNotEmpty ? updated : created;
+  final recalledRaw = row['last_recalled_at'];
+  if (recalledRaw is String && recalledRaw.trim().isNotEmpty) {
+    row['last_recalled_at'] = _normalizeMemoryTimestampToUtcOrKeep(recalledRaw);
   }
   return row;
 }
 
 Map<String, Object?> _exportWhitelistedSlice(Map<String, Object?> raw) {
-  return <String, Object?>{
+  final row = <String, Object?>{
     for (final col in _memorySliceColumnWhitelist) col: raw[col],
   };
+  row['observed_at'] = _normalizeMemoryTimestampToUtcOrKeep(row['observed_at']);
+  row['expires_at'] = _normalizeMemoryTimestampToUtcOrKeep(row['expires_at']);
+  return row;
 }
 
 String? _pickLatestTimestampStr(Object? leftRaw, Object? rightRaw) {
-  final leftStr =
-      leftRaw is String && leftRaw.trim().isNotEmpty ? leftRaw.trim() : null;
-  final rightStr =
-      rightRaw is String && rightRaw.trim().isNotEmpty ? rightRaw.trim() : null;
-  if (leftStr == null) return rightStr;
-  if (rightStr == null) return leftStr;
-  final leftUtc = LWWUtils.parseTimestamp(leftStr);
-  final rightUtc = LWWUtils.parseTimestamp(rightStr);
-  return rightUtc.isAfter(leftUtc) ? rightStr : leftStr;
+  final leftUtc = _tryParseMemoryUtc(leftRaw);
+  final rightUtc = _tryParseMemoryUtc(rightRaw);
+  if (leftUtc == null && rightUtc == null) return null;
+  if (leftUtc == null) return rightUtc!.toIso8601String();
+  if (rightUtc == null) return leftUtc.toIso8601String();
+  return rightUtc.isAfter(leftUtc)
+      ? rightUtc.toIso8601String()
+      : leftUtc.toIso8601String();
 }
 
 int _compareProfileRowsByWinnerRule(
@@ -501,22 +633,80 @@ int _compareProfileRowsByWinnerRule(
   return leftId.compareTo(rightId);
 }
 
-Future<({int supersededCount, bool bothUncoveredDreamingConflict})>
-    _convergeActiveProfilesInTxn(
+/// 基于全量有效候选集执行确定性画像收敛重算。
+///
+/// 关键不变量：
+/// 1. 收敛仅修改 `status` 与 `superseded_by` 派生状态，绝不改写任何条目的 `updated_at`；
+/// 2. 凡 `status == 'active'`，或 `status == 'superseded'` 且沿 `superseded_by` 链仍指向当前
+///    `profileTable` 中存在条目（含互指环）的条目均纳入重算；若后继已被 `forgetProfile` 墓碑删除
+///    或已超期物理清理（不在 `profileTable` 中），绝不纳入重算、绝不复活；
+/// 3. 显式 `replaces_id` 链、同 `replaces_id` 分叉、单例类别与身份别名/重复指令统一确定性选出唯一赢家，
+///    若最终赢家此前处于 `superseded` 则原位恢复为 `active`。
+Future<
+    ({
+      int supersededCount,
+      bool didMutate,
+      bool bothUncoveredDreamingConflict,
+    })> _convergeProfilesInTxn(
   DatabaseExecutor txn, {
-  required String nowUtcIso,
   bool Function(String? watermark, int? noteCount)? isBasisCovered,
 }) async {
-  final activeRows = await txn.query(
-    AgentMemoryService.profileTable,
-    where: 'status = ?',
-    whereArgs: <Object?>[AgentMemoryStatus.active.storageValue],
-  );
-  if (activeRows.length <= 1) {
-    return (supersededCount: 0, bothUncoveredDreamingConflict: false);
+  final allRows = await txn.query(AgentMemoryService.profileTable);
+  if (allRows.isEmpty) {
+    return (
+      supersededCount: 0,
+      didMutate: false,
+      bothUncoveredDreamingConflict: false,
+    );
   }
 
-  final sorted = List<Map<String, Object?>>.of(activeRows)
+  final allRowsById = <String, Map<String, Object?>>{
+    for (final row in allRows)
+      if (row['id'] is String && (row['id'] as String).isNotEmpty)
+        row['id'] as String: Map<String, Object?>.of(row),
+  };
+
+  bool isEligibleCandidate(String startId) {
+    var currId = startId;
+    final visited = <String>{};
+    for (;;) {
+      final row = allRowsById[currId];
+      if (row == null) {
+        return false;
+      }
+      final status = (row['status'] as String?)?.trim() ??
+          AgentMemoryStatus.active.storageValue;
+      if (status == AgentMemoryStatus.active.storageValue) {
+        return true;
+      }
+      if (status != AgentMemoryStatus.superseded.storageValue) {
+        return false;
+      }
+      final nextId = (row['superseded_by'] as String?)?.trim() ?? '';
+      if (nextId.isEmpty) {
+        return false;
+      }
+      if (!visited.add(currId)) {
+        // 环中所有节点均存在于 profileTable（例如多端离线互相淘汰），必须纳入重算以打破死锁。
+        return true;
+      }
+      currId = nextId;
+    }
+  }
+
+  final eligibleRows = <Map<String, Object?>>[
+    for (final entry in allRowsById.entries)
+      if (isEligibleCandidate(entry.key)) entry.value,
+  ];
+  if (eligibleRows.isEmpty) {
+    return (
+      supersededCount: 0,
+      didMutate: false,
+      bothUncoveredDreamingConflict: false,
+    );
+  }
+
+  final sorted = List<Map<String, Object?>>.of(eligibleRows)
     ..sort(
       (a, b) => _compareProfileRowsByWinnerRule(
         a,
@@ -525,22 +715,103 @@ Future<({int supersededCount, bool bothUncoveredDreamingConflict})>
       ),
     );
 
-  final rowById = <String, Map<String, Object?>>{
-    for (final row in sorted)
-      if (row['id'] is String) row['id'] as String: row,
+  final eligibleById = <String, Map<String, Object?>>{
+    for (final row in sorted) row['id'] as String: row,
   };
   final supersededToWinner = <String, Map<String, Object?>>{};
 
-  // 1. 分叉收敛：多个 active 条目的 replaces_id 非空且相同时按赢家规则选唯一赢家。
+  Map<String, Object?> resolveRootWinner(Map<String, Object?> startRow) {
+    var curr = startRow;
+    final visited = <String>{};
+    for (;;) {
+      final currId = curr['id'] as String;
+      if (!visited.add(currId)) {
+        return curr;
+      }
+      final nextWinner = supersededToWinner[currId];
+      if (nextWinner == null) {
+        return curr;
+      }
+      curr = nextWinner;
+    }
+  }
+
+  void recordSupersede(String loserId, Map<String, Object?> proposedWinner) {
+    final rootWinner = resolveRootWinner(proposedWinner);
+    final rootWinnerId = rootWinner['id'] as String;
+    if (rootWinnerId == loserId) {
+      // 防御损坏的 replaces_id 环：按确定性赢家规则打破环。
+      final loserRow = eligibleById[loserId];
+      if (loserRow == null) return;
+      final cmp = _compareProfileRowsByWinnerRule(
+        loserRow,
+        proposedWinner,
+        isBasisCovered: isBasisCovered,
+      );
+      if (cmp < 0) {
+        final propId = proposedWinner['id'] as String;
+        supersededToWinner.remove(loserId);
+        supersededToWinner[propId] = loserRow;
+      }
+      return;
+    }
+
+    final existingWinner = supersededToWinner[loserId];
+    if (existingWinner == null) {
+      supersededToWinner[loserId] = rootWinner;
+      return;
+    }
+    final existingRoot = resolveRootWinner(existingWinner);
+    if (_compareProfileRowsByWinnerRule(
+          rootWinner,
+          existingRoot,
+          isBasisCovered: isBasisCovered,
+        ) <
+        0) {
+      supersededToWinner[loserId] = rootWinner;
+    }
+  }
+
+  // 0. 显式 replaces_id 关系收敛：
+  //    若 Y 声明 replaces_id == X.id 且 X、Y 均在候选集：
+  //    当 X 在 Y 创建之后又被原位编辑（X 版本时间严格晚于 Y），或 X 为用户手动编辑而 Y 为后台 Dreaming 时，
+  //    X 胜出并将 Y 淘汰指向 X；否则 Y 取代 X。
+  for (final yRow in sorted) {
+    final yId = yRow['id'] as String;
+    final xId = (yRow['replaces_id'] as String?)?.trim() ?? '';
+    if (xId.isEmpty || xId == yId) continue;
+    final xRow = eligibleById[xId];
+    if (xRow == null) continue;
+
+    final xTime = _parseMemoryRowVersionUtc(
+      xRow['updated_at'],
+      xRow['observed_at'],
+    );
+    final yTime = _parseMemoryRowVersionUtc(
+      yRow['updated_at'],
+      yRow['observed_at'],
+    );
+    final xIsUserEditVsDreaming =
+        (xRow['source'] as String?)?.trim() == 'user_edit' &&
+            _isDreamingMemorySource(yRow['source']);
+
+    if (xTime.isAfter(yTime) || xIsUserEditVsDreaming) {
+      recordSupersede(yId, xRow);
+    } else {
+      recordSupersede(xId, yRow);
+    }
+  }
+
+  // 1. 分叉收敛：多个候选条目的 replaces_id 非空且相同时按赢家规则选唯一赢家。
   final seenReplacesId = <String, Map<String, Object?>>{};
   for (final row in sorted) {
-    final id = row['id'] as String?;
-    if (id == null || id.isEmpty) continue;
+    final id = row['id'] as String;
+    if (supersededToWinner.containsKey(id)) continue;
     final replacesId = (row['replaces_id'] as String?)?.trim() ?? '';
     if (replacesId.isEmpty) continue;
     final existingWinner = seenReplacesId[replacesId];
     if (existingWinner != null) {
-      supersededToWinner[id] = existingWinner;
+      recordSupersede(id, existingWinner);
     } else {
       seenReplacesId[replacesId] = row;
     }
@@ -554,15 +825,13 @@ Future<({int supersededCount, bool bothUncoveredDreamingConflict})>
   };
   final seenSingletonKind = <String, Map<String, Object?>>{};
   for (final row in sorted) {
-    final id = row['id'] as String?;
-    if (id == null || id.isEmpty || supersededToWinner.containsKey(id)) {
-      continue;
-    }
+    final id = row['id'] as String;
+    if (supersededToWinner.containsKey(id)) continue;
     final rawKind = (row['kind'] as String? ?? '').trim();
     if (!singletonKinds.contains(rawKind)) continue;
     final existingWinner = seenSingletonKind[rawKind];
     if (existingWinner != null) {
-      supersededToWinner[id] = existingWinner;
+      recordSupersede(id, existingWinner);
     } else {
       seenSingletonKind[rawKind] = row;
     }
@@ -571,10 +840,8 @@ Future<({int supersededCount, bool bothUncoveredDreamingConflict})>
   // 3. 身份别名（已确认优先于存疑、同别名唯一）与同 kind + directive 去重。
   final confirmedAliasToWinner = <String, Map<String, Object?>>{};
   for (final row in sorted) {
-    final id = row['id'] as String?;
-    if (id == null || id.isEmpty || supersededToWinner.containsKey(id)) {
-      continue;
-    }
+    final id = row['id'] as String;
+    if (supersededToWinner.containsKey(id)) continue;
     final rawKind = (row['kind'] as String? ?? '').trim();
     final directive = (row['directive'] as String? ?? '').trim();
     if (rawKind == AgentMemoryKind.identity.storageValue &&
@@ -591,10 +858,8 @@ Future<({int supersededCount, bool bothUncoveredDreamingConflict})>
   final seenKindDirectives = <String, Map<String, Object?>>{};
 
   for (final row in sorted) {
-    final id = row['id'] as String?;
-    if (id == null || id.isEmpty || supersededToWinner.containsKey(id)) {
-      continue;
-    }
+    final id = row['id'] as String;
+    if (supersededToWinner.containsKey(id)) continue;
     final rawKind = (row['kind'] as String? ?? '').trim();
     final directive = (row['directive'] as String? ?? '').trim();
     if (directive.isEmpty) continue;
@@ -654,66 +919,113 @@ Future<({int supersededCount, bool bothUncoveredDreamingConflict})>
     }
 
     if (winner != null) {
-      supersededToWinner[id] = winner;
+      recordSupersede(id, winner);
     }
   }
 
+  var newlySupersededCount = 0;
+  var didMutate = false;
   var bothUncoveredDreamingConflict = false;
-  for (final entry in supersededToWinner.entries) {
-    final loserId = entry.key;
-    final winnerRow = entry.value;
-    final winnerId = winnerRow['id'] as String;
-    final loserRow = rowById[loserId];
 
-    if (isBasisCovered != null &&
-        loserRow != null &&
-        _isDreamingMemorySource(winnerRow['source']) &&
-        _isDreamingMemorySource(loserRow['source'])) {
-      final winnerCovered = isBasisCovered(
-        winnerRow['basis_watermark'] as String?,
-        _parseMemoryOptionalInt(winnerRow['basis_note_count']),
-      );
-      final loserCovered = isBasisCovered(
-        loserRow['basis_watermark'] as String?,
-        _parseMemoryOptionalInt(loserRow['basis_note_count']),
-      );
-      if (!winnerCovered && !loserCovered) {
-        bothUncoveredDreamingConflict = true;
+  for (final row in sorted) {
+    final id = row['id'] as String;
+    final prevStatus = (row['status'] as String?)?.trim() ??
+        AgentMemoryStatus.active.storageValue;
+    final rawPrevSupBy = (row['superseded_by'] as String?)?.trim();
+    final prevSupersededBy =
+        (rawPrevSupBy != null && rawPrevSupBy.isNotEmpty) ? rawPrevSupBy : null;
+
+    final immediateWinner = supersededToWinner[id];
+    if (immediateWinner != null) {
+      final finalWinner = resolveRootWinner(immediateWinner);
+      final finalWinnerId = finalWinner['id'] as String;
+      final winnerPrevStatus = (finalWinner['status'] as String?)?.trim() ??
+          AgentMemoryStatus.active.storageValue;
+      final winnerRawPrevSupBy =
+          (finalWinner['superseded_by'] as String?)?.trim();
+      final winnerNeedsRestore =
+          winnerPrevStatus != AgentMemoryStatus.active.storageValue ||
+              (winnerRawPrevSupBy != null && winnerRawPrevSupBy.isNotEmpty);
+      final loserNeedsUpdate =
+          prevStatus != AgentMemoryStatus.superseded.storageValue ||
+              prevSupersededBy != finalWinnerId;
+
+      if ((loserNeedsUpdate || winnerNeedsRestore) &&
+          isBasisCovered != null &&
+          _isDreamingMemorySource(finalWinner['source']) &&
+          _isDreamingMemorySource(row['source'])) {
+        final winnerCovered = isBasisCovered(
+          finalWinner['basis_watermark'] as String?,
+          _parseMemoryOptionalInt(finalWinner['basis_note_count']),
+        );
+        final loserCovered = isBasisCovered(
+          row['basis_watermark'] as String?,
+          _parseMemoryOptionalInt(row['basis_note_count']),
+        );
+        if (!winnerCovered && !loserCovered) {
+          bothUncoveredDreamingConflict = true;
+        }
       }
-    }
 
-    await txn.update(
-      AgentMemoryService.profileTable,
-      <String, Object?>{
-        'status': AgentMemoryStatus.superseded.storageValue,
-        'superseded_by': winnerId,
-        'updated_at': nowUtcIso,
-      },
-      where: 'id = ?',
-      whereArgs: <Object?>[loserId],
-    );
+      if (loserNeedsUpdate) {
+        await txn.update(
+          AgentMemoryService.profileTable,
+          <String, Object?>{
+            'status': AgentMemoryStatus.superseded.storageValue,
+            'superseded_by': finalWinnerId,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+        );
+        didMutate = true;
+        if (prevStatus == AgentMemoryStatus.active.storageValue) {
+          newlySupersededCount++;
+        }
+      }
 
-    final sharedReplacesId = (loserRow?['replaces_id'] as String?)?.trim();
-    if (sharedReplacesId != null &&
-        sharedReplacesId.isNotEmpty &&
-        sharedReplacesId == (winnerRow['replaces_id'] as String?)?.trim()) {
-      await txn.update(
-        AgentMemoryService.profileTable,
-        <String, Object?>{
-          'superseded_by': winnerId,
-          'updated_at': nowUtcIso,
-        },
-        where: 'id = ? AND status = ?',
-        whereArgs: <Object?>[
-          sharedReplacesId,
-          AgentMemoryStatus.superseded.storageValue,
-        ],
-      );
+      final sharedReplacesId = (row['replaces_id'] as String?)?.trim();
+      if (sharedReplacesId != null &&
+          sharedReplacesId.isNotEmpty &&
+          sharedReplacesId == (finalWinner['replaces_id'] as String?)?.trim() &&
+          !eligibleById.containsKey(sharedReplacesId)) {
+        final ancestor = allRowsById[sharedReplacesId];
+        if (ancestor != null &&
+            ancestor['status'] == AgentMemoryStatus.superseded.storageValue &&
+            ancestor['superseded_by'] != finalWinnerId) {
+          await txn.update(
+            AgentMemoryService.profileTable,
+            <String, Object?>{'superseded_by': finalWinnerId},
+            where: 'id = ? AND status = ?',
+            whereArgs: <Object?>[
+              sharedReplacesId,
+              AgentMemoryStatus.superseded.storageValue,
+            ],
+          );
+          didMutate = true;
+        }
+      }
+    } else {
+      final needsRestore =
+          prevStatus != AgentMemoryStatus.active.storageValue ||
+              prevSupersededBy != null;
+      if (needsRestore) {
+        await txn.update(
+          AgentMemoryService.profileTable,
+          <String, Object?>{
+            'status': AgentMemoryStatus.active.storageValue,
+            'superseded_by': null,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+        );
+        didMutate = true;
+      }
     }
   }
 
   return (
-    supersededCount: supersededToWinner.length,
+    supersededCount: newlySupersededCount,
+    didMutate: didMutate,
     bothUncoveredDreamingConflict: bothUncoveredDreamingConflict,
   );
 }
@@ -752,7 +1064,10 @@ Future<int> _dedupAndTrimFactsInTxn(DatabaseExecutor txn) async {
       final survivor = group.first;
       final survivorId = survivor['id'] as String;
       var maxRecall = _parseMemoryOptionalInt(survivor['recall_count']) ?? 0;
-      String? maxLastRecalled = survivor['last_recalled_at'] as String?;
+      String? maxLastRecalled = _pickLatestTimestampStr(
+        survivor['last_recalled_at'],
+        null,
+      );
 
       for (var i = 1; i < group.length; i++) {
         final dup = group[i];
@@ -802,26 +1117,62 @@ Future<int> _dedupAndTrimFactsInTxn(DatabaseExecutor txn) async {
 }
 
 extension AgentMemorySyncExtension on AgentMemoryService {
+  /// 在策略代际锁保护下序列化当前 `agent_memory` JSON 字符串；
+  /// 若记忆已关闭或在构建期间被关闭/失效，返回 `null`，绝不泄露已关闭记忆。
+  Future<String?> encodeMemorySectionIfEnabled({
+    CancelToken? cancelToken,
+  }) async {
+    final payload = await _buildGuardedExportMemoryPayload(
+      cancelToken: cancelToken,
+    );
+    if (payload == null) {
+      return null;
+    }
+    return jsonEncode(payload);
+  }
+
   /// 流式写出 `agent_memory` 同步载荷（不含外层键名 `"agent_memory":`）。
   ///
-  /// 调用方应先检查 [isEnabled]；若记忆开关关闭，本方法不写出任何内容。
+  /// 与策略代际锁协同：若记忆开关关闭或在序列化期间被关闭，本方法不写出任何内容。
   Future<void> exportMemorySectionStreaming(
     IOSink sink, {
     CancelToken? cancelToken,
   }) async {
-    if (!isEnabled) {
+    final encoded = await encodeMemorySectionIfEnabled(
+      cancelToken: cancelToken,
+    );
+    if (encoded == null) {
       return;
     }
-    final payload = await _buildExportMemoryPayload(cancelToken: cancelToken);
-    sink.write(jsonEncode(payload));
+    sink.write(encoded);
   }
 
   @visibleForTesting
-  Future<Map<String, dynamic>?> exportMemorySectionForTesting() async {
+  Future<Map<String, dynamic>?> exportMemorySectionForTesting() {
+    return _buildGuardedExportMemoryPayload();
+  }
+
+  Future<Map<String, dynamic>?> _buildGuardedExportMemoryPayload({
+    CancelToken? cancelToken,
+  }) async {
     if (!isEnabled) {
       return null;
     }
-    return _buildExportMemoryPayload();
+    final startGeneration = captureGeneration;
+    return _settingsService.withAgentMemoryPolicy<Map<String, dynamic>?>(
+      () async {
+        if (!isCaptureCurrent(startGeneration)) {
+          return null;
+        }
+        final payload = await _buildExportMemoryPayload(
+          cancelToken: cancelToken,
+        );
+        if (!isCaptureCurrent(startGeneration)) {
+          return null;
+        }
+        return payload;
+      },
+    );
   }
 
   Future<Map<String, dynamic>> _buildExportMemoryPayload({
@@ -854,25 +1205,32 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             row['key'] as String: row['value'] as String,
       };
 
-      final clearedAtRaw = metaMap[AgentMemoryService.metaClearedAtKey];
-      final clearedAt =
-          (clearedAtRaw != null && _tryParseMemoryUtc(clearedAtRaw) != null)
-              ? _tryParseMemoryUtc(clearedAtRaw)!.toIso8601String()
-              : null;
+      final clearedAtUtc = _tryParseMemoryUtc(
+        metaMap[AgentMemoryService.metaClearedAtKey],
+      );
+      final clearedAt = clearedAtUtc?.toIso8601String();
 
       final settingsLastRunUtc = _settingsService.lastDreamingAt?.toUtc();
+      final isDreamingAfterClear = settingsLastRunUtc != null &&
+          (clearedAtUtc == null || settingsLastRunUtc.isAfter(clearedAtUtc));
       Map<String, Object?> dreamingPayload;
-      if (settingsLastRunUtc != null) {
+      if (isDreamingAfterClear) {
         final metaLastRunUtc = _tryParseMemoryUtc(
           metaMap[AgentMemoryService.metaDreamingLastRunAtKey],
         );
         final matchesMeta = metaLastRunUtc != null &&
             metaLastRunUtc.difference(settingsLastRunUtc).inSeconds.abs() <= 1;
+        final rawWatermark = matchesMeta
+            ? metaMap[AgentMemoryService.metaDreamingBasisWatermarkKey]
+            : null;
+        final normalizedWatermark =
+            _tryParseMemoryUtc(rawWatermark)?.toIso8601String() ??
+                ((rawWatermark != null && rawWatermark.trim().isNotEmpty)
+                    ? rawWatermark.trim()
+                    : null);
         dreamingPayload = <String, Object?>{
           'last_run_at': settingsLastRunUtc.toIso8601String(),
-          'basis_watermark': matchesMeta
-              ? metaMap[AgentMemoryService.metaDreamingBasisWatermarkKey]
-              : null,
+          'basis_watermark': normalizedWatermark,
           'basis_note_count': matchesMeta
               ? _parseMemoryOptionalInt(
                   metaMap[AgentMemoryService.metaDreamingBasisNoteCountKey],
@@ -899,7 +1257,9 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               (r) => <String, Object?>{
                 'entity_type': r['entity_type'],
                 'entity_id': r['entity_id'],
-                'deleted_at': r['deleted_at'],
+                'deleted_at': _normalizeMemoryTimestampToUtcOrKeep(
+                  r['deleted_at'],
+                ),
               },
             )
             .toList(growable: false),
@@ -909,10 +1269,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
     });
   }
 
-  /// 将远端 `agent_memory` 段按 LWW + 墓碑 + `cleared_at` 屏障 + 四步收敛合入本地。
+  /// 将远端 `agent_memory` 段按 LWW + 墓碑 + `cleared_at` 屏障 + 确定性收敛合入本地。
   Future<MemoryMergeStats> mergeMemorySection(
     Object? rawSection, {
     AgentMemoryBasisChecker? isBasisCovered,
+    AgentMemoryBatchBasisChecker? checkBasisBatch,
   }) async {
     if (rawSection == null) {
       return const MemoryMergeStats();
@@ -920,28 +1281,19 @@ extension AgentMemorySyncExtension on AgentMemoryService {
     if (rawSection is! Map) {
       throw const FormatException('Invalid agent_memory section format');
     }
+    _validateMemorySectionContainers(rawSection);
+
     if (!isEnabled) {
       return const MemoryMergeStats(skippedBecauseDisabled: true);
     }
+    final startGeneration = captureGeneration;
 
-    var profilesAdded = 0;
-    var profilesUpdated = 0;
-    var profilesDeleted = 0;
-    var factsAdded = 0;
-    var factsUpdated = 0;
-    var factsDeleted = 0;
-    var slicesAdded = 0;
-    var slicesUpdated = 0;
-    var slicesDeleted = 0;
     var skippedCount = 0;
 
     DateTime? remoteClearedAtUtc;
     final rawClearedAt = rawSection['cleared_at'];
-    if (rawClearedAt != null) {
+    if (rawClearedAt is String && rawClearedAt.trim().isNotEmpty) {
       remoteClearedAtUtc = _tryParseMemoryUtc(rawClearedAt);
-      if (remoteClearedAtUtc == null) {
-        skippedCount++;
-      }
     }
 
     DateTime? remoteDreamingLastRunUtc;
@@ -956,74 +1308,160 @@ extension AgentMemorySyncExtension on AgentMemoryService {
       if (cnt != null && cnt >= 0) {
         remoteDreamingNoteCount = cnt;
       }
-    } else if (rawDreaming != null) {
-      skippedCount++;
     }
 
-    final remoteProfiles = <Map<String, Object?>>[];
+    final remoteProfilesById = <String, Map<String, Object?>>{};
     final rawProfiles = rawSection['profile'];
     if (rawProfiles is List) {
       for (final item in rawProfiles) {
         final sanitized = _sanitizeMemoryProfileRow(item);
         if (sanitized == null) {
           skippedCount++;
+          continue;
+        }
+        final id = sanitized['id'] as String;
+        final existing = remoteProfilesById[id];
+        if (existing == null) {
+          remoteProfilesById[id] = sanitized;
+          continue;
+        }
+        final candUtc = _parseMemoryRowVersionUtc(
+          sanitized['updated_at'],
+          sanitized['observed_at'],
+        );
+        final existUtc = _parseMemoryRowVersionUtc(
+          existing['updated_at'],
+          existing['observed_at'],
+        );
+        if (candUtc.isAfter(existUtc) ||
+            (candUtc.isAtSameMomentAs(existUtc) &&
+                _compareMemoryCanonicalFields(
+                      sanitized,
+                      existing,
+                      _memoryProfileTieBreakKeys,
+                    ) >
+                    0)) {
+          remoteProfilesById[id] = sanitized;
         } else {
-          remoteProfiles.add(sanitized);
+          skippedCount++;
         }
       }
-    } else if (rawProfiles != null) {
-      skippedCount++;
     }
+    final remoteProfiles = remoteProfilesById.values.toList(growable: false);
 
-    final remoteFacts = <Map<String, Object?>>[];
+    final remoteFactsById = <String, Map<String, Object?>>{};
     final rawFacts = rawSection['facts'];
     if (rawFacts is List) {
       for (final item in rawFacts) {
         final sanitized = _sanitizeMemoryFactRow(item);
         if (sanitized == null) {
           skippedCount++;
+          continue;
+        }
+        final id = sanitized['id'] as String;
+        final existing = remoteFactsById[id];
+        if (existing == null) {
+          remoteFactsById[id] = sanitized;
+          continue;
+        }
+        final candUtc = _parseMemoryRowVersionUtc(
+          sanitized['updated_at'],
+          sanitized['created_at'],
+        );
+        final existUtc = _parseMemoryRowVersionUtc(
+          existing['updated_at'],
+          existing['created_at'],
+        );
+        final mergedRecall = math.max(
+          _parseMemoryOptionalInt(existing['recall_count']) ?? 0,
+          _parseMemoryOptionalInt(sanitized['recall_count']) ?? 0,
+        );
+        final mergedLastRecalled = _pickLatestTimestampStr(
+          existing['last_recalled_at'],
+          sanitized['last_recalled_at'],
+        );
+        if (candUtc.isAfter(existUtc) ||
+            (candUtc.isAtSameMomentAs(existUtc) &&
+                _compareMemoryCanonicalFields(
+                      sanitized,
+                      existing,
+                      _memoryFactTieBreakKeys,
+                    ) >
+                    0)) {
+          sanitized['recall_count'] = mergedRecall;
+          sanitized['last_recalled_at'] = mergedLastRecalled;
+          remoteFactsById[id] = sanitized;
         } else {
-          remoteFacts.add(sanitized);
+          existing['recall_count'] = mergedRecall;
+          existing['last_recalled_at'] = mergedLastRecalled;
+          skippedCount++;
         }
       }
-    } else if (rawFacts != null) {
-      skippedCount++;
     }
+    final remoteFacts = remoteFactsById.values.toList(growable: false);
 
-    final remoteSlices = <Map<String, Object?>>[];
+    final remoteSlicesById = <String, Map<String, Object?>>{};
     final rawSlices = rawSection['recent_slices'];
     if (rawSlices is List) {
       for (final item in rawSlices) {
         final sanitized = _sanitizeMemorySliceRow(item);
         if (sanitized == null) {
           skippedCount++;
+          continue;
+        }
+        final id = sanitized['id'] as String;
+        final existing = remoteSlicesById[id];
+        if (existing == null) {
+          remoteSlicesById[id] = sanitized;
+          continue;
+        }
+        final candUtc = _parseMemoryRowVersionUtc(
+          sanitized['observed_at'],
+          null,
+        );
+        final existUtc = _parseMemoryRowVersionUtc(
+          existing['observed_at'],
+          null,
+        );
+        if (candUtc.isAfter(existUtc) ||
+            (candUtc.isAtSameMomentAs(existUtc) &&
+                _compareMemorySliceOnSameObservedAt(sanitized, existing) > 0)) {
+          remoteSlicesById[id] = sanitized;
         } else {
-          remoteSlices.add(sanitized);
+          skippedCount++;
         }
       }
-    } else if (rawSlices != null) {
-      skippedCount++;
     }
+    final remoteSlices = remoteSlicesById.values.toList(growable: false);
 
-    final remoteTombstones = <_ParsedMemoryTombstone>[];
+    final remoteTombstonesByKey = <String, _ParsedMemoryTombstone>{};
     final rawTombstones = rawSection['tombstones'];
     if (rawTombstones is List) {
       for (final item in rawTombstones) {
         final sanitized = _sanitizeMemoryTombstone(item);
         if (sanitized == null) {
           skippedCount++;
-        } else {
-          remoteTombstones.add(sanitized);
+          continue;
+        }
+        final key = '${sanitized.entityType}:${sanitized.entityId}';
+        final existing = remoteTombstonesByKey[key];
+        if (existing == null ||
+            sanitized.deletedAtUtc.isAfter(existing.deletedAtUtc)) {
+          remoteTombstonesByKey[key] = sanitized;
         }
       }
-    } else if (rawTombstones != null) {
-      skippedCount++;
     }
+    final remoteTombstones =
+        remoteTombstonesByKey.values.toList(growable: false);
 
     final db = await _db;
+    if (!isCaptureCurrent(startGeneration)) {
+      return const MemoryMergeStats(skippedBecauseDisabled: true);
+    }
 
-    // 在开启记忆库写事务前，针对主库已完成合并的快照预评估所有 Dreaming 依据对，
+    // 在开启记忆库写事务前，针对主库已完成合并的快照批量预评估所有 Dreaming 依据对，
     // 避免在 agent_memory.db 事务内跨库异步等待，同时确保收敛比较函数纯同步确定。
+    final hasBasisChecker = checkBasisBatch != null || isBasisCovered != null;
     final basisPairs = <(String, int)>{};
     void collectBasis(Object? wmRaw, Object? cntRaw) {
       if (wmRaw is! String) return;
@@ -1034,18 +1472,16 @@ extension AgentMemorySyncExtension on AgentMemoryService {
       basisPairs.add((wm, cnt));
     }
 
-    if (isBasisCovered != null) {
-      final existingActive = await db.query(
+    if (hasBasisChecker) {
+      final existingProfiles = await db.query(
         AgentMemoryService.profileTable,
         columns: const <String>[
           'source',
           'basis_watermark',
-          'basis_note_count'
+          'basis_note_count',
         ],
-        where: 'status = ?',
-        whereArgs: <Object?>[AgentMemoryStatus.active.storageValue],
       );
-      for (final row in existingActive) {
+      for (final row in existingProfiles) {
         if (_isDreamingMemorySource(row['source'])) {
           collectBasis(row['basis_watermark'], row['basis_note_count']);
         }
@@ -1061,10 +1497,21 @@ extension AgentMemorySyncExtension on AgentMemoryService {
     }
 
     final coverageCache = <(String, int), bool>{};
-    if (isBasisCovered != null) {
-      for (final pair in basisPairs) {
-        coverageCache[pair] = await isBasisCovered(pair.$1, pair.$2);
+    if (basisPairs.isNotEmpty) {
+      if (checkBasisBatch != null) {
+        coverageCache.addAll(await checkBasisBatch(basisPairs));
+      } else if (isBasisCovered != null) {
+        for (final pair in basisPairs) {
+          if (!isCaptureCurrent(startGeneration)) {
+            return const MemoryMergeStats(skippedBecauseDisabled: true);
+          }
+          coverageCache[pair] = await isBasisCovered(pair.$1, pair.$2);
+        }
       }
+    }
+
+    if (!isCaptureCurrent(startGeneration)) {
+      return const MemoryMergeStats(skippedBecauseDisabled: true);
     }
 
     bool syncCheckCovered(String? wm, int? cnt) {
@@ -1074,597 +1521,788 @@ extension AgentMemorySyncExtension on AgentMemoryService {
       return coverageCache[(trimmed, cnt)] ?? false;
     }
 
-    var changed = false;
-    var bothUncoveredDreamingConflict = false;
-    DateTime? effectiveClearedAtUtc;
-    final nowUtcIso = DateTime.now().toUtc().toIso8601String();
+    return _settingsService.withAgentMemoryPolicy<MemoryMergeStats>(() async {
+      if (!isCaptureCurrent(startGeneration)) {
+        return const MemoryMergeStats(skippedBecauseDisabled: true);
+      }
 
-    try {
-      await db.transaction((txn) async {
-        // 1. cleared_at 屏障计算与本地清理
-        final metaRows = await txn.query(
-          AgentMemoryService.metaTable,
-          where: 'key = ?',
-          whereArgs: <Object?>[AgentMemoryService.metaClearedAtKey],
-          limit: 1,
-        );
-        final localClearedAtUtc = metaRows.isEmpty
-            ? null
-            : _tryParseMemoryUtc(metaRows.first['value']);
+      var profilesAdded = 0;
+      var profilesUpdated = 0;
+      var profilesDeleted = 0;
+      var factsAdded = 0;
+      var factsUpdated = 0;
+      var factsDeleted = 0;
+      var slicesAdded = 0;
+      var slicesUpdated = 0;
+      var slicesDeleted = 0;
+      var localSkippedCount = skippedCount;
 
-        if (localClearedAtUtc != null && remoteClearedAtUtc != null) {
-          effectiveClearedAtUtc = remoteClearedAtUtc.isAfter(localClearedAtUtc)
-              ? remoteClearedAtUtc
-              : localClearedAtUtc;
-        } else {
-          effectiveClearedAtUtc = remoteClearedAtUtc ?? localClearedAtUtc;
-        }
+      var changed = false;
+      var bothUncoveredDreamingConflict = false;
+      DateTime? effectiveClearedAtUtc;
 
-        final remoteCleared = remoteClearedAtUtc;
-        if (remoteCleared != null &&
-            (localClearedAtUtc == null ||
-                remoteCleared.isAfter(localClearedAtUtc))) {
-          await txn.insert(
+      try {
+        await db.transaction((txn) async {
+          // 1. cleared_at 屏障计算与本地清理
+          final metaRows = await txn.query(
             AgentMemoryService.metaTable,
-            <String, Object?>{
-              'key': AgentMemoryService.metaClearedAtKey,
-              'value': remoteCleared.toIso8601String(),
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
+            where: 'key = ?',
+            whereArgs: <Object?>[AgentMemoryService.metaClearedAtKey],
+            limit: 1,
           );
-          changed = true;
+          final localClearedAtUtc = metaRows.isEmpty
+              ? null
+              : _tryParseMemoryUtc(metaRows.first['value']);
 
-          final localProfRows =
-              await txn.query(AgentMemoryService.profileTable);
-          for (final row in localProfRows) {
-            final rowUtc = _parseMemoryRowVersionUtc(
-              row['updated_at'],
-              row['observed_at'],
+          if (localClearedAtUtc != null && remoteClearedAtUtc != null) {
+            effectiveClearedAtUtc =
+                remoteClearedAtUtc.isAfter(localClearedAtUtc)
+                    ? remoteClearedAtUtc
+                    : localClearedAtUtc;
+          } else {
+            effectiveClearedAtUtc = remoteClearedAtUtc ?? localClearedAtUtc;
+          }
+
+          final remoteCleared = remoteClearedAtUtc;
+          if (remoteCleared != null &&
+              (localClearedAtUtc == null ||
+                  remoteCleared.isAfter(localClearedAtUtc))) {
+            await txn.insert(
+              AgentMemoryService.metaTable,
+              <String, Object?>{
+                'key': AgentMemoryService.metaClearedAtKey,
+                'value': remoteCleared.toIso8601String(),
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
             );
-            if (!rowUtc.isAfter(remoteCleared)) {
-              await txn.delete(
-                AgentMemoryService.profileTable,
-                where: 'id = ?',
-                whereArgs: <Object?>[row['id']],
+            changed = true;
+
+            final localProfRows =
+                await txn.query(AgentMemoryService.profileTable);
+            for (final row in localProfRows) {
+              final rowUtc = _parseMemoryRowVersionUtc(
+                row['updated_at'],
+                row['observed_at'],
               );
-              profilesDeleted++;
-            }
-          }
-
-          final localFactRows = await txn.query(AgentMemoryService.factsTable);
-          for (final row in localFactRows) {
-            final rowUtc = _parseMemoryRowVersionUtc(
-              row['updated_at'],
-              row['created_at'],
-            );
-            if (!rowUtc.isAfter(remoteCleared)) {
-              await txn.delete(
-                AgentMemoryService.factsTable,
-                where: 'id = ?',
-                whereArgs: <Object?>[row['id']],
-              );
-              factsDeleted++;
-            }
-          }
-
-          final localSliceRows =
-              await txn.query(AgentMemoryService.recentSliceTable);
-          for (final row in localSliceRows) {
-            final rowUtc = _parseMemoryRowVersionUtc(row['observed_at'], null);
-            if (!rowUtc.isAfter(remoteCleared)) {
-              await txn.delete(
-                AgentMemoryService.recentSliceTable,
-                where: 'id = ?',
-                whereArgs: <Object?>[row['id']],
-              );
-              slicesDeleted++;
-            }
-          }
-
-          final localTombRows =
-              await txn.query(AgentMemoryService.tombstonesTable);
-          for (final row in localTombRows) {
-            final delUtc = _parseMemoryRowVersionUtc(row['deleted_at'], null);
-            if (!delUtc.isAfter(remoteCleared)) {
-              await txn.delete(
-                AgentMemoryService.tombstonesTable,
-                where: 'entity_type = ? AND entity_id = ?',
-                whereArgs: <Object?>[row['entity_type'], row['entity_id']],
-              );
-            }
-          }
-        }
-
-        bool isBlockedByClearedAt(DateTime tsUtc) =>
-            effectiveClearedAtUtc != null &&
-            !tsUtc.isAfter(effectiveClearedAtUtc!);
-
-        // 2. 加载当前本地快照
-        final localProfilesById = <String, Map<String, Object?>>{
-          for (final r in await txn.query(AgentMemoryService.profileTable))
-            if (r['id'] is String) r['id'] as String: r,
-        };
-        final localFactsById = <String, Map<String, Object?>>{
-          for (final r in await txn.query(AgentMemoryService.factsTable))
-            if (r['id'] is String) r['id'] as String: r,
-        };
-        final localSlicesById = <String, Map<String, Object?>>{
-          for (final r in await txn.query(AgentMemoryService.recentSliceTable))
-            if (r['id'] is String) r['id'] as String: r,
-        };
-        final localTombstones = <String, DateTime>{};
-        for (final r in await txn.query(AgentMemoryService.tombstonesTable)) {
-          final type = r['entity_type'] as String?;
-          final id = r['entity_id'] as String?;
-          final delUtc = _tryParseMemoryUtc(r['deleted_at']);
-          if (type != null && id != null && delUtc != null) {
-            localTombstones['$type:$id'] = delUtc;
-          }
-        }
-
-        Future<void> upsertTombstone(
-          String type,
-          String id,
-          DateTime deletedUtc,
-        ) async {
-          final key = '$type:$id';
-          final existing = localTombstones[key];
-          final effective = (existing != null && existing.isAfter(deletedUtc))
-              ? existing
-              : deletedUtc;
-          await txn.insert(
-            AgentMemoryService.tombstonesTable,
-            <String, Object?>{
-              'entity_type': type,
-              'entity_id': id,
-              'deleted_at': effective.toIso8601String(),
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-          localTombstones[key] = effective;
-          changed = true;
-        }
-
-        // 3. 应用远端墓碑
-        for (final tomb in remoteTombstones) {
-          if (isBlockedByClearedAt(tomb.deletedAtUtc)) {
-            skippedCount++;
-            continue;
-          }
-          final key = '${tomb.entityType}:${tomb.entityId}';
-          if (tomb.entityType == 'profile') {
-            final localRow = localProfilesById[tomb.entityId];
-            if (localRow != null) {
-              final localUtc = _parseMemoryRowVersionUtc(
-                localRow['updated_at'],
-                localRow['observed_at'],
-              );
-              if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+              if (!rowUtc.isAfter(remoteCleared)) {
                 await txn.delete(
                   AgentMemoryService.profileTable,
                   where: 'id = ?',
-                  whereArgs: <Object?>[tomb.entityId],
+                  whereArgs: <Object?>[row['id']],
                 );
-                localProfilesById.remove(tomb.entityId);
                 profilesDeleted++;
-                await upsertTombstone(
-                  tomb.entityType,
-                  tomb.entityId,
-                  tomb.deletedAtUtc,
-                );
-              } else if (localTombstones.containsKey(key)) {
-                await txn.delete(
-                  AgentMemoryService.tombstonesTable,
-                  where: 'entity_type = ? AND entity_id = ?',
-                  whereArgs: <Object?>[tomb.entityType, tomb.entityId],
-                );
-                localTombstones.remove(key);
-                changed = true;
-              }
-            } else {
-              final existingTomb = localTombstones[key];
-              if (existingTomb == null ||
-                  tomb.deletedAtUtc.isAfter(existingTomb)) {
-                await upsertTombstone(
-                  tomb.entityType,
-                  tomb.entityId,
-                  tomb.deletedAtUtc,
-                );
               }
             }
-          } else if (tomb.entityType == 'fact') {
-            final localRow = localFactsById[tomb.entityId];
-            if (localRow != null) {
-              final localUtc = _parseMemoryRowVersionUtc(
-                localRow['updated_at'],
-                localRow['created_at'],
+
+            final localFactRows =
+                await txn.query(AgentMemoryService.factsTable);
+            for (final row in localFactRows) {
+              final rowUtc = _parseMemoryRowVersionUtc(
+                row['updated_at'],
+                row['created_at'],
               );
-              if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+              if (!rowUtc.isAfter(remoteCleared)) {
                 await txn.delete(
                   AgentMemoryService.factsTable,
                   where: 'id = ?',
-                  whereArgs: <Object?>[tomb.entityId],
+                  whereArgs: <Object?>[row['id']],
                 );
-                localFactsById.remove(tomb.entityId);
                 factsDeleted++;
-                await upsertTombstone(
-                  tomb.entityType,
-                  tomb.entityId,
-                  tomb.deletedAtUtc,
-                );
-              } else if (localTombstones.containsKey(key)) {
-                await txn.delete(
-                  AgentMemoryService.tombstonesTable,
-                  where: 'entity_type = ? AND entity_id = ?',
-                  whereArgs: <Object?>[tomb.entityType, tomb.entityId],
-                );
-                localTombstones.remove(key);
-                changed = true;
-              }
-            } else {
-              final existingTomb = localTombstones[key];
-              if (existingTomb == null ||
-                  tomb.deletedAtUtc.isAfter(existingTomb)) {
-                await upsertTombstone(
-                  tomb.entityType,
-                  tomb.entityId,
-                  tomb.deletedAtUtc,
-                );
               }
             }
-          } else if (tomb.entityType == 'slice') {
-            final localRow = localSlicesById[tomb.entityId];
-            if (localRow != null) {
-              final localUtc =
-                  _parseMemoryRowVersionUtc(localRow['observed_at'], null);
-              if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+
+            final localSliceRows =
+                await txn.query(AgentMemoryService.recentSliceTable);
+            for (final row in localSliceRows) {
+              final rowUtc =
+                  _parseMemoryRowVersionUtc(row['observed_at'], null);
+              if (!rowUtc.isAfter(remoteCleared)) {
                 await txn.delete(
                   AgentMemoryService.recentSliceTable,
                   where: 'id = ?',
-                  whereArgs: <Object?>[tomb.entityId],
+                  whereArgs: <Object?>[row['id']],
                 );
-                localSlicesById.remove(tomb.entityId);
                 slicesDeleted++;
-                await upsertTombstone(
-                  tomb.entityType,
-                  tomb.entityId,
-                  tomb.deletedAtUtc,
-                );
-              } else if (localTombstones.containsKey(key)) {
+              }
+            }
+
+            final localTombRows =
+                await txn.query(AgentMemoryService.tombstonesTable);
+            for (final row in localTombRows) {
+              final delUtc = _parseMemoryRowVersionUtc(row['deleted_at'], null);
+              if (!delUtc.isAfter(remoteCleared)) {
                 await txn.delete(
                   AgentMemoryService.tombstonesTable,
                   where: 'entity_type = ? AND entity_id = ?',
-                  whereArgs: <Object?>[tomb.entityType, tomb.entityId],
-                );
-                localTombstones.remove(key);
-                changed = true;
-              }
-            } else {
-              final existingTomb = localTombstones[key];
-              if (existingTomb == null ||
-                  tomb.deletedAtUtc.isAfter(existingTomb)) {
-                await upsertTombstone(
-                  tomb.entityType,
-                  tomb.entityId,
-                  tomb.deletedAtUtc,
+                  whereArgs: <Object?>[row['entity_type'], row['entity_id']],
                 );
               }
             }
           }
-        }
 
-        // 4. 合并 profile 行
-        for (final remoteRow in remoteProfiles) {
-          final id = remoteRow['id'] as String;
-          final remoteUtc = _parseMemoryRowVersionUtc(
-            remoteRow['updated_at'],
-            remoteRow['observed_at'],
-          );
-          if (isBlockedByClearedAt(remoteUtc)) {
-            skippedCount++;
-            continue;
-          }
-          final tombKey = 'profile:$id';
-          final localTombUtc = localTombstones[tombKey];
-          if (localTombUtc != null) {
-            if (!remoteUtc.isAfter(localTombUtc)) {
-              skippedCount++;
-              continue;
+          bool isBlockedByClearedAt(DateTime tsUtc) =>
+              effectiveClearedAtUtc != null &&
+              !tsUtc.isAfter(effectiveClearedAtUtc!);
+
+          // 2. 加载当前本地快照
+          final localProfilesById = <String, Map<String, Object?>>{
+            for (final r in await txn.query(AgentMemoryService.profileTable))
+              if (r['id'] is String)
+                r['id'] as String: _exportWhitelistedProfile(r),
+          };
+          final localFactsById = <String, Map<String, Object?>>{
+            for (final r in await txn.query(AgentMemoryService.factsTable))
+              if (r['id'] is String)
+                r['id'] as String: _exportWhitelistedFact(r),
+          };
+          final localSlicesById = <String, Map<String, Object?>>{
+            for (final r
+                in await txn.query(AgentMemoryService.recentSliceTable))
+              if (r['id'] is String)
+                r['id'] as String: _exportWhitelistedSlice(r),
+          };
+          final localTombstones = <String, DateTime>{};
+          for (final r in await txn.query(AgentMemoryService.tombstonesTable)) {
+            final type = r['entity_type'] as String?;
+            final id = r['entity_id'] as String?;
+            final delUtc = _tryParseMemoryUtc(r['deleted_at']);
+            if (type != null && id != null && delUtc != null) {
+              localTombstones['$type:$id'] = delUtc;
             }
-            await txn.delete(
-              AgentMemoryService.tombstonesTable,
-              where: 'entity_type = ? AND entity_id = ?',
-              whereArgs: <Object?>['profile', id],
-            );
-            localTombstones.remove(tombKey);
-            changed = true;
           }
 
-          final localRow = localProfilesById[id];
-          if (localRow == null) {
+          Future<void> upsertTombstone(
+            String type,
+            String id,
+            DateTime deletedUtc,
+          ) async {
+            final key = '$type:$id';
+            final existing = localTombstones[key];
+            final effective = (existing != null && existing.isAfter(deletedUtc))
+                ? existing
+                : deletedUtc;
             await txn.insert(
-              AgentMemoryService.profileTable,
-              remoteRow,
+              AgentMemoryService.tombstonesTable,
+              <String, Object?>{
+                'entity_type': type,
+                'entity_id': id,
+                'deleted_at': effective.toIso8601String(),
+              },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
-            localProfilesById[id] = remoteRow;
-            profilesAdded++;
+            localTombstones[key] = effective;
             changed = true;
-          } else {
-            final localUtc = _parseMemoryRowVersionUtc(
-              localRow['updated_at'],
-              localRow['observed_at'],
+          }
+
+          // 3. 应用远端墓碑
+          for (final tomb in remoteTombstones) {
+            if (isBlockedByClearedAt(tomb.deletedAtUtc)) {
+              localSkippedCount++;
+              continue;
+            }
+            final key = '${tomb.entityType}:${tomb.entityId}';
+            if (tomb.entityType == 'profile') {
+              final localRow = localProfilesById[tomb.entityId];
+              if (localRow != null) {
+                final localUtc = _parseMemoryRowVersionUtc(
+                  localRow['updated_at'],
+                  localRow['observed_at'],
+                );
+                if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+                  await txn.delete(
+                    AgentMemoryService.profileTable,
+                    where: 'id = ?',
+                    whereArgs: <Object?>[tomb.entityId],
+                  );
+                  localProfilesById.remove(tomb.entityId);
+                  profilesDeleted++;
+                  await upsertTombstone(
+                    tomb.entityType,
+                    tomb.entityId,
+                    tomb.deletedAtUtc,
+                  );
+                } else if (localTombstones.containsKey(key)) {
+                  await txn.delete(
+                    AgentMemoryService.tombstonesTable,
+                    where: 'entity_type = ? AND entity_id = ?',
+                    whereArgs: <Object?>[tomb.entityType, tomb.entityId],
+                  );
+                  localTombstones.remove(key);
+                  changed = true;
+                }
+              } else {
+                final existingTomb = localTombstones[key];
+                if (existingTomb == null ||
+                    tomb.deletedAtUtc.isAfter(existingTomb)) {
+                  await upsertTombstone(
+                    tomb.entityType,
+                    tomb.entityId,
+                    tomb.deletedAtUtc,
+                  );
+                }
+              }
+            } else if (tomb.entityType == 'fact') {
+              final localRow = localFactsById[tomb.entityId];
+              if (localRow != null) {
+                final localUtc = _parseMemoryRowVersionUtc(
+                  localRow['updated_at'],
+                  localRow['created_at'],
+                );
+                if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+                  await txn.delete(
+                    AgentMemoryService.factsTable,
+                    where: 'id = ?',
+                    whereArgs: <Object?>[tomb.entityId],
+                  );
+                  localFactsById.remove(tomb.entityId);
+                  factsDeleted++;
+                  await upsertTombstone(
+                    tomb.entityType,
+                    tomb.entityId,
+                    tomb.deletedAtUtc,
+                  );
+                } else if (localTombstones.containsKey(key)) {
+                  await txn.delete(
+                    AgentMemoryService.tombstonesTable,
+                    where: 'entity_type = ? AND entity_id = ?',
+                    whereArgs: <Object?>[tomb.entityType, tomb.entityId],
+                  );
+                  localTombstones.remove(key);
+                  changed = true;
+                }
+              } else {
+                final existingTomb = localTombstones[key];
+                if (existingTomb == null ||
+                    tomb.deletedAtUtc.isAfter(existingTomb)) {
+                  await upsertTombstone(
+                    tomb.entityType,
+                    tomb.entityId,
+                    tomb.deletedAtUtc,
+                  );
+                }
+              }
+            } else if (tomb.entityType == 'slice') {
+              final localRow = localSlicesById[tomb.entityId];
+              if (localRow != null) {
+                final localUtc =
+                    _parseMemoryRowVersionUtc(localRow['observed_at'], null);
+                if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+                  await txn.delete(
+                    AgentMemoryService.recentSliceTable,
+                    where: 'id = ?',
+                    whereArgs: <Object?>[tomb.entityId],
+                  );
+                  localSlicesById.remove(tomb.entityId);
+                  slicesDeleted++;
+                  await upsertTombstone(
+                    tomb.entityType,
+                    tomb.entityId,
+                    tomb.deletedAtUtc,
+                  );
+                } else if (localTombstones.containsKey(key)) {
+                  await txn.delete(
+                    AgentMemoryService.tombstonesTable,
+                    where: 'entity_type = ? AND entity_id = ?',
+                    whereArgs: <Object?>[tomb.entityType, tomb.entityId],
+                  );
+                  localTombstones.remove(key);
+                  changed = true;
+                }
+              } else {
+                final existingTomb = localTombstones[key];
+                if (existingTomb == null ||
+                    tomb.deletedAtUtc.isAfter(existingTomb)) {
+                  await upsertTombstone(
+                    tomb.entityType,
+                    tomb.entityId,
+                    tomb.deletedAtUtc,
+                  );
+                }
+              }
+            }
+          }
+
+          bool hasTombstonedProfileSuccessor(
+            Map<String, Object?> row,
+            DateTime rowVersionUtc,
+          ) {
+            final status = (row['status'] as String?)?.trim();
+            final supBy = (row['superseded_by'] as String?)?.trim();
+            if (status != AgentMemoryStatus.superseded.storageValue ||
+                supBy == null ||
+                supBy.isEmpty) {
+              return false;
+            }
+            final tombUtc = localTombstones['profile:$supBy'];
+            return tombUtc != null && !tombUtc.isBefore(rowVersionUtc);
+          }
+
+          // 4. 合并 profile 行
+          for (final remoteRow in remoteProfiles) {
+            final id = remoteRow['id'] as String;
+            final remoteUtc = _parseMemoryRowVersionUtc(
+              remoteRow['updated_at'],
+              remoteRow['observed_at'],
             );
-            if (remoteUtc.isAfter(localUtc)) {
+            if (isBlockedByClearedAt(remoteUtc)) {
+              localSkippedCount++;
+              continue;
+            }
+            final tombKey = 'profile:$id';
+            final localTombUtc = localTombstones[tombKey];
+            if (localTombUtc != null) {
+              if (!remoteUtc.isAfter(localTombUtc)) {
+                localSkippedCount++;
+                continue;
+              }
+              await txn.delete(
+                AgentMemoryService.tombstonesTable,
+                where: 'entity_type = ? AND entity_id = ?',
+                whereArgs: <Object?>['profile', id],
+              );
+              localTombstones.remove(tombKey);
+              changed = true;
+            }
+
+            final localRow = localProfilesById[id];
+            if (localRow == null) {
               await txn.insert(
                 AgentMemoryService.profileTable,
                 remoteRow,
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
               localProfilesById[id] = remoteRow;
-              profilesUpdated++;
+              profilesAdded++;
               changed = true;
+            } else {
+              final localUtc = _parseMemoryRowVersionUtc(
+                localRow['updated_at'],
+                localRow['observed_at'],
+              );
+              if (remoteUtc.isAfter(localUtc)) {
+                await txn.insert(
+                  AgentMemoryService.profileTable,
+                  remoteRow,
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+                localProfilesById[id] = remoteRow;
+                profilesUpdated++;
+                changed = true;
+              } else if (remoteUtc.isAtSameMomentAs(localUtc)) {
+                final remoteTombSucc =
+                    hasTombstonedProfileSuccessor(remoteRow, remoteUtc);
+                final localTombSucc =
+                    hasTombstonedProfileSuccessor(localRow, localUtc);
+                final contentTieCmp = _compareMemoryCanonicalFields(
+                  remoteRow,
+                  localRow,
+                  _memoryProfileTieBreakKeys,
+                );
+
+                final mergedRow = Map<String, Object?>.of(
+                  contentTieCmp > 0 ? remoteRow : localRow,
+                );
+                if (remoteTombSucc || localTombSucc) {
+                  final tombSource = remoteTombSucc ? remoteRow : localRow;
+                  mergedRow['status'] =
+                      AgentMemoryStatus.superseded.storageValue;
+                  mergedRow['superseded_by'] = tombSource['superseded_by'];
+                } else {
+                  mergedRow['status'] = localRow['status'];
+                  mergedRow['superseded_by'] = localRow['superseded_by'];
+                }
+
+                final hasDiff = _memoryProfileColumnWhitelist.any(
+                  (col) => localRow[col] != mergedRow[col],
+                );
+                if (hasDiff) {
+                  await txn.insert(
+                    AgentMemoryService.profileTable,
+                    mergedRow,
+                    conflictAlgorithm: ConflictAlgorithm.replace,
+                  );
+                  localProfilesById[id] = mergedRow;
+                  profilesUpdated++;
+                  changed = true;
+                }
+              }
             }
           }
-        }
 
-        // 5. 合并 facts 行（同一 id 始终合并保留最大 recall_count 与最晚 last_recalled_at）
-        for (final remoteRow in remoteFacts) {
-          final id = remoteRow['id'] as String;
-          final remoteUtc = _parseMemoryRowVersionUtc(
-            remoteRow['updated_at'],
-            remoteRow['created_at'],
-          );
-          if (isBlockedByClearedAt(remoteUtc)) {
-            skippedCount++;
-            continue;
-          }
-          final tombKey = 'fact:$id';
-          final localTombUtc = localTombstones[tombKey];
-          if (localTombUtc != null) {
-            if (!remoteUtc.isAfter(localTombUtc)) {
-              skippedCount++;
+          // 5. 合并 facts 行（同一 id 始终合并保留最大 recall_count 与最晚 last_recalled_at）
+          for (final remoteRow in remoteFacts) {
+            final id = remoteRow['id'] as String;
+            final remoteUtc = _parseMemoryRowVersionUtc(
+              remoteRow['updated_at'],
+              remoteRow['created_at'],
+            );
+            if (isBlockedByClearedAt(remoteUtc)) {
+              localSkippedCount++;
               continue;
             }
-            await txn.delete(
-              AgentMemoryService.tombstonesTable,
-              where: 'entity_type = ? AND entity_id = ?',
-              whereArgs: <Object?>['fact', id],
-            );
-            localTombstones.remove(tombKey);
-            changed = true;
-          }
+            final tombKey = 'fact:$id';
+            final localTombUtc = localTombstones[tombKey];
+            if (localTombUtc != null) {
+              if (!remoteUtc.isAfter(localTombUtc)) {
+                localSkippedCount++;
+                continue;
+              }
+              await txn.delete(
+                AgentMemoryService.tombstonesTable,
+                where: 'entity_type = ? AND entity_id = ?',
+                whereArgs: <Object?>['fact', id],
+              );
+              localTombstones.remove(tombKey);
+              changed = true;
+            }
 
-          final localRow = localFactsById[id];
-          if (localRow == null) {
-            await txn.insert(
-              AgentMemoryService.factsTable,
-              remoteRow,
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-            localFactsById[id] = remoteRow;
-            factsAdded++;
-            changed = true;
-          } else {
-            final localUtc = _parseMemoryRowVersionUtc(
-              localRow['updated_at'],
-              localRow['created_at'],
-            );
-            final localRecall =
-                _parseMemoryOptionalInt(localRow['recall_count']) ?? 0;
-            final remoteRecall =
-                _parseMemoryOptionalInt(remoteRow['recall_count']) ?? 0;
-            final mergedRecall = math.max(localRecall, remoteRecall);
-            final mergedLastRecalled = _pickLatestTimestampStr(
-              localRow['last_recalled_at'],
-              remoteRow['last_recalled_at'],
-            );
-
-            if (remoteUtc.isAfter(localUtc)) {
-              final mergedRow = <String, Object?>{
-                ...remoteRow,
-                'recall_count': mergedRecall,
-                'last_recalled_at': mergedLastRecalled,
-              };
+            final localRow = localFactsById[id];
+            if (localRow == null) {
               await txn.insert(
                 AgentMemoryService.factsTable,
-                mergedRow,
+                remoteRow,
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
-              localFactsById[id] = mergedRow;
-              factsUpdated++;
+              localFactsById[id] = remoteRow;
+              factsAdded++;
               changed = true;
-            } else if (mergedRecall != localRecall ||
-                mergedLastRecalled != localRow['last_recalled_at']) {
-              await txn.update(
-                AgentMemoryService.factsTable,
-                <String, Object?>{
+            } else {
+              final localUtc = _parseMemoryRowVersionUtc(
+                localRow['updated_at'],
+                localRow['created_at'],
+              );
+              final localRecall =
+                  _parseMemoryOptionalInt(localRow['recall_count']) ?? 0;
+              final remoteRecall =
+                  _parseMemoryOptionalInt(remoteRow['recall_count']) ?? 0;
+              final mergedRecall = math.max(localRecall, remoteRecall);
+              final mergedLastRecalled = _pickLatestTimestampStr(
+                localRow['last_recalled_at'],
+                remoteRow['last_recalled_at'],
+              );
+
+              final remoteWinsContent = remoteUtc.isAfter(localUtc) ||
+                  (remoteUtc.isAtSameMomentAs(localUtc) &&
+                      _compareMemoryCanonicalFields(
+                            remoteRow,
+                            localRow,
+                            _memoryFactTieBreakKeys,
+                          ) >
+                          0);
+
+              if (remoteWinsContent) {
+                final mergedRow = <String, Object?>{
+                  ...remoteRow,
                   'recall_count': mergedRecall,
                   'last_recalled_at': mergedLastRecalled,
-                },
-                where: 'id = ?',
-                whereArgs: <Object?>[id],
-              );
-              localFactsById[id] = <String, Object?>{
-                ...localRow,
-                'recall_count': mergedRecall,
-                'last_recalled_at': mergedLastRecalled,
-              };
-              factsUpdated++;
-              changed = true;
+                };
+                final hasDiff = _memoryFactColumnWhitelist.any(
+                  (col) => localRow[col] != mergedRow[col],
+                );
+                if (hasDiff) {
+                  await txn.insert(
+                    AgentMemoryService.factsTable,
+                    mergedRow,
+                    conflictAlgorithm: ConflictAlgorithm.replace,
+                  );
+                  localFactsById[id] = mergedRow;
+                  factsUpdated++;
+                  changed = true;
+                }
+              } else if (mergedRecall != localRecall ||
+                  mergedLastRecalled != localRow['last_recalled_at']) {
+                await txn.update(
+                  AgentMemoryService.factsTable,
+                  <String, Object?>{
+                    'recall_count': mergedRecall,
+                    'last_recalled_at': mergedLastRecalled,
+                  },
+                  where: 'id = ?',
+                  whereArgs: <Object?>[id],
+                );
+                localFactsById[id] = <String, Object?>{
+                  ...localRow,
+                  'recall_count': mergedRecall,
+                  'last_recalled_at': mergedLastRecalled,
+                };
+                factsUpdated++;
+                changed = true;
+              }
             }
           }
-        }
 
-        // 6. 合并 recent_slices 行
-        for (final remoteRow in remoteSlices) {
-          final id = remoteRow['id'] as String;
-          final remoteUtc =
-              _parseMemoryRowVersionUtc(remoteRow['observed_at'], null);
-          if (isBlockedByClearedAt(remoteUtc)) {
-            skippedCount++;
-            continue;
-          }
-          final tombKey = 'slice:$id';
-          final localTombUtc = localTombstones[tombKey];
-          if (localTombUtc != null) {
-            if (!remoteUtc.isAfter(localTombUtc)) {
-              skippedCount++;
+          // 6. 合并 recent_slices 行
+          for (final remoteRow in remoteSlices) {
+            final id = remoteRow['id'] as String;
+            final remoteUtc =
+                _parseMemoryRowVersionUtc(remoteRow['observed_at'], null);
+            if (isBlockedByClearedAt(remoteUtc)) {
+              localSkippedCount++;
               continue;
             }
-            await txn.delete(
-              AgentMemoryService.tombstonesTable,
-              where: 'entity_type = ? AND entity_id = ?',
-              whereArgs: <Object?>['slice', id],
-            );
-            localTombstones.remove(tombKey);
-            changed = true;
-          }
+            final tombKey = 'slice:$id';
+            final localTombUtc = localTombstones[tombKey];
+            if (localTombUtc != null) {
+              if (!remoteUtc.isAfter(localTombUtc)) {
+                localSkippedCount++;
+                continue;
+              }
+              await txn.delete(
+                AgentMemoryService.tombstonesTable,
+                where: 'entity_type = ? AND entity_id = ?',
+                whereArgs: <Object?>['slice', id],
+              );
+              localTombstones.remove(tombKey);
+              changed = true;
+            }
 
-          final localRow = localSlicesById[id];
-          if (localRow == null) {
-            await txn.insert(
-              AgentMemoryService.recentSliceTable,
-              remoteRow,
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-            localSlicesById[id] = remoteRow;
-            slicesAdded++;
-            changed = true;
-          } else {
-            final localUtc =
-                _parseMemoryRowVersionUtc(localRow['observed_at'], null);
-            if (remoteUtc.isAfter(localUtc)) {
+            final localRow = localSlicesById[id];
+            if (localRow == null) {
               await txn.insert(
                 AgentMemoryService.recentSliceTable,
                 remoteRow,
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
               localSlicesById[id] = remoteRow;
-              slicesUpdated++;
+              slicesAdded++;
               changed = true;
+            } else {
+              final localUtc =
+                  _parseMemoryRowVersionUtc(localRow['observed_at'], null);
+              final remoteWins = remoteUtc.isAfter(localUtc) ||
+                  (remoteUtc.isAtSameMomentAs(localUtc) &&
+                      _compareMemorySliceOnSameObservedAt(remoteRow, localRow) >
+                          0);
+              if (remoteWins) {
+                final hasDiff = _memorySliceColumnWhitelist.any(
+                  (col) => localRow[col] != remoteRow[col],
+                );
+                if (hasDiff) {
+                  await txn.insert(
+                    AgentMemoryService.recentSliceTable,
+                    remoteRow,
+                    conflictAlgorithm: ConflictAlgorithm.replace,
+                  );
+                  localSlicesById[id] = remoteRow;
+                  slicesUpdated++;
+                  changed = true;
+                }
+              }
             }
+          }
+
+          // 7. 同一事务内执行全量候选集确定性收敛（不改写 updated_at）
+          final profileConv = await _convergeProfilesInTxn(
+            txn,
+            isBasisCovered: hasBasisChecker ? syncCheckCovered : null,
+          );
+          if (profileConv.didMutate) {
+            changed = true;
+          }
+          bothUncoveredDreamingConflict =
+              profileConv.bothUncoveredDreamingConflict;
+
+          final factsDeduped = await _dedupAndTrimFactsInTxn(txn);
+          if (factsDeduped > 0) {
+            changed = true;
+          }
+        });
+      } catch (error, stackTrace) {
+        _reportDatabaseError('mergeMemorySection', error, stackTrace);
+        rethrow;
+      }
+
+      // 8. 同步 Dreaming 时间戳（严格处理 cleared_at 重置、双漏看重做与看全沿用）
+      if (bothUncoveredDreamingConflict) {
+        await _settingsService.setLastDreamingAt(null);
+        await _clearDreamingMeta();
+      } else {
+        if (effectiveClearedAtUtc != null) {
+          final currentLastDreamingUtc =
+              _settingsService.lastDreamingAt?.toUtc();
+          if (currentLastDreamingUtc != null &&
+              !currentLastDreamingUtc.isAfter(effectiveClearedAtUtc!)) {
+            await _settingsService.setLastDreamingAt(null);
+            await _clearDreamingMeta();
           }
         }
 
-        // 7. 同一事务内执行四步确定性收敛
-        final profileConv = await _convergeActiveProfilesInTxn(
-          txn,
-          nowUtcIso: nowUtcIso,
-          isBasisCovered: isBasisCovered != null ? syncCheckCovered : null,
-        );
-        if (profileConv.supersededCount > 0) {
-          changed = true;
+        final candidateRemoteRunUtc = remoteDreamingLastRunUtc;
+        final clearedUtcSnapshot = effectiveClearedAtUtc;
+        if (candidateRemoteRunUtc != null &&
+            (clearedUtcSnapshot == null ||
+                candidateRemoteRunUtc.isAfter(clearedUtcSnapshot)) &&
+            hasBasisChecker &&
+            syncCheckCovered(
+              remoteDreamingWatermark,
+              remoteDreamingNoteCount,
+            )) {
+          final localLastDreamingUtc = _settingsService.lastDreamingAt?.toUtc();
+          if (localLastDreamingUtc == null ||
+              candidateRemoteRunUtc.isAfter(localLastDreamingUtc)) {
+            await _settingsService.setLastDreamingAt(candidateRemoteRunUtc);
+            await recordDreamingRun(
+              runAt: candidateRemoteRunUtc,
+              basisWatermark: remoteDreamingWatermark,
+              basisNoteCount: remoteDreamingNoteCount,
+            );
+          }
         }
-        bothUncoveredDreamingConflict =
-            profileConv.bothUncoveredDreamingConflict;
-
-        final factsDeduped = await _dedupAndTrimFactsInTxn(txn);
-        if (factsDeduped > 0) {
-          changed = true;
-        }
-      });
-    } catch (error, stackTrace) {
-      _reportDatabaseError('mergeMemorySection', error, stackTrace);
-      rethrow;
-    }
-
-    // 8. 同步 Dreaming 时间戳（严格处理双漏看重做与看全沿用）
-    if (bothUncoveredDreamingConflict) {
-      await _settingsService.setLastDreamingAt(null);
-      await _clearDreamingMeta();
-    } else if (remoteDreamingLastRunUtc != null &&
-        (effectiveClearedAtUtc == null ||
-            remoteDreamingLastRunUtc.isAfter(effectiveClearedAtUtc!)) &&
-        isBasisCovered != null &&
-        syncCheckCovered(remoteDreamingWatermark, remoteDreamingNoteCount)) {
-      final localLastDreamingUtc = _settingsService.lastDreamingAt?.toUtc();
-      if (localLastDreamingUtc == null ||
-          remoteDreamingLastRunUtc.isAfter(localLastDreamingUtc)) {
-        await _settingsService.setLastDreamingAt(remoteDreamingLastRunUtc);
-        await recordDreamingRun(
-          runAt: remoteDreamingLastRunUtc,
-          basisWatermark: remoteDreamingWatermark,
-          basisNoteCount: remoteDreamingNoteCount,
-        );
       }
-    }
 
-    if (changed) {
-      _activeProfileCache = null;
-      await activeIdentityAliases();
-      _settingsService.refreshIdentityAliases();
-      _notifySyncListeners();
-    }
+      if (changed) {
+        _activeProfileCache = null;
+        await activeIdentityAliases();
+        _settingsService.refreshIdentityAliases();
+        _notifySyncListeners();
+      }
 
-    return MemoryMergeStats(
-      profilesAdded: profilesAdded,
-      profilesUpdated: profilesUpdated,
-      profilesDeleted: profilesDeleted,
-      factsAdded: factsAdded,
-      factsUpdated: factsUpdated,
-      factsDeleted: factsDeleted,
-      slicesAdded: slicesAdded,
-      slicesUpdated: slicesUpdated,
-      slicesDeleted: slicesDeleted,
-      skippedCount: skippedCount,
-    );
+      return MemoryMergeStats(
+        profilesAdded: profilesAdded,
+        profilesUpdated: profilesUpdated,
+        profilesDeleted: profilesDeleted,
+        factsAdded: factsAdded,
+        factsUpdated: factsUpdated,
+        factsDeleted: factsDeleted,
+        slicesAdded: slicesAdded,
+        slicesUpdated: slicesUpdated,
+        slicesDeleted: slicesDeleted,
+        skippedCount: localSkippedCount,
+      );
+    });
   }
 
   /// 覆盖恢复 `agent_memory` 段。
   ///
+  /// 顶层或内部容器结构损坏时立即抛出 [FormatException] 且不触碰本地现有数据；
   /// 包中无 `agent_memory` 段或本机记忆开关关闭时保持本地原数据不动。
   Future<void> restoreMemorySection(Object? rawSection) async {
-    if (rawSection == null || !isEnabled) {
+    if (rawSection == null) {
       return;
     }
     if (rawSection is! Map) {
       throw const FormatException('Invalid agent_memory backup section');
     }
+    _validateMemorySectionContainers(rawSection);
 
-    final profiles = <Map<String, Object?>>[];
+    if (!isEnabled) {
+      return;
+    }
+    final startGeneration = captureGeneration;
+
+    final profilesById = <String, Map<String, Object?>>{};
     final rawProfiles = rawSection['profile'];
     if (rawProfiles is List) {
       for (final item in rawProfiles) {
         final sanitized = _sanitizeMemoryProfileRow(item);
-        if (sanitized != null) {
-          profiles.add(sanitized);
+        if (sanitized == null) continue;
+        final id = sanitized['id'] as String;
+        final existing = profilesById[id];
+        if (existing == null) {
+          profilesById[id] = sanitized;
+        } else {
+          final candUtc = _parseMemoryRowVersionUtc(
+            sanitized['updated_at'],
+            sanitized['observed_at'],
+          );
+          final existUtc = _parseMemoryRowVersionUtc(
+            existing['updated_at'],
+            existing['observed_at'],
+          );
+          if (candUtc.isAfter(existUtc) ||
+              (candUtc.isAtSameMomentAs(existUtc) &&
+                  _compareMemoryCanonicalFields(
+                        sanitized,
+                        existing,
+                        _memoryProfileTieBreakKeys,
+                      ) >
+                      0)) {
+            profilesById[id] = sanitized;
+          }
         }
       }
     }
+    final profiles = profilesById.values.toList(growable: false);
 
-    final facts = <Map<String, Object?>>[];
+    final factsById = <String, Map<String, Object?>>{};
     final rawFacts = rawSection['facts'];
     if (rawFacts is List) {
       for (final item in rawFacts) {
         final sanitized = _sanitizeMemoryFactRow(item);
-        if (sanitized != null) {
-          facts.add(sanitized);
+        if (sanitized == null) continue;
+        final id = sanitized['id'] as String;
+        final existing = factsById[id];
+        if (existing == null) {
+          factsById[id] = sanitized;
+        } else {
+          final candUtc = _parseMemoryRowVersionUtc(
+            sanitized['updated_at'],
+            sanitized['created_at'],
+          );
+          final existUtc = _parseMemoryRowVersionUtc(
+            existing['updated_at'],
+            existing['created_at'],
+          );
+          if (candUtc.isAfter(existUtc) ||
+              (candUtc.isAtSameMomentAs(existUtc) &&
+                  _compareMemoryCanonicalFields(
+                        sanitized,
+                        existing,
+                        _memoryFactTieBreakKeys,
+                      ) >
+                      0)) {
+            factsById[id] = sanitized;
+          }
         }
       }
     }
+    final facts = factsById.values.toList(growable: false);
 
-    final slices = <Map<String, Object?>>[];
+    final slicesById = <String, Map<String, Object?>>{};
     final rawSlices = rawSection['recent_slices'];
     if (rawSlices is List) {
       for (final item in rawSlices) {
         final sanitized = _sanitizeMemorySliceRow(item);
-        if (sanitized != null) {
-          slices.add(sanitized);
+        if (sanitized == null) continue;
+        final id = sanitized['id'] as String;
+        final existing = slicesById[id];
+        if (existing == null) {
+          slicesById[id] = sanitized;
+        } else {
+          final candUtc = _parseMemoryRowVersionUtc(
+            sanitized['observed_at'],
+            null,
+          );
+          final existUtc = _parseMemoryRowVersionUtc(
+            existing['observed_at'],
+            null,
+          );
+          if (candUtc.isAfter(existUtc) ||
+              (candUtc.isAtSameMomentAs(existUtc) &&
+                  _compareMemorySliceOnSameObservedAt(sanitized, existing) >
+                      0)) {
+            slicesById[id] = sanitized;
+          }
         }
       }
     }
+    final slices = slicesById.values.toList(growable: false);
 
-    final tombstones = <_ParsedMemoryTombstone>[];
+    final tombstonesByKey = <String, _ParsedMemoryTombstone>{};
     final rawTombstones = rawSection['tombstones'];
     if (rawTombstones is List) {
       for (final item in rawTombstones) {
         final sanitized = _sanitizeMemoryTombstone(item);
-        if (sanitized != null) {
-          tombstones.add(sanitized);
+        if (sanitized == null) continue;
+        final key = '${sanitized.entityType}:${sanitized.entityId}';
+        final existing = tombstonesByKey[key];
+        if (existing == null ||
+            sanitized.deletedAtUtc.isAfter(existing.deletedAtUtc)) {
+          tombstonesByKey[key] = sanitized;
         }
       }
     }
+    final tombstones = tombstonesByKey.values.toList(growable: false);
 
     final clearedAtUtc = _tryParseMemoryUtc(rawSection['cleared_at']);
 
@@ -1684,101 +2322,107 @@ extension AgentMemorySyncExtension on AgentMemoryService {
     }
 
     final db = await _db;
-    try {
-      await db.transaction((txn) async {
-        await txn.delete(AgentMemoryService.profileTable);
-        await txn.delete(AgentMemoryService.factsTable);
-        await txn.delete(AgentMemoryService.recentSliceTable);
-        await txn.delete(AgentMemoryService.tombstonesTable);
-        await txn.delete(AgentMemoryService.metaTable);
+    await _settingsService.withAgentMemoryPolicy<void>(() async {
+      if (!isCaptureCurrent(startGeneration)) {
+        return;
+      }
 
-        for (final row in profiles) {
-          await txn.insert(
-            AgentMemoryService.profileTable,
-            row,
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-        for (final row in facts) {
-          await txn.insert(
-            AgentMemoryService.factsTable,
-            row,
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-        for (final row in slices) {
-          await txn.insert(
-            AgentMemoryService.recentSliceTable,
-            row,
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-        for (final tomb in tombstones) {
-          await txn.insert(
-            AgentMemoryService.tombstonesTable,
-            <String, Object?>{
-              'entity_type': tomb.entityType,
-              'entity_id': tomb.entityId,
-              'deleted_at': tomb.deletedAtRaw,
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
+      try {
+        await db.transaction((txn) async {
+          await txn.delete(AgentMemoryService.profileTable);
+          await txn.delete(AgentMemoryService.factsTable);
+          await txn.delete(AgentMemoryService.recentSliceTable);
+          await txn.delete(AgentMemoryService.tombstonesTable);
+          await txn.delete(AgentMemoryService.metaTable);
 
-        if (clearedAtUtc != null) {
-          await txn.insert(
-            AgentMemoryService.metaTable,
-            <String, Object?>{
-              'key': AgentMemoryService.metaClearedAtKey,
-              'value': clearedAtUtc.toIso8601String(),
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-
-        if (dreamingLastRunUtc != null) {
-          await txn.insert(
-            AgentMemoryService.metaTable,
-            <String, Object?>{
-              'key': AgentMemoryService.metaDreamingLastRunAtKey,
-              'value': dreamingLastRunUtc.toIso8601String(),
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-          if (dreamingWatermark != null) {
+          for (final row in profiles) {
             await txn.insert(
-              AgentMemoryService.metaTable,
+              AgentMemoryService.profileTable,
+              row,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          for (final row in facts) {
+            await txn.insert(
+              AgentMemoryService.factsTable,
+              row,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          for (final row in slices) {
+            await txn.insert(
+              AgentMemoryService.recentSliceTable,
+              row,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          for (final tomb in tombstones) {
+            await txn.insert(
+              AgentMemoryService.tombstonesTable,
               <String, Object?>{
-                'key': AgentMemoryService.metaDreamingBasisWatermarkKey,
-                'value': dreamingWatermark,
+                'entity_type': tomb.entityType,
+                'entity_id': tomb.entityId,
+                'deleted_at': tomb.deletedAtRaw,
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
           }
-          if (dreamingNoteCount != null) {
+
+          if (clearedAtUtc != null) {
             await txn.insert(
               AgentMemoryService.metaTable,
               <String, Object?>{
-                'key': AgentMemoryService.metaDreamingBasisNoteCountKey,
-                'value': dreamingNoteCount.toString(),
+                'key': AgentMemoryService.metaClearedAtKey,
+                'value': clearedAtUtc.toIso8601String(),
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
           }
-        }
-      });
-    } catch (error, stackTrace) {
-      _reportDatabaseError('restoreMemorySection', error, stackTrace);
-      rethrow;
-    }
 
-    if (hasDreamingKey) {
-      await _settingsService.setLastDreamingAt(dreamingLastRunUtc);
-    }
+          if (dreamingLastRunUtc != null) {
+            await txn.insert(
+              AgentMemoryService.metaTable,
+              <String, Object?>{
+                'key': AgentMemoryService.metaDreamingLastRunAtKey,
+                'value': dreamingLastRunUtc.toIso8601String(),
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            if (dreamingWatermark != null) {
+              await txn.insert(
+                AgentMemoryService.metaTable,
+                <String, Object?>{
+                  'key': AgentMemoryService.metaDreamingBasisWatermarkKey,
+                  'value': dreamingWatermark,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+            if (dreamingNoteCount != null) {
+              await txn.insert(
+                AgentMemoryService.metaTable,
+                <String, Object?>{
+                  'key': AgentMemoryService.metaDreamingBasisNoteCountKey,
+                  'value': dreamingNoteCount.toString(),
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+          }
+        });
+      } catch (error, stackTrace) {
+        _reportDatabaseError('restoreMemorySection', error, stackTrace);
+        rethrow;
+      }
 
-    _activeProfileCache = null;
-    await activeIdentityAliases();
-    _settingsService.refreshIdentityAliases();
-    _notifySyncListeners();
+      if (hasDreamingKey) {
+        await _settingsService.setLastDreamingAt(dreamingLastRunUtc);
+      }
+
+      _activeProfileCache = null;
+      await activeIdentityAliases();
+      _settingsService.refreshIdentityAliases();
+      _notifySyncListeners();
+    });
   }
 }

@@ -902,5 +902,355 @@ void main() {
       expect(webdav.lastSyncError, isNotNull);
       expect(webdav.lastSyncError, isNot(contains(secretMarker)));
     });
+
+    test(
+        '问题2：WebDAV 三设备链路（A 开启记忆上传 -> B 关闭记忆同步新笔记上传 -> C 开启记忆拉取），B 既不泄露本机休眠记忆也不抹掉云端 A 的记忆与墓碑',
+        () async {
+      List<int>? cloudZipBytes;
+      var etagCounter = 1;
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        final body = await request.fold<List<int>>(
+          <int>[],
+          (acc, chunk) => acc..addAll(chunk),
+        );
+        final response = request.response;
+        if (request.uri.path.endsWith('thoughtecho_sync.zip')) {
+          switch (request.method) {
+            case 'PROPFIND':
+              if (cloudZipBytes == null) {
+                response.statusCode = 404;
+              } else {
+                response.statusCode = 207;
+                response.write('''
+<d:multistatus xmlns:d="DAV:"><d:response>
+<d:href>/dav/thoughtecho/thoughtecho_sync.zip</d:href>
+<d:propstat><d:prop><d:getetag>"rev-chain-$etagCounter"</d:getetag>
+<d:getcontentlength>${cloudZipBytes!.length}</d:getcontentlength>
+</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+</d:response></d:multistatus>''');
+              }
+            case 'GET':
+              if (cloudZipBytes == null) {
+                response.statusCode = 404;
+              } else {
+                response.add(cloudZipBytes!);
+              }
+            case 'PUT':
+              cloudZipBytes = body;
+              etagCounter++;
+              response.statusCode = 204;
+            default:
+              response.statusCode = 405;
+          }
+        } else {
+          response.statusCode = 207;
+        }
+        await response.close();
+      });
+
+      Future<void> resetLocalNotesForDevice() async {
+        await rawNotesDb.delete('quote_tags');
+        await rawNotesDb.delete('quotes');
+        await rawNotesDb.delete('quote_tombstones');
+      }
+
+      Future<void> runWebDavStep({
+        required bool memoryEnabled,
+        required String stepTag,
+        required Future<void> Function(
+          ChatSessionService chat,
+          AgentMemoryService mem,
+          SettingsService settings,
+        ) prepare,
+        required Future<void> Function(
+          ChatSessionService chat,
+          AgentMemoryService mem,
+        ) verify,
+      }) async {
+        final stepDir =
+            await Directory.systemTemp.createTemp('webdav_step_${stepTag}_');
+        await AppPreferencesService().clear();
+        SharedPreferences.resetStatic();
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final stepSettings =
+            SettingsService(await SharedPreferences.getInstance());
+        await stepSettings.setRequireBiometricForHidden(false);
+
+        final stepChat = ChatSessionService(
+          databasePath: p.join(stepDir.path, 'chat.db'),
+        );
+        await stepChat.init();
+        final stepMem = AgentMemoryService(
+          settingsService: stepSettings,
+          databasePath: p.join(stepDir.path, 'agent_memory.db'),
+        );
+        final stepAssistant = AssistantDataSyncService(
+          chatSessionService: stepChat,
+          agentMemoryService: stepMem,
+          settingsService: stepSettings,
+          databaseService: databaseService,
+        );
+
+        final webdav = WebDAVSyncService.forTesting();
+        try {
+          await prepare(stepChat, stepMem, stepSettings);
+          await stepSettings.setAgentMemoryEnabled(memoryEnabled);
+
+          webdav.attachAssistantDataSync(stepAssistant);
+          await webdav.saveSettings(
+            enabled: true,
+            provider: 'custom',
+            url: 'https://webdav.example.invalid/dav/',
+            username: 'test-user',
+            password: 'synthetic-password',
+            syncOnLaunch: false,
+            syncOnChange: false,
+            syncOnCellular: false,
+            syncNotesOnlyOnCellular: true,
+          );
+
+          await HttpOverrides.runWithHttpOverrides(
+            () => webdav.triggerSync(),
+            _LoopbackHttpOverrides(server.port),
+          );
+          expect(
+            webdav.syncStatus,
+            WebDAVSyncStatus.success,
+            reason: webdav.lastSyncError,
+          );
+          await verify(stepChat, stepMem);
+        } finally {
+          webdav.dispose();
+          await stepChat.close();
+          stepChat.dispose();
+          stepMem.dispose();
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          if (await stepDir.exists()) {
+            await stepDir.delete(recursive: true);
+          }
+        }
+      }
+
+      await resetLocalNotesForDevice();
+      await rawNotesDb.insert('quotes', <String, Object?>{
+        'id': 'note_from_a',
+        'content': '设备 A 创建的笔记',
+        'date': '2026-11-15T08:00:00.000Z',
+        'last_modified': '2026-11-15T08:00:00.000Z',
+        'is_deleted': 0,
+      });
+
+      late String profKeepId;
+      late String profDeletedId;
+      late String factFromAId;
+
+      // Step 1：设备 A（开启记忆）创建画像、事实与删除墓碑并上传到 WebDAV
+      await runWebDavStep(
+        memoryEnabled: true,
+        stepTag: 'A',
+        prepare: (chat, mem, settings) async {
+          await settings.setAgentMemoryEnabled(true);
+          final keep = await mem.rememberProfile(
+            kind: AgentMemoryKind.preference,
+            directive: '设备 A 上传的云端共享画像',
+            observedAt: DateTime.utc(2026, 11, 15, 8, 0),
+          );
+          final toForget = await mem.rememberProfile(
+            kind: AgentMemoryKind.feedback,
+            directive: '设备 A 已删除并写墓碑的画像',
+            observedAt: DateTime.utc(2026, 11, 15, 8, 5),
+          );
+          await mem.forgetProfile(toForget.id);
+          final fact = await mem.addFact(content: '设备 A 上传的长期事实');
+          profKeepId = keep.id;
+          profDeletedId = toForget.id;
+          factFromAId = fact.id;
+        },
+        verify: (_, __) async {
+          expect(cloudZipBytes, isNotNull);
+        },
+      );
+
+      // Step 2：设备 B（本地曾有私密休眠记忆，但当前关闭记忆开关）新增笔记并执行 WebDAV 同步
+      await resetLocalNotesForDevice();
+      await rawNotesDb.insert('quotes', <String, Object?>{
+        'id': 'note_from_b',
+        'content': '设备 B 关闭记忆时新增的笔记',
+        'date': '2026-11-16T09:00:00.000Z',
+        'last_modified': '2026-11-16T09:00:00.000Z',
+        'is_deleted': 0,
+      });
+
+      await runWebDavStep(
+        memoryEnabled: false,
+        stepTag: 'B',
+        prepare: (chat, mem, settings) async {
+          // 先在 B 本机写入一条休眠记忆，随后在 runWebDavStep 中关闭记忆开关：验证绝不泄露到云端！
+          await settings.setAgentMemoryEnabled(true);
+          await mem.rememberProfile(
+            kind: AgentMemoryKind.identity,
+            directive: '设备 B 本机休眠记忆绝不可上传泄露',
+          );
+        },
+        verify: (_, __) async {
+          final bQuotes = await rawNotesDb.query('quotes');
+          expect(
+            bQuotes.map((q) => q['id']).toSet(),
+            equals(<String>{'note_from_a', 'note_from_b'}),
+          );
+        },
+      );
+
+      // Step 3：设备 C（开启记忆，且预置那条被 A 删掉的旧画像）从 WebDAV 同步
+      await resetLocalNotesForDevice();
+
+      await runWebDavStep(
+        memoryEnabled: true,
+        stepTag: 'C',
+        prepare: (chat, mem, settings) async {
+          await settings.setAgentMemoryEnabled(true);
+          await mem.mergeMemorySection(<String, dynamic>{
+            'format': 1,
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': profDeletedId,
+                'kind': 'feedback',
+                'directive': '设备 A 已删除并写墓碑的画像',
+                'observed_at': '2026-11-15T08:05:00.000Z',
+                'updated_at': '2026-11-15T08:05:00.000Z',
+                'status': 'active',
+              },
+            ],
+          });
+        },
+        verify: (_, mem) async {
+          // C 同时拿到了 A 与 B 的两条笔记
+          final cQuotes = await rawNotesDb.query('quotes');
+          expect(
+            cQuotes.map((q) => q['id']).toSet(),
+            equals(<String>{'note_from_a', 'note_from_b'}),
+          );
+          // C 完整拿到了 A 的保留画像与事实，A 的删除墓碑生效删掉了 profDeletedId，且绝无 B 的本机休眠记忆！
+          final activeProfiles = await mem.activeProfile();
+          expect(
+            activeProfiles.map((p) => p.id).toList(),
+            <String>[profKeepId],
+          );
+          expect(
+            (await mem.allFacts()).map((f) => f.id).toList(),
+            <String>[factFromAId],
+          );
+        },
+      );
+    });
+
+    test(
+        '问题3 & 二.2：WebDAV 拉取到 {"agent_memory": {"profile": {}}} 时中止同步且 PUT=0，BackupService 覆盖恢复自动重载活跃 AppTheme',
+        () async {
+      final appPrefs = AppPreferencesService();
+      const initialWatermark = '2026-11-01T00:00:00.000Z';
+      await appPrefs.setString('webdav_last_sync_time', initialWatermark);
+
+      final malformedMemoryPayload = <String, dynamic>{
+        'categories': <Object?>[],
+        'quotes': <Object?>[],
+        'agent_memory': <String, dynamic>{
+          'format': 1,
+          'profile': <String, Object?>{},
+        },
+      };
+      final remoteBytes = utf8.encode(jsonEncode(malformedMemoryPayload));
+      final remoteZip = ZipEncoder().encode(
+        Archive()
+          ..addFile(
+            ArchiveFile('backup_data.json', remoteBytes.length, remoteBytes),
+          ),
+      );
+
+      var putCount = 0;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        await request.fold<List<int>>(<int>[], (a, b) => a..addAll(b));
+        final response = request.response;
+        if (request.uri.path.endsWith('thoughtecho_sync.zip')) {
+          switch (request.method) {
+            case 'PROPFIND':
+              response.statusCode = 207;
+              response.write('''
+<d:multistatus xmlns:d="DAV:"><d:response>
+<d:href>/dav/thoughtecho/thoughtecho_sync.zip</d:href>
+<d:propstat><d:prop><d:getetag>"rev-bad-mem"</d:getetag>
+<d:getcontentlength>${remoteZip.length}</d:getcontentlength>
+</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+</d:response></d:multistatus>''');
+            case 'GET':
+              response.add(remoteZip);
+            case 'PUT':
+              putCount++;
+              response.statusCode = 204;
+            default:
+              response.statusCode = 405;
+          }
+        } else {
+          response.statusCode = 207;
+        }
+        await response.close();
+      });
+
+      final webdav = WebDAVSyncService.forTesting();
+      addTearDown(webdav.dispose);
+      webdav.attachAssistantDataSync(assistantSync);
+      await webdav.saveSettings(
+        enabled: true,
+        provider: 'custom',
+        url: 'https://webdav.example.invalid/dav/',
+        username: 'test-user',
+        password: 'synthetic-password',
+        syncOnLaunch: false,
+        syncOnChange: false,
+        syncOnCellular: false,
+        syncNotesOnlyOnCellular: true,
+      );
+
+      await HttpOverrides.runWithHttpOverrides(
+        () => webdav.triggerSync(),
+        _LoopbackHttpOverrides(server.port),
+      );
+      expect(webdav.syncStatus, WebDAVSyncStatus.failed);
+      expect(putCount, 0);
+      expect(appPrefs.getString('webdav_last_sync_time'), initialWatermark);
+
+      // 同时验证 BackupService 覆盖恢复自动联动 AppTheme.reloadCurrentInstance()
+      await appPrefs.setString('theme_style', 'plain');
+      final exportedPlainSettings = settingsService.getAllSettingsForBackup();
+      await appPrefs.setString('theme_style', 'paper');
+      final activeTheme = AppTheme();
+      addTearDown(activeTheme.dispose);
+      await activeTheme.initialize();
+      expect(activeTheme.themeStyle, ThemeStyle.paper);
+
+      final restoreJsonFile =
+          File(p.join(tempDir.path, 'theme_auto_sync.json'));
+      await restoreJsonFile.writeAsString(
+        jsonEncode(<String, dynamic>{
+          'version': '2.0.0',
+          'notes': <String, dynamic>{
+            'categories': <Object?>[],
+            'quotes': <Object?>[],
+          },
+          'settings': exportedPlainSettings,
+        }),
+      );
+      await backupService.importData(
+        restoreJsonFile.path,
+        clearExisting: true,
+        merge: false,
+      );
+      expect(activeTheme.themeStyle, ThemeStyle.plain);
+    });
   });
 }

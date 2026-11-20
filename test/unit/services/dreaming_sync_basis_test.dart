@@ -17,6 +17,32 @@ import 'package:thoughtecho/services/settings_service.dart';
 
 import '../../test_harness.dart';
 
+class _CountingDatabaseService extends DatabaseService {
+  _CountingDatabaseService() : super.forTesting();
+
+  int singleWatermarkCalls = 0;
+  int batchWatermarkCalls = 0;
+
+  void resetCounters() {
+    singleWatermarkCalls = 0;
+    batchWatermarkCalls = 0;
+  }
+
+  @override
+  Future<int> countActiveNotesUpToWatermark(String watermarkIso) {
+    singleWatermarkCalls++;
+    return super.countActiveNotesUpToWatermark(watermarkIso);
+  }
+
+  @override
+  Future<Map<String, int>> countActiveNotesUpToWatermarks(
+    Iterable<String> watermarks,
+  ) {
+    batchWatermarkCalls++;
+    return super.countActiveNotesUpToWatermarks(watermarks);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
@@ -24,7 +50,7 @@ void main() {
 
   late Directory tempDir;
   late Database rawNotesDb;
-  late DatabaseService databaseService;
+  late _CountingDatabaseService databaseService;
   late SettingsService settingsService;
   late ChatSessionService chatService;
   late AgentMemoryService memoryService;
@@ -48,7 +74,7 @@ void main() {
     rawNotesDb = await databaseFactory.openDatabase(inMemoryDatabasePath);
     await DatabaseSchemaManager().createTables(rawNotesDb);
     DatabaseService.setTestDatabase(rawNotesDb);
-    databaseService = DatabaseService();
+    databaseService = _CountingDatabaseService();
     await databaseService.init();
 
     chatService = ChatSessionService(
@@ -434,6 +460,97 @@ void main() {
         },
       });
       expect(settingsService.lastDreamingAt?.toUtc(), remoteCoveredNewer);
+    });
+
+    test('批量水位查询消除 N+1：多条不同水位 Dreaming 画像与元数据合并仅查询 quotes 表一次', () async {
+      await insertNote(
+        id: 'batch_n1',
+        content: '批量依据笔记1',
+        lastModifiedIso: '2026-11-01T10:00:00.000Z',
+      );
+      await insertNote(
+        id: 'batch_n2',
+        content: '批量依据笔记2',
+        lastModifiedIso: '2026-11-05T10:00:00.000Z',
+      );
+      await insertNote(
+        id: 'batch_n3',
+        content: '批量依据笔记3',
+        lastModifiedIso: '2026-11-10T10:00:00.000Z',
+      );
+
+      databaseService.resetCounters();
+
+      await assistantSync.mergeSections(<String, dynamic>{
+        'agent_memory': <String, dynamic>{
+          'format': 1,
+          'dreaming': <String, Object?>{
+            'last_run_at': '2026-11-12T08:00:00.000Z',
+            'basis_watermark': '2026-11-10T10:00:00.000Z',
+            'basis_note_count': 3,
+          },
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'prof_wm_early_uncovered',
+              'kind': 'taste',
+              'directive': '时间较新但漏看的品味（水位内实际 2 条 > 1）',
+              'observed_at': '2026-11-12T08:00:00.000Z',
+              'updated_at': '2026-11-12T08:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-05T10:00:00.000Z',
+              'basis_note_count': 1,
+            },
+            <String, Object?>{
+              'id': 'prof_wm_early_covered',
+              'kind': 'taste',
+              'directive': '看全全部 3 条笔记的品味（水位内实际 3 条 <= 3）',
+              'observed_at': '2026-11-10T11:00:00.000Z',
+              'updated_at': '2026-11-10T11:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-10T10:00:00.000Z',
+              'basis_note_count': 3,
+            },
+            <String, Object?>{
+              'id': 'prof_wm_voice_1',
+              'kind': 'voice',
+              'directive': '早期单条笔记文风（水位内实际 1 条 <= 1）',
+              'observed_at': '2026-11-01T11:00:00.000Z',
+              'updated_at': '2026-11-01T11:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-01T10:00:00.000Z',
+              'basis_note_count': 1,
+            },
+            <String, Object?>{
+              'id': 'prof_wm_voice_2',
+              'kind': 'voice',
+              'directive': '更新且看全 3 条笔记的文风',
+              'observed_at': '2026-11-11T11:00:00.000Z',
+              'updated_at': '2026-11-11T11:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-10T10:00:00.000Z',
+              'basis_note_count': 3,
+            },
+          ],
+        },
+      });
+
+      // 无论存在多少条不同水位的 Dreaming 条目，仅触发 1 次批量查询且单条查询次数为 0
+      expect(databaseService.batchWatermarkCalls, 1);
+      expect(databaseService.singleWatermarkCalls, 0);
+
+      final active = await memoryService.activeProfile();
+      final taste = active.singleWhere((e) => e.kind == AgentMemoryKind.taste);
+      final voice = active.singleWhere((e) => e.kind == AgentMemoryKind.voice);
+      expect(taste.id, 'prof_wm_early_covered');
+      expect(voice.id, 'prof_wm_voice_2');
+      expect(
+        settingsService.lastDreamingAt?.toUtc().toIso8601String(),
+        '2026-11-12T08:00:00.000Z',
+      );
     });
   });
 }

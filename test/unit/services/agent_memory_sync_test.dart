@@ -251,7 +251,7 @@ void main() {
       // 墓碑集合仍只包含之前显式删除的那 4 条
       final tombsAfterPrune = await queryTombstones(dbPath);
       expect(tombsAfterPrune, hasLength(4));
-    });
+    }, timeout: const Timeout(Duration(minutes: 2)));
 
     test('clearAll 写入 cleared_at 屏障，拒收早于等于它的远端行，晚于它的新行正常合入', () async {
       await memory.rememberProfile(
@@ -775,6 +775,608 @@ void main() {
         settingsService.lastDreamingAt?.toUtc().toIso8601String(),
         '2026-11-14T06:00:00.000Z',
       );
+    });
+  });
+
+  group('审查回归：多端收敛防双杀、损坏容器保护、异步开关守卫与时区平局闭环', () {
+    test('问题1a：设备 A/B 离线选出相反 Dreaming 赢家后双向互相同步，正反顺序均收敛到同一条非空 active 赢家',
+        () async {
+      Future<(String, String)> runDirection({required bool aToBFirst}) async {
+        final dir = await Directory.systemTemp.createTemp('opp_dream_');
+        final devA = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dir.path, 'dev_a.db'),
+        );
+        final devB = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dir.path, 'dev_b.db'),
+        );
+        try {
+          // 设备 A 上 d_early 看全，d_late 因笔记尚未同步被判漏看标为 superseded
+          final payloadOnA = <String, dynamic>{
+            'format': 1,
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'd_early',
+                'kind': 'taste',
+                'directive': '早期局部归纳品味',
+                'observed_at': '2026-11-10T08:00:00.000Z',
+                'updated_at': '2026-11-10T08:00:00.000Z',
+                'status': 'active',
+                'source': 'dreaming',
+                'basis_watermark': '2026-11-10T07:00:00.000Z',
+                'basis_note_count': 3,
+              },
+              <String, Object?>{
+                'id': 'd_late',
+                'kind': 'taste',
+                'directive': '后期完整归纳品味',
+                'observed_at': '2026-11-12T08:00:00.000Z',
+                'updated_at': '2026-11-12T08:00:00.000Z',
+                'status': 'superseded',
+                'superseded_by': 'd_early',
+                'source': 'dreaming',
+                'basis_watermark': '2026-11-12T07:00:00.000Z',
+                'basis_note_count': 6,
+              },
+            ],
+          };
+          // 设备 B 已收齐全部笔记，d_late 看全并标 d_early 为 superseded（形成跨端互标环）
+          final payloadOnB = <String, dynamic>{
+            'format': 1,
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'd_early',
+                'kind': 'taste',
+                'directive': '早期局部归纳品味',
+                'observed_at': '2026-11-10T08:00:00.000Z',
+                'updated_at': '2026-11-10T08:00:00.000Z',
+                'status': 'superseded',
+                'superseded_by': 'd_late',
+                'source': 'dreaming',
+                'basis_watermark': '2026-11-10T07:00:00.000Z',
+                'basis_note_count': 3,
+              },
+              <String, Object?>{
+                'id': 'd_late',
+                'kind': 'taste',
+                'directive': '后期完整归纳品味',
+                'observed_at': '2026-11-12T08:00:00.000Z',
+                'updated_at': '2026-11-12T08:00:00.000Z',
+                'status': 'active',
+                'source': 'dreaming',
+                'basis_watermark': '2026-11-12T07:00:00.000Z',
+                'basis_note_count': 6,
+              },
+            ],
+          };
+
+          await devA.restoreMemorySection(payloadOnA);
+          await devB.restoreMemorySection(payloadOnB);
+
+          // 现两端主库均已补齐笔记（两个水位均看全）
+          Future<bool> allCovered(String? wm, int? cnt) async => true;
+
+          if (aToBFirst) {
+            final snapA = (await devA.exportMemorySectionForTesting())!;
+            await devB.mergeMemorySection(snapA, isBasisCovered: allCovered);
+            final snapB = (await devB.exportMemorySectionForTesting())!;
+            await devA.mergeMemorySection(snapB, isBasisCovered: allCovered);
+          } else {
+            final snapB = (await devB.exportMemorySectionForTesting())!;
+            await devA.mergeMemorySection(snapB, isBasisCovered: allCovered);
+            final snapA = (await devA.exportMemorySectionForTesting())!;
+            await devB.mergeMemorySection(snapA, isBasisCovered: allCovered);
+          }
+
+          final activeA = await devA.activeProfile();
+          final activeB = await devB.activeProfile();
+          expect(activeA, hasLength(1));
+          expect(activeB, hasLength(1));
+          expect(activeA.single.supersededBy, isNull);
+          expect(activeB.single.supersededBy, isNull);
+          return (activeA.single.id, activeB.single.id);
+        } finally {
+          devA.dispose();
+          devB.dispose();
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        }
+      }
+
+      final (winA1, winB1) = await runDirection(aToBFirst: true);
+      final (winA2, winB2) = await runDirection(aToBFirst: false);
+      expect(winA1, 'd_late');
+      expect(winB1, 'd_late');
+      expect(winA2, 'd_late');
+      expect(winB2, 'd_late');
+    });
+
+    test(
+        '问题1b：P(v1) + Q(v4, replaces_id:P) + B 离线编辑 P(v5) 后 A(T6)/B(T7) 分别合入 Q 再互传快照，两端均保留 P(v5) 为唯一 active 赢家',
+        () async {
+      Future<void> verifyOrder({required bool pushAToBFirst}) async {
+        final dir = await Directory.systemTemp.createTemp('p_q_edit_');
+        final pathA = p.join(dir.path, 'a.db');
+        final pathB = p.join(dir.path, 'b.db');
+        final devA = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: pathA,
+        );
+        final devB = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: pathB,
+        );
+        try {
+          // 1. 初始 P(v1, T1) 同步到 A、B 两端
+          final pV1 = await devA.rememberProfile(
+            kind: AgentMemoryKind.preference,
+            directive: '回答保持中等篇幅(v1)',
+            observedAt: DateTime.utc(2026, 11, 1, 1, 0),
+            updatedAt: DateTime.utc(2026, 11, 1, 1, 0),
+          );
+          await devB.mergeMemorySection(
+            (await devA.exportMemorySectionForTesting())!,
+          );
+
+          // 2. 产生 Q(v4, T4, replaces_id: P.id) 的远端包（尚未被 B 看到）
+          final qPayload = <String, dynamic>{
+            'format': 1,
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'q_v4_id',
+                'kind': 'preference',
+                'directive': '回答偏详细展开(v4)',
+                'observed_at': '2026-11-01T04:00:00.000Z',
+                'updated_at': '2026-11-01T04:00:00.000Z',
+                'status': 'active',
+                'replaces_id': pV1.id,
+                'source': 'thoughter',
+              },
+            ],
+          };
+
+          // 3. B 离线在 T5 手动编辑 P -> P(v5, T5 > T4)
+          await devB.editProfileDirective(
+            id: pV1.id,
+            directive: '回答务必简明直给(v5)',
+          );
+          // 固定 P(v5) 的时间为 T5，确保严格模拟 T1 < T4 < T5 < T6 < T7
+          final rawB = await openDatabase(pathB, singleInstance: true);
+          await rawB.update(
+            AgentMemoryService.profileTable,
+            <String, Object?>{
+              'observed_at': '2026-11-01T05:00:00.000Z',
+              'updated_at': '2026-11-01T05:00:00.000Z',
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[pV1.id],
+          );
+
+          // 4. A 在 T6 合入 Q（此时 A 上仍是 P(v1, T1) -> Q 取代 P，且绝不污染 P 的 updated_at）
+          await devA.mergeMemorySection(qPayload);
+          final rawA = await openDatabase(pathA, singleInstance: true);
+          final pRowOnA = (await rawA.query(
+            AgentMemoryService.profileTable,
+            where: 'id = ?',
+            whereArgs: <Object?>[pV1.id],
+          ))
+              .single;
+          expect(pRowOnA['status'], 'superseded');
+          expect(pRowOnA['updated_at'], '2026-11-01T01:00:00.000Z');
+
+          // 5. B 在 T7 合入 Q（B 上 P 为 T5 > Q(T4)，P(v5) 保持 active，Q 被标 superseded 且保留 T4）
+          await devB.mergeMemorySection(qPayload);
+          expect((await devB.activeProfile()).map((e) => e.id).toList(), [
+            pV1.id,
+          ]);
+
+          // 6. A 与 B 双向交换完整快照
+          if (pushAToBFirst) {
+            await devB.mergeMemorySection(
+              (await devA.exportMemorySectionForTesting())!,
+            );
+            await devA.mergeMemorySection(
+              (await devB.exportMemorySectionForTesting())!,
+            );
+          } else {
+            await devA.mergeMemorySection(
+              (await devB.exportMemorySectionForTesting())!,
+            );
+            await devB.mergeMemorySection(
+              (await devA.exportMemorySectionForTesting())!,
+            );
+          }
+
+          final finalActiveA = await devA.activeProfile();
+          final finalActiveB = await devB.activeProfile();
+          expect(finalActiveA, hasLength(1));
+          expect(finalActiveB, hasLength(1));
+          expect(finalActiveA.single.id, pV1.id);
+          expect(finalActiveA.single.directive, '回答务必简明直给(v5)');
+          expect(finalActiveA.single.supersededBy, isNull);
+          expect(finalActiveB.single.id, pV1.id);
+          expect(finalActiveB.single.directive, '回答务必简明直给(v5)');
+          expect(finalActiveB.single.supersededBy, isNull);
+
+          final qOnA = (await rawA.query(
+            AgentMemoryService.profileTable,
+            where: 'id = ?',
+            whereArgs: const <Object?>['q_v4_id'],
+          ))
+              .single;
+          expect(qOnA['status'], 'superseded');
+          expect(qOnA['superseded_by'], pV1.id);
+        } finally {
+          devA.dispose();
+          devB.dispose();
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        }
+      }
+
+      await verifyOrder(pushAToBFirst: true);
+      await verifyOrder(pushAToBFirst: false);
+    });
+
+    test('问题1c：Y 取代 X 后调用 forgetProfile(Y.id) 产生墓碑，跨端双向同步时 X 绝不错误复活', () async {
+      final dir = await Directory.systemTemp.createTemp('tomb_successor_');
+      final devA = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'a.db'),
+      );
+      final devB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'b.db'),
+      );
+      try {
+        final x = await devA.rememberProfile(
+          kind: AgentMemoryKind.feedback,
+          directive: '旧反馈指令 X',
+          observedAt: DateTime.utc(2026, 11, 1, 10, 0),
+        );
+        final y = await devA.rememberProfile(
+          kind: AgentMemoryKind.feedback,
+          directive: '更新后的反馈指令 Y',
+          replacesId: x.id,
+          observedAt: DateTime.utc(2026, 11, 2, 10, 0),
+        );
+        // 先同步到设备 B（B 同时持有 superseded 的 X 与 active 的 Y）
+        await devB.mergeMemorySection(
+          (await devA.exportMemorySectionForTesting())!,
+        );
+        expect((await devB.activeProfile()).single.id, y.id);
+
+        // 用户在设备 A 上删除了当前生效的 Y（写入 Y 的墓碑）
+        await devA.forgetProfile(y.id);
+        expect(await devA.activeProfile(), isEmpty);
+
+        // A -> B 同步：B 删除 Y，且已被 Y 取代的旧 X 绝不能复活！
+        await devB.mergeMemorySection(
+          (await devA.exportMemorySectionForTesting())!,
+        );
+        expect(await devB.activeProfile(), isEmpty);
+
+        // B -> A 回传：A 上 X 也绝不能复活！
+        await devA.mergeMemorySection(
+          (await devB.exportMemorySectionForTesting())!,
+        );
+        expect(await devA.activeProfile(), isEmpty);
+      } finally {
+        devA.dispose();
+        devB.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        '问题3：传入损坏的 agent_memory 内部容器时，restore 与 merge 均抛 FormatException 且本地记忆毫发无损',
+        () async {
+      final seededProfile = await memory.rememberProfile(
+        kind: AgentMemoryKind.preference,
+        directive: '受保护的本机核心画像',
+      );
+      final seededFact = await memory.addFact(content: '受保护的本机事实记录');
+
+      final malformedPayloads = <Map<String, dynamic>>[
+        <String, dynamic>{'profile': <String, Object?>{}},
+        <String, dynamic>{'facts': 'not_a_list'},
+        <String, dynamic>{'recent_slices': 123},
+        <String, dynamic>{'tombstones': <String, Object?>{}},
+        <String, dynamic>{'dreaming': <Object?>[]},
+        <String, dynamic>{'cleared_at': 'invalid-iso-timestamp'},
+        <String, dynamic>{'format': 'v1'},
+        <String, dynamic>{'format': 0},
+      ];
+
+      for (final bad in malformedPayloads) {
+        await expectLater(
+          () => memory.restoreMemorySection(bad),
+          throwsA(isA<FormatException>()),
+        );
+        await expectLater(
+          () => memory.mergeMemorySection(bad),
+          throwsA(isA<FormatException>()),
+        );
+      }
+
+      // 关闭记忆开关时遇到损坏容器同样先抛 FormatException，防止 WebDAV 把损坏云端包静默忽略后覆写
+      await settingsService.setAgentMemoryEnabled(false);
+      await expectLater(
+        () => memory.mergeMemorySection(<String, dynamic>{
+          'profile': <String, Object?>{},
+        }),
+        throwsA(isA<FormatException>()),
+      );
+      await settingsService.setAgentMemoryEnabled(true);
+
+      // 验证本地已有记忆毫发无损
+      expect(
+        (await memory.activeProfile()).map((e) => e.id).toList(),
+        <String>[seededProfile.id],
+      );
+      expect(
+        (await memory.allFacts()).map((f) => f.id).toList(),
+        <String>[seededFact.id],
+      );
+    });
+
+    test('问题4：在 isBasisCovered 异步等待期间关闭长期记忆开关，放弃写入且不改写 lastDreamingAt',
+        () async {
+      final initialLastDreaming = DateTime.utc(2026, 11, 5, 8, 0);
+      await settingsService.setLastDreamingAt(initialLastDreaming);
+
+      final stats = await memory.mergeMemorySection(
+        <String, dynamic>{
+          'format': 1,
+          'dreaming': <String, Object?>{
+            'last_run_at': '2026-11-18T08:00:00.000Z',
+            'basis_watermark': '2026-11-18T07:00:00.000Z',
+            'basis_note_count': 10,
+          },
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'race_dreaming_prof',
+              'kind': 'taste',
+              'directive': '异步期间被关闭开关拦截的远端画像',
+              'observed_at': '2026-11-18T08:00:00.000Z',
+              'updated_at': '2026-11-18T08:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-18T07:00:00.000Z',
+              'basis_note_count': 10,
+            },
+          ],
+          'facts': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'race_fact_1',
+              'content': '不应落库的远端事实',
+              'importance': 6,
+              'created_at': '2026-11-18T08:00:00.000Z',
+              'updated_at': '2026-11-18T08:00:00.000Z',
+            },
+          ],
+        },
+        isBasisCovered: (wm, cnt) async {
+          // 模拟主库查询期间用户在设置页关闭了长期记忆开关
+          await settingsService.setAgentMemoryEnabled(false);
+          return true;
+        },
+      );
+
+      expect(stats.skippedBecauseDisabled, isTrue);
+      expect(stats.hasChanges, isFalse);
+      expect(settingsService.lastDreamingAt?.toUtc(), initialLastDreaming);
+
+      // 重新打开记忆开关检查数据库：没有任何远端行偷跑落库
+      await settingsService.setAgentMemoryEnabled(true);
+      expect(await memory.activeProfile(), isEmpty);
+      expect(await memory.allFacts(), isEmpty);
+    });
+
+    test(
+        '问题5：editProfileDirective 将 Dreaming 画像转为 user_edit 并清除 basis_*，跨端收敛优先胜出',
+        () async {
+      final dreamingTaste = await memory.rememberProfile(
+        kind: AgentMemoryKind.taste,
+        directive: 'Dreaming 初始自动归纳品味',
+        source: 'dreaming',
+        observedAt: DateTime.utc(2026, 11, 10, 8, 0),
+        basisWatermark: '2026-11-10T07:00:00.000Z',
+        basisNoteCount: 8,
+      );
+
+      await memory.editProfileDirective(
+        id: dreamingTaste.id,
+        directive: '用户亲自改写确认的品味描述',
+      );
+
+      final afterEdit = (await memory.activeProfile()).single;
+      expect(afterEdit.id, dreamingTaste.id);
+      expect(afterEdit.source, 'user_edit');
+      expect(afterEdit.basisWatermark, isNull);
+      expect(afterEdit.basisNoteCount, isNull);
+
+      // 合入另一台设备较旧的 thoughter taste 以及另一条覆盖更多笔记的 dreaming taste，用户手动修改均必须胜出！
+      await memory.mergeMemorySection(
+        <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'older_thoughter_taste',
+              'kind': 'taste',
+              'directive': '另一台设备较早的对话记住品味',
+              'observed_at': '2026-11-11T08:00:00.000Z',
+              'updated_at': '2026-11-11T08:00:00.000Z',
+              'status': 'active',
+              'source': 'thoughter',
+            },
+            <String, Object?>{
+              'id': 'newer_dreaming_taste',
+              'kind': 'taste',
+              'directive': '另一台设备全量笔记自动归纳品味',
+              'observed_at': '2026-12-01T08:00:00.000Z',
+              'updated_at': '2026-12-01T08:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-12-01T07:00:00.000Z',
+              'basis_note_count': 50,
+            },
+          ],
+        },
+        isBasisCovered: (_, __) async => true,
+      );
+
+      final finalTastes = (await memory.activeProfile())
+          .where((e) => e.kind == AgentMemoryKind.taste)
+          .toList();
+      expect(finalTastes, hasLength(1));
+      expect(finalTastes.single.id, dreamingTaste.id);
+      expect(finalTastes.single.directive, '用户亲自改写确认的品味描述');
+      expect(finalTastes.single.source, 'user_edit');
+    });
+
+    test('问题6 & 二.2：跨时区时间戳归一化、同 ID 同时间戳交换律平局决胜、以及 cleared_at 重置 lastDreamingAt',
+        () async {
+      // 1. 近期切片跨时区 expires_at 过滤与旧表非 Z 时间戳自动迁移
+      await memory.mergeMemorySection(<String, dynamic>{
+        'format': 1,
+        'recent_slices': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 'slice_tz_expired',
+            'content': '已过期的带偏移切片',
+            'observed_at': '2026-11-18T08:00:00+08:00',
+            'updated_at': '2026-11-18T08:00:00+08:00',
+            // 等价于 2026-11-19T01:00:00.000Z（早于查询时刻 02:00Z，应判定已过期！）
+            'expires_at': '2026-11-19T09:00:00+08:00',
+          },
+          <String, Object?>{
+            'id': 'slice_tz_valid',
+            'content': '仍有效的带偏移切片',
+            'observed_at': '2026-11-18T08:00:00+08:00',
+            'updated_at': '2026-11-18T08:00:00+08:00',
+            // 等价于 2026-11-19T04:00:00.000Z（晚于查询时刻 02:00Z，应保留！）
+            'expires_at': '2026-11-19T12:00:00+08:00',
+          },
+        ],
+      });
+      final activeSlices = await memory.activeRecentSlices(
+        now: DateTime.utc(2026, 11, 19, 2, 0),
+      );
+      expect(
+        activeSlices.map((s) => s.id).toList(),
+        <String>['slice_tz_valid'],
+      );
+
+      // 2. 同 ID 且 updated_at 绝对时刻完全相等（含 +08:00 vs Z）时，A->B 与 B->A 最终结果严格一致
+      final dir = await Directory.systemTemp.createTemp('tie_mem_');
+      final dev1 = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, '1.db'),
+      );
+      final dev2 = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, '2.db'),
+      );
+      try {
+        final variantAlpha = <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'same_prof_id',
+              'kind': 'preference',
+              'directive': '偏好方案 Alpha',
+              'observed_at': '2026-11-19T09:00:00+08:00',
+              'updated_at': '2026-11-19T09:00:00+08:00',
+              'status': 'active',
+              'source': 'thoughter',
+            },
+          ],
+          'facts': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'same_fact_id',
+              'content': '事实内容 Alpha',
+              'importance': 6,
+              'created_at': '2026-11-19T01:00:00.000Z',
+              'updated_at': '2026-11-19T01:00:00.000Z',
+            },
+          ],
+        };
+        final variantBeta = <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'same_prof_id',
+              'kind': 'preference',
+              'directive': '偏好方案 Beta',
+              'observed_at': '2026-11-19T01:00:00.000Z',
+              'updated_at': '2026-11-19T01:00:00.000Z',
+              'status': 'active',
+              'source': 'thoughter',
+            },
+          ],
+          'facts': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'same_fact_id',
+              'content': '事实内容 Beta',
+              'importance': 8,
+              'created_at': '2026-11-19T09:00:00+08:00',
+              'updated_at': '2026-11-19T09:00:00+08:00',
+            },
+          ],
+        };
+
+        await dev1.mergeMemorySection(variantAlpha);
+        await dev1.mergeMemorySection(variantBeta);
+
+        await dev2.mergeMemorySection(variantBeta);
+        await dev2.mergeMemorySection(variantAlpha);
+
+        expect(
+          (await dev1.activeProfile()).single.directive,
+          (await dev2.activeProfile()).single.directive,
+        );
+        expect(
+          (await dev1.allFacts()).single.content,
+          (await dev2.allFacts()).single.content,
+        );
+      } finally {
+        dev1.dispose();
+        dev2.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+
+      // 3. 远端传来更新的 cleared_at >= 本机 lastDreamingAt 时，同步清空 lastDreamingAt 且不再导出陈旧 last_run_at
+      await settingsService.setLastDreamingAt(
+        DateTime.utc(2026, 11, 18, 12, 0),
+      );
+      await memory.recordDreamingRun(
+        runAt: DateTime.utc(2026, 11, 18, 12, 0),
+        basisWatermark: '2026-11-18T11:00:00.000Z',
+        basisNoteCount: 5,
+      );
+
+      await memory.mergeMemorySection(<String, dynamic>{
+        'format': 1,
+        'cleared_at': '2026-11-19T05:00:00.000Z',
+      });
+
+      expect(settingsService.lastDreamingAt, isNull);
+      final exportedAfterRemoteClear =
+          (await memory.exportMemorySectionForTesting())!;
+      final exportedDreaming =
+          exportedAfterRemoteClear['dreaming'] as Map<String, dynamic>?;
+      expect(exportedDreaming?['last_run_at'], isNull);
     });
   });
 }

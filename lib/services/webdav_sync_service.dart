@@ -14,6 +14,7 @@ import 'package:uuid/uuid.dart';
 import 'package:xml/xml.dart';
 import 'package:xml/xml_events.dart';
 
+import '../models/merge_report.dart';
 import '../services/connectivity_service.dart';
 import '../services/assistant_data_sync_service.dart';
 import '../services/database_service.dart';
@@ -572,6 +573,8 @@ class WebDAVSyncService extends ChangeNotifier {
       }
 
       // 4. 合并云端数据到本地数据库（固定顺序：笔记 → 对话 → 记忆）
+      AssistantSyncStats? assistantMergeStats;
+      Map<String, dynamic>? preservedRemoteAgentMemory;
       if (remoteData != null) {
         logDebug('开始执行 LWW 本地智能合并...');
         final mergeReport = await dbService.importDataWithLWWMerge(
@@ -584,10 +587,17 @@ class WebDAVSyncService extends ChangeNotifier {
         dbService.refreshQuotes(); // 刷新 UI
 
         if (_assistantDataSync != null) {
-          await _assistantDataSync!.mergeSections(
+          assistantMergeStats = await _assistantDataSync!.mergeSections(
             remoteData,
             throwOnError: true,
           );
+        }
+
+        final rawRemoteMemory = remoteData['agent_memory'];
+        if (rawRemoteMemory is Map) {
+          preservedRemoteAgentMemory = rawRemoteMemory is Map<String, dynamic>
+              ? rawRemoteMemory
+              : rawRemoteMemory.map((k, v) => MapEntry(k.toString(), v));
         }
       }
 
@@ -612,7 +622,13 @@ class WebDAVSyncService extends ChangeNotifier {
         // 分页流式写入 JSON 到临时文件
         final uploadDb =
             localDb.isOpen ? localDb : await dbService.safeDatabase;
-        await _writeLocalDataToTempJson(uploadDb, tempJsonPath);
+        await _writeLocalDataToTempJson(
+          uploadDb,
+          tempJsonPath,
+          preservedRemoteAgentMemory: preservedRemoteAgentMemory,
+          forceSkipLocalMemoryExport:
+              assistantMergeStats?.memorySkippedBecauseDisabled ?? false,
+        );
 
         await packSyncZip(tempJsonPath, tempZipPath);
 
@@ -2606,7 +2622,12 @@ class WebDAVSyncService extends ChangeNotifier {
   /// 格式与 [DatabaseBackupService.exportDataAsMap] 兼容：
   /// `{ metadata, categories, quotes: [...], tombstones }`
   /// 笔记按每页 50 条分页查询，避免全表入内存。
-  Future<void> _writeLocalDataToTempJson(Database db, String filePath) async {
+  Future<void> _writeLocalDataToTempJson(
+    Database db,
+    String filePath, {
+    Map<String, dynamic>? preservedRemoteAgentMemory,
+    bool forceSkipLocalMemoryExport = false,
+  }) async {
     final sink = File(filePath).openWrite(encoding: utf8);
     try {
       await db.transaction((txn) async {
@@ -2669,7 +2690,11 @@ class WebDAVSyncService extends ChangeNotifier {
         sink.write('"tombstones":${json.encode(tombstones)}');
       });
 
-      await _assistantDataSync?.writeSections(sink);
+      await _assistantDataSync?.writeSections(
+        sink,
+        preservedRemoteAgentMemory: preservedRemoteAgentMemory,
+        forceSkipLocalMemoryExport: forceSkipLocalMemoryExport,
+      );
       sink.write('}');
       await sink.flush();
     } finally {

@@ -554,22 +554,6 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
 
   @override
   Future<({String? watermark, int noteCount})> getActiveNotesBasis() async {
-    if (kIsWeb) {
-      final activeQuotes = _memoryStore.where(
-        (quote) => !quote.isDeleted && quote.deletedAt == null,
-      );
-      DateTime? maxUtc;
-      var count = 0;
-      for (final quote in activeQuotes) {
-        count++;
-        final ts = _parseEffectiveNoteUtcTime(quote.lastModified, quote.date);
-        if (ts != null && (maxUtc == null || ts.isAfter(maxUtc))) {
-          maxUtc = ts;
-        }
-      }
-      return (watermark: maxUtc?.toIso8601String(), noteCount: count);
-    }
-
     final db = await safeDatabase;
     final rows = await db.rawQuery(
       'SELECT last_modified, date FROM quotes '
@@ -594,21 +578,27 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     if (trimmed.isEmpty) {
       return 0;
     }
-    final watermarkUtc = DateTime.tryParse(trimmed)?.toUtc();
-    if (watermarkUtc == null) {
-      return 0;
-    }
+    final counts = await countActiveNotesUpToWatermarks(<String>[trimmed]);
+    return counts[trimmed] ?? 0;
+  }
 
-    if (kIsWeb) {
-      var count = 0;
-      for (final quote in _memoryStore) {
-        if (quote.isDeleted || quote.deletedAt != null) continue;
-        final ts = _parseEffectiveNoteUtcTime(quote.lastModified, quote.date);
-        if (ts != null && !ts.isAfter(watermarkUtc)) {
-          count++;
-        }
+  @override
+  Future<Map<String, int>> countActiveNotesUpToWatermarks(
+    Iterable<String> watermarks,
+  ) async {
+    final parsedWatermarks = <String, DateTime>{};
+    for (final raw in watermarks) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty || parsedWatermarks.containsKey(trimmed)) {
+        continue;
       }
-      return count;
+      final watermarkUtc = DateTime.tryParse(trimmed)?.toUtc();
+      if (watermarkUtc != null) {
+        parsedWatermarks[trimmed] = watermarkUtc;
+      }
+    }
+    if (parsedWatermarks.isEmpty) {
+      return const <String, int>{};
     }
 
     final db = await safeDatabase;
@@ -616,17 +606,29 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       'SELECT last_modified, date FROM quotes '
       'WHERE (is_deleted IS NULL OR is_deleted = 0) AND deleted_at IS NULL',
     );
-    var count = 0;
+    final activeTimestamps = <DateTime>[];
     for (final row in rows) {
       final ts = _parseEffectiveNoteUtcTime(
         row['last_modified'] as String?,
         row['date'] as String?,
       );
-      if (ts != null && !ts.isAfter(watermarkUtc)) {
-        count++;
+      if (ts != null) {
+        activeTimestamps.add(ts);
       }
     }
-    return count;
+
+    final counts = <String, int>{};
+    for (final entry in parsedWatermarks.entries) {
+      var count = 0;
+      final limitUtc = entry.value;
+      for (final ts in activeTimestamps) {
+        if (!ts.isAfter(limitUtc)) {
+          count++;
+        }
+      }
+      counts[entry.key] = count;
+    }
+    return counts;
   }
 
   /// 修复：更新查询性能统计
