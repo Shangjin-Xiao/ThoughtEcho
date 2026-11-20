@@ -259,6 +259,7 @@ List<SingleChildWidget> buildAppProviders({
         WebDAVSyncService().attachAssistantDataSync(service);
         return service;
       },
+      dispose: (_, service) => service.dispose(),
     ),
     ProxyProvider4<DatabaseService, SettingsService, AIAnalysisDatabaseService,
         AssistantDataSyncService, BackupService>(

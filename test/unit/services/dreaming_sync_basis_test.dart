@@ -553,4 +553,201 @@ void main() {
       );
     });
   });
+
+  group('回归防护：compactAndPrune 与 Dreaming 维护阶段不翻转看全收敛结果', () {
+    test(
+        '同步选出较早但看全的 P_full 并淘汰较新但漏看的 P_partial 后，独立或挂载同步服务的 compactAndPrune 及 AI 不可用时的 DreamingService.run 均保持 P_full 活跃、P_partial 已淘汰',
+        () async {
+      await insertNote(
+        id: 'n_cov_1',
+        content: '早期完整笔记1',
+        lastModifiedIso: '2026-11-08T10:00:00.000Z',
+      );
+      await insertNote(
+        id: 'n_cov_2',
+        content: '早期完整笔记2',
+        lastModifiedIso: '2026-11-09T10:00:00.000Z',
+      );
+      await insertNote(
+        id: 'n_cov_3',
+        content: '早期完整笔记3',
+        lastModifiedIso: '2026-11-10T10:00:00.000Z',
+      );
+
+      final pFull = await memoryService.rememberProfile(
+        kind: AgentMemoryKind.taste,
+        directive: '基于完整笔记库归纳的品味画像',
+        source: 'dreaming',
+        observedAt: DateTime.utc(2026, 11, 10, 10, 30),
+        basisWatermark: '2026-11-10T10:00:00.000Z',
+        basisNoteCount: 3,
+      );
+
+      await assistantSync.mergeSections(<String, dynamic>{
+        'agent_memory': <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'p_partial_newer',
+              'kind': 'taste',
+              'directive': '未同步完整时归纳的残缺品味画像',
+              'observed_at': '2026-11-12T08:00:00.000Z',
+              'updated_at': '2026-11-12T08:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-10T10:00:00.000Z',
+              'basis_note_count': 2,
+            },
+          ],
+        },
+      });
+
+      Future<void> verifyConvergedState() async {
+        final active = (await memoryService.activeProfile())
+            .where((e) => e.kind == AgentMemoryKind.taste)
+            .toList();
+        expect(active, hasLength(1));
+        expect(active.single.id, pFull.id);
+
+        final allEntries = await memoryService.allProfileEntries();
+        final partial = allEntries.singleWhere(
+          (e) => e.id == 'p_partial_newer',
+        );
+        expect(partial.status, AgentMemoryStatus.superseded);
+        expect(partial.supersededBy, pFull.id);
+      }
+
+      await verifyConvergedState();
+
+      // (a) 挂载 AssistantDataSyncService 时执行 compactAndPrune（30 天保留期内）
+      await memoryService.compactAndPrune(
+        now: DateTime.utc(2026, 11, 13, 0, 0),
+      );
+      await verifyConvergedState();
+
+      // (b) 解绑同步判定器后独立调用 compactAndPrune（防御层 1：绝不把 superseded 重新纳入候选集复活）
+      assistantSync.dispose();
+      await memoryService.compactAndPrune(
+        now: DateTime.utc(2026, 11, 13, 1, 0),
+      );
+      await verifyConvergedState();
+
+      // 重新挂载同步服务后，(c) AI 不可用时运行 DreamingService.run()（内部触发 compactAndPrune）
+      assistantSync.updateDependencies(
+        chatSessionService: chatService,
+        agentMemoryService: memoryService,
+        settingsService: settingsService,
+        databaseService: databaseService,
+      );
+      final dreaming = DreamingService(
+        settingsService: settingsService,
+        memoryService: memoryService,
+        isAiAvailable: () async => false,
+        loadNotes: ({required start, required end, required limit}) async =>
+            const <Quote>[],
+        complete: ({required systemPrompt, required userMessage}) async => '{}',
+      );
+      final outcome = await dreaming.run(now: DateTime.utc(2026, 11, 13, 2, 0));
+      expect(outcome, DreamingOutcome.skipped);
+      await verifyConvergedState();
+    });
+
+    test(
+        '挂载 AssistantDataSyncService 后，直接调用 mergeMemorySection 或对多条活跃 Dreaming 画像执行 compactAndPrune 均自动按看全规则收敛',
+        () async {
+      await insertNote(
+        id: 'n_mount_1',
+        content: '笔记1',
+        lastModifiedIso: '2026-11-08T10:00:00.000Z',
+      );
+      await insertNote(
+        id: 'n_mount_2',
+        content: '笔记2',
+        lastModifiedIso: '2026-11-09T10:00:00.000Z',
+      );
+      await insertNote(
+        id: 'n_mount_3',
+        content: '笔记3',
+        lastModifiedIso: '2026-11-10T10:00:00.000Z',
+      );
+
+      // 1. 直接调用 memoryService.mergeMemorySection（未显式传 checkBasisBatch），自动回退到挂载的判定器
+      await memoryService.mergeMemorySection(<String, dynamic>{
+        'format': 1,
+        'profile': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 'voice_early_covered',
+            'kind': 'voice',
+            'directive': '较早但看全 3 条笔记的表达风格',
+            'observed_at': '2026-11-10T11:00:00.000Z',
+            'updated_at': '2026-11-10T11:00:00.000Z',
+            'status': 'active',
+            'source': 'dreaming',
+            'basis_watermark': '2026-11-10T10:00:00.000Z',
+            'basis_note_count': 3,
+          },
+          <String, Object?>{
+            'id': 'voice_late_uncovered',
+            'kind': 'voice',
+            'directive': '较新但仅看 1 条笔记的残缺表达风格',
+            'observed_at': '2026-11-12T11:00:00.000Z',
+            'updated_at': '2026-11-12T11:00:00.000Z',
+            'status': 'active',
+            'source': 'dreaming',
+            'basis_watermark': '2026-11-10T10:00:00.000Z',
+            'basis_note_count': 1,
+          },
+        ],
+      });
+
+      final activeVoice = (await memoryService.activeProfile())
+          .singleWhere((e) => e.kind == AgentMemoryKind.voice);
+      expect(activeVoice.id, 'voice_early_covered');
+
+      // 2. 若库内同时存在两条 status='active' 的 Dreaming 同类画像，compactAndPrune 预评估依据后保留看全者
+      final rawMemDb = await openDatabase(
+        p.join(tempDir.path, 'agent_memory.db'),
+        singleInstance: true,
+      );
+      await rawMemDb.insert(
+        AgentMemoryService.profileTable,
+        <String, Object?>{
+          'id': 'taste_active_covered',
+          'kind': 'taste',
+          'directive': '看全笔记的活跃品味',
+          'observed_at': '2026-11-10T11:00:00.000Z',
+          'updated_at': '2026-11-10T11:00:00.000Z',
+          'status': 'active',
+          'source': 'dreaming',
+          'basis_watermark': '2026-11-10T10:00:00.000Z',
+          'basis_note_count': 3,
+        },
+      );
+      await rawMemDb.insert(
+        AgentMemoryService.profileTable,
+        <String, Object?>{
+          'id': 'taste_active_uncovered',
+          'kind': 'taste',
+          'directive': '更新但漏看的活跃品味',
+          'observed_at': '2026-11-12T12:00:00.000Z',
+          'updated_at': '2026-11-12T12:00:00.000Z',
+          'status': 'active',
+          'source': 'dreaming',
+          'basis_watermark': '2026-11-10T10:00:00.000Z',
+          'basis_note_count': 1,
+        },
+      );
+
+      databaseService.resetCounters();
+      final stats = await memoryService.compactAndPrune(
+        now: DateTime.utc(2026, 11, 13, 0, 0),
+      );
+      expect(databaseService.batchWatermarkCalls, 1);
+      expect(stats.duplicatesPruned, 1);
+
+      final activeTaste = (await memoryService.activeProfile())
+          .singleWhere((e) => e.kind == AgentMemoryKind.taste);
+      expect(activeTaste.id, 'taste_active_covered');
+    });
+  });
 }

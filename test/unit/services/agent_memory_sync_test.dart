@@ -1378,5 +1378,53 @@ void main() {
           exportedAfterRemoteClear['dreaming'] as Map<String, dynamic>?;
       expect(exportedDreaming?['last_run_at'], isNull);
     });
+
+    test('本地 compactAndPrune 仅收敛当前 active 条目，绝不复活已被看全合并置为 superseded 的较新条目',
+        () async {
+      await memory.mergeMemorySection(
+        <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'p_early_covered',
+              'kind': 'taste',
+              'directive': '看全依据的早期品味',
+              'observed_at': '2026-11-10T09:00:00.000Z',
+              'updated_at': '2026-11-10T09:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-10T08:00:00.000Z',
+              'basis_note_count': 5,
+            },
+            <String, Object?>{
+              'id': 'p_late_uncovered',
+              'kind': 'taste',
+              'directive': '漏看依据但时间更新的品味',
+              'observed_at': '2026-11-12T09:00:00.000Z',
+              'updated_at': '2026-11-12T09:00:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-10T08:00:00.000Z',
+              'basis_note_count': 2,
+            },
+          ],
+        },
+        isBasisCovered: (wm, cnt) async => cnt == 5,
+      );
+
+      expect((await memory.activeProfile()).single.id, 'p_early_covered');
+
+      // 无挂载判定器时直接调用 compactAndPrune（30 天内保留审计行），不得复活 p_late_uncovered
+      final stats = await memory.compactAndPrune(
+        now: DateTime.utc(2026, 11, 15, 0, 0),
+      );
+      expect(stats.duplicatesPruned, 0);
+      expect((await memory.activeProfile()).single.id, 'p_early_covered');
+
+      final all = await memory.allProfileEntries();
+      final lateEntry = all.singleWhere((e) => e.id == 'p_late_uncovered');
+      expect(lateEntry.status, AgentMemoryStatus.superseded);
+      expect(lateEntry.supersededBy, 'p_early_covered');
+    });
   });
 }

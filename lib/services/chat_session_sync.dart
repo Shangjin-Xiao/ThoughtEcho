@@ -931,7 +931,8 @@ extension ChatSessionSyncExtension on ChatSessionService {
         }
       }
 
-      // 仅对 updated_at 完全相等的极少数同 ID 消息批量拉取完整行用于确定性决胜。
+      // 仅对存活且 updated_at 完全相等的同 ID 消息分小批流式拉取完整行做确定性决胜，
+      // 每批比较后立即释放本地消息正文，仅保留远端决胜赢家的 ID 集合，防止重复同步时内存累积。
       final exactTieMsgIds = <String>[];
       for (final msgId in candidateMsgIds) {
         final localUpd = localMsgUpdatedById[msgId];
@@ -941,14 +942,18 @@ extension ChatSessionSyncExtension on ChatSessionService {
         if (!survivingSessionIds.contains(remoteSessionId)) continue;
         final remoteUpd =
             LWWUtils.parseTimestamp(remoteRow['updated_at'] as String?);
-        if (remoteUpd.isAtSameMomentAs(localUpd)) {
-          exactTieMsgIds.add(msgId);
+        if (!remoteUpd.isAtSameMomentAs(localUpd)) continue;
+        final effTomb = effectiveMessageTombstoneFor(msgId);
+        if (effTomb != null && !localUpd.isAfter(effTomb.deletedAtUtc)) {
+          continue;
         }
+        exactTieMsgIds.add(msgId);
       }
-      final localTiedMsgsById = <String, Map<String, Object?>>{};
-      for (var i = 0; i < exactTieMsgIds.length; i += chunkSize) {
-        final end = (i + chunkSize < exactTieMsgIds.length)
-            ? i + chunkSize
+      const tieBreakChunkSize = 200;
+      final remoteWinsOnTieMsgIds = <String>{};
+      for (var i = 0; i < exactTieMsgIds.length; i += tieBreakChunkSize) {
+        final end = (i + tieBreakChunkSize < exactTieMsgIds.length)
+            ? i + tieBreakChunkSize
             : exactTieMsgIds.length;
         final chunk = exactTieMsgIds.sublist(i, end);
         final placeholders = List.filled(chunk.length, '?').join(',');
@@ -959,8 +964,16 @@ extension ChatSessionSyncExtension on ChatSessionService {
         );
         for (final r in rows) {
           final id = r['id']?.toString() ?? '';
-          if (id.isNotEmpty) {
-            localTiedMsgsById[id] = _exportWhitelistedMessage(r);
+          if (id.isEmpty) continue;
+          final remoteRow = remoteMessagesById[id];
+          if (remoteRow != null &&
+              _compareChatCanonicalFields(
+                    remoteRow,
+                    _exportWhitelistedMessage(r),
+                    _chatMessageTieBreakKeys,
+                  ) >
+                  0) {
+            remoteWinsOnTieMsgIds.add(id);
           }
         }
       }
@@ -1056,17 +1069,10 @@ extension ChatSessionSyncExtension on ChatSessionService {
             sessionsWithAddedOrUpdatedMessages.add(remoteSessionId);
           }
         } else if (localUpdated != null && validRemoteRow != null) {
-          final localTiedRow = localTiedMsgsById[msgId];
           final remoteWinsOnTie = remoteUpdated!.isAtSameMomentAs(
                 localUpdated,
               ) &&
-              localTiedRow != null &&
-              _compareChatCanonicalFields(
-                    validRemoteRow,
-                    localTiedRow,
-                    _chatMessageTieBreakKeys,
-                  ) >
-                  0;
+              remoteWinsOnTieMsgIds.contains(msgId);
           if (remoteUpdated.isAfter(localUpdated) || remoteWinsOnTie) {
             await txn.insert(
               'chat_messages',

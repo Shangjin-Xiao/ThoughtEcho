@@ -1285,5 +1285,157 @@ void main() {
         }
       }
     });
+
+    test('回归防护：跨多批（>500 条）同 updated_at 消息重复同步时流式决胜，无假更新、跳过墓碑消息且同时间戳差异双向收敛',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('chat_bulk_tie_');
+      final pathA = p.join(dir.path, 'dev_a.db');
+      final pathB = p.join(dir.path, 'dev_b.db');
+      final devA = ChatSessionService(databasePath: pathA);
+      final devB = ChatSessionService(databasePath: pathB);
+      await devA.init();
+      await devB.init();
+
+      try {
+        const totalMessages = 520;
+        const sharedUpdatedIso = '2026-11-16T10:00:00.000Z';
+        // 4 条分布在 3 个 200 行分批窗口中的同时间戳正文冲突：
+        // 索引 5 与 405 在 devB 字典序更大，索引 205 与 515 在 devA 字典序更大。
+        const bWinsIndices = <int>{5, 405};
+        const aWinsIndices = <int>{205, 515};
+        // 2 条已被同时间戳消息墓碑覆盖的旧消息（不应再进入决胜或产生假更新）。
+        const tombstonedIndices = <int>{110, 310};
+
+        List<Map<String, Object?>> buildMessages({required bool isDeviceA}) {
+          return List<Map<String, Object?>>.generate(totalMessages, (index) {
+            final id = 'msg_${index.toString().padLeft(4, '0')}';
+            final createdAt = DateTime.utc(2026, 11, 16, 8, 0)
+                .add(Duration(seconds: index))
+                .toIso8601String();
+            String content;
+            if (bWinsIndices.contains(index)) {
+              content = isDeviceA ? '候选正文-Alpha-$index' : '候选正文-Zulu-$index';
+            } else if (aWinsIndices.contains(index)) {
+              content = isDeviceA ? '候选正文-Zulu-$index' : '候选正文-Alpha-$index';
+            } else {
+              content = '完全一致的历史对话正文-$index-${'段落文本' * 8}';
+            }
+            return <String, Object?>{
+              'id': id,
+              'session_id': 's_bulk',
+              'role': index.isEven ? 'user' : 'assistant',
+              'content': content,
+              'created_at': createdAt,
+              'updated_at': sharedUpdatedIso,
+            };
+          });
+        }
+
+        Map<String, dynamic> buildInitialSection({required bool isDeviceA}) {
+          return <String, dynamic>{
+            'format': 1,
+            'sessions': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 's_bulk',
+                'session_type': 'agent',
+                'title': '大批量重复同步测试会话',
+                'created_at': '2026-11-16T08:00:00.000Z',
+                'last_active_at': '2026-11-16T10:00:00.000Z',
+                'updated_at': sharedUpdatedIso,
+                'is_pinned': 0,
+              },
+            ],
+            'messages': buildMessages(isDeviceA: isDeviceA),
+            'tombstones': <Map<String, Object?>>[
+              for (final idx in tombstonedIndices)
+                <String, Object?>{
+                  'entity_type': 'message',
+                  'entity_id': 'msg_${idx.toString().padLeft(4, '0')}',
+                  'deleted_at': sharedUpdatedIso,
+                },
+            ],
+          };
+        }
+
+        await devA.restoreChatSection(buildInitialSection(isDeviceA: true));
+        await devB.restoreChatSection(buildInitialSection(isDeviceA: false));
+        // 模拟两台设备本地先残留了将被同时间戳墓碑删除的那 2 条消息，检验墓碑跳过决胜并正确删除。
+        for (final dbPath in <String>[pathA, pathB]) {
+          final rawDb = await openDatabase(dbPath, singleInstance: true);
+          for (final idx in tombstonedIndices) {
+            await rawDb.insert(
+              'chat_messages',
+              <String, Object?>{
+                'id': 'msg_${idx.toString().padLeft(4, '0')}',
+                'session_id': 's_bulk',
+                'role': 'user',
+                'content': '待被同时间戳墓碑清理的消息-$idx',
+                'created_at': '2026-11-16T08:00:00.000Z',
+                'updated_at': sharedUpdatedIso,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+        }
+
+        final snapshotFromB = await devB.exportChatSectionForTesting();
+        final snapshotFromA = await devA.exportChatSectionForTesting();
+
+        final firstMergeOnA = await devA.mergeChatSection(snapshotFromB);
+        final firstMergeOnB = await devB.mergeChatSection(snapshotFromA);
+
+        // devA 仅对 devB 字典序获胜的 2 条消息执行更新，其余 518 条远端行（516 条存活未更新 + 2 条命中墓碑跳过）计入 messagesSkipped，本地 2 条残留消息被删除。
+        expect(firstMergeOnA.messagesAdded, 0);
+        expect(firstMergeOnA.messagesUpdated, bWinsIndices.length);
+        expect(firstMergeOnA.messagesDeleted, tombstonedIndices.length);
+        expect(
+          firstMergeOnA.messagesSkipped,
+          totalMessages - bWinsIndices.length,
+        );
+
+        // devB 对称地仅对 devA 字典序获胜的 2 条消息执行更新。
+        expect(firstMergeOnB.messagesAdded, 0);
+        expect(firstMergeOnB.messagesUpdated, aWinsIndices.length);
+        expect(firstMergeOnB.messagesDeleted, tombstonedIndices.length);
+        expect(
+          firstMergeOnB.messagesSkipped,
+          totalMessages - aWinsIndices.length,
+        );
+
+        // 再次执行常规重复同步时：0 新增、0 更新、0 删除，全部 518 条存活消息均走 messagesSkipped。
+        final repeatOnA = await devA.mergeChatSection(
+          await devB.exportChatSectionForTesting(),
+        );
+        expect(repeatOnA.messagesAdded, 0);
+        expect(repeatOnA.messagesUpdated, 0);
+        expect(repeatOnA.messagesDeleted, 0);
+        expect(
+          repeatOnA.messagesSkipped,
+          totalMessages - tombstonedIndices.length,
+        );
+
+        final msgsA = await devA.getMessages('s_bulk');
+        final msgsB = await devB.getMessages('s_bulk');
+        expect(msgsA, hasLength(totalMessages - tombstonedIndices.length));
+        expect(msgsB, hasLength(totalMessages - tombstonedIndices.length));
+        for (var i = 0; i < msgsA.length; i++) {
+          expect(msgsA[i].id, msgsB[i].id);
+          expect(msgsA[i].content, msgsB[i].content);
+        }
+        final byIdA = <String, ChatMessage>{for (final m in msgsA) m.id: m};
+        for (final idx in <int>{...aWinsIndices, ...bWinsIndices}) {
+          final id = 'msg_${idx.toString().padLeft(4, '0')}';
+          expect(byIdA[id]?.content, '候选正文-Zulu-$idx');
+        }
+      } finally {
+        await devA.close();
+        devA.dispose();
+        await devB.close();
+        devB.dispose();
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
   });
 }

@@ -145,6 +145,22 @@ class AgentMemoryService extends ChangeNotifier {
 
   List<AgentMemoryProfileEntry>? _activeProfileCache;
   Set<String> _cachedIdentityAliases = const <String>{};
+  AgentMemoryBatchBasisChecker? _basisChecker;
+
+  /// 注册可选的 Dreaming 笔记依据“看全了”批量判定器（由同步层自动挂载）。
+  ///
+  /// 挂载后，[compactAndPrune] 在发现多条活跃 Dreaming 画像候选，以及直接调用
+  /// [mergeMemorySection] 未显式传参时，均可按与跨端同步一致的口径评估依据覆盖。
+  void setBasisChecker(AgentMemoryBatchBasisChecker? checker) {
+    _basisChecker = checker;
+  }
+
+  /// 仅在当前挂载的判定器仍是 [checker] 时解绑，避免新旧依赖切换时误清。
+  void detachBasisChecker(AgentMemoryBatchBasisChecker checker) {
+    if (identical(_basisChecker, checker)) {
+      _basisChecker = null;
+    }
+  }
 
   /// 获取当前内存中已缓存的活跃身份别名集合。
   Set<String> get cachedIdentityAliases => _cachedIdentityAliases;
@@ -629,6 +645,7 @@ class AgentMemoryService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _basisChecker = null;
     _settingsService.setIdentityAliasesProvider(null);
     _disposed = true;
     unawaited(_close());
@@ -2017,6 +2034,54 @@ class AgentMemoryService extends ChangeNotifier {
       var duplicatesPruned = 0;
       var profileStateMutated = false;
 
+      // 若已挂载依据判定器且当前存在多条活跃 Dreaming 画像条目，
+      // 在开启记忆库事务前批量预评估各条目的 basis 覆盖状态，避免事务内跨库异步等待。
+      bool Function(String? watermark, int? noteCount)? syncCheckCovered;
+      final checker = _basisChecker;
+      if (checker != null) {
+        final activeBasisRows = await db.query(
+          profileTable,
+          columns: const <String>[
+            'source',
+            'basis_watermark',
+            'basis_note_count',
+          ],
+          where: 'status = ?',
+          whereArgs: <Object?>[AgentMemoryStatus.active.storageValue],
+        );
+        var activeDreamingCount = 0;
+        final basisPairs = <(String, int)>{};
+        for (final row in activeBasisRows) {
+          if (!_isDreamingMemorySource(row['source'])) continue;
+          activeDreamingCount++;
+          final wmRaw = row['basis_watermark'];
+          if (wmRaw is! String) continue;
+          final wm = wmRaw.trim();
+          final cnt = _parseMemoryOptionalInt(row['basis_note_count']);
+          if (wm.isEmpty || cnt == null || cnt < 0) continue;
+          if (_tryParseMemoryUtc(wm) == null) continue;
+          basisPairs.add((wm, cnt));
+        }
+        if (activeDreamingCount > 1) {
+          try {
+            final coverageCache = basisPairs.isEmpty
+                ? const <(String, int), bool>{}
+                : await checker(basisPairs);
+            syncCheckCovered = (String? wm, int? cnt) {
+              if (wm == null || cnt == null || cnt < 0) return false;
+              final trimmed = wm.trim();
+              if (trimmed.isEmpty) return false;
+              return coverageCache[(trimmed, cnt)] ?? false;
+            };
+          } catch (error) {
+            logDebug(
+              '压缩前预评估 Dreaming 依据覆盖失败，降级为纯时间序活跃去重 (${error.runtimeType})',
+              source: 'AgentMemoryService',
+            );
+          }
+        }
+      }
+
       await db.transaction((txn) async {
         // 1. 清理已过期的近况切片
         expiredSlices = await txn.delete(
@@ -2044,8 +2109,13 @@ class AgentMemoryService extends ChangeNotifier {
           whereArgs: <Object?>[thirtyDaysAgo.toIso8601String()],
         );
 
-        // 4. 分叉收敛、单例画像唯一性、身份别名收敛与同 kind+directive 活跃指令去重（不写墓碑、不改 updated_at）
-        final convergence = await _convergeProfilesInTxn(txn);
+        // 4. 活跃画像分叉收敛、单例唯一性、身份别名收敛与同 kind+directive 活跃指令去重
+        //    （本地压缩仅收敛当前 active 条目，绝不复活已 superseded 的审计历史条目）
+        final convergence = await _convergeProfilesInTxn(
+          txn,
+          includeSupersededCandidates: false,
+          isBasisCovered: syncCheckCovered,
+        );
         duplicatesPruned = convergence.supersededCount;
         profileStateMutated = convergence.didMutate;
 

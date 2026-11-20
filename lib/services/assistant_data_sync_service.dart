@@ -25,7 +25,12 @@ class AssistantDataSyncService {
   })  : _chatSessionService = chatSessionService,
         _agentMemoryService = agentMemoryService,
         _settingsService = settingsService,
-        _databaseService = databaseService;
+        _databaseService = databaseService {
+    _agentMemoryService.setBasisChecker(_boundBasisChecker);
+  }
+
+  late final AgentMemoryBatchBasisChecker _boundBasisChecker =
+      _checkDreamingBasisBatch;
 
   ChatSessionService _chatSessionService;
   AgentMemoryService _agentMemoryService;
@@ -39,10 +44,18 @@ class AssistantDataSyncService {
     required SettingsService settingsService,
     required DatabaseService databaseService,
   }) {
+    if (!identical(_agentMemoryService, agentMemoryService)) {
+      _agentMemoryService.detachBasisChecker(_boundBasisChecker);
+    }
     _chatSessionService = chatSessionService;
     _agentMemoryService = agentMemoryService;
     _settingsService = settingsService;
     _databaseService = databaseService;
+    _agentMemoryService.setBasisChecker(_boundBasisChecker);
+  }
+
+  void dispose() {
+    _agentMemoryService.detachBasisChecker(_boundBasisChecker);
   }
 
   /// 向已写出前序键值（尚未写末尾 `}`）的顶层 JSON 流追加 `chat` 与（开启时）`agent_memory` 段。

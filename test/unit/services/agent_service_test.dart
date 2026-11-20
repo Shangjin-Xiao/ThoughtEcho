@@ -143,6 +143,16 @@ void main() {
       expect(text, contains('9 天前'));
     });
 
+    test('converts UTC lastMessageAt to local timezone when now is local', () {
+      final localExpected = DateTime(2026, 7, 20, 9, 30);
+      final utcFromDb = localExpected.toUtc();
+      final localNow = DateTime(2026, 7, 29, 15, 4);
+
+      final text = AgentService.describeHistoryGap(utcFromDb, localNow);
+      expect(text, isNotNull);
+      expect(text, contains('2026-07-20 09:30'));
+    });
+
     test('stays quiet when the conversation is still fresh', () {
       expect(
         AgentService.describeHistoryGap(

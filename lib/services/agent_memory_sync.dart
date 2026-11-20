@@ -650,6 +650,7 @@ Future<
     })> _convergeProfilesInTxn(
   DatabaseExecutor txn, {
   bool Function(String? watermark, int? noteCount)? isBasisCovered,
+  bool includeSupersededCandidates = true,
 }) async {
   final allRows = await txn.query(AgentMemoryService.profileTable);
   if (allRows.isEmpty) {
@@ -667,6 +668,15 @@ Future<
   };
 
   bool isEligibleCandidate(String startId) {
+    if (!includeSupersededCandidates) {
+      final row = allRowsById[startId];
+      if (row == null) {
+        return false;
+      }
+      final status = (row['status'] as String?)?.trim() ??
+          AgentMemoryStatus.active.storageValue;
+      return status == AgentMemoryStatus.active.storageValue;
+    }
     var currId = startId;
     final visited = <String>{};
     for (;;) {
@@ -1461,7 +1471,10 @@ extension AgentMemorySyncExtension on AgentMemoryService {
 
     // 在开启记忆库写事务前，针对主库已完成合并的快照批量预评估所有 Dreaming 依据对，
     // 避免在 agent_memory.db 事务内跨库异步等待，同时确保收敛比较函数纯同步确定。
-    final hasBasisChecker = checkBasisBatch != null || isBasisCovered != null;
+    final effectiveCheckBasisBatch =
+        checkBasisBatch ?? (isBasisCovered == null ? _basisChecker : null);
+    final hasBasisChecker =
+        effectiveCheckBasisBatch != null || isBasisCovered != null;
     final basisPairs = <(String, int)>{};
     void collectBasis(Object? wmRaw, Object? cntRaw) {
       if (wmRaw is! String) return;
@@ -1498,8 +1511,8 @@ extension AgentMemorySyncExtension on AgentMemoryService {
 
     final coverageCache = <(String, int), bool>{};
     if (basisPairs.isNotEmpty) {
-      if (checkBasisBatch != null) {
-        coverageCache.addAll(await checkBasisBatch(basisPairs));
+      if (effectiveCheckBasisBatch != null) {
+        coverageCache.addAll(await effectiveCheckBasisBatch(basisPairs));
       } else if (isBasisCovered != null) {
         for (final pair in basisPairs) {
           if (!isCaptureCurrent(startGeneration)) {
@@ -2094,6 +2107,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           // 7. 同一事务内执行全量候选集确定性收敛（不改写 updated_at）
           final profileConv = await _convergeProfilesInTxn(
             txn,
+            includeSupersededCandidates: true,
             isBasisCovered: hasBasisChecker ? syncCheckCovered : null,
           );
           if (profileConv.didMutate) {
