@@ -13,14 +13,13 @@ import 'package:thoughtecho/models/quote_map_point.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/map_memory_page.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/draft_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 import '../../test_harness.dart';
@@ -125,7 +124,7 @@ class _TestWeatherService extends ChangeNotifier implements WeatherService {
 }
 
 class _TestFeatureGuideService extends FeatureGuideService {
-  _TestFeatureGuideService() : super(SafeMMKV());
+  _TestFeatureGuideService() : super(AppPreferencesService());
 
   @override
   bool hasShown(String guideId) => true;
@@ -291,11 +290,12 @@ void main() {
 
   setUpAll(() async {
     await TestHarness.initialize();
-    await MMKVService().init();
+    await AppPreferencesService().init();
   });
 
   setUp(() async {
     databaseService = _TestDatabaseService();
+    await AppPreferencesService().clear();
     await DraftService().deleteAllDrafts();
   });
 
