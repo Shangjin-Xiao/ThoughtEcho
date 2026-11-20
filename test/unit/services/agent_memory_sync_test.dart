@@ -1426,5 +1426,124 @@ void main() {
       expect(lateEntry.status, AgentMemoryStatus.superseded);
       expect(lateEntry.supersededBy, 'p_early_covered');
     });
+
+    test('本地 compactAndPrune 自愈恢复被后台 Dreaming 误置为 superseded 的人工/显式画像（含超30天条目）',
+        () async {
+      final now = DateTime.utc(2026, 11, 20, 10, 0);
+      await memory.activeProfile();
+      final rawMemDb = await openDatabase(dbPath, singleInstance: true);
+
+      // 模拟历史旧版遗留状态：45 天前用户手动修正的 taste (user_edit) 曾被两轮后台 Dreaming 连续置为 superseded
+      await rawMemDb.insert(
+        AgentMemoryService.profileTable,
+        <String, Object?>{
+          'id': 'manual_taste_legacy',
+          'kind': 'taste',
+          'directive': '用户手动修正的摘录偏好结论',
+          'observed_at':
+              now.subtract(const Duration(days: 45)).toIso8601String(),
+          'updated_at':
+              now.subtract(const Duration(days: 45)).toIso8601String(),
+          'status': 'superseded',
+          'superseded_by': 'dreaming_taste_mid',
+          'source': 'user_edit',
+        },
+      );
+      await rawMemDb.insert(
+        AgentMemoryService.profileTable,
+        <String, Object?>{
+          'id': 'dreaming_taste_mid',
+          'kind': 'taste',
+          'directive': '首轮后台自动覆盖的品味',
+          'observed_at':
+              now.subtract(const Duration(days: 14)).toIso8601String(),
+          'updated_at':
+              now.subtract(const Duration(days: 14)).toIso8601String(),
+          'status': 'superseded',
+          'replaces_id': 'manual_taste_legacy',
+          'superseded_by': 'dreaming_taste_latest',
+          'source': 'dreaming',
+        },
+      );
+      await rawMemDb.insert(
+        AgentMemoryService.profileTable,
+        <String, Object?>{
+          'id': 'dreaming_taste_latest',
+          'kind': 'taste',
+          'directive': '次轮后台自动覆盖的品味',
+          'observed_at':
+              now.subtract(const Duration(days: 2)).toIso8601String(),
+          'updated_at': now.subtract(const Duration(days: 2)).toIso8601String(),
+          'status': 'active',
+          'replaces_id': 'dreaming_taste_mid',
+          'source': 'dreaming',
+        },
+      );
+
+      // 对照组：被用户新显式指令替换的 45 天前旧显式条目（不应复活，且应按 >30 天清理）
+      await rawMemDb.insert(
+        AgentMemoryService.profileTable,
+        <String, Object?>{
+          'id': 'old_explicit_voice',
+          'kind': 'voice',
+          'directive': '早期已废弃显式文风',
+          'observed_at':
+              now.subtract(const Duration(days: 45)).toIso8601String(),
+          'updated_at':
+              now.subtract(const Duration(days: 45)).toIso8601String(),
+          'status': 'superseded',
+          'superseded_by': 'new_explicit_voice',
+          'source': 'thoughter',
+        },
+      );
+      await rawMemDb.insert(
+        AgentMemoryService.profileTable,
+        <String, Object?>{
+          'id': 'new_explicit_voice',
+          'kind': 'voice',
+          'directive': '最新显式确认文风',
+          'observed_at':
+              now.subtract(const Duration(days: 3)).toIso8601String(),
+          'updated_at': now.subtract(const Duration(days: 3)).toIso8601String(),
+          'status': 'active',
+          'replaces_id': 'old_explicit_voice',
+          'source': 'thoughter',
+        },
+      );
+
+      final stats = await memory.compactAndPrune(now: now);
+      // dreaming_taste_latest 由 active 退回 superseded（1 条），old_explicit_voice 超 30 天被清理（1 条）
+      expect(stats.duplicatesPruned, 1);
+      expect(stats.supersededProfilesPruned, 1);
+
+      final active = await memory.activeProfile();
+      final activeTaste = active.singleWhere(
+        (e) => e.kind == AgentMemoryKind.taste,
+      );
+      final activeVoice = active.singleWhere(
+        (e) => e.kind == AgentMemoryKind.voice,
+      );
+      expect(activeTaste.id, 'manual_taste_legacy');
+      expect(activeTaste.directive, '用户手动修正的摘录偏好结论');
+      expect(activeVoice.id, 'new_explicit_voice');
+
+      final all = await memory.allProfileEntries();
+      expect(all.any((e) => e.id == 'old_explicit_voice'), isFalse);
+      final retiredDreaming = all.singleWhere(
+        (e) => e.id == 'dreaming_taste_latest',
+      );
+      expect(retiredDreaming.status, AgentMemoryStatus.superseded);
+      expect(retiredDreaming.supersededBy, 'manual_taste_legacy');
+
+      // 再次运行应完全幂等
+      final secondStats = await memory.compactAndPrune(now: now);
+      expect(secondStats.duplicatesPruned, 0);
+      expect(
+        (await memory.activeProfile())
+            .singleWhere((e) => e.kind == AgentMemoryKind.taste)
+            .id,
+        'manual_taste_legacy',
+      );
+    });
   });
 }

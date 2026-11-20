@@ -675,7 +675,39 @@ Future<
       }
       final status = (row['status'] as String?)?.trim() ??
           AgentMemoryStatus.active.storageValue;
-      return status == AgentMemoryStatus.active.storageValue;
+      if (status == AgentMemoryStatus.active.storageValue) {
+        return true;
+      }
+      // 本地压缩绝不复活同步淘汰的 dreaming* 历史行，也不复活被用户新指令替换的旧行；
+      // 仅当非 dreaming* 人工/显式画像被后台 dreaming* 条目置为 superseded 且链尾仍是同类别活跃
+      // dreaming* 条目时，将其纳入重算以自愈恢复人工修正。
+      if (status != AgentMemoryStatus.superseded.storageValue ||
+          _isDreamingMemorySource(row['source'])) {
+        return false;
+      }
+      final startKind = (row['kind'] as String?)?.trim() ?? '';
+      var currId = (row['superseded_by'] as String?)?.trim() ?? '';
+      final visited = <String>{startId};
+      while (currId.isNotEmpty && visited.add(currId)) {
+        final nextRow = allRowsById[currId];
+        if (nextRow == null) {
+          return false;
+        }
+        if (((nextRow['kind'] as String?)?.trim() ?? '') != startKind ||
+            !_isDreamingMemorySource(nextRow['source'])) {
+          return false;
+        }
+        final nextStatus = (nextRow['status'] as String?)?.trim() ??
+            AgentMemoryStatus.active.storageValue;
+        if (nextStatus == AgentMemoryStatus.active.storageValue) {
+          return true;
+        }
+        if (nextStatus != AgentMemoryStatus.superseded.storageValue) {
+          return false;
+        }
+        currId = (nextRow['superseded_by'] as String?)?.trim() ?? '';
+      }
+      return false;
     }
     var currId = startId;
     final visited = <String>{};
@@ -784,7 +816,7 @@ Future<
 
   // 0. 显式 replaces_id 关系收敛：
   //    若 Y 声明 replaces_id == X.id 且 X、Y 均在候选集：
-  //    当 X 在 Y 创建之后又被原位编辑（X 版本时间严格晚于 Y），或 X 为用户手动编辑而 Y 为后台 Dreaming 时，
+  //    当 X 在 Y 创建之后又被原位编辑（X 版本时间严格晚于 Y），或 X 为非 dreaming* 显式/人工画像而 Y 为后台 Dreaming 时，
   //    X 胜出并将 Y 淘汰指向 X；否则 Y 取代 X。
   for (final yRow in sorted) {
     final yId = yRow['id'] as String;
@@ -801,11 +833,10 @@ Future<
       yRow['updated_at'],
       yRow['observed_at'],
     );
-    final xIsUserEditVsDreaming =
-        (xRow['source'] as String?)?.trim() == 'user_edit' &&
-            _isDreamingMemorySource(yRow['source']);
+    final xIsExplicitVsDreaming = !_isDreamingMemorySource(xRow['source']) &&
+        _isDreamingMemorySource(yRow['source']);
 
-    if (xTime.isAfter(yTime) || xIsUserEditVsDreaming) {
+    if (xTime.isAfter(yTime) || xIsExplicitVsDreaming) {
       recordSupersede(yId, xRow);
     } else {
       recordSupersede(xId, yRow);

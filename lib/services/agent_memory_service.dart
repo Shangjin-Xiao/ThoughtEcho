@@ -2090,7 +2090,18 @@ class AgentMemoryService extends ChangeNotifier {
           whereArgs: <Object?>[currentTime.toIso8601String()],
         );
 
-        // 2. 清理超过 30 天的 superseded 画像历史条目
+        // 2. 活跃画像分叉收敛、单例唯一性、身份别名收敛、同 kind+directive 去重，
+        //    以及自愈恢复曾被后台 dreaming* 误置为 superseded 的人工/显式画像
+        //    （绝不复活同步淘汰的 dreaming* 行或被用户新指令替换的历史行）
+        final convergence = await _convergeProfilesInTxn(
+          txn,
+          includeSupersededCandidates: false,
+          isBasisCovered: syncCheckCovered,
+        );
+        duplicatesPruned = convergence.supersededCount;
+        profileStateMutated = convergence.didMutate;
+
+        // 3. 清理超过 30 天或超出 10 条保留上限的 superseded 画像审计历史条目
         supersededProfiles = await txn.delete(
           profileTable,
           where: "status = ? AND (observed_at < ? OR id NOT IN "
@@ -2102,22 +2113,12 @@ class AgentMemoryService extends ChangeNotifier {
           ],
         );
 
-        // 3. 淘汰低价值衰减事实：重要度 <= 3、从未召回过、且创建于 30 天之前
+        // 4. 淘汰低价值衰减事实：重要度 <= 3、从未召回过、且创建于 30 天之前
         decayedFacts = await txn.delete(
           factsTable,
           where: 'importance <= 3 AND recall_count = 0 AND created_at < ?',
           whereArgs: <Object?>[thirtyDaysAgo.toIso8601String()],
         );
-
-        // 4. 活跃画像分叉收敛、单例唯一性、身份别名收敛与同 kind+directive 活跃指令去重
-        //    （本地压缩仅收敛当前 active 条目，绝不复活已 superseded 的审计历史条目）
-        final convergence = await _convergeProfilesInTxn(
-          txn,
-          includeSupersededCandidates: false,
-          isBasisCovered: syncCheckCovered,
-        );
-        duplicatesPruned = convergence.supersededCount;
-        profileStateMutated = convergence.didMutate;
 
         // 5. 修剪超出容量的过旧近况切片（仅保留最新的 maxRecentSlices 条活跃切片）
         await txn.delete(
