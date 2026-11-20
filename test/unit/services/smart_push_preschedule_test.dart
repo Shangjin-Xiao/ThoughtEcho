@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/core/config/distribution_config.dart';
@@ -91,10 +94,16 @@ class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeDatabaseService implements DatabaseService {
+class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
   List<Quote> notes;
+  Completer<void>? pendingQueryBarrier;
+  int queryCount = 0;
 
   _FakeDatabaseService(this.notes);
+
+  void notifyChanged() {
+    notifyListeners();
+  }
 
   @override
   Future<List<Quote>> getAllQuotes({
@@ -110,7 +119,19 @@ class _FakeDatabaseService implements DatabaseService {
     String orderBy = 'q.date DESC',
     bool includeDeleted = false,
   }) async {
+    queryCount++;
+    final barrier = pendingQueryBarrier;
+    if (barrier != null && !barrier.isCompleted) {
+      await barrier.future;
+    }
     return List<Quote>.from(notes);
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getLocalDailyQuote({
+    String offlineQuoteSource = 'tagOnly',
+  }) async {
+    return null;
   }
 
   @override
@@ -168,6 +189,8 @@ void main() {
     late _RecordingNotificationsPlugin notificationsPlugin;
     late DateTime currentNow;
     late bool exactAlarmPermitted;
+    late int renewalRegisterCount;
+    late int renewalCancelCount;
 
     SmartPushService createService() {
       return SmartPushService(
@@ -178,6 +201,12 @@ void main() {
         isAndroidOverride: true,
         isIOSOverride: false,
         canScheduleExactAlarmsOverride: () async => exactAlarmPermitted,
+        registerPreScheduleRenewalOverride: () async {
+          renewalRegisterCount++;
+        },
+        cancelPreScheduleRenewalOverride: () async {
+          renewalCancelCount++;
+        },
         nowProvider: () => currentNow,
       );
     }
@@ -185,6 +214,8 @@ void main() {
     setUp(() {
       currentNow = DateTime(2026, 5, 10, 7, 30);
       exactAlarmPermitted = true;
+      renewalRegisterCount = 0;
+      renewalCancelCount = 0;
       databaseService = _FakeDatabaseService([
         Quote(
           id: '11111111-1111-1111-1111-111111111111',
@@ -425,6 +456,193 @@ void main() {
         expect(
           notificationsPlugin.scheduledCalls.map((c) => c.scheduledDate.day),
           equals([11, 12, 13]),
+        );
+      },
+    );
+
+    test(
+      'registers periodic background renewal task when pre-scheduling and cancels it when disabled',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(renewalRegisterCount, equals(1));
+        expect(renewalCancelCount, equals(0));
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(renewalCancelCount, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'editing, hiding, or deleting notes immediately reconciles pending and delivered notifications',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        databaseService.notes = [
+          Quote(
+            id: 'note-secret',
+            content: '原始私密草稿内容',
+            date: DateTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: const {PastNoteType.yearAgoToday},
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final day10Id =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          DateTime(2026, 5, 10, 9, 0),
+          slotIndex: 0,
+        );
+        final initialDay10 = notificationsPlugin.scheduledCalls
+            .firstWhere((c) => c.id == day10Id);
+        expect(initialDay10.body, contains('原始私密草稿内容'));
+
+        // 1. Edit note within 6h throttle window -> updates pending notification body immediately
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = DateTime(2026, 5, 10, 8, 0);
+        databaseService.notes = [
+          Quote(
+            id: 'note-secret',
+            content: '修改后的公开笔记内容',
+            date: DateTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.notifyChanged();
+        await service.waitForPendingScheduleForTest();
+
+        final updatedDay10 = notificationsPlugin.scheduledCalls
+            .firstWhere((c) => c.id == day10Id);
+        expect(updatedDay10.body, contains('修改后的公开笔记内容'));
+
+        // 2. Time advances past 09:00 delivery, an intermediate foreground refresh runs,
+        //    and then the user hides/deletes the note -> delivered notification is still cancelled!
+        currentNow = DateTime(2026, 5, 10, 9, 30);
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        expect(notificationsPlugin.cancelledIds, isNot(contains(day10Id)));
+
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        currentNow = DateTime(2026, 5, 10, 10, 0);
+        databaseService.notes = [];
+        databaseService.notifyChanged();
+        await service.waitForPendingScheduleForTest();
+
+        expect(notificationsPlugin.cancelledIds, contains(day10Id));
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+      },
+    );
+
+    test(
+      'disabling reminders while an async refresh is in flight prevents stale notifications from being scheduled',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelAllCount = 0;
+
+        // Start a background/resume refresh that pauses mid-flight on DB query
+        final barrier = Completer<void>();
+        databaseService.pendingQueryBarrier = barrier;
+        final inflightRefresh =
+            service.scheduleNextPush(preserveDeliveredNotifications: true);
+        await Future<void>.delayed(Duration.zero);
+
+        // User disables reminders while inflightRefresh is suspended
+        final disableFuture = service.saveSettings(
+          SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // Release DB query so the stale refresh resumes
+        barrier.complete();
+        await Future.wait([inflightRefresh, disableFuture]);
+
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+        expect(notificationsPlugin.cancelAllCount, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'saving daily quote push with empty local cache and empty database does not make external HTTP requests',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        storage.values.clear();
+        databaseService.notes = [];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        var httpClientCreated = false;
+        await HttpOverrides.runZoned(
+          () async {
+            await service.saveSettings(
+              SmartPushSettings(
+                enabled: false,
+                dailyQuotePushEnabled: true,
+                dailyQuotePushTime: const PushTimeSlot(hour: 8, minute: 0),
+              ),
+            );
+          },
+          createHttpClient: (_) {
+            httpClientCreated = true;
+            throw StateError(
+              'Unexpected external HTTP request during saveSettings',
+            );
+          },
+        );
+
+        expect(httpClientCreated, isFalse);
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+        expect(
+          notificationsPlugin.scheduledCalls.every(
+            (c) => c.payload == 'contentType:dailyQuote',
+          ),
+          isTrue,
         );
       },
     );

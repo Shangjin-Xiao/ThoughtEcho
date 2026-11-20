@@ -20,6 +20,8 @@ import 'package:thoughtecho/services/database_platform_bootstrap.dart';
 // WorkManager 任务名称常量
 const String kBackgroundPushTask = 'com.shangjin.thoughtecho.backgroundPush';
 const String kPeriodicCheckTask = 'com.shangjin.thoughtecho.periodicCheck';
+const String kPreScheduleRenewTask =
+    'com.shangjin.thoughtecho.renewPreSchedule';
 
 /// 封装集中式后台监控初始化函数
 ///
@@ -148,6 +150,14 @@ void callbackDispatcher() {
           // 周期性检查逻辑
           AppLogger.i('执行周期性推送检查...');
           await backgroundPeriodicCheck();
+          break;
+
+        case kPreScheduleRenewTask:
+          AppLogger.i('执行预调度通知队列后台续期...');
+          await pushService.scheduleNextPush(
+            fromBackground: true,
+            preserveDeliveredNotifications: true,
+          );
           break;
 
         default:
@@ -301,6 +311,15 @@ Future<void> backgroundPeriodicCheck() async {
 
     if (!settings.enabled && !settings.dailyQuotePushEnabled) {
       AppLogger.d('推送未启用，跳过检查');
+      return;
+    }
+
+    if (await pushService.shouldUseAndroidPreScheduledNotifications()) {
+      AppLogger.i('周期性任务检测到本地预调度模式，滚动续期未来通知队列');
+      await pushService.scheduleNextPush(
+        fromBackground: true,
+        preserveDeliveredNotifications: true,
+      );
       return;
     }
 

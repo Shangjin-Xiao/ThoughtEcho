@@ -41,6 +41,10 @@ extension SmartPushPlatform on SmartPushService {
   }
 
   /// 判断 Android 是否应使用系统本地通知预调度队列（无需后台冷启动 Dart Isolate）
+  Future<bool> shouldUseAndroidPreScheduledNotifications() {
+    return _shouldUseAndroidPreScheduledNotifications();
+  }
+
   Future<bool> _shouldUseAndroidPreScheduledNotifications({
     bool? canScheduleExact,
   }) async {
@@ -50,9 +54,52 @@ extension SmartPushPlatform on SmartPushService {
     return !exactGranted;
   }
 
-  /// 取消所有 Android AlarmManager 与 WorkManager 后台调度任务
-  Future<void> _cancelAndroidBackgroundTasks() async {
+  /// 注册低频周期性预调度续期任务（每 24 小时由系统 JobScheduler 滚动续期未来 3 天本地通知队列，不使用前台服务）
+  Future<void> _registerPreScheduleRenewalTask() async {
+    final override = _registerPreScheduleRenewalOverride;
+    if (override != null) {
+      await override();
+      return;
+    }
     if (!_isAndroid) return;
+
+    try {
+      await Workmanager().registerPeriodicTask(
+        SmartPushService._preScheduleRenewalUniqueName,
+        kPreScheduleRenewTask,
+        frequency: SmartPushService._preScheduleRenewalFrequency,
+        initialDelay: SmartPushService._preScheduleRenewalFrequency,
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      );
+      AppLogger.d('已注册预调度通知队列后台续期任务 (24h)');
+    } catch (e) {
+      AppLogger.w('注册预调度通知队列后台续期任务失败', error: e);
+    }
+  }
+
+  /// 取消预调度续期后台任务
+  Future<void> _cancelPreScheduleRenewalTask() async {
+    final override = _cancelPreScheduleRenewalOverride;
+    if (override != null) {
+      await override();
+      return;
+    }
+    if (!_isAndroid) return;
+
+    try {
+      await Workmanager().cancelByUniqueName(
+        SmartPushService._preScheduleRenewalUniqueName,
+      );
+      AppLogger.d('已取消预调度通知队列后台续期任务');
+    } catch (e) {
+      AppLogger.w('取消预调度通知队列后台续期任务失败', error: e);
+    }
+  }
+
+  /// 取消旧版 Android AlarmManager 与一次性/高频 WorkManager 后台推送任务（保留预调度续期任务，避免后台续期执行时自取消）
+  Future<void> _cancelLegacyAndroidPushTasks({bool force = false}) async {
+    if (!_isAndroid) return;
+    if (_legacyAndroidTasksCleared && !force) return;
 
     for (int i = 0; i < 10; i++) {
       try {
@@ -69,6 +116,14 @@ extension SmartPushPlatform on SmartPushService {
       await Workmanager().cancelByUniqueName('daily_quote_fallback');
     } catch (_) {}
     await _cancelPeriodicFallbackTask();
+    _legacyAndroidTasksCleared = true;
+  }
+
+  /// 取消所有 Android AlarmManager 与 WorkManager 后台调度任务
+  Future<void> _cancelAndroidBackgroundTasks() async {
+    if (!_isAndroid) return;
+    await _cancelLegacyAndroidPushTasks(force: true);
+    await _cancelPreScheduleRenewalTask();
   }
 
   List<_PreScheduledEntry> _loadTrackedPreScheduledEntries() {
@@ -107,24 +162,36 @@ extension SmartPushPlatform on SmartPushService {
     }
   }
 
-  /// 对账并取消不再处于当前有效计划内的预调度通知
-  Future<void> _reconcileTrackedPreScheduledNotifications({
+  /// 对账并取消不再处于当前有效计划内、或关联笔记已被隐藏/删除的预调度通知。
+  ///
+  /// 返回因关联笔记被隐藏/删除而失效的通知 ID 集合。
+  Future<Set<int>> _reconcileTrackedPreScheduledNotifications({
     required Set<int> activeIds,
     required bool futureOnly,
+    Set<String>? visibleNoteIds,
   }) async {
     final previousEntries = _loadTrackedPreScheduledEntries();
-    if (previousEntries.isEmpty) return;
+    if (previousEntries.isEmpty) return const {};
 
+    final invalidatedIds = <int>{};
     final nowMs = _now().millisecondsSinceEpoch;
     for (final entry in previousEntries) {
-      if (activeIds.contains(entry.id)) continue;
-      if (futureOnly && entry.epochMs <= nowMs) continue;
+      final hasInvalidatedNote = visibleNoteIds != null &&
+          entry.noteId != null &&
+          !visibleNoteIds.contains(entry.noteId);
+      if (hasInvalidatedNote) {
+        invalidatedIds.add(entry.id);
+      } else {
+        if (activeIds.contains(entry.id)) continue;
+        if (futureOnly && entry.epochMs <= nowMs) continue;
+      }
       try {
         await _notificationsPlugin.cancel(entry.id);
       } catch (e) {
         AppLogger.w('取消过期预调度通知失败 (ID: ${entry.id})', error: e);
       }
     }
+    return invalidatedIds;
   }
 
   /// 初始化时区 - 正确设置设备本地时区
@@ -233,6 +300,7 @@ extension SmartPushPlatform on SmartPushService {
 
       if (canScheduleExact && !DistributionConfig.isPlayStore) {
         try {
+          _legacyAndroidTasksCleared = false;
           await AndroidAlarmManager.oneShotAt(
             scheduledDate,
             SmartPushService._androidAlarmId + idIndex,
@@ -309,15 +377,16 @@ extension SmartPushPlatform on SmartPushService {
     PushTimeSlot slot, {
     bool isDailyQuote = false,
     _PushContent? precomputedContent,
+    bool allowContentLookup = true,
     bool? canScheduleExactOverride,
   }) async {
     try {
       await _ensureNotificationReady();
-      // 优先复用批量预计算好的内容，避免多次重复查库或请求网络
+      // 优先复用批量预计算好的内容；即使需要回退查询也仅使用本地缓存/数据库，绝不在调度阶段请求外网
       _PushContent? content = precomputedContent;
-      if (content == null) {
+      if (content == null && allowContentLookup) {
         if (isDailyQuote) {
-          final quote = await _fetchDailyQuote();
+          final quote = await _resolvePreScheduleDailyQuote();
           if (quote != null) {
             content = _PushContent(
               title: '📖 每日一言',
@@ -396,7 +465,13 @@ extension SmartPushPlatform on SmartPushService {
     }
   }
 
-  Future<void> _cancelAllSchedules() async {
+  Future<void> _cancelAllSchedules() {
+    return _enqueueScheduleOperation(
+      (_) => _cancelAllSchedulesInternal(),
+    );
+  }
+
+  Future<void> _cancelAllSchedulesInternal() async {
     await _reconcileTrackedPreScheduledNotifications(
       activeIds: const {},
       futureOnly: false,

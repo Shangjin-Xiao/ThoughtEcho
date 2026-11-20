@@ -74,6 +74,10 @@ class SmartPushService extends ChangeNotifier {
   static const int _dailyQuoteSlotCode = 99;
   static const String _preScheduledEntriesKey =
       'smart_push_prescheduled_entries_v1';
+  static const String _preScheduleRenewalUniqueName =
+      'smart_push_preschedule_renew';
+  static const Duration _preScheduleRenewalFrequency = Duration(hours: 24);
+  static const Duration _deliveredEntryRetention = Duration(days: 7);
   static const Duration _resumeRefreshMinInterval = Duration(hours: 6);
   static const String _notificationChannelId = 'smart_push_channel';
   static const String _notificationChannelName = '智能推送';
@@ -165,15 +169,42 @@ class SmartPushService extends ChangeNotifier {
   final Future<bool> Function()? _canScheduleExactAlarmsOverride;
   final Future<PushPermissionStatus> Function()? _permissionStatusOverride;
   final Future<void> Function()? _openSystemAppSettingsOverride;
+  final Future<void> Function()? _registerPreScheduleRenewalOverride;
+  final Future<void> Function()? _cancelPreScheduleRenewalOverride;
   final DateTime Function() _nowProvider;
 
   DateTime? _lastScheduleRefreshAt;
   bool? _lastScheduledExactAlarmGranted;
   bool _isRefreshingOnResume = false;
+  bool _isDisposed = false;
+  bool _databaseListenerAttached = false;
+  bool _legacyAndroidTasksCleared = false;
+  int _scheduleGeneration = 0;
+  Future<void> _pendingScheduleOp = Future<void>.value();
 
   bool get _isAndroid => _isAndroidOverride ?? PlatformHelper.isAndroid;
   bool get _isIOS => _isIOSOverride ?? PlatformHelper.isIOS;
   DateTime _now() => _nowProvider();
+
+  @visibleForTesting
+  Future<void> waitForPendingScheduleForTest() => _pendingScheduleOp;
+
+  bool _isScheduleGenerationCurrent(int generation) =>
+      !_isDisposed && generation == _scheduleGeneration;
+
+  Future<void> _enqueueScheduleOperation(
+    Future<void> Function(int generation) action,
+  ) {
+    final generation = ++_scheduleGeneration;
+    final next = _pendingScheduleOp.then((_) async {
+      if (!_isScheduleGenerationCurrent(generation)) return;
+      await action(generation);
+    });
+    _pendingScheduleOp = next.catchError((Object e, StackTrace stack) {
+      AppLogger.w('推送调度队列执行异常', error: e, stackTrace: stack);
+    });
+    return next;
+  }
 
   SmartPushService({
     required DatabaseService databaseService,
@@ -188,6 +219,10 @@ class SmartPushService extends ChangeNotifier {
     @visibleForTesting
     Future<PushPermissionStatus> Function()? permissionStatusOverride,
     @visibleForTesting Future<void> Function()? openSystemAppSettingsOverride,
+    @visibleForTesting
+    Future<void> Function()? registerPreScheduleRenewalOverride,
+    @visibleForTesting
+    Future<void> Function()? cancelPreScheduleRenewalOverride,
     @visibleForTesting DateTime Function()? nowProvider,
   })  : _databaseService = databaseService,
         _locationService = locationService,
@@ -200,13 +235,56 @@ class SmartPushService extends ChangeNotifier {
         _canScheduleExactAlarmsOverride = canScheduleExactAlarmsOverride,
         _permissionStatusOverride = permissionStatusOverride,
         _openSystemAppSettingsOverride = openSystemAppSettingsOverride,
+        _registerPreScheduleRenewalOverride =
+            registerPreScheduleRenewalOverride,
+        _cancelPreScheduleRenewalOverride = cancelPreScheduleRenewalOverride,
         _nowProvider = nowProvider ?? DateTime.now {
     _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
+    _attachDatabaseListener();
     _currentInstance = this;
+  }
+
+  void _attachDatabaseListener() {
+    try {
+      _databaseService.addListener(_handleDatabaseChanged);
+      _databaseListenerAttached = true;
+    } catch (_) {
+      _databaseListenerAttached = false;
+    }
+  }
+
+  void _detachDatabaseListener() {
+    if (!_databaseListenerAttached) return;
+    try {
+      _databaseService.removeListener(_handleDatabaseChanged);
+    } catch (_) {}
+    _databaseListenerAttached = false;
+  }
+
+  void _handleDatabaseChanged() {
+    if (_isDisposed) return;
+    if (!_settings.enabled && !_settings.dailyQuotePushEnabled) return;
+    if (!_isAndroid && !_isIOS) return;
+
+    final hasTrackedPreScheduled = _loadTrackedPreScheduledEntries().isNotEmpty;
+    if (!hasTrackedPreScheduled && !_isInitialized) return;
+    if (!hasTrackedPreScheduled &&
+        _isAndroid &&
+        !DistributionConfig.isPlayStore &&
+        (_lastScheduledExactAlarmGranted ?? true)) {
+      return;
+    }
+
+    unawaited(
+      scheduleNextPush(preserveDeliveredNotifications: true).catchError((_) {}),
+    );
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _scheduleGeneration++;
+    _detachDatabaseListener();
     if (_currentInstance == this) {
       _currentInstance = null;
     }
@@ -512,9 +590,6 @@ class SmartPushService extends ChangeNotifier {
       // 每次启动时重新规划推送计划（保留通知栏中已送达的未读通知）
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush(preserveDeliveredNotifications: true);
-        if (_isAndroid) {
-          await _cancelPeriodicFallbackTask();
-        }
       } else {
         // 如果都禁用了，确保取消所有计划
         await _cancelAllSchedules();
@@ -613,6 +688,8 @@ class SmartPushService extends ChangeNotifier {
   Future<void> saveSettings(SmartPushSettings newSettings) async {
     try {
       _settings = newSettings;
+      // 同步递增调度代数，立即作废正在异步查库/计算中的旧调度任务
+      _scheduleGeneration++;
       final jsonStr = jsonEncode(newSettings.toJson());
       await _mmkv.setString(_settingsKey, jsonStr);
       notifyListeners();
@@ -621,9 +698,6 @@ class SmartPushService extends ChangeNotifier {
       // 更新计划任务
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush();
-        if (_isAndroid) {
-          await _cancelPeriodicFallbackTask();
-        }
       } else {
         await _cancelAllSchedules();
       }
@@ -637,12 +711,10 @@ class SmartPushService extends ChangeNotifier {
   Future<void> reloadFromStorage() async {
     try {
       await _loadSettings();
+      _scheduleGeneration++;
       notifyListeners();
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush(preserveDeliveredNotifications: true);
-        if (_isAndroid) {
-          await _cancelPeriodicFallbackTask();
-        }
       } else {
         await _cancelAllSchedules();
       }
@@ -708,25 +780,30 @@ class SmartPushService extends ChangeNotifier {
   }
 }
 
-/// 预调度本地通知记录条目（用于跨重排与生命周期对账）
+/// 预调度本地通知记录条目（用于跨重排、隐藏/删除笔记清理与生命周期对账）
 class _PreScheduledEntry {
   final int id;
   final int epochMs;
+  final String? noteId;
 
   const _PreScheduledEntry({
     required this.id,
     required this.epochMs,
+    this.noteId,
   });
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'epochMs': epochMs,
+        if (noteId != null && noteId!.isNotEmpty) 'noteId': noteId,
       };
 
   factory _PreScheduledEntry.fromJson(Map<String, dynamic> json) {
+    final rawNoteId = json['noteId'] as String?;
     return _PreScheduledEntry(
       id: (json['id'] as num?)?.toInt() ?? 0,
       epochMs: (json['epochMs'] as num?)?.toInt() ?? 0,
+      noteId: (rawNoteId != null && rawNoteId.isNotEmpty) ? rawNoteId : null,
     );
   }
 }
