@@ -412,6 +412,10 @@ class NoteEditorMetadataState extends ChangeNotifier {
           author: initialQuote?.sourceAuthor ?? initialAuthor ?? '',
           work: initialQuote?.sourceWork ?? initialWork ?? '',
           tagIds: initialQuote?.tagIds ?? initialTagIds ?? const [],
+          showLocation: initialQuote?.location != null ||
+              (initialQuote?.latitude != null &&
+                  initialQuote?.longitude != null),
+          showWeather: initialQuote?.weather != null,
         );
 
   final TextEditingController authorController;
@@ -649,12 +653,12 @@ class NoteEditorMetadataState extends ChangeNotifier {
       work: work,
       tagIds: Set<String>.from(_selectedTagIds),
       colorHex: _selectedColorHex,
-      location: _location,
-      latitude: _latitude,
-      longitude: _longitude,
-      poiName: _poiName,
-      weather: _weather,
-      temperature: _temperature,
+      location: _showLocation ? _location : null,
+      latitude: _showLocation ? _latitude : null,
+      longitude: _showLocation ? _longitude : null,
+      poiName: _showLocation ? _poiName : null,
+      weather: _showWeather ? _weather : null,
+      temperature: _showWeather ? _temperature : null,
       aiAnalysis: _currentAiAnalysis,
     );
   }
@@ -794,18 +798,20 @@ class _MetadataSnapshot {
     required String author,
     required String work,
     required Iterable<String> tagIds,
+    required bool showLocation,
+    required bool showWeather,
   }) {
     return _MetadataSnapshot(
       author: author,
       work: work,
       tagIds: Set<String>.from(tagIds),
       colorHex: quote?.colorHex,
-      location: quote?.location,
-      latitude: quote?.latitude,
-      longitude: quote?.longitude,
-      poiName: quote?.poiName,
-      weather: quote?.weather,
-      temperature: quote?.temperature,
+      location: showLocation ? quote?.location : null,
+      latitude: showLocation ? quote?.latitude : null,
+      longitude: showLocation ? quote?.longitude : null,
+      poiName: showLocation ? quote?.poiName : null,
+      weather: showWeather ? quote?.weather : null,
+      temperature: showWeather ? quote?.temperature : null,
       aiAnalysis: quote?.aiAnalysis,
     );
   }

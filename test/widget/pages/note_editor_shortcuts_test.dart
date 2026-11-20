@@ -1006,4 +1006,76 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'turning off location or weather after Ctrl+S on a new note prompts on Escape and saves removal',
+    (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final databaseService = _TestDatabaseService();
+      final unsavedNewQuoteWithMetadata = Quote(
+        content: 'Note with location and weather',
+        date: '2026-03-29T00:00:00.000Z',
+        location: '示例省·示例市',
+        latitude: 30.0,
+        longitude: 120.0,
+        weather: 'clear',
+        temperature: '22°C',
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          databaseService: databaseService,
+          initialQuote: unsavedNewQuoteWithMetadata,
+          initialContent: 'Note with location and weather',
+        ),
+      );
+
+      await _openEditor(tester);
+
+      // Save new note in place via Ctrl+S (persists location & weather)
+      await _saveViaShortcut(tester);
+      expect(databaseService.addedQuotes, hasLength(1));
+      expect(databaseService.addedQuotes.single.location, '示例省·示例市');
+      expect(databaseService.addedQuotes.single.weather, 'clear');
+
+      // Open metadata bottom sheet and uncheck both location and weather chips
+      await tester.tap(find.byIcon(Icons.edit_note));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('full_editor_location_chip')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('full_editor_weather_chip')));
+      await tester.pump();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.tap(find.text(l10n.done));
+      await tester.pumpAndSettle();
+
+      // Pressing Escape must detect unsaved metadata removal instead of exiting silently
+      await _pressEscape(tester);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(NoteFullEditorPage), findsOneWidget);
+
+      // Confirm save-and-exit in the unsaved-changes dialog and verify DB removes location & weather
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text(l10n.saveAndExit),
+        ),
+      );
+      await _flushDraftIo(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NoteFullEditorPage), findsNothing);
+      expect(databaseService.updatedQuotes, hasLength(1));
+      expect(databaseService.updatedQuotes.single.location, isNull);
+      expect(databaseService.updatedQuotes.single.latitude, isNull);
+      expect(databaseService.updatedQuotes.single.longitude, isNull);
+      expect(databaseService.updatedQuotes.single.weather, isNull);
+      expect(databaseService.updatedQuotes.single.temperature, isNull);
+    },
+  );
 }

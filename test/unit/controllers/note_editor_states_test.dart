@@ -1098,5 +1098,49 @@ void main() {
 
       metadata.dispose();
     });
+
+    test(
+        'toggling showLocation or showWeather after committing snapshot marks metadata dirty',
+        () {
+      final metadata = NoteEditorMetadataState()
+        ..updateLocation(
+          location: '示例省·示例市',
+          latitude: 30.0,
+          longitude: 120.0,
+          poiName: '示例区域',
+          show: true,
+        )
+        ..updateWeather(
+          weather: 'clear',
+          temperature: '22°C',
+          show: true,
+        );
+
+      final persistedWithLocationWeather = metadata.captureSnapshotToken();
+      metadata.commitSnapshotToken(persistedWithLocationWeather);
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Turning off location while raw location stays cached marks metadata dirty
+      metadata.showLocation = false;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.showLocation = true;
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Turning off weather while raw weather stays cached marks metadata dirty
+      metadata.showWeather = false;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      // Persisting with weather hidden makes hidden weather the new clean baseline
+      final persistedWithoutWeather = metadata.captureSnapshotToken();
+      metadata.commitSnapshotToken(persistedWithoutWeather);
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Re-enabling cached weather marks metadata dirty again
+      metadata.showWeather = true;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.dispose();
+    });
   });
 }
