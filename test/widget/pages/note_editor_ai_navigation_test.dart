@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,7 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/pages/thoughter_page.dart';
+import 'package:thoughtecho/services/agent_tools/propose_note_edit_tool.dart';
 import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/draft_service.dart';
@@ -283,6 +285,63 @@ void main() {
       // Verify note was saved and editor was popped
       expect(databaseService.addQuoteCallCount, equals(1));
       expect(find.byType(NoteFullEditorPage), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'new rich-text note saved via Ctrl+S passes editSource and deltaContent with matching revision to ThoughterPage',
+    (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      final editor = find.byType(QuillEditor);
+      final controller = tester.widget<QuillEditor>(editor).controller;
+      controller.replaceText(
+        0,
+        0,
+        'Rich bold note',
+        const TextSelection.collapsed(offset: 14),
+      );
+      controller.formatText(0, 4, Attribute.bold);
+      await tester.pump();
+
+      // Save in-place via Ctrl+S
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await _flushDraftIo(tester);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(databaseService.addQuoteCallCount, equals(1));
+      final savedQuote = databaseService.lastSavedQuote!;
+      expect(savedQuote.id, isNotNull);
+      expect(savedQuote.editSource, equals('fullscreen'));
+      expect(savedQuote.deltaContent, isNotNull);
+
+      // Open AI assistant without unsaved changes dialog (already clean)
+      await tester.tap(find.byIcon(Icons.auto_awesome));
+      await tester.pumpAndSettle();
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      await tester.tap(find.text(l10n.polishText));
+      await tester.pumpAndSettle();
+
+      final thoughterFinder = find.byType(ThoughterPage);
+      expect(thoughterFinder, findsOneWidget);
+      final thoughterQuote =
+          tester.widget<ThoughterPage>(thoughterFinder).quote;
+      expect(thoughterQuote, isNotNull);
+      expect(thoughterQuote!.id, equals(savedQuote.id));
+      expect(thoughterQuote.editSource, equals('fullscreen'));
+      expect(thoughterQuote.deltaContent, equals(savedQuote.deltaContent));
+      expect(
+        ProposeNoteEditTool.kindForQuote(thoughterQuote),
+        equals(ProposeNoteEditTool.kindForQuote(savedQuote)),
+      );
+      expect(
+        ProposeNoteEditTool.revisionForQuote(thoughterQuote),
+        equals(ProposeNoteEditTool.revisionForQuote(savedQuote)),
+      );
     },
   );
 }
