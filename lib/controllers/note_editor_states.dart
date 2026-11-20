@@ -9,14 +9,31 @@ import 'package:flutter_quill/quill_delta.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/location_service.dart';
 
+/// Immutable snapshot of the editor document captured when a save begins.
+class NoteEditorDocumentSnapshot {
+  const NoteEditorDocumentSnapshot({
+    required this.version,
+    required this.delta,
+    required this.plainText,
+  });
+
+  final int version;
+  final Delta delta;
+  final String plainText;
+
+  List<Map<String, dynamic>> toJson() => delta.toJson();
+}
+
 /// Owns the editor document and its draft-related lifecycle.
 class NoteEditorState extends ChangeNotifier {
   NoteEditorState({
-    required this.initialPlainText,
+    required String initialPlainText,
     required this.initialDeltaContent,
-    required this.draftStorageKey,
+    required String draftStorageKey,
     required bool restoredFromDraft,
-  })  : _restoredFromDraft = restoredFromDraft,
+  })  : _initialPlainText = initialPlainText,
+        _draftStorageKey = draftStorageKey,
+        _restoredFromDraft = restoredFromDraft,
         _controller = quill.QuillController.basic() {
     _savedDocumentDelta = _controller.document.toDelta();
     _savedDocumentLength = _getDeltaCharacterLength(_savedDocumentDelta!);
@@ -28,9 +45,9 @@ class NoteEditorState extends ChangeNotifier {
   quill.QuillController _controller;
   final ScrollController scrollController = ScrollController();
   final FocusNode focusNode = FocusNode();
-  final String initialPlainText;
+  String _initialPlainText;
   final String? initialDeltaContent;
-  final String draftStorageKey;
+  String _draftStorageKey;
   bool _restoredFromDraft;
   bool _draftLoaded = false;
   bool _isLoadingFullQuote = false;
@@ -67,6 +84,8 @@ class NoteEditorState extends ChangeNotifier {
 
   quill.QuillController get controller => _controller;
   set controller(quill.QuillController value) => replaceController(value);
+  String get initialPlainText => _initialPlainText;
+  String get draftStorageKey => _draftStorageKey;
   bool get restoredFromDraft => _restoredFromDraft;
   bool get draftLoaded => _draftLoaded;
   set draftLoaded(bool value) => setDraftLoaded(value);
@@ -99,6 +118,16 @@ class NoteEditorState extends ChangeNotifier {
     }
   }
 
+  NoteEditorDocumentSnapshot captureDocumentSnapshot() {
+    final delta = _controller.document.toDelta();
+    final plainText = _controller.document.toPlainText().trim();
+    return NoteEditorDocumentSnapshot(
+      version: _documentVersion,
+      delta: delta,
+      plainText: plainText,
+    );
+  }
+
   void markDraftSaved() {
     if (_disposed) return;
     _restoredFromDraft = false;
@@ -108,6 +137,42 @@ class NoteEditorState extends ChangeNotifier {
     _savedDocumentDelta = delta;
     _savedDocumentLength = _getDeltaCharacterLength(delta);
     _lastKnownDocDelta = delta;
+  }
+
+  /// Commits a persisted note snapshot and updates draft identity if needed.
+  ///
+  /// Only clears `isDirty` if the editor document still matches [snapshot]; if
+  /// the user continued typing while persistence was in flight, advances the
+  /// saved baseline to [snapshot] while keeping `isDirty` true.
+  void markNotePersisted(
+    NoteEditorDocumentSnapshot snapshot, {
+    String? savedNoteId,
+  }) {
+    if (_disposed) return;
+    _restoredFromDraft = false;
+    _initialPlainText = snapshot.plainText;
+    if (savedNoteId != null && savedNoteId.isNotEmpty) {
+      _draftStorageKey = savedNoteId;
+    }
+    _savedDocumentDelta = snapshot.delta;
+    _savedDocumentLength = _getDeltaCharacterLength(snapshot.delta);
+
+    if (_documentVersion == snapshot.version) {
+      _isDirty = false;
+      _savedDocumentVersion = snapshot.version;
+      _lastKnownDocDelta = snapshot.delta;
+      return;
+    }
+
+    final currentDelta = _controller.document.toDelta();
+    _lastKnownDocDelta = currentDelta;
+    if (currentDelta == snapshot.delta) {
+      _isDirty = false;
+      _savedDocumentVersion = _documentVersion;
+    } else {
+      _isDirty = true;
+      _savedDocumentVersion = snapshot.version;
+    }
   }
 
   void markClean() {
@@ -578,9 +643,8 @@ class NoteEditorMetadataState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Establishes the clean baseline after page-level defaults are applied.
-  void captureInitialSnapshot() {
-    _initialSnapshot = _MetadataSnapshot(
+  _MetadataSnapshot _buildCurrentSnapshot() {
+    return _MetadataSnapshot(
       author: author,
       work: work,
       tagIds: Set<String>.from(_selectedTagIds),
@@ -595,20 +659,21 @@ class NoteEditorMetadataState extends ChangeNotifier {
     );
   }
 
+  Object captureSnapshotToken() => _buildCurrentSnapshot();
+
+  void commitSnapshotToken(Object token) {
+    if (token is _MetadataSnapshot) {
+      _initialSnapshot = token;
+    }
+  }
+
+  /// Establishes the clean baseline after page-level defaults are applied.
+  void captureInitialSnapshot() {
+    _initialSnapshot = _buildCurrentSnapshot();
+  }
+
   bool hasChanges({required bool isExistingNote}) {
-    final current = _MetadataSnapshot(
-      author: author,
-      work: work,
-      tagIds: Set<String>.from(_selectedTagIds),
-      colorHex: _selectedColorHex,
-      location: _location,
-      latitude: _latitude,
-      longitude: _longitude,
-      poiName: _poiName,
-      weather: _weather,
-      temperature: _temperature,
-      aiAnalysis: _currentAiAnalysis,
-    );
+    final current = _buildCurrentSnapshot();
     return current.differsFrom(
       _initialSnapshot,
       compareLocationAndWeather: isExistingNote,
@@ -629,17 +694,18 @@ class NoteEditorMediaState extends ChangeNotifier {
   final Set<String> _sessionImportedMedia = <String>{};
   bool _didSaveSuccessfully = false;
   bool _isSaving = false;
+  bool _isPersisting = false;
   double _saveProgress = 0;
   String? _saveStatus;
 
-  Set<String> get unsavedImportedMedia => Set<String>.unmodifiable(
-        _didSaveSuccessfully ? const <String>{} : _sessionImportedMedia,
-      );
+  Set<String> get unsavedImportedMedia =>
+      Set<String>.unmodifiable(_sessionImportedMedia);
   Set<String> get sessionImportedMedia =>
       Set<String>.unmodifiable(_sessionImportedMedia);
   bool get didSaveSuccessfully => _didSaveSuccessfully;
   bool get isSaving => _isSaving;
   set isSaving(bool value) => setSaving(value);
+  bool get isPersisting => _isPersisting;
   double get saveProgress => _saveProgress;
   set saveProgress(double value) => updateSaveProgress(value);
   String? get saveStatus => _saveStatus;
@@ -651,14 +717,22 @@ class NoteEditorMediaState extends ChangeNotifier {
 
   void beginSave({String? status}) {
     _isSaving = true;
+    _isPersisting = true;
     _saveProgress = 0;
     _saveStatus = status;
     notifyListeners();
   }
 
+  void endPersistence() {
+    _isPersisting = false;
+  }
+
   void setSaving(bool value) {
     if (_isSaving == value) return;
     _isSaving = value;
+    if (!value) {
+      _isPersisting = false;
+    }
     notifyListeners();
   }
 
@@ -676,19 +750,26 @@ class NoteEditorMediaState extends ChangeNotifier {
 
   void resetSaveAfterFailure() {
     _isSaving = false;
+    _isPersisting = false;
     _saveProgress = 0;
     notifyListeners();
   }
 
   void finishSave() {
     _isSaving = false;
+    _isPersisting = false;
     _saveProgress = 1;
     notifyListeners();
   }
 
-  void markSavedSuccessfully() {
+  void markSavedSuccessfully([Iterable<String>? savedMediaPaths]) {
     _didSaveSuccessfully = true;
-    _sessionImportedMedia.clear();
+    if (savedMediaPaths == null) {
+      _sessionImportedMedia.clear();
+    } else {
+      final pathsToRemove = savedMediaPaths.toList(growable: false);
+      _sessionImportedMedia.removeAll(pathsToRemove);
+    }
     notifyListeners();
   }
 }

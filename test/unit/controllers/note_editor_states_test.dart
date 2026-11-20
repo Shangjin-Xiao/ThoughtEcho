@@ -1002,7 +1002,101 @@ void main() {
 
       state.finishSave();
       expect(state.isSaving, isFalse);
+      expect(state.isPersisting, isFalse);
       expect(state.saveProgress, 1.0);
+    });
+
+    test(
+        'markSavedSuccessfully clears submitted media while tracking subsequent imports separately',
+        () {
+      final state = NoteEditorMediaState();
+      state.recordImportedMedia('/tmp/first.png');
+      final submitted = state.sessionImportedMedia.toSet();
+      state.recordImportedMedia('/tmp/in_flight.png');
+
+      state.markSavedSuccessfully(submitted);
+
+      expect(state.didSaveSuccessfully, isTrue);
+      expect(state.unsavedImportedMedia, equals({'/tmp/in_flight.png'}));
+
+      state.recordImportedMedia('/tmp/post_save.png');
+      expect(
+        state.unsavedImportedMedia,
+        equals({'/tmp/in_flight.png', '/tmp/post_save.png'}),
+      );
+    });
+  });
+
+  group('NoteEditorState.markNotePersisted and Metadata Snapshot Tokens', () {
+    test(
+        'markNotePersisted clears dirty flag and updates draftStorageKey and initialPlainText when unchanged',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: true,
+      );
+
+      state.controller.replaceText(0, 0, 'Saved body', null);
+      expect(state.isDirty, isTrue);
+
+      final snapshot = state.captureDocumentSnapshot();
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-1');
+
+      expect(state.isDirty, isFalse);
+      expect(state.restoredFromDraft, isFalse);
+      expect(state.draftStorageKey, 'persisted-id-1');
+      expect(state.initialPlainText, 'Saved body');
+
+      state.dispose();
+    });
+
+    test(
+        'markNotePersisted keeps isDirty true when document changed after snapshot was captured',
+        () {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: false,
+      );
+
+      state.controller.replaceText(0, 0, 'Committed', null);
+      final snapshot = state.captureDocumentSnapshot();
+
+      // User types while persistence is in flight
+      state.controller.replaceText(9, 0, ' extra', null);
+      expect(state.isDirty, isTrue);
+
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-2');
+
+      expect(state.isDirty, isTrue);
+      expect(state.draftStorageKey, 'persisted-id-2');
+      expect(state.initialPlainText, 'Committed');
+
+      // Deleting the in-flight tail back to the persisted baseline marks it clean
+      state.controller.replaceText(9, 6, '', null);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test('metadata snapshot token commits only the persisted baseline', () {
+      final metadata = NoteEditorMetadataState();
+      metadata.setAuthor('Author A');
+      final token = metadata.captureSnapshotToken();
+
+      // Metadata changes while save is in flight
+      metadata.setAuthor('Author B');
+      metadata.commitSnapshotToken(token);
+
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.setAuthor('Author A');
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      metadata.dispose();
     });
   });
 }

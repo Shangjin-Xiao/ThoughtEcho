@@ -90,11 +90,12 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     }
 
     // 创建包含元数据的临时 Quote，为 Agent 提供更丰富的上下文
+    final baseQuote = _editorState.fullInitialQuote ?? widget.initialQuote;
     final tempQuote = Quote(
-      id: widget.initialQuote?.id,
+      id: baseQuote?.id,
       content: plainText,
-      date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
-      dayPeriod: widget.initialQuote?.dayPeriod,
+      date: baseQuote?.date ?? DateTime.now().toIso8601String(),
+      dayPeriod: baseQuote?.dayPeriod,
       sourceAuthor: _metadataState.authorController.text.trim().isNotEmpty
           ? _metadataState.authorController.text.trim()
           : null,
@@ -113,6 +114,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
           initialQuestion: initialQuestion,
         ),
       ),
+      result: _mediaState.didSaveSuccessfully ? true : null,
     );
   }
 }

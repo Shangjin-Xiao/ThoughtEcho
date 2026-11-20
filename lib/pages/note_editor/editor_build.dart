@@ -22,7 +22,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
         child: PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, result) async {
-            if (didPop) {
+            if (didPop || _mediaState.isPersisting) {
               return;
             }
             // 有未保存的内容，提示用户
@@ -32,7 +32,10 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                 // 没有未保存的更改，安全退出并清理草稿
                 await _clearDraft();
                 if (context.mounted) {
-                  Navigator.pop(context);
+                  Navigator.pop(
+                    context,
+                    _mediaState.didSaveSuccessfully ? true : null,
+                  );
                 }
               }
               return;
@@ -70,7 +73,10 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                 // 用户选择放弃更改，清理草稿
                 await _clearDraft();
                 if (context.mounted) {
-                  Navigator.pop(context);
+                  Navigator.pop(
+                    context,
+                    _mediaState.didSaveSuccessfully ? true : null,
+                  );
                 }
               }
             } else if (dialogResult == 'save') {
