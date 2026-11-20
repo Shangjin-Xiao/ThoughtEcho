@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -23,10 +24,33 @@ const _uuid = Uuid();
 
 /// Simplified send provider for ThoughtEcho
 /// Based on LocalSend's send_provider but with minimal dependencies
+class _NonRetriableUploadException implements Exception {
+  final String message;
+  const _NonRetriableUploadException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class LocalSendProvider {
+  final Duration retryBaseDelay;
+  int? localPort;
   final Map<String, SendSession> _sessions = {};
   final Map<String, http.Client> _activeClients = {};
   final Set<String> _cancelledSessions = {};
+
+  LocalSendProvider({
+    this.localPort,
+    this.retryBaseDelay = const Duration(seconds: 1),
+  });
+
+  /// Extract a safe protocol basename across POSIX and Windows path styles.
+  static String extractFileName(String filePath) {
+    if (Platform.isWindows || filePath.contains('\\')) {
+      return p.windows.basename(filePath);
+    }
+    return p.basename(filePath);
+  }
 
   /// Start a file transfer session
   Future<String> startSession({
@@ -46,11 +70,13 @@ class LocalSendProvider {
     }
 
     // Create session
+    final effectiveLocalPort = localPort;
     final session = SendSession(
       sessionId: sessionId,
       target: target,
       files: files,
       status: SessionStatus.waiting,
+      localPort: effectiveLocalPort,
     );
 
     _sessions[sessionId] = session;
@@ -61,111 +87,35 @@ class LocalSendProvider {
       await _handshakeWithTarget(target, sessionId);
       _throwIfCancelled(sessionId);
 
-      // Prepare upload request
-      final requestDto = PrepareUploadRequestDto(
-        info: await _buildInfoRegisterDto(),
-        files: {
-          for (int i = 0; i < files.length; i++)
-            'file_$i': FileDto(
-              id: 'file_$i',
-              fileName: files[i].path.split('/').last,
-              size: await _ensureStableFileSize(files[i]),
-              fileType: FileType.other,
-              hash: null,
-              preview: null,
-              legacy: target.version == '1.0',
-              metadata: null,
-            ),
-        },
+      final filesMap = <String, File>{
+        for (int i = 0; i < files.length; i++) 'file_$i': files[i],
+      };
+      final responseDto = await _prepareUploadForFiles(
+        sessionId,
+        target,
+        filesMap,
+        localPort: effectiveLocalPort,
       );
 
-      // Send prepare upload request with timeout and retry
-      final url = ApiRoute.prepareUpload.target(target);
-      logInfo(
-        'send_prepare target=${target.ip}:${target.port} url=$url session=$sessionId',
-        source: 'LocalSend',
+      // Update session with response
+      _sessions[sessionId] = session.copyWith(
+        status: SessionStatus.sending,
+        remoteSessionId: responseDto.sessionId,
+        fileTokens: responseDto.files,
       );
+      _throwIfCancelled(sessionId);
 
-      final client = http.Client();
-      _activeClients[sessionId] = client;
-      try {
-        final requestBody =
-            await Isolate.run(() => jsonEncode(requestDto.toJson()));
-        http.Response response = await client
-            .post(
-              Uri.parse(url),
-              headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'ThoughtEcho/1.0',
-              },
-              body: requestBody,
-            )
-            .timeout(const Duration(seconds: 30));
+      // Start file uploads with progress
+      await _uploadFiles(sessionId, onProgress: onProgress);
 
-        // Retry once with v1 route if server responded with 404 (version mismatch)
-        if (response.statusCode == 404) {
-          final fallbackUrl = ApiRoute.prepareUpload.targetRaw(
-            target.ip ?? '127.0.0.1',
-            target.port,
-            target.https,
-            '1.0',
-          );
-          logInfo('v2 route 404, trying v1 route: $fallbackUrl',
-              source: 'LocalSend');
-          response = await client
-              .post(
-                Uri.parse(fallbackUrl),
-                headers: {
-                  'Content-Type': 'application/json',
-                  'User-Agent': 'ThoughtEcho/1.0',
-                },
-                body: requestBody,
-              )
-              .timeout(const Duration(seconds: 30));
-        }
-
-        logDebug(
-          'prepare_resp status=${response.statusCode} body=${_summarizeBody(response.body, maxLength: 50)}',
-          source: 'LocalSend',
-        );
-
-        if (response.statusCode == 200) {
-          final responseBody = response.body;
-          final responseDto = await Isolate.run(() {
-            final map = jsonDecode(responseBody) as Map<String, dynamic>;
-            return PrepareUploadResponseDto.fromJson(map);
-          });
-
-          // Update session with response
-          _sessions[sessionId] = session.copyWith(
-            status: SessionStatus.sending,
-            remoteSessionId: responseDto.sessionId,
-            fileTokens: responseDto.files,
-          );
-          _throwIfCancelled(sessionId);
-
-          // Start file uploads with progress
-          await _uploadFiles(sessionId, onProgress: onProgress);
-
-          return sessionId;
-        } else {
-          throw Exception(
-            'Failed to prepare upload: ${response.statusCode} - ${_summarizeBody(response.body)}',
-          );
-        }
-      } finally {
-        if (identical(_activeClients[sessionId], client)) {
-          _activeClients.remove(sessionId);
-        }
-        client.close();
-      }
+      return sessionId;
     } catch (e) {
       if (_cancelledSessions.contains(sessionId)) {
-        _sessions[sessionId] = session.copyWith(
+        _sessions[sessionId] = (_sessions[sessionId] ?? session).copyWith(
           status: SessionStatus.canceledBySender,
         );
       } else {
-        _sessions[sessionId] = session.copyWith(
+        _sessions[sessionId] = (_sessions[sessionId] ?? session).copyWith(
           status: SessionStatus.finishedWithErrors,
           errorMessage: e.toString(),
         );
@@ -174,13 +124,114 @@ class LocalSendProvider {
     }
   }
 
+  Future<PrepareUploadResponseDto> _prepareUploadForFiles(
+    String sessionId,
+    Device target,
+    Map<String, File> filesMap, {
+    int? localPort,
+  }) async {
+    final requestDto = PrepareUploadRequestDto(
+      info: await _buildInfoRegisterDto(localPort: localPort),
+      files: {
+        for (final entry in filesMap.entries)
+          entry.key: FileDto(
+            id: entry.key,
+            fileName: extractFileName(entry.value.path),
+            size: await _ensureStableFileSize(entry.value),
+            fileType: FileType.other,
+            hash: null,
+            preview: null,
+            legacy: target.version == '1.0',
+            metadata: null,
+          ),
+      },
+    );
+
+    _throwIfCancelled(sessionId);
+
+    final url = ApiRoute.prepareUpload.target(target);
+    logInfo(
+      'send_prepare target=${target.ip}:${target.port} url=$url session=$sessionId',
+      source: 'LocalSend',
+    );
+
+    final client = http.Client();
+    _activeClients[sessionId] = client;
+    try {
+      final requestBody =
+          await Isolate.run(() => jsonEncode(requestDto.toJson()));
+      http.Response response = await client
+          .post(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'ThoughtEcho/1.0',
+            },
+            body: requestBody,
+          )
+          .timeout(const Duration(seconds: 30));
+
+      // Retry once with v1 route if server responded with 404 (version mismatch)
+      if (response.statusCode == 404) {
+        final fallbackUrl = ApiRoute.prepareUpload.targetRaw(
+          target.ip ?? '127.0.0.1',
+          target.port,
+          target.https,
+          '1.0',
+        );
+        logInfo('v2 route 404, trying v1 route: $fallbackUrl',
+            source: 'LocalSend');
+        response = await client
+            .post(
+              Uri.parse(fallbackUrl),
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'ThoughtEcho/1.0',
+              },
+              body: requestBody,
+            )
+            .timeout(const Duration(seconds: 30));
+      }
+
+      logDebug(
+        'prepare_resp status=${response.statusCode} body=${_summarizeBody(response.body, maxLength: 50)}',
+        source: 'LocalSend',
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = response.body;
+        return await Isolate.run(() {
+          final map = jsonDecode(responseBody) as Map<String, dynamic>;
+          return PrepareUploadResponseDto.fromJson(map);
+        });
+      }
+
+      final summarized = _summarizeBody(response.body);
+      final status = response.statusCode;
+      final isExplicitRejection = response.body.contains('接收端已拒绝');
+      final isNonRetriableStatus =
+          status < 500 && status != 408 && status != 429;
+      if (isExplicitRejection || isNonRetriableStatus) {
+        throw _NonRetriableUploadException(
+          'Failed to prepare upload: $status - $summarized',
+        );
+      }
+      throw Exception('Failed to prepare upload: $status - $summarized');
+    } finally {
+      if (identical(_activeClients[sessionId], client)) {
+        _activeClients.remove(sessionId);
+      }
+      client.close();
+    }
+  }
+
   /// Upload files for a session with enhanced error handling and progress tracking
   Future<void> _uploadFiles(
     String sessionId, {
     void Function(int, int)? onProgress,
   }) async {
-    final session = _sessions[sessionId];
-    if (session == null) return;
+    final initialSession = _sessions[sessionId];
+    if (initialSession == null) return;
 
     try {
       // 计算总大小 (分批并发获取，避免 I/O 峰值)
@@ -189,8 +240,9 @@ class LocalSendProvider {
 
       // 只统计拥有 token 的文件，与后续上传保持一致
       final filesToUpload = <File>[
-        for (int i = 0; i < session.files.length; i++)
-          if (session.fileTokens?['file_$i'] != null) session.files[i],
+        for (int i = 0; i < initialSession.files.length; i++)
+          if (initialSession.fileTokens?['file_$i'] != null)
+            initialSession.files[i],
       ];
 
       for (int i = 0; i < filesToUpload.length; i += batchSize) {
@@ -203,12 +255,14 @@ class LocalSendProvider {
         }));
         totalSize += sizes.fold<int>(0, (sum, size) => sum + size);
       }
-      int sentBytes = 0;
-      for (int i = 0; i < session.files.length; i++) {
+      int completedBytes = 0;
+      int maxReportedBytes = 0;
+      for (int i = 0; i < initialSession.files.length; i++) {
         _throwIfCancelled(sessionId);
-        final file = session.files[i];
+        final currentSession = _sessions[sessionId] ?? initialSession;
+        final file = currentSession.files[i];
         final fileId = 'file_$i';
-        final token = session.fileTokens?[fileId];
+        final token = currentSession.fileTokens?[fileId];
 
         if (token == null) {
           logWarning('Skipping file $fileId: no token', source: 'LocalSend');
@@ -221,35 +275,44 @@ class LocalSendProvider {
         }
 
         final fileSize = await file.length();
-        final fileName = file.path.split('/').last;
+        final fileName = extractFileName(file.path);
         logInfo('Preparing to upload file: $fileName ($fileSize bytes)',
             source: 'LocalSend');
 
-        // Upload file with retry mechanism
+        // Upload file with retry mechanism (re-prepares fresh token on retry)
         await _uploadSingleFile(
           sessionId,
-          session,
+          i,
           fileId,
           token,
           file,
           fileSize,
-          onChunk: (c) {
-            sentBytes += c;
+          onAttemptProgress: (attemptSent) {
             if (onProgress != null) {
-              onProgress(sentBytes, totalSize == 0 ? 1 : totalSize);
+              final nextReported = completedBytes + attemptSent;
+              if (nextReported > maxReportedBytes) {
+                maxReportedBytes = nextReported;
+                onProgress(
+                  maxReportedBytes,
+                  totalSize == 0 ? 1 : totalSize,
+                );
+              }
             }
           },
         );
+        completedBytes += fileSize;
       }
 
       // Mark as completed
       _throwIfCancelled(sessionId);
-      _sessions[sessionId] = session.copyWith(status: SessionStatus.finished);
+      final latest = _sessions[sessionId] ?? initialSession;
+      _sessions[sessionId] = latest.copyWith(status: SessionStatus.finished);
       logInfo('All files uploaded for session: $sessionId',
           source: 'LocalSend');
     } catch (e) {
       logError('File upload failed: $e', source: 'LocalSend');
-      _sessions[sessionId] = session.copyWith(
+      final latest = _sessions[sessionId] ?? initialSession;
+      _sessions[sessionId] = latest.copyWith(
         status: SessionStatus.finishedWithErrors,
         errorMessage: e.toString(),
       );
@@ -257,34 +320,72 @@ class LocalSendProvider {
     }
   }
 
-  /// Upload a single file with retry mechanism
+  /// Upload a single file with retry mechanism.
+  ///
+  /// Because the receiver consumes each single-use token before any async I/O,
+  /// retries re-prepare the remaining files to acquire a fresh session/token.
   Future<void> _uploadSingleFile(
     String sessionId,
-    SendSession session,
+    int fileIndex,
     String fileId,
-    String token,
+    String initialToken,
     File file,
     int fileSize, {
-    void Function(int chunkBytes)? onChunk,
+    void Function(int attemptSentBytes)? onAttemptProgress,
   }) async {
     const maxRetries = 3;
     int attempt = 0;
+    final fileName = extractFileName(file.path);
+    var activeSession = _sessions[sessionId]!;
+    var activeRemoteSessionId = activeSession.remoteSessionId;
+    var activeToken = initialToken;
 
     while (attempt < maxRetries) {
       _throwIfCancelled(sessionId);
       http.Client? client;
       try {
+        if (attempt > 0) {
+          final previousRemoteId = activeRemoteSessionId;
+          if (previousRemoteId != null) {
+            unawaited(_notifyCancellation(activeSession, previousRemoteId));
+          }
+          final remainingFiles = <String, File>{
+            for (int j = fileIndex; j < activeSession.files.length; j++)
+              'file_$j': activeSession.files[j],
+          };
+          final rePrepared = await _prepareUploadForFiles(
+            sessionId,
+            activeSession.target,
+            remainingFiles,
+            localPort: activeSession.localPort,
+          );
+          _throwIfCancelled(sessionId);
+          final refreshedToken = rePrepared.files[fileId];
+          if (refreshedToken == null || refreshedToken.isEmpty) {
+            throw _NonRetriableUploadException(
+              'Missing upload token after re-prepare for $fileId',
+            );
+          }
+          activeSession = activeSession.copyWith(
+            remoteSessionId: rePrepared.sessionId,
+            fileTokens: rePrepared.files,
+          );
+          _sessions[sessionId] = activeSession;
+          activeRemoteSessionId = rePrepared.sessionId;
+          activeToken = refreshedToken;
+        }
+
         // 构建带查询参数的URL
         var url = ApiRoute.upload.target(
-          session.target,
+          activeSession.target,
           query: {
-            'sessionId': session.remoteSessionId!,
+            'sessionId': activeRemoteSessionId!,
             'fileId': fileId,
-            'token': token,
+            'token': activeToken,
           },
         );
         logInfo(
-          'Uploading file to: $url (file: ${file.path.split('/').last}, attempt: ${attempt + 1}/$maxRetries)',
+          'Uploading file to: $url (file: $fileName, attempt: ${attempt + 1}/$maxRetries)',
           source: 'LocalSend',
         );
 
@@ -292,11 +393,13 @@ class LocalSendProvider {
         request.headers['User-Agent'] = 'ThoughtEcho/1.0';
 
         // 构建带进度的流
+        int attemptSent = 0;
         final stream = file.openRead().transform<List<int>>(
           StreamTransformer.fromHandlers(
             handleData: (List<int> data, EventSink<List<int>> sink) {
               sink.add(data);
-              onChunk?.call(data.length);
+              attemptSent += data.length;
+              onAttemptProgress?.call(attemptSent);
             },
           ),
         );
@@ -304,7 +407,7 @@ class LocalSendProvider {
           'file',
           stream,
           fileSize,
-          filename: file.path.split('/').last,
+          filename: fileName,
         );
         request.files.add(multipart);
 
@@ -316,22 +419,24 @@ class LocalSendProvider {
             );
 
         logDebug(
-          'upload_resp status=${response.statusCode} file=${file.path.split('/').last}',
+          'upload_resp status=${response.statusCode} file=$fileName',
           source: 'LocalSend',
         );
 
         if (response.statusCode == 404) {
           // Try legacy v1 route if needed
           url =
-              '${ApiRoute.upload.targetRaw(session.target.ip ?? '127.0.0.1', session.target.port, session.target.https, '1.0')}?sessionId=${Uri.encodeQueryComponent(session.remoteSessionId!)}&fileId=$fileId&token=$token';
+              '${ApiRoute.upload.targetRaw(activeSession.target.ip ?? '127.0.0.1', activeSession.target.port, activeSession.target.https, '1.0')}?sessionId=${Uri.encodeQueryComponent(activeRemoteSessionId)}&fileId=$fileId&token=$activeToken';
           logInfo('v2 upload 404, trying v1 route: $url', source: 'LocalSend');
           final legacyReq = http.MultipartRequest('POST', Uri.parse(url));
           legacyReq.headers['User-Agent'] = 'ThoughtEcho/1.0';
+          int legacyAttemptSent = 0;
           final legacyStream = file.openRead().transform<List<int>>(
             StreamTransformer.fromHandlers(
               handleData: (List<int> data, EventSink<List<int>> sink) {
                 sink.add(data);
-                onChunk?.call(data.length);
+                legacyAttemptSent += data.length;
+                onAttemptProgress?.call(legacyAttemptSent);
               },
             ),
           );
@@ -340,7 +445,7 @@ class LocalSendProvider {
               'file',
               legacyStream,
               fileSize,
-              filename: file.path.split('/').last,
+              filename: fileName,
             ),
           );
           final legacyResp = await client.send(legacyReq).timeout(
@@ -351,15 +456,25 @@ class LocalSendProvider {
             return;
           } else {
             final respBody = await legacyResp.stream.bytesToString();
+            final legacyStatus = legacyResp.statusCode;
+            final legacyRetriable = legacyStatus >= 500 ||
+                legacyStatus == 408 ||
+                legacyStatus == 429;
+            final summarizedLegacy = _summarizeBody(respBody);
+            if (!legacyRetriable || _isPermanentValidationFailure(respBody)) {
+              throw _NonRetriableUploadException(
+                'Legacy upload failed with status $legacyStatus: $summarizedLegacy',
+              );
+            }
             throw Exception(
-              'Legacy upload failed with status ${legacyResp.statusCode}: ${_summarizeBody(respBody)}',
+              'Legacy upload failed with status $legacyStatus: $summarizedLegacy',
             );
           }
         }
 
         if (response.statusCode == 200) {
           logInfo(
-            'upload_success attempt=${attempt + 1} file=${file.path.split('/').last} size=$fileSize',
+            'upload_success attempt=${attempt + 1} file=$fileName size=$fileSize',
             source: 'LocalSend',
           );
           return; // Success
@@ -368,23 +483,28 @@ class LocalSendProvider {
         final status = response.statusCode;
         final retriable = status >= 500 || status == 408 || status == 429;
         final summarizedBody = _summarizeBody(responseBody);
-        if (!retriable) {
-          throw Exception('Non-retriable status $status: $summarizedBody');
+        if (!retriable || _isPermanentValidationFailure(responseBody)) {
+          throw _NonRetriableUploadException(
+            'Non-retriable status $status: $summarizedBody',
+          );
         }
         throw Exception('Retriable status $status: $summarizedBody');
       } catch (e) {
         if (_cancelledSessions.contains(sessionId)) {
           throw StateError('发送已取消');
         }
+        if (e is _NonRetriableUploadException) {
+          rethrow;
+        }
         attempt++;
         logWarning(
-          'upload_retry attempt=$attempt file=${file.path.split('/').last} error=$e',
+          'upload_retry attempt=$attempt file=$fileName error=$e',
           source: 'LocalSend',
         );
 
         if (attempt >= maxRetries) {
           logError(
-            'upload_give_up file=${file.path.split('/').last} error=$e',
+            'upload_give_up file=$fileName error=$e',
             source: 'LocalSend',
           );
           throw Exception(
@@ -393,7 +513,7 @@ class LocalSendProvider {
         }
 
         // Exponential backoff (cap 8s)
-        final delay = Duration(seconds: 1 << (attempt - 1));
+        final delay = retryBaseDelay * (1 << (attempt - 1));
         await Future.delayed(
           delay > const Duration(seconds: 8)
               ? const Duration(seconds: 8)
@@ -406,6 +526,12 @@ class LocalSendProvider {
         client?.close();
       }
     }
+  }
+
+  bool _isPermanentValidationFailure(String body) {
+    return body.contains('Invalid file name') ||
+        body.contains('Blocked file type') ||
+        body.contains('Invalid file size');
   }
 
   void _throwIfCancelled(String sessionId) {
@@ -524,15 +650,18 @@ class LocalSendProvider {
   }
 
   /// Build a stable sender info to be compatible with LocalSend
-  Future<InfoRegisterDto> _buildInfoRegisterDto() async {
+  Future<InfoRegisterDto> _buildInfoRegisterDto({int? localPort}) async {
     final stableFingerprint = await DeviceIdentityManager.I.getFingerprint();
+    final validPort = (localPort != null && localPort > 0 && localPort <= 65535)
+        ? localPort
+        : null;
     return InfoRegisterDto(
       alias: 'ThoughtEcho',
       version: protocolVersion,
       deviceModel: 'ThoughtEcho App',
       deviceType: DeviceType.mobile,
       fingerprint: stableFingerprint,
-      port: defaultPort,
+      port: validPort,
       protocol: ProtocolType.http,
       download: true,
     );
@@ -566,6 +695,7 @@ class SendSession {
   final SessionStatus status;
   final Map<String, String>? fileTokens;
   final String? errorMessage;
+  final int? localPort;
 
   const SendSession({
     required this.sessionId,
@@ -575,6 +705,7 @@ class SendSession {
     required this.status,
     this.fileTokens,
     this.errorMessage,
+    this.localPort,
   });
 
   SendSession copyWith({
@@ -585,6 +716,7 @@ class SendSession {
     SessionStatus? status,
     Map<String, String>? fileTokens,
     String? errorMessage,
+    int? localPort,
   }) {
     return SendSession(
       sessionId: sessionId ?? this.sessionId,
@@ -594,6 +726,7 @@ class SendSession {
       status: status ?? this.status,
       fileTokens: fileTokens ?? this.fileTokens,
       errorMessage: errorMessage ?? this.errorMessage,
+      localPort: localPort ?? this.localPort,
     );
   }
 }

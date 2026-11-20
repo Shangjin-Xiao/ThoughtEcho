@@ -2,6 +2,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,10 +15,11 @@ import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/services/api_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:thoughtecho/utils/mmkv_binary_reader.dart';
 
 import '../../test_harness.dart';
 
@@ -420,7 +422,7 @@ void main() {
       test('首次安装种下信笺', () async {
         // setUp 里的 create() 走的正是首次安装分支。
         expect(
-          MMKVService().getString(ThemeStyle.storageKey),
+          AppPreferencesService().getString(ThemeStyle.storageKey),
           ThemeStyle.freshInstallStyle.name,
         );
         expect(ThemeStyle.freshInstallStyle, ThemeStyle.paper);
@@ -436,26 +438,29 @@ void main() {
       });
 
       test('老用户不会被种上风格', () async {
-        await MMKVService().remove(ThemeStyle.storageKey);
-        await MMKVService().setBool('app_installed_v2', true);
-
-        await SettingsService.create();
-
-        expect(MMKVService().getString(ThemeStyle.storageKey), isNull);
-      });
-
-      test('已经有风格取值时不覆盖', () async {
-        // 从备份恢复出来的取值也是用户自己选的，覆盖掉就是替他改外观。
-        await MMKVService().setString(
-          ThemeStyle.storageKey,
-          ThemeStyle.plain.name,
-        );
-        await MMKVService().remove('app_installed_v2');
+        await AppPreferencesService().remove(ThemeStyle.storageKey);
+        await AppPreferencesService().setBool('app_installed_v2', true);
 
         await SettingsService.create();
 
         expect(
-          MMKVService().getString(ThemeStyle.storageKey),
+          AppPreferencesService().getString(ThemeStyle.storageKey),
+          isNull,
+        );
+      });
+
+      test('已经有风格取值时不覆盖', () async {
+        // 从备份恢复出来的取值也是用户自己选的，覆盖掉就是替他改外观。
+        await AppPreferencesService().setString(
+          ThemeStyle.storageKey,
+          ThemeStyle.plain.name,
+        );
+        await AppPreferencesService().remove('app_installed_v2');
+
+        await SettingsService.create();
+
+        expect(
+          AppPreferencesService().getString(ThemeStyle.storageKey),
           ThemeStyle.plain.name,
         );
       });
@@ -477,14 +482,14 @@ void main() {
       test('读不到已读版本时，用 sentryDisclosureShown 推基线', () async {
         // 存量用户第一次升上来就是这个状态：字段是这一版才加的，一定读不到。
         await settingsService.setSentryDisclosureShown(true);
-        await MMKVService().remove(key);
+        await AppPreferencesService().remove(key);
         expect(
           settingsService.lastSeenReleaseVersion,
           ReleaseHighlights.sentryDisclosureVersion,
         );
 
         await settingsService.setSentryDisclosureShown(false);
-        await MMKVService().remove(key);
+        await AppPreferencesService().remove(key);
         expect(
           settingsService.lastSeenReleaseVersion,
           ReleaseHighlights.earliestVersion,
@@ -493,7 +498,7 @@ void main() {
 
       test('空串按「没记过」处理，同样走兜底', () async {
         await settingsService.setSentryDisclosureShown(true);
-        await MMKVService().setString(key, '');
+        await AppPreferencesService().setString(key, '');
 
         expect(
           settingsService.lastSeenReleaseVersion,
@@ -542,35 +547,50 @@ void main() {
     );
 
     test(
-        'legacy multi-provider API keys in MMKV or SharedPreferences should migrate to APIKeyManager and scrub',
+        'legacy multi-provider API keys in MMKV binary file should migrate through AppPreferencesService to APIKeyManager and scrub',
         () async {
-      final mmkv = MMKVService();
+      final tempDir = await TestHarness.createTempDirectory(
+        'settings_mmkv_key',
+      );
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final legacyMultiJson = json.encode({
+        'currentProviderId': 'openai',
+        'providers': [
+          {
+            'id': 'openai',
+            'name': 'OpenAI',
+            'apiKey': 'sk-legacy-openai-key-12345',
+            'apiUrl': 'https://api.openai.com/v1',
+            'model': 'gpt-4o',
+            'isEnabled': true,
+          },
+        ],
+      });
+
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('multi_ai_settings', legacyMultiJson);
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      SharedPreferences.setMockInitialValues({});
+      final appPrefs = AppPreferencesService()
+        ..resetForTesting()
+        ..configureForTesting(
+          candidateMmkvFiles: [mmkvPath],
+          candidateDbPaths: const [],
+        );
+      await appPrefs.init();
       final prefs = await SharedPreferences.getInstance();
 
-      final legacyMultiJson = '''
-      {
-        "currentProviderId": "openai",
-        "providers": [
-          {
-            "id": "openai",
-            "name": "OpenAI",
-            "apiKey": "sk-legacy-openai-key-12345",
-            "apiUrl": "https://api.openai.com/v1",
-            "model": "gpt-4o",
-            "isEnabled": true
-          }
-        ]
-      }
-      ''';
-
-      await mmkv.setString('multi_ai_settings', legacyMultiJson);
-      await prefs.setString('multi_ai_settings', legacyMultiJson);
       addTearDown(() async {
-        await mmkv.remove('multi_ai_settings');
-        await mmkv.remove('ai_settings');
-        await mmkv.remove('ai_auto_enable_pending_v1');
+        await appPrefs.remove('multi_ai_settings');
+        await appPrefs.remove('ai_settings');
+        await appPrefs.remove('ai_auto_enable_pending_v1');
         await prefs.remove('multi_ai_settings');
         await prefs.remove('ai_settings');
+        appPrefs.resetForTesting();
+        await TestHarness.deleteTempDirectory(tempDir);
       });
 
       final rebuiltService = await SettingsService.create();
@@ -578,18 +598,20 @@ void main() {
 
       expect(key, equals('sk-legacy-openai-key-12345'));
 
-      final storedMmkv = mmkv.getString('multi_ai_settings') ?? '';
+      final storedAppPrefs = appPrefs.getString('multi_ai_settings') ?? '';
       final storedPrefs = prefs.getString('multi_ai_settings') ?? '';
 
-      expect(storedMmkv.contains('sk-legacy-openai-key-12345'), isFalse);
+      expect(storedAppPrefs.contains('sk-legacy-openai-key-12345'), isFalse);
       expect(storedPrefs.contains('sk-legacy-openai-key-12345'), isFalse);
       expect(rebuiltService.multiAISettings.providers.first.apiKey, isEmpty);
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
     });
 
     test(
         'SharedPreferences-only legacy multi_ai_settings should be loaded and migrated without being overwritten',
         () async {
-      final mmkv = MMKVService();
+      final mmkv = AppPreferencesService();
       final prefs = await SharedPreferences.getInstance();
 
       final legacyPrefsJson = '''
@@ -660,9 +682,9 @@ void main() {
       };
 
       addTearDown(() async {
-        await MMKVService().remove('multi_ai_settings');
-        await MMKVService().remove('ai_settings');
-        await MMKVService().remove('ai_auto_enable_pending_v1');
+        await AppPreferencesService().remove('multi_ai_settings');
+        await AppPreferencesService().remove('ai_settings');
+        await AppPreferencesService().remove('ai_auto_enable_pending_v1');
       });
 
       await settingsService.restoreAllSettingsFromBackup(backupData);
@@ -673,7 +695,8 @@ void main() {
       final openaiKey = await APIKeyManager().getProviderApiKey('openai');
       expect(openaiKey, equals('sk-backup-legacy-key'));
 
-      final mmkvMulti = MMKVService().getString('multi_ai_settings') ?? '';
+      final mmkvMulti =
+          AppPreferencesService().getString('multi_ai_settings') ?? '';
       expect(mmkvMulti.contains('sk-backup-deepseek-key-67890'), isFalse);
       expect(settingsService.aiSettings.apiKey, isEmpty);
     });
@@ -697,8 +720,8 @@ void main() {
         );
         await APIKeyManager().saveProviderApiKey(providerId, savedKey);
         addTearDown(() async {
-          await MMKVService().remove('multi_ai_settings');
-          await MMKVService().remove('ai_auto_enable_pending_v1');
+          await AppPreferencesService().remove('multi_ai_settings');
+          await AppPreferencesService().remove('ai_auto_enable_pending_v1');
         });
       });
 
@@ -891,7 +914,7 @@ void main() {
 
       // Non-string device_id should be ignored
       await settingsService.restoreAllSettingsFromBackup({'device_id': true});
-      expect(MMKVService().getString('device_id_v1'), isNot('true'));
+      expect(AppPreferencesService().getString('device_id_v1'), isNot('true'));
 
       // 3. Generic Map<dynamic, dynamic> payloads for nested settings
       final Map<dynamic, dynamic> genericPayload = {
@@ -923,7 +946,7 @@ void main() {
 
       await settingsService.restoreAllSettingsFromBackup(backupPayload);
 
-      final mmkv = MMKVService();
+      final mmkv = AppPreferencesService();
       expect(mmkv.getString('theme_style'), equals('plain'));
       expect(mmkv.getString('theme_accent_plain'), equals('celadon'));
       expect(mmkv.getInt('custom_color'), equals(0xff9c27b0));
@@ -945,7 +968,7 @@ void main() {
     });
 
     test('restore removes explicitly null theme preferences', () async {
-      final mmkv = MMKVService();
+      final mmkv = AppPreferencesService();
       await mmkv.setString('theme_style', 'paper');
       await mmkv.setString('theme_accent_material', 'emerald');
       await mmkv.setString('theme_accent_paper', 'bamboo');
@@ -976,7 +999,7 @@ void main() {
         'theme_accent_paper': ' bamboo ',
         'custom_color': 42.0,
       });
-      final mmkv = MMKVService();
+      final mmkv = AppPreferencesService();
       expect(mmkv.getString('theme_style'), ThemeStyle.defaultStyle.name);
       expect(mmkv.getString('theme_accent_paper'), 'bamboo');
       expect(mmkv.getInt('custom_color'), 42);
@@ -985,7 +1008,7 @@ void main() {
     test(
       'restore ignores invalid theme values without erasing preferences',
       () async {
-        final mmkv = MMKVService();
+        final mmkv = AppPreferencesService();
         await mmkv.setString('theme_style', 'paper');
         await mmkv.setString('theme_accent_paper', 'bamboo');
         await mmkv.setInt('custom_color', 42);
@@ -1018,7 +1041,7 @@ void main() {
       test(
         'restore preserves push settings for invalid payload ${invalidPush.key}',
         () async {
-          final mmkv = MMKVService();
+          final mmkv = AppPreferencesService();
           const saved = '{"enabled":false,"pushMode":0}';
           await mmkv.setString('smart_push_settings_v2', saved);
           await settingsService.restoreAllSettingsFromBackup({
@@ -1033,14 +1056,19 @@ void main() {
       await settingsService.restoreAllSettingsFromBackup({
         'smart_push_settings_v2': ' {"enabled":false,"pushMode":1} ',
       });
-      expect(json.decode(MMKVService().getString('smart_push_settings_v2')!), {
-        'enabled': false,
-        'pushMode': 1,
-      });
+      expect(
+        json.decode(
+          AppPreferencesService().getString('smart_push_settings_v2')!,
+        ),
+        {'enabled': false, 'pushMode': 1},
+      );
     });
 
     test('backup preserves malformed push JSON for lossless export', () async {
-      await MMKVService().setString('smart_push_settings_v2', '{invalid-json');
+      await AppPreferencesService().setString(
+        'smart_push_settings_v2',
+        '{invalid-json',
+      );
       final backup = settingsService.getAllSettingsForBackup();
       expect(backup['smart_push_settings_v2'], '{invalid-json');
     });
@@ -1048,7 +1076,7 @@ void main() {
     test(
         'getAllSettingsForBackup and restoreAllSettingsFromBackup full round-trip preserves theme and smart push state',
         () async {
-      final mmkv = MMKVService();
+      final mmkv = AppPreferencesService();
       await mmkv.setString(ThemeStyle.storageKey, 'paper');
       await mmkv.setString('theme_accent_paper', 'umber');
       await mmkv.setInt('custom_color', 0xff00bcd4);
@@ -1091,9 +1119,9 @@ void main() {
         'restoreAllSettingsFromBackup should safely handle nested Map<dynamic, dynamic> providers and sanitize invalid provider ids and api keys',
         () async {
       addTearDown(() async {
-        await MMKVService().remove('multi_ai_settings');
-        await MMKVService().remove('ai_settings');
-        await MMKVService().remove('ai_auto_enable_pending_v1');
+        await AppPreferencesService().remove('multi_ai_settings');
+        await AppPreferencesService().remove('ai_settings');
+        await AppPreferencesService().remove('ai_auto_enable_pending_v1');
         await APIKeyManager().removeProviderApiKey('valid_nested_provider');
         await APIKeyManager().removeProviderApiKey('numeric_key_provider');
         await APIKeyManager().removeProviderApiKey('fallback_key_provider');
@@ -1192,9 +1220,9 @@ void main() {
         'restoreAllSettingsFromBackup should safely handle non-string currentProviderId without crashing',
         () async {
       addTearDown(() async {
-        await MMKVService().remove('multi_ai_settings');
-        await MMKVService().remove('ai_settings');
-        await MMKVService().remove('ai_auto_enable_pending_v1');
+        await AppPreferencesService().remove('multi_ai_settings');
+        await AppPreferencesService().remove('ai_settings');
+        await AppPreferencesService().remove('ai_auto_enable_pending_v1');
         await APIKeyManager().removeProviderApiKey('provider_safe');
       });
 
@@ -1276,7 +1304,7 @@ void main() {
       //
       // 存储在同一个 isolate 里是复用的，setUp 的 create() 未必再走首次安装分支，
       // 所以这里把安装标记清掉重建一次，拿到一个真正「全新安装」的服务。
-      await MMKVService().remove('app_installed_v2');
+      await AppPreferencesService().remove('app_installed_v2');
       final service = await SettingsService.create();
 
       await service.setHasCompletedOnboarding(true);
@@ -1304,7 +1332,7 @@ void main() {
     });
 
     test('自动开启只做一次，用户自己关掉后不会被再打开', () async {
-      await MMKVService().remove('app_installed_v2');
+      await AppPreferencesService().remove('app_installed_v2');
       final service = await SettingsService.create();
       await service.setHasCompletedOnboarding(false);
 
@@ -1401,7 +1429,7 @@ void main() {
 
     group('Error Handling & Resilience Tests', () {
       test('recentCities handles invalid JSON string gracefully', () async {
-        final mmkv = MMKVService();
+        final mmkv = AppPreferencesService();
         await mmkv.setString('recent_cities_json_v1', 'invalid-json{');
 
         expect(settingsService.recentCities, isEmpty);
@@ -1410,7 +1438,7 @@ void main() {
       test(
         'recentCities handles malformed CityInfo JSON items gracefully',
         () async {
-          final mmkv = MMKVService();
+          final mmkv = AppPreferencesService();
           await mmkv.setString('recent_cities_json_v1', '[123, true]');
 
           expect(settingsService.recentCities, isEmpty);
@@ -1420,7 +1448,7 @@ void main() {
       test(
           'SettingsService recovers gracefully when app_settings JSON is corrupted',
           () async {
-        final mmkv = MMKVService();
+        final mmkv = AppPreferencesService();
         await mmkv.setString('app_settings', 'corrupted-app-settings-json{');
 
         final rebuilt = await SettingsService.create();
@@ -1434,7 +1462,7 @@ void main() {
       test(
           'SettingsService recovers gracefully when multi_ai_settings JSON is corrupted',
           () async {
-        final mmkv = MMKVService();
+        final mmkv = AppPreferencesService();
         await mmkv.setString('multi_ai_settings', 'corrupted-multi-ai-json{');
 
         final rebuilt = await SettingsService.create();
@@ -1448,7 +1476,7 @@ void main() {
       test(
           'SettingsService recovers gracefully when local_ai_settings JSON is corrupted',
           () async {
-        final mmkv = MMKVService();
+        final mmkv = AppPreferencesService();
         await mmkv.setString('local_ai_settings', 'corrupted-local-ai-json{');
 
         final rebuilt = await SettingsService.create();

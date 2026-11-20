@@ -5,11 +5,10 @@ import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/database_schema_manager.dart';
 import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
@@ -19,9 +18,10 @@ void main() {
   test('sync backs up each local revision once despite duplicate remote IDs',
       () async {
     await TestHarness.initialize();
-    await MMKVService().init();
-    await SafeMMKV().clear();
-    await MMKVService().setString(
+    final appPrefs = AppPreferencesService();
+    await appPrefs.init();
+    await appPrefs.clear();
+    await appPrefs.setString(
       'webdav_last_sync_time',
       '2026-01-01T00:00:00Z',
     );

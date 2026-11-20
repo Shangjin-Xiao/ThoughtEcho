@@ -1,10 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
-import 'package:thoughtecho/services/webdav_sync_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/services/webdav_sync_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +14,7 @@ void main() {
       MethodChannel('dev.fluttercommunity.plus/connectivity');
 
   final Map<String, String> secureStorage = {};
-  late MMKVService mmkv;
+  late AppPreferencesService appPrefs;
   List<String> mockConnectivityResults = ['wifi'];
 
   setUp(() async {
@@ -25,13 +24,9 @@ void main() {
     // Initialize SharedPreferences
     SharedPreferences.setMockInitialValues({});
 
-    mmkv = MMKVService();
-    await mmkv.init();
-
-    // Clear MMKV config
-    final safeMMKV = SafeMMKV();
-    await safeMMKV.initialize();
-    await safeMMKV.clear();
+    appPrefs = AppPreferencesService();
+    await appPrefs.init();
+    await appPrefs.clear();
 
     // Mock FlutterSecureStorage channel
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

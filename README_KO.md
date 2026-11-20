@@ -65,7 +65,7 @@
 
 ## 🌟 왜 ThoughtEcho인가요?
 
-- 🔒 **로컬 우선 및 프라이버시 보호**: SQLite와 MMKV를 통해 모든 데이터는 100% 사용자 기기 로컬에 저장됩니다. 민감한 노트는 숨김 태그와 생체 인증(지문 / Face ID / Windows Hello)으로 안전하게 보호됩니다. 불필요한 추적이나 강제 클라우드 종속이 없습니다.
+- 🔒 **로컬 우선 및 프라이버시 보호**: 모든 데이터는 SQLite와 SharedPreferences로 기기 로컬에 100% 저장되며, API 키 등 민감한 정보는 flutter_secure_storage로 암호화하여 보관합니다. 민감한 노트는 숨김 태그와 생체 인증(지문 / Face ID / Windows Hello)으로 안전하게 보호됩니다. 불필요한 추적이나 강제 클라우드 종속이 없습니다.
 - 💡 **Thoughter AI 에이전트 & 장기 기억**: OpenAI 호환 멀티 AI 아키텍처(OpenAI, DeepSeek, Ollama, Gemini, Claude, OpenRouter, SiliconFlow 등 지원). 세션을 넘나들며 사용자의 글쓰기 성향을 이해하는 자율형 Thoughter 에이전트와 독립 장기 기억 데이터베이스를 탑재했습니다.
 - ✍️ **풍부한 멀티미디어 & 맥락 기록**: Quill 기반의 풍부한 서식과 멀티미디어 첨부(이미지, 오디오, 비디오). 위치, 날씨, 시간대 등 영감이 떠오른 순간의 맥락을 자동으로 기록합니다.
 - 📊 **주기별 인사이트 & 카드 생성**: AI가 생성하는 주간/월간 회고 인사이트, 연간 결산 보고서, 사고 패턴 분석, 원클릭 명언 공유 카드 생성.
@@ -134,7 +134,7 @@
     </tr>
     <tr>
       <td align="center"><b>스토리지 및 보안</b></td>
-      <td>MMKV (고성능 키-값 캐싱) + flutter_secure_storage (암호화된 API 키 저장)</td>
+      <td>SQLite + SharedPreferences (로컬 저장소 및 환경설정) + flutter_secure_storage (암호화된 API 키 저장)</td>
     </tr>
     <tr>
       <td align="center"><b>멀티 기기 동기화</b></td>

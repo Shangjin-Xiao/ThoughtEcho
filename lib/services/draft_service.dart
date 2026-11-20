@@ -9,7 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../utils/app_logger.dart';
-import '../utils/mmkv_ffi_fix.dart' show kDraftsSqliteMigratedKey;
 import 'app_preferences_service.dart';
 
 /// 笔记草稿持久化服务（基于独立本地 SQLite `drafts.db`）
@@ -25,8 +24,9 @@ class DraftService {
   static const String _databaseDirectoryName = 'drafts';
   static const String _tableName = 'note_drafts';
   static const int _schemaVersion = 1;
-  static const MethodChannel _fileAttributesChannel =
-      MethodChannel('com.shangjin.thoughtecho/file_attributes');
+  static const MethodChannel _fileAttributesChannel = MethodChannel(
+    'com.shangjin.thoughtecho/file_attributes',
+  );
 
   Database? _database;
   String? _testDatabasePath;
@@ -107,10 +107,9 @@ class DraftService {
   Future<void> _excludeFromIosBackupIfNeeded(String targetPath) async {
     if (kIsWeb || !Platform.isIOS) return;
     try {
-      await _fileAttributesChannel.invokeMethod<bool>(
-        'excludeFromBackup',
-        {'path': targetPath},
-      );
+      await _fileAttributesChannel.invokeMethod<bool>('excludeFromBackup', {
+        'path': targetPath,
+      });
     } on MissingPluginException {
       // 测试环境或未注册原生通道时忽略
     } catch (e) {
@@ -214,6 +213,7 @@ class DraftService {
       if (legacyKeys.isNotEmpty) {
         final rowsToInsert = <Map<String, Object?>>[];
         final migratedKeys = <String>[];
+        final seenNormalizedIds = <String>{};
         for (final key in legacyKeys) {
           final raw = prefs.getString(key);
           if (raw == null) {
@@ -238,6 +238,14 @@ class DraftService {
             allMigrated = false;
             logWarning(
               'DraftService: 跳过规范化后 ID 为空的历史草稿键 $key（保留原键）',
+              source: 'DraftService',
+            );
+            continue;
+          }
+          if (!seenNormalizedIds.add(normalizedId)) {
+            allMigrated = false;
+            logWarning(
+              'DraftService: 跳过规范化 ID 冲突的历史草稿键 $key -> $normalizedId（保留原键）',
               source: 'DraftService',
             );
             continue;
@@ -271,11 +279,12 @@ class DraftService {
         }
       }
 
-      if (allMigrated) {
+      final engineMigrated = prefs.getBool(kKvEngineMigratedKey) == true;
+      if (allMigrated && (engineMigrated || legacyKeys.isNotEmpty)) {
         final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
         _hasPendingLegacyDrafts = !flagSaved;
       } else {
-        _hasPendingLegacyDrafts = true;
+        _hasPendingLegacyDrafts = !allMigrated || !engineMigrated;
       }
       _legacyMigrationAttemptedInSession = true;
     } catch (e, stackTrace) {
@@ -329,8 +338,12 @@ class DraftService {
         throw StateError('删除待迁移 KV 草稿键失败: $key');
       }
     }
-    final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
-    _hasPendingLegacyDrafts = !flagSaved;
+    if (prefs.getBool(kKvEngineMigratedKey) == true) {
+      final flagSaved = await prefs.setBool(kDraftsSqliteMigratedKey, true);
+      _hasPendingLegacyDrafts = !flagSaved;
+    } else {
+      _hasPendingLegacyDrafts = false;
+    }
   }
 
   Future<Map<String, dynamic>?> _readPendingKvDraft(String normalizedId) async {
@@ -357,8 +370,9 @@ class DraftService {
     try {
       final prefs = AppPreferencesService();
       await prefs.init();
-      final keys =
-          prefs.getAllKeysStrict().where((k) => k.startsWith('draft_'));
+      final keys = prefs.getAllKeysStrict().where(
+            (k) => k.startsWith('draft_'),
+          );
       for (final key in keys) {
         final normalizedId = _normalizeId(key.substring(6));
         if (normalizedId.isEmpty) continue;
@@ -483,11 +497,7 @@ class DraftService {
       try {
         final normalizedId = _normalizeId(id);
         final db = await _ensureDatabaseAndMigrated();
-        await db.delete(
-          _tableName,
-          where: 'id = ?',
-          whereArgs: [normalizedId],
-        );
+        await db.delete(_tableName, where: 'id = ?', whereArgs: [normalizedId]);
         await _removeMatchingPendingKvDrafts(normalizedId);
         logDebug('草稿已删除: $id (SQLite)');
       } catch (e, stackTrace) {
@@ -666,8 +676,9 @@ class DraftService {
         if (_hasPendingLegacyDrafts) {
           final prefs = AppPreferencesService();
           await prefs.init();
-          final pendingKeys =
-              prefs.getAllKeysStrict().where((k) => k.startsWith('draft_'));
+          final pendingKeys = prefs.getAllKeysStrict().where(
+                (k) => k.startsWith('draft_'),
+              );
           for (final key in pendingKeys) {
             final raw = prefs.getString(key);
             if (raw == null) {

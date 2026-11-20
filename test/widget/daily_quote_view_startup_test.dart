@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/widgets/daily_quote_view.dart';
@@ -23,7 +23,7 @@ void main() {
       final smartPushService = SmartPushService(
         databaseService: databaseService,
         locationService: locationService,
-        mmkvService: MMKVService(),
+        mmkvService: AppPreferencesService(),
       );
 
       await tester.pumpWidget(

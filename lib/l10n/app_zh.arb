@@ -4937,7 +4937,7 @@
   "@mmkvDiagnosticTitle": {
     "description": "Developer settings entry title for MMKV migration and binary parser diagnostics"
   },
-  "mmkvDiagnosticSubtitle": "查看键值迁移状态，比对原生 MMKV、手写二进制解析结果与 SharedPreferences",
+  "mmkvDiagnosticSubtitle": "查看键值迁移状态，比对手写二进制解析结果与 SharedPreferences",
   "@mmkvDiagnosticSubtitle": {
     "description": "Developer settings entry subtitle for MMKV migration and binary parser diagnostics"
   },
@@ -4960,5 +4960,9 @@
   "backupScopeExcludedChatsAndMemory": "AI 对话与记忆档案：AI 聊天记录及智能记忆仅保存在当前设备。",
   "backupScopeExcludedInsightsAndLogs": "周期洞察缓存、孤立文件与运行日志：首页/报告的周期洞察缓存、未被任何笔记引用的残留媒体文件，以及应用诊断日志不会打包。",
   "backupScopeRestoreModeNote": "提示：覆盖还原会恢复笔记、媒体（ZIP）、设置与已保存的 AI 分析报告；智能合并仅合并笔记、标签、媒体（ZIP）和回收站保留天数，保留当前设备的设置与 AI 分析报告。WebDAV 云同步仅同步笔记、标签、删除记录与媒体文件，不同步应用设置与 AI 分析报告。",
-  "settingsTermsOfService": "用户协议"
+  "settingsTermsOfService": "用户协议",
+  "mmkvDiagnosticRerunSuccess": "已重新执行迁移并刷新校验结果",
+  "mmkvDiagnosticConsistencySummaryTitle": "存储一致性比对大盘",
+  "mmkvDiagnosticKeyCountBinarySp": "存储源键总数 (Binary / SP)",
+  "mmkvDiagnosticSpCoverage": "SharedPreferences 迁移覆盖率"
 }

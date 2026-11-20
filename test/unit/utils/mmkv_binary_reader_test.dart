@@ -24,7 +24,7 @@ void main() {
       // 2. Dynamic prefix key (draft_*)
       encoder.writeString('draft_note_123', '{"plainText":"草稿内容"}');
 
-      // 3. StringList encoded as JSON array string (matching MMKVAdapter.setStringList)
+      // 3. StringList encoded as JSON array string (matching legacy MMKV StringList wire format)
       encoder.writeString('favorite_tags', json.encode(['哲学', '思考', 'AI']));
 
       // 4. Booleans
@@ -351,6 +351,97 @@ void main() {
       expect(result.entries['lang'], equals('zh'));
       expect(result.entries['is_active'], isTrue);
       expect(result.entries['counter'], equals(-1));
+    });
+
+    test(
+        'parseFile ignores .migrated.bak by default and falls back only when allowMigratedBackupFallback is true without reading main .crc',
+        () async {
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'paper')
+        ..writeBool('app_installed_v2', true)
+        ..writeInt('custom_color', 0xFF112233);
+
+      final mismatchedMainEncoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'material');
+
+      final tempDir = await Directory.systemTemp.createTemp('mmkv_bak_reader_');
+      try {
+        final originalPath = '${tempDir.path}/mmkv.default';
+        final bakPath = '$originalPath.migrated.bak';
+        await File(bakPath)
+            .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+        // Write a stale main .crc only (no bak .crc) to verify parseFile does not
+        // cross-verify .migrated.bak against the missing main file's .crc.
+        await File('$originalPath.crc')
+            .writeAsBytes(mismatchedMainEncoder.toCrcBytes());
+
+        final defaultResult = await MmkvBinaryReader.parseFile(originalPath);
+        expect(defaultResult.fileExists, isFalse);
+
+        final diagWithoutBakCrc = await MmkvBinaryReader.parseFile(
+          originalPath,
+          allowMigratedBackupFallback: true,
+        );
+        expect(diagWithoutBakCrc.fileExists, isTrue);
+        expect(diagWithoutBakCrc.filePath, equals(bakPath));
+        expect(diagWithoutBakCrc.crcMatched, isNull);
+        expect(diagWithoutBakCrc.entries['theme_style'], equals('paper'));
+        expect(diagWithoutBakCrc.entries['app_installed_v2'], isTrue);
+        expect(diagWithoutBakCrc.entries['custom_color'], equals(0xFF112233));
+
+        await File('$bakPath.crc').writeAsBytes(encoder.toCrcBytes());
+        final diagWithBakCrc = await MmkvBinaryReader.parseFile(
+          originalPath,
+          allowMigratedBackupFallback: true,
+        );
+        expect(diagWithBakCrc.fileExists, isTrue);
+        expect(diagWithBakCrc.filePath, equals(bakPath));
+        expect(diagWithBakCrc.crcMatched, isTrue);
+      } finally {
+        await tempDir.delete(recursive: true);
+      }
+    });
+
+    test(
+        'parseBytes tracks seenKeys and historical plaintext credentials across overwrites and tombstones',
+        () {
+      final overwrittenEncoder = MmkvBinaryEncoder()
+        ..writeString(
+          'ai_settings',
+          '{"apiKey":"sk-old-historical-secret","model":"gpt-4o"}',
+        )
+        ..writeString('ai_settings', '{"apiKey":"","model":"gpt-4o"}')
+        ..writeString('theme_style', 'paper');
+      final overwrittenRes = MmkvBinaryReader.parseBytes(
+        overwrittenEncoder.toFileBytes(minTotalSize: 4096),
+        crcBytes: overwrittenEncoder.toCrcBytes(),
+      );
+      expect(overwrittenRes.hasHistoricalPlaintextCredentials, isTrue);
+      expect(
+        overwrittenRes.seenKeys,
+        containsAll(['ai_settings', 'theme_style']),
+      );
+
+      final tombstonedEncoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-tombstoned-secret"}')
+        ..writeTombstone('provider_api_keys');
+      final tombstonedRes = MmkvBinaryReader.parseBytes(
+        tombstonedEncoder.toFileBytes(minTotalSize: 4096),
+        crcBytes: tombstonedEncoder.toCrcBytes(),
+      );
+      expect(tombstonedRes.hasHistoricalPlaintextCredentials, isTrue);
+      expect(tombstonedRes.tombstonedKeys, contains('provider_api_keys'));
+      expect(tombstonedRes.seenKeys, contains('provider_api_keys'));
+
+      final malformedEncoder = MmkvBinaryEncoder()
+        ..writeString('ai_settings', '{"apiKey":"sk-do-not-leak-warning"');
+      final malformedRes = MmkvBinaryReader.parseBytes(
+        malformedEncoder.toFileBytes(minTotalSize: 4096),
+        crcBytes: malformedEncoder.toCrcBytes(),
+      );
+      expect(malformedRes.hasHistoricalPlaintextCredentials, isTrue);
+      expect(malformedRes.warnings.join('\n'),
+          isNot(contains('sk-do-not-leak-warning')));
     });
   });
 }

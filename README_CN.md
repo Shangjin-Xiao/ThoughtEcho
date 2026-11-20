@@ -144,7 +144,7 @@
     </tr>
     <tr>
       <td align="center"><b>存储与安全</b></td>
-      <td>MMKV (高性能键值缓存), flutter_secure_storage (密钥安全加密存储)</td>
+      <td>SQLite + SharedPreferences (本地存储与偏好设置), flutter_secure_storage (密钥安全加密存储)</td>
     </tr>
     <tr>
       <td align="center"><b>多端同步</b></td>

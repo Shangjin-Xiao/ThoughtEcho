@@ -7,7 +7,6 @@ import 'package:sqflite/sqflite.dart';
 import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
@@ -44,6 +43,8 @@ class _FakeStorageAdapter implements StorageAdapter {
 
   @override
   Future<void> initialize() async {}
+
+  Future<void> reload() async {}
 
   @override
   Future<bool> setString(String key, String value) async {
@@ -291,10 +292,9 @@ void main() {
         () async {
       final adapter = _FakeStorageAdapter();
       AppPreferencesService().resetForTesting();
-      SafeMMKV().configureForTesting(
+      AppPreferencesService().configureForTesting(
         primaryAdapter: adapter,
         candidateMmkvFiles: const [],
-        forceNativeMmkvSupport: false,
       );
       await AppPreferencesService().init();
       addTearDown(() async {
@@ -338,10 +338,9 @@ void main() {
         () async {
       final adapter = _FakeStorageAdapter();
       AppPreferencesService().resetForTesting();
-      SafeMMKV().configureForTesting(
+      AppPreferencesService().configureForTesting(
         primaryAdapter: adapter,
         candidateMmkvFiles: const [],
-        forceNativeMmkvSupport: false,
       );
       await AppPreferencesService().init();
       addTearDown(() async {
@@ -381,10 +380,9 @@ void main() {
         () async {
       final adapter = _FakeStorageAdapter();
       AppPreferencesService().resetForTesting();
-      SafeMMKV().configureForTesting(
+      AppPreferencesService().configureForTesting(
         primaryAdapter: adapter,
         candidateMmkvFiles: const [],
-        forceNativeMmkvSupport: false,
       );
       await AppPreferencesService().init();
       addTearDown(() async {

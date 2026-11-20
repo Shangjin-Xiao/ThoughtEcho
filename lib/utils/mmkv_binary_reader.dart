@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'platform_helper.dart';
 
 /// Value types stored inside a Tencent MMKV v1.3.x data file.
@@ -63,6 +64,8 @@ class MmkvParseResult {
   final int totalRecordsRead;
   final int tombstoneRecordsRead;
   final Set<String> tombstonedKeys;
+  final Set<String> seenKeys;
+  final bool hasHistoricalPlaintextCredentials;
   final List<String> warnings;
   final int parseDurationMicroseconds;
 
@@ -81,6 +84,8 @@ class MmkvParseResult {
     this.totalRecordsRead = 0,
     this.tombstoneRecordsRead = 0,
     this.tombstonedKeys = const <String>{},
+    this.seenKeys = const <String>{},
+    this.hasHistoricalPlaintextCredentials = false,
     required this.warnings,
     required this.parseDurationMicroseconds,
   });
@@ -100,6 +105,9 @@ class MmkvParseResult {
       rawEntries: const {},
       totalRecordsRead: 0,
       tombstoneRecordsRead: 0,
+      tombstonedKeys: const <String>{},
+      seenKeys: const <String>{},
+      hasHistoricalPlaintextCredentials: false,
       warnings: const [],
       parseDurationMicroseconds: 0,
     );
@@ -193,9 +201,7 @@ class MmkvKeySchema {
     'last_backup_timestamp',
   };
 
-  static const Set<String> doubleKeys = {
-    'font_scale',
-  };
+  static const Set<String> doubleKeys = {'font_scale'};
 
   static const Set<String> stringListKeys = {
     'app_logs',
@@ -373,23 +379,42 @@ class MmkvBinaryReader {
   }
 
   /// Parses an `mmkv.default` file from disk along with its sibling `.crc` file if present.
+  ///
+  /// When [allowMigratedBackupFallback] is true (for read-only diagnostics), falls back to
+  /// `<mmkvFilePath>.migrated.bak` and `<mmkvFilePath>.migrated.bak.crc` if the active
+  /// file no longer exists on disk.
   static Future<MmkvParseResult> parseFile(
     String mmkvFilePath, {
     String? crcFilePath,
+    bool allowMigratedBackupFallback = false,
   }) async {
-    final dataBytes = await PlatformHelper.readFileBytesIfExists(mmkvFilePath);
+    var resolvedDataPath = mmkvFilePath;
+    var dataBytes = await PlatformHelper.readFileBytesIfExists(mmkvFilePath);
+    var resolvedCrcPath = crcFilePath ?? '$mmkvFilePath.crc';
+    Uint8List? crcBytes;
+
+    if (dataBytes == null &&
+        allowMigratedBackupFallback &&
+        !mmkvFilePath.endsWith('.migrated.bak')) {
+      final bakPath = '$mmkvFilePath.migrated.bak';
+      dataBytes = await PlatformHelper.readFileBytesIfExists(bakPath);
+      if (dataBytes != null) {
+        resolvedDataPath = bakPath;
+        resolvedCrcPath = crcFilePath ?? '$bakPath.crc';
+        crcBytes = await PlatformHelper.readFileBytesIfExists(resolvedCrcPath);
+      }
+    } else if (dataBytes != null) {
+      crcBytes = await PlatformHelper.readFileBytesIfExists(resolvedCrcPath);
+    }
+
     if (dataBytes == null) {
       return MmkvParseResult.notFound(mmkvFilePath);
     }
 
-    final resolvedCrcPath = crcFilePath ?? '$mmkvFilePath.crc';
-    final crcBytes =
-        await PlatformHelper.readFileBytesIfExists(resolvedCrcPath);
-
     return parseBytes(
       dataBytes,
       crcBytes: crcBytes,
-      filePath: mmkvFilePath,
+      filePath: resolvedDataPath,
     );
   }
 
@@ -467,8 +492,11 @@ class MmkvBinaryReader {
         } else if (crcMeta.lastActualSize > 0 &&
             crcMeta.lastActualSize <= dataBytes.length - 4) {
           // Try falling back to lastActualSize / lastCrcDigest just like MMKV C++ checkLoadCRC()
-          final fallbackCrc =
-              computeCrc32(dataBytes, 4, crcMeta.lastActualSize);
+          final fallbackCrc = computeCrc32(
+            dataBytes,
+            4,
+            crcMeta.lastActualSize,
+          );
           if (fallbackCrc == crcMeta.lastCrcDigest) {
             actualSize = crcMeta.lastActualSize;
             computedCrc32 = fallbackCrc;
@@ -521,6 +549,8 @@ class MmkvBinaryReader {
     int? itemSizeHolder;
     final rawMap = <String, Uint8List>{};
     final tombstoneKeys = <String>{};
+    final seenKeys = <String>{};
+    var hasHistoricalPlaintextCredentials = false;
     var totalRecords = 0;
     var tombstoneRecords = 0;
 
@@ -572,6 +602,7 @@ class MmkvBinaryReader {
         if (valueLen == 0) {
           // Tombstone record (MMKV::removeValueForKey writes a 0-length value holder)
           if (key.isNotEmpty) {
+            seenKeys.add(key);
             rawMap.remove(key);
             tombstoneKeys.add(key);
           }
@@ -579,6 +610,15 @@ class MmkvBinaryReader {
         } else {
           final valueBytes = reader.readBytes(valueLen);
           if (key.isNotEmpty) {
+            seenKeys.add(key);
+            if (!hasHistoricalPlaintextCredentials &&
+                _recordContainsPlaintextCredential(
+                  key,
+                  valueBytes,
+                  warnings: warnings,
+                )) {
+              hasHistoricalPlaintextCredentials = true;
+            }
             rawMap[key] = valueBytes;
             tombstoneKeys.remove(key);
           }
@@ -628,9 +668,82 @@ class MmkvBinaryReader {
       totalRecordsRead: totalRecords,
       tombstoneRecordsRead: tombstoneRecords,
       tombstonedKeys: Set<String>.unmodifiable(tombstoneKeys),
+      seenKeys: Set<String>.unmodifiable(seenKeys),
+      hasHistoricalPlaintextCredentials: hasHistoricalPlaintextCredentials,
       warnings: warnings,
       parseDurationMicroseconds: stopwatch.elapsedMicroseconds,
     );
+  }
+
+  static bool _isPotentialCredentialKey(String key) {
+    final lower = key.toLowerCase();
+    return key == 'provider_api_keys' ||
+        key == 'ai_settings' ||
+        key == 'multi_ai_settings' ||
+        lower.contains('api_key') ||
+        lower.contains('apikey');
+  }
+
+  static bool _recordContainsPlaintextCredential(
+    String key,
+    Uint8List valueBytes, {
+    List<String>? warnings,
+  }) {
+    if (!_isPotentialCredentialKey(key) || valueBytes.isEmpty) {
+      return false;
+    }
+    try {
+      final decoded = decodeValueForKey(key, valueBytes);
+      if (key == 'provider_api_keys') {
+        if (decoded is String) {
+          final trimmed = decoded.trim();
+          return trimmed.isNotEmpty && trimmed != '{}';
+        }
+        return true;
+      }
+      final lower = key.toLowerCase();
+      if (lower.contains('api_key') || lower.contains('apikey')) {
+        return decoded is String ? decoded.trim().isNotEmpty : decoded != null;
+      }
+      if (key == 'ai_settings' || key == 'multi_ai_settings') {
+        if (decoded is String && decoded.trim().isNotEmpty) {
+          final jsonNode = json.decode(decoded);
+          return _jsonContainsNonEmptyApiKey(jsonNode);
+        }
+      }
+    } catch (e, stackTrace) {
+      // Log only runtimeType + stackTrace (never e.toString(), as FormatException
+      // embeds raw source text that could contain plaintext API keys).
+      warnings?.add(
+        'Credential inspection fallback for "$key" (${e.runtimeType})\n$stackTrace',
+      );
+      // Conservative fallback if a partial/unschematized credential record fails decoding.
+      return true;
+    }
+    return false;
+  }
+
+  static bool _jsonContainsNonEmptyApiKey(Object? node) {
+    if (node is Map) {
+      for (final entry in node.entries) {
+        final k = entry.key.toString();
+        if ((k == 'apiKey' || k == 'api_key') &&
+            entry.value is String &&
+            (entry.value as String).trim().isNotEmpty) {
+          return true;
+        }
+        if (_jsonContainsNonEmptyApiKey(entry.value)) {
+          return true;
+        }
+      }
+    } else if (node is List) {
+      for (final item in node) {
+        if (_jsonContainsNonEmptyApiKey(item)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /// Decodes a single MMKV record's raw value bytes according to [MmkvKeySchema]

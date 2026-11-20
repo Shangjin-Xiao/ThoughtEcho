@@ -8,12 +8,11 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/draft_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_harness.dart';
 
@@ -75,7 +74,7 @@ class _SlowSaveDatabaseService extends ChangeNotifier
 }
 
 class _TestFeatureGuideService extends FeatureGuideService {
-  _TestFeatureGuideService() : super(SafeMMKV());
+  _TestFeatureGuideService() : super(AppPreferencesService());
 
   @override
   bool hasShown(String guideId) => true;
@@ -114,11 +113,11 @@ void main() {
 
   late DraftService draftService;
   late _TestDatabaseService databaseService;
-  late MMKVService mmkvService;
+  late AppPreferencesService prefsService;
 
   setUpAll(() async {
     await TestHarness.initialize();
-    await MMKVService().init();
+    await AppPreferencesService().init();
   });
 
   setUp(() async {
@@ -132,8 +131,8 @@ void main() {
         editSource: 'fullscreen',
       ),
     );
-    mmkvService = MMKVService();
-    await mmkvService.clear();
+    prefsService = AppPreferencesService();
+    await prefsService.clear();
     await draftService.deleteAllDrafts();
   });
 

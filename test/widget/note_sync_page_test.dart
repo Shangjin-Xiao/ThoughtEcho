@@ -28,6 +28,11 @@ void main() {
       when(mockSyncService.syncProgress).thenReturn(0.0);
       when(mockSyncService.awaitingPeerApproval).thenReturn(false);
       when(mockSyncService.awaitingUserApproval).thenReturn(false);
+      when(mockSyncService.receiveSenderAlias).thenReturn(null);
+      when(mockSyncService.receiveSenderIp).thenReturn(null);
+      when(mockSyncService.receiveSenderPort).thenReturn(null);
+      when(mockSyncService.receiveSenderFingerprint).thenReturn(null);
+      when(mockSyncService.skipSyncConfirmation).thenReturn(false);
       when(mockSyncService.discoverNearbyDevices()).thenAnswer((_) async => []);
       when(
         mockSyncService.discoverNearbyDevicesStream(
@@ -499,5 +504,119 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 3));
     });
+
+    testWidgets(
+      '等待用户确认对话框展示发送方别名、IP:端口与短指纹且支持接受与拒绝',
+      (WidgetTester tester) async {
+        when(mockSyncService.syncStatus).thenReturn(SyncStatus.receiving);
+        when(mockSyncService.awaitingUserApproval).thenReturn(true);
+        when(mockSyncService.receiveSenderAlias).thenReturn('Sender Phone');
+        when(mockSyncService.receiveSenderIp).thenReturn('192.168.1.50');
+        when(mockSyncService.receiveSenderPort).thenReturn(53320);
+        when(
+          mockSyncService.receiveSenderFingerprint,
+        ).thenReturn('sender-device-abcdef');
+        when(mockSyncService.skipSyncConfirmation).thenReturn(false);
+
+        await tester.pumpWidget(createTestWidget());
+        await pumpUi(tester);
+
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('接收同步请求'), findsOneWidget);
+        expect(find.text('设备 "Sender Phone" 想同步笔记'), findsOneWidget);
+        expect(find.byIcon(Icons.lan_outlined), findsOneWidget);
+        expect(find.text('192.168.1.50:53320'), findsOneWidget);
+        expect(find.text('#ABCDEF'), findsOneWidget);
+
+        await tester.tap(find.text('接受'));
+        await tester.pump();
+        verify(mockSyncService.approveIncoming()).called(1);
+        expect(find.byType(AlertDialog), findsOneWidget);
+
+        await tester.tap(find.text('拒绝'));
+        await tester.pump();
+        verify(
+          mockSyncService.rejectIncoming(),
+        ).called(greaterThanOrEqualTo(1));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.byType(AlertDialog), findsNothing);
+      },
+    );
+
+    testWidgets('等待用户确认对话框在缺少端口或指纹时仅显示可用发送方信息', (
+      WidgetTester tester,
+    ) async {
+      when(mockSyncService.syncStatus).thenReturn(SyncStatus.receiving);
+      when(mockSyncService.awaitingUserApproval).thenReturn(true);
+      when(mockSyncService.receiveSenderAlias).thenReturn('Sender Tablet');
+      when(mockSyncService.receiveSenderIp).thenReturn('192.168.1.60');
+      when(mockSyncService.receiveSenderPort).thenReturn(0);
+      when(mockSyncService.receiveSenderFingerprint).thenReturn(null);
+      when(mockSyncService.skipSyncConfirmation).thenReturn(false);
+
+      await tester.pumpWidget(createTestWidget());
+      await pumpUi(tester);
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('设备 "Sender Tablet" 想同步笔记'), findsOneWidget);
+      expect(find.byIcon(Icons.lan_outlined), findsOneWidget);
+      expect(find.text('192.168.1.60'), findsOneWidget);
+      expect(find.textContaining('#'), findsNothing);
+    });
+
+    testWidgets(
+      '等待用户确认对话框在窄屏与大字号下对长端点自动换行而不溢出',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(320, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        when(mockSyncService.syncStatus).thenReturn(SyncStatus.receiving);
+        when(mockSyncService.awaitingUserApproval).thenReturn(true);
+        when(mockSyncService.receiveSenderAlias).thenReturn('Long Sender');
+        when(
+          mockSyncService.receiveSenderIp,
+        ).thenReturn('fe80::1234:5678:9abc:def0');
+        when(mockSyncService.receiveSenderPort).thenReturn(53320);
+        when(
+          mockSyncService.receiveSenderFingerprint,
+        ).thenReturn('sender-device-abcdef');
+        when(mockSyncService.skipSyncConfirmation).thenReturn(false);
+
+        await tester.pumpWidget(
+          ChangeNotifierProvider<NoteSyncService>.value(
+            value: mockSyncService,
+            child: MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('en', ''),
+                Locale('zh', ''),
+              ],
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: const TextScaler.linear(1.6),
+                ),
+                child: child!,
+              ),
+              home: const NoteSyncPage(),
+            ),
+          ),
+        );
+        await pumpUi(tester);
+
+        expect(find.byType(AlertDialog), findsOneWidget);
+        final endpointFinder = find.text('[fe80::1234:5678:9abc:def0]:53320');
+        expect(endpointFinder, findsOneWidget);
+        expect(tester.getSize(endpointFinder).height, greaterThan(28));
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

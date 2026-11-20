@@ -152,10 +152,12 @@ class MediaReferenceService {
         cachedAppPath: cachedAppPath,
       );
 
+      final candidates = _candidateStoredFilePaths(normalizedPath);
+      final placeholders = List.filled(candidates.length, '?').join(', ');
       final result = await db.delete(
         _tableName,
-        where: 'file_path = ? AND quote_id = ?',
-        whereArgs: [normalizedPath, quoteId],
+        where: 'file_path IN ($placeholders) AND quote_id = ?',
+        whereArgs: [...candidates, quoteId],
       );
 
       logDebug('移除媒体文件引用: $normalizedPath -> $quoteId (删除了 $result 条记录)');
@@ -199,9 +201,11 @@ class MediaReferenceService {
         cachedAppPath: cachedAppPath,
       );
 
+      final candidates = _candidateStoredFilePaths(normalizedPath);
+      final placeholders = List.filled(candidates.length, '?').join(', ');
       final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM $_tableName WHERE file_path = ?',
-        [normalizedPath],
+        'SELECT COUNT(*) as count FROM $_tableName WHERE file_path IN ($placeholders)',
+        candidates,
       );
 
       final count = _countFromRows(result);
@@ -240,10 +244,12 @@ class MediaReferenceService {
 
       // 先用可命中 idx_media_references_file_path 的精确匹配。修复后的引用都是
       // 标准相对路径，绝大多数查询到此为止，不会退到下面的全表扫描。
+      // 同时兼容历史数据中可能保留尾部分隔符的存储形态。
       final exact = await db.rawQuery(
         'SELECT COUNT(*) as count FROM $_tableName '
-        'WHERE file_path = ? OR file_path = ?',
-        [posixTail, windowsTail],
+        'WHERE file_path = ? OR file_path = ? '
+        'OR file_path = ? OR file_path = ?',
+        [posixTail, windowsTail, '$posixTail/', '$windowsTail\\'],
       );
       final exactCount = _countFromRows(exact);
       if (exactCount > 0) return exactCount;
@@ -256,11 +262,24 @@ class MediaReferenceService {
       // 该比较用不上索引，因此只在精确匹配落空时才付这次扫描的代价。
       final posixSuffix = '/$posixTail';
       final windowsSuffix = '\\$windowsTail';
+      final posixTrailingSuffix = '$posixSuffix/';
+      final windowsTrailingSuffix = '$windowsSuffix\\';
       final fallback = await db.rawQuery(
         'SELECT COUNT(*) as count FROM $_tableName '
         'WHERE substr(file_path, -length(?)) = ? '
+        'OR substr(file_path, -length(?)) = ? '
+        'OR substr(file_path, -length(?)) = ? '
         'OR substr(file_path, -length(?)) = ?',
-        [posixSuffix, posixSuffix, windowsSuffix, windowsSuffix],
+        [
+          posixSuffix,
+          posixSuffix,
+          windowsSuffix,
+          windowsSuffix,
+          posixTrailingSuffix,
+          posixTrailingSuffix,
+          windowsTrailingSuffix,
+          windowsTrailingSuffix,
+        ],
       );
 
       return _countFromRows(fallback);
@@ -756,7 +775,7 @@ class MediaReferenceService {
       key = key.substring(2);
     }
 
-    return key;
+    return _stripTrailingSeparators(key);
   }
 
   /// 轻量级检查单个文件是否仍被引用（双重校验：引用表 + 笔记内容）
@@ -971,8 +990,8 @@ class MediaReferenceService {
     final lookupPaths = candidates
         .expand(
           (candidate) => <String>{
-            candidate.normalizedPath,
-            candidate.canonicalKey,
+            ..._candidateStoredFilePaths(candidate.normalizedPath),
+            ..._candidateStoredFilePaths(candidate.canonicalKey),
           },
         )
         .toList(growable: false);
@@ -1353,6 +1372,31 @@ class MediaReferenceService {
     return mediaFiles;
   }
 
+  static List<String> _candidateStoredFilePaths(String normalizedPath) {
+    if (normalizedPath.isEmpty ||
+        normalizedPath.endsWith('/') ||
+        normalizedPath.endsWith(r'\')) {
+      return <String>[normalizedPath];
+    }
+    return <String>[normalizedPath, '$normalizedPath/', '$normalizedPath\\'];
+  }
+
+  static String _stripTrailingSeparators(String value) {
+    var end = value.length;
+    while (end > 1) {
+      final code = value.codeUnitAt(end - 1);
+      if (code != 47 /* '/' */ && code != 92 /* '\\' */) {
+        break;
+      }
+      // 保留 Windows 盘符根目录（如 `C:\\` 或 `C:/`）
+      if (end == 3 && value.codeUnitAt(1) == 58 /* ':' */) {
+        break;
+      }
+      end--;
+    }
+    return end == value.length ? value : value.substring(0, end);
+  }
+
   /// 同步标准化文件路径（需传入已缓存的应用根目录）
   static String normalizeFilePathSync(
     String filePath, {
@@ -1372,10 +1416,12 @@ class MediaReferenceService {
         }
       }
 
-      sanitized = path.normalize(sanitized);
+      sanitized = _stripTrailingSeparators(path.normalize(sanitized));
 
       if (sanitized.startsWith(cachedAppPath)) {
-        return path.normalize(path.relative(sanitized, from: cachedAppPath));
+        return _stripTrailingSeparators(
+          path.normalize(path.relative(sanitized, from: cachedAppPath)),
+        );
       }
 
       return sanitized;

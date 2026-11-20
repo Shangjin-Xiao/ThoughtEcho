@@ -191,12 +191,20 @@ void main() {
       );
     });
 
-    test('keeps MMKV native load failures from aborting startup', () {
+    test(
+        'removes native MMKV dependencies and initialization from Android build and application config',
+        () {
       final application = File(
         'android/app/src/main/kotlin/com/shangjin/thoughtecho/ThoughtEchoApplication.kt',
       ).readAsStringSync();
+      final buildGradle = File('android/app/build.gradle').readAsStringSync();
+      final proguardRules =
+          File('android/app/proguard-rules.pro').readAsStringSync();
 
-      expect(application, contains('catch (t: Throwable)'));
+      for (final content in [application, buildGradle, proguardRules]) {
+        expect(content, isNot(contains('com.tencent.mmkv')));
+        expect(content, isNot(contains('com.tencent:mmkv')));
+      }
     });
   });
 

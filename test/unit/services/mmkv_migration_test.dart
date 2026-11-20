@@ -1,16 +1,136 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
+import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_binary_reader.dart';
-import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/platform_helper.dart';
 
 import '../../test_harness.dart';
+
+class _CountingStorageAdapter implements StorageAdapter {
+  _CountingStorageAdapter({
+    this.initGate,
+    this.throwOnInit = false,
+    this.failingWriteKeys = const <String>{},
+    this.failingRemoveKeys = const <String>{},
+  });
+
+  final Future<void>? initGate;
+  final bool throwOnInit;
+  final Set<String> failingWriteKeys;
+  final Set<String> failingRemoveKeys;
+  final Map<String, Object?> _data = {};
+  final Map<String, int> writeCounts = {};
+  int initializeCount = 0;
+
+  @override
+  Future<void> initialize() async {
+    initializeCount++;
+    if (initGate != null) {
+      await initGate;
+    }
+    if (throwOnInit) {
+      throw StateError('Simulated storage init failure');
+    }
+  }
+
+  Future<void> reload() async {}
+
+  @override
+  Future<bool> setString(String key, String value) async {
+    writeCounts[key] = (writeCounts[key] ?? 0) + 1;
+    if (failingWriteKeys.contains(key)) {
+      return false;
+    }
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  String? getString(String key) {
+    final value = _data[key];
+    return value is String ? value : null;
+  }
+
+  @override
+  Future<bool> setInt(String key, int value) async {
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  int? getInt(String key) {
+    final value = _data[key];
+    return value is int ? value : null;
+  }
+
+  @override
+  Future<bool> setDouble(String key, double value) async {
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  double? getDouble(String key) {
+    final value = _data[key];
+    return value is double ? value : null;
+  }
+
+  @override
+  Future<bool> setBool(String key, bool value) async {
+    writeCounts[key] = (writeCounts[key] ?? 0) + 1;
+    if (failingWriteKeys.contains(key)) {
+      return false;
+    }
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  bool? getBool(String key) {
+    final value = _data[key];
+    return value is bool ? value : null;
+  }
+
+  @override
+  Future<bool> setStringList(String key, List<String> value) async {
+    _data[key] = List<String>.from(value);
+    return true;
+  }
+
+  @override
+  List<String>? getStringList(String key) {
+    final value = _data[key];
+    return value is List<String> ? List<String>.from(value) : null;
+  }
+
+  @override
+  bool containsKey(String key) => _data.containsKey(key);
+
+  @override
+  Future<bool> remove(String key) async {
+    if (failingRemoveKeys.contains(key)) {
+      return false;
+    }
+    _data.remove(key);
+    return true;
+  }
+
+  @override
+  Future<bool> clear() async {
+    _data.clear();
+    return true;
+  }
+
+  @override
+  Set<String> getKeys() => _data.keys.toSet();
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,18 +141,18 @@ void main() {
     await TestHarness.initialize();
     tempDir = await Directory.systemTemp.createTemp('mmkv_migration_test_');
     SharedPreferences.setMockInitialValues({});
-    MMKVService().resetForTesting();
+    AppPreferencesService().resetForTesting();
   });
 
   tearDown(() async {
-    MMKVService().resetForTesting();
+    AppPreferencesService().resetForTesting();
     await TestHarness.tearDown();
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
   });
 
-  group('SafeMMKV & MMKVService Phase 1 Migration', () {
+  group('AppPreferencesService Migration', () {
     test(
         'migrates binary mmkv.default entries to SharedPreferences, overwrites stale SP values, and preserves SP-only keys',
         () async {
@@ -56,41 +176,38 @@ void main() {
           .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
       await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
 
-      final safeMmkv = SafeMMKV()
-        ..configureForTesting(
-          candidateMmkvFiles: [mmkvPath],
-          forceNativeMmkvSupport: false,
-        );
+      final appPrefs = AppPreferencesService()
+        ..configureForTesting(candidateMmkvFiles: [mmkvPath]);
 
-      await safeMmkv.initialize();
+      await appPrefs.initialize();
 
       // Stale SP value ('light') must be overwritten by MMKV value ('dark')
-      expect(safeMmkv.getString('theme_mode'), equals('dark'));
-      expect(safeMmkv.getString('theme_style'), equals('paper'));
-      expect(safeMmkv.getBool('app_installed_v2'), isTrue);
-      expect(safeMmkv.getBool('agent_memory_enabled'), isFalse);
-      expect(safeMmkv.getInt('custom_color'), equals(0xFF123456));
+      expect(appPrefs.getString('theme_mode'), equals('dark'));
+      expect(appPrefs.getString('theme_style'), equals('paper'));
+      expect(appPrefs.getBool('app_installed_v2'), isTrue);
+      expect(appPrefs.getBool('agent_memory_enabled'), isFalse);
+      expect(appPrefs.getInt('custom_color'), equals(0xFF123456));
       expect(
-        safeMmkv.getString('smart_push_today_daily_quote_pushed'),
+        appPrefs.getString('smart_push_today_daily_quote_pushed'),
         equals('2026-11-07'),
       );
       expect(
-        safeMmkv.getString('draft_abc'),
+        appPrefs.getString('draft_abc'),
         equals('{"plainText":"saved draft"}'),
       );
 
       // SP-only key must be preserved intact
       expect(
-        safeMmkv.getString('custom_data_directory_path'),
+        appPrefs.getString('custom_data_directory_path'),
         equals('/custom/notes/dir'),
       );
 
       // Migration watermarks must be set
-      expect(safeMmkv.getBool(kKvEngineMigratedKey), isTrue);
-      expect(safeMmkv.getBool(kLegacyMmkvMigrationCompleteKey), isTrue);
+      expect(appPrefs.getBool(kKvEngineMigratedKey), isTrue);
+      expect(appPrefs.getBool(kLegacyMmkvMigrationCompleteKey), isTrue);
 
       // Diagnostic report must show 0 diffs
-      final report = await safeMmkv.collectDiagnosticReport();
+      final report = await appPrefs.collectDiagnosticReport();
       expect(report.kvEngineMigrated, isTrue);
       expect(report.primaryBinaryResult.crcMatched, isTrue);
       expect(report.diffCount, equals(0));
@@ -111,11 +228,10 @@ void main() {
           'theme_style': 'paper',
           'draft_retained': 'new draft',
         });
-        final storage = SafeMMKV()
+        final storage = AppPreferencesService()
           ..configureForTesting(
             candidateMmkvFiles: [path],
             candidateDbPaths: const [],
-            forceNativeMmkvSupport: false,
           );
         await storage.initialize();
         expect(storage.getString('theme_style'), 'paper');
@@ -140,11 +256,10 @@ void main() {
         final encoder = MmkvBinaryEncoder()..writeTombstone('draft_removed');
         await File(path).writeAsBytes(encoder.toFileBytes());
         await File('$path.crc').writeAsBytes(encoder.toCrcBytes());
-        final storage = SafeMMKV()
+        final storage = AppPreferencesService()
           ..configureForTesting(
             candidateMmkvFiles: [path],
             candidateDbPaths: const [],
-            forceNativeMmkvSupport: false,
           );
         await storage.initialize();
         expect(storage.containsKey('draft_removed'), isFalse);
@@ -171,11 +286,10 @@ void main() {
         final good = MmkvBinaryEncoder()..writeString('theme_style', 'paper');
         await File(valid).writeAsBytes(good.toFileBytes());
         await File('$valid.crc').writeAsBytes(good.toCrcBytes());
-        final storage = SafeMMKV()
+        final storage = AppPreferencesService()
           ..configureForTesting(
             candidateMmkvFiles: [empty, corrupt, valid],
             candidateDbPaths: const [],
-            forceNativeMmkvSupport: false,
           );
         await storage.initialize();
         expect(storage.getString('theme_style'), 'paper');
@@ -187,12 +301,11 @@ void main() {
       'clear before init persists watermarks and prevents legacy resurrection',
       () async {
         SharedPreferences.setMockInitialValues({'theme_style': 'paper'});
-        final service = MMKVService();
-        SafeMMKV().configureForTesting(
-          candidateMmkvFiles: const [],
-          candidateDbPaths: const [],
-          forceNativeMmkvSupport: false,
-        );
+        final service = AppPreferencesService()
+          ..configureForTesting(
+            candidateMmkvFiles: const [],
+            candidateDbPaths: const [],
+          );
         expect(await service.clear(), isTrue);
         final prefs = await SharedPreferences.getInstance();
         final nonLogKeys =
@@ -209,12 +322,11 @@ void main() {
     );
 
     test('concurrent first writes persist every value', () async {
-      final service = MMKVService();
-      SafeMMKV().configureForTesting(
-        candidateMmkvFiles: const [],
-        candidateDbPaths: const [],
-        forceNativeMmkvSupport: false,
-      );
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: const [],
+          candidateDbPaths: const [],
+        );
       expect(
         await Future.wait([
           service.setString('theme_style', 'paper'),
@@ -245,11 +357,10 @@ void main() {
           'draft_example': 'synthetic private draft',
           'theme_style': 'paper',
         });
-        final storage = SafeMMKV()
+        final storage = AppPreferencesService()
           ..configureForTesting(
             candidateMmkvFiles: const [],
             candidateDbPaths: const [],
-            forceNativeMmkvSupport: false,
           );
         await storage.initialize();
         final report = await storage.collectDiagnosticReport();
@@ -281,11 +392,10 @@ void main() {
           final magic = ascii.encode('SQLite format 3\x00');
           bytes.setRange(0, magic.length, magic);
           await File(path).writeAsBytes(bytes);
-          final storage = SafeMMKV()
+          final storage = AppPreferencesService()
             ..configureForTesting(
               candidateMmkvFiles: const [],
               candidateDbPaths: [path],
-              forceNativeMmkvSupport: false,
             );
           await storage.initialize();
           expect(
@@ -314,11 +424,10 @@ void main() {
         final magic = ascii.encode('SQLite format 3\x00');
         bytes.setRange(0, magic.length, magic);
         await File(path).writeAsBytes(bytes);
-        final storage = SafeMMKV()
+        final storage = AppPreferencesService()
           ..configureForTesting(
             candidateMmkvFiles: const [],
             candidateDbPaths: [path],
-            forceNativeMmkvSupport: false,
           );
         await storage.initialize();
         expect(storage.getString('app_settings'), saved);
@@ -328,12 +437,11 @@ void main() {
 
     test('remove before init deletes the persisted value', () async {
       SharedPreferences.setMockInitialValues({'theme_style': 'paper'});
-      SafeMMKV().configureForTesting(
-        candidateMmkvFiles: const [],
-        candidateDbPaths: const [],
-        forceNativeMmkvSupport: false,
-      );
-      final service = MMKVService();
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: const [],
+          candidateDbPaths: const [],
+        );
       expect(await service.remove('theme_style'), isTrue);
       expect(service.containsKey('theme_style'), isFalse);
       final prefs = await SharedPreferences.getInstance();
@@ -341,7 +449,8 @@ void main() {
     });
 
     test('synchronous reads before init return safe empty results', () {
-      final service = MMKVService();
+      final service = AppPreferencesService();
+      expect(service.isInitialized, isFalse);
       expect(service.getString('missing'), isNull);
       expect(service.getBool('missing'), isNull);
       expect(service.getInt('missing'), isNull);
@@ -350,6 +459,7 @@ void main() {
       expect(service.getJson('missing'), isNull);
       expect(service.containsKey('missing'), isFalse);
       expect(service.getAllKeys(), isEmpty);
+      expect(() => service.getAllKeysStrict(), throwsStateError);
     });
 
     test(
@@ -360,14 +470,13 @@ void main() {
       final corruptedDbPath = '${tempDir.path}/corrupted_thoughtecho.db';
       await File(corruptedDbPath).writeAsBytes(Uint8List(16384));
 
-      final safeMmkvCorrupted = SafeMMKV()
+      final appPrefsCorrupted = AppPreferencesService()
         ..configureForTesting(
           candidateMmkvFiles: ['${tempDir.path}/nonexistent_mmkv.default'],
           candidateDbPaths: [corruptedDbPath],
-          forceNativeMmkvSupport: false,
         );
-      await safeMmkvCorrupted.initialize();
-      expect(safeMmkvCorrupted.getBool('app_installed_v2'), isNull);
+      await appPrefsCorrupted.initialize();
+      expect(appPrefsCorrupted.getBool('app_installed_v2'), isNull);
 
       // 2. A valid >8KB SQLite file with "SQLite format 3\0" header heals flags & preserves sentryDisclosureShown
       SharedPreferences.setMockInitialValues({
@@ -379,38 +488,34 @@ void main() {
       validDbBytes.setRange(0, magic.length, magic);
       await File(fakeDbPath).writeAsBytes(validDbBytes);
 
-      final safeMmkv = SafeMMKV()
+      final appPrefs = AppPreferencesService()
         ..configureForTesting(
           candidateMmkvFiles: ['${tempDir.path}/nonexistent_mmkv.default'],
           candidateDbPaths: [fakeDbPath],
-          forceNativeMmkvSupport: false,
         );
 
-      await safeMmkv.initialize();
+      await appPrefs.initialize();
 
-      expect(safeMmkv.getBool('app_installed_v2'), isTrue);
-      expect(safeMmkv.getBool('initial_database_setup_complete'), isTrue);
-      expect(safeMmkv.getBool('database_migration_complete'), isTrue);
-      expect(safeMmkv.getBool('hasCompletedOnboarding'), isTrue);
+      expect(appPrefs.getBool('app_installed_v2'), isTrue);
+      expect(appPrefs.getBool('initial_database_setup_complete'), isTrue);
+      expect(appPrefs.getBool('database_migration_complete'), isTrue);
+      expect(appPrefs.getBool('hasCompletedOnboarding'), isTrue);
 
-      final appSettingsRaw = safeMmkv.getString('app_settings');
+      final appSettingsRaw = appPrefs.getString('app_settings');
       expect(appSettingsRaw, isNotNull);
       final decoded = json.decode(appSettingsRaw!) as Map<String, dynamic>;
       expect(decoded['hasCompletedOnboarding'], isTrue);
       expect(decoded['sentryDisclosureShown'], isFalse);
-      expect(safeMmkv.lastMigrationSnapshot?.healedFromSqliteCount, equals(5));
+      expect(appPrefs.lastMigrationSnapshot?.healedFromSqliteCount, equals(5));
     });
 
     test(
-        'MMKVService async write methods await initialization when called before explicit init()',
+        'AppPreferencesService async write methods await initialization when called before explicit init()',
         () async {
       SharedPreferences.setMockInitialValues({kKvEngineMigratedKey: true});
-      final service = MMKVService();
+      final service = AppPreferencesService();
       service.resetForTesting();
-      SafeMMKV().configureForTesting(
-        candidateMmkvFiles: const [],
-        forceNativeMmkvSupport: false,
-      );
+      service.configureForTesting(candidateMmkvFiles: const []);
 
       // Call setBool, setInt, setDouble, setStringList, setJson without calling service.init() first
       expect(await service.setBool('flag_a', true), isTrue);
@@ -454,17 +559,14 @@ void main() {
       File('$secondaryPath.crc')
           .writeAsBytesSync(secondaryEncoder.toCrcBytes());
 
-      final safeMmkv = SafeMMKV()
-        ..configureForTesting(
-          candidateMmkvFiles: [primaryPath, secondaryPath],
-          forceNativeMmkvSupport: false,
-        );
+      final appPrefs = AppPreferencesService()
+        ..configureForTesting(candidateMmkvFiles: [primaryPath, secondaryPath]);
 
-      await safeMmkv.initialize();
+      await appPrefs.initialize();
 
-      expect(safeMmkv.getString('theme_style'), equals('paper'));
-      expect(safeMmkv.getString('secondary_only_key'), equals('rescued_value'));
-      expect(safeMmkv.getBool('deleted_flag'), isNull);
+      expect(appPrefs.getString('theme_style'), equals('paper'));
+      expect(appPrefs.getString('secondary_only_key'), equals('rescued_value'));
+      expect(appPrefs.getBool('deleted_flag'), isNull);
     });
 
     test(
@@ -491,24 +593,25 @@ void main() {
       await settingsService.restoreAllSettingsFromBackup(backupData);
 
       expect(notified, isTrue);
-      final mmkv = MMKVService();
-      expect(mmkv.getString('theme_style'), equals('paper'));
-      expect(mmkv.getString('theme_accent_material'), equals('emerald'));
-      expect(mmkv.getString('theme_accent_paper'), equals('bamboo'));
-      expect(mmkv.getString('theme_accent_plain'), equals('slate'));
-      expect(mmkv.getInt('custom_color'), equals(0xFF112233));
-      expect(mmkv.getBool('use_custom_color'), isTrue);
-      expect(mmkv.getBool('use_dynamic_color'), isFalse);
+      final appPrefs = AppPreferencesService();
+      expect(appPrefs.getString('theme_style'), equals('paper'));
+      expect(appPrefs.getString('theme_accent_material'), equals('emerald'));
+      expect(appPrefs.getString('theme_accent_paper'), equals('bamboo'));
+      expect(appPrefs.getString('theme_accent_plain'), equals('slate'));
+      expect(appPrefs.getInt('custom_color'), equals(0xFF112233));
+      expect(appPrefs.getBool('use_custom_color'), isTrue);
+      expect(appPrefs.getBool('use_dynamic_color'), isFalse);
       expect(
-        mmkv.getString('smart_push_settings_v2'),
+        appPrefs.getString('smart_push_settings_v2'),
         contains('"enabled":true'),
       );
     });
 
-    test('AppPreferencesService and MMKVService resolve to the same singleton',
-        () {
-      expect(identical(AppPreferencesService(), MMKVService()), isTrue);
-      expect(AppPreferencesService(), isA<MMKVService>());
+    test('AppPreferencesService resolves to the same singleton', () {
+      expect(
+        identical(AppPreferencesService(), AppPreferencesService()),
+        isTrue,
+      );
     });
 
     test(
@@ -532,11 +635,10 @@ void main() {
         'theme_style': 'paper',
       });
 
-      final storage = SafeMMKV()
+      final storage = AppPreferencesService()
         ..configureForTesting(
           candidateMmkvFiles: [path],
           candidateDbPaths: const [],
-          forceNativeMmkvSupport: false,
         );
       await storage.initialize();
 
@@ -553,23 +655,640 @@ void main() {
         (entry) => entry.key == 'draft_legacy_1',
       );
       expect(retiredDraftEntry.allConsistent, isTrue);
-      expect(retiredDraftEntry.nativeMatchesBinary, isTrue);
       final retiredInsightEntry = report.comparisons.singleWhere(
         (entry) => entry.key == 'periodic_insights_history',
       );
       expect(retiredInsightEntry.allConsistent, isTrue);
-      expect(retiredInsightEntry.nativeMatchesBinary, isTrue);
 
       // Clearing storage preserves SQLite takeover watermarks and prevents resurrection
       expect(await storage.clear(), isTrue);
       expect(storage.getBool(kDraftsSqliteMigratedKey), isTrue);
       expect(storage.getBool(kPeriodicInsightsSqliteMigratedKey), isTrue);
+      // Re-run with archived .migrated.bak only must not resurrect anything
+      final afterArchiveSnapshot = await storage.runMigration(force: true);
+      expect(afterArchiveSnapshot.migratedFromBinaryCount, equals(0));
+      // Even if an active mmkv.default is present after clear(), retired SQLite keys stay absent
+      await File(path).writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$path.crc').writeAsBytes(encoder.toCrcBytes());
       final afterClearSnapshot = await storage.runMigration(force: true);
       // 仅非退役键 theme_style 被迁移，已由 SQLite 接管的草稿/洞察键不得复活
       expect(afterClearSnapshot.migratedFromBinaryCount, equals(1));
       expect(storage.getString('theme_style'), equals('paper'));
       expect(storage.containsKey('draft_legacy_1'), isFalse);
       expect(storage.containsKey('periodic_insights_history'), isFalse);
+    });
+
+    test(
+        'cold-upgrade skipping intermediate versions migrates legacy mmkv.default, archives files to .migrated.bak, and keeps diagnostics readable',
+        () async {
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeBool('app_installed_v2', true)
+        ..writeString('theme_style', 'paper')
+        ..writeString('theme_mode', 'dark')
+        ..writeInt('custom_color', 0xFF2B5B84)
+        ..writeDouble('font_scale', 1.25)
+        ..writeString('favorite_tags', json.encode(['随想', '读书']))
+        ..writeString(
+          'app_settings',
+          json.encode({'hasCompletedOnboarding': true}),
+        );
+
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [mmkvPath],
+          candidateDbPaths: const [],
+        );
+
+      await service.init();
+
+      expect(service.isInitialized, isTrue);
+      expect(service.getBool('app_installed_v2'), isTrue);
+      expect(service.getString('theme_style'), equals('paper'));
+      expect(service.getString('theme_mode'), equals('dark'));
+      expect(service.getInt('custom_color'), equals(0xFF2B5B84));
+      expect(service.getDouble('font_scale'), closeTo(1.25, 1e-9));
+      expect(service.getStringList('favorite_tags'), equals(['随想', '读书']));
+      expect(
+        service.getJson('app_settings'),
+        equals({'hasCompletedOnboarding': true}),
+      );
+      expect(service.lastMigrationSnapshot?.wasAlreadyMigrated, isFalse);
+      expect(
+        service.lastMigrationSnapshot?.migratedFromBinaryCount,
+        greaterThanOrEqualTo(7),
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('theme_style'), equals('paper'));
+      expect(prefs.getBool(kKvEngineMigratedKey), isTrue);
+      expect(prefs.getBool(kLegacyMmkvMigrationCompleteKey), isTrue);
+
+      // Original mmkv.default and .crc are archived to .migrated.bak and .migrated.bak.crc
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.crc').existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isTrue);
+      expect(File('$mmkvPath.migrated.bak.crc').existsSync(), isTrue);
+
+      final report = await service.collectDiagnosticReport();
+      expect(report.kvEngineMigrated, isTrue);
+      expect(report.primaryBinaryResult.fileExists, isTrue);
+      expect(report.primaryBinaryResult.crcMatched, isTrue);
+      expect(report.diffCount, equals(0));
+      expect(report.consistentCount, greaterThan(0));
+
+      // Simulated subsequent cold restart reads SharedPreferences cleanly without re-migrating
+      service.resetForTesting();
+      service.configureForTesting(
+        candidateMmkvFiles: [mmkvPath],
+        candidateDbPaths: const [],
+      );
+      await service.init();
+      expect(service.getString('theme_style'), equals('paper'));
+      expect(service.lastMigrationSnapshot?.wasAlreadyMigrated, isTrue);
+    });
+
+    test(
+        'migrates provider_api_keys and wipes mmkv.default, .crc, and .migrated.bak from disk',
+        () async {
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final secretPayload = json.encode({'openai': 'synthetic-provider-key'});
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', secretPayload)
+        ..writeString('theme_style', 'paper');
+
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+      await File('$mmkvPath.migrated.bak').writeAsBytes(Uint8List(64));
+      await File('$mmkvPath.migrated.bak.crc').writeAsBytes(Uint8List(32));
+
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [mmkvPath],
+          candidateDbPaths: const [],
+        );
+
+      await service.init();
+
+      expect(service.getString('provider_api_keys'), equals(secretPayload));
+      expect(service.getString('theme_style'), equals('paper'));
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('provider_api_keys'), equals(secretPayload));
+
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.crc').existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak.crc').existsSync(), isFalse);
+    });
+
+    test(
+        'migrates ai_settings and multi_ai_settings with non-empty apiKey and wipes MMKV artifacts from disk',
+        () async {
+      final cases = <String, String>{
+        'ai_settings': json.encode({
+          'apiKey': 'synthetic-ai-secret',
+          'model': 'synthetic-model',
+        }),
+        'multi_ai_settings': json.encode({
+          'currentProviderId': 'provider_1',
+          'providers': [
+            {
+              'id': 'provider_1',
+              'name': 'Synthetic Provider',
+              'apiKey': 'synthetic-multi-secret',
+            },
+          ],
+        }),
+      };
+
+      for (final entry in cases.entries) {
+        final caseDir = await tempDir.createTemp('wipe_${entry.key}_');
+        final mmkvPath = '${caseDir.path}/mmkv.default';
+        final encoder = MmkvBinaryEncoder()
+          ..writeString(entry.key, entry.value)
+          ..writeString('theme_style', 'plain');
+
+        await File(mmkvPath)
+            .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+        await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+        SharedPreferences.setMockInitialValues({});
+        final service = AppPreferencesService()
+          ..resetForTesting()
+          ..configureForTesting(
+            candidateMmkvFiles: [mmkvPath],
+            candidateDbPaths: const [],
+          );
+
+        await service.init();
+
+        expect(service.getString(entry.key), equals(entry.value));
+        expect(service.getString('theme_style'), equals('plain'));
+        expect(File(mmkvPath).existsSync(), isFalse);
+        expect(File('$mmkvPath.crc').existsSync(), isFalse);
+        expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
+        expect(File('$mmkvPath.migrated.bak.crc').existsSync(), isFalse);
+      }
+    });
+
+    test(
+      'reload refreshes values updated externally in SharedPreferences',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          kKvEngineMigratedKey: true,
+          'external_string': 'initial',
+        });
+
+        final service = AppPreferencesService()
+          ..configureForTesting(
+            candidateMmkvFiles: const [],
+            candidateDbPaths: const [],
+          );
+        await service.init();
+        expect(service.getString('external_string'), equals('initial'));
+
+        // Simulate an external isolate writing to the underlying SharedPreferences store
+        SharedPreferences.resetStatic();
+        final externalPrefs = await SharedPreferences.getInstance();
+        await externalPrefs.setString(
+          'external_string',
+          'updated_from_outside',
+        );
+        await externalPrefs.setInt('external_counter', 99);
+
+        // Cached adapter retains stale snapshot until reload() is called
+        expect(service.getString('external_string'), equals('initial'));
+        expect(service.getInt('external_counter'), isNull);
+
+        await service.reload();
+
+        expect(
+          service.getString('external_string'),
+          equals('updated_from_outside'),
+        );
+        expect(service.getInt('external_counter'), equals(99));
+      },
+    );
+
+    test(
+        'concurrent init() calls complete safely without re-running initialization',
+        () async {
+      final gate = Completer<void>();
+      final adapter = _CountingStorageAdapter(initGate: gate.future);
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          primaryAdapter: adapter,
+          candidateMmkvFiles: const [],
+          candidateDbPaths: const [],
+        );
+
+      final pending = Future.wait([
+        AppPreferencesService().init(),
+        AppPreferencesService().init(),
+        AppPreferencesService().init(),
+      ]);
+
+      await Future<void>.delayed(Duration.zero);
+      expect(adapter.initializeCount, equals(1));
+
+      gate.complete();
+      await pending;
+
+      expect(service.isInitialized, isTrue);
+      expect(adapter.initializeCount, equals(1));
+
+      await AppPreferencesService().init();
+      expect(adapter.initializeCount, equals(1));
+    });
+
+    test(
+        'concurrent init() calls with legacy mmkv.default complete migration once',
+        () async {
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'paper')
+        ..writeBool('app_installed_v2', true);
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final adapter = _CountingStorageAdapter();
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          primaryAdapter: adapter,
+          candidateMmkvFiles: [mmkvPath],
+          candidateDbPaths: const [],
+        );
+
+      await Future.wait([
+        AppPreferencesService().init(),
+        AppPreferencesService().init(),
+        AppPreferencesService().init(),
+      ]);
+
+      expect(service.isInitialized, isTrue);
+      expect(adapter.initializeCount, equals(1));
+      expect(adapter.writeCounts['theme_style'], equals(1));
+      expect(adapter.writeCounts['app_installed_v2'], equals(1));
+      expect(adapter.writeCounts[kKvEngineMigratedKey], equals(1));
+      expect(service.getString('theme_style'), equals('paper'));
+      expect(service.getBool('app_installed_v2'), isTrue);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isTrue);
+    });
+
+    test(
+        'set*/get* roundtrips, remove, containsKey, and key enumeration work end-to-end',
+        () async {
+      SharedPreferences.setMockInitialValues({kKvEngineMigratedKey: true});
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: const [],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      expect(await service.setString('rt_str', 'hello'), isTrue);
+      expect(await service.setBool('rt_bool', true), isTrue);
+      expect(await service.setInt('rt_int', 2026), isTrue);
+      expect(await service.setDouble('rt_double', 2.71828), isTrue);
+      expect(await service.setStringList('rt_list', ['alpha', 'beta']), isTrue);
+      expect(
+        await service.setJson('rt_json', {
+          'nested': {'count': 3},
+          'items': ['a', 'b'],
+        }),
+        isTrue,
+      );
+
+      expect(service.getString('rt_str'), equals('hello'));
+      expect(service.getBool('rt_bool'), isTrue);
+      expect(service.getInt('rt_int'), equals(2026));
+      expect(service.getDouble('rt_double'), closeTo(2.71828, 1e-9));
+      expect(service.getStringList('rt_list'), equals(['alpha', 'beta']));
+      expect(
+        service.getJson('rt_json'),
+        equals({
+          'nested': {'count': 3},
+          'items': ['a', 'b'],
+        }),
+      );
+
+      for (final key in [
+        'rt_str',
+        'rt_bool',
+        'rt_int',
+        'rt_double',
+        'rt_list',
+        'rt_json',
+      ]) {
+        expect(service.containsKey(key), isTrue, reason: key);
+      }
+
+      final expectedKeys = [
+        'rt_str',
+        'rt_bool',
+        'rt_int',
+        'rt_double',
+        'rt_list',
+        'rt_json',
+      ];
+      expect(service.getAllKeys(), containsAll(expectedKeys));
+      expect(service.getKeys(), containsAll(expectedKeys));
+      expect(service.getAllKeysStrict(), containsAll(expectedKeys));
+
+      expect(await service.remove('rt_str'), isTrue);
+      expect(service.containsKey('rt_str'), isFalse);
+      expect(service.getString('rt_str'), isNull);
+      expect(service.getAllKeys(), isNot(contains('rt_str')));
+    });
+
+    test(
+        'partial migration write failure omits watermark and keeps source MMKV file for retry',
+        () async {
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-retry-secret"}')
+        ..writeString('theme_style', 'paper')
+        ..writeBool('app_installed_v2', true);
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final failingWriteKeys = <String>{'theme_style'};
+      final failingAdapter = _CountingStorageAdapter(
+        failingWriteKeys: failingWriteKeys,
+      );
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          primaryAdapter: failingAdapter,
+          candidateMmkvFiles: [mmkvPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      // Watermark must not be set and source file must remain on disk when any write fails.
+      expect(service.getBool(kKvEngineMigratedKey), isNull);
+      expect(File(mmkvPath).existsSync(), isTrue);
+      expect(
+        service.lastMigrationSnapshot?.warnings,
+        anyElement(contains('partial write failure')),
+      );
+
+      // Simulate user updating an already-migrated key in the persisted store before retry.
+      expect(
+        failingAdapter.getStringList('kv_engine_migrated_keys_v1'),
+        containsAll(['provider_api_keys', 'app_installed_v2']),
+      );
+      await failingAdapter.setString(
+        'provider_api_keys',
+        '{"openai":"sk-updated"}',
+      );
+      failingWriteKeys.clear();
+
+      // Next launch reuses the same persisted store and retries only the failed key.
+      service.resetForTesting();
+      service.configureForTesting(
+        primaryAdapter: failingAdapter,
+        candidateMmkvFiles: [mmkvPath],
+        candidateDbPaths: const [],
+      );
+      await service.init();
+      expect(service.getBool(kKvEngineMigratedKey), isTrue);
+      expect(service.getString('theme_style'), equals('paper'));
+      expect(
+        service.getString('provider_api_keys'),
+        equals('{"openai":"sk-updated"}'),
+      );
+      expect(service.containsKey('kv_engine_migrated_keys_v1'), isFalse);
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
+    });
+
+    test(
+        'corrupt-CRC credential file skipped by migration is preserved on disk and staging files are wiped when wiping plaintext',
+        () async {
+      final corruptPath = '${tempDir.path}/corrupt_secret.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-corrupt-secret"}')
+        ..writeString('theme_style', 'paper');
+      await File(corruptPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$corruptPath.crc')
+          .writeAsBytes(encoder.toCrcBytes(overrideCrcDigest: 0xDEADBEEF));
+
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [corruptPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      // Skipped crcMatched==false file must NOT be deleted when its entries were not migrated.
+      expect(service.containsKey('theme_style'), isFalse);
+      expect(File(corruptPath).existsSync(), isTrue);
+
+      // Leftover archiving staging files must be wiped by archiveOrWipeMmkvFile(wipePlaintext: true).
+      final stageFile = File('$corruptPath.archiving.1234.1');
+      final crcStageFile = File('$corruptPath.crc.archiving.1234.2');
+      await stageFile.writeAsBytes(const [1, 2, 3]);
+      await crcStageFile.writeAsBytes(const [4, 5, 6]);
+      await PlatformHelper.archiveOrWipeMmkvFile(
+        corruptPath,
+        wipePlaintext: true,
+      );
+      expect(File(corruptPath).existsSync(), isFalse);
+      expect(stageFile.existsSync(), isFalse);
+      expect(crcStageFile.existsSync(), isFalse);
+    });
+
+    test(
+        'alreadyMigrated initialization wipes residual credential-bearing mmkv.default and .migrated.bak',
+        () async {
+      final mmkvPath = '${tempDir.path}/mmkv.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('ai_settings', '{"apiKey":"sk-residual-secret"}')
+        ..writeString('theme_style', 'paper');
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final secretBackupPath = '${tempDir.path}/legacy2.default';
+      final secretEncoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-stale-backup"}');
+      await File('$secretBackupPath.migrated.bak')
+          .writeAsBytes(secretEncoder.toFileBytes(minTotalSize: 4096));
+      await File('$secretBackupPath.migrated.bak.crc')
+          .writeAsBytes(secretEncoder.toCrcBytes());
+
+      SharedPreferences.setMockInitialValues({kKvEngineMigratedKey: true});
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [mmkvPath, secretBackupPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.crc').existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isFalse);
+      expect(File('$secretBackupPath.migrated.bak').existsSync(), isFalse);
+      expect(File('$secretBackupPath.migrated.bak.crc').existsSync(), isFalse);
+    });
+
+    test(
+        'tombstoned or overwritten plaintext credentials trigger full wipe instead of .migrated.bak archive',
+        () async {
+      final tombstonedPath = '${tempDir.path}/tombstoned.default';
+      final tombEncoder = MmkvBinaryEncoder()
+        ..writeString('provider_api_keys', '{"openai":"sk-deleted-secret"}')
+        ..writeTombstone('provider_api_keys')
+        ..writeString('theme_style', 'plain');
+      await File(tombstonedPath)
+          .writeAsBytes(tombEncoder.toFileBytes(minTotalSize: 4096));
+      await File('$tombstonedPath.crc').writeAsBytes(tombEncoder.toCrcBytes());
+
+      final overwrittenPath = '${tempDir.path}/overwritten.default';
+      final overEncoder = MmkvBinaryEncoder()
+        ..writeString(
+          'ai_settings',
+          '{"apiKey":"sk-overwritten-secret","model":"gpt-4o"}',
+        )
+        ..writeString('ai_settings', '{"apiKey":"","model":"gpt-4o"}')
+        ..writeString('theme_mode', 'dark');
+      await File(overwrittenPath)
+          .writeAsBytes(overEncoder.toFileBytes(minTotalSize: 4096));
+      await File('$overwrittenPath.crc').writeAsBytes(overEncoder.toCrcBytes());
+
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [tombstonedPath, overwrittenPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+
+      expect(service.getString('theme_style'), equals('plain'));
+      expect(service.getString('theme_mode'), equals('dark'));
+      expect(File(tombstonedPath).existsSync(), isFalse);
+      expect(File('$tombstonedPath.migrated.bak').existsSync(), isFalse);
+      expect(File(overwrittenPath).existsSync(), isFalse);
+      expect(File('$overwrittenPath.migrated.bak').existsSync(), isFalse);
+    });
+
+    test(
+        'init() rethrows primary storage initialization error instead of silent memory fallback',
+        () async {
+      final failingAdapter = _CountingStorageAdapter(throwOnInit: true);
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          primaryAdapter: failingAdapter,
+          candidateMmkvFiles: const [],
+          candidateDbPaths: const [],
+        );
+
+      await expectLater(service.init(), throwsStateError);
+      expect(service.isInitialized, isFalse);
+    });
+
+    test(
+        'forced re-migration ignores .migrated.bak and diagnostic report preserves secondary invalid candidate',
+        () async {
+      final primaryPath = '${tempDir.path}/primary.default';
+      final encoder = MmkvBinaryEncoder()
+        ..writeString('theme_style', 'paper')
+        ..writeString('deleted_after_migration', 'should_not_resurrect');
+      await File(primaryPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$primaryPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final service = AppPreferencesService()
+        ..configureForTesting(
+          candidateMmkvFiles: [primaryPath],
+          candidateDbPaths: const [],
+        );
+      await service.init();
+      expect(
+        service.getString('deleted_after_migration'),
+        equals('should_not_resurrect'),
+      );
+
+      // User deletes key after migration; archived .migrated.bak still holds it.
+      await service.remove('deleted_after_migration');
+      await service.runMigration(force: true);
+      expect(service.containsKey('deleted_after_migration'), isFalse);
+
+      // Verify two invalid candidates expose both primary and secondary in diagnostic report.
+      final invalid1 = '${tempDir.path}/invalid1.default';
+      final invalid2 = '${tempDir.path}/invalid2.default';
+      await File(invalid1).writeAsBytes([1, 2]);
+      await File(invalid2).writeAsBytes([3, 4]);
+
+      service.resetForTesting();
+      service.configureForTesting(
+        candidateMmkvFiles: [invalid1, invalid2],
+        candidateDbPaths: const [],
+      );
+      await service.init();
+      final report = await service.collectDiagnosticReport();
+      expect(report.primaryBinaryResult.filePath, equals(invalid1));
+      expect(report.secondaryBinaryResult, isNotNull);
+      expect(report.secondaryBinaryResult!.filePath, equals(invalid2));
+    });
+
+    test(
+        'PlatformHelper.archiveOrWipeMmkvFile preserves .migrated.bak under concurrent calls',
+        () async {
+      final mmkvPath = '${tempDir.path}/concurrent_archive.default';
+      final encoder = MmkvBinaryEncoder()..writeString('theme_style', 'paper');
+      await File(mmkvPath)
+          .writeAsBytes(encoder.toFileBytes(minTotalSize: 4096));
+      await File('$mmkvPath.crc').writeAsBytes(encoder.toCrcBytes());
+
+      final results = await Future.wait([
+        PlatformHelper.archiveOrWipeMmkvFile(mmkvPath, wipePlaintext: false),
+        PlatformHelper.archiveOrWipeMmkvFile(mmkvPath, wipePlaintext: false),
+        PlatformHelper.archiveOrWipeMmkvFile(mmkvPath, wipePlaintext: false),
+      ]);
+
+      expect(results.where((ok) => ok).length, equals(1));
+      expect(File(mmkvPath).existsSync(), isFalse);
+      expect(File('$mmkvPath.migrated.bak').existsSync(), isTrue);
+      expect(File('$mmkvPath.migrated.bak.crc').existsSync(), isTrue);
+    });
+
+    test(
+        'FeatureGuideService does not notify listeners when underlying storage write or remove fails',
+        () async {
+      final adapter = _CountingStorageAdapter(
+        failingWriteKeys: {'feature_guide_shown_intro'},
+        failingRemoveKeys: {'feature_guide_shown_existing'},
+      );
+      await adapter.setBool('feature_guide_shown_existing', true);
+
+      final appPrefs = AppPreferencesService()
+        ..configureForTesting(
+          primaryAdapter: adapter,
+          candidateMmkvFiles: const [],
+          candidateDbPaths: const [],
+        );
+      await appPrefs.init();
+
+      final guideService = FeatureGuideService(appPrefs);
+      var notifications = 0;
+      guideService.addListener(() => notifications++);
+
+      await guideService.markAsShown('intro');
+      await guideService.resetGuide('existing');
+      await guideService.resetAllGuides();
+
+      expect(notifications, equals(0));
+      expect(guideService.hasShown('intro'), isFalse);
+      expect(guideService.hasShown('existing'), isTrue);
     });
   });
 }
