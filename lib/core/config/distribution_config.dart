@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/services.dart' show appFlavor;
+
 /// Represents the distribution channel / flavor of the app.
 enum DistributionChannel {
   standard,
@@ -17,10 +20,38 @@ abstract final class DistributionConfig {
     defaultValue: 'standard',
   );
 
+  @visibleForTesting
+  static DistributionChannel? debugChannelOverride;
+
+  @visibleForTesting
+  static String? debugAppFlavorOverride;
+
+  @visibleForTesting
+  static void resetDebugOverrides() {
+    debugChannelOverride = null;
+    debugAppFlavorOverride = null;
+  }
+
+  /// Resolves the effective [DistributionChannel] from compile-time defines
+  /// and Flutter's runtime [appFlavor].
+  @visibleForTesting
+  static DistributionChannel resolveChannel({
+    String rawChannel = _rawChannel,
+    String? flavor,
+  }) {
+    if (rawChannel == 'play' || flavor == 'play') {
+      return DistributionChannel.play;
+    }
+    return DistributionChannel.standard;
+  }
+
   /// Current active distribution channel.
-  static DistributionChannel get channel => _rawChannel == 'play'
-      ? DistributionChannel.play
-      : DistributionChannel.standard;
+  static DistributionChannel get channel =>
+      debugChannelOverride ??
+      resolveChannel(
+        rawChannel: _rawChannel,
+        flavor: debugAppFlavorOverride ?? appFlavor,
+      );
 
   /// Whether this build targets the Google Play Store.
   static bool get isPlayStore => channel.isPlayStore;

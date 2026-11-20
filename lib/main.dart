@@ -798,6 +798,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             source: 'AppLifecycle',
           );
         }
+        try {
+          await SmartPushService.currentInstance?.handleAppResumed();
+        } catch (e, stackTrace) {
+          AppLogger.w(
+            '应用回到前台刷新智能推送计划失败',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'AppLifecycle',
+          );
+        }
       });
     }
   }

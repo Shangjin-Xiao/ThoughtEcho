@@ -2,29 +2,9 @@ part of '../smart_push_service.dart';
 
 /// 平台相关 — 时区、AlarmManager、WorkManager、本地通知调度
 extension SmartPushPlatform on SmartPushService {
-  /// 注册 WorkManager 周期性备用任务
-  ///
-  /// 当 Android 12+ 精确闹钟权限被拒绝或系统限制后台执行时，
-  /// 这个周期性任务（每15分钟）会检查是否有遗漏的推送
-  Future<void> _registerPeriodicFallbackTask() async {
-    if (!PlatformHelper.isAndroid && !PlatformHelper.isIOS) return;
-
-    try {
-      // 注册周期性任务（最小间隔15分钟）
-      await Workmanager().registerPeriodicTask(
-        'smart_push_periodic_check',
-        kPeriodicCheckTask,
-        frequency: const Duration(minutes: 15),
-      );
-      AppLogger.i('已注册 WorkManager 周期性备用任务（15分钟间隔）');
-    } catch (e) {
-      AppLogger.w('注册周期性备用任务失败', error: e);
-    }
-  }
-
   /// 取消周期性备用任务
   Future<void> _cancelPeriodicFallbackTask() async {
-    if (!PlatformHelper.isAndroid && !PlatformHelper.isIOS) return;
+    if (!_isAndroid && !_isIOS) return;
 
     try {
       await Workmanager().cancelByUniqueName('smart_push_periodic_check');
@@ -38,7 +18,11 @@ extension SmartPushPlatform on SmartPushService {
   ///
   /// Android 12+ 需要 SCHEDULE_EXACT_ALARM 权限，Android 14+ 默认不授予
   Future<bool> _canScheduleExactAlarms() async {
-    if (!PlatformHelper.isAndroid) return true;
+    final override = _canScheduleExactAlarmsOverride;
+    if (override != null) {
+      return override();
+    }
+    if (!_isAndroid) return true;
 
     try {
       final androidPlugin =
@@ -56,31 +40,90 @@ extension SmartPushPlatform on SmartPushService {
     }
   }
 
-  /// WorkManager 降级方案
-  ///
-  /// 当精确闹钟不可用时，使用 WorkManager 一次性任务作为备用
-  Future<void> _scheduleWorkManagerFallback(
-    int idIndex,
-    tz.TZDateTime scheduledDate,
-    PushTimeSlot slot,
+  /// 判断 Android 是否应使用系统本地通知预调度队列（无需后台冷启动 Dart Isolate）
+  Future<bool> _shouldUseAndroidPreScheduledNotifications({
+    bool? canScheduleExact,
+  }) async {
+    if (!_isAndroid) return false;
+    if (DistributionConfig.isPlayStore) return true;
+    final exactGranted = canScheduleExact ?? await _canScheduleExactAlarms();
+    return !exactGranted;
+  }
+
+  /// 取消所有 Android AlarmManager 与 WorkManager 后台调度任务
+  Future<void> _cancelAndroidBackgroundTasks() async {
+    if (!_isAndroid) return;
+
+    for (int i = 0; i < 10; i++) {
+      try {
+        await AndroidAlarmManager.cancel(SmartPushService._androidAlarmId + i);
+      } catch (_) {}
+      try {
+        await Workmanager().cancelByUniqueName('android_push_fallback_$i');
+      } catch (_) {}
+    }
+    try {
+      await AndroidAlarmManager.cancel(SmartPushService._dailyQuoteAlarmId);
+    } catch (_) {}
+    try {
+      await Workmanager().cancelByUniqueName('daily_quote_fallback');
+    } catch (_) {}
+    await _cancelPeriodicFallbackTask();
+  }
+
+  List<_PreScheduledEntry> _loadTrackedPreScheduledEntries() {
+    try {
+      final raw = _mmkv.getString(SmartPushService._preScheduledEntriesKey);
+      if (raw == null || raw.isEmpty) return const [];
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => _PreScheduledEntry.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .where((entry) => entry.id > 0)
+          .toList();
+    } catch (e) {
+      AppLogger.w('读取已追踪预调度通知列表失败', error: e);
+      return const [];
+    }
+  }
+
+  Future<void> _saveTrackedPreScheduledEntries(
+    List<_PreScheduledEntry> entries,
   ) async {
     try {
-      final now = DateTime.now();
-      final delay = scheduledDate.difference(now);
-
-      // 使用 WorkManager 一次性任务
-      await Workmanager().registerOneOffTask(
-        'android_push_fallback_$idIndex',
-        kBackgroundPushTask,
-        initialDelay: delay > Duration.zero ? delay : Duration.zero,
-        inputData: {'triggerKind': 'smartPush'},
-        existingWorkPolicy: ExistingWorkPolicy.replace,
-      );
-      AppLogger.i('已使用 WorkManager 降级方案调度推送: 延迟 ${delay.inMinutes} 分钟');
+      if (entries.isEmpty) {
+        await _mmkv.remove(SmartPushService._preScheduledEntriesKey);
+        return;
+      }
+      final encoded = jsonEncode(entries.map((e) => e.toJson()).toList());
+      await _mmkv.setString(SmartPushService._preScheduledEntriesKey, encoded);
     } catch (e) {
-      AppLogger.e('WorkManager 降级方案也失败', error: e);
-      // 最后的降级：仅本地通知
-      await _scheduleLocalNotification(idIndex, scheduledDate, slot);
+      AppLogger.w('保存预调度通知追踪列表失败', error: e);
+    }
+  }
+
+  /// 对账并取消不再处于当前有效计划内的预调度通知
+  Future<void> _reconcileTrackedPreScheduledNotifications({
+    required Set<int> activeIds,
+    required bool futureOnly,
+  }) async {
+    final previousEntries = _loadTrackedPreScheduledEntries();
+    if (previousEntries.isEmpty) return;
+
+    final nowMs = _now().millisecondsSinceEpoch;
+    for (final entry in previousEntries) {
+      if (activeIds.contains(entry.id)) continue;
+      if (futureOnly && entry.epochMs <= nowMs) continue;
+      try {
+        await _notificationsPlugin.cancel(entry.id);
+      } catch (e) {
+        AppLogger.w('取消过期预调度通知失败 (ID: ${entry.id})', error: e);
+      }
     }
   }
 
@@ -184,11 +227,11 @@ extension SmartPushPlatform on SmartPushService {
     PushTimeSlot slot,
   ) async {
     // 1. Android: 优先使用 AlarmManager 实现精确定时
-    if (PlatformHelper.isAndroid) {
+    if (_isAndroid) {
       // 先检查精确闹钟权限
       final canScheduleExact = await _canScheduleExactAlarms();
 
-      if (canScheduleExact) {
+      if (canScheduleExact && !DistributionConfig.isPlayStore) {
         try {
           await AndroidAlarmManager.oneShotAt(
             scheduledDate,
@@ -205,17 +248,24 @@ extension SmartPushPlatform on SmartPushService {
           return; // 成功，直接返回
         } catch (e) {
           AppLogger.e('设定常规 Alarm 失败', error: e);
-          // 继续降级处理
+          // 继续降级到本地通知
         }
-      } else {
-        AppLogger.w('精确闹钟权限被拒绝，使用 WorkManager 降级方案');
       }
 
-      // Android 降级方案: 使用 WorkManager 一次性任务
-      await _scheduleWorkManagerFallback(idIndex, scheduledDate, slot);
+      final notificationId =
+          SmartPushService.deterministicPreScheduledNotificationId(
+        scheduledDate,
+        slotIndex: idIndex,
+      );
+      await _scheduleLocalNotification(
+        notificationId,
+        scheduledDate,
+        slot,
+        canScheduleExactOverride: canScheduleExact,
+      );
     }
     // 2. iOS: 使用 WorkManager 注册后台任务
-    else if (PlatformHelper.isIOS) {
+    else if (_isIOS) {
       // iOS 使用本地通知作为用户可见的提醒
       await _scheduleLocalNotification(idIndex, scheduledDate, slot);
 
@@ -258,22 +308,27 @@ extension SmartPushPlatform on SmartPushService {
     tz.TZDateTime scheduledDate,
     PushTimeSlot slot, {
     bool isDailyQuote = false,
+    _PushContent? precomputedContent,
+    bool? canScheduleExactOverride,
   }) async {
     try {
       await _ensureNotificationReady();
-      // 尝试预计算要推送的内容
-      _PushContent? content;
-      if (isDailyQuote) {
-        final quote = await _fetchDailyQuote();
-        if (quote != null) {
-          content = _PushContent(
-            title: '📖 每日一言',
-            body: quote.content,
-            noteId: null,
-          );
+      // 优先复用批量预计算好的内容，避免多次重复查库或请求网络
+      _PushContent? content = precomputedContent;
+      if (content == null) {
+        if (isDailyQuote) {
+          final quote = await _fetchDailyQuote();
+          if (quote != null) {
+            content = _PushContent(
+              title: '📖 每日一言',
+              body: _buildNotificationBody(quote),
+              noteId: null,
+              contentType: 'dailyQuote',
+            );
+          }
+        } else {
+          content = await _getPrecomputedContent();
         }
-      } else {
-        content = await _getPrecomputedContent();
       }
 
       final androidDetails = AndroidNotificationDetails(
@@ -299,7 +354,8 @@ extension SmartPushPlatform on SmartPushService {
       );
 
       // 检查精确闹钟权限，决定使用哪种调度模式
-      final canScheduleExact = await _canScheduleExactAlarms();
+      final canScheduleExact =
+          canScheduleExactOverride ?? await _canScheduleExactAlarms();
       final scheduleMode = canScheduleExact
           ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle;
@@ -333,7 +389,7 @@ extension SmartPushPlatform on SmartPushService {
       );
 
       AppLogger.i(
-        '已设定本地通知: $scheduledDate (模式: ${canScheduleExact ? "精确" : "非精确"})',
+        '已设定本地通知: $scheduledDate (ID: $id, 模式: ${canScheduleExact ? "精确" : "非精确"})',
       );
     } catch (e) {
       AppLogger.e('设定本地通知失败', error: e);
@@ -341,16 +397,16 @@ extension SmartPushPlatform on SmartPushService {
   }
 
   Future<void> _cancelAllSchedules() async {
+    await _reconcileTrackedPreScheduledNotifications(
+      activeIds: const {},
+      futureOnly: false,
+    );
+    await _saveTrackedPreScheduledEntries(const []);
     await _notificationsPlugin.cancelAll();
-    if (PlatformHelper.isAndroid) {
-      // 取消常规推送
-      for (int i = 0; i < 10; i++) {
-        await AndroidAlarmManager.cancel(SmartPushService._androidAlarmId + i);
-      }
-      // 取消每日一言
-      await AndroidAlarmManager.cancel(SmartPushService._dailyQuoteAlarmId);
+    if (_isAndroid) {
+      await _cancelAndroidBackgroundTasks();
+    } else {
+      await _cancelPeriodicFallbackTask();
     }
-    // 取消 WorkManager 周期性任务
-    await _cancelPeriodicFallbackTask();
   }
 }

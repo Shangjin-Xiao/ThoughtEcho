@@ -350,12 +350,6 @@ extension SmartPushContentSelection on SmartPushService {
     return '💭 心迹';
   }
 
-  /// 截断内容
-  String _truncateContent(String content) {
-    if (content.length <= 100) return content;
-    return '${content.substring(0, 100)}...';
-  }
-
   /// 获取每日一言
   ///
   /// 优先使用缓存，但如果缓存内容已推送过，则请求新内容。
@@ -438,12 +432,17 @@ extension SmartPushContentSelection on SmartPushService {
   }
 
   Future<String?> _loadCurrentLocationForMatching() async {
-    final currentLocation = _locationService.getFormattedLocation();
-    if (currentLocation.isNotEmpty) return currentLocation;
+    try {
+      final currentLocation = _locationService.getFormattedLocation();
+      if (currentLocation.isNotEmpty) return currentLocation;
 
-    await _locationService.init();
-    final resolvedLocation = _locationService.getFormattedLocation();
-    return resolvedLocation.isEmpty ? null : resolvedLocation;
+      await _locationService.init();
+      final resolvedLocation = _locationService.getFormattedLocation();
+      return resolvedLocation.isEmpty ? null : resolvedLocation;
+    } catch (e) {
+      AppLogger.w('加载当前位置用于智能推送匹配失败: $e');
+      return null;
+    }
   }
 
   String? _loadCurrentWeatherForMatching() {

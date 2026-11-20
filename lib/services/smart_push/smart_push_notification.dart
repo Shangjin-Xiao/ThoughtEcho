@@ -211,7 +211,7 @@ extension SmartPushNotification on SmartPushService {
     }
   }
 
-  String _todayDateKey() => DateTime.now().toIso8601String().substring(0, 10);
+  String _todayDateKey() => _now().toIso8601String().substring(0, 10);
 
   /// 读取当天缓存的一言数据，跨首页与推送共用。
   Future<Map<String, dynamic>?> getCachedDailyQuoteForToday() async {

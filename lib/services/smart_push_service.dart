@@ -69,6 +69,12 @@ class SmartPushService extends ChangeNotifier {
   static const String _autoStartGrantedKey = 'smart_push_auto_start_granted';
   static const int _androidAlarmId = 888;
   static const int _dailyQuoteAlarmId = 988;
+  static const int kAndroidPreScheduleDays = 3;
+  static const int _preScheduledNotificationBaseId = 100000000;
+  static const int _dailyQuoteSlotCode = 99;
+  static const String _preScheduledEntriesKey =
+      'smart_push_prescheduled_entries_v1';
+  static const Duration _resumeRefreshMinInterval = Duration(hours: 6);
   static const String _notificationChannelId = 'smart_push_channel';
   static const String _notificationChannelName = '智能推送';
   static const String _scheduledTimesKey = 'smart_push_scheduled_times_today';
@@ -154,6 +160,20 @@ class SmartPushService extends ChangeNotifier {
   }
 
   final Random _random = Random();
+  final bool? _isAndroidOverride;
+  final bool? _isIOSOverride;
+  final Future<bool> Function()? _canScheduleExactAlarmsOverride;
+  final Future<PushPermissionStatus> Function()? _permissionStatusOverride;
+  final Future<void> Function()? _openSystemAppSettingsOverride;
+  final DateTime Function() _nowProvider;
+
+  DateTime? _lastScheduleRefreshAt;
+  bool? _lastScheduledExactAlarmGranted;
+  bool _isRefreshingOnResume = false;
+
+  bool get _isAndroid => _isAndroidOverride ?? PlatformHelper.isAndroid;
+  bool get _isIOS => _isIOSOverride ?? PlatformHelper.isIOS;
+  DateTime _now() => _nowProvider();
 
   SmartPushService({
     required DatabaseService databaseService,
@@ -162,12 +182,25 @@ class SmartPushService extends ChangeNotifier {
     FlutterLocalNotificationsPlugin? notificationsPlugin,
     WeatherService? weatherService,
     SmartPushAnalytics? analytics,
+    @visibleForTesting bool? isAndroidOverride,
+    @visibleForTesting bool? isIOSOverride,
+    @visibleForTesting Future<bool> Function()? canScheduleExactAlarmsOverride,
+    @visibleForTesting
+    Future<PushPermissionStatus> Function()? permissionStatusOverride,
+    @visibleForTesting Future<void> Function()? openSystemAppSettingsOverride,
+    @visibleForTesting DateTime Function()? nowProvider,
   })  : _databaseService = databaseService,
         _locationService = locationService,
         _mmkv = mmkvService ?? AppPreferencesService(),
         _notificationsPlugin =
             notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
-        _weatherService = weatherService {
+        _weatherService = weatherService,
+        _isAndroidOverride = isAndroidOverride,
+        _isIOSOverride = isIOSOverride,
+        _canScheduleExactAlarmsOverride = canScheduleExactAlarmsOverride,
+        _permissionStatusOverride = permissionStatusOverride,
+        _openSystemAppSettingsOverride = openSystemAppSettingsOverride,
+        _nowProvider = nowProvider ?? DateTime.now {
     _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
     _currentInstance = this;
   }
@@ -197,7 +230,7 @@ class SmartPushService extends ChangeNotifier {
     final pushedData = _mmkv.getString(_dailyQuotePushedDateKey);
     if (pushedData == null) return false;
 
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final today = _now().toIso8601String().substring(0, 10);
     // 格式: "2026-03-13|hash1,hash2,hash3"
     if (!pushedData.startsWith('$today|')) return false;
 
@@ -209,7 +242,7 @@ class SmartPushService extends ChangeNotifier {
 
   /// 标记某条每日一言内容已推送
   void _markDailyQuoteContentPushed(String content) {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final today = _now().toIso8601String().substring(0, 10);
     final contentHash = _contentHash(content);
 
     final pushedData = _mmkv.getString(_dailyQuotePushedDateKey);
@@ -421,6 +454,22 @@ class SmartPushService extends ChangeNotifier {
     );
   }
 
+  /// Generates a deterministic 32-bit notification ID per calendar date and slot
+  /// so repeated scheduling updates/replaces pending entries without duplicates.
+  static int deterministicPreScheduledNotificationId(
+    DateTime scheduledDate, {
+    int slotIndex = 0,
+    bool isDailyQuote = false,
+  }) {
+    final dateCode = (scheduledDate.year % 100) * 10000 +
+        scheduledDate.month * 100 +
+        scheduledDate.day;
+    final slotCode = isDailyQuote
+        ? _dailyQuoteSlotCode
+        : slotIndex.clamp(0, _dailyQuoteSlotCode - 1);
+    return _preScheduledNotificationBaseId + dateCode * 100 + slotCode;
+  }
+
   /// 设置天气服务（延迟注入）
   void setWeatherService(WeatherService service) {
     _weatherService = service;
@@ -452,28 +501,19 @@ class SmartPushService extends ChangeNotifier {
         'SmartPushService settings: enabled=${_settings.enabled}, dailyQuoteEnabled=${_settings.dailyQuotePushEnabled}',
       );
 
-      // 请求精确闹钟权限（Android 12+）
-      // 移除自动请求，改为在 UI 层（SmartPushSettingsPage）引导用户开启
-      if (PlatformHelper.isAndroid) {
+      // 检查精确闹钟权限状态（Android 12+，不主动弹窗，由设置页引导用户配置）
+      if (_isAndroid) {
         final canScheduleExact = await _canScheduleExactAlarms();
         if (!canScheduleExact) {
-          AppLogger.i('精确闹钟权限不可用，将使用 WorkManager 降级方案');
+          AppLogger.i('精确闹钟权限不可用，将使用系统预调度本地通知');
         }
       }
 
-      // 每次启动时重新规划下一次推送
+      // 每次启动时重新规划推送计划（保留通知栏中已送达的未读通知）
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
-        await scheduleNextPush();
-
-        // 仅当精确闹钟权限不可用时，才注册周期性备用任务（省电）
-        if (PlatformHelper.isAndroid) {
-          final canScheduleExact = await _canScheduleExactAlarms();
-          if (!canScheduleExact) {
-            await _registerPeriodicFallbackTask();
-          } else {
-            // 有精确闹钟权限，取消周期性任务节省电量
-            await _cancelPeriodicFallbackTask();
-          }
+        await scheduleNextPush(preserveDeliveredNotifications: true);
+        if (_isAndroid) {
+          await _cancelPeriodicFallbackTask();
         }
       } else {
         // 如果都禁用了，确保取消所有计划
@@ -485,6 +525,50 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.i('SmartPushService 初始化完成');
     } catch (e, stack) {
       AppLogger.e('SmartPushService 初始化失败', error: e, stackTrace: stack);
+    }
+  }
+
+  /// 应用回到前台时按需刷新预调度队列（带节流与权限变更检测，避免重复调度）
+  Future<void> handleAppResumed() async {
+    if (!_isInitialized || _isRefreshingOnResume) return;
+    if (!_settings.enabled && !_settings.dailyQuotePushEnabled) return;
+    if (!_isAndroid && !_isIOS) return;
+
+    _isRefreshingOnResume = true;
+    try {
+      final now = _now();
+      var shouldRefresh = false;
+
+      if (_isAndroid) {
+        final currentExactGranted = await _canScheduleExactAlarms();
+        if (_lastScheduledExactAlarmGranted != null &&
+            _lastScheduledExactAlarmGranted != currentExactGranted) {
+          shouldRefresh = true;
+        }
+      }
+
+      if (!shouldRefresh) {
+        final lastRefresh = _lastScheduleRefreshAt;
+        if (lastRefresh == null) {
+          shouldRefresh = true;
+        } else {
+          final crossedCalendarDay = lastRefresh.year != now.year ||
+              lastRefresh.month != now.month ||
+              lastRefresh.day != now.day;
+          final elapsed = now.difference(lastRefresh);
+          if (crossedCalendarDay || elapsed >= _resumeRefreshMinInterval) {
+            shouldRefresh = true;
+          }
+        }
+      }
+
+      if (shouldRefresh) {
+        await scheduleNextPush(preserveDeliveredNotifications: true);
+      }
+    } catch (e, stack) {
+      AppLogger.w('应用恢复前台刷新推送计划失败', error: e, stackTrace: stack);
+    } finally {
+      _isRefreshingOnResume = false;
     }
   }
 
@@ -537,14 +621,8 @@ class SmartPushService extends ChangeNotifier {
       // 更新计划任务
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush();
-
-        if (PlatformHelper.isAndroid) {
-          final canScheduleExact = await _canScheduleExactAlarms();
-          if (canScheduleExact) {
-            await _cancelPeriodicFallbackTask();
-          } else {
-            await _registerPeriodicFallbackTask();
-          }
+        if (_isAndroid) {
+          await _cancelPeriodicFallbackTask();
         }
       } else {
         await _cancelAllSchedules();
@@ -561,15 +639,9 @@ class SmartPushService extends ChangeNotifier {
       await _loadSettings();
       notifyListeners();
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
-        await scheduleNextPush();
-
-        if (PlatformHelper.isAndroid) {
-          final canScheduleExact = await _canScheduleExactAlarms();
-          if (canScheduleExact) {
-            await _cancelPeriodicFallbackTask();
-          } else {
-            await _registerPeriodicFallbackTask();
-          }
+        await scheduleNextPush(preserveDeliveredNotifications: true);
+        if (_isAndroid) {
+          await _cancelPeriodicFallbackTask();
         }
       } else {
         await _cancelAllSchedules();
@@ -634,6 +706,48 @@ class SmartPushService extends ChangeNotifier {
           .toList(),
     };
   }
+}
+
+/// 预调度本地通知记录条目（用于跨重排与生命周期对账）
+class _PreScheduledEntry {
+  final int id;
+  final int epochMs;
+
+  const _PreScheduledEntry({
+    required this.id,
+    required this.epochMs,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'epochMs': epochMs,
+      };
+
+  factory _PreScheduledEntry.fromJson(Map<String, dynamic> json) {
+    return _PreScheduledEntry(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      epochMs: (json['epochMs'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+/// 待写入系统通知队列的单个预调度项
+class _PlannedLocalNotification {
+  final int id;
+  final int slotIndex;
+  final PushTimeSlot slot;
+  final tz.TZDateTime scheduledDate;
+  final bool isDailyQuote;
+  final _PushContent? content;
+
+  const _PlannedLocalNotification({
+    required this.id,
+    required this.slotIndex,
+    required this.slot,
+    required this.scheduledDate,
+    this.isDailyQuote = false,
+    this.content,
+  });
 }
 
 /// 推送内容辅助类
