@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderAnimatedSize;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -588,9 +589,19 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   /// 正文尺寸折叠/展开过渡态守卫。
   ///
   /// 遵循 `lib/widgets/AGENTS.md` 规范：静态卡片一律不挂动画机件。
-  /// 仅在双击或外部驱动展开/收起过渡期间挂载 [AnimatedSize]，动画完成触发
-  /// [onEnd] 回调后复位并卸载，消除静态展示与列表滑动时的持续布局与 Ticker 开销。
+  /// 仅在双击或外部驱动展开/收起过渡期间挂载 [AnimatedSize]（并同步维持动画外壳以防
+  /// 根壳类型切换销毁 [RenderAnimatedSize]），动画完成触发 [onEnd] 或无补间兜底后
+  /// 复位并卸载，消除静态展示与列表滑动时的持续布局与 Ticker 开销。
   bool _isSizeTransitionActive = false;
+  int _sizeTransitionToken = 0;
+  GlobalKey? _animatedSizeKey;
+
+  bool get _isAnimatedSizeAnimating {
+    final renderObject = _animatedSizeKey?.currentContext?.findRenderObject();
+    return renderObject is RenderAnimatedSize && renderObject.isAnimating;
+  }
+
+  bool get _isDoubleTapAnimating => _doubleTapController?.isAnimating ?? false;
 
   void _ensureDoubleTapController() {
     if (_doubleTapController != null) return;
@@ -598,7 +609,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final controller = AnimationController(
       duration: const Duration(milliseconds: 240),
       vsync: this,
-    );
+    )..addStatusListener(_handleDoubleTapStatusChanged);
     _doubleTapController = controller;
 
     _scaleAnimation = TweenSequence<double>([
@@ -636,19 +647,58 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     ]).animate(controller);
   }
 
+  void _handleDoubleTapStatusChanged(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    // 双击反馈时长（240ms）晚于 AnimatedSwitcher 淡出时长（130ms）：
+    // 若此时并未启动或维持任何尺寸补间（例如展开前后高度一致或连续重排提前终止），
+    // 则在帧后安全回收过渡守卫，避免仅依赖 onEnd 导致 AnimatedSize 常驻。
+    _schedulePostFrameIdleCleanup(_sizeTransitionToken);
+  }
+
+  void _schedulePostFrameIdleCleanup(int token) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_isSizeTransitionActive ||
+          _sizeTransitionToken != token) {
+        return;
+      }
+      if (!_isAnimatedSizeAnimating && !_isDoubleTapAnimating) {
+        setState(() {
+          _isSizeTransitionActive = false;
+        });
+      }
+    });
+  }
+
+  void _scheduleNoOpTransitionCleanup({
+    required int token,
+    required bool previousExpanded,
+  }) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_isSizeTransitionActive ||
+          _sizeTransitionToken != token) {
+        return;
+      }
+      if (widget.isExpanded == previousExpanded && !_isAnimatedSizeAnimating) {
+        setState(() {
+          _isSizeTransitionActive = false;
+        });
+      }
+    });
+  }
+
   @override
   void didUpdateWidget(QuoteItemWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isExpanded != widget.isExpanded && !_isSizeTransitionActive) {
-      _isSizeTransitionActive = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_isSizeTransitionActive) {
-          setState(() {
-            _isSizeTransitionActive = false;
-          });
-        }
-      });
+    if (oldWidget.isExpanded != widget.isExpanded) {
+      if (!_isSizeTransitionActive) {
+        final token = ++_sizeTransitionToken;
+        _isSizeTransitionActive = true;
+        _schedulePostFrameIdleCleanup(token);
+      } else {
+        _schedulePostFrameIdleCleanup(_sizeTransitionToken);
+      }
     }
   }
 
@@ -703,30 +753,37 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     Feedback.forTap(context);
 
+    final token = ++_sizeTransitionToken;
     if (_isSizeTransitionActive) {
       // 正在过渡中再次双击：AnimatedSize 已挂载，直接应用反向状态以平滑过渡
       if (controller == null) {
         setState(() {});
       }
+      final previousExpanded = widget.isExpanded;
       widget.onToggleExpanded(!isExpanded);
+      _scheduleNoOpTransitionCleanup(
+        token: token,
+        previousExpanded: previousExpanded,
+      );
     } else {
-      // 第一阶段：激活过渡守卫挂载 AnimatedSize，捕获起始尺寸
+      // 第一阶段：激活过渡守卫挂载 AnimatedSize（并同步切入动画外壳），捕获起始尺寸
       setState(() {
         _isSizeTransitionActive = true;
       });
       // 第二阶段：在下一帧应用展开/收起状态，触发平滑尺寸过渡
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
+        if (!mounted ||
+            !_isSizeTransitionActive ||
+            _sizeTransitionToken != token) {
+          return;
+        }
+        final previousExpanded = widget.isExpanded;
         widget.onToggleExpanded(!isExpanded);
         // 安全兜底：如果外部未响应展开状态变更，在下一帧安全复位守卫
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          if (_isSizeTransitionActive && widget.isExpanded == isExpanded) {
-            setState(() {
-              _isSizeTransitionActive = false;
-            });
-          }
-        });
+        _scheduleNoOpTransitionCleanup(
+          token: token,
+          previousExpanded: previousExpanded,
+        );
       });
     }
   }
@@ -1055,12 +1112,26 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           );
 
     if (!_isSizeTransitionActive || !canToggle) {
+      if (_isSizeTransitionActive && !canToggle) {
+        final token = _sizeTransitionToken;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted ||
+              !_isSizeTransitionActive ||
+              _sizeTransitionToken != token) {
+            return;
+          }
+          setState(() {
+            _isSizeTransitionActive = false;
+          });
+        });
+      }
       // 未处于过渡态或不可展开的卡片直接返回静态 RepaintBoundary 隔离内容；
       // 避免静态卡片与列表滑动时底层 RenderAnimatedSize 常驻导致的持续尺寸对比与 Ticker 开销。
       return RepaintBoundary(child: content);
     }
 
     return AnimatedSize(
+      key: _animatedSizeKey ??= GlobalKey(),
       duration: QuoteItemWidget.expandCollapseDuration,
       curve: QuoteItemWidget._expandCurve,
       alignment: Alignment.topLeft,
@@ -1071,12 +1142,22 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   }
 
   void _handleSizeTransitionEnd() {
-    if (!mounted) return;
-    if (_isSizeTransitionActive) {
+    if (!mounted || !_isSizeTransitionActive) return;
+    final token = _sizeTransitionToken;
+    // 延后到本帧 build/layout 之后再判读 _isAnimatedSizeAnimating：
+    // Ticker 完成回调触发在 handleBeginFrame，若同帧 AnimatedSwitcher 刚卸载旧子项并触发
+    // 新一轮尺寸补间，performLayout 会在本帧重新启动 controller；帧后检查可避免提前卸载。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_isSizeTransitionActive ||
+          _sizeTransitionToken != token) {
+        return;
+      }
+      if (_isAnimatedSizeAnimating) return;
       setState(() {
         _isSizeTransitionActive = false;
       });
-    }
+    });
   }
 
   /// 三个动画对象由 [_ensureDoubleTapController] 一次性建出，调用方传进来，
@@ -1935,7 +2016,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     // 纸张横线纹理**不在这一层**：它只画在正文块上（见 _buildQuoteContentSection），
     // 铺满整张卡会穿过头部元信息、图片和按钮行。这层保持纯壳，
     // 折叠态卡片的 RepaintBoundary 缓存收益也就不受影响。
-    final shouldAnimateCardShell = widget.selectionMode || isExpanded;
+    // 过渡态激活期间同步维持 AnimatedContainer 外壳，防止阶段二切换 isExpanded 时
+    // 根壳在 RepaintBoundary 与 AnimatedContainer 间互换导致整棵子树销毁重建、
+    // 丢失阶段一捕获的起始尺寸与 onEnd 完成回调。
+    final shouldAnimateCardShell =
+        widget.selectionMode || isExpanded || _isSizeTransitionActive;
     final Widget card;
     if (shouldAnimateCardShell) {
       card = AnimatedContainer(
