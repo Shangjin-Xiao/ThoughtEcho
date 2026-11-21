@@ -813,6 +813,7 @@ Future<void> forwardToSentry(Object error) => Sentry.captureException(error);
             String.fromCharCodes(const [0x6D77, 0x6DC0, 0x533A]);
         final shortCityCd = String.fromCharCodes(const [0x6210, 0x90FD]);
         final shortCityXa = String.fromCharCodes(const [0x897F, 0x5B89]);
+        final shortCityZs = String.fromCharCodes(const [0x4E2D, 0x5C71]);
 
         await _writeFile(
           tempDir,
@@ -821,12 +822,15 @@ Future<void> forwardToSentry(Object error) => Sentry.captureException(error);
 void main() {
   const safeLocation = '示例省·示例市';
   const safePoi = 'MockPOI';
-  // 任务完成都会释放资源，八成都在缓存里，东西安装与选中山形图标均不会误报
-  const normalWords = '时区与富文本选区不会误报';
+  // 任务完成都会释放资源，每次生成都正确，持续集成都通过，八成都在缓存里
+  // 东西安放整齐，把东西安顿好，东西安装与选中山形图标、卡片中山水插画、确保定位回退均不会误报
+  const normalWords = '时区与富文本选区不会误报，每次生成都和预期一致';
   const leakedLocation = '$concreteCity$concreteDistrict';
   const leakedSentenceA = '${shortCityCd}有哪些景点';
   const leakedSentenceB = '${shortCityCd}在这里';
   const leakedSentenceC = '${shortCityXa}安全检查';
+  const leakedSentenceD = '到达${shortCityCd}正确吗';
+  const leakedSentenceE = '选${shortCityZs}作为默认城市';
 }
 ''',
         );
@@ -838,12 +842,6 @@ void main() {
         final result = await runLint(['--staged']);
         expect(result.exitCode, equals(1));
         final err = result.stderr as String;
-        expect(
-          err,
-          contains(
-            'test/unit/models/sample_location_test.dart:6 [no-real-place-names-in-tests]',
-          ),
-        );
         expect(
           err,
           contains(
@@ -862,10 +860,29 @@ void main() {
             'test/unit/models/sample_location_test.dart:9 [no-real-place-names-in-tests]',
           ),
         );
+        expect(
+          err,
+          contains(
+            'test/unit/models/sample_location_test.dart:10 [no-real-place-names-in-tests]',
+          ),
+        );
+        expect(
+          err,
+          contains(
+            'test/unit/models/sample_location_test.dart:11 [no-real-place-names-in-tests]',
+          ),
+        );
+        expect(
+          err,
+          contains(
+            'test/unit/models/sample_location_test.dart:12 [no-real-place-names-in-tests]',
+          ),
+        );
         expect(err, isNot(contains('sample_location_test.dart:2')));
         expect(err, isNot(contains('sample_location_test.dart:3')));
         expect(err, isNot(contains('sample_location_test.dart:4')));
         expect(err, isNot(contains('sample_location_test.dart:5')));
+        expect(err, isNot(contains('sample_location_test.dart:6')));
       },
     );
 
