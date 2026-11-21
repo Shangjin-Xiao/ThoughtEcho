@@ -103,6 +103,8 @@ class AgentMemoryService extends ChangeNotifier {
       'dreaming_basis_watermark';
   static const String metaDreamingBasisNoteCountKey =
       'dreaming_basis_note_count';
+  static const String metaProfileReplacementsKey = 'profile_replacements';
+  static const int maxProfileReplacements = 500;
 
   /// 画像层注入预算。超出时按「最近观察优先」截断注入副本，**不删库里的条目**。
   static const int profileInjectionMaxEntries = 24;
@@ -1196,20 +1198,22 @@ class AgentMemoryService extends ChangeNotifier {
         String? terminalSuccessorId;
         if (prevStatus == AgentMemoryStatus.superseded.storageValue &&
             prevSupBy.isNotEmpty) {
+          final allStatusRows = await txn.query(
+            profileTable,
+            columns: const <String>['id', 'status', 'superseded_by'],
+          );
+          final statusRowsById = <String, Map<String, Object?>>{
+            for (final row in allStatusRows)
+              if (row['id'] is String && (row['id'] as String).isNotEmpty)
+                row['id'] as String: row,
+          };
           var currId = prevSupBy;
           final visited = <String>{id};
           while (currId.isNotEmpty && visited.add(currId)) {
-            final nextRows = await txn.query(
-              profileTable,
-              columns: const <String>['id', 'status', 'superseded_by'],
-              where: 'id = ?',
-              whereArgs: <Object?>[currId],
-              limit: 1,
-            );
-            if (nextRows.isEmpty) {
+            final nextRow = statusRowsById[currId];
+            if (nextRow == null) {
               break;
             }
-            final nextRow = nextRows.first;
             final nextStatus = (nextRow['status'] as String?)?.trim() ??
                 AgentMemoryStatus.active.storageValue;
             if (nextStatus == AgentMemoryStatus.active.storageValue) {
@@ -2347,6 +2351,7 @@ class AgentMemoryService extends ChangeNotifier {
             }
           }
           if (pruneSupIds.isNotEmpty) {
+            await _recordPrunedProfileReplacementsInTxn(txn, pruneSupIds);
             final placeholders =
                 List<String>.filled(pruneSupIds.length, '?').join(', ');
             supersededProfiles = await txn.rawDelete(

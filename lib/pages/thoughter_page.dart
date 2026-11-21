@@ -176,6 +176,8 @@ class _ThoughterPageState extends State<ThoughterPage>
   double _lastMessageViewportHeight = 0;
   bool _isDisposed = false;
   bool _agentListenerAttached = false;
+  bool _chatSessionListenerAttached = false;
+  bool _handlingRemoteSessionCheck = false;
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
   StreamSubscription<AgentEvent>? _agentEventSubscription;
@@ -427,7 +429,7 @@ class _ThoughterPageState extends State<ThoughterPage>
     });
     if (persist) {
       if (_currentSessionId != null) {
-        unawaited(_chatSessionService.addMessage(_currentSessionId!, message));
+        unawaited(_persistMessageSafely(message));
       } else {
         // 会话要到首条用户消息才建。挂起等 _ensureSessionCreated 补写，
         // 否则开场白这类先于会话出现的消息会被静默丢掉。
@@ -462,8 +464,7 @@ class _ThoughterPageState extends State<ThoughterPage>
       );
       _messages[idx] = updatedMsg;
       if (!isLoading && _currentSessionId != null) {
-        unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, updatedMsg));
+        unawaited(_persistMessageSafely(updatedMsg));
       }
       // 这里不碰 _isLoading：单条消息定稿 ≠ 这一轮结束。Agent 一轮里可能定稿
       // 多条消息（旁白、工具面板、最终回答），任何一条把整页判成「不在生成」，

@@ -76,9 +76,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         );
         _messages[index] = finalized;
         if (_currentSessionId != null) {
-          unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, finalized),
-          );
+          unawaited(_persistMessageSafely(finalized));
         }
       });
       _scrollToBottom();
@@ -103,9 +101,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         );
         _messages[index] = failed;
         if (_currentSessionId != null) {
-          unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, failed),
-          );
+          unawaited(_persistMessageSafely(failed));
         }
       });
     }
@@ -423,7 +419,7 @@ extension _ThoughterAgent on _ThoughterPageState {
           }),
         );
         _setState(() => _messages.add(cardMsg));
-        await _chatSessionService.addMessage(_currentSessionId!, cardMsg);
+        await _persistMessageSafely(cardMsg, surfaceError: true);
       }
 
       _scrollToBottom(bypassThrottle: true);
@@ -516,7 +512,7 @@ extension _ThoughterAgent on _ThoughterPageState {
 
       // 保存到数据库（完成时持久化最终状态）
       if (!inProgress && _currentSessionId != null) {
-        _chatSessionService.addMessage(_currentSessionId!, updatedMsg);
+        unawaited(_persistMessageSafely(updatedMsg));
       }
     });
     _scrollToBottom();
@@ -841,7 +837,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
     if (effectiveSessionId != null && updated != null) {
       unawaited(
-        _chatSessionService.addMessage(effectiveSessionId, updated),
+        _persistMessageSafely(updated, preferredSessionId: effectiveSessionId),
       );
     }
     if (mounted && !_isDisposed && updated != null) {

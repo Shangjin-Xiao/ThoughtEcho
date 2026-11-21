@@ -447,6 +447,7 @@ class ChatSessionService extends ChangeNotifier {
         entity_type TEXT NOT NULL,
         entity_id TEXT NOT NULL,
         deleted_at TEXT NOT NULL,
+        session_id TEXT,
         PRIMARY KEY(entity_type, entity_id)
       )
     ''');
@@ -515,6 +516,12 @@ class ChatSessionService extends ChangeNotifier {
       db,
       tableName: 'chat_messages',
       columnName: 'delta_json',
+      definition: 'TEXT',
+    );
+    await addColumnIfMissing(
+      db,
+      tableName: 'chat_tombstones',
+      columnName: 'session_id',
       definition: 'TEXT',
     );
 
@@ -1139,19 +1146,21 @@ class ChatSessionService extends ChangeNotifier {
           : sessionIds.length;
       final chunk = sessionIds.sublist(i, end);
       final placeholders = List.filled(chunk.length, '?').join(',');
+      // 先只拉取消息 ID、会话 ID 与时间列，避免把所有历史消息正文读入内存。
       final rows = await db.rawQuery(
         '''
-        SELECT session_id, content, created_at
+        SELECT id, session_id, created_at
         FROM chat_messages
         WHERE session_id IN ($placeholders)
         ORDER BY created_at ASC
         ''',
         chunk,
       );
-      final latestBySession = <String, ({DateTime tsUtc, String? content})>{};
+      final latestBySession = <String, ({DateTime tsUtc, String msgId})>{};
       for (final row in rows) {
+        final mId = row['id'] as String?;
         final sId = row['session_id'] as String?;
-        if (sId == null) continue;
+        if (mId == null || mId.isEmpty || sId == null) continue;
         final createdStr = row['created_at'] as String? ?? '';
         final tsUtc = DateTime.tryParse(createdStr)?.toUtc();
         if (tsUtc == null) continue;
@@ -1160,16 +1169,37 @@ class ChatSessionService extends ChangeNotifier {
         if (prev == null || !tsUtc.isBefore(prev.tsUtc)) {
           latestBySession[sId] = (
             tsUtc: tsUtc,
-            content: row['content'] as String?,
+            msgId: mId,
           );
         }
+      }
+      if (latestBySession.isEmpty) continue;
+
+      final winningMsgIds = latestBySession.values
+          .map((v) => v.msgId)
+          .toSet()
+          .toList(growable: false);
+      final msgPlaceholders = List.filled(winningMsgIds.length, '?').join(',');
+      final contentRows = await db.rawQuery(
+        '''
+        SELECT id, content
+        FROM chat_messages
+        WHERE id IN ($msgPlaceholders)
+        ''',
+        winningMsgIds,
+      );
+      final snippetByMsgId = <String, String>{};
+      for (final row in contentRows) {
+        final mId = row['id'] as String?;
+        if (mId == null || mId.isEmpty) continue;
+        snippetByMsgId[mId] = _truncatePreview(row['content'] as String?);
       }
       for (final entry in latestBySession.entries) {
         final existing = result[entry.key];
         if (existing != null) {
           result[entry.key] = ChatSessionOverview(
             messageCount: existing.messageCount,
-            snippet: _truncatePreview(entry.value.content),
+            snippet: snippetByMsgId[entry.value.msgId] ?? '',
           );
         }
       }
@@ -1477,6 +1507,8 @@ WHERE s.id IN ($placeholders)
     required String entityType,
     required Iterable<String> entityIds,
     required String deletedAtUtcIso,
+    String? sessionId,
+    Map<String, String>? sessionIdByEntityId,
   }) async {
     final ids =
         entityIds.where((id) => id.isNotEmpty).toSet().toList(growable: false);
@@ -1486,17 +1518,85 @@ WHERE s.id IN ($placeholders)
       final end = (i + chunkSize < ids.length) ? i + chunkSize : ids.length;
       final batch = txn.batch();
       for (var j = i; j < end; j++) {
+        final id = ids[j];
+        final resolvedSessionId = entityType == 'message'
+            ? (sessionIdByEntityId?[id] ?? sessionId)
+            : null;
         batch.insert(
           'chat_tombstones',
           {
             'entity_type': entityType,
-            'entity_id': ids[j],
+            'entity_id': id,
             'deleted_at': deletedAtUtcIso,
+            if (resolvedSessionId != null && resolvedSessionId.isNotEmpty)
+              'session_id': resolvedSessionId,
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
       await batch.commit(noResult: true);
+    }
+  }
+
+  Future<void> _recalibrateSessionLastActiveInTxn(
+    DatabaseExecutor txn,
+    String sessionId,
+  ) async {
+    final sessionRows = await txn.query(
+      'chat_sessions',
+      columns: const <String>['created_at', 'last_active_at'],
+      where: 'id = ?',
+      whereArgs: <Object?>[sessionId],
+      limit: 1,
+    );
+    if (sessionRows.isEmpty) return;
+    final createdStr = _normalizeChatTimestampToUtcOrKeep(
+      sessionRows.first['created_at'],
+    );
+    final currentLastActiveRaw =
+        sessionRows.first['last_active_at']?.toString() ?? '';
+    final createdVer = _parseChatSyncVersion(createdStr);
+
+    final msgTimeRows = await txn.query(
+      'chat_messages',
+      columns: const <String>['created_at', 'updated_at'],
+      where: 'session_id = ?',
+      whereArgs: <Object?>[sessionId],
+    );
+    ({_ChatSyncVersion ver, String iso})? maxMsg;
+    for (final r in msgTimeRows) {
+      final createdNorm = _normalizeChatTimestampToUtcOrKeep(r['created_at']);
+      final updatedNorm = _normalizeChatTimestampToUtcOrKeep(r['updated_at']);
+      final createdMsgVer = LWWUtils.tryParseSyncVersion(createdNorm);
+      final updatedMsgVer = LWWUtils.tryParseSyncVersion(updatedNorm);
+      ({_ChatSyncVersion ver, String iso})? rowMax;
+      if (createdMsgVer != null && updatedMsgVer != null) {
+        rowMax = LWWUtils.compareSyncVersions(updatedMsgVer, createdMsgVer) >= 0
+            ? (ver: updatedMsgVer, iso: updatedNorm)
+            : (ver: createdMsgVer, iso: createdNorm);
+      } else if (updatedMsgVer != null) {
+        rowMax = (ver: updatedMsgVer, iso: updatedNorm);
+      } else if (createdMsgVer != null) {
+        rowMax = (ver: createdMsgVer, iso: createdNorm);
+      }
+      if (rowMax != null &&
+          (maxMsg == null ||
+              LWWUtils.compareSyncVersions(rowMax.ver, maxMsg.ver) > 0)) {
+        maxMsg = rowMax;
+      }
+    }
+
+    final targetIso = (maxMsg != null &&
+            LWWUtils.compareSyncVersions(maxMsg.ver, createdVer) > 0)
+        ? maxMsg.iso
+        : createdStr;
+    if (targetIso.isNotEmpty && targetIso != currentLastActiveRaw) {
+      await txn.update(
+        'chat_sessions',
+        <String, Object?>{'last_active_at': targetIso},
+        where: 'id = ?',
+        whereArgs: <Object?>[sessionId],
+      );
     }
   }
 
@@ -1568,17 +1668,27 @@ WHERE s.id IN ($placeholders)
             final placeholders = List.filled(chunk.length, '?').join(',');
             final msgRows = await txn.query(
               'chat_messages',
-              columns: ['id'],
+              columns: const ['id', 'session_id'],
               where: 'session_id IN ($placeholders)',
               whereArgs: chunk,
             );
-            final msgIds =
-                msgRows.map((r) => r['id']?.toString() ?? '').toList();
+            final msgIds = <String>[];
+            final sessionIdByMsgId = <String, String>{};
+            for (final r in msgRows) {
+              final mId = r['id']?.toString() ?? '';
+              if (mId.isEmpty) continue;
+              msgIds.add(mId);
+              final sId = r['session_id']?.toString() ?? '';
+              if (sId.isNotEmpty) {
+                sessionIdByMsgId[mId] = sId;
+              }
+            }
             await _upsertTombstonesInTxn(
               txn,
               entityType: 'message',
               entityIds: msgIds,
               deletedAtUtcIso: deletedAt,
+              sessionIdByEntityId: sessionIdByMsgId,
             );
             await _upsertTombstonesInTxn(
               txn,
@@ -1673,13 +1783,31 @@ WHERE s.id IN ($placeholders)
     notifyListeners();
   }
 
-  Future<void> addMessage(String sessionId, ChatMessage message) async {
+  /// 持久化消息并返回是否写入成功。
+  ///
+  /// 若目标会话已被远端同步或本地操作删除，事务内会因会话不存在而中止并返回 `false`，
+  /// 避免写入孤儿消息或静默吞掉外键错误。
+  Future<bool> tryAddMessage(String sessionId, ChatMessage message) async {
+    if (sessionId.isEmpty) return false;
+    var persisted = false;
     try {
       final nowUtcIso = LWWUtils.formatFixedUtcIso(DateTime.now());
       final messageCreatedUtcIso =
           LWWUtils.formatFixedUtcIso(message.timestamp);
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
+          // 先刷新会话活跃时间并校验父会话确实存在（不刷新会话元数据 updated_at，
+          // 避免覆盖对端标题/置顶修改）。若父会话已被删除则立即中止，防止产生孤儿消息。
+          final updatedSessions = await txn.update(
+            'chat_sessions',
+            {'last_active_at': nowUtcIso},
+            where: 'id = ?',
+            whereArgs: [sessionId],
+          );
+          if (updatedSessions <= 0) {
+            throw StateError('目标对话会话不存在: $sessionId');
+          }
+
           final row = message.toMap(sessionId);
           row['created_at'] = messageCreatedUtcIso;
           row['updated_at'] = nowUtcIso;
@@ -1727,13 +1855,7 @@ WHERE s.id IN ($placeholders)
               whereArgs: <Object?>[message.id],
             );
           }
-          // 仅刷新会话活跃时间，不刷新会话元数据 updated_at，避免覆盖对端标题/置顶修改。
-          await txn.update(
-            'chat_sessions',
-            {'last_active_at': nowUtcIso},
-            where: 'id = ?',
-            whereArgs: [sessionId],
-          );
+          persisted = true;
         });
       }, operationName: 'ChatSessionService.addMessage');
     } catch (e) {
@@ -1742,8 +1864,43 @@ WHERE s.id IN ($placeholders)
         error: e,
         source: 'ChatSessionService',
       );
+      return false;
     }
-    notifyListeners();
+    if (persisted) {
+      notifyListeners();
+    }
+    return persisted;
+  }
+
+  Future<void> addMessage(String sessionId, ChatMessage message) async {
+    await tryAddMessage(sessionId, message);
+  }
+
+  /// 检查指定会话是否仍然存在于数据库中。
+  ///
+  /// 返回 `null` 表示数据库暂不可读（未就绪或查询异常），调用方不应把读库失败
+  /// 误判为会话已被删除。
+  Future<bool?> sessionExists(String sessionId) async {
+    if (sessionId.isEmpty) return false;
+    final db = await _getDatabaseForRead();
+    if (db == null) return null;
+    try {
+      final rows = await db.query(
+        'chat_sessions',
+        columns: const <String>['id'],
+        where: 'id = ?',
+        whereArgs: <Object?>[sessionId],
+        limit: 1,
+      );
+      return rows.isNotEmpty;
+    } catch (e) {
+      logError(
+        'ChatSessionService.sessionExists 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return null;
+    }
   }
 
   List<ChatMessage> _parseMessagesFromRows(List<Map<String, dynamic>> rows) {
@@ -1858,17 +2015,31 @@ WHERE s.id IN ($placeholders)
       final deletedAt = LWWUtils.formatFixedUtcIso(DateTime.now());
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
+          final existingRows = await txn.query(
+            'chat_messages',
+            columns: const <String>['session_id'],
+            where: 'id = ?',
+            whereArgs: <Object?>[messageId],
+            limit: 1,
+          );
+          final rawSessionId =
+              existingRows.firstOrNull?['session_id']?.toString() ?? '';
+          final sessionId = rawSessionId.isNotEmpty ? rawSessionId : null;
           await _upsertTombstonesInTxn(
             txn,
             entityType: 'message',
             entityIds: [messageId],
             deletedAtUtcIso: deletedAt,
+            sessionId: sessionId,
           );
           await txn.delete(
             'chat_messages',
             where: 'id = ?',
             whereArgs: [messageId],
           );
+          if (sessionId != null) {
+            await _recalibrateSessionLastActiveInTxn(txn, sessionId);
+          }
         });
       }, operationName: 'ChatSessionService.deleteMessage');
     } catch (e) {
@@ -1899,6 +2070,7 @@ WHERE s.id IN ($placeholders)
             entityType: 'message',
             entityIds: msgIds,
             deletedAtUtcIso: deletedAt,
+            sessionId: sessionId,
           );
           await _upsertTombstonesInTxn(
             txn,
@@ -1911,6 +2083,7 @@ WHERE s.id IN ($placeholders)
             where: 'session_id = ?',
             whereArgs: [sessionId],
           );
+          await _recalibrateSessionLastActiveInTxn(txn, sessionId);
         });
       }, operationName: 'ChatSessionService.clearMessages');
     } catch (e) {
@@ -1951,17 +2124,27 @@ WHERE s.id IN ($placeholders)
               final placeholders = List.filled(chunk.length, '?').join(',');
               final msgRows = await txn.query(
                 'chat_messages',
-                columns: ['id'],
+                columns: const ['id', 'session_id'],
                 where: 'session_id IN ($placeholders)',
                 whereArgs: chunk,
               );
-              final msgIds =
-                  msgRows.map((r) => r['id']?.toString() ?? '').toList();
+              final msgIds = <String>[];
+              final sessionIdByMsgId = <String, String>{};
+              for (final r in msgRows) {
+                final mId = r['id']?.toString() ?? '';
+                if (mId.isEmpty) continue;
+                msgIds.add(mId);
+                final sId = r['session_id']?.toString() ?? '';
+                if (sId.isNotEmpty) {
+                  sessionIdByMsgId[mId] = sId;
+                }
+              }
               await _upsertTombstonesInTxn(
                 txn,
                 entityType: 'message',
                 entityIds: msgIds,
                 deletedAtUtcIso: deletedAt,
+                sessionIdByEntityId: sessionIdByMsgId,
               );
               await _upsertTombstonesInTxn(
                 txn,

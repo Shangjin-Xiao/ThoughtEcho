@@ -17,6 +17,8 @@ import 'package:xml/xml_events.dart';
 import '../models/merge_report.dart';
 import '../services/connectivity_service.dart';
 import '../services/assistant_data_sync_service.dart';
+import '../services/chat_session_service.dart'
+    show ChatMessageShardDescriptor, parseChatMessageShardDescriptors;
 import '../services/database_service.dart';
 import '../services/media_fingerprint_cache.dart';
 import '../services/media_reference_service.dart';
@@ -56,7 +58,9 @@ class _CorruptedRemoteSyncFileException implements Exception {
 // A size rejection must fail sync, rather than archive and overwrite remote
 // data through the corrupted-file recovery path.
 class _RemoteSyncSizeLimitException extends StateError {
-  _RemoteSyncSizeLimitException() : super('云端同步文件超过 32 MiB，已停止同步');
+  _RemoteSyncSizeLimitException([
+    super.message = '云端同步文件超过 32 MiB，已停止同步',
+  ]);
 }
 
 class _RemoteSyncJsonOutput extends OutputMemoryStream {
@@ -146,6 +150,18 @@ class WebDAVSyncService extends ChangeNotifier {
   // Sync ZIPs contain JSON only; media is transferred separately. Bound both
   // archive parsing and expanded JSON before allocating strings or objects.
   static const int _maxRemoteSyncBytes = 32 * 1024 * 1024;
+  static const int _defaultChatShardThresholdBytes = 24 * 1024 * 1024;
+  static const int _defaultMaxChatShardJsonBytes = 8 * 1024 * 1024;
+  static final RegExp _remoteChatShardFileNamePattern = RegExp(
+    r'^shard_[0-9a-f]{64}\.zip$',
+  );
+
+  @visibleForTesting
+  static int? chatShardThresholdBytesForTesting;
+
+  @visibleForTesting
+  static int? maxChatShardJsonBytesForTesting;
+
   bool _isSyncExecuting = false; // 独占同步/上传互斥锁，防止并发重入
   String _lastSyncError = ''; // 最近一次失败的错误摘要（对用户安全）
 
@@ -497,6 +513,10 @@ class WebDAVSyncService extends ChangeNotifier {
     _lastConflictCount = 0;
     notifyListeners();
 
+    Directory? workDir;
+    Future<Directory> ensureWorkDir() async =>
+        workDir ??= await _createSyncWorkDirectory();
+
     try {
       // 0. 先确认本地主库可用（必要时会等待/重新初始化）。若主库启动失败，
       // 在这里整体失败并记录一次错误，而不是在后续每个媒体文件上各抛一次。
@@ -562,6 +582,22 @@ class WebDAVSyncService extends ChangeNotifier {
         }
       }
 
+      // 2b. 若云端主索引引用了对话消息分片，先在写入任何本地数据库前逐片下载并完成哈希与 32 MiB 解压校验
+      final remoteChatShards = _extractRemoteChatShards(remoteData);
+      final verifiedRemoteChatShardPaths = <String>[];
+      if (remoteChatShards.isNotEmpty && _assistantDataSync != null) {
+        final syncWorkDir = await ensureWorkDir();
+        for (var i = 0; i < remoteChatShards.length; i++) {
+          final shardPath = await _downloadAndVerifyChatShard(
+            dio,
+            shard: remoteChatShards[i],
+            workDir: syncWorkDir,
+            index: i,
+          );
+          verifiedRemoteChatShardPaths.add(shardPath);
+        }
+      }
+
       // 3. 如果两端都有数据，进行冲突检测与克隆
       if (remoteData != null && _lastSyncTime.isNotEmpty) {
         logDebug('进行同步冲突检测与隔离...');
@@ -590,6 +626,7 @@ class WebDAVSyncService extends ChangeNotifier {
           assistantMergeStats = await _assistantDataSync!.mergeSections(
             remoteData,
             throwOnError: true,
+            chatMessageShardPaths: verifiedRemoteChatShardPaths,
           );
         }
 
@@ -610,37 +647,95 @@ class WebDAVSyncService extends ChangeNotifier {
         mediaFailureCount = await _syncMediaFiles(dio);
       }
 
-      // 6. 流式写入本地数据到临时文件并上传（避免全量数据入内存）
+      // 6. 流式写入本地数据到临时文件并上传（超大对话记录自动切分为内容寻址分片，且上传前强制自检 <= 32 MiB）
       logDebug('打包本地最新数据上传云端...');
-      // 工作文件不能放在缓存目录：系统存储紧张时会清理 cache/，
-      // “清理缓存”也会清空整个临时目录，导致打包时找不到刚写入的 JSON。
-      // 改为放在应用支持目录下、每轮同步独立的子目录中。
-      final workDir = await _createSyncWorkDirectory();
-      final tempJsonPath = p.join(workDir.path, 'thoughtecho_webdav_sync.json');
-      final tempZipPath = p.join(workDir.path, 'thoughtecho_webdav_sync.zip');
-      try {
-        // 分页流式写入 JSON 到临时文件
-        final uploadDb =
-            localDb.isOpen ? localDb : await dbService.safeDatabase;
-        await _writeLocalDataToTempJson(
-          uploadDb,
-          tempJsonPath,
-          preservedRemoteAgentMemory: preservedRemoteAgentMemory,
-          forceSkipLocalMemoryExport:
-              assistantMergeStats?.memorySkippedBecauseDisabled ?? false,
+      // 工作文件放在应用支持目录下、每轮同步独立的子目录中。
+      final syncWorkDir = await ensureWorkDir();
+      final tempJsonPath = p.join(
+        syncWorkDir.path,
+        'thoughtecho_webdav_sync.json',
+      );
+      final tempZipPath = p.join(
+        syncWorkDir.path,
+        'thoughtecho_webdav_sync.zip',
+      );
+      final uploadDb = localDb.isOpen ? localDb : await dbService.safeDatabase;
+      final forceSkipMemory =
+          assistantMergeStats?.memorySkippedBecauseDisabled ?? false;
+      await _writeLocalDataToTempJson(
+        uploadDb,
+        tempJsonPath,
+        preservedRemoteAgentMemory: preservedRemoteAgentMemory,
+        forceSkipLocalMemoryExport: forceSkipMemory,
+      );
+
+      final effectiveShardThreshold =
+          chatShardThresholdBytesForTesting ?? _defaultChatShardThresholdBytes;
+      final effectiveMaxShardJsonBytes =
+          maxChatShardJsonBytesForTesting ?? _defaultMaxChatShardJsonBytes;
+      var uploadedChatShards = const <ChatMessageShardDescriptor>[];
+      if (_assistantDataSync != null &&
+          await File(tempJsonPath).length() > effectiveShardThreshold) {
+        uploadedChatShards = await _buildLocalChatShardArchives(
+          syncWorkDir,
+          maxShardJsonBytes: effectiveMaxShardJsonBytes,
         );
+        if (uploadedChatShards.isNotEmpty) {
+          await _writeLocalDataToTempJson(
+            uploadDb,
+            tempJsonPath,
+            preservedRemoteAgentMemory: preservedRemoteAgentMemory,
+            forceSkipLocalMemoryExport: forceSkipMemory,
+            chatMessageShards: uploadedChatShards,
+          );
+        }
+      }
 
-        await packSyncZip(tempJsonPath, tempZipPath);
+      await packSyncZip(tempJsonPath, tempZipPath);
 
-        await _uploadSyncZipWithConflictProtection(
+      Map<String, int?>? existingRemoteChatShards;
+      final chatShardsDirUrl = '${_url}thoughtecho/chat_shards/';
+      if (uploadedChatShards.isNotEmpty) {
+        await _ensureDirectoryExists(dio, chatShardsDirUrl);
+        existingRemoteChatShards = await _listRemoteChatShardFiles(
           dio,
-          remoteSyncZipUrl,
-          File(tempZipPath),
-          remoteSyncFile,
+          chatShardsDirUrl,
         );
-      } finally {
-        // 清理本轮同步的工作目录（含完整笔记快照，必须删除）
-        await _cleanupSyncWorkDirectory(workDir);
+        for (final shard in uploadedChatShards) {
+          final localShardZip = File(shard.localPath!);
+          final localLen = await localShardZip.length();
+          if (existingRemoteChatShards[shard.file] == localLen) {
+            continue;
+          }
+          await dio.put(
+            '$chatShardsDirUrl${shard.file}',
+            data: localShardZip.openRead(),
+            options: Options(
+              headers: <String, Object>{
+                Headers.contentTypeHeader: 'application/zip',
+                Headers.contentLengthHeader: localLen,
+              },
+            ),
+          );
+        }
+      }
+
+      await _uploadSyncZipWithConflictProtection(
+        dio,
+        remoteSyncZipUrl,
+        File(tempZipPath),
+        remoteSyncFile,
+      );
+
+      if (uploadedChatShards.isNotEmpty || remoteChatShards.isNotEmpty) {
+        await _cleanupStaleRemoteChatShards(
+          dio,
+          chatShardsDirUrl,
+          activeShardFiles: <String>{
+            for (final s in uploadedChatShards) s.file,
+          },
+          prefetchedRemoteFiles: existingRemoteChatShards,
+        );
       }
 
       // 7. 更新同步状态。笔记数据已完整同步，水位线可以前推；
@@ -680,6 +775,10 @@ class WebDAVSyncService extends ChangeNotifier {
       await _mmkv.setString('webdav_sync_status', 'failed');
       await _mmkv.setString('webdav_last_sync_error', _lastSyncError);
     } finally {
+      if (workDir != null) {
+        // 清理本轮同步的工作目录（含完整笔记或对话分片快照，必须删除）
+        await _cleanupSyncWorkDirectory(workDir!);
+      }
       _isSyncExecuting = false;
       notifyListeners();
       if (_hasPendingSync) {
@@ -1052,27 +1151,52 @@ class WebDAVSyncService extends ChangeNotifier {
     if (!await jsonFile.exists()) {
       throw StateError('待打包的本地同步数据文件不存在: $jsonPath');
     }
+    final jsonLength = await jsonFile.length();
+    if (jsonLength > _maxRemoteSyncBytes) {
+      throw _RemoteSyncSizeLimitException(
+        '本地同步数据超过 32 MiB 上限，已中止上传以防损坏云端备份',
+      );
+    }
     final encoder = ZipFileEncoder();
     encoder.create(zipPath);
     try {
-      await encoder.addFile(File(jsonPath), 'backup_data.json');
+      await encoder.addFile(jsonFile, 'backup_data.json');
     } finally {
       encoder.closeSync();
     }
 
-    // 上传前自检，杜绝把不含数据条目的包推到云端污染其他设备
+    final zipLength = await File(zipPath).length();
+    if (zipLength > _maxRemoteSyncBytes) {
+      throw _RemoteSyncSizeLimitException(
+        '本地同步压缩包超过 32 MiB 上限，已中止上传',
+      );
+    }
+
+    // 上传前自检，杜绝把不含数据条目或展开超限的包推到云端污染其他设备
     _assertSyncZipContainsBackupData(zipPath);
   }
 
-  /// 上传前校验本地打好的同步包确实含有数据条目
+  /// 上传前校验本地打好的同步包确实含有数据条目且未超出 32 MiB 解压预算
   static void _assertSyncZipContainsBackupData(String zipPath) {
     final inputStream = InputFileStream(zipPath);
     try {
-      final hasData = ZipDecoder()
-          .decodeStream(inputStream)
-          .any((file) => _isBackupDataEntryName(file.name));
-      if (!hasData) {
+      final directory = ZipDirectory()..read(inputStream);
+      ZipFile? dataJsonFile;
+      for (final header in directory.fileHeaders) {
+        final file = header.file;
+        if (file != null && _isBackupDataEntryName(file.filename)) {
+          dataJsonFile = file;
+          break;
+        }
+      }
+      if (dataJsonFile == null) {
         throw StateError('本地打包的同步文件缺少 backup_data.json，已中止上传');
+      }
+      if (dataJsonFile.uncompressedSize > _maxRemoteSyncBytes ||
+          (dataJsonFile.header?.uncompressedSize ?? 0) > _maxRemoteSyncBytes) {
+        throw _RemoteSyncSizeLimitException(
+          '本地同步文件解压大小超过 32 MiB 上限，已中止上传',
+        );
       }
     } finally {
       inputStream.closeSync();
@@ -1085,7 +1209,7 @@ class WebDAVSyncService extends ChangeNotifier {
   ) =>
       _decodeAndValidateRemoteSyncZip(bytes);
 
-  static Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
+  static Uint8List _decompressSyncZipJsonBytes(List<int> bytes) {
     if (bytes.length > _maxRemoteSyncBytes) {
       throw _RemoteSyncSizeLimitException();
     }
@@ -1114,7 +1238,6 @@ class WebDAVSyncService extends ChangeNotifier {
       throw _RemoteSyncSizeLimitException();
     }
 
-    final Object? decoded;
     try {
       final output = _RemoteSyncJsonOutput();
       if (dataJsonFile.compressionMethod == CompressionType.deflate) {
@@ -1133,9 +1256,19 @@ class WebDAVSyncService extends ChangeNotifier {
         // Stored and BZip2 entries write directly to the bounded output.
         dataJsonFile.decompress(output);
       }
-      decoded = json.decode(utf8.decode(output.getBytes()));
+      return output.getBytes();
     } on _RemoteSyncSizeLimitException {
       rethrow;
+    } catch (e) {
+      throw _CorruptedRemoteSyncFileException('数据条目解压失败 ($e)');
+    }
+  }
+
+  static Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
+    final jsonBytes = _decompressSyncZipJsonBytes(bytes);
+    final Object? decoded;
+    try {
+      decoded = json.decode(utf8.decode(jsonBytes));
     } catch (e) {
       throw _CorruptedRemoteSyncFileException('数据文件不是有效 JSON ($e)');
     }
@@ -1144,6 +1277,22 @@ class WebDAVSyncService extends ChangeNotifier {
     }
     _validateRemoteSyncData(decoded);
     return decoded;
+  }
+
+  static Uint8List _decodeAndValidateRemoteChatShardZipToBytes(
+    List<int> bytes,
+  ) {
+    final jsonBytes = _decompressSyncZipJsonBytes(bytes);
+    final Object? decoded;
+    try {
+      decoded = json.decode(utf8.decode(jsonBytes));
+    } catch (e) {
+      throw FormatException('云端对话分片不是有效 JSON ($e)');
+    }
+    if (decoded is! Map<String, dynamic> || decoded['messages'] is! List) {
+      throw const FormatException('云端对话分片结构无效');
+    }
+    return jsonBytes;
   }
 
   /// 把无法解析的云端文件改名归档，避免重建时直接丢弃用户数据。
@@ -1208,6 +1357,16 @@ class WebDAVSyncService extends ChangeNotifier {
     final chat = data['chat'];
     if (chat != null && chat is! Map) {
       throw const _CorruptedRemoteSyncFileException('云端同步对话数据格式无效');
+    }
+    if (chat is Map) {
+      final chatMap = chat is Map<String, dynamic>
+          ? chat
+          : chat.map((k, v) => MapEntry(k.toString(), v));
+      try {
+        parseChatMessageShardDescriptors(chatMap);
+      } on FormatException catch (e) {
+        throw _CorruptedRemoteSyncFileException(e.message);
+      }
     }
 
     final agentMemory = data['agent_memory'];
@@ -2617,6 +2776,187 @@ class WebDAVSyncService extends ChangeNotifier {
     );
   }
 
+  static List<ChatMessageShardDescriptor> _extractRemoteChatShards(
+    Map<String, dynamic>? remoteData,
+  ) {
+    if (remoteData == null) return const <ChatMessageShardDescriptor>[];
+    final rawChat = remoteData['chat'];
+    if (rawChat is! Map) return const <ChatMessageShardDescriptor>[];
+    final chatMap = rawChat is Map<String, dynamic>
+        ? rawChat
+        : rawChat.map((k, v) => MapEntry(k.toString(), v));
+    return parseChatMessageShardDescriptors(chatMap);
+  }
+
+  Future<List<ChatMessageShardDescriptor>> _buildLocalChatShardArchives(
+    Directory workDir, {
+    required int maxShardJsonBytes,
+  }) async {
+    final assistantSync = _assistantDataSync;
+    if (assistantSync == null) return const <ChatMessageShardDescriptor>[];
+    final rawShardFiles = await assistantSync.exportChatMessageShardJsonFiles(
+      workDir,
+      maxShardJsonBytes: maxShardJsonBytes,
+    );
+    if (rawShardFiles.isEmpty) return const <ChatMessageShardDescriptor>[];
+
+    final descriptors = <ChatMessageShardDescriptor>[];
+    for (var i = 0; i < rawShardFiles.length; i++) {
+      final rawFile = rawShardFiles[i];
+      final tempShardZipPath = p.join(workDir.path, 'chat_shard_tmp_$i.zip');
+      try {
+        await packSyncZip(rawFile.path, tempShardZipPath);
+      } finally {
+        if (await rawFile.exists()) {
+          await rawFile.delete();
+        }
+      }
+      final tempZipFile = File(tempShardZipPath);
+      final digest = await sha256.bind(tempZipFile.openRead()).first;
+      final shaHex = digest.toString().toLowerCase();
+      final finalName = 'shard_$shaHex.zip';
+      final finalZipPath = p.join(workDir.path, finalName);
+      if (await File(finalZipPath).exists()) {
+        await tempZipFile.delete();
+      } else {
+        await tempZipFile.rename(finalZipPath);
+      }
+      descriptors.add(
+        ChatMessageShardDescriptor(
+          file: finalName,
+          sha256: shaHex,
+          localPath: finalZipPath,
+        ),
+      );
+    }
+    return descriptors;
+  }
+
+  Future<String> _downloadAndVerifyChatShard(
+    Dio dio, {
+    required ChatMessageShardDescriptor shard,
+    required Directory workDir,
+    required int index,
+  }) async {
+    if (!_remoteChatShardFileNamePattern.hasMatch(shard.file)) {
+      throw StateError('非法的云端对话分片文件名');
+    }
+    final shardUrl = '${_url}thoughtecho/chat_shards/${shard.file}';
+    final cancelToken = CancelToken();
+    final res = await dio.get<List<int>>(
+      shardUrl,
+      cancelToken: cancelToken,
+      options: Options(responseType: ResponseType.bytes),
+      onReceiveProgress: (received, total) {
+        if (received > _maxRemoteSyncBytes || total > _maxRemoteSyncBytes) {
+          cancelToken.cancel('WebDAV chat shard exceeds 32 MiB limit');
+        }
+      },
+    );
+    if (res.statusCode != 200 || res.data == null) {
+      throw StateError('下载云端对话分片失败 (${res.statusCode})');
+    }
+    final bytes = res.data!;
+    if (bytes.length > _maxRemoteSyncBytes) {
+      throw _RemoteSyncSizeLimitException();
+    }
+    final expectedHeaderLen = _contentLengthFromHeaders(res.headers);
+    if (expectedHeaderLen != null && expectedHeaderLen != bytes.length) {
+      throw StateError('云端对话分片下载不完整');
+    }
+    final actualSha = sha256.convert(bytes).toString().toLowerCase();
+    if (actualSha != shard.sha256) {
+      throw StateError('云端对话分片 SHA-256 校验不一致');
+    }
+    final Uint8List verifiedJsonBytes;
+    try {
+      verifiedJsonBytes = await compute(
+        _decodeAndValidateRemoteChatShardZipToBytes,
+        bytes,
+      );
+    } on _CorruptedRemoteSyncFileException catch (e) {
+      // 分片文件损坏或下载截断时直接中止本轮同步，不触发主同步包归档覆盖。
+      throw StateError('云端对话分片损坏 (${e.reason})');
+    }
+    final localJsonPath = p.join(
+      workDir.path,
+      'verified_remote_chat_shard_$index.json',
+    );
+    await File(localJsonPath).writeAsBytes(verifiedJsonBytes, flush: true);
+    return localJsonPath;
+  }
+
+  Future<Map<String, int?>> _listRemoteChatShardFiles(
+    Dio dio,
+    String chatShardsDirUrl,
+  ) async {
+    final result = <String, int?>{};
+    try {
+      final response = await _requestPropfind(
+        dio,
+        chatShardsDirUrl,
+        depth: '1',
+        validateStatus: (status) =>
+            status == 200 || status == 207 || status == 404,
+      );
+      if (response.statusCode != 200 && response.statusCode != 207) {
+        return result;
+      }
+      final body = response.data ?? '';
+      for (final block in _parsePropfindResponses(body)) {
+        if (block.descendantElements.any(
+          (element) => element.name.local.toLowerCase() == 'collection',
+        )) {
+          continue;
+        }
+        if (!_propfindResponseHasSuccessStatus(block)) continue;
+        final href = _extractFirstXmlTagValue(block, 'href');
+        if (href == null) continue;
+        final normalizedPath = _normalizedUriPath(href);
+        if (normalizedPath == null) continue;
+        final fileName = p.posix.basename(normalizedPath);
+        if (!_remoteChatShardFileNamePattern.hasMatch(fileName)) continue;
+        final length = int.tryParse(
+          _extractFirstXmlTagValue(block, 'getcontentlength') ?? '',
+        );
+        result[fileName] = length;
+      }
+    } catch (e) {
+      logDebug('列举云端对话分片目录失败: $e', source: 'WebDAVSyncService');
+    }
+    return result;
+  }
+
+  Future<void> _cleanupStaleRemoteChatShards(
+    Dio dio,
+    String chatShardsDirUrl, {
+    required Set<String> activeShardFiles,
+    Map<String, int?>? prefetchedRemoteFiles,
+  }) async {
+    try {
+      final remoteFiles = prefetchedRemoteFiles ??
+          await _listRemoteChatShardFiles(dio, chatShardsDirUrl);
+      for (final fileName in remoteFiles.keys) {
+        if (activeShardFiles.contains(fileName) ||
+            !_remoteChatShardFileNamePattern.hasMatch(fileName)) {
+          continue;
+        }
+        try {
+          await dio.delete(
+            '$chatShardsDirUrl$fileName',
+            options: Options(
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          );
+        } catch (e) {
+          logDebug('清理过期云端对话分片跳过 ($fileName): $e', source: 'WebDAVSyncService');
+        }
+      }
+    } catch (e) {
+      logDebug('清理云端旧对话分片跳过: $e', source: 'WebDAVSyncService');
+    }
+  }
+
   /// 流式写入本地同步数据到临时 JSON 文件
   ///
   /// 格式与 [DatabaseBackupService.exportDataAsMap] 兼容：
@@ -2627,6 +2967,7 @@ class WebDAVSyncService extends ChangeNotifier {
     String filePath, {
     Map<String, dynamic>? preservedRemoteAgentMemory,
     bool forceSkipLocalMemoryExport = false,
+    List<ChatMessageShardDescriptor>? chatMessageShards,
   }) async {
     final sink = File(filePath).openWrite(encoding: utf8);
     try {
@@ -2694,6 +3035,7 @@ class WebDAVSyncService extends ChangeNotifier {
         sink,
         preservedRemoteAgentMemory: preservedRemoteAgentMemory,
         forceSkipLocalMemoryExport: forceSkipLocalMemoryExport,
+        chatMessageShards: chatMessageShards,
       );
       sink.write('}');
       await sink.flush();

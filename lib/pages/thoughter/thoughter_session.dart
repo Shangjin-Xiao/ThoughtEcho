@@ -53,6 +53,10 @@ extension _ThoughterSession on _ThoughterPageState {
         _agentListenerAttached = false;
       }
     }
+    if (_chatSessionListenerAttached) {
+      _chatSessionService.removeListener(_onChatSessionServiceChanged);
+      _chatSessionListenerAttached = false;
+    }
     _streamSubscription?.cancel();
     _tagSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -150,6 +154,10 @@ extension _ThoughterSession on _ThoughterPageState {
       if (!_agentListenerAttached) {
         agentService.addListener(_onAgentServiceChanged);
         _agentListenerAttached = true;
+      }
+      if (!_chatSessionListenerAttached) {
+        _chatSessionService.addListener(_onChatSessionServiceChanged);
+        _chatSessionListenerAttached = true;
       }
       _settingsReady = true;
       // 两条一次性提示串行弹，别叠在一起：实验性说明讲的是「AI 会出错」，
@@ -269,11 +277,120 @@ extension _ThoughterSession on _ThoughterPageState {
     };
   }
 
-  /// 延迟创建会话。
-  Future<void> _ensureSessionCreated() async {
-    if (_currentSessionId != null) return;
+  void _onChatSessionServiceChanged() {
+    if (_isDisposed || !mounted) return;
+    final sessionId = _currentSessionId;
+    if (sessionId == null || _handlingRemoteSessionCheck) return;
+    unawaited(_verifyCurrentSessionStillExists(sessionId));
+  }
+
+  Future<void> _verifyCurrentSessionStillExists(String sessionId) async {
+    if (_handlingRemoteSessionCheck) return;
+    _handlingRemoteSessionCheck = true;
+    try {
+      final exists = await _chatSessionService.sessionExists(sessionId);
+      if (!mounted || _isDisposed || _currentSessionId != sessionId) return;
+      // null 表示读库暂不可用，仅在明确确认会话已不存在（false）时处理。
+      if (exists != false) return;
+      if (_isLoading) {
+        // 正在生成回复时当前会话被远端同步删除：立即重建新会话并迁移当前可见历史，
+        // 避免打断进行中的生成或让后续回复因外键失效而静默丢失。
+        await _rebuildDeletedCurrentSession();
+      } else {
+        // 空闲态下当前会话已被远端删除：清空过期引用并回到新对话初始态。
+        _currentSessionId = null;
+        _messagesSessionId = null;
+        await _startNewChat();
+      }
+    } finally {
+      _handlingRemoteSessionCheck = false;
+    }
+  }
+
+  Future<void> _rebuildDeletedCurrentSession({
+    String? excludeMessageId,
+  }) async {
+    String? firstUserContent;
+    for (final m in _messages) {
+      if (m.isUser && m.id != excludeMessageId && m.content.trim().isNotEmpty) {
+        firstUserContent = m.content.trim();
+        break;
+      }
+    }
     await _createNewSession();
     await _flushPendingPersistMessages();
+    final newSessionId = _currentSessionId;
+    if (newSessionId == null) return;
+    for (final msg in List<app_chat.ChatMessage>.from(_messages)) {
+      if (msg.id == excludeMessageId || msg.isLoading) continue;
+      if (msg.role == 'system' && !msg.includedInContext) continue;
+      await _chatSessionService.tryAddMessage(newSessionId, msg);
+    }
+    if (firstUserContent != null) {
+      _generateAITitle(newSessionId, firstUserContent);
+    }
+  }
+
+  /// 延迟创建会话（若既有会话已被远端同步删除则自动重建）。
+  Future<void> _ensureSessionCreated({String? excludeMessageId}) async {
+    final currentId = _currentSessionId;
+    if (currentId != null) {
+      final exists = await _chatSessionService.sessionExists(currentId);
+      if (exists == false) {
+        await _rebuildDeletedCurrentSession(excludeMessageId: excludeMessageId);
+      }
+      return;
+    }
+    await _createNewSession();
+    await _flushPendingPersistMessages();
+  }
+
+  /// 安全落库单条消息：若目标会话已被远端删除则自动重建新会话重试；仍失败时按需提示用户。
+  Future<bool> _persistMessageSafely(
+    app_chat.ChatMessage message, {
+    String? preferredSessionId,
+    bool surfaceError = false,
+  }) async {
+    var targetSessionId = preferredSessionId ?? _currentSessionId;
+    if (targetSessionId == null) {
+      await _ensureSessionCreated(excludeMessageId: message.id);
+      targetSessionId = _currentSessionId;
+      if (targetSessionId == null) {
+        if (surfaceError && mounted && !_isDisposed) {
+          final l10n = AppLocalizations.of(context);
+          AppSnackBar.error(context, l10n.saveFailed(l10n.aiChat));
+        }
+        return false;
+      }
+    }
+
+    var persisted = await _chatSessionService.tryAddMessage(
+      targetSessionId,
+      message,
+    );
+    if (!persisted &&
+        mounted &&
+        !_isDisposed &&
+        (preferredSessionId == null ||
+            preferredSessionId == _currentSessionId)) {
+      final exists = await _chatSessionService.sessionExists(targetSessionId);
+      if (exists == false && mounted && !_isDisposed) {
+        await _rebuildDeletedCurrentSession(excludeMessageId: message.id);
+        final rebuiltId = _currentSessionId;
+        if (rebuiltId != null && rebuiltId != targetSessionId) {
+          persisted = await _chatSessionService.tryAddMessage(
+            rebuiltId,
+            message,
+          );
+        }
+      }
+    }
+
+    if (!persisted && surfaceError && mounted && !_isDisposed) {
+      final l10n = AppLocalizations.of(context);
+      AppSnackBar.error(context, l10n.saveFailed(l10n.aiChat));
+    }
+    return persisted;
   }
 
   /// 补写会话建立前挂起的消息，保持它们在用户首条消息之前的顺序。
@@ -285,7 +402,7 @@ extension _ThoughterSession on _ThoughterPageState {
     _pendingPersistMessages.clear();
     for (final message in pending) {
       try {
-        await _chatSessionService.addMessage(sessionId, message);
+        await _chatSessionService.tryAddMessage(sessionId, message);
       } catch (e) {
         logDebug('补写挂起消息失败: ${message.id} - $e');
       }
@@ -344,6 +461,16 @@ extension _ThoughterSession on _ThoughterPageState {
       // 读库这段时间里 _messages 还是上一个会话的，先声明"对不上号"，
       // 免得这期间又有人来切会话、拿这份旧列表去删新会话。
       _messagesSessionId = null;
+      final exists = await _chatSessionService.sessionExists(sessionId);
+      if (!mounted || generation != _sessionLoadGeneration) return;
+      if (exists == false) {
+        _currentSessionId = null;
+        _messagesSessionId = null;
+        _setState(() {
+          _messages.clear();
+        });
+        return;
+      }
       final messages = await _chatSessionService.getMessages(sessionId);
       // 读的过程中又切走了：这次的结果已经过期，写回去会盖掉新的那次。
       if (!mounted || generation != _sessionLoadGeneration) return;

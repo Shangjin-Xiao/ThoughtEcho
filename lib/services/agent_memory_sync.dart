@@ -124,6 +124,20 @@ class _ParsedMemoryTombstone {
   final DateTime deletedAtUtc;
 }
 
+class _ParsedMemoryProfileReplacement {
+  const _ParsedMemoryProfileReplacement({
+    required this.fromId,
+    required this.toId,
+    required this.updatedAtRaw,
+    required this.updatedAtVer,
+  });
+
+  final String fromId;
+  final String toId;
+  final String updatedAtRaw;
+  final _MemorySyncVersion updatedAtVer;
+}
+
 typedef _MemorySyncVersion = ({DateTime utc, bool hasExplicitZone});
 
 final _MemorySyncVersion _epochMemorySyncVersion = (
@@ -193,6 +207,12 @@ void _validateMemorySectionContainers(Map<dynamic, dynamic> rawSection) {
   final rawDreaming = rawSection['dreaming'];
   if (rawDreaming != null && rawDreaming is! Map) {
     throw const FormatException('Invalid agent_memory.dreaming container');
+  }
+  final rawReplacements = rawSection['profile_replacements'];
+  if (rawReplacements != null && rawReplacements is! List) {
+    throw const FormatException(
+      'Invalid agent_memory.profile_replacements container',
+    );
   }
   final rawClearedAt = rawSection['cleared_at'];
   if (rawClearedAt != null) {
@@ -659,6 +679,445 @@ final Set<String> _singletonMemoryKinds = <String>{
   AgentMemoryKind.style.storageValue,
 };
 
+_ParsedMemoryProfileReplacement? _sanitizeMemoryProfileReplacement(
+  Object? item,
+) {
+  if (item is! Map) return null;
+  final fromRaw = item['from_id'];
+  final toRaw = item['to_id'];
+  final updatedRaw = item['updated_at'];
+  if (fromRaw is! String || toRaw is! String || updatedRaw is! String) {
+    return null;
+  }
+  final fromId = fromRaw.trim();
+  final toId = toRaw.trim();
+  final updatedTrimmed = updatedRaw.trim();
+  if (fromId.isEmpty ||
+      toId.isEmpty ||
+      fromId == toId ||
+      updatedTrimmed.isEmpty) {
+    return null;
+  }
+  if (_tryParseMemoryUtc(updatedTrimmed) == null) {
+    return null;
+  }
+  final normalizedUpdated = _normalizeMemoryTimestampToUtcOrKeep(
+    updatedTrimmed,
+  );
+  return _ParsedMemoryProfileReplacement(
+    fromId: fromId,
+    toId: toId,
+    updatedAtRaw: normalizedUpdated,
+    updatedAtVer: _parseMemoryRowSyncVersion(normalizedUpdated, null),
+  );
+}
+
+Map<String, _ParsedMemoryProfileReplacement> _decodeProfileReplacementsMeta(
+  String? rawJson,
+) {
+  if (rawJson == null || rawJson.trim().isEmpty) {
+    return <String, _ParsedMemoryProfileReplacement>{};
+  }
+  try {
+    final decoded = jsonDecode(rawJson);
+    if (decoded is! List) {
+      return <String, _ParsedMemoryProfileReplacement>{};
+    }
+    final result = <String, _ParsedMemoryProfileReplacement>{};
+    for (final item in decoded) {
+      final parsed = _sanitizeMemoryProfileReplacement(item);
+      if (parsed == null) continue;
+      final existing = result[parsed.fromId];
+      if (existing == null) {
+        result[parsed.fromId] = parsed;
+      } else {
+        final cmp = LWWUtils.compareSyncVersions(
+          parsed.updatedAtVer,
+          existing.updatedAtVer,
+        );
+        if (cmp > 0 || (cmp == 0 && parsed.toId.compareTo(existing.toId) > 0)) {
+          result[parsed.fromId] = parsed;
+        }
+      }
+    }
+    return result;
+  } catch (_) {
+    return <String, _ParsedMemoryProfileReplacement>{};
+  }
+}
+
+Map<String, _ParsedMemoryProfileReplacement>
+    _compressAndBoundProfileReplacements(
+  Map<String, _ParsedMemoryProfileReplacement> input, {
+  Map<String, Map<String, Object?>>? profileById,
+  Set<String> pruneSet = const <String>{},
+}) {
+  if (input.isEmpty) {
+    return <String, _ParsedMemoryProfileReplacement>{};
+  }
+  final compressed = <String, _ParsedMemoryProfileReplacement>{};
+  for (final entry in input.entries) {
+    final startId = entry.key;
+    var currId = entry.value.toId;
+    var latestRaw = entry.value.updatedAtRaw;
+    var latestVer = entry.value.updatedAtVer;
+    final visited = <String>{startId};
+
+    while (currId.isNotEmpty && visited.add(currId)) {
+      final nextRep = input[currId];
+      if (nextRep != null) {
+        if (LWWUtils.compareSyncVersions(nextRep.updatedAtVer, latestVer) > 0) {
+          latestVer = nextRep.updatedAtVer;
+          latestRaw = nextRep.updatedAtRaw;
+        }
+        currId = nextRep.toId;
+        continue;
+      }
+      final profRow = profileById?[currId];
+      if (profRow != null) {
+        final status = (profRow['status'] as String?)?.trim() ?? '';
+        final supBy = (profRow['superseded_by'] as String?)?.trim() ?? '';
+        if ((pruneSet.contains(currId) ||
+                status == AgentMemoryStatus.superseded.storageValue) &&
+            supBy.isNotEmpty) {
+          final rowVer = _parseMemoryRowSyncVersion(
+            profRow['updated_at'],
+            profRow['observed_at'],
+          );
+          if (LWWUtils.compareSyncVersions(rowVer, latestVer) > 0) {
+            latestVer = rowVer;
+            latestRaw = _normalizeMemoryTimestampToUtcOrKeep(
+              profRow['updated_at'] ?? profRow['observed_at'],
+            );
+          }
+          currId = supBy;
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (currId.isEmpty || currId == startId) {
+      continue;
+    }
+    compressed[startId] = _ParsedMemoryProfileReplacement(
+      fromId: startId,
+      toId: currId,
+      updatedAtRaw: latestRaw,
+      updatedAtVer: latestVer,
+    );
+  }
+
+  if (compressed.length <= AgentMemoryService.maxProfileReplacements) {
+    return compressed;
+  }
+  final sortedEntries = compressed.values.toList()
+    ..sort((a, b) {
+      final cmp = LWWUtils.compareSyncVersions(b.updatedAtVer, a.updatedAtVer);
+      if (cmp != 0) return cmp;
+      return a.fromId.compareTo(b.fromId);
+    });
+  return <String, _ParsedMemoryProfileReplacement>{
+    for (final item
+        in sortedEntries.take(AgentMemoryService.maxProfileReplacements))
+      item.fromId: item,
+  };
+}
+
+String _encodeProfileReplacementsMeta(
+  Map<String, _ParsedMemoryProfileReplacement> map,
+) {
+  final list = map.values.toList()
+    ..sort((a, b) => a.fromId.compareTo(b.fromId));
+  return jsonEncode(<Map<String, String>>[
+    for (final item in list)
+      <String, String>{
+        'from_id': item.fromId,
+        'to_id': item.toId,
+        'updated_at': item.updatedAtRaw,
+      },
+  ]);
+}
+
+Future<void> _recordPrunedProfileReplacementsInTxn(
+  DatabaseExecutor txn,
+  List<String> pruneSupIds,
+) async {
+  if (pruneSupIds.isEmpty) return;
+  final pruneSet = pruneSupIds.toSet();
+  final allProfRows = await txn.query(
+    AgentMemoryService.profileTable,
+    columns: const <String>[
+      'id',
+      'status',
+      'superseded_by',
+      'replaces_id',
+      'source',
+      'observed_at',
+      'updated_at',
+    ],
+  );
+  final profileById = <String, Map<String, Object?>>{
+    for (final r in allProfRows)
+      if (r['id'] is String && (r['id'] as String).isNotEmpty)
+        r['id'] as String: r,
+  };
+
+  final metaRows = await txn.query(
+    AgentMemoryService.metaTable,
+    where: 'key = ?',
+    whereArgs: const <Object?>[AgentMemoryService.metaProfileReplacementsKey],
+    limit: 1,
+  );
+  final existingRaw =
+      metaRows.isEmpty ? null : metaRows.first['value'] as String?;
+  final replacements = _decodeProfileReplacementsMeta(existingRaw);
+
+  final tombRows = await txn.query(
+    AgentMemoryService.tombstonesTable,
+    columns: const <String>['entity_id', 'deleted_at'],
+    where: 'entity_type = ?',
+    whereArgs: const <Object?>['profile'],
+  );
+  final tombRawById = <String, String>{
+    for (final r in tombRows)
+      if (r['entity_id'] is String && r['deleted_at'] is String)
+        r['entity_id'] as String: r['deleted_at'] as String,
+  };
+
+  // 构建显式 replaces_id 的反向后继索引，兜底 superseded_by 为空的替换跳
+  final explicitSuccByReplacesId = <String, String>{};
+  for (final r in profileById.values) {
+    final rId = r['id'] as String;
+    final repId = (r['replaces_id'] as String?)?.trim() ?? '';
+    if (repId.isEmpty || repId == rId) continue;
+    final xRow = profileById[repId];
+    if (xRow != null && _predecessorWinsReplacementEdge(xRow, r)) {
+      continue;
+    }
+    final prev = explicitSuccByReplacesId[repId];
+    if (prev == null) {
+      explicitSuccByReplacesId[repId] = rId;
+    } else {
+      final prevRow = profileById[prev];
+      if (prevRow != null && _compareProfileRowsByWinnerRule(r, prevRow) < 0) {
+        explicitSuccByReplacesId[repId] = rId;
+      }
+    }
+  }
+
+  void putReplacement(String fromId, String toId, String updatedIso) {
+    if (fromId.isEmpty || toId.isEmpty || fromId == toId) return;
+    final normIso = _normalizeMemoryTimestampToUtcOrKeep(updatedIso);
+    if (_tryParseMemoryUtc(normIso) == null) return;
+    final ver = _parseMemoryRowSyncVersion(normIso, null);
+    final existing = replacements[fromId];
+    if (existing == null ||
+        LWWUtils.compareSyncVersions(ver, existing.updatedAtVer) > 0 ||
+        (LWWUtils.compareSyncVersions(ver, existing.updatedAtVer) == 0 &&
+            toId.compareTo(existing.toId) > 0)) {
+      replacements[fromId] = _ParsedMemoryProfileReplacement(
+        fromId: fromId,
+        toId: toId,
+        updatedAtRaw: normIso,
+        updatedAtVer: ver,
+      );
+    }
+  }
+
+  for (final prunedId in pruneSet) {
+    final prunedRow = profileById[prunedId];
+    if (prunedRow == null) continue;
+
+    var currId = prunedId;
+    final visited = <String>{};
+    String? terminalId;
+    var hasExplicitHop = false;
+    var latestIso = _normalizeMemoryTimestampToUtcOrKeep(
+      prunedRow['updated_at'] ?? prunedRow['observed_at'],
+    );
+    var latestVer = _parseMemoryRowSyncVersion(
+      prunedRow['updated_at'],
+      prunedRow['observed_at'],
+    );
+
+    while (currId.isNotEmpty && visited.add(currId)) {
+      final currRow = profileById[currId];
+      String nextId = '';
+      if (currRow != null) {
+        final rowVer = _parseMemoryRowSyncVersion(
+          currRow['updated_at'],
+          currRow['observed_at'],
+        );
+        if (LWWUtils.compareSyncVersions(rowVer, latestVer) > 0) {
+          latestVer = rowVer;
+          latestIso = _normalizeMemoryTimestampToUtcOrKeep(
+            currRow['updated_at'] ?? currRow['observed_at'],
+          );
+        }
+        final supBy = (currRow['superseded_by'] as String?)?.trim() ?? '';
+        nextId =
+            supBy.isNotEmpty ? supBy : (explicitSuccByReplacesId[currId] ?? '');
+        if (nextId.isEmpty) {
+          nextId = replacements[currId]?.toId ?? '';
+        }
+        final nextRow = profileById[nextId];
+        if (nextRow != null &&
+            ((nextRow['replaces_id'] as String?)?.trim() ?? '') == currId) {
+          hasExplicitHop = true;
+        }
+      } else {
+        final rep = replacements[currId];
+        if (rep != null) {
+          if (LWWUtils.compareSyncVersions(rep.updatedAtVer, latestVer) > 0) {
+            latestVer = rep.updatedAtVer;
+            latestIso = rep.updatedAtRaw;
+          }
+          nextId = rep.toId;
+        } else {
+          final tombIso = tombRawById[currId];
+          if (tombIso != null) {
+            final tombVer = _parseMemoryRowSyncVersion(tombIso, null);
+            if (LWWUtils.compareSyncVersions(tombVer, latestVer) > 0) {
+              latestVer = tombVer;
+              latestIso = _normalizeMemoryTimestampToUtcOrKeep(tombIso);
+            }
+          }
+        }
+      }
+
+      if (nextId.isEmpty) {
+        if (currId != prunedId) {
+          terminalId = currId;
+        }
+        break;
+      }
+      final nextRow = profileById[nextId];
+      if (nextRow == null) {
+        final tombIso = tombRawById[nextId];
+        if (tombIso != null) {
+          final tombVer = _parseMemoryRowSyncVersion(tombIso, null);
+          if (LWWUtils.compareSyncVersions(tombVer, latestVer) > 0) {
+            latestVer = tombVer;
+            latestIso = _normalizeMemoryTimestampToUtcOrKeep(tombIso);
+          }
+        }
+        terminalId = nextId;
+        final nextRep = replacements[nextId];
+        if (nextRep == null) {
+          break;
+        }
+      } else if (!pruneSet.contains(nextId)) {
+        final nextStatus = (nextRow['status'] as String?)?.trim() ??
+            AgentMemoryStatus.active.storageValue;
+        final nextSupBy = (nextRow['superseded_by'] as String?)?.trim() ?? '';
+        final rowVer = _parseMemoryRowSyncVersion(
+          nextRow['updated_at'],
+          nextRow['observed_at'],
+        );
+        if (LWWUtils.compareSyncVersions(rowVer, latestVer) > 0) {
+          latestVer = rowVer;
+          latestIso = _normalizeMemoryTimestampToUtcOrKeep(
+            nextRow['updated_at'] ?? nextRow['observed_at'],
+          );
+        }
+        terminalId = nextId;
+        if (nextStatus != AgentMemoryStatus.superseded.storageValue ||
+            nextSupBy.isEmpty) {
+          break;
+        }
+      }
+      currId = nextId;
+    }
+
+    if (terminalId == null || terminalId == prunedId) continue;
+    final terminalRow = profileById[terminalId];
+    final prunedVer = _parseMemoryRowSyncVersion(
+      prunedRow['updated_at'],
+      prunedRow['observed_at'],
+    );
+    final terminalVer = terminalRow != null
+        ? _parseMemoryRowSyncVersion(
+            terminalRow['updated_at'],
+            terminalRow['observed_at'],
+          )
+        : latestVer;
+
+    final allowPrunedEdge = terminalRow == null ||
+        hasExplicitHop ||
+        !_isDreamingMemorySource(terminalRow['source']) ||
+        LWWUtils.compareSyncVersions(terminalVer, prunedVer) >= 0;
+
+    if (allowPrunedEdge) {
+      putReplacement(prunedId, terminalId, latestIso);
+    }
+
+    final ancId = (prunedRow['replaces_id'] as String?)?.trim() ?? '';
+    if (ancId.isNotEmpty && ancId != terminalId) {
+      putReplacement(ancId, terminalId, latestIso);
+    }
+  }
+
+  final compressed = _compressAndBoundProfileReplacements(
+    replacements,
+    profileById: profileById,
+    pruneSet: pruneSet,
+  );
+  if (compressed.isEmpty) {
+    await txn.delete(
+      AgentMemoryService.metaTable,
+      where: 'key = ?',
+      whereArgs: const <Object?>[AgentMemoryService.metaProfileReplacementsKey],
+    );
+  } else {
+    await txn.insert(
+      AgentMemoryService.metaTable,
+      <String, Object?>{
+        'key': AgentMemoryService.metaProfileReplacementsKey,
+        'value': _encodeProfileReplacementsMeta(compressed),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+}
+
+/// 判定候选 `identity` 条目是否仅包含未确认推断别名，且与终点的已确认身份别名重叠。
+///
+/// 别名去重规则要求已确认别名优先于存疑别名（即便存疑别名时间戳更新）；
+/// 在反向恢复与显式边判定中也必须遵守该优先级，防止二次同步翻转退位已确认别名。
+bool _isUnconfirmedAliasBlockedByConfirmedIdentity(
+  Map<String, Object?> candidateRow,
+  Map<String, Object?> terminalRow,
+) {
+  final candKind = (candidateRow['kind'] as String?)?.trim() ?? '';
+  final termKind = (terminalRow['kind'] as String?)?.trim() ?? '';
+  if (candKind != AgentMemoryKind.identity.storageValue ||
+      termKind != AgentMemoryKind.identity.storageValue) {
+    return false;
+  }
+  final candDirective = (candidateRow['directive'] as String?)?.trim() ?? '';
+  final termDirective = (terminalRow['directive'] as String?)?.trim() ?? '';
+  if (candDirective.isEmpty || termDirective.isEmpty) {
+    return false;
+  }
+  final candConfirmed =
+      AgentMemoryService.extractAliasesFromDirective(candDirective);
+  if (candConfirmed.isNotEmpty) {
+    return false;
+  }
+  final candUnconfirmed = AgentMemoryService.extractAliasesFromDirective(
+    candDirective,
+    includeUnconfirmed: true,
+  ).map((a) => a.toLowerCase()).toSet();
+  if (candUnconfirmed.isEmpty) {
+    return false;
+  }
+  final termConfirmed = AgentMemoryService.extractAliasesFromDirective(
+    termDirective,
+  ).map((a) => a.toLowerCase()).toSet();
+  return candUnconfirmed.any(termConfirmed.contains);
+}
+
 /// 判定在 `Y.replaces_id == X.id` 的显式替换边中，前驱 `X` 是否反而应当胜出并淘汰 `Y`：
 /// 1. 非 `dreaming*` 显式/人工画像绝不被后台 `dreaming*` 取代；
 /// 2. 同为 `dreaming*` 且挂载了依据判定器时，看全全部笔记依据的前驱 `X` 优先于漏看离线笔记的 `Y`；
@@ -671,6 +1130,9 @@ bool _predecessorWinsReplacementEdge(
   final xDream = _isDreamingMemorySource(xRow['source']);
   final yDream = _isDreamingMemorySource(yRow['source']);
   if (!xDream && yDream) {
+    return true;
+  }
+  if (_isUnconfirmedAliasBlockedByConfirmedIdentity(yRow, xRow)) {
     return true;
   }
   if (xDream && yDream && isBasisCovered != null) {
@@ -803,10 +1265,13 @@ Future<
       int supersededCount,
       bool didMutate,
       bool bothUncoveredDreamingConflict,
+      Set<String> invalidatedReplacementFromIds,
     })> _convergeProfilesInTxn(
   DatabaseExecutor txn, {
   bool Function(String? watermark, int? noteCount)? isBasisCovered,
   bool includeSupersededCandidates = true,
+  Map<String, String> profileReplacements = const <String, String>{},
+  Map<String, String> forcedSupersedes = const <String, String>{},
 }) async {
   final allRows = await txn.query(AgentMemoryService.profileTable);
   if (allRows.isEmpty) {
@@ -814,6 +1279,7 @@ Future<
       supersededCount: 0,
       didMutate: false,
       bothUncoveredDreamingConflict: false,
+      invalidatedReplacementFromIds: const <String>{},
     );
   }
 
@@ -924,6 +1390,63 @@ Future<
           preMutated = true;
           progressed = true;
         }
+
+        for (final entry in profileReplacements.entries) {
+          final xId = entry.key;
+          final targetId = entry.value;
+          if (xId.isEmpty || targetId.isEmpty || xId == targetId) continue;
+          final xRow = allRowsById[xId];
+          if (xRow == null) continue;
+          final xStatus = (xRow['status'] as String?)?.trim() ??
+              AgentMemoryStatus.active.storageValue;
+          if (xStatus != AgentMemoryStatus.active.storageValue) continue;
+
+          DateTime? tombUtc = profileTombstones[targetId];
+          final targetRow = allRowsById[targetId];
+          if (tombUtc != null && targetRow != null) {
+            final targetAliveAfterTomb = LWWUtils.syncVersionBeatsDeletion(
+              _parseMemoryRowSyncVersion(
+                targetRow['updated_at'],
+                targetRow['observed_at'],
+              ),
+              tombUtc,
+            );
+            if (targetAliveAfterTomb) {
+              tombUtc = null;
+            }
+          }
+          tombUtc ??=
+              targetRow != null ? resolveChainTombstoneUtc(targetRow) : null;
+          if (tombUtc == null) continue;
+
+          final xVer = _parseMemoryRowSyncVersion(
+            xRow['updated_at'],
+            xRow['observed_at'],
+          );
+          if (LWWUtils.syncVersionBeatsDeletion(xVer, tombUtc)) continue;
+          if (targetRow != null &&
+              _predecessorWinsReplacementEdge(
+                xRow,
+                targetRow,
+                isBasisCovered: isBasisCovered,
+              )) {
+            continue;
+          }
+          await txn.update(
+            AgentMemoryService.profileTable,
+            <String, Object?>{
+              'status': AgentMemoryStatus.superseded.storageValue,
+              'superseded_by': targetId,
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[xId],
+          );
+          xRow['status'] = AgentMemoryStatus.superseded.storageValue;
+          xRow['superseded_by'] = targetId;
+          preRetiredCount++;
+          preMutated = true;
+          progressed = true;
+        }
       }
     }
   }
@@ -1011,6 +1534,7 @@ Future<
       supersededCount: preRetiredCount,
       didMutate: preMutated,
       bothUncoveredDreamingConflict: false,
+      invalidatedReplacementFromIds: const <String>{},
     );
   }
 
@@ -1102,9 +1626,79 @@ Future<
     }
   }
 
+  final invalidatedReplacementFromIds = <String>{};
+  if (profileReplacements.isNotEmpty) {
+    Map<String, Object?>? resolveReplacementEligibleTarget(String startTarget) {
+      var currId = startTarget;
+      final visited = <String>{};
+      while (currId.isNotEmpty && visited.add(currId)) {
+        final directEligible = eligibleById[currId];
+        if (directEligible != null) {
+          return directEligible;
+        }
+        final row = allRowsById[currId];
+        if (row != null) {
+          final supBy = (row['superseded_by'] as String?)?.trim() ?? '';
+          if (supBy.isNotEmpty) {
+            currId = supBy;
+            continue;
+          }
+        }
+        final nextRep = profileReplacements[currId];
+        if (nextRep != null && nextRep.isNotEmpty) {
+          currId = nextRep;
+          continue;
+        }
+        break;
+      }
+      return null;
+    }
+
+    for (final entry in profileReplacements.entries) {
+      final xId = entry.key;
+      final xRow = eligibleById[xId];
+      if (xRow == null) continue;
+      final yRow = resolveReplacementEligibleTarget(entry.value);
+      if (yRow == null) continue;
+      final yId = yRow['id'] as String;
+      if (yId == xId) continue;
+
+      if (_predecessorWinsReplacementEdge(
+        xRow,
+        yRow,
+        isBasisCovered: isBasisCovered,
+      )) {
+        recordSupersede(yId, xRow);
+        invalidatedReplacementFromIds.add(xId);
+      } else {
+        recordSupersede(xId, yRow);
+      }
+    }
+  }
+
+  if (forcedSupersedes.isNotEmpty) {
+    for (final entry in forcedSupersedes.entries) {
+      final loserId = entry.key;
+      final winnerId = entry.value;
+      if (loserId.isEmpty || winnerId.isEmpty || loserId == winnerId) continue;
+      final loserRow = eligibleById[loserId];
+      final winnerRow = eligibleById[winnerId];
+      if (loserRow == null || winnerRow == null) continue;
+      if (!_isUnconfirmedAliasBlockedByConfirmedIdentity(winnerRow, loserRow) &&
+          _compareProfileRowsByWinnerRule(
+                winnerRow,
+                loserRow,
+                isBasisCovered: isBasisCovered,
+              ) <
+              0) {
+        recordSupersede(loserId, winnerRow);
+      }
+    }
+  }
+
   // 0b. 去重退休条目后续被人工编辑反超收敛：
   //     若候选条目 X 当前处于 `superseded` 且沿 `superseded_by` 链指向候选终点 T（即便 X 未写 `replaces_id`），
-  //     当 X 按赢家规则严格胜过 T（例如同步并发期间用户编辑了 X）时，由 X 反超淘汰 T 并恢复 active。
+  //     当 X 按赢家规则严格胜过 T（例如同步并发期间用户编辑了 X，且非存疑别名反压确认别名）时，由 X 反超淘汰 T 并恢复 active。
   for (final xRow in sorted) {
     final xId = xRow['id'] as String;
     final xStatus = (xRow['status'] as String?)?.trim() ?? '';
@@ -1130,12 +1724,13 @@ Future<
     if (terminalRow == null) continue;
     final tId = terminalRow['id'] as String;
     if (tId == xId) continue;
-    if (_compareProfileRowsByWinnerRule(
-          xRow,
-          terminalRow,
-          isBasisCovered: isBasisCovered,
-        ) <
-        0) {
+    if (!_isUnconfirmedAliasBlockedByConfirmedIdentity(xRow, terminalRow) &&
+        _compareProfileRowsByWinnerRule(
+              xRow,
+              terminalRow,
+              isBasisCovered: isBasisCovered,
+            ) <
+            0) {
       recordSupersede(tId, xRow);
     }
   }
@@ -1360,6 +1955,7 @@ Future<
     supersededCount: newlySupersededCount,
     didMutate: didMutate,
     bothUncoveredDreamingConflict: bothUncoveredDreamingConflict,
+    invalidatedReplacementFromIds: invalidatedReplacementFromIds,
   );
 }
 
@@ -1579,6 +2175,23 @@ extension AgentMemorySyncExtension on AgentMemoryService {
         };
       }
 
+      final localReplacements = _decodeProfileReplacementsMeta(
+        metaMap[AgentMemoryService.metaProfileReplacementsKey],
+      );
+      final exportedReplacements = <Map<String, Object?>>[
+        for (final item
+            in (localReplacements.values.toList()
+              ..sort((a, b) => a.fromId.compareTo(b.fromId))))
+          if (clearedAtUtc == null ||
+              LWWUtils.syncVersionBeatsDeletion(
+                  item.updatedAtVer, clearedAtUtc))
+            <String, Object?>{
+              'from_id': item.fromId,
+              'to_id': item.toId,
+              'updated_at': item.updatedAtRaw,
+            },
+      ];
+
       return <String, dynamic>{
         'format': 1,
         'profile':
@@ -1597,6 +2210,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               },
             )
             .toList(growable: false),
+        'profile_replacements': exportedReplacements,
         'cleared_at': clearedAt,
         'dreaming': dreamingPayload,
       };
@@ -1791,6 +2405,32 @@ extension AgentMemorySyncExtension on AgentMemoryService {
     final remoteTombstones =
         remoteTombstonesByKey.values.toList(growable: false);
 
+    final remoteReplacementsByFromId =
+        <String, _ParsedMemoryProfileReplacement>{};
+    final rawReplacements = rawSection['profile_replacements'];
+    if (rawReplacements is List) {
+      for (final item in rawReplacements) {
+        final parsed = _sanitizeMemoryProfileReplacement(item);
+        if (parsed == null) {
+          skippedCount++;
+          continue;
+        }
+        final existing = remoteReplacementsByFromId[parsed.fromId];
+        if (existing == null) {
+          remoteReplacementsByFromId[parsed.fromId] = parsed;
+        } else {
+          final cmp = LWWUtils.compareSyncVersions(
+            parsed.updatedAtVer,
+            existing.updatedAtVer,
+          );
+          if (cmp > 0 ||
+              (cmp == 0 && parsed.toId.compareTo(existing.toId) > 0)) {
+            remoteReplacementsByFromId[parsed.fromId] = parsed;
+          }
+        }
+      }
+    }
+
     final db = await _db;
     if (!isCaptureCurrent(startGeneration)) {
       return const MemoryMergeStats(skippedBecauseDisabled: true);
@@ -1878,6 +2518,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
       var localSkippedCount = skippedCount;
 
       var changed = false;
+      var appliedNewerRemoteClearedAt = false;
       var bothUncoveredDreamingConflict = false;
       DateTime? effectiveClearedAtUtc;
 
@@ -1886,13 +2527,26 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           // 1. cleared_at 屏障计算与本地清理
           final metaRows = await txn.query(
             AgentMemoryService.metaTable,
-            where: 'key = ?',
-            whereArgs: <Object?>[AgentMemoryService.metaClearedAtKey],
-            limit: 1,
+            where: 'key IN (?, ?)',
+            whereArgs: const <Object?>[
+              AgentMemoryService.metaClearedAtKey,
+              AgentMemoryService.metaProfileReplacementsKey,
+            ],
           );
-          final localClearedAtUtc = metaRows.isEmpty
-              ? null
-              : _tryParseMemoryUtc(metaRows.first['value']);
+          String? rawLocalCleared;
+          String? rawLocalReplacements;
+          for (final r in metaRows) {
+            final k = r['key'] as String?;
+            final v = r['value'] as String?;
+            if (k == AgentMemoryService.metaClearedAtKey) {
+              rawLocalCleared = v;
+            } else if (k == AgentMemoryService.metaProfileReplacementsKey) {
+              rawLocalReplacements = v;
+            }
+          }
+          final localClearedAtUtc = _tryParseMemoryUtc(rawLocalCleared);
+          final localReplacements =
+              _decodeProfileReplacementsMeta(rawLocalReplacements);
 
           if (localClearedAtUtc != null && remoteClearedAtUtc != null) {
             effectiveClearedAtUtc =
@@ -1915,7 +2569,14 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
+            appliedNewerRemoteClearedAt = true;
             changed = true;
+            localReplacements.removeWhere(
+              (_, item) => !LWWUtils.syncVersionBeatsDeletion(
+                item.updatedAtVer,
+                remoteCleared,
+              ),
+            );
 
             final localProfRows =
                 await txn.query(AgentMemoryService.profileTable);
@@ -2276,12 +2937,9 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           }) {
             final winnerStatus = (winnerRow['status'] as String?)?.trim() ??
                 AgentMemoryStatus.active.storageValue;
-            final winnerReplaces =
-                (winnerRow['replaces_id'] as String?)?.trim() ?? '';
             final olderStatus = (olderRow['status'] as String?)?.trim() ?? '';
             var currId = (olderRow['superseded_by'] as String?)?.trim() ?? '';
             if (winnerStatus != AgentMemoryStatus.active.storageValue ||
-                winnerReplaces.isNotEmpty ||
                 olderStatus != AgentMemoryStatus.superseded.storageValue ||
                 currId.isEmpty) {
               return null;
@@ -2302,7 +2960,20 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                     lCand['observed_at'],
                   ),
                 );
-                cand = cmpCand > 0 ? rCand : lCand;
+                if (cmpCand > 0) {
+                  cand = rCand;
+                } else if (cmpCand < 0) {
+                  cand = lCand;
+                } else {
+                  final rSupBy =
+                      (rCand['superseded_by'] as String?)?.trim() ?? '';
+                  final rSup = (rCand['status'] as String?)?.trim() ==
+                          AgentMemoryStatus.superseded.storageValue &&
+                      rSupBy.isNotEmpty &&
+                      (remoteProfilesById.containsKey(rSupBy) ||
+                          localProfilesById.containsKey(rSupBy));
+                  cand = rSup ? rCand : lCand;
+                }
               } else {
                 cand = rCand ?? lCand;
               }
@@ -2312,12 +2983,18 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               if (candStatus == AgentMemoryStatus.active.storageValue) {
                 final tId = (cand['id'] as String?)?.trim() ?? '';
                 if (tId.isEmpty || tId == selfId) return null;
-                final beatsTerminal = _compareProfileRowsByWinnerRule(
-                      winnerRow,
-                      cand,
-                      isBasisCovered: hasBasisChecker ? syncCheckCovered : null,
-                    ) <
-                    0;
+                final beatsTerminal =
+                    !_isUnconfirmedAliasBlockedByConfirmedIdentity(
+                          winnerRow,
+                          cand,
+                        ) &&
+                        _compareProfileRowsByWinnerRule(
+                              winnerRow,
+                              cand,
+                              isBasisCovered:
+                                  hasBasisChecker ? syncCheckCovered : null,
+                            ) <
+                            0;
                 return beatsTerminal ? tId : null;
               }
               if (candStatus != AgentMemoryStatus.superseded.storageValue) {
@@ -2326,6 +3003,53 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               currId = (cand['superseded_by'] as String?)?.trim() ?? '';
             }
             return null;
+          }
+
+          final forcedDeduplicationRetirements = <String, String>{};
+          final mergedReplacements =
+              Map<String, _ParsedMemoryProfileReplacement>.of(
+            localReplacements,
+          );
+          for (final item in remoteReplacementsByFromId.values) {
+            if (isVersionBlockedByClearedAt(item.updatedAtVer)) {
+              localSkippedCount++;
+              continue;
+            }
+            final existing = mergedReplacements[item.fromId];
+            if (existing == null ||
+                LWWUtils.compareSyncVersions(
+                      item.updatedAtVer,
+                      existing.updatedAtVer,
+                    ) >
+                    0 ||
+                (LWWUtils.compareSyncVersions(
+                          item.updatedAtVer,
+                          existing.updatedAtVer,
+                        ) ==
+                        0 &&
+                    item.toId.compareTo(existing.toId) > 0)) {
+              mergedReplacements[item.fromId] = item;
+            }
+          }
+
+          void recordDeduplicationRetirement({
+            required String loserId,
+            required String winnerId,
+            required Map<String, Object?> winnerRow,
+            required _MemorySyncVersion winnerVer,
+          }) {
+            forcedDeduplicationRetirements[loserId] = winnerId;
+            final winnerIso = _normalizeMemoryTimestampToUtcOrKeep(
+              winnerRow['updated_at'] ?? winnerRow['observed_at'],
+            );
+            if (_tryParseMemoryUtc(winnerIso) != null) {
+              mergedReplacements[loserId] = _ParsedMemoryProfileReplacement(
+                fromId: loserId,
+                toId: winnerId,
+                updatedAtRaw: winnerIso,
+                updatedAtVer: winnerVer,
+              );
+            }
           }
 
           // 4. 合并 profile 行
@@ -2377,12 +3101,23 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                   winnerRow: remoteRow,
                   olderRow: localRow,
                 );
-                final effectiveRemoteRow = retiredSuccId != null
-                    ? <String, Object?>{
-                        ...remoteRow,
-                        'replaces_id': retiredSuccId,
-                      }
-                    : remoteRow;
+                if (retiredSuccId != null) {
+                  recordDeduplicationRetirement(
+                    loserId: retiredSuccId,
+                    winnerId: id,
+                    winnerRow: remoteRow,
+                    winnerVer: remoteVer,
+                  );
+                }
+                final remoteReplaces =
+                    (remoteRow['replaces_id'] as String?)?.trim() ?? '';
+                final effectiveRemoteRow =
+                    (retiredSuccId != null && remoteReplaces.isEmpty)
+                        ? <String, Object?>{
+                            ...remoteRow,
+                            'replaces_id': retiredSuccId,
+                          }
+                        : remoteRow;
                 await txn.update(
                   AgentMemoryService.profileTable,
                   effectiveRemoteRow,
@@ -2399,18 +3134,28 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                   olderRow: remoteRow,
                 );
                 if (retiredSuccId != null) {
-                  final updatedLocalRow = <String, Object?>{
-                    ...localRow,
-                    'replaces_id': retiredSuccId,
-                  };
-                  await txn.update(
-                    AgentMemoryService.profileTable,
-                    <String, Object?>{'replaces_id': retiredSuccId},
-                    where: 'id = ?',
-                    whereArgs: <Object?>[id],
+                  recordDeduplicationRetirement(
+                    loserId: retiredSuccId,
+                    winnerId: id,
+                    winnerRow: localRow,
+                    winnerVer: localVer,
                   );
-                  localProfilesById[id] = updatedLocalRow;
-                  profilesUpdated++;
+                  final localReplaces =
+                      (localRow['replaces_id'] as String?)?.trim() ?? '';
+                  if (localReplaces.isEmpty) {
+                    final updatedLocalRow = <String, Object?>{
+                      ...localRow,
+                      'replaces_id': retiredSuccId,
+                    };
+                    await txn.update(
+                      AgentMemoryService.profileTable,
+                      <String, Object?>{'replaces_id': retiredSuccId},
+                      where: 'id = ?',
+                      whereArgs: <Object?>[id],
+                    );
+                    localProfilesById[id] = updatedLocalRow;
+                    profilesUpdated++;
+                  }
                   changed = true;
                 }
               } else {
@@ -2650,13 +3395,56 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           }
 
           // 7. 同一事务内执行全量候选集确定性收敛（不改写 updated_at）
+          var compressedReplacements = _compressAndBoundProfileReplacements(
+            mergedReplacements,
+            profileById: localProfilesById,
+          );
+          final replacementEdgeMap = <String, String>{
+            for (final entry in compressedReplacements.entries)
+              entry.key: entry.value.toId,
+          };
+
           final profileConv = await _convergeProfilesInTxn(
             txn,
             includeSupersededCandidates: true,
             isBasisCovered: hasBasisChecker ? syncCheckCovered : null,
+            profileReplacements: replacementEdgeMap,
+            forcedSupersedes: forcedDeduplicationRetirements,
           );
           if (profileConv.didMutate) {
             changed = true;
+          }
+          if (profileConv.invalidatedReplacementFromIds.isNotEmpty) {
+            for (final invId in profileConv.invalidatedReplacementFromIds) {
+              compressedReplacements.remove(invId);
+            }
+          }
+          final encodedReplacements = compressedReplacements.isEmpty
+              ? null
+              : _encodeProfileReplacementsMeta(compressedReplacements);
+          if (encodedReplacements != (rawLocalReplacements ?? '')) {
+            if (encodedReplacements == null) {
+              if (rawLocalReplacements != null) {
+                await txn.delete(
+                  AgentMemoryService.metaTable,
+                  where: 'key = ?',
+                  whereArgs: const <Object?>[
+                    AgentMemoryService.metaProfileReplacementsKey,
+                  ],
+                );
+                changed = true;
+              }
+            } else {
+              await txn.insert(
+                AgentMemoryService.metaTable,
+                <String, Object?>{
+                  'key': AgentMemoryService.metaProfileReplacementsKey,
+                  'value': encodedReplacements,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+              changed = true;
+            }
           }
           bothUncoveredDreamingConflict =
               profileConv.bothUncoveredDreamingConflict;
@@ -2669,6 +3457,10 @@ extension AgentMemorySyncExtension on AgentMemoryService {
       } catch (error, stackTrace) {
         _reportDatabaseError('mergeMemorySection', error, stackTrace);
         rethrow;
+      }
+
+      if (appliedNewerRemoteClearedAt) {
+        _settingsService.invalidateAgentMemoryCaptures();
       }
 
       // 8. 同步 Dreaming 时间戳（严格处理 cleared_at 重置、双漏看重做与看全沿用）
@@ -2866,6 +3658,34 @@ extension AgentMemorySyncExtension on AgentMemoryService {
     }
     final tombstones = tombstonesByKey.values.toList(growable: false);
 
+    final replacementsByFromId = <String, _ParsedMemoryProfileReplacement>{};
+    final rawReplacements = rawSection['profile_replacements'];
+    if (rawReplacements is List) {
+      for (final item in rawReplacements) {
+        final parsed = _sanitizeMemoryProfileReplacement(item);
+        if (parsed == null) continue;
+        final existing = replacementsByFromId[parsed.fromId];
+        if (existing == null ||
+            LWWUtils.compareSyncVersions(
+                  parsed.updatedAtVer,
+                  existing.updatedAtVer,
+                ) >
+                0 ||
+            (LWWUtils.compareSyncVersions(
+                      parsed.updatedAtVer,
+                      existing.updatedAtVer,
+                    ) ==
+                    0 &&
+                parsed.toId.compareTo(existing.toId) > 0)) {
+          replacementsByFromId[parsed.fromId] = parsed;
+        }
+      }
+    }
+    final compressedRestoreReplacements = _compressAndBoundProfileReplacements(
+      replacementsByFromId,
+      profileById: profilesById,
+    );
+
     final clearedAtUtc = _tryParseMemoryUtc(rawSection['cleared_at']);
 
     DateTime? dreamingLastRunUtc;
@@ -2941,6 +3761,19 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             );
           }
 
+          if (compressedRestoreReplacements.isNotEmpty) {
+            await txn.insert(
+              AgentMemoryService.metaTable,
+              <String, Object?>{
+                'key': AgentMemoryService.metaProfileReplacementsKey,
+                'value': _encodeProfileReplacementsMeta(
+                  compressedRestoreReplacements,
+                ),
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+
           if (dreamingLastRunUtc != null) {
             await txn.insert(
               AgentMemoryService.metaTable,
@@ -2976,6 +3809,8 @@ extension AgentMemorySyncExtension on AgentMemoryService {
         _reportDatabaseError('restoreMemorySection', error, stackTrace);
         rethrow;
       }
+
+      _settingsService.invalidateAgentMemoryCaptures();
 
       if (hasDreamingKey) {
         await _settingsService.setLastDreamingAt(dreamingLastRunUtc);

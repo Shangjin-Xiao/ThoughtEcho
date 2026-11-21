@@ -1430,4 +1430,236 @@ void main() {
       }
     });
   });
+
+  group('WebDAV 大体量对话历史自动分片同步（chat_shards）', () {
+    test('同步 JSON 超过分片阈值时自动切分上传 chat_shards，对端拉取校验 SHA-256 流式合并全部消息并清理过期分片',
+        () async {
+      WebDAVSyncService.chatShardThresholdBytesForTesting = 900;
+      WebDAVSyncService.maxChatShardJsonBytesForTesting = 700;
+      addTearDown(() {
+        WebDAVSyncService.chatShardThresholdBytesForTesting = null;
+        WebDAVSyncService.maxChatShardJsonBytesForTesting = null;
+      });
+
+      // 设备 A 写入多条会话与消息，使完整同步 JSON 超过 900 字节并切分为多个分片
+      final createdSessionIds = <String>[];
+      for (var s = 0; s < 3; s++) {
+        final session = await chatService.createSession(
+          sessionType: 'agent',
+          title: '分片测试会话_$s',
+        );
+        createdSessionIds.add(session.id);
+        for (var m = 0; m < 3; m++) {
+          await chatService.addMessage(
+            session.id,
+            ChatMessage(
+              id: 'shard_msg_${s}_$m',
+              content: '分片消息正文_${s}_${m}_${'内容填充' * 30}',
+              isUser: m.isEven,
+              role: m.isEven ? 'user' : 'assistant',
+              timestamp: DateTime.utc(2026, 11, 20, 8, s * 10 + m),
+            ),
+          );
+        }
+      }
+
+      const staleShardName =
+          'shard_0000000000000000000000000000000000000000000000000000000000000000.zip';
+      final remoteFiles = <String, List<int>>{
+        '/dav/thoughtecho/chat_shards/$staleShardName': <int>[1, 2, 3],
+      };
+      final deletedPaths = <String>[];
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        final body = await request.fold<List<int>>(
+          <int>[],
+          (acc, chunk) => acc..addAll(chunk),
+        );
+        final path = request.uri.path;
+        final response = request.response;
+        switch (request.method) {
+          case 'MKCOL':
+            response.statusCode = 201;
+          case 'PROPFIND':
+            if (path.endsWith('/thoughtecho/chat_shards') ||
+                path.endsWith('/thoughtecho/chat_shards/')) {
+              final shardEntries = remoteFiles.keys
+                  .where((k) => k.startsWith('/dav/thoughtecho/chat_shards/'))
+                  .map(
+                    (k) => '<d:response><d:href>$k</d:href>'
+                        '<d:propstat><d:prop>'
+                        '<d:getcontentlength>${remoteFiles[k]!.length}</d:getcontentlength>'
+                        '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>'
+                        '</d:response>',
+                  )
+                  .join();
+              response.statusCode = 207;
+              response.write(
+                '<d:multistatus xmlns:d="DAV:">'
+                '<d:response><d:href>/dav/thoughtecho/chat_shards/</d:href></d:response>'
+                '$shardEntries'
+                '</d:multistatus>',
+              );
+            } else if (remoteFiles.containsKey(path)) {
+              response.statusCode = 207;
+              response.write(
+                '<d:multistatus xmlns:d="DAV:"><d:response>'
+                '<d:href>$path</d:href>'
+                '<d:propstat><d:prop><d:getetag>"etag-${remoteFiles[path]!.length}"</d:getetag>'
+                '<d:getcontentlength>${remoteFiles[path]!.length}</d:getcontentlength>'
+                '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>'
+                '</d:response></d:multistatus>',
+              );
+            } else if (path.endsWith('/thoughtecho') ||
+                path.endsWith('/thoughtecho/') ||
+                path.endsWith('/dav') ||
+                path.endsWith('/dav/')) {
+              response.statusCode = 207;
+              response.write('<d:multistatus xmlns:d="DAV:"></d:multistatus>');
+            } else {
+              response.statusCode = 404;
+            }
+          case 'GET':
+            final data = remoteFiles[path];
+            if (data == null) {
+              response.statusCode = 404;
+            } else {
+              response.statusCode = 200;
+              response.add(data);
+            }
+          case 'PUT':
+            remoteFiles[path] = body;
+            response.statusCode = 204;
+          case 'DELETE':
+            deletedPaths.add(path);
+            remoteFiles.remove(path);
+            response.statusCode = 204;
+          default:
+            response.statusCode = 405;
+        }
+        await response.close();
+      });
+
+      // 1. 设备 A 触发上传：主包 messages 置空并写入多个 message_shards，过期分片被清理
+      final webdavA = WebDAVSyncService.forTesting();
+      addTearDown(webdavA.dispose);
+      webdavA.attachAssistantDataSync(assistantSync);
+      await webdavA.saveSettings(
+        enabled: true,
+        provider: 'custom',
+        url: 'https://webdav.example.invalid/dav/',
+        username: 'test-user',
+        password: 'synthetic-password',
+        syncOnLaunch: false,
+        syncOnChange: false,
+        syncOnCellular: false,
+        syncNotesOnlyOnCellular: true,
+      );
+
+      await HttpOverrides.runWithHttpOverrides(
+        () => webdavA.triggerSync(),
+        _LoopbackHttpOverrides(server.port),
+      );
+      expect(
+        webdavA.syncStatus,
+        WebDAVSyncStatus.success,
+        reason: webdavA.lastSyncError,
+      );
+
+      final mainZipBytes = remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip'];
+      expect(mainZipBytes, isNotNull);
+      final mainPayload =
+          WebDAVSyncService.decodeAndValidateRemoteSyncZipForTesting(
+        mainZipBytes!,
+      );
+      final uploadedChat = mainPayload['chat'] as Map<String, dynamic>;
+      expect(uploadedChat['messages'] as List, isEmpty);
+      final uploadedShards = uploadedChat['message_shards'] as List;
+      expect(uploadedShards.length, greaterThanOrEqualTo(2));
+      expect(
+        deletedPaths,
+        contains('/dav/thoughtecho/chat_shards/$staleShardName'),
+      );
+
+      // 2. 全新设备 B 拉取分片主包，逐片下载校验 SHA-256 并完整恢复 3 个会话共 9 条消息
+      final dirB = await Directory.systemTemp.createTemp('peer_b_sharded_');
+      final rawNotesDbB = await databaseFactory.openDatabase(
+        p.join(dirB.path, 'notes_b.db'),
+      );
+      await DatabaseSchemaManager().createTables(rawNotesDbB);
+      DatabaseService.setTestDatabase(rawNotesDbB);
+      final dbServiceB = DatabaseService();
+      await dbServiceB.init();
+      final chatB = ChatSessionService(
+        databasePath: p.join(dirB.path, 'chat_b.db'),
+      );
+      await chatB.init();
+      final memB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirB.path, 'mem_b.db'),
+      );
+      final assistantSyncB = AssistantDataSyncService(
+        chatSessionService: chatB,
+        agentMemoryService: memB,
+        settingsService: settingsService,
+        databaseService: dbServiceB,
+      );
+      final webdavB = WebDAVSyncService.forTesting();
+      try {
+        await AppPreferencesService().remove('webdav_last_sync_time');
+        webdavB.attachAssistantDataSync(assistantSyncB);
+        await webdavB.saveSettings(
+          enabled: true,
+          provider: 'custom',
+          url: 'https://webdav.example.invalid/dav/',
+          username: 'test-user',
+          password: 'synthetic-password',
+          syncOnLaunch: false,
+          syncOnChange: false,
+          syncOnCellular: false,
+          syncNotesOnlyOnCellular: true,
+        );
+
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(
+          webdavB.syncStatus,
+          WebDAVSyncStatus.success,
+          reason: webdavB.lastSyncError,
+        );
+
+        final sessionsOnB = await chatB.getAllSessions();
+        expect(
+          sessionsOnB.map((s) => s.id).toSet(),
+          equals(createdSessionIds.toSet()),
+        );
+        for (var s = 0; s < 3; s++) {
+          final msgs = await chatB.getMessages(createdSessionIds[s]);
+          expect(msgs, hasLength(3));
+          expect(
+            msgs.map((m) => m.id).toSet(),
+            equals(<String>{
+              'shard_msg_${s}_0',
+              'shard_msg_${s}_1',
+              'shard_msg_${s}_2',
+            }),
+          );
+        }
+      } finally {
+        webdavB.dispose();
+        await chatB.close();
+        chatB.dispose();
+        memB.dispose();
+        await rawNotesDbB.close();
+        DatabaseService.setTestDatabase(rawNotesDb);
+        if (await dirB.exists()) {
+          await dirB.delete(recursive: true);
+        }
+      }
+    });
+  });
 }

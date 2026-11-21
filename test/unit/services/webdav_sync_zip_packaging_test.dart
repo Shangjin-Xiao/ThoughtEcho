@@ -92,4 +92,30 @@ void main() {
       inputStream.closeSync();
     }
   });
+
+  test('JSON 输入超过 32 MiB 上限时 packSyncZip 前置抛出 StateError 且不残留超限压缩包', () async {
+    final jsonPath = '${tempDir.path}/oversized.json';
+    final zipPath = '${tempDir.path}/oversized.zip';
+    final sink = File(jsonPath).openWrite();
+    sink.write('{"pad":"');
+    final chunk = 'a' * (1024 * 1024);
+    for (var i = 0; i < 33; i++) {
+      sink.write(chunk);
+    }
+    sink.write('"}');
+    await sink.flush();
+    await sink.close();
+
+    await expectLater(
+      WebDAVSyncService.packSyncZip(jsonPath, zipPath),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('32 MiB'),
+        ),
+      ),
+    );
+    expect(await File(zipPath).exists(), isFalse);
+  });
 }

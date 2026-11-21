@@ -108,9 +108,34 @@ class _InMemoryChatSessionService extends ChatSessionService {
   @override
   Future<void> addMessage(
       String sessionId, app_chat.ChatMessage message) async {
-    _messages
-        .putIfAbsent(sessionId, () => <app_chat.ChatMessage>[])
-        .add(message);
+    final list =
+        _messages.putIfAbsent(sessionId, () => <app_chat.ChatMessage>[]);
+    final existingIdx = list.indexWhere((m) => m.id == message.id);
+    if (existingIdx >= 0) {
+      list[existingIdx] = message;
+    } else {
+      list.add(message);
+    }
+  }
+
+  @override
+  Future<bool> tryAddMessage(
+    String sessionId,
+    app_chat.ChatMessage message,
+  ) async {
+    if (simulateWriteFailure || !_sessions.containsKey(sessionId)) {
+      return false;
+    }
+    await addMessage(sessionId, message);
+    return true;
+  }
+
+  @override
+  Future<bool?> sessionExists(String sessionId) async {
+    if (simulateReadFailure) return null;
+    final gate = loadGates[sessionId];
+    if (gate != null) await gate.future;
+    return _sessions.containsKey(sessionId);
   }
 
   @override
@@ -150,6 +175,16 @@ class _InMemoryChatSessionService extends ChatSessionService {
     _sessions.remove(sessionId);
     _messages.remove(sessionId);
   }
+
+  /// 模拟远端同步删除会话并广播变更通知。
+  void simulateRemoteDeleteSession(String sessionId) {
+    _sessions.remove(sessionId);
+    _messages.remove(sessionId);
+    notifyListeners();
+  }
+
+  /// 模拟消息落库失败（例如磁盘满或数据库写锁异常）。
+  bool simulateWriteFailure = false;
 
   /// 模拟数据库临时读不出来。
   ///
@@ -3624,6 +3659,97 @@ void main() {
         }),
         isFalse,
       );
+    });
+
+    testWidgets(
+        'remote sync deleting active session resets stale session state and persists next message into a new session',
+        (tester) async {
+      final agentService = _FakeAgentService(settingsService: settingsService);
+      final staleSession = ChatSession(
+        id: 'session-remote-deleted',
+        sessionType: 'agent',
+        title: '即将被远端同步删除的会话',
+        createdAt: DateTime(2026, 9, 1),
+        lastActiveAt: DateTime(2026, 9, 1),
+      );
+      chatSessionService.seedSession(staleSession, <app_chat.ChatMessage>[
+        app_chat.ChatMessage(
+          id: 'old-seeded-msg',
+          content: '旧会话中的历史消息',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime(2026, 9, 1),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: ThoughterPage(
+            key: const ValueKey('remote_deleted_active_session_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: staleSession,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('旧会话中的历史消息'), findsOneWidget);
+
+      // 模拟后台同步删除了当前打开的会话并通知监听者
+      chatSessionService.simulateRemoteDeleteSession(staleSession.id);
+      await tester.pumpAndSettle();
+      expect(find.text('旧会话中的历史消息'), findsNothing);
+
+      // 用户继续发送新消息：应自动新建有效会话并正常持久化对话
+      await _submitInput(tester, '远端删除后继续提问');
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      expect(chatSessionService.sessions, hasLength(1));
+      final replacementSession = chatSessionService.sessions.single;
+      expect(replacementSession.id, isNot(equals(staleSession.id)));
+      final savedMsgs =
+          await chatSessionService.getMessages(replacementSession.id);
+      expect(
+        savedMsgs.any((m) => m.isUser && m.content == '远端删除后继续提问'),
+        isTrue,
+      );
+      expect(savedMsgs.any((m) => !m.isUser && m.content.isNotEmpty), isTrue);
+    });
+
+    testWidgets(
+        'message persistence failure rolls back unsaved bubble, restores draft input, and shows error SnackBar',
+        (tester) async {
+      final agentService = _FakeAgentService(settingsService: settingsService);
+      final liveSession = await chatSessionService.createSession(
+        sessionType: 'agent',
+        title: '写库失败回滚测试会话',
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: ThoughterPage(
+            key: const ValueKey('persist_failure_rollback_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: liveSession,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      chatSessionService.simulateWriteFailure = true;
+      await _submitInput(tester, '写库失败待恢复的草稿文本');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller?.text, '写库失败待恢复的草稿文本');
+      expect(await chatSessionService.getMessages(liveSession.id), isEmpty);
     });
   });
 }

@@ -2173,4 +2173,435 @@ void main() {
       }
     });
   });
+
+  group('第六轮评审回归：确认称呼保护、编辑链收敛、裁剪替换表与清空代际失效', () {
+    test('已确认身份称呼与相同观测覆盖面的较新未确认 Dreaming 称呼重复合并时，已确认称呼保持唯一 active', () async {
+      final dir = await Directory.systemTemp.createTemp('alias_repeat_sync_');
+      final memA = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'a.db'),
+      );
+      final memB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'b.db'),
+      );
+      try {
+        await memA.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'prof_confirmed_alias',
+              'kind': 'identity',
+              'directive': '称呼用户为「示例笔名甲」',
+              'observed_at': '2026-11-20T08:00:00.000Z',
+              'updated_at': '2026-11-20T08:05:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-20T08:00:00.000Z',
+              'basis_note_count': 5,
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+
+        final unconfirmedPeerSnapshot = <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'prof_dreaming_alias',
+              'kind': 'identity',
+              'directive': '称呼用户为「示例笔名甲」（存疑，待确认）',
+              'observed_at': '2026-11-20T09:30:00.000Z',
+              'updated_at': '2026-11-20T09:30:00.000Z',
+              'status': 'active',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-20T08:00:00.000Z',
+              'basis_note_count': 5,
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        };
+        await memB.mergeMemorySection(unconfirmedPeerSnapshot);
+
+        // 首轮合并与重复合并旧快照：已确认称呼均不得被未确认称呼反超退役
+        await memA.mergeMemorySection(unconfirmedPeerSnapshot);
+        expect(
+          (await memA.activeProfile()).map((e) => e.id).toList(),
+          <String>['prof_confirmed_alias'],
+        );
+
+        await memA.mergeMemorySection(unconfirmedPeerSnapshot);
+        expect(
+          (await memA.activeProfile()).map((e) => e.id).toList(),
+          <String>['prof_confirmed_alias'],
+        );
+
+        // 双向同步收敛验证
+        await memB.mergeMemorySection(
+          (await memA.exportMemorySectionForTesting())!,
+        );
+        await memA.mergeMemorySection(
+          (await memB.exportMemorySectionForTesting())!,
+        );
+        expect(
+          (await memA.activeProfile()).map((e) => e.id).toList(),
+          <String>['prof_confirmed_alias'],
+        );
+        expect(
+          (await memB.activeProfile()).map((e) => e.id).toList(),
+          <String>['prof_confirmed_alias'],
+        );
+      } finally {
+        memA.dispose();
+        memB.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        '中继节点 P2 自身携带 replaces_id=P1 且曾被重复项 P3 取代后在离线端编辑复活：双向合并均收敛为仅 P2 active 且保留 replaces_id=P1',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('p1_p2_p3_edit_');
+      final memWithP3 = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'with_p3.db'),
+      );
+      final memOfflineEditA = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'offline_edit_a.db'),
+      );
+      final memOfflineEditB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'offline_edit_b.db'),
+      );
+      try {
+        final baseP1P2 = <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 'prof_chain_p1',
+            'kind': 'style',
+            'directive': '初代冗长回复风格',
+            'observed_at': '2026-11-01T08:00:00.000Z',
+            'updated_at': '2026-11-02T08:00:00.000Z',
+            'status': 'superseded',
+            'superseded_by': 'prof_chain_p2',
+            'source': 'dreaming',
+          },
+          <String, Object?>{
+            'id': 'prof_chain_p2',
+            'kind': 'style',
+            'directive': '二代精炼回复风格',
+            'observed_at': '2026-11-02T08:00:00.000Z',
+            'updated_at': '2026-11-02T08:00:00.000Z',
+            'status': 'active',
+            'replaces_id': 'prof_chain_p1',
+            'source': 'dreaming',
+          },
+        ];
+        await memOfflineEditA.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': baseP1P2,
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+        await memOfflineEditB.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': baseP1P2,
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+
+        await memWithP3.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            baseP1P2[0],
+            <String, Object?>{
+              ...baseP1P2[1],
+              'status': 'superseded',
+              'superseded_by': 'prof_chain_p3',
+              'updated_at': '2026-11-03T08:00:00.000Z',
+            },
+            <String, Object?>{
+              'id': 'prof_chain_p3',
+              'kind': 'style',
+              'directive': '三代重复提炼回复风格',
+              'observed_at': '2026-11-03T08:00:00.000Z',
+              'updated_at': '2026-11-03T08:00:00.000Z',
+              'status': 'active',
+              'replaces_id': 'prof_chain_p2',
+              'source': 'dreaming',
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+
+        // 离线端手改 P2（updated_at 为当前 UTC，晚于 2026-11-03）
+        await memOfflineEditA.editProfileDirective(
+          id: 'prof_chain_p2',
+          directive: '用户手改精炼风格',
+        );
+        await memOfflineEditB.editProfileDirective(
+          id: 'prof_chain_p2',
+          directive: '用户手改精炼风格',
+        );
+
+        final p3Snap = (await memWithP3.exportMemorySectionForTesting())!;
+        final editSnap =
+            (await memOfflineEditA.exportMemorySectionForTesting())!;
+
+        // 方向一：持有 P3 的设备合入离线编辑快照
+        await memWithP3.mergeMemorySection(editSnap);
+        final activeOnP3Node = await memWithP3.activeProfile();
+        expect(activeOnP3Node.map((e) => e.id).toList(), <String>[
+          'prof_chain_p2',
+        ]);
+        expect(activeOnP3Node.single.directive, '用户手改精炼风格');
+        final exportedAfter1 =
+            (await memWithP3.exportMemorySectionForTesting())!;
+        final p2Row1 = (exportedAfter1['profile'] as List)
+            .cast<Map<String, dynamic>>()
+            .singleWhere((r) => r['id'] == 'prof_chain_p2');
+        expect(p2Row1['replaces_id'], 'prof_chain_p1');
+
+        // 方向二：离线编辑设备合入持有 P3 的快照
+        await memOfflineEditB.mergeMemorySection(p3Snap);
+        final activeOnEditNode = await memOfflineEditB.activeProfile();
+        expect(activeOnEditNode.map((e) => e.id).toList(), <String>[
+          'prof_chain_p2',
+        ]);
+        expect(activeOnEditNode.single.directive, '用户手改精炼风格');
+        final exportedAfter2 =
+            (await memOfflineEditB.exportMemorySectionForTesting())!;
+        final p2Row2 = (exportedAfter2['profile'] as List)
+            .cast<Map<String, dynamic>>()
+            .singleWhere((r) => r['id'] == 'prof_chain_p2');
+        expect(p2Row2['replaces_id'], 'prof_chain_p1');
+      } finally {
+        memWithP3.dispose();
+        memOfflineEditA.dispose();
+        memOfflineEditB.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test('editProfileDirective 沿多跳 superseded_by 链单次批量回溯并将远端终端节点收口为 superseded',
+        () async {
+      await memory.mergeMemorySection(<String, dynamic>{
+        'format': 1,
+        'profile': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 'hop_1',
+            'kind': 'preference',
+            'directive': '跳点一',
+            'observed_at': '2026-10-01T08:00:00.000Z',
+            'updated_at': '2026-10-02T08:00:00.000Z',
+            'status': 'superseded',
+            'superseded_by': 'hop_2',
+          },
+          <String, Object?>{
+            'id': 'hop_2',
+            'kind': 'preference',
+            'directive': '跳点二',
+            'observed_at': '2026-10-02T08:00:00.000Z',
+            'updated_at': '2026-10-03T08:00:00.000Z',
+            'status': 'superseded',
+            'replaces_id': 'hop_1',
+            'superseded_by': 'hop_3',
+          },
+          <String, Object?>{
+            'id': 'hop_3',
+            'kind': 'preference',
+            'directive': '跳点三',
+            'observed_at': '2026-10-03T08:00:00.000Z',
+            'updated_at': '2026-10-04T08:00:00.000Z',
+            'status': 'superseded',
+            'replaces_id': 'hop_2',
+            'superseded_by': 'hop_4',
+          },
+          <String, Object?>{
+            'id': 'hop_4',
+            'kind': 'preference',
+            'directive': '跳点四当前生效',
+            'observed_at': '2026-10-04T08:00:00.000Z',
+            'updated_at': '2026-10-04T08:00:00.000Z',
+            'status': 'active',
+            'replaces_id': 'hop_3',
+          },
+        ],
+        'facts': <Object?>[],
+        'recent_slices': <Object?>[],
+        'tombstones': <Object?>[],
+      });
+
+      final updated = await memory.editProfileDirective(
+        id: 'hop_1',
+        directive: '跳点一编辑复活指令',
+      );
+      expect(updated, isTrue);
+
+      final active = await memory.activeProfile();
+      expect(active.map((e) => e.id).toList(), <String>['hop_1']);
+      expect(active.single.directive, '跳点一编辑复活指令');
+
+      final exported = (await memory.exportMemorySectionForTesting())!;
+      final hop4 = (exported['profile'] as List)
+          .cast<Map<String, dynamic>>()
+          .singleWhere((r) => r['id'] == 'hop_4');
+      expect(hop4['status'], 'superseded');
+      expect(hop4['superseded_by'], 'hop_1');
+    });
+
+    test(
+        'compactAndPrune 裁剪超期 superseded 行后持久化 profile_replacements，离线设备旧偏好同步时被正确退役不复活',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('prune_replacements_');
+      final memA = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'a.db'),
+      );
+      final memB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'b.db'),
+      );
+      try {
+        // 离线设备 B 仍持有 40 天前的旧偏好 active
+        await memB.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'prof_old_pref',
+              'kind': 'preference',
+              'directive': '旧偏好：每句末尾附带感叹号',
+              'observed_at': '2026-09-01T08:00:00.000Z',
+              'updated_at': '2026-09-01T08:00:00.000Z',
+              'status': 'active',
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+
+        // 设备 A 经历了 prof_old_pref -> prof_mid_pref -> prof_cur_pref 两级演进
+        await memA.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'prof_old_pref',
+              'kind': 'preference',
+              'directive': '旧偏好：每句末尾附带感叹号',
+              'observed_at': '2026-09-01T08:00:00.000Z',
+              'updated_at': '2026-09-05T08:00:00.000Z',
+              'status': 'superseded',
+              'superseded_by': 'prof_mid_pref',
+            },
+            <String, Object?>{
+              'id': 'prof_mid_pref',
+              'kind': 'preference',
+              'directive': '过渡偏好：适度使用标点',
+              'observed_at': '2026-09-05T08:00:00.000Z',
+              'updated_at': '2026-11-01T08:00:00.000Z',
+              'status': 'superseded',
+              'replaces_id': 'prof_old_pref',
+              'superseded_by': 'prof_cur_pref',
+            },
+            <String, Object?>{
+              'id': 'prof_cur_pref',
+              'kind': 'preference',
+              'directive': '当前偏好：克制平实叙述',
+              'observed_at': '2026-11-01T08:00:00.000Z',
+              'updated_at': '2026-11-01T08:00:00.000Z',
+              'status': 'active',
+              'replaces_id': 'prof_mid_pref',
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+
+        // 在 2026-11-20 执行裁剪：prof_old_pref 与 prof_mid_pref 超 30 天被物理删除
+        await memA.compactAndPrune(now: DateTime.utc(2026, 11, 20));
+        final snapA = (await memA.exportMemorySectionForTesting())!;
+        expect(
+          (snapA['profile'] as List).map((e) => (e as Map)['id']).toList(),
+          <String>['prof_cur_pref'],
+        );
+        final replacements = snapA['profile_replacements'] as List;
+        expect(
+          replacements.any(
+            (r) =>
+                (r as Map)['from_id'] == 'prof_old_pref' &&
+                r['to_id'] == 'prof_cur_pref',
+          ),
+          isTrue,
+        );
+
+        final snapBStale = (await memB.exportMemorySectionForTesting())!;
+
+        // A 合入 B 的旧快照：旧偏好绝不复活
+        await memA.mergeMemorySection(snapBStale);
+        expect(
+          (await memA.activeProfile()).map((e) => e.id).toList(),
+          <String>['prof_cur_pref'],
+        );
+
+        // B 合入 A 的已裁剪快照：B 上的 prof_old_pref 被退役为 superseded
+        await memB.mergeMemorySection(snapA);
+        expect(
+          (await memB.activeProfile()).map((e) => e.id).toList(),
+          <String>['prof_cur_pref'],
+        );
+      } finally {
+        memA.dispose();
+        memB.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test('mergeMemorySection 应用远端更新的 cleared_at 时使进行中的提取代际失效，拦截跨清空脏写',
+        () async {
+      await memory.rememberProfile(
+        kind: AgentMemoryKind.preference,
+        directive: '清空前本地偏好',
+      );
+      final inFlightGen = memory.captureGeneration;
+      expect(memory.isCaptureCurrent(inFlightGen), isTrue);
+
+      await memory.mergeMemorySection(<String, dynamic>{
+        'format': 1,
+        'cleared_at': '2099-01-01T00:00:00.000000Z',
+        'profile': <Object?>[],
+        'facts': <Object?>[],
+        'recent_slices': <Object?>[],
+        'tombstones': <Object?>[],
+      });
+
+      expect(memory.isCaptureCurrent(inFlightGen), isFalse);
+      final persisted = await memory.rememberProfileFromCapture(
+        generation: inFlightGen,
+        kind: AgentMemoryKind.preference,
+        directive: '清空前已发起但晚返回的脏提取指令',
+        source: 'dreaming',
+      );
+      expect(persisted, isFalse);
+      expect(await memory.activeProfile(), isEmpty);
+    });
+  });
 }

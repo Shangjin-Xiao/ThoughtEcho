@@ -70,12 +70,16 @@ class AssistantDataSyncService {
     CancelToken? cancelToken,
     Map<String, dynamic>? preservedRemoteAgentMemory,
     bool forceSkipLocalMemoryExport = false,
+    List<ChatMessageShardDescriptor>? chatMessageShards,
   }) async {
     cancelToken?.throwIfCancelled();
+    final useShards = chatMessageShards != null && chatMessageShards.isNotEmpty;
     sink.write(',"chat":');
     await _chatSessionService.exportChatSectionStreaming(
       sink,
       cancelToken: cancelToken,
+      includeInlineMessages: !useShards,
+      messageShards: chatMessageShards,
     );
 
     cancelToken?.throwIfCancelled();
@@ -95,6 +99,19 @@ class AssistantDataSyncService {
     }
   }
 
+  /// 按单分片字节预算将本地全部对话消息流式切分为多个临时 JSON 分片文件。
+  Future<List<File>> exportChatMessageShardJsonFiles(
+    Directory outputDir, {
+    required int maxShardJsonBytes,
+    CancelToken? cancelToken,
+  }) {
+    return _chatSessionService.exportChatMessageShardJsonFiles(
+      outputDir,
+      maxShardJsonBytes: maxShardJsonBytes,
+      cancelToken: cancelToken,
+    );
+  }
+
   /// 按固定顺序合并载荷中的 `chat` 与 `agent_memory` 段。
   ///
   /// - [throwOnError] 为 `false`（默认，用于手动合并备份与 LocalSend 同步）时，
@@ -104,6 +121,7 @@ class AssistantDataSyncService {
   Future<AssistantSyncStats> mergeSections(
     Map<String, dynamic> payload, {
     bool throwOnError = false,
+    List<String>? chatMessageShardPaths,
   }) async {
     ChatMergeStats chatStats = const ChatMergeStats();
     MemoryMergeStats memoryStats = const MemoryMergeStats();
@@ -119,7 +137,10 @@ class AssistantDataSyncService {
         final chatMap = rawChat is Map<String, dynamic>
             ? rawChat
             : rawChat.map((k, v) => MapEntry(k.toString(), v));
-        chatStats = await _chatSessionService.mergeChatSection(chatMap);
+        chatStats = await _chatSessionService.mergeChatSection(
+          chatMap,
+          chatMessageShardPaths: chatMessageShardPaths,
+        );
       } catch (e, stack) {
         final safeMsg = _sanitizeSectionError('对话记录', e);
         AppLogger.e(

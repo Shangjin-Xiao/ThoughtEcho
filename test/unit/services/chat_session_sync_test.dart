@@ -2176,4 +2176,237 @@ void main() {
       }
     });
   });
+
+  group('第六轮评审回归：删除消息重算活跃时间、孤儿写入拦截与混合时区大量历史摘要', () {
+    test('混合时区会话含多条长正文历史消息时，getSessionOverviews 精确选中真实 UTC 最新消息并截断摘要',
+        () async {
+      final rawDb = await openDatabase(dbPath, singleInstance: true);
+      await rawDb.insert('chat_sessions', <String, Object?>{
+        'id': 's_many_mixed',
+        'session_type': 'agent',
+        'title': '大量混合时区消息会话',
+        'created_at': '2026-11-21T03:00:00.000000Z',
+        'last_active_at': '2026-11-21T04:00:00.000000Z',
+        'updated_at': '2026-11-21T04:00:00.000000Z',
+        'is_pinned': 0,
+      });
+
+      for (var i = 0; i < 20; i++) {
+        final mm = i.toString().padLeft(2, '0');
+        await rawDb.insert('chat_messages', <String, Object?>{
+          'id': 'm_hist_$mm',
+          'session_id': 's_many_mixed',
+          'role': 'user',
+          'content': '历史长消息_$mm${'内' * 300}',
+          // 11:00+08:00..11:19+08:00 对应 03:00Z..03:19Z，字面大于 04:00Z 但真实时间更早
+          'created_at': '2026-11-21T11:$mm:00.000+08:00',
+          'updated_at': '2026-11-21T11:$mm:00.000+08:00',
+          'included_in_context': 1,
+        });
+      }
+
+      final latestContent = '真实最新UTC消息摘要前缀_${'甲' * 100}';
+      await rawDb.insert('chat_messages', <String, Object?>{
+        'id': 'm_utc_latest',
+        'session_id': 's_many_mixed',
+        'role': 'assistant',
+        'content': latestContent,
+        'created_at': '2026-11-21T04:00:00.000000Z',
+        'updated_at': '2026-11-21T04:00:00.000000Z',
+        'included_in_context': 1,
+      });
+
+      final overviews =
+          await service.getSessionOverviews(<String>['s_many_mixed']);
+      final overview = overviews['s_many_mixed']!;
+      expect(overview.messageCount, 21);
+      expect(overview.snippet, '${latestContent.substring(0, 80)}...');
+    });
+
+    test(
+        'deleteMessage / clearMessages 与多轮增量同步（含带 session_id 及旧版无 session_id 消息墓碑）收敛 last_active_at，同时保留删除后的会话重命名时间',
+        () async {
+      await service.mergeChatSection(<String, dynamic>{
+        'format': 1,
+        'sessions': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 's_recal',
+            'session_type': 'agent',
+            'title': '待重算活跃时间会话',
+            'created_at': '2026-11-20T07:00:00.000000Z',
+            'last_active_at': '2026-11-20T10:00:00.000000Z',
+            'updated_at': '2026-11-20T07:00:00.000000Z',
+            'is_pinned': 0,
+          },
+        ],
+        'messages': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 'm_keep_0800',
+            'session_id': 's_recal',
+            'role': 'user',
+            'content': '保留的较早消息',
+            'created_at': '2026-11-20T08:00:00.000000Z',
+            'updated_at': '2026-11-20T08:00:00.000000Z',
+          },
+          <String, Object?>{
+            'id': 'm_del_1000',
+            'session_id': 's_recal',
+            'role': 'assistant',
+            'content': '即将被删除的最新消息',
+            'created_at': '2026-11-20T10:00:00.000000Z',
+            'updated_at': '2026-11-20T10:00:00.000000Z',
+          },
+        ],
+        'tombstones': <Object?>[],
+      });
+
+      // 1. 本地删除最新消息：last_active_at 立即回退至 08:00Z，且导出的墓碑包含 session_id
+      await service.deleteMessage('m_del_1000');
+      expect(
+        (await querySession(dbPath, 's_recal'))!.lastActiveAt.toUtc(),
+        DateTime.utc(2026, 11, 20, 8, 0),
+      );
+      final exportedAfterDel = await service.exportChatSectionForTesting();
+      final msgTomb = (exportedAfterDel['tombstones'] as List)
+          .cast<Map<String, dynamic>>()
+          .singleWhere(
+            (t) =>
+                t['entity_type'] == 'message' && t['entity_id'] == 'm_del_1000',
+          );
+      expect(msgTomb['session_id'], 's_recal');
+
+      // 2. 第二轮与第三轮重复合入携带虚高 last_active_at=10:00Z 的旧端快照：不得把 08:00Z 抬回 10:00Z
+      final stalePeerSnapshot = <String, dynamic>{
+        'format': 1,
+        'sessions': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 's_recal',
+            'session_type': 'agent',
+            'title': '待重算活跃时间会话',
+            'created_at': '2026-11-20T07:00:00.000000Z',
+            'last_active_at': '2026-11-20T10:00:00.000000Z',
+            'updated_at': '2026-11-20T07:00:00.000000Z',
+            'is_pinned': 0,
+          },
+        ],
+        'messages': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 'm_keep_0800',
+            'session_id': 's_recal',
+            'role': 'user',
+            'content': '保留的较早消息',
+            'created_at': '2026-11-20T08:00:00.000000Z',
+            'updated_at': '2026-11-20T08:00:00.000000Z',
+          },
+          <String, Object?>{
+            'id': 'm_del_1000',
+            'session_id': 's_recal',
+            'role': 'assistant',
+            'content': '即将被删除的最新消息',
+            'created_at': '2026-11-20T10:00:00.000000Z',
+            'updated_at': '2026-11-20T10:00:00.000000Z',
+          },
+        ],
+        'tombstones': <Object?>[],
+      };
+      await service.mergeChatSection(stalePeerSnapshot);
+      await service.mergeChatSection(stalePeerSnapshot);
+      expect(
+        (await querySession(dbPath, 's_recal'))!.lastActiveAt.toUtc(),
+        DateTime.utc(2026, 11, 20, 8, 0),
+      );
+
+      // 3. 兼容旧版无 session_id 的消息墓碑：在全新实例上重复合入虚高会话头亦能收敛至 08:00Z
+      final legacyDir = await Directory.systemTemp.createTemp('legacy_tomb_');
+      final legacyPath = p.join(legacyDir.path, 'chat.db');
+      final legacySvc = ChatSessionService(databasePath: legacyPath);
+      await legacySvc.init();
+      try {
+        await legacySvc.mergeChatSection(<String, dynamic>{
+          'format': 1,
+          'sessions': stalePeerSnapshot['sessions'],
+          'messages': <Map<String, Object?>>[
+            (stalePeerSnapshot['messages'] as List).first
+                as Map<String, Object?>,
+          ],
+          'tombstones': <Map<String, Object?>>[
+            <String, Object?>{
+              'entity_type': 'message',
+              'entity_id': 'm_del_1000',
+              'deleted_at': '2026-11-20T10:05:00.000000Z',
+            },
+          ],
+        });
+        expect(
+          (await querySession(legacyPath, 's_recal'))!.lastActiveAt.toUtc(),
+          DateTime.utc(2026, 11, 20, 8, 0),
+        );
+
+        // 若用户在删除消息之后（11:00Z > 10:05Z）显式重命名会话，则保留更新后的活跃时间
+        await legacySvc.mergeChatSection(<String, dynamic>{
+          'format': 1,
+          'sessions': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 's_recal',
+              'session_type': 'agent',
+              'title': '删除后重命名的新标题',
+              'created_at': '2026-11-20T07:00:00.000000Z',
+              'last_active_at': '2026-11-20T11:00:00.000000Z',
+              'updated_at': '2026-11-20T11:00:00.000000Z',
+              'is_pinned': 0,
+            },
+          ],
+          'messages': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+        final renamed = await querySession(legacyPath, 's_recal');
+        expect(renamed!.title, '删除后重命名的新标题');
+        expect(renamed.lastActiveAt.toUtc(), DateTime.utc(2026, 11, 20, 11, 0));
+      } finally {
+        await legacySvc.close();
+        legacySvc.dispose();
+        if (await legacyDir.exists()) {
+          await legacyDir.delete(recursive: true);
+        }
+      }
+
+      // 4. clearMessages 清空全部消息后，last_active_at 回退至会话 created_at (07:00Z)
+      await service.clearMessages('s_recal');
+      expect(
+        (await querySession(dbPath, 's_recal'))!.lastActiveAt.toUtc(),
+        DateTime.utc(2026, 11, 20, 7, 0),
+      );
+    });
+
+    test('tryAddMessage 在目标会话已被删除时返回 false 且绝不写入孤儿消息行', () async {
+      final session = await service.createSession(
+        sessionType: 'agent',
+        title: '即将被删除的会话',
+      );
+      expect(await service.sessionExists(session.id), isTrue);
+
+      await service.deleteSession(session.id);
+      expect(await service.sessionExists(session.id), isFalse);
+
+      final persisted = await service.tryAddMessage(
+        session.id,
+        ChatMessage(
+          id: 'm_orphan_prevented',
+          content: '不应落库的孤儿消息',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime.utc(2026, 11, 21, 6, 0),
+        ),
+      );
+      expect(persisted, isFalse);
+
+      final rawDb = await openDatabase(dbPath, singleInstance: true);
+      final rows = await rawDb.query(
+        'chat_messages',
+        where: 'id = ?',
+        whereArgs: <Object?>['m_orphan_prevented'],
+      );
+      expect(rows, isEmpty);
+    });
+  });
 }
