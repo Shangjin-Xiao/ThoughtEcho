@@ -179,13 +179,16 @@ class _ThoughterPageState extends State<ThoughterPage>
   bool _chatSessionListenerAttached = false;
   bool _handlingRemoteSessionCheck = false;
   Future<String?>? _rebuildingDeletedSessionFuture;
-  final Map<String, String> _replacedDeletedSessionIds = <String, String>{};
+  final Map<String, ({String replacementSessionId, int maxOriginGeneration})>
+      _replacedDeletedSessionIds =
+      <String, ({String replacementSessionId, int maxOriginGeneration})>{};
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
   StreamSubscription<AgentEvent>? _agentEventSubscription;
   Completer<AskUserResponse>? _pendingAskUserCompleter;
   String? _pendingAskUserMessageId;
   String? _pendingAskUserSessionId;
+  int? _pendingAskUserGeneration;
   app_chat.ChatMessage? _pendingAskUserMessage;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
@@ -428,21 +431,30 @@ class _ThoughterPageState extends State<ThoughterPage>
   @visibleForTesting
   Future<void> debugStartNewChatForTest() => _startNewChat();
 
-  void _appendMessage(app_chat.ChatMessage message, {bool persist = false}) {
+  void _appendMessage(
+    app_chat.ChatMessage message, {
+    bool persist = false,
+    String? preferredSessionId,
+    int? originGeneration,
+  }) {
     _setState(() {
       _messages.add(message);
     });
     if (persist) {
-      final sessionId = _currentSessionId;
+      final effectiveGeneration = originGeneration ?? _sessionLoadGeneration;
+      final sessionId = preferredSessionId ??
+          (effectiveGeneration == _sessionLoadGeneration
+              ? _currentSessionId
+              : null);
       if (sessionId != null) {
         unawaited(
           _persistMessageSafely(
             message,
             preferredSessionId: sessionId,
-            originGeneration: _sessionLoadGeneration,
+            originGeneration: effectiveGeneration,
           ),
         );
-      } else {
+      } else if (effectiveGeneration == _sessionLoadGeneration) {
         // 会话要到首条用户消息才建。挂起等 _ensureSessionCreated 补写，
         // 否则开场白这类先于会话出现的消息会被静默丢掉。
         _pendingPersistMessages.add(message);
@@ -458,6 +470,8 @@ class _ThoughterPageState extends State<ThoughterPage>
     String? metaJson,
     app_chat.MessageState? state,
     List<String>? thinkingChunks,
+    String? preferredSessionId,
+    int? originGeneration,
   }) {
     // 直接写覆盖节流队列里还没落地的那次更新。否则一次「定稿」写完 isLoading=false
     // 之后，50ms 内攒下的旧快照会晚一步落地，把 isLoading 又推回 true——正文末尾
@@ -475,13 +489,17 @@ class _ThoughterPageState extends State<ThoughterPage>
         thinkingChunks: thinkingChunks,
       );
       _messages[idx] = updatedMsg;
-      final sessionId = _currentSessionId;
+      final effectiveGeneration = originGeneration ?? _sessionLoadGeneration;
+      final sessionId = preferredSessionId ??
+          (effectiveGeneration == _sessionLoadGeneration
+              ? _currentSessionId
+              : null);
       if (!isLoading && sessionId != null) {
         unawaited(
           _persistMessageSafely(
             updatedMsg,
             preferredSessionId: sessionId,
-            originGeneration: _sessionLoadGeneration,
+            originGeneration: effectiveGeneration,
           ),
         );
       }
@@ -614,16 +632,20 @@ class _ThoughterPageState extends State<ThoughterPage>
       }
     }
 
-    // 会话校验与消息持久化：与 UI 更新严格分开，校验所属会话防止串写
+    // 会话校验与消息持久化：与 UI 更新严格分开，即使在页面退出销毁路径中也把取消元数据落入既有原会话
+    final effectiveGeneration =
+        (isTargetPending ? _pendingAskUserGeneration : null) ??
+            _sessionLoadGeneration;
     final effectiveSessionId = targetSessionId ??
         (isTargetPending ? _pendingAskUserSessionId : null) ??
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
     if (effectiveSessionId != null && updated != null) {
       unawaited(
-        _persistMessageSafely(
+        _persistCancelledAskUserMessage(
           updated,
-          preferredSessionId: effectiveSessionId,
-          originGeneration: _sessionLoadGeneration,
+          sessionId: effectiveSessionId,
+          originGeneration: effectiveGeneration,
+          allowLiveRebuild: updateUi && mounted && !_isDisposed,
         ),
       );
     }
@@ -638,6 +660,7 @@ class _ThoughterPageState extends State<ThoughterPage>
       _pendingAskUserCompleter = null;
       _pendingAskUserMessageId = null;
       _pendingAskUserSessionId = null;
+      _pendingAskUserGeneration = null;
       _pendingAskUserMessage = null;
     }
 

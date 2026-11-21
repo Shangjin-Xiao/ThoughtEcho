@@ -41,13 +41,13 @@ extension _ThoughterWorkflow on _ThoughterPageState {
     if (!mounted || _isDisposed || submitGeneration != _sessionLoadGeneration) {
       return;
     }
-    final persisted = await _persistMessageSafely(
+    final persistedSessionId = await _persistMessageSafely(
       userMsg,
       preferredSessionId: sessionId,
       originGeneration: submitGeneration,
       surfaceError: true,
     );
-    if (!persisted) {
+    if (persistedSessionId == null) {
       if (submitGeneration == _sessionLoadGeneration) {
         _rollbackUnsavedSubmittedMessage(userMsg.id, trimmed);
       }
@@ -56,9 +56,8 @@ extension _ThoughterWorkflow on _ThoughterPageState {
     if (!mounted || _isDisposed || submitGeneration != _sessionLoadGeneration) {
       return;
     }
-    final activeSessionId = _resolveReplacedSessionId(sessionId);
     if (shouldGenerateTitle) {
-      _generateAITitle(activeSessionId, trimmed);
+      _generateAITitle(persistedSessionId, trimmed);
     }
 
     _agentStatusDismissTimer?.cancel();

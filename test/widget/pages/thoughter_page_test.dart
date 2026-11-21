@@ -26,6 +26,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/utils/agent_history_builder.dart';
 import 'package:thoughtecho/widgets/ai/experimental_badge.dart';
 import 'package:thoughtecho/widgets/ai/note_proposal_card.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
@@ -312,6 +313,16 @@ class _FakeAIService extends AIService {
     generalConversationCalls++;
     return Stream.value('普通对话结果');
   }
+
+  bool echoFirstMessageAsTitle = false;
+
+  @override
+  Future<String> generateSessionTitle(String firstMessage) async {
+    if (echoFirstMessageAsTitle) {
+      return '标题:$firstMessage';
+    }
+    return super.generateSessionTitle(firstMessage);
+  }
 }
 
 class _FakeAgentService extends AgentService {
@@ -392,12 +403,22 @@ class _FakeAgentService extends AgentService {
     notifyListeners();
   }
 
+  bool _fakeDisposed = false;
+
   @override
   void requestStop() {
     stopRequestCount++;
     stopRequested = true;
     _cancelPendingTimers();
-    _setMockState(isRunning: false, statusKey: '');
+    _mockIsRunning = false;
+    _mockStatusKey = '';
+    // 与真实 AgentService.requestStop 一致：同步期间（如路由 pop 卸载 finalizeTree）不直接同步触发
+    // 顶层 InheritedProvider 重建，改为微任务异步通知，避免锁树期间 markNeedsBuild 报错。
+    scheduleMicrotask(() {
+      if (!_fakeDisposed) {
+        notifyListeners();
+      }
+    });
   }
 
   Future<void> _delay(Duration duration) {
@@ -575,6 +596,7 @@ class _FakeAgentService extends AgentService {
     // 顺序和语义都要和 requestStop 对齐：先立起停止标志，再放行等待方。
     // 只 cancel 不置标志的话，恢复执行的 runAgent 会一路穿过所有
     // `if (stopRequested)` 守卫，然后往已经关闭的控制器里发事件。
+    _fakeDisposed = true;
     stopRequested = true;
     _cancelPendingTimers();
     _eventController.close();
@@ -4221,6 +4243,293 @@ void main() {
         reason: '重建迁移必须采用最新的已保存提案状态，不能被旧快照覆盖回未保存',
       );
       expect(migratedProposal.parsedMeta?['applied'], isTrue);
+    });
+
+    testWidgets(
+        'popping ThoughterPage with a persisted pending ask_user persists isCancelled metadata and preserves history record',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateAskUser: true,
+      );
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+      final session = ChatSession(
+        id: 'pop-with-pending-ask-user-session',
+        sessionType: 'agent',
+        title: '退出取消澄清会话',
+        createdAt: DateTime(2026, 9, 5, 10),
+        lastActiveAt: DateTime(2026, 9, 5, 10),
+      );
+      chatSessionService.seedSession(session, const <app_chat.ChatMessage>[]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: Builder(
+            builder: (ctx) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const ValueKey('open_thoughter_route_btn'),
+                  onPressed: () {
+                    Navigator.of(ctx).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ThoughterPage(
+                          key: const ValueKey('routed_ask_user_page'),
+                          entrySource: ThoughterEntrySource.explore,
+                          session: session,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('打开对话'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('open_thoughter_route_btn')));
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '请发起一个澄清问题');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      expect(find.text('模拟提问：请选择'), findsOneWidget);
+
+      final beforePopMsgs = await chatSessionService.getMessages(session.id);
+      final pendingAskBeforePop = beforePopMsgs.singleWhere(
+        (m) => m.parsedMeta?['type'] == 'ask_user',
+      );
+      expect(pendingAskBeforePop.parsedMeta?['isCompleted'], isFalse);
+      expect(pendingAskBeforePop.parsedMeta?['isCancelled'], isFalse);
+      expect(
+        AgentHistoryBuilder.build(beforePopMsgs)
+            .any((m) => m.content.contains('用户取消了选择')),
+        isFalse,
+        reason: '未完成且未取消的挂起澄清卡在落库前会被 AgentHistoryBuilder 省略',
+      );
+
+      // 不回答直接返回上一页触发 dispose()
+      Navigator.of(tester.element(find.byType(ThoughterPage))).pop();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      final afterPopMsgs = await chatSessionService.getMessages(session.id);
+      final cancelledAskAfterPop = afterPopMsgs.singleWhere(
+        (m) => m.parsedMeta?['type'] == 'ask_user',
+      );
+      expect(
+        cancelledAskAfterPop.parsedMeta?['isCompleted'],
+        isTrue,
+        reason: '退出页面时必须把挂起澄清卡的完成态持久化回原会话',
+      );
+      expect(
+        cancelledAskAfterPop.parsedMeta?['isCancelled'],
+        isTrue,
+        reason: '退出页面时必须把挂起澄清卡的已取消元数据持久化回原会话',
+      );
+      final rebuiltHistory = AgentHistoryBuilder.build(afterPopMsgs);
+      expect(
+        rebuiltHistory.any(
+          (m) =>
+              m.content.contains(AgentHistoryBuilder.askUserHeader) &&
+              m.content.contains('用户取消了选择'),
+        ),
+        isTrue,
+        reason: '用户重进会话继续对话时，AgentHistoryBuilder 应向模型保留已取消澄清记录',
+      );
+    });
+
+    testWidgets(
+        'reopening a sync-restored original session saves fresh messages, card updates, and title to original session while keeping deleted-instance writes in replacement',
+        (tester) async {
+      await settingsService.setRequireBiometricForHidden(false);
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+      final originalQuote = _buildQuote();
+      final proposalArtifact = NoteProposalArtifact(
+        action: NoteProposalAction.edit,
+        proposalTitle: '恢复会话中的提案卡',
+        reason: '验证恢复原会话后保存卡片不会迁移到旧替换会话',
+        noteId: originalQuote.id,
+        originalKind: NoteDocumentKind.plain,
+        resultKind: NoteDocumentKind.plain,
+        content: '恢复原会话后应用的笔记内容',
+        documentOps: null,
+        metadata: const <String, Object?>{},
+        changes: const <NoteProposalChange>[],
+        baseRevision: ProposeNoteEditTool.revisionForQuote(originalQuote),
+      );
+      final database = _ProposalDatabaseService(originalQuote);
+      final aiService = _FakeAIService(settingsService: settingsService)
+        ..echoFirstMessageAsTitle = true;
+      final responseGateDeletedInstance = Completer<AgentResponse>();
+      final responseGateRestoredSession = Completer<AgentResponse>();
+      final agentService = _ControllableAgentService(
+        settingsService: settingsService,
+        responses: <Completer<AgentResponse>>[
+          responseGateDeletedInstance,
+          responseGateRestoredSession,
+        ],
+      );
+
+      final sessionA = ChatSession(
+        id: 'sync-restorable-session-a',
+        sessionType: 'agent',
+        title: '初始会话A',
+        createdAt: DateTime(2026, 9, 6, 9),
+        lastActiveAt: DateTime(2026, 9, 6, 9),
+      );
+      chatSessionService.seedSession(
+        sessionA,
+        <app_chat.ChatMessage>[
+          app_chat.ChatMessage(
+            id: 'a-seed-user-1',
+            role: 'user',
+            isUser: true,
+            content: '会话A首轮历史提问',
+            timestamp: DateTime(2026, 9, 6, 9),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          aiService: aiService,
+          agentService: agentService,
+          databaseService: database,
+          child: ThoughterPage(
+            key: const ValueKey('sync_restored_session_routing_page'),
+            session: sessionA,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1) 在原会话 A（代次 G1）发起生成，随后同步删除 A，并在重建新会话 B 处挂起
+      await tester.enterText(find.byType(TextField), 'G1 删除前追问');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+
+      final rebuildCreateGate = Completer<void>();
+      chatSessionService.createSessionGate = rebuildCreateGate;
+      chatSessionService.simulateRemoteDeleteSession(sessionA.id);
+      await tester.pump();
+
+      // G1 的 Agent 回复先一步完成：其持久化将等待 rebuildCreateGate 并在完成后路由至替换会话 B
+      responseGateDeletedInstance.complete(
+        AgentResponse(content: 'G1 归属被删实例的回复'),
+      );
+      await _settleAgentTurn(tester);
+
+      // 2) 模拟另一台设备用更新消息复活了原会话 A（内含待操作提案卡且尚无用户消息以便同时验证标题落点）
+      chatSessionService.seedSession(
+        sessionA.copyWith(title: '云端复活后的会话A'),
+        <app_chat.ChatMessage>[
+          app_chat.ChatMessage(
+            id: 'restored-a-proposal-msg',
+            role: 'assistant',
+            isUser: false,
+            content: '',
+            timestamp: DateTime(2026, 9, 6, 10),
+            metaJson: jsonEncode(<String, Object?>{
+              'type': NoteProposalArtifact.typeName,
+              'artifact': proposalArtifact.toJson(),
+            }),
+          ),
+        ],
+      );
+
+      // 用户从历史列表重新打开复活后的原会话 A（进入新代次 G2）
+      final pageState = tester.state(find.byType(ThoughterPage)) as dynamic;
+      await (pageState.debugLoadSessionForTest(sessionA.id) as Future<void>);
+      await tester.pumpAndSettle();
+
+      // 放行 G1 的后台分离重建：G1 在途写必须进入替换会话 B，绝不污染复活后的 A
+      chatSessionService.createSessionGate = null;
+      rebuildCreateGate.complete();
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      final replacementB = chatSessionService.sessions.singleWhere(
+        (s) => s.id != sessionA.id,
+      );
+      final msgsInB = await chatSessionService.getMessages(replacementB.id);
+      expect(
+        msgsInB.any((m) => m.content == 'G1 归属被删实例的回复'),
+        isTrue,
+        reason: '被删会话实例 G1 的在途写仍应落入替换会话 B',
+      );
+
+      // 3) 在重新打开的原会话 A 中保存提案卡并发送全新追问：消息、卡片状态和标题均须落入 A 而非 B
+      final restoredCard =
+          tester.widget<NoteProposalCard>(find.byType(NoteProposalCard));
+      final appliedNoteId = await tester.runAsync(restoredCard.onApply);
+      await tester.pump();
+      expect(appliedNoteId, originalQuote.id);
+
+      responseGateRestoredSession.complete(
+        AgentResponse(content: '复活原会话A中的新回复'),
+      );
+      await _submitInput(tester, '复活原会话A中的新提问');
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      final msgsInRestoredA = await chatSessionService.getMessages(sessionA.id);
+      expect(
+        msgsInRestoredA.map((m) => m.id),
+        contains('restored-a-proposal-msg'),
+        reason: '在复活后的原会话 A 中编辑/应用卡片消息，不得把该消息迁移到旧替换会话 B',
+      );
+      expect(
+        msgsInRestoredA
+            .singleWhere((m) => m.id == 'restored-a-proposal-msg')
+            .parsedMeta?['applied'],
+        isTrue,
+      );
+      expect(
+        msgsInRestoredA.any((m) => m.content == '复活原会话A中的新提问'),
+        isTrue,
+        reason: '复活原会话 A 中的新提问必须保存在 A 中，而非旧替换会话 B',
+      );
+      expect(
+        msgsInRestoredA.any((m) => m.content == '复活原会话A中的新回复'),
+        isTrue,
+        reason: '复活原会话 A 中的新回复必须保存在 A 中，而非旧替换会话 B',
+      );
+      expect(
+        msgsInRestoredA.any((m) => m.content == 'G1 归属被删实例的回复'),
+        isFalse,
+      );
+
+      final updatedSessionA = chatSessionService.sessions.singleWhere(
+        (s) => s.id == sessionA.id,
+      );
+      final updatedReplacementB = chatSessionService.sessions.singleWhere(
+        (s) => s.id == replacementB.id,
+      );
+      expect(
+        updatedSessionA.title,
+        '标题:复活原会话A中的新提问',
+        reason: '标题更新目标必须与实际写入会话一致（原会话 A）',
+      );
+      expect(updatedReplacementB.title, '标题:会话A首轮历史提问');
     });
   });
 }

@@ -2175,6 +2175,8 @@ void main() {
 
       var etagSeq = 1;
       var omitServerDateHeader = false;
+      var omitPutEtagHeader = false;
+      var assignFreshModifiedOnPut = false;
       final remoteFiles = <String, List<int>>{};
       final remoteEtags = <String, String>{};
       final remoteModified = <String, DateTime>{};
@@ -2182,6 +2184,8 @@ void main() {
       final putShardPaths = <String>[];
       Completer<void>? pauseCleanupListGate;
       Completer<void>? cleanupListPausedSignal;
+      Completer<void>? pauseAfterMainZipPutGate;
+      Completer<void>? afterMainZipPutPausedSignal;
 
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() => server.close(force: true));
@@ -2195,13 +2199,14 @@ void main() {
         );
         final path = request.uri.path;
         final response = request.response;
+        final nowServerUtc = DateTime.now().toUtc();
         response.headers.removeAll(HttpHeaders.dateHeader);
         if (omitServerDateHeader) {
           response.headers.set(HttpHeaders.dateHeader, 'not-a-valid-http-date');
         } else {
           response.headers.set(
             HttpHeaders.dateHeader,
-            HttpDate.format(DateTime.now().toUtc()),
+            HttpDate.format(nowServerUtc),
           );
         }
         switch (request.method) {
@@ -2277,12 +2282,28 @@ void main() {
             remoteFiles[path] = body;
             final newEtag = '"etag-${etagSeq++}"';
             remoteEtags[path] = newEtag;
-            remoteModified[path] = DateTime.utc(2020, 1, 1, 0, 0, 0);
+            remoteModified[path] = assignFreshModifiedOnPut
+                ? nowServerUtc.subtract(const Duration(minutes: 1))
+                : DateTime.utc(2020, 1, 1, 0, 0, 0);
             if (path.startsWith('/dav/thoughtecho/chat_shards/')) {
               putShardPaths.add(path);
             }
-            response.headers.set(HttpHeaders.etagHeader, newEtag);
+            if (!omitPutEtagHeader) {
+              response.headers.set(HttpHeaders.etagHeader, newEtag);
+            }
             response.statusCode = 204;
+            await response.close();
+            if (path == '/dav/thoughtecho/thoughtecho_sync.zip') {
+              final putGate = pauseAfterMainZipPutGate;
+              final putSignal = afterMainZipPutPausedSignal;
+              if (putGate != null &&
+                  putSignal != null &&
+                  !putSignal.isCompleted) {
+                putSignal.complete();
+                await putGate.future;
+              }
+            }
+            return;
           case 'DELETE':
             deletedShardPaths.add(path);
             remoteFiles.remove(path);
@@ -2333,7 +2354,6 @@ void main() {
         isTrue,
       );
 
-      // 恢复 Date 头后，准备双客户端零宽限期并发主包切换验证
       omitServerDateHeader = false;
 
       final dirPeer = await Directory.systemTemp.createTemp('peer_zero_grace_');
@@ -2366,14 +2386,85 @@ void main() {
           syncNotesOnlyOnCellular: true,
         );
 
-        // 先让 B 同步获取 A 的大体积会话，并在 B 上再新增一条独有大体积会话
+        // 2) 独立隔离验证「从内联清单重回分片清单时强制 PUT 续期既有分片」规则：
+        //    开启非零宽限期（2h，半衰期 1h）并为已存在分片赋予新鲜 mtime（1 分钟前），不新增任何对话或新分片。
+        WebDAVSyncService.chatShardStaleCleanupMinAgeForTesting =
+            const Duration(hours: 2);
+        assignFreshModifiedOnPut = true;
+
+        // B 拉取 A 的会话并以新鲜 mtime 完成一次上传，确立分片已在云端且处于半衰期内
         await HttpOverrides.runWithHttpOverrides(
           () => webdavB.triggerSync(),
           _LoopbackHttpOverrides(server.port),
         );
+        // 刷新已有分片为新鲜 mtime 后，验证常规「分片 -> 分片」同步确实走复用分支（0 次 PUT）
+        for (final k in remoteFiles.keys
+            .where((k) => k.startsWith('/dav/thoughtecho/chat_shards/'))) {
+          remoteModified[k] =
+              DateTime.now().toUtc().subtract(const Duration(minutes: 1));
+        }
+        putShardPaths.clear();
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(webdavB.syncStatus, WebDAVSyncStatus.success);
+        expect(
+          putShardPaths,
+          isEmpty,
+          reason: '云端上一版主包已引用该批分片且 mtime 新鲜时，常规同步应直接复用而不重复 PUT',
+        );
+
+        final existingActiveShardPaths =
+            ((WebDAVSyncService.decodeAndValidateRemoteSyncZipForTesting(
+          remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip']!,
+        )['chat'] as Map<String, dynamic>)['message_shards'] as List)
+                .map(
+                  (e) =>
+                      '/dav/thoughtecho/chat_shards/${(e as Map<String, dynamic>)['file'] as String}',
+                )
+                .toSet();
+        expect(existingActiveShardPaths, isNotEmpty);
+
+        // 让 A 临时提高切分阈值发布一版合法的内联主包（云端既有分片文件与新鲜 mtime 原封不动，B 亦无任何新增消息）
+        WebDAVSyncService.chatShardThresholdBytesForTesting = 999999;
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavA.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(webdavA.syncStatus, WebDAVSyncStatus.success);
+        expect(
+          (WebDAVSyncService.decodeAndValidateRemoteSyncZipForTesting(
+            remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip']!,
+          )['chat'] as Map<String, dynamic>)['message_shards'],
+          isNull,
+        );
+
+        // 恢复分片阈值后让 B 同步（无任何新会话/新分片）：因上一版主包为内联，必须对全部既有分片执行重写续期
+        WebDAVSyncService.chatShardThresholdBytesForTesting = 1200;
+        putShardPaths.clear();
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(webdavB.syncStatus, WebDAVSyncStatus.success);
+        expect(
+          putShardPaths.toSet(),
+          equals(existingActiveShardPaths),
+          reason: '从内联主包重回分片清单时，即便云端既有分片 mtime 仍在半衰期内，也必须逐一重写续期',
+        );
+
+        // 3) 恢复零宽限期与旧 mtime，验证并发主包覆盖下（含 PUT 返回 ETag 与 PUT 不返回 ETag 两种服务端）均安全中止删除
+        WebDAVSyncService.chatShardStaleCleanupMinAgeForTesting = Duration.zero;
+        assignFreshModifiedOnPut = false;
+        for (final k in remoteFiles.keys
+            .where((k) => k.startsWith('/dav/thoughtecho/chat_shards/'))) {
+          remoteModified[k] = DateTime.utc(2020, 1, 1, 0, 0, 0);
+        }
+
         final sessionB = await chatB.createSession(
           sessionType: 'agent',
-          title: '设备B新增大体积会话',
+          title: '设备B独有大体积会话',
         );
         for (var i = 0; i < 5; i++) {
           await chatB.addMessage(
@@ -2388,7 +2479,7 @@ void main() {
           );
         }
 
-        // A 删除其会话退回内联上传，并在清理列目录时挂起（此时 staleMinAge == 0 且所有分片 mtime 为 2020 年！）
+        // 3a) PUT 返回 ETag：A 在清理列目录时挂起，B 发布新主包，A 检测到 ETag 变更中止删除
         await chatService.deleteSession(sessionA.id);
         pauseCleanupListGate = Completer<void>();
         cleanupListPausedSignal = Completer<void>();
@@ -2400,19 +2491,12 @@ void main() {
 
         final heldGate = pauseCleanupListGate;
         pauseCleanupListGate = null;
-        putShardPaths.clear();
 
-        // B 读取 A 的内联主包后重回分片模式：必须对所有分片执行 PUT 续期，并覆盖主包 ETag
         await HttpOverrides.runWithHttpOverrides(
           () => webdavB.triggerSync(),
           _LoopbackHttpOverrides(server.port),
         );
         expect(webdavB.syncStatus, WebDAVSyncStatus.success);
-        expect(
-          putShardPaths,
-          isNotEmpty,
-          reason: '从内联清单重回分片清单时，必须重新 PUT 分片刷新服务端 mtime 租约',
-        );
 
         final bMainPayload =
             WebDAVSyncService.decodeAndValidateRemoteSyncZipForTesting(
@@ -2424,8 +2508,6 @@ void main() {
             .toList();
         expect(bActiveShardFiles, isNotEmpty);
 
-        // 清空 B 自身清理历史孤儿分片的记录，专门观测 A 恢复执行后的行为：
-        // 即便 staleMinAge == 0 且分片 mtime 为 2020 年，因云端主包 ETag 已变更为 B 的新快照，A 必须立即中止删除
         deletedShardPaths.clear();
         heldGate.complete();
         await syncAFuture;
@@ -2442,10 +2524,80 @@ void main() {
             reason: 'B 当前主包引用的分片 $shardFile 必须完整保留在云端',
           );
         }
+
+        // 3b) PUT 不返回 ETag 响应头：A 在刚完成主包 PUT 后挂起，B 随即发布新主包，
+        //     A 恢复执行后绝不能把 B 的主包指纹误采为本端指纹而误删 B 的活跃分片
+        omitPutEtagHeader = true;
+        // A 先拉取当前状态后删除 sessionB 以构造体积不同的内联主包上传
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavA.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        await chatService.deleteSession(sessionB.id);
+        // B 追加一条更新消息，确保稍后 B 同步时击败删除墓碑并再次发布分片主包
+        await chatB.addMessage(
+          sessionB.id,
+          ChatMessage(
+            id: 'zero_grace_b_revive_msg',
+            content: 'B复活会话消息_${'长文本块' * 50}',
+            isUser: true,
+            role: 'user',
+            timestamp: DateTime.now().toUtc().add(const Duration(minutes: 5)),
+          ),
+        );
+
+        pauseAfterMainZipPutGate = Completer<void>();
+        afterMainZipPutPausedSignal = Completer<void>();
+        final syncANoEtagFuture = HttpOverrides.runWithHttpOverrides(
+          () => webdavA.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        await afterMainZipPutPausedSignal.future;
+
+        final heldPutGate = pauseAfterMainZipPutGate;
+        pauseAfterMainZipPutGate = null;
+        afterMainZipPutPausedSignal = null;
+
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(webdavB.syncStatus, WebDAVSyncStatus.success);
+        final bRevivedShards =
+            ((WebDAVSyncService.decodeAndValidateRemoteSyncZipForTesting(
+          remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip']!,
+        )['chat'] as Map<String, dynamic>)['message_shards'] as List)
+                .map((e) => (e as Map<String, dynamic>)['file'] as String)
+                .toList();
+        expect(bRevivedShards, isNotEmpty);
+        for (final shardFile in bRevivedShards) {
+          remoteModified['/dav/thoughtecho/chat_shards/$shardFile'] =
+              DateTime.utc(2020, 1, 1, 0, 0, 0);
+        }
+
+        deletedShardPaths.clear();
+        heldPutGate.complete();
+        await syncANoEtagFuture;
+        expect(webdavA.syncStatus, WebDAVSyncStatus.success);
+        expect(
+          deletedShardPaths,
+          isEmpty,
+          reason: 'PUT 未返回 ETag 时，不得把并发设备新发布的主包指纹误认成本端上传并误删分片',
+        );
+        for (final shardFile in bRevivedShards) {
+          expect(
+            remoteFiles.containsKey('/dav/thoughtecho/chat_shards/$shardFile'),
+            isTrue,
+          );
+        }
       } finally {
         final lingering = pauseCleanupListGate;
         if (lingering != null && !lingering.isCompleted) {
           lingering.complete();
+        }
+        final lingeringPut = pauseAfterMainZipPutGate;
+        if (lingeringPut != null && !lingeringPut.isCompleted) {
+          lingeringPut.complete();
         }
         webdavB.dispose();
         await chatB.close();

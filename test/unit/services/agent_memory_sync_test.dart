@@ -2897,7 +2897,9 @@ void main() {
         expect(exportedTombCase['profile_replacements'] ?? const <Object?>[],
             isEmpty);
 
-        // 场景 2：旧备份中的去重副本 D2 早于本机 cleared_at，而本机 P2 在 cleared_at 之后已重新编辑生效
+        // 场景 2：superseded 条目 P2 自身晚于 cleared_at（不会被入口屏障直接跳过，会进入后继链解析），
+        // 但其 superseded_by 指向的高优后继 D2（source: user_edit）早于 cleared_at。
+        // 若缺少后继准入屏障过滤，D2（user_edit）将击败活跃 P2（dreaming）并错误把 P2 退役。
         await memClearedCase.mergeMemorySection(<String, dynamic>{
           'format': 1,
           'cleared_at': '2026-11-05T00:00:00.000000Z',
@@ -2905,11 +2907,11 @@ void main() {
             <String, Object?>{
               'id': 'pref_p2_post_clear',
               'kind': 'preference',
-              'directive': '清空后重新确认的活跃偏好',
+              'directive': '清空后重新提炼的活跃偏好',
               'observed_at': '2026-11-06T08:00:00.000000Z',
               'updated_at': '2026-11-06T08:00:00.000000Z',
               'status': 'active',
-              'source': 'user_edit',
+              'source': 'dreaming',
             },
           ],
           'facts': <Object?>[],
@@ -2923,21 +2925,21 @@ void main() {
             <String, Object?>{
               'id': 'pref_p2_post_clear',
               'kind': 'preference',
-              'directive': '清空前旧版本',
-              'observed_at': '2026-11-01T08:00:00.000000Z',
-              'updated_at': '2026-11-01T08:00:00.000000Z',
+              'directive': '清空后但早于本机修订的已取代版本',
+              'observed_at': '2026-11-05T10:00:00.000000Z',
+              'updated_at': '2026-11-05T10:00:00.000000Z',
               'status': 'superseded',
               'superseded_by': 'pref_d2_pre_clear',
-              'source': 'thoughter',
+              'source': 'dreaming',
             },
             <String, Object?>{
               'id': 'pref_d2_pre_clear',
               'kind': 'preference',
-              'directive': '清空前旧版本',
+              'directive': '清空前残留的高优先级版本',
               'observed_at': '2026-11-04T08:00:00.000000Z',
               'updated_at': '2026-11-04T08:00:00.000000Z',
               'status': 'active',
-              'source': 'thoughter',
+              'source': 'user_edit',
             },
           ],
           'facts': <Object?>[],
@@ -2949,7 +2951,77 @@ void main() {
         expect(
           activeAfterClearedMerge.map((e) => e.id).toList(),
           <String>['pref_p2_post_clear'],
+          reason: 'P2 晚于 cleared_at 进入后继链判定时，早于 cleared_at 的后继 D2 必须被准入过滤拦截',
         );
+        final exportedClearedCase =
+            (await memClearedCase.exportMemorySectionForTesting())!;
+        expect(
+          exportedClearedCase['profile_replacements'] ?? const <Object?>[],
+          isEmpty,
+        );
+
+        // 对称合并顺序验证（cmpProf > 0 分支）：本机先持有晚于 cleared_at 的 superseded P2，
+        // 远端合入 cleared_at 屏障 + 更新的活跃 dreaming P2 + 早于 cleared_at 的高优 D2
+        final memClearedReverse = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dir.path, 'cleared_case_reverse.db'),
+        );
+        try {
+          await memClearedReverse.mergeMemorySection(<String, dynamic>{
+            'format': 1,
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'pref_p2_post_clear',
+                'kind': 'preference',
+                'directive': '本机先持有的已取代版本',
+                'observed_at': '2026-11-05T10:00:00.000000Z',
+                'updated_at': '2026-11-05T10:00:00.000000Z',
+                'status': 'superseded',
+                'superseded_by': 'pref_d2_pre_clear',
+                'source': 'dreaming',
+              },
+            ],
+            'facts': <Object?>[],
+            'recent_slices': <Object?>[],
+            'tombstones': <Object?>[],
+          });
+
+          await memClearedReverse.mergeMemorySection(<String, dynamic>{
+            'format': 1,
+            'cleared_at': '2026-11-05T00:00:00.000000Z',
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'pref_p2_post_clear',
+                'kind': 'preference',
+                'directive': '远端清空后更新的活跃偏好',
+                'observed_at': '2026-11-06T08:00:00.000000Z',
+                'updated_at': '2026-11-06T08:00:00.000000Z',
+                'status': 'active',
+                'source': 'dreaming',
+              },
+              <String, Object?>{
+                'id': 'pref_d2_pre_clear',
+                'kind': 'preference',
+                'directive': '清空前残留的高优先级版本',
+                'observed_at': '2026-11-04T08:00:00.000000Z',
+                'updated_at': '2026-11-04T08:00:00.000000Z',
+                'status': 'active',
+                'source': 'user_edit',
+              },
+            ],
+            'facts': <Object?>[],
+            'recent_slices': <Object?>[],
+            'tombstones': <Object?>[],
+          });
+
+          final activeReverse = await memClearedReverse.activeProfile();
+          expect(
+            activeReverse.map((e) => e.id).toList(),
+            <String>['pref_p2_post_clear'],
+          );
+        } finally {
+          memClearedReverse.dispose();
+        }
       } finally {
         memTombCase.dispose();
         memClearedCase.dispose();
