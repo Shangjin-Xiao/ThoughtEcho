@@ -396,7 +396,7 @@ class SmartPushAnalytics extends ChangeNotifier {
     bool deferScoreUntilAccounted = false,
   }) {
     return _withAnalyticsLock(() async {
-      if (notificationId != null) {
+      if (notificationId != null && notificationId >= 0) {
         final settledEngagedIds = _getTrackedIdList(_settledEngagedIdsKey);
         if (settledEngagedIds.contains(notificationId)) {
           await _setUnengagedStreak(0);
@@ -485,7 +485,7 @@ class SmartPushAnalytics extends ChangeNotifier {
 
   /// 判断某次通知发送实例是否已完成配额计数登记（防止并发补记中断后重试时重复计数）
   bool hasRecordedSentNotification(int notificationId, {DateTime? sentAt}) {
-    if (notificationId <= 0) return false;
+    if (notificationId < 0) return false;
     final tokens = _getTrackedStringList(_sentNotificationIdsKey);
     if (tokens.isEmpty) return false;
     final exactToken =
@@ -505,7 +505,7 @@ class SmartPushAnalytics extends ChangeNotifier {
   /// 当同一确定性通知 ID 被重新调度到新的未来时间点时，先结算同 ID 挂起记录，再清理旧实例遗留的点击与结算状态
   Future<void> resetTrackedNotificationState(int notificationId) {
     return _withAnalyticsLock(() async {
-      if (notificationId <= 0) return;
+      if (notificationId < 0) return;
       final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
       if (pending != null && pending.notificationId == notificationId) {
         await settlePendingSend();
@@ -572,7 +572,7 @@ class SmartPushAnalytics extends ChangeNotifier {
     final result = <int>[];
     for (final token in raw.split(',')) {
       final parsed = int.tryParse(token.trim());
-      if (parsed != null && parsed > 0) {
+      if (parsed != null && parsed >= 0) {
         result.add(parsed);
       }
     }
@@ -724,7 +724,7 @@ class SmartPushAnalytics extends ChangeNotifier {
 
   /// 非消费式检查某条通知是否已被用户点击（不清除点击标记）
   bool hasClickedNotification(int notificationId) {
-    if (notificationId <= 0) return false;
+    if (notificationId < 0) return false;
     return _getTrackedIdList(_clickedNotificationIdsKey)
         .contains(notificationId);
   }
@@ -897,21 +897,23 @@ class SmartPushAnalytics extends ChangeNotifier {
       }
 
       final hadPriorTokenForSameId = notificationId != null &&
-          notificationId > 0 &&
+          notificationId >= 0 &&
           hasRecordedSentNotification(notificationId);
       final currentPending =
           _parsePendingSend(_mmkv.getString(_pendingSendKey));
       final alreadySettledEngagedCurrentInstance = notificationId != null &&
+          notificationId >= 0 &&
           !hadPriorTokenForSameId &&
           _getTrackedIdList(_settledEngagedIdsKey).contains(notificationId);
       final alreadyPendingEngagedCurrentInstance = notificationId != null &&
+          notificationId >= 0 &&
           !hadPriorTokenForSameId &&
           currentPending != null &&
           currentPending.notificationId == notificationId &&
           currentPending.engaged;
 
       await _incrementTodayPushCount(now: sentAt);
-      if (notificationId != null && notificationId > 0) {
+      if (notificationId != null && notificationId >= 0) {
         await _appendTrackedString(
           _sentNotificationIdsKey,
           _buildSentNotificationToken(notificationId, sentAt: sentAt),

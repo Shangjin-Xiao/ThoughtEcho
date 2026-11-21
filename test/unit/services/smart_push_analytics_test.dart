@@ -419,6 +419,44 @@ void main() {
       expect(scores['pastNote'], closeTo(1 / 3, 1e-6));
     });
 
+    test('非 Android 首槽通知 ID 为 0 时点击与补记结算应记为正向互动而非未点击忽略', () async {
+      await mmkvService.setString('smart_push_unengaged_streak', '2');
+      final sentAt = DateTime(2026, 5, 10, 8, 0);
+      final nextDaySentAt = DateTime(2026, 5, 11, 8, 0);
+
+      // 模拟 iOS 首槽常规提醒（id = 0）先收到用户点击，随后触发补记结算
+      await analytics.recordInteraction(
+        'yearAgoToday',
+        notificationId: 0,
+        deferScoreUntilAccounted: true,
+      );
+      expect(analytics.hasClickedNotification(0), isTrue);
+
+      await analytics.recordDeliveredNotification(
+        'yearAgoToday',
+        notificationId: 0,
+        sentAt: sentAt,
+      );
+      await analytics.settlePendingSend();
+
+      expect(await analytics.getUnengagedStreak(), equals(0));
+      final scoresAfterClick = await analytics.getContentTypeScores();
+      expect(scoresAfterClick['yearAgoToday']!, greaterThan(0.5));
+      final stats = await analytics.getAnalyticsStats();
+      expect(stats['totalNotificationsSent'], equals(1));
+      expect(stats['totalEngagements'], equals(1));
+
+      // 次日复用 id = 0 且用户未点击时，不应继承前一日 id = 0 的点击标记
+      await analytics.markSent(
+        'yearAgoToday',
+        sentAt: nextDaySentAt,
+        notificationId: 0,
+      );
+      expect(analytics.hasClickedNotification(0), isFalse);
+      await analytics.settlePendingSend();
+      expect(await analytics.getUnengagedStreak(), equals(1));
+    });
+
     test('前台点击结算与后台补记在独立缓存实例上并发交错时不会把真实点击覆盖为未点击', () async {
       final sharedDisk = <String, Object>{
         'smart_push_unengaged_streak': '2',

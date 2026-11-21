@@ -671,10 +671,11 @@ extension SmartPushPlatform on SmartPushService {
               sourceNoteId: resolved.sourceNoteId,
               contentType: 'dailyQuote',
               dailyQuoteData: resolved.quoteData,
+              quoteSourceFingerprint: resolved.quoteSourceFingerprint,
             );
           }
         } else {
-          content = await _getPrecomputedContent();
+          content = await _getPrecomputedContent(referenceTime: scheduledDate);
         }
       }
 
@@ -781,16 +782,25 @@ extension SmartPushPlatform on SmartPushService {
       if (persistSingleTrackedEntry &&
           (isDailyQuoteContent ||
               content?.dailyQuoteData != null ||
-              content?.sourceNoteId != null)) {
+              content?.sourceNoteId != null ||
+              !isDailyQuote)) {
         await _withScheduleCommitLock(() async {
           final commitSeq = await _nextNotificationCommitSeq();
-          final existing = _loadTrackedPreScheduledEntries()
-              .where((e) => e.id != id)
-              .toList();
+          final nowMs = _now().millisecondsSinceEpoch;
+          final maxRetentionMs =
+              SmartPushService._deliveredEntryRetention.inMilliseconds;
+          final newEpochMs = scheduledDate.millisecondsSinceEpoch;
+          final existing = _loadTrackedPreScheduledEntries().where((e) {
+            if (e.id != id) return true;
+            return e.epochMs > 0 &&
+                e.epochMs <= nowMs &&
+                e.epochMs != newEpochMs &&
+                nowMs - e.epochMs <= maxRetentionMs;
+          }).toList();
           existing.add(
             _PreScheduledEntry(
               id: id,
-              epochMs: scheduledDate.millisecondsSinceEpoch,
+              epochMs: newEpochMs,
               noteId: content?.sourceNoteId ?? content?.noteId,
               isDailyQuote: isDailyQuote,
               contentType:
@@ -798,9 +808,8 @@ extension SmartPushPlatform on SmartPushService {
               slotHour: slot.hour,
               slotMinute: slot.minute,
               dailyQuoteData: content?.dailyQuoteData,
-              quoteSourceFingerprint: isDailyQuoteContent
-                  ? _currentDailyQuoteSourceFingerprint()
-                  : null,
+              quoteSourceFingerprint:
+                  isDailyQuoteContent ? content?.quoteSourceFingerprint : null,
               commitSeq: commitSeq,
             ),
           );

@@ -84,18 +84,25 @@ extension SmartPushNotification on SmartPushService {
     if (shouldRearmIosDailyQuote) {
       final targetId = parsed.notificationId ?? 100;
       final nowMs = _now().millisecondsSinceEpoch;
+      _PreScheduledEntry? matchedDailyEntry;
       for (final entry in _loadTrackedPreScheduledEntries()) {
-        if (entry.id == targetId) {
-          final matchesTappedDelivery = parsed.scheduledEpochMs != null
-              ? entry.epochMs == parsed.scheduledEpochMs
-              : entry.epochMs <= nowMs;
-          if (matchesTappedDelivery) {
-            tappedIosDailyQuoteEpochMs ??= entry.epochMs;
-            tappedIosDailyQuoteContent =
-                (entry.dailyQuoteData?['hitokoto'] as String?)?.trim();
-          }
+        if (entry.id != targetId) continue;
+        final matchesTappedDelivery = parsed.scheduledEpochMs != null
+            ? entry.epochMs == parsed.scheduledEpochMs
+            : entry.epochMs <= nowMs;
+        if (!matchesTappedDelivery) continue;
+        if (matchedDailyEntry == null ||
+            entry.epochMs >= matchedDailyEntry.epochMs) {
+          matchedDailyEntry = entry;
+        }
+        if (parsed.scheduledEpochMs != null) {
           break;
         }
+      }
+      if (matchedDailyEntry != null) {
+        tappedIosDailyQuoteEpochMs ??= matchedDailyEntry.epochMs;
+        tappedIosDailyQuoteContent =
+            (matchedDailyEntry.dailyQuoteData?['hitokoto'] as String?)?.trim();
       }
 
       if (tappedIosDailyQuoteEpochMs != null &&
@@ -230,15 +237,17 @@ extension SmartPushNotification on SmartPushService {
         _PreScheduledEntry? matchedEntry;
         if (notificationId != null) {
           for (final entry in trackedEntries) {
-            if (entry.id == notificationId) {
-              final matchesTappedDelivery = scheduledEpochMs != null
-                  ? entry.epochMs == scheduledEpochMs
-                  : (entry.epochMs <= nowMs ||
-                      notificationId >=
-                          SmartPushService._preScheduledNotificationBaseId);
-              if (matchesTappedDelivery) {
-                matchedEntry = entry;
-              }
+            if (entry.id != notificationId) continue;
+            final matchesTappedDelivery = scheduledEpochMs != null
+                ? entry.epochMs == scheduledEpochMs
+                : (entry.epochMs <= nowMs ||
+                    notificationId >=
+                        SmartPushService._preScheduledNotificationBaseId);
+            if (!matchesTappedDelivery) continue;
+            if (matchedEntry == null || entry.epochMs >= matchedEntry.epochMs) {
+              matchedEntry = entry;
+            }
+            if (scheduledEpochMs != null) {
               break;
             }
           }
@@ -291,6 +300,7 @@ extension SmartPushNotification on SmartPushService {
             settingsGeneration: tapSettingsGeneration,
             expectedEpoch: tapEpoch,
             forceAccountNotificationId: notificationId,
+            forceAccountEpochMs: matchedEntry.epochMs,
           );
         }
       }
@@ -398,25 +408,36 @@ extension SmartPushNotification on SmartPushService {
       if (notificationId != null) {
         final nowMs = _now().millisecondsSinceEpoch;
         final trackedEntries = _loadTrackedPreScheduledEntries();
+        _PreScheduledEntry? matchedQuoteEntry;
         for (final entry in trackedEntries) {
-          if (entry.id == notificationId && entry.dailyQuoteData != null) {
-            final matchesTappedDelivery = scheduledEpochMs != null
-                ? entry.epochMs == scheduledEpochMs
-                : (entry.epochMs <= nowMs ||
-                    notificationId >=
-                        SmartPushService._preScheduledNotificationBaseId);
-            if (!matchesTappedDelivery) {
-              break;
-            }
-            hitokotoData =
-                await _validateCachedDailyQuote(entry.dailyQuoteData!);
-            if (hitokotoData == null) {
-              AppLogger.d(
-                '每日一言通知点击处理取消：关联本地笔记已隐藏或删除 ($notificationId)',
-              );
-              return;
-            }
+          if (entry.id != notificationId || entry.dailyQuoteData == null) {
+            continue;
+          }
+          final matchesTappedDelivery = scheduledEpochMs != null
+              ? entry.epochMs == scheduledEpochMs
+              : (entry.epochMs <= nowMs ||
+                  notificationId >=
+                      SmartPushService._preScheduledNotificationBaseId);
+          if (!matchesTappedDelivery) {
+            continue;
+          }
+          if (matchedQuoteEntry == null ||
+              entry.epochMs >= matchedQuoteEntry.epochMs) {
+            matchedQuoteEntry = entry;
+          }
+          if (scheduledEpochMs != null) {
             break;
+          }
+        }
+        if (matchedQuoteEntry != null) {
+          hitokotoData = await _validateCachedDailyQuote(
+            matchedQuoteEntry.dailyQuoteData!,
+          );
+          if (hitokotoData == null) {
+            AppLogger.d(
+              '每日一言通知点击处理取消：关联本地笔记已隐藏或删除 ($notificationId)',
+            );
+            return;
           }
         }
       }
@@ -450,6 +471,20 @@ extension SmartPushNotification on SmartPushService {
       final normalizedData =
           SmartPushService.normalizeDailyQuoteData(hitokotoData);
       if (normalizedData == null) return;
+      final existingFp =
+          (normalizedData['quote_source_fingerprint'] as String?)?.trim() ?? '';
+      if (existingFp.isEmpty) {
+        final appSettings = _loadStoredAppSettings();
+        final normalizedType =
+            (normalizedData['type'] as String?)?.trim() ?? '';
+        final canStampCurrentFp = appSettings.useLocalQuotesOnly
+            ? normalizedType == 'local'
+            : (normalizedType != 'offline' && normalizedType != 'local-empty');
+        if (canStampCurrentFp) {
+          normalizedData['quote_source_fingerprint'] =
+              _currentDailyQuoteSourceFingerprint(appSettings);
+        }
+      }
 
       _mmkv.setString(
           SmartPushService._lastDailyQuoteKey, json.encode(normalizedData));
@@ -480,7 +515,10 @@ extension SmartPushNotification on SmartPushService {
         return null;
       }
 
-      return await _validateCachedDailyQuote(decoded);
+      return await _validateCachedDailyQuote(
+        decoded,
+        verifySourceAndContentFreshness: true,
+      );
     } catch (e) {
       AppLogger.w('读取每日一言缓存失败', error: e);
       return null;
@@ -515,22 +553,158 @@ extension SmartPushNotification on SmartPushService {
     }
   }
 
-  /// 本地缓存可能在笔记隐藏/删除后仍然存在，读取时重新校验可见性。
+  bool _doesDailyQuoteMatchAppSettings(
+    Map<String, dynamic> data,
+    AppSettings appSettings,
+  ) {
+    final type = (data['type'] as String?)?.trim() ?? '';
+    if (appSettings.useLocalQuotesOnly && type != 'local') {
+      return false;
+    }
+
+    final storedFp =
+        (data['quote_source_fingerprint'] as String?)?.trim() ?? '';
+    final expectedFp = _currentDailyQuoteSourceFingerprint(appSettings);
+    if (storedFp.isNotEmpty) {
+      return storedFp == expectedFp;
+    }
+
+    if (!appSettings.useLocalQuotesOnly) {
+      final expectedProvider = ApiService.supportedDailyQuoteProviders.contains(
+        appSettings.dailyQuoteProvider,
+      )
+          ? appSettings.dailyQuoteProvider
+          : ApiService.hitokotoProvider;
+      final cachedProvider = (data['provider'] as String?)?.trim() ?? '';
+      if (cachedProvider.isNotEmpty && cachedProvider != 'offline') {
+        return cachedProvider == expectedProvider;
+      }
+      if (cachedProvider.isEmpty && type != 'local') {
+        return expectedProvider == ApiService.hitokotoProvider;
+      }
+    }
+    return true;
+  }
+
+  /// 校验某条本地一言快照对应的源笔记当前是否仍可见、符合标签/长度规则且正文与作者出处未被修改。
+  Future<bool> _isLocalDailyQuoteSnapshotCurrent(
+    String noteId,
+    Map<String, dynamic> rawSnapshot, {
+    AppSettings? appSettings,
+    bool enforceConfiguredOfflineSource = false,
+  }) async {
+    if (noteId.isEmpty) return false;
+    final snapshot = SmartPushService.normalizeDailyQuoteData(rawSnapshot);
+    if (snapshot == null) return false;
+
+    final settings = appSettings ?? _loadStoredAppSettings();
+    final snapshotOfflineSource =
+        (snapshot['offline_quote_source'] as String?)?.trim() ?? '';
+    final effectiveOfflineSource =
+        (!enforceConfiguredOfflineSource && snapshotOfflineSource.isNotEmpty)
+            ? snapshotOfflineSource
+            : settings.offlineQuoteSource;
+
+    try {
+      final currentRaw = await _databaseService.getLocalDailyQuoteById(
+        noteId,
+        offlineQuoteSource: effectiveOfflineSource,
+      );
+      if (currentRaw == null) return false;
+      final current = SmartPushService.normalizeDailyQuoteData(currentRaw);
+      if (current == null) return false;
+      return current['hitokoto'] == snapshot['hitokoto'] &&
+          current['from_who'] == snapshot['from_who'] &&
+          current['from'] == snapshot['from'];
+    } on NoSuchMethodError {
+      final visibleIds = await _databaseService.getVisibleQuoteIds([noteId]);
+      if (!visibleIds.contains(noteId)) return false;
+      try {
+        final allVisible = await _databaseService.getAllQuotes();
+        for (final note in allVisible) {
+          if (note.id != noteId) continue;
+          final currentText = note.content.trim();
+          final currentAuthor = (note.sourceAuthor ?? '').trim();
+          final currentWork = ((note.sourceWork?.isNotEmpty ?? false)
+                  ? note.sourceWork!
+                  : (note.source ?? ''))
+              .trim();
+          if (currentText != snapshot['hitokoto'] ||
+              currentAuthor != snapshot['from_who'] ||
+              currentWork != snapshot['from']) {
+            return false;
+          }
+          if (effectiveOfflineSource == 'tagOnly') {
+            final allowedTags = <String>{'default_hitokoto'};
+            try {
+              for (final t in await _databaseService.getTags()) {
+                if (t.name == '每日一言' && t.id.isNotEmpty) {
+                  allowedTags.add(t.id);
+                }
+              }
+            } catch (_) {}
+            if (!note.tagIds.any(allowedTags.contains)) {
+              return false;
+            }
+          } else if (note.content.contains('\n')) {
+            return false;
+          }
+          return currentText.isNotEmpty && note.content.length <= 100;
+        }
+        return false;
+      } catch (_) {
+        return true;
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 本地缓存在笔记隐藏/删除、内容编辑、取消一言标签或切换一言源后可能失效，读取时按场景校验。
   Future<Map<String, dynamic>?> _validateCachedDailyQuote(
-    Map<String, dynamic> rawData,
-  ) async {
+    Map<String, dynamic> rawData, {
+    bool verifySourceAndContentFreshness = false,
+  }) async {
     final data = SmartPushService.normalizeDailyQuoteData(rawData);
-    if (data == null || data['type'] != 'local') return data;
+    if (data == null) return null;
 
-    // 旧缓存未保存笔记 ID，无法安全验证，交由调用方重新获取。
-    final noteId = data['local_quote_id'];
-    if (noteId is! String || noteId.isEmpty) return null;
-
-    final visibleIds = await _databaseService.getVisibleQuoteIds([noteId]);
-    if (!visibleIds.contains(noteId)) {
+    Future<Null> clearTodayCache() async {
       await _mmkv.remove(SmartPushService._lastDailyQuoteKey);
       await _mmkv.remove(SmartPushService._lastDailyQuoteDateKey);
       return null;
+    }
+
+    final appSettings =
+        verifySourceAndContentFreshness ? _loadStoredAppSettings() : null;
+    if (verifySourceAndContentFreshness &&
+        appSettings != null &&
+        !_doesDailyQuoteMatchAppSettings(data, appSettings)) {
+      return clearTodayCache();
+    }
+
+    if (data['type'] != 'local') return data;
+
+    // 旧缓存未保存笔记 ID，无法安全验证，交由调用方重新获取。
+    final noteId = data['local_quote_id'];
+    if (noteId is! String || noteId.isEmpty) {
+      return verifySourceAndContentFreshness ? clearTodayCache() : null;
+    }
+
+    if (verifySourceAndContentFreshness) {
+      final isCurrent = await _isLocalDailyQuoteSnapshotCurrent(
+        noteId,
+        data,
+        appSettings: appSettings,
+      );
+      if (!isCurrent) {
+        return clearTodayCache();
+      }
+      return data;
+    }
+
+    final visibleIds = await _databaseService.getVisibleQuoteIds([noteId]);
+    if (!visibleIds.contains(noteId)) {
+      return clearTodayCache();
     }
     return data;
   }
@@ -563,9 +737,22 @@ extension SmartPushNotification on SmartPushService {
       return null;
     }
     final normalizedType = (normalizedData['type'] as String?)?.trim() ?? '';
+    final normalizedProvider =
+        (normalizedData['provider'] as String?)?.trim() ?? '';
+    final matchesConfiguredMode = appSettings.useLocalQuotesOnly
+        ? normalizedType == 'local'
+        : (normalizedType != 'local' &&
+            normalizedType != 'offline' &&
+            normalizedType != 'local-empty' &&
+            normalizedProvider != 'offline');
+    if (matchesConfiguredMode) {
+      normalizedData['quote_source_fingerprint'] =
+          _currentDailyQuoteSourceFingerprint(appSettings);
+    }
     if (updateTodayCache &&
         normalizedType != 'offline' &&
-        normalizedType != 'local-empty') {
+        normalizedType != 'local-empty' &&
+        (appSettings.useLocalQuotesOnly || normalizedType != 'local')) {
       _saveDailyQuoteToCache(normalizedData);
     }
     return normalizedData;

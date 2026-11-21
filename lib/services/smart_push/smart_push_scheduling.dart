@@ -206,10 +206,26 @@ extension SmartPushScheduling on SmartPushService {
           (fromBackground || preserveDeliveredNotifications);
 
       final commitSeq = await _nextNotificationCommitSeq();
-      await _reconcileTrackedPreScheduledNotifications(
+      final preserveDeliveredSnapshots =
+          fromBackground || preserveDeliveredNotifications;
+      final existingBeforeReconcile = preserveDeliveredSnapshots
+          ? _loadTrackedPreScheduledEntries()
+          : const <_PreScheduledEntry>[];
+      final deliveredNoteIdsToVerify = <String>{
+        for (final e in existingBeforeReconcile)
+          if (e.noteId != null && e.noteId!.isNotEmpty) e.noteId!,
+      };
+      final visibleDeliveredNoteIds = deliveredNoteIdsToVerify.isNotEmpty
+          ? await _resolveVisibleTrackedNoteIds(deliveredNoteIdsToVerify)
+          : null;
+      final reconcileResult = await _reconcileTrackedPreScheduledNotifications(
         activeIds: keepPendingDailyQuoteInQueue ? const <int>{100} : const {},
-        futureOnly: fromBackground || preserveDeliveredNotifications,
+        futureOnly: preserveDeliveredSnapshots,
+        visibleNoteIds: visibleDeliveredNoteIds,
       );
+      final effectiveKeepPendingDailyQuoteInQueue =
+          keepPendingDailyQuoteInQueue &&
+              !reconcileResult.cancelledIds.contains(100);
       if (!await _isScheduleContextStillValid(
         generation: generation,
         expectedEpoch: expectedEpoch,
@@ -219,12 +235,27 @@ extension SmartPushScheduling on SmartPushService {
       )) {
         return;
       }
+      final nowMsForRetained = _now().millisecondsSinceEpoch;
+      final maxRetentionMs =
+          SmartPushService._deliveredEntryRetention.inMilliseconds;
+      final retainedDeliveredEntries = <_PreScheduledEntry>[
+        if (preserveDeliveredSnapshots)
+          for (final prev in existingBeforeReconcile)
+            if (prev.epochMs > 0 &&
+                prev.epochMs <= nowMsForRetained &&
+                nowMsForRetained - prev.epochMs <= maxRetentionMs &&
+                (prev.noteId == null ||
+                    visibleDeliveredNoteIds == null ||
+                    visibleDeliveredNoteIds.contains(prev.noteId)) &&
+                (!effectiveKeepPendingDailyQuoteInQueue ||
+                    prev.id != 100 ||
+                    prev.epochMs != preservedDailyQuoteEntry.epochMs))
+              prev,
+        if (effectiveKeepPendingDailyQuoteInQueue)
+          preservedDailyQuoteEntry.copyWith(commitSeq: commitSeq),
+      ];
       await _saveTrackedPreScheduledEntries(
-        keepPendingDailyQuoteInQueue
-            ? <_PreScheduledEntry>[
-                preservedDailyQuoteEntry.copyWith(commitSeq: commitSeq),
-              ]
-            : const [],
+        retainedDeliveredEntries,
         expectedCommitSeq: commitSeq,
       );
 
@@ -317,7 +348,7 @@ extension SmartPushScheduling on SmartPushService {
               canScheduleExactOverride: canScheduleExact,
             );
           }
-        } else if (!keepPendingDailyQuoteInQueue) {
+        } else if (!effectiveKeepPendingDailyQuoteInQueue) {
           _PushContent? preservedPrecomputed;
           if (preservedDailyQuoteEntry?.dailyQuoteData != null) {
             final data = preservedDailyQuoteEntry!.dailyQuoteData!;
@@ -344,6 +375,8 @@ extension SmartPushScheduling on SmartPushService {
                 sourceNoteId: sourceNoteId,
                 contentType: 'dailyQuote',
                 dailyQuoteData: Map<String, dynamic>.from(data),
+                quoteSourceFingerprint:
+                    preservedDailyQuoteEntry.quoteSourceFingerprint,
               );
             }
           }
@@ -542,6 +575,7 @@ extension SmartPushScheduling on SmartPushService {
     int? expectedEpoch,
     bool fromBackground = false,
     int? forceAccountNotificationId,
+    int? forceAccountEpochMs,
   }) {
     final effectiveSettingsGen =
         settingsGeneration ?? _settingsMutationGeneration;
@@ -554,6 +588,7 @@ extension SmartPushScheduling on SmartPushService {
           expectedEpoch: effectiveEpoch,
           fromBackground: fromBackground,
           forceAccountNotificationId: forceAccountNotificationId,
+          forceAccountEpochMs: forceAccountEpochMs,
         );
         completer.complete(result);
       } catch (e, stack) {
@@ -570,6 +605,7 @@ extension SmartPushScheduling on SmartPushService {
     required int expectedEpoch,
     bool fromBackground = false,
     int? forceAccountNotificationId,
+    int? forceAccountEpochMs,
   }) async {
     if (!await _isAccountingContextStillValid(
       settingsGeneration: settingsGeneration,
@@ -588,8 +624,10 @@ extension SmartPushScheduling on SmartPushService {
       (e) =>
           !e.accounted &&
           e.epochMs <= nowMs &&
-          (forceAccountNotificationId == null ||
-              e.id != forceAccountNotificationId),
+          !(forceAccountNotificationId != null &&
+              e.id == forceAccountNotificationId &&
+              (forceAccountEpochMs == null ||
+                  e.epochMs == forceAccountEpochMs)),
     );
     Set<int>? pendingRequestIds;
     if (hasCandidateElapsedEntries) {
@@ -607,11 +645,17 @@ extension SmartPushScheduling on SmartPushService {
     bool isEntryDue(_PreScheduledEntry e) {
       if (e.accounted) return false;
       if (forceAccountNotificationId != null &&
-          e.id == forceAccountNotificationId) {
+          e.id == forceAccountNotificationId &&
+          (forceAccountEpochMs == null || e.epochMs == forceAccountEpochMs)) {
         return true;
       }
       if (e.epochMs > nowMs) return false;
-      if (pendingRequestIds != null && pendingRequestIds.contains(e.id)) {
+      final hasNewerPendingSibling = entries.any(
+        (other) => other.id == e.id && other.epochMs > nowMs,
+      );
+      if (!hasNewerPendingSibling &&
+          pendingRequestIds != null &&
+          pendingRequestIds.contains(e.id)) {
         return false;
       }
       return true;
@@ -827,12 +871,14 @@ extension SmartPushScheduling on SmartPushService {
           Quote quote,
           String? sourceNoteId,
           Map<String, dynamic> quoteData,
+          String? quoteSourceFingerprint,
         })?>? memoizedPrimaryDailyQuoteFuture;
     Future<
             ({
               Quote quote,
               String? sourceNoteId,
               Map<String, dynamic> quoteData,
+              String? quoteSourceFingerprint,
             })?>
         resolvePrimaryDailyQuoteOnce() =>
             memoizedPrimaryDailyQuoteFuture ??= _resolvePreScheduleDailyQuote();
@@ -883,6 +929,7 @@ extension SmartPushScheduling on SmartPushService {
       Quote quote,
       String? sourceNoteId,
       Map<String, dynamic> quoteData,
+      String? quoteSourceFingerprint,
     })>[];
     final seenCandidateHashes = <String>{};
     void addCandidateIfDistinct(
@@ -890,6 +937,7 @@ extension SmartPushScheduling on SmartPushService {
         Quote quote,
         String? sourceNoteId,
         Map<String, dynamic> quoteData,
+        String? quoteSourceFingerprint,
       })? candidate,
     ) {
       if (candidate == null) return;
@@ -924,6 +972,9 @@ extension SmartPushScheduling on SmartPushService {
           } else {
             if (note.content.contains('\n')) continue;
           }
+          final localFingerprint = useLocalQuotesOnly
+              ? _currentDailyQuoteSourceFingerprint(appSettingsForQuotes)
+              : null;
           final normalized = SmartPushService.normalizeDailyQuoteData(
             <String, dynamic>{
               'content': content,
@@ -931,6 +982,9 @@ extension SmartPushScheduling on SmartPushService {
               'author': note.sourceAuthor ?? '',
               'type': 'local',
               'local_quote_id': note.id,
+              'offline_quote_source': offlineQuoteSource,
+              if (localFingerprint != null)
+                'quote_source_fingerprint': localFingerprint,
               'from_who': note.sourceAuthor ?? '',
               'from': note.sourceWork ?? note.source ?? '',
             },
@@ -950,6 +1004,7 @@ extension SmartPushScheduling on SmartPushService {
             ),
             sourceNoteId: note.id,
             quoteData: normalized,
+            quoteSourceFingerprint: localFingerprint,
           ));
         }
       }
@@ -959,6 +1014,7 @@ extension SmartPushScheduling on SmartPushService {
       Quote quote,
       String? sourceNoteId,
       Map<String, dynamic> quoteData,
+      String? quoteSourceFingerprint,
     })? claimQuoteForDate(String dayKey,
         {bool allowReuseWhenSoleChannel = false}) {
       final reserved = reservedQuoteHashesByDay.putIfAbsent(
@@ -1033,6 +1089,7 @@ extension SmartPushScheduling on SmartPushService {
       Quote quote,
       String? sourceNoteId,
       Map<String, dynamic> quoteData,
+      String? quoteSourceFingerprint,
     })?>{};
     var independentDailyQuotesClaimed = false;
     Future<void> ensureIndependentDailyQuotesClaimed({
@@ -1055,6 +1112,7 @@ extension SmartPushScheduling on SmartPushService {
           Quote quote,
           String? sourceNoteId,
           Map<String, dynamic> quoteData,
+          String? quoteSourceFingerprint,
         })?> resolveRegularFallbackQuoteForDate(
       String dayKey, {
       List<Quote>? loadedNotes,
@@ -1188,6 +1246,7 @@ extension SmartPushScheduling on SmartPushService {
                 sourceNoteId: resolved.sourceNoteId,
                 contentType: 'dailyQuote',
                 dailyQuoteData: resolved.quoteData,
+                quoteSourceFingerprint: resolved.quoteSourceFingerprint,
               )
             : null;
         final id = SmartPushService.deterministicPreScheduledNotificationId(
@@ -1442,6 +1501,7 @@ extension SmartPushScheduling on SmartPushService {
               slotHour: item.slot.hour,
               slotMinute: item.slot.minute,
               dailyQuoteData: item.content?.dailyQuoteData,
+              quoteSourceFingerprint: item.content?.quoteSourceFingerprint,
               commitSeq: batchCommitSeq,
             ),
           );
@@ -1901,6 +1961,7 @@ extension SmartPushScheduling on SmartPushService {
                   Quote quote,
                   String? sourceNoteId,
                   Map<String, dynamic> quoteData,
+                  String? quoteSourceFingerprint,
                 })?>
             Function(String dayKey, {List<Quote>? loadedNotes})
         resolveDailyQuoteForDate,
@@ -2239,6 +2300,7 @@ extension SmartPushScheduling on SmartPushService {
               contentType: 'dailyQuote',
               priority: 0,
               dailyQuoteData: resolved.quoteData,
+              quoteSourceFingerprint: resolved.quoteSourceFingerprint,
             );
           }
           return null;
@@ -2258,6 +2320,7 @@ extension SmartPushScheduling on SmartPushService {
                 contentType: 'dailyQuote',
                 priority: 0,
                 dailyQuoteData: resolved.quoteData,
+                quoteSourceFingerprint: resolved.quoteSourceFingerprint,
               );
             }
           }
@@ -2376,6 +2439,7 @@ extension SmartPushScheduling on SmartPushService {
               contentType: 'dailyQuote',
               priority: 0,
               dailyQuoteData: resolved.quoteData,
+              quoteSourceFingerprint: resolved.quoteSourceFingerprint,
             );
           }
         }
@@ -2556,9 +2620,13 @@ extension SmartPushScheduling on SmartPushService {
   }
 
   /// 预计算推送内容
-  Future<_PushContent?> _getPrecomputedContent() async {
+  Future<_PushContent?> _getPrecomputedContent({
+    DateTime? referenceTime,
+  }) async {
     try {
-      final candidates = await getTypedCandidateNotes();
+      final candidates = await getTypedCandidateNotes(
+        nowOverride: referenceTime,
+      );
       if (candidates.isNotEmpty) {
         final candidate = candidates.first;
         final note = candidate.note;
@@ -2579,15 +2647,21 @@ extension SmartPushScheduling on SmartPushService {
   }
 
   /// 预调度专用的本地一言解析：仅读取本地缓存或本地数据库，绝不在保存设置/启动恢复时发起外网请求阻塞 UI
-  Future<({Quote quote, String? sourceNoteId, Map<String, dynamic> quoteData})?>
-      _resolvePreScheduleDailyQuote() async {
+  Future<
+      ({
+        Quote quote,
+        String? sourceNoteId,
+        Map<String, dynamic> quoteData,
+        String? quoteSourceFingerprint,
+      })?> _resolvePreScheduleDailyQuote() async {
     try {
       final appSettings = _loadStoredAppSettings();
+      final currentFp = _currentDailyQuoteSourceFingerprint(appSettings);
       var data = await getCachedDailyQuoteForToday();
-      if (data != null &&
-          appSettings.useLocalQuotesOnly &&
-          data['type'] != 'local') {
+      var fromVerifiedCache = data != null;
+      if (data != null && !_doesDailyQuoteMatchAppSettings(data, appSettings)) {
         data = null;
+        fromVerifiedCache = false;
       }
       if (data == null) {
         try {
@@ -2608,6 +2682,13 @@ extension SmartPushScheduling on SmartPushService {
       final rawLocalId = data['local_quote_id'];
       final sourceNoteId =
           (rawLocalId is String && rawLocalId.isNotEmpty) ? rawLocalId : null;
+      final verifiedFp = (fromVerifiedCache || appSettings.useLocalQuotesOnly)
+          ? currentFp
+          : null;
+      final quoteMap = Map<String, dynamic>.from(data);
+      if (verifiedFp != null) {
+        quoteMap['quote_source_fingerprint'] = verifiedFp;
+      }
       return (
         quote: Quote(
           id: sourceNoteId,
@@ -2617,7 +2698,8 @@ extension SmartPushScheduling on SmartPushService {
           source: from.isNotEmpty ? from : null,
         ),
         sourceNoteId: sourceNoteId,
-        quoteData: Map<String, dynamic>.from(data),
+        quoteData: quoteMap,
+        quoteSourceFingerprint: verifiedFp,
       );
     } catch (e) {
       AppLogger.w('解析预调度每日一言失败', error: e);
@@ -2625,26 +2707,22 @@ extension SmartPushScheduling on SmartPushService {
     }
   }
 
-  /// 检查非 Android 独立每日一言（ID=100）是否已存在与当前时间、一言源配置及本地笔记可见性完全匹配的未来待触发项。
+  /// 检查非 Android 独立每日一言（ID=100）是否已存在与当前时间、一言源配置及本地笔记内容/标签可见性完全匹配的未来待触发项。
   Future<_PreScheduledEntry?>
       _findPreservableStandaloneDailyQuoteEntry() async {
     if (_isAndroid || !_settings.dailyQuotePushEnabled) {
       return null;
     }
+    final nowMs = _now().millisecondsSinceEpoch;
     final tracked = _loadTrackedPreScheduledEntries();
     _PreScheduledEntry? existing;
     for (final entry in tracked) {
-      if (entry.id == 100 && entry.isDailyQuote) {
+      if (entry.id == 100 && entry.isDailyQuote && entry.epochMs > nowMs) {
         existing = entry;
         break;
       }
     }
     if (existing == null || existing.dailyQuoteData == null) {
-      return null;
-    }
-
-    final nowMs = _now().millisecondsSinceEpoch;
-    if (existing.epochMs <= nowMs) {
       return null;
     }
 
@@ -2660,9 +2738,10 @@ extension SmartPushScheduling on SmartPushService {
       return null;
     }
 
+    final appSettings = _loadStoredAppSettings();
     if (existing.quoteSourceFingerprint == null ||
         existing.quoteSourceFingerprint !=
-            _currentDailyQuoteSourceFingerprint()) {
+            _currentDailyQuoteSourceFingerprint(appSettings)) {
       return null;
     }
 
@@ -2681,9 +2760,19 @@ extension SmartPushScheduling on SmartPushService {
     final sourceNoteId = (rawLocalId is String && rawLocalId.isNotEmpty)
         ? rawLocalId
         : existing.noteId;
-    if (sourceNoteId != null && sourceNoteId.isNotEmpty) {
-      final visibleIds = await _resolveVisibleTrackedNoteIds({sourceNoteId});
-      if (visibleIds != null && !visibleIds.contains(sourceNoteId)) {
+    final isLocalQuote = existing.dailyQuoteData!['type'] == 'local' ||
+        (sourceNoteId != null && sourceNoteId.isNotEmpty);
+    if (isLocalQuote) {
+      if (sourceNoteId == null || sourceNoteId.isEmpty) {
+        return null;
+      }
+      final isSnapshotCurrent = await _isLocalDailyQuoteSnapshotCurrent(
+        sourceNoteId,
+        existing.dailyQuoteData!,
+        appSettings: appSettings,
+        enforceConfiguredOfflineSource: true,
+      );
+      if (!isSnapshotCurrent) {
         return null;
       }
     }
@@ -2759,30 +2848,53 @@ extension SmartPushScheduling on SmartPushService {
         }
 
         final excludedTrimmed = previousQuoteContent?.trim() ?? '';
-        bool hasValidPendingTarget(
+        Future<bool> hasValidPendingTarget(
           Set<int>? pendingIds,
           tz.TZDateTime targetDate, {
           required bool isFutureDay,
-        }) {
+        }) async {
           if (pendingIds == null || !pendingIds.contains(100)) {
             return false;
           }
-          final expectedFingerprint = _currentDailyQuoteSourceFingerprint();
+          final appSettings = _loadStoredAppSettings();
+          final expectedFingerprint =
+              _currentDailyQuoteSourceFingerprint(appSettings);
           for (final entry in _loadTrackedPreScheduledEntries()) {
             if (entry.id != 100 ||
                 entry.epochMs < targetDate.millisecondsSinceEpoch) {
               continue;
             }
+            if (entry.quoteSourceFingerprint == null ||
+                entry.quoteSourceFingerprint != expectedFingerprint) {
+              continue;
+            }
+            final data = entry.dailyQuoteData;
+            final rawLocalId = data?['local_quote_id'];
+            final sourceNoteId = (rawLocalId is String && rawLocalId.isNotEmpty)
+                ? rawLocalId
+                : entry.noteId;
+            final isLocalQuote = data?['type'] == 'local' ||
+                (sourceNoteId != null && sourceNoteId.isNotEmpty);
+            if (isLocalQuote) {
+              if (data == null ||
+                  sourceNoteId == null ||
+                  sourceNoteId.isEmpty ||
+                  !await _isLocalDailyQuoteSnapshotCurrent(
+                    sourceNoteId,
+                    data,
+                    appSettings: appSettings,
+                    enforceConfiguredOfflineSource: true,
+                  )) {
+                continue;
+              }
+            }
             if (!isFutureDay) {
               return true;
             }
-            final existingQuote =
-                (entry.dailyQuoteData?['hitokoto'] as String?)?.trim() ?? '';
+            final existingQuote = (data?['hitokoto'] as String?)?.trim() ?? '';
             final repeatsTapped =
                 excludedTrimmed.isNotEmpty && existingQuote == excludedTrimmed;
-            final matchesFingerprint = entry.quoteSourceFingerprint == null ||
-                entry.quoteSourceFingerprint == expectedFingerprint;
-            if (!repeatsTapped && matchesFingerprint) {
+            if (!repeatsTapped && existingQuote.isNotEmpty) {
               return true;
             }
           }
@@ -2800,7 +2912,7 @@ extension SmartPushScheduling on SmartPushService {
         if (!_isSettingsMutationGenerationCurrent(observedSettingsGeneration)) {
           return;
         }
-        if (hasValidPendingTarget(
+        if (await hasValidPendingTarget(
           initialPendingIds,
           previewDate,
           isFutureDay: isFutureCalendarDay,
@@ -2829,6 +2941,7 @@ extension SmartPushScheduling on SmartPushService {
                 sourceNoteId: resolved.sourceNoteId,
                 contentType: 'dailyQuote',
                 dailyQuoteData: resolved.quoteData,
+                quoteSourceFingerprint: resolved.quoteSourceFingerprint,
               )
             : null;
 
@@ -2856,7 +2969,7 @@ extension SmartPushScheduling on SmartPushService {
               scheduledDate.month != nowInLock.month ||
               scheduledDate.day != nowInLock.day;
           final pendingIds = await _queryPendingLocalNotificationIds();
-          if (hasValidPendingTarget(
+          if (await hasValidPendingTarget(
             pendingIds,
             scheduledDate,
             isFutureDay: futureDayInLock,
@@ -2877,13 +2990,20 @@ extension SmartPushScheduling on SmartPushService {
     );
   }
 
-  /// 非 Android 单条独立每日一言调度解析：优先使用有效缓存/本地库，无本地内容时请求用户配置的在线一言源
-  Future<({Quote quote, String? sourceNoteId, Map<String, dynamic> quoteData})?>
-      _resolveStandaloneDailyQuote({
+  /// 非 Android 单条独立每日一言调度解析：遵循用户一言源配置（仅本地或在线提供商，离线时回退本地）
+  Future<
+      ({
+        Quote quote,
+        String? sourceNoteId,
+        Map<String, dynamic> quoteData,
+        String? quoteSourceFingerprint,
+      })?> _resolveStandaloneDailyQuote({
     String? excludeQuoteContent,
     bool updateTodayCache = true,
   }) async {
     try {
+      final appSettings = _loadStoredAppSettings();
+      final currentFp = _currentDailyQuoteSourceFingerprint(appSettings);
       final excluded = excludeQuoteContent?.trim() ?? '';
       bool isExcludedContent(String candidate) {
         final trimmed = candidate.trim();
@@ -2892,51 +3012,119 @@ extension SmartPushScheduling on SmartPushService {
         return _hasDailyQuoteContentPushed(trimmed);
       }
 
-      final localResolved = await _resolvePreScheduleDailyQuote();
-      if (localResolved != null &&
-          !isExcludedContent(localResolved.quote.content)) {
-        return localResolved;
+      ({
+        Quote quote,
+        String? sourceNoteId,
+        Map<String, dynamic> quoteData,
+        String? quoteSourceFingerprint,
+      })? buildResolvedFromMap(
+        Map<String, dynamic> map, {
+        required bool verifiedForCurrentSettings,
+      }) {
+        final content = (map['hitokoto'] as String?)?.trim() ?? '';
+        if (content.isEmpty) return null;
+        final fromWho = (map['from_who'] as String?)?.trim() ?? '';
+        final from = (map['from'] as String?)?.trim() ?? '';
+        final rawLocalId = map['local_quote_id'];
+        final sourceNoteId =
+            (rawLocalId is String && rawLocalId.isNotEmpty) ? rawLocalId : null;
+        final fp = verifiedForCurrentSettings ? currentFp : null;
+        final copied = Map<String, dynamic>.from(map);
+        if (fp != null) {
+          copied['quote_source_fingerprint'] = fp;
+        }
+        return (
+          quote: Quote(
+            id: sourceNoteId,
+            content: content,
+            date: _now().toIso8601String(),
+            sourceAuthor: fromWho.isNotEmpty ? fromWho : null,
+            source: from.isNotEmpty ? from : null,
+          ),
+          sourceNoteId: sourceNoteId,
+          quoteData: copied,
+          quoteSourceFingerprint: fp,
+        );
       }
 
-      var data = await _loadDailyQuoteData(
-        preferCache: localResolved == null,
-        updateTodayCache: updateTodayCache,
-      );
-      if (data == null) return localResolved;
-
-      final firstContent = (data['hitokoto'] as String?)?.trim() ?? '';
-      if (firstContent.isNotEmpty && isExcludedContent(firstContent)) {
-        data = await _loadDailyQuoteData(
+      if (appSettings.useLocalQuotesOnly) {
+        final localPrimary = await _resolvePreScheduleDailyQuote();
+        if (localPrimary != null &&
+            !isExcludedContent(localPrimary.quote.content)) {
+          if (updateTodayCache) {
+            _saveDailyQuoteToCache(localPrimary.quoteData);
+          }
+          return localPrimary;
+        }
+        final retryLocal = await _loadDailyQuoteData(
           preferCache: false,
           updateTodayCache: updateTodayCache,
         );
-        if (data == null) return localResolved;
+        if (retryLocal != null) {
+          final retryType = (retryLocal['type'] as String?)?.trim() ?? '';
+          if (retryType == 'local') {
+            final built = buildResolvedFromMap(
+              retryLocal,
+              verifiedForCurrentSettings: true,
+            );
+            if (built != null) return built;
+          }
+        }
+        if (localPrimary != null && updateTodayCache) {
+          _saveDailyQuoteToCache(localPrimary.quoteData);
+        }
+        return localPrimary;
       }
 
-      final type = (data['type'] as String?)?.trim() ?? '';
-      final provider = (data['provider'] as String?)?.trim() ?? '';
-      if (type == 'offline' || type == 'local-empty' || provider == 'offline') {
-        return localResolved;
+      final cachedToday = await getCachedDailyQuoteForToday();
+      final cachedFallback = cachedToday != null
+          ? buildResolvedFromMap(
+              cachedToday,
+              verifiedForCurrentSettings:
+                  _doesDailyQuoteMatchAppSettings(cachedToday, appSettings),
+            )
+          : null;
+      if (cachedFallback != null &&
+          !isExcludedContent(cachedFallback.quote.content)) {
+        return cachedFallback;
       }
 
-      final content = (data['hitokoto'] as String?)?.trim() ?? '';
-      if (content.isEmpty) return localResolved;
-      final fromWho = (data['from_who'] as String?)?.trim() ?? '';
-      final from = (data['from'] as String?)?.trim() ?? '';
-      final rawLocalId = data['local_quote_id'];
-      final sourceNoteId =
-          (rawLocalId is String && rawLocalId.isNotEmpty) ? rawLocalId : null;
-      return (
-        quote: Quote(
-          id: sourceNoteId,
-          content: content,
-          date: _now().toIso8601String(),
-          sourceAuthor: fromWho.isNotEmpty ? fromWho : null,
-          source: from.isNotEmpty ? from : null,
-        ),
-        sourceNoteId: sourceNoteId,
-        quoteData: Map<String, dynamic>.from(data),
+      var data = await _loadDailyQuoteData(
+        preferCache: false,
+        updateTodayCache: updateTodayCache,
       );
+      if (data != null) {
+        final firstContent = (data['hitokoto'] as String?)?.trim() ?? '';
+        if (firstContent.isNotEmpty && isExcludedContent(firstContent)) {
+          final secondAttempt = await _loadDailyQuoteData(
+            preferCache: false,
+            updateTodayCache: updateTodayCache,
+          );
+          if (secondAttempt != null) {
+            data = secondAttempt;
+          }
+        }
+      }
+
+      if (data != null) {
+        final type = (data['type'] as String?)?.trim() ?? '';
+        final provider = (data['provider'] as String?)?.trim() ?? '';
+        if (type != 'offline' &&
+            type != 'local-empty' &&
+            provider != 'offline') {
+          final verifiedOnline = type != 'local' &&
+              _doesDailyQuoteMatchAppSettings(data, appSettings);
+          final built = buildResolvedFromMap(
+            data,
+            verifiedForCurrentSettings: verifiedOnline,
+          );
+          if (built != null) {
+            return built;
+          }
+        }
+      }
+
+      return cachedFallback ?? await _resolvePreScheduleDailyQuote();
     } catch (e) {
       AppLogger.w('解析独立每日一言失败', error: e);
       return null;

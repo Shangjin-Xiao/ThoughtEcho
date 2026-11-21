@@ -388,11 +388,13 @@ extension SmartPushContentSelection on SmartPushService {
     return typedCandidates.map((candidate) => candidate.note).toList();
   }
 
-  Future<List<TypedSmartPushCandidate>> getTypedCandidateNotes() async {
+  Future<List<TypedSmartPushCandidate>> getTypedCandidateNotes({
+    DateTime? nowOverride,
+  }) async {
     final allNotes = await _databaseService.getQuotesForSmartPush(limit: 5000);
     if (allNotes.isEmpty) return [];
 
-    final now = DateTime.now();
+    final now = nowOverride ?? _now();
     final currentLocation = await _loadCurrentLocationForMatching();
     final currentWeather = _loadCurrentWeatherForMatching();
 

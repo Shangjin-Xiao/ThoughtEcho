@@ -21,6 +21,43 @@ typedef _PosixFlockNative = ffi.Int32 Function(ffi.Int32 fd, ffi.Int32 op);
 typedef _PosixFlockDart = int Function(int fd, int op);
 typedef _PosixCloseNative = ffi.Int32 Function(ffi.Int32 fd);
 typedef _PosixCloseDart = int Function(int fd);
+typedef _PosixFdopenNative = ffi.Pointer<ffi.Void> Function(
+  ffi.Int32 fd,
+  ffi.Pointer<ffi.Uint8> mode,
+);
+typedef _PosixFdopenDart = ffi.Pointer<ffi.Void> Function(
+  int fd,
+  ffi.Pointer<ffi.Uint8> mode,
+);
+typedef _PosixFcloseNative = ffi.Int32 Function(ffi.Pointer<ffi.Void> stream);
+typedef _PosixFcloseDart = int Function(ffi.Pointer<ffi.Void> stream);
+
+/// Guard token owning an exclusively locked POSIX `FILE*` / `fd`.
+///
+/// Attached to [_PosixFlockBindings._fcloseFinalizer] so that if a background
+/// `FlutterEngine` / Dart `IsolateGroup` is torn down abruptly (e.g. Android
+/// `WorkManager` `onStopped()` -> `stopEngine`) without running Dart `finally`
+/// blocks, the VM's isolate-group shutdown runs `fclose(stream)` natively,
+/// closing the underlying descriptor and releasing the `flock` lock in-process.
+final class _PosixLockedFileHandle implements ffi.Finalizable {
+  _PosixLockedFileHandle._(this.fd, this._stream);
+
+  final int fd;
+  final ffi.Pointer<ffi.Void> _stream;
+  bool _released = false;
+
+  void release() {
+    if (_released) return;
+    _released = true;
+    _PosixFlockBindings.instance._detachFinalizer(this);
+    try {
+      _PosixFlockBindings.instance.unlock(fd);
+    } catch (_) {}
+    try {
+      _PosixFlockBindings.instance._fcloseStream(_stream);
+    } catch (_) {}
+  }
+}
 
 /// POSIX open-file-description advisory lock bindings (`flock`).
 ///
@@ -29,7 +66,9 @@ typedef _PosixCloseDart = int Function(int fd);
 /// within the same OS process), each `open()` call creates an independent open
 /// file description whose `flock(LOCK_EX | LOCK_NB)` blocks both sibling
 /// `Isolate`s and separate OS processes, and is automatically released by the
-/// kernel if a holder process crashes or is killed.
+/// kernel if a holder process crashes or is killed, or via `NativeFinalizer`
+/// (`fclose`) if a background `FlutterEngine` / `IsolateGroup` is destroyed
+/// within a shared host process.
 final class _PosixFlockBindings {
   _PosixFlockBindings._() {
     final lib = ffi.DynamicLibrary.process();
@@ -40,6 +79,22 @@ final class _PosixFlockBindings {
     _open2 = lib.lookupFunction<_PosixOpen2Native, _PosixOpen2Dart>('open');
     _flock = lib.lookupFunction<_PosixFlockNative, _PosixFlockDart>('flock');
     _close = lib.lookupFunction<_PosixCloseNative, _PosixCloseDart>('close');
+    _fdopen = lib.lookupFunction<_PosixFdopenNative, _PosixFdopenDart>(
+      'fdopen',
+    );
+    final fclosePtr = lib.lookup<ffi.NativeFunction<_PosixFcloseNative>>(
+      'fclose',
+    );
+    _fclose = fclosePtr.asFunction<_PosixFcloseDart>();
+    _fcloseFinalizer = ffi.NativeFinalizer(
+      fclosePtr.cast<ffi.NativeFinalizerFunction>(),
+    );
+    final modeBuf = _malloc(3);
+    if (modeBuf == ffi.nullptr) {
+      throw const FileSystemException('Failed to allocate fdopen mode buffer');
+    }
+    _rwModePtr = modeBuf.cast<ffi.Uint8>()
+      ..asTypedList(3).setAll(0, const <int>[0x72, 0x2B, 0]); // "r+\0"
   }
 
   static final _PosixFlockBindings instance = _PosixFlockBindings._();
@@ -55,6 +110,10 @@ final class _PosixFlockBindings {
   late final _PosixOpen2Dart _open2;
   late final _PosixFlockDart _flock;
   late final _PosixCloseDart _close;
+  late final _PosixFdopenDart _fdopen;
+  late final _PosixFcloseDart _fclose;
+  late final ffi.NativeFinalizer _fcloseFinalizer;
+  late final ffi.Pointer<ffi.Uint8> _rwModePtr;
 
   int openRdWr(String path) {
     final encoded = utf8.encode(path);
@@ -74,6 +133,26 @@ final class _PosixFlockBindings {
   }
 
   bool tryLockExclusive(int fd) => _flock(fd, _lockEx | _lockNb) == 0;
+
+  _PosixLockedFileHandle? wrapLockedFd(int fd) {
+    final stream = _fdopen(fd, _rwModePtr);
+    if (stream == ffi.nullptr) {
+      unlock(fd);
+      closeFd(fd);
+      return null;
+    }
+    final handle = _PosixLockedFileHandle._(fd, stream);
+    _fcloseFinalizer.attach(handle, stream, detach: handle);
+    return handle;
+  }
+
+  void _detachFinalizer(_PosixLockedFileHandle handle) {
+    _fcloseFinalizer.detach(handle);
+  }
+
+  void _fcloseStream(ffi.Pointer<ffi.Void> stream) {
+    _fclose(stream);
+  }
 
   void unlock(int fd) {
     _flock(fd, _lockUn);
@@ -247,11 +326,11 @@ class PlatformHelper {
         : acquireTimeout;
     final waitWatch = Stopwatch()..start();
     var attempt = 0;
-    int? lockedPosixFd;
+    _PosixLockedFileHandle? lockedPosixHandle;
     RandomAccessFile? lockedWindowsHandle;
 
     try {
-      while (lockedPosixFd == null && lockedWindowsHandle == null) {
+      while (lockedPosixHandle == null && lockedWindowsHandle == null) {
         final entityType = FileSystemEntity.typeSync(
           lockFile.path,
           followLinks: false,
@@ -323,7 +402,14 @@ class PlatformHelper {
                 );
               }
             } else if (_PosixFlockBindings.instance.tryLockExclusive(fd)) {
-              lockedPosixFd = fd;
+              final wrapped = _PosixFlockBindings.instance.wrapLockedFd(fd);
+              if (wrapped == null) {
+                throw FileSystemException(
+                  'Failed to attach native finalizer to lock file ($lockName)',
+                  lockFile.path,
+                );
+              }
+              lockedPosixHandle = wrapped;
               break;
             } else {
               _PosixFlockBindings.instance.closeFd(fd);
@@ -342,6 +428,18 @@ class PlatformHelper {
 
         final delayMs =
             attempt == 0 ? 1 : (attempt < 4 ? 5 : (attempt < 8 ? 10 : 20));
+        if (!Platform.isWindows &&
+            attempt >= 3 &&
+            (attempt == 3 || attempt % 4 == 0)) {
+          // If a sibling Isolate in the same IsolateGroup was killed via
+          // Isolate.kill(priority: Isolate.immediate) without running finally,
+          // nudging young-space allocation under contention prompts Dart GC to
+          // run _PosixLockedFileHandle's NativeFinalizer promptly. Separate
+          // FlutterEngine / IsolateGroup teardown runs NativeFinalizer directly.
+          for (var i = 0; i < 8; i++) {
+            Uint8List(512 * 1024);
+          }
+        }
         attempt++;
         await Future<void>.delayed(Duration(milliseconds: delayMs));
       }
@@ -355,13 +453,8 @@ class PlatformHelper {
         zoneValues: <Object?, Object?>{_heldLocksZoneKey: nextHeld},
       );
     } finally {
-      if (lockedPosixFd != null) {
-        try {
-          _PosixFlockBindings.instance.unlock(lockedPosixFd);
-        } catch (_) {}
-        try {
-          _PosixFlockBindings.instance.closeFd(lockedPosixFd);
-        } catch (_) {}
+      if (lockedPosixHandle != null) {
+        lockedPosixHandle.release();
       }
       if (lockedWindowsHandle != null) {
         try {

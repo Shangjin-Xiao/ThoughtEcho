@@ -477,6 +477,30 @@ class SmartPushService extends ChangeNotifier {
     );
   }
 
+  /// 当每日一言提供商、分类、本地源开关或离线源范围发生变更时清理当日缓存并触发待发通知重排。
+  Future<void> handleDailyQuoteSourceSettingsChanged() {
+    final shouldReschedule = !_isDisposed &&
+        (_settings.enabled || _settings.dailyQuotePushEnabled) &&
+        (_isAndroid || _isIOS) &&
+        (_isInitialized || _scheduleGeneration > 0);
+    final invalidateAndBumpFuture = () async {
+      try {
+        await _mmkv.remove(_lastDailyQuoteKey);
+        await _mmkv.remove(_lastDailyQuoteDateKey);
+      } catch (_) {}
+      if (shouldReschedule && !_isDisposed) {
+        await _bumpScheduleEpoch();
+      }
+    }();
+    if (!shouldReschedule) {
+      return invalidateAndBumpFuture;
+    }
+    return _scheduleNextPushWithPrerequisite(
+      preserveDeliveredNotifications: true,
+      prerequisite: invalidateAndBumpFuture,
+    ).catchError((_) {});
+  }
+
   @override
   void dispose() {
     _isDisposed = true;
@@ -602,6 +626,10 @@ class SmartPushService extends ChangeNotifier {
     final from = (rawData['from'] ?? rawData['source'] ?? '').toString().trim();
     final type = (rawData['type'] ?? '').toString().trim();
     final provider = (rawData['provider'] ?? '').toString().trim();
+    final offlineQuoteSource =
+        (rawData['offline_quote_source'] ?? '').toString().trim();
+    final quoteSourceFingerprint =
+        (rawData['quote_source_fingerprint'] ?? '').toString().trim();
 
     return {
       'hitokoto': content,
@@ -611,6 +639,10 @@ class SmartPushService extends ChangeNotifier {
       if (provider.isNotEmpty) 'provider': provider,
       if (rawData['local_quote_id'] is String)
         'local_quote_id': rawData['local_quote_id'],
+      if (offlineQuoteSource.isNotEmpty)
+        'offline_quote_source': offlineQuoteSource,
+      if (quoteSourceFingerprint.isNotEmpty)
+        'quote_source_fingerprint': quoteSourceFingerprint,
     };
   }
 
@@ -1313,6 +1345,7 @@ class _PushContent {
   final String? contentType;
   final double priority;
   final Map<String, dynamic>? dailyQuoteData;
+  final String? quoteSourceFingerprint;
 
   _PushContent({
     required this.title,
@@ -1322,6 +1355,7 @@ class _PushContent {
     this.contentType,
     this.priority = 0,
     this.dailyQuoteData,
+    this.quoteSourceFingerprint,
   }) : sourceNoteId = sourceNoteId ?? noteId;
 }
 

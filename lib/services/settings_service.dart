@@ -668,11 +668,26 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _notifyDailyQuoteSourceChanged() async {
+    try {
+      await _mmkv.remove('smart_push_last_daily_quote');
+      await _mmkv.remove('smart_push_last_daily_quote_date');
+    } catch (_) {}
+    final pushInstance = SmartPushService.currentInstance;
+    if (pushInstance != null) {
+      unawaited(pushInstance.handleDailyQuoteSourceSettingsChanged());
+    }
+  }
+
   // 是否仅使用本地笔记作为一言
   bool get useLocalQuotesOnly => _appSettings.useLocalQuotesOnly;
   Future<void> setUseLocalQuotesOnly(bool enabled) async {
+    final changed = _appSettings.useLocalQuotesOnly != enabled;
     _appSettings = _appSettings.copyWith(useLocalQuotesOnly: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'toggle_setting',
       'setting': 'local_quotes_only',
@@ -684,8 +699,12 @@ class SettingsService extends ChangeNotifier {
   // 每日一言 provider
   String get dailyQuoteProvider => _appSettings.dailyQuoteProvider;
   Future<void> setDailyQuoteProvider(String provider) async {
+    final changed = _appSettings.dailyQuoteProvider != provider;
     _appSettings = _appSettings.copyWith(dailyQuoteProvider: provider);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     // provider 来自预设下拉选项（固定枚举），不是用户自由输入，可上报。
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'select_setting',
@@ -698,8 +717,15 @@ class SettingsService extends ChangeNotifier {
   // API Ninjas 分类选择
   List<String> get apiNinjasCategories => _appSettings.apiNinjasCategories;
   Future<void> setApiNinjasCategories(List<String> categories) async {
+    final prevSorted = List<String>.from(_appSettings.apiNinjasCategories)
+      ..sort();
+    final nextSorted = List<String>.from(categories)..sort();
+    final changed = prevSorted.join(',') != nextSorted.join(',');
     _appSettings = _appSettings.copyWith(apiNinjasCategories: categories);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     notifyListeners();
   }
 
@@ -719,8 +745,12 @@ class SettingsService extends ChangeNotifier {
   // 无网/离线时的一言回退数据源
   String get offlineQuoteSource => _appSettings.offlineQuoteSource;
   Future<void> setOfflineQuoteSource(String source) async {
+    final changed = _appSettings.offlineQuoteSource != source;
     _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     // 取值来自卡片内固定单选项（tagOnly/allNotes），不是用户自由输入。
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'select_setting',
@@ -818,12 +848,16 @@ class SettingsService extends ChangeNotifier {
 
   /// 设置语言代码，null 表示跟随系统
   Future<void> setLocale(String? localeCode) async {
+    final prevLocale = _appSettings.localeCode;
     if (localeCode == null) {
       _appSettings = _appSettings.copyWith(clearLocale: true);
     } else {
       _appSettings = _appSettings.copyWith(localeCode: localeCode);
     }
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (prevLocale != _appSettings.localeCode) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     // 语言代码来自应用支持的固定列表（null 记为 system），不是自由输入。
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'select_setting',
@@ -1407,14 +1441,32 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> updateAppSettings(AppSettings settings) async {
+    final prevCategories = List<String>.from(_appSettings.apiNinjasCategories)
+      ..sort();
+    final nextCategories = List<String>.from(settings.apiNinjasCategories)
+      ..sort();
+    final quoteSourceChanged =
+        _appSettings.useLocalQuotesOnly != settings.useLocalQuotesOnly ||
+            _appSettings.offlineQuoteSource != settings.offlineQuoteSource ||
+            _appSettings.dailyQuoteProvider != settings.dailyQuoteProvider ||
+            _appSettings.hitokotoType != settings.hitokotoType ||
+            prevCategories.join(',') != nextCategories.join(',') ||
+            _appSettings.localeCode != settings.localeCode;
     _appSettings = settings;
     await _mmkv.setString(_appSettingsKey, json.encode(settings.toJson()));
+    if (quoteSourceChanged) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     notifyListeners();
   }
 
   Future<void> updateHitokotoType(String type) async {
+    final changed = _appSettings.hitokotoType != type;
     _appSettings = _appSettings.copyWith(hitokotoType: type);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     notifyListeners();
   }
 

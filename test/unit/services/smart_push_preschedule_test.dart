@@ -16,6 +16,8 @@ import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/smart_push_analytics.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/utils/http_response.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -184,6 +186,8 @@ class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
 
 class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
   List<Quote> notes;
+  List<NoteTag> tags = const [];
+  bool enforceTagOnlyEligibility = false;
   Map<String, dynamic>? localDailyQuoteResult;
   Completer<void>? pendingQueryBarrier;
   int queryCount = 0;
@@ -237,11 +241,65 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
     String offlineQuoteSource = 'tagOnly',
   }) async {
     localDailyQuoteQueryCount++;
-    return localDailyQuoteResult;
+    final res = localDailyQuoteResult;
+    if (res == null) return null;
+    return <String, dynamic>{
+      ...res,
+      'offline_quote_source': res['offline_quote_source'] ?? offlineQuoteSource,
+    };
   }
 
   @override
-  Future<List<NoteTag>> getTags() async => const [];
+  Future<Map<String, dynamic>?> getLocalDailyQuoteById(
+    String quoteId, {
+    String offlineQuoteSource = 'tagOnly',
+  }) async {
+    if (quoteId.isEmpty) return null;
+    Quote? matched;
+    for (final note in notes) {
+      if (note.id == quoteId) {
+        matched = note;
+        break;
+      }
+    }
+    if (matched == null) return null;
+    final trimmed = matched.content.trim();
+    if (trimmed.isEmpty || matched.content.length > 100) {
+      return null;
+    }
+    if (offlineQuoteSource == 'tagOnly') {
+      final shouldEnforceTags = enforceTagOnlyEligibility ||
+          tags.isNotEmpty ||
+          notes.any((n) => n.tagIds.isNotEmpty);
+      if (shouldEnforceTags) {
+        final allowedTags = <String>{
+          'default_hitokoto',
+          for (final tag in tags)
+            if (tag.name == '每日一言' && tag.id.isNotEmpty) tag.id,
+        };
+        if (!matched.tagIds.any(allowedTags.contains)) {
+          return null;
+        }
+      }
+    } else if (matched.content.contains('\n')) {
+      return null;
+    }
+    final work = (matched.sourceWork?.isNotEmpty ?? false)
+        ? matched.sourceWork!
+        : (matched.source ?? '');
+    return <String, dynamic>{
+      'content': trimmed,
+      'author': matched.sourceAuthor ?? '',
+      'source': work,
+      'type': 'local',
+      'provider': 'offline',
+      'local_quote_id': quoteId,
+      'offline_quote_source': offlineQuoteSource,
+    };
+  }
+
+  @override
+  Future<List<NoteTag>> getTags() async => List<NoteTag>.from(tags);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -4440,13 +4498,34 @@ void main() {
           ),
         );
 
-        // 推进到次日 09:01：前一日的常规提醒（ID=0、1）均已过期，用户点击刚送达的 09:00 每日一言唤醒应用
-        currentNow = localTime(2026, 5, 11, 9, 1);
-        final secondDailyPayload = SmartPushService.buildNotificationPayload(
-          contentType: 'dailyQuote',
-          notificationId: 100,
-          scheduledEpochMs: localTime(2026, 5, 11, 9, 0).millisecondsSinceEpoch,
+        final firstDailyCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          firstDailyCall.scheduledDate,
+          equals(localTime(2026, 5, 10, 9, 0)),
         );
+
+        // 先在首日 09:01 点击已送达的首日一言，由服务真实续订出次日（5 月 11 日 09:00）的 ID=100 通知与追踪条目
+        currentNow = localTime(2026, 5, 10, 9, 1);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 100,
+            payload: firstDailyCall.payload,
+          ),
+        );
+        final armedMay11DailyCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          armedMay11DailyCall.scheduledDate,
+          equals(localTime(2026, 5, 11, 9, 0)),
+        );
+        expect(armedMay11DailyCall.payload, isNotNull);
+        await iosService.consumePendingDailyQuoteForHomeDisplay();
+
+        // 推进到次日 09:01：前一日的常规提醒（ID=0、1）均已过期，用户点击刚送达的真实 5 月 11 日 09:00 每日一言唤醒应用
+        currentNow = localTime(2026, 5, 11, 9, 1);
 
         final planningBarrier = Completer<void>();
         databaseService.pendingQueryBarrier = planningBarrier;
@@ -4456,13 +4535,13 @@ void main() {
         final resumeFuture = iosService.handleAppResumed();
         await Future<void>.delayed(const Duration(milliseconds: 10));
 
-        // 2. 在全量刷新尚未完成常规槽位规划时，每日一言点击回调并发排入续订操作
+        // 2. 在全量刷新尚未完成常规槽位规划时，每日一言点击回调使用已注册通知的真实 payload 并发排入续订操作
         final tapFuture = iosService.handleNotificationTapForTest(
           NotificationResponse(
             notificationResponseType:
                 NotificationResponseType.selectedNotification,
             id: 100,
-            payload: secondDailyPayload,
+            payload: armedMay11DailyCall.payload,
           ),
         );
         await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -4471,6 +4550,11 @@ void main() {
         planningBarrier.complete();
         databaseService.pendingQueryBarrier = null;
         await Future.wait(<Future<void>>[resumeFuture, tapFuture]);
+
+        final tappedMay11Display =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(tappedMay11Display, isNotNull);
+        expect(tappedMay11Display!['hitokoto'], contains('次日晨间一言'));
 
         final pendingIds =
             (await notificationsPlugin.pendingNotificationRequests())
@@ -4589,6 +4673,15 @@ void main() {
             payload: mondayCall.payload,
           ),
         );
+        final mondayQuoteFromTimestampedPayload =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(mondayQuoteFromTimestampedPayload, isNotNull);
+        expect(
+          mondayQuoteFromTimestampedPayload!['hitokoto'],
+          contains('周一晨间一言'),
+          reason: '点击周一未读每日一言通知后，首页必须展示周一条目的快照而非周二新缓存',
+        );
+
         await iosService.handleNotificationTapForTest(
           const NotificationResponse(
             notificationResponseType:
@@ -4596,6 +4689,14 @@ void main() {
             id: 100,
             payload: 'contentType:dailyQuote|notificationId:100',
           ),
+        );
+        final mondayQuoteFromLegacyPayload =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(mondayQuoteFromLegacyPayload, isNotNull);
+        expect(
+          mondayQuoteFromLegacyPayload!['hitokoto'],
+          contains('周一晨间一言'),
+          reason: '兼容无时间戳旧版 payload 点击已送达通知时，也必须还原最近一次已送达快照',
         );
 
         final pendingOnTuesdayMorning =
@@ -4809,6 +4910,327 @@ void main() {
           tz.local.currentTimeZone.offset,
           equals(-5 * Duration.millisecondsPerHour),
         );
+      },
+    );
+
+    test(
+      'editing local Daily Quote note or removing 每日一言 tag in tagOnly mode refreshes pending iOS Daily Quote and invalidates cache',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 40);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        const primaryNoteId = 'f1000000-1111-2222-3333-444444444444';
+        const fallbackNoteId = 'f2000000-1111-2222-3333-444444444444';
+        databaseService.tags = <NoteTag>[
+          NoteTag(id: 'tag-daily-quote', name: '每日一言'),
+        ];
+        databaseService.enforceTagOnlyEligibility = true;
+
+        final initialPrimary = Quote(
+          id: primaryNoteId,
+          content: '初版短句：春风又绿江南岸。',
+          sourceAuthor: '示例作者甲',
+          sourceWork: '示例诗集',
+          tagIds: const <String>['tag-daily-quote'],
+          date: DateTime(2026, 4, 10, 9, 0).toIso8601String(),
+        );
+        final taggedBackup = Quote(
+          id: fallbackNoteId,
+          content: '替补标签短句：海上生明月。',
+          sourceAuthor: '示例作者乙',
+          sourceWork: '示例诗选',
+          tagIds: const <String>['tag-daily-quote'],
+          date: DateTime(2026, 4, 11, 9, 0).toIso8601String(),
+        );
+        databaseService.notes = <Quote>[initialPrimary, taggedBackup];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': initialPrimary.content,
+          'author': initialPrimary.sourceAuthor,
+          'source': initialPrimary.sourceWork,
+          'type': 'local',
+          'provider': 'offline',
+          'local_quote_id': primaryNoteId,
+        };
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'tagOnly',
+            ).toJson(),
+          ),
+        );
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(() {
+          databaseService.tags = const <NoteTag>[];
+          databaseService.enforceTagOnlyEligibility = false;
+          iosService.dispose();
+        });
+        await iosService.initialize();
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final initialScheduled =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(initialScheduled.body, contains('初版短句'));
+        expect(
+          await iosService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', '初版短句：春风又绿江南岸。'),
+        );
+
+        // 1. 用户直接修改该本地笔记正文与作者（未隐藏/未删除）：待触发 iOS 每日一言与今日缓存必须刷新
+        final editedPrimary = initialPrimary.copyWith(
+          content: '修订后短句：明月何时照我还。',
+          sourceAuthor: '示例作者丙',
+        );
+        databaseService.notes = <Quote>[editedPrimary, taggedBackup];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': editedPrimary.content,
+          'author': editedPrimary.sourceAuthor,
+          'source': editedPrimary.sourceWork,
+          'type': 'local',
+          'provider': 'offline',
+          'local_quote_id': primaryNoteId,
+        };
+        databaseService.notifyChanged();
+        await iosService.waitForPendingScheduleForTest();
+
+        final afterEditCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          afterEditCall.body,
+          contains('修订后短句'),
+          reason: '源本地笔记编辑后不得继续保留旧版待发通知正文',
+        );
+        expect(afterEditCall.body, contains('示例作者丙'));
+        expect(
+          await iosService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', '修订后短句：明月何时照我还。'),
+        );
+
+        // 2. 在 tagOnly 模式下移除该笔记的「每日一言」标签：待触发通知与缓存必须立即替换为仍带标签的候选笔记
+        final untaggedPrimary = editedPrimary.copyWith(
+          tagIds: const <String>[],
+        );
+        databaseService.notes = <Quote>[untaggedPrimary, taggedBackup];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': taggedBackup.content,
+          'author': taggedBackup.sourceAuthor,
+          'source': taggedBackup.sourceWork,
+          'type': 'local',
+          'provider': 'offline',
+          'local_quote_id': fallbackNoteId,
+        };
+        databaseService.notifyChanged();
+        await iosService.waitForPendingScheduleForTest();
+
+        final afterUntagCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          afterUntagCall.body,
+          contains('替补标签短句'),
+          reason: 'tagOnly 模式下移除「每日一言」标签后必须撤换已不再符合条件的待触发通知',
+        );
+        expect(
+          await iosService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', '替补标签短句：海上生明月。'),
+        );
+      },
+    );
+
+    test(
+      'switching dailyQuoteProvider invalidates same-day cached quote and refreshes queued iOS Daily Quote',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 45);
+        final appPrefs = AppPreferencesService();
+        await appPrefs.init();
+        await appPrefs.remove('smart_push_last_daily_quote');
+        await appPrefs.remove('smart_push_last_daily_quote_date');
+        await appPrefs.remove('smart_push_tracked_prescheduled_v1');
+        databaseService.notes.clear();
+        databaseService.localDailyQuoteResult = null;
+
+        final settingsService = await SettingsService.create();
+        await settingsService.setUseLocalQuotesOnly(false);
+        await settingsService.setDailyQuoteProvider(
+          ApiService.hitokotoProvider,
+        );
+
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          if (url.contains('zenquotes')) {
+            return HttpResponse(
+              jsonEncode(<Map<String, dynamic>>[
+                <String, dynamic>{
+                  'q': 'Calm seas never made a skilled sailor.',
+                  'a': 'Sample Thinker',
+                },
+              ]),
+              200,
+            );
+          }
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': '一言接口句子：星垂平野阔。',
+              'from_who': '示例作者甲',
+              'from': '示例旅夜诗',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: appPrefs,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final hitokotoCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(hitokotoCall.body, contains('一言接口句子'));
+        expect(
+          await iosService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', '一言接口句子：星垂平野阔。'),
+        );
+
+        // 通过 SettingsService 切换每日一言提供商为 ZenQuotes：应自动使旧缓存失效并将待发 ID=100 通知更新为 ZenQuotes 内容
+        await settingsService.setDailyQuoteProvider(
+          ApiService.zenQuotesProvider,
+        );
+        await iosService.waitForPendingScheduleForTest();
+
+        final zenCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          zenCall.body,
+          contains('Calm seas never made a skilled sailor.'),
+          reason: '切换一言提供商后不得把新指纹盖到旧提供商缓存上，而必须重新拉取新提供商内容',
+        );
+        final cachedAfterSwitch =
+            await iosService.getCachedDailyQuoteForToday();
+        expect(cachedAfterSwitch, isNotNull);
+        expect(
+          cachedAfterSwitch!['hitokoto'],
+          equals('Calm seas never made a skilled sailor.'),
+        );
+        expect(
+          cachedAfterSwitch['provider'],
+          equals(ApiService.zenQuotesProvider),
+        );
+      },
+    );
+
+    test(
+      'tapping first iOS smart reminder slot id 0 credits positive engagement instead of counting as ignored',
+      () async {
+        currentNow = localTime(2026, 5, 10, 7, 50);
+        await storage.setString('smart_push_unengaged_streak', '2');
+        databaseService.notes = <Quote>[
+          Quote(
+            id: '00112233-4455-6677-8899-aabbccddeeff',
+            content: '去年今日在湖畔步道记录下的晨光笔记，微风拂过水面泛起层层涟漪。',
+            date: localTime(2025, 5, 10, 8, 0).toIso8601String(),
+          ),
+        ];
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 8, minute: 0, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final slotZeroCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        expect(
+          slotZeroCall.scheduledDate,
+          equals(localTime(2026, 5, 10, 8, 0)),
+        );
+        expect(slotZeroCall.payload, contains('notificationId:0'));
+
+        // 08:05 用户点击该首槽通知（id = 0）唤醒应用
+        currentNow = localTime(2026, 5, 10, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 0,
+            payload: slotZeroCall.payload,
+          ),
+        );
+
+        final analytics = SmartPushAnalytics(mmkvService: storage);
+        await analytics.settlePendingSend();
+        expect(
+          await analytics.getUnengagedStreak(),
+          equals(0),
+          reason: 'iOS 首槽常规提醒（id = 0）被点击后必须复位连续未点击计数，不得被当作忽略累加',
+        );
+        final scores = await analytics.getContentTypeScores();
+        expect(scores['yearAgoToday']!, greaterThan(0.5));
+        final stats = await analytics.getAnalyticsStats();
+        expect(stats['totalNotificationsSent'], equals(1));
+        expect(stats['totalEngagements'], equals(1));
       },
     );
   });

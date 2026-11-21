@@ -29,6 +29,33 @@ Future<void> _holdLockInWorkerIsolate(List<Object> args) async {
   mainSendPort.send('released');
 }
 
+Future<void> _holdLockUntilKilledAbruptly(List<Object> args) async {
+  final lockPath = args[0] as String;
+  final mainSendPort = args[1] as SendPort;
+  final finallyMarkerPath = args[2] as String;
+  final keepAlivePort = ReceivePort();
+  final hang = Completer<void>();
+  keepAlivePort.listen((_) {
+    if (!hang.isCompleted) {
+      hang.complete();
+    }
+    keepAlivePort.close();
+  });
+  try {
+    await PlatformHelper.withCrossIsolateLock<void>(
+      'abrupt_worker_lock',
+      () async {
+        mainSendPort.send(pid);
+        await hang.future;
+      },
+      customLockFilePath: lockPath,
+      acquireTimeout: const Duration(seconds: 5),
+    );
+  } finally {
+    File(finallyMarkerPath).writeAsStringSync('finally', flush: true);
+  }
+}
+
 void main() {
   group('PlatformHelper.withCrossIsolateLock', () {
     late Directory tempDir;
@@ -255,6 +282,64 @@ void main() {
 
         expect(int.parse(stateFile.readAsStringSync()), equals(6));
         expect(int.parse(activeFile.readAsStringSync()), equals(0));
+      },
+    );
+
+    test(
+      'releases POSIX lock via NativeFinalizer when worker isolate stops abruptly without running finally',
+      () async {
+        if (Platform.isWindows) {
+          return;
+        }
+
+        final lockPath = '${tempDir.path}/abrupt_worker.lock';
+        final finallyFile = File('${tempDir.path}/worker_finally_ran.txt');
+        final readyPort = ReceivePort();
+        addTearDown(readyPort.close);
+
+        final workerIsolate = await Isolate.spawn(
+          _holdLockUntilKilledAbruptly,
+          <Object>[lockPath, readyPort.sendPort, finallyFile.path],
+        );
+        addTearDown(() => workerIsolate.kill(priority: Isolate.immediate));
+
+        final workerPid = await readyPort.first.timeout(
+          const Duration(seconds: 5),
+        );
+        expect(workerPid, equals(pid));
+
+        await expectLater(
+          PlatformHelper.withCrossIsolateLock<void>(
+            'abrupt_worker_lock',
+            () async {},
+            customLockFilePath: lockPath,
+            acquireTimeout: const Duration(milliseconds: 25),
+          ),
+          throwsA(isA<FileSystemException>()),
+        );
+
+        final exitPort = ReceivePort();
+        addTearDown(exitPort.close);
+        workerIsolate.addOnExitListener(exitPort.sendPort);
+        workerIsolate.kill(priority: Isolate.immediate);
+        await exitPort.first.timeout(const Duration(seconds: 5));
+
+        expect(
+          finallyFile.existsSync(),
+          isFalse,
+          reason: 'Worker 被强行销毁时 Dart finally 块不会执行',
+        );
+
+        var reacquiredInSameProcess = false;
+        await PlatformHelper.withCrossIsolateLock<void>(
+          'abrupt_worker_lock',
+          () async {
+            reacquiredInSameProcess = true;
+          },
+          customLockFilePath: lockPath,
+          acquireTimeout: const Duration(seconds: 2),
+        );
+        expect(reacquiredInSameProcess, isTrue);
       },
     );
   });

@@ -589,6 +589,7 @@ class DatabaseHealthService {
           'author': quote['source_author'] ?? '',
           'type': 'local',
           'local_quote_id': quote['id'],
+          'offline_quote_source': offlineQuoteSource,
           'from_who': quote['source_author'] ?? '',
           'from': quote['source_work'] ?? '',
         };
@@ -597,6 +598,99 @@ class DatabaseHealthService {
       return null;
     } catch (e) {
       logDebug('获取本地每日一言失败: $e');
+      return null;
+    }
+  }
+
+  /// 按指定笔记 ID 校验并读取当前仍符合每日一言条件（可见、未删除、长度及标签规则）的本地笔记。
+  Future<Map<String, dynamic>?> getLocalDailyQuoteById(
+    Database db,
+    String quoteId, {
+    String offlineQuoteSource = 'tagOnly',
+    List<Quote>? memoryStore,
+    List<NoteTag>? categoryStore,
+  }) async {
+    if (quoteId.isEmpty) return null;
+    try {
+      if (kIsWeb) {
+        if (memoryStore == null || categoryStore == null) {
+          return null;
+        }
+        return _getLocalQuoteFromMemory(
+          memoryStore,
+          categoryStore,
+          offlineQuoteSource,
+          targetQuoteId: quoteId,
+        );
+      }
+
+      final hasDeletedColumn =
+          await checkColumnExists(db, 'quotes', 'is_deleted');
+      final deletedFilter = hasDeletedColumn
+          ? 'AND (q.is_deleted = 0 OR q.is_deleted IS NULL)'
+          : '';
+      const hiddenFilter = '''
+        AND NOT EXISTS (
+          SELECT 1 FROM quote_tags qt_hidden
+          WHERE qt_hidden.quote_id = q.id AND qt_hidden.tag_id = ?
+        )
+      ''';
+
+      List<Map<String, dynamic>> results;
+      if (offlineQuoteSource == 'tagOnly') {
+        final tagIdRows = await db.rawQuery(
+          "SELECT id FROM categories WHERE name = '每日一言' OR id = ?",
+          [dailyQuoteTagId],
+        );
+        final tagIds = tagIdRows.map((r) => r['id'] as String).toList();
+        if (tagIds.isEmpty) {
+          tagIds.add(dailyQuoteTagId);
+        }
+        final placeholders = tagIds.map((_) => '?').join(',');
+        results = await db.rawQuery(
+          '''
+          SELECT DISTINCT q.* FROM quotes q
+          INNER JOIN quote_tags qt ON q.id = qt.quote_id
+          WHERE q.id = ?
+            AND qt.tag_id IN ($placeholders)
+            AND length(q.content) <= ?
+            $hiddenFilter
+            $deletedFilter
+          LIMIT 1
+        ''',
+          [quoteId, ...tagIds, _maxOfflineQuoteLength, _hiddenTagId],
+        );
+      } else {
+        results = await db.rawQuery(
+          '''
+          SELECT q.* FROM quotes q
+          WHERE q.id = ?
+            AND length(q.content) <= ?
+            AND q.content NOT LIKE '%\n%'
+            $hiddenFilter
+            $deletedFilter
+          LIMIT 1
+        ''',
+          [quoteId, _maxOfflineQuoteLength, _hiddenTagId],
+        );
+      }
+
+      if (results.isEmpty) {
+        return null;
+      }
+      final quote = results.first;
+      return {
+        'content': quote['content'],
+        'source': quote['source_work'] ?? '',
+        'author': quote['source_author'] ?? '',
+        'type': 'local',
+        'local_quote_id': quote['id'],
+        'offline_quote_source': offlineQuoteSource,
+        'from_who': quote['source_author'] ?? '',
+        'from': quote['source_work'] ?? '',
+      };
+    } catch (e) {
+      logDebug('按 ID 校验本地每日一言失败: $e');
       return null;
     }
   }
@@ -765,9 +859,13 @@ class DatabaseHealthService {
   Map<String, dynamic>? _getLocalQuoteFromMemory(
     List<Quote> memoryStore,
     List<NoteTag> categoryStore,
-    String offlineQuoteSource,
-  ) {
+    String offlineQuoteSource, {
+    String? targetQuoteId,
+  }) {
     try {
+      final scopedStore = targetQuoteId != null
+          ? memoryStore.where((q) => q.id == targetQuoteId)
+          : memoryStore;
       List<Quote> candidates = [];
 
       if (offlineQuoteSource == 'tagOnly') {
@@ -775,8 +873,9 @@ class DatabaseHealthService {
         final hitokotoTagIds = categoryStore
             .where((c) => c.name == '每日一言' || c.id == dailyQuoteTagId)
             .map((c) => c.id)
-            .toSet();
-        candidates = memoryStore
+            .toSet()
+          ..add(dailyQuoteTagId);
+        candidates = scopedStore
             .where(
               (quote) =>
                   isEligibleOfflineQuoteContent(
@@ -790,7 +889,7 @@ class DatabaseHealthService {
             )
             .toList();
       } else {
-        candidates = memoryStore
+        candidates = scopedStore
             .where(
               (quote) =>
                   isEligibleOfflineQuoteContent(
@@ -804,7 +903,9 @@ class DatabaseHealthService {
       }
 
       if (candidates.isNotEmpty) {
-        candidates.shuffle();
+        if (targetQuoteId == null) {
+          candidates.shuffle();
+        }
         final quote = candidates.first;
         return {
           'content': quote.content,
@@ -812,6 +913,7 @@ class DatabaseHealthService {
           'author': quote.sourceAuthor ?? '',
           'type': 'local',
           'local_quote_id': quote.id,
+          'offline_quote_source': offlineQuoteSource,
           'from_who': quote.sourceAuthor ?? '',
           'from': quote.sourceWork ?? '',
         };
