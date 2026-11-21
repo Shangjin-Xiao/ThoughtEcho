@@ -425,13 +425,23 @@ class _ThoughterPageState extends State<ThoughterPage>
   @visibleForTesting
   void debugCancelPendingAskUserForTest() => _cancelPendingAskUser();
 
+  @visibleForTesting
+  Future<void> debugStartNewChatForTest() => _startNewChat();
+
   void _appendMessage(app_chat.ChatMessage message, {bool persist = false}) {
     _setState(() {
       _messages.add(message);
     });
     if (persist) {
-      if (_currentSessionId != null) {
-        unawaited(_persistMessageSafely(message));
+      final sessionId = _currentSessionId;
+      if (sessionId != null) {
+        unawaited(
+          _persistMessageSafely(
+            message,
+            preferredSessionId: sessionId,
+            originGeneration: _sessionLoadGeneration,
+          ),
+        );
       } else {
         // 会话要到首条用户消息才建。挂起等 _ensureSessionCreated 补写，
         // 否则开场白这类先于会话出现的消息会被静默丢掉。
@@ -465,8 +475,15 @@ class _ThoughterPageState extends State<ThoughterPage>
         thinkingChunks: thinkingChunks,
       );
       _messages[idx] = updatedMsg;
-      if (!isLoading && _currentSessionId != null) {
-        unawaited(_persistMessageSafely(updatedMsg));
+      final sessionId = _currentSessionId;
+      if (!isLoading && sessionId != null) {
+        unawaited(
+          _persistMessageSafely(
+            updatedMsg,
+            preferredSessionId: sessionId,
+            originGeneration: _sessionLoadGeneration,
+          ),
+        );
       }
       // 这里不碰 _isLoading：单条消息定稿 ≠ 这一轮结束。Agent 一轮里可能定稿
       // 多条消息（旁白、工具面板、最终回答），任何一条把整页判成「不在生成」，
@@ -603,7 +620,11 @@ class _ThoughterPageState extends State<ThoughterPage>
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
     if (effectiveSessionId != null && updated != null) {
       unawaited(
-        _chatSessionService.addMessage(effectiveSessionId, updated),
+        _persistMessageSafely(
+          updated,
+          preferredSessionId: effectiveSessionId,
+          originGeneration: _sessionLoadGeneration,
+        ),
       );
     }
 

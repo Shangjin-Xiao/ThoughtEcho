@@ -298,9 +298,14 @@ extension _ThoughterQuickEdit on _ThoughterPageState {
         metaJson: jsonEncode(updatedMeta),
       );
       _messages[index] = updatedMessage;
-      if (_currentSessionId != null) {
+      final sessionId = _currentSessionId;
+      if (sessionId != null) {
         unawaited(
-          _chatSessionService.addMessage(_currentSessionId!, updatedMessage),
+          _persistMessageSafely(
+            updatedMessage,
+            preferredSessionId: sessionId,
+            originGeneration: _sessionLoadGeneration,
+          ),
         );
       }
     });
@@ -345,9 +350,14 @@ extension _ThoughterQuickEdit on _ThoughterPageState {
         metaJson: jsonEncode(updatedMeta),
       );
       _messages[index] = updatedMessage;
-      if (_currentSessionId != null) {
+      final sessionId = _currentSessionId;
+      if (sessionId != null) {
         unawaited(
-          _chatSessionService.addMessage(_currentSessionId!, updatedMessage),
+          _persistMessageSafely(
+            updatedMessage,
+            preferredSessionId: sessionId,
+            originGeneration: _sessionLoadGeneration,
+          ),
         );
       }
     });

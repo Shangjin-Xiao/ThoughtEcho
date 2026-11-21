@@ -3910,5 +3910,317 @@ void main() {
         isTrue,
       );
     });
+
+    testWidgets(
+        'switching session or tapping New Chat while deleted-session rebuild is in flight never leaks old replies into target chat',
+        (tester) async {
+      // 场景 A：重建挂起期间切换到另一历史会话 S2，旧会话在途回复落入重建后的独立会话，绝不污染 S2
+      final responseGateA = Completer<AgentResponse>();
+      final agentServiceA = _ControllableAgentService(
+        settingsService: settingsService,
+        responses: <Completer<AgentResponse>>[responseGateA],
+      );
+      final sessionS1 = ChatSession(
+        id: 'session-s1-deleted-mid-flight',
+        sessionType: 'agent',
+        title: '会话 S1',
+        createdAt: DateTime(2026, 9, 3, 9),
+        lastActiveAt: DateTime(2026, 9, 3, 9),
+      );
+      final sessionS2 = ChatSession(
+        id: 'session-s2-target-history',
+        sessionType: 'agent',
+        title: '会话 S2',
+        createdAt: DateTime(2026, 9, 3, 8),
+        lastActiveAt: DateTime(2026, 9, 3, 8),
+      );
+      chatSessionService.seedSession(sessionS1, <app_chat.ChatMessage>[
+        app_chat.ChatMessage(
+          id: 's1-seed-user',
+          content: 'S1 历史提问',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime(2026, 9, 3, 9),
+        ),
+      ]);
+      chatSessionService.seedSession(sessionS2, <app_chat.ChatMessage>[
+        app_chat.ChatMessage(
+          id: 's2-seed-user',
+          content: 'S2 原有消息',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime(2026, 9, 3, 8),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentServiceA,
+          child: ThoughterPage(
+            key: const ValueKey('switch_during_rebuild_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: sessionS1,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'S1 本轮提问');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+
+      final createGateA = Completer<void>();
+      chatSessionService.createSessionGate = createGateA;
+
+      chatSessionService.simulateRemoteDeleteSession(sessionS1.id);
+      await tester.pump();
+
+      responseGateA.complete(
+        AgentResponse(content: 'S1 迟到的回复正文'),
+      );
+      await _settleAgentTurn(tester);
+
+      // 重建仍在挂起期间，用户切换到历史会话 S2
+      final pageStateA = tester.state(find.byType(ThoughterPage)) as dynamic;
+      unawaited(
+        pageStateA.debugLoadSessionForTest(sessionS2.id) as Future<void>,
+      );
+      await tester.pump();
+
+      // 放行 S1 的后台重建
+      chatSessionService.createSessionGate = null;
+      createGateA.complete();
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      final msgsInS2 = await chatSessionService.getMessages(sessionS2.id);
+      expect(
+        msgsInS2.map((m) => m.content).toList(),
+        <String>['S2 原有消息'],
+        reason: 'S1 在途回复绝不能串写进用户切换过去的历史会话 S2',
+      );
+      final rebuiltForS1 =
+          chatSessionService.sessions.singleWhere((s) => s.id != sessionS2.id);
+      final msgsInRebuiltS1 =
+          await chatSessionService.getMessages(rebuiltForS1.id);
+      expect(
+        msgsInRebuiltS1.any((m) => m.content == 'S1 迟到的回复正文'),
+        isTrue,
+      );
+
+      // 场景 B：重建挂起期间点击「新建对话」，旧回复不污染空白新对话且不覆盖新对话的后续提问
+      final responseGateB = Completer<AgentResponse>();
+      final responseGateNewChat = Completer<AgentResponse>();
+      final agentServiceB = _ControllableAgentService(
+        settingsService: settingsService,
+        responses: <Completer<AgentResponse>>[
+          responseGateB,
+          responseGateNewChat,
+        ],
+      );
+      final sessionS3 = ChatSession(
+        id: 'session-s3-deleted-before-new-chat',
+        sessionType: 'agent',
+        title: '会话 S3',
+        createdAt: DateTime(2026, 9, 3, 10),
+        lastActiveAt: DateTime(2026, 9, 3, 10),
+      );
+      chatSessionService.seedSession(sessionS3, <app_chat.ChatMessage>[
+        app_chat.ChatMessage(
+          id: 's3-seed-user',
+          content: 'S3 历史提问',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime(2026, 9, 3, 10),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentServiceB,
+          child: ThoughterPage(
+            key: const ValueKey('new_chat_during_rebuild_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: sessionS3,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'S3 本轮提问');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+
+      final createGateB = Completer<void>();
+      chatSessionService.createSessionGate = createGateB;
+      chatSessionService.simulateRemoteDeleteSession(sessionS3.id);
+      await tester.pump();
+
+      responseGateB.complete(
+        AgentResponse(content: 'S3 迟到的回复正文'),
+      );
+      await _settleAgentTurn(tester);
+
+      // 重建挂起期间点击「新建对话」
+      final pageStateB = tester.state(find.byType(ThoughterPage)) as dynamic;
+      unawaited(pageStateB.debugStartNewChatForTest() as Future<void>);
+      await tester.pump();
+
+      chatSessionService.createSessionGate = null;
+      createGateB.complete();
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('S3 迟到的回复正文'), findsNothing);
+
+      // 用户在空白新对话中发起全新提问，应创建独立新会话且不含 S3 消息
+      responseGateNewChat.complete(
+        AgentResponse(content: '全新对话回复'),
+      );
+      await _submitInput(tester, '全新对话首问');
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      final newChatSession = chatSessionService.sessions.singleWhere(
+        (s) =>
+            s.id != sessionS2.id &&
+            s.id != rebuiltForS1.id &&
+            chatSessionService.storedMessages[s.id]!
+                .any((m) => m.content == '全新对话首问'),
+      );
+      final newChatMsgs =
+          await chatSessionService.getMessages(newChatSession.id);
+      expect(
+        newChatMsgs.any((m) => m.content.contains('S3')),
+        isFalse,
+        reason: '空白新对话创建的会话绝不能混入上一轮 S3 的任何消息',
+      );
+    });
+
+    testWidgets(
+        'accepting note proposal while deleted-session rebuild is in flight preserves saved_note_id in rebuilt session',
+        (tester) async {
+      await settingsService.setRequireBiometricForHidden(false);
+      final original = _buildQuote();
+      final artifact = NoteProposalArtifact(
+        action: NoteProposalAction.edit,
+        proposalTitle: '重建期间待保存提案',
+        reason: '验证重建迁移保留最新已保存状态',
+        noteId: original.id,
+        originalKind: NoteDocumentKind.plain,
+        resultKind: NoteDocumentKind.plain,
+        content: '重建期间确认应用的提案正文',
+        documentOps: null,
+        metadata: const <String, Object?>{},
+        changes: const <NoteProposalChange>[],
+        baseRevision: ProposeNoteEditTool.revisionForQuote(original),
+      );
+      final database = _ProposalDatabaseService(original);
+      final responseGate = Completer<AgentResponse>();
+      final agentService = _ControllableAgentService(
+        settingsService: settingsService,
+        responses: <Completer<AgentResponse>>[responseGate],
+      );
+      final session = ChatSession(
+        id: 'proposal-save-during-rebuild-session',
+        sessionType: 'agent',
+        title: '含提案卡的活跃会话',
+        createdAt: DateTime(2026, 9, 4, 10),
+        lastActiveAt: DateTime(2026, 9, 4, 10),
+      );
+      chatSessionService.seedSession(session, <app_chat.ChatMessage>[
+        app_chat.ChatMessage(
+          id: 'seed-user-before-proposal',
+          role: 'user',
+          isUser: true,
+          content: '帮我润色笔记',
+          timestamp: DateTime(2026, 9, 4, 10),
+        ),
+        app_chat.ChatMessage(
+          id: 'proposal-msg-1',
+          role: 'assistant',
+          isUser: false,
+          content: '',
+          timestamp: DateTime(2026, 9, 4, 10, 1),
+          metaJson: jsonEncode(<String, Object?>{
+            'type': NoteProposalArtifact.typeName,
+            'artifact': artifact.toJson(),
+          }),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          databaseService: database,
+          child: ThoughterPage(
+            key: const ValueKey('proposal_save_mid_rebuild_page'),
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 发起下一轮追问进入 _isLoading，随后远端删除会话并在 _createNewSession 处挂起
+      await tester.enterText(find.byType(TextField), '顺便总结一下要点');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+
+      final createGate = Completer<void>();
+      chatSessionService.createSessionGate = createGate;
+      chatSessionService.simulateRemoteDeleteSession(session.id);
+      await tester.pump();
+
+      // 此时 messagesSnapshot 已在快照点采集（尚无 saved_note_id），用户在等待期间点击保存提案卡
+      final card =
+          tester.widget<NoteProposalCard>(find.byType(NoteProposalCard));
+      final savedNoteId = await tester.runAsync(card.onApply);
+      await tester.pump();
+      expect(savedNoteId, original.id);
+
+      // 完成本轮回复并放行会话重建
+      responseGate.complete(AgentResponse(content: '要点总结已完成'));
+      chatSessionService.createSessionGate = null;
+      createGate.complete();
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      expect(chatSessionService.sessions, hasLength(1));
+      final rebuiltSession = chatSessionService.sessions.single;
+      final migratedMsgs =
+          await chatSessionService.getMessages(rebuiltSession.id);
+      final migratedProposal =
+          migratedMsgs.singleWhere((m) => m.id == 'proposal-msg-1');
+      expect(
+        migratedProposal.parsedMeta?['saved_note_id'],
+        original.id,
+        reason: '重建迁移必须采用最新的已保存提案状态，不能被旧快照覆盖回未保存',
+      );
+      expect(migratedProposal.parsedMeta?['applied'], isTrue);
+    });
   });
 }

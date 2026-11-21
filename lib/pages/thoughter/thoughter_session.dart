@@ -257,16 +257,40 @@ extension _ThoughterSession on _ThoughterPageState {
     }
   }
 
-  Future<void> _createNewSession() async {
+  Future<String?> _createNewSession({
+    int? expectedGeneration,
+    bool allowDetachedForRebuild = false,
+  }) async {
     final l10n = AppLocalizations.of(context);
     final session = await _chatSessionService.createSession(
       sessionType: _sessionTypeForMode(_currentMode),
       noteId: _boundNoteId,
       title: _hasBoundNote ? _getQuotePreview() : l10n.aiChat,
     );
+    if (!mounted || _isDisposed) {
+      unawaited(
+        _chatSessionService.deleteEmptySession(session.id).catchError((_) {
+          return false;
+        }),
+      );
+      return null;
+    }
+    if (expectedGeneration != null &&
+        expectedGeneration != _sessionLoadGeneration) {
+      if (allowDetachedForRebuild) {
+        return session.id;
+      }
+      unawaited(
+        _chatSessionService.deleteEmptySession(session.id).catchError((_) {
+          return false;
+        }),
+      );
+      return null;
+    }
     _currentSessionId = session.id;
     // 会话是给手里这批消息现建的，两者天然对得上。
     _messagesSessionId = session.id;
+    return session.id;
   }
 
   String _sessionTypeForMode(ThoughterPageMode mode) {
@@ -309,6 +333,19 @@ extension _ThoughterSession on _ThoughterPageState {
     }
   }
 
+  void _recordReplacedSessionId(String oldSessionId, String newSessionId) {
+    if (oldSessionId.isEmpty ||
+        newSessionId.isEmpty ||
+        oldSessionId == newSessionId) {
+      return;
+    }
+    _replacedDeletedSessionIds.remove(oldSessionId);
+    _replacedDeletedSessionIds[oldSessionId] = newSessionId;
+    while (_replacedDeletedSessionIds.length > 64) {
+      _replacedDeletedSessionIds.remove(_replacedDeletedSessionIds.keys.first);
+    }
+  }
+
   String _resolveReplacedSessionId(String sessionId) {
     var current = sessionId;
     final visited = <String>{};
@@ -348,13 +385,13 @@ extension _ThoughterSession on _ThoughterPageState {
   }) async {
     if (!mounted || _isDisposed) return null;
     final startGeneration = _sessionLoadGeneration;
-    // 若在等待前序异步检查期间已有另一入口完成了新会话重建，直接复用该有效会话，防止拆出多个会话。
+    // 若在等待前序异步检查期间已有另一入口完成了该会话的替换重建，直接复用显式登记的替换会话；
+    // 若当前已切到无关会话（_currentSessionId 不等于待重建会话或其替换映射），绝不借用或覆盖当前会话。
     if (expectedDeletedSessionId != null) {
       final mappedReplacement = _resolveReplacedSessionId(
         expectedDeletedSessionId,
       );
-      if (mappedReplacement != expectedDeletedSessionId &&
-          _currentSessionId == mappedReplacement) {
+      if (mappedReplacement != expectedDeletedSessionId) {
         final replacementExists = await _chatSessionService.sessionExists(
           mappedReplacement,
         );
@@ -362,14 +399,9 @@ extension _ThoughterSession on _ThoughterPageState {
           return mappedReplacement;
         }
       }
-      if (_currentSessionId != null &&
-          _currentSessionId != expectedDeletedSessionId) {
-        final currentExists = await _chatSessionService.sessionExists(
-          _currentSessionId!,
-        );
-        if (currentExists == true) {
-          return _currentSessionId;
-        }
+      if (_currentSessionId != expectedDeletedSessionId &&
+          _currentSessionId != mappedReplacement) {
+        return null;
       }
     }
     if (!mounted || _isDisposed || startGeneration != _sessionLoadGeneration) {
@@ -378,10 +410,17 @@ extension _ThoughterSession on _ThoughterPageState {
 
     final previousSessionId = expectedDeletedSessionId ?? _currentSessionId;
     final messagesSnapshot = List<app_chat.ChatMessage>.from(_messages);
-    await _createNewSession();
-    final newSessionId = _currentSessionId;
+    final pendingSnapshot =
+        List<app_chat.ChatMessage>.from(_pendingPersistMessages);
+    _pendingPersistMessages.clear();
+
+    final newSessionId = await _createNewSession(
+      expectedGeneration: startGeneration,
+      allowDetachedForRebuild:
+          previousSessionId != null && messagesSnapshot.any((m) => m.isUser),
+    );
     if (newSessionId == null) return null;
-    if (!mounted || _isDisposed || startGeneration != _sessionLoadGeneration) {
+    if (!mounted || _isDisposed) {
       unawaited(
         _chatSessionService.deleteEmptySession(newSessionId).catchError((_) {
           return false;
@@ -390,21 +429,54 @@ extension _ThoughterSession on _ThoughterPageState {
       return null;
     }
     if (previousSessionId != null && previousSessionId != newSessionId) {
-      _replacedDeletedSessionIds[previousSessionId] = newSessionId;
+      _recordReplacedSessionId(previousSessionId, newSessionId);
       if (_pendingAskUserSessionId != null &&
           _resolveReplacedSessionId(_pendingAskUserSessionId!) ==
               newSessionId) {
         _pendingAskUserSessionId = newSessionId;
       }
     }
-    await _flushPendingPersistMessages();
+    for (final pendingMsg in pendingSnapshot) {
+      try {
+        await _chatSessionService.tryAddMessage(newSessionId, pendingMsg);
+      } catch (e) {
+        logDebug('补写挂起消息失败: ${pendingMsg.id} - $e');
+      }
+    }
+    if (startGeneration == _sessionLoadGeneration &&
+        _currentSessionId == newSessionId) {
+      await _flushPendingPersistMessages(targetSessionId: newSessionId);
+    }
+
+    // 合并快照与同代次实时列表，顺序沿首次出现顺序，内容优先采用同代次 _messages 中的最新修订
+    // （例如在 await _createNewSession 期间用户点击保存提案卡写入了 saved_note_id / applied）。
+    final orderedIds = <String>[];
+    final seenIds = <String>{};
+    final latestById = <String, app_chat.ChatMessage>{};
+    for (final msg in messagesSnapshot) {
+      if (seenIds.add(msg.id)) {
+        orderedIds.add(msg.id);
+      }
+      latestById[msg.id] = msg;
+    }
+    if (startGeneration == _sessionLoadGeneration) {
+      for (final msg in _messages) {
+        if (seenIds.add(msg.id)) {
+          orderedIds.add(msg.id);
+        }
+        latestById[msg.id] = msg;
+      }
+    }
+
     String? firstUserContent;
-    final migratedIds = <String>{};
-    for (final msg in <app_chat.ChatMessage>[
-      ...messagesSnapshot,
-      ..._messages,
-    ]) {
-      if (!migratedIds.add(msg.id)) continue;
+    for (final msgId in orderedIds) {
+      var msg = latestById[msgId]!;
+      if (startGeneration == _sessionLoadGeneration) {
+        final liveIndex = _messages.indexWhere((m) => m.id == msgId);
+        if (liveIndex != -1) {
+          msg = _messages[liveIndex];
+        }
+      }
       if (msg.id == excludeMessageId || msg.isLoading) continue;
       if (msg.role == 'system' && !msg.includedInContext) continue;
       if (firstUserContent == null &&
@@ -421,13 +493,25 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   /// 延迟创建会话（若既有会话已被远端同步删除则自动单飞重建）。
-  Future<void> _ensureSessionCreated({String? excludeMessageId}) async {
+  Future<void> _ensureSessionCreated({
+    String? excludeMessageId,
+    int? expectedGeneration,
+  }) async {
+    final targetGeneration = expectedGeneration ?? _sessionLoadGeneration;
     if (_rebuildingDeletedSessionFuture != null) {
       await _rebuildingDeletedSessionFuture;
+    }
+    if (!mounted || _isDisposed || targetGeneration != _sessionLoadGeneration) {
+      return;
     }
     final currentId = _currentSessionId;
     if (currentId != null) {
       final exists = await _chatSessionService.sessionExists(currentId);
+      if (!mounted ||
+          _isDisposed ||
+          targetGeneration != _sessionLoadGeneration) {
+        return;
+      }
       if (exists == false) {
         await _rebuildDeletedCurrentSession(
           expectedDeletedSessionId: currentId,
@@ -436,39 +520,64 @@ extension _ThoughterSession on _ThoughterPageState {
       }
       return;
     }
-    await _createNewSession();
-    await _flushPendingPersistMessages();
+    final createdId = await _createNewSession(
+      expectedGeneration: targetGeneration,
+    );
+    if (createdId != null &&
+        targetGeneration == _sessionLoadGeneration &&
+        _currentSessionId == createdId) {
+      await _flushPendingPersistMessages(targetSessionId: createdId);
+    }
   }
 
-  /// 安全落库单条消息：若目标会话已被远端删除则共用单飞重建任务或复用已重建会话重试；仍失败时按需提示用户。
+  /// 安全落库单条消息：在入口处绑定发起时的目标会话与会话代次，杜绝跨会话串写或误建新会话。
   Future<bool> _persistMessageSafely(
     app_chat.ChatMessage message, {
     String? preferredSessionId,
+    int? originGeneration,
     bool surfaceError = false,
   }) async {
-    if (_rebuildingDeletedSessionFuture != null &&
-        (preferredSessionId == null ||
-            preferredSessionId == _currentSessionId ||
-            _replacedDeletedSessionIds.containsKey(preferredSessionId))) {
+    final capturedGeneration = originGeneration ?? _sessionLoadGeneration;
+    final initialSessionId = preferredSessionId ??
+        (capturedGeneration == _sessionLoadGeneration
+            ? _currentSessionId
+            : null);
+
+    if (_rebuildingDeletedSessionFuture != null) {
       await _rebuildingDeletedSessionFuture;
     }
-    var targetSessionId = preferredSessionId ?? _currentSessionId;
-    if (targetSessionId != null) {
-      final resolved = _resolveReplacedSessionId(targetSessionId);
-      if (resolved != targetSessionId && _currentSessionId == resolved) {
-        targetSessionId = resolved;
-      }
+    if (!mounted || _isDisposed) {
+      return false;
     }
-    if (targetSessionId == null) {
-      await _ensureSessionCreated(excludeMessageId: message.id);
-      targetSessionId = _currentSessionId;
-      if (targetSessionId == null) {
-        if (surfaceError && mounted && !_isDisposed) {
-          final l10n = AppLocalizations.of(context);
-          AppSnackBar.error(context, l10n.saveFailed(l10n.aiChat));
-        }
+
+    String? targetSessionId;
+    if (initialSessionId != null) {
+      targetSessionId = _resolveReplacedSessionId(initialSessionId);
+    } else {
+      if (capturedGeneration != _sessionLoadGeneration) {
         return false;
       }
+      await _ensureSessionCreated(
+        excludeMessageId: message.id,
+        expectedGeneration: capturedGeneration,
+      );
+      if (!mounted ||
+          _isDisposed ||
+          capturedGeneration != _sessionLoadGeneration) {
+        return false;
+      }
+      targetSessionId = _currentSessionId;
+    }
+
+    if (targetSessionId == null) {
+      if (surfaceError &&
+          mounted &&
+          !_isDisposed &&
+          capturedGeneration == _sessionLoadGeneration) {
+        final l10n = AppLocalizations.of(context);
+        AppSnackBar.error(context, l10n.saveFailed(l10n.aiChat));
+      }
+      return false;
     }
 
     var persisted = await _chatSessionService.tryAddMessage(
@@ -476,32 +585,26 @@ extension _ThoughterSession on _ThoughterPageState {
       message,
     );
     if (!persisted && mounted && !_isDisposed) {
-      if (_rebuildingDeletedSessionFuture != null &&
-          (preferredSessionId == null ||
-              preferredSessionId == targetSessionId ||
-              preferredSessionId == _currentSessionId ||
-              _replacedDeletedSessionIds.containsKey(preferredSessionId))) {
+      if (_rebuildingDeletedSessionFuture != null) {
         await _rebuildingDeletedSessionFuture;
       }
+      if (!mounted || _isDisposed) {
+        return false;
+      }
       final mappedId = _resolveReplacedSessionId(targetSessionId);
-      final alreadyRebuiltId =
-          (mappedId != targetSessionId && _currentSessionId == mappedId)
-              ? mappedId
-              : (preferredSessionId == null &&
-                      _currentSessionId != null &&
-                      _currentSessionId != targetSessionId
-                  ? _currentSessionId
-                  : null);
-      if (alreadyRebuiltId != null) {
+      if (mappedId != targetSessionId) {
         persisted = await _chatSessionService.tryAddMessage(
-          alreadyRebuiltId,
+          mappedId,
           message,
         );
-      } else if (preferredSessionId == null ||
-          preferredSessionId == _currentSessionId ||
-          _resolveReplacedSessionId(preferredSessionId) == _currentSessionId) {
+      } else if (capturedGeneration == _sessionLoadGeneration &&
+          _currentSessionId == targetSessionId) {
         final exists = await _chatSessionService.sessionExists(targetSessionId);
-        if (exists == false && mounted && !_isDisposed) {
+        if (exists == false &&
+            mounted &&
+            !_isDisposed &&
+            capturedGeneration == _sessionLoadGeneration &&
+            _currentSessionId == targetSessionId) {
           final rebuiltId = await _rebuildDeletedCurrentSession(
             expectedDeletedSessionId: targetSessionId,
             excludeMessageId: message.id,
@@ -516,7 +619,11 @@ extension _ThoughterSession on _ThoughterPageState {
       }
     }
 
-    if (!persisted && surfaceError && mounted && !_isDisposed) {
+    if (!persisted &&
+        surfaceError &&
+        mounted &&
+        !_isDisposed &&
+        capturedGeneration == _sessionLoadGeneration) {
       final l10n = AppLocalizations.of(context);
       AppSnackBar.error(context, l10n.saveFailed(l10n.aiChat));
     }
@@ -524,9 +631,9 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   /// 补写会话建立前挂起的消息，保持它们在用户首条消息之前的顺序。
-  Future<void> _flushPendingPersistMessages() async {
+  Future<void> _flushPendingPersistMessages({String? targetSessionId}) async {
     if (_pendingPersistMessages.isEmpty) return;
-    final sessionId = _currentSessionId;
+    final sessionId = targetSessionId ?? _currentSessionId;
     if (sessionId == null) return;
     final pending = List<app_chat.ChatMessage>.from(_pendingPersistMessages);
     _pendingPersistMessages.clear();
@@ -580,7 +687,6 @@ extension _ThoughterSession on _ThoughterPageState {
     _agentStatusDismissTimer?.cancel();
 
     final generation = ++_sessionLoadGeneration;
-    _replacedDeletedSessionIds.clear();
     try {
       // 从一个还没说过话的会话跳到历史里的另一段：同上，那一段不留。
       // 初始化时 _currentSessionId 还是 null，_cleanupEmptySession 会直接返回。
@@ -932,7 +1038,6 @@ extension _ThoughterSession on _ThoughterPageState {
       // _ensureSessionCreated 顺手建；开场白先挂起，建完按原顺序补写。
       _currentSessionId = null;
       _messagesSessionId = null;
-      _replacedDeletedSessionIds.clear();
       _addWelcomeMessage();
     } catch (e, stack) {
       AppLogger.e('Failed to start a new chat session',

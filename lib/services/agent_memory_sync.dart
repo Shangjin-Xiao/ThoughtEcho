@@ -2953,6 +2953,31 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                 !LWWUtils.syncVersionBeatsDeletion(rowVersion, tombUtc);
           }
 
+          bool isAdmittedProfileCandidate(Map<String, Object?>? row) {
+            if (row == null) return false;
+            final candId = (row['id'] as String?)?.trim() ?? '';
+            if (candId.isEmpty) return false;
+            final candVer = _parseMemoryRowSyncVersion(
+              row['updated_at'],
+              row['observed_at'],
+            );
+            if (isVersionBlockedByClearedAt(candVer)) {
+              return false;
+            }
+            final tombUtc = localTombstones['profile:$candId'];
+            if (tombUtc != null &&
+                !LWWUtils.syncVersionBeatsDeletion(candVer, tombUtc)) {
+              return false;
+            }
+            return true;
+          }
+
+          bool hasAdmittedProfileCandidate(String id) {
+            if (id.isEmpty) return false;
+            return isAdmittedProfileCandidate(remoteProfilesById[id]) ||
+                isAdmittedProfileCandidate(localProfilesById[id]);
+          }
+
           bool hasKnownLiveProfileSuccessor(Map<String, Object?> row) {
             final status = (row['status'] as String?)?.trim();
             final supBy = (row['superseded_by'] as String?)?.trim() ?? '';
@@ -2960,8 +2985,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                 supBy.isEmpty) {
               return false;
             }
-            return remoteProfilesById.containsKey(supBy) ||
-                localProfilesById.containsKey(supBy);
+            return hasAdmittedProfileCandidate(supBy);
           }
 
           ({Map<String, Object?> terminalRow, bool editedRowBeatsTerminal})?
@@ -2981,8 +3005,12 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             }
             final visited = <String>{selfId};
             while (currId.isNotEmpty && visited.add(currId)) {
-              final rCand = remoteProfilesById[currId];
-              final lCand = localProfilesById[currId];
+              final rawRCand = remoteProfilesById[currId];
+              final rawLCand = localProfilesById[currId];
+              final rCand =
+                  isAdmittedProfileCandidate(rawRCand) ? rawRCand : null;
+              final lCand =
+                  isAdmittedProfileCandidate(rawLCand) ? rawLCand : null;
               Map<String, Object?>? cand;
               if (rCand != null && lCand != null) {
                 final cmpCand = LWWUtils.compareSyncVersions(
@@ -3005,8 +3033,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                   final rSup = (rCand['status'] as String?)?.trim() ==
                           AgentMemoryStatus.superseded.storageValue &&
                       rSupBy.isNotEmpty &&
-                      (remoteProfilesById.containsKey(rSupBy) ||
-                          localProfilesById.containsKey(rSupBy));
+                      hasAdmittedProfileCandidate(rSupBy);
                   cand = rSup ? rCand : lCand;
                 }
               } else {

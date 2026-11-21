@@ -2815,5 +2815,268 @@ void main() {
         }
       }
     });
+
+    test('合入较旧快照时，若其中的去重副本 D 已被本机墓碑删除或被 cleared_at 阻挡，绝不将本机已离线编辑的偏好 P 级联退役',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('tomb_dup_edit_pref_');
+      final memTombCase = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'tomb_case.db'),
+      );
+      final memClearedCase = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'cleared_case.db'),
+      );
+      try {
+        // 场景 1：设备 A 在 t2 离线编辑了偏好 P，并在 t4 已墓碑删除重复项 D；
+        //        随后合入来自设备 B 的旧备份（其中 P@t1 指向去重赢家 D@t3，且 t2 < t3 < t4）。
+        await memTombCase.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'pref_p_edited',
+              'kind': 'preference',
+              'directive': '用户离线编辑后的有效偏好',
+              'observed_at': '2026-11-01T08:00:00.000000Z',
+              'updated_at': '2026-11-02T08:00:00.000000Z',
+              'status': 'active',
+              'source': 'user_edit',
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Map<String, Object?>>[
+            <String, Object?>{
+              'entity_type': 'profile',
+              'entity_id': 'pref_d_deleted_dup',
+              'deleted_at': '2026-11-04T08:00:00.000000Z',
+            },
+          ],
+        });
+
+        await memTombCase.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'pref_p_edited',
+              'kind': 'preference',
+              'directive': '未编辑前的旧偏好文案',
+              'observed_at': '2026-11-01T08:00:00.000000Z',
+              'updated_at': '2026-11-01T08:00:00.000000Z',
+              'status': 'superseded',
+              'superseded_by': 'pref_d_deleted_dup',
+              'source': 'thoughter',
+            },
+            <String, Object?>{
+              'id': 'pref_d_deleted_dup',
+              'kind': 'preference',
+              'directive': '未编辑前的旧偏好文案',
+              'observed_at': '2026-11-03T08:00:00.000000Z',
+              'updated_at': '2026-11-03T08:00:00.000000Z',
+              'status': 'active',
+              'source': 'thoughter',
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+
+        final activeAfterTombMerge = await memTombCase.activeProfile();
+        expect(
+          activeAfterTombMerge.map((e) => e.id).toList(),
+          <String>['pref_p_edited'],
+          reason: '被墓碑拦截的重复项 D 绝不能反向生成替换边把已编辑的活跃偏好 P 退役',
+        );
+        expect(
+          activeAfterTombMerge.single.directive,
+          '用户离线编辑后的有效偏好',
+        );
+        final exportedTombCase =
+            (await memTombCase.exportMemorySectionForTesting())!;
+        expect(exportedTombCase['profile_replacements'] ?? const <Object?>[],
+            isEmpty);
+
+        // 场景 2：旧备份中的去重副本 D2 早于本机 cleared_at，而本机 P2 在 cleared_at 之后已重新编辑生效
+        await memClearedCase.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'cleared_at': '2026-11-05T00:00:00.000000Z',
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'pref_p2_post_clear',
+              'kind': 'preference',
+              'directive': '清空后重新确认的活跃偏好',
+              'observed_at': '2026-11-06T08:00:00.000000Z',
+              'updated_at': '2026-11-06T08:00:00.000000Z',
+              'status': 'active',
+              'source': 'user_edit',
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+
+        await memClearedCase.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'pref_p2_post_clear',
+              'kind': 'preference',
+              'directive': '清空前旧版本',
+              'observed_at': '2026-11-01T08:00:00.000000Z',
+              'updated_at': '2026-11-01T08:00:00.000000Z',
+              'status': 'superseded',
+              'superseded_by': 'pref_d2_pre_clear',
+              'source': 'thoughter',
+            },
+            <String, Object?>{
+              'id': 'pref_d2_pre_clear',
+              'kind': 'preference',
+              'directive': '清空前旧版本',
+              'observed_at': '2026-11-04T08:00:00.000000Z',
+              'updated_at': '2026-11-04T08:00:00.000000Z',
+              'status': 'active',
+              'source': 'thoughter',
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        });
+
+        final activeAfterClearedMerge = await memClearedCase.activeProfile();
+        expect(
+          activeAfterClearedMerge.map((e) => e.id).toList(),
+          <String>['pref_p2_post_clear'],
+        );
+      } finally {
+        memTombCase.dispose();
+        memClearedCase.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test('共享同一 replaces_id 前驱的身份别名分叉（已确认称呼 vs 更新的待确认笔名）在正反合并顺序与多轮重入下均唯一保留已确认称呼',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('alias_fork_shared_');
+      final memConfFirst = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'conf_first.db'),
+      );
+      final memUnconfFirst = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'unconf_first.db'),
+      );
+      try {
+        final predRow = <String, Object?>{
+          'id': 'id_shared_pred',
+          'kind': 'identity',
+          'directive': '称呼用户为「旧笔名甲」',
+          'observed_at': '2026-11-18T08:00:00.000000Z',
+          'updated_at': '2026-11-18T08:00:00.000000Z',
+          'status': 'superseded',
+          'source': 'dreaming',
+          'basis_watermark': '2026-11-18T08:00:00.000000Z',
+          'basis_note_count': 3,
+        };
+        final confirmedForkSnap = <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              ...predRow,
+              'superseded_by': 'id_fork_confirmed',
+            },
+            <String, Object?>{
+              'id': 'id_fork_confirmed',
+              'kind': 'identity',
+              'directive': '称呼用户为「示例笔名丙」',
+              'observed_at': '2026-11-20T08:00:00.000000Z',
+              'updated_at': '2026-11-20T08:00:00.000000Z',
+              'status': 'active',
+              'replaces_id': 'id_shared_pred',
+              'source': 'dreaming',
+              'basis_watermark': '2026-11-20T08:00:00.000000Z',
+              'basis_note_count': 6,
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        };
+        final unconfirmedForkSnap = <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              ...predRow,
+              'superseded_by': 'id_fork_unconfirmed',
+            },
+            <String, Object?>{
+              'id': 'id_fork_unconfirmed',
+              'kind': 'identity',
+              'directive': '称呼用户为「示例笔名丙」（待确认笔名）',
+              'observed_at': '2026-11-21T09:30:00.000000Z',
+              'updated_at': '2026-11-21T09:30:00.000000Z',
+              'status': 'active',
+              'replaces_id': 'id_shared_pred',
+              'source': 'dreaming_ai',
+              'basis_watermark': '2026-11-20T08:00:00.000000Z',
+              'basis_note_count': 6,
+            },
+          ],
+          'facts': <Object?>[],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        };
+
+        Future<bool> allCovered(String? wm, int? count) async => true;
+
+        // 顺序 1：先已确认分叉，后连续两次合入时间戳更新的待确认分叉
+        await memConfFirst.mergeMemorySection(
+          confirmedForkSnap,
+          isBasisCovered: allCovered,
+        );
+        await memConfFirst.mergeMemorySection(
+          unconfirmedForkSnap,
+          isBasisCovered: allCovered,
+        );
+        await memConfFirst.mergeMemorySection(
+          unconfirmedForkSnap,
+          isBasisCovered: allCovered,
+        );
+
+        // 顺序 2：先待确认分叉，后合入已确认分叉，再重入待确认分叉
+        await memUnconfFirst.mergeMemorySection(
+          unconfirmedForkSnap,
+          isBasisCovered: allCovered,
+        );
+        await memUnconfFirst.mergeMemorySection(
+          confirmedForkSnap,
+          isBasisCovered: allCovered,
+        );
+        await memUnconfFirst.mergeMemorySection(
+          unconfirmedForkSnap,
+          isBasisCovered: allCovered,
+        );
+
+        for (final node in <AgentMemoryService>[memConfFirst, memUnconfFirst]) {
+          final active = await node.activeProfile();
+          expect(
+              active.map((e) => e.id).toList(), <String>['id_fork_confirmed']);
+          expect(active.single.directive, '称呼用户为「示例笔名丙」');
+          expect(await node.activeIdentityAliases(), contains('示例笔名丙'));
+        }
+      } finally {
+        memConfFirst.dispose();
+        memUnconfFirst.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
   });
 }

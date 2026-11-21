@@ -24,22 +24,39 @@ extension _ThoughterWorkflow on _ThoughterPageState {
     });
     _scrollToBottom();
 
-    await _ensureSessionCreated(excludeMessageId: userMsg.id);
+    final submitGeneration = _sessionLoadGeneration;
+    await _ensureSessionCreated(
+      excludeMessageId: userMsg.id,
+      expectedGeneration: submitGeneration,
+    );
+    if (!mounted || _isDisposed || submitGeneration != _sessionLoadGeneration) {
+      return;
+    }
     final sessionId = _currentSessionId;
     if (sessionId == null) {
       _rollbackUnsavedSubmittedMessage(userMsg.id, trimmed);
       return;
     }
     final shouldGenerateTitle = !(await _sessionHasUserMessages(sessionId));
+    if (!mounted || _isDisposed || submitGeneration != _sessionLoadGeneration) {
+      return;
+    }
     final persisted = await _persistMessageSafely(
       userMsg,
+      preferredSessionId: sessionId,
+      originGeneration: submitGeneration,
       surfaceError: true,
     );
     if (!persisted) {
-      _rollbackUnsavedSubmittedMessage(userMsg.id, trimmed);
+      if (submitGeneration == _sessionLoadGeneration) {
+        _rollbackUnsavedSubmittedMessage(userMsg.id, trimmed);
+      }
       return;
     }
-    final activeSessionId = _currentSessionId ?? sessionId;
+    if (!mounted || _isDisposed || submitGeneration != _sessionLoadGeneration) {
+      return;
+    }
+    final activeSessionId = _resolveReplacedSessionId(sessionId);
     if (shouldGenerateTitle) {
       _generateAITitle(activeSessionId, trimmed);
     }

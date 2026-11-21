@@ -2143,5 +2143,318 @@ void main() {
         }
       }
     });
+
+    test('零宽限期下主包已被并发客户端更新、或服务端缺失 Date 响应头时绝不误删分片，且从内联重回分片时强制刷新已有分片租约',
+        () async {
+      WebDAVSyncService.chatShardThresholdBytesForTesting = 900;
+      WebDAVSyncService.maxChatShardJsonBytesForTesting = 700;
+      // 设为 0 以验证：即便跨端宽限期已过，主包归属 ETag 校验与服务端时钟门禁仍能独立阻止误删
+      WebDAVSyncService.chatShardStaleCleanupMinAgeForTesting = Duration.zero;
+      addTearDown(() {
+        WebDAVSyncService.chatShardThresholdBytesForTesting = null;
+        WebDAVSyncService.maxChatShardJsonBytesForTesting = null;
+        WebDAVSyncService.chatShardStaleCleanupMinAgeForTesting = null;
+      });
+
+      final sessionA = await chatService.createSession(
+        sessionType: 'agent',
+        title: '零宽限期与无Date头验证会话',
+      );
+      for (var i = 0; i < 6; i++) {
+        await chatService.addMessage(
+          sessionA.id,
+          ChatMessage(
+            id: 'zero_grace_msg_$i',
+            content: '零宽限期消息正文_${i}_${'长文本块' * 40}',
+            isUser: i.isEven,
+            role: i.isEven ? 'user' : 'assistant',
+            timestamp: DateTime.utc(2026, 11, 20, 14, i),
+          ),
+        );
+      }
+
+      var etagSeq = 1;
+      var omitServerDateHeader = false;
+      final remoteFiles = <String, List<int>>{};
+      final remoteEtags = <String, String>{};
+      final remoteModified = <String, DateTime>{};
+      final deletedShardPaths = <String>[];
+      final putShardPaths = <String>[];
+      Completer<void>? pauseCleanupListGate;
+      Completer<void>? cleanupListPausedSignal;
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.autoCompress = false;
+      // 禁用 HttpServer 自动补充 Date 头，以便精确模拟缺失 Date 响应头的老旧服务端
+      server.defaultResponseHeaders.removeAll(HttpHeaders.dateHeader);
+      server.listen((request) async {
+        final body = await request.fold<List<int>>(
+          <int>[],
+          (acc, chunk) => acc..addAll(chunk),
+        );
+        final path = request.uri.path;
+        final response = request.response;
+        response.headers.removeAll(HttpHeaders.dateHeader);
+        if (omitServerDateHeader) {
+          response.headers.set(HttpHeaders.dateHeader, 'not-a-valid-http-date');
+        } else {
+          response.headers.set(
+            HttpHeaders.dateHeader,
+            HttpDate.format(DateTime.now().toUtc()),
+          );
+        }
+        switch (request.method) {
+          case 'MKCOL':
+            response.statusCode = 201;
+          case 'PROPFIND':
+            if (path.endsWith('/thoughtecho/chat_shards') ||
+                path.endsWith('/thoughtecho/chat_shards/')) {
+              final gate = pauseCleanupListGate;
+              final signal = cleanupListPausedSignal;
+              if (gate != null && signal != null && !signal.isCompleted) {
+                signal.complete();
+                await gate.future;
+              }
+              final shardEntries = remoteFiles.keys
+                  .where((k) => k.startsWith('/dav/thoughtecho/chat_shards/'))
+                  .map((k) {
+                final mod =
+                    remoteModified[k] ?? DateTime.utc(2020, 1, 1, 0, 0, 0);
+                return '<d:response><d:href>$k</d:href>'
+                    '<d:propstat><d:prop>'
+                    '<d:getcontentlength>${remoteFiles[k]!.length}</d:getcontentlength>'
+                    '<d:getlastmodified>${HttpDate.format(mod)}</d:getlastmodified>'
+                    '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>'
+                    '</d:response>';
+              }).join();
+              response.statusCode = 207;
+              response.write(
+                '<d:multistatus xmlns:d="DAV:">'
+                '<d:response><d:href>/dav/thoughtecho/chat_shards/</d:href></d:response>'
+                '$shardEntries'
+                '</d:multistatus>',
+              );
+            } else if (remoteFiles.containsKey(path)) {
+              response.statusCode = 207;
+              response.write(
+                '<d:multistatus xmlns:d="DAV:"><d:response>'
+                '<d:href>$path</d:href>'
+                '<d:propstat><d:prop><d:getetag>${remoteEtags[path]}</d:getetag>'
+                '<d:getcontentlength>${remoteFiles[path]!.length}</d:getcontentlength>'
+                '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>'
+                '</d:response></d:multistatus>',
+              );
+            } else if (path.endsWith('/thoughtecho') ||
+                path.endsWith('/thoughtecho/') ||
+                path.endsWith('/dav') ||
+                path.endsWith('/dav/')) {
+              response.statusCode = 207;
+              response.write('<d:multistatus xmlns:d="DAV:"></d:multistatus>');
+            } else {
+              response.statusCode = 404;
+            }
+          case 'GET':
+            final data = remoteFiles[path];
+            if (data == null) {
+              response.statusCode = 404;
+            } else {
+              if (remoteEtags.containsKey(path)) {
+                response.headers
+                    .set(HttpHeaders.etagHeader, remoteEtags[path]!);
+              }
+              response.statusCode = 200;
+              response.add(data);
+            }
+          case 'PUT':
+            final ifMatch = request.headers.value(HttpHeaders.ifMatchHeader);
+            if (ifMatch != null &&
+                remoteEtags.containsKey(path) &&
+                ifMatch != remoteEtags[path]) {
+              response.statusCode = 412;
+              break;
+            }
+            remoteFiles[path] = body;
+            final newEtag = '"etag-${etagSeq++}"';
+            remoteEtags[path] = newEtag;
+            remoteModified[path] = DateTime.utc(2020, 1, 1, 0, 0, 0);
+            if (path.startsWith('/dav/thoughtecho/chat_shards/')) {
+              putShardPaths.add(path);
+            }
+            response.headers.set(HttpHeaders.etagHeader, newEtag);
+            response.statusCode = 204;
+          case 'DELETE':
+            deletedShardPaths.add(path);
+            remoteFiles.remove(path);
+            remoteEtags.remove(path);
+            remoteModified.remove(path);
+            response.statusCode = 204;
+          default:
+            response.statusCode = 405;
+        }
+        await response.close();
+      });
+
+      final webdavA = WebDAVSyncService.forTesting();
+      addTearDown(webdavA.dispose);
+      webdavA.attachAssistantDataSync(assistantSync);
+      await webdavA.saveSettings(
+        enabled: true,
+        provider: 'custom',
+        url: 'https://webdav.example.invalid/dav/',
+        username: 'test-user',
+        password: 'synthetic-password',
+        syncOnLaunch: false,
+        syncOnChange: false,
+        syncOnCellular: false,
+        syncNotesOnlyOnCellular: true,
+      );
+
+      // 1) 预置一枚超期孤儿分片，但令服务端省略 Date 响应头：客户端不得回退本机时钟误删分片
+      const orphanShard =
+          'shard_1111111111111111111111111111111111111111111111111111111111111111.zip';
+      remoteFiles['/dav/thoughtecho/chat_shards/$orphanShard'] = <int>[9, 9, 9];
+      remoteModified['/dav/thoughtecho/chat_shards/$orphanShard'] =
+          DateTime.utc(2020, 1, 1);
+      omitServerDateHeader = true;
+
+      await HttpOverrides.runWithHttpOverrides(
+        () => webdavA.triggerSync(),
+        _LoopbackHttpOverrides(server.port),
+      );
+      expect(webdavA.syncStatus, WebDAVSyncStatus.success);
+      expect(
+        deletedShardPaths,
+        isEmpty,
+        reason: '服务端未返回可解析 Date 时钟时，客户端不得回退本机时钟误删分片',
+      );
+      expect(
+        remoteFiles.containsKey('/dav/thoughtecho/chat_shards/$orphanShard'),
+        isTrue,
+      );
+
+      // 恢复 Date 头后，准备双客户端零宽限期并发主包切换验证
+      omitServerDateHeader = false;
+
+      final dirPeer = await Directory.systemTemp.createTemp('peer_zero_grace_');
+      final chatB = ChatSessionService(
+        databasePath: p.join(dirPeer.path, 'chat_b.db'),
+      );
+      await chatB.init();
+      final memB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirPeer.path, 'mem_b.db'),
+      );
+      final assistantSyncB = AssistantDataSyncService(
+        chatSessionService: chatB,
+        agentMemoryService: memB,
+        settingsService: settingsService,
+        databaseService: databaseService,
+      );
+      final webdavB = WebDAVSyncService.forTesting();
+      try {
+        webdavB.attachAssistantDataSync(assistantSyncB);
+        await webdavB.saveSettings(
+          enabled: true,
+          provider: 'custom',
+          url: 'https://webdav.example.invalid/dav/',
+          username: 'test-user',
+          password: 'synthetic-password',
+          syncOnLaunch: false,
+          syncOnChange: false,
+          syncOnCellular: false,
+          syncNotesOnlyOnCellular: true,
+        );
+
+        // 先让 B 同步获取 A 的大体积会话，并在 B 上再新增一条独有大体积会话
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        final sessionB = await chatB.createSession(
+          sessionType: 'agent',
+          title: '设备B新增大体积会话',
+        );
+        for (var i = 0; i < 5; i++) {
+          await chatB.addMessage(
+            sessionB.id,
+            ChatMessage(
+              id: 'zero_grace_b_msg_$i',
+              content: 'B新增消息_${i}_${'长文本块' * 40}',
+              isUser: i.isEven,
+              role: i.isEven ? 'user' : 'assistant',
+              timestamp: DateTime.utc(2026, 11, 20, 15, i),
+            ),
+          );
+        }
+
+        // A 删除其会话退回内联上传，并在清理列目录时挂起（此时 staleMinAge == 0 且所有分片 mtime 为 2020 年！）
+        await chatService.deleteSession(sessionA.id);
+        pauseCleanupListGate = Completer<void>();
+        cleanupListPausedSignal = Completer<void>();
+        final syncAFuture = HttpOverrides.runWithHttpOverrides(
+          () => webdavA.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        await cleanupListPausedSignal.future;
+
+        final heldGate = pauseCleanupListGate;
+        pauseCleanupListGate = null;
+        putShardPaths.clear();
+
+        // B 读取 A 的内联主包后重回分片模式：必须对所有分片执行 PUT 续期，并覆盖主包 ETag
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(webdavB.syncStatus, WebDAVSyncStatus.success);
+        expect(
+          putShardPaths,
+          isNotEmpty,
+          reason: '从内联清单重回分片清单时，必须重新 PUT 分片刷新服务端 mtime 租约',
+        );
+
+        final bMainPayload =
+            WebDAVSyncService.decodeAndValidateRemoteSyncZipForTesting(
+          remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip']!,
+        );
+        final bActiveShardFiles = ((bMainPayload['chat']
+                as Map<String, dynamic>)['message_shards'] as List)
+            .map((e) => (e as Map<String, dynamic>)['file'] as String)
+            .toList();
+        expect(bActiveShardFiles, isNotEmpty);
+
+        // 清空 B 自身清理历史孤儿分片的记录，专门观测 A 恢复执行后的行为：
+        // 即便 staleMinAge == 0 且分片 mtime 为 2020 年，因云端主包 ETag 已变更为 B 的新快照，A 必须立即中止删除
+        deletedShardPaths.clear();
+        heldGate.complete();
+        await syncAFuture;
+        expect(webdavA.syncStatus, WebDAVSyncStatus.success);
+        expect(
+          deletedShardPaths,
+          isEmpty,
+          reason: '检测到云端主包 ETag 已被其他客户端更新时，必须中止分片删除',
+        );
+        for (final shardFile in bActiveShardFiles) {
+          expect(
+            remoteFiles.containsKey('/dav/thoughtecho/chat_shards/$shardFile'),
+            isTrue,
+            reason: 'B 当前主包引用的分片 $shardFile 必须完整保留在云端',
+          );
+        }
+      } finally {
+        final lingering = pauseCleanupListGate;
+        if (lingering != null && !lingering.isCompleted) {
+          lingering.complete();
+        }
+        webdavB.dispose();
+        await chatB.close();
+        chatB.dispose();
+        memB.dispose();
+        if (await dirPeer.exists()) {
+          await dirPeer.delete(recursive: true);
+        }
+      }
+    });
   });
 }

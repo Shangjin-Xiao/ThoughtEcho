@@ -10,6 +10,8 @@ extension _ThoughterAgent on _ThoughterPageState {
 
     final l10n = AppLocalizations.of(context);
     final requestGeneration = ++_agentRequestGeneration;
+    final agentSessionGeneration = _sessionLoadGeneration;
+    final agentInitialSessionId = _currentSessionId;
     StreamSubscription<AgentEvent>? eventSubscription;
 
     // 带元数据的消息（工具轨迹、提案卡片）以前被整条排除，导致 agent 完全
@@ -75,8 +77,18 @@ extension _ThoughterAgent on _ThoughterPageState {
           isLoading: false,
         );
         _messages[index] = finalized;
-        if (_currentSessionId != null) {
-          unawaited(_persistMessageSafely(finalized));
+        final sessionId = agentInitialSessionId ??
+            (agentSessionGeneration == _sessionLoadGeneration
+                ? _currentSessionId
+                : null);
+        if (sessionId != null) {
+          unawaited(
+            _persistMessageSafely(
+              finalized,
+              preferredSessionId: sessionId,
+              originGeneration: agentSessionGeneration,
+            ),
+          );
         }
       });
       _scrollToBottom();
@@ -100,8 +112,18 @@ extension _ThoughterAgent on _ThoughterPageState {
           state: app_chat.MessageState.error,
         );
         _messages[index] = failed;
-        if (_currentSessionId != null) {
-          unawaited(_persistMessageSafely(failed));
+        final sessionId = agentInitialSessionId ??
+            (agentSessionGeneration == _sessionLoadGeneration
+                ? _currentSessionId
+                : null);
+        if (sessionId != null) {
+          unawaited(
+            _persistMessageSafely(
+              failed,
+              preferredSessionId: sessionId,
+              originGeneration: agentSessionGeneration,
+            ),
+          );
         }
       });
     }
@@ -419,7 +441,15 @@ extension _ThoughterAgent on _ThoughterPageState {
           }),
         );
         _setState(() => _messages.add(cardMsg));
-        await _persistMessageSafely(cardMsg, surfaceError: true);
+        await _persistMessageSafely(
+          cardMsg,
+          preferredSessionId: agentInitialSessionId ??
+              (agentSessionGeneration == _sessionLoadGeneration
+                  ? _currentSessionId
+                  : null),
+          originGeneration: agentSessionGeneration,
+          surfaceError: true,
+        );
       }
 
       _scrollToBottom(bypassThrottle: true);
@@ -511,8 +541,15 @@ extension _ThoughterAgent on _ThoughterPageState {
       _messages[idx] = updatedMsg;
 
       // 保存到数据库（完成时持久化最终状态）
-      if (!inProgress && _currentSessionId != null) {
-        unawaited(_persistMessageSafely(updatedMsg));
+      final sessionId = _currentSessionId;
+      if (!inProgress && sessionId != null) {
+        unawaited(
+          _persistMessageSafely(
+            updatedMsg,
+            preferredSessionId: sessionId,
+            originGeneration: _sessionLoadGeneration,
+          ),
+        );
       }
     });
     _scrollToBottom();
@@ -837,7 +874,11 @@ extension _ThoughterAgent on _ThoughterPageState {
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
     if (effectiveSessionId != null && updated != null) {
       unawaited(
-        _persistMessageSafely(updated, preferredSessionId: effectiveSessionId),
+        _persistMessageSafely(
+          updated,
+          preferredSessionId: effectiveSessionId,
+          originGeneration: _sessionLoadGeneration,
+        ),
       );
     }
     if (mounted && !_isDisposed && updated != null) {

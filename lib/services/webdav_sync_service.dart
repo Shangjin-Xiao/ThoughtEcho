@@ -714,31 +714,33 @@ class WebDAVSyncService extends ChangeNotifier {
       final shardRefreshMaxAge = Duration(
         milliseconds: effectiveShardCleanupMinAge.inMilliseconds ~/ 2,
       );
-      ({
-        bool listedSuccessfully,
-        Map<String, _RemoteChatShardInfo> files,
-        DateTime? serverTimeUtc,
-      })? existingRemoteChatShardListing;
+      final previousRemoteShardFileSet = <String>{
+        for (final s in remoteChatShards) s.file,
+      };
       final chatShardsDirUrl = '${_url}thoughtecho/chat_shards/';
       if (uploadedChatShards.isNotEmpty) {
         await _ensureDirectoryExists(dio, chatShardsDirUrl);
-        existingRemoteChatShardListing = await _listRemoteChatShardFiles(
+        final existingRemoteChatShardListing = await _listRemoteChatShardFiles(
           dio,
           chatShardsDirUrl,
         );
-        final referenceNowUtc = existingRemoteChatShardListing.serverTimeUtc ??
-            DateTime.now().toUtc();
+        final serverNowUtc = existingRemoteChatShardListing.serverTimeUtc;
         for (final shard in uploadedChatShards) {
           final localShardZip = File(shard.localPath!);
           final localLen = await localShardZip.length();
           final existingInfo = existingRemoteChatShardListing.files[shard.file];
           final existingModifiedUtc = existingInfo?.lastModified?.toUtc();
-          final isFreshEnoughToReuse = existingInfo != null &&
+          // 仅当分片已在拉取到的上一版云端主包清单中活跃引用，且服务端同时返回了可信时钟与修改时间、
+          // 且距今未达半衰期时才复用跳过 PUT；新引入或跨内联恢复的分片一律重新 PUT 刷新服务端 mtime 租约。
+          final isFreshEnoughToReuse = previousRemoteShardFileSet
+                  .contains(shard.file) &&
+              existingInfo != null &&
               existingInfo.length == localLen &&
-              (existingModifiedUtc == null ||
-                  (shardRefreshMaxAge > Duration.zero &&
-                      referenceNowUtc.difference(existingModifiedUtc) <
-                          shardRefreshMaxAge));
+              serverNowUtc != null &&
+              existingModifiedUtc != null &&
+              shardRefreshMaxAge > Duration.zero &&
+              !serverNowUtc.isBefore(existingModifiedUtc) &&
+              serverNowUtc.difference(existingModifiedUtc) < shardRefreshMaxAge;
           if (isFreshEnoughToReuse) {
             continue;
           }
@@ -755,7 +757,7 @@ class WebDAVSyncService extends ChangeNotifier {
         }
       }
 
-      await _uploadSyncZipWithConflictProtection(
+      final uploadedMainSnapshot = await _uploadSyncZipWithConflictProtection(
         dio,
         remoteSyncZipUrl,
         File(tempZipPath),
@@ -774,13 +776,32 @@ class WebDAVSyncService extends ChangeNotifier {
       if (uploadedChatShards.isNotEmpty ||
           remoteChatShards.isNotEmpty ||
           hadPendingShardCleanup) {
+        String? expectedMainEtag = uploadedMainSnapshot.etag;
+        int? expectedMainLength = uploadedMainSnapshot.contentLength;
+        if (expectedMainEtag == null || expectedMainEtag.isEmpty) {
+          try {
+            final postUploadMeta = await _getRemoteSyncFileMetadata(
+              dio,
+              remoteSyncZipUrl,
+            );
+            if (postUploadMeta.exists) {
+              expectedMainEtag = postUploadMeta.etag;
+              expectedMainLength =
+                  postUploadMeta.contentLength ?? expectedMainLength;
+            }
+          } catch (_) {
+            // 预取主包指纹失败时交给清理阶段的复核兜底：无法确认主包归属则不执行删除。
+          }
+        }
         final hasRemainingStaleCandidates = await _cleanupStaleRemoteChatShards(
           dio,
           chatShardsDirUrl,
+          remoteSyncZipUrl: remoteSyncZipUrl,
+          expectedMainEtag: expectedMainEtag,
+          expectedMainContentLength: expectedMainLength,
           activeShardFiles: activeShardFileSet,
           protectedShardFiles: retiredFromPreviousManifest,
           staleMinAge: effectiveShardCleanupMinAge,
-          prefetchedListing: existingRemoteChatShardListing,
         );
         await _mmkv.setBool(
           _pendingChatShardCleanupKey,
@@ -1452,7 +1473,8 @@ class WebDAVSyncService extends ChangeNotifier {
     }
   }
 
-  Future<void> _uploadSyncZipWithConflictProtection(
+  Future<({String? etag, int contentLength})>
+      _uploadSyncZipWithConflictProtection(
     Dio dio,
     String fileUrl,
     File zipFile,
@@ -1491,10 +1513,17 @@ class WebDAVSyncService extends ChangeNotifier {
     }
 
     try {
-      await dio.put(
+      final response = await dio.put<void>(
         fileUrl,
         data: zipFile.openRead(),
         options: Options(headers: headers),
+      );
+      final responseEtag = response.headers.value('etag')?.trim();
+      return (
+        etag: (responseEtag != null && responseEtag.isNotEmpty)
+            ? responseEtag
+            : null,
+        contentLength: fileLen,
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
@@ -3039,28 +3068,31 @@ class WebDAVSyncService extends ChangeNotifier {
   }
 
   /// 清理已退役且超过跨端保护宽限期的孤儿分片，返回是否仍余待后续轮次清理的候选分片。
+  ///
+  /// 安全门禁：
+  /// 1. 始终在主同步包发布后重新列举 `chat_shards/` 目录，绝不复用上传前的旧目录快照；
+  /// 2. 仅依据 WebDAV 服务端自身 HTTP `Date` 响应头时钟与分片 `getlastmodified` 计算年龄，
+  ///    绝不回退使用可能存在大幅偏差的本机时钟；
+  /// 3. 真正发起 `DELETE` 前再次复核云端 `thoughtecho_sync.zip` 的指纹（ETag / 大小）仍与本轮刚发布的快照一致，
+  ///    一旦检测到另一台客户端在此期间已发布新主包，立即中止删除，由新主包持有方接管分片生命周期。
   Future<bool> _cleanupStaleRemoteChatShards(
     Dio dio,
     String chatShardsDirUrl, {
+    required String remoteSyncZipUrl,
+    required String? expectedMainEtag,
+    required int? expectedMainContentLength,
     required Set<String> activeShardFiles,
     required Set<String> protectedShardFiles,
     required Duration staleMinAge,
-    ({
-      bool listedSuccessfully,
-      Map<String, _RemoteChatShardInfo> files,
-      DateTime? serverTimeUtc,
-    })? prefetchedListing,
   }) async {
     try {
-      final listing =
-          (prefetchedListing != null && prefetchedListing.listedSuccessfully)
-              ? prefetchedListing
-              : await _listRemoteChatShardFiles(dio, chatShardsDirUrl);
+      final listing = await _listRemoteChatShardFiles(dio, chatShardsDirUrl);
       if (!listing.listedSuccessfully) {
         return true;
       }
-      final nowUtc = listing.serverTimeUtc ?? DateTime.now().toUtc();
+      final serverNowUtc = listing.serverTimeUtc;
       var hasUncleanedInactiveShard = false;
+      final staleCandidates = <String>[];
       for (final entry in listing.files.entries) {
         final fileName = entry.key;
         if (activeShardFiles.contains(fileName) ||
@@ -3068,22 +3100,55 @@ class WebDAVSyncService extends ChangeNotifier {
           continue;
         }
         final modifiedUtc = entry.value.lastModified?.toUtc();
-        // 1) 本轮刚刚从旧主包退役的分片予以保留一轮，防止并发读取旧主包的设备遇到 404；
-        // 2) 无可信最后修改时间，或尚未达到跨设备静默宽限期的分片绝不删除，
-        //    防止误删另一台设备正在上传的新分片。
         if (protectedShardFiles.contains(fileName)) {
           if (modifiedUtc != null) {
             hasUncleanedInactiveShard = true;
           }
           continue;
         }
-        if (modifiedUtc == null) {
+        if (modifiedUtc == null || serverNowUtc == null) {
           continue;
         }
-        if (nowUtc.difference(modifiedUtc) < staleMinAge) {
+        if (serverNowUtc.isBefore(modifiedUtc) ||
+            serverNowUtc.difference(modifiedUtc) < staleMinAge) {
           hasUncleanedInactiveShard = true;
           continue;
         }
+        staleCandidates.add(fileName);
+      }
+
+      if (staleCandidates.isEmpty) {
+        return hasUncleanedInactiveShard;
+      }
+
+      // 执行物理删除前复核云端主包未被其他设备并发更新覆盖。
+      final latestMainMeta = await _getRemoteSyncFileMetadata(
+        dio,
+        remoteSyncZipUrl,
+      );
+      if (!latestMainMeta.exists) {
+        return true;
+      }
+      final hasVerifiableOwnership =
+          (expectedMainEtag != null && expectedMainEtag.isNotEmpty) ||
+              expectedMainContentLength != null;
+      if (!hasVerifiableOwnership) {
+        return true;
+      }
+      if (expectedMainEtag != null && expectedMainEtag.isNotEmpty) {
+        if (latestMainMeta.etag == null ||
+            latestMainMeta.etag != expectedMainEtag) {
+          // 云端主包已被其他设备更新（或无法校验 ETag 一致性），立即放弃本轮删除。
+          return false;
+        }
+      }
+      if (expectedMainContentLength != null &&
+          latestMainMeta.contentLength != null &&
+          latestMainMeta.contentLength != expectedMainContentLength) {
+        return false;
+      }
+
+      for (final fileName in staleCandidates) {
         try {
           final res = await dio.delete(
             '$chatShardsDirUrl$fileName',

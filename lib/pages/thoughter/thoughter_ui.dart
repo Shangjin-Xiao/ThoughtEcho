@@ -1487,9 +1487,14 @@ extension _ThoughterUI on _ThoughterPageState {
       meta['applied'] = true;
       final updatedMessage = oldMessage.copyWith(metaJson: jsonEncode(meta));
       _messages[index] = updatedMessage;
-      if (_currentSessionId != null) {
+      final sessionId = _currentSessionId;
+      if (sessionId != null) {
         unawaited(
-          _chatSessionService.addMessage(_currentSessionId!, updatedMessage),
+          _persistMessageSafely(
+            updatedMessage,
+            preferredSessionId: sessionId,
+            originGeneration: _sessionLoadGeneration,
+          ),
         );
       }
     });
