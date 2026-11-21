@@ -17,6 +17,10 @@ class ConnectivityService extends ChangeNotifier {
   final Connectivity _connectivity = Connectivity();
   bool _isConnected = true;
   Timer? _connectivityTimer;
+  Future<void>? _inFlightCheck;
+  bool _isDisposed = false;
+
+  static const Duration _defaultProbeTimeout = Duration(seconds: 3);
 
   /// 多域名探测列表，任一成功即视为有网
   static const List<String> _probeHosts = [
@@ -28,6 +32,15 @@ class ConnectivityService extends ChangeNotifier {
   /// 用于单元测试中精确控制网络连通状态
   @visibleForTesting
   static bool? isConnectedOverrideForTesting;
+
+  /// 用于单元测试中注入自定义 DNS 查询函数，避免依赖真实外网
+  @visibleForTesting
+  static Future<List<InternetAddress>> Function(String host)?
+      dnsLookupForTesting;
+
+  /// 用于单元测试中覆盖单轮 DNS 探测超时时间
+  @visibleForTesting
+  static Duration? probeTimeoutOverrideForTesting;
 
   bool get isConnected => isConnectedOverrideForTesting ?? _isConnected;
 
@@ -45,56 +58,132 @@ class ConnectivityService extends ChangeNotifier {
   /// 在线时 60 秒检查一次（省电），离线时 15 秒检查一次（快速恢复）
   void _startPeriodicCheck() {
     _connectivityTimer?.cancel();
+    if (_isDisposed) {
+      _connectivityTimer = null;
+      return;
+    }
     final interval = _isConnected
         ? const Duration(seconds: 60)
         : const Duration(seconds: 15);
     _connectivityTimer = Timer.periodic(interval, (_) => _checkConnectivity());
   }
 
-  /// 检查网络连接状态（多域名 fallback）
-  Future<void> _checkConnectivity() async {
-    bool wasConnected = _isConnected;
+  /// 检查网络连接状态（支持测试覆盖同步应用与在飞探测复用）
+  Future<void> _checkConnectivity() {
+    if (isConnectedOverrideForTesting != null) {
+      _applyConnectivityResult(isConnectedOverrideForTesting!);
+      return Future<void>.value();
+    }
+
+    final existingCheck = _inFlightCheck;
+    if (existingCheck != null) {
+      return existingCheck;
+    }
+
+    late final Future<void> checkFuture;
+    checkFuture = _performConnectivityCheck().whenComplete(() {
+      if (identical(_inFlightCheck, checkFuture)) {
+        _inFlightCheck = null;
+      }
+    });
+    _inFlightCheck = checkFuture;
+    return checkFuture;
+  }
+
+  Future<void> _performConnectivityCheck() async {
+    bool nextConnected;
 
     try {
-      if (isConnectedOverrideForTesting != null) {
-        _isConnected = isConnectedOverrideForTesting!;
-      } else if (kIsWeb) {
+      if (kIsWeb) {
         // Web 平台：尝试对轻量 URL 发 HEAD 请求检测网络
-        _isConnected = await _checkConnectivityWeb();
+        nextConnected = await _checkConnectivityWeb();
       } else {
-        // 原生平台：多域名 DNS 探测，任一成功即判为在线
-        _isConnected = await _checkConnectivityNative();
+        // 原生平台：本地连接状态短路 + 多域名并发 DNS 竞速，任一成功即判为在线
+        nextConnected = await _checkConnectivityNative();
       }
     } catch (e) {
-      _isConnected = false;
+      nextConnected = false;
       logDebug('网络连接检查异常: $e');
     }
+
+    if (isConnectedOverrideForTesting != null) {
+      nextConnected = isConnectedOverrideForTesting!;
+    }
+
+    _applyConnectivityResult(nextConnected);
+  }
+
+  void _applyConnectivityResult(bool connected) {
+    final wasConnected = _isConnected;
+    _isConnected = connected;
 
     // 如果连接状态发生变化，通知监听器并调整轮询间隔
     if (wasConnected != _isConnected) {
       logDebug(
         '网络连接状态变化: ${wasConnected ? '已连接' : '未连接'} -> ${_isConnected ? '已连接' : '未连接'}',
       );
-      notifyListeners();
-      // 状态变化后重新调整轮询间隔
-      _startPeriodicCheck();
+      if (!_isDisposed) {
+        notifyListeners();
+        // 状态变化后重新调整轮询间隔
+        _startPeriodicCheck();
+      }
     }
   }
 
-  /// 原生平台：多域名 DNS 探测
+  /// 原生平台：本地无连接快速短路 + 多域名并发 DNS 竞速探测
   Future<bool> _checkConnectivityNative() async {
-    for (final host in _probeHosts) {
-      try {
-        final result = await InternetAddress.lookup(host)
-            .timeout(const Duration(seconds: 3));
-        if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-          return true;
-        }
-      } catch (_) {
-        // 当前域名失败，继续尝试下一个
+    try {
+      final results = await _connectivity.checkConnectivity();
+      if (results.isNotEmpty &&
+          results.every((result) => result == ConnectivityResult.none)) {
+        return false;
       }
+    } catch (_) {
+      // 平台通道不可用（如未挂载 Mock 的单测环境或桌面插件异常）时安全降级至 DNS 探测
     }
-    return false;
+
+    var remaining = _probeHosts.length;
+    if (remaining == 0) {
+      return false;
+    }
+
+    final lookup = dnsLookupForTesting ?? InternetAddress.lookup;
+    final timeout = probeTimeoutOverrideForTesting ?? _defaultProbeTimeout;
+    final completer = Completer<bool>();
+
+    final timer = Timer(timeout, () {
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
+    });
+
+    for (final host in _probeHosts) {
+      Future<List<InternetAddress>>.sync(() => lookup(host)).then(
+        (result) {
+          if (completer.isCompleted) return;
+          if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+            timer.cancel();
+            completer.complete(true);
+            return;
+          }
+          remaining -= 1;
+          if (remaining == 0) {
+            timer.cancel();
+            completer.complete(false);
+          }
+        },
+        onError: (Object _, StackTrace __) {
+          if (completer.isCompleted) return;
+          remaining -= 1;
+          if (remaining == 0) {
+            timer.cancel();
+            completer.complete(false);
+          }
+        },
+      );
+    }
+
+    return completer.future;
   }
 
   /// Web 平台：通过 NetworkService 探测
@@ -115,7 +204,7 @@ class ConnectivityService extends ChangeNotifier {
   /// 立即检查连接状态
   Future<bool> checkConnectionNow() async {
     await _checkConnectivity();
-    return _isConnected;
+    return isConnected;
   }
 
   /// 检查当前是否为移动数据流量连接
@@ -132,7 +221,10 @@ class ConnectivityService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _connectivityTimer?.cancel();
+    _connectivityTimer = null;
+    _inFlightCheck = null;
     super.dispose();
   }
 }
