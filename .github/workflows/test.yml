@@ -6,7 +6,11 @@ on:
     paths:
       - 'lib/**'
       - 'test/**'
+      - 'scripts/**'
+      - '.githooks/**'
       - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'l10n.yaml'
       - 'analysis_options.yaml'
       - '.github/workflows/test.yml'
   pull_request:
@@ -14,7 +18,11 @@ on:
     paths:
       - 'lib/**'
       - 'test/**'
+      - 'scripts/**'
+      - '.githooks/**'
       - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'l10n.yaml'
       - 'analysis_options.yaml'
       - '.github/workflows/test.yml'
   workflow_dispatch:
@@ -49,6 +57,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
@@ -67,9 +77,18 @@ jobs:
       run: dart format --set-exit-if-changed .
 
     - name: Check repository mechanical rules
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
+        BEFORE_SHA: ${{ github.event.before }}
+        REF_NAME: ${{ github.ref_name }}
       run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          dart scripts/lint_repo_rules.dart --base "origin/${{ github.base_ref }}"
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          dart scripts/lint_repo_rules.dart --base "origin/$BASE_REF"
+        elif [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+          dart scripts/lint_repo_rules.dart --base "$BEFORE_SHA"
+        elif [ "$REF_NAME" != "main" ] && git rev-parse --verify origin/main >/dev/null 2>&1; then
+          dart scripts/lint_repo_rules.dart --base origin/main
         else
           dart scripts/lint_repo_rules.dart --base HEAD~1
         fi
