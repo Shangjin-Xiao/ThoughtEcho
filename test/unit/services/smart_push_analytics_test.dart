@@ -310,6 +310,71 @@ void main() {
       final scores = await analytics.getContentTypeScores();
       expect(scores['yearAgoToday'], closeTo(2 / 3, 1e-6));
     });
+
+    test('同一通知发送实例重复调用 markSent 保持幂等，不重复累加今日配额', () async {
+      final sentAt = DateTime(2026, 5, 10, 9, 0);
+      await analytics.markSent(
+        'yearAgoToday',
+        sentAt: sentAt,
+        notificationId: 126051000,
+      );
+      await analytics.markSent(
+        'yearAgoToday',
+        sentAt: sentAt,
+        notificationId: 126051000,
+      );
+
+      expect(await analytics.getTodayPushCount(now: sentAt), 1);
+
+      // 重试期间若发生预点击补记，同样只计 1 次发送并升级为已点击
+      await analytics.recordInteraction(
+        'yearAgoToday',
+        notificationId: 126051000,
+        deferScoreUntilAccounted: true,
+      );
+      await analytics.markSent(
+        'yearAgoToday',
+        sentAt: sentAt,
+        notificationId: 126051000,
+      );
+      await analytics.settlePendingSend();
+
+      expect(await analytics.getTodayPushCount(now: sentAt), 1);
+      expect(await analytics.getUnengagedStreak(), 0);
+      final stats = await analytics.getAnalyticsStats();
+      expect(stats['totalNotificationsSent'], 1);
+      expect(stats['totalEngagements'], 1);
+    });
+
+    test('新通知复用历史已点击通知 ID 时不会继承旧点击状态', () async {
+      final t1 = DateTime(2026, 5, 10, 9, 0);
+      final t2 = DateTime(2026, 5, 10, 15, 0);
+
+      await analytics.markSent(
+        'yearAgoToday',
+        sentAt: t1,
+        notificationId: 77777,
+      );
+      await analytics.recordInteraction(
+        'yearAgoToday',
+        notificationId: 77777,
+      );
+      await analytics.settlePendingSend();
+      expect(await analytics.getUnengagedStreak(), 0);
+
+      // 新一轮发送即使落到同一通知 ID，未点击时也必须按未点击结算
+      await analytics.markSent(
+        'pastNote',
+        sentAt: t2,
+        notificationId: 77777,
+      );
+      expect(await analytics.getTodayPushCount(now: t2), 2);
+      await analytics.settlePendingSend();
+
+      expect(await analytics.getUnengagedStreak(), 1);
+      final scores = await analytics.getContentTypeScores();
+      expect(scores['pastNote'], closeTo(1 / 3, 1e-6));
+    });
   });
 
   group('PushIntensity 配额矩阵', () {

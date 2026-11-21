@@ -150,6 +150,7 @@ extension SmartPushPlatform on SmartPushService {
   Future<void> _saveTrackedPreScheduledEntries(
     List<_PreScheduledEntry> entries, {
     int? expectedGeneration,
+    int? expectedSettingsGeneration,
     int? expectedEpoch,
     bool fromBackground = false,
   }) async {
@@ -158,10 +159,18 @@ extension SmartPushPlatform on SmartPushService {
           !_isScheduleGenerationCurrent(expectedGeneration)) {
         return;
       }
+      if (expectedSettingsGeneration != null &&
+          !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
+        return;
+      }
       if (expectedEpoch != null) {
         await _reloadSharedStorageIfSupported();
         if (expectedGeneration != null &&
             !_isScheduleGenerationCurrent(expectedGeneration)) {
+          return;
+        }
+        if (expectedSettingsGeneration != null &&
+            !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
           return;
         }
         if (_readStoredSettingsEpoch() != expectedEpoch ||
@@ -178,6 +187,29 @@ extension SmartPushPlatform on SmartPushService {
     } catch (e) {
       AppLogger.w('保存预调度通知追踪列表失败', error: e);
     }
+  }
+
+  bool _isEntryDisabledByCurrentSettings(_PreScheduledEntry entry) {
+    if (entry.isDailyQuote) {
+      return !_settings.dailyQuotePushEnabled;
+    }
+    if (!_settings.enabled) {
+      return true;
+    }
+    if (_settings.pushMode != PushMode.smart) {
+      if (!_settings.pushTimeSlots.any((s) => s.enabled)) {
+        return true;
+      }
+      if (entry.slotHour != null && entry.slotMinute != null) {
+        return !_settings.pushTimeSlots.any(
+          (s) =>
+              s.enabled &&
+              s.hour == entry.slotHour &&
+              s.minute == entry.slotMinute,
+        );
+      }
+    }
+    return false;
   }
 
   /// 对账并取消不再处于当前有效计划内、或关联笔记已被隐藏/删除的预调度通知。
@@ -207,7 +239,10 @@ extension SmartPushPlatform on SmartPushService {
         invalidatedIds.add(entry.id);
       } else {
         if (activeIds.contains(entry.id)) continue;
-        if (futureOnly && entry.epochMs <= nowMs) continue;
+        if (entry.epochMs <= nowMs &&
+            (futureOnly || !_isEntryDisabledByCurrentSettings(entry))) {
+          continue;
+        }
       }
       cancelledIds.add(entry.id);
       try {

@@ -75,6 +75,8 @@ class SmartPushService extends ChangeNotifier {
   static const String _preScheduledEntriesKey =
       'smart_push_prescheduled_entries_v1';
   static const String _settingsEpochKey = 'smart_push_settings_epoch_v1';
+  static const String _immediateNotificationSeqKey =
+      'smart_push_immediate_notif_seq_v1';
   static const String _preScheduleRenewalUniqueName =
       'smart_push_preschedule_renew';
   static const Duration _preScheduleRenewalFrequency = Duration(hours: 24);
@@ -182,6 +184,8 @@ class SmartPushService extends ChangeNotifier {
   bool _databaseListenerAttached = false;
   bool _legacyAndroidTasksCleared = false;
   int _scheduleGeneration = 0;
+  int _settingsMutationGeneration = 0;
+  final Set<int> _inFlightImmediateSmartNotificationIds = <int>{};
   Future<void> _pendingScheduleOp = Future<void>.value();
   Future<void> _pendingAccountingOp = Future<void>.value();
 
@@ -194,6 +198,9 @@ class SmartPushService extends ChangeNotifier {
 
   bool _isScheduleGenerationCurrent(int generation) =>
       !_isDisposed && generation == _scheduleGeneration;
+
+  bool _isSettingsMutationGenerationCurrent(int settingsGeneration) =>
+      !_isDisposed && settingsGeneration == _settingsMutationGeneration;
 
   int _readStoredSettingsEpoch() {
     final raw = _mmkv.getString(_settingsEpochKey);
@@ -325,6 +332,7 @@ class SmartPushService extends ChangeNotifier {
   void dispose() {
     _isDisposed = true;
     _scheduleGeneration++;
+    _settingsMutationGeneration++;
     _detachDatabaseListener();
     if (_currentInstance == this) {
       _currentInstance = null;
@@ -747,9 +755,10 @@ class SmartPushService extends ChangeNotifier {
   Future<void> saveSettings(SmartPushSettings newSettings) async {
     try {
       _settings = newSettings;
-      // 先落盘最新设置，再递增实例内调度代数与跨 Isolate 持久化配置纪元，
+      // 先落盘最新设置，再递增实例内调度代数、设置变更代数与跨 Isolate 持久化配置纪元，
       // 确保任意并发 Isolate 一旦读到新纪元就必然读到新设置
       _scheduleGeneration++;
+      _settingsMutationGeneration++;
       final jsonStr = jsonEncode(newSettings.toJson());
       await _mmkv.setString(_settingsKey, jsonStr);
       await _bumpSettingsEpoch();
@@ -774,6 +783,7 @@ class SmartPushService extends ChangeNotifier {
       await _reloadSharedStorageIfSupported();
       await _loadSettings();
       _scheduleGeneration++;
+      _settingsMutationGeneration++;
       await _bumpSettingsEpoch();
       notifyListeners();
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
@@ -795,6 +805,7 @@ class SmartPushService extends ChangeNotifier {
   Future<void> _saveSettingsQuietly(
     SmartPushSettings newSettings, {
     int? expectedGeneration,
+    int? expectedSettingsGeneration,
     int? expectedEpoch,
   }) async {
     try {
@@ -802,10 +813,18 @@ class SmartPushService extends ChangeNotifier {
           !_isScheduleGenerationCurrent(expectedGeneration)) {
         return;
       }
+      if (expectedSettingsGeneration != null &&
+          !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
+        return;
+      }
       if (expectedEpoch != null) {
         await _reloadSharedStorageIfSupported();
         if (expectedGeneration != null &&
             !_isScheduleGenerationCurrent(expectedGeneration)) {
+          return;
+        }
+        if (expectedSettingsGeneration != null &&
+            !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
           return;
         }
         if (_readStoredSettingsEpoch() != expectedEpoch) {

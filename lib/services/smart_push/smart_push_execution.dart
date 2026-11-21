@@ -124,7 +124,7 @@ extension SmartPushExecution on SmartPushService {
   /// 独立的每日一言推送通道，允许一天多次推送但不重复推送相同内容。
   Future<void> _performDailyQuotePush({bool isBackground = false}) async {
     try {
-      final startGeneration = _scheduleGeneration;
+      final startSettingsGeneration = _settingsMutationGeneration;
       final startEpoch = _readStoredSettingsEpoch();
       // 每日一言是用户期望的每日固定内容，不受 SOTA 疲劳预防系统限制。
       // 允许一天多次推送，但使用内容哈希去重避免推送相同一言。
@@ -156,7 +156,7 @@ extension SmartPushExecution on SmartPushService {
       );
       await _saveSettingsQuietly(
         updatedSettings,
-        expectedGeneration: startGeneration,
+        expectedSettingsGeneration: startSettingsGeneration,
         expectedEpoch: startEpoch,
       );
 
@@ -185,7 +185,7 @@ extension SmartPushExecution on SmartPushService {
     bool isBackground = false,
   }) async {
     try {
-      final startGeneration = _scheduleGeneration;
+      final startSettingsGeneration = _settingsMutationGeneration;
       final startEpoch = _readStoredSettingsEpoch();
       // 配额裁定结果 —— 测试模式不做裁定，一路放行
       PushAllowance? allowance;
@@ -327,78 +327,95 @@ extension SmartPushExecution on SmartPushService {
       }
 
       if (noteToShow != null) {
-        final shownNotificationId = await _showNotification(
-          noteToShow,
-          title: title,
-          contentType: contentType,
-        );
+        final int? plannedNotificationId = (!isTest && contentType.isNotEmpty)
+            ? await _nextImmediateNotificationId()
+            : null;
+        if (plannedNotificationId != null) {
+          _inFlightImmediateSmartNotificationIds.add(plannedNotificationId);
+        }
+        int? shownNotificationId;
+        try {
+          shownNotificationId = await _showNotification(
+            noteToShow,
+            title: title,
+            contentType: contentType,
+            notificationIdOverride: plannedNotificationId,
+          );
 
-        // ==== 向树莓派 Pico 发送蓝牙广播（默认关闭）====
-        // 这条链路只服务于外接墨水屏硬件，绝大多数用户用不到。
-        // 但它并不是死代码：不加开关时每条推送都会真的去碰系统蓝牙栈，
-        // 在 iOS 上足以直接把进程带走。所以默认不走，由用户显式开启。
-        if (picoBleEnabled) {
-          try {
-            // 不阻塞推送主流程，火忘式发送
-            unawaited(
-              PicoBleService.instance.sendQuoteToPico(noteToShow).catchError(
-                (e) {
-                  AppLogger.w('蓝牙发送到水墨屏异步失败', error: e);
-                  return false;
-                },
-              ),
+          // ==== 向树莓派 Pico 发送蓝牙广播（默认关闭）====
+          // 这条链路只服务于外接墨水屏硬件，绝大多数用户用不到。
+          // 但它并不是死代码：不加开关时每条推送都会真的去碰系统蓝牙栈，
+          // 在 iOS 上足以直接把进程带走。所以默认不走，由用户显式开启。
+          if (picoBleEnabled) {
+            try {
+              // 不阻塞推送主流程，火忘式发送
+              unawaited(
+                PicoBleService.instance.sendQuoteToPico(noteToShow).catchError(
+                  (e) {
+                    AppLogger.w('蓝牙发送到水墨屏异步失败', error: e);
+                    return false;
+                  },
+                ),
+              );
+            } catch (bleErr) {
+              AppLogger.w('蓝牙发送到水墨屏失败', error: bleErr);
+            }
+          }
+          // ===================================
+
+          AppLogger.w(
+            '推送成功 [${_settings.pushMode.name}] (contentType: $contentType): '
+            '${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...',
+          );
+
+          // 标记今日已推送（用于「此时此刻」兜底判断）
+          if (!isTest) {
+            _markPushedToday();
+          }
+
+          // 记录推送历史（避免重复推送，测试模式也不记录）
+          if (!isDailyQuote && noteToShow.id != null && !isTest) {
+            if (_settings.pushMode == PushMode.smart) {
+              _markNotePushedToday(noteToShow.id!);
+            }
+            final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
+            await _saveSettingsQuietly(
+              updatedSettings,
+              expectedSettingsGeneration: startSettingsGeneration,
+              expectedEpoch: startEpoch,
             );
-          } catch (bleErr) {
-            AppLogger.w('蓝牙发送到水墨屏失败', error: bleErr);
           }
-        }
-        // ===================================
 
-        AppLogger.w(
-          '推送成功 [${_settings.pushMode.name}] (contentType: $contentType): '
-          '${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...',
-        );
-
-        // 标记今日已推送（用于「此时此刻」兜底判断）
-        if (!isTest) {
-          _markPushedToday();
-        }
-
-        // 记录推送历史（避免重复推送，测试模式也不记录）
-        if (!isDailyQuote && noteToShow.id != null && !isTest) {
-          if (_settings.pushMode == PushMode.smart) {
-            _markNotePushedToday(noteToShow.id!);
+          // 如果推送的是每日一言（来自 PushMode.dailyQuote / PushMode.both 的回退 / PushMode.smart），
+          // 标记内容哈希并更新 lastPushTime，同时标记今日智能推送已推每日一言
+          if (isDailyQuote && !isTest) {
+            _markDailyQuoteContentPushed(noteToShow.content);
+            _markDailyQuotePushedTodayInSmartPush();
+            final updatedSettings = _settings.copyWith(
+              lastPushTime: DateTime.now(),
+            );
+            await _saveSettingsQuietly(
+              updatedSettings,
+              expectedSettingsGeneration: startSettingsGeneration,
+              expectedEpoch: startEpoch,
+            );
           }
-          final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
-          await _saveSettingsQuietly(
-            updatedSettings,
-            expectedGeneration: startGeneration,
-            expectedEpoch: startEpoch,
-          );
-        }
 
-        // 如果推送的是每日一言（来自 PushMode.dailyQuote / PushMode.both 的回退 / PushMode.smart），
-        // 标记内容哈希并更新 lastPushTime，同时标记今日智能推送已推每日一言
-        if (isDailyQuote && !isTest) {
-          _markDailyQuoteContentPushed(noteToShow.content);
-          _markDailyQuotePushedTodayInSmartPush();
-          final updatedSettings = _settings.copyWith(
-            lastPushTime: DateTime.now(),
-          );
-          await _saveSettingsQuietly(
-            updatedSettings,
-            expectedGeneration: startGeneration,
-            expectedEpoch: startEpoch,
-          );
-        }
-
-        // 登记这一条推送：占掉今日配额，并挂起等待下次结算。
-        // 分数更新交给 settlePendingSend —— 发出去的瞬间还不知道用户点不点。
-        if (!isTest && contentType.isNotEmpty) {
-          await _analytics.markSent(
-            contentType,
-            notificationId: shownNotificationId,
-          );
+          // 登记这一条推送：占掉今日配额，并挂起等待下次结算。
+          // 分数更新交给 settlePendingSend —— 发出去的瞬间还不知道用户点不点。
+          if (!isTest &&
+              contentType.isNotEmpty &&
+              shownNotificationId != null) {
+            await _analytics.markSent(
+              contentType,
+              notificationId: shownNotificationId,
+            );
+          }
+        } finally {
+          if (plannedNotificationId != null) {
+            _inFlightImmediateSmartNotificationIds
+                .remove(plannedNotificationId);
+          }
         }
 
         AppLogger.i(

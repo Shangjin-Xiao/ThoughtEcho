@@ -285,20 +285,8 @@ extension SmartPushScheduling on SmartPushService {
           final foregroundTrackedIds =
               _loadTrackedPreScheduledEntries().map((e) => e.id).toSet();
           for (final entry in writtenEntries) {
-            final slotDisabledInSettings = entry.isDailyQuote
-                ? !_settings.dailyQuotePushEnabled
-                : (!_settings.enabled ||
-                    (_settings.pushMode != PushMode.smart &&
-                        entry.slotHour != null &&
-                        entry.slotMinute != null &&
-                        !_settings.pushTimeSlots.any(
-                          (s) =>
-                              s.enabled &&
-                              s.hour == entry.slotHour &&
-                              s.minute == entry.slotMinute,
-                        )));
             if (!foregroundTrackedIds.contains(entry.id) ||
-                slotDisabledInSettings) {
+                _isEntryDisabledByCurrentSettings(entry)) {
               try {
                 await _notificationsPlugin.cancel(entry.id);
               } catch (_) {}
@@ -312,20 +300,47 @@ extension SmartPushScheduling on SmartPushService {
     return true;
   }
 
+  /// 校验预调度补记上下文是否仍然有效（仅受设置修改、配置重载、实例销毁及跨 Isolate 纪元变化影响，不受普通数据库变更重排打断）
+  Future<bool> _isAccountingContextStillValid({
+    required int settingsGeneration,
+    required int expectedEpoch,
+    required bool fromBackground,
+    bool reloadStorage = false,
+  }) async {
+    if (!_isSettingsMutationGenerationCurrent(settingsGeneration)) {
+      return false;
+    }
+
+    if (fromBackground || reloadStorage) {
+      await _reloadSharedStorageIfSupported();
+      if (!_isSettingsMutationGenerationCurrent(settingsGeneration)) {
+        return false;
+      }
+    }
+
+    final currentEpoch = _readStoredSettingsEpoch();
+    final disabledInStorage = fromBackground &&
+        (_settings.enabled || _settings.dailyQuotePushEnabled) &&
+        _areStoredSettingsAllDisabled();
+
+    return currentEpoch == expectedEpoch && !disabledInStorage;
+  }
+
   /// 结算已过触发时间的预调度常规通知，更新推送计数、最近推送笔记历史与上次推送时间
   Future<List<_PreScheduledEntry>> _accountDeliveredPreScheduledEntries({
-    int? generation,
+    int? settingsGeneration,
     int? expectedEpoch,
     bool fromBackground = false,
     int? forceAccountNotificationId,
   }) {
-    final effectiveGeneration = generation ?? _scheduleGeneration;
+    final effectiveSettingsGen =
+        settingsGeneration ?? _settingsMutationGeneration;
     final effectiveEpoch = expectedEpoch ?? _readStoredSettingsEpoch();
     final completer = Completer<List<_PreScheduledEntry>>();
     final next = _pendingAccountingOp.then((_) async {
       try {
         final result = await _accountDeliveredPreScheduledEntriesInternal(
-          generation: effectiveGeneration,
+          settingsGeneration: effectiveSettingsGen,
           expectedEpoch: effectiveEpoch,
           fromBackground: fromBackground,
           forceAccountNotificationId: forceAccountNotificationId,
@@ -341,13 +356,13 @@ extension SmartPushScheduling on SmartPushService {
 
   Future<List<_PreScheduledEntry>>
       _accountDeliveredPreScheduledEntriesInternal({
-    required int generation,
+    required int settingsGeneration,
     required int expectedEpoch,
     bool fromBackground = false,
     int? forceAccountNotificationId,
   }) async {
-    if (!await _isScheduleContextStillValid(
-      generation: generation,
+    if (!await _isAccountingContextStillValid(
+      settingsGeneration: settingsGeneration,
       expectedEpoch: expectedEpoch,
       fromBackground: fromBackground,
       reloadStorage: true,
@@ -380,8 +395,8 @@ extension SmartPushScheduling on SmartPushService {
       DateTime? latestPushTime = _settings.lastPushTime;
 
       for (final entry in dueRegularEntries) {
-        if (!await _isScheduleContextStillValid(
-          generation: generation,
+        if (!await _isAccountingContextStillValid(
+          settingsGeneration: settingsGeneration,
           expectedEpoch: expectedEpoch,
           fromBackground: fromBackground,
           reloadStorage: fromBackground,
@@ -399,7 +414,13 @@ extension SmartPushScheduling on SmartPushService {
           deliveredAt = DateTime.fromMillisecondsSinceEpoch(entry.epochMs);
         }
         if (_settings.pushMode == PushMode.smart) {
-          await _analytics.settlePendingSend();
+          final alreadyRecorded = _analytics.hasRecordedSentNotification(
+            entry.id,
+            sentAt: deliveredAt,
+          );
+          if (!alreadyRecorded) {
+            await _analytics.settlePendingSend();
+          }
           final wasClicked =
               await _analytics.consumeClickedNotification(entry.id);
           await _analytics.markSent(
@@ -423,8 +444,8 @@ extension SmartPushScheduling on SmartPushService {
         }
       }
 
-      if (!await _isScheduleContextStillValid(
-        generation: generation,
+      if (!await _isAccountingContextStillValid(
+        settingsGeneration: settingsGeneration,
         expectedEpoch: expectedEpoch,
         fromBackground: fromBackground,
         reloadStorage: true,
@@ -454,13 +475,13 @@ extension SmartPushScheduling on SmartPushService {
       );
       await _saveSettingsQuietly(
         updatedSettings,
-        expectedGeneration: generation,
+        expectedSettingsGeneration: settingsGeneration,
         expectedEpoch: expectedEpoch,
       );
     }
 
-    if (!await _isScheduleContextStillValid(
-      generation: generation,
+    if (!await _isAccountingContextStillValid(
+      settingsGeneration: settingsGeneration,
       expectedEpoch: expectedEpoch,
       fromBackground: fromBackground,
       reloadStorage: true,
@@ -475,7 +496,7 @@ extension SmartPushScheduling on SmartPushService {
         .toList();
     await _saveTrackedPreScheduledEntries(
       updatedEntries,
-      expectedGeneration: generation,
+      expectedSettingsGeneration: settingsGeneration,
       expectedEpoch: expectedEpoch,
       fromBackground: fromBackground,
     );
@@ -513,7 +534,7 @@ extension SmartPushScheduling on SmartPushService {
     }
 
     final previousEntries = await _accountDeliveredPreScheduledEntries(
-      generation: generation,
+      settingsGeneration: _settingsMutationGeneration,
       expectedEpoch: expectedEpoch,
       fromBackground: fromBackground,
     );
@@ -737,8 +758,7 @@ extension SmartPushScheduling on SmartPushService {
         for (final prev in remainingPreviousEntries)
           if (!scheduledIds.contains(prev.id) &&
               prev.epochMs > 0 &&
-              (prev.epochMs > nowMs ||
-                  (futureOnly && nowMs - prev.epochMs <= maxRetentionMs)))
+              (prev.epochMs > nowMs || nowMs - prev.epochMs <= maxRetentionMs))
             prev,
       ];
     }
@@ -774,6 +794,14 @@ extension SmartPushScheduling on SmartPushService {
           return;
         }
 
+        final newEpochMs = item.scheduledDate.millisecondsSinceEpoch;
+        final isNewNotificationInstance = previousEntries
+            .where((e) => e.id == item.id)
+            .every((e) => e.epochMs != newEpochMs);
+        if (isNewNotificationInstance) {
+          await _analytics.resetTrackedNotificationState(item.id);
+        }
+
         await _scheduleLocalNotification(
           item.id,
           item.scheduledDate,
@@ -787,7 +815,7 @@ extension SmartPushScheduling on SmartPushService {
         scheduledEntries.add(
           _PreScheduledEntry(
             id: item.id,
-            epochMs: item.scheduledDate.millisecondsSinceEpoch,
+            epochMs: newEpochMs,
             noteId: item.content?.sourceNoteId ?? item.content?.noteId,
             isDailyQuote: item.isDailyQuote,
             contentType: item.content?.contentType ??

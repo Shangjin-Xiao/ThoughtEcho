@@ -129,7 +129,7 @@ extension SmartPushNotification on SmartPushService {
           }
         }
 
-        final tapGeneration = _scheduleGeneration;
+        final tapSettingsGeneration = _settingsMutationGeneration;
         final tapEpoch = _readStoredSettingsEpoch();
         final trackedEntries = notificationId != null
             ? _loadTrackedPreScheduledEntries()
@@ -149,10 +149,13 @@ extension SmartPushNotification on SmartPushService {
               !matchedEntry.accounted &&
               !matchedEntry.isDailyQuote &&
               _settings.pushMode == PushMode.smart;
+          final isInFlightImmediateSmartNotification = notificationId != null &&
+              _inFlightImmediateSmartNotificationIds.contains(notificationId);
           await _analytics.recordInteraction(
             contentType,
             notificationId: notificationId,
-            deferScoreUntilAccounted: isUnaccountedSmartRegularEntry,
+            deferScoreUntilAccounted: isUnaccountedSmartRegularEntry ||
+                isInFlightImmediateSmartNotification,
           );
           AppLogger.d(
             'SOTA: 记录通知点击交互 - $contentType (ID: $notificationId)',
@@ -161,7 +164,7 @@ extension SmartPushNotification on SmartPushService {
 
         if (matchedEntry != null && !matchedEntry.accounted) {
           await _accountDeliveredPreScheduledEntries(
-            generation: tapGeneration,
+            settingsGeneration: tapSettingsGeneration,
             expectedEpoch: tapEpoch,
             forceAccountNotificationId: notificationId,
           );
@@ -482,11 +485,36 @@ extension SmartPushNotification on SmartPushService {
     }
   }
 
+  /// 生成与固定槽位 (0..1000) 及预调度区间 ([100000000, 199999999]) 完全隔离的单调 31 位立即通知 ID
+  Future<int> _nextImmediateNotificationId() async {
+    const baseId = 300000000;
+    const span = 1700000000; // 最大 1,999,999,999 < 2^31 - 1
+    await _reloadSharedStorageIfSupported();
+    final prev = int.tryParse(
+      _mmkv.getString(SmartPushService._immediateNotificationSeqKey) ?? '',
+    );
+    // 100ms 刻度在 17 亿空间内约 5.39 年不回绕；同刻度或固定测试时钟下按 prev + 1 严格单调递增
+    final tick = (_now().millisecondsSinceEpoch ~/ 100) % span;
+    final int nextOffset;
+    if (prev == null) {
+      nextOffset = tick;
+    } else {
+      final delta = (tick - prev) % span;
+      nextOffset = (delta > 0 && delta < span ~/ 2) ? tick : (prev + 1) % span;
+    }
+    await _mmkv.setString(
+      SmartPushService._immediateNotificationSeqKey,
+      nextOffset.toString(),
+    );
+    return baseId + nextOffset;
+  }
+
   /// 显示通知，返回实际发送的通知 ID（发送失败时返回 null）
   Future<int?> _showNotification(
     Quote note, {
     String title = '心迹',
     String contentType = '',
+    int? notificationIdOverride,
   }) async {
     await _ensureNotificationReady();
 
@@ -519,7 +547,8 @@ extension SmartPushNotification on SmartPushService {
       iOS: iosDetails,
     );
 
-    final notificationId = (_now().millisecondsSinceEpoch % 99999) + 1;
+    final notificationId =
+        notificationIdOverride ?? await _nextImmediateNotificationId();
 
     String payload = '';
     if (contentType.isNotEmpty) {

@@ -1761,5 +1761,159 @@ void main() {
         );
       },
     );
+
+    test(
+      'database change or enabled settings update during accounting never double-counts delivered notification',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        databaseService.notes = [
+          Quote(
+            id: 'ffff6666-6666-6666-6666-666666666666',
+            content: '验证补记期间发生数据库变更或保持开启的设置更新时不会重复计数的第一条笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+          Quote(
+            id: 'aaaa7777-7777-7777-7777-777777777777',
+            content: '验证补记期间发生保持开启的设置更新时不会把同一通知结算两次的第二条笔记。',
+            date: localTime(2025, 5, 11, 9, 0).toIso8601String(),
+          ),
+        ];
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 9, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final firstCall = notificationsPlugin.scheduledCalls.first;
+        currentNow = localTime(2026, 5, 10, 9, 30);
+
+        var triggeredDbChange = false;
+        storage.onSetStringHook = (key, value) async {
+          if (key == 'smart_push_daily_count' && !triggeredDbChange) {
+            triggeredDbChange = true;
+            storage.onSetStringHook = null;
+            databaseService.notifyChanged();
+            await Future<void>.delayed(Duration.zero);
+          }
+        };
+
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: firstCall.id,
+            payload: firstCall.payload,
+          ),
+        );
+        await service.waitForPendingScheduleForTest();
+
+        expect(triggeredDbChange, isTrue);
+        expect(
+          await service.analytics.getTodayPushCount(now: currentNow),
+          equals(1),
+        );
+        final statsAfterTap = await service.analytics.getAnalyticsStats();
+        expect(statsAfterTap['totalNotificationsSent'], equals(1));
+        expect(statsAfterTap['totalEngagements'], equals(1));
+
+        // 推进到次日已送达未点击通知，在补记中途修改设置（保持 enabled: true）
+        final nextDayCall = notificationsPlugin.scheduledCalls.firstWhere(
+          (call) => call.scheduledDate.isAfter(currentNow),
+        );
+        currentNow = DateTime.fromMillisecondsSinceEpoch(
+          nextDayCall.scheduledDate.millisecondsSinceEpoch + 30 * 60 * 1000,
+        );
+
+        Future<void>? concurrentSettingsUpdate;
+        storage.onSetStringHook = (key, value) async {
+          if (key == 'smart_push_daily_count' &&
+              concurrentSettingsUpdate == null) {
+            storage.onSetStringHook = null;
+            concurrentSettingsUpdate = service.saveSettings(
+              const SmartPushSettings(
+                enabled: true,
+                pushMode: PushMode.smart,
+                pushIntensity: PushIntensity.frequent,
+                dailyQuotePushEnabled: false,
+              ),
+            );
+            await Future<void>.delayed(Duration.zero);
+          }
+        };
+
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        expect(concurrentSettingsUpdate, isNotNull);
+        await concurrentSettingsUpdate;
+        await service.waitForPendingScheduleForTest();
+
+        expect(service.settings.pushIntensity, equals(PushIntensity.frequent));
+        expect(
+          await service.analytics.getTodayPushCount(now: currentNow),
+          equals(1),
+        );
+        // 同一条未点击通知不应在中断重试时自己把自己提前结算为未点击
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        final trackedRaw =
+            storage.getString('smart_push_prescheduled_entries_v1');
+        expect(trackedRaw, isNotNull);
+        final trackedList =
+            (jsonDecode(trackedRaw!) as List).cast<Map<String, dynamic>>();
+        final accountedEntry = trackedList.firstWhere(
+          (item) => item['id'] == nextDayCall.id,
+        );
+        expect(accountedEntry['accounted'], isTrue);
+      },
+    );
+
+    test(
+      'immediate notifications allocate monotonic 31-bit IDs without colliding at fixed clock',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.standard;
+        exactAlarmPermitted = true;
+        final wallNow = DateTime.now();
+        databaseService.notes = [
+          Quote(
+            id: 'bbbb8888-8888-8888-8888-888888888888',
+            content: '验证立即推送通知在固定时钟下仍单调递增且落入独立 31 位正整数区间的回归笔记。',
+            date: DateTime(
+              wallNow.year - 1,
+              wallNow.month,
+              wallNow.day,
+              9,
+              0,
+            ).toIso8601String(),
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.triggerPush();
+        await service.triggerPush();
+
+        expect(notificationsPlugin.shownCalls, hasLength(2));
+        final firstId = notificationsPlugin.shownCalls[0].id;
+        final secondId = notificationsPlugin.shownCalls[1].id;
+        expect(firstId, greaterThanOrEqualTo(300000000));
+        expect(firstId, lessThanOrEqualTo(1999999999));
+        expect(secondId, equals(firstId + 1));
+      },
+    );
   });
 }
