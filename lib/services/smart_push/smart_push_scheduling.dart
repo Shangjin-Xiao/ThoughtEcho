@@ -1189,6 +1189,17 @@ extension SmartPushScheduling on SmartPushService {
             if (prev.noteId != null && !visibleNoteIds.contains(prev.noteId))
               prev.id,
       };
+      final invalidatedRegularDays = <String>{
+        if (visibleNoteIds != null)
+          for (final prev in effectivePreviousEntries)
+            if (!prev.isDailyQuote &&
+                prev.epochMs > 0 &&
+                prev.noteId != null &&
+                !visibleNoteIds.contains(prev.noteId))
+              tz.TZDateTime.fromMillisecondsSinceEpoch(tz.local, prev.epochMs)
+                  .toIso8601String()
+                  .substring(0, 10),
+      };
 
       final itemsToWrite = plannedItems.where((item) {
         if (item.content != null) return true;
@@ -1203,7 +1214,8 @@ extension SmartPushScheduling on SmartPushService {
         if (suppressedDuplicateRegularFallbackDays.contains(itemDayKey)) {
           return false;
         }
-        if (invalidatedIds.contains(item.id)) {
+        if (invalidatedIds.contains(item.id) ||
+            invalidatedRegularDays.contains(itemDayKey)) {
           return false;
         }
         if (isNoteOnlyMode && !regularPrecomputationFailed) {
@@ -2306,6 +2318,18 @@ extension SmartPushScheduling on SmartPushService {
         ..._settings.recentlyPushedNoteIds,
         ...retainedPendingNoteIds,
       };
+      final effectiveVisibleForInvalidated =
+          trackedVisibleNoteIds ?? visibleNoteIds;
+      final invalidatedPreviousDays = <String>{
+        for (final prev in previousEntries)
+          if (!prev.isDailyQuote &&
+              prev.epochMs > 0 &&
+              prev.noteId != null &&
+              !effectiveVisibleForInvalidated.contains(prev.noteId))
+            tz.TZDateTime.fromMillisecondsSinceEpoch(tz.local, prev.epochMs)
+                .toIso8601String()
+                .substring(0, 10),
+      };
       final items = <_PlannedLocalNotification>[];
 
       for (final rawSlot in rawRegularSlots) {
@@ -2357,12 +2381,14 @@ extension SmartPushScheduling on SmartPushService {
           slotIndex: rawSlot.slotIndex,
         );
         final effectiveVisibleForSlot = trackedVisibleNoteIds ?? visibleNoteIds;
-        final hadInvalidatedPreviousNote = previousEntries.any(
-          (prev) =>
-              prev.id == id &&
-              prev.noteId != null &&
-              !effectiveVisibleForSlot.contains(prev.noteId),
-        );
+        final hadInvalidatedPreviousNote =
+            invalidatedPreviousDays.contains(dayKey) ||
+                previousEntries.any(
+                  (prev) =>
+                      prev.id == id &&
+                      prev.noteId != null &&
+                      !effectiveVisibleForSlot.contains(prev.noteId),
+                );
         final isSuppressedEmptyFallback = candidateContent == null &&
             (useLocalQuotesOnly ||
                 hadInvalidatedPreviousNote ||
@@ -2530,34 +2556,180 @@ extension SmartPushScheduling on SmartPushService {
     }
   }
 
+  /// iOS 单次每日一言（ID=100）在暖启动点击后单独续订下一次触发，
+  /// 不受 `handleAppResumed` 同日 6 小时节流限制，也不改动常规提醒计划。
+  Future<void> _rearmIosDailyQuoteAfterTap({
+    int? tappedEpochMs,
+    String? previousQuoteContent,
+  }) {
+    return _enqueueScheduleOperation((generation) async {
+      try {
+        tz.local;
+      } catch (_) {
+        await _initializeTimezone();
+      }
+      if (!_isScheduleGenerationCurrent(generation)) return;
+
+      await _reloadSharedStorageIfSupported();
+      if (!_isScheduleGenerationCurrent(generation)) return;
+      if (!_isIOS ||
+          !_settings.dailyQuotePushEnabled ||
+          _areStoredSettingsAllDisabled()) {
+        return;
+      }
+
+      final expectedEpoch = _readStoredSettingsEpoch();
+      final expectedScheduleEpoch = _readStoredScheduleEpoch();
+
+      tz.TZDateTime computeNextIosDailyQuoteDate(PushTimeSlot slot) {
+        var candidate = _nextInstanceOfTime(
+          slot.hour,
+          slot.minute,
+          respectsFrequency: false,
+        );
+        final nowLocal = tz.TZDateTime.from(_now(), tz.local);
+        final tappedTodaySlot = tappedEpochMs != null &&
+            tappedEpochMs > 0 &&
+            (() {
+              final tappedLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
+                tz.local,
+                tappedEpochMs,
+              );
+              return tappedLocal.year == nowLocal.year &&
+                  tappedLocal.month == nowLocal.month &&
+                  tappedLocal.day == nowLocal.day;
+            })();
+        final isSameDayAsNow = candidate.year == nowLocal.year &&
+            candidate.month == nowLocal.month &&
+            candidate.day == nowLocal.day;
+        if (isSameDayAsNow &&
+            (tappedTodaySlot || !nowLocal.isBefore(candidate))) {
+          candidate = tz.TZDateTime(
+            tz.local,
+            nowLocal.year,
+            nowLocal.month,
+            nowLocal.day + 1,
+            slot.hour,
+            slot.minute,
+          );
+        }
+        return candidate;
+      }
+
+      final initialSlot = _settings.dailyQuotePushTime;
+      final previewDate = computeNextIosDailyQuoteDate(initialSlot);
+      final nowLocalForCache = tz.TZDateTime.from(_now(), tz.local);
+      final isFutureCalendarDay = previewDate.year != nowLocalForCache.year ||
+          previewDate.month != nowLocalForCache.month ||
+          previewDate.day != nowLocalForCache.day;
+
+      final resolved = await _resolveStandaloneDailyQuote(
+        excludeQuoteContent: previousQuoteContent,
+        updateTodayCache: !isFutureCalendarDay,
+      );
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        fromBackground: false,
+      )) {
+        return;
+      }
+      final precomputedContent = resolved != null
+          ? _PushContent(
+              title: '📖 每日一言',
+              body: _buildNotificationBody(resolved.quote),
+              noteId: null,
+              sourceNoteId: resolved.sourceNoteId,
+              contentType: 'dailyQuote',
+              dailyQuoteData: resolved.quoteData,
+            )
+          : null;
+
+      await _withScheduleCommitLock(() async {
+        if (!await _isScheduleContextStillValid(
+          generation: generation,
+          expectedEpoch: expectedEpoch,
+          expectedScheduleEpoch: expectedScheduleEpoch,
+          fromBackground: false,
+          reloadStorage: true,
+        )) {
+          return;
+        }
+        if (!_settings.dailyQuotePushEnabled) {
+          return;
+        }
+
+        final slot = _settings.dailyQuotePushTime;
+        final scheduledDate = computeNextIosDailyQuoteDate(slot);
+        final pendingIds = await _queryPendingLocalNotificationIds();
+        if (pendingIds != null && pendingIds.contains(100)) {
+          final alreadyScheduledFuture = _loadTrackedPreScheduledEntries().any(
+            (e) =>
+                e.id == 100 &&
+                e.epochMs >= scheduledDate.millisecondsSinceEpoch,
+          );
+          if (alreadyScheduledFuture) {
+            return;
+          }
+        }
+
+        await _scheduleLocalNotification(
+          100,
+          scheduledDate,
+          slot,
+          isDailyQuote: true,
+          precomputedContent: precomputedContent,
+          allowContentLookup: false,
+        );
+      });
+    });
+  }
+
   /// 非 Android 单条独立每日一言调度解析：优先使用有效缓存/本地库，无本地内容时请求用户配置的在线一言源
   Future<({Quote quote, String? sourceNoteId, Map<String, dynamic> quoteData})?>
-      _resolveStandaloneDailyQuote() async {
+      _resolveStandaloneDailyQuote({
+    String? excludeQuoteContent,
+    bool updateTodayCache = true,
+  }) async {
     try {
+      final excluded = excludeQuoteContent?.trim() ?? '';
+      bool isExcludedContent(String candidate) {
+        final trimmed = candidate.trim();
+        if (trimmed.isEmpty) return false;
+        if (excluded.isNotEmpty && trimmed == excluded) return true;
+        return _hasDailyQuoteContentPushed(trimmed);
+      }
+
       final localResolved = await _resolvePreScheduleDailyQuote();
       if (localResolved != null &&
-          !_hasDailyQuoteContentPushed(localResolved.quote.content)) {
+          !isExcludedContent(localResolved.quote.content)) {
         return localResolved;
       }
 
-      var data = await _loadDailyQuoteData(preferCache: localResolved == null);
+      var data = await _loadDailyQuoteData(
+        preferCache: localResolved == null,
+        updateTodayCache: updateTodayCache,
+      );
       if (data == null) return localResolved;
 
       final firstContent = (data['hitokoto'] as String?)?.trim() ?? '';
-      if (firstContent.isNotEmpty &&
-          _hasDailyQuoteContentPushed(firstContent)) {
-        data = await _loadDailyQuoteData(preferCache: false);
-        if (data == null) return null;
+      if (firstContent.isNotEmpty && isExcludedContent(firstContent)) {
+        data = await _loadDailyQuoteData(
+          preferCache: false,
+          updateTodayCache: updateTodayCache,
+        );
+        if (data == null) return localResolved;
       }
 
       final type = (data['type'] as String?)?.trim() ?? '';
       final provider = (data['provider'] as String?)?.trim() ?? '';
       if (type == 'offline' || type == 'local-empty' || provider == 'offline') {
-        return null;
+        return localResolved;
       }
 
       final content = (data['hitokoto'] as String?)?.trim() ?? '';
-      if (content.isEmpty) return null;
+      if (content.isEmpty) return localResolved;
       final fromWho = (data['from_who'] as String?)?.trim() ?? '';
       final from = (data['from'] as String?)?.trim() ?? '';
       final rawLocalId = data['local_quote_id'];

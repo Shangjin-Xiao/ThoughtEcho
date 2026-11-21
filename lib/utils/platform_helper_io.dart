@@ -4,11 +4,15 @@ import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 class PlatformHelper {
+  @visibleForTesting
+  static void Function(File lockFile)? debugBeforeLockCreateHook;
+
   static bool get isAndroid => Platform.isAndroid;
   static bool get isIOS => Platform.isIOS;
   static bool get isWindows => Platform.isWindows;
@@ -144,6 +148,31 @@ class PlatformHelper {
     return false;
   }
 
+  static bool _isRetryableLockCreateError(FileSystemException e) {
+    final code = e.osError?.errorCode;
+    if (code == null) {
+      return true;
+    }
+    if (Platform.isWindows) {
+      // ERROR_FILE_NOT_FOUND (2), ERROR_PATH_NOT_FOUND (3),
+      // ERROR_ACCESS_DENIED (5, transient pending-delete on lockfile),
+      // ERROR_SHARING_VIOLATION (32), ERROR_FILE_EXISTS (80),
+      // ERROR_ALREADY_EXISTS (183).
+      return code == 2 ||
+          code == 3 ||
+          code == 5 ||
+          code == 32 ||
+          code == 80 ||
+          code == 183;
+    }
+    // POSIX (Android / Linux / iOS / macOS):
+    // ENOENT (2), EINTR (4), EAGAIN/EWOULDBLOCK (11 / 35), EEXIST (17).
+    // Persistent storage/permission errors such as EPERM (1), EACCES (13),
+    // ENOTDIR (20), EISDIR (21), ENFILE (23), EMFILE (24), ENOSPC (28),
+    // EROFS (30), ENAMETOOLONG (36), and EDQUOT (122) fail fast.
+    return code == 2 || code == 4 || code == 11 || code == 17 || code == 35;
+  }
+
   /// Serializes [action] both across async tasks within the current Isolate and
   /// across concurrent Isolates sharing the app's filesystem via `O_CREAT|O_EXCL`.
   ///
@@ -184,8 +213,8 @@ class PlatformHelper {
     final effectiveStaleTimeout = staleLockTimeout <= Duration.zero
         ? const Duration(milliseconds: 50)
         : staleLockTimeout;
-    final effectiveAcquireTimeout = acquireTimeout <= effectiveStaleTimeout
-        ? effectiveStaleTimeout * 3
+    final effectiveAcquireTimeout = acquireTimeout <= Duration.zero
+        ? const Duration(milliseconds: 10)
         : acquireTimeout;
     final waitWatch = Stopwatch()..start();
     DateTime? observedModified;
@@ -195,15 +224,35 @@ class PlatformHelper {
 
     try {
       while (!lockAcquired) {
+        var createdByCurrentAttempt = false;
         try {
+          debugBeforeLockCreateHook?.call(lockFile);
           lockFile.createSync(recursive: true, exclusive: true);
+          createdByCurrentAttempt = true;
           lockFile.writeAsStringSync(ownerToken, flush: true);
           lockAcquired = true;
           break;
         } on FileSystemException catch (e) {
-          var retryImmediately = false;
-          try {
-            if (lockFile.existsSync()) {
+          if (createdByCurrentAttempt) {
+            try {
+              lockFile.deleteSync();
+            } catch (_) {}
+            rethrow;
+          }
+
+          final lockEntityType = FileSystemEntity.typeSync(
+            lockFile.path,
+            followLinks: false,
+          );
+          if (lockEntityType == FileSystemEntityType.directory ||
+              !_isRetryableLockCreateError(e)) {
+            rethrow;
+          }
+
+          var evictedStaleLock = false;
+          if (lockEntityType != FileSystemEntityType.notFound &&
+              lockFile.existsSync()) {
+            try {
               final modified = lockFile.statSync().modified;
               final currentToken = _readLockOwnerToken(lockFile);
               if (observedModified != modified ||
@@ -243,7 +292,7 @@ class PlatformHelper {
                       moved.renameSync(lockFile.path);
                     } else {
                       moved.deleteSync();
-                      retryImmediately = true;
+                      evictedStaleLock = true;
                     }
                   } catch (_) {}
                 }
@@ -251,21 +300,21 @@ class PlatformHelper {
                 observedToken = null;
                 unchangedLockWatch = null;
               }
-            } else {
-              // Lockfile disappeared right after contention (holder released);
-              // keep the canonical lockPath and retry immediately.
-              observedModified = null;
-              observedToken = null;
-              unchangedLockWatch = null;
-              try {
-                lockFile.parent.createSync(recursive: true);
-              } catch (_) {}
-              retryImmediately = true;
+            } catch (_) {}
+          } else {
+            observedModified = null;
+            observedToken = null;
+            unchangedLockWatch = null;
+            final parentType = FileSystemEntity.typeSync(
+              lockFile.parent.path,
+              followLinks: false,
+            );
+            if (parentType != FileSystemEntityType.directory) {
+              // Surface persistent parent-directory errors (e.g. parent path
+              // occupied by a regular file, permission denied, or disk full)
+              // instead of spinning on a path that can never hold a lockfile.
+              lockFile.parent.createSync(recursive: true);
             }
-          } catch (_) {}
-
-          if (retryImmediately) {
-            continue;
           }
 
           if (waitWatch.elapsed >= effectiveAcquireTimeout) {
@@ -276,12 +325,13 @@ class PlatformHelper {
             );
           }
 
-          if (attempt < 3) {
-            await Future<void>.value();
-          } else {
-            await Future<void>.delayed(const Duration(milliseconds: 5));
-          }
+          final delayMs = (evictedStaleLock && attempt == 0)
+              ? 0
+              : (attempt == 0
+                  ? 1
+                  : (attempt < 4 ? 5 : (attempt < 8 ? 10 : 20)));
           attempt++;
+          await Future<void>.delayed(Duration(milliseconds: delayMs));
         }
       }
 

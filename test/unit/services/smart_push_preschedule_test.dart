@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/utils/platform_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/core/config/distribution_config.dart';
 import 'package:thoughtecho/models/app_settings.dart';
@@ -253,6 +252,7 @@ class _MemoryPreferences implements AppPreferencesService {
   final Map<String, Object> values;
   final bool isolatedCache;
   Future<void> Function(String key, String value)? onSetStringHook;
+  Future<void> Function()? onReloadHook;
 
   _MemoryPreferences({
     Map<String, Object>? sharedDisk,
@@ -268,6 +268,9 @@ class _MemoryPreferences implements AppPreferencesService {
       values
         ..clear()
         ..addAll(_backingDisk);
+    }
+    if (onReloadHook != null) {
+      await onReloadHook!();
     }
   }
 
@@ -3785,19 +3788,31 @@ void main() {
     );
 
     test(
-      'background rollback never cancels newer foreground notification on shared slot ID even on final renewal attempt',
+      'background rollback cancels written stale notifications while preserving newer foreground notification on shared slot ID',
       () async {
         DistributionConfig.debugChannelOverride = DistributionChannel.play;
-        currentNow = localTime(2026, 5, 10, 8, 0);
+        currentNow = localTime(2026, 5, 9, 8, 0);
 
-        Quote buildVersionedNote(int version) => Quote(
-              id: 'd${version}000000-1111-2222-3333-444444444444',
-              content: '五月十日同槽位并发替换笔记版本-$version，验证新提醒绝不被旧后台回滚误删。',
-              date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
-              favoriteCount: 10,
-            );
+        List<Quote> buildVersionedNotes(int version) => <Quote>[
+              Quote(
+                id: 'd${version}000000-1111-2222-3333-444444444444',
+                content:
+                    '跨日预调度共享槽位并发替换长笔记版本-$version，用于验证后台已写入旧通知必被回滚且前台同槽位新提醒完整保留，正文长度超过一百字避免命中短一言候选池。' *
+                        2,
+                date: DateTime(2025, 5, 12, 9, 0).toIso8601String(),
+                favoriteCount: 12,
+              ),
+              Quote(
+                id: 'd${version}999999-1111-2222-3333-444444444444',
+                content:
+                    '跨日预调度晚间副槽位长笔记版本-$version，用于支撑同日第二槽位真实写入系统通知队列并在移除后验证回滚清理，正文长度超过一百字避免命中短一言池。' *
+                        2,
+                date: DateTime(2026, 4, 1, 20, 0).toIso8601String(),
+                favoriteCount: 3,
+              ),
+            ];
 
-        databaseService.notes = <Quote>[buildVersionedNote(0)];
+        databaseService.notes = buildVersionedNotes(0);
 
         final sharedDisk = <String, Object>{};
         final fgStorage = _MemoryPreferences(
@@ -3842,62 +3857,158 @@ void main() {
         final bgService = buildIsolatedService(bgStorage);
         addTearDown(bgService.dispose);
 
+        // 先在 5 月 9 日开启 09:00 与 20:00 双槽位（此时仅追踪 5/9、5/10、5/11，5/12 尚未进入追踪表）
         await fgService.saveSettings(
           const SmartPushSettings(
             enabled: true,
             pushMode: PushMode.custom,
-            enabledPastNoteTypes: {PastNoteType.yearAgoToday},
+            enabledPastNoteTypes: {
+              PastNoteType.yearAgoToday,
+              PastNoteType.randomMemory,
+            },
             pushTimeSlots: [
               PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+              PushTimeSlot(hour: 20, minute: 0, label: '晚间回顾'),
             ],
             dailyQuotePushEnabled: false,
           ),
         );
 
-        final sharedSlotId =
+        // 推进到 5 月 10 日：后台续期滚动补写 5 月 12 日新窗口槽位（slotIndex=0 为 09:00，slotIndex=1 为 20:00）
+        currentNow = localTime(2026, 5, 10, 8, 0);
+        final sharedMorningSlotId =
             SmartPushService.deterministicPreScheduledNotificationId(
-          localTime(2026, 5, 10, 9, 0),
+          localTime(2026, 5, 12, 9, 0),
           slotIndex: 0,
         );
+        final may12EveningStaleOnlyId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          localTime(2026, 5, 12, 20, 0),
+          slotIndex: 1,
+        );
 
-        // 在每一轮（共 4 轮，含最后一轮）后台规划查库阶段，通过 Zone.root 触发独立锁上下文的前台提交，
-        // 使前台真实竞争并获取 schedule.lock 写入更新版本笔记，验证后台回滚与写后校验绝不误删共享槽位新提醒。
+        Future<void>? pendingFgSaveFuture;
+        var bgTriggeredRound = 0;
         var nextVersion = 1;
-        var currentBarrier = Completer<void>();
-        databaseService.pendingQueryBarrier = currentBarrier;
-        final bgFuture = bgService.renewPreScheduledQueueFromBackground();
-        for (var r = 0; r < 4; r++) {
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-          final barrierToRelease = currentBarrier;
-          databaseService.pendingQueryBarrier = null;
-          await Zone.root.run(() async {
-            final updatedNote = buildVersionedNote(nextVersion);
-            nextVersion++;
-            databaseService.notes = <Quote>[updatedNote];
-            databaseService.notifyChanged();
-            await fgService.waitForPendingScheduleForTest();
-          });
-          if (r + 1 < 4) {
-            currentBarrier = Completer<void>();
-            databaseService.pendingQueryBarrier = currentBarrier;
-          }
-          barrierToRelease.complete();
-        }
-        databaseService.pendingQueryBarrier = null;
-        await bgFuture;
+        var sawBgEveningStaleWrite = false;
+        var sawBgMorningStaleWriteCount = 0;
 
+        Future<void> waitForDiskKeyChange(
+          String key,
+          String? previousValue,
+        ) async {
+          for (var i = 0; i < 200; i++) {
+            if ((sharedDisk[key] as String?) != previousValue) {
+              return;
+            }
+            await Future<void>.delayed(const Duration(milliseconds: 1));
+          }
+        }
+
+        bgStorage.onReloadHook = () async {
+          if (bgTriggeredRound >= 1 && !File(scheduleLockPath).existsSync()) {
+            if (pendingFgSaveFuture != null) {
+              final f = pendingFgSaveFuture;
+              pendingFgSaveFuture = null;
+              await f;
+            }
+            await fgService.waitForPendingScheduleForTest();
+          }
+        };
+
+        notificationsPlugin.onScheduleHook = (call) async {
+          if (bgTriggeredRound == 0 &&
+              call.id == may12EveningStaleOnlyId &&
+              (call.body ?? '').contains('版本-0')) {
+            // 后台已真实调用 zonedSchedule 写入 5/12 09:00 与 20:00（slotIndex=1，尚未持久化到追踪表）！
+            // 此时前台在 Zone.root 移除 20:00 槽位并仅保留 09:00（slotIndex=0）：
+            // 唯有后台 _rollbackStaleBackgroundEntries(writtenEntries) 才能撤回 slotIndex=1 的已写入未追踪通知。
+            sawBgEveningStaleWrite = true;
+            bgTriggeredRound = 1;
+            final prevSettingsEpoch =
+                sharedDisk['smart_push_settings_epoch_v1'] as String?;
+            databaseService.notes = buildVersionedNotes(nextVersion++);
+            pendingFgSaveFuture = Zone.root.run(
+              () => fgService.saveSettings(
+                const SmartPushSettings(
+                  enabled: true,
+                  pushMode: PushMode.custom,
+                  enabledPastNoteTypes: {
+                    PastNoteType.yearAgoToday,
+                    PastNoteType.randomMemory,
+                  },
+                  pushTimeSlots: [
+                    PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+                  ],
+                  dailyQuotePushEnabled: false,
+                ),
+              ),
+            );
+            await waitForDiskKeyChange(
+              'smart_push_settings_epoch_v1',
+              prevSettingsEpoch,
+            );
+            return;
+          }
+
+          if (bgTriggeredRound >= 1 &&
+              bgTriggeredRound < 4 &&
+              call.id == sharedMorningSlotId &&
+              (call.body ?? '').contains('版本-$bgTriggeredRound')) {
+            // 在后续每一轮（直到第 4 轮最终轮）后台真实写入 sharedMorningSlotId 后触发前台笔记变更，
+            // 验证写后回滚不会误删前台紧随其后或先前写入的同确定性槽位新通知。
+            sawBgMorningStaleWriteCount++;
+            bgTriggeredRound++;
+            final prevScheduleEpoch =
+                sharedDisk['smart_push_schedule_epoch_v1'] as String?;
+            Zone.root.run(() {
+              databaseService.notes = buildVersionedNotes(nextVersion++);
+              databaseService.notifyChanged();
+            });
+            await waitForDiskKeyChange(
+              'smart_push_schedule_epoch_v1',
+              prevScheduleEpoch,
+            );
+          }
+        };
+
+        final bgFuture = bgService.renewPreScheduledQueueFromBackground();
+        await bgFuture;
+        bgStorage.onReloadHook = null;
+        notificationsPlugin.onScheduleHook = null;
+        if (pendingFgSaveFuture != null) {
+          await pendingFgSaveFuture;
+        }
+        await fgService.waitForPendingScheduleForTest();
+
+        expect(
+          sawBgEveningStaleWrite,
+          isTrue,
+          reason: '测试必须真实覆盖后台已调用 zonedSchedule 写入旧通知后再触发回滚的路径',
+        );
+        expect(sawBgMorningStaleWriteCount, equals(3));
         expect(nextVersion, equals(5));
+        expect(
+          notificationsPlugin.cancelledIds,
+          contains(may12EveningStaleOnlyId),
+          reason: '后台在写入后被新设置打断时，必须主动撤回尚未落盘追踪表的已写入旧通知',
+        );
 
         final pending = await notificationsPlugin.pendingNotificationRequests();
-        final matchingSlot =
-            pending.where((req) => req.id == sharedSlotId).toList();
         expect(
-          matchingSlot,
-          hasLength(1),
-          reason: '前台最后写入同确定性槽位 ID 的新通知绝不能在后台最后一轮回滚时被 cancel 删除',
+          pending.any((req) => req.id == may12EveningStaleOnlyId),
+          isFalse,
+          reason: '已被移除且未写入前台追踪表的 5/12 20:00 (slotIndex=1) 旧通知必须已被后台回滚清除',
         );
-        expect(matchingSlot.single.body, contains('版本-4'));
-        expect(matchingSlot.single.body, isNot(contains('版本-3')));
+        final matchingMorningSlot =
+            pending.where((req) => req.id == sharedMorningSlotId).toList();
+        expect(
+          matchingMorningSlot,
+          hasLength(1),
+          reason: '前台同确定性槽位 ID (slotIndex=0) 的最新通知在后台最终轮回滚后必须完整存活',
+        );
+        expect(matchingMorningSlot.single.body, contains('版本-4'));
+        expect(matchingMorningSlot.single.body, isNot(contains('版本-3')));
       },
     );
 
@@ -3934,6 +4045,7 @@ void main() {
         });
         final scheduleLockPath = '${sharedLockDir.path}/schedule.lock';
         var renewalTaskActive = false;
+        var cancelRenewalCallCount = 0;
 
         SmartPushService buildService(_MemoryPreferences prefs) {
           return SmartPushService(
@@ -3949,6 +4061,7 @@ void main() {
               renewalTaskActive = true;
             },
             cancelPreScheduleRenewalOverride: () async {
+              cancelRenewalCallCount++;
               renewalTaskActive = false;
             },
             scheduleLockFilePathOverride: scheduleLockPath,
@@ -3970,44 +4083,59 @@ void main() {
           ),
         );
 
-        final holdCommitLock = Completer<void>();
-        final lockEntered = Completer<void>();
-        final heldFuture = Zone.root.run(
-          () => PlatformHelper.withCrossIsolateLock<void>(
-            'smart_push_schedule_v1',
-            () async {
-              lockEntered.complete();
-              await holdCommitLock.future;
-            },
-            customLockFilePath: scheduleLockPath,
-          ),
-        );
-        await lockEntered.future;
+        var cancelAllCountAfterFgEnable = 0;
+        var cancelledIdsCountAfterFgEnable = 0;
+        var cancelRenewalCountAfterFgEnable = 0;
+        var fgEnabledBeforeBgCancel = false;
 
-        final bgRenewFuture = Zone.root.run(
-          () => bgService.renewPreScheduledQueueFromBackground(),
-        );
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-
-        final fgEnableFuture = Zone.root.run(
-          () => fgService.saveSettings(
-            const SmartPushSettings(
-              enabled: true,
-              pushMode: PushMode.custom,
-              enabledPastNoteTypes: {PastNoteType.yearAgoToday},
-              pushTimeSlots: [
-                PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
-              ],
-              dailyQuotePushEnabled: false,
+        // 在后台续期入口首次 reload() 捕获到旧的禁用快照（epoch=1）之后、进入 _cancelAllSchedulesInternal 之前，
+        // 先让前台完整执行完重新开启提醒与排期注册，确保后台滞后取消严格发生在前台排期完成之后（无后续重建机会）。
+        bgStorage.onReloadHook = () async {
+          bgStorage.onReloadHook = null;
+          await Zone.root.run(
+            () => fgService.saveSettings(
+              const SmartPushSettings(
+                enabled: true,
+                pushMode: PushMode.custom,
+                enabledPastNoteTypes: {PastNoteType.yearAgoToday},
+                pushTimeSlots: [
+                  PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+                ],
+                dailyQuotePushEnabled: false,
+              ),
             ),
-          ),
-        );
+          );
+          final pendingAfterEnable =
+              await notificationsPlugin.pendingNotificationRequests();
+          expect(pendingAfterEnable, hasLength(1));
+          expect(renewalTaskActive, isTrue);
+          cancelAllCountAfterFgEnable = notificationsPlugin.cancelAllCount;
+          cancelledIdsCountAfterFgEnable =
+              notificationsPlugin.cancelledIds.length;
+          cancelRenewalCountAfterFgEnable = cancelRenewalCallCount;
+          fgEnabledBeforeBgCancel = true;
+        };
 
-        holdCommitLock.complete();
-        await Future.wait([heldFuture, fgEnableFuture, bgRenewFuture]);
+        await bgService.renewPreScheduledQueueFromBackground();
+
+        expect(fgEnabledBeforeBgCancel, isTrue);
+        expect(
+          notificationsPlugin.cancelAllCount,
+          equals(cancelAllCountAfterFgEnable),
+          reason: '滞后的后台禁用取消必须在提交锁内识别到新纪元并直接跳过 cancelAll',
+        );
+        expect(
+          notificationsPlugin.cancelledIds.length,
+          equals(cancelledIdsCountAfterFgEnable),
+        );
+        expect(
+          cancelRenewalCallCount,
+          equals(cancelRenewalCountAfterFgEnable),
+          reason: '滞后的后台禁用取消不得取消前台刚注册的周期续期任务',
+        );
 
         final pending = await notificationsPlugin.pendingNotificationRequests();
-        expect(pending, isNotEmpty);
+        expect(pending, hasLength(1));
         expect(renewalTaskActive, isTrue);
       },
     );
@@ -4017,21 +4145,36 @@ void main() {
       () async {
         DistributionConfig.debugChannelOverride = DistributionChannel.play;
         currentNow = localTime(2026, 5, 10, 7, 30);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        databaseService.localDailyQuoteResult = null;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(AppSettings(useLocalQuotesOnly: true).toJson()),
+        );
 
         final day1OnlyNote = Quote(
           id: 'f1000000-1111-2222-3333-444444444444',
-          content: '五月十日专属那年今日笔记，隐藏后当日无替代内容但不应拉长冷却期。',
-          date: localTime(2025, 5, 10, 8, 0).toIso8601String(),
+          content:
+              '五月十日专属那年今日长笔记，隐藏后当日无替代内容但不应拉长预计连续未点击冷却期，正文超过一百字以避免落入短一言池。' * 2,
+          date: DateTime(2025, 5, 10, 8, 30).toIso8601String(),
           favoriteCount: 9,
         );
+        // 创建于 2026-05-04 14:00（距 5 月 10 日仅 6 天且时间差超过 30 分钟）：
+        // 在 5 月 10 日不满足那年今日、上月今日、上周今日、随机回忆（需 >7 天）或往日此时；
+        // 仅在 5 月 11 日满足「上周今日」（恰满 7 天）。
         final day2OnlyNote = Quote(
           id: 'f2000000-1111-2222-3333-444444444444',
-          content: '五月十一日专属那年今日笔记，在首日槽位因隐藏撤回后仍应正常排期。',
-          date: localTime(2025, 5, 11, 8, 0).toIso8601String(),
+          content: '五月四日下午记录的专属周回顾长笔记，仅在五月十一日满足上周今日条件，在首日无法被选为随机回忆或往日此时。' * 2,
+          date: DateTime(2026, 5, 4, 14, 0).toIso8601String(),
           favoriteCount: 9,
         );
         databaseService.notes = <Quote>[day1OnlyNote, day2OnlyNote];
 
+        await storage.setString(
+          'smart_push_app_open_times',
+          localTime(2026, 5, 8, 9, 0).toIso8601String(),
+        );
         await storage.setString('smart_push_unengaged_streak', '3');
 
         final service = SmartPushService(
@@ -4051,12 +4194,31 @@ void main() {
         await service.initialize();
 
         await service.saveSettings(
-          const SmartPushSettings(
+          SmartPushSettings(
             enabled: true,
             pushMode: PushMode.smart,
             dailyQuotePushEnabled: false,
+            lastPushTime: localTime(2026, 5, 9, 9, 0),
           ),
         );
+
+        final day1SlotId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          localTime(2026, 5, 10, 9, 0),
+          slotIndex: 0,
+        );
+        final day2SlotId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          localTime(2026, 5, 11, 9, 0),
+          slotIndex: 0,
+        );
+
+        // 隐藏前：5 月 10 日 09:00（距上次推送恰满 24h，满足 streak=3 冷却）排入后，
+        // 预计连续未点击升至 4（72 小时冷却），因此 5 月 11 日 09:00 最初被冷却抑制
+        final pendingBeforeHide =
+            await notificationsPlugin.pendingNotificationRequests();
+        expect(pendingBeforeHide.any((req) => req.id == day1SlotId), isTrue);
+        expect(pendingBeforeHide.any((req) => req.id == day2SlotId), isFalse);
 
         databaseService.notes = <Quote>[day2OnlyNote];
         databaseService.notifyChanged();
@@ -4064,9 +4226,138 @@ void main() {
 
         final pending = await notificationsPlugin.pendingNotificationRequests();
         expect(
-          pending.any((req) => (req.body ?? '').contains('五月十一日专属那年今日笔记')),
-          isTrue,
-          reason: '因源笔记隐藏而取消的槽位不应推进预计连续未点击冷却期',
+          pending.any((req) => req.id == day1SlotId),
+          isFalse,
+          reason: '5 月 10 日在源笔记隐藏后无任何合格候选，当日不应残留或替补任何通知',
+        );
+        final day2Matches =
+            pending.where((req) => req.id == day2SlotId).toList();
+        expect(
+          day2Matches,
+          hasLength(1),
+          reason: '因源笔记隐藏而取消的首日槽位不应推进预计冷却期，5 月 11 日提醒（距上次推送 48h >= 24h）必须恢复排期',
+        );
+        expect(
+          day2Matches.single.body,
+          contains('五月四日下午记录的专属周回顾长笔记'),
+        );
+      },
+    );
+
+    test(
+      'warm tap on iOS standalone Daily Quote rearms next day notification without unthrottled resume refresh',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 55);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        databaseService.notes.clear();
+        databaseService.localDailyQuoteResult = null;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: false,
+              dailyQuoteProvider: ApiService.hitokotoProvider,
+            ).toJson(),
+          ),
+        );
+
+        var providerCalls = 0;
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          providerCalls++;
+          final quoteText =
+              providerCalls == 1 ? '首日晨间一言：清风徐来，水波不兴。' : '次日预备一言：行到水穷处，坐看云起时。';
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': quoteText,
+              'from_who': '示例作者甲',
+              'from': '示例诗文集',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final initialDailyCalls = notificationsPlugin.scheduledCalls
+            .where((c) => c.id == 100)
+            .toList();
+        expect(initialDailyCalls, isNotEmpty);
+        final firstScheduled = initialDailyCalls.last;
+        expect(
+            firstScheduled.scheduledDate, equals(localTime(2026, 5, 10, 9, 0)));
+        expect(firstScheduled.body, contains('首日晨间一言'));
+
+        // 09:01 触发并暖启动点击：距 08:55 仅过去 6 分钟，handleAppResumed 受同日 6 小时节流限制不会重排
+        currentNow = localTime(2026, 5, 10, 9, 1);
+        await iosService.handleAppResumed();
+        expect(
+          await notificationsPlugin.pendingNotificationRequests(),
+          isEmpty,
+          reason: '同日 6 小时节流窗口内的前台恢复不会重新注册单次 iOS 每日一言通知',
+        );
+
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 100,
+            payload: firstScheduled.payload,
+          ),
+        );
+
+        // 本次点击仍准确消费并保留首日一言缓存，不被明日预取内容覆盖
+        final tappedDisplay =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(tappedDisplay, isNotNull);
+        expect(tappedDisplay!['hitokoto'], contains('首日晨间一言'));
+        final todayCached = await iosService.getCachedDailyQuoteForToday();
+        expect(todayCached, isNotNull);
+        expect(todayCached!['hitokoto'], contains('首日晨间一言'));
+
+        // 验证明日（5 月 11 日 09:00）的 ID=100 通知已被自动续订，且未额外创建常规提醒
+        final pendingAfterTap =
+            await notificationsPlugin.pendingNotificationRequests();
+        expect(pendingAfterTap.map((r) => r.id).toList(), equals(<int>[100]));
+        final rearmedCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          rearmedCall.scheduledDate,
+          equals(localTime(2026, 5, 11, 9, 0)),
+        );
+        expect(rearmedCall.body, contains('次日预备一言'));
+        expect(
+          notificationsPlugin.scheduledCalls.where((c) => c.id != 100),
+          isEmpty,
         );
       },
     );

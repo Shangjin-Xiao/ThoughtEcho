@@ -74,6 +74,25 @@ extension SmartPushNotification on SmartPushService {
     NotificationResponse response,
   ) async {
     final parsed = await _recordNotificationTapState(response);
+    final shouldRearmIosDailyQuote = !_isDisposed &&
+        _isIOS &&
+        _settings.dailyQuotePushEnabled &&
+        (parsed.notificationId == 100 ||
+            (parsed.contentType == 'dailyQuote' && parsed.noteId == null));
+    int? tappedIosDailyQuoteEpochMs;
+    String? tappedIosDailyQuoteContent;
+    if (shouldRearmIosDailyQuote) {
+      final targetId = parsed.notificationId ?? 100;
+      for (final entry in _loadTrackedPreScheduledEntries()) {
+        if (entry.id == targetId) {
+          tappedIosDailyQuoteEpochMs = entry.epochMs;
+          tappedIosDailyQuoteContent =
+              (entry.dailyQuoteData?['hitokoto'] as String?)?.trim();
+          break;
+        }
+      }
+    }
+
     Future<void>? rescheduleFuture;
     if (!_isDisposed &&
         _isAndroid &&
@@ -90,6 +109,15 @@ extension SmartPushNotification on SmartPushService {
       });
     }
     await _performNotificationTapNavigation(parsed);
+    if (shouldRearmIosDailyQuote && !_isDisposed) {
+      // 在导航消费完当前 ID=100 的追踪一言数据后再续订下一日通知，避免覆盖本次点击展示内容
+      await _rearmIosDailyQuoteAfterTap(
+        tappedEpochMs: tappedIosDailyQuoteEpochMs,
+        previousQuoteContent: tappedIosDailyQuoteContent,
+      ).catchError((Object e, StackTrace stack) {
+        AppLogger.w('iOS 每日一言点击后续订下一日通知失败', error: e, stackTrace: stack);
+      });
+    }
     if (rescheduleFuture != null) {
       await rescheduleFuture;
     }
@@ -415,6 +443,7 @@ extension SmartPushNotification on SmartPushService {
 
   Future<Map<String, dynamic>?> _loadDailyQuoteData({
     bool preferCache = true,
+    bool updateTodayCache = true,
   }) async {
     if (preferCache) {
       final cachedData = await getCachedDailyQuoteForToday();
@@ -440,7 +469,9 @@ extension SmartPushNotification on SmartPushService {
       return null;
     }
     final normalizedType = (normalizedData['type'] as String?)?.trim() ?? '';
-    if (normalizedType != 'offline' && normalizedType != 'local-empty') {
+    if (updateTodayCache &&
+        normalizedType != 'offline' &&
+        normalizedType != 'local-empty') {
       _saveDailyQuoteToCache(normalizedData);
     }
     return normalizedData;

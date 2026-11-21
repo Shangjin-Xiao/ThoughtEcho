@@ -766,7 +766,9 @@ extension SmartPushPlatform on SmartPushService {
       }
 
       if (persistSingleTrackedEntry &&
-          (content?.dailyQuoteData != null || content?.sourceNoteId != null)) {
+          (isDailyQuoteContent ||
+              content?.dailyQuoteData != null ||
+              content?.sourceNoteId != null)) {
         await _withScheduleCommitLock(() async {
           final commitSeq = await _nextNotificationCommitSeq();
           final existing = _loadTrackedPreScheduledEntries()
