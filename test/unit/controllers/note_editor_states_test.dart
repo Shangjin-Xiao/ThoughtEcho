@@ -1153,7 +1153,180 @@ void main() {
 
       state.finishSave();
       expect(state.isSaving, isFalse);
+      expect(state.isPersisting, isFalse);
       expect(state.saveProgress, 1.0);
+    });
+
+    test(
+        'markSavedSuccessfully clears submitted media while tracking subsequent imports separately',
+        () {
+      final state = NoteEditorMediaState();
+      state.recordImportedMedia('/tmp/first.png');
+      final submitted = state.sessionImportedMedia.toSet();
+      state.recordImportedMedia('/tmp/in_flight.png');
+
+      state.markSavedSuccessfully(submitted);
+
+      expect(state.didSaveSuccessfully, isTrue);
+      expect(state.unsavedImportedMedia, equals({'/tmp/in_flight.png'}));
+
+      state.recordImportedMedia('/tmp/post_save.png');
+      expect(
+        state.unsavedImportedMedia,
+        equals({'/tmp/in_flight.png', '/tmp/post_save.png'}),
+      );
+    });
+  });
+
+  group('NoteEditorState.markNotePersisted and Metadata Snapshot Tokens', () {
+    test(
+        'markNotePersisted clears dirty flag and updates draftStorageKey and initialPlainText when unchanged',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: true,
+      );
+
+      state.controller.replaceText(0, 0, 'Saved body', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      final snapshot = state.captureDocumentSnapshot();
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-1');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isFalse);
+      expect(state.restoredFromDraft, isFalse);
+      expect(state.draftStorageKey, 'persisted-id-1');
+      expect(state.initialPlainText, 'Saved body');
+
+      state.dispose();
+    });
+
+    test(
+        'markNotePersisted keeps isDirty true when document changed after snapshot was captured',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: false,
+      );
+
+      state.controller.replaceText(0, 0, 'Committed', null);
+      await Future<void>.delayed(Duration.zero);
+      final snapshot = state.captureDocumentSnapshot();
+
+      // User types while persistence is in flight (even before stream drains)
+      state.controller.replaceText(9, 0, ' extra', null);
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-2');
+
+      expect(state.isDirty, isTrue);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+      expect(state.draftStorageKey, 'persisted-id-2');
+      expect(state.initialPlainText, 'Committed');
+
+      // Deleting the in-flight tail back to the persisted baseline marks it clean
+      state.controller.replaceText(9, 6, '', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'markNotePersisted compares Delta and keeps isDirty true on same-length edit before stream drains',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: false,
+      );
+
+      state.controller.replaceText(0, 0, 'Committed', null);
+      await Future<void>.delayed(Duration.zero);
+      final snapshot = state.captureDocumentSnapshot();
+
+      // Same-length replacement keeps document.length equal to _savedDocumentLength,
+      // exercising the Delta comparison inside markNotePersisted before stream drains
+      state.controller.replaceText(0, 1, 'K', null);
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-3');
+
+      expect(state.isDirty, isTrue);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // Restoring the original character brings Delta back to the persisted baseline
+      state.controller.replaceText(0, 1, 'C', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test('metadata snapshot token commits only the persisted baseline', () {
+      final metadata = NoteEditorMetadataState();
+      metadata.setAuthor('Author A');
+      final token = metadata.captureSnapshotToken();
+
+      // Metadata changes while save is in flight
+      metadata.setAuthor('Author B');
+      metadata.commitSnapshotToken(token);
+
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.setAuthor('Author A');
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      metadata.dispose();
+    });
+
+    test(
+        'toggling showLocation or showWeather after committing snapshot marks metadata dirty',
+        () {
+      final metadata = NoteEditorMetadataState()
+        ..updateLocation(
+          location: '示例省·示例市',
+          latitude: 30.0,
+          longitude: 120.0,
+          poiName: '示例区域',
+          show: true,
+        )
+        ..updateWeather(
+          weather: 'clear',
+          temperature: '22°C',
+          show: true,
+        );
+
+      final persistedWithLocationWeather = metadata.captureSnapshotToken();
+      metadata.commitSnapshotToken(persistedWithLocationWeather);
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Turning off location while raw location stays cached marks metadata dirty
+      metadata.showLocation = false;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.showLocation = true;
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Turning off weather while raw weather stays cached marks metadata dirty
+      metadata.showWeather = false;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      // Persisting with weather hidden makes hidden weather the new clean baseline
+      final persistedWithoutWeather = metadata.captureSnapshotToken();
+      metadata.commitSnapshotToken(persistedWithoutWeather);
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Re-enabling cached weather marks metadata dirty again
+      metadata.showWeather = true;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.dispose();
     });
   });
 }

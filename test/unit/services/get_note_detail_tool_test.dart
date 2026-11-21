@@ -5,6 +5,7 @@ import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/get_note_detail_tool.dart';
+import 'package:thoughtecho/services/agent_tools/propose_note_edit_tool.dart';
 import 'package:thoughtecho/services/database_service.dart';
 
 import '../../test_harness.dart';
@@ -241,6 +242,63 @@ void main() {
       final data = jsonDecode(result.content);
       expect(data['category'], '工作');
       expect(data['tags'], containsAll(['灵感', '生活']));
+    });
+
+    test(
+        'returns read-only plain text without substitute revision when rich Delta is unreadable and keeps edit proposals blocked',
+        () async {
+      final corruptQuote = Quote(
+        id: 'corrupt_rich_note',
+        content: 'Trip itinerary',
+        date: '2026-06-06T12:00:00Z',
+        editSource: 'fullscreen',
+        deltaContent: '[{"insert":"Trip itinerary',
+      );
+      final testDb = _TestDatabaseService(<Quote>[corruptQuote]);
+      final detailTool = GetNoteDetailTool(testDb);
+      final editTool = ProposeNoteEditTool(testDb);
+
+      expect(ProposeNoteEditTool.tryRevisionForQuote(corruptQuote), isNull);
+
+      final detailResult = await detailTool.execute(
+        ToolCall(
+          id: 'call_corrupt_detail',
+          name: 'get_note_detail',
+          arguments: const {'note_id': 'corrupt_rich_note'},
+        ),
+      );
+
+      expect(detailResult.isError, isFalse);
+      final data = jsonDecode(detailResult.content) as Map<String, dynamic>;
+      expect(
+        data['content'],
+        '<note id="corrupt_rich_note">Trip itinerary</note>',
+      );
+      expect(data['document_kind'], 'rich');
+      expect(data.containsKey('document_revision'), isFalse);
+      expect(data.containsKey('document_ops'), isFalse);
+      expect(data['document_revision_unavailable'], 'invalid_stored_delta');
+
+      final editResult = await editTool.execute(
+        ToolCall(
+          id: 'call_corrupt_edit',
+          name: 'propose_note_edit',
+          arguments: const {
+            'proposal_title': 'Attempt edit on corrupt delta',
+            'note_id': 'corrupt_rich_note',
+            'base_revision': 'placeholder-revision',
+            'result_kind': 'preserve',
+            'operations': [
+              {
+                'type': 'append',
+                'insert_text': '\nDay 2',
+              },
+            ],
+          },
+        ),
+      );
+      expect(editResult.isError, isTrue);
+      expect(editResult.content, contains('invalid_stored_delta'));
     });
   });
 }

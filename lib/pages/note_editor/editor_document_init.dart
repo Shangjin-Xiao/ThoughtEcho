@@ -535,10 +535,13 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     return totalChars * 2;
   }
 
-  Future<String> _getDocumentContentSafely() async {
+  Future<String> _getDocumentContentSafely([
+    NoteEditorDocumentSnapshot? snapshot,
+  ]) async {
     try {
       final memoryManager = DeviceMemoryManager();
-      final delta = _editorState.controller.document.toDelta();
+      final delta =
+          snapshot?.delta ?? _editorState.controller.document.toDelta();
       final deltaData = delta.toJson();
 
       // 快速估算内容大小，不再执行 deltaData.toString()

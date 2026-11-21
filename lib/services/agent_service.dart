@@ -113,12 +113,14 @@ class AgentNoteContext {
     required this.content,
     required this.documentKind,
     required this.documentRevision,
+    this.documentRevisionUnavailableReason,
   });
 
   final String? noteId;
   final String content;
   final NoteDocumentKind documentKind;
-  final String documentRevision;
+  final String? documentRevision;
+  final String? documentRevisionUnavailableReason;
 }
 
 /// Agent 运行时服务 — 基于 OpenAI 原生 tool calling 的 Agent Loop。
@@ -1403,15 +1405,57 @@ class AgentService extends ChangeNotifier {
     // 绑定笔记作为独立数据消息，避免把私人正文嵌入系统提示词。
     if (noteContext != null) {
       final noteId = noteContext.noteId;
+      final revision = noteContext.documentRevision;
+      const malformedDeltaReasons = <String>{
+        'invalid_stored_delta',
+        'invalid_ops',
+        'invalid_op',
+        'invalid_attributes',
+        'line_attribute_without_newline',
+        'plain_attributes_not_allowed',
+      };
+      const unsupportedFormattingReasons = <String>{
+        'unsafe_link',
+        'unsupported_attribute',
+        'invalid_attribute_value',
+        'embed_not_allowed',
+      };
+      final unavailableReason = noteContext.documentRevisionUnavailableReason;
+      final String readOnlyStatusLine;
+      if (unavailableReason == 'empty_document') {
+        readOnlyStatusLine = noteContext.content.trim().isEmpty
+            ? '状态: 该笔记当前正文为空，没有可用的编辑基线 document_revision；'
+                '请直接回应用户，不要调用 propose_note_edit 修改原笔记（如需新建内容可使用 propose_note_create）。\n'
+            : '状态: 该笔记存储的富文本插入内容为空且无法生成编辑基线，当前仅提供只读纯文本正文，没有可用的 document_revision；'
+                '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
+      } else if (unavailableReason != null &&
+          malformedDeltaReasons.contains(unavailableReason)) {
+        readOnlyStatusLine =
+            '状态: 该笔记存储的富文本数据无法解析为编辑基线，当前仅提供只读纯文本正文，没有可用的 document_revision；'
+            '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
+      } else if (unavailableReason != null &&
+          unsupportedFormattingReasons.contains(unavailableReason)) {
+        readOnlyStatusLine =
+            '状态: 该笔记内容正常可读，但包含暂不支持代理直接编辑的格式（如非网页链接或特殊样式），当前仅提供只读纯文本正文，没有可用的 document_revision；'
+            '请直接基于正文回答或分析，不要声称笔记损坏，也不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
+      } else {
+        readOnlyStatusLine = '状态: 当前仅提供该笔记的只读纯文本正文，没有可用的编辑基线 document_revision；'
+            '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
+      }
       // 草稿（还没入库）不能伪造一个 note_id 塞给模型——它既没法拿去调编辑工具，
       // 又会被当成事实汇报给用户（「这条笔记未保存」）。直接说清楚状态即可。
+      // 已入库笔记若无法计算编辑基线 revision，仅提供只读纯文本上下文，不伪造替代 revision。
       final identityLines = noteId == null
           ? '状态: 这是尚未保存到数据库的草稿，没有 note_id。\n'
               '不要声称笔记「未保存」或据此拒绝工作；要落库请用 propose_note_create，'
               '不要调用需要 note_id 的编辑工具。\n'
-          : 'note_id: ${escapeUntrustedText(noteId)}\n'
-              'document_kind: ${noteContext.documentKind.name}\n'
-              'document_revision: ${noteContext.documentRevision}\n';
+          : revision == null
+              ? 'note_id: ${escapeUntrustedText(noteId)}\n'
+                  'document_kind: ${noteContext.documentKind.name}\n'
+                  '$readOnlyStatusLine'
+              : 'note_id: ${escapeUntrustedText(noteId)}\n'
+                  'document_kind: ${noteContext.documentKind.name}\n'
+                  'document_revision: $revision\n';
       messages.add(openai.ChatMessage.user(
         '[当前绑定笔记 - 应用提供的引用信息]\n'
         '$identityLines'
