@@ -270,6 +270,50 @@ Widget buildSpaced() => Container(color: Colors.green);
         );
       },
     );
+
+    test(
+      'preserves exact line numbers when an added source line starts with ++ at column 0',
+      () async {
+        await initGitRepo();
+
+        await _writeFile(
+          tempDir,
+          'lib/pages/prefix_inc_page.dart',
+          '''
+import 'package:flutter/material.dart';
+
+int bumpCounter(int count) {
+  return count;
+}
+''',
+        );
+        await _git(tempDir.path, ['add', 'lib/pages/prefix_inc_page.dart']);
+        await _git(tempDir.path, ['commit', '-m', 'chore: add baseline']);
+
+        await _writeFile(
+          tempDir,
+          'lib/pages/prefix_inc_page.dart',
+          '''
+import 'package:flutter/material.dart';
+
+int bumpCounter(int count) {
+++count;
+  return count;
+}
+
+Widget buildBadAfterPlusPlus() => Container(color: Colors.red);
+''',
+        );
+
+        final result = await runLint(const []);
+        expect(result.exitCode, equals(1));
+        expect(
+          result.stderr as String,
+          contains(
+              'lib/pages/prefix_inc_page.dart:8 [no-material-named-colors]'),
+        );
+      },
+    );
   });
 
   group('Multiline lexical windows & showSnackBar / comment / string stripping',
@@ -517,12 +561,14 @@ Widget buildExempted() => Container(color: Colors.purple);
           'lib/pages/colors_check_page.dart',
           '''
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
 
 List<Color> buildPalette() => [
       Colors.transparent,
       Colors.black54,
       Colors.white70,
       Colors.blueAccent,
+      material.Colors.red,
     ];
 ''',
         );
@@ -533,13 +579,7 @@ List<Color> buildPalette() => [
         ]);
         expect(result.exitCode, equals(1));
         final err = result.stderr as String;
-        expect(err, isNot(contains('colors_check_page.dart:4')));
-        expect(
-          err,
-          contains(
-            'lib/pages/colors_check_page.dart:5 [no-material-named-colors]',
-          ),
-        );
+        expect(err, isNot(contains('colors_check_page.dart:5')));
         expect(
           err,
           contains(
@@ -550,6 +590,18 @@ List<Color> buildPalette() => [
           err,
           contains(
             'lib/pages/colors_check_page.dart:7 [no-material-named-colors]',
+          ),
+        );
+        expect(
+          err,
+          contains(
+            'lib/pages/colors_check_page.dart:8 [no-material-named-colors]',
+          ),
+        );
+        expect(
+          err,
+          contains(
+            'lib/pages/colors_check_page.dart:9 [no-material-named-colors]',
           ),
         );
       },
@@ -573,6 +625,10 @@ BorderRadius badMultilineRadius() => BorderRadius.circular(
 BorderRadius zeroRadius() => BorderRadius.circular(0);
 BorderRadius pillRadius() => BorderRadius.circular(999);
 BorderRadius tokenRadius(double cardRadius) => BorderRadius.circular(cardRadius);
+BorderRadius mixedBadRadius(bool isCard, double cardRadius) =>
+    BorderRadius.circular(isCard ? cardRadius : 12);
+BorderRadius mixedPillRadius(bool isPill, double cardRadius) =>
+    BorderRadius.circular(isPill ? 999 : cardRadius);
 ''',
         );
 
@@ -602,6 +658,13 @@ BorderRadius colorDotRadius() => BorderRadius.circular(21);
         expect(err, isNot(contains('custom_surface_card.dart:7')));
         expect(err, isNot(contains('custom_surface_card.dart:8')));
         expect(err, isNot(contains('custom_surface_card.dart:9')));
+        expect(
+          err,
+          contains(
+            'lib/widgets/custom_surface_card.dart:11 [no-hardcoded-border-radius]',
+          ),
+        );
+        expect(err, isNot(contains('custom_surface_card.dart:13')));
         expect(err, isNot(contains('accessible_color_grid.dart')));
       },
     );
@@ -756,6 +819,7 @@ Future<void> forwardToSentry(Object error) => Sentry.captureException(error);
 void main() {
   const safeLocation = '示例省·示例市';
   const safePoi = 'MockPOI';
+  // 任务完成都会释放资源，东西安装与选中山形图标均不会误报
   const normalWords = '时区与富文本选区不会误报';
   const leakedLocation = '$concreteCity$concreteDistrict';
 }
@@ -772,12 +836,13 @@ void main() {
         expect(
           err,
           contains(
-            'test/unit/models/sample_location_test.dart:5 [no-real-place-names-in-tests]',
+            'test/unit/models/sample_location_test.dart:6 [no-real-place-names-in-tests]',
           ),
         );
         expect(err, isNot(contains('sample_location_test.dart:2')));
         expect(err, isNot(contains('sample_location_test.dart:3')));
         expect(err, isNot(contains('sample_location_test.dart:4')));
+        expect(err, isNot(contains('sample_location_test.dart:5')));
       },
     );
 

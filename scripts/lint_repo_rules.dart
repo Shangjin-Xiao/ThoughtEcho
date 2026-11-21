@@ -443,11 +443,39 @@ Future<List<_FileScanTarget>> _collectGitDiffTargets({
 
   String? currentFile;
   var currentNewLine = 0;
+  var remainingOld = 0;
+  var remainingNew = 0;
 
-  final hunkHeader = RegExp(r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@');
+  final hunkHeader = RegExp(r'^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@');
 
   for (final raw in output.split('\n')) {
     final line = raw.endsWith('\r') ? raw.substring(0, raw.length - 1) : raw;
+
+    if (remainingOld > 0 || remainingNew > 0) {
+      if (line.startsWith(r'\')) {
+        continue;
+      }
+      if (line.startsWith('+') && remainingNew > 0) {
+        if (currentFile != null) {
+          addedLinesByFile[currentFile]!.add(currentNewLine);
+        }
+        currentNewLine++;
+        remainingNew--;
+        continue;
+      }
+      if (line.startsWith('-') && remainingOld > 0) {
+        remainingOld--;
+        continue;
+      }
+      if (line.startsWith(' ') && remainingOld > 0 && remainingNew > 0) {
+        currentNewLine++;
+        remainingOld--;
+        remainingNew--;
+        continue;
+      }
+      remainingOld = 0;
+      remainingNew = 0;
+    }
 
     if (line.startsWith('diff --git ')) {
       currentFile = null;
@@ -473,14 +501,10 @@ Future<List<_FileScanTarget>> _collectGitDiffTargets({
 
     final hunkMatch = hunkHeader.firstMatch(line);
     if (hunkMatch != null) {
-      currentNewLine = int.parse(hunkMatch.group(1)!);
+      remainingOld = int.parse(hunkMatch.group(1) ?? '1');
+      currentNewLine = int.parse(hunkMatch.group(2)!);
+      remainingNew = int.parse(hunkMatch.group(3) ?? '1');
       continue;
-    }
-
-    if (currentFile == null) continue;
-    if (line.startsWith('+') && !line.startsWith('+++')) {
-      addedLinesByFile[currentFile]!.add(currentNewLine);
-      currentNewLine++;
     }
   }
 
@@ -594,10 +618,11 @@ final _tailwindHexRegex = RegExp(
   caseSensitive: false,
 );
 
-/// Matches all `Colors.<member>` (including opacity variants like `black54`,
-/// `white70`, and `*Accent` swatches) while exempting `Colors.transparent`.
+/// Matches all `Colors.<member>` (including import-prefixed `material.Colors.*`,
+/// opacity variants like `black54`/`white70`, and `*Accent` swatches) while
+/// exempting `Colors.transparent`.
 final _materialNamedColorRegex = RegExp(
-  r'(?<!\.)\bColors\s*\.\s*(?!transparent\b)([a-z][A-Za-z0-9_]*)\b',
+  r'\bColors\s*\.\s*(?!transparent\b)([a-z][A-Za-z0-9_]*)\b',
 );
 
 final _themeStyleBranchRegex = RegExp(
@@ -649,9 +674,8 @@ bool _isHardcodedNumericRadiusArg(String directArgs) {
   if (qIdx != -1 && cIdx > qIdx) {
     final thenNum = double.tryParse(trimmed.substring(qIdx + 1, cIdx).trim());
     final elseNum = double.tryParse(trimmed.substring(cIdx + 1).trim());
-    if (thenNum != null && elseNum != null) {
-      return (thenNum > 0 && thenNum != 999) || (elseNum > 0 && elseNum != 999);
-    }
+    return (thenNum != null && thenNum > 0 && thenNum != 999) ||
+        (elseNum != null && elseNum > 0 && elseNum != 999);
   }
   return false;
 }
@@ -738,7 +762,7 @@ final _syntheticPlaceholdersRegex = RegExp(
 /// Concrete real place names / administrative regions / famous POIs forbidden in
 /// newly added `test/` fixtures & comments (`AGENTS.md` redaction rule).
 final _realPlaceNameInTestRegex = RegExp(
-  r'(北京市?|上海市?|天津市?|重庆市?|广州市?|深圳市?|杭州市?|南京市?|武汉市?|成都市?|西安市?|苏州市?|郑州市?|长沙市?|东莞市?|沈阳市?|青岛市?|合肥市?|佛山市?|宁波市?|昆明市?|福州市?|无锡市?|厦门市?|哈尔滨市?|长春市?|南昌市?|济南市?|大连市?|贵阳市?|温州市?|石家庄市?|泉州市?|南宁市?|金华市?|常州市?|珠海市?|惠州市?|嘉兴市?|南通市?|太原市?|保定市?|中山市?|台州市?|绍兴市?|烟台市?|兰州市?|海口市?|乌鲁木齐市?|呼和浩特市?|银川市?|西宁市?|拉萨市?|香港|澳门|台北市?|高雄市?|广东省?|浙江省?|江苏省?|山东省?|河南省?|四川省?|湖北省?|湖南省?|河北省?|福建省?|安徽省?|辽宁省?|陕西省?|江西省?|广西|云南省?|山西省?|贵州省?|吉林省?|黑龙江省?|内蒙古|新疆|甘肃省?|海南省?|宁夏|青海省?|西藏|台湾省?|海淀区?|朝阳区|西城区|东城区|浦东新区|浦东|静安区|徐汇区|黄浦区|南山区|福田区|西湖|苏堤|外滩|故宫|天安门|中关村|三里屯|陆家嘴|\b(?:Beijing|Shanghai|Guangzhou|Shenzhen|Hangzhou|Chengdu|Wuhan|Nanjing|Suzhou|Chongqing|Tianjin|Hong\s+Kong|Taipei)\b)',
+  r'(北京市?|上海市?|天津市?|重庆市?|广州市?|深圳市?|杭州市?|南京市?|武汉市?|成都市|(?<![完生形达组赞构变])成都(?![会是能要有在不已将可])|西安市|(?<!东)西安(?![装全排])|苏州市?|郑州市?|长沙市?|东莞市?|沈阳市?|青岛市?|合肥市?|佛山市?|宁波市?|昆明市?|福州市?|无锡市?|厦门市?|哈尔滨市?|长春市?|南昌市?|济南市?|大连市?|贵阳市?|温州市?|石家庄市?|泉州市?|南宁市?|金华市?|常州市?|珠海市?|惠州市?|嘉兴市?|南通市?|太原市?|保定市?|中山市|(?<![选命居正集])中山|台州市?|绍兴市?|烟台市?|兰州市?|海口市?|乌鲁木齐市?|呼和浩特市?|银川市?|西宁市?|拉萨市?|香港|澳门|台北市?|高雄市?|广东省?|浙江省?|江苏省?|山东省?|河南省?|四川省?|湖北省?|湖南省?|河北省?|福建省?|安徽省?|辽宁省?|陕西省?|江西省?|广西|云南省?|山西省?|贵州省?|吉林省?|黑龙江省?|内蒙古|新疆|甘肃省?|海南省?|宁夏|青海省?|西藏|台湾省?|海淀区?|朝阳区|西城区|东城区|浦东新区|浦东|静安区|徐汇区|黄浦区|南山区|福田区|西湖|苏堤|外滩|故宫|天安门|中关村|三里屯|陆家嘴|\b(?:Beijing|Shanghai|Guangzhou|Shenzhen|Hangzhou|Chengdu|Wuhan|Nanjing|Suzhou|Chongqing|Tianjin|Hong\s+Kong|Taipei)\b)',
   caseSensitive: false,
 );
 
