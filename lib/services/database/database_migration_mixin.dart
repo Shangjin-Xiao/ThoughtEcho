@@ -116,6 +116,18 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
     );
   }
 
+  @override
+  Future<Map<String, dynamic>?> getLocalDailyQuoteById(
+    String quoteId, {
+    String offlineQuoteSource = 'tagOnly',
+  }) async {
+    return _healthService.getLocalDailyQuoteById(
+      await safeDatabase,
+      quoteId,
+      offlineQuoteSource: offlineQuoteSource,
+    );
+  }
+
   /// 手动触发数据库维护（VACUUM + ANALYZE）
   /// 应在存储管理页面由用户主动触发，带进度提示
   /// 返回维护结果和统计信息

@@ -345,18 +345,10 @@ Future<void> main() async {
             await locationService.init();
             logDebug('位置服务预初始化完成');
 
-            // 初始化智能推送服务
+            // 初始化智能推送服务（先记录本次冷启动访问，再执行首轮预调度，确保近 4 小时抑制窗口立即生效）
             logDebug('开始初始化智能推送服务...');
-            await smartPushService.initialize();
-            logDebug('智能推送服务初始化完成');
-
-            // SOTA: 记录 App 打开时间（用于响应性热图分析）
-            try {
-              await smartPushService.analytics.recordAppOpen();
-              logDebug('SOTA: 已记录 App 打开时间');
-            } catch (e) {
-              logDebug('SOTA: 记录 App 打开时间失败: $e');
-            }
+            await smartPushService.initialize(recordAppOpenOnLaunch: true);
+            logDebug('智能推送服务初始化完成（已记录 App 打开时间）');
           } catch (e) {
             logDebug('预初始化服务失败: $e');
           }
@@ -793,6 +785,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         } catch (e, stackTrace) {
           AppLogger.e(
             '应用回到前台触发 WebDAV 后台同步失败',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'AppLifecycle',
+          );
+        }
+        try {
+          await SmartPushService.currentInstance?.handleAppResumed();
+        } catch (e, stackTrace) {
+          AppLogger.w(
+            '应用回到前台刷新智能推送计划失败',
             error: e,
             stackTrace: stackTrace,
             source: 'AppLifecycle',

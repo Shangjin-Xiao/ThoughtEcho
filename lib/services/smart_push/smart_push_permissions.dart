@@ -170,6 +170,11 @@ extension SmartPushPermissions on SmartPushService {
 
   /// 打开应用设置页面（用于手动设置自启动等）
   Future<void> openSystemAppSettings() async {
+    final override = _openSystemAppSettingsOverride;
+    if (override != null) {
+      await override();
+      return;
+    }
     try {
       await openAppSettings();
     } catch (e) {
@@ -199,6 +204,10 @@ extension SmartPushPermissions on SmartPushService {
   ///
   /// 返回一个包含所有权限状态的 Map，用于 UI 展示
   Future<PushPermissionStatus> getPushPermissionStatus() async {
+    final override = _permissionStatusOverride;
+    if (override != null) {
+      return override();
+    }
     if (kIsWeb) {
       return PushPermissionStatus(
         notificationEnabled: true,

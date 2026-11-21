@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
@@ -6,6 +7,161 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+
+typedef _PosixMallocNative = ffi.Pointer<ffi.Void> Function(ffi.IntPtr size);
+typedef _PosixMallocDart = ffi.Pointer<ffi.Void> Function(int size);
+typedef _PosixFreeNative = ffi.Void Function(ffi.Pointer<ffi.Void> ptr);
+typedef _PosixFreeDart = void Function(ffi.Pointer<ffi.Void> ptr);
+typedef _PosixOpen2Native = ffi.Int32 Function(
+  ffi.Pointer<ffi.Uint8> path,
+  ffi.Int32 oflag,
+);
+typedef _PosixOpen2Dart = int Function(ffi.Pointer<ffi.Uint8> path, int oflag);
+typedef _PosixFlockNative = ffi.Int32 Function(ffi.Int32 fd, ffi.Int32 op);
+typedef _PosixFlockDart = int Function(int fd, int op);
+typedef _PosixCloseNative = ffi.Int32 Function(ffi.Int32 fd);
+typedef _PosixCloseDart = int Function(int fd);
+typedef _PosixFdopenNative = ffi.Pointer<ffi.Void> Function(
+  ffi.Int32 fd,
+  ffi.Pointer<ffi.Uint8> mode,
+);
+typedef _PosixFdopenDart = ffi.Pointer<ffi.Void> Function(
+  int fd,
+  ffi.Pointer<ffi.Uint8> mode,
+);
+typedef _PosixFcloseNative = ffi.Int32 Function(ffi.Pointer<ffi.Void> stream);
+typedef _PosixFcloseDart = int Function(ffi.Pointer<ffi.Void> stream);
+
+/// Guard token owning an exclusively locked POSIX `FILE*` / `fd`.
+///
+/// Attached to [_PosixFlockBindings._fcloseFinalizer] so that if a background
+/// `FlutterEngine` / Dart `IsolateGroup` is torn down abruptly (e.g. Android
+/// `WorkManager` `onStopped()` -> `stopEngine`) without running Dart `finally`
+/// blocks, the VM's isolate-group shutdown runs `fclose(stream)` natively,
+/// closing the underlying descriptor and releasing the `flock` lock in-process.
+final class _PosixLockedFileHandle implements ffi.Finalizable {
+  _PosixLockedFileHandle._(this.fd, this._stream);
+
+  final int fd;
+  final ffi.Pointer<ffi.Void> _stream;
+  bool _released = false;
+
+  void release() {
+    if (_released) return;
+    _released = true;
+    _PosixFlockBindings.instance._detachFinalizer(this);
+    try {
+      _PosixFlockBindings.instance.unlock(fd);
+    } catch (_) {}
+    try {
+      _PosixFlockBindings.instance._fcloseStream(_stream);
+    } catch (_) {}
+  }
+}
+
+/// POSIX open-file-description advisory lock bindings (`flock`).
+///
+/// Unlike `RandomAccessFile.lockSync` (which uses process-associated `fcntl`
+/// locks on Linux/Android and therefore does not block sibling Dart `Isolate`s
+/// within the same OS process), each `open()` call creates an independent open
+/// file description whose `flock(LOCK_EX | LOCK_NB)` blocks both sibling
+/// `Isolate`s and separate OS processes, and is automatically released by the
+/// kernel if a holder process crashes or is killed, or via `NativeFinalizer`
+/// (`fclose`) if a background `FlutterEngine` / `IsolateGroup` is destroyed
+/// within a shared host process.
+final class _PosixFlockBindings {
+  _PosixFlockBindings._() {
+    final lib = ffi.DynamicLibrary.process();
+    _malloc = lib.lookupFunction<_PosixMallocNative, _PosixMallocDart>(
+      'malloc',
+    );
+    _free = lib.lookupFunction<_PosixFreeNative, _PosixFreeDart>('free');
+    _open2 = lib.lookupFunction<_PosixOpen2Native, _PosixOpen2Dart>('open');
+    _flock = lib.lookupFunction<_PosixFlockNative, _PosixFlockDart>('flock');
+    _close = lib.lookupFunction<_PosixCloseNative, _PosixCloseDart>('close');
+    _fdopen = lib.lookupFunction<_PosixFdopenNative, _PosixFdopenDart>(
+      'fdopen',
+    );
+    final fclosePtr = lib.lookup<ffi.NativeFunction<_PosixFcloseNative>>(
+      'fclose',
+    );
+    _fclose = fclosePtr.asFunction<_PosixFcloseDart>();
+    _fcloseFinalizer = ffi.NativeFinalizer(
+      fclosePtr.cast<ffi.NativeFinalizerFunction>(),
+    );
+    final modeBuf = _malloc(3);
+    if (modeBuf == ffi.nullptr) {
+      throw const FileSystemException('Failed to allocate fdopen mode buffer');
+    }
+    _rwModePtr = modeBuf.cast<ffi.Uint8>()
+      ..asTypedList(3).setAll(0, const <int>[0x72, 0x2B, 0]); // "r+\0"
+  }
+
+  static final _PosixFlockBindings instance = _PosixFlockBindings._();
+
+  // Identical across Linux, Android (Bionic), macOS, and iOS (Darwin).
+  static const int _oRdWr = 2;
+  static const int _lockEx = 2;
+  static const int _lockNb = 4;
+  static const int _lockUn = 8;
+
+  late final _PosixMallocDart _malloc;
+  late final _PosixFreeDart _free;
+  late final _PosixOpen2Dart _open2;
+  late final _PosixFlockDart _flock;
+  late final _PosixCloseDart _close;
+  late final _PosixFdopenDart _fdopen;
+  late final _PosixFcloseDart _fclose;
+  late final ffi.NativeFinalizer _fcloseFinalizer;
+  late final ffi.Pointer<ffi.Uint8> _rwModePtr;
+
+  int openRdWr(String path) {
+    final encoded = utf8.encode(path);
+    final rawPtr = _malloc(encoded.length + 1);
+    if (rawPtr == ffi.nullptr) {
+      return -1;
+    }
+    final bytePtr = rawPtr.cast<ffi.Uint8>();
+    try {
+      bytePtr.asTypedList(encoded.length + 1)
+        ..setRange(0, encoded.length, encoded)
+        ..[encoded.length] = 0;
+      return _open2(bytePtr, _oRdWr);
+    } finally {
+      _free(rawPtr);
+    }
+  }
+
+  bool tryLockExclusive(int fd) => _flock(fd, _lockEx | _lockNb) == 0;
+
+  _PosixLockedFileHandle? wrapLockedFd(int fd) {
+    final stream = _fdopen(fd, _rwModePtr);
+    if (stream == ffi.nullptr) {
+      unlock(fd);
+      closeFd(fd);
+      return null;
+    }
+    final handle = _PosixLockedFileHandle._(fd, stream);
+    _fcloseFinalizer.attach(handle, stream, detach: handle);
+    return handle;
+  }
+
+  void _detachFinalizer(_PosixLockedFileHandle handle) {
+    _fcloseFinalizer.detach(handle);
+  }
+
+  void _fcloseStream(ffi.Pointer<ffi.Void> stream) {
+    _fclose(stream);
+  }
+
+  void unlock(int fd) {
+    _flock(fd, _lockUn);
+  }
+
+  void closeFd(int fd) {
+    _close(fd);
+  }
+}
 
 class PlatformHelper {
   static bool get isAndroid => Platform.isAndroid;
@@ -26,6 +182,29 @@ class PlatformHelper {
 
   static Future<String> getCpuArchitecture() async {
     return is64BitProcess ? '64-bit' : '32-bit';
+  }
+
+  /// Reads Android's IANA system timezone (`persist.sys.timezone`) without
+  /// requiring an Activity-scoped MethodChannel, so headless WorkManager
+  /// isolates can resolve the exact device timezone.
+  static Future<String?> readAndroidSystemTimeZone() async {
+    if (!Platform.isAndroid ||
+        Platform.environment.containsKey('FLUTTER_TEST')) {
+      return null;
+    }
+    try {
+      final result = await Process.run(
+        'getprop',
+        const <String>['persist.sys.timezone'],
+      ).timeout(const Duration(seconds: 2));
+      if (result.exitCode != 0) {
+        return null;
+      }
+      final tzId = result.stdout.toString().trim();
+      return tzId.isEmpty ? null : tzId;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Reads raw bytes from [filePath] if the file exists on disk, or returns `null`.
@@ -57,7 +236,241 @@ class PlatformHelper {
 
   static final Map<String, Future<void>> _archiveLocks =
       <String, Future<void>>{};
+  static final Map<String, Future<void>> _crossIsolateLocks =
+      <String, Future<void>>{};
+  static final Object _heldLocksZoneKey = Object();
+  static String? _cachedCrossIsolateLockDir;
   static int _archiveStageSeq = 0;
+
+  static Future<String> _resolveCrossIsolateLockFilePath(
+    String lockName, {
+    String? customLockFilePath,
+  }) async {
+    if (customLockFilePath != null && customLockFilePath.trim().isNotEmpty) {
+      return p.normalize(customLockFilePath.trim());
+    }
+    final sanitized = lockName.replaceAll(RegExp(r'[^a-zA-Z0-9_.-]'), '_');
+    var baseDir = _cachedCrossIsolateLockDir;
+    if (baseDir == null) {
+      final candidates = <Future<String> Function()>[
+        () async => (await getApplicationSupportDirectory()).path,
+        () async => (await getApplicationDocumentsDirectory()).path,
+        () async => p.join(Directory.systemTemp.path, 'thoughtecho_locks'),
+      ];
+      for (final resolveCandidate in candidates) {
+        try {
+          final candidatePath = await resolveCandidate();
+          Directory(candidatePath).createSync(recursive: true);
+          baseDir = candidatePath;
+          break;
+        } catch (_) {}
+      }
+      baseDir ??= Directory.systemTemp.path;
+      _cachedCrossIsolateLockDir = baseDir;
+    }
+    return p.normalize(p.join(baseDir, '$sanitized.lock'));
+  }
+
+  static bool _isRetryableLockOpenError(FileSystemException e) {
+    final code = e.osError?.errorCode;
+    if (code == null) {
+      return false;
+    }
+    if (Platform.isWindows) {
+      // ERROR_FILE_NOT_FOUND (2), ERROR_SHARING_VIOLATION (32),
+      // ERROR_LOCK_VIOLATION (33).
+      return code == 2 || code == 32 || code == 33;
+    }
+    // POSIX: ENOENT (2), EINTR (4), EAGAIN/EWOULDBLOCK (11 / 35).
+    // Non-contention errors such as EPERM (1), EACCES (13), ENOTDIR (20),
+    // EISDIR (21), ENFILE (23), EMFILE (24), ENOSPC (28), EROFS (30),
+    // ENAMETOOLONG (36), and EDQUOT (122) fail fast.
+    return code == 2 || code == 4 || code == 11 || code == 35;
+  }
+
+  /// Serializes [action] both across async tasks within the current Isolate and
+  /// across concurrent Isolates / OS processes sharing the app's filesystem.
+  ///
+  /// Uses kernel-managed advisory locks on a permanent canonical lockfile per
+  /// [lockName] (`flock` open-file-description locks on POSIX and per-handle
+  /// `LockFileEx` via `RandomAccessFile.lockSync` on Windows) without renaming
+  /// or unlinking the shared lockfile path. Crashed holders are automatically
+  /// released by the OS kernel, and live holders can never be evicted.
+  static Future<T> withCrossIsolateLock<T>(
+    String lockName,
+    Future<T> Function() action, {
+    String? customLockFilePath,
+    Duration staleLockTimeout = const Duration(seconds: 60),
+    Duration acquireTimeout = const Duration(seconds: 180),
+  }) async {
+    final lockPath = await _resolveCrossIsolateLockFilePath(
+      lockName,
+      customLockFilePath: customLockFilePath,
+    );
+    final heldLocks = Zone.current[_heldLocksZoneKey];
+    if (heldLocks is Set<String> && heldLocks.contains(lockPath)) {
+      return action();
+    }
+
+    final previous = _crossIsolateLocks[lockPath] ?? Future<void>.value();
+    final turnCompleter = Completer<void>();
+    _crossIsolateLocks[lockPath] = turnCompleter.future;
+
+    try {
+      await previous;
+    } catch (_) {}
+
+    final lockFile = File(lockPath);
+    final effectiveAcquireTimeout = acquireTimeout <= Duration.zero
+        ? const Duration(milliseconds: 10)
+        : acquireTimeout;
+    final waitWatch = Stopwatch()..start();
+    var attempt = 0;
+    var nextFinalizerNudgeMs = 150;
+    _PosixLockedFileHandle? lockedPosixHandle;
+    RandomAccessFile? lockedWindowsHandle;
+
+    try {
+      while (lockedPosixHandle == null && lockedWindowsHandle == null) {
+        final entityType = FileSystemEntity.typeSync(
+          lockFile.path,
+          followLinks: false,
+        );
+        if (entityType == FileSystemEntityType.directory) {
+          throw FileSystemException(
+            'Cross-isolate lock path is a directory ($lockName)',
+            lockFile.path,
+          );
+        }
+
+        if (!lockFile.parent.existsSync()) {
+          lockFile.parent.createSync(recursive: true);
+        }
+
+        var contended = false;
+        OSError? lastOsError;
+
+        if (Platform.isWindows) {
+          RandomAccessFile? raf;
+          try {
+            raf = lockFile.openSync(mode: FileMode.append);
+          } on FileSystemException catch (e) {
+            if (!_isRetryableLockOpenError(e)) {
+              rethrow;
+            }
+            contended = true;
+            lastOsError = e.osError;
+          }
+          if (raf != null) {
+            try {
+              raf.lockSync(FileLock.exclusive);
+              lockedWindowsHandle = raf;
+              break;
+            } on FileSystemException catch (e) {
+              try {
+                raf.closeSync();
+              } catch (_) {}
+              contended = true;
+              lastOsError = e.osError;
+            }
+          }
+        } else {
+          if (!lockFile.existsSync()) {
+            try {
+              lockFile.createSync(exclusive: false);
+            } on FileSystemException catch (e) {
+              if (!_isRetryableLockOpenError(e)) {
+                rethrow;
+              }
+              contended = true;
+              lastOsError = e.osError;
+            }
+          }
+
+          if (!contended) {
+            final fd = _PosixFlockBindings.instance.openRdWr(lockFile.path);
+            if (fd < 0) {
+              if (!lockFile.existsSync()) {
+                contended = true;
+              } else {
+                // Surface the concrete OS error (e.g. EACCES / EROFS / EISDIR)
+                // via dart:io rather than spinning on a non-openable path.
+                final probe = lockFile.openSync(mode: FileMode.append);
+                probe.closeSync();
+                throw FileSystemException(
+                  'Failed to open cross-isolate lock file ($lockName)',
+                  lockFile.path,
+                );
+              }
+            } else if (_PosixFlockBindings.instance.tryLockExclusive(fd)) {
+              final wrapped = _PosixFlockBindings.instance.wrapLockedFd(fd);
+              if (wrapped == null) {
+                throw FileSystemException(
+                  'Failed to attach native finalizer to lock file ($lockName)',
+                  lockFile.path,
+                );
+              }
+              lockedPosixHandle = wrapped;
+              break;
+            } else {
+              _PosixFlockBindings.instance.closeFd(fd);
+              contended = true;
+            }
+          }
+        }
+
+        if (waitWatch.elapsed >= effectiveAcquireTimeout) {
+          throw FileSystemException(
+            'Timed out acquiring cross-isolate lock ($lockName)',
+            lockFile.path,
+            lastOsError,
+          );
+        }
+
+        final delayMs =
+            attempt == 0 ? 1 : (attempt < 4 ? 5 : (attempt < 8 ? 10 : 20));
+        if (!Platform.isWindows &&
+            waitWatch.elapsedMilliseconds >= nextFinalizerNudgeMs) {
+          // If a sibling Isolate in the same IsolateGroup was killed via
+          // Isolate.kill(priority: Isolate.immediate) without running finally,
+          // a throttled young-space nudge prompts Dart GC to run
+          // _PosixLockedFileHandle's NativeFinalizer without churning heap
+          // during ordinary short-lived lock contention.
+          nextFinalizerNudgeMs = waitWatch.elapsedMilliseconds + 1000;
+          for (var i = 0; i < 8; i++) {
+            Uint8List(256 * 1024);
+          }
+        }
+        attempt++;
+        await Future<void>.delayed(Duration(milliseconds: delayMs));
+      }
+
+      final nextHeld = <String>{
+        if (heldLocks is Set<String>) ...heldLocks,
+        lockPath,
+      };
+      return await runZoned(
+        action,
+        zoneValues: <Object?, Object?>{_heldLocksZoneKey: nextHeld},
+      );
+    } finally {
+      if (lockedPosixHandle != null) {
+        lockedPosixHandle.release();
+      }
+      if (lockedWindowsHandle != null) {
+        try {
+          lockedWindowsHandle.unlockSync();
+        } catch (_) {}
+        try {
+          lockedWindowsHandle.closeSync();
+        } catch (_) {}
+      }
+      if (identical(_crossIsolateLocks[lockPath], turnCompleter.future)) {
+        _crossIsolateLocks.remove(lockPath);
+      }
+      turnCompleter.complete();
+    }
+  }
 
   static Future<bool> _deleteIfExists(File file, {required bool syncIo}) async {
     if (syncIo) {

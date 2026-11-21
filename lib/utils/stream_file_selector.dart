@@ -22,6 +22,33 @@ class StreamFileSelector {
   // 控制是否启用原生选择器的标志
   static bool _useNativeSelector = false;
 
+  @visibleForTesting
+  static TargetPlatform? debugPlatformOverride;
+
+  @visibleForTesting
+  static Future<desktop_selector.XFile?> Function({
+    required List<desktop_selector.XTypeGroup> acceptedTypeGroups,
+  })? debugOpenDesktopFile;
+
+  static bool get _isDesktopPlatform {
+    final override = debugPlatformOverride;
+    if (override != null) {
+      return override == TargetPlatform.windows ||
+          override == TargetPlatform.linux ||
+          override == TargetPlatform.macOS;
+    }
+    return kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  }
+
+  static bool get _isMobilePlatform {
+    final override = debugPlatformOverride;
+    if (override != null) {
+      return override == TargetPlatform.android ||
+          override == TargetPlatform.iOS;
+    }
+    return !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  }
+
   /// 选择视频文件（优化版）
   static Future<FilePickerResult?> selectVideoFile() async {
     try {
@@ -29,19 +56,19 @@ class StreamFileSelector {
 
       FilePickerResult? result;
 
-      if (kIsWeb ||
-          Platform.isWindows ||
-          Platform.isLinux ||
-          Platform.isMacOS) {
+      if (_isDesktopPlatform) {
         // 桌面端使用 file_selector
         const typeGroup = desktop_selector.XTypeGroup(
           label: 'videos',
           extensions: ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'm4v'],
         );
 
-        final file = await desktop_selector.openFile(
-          acceptedTypeGroups: [typeGroup],
-        );
+        final desktopOpener = debugOpenDesktopFile;
+        final file = desktopOpener != null
+            ? await desktopOpener(acceptedTypeGroups: const [typeGroup])
+            : await desktop_selector.openFile(
+                acceptedTypeGroups: [typeGroup],
+              );
 
         if (file != null) {
           // 创建兼容的 FilePickerResult
@@ -53,9 +80,10 @@ class StreamFileSelector {
             ),
           ]);
         }
+      } else {
         // 移动端（Android & iOS）：
         // - 使用系统媒体选择器（ImagePicker -> 相册/图库）
-        if (Platform.isAndroid || Platform.isIOS) {
+        if (_isMobilePlatform) {
           final picker = ImagePicker();
           final XFile? file = await picker.pickVideo(
             source: ImageSource.gallery,

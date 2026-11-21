@@ -4954,5 +4954,13 @@
   "mmkvDiagnosticSpCoverage": "SharedPreferences 마이그레이션 커버리지",
   "@mmkvDiagnosticSpCoverage": {
     "description": "Label for SharedPreferences migration coverage"
+  },
+  "smartPushBackgroundBatteryGuideTitle": "백그라운드 배터리 설정",
+  "@smartPushBackgroundBatteryGuideTitle": {
+    "description": "Title for manual background battery settings guide in Play Store flavor"
+  },
+  "smartPushBackgroundBatteryGuideDesc": "시스템 절전 정책으로 인해 알림이 지연되는 경우 앱 정보에서 백그라운드 배터리 사용 설정을 수동으로 조정할 수 있습니다",
+  "@smartPushBackgroundBatteryGuideDesc": {
+    "description": "Subtitle for manual background battery settings guide in Play Store flavor"
   }
 }

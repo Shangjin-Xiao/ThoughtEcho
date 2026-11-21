@@ -418,11 +418,41 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
         }
 
         final status = snapshot.data!;
+        final showPlayBatteryGuide = DistributionConfig.isPlayStore &&
+            (theme.platform == TargetPlatform.android ||
+                defaultTargetPlatform == TargetPlatform.android ||
+                status.sdkVersion > 0);
 
-        // 如果所有权限都已授予，则不显示警告卡片
+        // 如果所有权限都已授予，标准渠道直接隐藏卡片；Play 渠道展示平静的后台电池设置说明入口
         // 注意：allPermissionsGranted 已包含自启动权限的判断
         if (status.allPermissionsGranted) {
-          return const SizedBox.shrink();
+          if (!showPlayBatteryGuide) {
+            return const SizedBox.shrink();
+          }
+          return Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Card(
+              elevation: 0,
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                  AppShapeTokens.of(context).cardRadius,
+                ),
+                side: BorderSide(
+                  color: colorScheme.outline.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: _buildPlayBatterySettingsGuideItem(
+                  l10n: l10n,
+                  theme: theme,
+                  colorScheme: colorScheme,
+                  inWarningCard: false,
+                ),
+              ),
+            ),
+          );
         }
 
         return Padding(
@@ -506,7 +536,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                       colorScheme: colorScheme,
                     ),
 
-                  // 电池优化豁免
+                  // 电池优化豁免（标准渠道）或系统应用信息引导（Play 渠道）
                   if (DistributionConfig.supportsBatteryOptimizationExemption)
                     _buildPermissionItem(
                       icon: Icons.battery_saver_outlined,
@@ -537,6 +567,13 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                             },
                       theme: theme,
                       colorScheme: colorScheme,
+                    )
+                  else if (showPlayBatteryGuide)
+                    _buildPlayBatterySettingsGuideItem(
+                      l10n: l10n,
+                      theme: theme,
+                      colorScheme: colorScheme,
+                      inWarningCard: true,
                     ),
 
                   // 自启动权限（如果是需要的厂商）
@@ -596,6 +633,75 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               ),
               if (!isGranted)
                 Icon(Icons.chevron_right, size: 20, color: colorScheme.error),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Play 渠道合规的后台电池设置说明项（打开系统标准应用信息页）
+  Widget _buildPlayBatterySettingsGuideItem({
+    required AppLocalizations l10n,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+    required bool inWarningCard,
+  }) {
+    final titleColor =
+        inWarningCard ? colorScheme.onErrorContainer : colorScheme.onSurface;
+    final subtitleColor = inWarningCard
+        ? colorScheme.onErrorContainer.withValues(alpha: 0.75)
+        : colorScheme.onSurfaceVariant;
+    final iconColor =
+        inWarningCard ? colorScheme.onErrorContainer : colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: InkWell(
+        key: const Key('smart_push_play_battery_guide_tile'),
+        onTap: () async {
+          final smartPushService = context.read<SmartPushService>();
+          await smartPushService.openSystemAppSettings();
+          _updateState(() {});
+        },
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.settings_outlined,
+                size: 20,
+                color: iconColor,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.smartPushBackgroundBatteryGuideTitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.smartPushBackgroundBatteryGuideDesc,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: subtitleColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.open_in_new,
+                size: 18,
+                color: subtitleColor,
+              ),
             ],
           ),
         ),

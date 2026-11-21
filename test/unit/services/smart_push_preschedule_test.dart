@@ -1,0 +1,5823 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:thoughtecho/core/config/distribution_config.dart';
+import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/note_tag.dart';
+import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/models/smart_push_settings.dart';
+import 'package:thoughtecho/services/api_service.dart';
+import 'package:thoughtecho/services/app_preferences_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/smart_push_analytics.dart';
+import 'package:thoughtecho/services/smart_push_service.dart';
+import 'package:thoughtecho/utils/http_response.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:xml/xml.dart';
+
+import '../../test_harness.dart';
+
+class _ScheduledCall {
+  final int id;
+  final String? title;
+  final String? body;
+  final tz.TZDateTime scheduledDate;
+  final AndroidScheduleMode androidScheduleMode;
+  final String? payload;
+
+  const _ScheduledCall({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.scheduledDate,
+    required this.androidScheduleMode,
+    required this.payload,
+  });
+}
+
+class _ShownCall {
+  final int id;
+  final String? title;
+  final String? body;
+  final String? payload;
+
+  const _ShownCall({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.payload,
+  });
+}
+
+class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
+  final DateTime Function()? nowProvider;
+  final List<_ScheduledCall> scheduledCalls = [];
+  final Map<int, _ScheduledCall> _activeScheduledById = <int, _ScheduledCall>{};
+  final Set<int> delayedPendingIds = <int>{};
+  final Set<int> activeShadeIds = <int>{};
+  bool throwOnGetActiveNotifications = false;
+  final List<_ShownCall> shownCalls = [];
+  final List<int> cancelledIds = [];
+  int cancelAllCount = 0;
+  Object? Function(_ScheduledCall call)? scheduleErrorBuilder;
+  Future<void> Function(_ScheduledCall call)? onScheduleHook;
+
+  _RecordingNotificationsPlugin({this.nowProvider});
+
+  @override
+  Future<bool?> initialize(
+    InitializationSettings initializationSettings, {
+    DidReceiveNotificationResponseCallback? onDidReceiveNotificationResponse,
+    DidReceiveBackgroundNotificationResponseCallback?
+        onDidReceiveBackgroundNotificationResponse,
+  }) async {
+    return true;
+  }
+
+  @override
+  T? resolvePlatformSpecificImplementation<
+      T extends FlutterLocalNotificationsPlatform>() {
+    return null;
+  }
+
+  @override
+  Future<void> zonedSchedule(
+    int id,
+    String? title,
+    String? body,
+    tz.TZDateTime scheduledDate,
+    NotificationDetails notificationDetails, {
+    required AndroidScheduleMode androidScheduleMode,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    final call = _ScheduledCall(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledDate,
+      androidScheduleMode: androidScheduleMode,
+      payload: payload,
+    );
+    final error = scheduleErrorBuilder?.call(call);
+    if (error != null) {
+      throw error;
+    }
+    scheduledCalls.add(call);
+    _activeScheduledById[id] = call;
+    if (onScheduleHook != null) {
+      await onScheduleHook!(call);
+    }
+  }
+
+  @override
+  Future<void> show(
+    int id,
+    String? title,
+    String? body,
+    NotificationDetails? notificationDetails, {
+    String? payload,
+  }) async {
+    shownCalls.add(
+      _ShownCall(
+        id: id,
+        title: title,
+        body: body,
+        payload: payload,
+      ),
+    );
+  }
+
+  @override
+  Future<void> cancel(int id, {String? tag}) async {
+    cancelledIds.add(id);
+    _activeScheduledById.remove(id);
+    delayedPendingIds.remove(id);
+    activeShadeIds.remove(id);
+  }
+
+  @override
+  Future<void> cancelAll() async {
+    cancelAllCount++;
+    _activeScheduledById.clear();
+    delayedPendingIds.clear();
+    activeShadeIds.clear();
+  }
+
+  @override
+  Future<List<ActiveNotification>> getActiveNotifications() async {
+    if (throwOnGetActiveNotifications) {
+      throw PlatformException(code: 'UNAVAILABLE');
+    }
+    return <ActiveNotification>[
+      for (final id in activeShadeIds) ActiveNotification(id: id),
+    ];
+  }
+
+  @override
+  Future<List<PendingNotificationRequest>> pendingNotificationRequests() async {
+    final nowMs = nowProvider?.call().millisecondsSinceEpoch;
+    return <PendingNotificationRequest>[
+      for (final call in _activeScheduledById.values)
+        if (delayedPendingIds.contains(call.id) ||
+            (nowMs != null &&
+                call.scheduledDate.millisecondsSinceEpoch > nowMs))
+          PendingNotificationRequest(
+            call.id,
+            call.title,
+            call.body,
+            call.payload,
+          ),
+    ];
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
+  List<Quote> notes;
+  List<NoteTag> tags = const [];
+  bool enforceTagOnlyEligibility = false;
+  Map<String, dynamic>? localDailyQuoteResult;
+  Completer<void>? pendingQueryBarrier;
+  int queryCount = 0;
+  int localDailyQuoteQueryCount = 0;
+
+  _FakeDatabaseService(this.notes);
+
+  void notifyChanged() {
+    notifyListeners();
+  }
+
+  @override
+  Future<List<Quote>> getAllQuotes({
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
+    return List<Quote>.from(notes);
+  }
+
+  @override
+  Future<List<Quote>> getQuotesForSmartPush({
+    int limit = 200,
+    String orderBy = 'q.date DESC',
+    bool includeDeleted = false,
+  }) async {
+    queryCount++;
+    final barrier = pendingQueryBarrier;
+    if (barrier != null && !barrier.isCompleted) {
+      await barrier.future;
+    }
+    return List<Quote>.from(notes);
+  }
+
+  @override
+  Future<List<int>> getHourDistributionForSmartPush() async {
+    return List<int>.filled(24, 0);
+  }
+
+  @override
+  Future<Set<String>> getVisibleQuoteIds(Iterable<String> ids) async {
+    final requested = ids.toSet();
+    return notes
+        .map((n) => n.id)
+        .whereType<String>()
+        .where(requested.contains)
+        .toSet();
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getLocalDailyQuote({
+    String offlineQuoteSource = 'tagOnly',
+  }) async {
+    localDailyQuoteQueryCount++;
+    final res = localDailyQuoteResult;
+    if (res == null) return null;
+    return <String, dynamic>{
+      ...res,
+      'offline_quote_source': res['offline_quote_source'] ?? offlineQuoteSource,
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getLocalDailyQuoteById(
+    String quoteId, {
+    String offlineQuoteSource = 'tagOnly',
+  }) async {
+    if (quoteId.isEmpty) return null;
+    Quote? matched;
+    for (final note in notes) {
+      if (note.id == quoteId) {
+        matched = note;
+        break;
+      }
+    }
+    if (matched == null) return null;
+    final trimmed = matched.content.trim();
+    if (trimmed.isEmpty || matched.content.length > 100) {
+      return null;
+    }
+    if (offlineQuoteSource == 'tagOnly') {
+      final shouldEnforceTags = enforceTagOnlyEligibility ||
+          tags.isNotEmpty ||
+          notes.any((n) => n.tagIds.isNotEmpty);
+      if (shouldEnforceTags) {
+        final allowedTags = <String>{
+          'default_hitokoto',
+          for (final tag in tags)
+            if (tag.name == '每日一言' && tag.id.isNotEmpty) tag.id,
+        };
+        if (!matched.tagIds.any(allowedTags.contains)) {
+          return null;
+        }
+      }
+    } else if (matched.content.contains('\n')) {
+      return null;
+    }
+    final work = (matched.sourceWork?.isNotEmpty ?? false)
+        ? matched.sourceWork!
+        : (matched.source ?? '');
+    return <String, dynamic>{
+      'content': trimmed,
+      'author': matched.sourceAuthor ?? '',
+      'source': work,
+      'type': 'local',
+      'provider': 'offline',
+      'local_quote_id': quoteId,
+      'offline_quote_source': offlineQuoteSource,
+    };
+  }
+
+  @override
+  Future<List<NoteTag>> getTags() async => List<NoteTag>.from(tags);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MemoryPreferences implements AppPreferencesService {
+  final Map<String, Object> _backingDisk;
+  final Map<String, Object> values;
+  final bool isolatedCache;
+  Future<void> Function(String key, String value)? onSetStringHook;
+  Future<void> Function()? onReloadHook;
+
+  _MemoryPreferences({
+    Map<String, Object>? sharedDisk,
+    this.isolatedCache = false,
+  })  : _backingDisk = sharedDisk ?? <String, Object>{},
+        values = isolatedCache
+            ? Map<String, Object>.from(sharedDisk ?? const <String, Object>{})
+            : (sharedDisk ?? <String, Object>{});
+
+  @override
+  Future<void> reload() async {
+    if (isolatedCache) {
+      values
+        ..clear()
+        ..addAll(_backingDisk);
+    }
+    if (onReloadHook != null) {
+      await onReloadHook!();
+    }
+  }
+
+  @override
+  String? getString(String key) => values[key] as String?;
+
+  @override
+  Future<bool> setString(String key, String value) async {
+    values[key] = value;
+    _backingDisk[key] = value;
+    if (onSetStringHook != null) {
+      await onSetStringHook!(key, value);
+    }
+    return true;
+  }
+
+  @override
+  bool? getBool(String key) => values[key] as bool?;
+
+  @override
+  Future<bool> setBool(String key, bool value) async {
+    values[key] = value;
+    _backingDisk[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> remove(String key) async {
+    values.remove(key);
+    _backingDisk.remove(key);
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    await TestHarness.initialize();
+    tz_data.initializeTimeZones();
+    tz.timeZoneDatabase.add(
+      tz.Location(
+        'Etc/GMT-8',
+        [tz.minTime],
+        [0],
+        const [
+          tz.TimeZone(
+            8 * Duration.millisecondsPerHour,
+            isDst: false,
+            abbreviation: '+08',
+          ),
+        ],
+      ),
+    );
+    tz.setLocalLocation(tz.getLocation('Etc/GMT-8'));
+  });
+
+  tearDown(() {
+    DistributionConfig.resetDebugOverrides();
+    ApiService.resetDebugOverrides();
+    tz.setLocalLocation(tz.getLocation('Etc/GMT-8'));
+  });
+
+  group('Android smart push 3-day local notification pre-scheduling', () {
+    late _FakeDatabaseService databaseService;
+    late _MemoryPreferences storage;
+    late _RecordingNotificationsPlugin notificationsPlugin;
+    late DateTime currentNow;
+    late bool exactAlarmPermitted;
+    late int renewalRegisterCount;
+    late int renewalCancelCount;
+
+    tz.TZDateTime localTime(
+      int year,
+      int month,
+      int day, [
+      int hour = 0,
+      int minute = 0,
+    ]) =>
+        tz.TZDateTime(tz.local, year, month, day, hour, minute);
+
+    SmartPushService createService() {
+      return SmartPushService(
+        databaseService: databaseService,
+        locationService: LocationService(),
+        mmkvService: storage,
+        notificationsPlugin: notificationsPlugin,
+        isAndroidOverride: true,
+        isIOSOverride: false,
+        timeZoneOverride: 'Etc/GMT-8',
+        canScheduleExactAlarmsOverride: () async => exactAlarmPermitted,
+        registerPreScheduleRenewalOverride: () async {
+          renewalRegisterCount++;
+        },
+        cancelPreScheduleRenewalOverride: () async {
+          renewalCancelCount++;
+        },
+        nowProvider: () => currentNow,
+      );
+    }
+
+    setUp(() {
+      tz.setLocalLocation(tz.getLocation('Etc/GMT-8'));
+      currentNow = localTime(2026, 5, 10, 7, 30);
+      exactAlarmPermitted = true;
+      renewalRegisterCount = 0;
+      renewalCancelCount = 0;
+      databaseService = _FakeDatabaseService([
+        Quote(
+          id: '11111111-1111-1111-1111-111111111111',
+          content: '第一条回顾笔记',
+          date: DateTime(2025, 5, 10, 9, 0).toIso8601String(),
+        ),
+        Quote(
+          id: '22222222-2222-2222-2222-222222222222',
+          content: '第二条回顾笔记',
+          date: DateTime(2026, 4, 10, 9, 0).toIso8601String(),
+        ),
+        Quote(
+          id: '33333333-3333-3333-3333-333333333333',
+          content: '第三条回顾笔记',
+          date: DateTime(2026, 5, 3, 9, 0).toIso8601String(),
+        ),
+      ]);
+      storage = _MemoryPreferences();
+      storage.values['smart_push_last_daily_quote'] = jsonEncode({
+        'hitokoto': '日拱一卒，功不唐捐。',
+        'from_who': '示例作者',
+        'from': '演讲',
+      });
+      storage.values['smart_push_last_daily_quote_date'] = '2026-05-10';
+      notificationsPlugin = _RecordingNotificationsPlugin(
+        nowProvider: () => currentNow,
+      );
+    });
+
+    test(
+      'Play Store build pre-schedules 3 days of regular and daily quote slots with exact mode when granted',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        exactAlarmPermitted = true;
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: const {
+              PastNoteType.yearAgoToday,
+              PastNoteType.monthAgoToday,
+              PastNoteType.weekAgoToday,
+              PastNoteType.randomMemory,
+            },
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+              PushTimeSlot(hour: 20, minute: 30, label: '晚间', enabled: true),
+            ],
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: const PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        // 2 regular slots * 3 days + 1 daily quote * 3 days = 9 notifications
+        expect(notificationsPlugin.scheduledCalls, hasLength(9));
+        expect(
+          notificationsPlugin.scheduledCalls.every(
+            (c) =>
+                c.androidScheduleMode ==
+                AndroidScheduleMode.exactAllowWhileIdle,
+          ),
+          isTrue,
+        );
+
+        final uniqueIds =
+            notificationsPlugin.scheduledCalls.map((c) => c.id).toSet();
+        expect(uniqueIds, hasLength(9));
+
+        final dailyQuoteCalls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) => (c.payload ?? '').startsWith('contentType:dailyQuote'),
+            )
+            .toList();
+        expect(dailyQuoteCalls, hasLength(3));
+        expect(dailyQuoteCalls.first.body, contains('日拱一卒'));
+        expect(
+          dailyQuoteCalls.every(
+            (c) => (c.payload ?? '').contains('notificationId:${c.id}'),
+          ),
+          isTrue,
+        );
+
+        final regularCalls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) => !(c.payload ?? '').startsWith('contentType:dailyQuote'),
+            )
+            .toList();
+        expect(regularCalls, hasLength(6));
+        expect(
+          regularCalls.every(
+            (c) => (c.payload ?? '').contains('routeTarget:noteList'),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'Standard build without exact alarm permission falls back to 3-day inexact pre-scheduling',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.standard;
+        exactAlarmPermitted = false;
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 10, minute: 0, label: '上午', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+        expect(
+          notificationsPlugin.scheduledCalls.every(
+            (c) =>
+                c.androidScheduleMode ==
+                AndroidScheduleMode.inexactAllowWhileIdle,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      're-scheduling uses deterministic IDs and cancels disabled slots cleanly',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+              PushTimeSlot(hour: 21, minute: 0, label: '夜间', enabled: true),
+            ],
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: const PushTimeSlot(hour: 8, minute: 0),
+          ),
+        );
+
+        final initialIds =
+            notificationsPlugin.scheduledCalls.map((c) => c.id).toSet();
+        expect(initialIds, hasLength(9));
+
+        // Re-run scheduleNextPush on same day -> identical deterministic IDs
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+
+        final secondIds =
+            notificationsPlugin.scheduledCalls.map((c) => c.id).toSet();
+        expect(secondIds, equals(initialIds));
+        expect(notificationsPlugin.cancelledIds, isEmpty);
+        expect(notificationsPlugin.cancelAllCount, equals(0));
+
+        // Disable evening slot (slotIndex 1) and daily quote -> 6 removed IDs cancelled
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+              PushTimeSlot(hour: 21, minute: 0, label: '夜间', enabled: false),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final remainingIds =
+            notificationsPlugin.scheduledCalls.map((c) => c.id).toSet();
+        expect(remainingIds, hasLength(3));
+        expect(notificationsPlugin.cancelledIds.toSet(), hasLength(6));
+        expect(
+          notificationsPlugin.cancelledIds.toSet().union(remainingIds),
+          equals(initialIds),
+        );
+      },
+    );
+
+    test(
+      'handleAppResumed refreshes queue when exact alarm permission changes or day rolls over',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        exactAlarmPermitted = false;
+
+        storage.values['smart_push_settings_v2'] = jsonEncode(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ).toJson(),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+
+        // 1 hour later, same day, same permission -> throttled (no reschedule)
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 10, 8, 30);
+        await service.handleAppResumed();
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+
+        // 5 minutes later, user grants exact alarm permission -> refreshes immediately with exact mode
+        exactAlarmPermitted = true;
+        currentNow = localTime(2026, 5, 10, 8, 35);
+        await service.handleAppResumed();
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+        expect(
+          notificationsPlugin.scheduledCalls.every(
+            (c) =>
+                c.androidScheduleMode ==
+                AndroidScheduleMode.exactAllowWhileIdle,
+          ),
+          isTrue,
+        );
+
+        // Next calendar day (< 6h across midnight) -> refreshes 3-day window
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 10, 22, 0);
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        notificationsPlugin.scheduledCalls.clear();
+
+        currentNow = localTime(2026, 5, 11, 0, 30);
+        await service.handleAppResumed();
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+        expect(
+          notificationsPlugin.scheduledCalls.map((c) => c.scheduledDate.day),
+          equals([11, 12, 13]),
+        );
+      },
+    );
+
+    test(
+      'registers periodic background renewal task when pre-scheduling and cancels it when disabled',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(renewalRegisterCount, equals(1));
+        expect(renewalCancelCount, equals(0));
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(renewalCancelCount, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'editing, hiding, or deleting notes immediately reconciles pending and delivered notifications',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        databaseService.notes = [
+          Quote(
+            id: 'note-secret',
+            content: '原始私密草稿内容',
+            date: DateTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: const {PastNoteType.yearAgoToday},
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final day10Id =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          DateTime(2026, 5, 10, 9, 0),
+          slotIndex: 0,
+        );
+        final initialDay10 = notificationsPlugin.scheduledCalls
+            .firstWhere((c) => c.id == day10Id);
+        expect(initialDay10.body, contains('原始私密草稿内容'));
+
+        // 1. Edit note within 6h throttle window -> updates pending notification body immediately
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 10, 8, 0);
+        databaseService.notes = [
+          Quote(
+            id: 'note-secret',
+            content: '修改后的公开笔记内容',
+            date: DateTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.notifyChanged();
+        await service.waitForPendingScheduleForTest();
+
+        final updatedDay10 = notificationsPlugin.scheduledCalls
+            .firstWhere((c) => c.id == day10Id);
+        expect(updatedDay10.body, contains('修改后的公开笔记内容'));
+
+        // 2. Time advances past 09:00 delivery, an intermediate foreground refresh runs,
+        //    and then the user hides/deletes the note -> delivered notification is still cancelled!
+        currentNow = localTime(2026, 5, 10, 9, 30);
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        expect(notificationsPlugin.cancelledIds, isNot(contains(day10Id)));
+
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        currentNow = localTime(2026, 5, 10, 10, 0);
+        databaseService.notes = [];
+        databaseService.notifyChanged();
+        await service.waitForPendingScheduleForTest();
+
+        expect(notificationsPlugin.cancelledIds, contains(day10Id));
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+      },
+    );
+
+    test(
+      'disabling reminders while an async refresh is in flight prevents stale notifications from being scheduled',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: const [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelAllCount = 0;
+
+        // Start a background/resume refresh that pauses mid-flight on DB query
+        final barrier = Completer<void>();
+        databaseService.pendingQueryBarrier = barrier;
+        final inflightRefresh =
+            service.scheduleNextPush(preserveDeliveredNotifications: true);
+        await Future<void>.delayed(Duration.zero);
+
+        // User disables reminders while inflightRefresh is suspended
+        final disableFuture = service.saveSettings(
+          SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // Release DB query so the stale refresh resumes
+        barrier.complete();
+        await Future.wait([inflightRefresh, disableFuture]);
+
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+        expect(notificationsPlugin.cancelAllCount, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'saving daily quote push with empty local cache and empty database does not make external HTTP requests',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        storage.values.clear();
+        databaseService.notes = [];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        var httpClientCreated = false;
+        await HttpOverrides.runZoned(
+          () async {
+            await service.saveSettings(
+              SmartPushSettings(
+                enabled: false,
+                dailyQuotePushEnabled: true,
+                dailyQuotePushTime: const PushTimeSlot(hour: 8, minute: 0),
+              ),
+            );
+          },
+          createHttpClient: (_) {
+            httpClientCreated = true;
+            throw StateError(
+              'Unexpected external HTTP request during saveSettings',
+            );
+          },
+        );
+
+        expect(httpClientCreated, isFalse);
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+        expect(
+          notificationsPlugin.scheduledCalls.every(
+            (c) => (c.payload ?? '').startsWith('contentType:dailyQuote'),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'PushMode.smart respects pushIntensity dailyCap, minGapDays, quality floor, and elapsed delivery accounting',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        // Mark user as active with two balanced daily windows (09:00 & 20:00)
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 20, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        // 1. PushIntensity.rare + EngagementTier.active => dailyCap: 1, minGapDays: 2
+        // Across 3 days (May 10, 11, 12), only May 10 (first slot) and May 12 (first slot) qualify!
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.rare,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(notificationsPlugin.scheduledCalls, hasLength(2));
+        expect(
+          notificationsPlugin.scheduledCalls.map((c) => c.scheduledDate.day),
+          equals([10, 12]),
+        );
+
+        // Advance past Day 10 delivery (e.g. May 10 12:00) and refresh:
+        // Day 10 delivery is accounted into todayCount/lastPushTime, so May 10 evening and May 11 remain skipped!
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 10, 12, 0);
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        expect(notificationsPlugin.scheduledCalls, hasLength(1));
+        expect(notificationsPlugin.scheduledCalls.single.scheduledDate.day, 12);
+      },
+    );
+
+    test(
+      'empty smart fallback slots memoize getLocalDailyQuote to at most one database lookup per schedule run',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        // One recent note from yesterday (matches neither year/month/week-ago nor randomMemory >7d)
+        databaseService.notes = [
+          Quote(
+            id: 'recent-only-note',
+            content: '昨天刚记下的随笔',
+            date: DateTime(2026, 5, 9, 14, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = null;
+
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 9, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 21, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 8, minute: 0),
+          ),
+        );
+
+        expect(databaseService.localDailyQuoteQueryCount, equals(1));
+      },
+    );
+
+    test(
+      'hiding a local note used as daily quote cancels tracked daily quote notification and purges cache',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode({'useLocalQuotesOnly': true}),
+        );
+
+        const localQuoteId = '44444444-4444-4444-4444-444444444444';
+        databaseService.notes = [
+          Quote(
+            id: localQuoteId,
+            content: '本地私密摘录一言',
+            date: DateTime(2026, 5, 1, 9, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = {
+          'content': '本地私密摘录一言',
+          'type': 'local',
+          'local_quote_id': localQuoteId,
+          'from_who': '示例作者',
+          'from': '示例出处',
+        };
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 8, minute: 0),
+          ),
+        );
+
+        final day10DailyId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          DateTime(2026, 5, 10, 8, 0),
+          isDailyQuote: true,
+        );
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+        expect(
+          notificationsPlugin.scheduledCalls.first.body,
+          contains('本地私密摘录一言'),
+        );
+
+        // Advance past 08:00 delivery, then hide/delete the backing local note
+        currentNow = localTime(2026, 5, 10, 8, 30);
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        databaseService.notes = [];
+        databaseService.localDailyQuoteResult = null;
+        databaseService.notifyChanged();
+        await service.waitForPendingScheduleForTest();
+
+        // Both delivered (May 10) and pending (May 11, May 12) notifications with hidden local quote are cancelled
+        expect(notificationsPlugin.cancelledIds, contains(day10DailyId));
+        expect(notificationsPlugin.cancelledIds.toSet(), hasLength(3));
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+      },
+    );
+
+    test(
+      'interrupting partial notification writes mid-loop still tracks written IDs so disabling one slot cancels them',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final service = createService();
+        addTearDown(service.dispose);
+
+        final day10EveningId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          DateTime(2026, 5, 10, 21, 0),
+          slotIndex: 1,
+        );
+
+        Future<void>? concurrentSlotDisable;
+        var hookTriggered = false;
+        notificationsPlugin.onScheduleHook = (call) async {
+          if (!hookTriggered && call.id == day10EveningId) {
+            hookTriggered = true;
+            // User disables ONLY the evening slot right after day 10 evening is written!
+            concurrentSlotDisable = service.saveSettings(
+              const SmartPushSettings(
+                enabled: true,
+                pushMode: PushMode.custom,
+                pushTimeSlots: [
+                  PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+                  PushTimeSlot(
+                      hour: 21, minute: 0, label: '晚间', enabled: false),
+                ],
+                dailyQuotePushEnabled: false,
+              ),
+            );
+          }
+        };
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+              PushTimeSlot(hour: 21, minute: 0, label: '晚间', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        notificationsPlugin.onScheduleHook = null;
+        await concurrentSlotDisable;
+
+        expect(hookTriggered, isTrue);
+        expect(notificationsPlugin.cancelledIds, contains(day10EveningId));
+      },
+    );
+
+    test(
+      'cross-isolate background renewal aborts and does not re-enable notifications when foreground disables reminders',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final sharedDisk = <String, Object>{};
+        final foregroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final backgroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+
+        var bgRenewalRegisters = 0;
+        var bgRenewalCancels = 0;
+
+        final foregroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: foregroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(foregroundService.dispose);
+
+        await foregroundService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelAllCount = 0;
+
+        final backgroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: backgroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {
+            bgRenewalRegisters++;
+          },
+          cancelPreScheduleRenewalOverride: () async {
+            bgRenewalCancels++;
+          },
+          nowProvider: () => currentNow,
+        );
+        addTearDown(backgroundService.dispose);
+        await backgroundStorage.reload();
+        await backgroundService.loadSettingsForBackground();
+
+        // Pause background renewal on DB query while foreground disables reminders
+        final barrier = Completer<void>();
+        databaseService.pendingQueryBarrier = barrier;
+        final bgFuture = backgroundService.scheduleNextPush(
+          fromBackground: true,
+          preserveDeliveredNotifications: true,
+        );
+        await Future<void>.delayed(Duration.zero);
+
+        await foregroundService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        barrier.complete();
+        await bgFuture;
+
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+        expect(bgRenewalRegisters, equals(0));
+        expect(bgRenewalCancels, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'XML-parsed merged Play manifest preserves ScheduledNotificationReceiver and strips transitive permissions/services',
+      () {
+        const androidNs = 'http://schemas.android.com/apk/res/android';
+        const toolsNs = 'http://schemas.android.com/tools';
+
+        final mainDoc = XmlDocument.parse(
+          File('android/app/src/main/AndroidManifest.xml').readAsStringSync(),
+        );
+        final playDoc = XmlDocument.parse(
+          File('android/app/src/play/AndroidManifest.xml').readAsStringSync(),
+        );
+
+        // Load real Android plugin manifests from .flutter-plugins-dependencies when present,
+        // plus transitive AAR manifests contributed by Gradle dependencies (e.g. WorkManager & Geolocator).
+        final dependencyDocs = <XmlDocument>[];
+        final pluginDepsFile = File('.flutter-plugins-dependencies');
+        if (pluginDepsFile.existsSync()) {
+          final parsed = jsonDecode(pluginDepsFile.readAsStringSync());
+          final androidPlugins = ((parsed as Map<String, dynamic>)['plugins']
+              as Map<String, dynamic>?)?['android'];
+          if (androidPlugins is List) {
+            for (final plugin in androidPlugins) {
+              if (plugin is! Map<String, dynamic>) continue;
+              final pluginPath = plugin['path'] as String?;
+              if (pluginPath == null || pluginPath.isEmpty) continue;
+              final manifestFile = File(
+                '$pluginPath/android/src/main/AndroidManifest.xml',
+              );
+              if (manifestFile.existsSync()) {
+                dependencyDocs.add(
+                  XmlDocument.parse(manifestFile.readAsStringSync()),
+                );
+              }
+            }
+          }
+        }
+        // Represent transitive Maven/Gradle AAR manifests (androidx.work:work-runtime, geolocator, record)
+        // so the merger test exercises real transitive service/permission removal even in offline CI.
+        dependencyDocs.add(
+          XmlDocument.parse('''
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <application>
+    <service
+      android:name="com.baseflow.geolocator.GeolocatorLocationService"
+      android:enabled="true"
+      android:exported="false"
+      android:foregroundServiceType="location" />
+    <service
+      android:name="androidx.work.impl.foreground.SystemForegroundService"
+      android:exported="false" />
+  </application>
+</manifest>
+'''),
+        );
+
+        String? attrName(XmlElement el) =>
+            el.getAttribute('name', namespace: androidNs);
+        String? toolsNode(XmlElement el) =>
+            el.getAttribute('node', namespace: toolsNs);
+
+        Map<String, XmlElement> mergePermissions(
+          List<XmlDocument> baseDocs, [
+          XmlDocument? overlayDoc,
+        ]) {
+          final merged = <String, XmlElement>{};
+          for (final doc in baseDocs) {
+            for (final perm
+                in doc.rootElement.findElements('uses-permission')) {
+              final name = attrName(perm);
+              if (name != null) merged[name] = perm;
+            }
+          }
+          if (overlayDoc != null) {
+            for (final overlayPerm
+                in overlayDoc.rootElement.findElements('uses-permission')) {
+              final name = attrName(overlayPerm);
+              if (name == null) continue;
+              if (toolsNode(overlayPerm) == 'remove') {
+                merged.remove(name);
+              } else {
+                merged[name] = overlayPerm;
+              }
+            }
+          }
+          return merged;
+        }
+
+        Map<String, XmlElement> mergeAppComponents(
+          String tag,
+          List<XmlDocument> baseDocs, [
+          XmlDocument? overlayDoc,
+        ]) {
+          final map = <String, XmlElement>{};
+          for (final doc in baseDocs) {
+            final app = doc.rootElement.getElement('application');
+            if (app == null) continue;
+            for (final el in app.findElements(tag)) {
+              final name = attrName(el);
+              if (name != null) map[name] = el;
+            }
+          }
+          final overlayApp = overlayDoc?.rootElement.getElement('application');
+          if (overlayApp != null) {
+            for (final overlayEl in overlayApp.findElements(tag)) {
+              final name = attrName(overlayEl);
+              if (name == null) continue;
+              if (toolsNode(overlayEl) == 'remove') {
+                map.remove(name);
+              } else {
+                map[name] = overlayEl;
+              }
+            }
+          }
+          return map;
+        }
+
+        final baseDocs = <XmlDocument>[...dependencyDocs, mainDoc];
+        const removedPermissions = <String>[
+          'android.permission.REQUEST_INSTALL_PACKAGES',
+          'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+          'android.permission.RECORD_AUDIO',
+          'android.permission.READ_MEDIA_IMAGES',
+          'android.permission.READ_MEDIA_VIDEO',
+          'android.permission.READ_MEDIA_AUDIO',
+          'android.permission.READ_EXTERNAL_STORAGE',
+          'android.permission.FOREGROUND_SERVICE',
+          'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
+        ];
+        const removedServices = <String>[
+          'com.baseflow.geolocator.GeolocatorLocationService',
+          'androidx.work.impl.foreground.SystemForegroundService',
+        ];
+
+        // 1. Pre-overlay baseline: confirm transitive services and permissions ARE present before Play overlay
+        final prePlayPermissions = mergePermissions(baseDocs);
+        final prePlayServices = mergeAppComponents('service', baseDocs);
+        for (final svc in removedServices) {
+          expect(
+            prePlayServices.containsKey(svc),
+            isTrue,
+            reason: 'Expected $svc in pre-Play merged manifest baseline',
+          );
+        }
+        for (final perm in removedPermissions) {
+          expect(
+            prePlayPermissions.containsKey(perm),
+            isTrue,
+            reason: 'Expected $perm in pre-Play merged manifest baseline',
+          );
+        }
+
+        // 2. Post-Play overlay: confirm Play manifest strips all prohibited services and permissions
+        final mergedPermissions = mergePermissions(baseDocs, playDoc);
+        final mergedReceivers =
+            mergeAppComponents('receiver', baseDocs, playDoc);
+        final mergedServices = mergeAppComponents('service', baseDocs, playDoc);
+
+        final scheduledReceiver = mergedReceivers[
+            'com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver'];
+        expect(scheduledReceiver, isNotNull);
+        expect(
+          scheduledReceiver!.getAttribute('exported', namespace: androidNs),
+          equals('false'),
+        );
+        expect(
+          scheduledReceiver.getAttribute('enabled', namespace: androidNs),
+          isNot(equals('false')),
+        );
+
+        final bootReceiver = mergedReceivers[
+            'com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver'];
+        expect(bootReceiver, isNotNull);
+        expect(
+          bootReceiver!.getAttribute('exported', namespace: androidNs),
+          equals('false'),
+        );
+
+        for (final svc in removedServices) {
+          expect(mergedServices.containsKey(svc), isFalse);
+        }
+        for (final removedPerm in removedPermissions) {
+          expect(mergedPermissions.containsKey(removedPerm), isFalse);
+        }
+        expect(
+          mergedPermissions
+              .containsKey('android.permission.POST_NOTIFICATIONS'),
+          isTrue,
+        );
+        expect(
+          mergedPermissions.containsKey(
+            'android.permission.RECEIVE_BOOT_COMPLETED',
+          ),
+          isTrue,
+        );
+
+        // 3. Negative mutation check: stripping tools:node="remove" from Play overlay causes leak detection
+        final mutatedPlayDoc = XmlDocument.parse(playDoc.toXmlString());
+        for (final el in mutatedPlayDoc.descendants.whereType<XmlElement>()) {
+          if (toolsNode(el) == 'remove') {
+            el.removeAttribute('node', namespace: toolsNs);
+          }
+        }
+        final leakedServices =
+            mergeAppComponents('service', baseDocs, mutatedPlayDoc);
+        final leakedPermissions = mergePermissions(baseDocs, mutatedPlayDoc);
+        for (final svc in removedServices) {
+          expect(leakedServices.containsKey(svc), isTrue);
+        }
+        for (final perm in removedPermissions) {
+          expect(leakedPermissions.containsKey(perm), isTrue);
+        }
+      },
+    );
+
+    test(
+      'PushMode.smart suppresses regular slots during dismissal cooldown while preserving independent daily quote',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 20, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+        // Active 8h dismissal cooldown from May 10 07:00 -> suppresses May 10 morning slot (before 15:00)
+        await storage.setString(
+          'smart_push_last_dismissal',
+          localTime(2026, 5, 10, 7, 0).toIso8601String(),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 8, minute: 0),
+          ),
+        );
+
+        final dailyQuoteCalls = notificationsPlugin.scheduledCalls
+            .where(
+                (c) => (c.payload ?? '').startsWith('contentType:dailyQuote'))
+            .toList();
+        final regularCalls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) => !(c.payload ?? '').startsWith('contentType:dailyQuote'),
+            )
+            .toList();
+
+        // Independent Daily Quote still schedules all 3 days (May 10, 11, 12)
+        expect(dailyQuoteCalls, hasLength(3));
+        // Regular slots before May 10 15:00 are suppressed by dismissal cooldown
+        expect(
+          regularCalls.every(
+            (c) => !c.scheduledDate.isBefore(localTime(2026, 5, 10, 15, 0)),
+          ),
+          isTrue,
+        );
+        expect(regularCalls, isNotEmpty);
+      },
+    );
+
+    test(
+      'custom yearAgoToday mode skips empty future days and cancels previously scheduled empty slots',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        databaseService.notes = [
+          Quote(
+            id: '55555555-5555-5555-5555-555555555555',
+            content: '仅限五月十日的那年今日笔记',
+            date: DateTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        // First schedule with randomMemory enabled -> all 3 days match
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: {
+              PastNoteType.yearAgoToday,
+              PastNoteType.randomMemory,
+            },
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+        final day11Id =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          DateTime(2026, 5, 11, 9, 0),
+          slotIndex: 0,
+        );
+        final day12Id =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          DateTime(2026, 5, 12, 9, 0),
+          slotIndex: 0,
+        );
+
+        // Now restrict to yearAgoToday only -> May 11 & May 12 have no matching notes,
+        // so they must be cancelled and NOT replaced with placeholders or May 10's note!
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: {PastNoteType.yearAgoToday},
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(notificationsPlugin.scheduledCalls, hasLength(1));
+        expect(notificationsPlugin.scheduledCalls.single.scheduledDate.day, 10);
+        expect(
+          notificationsPlugin.scheduledCalls.single.body,
+          contains('仅限五月十日的那年今日笔记'),
+        );
+        expect(
+          notificationsPlugin.cancelledIds,
+          containsAll(<int>[day11Id, day12Id]),
+        );
+      },
+    );
+
+    test(
+      'PushMode.smart never repeats the same anniversary note across two slots on the same day or after midday refresh',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        const yearAgoId = '66666666-6666-6666-6666-666666666666';
+        const monthAgoId = '77777777-7777-7777-7777-777777777777';
+        databaseService.notes = [
+          Quote(
+            id: yearAgoId,
+            content: '去年今日的高优先级长篇纪念回顾笔记，确保得分充裕且内容完整清晰。',
+            date: DateTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+          Quote(
+            id: monthAgoId,
+            content:
+                '上月今日的次优先级深度回顾长笔记，包含足够字数以满足智能模式同日第二条推送的质量门槛要求，确保在首条推送已选用那年今日后能够平滑接棒而不重复。',
+            date: DateTime(2026, 4, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 20, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final may10Calls = notificationsPlugin.scheduledCalls
+            .where((c) => c.scheduledDate.day == 10)
+            .toList();
+        expect(may10Calls, hasLength(2));
+        expect(may10Calls[0].payload, contains('noteId:$yearAgoId'));
+        expect(may10Calls[1].payload, contains('noteId:$monthAgoId'));
+
+        // Refresh at 12:00 after morning slot (08:30) has delivered -> evening slot (20:00) still excludes yearAgoId!
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 10, 12, 0);
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+
+        final remainingMay10Calls = notificationsPlugin.scheduledCalls
+            .where((c) => c.scheduledDate.day == 10)
+            .toList();
+        expect(remainingMay10Calls, hasLength(1));
+        expect(
+          remainingMay10Calls.single.payload,
+          contains('noteId:$monthAgoId'),
+        );
+      },
+    );
+
+    test(
+      'regular smart daily-quote fallback routes taps to dailyQuote and preserves exact local quote until hidden',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 9, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 21, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        const scheduledLocalId = '88888888-8888-8888-8888-888888888888';
+        const otherLocalId = '99999999-9999-9999-9999-999999999999';
+        // Empty regular candidate pool (note from 2 hours ago on same day is excluded by all past-note filters),
+        // wait: keep backing local quotes visible in getVisibleQuoteIds via databaseService.notes from today!
+        databaseService.notes = [
+          Quote(
+            id: scheduledLocalId,
+            content: '通知栏上实际展示的专属本地一言',
+            date: localTime(2026, 5, 10, 7, 0).toIso8601String(),
+          ),
+          Quote(
+            id: otherLocalId,
+            content: '数据库随机抽到的另一条本地一言',
+            date: localTime(2026, 5, 10, 7, 10).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = {
+          'content': '通知栏上实际展示的专属本地一言',
+          'type': 'local',
+          'local_quote_id': scheduledLocalId,
+          'from_who': '示例作者甲',
+          'from': '示例文集',
+        };
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.rare,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // Regular slot fell back to local daily quote -> must emit contentType:dailyQuote|notificationId:...
+        expect(notificationsPlugin.scheduledCalls, isNotEmpty);
+        final fallbackCall = notificationsPlugin.scheduledCalls.first;
+        expect(fallbackCall.title, equals('📖 每日一言'));
+        expect(fallbackCall.body, contains('通知栏上实际展示的专属本地一言'));
+        expect(
+          fallbackCall.payload,
+          equals(
+            'contentType:dailyQuote|notificationId:${fallbackCall.id}',
+          ),
+        );
+
+        // Simulate tapping next day / when daily cache is empty and DB random query would return a DIFFERENT quote
+        currentNow = localTime(2026, 5, 10, 9, 0);
+        databaseService.localDailyQuoteResult = {
+          'content': '数据库随机抽到的另一条本地一言',
+          'type': 'local',
+          'local_quote_id': otherLocalId,
+          'from_who': '示例作者乙',
+          'from': '示例随笔',
+        };
+
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: fallbackCall.id,
+            payload: fallbackCall.payload,
+          ),
+        );
+
+        final pendingQuote =
+            await service.consumePendingDailyQuoteForHomeDisplay();
+        expect(pendingQuote, isNotNull);
+        expect(pendingQuote!['hitokoto'], equals('通知栏上实际展示的专属本地一言'));
+        expect(pendingQuote['local_quote_id'], equals(scheduledLocalId));
+
+        // Now hide/delete the backing local note without waiting for reschedule, and tap again -> must NOT leak!
+        databaseService.notes = [];
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: fallbackCall.id,
+            payload: fallbackCall.payload,
+          ),
+        );
+        expect(
+          await service.consumePendingDailyQuoteForHomeDisplay(),
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'keeps periodic renewal task alive when 7-day dormant cooldown empties 3-day window and resumes reminders automatically',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        // Dormant user: last opened 20 days ago -> PushIntensity.rare requires minGapDays: 7
+        await storage.setString(
+          'smart_push_app_open_times',
+          localTime(2026, 4, 20, 9, 0).toIso8601String(),
+        );
+        databaseService.notes = [
+          Quote(
+            id: 'aaaa1111-1111-1111-1111-111111111111',
+            content: '沉睡档位恢复验证的长回顾笔记，用于验证七天间隔期满后后台续期自动恢复。',
+            date: localTime(2025, 5, 1, 9, 0).toIso8601String(),
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.rare,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // Day 0 (May 10): schedules May 10 only (May 11 & 12 filtered by minGapDays: 7)
+        expect(notificationsPlugin.scheduledCalls, hasLength(1));
+        expect(notificationsPlugin.scheduledCalls.single.scheduledDate.day, 10);
+        expect(renewalRegisterCount, equals(1));
+        expect(renewalCancelCount, equals(0));
+
+        // Day 1 (May 11): background renewal settles May 10 delivery;
+        // next 3 days (May 11, 12, 13) are all inside the 7-day gap -> 0 notifications scheduled,
+        // BUT renewal task MUST remain registered (never cancelled)!
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 11, 9, 0);
+        await service.renewPreScheduledQueueFromBackground();
+
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+        expect(renewalCancelCount, equals(0));
+        expect(renewalRegisterCount, equals(2));
+
+        // Day 5 (May 15): 3-day lookahead [May 15, 16, 17] reaches May 17 (7 days after May 10) ->
+        // background renewal automatically schedules May 17 without user opening the app!
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 15, 7, 30);
+        await service.renewPreScheduledQueueFromBackground();
+
+        expect(notificationsPlugin.scheduledCalls, hasLength(1));
+        expect(notificationsPlugin.scheduledCalls.single.scheduledDate.day, 17);
+        expect(renewalCancelCount, equals(0));
+      },
+    );
+
+    test(
+      'tapping an unaccounted pre-scheduled notification records positive engagement and is never overwritten as ignored',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        const yearAgoId = 'bbbb2222-2222-2222-2222-222222222222';
+        const monthAgoId = 'cccc3333-3333-3333-3333-333333333333';
+        databaseService.notes = [
+          Quote(
+            id: yearAgoId,
+            content: '那年今日高优先级长篇回顾笔记，包含充裕内容以验证点击正向计分不被覆盖。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+          Quote(
+            id: monthAgoId,
+            content: '上月今日第二优先级长篇回顾笔记，字数充足可通过同日第二条智能推送的质量门槛，验证多条通知补记时点击状态精确匹配。',
+            date: localTime(2026, 4, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 20, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final may10Calls = notificationsPlugin.scheduledCalls
+            .where((c) => c.scheduledDate.day == 10)
+            .toList();
+        expect(may10Calls, hasLength(2));
+        final morningCall = may10Calls[0];
+        final eveningCall = may10Calls[1];
+
+        // Seed an existing unengaged streak of 2 before user taps morning notification
+        await storage.setString('smart_push_unengaged_streak', '2');
+
+        // Advance past BOTH May 10 slots (20:05) and tap ONLY the morning notification before accounting runs:
+        // Morning must settle as engaged (score > 0.5, streak = 0) while evening stays pending (not settled as ignored yet)
+        currentNow = localTime(2026, 5, 10, 20, 5);
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: morningCall.id,
+            payload: morningCall.payload,
+          ),
+        );
+
+        // Subsequent reschedule must NOT overwrite morning click or prematurely penalize evening
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        expect(
+          await service.analytics.getHabituationCooldown(),
+          equals(Duration.zero),
+        );
+        final scoresAfterMorningTap =
+            await service.analytics.getContentTypeScores();
+        expect(scoresAfterMorningTap['yearAgoToday']!, greaterThan(0.5));
+        expect(scoresAfterMorningTap.containsKey('monthAgoToday'), isFalse);
+
+        // Now user ALSO taps the pending evening notification -> settles cleanly on next settlePendingSend() with streak still 0!
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: eveningCall.id,
+            payload: eveningCall.payload,
+          ),
+        );
+        await service.analytics.settlePendingSend();
+
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        final scoresAfterBoth = await service.analytics.getContentTypeScores();
+        expect(scoresAfterBoth['yearAgoToday']!, greaterThan(0.5));
+        expect(scoresAfterBoth['monthAgoToday']!, greaterThan(0.5));
+      },
+    );
+
+    test(
+      'background renewal rolls back written notifications and renewal task if foreground disables reminders mid-write',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final sharedDisk = <String, Object>{};
+        final foregroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final backgroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+
+        var bgRenewalCancels = 0;
+
+        final foregroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: foregroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(foregroundService.dispose);
+
+        await foregroundService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        notificationsPlugin.cancelAllCount = 0;
+
+        final backgroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: backgroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {
+            bgRenewalCancels++;
+          },
+          nowProvider: () => currentNow,
+        );
+        addTearDown(backgroundService.dispose);
+        await backgroundStorage.reload();
+        await backgroundService.loadSettingsForBackground();
+
+        // Trigger foreground disable right AFTER background writes its last zonedSchedule!
+        var writeCount = 0;
+        notificationsPlugin.onScheduleHook = (call) async {
+          writeCount++;
+          if (writeCount == 3) {
+            await foregroundService.saveSettings(
+              const SmartPushSettings(
+                enabled: false,
+                dailyQuotePushEnabled: false,
+              ),
+            );
+          }
+        };
+
+        await backgroundService.renewPreScheduledQueueFromBackground();
+        notificationsPlugin.onScheduleHook = null;
+
+        await foregroundStorage.reload();
+        final finalSettingsJson =
+            foregroundStorage.getString('smart_push_settings_v2');
+        expect(finalSettingsJson, isNotNull);
+        final finalSettings = SmartPushSettings.fromJson(
+          jsonDecode(finalSettingsJson!) as Map<String, dynamic>,
+        );
+        expect(finalSettings.enabled, isFalse);
+        expect(finalSettings.dailyQuotePushEnabled, isFalse);
+        expect(
+          foregroundStorage.getString('smart_push_prescheduled_entries_v1'),
+          isNull,
+        );
+        expect(notificationsPlugin.cancelledIds, isNotEmpty);
+        expect(bgRenewalCancels, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'standard exact-alarm checkAndPush binds shown notificationId to markSent and settles tap as engaged once',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.standard;
+        exactAlarmPermitted = true;
+        final wallNow = DateTime.now();
+        databaseService.notes = [
+          Quote(
+            id: 'dddd4444-4444-4444-4444-444444444444',
+            content: '标准渠道精确闹钟直发通知点击回归验证笔记，确保点击后不会被二次结算成忽略。',
+            date: DateTime(
+              wallNow.year - 1,
+              wallNow.month,
+              wallNow.day,
+              9,
+              0,
+            ).toIso8601String(),
+          ),
+        ];
+        await storage.setString(
+          'smart_push_app_open_times',
+          List.generate(
+            4,
+            (i) =>
+                wallNow.subtract(Duration(days: i, hours: 6)).toIso8601String(),
+          ).join(','),
+        );
+        await storage.setString('smart_push_unengaged_streak', '2');
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        await service.checkAndPush();
+        expect(notificationsPlugin.shownCalls, hasLength(1));
+        final shown = notificationsPlugin.shownCalls.single;
+        expect(shown.id, greaterThan(0));
+        expect(shown.payload, contains('notificationId:${shown.id}'));
+
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: shown.id,
+            payload: shown.payload,
+          ),
+        );
+        await service.analytics.settlePendingSend();
+
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        expect(
+          await service.analytics.getHabituationCooldown(),
+          equals(Duration.zero),
+        );
+        final scores = await service.analytics.getContentTypeScores();
+        expect(scores['yearAgoToday'], closeTo(2 / 3, 1e-6));
+      },
+    );
+
+    test(
+      'disabling reminders while notification tap accounting is in flight never overwrites disabled settings',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        databaseService.notes = [
+          Quote(
+            id: 'eeee5555-5555-5555-5555-555555555555',
+            content: '验证点击补记与关闭提醒并发交错时，旧快照静默保存不会覆盖用户关闭状态的回归笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 9, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final deliveredCall = notificationsPlugin.scheduledCalls.first;
+        currentNow = localTime(2026, 5, 10, 9, 30);
+
+        Future<void>? concurrentDisableFuture;
+        storage.onSetStringHook = (key, value) async {
+          if (key == 'smart_push_daily_count' &&
+              concurrentDisableFuture == null) {
+            storage.onSetStringHook = null;
+            concurrentDisableFuture = service.saveSettings(
+              const SmartPushSettings(
+                enabled: false,
+                dailyQuotePushEnabled: false,
+              ),
+            );
+            // Yield microtasks so saveSettings writes disabled state and bumps epoch
+            // before in-flight tap accounting reaches _saveSettingsQuietly.
+            await Future<void>.delayed(Duration.zero);
+          }
+        };
+
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: deliveredCall.id,
+            payload: deliveredCall.payload,
+          ),
+        );
+        expect(concurrentDisableFuture, isNotNull);
+        await concurrentDisableFuture;
+
+        expect(service.settings.enabled, isFalse);
+        expect(service.settings.dailyQuotePushEnabled, isFalse);
+        final storedJson = storage.getString('smart_push_settings_v2');
+        expect(storedJson, isNotNull);
+        final storedSettings = SmartPushSettings.fromJson(
+          jsonDecode(storedJson!) as Map<String, dynamic>,
+        );
+        expect(storedSettings.enabled, isFalse);
+        expect(storedSettings.dailyQuotePushEnabled, isFalse);
+        expect(
+          storage.getString('smart_push_prescheduled_entries_v1'),
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'database change or enabled settings update during accounting never double-counts delivered notification',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        databaseService.notes = [
+          Quote(
+            id: 'ffff6666-6666-6666-6666-666666666666',
+            content: '验证补记期间发生数据库变更或保持开启的设置更新时不会重复计数的第一条笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+          Quote(
+            id: 'aaaa7777-7777-7777-7777-777777777777',
+            content: '验证补记期间发生保持开启的设置更新时不会把同一通知结算两次的第二条笔记。',
+            date: localTime(2025, 5, 11, 9, 0).toIso8601String(),
+          ),
+        ];
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 9, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final firstCall = notificationsPlugin.scheduledCalls.first;
+        currentNow = localTime(2026, 5, 10, 9, 30);
+
+        var triggeredDbChange = false;
+        storage.onSetStringHook = (key, value) async {
+          if (key == 'smart_push_daily_count' && !triggeredDbChange) {
+            triggeredDbChange = true;
+            storage.onSetStringHook = null;
+            databaseService.notifyChanged();
+            await Future<void>.delayed(Duration.zero);
+          }
+        };
+
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: firstCall.id,
+            payload: firstCall.payload,
+          ),
+        );
+        await service.waitForPendingScheduleForTest();
+
+        expect(triggeredDbChange, isTrue);
+        expect(
+          await service.analytics.getTodayPushCount(now: currentNow),
+          equals(1),
+        );
+        final statsAfterTap = await service.analytics.getAnalyticsStats();
+        expect(statsAfterTap['totalNotificationsSent'], equals(1));
+        expect(statsAfterTap['totalEngagements'], equals(1));
+
+        // 推进到次日已送达未点击通知，在补记中途修改设置（保持 enabled: true）
+        final nextDayCall = notificationsPlugin.scheduledCalls.firstWhere(
+          (call) => call.scheduledDate.isAfter(currentNow),
+        );
+        currentNow = tz.TZDateTime.fromMillisecondsSinceEpoch(
+          tz.local,
+          nextDayCall.scheduledDate.millisecondsSinceEpoch + 30 * 60 * 1000,
+        );
+
+        Future<void>? concurrentSettingsUpdate;
+        storage.onSetStringHook = (key, value) async {
+          if (key == 'smart_push_daily_count' &&
+              concurrentSettingsUpdate == null) {
+            storage.onSetStringHook = null;
+            concurrentSettingsUpdate = service.saveSettings(
+              const SmartPushSettings(
+                enabled: true,
+                pushMode: PushMode.smart,
+                pushIntensity: PushIntensity.frequent,
+                dailyQuotePushEnabled: false,
+              ),
+            );
+            await Future<void>.delayed(Duration.zero);
+          }
+        };
+
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        expect(concurrentSettingsUpdate, isNotNull);
+        await concurrentSettingsUpdate;
+        await service.waitForPendingScheduleForTest();
+
+        expect(service.settings.pushIntensity, equals(PushIntensity.frequent));
+        expect(
+          await service.analytics.getTodayPushCount(now: currentNow),
+          equals(1),
+        );
+        // 同一条未点击通知不应在中断重试时自己把自己提前结算为未点击
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        final trackedRaw =
+            storage.getString('smart_push_prescheduled_entries_v1');
+        expect(trackedRaw, isNotNull);
+        final trackedList =
+            (jsonDecode(trackedRaw!) as List).cast<Map<String, dynamic>>();
+        final accountedEntry = trackedList.firstWhere(
+          (item) => item['id'] == nextDayCall.id,
+        );
+        expect(accountedEntry['accounted'], isTrue);
+      },
+    );
+
+    test(
+      'immediate notifications allocate monotonic 31-bit IDs without colliding at fixed clock',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.standard;
+        exactAlarmPermitted = true;
+        final wallNow = DateTime.now();
+        databaseService.notes = [
+          Quote(
+            id: 'bbbb8888-8888-8888-8888-888888888888',
+            content: '验证立即推送通知在固定时钟下仍单调递增且落入独立 31 位正整数区间的回归笔记。',
+            date: DateTime(
+              wallNow.year - 1,
+              wallNow.month,
+              wallNow.day,
+              9,
+              0,
+            ).toIso8601String(),
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.triggerPush();
+        await service.triggerPush();
+
+        expect(notificationsPlugin.shownCalls, hasLength(2));
+        final firstId = notificationsPlugin.shownCalls[0].id;
+        final secondId = notificationsPlugin.shownCalls[1].id;
+        expect(firstId, greaterThanOrEqualTo(300000000));
+        expect(firstId, lessThanOrEqualTo(1999999999));
+        expect(secondId, equals(firstId + 1));
+      },
+    );
+
+    test(
+      'changing reminder times after scheduled minute passes cancels delayed inexact pending notifications without false quota accounting',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        exactAlarmPermitted = false;
+        currentNow = localTime(2026, 5, 9, 22, 0);
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final todayDailyCall = notificationsPlugin.scheduledCalls.firstWhere(
+          (call) =>
+              call.scheduledDate.year == 2026 &&
+              call.scheduledDate.month == 5 &&
+              call.scheduledDate.day == 10 &&
+              call.title == '📖 每日一言',
+        );
+        final todayRegularCall = notificationsPlugin.scheduledCalls.firstWhere(
+          (call) =>
+              call.scheduledDate.year == 2026 &&
+              call.scheduledDate.month == 5 &&
+              call.scheduledDate.day == 10 &&
+              call.title != '📖 每日一言',
+        );
+
+        // 模拟跨天且无精确闹钟下已过计划时间（08:35 > 08:00 / 08:30），但系统尚未送达这两条通知
+        currentNow = localTime(2026, 5, 10, 8, 35);
+        notificationsPlugin.delayedPendingIds
+          ..add(todayDailyCall.id)
+          ..add(todayRegularCall.id);
+        notificationsPlugin.cancelledIds.clear();
+        final queriesBeforeResume = databaseService.queryCount;
+
+        // 回到前台触发真实对账刷新（futureOnly: true）时应保留待系统送达的延迟通知，且不提前误计入今日已送达配额
+        await service.handleAppResumed();
+        expect(databaseService.queryCount, greaterThan(queriesBeforeResume));
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(todayDailyCall.id)),
+        );
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(todayRegularCall.id)),
+        );
+        expect(
+          await service.analytics.getTodayPushCount(now: currentNow),
+          equals(0),
+        );
+
+        // 用户直接点击保存但未改变提醒时间（futureOnly: false）时，仍有效的等待中通知不应被取消而漏发
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(todayDailyCall.id)),
+        );
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(todayRegularCall.id)),
+        );
+
+        // 用户将提醒时间改到 07:00 / 07:15（新计划从次日开始，旧提醒已不符合新设置）
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 7, minute: 15, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 7,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        expect(
+          notificationsPlugin.cancelledIds,
+          containsAll(<int>[todayDailyCall.id, todayRegularCall.id]),
+        );
+        final remainingPendingIds =
+            (await notificationsPlugin.pendingNotificationRequests())
+                .map((r) => r.id)
+                .toSet();
+        expect(remainingPendingIds, isNot(contains(todayDailyCall.id)));
+        expect(remainingPendingIds, isNot(contains(todayRegularCall.id)));
+        expect(
+          await service.analytics.getTodayPushCount(now: currentNow),
+          equals(0),
+        );
+      },
+    );
+
+    test(
+      'overdue pending regular dailyQuote fallback reserves smart quota and prevents duplicate evening or gap-violating push',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        exactAlarmPermitted = false;
+        databaseService.notes.clear();
+        currentNow = localTime(2026, 5, 9, 22, 0);
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.rare,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // 2026-05-09 22:00 仅应调度次日（5月10日）早晨一条回退通知（5月10日晚间受 dailyCap=1 抑制，5月11-12日受 minGapDays 抑制）
+        final initialMay10Calls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(initialMay10Calls, hasLength(1));
+        final morningFallbackCall = initialMay10Calls.single;
+        expect(morningFallbackCall.scheduledDate.hour, equals(8));
+
+        // 推进到 5月10日 08:40（跨天超过节流窗口），早间回退通知仍等待系统送达
+        currentNow = localTime(2026, 5, 10, 8, 40);
+        notificationsPlugin.delayedPendingIds.add(morningFallbackCall.id);
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        final queriesBeforeResume = databaseService.queryCount;
+
+        // 前台恢复真正执行对账（queryCount 递增），保留早间待送达回退通知并为其预留配额，绝不安排 5月10日 20:00 或违反最小间隔的 5月11日通知
+        await service.handleAppResumed();
+        expect(databaseService.queryCount, greaterThan(queriesBeforeResume));
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(morningFallbackCall.id)),
+        );
+        expect(
+          notificationsPlugin.scheduledCalls.where(
+            (c) =>
+                c.scheduledDate.year == 2026 &&
+                c.scheduledDate.month == 5 &&
+                (c.scheduledDate.day == 10 || c.scheduledDate.day == 11),
+          ),
+          isEmpty,
+        );
+
+        notificationsPlugin.scheduledCalls.clear();
+        await service.saveSettings(service.settings);
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(morningFallbackCall.id)),
+        );
+        expect(
+          notificationsPlugin.scheduledCalls.where(
+            (c) =>
+                c.scheduledDate.year == 2026 &&
+                c.scheduledDate.month == 5 &&
+                (c.scheduledDate.day == 10 || c.scheduledDate.day == 11),
+          ),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      'headless background renewal resolves EDT daylight-saving zone instead of falling back to fixed UTC+8',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final nyLocation = tz.getLocation('America/New_York');
+        tz.setLocalLocation(nyLocation);
+        currentNow = tz.TZDateTime(nyLocation, 2026, 7, 15, 7, 0);
+
+        // Simulate headless WorkManager isolate: MethodChannel is unregistered (throws MissingPluginException)
+        const tzChannel = MethodChannel('com.shangjin.thoughtecho/timezone');
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(tzChannel, (call) async {
+          throw MissingPluginException('No implementation in headless engine');
+        });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(tzChannel, null);
+        });
+
+        await storage.setString(
+          'smart_push_settings_v2',
+          jsonEncode(
+            const SmartPushSettings(
+              enabled: false,
+              dailyQuotePushEnabled: true,
+              dailyQuotePushTime: PushTimeSlot(
+                hour: 8,
+                minute: 0,
+                label: '每日一言',
+              ),
+            ).toJson(),
+          ),
+        );
+
+        // Without any pre-synced storage key, EDT (-04:00) resolves to America/New_York (08:00 EDT == 12:00 UTC)
+        final headlessService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: null,
+          localTimeZoneProbeOverride: () => (
+            name: 'EDT',
+            offset: const Duration(hours: -4),
+          ),
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(headlessService.dispose);
+
+        await headlessService.loadSettingsForBackground();
+        await headlessService.renewPreScheduledQueueFromBackground();
+
+        expect(notificationsPlugin.scheduledCalls, hasLength(3));
+        final first = notificationsPlugin.scheduledCalls.first;
+        expect(first.scheduledDate.location.name, equals('America/New_York'));
+        expect(first.scheduledDate.hour, equals(8));
+        expect(first.scheduledDate.toUtc().hour, equals(12));
+      },
+    );
+
+    test(
+      'background delivery accounting paused between foreground settings write and epoch bump never overwrites disabled settings',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final sharedDisk = <String, Object>{};
+        final foregroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final backgroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+
+        final foregroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: foregroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(foregroundService.dispose);
+
+        await foregroundService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+          ),
+        );
+        expect(notificationsPlugin.scheduledCalls, isNotEmpty);
+
+        // Advance past morning delivery so background renewal has an unaccounted due entry
+        currentNow = localTime(2026, 5, 10, 10, 0);
+        final backgroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: backgroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(backgroundService.dispose);
+        await backgroundStorage.reload();
+        await backgroundService.loadSettingsForBackground();
+
+        // 1. Pause foreground saveSettings immediately AFTER writing smart_push_settings_v2
+        //    (turning off dailyQuotePushEnabled and switching pushMode to custom) and BEFORE
+        //    _bumpSettingsEpoch() updates smart_push_settings_epoch_v1: background accounting
+        //    actually executes and records lastPushTime into smart_push_delivery_history_v1
+        //    without overwriting smart_push_settings_v2!
+        var interceptedModifyWrite = false;
+        foregroundStorage.onSetStringHook = (key, value) async {
+          if (key == 'smart_push_settings_v2' &&
+              value.contains('"dailyQuotePushEnabled":false') &&
+              !interceptedModifyWrite) {
+            interceptedModifyWrite = true;
+            foregroundStorage.onSetStringHook = null;
+            await backgroundService.renewPreScheduledQueueFromBackground();
+          }
+        };
+
+        await foregroundService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        expect(interceptedModifyWrite, isTrue);
+
+        // 2. Also disable all reminders on foreground while delivery history already exists
+        await foregroundService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            pushMode: PushMode.custom,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // Next cold launch must read the foreground user settings intact plus merged delivery history
+        final nextLaunchStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final nextLaunchService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: nextLaunchStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(nextLaunchService.dispose);
+        await nextLaunchService.initialize();
+
+        expect(nextLaunchService.settings.enabled, isFalse);
+        expect(nextLaunchService.settings.pushMode, equals(PushMode.custom));
+        expect(nextLaunchService.settings.dailyQuotePushEnabled, isFalse);
+        expect(nextLaunchService.settings.lastPushTime, isNotNull);
+      },
+    );
+
+    test(
+      'iOS standalone daily quote schedule fetches from configured online provider when local store is empty',
+      () async {
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        databaseService.notes.clear();
+        databaseService.localDailyQuoteResult = null;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: false,
+              dailyQuoteProvider: ApiService.hitokotoProvider,
+            ).toJson(),
+          ),
+        );
+
+        var providerCalls = 0;
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          providerCalls++;
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': '山高月小，水落石出。',
+              'from_who': '古典文学作者',
+              'from': '古典散文选',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        expect(providerCalls, equals(1));
+        expect(notificationsPlugin.scheduledCalls, hasLength(1));
+        final iosCall = notificationsPlugin.scheduledCalls.single;
+        expect(iosCall.id, equals(100));
+        expect(iosCall.body, contains('山高月小，水落石出。'));
+      },
+    );
+
+    test(
+      'foreground handleAppResumed merges background-accounted delivery history and honors minGapDays',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final sharedDisk = <String, Object>{};
+        final foregroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final backgroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        databaseService.notes = [
+          Quote(
+            id: '10101010-1111-2222-3333-444444444444',
+            content: '跨进程投递历史同步验证第一条回顾笔记内容。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+          Quote(
+            id: '20202020-1111-2222-3333-444444444444',
+            content: '跨进程投递历史同步验证第二条回顾笔记内容。',
+            date: localTime(2025, 5, 11, 9, 0).toIso8601String(),
+          ),
+        ];
+
+        final foregroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: foregroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(foregroundService.dispose);
+        await foregroundService.initialize();
+
+        await foregroundService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.rare,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        expect(foregroundService.settings.lastPushTime, isNull);
+
+        // Background worker runs on May 11 07:00, accounting for May 10's delivered reminder
+        currentNow = localTime(2026, 5, 11, 7, 0);
+        final backgroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: backgroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(backgroundService.dispose);
+        await backgroundStorage.reload();
+        await backgroundService.loadSettingsForBackground();
+        await backgroundService.renewPreScheduledQueueFromBackground();
+
+        // Still-alive foreground instance resumes on May 11 07:05 without restarting
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 11, 7, 5);
+        await foregroundService.handleAppResumed();
+
+        expect(foregroundService.settings.lastPushTime, isNotNull);
+        expect(
+          notificationsPlugin.scheduledCalls.where(
+            (c) =>
+                c.scheduledDate.year == 2026 &&
+                c.scheduledDate.month == 5 &&
+                c.scheduledDate.day == 11,
+          ),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      'independent daily quote and Smart Push fallback never deliver duplicate quote content on the same day',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'allNotes',
+            ).toJson(),
+          ),
+        );
+
+        // Case 1: Only a single today-created short quote exists (no past notes match) ->
+        // independent daily quote claims it, and regular Smart Push fallback skips the duplicate.
+        final singleQuote = Quote(
+          id: '30303030-1111-2222-3333-444444444444',
+          content: '今日新录入的唯一短句语录。',
+          date: localTime(2026, 5, 10, 6, 0).toIso8601String(),
+        );
+        databaseService.notes = [singleQuote];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': singleQuote.content,
+          'type': 'local',
+          'local_quote_id': singleQuote.id,
+        };
+        databaseService.queryCount = 0;
+        databaseService.localDailyQuoteQueryCount = 0;
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        expect(databaseService.queryCount, lessThanOrEqualTo(1));
+        expect(databaseService.localDailyQuoteQueryCount, lessThanOrEqualTo(1));
+        final may10SingleCalls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(may10SingleCalls, hasLength(1));
+        expect(may10SingleCalls.single.body, contains(singleQuote.content));
+
+        // Case 2: Two distinct short quotes exist -> independent daily quote and regular fallback pick distinct quotes!
+        final secondQuote = Quote(
+          id: '40404040-1111-2222-3333-444444444444',
+          content: '今日新录入的第二条不同短句语录。',
+          date: localTime(2026, 5, 10, 6, 5).toIso8601String(),
+        );
+        databaseService.notes = [singleQuote, secondQuote];
+        notificationsPlugin.scheduledCalls.clear();
+        databaseService.queryCount = 0;
+        databaseService.localDailyQuoteQueryCount = 0;
+
+        await service.scheduleNextPush();
+
+        expect(databaseService.queryCount, lessThanOrEqualTo(1));
+        expect(databaseService.localDailyQuoteQueryCount, lessThanOrEqualTo(1));
+        final may10DualCalls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(may10DualCalls, hasLength(2));
+        expect(
+          may10DualCalls.map((c) => c.body).toSet(),
+          hasLength(2),
+        );
+      },
+    );
+
+    test(
+      'DST fall-back 25-hour Sunday advances strictly by calendar date without repeating early reminders',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final nyLocation = tz.getLocation('America/New_York');
+        tz.setLocalLocation(nyLocation);
+        // 2026-11-01 is US DST fall-back Sunday (25 hours). Start at 00:45 EDT after 00:30 reminder passed.
+        currentNow = tz.TZDateTime(nyLocation, 2026, 11, 1, 0, 45);
+
+        final dstService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'America/New_York',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(dstService.dispose);
+
+        await dstService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 0,
+              minute: 30,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final dates = notificationsPlugin.scheduledCalls
+            .map((c) => c.scheduledDate)
+            .toList();
+        expect(dates, hasLength(3));
+        expect(
+          dates
+              .map(
+                (d) =>
+                    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}',
+              )
+              .toList(),
+          equals(<String>['2026-11-02', '2026-11-03', '2026-11-04']),
+        );
+        expect(notificationsPlugin.scheduledCalls.map((c) => c.id).toSet(),
+            hasLength(3));
+      },
+    );
+
+    test(
+      'active notification kept in shade past 7-day retention window is still cancelled when its note is hidden',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final secretNote = Quote(
+          id: '50505050-1111-2222-3333-444444444444',
+          content: '超过七天仍停留在通知栏中的私密回顾笔记预览文本。',
+          date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+        );
+        databaseService.notes = [secretNote];
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final may10Call = notificationsPlugin.scheduledCalls.firstWhere(
+          (c) =>
+              c.scheduledDate.year == 2026 &&
+              c.scheduledDate.month == 5 &&
+              c.scheduledDate.day == 10,
+        );
+
+        // Simulate May 10 notification delivered and left unread in Android notification shade for 9 days
+        notificationsPlugin.activeShadeIds.add(may10Call.id);
+        currentNow = localTime(2026, 5, 19, 10, 0);
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(may10Call.id)),
+        );
+        expect(notificationsPlugin.activeShadeIds, contains(may10Call.id));
+
+        // User now hides/deletes the note on Day 9 -> active notification must be cancelled from shade!
+        databaseService.notes = [];
+        databaseService.notifyChanged();
+        await service.waitForPendingScheduleForTest();
+
+        expect(notificationsPlugin.cancelledIds, contains(may10Call.id));
+        expect(
+          notificationsPlugin.activeShadeIds,
+          isNot(contains(may10Call.id)),
+        );
+      },
+    );
+
+    test(
+      'smart pre-schedule projects pending unread delivery into habituation cooldown without double-settling on refresh and resets on late click',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        // Seed active engagement tier (>= 4 open days in past week, all > 4h ago)
+        storage.values['smart_push_app_open_times'] = <String>[
+          localTime(2026, 5, 5, 9, 0).toIso8601String(),
+          localTime(2026, 5, 6, 9, 0).toIso8601String(),
+          localTime(2026, 5, 7, 9, 0).toIso8601String(),
+          localTime(2026, 5, 8, 9, 0).toIso8601String(),
+        ].join(',');
+
+        // Simulate 3 settled unengaged deliveries + 1 unsettled pending delivery (4 unread total -> 72h cooldown)
+        final fourthDeliveryTime = localTime(2026, 5, 9, 9, 0);
+        const fourthNotificationId = 326050900;
+        storage.values['smart_push_unengaged_streak'] = '3';
+        storage.values['smart_push_pending_send'] =
+            'yearAgoToday|0|$fourthNotificationId';
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+            lastPushTime: fourthDeliveryTime,
+          ),
+        );
+
+        // May 10 (23.5h-35h after May 9 09:00) and May 11 (47.5h-59h) are both inside the 72h 4-unread cooldown;
+        // only May 12 (>= 72h after May 9 09:00) is eligible!
+        expect(notificationsPlugin.scheduledCalls, isNotEmpty);
+        for (final call in notificationsPlugin.scheduledCalls) {
+          expect(
+            call.scheduledDate.difference(fourthDeliveryTime),
+            greaterThanOrEqualTo(const Duration(hours: 72)),
+          );
+        }
+
+        // Refreshing again does NOT prematurely settle or double-increment the stored streak
+        expect(await service.analytics.getUnengagedStreak(), equals(3));
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        expect(await service.analytics.getUnengagedStreak(), equals(3));
+
+        // User late-clicks the 4th notification -> projected cooldown resets to 0h so May 10 slots are scheduled!
+        await service.analytics.recordInteraction(
+          'yearAgoToday',
+          notificationId: fourthNotificationId,
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+        expect(
+          notificationsPlugin.scheduledCalls.any(
+            (c) =>
+                c.scheduledDate.year == 2026 &&
+                c.scheduledDate.month == 5 &&
+                c.scheduledDate.day == 10,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'cold launch with recordAppOpenOnLaunch records fresh visit before first smart schedule and suppresses slots inside 4-hour window',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        // Pre-populate active open days with both morning (08:xx) and evening (20:xx) activity
+        storage.values['smart_push_app_open_times'] = <String>[
+          localTime(2026, 5, 6, 8, 30).toIso8601String(),
+          localTime(2026, 5, 6, 20, 0).toIso8601String(),
+          localTime(2026, 5, 7, 8, 30).toIso8601String(),
+          localTime(2026, 5, 7, 20, 0).toIso8601String(),
+          localTime(2026, 5, 8, 8, 30).toIso8601String(),
+          localTime(2026, 5, 8, 20, 0).toIso8601String(),
+          localTime(2026, 5, 9, 20, 0).toIso8601String(),
+        ].join(',');
+        storage.values['smart_push_settings_v2'] = jsonEncode(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+          ).toJson(),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize(recordAppOpenOnLaunch: true);
+
+        // Cold launch happened at May 10 07:30 -> any May 10 slot before 11:30 (4h window) MUST be suppressed,
+        // while May 10 evening (>= 11:30) and May 11-12 morning slots ARE scheduled!
+        final may10Calls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(
+          may10Calls.every(
+            (c) =>
+                c.scheduledDate.difference(currentNow) >=
+                const Duration(hours: 4),
+          ),
+          isTrue,
+        );
+        expect(may10Calls, isNotEmpty);
+      },
+    );
+
+    test(
+      'smart pre-schedule ranks candidates by adjusted score before extraQualityFloor check while preserving base priority in custom mode',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        // Light engagement tier (1 open day > 4h ago, both morning & evening windows) + PushIntensity.frequent -> dailyCap: 2, extraQualityFloor: 70
+        storage.values['smart_push_app_open_times'] = <String>[
+          localTime(2026, 5, 8, 9, 0).toIso8601String(),
+          localTime(2026, 5, 8, 20, 0).toIso8601String(),
+        ].join(',');
+        // Low engagement score on monthAgoToday (base 70 -> adjusted 64 < 70),
+        // high engagement + favorites on weekAgoToday (base 55 + 8 + 16 = 79 >= 70)
+        storage.values['smart_push_content_scores'] =
+            'yearAgoToday:0.5;monthAgoToday:0.2;weekAgoToday:0.9';
+
+        databaseService.notes = [
+          Quote(
+            id: '60606060-1111-2222-3333-444444444444',
+            content: '一年前今日的晨间首发回顾笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+          Quote(
+            id: '70707070-1111-2222-3333-444444444444',
+            content: '一个月前今日但历史点击率较低的笔记。',
+            date: localTime(2026, 4, 10, 9, 0).toIso8601String(),
+            favoriteCount: 0,
+          ),
+          Quote(
+            id: '80808080-1111-2222-3333-444444444444',
+            content: '一周前今日且多次收藏与高互动的精选笔记。',
+            date: localTime(2026, 5, 3, 9, 0).toIso8601String(),
+            favoriteCount: 15,
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final smartMay10Calls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(smartMay10Calls, hasLength(2));
+        expect(
+          smartMay10Calls[0].payload,
+          contains('noteId:60606060-1111-2222-3333-444444444444'),
+        );
+        expect(
+          smartMay10Calls[1].payload,
+          contains('noteId:80808080-1111-2222-3333-444444444444'),
+        );
+
+        // Switch to custom mode with only monthAgoToday + weekAgoToday -> base priority (70 > 55) still wins
+        databaseService.notes = databaseService.notes.sublist(1);
+        notificationsPlugin.scheduledCalls.clear();
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: {
+              PastNoteType.monthAgoToday,
+              PastNoteType.weekAgoToday,
+            },
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '晨间'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        final customMay10Call = notificationsPlugin.scheduledCalls.firstWhere(
+          (c) =>
+              c.scheduledDate.year == 2026 &&
+              c.scheduledDate.month == 5 &&
+              c.scheduledDate.day == 10,
+        );
+        expect(
+          customMay10Call.payload,
+          contains('noteId:70707070-1111-2222-3333-444444444444'),
+        );
+      },
+    );
+
+    test(
+      'concurrent saveSettings never lets slower earlier enable overwrite newer disable or reschedule reminders',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        final pauseFirstSave = Completer<void>();
+        final firstSaveIntercepted = Completer<void>();
+        var hookedOnce = false;
+        storage.onSetStringHook = (key, value) async {
+          if (!hookedOnce &&
+              key == 'smart_push_settings_v2' &&
+              value.contains('"enabled":true')) {
+            hookedOnce = true;
+            firstSaveIntercepted.complete();
+            await pauseFirstSave.future;
+          }
+        };
+
+        final firstSaveFuture = service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+          ),
+        );
+
+        await firstSaveIntercepted.future;
+        storage.onSetStringHook = null;
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            pushMode: PushMode.smart,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        pauseFirstSave.complete();
+        await firstSaveFuture;
+
+        expect(service.settings.enabled, isFalse);
+        expect(service.settings.dailyQuotePushEnabled, isFalse);
+        final persisted = jsonDecode(
+          storage.getString('smart_push_settings_v2')!,
+        ) as Map<String, dynamic>;
+        expect(persisted['enabled'], isFalse);
+        expect(persisted['dailyQuotePushEnabled'], isFalse);
+        expect(
+            await notificationsPlugin.pendingNotificationRequests(), isEmpty);
+        expect(renewalCancelCount, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'real SQLite DatabaseService.getQuotesForSmartPush loads quote_tags so tagOnly secondary quote schedules without duplication',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final db = await databaseFactoryFfi.openDatabase(
+          inMemoryDatabasePath,
+          options: OpenDatabaseOptions(singleInstance: false),
+        );
+        await db.execute('''
+          CREATE TABLE categories (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            is_default INTEGER DEFAULT 0,
+            icon_name TEXT,
+            last_modified TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE quotes (
+            id TEXT PRIMARY KEY,
+            content TEXT,
+            date TEXT,
+            source TEXT,
+            source_author TEXT,
+            source_work TEXT,
+            category_id TEXT,
+            color_hex TEXT,
+            location TEXT,
+            poi_name TEXT,
+            latitude REAL,
+            longitude REAL,
+            weather TEXT,
+            temperature REAL,
+            edit_source TEXT,
+            day_period TEXT,
+            last_modified TEXT,
+            favorite_count INTEGER,
+            is_deleted INTEGER DEFAULT 0,
+            deleted_at TEXT,
+            delta_content TEXT,
+            ai_analysis TEXT,
+            summary TEXT,
+            keywords TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE quote_tags (
+            quote_id TEXT NOT NULL,
+            tag_id TEXT NOT NULL,
+            PRIMARY KEY (quote_id, tag_id)
+          )
+        ''');
+        DatabaseService.setTestDatabase(db);
+        final realDbService = DatabaseService.forTesting();
+        await realDbService.init();
+        addTearDown(() async {
+          realDbService.dispose();
+          if (db.isOpen) {
+            await db.close();
+          }
+          DatabaseService.clearTestDatabase();
+        });
+
+        await db.insert('categories', <String, Object?>{
+          'id': 'tag-daily-quote',
+          'name': '每日一言',
+          'is_default': 0,
+        });
+        await db.insert('quotes', <String, Object?>{
+          'id': 'tagged-quote-1',
+          'content': '带每日一言标签的第一条本地语录。',
+          'date': localTime(2026, 5, 10, 6, 0).toIso8601String(),
+          'is_deleted': 0,
+        });
+        await db.insert('quotes', <String, Object?>{
+          'id': 'tagged-quote-2',
+          'content': '带每日一言标签的第二条备选本地语录。',
+          'date': localTime(2026, 5, 10, 6, 10).toIso8601String(),
+          'is_deleted': 0,
+        });
+        await db.insert('quotes', <String, Object?>{
+          'id': 'untagged-quote-3',
+          'content': '未打标签的普通今日短句不应在tagOnly模式被选中。',
+          'date': localTime(2026, 5, 10, 6, 20).toIso8601String(),
+          'is_deleted': 0,
+        });
+        await db.insert('quote_tags', <String, Object?>{
+          'quote_id': 'tagged-quote-1',
+          'tag_id': 'tag-daily-quote',
+        });
+        await db.insert('quote_tags', <String, Object?>{
+          'quote_id': 'tagged-quote-2',
+          'tag_id': 'tag-daily-quote',
+        });
+
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'tagOnly',
+            ).toJson(),
+          ),
+        );
+
+        final loadedQuotes = await realDbService.getQuotesForSmartPush();
+        final byId = <String, Quote>{
+          for (final q in loadedQuotes)
+            if (q.id != null) q.id!: q,
+        };
+        expect(byId['tagged-quote-1']?.tagIds, contains('tag-daily-quote'));
+        expect(byId['tagged-quote-2']?.tagIds, contains('tag-daily-quote'));
+        expect(byId['untagged-quote-3']?.tagIds, isEmpty);
+
+        final service = SmartPushService(
+          databaseService: realDbService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final may10Calls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(may10Calls, hasLength(2));
+        expect(may10Calls.map((c) => c.body).toSet(), hasLength(2));
+        for (final call in may10Calls) {
+          expect(call.body, isNot(contains('未打标签的普通今日短句')));
+        }
+      },
+    );
+
+    test(
+      'failed zonedSchedule does not record phantom tracked entries or consume quota and falls back from exact alarm exception',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        notificationsPlugin.scheduleErrorBuilder = (_) => PlatformException(
+              code: 'NOTIFICATION_BLOCKED',
+              message: 'OS rejected schedule request',
+            );
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+        final rawEntriesAfterFailure =
+            storage.getString('smart_push_prescheduled_entries_v1');
+        expect(
+          rawEntriesAfterFailure == null
+              ? const <Object?>[]
+              : (jsonDecode(rawEntriesAfterFailure) as List<Object?>),
+          isEmpty,
+        );
+
+        // Advance past morning slot time, restore OS scheduling, and verify zero phantom quota/cooldown was consumed
+        currentNow = localTime(2026, 5, 10, 10, 0);
+        notificationsPlugin.scheduleErrorBuilder = null;
+        await service.scheduleNextPush();
+
+        expect(service.settings.lastPushTime, isNull);
+        expect(service.settings.recentlyPushedNoteIds, isEmpty);
+        expect(storage.getString('smart_push_today_count'), isNull);
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        expect(
+          notificationsPlugin.scheduledCalls.any(
+            (c) =>
+                c.scheduledDate.year == 2026 &&
+                c.scheduledDate.month == 5 &&
+                c.scheduledDate.day == 10,
+          ),
+          isTrue,
+        );
+
+        // Exact alarm race: canScheduleExactAlarmsOverride returned true, but zonedSchedule throws exact_alarms_not_permitted
+        notificationsPlugin.scheduledCalls.clear();
+        await notificationsPlugin.cancelAll();
+        exactAlarmPermitted = true;
+        notificationsPlugin.scheduleErrorBuilder = (call) {
+          if (call.androidScheduleMode ==
+              AndroidScheduleMode.exactAllowWhileIdle) {
+            return PlatformException(
+              code: 'exact_alarms_not_permitted',
+              message: 'Exact alarms revoked concurrently',
+            );
+          }
+          return null;
+        };
+
+        await service.scheduleNextPush();
+        expect(notificationsPlugin.scheduledCalls, isNotEmpty);
+        expect(
+          notificationsPlugin.scheduledCalls.every(
+            (c) =>
+                c.androidScheduleMode ==
+                AndroidScheduleMode.inexactAllowWhileIdle,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'smart 3-day planner advances projected habituation cooldown across future unclicked slots and unlocks after interaction',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        // Active engagement tier (>= 4 open days in past week, all > 4h ago) with morning & evening habits
+        storage.values['smart_push_app_open_times'] = <String>[
+          localTime(2026, 5, 5, 8, 30).toIso8601String(),
+          localTime(2026, 5, 5, 20, 0).toIso8601String(),
+          localTime(2026, 5, 6, 8, 30).toIso8601String(),
+          localTime(2026, 5, 6, 20, 0).toIso8601String(),
+          localTime(2026, 5, 7, 8, 30).toIso8601String(),
+          localTime(2026, 5, 7, 20, 0).toIso8601String(),
+          localTime(2026, 5, 8, 8, 30).toIso8601String(),
+          localTime(2026, 5, 8, 20, 0).toIso8601String(),
+        ].join(',');
+        storage.values['smart_push_unengaged_streak'] = '2';
+
+        databaseService.notes = <Quote>[
+          Quote(
+            id: '91000000-1111-2222-3333-444444444444',
+            content: '五月十日第一条高分历史回顾笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+          Quote(
+            id: '92000000-1111-2222-3333-444444444444',
+            content: '五月十日第二条高分月度回顾笔记。',
+            date: localTime(2026, 4, 10, 20, 0).toIso8601String(),
+            favoriteCount: 15,
+          ),
+          Quote(
+            id: '93000000-1111-2222-3333-444444444444',
+            content: '五月十一日第一条高分历史回顾笔记。',
+            date: localTime(2025, 5, 11, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+          Quote(
+            id: '94000000-1111-2222-3333-444444444444',
+            content: '五月十一日第二条高分月度回顾笔记。',
+            date: localTime(2026, 4, 11, 20, 0).toIso8601String(),
+            favoriteCount: 15,
+          ),
+          Quote(
+            id: '95000000-1111-2222-3333-444444444444',
+            content: '五月十二日第一条高分历史回顾笔记。',
+            date: localTime(2025, 5, 12, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+        ];
+
+        final prevDelivery = localTime(2026, 5, 9, 20, 0);
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+            lastPushTime: prevDelivery,
+          ),
+        );
+
+        final initialCalls = List<_ScheduledCall>.from(
+          notificationsPlugin.scheduledCalls,
+        )..sort((a, b) => a.scheduledDate.compareTo(b.scheduledDate));
+
+        // 1. Streak=2 (8h cooldown): May 10 morning (>8h after May 9 20:00) is accepted -> projected streak becomes 3 (24h cooldown)
+        // 2. May 10 evening (~11.5h after May 10 morning < 24h) MUST be skipped!
+        final may10Calls = initialCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(may10Calls, hasLength(1));
+
+        // 3. If a second slot is scheduled in the 3-day window, it must respect >= 24h after May 10 morning,
+        //    and any third slot would require >= 72h (projected streak=4), so at most 2 slots fit in 3 days!
+        expect(initialCalls.length, inInclusiveRange(1, 2));
+        if (initialCalls.length == 2) {
+          expect(
+            initialCalls[1]
+                .scheduledDate
+                .difference(initialCalls[0].scheduledDate),
+            greaterThanOrEqualTo(const Duration(hours: 24)),
+          );
+        }
+
+        // Simulate May 10 morning firing and user clicking it -> streak resets to 0 so May 10 evening is unlocked!
+        currentNow = may10Calls.single.scheduledDate.add(
+          const Duration(minutes: 15),
+        );
+        await service.analytics.recordInteraction(
+          'yearAgoToday',
+          notificationId: may10Calls.single.id,
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+
+        expect(
+          notificationsPlugin.scheduledCalls.any(
+            (c) =>
+                c.scheduledDate.year == 2026 &&
+                c.scheduledDate.month == 5 &&
+                c.scheduledDate.day == 10 &&
+                c.scheduledDate.isAfter(currentNow),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'background renewal racing with foreground hiding a note rolls back hidden content and keeps replacement visible note',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        final sharedDisk = <String, Object>{};
+        final fgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final bgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+
+        final secretNote = Quote(
+          id: 'a1a1a1a1-1111-2222-3333-444444444444',
+          content: '已被用户设为私密隐藏、绝不允许被后台续期写入通知栏的正文。',
+          date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+        );
+        final replacementNote = Quote(
+          id: 'b2b2b2b2-1111-2222-3333-444444444444',
+          content: '隐藏私密笔记后仍保持公开可见的替代回顾笔记正文。',
+          date: localTime(2026, 4, 10, 9, 0).toIso8601String(),
+        );
+        databaseService.notes = <Quote>[secretNote, replacementNote];
+
+        SmartPushService buildIsolatedService(_MemoryPreferences prefs) {
+          return SmartPushService(
+            databaseService: databaseService,
+            locationService: LocationService(),
+            mmkvService: prefs,
+            notificationsPlugin: notificationsPlugin,
+            isAndroidOverride: true,
+            isIOSOverride: false,
+            timeZoneOverride: 'Etc/GMT-8',
+            canScheduleExactAlarmsOverride: () async => true,
+            registerPreScheduleRenewalOverride: () async {},
+            cancelPreScheduleRenewalOverride: () async {},
+            nowProvider: () => currentNow,
+          );
+        }
+
+        final fgService = buildIsolatedService(fgStorage);
+        final bgService = buildIsolatedService(bgStorage);
+        addTearDown(fgService.dispose);
+        addTearDown(bgService.dispose);
+
+        await fgService.initialize();
+        await fgService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: {
+              PastNoteType.yearAgoToday,
+              PastNoteType.monthAgoToday,
+              PastNoteType.randomMemory,
+            },
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        await bgService.loadSettingsForBackground();
+
+        // 当后台刚把包含旧 secretNote 正文的预计算通知写入系统队列时，前台将 secretNote 隐藏并完成重排
+        var hidDuringBackgroundWrite = false;
+        notificationsPlugin.onScheduleHook = (call) async {
+          if (!hidDuringBackgroundWrite &&
+              (call.body?.contains(secretNote.content) ?? false)) {
+            hidDuringBackgroundWrite = true;
+            notificationsPlugin.onScheduleHook = null;
+            databaseService.notes = <Quote>[replacementNote];
+            databaseService.notifyChanged();
+            await fgService.waitForPendingScheduleForTest();
+          }
+        };
+
+        await bgService.renewPreScheduledQueueFromBackground();
+        expect(hidDuringBackgroundWrite, isTrue);
+
+        final pendingAfterRace =
+            await notificationsPlugin.pendingNotificationRequests();
+        expect(pendingAfterRace, isNotEmpty);
+        for (final req in pendingAfterRace) {
+          expect(req.body, isNot(contains(secretNote.content)));
+          expect(req.payload, isNot(contains(secretNote.id!)));
+        }
+        expect(
+          pendingAfterRace.any(
+            (req) => req.body?.contains(replacementNote.content) ?? false,
+          ),
+          isTrue,
+        );
+
+        // 若隐藏后已无任何可见笔记，后台并发续期同样必须彻底撤回，不留任何隐藏正文
+        databaseService.notes = <Quote>[secretNote];
+        databaseService.notifyChanged();
+        await fgService.waitForPendingScheduleForTest();
+
+        var hidLastNoteDuringWrite = false;
+        notificationsPlugin.onScheduleHook = (call) async {
+          if (!hidLastNoteDuringWrite &&
+              (call.body?.contains(secretNote.content) ?? false)) {
+            hidLastNoteDuringWrite = true;
+            notificationsPlugin.onScheduleHook = null;
+            databaseService.notes = const <Quote>[];
+            databaseService.notifyChanged();
+            await fgService.waitForPendingScheduleForTest();
+          }
+        };
+
+        await bgService.renewPreScheduledQueueFromBackground();
+        expect(hidLastNoteDuringWrite, isTrue);
+        expect(
+          await notificationsPlugin.pendingNotificationRequests(),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      'warm-start notification tap bypasses 6-hour resume throttle and immediately restores skipped evening reminder',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        storage.values['smart_push_app_open_times'] = <String>[
+          localTime(2026, 5, 5, 8, 30).toIso8601String(),
+          localTime(2026, 5, 5, 20, 0).toIso8601String(),
+          localTime(2026, 5, 6, 8, 30).toIso8601String(),
+          localTime(2026, 5, 6, 20, 0).toIso8601String(),
+          localTime(2026, 5, 7, 8, 30).toIso8601String(),
+          localTime(2026, 5, 7, 20, 0).toIso8601String(),
+          localTime(2026, 5, 8, 8, 30).toIso8601String(),
+          localTime(2026, 5, 8, 20, 0).toIso8601String(),
+        ].join(',');
+        storage.values['smart_push_unengaged_streak'] = '2';
+
+        databaseService.notes = <Quote>[
+          Quote(
+            id: 'c1000000-1111-2222-3333-444444444444',
+            content: '五月十日早间待点击的高分历史回顾笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+          Quote(
+            id: 'c2000000-1111-2222-3333-444444444444',
+            content: '五月十日晚间在点击早间提醒后应自动恢复的高分笔记。',
+            date: localTime(2026, 4, 10, 20, 0).toIso8601String(),
+            favoriteCount: 15,
+          ),
+          Quote(
+            id: 'c3000000-1111-2222-3333-444444444444',
+            content: '五月十一日备用高分历史回顾笔记。',
+            date: localTime(2025, 5, 11, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+            lastPushTime: localTime(2026, 5, 9, 20, 0),
+          ),
+        );
+
+        final may10BeforeTap = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        // 因预计第 3 次未点击触发 24h 冷却，当晚槽位最初被跳过，当天仅排入早间 1 条
+        expect(may10BeforeTap, hasLength(1));
+        final morningCall = may10BeforeTap.single;
+        expect(morningCall.scheduledDate.hour, lessThan(12));
+
+        // 推进到早间通知送达后 15 分钟（距上次刷新不足 2 小时，处于 handleAppResumed 6 小时节流窗口内）
+        currentNow = morningCall.scheduledDate.add(
+          const Duration(minutes: 15),
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        await service.handleAppResumed();
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+
+        // 用户暖启动点击早间通知 -> 应突破 6 小时节流立即重排并恢复当晚提醒槽位
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: morningCall.id,
+            payload: morningCall.payload,
+          ),
+        );
+
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        final restoredTonightCalls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10 &&
+                  c.scheduledDate.isAfter(currentNow),
+            )
+            .toList();
+        expect(restoredTonightCalls, hasLength(1));
+        expect(restoredTonightCalls.single.scheduledDate.hour,
+            greaterThanOrEqualTo(18));
+      },
+    );
+
+    test(
+      'background rollback cancels written stale notifications while preserving newer foreground notification on shared slot ID',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 9, 8, 0);
+
+        List<Quote> buildVersionedNotes(int version) => <Quote>[
+              Quote(
+                id: 'd${version}000000-1111-2222-3333-444444444444',
+                content:
+                    '跨日预调度共享槽位并发替换长笔记版本-$version，用于验证后台已写入旧通知必被回滚且前台同槽位新提醒完整保留，正文长度超过一百字避免命中短一言候选池。' *
+                        2,
+                date: DateTime(2025, 5, 12, 9, 0).toIso8601String(),
+                favoriteCount: 12,
+              ),
+              Quote(
+                id: 'd${version}999999-1111-2222-3333-444444444444',
+                content:
+                    '跨日预调度晚间副槽位长笔记版本-$version，用于支撑同日第二槽位真实写入系统通知队列并在移除后验证回滚清理，正文长度超过一百字避免命中短一言池。' *
+                        2,
+                date: DateTime(2026, 4, 1, 20, 0).toIso8601String(),
+                favoriteCount: 3,
+              ),
+            ];
+
+        databaseService.notes = buildVersionedNotes(0);
+
+        final sharedDisk = <String, Object>{};
+        final fgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final bgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final sharedLockDir = await Directory.systemTemp.createTemp(
+          'smart_push_sched_lock_',
+        );
+        addTearDown(() async {
+          if (sharedLockDir.existsSync()) {
+            await sharedLockDir.delete(recursive: true);
+          }
+        });
+        final scheduleLockPath = '${sharedLockDir.path}/schedule.lock';
+
+        SmartPushService buildIsolatedService(_MemoryPreferences prefs) {
+          return SmartPushService(
+            databaseService: databaseService,
+            locationService: LocationService(),
+            mmkvService: prefs,
+            notificationsPlugin: notificationsPlugin,
+            isAndroidOverride: true,
+            isIOSOverride: false,
+            timeZoneOverride: 'Etc/GMT-8',
+            canScheduleExactAlarmsOverride: () async => false,
+            registerPreScheduleRenewalOverride: () async {},
+            cancelPreScheduleRenewalOverride: () async {},
+            scheduleLockFilePathOverride: scheduleLockPath,
+            nowProvider: () => currentNow,
+          );
+        }
+
+        final fgService = buildIsolatedService(fgStorage);
+        addTearDown(fgService.dispose);
+        await fgService.initialize();
+
+        final bgService = buildIsolatedService(bgStorage);
+        addTearDown(bgService.dispose);
+
+        // 先在 5 月 9 日开启 09:00 与 20:00 双槽位（此时仅追踪 5/9、5/10、5/11，5/12 尚未进入追踪表）
+        await fgService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: {
+              PastNoteType.yearAgoToday,
+              PastNoteType.randomMemory,
+            },
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+              PushTimeSlot(hour: 20, minute: 0, label: '晚间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // 推进到 5 月 10 日：后台续期滚动补写 5 月 12 日新窗口槽位（slotIndex=0 为 09:00，slotIndex=1 为 20:00）
+        currentNow = localTime(2026, 5, 10, 8, 0);
+        final sharedMorningSlotId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          localTime(2026, 5, 12, 9, 0),
+          slotIndex: 0,
+        );
+        final may12EveningStaleOnlyId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          localTime(2026, 5, 12, 20, 0),
+          slotIndex: 1,
+        );
+
+        Future<void>? pendingFgSaveFuture;
+        var bgTriggeredRound = 0;
+        var nextVersion = 1;
+        var sawBgEveningStaleWrite = false;
+        var sawBgMorningStaleWriteCount = 0;
+
+        Future<void> waitForDiskKeyChange(
+          String key,
+          String? previousValue,
+        ) async {
+          for (var i = 0; i < 200; i++) {
+            if ((sharedDisk[key] as String?) != previousValue) {
+              return;
+            }
+            await Future<void>.delayed(const Duration(milliseconds: 1));
+          }
+        }
+
+        final outerZone = Zone.current;
+        bgStorage.onReloadHook = () async {
+          if (bgTriggeredRound >= 1 && identical(Zone.current, outerZone)) {
+            if (pendingFgSaveFuture != null) {
+              final f = pendingFgSaveFuture;
+              pendingFgSaveFuture = null;
+              await f;
+            }
+            await fgService.waitForPendingScheduleForTest();
+          }
+        };
+
+        notificationsPlugin.onScheduleHook = (call) async {
+          if (bgTriggeredRound == 0 &&
+              call.id == may12EveningStaleOnlyId &&
+              (call.body ?? '').contains('版本-0')) {
+            // 后台已真实调用 zonedSchedule 写入 5/12 09:00 与 20:00（slotIndex=1，尚未持久化到追踪表）！
+            // 此时前台在 Zone.root 移除 20:00 槽位并仅保留 09:00（slotIndex=0）：
+            // 唯有后台 _rollbackStaleBackgroundEntries(writtenEntries) 才能撤回 slotIndex=1 的已写入未追踪通知。
+            sawBgEveningStaleWrite = true;
+            bgTriggeredRound = 1;
+            final prevSettingsEpoch =
+                sharedDisk['smart_push_settings_epoch_v1'] as String?;
+            databaseService.notes = buildVersionedNotes(nextVersion++);
+            pendingFgSaveFuture = Zone.root.run(
+              () => fgService.saveSettings(
+                const SmartPushSettings(
+                  enabled: true,
+                  pushMode: PushMode.custom,
+                  enabledPastNoteTypes: {
+                    PastNoteType.yearAgoToday,
+                    PastNoteType.randomMemory,
+                  },
+                  pushTimeSlots: [
+                    PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+                  ],
+                  dailyQuotePushEnabled: false,
+                ),
+              ),
+            );
+            await waitForDiskKeyChange(
+              'smart_push_settings_epoch_v1',
+              prevSettingsEpoch,
+            );
+            return;
+          }
+
+          if (bgTriggeredRound >= 1 &&
+              bgTriggeredRound < 4 &&
+              call.id == sharedMorningSlotId &&
+              (call.body ?? '').contains('版本-$bgTriggeredRound')) {
+            // 在后续每一轮（直到第 4 轮最终轮）后台真实写入 sharedMorningSlotId 后触发前台笔记变更，
+            // 验证写后回滚不会误删前台紧随其后或先前写入的同确定性槽位新通知。
+            sawBgMorningStaleWriteCount++;
+            bgTriggeredRound++;
+            final prevScheduleEpoch =
+                sharedDisk['smart_push_schedule_epoch_v1'] as String?;
+            Zone.root.run(() {
+              databaseService.notes = buildVersionedNotes(nextVersion++);
+              databaseService.notifyChanged();
+            });
+            await waitForDiskKeyChange(
+              'smart_push_schedule_epoch_v1',
+              prevScheduleEpoch,
+            );
+          }
+        };
+
+        final bgFuture = bgService.renewPreScheduledQueueFromBackground();
+        await bgFuture;
+        bgStorage.onReloadHook = null;
+        notificationsPlugin.onScheduleHook = null;
+        if (pendingFgSaveFuture != null) {
+          await pendingFgSaveFuture;
+        }
+        await fgService.waitForPendingScheduleForTest();
+
+        expect(
+          sawBgEveningStaleWrite,
+          isTrue,
+          reason: '测试必须真实覆盖后台已调用 zonedSchedule 写入旧通知后再触发回滚的路径',
+        );
+        expect(sawBgMorningStaleWriteCount, equals(3));
+        expect(nextVersion, equals(5));
+        expect(
+          notificationsPlugin.cancelledIds,
+          contains(may12EveningStaleOnlyId),
+          reason: '后台在写入后被新设置打断时，必须主动撤回尚未落盘追踪表的已写入旧通知',
+        );
+
+        final pending = await notificationsPlugin.pendingNotificationRequests();
+        expect(
+          pending.any((req) => req.id == may12EveningStaleOnlyId),
+          isFalse,
+          reason: '已被移除且未写入前台追踪表的 5/12 20:00 (slotIndex=1) 旧通知必须已被后台回滚清除',
+        );
+        final matchingMorningSlot =
+            pending.where((req) => req.id == sharedMorningSlotId).toList();
+        expect(
+          matchingMorningSlot,
+          hasLength(1),
+          reason: '前台同确定性槽位 ID (slotIndex=0) 的最新通知在后台最终轮回滚后必须完整存活',
+        );
+        expect(matchingMorningSlot.single.body, contains('版本-4'));
+        expect(matchingMorningSlot.single.body, isNot(contains('版本-3')));
+      },
+    );
+
+    test(
+      'background stale disabled cancellation skips clearing newly enabled foreground reminders and renewal task',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 8, 0);
+        databaseService.notes = <Quote>[
+          Quote(
+            id: 'e1000000-1111-2222-3333-444444444444',
+            content: '重新开启提醒后的公开笔记，不应被滞后的后台禁用清理任务撤回。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+            favoriteCount: 8,
+          ),
+        ];
+
+        final sharedDisk = <String, Object>{};
+        final fgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final bgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final sharedLockDir = await Directory.systemTemp.createTemp(
+          'smart_push_cancel_race_',
+        );
+        addTearDown(() async {
+          if (sharedLockDir.existsSync()) {
+            await sharedLockDir.delete(recursive: true);
+          }
+        });
+        final scheduleLockPath = '${sharedLockDir.path}/schedule.lock';
+        var renewalTaskActive = false;
+        var cancelRenewalCallCount = 0;
+
+        SmartPushService buildService(_MemoryPreferences prefs) {
+          return SmartPushService(
+            databaseService: databaseService,
+            locationService: LocationService(),
+            mmkvService: prefs,
+            notificationsPlugin: notificationsPlugin,
+            isAndroidOverride: true,
+            isIOSOverride: false,
+            timeZoneOverride: 'Etc/GMT-8',
+            canScheduleExactAlarmsOverride: () async => false,
+            registerPreScheduleRenewalOverride: () async {
+              renewalTaskActive = true;
+            },
+            cancelPreScheduleRenewalOverride: () async {
+              cancelRenewalCallCount++;
+              renewalTaskActive = false;
+            },
+            scheduleLockFilePathOverride: scheduleLockPath,
+            nowProvider: () => currentNow,
+          );
+        }
+
+        final fgService = buildService(fgStorage);
+        addTearDown(fgService.dispose);
+        await fgService.initialize();
+
+        final bgService = buildService(bgStorage);
+        addTearDown(bgService.dispose);
+
+        await fgService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        var cancelAllCountAfterFgEnable = 0;
+        var cancelledIdsCountAfterFgEnable = 0;
+        var cancelRenewalCountAfterFgEnable = 0;
+        var fgEnabledBeforeBgCancel = false;
+
+        // 在后台续期入口首次 reload() 捕获到旧的禁用快照（epoch=1）之后、进入 _cancelAllSchedulesInternal 之前，
+        // 先让前台完整执行完重新开启提醒与排期注册，确保后台滞后取消严格发生在前台排期完成之后（无后续重建机会）。
+        bgStorage.onReloadHook = () async {
+          bgStorage.onReloadHook = null;
+          await Zone.root.run(
+            () => fgService.saveSettings(
+              const SmartPushSettings(
+                enabled: true,
+                pushMode: PushMode.custom,
+                enabledPastNoteTypes: {PastNoteType.yearAgoToday},
+                pushTimeSlots: [
+                  PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+                ],
+                dailyQuotePushEnabled: false,
+              ),
+            ),
+          );
+          final pendingAfterEnable =
+              await notificationsPlugin.pendingNotificationRequests();
+          expect(pendingAfterEnable, hasLength(1));
+          expect(renewalTaskActive, isTrue);
+          cancelAllCountAfterFgEnable = notificationsPlugin.cancelAllCount;
+          cancelledIdsCountAfterFgEnable =
+              notificationsPlugin.cancelledIds.length;
+          cancelRenewalCountAfterFgEnable = cancelRenewalCallCount;
+          fgEnabledBeforeBgCancel = true;
+        };
+
+        await bgService.renewPreScheduledQueueFromBackground();
+
+        expect(fgEnabledBeforeBgCancel, isTrue);
+        expect(
+          notificationsPlugin.cancelAllCount,
+          equals(cancelAllCountAfterFgEnable),
+          reason: '滞后的后台禁用取消必须在提交锁内识别到新纪元并直接跳过 cancelAll',
+        );
+        expect(
+          notificationsPlugin.cancelledIds.length,
+          equals(cancelledIdsCountAfterFgEnable),
+        );
+        expect(
+          cancelRenewalCallCount,
+          equals(cancelRenewalCountAfterFgEnable),
+          reason: '滞后的后台禁用取消不得取消前台刚注册的周期续期任务',
+        );
+
+        final pending = await notificationsPlugin.pendingNotificationRequests();
+        expect(pending, hasLength(1));
+        expect(renewalTaskActive, isTrue);
+      },
+    );
+
+    test(
+      'hiding source note of upcoming smart reminder cancels slot without inflating projected cooldown for next day',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        databaseService.localDailyQuoteResult = null;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(AppSettings(useLocalQuotesOnly: false).toJson()),
+        );
+
+        final day1OnlyNote = Quote(
+          id: 'f1000000-1111-2222-3333-444444444444',
+          content:
+              '五月十日专属那年今日长笔记，隐藏后当日无替代内容但不应拉长预计连续未点击冷却期，正文超过一百字以避免落入短一言池。' * 2,
+          date: DateTime(2025, 5, 10, 8, 30).toIso8601String(),
+          favoriteCount: 9,
+        );
+        // 创建于 2026-05-04 14:00（距 5 月 10 日仅 6 天且时间差超过 30 分钟）：
+        // 在 5 月 10 日不满足那年今日、上月今日、上周今日、随机回忆（需 >7 天）或往日此时；
+        // 仅在 5 月 11 日满足「上周今日」（恰满 7 天）。
+        final day2OnlyNote = Quote(
+          id: 'f2000000-1111-2222-3333-444444444444',
+          content: '五月四日下午记录的专属周回顾长笔记，仅在五月十一日满足上周今日条件，在首日无法被选为随机回忆或往日此时。' * 2,
+          date: DateTime(2026, 5, 4, 14, 0).toIso8601String(),
+          favoriteCount: 9,
+        );
+        databaseService.notes = <Quote>[day1OnlyNote, day2OnlyNote];
+
+        await storage.setString(
+          'smart_push_app_open_times',
+          localTime(2026, 5, 8, 9, 0).toIso8601String(),
+        );
+        await storage.setString('smart_push_unengaged_streak', '3');
+
+        final service = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => false,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            dailyQuotePushEnabled: false,
+            lastPushTime: localTime(2026, 5, 9, 9, 0),
+          ),
+        );
+
+        final day1SlotId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          localTime(2026, 5, 10, 9, 0),
+          slotIndex: 0,
+        );
+        final day2SlotId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          localTime(2026, 5, 11, 9, 0),
+          slotIndex: 0,
+        );
+
+        // 隐藏前：5 月 10 日 09:00（距上次推送恰满 24h，满足 streak=3 冷却）排入后，
+        // 预计连续未点击升至 4（72 小时冷却），因此 5 月 11 日 09:00 最初被冷却抑制
+        final pendingBeforeHide =
+            await notificationsPlugin.pendingNotificationRequests();
+        expect(pendingBeforeHide.any((req) => req.id == day1SlotId), isTrue);
+        expect(pendingBeforeHide.any((req) => req.id == day2SlotId), isFalse);
+
+        databaseService.notes = <Quote>[day2OnlyNote];
+        databaseService.notifyChanged();
+        await service.waitForPendingScheduleForTest();
+
+        final pending = await notificationsPlugin.pendingNotificationRequests();
+        expect(
+          pending.any((req) => req.id == day1SlotId),
+          isFalse,
+          reason: '5 月 10 日在源笔记隐藏后无任何合格候选，当日不应残留或替补任何通知',
+        );
+        final day2Matches =
+            pending.where((req) => req.id == day2SlotId).toList();
+        expect(
+          day2Matches,
+          hasLength(1),
+          reason: '因源笔记隐藏而取消的首日槽位不应推进预计冷却期，5 月 11 日提醒（距上次推送 48h >= 24h）必须恢复排期',
+        );
+        expect(
+          day2Matches.single.body,
+          contains('五月四日下午记录的专属周回顾长笔记'),
+        );
+      },
+    );
+
+    test(
+      'warm tap on iOS standalone Daily Quote rearms next day notification without unthrottled resume refresh',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 55);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        databaseService.notes.clear();
+        databaseService.localDailyQuoteResult = null;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: false,
+              dailyQuoteProvider: ApiService.hitokotoProvider,
+            ).toJson(),
+          ),
+        );
+
+        var providerCalls = 0;
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          providerCalls++;
+          final quoteText =
+              providerCalls == 1 ? '首日晨间一言：清风徐来，水波不兴。' : '次日预备一言：行到水穷处，坐看云起时。';
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': quoteText,
+              'from_who': '示例作者甲',
+              'from': '示例诗文集',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final initialDailyCalls = notificationsPlugin.scheduledCalls
+            .where((c) => c.id == 100)
+            .toList();
+        expect(initialDailyCalls, isNotEmpty);
+        final firstScheduled = initialDailyCalls.last;
+        expect(
+            firstScheduled.scheduledDate, equals(localTime(2026, 5, 10, 9, 0)));
+        expect(firstScheduled.body, contains('首日晨间一言'));
+
+        // 09:01 触发并暖启动点击：距 08:55 仅过去 6 分钟，handleAppResumed 受同日 6 小时节流限制不会重排
+        currentNow = localTime(2026, 5, 10, 9, 1);
+        await iosService.handleAppResumed();
+        expect(
+          await notificationsPlugin.pendingNotificationRequests(),
+          isEmpty,
+          reason: '同日 6 小时节流窗口内的前台恢复不会重新注册单次 iOS 每日一言通知',
+        );
+
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 100,
+            payload: firstScheduled.payload,
+          ),
+        );
+
+        // 本次点击仍准确消费并保留首日一言缓存，不被明日预取内容覆盖
+        final tappedDisplay =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(tappedDisplay, isNotNull);
+        expect(tappedDisplay!['hitokoto'], contains('首日晨间一言'));
+        final todayCached = await iosService.getCachedDailyQuoteForToday();
+        expect(todayCached, isNotNull);
+        expect(todayCached!['hitokoto'], contains('首日晨间一言'));
+
+        // 验证明日（5 月 11 日 09:00）的 ID=100 通知已被自动续订，且未额外创建常规提醒
+        final pendingAfterTap =
+            await notificationsPlugin.pendingNotificationRequests();
+        expect(pendingAfterTap.map((r) => r.id).toList(), equals(<int>[100]));
+        final rearmedCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          rearmedCall.scheduledDate,
+          equals(localTime(2026, 5, 11, 9, 0)),
+        );
+        expect(rearmedCall.body, contains('次日预备一言'));
+        expect(
+          notificationsPlugin.scheduledCalls.where((c) => c.id != 100),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      'warm Daily Quote tap on iOS does not abort concurrent handleAppResumed regular reminder planning',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 55);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        final pastNote = Quote(
+          id: 'd1000000-1111-2222-3333-444444444444',
+          content: '一年前留下的晨昏随笔，用于验证 iOS 常规提醒与每日一言并发恢复时槽位完整保留。',
+          date: DateTime(2025, 5, 11, 8, 30).toIso8601String(),
+          favoriteCount: 5,
+        );
+        databaseService.notes = <Quote>[pastNote];
+        databaseService.localDailyQuoteResult = null;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: false,
+              dailyQuoteProvider: ApiService.hitokotoProvider,
+            ).toJson(),
+          ),
+        );
+
+        var providerCalls = 0;
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          providerCalls++;
+          final quoteText = providerCalls == 1
+              ? '首日晨间一言：山高月小，水落石出。'
+              : (providerCalls == 2 ? '次日晨间一言：竹杖芒鞋轻胜马。' : '三日预备一言：一蓑烟雨任平生。');
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': quoteText,
+              'from_who': '示例作者甲',
+              'from': '示例词选',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 8, minute: 0, label: '晨间回顾'),
+              PushTimeSlot(hour: 20, minute: 0, label: '晚间回顾'),
+            ],
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final firstDailyCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          firstDailyCall.scheduledDate,
+          equals(localTime(2026, 5, 10, 9, 0)),
+        );
+
+        // 先在首日 09:01 点击已送达的首日一言，由服务真实续订出次日（5 月 11 日 09:00）的 ID=100 通知与追踪条目
+        currentNow = localTime(2026, 5, 10, 9, 1);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 100,
+            payload: firstDailyCall.payload,
+          ),
+        );
+        final armedMay11DailyCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          armedMay11DailyCall.scheduledDate,
+          equals(localTime(2026, 5, 11, 9, 0)),
+        );
+        expect(armedMay11DailyCall.payload, isNotNull);
+        await iosService.consumePendingDailyQuoteForHomeDisplay();
+
+        // 推进到次日 09:01：前一日的常规提醒（ID=0、1）均已过期，用户点击刚送达的真实 5 月 11 日 09:00 每日一言唤醒应用
+        currentNow = localTime(2026, 5, 11, 9, 1);
+
+        final planningBarrier = Completer<void>();
+        databaseService.pendingQueryBarrier = planningBarrier;
+        notificationsPlugin.scheduledCalls.clear();
+
+        // 1. 前台恢复先启动全量刷新，并暂停在常规提醒智能槽位规划阶段
+        final resumeFuture = iosService.handleAppResumed();
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // 2. 在全量刷新尚未完成常规槽位规划时，每日一言点击回调使用已注册通知的真实 payload 并发排入续订操作
+        final tapFuture = iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 100,
+            payload: armedMay11DailyCall.payload,
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // 放行常规槽位规划
+        planningBarrier.complete();
+        databaseService.pendingQueryBarrier = null;
+        await Future.wait(<Future<void>>[resumeFuture, tapFuture]);
+
+        final tappedMay11Display =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(tappedMay11Display, isNotNull);
+        expect(tappedMay11Display!['hitokoto'], contains('次日晨间一言'));
+
+        final pendingIds =
+            (await notificationsPlugin.pendingNotificationRequests())
+                .map((r) => r.id)
+                .toSet();
+        expect(
+          pendingIds.contains(0),
+          isTrue,
+          reason: '点击每日一言不得递增全量刷新代数并导致常规提醒槽位漏排',
+        );
+        expect(
+          pendingIds.contains(100),
+          isTrue,
+          reason: '下一日的独立每日一言（ID=100）应同时保留在待触发队列中',
+        );
+        final latestDailyCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          latestDailyCall.scheduledDate,
+          equals(localTime(2026, 5, 12, 9, 0)),
+        );
+      },
+    );
+
+    test(
+      'tapping yesterday unread iOS Daily Quote before today pending slot preserves today alert',
+      () async {
+        currentNow = localTime(2026, 5, 11, 8, 50);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        databaseService.notes.clear();
+        databaseService.localDailyQuoteResult = null;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: false,
+              dailyQuoteProvider: ApiService.hitokotoProvider,
+            ).toJson(),
+          ),
+        );
+
+        var providerCalls = 0;
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          providerCalls++;
+          final quoteText = providerCalls == 1
+              ? '周一晨间一言：明月松间照，清泉石上流。'
+              : '周二待发一言：空山新雨后，天气晚来秋。';
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': quoteText,
+              'from_who': '示例作者乙',
+              'from': '示例唐诗',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final mondayCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          mondayCall.scheduledDate,
+          equals(localTime(2026, 5, 11, 9, 0)),
+        );
+        expect(mondayCall.payload, contains('scheduledEpochMs:'));
+
+        // 周一 09:00 通知送达但未读；周二 08:00 用户打开 App 触发跨日重排，注册周二 09:00 待触发通知
+        currentNow = localTime(2026, 5, 12, 8, 0);
+        await iosService.handleAppResumed();
+        final tuesdayCallBeforeTap =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          tuesdayCallBeforeTap.scheduledDate,
+          equals(localTime(2026, 5, 12, 9, 0)),
+        );
+        expect(tuesdayCallBeforeTap.body, contains('周二待发一言'));
+
+        // 周二 08:05 用户在通知中心点击周一遗留的未读通知（同时覆盖带 scheduledEpochMs 与旧版无时间戳载荷）
+        currentNow = localTime(2026, 5, 12, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 100,
+            payload: mondayCall.payload,
+          ),
+        );
+        final mondayQuoteFromTimestampedPayload =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(mondayQuoteFromTimestampedPayload, isNotNull);
+        expect(
+          mondayQuoteFromTimestampedPayload!['hitokoto'],
+          contains('周一晨间一言'),
+          reason: '点击周一未读每日一言通知后，首页必须展示周一条目的快照而非周二新缓存',
+        );
+
+        await iosService.handleNotificationTapForTest(
+          const NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 100,
+            payload: 'contentType:dailyQuote|notificationId:100',
+          ),
+        );
+        final mondayQuoteFromLegacyPayload =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(mondayQuoteFromLegacyPayload, isNotNull);
+        expect(
+          mondayQuoteFromLegacyPayload!['hitokoto'],
+          contains('周一晨间一言'),
+          reason: '兼容无时间戳旧版 payload 点击已送达通知时，也必须还原最近一次已送达快照',
+        );
+
+        final pendingOnTuesdayMorning =
+            await notificationsPlugin.pendingNotificationRequests();
+        expect(
+          pendingOnTuesdayMorning.map((r) => r.id).toList(),
+          equals(<int>[100]),
+        );
+        final latestTuesdayCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          latestTuesdayCall.scheduledDate,
+          equals(localTime(2026, 5, 12, 9, 0)),
+          reason: '点击昨日未读每日一言时必须保留今日尚未触发的 09:00 提醒，不得跳到周三',
+        );
+        expect(latestTuesdayCall.body, contains('周二待发一言'));
+      },
+    );
+
+    test(
+      'same-day evening resume refresh preserves prefetched tomorrow iOS Daily Quote until time or source changes',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 55);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        databaseService.notes.clear();
+        databaseService.localDailyQuoteResult = null;
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: false,
+              dailyQuoteProvider: ApiService.hitokotoProvider,
+            ).toJson(),
+          ),
+        );
+
+        var providerCalls = 0;
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          providerCalls++;
+          final quoteText = providerCalls == 1
+              ? '今日一言甲：长风破浪会有时。'
+              : (providerCalls == 2 ? '明日预取乙：直挂云帆济沧海。' : '改时间后一言丙：千里江陵一日还。');
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': quoteText,
+              'from_who': '示例作者丙',
+              'from': '示例诗选',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final morningCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(morningCall.body, contains('今日一言甲'));
+
+        // 09:01 点击今日一言，为明日 09:00 预取「明日预取乙」，同时今日缓存仍保留「今日一言甲」
+        currentNow = localTime(2026, 5, 10, 9, 1);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 100,
+            payload: morningCall.payload,
+          ),
+        );
+        final prefetchedTomorrow =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          prefetchedTomorrow.scheduledDate,
+          equals(localTime(2026, 5, 11, 9, 0)),
+        );
+        expect(prefetchedTomorrow.body, contains('明日预取乙'));
+
+        // 同日傍晚 16:30（距上次全量刷新已超 6 小时）重新打开 App：不得将明日预取的乙覆盖回今日缓存甲
+        currentNow = localTime(2026, 5, 10, 16, 30);
+        await iosService.handleAppResumed();
+        final pendingAfterEveningResume =
+            await notificationsPlugin.pendingNotificationRequests();
+        expect(pendingAfterEveningResume, hasLength(1));
+        expect(
+          pendingAfterEveningResume.single.body,
+          contains('明日预取乙'),
+          reason: '时间与一言源配置未变时，同日晚间恢复刷新必须保留明日已预取的新一言',
+        );
+
+        // 若用户修改每日一言推送时间（09:00 -> 10:00），则必须立即替换旧时间点的待触发通知
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 10,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+        final rescheduledAfterTimeChange =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          rescheduledAfterTimeChange.scheduledDate,
+          equals(localTime(2026, 5, 11, 10, 0)),
+        );
+        expect(rescheduledAfterTimeChange.body, contains('改时间后一言丙'));
+
+        // 若用户切换一言来源配置为仅本地笔记，随后全量刷新必须用本地一言替换旧的在线预取项；
+        // 当该本地笔记随后被隐藏时，数据库监听刷新必须撤回并替换它
+        const localQuoteId = 'e1000000-1111-2222-3333-444444444444';
+        const backupLocalQuoteId = 'e2000000-1111-2222-3333-444444444444';
+        final localQuoteA = Quote(
+          id: localQuoteId,
+          content: '本地短句甲：采菊东篱下。',
+          date: DateTime(2026, 4, 1, 9, 0).toIso8601String(),
+        );
+        final localQuoteB = Quote(
+          id: backupLocalQuoteId,
+          content: '本地短句乙：悠然见南山。',
+          date: DateTime(2026, 4, 2, 9, 0).toIso8601String(),
+        );
+        databaseService.notes = <Quote>[localQuoteA, localQuoteB];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': localQuoteA.content,
+          'type': 'local',
+          'local_quote_id': localQuoteId,
+        };
+        await storage.setString(
+          'app_settings',
+          jsonEncode(AppSettings(useLocalQuotesOnly: true).toJson()),
+        );
+        await iosService.scheduleNextPush(preserveDeliveredNotifications: true);
+        final afterSourceChange =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(afterSourceChange.body, contains('本地短句甲'));
+
+        // 隐藏已预取的本地一言笔记后，自动重排必须替换掉不可见的本地笔记内容
+        databaseService.notes = <Quote>[localQuoteB];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': localQuoteB.content,
+          'type': 'local',
+          'local_quote_id': backupLocalQuoteId,
+        };
+        databaseService.notifyChanged();
+        await iosService.waitForPendingScheduleForTest();
+        final afterHideLocalQuote =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(afterHideLocalQuote.body, contains('本地短句乙'));
+      },
+    );
+
+    test(
+      'unregistered POSIX Etc/GMT fixed-offset zone falls back cleanly through offset parser',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        tz.timeZoneDatabase.locations.remove('Etc/GMT+5');
+        expect(
+          () => tz.getLocation('Etc/GMT+5'),
+          throwsA(anything),
+        );
+
+        final unregService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT+5',
+          canScheduleExactAlarmsOverride: () async => false,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => DateTime.utc(2026, 5, 10, 12, 0),
+        );
+        addTearDown(unregService.dispose);
+
+        await unregService.initialize();
+        expect(tz.local.name, equals('Etc/GMT+5'));
+        expect(
+          tz.local.currentTimeZone.offset,
+          equals(-5 * Duration.millisecondsPerHour),
+        );
+      },
+    );
+
+    test(
+      'editing local Daily Quote note or removing 每日一言 tag in tagOnly mode refreshes pending iOS Daily Quote and invalidates cache',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 40);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        const primaryNoteId = 'f1000000-1111-2222-3333-444444444444';
+        const fallbackNoteId = 'f2000000-1111-2222-3333-444444444444';
+        databaseService.tags = <NoteTag>[
+          NoteTag(id: 'tag-daily-quote', name: '每日一言'),
+        ];
+        databaseService.enforceTagOnlyEligibility = true;
+
+        final initialPrimary = Quote(
+          id: primaryNoteId,
+          content: '初版短句：春风又绿江南岸。',
+          sourceAuthor: '示例作者甲',
+          sourceWork: '示例诗集',
+          tagIds: const <String>['tag-daily-quote'],
+          date: DateTime(2026, 4, 10, 9, 0).toIso8601String(),
+        );
+        final taggedBackup = Quote(
+          id: fallbackNoteId,
+          content: '替补标签短句：海上生明月。',
+          sourceAuthor: '示例作者乙',
+          sourceWork: '示例诗选',
+          tagIds: const <String>['tag-daily-quote'],
+          date: DateTime(2026, 4, 11, 9, 0).toIso8601String(),
+        );
+        databaseService.notes = <Quote>[initialPrimary, taggedBackup];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': initialPrimary.content,
+          'author': initialPrimary.sourceAuthor,
+          'source': initialPrimary.sourceWork,
+          'type': 'local',
+          'provider': 'offline',
+          'local_quote_id': primaryNoteId,
+        };
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'tagOnly',
+            ).toJson(),
+          ),
+        );
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(() {
+          databaseService.tags = const <NoteTag>[];
+          databaseService.enforceTagOnlyEligibility = false;
+          iosService.dispose();
+        });
+        await iosService.initialize();
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final initialScheduled =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(initialScheduled.body, contains('初版短句'));
+        expect(
+          await iosService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', '初版短句：春风又绿江南岸。'),
+        );
+
+        // 1. 用户直接修改该本地笔记正文与作者（未隐藏/未删除）：待触发 iOS 每日一言与今日缓存必须刷新
+        final editedPrimary = initialPrimary.copyWith(
+          content: '修订后短句：明月何时照我还。',
+          sourceAuthor: '示例作者丙',
+        );
+        databaseService.notes = <Quote>[editedPrimary, taggedBackup];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': editedPrimary.content,
+          'author': editedPrimary.sourceAuthor,
+          'source': editedPrimary.sourceWork,
+          'type': 'local',
+          'provider': 'offline',
+          'local_quote_id': primaryNoteId,
+        };
+        databaseService.notifyChanged();
+        await iosService.waitForPendingScheduleForTest();
+
+        final afterEditCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          afterEditCall.body,
+          contains('修订后短句'),
+          reason: '源本地笔记编辑后不得继续保留旧版待发通知正文',
+        );
+        expect(afterEditCall.body, contains('示例作者丙'));
+        expect(
+          await iosService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', '修订后短句：明月何时照我还。'),
+        );
+
+        // 2. 在 tagOnly 模式下移除该笔记的「每日一言」标签：待触发通知与缓存必须立即替换为仍带标签的候选笔记
+        final untaggedPrimary = editedPrimary.copyWith(
+          tagIds: const <String>[],
+        );
+        databaseService.notes = <Quote>[untaggedPrimary, taggedBackup];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': taggedBackup.content,
+          'author': taggedBackup.sourceAuthor,
+          'source': taggedBackup.sourceWork,
+          'type': 'local',
+          'provider': 'offline',
+          'local_quote_id': fallbackNoteId,
+        };
+        databaseService.notifyChanged();
+        await iosService.waitForPendingScheduleForTest();
+
+        final afterUntagCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          afterUntagCall.body,
+          contains('替补标签短句'),
+          reason: 'tagOnly 模式下移除「每日一言」标签后必须撤换已不再符合条件的待触发通知',
+        );
+        expect(
+          await iosService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', '替补标签短句：海上生明月。'),
+        );
+      },
+    );
+
+    test(
+      'switching dailyQuoteProvider invalidates same-day cached quote and refreshes queued iOS Daily Quote',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 45);
+        final appPrefs = AppPreferencesService();
+        await appPrefs.init();
+        await appPrefs.remove('smart_push_last_daily_quote');
+        await appPrefs.remove('smart_push_last_daily_quote_date');
+        await appPrefs.remove('smart_push_tracked_prescheduled_v1');
+        databaseService.notes.clear();
+        databaseService.localDailyQuoteResult = null;
+
+        final settingsService = await SettingsService.create();
+        await settingsService.setUseLocalQuotesOnly(false);
+        await settingsService.setDailyQuoteProvider(
+          ApiService.hitokotoProvider,
+        );
+
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          if (url.contains('zenquotes')) {
+            return HttpResponse(
+              jsonEncode(<Map<String, dynamic>>[
+                <String, dynamic>{
+                  'q': 'Calm seas never made a skilled sailor.',
+                  'a': 'Sample Thinker',
+                },
+              ]),
+              200,
+            );
+          }
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': '一言接口句子：星垂平野阔。',
+              'from_who': '示例作者甲',
+              'from': '示例旅夜诗',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: appPrefs,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 9,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final hitokotoCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(hitokotoCall.body, contains('一言接口句子'));
+        expect(
+          await iosService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', '一言接口句子：星垂平野阔。'),
+        );
+
+        // 通过 SettingsService 切换每日一言提供商为 ZenQuotes：应自动使旧缓存失效并将待发 ID=100 通知更新为 ZenQuotes 内容
+        await settingsService.setDailyQuoteProvider(
+          ApiService.zenQuotesProvider,
+        );
+        await iosService.waitForPendingScheduleForTest();
+
+        final zenCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          zenCall.body,
+          contains('Calm seas never made a skilled sailor.'),
+          reason: '切换一言提供商后不得把新指纹盖到旧提供商缓存上，而必须重新拉取新提供商内容',
+        );
+        final cachedAfterSwitch =
+            await iosService.getCachedDailyQuoteForToday();
+        expect(cachedAfterSwitch, isNotNull);
+        expect(
+          cachedAfterSwitch!['hitokoto'],
+          equals('Calm seas never made a skilled sailor.'),
+        );
+        expect(
+          cachedAfterSwitch['provider'],
+          equals(ApiService.zenQuotesProvider),
+        );
+      },
+    );
+
+    test(
+      'tapping first iOS smart reminder slot id 0 credits positive engagement instead of counting as ignored',
+      () async {
+        currentNow = localTime(2026, 5, 10, 7, 50);
+        await storage.setString('smart_push_unengaged_streak', '2');
+        databaseService.notes = <Quote>[
+          Quote(
+            id: '00112233-4455-6677-8899-aabbccddeeff',
+            content: '去年今日在湖畔步道记录下的晨光笔记，微风拂过水面泛起层层涟漪。',
+            date: localTime(2025, 5, 10, 8, 0).toIso8601String(),
+          ),
+        ];
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 8, minute: 0, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final slotZeroCall =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        expect(
+          slotZeroCall.scheduledDate,
+          equals(localTime(2026, 5, 10, 8, 0)),
+        );
+        expect(slotZeroCall.payload, contains('notificationId:0'));
+
+        // 08:05 用户点击该首槽通知（id = 0）唤醒应用
+        currentNow = localTime(2026, 5, 10, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 0,
+            payload: slotZeroCall.payload,
+          ),
+        );
+
+        final analytics = SmartPushAnalytics(mmkvService: storage);
+        await analytics.settlePendingSend();
+        expect(
+          await analytics.getUnengagedStreak(),
+          equals(0),
+          reason: 'iOS 首槽常规提醒（id = 0）被点击后必须复位连续未点击计数，不得被当作忽略累加',
+        );
+        final scores = await analytics.getContentTypeScores();
+        expect(scores['yearAgoToday']!, greaterThan(0.5));
+        final stats = await analytics.getAnalyticsStats();
+        expect(stats['totalNotificationsSent'], equals(1));
+        expect(stats['totalEngagements'], equals(1));
+      },
+    );
+
+    test(
+      'reusing iOS slot id 0 across consecutive days credits Day 2 tap after Day 1 tap and does not misattribute click to unengaged prior day',
+      () async {
+        currentNow = localTime(2026, 5, 10, 7, 50);
+        databaseService.notes = <Quote>[
+          Quote(
+            id: '11112222-3333-4444-5555-666677778801',
+            content: '第一天的去年今日晨光随笔，记录微风与鸟鸣。',
+            date: localTime(2025, 5, 10, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: '11112222-3333-4444-5555-666677778802',
+            content: '第二天的去年今日晨光随笔，记录露珠与远山。',
+            date: localTime(2025, 5, 11, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: '11112222-3333-4444-5555-666677778803',
+            content: '第三天的往月今日笔记，记录静谧街角的灯火。',
+            date: localTime(2026, 4, 12, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: '11112222-3333-4444-5555-666677778804',
+            content: '第四天的去年今日晨光随笔，记录雨后初晴的蓝天。',
+            date: localTime(2025, 5, 13, 8, 0).toIso8601String(),
+          ),
+        ];
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 8, minute: 0, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // Day 1 (5/10): 点击 id=0 并推进到次日重排
+        final day1Call =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        currentNow = localTime(2026, 5, 10, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 0,
+            payload: day1Call.payload,
+          ),
+        );
+        await iosService.scheduleNextPush(preserveDeliveredNotifications: true);
+
+        // Day 2 (5/11): 再次点击复用 id=0 的新通知，不应被 Day 1 的已结算标记吞掉
+        final day2Call =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        expect(
+          day2Call.scheduledDate,
+          equals(localTime(2026, 5, 11, 8, 0)),
+        );
+        currentNow = localTime(2026, 5, 11, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 0,
+            payload: day2Call.payload,
+          ),
+        );
+
+        final analytics = SmartPushAnalytics(mmkvService: storage);
+        await analytics.settlePendingSend();
+        expect(await analytics.getUnengagedStreak(), equals(0));
+        var stats = await analytics.getAnalyticsStats();
+        // 智能模式每日规划早晚 2 个窗口（id=0 08:00 与 id=1 20:00）：
+        // 截至 5/11 08:05 共送达 3 条（5/10 08:00、5/10 20:00、5/11 08:00），其中两次 id=0 点击均被准确计为正向互动
+        expect(stats['totalNotificationsSent'], equals(3));
+        expect(stats['totalEngagements'], equals(2));
+
+        // 排入 Day 3 (5/12)；Day 3 08:00 (id=0, monthAgoToday) 送达后用户未点击，
+        // 5/12 19:00 前台恢复触发重排（preserveDeliveredNotifications: true）自然保留未结算的 Day 3 id=0 并追加待发 Day 4 (5/13 08:00) id=0
+        await iosService.scheduleNextPush(preserveDeliveredNotifications: true);
+        final day3Call =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        expect(
+          day3Call.scheduledDate,
+          equals(localTime(2026, 5, 12, 8, 0)),
+        );
+
+        currentNow = localTime(2026, 5, 12, 19, 0);
+        await iosService.scheduleNextPush(preserveDeliveredNotifications: true);
+        final day4Call =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        expect(
+          day4Call.scheduledDate,
+          equals(localTime(2026, 5, 13, 8, 0)),
+        );
+
+        final coexistingSlotZeroEntries = (jsonDecode(
+          storage.getString('smart_push_prescheduled_entries_v1')!,
+        ) as List<dynamic>)
+            .whereType<Map<String, dynamic>>()
+            .where((e) => e['id'] == 0 && e['accounted'] != true)
+            .toList();
+        expect(
+          coexistingSlotZeroEntries,
+          hasLength(2),
+          reason: '重排保留已送达快照时，未补记的 Day 3 id=0 与待发的 Day 4 id=0 在真实存储中共存',
+        );
+
+        currentNow = localTime(2026, 5, 13, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 0,
+            payload: day4Call.payload,
+          ),
+        );
+        await analytics.settlePendingSend();
+
+        expect(await analytics.getUnengagedStreak(), equals(0));
+        final scores = await analytics.getContentTypeScores();
+        expect(
+          scores['monthAgoToday']!,
+          lessThan(0.5),
+          reason: 'Day 3 未点击的同槽位通知不得挪用 Day 4 的点击记录',
+        );
+        // 截至 5/13 08:05 已到达触发时间的通知共 6 条（5/10 早晚、5/11 早晚、5/12 早、5/13 早；5/13 晚间槽位尚在未来），其中 3 次点击均精准归因
+        stats = await analytics.getAnalyticsStats();
+        expect(stats['totalNotificationsSent'], equals(6));
+        expect(stats['totalEngagements'], equals(3));
+      },
+    );
+
+    test(
+      'immediate Daily Quote push delivered offline with local fallback opens exact delivered quote after reconnecting online and respects note hiding',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.standard;
+        addTearDown(() {
+          ApiService.debugIsConnectedOverride = null;
+          ApiService.debugHttpGetOverride = null;
+        });
+
+        currentNow = localTime(2026, 5, 10, 8, 0);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: false,
+              dailyQuoteProvider: ApiService.hitokotoProvider,
+              offlineQuoteSource: 'tagOnly',
+            ).toJson(),
+          ),
+        );
+
+        const localFallbackId = '99887766-5544-3322-1100-aabbccddeeff';
+        databaseService.notes = <Quote>[
+          Quote(
+            id: localFallbackId,
+            content: '断网时推送到通知栏的本地收藏短句。',
+            sourceAuthor: '本地作者',
+            sourceWork: '离线手札',
+            date: localTime(2026, 4, 1, 9, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '断网时推送到通知栏的本地收藏短句。',
+          'author': '本地作者',
+          'source': '离线手札',
+          'type': 'local',
+          'local_quote_id': localFallbackId,
+        };
+
+        // 1. 断网状态下触发即时每日一言推送：展示本地回退语录，且不污染今日在线一言缓存
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          throw const SocketException('Network unreachable');
+        };
+
+        final androidService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          nowProvider: () => currentNow,
+        );
+        addTearDown(androidService.dispose);
+        await androidService.initialize();
+        await androidService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 8, minute: 0),
+          ),
+        );
+        notificationsPlugin.shownCalls.clear();
+
+        await androidService.checkAndPush(
+          isBackground: true,
+          triggerKind: 'dailyQuote',
+        );
+        expect(notificationsPlugin.shownCalls, hasLength(1));
+        final shown = notificationsPlugin.shownCalls.single;
+        expect(shown.body, contains('断网时推送到通知栏的本地收藏短句。'));
+        expect(await androidService.getCachedDailyQuoteForToday(), isNull);
+
+        // 2. 恢复联网且在线接口返回全新一言后点击刚才的即时通知：首页必须展示通知上实际看到的本地短句
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': '联网后新拉取的在线一言：长风破浪会有时。',
+              'from_who': '示例作者丁',
+              'from': '示例诗集',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        currentNow = localTime(2026, 5, 10, 8, 10);
+        await androidService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: shown.id,
+            payload: shown.payload,
+          ),
+        );
+
+        final displayed =
+            await androidService.consumePendingDailyQuoteForHomeDisplay();
+        expect(displayed, isNotNull);
+        expect(
+          displayed!['hitokoto'],
+          equals('断网时推送到通知栏的本地收藏短句。'),
+          reason: '离线送达后恢复联网再点击通知，应展示通知实际送达的本地快照而非重新拉取新在线一言',
+        );
+
+        // 3. 若用户随后将该源笔记隐藏，再点击该通知必须拒绝展示并联动清理
+        databaseService.notes = <Quote>[];
+        databaseService.localDailyQuoteResult = null;
+        await androidService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: shown.id,
+            payload: shown.payload,
+          ),
+        );
+        expect(
+          await androidService.consumePendingDailyQuoteForHomeDisplay(),
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'iOS standalone Daily Quote with useLocalQuotesOnly uses built-in default quote when offlineQuoteSource is all and upgrades once a local note is added',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 30);
+        databaseService.notes = <Quote>[];
+        databaseService.localDailyQuoteResult = null;
+
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'all',
+              localeCode: 'zh',
+            ).toJson(),
+          ),
+        );
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 9, minute: 0),
+          ),
+        );
+
+        final defaultScheduled =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          defaultScheduled.body,
+          isNot(equals('点击查看今天的灵感')),
+          reason: '仅本地 + 全部笔记模式下空库应回退内置默认语录，而非退化为无内容通用提示',
+        );
+        final cachedDefault = await iosService.getCachedDailyQuoteForToday();
+        expect(cachedDefault, isNotNull);
+        expect(cachedDefault!['provider'], equals('default'));
+
+        // 用户新增第一条符合条件的本地笔记后，待触发 ID=100 与当日缓存应自动升级为真实本地笔记
+        const addedLocalId = '77776666-5555-4444-3333-222211110000';
+        databaseService.notes = <Quote>[
+          Quote(
+            id: addedLocalId,
+            content: '用户新写下的第一条真实本地短句。',
+            date: localTime(2026, 5, 10, 8, 35).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '用户新写下的第一条真实本地短句。',
+          'type': 'local',
+          'local_quote_id': addedLocalId,
+        };
+        databaseService.notifyChanged();
+        await iosService.waitForPendingScheduleForTest();
+
+        final upgradedScheduled =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(upgradedScheduled.body, contains('用户新写下的第一条真实本地短句。'));
+      },
+    );
+
+    test(
+      'tapping an iOS Daily Quote test notification before today standalone slot displays the test quote without moving ID=100 to tomorrow',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 30);
+        const quoteId = '66554433-2211-0099-8877-665544332211';
+        databaseService.notes = <Quote>[
+          Quote(
+            id: quoteId,
+            content: '清晨试推与九点正式一言共用的本地佳句。',
+            sourceAuthor: '示例作者戊',
+            sourceWork: '示例文选',
+            date: localTime(2026, 5, 1, 9, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '清晨试推与九点正式一言共用的本地佳句。',
+          'author': '示例作者戊',
+          'source': '示例文选',
+          'type': 'local',
+          'local_quote_id': quoteId,
+        };
+
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'tagOnly',
+              localeCode: 'zh',
+            ).toJson(),
+          ),
+        );
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.dailyQuote,
+            pushTimeSlots: <PushTimeSlot>[PushTimeSlot(hour: 20, minute: 0)],
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 9, minute: 0),
+          ),
+        );
+
+        final initialStandalone =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(initialStandalone.scheduledDate.year, equals(2026));
+        expect(initialStandalone.scheduledDate.month, equals(5));
+        expect(initialStandalone.scheduledDate.day, equals(10));
+        expect(initialStandalone.scheduledDate.hour, equals(9));
+        expect(initialStandalone.scheduledDate.minute, equals(0));
+        final scheduleCountBeforeTestTap =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).length;
+
+        // 08:30 在设置页点击「测试推送」（PushMode.dailyQuote），发出非 ID=100 的即时通知
+        notificationsPlugin.shownCalls.clear();
+        await iosService.triggerPush();
+        expect(notificationsPlugin.shownCalls, hasLength(1));
+        final testShown = notificationsPlugin.shownCalls.single;
+        expect(testShown.id, isNot(equals(100)));
+
+        // 08:31 点击该测试通知：首页应展示测试通知快照，但今日 09:00 待触发的 ID=100 绝不能被跳到明天
+        currentNow = localTime(2026, 5, 10, 8, 31);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: testShown.id,
+            payload: testShown.payload,
+          ),
+        );
+        await iosService.waitForPendingScheduleForTest();
+
+        final displayed =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(displayed, isNotNull);
+        expect(displayed!['hitokoto'], equals('清晨试推与九点正式一言共用的本地佳句。'));
+
+        final activeStandaloneAfterTestTap =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          notificationsPlugin.scheduledCalls.where((c) => c.id == 100).length,
+          equals(scheduleCountBeforeTestTap),
+          reason: '点击测试通知不应触发 iOS 独立每日一言槽位重装',
+        );
+        expect(
+          activeStandaloneAfterTestTap.scheduledDate.day,
+          equals(10),
+          reason: '今日 09:00 的独立每日一言提醒必须保留在今天，不得被提前推移至次日',
+        );
+      },
+    );
+
+    test(
+      'persisting an immediate Daily Quote snapshot retains >7-day-old notifications still visible in the Android shade so hiding their note cancels them',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 1, 8, 0);
+
+        const oldShadeNoteId = '11223344-5566-7788-99aa-bbccddeeff00';
+        const freshQuoteNoteId = 'ffeeddcc-bbaa-9988-7766-554433221100';
+        databaseService.notes = <Quote>[
+          Quote(
+            id: oldShadeNoteId,
+            content: '通知栏里保留了十天的历史回顾笔记。',
+            date: localTime(2025, 5, 1, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: freshQuoteNoteId,
+            content: '十天后新送达的即时每日一言短句。',
+            date: localTime(2026, 5, 10, 8, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '十天后新送达的即时每日一言短句。',
+          'author': '示例作者己',
+          'source': '示例札记',
+          'type': 'local',
+          'local_quote_id': freshQuoteNoteId,
+        };
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'tagOnly',
+              localeCode: 'zh',
+            ).toJson(),
+          ),
+        );
+
+        // 5/1 生成预排期回顾通知并使其送达后一直保留在系统通知栏中
+        exactAlarmPermitted = true;
+        final androidService = createService();
+        addTearDown(androidService.dispose);
+        await androidService.initialize();
+        await androidService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            enabledPastNoteTypes: <PastNoteType>{PastNoteType.yearAgoToday},
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 8, minute: 0),
+          ),
+        );
+
+        final may1Call = notificationsPlugin.scheduledCalls.firstWhere(
+          (c) =>
+              c.scheduledDate.year == 2026 &&
+              c.scheduledDate.month == 5 &&
+              c.scheduledDate.day == 1 &&
+              (c.body?.contains('通知栏里保留了十天的历史回顾笔记。') ?? false),
+        );
+        notificationsPlugin.activeShadeIds.add(may1Call.id);
+
+        // 推进 10 天（超出 7 天保留期），换上全新一言后触发一次即时每日一言推送写入快照（不经过全量重排）
+        currentNow = localTime(2026, 5, 11, 8, 0);
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '五月十一日清晨全新送达的即时每日一言。',
+          'author': '示例作者己',
+          'source': '示例札记',
+          'type': 'local',
+          'local_quote_id': freshQuoteNoteId,
+        };
+        databaseService.notes = <Quote>[
+          Quote(
+            id: oldShadeNoteId,
+            content: '通知栏里保留了十天的历史回顾笔记。',
+            date: localTime(2025, 5, 1, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: freshQuoteNoteId,
+            content: '五月十一日清晨全新送达的即时每日一言。',
+            date: localTime(2026, 5, 10, 8, 0).toIso8601String(),
+          ),
+        ];
+        notificationsPlugin.shownCalls.clear();
+        await androidService.triggerPush();
+        expect(notificationsPlugin.shownCalls, hasLength(1));
+        expect(
+          notificationsPlugin.shownCalls.single.body,
+          contains('五月十一日清晨全新送达的即时每日一言。'),
+        );
+
+        // 断言在 _persistDeliveredDailyQuoteSnapshot 执行后，超 7 天但仍在通知栏中的 may1Call 仍留在追踪存储里
+        final trackedAfterSnapshot = (jsonDecode(
+          storage.getString('smart_push_prescheduled_entries_v1') ?? '[]',
+        ) as List<dynamic>)
+            .whereType<Map<String, dynamic>>()
+            .map((e) => e['id'])
+            .toSet();
+        expect(trackedAfterSnapshot, contains(may1Call.id));
+
+        // 随后隐藏 10 天前的源笔记：仍在通知栏中的旧通知应被精准撤回
+        notificationsPlugin.cancelledIds.clear();
+        databaseService.notes = <Quote>[
+          Quote(
+            id: freshQuoteNoteId,
+            content: '五月十一日清晨全新送达的即时每日一言。',
+            date: localTime(2026, 5, 10, 8, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.notifyChanged();
+        await androidService.waitForPendingScheduleForTest();
+
+        expect(
+          notificationsPlugin.cancelledIds,
+          contains(may1Call.id),
+          reason: '仍在通知栏可见的超 7 天通知在即时一言快照写入后仍应保留追踪并在隐藏笔记时撤回',
+        );
+      },
+    );
+  });
+}

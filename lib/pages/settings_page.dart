@@ -16,6 +16,7 @@ import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/version_check_service.dart';
 import '../widgets/update_dialog.dart';
+import '../core/config/distribution_config.dart';
 import '../constants/app_constants.dart';
 import 'backup_restore_page.dart';
 import 'note_sync_page.dart';
@@ -166,6 +167,13 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 版本检查方法 ---
   Future<void> _checkForUpdates({bool showNoUpdateMessage = true}) async {
     if (_isCheckingUpdate) return;
+
+    if (!kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        DistributionConfig.isPlayStore) {
+      await UpdateBottomSheet.openGooglePlayStore(context);
+      return;
+    }
 
     setState(() {
       _isCheckingUpdate = true;

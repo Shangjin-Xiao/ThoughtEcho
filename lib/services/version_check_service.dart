@@ -138,6 +138,21 @@ class VersionCheckService {
   static const Duration _cacheValidDuration = Duration(hours: 1);
   static List<String>? _cachedDeviceAbis;
 
+  @visibleForTesting
+  static int debugCheckForUpdatesCallCount = 0;
+
+  @visibleForTesting
+  static Future<VersionInfo> Function({
+    Duration? timeout,
+    bool forceRefresh,
+  })? debugCheckForUpdatesOverride;
+
+  @visibleForTesting
+  static void resetDebugState() {
+    debugCheckForUpdatesCallCount = 0;
+    debugCheckForUpdatesOverride = null;
+  }
+
   /// 读取设备支持的 ABI，用于挑选架构匹配的 APK。
   ///
   /// 非 Android 平台或读取失败时返回空列表，调用方据此退回旧的选包行为。
@@ -189,6 +204,11 @@ class VersionCheckService {
     Duration? timeout,
     bool forceRefresh = false,
   }) async {
+    debugCheckForUpdatesCallCount++;
+    final override = debugCheckForUpdatesOverride;
+    if (override != null) {
+      return override(timeout: timeout, forceRefresh: forceRefresh);
+    }
     try {
       // 如果有缓存且未过期，且不是强制刷新，则返回缓存
       if (!forceRefresh &&

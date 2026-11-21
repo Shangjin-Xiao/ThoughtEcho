@@ -69,6 +69,26 @@ class SmartPushService extends ChangeNotifier {
   static const String _autoStartGrantedKey = 'smart_push_auto_start_granted';
   static const int _androidAlarmId = 888;
   static const int _dailyQuoteAlarmId = 988;
+  static const int kAndroidPreScheduleDays = 3;
+  static const int _preScheduledNotificationBaseId = 100000000;
+  static const int _dailyQuoteSlotCode = 99;
+  static const String _preScheduledEntriesKey =
+      'smart_push_prescheduled_entries_v1';
+  static const String _settingsEpochKey = 'smart_push_settings_epoch_v1';
+  static const String _scheduleEpochKey = 'smart_push_schedule_epoch_v1';
+  static const String _notificationCommitSeqKey =
+      'smart_push_notification_commit_seq_v1';
+  static const String _scheduleCrossIsolateLockName = 'smart_push_schedule_v1';
+  static final Object _scheduleCommitLockZoneKey = Object();
+  static const String _deliveryHistoryKey = 'smart_push_delivery_history_v1';
+  static const String _deviceTimeZoneKey = 'smart_push_device_timezone_v1';
+  static const String _immediateNotificationSeqKey =
+      'smart_push_immediate_notif_seq_v1';
+  static const String _preScheduleRenewalUniqueName =
+      'smart_push_preschedule_renew';
+  static const Duration _preScheduleRenewalFrequency = Duration(hours: 24);
+  static const Duration _deliveredEntryRetention = Duration(days: 7);
+  static const Duration _resumeRefreshMinInterval = Duration(hours: 6);
   static const String _notificationChannelId = 'smart_push_channel';
   static const String _notificationChannelName = '智能推送';
   static const String _scheduledTimesKey = 'smart_push_scheduled_times_today';
@@ -154,6 +174,212 @@ class SmartPushService extends ChangeNotifier {
   }
 
   final Random _random = Random();
+  final bool? _isAndroidOverride;
+  final bool? _isIOSOverride;
+  final String? _timeZoneOverride;
+  final ({String name, Duration offset}) Function()?
+      _localTimeZoneProbeOverride;
+  final Future<bool> Function()? _canScheduleExactAlarmsOverride;
+  final Future<PushPermissionStatus> Function()? _permissionStatusOverride;
+  final Future<void> Function()? _openSystemAppSettingsOverride;
+  final Future<void> Function()? _registerPreScheduleRenewalOverride;
+  final Future<void> Function()? _cancelPreScheduleRenewalOverride;
+  final String? _scheduleLockFilePathOverride;
+  final DateTime Function() _nowProvider;
+
+  DateTime? _lastScheduleRefreshAt;
+  bool? _lastScheduledExactAlarmGranted;
+  bool _isRefreshingOnResume = false;
+  bool _isDisposed = false;
+  bool _databaseListenerAttached = false;
+  bool _legacyAndroidTasksCleared = false;
+  int _scheduleGeneration = 0;
+  int _settingsMutationGeneration = 0;
+  String? _latestAuthoritativeSettingsJson;
+  final Set<int> _inFlightImmediateSmartNotificationIds = <int>{};
+  Future<void> _pendingScheduleOp = Future<void>.value();
+  Future<void> _pendingAccountingOp = Future<void>.value();
+  Future<void> _pendingEpochBump = Future<void>.value();
+
+  bool get _isAndroid => _isAndroidOverride ?? PlatformHelper.isAndroid;
+  bool get _isIOS => _isIOSOverride ?? PlatformHelper.isIOS;
+  DateTime _now() => _nowProvider();
+
+  @visibleForTesting
+  Future<void> waitForPendingScheduleForTest() => _pendingScheduleOp;
+
+  bool _isScheduleGenerationCurrent(int generation) =>
+      !_isDisposed && generation == _scheduleGeneration;
+
+  bool _isSettingsMutationGenerationCurrent(int settingsGeneration) =>
+      !_isDisposed && settingsGeneration == _settingsMutationGeneration;
+
+  int _readStoredSettingsEpoch() {
+    final raw = _mmkv.getString(_settingsEpochKey);
+    if (raw == null || raw.isEmpty) return 0;
+    return int.tryParse(raw) ?? 0;
+  }
+
+  int _readStoredScheduleEpoch() {
+    final raw = _mmkv.getString(_scheduleEpochKey);
+    if (raw == null || raw.isEmpty) return 0;
+    return int.tryParse(raw) ?? 0;
+  }
+
+  int _readStoredNotificationCommitSeq() {
+    final raw = _mmkv.getString(_notificationCommitSeqKey);
+    if (raw == null || raw.isEmpty) return 0;
+    return int.tryParse(raw) ?? 0;
+  }
+
+  Future<int> _nextNotificationCommitSeq() async {
+    await _reloadSharedStorageIfSupported();
+    final nextSeq = _readStoredNotificationCommitSeq() + 1;
+    await _mmkv.setString(_notificationCommitSeqKey, nextSeq.toString());
+    return nextSeq;
+  }
+
+  Future<T> _withScheduleCommitLock<T>(Future<T> Function() action) {
+    if (Zone.current[_scheduleCommitLockZoneKey] == true) {
+      return action();
+    }
+    return PlatformHelper.withCrossIsolateLock<T>(
+      _scheduleCrossIsolateLockName,
+      () => runZoned(
+        action,
+        zoneValues: <Object?, Object?>{_scheduleCommitLockZoneKey: true},
+      ),
+      customLockFilePath: _scheduleLockFilePathOverride,
+    );
+  }
+
+  Future<int> _bumpScheduleEpoch() {
+    final completer = Completer<int>();
+    final nextOp = _pendingEpochBump.then((_) async {
+      try {
+        await _mmkv.reload();
+      } catch (_) {}
+      final nextSchedule = _readStoredScheduleEpoch() + 1;
+      await _mmkv.setString(_scheduleEpochKey, nextSchedule.toString());
+      completer.complete(nextSchedule);
+    });
+    _pendingEpochBump = nextOp.catchError((Object e, StackTrace stack) {
+      if (!completer.isCompleted) {
+        completer.completeError(e, stack);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<int> _bumpSettingsEpoch() {
+    final completer = Completer<int>();
+    final nextOp = _pendingEpochBump.then((_) async {
+      try {
+        await _mmkv.reload();
+      } catch (_) {}
+      final nextSettings = _readStoredSettingsEpoch() + 1;
+      final nextSchedule = _readStoredScheduleEpoch() + 1;
+      await _mmkv.setString(_settingsEpochKey, nextSettings.toString());
+      await _mmkv.setString(_scheduleEpochKey, nextSchedule.toString());
+      completer.complete(nextSettings);
+    });
+    _pendingEpochBump = nextOp.catchError((Object e, StackTrace stack) {
+      if (!completer.isCompleted) {
+        completer.completeError(e, stack);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<void> _reloadSharedStorageIfSupported() async {
+    try {
+      await _mmkv.reload();
+    } catch (_) {}
+  }
+
+  bool _areStoredSettingsAllDisabled() {
+    try {
+      final raw =
+          _mmkv.getString(_settingsKey) ?? _mmkv.getString(_legacySettingsKey);
+      if (raw == null || raw.isEmpty) return false;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return false;
+      final parsed = SmartPushSettings.fromJson(decoded);
+      return !parsed.enabled && !parsed.dailyQuotePushEnabled;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _hasActiveReminderInStoredSettings() {
+    try {
+      final raw =
+          _mmkv.getString(_settingsKey) ?? _mmkv.getString(_legacySettingsKey);
+      if (raw == null || raw.isEmpty) return false;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return false;
+      final parsed = SmartPushSettings.fromJson(decoded);
+      return _hasActiveReminderScheduleConfig(parsed);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _enqueueScheduleOperation(
+    Future<void> Function(int generation) action, {
+    Future<Object?>? prerequisite,
+  }) {
+    final generation = ++_scheduleGeneration;
+    final next = _pendingScheduleOp.then((_) async {
+      if (prerequisite != null) {
+        try {
+          await prerequisite;
+        } catch (_) {}
+      }
+      await _pendingAccountingOp;
+      if (!_isScheduleGenerationCurrent(generation)) return;
+      await action(generation);
+    });
+    _pendingScheduleOp = next.catchError((Object e, StackTrace stack) {
+      AppLogger.w('推送调度队列执行异常', error: e, stackTrace: stack);
+    });
+    return next;
+  }
+
+  /// 将单条增量调度（如 iOS 每日一言点击后续订下一日通知）串行排入 [_pendingScheduleOp]，
+  /// 但不递增 [_scheduleGeneration]，避免取消正在并发规划常规提醒槽位的全量刷新（如 `handleAppResumed`）。
+  Future<void> _enqueueNonInvalidatingScheduleOperation(
+    Future<void> Function(
+      int observedGeneration,
+      int observedSettingsGeneration,
+    ) action,
+  ) {
+    final observedGeneration = _scheduleGeneration;
+    final observedSettingsGeneration = _settingsMutationGeneration;
+    final next = _pendingScheduleOp.then((_) async {
+      await _pendingAccountingOp;
+      if (!_isScheduleGenerationCurrent(observedGeneration) ||
+          !_isSettingsMutationGenerationCurrent(observedSettingsGeneration)) {
+        return;
+      }
+      await action(observedGeneration, observedSettingsGeneration);
+    });
+    _pendingScheduleOp = next.catchError((Object e, StackTrace stack) {
+      AppLogger.w('推送增量调度队列执行异常', error: e, stackTrace: stack);
+    });
+    return next;
+  }
+
+  String _currentDailyQuoteSourceFingerprint([AppSettings? appSettings]) {
+    final settings = appSettings ?? _loadStoredAppSettings();
+    final categories = List<String>.from(settings.apiNinjasCategories)..sort();
+    return '${settings.useLocalQuotesOnly}|'
+        '${settings.offlineQuoteSource}|'
+        '${settings.dailyQuoteProvider}|'
+        '${settings.hitokotoType}|'
+        '${categories.join(",")}|'
+        '${settings.localeCode ?? ""}';
+  }
 
   SmartPushService({
     required DatabaseService databaseService,
@@ -162,18 +388,125 @@ class SmartPushService extends ChangeNotifier {
     FlutterLocalNotificationsPlugin? notificationsPlugin,
     WeatherService? weatherService,
     SmartPushAnalytics? analytics,
+    @visibleForTesting bool? isAndroidOverride,
+    @visibleForTesting bool? isIOSOverride,
+    @visibleForTesting String? timeZoneOverride,
+    @visibleForTesting
+    ({String name, Duration offset}) Function()? localTimeZoneProbeOverride,
+    @visibleForTesting Future<bool> Function()? canScheduleExactAlarmsOverride,
+    @visibleForTesting
+    Future<PushPermissionStatus> Function()? permissionStatusOverride,
+    @visibleForTesting Future<void> Function()? openSystemAppSettingsOverride,
+    @visibleForTesting
+    Future<void> Function()? registerPreScheduleRenewalOverride,
+    @visibleForTesting
+    Future<void> Function()? cancelPreScheduleRenewalOverride,
+    @visibleForTesting String? scheduleLockFilePathOverride,
+    @visibleForTesting DateTime Function()? nowProvider,
   })  : _databaseService = databaseService,
         _locationService = locationService,
         _mmkv = mmkvService ?? AppPreferencesService(),
         _notificationsPlugin =
             notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
-        _weatherService = weatherService {
+        _weatherService = weatherService,
+        _isAndroidOverride = isAndroidOverride,
+        _isIOSOverride = isIOSOverride,
+        _timeZoneOverride = timeZoneOverride,
+        _localTimeZoneProbeOverride = localTimeZoneProbeOverride,
+        _canScheduleExactAlarmsOverride = canScheduleExactAlarmsOverride,
+        _permissionStatusOverride = permissionStatusOverride,
+        _openSystemAppSettingsOverride = openSystemAppSettingsOverride,
+        _registerPreScheduleRenewalOverride =
+            registerPreScheduleRenewalOverride,
+        _cancelPreScheduleRenewalOverride = cancelPreScheduleRenewalOverride,
+        _scheduleLockFilePathOverride = scheduleLockFilePathOverride,
+        _nowProvider = nowProvider ?? DateTime.now {
     _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
+    _attachDatabaseListener();
     _currentInstance = this;
+  }
+
+  void _attachDatabaseListener() {
+    try {
+      _databaseService.addListener(_handleDatabaseChanged);
+      _databaseListenerAttached = true;
+    } catch (_) {
+      _databaseListenerAttached = false;
+    }
+  }
+
+  void _detachDatabaseListener() {
+    if (!_databaseListenerAttached) return;
+    try {
+      _databaseService.removeListener(_handleDatabaseChanged);
+    } catch (_) {}
+    _databaseListenerAttached = false;
+  }
+
+  void _handleDatabaseChanged() {
+    if (_isDisposed) return;
+    if (!_settings.enabled && !_settings.dailyQuotePushEnabled) return;
+    if (!_isAndroid && !_isIOS) return;
+
+    final hasTrackedPreScheduled = _loadTrackedPreScheduledEntries().isNotEmpty;
+    if (!hasTrackedPreScheduled &&
+        _isAndroid &&
+        !DistributionConfig.isPlayStore &&
+        (_lastScheduledExactAlarmGranted ?? true)) {
+      return;
+    }
+    if (!hasTrackedPreScheduled &&
+        !_isInitialized &&
+        _scheduleGeneration == 0) {
+      if (_isAndroid &&
+          (DistributionConfig.isPlayStore ||
+              _lastScheduledExactAlarmGranted == false)) {
+        unawaited(_bumpScheduleEpoch().catchError((_) => 0));
+      }
+      return;
+    }
+
+    // 立即递增跨 Isolate 共享调度纪元，使后台并发续期的旧预计算计划失效，防止隐藏笔记正文被重新写入系统队列
+    final epochBumpFuture = _bumpScheduleEpoch();
+
+    unawaited(
+      _scheduleNextPushWithPrerequisite(
+        preserveDeliveredNotifications: true,
+        prerequisite: epochBumpFuture,
+      ).catchError((_) {}),
+    );
+  }
+
+  /// 当每日一言提供商、分类、本地源开关或离线源范围发生变更时清理当日缓存并触发待发通知重排。
+  Future<void> handleDailyQuoteSourceSettingsChanged() {
+    final shouldReschedule = !_isDisposed &&
+        (_settings.enabled || _settings.dailyQuotePushEnabled) &&
+        (_isAndroid || _isIOS) &&
+        (_isInitialized || _scheduleGeneration > 0);
+    final invalidateAndBumpFuture = () async {
+      try {
+        await _mmkv.remove(_lastDailyQuoteKey);
+        await _mmkv.remove(_lastDailyQuoteDateKey);
+      } catch (_) {}
+      if (shouldReschedule && !_isDisposed) {
+        await _bumpScheduleEpoch();
+      }
+    }();
+    if (!shouldReschedule) {
+      return invalidateAndBumpFuture;
+    }
+    return _scheduleNextPushWithPrerequisite(
+      preserveDeliveredNotifications: true,
+      prerequisite: invalidateAndBumpFuture,
+    ).catchError((_) {});
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _scheduleGeneration++;
+    _settingsMutationGeneration++;
+    _detachDatabaseListener();
     if (_currentInstance == this) {
       _currentInstance = null;
     }
@@ -194,22 +527,24 @@ class SmartPushService extends ChangeNotifier {
 
   /// 检查某条每日一言内容是否已在今天推送过
   bool _hasDailyQuoteContentPushed(String content) {
+    final today = _now().toIso8601String().substring(0, 10);
+    return _getDailyQuotePushedHashesForDate(today)
+        .contains(_contentHash(content));
+  }
+
+  Set<String> _getDailyQuotePushedHashesForDate(String dateKey) {
     final pushedData = _mmkv.getString(_dailyQuotePushedDateKey);
-    if (pushedData == null) return false;
-
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    // 格式: "2026-03-13|hash1,hash2,hash3"
-    if (!pushedData.startsWith('$today|')) return false;
-
-    final contentHash = _contentHash(content);
-    final hashesStr = pushedData.substring(today.length + 1);
-    final pushedHashes = hashesStr.split(',').toSet();
-    return pushedHashes.contains(contentHash);
+    if (pushedData == null || !pushedData.startsWith('$dateKey|')) {
+      return const <String>{};
+    }
+    final hashesStr = pushedData.substring(dateKey.length + 1);
+    if (hashesStr.isEmpty) return const <String>{};
+    return hashesStr.split(',').where((h) => h.isNotEmpty).toSet();
   }
 
   /// 标记某条每日一言内容已推送
   void _markDailyQuoteContentPushed(String content) {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final today = _now().toIso8601String().substring(0, 10);
     final contentHash = _contentHash(content);
 
     final pushedData = _mmkv.getString(_dailyQuotePushedDateKey);
@@ -246,8 +581,8 @@ class SmartPushService extends ChangeNotifier {
     _mmkv.setString(_todayPushedDateKey, today);
   }
 
-  Set<String> _getTodayPushedNoteIds() {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+  Set<String> _getTodayPushedNoteIds({DateTime? now}) {
+    final today = (now ?? _now()).toIso8601String().substring(0, 10);
     final rawData = _mmkv.getString(_todayPushedNoteIdsKey);
     if (rawData == null || !rawData.startsWith('$today|')) return {};
 
@@ -291,6 +626,10 @@ class SmartPushService extends ChangeNotifier {
     final from = (rawData['from'] ?? rawData['source'] ?? '').toString().trim();
     final type = (rawData['type'] ?? '').toString().trim();
     final provider = (rawData['provider'] ?? '').toString().trim();
+    final offlineQuoteSource =
+        (rawData['offline_quote_source'] ?? '').toString().trim();
+    final quoteSourceFingerprint =
+        (rawData['quote_source_fingerprint'] ?? '').toString().trim();
 
     return {
       'hitokoto': content,
@@ -300,6 +639,10 @@ class SmartPushService extends ChangeNotifier {
       if (provider.isNotEmpty) 'provider': provider,
       if (rawData['local_quote_id'] is String)
         'local_quote_id': rawData['local_quote_id'],
+      if (offlineQuoteSource.isNotEmpty)
+        'offline_quote_source': offlineQuoteSource,
+      if (quoteSourceFingerprint.isNotEmpty)
+        'quote_source_fingerprint': quoteSourceFingerprint,
     };
   }
 
@@ -337,6 +680,8 @@ class SmartPushService extends ChangeNotifier {
     String? noteId,
     required String contentType,
     String? routeTarget,
+    int? notificationId,
+    int? scheduledEpochMs,
   }) {
     if (contentType.isEmpty) return null;
     final parts = <String>['contentType:$contentType'];
@@ -346,8 +691,18 @@ class SmartPushService extends ChangeNotifier {
     if (routeTarget != null && routeTarget.isNotEmpty) {
       parts.add('routeTarget:$routeTarget');
     }
+    if (notificationId != null) {
+      parts.add('notificationId:$notificationId');
+    }
+    if (scheduledEpochMs != null && scheduledEpochMs > 0) {
+      parts.add('scheduledEpochMs:$scheduledEpochMs');
+    }
     return parts.join('|');
   }
+
+  @visibleForTesting
+  Future<void> handleNotificationTapForTest(NotificationResponse response) =>
+      _handleNotificationTapAsync(response);
 
   @visibleForTesting
   static String? notificationSummaryForTest(Quote note) => null;
@@ -402,9 +757,25 @@ class SmartPushService extends ChangeNotifier {
       hour,
       minute,
     );
+    final nowWallClock = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+      now.second,
+      now.millisecond,
+      now.microsecond,
+    );
 
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    if (scheduledDate.isBefore(nowWallClock)) {
+      scheduledDate = DateTime(
+        scheduledDate.year,
+        scheduledDate.month,
+        scheduledDate.day + 1,
+        hour,
+        minute,
+      );
     }
 
     if (!respectsFrequency) {
@@ -419,6 +790,22 @@ class SmartPushService extends ChangeNotifier {
       hour,
       minute,
     );
+  }
+
+  /// Generates a deterministic 32-bit notification ID per calendar date and slot
+  /// so repeated scheduling updates/replaces pending entries without duplicates.
+  static int deterministicPreScheduledNotificationId(
+    DateTime scheduledDate, {
+    int slotIndex = 0,
+    bool isDailyQuote = false,
+  }) {
+    final dateCode = (scheduledDate.year % 100) * 10000 +
+        scheduledDate.month * 100 +
+        scheduledDate.day;
+    final slotCode = isDailyQuote
+        ? _dailyQuoteSlotCode
+        : slotIndex.clamp(0, _dailyQuoteSlotCode - 1);
+    return _preScheduledNotificationBaseId + dateCode * 100 + slotCode;
   }
 
   /// 设置天气服务（延迟注入）
@@ -439,7 +826,7 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 初始化服务
-  Future<void> initialize() async {
+  Future<void> initialize({bool recordAppOpenOnLaunch = false}) async {
     try {
       await _initializeTimezone();
       await _loadSettings();
@@ -448,33 +835,32 @@ class SmartPushService extends ChangeNotifier {
       // 处理冷启动场景：检查 App 是否由通知点击启动
       await _handleLaunchNotification();
 
+      if (recordAppOpenOnLaunch) {
+        try {
+          await _analytics.recordAppOpen(
+            openedAt: tz.TZDateTime.from(_now(), tz.local),
+          );
+          AppLogger.d('SOTA: 已在首轮预调度前记录冷启动 App 打开时间');
+        } catch (e) {
+          AppLogger.w('SOTA: 冷启动记录 App 打开时间失败', error: e);
+        }
+      }
+
       AppLogger.i(
         'SmartPushService settings: enabled=${_settings.enabled}, dailyQuoteEnabled=${_settings.dailyQuotePushEnabled}',
       );
 
-      // 请求精确闹钟权限（Android 12+）
-      // 移除自动请求，改为在 UI 层（SmartPushSettingsPage）引导用户开启
-      if (PlatformHelper.isAndroid) {
+      // 检查精确闹钟权限状态（Android 12+，不主动弹窗，由设置页引导用户配置）
+      if (_isAndroid) {
         final canScheduleExact = await _canScheduleExactAlarms();
         if (!canScheduleExact) {
-          AppLogger.i('精确闹钟权限不可用，将使用 WorkManager 降级方案');
+          AppLogger.i('精确闹钟权限不可用，将使用系统预调度本地通知');
         }
       }
 
-      // 每次启动时重新规划下一次推送
+      // 每次启动时重新规划推送计划（保留通知栏中已送达的未读通知）
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
-        await scheduleNextPush();
-
-        // 仅当精确闹钟权限不可用时，才注册周期性备用任务（省电）
-        if (PlatformHelper.isAndroid) {
-          final canScheduleExact = await _canScheduleExactAlarms();
-          if (!canScheduleExact) {
-            await _registerPeriodicFallbackTask();
-          } else {
-            // 有精确闹钟权限，取消周期性任务节省电量
-            await _cancelPeriodicFallbackTask();
-          }
-        }
+        await scheduleNextPush(preserveDeliveredNotifications: true);
       } else {
         // 如果都禁用了，确保取消所有计划
         await _cancelAllSchedules();
@@ -485,6 +871,50 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.i('SmartPushService 初始化完成');
     } catch (e, stack) {
       AppLogger.e('SmartPushService 初始化失败', error: e, stackTrace: stack);
+    }
+  }
+
+  /// 应用回到前台时按需刷新预调度队列（带节流与权限变更检测，避免重复调度）
+  Future<void> handleAppResumed() async {
+    if (!_isInitialized || _isRefreshingOnResume) return;
+    if (!_settings.enabled && !_settings.dailyQuotePushEnabled) return;
+    if (!_isAndroid && !_isIOS) return;
+
+    _isRefreshingOnResume = true;
+    try {
+      final now = _now();
+      var shouldRefresh = false;
+
+      if (_isAndroid) {
+        final currentExactGranted = await _canScheduleExactAlarms();
+        if (_lastScheduledExactAlarmGranted != null &&
+            _lastScheduledExactAlarmGranted != currentExactGranted) {
+          shouldRefresh = true;
+        }
+      }
+
+      if (!shouldRefresh) {
+        final lastRefresh = _lastScheduleRefreshAt;
+        if (lastRefresh == null) {
+          shouldRefresh = true;
+        } else {
+          final crossedCalendarDay = lastRefresh.year != now.year ||
+              lastRefresh.month != now.month ||
+              lastRefresh.day != now.day;
+          final elapsed = now.difference(lastRefresh);
+          if (crossedCalendarDay || elapsed >= _resumeRefreshMinInterval) {
+            shouldRefresh = true;
+          }
+        }
+      }
+
+      if (shouldRefresh) {
+        await scheduleNextPush(preserveDeliveredNotifications: true);
+      }
+    } catch (e, stack) {
+      AppLogger.w('应用恢复前台刷新推送计划失败', error: e, stackTrace: stack);
+    } finally {
+      _isRefreshingOnResume = false;
     }
   }
 
@@ -500,9 +930,155 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 加载设置（支持版本迁移）
+  ({DateTime? lastPushTime, List<String> recentlyPushedNoteIds})
+      _readStoredDeliveryHistory() {
+    try {
+      final raw = _mmkv.getString(_deliveryHistoryKey);
+      if (raw == null || raw.isEmpty) {
+        return (lastPushTime: null, recentlyPushedNoteIds: const <String>[]);
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        return (lastPushTime: null, recentlyPushedNoteIds: const <String>[]);
+      }
+      final rawTime = decoded['lastPushTime'];
+      final parsedTime = rawTime is String ? DateTime.tryParse(rawTime) : null;
+      final rawIds = decoded['recentlyPushedNoteIds'];
+      final parsedIds = rawIds is List
+          ? rawIds
+              .map((e) => e.toString())
+              .where((id) => id.isNotEmpty)
+              .toList()
+          : const <String>[];
+      return (lastPushTime: parsedTime, recentlyPushedNoteIds: parsedIds);
+    } catch (_) {
+      return (lastPushTime: null, recentlyPushedNoteIds: const <String>[]);
+    }
+  }
+
+  SmartPushSettings _mergeStoredDeliveryHistoryInto(SmartPushSettings base) {
+    final stored = _readStoredDeliveryHistory();
+    DateTime? mergedLastPushTime = base.lastPushTime;
+    if (stored.lastPushTime != null &&
+        (mergedLastPushTime == null ||
+            stored.lastPushTime!.isAfter(mergedLastPushTime))) {
+      mergedLastPushTime = stored.lastPushTime;
+    }
+
+    final mergedIds = <String>[];
+    void appendUnique(Iterable<String> ids) {
+      for (final id in ids) {
+        if (id.isEmpty) continue;
+        mergedIds.remove(id);
+        mergedIds.add(id);
+      }
+    }
+
+    final storedIsNewer = stored.lastPushTime != null &&
+        (base.lastPushTime == null ||
+            stored.lastPushTime!.isAfter(base.lastPushTime!));
+    if (storedIsNewer) {
+      appendUnique(base.recentlyPushedNoteIds);
+      appendUnique(stored.recentlyPushedNoteIds);
+    } else {
+      appendUnique(stored.recentlyPushedNoteIds);
+      appendUnique(base.recentlyPushedNoteIds);
+    }
+    while (mergedIds.length > SmartPushSettings.maxRecentPushedCount) {
+      mergedIds.removeAt(0);
+    }
+
+    if (mergedLastPushTime == base.lastPushTime &&
+        listEquals(mergedIds, base.recentlyPushedNoteIds)) {
+      return base;
+    }
+    return base.copyWith(
+      lastPushTime: mergedLastPushTime,
+      recentlyPushedNoteIds: mergedIds,
+    );
+  }
+
+  Future<void> _persistDeliveryHistory({
+    DateTime? lastPushTime,
+    Iterable<String>? pushedNoteIds,
+    int? expectedGeneration,
+    int? expectedSettingsGeneration,
+    int? expectedEpoch,
+  }) async {
+    try {
+      if (expectedGeneration != null &&
+          !_isScheduleGenerationCurrent(expectedGeneration)) {
+        return;
+      }
+      if (expectedSettingsGeneration != null &&
+          !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
+        return;
+      }
+      await _reloadSharedStorageIfSupported();
+      if (expectedGeneration != null &&
+          !_isScheduleGenerationCurrent(expectedGeneration)) {
+        return;
+      }
+      if (expectedSettingsGeneration != null &&
+          !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
+        return;
+      }
+      if (expectedEpoch != null &&
+          _readStoredSettingsEpoch() != expectedEpoch) {
+        return;
+      }
+
+      final stored = _readStoredDeliveryHistory();
+      DateTime? mergedLastPushTime = stored.lastPushTime;
+      for (final candidate in <DateTime?>[
+        _settings.lastPushTime,
+        lastPushTime,
+      ]) {
+        if (candidate != null &&
+            (mergedLastPushTime == null ||
+                candidate.isAfter(mergedLastPushTime))) {
+          mergedLastPushTime = candidate;
+        }
+      }
+
+      final mergedIds = <String>[];
+      void appendUnique(Iterable<String> ids) {
+        for (final id in ids) {
+          if (id.isEmpty) continue;
+          mergedIds.remove(id);
+          mergedIds.add(id);
+        }
+      }
+
+      appendUnique(stored.recentlyPushedNoteIds);
+      appendUnique(_settings.recentlyPushedNoteIds);
+      if (pushedNoteIds != null) {
+        appendUnique(pushedNoteIds);
+      }
+      while (mergedIds.length > SmartPushSettings.maxRecentPushedCount) {
+        mergedIds.removeAt(0);
+      }
+
+      final payload = jsonEncode(<String, dynamic>{
+        'lastPushTime': mergedLastPushTime?.toIso8601String(),
+        'recentlyPushedNoteIds': mergedIds,
+      });
+      await _mmkv.setString(_deliveryHistoryKey, payload);
+
+      if (!_isDisposed) {
+        _settings = _settings.copyWith(
+          lastPushTime: mergedLastPushTime,
+          recentlyPushedNoteIds: mergedIds,
+        );
+      }
+      AppLogger.i('智能推送投递历史已独立保存（不改动用户配置）');
+    } catch (e, stack) {
+      AppLogger.e('保存智能推送投递历史失败', error: e, stackTrace: stack);
+    }
+  }
+
   Future<void> _loadSettings() async {
     try {
-      // 先尝试加载新版本设置
       var jsonStr = _mmkv.getString(_settingsKey);
 
       // 如果没有新版本，尝试迁移旧版本
@@ -515,37 +1091,55 @@ class SmartPushService extends ChangeNotifier {
         }
       }
 
+      var loaded = SmartPushSettings.defaultSettings();
       if (jsonStr != null && jsonStr.isNotEmpty) {
         final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-        _settings = SmartPushSettings.fromJson(json);
+        loaded = SmartPushSettings.fromJson(json);
       }
+      _settings = _mergeStoredDeliveryHistoryInto(loaded);
     } catch (e) {
       AppLogger.w('加载智能推送设置失败，使用默认设置', error: e);
-      _settings = SmartPushSettings.defaultSettings();
+      _settings = _mergeStoredDeliveryHistoryInto(
+        SmartPushSettings.defaultSettings(),
+      );
     }
   }
 
   /// 保存设置并更新推送计划
   Future<void> saveSettings(SmartPushSettings newSettings) async {
+    final mutationGen = ++_settingsMutationGeneration;
+    _scheduleGeneration++;
     try {
-      _settings = newSettings;
-      final jsonStr = jsonEncode(newSettings.toJson());
+      final mergedInitial = _mergeStoredDeliveryHistoryInto(newSettings);
+      _settings = mergedInitial;
+      final jsonStr = jsonEncode(mergedInitial.toJson());
+      _latestAuthoritativeSettingsJson = jsonStr;
       await _mmkv.setString(_settingsKey, jsonStr);
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) {
+        final authoritative = _latestAuthoritativeSettingsJson;
+        if (authoritative != null) {
+          await _mmkv.setString(_settingsKey, authoritative);
+        }
+        return;
+      }
+      if (mergedInitial.lastPushTime != null ||
+          mergedInitial.recentlyPushedNoteIds.isNotEmpty) {
+        await _persistDeliveryHistory(
+          lastPushTime: mergedInitial.lastPushTime,
+          pushedNoteIds: mergedInitial.recentlyPushedNoteIds,
+          expectedSettingsGeneration: mutationGen,
+        );
+        if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
+      }
+      await _bumpSettingsEpoch();
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
+      _settings = _mergeStoredDeliveryHistoryInto(newSettings);
       notifyListeners();
       AppLogger.i('智能推送设置已保存');
 
       // 更新计划任务
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush();
-
-        if (PlatformHelper.isAndroid) {
-          final canScheduleExact = await _canScheduleExactAlarms();
-          if (canScheduleExact) {
-            await _cancelPeriodicFallbackTask();
-          } else {
-            await _registerPeriodicFallbackTask();
-          }
-        }
       } else {
         await _cancelAllSchedules();
       }
@@ -557,42 +1151,26 @@ class SmartPushService extends ChangeNotifier {
 
   /// 从持久化存储重新加载设置并重新计算调度任务（用于备份恢复或跨 Isolate 数据同步）
   Future<void> reloadFromStorage() async {
+    final mutationGen = ++_settingsMutationGeneration;
+    _scheduleGeneration++;
+    _latestAuthoritativeSettingsJson = null;
     try {
+      await _reloadSharedStorageIfSupported();
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
       await _loadSettings();
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
+      _latestAuthoritativeSettingsJson = _mmkv.getString(_settingsKey);
+      await _bumpSettingsEpoch();
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
       notifyListeners();
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
-        await scheduleNextPush();
-
-        if (PlatformHelper.isAndroid) {
-          final canScheduleExact = await _canScheduleExactAlarms();
-          if (canScheduleExact) {
-            await _cancelPeriodicFallbackTask();
-          } else {
-            await _registerPeriodicFallbackTask();
-          }
-        }
+        await scheduleNextPush(preserveDeliveredNotifications: true);
       } else {
         await _cancelAllSchedules();
       }
       AppLogger.i('智能推送服务已从存储重新加载并更新调度');
     } catch (e, stack) {
       AppLogger.w('从存储重新加载智能推送设置失败', error: e, stackTrace: stack);
-    }
-  }
-
-  /// 仅持久化设置到 MMKV，不触发重新调度
-  ///
-  /// 用于后台推送成功后记录已推送笔记 ID 等场景，
-  /// 避免 [saveSettings] 中的 [scheduleNextPush] / [_cancelAllSchedules]
-  /// 意外取消刚刚显示的通知。
-  Future<void> _saveSettingsQuietly(SmartPushSettings newSettings) async {
-    try {
-      _settings = newSettings;
-      final jsonStr = jsonEncode(newSettings.toJson());
-      await _mmkv.setString(_settingsKey, jsonStr);
-      AppLogger.i('智能推送设置已静默保存（不触发重新调度）');
-    } catch (e, stack) {
-      AppLogger.e('静默保存智能推送设置失败', error: e, stackTrace: stack);
     }
   }
 
@@ -636,19 +1214,149 @@ class SmartPushService extends ChangeNotifier {
   }
 }
 
+/// 预调度本地通知记录条目（用于跨重排、隐藏/删除笔记清理、点击内容还原、配额结算与生命周期对账）
+class _PreScheduledEntry {
+  final int id;
+  final int epochMs;
+  final String? noteId;
+  final bool isDailyQuote;
+  final String? contentType;
+  final bool accounted;
+  final int? slotHour;
+  final int? slotMinute;
+  final Map<String, dynamic>? dailyQuoteData;
+  final String? quoteSourceFingerprint;
+  final int commitSeq;
+
+  const _PreScheduledEntry({
+    required this.id,
+    required this.epochMs,
+    this.noteId,
+    this.isDailyQuote = false,
+    this.contentType,
+    this.accounted = false,
+    this.slotHour,
+    this.slotMinute,
+    this.dailyQuoteData,
+    this.quoteSourceFingerprint,
+    this.commitSeq = 0,
+  });
+
+  _PreScheduledEntry copyWith({
+    String? noteId,
+    bool? isDailyQuote,
+    String? contentType,
+    bool? accounted,
+    int? slotHour,
+    int? slotMinute,
+    Map<String, dynamic>? dailyQuoteData,
+    String? quoteSourceFingerprint,
+    int? commitSeq,
+  }) {
+    return _PreScheduledEntry(
+      id: id,
+      epochMs: epochMs,
+      noteId: noteId ?? this.noteId,
+      isDailyQuote: isDailyQuote ?? this.isDailyQuote,
+      contentType: contentType ?? this.contentType,
+      accounted: accounted ?? this.accounted,
+      slotHour: slotHour ?? this.slotHour,
+      slotMinute: slotMinute ?? this.slotMinute,
+      dailyQuoteData: dailyQuoteData ?? this.dailyQuoteData,
+      quoteSourceFingerprint:
+          quoteSourceFingerprint ?? this.quoteSourceFingerprint,
+      commitSeq: commitSeq ?? this.commitSeq,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'epochMs': epochMs,
+        if (noteId != null && noteId!.isNotEmpty) 'noteId': noteId,
+        if (isDailyQuote) 'isDailyQuote': true,
+        if (contentType != null && contentType!.isNotEmpty)
+          'contentType': contentType,
+        if (accounted) 'accounted': true,
+        if (slotHour != null) 'slotHour': slotHour,
+        if (slotMinute != null) 'slotMinute': slotMinute,
+        if (dailyQuoteData != null && dailyQuoteData!.isNotEmpty)
+          'dailyQuoteData': dailyQuoteData,
+        if (quoteSourceFingerprint != null &&
+            quoteSourceFingerprint!.isNotEmpty)
+          'quoteSourceFingerprint': quoteSourceFingerprint,
+        if (commitSeq > 0) 'commitSeq': commitSeq,
+      };
+
+  factory _PreScheduledEntry.fromJson(Map<String, dynamic> json) {
+    final rawNoteId = json['noteId'] as String?;
+    final rawContentType = json['contentType'] as String?;
+    final rawQuoteData = json['dailyQuoteData'];
+    final rawQuoteSourceFingerprint = json['quoteSourceFingerprint'] as String?;
+    return _PreScheduledEntry(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      epochMs: (json['epochMs'] as num?)?.toInt() ?? 0,
+      noteId: (rawNoteId != null && rawNoteId.isNotEmpty) ? rawNoteId : null,
+      isDailyQuote: json['isDailyQuote'] as bool? ?? false,
+      contentType: (rawContentType != null && rawContentType.isNotEmpty)
+          ? rawContentType
+          : null,
+      accounted: json['accounted'] as bool? ?? false,
+      slotHour: (json['slotHour'] as num?)?.toInt(),
+      slotMinute: (json['slotMinute'] as num?)?.toInt(),
+      dailyQuoteData: rawQuoteData is Map
+          ? SmartPushService.normalizeDailyQuoteData(
+              Map<String, dynamic>.from(rawQuoteData),
+            )
+          : null,
+      quoteSourceFingerprint: (rawQuoteSourceFingerprint != null &&
+              rawQuoteSourceFingerprint.isNotEmpty)
+          ? rawQuoteSourceFingerprint
+          : null,
+      commitSeq: (json['commitSeq'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+/// 待写入系统通知队列的单个预调度项
+class _PlannedLocalNotification {
+  final int id;
+  final int slotIndex;
+  final PushTimeSlot slot;
+  final tz.TZDateTime scheduledDate;
+  final bool isDailyQuote;
+  final _PushContent? content;
+
+  const _PlannedLocalNotification({
+    required this.id,
+    required this.slotIndex,
+    required this.slot,
+    required this.scheduledDate,
+    this.isDailyQuote = false,
+    this.content,
+  });
+}
+
 /// 推送内容辅助类
 class _PushContent {
   final String title;
   final String body;
   final String? noteId;
+  final String? sourceNoteId;
   final String? contentType;
+  final double priority;
+  final Map<String, dynamic>? dailyQuoteData;
+  final String? quoteSourceFingerprint;
 
   _PushContent({
     required this.title,
     required this.body,
     this.noteId,
+    String? sourceNoteId,
     this.contentType,
-  });
+    this.priority = 0,
+    this.dailyQuoteData,
+    this.quoteSourceFingerprint,
+  }) : sourceNoteId = sourceNoteId ?? noteId;
 }
 
 /// 智能选择结果辅助类
@@ -662,6 +1370,9 @@ class _SmartSelectResult {
   ///
   /// 每日一言等非笔记内容为 0 —— 它们永远过不了门槛，只能当天第一条推。
   final double priority;
+  final Map<String, dynamic>? dailyQuoteData;
+  final String? sourceNoteId;
+  final String? quoteSourceFingerprint;
 
   _SmartSelectResult({
     required this.note,
@@ -669,6 +1380,9 @@ class _SmartSelectResult {
     required this.isDailyQuote,
     this.contentType = 'dailyQuote',
     this.priority = 0,
+    this.dailyQuoteData,
+    this.sourceNoteId,
+    this.quoteSourceFingerprint,
   });
 
   factory _SmartSelectResult.empty() => _SmartSelectResult(
@@ -705,12 +1419,18 @@ class _ContentCandidate {
   final String title;
   final int priority;
   final bool isDailyQuote;
+  final Map<String, dynamic>? dailyQuoteData;
+  final String? sourceNoteId;
+  final String? quoteSourceFingerprint;
 
   _ContentCandidate({
     required this.note,
     required this.title,
     required this.priority,
     this.isDailyQuote = false,
+    this.dailyQuoteData,
+    this.sourceNoteId,
+    this.quoteSourceFingerprint,
   });
 }
 

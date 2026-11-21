@@ -245,6 +245,7 @@ class MmkvKeySchema {
     'provider_api_keys',
     // SmartPush strings & JSON
     'smart_push_settings_v2',
+    'smart_push_delivery_history_v1',
     'smart_push_settings',
     'smart_push_scheduled_times_today',
     'smart_push_today_pushed_date',

@@ -100,6 +100,57 @@ void main() {
         },
       );
     }
+
+    test('invalidates today local cache when note content is edited', () async {
+      final quote = await databaseService.getLocalDailyQuote(
+        offlineQuoteSource: 'allNotes',
+      );
+      expect(quote, isNotNull);
+      pushService.cacheDailyQuoteForToday(quote!);
+      expect(
+        await pushService.getCachedDailyQuoteForToday(),
+        containsPair('hitokoto', 'Sample quote'),
+      );
+
+      await db.update('quotes', {'content': 'Edited quote text'});
+
+      expect(await pushService.getCachedDailyQuoteForToday(), isNull);
+      expect(storage.values['smart_push_last_daily_quote'], isNull);
+    });
+
+    test(
+      'invalidates today local cache when 每日一言 tag is removed in tagOnly mode',
+      () async {
+        await db.insert('categories', {'id': 'daily-tag', 'name': '每日一言'});
+        await db.insert('quote_tags', {
+          'quote_id': 'local-note',
+          'tag_id': 'daily-tag',
+        });
+        storage.values['app_settings'] = jsonEncode({
+          'useLocalQuotesOnly': true,
+          'offlineQuoteSource': 'tagOnly',
+        });
+
+        final quote = await databaseService.getLocalDailyQuote(
+          offlineQuoteSource: 'tagOnly',
+        );
+        expect(quote, isNotNull);
+        pushService.cacheDailyQuoteForToday(quote!);
+        expect(
+          await pushService.getCachedDailyQuoteForToday(),
+          containsPair('hitokoto', 'Sample quote'),
+        );
+
+        await db.delete(
+          'quote_tags',
+          where: 'quote_id = ? AND tag_id = ?',
+          whereArgs: ['local-note', 'daily-tag'],
+        );
+
+        expect(await pushService.getCachedDailyQuoteForToday(), isNull);
+        expect(storage.values['smart_push_last_daily_quote'], isNull);
+      },
+    );
   });
 }
 
