@@ -3782,5 +3782,120 @@ void main() {
             greaterThanOrEqualTo(18));
       },
     );
+
+    test(
+      'background rollback never cancels newer foreground notification on shared slot ID even on final renewal attempt',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 8, 0);
+
+        Quote buildVersionedNote(int version) => Quote(
+              id: 'd${version}000000-1111-2222-3333-444444444444',
+              content: '五月十日同槽位并发替换笔记版本-$version，验证新提醒绝不被旧后台回滚误删。',
+              date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+              favoriteCount: 10,
+            );
+
+        databaseService.notes = <Quote>[buildVersionedNote(0)];
+
+        final sharedDisk = <String, Object>{};
+        final fgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final bgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final sharedLockDir = await Directory.systemTemp.createTemp(
+          'smart_push_sched_lock_',
+        );
+        addTearDown(() async {
+          if (sharedLockDir.existsSync()) {
+            await sharedLockDir.delete(recursive: true);
+          }
+        });
+        final scheduleLockPath = '${sharedLockDir.path}/schedule.lock';
+
+        SmartPushService buildIsolatedService(_MemoryPreferences prefs) {
+          return SmartPushService(
+            databaseService: databaseService,
+            locationService: LocationService(),
+            mmkvService: prefs,
+            notificationsPlugin: notificationsPlugin,
+            isAndroidOverride: true,
+            isIOSOverride: false,
+            timeZoneOverride: 'Etc/GMT-8',
+            canScheduleExactAlarmsOverride: () async => false,
+            registerPreScheduleRenewalOverride: () async {},
+            cancelPreScheduleRenewalOverride: () async {},
+            scheduleLockFilePathOverride: scheduleLockPath,
+            nowProvider: () => currentNow,
+          );
+        }
+
+        final fgService = buildIsolatedService(fgStorage);
+        addTearDown(fgService.dispose);
+        await fgService.initialize();
+
+        final bgService = buildIsolatedService(bgStorage);
+        addTearDown(bgService.dispose);
+
+        await fgService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: {PastNoteType.yearAgoToday},
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final sharedSlotId =
+            SmartPushService.deterministicPreScheduledNotificationId(
+          localTime(2026, 5, 10, 9, 0),
+          slotIndex: 0,
+        );
+
+        // 连续在每一轮（含最后一轮）后台刚把共享槽位 ID 写入队列时触发前台更新同一槽位为更新版本笔记
+        var nextVersion = 1;
+        var reentrantTriggering = false;
+        notificationsPlugin.onScheduleHook = (call) async {
+          if (reentrantTriggering || call.id != sharedSlotId) return;
+          final currentBody = call.body ?? '';
+          final prevTag = '版本-${nextVersion - 1}';
+          if (currentBody.contains(prevTag) && nextVersion <= 4) {
+            reentrantTriggering = true;
+            try {
+              final updatedNote = buildVersionedNote(nextVersion);
+              nextVersion++;
+              databaseService.notes = <Quote>[updatedNote];
+              databaseService.notifyChanged();
+              await fgService.waitForPendingScheduleForTest();
+            } finally {
+              reentrantTriggering = false;
+            }
+          }
+        };
+
+        await bgService.renewPreScheduledQueueFromBackground();
+        notificationsPlugin.onScheduleHook = null;
+
+        expect(nextVersion, equals(5));
+
+        final pending = await notificationsPlugin.pendingNotificationRequests();
+        final matchingSlot =
+            pending.where((req) => req.id == sharedSlotId).toList();
+        expect(
+          matchingSlot,
+          hasLength(1),
+          reason: '前台最后写入同确定性槽位 ID 的新通知绝不能在后台最后一轮回滚时被 cancel 删除',
+        );
+        expect(matchingSlot.single.body, contains('版本-4'));
+        expect(matchingSlot.single.body, isNot(contains('版本-3')));
+      },
+    );
   });
 }

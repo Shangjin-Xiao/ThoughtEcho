@@ -97,15 +97,20 @@ class PlatformHelper {
     final sanitized = lockName.replaceAll(RegExp(r'[^a-zA-Z0-9_.-]'), '_');
     var baseDir = _cachedCrossIsolateLockDir;
     if (baseDir == null) {
-      try {
-        baseDir = (await getApplicationSupportDirectory()).path;
-      } catch (_) {
+      final candidates = <Future<String> Function()>[
+        () async => (await getApplicationSupportDirectory()).path,
+        () async => (await getApplicationDocumentsDirectory()).path,
+        () async => p.join(Directory.systemTemp.path, 'thoughtecho_locks'),
+      ];
+      for (final resolveCandidate in candidates) {
         try {
-          baseDir = (await getApplicationDocumentsDirectory()).path;
-        } catch (_) {
-          baseDir = Directory.systemTemp.path;
-        }
+          final candidatePath = await resolveCandidate();
+          Directory(candidatePath).createSync(recursive: true);
+          baseDir = candidatePath;
+          break;
+        } catch (_) {}
       }
+      baseDir ??= Directory.systemTemp.path;
       _cachedCrossIsolateLockDir = baseDir;
     }
     return p.normalize(p.join(baseDir, '$sanitized.lock'));
@@ -113,10 +118,16 @@ class PlatformHelper {
 
   /// Serializes [action] both across async tasks within the current Isolate and
   /// across concurrent Isolates sharing the app's filesystem via `O_CREAT|O_EXCL`.
+  ///
+  /// Never executes [action] without holding the lockfile: if an older Isolate
+  /// crashed leaving a stale lockfile older than [staleLockTimeout], the stale
+  /// file is atomically renamed and evicted before [acquireTimeout] expires.
   static Future<T> withCrossIsolateLock<T>(
     String lockName,
     Future<T> Function() action, {
     String? customLockFilePath,
+    Duration staleLockTimeout = const Duration(seconds: 10),
+    Duration acquireTimeout = const Duration(seconds: 30),
   }) async {
     final lockPath = await _resolveCrossIsolateLockFilePath(
       lockName,
@@ -136,32 +147,86 @@ class PlatformHelper {
     } catch (_) {}
 
     final syncIo = Platform.environment.containsKey('FLUTTER_TEST');
-    final lockFile = File(lockPath);
+    var lockFile = File(lockPath);
     var lockAcquired = false;
-    final maxAttempts = syncIo ? 50 : 300;
+    final effectiveStaleTimeout = staleLockTimeout <= Duration.zero
+        ? const Duration(milliseconds: 50)
+        : staleLockTimeout;
+    final effectiveAcquireTimeout = acquireTimeout <= effectiveStaleTimeout
+        ? effectiveStaleTimeout * 3
+        : acquireTimeout;
+    final waitWatch = Stopwatch()..start();
+    DateTime? observedModified;
+    Stopwatch? unchangedLockWatch;
+    var attempt = 0;
 
     try {
-      for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      while (!lockAcquired) {
         try {
           lockFile.createSync(recursive: true, exclusive: true);
           lockAcquired = true;
           break;
-        } on FileSystemException {
+        } on FileSystemException catch (e) {
+          var evictedStale = false;
           try {
             if (lockFile.existsSync()) {
               final modified = lockFile.statSync().modified;
-              if (DateTime.now().difference(modified) >
-                  const Duration(seconds: 15)) {
+              if (observedModified != modified) {
+                observedModified = modified;
+                unchangedLockWatch = Stopwatch()..start();
+              }
+              final ageByWallClock = DateTime.now().difference(modified);
+              final ageByMonotonic =
+                  unchangedLockWatch?.elapsed ?? Duration.zero;
+              if (ageByWallClock > effectiveStaleTimeout ||
+                  ageByMonotonic > effectiveStaleTimeout) {
                 final seq = ++_staleLockSeq;
-                final stalePath = '$lockPath.stale.$pid.$seq';
+                final stalePath = '${lockFile.path}.stale.$pid.$seq';
                 try {
                   final moved = lockFile.renameSync(stalePath);
                   moved.deleteSync();
                 } catch (_) {}
-                continue;
+                observedModified = null;
+                unchangedLockWatch = null;
+                evictedStale = true;
+              }
+            } else {
+              observedModified = null;
+              unchangedLockWatch = null;
+              if (customLockFilePath == null) {
+                final fallbackDir = p.join(
+                  Directory.systemTemp.path,
+                  'thoughtecho_locks',
+                );
+                final sanitized = lockName.replaceAll(
+                  RegExp(r'[^a-zA-Z0-9_.-]'),
+                  '_',
+                );
+                final fallbackPath =
+                    p.normalize(p.join(fallbackDir, '$sanitized.lock'));
+                if (lockFile.path != fallbackPath) {
+                  try {
+                    Directory(fallbackDir).createSync(recursive: true);
+                    _cachedCrossIsolateLockDir = fallbackDir;
+                    lockFile = File(fallbackPath);
+                    continue;
+                  } catch (_) {}
+                }
               }
             }
           } catch (_) {}
+
+          if (evictedStale) {
+            continue;
+          }
+
+          if (waitWatch.elapsed >= effectiveAcquireTimeout) {
+            throw FileSystemException(
+              'Timed out acquiring cross-isolate lock ($lockName): ${e.message}',
+              lockFile.path,
+              e.osError,
+            );
+          }
 
           if (syncIo) {
             if (attempt < 5) {
@@ -172,12 +237,14 @@ class PlatformHelper {
           } else {
             await Future<void>.delayed(const Duration(milliseconds: 10));
           }
+          attempt++;
         }
       }
 
       final nextHeld = <String>{
         if (heldLocks is Set<String>) ...heldLocks,
         lockPath,
+        lockFile.path,
       };
       return await runZoned(
         action,

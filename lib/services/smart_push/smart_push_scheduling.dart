@@ -5,7 +5,8 @@ extension SmartPushScheduling on SmartPushService {
   /// 仅供后台续期任务调用：校验共享设置与调度纪元后滚动续期未来 3 天预调度队列，
   /// 若续期过程中前台关闭、修改了提醒配置或隐藏了笔记，自动执行回滚与按需重排。
   Future<void> renewPreScheduledQueueFromBackground() async {
-    for (var attempt = 0; attempt < 2; attempt++) {
+    const maxAttempts = 4;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
       await _reloadSharedStorageIfSupported();
       await _loadSettings();
       if (!_hasActiveReminderScheduleConfig(_settings) ||
@@ -33,8 +34,8 @@ extension SmartPushScheduling on SmartPushService {
           await _cancelAllSchedulesInternal();
           return;
         }
-        // 若后台续期期间前台发生了笔记隐藏/修改并触发了回滚，基于最新可见笔记补做一次干净续期
-        if (attempt == 0) {
+        // 若后台续期期间前台发生了笔记隐藏/修改并触发了回滚，基于最新可见笔记补做干净续期
+        if (attempt + 1 < maxAttempts) {
           continue;
         }
       }
@@ -154,11 +155,10 @@ extension SmartPushScheduling on SmartPushService {
       return;
     }
 
-    // 非预调度模式（如标准渠道且拥有精确闹钟权限）：清理可能遗留的预调度本地通知
-    await _reconcileTrackedPreScheduledNotifications(
-      activeIds: const {},
-      futureOnly: fromBackground || preserveDeliveredNotifications,
-    );
+    // 非预调度模式（如标准渠道且拥有精确闹钟权限）：在跨 Isolate 调度提交锁内清理遗留通知并注册闹钟
+    final slotsToSchedule = _settings.enabled
+        ? await _resolveRegularSlotsToSchedule()
+        : const <PushTimeSlot>[];
     if (!await _isScheduleContextStillValid(
       generation: generation,
       expectedEpoch: expectedEpoch,
@@ -167,30 +167,48 @@ extension SmartPushScheduling on SmartPushService {
     )) {
       return;
     }
-    await _saveTrackedPreScheduledEntries(const []);
 
-    if (fromBackground || preserveDeliveredNotifications) {
-      // 后台或保留已送达通知场景：只取消 AlarmManager 定时器，不调用 cancelAll
-      if (_isAndroid) {
-        await _cancelAndroidBackgroundTasks();
+    var committedNonPreSchedule = false;
+    await _withScheduleCommitLock(() async {
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        fromBackground: fromBackground,
+        reloadStorage: true,
+      )) {
+        return;
       }
-      AppLogger.d('重新调度：仅重置后台定时器');
-    } else {
-      await _cancelAllSchedulesInternal();
-      AppLogger.d('已取消现有推送计划，准备重新规划');
-    }
-    if (!await _isScheduleContextStillValid(
-      generation: generation,
-      expectedEpoch: expectedEpoch,
-      expectedScheduleEpoch: expectedScheduleEpoch,
-      fromBackground: fromBackground,
-    )) {
-      return;
-    }
 
-    // 1. 规划常规推送 (仅当 enabled 为 true 时)
-    if (_settings.enabled) {
-      final slotsToSchedule = await _resolveRegularSlotsToSchedule();
+      final commitSeq = await _nextNotificationCommitSeq();
+      await _reconcileTrackedPreScheduledNotifications(
+        activeIds: const {},
+        futureOnly: fromBackground || preserveDeliveredNotifications,
+      );
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        expectedCommitSeq: commitSeq,
+        fromBackground: fromBackground,
+      )) {
+        return;
+      }
+      await _saveTrackedPreScheduledEntries(
+        const [],
+        expectedCommitSeq: commitSeq,
+      );
+
+      if (fromBackground || preserveDeliveredNotifications) {
+        // 后台或保留已送达通知场景：只取消 AlarmManager 定时器，不调用 cancelAll
+        if (_isAndroid) {
+          await _cancelAndroidBackgroundTasks();
+        }
+        AppLogger.d('重新调度：仅重置后台定时器');
+      } else {
+        await _cancelAllSchedulesInternal();
+        AppLogger.d('已取消现有推送计划，准备重新规划');
+      }
       if (!await _isScheduleContextStillValid(
         generation: generation,
         expectedEpoch: expectedEpoch,
@@ -200,103 +218,191 @@ extension SmartPushScheduling on SmartPushService {
         return;
       }
 
-      // 持久化今日实际调度的时间（供后台周期性检查使用）
-      await _persistScheduledTimes(slotsToSchedule);
+      // 1. 规划常规推送 (仅当 enabled 为 true 时)
+      if (_settings.enabled) {
+        // 持久化今日实际调度的时间（供后台周期性检查使用）
+        await _persistScheduledTimes(slotsToSchedule);
 
-      for (int i = 0; i < slotsToSchedule.length; i++) {
-        if (!await _isScheduleContextStillValid(
-          generation: generation,
-          expectedEpoch: expectedEpoch,
-          expectedScheduleEpoch: expectedScheduleEpoch,
-          fromBackground: fromBackground,
-        )) {
-          return;
+        for (int i = 0; i < slotsToSchedule.length; i++) {
+          if (!await _isScheduleContextStillValid(
+            generation: generation,
+            expectedEpoch: expectedEpoch,
+            expectedScheduleEpoch: expectedScheduleEpoch,
+            fromBackground: fromBackground,
+          )) {
+            return;
+          }
+          final slot = slotsToSchedule[i];
+          final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
+          final id = i; // 0-9
+
+          await _scheduleSingleAlarm(id, scheduledDate, slot);
         }
-        final slot = slotsToSchedule[i];
-        final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
-        final id = i; // 0-9
-
-        await _scheduleSingleAlarm(id, scheduledDate, slot);
       }
-    }
 
-    if (!await _isScheduleContextStillValid(
-      generation: generation,
-      expectedEpoch: expectedEpoch,
-      expectedScheduleEpoch: expectedScheduleEpoch,
-      fromBackground: fromBackground,
-    )) {
-      return;
-    }
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        fromBackground: fromBackground,
+      )) {
+        return;
+      }
 
-    // 2. 规划每日一言独立推送
-    if (_settings.dailyQuotePushEnabled) {
-      AppLogger.d('正在规划每日一言独立推送...');
-      final slot = _settings.dailyQuotePushTime;
-      // 每日一言每天都推，不受 frequency 限制
-      final scheduledDate = _nextInstanceOfTime(
-        slot.hour,
-        slot.minute,
-        respectsFrequency: false,
-      );
+      // 2. 规划每日一言独立推送
+      if (_settings.dailyQuotePushEnabled) {
+        AppLogger.d('正在规划每日一言独立推送...');
+        final slot = _settings.dailyQuotePushTime;
+        // 每日一言每天都推，不受 frequency 限制
+        final scheduledDate = _nextInstanceOfTime(
+          slot.hour,
+          slot.minute,
+          respectsFrequency: false,
+        );
 
-      if (_isAndroid) {
-        try {
-          _legacyAndroidTasksCleared = false;
-          await AndroidAlarmManager.oneShotAt(
-            scheduledDate,
-            SmartPushService._dailyQuoteAlarmId,
-            backgroundPushCallback,
-            exact: true,
-            wakeup: true,
-            rescheduleOnReboot: true,
-            allowWhileIdle: true,
-          );
-          AppLogger.i(
-            '已设定每日一言 Alarm: $scheduledDate (ID: ${SmartPushService._dailyQuoteAlarmId})',
-          );
-        } catch (e) {
-          AppLogger.e('设定每日一言 Alarm 失败，降级到本地预调度通知', error: e);
-          await _scheduleLocalNotification(
-            SmartPushService.deterministicPreScheduledNotificationId(
+        if (_isAndroid) {
+          try {
+            _legacyAndroidTasksCleared = false;
+            await AndroidAlarmManager.oneShotAt(
               scheduledDate,
+              SmartPushService._dailyQuoteAlarmId,
+              backgroundPushCallback,
+              exact: true,
+              wakeup: true,
+              rescheduleOnReboot: true,
+              allowWhileIdle: true,
+            );
+            AppLogger.i(
+              '已设定每日一言 Alarm: $scheduledDate (ID: ${SmartPushService._dailyQuoteAlarmId})',
+            );
+          } catch (e) {
+            AppLogger.e('设定每日一言 Alarm 失败，降级到本地预调度通知', error: e);
+            await _scheduleLocalNotification(
+              SmartPushService.deterministicPreScheduledNotificationId(
+                scheduledDate,
+                isDailyQuote: true,
+              ),
+              scheduledDate,
+              slot,
               isDailyQuote: true,
-            ),
+              canScheduleExactOverride: canScheduleExact,
+            );
+          }
+        } else {
+          await _scheduleLocalNotification(
+            100,
             scheduledDate,
             slot,
             isDailyQuote: true,
-            canScheduleExactOverride: canScheduleExact,
           );
         }
-      } else {
-        await _scheduleLocalNotification(
-          100,
-          scheduledDate,
-          slot,
-          isDailyQuote: true,
-        );
       }
-    }
 
-    if (!await _isScheduleContextStillValid(
-      generation: generation,
-      expectedEpoch: expectedEpoch,
-      expectedScheduleEpoch: expectedScheduleEpoch,
-      fromBackground: fromBackground,
-    )) {
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        fromBackground: fromBackground,
+      )) {
+        return;
+      }
+      committedNonPreSchedule = true;
+    });
+    if (!committedNonPreSchedule) {
       return;
     }
     _lastScheduleRefreshAt = _now();
     _lastScheduledExactAlarmGranted = canScheduleExact;
   }
 
+  /// 撤回后台任务已写入但已失效的通知；若共享确定性槽位 ID 已被更新提交（`fg.commitSeq > entry.commitSeq`）
+  /// 用合法新提醒覆盖，则保留系统队列中的新通知，避免旧任务误删新提醒。
+  Future<void> _rollbackStaleBackgroundEntries(
+    List<_PreScheduledEntry> writtenEntries,
+  ) async {
+    await _reloadSharedStorageIfSupported();
+    await _loadSettings();
+    if (!_hasActiveReminderScheduleConfig(_settings) ||
+        _areStoredSettingsAllDisabled()) {
+      for (final entry in writtenEntries) {
+        try {
+          await _notificationsPlugin.cancel(entry.id);
+        } catch (_) {}
+      }
+      await _cancelAllSchedulesInternal();
+      return;
+    }
+
+    if (writtenEntries.isEmpty) {
+      return;
+    }
+
+    final foregroundEntriesById = <int, _PreScheduledEntry>{
+      for (final e in _loadTrackedPreScheduledEntries()) e.id: e,
+    };
+    final latestCommitSeq = _readStoredNotificationCommitSeq();
+    final candidateNoteIds = <String>{
+      for (final e in writtenEntries)
+        if (e.noteId != null && e.noteId!.isNotEmpty) e.noteId!,
+      for (final fg in foregroundEntriesById.values)
+        if (fg.noteId != null && fg.noteId!.isNotEmpty) fg.noteId!,
+    };
+    final visibleNoteIds = candidateNoteIds.isNotEmpty
+        ? await _resolveVisibleTrackedNoteIds(candidateNoteIds)
+        : null;
+
+    for (final entry in writtenEntries) {
+      final fg = foregroundEntriesById[entry.id];
+      final supersededByNewerCommit =
+          fg != null && fg.commitSeq > entry.commitSeq;
+      if (supersededByNewerCommit) {
+        final fgNoteHidden = fg.noteId != null &&
+            visibleNoteIds != null &&
+            !visibleNoteIds.contains(fg.noteId);
+        if (!fgNoteHidden && !_isEntryDisabledByCurrentSettings(fg)) {
+          // 前台更新提交已覆盖同一确定性通知 ID，绝不能按共享 ID 取消新通知
+          continue;
+        }
+        try {
+          await _notificationsPlugin.cancel(entry.id);
+        } catch (_) {}
+        continue;
+      }
+
+      if (latestCommitSeq > entry.commitSeq && fg == null) {
+        try {
+          await _notificationsPlugin.cancel(entry.id);
+        } catch (_) {}
+        continue;
+      }
+
+      final noteHidden = entry.noteId != null &&
+          visibleNoteIds != null &&
+          !visibleNoteIds.contains(entry.noteId);
+      final mismatchedWithForeground = fg == null ||
+          fg.epochMs != entry.epochMs ||
+          fg.noteId != entry.noteId ||
+          fg.isDailyQuote != entry.isDailyQuote ||
+          fg.contentType != entry.contentType ||
+          (fg.dailyQuoteData?['hitokoto'] != entry.dailyQuoteData?['hitokoto']);
+      if (noteHidden ||
+          mismatchedWithForeground ||
+          _isEntryDisabledByCurrentSettings(entry)) {
+        try {
+          await _notificationsPlugin.cancel(entry.id);
+        } catch (_) {}
+      }
+    }
+  }
+
   /// 校验当前调度操作在实例内及跨 Isolate 层面是否仍然有效。
   ///
-  /// 若后台任务执行期间前台已关闭提醒、修改了设置或隐藏/修改了笔记，会自动回滚后台刚写入的旧通知并清理任务。
+  /// 若后台任务执行期间前台已关闭提醒、修改了设置或隐藏/修改了笔记，会自动回滚后台刚写入的旧通知并保留前台新写入的通知。
   Future<bool> _isScheduleContextStillValid({
     required int generation,
     required int expectedEpoch,
     int? expectedScheduleEpoch,
+    int? expectedCommitSeq,
     required bool fromBackground,
     bool reloadStorage = false,
     List<_PreScheduledEntry> writtenEntries = const [],
@@ -314,6 +420,8 @@ extension SmartPushScheduling on SmartPushService {
 
     final currentEpoch = _readStoredSettingsEpoch();
     final currentScheduleEpoch = _readStoredScheduleEpoch();
+    final commitChanged = expectedCommitSeq != null &&
+        _readStoredNotificationCommitSeq() != expectedCommitSeq;
     final disabledInStorage = fromBackground &&
         (_settings.enabled || _settings.dailyQuotePushEnabled) &&
         _areStoredSettingsAllDisabled();
@@ -321,50 +429,10 @@ extension SmartPushScheduling on SmartPushService {
     if (currentEpoch != expectedEpoch ||
         (expectedScheduleEpoch != null &&
             currentScheduleEpoch != expectedScheduleEpoch) ||
+        commitChanged ||
         disabledInStorage) {
       if (fromBackground) {
-        await _loadSettings();
-        if (!_hasActiveReminderScheduleConfig(_settings) ||
-            _areStoredSettingsAllDisabled()) {
-          for (final entry in writtenEntries) {
-            try {
-              await _notificationsPlugin.cancel(entry.id);
-            } catch (_) {}
-          }
-          await _cancelAllSchedulesInternal();
-        } else if (writtenEntries.isNotEmpty) {
-          final foregroundEntriesById = <int, _PreScheduledEntry>{
-            for (final e in _loadTrackedPreScheduledEntries()) e.id: e,
-          };
-          final candidateNoteIds = writtenEntries
-              .map((e) => e.noteId)
-              .whereType<String>()
-              .where((id) => id.isNotEmpty)
-              .toSet();
-          final visibleNoteIds = candidateNoteIds.isNotEmpty
-              ? await _resolveVisibleTrackedNoteIds(candidateNoteIds)
-              : null;
-          for (final entry in writtenEntries) {
-            final fg = foregroundEntriesById[entry.id];
-            final noteHidden = entry.noteId != null &&
-                visibleNoteIds != null &&
-                !visibleNoteIds.contains(entry.noteId);
-            final mismatchedWithForeground = fg == null ||
-                fg.epochMs != entry.epochMs ||
-                fg.noteId != entry.noteId ||
-                fg.isDailyQuote != entry.isDailyQuote ||
-                fg.contentType != entry.contentType ||
-                (fg.dailyQuoteData?['hitokoto'] !=
-                    entry.dailyQuoteData?['hitokoto']);
-            if (noteHidden ||
-                mismatchedWithForeground ||
-                _isEntryDisabledByCurrentSettings(entry)) {
-              try {
-                await _notificationsPlugin.cancel(entry.id);
-              } catch (_) {}
-            }
-          }
-        }
+        await _rollbackStaleBackgroundEntries(writtenEntries);
       }
       return false;
     }
@@ -566,27 +634,37 @@ extension SmartPushScheduling on SmartPushService {
       );
     }
 
-    if (!await _isAccountingContextStillValid(
-      settingsGeneration: settingsGeneration,
-      expectedEpoch: expectedEpoch,
-      fromBackground: fromBackground,
-      reloadStorage: true,
-    )) {
-      return entries;
-    }
+    return _withScheduleCommitLock(() async {
+      if (!await _isAccountingContextStillValid(
+        settingsGeneration: settingsGeneration,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+        reloadStorage: true,
+      )) {
+        return _loadTrackedPreScheduledEntries();
+      }
 
-    final updatedEntries = entries
-        .map(
-          (e) => isEntryDue(e) ? e.copyWith(accounted: true) : e,
-        )
-        .toList();
-    await _saveTrackedPreScheduledEntries(
-      updatedEntries,
-      expectedSettingsGeneration: settingsGeneration,
-      expectedEpoch: expectedEpoch,
-      fromBackground: fromBackground,
-    );
-    return updatedEntries;
+      final dueKeys = <String>{
+        for (final e in entries)
+          if (isEntryDue(e)) '${e.id}@${e.epochMs}',
+      };
+      final latestEntries = _loadTrackedPreScheduledEntries();
+      final baseEntries = latestEntries.isNotEmpty ? latestEntries : entries;
+      final updatedEntries = baseEntries
+          .map(
+            (e) => dueKeys.contains('${e.id}@${e.epochMs}')
+                ? e.copyWith(accounted: true)
+                : e,
+          )
+          .toList();
+      await _saveTrackedPreScheduledEntries(
+        updatedEntries,
+        expectedSettingsGeneration: settingsGeneration,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+      );
+      return updatedEntries;
+    });
   }
 
   /// 解析当前有效的常规推送时间槽
@@ -626,6 +704,7 @@ extension SmartPushScheduling on SmartPushService {
       expectedEpoch: expectedEpoch,
       fromBackground: fromBackground,
     );
+    final planningCommitSeq = _readStoredNotificationCommitSeq();
     final futureOnly = fromBackground || preserveDeliveredNotifications;
     final pendingRequestIds = previousEntries.isNotEmpty
         ? await _queryPendingLocalNotificationIds()
@@ -926,6 +1005,7 @@ extension SmartPushScheduling on SmartPushService {
     Set<String>? loadedVisibleNoteIds;
     List<Quote>? loadedNotesForQuotes;
     var regularPrecomputationFailed = false;
+    var scheduledRegularSlotsToPersist = const <PushTimeSlot>[];
 
     // 1. 常规回顾提醒槽位（未来 3 个有效推送日）
     if (_settings.enabled) {
@@ -934,19 +1014,12 @@ extension SmartPushScheduling on SmartPushService {
         generation: generation,
         expectedEpoch: expectedEpoch,
         expectedScheduleEpoch: expectedScheduleEpoch,
+        expectedCommitSeq: fromBackground ? planningCommitSeq : null,
         fromBackground: fromBackground,
       )) {
         return;
       }
-      await _persistScheduledTimes(slotsToSchedule);
-      if (!await _isScheduleContextStillValid(
-        generation: generation,
-        expectedEpoch: expectedEpoch,
-        expectedScheduleEpoch: expectedScheduleEpoch,
-        fromBackground: fromBackground,
-      )) {
-        return;
-      }
+      scheduledRegularSlotsToPersist = slotsToSchedule;
 
       final rawRegularSlots =
           <({int slotIndex, PushTimeSlot slot, tz.TZDateTime date})>[];
@@ -982,6 +1055,7 @@ extension SmartPushScheduling on SmartPushService {
         generation: generation,
         expectedEpoch: expectedEpoch,
         expectedScheduleEpoch: expectedScheduleEpoch,
+        expectedCommitSeq: fromBackground ? planningCommitSeq : null,
         fromBackground: fromBackground,
       )) {
         return;
@@ -993,16 +1067,6 @@ extension SmartPushScheduling on SmartPushService {
         plannedRegular.retainedOverduePendingIds,
       );
       plannedItems.addAll(plannedRegular.items);
-    } else {
-      await _persistScheduledTimes(const []);
-      if (!await _isScheduleContextStillValid(
-        generation: generation,
-        expectedEpoch: expectedEpoch,
-        expectedScheduleEpoch: expectedScheduleEpoch,
-        fromBackground: fromBackground,
-      )) {
-        return;
-      }
     }
 
     // 2. 每日一言独立槽位（未来 3 天，不受常规 frequency 限制）
@@ -1015,6 +1079,7 @@ extension SmartPushScheduling on SmartPushService {
           generation: generation,
           expectedEpoch: expectedEpoch,
           expectedScheduleEpoch: expectedScheduleEpoch,
+          expectedCommitSeq: fromBackground ? planningCommitSeq : null,
           fromBackground: fromBackground,
         )) {
           return;
@@ -1052,262 +1117,337 @@ extension SmartPushScheduling on SmartPushService {
       }
     }
 
-    // 3. 对账并清理已移除/禁用或关联笔记（含本地每日一言来源笔记）已被隐藏/删除的预调度通知
-    final visibleNoteIds = trackedNoteIds.isNotEmpty
-        ? (trackedVisibleNoteIds ?? loadedVisibleNoteIds)
-        : loadedVisibleNoteIds;
-
-    final isNoteOnlyMode = _settings.pushMode == PushMode.custom ||
-        _settings.pushMode == PushMode.pastNotes;
-    final invalidatedIds = <int>{
-      if (visibleNoteIds != null)
-        for (final prev in previousEntries)
-          if (prev.noteId != null && !visibleNoteIds.contains(prev.noteId))
-            prev.id,
-    };
-
-    final itemsToWrite = plannedItems.where((item) {
-      if (item.content != null) return true;
-      final itemDayKey = item.scheduledDate.toIso8601String().substring(0, 10);
-      if (item.isDailyQuote) {
-        if (useLocalQuotesOnly || invalidatedIds.contains(item.id)) {
-          return false;
-        }
-        return true;
-      }
-      if (suppressedDuplicateRegularFallbackDays.contains(itemDayKey)) {
-        return false;
-      }
-      if (invalidatedIds.contains(item.id)) {
-        return false;
-      }
-      if (isNoteOnlyMode && !regularPrecomputationFailed) {
-        return false;
-      }
-      if (useLocalQuotesOnly && !regularPrecomputationFailed) {
-        return false;
-      }
-      return true;
-    }).toList();
-
-    final activeIds = itemsToWrite.map((e) => e.id).toSet();
-    final reconcileResult = await _reconcileTrackedPreScheduledNotifications(
-      activeIds: activeIds,
-      futureOnly: futureOnly,
-      visibleNoteIds: visibleNoteIds,
-      entriesOverride: previousEntries,
-      pendingRequestIds: pendingRequestIds,
-      alreadyQueriedPendingIds: true,
-      canScheduleExact: canScheduleExact,
-      retainedOverduePendingIds: retainedOverduePendingIds,
-    );
-    final remainingPreviousEntries = previousEntries
-        .where((e) => !reconcileResult.cancelledIds.contains(e.id))
-        .toList();
-    if (reconcileResult.cancelledIds.isNotEmpty &&
-        !fromBackground &&
-        _readStoredSettingsEpoch() == expectedEpoch &&
-        _readStoredScheduleEpoch() == expectedScheduleEpoch) {
-      await _saveTrackedPreScheduledEntries(
-        remainingPreviousEntries,
-        expectedGeneration: generation,
-        expectedEpoch: expectedEpoch,
-        expectedScheduleEpoch: expectedScheduleEpoch,
-      );
-    }
-
-    Future<List<_PreScheduledEntry>> mergeWithRetained(
-      List<_PreScheduledEntry> currentScheduled,
-    ) async {
-      final scheduledIds = currentScheduled.map((e) => e.id).toSet();
-      final nowMs = _now().millisecondsSinceEpoch;
-      final maxRetentionMs =
-          SmartPushService._deliveredEntryRetention.inMilliseconds;
-      final retained = <_PreScheduledEntry>[...currentScheduled];
-      for (final prev in remainingPreviousEntries) {
-        if (scheduledIds.contains(prev.id) || prev.epochMs <= 0) {
-          continue;
-        }
-        if (prev.epochMs > nowMs &&
-            pendingRequestIds != null &&
-            !pendingRequestIds.contains(prev.id)) {
-          continue;
-        }
-        final withinRetention =
-            prev.epochMs > nowMs || nowMs - prev.epochMs <= maxRetentionMs;
-        if (withinRetention) {
-          retained.add(prev);
-          continue;
-        }
-        // 超出 7 天保留期时：若系统通知栏中该通知仍可见，继续保留 noteId 追踪记录以便后续隐藏/删除笔记时撤回；
-        // 若平台无法查询活动通知，则在移除追踪记录前主动取消系统通知，防止隐私笔记预览残留。
-        if (activeNotificationIds != null) {
-          if (activeNotificationIds.contains(prev.id)) {
-            retained.add(prev);
-          }
-        } else {
-          try {
-            await _notificationsPlugin.cancel(prev.id);
-          } catch (e) {
-            AppLogger.w('清理超期预调度通知失败 (ID: ${prev.id})', error: e);
-          }
-        }
-      }
-      return retained;
-    }
-
-    if (!await _isScheduleContextStillValid(
-      generation: generation,
-      expectedEpoch: expectedEpoch,
-      expectedScheduleEpoch: expectedScheduleEpoch,
-      fromBackground: fromBackground,
-    )) {
-      if (!fromBackground &&
-          _readStoredSettingsEpoch() == expectedEpoch &&
-          _readStoredScheduleEpoch() == expectedScheduleEpoch) {
-        await _saveTrackedPreScheduledEntries(
-          await mergeWithRetained(const <_PreScheduledEntry>[]),
-          expectedGeneration: generation,
-          expectedEpoch: expectedEpoch,
-          expectedScheduleEpoch: expectedScheduleEpoch,
-        );
-      }
-      return;
-    }
-
-    // 4. 逐条写入系统本地通知队列；若中途被新设置或笔记变更打断，自动撤销后台旧通知或在前台保留局部追踪记录供下一轮对账
-    final scheduledEntries = <_PreScheduledEntry>[];
-    try {
-      for (final item in itemsToWrite) {
-        if (!await _isScheduleContextStillValid(
-          generation: generation,
-          expectedEpoch: expectedEpoch,
-          expectedScheduleEpoch: expectedScheduleEpoch,
-          fromBackground: fromBackground,
-          writtenEntries: scheduledEntries,
-        )) {
-          if (!fromBackground) {
-            await _saveTrackedPreScheduledEntries(
-              await mergeWithRetained(scheduledEntries),
-            );
-          }
-          return;
-        }
-
-        final newEpochMs = item.scheduledDate.millisecondsSinceEpoch;
-        final isNewNotificationInstance = previousEntries
-            .where((e) => e.id == item.id)
-            .every((e) => e.epochMs != newEpochMs);
-
-        final scheduled = await _scheduleLocalNotification(
-          item.id,
-          item.scheduledDate,
-          item.slot,
-          isDailyQuote: item.isDailyQuote,
-          precomputedContent: item.content,
-          allowContentLookup: false,
-          canScheduleExactOverride: canScheduleExact,
-          persistSingleTrackedEntry: false,
-        );
-        if (!scheduled) {
-          continue;
-        }
-        if (isNewNotificationInstance) {
-          await _analytics.resetTrackedNotificationState(item.id);
-        }
-        scheduledEntries.add(
-          _PreScheduledEntry(
-            id: item.id,
-            epochMs: newEpochMs,
-            noteId: item.content?.sourceNoteId ?? item.content?.noteId,
-            isDailyQuote: item.isDailyQuote,
-            contentType: item.content?.contentType ??
-                (item.isDailyQuote ? 'dailyQuote' : null),
-            accounted: false,
-            slotHour: item.slot.hour,
-            slotMinute: item.slot.minute,
-            dailyQuoteData: item.content?.dailyQuoteData,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!fromBackground && scheduledEntries.isNotEmpty) {
-        await _saveTrackedPreScheduledEntries(
-          await mergeWithRetained(scheduledEntries),
-        );
-      }
-      rethrow;
-    }
-
-    // 写入后再次核验关联笔记在数据库中的可见性，防止写入窗口内被隐藏/删除的笔记正文残留在系统通知队列
-    final writtenNoteIds = scheduledEntries
-        .map((e) => e.noteId)
-        .whereType<String>()
-        .where((id) => id.isNotEmpty)
-        .toSet();
-    if (writtenNoteIds.isNotEmpty) {
-      final postWriteVisibleIds =
-          await _resolveVisibleTrackedNoteIds(writtenNoteIds);
-      if (postWriteVisibleIds != null) {
-        final hiddenWritten = scheduledEntries
-            .where(
-              (e) =>
-                  e.noteId != null && !postWriteVisibleIds.contains(e.noteId),
-            )
-            .toList();
-        if (hiddenWritten.isNotEmpty) {
-          for (final stale in hiddenWritten) {
-            try {
-              await _notificationsPlugin.cancel(stale.id);
-            } catch (_) {}
-          }
-          scheduledEntries.removeWhere(
-            (e) => e.noteId != null && !postWriteVisibleIds.contains(e.noteId),
-          );
-        }
-      }
-    }
-
-    final mergedEntries = await mergeWithRetained(scheduledEntries);
-
-    if (!await _isScheduleContextStillValid(
-      generation: generation,
-      expectedEpoch: expectedEpoch,
-      expectedScheduleEpoch: expectedScheduleEpoch,
-      fromBackground: fromBackground,
-      reloadStorage: true,
-      writtenEntries: scheduledEntries,
-    )) {
-      if (!fromBackground) {
-        await _saveTrackedPreScheduledEntries(mergedEntries);
-      }
-      return;
-    }
-
-    await _saveTrackedPreScheduledEntries(
-      mergedEntries,
-      expectedGeneration: generation,
-      expectedEpoch: expectedEpoch,
-      expectedScheduleEpoch: expectedScheduleEpoch,
-      fromBackground: fromBackground,
-    );
-
-    if (_hasActiveReminderScheduleConfig(_settings)) {
-      await _registerPreScheduleRenewalTask();
-    } else {
-      await _cancelPreScheduleRenewalTask();
-    }
-
-    if (fromBackground) {
-      await _isScheduleContextStillValid(
+    // 3 & 4. 在跨 Isolate 调度提交锁内完成对账清理、通知写入、写后可见性复核与追踪表提交，
+    // 确保前后台不会并发竞争同一确定性槽位 ID。
+    await _withScheduleCommitLock(() async {
+      if (!await _isScheduleContextStillValid(
         generation: generation,
         expectedEpoch: expectedEpoch,
         expectedScheduleEpoch: expectedScheduleEpoch,
-        fromBackground: true,
+        expectedCommitSeq: fromBackground ? planningCommitSeq : null,
+        fromBackground: fromBackground,
+        reloadStorage: true,
+      )) {
+        return;
+      }
+
+      var effectivePreviousEntries = previousEntries;
+      var effectiveTrackedVisibleNoteIds = trackedVisibleNoteIds;
+      if (!fromBackground &&
+          _readStoredNotificationCommitSeq() != planningCommitSeq) {
+        final latestStored = _loadTrackedPreScheduledEntries();
+        final byId = <int, _PreScheduledEntry>{
+          for (final e in previousEntries) e.id: e,
+          for (final e in latestStored) e.id: e,
+        };
+        effectivePreviousEntries = byId.values.toList();
+        final mergedTrackedNoteIds = effectivePreviousEntries
+            .map((e) => e.noteId)
+            .whereType<String>()
+            .where((id) => id.isNotEmpty)
+            .toSet();
+        if (mergedTrackedNoteIds.isNotEmpty) {
+          effectiveTrackedVisibleNoteIds =
+              await _resolveVisibleTrackedNoteIds(mergedTrackedNoteIds);
+        }
+      }
+
+      await _persistScheduledTimes(scheduledRegularSlotsToPersist);
+
+      final visibleNoteIds = effectivePreviousEntries.any(
+        (e) => e.noteId != null && e.noteId!.isNotEmpty,
+      )
+          ? (effectiveTrackedVisibleNoteIds ?? loadedVisibleNoteIds)
+          : loadedVisibleNoteIds;
+
+      final isNoteOnlyMode = _settings.pushMode == PushMode.custom ||
+          _settings.pushMode == PushMode.pastNotes;
+      final invalidatedIds = <int>{
+        if (visibleNoteIds != null)
+          for (final prev in effectivePreviousEntries)
+            if (prev.noteId != null && !visibleNoteIds.contains(prev.noteId))
+              prev.id,
+      };
+
+      final itemsToWrite = plannedItems.where((item) {
+        if (item.content != null) return true;
+        final itemDayKey =
+            item.scheduledDate.toIso8601String().substring(0, 10);
+        if (item.isDailyQuote) {
+          if (useLocalQuotesOnly || invalidatedIds.contains(item.id)) {
+            return false;
+          }
+          return true;
+        }
+        if (suppressedDuplicateRegularFallbackDays.contains(itemDayKey)) {
+          return false;
+        }
+        if (invalidatedIds.contains(item.id)) {
+          return false;
+        }
+        if (isNoteOnlyMode && !regularPrecomputationFailed) {
+          return false;
+        }
+        if (useLocalQuotesOnly && !regularPrecomputationFailed) {
+          return false;
+        }
+        return true;
+      }).toList();
+
+      final batchCommitSeq = await _nextNotificationCommitSeq();
+
+      final activeIds = itemsToWrite.map((e) => e.id).toSet();
+      final reconcileResult = await _reconcileTrackedPreScheduledNotifications(
+        activeIds: activeIds,
+        futureOnly: futureOnly,
+        visibleNoteIds: visibleNoteIds,
+        entriesOverride: effectivePreviousEntries,
+        pendingRequestIds: pendingRequestIds,
+        alreadyQueriedPendingIds: true,
+        canScheduleExact: canScheduleExact,
+        retainedOverduePendingIds: retainedOverduePendingIds,
+      );
+      final remainingPreviousEntries = effectivePreviousEntries
+          .where((e) => !reconcileResult.cancelledIds.contains(e.id))
+          .toList();
+      if (reconcileResult.cancelledIds.isNotEmpty &&
+          !fromBackground &&
+          _readStoredSettingsEpoch() == expectedEpoch &&
+          _readStoredScheduleEpoch() == expectedScheduleEpoch &&
+          _readStoredNotificationCommitSeq() == batchCommitSeq) {
+        await _saveTrackedPreScheduledEntries(
+          remainingPreviousEntries,
+          expectedGeneration: generation,
+          expectedEpoch: expectedEpoch,
+          expectedScheduleEpoch: expectedScheduleEpoch,
+          expectedCommitSeq: batchCommitSeq,
+        );
+      }
+
+      Future<List<_PreScheduledEntry>> mergeWithRetained(
+        List<_PreScheduledEntry> currentScheduled,
+      ) async {
+        final scheduledIds = currentScheduled.map((e) => e.id).toSet();
+        final nowMs = _now().millisecondsSinceEpoch;
+        final maxRetentionMs =
+            SmartPushService._deliveredEntryRetention.inMilliseconds;
+        final retained = <_PreScheduledEntry>[...currentScheduled];
+        for (final prev in remainingPreviousEntries) {
+          if (scheduledIds.contains(prev.id) || prev.epochMs <= 0) {
+            continue;
+          }
+          if (prev.epochMs > nowMs &&
+              pendingRequestIds != null &&
+              !pendingRequestIds.contains(prev.id)) {
+            continue;
+          }
+          final withinRetention =
+              prev.epochMs > nowMs || nowMs - prev.epochMs <= maxRetentionMs;
+          if (withinRetention) {
+            retained.add(prev);
+            continue;
+          }
+          // 超出 7 天保留期时：若系统通知栏中该通知仍可见，继续保留 noteId 追踪记录以便后续隐藏/删除笔记时撤回；
+          // 若平台无法查询活动通知，则在移除追踪记录前主动取消系统通知，防止隐私笔记预览残留。
+          if (activeNotificationIds != null) {
+            if (activeNotificationIds.contains(prev.id)) {
+              retained.add(prev);
+            }
+          } else {
+            try {
+              await _notificationsPlugin.cancel(prev.id);
+            } catch (e) {
+              AppLogger.w('清理超期预调度通知失败 (ID: ${prev.id})', error: e);
+            }
+          }
+        }
+        return retained;
+      }
+
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        expectedCommitSeq: batchCommitSeq,
+        fromBackground: fromBackground,
+      )) {
+        if (!fromBackground &&
+            _readStoredSettingsEpoch() == expectedEpoch &&
+            _readStoredScheduleEpoch() == expectedScheduleEpoch &&
+            _readStoredNotificationCommitSeq() == batchCommitSeq) {
+          await _saveTrackedPreScheduledEntries(
+            await mergeWithRetained(const <_PreScheduledEntry>[]),
+            expectedGeneration: generation,
+            expectedEpoch: expectedEpoch,
+            expectedScheduleEpoch: expectedScheduleEpoch,
+            expectedCommitSeq: batchCommitSeq,
+          );
+        }
+        return;
+      }
+
+      // 4. 逐条写入系统本地通知队列；若中途被新设置或笔记变更打断，自动撤销未被新提交覆盖的旧通知
+      final scheduledEntries = <_PreScheduledEntry>[];
+      try {
+        for (final item in itemsToWrite) {
+          if (!await _isScheduleContextStillValid(
+            generation: generation,
+            expectedEpoch: expectedEpoch,
+            expectedScheduleEpoch: expectedScheduleEpoch,
+            expectedCommitSeq: batchCommitSeq,
+            fromBackground: fromBackground,
+            writtenEntries: scheduledEntries,
+          )) {
+            if (!fromBackground) {
+              await _saveTrackedPreScheduledEntries(
+                await mergeWithRetained(scheduledEntries),
+                expectedCommitSeq: batchCommitSeq,
+              );
+            }
+            return;
+          }
+
+          final newEpochMs = item.scheduledDate.millisecondsSinceEpoch;
+          final isNewNotificationInstance = effectivePreviousEntries
+              .where((e) => e.id == item.id)
+              .every((e) => e.epochMs != newEpochMs);
+
+          final scheduled = await _scheduleLocalNotification(
+            item.id,
+            item.scheduledDate,
+            item.slot,
+            isDailyQuote: item.isDailyQuote,
+            precomputedContent: item.content,
+            allowContentLookup: false,
+            canScheduleExactOverride: canScheduleExact,
+            persistSingleTrackedEntry: false,
+          );
+          if (!scheduled) {
+            continue;
+          }
+          if (isNewNotificationInstance) {
+            await _analytics.resetTrackedNotificationState(item.id);
+          }
+          scheduledEntries.add(
+            _PreScheduledEntry(
+              id: item.id,
+              epochMs: newEpochMs,
+              noteId: item.content?.sourceNoteId ?? item.content?.noteId,
+              isDailyQuote: item.isDailyQuote,
+              contentType: item.content?.contentType ??
+                  (item.isDailyQuote ? 'dailyQuote' : null),
+              accounted: false,
+              slotHour: item.slot.hour,
+              slotMinute: item.slot.minute,
+              dailyQuoteData: item.content?.dailyQuoteData,
+              commitSeq: batchCommitSeq,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!fromBackground && scheduledEntries.isNotEmpty) {
+          await _saveTrackedPreScheduledEntries(
+            await mergeWithRetained(scheduledEntries),
+            expectedCommitSeq: batchCommitSeq,
+          );
+        }
+        rethrow;
+      }
+
+      // 写入后再次核验关联笔记在数据库中的可见性；若某槽位已被更新提交合法覆盖则保留新通知，仅撤回未被新提交接管的隐藏旧通知
+      final writtenNoteIds = scheduledEntries
+          .map((e) => e.noteId)
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      if (writtenNoteIds.isNotEmpty) {
+        await _reloadSharedStorageIfSupported();
+        final latestForegroundById = <int, _PreScheduledEntry>{
+          for (final e in _loadTrackedPreScheduledEntries()) e.id: e,
+        };
+        final candidateIdsToCheck = <String>{
+          ...writtenNoteIds,
+          for (final fg in latestForegroundById.values)
+            if (fg.noteId != null && fg.noteId!.isNotEmpty) fg.noteId!,
+        };
+        final postWriteVisibleIds =
+            await _resolveVisibleTrackedNoteIds(candidateIdsToCheck);
+        if (postWriteVisibleIds != null) {
+          final hiddenWritten = scheduledEntries
+              .where(
+                (e) =>
+                    e.noteId != null && !postWriteVisibleIds.contains(e.noteId),
+              )
+              .toList();
+          if (hiddenWritten.isNotEmpty) {
+            for (final stale in hiddenWritten) {
+              final fg = latestForegroundById[stale.id];
+              final supersededByValidCommit = fg != null &&
+                  fg.commitSeq > stale.commitSeq &&
+                  (fg.noteId == null ||
+                      postWriteVisibleIds.contains(fg.noteId)) &&
+                  !_isEntryDisabledByCurrentSettings(fg);
+              if (!supersededByValidCommit) {
+                try {
+                  await _notificationsPlugin.cancel(stale.id);
+                } catch (_) {}
+              }
+            }
+            scheduledEntries.removeWhere(
+              (e) =>
+                  e.noteId != null && !postWriteVisibleIds.contains(e.noteId),
+            );
+          }
+        }
+      }
+
+      final mergedEntries = await mergeWithRetained(scheduledEntries);
+
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        expectedCommitSeq: batchCommitSeq,
+        fromBackground: fromBackground,
         reloadStorage: true,
         writtenEntries: scheduledEntries,
+      )) {
+        if (!fromBackground) {
+          await _saveTrackedPreScheduledEntries(
+            mergedEntries,
+            expectedCommitSeq: batchCommitSeq,
+          );
+        }
+        return;
+      }
+
+      await _saveTrackedPreScheduledEntries(
+        mergedEntries,
+        expectedGeneration: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        expectedCommitSeq: batchCommitSeq,
+        fromBackground: fromBackground,
       );
-    }
+
+      if (_hasActiveReminderScheduleConfig(_settings)) {
+        await _registerPreScheduleRenewalTask();
+      } else {
+        await _cancelPreScheduleRenewalTask();
+      }
+
+      if (fromBackground) {
+        await _isScheduleContextStillValid(
+          generation: generation,
+          expectedEpoch: expectedEpoch,
+          expectedScheduleEpoch: expectedScheduleEpoch,
+          expectedCommitSeq: batchCommitSeq,
+          fromBackground: true,
+          reloadStorage: true,
+          writtenEntries: scheduledEntries,
+        );
+      }
+    });
   }
 
   /// 智能推送时间计算算法 (SOTA v2)

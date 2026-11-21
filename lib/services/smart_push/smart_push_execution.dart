@@ -400,7 +400,7 @@ extension SmartPushExecution on SmartPushService {
           if (!isTest &&
               contentType.isNotEmpty &&
               shownNotificationId != null) {
-            await _analytics.markSent(
+            await _analytics.recordDeliveredNotification(
               contentType,
               notificationId: shownNotificationId,
             );

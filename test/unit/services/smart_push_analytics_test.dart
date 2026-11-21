@@ -533,6 +533,82 @@ void main() {
 
       expect(int.parse(counterFile.readAsStringSync()), equals(2));
     });
+
+    test('跨 Isolate 文件锁在竞争超旧阈值及遗留陈旧锁时均不会退化为无锁执行', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'cross_isolate_lock_no_bypass_',
+      );
+      addTearDown(() async {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final lockPath = '${tempDir.path}/contended.lock';
+      final traceFile = File('${tempDir.path}/trace.txt')
+        ..writeAsStringSync('');
+
+      // 1. 模拟崩溃遗留陈旧锁：必须在驱逐旧锁并重新独占创建锁文件后才允许进入临界区
+      File(lockPath).writeAsStringSync('crashed');
+      var heldLockFileInsideAction = false;
+      await PlatformHelper.withCrossIsolateLock(
+        'stale_eviction_test',
+        () async {
+          heldLockFileInsideAction = File(lockPath).existsSync();
+        },
+        customLockFilePath: lockPath,
+        staleLockTimeout: const Duration(milliseconds: 30),
+        acquireTimeout: const Duration(seconds: 2),
+      );
+      expect(heldLockFileInsideAction, isTrue);
+      expect(File(lockPath).existsSync(), isFalse);
+
+      // 2. 模拟另一真实 Isolate 持锁超过 140ms（高于旧版 FLUTTER_TEST 50 次重试窗口），等待方绝不能提前无锁闯入
+      final workerEntered = File('${tempDir.path}/worker_entered.flag');
+      final workerFuture = Isolate.run(() async {
+        await PlatformHelper.withCrossIsolateLock(
+          'contention_no_fallthrough',
+          () async {
+            workerEntered.writeAsStringSync('1');
+            traceFile.writeAsStringSync(
+              '${traceFile.readAsStringSync()}worker_enter\n',
+            );
+            sleep(const Duration(milliseconds: 140));
+            traceFile.writeAsStringSync(
+              '${traceFile.readAsStringSync()}worker_exit\n',
+            );
+          },
+          customLockFilePath: lockPath,
+          staleLockTimeout: const Duration(seconds: 5),
+          acquireTimeout: const Duration(seconds: 10),
+        );
+      });
+
+      final waitForWorker = Stopwatch()..start();
+      while (!workerEntered.existsSync() &&
+          waitForWorker.elapsed < const Duration(seconds: 3)) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      expect(workerEntered.existsSync(), isTrue);
+
+      await PlatformHelper.withCrossIsolateLock(
+        'contention_no_fallthrough',
+        () async {
+          expect(File(lockPath).existsSync(), isTrue);
+          traceFile.writeAsStringSync(
+            '${traceFile.readAsStringSync()}main_enter\n',
+          );
+        },
+        customLockFilePath: lockPath,
+        staleLockTimeout: const Duration(seconds: 5),
+        acquireTimeout: const Duration(seconds: 10),
+      );
+      await workerFuture;
+
+      expect(
+        traceFile.readAsStringSync().trim().split('\n'),
+        equals(<String>['worker_enter', 'worker_exit', 'main_enter']),
+      );
+    });
   });
 
   group('PushIntensity 配额矩阵', () {

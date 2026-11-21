@@ -168,54 +168,56 @@ class SmartPushAnalytics extends ChangeNotifier {
   /// 计算用户响应性热图（24小时分布）
   ///
   /// 返回: `Map<hour, score>` 其中 score 是该小时的响应性得分 (0.0-1.0)
-  Future<Map<int, double>> calculateResponsivenessHeatmap() async {
-    final records = await _getAppOpenRecords();
-    final heatmap = <int, double>{};
+  Future<Map<int, double>> calculateResponsivenessHeatmap() {
+    return _withAnalyticsLock(() async {
+      final records = await _getAppOpenRecords();
+      final heatmap = <int, double>{};
 
-    // 初始化所有小时
-    for (int h = 0; h < 24; h++) {
-      heatmap[h] = 0.0;
-    }
-
-    if (records.isEmpty) {
-      // 没有数据时返回默认热图
-      return _getDefaultHeatmap();
-    }
-
-    // 统计每小时的打开次数
-    final hourCounts = <int, int>{};
-    for (int h = 0; h < 24; h++) {
-      hourCounts[h] = 0;
-    }
-
-    for (final record in records) {
-      try {
-        final dt = DateTime.parse(record);
-        final hour = _extractRecordWallHour(record, dt);
-        hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
-      } catch (e, stack) {
-        AppLogger.e(
-          '解析应用打开记录失败',
-          error: e,
-          stackTrace: stack,
-          source: 'SmartPushAnalytics',
-        );
+      // 初始化所有小时
+      for (int h = 0; h < 24; h++) {
+        heatmap[h] = 0.0;
       }
-    }
 
-    // 找到最大值用于归一化
-    final maxCount = hourCounts.values.reduce(max);
-    if (maxCount == 0) return _getDefaultHeatmap();
+      if (records.isEmpty) {
+        // 没有数据时返回默认热图
+        return _getDefaultHeatmap();
+      }
 
-    // 归一化到 0.0-1.0
-    for (int h = 0; h < 24; h++) {
-      heatmap[h] = (hourCounts[h] ?? 0) / maxCount;
-    }
+      // 统计每小时的打开次数
+      final hourCounts = <int, int>{};
+      for (int h = 0; h < 24; h++) {
+        hourCounts[h] = 0;
+      }
 
-    // 应用时间衰减：最近的记录权重更高
-    await _applyTimeDecay(heatmap, records);
+      for (final record in records) {
+        try {
+          final dt = DateTime.parse(record);
+          final hour = _extractRecordWallHour(record, dt);
+          hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
+        } catch (e, stack) {
+          AppLogger.e(
+            '解析应用打开记录失败',
+            error: e,
+            stackTrace: stack,
+            source: 'SmartPushAnalytics',
+          );
+        }
+      }
 
-    return heatmap;
+      // 找到最大值用于归一化
+      final maxCount = hourCounts.values.reduce(max);
+      if (maxCount == 0) return _getDefaultHeatmap();
+
+      // 归一化到 0.0-1.0
+      for (int h = 0; h < 24; h++) {
+        heatmap[h] = (hourCounts[h] ?? 0) / maxCount;
+      }
+
+      // 应用时间衰减：最近的记录权重更高
+      await _applyTimeDecay(heatmap, records);
+
+      return heatmap;
+    });
   }
 
   /// 获取最佳推送时间窗口
@@ -364,8 +366,10 @@ class SmartPushAnalytics extends ChangeNotifier {
   // ============================================================
 
   /// 获取内容类型点击学习得分快照，供候选排序使用。
-  Future<Map<String, double>> getContentTypeScores() async {
-    return Map.unmodifiable(await _getContentScores());
+  Future<Map<String, double>> getContentTypeScores() {
+    return _withAnalyticsLock(() async {
+      return Map.unmodifiable(await _getContentScores());
+    });
   }
 
   /// 记录用户忽略/关闭通知（触发冷却期）
@@ -653,50 +657,58 @@ class SmartPushAnalytics extends ChangeNotifier {
   // ============================================================
 
   /// 最近一次打开 App 的时间
-  Future<DateTime?> getLastAppOpen() async {
-    final records = await _getAppOpenRecords();
-    for (int i = records.length - 1; i >= 0; i--) {
-      final dt = DateTime.tryParse(records[i]);
-      if (dt != null) return dt;
-    }
-    return null;
+  Future<DateTime?> getLastAppOpen() {
+    return _withAnalyticsLock(() async {
+      final records = await _getAppOpenRecords();
+      for (int i = records.length - 1; i >= 0; i--) {
+        final dt = DateTime.tryParse(records[i]);
+        if (dt != null) return dt;
+      }
+      return null;
+    });
   }
 
   /// 按最近 [engagementWindowDays] 天打开 App 的**天数**分档
   ///
   /// 用天数而不是次数：一天疯狂开 20 次的人和连开 4 天的人，
   /// 后者才是真的把它当日常，前者可能只是在找某条笔记。
-  Future<EngagementTier> getEngagementTier({DateTime? now}) async {
-    final records = await _getAppOpenRecords();
-    final currentNow = now ?? DateTime.now();
-    final cutoff = currentNow.subtract(
-      const Duration(days: engagementWindowDays),
-    );
+  Future<EngagementTier> getEngagementTier({DateTime? now}) {
+    return _withAnalyticsLock(() async {
+      final records = await _getAppOpenRecords();
+      final currentNow = now ?? DateTime.now();
+      final cutoff = currentNow.subtract(
+        const Duration(days: engagementWindowDays),
+      );
 
-    final openDays = <String>{};
-    for (final record in records) {
-      final dt = DateTime.tryParse(record);
-      if (dt == null || dt.isBefore(cutoff) || dt.isAfter(currentNow)) continue;
-      final dayPart = (record.length >= 10 &&
-              record.codeUnitAt(4) == 0x2D &&
-              record.codeUnitAt(7) == 0x2D)
-          ? record.substring(0, 10)
-          : dt.toIso8601String().substring(0, 10);
-      openDays.add(dayPart);
-    }
+      final openDays = <String>{};
+      for (final record in records) {
+        final dt = DateTime.tryParse(record);
+        if (dt == null || dt.isBefore(cutoff) || dt.isAfter(currentNow)) {
+          continue;
+        }
+        final dayPart = (record.length >= 10 &&
+                record.codeUnitAt(4) == 0x2D &&
+                record.codeUnitAt(7) == 0x2D)
+            ? record.substring(0, 10)
+            : dt.toIso8601String().substring(0, 10);
+        openDays.add(dayPart);
+      }
 
-    if (openDays.length >= activeOpenDaysThreshold) {
-      return EngagementTier.active;
-    }
-    if (openDays.isNotEmpty) return EngagementTier.light;
-    return EngagementTier.dormant;
+      if (openDays.length >= activeOpenDaysThreshold) {
+        return EngagementTier.active;
+      }
+      if (openDays.isNotEmpty) return EngagementTier.light;
+      return EngagementTier.dormant;
+    });
   }
 
   /// 连续未点击次数
-  Future<int> getUnengagedStreak() async {
-    final raw = _mmkv.getString(_unengagedStreakKey);
-    if (raw == null || raw.isEmpty) return 0;
-    return int.tryParse(raw) ?? 0;
+  Future<int> getUnengagedStreak() {
+    return _withAnalyticsLock(() async {
+      final raw = _mmkv.getString(_unengagedStreakKey);
+      if (raw == null || raw.isEmpty) return 0;
+      return int.tryParse(raw) ?? 0;
+    });
   }
 
   Future<void> _setUnengagedStreak(int value) async {
@@ -724,41 +736,47 @@ class SmartPushAnalytics extends ChangeNotifier {
   }
 
   /// 预测下一次推送发出前结算挂起记录后的连续未点击次数（纯只读：不消费点击记录、不重复落盘）
-  Future<int> getProjectedUnengagedStreak() async {
-    final settledStreak = await getUnengagedStreak();
-    final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
-    if (pending == null) return settledStreak;
+  Future<int> getProjectedUnengagedStreak() {
+    return _withAnalyticsLock(() async {
+      final settledStreak = await getUnengagedStreak();
+      final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+      if (pending == null) return settledStreak;
 
-    final isPendingEngaged = pending.engaged ||
-        (pending.notificationId != null &&
-            hasClickedNotification(pending.notificationId!));
-    if (isPendingEngaged) {
-      return 0;
-    }
-    return settledStreak + 1;
+      final isPendingEngaged = pending.engaged ||
+          (pending.notificationId != null &&
+              hasClickedNotification(pending.notificationId!));
+      if (isPendingEngaged) {
+        return 0;
+      }
+      return settledStreak + 1;
+    });
   }
 
   /// 预测未来槽位判定时的连续未点击冷却时长（计入尚未结算的上一条已送达提醒）
   Future<Duration> getProjectedHabituationCooldown({
     int additionalUnengaged = 0,
-  }) async {
-    final projectedStreak =
-        await getProjectedUnengagedStreak() + additionalUnengaged;
-    return cooldownForStreak(projectedStreak);
+  }) {
+    return _withAnalyticsLock(() async {
+      final projectedStreak =
+          await getProjectedUnengagedStreak() + additionalUnengaged;
+      return cooldownForStreak(projectedStreak);
+    });
   }
 
   /// 今日已推送条数
-  Future<int> getTodayPushCount({DateTime? now}) async {
-    final raw = _mmkv.getString(_dailyCountKey);
-    if (raw == null || raw.isEmpty) return 0;
+  Future<int> getTodayPushCount({DateTime? now}) {
+    return _withAnalyticsLock(() async {
+      final raw = _mmkv.getString(_dailyCountKey);
+      if (raw == null || raw.isEmpty) return 0;
 
-    final parts = raw.split('|');
-    if (parts.length != 2) return 0;
+      final parts = raw.split('|');
+      if (parts.length != 2) return 0;
 
-    final today = (now ?? DateTime.now()).toIso8601String().substring(0, 10);
-    if (parts[0] != today) return 0; // 跨天自动归零
+      final today = (now ?? DateTime.now()).toIso8601String().substring(0, 10);
+      if (parts[0] != today) return 0; // 跨天自动归零
 
-    return int.tryParse(parts[1]) ?? 0;
+      return int.tryParse(parts[1]) ?? 0;
+    });
   }
 
   Future<void> _incrementTodayPushCount({DateTime? now}) async {
@@ -946,67 +964,69 @@ class SmartPushAnalytics extends ChangeNotifier {
     required PushIntensity intensity,
     DateTime? lastPushTime,
     DateTime? now,
-  }) async {
-    final currentNow = now ?? DateTime.now();
-    final tier = await getEngagementTier(now: currentNow);
-    final profile = intensity.quotaFor(tier);
-    final todayCount = await getTodayPushCount(now: currentNow);
+  }) {
+    return _withAnalyticsLock(() async {
+      final currentNow = now ?? DateTime.now();
+      final tier = await getEngagementTier(now: currentNow);
+      final profile = intensity.quotaFor(tier);
+      final todayCount = await getTodayPushCount(now: currentNow);
 
-    PushAllowance deny(String reason) => PushAllowance(
-          allowed: false,
-          reason: reason,
-          tier: tier,
-          profile: profile,
-          todayCount: todayCount,
-        );
+      PushAllowance deny(String reason) => PushAllowance(
+            allowed: false,
+            reason: reason,
+            tier: tier,
+            profile: profile,
+            todayCount: todayCount,
+          );
 
-    // 1. 今日配额
-    if (todayCount >= profile.dailyCap) {
-      return deny(
-        '今日配额已用尽 (${tier.name}/${intensity.name}: $todayCount/${profile.dailyCap})',
-      );
-    }
-
-    // 2. 最小间隔天数（沉睡档靠这个把节奏拉到 3 天/周/更长）
-    if (profile.minGapDays > 0 && lastPushTime != null) {
-      final gap = currentNow.difference(lastPushTime).inDays;
-      if (gap < profile.minGapDays) {
-        return deny('未到最小间隔 ($gap 天 < ${profile.minGapDays} 天)');
-      }
-    }
-
-    // 3. 连续未点击衰减
-    final habituation = await getHabituationCooldown();
-    if (habituation > Duration.zero && lastPushTime != null) {
-      final since = currentNow.difference(lastPushTime);
-      if (since < habituation) {
-        final streak = await getUnengagedStreak();
+      // 1. 今日配额
+      if (todayCount >= profile.dailyCap) {
         return deny(
-          '连续 $streak 次未点击，冷却中 (${habituation.inHours}h，已过 ${since.inHours}h)',
+          '今日配额已用尽 (${tier.name}/${intensity.name}: $todayCount/${profile.dailyCap})',
         );
       }
-    }
 
-    // 4. 刚打开过 App —— 他已经想起来了
-    final lastOpen = await getLastAppOpen();
-    if (lastOpen != null && !currentNow.isBefore(lastOpen)) {
-      final sinceOpen = currentNow.difference(lastOpen);
-      if (sinceOpen < const Duration(hours: recentOpenSuppressHours)) {
-        return deny('${sinceOpen.inMinutes} 分钟前刚用过 App，跳过本次推送');
+      // 2. 最小间隔天数（沉睡档靠这个把节奏拉到 3 天/周/更长）
+      if (profile.minGapDays > 0 && lastPushTime != null) {
+        final gap = currentNow.difference(lastPushTime).inDays;
+        if (gap < profile.minGapDays) {
+          return deny('未到最小间隔 ($gap 天 < ${profile.minGapDays} 天)');
+        }
       }
-    }
 
-    // 5. 被手动忽略后的冷却
-    if (await _isInCooldown(now: currentNow)) {
-      return deny('用户处于忽略冷却期');
-    }
+      // 3. 连续未点击衰减
+      final habituation = await getHabituationCooldown();
+      if (habituation > Duration.zero && lastPushTime != null) {
+        final since = currentNow.difference(lastPushTime);
+        if (since < habituation) {
+          final streak = await getUnengagedStreak();
+          return deny(
+            '连续 $streak 次未点击，冷却中 (${habituation.inHours}h，已过 ${since.inHours}h)',
+          );
+        }
+      }
 
-    return PushAllowance(
-      allowed: true,
-      tier: tier,
-      profile: profile,
-      todayCount: todayCount,
-    );
+      // 4. 刚打开过 App —— 他已经想起来了
+      final lastOpen = await getLastAppOpen();
+      if (lastOpen != null && !currentNow.isBefore(lastOpen)) {
+        final sinceOpen = currentNow.difference(lastOpen);
+        if (sinceOpen < const Duration(hours: recentOpenSuppressHours)) {
+          return deny('${sinceOpen.inMinutes} 分钟前刚用过 App，跳过本次推送');
+        }
+      }
+
+      // 5. 被手动忽略后的冷却
+      if (await _isInCooldown(now: currentNow)) {
+        return deny('用户处于忽略冷却期');
+      }
+
+      return PushAllowance(
+        allowed: true,
+        tier: tier,
+        profile: profile,
+        todayCount: todayCount,
+      );
+    });
   }
 
   // ============================================================
@@ -1016,37 +1036,39 @@ class SmartPushAnalytics extends ChangeNotifier {
   /// 使用 Thompson Sampling 选择最佳内容类型
   ///
   /// 实现 ε-Greedy 策略的探索-利用平衡
-  Future<String> selectContentType(List<String> availableTypes) async {
-    if (availableTypes.isEmpty) return 'dailyQuote';
-    if (availableTypes.length == 1) return availableTypes.first;
+  Future<String> selectContentType(List<String> availableTypes) {
+    return _withAnalyticsLock(() async {
+      if (availableTypes.isEmpty) return 'dailyQuote';
+      if (availableTypes.length == 1) return availableTypes.first;
 
-    // ε-Greedy: 10% 概率探索（随机选择）
-    if (_random.nextDouble() < explorationRate) {
-      final selected = availableTypes[_random.nextInt(availableTypes.length)];
-      AppLogger.d('Thompson Sampling 探索: $selected');
-      return selected;
-    }
-
-    // 90% 概率利用（选择历史最佳）
-    final scores = await _getContentScores();
-
-    String bestType = availableTypes.first;
-    double bestScore = -1;
-
-    for (final type in availableTypes) {
-      final score = scores[type] ?? 0.5; // 默认得分 0.5
-
-      // 添加少量随机噪声避免总是选择同一个
-      final adjustedScore = score + (_random.nextDouble() * 0.1);
-
-      if (adjustedScore > bestScore) {
-        bestScore = adjustedScore;
-        bestType = type;
+      // ε-Greedy: 10% 概率探索（随机选择）
+      if (_random.nextDouble() < explorationRate) {
+        final selected = availableTypes[_random.nextInt(availableTypes.length)];
+        AppLogger.d('Thompson Sampling 探索: $selected');
+        return selected;
       }
-    }
 
-    AppLogger.d('Thompson Sampling 利用: $bestType (score: $bestScore)');
-    return bestType;
+      // 90% 概率利用（选择历史最佳）
+      final scores = await _getContentScores();
+
+      String bestType = availableTypes.first;
+      double bestScore = -1;
+
+      for (final type in availableTypes) {
+        final score = scores[type] ?? 0.5; // 默认得分 0.5
+
+        // 添加少量随机噪声避免总是选择同一个
+        final adjustedScore = score + (_random.nextDouble() * 0.1);
+
+        if (adjustedScore > bestScore) {
+          bestScore = adjustedScore;
+          bestType = type;
+        }
+      }
+
+      AppLogger.d('Thompson Sampling 利用: $bestType (score: $bestScore)');
+      return bestType;
+    });
   }
 
   /// 更新内容类型得分（基于用户反馈）
@@ -1154,33 +1176,35 @@ class SmartPushAnalytics extends ChangeNotifier {
   // ============================================================
 
   /// 获取推送效果统计
-  Future<Map<String, dynamic>> getAnalyticsStats() async {
-    final metrics = await _getNotificationMetrics();
-    final scores = await _getContentScores();
-    final optimalWindows = await getOptimalPushWindows();
+  Future<Map<String, dynamic>> getAnalyticsStats() {
+    return _withAnalyticsLock(() async {
+      final metrics = await _getNotificationMetrics();
+      final scores = await _getContentScores();
+      final optimalWindows = await getOptimalPushWindows();
 
-    // 计算整体点击率
-    int totalSent = 0;
-    int totalEngaged = 0;
-    for (final type in _trackedContentTypes) {
-      totalSent += metrics['${type}_total'] ?? 0;
-      totalEngaged += metrics['${type}_success'] ?? 0;
-    }
+      // 计算整体点击率
+      int totalSent = 0;
+      int totalEngaged = 0;
+      for (final type in _trackedContentTypes) {
+        totalSent += metrics['${type}_total'] ?? 0;
+        totalEngaged += metrics['${type}_success'] ?? 0;
+      }
 
-    final overallCtr = totalSent > 0 ? totalEngaged / totalSent : 0.0;
+      final overallCtr = totalSent > 0 ? totalEngaged / totalSent : 0.0;
 
-    return {
-      'totalNotificationsSent': totalSent,
-      'totalEngagements': totalEngaged,
-      'overallClickRate': (overallCtr * 100).toStringAsFixed(1),
-      'contentTypeScores': scores,
-      'optimalHours': optimalWindows.map((e) => e.key).toList(),
-      'engagementTier': (await getEngagementTier()).name,
-      'todayPushCount': await getTodayPushCount(),
-      'unengagedStreak': await getUnengagedStreak(),
-      'habituationCooldownHours': (await getHabituationCooldown()).inHours,
-      'isInCooldown': await _isInCooldown(),
-    };
+      return {
+        'totalNotificationsSent': totalSent,
+        'totalEngagements': totalEngaged,
+        'overallClickRate': (overallCtr * 100).toStringAsFixed(1),
+        'contentTypeScores': scores,
+        'optimalHours': optimalWindows.map((e) => e.key).toList(),
+        'engagementTier': (await getEngagementTier()).name,
+        'todayPushCount': await getTodayPushCount(),
+        'unengagedStreak': await getUnengagedStreak(),
+        'habituationCooldownHours': (await getHabituationCooldown()).inHours,
+        'isInCooldown': await _isInCooldown(),
+      };
+    });
   }
 
   /// 重置所有分析数据

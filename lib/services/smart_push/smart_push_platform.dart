@@ -153,6 +153,7 @@ extension SmartPushPlatform on SmartPushService {
     int? expectedSettingsGeneration,
     int? expectedEpoch,
     int? expectedScheduleEpoch,
+    int? expectedCommitSeq,
     bool fromBackground = false,
   }) async {
     try {
@@ -164,7 +165,9 @@ extension SmartPushPlatform on SmartPushService {
           !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
         return;
       }
-      if (expectedEpoch != null || expectedScheduleEpoch != null) {
+      if (expectedEpoch != null ||
+          expectedScheduleEpoch != null ||
+          expectedCommitSeq != null) {
         await _reloadSharedStorageIfSupported();
         if (expectedGeneration != null &&
             !_isScheduleGenerationCurrent(expectedGeneration)) {
@@ -178,6 +181,8 @@ extension SmartPushPlatform on SmartPushService {
                 _readStoredSettingsEpoch() != expectedEpoch) ||
             (expectedScheduleEpoch != null &&
                 _readStoredScheduleEpoch() != expectedScheduleEpoch) ||
+            (expectedCommitSeq != null &&
+                _readStoredNotificationCommitSeq() != expectedCommitSeq) ||
             (fromBackground && _areStoredSettingsAllDisabled())) {
           return;
         }
@@ -762,22 +767,30 @@ extension SmartPushPlatform on SmartPushService {
 
       if (persistSingleTrackedEntry &&
           (content?.dailyQuoteData != null || content?.sourceNoteId != null)) {
-        final existing =
-            _loadTrackedPreScheduledEntries().where((e) => e.id != id).toList();
-        existing.add(
-          _PreScheduledEntry(
-            id: id,
-            epochMs: scheduledDate.millisecondsSinceEpoch,
-            noteId: content?.sourceNoteId ?? content?.noteId,
-            isDailyQuote: isDailyQuote,
-            contentType:
-                content?.contentType ?? (isDailyQuote ? 'dailyQuote' : null),
-            slotHour: slot.hour,
-            slotMinute: slot.minute,
-            dailyQuoteData: content?.dailyQuoteData,
-          ),
-        );
-        await _saveTrackedPreScheduledEntries(existing);
+        await _withScheduleCommitLock(() async {
+          final commitSeq = await _nextNotificationCommitSeq();
+          final existing = _loadTrackedPreScheduledEntries()
+              .where((e) => e.id != id)
+              .toList();
+          existing.add(
+            _PreScheduledEntry(
+              id: id,
+              epochMs: scheduledDate.millisecondsSinceEpoch,
+              noteId: content?.sourceNoteId ?? content?.noteId,
+              isDailyQuote: isDailyQuote,
+              contentType:
+                  content?.contentType ?? (isDailyQuote ? 'dailyQuote' : null),
+              slotHour: slot.hour,
+              slotMinute: slot.minute,
+              dailyQuoteData: content?.dailyQuoteData,
+              commitSeq: commitSeq,
+            ),
+          );
+          await _saveTrackedPreScheduledEntries(
+            existing,
+            expectedCommitSeq: commitSeq,
+          );
+        });
       }
 
       AppLogger.i(
@@ -798,17 +811,24 @@ extension SmartPushPlatform on SmartPushService {
     );
   }
 
-  Future<void> _cancelAllSchedulesInternal() async {
-    await _reconcileTrackedPreScheduledNotifications(
-      activeIds: const {},
-      futureOnly: false,
-    );
-    await _saveTrackedPreScheduledEntries(const []);
-    await _notificationsPlugin.cancelAll();
-    if (_isAndroid) {
-      await _cancelAndroidBackgroundTasks();
-    } else {
-      await _cancelPeriodicFallbackTask();
-    }
+  Future<void> _cancelAllSchedulesInternal() {
+    return _withScheduleCommitLock(() async {
+      await _reloadSharedStorageIfSupported();
+      final commitSeq = await _nextNotificationCommitSeq();
+      await _reconcileTrackedPreScheduledNotifications(
+        activeIds: const {},
+        futureOnly: false,
+      );
+      await _saveTrackedPreScheduledEntries(
+        const [],
+        expectedCommitSeq: commitSeq,
+      );
+      await _notificationsPlugin.cancelAll();
+      if (_isAndroid) {
+        await _cancelAndroidBackgroundTasks();
+      } else {
+        await _cancelPeriodicFallbackTask();
+      }
+    });
   }
 }

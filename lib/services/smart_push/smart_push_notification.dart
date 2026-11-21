@@ -78,9 +78,11 @@ extension SmartPushNotification on SmartPushService {
     if (!_isDisposed &&
         _hasActiveReminderScheduleConfig(_settings) &&
         (parsed.contentType != null || parsed.noteId != null)) {
-      // 点击结算会复位连续未点击计数并更新推送历史，需不受 6 小时节流限制立即主动重排，恢复此前因预计冷却而跳过的后续提醒槽位
-      rescheduleFuture = scheduleNextPush(
+      // 点击结算会复位连续未点击计数并更新推送历史，需递增调度纪元并不受 6 小时节流限制立即主动重排，恢复此前因预计冷却而跳过的后续提醒槽位
+      final epochBumpFuture = _bumpScheduleEpoch();
+      rescheduleFuture = _scheduleNextPushWithPrerequisite(
         preserveDeliveredNotifications: true,
+        prerequisite: epochBumpFuture,
       ).catchError((Object e, StackTrace stack) {
         AppLogger.w('通知点击后重排推送计划失败', error: e, stackTrace: stack);
       });

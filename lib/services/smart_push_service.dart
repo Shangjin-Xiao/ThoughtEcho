@@ -76,6 +76,10 @@ class SmartPushService extends ChangeNotifier {
       'smart_push_prescheduled_entries_v1';
   static const String _settingsEpochKey = 'smart_push_settings_epoch_v1';
   static const String _scheduleEpochKey = 'smart_push_schedule_epoch_v1';
+  static const String _notificationCommitSeqKey =
+      'smart_push_notification_commit_seq_v1';
+  static const String _scheduleCrossIsolateLockName = 'smart_push_schedule_v1';
+  static final Object _scheduleCommitLockZoneKey = Object();
   static const String _deliveryHistoryKey = 'smart_push_delivery_history_v1';
   static const String _deviceTimeZoneKey = 'smart_push_device_timezone_v1';
   static const String _immediateNotificationSeqKey =
@@ -180,6 +184,7 @@ class SmartPushService extends ChangeNotifier {
   final Future<void> Function()? _openSystemAppSettingsOverride;
   final Future<void> Function()? _registerPreScheduleRenewalOverride;
   final Future<void> Function()? _cancelPreScheduleRenewalOverride;
+  final String? _scheduleLockFilePathOverride;
   final DateTime Function() _nowProvider;
 
   DateTime? _lastScheduleRefreshAt;
@@ -219,6 +224,33 @@ class SmartPushService extends ChangeNotifier {
     final raw = _mmkv.getString(_scheduleEpochKey);
     if (raw == null || raw.isEmpty) return 0;
     return int.tryParse(raw) ?? 0;
+  }
+
+  int _readStoredNotificationCommitSeq() {
+    final raw = _mmkv.getString(_notificationCommitSeqKey);
+    if (raw == null || raw.isEmpty) return 0;
+    return int.tryParse(raw) ?? 0;
+  }
+
+  Future<int> _nextNotificationCommitSeq() async {
+    await _reloadSharedStorageIfSupported();
+    final nextSeq = _readStoredNotificationCommitSeq() + 1;
+    await _mmkv.setString(_notificationCommitSeqKey, nextSeq.toString());
+    return nextSeq;
+  }
+
+  Future<T> _withScheduleCommitLock<T>(Future<T> Function() action) {
+    if (Zone.current[_scheduleCommitLockZoneKey] == true) {
+      return action();
+    }
+    return PlatformHelper.withCrossIsolateLock<T>(
+      _scheduleCrossIsolateLockName,
+      () => runZoned(
+        action,
+        zoneValues: <Object?, Object?>{_scheduleCommitLockZoneKey: true},
+      ),
+      customLockFilePath: _scheduleLockFilePathOverride,
+    );
   }
 
   Future<int> _bumpScheduleEpoch() {
@@ -320,6 +352,7 @@ class SmartPushService extends ChangeNotifier {
     Future<void> Function()? registerPreScheduleRenewalOverride,
     @visibleForTesting
     Future<void> Function()? cancelPreScheduleRenewalOverride,
+    @visibleForTesting String? scheduleLockFilePathOverride,
     @visibleForTesting DateTime Function()? nowProvider,
   })  : _databaseService = databaseService,
         _locationService = locationService,
@@ -337,6 +370,7 @@ class SmartPushService extends ChangeNotifier {
         _registerPreScheduleRenewalOverride =
             registerPreScheduleRenewalOverride,
         _cancelPreScheduleRenewalOverride = cancelPreScheduleRenewalOverride,
+        _scheduleLockFilePathOverride = scheduleLockFilePathOverride,
         _nowProvider = nowProvider ?? DateTime.now {
     _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
     _attachDatabaseListener();
@@ -1103,6 +1137,7 @@ class _PreScheduledEntry {
   final int? slotHour;
   final int? slotMinute;
   final Map<String, dynamic>? dailyQuoteData;
+  final int commitSeq;
 
   const _PreScheduledEntry({
     required this.id,
@@ -1114,6 +1149,7 @@ class _PreScheduledEntry {
     this.slotHour,
     this.slotMinute,
     this.dailyQuoteData,
+    this.commitSeq = 0,
   });
 
   _PreScheduledEntry copyWith({
@@ -1124,6 +1160,7 @@ class _PreScheduledEntry {
     int? slotHour,
     int? slotMinute,
     Map<String, dynamic>? dailyQuoteData,
+    int? commitSeq,
   }) {
     return _PreScheduledEntry(
       id: id,
@@ -1135,6 +1172,7 @@ class _PreScheduledEntry {
       slotHour: slotHour ?? this.slotHour,
       slotMinute: slotMinute ?? this.slotMinute,
       dailyQuoteData: dailyQuoteData ?? this.dailyQuoteData,
+      commitSeq: commitSeq ?? this.commitSeq,
     );
   }
 
@@ -1150,6 +1188,7 @@ class _PreScheduledEntry {
         if (slotMinute != null) 'slotMinute': slotMinute,
         if (dailyQuoteData != null && dailyQuoteData!.isNotEmpty)
           'dailyQuoteData': dailyQuoteData,
+        if (commitSeq > 0) 'commitSeq': commitSeq,
       };
 
   factory _PreScheduledEntry.fromJson(Map<String, dynamic> json) {
@@ -1172,6 +1211,7 @@ class _PreScheduledEntry {
               Map<String, dynamic>.from(rawQuoteData),
             )
           : null,
+      commitSeq: (json['commitSeq'] as num?)?.toInt() ?? 0,
     );
   }
 }

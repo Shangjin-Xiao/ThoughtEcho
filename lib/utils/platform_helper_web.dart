@@ -18,6 +18,8 @@ class PlatformHelper {
     String lockName,
     Future<T> Function() action, {
     String? customLockFilePath,
+    Duration staleLockTimeout = const Duration(seconds: 10),
+    Duration acquireTimeout = const Duration(seconds: 30),
   }) async {
     final lockKey = customLockFilePath ?? lockName;
     final heldLocks = Zone.current[_heldLocksZoneKey];
