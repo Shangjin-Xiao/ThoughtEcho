@@ -7,13 +7,24 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
     final l10n = AppLocalizations.of(context);
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
+        const SingleActivator(
+          LogicalKeyboardKey.keyS,
+          control: true,
+          includeRepeats: false,
+        ): () {
           _saveContent(popOnSuccess: false);
         },
-        const SingleActivator(LogicalKeyboardKey.keyS, meta: true): () {
+        const SingleActivator(
+          LogicalKeyboardKey.keyS,
+          meta: true,
+          includeRepeats: false,
+        ): () {
           _saveContent(popOnSuccess: false);
         },
-        const SingleActivator(LogicalKeyboardKey.escape): () {
+        const SingleActivator(
+          LogicalKeyboardKey.escape,
+          includeRepeats: false,
+        ): () {
           final rawEditor = _quillRawEditorKey.currentState;
           if (rawEditor != null &&
               rawEditor.selectionOverlay?.toolbar != null) {

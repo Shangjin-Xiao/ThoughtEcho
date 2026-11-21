@@ -446,6 +446,46 @@ void main() {
       expect(telLinkContextMessage, contains('内容正常可读'));
       expect(telLinkContextMessage, contains('不要声称笔记损坏'));
       expect(telLinkContextMessage, contains('Hotline: 400-000-0000'));
+
+      await service.runAgent(
+        userMessage: '帮我看下这条空笔记',
+        noteContext: const AgentNoteContext(
+          noteId: 'note-empty-1',
+          content: '',
+          documentKind: NoteDocumentKind.plain,
+          documentRevision: null,
+          documentRevisionUnavailableReason: 'empty_document',
+        ),
+      );
+
+      final emptyContextMessage = _chatMessageText(capturedMessages[1]);
+      expect(emptyContextMessage, contains('note_id: note-empty-1'));
+      expect(emptyContextMessage, contains('该笔记当前正文为空'));
+      expect(
+        emptyContextMessage,
+        isNot(contains('包含暂不支持代理直接编辑的格式')),
+      );
+
+      await service.runAgent(
+        userMessage: '解释这条富文本回退笔记',
+        noteContext: const AgentNoteContext(
+          noteId: 'note-empty-ops-with-body-1',
+          content: 'Fallback plain body',
+          documentKind: NoteDocumentKind.rich,
+          documentRevision: null,
+          documentRevisionUnavailableReason: 'empty_document',
+        ),
+      );
+
+      final emptyOpsFallbackMessage = _chatMessageText(capturedMessages[1]);
+      expect(
+        emptyOpsFallbackMessage,
+        contains('存储的富文本插入内容为空且无法生成编辑基线'),
+      );
+      expect(
+        emptyOpsFallbackMessage,
+        isNot(contains('包含暂不支持代理直接编辑的格式')),
+      );
     });
 
     test('preserves one typed proposal artifact in the final response',

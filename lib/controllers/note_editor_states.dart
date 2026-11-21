@@ -154,16 +154,10 @@ class NoteEditorState extends ChangeNotifier {
     _savedDocumentDelta = snapshot.delta;
     _savedDocumentLength = _getDeltaCharacterLength(snapshot.delta);
 
-    if (_documentVersion == snapshot.version) {
-      _isDirty = false;
-      _savedDocumentVersion = snapshot.version;
-      _lastKnownDocDelta = snapshot.delta;
-      return;
-    }
-
-    final currentDelta = _controller.document.toDelta();
-    _lastKnownDocDelta = currentDelta;
-    if (currentDelta == snapshot.delta) {
+    final matchesSnapshot =
+        _controller.document.length == _savedDocumentLength &&
+            _controller.document.toDelta() == snapshot.delta;
+    if (matchesSnapshot) {
       _isDirty = false;
       _savedDocumentVersion = _documentVersion;
     } else {

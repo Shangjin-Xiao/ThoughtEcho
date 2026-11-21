@@ -1181,7 +1181,7 @@ void main() {
   group('NoteEditorState.markNotePersisted and Metadata Snapshot Tokens', () {
     test(
         'markNotePersisted clears dirty flag and updates draftStorageKey and initialPlainText when unchanged',
-        () {
+        () async {
       final state = NoteEditorState(
         initialPlainText: '',
         initialDeltaContent: null,
@@ -1190,10 +1190,12 @@ void main() {
       );
 
       state.controller.replaceText(0, 0, 'Saved body', null);
+      await Future<void>.delayed(Duration.zero);
       expect(state.isDirty, isTrue);
 
       final snapshot = state.captureDocumentSnapshot();
       state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-1');
+      await Future<void>.delayed(Duration.zero);
 
       expect(state.isDirty, isFalse);
       expect(state.restoredFromDraft, isFalse);
@@ -1205,7 +1207,7 @@ void main() {
 
     test(
         'markNotePersisted keeps isDirty true when document changed after snapshot was captured',
-        () {
+        () async {
       final state = NoteEditorState(
         initialPlainText: '',
         initialDeltaContent: null,
@@ -1214,20 +1216,22 @@ void main() {
       );
 
       state.controller.replaceText(0, 0, 'Committed', null);
+      await Future<void>.delayed(Duration.zero);
       final snapshot = state.captureDocumentSnapshot();
 
-      // User types while persistence is in flight
+      // User types while persistence is in flight (even before stream drains)
       state.controller.replaceText(9, 0, ' extra', null);
-      expect(state.isDirty, isTrue);
-
       state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-2');
 
+      expect(state.isDirty, isTrue);
+      await Future<void>.delayed(Duration.zero);
       expect(state.isDirty, isTrue);
       expect(state.draftStorageKey, 'persisted-id-2');
       expect(state.initialPlainText, 'Committed');
 
       // Deleting the in-flight tail back to the persisted baseline marks it clean
       state.controller.replaceText(9, 6, '', null);
+      await Future<void>.delayed(Duration.zero);
       expect(state.isDirty, isFalse);
 
       state.dispose();

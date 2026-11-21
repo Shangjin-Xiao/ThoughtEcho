@@ -1160,18 +1160,29 @@ void main() {
       );
       expect(quillWidget.focusNode.hasFocus, isTrue);
 
-      // Open the floating selection toolbar: first Escape must dismiss the menu
-      // without popping the editor, and second Escape must reach the page shortcut
+      // Open the floating selection toolbar: key-down Escape must dismiss the
+      // menu without popping the editor, holding Escape (auto-repeat before
+      // key-up) must NOT trigger Navigator.maybePop, and only a fresh Escape
+      // key-down closes the editor.
       final rawEditor = tester.state<EditorState>(find.byType(QuillRawEditor));
       rawEditor.showToolbar();
       await tester.pumpAndSettle();
       expect(rawEditor.selectionOverlay?.toolbar, isNotNull);
 
-      await _pressEscape(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
       expect(rawEditor.selectionOverlay?.toolbar, isNull);
       expect(find.byType(NoteFullEditorPage), findsOneWidget);
 
-      // Second Escape while QuillEditor is still focused and clean -> exits with true
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(NoteFullEditorPage), findsOneWidget);
+
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(NoteFullEditorPage), findsOneWidget);
+
+      // Fresh Escape press while QuillEditor is focused and clean -> exits with true
       await _pressEscape(tester);
       expect(find.byType(NoteFullEditorPage), findsNothing);
       expect(routeResult, isTrue);
