@@ -18,7 +18,8 @@ extension SmartPushNotification on SmartPushService {
       final response = launchDetails.notificationResponse;
       if (response != null) {
         AppLogger.i('检测到冷启动通知点击，处理 payload: ${response.payload}');
-        _onNotificationTap(response);
+        final parsed = await _recordNotificationTapState(response);
+        unawaited(_performNotificationTapNavigation(parsed));
       }
     } catch (e) {
       AppLogger.w('处理冷启动通知失败', error: e);
@@ -72,6 +73,19 @@ extension SmartPushNotification on SmartPushService {
   Future<void> _handleNotificationTapAsync(
     NotificationResponse response,
   ) async {
+    final parsed = await _recordNotificationTapState(response);
+    await _performNotificationTapNavigation(parsed);
+  }
+
+  Future<
+      ({
+        String? noteId,
+        String? contentType,
+        String? routeTarget,
+        int? notificationId,
+      })> _recordNotificationTapState(
+    NotificationResponse response,
+  ) async {
     AppLogger.i('通知被点击: ${response.payload}');
 
     String? noteId;
@@ -115,15 +129,64 @@ extension SmartPushNotification on SmartPushService {
           }
         }
 
+        final trackedEntries = notificationId != null
+            ? _loadTrackedPreScheduledEntries()
+            : const <_PreScheduledEntry>[];
+        _PreScheduledEntry? matchedEntry;
+        if (notificationId != null) {
+          for (final entry in trackedEntries) {
+            if (entry.id == notificationId) {
+              matchedEntry = entry;
+              break;
+            }
+          }
+        }
+
         if (contentType != null && contentType.isNotEmpty) {
-          // 记录交互（异步执行，不阻塞 UI）
-          _analytics.recordInteraction(contentType);
-          AppLogger.d('SOTA: 记录通知点击交互 - $contentType');
+          final isUnaccountedSmartRegularEntry = matchedEntry != null &&
+              !matchedEntry.accounted &&
+              !matchedEntry.isDailyQuote &&
+              _settings.pushMode == PushMode.smart;
+          await _analytics.recordInteraction(
+            contentType,
+            notificationId: notificationId,
+            deferScoreUntilAccounted: isUnaccountedSmartRegularEntry,
+          );
+          AppLogger.d(
+            'SOTA: 记录通知点击交互 - $contentType (ID: $notificationId)',
+          );
+        }
+
+        if (matchedEntry != null && !matchedEntry.accounted) {
+          await _accountDeliveredPreScheduledEntries(
+            forceAccountNotificationId: notificationId,
+          );
         }
       }
     } catch (e) {
       AppLogger.w('解析通知 payload 失败', error: e);
     }
+
+    return (
+      noteId: noteId,
+      contentType: contentType,
+      routeTarget: routeTarget,
+      notificationId: notificationId,
+    );
+  }
+
+  Future<void> _performNotificationTapNavigation(
+    ({
+      String? noteId,
+      String? contentType,
+      String? routeTarget,
+      int? notificationId,
+    }) parsed,
+  ) async {
+    final noteId = parsed.noteId;
+    final contentType = parsed.contentType;
+    final routeTarget = parsed.routeTarget;
+    final notificationId = parsed.notificationId;
 
     // 处理打开特定笔记的逻辑
     if (noteId != null && noteId.isNotEmpty) {

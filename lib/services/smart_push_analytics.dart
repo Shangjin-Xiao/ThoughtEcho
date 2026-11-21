@@ -57,6 +57,13 @@ class SmartPushAnalytics extends ChangeNotifier {
   static const String _unengagedStreakKey = 'smart_push_unengaged_streak';
   static const String _pendingSendKey = 'smart_push_pending_send';
   static const String _dailyCountKey = 'smart_push_daily_count';
+  static const String _clickedNotificationIdsKey =
+      'smart_push_clicked_notification_ids_v1';
+  static const String _settledUnengagedIdsKey =
+      'smart_push_settled_unengaged_ids_v1';
+  static const String _settledEngagedIdsKey =
+      'smart_push_settled_engaged_ids_v1';
+  static const int _maxTrackedNotificationIds = 100;
 
   // 配置常量
   static const int maxAppOpenRecords = 200; // 保留最近 200 条打开记录
@@ -333,13 +340,73 @@ class SmartPushAnalytics extends ChangeNotifier {
 
   /// 记录用户点击通知（正向反馈）
   ///
-  /// 只在待结算记录上打个「已点击」标记，真正的分数更新和连续未点击复位
-  /// 交给下一次推送前的 [settlePendingSend]。这样点击与未点击走同一条
-  /// 结算路径，不会出现「点击加了 success 计数但分数没动」的断裂。
-  Future<void> recordInteraction(String contentType) async {
-    final raw = _mmkv.getString(_pendingSendKey);
-    if (raw != null && raw.isNotEmpty && raw.startsWith('$contentType|')) {
-      await _mmkv.setString(_pendingSendKey, '$contentType|1');
+  /// 支持按 [notificationId] 追踪点击状态：
+  /// - 若点击的是当前待结算通知，将其标记为已点击并立即复位连续未点击计数；
+  /// - 若点击的是尚未补记发送的预调度通知（[deferScoreUntilAccounted] 为 true），
+  ///   持久化该通知 ID 的已点击状态，待补记发送时直接按“已点击”结算，防止随后 `markSent` 覆盖为未点击；
+  /// - 若点击的是此前已按“未点击”结算过的历史通知，修正成功次数与得分并复位连续未点击计数，不重复累加发送总数。
+  Future<void> recordInteraction(
+    String contentType, {
+    int? notificationId,
+    bool deferScoreUntilAccounted = false,
+  }) async {
+    if (notificationId != null) {
+      final settledEngagedIds = _getTrackedIdList(_settledEngagedIdsKey);
+      if (settledEngagedIds.contains(notificationId)) {
+        await _setUnengagedStreak(0);
+        AppLogger.d('记录通知交互: $contentType (ID: $notificationId 已结算过点击，跳过重复计分)');
+        return;
+      }
+
+      final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+      if (pending != null && pending.notificationId == notificationId) {
+        await _removeTrackedId(_clickedNotificationIdsKey, notificationId);
+        await _mmkv.setString(
+          _pendingSendKey,
+          '${pending.contentType}|1|$notificationId',
+        );
+        await _setUnengagedStreak(0);
+        AppLogger.d(
+          '记录通知交互: ${pending.contentType} (ID: $notificationId 已标记待结算为已点击)',
+        );
+        return;
+      }
+
+      final settledUnengagedIds = _getTrackedIdList(_settledUnengagedIdsKey);
+      if (settledUnengagedIds.contains(notificationId)) {
+        await _removeTrackedId(_settledUnengagedIdsKey, notificationId);
+        await _appendTrackedId(_settledEngagedIdsKey, notificationId);
+        await _setUnengagedStreak(0);
+        await _upgradeUnengagedScoreToEngaged(contentType);
+        AppLogger.d(
+          '记录通知交互: $contentType (ID: $notificationId 修正历史未点击结算为已点击)',
+        );
+        return;
+      }
+
+      if (deferScoreUntilAccounted) {
+        await _appendTrackedId(_clickedNotificationIdsKey, notificationId);
+        await _setUnengagedStreak(0);
+        AppLogger.d(
+          '记录通知交互: $contentType (ID: $notificationId 已保存点击状态，等待补记发送时结算)',
+        );
+        return;
+      }
+
+      await _appendTrackedId(_settledEngagedIdsKey, notificationId);
+      await _setUnengagedStreak(0);
+      await updateContentScore(contentType, true);
+      AppLogger.d('记录通知交互: $contentType (ID: $notificationId 直接结算点击)');
+      return;
+    }
+
+    final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+    if (pending != null && pending.contentType == contentType) {
+      final updatedPending = pending.notificationId != null
+          ? '$contentType|1|${pending.notificationId}'
+          : '$contentType|1';
+      await _mmkv.setString(_pendingSendKey, updatedPending);
+      await _setUnengagedStreak(0);
       AppLogger.d('记录通知交互: $contentType（已标记待结算为已点击）');
       return;
     }
@@ -349,6 +416,89 @@ class SmartPushAnalytics extends ChangeNotifier {
     await _setUnengagedStreak(0);
     await updateContentScore(contentType, true);
     AppLogger.d('记录通知交互: $contentType（无匹配待结算，直接复位）');
+  }
+
+  /// 消费指定通知 ID 在补记发送前已发生的点击标记
+  Future<bool> consumeClickedNotification(int notificationId) async {
+    final clicked = _getTrackedIdList(_clickedNotificationIdsKey);
+    if (!clicked.contains(notificationId)) {
+      return false;
+    }
+    await _removeTrackedId(_clickedNotificationIdsKey, notificationId);
+    return true;
+  }
+
+  ({String contentType, bool engaged, int? notificationId})? _parsePendingSend(
+    String? raw,
+  ) {
+    if (raw == null || raw.isEmpty) return null;
+    final parts = raw.split('|');
+    if (parts.length != 2 && parts.length != 3) return null;
+    final contentType = parts[0];
+    if (contentType.isEmpty) return null;
+    final engaged = parts[1] == '1';
+    final notificationId = parts.length == 3 ? int.tryParse(parts[2]) : null;
+    return (
+      contentType: contentType,
+      engaged: engaged,
+      notificationId: notificationId,
+    );
+  }
+
+  List<int> _getTrackedIdList(String key) {
+    final raw = _mmkv.getString(key);
+    if (raw == null || raw.isEmpty) return <int>[];
+    final result = <int>[];
+    for (final token in raw.split(',')) {
+      final parsed = int.tryParse(token.trim());
+      if (parsed != null && parsed > 0) {
+        result.add(parsed);
+      }
+    }
+    return result;
+  }
+
+  Future<void> _saveTrackedIdList(String key, List<int> ids) async {
+    if (ids.isEmpty) {
+      await _mmkv.remove(key);
+      return;
+    }
+    await _mmkv.setString(key, ids.join(','));
+  }
+
+  Future<void> _appendTrackedId(String key, int id) async {
+    final ids = _getTrackedIdList(key)..remove(id);
+    ids.add(id);
+    while (ids.length > _maxTrackedNotificationIds) {
+      ids.removeAt(0);
+    }
+    await _saveTrackedIdList(key, ids);
+  }
+
+  Future<void> _removeTrackedId(String key, int id) async {
+    final ids = _getTrackedIdList(key);
+    if (!ids.remove(id)) return;
+    await _saveTrackedIdList(key, ids);
+  }
+
+  Future<void> _upgradeUnengagedScoreToEngaged(String contentType) async {
+    final scores = await _getContentScores();
+    final metrics = await _getNotificationMetrics();
+    final totalKey = '${contentType}_total';
+    final successKey = '${contentType}_success';
+
+    final currentTotal = metrics[totalKey] ?? 0;
+    final currentSuccess = metrics[successKey] ?? 0;
+    final total = currentTotal > 0 ? currentTotal : 1;
+    final success = min(total, currentSuccess + 1);
+
+    metrics[totalKey] = total;
+    metrics[successKey] = success;
+    await _saveNotificationMetrics(metrics);
+
+    final newScore = (success + 1) / (total + 2);
+    scores[contentType] = newScore;
+    await _saveContentScores(scores);
   }
 
   /// 获取手动忽略通知后的冷却结束时间（未处于忽略记录中时返回 null）
@@ -474,21 +624,31 @@ class SmartPushAnalytics extends ChangeNotifier {
     final raw = _mmkv.getString(_pendingSendKey);
     if (raw == null || raw.isEmpty) return;
 
-    final parts = raw.split('|');
-    if (parts.length != 2) {
+    final pending = _parsePendingSend(raw);
+    if (pending == null) {
       await _mmkv.setString(_pendingSendKey, '');
       return;
     }
 
-    final contentType = parts[0];
-    final engaged = parts[1] == '1';
+    final contentType = pending.contentType;
+    final notificationId = pending.notificationId;
+    var engaged = pending.engaged;
+    if (!engaged && notificationId != null) {
+      engaged = await consumeClickedNotification(notificationId);
+    }
 
     await updateContentScore(contentType, engaged);
 
     if (engaged) {
+      if (notificationId != null) {
+        await _appendTrackedId(_settledEngagedIdsKey, notificationId);
+      }
       await _setUnengagedStreak(0);
       AppLogger.d('结算上一条推送: $contentType 已点击，连续未点击计数复位');
     } else {
+      if (notificationId != null) {
+        await _appendTrackedId(_settledUnengagedIdsKey, notificationId);
+      }
       final streak = await getUnengagedStreak();
       await _setUnengagedStreak(streak + 1);
       AppLogger.d('结算上一条推送: $contentType 未点击，连续未点击 ${streak + 1} 次');
@@ -497,10 +657,39 @@ class SmartPushAnalytics extends ChangeNotifier {
     await _mmkv.setString(_pendingSendKey, '');
   }
 
-  /// 登记一条刚发出的推送（等待下次结算）
-  Future<void> markSent(String contentType, {DateTime? sentAt}) async {
-    await _mmkv.setString(_pendingSendKey, '$contentType|0');
+  /// 登记一条刚发出的推送（等待下次结算；若补记前已被用户点击则立即按已点击结算）
+  Future<void> markSent(
+    String contentType, {
+    DateTime? sentAt,
+    int? notificationId,
+    bool alreadyEngaged = false,
+  }) async {
     await _incrementTodayPushCount(now: sentAt);
+
+    var engaged = alreadyEngaged;
+    if (!engaged && notificationId != null) {
+      engaged = await consumeClickedNotification(notificationId);
+    }
+
+    if (engaged) {
+      if (notificationId != null) {
+        final settledEngagedIds = _getTrackedIdList(_settledEngagedIdsKey);
+        if (!settledEngagedIds.contains(notificationId)) {
+          await updateContentScore(contentType, true);
+          await _appendTrackedId(_settledEngagedIdsKey, notificationId);
+        }
+      } else {
+        await updateContentScore(contentType, true);
+      }
+      await _setUnengagedStreak(0);
+      await _mmkv.setString(_pendingSendKey, '');
+      return;
+    }
+
+    final pendingValue = notificationId != null
+        ? '$contentType|0|$notificationId'
+        : '$contentType|0';
+    await _mmkv.setString(_pendingSendKey, pendingValue);
   }
 
   /// 裁定这次推送能不能发，以及要多好才配发。
@@ -754,6 +943,9 @@ class SmartPushAnalytics extends ChangeNotifier {
     await _mmkv.remove(_pendingSendKey);
     await _mmkv.remove(_dailyCountKey);
     await _mmkv.remove(_lastDismissalKey);
+    await _mmkv.remove(_clickedNotificationIdsKey);
+    await _mmkv.remove(_settledUnengagedIdsKey);
+    await _mmkv.remove(_settledEngagedIdsKey);
     AppLogger.i('智能推送分析数据已重置');
     notifyListeners();
   }

@@ -148,9 +148,18 @@ extension SmartPushPlatform on SmartPushService {
   }
 
   Future<void> _saveTrackedPreScheduledEntries(
-    List<_PreScheduledEntry> entries,
-  ) async {
+    List<_PreScheduledEntry> entries, {
+    int? expectedEpoch,
+    bool fromBackground = false,
+  }) async {
     try {
+      if (fromBackground && expectedEpoch != null) {
+        await _reloadSharedStorageIfSupported();
+        if (_readStoredSettingsEpoch() != expectedEpoch ||
+            _areStoredSettingsAllDisabled()) {
+          return;
+        }
+      }
       if (entries.isEmpty) {
         await _mmkv.remove(SmartPushService._preScheduledEntriesKey);
         return;
@@ -450,7 +459,7 @@ extension SmartPushPlatform on SmartPushService {
       final isDailyQuoteContent = isDailyQuote ||
           (content?.contentType == 'dailyQuote' && content?.noteId == null);
 
-      // 构建 payload，确保通知点击时能正确路由并定位到该通知对应的展示内容
+      // 构建 payload，确保通知点击时能正确路由并定位到该通知对应的展示内容与通知 ID
       String? payload;
       if (isDailyQuoteContent) {
         payload = SmartPushService.buildNotificationPayload(
@@ -462,6 +471,11 @@ extension SmartPushPlatform on SmartPushService {
           noteId: content!.noteId,
           contentType: content.contentType ?? 'dailyQuote',
           routeTarget: 'noteList',
+          notificationId: id,
+        );
+      } else {
+        payload = SmartPushService.buildNotificationPayload(
+          contentType: content?.contentType ?? 'pastNote',
           notificationId: id,
         );
       }

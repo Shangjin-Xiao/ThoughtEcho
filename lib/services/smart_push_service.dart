@@ -183,6 +183,7 @@ class SmartPushService extends ChangeNotifier {
   bool _legacyAndroidTasksCleared = false;
   int _scheduleGeneration = 0;
   Future<void> _pendingScheduleOp = Future<void>.value();
+  Future<void> _pendingAccountingOp = Future<void>.value();
 
   bool get _isAndroid => _isAndroidOverride ?? PlatformHelper.isAndroid;
   bool get _isIOS => _isIOSOverride ?? PlatformHelper.isIOS;
@@ -745,11 +746,12 @@ class SmartPushService extends ChangeNotifier {
   Future<void> saveSettings(SmartPushSettings newSettings) async {
     try {
       _settings = newSettings;
-      // 同步递增实例内调度代数与跨 Isolate 持久化配置纪元，作废正在查库/计算中的前台及后台续期任务
+      // 先落盘最新设置，再递增实例内调度代数与跨 Isolate 持久化配置纪元，
+      // 确保任意并发 Isolate 一旦读到新纪元就必然读到新设置
       _scheduleGeneration++;
-      await _bumpSettingsEpoch();
       final jsonStr = jsonEncode(newSettings.toJson());
       await _mmkv.setString(_settingsKey, jsonStr);
+      await _bumpSettingsEpoch();
       notifyListeners();
       AppLogger.i('智能推送设置已保存');
 

@@ -1329,5 +1329,253 @@ void main() {
         );
       },
     );
+
+    test(
+      'keeps periodic renewal task alive when 7-day dormant cooldown empties 3-day window and resumes reminders automatically',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        // Dormant user: last opened 20 days ago -> PushIntensity.rare requires minGapDays: 7
+        await storage.setString(
+          'smart_push_app_open_times',
+          localTime(2026, 4, 20, 9, 0).toIso8601String(),
+        );
+        databaseService.notes = [
+          Quote(
+            id: 'aaaa1111-1111-1111-1111-111111111111',
+            content: '沉睡档位恢复验证的长回顾笔记，用于验证七天间隔期满后后台续期自动恢复。',
+            date: localTime(2025, 5, 1, 9, 0).toIso8601String(),
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.rare,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // Day 0 (May 10): schedules May 10 only (May 11 & 12 filtered by minGapDays: 7)
+        expect(notificationsPlugin.scheduledCalls, hasLength(1));
+        expect(notificationsPlugin.scheduledCalls.single.scheduledDate.day, 10);
+        expect(renewalRegisterCount, equals(1));
+        expect(renewalCancelCount, equals(0));
+
+        // Day 1 (May 11): background renewal settles May 10 delivery;
+        // next 3 days (May 11, 12, 13) are all inside the 7-day gap -> 0 notifications scheduled,
+        // BUT renewal task MUST remain registered (never cancelled)!
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 11, 9, 0);
+        await service.renewPreScheduledQueueFromBackground();
+
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+        expect(renewalCancelCount, equals(0));
+        expect(renewalRegisterCount, equals(2));
+
+        // Day 5 (May 15): 3-day lookahead [May 15, 16, 17] reaches May 17 (7 days after May 10) ->
+        // background renewal automatically schedules May 17 without user opening the app!
+        notificationsPlugin.scheduledCalls.clear();
+        currentNow = localTime(2026, 5, 15, 7, 30);
+        await service.renewPreScheduledQueueFromBackground();
+
+        expect(notificationsPlugin.scheduledCalls, hasLength(1));
+        expect(notificationsPlugin.scheduledCalls.single.scheduledDate.day, 17);
+        expect(renewalCancelCount, equals(0));
+      },
+    );
+
+    test(
+      'tapping an unaccounted pre-scheduled notification records positive engagement and is never overwritten as ignored',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        const yearAgoId = 'bbbb2222-2222-2222-2222-222222222222';
+        const monthAgoId = 'cccc3333-3333-3333-3333-333333333333';
+        databaseService.notes = [
+          Quote(
+            id: yearAgoId,
+            content: '那年今日高优先级长篇回顾笔记，包含充裕内容以验证点击正向计分不被覆盖。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+          Quote(
+            id: monthAgoId,
+            content: '上月今日第二优先级长篇回顾笔记，字数充足可通过同日第二条智能推送的质量门槛，验证多条通知补记时点击状态精确匹配。',
+            date: localTime(2026, 4, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 20, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final may10Calls = notificationsPlugin.scheduledCalls
+            .where((c) => c.scheduledDate.day == 10)
+            .toList();
+        expect(may10Calls, hasLength(2));
+        final morningCall = may10Calls[0];
+        final eveningCall = may10Calls[1];
+
+        // Seed an existing unengaged streak of 2 before user taps morning notification
+        await storage.setString('smart_push_unengaged_streak', '2');
+
+        // Advance past BOTH May 10 slots (20:05) and tap ONLY the morning notification before accounting runs:
+        // Morning must settle as engaged (score > 0.5, streak = 0) while evening stays pending (not settled as ignored yet)
+        currentNow = localTime(2026, 5, 10, 20, 5);
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: morningCall.id,
+            payload: morningCall.payload,
+          ),
+        );
+
+        // Subsequent reschedule must NOT overwrite morning click or prematurely penalize evening
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        expect(
+          await service.analytics.getHabituationCooldown(),
+          equals(Duration.zero),
+        );
+        final scoresAfterMorningTap =
+            await service.analytics.getContentTypeScores();
+        expect(scoresAfterMorningTap['yearAgoToday']!, greaterThan(0.5));
+        expect(scoresAfterMorningTap.containsKey('monthAgoToday'), isFalse);
+
+        // Now user ALSO taps the pending evening notification -> settles cleanly on next settlePendingSend() with streak still 0!
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: eveningCall.id,
+            payload: eveningCall.payload,
+          ),
+        );
+        await service.analytics.settlePendingSend();
+
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        final scoresAfterBoth = await service.analytics.getContentTypeScores();
+        expect(scoresAfterBoth['yearAgoToday']!, greaterThan(0.5));
+        expect(scoresAfterBoth['monthAgoToday']!, greaterThan(0.5));
+      },
+    );
+
+    test(
+      'background renewal rolls back written notifications and renewal task if foreground disables reminders mid-write',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final sharedDisk = <String, Object>{};
+        final foregroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final backgroundStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+
+        var bgRenewalCancels = 0;
+
+        final foregroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: foregroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(foregroundService.dispose);
+
+        await foregroundService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '早晨', enabled: true),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+        notificationsPlugin.cancelAllCount = 0;
+
+        final backgroundService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: backgroundStorage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {
+            bgRenewalCancels++;
+          },
+          nowProvider: () => currentNow,
+        );
+        addTearDown(backgroundService.dispose);
+        await backgroundStorage.reload();
+        await backgroundService.loadSettingsForBackground();
+
+        // Trigger foreground disable right AFTER background writes its last zonedSchedule!
+        var writeCount = 0;
+        notificationsPlugin.onScheduleHook = (call) async {
+          writeCount++;
+          if (writeCount == 3) {
+            await foregroundService.saveSettings(
+              const SmartPushSettings(
+                enabled: false,
+                dailyQuotePushEnabled: false,
+              ),
+            );
+          }
+        };
+
+        await backgroundService.renewPreScheduledQueueFromBackground();
+        notificationsPlugin.onScheduleHook = null;
+
+        await foregroundStorage.reload();
+        final finalSettingsJson =
+            foregroundStorage.getString('smart_push_settings_v2');
+        expect(finalSettingsJson, isNotNull);
+        final finalSettings = SmartPushSettings.fromJson(
+          jsonDecode(finalSettingsJson!) as Map<String, dynamic>,
+        );
+        expect(finalSettings.enabled, isFalse);
+        expect(finalSettings.dailyQuotePushEnabled, isFalse);
+        expect(
+          foregroundStorage.getString('smart_push_prescheduled_entries_v1'),
+          isNull,
+        );
+        expect(notificationsPlugin.cancelledIds, isNotEmpty);
+        expect(bgRenewalCancels, greaterThanOrEqualTo(1));
+      },
+    );
   });
 }

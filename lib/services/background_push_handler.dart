@@ -154,10 +154,7 @@ void callbackDispatcher() {
 
         case kPreScheduleRenewTask:
           AppLogger.i('执行预调度通知队列后台续期...');
-          await pushService.scheduleNextPush(
-            fromBackground: true,
-            preserveDeliveredNotifications: true,
-          );
+          await pushService.renewPreScheduledQueueFromBackground();
           break;
 
         default:
