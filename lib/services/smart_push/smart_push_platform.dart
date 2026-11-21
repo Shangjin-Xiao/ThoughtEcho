@@ -202,6 +202,17 @@ extension SmartPushPlatform on SmartPushService {
     }
   }
 
+  /// 查询系统通知栏中当前仍可见（尚未被用户划掉或点击清除）的本地通知 ID 集合。
+  Future<Set<int>?> _queryActiveLocalNotificationIds() async {
+    if (!_isAndroid) return null;
+    try {
+      final active = await _notificationsPlugin.getActiveNotifications();
+      return active.map((item) => item.id).whereType<int>().toSet();
+    } catch (_) {
+      return null;
+    }
+  }
+
   bool _isEntryDisabledByCurrentSettings(_PreScheduledEntry entry) {
     if (entry.isDailyQuote) {
       return !_settings.dailyQuotePushEnabled;
@@ -327,7 +338,42 @@ extension SmartPushPlatform on SmartPushService {
     }
   }
 
-  /// 获取设备时区名称
+  static const List<String> _canonicalIanaZones = <String>[
+    'UTC',
+    'Asia/Shanghai',
+    'Asia/Tokyo',
+    'Asia/Seoul',
+    'Asia/Hong_Kong',
+    'Asia/Taipei',
+    'Asia/Singapore',
+    'Asia/Kolkata',
+    'Asia/Dubai',
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Berlin',
+    'Europe/Moscow',
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Phoenix',
+    'America/Toronto',
+    'America/Vancouver',
+    'America/Sao_Paulo',
+    'Australia/Sydney',
+    'Pacific/Auckland',
+  ];
+
+  tz.Location? _tryGetTzLocation(String? zoneName) {
+    if (zoneName == null || zoneName.trim().isEmpty) return null;
+    try {
+      return tz.getLocation(zoneName.trim());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 获取设备时区名称（兼顾前台 Activity 与无界面 WorkManager Isolate）
   Future<String> _getDeviceTimeZone() async {
     final override = _timeZoneOverride;
     if (override != null && override.isNotEmpty) {
@@ -338,48 +384,128 @@ extension SmartPushPlatform on SmartPushService {
     }
 
     try {
-      // Android: 通过 MethodChannel 获取系统时区
-      if (PlatformHelper.isAndroid) {
-        const channel = MethodChannel('com.shangjin.thoughtecho/timezone');
-        try {
-          final String? timeZone = await channel.invokeMethod('getTimeZone');
-          if (timeZone != null && timeZone.isNotEmpty) {
-            return timeZone;
+      final probeInstant = DateTime.fromMillisecondsSinceEpoch(
+        _now().millisecondsSinceEpoch,
+      );
+      final probe = _localTimeZoneProbeOverride?.call() ??
+          (
+            name: probeInstant.timeZoneName.trim(),
+            offset: probeInstant.timeZoneOffset,
+          );
+
+      // 1. Android: 优先通过 MethodChannel、Application 预同步的 SharedPreferences 或系统属性解析精确 IANA ID
+      if (_isAndroid) {
+        if (PlatformHelper.isAndroid) {
+          const channel = MethodChannel('com.shangjin.thoughtecho/timezone');
+          try {
+            final String? timeZone = await channel.invokeMethod('getTimeZone');
+            if (_tryGetTzLocation(timeZone) != null) {
+              final resolved = timeZone!.trim();
+              await _mmkv.setString(
+                SmartPushService._deviceTimeZoneKey,
+                resolved,
+              );
+              return resolved;
+            }
+          } catch (_) {
+            // 无界面后台 Isolate 中 MainActivity 通道不可用，继续走持久化/系统属性/时区库匹配
           }
-        } catch (_) {
-          // MethodChannel 不可用，使用 DateTime 估算
+        }
+
+        await _reloadSharedStorageIfSupported();
+        final persistedZone =
+            _mmkv.getString(SmartPushService._deviceTimeZoneKey);
+        final persistedLoc = _tryGetTzLocation(persistedZone);
+        if (persistedLoc != null) {
+          final persistedOffset =
+              tz.TZDateTime.from(probeInstant, persistedLoc).timeZoneOffset;
+          if (_localTimeZoneProbeOverride == null ||
+              persistedOffset == probe.offset) {
+            return persistedZone!.trim();
+          }
+        }
+
+        final sysZone = await PlatformHelper.readAndroidSystemTimeZone();
+        if (_tryGetTzLocation(sysZone) != null) {
+          final resolved = sysZone!.trim();
+          await _mmkv.setString(SmartPushService._deviceTimeZoneKey, resolved);
+          return resolved;
         }
       }
 
-      // iOS/降级: 使用 DateTime.now().timeZoneName
-      final timeZoneName = DateTime.now().timeZoneName;
-
-      // 处理常见缩写
-      final zoneMapping = {
-        'CST': 'Asia/Shanghai',
-        'EST': 'America/New_York',
-        'PST': 'America/Los_Angeles',
-        'GMT': 'Europe/London',
-        'UTC': 'UTC',
-        'JST': 'Asia/Tokyo',
-        'KST': 'Asia/Seoul',
-      };
-
-      if (zoneMapping.containsKey(timeZoneName)) {
-        return zoneMapping[timeZoneName]!;
-      }
-
-      // 尝试直接使用时区名称
-      try {
-        tz.getLocation(timeZoneName);
-        return timeZoneName;
-      } catch (_) {
-        return 'Asia/Shanghai'; // 默认
-      }
+      return _resolveIanaZoneFromLocalProbe(
+        probeInstant: probeInstant,
+        timeZoneName: probe.name,
+        timeZoneOffset: probe.offset,
+      );
     } catch (e) {
       AppLogger.w('获取设备时区失败: $e');
-      return 'Asia/Shanghai';
+      return 'UTC';
     }
+  }
+
+  String _resolveIanaZoneFromLocalProbe({
+    required DateTime probeInstant,
+    required String timeZoneName,
+    required Duration timeZoneOffset,
+  }) {
+    final persistedZone = _mmkv.getString(SmartPushService._deviceTimeZoneKey);
+    final persistedLoc = _tryGetTzLocation(persistedZone);
+    if (persistedLoc != null &&
+        tz.TZDateTime.from(probeInstant, persistedLoc).timeZoneOffset ==
+            timeZoneOffset) {
+      return persistedZone!.trim();
+    }
+
+    if (timeZoneName.contains('/') && !timeZoneName.startsWith('Etc/')) {
+      final directLoc = _tryGetTzLocation(timeZoneName);
+      if (directLoc != null &&
+          tz.TZDateTime.from(probeInstant, directLoc).timeZoneOffset ==
+              timeZoneOffset) {
+        return timeZoneName;
+      }
+    }
+
+    final orderedCandidates = <String>[
+      ..._canonicalIanaZones,
+      for (final key in tz.timeZoneDatabase.locations.keys)
+        if (key.contains('/') &&
+            !key.startsWith('Etc/') &&
+            !_canonicalIanaZones.contains(key))
+          key,
+      for (final key in tz.timeZoneDatabase.locations.keys)
+        if (!key.contains('/') && !_canonicalIanaZones.contains(key)) key,
+    ];
+
+    if (timeZoneName.isNotEmpty) {
+      for (final zoneId in orderedCandidates) {
+        final loc = _tryGetTzLocation(zoneId);
+        if (loc == null) continue;
+        final candidateTz = tz.TZDateTime.from(probeInstant, loc);
+        if (candidateTz.timeZoneOffset == timeZoneOffset &&
+            candidateTz.timeZoneName == timeZoneName) {
+          return zoneId;
+        }
+      }
+
+      final directLoc = _tryGetTzLocation(timeZoneName);
+      if (directLoc != null &&
+          tz.TZDateTime.from(probeInstant, directLoc).timeZoneOffset ==
+              timeZoneOffset) {
+        return timeZoneName;
+      }
+    }
+
+    for (final zoneId in orderedCandidates) {
+      final loc = _tryGetTzLocation(zoneId);
+      if (loc == null) continue;
+      final candidateTz = tz.TZDateTime.from(probeInstant, loc);
+      if (candidateTz.timeZoneOffset == timeZoneOffset) {
+        return zoneId;
+      }
+    }
+
+    return 'UTC';
   }
 
   /// 调度单个 Alarm
@@ -478,11 +604,14 @@ extension SmartPushPlatform on SmartPushService {
   }) async {
     try {
       await _ensureNotificationReady();
-      // 优先复用批量预计算好的内容；即使需要回退查询也仅使用本地缓存/数据库，绝不在调度阶段请求外网
+      // Android 批量预调度优先复用本地预计算内容，绝不在调度阶段请求外网；
+      // iOS/非 Android 单条独立每日一言恢复提供商感知解析，保证无本地笔记时仍能展示在线一言
       _PushContent? content = precomputedContent;
       if (content == null && allowContentLookup) {
         if (isDailyQuote) {
-          final resolved = await _resolvePreScheduleDailyQuote();
+          final resolved = _isAndroid
+              ? await _resolvePreScheduleDailyQuote()
+              : await _resolveStandaloneDailyQuote();
           if (resolved != null) {
             content = _PushContent(
               title: '📖 每日一言',

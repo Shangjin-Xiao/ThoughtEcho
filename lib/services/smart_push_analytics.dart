@@ -107,9 +107,9 @@ class SmartPushAnalytics extends ChangeNotifier {
   // ============================================================
 
   /// 记录用户打开 App 的时间
-  Future<void> recordAppOpen() async {
+  Future<void> recordAppOpen({DateTime? openedAt}) async {
     try {
-      final now = DateTime.now();
+      final now = openedAt ?? DateTime.now();
       final records = await _getAppOpenRecords();
 
       records.add(now.toIso8601String());
@@ -656,11 +656,48 @@ class SmartPushAnalytics extends ChangeNotifier {
     await _mmkv.setString(_unengagedStreakKey, value.toString());
   }
 
+  /// 根据连续未点击次数计算对应的冷却时长
+  static Duration cooldownForStreak(int streak) {
+    final safeStreak = streak < 0 ? 0 : streak;
+    final index = safeStreak.clamp(0, habituationCooldownHours.length - 1);
+    return Duration(hours: habituationCooldownHours[index]);
+  }
+
+  /// 非消费式检查某条通知是否已被用户点击（不清除点击标记）
+  bool hasClickedNotification(int notificationId) {
+    if (notificationId <= 0) return false;
+    return _getTrackedIdList(_clickedNotificationIdsKey)
+        .contains(notificationId);
+  }
+
   /// 当前连续未点击次数对应的冷却时长
   Future<Duration> getHabituationCooldown() async {
     final streak = await getUnengagedStreak();
-    final index = streak.clamp(0, habituationCooldownHours.length - 1);
-    return Duration(hours: habituationCooldownHours[index]);
+    return cooldownForStreak(streak);
+  }
+
+  /// 预测下一次推送发出前结算挂起记录后的连续未点击次数（纯只读：不消费点击记录、不重复落盘）
+  Future<int> getProjectedUnengagedStreak() async {
+    final settledStreak = await getUnengagedStreak();
+    final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+    if (pending == null) return settledStreak;
+
+    final isPendingEngaged = pending.engaged ||
+        (pending.notificationId != null &&
+            hasClickedNotification(pending.notificationId!));
+    if (isPendingEngaged) {
+      return 0;
+    }
+    return settledStreak + 1;
+  }
+
+  /// 预测未来槽位判定时的连续未点击冷却时长（计入尚未结算的上一条已送达提醒）
+  Future<Duration> getProjectedHabituationCooldown({
+    int additionalUnengaged = 0,
+  }) async {
+    final projectedStreak =
+        await getProjectedUnengagedStreak() + additionalUnengaged;
+    return cooldownForStreak(projectedStreak);
   }
 
   /// 今日已推送条数

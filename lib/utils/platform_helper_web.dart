@@ -14,6 +14,10 @@ class PlatformHelper {
     return 'web';
   }
 
+  static Future<String?> readAndroidSystemTimeZone() async {
+    return null;
+  }
+
   static Future<Uint8List?> readFileBytesIfExists(String filePath) async {
     return null;
   }

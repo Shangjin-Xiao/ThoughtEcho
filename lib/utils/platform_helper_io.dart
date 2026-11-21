@@ -28,6 +28,29 @@ class PlatformHelper {
     return is64BitProcess ? '64-bit' : '32-bit';
   }
 
+  /// Reads Android's IANA system timezone (`persist.sys.timezone`) without
+  /// requiring an Activity-scoped MethodChannel, so headless WorkManager
+  /// isolates can resolve the exact device timezone.
+  static Future<String?> readAndroidSystemTimeZone() async {
+    if (!Platform.isAndroid ||
+        Platform.environment.containsKey('FLUTTER_TEST')) {
+      return null;
+    }
+    try {
+      final result = await Process.run(
+        'getprop',
+        const <String>['persist.sys.timezone'],
+      ).timeout(const Duration(seconds: 2));
+      if (result.exitCode != 0) {
+        return null;
+      }
+      final tzId = result.stdout.toString().trim();
+      return tzId.isEmpty ? null : tzId;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Reads raw bytes from [filePath] if the file exists on disk, or returns `null`.
   static Future<Uint8List?> readFileBytesIfExists(String filePath) async {
     try {

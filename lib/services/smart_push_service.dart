@@ -75,6 +75,8 @@ class SmartPushService extends ChangeNotifier {
   static const String _preScheduledEntriesKey =
       'smart_push_prescheduled_entries_v1';
   static const String _settingsEpochKey = 'smart_push_settings_epoch_v1';
+  static const String _deliveryHistoryKey = 'smart_push_delivery_history_v1';
+  static const String _deviceTimeZoneKey = 'smart_push_device_timezone_v1';
   static const String _immediateNotificationSeqKey =
       'smart_push_immediate_notif_seq_v1';
   static const String _preScheduleRenewalUniqueName =
@@ -170,6 +172,8 @@ class SmartPushService extends ChangeNotifier {
   final bool? _isAndroidOverride;
   final bool? _isIOSOverride;
   final String? _timeZoneOverride;
+  final ({String name, Duration offset}) Function()?
+      _localTimeZoneProbeOverride;
   final Future<bool> Function()? _canScheduleExactAlarmsOverride;
   final Future<PushPermissionStatus> Function()? _permissionStatusOverride;
   final Future<void> Function()? _openSystemAppSettingsOverride;
@@ -262,6 +266,8 @@ class SmartPushService extends ChangeNotifier {
     @visibleForTesting bool? isAndroidOverride,
     @visibleForTesting bool? isIOSOverride,
     @visibleForTesting String? timeZoneOverride,
+    @visibleForTesting
+    ({String name, Duration offset}) Function()? localTimeZoneProbeOverride,
     @visibleForTesting Future<bool> Function()? canScheduleExactAlarmsOverride,
     @visibleForTesting
     Future<PushPermissionStatus> Function()? permissionStatusOverride,
@@ -280,6 +286,7 @@ class SmartPushService extends ChangeNotifier {
         _isAndroidOverride = isAndroidOverride,
         _isIOSOverride = isIOSOverride,
         _timeZoneOverride = timeZoneOverride,
+        _localTimeZoneProbeOverride = localTimeZoneProbeOverride,
         _canScheduleExactAlarmsOverride = canScheduleExactAlarmsOverride,
         _permissionStatusOverride = permissionStatusOverride,
         _openSystemAppSettingsOverride = openSystemAppSettingsOverride,
@@ -354,17 +361,19 @@ class SmartPushService extends ChangeNotifier {
 
   /// 检查某条每日一言内容是否已在今天推送过
   bool _hasDailyQuoteContentPushed(String content) {
-    final pushedData = _mmkv.getString(_dailyQuotePushedDateKey);
-    if (pushedData == null) return false;
-
     final today = _now().toIso8601String().substring(0, 10);
-    // 格式: "2026-03-13|hash1,hash2,hash3"
-    if (!pushedData.startsWith('$today|')) return false;
+    return _getDailyQuotePushedHashesForDate(today)
+        .contains(_contentHash(content));
+  }
 
-    final contentHash = _contentHash(content);
-    final hashesStr = pushedData.substring(today.length + 1);
-    final pushedHashes = hashesStr.split(',').toSet();
-    return pushedHashes.contains(contentHash);
+  Set<String> _getDailyQuotePushedHashesForDate(String dateKey) {
+    final pushedData = _mmkv.getString(_dailyQuotePushedDateKey);
+    if (pushedData == null || !pushedData.startsWith('$dateKey|')) {
+      return const <String>{};
+    }
+    final hashesStr = pushedData.substring(dateKey.length + 1);
+    if (hashesStr.isEmpty) return const <String>{};
+    return hashesStr.split(',').where((h) => h.isNotEmpty).toSet();
   }
 
   /// 标记某条每日一言内容已推送
@@ -582,7 +591,13 @@ class SmartPushService extends ChangeNotifier {
     );
 
     if (scheduledDate.isBefore(nowWallClock)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+      scheduledDate = DateTime(
+        scheduledDate.year,
+        scheduledDate.month,
+        scheduledDate.day + 1,
+        hour,
+        minute,
+      );
     }
 
     if (!respectsFrequency) {
@@ -633,7 +648,7 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 初始化服务
-  Future<void> initialize() async {
+  Future<void> initialize({bool recordAppOpenOnLaunch = false}) async {
     try {
       await _initializeTimezone();
       await _loadSettings();
@@ -641,6 +656,17 @@ class SmartPushService extends ChangeNotifier {
 
       // 处理冷启动场景：检查 App 是否由通知点击启动
       await _handleLaunchNotification();
+
+      if (recordAppOpenOnLaunch) {
+        try {
+          await _analytics.recordAppOpen(
+            openedAt: tz.TZDateTime.from(_now(), tz.local),
+          );
+          AppLogger.d('SOTA: 已在首轮预调度前记录冷启动 App 打开时间');
+        } catch (e) {
+          AppLogger.w('SOTA: 冷启动记录 App 打开时间失败', error: e);
+        }
+      }
 
       AppLogger.i(
         'SmartPushService settings: enabled=${_settings.enabled}, dailyQuoteEnabled=${_settings.dailyQuotePushEnabled}',
@@ -726,9 +752,155 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 加载设置（支持版本迁移）
+  ({DateTime? lastPushTime, List<String> recentlyPushedNoteIds})
+      _readStoredDeliveryHistory() {
+    try {
+      final raw = _mmkv.getString(_deliveryHistoryKey);
+      if (raw == null || raw.isEmpty) {
+        return (lastPushTime: null, recentlyPushedNoteIds: const <String>[]);
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        return (lastPushTime: null, recentlyPushedNoteIds: const <String>[]);
+      }
+      final rawTime = decoded['lastPushTime'];
+      final parsedTime = rawTime is String ? DateTime.tryParse(rawTime) : null;
+      final rawIds = decoded['recentlyPushedNoteIds'];
+      final parsedIds = rawIds is List
+          ? rawIds
+              .map((e) => e.toString())
+              .where((id) => id.isNotEmpty)
+              .toList()
+          : const <String>[];
+      return (lastPushTime: parsedTime, recentlyPushedNoteIds: parsedIds);
+    } catch (_) {
+      return (lastPushTime: null, recentlyPushedNoteIds: const <String>[]);
+    }
+  }
+
+  SmartPushSettings _mergeStoredDeliveryHistoryInto(SmartPushSettings base) {
+    final stored = _readStoredDeliveryHistory();
+    DateTime? mergedLastPushTime = base.lastPushTime;
+    if (stored.lastPushTime != null &&
+        (mergedLastPushTime == null ||
+            stored.lastPushTime!.isAfter(mergedLastPushTime))) {
+      mergedLastPushTime = stored.lastPushTime;
+    }
+
+    final mergedIds = <String>[];
+    void appendUnique(Iterable<String> ids) {
+      for (final id in ids) {
+        if (id.isEmpty) continue;
+        mergedIds.remove(id);
+        mergedIds.add(id);
+      }
+    }
+
+    final storedIsNewer = stored.lastPushTime != null &&
+        (base.lastPushTime == null ||
+            stored.lastPushTime!.isAfter(base.lastPushTime!));
+    if (storedIsNewer) {
+      appendUnique(base.recentlyPushedNoteIds);
+      appendUnique(stored.recentlyPushedNoteIds);
+    } else {
+      appendUnique(stored.recentlyPushedNoteIds);
+      appendUnique(base.recentlyPushedNoteIds);
+    }
+    while (mergedIds.length > SmartPushSettings.maxRecentPushedCount) {
+      mergedIds.removeAt(0);
+    }
+
+    if (mergedLastPushTime == base.lastPushTime &&
+        listEquals(mergedIds, base.recentlyPushedNoteIds)) {
+      return base;
+    }
+    return base.copyWith(
+      lastPushTime: mergedLastPushTime,
+      recentlyPushedNoteIds: mergedIds,
+    );
+  }
+
+  Future<void> _persistDeliveryHistory({
+    DateTime? lastPushTime,
+    Iterable<String>? pushedNoteIds,
+    int? expectedGeneration,
+    int? expectedSettingsGeneration,
+    int? expectedEpoch,
+  }) async {
+    try {
+      if (expectedGeneration != null &&
+          !_isScheduleGenerationCurrent(expectedGeneration)) {
+        return;
+      }
+      if (expectedSettingsGeneration != null &&
+          !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
+        return;
+      }
+      await _reloadSharedStorageIfSupported();
+      if (expectedGeneration != null &&
+          !_isScheduleGenerationCurrent(expectedGeneration)) {
+        return;
+      }
+      if (expectedSettingsGeneration != null &&
+          !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
+        return;
+      }
+      if (expectedEpoch != null &&
+          _readStoredSettingsEpoch() != expectedEpoch) {
+        return;
+      }
+
+      final stored = _readStoredDeliveryHistory();
+      DateTime? mergedLastPushTime = stored.lastPushTime;
+      for (final candidate in <DateTime?>[
+        _settings.lastPushTime,
+        lastPushTime,
+      ]) {
+        if (candidate != null &&
+            (mergedLastPushTime == null ||
+                candidate.isAfter(mergedLastPushTime))) {
+          mergedLastPushTime = candidate;
+        }
+      }
+
+      final mergedIds = <String>[];
+      void appendUnique(Iterable<String> ids) {
+        for (final id in ids) {
+          if (id.isEmpty) continue;
+          mergedIds.remove(id);
+          mergedIds.add(id);
+        }
+      }
+
+      appendUnique(stored.recentlyPushedNoteIds);
+      appendUnique(_settings.recentlyPushedNoteIds);
+      if (pushedNoteIds != null) {
+        appendUnique(pushedNoteIds);
+      }
+      while (mergedIds.length > SmartPushSettings.maxRecentPushedCount) {
+        mergedIds.removeAt(0);
+      }
+
+      final payload = jsonEncode(<String, dynamic>{
+        'lastPushTime': mergedLastPushTime?.toIso8601String(),
+        'recentlyPushedNoteIds': mergedIds,
+      });
+      await _mmkv.setString(_deliveryHistoryKey, payload);
+
+      if (!_isDisposed) {
+        _settings = _settings.copyWith(
+          lastPushTime: mergedLastPushTime,
+          recentlyPushedNoteIds: mergedIds,
+        );
+      }
+      AppLogger.i('智能推送投递历史已独立保存（不改动用户配置）');
+    } catch (e, stack) {
+      AppLogger.e('保存智能推送投递历史失败', error: e, stackTrace: stack);
+    }
+  }
+
   Future<void> _loadSettings() async {
     try {
-      // 先尝试加载新版本设置
       var jsonStr = _mmkv.getString(_settingsKey);
 
       // 如果没有新版本，尝试迁移旧版本
@@ -741,27 +913,38 @@ class SmartPushService extends ChangeNotifier {
         }
       }
 
+      var loaded = SmartPushSettings.defaultSettings();
       if (jsonStr != null && jsonStr.isNotEmpty) {
         final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-        _settings = SmartPushSettings.fromJson(json);
+        loaded = SmartPushSettings.fromJson(json);
       }
+      _settings = _mergeStoredDeliveryHistoryInto(loaded);
     } catch (e) {
       AppLogger.w('加载智能推送设置失败，使用默认设置', error: e);
-      _settings = SmartPushSettings.defaultSettings();
+      _settings = _mergeStoredDeliveryHistoryInto(
+        SmartPushSettings.defaultSettings(),
+      );
     }
   }
 
   /// 保存设置并更新推送计划
   Future<void> saveSettings(SmartPushSettings newSettings) async {
     try {
-      _settings = newSettings;
-      // 先落盘最新设置，再递增实例内调度代数、设置变更代数与跨 Isolate 持久化配置纪元，
-      // 确保任意并发 Isolate 一旦读到新纪元就必然读到新设置
+      final mergedInitial = _mergeStoredDeliveryHistoryInto(newSettings);
+      _settings = mergedInitial;
       _scheduleGeneration++;
       _settingsMutationGeneration++;
-      final jsonStr = jsonEncode(newSettings.toJson());
+      final jsonStr = jsonEncode(mergedInitial.toJson());
       await _mmkv.setString(_settingsKey, jsonStr);
+      if (mergedInitial.lastPushTime != null ||
+          mergedInitial.recentlyPushedNoteIds.isNotEmpty) {
+        await _persistDeliveryHistory(
+          lastPushTime: mergedInitial.lastPushTime,
+          pushedNoteIds: mergedInitial.recentlyPushedNoteIds,
+        );
+      }
       await _bumpSettingsEpoch();
+      _settings = _mergeStoredDeliveryHistoryInto(newSettings);
       notifyListeners();
       AppLogger.i('智能推送设置已保存');
 
@@ -794,49 +977,6 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.i('智能推送服务已从存储重新加载并更新调度');
     } catch (e, stack) {
       AppLogger.w('从存储重新加载智能推送设置失败', error: e, stackTrace: stack);
-    }
-  }
-
-  /// 仅持久化设置到 MMKV，不触发重新调度
-  ///
-  /// 用于后台推送成功后记录已推送笔记 ID 等场景，
-  /// 避免 [saveSettings] 中的 [scheduleNextPush] / [_cancelAllSchedules]
-  /// 意外取消刚刚显示的通知。
-  Future<void> _saveSettingsQuietly(
-    SmartPushSettings newSettings, {
-    int? expectedGeneration,
-    int? expectedSettingsGeneration,
-    int? expectedEpoch,
-  }) async {
-    try {
-      if (expectedGeneration != null &&
-          !_isScheduleGenerationCurrent(expectedGeneration)) {
-        return;
-      }
-      if (expectedSettingsGeneration != null &&
-          !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
-        return;
-      }
-      if (expectedEpoch != null) {
-        await _reloadSharedStorageIfSupported();
-        if (expectedGeneration != null &&
-            !_isScheduleGenerationCurrent(expectedGeneration)) {
-          return;
-        }
-        if (expectedSettingsGeneration != null &&
-            !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
-          return;
-        }
-        if (_readStoredSettingsEpoch() != expectedEpoch) {
-          return;
-        }
-      }
-      _settings = newSettings;
-      final jsonStr = jsonEncode(newSettings.toJson());
-      await _mmkv.setString(_settingsKey, jsonStr);
-      AppLogger.i('智能推送设置已静默保存（不触发重新调度）');
-    } catch (e, stack) {
-      AppLogger.e('静默保存智能推送设置失败', error: e, stackTrace: stack);
     }
   }
 

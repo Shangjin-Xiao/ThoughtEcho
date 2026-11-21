@@ -10,6 +10,7 @@ import 'package:thoughtecho/pages/settings_page.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
@@ -65,11 +66,13 @@ void main() {
 
   setUp(() async {
     await TestHarness.initialize();
+    VersionCheckService.resetDebugState();
   });
 
   tearDown(() {
     DistributionConfig.resetDebugOverrides();
     UpdateBottomSheet.debugUrlLauncher = null;
+    VersionCheckService.resetDebugState();
     debugDefaultTargetPlatformOverride = null;
   });
 
@@ -78,6 +81,13 @@ void main() {
     (tester) async {
       DistributionConfig.debugChannelOverride = DistributionChannel.play;
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
+
+      VersionCheckService.debugCheckForUpdatesOverride = ({
+        timeout,
+        forceRefresh = false,
+      }) async {
+        fail('Play 渠道不应调用 VersionCheckService.checkForUpdates');
+      };
 
       final launchedUris = <Uri>[];
       UpdateBottomSheet.debugUrlLauncher = (uri, {required mode}) async {

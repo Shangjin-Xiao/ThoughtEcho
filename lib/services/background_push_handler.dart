@@ -313,10 +313,7 @@ Future<void> backgroundPeriodicCheck() async {
 
     if (await pushService.shouldUseAndroidPreScheduledNotifications()) {
       AppLogger.i('周期性任务检测到本地预调度模式，滚动续期未来通知队列');
-      await pushService.scheduleNextPush(
-        fromBackground: true,
-        preserveDeliveredNotifications: true,
-      );
+      await pushService.renewPreScheduledQueueFromBackground();
       return;
     }
 

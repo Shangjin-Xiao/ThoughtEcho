@@ -150,12 +150,9 @@ extension SmartPushExecution on SmartPushService {
       // 记录已推送的内容哈希，防止重复
       _markDailyQuoteContentPushed(dailyQuote.content);
 
-      // 更新 lastPushTime，让 3 分钟防重复机制对后续推送生效
-      final updatedSettings = _settings.copyWith(
-        lastPushTime: DateTime.now(),
-      );
-      await _saveSettingsQuietly(
-        updatedSettings,
+      // 更新独立投递历史中的 lastPushTime，让防重复机制对后续推送生效且不触碰用户配置
+      await _persistDeliveryHistory(
+        lastPushTime: _now(),
         expectedSettingsGeneration: startSettingsGeneration,
         expectedEpoch: startEpoch,
       );
@@ -378,9 +375,9 @@ extension SmartPushExecution on SmartPushService {
             if (_settings.pushMode == PushMode.smart) {
               _markNotePushedToday(noteToShow.id!);
             }
-            final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
-            await _saveSettingsQuietly(
-              updatedSettings,
+            await _persistDeliveryHistory(
+              lastPushTime: _now(),
+              pushedNoteIds: <String>[noteToShow.id!],
               expectedSettingsGeneration: startSettingsGeneration,
               expectedEpoch: startEpoch,
             );
@@ -391,11 +388,8 @@ extension SmartPushExecution on SmartPushService {
           if (isDailyQuote && !isTest) {
             _markDailyQuoteContentPushed(noteToShow.content);
             _markDailyQuotePushedTodayInSmartPush();
-            final updatedSettings = _settings.copyWith(
-              lastPushTime: DateTime.now(),
-            );
-            await _saveSettingsQuietly(
-              updatedSettings,
+            await _persistDeliveryHistory(
+              lastPushTime: _now(),
               expectedSettingsGeneration: startSettingsGeneration,
               expectedEpoch: startEpoch,
             );

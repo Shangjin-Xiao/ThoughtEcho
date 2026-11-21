@@ -420,8 +420,10 @@ extension SmartPushNotification on SmartPushService {
     if (normalizedData == null) {
       return null;
     }
-
-    _saveDailyQuoteToCache(normalizedData);
+    final normalizedType = (normalizedData['type'] as String?)?.trim() ?? '';
+    if (normalizedType != 'offline' && normalizedType != 'local-empty') {
+      _saveDailyQuoteToCache(normalizedData);
+    }
     return normalizedData;
   }
 

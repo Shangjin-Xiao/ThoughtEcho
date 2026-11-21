@@ -256,8 +256,20 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
   String? currentLocation,
   String? currentWeather,
   Set<WeatherFilterType> weatherFilters = const {},
+  Map<String, double>? smartContentTypeScores,
 }) {
   final candidatesById = <String, TypedSmartPushCandidate>{};
+
+  double effectiveScore(String contentType, int basePriority, Quote note) {
+    if (smartContentTypeScores == null) {
+      return basePriority.toDouble();
+    }
+    return scoreSmartPushCandidate(
+      basePriority: basePriority,
+      note: note,
+      contentTypeScore: smartContentTypeScores[contentType] ?? 0.5,
+    );
+  }
 
   void addCandidate(
     String contentType,
@@ -280,8 +292,17 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
     if (selected == null || selected.id == null) return;
 
     final existing = candidatesById[selected.id!];
-    if (existing != null && existing.priority >= priority) {
-      return;
+    if (existing != null) {
+      final existingScore = effectiveScore(
+        existing.contentType,
+        existing.priority,
+        existing.note,
+      );
+      final candidateScore = effectiveScore(contentType, priority, selected);
+      if (existingScore > candidateScore ||
+          (existingScore == candidateScore && existing.priority >= priority)) {
+        return;
+      }
     }
 
     candidatesById[selected.id!] = TypedSmartPushCandidate(
@@ -357,7 +378,17 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
   }
 
   final typedCandidates = candidatesById.values.toList()
-    ..sort((a, b) => b.priority.compareTo(a.priority));
+    ..sort((a, b) {
+      final scoreCmp = effectiveScore(
+        b.contentType,
+        b.priority,
+        b.note,
+      ).compareTo(
+        effectiveScore(a.contentType, a.priority, a.note),
+      );
+      if (scoreCmp != 0) return scoreCmp;
+      return b.priority.compareTo(a.priority);
+    });
   return typedCandidates;
 }
 

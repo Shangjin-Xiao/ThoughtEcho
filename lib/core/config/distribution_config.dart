@@ -17,7 +17,6 @@ enum DistributionChannel {
 abstract final class DistributionConfig {
   static const String _rawChannel = String.fromEnvironment(
     'DISTRIBUTION_CHANNEL',
-    defaultValue: 'standard',
   );
 
   @visibleForTesting
@@ -34,12 +33,23 @@ abstract final class DistributionConfig {
 
   /// Resolves the effective [DistributionChannel] from compile-time defines
   /// and Flutter's runtime [appFlavor].
+  ///
+  /// Explicit `--dart-define=DISTRIBUTION_CHANNEL=play|standard` takes
+  /// precedence over [flavor]; when omitted (`rawChannel` is empty), falls back
+  /// to `flavor == 'play'`.
   @visibleForTesting
   static DistributionChannel resolveChannel({
     String rawChannel = _rawChannel,
     String? flavor,
   }) {
-    if (rawChannel == 'play' || flavor == 'play') {
+    final normalizedRaw = rawChannel.trim().toLowerCase();
+    if (normalizedRaw == 'play') {
+      return DistributionChannel.play;
+    }
+    if (normalizedRaw == 'standard') {
+      return DistributionChannel.standard;
+    }
+    if (flavor?.trim().toLowerCase() == 'play') {
       return DistributionChannel.play;
     }
     return DistributionChannel.standard;

@@ -70,6 +70,10 @@ extension SmartPushScheduling on SmartPushService {
       await _reloadSharedStorageIfSupported();
       await _loadSettings();
       if (!_isScheduleGenerationCurrent(generation)) return;
+    } else {
+      await _reloadSharedStorageIfSupported();
+      if (!_isScheduleGenerationCurrent(generation)) return;
+      _settings = _mergeStoredDeliveryHistoryInto(_settings);
     }
 
     final expectedEpoch = _readStoredSettingsEpoch();
@@ -496,12 +500,9 @@ extension SmartPushScheduling on SmartPushService {
         mergedLastPushTime = latestPushTime;
       }
 
-      final updatedSettings = _settings.copyWith(
+      await _persistDeliveryHistory(
         lastPushTime: mergedLastPushTime,
-        recentlyPushedNoteIds: recentIds,
-      );
-      await _saveSettingsQuietly(
-        updatedSettings,
+        pushedNoteIds: recentIds,
         expectedSettingsGeneration: settingsGeneration,
         expectedEpoch: expectedEpoch,
       );
@@ -577,25 +578,273 @@ extension SmartPushScheduling on SmartPushService {
       return;
     }
 
-    // 整轮规划只解析一次本地/缓存每日一言（包括 null 结果），禁止在槽位循环中重复查询数据库
+    final activeNotificationIds = previousEntries.isNotEmpty
+        ? await _queryActiveLocalNotificationIds()
+        : const <int>{};
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
+
+    // 整轮规划至多查询一次缓存/本地每日一言与标签表，禁止在槽位循环中重复查库；
+    // 同时维护按日期隔离的一言内容哈希预留表，防止常规回退与独立每日一言在同一天重复推送同一句话
     Future<
         ({
           Quote quote,
           String? sourceNoteId,
           Map<String, dynamic> quoteData,
-        })?>? memoizedDailyQuoteFuture;
+        })?>? memoizedPrimaryDailyQuoteFuture;
     Future<
             ({
               Quote quote,
               String? sourceNoteId,
               Map<String, dynamic> quoteData,
             })?>
-        resolveDailyQuoteOnce() =>
-            memoizedDailyQuoteFuture ??= _resolvePreScheduleDailyQuote();
+        resolvePrimaryDailyQuoteOnce() =>
+            memoizedPrimaryDailyQuoteFuture ??= _resolvePreScheduleDailyQuote();
+
+    Future<Set<String>>? memoizedDailyQuoteTagIdsFuture;
+    Future<Set<String>> resolveDailyQuoteTagIdsOnce() {
+      return memoizedDailyQuoteTagIdsFuture ??= () async {
+        final ids = <String>{'default_hitokoto'};
+        try {
+          final tags = await _databaseService.getTags();
+          for (final tag in tags) {
+            if (tag.name == '每日一言' && tag.id.isNotEmpty) {
+              ids.add(tag.id);
+            }
+          }
+        } catch (_) {}
+        return ids;
+      }();
+    }
+
+    final appSettingsForQuotes = _loadStoredAppSettings();
+    final useLocalQuotesOnly = appSettingsForQuotes.useLocalQuotesOnly;
+    final offlineQuoteSource = appSettingsForQuotes.offlineQuoteSource;
+    final todayKeyForQuotes =
+        tz.TZDateTime.from(_now(), tz.local).toIso8601String().substring(0, 10);
+    final reservedQuoteHashesByDay = <String, Set<String>>{
+      if (_getDailyQuotePushedHashesForDate(todayKeyForQuotes).isNotEmpty)
+        todayKeyForQuotes: Set<String>.from(
+          _getDailyQuotePushedHashesForDate(todayKeyForQuotes),
+        ),
+    };
+    final nowMsForQuotes = _now().millisecondsSinceEpoch;
+    for (final prev in previousEntries) {
+      if (prev.epochMs <= 0 || prev.epochMs > nowMsForQuotes) continue;
+      final prevQuoteText =
+          (prev.dailyQuoteData?['hitokoto'] as String?)?.trim() ?? '';
+      if (prevQuoteText.isEmpty) continue;
+      final prevDayKey =
+          tz.TZDateTime.fromMillisecondsSinceEpoch(tz.local, prev.epochMs)
+              .toIso8601String()
+              .substring(0, 10);
+      reservedQuoteHashesByDay
+          .putIfAbsent(prevDayKey, () => <String>{})
+          .add(_contentHash(prevQuoteText));
+    }
+
+    final batchedQuoteCandidates = <({
+      Quote quote,
+      String? sourceNoteId,
+      Map<String, dynamic> quoteData,
+    })>[];
+    final seenCandidateHashes = <String>{};
+    void addCandidateIfDistinct(
+      ({
+        Quote quote,
+        String? sourceNoteId,
+        Map<String, dynamic> quoteData,
+      })? candidate,
+    ) {
+      if (candidate == null) return;
+      final text = candidate.quote.content.trim();
+      if (text.isEmpty) return;
+      final hash = _contentHash(text);
+      if (seenCandidateHashes.add(hash)) {
+        batchedQuoteCandidates.add(candidate);
+      }
+    }
+
+    var primaryQuoteLoaded = false;
+    var notesCandidatesLoaded = false;
+    Future<void> ensureQuoteCandidatesLoaded({List<Quote>? loadedNotes}) async {
+      if (!primaryQuoteLoaded) {
+        primaryQuoteLoaded = true;
+        addCandidateIfDistinct(await resolvePrimaryDailyQuoteOnce());
+      }
+      if (!notesCandidatesLoaded &&
+          loadedNotes != null &&
+          loadedNotes.isNotEmpty) {
+        notesCandidatesLoaded = true;
+        final allowedTagIds = offlineQuoteSource == 'tagOnly'
+            ? await resolveDailyQuoteTagIdsOnce()
+            : const <String>{};
+        final nowIso = _now().toIso8601String();
+        for (final note in loadedNotes) {
+          final content = note.content.trim();
+          if (content.isEmpty || note.content.length > 100) continue;
+          if (offlineQuoteSource == 'tagOnly') {
+            if (!note.tagIds.any(allowedTagIds.contains)) continue;
+          } else {
+            if (note.content.contains('\n')) continue;
+          }
+          final normalized = SmartPushService.normalizeDailyQuoteData(
+            <String, dynamic>{
+              'content': content,
+              'source': note.sourceWork ?? note.source ?? '',
+              'author': note.sourceAuthor ?? '',
+              'type': 'local',
+              'local_quote_id': note.id,
+              'from_who': note.sourceAuthor ?? '',
+              'from': note.sourceWork ?? note.source ?? '',
+            },
+          );
+          if (normalized == null) continue;
+          addCandidateIfDistinct((
+            quote: Quote(
+              id: note.id,
+              content: content,
+              date: nowIso,
+              sourceAuthor: (note.sourceAuthor?.isNotEmpty ?? false)
+                  ? note.sourceAuthor
+                  : null,
+              source: (note.sourceWork?.isNotEmpty ?? false)
+                  ? note.sourceWork
+                  : ((note.source?.isNotEmpty ?? false) ? note.source : null),
+            ),
+            sourceNoteId: note.id,
+            quoteData: normalized,
+          ));
+        }
+      }
+    }
+
+    ({
+      Quote quote,
+      String? sourceNoteId,
+      Map<String, dynamic> quoteData,
+    })? claimQuoteForDate(String dayKey,
+        {bool allowReuseWhenSoleChannel = false}) {
+      final reserved = reservedQuoteHashesByDay.putIfAbsent(
+        dayKey,
+        () => <String>{},
+      );
+      for (final candidate in batchedQuoteCandidates) {
+        final hash = _contentHash(candidate.quote.content.trim());
+        if (!reserved.contains(hash)) {
+          reserved.add(hash);
+          return candidate;
+        }
+      }
+      if (allowReuseWhenSoleChannel && batchedQuoteCandidates.isNotEmpty) {
+        return batchedQuoteCandidates.first;
+      }
+      return null;
+    }
 
     final plannedItems = <_PlannedLocalNotification>[];
     final retainedOverduePendingIds = <int>{};
-    final useLocalQuotesOnly = _loadStoredAppSettings().useLocalQuotesOnly;
+    final suppressedDuplicateRegularFallbackDays = <String>{};
+
+    // 预先计算独立每日一言覆盖的日期集合，确保同日独立一言优先获得唯一语录，避免常规兜底与之撞车
+    final dailySlot = _settings.dailyQuotePushTime;
+    final dailyDates = _settings.dailyQuotePushEnabled
+        ? _upcomingScheduledDates(
+            dailySlot.hour,
+            dailySlot.minute,
+            days: SmartPushService.kAndroidPreScheduleDays,
+            respectsFrequency: false,
+          )
+        : const <tz.TZDateTime>[];
+    final independentDailyQuoteDays = <String>{
+      for (final d in dailyDates) d.toIso8601String().substring(0, 10),
+    };
+    if (_settings.dailyQuotePushEnabled) {
+      final nowMsForDaily = _now().millisecondsSinceEpoch;
+      for (final prev in previousEntries) {
+        if (!prev.isDailyQuote ||
+            prev.epochMs <= 0 ||
+            prev.epochMs > nowMsForDaily) {
+          continue;
+        }
+        final prevDayKey =
+            tz.TZDateTime.fromMillisecondsSinceEpoch(tz.local, prev.epochMs)
+                .toIso8601String()
+                .substring(0, 10);
+        independentDailyQuoteDays.add(prevDayKey);
+        final isStillPending = pendingRequestIds != null
+            ? pendingRequestIds.contains(prev.id)
+            : (!canScheduleExact && !prev.accounted);
+        if (!isStillPending) continue;
+        if (useLocalQuotesOnly &&
+            (prev.noteId == null || prev.noteId!.isEmpty)) {
+          continue;
+        }
+        final prevLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
+          tz.local,
+          prev.epochMs,
+        );
+        final effHour = prev.slotHour ?? prevLocal.hour;
+        final effMinute = prev.slotMinute ?? prevLocal.minute;
+        if (effHour == dailySlot.hour && effMinute == dailySlot.minute) {
+          retainedOverduePendingIds.add(prev.id);
+        }
+      }
+    }
+
+    final preClaimedIndependentDailyQuotes = <String,
+        ({
+      Quote quote,
+      String? sourceNoteId,
+      Map<String, dynamic> quoteData,
+    })?>{};
+    var independentDailyQuotesClaimed = false;
+    Future<void> ensureIndependentDailyQuotesClaimed({
+      List<Quote>? loadedNotes,
+    }) async {
+      await ensureQuoteCandidatesLoaded(loadedNotes: loadedNotes);
+      if (independentDailyQuotesClaimed) return;
+      independentDailyQuotesClaimed = true;
+      for (final scheduledDate in dailyDates) {
+        final dayKey = scheduledDate.toIso8601String().substring(0, 10);
+        preClaimedIndependentDailyQuotes[dayKey] = claimQuoteForDate(
+          dayKey,
+          allowReuseWhenSoleChannel: true,
+        );
+      }
+    }
+
+    Future<
+        ({
+          Quote quote,
+          String? sourceNoteId,
+          Map<String, dynamic> quoteData,
+        })?> resolveRegularFallbackQuoteForDate(
+      String dayKey, {
+      List<Quote>? loadedNotes,
+    }) async {
+      if (independentDailyQuoteDays.isNotEmpty) {
+        await ensureIndependentDailyQuotesClaimed(loadedNotes: loadedNotes);
+      } else {
+        await ensureQuoteCandidatesLoaded(loadedNotes: loadedNotes);
+      }
+      final hasIndependentOnDay = independentDailyQuoteDays.contains(dayKey);
+      final distinct = claimQuoteForDate(
+        dayKey,
+        allowReuseWhenSoleChannel: !hasIndependentOnDay &&
+            !(reservedQuoteHashesByDay[dayKey]?.isNotEmpty ?? false),
+      );
+      if (distinct == null && hasIndependentOnDay) {
+        suppressedDuplicateRegularFallbackDays.add(dayKey);
+      }
+      return distinct;
+    }
+
     final trackedNoteIds = previousEntries
         .map((e) => e.noteId)
         .whereType<String>()
@@ -612,6 +861,7 @@ extension SmartPushScheduling on SmartPushService {
       return;
     }
     Set<String>? loadedVisibleNoteIds;
+    List<Quote>? loadedNotesForQuotes;
     var regularPrecomputationFailed = false;
 
     // 1. 常规回顾提醒槽位（未来 3 个有效推送日）
@@ -653,7 +903,9 @@ extension SmartPushScheduling on SmartPushService {
       final plannedRegular = await _planRegularPreScheduledNotifications(
         slotsToSchedule: slotsToSchedule,
         rawRegularSlots: rawRegularSlots,
-        resolveDailyQuoteOnce: resolveDailyQuoteOnce,
+        resolveDailyQuoteForDate: resolveRegularFallbackQuoteForDate,
+        suppressedDuplicateRegularFallbackDays:
+            suppressedDuplicateRegularFallbackDays,
         previousEntries: previousEntries,
         pendingRequestIds: pendingRequestIds,
         trackedVisibleNoteIds: trackedVisibleNoteIds,
@@ -669,6 +921,7 @@ extension SmartPushScheduling on SmartPushService {
         return;
       }
       loadedVisibleNoteIds = plannedRegular.visibleNoteIds;
+      loadedNotesForQuotes = plannedRegular.loadedNotes;
       regularPrecomputationFailed = plannedRegular.precomputationFailed;
       retainedOverduePendingIds.addAll(
         plannedRegular.retainedOverduePendingIds,
@@ -687,43 +940,10 @@ extension SmartPushScheduling on SmartPushService {
 
     // 2. 每日一言独立槽位（未来 3 天，不受常规 frequency 限制）
     if (_settings.dailyQuotePushEnabled) {
-      final dailySlot = _settings.dailyQuotePushTime;
-      final nowMsForDaily = _now().millisecondsSinceEpoch;
-      for (final prev in previousEntries) {
-        if (!prev.isDailyQuote ||
-            prev.epochMs <= 0 ||
-            prev.epochMs > nowMsForDaily) {
-          continue;
-        }
-        final isStillPending = pendingRequestIds != null
-            ? pendingRequestIds.contains(prev.id)
-            : (!canScheduleExact && !prev.accounted);
-        if (!isStillPending) continue;
-        if (useLocalQuotesOnly &&
-            (prev.noteId == null || prev.noteId!.isEmpty)) {
-          continue;
-        }
-        final prevLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
-          tz.local,
-          prev.epochMs,
-        );
-        final effHour = prev.slotHour ?? prevLocal.hour;
-        final effMinute = prev.slotMinute ?? prevLocal.minute;
-        if (effHour == dailySlot.hour && effMinute == dailySlot.minute) {
-          retainedOverduePendingIds.add(prev.id);
-        }
-      }
-
-      final dailyDates = _upcomingScheduledDates(
-        dailySlot.hour,
-        dailySlot.minute,
-        days: SmartPushService.kAndroidPreScheduleDays,
-        respectsFrequency: false,
-      );
-
-      _PushContent? dailyContent;
       if (dailyDates.isNotEmpty) {
-        final resolved = await resolveDailyQuoteOnce();
+        await ensureIndependentDailyQuotesClaimed(
+          loadedNotes: loadedNotesForQuotes,
+        );
         if (!await _isScheduleContextStillValid(
           generation: generation,
           expectedEpoch: expectedEpoch,
@@ -731,20 +951,22 @@ extension SmartPushScheduling on SmartPushService {
         )) {
           return;
         }
-        if (resolved != null) {
-          dailyContent = _PushContent(
-            title: '📖 每日一言',
-            body: _buildNotificationBody(resolved.quote),
-            noteId: null,
-            sourceNoteId: resolved.sourceNoteId,
-            contentType: 'dailyQuote',
-            dailyQuoteData: resolved.quoteData,
-          );
-        }
       }
 
       for (int idx = 0; idx < dailyDates.length; idx++) {
         final scheduledDate = dailyDates[idx];
+        final dayKey = scheduledDate.toIso8601String().substring(0, 10);
+        final resolved = preClaimedIndependentDailyQuotes[dayKey];
+        final dailyContent = resolved != null
+            ? _PushContent(
+                title: '📖 每日一言',
+                body: _buildNotificationBody(resolved.quote),
+                noteId: null,
+                sourceNoteId: resolved.sourceNoteId,
+                contentType: 'dailyQuote',
+                dailyQuoteData: resolved.quoteData,
+              )
+            : null;
         final id = SmartPushService.deterministicPreScheduledNotificationId(
           scheduledDate,
           isDailyQuote: true,
@@ -778,11 +1000,15 @@ extension SmartPushScheduling on SmartPushService {
 
     final itemsToWrite = plannedItems.where((item) {
       if (item.content != null) return true;
+      final itemDayKey = item.scheduledDate.toIso8601String().substring(0, 10);
       if (item.isDailyQuote) {
         if (useLocalQuotesOnly || invalidatedIds.contains(item.id)) {
           return false;
         }
         return true;
+      }
+      if (suppressedDuplicateRegularFallbackDays.contains(itemDayKey)) {
+        return false;
       }
       if (invalidatedIds.contains(item.id)) {
         return false;
@@ -816,21 +1042,39 @@ extension SmartPushScheduling on SmartPushService {
       await _saveTrackedPreScheduledEntries(remainingPreviousEntries);
     }
 
-    List<_PreScheduledEntry> mergeWithRetained(
+    Future<List<_PreScheduledEntry>> mergeWithRetained(
       List<_PreScheduledEntry> currentScheduled,
-    ) {
+    ) async {
       final scheduledIds = currentScheduled.map((e) => e.id).toSet();
       final nowMs = _now().millisecondsSinceEpoch;
       final maxRetentionMs =
           SmartPushService._deliveredEntryRetention.inMilliseconds;
-      return <_PreScheduledEntry>[
-        ...currentScheduled,
-        for (final prev in remainingPreviousEntries)
-          if (!scheduledIds.contains(prev.id) &&
-              prev.epochMs > 0 &&
-              (prev.epochMs > nowMs || nowMs - prev.epochMs <= maxRetentionMs))
-            prev,
-      ];
+      final retained = <_PreScheduledEntry>[...currentScheduled];
+      for (final prev in remainingPreviousEntries) {
+        if (scheduledIds.contains(prev.id) || prev.epochMs <= 0) {
+          continue;
+        }
+        final withinRetention =
+            prev.epochMs > nowMs || nowMs - prev.epochMs <= maxRetentionMs;
+        if (withinRetention) {
+          retained.add(prev);
+          continue;
+        }
+        // 超出 7 天保留期时：若系统通知栏中该通知仍可见，继续保留 noteId 追踪记录以便后续隐藏/删除笔记时撤回；
+        // 若平台无法查询活动通知，则在移除追踪记录前主动取消系统通知，防止隐私笔记预览残留。
+        if (activeNotificationIds != null) {
+          if (activeNotificationIds.contains(prev.id)) {
+            retained.add(prev);
+          }
+        } else {
+          try {
+            await _notificationsPlugin.cancel(prev.id);
+          } catch (e) {
+            AppLogger.w('清理超期预调度通知失败 (ID: ${prev.id})', error: e);
+          }
+        }
+      }
+      return retained;
     }
 
     if (!await _isScheduleContextStillValid(
@@ -840,7 +1084,7 @@ extension SmartPushScheduling on SmartPushService {
     )) {
       if (!fromBackground && _readStoredSettingsEpoch() == expectedEpoch) {
         await _saveTrackedPreScheduledEntries(
-          mergeWithRetained(const <_PreScheduledEntry>[]),
+          await mergeWithRetained(const <_PreScheduledEntry>[]),
         );
       }
       return;
@@ -858,7 +1102,7 @@ extension SmartPushScheduling on SmartPushService {
         )) {
           if (!fromBackground) {
             await _saveTrackedPreScheduledEntries(
-              mergeWithRetained(scheduledEntries),
+              await mergeWithRetained(scheduledEntries),
             );
           }
           return;
@@ -900,13 +1144,13 @@ extension SmartPushScheduling on SmartPushService {
     } catch (e) {
       if (!fromBackground && scheduledEntries.isNotEmpty) {
         await _saveTrackedPreScheduledEntries(
-          mergeWithRetained(scheduledEntries),
+          await mergeWithRetained(scheduledEntries),
         );
       }
       rethrow;
     }
 
-    final mergedEntries = mergeWithRetained(scheduledEntries);
+    final mergedEntries = await mergeWithRetained(scheduledEntries);
 
     if (!await _isScheduleContextStillValid(
       generation: generation,
@@ -1237,13 +1481,12 @@ extension SmartPushScheduling on SmartPushService {
         minute,
       );
       results.add(tzScheduled);
-      cursor = DateTime(
+      cursor = tz.TZDateTime(
+        tz.local,
         nextDate.year,
         nextDate.month,
-        nextDate.day,
-        hour,
-        minute,
-      ).add(const Duration(minutes: 1));
+        nextDate.day + 1,
+      );
     }
 
     return results;
@@ -1281,6 +1524,7 @@ extension SmartPushScheduling on SmartPushService {
   Future<
       ({
         List<_PlannedLocalNotification> items,
+        List<Quote>? loadedNotes,
         Set<String>? visibleNoteIds,
         bool? hasAnyVisibleNotes,
         bool precomputationFailed,
@@ -1295,8 +1539,9 @@ extension SmartPushScheduling on SmartPushService {
                   String? sourceNoteId,
                   Map<String, dynamic> quoteData,
                 })?>
-            Function()
-        resolveDailyQuoteOnce,
+            Function(String dayKey, {List<Quote>? loadedNotes})
+        resolveDailyQuoteForDate,
+    Set<String> suppressedDuplicateRegularFallbackDays = const <String>{},
     List<_PreScheduledEntry> previousEntries = const [],
     Set<int>? pendingRequestIds,
     Set<String>? trackedVisibleNoteIds,
@@ -1345,6 +1590,7 @@ extension SmartPushScheduling on SmartPushService {
       final visibleIds = await _loadVisibleNoteIdsForReconciliation();
       return (
         items: const <_PlannedLocalNotification>[],
+        loadedNotes: null,
         visibleNoteIds: visibleIds,
         hasAnyVisibleNotes: visibleIds?.isNotEmpty,
         precomputationFailed: false,
@@ -1381,6 +1627,7 @@ extension SmartPushScheduling on SmartPushService {
       final todayKey = currentNow.toIso8601String().substring(0, 10);
 
       PushQuotaProfile? smartProfile;
+      int projectedUnengagedStreak = 0;
       Duration habituationCooldown = Duration.zero;
       DateTime? lastOpen;
       DateTime? dismissalCooldownEnd;
@@ -1394,7 +1641,11 @@ extension SmartPushScheduling on SmartPushService {
         perDayCount[todayKey] = await _analytics.getTodayPushCount(
           now: currentNow,
         );
-        habituationCooldown = await _analytics.getHabituationCooldown();
+        projectedUnengagedStreak =
+            await _analytics.getProjectedUnengagedStreak();
+        habituationCooldown = SmartPushAnalytics.cooldownForStreak(
+          projectedUnengagedStreak,
+        );
         lastOpen = await _analytics.getLastAppOpen();
         dismissalCooldownEnd = _analytics.getDismissalCooldownEnd();
         contentTypeScores = await _analytics.getContentTypeScores();
@@ -1450,6 +1701,18 @@ extension SmartPushScheduling on SmartPushService {
             if (simulatedLastPushTime == null ||
                 deliveredTime.isAfter(simulatedLastPushTime)) {
               simulatedLastPushTime = deliveredTime;
+            }
+            if (!_analytics.hasRecordedSentNotification(
+              prev.id,
+              sentAt: deliveredTime,
+            )) {
+              projectedUnengagedStreak =
+                  _analytics.hasClickedNotification(prev.id)
+                      ? 0
+                      : projectedUnengagedStreak + 1;
+              habituationCooldown = SmartPushAnalytics.cooldownForStreak(
+                projectedUnengagedStreak,
+              );
             }
           }
           continue;
@@ -1592,9 +1855,31 @@ extension SmartPushScheduling on SmartPushService {
         Set<String> assignedIds,
         Set<String> sameDayExcludedIds,
       ) async {
+        final dayKey = scheduledDate.toIso8601String().substring(0, 10);
+        if (_settings.pushMode == PushMode.dailyQuote) {
+          final resolved = await resolveDailyQuoteForDate(
+            dayKey,
+            loadedNotes: allNotes,
+          );
+          if (resolved != null) {
+            return _PushContent(
+              title: '📖 每日一言',
+              body: _buildNotificationBody(resolved.quote),
+              noteId: null,
+              sourceNoteId: resolved.sourceNoteId,
+              contentType: 'dailyQuote',
+              priority: 0,
+              dailyQuoteData: resolved.quoteData,
+            );
+          }
+          return null;
+        }
         if (allNotes.isEmpty) {
           if (allowsDailyQuoteFallback) {
-            final resolved = await resolveDailyQuoteOnce();
+            final resolved = await resolveDailyQuoteForDate(
+              dayKey,
+              loadedNotes: allNotes,
+            );
             if (resolved != null) {
               return _PushContent(
                 title: '📖 每日一言',
@@ -1621,6 +1906,7 @@ extension SmartPushScheduling on SmartPushService {
           currentLocation: currentLocation,
           currentWeather: currentWeather,
           weatherFilters: weatherFilters,
+          smartContentTypeScores: isSmartMode ? contentTypeScores : null,
         );
 
         if (candidates.isEmpty) {
@@ -1635,6 +1921,7 @@ extension SmartPushScheduling on SmartPushService {
             currentLocation: currentLocation,
             currentWeather: currentWeather,
             weatherFilters: weatherFilters,
+            smartContentTypeScores: isSmartMode ? contentTypeScores : null,
           );
         }
 
@@ -1706,8 +1993,11 @@ extension SmartPushScheduling on SmartPushService {
           );
         }
 
-        if (isSmartMode) {
-          final resolved = await resolveDailyQuoteOnce();
+        if (allowsDailyQuoteFallback) {
+          final resolved = await resolveDailyQuoteForDate(
+            dayKey,
+            loadedNotes: allNotes,
+          );
           if (resolved != null) {
             return _PushContent(
               title: '📖 每日一言',
@@ -1774,7 +2064,11 @@ extension SmartPushScheduling on SmartPushService {
           sameDayExcludedIds,
         );
 
-        if (candidateContent == null && !allowsDailyQuoteFallback) {
+        final isSuppressedEmptyFallback = candidateContent == null &&
+            (useLocalQuotesOnly ||
+                suppressedDuplicateRegularFallbackDays.contains(dayKey));
+        if ((candidateContent == null && !allowsDailyQuoteFallback) ||
+            isSuppressedEmptyFallback) {
           continue;
         }
 
@@ -1815,6 +2109,7 @@ extension SmartPushScheduling on SmartPushService {
 
       return (
         items: items,
+        loadedNotes: allNotes,
         visibleNoteIds: visibleNoteIds,
         hasAnyVisibleNotes: hasAnyVisibleNotes,
         precomputationFailed: false,
@@ -1857,6 +2152,7 @@ extension SmartPushScheduling on SmartPushService {
               ),
             )
             .toList(),
+        loadedNotes: null,
         visibleNoteIds: null,
         hasAnyVisibleNotes: null,
         precomputationFailed: true,
@@ -1892,10 +2188,15 @@ extension SmartPushScheduling on SmartPushService {
   Future<({Quote quote, String? sourceNoteId, Map<String, dynamic> quoteData})?>
       _resolvePreScheduleDailyQuote() async {
     try {
+      final appSettings = _loadStoredAppSettings();
       var data = await getCachedDailyQuoteForToday();
+      if (data != null &&
+          appSettings.useLocalQuotesOnly &&
+          data['type'] != 'local') {
+        data = null;
+      }
       if (data == null) {
         try {
-          final appSettings = _loadStoredAppSettings();
           final localData = await _databaseService.getLocalDailyQuote(
             offlineQuoteSource: appSettings.offlineQuoteSource,
           );
@@ -1926,6 +2227,56 @@ extension SmartPushScheduling on SmartPushService {
       );
     } catch (e) {
       AppLogger.w('解析预调度每日一言失败', error: e);
+      return null;
+    }
+  }
+
+  /// 非 Android 单条独立每日一言调度解析：优先使用有效缓存/本地库，无本地内容时请求用户配置的在线一言源
+  Future<({Quote quote, String? sourceNoteId, Map<String, dynamic> quoteData})?>
+      _resolveStandaloneDailyQuote() async {
+    try {
+      final localResolved = await _resolvePreScheduleDailyQuote();
+      if (localResolved != null &&
+          !_hasDailyQuoteContentPushed(localResolved.quote.content)) {
+        return localResolved;
+      }
+
+      var data = await _loadDailyQuoteData(preferCache: localResolved == null);
+      if (data == null) return localResolved;
+
+      final firstContent = (data['hitokoto'] as String?)?.trim() ?? '';
+      if (firstContent.isNotEmpty &&
+          _hasDailyQuoteContentPushed(firstContent)) {
+        data = await _loadDailyQuoteData(preferCache: false);
+        if (data == null) return null;
+      }
+
+      final type = (data['type'] as String?)?.trim() ?? '';
+      final provider = (data['provider'] as String?)?.trim() ?? '';
+      if (type == 'offline' || type == 'local-empty' || provider == 'offline') {
+        return null;
+      }
+
+      final content = (data['hitokoto'] as String?)?.trim() ?? '';
+      if (content.isEmpty) return null;
+      final fromWho = (data['from_who'] as String?)?.trim() ?? '';
+      final from = (data['from'] as String?)?.trim() ?? '';
+      final rawLocalId = data['local_quote_id'];
+      final sourceNoteId =
+          (rawLocalId is String && rawLocalId.isNotEmpty) ? rawLocalId : null;
+      return (
+        quote: Quote(
+          id: sourceNoteId,
+          content: content,
+          date: _now().toIso8601String(),
+          sourceAuthor: fromWho.isNotEmpty ? fromWho : null,
+          source: from.isNotEmpty ? from : null,
+        ),
+        sourceNoteId: sourceNoteId,
+        quoteData: Map<String, dynamic>.from(data),
+      );
+    } catch (e) {
+      AppLogger.w('解析独立每日一言失败', error: e);
       return null;
     }
   }

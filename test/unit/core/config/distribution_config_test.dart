@@ -31,24 +31,42 @@ void main() {
       expect(DistributionConfig.supportsBatteryOptimizationExemption, isTrue);
     });
 
-    test('resolveChannel prefers explicit play dart-define', () {
+    test('resolveChannel prefers explicit dart-define over appFlavor', () {
       expect(
         DistributionConfig.resolveChannel(rawChannel: 'play', flavor: null),
         equals(DistributionChannel.play),
       );
-    });
-
-    test('resolveChannel falls back to Flutter appFlavor == play', () {
+      expect(
+        DistributionConfig.resolveChannel(
+          rawChannel: 'play',
+          flavor: 'standard',
+        ),
+        equals(DistributionChannel.play),
+      );
       expect(
         DistributionConfig.resolveChannel(
           rawChannel: 'standard',
           flavor: 'play',
         ),
-        equals(DistributionChannel.play),
+        equals(DistributionChannel.standard),
       );
     });
 
+    test(
+      'resolveChannel falls back to Flutter appFlavor == play when define is omitted',
+      () {
+        expect(
+          DistributionConfig.resolveChannel(rawChannel: '', flavor: 'play'),
+          equals(DistributionChannel.play),
+        );
+      },
+    );
+
     test('resolveChannel safely defaults to standard when flavor is null', () {
+      expect(
+        DistributionConfig.resolveChannel(rawChannel: '', flavor: null),
+        equals(DistributionChannel.standard),
+      );
       expect(
         DistributionConfig.resolveChannel(rawChannel: 'standard', flavor: null),
         equals(DistributionChannel.standard),
