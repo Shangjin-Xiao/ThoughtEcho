@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -1829,15 +1830,22 @@ void main() {
       await _submitInput(tester, '帮我看看我最近都写了什么内容');
       await tester.pump(const Duration(milliseconds: 40));
 
-      // 工具还在跑，一个 token 都没到：末尾得有光标顶着
-      expect(
-        find.byKey(const ValueKey('ai_assistant_waiting')),
-        findsOneWidget,
+      // 工具还在跑，一个 token 都没到：末尾得有光标顶着，且具备独立绘制图层隔离
+      final waitingCursor = find.byKey(const ValueKey('ai_assistant_waiting'));
+      expect(waitingCursor, findsOneWidget);
+      final waitingBoundary = find.descendant(
+        of: waitingCursor,
+        matching: find.byType(RepaintBoundary),
       );
+      expect(waitingBoundary, findsOneWidget);
+      final renderRepaintBoundary =
+          tester.renderObject<RenderRepaintBoundary>(waitingBoundary);
+      expect(renderRepaintBoundary.isRepaintBoundary, isTrue);
 
       await _settleAgentTurn(tester);
-      // 回答落定后不该还留着光标
-      expect(find.byKey(const ValueKey('ai_assistant_waiting')), findsNothing);
+      // 回答落定后不该还留着光标，图层平稳释放
+      expect(waitingCursor, findsNothing);
+      expect(waitingBoundary, findsNothing);
     });
 
     // 一轮里 AI 常常先说一句旁白、再调工具，工具跑完到最终回答之间还要等很久。
@@ -1869,15 +1877,22 @@ void main() {
       // 工具已经跑完、最终回答还没开始的那段空窗
       await tester.pump(const Duration(milliseconds: 120));
 
-      expect(
-        find.byKey(const ValueKey('ai_assistant_waiting')),
-        findsOneWidget,
+      final waitingCursor = find.byKey(const ValueKey('ai_assistant_waiting'));
+      expect(waitingCursor, findsOneWidget);
+      final waitingBoundary = find.descendant(
+        of: waitingCursor,
+        matching: find.byType(RepaintBoundary),
       );
+      expect(waitingBoundary, findsOneWidget);
+      final renderRepaintBoundary =
+          tester.renderObject<RenderRepaintBoundary>(waitingBoundary);
+      expect(renderRepaintBoundary.isRepaintBoundary, isTrue);
       // 这一轮还没结束，按钮得还是「停止」
       expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
 
       await _settleAgentTurn(tester);
-      expect(find.byKey(const ValueKey('ai_assistant_waiting')), findsNothing);
+      expect(waitingCursor, findsNothing);
+      expect(waitingBoundary, findsNothing);
     });
 
     testWidgets('thinking spinner stops once the answer starts streaming',
