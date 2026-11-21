@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -29,6 +30,9 @@ import '../../test_harness.dart';
 
 class _NoopAIAnalysisDbService extends Fake
     implements AIAnalysisDatabaseService {
+  int deleteAllCalls = 0;
+  int importCalls = 0;
+
   @override
   Future<List<Map<String, dynamic>>> exportAnalysesPage(
     int offset,
@@ -37,11 +41,16 @@ class _NoopAIAnalysisDbService extends Fake
       <Map<String, dynamic>>[];
 
   @override
-  Future<bool> deleteAllAnalyses() async => true;
+  Future<bool> deleteAllAnalyses() async {
+    deleteAllCalls++;
+    return true;
+  }
 
   @override
-  Future<int> importAnalysesFromList(List<dynamic> analyses) async =>
-      analyses.length;
+  Future<int> importAnalysesFromList(List<dynamic> analyses) async {
+    importCalls++;
+    return analyses.length;
+  }
 }
 
 class _LoopbackHttpOverrides extends HttpOverrides {
@@ -1428,6 +1437,111 @@ void main() {
         expect(await existingMediaFile.readAsBytes(), <int>[1, 2, 3, 4]);
         expect(await injectedMediaFile.exists(), isFalse);
       }
+
+      // 4. 验证包含合法 chat.message_shards 描述符的云端主包（JSON 与带媒体 ZIP）在覆盖恢复预检阶段即被拦截，
+      //    绝不提前清空笔记、AI 分析报告、偏好设置或解压覆盖媒体文件
+      final trackingAiDb = _NoopAIAnalysisDbService();
+      final trackedBackupService = BackupService(
+        databaseService: databaseService,
+        settingsService: settingsService,
+        aiAnalysisDbService: trackingAiDb,
+        assistantDataSyncService: assistantSync,
+      );
+      final shardedMainOnlyPayload = <String, dynamic>{
+        'version': '2.0.0',
+        'notes': <String, dynamic>{
+          'categories': <Object?>[],
+          'quotes': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'incoming_wiper_note_sharded',
+              'content': '不应落盘的分片覆盖笔记',
+              'date': '2026-11-21T00:00:00.000Z',
+              'last_modified': '2026-11-21T00:00:00.000Z',
+              'is_deleted': 0,
+            },
+          ],
+        },
+        'ai_analyses': <Map<String, Object?>>[
+          <String, Object?>{
+            'id': 'incoming_wiper_analysis',
+            'title': '不应导入的分析',
+            'content': '不应导入的正文',
+          },
+        ],
+        'settings': <String, Object?>{
+          'user_nickname': '不应覆盖的分片昵称',
+        },
+        'chat': <String, Object?>{
+          'format': 1,
+          'sessions': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'incoming_sharded_session',
+              'session_type': 'agent',
+              'title': '缺少外部聊天分片的主包会话',
+              'created_at': '2026-11-21T00:00:00.000000Z',
+              'last_active_at': '2026-11-21T00:00:00.000000Z',
+              'updated_at': '2026-11-21T00:00:00.000000Z',
+            },
+          ],
+          'messages': <Object?>[],
+          'message_shards': <Map<String, Object?>>[
+            <String, Object?>{
+              'file':
+                  'shard_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.zip',
+              'sha256':
+                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            },
+          ],
+          'tombstones': <Object?>[],
+        },
+        'agent_memory': <String, Object?>{'format': 1, 'profile': <Object?>[]},
+      };
+
+      final shardedJsonFile = File(
+        p.join(tempDir.path, 'sharded_sync_main_only.json'),
+      );
+      await shardedJsonFile.writeAsString(jsonEncode(shardedMainOnlyPayload));
+      await expectLater(
+        () => trackedBackupService.importData(
+          shardedJsonFile.path,
+          clearExisting: true,
+          merge: false,
+        ),
+        throwsA(anything),
+      );
+      await verifyAllLocalStateIntact();
+      expect(trackingAiDb.deleteAllCalls, 0);
+      expect(trackingAiDb.importCalls, 0);
+
+      final shardedBytes = utf8.encode(jsonEncode(shardedMainOnlyPayload));
+      const badMediaOverwrite = <int>[7, 7, 7, 7];
+      final shardedArchive = Archive()
+        ..addFile(
+          ArchiveFile('backup_data.json', shardedBytes.length, shardedBytes),
+        )
+        ..addFile(
+          ArchiveFile(
+            'media/images/keep.png',
+            badMediaOverwrite.length,
+            badMediaOverwrite,
+          ),
+        );
+      final shardedZipFile = File(
+        p.join(tempDir.path, 'thoughtecho_sync_sharded_only.zip'),
+      );
+      await shardedZipFile.writeAsBytes(ZipEncoder().encode(shardedArchive));
+      await expectLater(
+        () => trackedBackupService.importData(
+          shardedZipFile.path,
+          clearExisting: true,
+          merge: false,
+        ),
+        throwsA(anything),
+      );
+      await verifyAllLocalStateIntact();
+      expect(trackingAiDb.deleteAllCalls, 0);
+      expect(trackingAiDb.importCalls, 0);
+      expect(await existingMediaFile.readAsBytes(), <int>[1, 2, 3, 4]);
     });
   });
 
@@ -1468,7 +1582,12 @@ void main() {
       final remoteFiles = <String, List<int>>{
         '/dav/thoughtecho/chat_shards/$staleShardName': <int>[1, 2, 3],
       };
+      final remoteModified = <String, DateTime>{
+        '/dav/thoughtecho/chat_shards/$staleShardName':
+            DateTime.utc(2026, 1, 1, 0, 0, 0),
+      };
       final deletedPaths = <String>[];
+      final putShardPaths = <String>[];
 
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() => server.close(force: true));
@@ -1479,6 +1598,10 @@ void main() {
         );
         final path = request.uri.path;
         final response = request.response;
+        response.headers.set(
+          HttpHeaders.dateHeader,
+          HttpDate.format(DateTime.now().toUtc()),
+        );
         switch (request.method) {
           case 'MKCOL':
             response.statusCode = 201;
@@ -1487,14 +1610,18 @@ void main() {
                 path.endsWith('/thoughtecho/chat_shards/')) {
               final shardEntries = remoteFiles.keys
                   .where((k) => k.startsWith('/dav/thoughtecho/chat_shards/'))
-                  .map(
-                    (k) => '<d:response><d:href>$k</d:href>'
-                        '<d:propstat><d:prop>'
-                        '<d:getcontentlength>${remoteFiles[k]!.length}</d:getcontentlength>'
-                        '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>'
-                        '</d:response>',
-                  )
-                  .join();
+                  .map((k) {
+                final mod = remoteModified[k];
+                final modXml = mod != null
+                    ? '<d:getlastmodified>${HttpDate.format(mod)}</d:getlastmodified>'
+                    : '';
+                return '<d:response><d:href>$k</d:href>'
+                    '<d:propstat><d:prop>'
+                    '<d:getcontentlength>${remoteFiles[k]!.length}</d:getcontentlength>'
+                    '$modXml'
+                    '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>'
+                    '</d:response>';
+              }).join();
               response.statusCode = 207;
               response.write(
                 '<d:multistatus xmlns:d="DAV:">'
@@ -1531,10 +1658,15 @@ void main() {
             }
           case 'PUT':
             remoteFiles[path] = body;
+            remoteModified[path] = DateTime.now().toUtc();
+            if (path.startsWith('/dav/thoughtecho/chat_shards/')) {
+              putShardPaths.add(path);
+            }
             response.statusCode = 204;
           case 'DELETE':
             deletedPaths.add(path);
             remoteFiles.remove(path);
+            remoteModified.remove(path);
             response.statusCode = 204;
           default:
             response.statusCode = 405;
@@ -1581,6 +1713,39 @@ void main() {
       expect(
         deletedPaths,
         contains('/dav/thoughtecho/chat_shards/$staleShardName'),
+      );
+      final firstRunShardNames = uploadedShards
+          .map((e) => (e as Map<String, dynamic>)['file'] as String)
+          .toList();
+      final putCountAfterFirstSync = putShardPaths.length;
+      expect(putCountAfterFirstSync, equals(firstRunShardNames.length));
+
+      // 1b. 消息未变化时隔一秒再次触发同步：分片哈希与文件名完全不变，且云端已存在分片跳过重复 PUT
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await HttpOverrides.runWithHttpOverrides(
+        () => webdavA.triggerSync(),
+        _LoopbackHttpOverrides(server.port),
+      );
+      expect(webdavA.syncStatus, WebDAVSyncStatus.success);
+      final secondMainPayload =
+          WebDAVSyncService.decodeAndValidateRemoteSyncZipForTesting(
+        remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip']!,
+      );
+      final secondRunShardNames = ((secondMainPayload['chat']
+              as Map<String, dynamic>)['message_shards'] as List)
+          .map((e) => (e as Map<String, dynamic>)['file'] as String)
+          .toList();
+      expect(secondRunShardNames, equals(firstRunShardNames));
+      expect(
+        putShardPaths.length,
+        equals(putCountAfterFirstSync),
+        reason: '消息未变时不应重复 PUT 相同内容寻址分片',
+      );
+      expect(
+        deletedPaths.where(
+          (k) => firstRunShardNames.any(k.endsWith),
+        ),
+        isEmpty,
       );
 
       // 2. 全新设备 B 拉取分片主包，逐片下载校验 SHA-256 并完整恢复 3 个会话共 9 条消息
@@ -1658,6 +1823,323 @@ void main() {
         DatabaseService.setTestDatabase(rawNotesDb);
         if (await dirB.exists()) {
           await dirB.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        '双客户端并发交叉：客户端 A 从分片退回内联上传且其目录清理晚于客户端 B 暂存新分片执行时，B 的新分片不被误删且最终主包引用的全部分片均可下载恢复',
+        () async {
+      WebDAVSyncService.chatShardThresholdBytesForTesting = 900;
+      WebDAVSyncService.maxChatShardJsonBytesForTesting = 700;
+      addTearDown(() {
+        WebDAVSyncService.chatShardThresholdBytesForTesting = null;
+        WebDAVSyncService.maxChatShardJsonBytesForTesting = null;
+        WebDAVSyncService.chatShardStaleCleanupMinAgeForTesting = null;
+      });
+
+      // 初始化设备 A 的大体量会话（使其首轮同步走分片上传）
+      final sessionA = await chatService.createSession(
+        sessionType: 'agent',
+        title: '设备A大体积会话',
+      );
+      for (var i = 0; i < 6; i++) {
+        await chatService.addMessage(
+          sessionA.id,
+          ChatMessage(
+            id: 'dev_a_msg_$i',
+            content: '设备A消息正文_${i}_${'填充块' * 40}',
+            isUser: i.isEven,
+            role: i.isEven ? 'user' : 'assistant',
+            timestamp: DateTime.utc(2026, 11, 20, 9, i),
+          ),
+        );
+      }
+
+      var etagSeq = 1;
+      final remoteFiles = <String, List<int>>{};
+      final remoteEtags = <String, String>{};
+      final remoteModified = <String, DateTime>{};
+      final deletedShardPaths = <String>[];
+      Completer<void>? pauseCleanupListGate;
+      Completer<void>? cleanupListPausedSignal;
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        final body = await request.fold<List<int>>(
+          <int>[],
+          (acc, chunk) => acc..addAll(chunk),
+        );
+        final path = request.uri.path;
+        final response = request.response;
+        response.headers.set(
+          HttpHeaders.dateHeader,
+          HttpDate.format(DateTime.now().toUtc()),
+        );
+        switch (request.method) {
+          case 'MKCOL':
+            response.statusCode = 201;
+          case 'PROPFIND':
+            if (path.endsWith('/thoughtecho/chat_shards') ||
+                path.endsWith('/thoughtecho/chat_shards/')) {
+              final gate = pauseCleanupListGate;
+              final signal = cleanupListPausedSignal;
+              if (gate != null && signal != null && !signal.isCompleted) {
+                signal.complete();
+                await gate.future;
+              }
+              final shardEntries = remoteFiles.keys
+                  .where((k) => k.startsWith('/dav/thoughtecho/chat_shards/'))
+                  .map((k) {
+                final mod = remoteModified[k] ?? DateTime.now().toUtc();
+                return '<d:response><d:href>$k</d:href>'
+                    '<d:propstat><d:prop>'
+                    '<d:getcontentlength>${remoteFiles[k]!.length}</d:getcontentlength>'
+                    '<d:getlastmodified>${HttpDate.format(mod)}</d:getlastmodified>'
+                    '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>'
+                    '</d:response>';
+              }).join();
+              response.statusCode = 207;
+              response.write(
+                '<d:multistatus xmlns:d="DAV:">'
+                '<d:response><d:href>/dav/thoughtecho/chat_shards/</d:href></d:response>'
+                '$shardEntries'
+                '</d:multistatus>',
+              );
+            } else if (remoteFiles.containsKey(path)) {
+              response.statusCode = 207;
+              response.write(
+                '<d:multistatus xmlns:d="DAV:"><d:response>'
+                '<d:href>$path</d:href>'
+                '<d:propstat><d:prop><d:getetag>${remoteEtags[path]}</d:getetag>'
+                '<d:getcontentlength>${remoteFiles[path]!.length}</d:getcontentlength>'
+                '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>'
+                '</d:response></d:multistatus>',
+              );
+            } else if (path.endsWith('/thoughtecho') ||
+                path.endsWith('/thoughtecho/') ||
+                path.endsWith('/dav') ||
+                path.endsWith('/dav/')) {
+              response.statusCode = 207;
+              response.write('<d:multistatus xmlns:d="DAV:"></d:multistatus>');
+            } else {
+              response.statusCode = 404;
+            }
+          case 'GET':
+            final data = remoteFiles[path];
+            if (data == null) {
+              response.statusCode = 404;
+            } else {
+              if (remoteEtags.containsKey(path)) {
+                response.headers
+                    .set(HttpHeaders.etagHeader, remoteEtags[path]!);
+              }
+              response.statusCode = 200;
+              response.add(data);
+            }
+          case 'PUT':
+            final ifMatch = request.headers.value(HttpHeaders.ifMatchHeader);
+            if (ifMatch != null &&
+                remoteEtags.containsKey(path) &&
+                ifMatch != remoteEtags[path]) {
+              response.statusCode = 412;
+              break;
+            }
+            remoteFiles[path] = body;
+            final newEtag = '"etag-${etagSeq++}"';
+            remoteEtags[path] = newEtag;
+            remoteModified[path] = DateTime.now().toUtc();
+            response.headers.set(HttpHeaders.etagHeader, newEtag);
+            response.statusCode = 204;
+          case 'DELETE':
+            deletedShardPaths.add(path);
+            remoteFiles.remove(path);
+            remoteEtags.remove(path);
+            remoteModified.remove(path);
+            response.statusCode = 204;
+          default:
+            response.statusCode = 405;
+        }
+        await response.close();
+      });
+
+      final webdavA = WebDAVSyncService.forTesting();
+      addTearDown(webdavA.dispose);
+      webdavA.attachAssistantDataSync(assistantSync);
+      await webdavA.saveSettings(
+        enabled: true,
+        provider: 'custom',
+        url: 'https://webdav.example.invalid/dav/',
+        username: 'test-user',
+        password: 'synthetic-password',
+        syncOnLaunch: false,
+        syncOnChange: false,
+        syncOnCellular: false,
+        syncNotesOnlyOnCellular: true,
+      );
+
+      // 步骤 1：客户端 A 首轮上传分片主包
+      await HttpOverrides.runWithHttpOverrides(
+        () => webdavA.triggerSync(),
+        _LoopbackHttpOverrides(server.port),
+      );
+      expect(webdavA.syncStatus, WebDAVSyncStatus.success);
+
+      // 步骤 2：客户端 A 删除该大体积会话，使同步包缩小为内联模式；
+      //         拦截其主包发布后的 chat_shards 目录清理请求，模拟清理滞后于客户端 B 的新分片暂存
+      await chatService.deleteSession(sessionA.id);
+      pauseCleanupListGate = Completer<void>();
+      cleanupListPausedSignal = Completer<void>();
+
+      final syncAFuture = HttpOverrides.runWithHttpOverrides(
+        () => webdavA.triggerSync(),
+        _LoopbackHttpOverrides(server.port),
+      );
+      await cleanupListPausedSignal.future;
+
+      // 此时 A 的内联主包已经写上云端，但 A 的 _cleanupStaleRemoteChatShards 尚未列目录；
+      // 启动客户端 B：读取 A 的内联主包、暂存上传 B 自己的大体积聊天分片并发布 B 的新主包
+      final dirPeer = await Directory.systemTemp.createTemp('peer_bc_race_');
+      final chatB = ChatSessionService(
+        databasePath: p.join(dirPeer.path, 'chat_b.db'),
+      );
+      await chatB.init();
+      final memB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirPeer.path, 'mem_b.db'),
+      );
+      final assistantSyncB = AssistantDataSyncService(
+        chatSessionService: chatB,
+        agentMemoryService: memB,
+        settingsService: settingsService,
+        databaseService: databaseService,
+      );
+      final webdavB = WebDAVSyncService.forTesting();
+
+      final chatC = ChatSessionService(
+        databasePath: p.join(dirPeer.path, 'chat_c.db'),
+      );
+      await chatC.init();
+      final memC = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirPeer.path, 'mem_c.db'),
+      );
+      final assistantSyncC = AssistantDataSyncService(
+        chatSessionService: chatC,
+        agentMemoryService: memC,
+        settingsService: settingsService,
+        databaseService: databaseService,
+      );
+      final webdavC = WebDAVSyncService.forTesting();
+
+      try {
+        final sessionB = await chatB.createSession(
+          sessionType: 'agent',
+          title: '设备B保留的大体积会话',
+        );
+        for (var i = 0; i < 6; i++) {
+          await chatB.addMessage(
+            sessionB.id,
+            ChatMessage(
+              id: 'dev_b_msg_$i',
+              content: '设备B分片消息正文_${i}_${'长内容段落' * 40}',
+              isUser: i.isEven,
+              role: i.isEven ? 'user' : 'assistant',
+              timestamp: DateTime.utc(2026, 11, 20, 11, i),
+            ),
+          );
+        }
+
+        webdavB.attachAssistantDataSync(assistantSyncB);
+        await webdavB.saveSettings(
+          enabled: true,
+          provider: 'custom',
+          url: 'https://webdav.example.invalid/dav/',
+          username: 'test-user',
+          password: 'synthetic-password',
+          syncOnLaunch: false,
+          syncOnChange: false,
+          syncOnCellular: false,
+          syncNotesOnlyOnCellular: true,
+        );
+
+        // 放行后续 PROPFIND（让 B 能正常列目录暂存分片），等 B 完成发布后再恢复 A 的挂起清理
+        final heldCleanupGate = pauseCleanupListGate;
+        pauseCleanupListGate = null;
+
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(
+          webdavB.syncStatus,
+          WebDAVSyncStatus.success,
+          reason: webdavB.lastSyncError,
+        );
+
+        final finalMainPayload =
+            WebDAVSyncService.decodeAndValidateRemoteSyncZipForTesting(
+          remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip']!,
+        );
+        final finalShardFiles = ((finalMainPayload['chat']
+                as Map<String, dynamic>)['message_shards'] as List)
+            .map((e) => (e as Map<String, dynamic>)['file'] as String)
+            .toList();
+        expect(finalShardFiles, isNotEmpty);
+
+        // 释放 A 滞后的目录清理：B 新上传的分片受宽限期保护，绝不能被 A 误删
+        heldCleanupGate.complete();
+        await syncAFuture;
+        expect(webdavA.syncStatus, WebDAVSyncStatus.success);
+        for (final shardFile in finalShardFiles) {
+          expect(
+            remoteFiles.containsKey('/dav/thoughtecho/chat_shards/$shardFile'),
+            isTrue,
+            reason: 'B 引用的分片 $shardFile 不应被 A 的滞后清理误删',
+          );
+        }
+        expect(deletedShardPaths, isEmpty);
+
+        // 步骤 3：第三台全新客户端 C 同步下载 B 的主包及全部分片，验证所有引用分片完整可下载
+        webdavC.attachAssistantDataSync(assistantSyncC);
+        await webdavC.saveSettings(
+          enabled: true,
+          provider: 'custom',
+          url: 'https://webdav.example.invalid/dav/',
+          username: 'test-user',
+          password: 'synthetic-password',
+          syncOnLaunch: false,
+          syncOnChange: false,
+          syncOnCellular: false,
+          syncNotesOnlyOnCellular: true,
+        );
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavC.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(
+          webdavC.syncStatus,
+          WebDAVSyncStatus.success,
+          reason: webdavC.lastSyncError,
+        );
+        final msgsOnC = await chatC.getMessages(sessionB.id);
+        expect(msgsOnC, hasLength(6));
+      } finally {
+        final lingeringGate = pauseCleanupListGate;
+        if (lingeringGate != null && !lingeringGate.isCompleted) {
+          lingeringGate.complete();
+        }
+        webdavB.dispose();
+        webdavC.dispose();
+        await chatB.close();
+        chatB.dispose();
+        memB.dispose();
+        await chatC.close();
+        chatC.dispose();
+        memC.dispose();
+        if (await dirPeer.exists()) {
+          await dirPeer.delete(recursive: true);
         }
       }
     });

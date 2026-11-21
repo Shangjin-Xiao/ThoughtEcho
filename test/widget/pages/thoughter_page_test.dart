@@ -80,6 +80,10 @@ class _InMemoryChatSessionService extends ChatSessionService {
     String? noteId,
     required String title,
   }) async {
+    final gate = createSessionGate;
+    if (gate != null) {
+      await gate.future;
+    }
     final now = DateTime.now();
     final session = ChatSession(
       id: 'session-${_sessionSeq++}',
@@ -92,6 +96,8 @@ class _InMemoryChatSessionService extends ChatSessionService {
     _sessions[session.id] = session;
     return session;
   }
+
+  Completer<void>? createSessionGate;
 
   @override
   Future<ChatSession?> getLatestSessionForNote(String noteId) async {
@@ -108,6 +114,12 @@ class _InMemoryChatSessionService extends ChatSessionService {
   @override
   Future<void> addMessage(
       String sessionId, app_chat.ChatMessage message) async {
+    // 真实 SQLite 表中 chat_messages.id 是全局主键：写入新 session_id 会迁移该消息所属会话。
+    for (final entry in _messages.entries) {
+      if (entry.key != sessionId) {
+        entry.value.removeWhere((m) => m.id == message.id);
+      }
+    }
     final list =
         _messages.putIfAbsent(sessionId, () => <app_chat.ChatMessage>[]);
     final existingIdx = list.indexWhere((m) => m.id == message.id);
@@ -3750,6 +3762,153 @@ void main() {
       final textField = tester.widget<TextField>(find.byType(TextField));
       expect(textField.controller?.text, '写库失败待恢复的草稿文本');
       expect(await chatSessionService.getMessages(liveSession.id), isEmpty);
+    });
+
+    testWidgets(
+        'concurrent remote session deletion during active Agent turn shares a single rebuild and keeps all messages unified',
+        (tester) async {
+      final responseGate = Completer<AgentResponse>();
+      final agentService = _ControllableAgentService(
+        settingsService: settingsService,
+        responses: <Completer<AgentResponse>>[responseGate],
+      );
+      final activeSession = ChatSession(
+        id: 'session-deleted-mid-turn',
+        sessionType: 'agent',
+        title: '流式回复途中被远端删除的会话',
+        createdAt: DateTime(2026, 9, 2, 10),
+        lastActiveAt: DateTime(2026, 9, 2, 10),
+      );
+      chatSessionService.seedSession(activeSession, <app_chat.ChatMessage>[
+        app_chat.ChatMessage(
+          id: 'seed-history-user',
+          content: '前序提问内容',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime(2026, 9, 2, 10),
+        ),
+        app_chat.ChatMessage(
+          id: 'seed-history-assistant',
+          content: '前序回答内容',
+          isUser: false,
+          role: 'assistant',
+          timestamp: DateTime(2026, 9, 2, 10, 1),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: ThoughterPage(
+            key: const ValueKey('concurrent_rebuild_single_flight_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: activeSession,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 发起新一轮提问，进入 _isLoading 流式等待阶段
+      await tester.enterText(find.byType(TextField), '本轮追问内容');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+      expect(agentService.runCount, 1);
+
+      // 挂起 createSession，使监听器触发的重建与后续多条消息的 _persistMessageSafely 同时并发汇合
+      final createGate = Completer<void>();
+      chatSessionService.createSessionGate = createGate;
+
+      // 1) 远端删除当前会话（触发监听器 _verifyCurrentSessionStillExists -> _rebuildDeletedCurrentSession）
+      chatSessionService.simulateRemoteDeleteSession(activeSession.id);
+      await tester.pump();
+
+      // 2) 在重建尚未返回前，Agent 同时返回带结构化提案卡与最终回答的响应（触发多次并发 _persistMessageSafely）
+      responseGate.complete(
+        AgentResponse(
+          content: '本轮完整助手回复',
+          toolCalls: <ToolCall>[
+            ToolCall(
+              id: 'tool-call-concurrent-1',
+              name: 'propose_note_edit',
+              arguments: const <String, Object?>{'note_id': 'note-1'},
+            ),
+          ],
+          toolExecutions: <ToolExecution>[
+            ToolExecution(
+              call: ToolCall(
+                id: 'tool-call-concurrent-1',
+                name: 'propose_note_edit',
+                arguments: const <String, Object?>{'note_id': 'note-1'},
+              ),
+              result: ToolResult(
+                toolCallId: 'tool-call-concurrent-1',
+                content: '提案已生成',
+                artifact: NoteProposalArtifact(
+                  action: NoteProposalAction.edit,
+                  proposalTitle: '并发重建提案',
+                  reason: '',
+                  noteId: 'note-1',
+                  resultKind: NoteDocumentKind.plain,
+                  content: '并发重建期间产出的提案正文',
+                  documentOps: null,
+                  metadata: const <String, Object?>{},
+                  changes: const <NoteProposalChange>[],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      // 推进真实事件循环使 runAgent 后的 eventSubscription.cancel() 完成，
+      // 让助手文本气泡与提案卡片两条 _persistMessageSafely 同时汇入仍在挂起的单飞重建任务
+      await _settleAgentTurn(tester);
+
+      // 放行会话创建，所有并发路径应共享同一次单飞重建并落入唯一新会话
+      chatSessionService.createSessionGate = null;
+      createGate.complete();
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        chatSessionService.sessions,
+        hasLength(1),
+        reason: '监听器与多条消息保存重试必须共享同一次会话重建，绝不能拆出多个会话',
+      );
+      final rebuiltSession = chatSessionService.sessions.single;
+      expect(rebuiltSession.id, isNot(equals(activeSession.id)));
+
+      final persistedMsgs =
+          await chatSessionService.getMessages(rebuiltSession.id);
+      expect(
+        persistedMsgs.any((m) => m.id == 'seed-history-user'),
+        isTrue,
+      );
+      expect(
+        persistedMsgs.any((m) => m.id == 'seed-history-assistant'),
+        isTrue,
+      );
+      expect(
+        persistedMsgs.any((m) => m.isUser && m.content == '本轮追问内容'),
+        isTrue,
+      );
+      expect(
+        persistedMsgs.any((m) => !m.isUser && m.content == '本轮完整助手回复'),
+        isTrue,
+      );
+      expect(
+        persistedMsgs.any(
+          (m) => m.parsedMeta?['type'] == NoteProposalArtifact.typeName,
+        ),
+        isTrue,
+      );
     });
   });
 }

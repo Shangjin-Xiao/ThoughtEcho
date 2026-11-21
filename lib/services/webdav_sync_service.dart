@@ -110,6 +110,13 @@ class RemoteMediaFileInfo {
   final DateTime? lastModified;
 }
 
+class _RemoteChatShardInfo {
+  const _RemoteChatShardInfo({this.length, this.lastModified});
+
+  final int? length;
+  final DateTime? lastModified;
+}
+
 // Retained as an internal backward-compatible alias for RemoteMediaFileInfo.
 // ignore: unused_element
 typedef _RemoteMediaFileInfo = RemoteMediaFileInfo;
@@ -152,6 +159,11 @@ class WebDAVSyncService extends ChangeNotifier {
   static const int _maxRemoteSyncBytes = 32 * 1024 * 1024;
   static const int _defaultChatShardThresholdBytes = 24 * 1024 * 1024;
   static const int _defaultMaxChatShardJsonBytes = 8 * 1024 * 1024;
+  static const Duration _defaultChatShardStaleCleanupMinAge = Duration(
+    hours: 24,
+  );
+  static const String _pendingChatShardCleanupKey =
+      'webdav_pending_chat_shard_cleanup';
   static final RegExp _remoteChatShardFileNamePattern = RegExp(
     r'^shard_[0-9a-f]{64}\.zip$',
   );
@@ -161,6 +173,9 @@ class WebDAVSyncService extends ChangeNotifier {
 
   @visibleForTesting
   static int? maxChatShardJsonBytesForTesting;
+
+  @visibleForTesting
+  static Duration? chatShardStaleCleanupMinAgeForTesting;
 
   bool _isSyncExecuting = false; // 独占同步/上传互斥锁，防止并发重入
   String _lastSyncError = ''; // 最近一次失败的错误摘要（对用户安全）
@@ -693,18 +708,38 @@ class WebDAVSyncService extends ChangeNotifier {
 
       await packSyncZip(tempJsonPath, tempZipPath);
 
-      Map<String, int?>? existingRemoteChatShards;
+      final effectiveShardCleanupMinAge =
+          chatShardStaleCleanupMinAgeForTesting ??
+              _defaultChatShardStaleCleanupMinAge;
+      final shardRefreshMaxAge = Duration(
+        milliseconds: effectiveShardCleanupMinAge.inMilliseconds ~/ 2,
+      );
+      ({
+        bool listedSuccessfully,
+        Map<String, _RemoteChatShardInfo> files,
+        DateTime? serverTimeUtc,
+      })? existingRemoteChatShardListing;
       final chatShardsDirUrl = '${_url}thoughtecho/chat_shards/';
       if (uploadedChatShards.isNotEmpty) {
         await _ensureDirectoryExists(dio, chatShardsDirUrl);
-        existingRemoteChatShards = await _listRemoteChatShardFiles(
+        existingRemoteChatShardListing = await _listRemoteChatShardFiles(
           dio,
           chatShardsDirUrl,
         );
+        final referenceNowUtc = existingRemoteChatShardListing.serverTimeUtc ??
+            DateTime.now().toUtc();
         for (final shard in uploadedChatShards) {
           final localShardZip = File(shard.localPath!);
           final localLen = await localShardZip.length();
-          if (existingRemoteChatShards[shard.file] == localLen) {
+          final existingInfo = existingRemoteChatShardListing.files[shard.file];
+          final existingModifiedUtc = existingInfo?.lastModified?.toUtc();
+          final isFreshEnoughToReuse = existingInfo != null &&
+              existingInfo.length == localLen &&
+              (existingModifiedUtc == null ||
+                  (shardRefreshMaxAge > Duration.zero &&
+                      referenceNowUtc.difference(existingModifiedUtc) <
+                          shardRefreshMaxAge));
+          if (isFreshEnoughToReuse) {
             continue;
           }
           await dio.put(
@@ -727,14 +762,29 @@ class WebDAVSyncService extends ChangeNotifier {
         remoteSyncFile,
       );
 
-      if (uploadedChatShards.isNotEmpty || remoteChatShards.isNotEmpty) {
-        await _cleanupStaleRemoteChatShards(
+      final activeShardFileSet = <String>{
+        for (final s in uploadedChatShards) s.file,
+      };
+      final retiredFromPreviousManifest = <String>{
+        for (final s in remoteChatShards)
+          if (!activeShardFileSet.contains(s.file)) s.file,
+      };
+      final hadPendingShardCleanup =
+          _mmkv.getBool(_pendingChatShardCleanupKey) ?? false;
+      if (uploadedChatShards.isNotEmpty ||
+          remoteChatShards.isNotEmpty ||
+          hadPendingShardCleanup) {
+        final hasRemainingStaleCandidates = await _cleanupStaleRemoteChatShards(
           dio,
           chatShardsDirUrl,
-          activeShardFiles: <String>{
-            for (final s in uploadedChatShards) s.file,
-          },
-          prefetchedRemoteFiles: existingRemoteChatShards,
+          activeShardFiles: activeShardFileSet,
+          protectedShardFiles: retiredFromPreviousManifest,
+          staleMinAge: effectiveShardCleanupMinAge,
+          prefetchedListing: existingRemoteChatShardListing,
+        );
+        await _mmkv.setBool(
+          _pendingChatShardCleanupKey,
+          hasRemainingStaleCandidates,
         );
       }
 
@@ -1140,13 +1190,22 @@ class WebDAVSyncService extends ChangeNotifier {
         posixName.endsWith('/data.json');
   }
 
+  static final DateTime _deterministicArchiveModTime = DateTime(2020, 1, 1);
+  static const int _deterministicArchiveFileMode = 0x81a4; // 0o100644
+
   /// 把本地数据 JSON 打包成上传用的同步 ZIP。
   ///
   /// ZipFileEncoder.addFile 是异步的：不 await 会在条目真正写入前就 closeSync，
   /// 产出一个不含 backup_data.json 的空包并推到云端，导致所有设备此后都报
   /// “云端同步文件缺少 backup_data.json”且无法自愈。
+  /// 当 [deterministic] 为 `true` 时固定归档条目的修改时间与权限位，确保相同 JSON
+  /// 内容在跨时间、跨平台上产出完全一致的内容寻址 SHA-256。
   @visibleForTesting
-  static Future<void> packSyncZip(String jsonPath, String zipPath) async {
+  static Future<void> packSyncZip(
+    String jsonPath,
+    String zipPath, {
+    bool deterministic = false,
+  }) async {
     final jsonFile = File(jsonPath);
     if (!await jsonFile.exists()) {
       throw StateError('待打包的本地同步数据文件不存在: $jsonPath');
@@ -1158,9 +1217,27 @@ class WebDAVSyncService extends ChangeNotifier {
       );
     }
     final encoder = ZipFileEncoder();
-    encoder.create(zipPath);
+    encoder.create(
+      zipPath,
+      modified: deterministic ? _deterministicArchiveModTime : null,
+    );
     try {
-      await encoder.addFile(jsonFile, 'backup_data.json');
+      if (deterministic) {
+        final fileStream = InputFileStream(jsonFile.path);
+        try {
+          final archiveFile = ArchiveFile.stream(
+            'backup_data.json',
+            fileStream,
+          )
+            ..lastModTime = 0
+            ..mode = _deterministicArchiveFileMode;
+          encoder.addArchiveFile(archiveFile);
+        } finally {
+          await fileStream.close();
+        }
+      } else {
+        await encoder.addFile(jsonFile, 'backup_data.json');
+      }
     } finally {
       encoder.closeSync();
     }
@@ -2805,7 +2882,11 @@ class WebDAVSyncService extends ChangeNotifier {
       final rawFile = rawShardFiles[i];
       final tempShardZipPath = p.join(workDir.path, 'chat_shard_tmp_$i.zip');
       try {
-        await packSyncZip(rawFile.path, tempShardZipPath);
+        await packSyncZip(
+          rawFile.path,
+          tempShardZipPath,
+          deterministic: true,
+        );
       } finally {
         if (await rawFile.exists()) {
           await rawFile.delete();
@@ -2886,11 +2967,16 @@ class WebDAVSyncService extends ChangeNotifier {
     return localJsonPath;
   }
 
-  Future<Map<String, int?>> _listRemoteChatShardFiles(
+  Future<
+      ({
+        bool listedSuccessfully,
+        Map<String, _RemoteChatShardInfo> files,
+        DateTime? serverTimeUtc,
+      })> _listRemoteChatShardFiles(
     Dio dio,
     String chatShardsDirUrl,
   ) async {
-    final result = <String, int?>{};
+    final result = <String, _RemoteChatShardInfo>{};
     try {
       final response = await _requestPropfind(
         dio,
@@ -2899,8 +2985,22 @@ class WebDAVSyncService extends ChangeNotifier {
         validateStatus: (status) =>
             status == 200 || status == 207 || status == 404,
       );
+      final serverTimeUtc = _parseRemoteHttpDate(
+        response.headers.value('date'),
+      )?.toUtc();
+      if (response.statusCode == 404) {
+        return (
+          listedSuccessfully: true,
+          files: result,
+          serverTimeUtc: serverTimeUtc,
+        );
+      }
       if (response.statusCode != 200 && response.statusCode != 207) {
-        return result;
+        return (
+          listedSuccessfully: false,
+          files: result,
+          serverTimeUtc: serverTimeUtc,
+        );
       }
       final body = response.data ?? '';
       for (final block in _parsePropfindResponses(body)) {
@@ -2919,41 +3019,91 @@ class WebDAVSyncService extends ChangeNotifier {
         final length = int.tryParse(
           _extractFirstXmlTagValue(block, 'getcontentlength') ?? '',
         );
-        result[fileName] = length;
+        final lastModified = _parseRemoteHttpDate(
+          _extractFirstXmlTagValue(block, 'getlastmodified'),
+        );
+        result[fileName] = _RemoteChatShardInfo(
+          length: length,
+          lastModified: lastModified,
+        );
       }
+      return (
+        listedSuccessfully: true,
+        files: result,
+        serverTimeUtc: serverTimeUtc,
+      );
     } catch (e) {
       logDebug('列举云端对话分片目录失败: $e', source: 'WebDAVSyncService');
+      return (listedSuccessfully: false, files: result, serverTimeUtc: null);
     }
-    return result;
   }
 
-  Future<void> _cleanupStaleRemoteChatShards(
+  /// 清理已退役且超过跨端保护宽限期的孤儿分片，返回是否仍余待后续轮次清理的候选分片。
+  Future<bool> _cleanupStaleRemoteChatShards(
     Dio dio,
     String chatShardsDirUrl, {
     required Set<String> activeShardFiles,
-    Map<String, int?>? prefetchedRemoteFiles,
+    required Set<String> protectedShardFiles,
+    required Duration staleMinAge,
+    ({
+      bool listedSuccessfully,
+      Map<String, _RemoteChatShardInfo> files,
+      DateTime? serverTimeUtc,
+    })? prefetchedListing,
   }) async {
     try {
-      final remoteFiles = prefetchedRemoteFiles ??
-          await _listRemoteChatShardFiles(dio, chatShardsDirUrl);
-      for (final fileName in remoteFiles.keys) {
+      final listing =
+          (prefetchedListing != null && prefetchedListing.listedSuccessfully)
+              ? prefetchedListing
+              : await _listRemoteChatShardFiles(dio, chatShardsDirUrl);
+      if (!listing.listedSuccessfully) {
+        return true;
+      }
+      final nowUtc = listing.serverTimeUtc ?? DateTime.now().toUtc();
+      var hasUncleanedInactiveShard = false;
+      for (final entry in listing.files.entries) {
+        final fileName = entry.key;
         if (activeShardFiles.contains(fileName) ||
             !_remoteChatShardFileNamePattern.hasMatch(fileName)) {
           continue;
         }
+        final modifiedUtc = entry.value.lastModified?.toUtc();
+        // 1) 本轮刚刚从旧主包退役的分片予以保留一轮，防止并发读取旧主包的设备遇到 404；
+        // 2) 无可信最后修改时间，或尚未达到跨设备静默宽限期的分片绝不删除，
+        //    防止误删另一台设备正在上传的新分片。
+        if (protectedShardFiles.contains(fileName)) {
+          if (modifiedUtc != null) {
+            hasUncleanedInactiveShard = true;
+          }
+          continue;
+        }
+        if (modifiedUtc == null) {
+          continue;
+        }
+        if (nowUtc.difference(modifiedUtc) < staleMinAge) {
+          hasUncleanedInactiveShard = true;
+          continue;
+        }
         try {
-          await dio.delete(
+          final res = await dio.delete(
             '$chatShardsDirUrl$fileName',
             options: Options(
               validateStatus: (status) => status != null && status < 500,
             ),
           );
+          final code = res.statusCode ?? 0;
+          if (code >= 400 && code != 404) {
+            hasUncleanedInactiveShard = true;
+          }
         } catch (e) {
+          hasUncleanedInactiveShard = true;
           logDebug('清理过期云端对话分片跳过 ($fileName): $e', source: 'WebDAVSyncService');
         }
       }
+      return hasUncleanedInactiveShard;
     } catch (e) {
       logDebug('清理云端旧对话分片跳过: $e', source: 'WebDAVSyncService');
+      return true;
     }
   }
 

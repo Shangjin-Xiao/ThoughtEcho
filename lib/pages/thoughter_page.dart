@@ -178,6 +178,8 @@ class _ThoughterPageState extends State<ThoughterPage>
   bool _agentListenerAttached = false;
   bool _chatSessionListenerAttached = false;
   bool _handlingRemoteSessionCheck = false;
+  Future<String?>? _rebuildingDeletedSessionFuture;
+  final Map<String, String> _replacedDeletedSessionIds = <String, String>{};
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
   StreamSubscription<AgentEvent>? _agentEventSubscription;

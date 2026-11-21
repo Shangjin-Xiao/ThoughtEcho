@@ -900,7 +900,7 @@ Future<void> _recordPrunedProfileReplacementsInTxn(
       explicitSuccByReplacesId[repId] = rId;
     } else {
       final prevRow = profileById[prev];
-      if (prevRow != null && _compareProfileRowsByWinnerRule(r, prevRow) < 0) {
+      if (prevRow != null && _profileBeatsCompetitor(r, prevRow)) {
         explicitSuccByReplacesId[repId] = rId;
       }
     }
@@ -1118,21 +1118,50 @@ bool _isUnconfirmedAliasBlockedByConfirmedIdentity(
   return candUnconfirmed.any(termConfirmed.contains);
 }
 
+bool _profileBeatsCompetitor(
+  Map<String, Object?> candidateRow,
+  Map<String, Object?> competitorRow, {
+  bool Function(String? watermark, int? noteCount)? isBasisCovered,
+}) {
+  if (_isUnconfirmedAliasBlockedByConfirmedIdentity(
+    candidateRow,
+    competitorRow,
+  )) {
+    return false;
+  }
+  if (_isUnconfirmedAliasBlockedByConfirmedIdentity(
+    competitorRow,
+    candidateRow,
+  )) {
+    return true;
+  }
+  return _compareProfileRowsByWinnerRule(
+        candidateRow,
+        competitorRow,
+        isBasisCovered: isBasisCovered,
+      ) <
+      0;
+}
+
 /// 判定在 `Y.replaces_id == X.id` 的显式替换边中，前驱 `X` 是否反而应当胜出并淘汰 `Y`：
-/// 1. 非 `dreaming*` 显式/人工画像绝不被后台 `dreaming*` 取代；
-/// 2. 同为 `dreaming*` 且挂载了依据判定器时，看全全部笔记依据的前驱 `X` 优先于漏看离线笔记的 `Y`；
-/// 3. 其余情况下，仅当 `X` 在 `Y` 创建后又发生了原位编辑（`X` 版本时间严格晚于 `Y`）时 `X` 胜出。
+/// 1. 重叠身份别名下，已确认称呼始终优先于仅带存疑/待确认标记的推断称呼；
+/// 2. 非 `dreaming*` 显式/人工画像绝不被后台 `dreaming*` 取代；
+/// 3. 同为 `dreaming*` 且挂载了依据判定器时，看全全部笔记依据的前驱 `X` 优先于漏看离线笔记的 `Y`；
+/// 4. 其余情况下，仅当 `X` 在 `Y` 创建后又发生了原位编辑（`X` 版本时间严格晚于 `Y`）时 `X` 胜出。
 bool _predecessorWinsReplacementEdge(
   Map<String, Object?> xRow,
   Map<String, Object?> yRow, {
   bool Function(String? watermark, int? noteCount)? isBasisCovered,
 }) {
+  if (_isUnconfirmedAliasBlockedByConfirmedIdentity(yRow, xRow)) {
+    return true;
+  }
+  if (_isUnconfirmedAliasBlockedByConfirmedIdentity(xRow, yRow)) {
+    return false;
+  }
   final xDream = _isDreamingMemorySource(xRow['source']);
   final yDream = _isDreamingMemorySource(yRow['source']);
   if (!xDream && yDream) {
-    return true;
-  }
-  if (_isUnconfirmedAliasBlockedByConfirmedIdentity(yRow, xRow)) {
     return true;
   }
   if (xDream && yDream && isBasisCovered != null) {
@@ -1239,12 +1268,11 @@ bool _doSupersededChainAndActiveTerminalStillCompete(
   // (e) 起点条目在被去重退休后又发生了更新的人工修正或具备严格更高的赢家优先级，
   //     必须允许纳入收敛重算以反超取代旧活跃终点；若编辑发生在赢家终点上（terminal 胜过 start），
   //     此处比较 >= 0，旧起点维持退休不复活。
-  if (_compareProfileRowsByWinnerRule(
-        startRow,
-        terminalRow,
-        isBasisCovered: isBasisCovered,
-      ) <
-      0) {
+  if (_profileBeatsCompetitor(
+    startRow,
+    terminalRow,
+    isBasisCovered: isBasisCovered,
+  )) {
     return true;
   }
 
@@ -1575,12 +1603,11 @@ Future<
       // 防御损坏的 replaces_id 环：按确定性赢家规则打破环。
       final loserRow = eligibleById[loserId];
       if (loserRow == null) return;
-      final cmp = _compareProfileRowsByWinnerRule(
+      if (_profileBeatsCompetitor(
         loserRow,
         proposedWinner,
         isBasisCovered: isBasisCovered,
-      );
-      if (cmp < 0) {
+      )) {
         final propId = proposedWinner['id'] as String;
         supersededToWinner.remove(loserId);
         supersededToWinner[propId] = loserRow;
@@ -1594,12 +1621,11 @@ Future<
       return;
     }
     final existingRoot = resolveRootWinner(existingWinner);
-    if (_compareProfileRowsByWinnerRule(
-          rootWinner,
-          existingRoot,
-          isBasisCovered: isBasisCovered,
-        ) <
-        0) {
+    if (_profileBeatsCompetitor(
+      rootWinner,
+      existingRoot,
+      isBasisCovered: isBasisCovered,
+    )) {
       supersededToWinner[loserId] = rootWinner;
     }
   }
@@ -1684,14 +1710,14 @@ Future<
       final loserRow = eligibleById[loserId];
       final winnerRow = eligibleById[winnerId];
       if (loserRow == null || winnerRow == null) continue;
-      if (!_isUnconfirmedAliasBlockedByConfirmedIdentity(winnerRow, loserRow) &&
-          _compareProfileRowsByWinnerRule(
-                winnerRow,
-                loserRow,
-                isBasisCovered: isBasisCovered,
-              ) <
-              0) {
+      if (_profileBeatsCompetitor(
+        winnerRow,
+        loserRow,
+        isBasisCovered: isBasisCovered,
+      )) {
         recordSupersede(loserId, winnerRow);
+      } else {
+        recordSupersede(winnerId, loserRow);
       }
     }
   }
@@ -1724,13 +1750,11 @@ Future<
     if (terminalRow == null) continue;
     final tId = terminalRow['id'] as String;
     if (tId == xId) continue;
-    if (!_isUnconfirmedAliasBlockedByConfirmedIdentity(xRow, terminalRow) &&
-        _compareProfileRowsByWinnerRule(
-              xRow,
-              terminalRow,
-              isBasisCovered: isBasisCovered,
-            ) <
-            0) {
+    if (_profileBeatsCompetitor(
+      xRow,
+      terminalRow,
+      isBasisCovered: isBasisCovered,
+    )) {
       recordSupersede(tId, xRow);
     }
   }
@@ -1744,7 +1768,17 @@ Future<
     if (replacesId.isEmpty) continue;
     final existingWinner = seenReplacesId[replacesId];
     if (existingWinner != null) {
-      recordSupersede(id, existingWinner);
+      if (_profileBeatsCompetitor(
+        row,
+        existingWinner,
+        isBasisCovered: isBasisCovered,
+      )) {
+        final existingId = existingWinner['id'] as String;
+        seenReplacesId[replacesId] = row;
+        recordSupersede(existingId, row);
+      } else {
+        recordSupersede(id, existingWinner);
+      }
     } else {
       seenReplacesId[replacesId] = row;
     }
@@ -2930,7 +2964,8 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                 localProfilesById.containsKey(supBy);
           }
 
-          String? resolveOlderSupersededTerminalToRetire({
+          ({Map<String, Object?> terminalRow, bool editedRowBeatsTerminal})?
+              resolveOlderSupersededCompetingTerminal({
             required String selfId,
             required Map<String, Object?> winnerRow,
             required Map<String, Object?> olderRow,
@@ -2983,19 +3018,15 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               if (candStatus == AgentMemoryStatus.active.storageValue) {
                 final tId = (cand['id'] as String?)?.trim() ?? '';
                 if (tId.isEmpty || tId == selfId) return null;
-                final beatsTerminal =
-                    !_isUnconfirmedAliasBlockedByConfirmedIdentity(
-                          winnerRow,
-                          cand,
-                        ) &&
-                        _compareProfileRowsByWinnerRule(
-                              winnerRow,
-                              cand,
-                              isBasisCovered:
-                                  hasBasisChecker ? syncCheckCovered : null,
-                            ) <
-                            0;
-                return beatsTerminal ? tId : null;
+                final beatsTerminal = _profileBeatsCompetitor(
+                  winnerRow,
+                  cand,
+                  isBasisCovered: hasBasisChecker ? syncCheckCovered : null,
+                );
+                return (
+                  terminalRow: cand,
+                  editedRowBeatsTerminal: beatsTerminal,
+                );
               }
               if (candStatus != AgentMemoryStatus.superseded.storageValue) {
                 return null;
@@ -3096,18 +3127,34 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               );
               final cmpProf = LWWUtils.compareSyncVersions(remoteVer, localVer);
               if (cmpProf > 0) {
-                final retiredSuccId = resolveOlderSupersededTerminalToRetire(
+                final competing = resolveOlderSupersededCompetingTerminal(
                   selfId: id,
                   winnerRow: remoteRow,
                   olderRow: localRow,
                 );
-                if (retiredSuccId != null) {
-                  recordDeduplicationRetirement(
-                    loserId: retiredSuccId,
-                    winnerId: id,
-                    winnerRow: remoteRow,
-                    winnerVer: remoteVer,
-                  );
+                String? retiredSuccId;
+                if (competing != null) {
+                  final tRow = competing.terminalRow;
+                  final tId = tRow['id'] as String;
+                  if (competing.editedRowBeatsTerminal) {
+                    retiredSuccId = tId;
+                    recordDeduplicationRetirement(
+                      loserId: tId,
+                      winnerId: id,
+                      winnerRow: remoteRow,
+                      winnerVer: remoteVer,
+                    );
+                  } else {
+                    recordDeduplicationRetirement(
+                      loserId: id,
+                      winnerId: tId,
+                      winnerRow: tRow,
+                      winnerVer: _parseMemoryRowSyncVersion(
+                        tRow['updated_at'],
+                        tRow['observed_at'],
+                      ),
+                    );
+                  }
                 }
                 final remoteReplaces =
                     (remoteRow['replaces_id'] as String?)?.trim() ?? '';
@@ -3128,33 +3175,47 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                 profilesUpdated++;
                 changed = true;
               } else if (cmpProf < 0) {
-                final retiredSuccId = resolveOlderSupersededTerminalToRetire(
+                final competing = resolveOlderSupersededCompetingTerminal(
                   selfId: id,
                   winnerRow: localRow,
                   olderRow: remoteRow,
                 );
-                if (retiredSuccId != null) {
-                  recordDeduplicationRetirement(
-                    loserId: retiredSuccId,
-                    winnerId: id,
-                    winnerRow: localRow,
-                    winnerVer: localVer,
-                  );
-                  final localReplaces =
-                      (localRow['replaces_id'] as String?)?.trim() ?? '';
-                  if (localReplaces.isEmpty) {
-                    final updatedLocalRow = <String, Object?>{
-                      ...localRow,
-                      'replaces_id': retiredSuccId,
-                    };
-                    await txn.update(
-                      AgentMemoryService.profileTable,
-                      <String, Object?>{'replaces_id': retiredSuccId},
-                      where: 'id = ?',
-                      whereArgs: <Object?>[id],
+                if (competing != null) {
+                  final tRow = competing.terminalRow;
+                  final tId = tRow['id'] as String;
+                  if (competing.editedRowBeatsTerminal) {
+                    recordDeduplicationRetirement(
+                      loserId: tId,
+                      winnerId: id,
+                      winnerRow: localRow,
+                      winnerVer: localVer,
                     );
-                    localProfilesById[id] = updatedLocalRow;
-                    profilesUpdated++;
+                    final localReplaces =
+                        (localRow['replaces_id'] as String?)?.trim() ?? '';
+                    if (localReplaces.isEmpty) {
+                      final updatedLocalRow = <String, Object?>{
+                        ...localRow,
+                        'replaces_id': tId,
+                      };
+                      await txn.update(
+                        AgentMemoryService.profileTable,
+                        <String, Object?>{'replaces_id': tId},
+                        where: 'id = ?',
+                        whereArgs: <Object?>[id],
+                      );
+                      localProfilesById[id] = updatedLocalRow;
+                      profilesUpdated++;
+                    }
+                  } else {
+                    recordDeduplicationRetirement(
+                      loserId: id,
+                      winnerId: tId,
+                      winnerRow: tRow,
+                      winnerVer: _parseMemoryRowSyncVersion(
+                        tRow['updated_at'],
+                        tRow['observed_at'],
+                      ),
+                    );
                   }
                   changed = true;
                 }

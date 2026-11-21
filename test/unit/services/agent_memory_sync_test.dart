@@ -2603,5 +2603,217 @@ void main() {
       expect(persisted, isFalse);
       expect(await memory.activeProfile(), isEmpty);
     });
+
+    test('Dreaming 真实「待确认笔名」格式在携带等覆盖面 basisChecker、共享前驱分叉及多轮重复合并下均不退位已确认称呼',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('dreaming_alias_real_');
+      final memA = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'a.db'),
+      );
+      final memB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'b.db'),
+      );
+      try {
+        await memA.registerInferredAlias(
+          '示例笔名乙',
+          source: 'dreaming',
+          unconfirmed: false,
+          observedAt: DateTime.utc(2026, 11, 20, 8, 0),
+          basisWatermark: '2026-11-20T08:00:00.000000Z',
+          basisNoteCount: 5,
+        );
+        await memB.registerInferredAlias(
+          '示例笔名乙',
+          source: 'dreaming_ai',
+          unconfirmed: true,
+          observedAt: DateTime.utc(2026, 11, 21, 9, 30),
+          basisWatermark: '2026-11-20T08:00:00.000000Z',
+          basisNoteCount: 5,
+        );
+
+        final unchangedUnconfirmedSnap =
+            (await memB.exportMemorySectionForTesting())!;
+        Future<bool> allCovered(String? wm, int? count) async => true;
+
+        // 连续两次合入未变更的较新未确认快照（带等覆盖面 basisChecker）
+        await memA.mergeMemorySection(
+          unchangedUnconfirmedSnap,
+          isBasisCovered: allCovered,
+        );
+        expect(
+          await memA.activeIdentityAliases(),
+          contains('示例笔名乙'),
+        );
+        expect(
+          (await memA.activeProfile()).single.directive,
+          '称呼用户为「示例笔名乙」',
+        );
+
+        await memA.mergeMemorySection(
+          unchangedUnconfirmedSnap,
+          isBasisCovered: allCovered,
+        );
+        expect(
+          await memA.activeIdentityAliases(),
+          contains('示例笔名乙'),
+        );
+        expect(
+          (await memA.activeProfile()).single.directive,
+          '称呼用户为「示例笔名乙」',
+        );
+
+        // 双向同步后两端均唯一保留已确认称呼
+        await memB.mergeMemorySection(
+          (await memA.exportMemorySectionForTesting())!,
+          isBasisCovered: allCovered,
+        );
+        await memA.mergeMemorySection(
+          (await memB.exportMemorySectionForTesting())!,
+          isBasisCovered: allCovered,
+        );
+        expect(
+          (await memA.activeProfile()).single.directive,
+          '称呼用户为「示例笔名乙」',
+        );
+        expect(
+          (await memB.activeProfile()).single.directive,
+          '称呼用户为「示例笔名乙」',
+        );
+      } finally {
+        memA.dispose();
+        memB.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        '非单例 preference 节点 P2（已带 replaces_id=P1）在一端被独立同文 P3 文本去重、另一端原位编辑时，正反合并顺序与前后编辑时序均不残留冲突双活偏好',
+        () async {
+      for (final editNewerThanDup in <bool>[true, false]) {
+        final dir = await Directory.systemTemp.createTemp('pref_dedup_edit_');
+        final memDedup = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dir.path, 'dedup.db'),
+        );
+        final memEditFirst = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dir.path, 'edit_first.db'),
+        );
+        final memDedupFirst = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dir.path, 'dedup_first.db'),
+        );
+        try {
+          // 初始状态：P2（简短回答）显式替换了 P1（冗长回答）
+          final initialP1P2 = <String, dynamic>{
+            'format': 1,
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'pref_long_p1',
+                'kind': 'preference',
+                'directive': '请使用冗长回答',
+                'observed_at': '2026-11-01T08:00:00.000000Z',
+                'updated_at': '2026-11-01T08:00:00.000000Z',
+                'status': 'superseded',
+                'superseded_by': 'pref_short_p2',
+                'source': 'thoughter',
+              },
+              <String, Object?>{
+                'id': 'pref_short_p2',
+                'kind': 'preference',
+                'directive': '请使用简短回答',
+                'observed_at': '2026-11-02T08:00:00.000000Z',
+                'updated_at': '2026-11-02T08:00:00.000000Z',
+                'status': 'active',
+                'replaces_id': 'pref_long_p1',
+                'source': 'thoughter',
+              },
+            ],
+            'facts': <Object?>[],
+            'recent_slices': <Object?>[],
+            'tombstones': <Object?>[],
+          };
+          await memDedup.mergeMemorySection(initialP1P2);
+          await memEditFirst.mergeMemorySection(initialP1P2);
+          await memDedupFirst.mergeMemorySection(initialP1P2);
+
+          // 一端独立新增同正文 P3（replaces_id 为空），经文本去重使 P2 -> P3
+          final dupTimeIso = editNewerThanDup
+              ? '2026-11-03T08:00:00.000000Z'
+              : '2099-11-03T08:00:00.000000Z';
+          await memDedup.mergeMemorySection(<String, dynamic>{
+            'format': 1,
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'pref_short_dup_p3',
+                'kind': 'preference',
+                'directive': '请使用简短回答',
+                'observed_at': dupTimeIso,
+                'updated_at': dupTimeIso,
+                'status': 'active',
+                'replaces_id': null,
+                'source': 'thoughter',
+              },
+            ],
+          });
+          await memDedupFirst.mergeMemorySection(
+            (await memDedup.exportMemorySectionForTesting())!,
+          );
+          expect(
+            (await memDedupFirst.activeProfile()).map((e) => e.id).toList(),
+            <String>['pref_short_dup_p3'],
+          );
+
+          // 离线端原位修改 P2 为「请使用详细回答」（自身仍携带 replaces_id = pref_long_p1）
+          await memEditFirst.editProfileDirective(
+            id: 'pref_short_p2',
+            directive: '请使用详细回答',
+          );
+
+          final snapDedup =
+              (await memDedupFirst.exportMemorySectionForTesting())!;
+          final snapEdit =
+              (await memEditFirst.exportMemorySectionForTesting())!;
+
+          // 合并顺序 1：文本去重端合入离线编辑快照
+          await memDedupFirst.mergeMemorySection(snapEdit);
+          // 合并顺序 2：离线编辑端合入文本去重快照
+          await memEditFirst.mergeMemorySection(snapDedup);
+
+          final expectedWinnerId =
+              editNewerThanDup ? 'pref_short_p2' : 'pref_short_dup_p3';
+          final expectedDirective = editNewerThanDup ? '请使用详细回答' : '请使用简短回答';
+
+          for (final node in <AgentMemoryService>[
+            memDedupFirst,
+            memEditFirst
+          ]) {
+            final active = await node.activeProfile();
+            expect(
+                active.map((e) => e.id).toList(), <String>[expectedWinnerId]);
+            expect(active.single.directive, expectedDirective);
+
+            final exported = (await node.exportMemorySectionForTesting())!;
+            final p2Row = (exported['profile'] as List)
+                .cast<Map<String, dynamic>>()
+                .singleWhere((r) => r['id'] == 'pref_short_p2');
+            expect(p2Row['replaces_id'], 'pref_long_p1');
+          }
+        } finally {
+          memDedup.dispose();
+          memEditFirst.dispose();
+          memDedupFirst.dispose();
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        }
+      }
+    });
   });
 }

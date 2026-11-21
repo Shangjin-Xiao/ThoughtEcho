@@ -118,4 +118,32 @@ void main() {
     );
     expect(await File(zipPath).exists(), isFalse);
   });
+
+  test('packSyncZip(deterministic: true) 在源文件修改时间变化时仍产出逐字节一致的压缩包', () async {
+    const rawJson = '{"format":1,"messages":[{"id":"m1","content":"恒定分片内容"}]}';
+    final jsonA = File('${tempDir.path}/shard_a.json');
+    final jsonB = File('${tempDir.path}/shard_b.json');
+    final zipA = '${tempDir.path}/shard_a.zip';
+    final zipB = '${tempDir.path}/shard_b.zip';
+
+    await jsonA.writeAsString(rawJson);
+    await jsonA.setLastModified(DateTime.utc(2024, 3, 10, 8, 0, 0));
+    await WebDAVSyncService.packSyncZip(
+      jsonA.path,
+      zipA,
+      deterministic: true,
+    );
+
+    await jsonB.writeAsString(rawJson);
+    await jsonB.setLastModified(DateTime.utc(2026, 11, 21, 15, 30, 45));
+    await WebDAVSyncService.packSyncZip(
+      jsonB.path,
+      zipB,
+      deterministic: true,
+    );
+
+    final bytesA = await File(zipA).readAsBytes();
+    final bytesB = await File(zipB).readAsBytes();
+    expect(bytesB, equals(bytesA));
+  });
 }

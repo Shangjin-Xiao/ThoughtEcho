@@ -48,7 +48,7 @@ class ChatSessionService extends ChangeNotifier {
       'legacy_main_db_chat_migration_complete';
   static const Duration _emptySessionCleanupInterval = Duration(minutes: 1);
 
-  /// 校验 `chat` 段顶层及内部容器结构；非法时立即抛 [FormatException]。
+  /// 校验覆盖恢复场景下 `chat` 段顶层及内部容器结构；非法或缺失外部消息分片时立即抛 [FormatException]。
   static void validateChatSectionPayload(Object? rawSection) {
     if (rawSection == null) return;
     if (rawSection is! Map) {
@@ -58,6 +58,11 @@ class ChatSessionService extends ChangeNotifier {
         ? rawSection
         : rawSection.map((k, v) => MapEntry(k.toString(), v));
     _validateChatSectionContainers(chatMap);
+    if (parseChatMessageShardDescriptors(chatMap).isNotEmpty) {
+      throw const FormatException(
+        '分片对话载荷不支持在缺少分片文件时执行全量覆盖恢复',
+      );
+    }
   }
 
   ChatSessionService({
