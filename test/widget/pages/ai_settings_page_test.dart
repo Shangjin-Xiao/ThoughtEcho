@@ -335,6 +335,30 @@ void main() {
       expect(providers.single.modelMetadata?.contextWindow, 65536);
       expect(providers.single.modelMetadata?.reasoning, isTrue);
 
+      // 1b. 等价端点改写（/v1/chat/completions -> /v1）-> 草稿与保存均保留 modelMetadata
+      await tester.tap(find.text('本机主力模型'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.apiUrlField),
+        'http://localhost:1234/v1',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts.last.apiUrl, 'http://localhost:1234/v1');
+      expect(testedDrafts.last.modelMetadata?.contextWindow, 65536);
+      expect(testedDrafts.last.modelMetadata?.reasoning, isTrue);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      providers = settingsService.multiAISettings.providers;
+      expect(providers.single.apiUrl, 'http://localhost:1234/v1');
+      expect(providers.single.modelMetadata?.contextWindow, 65536);
+      expect(providers.single.modelMetadata?.reasoning, isTrue);
+
       // 2. 更换模型名 -> 草稿测试连接与保存均清空旧 modelMetadata
       await tester.tap(find.text('本机主力模型'));
       await tester.pumpAndSettle();
@@ -358,13 +382,20 @@ void main() {
       expect(providers.single.id, 'local');
       expect(providers.single.model, 'new-model');
       expect(providers.single.modelMetadata, isNull);
+    });
 
-      // 3. 重新注入 modelMetadata 后修改接口地址 -> 草稿与保存均清空旧 modelMetadata
+    testWidgets(
+        'editing a service clears stale modelMetadata when switching to a different endpoint',
+        (tester) async {
       await settingsService.saveMultiAISettings(
-        MultiAISettings(
+        const MultiAISettings(
           providers: [
-            providers.single.copyWith(
-              modelMetadata: const AIModelMetadata(
+            AIProviderSettings(
+              id: 'local',
+              name: '本机主力模型',
+              apiUrl: 'http://localhost:1234/v1',
+              model: 'local-model',
+              modelMetadata: AIModelMetadata(
                 contextWindow: 131072,
                 reasoning: true,
               ),
@@ -373,9 +404,23 @@ void main() {
           currentProviderId: 'local',
         ),
       );
+
+      final testedDrafts = <AIProviderSettings>[];
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async {
+        testedDrafts.add(provider);
+        return 'pong';
+      };
+      addTearDown(() => AIConnectionTester.testOverrideForTesting = null);
+
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
 
+      final l10n = _l10n(tester);
       await tester.tap(find.text('本机主力模型'));
       await tester.pumpAndSettle();
 
@@ -396,6 +441,71 @@ void main() {
         settingsService.multiAISettings.providers.single.modelMetadata,
         isNull,
       );
+    });
+
+    testWidgets(
+        'editing a service stored under a preset alias preserves modelMetadata while canonicalizing providerSlug',
+        (tester) async {
+      await APIKeyManager()
+          .saveProviderApiKey('p_gemini_alias', 'sk-test-gemini-1234');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_gemini_alias',
+              name: 'Gemini 服务',
+              apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+              model: 'gemini-2.5-flash',
+              providerSlug: 'gemini',
+              modelMetadata: AIModelMetadata(
+                contextWindow: 1048576,
+                reasoning: true,
+              ),
+            ),
+          ],
+          currentProviderId: 'p_gemini_alias',
+        ),
+      );
+
+      final testedDrafts = <AIProviderSettings>[];
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async {
+        testedDrafts.add(provider);
+        return 'pong';
+      };
+      addTearDown(() => AIConnectionTester.testOverrideForTesting = null);
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      await tester.tap(find.text('Gemini 服务'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.configNameField),
+        '主力 Gemini',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts.last.providerSlug, 'google');
+      expect(testedDrafts.last.modelMetadata?.contextWindow, 1048576);
+      expect(testedDrafts.last.modelMetadata?.reasoning, isTrue);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      final providers = settingsService.multiAISettings.providers;
+      expect(providers.single.name, '主力 Gemini');
+      expect(providers.single.providerSlug, 'google');
+      expect(providers.single.modelMetadata?.contextWindow, 1048576);
+      expect(providers.single.modelMetadata?.reasoning, isTrue);
     });
 
     testWidgets('memory switch defaults on and toggles off', (tester) async {

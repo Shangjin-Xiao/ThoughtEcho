@@ -134,7 +134,12 @@ void main() {
         final preset = AIProviderPresets.byId(entry.key)!;
         expect(preset.modelsDevProviderId, entry.value, reason: entry.key);
         expect(preset.protocol, AIProtocolType.openAICompatible);
+        expect(AIProviderPresets.bySlugOrId(entry.key)?.id, entry.key);
         expect(AIProviderPresets.bySlugOrId(entry.value)?.id, entry.key);
+        expect(
+          AIProviderPresets.bySlugOrId(entry.key.toUpperCase())?.id,
+          entry.key,
+        );
       }
     });
   });

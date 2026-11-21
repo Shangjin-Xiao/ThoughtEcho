@@ -45,6 +45,24 @@ class _EmptyPeriodDatabaseService extends DatabaseService {
   }) async {
     return const [];
   }
+
+  @override
+  Future<List<Quote>> getUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 10,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
+    bool includeDeleted = false,
+  }) async {
+    return const [];
+  }
 }
 
 /// 返回固定一条笔记，并统计查询次数，用于验证数据库通知的合并与静默刷新。
@@ -112,6 +130,9 @@ class _ReportSettingsService extends ChangeNotifier implements SettingsService {
   bool get reportInsightsUseAI => false;
 
   @override
+  MultiAISettings get multiAISettings => const MultiAISettings();
+
+  @override
   String get localeCode => 'zh';
 
   @override
@@ -150,6 +171,8 @@ class _AiSignatureSettingsService extends _ReportSettingsService {
 
   @override
   Future<bool> removeCustomKey(String key) async => true;
+
+  void notifyUnrelatedSettingsChanged() => notifyListeners();
 }
 
 class _RecordingInsightHistoryService extends InsightHistoryService {
@@ -724,6 +747,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(database.queryCount, 1);
     expect(aiService.reportInsightCalls, 1);
     expect(find.textContaining('来自 网关A 的周期洞察 #1'), findsOneWidget);
     expect(
@@ -731,18 +755,22 @@ void main() {
       endsWith('_p_gateway_a:gpt-4o-mini'),
     );
 
-    // Switch AITask.periodicInsight to gatewayB (same model name 'gpt-4o-mini', different provider.id)
+    // Unrelated SettingsService notifications do not trigger insight regeneration or DB reload
+    settings.notifyUnrelatedSettingsChanged();
+    await tester.pumpAndSettle();
+    expect(database.queryCount, 1);
+    expect(aiService.reportInsightCalls, 1);
+
+    // Switch AITask.periodicInsight to gatewayB while ExplorePage stays mounted (as in HomePage IndexedStack)
     await settings.saveMultiAISettings(
       settings.multiAISettings.withTaskProvider(
         AITask.periodicInsight,
         'p_gateway_b',
       ),
     );
-    // Trigger silent data reload so ExplorePage re-evaluates dataSignature
-    database.notifyDataChanged();
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
+    expect(database.queryCount, 1);
     expect(aiService.reportInsightCalls, 2);
     expect(find.textContaining('来自 网关B 的周期洞察 #2'), findsOneWidget);
     expect(
@@ -750,17 +778,16 @@ void main() {
       endsWith('_p_gateway_b:gpt-4o-mini'),
     );
 
-    // Switching back to gatewayA hits gatewayA's cached signature without making a 3rd AI request
+    // Switching back to gatewayA while mounted hits gatewayA's cached signature without making a 3rd AI request
     await settings.saveMultiAISettings(
       settings.multiAISettings.withTaskProvider(
         AITask.periodicInsight,
         'p_gateway_a',
       ),
     );
-    database.notifyDataChanged();
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
+    expect(database.queryCount, 1);
     expect(aiService.reportInsightCalls, 2);
     expect(find.textContaining('来自 网关A 的周期洞察 #1'), findsOneWidget);
   });

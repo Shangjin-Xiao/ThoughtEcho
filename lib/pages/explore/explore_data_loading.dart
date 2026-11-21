@@ -7,6 +7,7 @@ extension _ExploreDataLoading on _ExplorePageState {
   /// 这样数据库连续通知时页面不会来回闪。
   Future<void> _loadPeriodData({bool showLoading = true}) async {
     final token = ++_loadToken;
+    _isFetchingQuotes = true;
     // 首次加载还没有任何内容可保留，必须显示 loading
     final shouldShowLoading = showLoading || !_hasLoadedOnce;
     if (shouldShowLoading && !_isLoadingData) {
@@ -42,6 +43,7 @@ extension _ExploreDataLoading on _ExplorePageState {
 
       // 已有更新的加载在跑，丢弃这次的结果，避免旧数据把新数据顶掉
       if (token != _loadToken) return;
+      _isFetchingQuotes = false;
 
       // 更新数据版本key，触发动画
       final newDataKey =
@@ -61,6 +63,7 @@ extension _ExploreDataLoading on _ExplorePageState {
       await _computeExtrasAndInsight(token);
     } catch (e) {
       if (token != _loadToken) return;
+      _isFetchingQuotes = false;
       _updateState(() {
         _isLoadingData = false;
       });
@@ -133,9 +136,10 @@ extension _ExploreDataLoading on _ExplorePageState {
     final rangeStart = range?.start.toIso8601String().substring(0, 10);
     final rangeEnd = range?.end.toIso8601String().substring(0, 10);
     final rangeKey = range == null ? 'all' : '$rangeStart~$rangeEnd';
-    final provider = context
-        .read<SettingsService>()
-        .multiAISettings
+    final settingsService = context.read<SettingsService>();
+    _lastPeriodicInsightConfigKey =
+        _buildPeriodicInsightConfigKey(settingsService);
+    final provider = settingsService.multiAISettings
         .resolveProviderForTask(AITask.periodicInsight);
     final providerSignature =
         provider == null ? '-' : '${provider.id}:${provider.model}';

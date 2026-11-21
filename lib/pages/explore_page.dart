@@ -99,13 +99,40 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   DatabaseService? _databaseService;
+  SettingsService? _settingsService;
+  String? _lastPeriodicInsightConfigKey;
 
   // 并发/重复加载防护：数据库在启动与同步期间会连续 notifyListeners 多次，
   // 若每次都重新拉数据并把整页切回 loading，页面就会来回闪。
   int _loadToken = 0;
   bool _hasLoadedOnce = false;
+  bool _isFetchingQuotes = false;
   Timer? _reloadDebounce;
   static const Duration _reloadDebounceInterval = Duration(milliseconds: 300);
+
+  String _buildPeriodicInsightConfigKey(SettingsService settings) {
+    final provider =
+        settings.multiAISettings.resolveProviderForTask(AITask.periodicInsight);
+    final providerKey = provider == null
+        ? '-'
+        : '${provider.id}:${provider.model}:${provider.isEnabled}:${provider.apiUrl}';
+    return '${settings.reportInsightsUseAI}_$providerKey';
+  }
+
+  void _onSettingsChanged() {
+    final settings = _settingsService;
+    if (!mounted || settings == null) return;
+    final String nextKey;
+    try {
+      nextKey = _buildPeriodicInsightConfigKey(settings);
+    } catch (_) {
+      return;
+    }
+    if (nextKey == _lastPeriodicInsightConfigKey) return;
+    _lastPeriodicInsightConfigKey = nextKey;
+    if (!_hasLoadedOnce || _isFetchingQuotes) return;
+    _computeExtrasAndInsight(++_loadToken);
+  }
 
   void _onDatabaseChanged() {
     if (!mounted) return;
@@ -121,10 +148,14 @@ class _ExplorePageState extends State<ExplorePage> {
   void initState() {
     super.initState();
     try {
-      final period = context.read<SettingsService>().exploreSelectedPeriod;
+      final settings = context.read<SettingsService>();
+      _settingsService = settings;
+      final period = settings.exploreSelectedPeriod;
       if (period == 'week' || period == 'month' || period == 'year') {
         _selectedPeriod = period;
       }
+      _lastPeriodicInsightConfigKey = _buildPeriodicInsightConfigKey(settings);
+      _settingsService?.addListener(_onSettingsChanged);
     } catch (_) {}
     _loadPeriodData();
     _loadRecentSessions();
@@ -138,6 +169,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
   @override
   void dispose() {
+    _settingsService?.removeListener(_onSettingsChanged);
     _databaseService?.removeListener(_onDatabaseChanged);
     _reloadDebounce?.cancel();
     _insightFlushTimer?.cancel();

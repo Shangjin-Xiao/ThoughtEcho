@@ -278,7 +278,7 @@ class AIProviderPresets {
 
   /// 按模板 `id` 或 `modelsDevProviderId` 查找内置模板。
   static AIProviderPreset? bySlugOrId(String? slug) {
-    final normalized = slug?.trim();
+    final normalized = slug?.trim().toLowerCase();
     if (normalized == null || normalized.isEmpty) return null;
     for (final preset in all) {
       if (preset.id == normalized || preset.modelsDevProviderId == normalized) {

@@ -8,6 +8,7 @@ import '../models/ai_model_metadata.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/ai_settings.dart';
 import '../services/api_key_manager.dart';
+import '../services/openai_stream_service.dart';
 import '../services/settings_service.dart';
 import '../utils/ai_connection_tester.dart';
 import '../utils/ai_endpoint_security.dart';
@@ -66,8 +67,13 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       _apiUrlController.text = provider.apiUrl;
       _modelController.text = provider.model;
       _hostOverrideController.text = provider.hostOverride ?? '';
-      _preset = AIProviderPresets.bySlugOrId(provider.providerSlug) ??
-          AIProviderPresets.matchApiUrl(provider.apiUrl);
+      final resolvedPreset = AIProviderPresets.bySlugOrId(
+            provider.providerSlug,
+          ) ??
+          AIProviderPresets.matchApiUrl(provider.apiUrl) ??
+          AIProviderPresets.bySlugOrId(provider.id);
+      _preset =
+          resolvedPreset?.kind == AIPresetKind.custom ? null : resolvedPreset;
       _loadStoredApiKey(provider.id);
     } else {
       _preset = widget.initialPreset;
@@ -145,6 +151,62 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
 
   // --- 动作 ---
 
+  static String? _canonicalProviderSlug(String? slug) {
+    final trimmed = slug?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    final preset = AIProviderPresets.bySlugOrId(trimmed);
+    if (preset != null && preset.kind != AIPresetKind.custom) {
+      return preset.modelsDevProviderId ?? preset.id;
+    }
+    return trimmed.toLowerCase();
+  }
+
+  static AIProtocolType _baselineProtocol(AIProviderSettings existing) {
+    if (existing.protocol != null) {
+      return existing.protocol!;
+    }
+    if (existing.isAnthropicMessagesApi ||
+        existing.apiUrl.toLowerCase().contains('anthropic.com')) {
+      return AIProtocolType.anthropicMessages;
+    }
+    final preset = AIProviderPresets.bySlugOrId(existing.providerSlug) ??
+        AIProviderPresets.matchApiUrl(existing.apiUrl) ??
+        AIProviderPresets.bySlugOrId(existing.id);
+    if (preset != null && preset.kind != AIPresetKind.custom) {
+      return preset.protocol;
+    }
+    return AIProtocolType.openAICompatible;
+  }
+
+  static String _normalizeEffectiveEndpointUrl(
+    String rawUrl, {
+    required AIProtocolType protocol,
+  }) {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) return '';
+    if (protocol == AIProtocolType.anthropicMessages) {
+      final probe = AIProviderSettings(
+        id: '_probe',
+        name: '_probe',
+        apiUrl: trimmed,
+        model: '_probe',
+        protocol: AIProtocolType.anthropicMessages,
+      );
+      final resolved = probe.resolveRequestUrl(trimmed);
+      final uri = Uri.tryParse(resolved);
+      if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+        return resolved;
+      }
+      final port = uri.hasPort && uri.port != 0 ? ':${uri.port}' : '';
+      return '${uri.scheme}://${uri.host}$port${uri.path}';
+    }
+    try {
+      return OpenAIStreamService.normalizeOpenAIBaseUrl(trimmed);
+    } on FormatException {
+      return trimmed;
+    }
+  }
+
   ({
     AIProviderPreset? matchedPreset,
     String? providerSlug,
@@ -177,45 +239,90 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       );
     }
 
-    final sameEndpointAsExisting =
-        existing != null && existing.apiUrl.trim() == trimmedUrl;
+    final baselineProtocol = existing == null
+        ? AIProtocolType.openAICompatible
+        : _baselineProtocol(existing);
+    final sameEndpointAsExisting = existing != null &&
+        _normalizeEffectiveEndpointUrl(
+              trimmedUrl,
+              protocol: baselineProtocol,
+            ) ==
+            _normalizeEffectiveEndpointUrl(
+              existing.apiUrl,
+              protocol: baselineProtocol,
+            );
     return (
       matchedPreset: null,
-      providerSlug: sameEndpointAsExisting ? existing.providerSlug : null,
+      providerSlug: sameEndpointAsExisting
+          ? _canonicalProviderSlug(existing.providerSlug)
+          : null,
       protocol: sameEndpointAsExisting
-          ? (existing.protocol ?? AIProtocolType.openAICompatible)
+          ? baselineProtocol
           : AIProtocolType.openAICompatible,
     );
   }
 
   String? _baselineProviderSlug(AIProviderSettings existing) {
-    if (existing.providerSlug != null) {
-      return existing.providerSlug;
+    final rawSlug = existing.providerSlug?.trim();
+    if (rawSlug != null && rawSlug.isNotEmpty) {
+      final slugPreset = AIProviderPresets.bySlugOrId(rawSlug);
+      if (slugPreset != null && slugPreset.kind != AIPresetKind.custom) {
+        return slugPreset.modelsDevProviderId ?? slugPreset.id;
+      }
     }
+
     final trimmedUrl = existing.apiUrl.trim();
     final lowerUrl = trimmedUrl.toLowerCase();
     final matched = AIProviderPresets.matchApiUrl(trimmedUrl);
     if (lowerUrl.contains('anthropic.com') ||
-        lowerUrl.contains('/v1/messages')) {
-      return matched != null
-          ? (matched.modelsDevProviderId ?? matched.id)
+        lowerUrl.contains('/v1/messages') ||
+        existing.protocol == AIProtocolType.anthropicMessages) {
+      if (matched != null) {
+        return matched.modelsDevProviderId ?? matched.id;
+      }
+      return (rawSlug != null && rawSlug.isNotEmpty)
+          ? rawSlug.toLowerCase()
           : 'anthropic';
     }
-    return matched == null ? null : (matched.modelsDevProviderId ?? matched.id);
+    if (matched != null) {
+      return matched.modelsDevProviderId ?? matched.id;
+    }
+    if (rawSlug != null && rawSlug.isNotEmpty) {
+      return rawSlug.toLowerCase();
+    }
+    final idPreset = AIProviderPresets.bySlugOrId(existing.id);
+    if (idPreset != null && idPreset.kind != AIPresetKind.custom) {
+      return idPreset.modelsDevProviderId ?? idPreset.id;
+    }
+    return null;
   }
 
-  /// 仅当模型名与端点身份（URL 及解析出的 providerSlug）均未变化时保留原有 [AIModelMetadata]，
-  /// 避免更换模型或服务商后沿用过期的 `reasoning` 或 `contextWindow` 元数据。
+  /// 仅当模型名、协议及规范化后的端点身份（有效请求 URL 与规范化 providerSlug）均未变化时保留原有 [AIModelMetadata]，
+  /// 兼容等价 URL 改写与预设别名（如 `gemini` / `google`），同时在切换模型或服务商时清理过期元数据。
   AIModelMetadata? _resolvePreservedModelMetadata({
     required AIProviderSettings? existing,
     required String apiUrl,
     required String model,
     required String? resolvedProviderSlug,
+    required AIProtocolType resolvedProtocol,
   }) {
     if (existing == null) return null;
     if (model.trim() != existing.model.trim()) return null;
-    if (apiUrl.trim() != existing.apiUrl.trim()) return null;
-    if (resolvedProviderSlug != _baselineProviderSlug(existing)) return null;
+    final baselineProtocol = _baselineProtocol(existing);
+    if (resolvedProtocol != baselineProtocol) return null;
+    final nextNormalizedUrl = _normalizeEffectiveEndpointUrl(
+      apiUrl,
+      protocol: resolvedProtocol,
+    );
+    final existingNormalizedUrl = _normalizeEffectiveEndpointUrl(
+      existing.apiUrl,
+      protocol: baselineProtocol,
+    );
+    if (nextNormalizedUrl != existingNormalizedUrl) return null;
+    if (_canonicalProviderSlug(resolvedProviderSlug) !=
+        _baselineProviderSlug(existing)) {
+      return null;
+    }
     return existing.modelMetadata;
   }
 
@@ -246,6 +353,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
         apiUrl: trimmedUrl,
         model: trimmedModel,
         resolvedProviderSlug: resolved.providerSlug,
+        resolvedProtocol: resolved.protocol,
       ),
     );
   }
@@ -338,6 +446,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
           apiUrl: trimmedUrl,
           model: trimmedModel,
           resolvedProviderSlug: resolved.providerSlug,
+          resolvedProtocol: resolved.protocol,
         ),
       );
 
