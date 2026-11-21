@@ -149,14 +149,23 @@ extension SmartPushPlatform on SmartPushService {
 
   Future<void> _saveTrackedPreScheduledEntries(
     List<_PreScheduledEntry> entries, {
+    int? expectedGeneration,
     int? expectedEpoch,
     bool fromBackground = false,
   }) async {
     try {
-      if (fromBackground && expectedEpoch != null) {
+      if (expectedGeneration != null &&
+          !_isScheduleGenerationCurrent(expectedGeneration)) {
+        return;
+      }
+      if (expectedEpoch != null) {
         await _reloadSharedStorageIfSupported();
+        if (expectedGeneration != null &&
+            !_isScheduleGenerationCurrent(expectedGeneration)) {
+          return;
+        }
         if (_readStoredSettingsEpoch() != expectedEpoch ||
-            _areStoredSettingsAllDisabled()) {
+            (fromBackground && _areStoredSettingsAllDisabled())) {
           return;
         }
       }

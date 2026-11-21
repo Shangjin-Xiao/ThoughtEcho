@@ -319,12 +319,14 @@ extension SmartPushScheduling on SmartPushService {
     bool fromBackground = false,
     int? forceAccountNotificationId,
   }) {
+    final effectiveGeneration = generation ?? _scheduleGeneration;
+    final effectiveEpoch = expectedEpoch ?? _readStoredSettingsEpoch();
     final completer = Completer<List<_PreScheduledEntry>>();
     final next = _pendingAccountingOp.then((_) async {
       try {
         final result = await _accountDeliveredPreScheduledEntriesInternal(
-          generation: generation,
-          expectedEpoch: expectedEpoch,
+          generation: effectiveGeneration,
+          expectedEpoch: effectiveEpoch,
           fromBackground: fromBackground,
           forceAccountNotificationId: forceAccountNotificationId,
         );
@@ -339,11 +341,20 @@ extension SmartPushScheduling on SmartPushService {
 
   Future<List<_PreScheduledEntry>>
       _accountDeliveredPreScheduledEntriesInternal({
-    int? generation,
-    int? expectedEpoch,
+    required int generation,
+    required int expectedEpoch,
     bool fromBackground = false,
     int? forceAccountNotificationId,
   }) async {
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+      reloadStorage: true,
+    )) {
+      return _loadTrackedPreScheduledEntries();
+    }
+
     final entries = _loadTrackedPreScheduledEntries();
     if (entries.isEmpty) return entries;
 
@@ -365,21 +376,16 @@ extension SmartPushScheduling on SmartPushService {
     }
 
     if (dueRegularEntries.isNotEmpty) {
-      var updatedSettings = _settings;
-      final recentIds = List<String>.from(
-        updatedSettings.recentlyPushedNoteIds,
-      );
-      DateTime? latestPushTime = updatedSettings.lastPushTime;
+      final addedNoteIds = <String>[];
+      DateTime? latestPushTime = _settings.lastPushTime;
 
       for (final entry in dueRegularEntries) {
-        if (generation != null &&
-            expectedEpoch != null &&
-            !await _isScheduleContextStillValid(
-              generation: generation,
-              expectedEpoch: expectedEpoch,
-              fromBackground: fromBackground,
-              reloadStorage: fromBackground,
-            )) {
+        if (!await _isScheduleContextStillValid(
+          generation: generation,
+          expectedEpoch: expectedEpoch,
+          fromBackground: fromBackground,
+          reloadStorage: fromBackground,
+        )) {
           return entries;
         }
 
@@ -411,42 +417,54 @@ extension SmartPushScheduling on SmartPushService {
         final noteId = entry.noteId;
         if (noteId != null &&
             noteId.isNotEmpty &&
-            entry.contentType != 'dailyQuote') {
-          if (!recentIds.contains(noteId)) {
-            recentIds.add(noteId);
-            while (recentIds.length > SmartPushSettings.maxRecentPushedCount) {
-              recentIds.removeAt(0);
-            }
-          }
+            entry.contentType != 'dailyQuote' &&
+            !addedNoteIds.contains(noteId)) {
+          addedNoteIds.add(noteId);
         }
       }
 
-      if (generation != null &&
-          expectedEpoch != null &&
-          !await _isScheduleContextStillValid(
-            generation: generation,
-            expectedEpoch: expectedEpoch,
-            fromBackground: fromBackground,
-            reloadStorage: fromBackground,
-          )) {
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+        reloadStorage: true,
+      )) {
         return entries;
       }
 
-      updatedSettings = updatedSettings.copyWith(
-        lastPushTime: latestPushTime,
+      final recentIds = List<String>.from(_settings.recentlyPushedNoteIds);
+      for (final noteId in addedNoteIds) {
+        if (!recentIds.contains(noteId)) {
+          recentIds.add(noteId);
+          while (recentIds.length > SmartPushSettings.maxRecentPushedCount) {
+            recentIds.removeAt(0);
+          }
+        }
+      }
+      DateTime? mergedLastPushTime = _settings.lastPushTime;
+      if (latestPushTime != null &&
+          (mergedLastPushTime == null ||
+              latestPushTime.isAfter(mergedLastPushTime))) {
+        mergedLastPushTime = latestPushTime;
+      }
+
+      final updatedSettings = _settings.copyWith(
+        lastPushTime: mergedLastPushTime,
         recentlyPushedNoteIds: recentIds,
       );
-      await _saveSettingsQuietly(updatedSettings);
+      await _saveSettingsQuietly(
+        updatedSettings,
+        expectedGeneration: generation,
+        expectedEpoch: expectedEpoch,
+      );
     }
 
-    if (generation != null &&
-        expectedEpoch != null &&
-        !await _isScheduleContextStillValid(
-          generation: generation,
-          expectedEpoch: expectedEpoch,
-          fromBackground: fromBackground,
-          reloadStorage: fromBackground,
-        )) {
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+      reloadStorage: true,
+    )) {
       return entries;
     }
 
@@ -457,6 +475,7 @@ extension SmartPushScheduling on SmartPushService {
         .toList();
     await _saveTrackedPreScheduledEntries(
       updatedEntries,
+      expectedGeneration: generation,
       expectedEpoch: expectedEpoch,
       fromBackground: fromBackground,
     );
@@ -806,6 +825,7 @@ extension SmartPushScheduling on SmartPushService {
 
     await _saveTrackedPreScheduledEntries(
       mergedEntries,
+      expectedGeneration: generation,
       expectedEpoch: expectedEpoch,
       fromBackground: fromBackground,
     );

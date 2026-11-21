@@ -235,6 +235,7 @@ class SmartPushService extends ChangeNotifier {
   ) {
     final generation = ++_scheduleGeneration;
     final next = _pendingScheduleOp.then((_) async {
+      await _pendingAccountingOp;
       if (!_isScheduleGenerationCurrent(generation)) return;
       await action(generation);
     });
@@ -791,8 +792,26 @@ class SmartPushService extends ChangeNotifier {
   /// 用于后台推送成功后记录已推送笔记 ID 等场景，
   /// 避免 [saveSettings] 中的 [scheduleNextPush] / [_cancelAllSchedules]
   /// 意外取消刚刚显示的通知。
-  Future<void> _saveSettingsQuietly(SmartPushSettings newSettings) async {
+  Future<void> _saveSettingsQuietly(
+    SmartPushSettings newSettings, {
+    int? expectedGeneration,
+    int? expectedEpoch,
+  }) async {
     try {
+      if (expectedGeneration != null &&
+          !_isScheduleGenerationCurrent(expectedGeneration)) {
+        return;
+      }
+      if (expectedEpoch != null) {
+        await _reloadSharedStorageIfSupported();
+        if (expectedGeneration != null &&
+            !_isScheduleGenerationCurrent(expectedGeneration)) {
+          return;
+        }
+        if (_readStoredSettingsEpoch() != expectedEpoch) {
+          return;
+        }
+      }
       _settings = newSettings;
       final jsonStr = jsonEncode(newSettings.toJson());
       await _mmkv.setString(_settingsKey, jsonStr);

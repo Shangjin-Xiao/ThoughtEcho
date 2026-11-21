@@ -129,6 +129,8 @@ extension SmartPushNotification on SmartPushService {
           }
         }
 
+        final tapGeneration = _scheduleGeneration;
+        final tapEpoch = _readStoredSettingsEpoch();
         final trackedEntries = notificationId != null
             ? _loadTrackedPreScheduledEntries()
             : const <_PreScheduledEntry>[];
@@ -159,6 +161,8 @@ extension SmartPushNotification on SmartPushService {
 
         if (matchedEntry != null && !matchedEntry.accounted) {
           await _accountDeliveredPreScheduledEntries(
+            generation: tapGeneration,
+            expectedEpoch: tapEpoch,
             forceAccountNotificationId: notificationId,
           );
         }
@@ -478,8 +482,8 @@ extension SmartPushNotification on SmartPushService {
     }
   }
 
-  /// 显示通知
-  Future<void> _showNotification(
+  /// 显示通知，返回实际发送的通知 ID（发送失败时返回 null）
+  Future<int?> _showNotification(
     Quote note, {
     String title = '心迹',
     String contentType = '',
@@ -515,12 +519,15 @@ extension SmartPushNotification on SmartPushService {
       iOS: iosDetails,
     );
 
+    final notificationId = (_now().millisecondsSinceEpoch % 99999) + 1;
+
     String payload = '';
     if (contentType.isNotEmpty) {
       payload = SmartPushService.buildNotificationPayload(
             noteId: note.id,
             contentType: contentType,
             routeTarget: 'noteList',
+            notificationId: notificationId,
           ) ??
           '';
     } else {
@@ -529,19 +536,21 @@ extension SmartPushNotification on SmartPushService {
 
     try {
       await _notificationsPlugin.show(
-        DateTime.now().millisecondsSinceEpoch % 100000,
+        notificationId,
         title,
         body,
         details,
         payload: payload,
       );
       AppLogger.i('通知已成功发送: $title');
+      return notificationId;
     } catch (e, stack) {
       AppLogger.e(
         '通知发送失败 (_notificationsPlugin.show)',
         error: e,
         stackTrace: stack,
       );
+      return null;
     }
   }
 

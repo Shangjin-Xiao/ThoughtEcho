@@ -359,7 +359,10 @@ class SmartPushAnalytics extends ChangeNotifier {
       }
 
       final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
-      if (pending != null && pending.notificationId == notificationId) {
+      if (pending != null &&
+          (pending.notificationId == notificationId ||
+              (pending.notificationId == null &&
+                  pending.contentType == contentType))) {
         await _removeTrackedId(_clickedNotificationIdsKey, notificationId);
         await _mmkv.setString(
           _pendingSendKey,
@@ -668,7 +671,8 @@ class SmartPushAnalytics extends ChangeNotifier {
 
     var engaged = alreadyEngaged;
     if (!engaged && notificationId != null) {
-      engaged = await consumeClickedNotification(notificationId);
+      engaged = await consumeClickedNotification(notificationId) ||
+          _getTrackedIdList(_settledEngagedIdsKey).contains(notificationId);
     }
 
     if (engaged) {

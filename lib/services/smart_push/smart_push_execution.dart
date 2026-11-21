@@ -124,6 +124,8 @@ extension SmartPushExecution on SmartPushService {
   /// 独立的每日一言推送通道，允许一天多次推送但不重复推送相同内容。
   Future<void> _performDailyQuotePush({bool isBackground = false}) async {
     try {
+      final startGeneration = _scheduleGeneration;
+      final startEpoch = _readStoredSettingsEpoch();
       // 每日一言是用户期望的每日固定内容，不受 SOTA 疲劳预防系统限制。
       // 允许一天多次推送，但使用内容哈希去重避免推送相同一言。
       final dailyQuote = await _fetchDailyQuote();
@@ -152,7 +154,11 @@ extension SmartPushExecution on SmartPushService {
       final updatedSettings = _settings.copyWith(
         lastPushTime: DateTime.now(),
       );
-      await _saveSettingsQuietly(updatedSettings);
+      await _saveSettingsQuietly(
+        updatedSettings,
+        expectedGeneration: startGeneration,
+        expectedEpoch: startEpoch,
+      );
 
       // 记录推送效果（不消费疲劳预算，每日一言不参与疲劳系统）
       await _analytics.updateContentScore('dailyQuote', false);
@@ -179,6 +185,8 @@ extension SmartPushExecution on SmartPushService {
     bool isBackground = false,
   }) async {
     try {
+      final startGeneration = _scheduleGeneration;
+      final startEpoch = _readStoredSettingsEpoch();
       // 配额裁定结果 —— 测试模式不做裁定，一路放行
       PushAllowance? allowance;
 
@@ -319,7 +327,7 @@ extension SmartPushExecution on SmartPushService {
       }
 
       if (noteToShow != null) {
-        await _showNotification(
+        final shownNotificationId = await _showNotification(
           noteToShow,
           title: title,
           contentType: contentType,
@@ -362,7 +370,11 @@ extension SmartPushExecution on SmartPushService {
             _markNotePushedToday(noteToShow.id!);
           }
           final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
-          await _saveSettingsQuietly(updatedSettings);
+          await _saveSettingsQuietly(
+            updatedSettings,
+            expectedGeneration: startGeneration,
+            expectedEpoch: startEpoch,
+          );
         }
 
         // 如果推送的是每日一言（来自 PushMode.dailyQuote / PushMode.both 的回退 / PushMode.smart），
@@ -373,13 +385,20 @@ extension SmartPushExecution on SmartPushService {
           final updatedSettings = _settings.copyWith(
             lastPushTime: DateTime.now(),
           );
-          await _saveSettingsQuietly(updatedSettings);
+          await _saveSettingsQuietly(
+            updatedSettings,
+            expectedGeneration: startGeneration,
+            expectedEpoch: startEpoch,
+          );
         }
 
         // 登记这一条推送：占掉今日配额，并挂起等待下次结算。
         // 分数更新交给 settlePendingSend —— 发出去的瞬间还不知道用户点不点。
         if (!isTest && contentType.isNotEmpty) {
-          await _analytics.markSent(contentType);
+          await _analytics.markSent(
+            contentType,
+            notificationId: shownNotificationId,
+          );
         }
 
         AppLogger.i(

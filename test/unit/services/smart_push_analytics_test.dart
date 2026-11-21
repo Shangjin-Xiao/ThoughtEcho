@@ -294,6 +294,22 @@ void main() {
       await mmkvService.setString('smart_push_daily_count', '2020-01-01|3');
       expect(await analytics.getTodayPushCount(), 0);
     });
+
+    test('无 notificationId 的待结算记录在收到带 response.id 的点击时仍正确结算为已点击', () async {
+      await mmkvService.setString('smart_push_unengaged_streak', '2');
+
+      await analytics.markSent('yearAgoToday');
+      await analytics.recordInteraction(
+        'yearAgoToday',
+        notificationId: 43210,
+      );
+      await analytics.settlePendingSend();
+
+      expect(await analytics.getUnengagedStreak(), 0);
+      expect(await analytics.getHabituationCooldown(), Duration.zero);
+      final scores = await analytics.getContentTypeScores();
+      expect(scores['yearAgoToday'], closeTo(2 / 3, 1e-6));
+    });
   });
 
   group('PushIntensity 配额矩阵', () {

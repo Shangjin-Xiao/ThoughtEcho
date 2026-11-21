@@ -36,8 +36,23 @@ class _ScheduledCall {
   });
 }
 
+class _ShownCall {
+  final int id;
+  final String? title;
+  final String? body;
+  final String? payload;
+
+  const _ShownCall({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.payload,
+  });
+}
+
 class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
   final List<_ScheduledCall> scheduledCalls = [];
+  final List<_ShownCall> shownCalls = [];
   final List<int> cancelledIds = [];
   int cancelAllCount = 0;
   Future<void> Function(_ScheduledCall call)? onScheduleHook;
@@ -81,6 +96,24 @@ class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
     if (onScheduleHook != null) {
       await onScheduleHook!(call);
     }
+  }
+
+  @override
+  Future<void> show(
+    int id,
+    String? title,
+    String? body,
+    NotificationDetails? notificationDetails, {
+    String? payload,
+  }) async {
+    shownCalls.add(
+      _ShownCall(
+        id: id,
+        title: title,
+        body: body,
+        payload: payload,
+      ),
+    );
   }
 
   @override
@@ -166,6 +199,7 @@ class _MemoryPreferences implements AppPreferencesService {
   final Map<String, Object> _backingDisk;
   final Map<String, Object> values;
   final bool isolatedCache;
+  Future<void> Function(String key, String value)? onSetStringHook;
 
   _MemoryPreferences({
     Map<String, Object>? sharedDisk,
@@ -191,6 +225,9 @@ class _MemoryPreferences implements AppPreferencesService {
   Future<bool> setString(String key, String value) async {
     values[key] = value;
     _backingDisk[key] = value;
+    if (onSetStringHook != null) {
+      await onSetStringHook!(key, value);
+    }
     return true;
   }
 
@@ -1575,6 +1612,153 @@ void main() {
         );
         expect(notificationsPlugin.cancelledIds, isNotEmpty);
         expect(bgRenewalCancels, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'standard exact-alarm checkAndPush binds shown notificationId to markSent and settles tap as engaged once',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.standard;
+        exactAlarmPermitted = true;
+        final wallNow = DateTime.now();
+        databaseService.notes = [
+          Quote(
+            id: 'dddd4444-4444-4444-4444-444444444444',
+            content: '标准渠道精确闹钟直发通知点击回归验证笔记，确保点击后不会被二次结算成忽略。',
+            date: DateTime(
+              wallNow.year - 1,
+              wallNow.month,
+              wallNow.day,
+              9,
+              0,
+            ).toIso8601String(),
+          ),
+        ];
+        await storage.setString(
+          'smart_push_app_open_times',
+          List.generate(
+            4,
+            (i) =>
+                wallNow.subtract(Duration(days: i, hours: 6)).toIso8601String(),
+          ).join(','),
+        );
+        await storage.setString('smart_push_unengaged_streak', '2');
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        await service.checkAndPush();
+        expect(notificationsPlugin.shownCalls, hasLength(1));
+        final shown = notificationsPlugin.shownCalls.single;
+        expect(shown.id, greaterThan(0));
+        expect(shown.payload, contains('notificationId:${shown.id}'));
+
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: shown.id,
+            payload: shown.payload,
+          ),
+        );
+        await service.analytics.settlePendingSend();
+
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        expect(
+          await service.analytics.getHabituationCooldown(),
+          equals(Duration.zero),
+        );
+        final scores = await service.analytics.getContentTypeScores();
+        expect(scores['yearAgoToday'], closeTo(2 / 3, 1e-6));
+      },
+    );
+
+    test(
+      'disabling reminders while notification tap accounting is in flight never overwrites disabled settings',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        databaseService.notes = [
+          Quote(
+            id: 'eeee5555-5555-5555-5555-555555555555',
+            content: '验证点击补记与关闭提醒并发交错时，旧快照静默保存不会覆盖用户关闭状态的回归笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+          ),
+        ];
+        await storage.setString(
+          'smart_push_app_open_times',
+          [
+            localTime(2026, 5, 6, 9, 0).toIso8601String(),
+            localTime(2026, 5, 7, 9, 0).toIso8601String(),
+            localTime(2026, 5, 8, 9, 0).toIso8601String(),
+            localTime(2026, 5, 9, 20, 0).toIso8601String(),
+          ].join(','),
+        );
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final deliveredCall = notificationsPlugin.scheduledCalls.first;
+        currentNow = localTime(2026, 5, 10, 9, 30);
+
+        Future<void>? concurrentDisableFuture;
+        storage.onSetStringHook = (key, value) async {
+          if (key == 'smart_push_daily_count' &&
+              concurrentDisableFuture == null) {
+            storage.onSetStringHook = null;
+            concurrentDisableFuture = service.saveSettings(
+              const SmartPushSettings(
+                enabled: false,
+                dailyQuotePushEnabled: false,
+              ),
+            );
+            // Yield microtasks so saveSettings writes disabled state and bumps epoch
+            // before in-flight tap accounting reaches _saveSettingsQuietly.
+            await Future<void>.delayed(Duration.zero);
+          }
+        };
+
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: deliveredCall.id,
+            payload: deliveredCall.payload,
+          ),
+        );
+        expect(concurrentDisableFuture, isNotNull);
+        await concurrentDisableFuture;
+
+        expect(service.settings.enabled, isFalse);
+        expect(service.settings.dailyQuotePushEnabled, isFalse);
+        final storedJson = storage.getString('smart_push_settings_v2');
+        expect(storedJson, isNotNull);
+        final storedSettings = SmartPushSettings.fromJson(
+          jsonDecode(storedJson!) as Map<String, dynamic>,
+        );
+        expect(storedSettings.enabled, isFalse);
+        expect(storedSettings.dailyQuotePushEnabled, isFalse);
+        expect(
+          storage.getString('smart_push_prescheduled_entries_v1'),
+          isNull,
+        );
       },
     );
   });
