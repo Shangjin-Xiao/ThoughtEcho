@@ -811,9 +811,19 @@ extension SmartPushPlatform on SmartPushService {
     );
   }
 
-  Future<void> _cancelAllSchedulesInternal() {
+  Future<void> _cancelAllSchedulesInternal({
+    int? expectedSettingsEpoch,
+    bool requireDisabledInStorage = false,
+  }) {
     return _withScheduleCommitLock(() async {
       await _reloadSharedStorageIfSupported();
+      if (expectedSettingsEpoch != null &&
+          _readStoredSettingsEpoch() != expectedSettingsEpoch) {
+        return;
+      }
+      if (requireDisabledInStorage && _hasActiveReminderInStoredSettings()) {
+        return;
+      }
       final commitSeq = await _nextNotificationCommitSeq();
       await _reconcileTrackedPreScheduledNotifications(
         activeIds: const {},

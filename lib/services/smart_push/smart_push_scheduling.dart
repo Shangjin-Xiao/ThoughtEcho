@@ -8,10 +8,14 @@ extension SmartPushScheduling on SmartPushService {
     const maxAttempts = 4;
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       await _reloadSharedStorageIfSupported();
+      final observedEpochAtStart = _readStoredSettingsEpoch();
       await _loadSettings();
       if (!_hasActiveReminderScheduleConfig(_settings) ||
           _areStoredSettingsAllDisabled()) {
-        await _cancelAllSchedulesInternal();
+        await _cancelAllSchedulesInternal(
+          expectedSettingsEpoch: observedEpochAtStart,
+          requireDisabledInStorage: true,
+        );
         return;
       }
 
@@ -28,10 +32,14 @@ extension SmartPushScheduling on SmartPushService {
       if (settingsChanged ||
           scheduleChanged ||
           _areStoredSettingsAllDisabled()) {
+        final observedEpochAfterRun = _readStoredSettingsEpoch();
         await _loadSettings();
         if (!_hasActiveReminderScheduleConfig(_settings) ||
             _areStoredSettingsAllDisabled()) {
-          await _cancelAllSchedulesInternal();
+          await _cancelAllSchedulesInternal(
+            expectedSettingsEpoch: observedEpochAfterRun,
+            requireDisabledInStorage: true,
+          );
           return;
         }
         // 若后台续期期间前台发生了笔记隐藏/修改并触发了回滚，基于最新可见笔记补做干净续期
@@ -107,7 +115,10 @@ extension SmartPushScheduling on SmartPushService {
 
     // 只有当两个推送都关闭时才取消所有计划并返回
     if (!_settings.enabled && !_settings.dailyQuotePushEnabled) {
-      await _cancelAllSchedulesInternal();
+      await _cancelAllSchedulesInternal(
+        expectedSettingsEpoch: expectedEpoch,
+        requireDisabledInStorage: fromBackground,
+      );
       _lastScheduleRefreshAt = _now();
       return;
     }
@@ -319,80 +330,90 @@ extension SmartPushScheduling on SmartPushService {
   /// 用合法新提醒覆盖，则保留系统队列中的新通知，避免旧任务误删新提醒。
   Future<void> _rollbackStaleBackgroundEntries(
     List<_PreScheduledEntry> writtenEntries,
-  ) async {
-    await _reloadSharedStorageIfSupported();
-    await _loadSettings();
-    if (!_hasActiveReminderScheduleConfig(_settings) ||
-        _areStoredSettingsAllDisabled()) {
-      for (final entry in writtenEntries) {
-        try {
-          await _notificationsPlugin.cancel(entry.id);
-        } catch (_) {}
+  ) {
+    return _withScheduleCommitLock(() async {
+      await _reloadSharedStorageIfSupported();
+      final observedEpoch = _readStoredSettingsEpoch();
+      await _loadSettings();
+      if (!_hasActiveReminderScheduleConfig(_settings) ||
+          _areStoredSettingsAllDisabled()) {
+        if (!_hasActiveReminderInStoredSettings() &&
+            _readStoredSettingsEpoch() == observedEpoch) {
+          for (final entry in writtenEntries) {
+            try {
+              await _notificationsPlugin.cancel(entry.id);
+            } catch (_) {}
+          }
+          await _cancelAllSchedulesInternal(
+            expectedSettingsEpoch: observedEpoch,
+            requireDisabledInStorage: true,
+          );
+        }
+        return;
       }
-      await _cancelAllSchedulesInternal();
-      return;
-    }
 
-    if (writtenEntries.isEmpty) {
-      return;
-    }
+      if (writtenEntries.isEmpty) {
+        return;
+      }
 
-    final foregroundEntriesById = <int, _PreScheduledEntry>{
-      for (final e in _loadTrackedPreScheduledEntries()) e.id: e,
-    };
-    final latestCommitSeq = _readStoredNotificationCommitSeq();
-    final candidateNoteIds = <String>{
-      for (final e in writtenEntries)
-        if (e.noteId != null && e.noteId!.isNotEmpty) e.noteId!,
-      for (final fg in foregroundEntriesById.values)
-        if (fg.noteId != null && fg.noteId!.isNotEmpty) fg.noteId!,
-    };
-    final visibleNoteIds = candidateNoteIds.isNotEmpty
-        ? await _resolveVisibleTrackedNoteIds(candidateNoteIds)
-        : null;
+      final foregroundEntriesById = <int, _PreScheduledEntry>{
+        for (final e in _loadTrackedPreScheduledEntries()) e.id: e,
+      };
+      final latestCommitSeq = _readStoredNotificationCommitSeq();
+      final candidateNoteIds = <String>{
+        for (final e in writtenEntries)
+          if (e.noteId != null && e.noteId!.isNotEmpty) e.noteId!,
+        for (final fg in foregroundEntriesById.values)
+          if (fg.noteId != null && fg.noteId!.isNotEmpty) fg.noteId!,
+      };
+      final visibleNoteIds = candidateNoteIds.isNotEmpty
+          ? await _resolveVisibleTrackedNoteIds(candidateNoteIds)
+          : null;
 
-    for (final entry in writtenEntries) {
-      final fg = foregroundEntriesById[entry.id];
-      final supersededByNewerCommit =
-          fg != null && fg.commitSeq > entry.commitSeq;
-      if (supersededByNewerCommit) {
-        final fgNoteHidden = fg.noteId != null &&
-            visibleNoteIds != null &&
-            !visibleNoteIds.contains(fg.noteId);
-        if (!fgNoteHidden && !_isEntryDisabledByCurrentSettings(fg)) {
-          // 前台更新提交已覆盖同一确定性通知 ID，绝不能按共享 ID 取消新通知
+      for (final entry in writtenEntries) {
+        final fg = foregroundEntriesById[entry.id];
+        final supersededByNewerCommit =
+            fg != null && fg.commitSeq > entry.commitSeq;
+        if (supersededByNewerCommit) {
+          final fgNoteHidden = fg.noteId != null &&
+              visibleNoteIds != null &&
+              !visibleNoteIds.contains(fg.noteId);
+          if (!fgNoteHidden && !_isEntryDisabledByCurrentSettings(fg)) {
+            // 前台更新提交已覆盖同一确定性通知 ID，绝不能按共享 ID 取消新通知
+            continue;
+          }
+          try {
+            await _notificationsPlugin.cancel(entry.id);
+          } catch (_) {}
           continue;
         }
-        try {
-          await _notificationsPlugin.cancel(entry.id);
-        } catch (_) {}
-        continue;
-      }
 
-      if (latestCommitSeq > entry.commitSeq && fg == null) {
-        try {
-          await _notificationsPlugin.cancel(entry.id);
-        } catch (_) {}
-        continue;
-      }
+        if (latestCommitSeq > entry.commitSeq && fg == null) {
+          try {
+            await _notificationsPlugin.cancel(entry.id);
+          } catch (_) {}
+          continue;
+        }
 
-      final noteHidden = entry.noteId != null &&
-          visibleNoteIds != null &&
-          !visibleNoteIds.contains(entry.noteId);
-      final mismatchedWithForeground = fg == null ||
-          fg.epochMs != entry.epochMs ||
-          fg.noteId != entry.noteId ||
-          fg.isDailyQuote != entry.isDailyQuote ||
-          fg.contentType != entry.contentType ||
-          (fg.dailyQuoteData?['hitokoto'] != entry.dailyQuoteData?['hitokoto']);
-      if (noteHidden ||
-          mismatchedWithForeground ||
-          _isEntryDisabledByCurrentSettings(entry)) {
-        try {
-          await _notificationsPlugin.cancel(entry.id);
-        } catch (_) {}
+        final noteHidden = entry.noteId != null &&
+            visibleNoteIds != null &&
+            !visibleNoteIds.contains(entry.noteId);
+        final mismatchedWithForeground = fg == null ||
+            fg.epochMs != entry.epochMs ||
+            fg.noteId != entry.noteId ||
+            fg.isDailyQuote != entry.isDailyQuote ||
+            fg.contentType != entry.contentType ||
+            (fg.dailyQuoteData?['hitokoto'] !=
+                entry.dailyQuoteData?['hitokoto']);
+        if (noteHidden ||
+            mismatchedWithForeground ||
+            _isEntryDisabledByCurrentSettings(entry)) {
+          try {
+            await _notificationsPlugin.cancel(entry.id);
+          } catch (_) {}
+        }
       }
-    }
+    });
   }
 
   /// 校验当前调度操作在实例内及跨 Isolate 层面是否仍然有效。
@@ -2331,8 +2352,20 @@ extension SmartPushScheduling on SmartPushService {
           sameDayExcludedIds,
         );
 
+        final id = SmartPushService.deterministicPreScheduledNotificationId(
+          rawSlot.date,
+          slotIndex: rawSlot.slotIndex,
+        );
+        final effectiveVisibleForSlot = trackedVisibleNoteIds ?? visibleNoteIds;
+        final hadInvalidatedPreviousNote = previousEntries.any(
+          (prev) =>
+              prev.id == id &&
+              prev.noteId != null &&
+              !effectiveVisibleForSlot.contains(prev.noteId),
+        );
         final isSuppressedEmptyFallback = candidateContent == null &&
             (useLocalQuotesOnly ||
+                hadInvalidatedPreviousNote ||
                 suppressedDuplicateRegularFallbackDays.contains(dayKey));
         if ((candidateContent == null && !allowsDailyQuoteFallback) ||
             isSuppressedEmptyFallback) {
@@ -2361,11 +2394,6 @@ extension SmartPushScheduling on SmartPushService {
             projectedUnengagedStreak,
           );
         }
-
-        final id = SmartPushService.deterministicPreScheduledNotificationId(
-          rawSlot.date,
-          slotIndex: rawSlot.slotIndex,
-        );
         items.add(
           _PlannedLocalNotification(
             id: id,

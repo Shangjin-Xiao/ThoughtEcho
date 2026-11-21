@@ -627,5 +627,79 @@ void main() {
             reason: '${intensity.name} 沉睡档间隔应至少 2 天');
       }
     });
+
+    test(
+      'withCrossIsolateLock keeps live holder exclusive past staleLockTimeout and verifies owner on release',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp(
+          'smart_push_live_owner_lock_',
+        );
+        addTearDown(() async {
+          if (tempDir.existsSync()) {
+            await tempDir.delete(recursive: true);
+          }
+        });
+        final lockPath = '${tempDir.path}/live_holder.lock';
+
+        final holderFuture = Isolate.run(() async {
+          return PlatformHelper.withCrossIsolateLock<(int, int)>(
+            'smart_push_live_holder_test',
+            () async {
+              final entered = DateTime.now().millisecondsSinceEpoch;
+              await Future<void>.delayed(const Duration(milliseconds: 220));
+              final exited = DateTime.now().millisecondsSinceEpoch;
+              return (entered, exited);
+            },
+            customLockFilePath: lockPath,
+            staleLockTimeout: const Duration(milliseconds: 60),
+            acquireTimeout: const Duration(seconds: 5),
+          );
+        });
+
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+
+        final contenderFuture = Isolate.run(() async {
+          return PlatformHelper.withCrossIsolateLock<(int, int)>(
+            'smart_push_live_holder_test',
+            () async {
+              final entered = DateTime.now().millisecondsSinceEpoch;
+              await Future<void>.delayed(const Duration(milliseconds: 30));
+              final exited = DateTime.now().millisecondsSinceEpoch;
+              return (entered, exited);
+            },
+            customLockFilePath: lockPath,
+            staleLockTimeout: const Duration(milliseconds: 60),
+            acquireTimeout: const Duration(seconds: 5),
+          );
+        });
+
+        final results = await Future.wait([holderFuture, contenderFuture]);
+        final (_, holderExited) = results[0];
+        final (contenderEntered, _) = results[1];
+        expect(
+          contenderEntered,
+          greaterThanOrEqualTo(holderExited - 2),
+          reason: '存活持有者超过 staleLockTimeout 时，等待方绝不能抢占或分裂锁路径',
+        );
+
+        final foreignLockPath = '${tempDir.path}/foreign_owner.lock';
+        await PlatformHelper.withCrossIsolateLock<void>(
+          'smart_push_foreign_owner_test',
+          () async {
+            File(foreignLockPath).writeAsStringSync(
+              'v1|999999|replacement-owner|1',
+              flush: true,
+            );
+          },
+          customLockFilePath: foreignLockPath,
+          staleLockTimeout: const Duration(seconds: 10),
+        );
+        expect(File(foreignLockPath).existsSync(), isTrue);
+        expect(
+          File(foreignLockPath).readAsStringSync().trim(),
+          equals('v1|999999|replacement-owner|1'),
+        );
+      },
+    );
   });
 }

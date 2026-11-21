@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/utils/platform_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/core/config/distribution_config.dart';
 import 'package:thoughtecho/models/app_settings.dart';
@@ -3859,29 +3860,31 @@ void main() {
           slotIndex: 0,
         );
 
-        // 连续在每一轮（含最后一轮）后台刚把共享槽位 ID 写入队列时触发前台更新同一槽位为更新版本笔记
+        // 在每一轮（共 4 轮，含最后一轮）后台规划查库阶段，通过 Zone.root 触发独立锁上下文的前台提交，
+        // 使前台真实竞争并获取 schedule.lock 写入更新版本笔记，验证后台回滚与写后校验绝不误删共享槽位新提醒。
         var nextVersion = 1;
-        var reentrantTriggering = false;
-        notificationsPlugin.onScheduleHook = (call) async {
-          if (reentrantTriggering || call.id != sharedSlotId) return;
-          final currentBody = call.body ?? '';
-          final prevTag = '版本-${nextVersion - 1}';
-          if (currentBody.contains(prevTag) && nextVersion <= 4) {
-            reentrantTriggering = true;
-            try {
-              final updatedNote = buildVersionedNote(nextVersion);
-              nextVersion++;
-              databaseService.notes = <Quote>[updatedNote];
-              databaseService.notifyChanged();
-              await fgService.waitForPendingScheduleForTest();
-            } finally {
-              reentrantTriggering = false;
-            }
+        var currentBarrier = Completer<void>();
+        databaseService.pendingQueryBarrier = currentBarrier;
+        final bgFuture = bgService.renewPreScheduledQueueFromBackground();
+        for (var r = 0; r < 4; r++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          final barrierToRelease = currentBarrier;
+          databaseService.pendingQueryBarrier = null;
+          await Zone.root.run(() async {
+            final updatedNote = buildVersionedNote(nextVersion);
+            nextVersion++;
+            databaseService.notes = <Quote>[updatedNote];
+            databaseService.notifyChanged();
+            await fgService.waitForPendingScheduleForTest();
+          });
+          if (r + 1 < 4) {
+            currentBarrier = Completer<void>();
+            databaseService.pendingQueryBarrier = currentBarrier;
           }
-        };
-
-        await bgService.renewPreScheduledQueueFromBackground();
-        notificationsPlugin.onScheduleHook = null;
+          barrierToRelease.complete();
+        }
+        databaseService.pendingQueryBarrier = null;
+        await bgFuture;
 
         expect(nextVersion, equals(5));
 
@@ -3895,6 +3898,210 @@ void main() {
         );
         expect(matchingSlot.single.body, contains('版本-4'));
         expect(matchingSlot.single.body, isNot(contains('版本-3')));
+      },
+    );
+
+    test(
+      'background stale disabled cancellation skips clearing newly enabled foreground reminders and renewal task',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 8, 0);
+        databaseService.notes = <Quote>[
+          Quote(
+            id: 'e1000000-1111-2222-3333-444444444444',
+            content: '重新开启提醒后的公开笔记，不应被滞后的后台禁用清理任务撤回。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+            favoriteCount: 8,
+          ),
+        ];
+
+        final sharedDisk = <String, Object>{};
+        final fgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final bgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final sharedLockDir = await Directory.systemTemp.createTemp(
+          'smart_push_cancel_race_',
+        );
+        addTearDown(() async {
+          if (sharedLockDir.existsSync()) {
+            await sharedLockDir.delete(recursive: true);
+          }
+        });
+        final scheduleLockPath = '${sharedLockDir.path}/schedule.lock';
+        var renewalTaskActive = false;
+
+        SmartPushService buildService(_MemoryPreferences prefs) {
+          return SmartPushService(
+            databaseService: databaseService,
+            locationService: LocationService(),
+            mmkvService: prefs,
+            notificationsPlugin: notificationsPlugin,
+            isAndroidOverride: true,
+            isIOSOverride: false,
+            timeZoneOverride: 'Etc/GMT-8',
+            canScheduleExactAlarmsOverride: () async => false,
+            registerPreScheduleRenewalOverride: () async {
+              renewalTaskActive = true;
+            },
+            cancelPreScheduleRenewalOverride: () async {
+              renewalTaskActive = false;
+            },
+            scheduleLockFilePathOverride: scheduleLockPath,
+            nowProvider: () => currentNow,
+          );
+        }
+
+        final fgService = buildService(fgStorage);
+        addTearDown(fgService.dispose);
+        await fgService.initialize();
+
+        final bgService = buildService(bgStorage);
+        addTearDown(bgService.dispose);
+
+        await fgService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        final holdCommitLock = Completer<void>();
+        final lockEntered = Completer<void>();
+        final heldFuture = Zone.root.run(
+          () => PlatformHelper.withCrossIsolateLock<void>(
+            'smart_push_schedule_v1',
+            () async {
+              lockEntered.complete();
+              await holdCommitLock.future;
+            },
+            customLockFilePath: scheduleLockPath,
+          ),
+        );
+        await lockEntered.future;
+
+        final bgRenewFuture = Zone.root.run(
+          () => bgService.renewPreScheduledQueueFromBackground(),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        final fgEnableFuture = Zone.root.run(
+          () => fgService.saveSettings(
+            const SmartPushSettings(
+              enabled: true,
+              pushMode: PushMode.custom,
+              enabledPastNoteTypes: {PastNoteType.yearAgoToday},
+              pushTimeSlots: [
+                PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+              ],
+              dailyQuotePushEnabled: false,
+            ),
+          ),
+        );
+
+        holdCommitLock.complete();
+        await Future.wait([heldFuture, fgEnableFuture, bgRenewFuture]);
+
+        final pending = await notificationsPlugin.pendingNotificationRequests();
+        expect(pending, isNotEmpty);
+        expect(renewalTaskActive, isTrue);
+      },
+    );
+
+    test(
+      'hiding source note of upcoming smart reminder cancels slot without inflating projected cooldown for next day',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        final day1OnlyNote = Quote(
+          id: 'f1000000-1111-2222-3333-444444444444',
+          content: '五月十日专属那年今日笔记，隐藏后当日无替代内容但不应拉长冷却期。',
+          date: localTime(2025, 5, 10, 8, 0).toIso8601String(),
+          favoriteCount: 9,
+        );
+        final day2OnlyNote = Quote(
+          id: 'f2000000-1111-2222-3333-444444444444',
+          content: '五月十一日专属那年今日笔记，在首日槽位因隐藏撤回后仍应正常排期。',
+          date: localTime(2025, 5, 11, 8, 0).toIso8601String(),
+          favoriteCount: 9,
+        );
+        databaseService.notes = <Quote>[day1OnlyNote, day2OnlyNote];
+
+        await storage.setString('smart_push_unengaged_streak', '3');
+
+        final service = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => false,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        databaseService.notes = <Quote>[day2OnlyNote];
+        databaseService.notifyChanged();
+        await service.waitForPendingScheduleForTest();
+
+        final pending = await notificationsPlugin.pendingNotificationRequests();
+        expect(
+          pending.any((req) => (req.body ?? '').contains('五月十一日专属那年今日笔记')),
+          isTrue,
+          reason: '因源笔记隐藏而取消的槽位不应推进预计连续未点击冷却期',
+        );
+      },
+    );
+
+    test(
+      'unregistered POSIX Etc/GMT fixed-offset zone falls back cleanly through offset parser',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        tz.timeZoneDatabase.locations.remove('Etc/GMT+5');
+        expect(
+          () => tz.getLocation('Etc/GMT+5'),
+          throwsA(anything),
+        );
+
+        final unregService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT+5',
+          canScheduleExactAlarmsOverride: () async => false,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => DateTime.utc(2026, 5, 10, 12, 0),
+        );
+        addTearDown(unregService.dispose);
+
+        await unregService.initialize();
+        expect(tz.local.name, equals('Etc/GMT+5'));
+        expect(
+          tz.local.currentTimeZone.offset,
+          equals(-5 * Duration.millisecondsPerHour),
+        );
       },
     );
   });

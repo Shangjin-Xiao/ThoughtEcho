@@ -76,7 +76,9 @@ extension SmartPushNotification on SmartPushService {
     final parsed = await _recordNotificationTapState(response);
     Future<void>? rescheduleFuture;
     if (!_isDisposed &&
-        _hasActiveReminderScheduleConfig(_settings) &&
+        _isAndroid &&
+        _settings.enabled &&
+        _settings.pushMode == PushMode.smart &&
         (parsed.contentType != null || parsed.noteId != null)) {
       // 点击结算会复位连续未点击计数并更新推送历史，需递增调度纪元并不受 6 小时节流限制立即主动重排，恢复此前因预计冷却而跳过的后续提醒槽位
       final epochBumpFuture = _bumpScheduleEpoch();

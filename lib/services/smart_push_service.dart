@@ -311,6 +311,20 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
+  bool _hasActiveReminderInStoredSettings() {
+    try {
+      final raw =
+          _mmkv.getString(_settingsKey) ?? _mmkv.getString(_legacySettingsKey);
+      if (raw == null || raw.isEmpty) return false;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return false;
+      final parsed = SmartPushSettings.fromJson(decoded);
+      return _hasActiveReminderScheduleConfig(parsed);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _enqueueScheduleOperation(
     Future<void> Function(int generation) action, {
     Future<Object?>? prerequisite,
@@ -399,23 +413,26 @@ class SmartPushService extends ChangeNotifier {
     if (!_settings.enabled && !_settings.dailyQuotePushEnabled) return;
     if (!_isAndroid && !_isIOS) return;
 
-    // 立即递增跨 Isolate 共享调度纪元，使后台并发续期的旧预计算计划失效，防止隐藏笔记正文被重新写入系统队列
-    final epochBumpFuture = _bumpScheduleEpoch();
-
     final hasTrackedPreScheduled = _loadTrackedPreScheduledEntries().isNotEmpty;
-    if (!hasTrackedPreScheduled &&
-        !_isInitialized &&
-        _scheduleGeneration == 0) {
-      unawaited(epochBumpFuture.catchError((_) => 0));
-      return;
-    }
     if (!hasTrackedPreScheduled &&
         _isAndroid &&
         !DistributionConfig.isPlayStore &&
         (_lastScheduledExactAlarmGranted ?? true)) {
-      unawaited(epochBumpFuture.catchError((_) => 0));
       return;
     }
+    if (!hasTrackedPreScheduled &&
+        !_isInitialized &&
+        _scheduleGeneration == 0) {
+      if (_isAndroid &&
+          (DistributionConfig.isPlayStore ||
+              _lastScheduledExactAlarmGranted == false)) {
+        unawaited(_bumpScheduleEpoch().catchError((_) => 0));
+      }
+      return;
+    }
+
+    // 立即递增跨 Isolate 共享调度纪元，使后台并发续期的旧预计算计划失效，防止隐藏笔记正文被重新写入系统队列
+    final epochBumpFuture = _bumpScheduleEpoch();
 
     unawaited(
       _scheduleNextPushWithPrerequisite(

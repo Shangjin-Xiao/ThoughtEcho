@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:isolate';
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
@@ -116,18 +117,46 @@ class PlatformHelper {
     return p.normalize(p.join(baseDir, '$sanitized.lock'));
   }
 
+  static String? _readLockOwnerToken(File file) {
+    try {
+      if (!file.existsSync()) return null;
+      return file.readAsStringSync().trim();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static bool _isForeignProcessDefinitelyDead(String token) {
+    if (!token.startsWith('v1|')) return false;
+    final parts = token.split('|');
+    if (parts.length < 3) return false;
+    final holderPid = int.tryParse(parts[1]);
+    if (holderPid == null || holderPid <= 0 || holderPid == pid) {
+      return false;
+    }
+    if (Platform.isLinux || Platform.isAndroid) {
+      try {
+        if (Directory('/proc').existsSync()) {
+          return !Directory('/proc/$holderPid').existsSync();
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
   /// Serializes [action] both across async tasks within the current Isolate and
   /// across concurrent Isolates sharing the app's filesystem via `O_CREAT|O_EXCL`.
   ///
-  /// Never executes [action] without holding the lockfile: if an older Isolate
-  /// crashed leaving a stale lockfile older than [staleLockTimeout], the stale
-  /// file is atomically renamed and evicted before [acquireTimeout] expires.
+  /// Uses a single canonical lockfile path per [lockName], refreshes heartbeat
+  /// timestamps while [action] is live so active holders are never evicted past
+  /// [staleLockTimeout], and verifies owner identity before releasing or
+  /// evicting any crashed lockfile.
   static Future<T> withCrossIsolateLock<T>(
     String lockName,
     Future<T> Function() action, {
     String? customLockFilePath,
-    Duration staleLockTimeout = const Duration(seconds: 10),
-    Duration acquireTimeout = const Duration(seconds: 30),
+    Duration staleLockTimeout = const Duration(seconds: 60),
+    Duration acquireTimeout = const Duration(seconds: 180),
   }) async {
     final lockPath = await _resolveCrossIsolateLockFilePath(
       lockName,
@@ -146,9 +175,12 @@ class PlatformHelper {
       await previous;
     } catch (_) {}
 
-    final syncIo = Platform.environment.containsKey('FLUTTER_TEST');
-    var lockFile = File(lockPath);
+    final lockFile = File(lockPath);
+    final ownerSeq = ++_staleLockSeq;
+    final ownerToken =
+        'v1|$pid|${Isolate.current.hashCode}|${DateTime.now().microsecondsSinceEpoch}|$ownerSeq';
     var lockAcquired = false;
+    Timer? heartbeatTimer;
     final effectiveStaleTimeout = staleLockTimeout <= Duration.zero
         ? const Duration(milliseconds: 50)
         : staleLockTimeout;
@@ -157,6 +189,7 @@ class PlatformHelper {
         : acquireTimeout;
     final waitWatch = Stopwatch()..start();
     DateTime? observedModified;
+    String? observedToken;
     Stopwatch? unchangedLockWatch;
     var attempt = 0;
 
@@ -164,59 +197,74 @@ class PlatformHelper {
       while (!lockAcquired) {
         try {
           lockFile.createSync(recursive: true, exclusive: true);
+          lockFile.writeAsStringSync(ownerToken, flush: true);
           lockAcquired = true;
           break;
         } on FileSystemException catch (e) {
-          var evictedStale = false;
+          var retryImmediately = false;
           try {
             if (lockFile.existsSync()) {
               final modified = lockFile.statSync().modified;
-              if (observedModified != modified) {
+              final currentToken = _readLockOwnerToken(lockFile);
+              if (observedModified != modified ||
+                  observedToken != currentToken) {
                 observedModified = modified;
+                observedToken = currentToken;
                 unchangedLockWatch = Stopwatch()..start();
               }
               final ageByWallClock = DateTime.now().difference(modified);
               final ageByMonotonic =
                   unchangedLockWatch?.elapsed ?? Duration.zero;
-              if (ageByWallClock > effectiveStaleTimeout ||
-                  ageByMonotonic > effectiveStaleTimeout) {
-                final seq = ++_staleLockSeq;
-                final stalePath = '${lockFile.path}.stale.$pid.$seq';
-                try {
-                  final moved = lockFile.renameSync(stalePath);
-                  moved.deleteSync();
-                } catch (_) {}
-                observedModified = null;
-                unchangedLockWatch = null;
-                evictedStale = true;
-              }
-            } else {
-              observedModified = null;
-              unchangedLockWatch = null;
-              if (customLockFilePath == null) {
-                final fallbackDir = p.join(
-                  Directory.systemTemp.path,
-                  'thoughtecho_locks',
-                );
-                final sanitized = lockName.replaceAll(
-                  RegExp(r'[^a-zA-Z0-9_.-]'),
-                  '_',
-                );
-                final fallbackPath =
-                    p.normalize(p.join(fallbackDir, '$sanitized.lock'));
-                if (lockFile.path != fallbackPath) {
+              final deadForeignPid = currentToken != null &&
+                  currentToken.isNotEmpty &&
+                  _isForeignProcessDefinitelyDead(currentToken);
+              final unrefreshedPastStale = currentToken != null &&
+                  currentToken.isNotEmpty &&
+                  ageByWallClock > effectiveStaleTimeout &&
+                  ageByMonotonic > effectiveStaleTimeout;
+              final abandonedEmptyInit =
+                  (currentToken == null || currentToken.isEmpty) &&
+                      ageByWallClock > effectiveStaleTimeout * 2 &&
+                      ageByMonotonic > effectiveStaleTimeout * 2;
+              if (deadForeignPid ||
+                  unrefreshedPastStale ||
+                  abandonedEmptyInit) {
+                final latestToken = _readLockOwnerToken(lockFile);
+                if (latestToken == currentToken) {
+                  final seq = ++_staleLockSeq;
+                  final stalePath = '${lockFile.path}.stale.$pid.$seq';
                   try {
-                    Directory(fallbackDir).createSync(recursive: true);
-                    _cachedCrossIsolateLockDir = fallbackDir;
-                    lockFile = File(fallbackPath);
-                    continue;
+                    final moved = lockFile.renameSync(stalePath);
+                    final movedToken = _readLockOwnerToken(moved);
+                    if (movedToken != null &&
+                        movedToken.isNotEmpty &&
+                        movedToken != currentToken &&
+                        !lockFile.existsSync()) {
+                      moved.renameSync(lockFile.path);
+                    } else {
+                      moved.deleteSync();
+                      retryImmediately = true;
+                    }
                   } catch (_) {}
                 }
+                observedModified = null;
+                observedToken = null;
+                unchangedLockWatch = null;
               }
+            } else {
+              // Lockfile disappeared right after contention (holder released);
+              // keep the canonical lockPath and retry immediately.
+              observedModified = null;
+              observedToken = null;
+              unchangedLockWatch = null;
+              try {
+                lockFile.parent.createSync(recursive: true);
+              } catch (_) {}
+              retryImmediately = true;
             }
           } catch (_) {}
 
-          if (evictedStale) {
+          if (retryImmediately) {
             continue;
           }
 
@@ -228,33 +276,47 @@ class PlatformHelper {
             );
           }
 
-          if (syncIo) {
-            if (attempt < 5) {
-              await Future<void>.value();
-            } else {
-              sleep(const Duration(milliseconds: 2));
-            }
+          if (attempt < 3) {
+            await Future<void>.value();
           } else {
-            await Future<void>.delayed(const Duration(milliseconds: 10));
+            await Future<void>.delayed(const Duration(milliseconds: 5));
           }
           attempt++;
         }
       }
 
+      final heartbeatMs =
+          (effectiveStaleTimeout.inMilliseconds ~/ 4).clamp(10, 2000);
+      heartbeatTimer = Timer.periodic(
+        Duration(milliseconds: heartbeatMs),
+        (_) {
+          try {
+            if (_readLockOwnerToken(lockFile) == ownerToken) {
+              lockFile.setLastModifiedSync(DateTime.now());
+            }
+          } catch (_) {}
+        },
+      );
+
       final nextHeld = <String>{
         if (heldLocks is Set<String>) ...heldLocks,
         lockPath,
-        lockFile.path,
       };
       return await runZoned(
         action,
         zoneValues: <Object?, Object?>{_heldLocksZoneKey: nextHeld},
       );
     } finally {
+      heartbeatTimer?.cancel();
       if (lockAcquired) {
         try {
-          if (lockFile.existsSync()) {
-            lockFile.deleteSync();
+          if (_readLockOwnerToken(lockFile) == ownerToken) {
+            try {
+              lockFile.setLastModifiedSync(DateTime.now());
+            } catch (_) {}
+            if (_readLockOwnerToken(lockFile) == ownerToken) {
+              lockFile.deleteSync();
+            }
           }
         } catch (_) {}
       }
