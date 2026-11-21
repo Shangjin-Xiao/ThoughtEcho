@@ -4947,5 +4947,13 @@
   "mmkvDiagnosticSpCoverage": "Couverture de migration SharedPreferences",
   "@mmkvDiagnosticSpCoverage": {
     "description": "Label for SharedPreferences migration coverage"
+  },
+  "smartPushBackgroundBatteryGuideTitle": "Paramètres de batterie en arrière-plan",
+  "@smartPushBackgroundBatteryGuideTitle": {
+    "description": "Title for manual background battery settings guide in Play Store flavor"
+  },
+  "smartPushBackgroundBatteryGuideDesc": "Si les rappels sont retardés par l'économie d'énergie du système, vous pouvez ajuster manuellement l'utilisation de la batterie en arrière-plan dans les informations de l'application",
+  "@smartPushBackgroundBatteryGuideDesc": {
+    "description": "Subtitle for manual background battery settings guide in Play Store flavor"
   }
 }

@@ -520,13 +520,11 @@ class SmartPushSettings {
 
   /// 从指定日期开始，找到下一个允许推送的日期。
   DateTime nextPushDateFrom(DateTime date) {
-    var candidate = DateTime(date.year, date.month, date.day);
-
     for (int i = 0; i < 14; i++) {
+      final candidate = DateTime(date.year, date.month, date.day + i);
       if (shouldPushOnDate(candidate)) {
         return candidate;
       }
-      candidate = candidate.add(const Duration(days: 1));
     }
 
     return DateTime(date.year, date.month, date.day);

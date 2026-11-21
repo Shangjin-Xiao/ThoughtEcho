@@ -355,10 +355,15 @@ class UpdateBottomSheet extends StatelessWidget {
 
   /// 构建按钮列表
   List<Widget> _buildButtons(BuildContext context) {
+    final effectiveButtons = DistributionConfig.isPlayStore
+        ? buttons
+            .where((config) => config.type != UpdateButtonType.viewDetails)
+            .toList()
+        : buttons;
     final buttonWidgets = <Widget>[];
 
-    for (int i = 0; i < buttons.length; i++) {
-      final config = buttons[i];
+    for (int i = 0; i < effectiveButtons.length; i++) {
+      final config = effectiveButtons[i];
 
       Widget button;
       switch (config.type) {
@@ -405,7 +410,7 @@ class UpdateBottomSheet extends StatelessWidget {
       buttonWidgets.add(Expanded(child: button));
 
       // 在按钮之间添加间距（除了最后一个）
-      if (i < buttons.length - 1) {
+      if (i < effectiveButtons.length - 1) {
         buttonWidgets.add(const SizedBox(width: 12));
       }
     }
@@ -564,7 +569,7 @@ class UpdateBottomSheet extends StatelessWidget {
     final updateButtonIcon =
         (isWindows || isPlayStore) ? Icons.store : Icons.download;
 
-    // 按钮配置：永久忽略、查看详情、立即更新/前往商店
+    // 按钮配置：永久忽略、查看详情（标准渠道）、立即更新/前往商店
     final buttons = [
       UpdateButtonConfig(
         type: UpdateButtonType.ignore,
@@ -580,15 +585,16 @@ class UpdateBottomSheet extends StatelessWidget {
           }
         },
       ),
-      UpdateButtonConfig(
-        type: UpdateButtonType.viewDetails,
-        label: AppLocalizations.of(context).updateViewDetails,
-        icon: Icons.open_in_browser,
-        onPressed: () async {
-          // 不关闭对话框，直接打开GitHub页面
-          await _openDownloadUrl(context, versionInfo.downloadUrl);
-        },
-      ),
+      if (!DistributionConfig.isPlayStore)
+        UpdateButtonConfig(
+          type: UpdateButtonType.viewDetails,
+          label: AppLocalizations.of(context).updateViewDetails,
+          icon: Icons.open_in_browser,
+          onPressed: () async {
+            // 不关闭对话框，直接打开GitHub页面
+            await _openDownloadUrl(context, versionInfo.downloadUrl);
+          },
+        ),
       UpdateButtonConfig(
         type: UpdateButtonType.update,
         label: updateButtonLabel,
@@ -628,7 +634,7 @@ class UpdateBottomSheet extends StatelessWidget {
       await _openMicrosoftStore(context);
     } else if (isAndroid && DistributionConfig.isPlayStore) {
       // Google Play平台：跳转到Google Play商店
-      await _openGooglePlayStore(context);
+      await openGooglePlayStore(context);
     } else if (isAndroid) {
       // Android平台：下载APK
       if (versionInfo.apkDownloadUrl != null) {
@@ -647,6 +653,18 @@ class UpdateBottomSheet extends StatelessWidget {
     }
   }
 
+  @visibleForTesting
+  static Future<bool> Function(Uri uri, {required LaunchMode mode})?
+      debugUrlLauncher;
+
+  static Future<bool> _launchExternalUri(Uri uri) {
+    final override = debugUrlLauncher;
+    if (override != null) {
+      return override(uri, mode: LaunchMode.externalApplication);
+    }
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   /// 统一处理应用商店协议跳转与网页回退逻辑
   static Future<void> _openStoreWithWebFallback({
     required BuildContext context,
@@ -657,19 +675,13 @@ class UpdateBottomSheet extends StatelessWidget {
     try {
       var launched = false;
       try {
-        launched = await launchUrl(
-          storeUri,
-          mode: LaunchMode.externalApplication,
-        );
+        launched = await _launchExternalUri(storeUri);
       } catch (_) {
         launched = false;
       }
 
       if (!launched) {
-        final webLaunched = await launchUrl(
-          webUri,
-          mode: LaunchMode.externalApplication,
-        );
+        final webLaunched = await _launchExternalUri(webUri);
         if (!webLaunched) {
           throw Exception('Failed to launch fallback URL');
         }
@@ -686,7 +698,7 @@ class UpdateBottomSheet extends StatelessWidget {
   }
 
   /// 打开Google Play商店
-  static Future<void> _openGooglePlayStore(BuildContext context) async {
+  static Future<void> openGooglePlayStore(BuildContext context) async {
     const String marketUrl = 'market://details?id=com.shangjin.thoughtecho';
     const String webUrl =
         'https://play.google.com/store/apps/details?id=com.shangjin.thoughtecho';

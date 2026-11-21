@@ -90,7 +90,37 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         limit: limit,
       );
 
-      return _parseQuoteRows(maps);
+      if (maps.isEmpty) return [];
+
+      final tagsByQuoteId = <String, List<String>>{};
+      final quoteIds = maps.map((m) => m['id']).whereType<String>().toList();
+      if (quoteIds.isNotEmpty) {
+        final batch = db.batch();
+        for (int i = 0; i < quoteIds.length; i += 900) {
+          final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
+          final batchIds = quoteIds.sublist(i, end);
+          final placeholders = List.filled(batchIds.length, '?').join(',');
+          batch.query(
+            'quote_tags',
+            columns: ['quote_id', 'tag_id'],
+            where: 'quote_id IN ($placeholders)',
+            whereArgs: batchIds,
+          );
+        }
+        final allTagMaps = await batch.commit();
+        for (final result in allTagMaps) {
+          if (result is! List) continue;
+          for (final item in result) {
+            if (item is! Map) continue;
+            final quoteId = item['quote_id'];
+            final tagId = item['tag_id'];
+            if (quoteId is! String || tagId is! String) continue;
+            tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+          }
+        }
+      }
+
+      return _parseQuoteRows(maps, tagsByQuoteId: tagsByQuoteId);
     } catch (e) {
       logError(
         'getQuotesForSmartPush 失败: $e',

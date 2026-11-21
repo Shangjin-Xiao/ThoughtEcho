@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 class PlatformHelper {
@@ -10,8 +11,21 @@ class PlatformHelper {
   static bool get is64BitProcess => false;
   static int get pointerBits => 32;
 
+  static Future<T> withCrossIsolateLock<T>(
+    String lockName,
+    Future<T> Function() action, {
+    String? customLockFilePath,
+    Duration staleLockTimeout = const Duration(seconds: 60),
+    Duration acquireTimeout = const Duration(seconds: 180),
+  }) =>
+      action();
+
   static Future<String> getCpuArchitecture() async {
     return 'web';
+  }
+
+  static Future<String?> readAndroidSystemTimeZone() async {
+    return null;
   }
 
   static Future<Uint8List?> readFileBytesIfExists(String filePath) async {
