@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart' as flutter_svg;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +9,23 @@ import 'package:thoughtecho/constants/card_templates.dart';
 import 'package:thoughtecho/models/generated_card.dart';
 import 'package:thoughtecho/services/svg_to_image_service.dart';
 import 'package:thoughtecho/services/svg_raster_cache_service.dart';
+import 'package:thoughtecho/utils/bounded_svg_loader.dart';
+
+class _DelayedSvgLoader extends flutter_svg.BytesLoader {
+  const _DelayedSvgLoader(this.svgContent, this.delay);
+
+  final String svgContent;
+  final Duration delay;
+
+  @override
+  Future<ByteData> loadBytes(BuildContext? context) async {
+    await Future<void>.delayed(delay);
+    return BoundedSvgLoader(svgContent).loadBytes(context);
+  }
+
+  @override
+  Object cacheKey(BuildContext? context) => Object.hash(svgContent, delay);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -279,6 +297,53 @@ void main() {
       expect(serifDecoded, isNotNull);
       expect(serifDecoded!.width, equals(800));
       expect(serifDecoded.height, equals(1200));
+    });
+
+    test('冷启动慢解码超出零延迟轮询上限仍等待真实像素，且超时不会污染光栅化缓存', () async {
+      final cacheService = SvgRasterCacheService();
+      cacheService.clearCache();
+
+      const slowCardSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <rect width="120" height="120" fill="#dc2626"/>
+</svg>
+''';
+      const slowLoader = _DelayedSvgLoader(
+        slowCardSvg,
+        Duration(milliseconds: 120),
+      );
+
+      // 1. 当超时(20ms)小于解码耗时(120ms)时，降级兜底结果绝不可写入缓存污染后续导出
+      await SvgToImageService.convertSvgToImage(
+        slowCardSvg,
+        width: 120,
+        height: 120,
+        backgroundColor: Colors.transparent,
+        useCache: true,
+        timeout: const Duration(milliseconds: 20),
+        loaderOverride: slowLoader,
+      );
+      expect(cacheService.getCacheStats()['count'], equals(0));
+
+      // 2. 在正常超时窗口内，慢解码(120ms)完成后应导出真实红色卡片像素并写入缓存
+      final validBytes = await SvgToImageService.convertSvgToImage(
+        slowCardSvg,
+        width: 120,
+        height: 120,
+        backgroundColor: Colors.transparent,
+        useCache: true,
+        timeout: const Duration(seconds: 2),
+        loaderOverride: slowLoader,
+      );
+
+      expect(cacheService.getCacheStats()['count'], equals(1));
+      final decoded = img.decodePng(validBytes);
+      expect(decoded, isNotNull);
+      final center = decoded!.getPixel(60, 60);
+      expect(center.a.toInt(), equals(255));
+      expect(center.r.toInt(), greaterThan(200));
+      expect(center.g.toInt(), lessThan(60));
+      expect(center.b.toInt(), lessThan(60));
     });
 
     test('无效SVG处理', () async {

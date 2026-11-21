@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -11,6 +12,22 @@ import 'package:thoughtecho/services/svg_offscreen_renderer.dart';
 import 'package:thoughtecho/services/svg_raster_cache_service.dart';
 import 'package:thoughtecho/services/svg_to_image_service.dart';
 import 'package:thoughtecho/utils/bounded_svg_loader.dart';
+
+class _DelayedOffscreenSvgLoader extends BytesLoader {
+  const _DelayedOffscreenSvgLoader(this.svgContent, this.delay);
+
+  final String svgContent;
+  final Duration delay;
+
+  @override
+  Future<ByteData> loadBytes(BuildContext? context) async {
+    await Future<void>.delayed(delay);
+    return BoundedSvgLoader(svgContent).loadBytes(context);
+  }
+
+  @override
+  Object cacheKey(BuildContext? context) => Object.hash(svgContent, delay);
+}
 
 void main() {
   setUpAll(() {
@@ -325,6 +342,79 @@ void main() {
         // GeneratedCard.toImageBytes 默认四角透明圆角裁剪
         expect(decodedSota.getPixel(0, 0).a.toInt(), equals(0));
         expect(decodedSerif.getPixel(0, 0).a.toInt(), equals(0));
+      },
+    );
+
+    testWidgets(
+      '离屏导出遇到慢速冷解码仍等待真实像素落盘，且超时抛错不截取空白占位',
+      (tester) async {
+        late BuildContext overlayContext;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  overlayContext = context;
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        const emeraldCardSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <rect width="120" height="120" fill="#10b981"/>
+</svg>
+''';
+        const slowLoader = _DelayedOffscreenSvgLoader(
+          emeraldCardSvg,
+          Duration(milliseconds: 150),
+        );
+
+        // 1. 超时短于解码耗时应抛出 TimeoutException，而非返回空白图
+        Object? caughtError;
+        await tester.runAsync(() async {
+          try {
+            await SvgOffscreenRenderer.instance.renderSvgString(
+              emeraldCardSvg,
+              context: overlayContext,
+              width: 120,
+              height: 120,
+              background: Colors.transparent,
+              timeout: const Duration(milliseconds: 25),
+              loaderOverride: slowLoader,
+            );
+          } catch (e) {
+            caughtError = e;
+          }
+        });
+        expect(caughtError, isA<TimeoutException>());
+
+        // 2. 充足超时内应等待慢解码完成并截取真实绿色像素
+        final renderedBytes = await tester.runAsync(() async {
+          return SvgOffscreenRenderer.instance.renderSvgString(
+            emeraldCardSvg,
+            context: overlayContext,
+            width: 120,
+            height: 120,
+            background: Colors.transparent,
+            timeout: const Duration(seconds: 2),
+            loaderOverride: slowLoader,
+          );
+        });
+
+        expect(renderedBytes, isNotNull);
+        final decoded = await tester.runAsync(
+          () async => img.decodePng(renderedBytes!),
+        );
+        expect(decoded, isNotNull);
+        final center = decoded!.getPixel(60, 60);
+        expect(center.a.toInt(), equals(255));
+        expect(center.g.toInt(), greaterThan(150));
+        expect(center.r.toInt(), lessThan(60));
       },
     );
 

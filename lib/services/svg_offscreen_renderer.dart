@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -29,6 +29,7 @@ class SvgOffscreenRenderer {
     Duration timeout = const Duration(seconds: 10),
     bool devicePixelRatioAware = false,
     double borderRadius = 0,
+    BytesLoader? loaderOverride,
   }) async {
     if (width <= 0 || height <= 0) {
       throw ArgumentError('图片尺寸必须大于0');
@@ -72,27 +73,38 @@ class SvgOffscreenRenderer {
 
     final boundaryKey = GlobalKey();
     final placeholderKey = GlobalKey();
+    var isVectorReady = false;
     Object? svgLoadError;
     StackTrace? svgLoadStackTrace;
 
     AppLogger.d('SVG渲染目标尺寸: ${width}x$height', source: 'SvgOffscreenRenderer');
 
     final boxFit = _mapFit(mode);
+    final loader = loaderOverride ?? BoundedSvgLoader(svgContent);
+    final preloadFuture = loader.loadBytes(context);
+    unawaited(preloadFuture.then((_) {}, onError: (_) {}));
 
     // 创建SVG widget，使用与预览完全一致的配置
-    // 为占位子树挂载 placeholderKey 并配置 errorBuilder，用于检测解码与绘制就绪态
+    // 结合 placeholderKey、imageBuilder 与 errorBuilder，精确检测解码与绘制就绪态
     final svgWidget = SvgPicture(
-      BoundedSvgLoader(svgContent),
+      loader,
       width: width.toDouble(),
       height: height.toDouble(),
       fit: boxFit,
       allowDrawingOutsideViewBox: false,
-      placeholderBuilder: (context) => Container(
-        key: placeholderKey,
-        color: background,
-        width: width.toDouble(),
-        height: height.toDouble(),
-      ),
+      placeholderBuilder: (context) {
+        isVectorReady = false;
+        return Container(
+          key: placeholderKey,
+          color: background,
+          width: width.toDouble(),
+          height: height.toDouble(),
+        );
+      },
+      imageBuilder: (context, child) {
+        isVectorReady = true;
+        return child;
+      },
       errorBuilder: (context, error, stackTrace) {
         svgLoadError = error;
         svgLoadStackTrace = stackTrace;
@@ -206,9 +218,12 @@ class SvgOffscreenRenderer {
 
     try {
       final stopwatch = Stopwatch()..start();
-      RenderRepaintBoundary? readyBoundary;
+      await preloadFuture.timeout(timeout);
 
-      for (var frame = 0; frame < _maxReadyFrames; frame++) {
+      RenderRepaintBoundary? readyBoundary;
+      var postDecodeFrames = 0;
+
+      while (postDecodeFrames < _maxReadyFrames) {
         final remaining = timeout - stopwatch.elapsed;
         if (remaining <= Duration.zero) {
           throw TimeoutException('SVG离屏渲染等待帧就绪超时', timeout);
@@ -223,22 +238,34 @@ class SvgOffscreenRenderer {
           );
         }
 
+        // 若矢量图元仍在异步解码（占位子树仍挂载或图元尚未就绪），继续按壁钟超时等待而不消耗绘制稳定帧配额
+        if (!isVectorReady || placeholderKey.currentContext != null) {
+          final afterFrameRemaining = timeout - stopwatch.elapsed;
+          if (afterFrameRemaining <= Duration.zero) {
+            throw TimeoutException('SVG离屏渲染等待矢量解码超时', timeout);
+          }
+          final backoff = afterFrameRemaining < const Duration(milliseconds: 8)
+              ? afterFrameRemaining
+              : const Duration(milliseconds: 8);
+          await Future<void>.delayed(backoff);
+          continue;
+        }
+
+        postDecodeFrames++;
         final candidate = boundaryKey.currentContext?.findRenderObject()
             as RenderRepaintBoundary?;
         final isBoundaryReady = candidate != null &&
             candidate.attached &&
             candidate.hasSize &&
             !candidate.size.isEmpty &&
-            placeholderKey.currentContext == null &&
-            !candidate.debugNeedsLayout &&
-            !candidate.debugNeedsPaint;
+            (!kDebugMode ||
+                (!candidate.debugNeedsLayout && !candidate.debugNeedsPaint));
 
         if (isBoundaryReady) {
           readyBoundary = candidate;
           break;
         }
 
-        // 若矢量字节仍在异步解码，让出事件循环以便解码完成并触发 setState
         await Future<void>.delayed(Duration.zero);
       }
 
@@ -276,14 +303,11 @@ class SvgOffscreenRenderer {
         logSource: 'SvgOffscreenRenderer',
       );
 
-      final remainingForCapture = timeout - stopwatch.elapsed;
-      if (remainingForCapture <= Duration.zero) {
-        throw TimeoutException('SVG离屏渲染截图超时', timeout);
-      }
-
-      final image = await boundary
-          .toImage(pixelRatio: effectivePixelRatio)
-          .timeout(remainingForCapture);
+      final image = await SvgToImageService.captureBoundaryImage(
+        boundary,
+        pixelRatio: effectivePixelRatio,
+        timeout: timeout - stopwatch.elapsed,
+      );
       final bytes = await SvgToImageService.exportUiImageBytes(
         image,
         format: format,

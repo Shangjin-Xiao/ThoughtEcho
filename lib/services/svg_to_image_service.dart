@@ -155,6 +155,32 @@ class SvgToImageService {
     }
   }
 
+  /// 在指定超时内截取 [RenderRepaintBoundary]，若发生超时则在底层截图稍后完成时自动释放 [ui.Image]
+  static Future<ui.Image> captureBoundaryImage(
+    RenderRepaintBoundary boundary, {
+    required double pixelRatio,
+    required Duration timeout,
+  }) async {
+    if (timeout <= Duration.zero) {
+      throw TimeoutException('SVG离屏渲染截图超时', timeout);
+    }
+    final imageFuture = boundary.toImage(pixelRatio: pixelRatio);
+    var timedOut = false;
+    unawaited(
+      imageFuture.then((lateImage) {
+        if (timedOut) {
+          lateImage.dispose();
+        }
+      }, onError: (_) {}),
+    );
+    try {
+      return await imageFuture.timeout(timeout);
+    } on TimeoutException {
+      timedOut = true;
+      rethrow;
+    }
+  }
+
   /// 统一从 [ui.Image] 导出编码字节：
   /// - 非 PNG 格式直接调用 [ui.Image.toByteData]；
   /// - PNG 格式仅在主线程读取未压缩 [ui.ImageByteFormat.rawRgba] 并在 `finally` 中立即释放
@@ -223,6 +249,8 @@ class SvgToImageService {
     ExportRenderMode renderMode = ExportRenderMode.contain,
     BuildContext? context,
     double borderRadius = 0,
+    Duration timeout = const Duration(seconds: 10),
+    @visibleForTesting flutter_svg.BytesLoader? loaderOverride,
   }) async {
     try {
       // 验证输入参数
@@ -278,7 +306,7 @@ class SvgToImageService {
         // 关键修复：始终使用原始 SVG，不做任何标准化处理
         // 这样保证保存时的渲染与预览完全一致
         // flutter_svg 已能正确处理各种 SVG 格式（包括 rgb()/rgba()/style 等）
-        final imageBytes = await _renderSvgToBytes(
+        final renderResult = await _renderSvgToBytes(
           svgContent,
           width,
           height,
@@ -289,12 +317,15 @@ class SvgToImageService {
           renderMode,
           context,
           borderRadius,
+          timeout,
+          loaderOverride,
         );
 
-        if (useCache && cacheKey != null) {
-          _cacheService.cacheImage(cacheKey, imageBytes);
+        // 仅在真实渲染成功（非超时/降级占位兜底图）时写入缓存，防止慢解码超时把残缺图片固化到缓存
+        if (useCache && cacheKey != null && renderResult.cacheable) {
+          _cacheService.cacheImage(cacheKey, renderResult.bytes);
         }
-        return imageBytes;
+        return renderResult.bytes;
       }
 
       if (useCache && cacheKey != null) {
@@ -388,8 +419,8 @@ class SvgToImageService {
     }
   }
 
-  /// 渲染SVG为字节数组
-  static Future<Uint8List> _renderSvgToBytes(
+  /// 渲染SVG为字节数组，并标记结果是否可安全写入光栅化缓存
+  static Future<({Uint8List bytes, bool cacheable})> _renderSvgToBytes(
     String svgContent,
     int width,
     int height,
@@ -400,6 +431,8 @@ class SvgToImageService {
     ExportRenderMode renderMode,
     BuildContext? buildContext,
     double borderRadius,
+    Duration timeout,
+    flutter_svg.BytesLoader? loaderOverride,
   ) async {
     debugRenderCount++;
     // 策略：优先使用真实Flutter渲染，确保与预览一致
@@ -418,14 +451,16 @@ class SvgToImageService {
           background: backgroundColor,
           mode: renderMode,
           format: format,
+          timeout: timeout,
           devicePixelRatioAware: false,
           borderRadius: borderRadius,
+          loaderOverride: loaderOverride,
         );
         AppLogger.i(
           'Flutter真实渲染成功，图片大小: ${result.length} bytes',
           source: 'SvgToImageService',
         );
-        return result;
+        return (bytes: result, cacheable: true);
       } catch (e) {
         AppLogger.w(
           'Flutter真实渲染失败，尝试备用方案: $e',
@@ -443,7 +478,7 @@ class SvgToImageService {
     // 备用方案：使用flutter_svg直接渲染
     try {
       AppLogger.d('使用flutter_svg备用渲染', source: 'SvgToImageService');
-      return await _renderWithFlutterSvg(
+      final bytes = await _renderWithFlutterSvg(
         svgContent,
         width,
         height,
@@ -452,21 +487,25 @@ class SvgToImageService {
         scaleFactor,
         renderMode,
         borderRadius,
+        timeout: timeout,
+        loaderOverride: loaderOverride,
       );
+      return (bytes: bytes, cacheable: true);
     } catch (e) {
       AppLogger.w(
         'flutter_svg渲染失败，使用最终回退: $e',
         error: e,
         source: 'SvgToImageService',
       );
-      // 最终回退方案
-      return await _renderFallbackImage(
+      // 最终回退方案（降级占位图不可写入缓存，以便后续重试恢复真实卡片）
+      final fallbackBytes = await _renderFallbackImage(
         svgContent,
         width,
         height,
         format,
         backgroundColor,
       );
+      return (bytes: fallbackBytes, cacheable: false);
     }
   }
 
@@ -479,8 +518,10 @@ class SvgToImageService {
     Color backgroundColor,
     double scaleFactor,
     ExportRenderMode renderMode,
-    double borderRadius,
-  ) async {
+    double borderRadius, {
+    Duration timeout = const Duration(seconds: 10),
+    flutter_svg.BytesLoader? loaderOverride,
+  }) async {
     AppLogger.d(
       '使用flutter_svg Drawable 渲染（无BuildContext）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode',
       source: 'SvgToImageService',
@@ -508,6 +549,10 @@ class SvgToImageService {
     }
     final flutterView = views.first;
 
+    final stopwatch = Stopwatch()..start();
+    final loader = loaderOverride ?? BoundedSvgLoader(svgContent);
+    await loader.loadBytes(null).timeout(timeout);
+
     final repaintBoundary = RenderRepaintBoundary();
 
     // 通过 RenderView + PipelineOwner 驱动一次 layout/paint。
@@ -529,30 +574,47 @@ class SvgToImageService {
     renderView.prepareInitialFrame();
 
     final focusManager = FocusManager();
-    var focusDisposed = false;
-    void disposeFocusManager() {
-      if (focusDisposed) return;
-      focusDisposed = true;
+    final buildOwner = BuildOwner(focusManager: focusManager);
+    RenderObjectToWidgetElement<RenderBox>? mountedElement;
+    var resourcesDisposed = false;
+    void disposeOffscreenTree() {
+      if (resourcesDisposed) return;
+      resourcesDisposed = true;
+      final elementToUnmount = mountedElement;
+      mountedElement = null;
+      if (elementToUnmount != null) {
+        try {
+          RenderObjectToWidgetAdapter<RenderBox>(
+            container: repaintBoundary,
+          ).attachToRenderTree(buildOwner, elementToUnmount);
+          buildOwner.finalizeTree();
+        } catch (_) {}
+      }
       focusManager.dispose();
     }
 
     try {
-      final buildOwner = BuildOwner(focusManager: focusManager);
-      final placeholderKey = GlobalKey();
+      var isVectorReady = false;
       Object? svgLoadError;
       StackTrace? svgLoadStackTrace;
 
       Widget content = flutter_svg.SvgPicture(
-        BoundedSvgLoader(svgContent),
+        loader,
         width: outputSize.width,
         height: outputSize.height,
         fit: fit,
         allowDrawingOutsideViewBox: false,
-        placeholderBuilder: (_) => SizedBox(
-          key: placeholderKey,
-          width: outputSize.width,
-          height: outputSize.height,
-        ),
+        placeholderBuilder: (_) {
+          isVectorReady = false;
+          return SizedBox(
+            width: outputSize.width,
+            height: outputSize.height,
+          );
+        },
+        imageBuilder: (_, child) {
+          isVectorReady = true;
+          return child;
+        },
         errorBuilder: (_, error, stackTrace) {
           svgLoadError = error;
           svgLoadStackTrace = stackTrace;
@@ -581,6 +643,7 @@ class SvgToImageService {
         container: repaintBoundary,
         child: rootWidget,
       ).attachToRenderTree(buildOwner);
+      mountedElement = element;
 
       void flushPipeline() {
         buildOwner.buildScope(element);
@@ -592,13 +655,20 @@ class SvgToImageService {
 
       flushPipeline();
 
-      // 若首次冷解码 BoundedSvgLoader 尚未完成，让出微任务/事件循环直至占位态卸载
-      for (var attempt = 0;
-          attempt < 12 &&
-              placeholderKey.currentContext != null &&
-              svgLoadError == null;
-          attempt++) {
-        await Future<void>.delayed(Duration.zero);
+      // 在壁钟超时范围内等待矢量解码完成并挂载真实图元子树，绝不提前截取空白占位图
+      var pollCount = 0;
+      while (!isVectorReady && svgLoadError == null) {
+        final remaining = timeout - stopwatch.elapsed;
+        if (remaining <= Duration.zero) {
+          break;
+        }
+        final stepDelay = pollCount < 4
+            ? Duration.zero
+            : (remaining < const Duration(milliseconds: 8)
+                ? remaining
+                : const Duration(milliseconds: 8));
+        pollCount++;
+        await Future<void>.delayed(stepDelay);
         flushPipeline();
       }
 
@@ -609,15 +679,26 @@ class SvgToImageService {
         );
       }
 
+      if (!isVectorReady) {
+        throw TimeoutException('SVG无Context离屏解码超时，矢量图元尚未就绪', timeout);
+      }
+
+      repaintBoundary.markNeedsPaint();
+      flushPipeline();
+
       // 通过 pixelRatio 控制最终清晰度，并在主线程读取完原始 RGBA 后立即交由后台 Isolate 编码 PNG
-      final image = await repaintBoundary.toImage(pixelRatio: effectiveScale);
+      final image = await captureBoundaryImage(
+        repaintBoundary,
+        pixelRatio: effectiveScale,
+        timeout: timeout - stopwatch.elapsed,
+      );
       return await exportUiImageBytes(
         image,
         format: format,
-        onImageRead: disposeFocusManager,
+        onImageRead: disposeOffscreenTree,
       );
     } finally {
-      disposeFocusManager();
+      disposeOffscreenTree();
     }
   }
 
