@@ -325,6 +325,9 @@ extension _ThoughterAgent on _ThoughterPageState {
         return completer.future;
       });
 
+      final revisionInspection = _hasBoundNote
+          ? ProposeNoteEditTool.inspectRevisionForQuote(widget.quote!)
+          : null;
       final response = await agentService.runAgent(
         userMessage: text,
         history: history,
@@ -333,8 +336,9 @@ extension _ThoughterAgent on _ThoughterPageState {
                 noteId: _boundNoteId,
                 content: widget.quote!.content,
                 documentKind: ProposeNoteEditTool.kindForQuote(widget.quote!),
-                documentRevision:
-                    ProposeNoteEditTool.tryRevisionForQuote(widget.quote!),
+                documentRevision: revisionInspection!.revision,
+                documentRevisionUnavailableReason:
+                    revisionInspection.unavailableReason,
               )
             : null,
       );

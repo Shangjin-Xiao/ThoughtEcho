@@ -77,13 +77,15 @@ class NoteProposalApplier {
             NoteProposalApplyStatus.accessDenied);
       }
     }
-    if (note == null ||
-        ProposeNoteEditTool.tryRevisionForQuote(note) !=
-            artifact.baseRevision) {
+    final currentRevision =
+        note == null ? null : ProposeNoteEditTool.tryRevisionForQuote(note);
+    if (currentRevision == null ||
+        artifact.baseRevision == null ||
+        currentRevision != artifact.baseRevision) {
       return const NoteProposalApplyResult(NoteProposalApplyStatus.conflict);
     }
     final result =
-        await _databaseService.updateQuote(quoteFromArtifact(note, artifact));
+        await _databaseService.updateQuote(quoteFromArtifact(note!, artifact));
     if (result != QuoteUpdateResult.updated) {
       return const NoteProposalApplyResult(NoteProposalApplyStatus.conflict);
     }

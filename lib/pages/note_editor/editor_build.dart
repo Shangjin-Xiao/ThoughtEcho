@@ -14,6 +14,12 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
           _saveContent(popOnSuccess: false);
         },
         const SingleActivator(LogicalKeyboardKey.escape): () {
+          final rawEditor = _quillRawEditorKey.currentState;
+          if (rawEditor != null &&
+              rawEditor.selectionOverlay?.toolbar != null) {
+            rawEditor.hideToolbar();
+            return;
+          }
           Navigator.maybePop(context);
         },
       },
@@ -192,7 +198,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                             ) |
                                             0xFF000000,
                                       ),
-                                      borderRadius: BorderRadius.circular(8),
+                                      shape: BoxShape.circle,
                                       border: Border.all(
                                         color: theme.colorScheme.outline
                                             .applyOpacity(0.2),
@@ -241,7 +247,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                 onPressed: () => _showMetadataDialog(context),
                                 child: Text(
                                   l10n.editMetadata,
-                                  style: TextStyle(fontSize: 12),
+                                  style: theme.textTheme.labelMedium,
                                 ),
                               ),
                             ],
@@ -259,6 +265,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                 scrollController: _editorState.scrollController,
                                 focusNode: _editorState.focusNode,
                                 config: quill.QuillEditorConfig(
+                                  editorKey: _quillRawEditorKey,
                                   // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
                                   // 卡片里的正文挤得多——同一条笔记「写的时候」和
                                   // 「读的时候」行距不一样。两边共用同一套令牌纠正。

@@ -417,15 +417,35 @@ void main() {
           content: 'Trip itinerary',
           documentKind: NoteDocumentKind.rich,
           documentRevision: null,
+          documentRevisionUnavailableReason: 'invalid_stored_delta',
         ),
       );
 
-      final contextMessage = _chatMessageText(capturedMessages[1]);
-      expect(contextMessage, contains('note_id: note-corrupt-1'));
-      expect(contextMessage, contains('document_kind: rich'));
-      expect(contextMessage, isNot(contains('document_revision:')));
-      expect(contextMessage, contains('没有可用的 document_revision'));
-      expect(contextMessage, contains('Trip itinerary'));
+      final corruptContextMessage = _chatMessageText(capturedMessages[1]);
+      expect(corruptContextMessage, contains('note_id: note-corrupt-1'));
+      expect(corruptContextMessage, contains('document_kind: rich'));
+      expect(corruptContextMessage, isNot(contains('document_revision:')));
+      expect(corruptContextMessage, contains('无法解析为编辑基线'));
+      expect(corruptContextMessage, contains('没有可用的 document_revision'));
+      expect(corruptContextMessage, contains('Trip itinerary'));
+
+      await service.runAgent(
+        userMessage: '总结这条电话备忘',
+        noteContext: const AgentNoteContext(
+          noteId: 'note-tel-link-1',
+          content: 'Hotline: 400-000-0000',
+          documentKind: NoteDocumentKind.rich,
+          documentRevision: null,
+          documentRevisionUnavailableReason: 'unsafe_link',
+        ),
+      );
+
+      final telLinkContextMessage = _chatMessageText(capturedMessages[1]);
+      expect(telLinkContextMessage, contains('note_id: note-tel-link-1'));
+      expect(telLinkContextMessage, isNot(contains('document_revision:')));
+      expect(telLinkContextMessage, contains('内容正常可读'));
+      expect(telLinkContextMessage, contains('不要声称笔记损坏'));
+      expect(telLinkContextMessage, contains('Hotline: 400-000-0000'));
     });
 
     test('preserves one typed proposal artifact in the final response',

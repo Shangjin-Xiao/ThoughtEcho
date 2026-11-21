@@ -1160,7 +1160,18 @@ void main() {
       );
       expect(quillWidget.focusNode.hasFocus, isTrue);
 
-      // Press Escape while QuillEditor is still focused and clean -> exits with true
+      // Open the floating selection toolbar: first Escape must dismiss the menu
+      // without popping the editor, and second Escape must reach the page shortcut
+      final rawEditor = tester.state<EditorState>(find.byType(QuillRawEditor));
+      rawEditor.showToolbar();
+      await tester.pumpAndSettle();
+      expect(rawEditor.selectionOverlay?.toolbar, isNotNull);
+
+      await _pressEscape(tester);
+      expect(rawEditor.selectionOverlay?.toolbar, isNull);
+      expect(find.byType(NoteFullEditorPage), findsOneWidget);
+
+      // Second Escape while QuillEditor is still focused and clean -> exits with true
       await _pressEscape(tester);
       expect(find.byType(NoteFullEditorPage), findsNothing);
       expect(routeResult, isTrue);

@@ -113,12 +113,14 @@ class AgentNoteContext {
     required this.content,
     required this.documentKind,
     required this.documentRevision,
+    this.documentRevisionUnavailableReason,
   });
 
   final String? noteId;
   final String content;
   final NoteDocumentKind documentKind;
   final String? documentRevision;
+  final String? documentRevisionUnavailableReason;
 }
 
 /// Agent 运行时服务 — 基于 OpenAI 原生 tool calling 的 Agent Loop。
@@ -1404,10 +1406,23 @@ class AgentService extends ChangeNotifier {
     if (noteContext != null) {
       final noteId = noteContext.noteId;
       final revision = noteContext.documentRevision;
+      const malformedDeltaReasons = <String>{
+        'invalid_stored_delta',
+        'invalid_delta_root',
+        'invalid_op',
+        'invalid_insert',
+        'invalid_attributes',
+      };
+      final unavailableReason = noteContext.documentRevisionUnavailableReason;
+      final readOnlyStatusLine = unavailableReason != null &&
+              malformedDeltaReasons.contains(unavailableReason)
+          ? '状态: 该笔记存储的富文本数据无法解析为编辑基线，当前仅提供只读纯文本正文，没有可用的 document_revision；'
+              '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n'
+          : '状态: 该笔记内容正常可读，但包含暂不支持代理直接编辑的格式（如非网页链接或特殊样式），当前仅提供只读纯文本正文，没有可用的 document_revision；'
+              '请直接基于正文回答或分析，不要声称笔记损坏，也不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
       // 草稿（还没入库）不能伪造一个 note_id 塞给模型——它既没法拿去调编辑工具，
       // 又会被当成事实汇报给用户（「这条笔记未保存」）。直接说清楚状态即可。
-      // 已入库笔记若富文本 Delta 损坏导致无法计算 revision，仅提供只读纯文本上下文，
-      // 不伪造替代 revision，避免模型发起注定失败或冲突的编辑提案。
+      // 已入库笔记若无法计算编辑基线 revision，仅提供只读纯文本上下文，不伪造替代 revision。
       final identityLines = noteId == null
           ? '状态: 这是尚未保存到数据库的草稿，没有 note_id。\n'
               '不要声称笔记「未保存」或据此拒绝工作；要落库请用 propose_note_create，'
@@ -1415,8 +1430,7 @@ class AgentService extends ChangeNotifier {
           : revision == null
               ? 'note_id: ${escapeUntrustedText(noteId)}\n'
                   'document_kind: ${noteContext.documentKind.name}\n'
-                  '状态: 该笔记存储的富文本格式无法解析，当前仅提供只读纯文本正文，没有可用的 document_revision；'
-                  '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n'
+                  '$readOnlyStatusLine'
               : 'note_id: ${escapeUntrustedText(noteId)}\n'
                   'document_kind: ${noteContext.documentKind.name}\n'
                   'document_revision: $revision\n';
