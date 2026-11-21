@@ -337,11 +337,10 @@ class NetworkService {
 
     if (provider != null) {
       // 使用新版服务商配置
-      if (provider.isAnthropicMessagesApi ||
-          provider.apiUrl.contains('anthropic.com')) {
+      if (provider.isAnthropicMessagesApi) {
         headers['anthropic-version'] = '2023-06-01';
         headers['x-api-key'] = provider.apiKey;
-      } else if (provider.apiUrl.contains('openrouter.ai')) {
+      } else if (provider.isOpenRouter) {
         headers['Authorization'] = 'Bearer ${provider.apiKey}';
         headers['HTTP-Referer'] = 'https://thoughtecho.app';
         headers['X-Title'] = 'ThoughtEcho App';

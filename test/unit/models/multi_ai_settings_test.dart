@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 
 void main() {
@@ -280,6 +281,157 @@ void main() {
       expect(copyNone.providers.length, 1);
       expect(copyNone.currentProviderId, 'p1');
       expect(copyNone.enableFailover, isFalse);
+    });
+  });
+
+  group('MultiAISettings stateless per-task routing', () {
+    const defaultProvider = AIProviderSettings(
+      id: 'default_p',
+      name: 'Default Provider',
+      apiUrl: 'https://api.openai.com/v1',
+      model: 'gpt-4o-mini',
+    );
+    const fastProvider = AIProviderSettings(
+      id: 'fast_p',
+      name: 'Fast Provider',
+      apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+      model: 'glm-4-flash',
+    );
+    const reasoningProvider = AIProviderSettings(
+      id: 'reason_p',
+      name: 'Reasoning Provider',
+      apiUrl: 'https://api.deepseek.com/v1',
+      model: 'deepseek-reasoner',
+    );
+    const disabledProvider = AIProviderSettings(
+      id: 'disabled_p',
+      name: 'Disabled Provider',
+      apiUrl: 'https://api.deepseek.com/v1',
+      model: 'deepseek-chat',
+      isEnabled: false,
+    );
+
+    test(
+        'resolves explicit provider per task and falls back to currentProvider without mutating default',
+        () {
+      final settings = MultiAISettings(
+        providers: const [
+          defaultProvider,
+          fastProvider,
+          reasoningProvider,
+          disabledProvider,
+        ],
+        currentProviderId: 'default_p',
+        taskProviderIds: const {
+          AITask.dailyInsight: 'fast_p',
+          AITask.dreaming: 'reason_p',
+        },
+      );
+
+      expect(
+          settings.resolveProviderForTask(AITask.dailyInsight)?.id, 'fast_p');
+      expect(settings.resolveProviderForTask(AITask.dreaming)?.id, 'reason_p');
+      expect(
+        settings.resolveProviderForTask(AITask.periodicInsight)?.id,
+        'default_p',
+      );
+      expect(settings.resolveProviderForTask(AITask.agent)?.id, 'default_p');
+      expect(settings.resolveProviderForTask(null)?.id, 'default_p');
+      expect(settings.currentProviderId, 'default_p');
+    });
+
+    test(
+        'falls back to currentProvider when assigned provider is disabled or missing',
+        () {
+      final settings = MultiAISettings(
+        providers: const [defaultProvider, disabledProvider],
+        currentProviderId: 'default_p',
+        taskProviderIds: const {
+          AITask.dailyInsight: 'disabled_p',
+          AITask.dreaming: 'deleted_provider_id',
+        },
+      );
+
+      expect(settings.explicitProviderForTask(AITask.dailyInsight), isNull);
+      expect(settings.explicitProviderForTask(AITask.dreaming), isNull);
+      expect(
+        settings.resolveProviderForTask(AITask.dailyInsight)?.id,
+        'default_p',
+      );
+      expect(
+        settings.resolveProviderForTask(AITask.dreaming)?.id,
+        'default_p',
+      );
+      expect(settings.tasksAssignedTo('disabled_p'), isEmpty);
+    });
+
+    test('withTaskProvider and withoutProvider keep taskProviderIds clean', () {
+      var settings = const MultiAISettings(
+        providers: [defaultProvider, fastProvider, reasoningProvider],
+        currentProviderId: 'default_p',
+      );
+
+      settings = settings
+          .withTaskProvider(AITask.dailyInsight, 'fast_p')
+          .withTaskProvider(AITask.periodicInsight, 'fast_p')
+          .withTaskProvider(AITask.dreaming, 'reason_p');
+
+      expect(settings.currentProviderId, 'default_p');
+      expect(
+        settings.tasksAssignedTo('fast_p'),
+        [AITask.dailyInsight, AITask.periodicInsight],
+      );
+
+      // Reset dailyInsight back to following default
+      settings = settings.withTaskProvider(AITask.dailyInsight, null);
+      expect(settings.explicitProviderForTask(AITask.dailyInsight), isNull);
+      expect(
+        settings.resolveProviderForTask(AITask.dailyInsight)?.id,
+        'default_p',
+      );
+
+      // Delete fast_p -> cleans periodicInsight binding and preserves dreaming
+      final afterDelete = settings.withoutProvider('fast_p');
+      expect(afterDelete.taskProviderIds.containsKey(AITask.periodicInsight),
+          isFalse);
+      expect(afterDelete.taskProviderIds[AITask.dreaming], 'reason_p');
+      expect(afterDelete.currentProviderId, 'default_p');
+    });
+
+    test('serializes taskProviderIds and tolerates legacy or malformed maps',
+        () {
+      final original = MultiAISettings(
+        providers: const [defaultProvider, reasoningProvider],
+        currentProviderId: 'default_p',
+        taskProviderIds: const {
+          AITask.dreaming: 'reason_p',
+          AITask.agent: 'reason_p',
+        },
+      );
+
+      final json = original.toJson();
+      expect(json['taskProviderIds'], {
+        'dreaming': 'reason_p',
+        'agent': 'reason_p',
+      });
+
+      final restored = MultiAISettings.fromJson(json);
+      expect(restored.taskProviderIds, {
+        AITask.dreaming: 'reason_p',
+        AITask.agent: 'reason_p',
+      });
+
+      final malformed = MultiAISettings.fromJson({
+        'providers': [defaultProvider.toJson()],
+        'currentProviderId': 'default_p',
+        'taskProviderIds': {
+          'unknownTask': 'default_p',
+          'agent': 12345,
+          'dailyInsight': '   ',
+          'dreaming': 'default_p',
+        },
+      });
+      expect(malformed.taskProviderIds, {AITask.dreaming: 'default_p'});
     });
   });
 }

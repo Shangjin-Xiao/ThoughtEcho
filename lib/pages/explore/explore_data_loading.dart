@@ -7,6 +7,14 @@ extension _ExploreDataLoading on _ExplorePageState {
   /// 这样数据库连续通知时页面不会来回闪。
   Future<void> _loadPeriodData({bool showLoading = true}) async {
     final token = ++_loadToken;
+    _isFetchingQuotes = true;
+    final requestedScope = _ExplorePageState._periodScopeKey(
+      _selectedPeriod,
+      _selectedDate,
+    );
+    if (_activeInsightScope != null && _activeInsightScope != requestedScope) {
+      _invalidateActiveInsight(resetDisplay: true);
+    }
     // 首次加载还没有任何内容可保留，必须显示 loading
     final shouldShowLoading = showLoading || !_hasLoadedOnce;
     if (shouldShowLoading && !_isLoadingData) {
@@ -42,6 +50,7 @@ extension _ExploreDataLoading on _ExplorePageState {
 
       // 已有更新的加载在跑，丢弃这次的结果，避免旧数据把新数据顶掉
       if (token != _loadToken) return;
+      _isFetchingQuotes = false;
 
       // 更新数据版本key，触发动画
       final newDataKey =
@@ -61,6 +70,7 @@ extension _ExploreDataLoading on _ExplorePageState {
       await _computeExtrasAndInsight(token);
     } catch (e) {
       if (token != _loadToken) return;
+      _isFetchingQuotes = false;
       _updateState(() {
         _isLoadingData = false;
       });
@@ -133,9 +143,11 @@ extension _ExploreDataLoading on _ExplorePageState {
     final rangeStart = range?.start.toIso8601String().substring(0, 10);
     final rangeEnd = range?.end.toIso8601String().substring(0, 10);
     final rangeKey = range == null ? 'all' : '$rangeStart~$rangeEnd';
-    final provider =
-        context.read<SettingsService>().multiAISettings.currentProvider;
-    final model = provider?.model ?? '-';
+    final settingsService = context.read<SettingsService>();
+    _lastPeriodicInsightConfigKey =
+        _buildPeriodicInsightConfigKey(settingsService);
+    final providerSignature =
+        _periodicInsightProviderSignature(settingsService);
 
     final dataSignature = [
       _selectedPeriod,
@@ -144,7 +156,7 @@ extension _ExploreDataLoading on _ExplorePageState {
       totalWords,
       contentFingerprint,
       'p${AIPromptManager.reportInsightPromptVersion}',
-      model,
+      providerSignature,
     ].join('_');
 
     final mostPeriod = periodCounts.entries.isNotEmpty
@@ -243,32 +255,59 @@ extension _ExploreDataLoading on _ExplorePageState {
       _mostTopTagIcon = topTagIcon;
     });
 
-    _maybeStartInsight(dataSignature);
-  }
-
-  void _maybeStartInsight(String dataSignature) async {
-    if (!mounted) return;
-
-    // 同一份数据不要重复生成：否则数据库每通知一次，洞察就清空重来，
-    // 文字先消失再重新流出来，看上去就是页面在闪。
-    if (dataSignature == _insightSignature &&
-        (_insightLoading || _insightText.isNotEmpty)) {
+    if (!_computeIsPageVisible()) {
+      _pendingPeriodicInsightRefresh = true;
       return;
     }
-    _insightSignature = dataSignature;
+    _pendingPeriodicInsightRefresh = false;
+    _maybeStartInsight(dataSignature, token);
+  }
+
+  void _maybeStartInsight(String dataSignature, int loadToken) async {
+    if (!mounted || loadToken != _loadToken) return;
 
     final l10n = AppLocalizations.of(context);
     final settings = context.read<SettingsService>();
     final useAI = settings.reportInsightsUseAI;
+    final reuseKey = '${useAI ? 'ai' : 'local'}_$dataSignature';
+
+    final capturedPeriodType = _selectedPeriod;
+    final capturedDate = _selectedDate;
+    final currentScope = _ExplorePageState._periodScopeKey(
+      capturedPeriodType,
+      capturedDate,
+    );
+
+    // 同一份数据与模式不要重复生成：否则数据库每通知一次，洞察就清空重来，
+    // 文字先消失再重新流出来，看上去就是页面在闪。
+    // 注意：这里不修改 _insightToken，让同签名的在途流继续消费并正常收敛。
+    if (reuseKey == _insightSignature &&
+        currentScope == _activeInsightScope &&
+        (_insightLoading || _insightText.isNotEmpty)) {
+      return;
+    }
+    _insightSignature = reuseKey;
+    _activeInsightScope = currentScope;
+    final insightToken = ++_insightToken;
+
     // 用户翻到上周就说「上周」，翻到更早就报日期范围。原来是
     // thisPeriod(周) —— 永远的「本周」，和实际查询的日期范围对不上。
     final periodLabel = ReportPeriodLabels.label(
       l10n,
-      _selectedPeriod,
-      _selectedDate,
+      capturedPeriodType,
+      capturedDate,
     );
-    final periodRange =
-        ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
+    final rangeText = ReportPeriodLabels.rangeText(
+      l10n,
+      capturedPeriodType,
+      capturedDate,
+    );
+    final historyPeriodLabel =
+        rangeText.isNotEmpty ? rangeText : capturedPeriodType;
+    final periodRange = ReportPeriodUtils.dateRange(
+      capturedPeriodType,
+      capturedDate,
+    );
     final activeDays = _getActiveDays();
     final noteCount = _periodQuotes.length;
 
@@ -277,20 +316,20 @@ extension _ExploreDataLoading on _ExplorePageState {
     _insightFlushTimer = null;
     _insightPending = '';
 
-    // 1. 尝试从历史记录中查找缓存
+    // 1. 仅在开启 AI 模式时尝试从历史记录中查找缓存，避免本地模式下误展示 AI 缓存
     final insightService = context.read<InsightHistoryService>();
-    final cachedInsight = insightService.getInsightBySignature(dataSignature);
-
-    if (cachedInsight != null) {
-      // 如果有缓存，直接使用缓存
-      if (mounted) {
-        _updateState(() {
-          _insightText = cachedInsight.insight;
-          _insightLoading = false;
-        });
-        AppLogger.d('Using cached insight for signature: $dataSignature');
+    if (useAI) {
+      final cachedInsight = insightService.getInsightBySignature(dataSignature);
+      if (cachedInsight != null) {
+        if (mounted && insightToken == _insightToken) {
+          _updateState(() {
+            _insightText = cachedInsight.insight;
+            _insightLoading = false;
+          });
+          AppLogger.d('Using cached insight for signature: $dataSignature');
+        }
+        return;
       }
-      return;
     }
 
     // 这个周期一条笔记都没有。
@@ -302,6 +341,9 @@ extension _ExploreDataLoading on _ExplorePageState {
     if (noteCount == 0) {
       await _generateEmptyPeriodInsight(
         l10n,
+        insightToken: insightToken,
+        periodType: capturedPeriodType,
+        selectedDate: capturedDate,
         periodLabel: periodLabel,
         useAI: useAI,
       );
@@ -392,14 +434,20 @@ extension _ExploreDataLoading on _ExplorePageState {
       )
           .listen(
         (chunk) {
-          if (!mounted) return;
+          if (!mounted || insightToken != _insightToken) {
+            return;
+          }
           // 按帧率量级节流：逐 chunk setState 会让整页反复重排抖动
           _insightPending += chunk;
-          _insightFlushTimer ??=
-              Timer(_ExplorePageState._insightFlushInterval, _flushInsight);
+          _insightFlushTimer ??= Timer(
+            _ExplorePageState._insightFlushInterval,
+            () => _flushInsight(insightToken),
+          );
         },
         onError: (_) {
-          if (!mounted) return;
+          if (!mounted || insightToken != _insightToken) {
+            return;
+          }
           _insightFlushTimer?.cancel();
           _insightFlushTimer = null;
           _insightPending = '';
@@ -428,19 +476,28 @@ extension _ExploreDataLoading on _ExplorePageState {
           _insightSignature = null;
         },
         onDone: () {
-          if (!mounted) return;
+          if (!mounted || insightToken != _insightToken) {
+            return;
+          }
           _insightFlushTimer?.cancel();
           _insightFlushTimer = null;
           final tail = _insightPending;
           _insightPending = '';
+          final completedInsight =
+              tail.isNotEmpty ? '$_insightText$tail' : _insightText;
           _updateState(() {
-            if (tail.isNotEmpty) _insightText += tail;
+            _insightText = completedInsight;
             _insightLoading = false;
           });
 
-          // 保存洞察到历史记录
-          if (_insightText.isNotEmpty) {
-            _saveInsightToHistory(l10n, dataSignature: dataSignature);
+          // 使用生成启动时的周期快照保存历史记录，避免切换周期后把旧回答写进新周期
+          if (completedInsight.isNotEmpty) {
+            _saveInsightToHistory(
+              insightText: completedInsight,
+              periodType: capturedPeriodType,
+              periodLabel: historyPeriodLabel,
+              dataSignature: dataSignature,
+            );
           }
         },
       );
@@ -480,11 +537,14 @@ extension _ExploreDataLoading on _ExplorePageState {
   /// 因为网络抖一下就退回沉默。
   Future<void> _generateEmptyPeriodInsight(
     AppLocalizations l10n, {
+    required int insightToken,
+    required String periodType,
+    required DateTime selectedDate,
     required String periodLabel,
     required bool useAI,
   }) async {
     final now = DateTime.now();
-    final range = ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
+    final range = ReportPeriodUtils.dateRange(periodType, selectedDate);
 
     // "上一次落笔是多久前"——只有当最近那条确实早于本周期时才提。用户翻到
     // 一个更早的空周期时，最近那条可能在它之后，那时说"距上次 N 天"是错的。
@@ -501,13 +561,13 @@ extension _ExploreDataLoading on _ExplorePageState {
     } catch (e) {
       AppLogger.d('Failed to look up last note for empty insight: $e');
     }
-    if (!mounted) return;
+    if (!mounted || insightToken != _insightToken) return;
 
     final daysSinceLastNote = emptyPeriodGapDays(
       lastNoteDate: lastNoteDate,
       range: range,
-      period: _selectedPeriod,
-      date: _selectedDate,
+      period: periodType,
+      date: selectedDate,
     );
 
     String localFallback({bool isFallback = false}) =>
@@ -526,6 +586,11 @@ extension _ExploreDataLoading on _ExplorePageState {
       return;
     }
 
+    _insightSub?.cancel();
+    _insightFlushTimer?.cancel();
+    _insightFlushTimer = null;
+    _insightPending = '';
+
     _updateState(() {
       _insightText = '';
       _insightLoading = true;
@@ -543,13 +608,19 @@ extension _ExploreDataLoading on _ExplorePageState {
         )
         .listen(
       (chunk) {
-        if (!mounted) return;
+        if (!mounted || insightToken != _insightToken) {
+          return;
+        }
         _insightPending += chunk;
-        _insightFlushTimer ??=
-            Timer(_ExplorePageState._insightFlushInterval, _flushInsight);
+        _insightFlushTimer ??= Timer(
+          _ExplorePageState._insightFlushInterval,
+          () => _flushInsight(insightToken),
+        );
       },
       onError: (_) {
-        if (!mounted) return;
+        if (!mounted || insightToken != _insightToken) {
+          return;
+        }
         _insightFlushTimer?.cancel();
         _insightFlushTimer = null;
         _insightPending = '';
@@ -561,7 +632,9 @@ extension _ExploreDataLoading on _ExplorePageState {
         _insightSignature = null;
       },
       onDone: () {
-        if (!mounted) return;
+        if (!mounted || insightToken != _insightToken) {
+          return;
+        }
         _insightFlushTimer?.cancel();
         _insightFlushTimer = null;
         final tail = _insightPending;
@@ -582,9 +655,11 @@ extension _ExploreDataLoading on _ExplorePageState {
   }
 
   /// 把节流缓冲里的流式文本刷进 UI
-  void _flushInsight() {
+  void _flushInsight(int insightToken) {
     _insightFlushTimer = null;
-    if (!mounted || _insightPending.isEmpty) return;
+    if (!mounted || insightToken != _insightToken || _insightPending.isEmpty) {
+      return;
+    }
     final pending = _insightPending;
     _insightPending = '';
     _updateState(() {
@@ -614,30 +689,28 @@ extension _ExploreDataLoading on _ExplorePageState {
   }
 
   /// 保存洞察到历史记录
-  Future<void> _saveInsightToHistory(
-    AppLocalizations l10n, {
+  Future<void> _saveInsightToHistory({
+    required String insightText,
+    required String periodType,
+    required String periodLabel,
     String? dataSignature,
   }) async {
     try {
       final insightService = context.read<InsightHistoryService>();
 
-      // 存具体的日期范围，不存「本周」。这个标签只有一个消费者——
-      // getPreviousInsightsContext 把它拼成「- [标签] 洞察」喂回给模型做
-      // 历史参考。每一周都存成「本周」的话，模型看到的是一串一模一样的
-      // 标签，既分不清先后也看不出跨度，等于白给。
-      final rangeText = _getDateRangeText(l10n);
-      final periodLabel = rangeText.isNotEmpty ? rangeText : _selectedPeriod;
-
+      // 存生成启动时捕获的具体日期范围，不读取可变组件状态：
+      // 1) getPreviousInsightsContext 需要具体范围而非一串重复的「本周」；
+      // 2) 即便极端并发下发生延迟回调，也不会用切换后的新周期标签标注旧洞察。
       await insightService.addInsight(
-        insight: _insightText,
-        periodType: _selectedPeriod,
+        insight: insightText,
+        periodType: periodType,
         periodLabel: periodLabel,
         isAiGenerated: true,
         dataSignature: dataSignature, // 传递签名
       );
 
       logDebug(
-        'Saved insight to history: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
+        'Saved insight to history: ${insightText.substring(0, insightText.length > 50 ? 50 : insightText.length)}...',
         source: 'ExplorePage',
       );
     } catch (e) {

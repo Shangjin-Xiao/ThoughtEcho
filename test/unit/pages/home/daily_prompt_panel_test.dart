@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
 import 'package:thoughtecho/services/ai_service.dart';
@@ -16,10 +17,14 @@ import 'package:thoughtecho/services/weather_service.dart';
 
 class _FakeAIService extends Fake implements AIService {
   final Stream<String> stream;
+  AITask? lastCheckedTask;
   _FakeAIService(this.stream);
 
   @override
-  bool hasValidApiKey() => true;
+  bool hasValidApiKey({AITask? task}) {
+    lastCheckedTask = task;
+    return true;
+  }
 
   @override
   Stream<String> streamGenerateDailyPrompt(

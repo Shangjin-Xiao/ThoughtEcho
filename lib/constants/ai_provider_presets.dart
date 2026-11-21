@@ -1,4 +1,5 @@
 import '../gen_l10n/app_localizations.dart';
+import '../models/ai_model_metadata.dart';
 
 /// 内置服务商模板的分组。
 enum AIPresetKind {
@@ -32,6 +33,8 @@ class AIProviderPreset {
     this.consoleUrl,
     this.requiresApiKey = true,
     this.recommended = false,
+    this.modelsDevProviderId,
+    this.protocol = AIProtocolType.openAICompatible,
   });
 
   /// 模板标识，仅用于查找和展示，不会成为保存后配置的 id。
@@ -58,6 +61,12 @@ class AIProviderPreset {
 
   /// 是否作为首推项排在最前面。
   final bool recommended;
+
+  /// 对应 `https://models.dev/api.json` 中的服务商目录键名（若存在）。
+  final String? modelsDevProviderId;
+
+  /// 服务商默认协议类型。
+  final AIProtocolType protocol;
 
   String nameOf(AppLocalizations l10n) {
     switch (id) {
@@ -141,6 +150,7 @@ class AIProviderPresets {
         'minimax-m3:cloud',
       ],
       consoleUrl: 'https://ollama.com/settings/keys',
+      modelsDevProviderId: 'ollama-cloud',
     ),
     AIProviderPreset(
       id: 'openai',
@@ -149,6 +159,7 @@ class AIProviderPresets {
       defaultModel: 'gpt-4o-mini',
       suggestedModels: ['gpt-4o-mini', 'gpt-4o'],
       consoleUrl: 'https://platform.openai.com/api-keys',
+      modelsDevProviderId: 'openai',
     ),
     AIProviderPreset(
       id: 'openrouter',
@@ -161,6 +172,7 @@ class AIProviderPresets {
         'google/gemini-2.5-flash',
       ],
       consoleUrl: 'https://openrouter.ai/keys',
+      modelsDevProviderId: 'openrouter',
     ),
     AIProviderPreset(
       id: 'deepseek',
@@ -169,6 +181,7 @@ class AIProviderPresets {
       defaultModel: 'deepseek-chat',
       suggestedModels: ['deepseek-chat', 'deepseek-reasoner'],
       consoleUrl: 'https://platform.deepseek.com/api_keys',
+      modelsDevProviderId: 'deepseek',
     ),
     AIProviderPreset(
       id: 'siliconflow',
@@ -180,6 +193,7 @@ class AIProviderPresets {
         'deepseek-ai/DeepSeek-V3',
       ],
       consoleUrl: 'https://cloud.siliconflow.cn/account/ak',
+      modelsDevProviderId: 'siliconflow',
     ),
     AIProviderPreset(
       id: 'zhipu',
@@ -188,6 +202,7 @@ class AIProviderPresets {
       defaultModel: 'glm-4-flash',
       suggestedModels: ['glm-4-flash', 'glm-4-plus'],
       consoleUrl: 'https://open.bigmodel.cn/usercenter/apikeys',
+      modelsDevProviderId: 'zhipuai',
     ),
     AIProviderPreset(
       id: 'moonshot',
@@ -196,6 +211,7 @@ class AIProviderPresets {
       defaultModel: 'moonshot-v1-8k',
       suggestedModels: ['moonshot-v1-8k', 'moonshot-v1-32k'],
       consoleUrl: 'https://platform.moonshot.cn/console/api-keys',
+      modelsDevProviderId: 'moonshotai',
     ),
     AIProviderPreset(
       id: 'dashscope',
@@ -204,12 +220,14 @@ class AIProviderPresets {
       defaultModel: 'qwen-plus',
       suggestedModels: ['qwen-plus', 'qwen-turbo', 'qwen-max'],
       consoleUrl: 'https://bailian.console.aliyun.com/?tab=model#/api-key',
+      modelsDevProviderId: 'alibaba-cn',
     ),
     AIProviderPreset(
       id: 'volcengine',
       apiUrl: 'https://ark.cn-beijing.volces.com/api/v3',
       kind: AIPresetKind.cloud,
       consoleUrl: 'https://console.volcengine.com/ark',
+      modelsDevProviderId: 'volcengine',
     ),
     AIProviderPreset(
       id: 'gemini',
@@ -223,6 +241,7 @@ class AIProviderPresets {
         'gemini-2.5-flash',
       ],
       consoleUrl: 'https://aistudio.google.com/apikey',
+      modelsDevProviderId: 'google',
     ),
     AIProviderPreset(
       id: 'ollama_local',
@@ -253,6 +272,18 @@ class AIProviderPresets {
   static AIProviderPreset? byId(String id) {
     for (final preset in all) {
       if (preset.id == id) return preset;
+    }
+    return null;
+  }
+
+  /// 按模板 `id` 或 `modelsDevProviderId` 查找内置模板。
+  static AIProviderPreset? bySlugOrId(String? slug) {
+    final normalized = slug?.trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) return null;
+    for (final preset in all) {
+      if (preset.id == normalized || preset.modelsDevProviderId == normalized) {
+        return preset;
+      }
     }
     return null;
   }

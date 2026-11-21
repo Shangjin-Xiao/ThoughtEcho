@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/explore_page.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
@@ -38,6 +42,24 @@ class _EmptyPeriodDatabaseService extends DatabaseService {
     DateTime start,
     DateTime end, {
     bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
+    return const [];
+  }
+
+  @override
+  Future<List<Quote>> getUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 10,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
     bool includeDeleted = false,
   }) async {
     return const [];
@@ -109,6 +131,9 @@ class _ReportSettingsService extends ChangeNotifier implements SettingsService {
   bool get reportInsightsUseAI => false;
 
   @override
+  MultiAISettings get multiAISettings => const MultiAISettings();
+
+  @override
   String get localeCode => 'zh';
 
   @override
@@ -126,6 +151,213 @@ class _ReportSettingsService extends ChangeNotifier implements SettingsService {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('SettingsService.${invocation.memberName}');
+}
+
+class _AiSignatureSettingsService extends _ReportSettingsService {
+  _AiSignatureSettingsService(
+    this._multiAISettings, {
+    bool reportInsightsUseAI = true,
+  }) : _reportInsightsUseAI = reportInsightsUseAI;
+
+  MultiAISettings _multiAISettings;
+  bool _reportInsightsUseAI;
+
+  @override
+  bool get reportInsightsUseAI => _reportInsightsUseAI;
+
+  @override
+  Future<void> setReportInsightsUseAI(bool useAI) async {
+    _reportInsightsUseAI = useAI;
+    notifyListeners();
+  }
+
+  @override
+  MultiAISettings get multiAISettings => _multiAISettings;
+
+  @override
+  Future<void> saveMultiAISettings(MultiAISettings settings) async {
+    _multiAISettings = settings;
+    notifyListeners();
+  }
+
+  @override
+  Future<bool> removeCustomKey(String key) async => true;
+
+  void notifyUnrelatedSettingsChanged() => notifyListeners();
+}
+
+class _RecordingInsightHistoryService extends InsightHistoryService {
+  _RecordingInsightHistoryService({required super.settingsService});
+
+  final Map<String, PeriodicInsight> bySignature = <String, PeriodicInsight>{};
+  final List<String?> recordedSignatures = <String?>[];
+  final List<PeriodicInsight> recordedInsights = <PeriodicInsight>[];
+
+  @override
+  Future<void> ensureLoaded() async {}
+
+  @override
+  PeriodicInsight? getInsightBySignature(String signature) =>
+      bySignature[signature];
+
+  @override
+  Future<void> addInsight({
+    required String insight,
+    required String periodType,
+    required String periodLabel,
+    bool isAiGenerated = true,
+    String? dataSignature,
+  }) async {
+    if (!isAiGenerated) return;
+    recordedSignatures.add(dataSignature);
+    final entry = PeriodicInsight(
+      insight: insight,
+      periodType: periodType,
+      periodLabel: periodLabel,
+      createdAt: DateTime.now(),
+      isAiGenerated: isAiGenerated,
+      dataSignature: dataSignature,
+    );
+    recordedInsights.add(entry);
+    if (dataSignature != null) {
+      bySignature[dataSignature] = entry;
+    }
+  }
+}
+
+class _DelayedEmptyPeriodDatabaseService extends _EmptyPeriodDatabaseService {
+  int getUserQuotesCalls = 0;
+  Completer<List<Quote>>? firstLookupCompleter;
+
+  @override
+  Future<List<Quote>> getUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 10,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
+    bool includeDeleted = false,
+  }) async {
+    getUserQuotesCalls++;
+    if (getUserQuotesCalls == 1 && firstLookupCompleter != null) {
+      return firstLookupCompleter!.future;
+    }
+    return const [];
+  }
+}
+
+class _ControllableEmptyPeriodAIService extends AIService {
+  _ControllableEmptyPeriodAIService({required super.settingsService});
+
+  int emptyInsightCalls = 0;
+  final Map<String, StreamController<String>> controllersByProviderId = {};
+
+  @override
+  Stream<String> streamEmptyPeriodInsight({
+    required String periodLabel,
+    required DateTime now,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+    int? daysSinceLastNote,
+    bool everWroteAnything = false,
+  }) {
+    emptyInsightCalls++;
+    final active = settingsService.multiAISettings
+        .resolveProviderForTask(AITask.periodicInsight);
+    final controller = StreamController<String>();
+    if (active != null) {
+      controllersByProviderId[active.id] = controller;
+    }
+    return controller.stream;
+  }
+}
+
+class _DelayedSwitchPeriodDatabaseService extends DatabaseService {
+  _DelayedSwitchPeriodDatabaseService() : super.forTesting();
+
+  int queryCount = 0;
+  Completer<List<Quote>>? secondQueryCompleter;
+
+  @override
+  Future<List<Quote>> getQuotesForPeriod(
+    DateTime start,
+    DateTime end, {
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
+    queryCount++;
+    final note = Quote(
+      id: 'q_period_$queryCount',
+      content: '第 $queryCount 次周期查询笔记',
+      date: DateTime.now().toIso8601String(),
+    );
+    if (queryCount == 2 && secondQueryCompleter != null) {
+      return secondQueryCompleter!.future;
+    }
+    return [note];
+  }
+}
+
+class _ControllableReportInsightAIService extends AIService {
+  _ControllableReportInsightAIService({required super.settingsService});
+
+  int reportInsightCalls = 0;
+  final List<StreamController<String>> controllers = [];
+
+  @override
+  Stream<String> streamReportInsight({
+    required String periodLabel,
+    String? mostTimePeriod,
+    String? mostWeather,
+    String? topTag,
+    required int activeDays,
+    required int noteCount,
+    required int totalWordCount,
+    String? notesPreview,
+    String? fullNotesContent,
+    String? previousInsights,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+  }) {
+    reportInsightCalls++;
+    final controller = StreamController<String>();
+    controllers.add(controller);
+    return controller.stream;
+  }
+}
+
+class _StubPeriodicInsightAIService extends AIService {
+  _StubPeriodicInsightAIService({required super.settingsService});
+
+  int reportInsightCalls = 0;
+
+  @override
+  Stream<String> streamReportInsight({
+    required String periodLabel,
+    String? mostTimePeriod,
+    String? mostWeather,
+    String? topTag,
+    required int activeDays,
+    required int noteCount,
+    required int totalWordCount,
+    String? notesPreview,
+    String? fullNotesContent,
+    String? previousInsights,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+  }) {
+    reportInsightCalls++;
+    final active = settingsService.multiAISettings
+        .resolveProviderForTask(AITask.periodicInsight);
+    return Stream<String>.value(
+        '来自 ${active?.name} 的周期洞察 #$reportInsightCalls');
+  }
 }
 
 void main() {
@@ -590,5 +822,629 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('本月'), findsOneWidget);
+  });
+
+  testWidgets(
+      'includes provider.id in periodicInsight signature so switching same-model providers does not hit stale cache',
+      (tester) async {
+    const gatewayA = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    const gatewayB = AIProviderSettings(
+      id: 'p_gateway_b',
+      name: '网关B',
+      apiUrl: 'https://gateway-b.example/v1',
+      model: 'gpt-4o-mini',
+    );
+
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayA, gatewayB],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    final database = _CountingPeriodDatabaseService();
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _StubPeriodicInsightAIService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(database.queryCount, 1);
+    expect(aiService.reportInsightCalls, 1);
+    expect(find.textContaining('来自 网关A 的周期洞察 #1'), findsOneWidget);
+    expect(
+      insights.recordedSignatures.last,
+      endsWith('_p_gateway_a:gpt-4o-mini@https://gateway-a.example/v1'),
+    );
+
+    // Unrelated SettingsService notifications do not trigger insight regeneration or DB reload
+    settings.notifyUnrelatedSettingsChanged();
+    await tester.pumpAndSettle();
+    expect(database.queryCount, 1);
+    expect(aiService.reportInsightCalls, 1);
+
+    // Switch AITask.periodicInsight to gatewayB while ExplorePage stays mounted (as in HomePage IndexedStack)
+    await settings.saveMultiAISettings(
+      settings.multiAISettings.withTaskProvider(
+        AITask.periodicInsight,
+        'p_gateway_b',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(database.queryCount, 1);
+    expect(aiService.reportInsightCalls, 2);
+    expect(find.textContaining('来自 网关B 的周期洞察 #2'), findsOneWidget);
+    expect(
+      insights.recordedSignatures.last,
+      endsWith('_p_gateway_b:gpt-4o-mini@https://gateway-b.example/v1'),
+    );
+
+    // Switching back to gatewayA while mounted hits gatewayA's cached signature without making a 3rd AI request
+    await settings.saveMultiAISettings(
+      settings.multiAISettings.withTaskProvider(
+        AITask.periodicInsight,
+        'p_gateway_a',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(database.queryCount, 1);
+    expect(aiService.reportInsightCalls, 2);
+    expect(find.textContaining('来自 网关A 的周期洞察 #1'), findsOneWidget);
+  });
+
+  testWidgets(
+      'toggling reportInsightsUseAI and editing provider apiUrl refresh mounted ExplorePage without cross-mode cache bleed',
+      (tester) async {
+    const gatewayV1 = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayV1],
+        currentProviderId: 'p_gateway_a',
+      ),
+      reportInsightsUseAI: false,
+    );
+    final database = _CountingPeriodDatabaseService();
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _StubPeriodicInsightAIService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Starts in local mode: 0 AI calls
+    expect(aiService.reportInsightCalls, 0);
+    expect(find.textContaining('来自 网关A 的周期洞察'), findsNothing);
+
+    // Enable AI mode -> immediately generates AI insight
+    await settings.setReportInsightsUseAI(true);
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 1);
+    expect(find.textContaining('来自 网关A 的周期洞察 #1'), findsOneWidget);
+
+    // Disable AI mode -> switches back to local insight instead of showing cached AI insight
+    await settings.setReportInsightsUseAI(false);
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 1);
+    expect(find.textContaining('来自 网关A 的周期洞察'), findsNothing);
+
+    // Re-enable AI mode -> reuses cached AI insight without extra network call
+    await settings.setReportInsightsUseAI(true);
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 1);
+    expect(find.textContaining('来自 网关A 的周期洞察 #1'), findsOneWidget);
+
+    // Edit provider apiUrl while keeping same provider.id and model -> invalidates signature and regenerates
+    await settings.saveMultiAISettings(
+      MultiAISettings(
+        providers: [
+          gatewayV1.copyWith(apiUrl: 'https://gateway-a-v2.example/v1'),
+        ],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 2);
+    expect(find.textContaining('来自 网关A 的周期洞察 #2'), findsOneWidget);
+    expect(
+      insights.recordedSignatures.last,
+      endsWith('_p_gateway_a:gpt-4o-mini@https://gateway-a-v2.example/v1'),
+    );
+  });
+
+  testWidgets(
+      'defers periodicInsight refresh while ExplorePage is hidden in IndexedStack until tab becomes visible',
+      (tester) async {
+    const gatewayA = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    const gatewayB = AIProviderSettings(
+      id: 'p_gateway_b',
+      name: '网关B',
+      apiUrl: 'https://gateway-b.example/v1',
+      model: 'gpt-4o-mini',
+    );
+
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayA, gatewayB],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    final database = _CountingPeriodDatabaseService();
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _StubPeriodicInsightAIService(settingsService: settings);
+    final tabIndex = ValueNotifier<int>(1);
+    addTearDown(tabIndex.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ValueListenableBuilder<int>(
+            valueListenable: tabIndex,
+            builder: (_, index, __) => IndexedStack(
+              index: index,
+              children: [
+                const SizedBox.shrink(),
+                TickerMode(
+                  enabled: index == 1,
+                  child: const ExplorePage(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 1);
+
+    // Switch away from Explore tab -> ExplorePage stays mounted in IndexedStack with TickerMode disabled
+    tabIndex.value = 0;
+    await tester.pumpAndSettle();
+
+    // Change periodicInsight provider while ExplorePage is hidden -> must NOT fire background AI request
+    await settings.saveMultiAISettings(
+      settings.multiAISettings.withTaskProvider(
+        AITask.periodicInsight,
+        'p_gateway_b',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 1);
+
+    // Switch back to Explore tab -> deferred refresh runs once
+    tabIndex.value = 1;
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 2);
+    expect(find.textContaining('来自 网关B 的周期洞察 #2'), findsOneWidget);
+
+    // Push a route on top of ExplorePage -> changing back to uncached config while covered also defers until pop
+    final navContext = tester.element(find.byType(ExplorePage));
+    unawaited(
+      Navigator.of(navContext).push<void>(
+        MaterialPageRoute<void>(builder: (_) => const Scaffold()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await settings.saveMultiAISettings(
+      MultiAISettings(
+        providers: [
+          gatewayA.copyWith(apiUrl: 'https://gateway-a-v3.example/v1'),
+          gatewayB,
+        ],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 2);
+
+    Navigator.of(navContext).pop();
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 3);
+    expect(find.textContaining('来自 网关A 的周期洞察 #3'), findsOneWidget);
+  });
+
+  testWidgets(
+      'discards stale empty-period insight async lookup and stream chunks when provider switches mid-flight',
+      (tester) async {
+    const gatewayA = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    const gatewayB = AIProviderSettings(
+      id: 'p_gateway_b',
+      name: '网关B',
+      apiUrl: 'https://gateway-b.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    const gatewayC = AIProviderSettings(
+      id: 'p_gateway_c',
+      name: '网关C',
+      apiUrl: 'https://gateway-c.example/v1',
+      model: 'gpt-4o-mini',
+    );
+
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayA, gatewayB, gatewayC],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    final database = _DelayedEmptyPeriodDatabaseService()
+      ..firstLookupCompleter = Completer<List<Quote>>();
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _ControllableEmptyPeriodAIService(
+      settingsService: settings,
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    // Round 1 (gatewayA) is awaiting getUserQuotes(limit: 1); switch to gatewayB before it finishes
+    expect(database.getUserQuotesCalls, 1);
+    expect(aiService.emptyInsightCalls, 0);
+
+    await settings.saveMultiAISettings(
+      settings.multiAISettings.withTaskProvider(
+        AITask.periodicInsight,
+        'p_gateway_b',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    // Round 2 (gatewayB) has started streaming
+    expect(database.getUserQuotesCalls, 2);
+    expect(aiService.emptyInsightCalls, 1);
+    expect(
+      aiService.controllersByProviderId.containsKey('p_gateway_a'),
+      isFalse,
+    );
+    final controllerB = aiService.controllersByProviderId['p_gateway_b']!;
+
+    // Now complete Round 1's delayed getUserQuotes -> must be discarded by token check without starting stream A
+    database.firstLookupCompleter!.complete(const []);
+    await tester.pump();
+    expect(aiService.emptyInsightCalls, 1);
+    expect(
+      aiService.controllersByProviderId.containsKey('p_gateway_a'),
+      isFalse,
+    );
+
+    // Emit partial chunk on gatewayB (buffered in _insightPending before 120ms timer fires), then switch to gatewayC
+    controllerB.add('旧流半截残片_');
+    await tester.pump(const Duration(milliseconds: 20));
+
+    await settings.saveMultiAISettings(
+      settings.multiAISettings.withTaskProvider(
+        AITask.periodicInsight,
+        'p_gateway_c',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final controllerC = aiService.controllersByProviderId['p_gateway_c']!;
+    controllerC.add('新流完整空周期问候');
+    unawaited(controllerC.close());
+    unawaited(controllerB.close());
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+
+    expect(find.text('新流完整空周期问候'), findsOneWidget);
+    expect(find.textContaining('旧流半截残片'), findsNothing);
+  });
+
+  testWidgets(
+      'silent database reload with unchanged period signature does not freeze in-flight insight stream',
+      (tester) async {
+    const gatewayA = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayA],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    final database = _CountingPeriodDatabaseService();
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _ControllableReportInsightAIService(
+      settingsService: settings,
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(aiService.reportInsightCalls, 1);
+    final controller = aiService.controllers.single;
+
+    // Emit initial chunk and flush it
+    controller.add('前半段洞察，');
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text('前半段洞察，'), findsOneWidget);
+
+    // Trigger a silent database notification whose period data signature is unchanged
+    database.notifyDataChanged();
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(database.queryCount, 2);
+    expect(aiService.reportInsightCalls, 1);
+
+    // Subsequent chunks and completion must still flush and settle _insightLoading
+    controller.add('后半段顺利收敛。');
+    unawaited(controller.close());
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pumpAndSettle();
+
+    expect(find.text('前半段洞察，后半段顺利收敛。'), findsOneWidget);
+    expect(insights.recordedSignatures, hasLength(1));
+  });
+
+  testWidgets(
+      'database notifications while ExplorePage is hidden do not trigger AI insights until visible again',
+      (tester) async {
+    const gatewayA = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    const gatewayB = AIProviderSettings(
+      id: 'p_gateway_b',
+      name: '网关B',
+      apiUrl: 'https://gateway-b.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayA, gatewayB],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    final database = _CountingPeriodDatabaseService();
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _StubPeriodicInsightAIService(settingsService: settings);
+    final tabIndex = ValueNotifier<int>(1);
+    addTearDown(tabIndex.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ValueListenableBuilder<int>(
+            valueListenable: tabIndex,
+            builder: (_, index, __) => IndexedStack(
+              index: index,
+              children: [
+                const SizedBox.shrink(),
+                TickerMode(
+                  enabled: index == 1,
+                  child: const ExplorePage(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 1);
+
+    // Hide ExplorePage by switching to tab 0, change periodicInsight provider, and emit database change
+    tabIndex.value = 0;
+    await tester.pumpAndSettle();
+
+    await settings.saveMultiAISettings(
+      settings.multiAISettings.withTaskProvider(
+        AITask.periodicInsight,
+        'p_gateway_b',
+      ),
+    );
+    database.notifyDataChanged();
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+
+    // Even after the debounced database reload completes, no background AI insight request was fired
+    expect(database.queryCount, 2);
+    expect(aiService.reportInsightCalls, 1);
+
+    // Returning to Explore tab runs the deferred insight once
+    tabIndex.value = 1;
+    await tester.pumpAndSettle();
+    expect(aiService.reportInsightCalls, 2);
+    expect(find.textContaining('来自 网关B 的周期洞察 #2'), findsOneWidget);
+  });
+
+  testWidgets(
+      'switching period cancels in-flight stream immediately so finishing during pending DB read does not save under new period',
+      (tester) async {
+    const gatewayA = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayA],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    final monthlyQueryCompleter = Completer<List<Quote>>();
+    final database = _DelayedSwitchPeriodDatabaseService()
+      ..secondQueryCompleter = monthlyQueryCompleter;
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _ControllableReportInsightAIService(
+      settingsService: settings,
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    final context = tester.element(find.byType(ExplorePage));
+    final l10n = AppLocalizations.of(context);
+
+    // Weekly insight stream is active
+    expect(aiService.reportInsightCalls, 1);
+    final weeklyController = aiService.controllers.single;
+    weeklyController.add('旧的周度洞察内容');
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text('旧的周度洞察内容'), findsOneWidget);
+
+    // Open period picker and switch from This Week to This Month; monthly DB read stays pending
+    await tester.tap(find.text(l10n.thisWeek));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.thisMonth).last);
+    await tester.pump();
+
+    expect(database.queryCount, 2);
+    expect(weeklyController.hasListener, isFalse);
+
+    // Complete the old weekly stream while the monthly DB read is still pending
+    weeklyController.add('不应写入月度历史的尾部');
+    unawaited(weeklyController.close());
+    await tester.pump(const Duration(milliseconds: 150));
+
+    // Old weekly insight must NOT be persisted under either week or month
+    expect(insights.recordedInsights, isEmpty);
+
+    // Now release the monthly DB read and complete the new monthly insight stream
+    monthlyQueryCompleter.complete([
+      Quote(
+        id: 'q_month_1',
+        content: '本月新增笔记内容',
+        date: DateTime.now().toIso8601String(),
+      ),
+    ]);
+    await tester.pump();
+    await tester.pump();
+
+    expect(aiService.reportInsightCalls, 2);
+    final monthlyController = aiService.controllers.last;
+    monthlyController.add('新的月度洞察全文');
+    unawaited(monthlyController.close());
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pumpAndSettle();
+
+    expect(find.text('新的月度洞察全文'), findsOneWidget);
+    expect(find.textContaining('旧的周度洞察内容'), findsNothing);
+    expect(insights.recordedInsights, hasLength(1));
+    expect(insights.recordedInsights.single.insight, '新的月度洞察全文');
+    expect(insights.recordedInsights.single.periodType, 'month');
   });
 }

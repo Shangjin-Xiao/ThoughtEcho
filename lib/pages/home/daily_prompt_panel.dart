@@ -5,6 +5,7 @@ import '../../theme/theme_style.dart';
 import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
+import '../../models/ai_task.dart';
 import '../../models/thoughter_entry.dart';
 import '../../models/weather_data.dart' show WeatherCodeMapper;
 import '../../services/ai_service.dart';
@@ -95,7 +96,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
       final temperature = weatherService.temperature;
       final aiEnabledForToday = settingsService.todayThoughtsUseAI;
 
-      if (!aiEnabledForToday || !aiService.hasValidApiKey()) {
+      if (!aiEnabledForToday ||
+          !aiService.hasValidApiKey(task: AITask.dailyInsight)) {
         _setLocalPrompt(
           city: city,
           weather: weatherKey,
@@ -282,13 +284,13 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     final promptStyle = theme.textTheme.bodyMedium;
     final aiService = context.watch<AIService>();
     final settingsService = context.watch<SettingsService>();
-    // 以多 provider 设置为准：生成链路读的是 multiAISettings.currentProvider，
-    // 而 legacy aiSettings 只在 AI 设置页保存 provider 时才被镜像写入，
-    // 单纯切换当前 provider 不会同步，用它判断会误报"未配置"。
-    final currentProvider = settingsService.multiAISettings.currentProvider;
-    final isAiConfigured = aiService.hasValidApiKey() &&
-        (currentProvider?.apiUrl.isNotEmpty ?? false) &&
-        (currentProvider?.model.isNotEmpty ?? false);
+    // 以多 provider 设置为准：生成链路按 AITask.dailyInsight 解析生效配置（未单独指定时回退 currentProvider）。
+    final dailyPromptProvider = settingsService.multiAISettings
+        .resolveProviderForTask(AITask.dailyInsight);
+    final isAiConfigured =
+        aiService.hasValidApiKey(task: AITask.dailyInsight) &&
+            (dailyPromptProvider?.apiUrl.isNotEmpty ?? false) &&
+            (dailyPromptProvider?.model.isNotEmpty ?? false);
 
     return Container(
       width: double.infinity,
