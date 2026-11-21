@@ -78,6 +78,11 @@
             </intent-filter>
         </receiver>
         
+        <!-- flutter_local_notifications 触发已调度的本地通知 -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false"/>
+
         <!-- flutter_local_notifications 重启后恢复已调度的通知 -->
         <receiver 
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"

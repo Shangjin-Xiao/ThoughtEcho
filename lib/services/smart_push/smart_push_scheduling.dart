@@ -32,6 +32,14 @@ extension SmartPushScheduling on SmartPushService {
     }
     if (!_isScheduleGenerationCurrent(generation)) return;
 
+    if (fromBackground) {
+      await _reloadSharedStorageIfSupported();
+      await _loadSettings();
+      if (!_isScheduleGenerationCurrent(generation)) return;
+    }
+
+    final expectedEpoch = _readStoredSettingsEpoch();
+
     // 只有当两个推送都关闭时才取消所有计划并返回
     if (!_settings.enabled && !_settings.dailyQuotePushEnabled) {
       await _cancelAllSchedulesInternal();
@@ -41,22 +49,36 @@ extension SmartPushScheduling on SmartPushService {
 
     final canScheduleExact =
         _isAndroid ? await _canScheduleExactAlarms() : true;
-    if (!_isScheduleGenerationCurrent(generation)) return;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
 
     final useAndroidPreSchedule =
         await _shouldUseAndroidPreScheduledNotifications(
       canScheduleExact: canScheduleExact,
     );
-    if (!_isScheduleGenerationCurrent(generation)) return;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
 
     if (useAndroidPreSchedule) {
       await _scheduleAndroidPreScheduledQueue(
         generation: generation,
+        expectedEpoch: expectedEpoch,
         canScheduleExact: canScheduleExact,
         fromBackground: fromBackground,
         preserveDeliveredNotifications: preserveDeliveredNotifications,
       );
       if (!_isScheduleGenerationCurrent(generation)) return;
+      if (_readStoredSettingsEpoch() != expectedEpoch) return;
       _lastScheduleRefreshAt = _now();
       _lastScheduledExactAlarmGranted = canScheduleExact;
       return;
@@ -67,7 +89,13 @@ extension SmartPushScheduling on SmartPushService {
       activeIds: const {},
       futureOnly: fromBackground || preserveDeliveredNotifications,
     );
-    if (!_isScheduleGenerationCurrent(generation)) return;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
     await _saveTrackedPreScheduledEntries(const []);
 
     if (fromBackground || preserveDeliveredNotifications) {
@@ -80,18 +108,36 @@ extension SmartPushScheduling on SmartPushService {
       await _cancelAllSchedulesInternal();
       AppLogger.d('已取消现有推送计划，准备重新规划');
     }
-    if (!_isScheduleGenerationCurrent(generation)) return;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
 
     // 1. 规划常规推送 (仅当 enabled 为 true 时)
     if (_settings.enabled) {
       final slotsToSchedule = await _resolveRegularSlotsToSchedule();
-      if (!_isScheduleGenerationCurrent(generation)) return;
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+      )) {
+        return;
+      }
 
       // 持久化今日实际调度的时间（供后台周期性检查使用）
       await _persistScheduledTimes(slotsToSchedule);
 
       for (int i = 0; i < slotsToSchedule.length; i++) {
-        if (!_isScheduleGenerationCurrent(generation)) return;
+        if (!await _isScheduleContextStillValid(
+          generation: generation,
+          expectedEpoch: expectedEpoch,
+          fromBackground: fromBackground,
+        )) {
+          return;
+        }
         final slot = slotsToSchedule[i];
         final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
         final id = i; // 0-9
@@ -100,7 +146,13 @@ extension SmartPushScheduling on SmartPushService {
       }
     }
 
-    if (!_isScheduleGenerationCurrent(generation)) return;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
 
     // 2. 规划每日一言独立推送
     if (_settings.dailyQuotePushEnabled) {
@@ -151,9 +203,157 @@ extension SmartPushScheduling on SmartPushService {
       }
     }
 
-    if (!_isScheduleGenerationCurrent(generation)) return;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
     _lastScheduleRefreshAt = _now();
     _lastScheduledExactAlarmGranted = canScheduleExact;
+  }
+
+  /// 校验当前调度操作在实例内及跨 Isolate 层面是否仍然有效。
+  ///
+  /// 若后台任务执行期间前台已关闭全部提醒或修改了设置，会自动回滚后台刚写入的通知并清理任务。
+  Future<bool> _isScheduleContextStillValid({
+    required int generation,
+    required int expectedEpoch,
+    required bool fromBackground,
+    bool reloadStorage = false,
+    List<_PreScheduledEntry> writtenEntries = const [],
+  }) async {
+    if (!_isScheduleGenerationCurrent(generation)) {
+      return false;
+    }
+
+    if (fromBackground || reloadStorage) {
+      await _reloadSharedStorageIfSupported();
+    }
+
+    final currentEpoch = _readStoredSettingsEpoch();
+    final disabledInStorage = fromBackground &&
+        (_settings.enabled || _settings.dailyQuotePushEnabled) &&
+        _areStoredSettingsAllDisabled();
+
+    if (currentEpoch != expectedEpoch || disabledInStorage) {
+      if (fromBackground) {
+        await _loadSettings();
+        if (!_settings.enabled && !_settings.dailyQuotePushEnabled) {
+          for (final entry in writtenEntries) {
+            try {
+              await _notificationsPlugin.cancel(entry.id);
+            } catch (_) {}
+          }
+          await _cancelAllSchedulesInternal();
+        } else if (writtenEntries.isNotEmpty) {
+          final foregroundTrackedIds =
+              _loadTrackedPreScheduledEntries().map((e) => e.id).toSet();
+          for (final entry in writtenEntries) {
+            final slotDisabledInSettings = entry.isDailyQuote
+                ? !_settings.dailyQuotePushEnabled
+                : (!_settings.enabled ||
+                    (_settings.pushMode != PushMode.smart &&
+                        entry.slotHour != null &&
+                        entry.slotMinute != null &&
+                        !_settings.pushTimeSlots.any(
+                          (s) =>
+                              s.enabled &&
+                              s.hour == entry.slotHour &&
+                              s.minute == entry.slotMinute,
+                        )));
+            if (!foregroundTrackedIds.contains(entry.id) ||
+                slotDisabledInSettings) {
+              try {
+                await _notificationsPlugin.cancel(entry.id);
+              } catch (_) {}
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  /// 结算已过触发时间的预调度常规通知，更新推送计数、最近推送笔记历史与上次推送时间
+  Future<List<_PreScheduledEntry>> _accountDeliveredPreScheduledEntries(
+    List<_PreScheduledEntry> entries,
+  ) async {
+    if (entries.isEmpty) return entries;
+
+    final nowMs = _now().millisecondsSinceEpoch;
+    final dueRegularEntries = entries
+        .where((e) => !e.accounted && e.epochMs <= nowMs && !e.isDailyQuote)
+        .toList()
+      ..sort((a, b) => a.epochMs.compareTo(b.epochMs));
+
+    final hasAnyUnaccountedDue =
+        entries.any((e) => !e.accounted && e.epochMs <= nowMs);
+    if (!hasAnyUnaccountedDue) {
+      return entries;
+    }
+
+    if (dueRegularEntries.isNotEmpty) {
+      var updatedSettings = _settings;
+      final recentIds = List<String>.from(
+        updatedSettings.recentlyPushedNoteIds,
+      );
+      DateTime? latestPushTime = updatedSettings.lastPushTime;
+
+      for (final entry in dueRegularEntries) {
+        DateTime deliveredAt;
+        try {
+          deliveredAt = tz.TZDateTime.fromMillisecondsSinceEpoch(
+            tz.local,
+            entry.epochMs,
+          );
+        } catch (_) {
+          deliveredAt = DateTime.fromMillisecondsSinceEpoch(entry.epochMs);
+        }
+        if (_settings.pushMode == PushMode.smart) {
+          await _analytics.settlePendingSend();
+          await _analytics.markSent(
+            entry.contentType ?? 'pastNote',
+            sentAt: deliveredAt,
+          );
+        }
+
+        if (latestPushTime == null || deliveredAt.isAfter(latestPushTime)) {
+          latestPushTime = deliveredAt;
+        }
+
+        final noteId = entry.noteId;
+        if (noteId != null &&
+            noteId.isNotEmpty &&
+            entry.contentType != 'dailyQuote') {
+          if (!recentIds.contains(noteId)) {
+            recentIds.add(noteId);
+            while (recentIds.length > SmartPushSettings.maxRecentPushedCount) {
+              recentIds.removeAt(0);
+            }
+          }
+        }
+      }
+
+      updatedSettings = updatedSettings.copyWith(
+        lastPushTime: latestPushTime,
+        recentlyPushedNoteIds: recentIds,
+      );
+      await _saveSettingsQuietly(updatedSettings);
+    }
+
+    final updatedEntries = entries
+        .map(
+          (e) => (!e.accounted && e.epochMs <= nowMs)
+              ? e.copyWith(accounted: true)
+              : e,
+        )
+        .toList();
+    await _saveTrackedPreScheduledEntries(updatedEntries);
+    return updatedEntries;
   }
 
   /// 解析当前有效的常规推送时间槽
@@ -172,23 +372,69 @@ extension SmartPushScheduling on SmartPushService {
   /// Android 未来 3 天本地通知预调度队列（Play 渠道或无精确闹钟权限时启用）
   Future<void> _scheduleAndroidPreScheduledQueue({
     required int generation,
+    required int expectedEpoch,
     required bool canScheduleExact,
     required bool fromBackground,
     required bool preserveDeliveredNotifications,
   }) async {
     await _cancelLegacyAndroidPushTasks();
-    if (!_isScheduleGenerationCurrent(generation)) return;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
 
-    final previousEntries = _loadTrackedPreScheduledEntries();
+    final previousEntries = await _accountDeliveredPreScheduledEntries(
+      _loadTrackedPreScheduledEntries(),
+    );
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
+
+    // 整轮规划只解析一次本地/缓存每日一言（包括 null 结果），禁止在槽位循环中重复查询数据库
+    Future<
+        ({
+          Quote quote,
+          String? sourceNoteId,
+          Map<String, dynamic> quoteData,
+        })?>? memoizedDailyQuoteFuture;
+    Future<
+            ({
+              Quote quote,
+              String? sourceNoteId,
+              Map<String, dynamic> quoteData,
+            })?>
+        resolveDailyQuoteOnce() =>
+            memoizedDailyQuoteFuture ??= _resolvePreScheduleDailyQuote();
+
     final plannedItems = <_PlannedLocalNotification>[];
-    Set<String>? visibleNoteIds;
+    Set<String>? loadedVisibleNoteIds;
+    var regularPrecomputationFailed = false;
 
     // 1. 常规回顾提醒槽位（未来 3 个有效推送日）
     if (_settings.enabled) {
       final slotsToSchedule = await _resolveRegularSlotsToSchedule();
-      if (!_isScheduleGenerationCurrent(generation)) return;
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+      )) {
+        return;
+      }
       await _persistScheduledTimes(slotsToSchedule);
-      if (!_isScheduleGenerationCurrent(generation)) return;
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+      )) {
+        return;
+      }
 
       final rawRegularSlots =
           <({int slotIndex, PushTimeSlot slot, tz.TZDateTime date})>[];
@@ -207,38 +453,29 @@ extension SmartPushScheduling on SmartPushService {
 
       rawRegularSlots.sort((a, b) => a.date.compareTo(b.date));
 
-      final precomputedResult = await _buildPrecomputedRegularContents(
-        rawRegularSlots.map((item) => item.date).toList(),
+      final plannedRegular = await _planRegularPreScheduledNotifications(
+        rawRegularSlots: rawRegularSlots,
+        resolveDailyQuoteOnce: resolveDailyQuoteOnce,
+        previousEntries: previousEntries,
       );
-      if (!_isScheduleGenerationCurrent(generation)) return;
-      visibleNoteIds = precomputedResult.visibleNoteIds;
-      final precomputedContents = precomputedResult.contents;
-
-      for (int idx = 0; idx < rawRegularSlots.length; idx++) {
-        final item = rawRegularSlots[idx];
-        final id = SmartPushService.deterministicPreScheduledNotificationId(
-          item.date,
-          slotIndex: item.slotIndex,
-        );
-        plannedItems.add(
-          _PlannedLocalNotification(
-            id: id,
-            slotIndex: item.slotIndex,
-            slot: item.slot,
-            scheduledDate: item.date,
-            isDailyQuote: false,
-            content: idx < precomputedContents.length
-                ? precomputedContents[idx]
-                : null,
-          ),
-        );
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+      )) {
+        return;
       }
+      loadedVisibleNoteIds = plannedRegular.visibleNoteIds;
+      regularPrecomputationFailed = plannedRegular.precomputationFailed;
+      plannedItems.addAll(plannedRegular.items);
     } else {
       await _persistScheduledTimes(const []);
-      if (!_isScheduleGenerationCurrent(generation)) return;
-      if (previousEntries.any((e) => e.noteId != null)) {
-        visibleNoteIds = await _loadVisibleNoteIdsForReconciliation();
-        if (!_isScheduleGenerationCurrent(generation)) return;
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+      )) {
+        return;
       }
     }
 
@@ -254,14 +491,22 @@ extension SmartPushScheduling on SmartPushService {
 
       _PushContent? dailyContent;
       if (dailyDates.isNotEmpty) {
-        final quote = await _resolvePreScheduleDailyQuote();
-        if (!_isScheduleGenerationCurrent(generation)) return;
-        if (quote != null) {
+        final resolved = await resolveDailyQuoteOnce();
+        if (!await _isScheduleContextStillValid(
+          generation: generation,
+          expectedEpoch: expectedEpoch,
+          fromBackground: fromBackground,
+        )) {
+          return;
+        }
+        if (resolved != null) {
           dailyContent = _PushContent(
             title: '📖 每日一言',
-            body: _buildNotificationBody(quote),
+            body: _buildNotificationBody(resolved.quote),
             noteId: null,
+            sourceNoteId: resolved.sourceNoteId,
             contentType: 'dailyQuote',
+            dailyQuoteData: resolved.quoteData,
           );
         }
       }
@@ -285,71 +530,172 @@ extension SmartPushScheduling on SmartPushService {
       }
     }
 
-    // 3. 对账并清理已移除/禁用或关联笔记已被隐藏/删除的预调度通知
+    // 3. 对账并清理已移除/禁用或关联笔记（含本地每日一言来源笔记）已被隐藏/删除的预调度通知
+    final trackedNoteIds = previousEntries
+        .map((e) => e.noteId)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final visibleNoteIds = trackedNoteIds.isNotEmpty
+        ? await _resolveVisibleTrackedNoteIds(
+            trackedNoteIds,
+            fallbackVisibleIds: loadedVisibleNoteIds,
+          )
+        : loadedVisibleNoteIds;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
+
     final futureOnly = fromBackground || preserveDeliveredNotifications;
-    final activeIds = plannedItems.map((e) => e.id).toSet();
-    final invalidatedIds = await _reconcileTrackedPreScheduledNotifications(
+    final isNoteOnlyMode = _settings.pushMode == PushMode.custom ||
+        _settings.pushMode == PushMode.pastNotes;
+    final useLocalQuotesOnly = _loadStoredAppSettings().useLocalQuotesOnly;
+    final invalidatedIds = <int>{
+      if (visibleNoteIds != null)
+        for (final prev in previousEntries)
+          if (prev.noteId != null && !visibleNoteIds.contains(prev.noteId))
+            prev.id,
+    };
+
+    final itemsToWrite = plannedItems.where((item) {
+      if (item.content != null) return true;
+      if (item.isDailyQuote) {
+        if (useLocalQuotesOnly || invalidatedIds.contains(item.id)) {
+          return false;
+        }
+        return true;
+      }
+      if (invalidatedIds.contains(item.id)) {
+        return false;
+      }
+      if (isNoteOnlyMode && !regularPrecomputationFailed) {
+        return false;
+      }
+      if (useLocalQuotesOnly && !regularPrecomputationFailed) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    final activeIds = itemsToWrite.map((e) => e.id).toSet();
+    final reconcileResult = await _reconcileTrackedPreScheduledNotifications(
       activeIds: activeIds,
       futureOnly: futureOnly,
       visibleNoteIds: visibleNoteIds,
+      entriesOverride: previousEntries,
     );
-    if (!_isScheduleGenerationCurrent(generation)) return;
-
-    // 4. 逐条写入/更新系统本地通知队列（确定性 ID 原位覆盖，不产生重复通知）
-    final scheduledEntries = <_PreScheduledEntry>[];
-    final noVisibleNotesInNoteOnlyMode = visibleNoteIds != null &&
-        visibleNoteIds.isEmpty &&
-        (_settings.pushMode == PushMode.custom ||
-            _settings.pushMode == PushMode.pastNotes);
-
-    for (final item in plannedItems) {
-      if (!_isScheduleGenerationCurrent(generation)) return;
-
-      // 若原关联笔记已被隐藏/删除且无替代内容，或纯笔记模式下当前无任何可见笔记，跳过空占位写入
-      if (!item.isDailyQuote &&
-          item.content == null &&
-          (invalidatedIds.contains(item.id) || noVisibleNotesInNoteOnlyMode)) {
-        continue;
-      }
-
-      await _scheduleLocalNotification(
-        item.id,
-        item.scheduledDate,
-        item.slot,
-        isDailyQuote: item.isDailyQuote,
-        precomputedContent: item.content,
-        allowContentLookup: false,
-        canScheduleExactOverride: canScheduleExact,
-      );
-      scheduledEntries.add(
-        _PreScheduledEntry(
-          id: item.id,
-          epochMs: item.scheduledDate.millisecondsSinceEpoch,
-          noteId: item.content?.noteId,
-        ),
-      );
+    final remainingPreviousEntries = previousEntries
+        .where((e) => !reconcileResult.cancelledIds.contains(e.id))
+        .toList();
+    if (reconcileResult.cancelledIds.isNotEmpty &&
+        !fromBackground &&
+        _readStoredSettingsEpoch() == expectedEpoch) {
+      await _saveTrackedPreScheduledEntries(remainingPreviousEntries);
     }
 
-    if (!_isScheduleGenerationCurrent(generation)) return;
-
-    // 保留近期已送达且仍可见的通知追踪记录，确保送达后若笔记被隐藏/删除也能立即从通知栏撤回
-    final scheduledIds = scheduledEntries.map((e) => e.id).toSet();
-    final nowMs = _now().millisecondsSinceEpoch;
-    final maxRetentionMs =
-        SmartPushService._deliveredEntryRetention.inMilliseconds;
-    final mergedEntries = <_PreScheduledEntry>[
-      ...scheduledEntries,
-      if (futureOnly)
-        for (final prev in previousEntries)
-          if (prev.epochMs <= nowMs &&
-              nowMs - prev.epochMs <= maxRetentionMs &&
-              !scheduledIds.contains(prev.id) &&
-              !invalidatedIds.contains(prev.id))
+    List<_PreScheduledEntry> mergeWithRetained(
+      List<_PreScheduledEntry> currentScheduled,
+    ) {
+      final scheduledIds = currentScheduled.map((e) => e.id).toSet();
+      final nowMs = _now().millisecondsSinceEpoch;
+      final maxRetentionMs =
+          SmartPushService._deliveredEntryRetention.inMilliseconds;
+      return <_PreScheduledEntry>[
+        ...currentScheduled,
+        for (final prev in remainingPreviousEntries)
+          if (!scheduledIds.contains(prev.id) &&
+              prev.epochMs > 0 &&
+              (prev.epochMs > nowMs ||
+                  (futureOnly && nowMs - prev.epochMs <= maxRetentionMs)))
             prev,
-    ];
+      ];
+    }
+
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      if (!fromBackground && _readStoredSettingsEpoch() == expectedEpoch) {
+        await _saveTrackedPreScheduledEntries(
+          mergeWithRetained(const <_PreScheduledEntry>[]),
+        );
+      }
+      return;
+    }
+
+    // 4. 逐条写入系统本地通知队列；若中途被新设置打断，持久化已写入的局部结果以保证下一轮对账能够完整撤回
+    final scheduledEntries = <_PreScheduledEntry>[];
+    try {
+      for (final item in itemsToWrite) {
+        if (!await _isScheduleContextStillValid(
+          generation: generation,
+          expectedEpoch: expectedEpoch,
+          fromBackground: fromBackground,
+          writtenEntries: scheduledEntries,
+        )) {
+          if (!fromBackground) {
+            await _saveTrackedPreScheduledEntries(
+              mergeWithRetained(scheduledEntries),
+            );
+          }
+          return;
+        }
+
+        await _scheduleLocalNotification(
+          item.id,
+          item.scheduledDate,
+          item.slot,
+          isDailyQuote: item.isDailyQuote,
+          precomputedContent: item.content,
+          allowContentLookup: false,
+          canScheduleExactOverride: canScheduleExact,
+          persistSingleTrackedEntry: false,
+        );
+        scheduledEntries.add(
+          _PreScheduledEntry(
+            id: item.id,
+            epochMs: item.scheduledDate.millisecondsSinceEpoch,
+            noteId: item.content?.sourceNoteId ?? item.content?.noteId,
+            isDailyQuote: item.isDailyQuote,
+            contentType: item.content?.contentType ??
+                (item.isDailyQuote ? 'dailyQuote' : null),
+            accounted: false,
+            slotHour: item.slot.hour,
+            slotMinute: item.slot.minute,
+            dailyQuoteData: item.content?.dailyQuoteData,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!fromBackground && scheduledEntries.isNotEmpty) {
+        await _saveTrackedPreScheduledEntries(
+          mergeWithRetained(scheduledEntries),
+        );
+      }
+      rethrow;
+    }
+
+    final mergedEntries = mergeWithRetained(scheduledEntries);
+
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+      reloadStorage: true,
+      writtenEntries: scheduledEntries,
+    )) {
+      if (!fromBackground) {
+        await _saveTrackedPreScheduledEntries(mergedEntries);
+      }
+      return;
+    }
 
     await _saveTrackedPreScheduledEntries(mergedEntries);
-    if (!_isScheduleGenerationCurrent(generation)) return;
 
     if (scheduledEntries.isNotEmpty) {
       await _registerPreScheduleRenewalTask();
@@ -366,7 +712,7 @@ extension SmartPushScheduling on SmartPushService {
   /// 3. 应用 Thompson Sampling 的时间窗口探索
   /// 4. 周末/节假日自动调整
   Future<List<PushTimeSlot>> _calculateSmartPushTimes() async {
-    final now = DateTime.now();
+    final now = _now();
 
     // 默认黄金时间点（经过验证的高效推送时间）
     const defaultSlots = [
@@ -676,14 +1022,48 @@ extension SmartPushScheduling on SmartPushService {
     }
   }
 
-  /// 批量为多个预调度时间点准备回顾内容（单次查库，尽量避免多日内容重复）
-  Future<({List<_PushContent?> contents, Set<String>? visibleNoteIds})>
-      _buildPrecomputedRegularContents(
-    List<tz.TZDateTime> scheduledDates,
-  ) async {
-    if (scheduledDates.isEmpty) {
+  /// 批量校验已追踪通知所关联笔记的当前可见性（优先走精确主键集合查询，避免 5000 条截断）
+  Future<Set<String>?> _resolveVisibleTrackedNoteIds(
+    Set<String> trackedNoteIds, {
+    Set<String>? fallbackVisibleIds,
+  }) async {
+    if (trackedNoteIds.isEmpty) return fallbackVisibleIds;
+    try {
+      return await _databaseService.getVisibleQuoteIds(trackedNoteIds);
+    } catch (e) {
+      AppLogger.w('批量查询预调度关联笔记可见性失败，回退至常规集合对账', error: e);
+      return fallbackVisibleIds ?? await _loadVisibleNoteIdsForReconciliation();
+    }
+  }
+
+  /// 批量规划常规预调度槽位（单次查库 + 同日严禁重复选文 + 智能模式配额/冷却/质量门槛裁剪 + 记忆化本地一言兜底）
+  Future<
+      ({
+        List<_PlannedLocalNotification> items,
+        Set<String>? visibleNoteIds,
+        bool? hasAnyVisibleNotes,
+        bool precomputationFailed,
+      })> _planRegularPreScheduledNotifications({
+    required List<({int slotIndex, PushTimeSlot slot, tz.TZDateTime date})>
+        rawRegularSlots,
+    required Future<
+                ({
+                  Quote quote,
+                  String? sourceNoteId,
+                  Map<String, dynamic> quoteData,
+                })?>
+            Function()
+        resolveDailyQuoteOnce,
+    List<_PreScheduledEntry> previousEntries = const [],
+  }) async {
+    if (rawRegularSlots.isEmpty) {
       final visibleIds = await _loadVisibleNoteIdsForReconciliation();
-      return (contents: const <_PushContent?>[], visibleNoteIds: visibleIds);
+      return (
+        items: const <_PlannedLocalNotification>[],
+        visibleNoteIds: visibleIds,
+        hasAnyVisibleNotes: visibleIds?.isNotEmpty,
+        precomputationFailed: false,
+      );
     }
 
     try {
@@ -695,36 +1075,16 @@ extension SmartPushScheduling on SmartPushService {
           .whereType<String>()
           .where((id) => id.isNotEmpty)
           .toSet();
+      final hasAnyVisibleNotes = allNotes.isNotEmpty;
 
-      if (allNotes.isEmpty) {
-        if (_settings.pushMode != PushMode.custom &&
-            _settings.pushMode != PushMode.pastNotes) {
-          final quote = await _resolvePreScheduleDailyQuote();
-          if (quote != null) {
-            final fallback = _PushContent(
-              title: '📖 每日一言',
-              body: _buildNotificationBody(quote),
-              noteId: null,
-              contentType: 'dailyQuote',
-            );
-            return (
-              contents: List<_PushContent?>.filled(
-                scheduledDates.length,
-                fallback,
-              ),
-              visibleNoteIds: visibleNoteIds,
-            );
-          }
-        }
-        return (
-          contents: List<_PushContent?>.filled(scheduledDates.length, null),
-          visibleNoteIds: visibleNoteIds,
-        );
-      }
-
-      final currentLocation = await _loadCurrentLocationForMatching();
-      final currentWeather = _loadCurrentWeatherForMatching();
       final isSmartMode = _settings.pushMode == PushMode.smart;
+      final allowsDailyQuoteFallback = _settings.pushMode != PushMode.custom &&
+          _settings.pushMode != PushMode.pastNotes;
+
+      final currentLocation =
+          allNotes.isNotEmpty ? await _loadCurrentLocationForMatching() : null;
+      final currentWeather =
+          allNotes.isNotEmpty ? _loadCurrentWeatherForMatching() : null;
       final enabledTypes = isSmartMode
           ? PastNoteType.values.toSet()
           : _settings.enabledPastNoteTypes;
@@ -734,15 +1094,93 @@ extension SmartPushScheduling on SmartPushService {
           ? const <WeatherFilterType>{}
           : _settings.filterWeatherTypes;
 
-      final assignedIds = <String>{..._settings.recentlyPushedNoteIds};
-      final results = <_PushContent?>[];
+      final currentNow = tz.TZDateTime.from(_now(), tz.local);
+      final nowMs = currentNow.millisecondsSinceEpoch;
+      final todayKey = currentNow.toIso8601String().substring(0, 10);
 
-      for (final scheduledDate in scheduledDates) {
+      PushQuotaProfile? smartProfile;
+      Duration habituationCooldown = Duration.zero;
+      DateTime? lastOpen;
+      DateTime? dismissalCooldownEnd;
+      Map<String, double> contentTypeScores = const {};
+      final perDayCount = <String, int>{};
+      DateTime? simulatedLastPushTime = _settings.lastPushTime;
+
+      if (isSmartMode) {
+        final tier = await _analytics.getEngagementTier(now: currentNow);
+        smartProfile = _settings.pushIntensity.quotaFor(tier);
+        perDayCount[todayKey] = await _analytics.getTodayPushCount(
+          now: currentNow,
+        );
+        habituationCooldown = await _analytics.getHabituationCooldown();
+        lastOpen = await _analytics.getLastAppOpen();
+        dismissalCooldownEnd = _analytics.getDismissalCooldownEnd();
+        contentTypeScores = await _analytics.getContentTypeScores();
+      }
+
+      // 按日维护已分配的笔记 ID（严格排除集合），确保同一自然日多个槽位或刷新后绝不重复推送同一条笔记
+      final sameDayAssignedIds = <String, Set<String>>{};
+      final todayPushedIds = _getTodayPushedNoteIds(now: currentNow);
+      if (todayPushedIds.isNotEmpty) {
+        sameDayAssignedIds
+            .putIfAbsent(todayKey, () => <String>{})
+            .addAll(todayPushedIds);
+      }
+      for (final prev in previousEntries) {
+        final prevNoteId = prev.noteId;
+        if (!prev.isDailyQuote &&
+            prev.contentType != 'dailyQuote' &&
+            prev.epochMs > 0 &&
+            prev.epochMs <= nowMs &&
+            prevNoteId != null &&
+            prevNoteId.isNotEmpty &&
+            visibleNoteIds.contains(prevNoteId)) {
+          final deliveredDayKey = tz.TZDateTime.fromMillisecondsSinceEpoch(
+            tz.local,
+            prev.epochMs,
+          ).toIso8601String().substring(0, 10);
+          sameDayAssignedIds
+              .putIfAbsent(deliveredDayKey, () => <String>{})
+              .add(prevNoteId);
+        }
+      }
+
+      List<Quote> applyTagFilter(List<Quote> source) {
+        if (requiredTagIds.isEmpty) return source;
+        return source
+            .where((n) => n.tagIds.any(requiredTagIds.contains))
+            .toList();
+      }
+
+      Future<_PushContent?> selectCandidateForDate(
+        tz.TZDateTime scheduledDate,
+        Set<String> assignedIds,
+        Set<String> sameDayExcludedIds,
+      ) async {
+        if (allNotes.isEmpty) {
+          if (allowsDailyQuoteFallback) {
+            final resolved = await resolveDailyQuoteOnce();
+            if (resolved != null) {
+              return _PushContent(
+                title: '📖 每日一言',
+                body: _buildNotificationBody(resolved.quote),
+                noteId: null,
+                sourceNoteId: resolved.sourceNoteId,
+                contentType: 'dailyQuote',
+                priority: 0,
+                dailyQuoteData: resolved.quoteData,
+              );
+            }
+          }
+          return null;
+        }
+
         var candidates = buildTypedCandidates(
           notes: allNotes,
           now: scheduledDate,
           enabledPastNoteTypes: enabledTypes,
           recentPushedIds: assignedIds,
+          strictExcludedIds: sameDayExcludedIds,
           random: _random,
           requiredTagIds: requiredTagIds,
           currentLocation: currentLocation,
@@ -756,6 +1194,7 @@ extension SmartPushScheduling on SmartPushService {
             now: scheduledDate,
             enabledPastNoteTypes: enabledTypes,
             recentPushedIds: const {},
+            strictExcludedIds: sameDayExcludedIds,
             random: _random,
             requiredTagIds: requiredTagIds,
             currentLocation: currentLocation,
@@ -767,87 +1206,202 @@ extension SmartPushScheduling on SmartPushService {
         if (candidates.isNotEmpty) {
           final chosen = candidates.first;
           final note = chosen.note;
-          if (note.id != null && note.id!.isNotEmpty) {
-            assignedIds.add(note.id!);
-          }
-          results.add(
-            _PushContent(
-              title: chosen.title,
-              body: _buildNotificationBody(note),
-              noteId: note.id,
-              contentType: chosen.contentType,
-            ),
+          final priority = scoreSmartPushCandidate(
+            basePriority: chosen.priority,
+            note: note,
+            contentTypeScore: contentTypeScores[chosen.contentType] ?? 0.5,
           );
-        } else {
-          Quote? fallbackNote;
-          String fallbackTitle = '💡 漫步旧时光';
-          String fallbackType = 'randomMemory';
+          return _PushContent(
+            title: chosen.title,
+            body: _buildNotificationBody(note),
+            noteId: note.id,
+            sourceNoteId: note.id,
+            contentType: chosen.contentType,
+            priority: priority,
+          );
+        }
 
-          List<Quote> applyTagFilter(List<Quote> source) {
-            if (requiredTagIds.isEmpty) return source;
-            return source
-                .where((n) => n.tagIds.any(requiredTagIds.contains))
-                .toList();
-          }
+        Quote? fallbackNote;
+        String fallbackTitle = '💡 漫步旧时光';
+        String fallbackType = 'randomMemory';
+        int fallbackBasePriority = 40;
 
-          if (isSmartMode || enabledTypes.contains(PastNoteType.randomMemory)) {
-            final randomPool = applyTagFilter(
-              filterRandomMemory(allNotes, scheduledDate, _random),
-            );
-            fallbackNote = selectUnpushedNote(randomPool, assignedIds, _random);
-          }
+        if (isSmartMode || enabledTypes.contains(PastNoteType.randomMemory)) {
+          final randomPool = applyTagFilter(
+            filterRandomMemory(allNotes, scheduledDate, _random),
+          );
+          fallbackNote = selectUnpushedNote(
+            randomPool,
+            assignedIds,
+            _random,
+            strictExcludedIds: sameDayExcludedIds,
+          );
+        }
 
-          if (fallbackNote == null && isSmartMode) {
-            final sameTimePool = applyTagFilter(
-              filterSameTimeOfDay(allNotes, scheduledDate),
-            );
-            fallbackNote = selectUnpushedNote(
-              sameTimePool,
-              assignedIds,
-              _random,
-            );
-            if (fallbackNote != null) {
-              fallbackTitle = '⏰ 往日此时';
-              fallbackType = 'sameTimeOfDay';
-            }
-          }
-
+        if (fallbackNote == null && isSmartMode) {
+          final sameTimePool = applyTagFilter(
+            filterSameTimeOfDay(allNotes, scheduledDate),
+          );
+          fallbackNote = selectUnpushedNote(
+            sameTimePool,
+            assignedIds,
+            _random,
+            strictExcludedIds: sameDayExcludedIds,
+          );
           if (fallbackNote != null) {
-            if (fallbackNote.id != null && fallbackNote.id!.isNotEmpty) {
-              assignedIds.add(fallbackNote.id!);
-            }
-            results.add(
-              _PushContent(
-                title: fallbackTitle,
-                body: _buildNotificationBody(fallbackNote),
-                noteId: fallbackNote.id,
-                contentType: fallbackType,
-              ),
-            );
-          } else if (isSmartMode) {
-            final dailyQuote = await _resolvePreScheduleDailyQuote();
-            results.add(
-              dailyQuote != null
-                  ? _PushContent(
-                      title: '📖 每日一言',
-                      body: _buildNotificationBody(dailyQuote),
-                      noteId: null,
-                      contentType: 'dailyQuote',
-                    )
-                  : null,
-            );
-          } else {
-            results.add(null);
+            fallbackTitle = '⏰ 往日此时';
+            fallbackType = 'sameTimeOfDay';
+            fallbackBasePriority = 20;
           }
         }
+
+        if (fallbackNote != null) {
+          final priority = scoreSmartPushCandidate(
+            basePriority: fallbackBasePriority,
+            note: fallbackNote,
+            contentTypeScore: contentTypeScores[fallbackType] ?? 0.5,
+          );
+          return _PushContent(
+            title: fallbackTitle,
+            body: _buildNotificationBody(fallbackNote),
+            noteId: fallbackNote.id,
+            sourceNoteId: fallbackNote.id,
+            contentType: fallbackType,
+            priority: priority,
+          );
+        }
+
+        if (isSmartMode) {
+          final resolved = await resolveDailyQuoteOnce();
+          if (resolved != null) {
+            return _PushContent(
+              title: '📖 每日一言',
+              body: _buildNotificationBody(resolved.quote),
+              noteId: null,
+              sourceNoteId: resolved.sourceNoteId,
+              contentType: 'dailyQuote',
+              priority: 0,
+              dailyQuoteData: resolved.quoteData,
+            );
+          }
+        }
+
+        return null;
       }
 
-      return (contents: results, visibleNoteIds: visibleNoteIds);
+      final assignedIds = <String>{..._settings.recentlyPushedNoteIds};
+      final items = <_PlannedLocalNotification>[];
+
+      for (final rawSlot in rawRegularSlots) {
+        final slotTime = rawSlot.date;
+        final dayKey = slotTime.toIso8601String().substring(0, 10);
+        final dayCount = perDayCount[dayKey] ?? 0;
+
+        if (isSmartMode && smartProfile != null) {
+          if (dayCount >= smartProfile.dailyCap) {
+            continue;
+          }
+          if (smartProfile.minGapDays > 0 && simulatedLastPushTime != null) {
+            final gapDays = slotTime.difference(simulatedLastPushTime).inDays;
+            if (gapDays < smartProfile.minGapDays) {
+              continue;
+            }
+          }
+          if (habituationCooldown > Duration.zero &&
+              simulatedLastPushTime != null) {
+            if (slotTime.difference(simulatedLastPushTime) <
+                habituationCooldown) {
+              continue;
+            }
+          }
+          if (lastOpen != null && !slotTime.isBefore(lastOpen)) {
+            if (slotTime.difference(lastOpen) <
+                const Duration(
+                  hours: SmartPushAnalytics.recentOpenSuppressHours,
+                )) {
+              continue;
+            }
+          }
+          if (dismissalCooldownEnd != null &&
+              slotTime.isBefore(dismissalCooldownEnd)) {
+            continue;
+          }
+        }
+
+        final sameDayExcludedIds =
+            sameDayAssignedIds[dayKey] ?? const <String>{};
+        final candidateContent = await selectCandidateForDate(
+          rawSlot.date,
+          assignedIds,
+          sameDayExcludedIds,
+        );
+
+        if (candidateContent == null && !allowsDailyQuoteFallback) {
+          continue;
+        }
+
+        if (isSmartMode && smartProfile != null && dayCount > 0) {
+          final qualityFloor = smartProfile.extraQualityFloor;
+          final candidatePriority = candidateContent?.priority ?? 0;
+          if (qualityFloor > 0 && candidatePriority < qualityFloor) {
+            continue;
+          }
+        }
+
+        final noteId = candidateContent?.noteId;
+        if (noteId != null && noteId.isNotEmpty) {
+          assignedIds.add(noteId);
+          sameDayAssignedIds.putIfAbsent(dayKey, () => <String>{}).add(noteId);
+        }
+
+        if (isSmartMode) {
+          perDayCount[dayKey] = dayCount + 1;
+          simulatedLastPushTime = slotTime;
+        }
+
+        final id = SmartPushService.deterministicPreScheduledNotificationId(
+          rawSlot.date,
+          slotIndex: rawSlot.slotIndex,
+        );
+        items.add(
+          _PlannedLocalNotification(
+            id: id,
+            slotIndex: rawSlot.slotIndex,
+            slot: rawSlot.slot,
+            scheduledDate: rawSlot.date,
+            isDailyQuote: false,
+            content: candidateContent,
+          ),
+        );
+      }
+
+      return (
+        items: items,
+        visibleNoteIds: visibleNoteIds,
+        hasAnyVisibleNotes: hasAnyVisibleNotes,
+        precomputationFailed: false,
+      );
     } catch (e) {
       AppLogger.w('批量预计算推送内容失败', error: e);
       return (
-        contents: List<_PushContent?>.filled(scheduledDates.length, null),
+        items: rawRegularSlots
+            .map(
+              (item) => _PlannedLocalNotification(
+                id: SmartPushService.deterministicPreScheduledNotificationId(
+                  item.date,
+                  slotIndex: item.slotIndex,
+                ),
+                slotIndex: item.slotIndex,
+                slot: item.slot,
+                scheduledDate: item.date,
+                isDailyQuote: false,
+                content: null,
+              ),
+            )
+            .toList(),
         visibleNoteIds: null,
+        hasAnyVisibleNotes: null,
+        precomputationFailed: true,
       );
     }
   }
@@ -863,7 +1417,9 @@ extension SmartPushScheduling on SmartPushService {
           title: candidate.title,
           body: _buildNotificationBody(note),
           noteId: note.id,
+          sourceNoteId: note.id,
           contentType: candidate.contentType,
+          priority: candidate.priority.toDouble(),
         );
       }
       return null;
@@ -874,7 +1430,8 @@ extension SmartPushScheduling on SmartPushService {
   }
 
   /// 预调度专用的本地一言解析：仅读取本地缓存或本地数据库，绝不在保存设置/启动恢复时发起外网请求阻塞 UI
-  Future<Quote?> _resolvePreScheduleDailyQuote() async {
+  Future<({Quote quote, String? sourceNoteId, Map<String, dynamic> quoteData})?>
+      _resolvePreScheduleDailyQuote() async {
     try {
       var data = await getCachedDailyQuoteForToday();
       if (data == null) {
@@ -894,11 +1451,19 @@ extension SmartPushScheduling on SmartPushService {
       if (content.trim().isEmpty) return null;
       final fromWho = data['from_who'] as String? ?? '';
       final from = data['from'] as String? ?? '';
-      return Quote(
-        content: content,
-        date: _now().toIso8601String(),
-        sourceAuthor: fromWho.isNotEmpty ? fromWho : null,
-        source: from.isNotEmpty ? from : null,
+      final rawLocalId = data['local_quote_id'];
+      final sourceNoteId =
+          (rawLocalId is String && rawLocalId.isNotEmpty) ? rawLocalId : null;
+      return (
+        quote: Quote(
+          id: sourceNoteId,
+          content: content,
+          date: _now().toIso8601String(),
+          sourceAuthor: fromWho.isNotEmpty ? fromWho : null,
+          source: from.isNotEmpty ? from : null,
+        ),
+        sourceNoteId: sourceNoteId,
+        quoteData: Map<String, dynamic>.from(data),
       );
     } catch (e) {
       AppLogger.w('解析预调度每日一言失败', error: e);

@@ -251,6 +251,7 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
   required Set<PastNoteType> enabledPastNoteTypes,
   required Set<String> recentPushedIds,
   required Random random,
+  Set<String> strictExcludedIds = const {},
   List<String> requiredTagIds = const [],
   String? currentLocation,
   String? currentWeather,
@@ -270,8 +271,12 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
             .where((note) => note.tagIds.any(requiredTagIds.contains))
             .toList();
 
-    final selected =
-        selectUnpushedNote(eligibleSource, recentPushedIds, random);
+    final selected = selectUnpushedNote(
+      eligibleSource,
+      recentPushedIds,
+      random,
+      strictExcludedIds: strictExcludedIds,
+    );
     if (selected == null || selected.id == null) return;
 
     final existing = candidatesById[selected.id!];

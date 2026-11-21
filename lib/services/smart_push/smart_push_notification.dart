@@ -66,18 +66,25 @@ extension SmartPushNotification on SmartPushService {
 
   /// 通知点击回调 - SOTA 效果追踪
   void _onNotificationTap(NotificationResponse response) {
+    unawaited(_handleNotificationTapAsync(response));
+  }
+
+  Future<void> _handleNotificationTapAsync(
+    NotificationResponse response,
+  ) async {
     AppLogger.i('通知被点击: ${response.payload}');
 
     String? noteId;
     String? contentType;
     String? routeTarget;
+    int? notificationId = response.id;
     // SOTA: 记录用户点击交互（正向反馈）
-    // payload 格式: "contentType:xxx|noteId:yyy" 或 "dailyQuote"
+    // payload 格式: "contentType:xxx|noteId:yyy|notificationId:zzz" 或 "dailyQuote"
     try {
       final payload = response.payload;
       if (payload != null && payload.isNotEmpty) {
         if (payload.contains('contentType:')) {
-          // 解析 contentType 和 noteId
+          // 解析 contentType、noteId 与 notificationId
           final parts = payload.split('|');
           for (final part in parts) {
             if (part.startsWith('contentType:')) {
@@ -90,6 +97,13 @@ extension SmartPushNotification on SmartPushService {
               }
             } else if (part.startsWith('routeTarget:')) {
               routeTarget = part.substring('routeTarget:'.length);
+            } else if (part.startsWith('notificationId:')) {
+              final parsedId = int.tryParse(
+                part.substring('notificationId:'.length),
+              );
+              if (parsedId != null) {
+                notificationId = parsedId;
+              }
             }
           }
         } else if (payload == 'dailyQuote') {
@@ -114,14 +128,18 @@ extension SmartPushNotification on SmartPushService {
     // 处理打开特定笔记的逻辑
     if (noteId != null && noteId.isNotEmpty) {
       ClipboardService.suppressNextCheckForNotificationNavigation();
-      _navigateToNoteList(noteId, routeTarget: routeTarget).catchError((e) {
+      try {
+        await _navigateToNoteList(noteId, routeTarget: routeTarget);
+      } catch (e) {
         AppLogger.e('通知导航失败', error: e);
-      });
+      }
     } else if (contentType == 'dailyQuote') {
       // 每日一言：仅标记首页展示，不直接弹出添加弹窗
-      _navigateToDailyQuote().catchError((e) {
+      try {
+        await _navigateToDailyQuote(notificationId: notificationId);
+      } catch (e) {
         AppLogger.e('每日一言导航失败', error: e);
-      });
+      }
     }
   }
 
@@ -171,9 +189,28 @@ extension SmartPushNotification on SmartPushService {
   }
 
   /// 标记每日一言通知点击后的首页展示内容（一次性消费）。
-  Future<void> _navigateToDailyQuote() async {
+  Future<void> _navigateToDailyQuote({int? notificationId}) async {
     try {
-      var hitokotoData = await getCachedDailyQuoteForToday();
+      Map<String, dynamic>? hitokotoData;
+
+      if (notificationId != null) {
+        final trackedEntries = _loadTrackedPreScheduledEntries();
+        for (final entry in trackedEntries) {
+          if (entry.id == notificationId && entry.dailyQuoteData != null) {
+            hitokotoData =
+                await _validateCachedDailyQuote(entry.dailyQuoteData!);
+            if (hitokotoData == null) {
+              AppLogger.d(
+                '每日一言通知点击处理取消：关联本地笔记已隐藏或删除 ($notificationId)',
+              );
+              return;
+            }
+            break;
+          }
+        }
+      }
+
+      hitokotoData ??= await getCachedDailyQuoteForToday();
       if (hitokotoData == null) {
         AppLogger.d('通知点击时缓存为空，实时获取每日一言...');
         hitokotoData = await _loadDailyQuoteData(preferCache: false);
@@ -279,7 +316,12 @@ extension SmartPushNotification on SmartPushService {
     if (noteId is! String || noteId.isEmpty) return null;
 
     final visibleIds = await _databaseService.getVisibleQuoteIds([noteId]);
-    return visibleIds.contains(noteId) ? data : null;
+    if (!visibleIds.contains(noteId)) {
+      await _mmkv.remove(SmartPushService._lastDailyQuoteKey);
+      await _mmkv.remove(SmartPushService._lastDailyQuoteDateKey);
+      return null;
+    }
+    return data;
   }
 
   Future<Map<String, dynamic>?> _loadDailyQuoteData({

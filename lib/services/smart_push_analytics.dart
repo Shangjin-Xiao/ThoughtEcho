@@ -148,7 +148,8 @@ class SmartPushAnalytics extends ChangeNotifier {
     for (final record in records) {
       try {
         final dt = DateTime.parse(record);
-        hourCounts[dt.hour] = (hourCounts[dt.hour] ?? 0) + 1;
+        final hour = _extractRecordWallHour(record, dt);
+        hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
       } catch (e, stack) {
         AppLogger.e(
           '解析应用打开记录失败',
@@ -262,7 +263,8 @@ class SmartPushAnalytics extends ChangeNotifier {
       try {
         final dt = DateTime.parse(record);
         if (dt.isAfter(recentCutoff)) {
-          recentCounts[dt.hour] = (recentCounts[dt.hour] ?? 0) + 1;
+          final hour = _extractRecordWallHour(record, dt);
+          recentCounts[hour] = (recentCounts[hour] ?? 0) + 1;
         }
       } catch (e, stack) {
         AppLogger.e(
@@ -281,6 +283,16 @@ class SmartPushAnalytics extends ChangeNotifier {
       final recentScore = (recentCounts[h] ?? 0) / maxRecent;
       heatmap[h] = (heatmap[h]! * 0.4) + (recentScore * 0.6);
     }
+  }
+
+  int _extractRecordWallHour(String record, DateTime parsed) {
+    if (record.length >= 13 && record.codeUnitAt(10) == 0x54) {
+      final hour = int.tryParse(record.substring(11, 13));
+      if (hour != null && hour >= 0 && hour < 24) {
+        return hour;
+      }
+    }
+    return parsed.hour;
   }
 
   Future<List<String>> _getAppOpenRecords() async {
@@ -339,17 +351,16 @@ class SmartPushAnalytics extends ChangeNotifier {
     AppLogger.d('记录通知交互: $contentType（无匹配待结算，直接复位）');
   }
 
-  Future<bool> _isInCooldown() async {
+  /// 获取手动忽略通知后的冷却结束时间（未处于忽略记录中时返回 null）
+  DateTime? getDismissalCooldownEnd() {
     try {
       final lastDismissal = _mmkv.getString(_lastDismissalKey);
-      if (lastDismissal == null || lastDismissal.isEmpty) return false;
+      if (lastDismissal == null || lastDismissal.isEmpty) return null;
 
       final dismissTime = DateTime.parse(lastDismissal);
-      final cooldownEnd = dismissTime.add(
-        Duration(hours: cooldownHoursAfterDismiss),
+      return dismissTime.add(
+        const Duration(hours: cooldownHoursAfterDismiss),
       );
-
-      return DateTime.now().isBefore(cooldownEnd);
     } catch (e, stack) {
       AppLogger.e(
         '解析忽略时间记录失败',
@@ -357,8 +368,14 @@ class SmartPushAnalytics extends ChangeNotifier {
         stackTrace: stack,
         source: 'SmartPushAnalytics',
       );
-      return false;
+      return null;
     }
+  }
+
+  Future<bool> _isInCooldown({DateTime? now}) async {
+    final cooldownEnd = getDismissalCooldownEnd();
+    if (cooldownEnd == null) return false;
+    return (now ?? DateTime.now()).isBefore(cooldownEnd);
   }
 
   // ============================================================
@@ -382,16 +399,23 @@ class SmartPushAnalytics extends ChangeNotifier {
   ///
   /// 用天数而不是次数：一天疯狂开 20 次的人和连开 4 天的人，
   /// 后者才是真的把它当日常，前者可能只是在找某条笔记。
-  Future<EngagementTier> getEngagementTier() async {
+  Future<EngagementTier> getEngagementTier({DateTime? now}) async {
     final records = await _getAppOpenRecords();
-    final now = DateTime.now();
-    final cutoff = now.subtract(const Duration(days: engagementWindowDays));
+    final currentNow = now ?? DateTime.now();
+    final cutoff = currentNow.subtract(
+      const Duration(days: engagementWindowDays),
+    );
 
     final openDays = <String>{};
     for (final record in records) {
       final dt = DateTime.tryParse(record);
-      if (dt == null || dt.isBefore(cutoff)) continue;
-      openDays.add(dt.toIso8601String().substring(0, 10));
+      if (dt == null || dt.isBefore(cutoff) || dt.isAfter(currentNow)) continue;
+      final dayPart = (record.length >= 10 &&
+              record.codeUnitAt(4) == 0x2D &&
+              record.codeUnitAt(7) == 0x2D)
+          ? record.substring(0, 10)
+          : dt.toIso8601String().substring(0, 10);
+      openDays.add(dayPart);
     }
 
     if (openDays.length >= activeOpenDaysThreshold) {
@@ -420,22 +444,23 @@ class SmartPushAnalytics extends ChangeNotifier {
   }
 
   /// 今日已推送条数
-  Future<int> getTodayPushCount() async {
+  Future<int> getTodayPushCount({DateTime? now}) async {
     final raw = _mmkv.getString(_dailyCountKey);
     if (raw == null || raw.isEmpty) return 0;
 
     final parts = raw.split('|');
     if (parts.length != 2) return 0;
 
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final today = (now ?? DateTime.now()).toIso8601String().substring(0, 10);
     if (parts[0] != today) return 0; // 跨天自动归零
 
     return int.tryParse(parts[1]) ?? 0;
   }
 
-  Future<void> _incrementTodayPushCount() async {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    final count = await getTodayPushCount();
+  Future<void> _incrementTodayPushCount({DateTime? now}) async {
+    final currentNow = now ?? DateTime.now();
+    final today = currentNow.toIso8601String().substring(0, 10);
+    final count = await getTodayPushCount(now: currentNow);
     await _mmkv.setString(_dailyCountKey, '$today|${count + 1}');
   }
 
@@ -473,9 +498,9 @@ class SmartPushAnalytics extends ChangeNotifier {
   }
 
   /// 登记一条刚发出的推送（等待下次结算）
-  Future<void> markSent(String contentType) async {
+  Future<void> markSent(String contentType, {DateTime? sentAt}) async {
     await _mmkv.setString(_pendingSendKey, '$contentType|0');
-    await _incrementTodayPushCount();
+    await _incrementTodayPushCount(now: sentAt);
   }
 
   /// 裁定这次推送能不能发，以及要多好才配发。
@@ -484,10 +509,12 @@ class SmartPushAnalytics extends ChangeNotifier {
   Future<PushAllowance> checkPushAllowance({
     required PushIntensity intensity,
     DateTime? lastPushTime,
+    DateTime? now,
   }) async {
-    final tier = await getEngagementTier();
+    final currentNow = now ?? DateTime.now();
+    final tier = await getEngagementTier(now: currentNow);
     final profile = intensity.quotaFor(tier);
-    final todayCount = await getTodayPushCount();
+    final todayCount = await getTodayPushCount(now: currentNow);
 
     PushAllowance deny(String reason) => PushAllowance(
           allowed: false,
@@ -506,7 +533,7 @@ class SmartPushAnalytics extends ChangeNotifier {
 
     // 2. 最小间隔天数（沉睡档靠这个把节奏拉到 3 天/周/更长）
     if (profile.minGapDays > 0 && lastPushTime != null) {
-      final gap = DateTime.now().difference(lastPushTime).inDays;
+      final gap = currentNow.difference(lastPushTime).inDays;
       if (gap < profile.minGapDays) {
         return deny('未到最小间隔 ($gap 天 < ${profile.minGapDays} 天)');
       }
@@ -515,7 +542,7 @@ class SmartPushAnalytics extends ChangeNotifier {
     // 3. 连续未点击衰减
     final habituation = await getHabituationCooldown();
     if (habituation > Duration.zero && lastPushTime != null) {
-      final since = DateTime.now().difference(lastPushTime);
+      final since = currentNow.difference(lastPushTime);
       if (since < habituation) {
         final streak = await getUnengagedStreak();
         return deny(
@@ -526,15 +553,15 @@ class SmartPushAnalytics extends ChangeNotifier {
 
     // 4. 刚打开过 App —— 他已经想起来了
     final lastOpen = await getLastAppOpen();
-    if (lastOpen != null) {
-      final sinceOpen = DateTime.now().difference(lastOpen);
+    if (lastOpen != null && !currentNow.isBefore(lastOpen)) {
+      final sinceOpen = currentNow.difference(lastOpen);
       if (sinceOpen < const Duration(hours: recentOpenSuppressHours)) {
         return deny('${sinceOpen.inMinutes} 分钟前刚用过 App，跳过本次推送');
       }
     }
 
     // 5. 被手动忽略后的冷却
-    if (await _isInCooldown()) {
+    if (await _isInCooldown(now: currentNow)) {
       return deny('用户处于忽略冷却期');
     }
 

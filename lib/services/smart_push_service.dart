@@ -74,6 +74,7 @@ class SmartPushService extends ChangeNotifier {
   static const int _dailyQuoteSlotCode = 99;
   static const String _preScheduledEntriesKey =
       'smart_push_prescheduled_entries_v1';
+  static const String _settingsEpochKey = 'smart_push_settings_epoch_v1';
   static const String _preScheduleRenewalUniqueName =
       'smart_push_preschedule_renew';
   static const Duration _preScheduleRenewalFrequency = Duration(hours: 24);
@@ -166,6 +167,7 @@ class SmartPushService extends ChangeNotifier {
   final Random _random = Random();
   final bool? _isAndroidOverride;
   final bool? _isIOSOverride;
+  final String? _timeZoneOverride;
   final Future<bool> Function()? _canScheduleExactAlarmsOverride;
   final Future<PushPermissionStatus> Function()? _permissionStatusOverride;
   final Future<void> Function()? _openSystemAppSettingsOverride;
@@ -192,6 +194,41 @@ class SmartPushService extends ChangeNotifier {
   bool _isScheduleGenerationCurrent(int generation) =>
       !_isDisposed && generation == _scheduleGeneration;
 
+  int _readStoredSettingsEpoch() {
+    final raw = _mmkv.getString(_settingsEpochKey);
+    if (raw == null || raw.isEmpty) return 0;
+    return int.tryParse(raw) ?? 0;
+  }
+
+  Future<int> _bumpSettingsEpoch() async {
+    try {
+      await _mmkv.reload();
+    } catch (_) {}
+    final next = _readStoredSettingsEpoch() + 1;
+    await _mmkv.setString(_settingsEpochKey, next.toString());
+    return next;
+  }
+
+  Future<void> _reloadSharedStorageIfSupported() async {
+    try {
+      await _mmkv.reload();
+    } catch (_) {}
+  }
+
+  bool _areStoredSettingsAllDisabled() {
+    try {
+      final raw =
+          _mmkv.getString(_settingsKey) ?? _mmkv.getString(_legacySettingsKey);
+      if (raw == null || raw.isEmpty) return false;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return false;
+      final parsed = SmartPushSettings.fromJson(decoded);
+      return !parsed.enabled && !parsed.dailyQuotePushEnabled;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _enqueueScheduleOperation(
     Future<void> Function(int generation) action,
   ) {
@@ -215,6 +252,7 @@ class SmartPushService extends ChangeNotifier {
     SmartPushAnalytics? analytics,
     @visibleForTesting bool? isAndroidOverride,
     @visibleForTesting bool? isIOSOverride,
+    @visibleForTesting String? timeZoneOverride,
     @visibleForTesting Future<bool> Function()? canScheduleExactAlarmsOverride,
     @visibleForTesting
     Future<PushPermissionStatus> Function()? permissionStatusOverride,
@@ -232,6 +270,7 @@ class SmartPushService extends ChangeNotifier {
         _weatherService = weatherService,
         _isAndroidOverride = isAndroidOverride,
         _isIOSOverride = isIOSOverride,
+        _timeZoneOverride = timeZoneOverride,
         _canScheduleExactAlarmsOverride = canScheduleExactAlarmsOverride,
         _permissionStatusOverride = permissionStatusOverride,
         _openSystemAppSettingsOverride = openSystemAppSettingsOverride,
@@ -357,8 +396,8 @@ class SmartPushService extends ChangeNotifier {
     _mmkv.setString(_todayPushedDateKey, today);
   }
 
-  Set<String> _getTodayPushedNoteIds() {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+  Set<String> _getTodayPushedNoteIds({DateTime? now}) {
+    final today = (now ?? _now()).toIso8601String().substring(0, 10);
     final rawData = _mmkv.getString(_todayPushedNoteIdsKey);
     if (rawData == null || !rawData.startsWith('$today|')) return {};
 
@@ -448,6 +487,7 @@ class SmartPushService extends ChangeNotifier {
     String? noteId,
     required String contentType,
     String? routeTarget,
+    int? notificationId,
   }) {
     if (contentType.isEmpty) return null;
     final parts = <String>['contentType:$contentType'];
@@ -457,8 +497,15 @@ class SmartPushService extends ChangeNotifier {
     if (routeTarget != null && routeTarget.isNotEmpty) {
       parts.add('routeTarget:$routeTarget');
     }
+    if (notificationId != null) {
+      parts.add('notificationId:$notificationId');
+    }
     return parts.join('|');
   }
+
+  @visibleForTesting
+  Future<void> handleNotificationTapForTest(NotificationResponse response) =>
+      _handleNotificationTapAsync(response);
 
   @visibleForTesting
   static String? notificationSummaryForTest(Quote note) => null;
@@ -513,8 +560,18 @@ class SmartPushService extends ChangeNotifier {
       hour,
       minute,
     );
+    final nowWallClock = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+      now.second,
+      now.millisecond,
+      now.microsecond,
+    );
 
-    if (scheduledDate.isBefore(now)) {
+    if (scheduledDate.isBefore(nowWallClock)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
@@ -688,8 +745,9 @@ class SmartPushService extends ChangeNotifier {
   Future<void> saveSettings(SmartPushSettings newSettings) async {
     try {
       _settings = newSettings;
-      // 同步递增调度代数，立即作废正在异步查库/计算中的旧调度任务
+      // 同步递增实例内调度代数与跨 Isolate 持久化配置纪元，作废正在查库/计算中的前台及后台续期任务
       _scheduleGeneration++;
+      await _bumpSettingsEpoch();
       final jsonStr = jsonEncode(newSettings.toJson());
       await _mmkv.setString(_settingsKey, jsonStr);
       notifyListeners();
@@ -710,8 +768,10 @@ class SmartPushService extends ChangeNotifier {
   /// 从持久化存储重新加载设置并重新计算调度任务（用于备份恢复或跨 Isolate 数据同步）
   Future<void> reloadFromStorage() async {
     try {
+      await _reloadSharedStorageIfSupported();
       await _loadSettings();
       _scheduleGeneration++;
+      await _bumpSettingsEpoch();
       notifyListeners();
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush(preserveDeliveredNotifications: true);
@@ -780,30 +840,86 @@ class SmartPushService extends ChangeNotifier {
   }
 }
 
-/// 预调度本地通知记录条目（用于跨重排、隐藏/删除笔记清理与生命周期对账）
+/// 预调度本地通知记录条目（用于跨重排、隐藏/删除笔记清理、点击内容还原、配额结算与生命周期对账）
 class _PreScheduledEntry {
   final int id;
   final int epochMs;
   final String? noteId;
+  final bool isDailyQuote;
+  final String? contentType;
+  final bool accounted;
+  final int? slotHour;
+  final int? slotMinute;
+  final Map<String, dynamic>? dailyQuoteData;
 
   const _PreScheduledEntry({
     required this.id,
     required this.epochMs,
     this.noteId,
+    this.isDailyQuote = false,
+    this.contentType,
+    this.accounted = false,
+    this.slotHour,
+    this.slotMinute,
+    this.dailyQuoteData,
   });
+
+  _PreScheduledEntry copyWith({
+    String? noteId,
+    bool? isDailyQuote,
+    String? contentType,
+    bool? accounted,
+    int? slotHour,
+    int? slotMinute,
+    Map<String, dynamic>? dailyQuoteData,
+  }) {
+    return _PreScheduledEntry(
+      id: id,
+      epochMs: epochMs,
+      noteId: noteId ?? this.noteId,
+      isDailyQuote: isDailyQuote ?? this.isDailyQuote,
+      contentType: contentType ?? this.contentType,
+      accounted: accounted ?? this.accounted,
+      slotHour: slotHour ?? this.slotHour,
+      slotMinute: slotMinute ?? this.slotMinute,
+      dailyQuoteData: dailyQuoteData ?? this.dailyQuoteData,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'epochMs': epochMs,
         if (noteId != null && noteId!.isNotEmpty) 'noteId': noteId,
+        if (isDailyQuote) 'isDailyQuote': true,
+        if (contentType != null && contentType!.isNotEmpty)
+          'contentType': contentType,
+        if (accounted) 'accounted': true,
+        if (slotHour != null) 'slotHour': slotHour,
+        if (slotMinute != null) 'slotMinute': slotMinute,
+        if (dailyQuoteData != null && dailyQuoteData!.isNotEmpty)
+          'dailyQuoteData': dailyQuoteData,
       };
 
   factory _PreScheduledEntry.fromJson(Map<String, dynamic> json) {
     final rawNoteId = json['noteId'] as String?;
+    final rawContentType = json['contentType'] as String?;
+    final rawQuoteData = json['dailyQuoteData'];
     return _PreScheduledEntry(
       id: (json['id'] as num?)?.toInt() ?? 0,
       epochMs: (json['epochMs'] as num?)?.toInt() ?? 0,
       noteId: (rawNoteId != null && rawNoteId.isNotEmpty) ? rawNoteId : null,
+      isDailyQuote: json['isDailyQuote'] as bool? ?? false,
+      contentType: (rawContentType != null && rawContentType.isNotEmpty)
+          ? rawContentType
+          : null,
+      accounted: json['accounted'] as bool? ?? false,
+      slotHour: (json['slotHour'] as num?)?.toInt(),
+      slotMinute: (json['slotMinute'] as num?)?.toInt(),
+      dailyQuoteData: rawQuoteData is Map
+          ? SmartPushService.normalizeDailyQuoteData(
+              Map<String, dynamic>.from(rawQuoteData),
+            )
+          : null,
     );
   }
 }
@@ -832,14 +948,20 @@ class _PushContent {
   final String title;
   final String body;
   final String? noteId;
+  final String? sourceNoteId;
   final String? contentType;
+  final double priority;
+  final Map<String, dynamic>? dailyQuoteData;
 
   _PushContent({
     required this.title,
     required this.body,
     this.noteId,
+    String? sourceNoteId,
     this.contentType,
-  });
+    this.priority = 0,
+    this.dailyQuoteData,
+  }) : sourceNoteId = sourceNoteId ?? noteId;
 }
 
 /// 智能选择结果辅助类

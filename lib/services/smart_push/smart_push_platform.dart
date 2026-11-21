@@ -164,15 +164,21 @@ extension SmartPushPlatform on SmartPushService {
 
   /// 对账并取消不再处于当前有效计划内、或关联笔记已被隐藏/删除的预调度通知。
   ///
-  /// 返回因关联笔记被隐藏/删除而失效的通知 ID 集合。
-  Future<Set<int>> _reconcileTrackedPreScheduledNotifications({
+  /// 返回实际被取消的通知 ID 集合与因关联笔记被隐藏/删除而失效的通知 ID 集合。
+  Future<({Set<int> cancelledIds, Set<int> invalidatedIds})>
+      _reconcileTrackedPreScheduledNotifications({
     required Set<int> activeIds,
     required bool futureOnly,
     Set<String>? visibleNoteIds,
+    List<_PreScheduledEntry>? entriesOverride,
   }) async {
-    final previousEntries = _loadTrackedPreScheduledEntries();
-    if (previousEntries.isEmpty) return const {};
+    final previousEntries =
+        entriesOverride ?? _loadTrackedPreScheduledEntries();
+    if (previousEntries.isEmpty) {
+      return (cancelledIds: const <int>{}, invalidatedIds: const <int>{});
+    }
 
+    final cancelledIds = <int>{};
     final invalidatedIds = <int>{};
     final nowMs = _now().millisecondsSinceEpoch;
     for (final entry in previousEntries) {
@@ -185,13 +191,14 @@ extension SmartPushPlatform on SmartPushService {
         if (activeIds.contains(entry.id)) continue;
         if (futureOnly && entry.epochMs <= nowMs) continue;
       }
+      cancelledIds.add(entry.id);
       try {
         await _notificationsPlugin.cancel(entry.id);
       } catch (e) {
         AppLogger.w('取消过期预调度通知失败 (ID: ${entry.id})', error: e);
       }
     }
-    return invalidatedIds;
+    return (cancelledIds: cancelledIds, invalidatedIds: invalidatedIds);
   }
 
   /// 初始化时区 - 正确设置设备本地时区
@@ -238,6 +245,10 @@ extension SmartPushPlatform on SmartPushService {
 
   /// 获取设备时区名称
   Future<String> _getDeviceTimeZone() async {
+    final override = _timeZoneOverride;
+    if (override != null && override.isNotEmpty) {
+      return override;
+    }
     if (kIsWeb) {
       return 'UTC';
     }
@@ -379,6 +390,7 @@ extension SmartPushPlatform on SmartPushService {
     _PushContent? precomputedContent,
     bool allowContentLookup = true,
     bool? canScheduleExactOverride,
+    bool persistSingleTrackedEntry = true,
   }) async {
     try {
       await _ensureNotificationReady();
@@ -386,13 +398,15 @@ extension SmartPushPlatform on SmartPushService {
       _PushContent? content = precomputedContent;
       if (content == null && allowContentLookup) {
         if (isDailyQuote) {
-          final quote = await _resolvePreScheduleDailyQuote();
-          if (quote != null) {
+          final resolved = await _resolvePreScheduleDailyQuote();
+          if (resolved != null) {
             content = _PushContent(
               title: '📖 每日一言',
-              body: _buildNotificationBody(quote),
+              body: _buildNotificationBody(resolved.quote),
               noteId: null,
+              sourceNoteId: resolved.sourceNoteId,
               contentType: 'dailyQuote',
+              dailyQuoteData: resolved.quoteData,
             );
           }
         } else {
@@ -433,29 +447,54 @@ extension SmartPushPlatform on SmartPushService {
         AppLogger.w('精确闹钟权限不可用，使用 inexact 模式调度本地通知（时间可能有 15 分钟误差）');
       }
 
-      // 构建 payload，确保通知点击时能正确路由
+      final isDailyQuoteContent = isDailyQuote ||
+          (content?.contentType == 'dailyQuote' && content?.noteId == null);
+
+      // 构建 payload，确保通知点击时能正确路由并定位到该通知对应的展示内容
       String? payload;
-      if (isDailyQuote) {
+      if (isDailyQuoteContent) {
         payload = SmartPushService.buildNotificationPayload(
           contentType: 'dailyQuote',
+          notificationId: id,
         );
       } else if (content?.noteId != null) {
         payload = SmartPushService.buildNotificationPayload(
           noteId: content!.noteId,
           contentType: content.contentType ?? 'dailyQuote',
           routeTarget: 'noteList',
+          notificationId: id,
         );
       }
 
       await _notificationsPlugin.zonedSchedule(
         id,
-        content?.title ?? (isDailyQuote ? '📖 每日一言' : '💡 回忆时刻'),
+        content?.title ?? (isDailyQuoteContent ? '📖 每日一言' : '💡 回忆时刻'),
         content?.body ?? '点击查看今天的灵感',
         scheduledDate,
         details,
         androidScheduleMode: scheduleMode,
         payload: payload,
       );
+
+      if (persistSingleTrackedEntry &&
+          (content?.dailyQuoteData != null || content?.sourceNoteId != null)) {
+        final existing =
+            _loadTrackedPreScheduledEntries().where((e) => e.id != id).toList();
+        existing.add(
+          _PreScheduledEntry(
+            id: id,
+            epochMs: scheduledDate.millisecondsSinceEpoch,
+            noteId: content?.sourceNoteId ?? content?.noteId,
+            isDailyQuote: isDailyQuote,
+            contentType:
+                content?.contentType ?? (isDailyQuote ? 'dailyQuote' : null),
+            slotHour: slot.hour,
+            slotMinute: slot.minute,
+            dailyQuoteData: content?.dailyQuoteData,
+          ),
+        );
+        await _saveTrackedPreScheduledEntries(existing);
+      }
 
       AppLogger.i(
         '已设定本地通知: $scheduledDate (ID: $id, 模式: ${canScheduleExact ? "精确" : "非精确"})',
