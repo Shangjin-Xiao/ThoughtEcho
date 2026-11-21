@@ -75,6 +75,7 @@ class SmartPushService extends ChangeNotifier {
   static const String _preScheduledEntriesKey =
       'smart_push_prescheduled_entries_v1';
   static const String _settingsEpochKey = 'smart_push_settings_epoch_v1';
+  static const String _scheduleEpochKey = 'smart_push_schedule_epoch_v1';
   static const String _deliveryHistoryKey = 'smart_push_delivery_history_v1';
   static const String _deviceTimeZoneKey = 'smart_push_device_timezone_v1';
   static const String _immediateNotificationSeqKey =
@@ -193,6 +194,7 @@ class SmartPushService extends ChangeNotifier {
   final Set<int> _inFlightImmediateSmartNotificationIds = <int>{};
   Future<void> _pendingScheduleOp = Future<void>.value();
   Future<void> _pendingAccountingOp = Future<void>.value();
+  Future<void> _pendingEpochBump = Future<void>.value();
 
   bool get _isAndroid => _isAndroidOverride ?? PlatformHelper.isAndroid;
   bool get _isIOS => _isIOSOverride ?? PlatformHelper.isIOS;
@@ -213,13 +215,48 @@ class SmartPushService extends ChangeNotifier {
     return int.tryParse(raw) ?? 0;
   }
 
-  Future<int> _bumpSettingsEpoch() async {
-    try {
-      await _mmkv.reload();
-    } catch (_) {}
-    final next = _readStoredSettingsEpoch() + 1;
-    await _mmkv.setString(_settingsEpochKey, next.toString());
-    return next;
+  int _readStoredScheduleEpoch() {
+    final raw = _mmkv.getString(_scheduleEpochKey);
+    if (raw == null || raw.isEmpty) return 0;
+    return int.tryParse(raw) ?? 0;
+  }
+
+  Future<int> _bumpScheduleEpoch() {
+    final completer = Completer<int>();
+    final nextOp = _pendingEpochBump.then((_) async {
+      try {
+        await _mmkv.reload();
+      } catch (_) {}
+      final nextSchedule = _readStoredScheduleEpoch() + 1;
+      await _mmkv.setString(_scheduleEpochKey, nextSchedule.toString());
+      completer.complete(nextSchedule);
+    });
+    _pendingEpochBump = nextOp.catchError((Object e, StackTrace stack) {
+      if (!completer.isCompleted) {
+        completer.completeError(e, stack);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<int> _bumpSettingsEpoch() {
+    final completer = Completer<int>();
+    final nextOp = _pendingEpochBump.then((_) async {
+      try {
+        await _mmkv.reload();
+      } catch (_) {}
+      final nextSettings = _readStoredSettingsEpoch() + 1;
+      final nextSchedule = _readStoredScheduleEpoch() + 1;
+      await _mmkv.setString(_settingsEpochKey, nextSettings.toString());
+      await _mmkv.setString(_scheduleEpochKey, nextSchedule.toString());
+      completer.complete(nextSettings);
+    });
+    _pendingEpochBump = nextOp.catchError((Object e, StackTrace stack) {
+      if (!completer.isCompleted) {
+        completer.completeError(e, stack);
+      }
+    });
+    return completer.future;
   }
 
   Future<void> _reloadSharedStorageIfSupported() async {
@@ -243,10 +280,16 @@ class SmartPushService extends ChangeNotifier {
   }
 
   Future<void> _enqueueScheduleOperation(
-    Future<void> Function(int generation) action,
-  ) {
+    Future<void> Function(int generation) action, {
+    Future<Object?>? prerequisite,
+  }) {
     final generation = ++_scheduleGeneration;
     final next = _pendingScheduleOp.then((_) async {
+      if (prerequisite != null) {
+        try {
+          await prerequisite;
+        } catch (_) {}
+      }
       await _pendingAccountingOp;
       if (!_isScheduleGenerationCurrent(generation)) return;
       await action(generation);
@@ -322,17 +365,29 @@ class SmartPushService extends ChangeNotifier {
     if (!_settings.enabled && !_settings.dailyQuotePushEnabled) return;
     if (!_isAndroid && !_isIOS) return;
 
+    // 立即递增跨 Isolate 共享调度纪元，使后台并发续期的旧预计算计划失效，防止隐藏笔记正文被重新写入系统队列
+    final epochBumpFuture = _bumpScheduleEpoch();
+
     final hasTrackedPreScheduled = _loadTrackedPreScheduledEntries().isNotEmpty;
-    if (!hasTrackedPreScheduled && !_isInitialized) return;
+    if (!hasTrackedPreScheduled &&
+        !_isInitialized &&
+        _scheduleGeneration == 0) {
+      unawaited(epochBumpFuture.catchError((_) => 0));
+      return;
+    }
     if (!hasTrackedPreScheduled &&
         _isAndroid &&
         !DistributionConfig.isPlayStore &&
         (_lastScheduledExactAlarmGranted ?? true)) {
+      unawaited(epochBumpFuture.catchError((_) => 0));
       return;
     }
 
     unawaited(
-      scheduleNextPush(preserveDeliveredNotifications: true).catchError((_) {}),
+      _scheduleNextPushWithPrerequisite(
+        preserveDeliveredNotifications: true,
+        prerequisite: epochBumpFuture,
+      ).catchError((_) {}),
     );
   }
 

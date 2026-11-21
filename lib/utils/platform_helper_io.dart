@@ -80,7 +80,123 @@ class PlatformHelper {
 
   static final Map<String, Future<void>> _archiveLocks =
       <String, Future<void>>{};
+  static final Map<String, Future<void>> _crossIsolateLocks =
+      <String, Future<void>>{};
+  static final Object _heldLocksZoneKey = Object();
+  static String? _cachedCrossIsolateLockDir;
   static int _archiveStageSeq = 0;
+  static int _staleLockSeq = 0;
+
+  static Future<String> _resolveCrossIsolateLockFilePath(
+    String lockName, {
+    String? customLockFilePath,
+  }) async {
+    if (customLockFilePath != null && customLockFilePath.trim().isNotEmpty) {
+      return p.normalize(customLockFilePath.trim());
+    }
+    final sanitized = lockName.replaceAll(RegExp(r'[^a-zA-Z0-9_.-]'), '_');
+    var baseDir = _cachedCrossIsolateLockDir;
+    if (baseDir == null) {
+      try {
+        baseDir = (await getApplicationSupportDirectory()).path;
+      } catch (_) {
+        try {
+          baseDir = (await getApplicationDocumentsDirectory()).path;
+        } catch (_) {
+          baseDir = Directory.systemTemp.path;
+        }
+      }
+      _cachedCrossIsolateLockDir = baseDir;
+    }
+    return p.normalize(p.join(baseDir, '$sanitized.lock'));
+  }
+
+  /// Serializes [action] both across async tasks within the current Isolate and
+  /// across concurrent Isolates sharing the app's filesystem via `O_CREAT|O_EXCL`.
+  static Future<T> withCrossIsolateLock<T>(
+    String lockName,
+    Future<T> Function() action, {
+    String? customLockFilePath,
+  }) async {
+    final lockPath = await _resolveCrossIsolateLockFilePath(
+      lockName,
+      customLockFilePath: customLockFilePath,
+    );
+    final heldLocks = Zone.current[_heldLocksZoneKey];
+    if (heldLocks is Set<String> && heldLocks.contains(lockPath)) {
+      return action();
+    }
+
+    final previous = _crossIsolateLocks[lockPath] ?? Future<void>.value();
+    final turnCompleter = Completer<void>();
+    _crossIsolateLocks[lockPath] = turnCompleter.future;
+
+    try {
+      await previous;
+    } catch (_) {}
+
+    final syncIo = Platform.environment.containsKey('FLUTTER_TEST');
+    final lockFile = File(lockPath);
+    var lockAcquired = false;
+    final maxAttempts = syncIo ? 50 : 300;
+
+    try {
+      for (var attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          lockFile.createSync(recursive: true, exclusive: true);
+          lockAcquired = true;
+          break;
+        } on FileSystemException {
+          try {
+            if (lockFile.existsSync()) {
+              final modified = lockFile.statSync().modified;
+              if (DateTime.now().difference(modified) >
+                  const Duration(seconds: 15)) {
+                final seq = ++_staleLockSeq;
+                final stalePath = '$lockPath.stale.$pid.$seq';
+                try {
+                  final moved = lockFile.renameSync(stalePath);
+                  moved.deleteSync();
+                } catch (_) {}
+                continue;
+              }
+            }
+          } catch (_) {}
+
+          if (syncIo) {
+            if (attempt < 5) {
+              await Future<void>.value();
+            } else {
+              sleep(const Duration(milliseconds: 2));
+            }
+          } else {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+          }
+        }
+      }
+
+      final nextHeld = <String>{
+        if (heldLocks is Set<String>) ...heldLocks,
+        lockPath,
+      };
+      return await runZoned(
+        action,
+        zoneValues: <Object?, Object?>{_heldLocksZoneKey: nextHeld},
+      );
+    } finally {
+      if (lockAcquired) {
+        try {
+          if (lockFile.existsSync()) {
+            lockFile.deleteSync();
+          }
+        } catch (_) {}
+      }
+      if (identical(_crossIsolateLocks[lockPath], turnCompleter.future)) {
+        _crossIsolateLocks.remove(lockPath);
+      }
+      turnCompleter.complete();
+    }
+  }
 
   static Future<bool> _deleteIfExists(File file, {required bool syncIo}) async {
     if (syncIo) {

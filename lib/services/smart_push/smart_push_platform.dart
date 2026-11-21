@@ -152,6 +152,7 @@ extension SmartPushPlatform on SmartPushService {
     int? expectedGeneration,
     int? expectedSettingsGeneration,
     int? expectedEpoch,
+    int? expectedScheduleEpoch,
     bool fromBackground = false,
   }) async {
     try {
@@ -163,7 +164,7 @@ extension SmartPushPlatform on SmartPushService {
           !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
         return;
       }
-      if (expectedEpoch != null) {
+      if (expectedEpoch != null || expectedScheduleEpoch != null) {
         await _reloadSharedStorageIfSupported();
         if (expectedGeneration != null &&
             !_isScheduleGenerationCurrent(expectedGeneration)) {
@@ -173,7 +174,10 @@ extension SmartPushPlatform on SmartPushService {
             !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
           return;
         }
-        if (_readStoredSettingsEpoch() != expectedEpoch ||
+        if ((expectedEpoch != null &&
+                _readStoredSettingsEpoch() != expectedEpoch) ||
+            (expectedScheduleEpoch != null &&
+                _readStoredScheduleEpoch() != expectedScheduleEpoch) ||
             (fromBackground && _areStoredSettingsAllDisabled())) {
           return;
         }
@@ -787,8 +791,10 @@ extension SmartPushPlatform on SmartPushService {
   }
 
   Future<void> _cancelAllSchedules() {
+    final bumpFuture = _bumpScheduleEpoch();
     return _enqueueScheduleOperation(
       (_) => _cancelAllSchedulesInternal(),
+      prerequisite: bumpFuture,
     );
   }
 

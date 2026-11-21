@@ -74,7 +74,21 @@ extension SmartPushNotification on SmartPushService {
     NotificationResponse response,
   ) async {
     final parsed = await _recordNotificationTapState(response);
+    Future<void>? rescheduleFuture;
+    if (!_isDisposed &&
+        _hasActiveReminderScheduleConfig(_settings) &&
+        (parsed.contentType != null || parsed.noteId != null)) {
+      // 点击结算会复位连续未点击计数并更新推送历史，需不受 6 小时节流限制立即主动重排，恢复此前因预计冷却而跳过的后续提醒槽位
+      rescheduleFuture = scheduleNextPush(
+        preserveDeliveredNotifications: true,
+      ).catchError((Object e, StackTrace stack) {
+        AppLogger.w('通知点击后重排推送计划失败', error: e, stackTrace: stack);
+      });
+    }
     await _performNotificationTapNavigation(parsed);
+    if (rescheduleFuture != null) {
+      await rescheduleFuture;
+    }
   }
 
   Future<
@@ -129,6 +143,7 @@ extension SmartPushNotification on SmartPushService {
           }
         }
 
+        await _reloadSharedStorageIfSupported();
         final tapSettingsGeneration = _settingsMutationGeneration;
         final tapEpoch = _readStoredSettingsEpoch();
         final trackedEntries = notificationId != null

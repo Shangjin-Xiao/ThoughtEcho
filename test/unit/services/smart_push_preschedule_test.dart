@@ -3558,5 +3558,229 @@ void main() {
         );
       },
     );
+
+    test(
+      'background renewal racing with foreground hiding a note rolls back hidden content and keeps replacement visible note',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        final sharedDisk = <String, Object>{};
+        final fgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+        final bgStorage = _MemoryPreferences(
+          sharedDisk: sharedDisk,
+          isolatedCache: true,
+        );
+
+        final secretNote = Quote(
+          id: 'a1a1a1a1-1111-2222-3333-444444444444',
+          content: '已被用户设为私密隐藏、绝不允许被后台续期写入通知栏的正文。',
+          date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+        );
+        final replacementNote = Quote(
+          id: 'b2b2b2b2-1111-2222-3333-444444444444',
+          content: '隐藏私密笔记后仍保持公开可见的替代回顾笔记正文。',
+          date: localTime(2026, 4, 10, 9, 0).toIso8601String(),
+        );
+        databaseService.notes = <Quote>[secretNote, replacementNote];
+
+        SmartPushService buildIsolatedService(_MemoryPreferences prefs) {
+          return SmartPushService(
+            databaseService: databaseService,
+            locationService: LocationService(),
+            mmkvService: prefs,
+            notificationsPlugin: notificationsPlugin,
+            isAndroidOverride: true,
+            isIOSOverride: false,
+            timeZoneOverride: 'Etc/GMT-8',
+            canScheduleExactAlarmsOverride: () async => true,
+            registerPreScheduleRenewalOverride: () async {},
+            cancelPreScheduleRenewalOverride: () async {},
+            nowProvider: () => currentNow,
+          );
+        }
+
+        final fgService = buildIsolatedService(fgStorage);
+        final bgService = buildIsolatedService(bgStorage);
+        addTearDown(fgService.dispose);
+        addTearDown(bgService.dispose);
+
+        await fgService.initialize();
+        await fgService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            enabledPastNoteTypes: {
+              PastNoteType.yearAgoToday,
+              PastNoteType.monthAgoToday,
+              PastNoteType.randomMemory,
+            },
+            pushTimeSlots: [
+              PushTimeSlot(hour: 9, minute: 0, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        await bgService.loadSettingsForBackground();
+
+        // 当后台刚把包含旧 secretNote 正文的预计算通知写入系统队列时，前台将 secretNote 隐藏并完成重排
+        var hidDuringBackgroundWrite = false;
+        notificationsPlugin.onScheduleHook = (call) async {
+          if (!hidDuringBackgroundWrite &&
+              (call.body?.contains(secretNote.content) ?? false)) {
+            hidDuringBackgroundWrite = true;
+            notificationsPlugin.onScheduleHook = null;
+            databaseService.notes = <Quote>[replacementNote];
+            databaseService.notifyChanged();
+            await fgService.waitForPendingScheduleForTest();
+          }
+        };
+
+        await bgService.renewPreScheduledQueueFromBackground();
+        expect(hidDuringBackgroundWrite, isTrue);
+
+        final pendingAfterRace =
+            await notificationsPlugin.pendingNotificationRequests();
+        expect(pendingAfterRace, isNotEmpty);
+        for (final req in pendingAfterRace) {
+          expect(req.body, isNot(contains(secretNote.content)));
+          expect(req.payload, isNot(contains(secretNote.id!)));
+        }
+        expect(
+          pendingAfterRace.any(
+            (req) => req.body?.contains(replacementNote.content) ?? false,
+          ),
+          isTrue,
+        );
+
+        // 若隐藏后已无任何可见笔记，后台并发续期同样必须彻底撤回，不留任何隐藏正文
+        databaseService.notes = <Quote>[secretNote];
+        databaseService.notifyChanged();
+        await fgService.waitForPendingScheduleForTest();
+
+        var hidLastNoteDuringWrite = false;
+        notificationsPlugin.onScheduleHook = (call) async {
+          if (!hidLastNoteDuringWrite &&
+              (call.body?.contains(secretNote.content) ?? false)) {
+            hidLastNoteDuringWrite = true;
+            notificationsPlugin.onScheduleHook = null;
+            databaseService.notes = const <Quote>[];
+            databaseService.notifyChanged();
+            await fgService.waitForPendingScheduleForTest();
+          }
+        };
+
+        await bgService.renewPreScheduledQueueFromBackground();
+        expect(hidLastNoteDuringWrite, isTrue);
+        expect(
+          await notificationsPlugin.pendingNotificationRequests(),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      'warm-start notification tap bypasses 6-hour resume throttle and immediately restores skipped evening reminder',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        storage.values['smart_push_app_open_times'] = <String>[
+          localTime(2026, 5, 5, 8, 30).toIso8601String(),
+          localTime(2026, 5, 5, 20, 0).toIso8601String(),
+          localTime(2026, 5, 6, 8, 30).toIso8601String(),
+          localTime(2026, 5, 6, 20, 0).toIso8601String(),
+          localTime(2026, 5, 7, 8, 30).toIso8601String(),
+          localTime(2026, 5, 7, 20, 0).toIso8601String(),
+          localTime(2026, 5, 8, 8, 30).toIso8601String(),
+          localTime(2026, 5, 8, 20, 0).toIso8601String(),
+        ].join(',');
+        storage.values['smart_push_unengaged_streak'] = '2';
+
+        databaseService.notes = <Quote>[
+          Quote(
+            id: 'c1000000-1111-2222-3333-444444444444',
+            content: '五月十日早间待点击的高分历史回顾笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+          Quote(
+            id: 'c2000000-1111-2222-3333-444444444444',
+            content: '五月十日晚间在点击早间提醒后应自动恢复的高分笔记。',
+            date: localTime(2026, 4, 10, 20, 0).toIso8601String(),
+            favoriteCount: 15,
+          ),
+          Quote(
+            id: 'c3000000-1111-2222-3333-444444444444',
+            content: '五月十一日备用高分历史回顾笔记。',
+            date: localTime(2025, 5, 11, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+        ];
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+            lastPushTime: localTime(2026, 5, 9, 20, 0),
+          ),
+        );
+
+        final may10BeforeTap = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        // 因预计第 3 次未点击触发 24h 冷却，当晚槽位最初被跳过，当天仅排入早间 1 条
+        expect(may10BeforeTap, hasLength(1));
+        final morningCall = may10BeforeTap.single;
+        expect(morningCall.scheduledDate.hour, lessThan(12));
+
+        // 推进到早间通知送达后 15 分钟（距上次刷新不足 2 小时，处于 handleAppResumed 6 小时节流窗口内）
+        currentNow = morningCall.scheduledDate.add(
+          const Duration(minutes: 15),
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        await service.handleAppResumed();
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+
+        // 用户暖启动点击早间通知 -> 应突破 6 小时节流立即重排并恢复当晚提醒槽位
+        await service.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: morningCall.id,
+            payload: morningCall.payload,
+          ),
+        );
+
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        final restoredTonightCalls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10 &&
+                  c.scheduledDate.isAfter(currentNow),
+            )
+            .toList();
+        expect(restoredTonightCalls, hasLength(1));
+        expect(restoredTonightCalls.single.scheduledDate.hour,
+            greaterThanOrEqualTo(18));
+      },
+    );
   });
 }

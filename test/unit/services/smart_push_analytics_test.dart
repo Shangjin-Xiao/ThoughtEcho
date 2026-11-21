@@ -1,9 +1,52 @@
+import 'dart:io';
+import 'dart:isolate';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/smart_push_settings.dart';
 import 'package:thoughtecho/services/app_preferences_service.dart';
 import 'package:thoughtecho/services/smart_push_analytics.dart';
+import 'package:thoughtecho/utils/platform_helper.dart';
 
 import '../../test_harness.dart';
+
+class _IsolatedAnalyticsPreferences implements AppPreferencesService {
+  final Map<String, Object> _sharedDisk;
+  final Map<String, Object> _cache;
+  Future<void> Function(String key, String value)? onBeforeSetString;
+
+  _IsolatedAnalyticsPreferences(this._sharedDisk)
+      : _cache = Map<String, Object>.from(_sharedDisk);
+
+  @override
+  Future<void> reload() async {
+    _cache
+      ..clear()
+      ..addAll(_sharedDisk);
+  }
+
+  @override
+  String? getString(String key) => _cache[key] as String?;
+
+  @override
+  Future<bool> setString(String key, String value) async {
+    if (onBeforeSetString != null) {
+      await onBeforeSetString!(key, value);
+    }
+    _cache[key] = value;
+    _sharedDisk[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> remove(String key) async {
+    _cache.remove(key);
+    _sharedDisk.remove(key);
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -374,6 +417,121 @@ void main() {
       expect(await analytics.getUnengagedStreak(), 1);
       final scores = await analytics.getContentTypeScores();
       expect(scores['pastNote'], closeTo(1 / 3, 1e-6));
+    });
+
+    test('前台点击结算与后台补记在独立缓存实例上并发交错时不会把真实点击覆盖为未点击', () async {
+      final sharedDisk = <String, Object>{
+        'smart_push_unengaged_streak': '2',
+      };
+      final fgPrefs = _IsolatedAnalyticsPreferences(sharedDisk);
+      final bgPrefs = _IsolatedAnalyticsPreferences(sharedDisk);
+      final tempDir = await Directory.systemTemp.createTemp(
+        'smart_push_analytics_lock_test_',
+      );
+      addTearDown(() async {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final lockPath = '${tempDir.path}/analytics.lock';
+
+      final fgAnalytics = SmartPushAnalytics(
+        mmkvService: fgPrefs,
+        lockFilePathOverride: lockPath,
+      );
+      final bgAnalytics = SmartPushAnalytics(
+        mmkvService: bgPrefs,
+        lockFilePathOverride: lockPath,
+      );
+
+      final sentAt = DateTime(2026, 5, 10, 9, 0);
+      const notificationId = 126051000;
+
+      // 模拟后台先发起补记并在首次写入计数时产生异步延迟，期间前台并发发起点击记录与补记结算
+      var delayedOnce = false;
+      bgPrefs.onBeforeSetString = (key, value) async {
+        if (key == 'smart_push_daily_count' && !delayedOnce) {
+          delayedOnce = true;
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+      };
+
+      final bgFuture = bgAnalytics.recordDeliveredNotification(
+        'yearAgoToday',
+        notificationId: notificationId,
+        sentAt: sentAt,
+      );
+      final fgFuture = () async {
+        await fgAnalytics.recordInteraction(
+          'yearAgoToday',
+          notificationId: notificationId,
+          deferScoreUntilAccounted: true,
+        );
+        await fgAnalytics.recordDeliveredNotification(
+          'yearAgoToday',
+          notificationId: notificationId,
+          sentAt: sentAt,
+        );
+      }();
+
+      await Future.wait(<Future<void>>[bgFuture, fgFuture]);
+
+      // 下一次结算绝不能把本次真实点击当作忽略惩罚
+      await fgAnalytics.settlePendingSend();
+      await bgPrefs.reload();
+      await fgPrefs.reload();
+
+      expect(await fgAnalytics.getTodayPushCount(now: sentAt), equals(1));
+      expect(await fgAnalytics.getUnengagedStreak(), equals(0));
+      expect(await bgAnalytics.getUnengagedStreak(), equals(0));
+      final scores = await fgAnalytics.getContentTypeScores();
+      expect(scores['yearAgoToday']!, greaterThan(0.5));
+      final stats = await fgAnalytics.getAnalyticsStats();
+      expect(stats['totalNotificationsSent'], equals(1));
+      expect(stats['totalEngagements'], equals(1));
+    });
+
+    test('真实跨 Isolate 文件互斥锁严格串行执行，避免两个 Isolate 并发读写覆盖', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'cross_isolate_lock_test_',
+      );
+      addTearDown(() async {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final lockPath = '${tempDir.path}/shared.lock';
+      final counterFile = File('${tempDir.path}/counter.txt')
+        ..writeAsStringSync('0');
+
+      Future<void> incrementInWorker() {
+        return Isolate.run(() async {
+          await PlatformHelper.withCrossIsolateLock(
+            'test_lock',
+            () async {
+              final current = int.parse(counterFile.readAsStringSync());
+              sleep(const Duration(milliseconds: 15));
+              counterFile.writeAsStringSync('${current + 1}');
+            },
+            customLockFilePath: lockPath,
+          );
+        });
+      }
+
+      await Future.wait(<Future<void>>[
+        incrementInWorker(),
+        PlatformHelper.withCrossIsolateLock(
+          'test_lock',
+          () async {
+            final current = int.parse(counterFile.readAsStringSync());
+            sleep(const Duration(milliseconds: 10));
+            counterFile.writeAsStringSync('${current + 1}');
+          },
+          customLockFilePath: lockPath,
+        ),
+      ]);
+
+      expect(int.parse(counterFile.readAsStringSync()), equals(2));
     });
   });
 
