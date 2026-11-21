@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -8,6 +9,28 @@ import 'package:thoughtecho/services/smart_push_analytics.dart';
 import 'package:thoughtecho/utils/platform_helper.dart';
 
 import '../../test_harness.dart';
+
+Future<(int, int)> _acquireAndHoldCrossIsolateLock({
+  required String lockPath,
+  required Duration holdDuration,
+  SendPort? acquiredSendPort,
+}) {
+  return Isolate.run(() async {
+    return PlatformHelper.withCrossIsolateLock<(int, int)>(
+      'smart_push_live_holder_test',
+      () async {
+        final entered = DateTime.now().millisecondsSinceEpoch;
+        acquiredSendPort?.send(entered);
+        await Future<void>.delayed(holdDuration);
+        final exited = DateTime.now().millisecondsSinceEpoch;
+        return (entered, exited);
+      },
+      customLockFilePath: lockPath,
+      staleLockTimeout: const Duration(milliseconds: 60),
+      acquireTimeout: const Duration(seconds: 5),
+    );
+  });
+}
 
 class _IsolatedAnalyticsPreferences implements AppPreferencesService {
   final Map<String, Object> _sharedDisk;
@@ -689,40 +712,34 @@ void main() {
 
         final holderAcquiredPort = ReceivePort();
         addTearDown(holderAcquiredPort.close);
-        final holderAcquiredSendPort = holderAcquiredPort.sendPort;
-
-        final holderFuture = Isolate.run(() async {
-          return PlatformHelper.withCrossIsolateLock<(int, int)>(
-            'smart_push_live_holder_test',
-            () async {
-              final entered = DateTime.now().millisecondsSinceEpoch;
-              holderAcquiredSendPort.send(entered);
-              await Future<void>.delayed(const Duration(milliseconds: 220));
-              final exited = DateTime.now().millisecondsSinceEpoch;
-              return (entered, exited);
-            },
-            customLockFilePath: lockPath,
-            staleLockTimeout: const Duration(milliseconds: 60),
-            acquireTimeout: const Duration(seconds: 5),
-          );
+        final holderAcquired = Completer<int>();
+        final holderAcquiredSub = holderAcquiredPort.listen((message) {
+          if (message is int && !holderAcquired.isCompleted) {
+            holderAcquired.complete(message);
+          }
         });
+        addTearDown(holderAcquiredSub.cancel);
+        final holderFuture = _acquireAndHoldCrossIsolateLock(
+          lockPath: lockPath,
+          holdDuration: const Duration(milliseconds: 220),
+          acquiredSendPort: holderAcquiredPort.sendPort,
+        );
 
-        await holderAcquiredPort.first;
+        await Future.any<void>(<Future<void>>[
+          holderAcquired.future.then((_) {}),
+          holderFuture.then((_) {
+            if (!holderAcquired.isCompleted) {
+              throw StateError(
+                'Holder isolate exited before signaling lock acquisition',
+              );
+            }
+          }),
+        ]).timeout(const Duration(seconds: 5));
 
-        final contenderFuture = Isolate.run(() async {
-          return PlatformHelper.withCrossIsolateLock<(int, int)>(
-            'smart_push_live_holder_test',
-            () async {
-              final entered = DateTime.now().millisecondsSinceEpoch;
-              await Future<void>.delayed(const Duration(milliseconds: 30));
-              final exited = DateTime.now().millisecondsSinceEpoch;
-              return (entered, exited);
-            },
-            customLockFilePath: lockPath,
-            staleLockTimeout: const Duration(milliseconds: 60),
-            acquireTimeout: const Duration(seconds: 5),
-          );
-        });
+        final contenderFuture = _acquireAndHoldCrossIsolateLock(
+          lockPath: lockPath,
+          holdDuration: const Duration(milliseconds: 30),
+        );
 
         final results = await Future.wait([holderFuture, contenderFuture]);
         final (_, holderExited) = results[0];

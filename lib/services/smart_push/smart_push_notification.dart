@@ -501,7 +501,7 @@ extension SmartPushNotification on SmartPushService {
       final maxRetentionMs =
           SmartPushService._deliveredEntryRetention.inMilliseconds;
       final existing = <_PreScheduledEntry>[];
-      for (final e in _loadTrackedPreScheduledEntries()) {
+      for (final e in previousEntries) {
         if (e.id == notificationId || e.epochMs <= 0) continue;
         if (e.epochMs > nowMs || nowMs - e.epochMs <= maxRetentionMs) {
           existing.add(e);
