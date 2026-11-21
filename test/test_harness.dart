@@ -154,8 +154,8 @@ final class TestHarness {
     _pathProvider = null;
     _root = null;
 
-    if (root != null && await root.exists()) {
-      await root.delete(recursive: true);
+    if (root != null) {
+      await _deleteDirectoryWithRetry(root);
     }
   }
 
@@ -172,8 +172,24 @@ final class TestHarness {
 
   /// Deletes a directory created for an individual test.
   static Future<void> deleteTempDirectory(Directory directory) async {
-    if (await directory.exists()) {
-      await directory.delete(recursive: true);
+    await _deleteDirectoryWithRetry(directory);
+  }
+
+  static Future<void> _deleteDirectoryWithRetry(Directory directory) async {
+    const maxAttempts = 6;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      if (!await directory.exists()) {
+        return;
+      }
+      try {
+        await directory.delete(recursive: true);
+        return;
+      } on FileSystemException {
+        if (attempt == maxAttempts - 1) {
+          rethrow;
+        }
+        await Future<void>.delayed(Duration(milliseconds: 20 * (1 << attempt)));
+      }
     }
   }
 

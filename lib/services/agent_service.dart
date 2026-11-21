@@ -1822,10 +1822,12 @@ $memoryGuidance## 应用特性（避免重复劳动）
   static String? describeHistoryGap(DateTime lastMessageAt, DateTime now) {
     final gap = now.difference(lastMessageAt);
     if (gap.inHours < 8) return null;
+    final alignedLast =
+        now.isUtc ? lastMessageAt.toUtc() : lastMessageAt.toLocal();
     final span = gap.inDays >= 1 ? '${gap.inDays} 天前' : '${gap.inHours} 小时前';
-    final date = '${lastMessageAt.year}-${_twoDigits(lastMessageAt.month)}-'
-        '${_twoDigits(lastMessageAt.day)} '
-        '${_twoDigits(lastMessageAt.hour)}:${_twoDigits(lastMessageAt.minute)}';
+    final date = '${alignedLast.year}-${_twoDigits(alignedLast.month)}-'
+        '${_twoDigits(alignedLast.day)} '
+        '${_twoDigits(alignedLast.hour)}:${_twoDigits(alignedLast.minute)}';
     return '这是一段被重新打开的旧对话：上一条消息是 $date（$span）留下的，不是刚刚。'
         '历史里的"今天""刚才"指的是当时，涉及时间时一律以上面的当前时间重新换算。';
   }

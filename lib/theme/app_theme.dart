@@ -14,7 +14,7 @@ class AppTheme with ChangeNotifier {
 
   /// 从存储重载当前活跃实例的主题配置
   static Future<void> reloadCurrentInstance() async {
-    await _currentInstance?.reloadThemeFromStorage();
+    await _currentInstance?.reloadFromStorage();
   }
 
   AppTheme() {
@@ -636,9 +636,13 @@ class AppTheme with ChangeNotifier {
     }
   }
 
-  /// 重新从持久化存储加载所有主题配置（用于备份恢复后刷新界面）
-  Future<void> reloadThemeFromStorage() async {
+  /// 重新从持久化存储加载所有主题配置（用于备份覆盖恢复后即时刷新界面）
+  Future<void> reloadFromStorage() async {
     try {
+      if (_storage == null) {
+        _storage = AppPreferencesService();
+        await _storage!.init();
+      }
       _loadCustomColor();
       _loadThemeMode();
       await _loadThemeStyle();
@@ -650,6 +654,9 @@ class AppTheme with ChangeNotifier {
       logError('重载主题配置失败', error: e, stackTrace: stack, source: 'AppTheme');
     }
   }
+
+  /// 兼容旧入口：委托给 [reloadFromStorage]
+  Future<void> reloadThemeFromStorage() => reloadFromStorage();
 
   // 更新动态颜色方案
   void updateDynamicColorScheme(

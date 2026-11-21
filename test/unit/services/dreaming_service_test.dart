@@ -732,6 +732,81 @@ void main() {
         expect(after.id, before.id);
         expect(after.observedAt, before.observedAt);
       });
+
+      test('用户手改（user_edit）或显式设定（thoughter）的 taste/voice 不被后续 Dreaming 覆盖',
+          () async {
+        // 1. 首轮 Dreaming 写入自动 taste 与 voice
+        await build(modelOutput: goodOutput).run(
+          now: DateTime.utc(2026, 9, 1, 8, 0),
+        );
+        final initial = await harness.memory.activeProfile();
+        final initialTaste = initial.firstWhere(
+          (e) => e.kind == AgentMemoryKind.taste,
+        );
+
+        // 用户手动修正 taste（转为 user_edit），保持 voice 为 dreaming
+        await harness.memory.editProfileDirective(
+          id: initialTaste.id,
+          directive: '人工修正：仅偏好结构化读书札记与简短格言',
+        );
+
+        await harness.settingsService.setLastDreamingAt(
+          DateTime.fromMillisecondsSinceEpoch(0),
+        );
+
+        // 2. 后续 Dreaming 产出新结论：人工 taste 必须保持 active，自动 voice 与近况正常更新
+        const nextDreamingOutput = '''
+{"taste": "自动归纳的新品味不应覆盖人工修正",
+ "voice": "自动归纳更新后的第一人称长段",
+ "recent": "近期正在复盘阶段性成果"}
+''';
+        final secondRunTime = DateTime.utc(2026, 9, 15, 8, 0);
+        final outcome = await build(modelOutput: nextDreamingOutput).run(
+          now: secondRunTime,
+        );
+        expect(outcome, DreamingOutcome.updated);
+
+        final afterSecond = await harness.memory.activeProfile();
+        final activeTaste = afterSecond.singleWhere(
+          (e) => e.kind == AgentMemoryKind.taste,
+        );
+        final activeVoice = afterSecond.singleWhere(
+          (e) => e.kind == AgentMemoryKind.voice,
+        );
+        expect(activeTaste.id, initialTaste.id);
+        expect(activeTaste.source, 'user_edit');
+        expect(activeTaste.directive, '人工修正：仅偏好结构化读书札记与简短格言');
+        expect(activeVoice.source, 'dreaming');
+        expect(activeVoice.directive, '自动归纳更新后的第一人称长段');
+
+        // 3. 对话显式替换 voice（source: 'thoughter'）后，仅产出 taste/voice 的 Dreaming 均保留显式画像并推进水位防死循环
+        final explicitVoice = await harness.memory.rememberProfile(
+          kind: AgentMemoryKind.voice,
+          directive: '对话明确指定：保持克制精炼的客观陈述',
+          replacesId: activeVoice.id,
+          source: 'thoughter',
+        );
+        await harness.settingsService.setLastDreamingAt(
+          DateTime.fromMillisecondsSinceEpoch(0),
+        );
+
+        final thirdRunTime = DateTime.utc(2026, 9, 25, 8, 0);
+        final thirdOutcome = await build(
+          modelOutput: '{"taste": "再次尝试自动品味", "voice": "再次尝试自动文风"}',
+        ).run(now: thirdRunTime);
+        expect(thirdOutcome, DreamingOutcome.skipped);
+        expect(harness.settingsService.lastDreamingAt?.toUtc(), thirdRunTime);
+
+        final afterThird = await harness.memory.activeProfile();
+        expect(
+          afterThird.singleWhere((e) => e.kind == AgentMemoryKind.taste).id,
+          initialTaste.id,
+        );
+        expect(
+          afterThird.singleWhere((e) => e.kind == AgentMemoryKind.voice).id,
+          explicitVoice.id,
+        );
+      });
     });
 
     group('失败静默', () {

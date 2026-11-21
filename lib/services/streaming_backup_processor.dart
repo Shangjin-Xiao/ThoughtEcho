@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../utils/app_logger.dart';
 import '../utils/path_security_utils.dart';
+import 'assistant_data_sync_service.dart';
 import 'media_sync_manifest.dart';
 
 /// 备份文件后台处理器
@@ -62,6 +63,7 @@ class StreamingBackupProcessor {
     Function(int current, int total)? onProgress,
     bool Function()? shouldCancel,
     bool extractMediaFiles = true,
+    bool validateRestoreSections = false,
   }) async {
     onStatusUpdate?.call('正在处理ZIP备份文件...');
 
@@ -83,7 +85,12 @@ class StreamingBackupProcessor {
         ? (await getApplicationDocumentsDirectory()).path
         : '';
     final map = await Isolate.run(
-      () => _decodeZipBackup(filePath, appDirectoryPath, extractMediaFiles),
+      () => _decodeZipBackup(
+        filePath,
+        appDirectoryPath,
+        extractMediaFiles,
+        validateRestoreSections,
+      ),
     );
 
     if (shouldCancel?.call() == true) {
@@ -97,6 +104,7 @@ class StreamingBackupProcessor {
     String filePath,
     String appDirectoryPath,
     bool extractMediaFiles,
+    bool validateRestoreSections,
   ) {
     final inputStream = InputFileStream(filePath);
     try {
@@ -117,6 +125,9 @@ class StreamingBackupProcessor {
       }
 
       final map = _decodeZipJson(dataFile);
+      if (validateRestoreSections) {
+        AssistantDataSyncService.validateRestorePayload(map);
+      }
 
       if (extractMediaFiles) {
         for (final file in archive) {

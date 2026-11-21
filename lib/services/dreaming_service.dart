@@ -28,6 +28,10 @@ typedef DreamingCompleter = Future<String> Function({
 /// 检查当前是否具备调用模型的条件（已选服务商、已启用、已配置 API Key）。
 typedef DreamingAiAvailability = Future<bool> Function();
 
+/// 获取当前未删除笔记的最大修改时间水位与未删除笔记总数。
+typedef DreamingBasisLoader = Future<({String? watermark, int noteCount})>
+    Function();
+
 /// 一轮 Dreaming 的结果。只用于测试与日志，不面向用户。
 enum DreamingOutcome {
   /// 前置门槛没过，整轮跳过。
@@ -68,11 +72,13 @@ class DreamingService {
     required DreamingNoteLoader loadNotes,
     required DreamingCompleter complete,
     DreamingAiAvailability? isAiAvailable,
+    DreamingBasisLoader? loadNotesBasis,
   })  : _settings = settingsService,
         _memory = memoryService,
         _loadNotes = loadNotes,
         _complete = complete,
-        _isAiAvailable = isAiAvailable ?? _alwaysAvailable;
+        _isAiAvailable = isAiAvailable ?? _alwaysAvailable,
+        _loadNotesBasis = loadNotesBasis;
 
   static Future<bool> _alwaysAvailable() async => true;
 
@@ -103,6 +109,7 @@ class DreamingService {
         userMessage: userMessage,
       ),
       isAiAvailable: aiService.hasValidApiKeyAsync,
+      loadNotesBasis: databaseService.getActiveNotesBasis,
     );
   }
 
@@ -111,6 +118,7 @@ class DreamingService {
   final DreamingNoteLoader _loadNotes;
   final DreamingCompleter _complete;
   final DreamingAiAvailability _isAiAvailable;
+  final DreamingBasisLoader? _loadNotesBasis;
 
   /// 样本量下限。低于这个数归纳不出稳定结论，硬归纳只会产出噪声。
   static const int minNoteSample = 10;
@@ -209,6 +217,10 @@ class DreamingService {
       return DreamingOutcome.skipped;
     }
 
+    // 在调用模型前采集当前未删除笔记的最大修改时间水位与未删除笔记总数，
+    // 确保依据准确反映本轮采样时刻可见的笔记集合。
+    final basis = await _loadNotesBasis?.call();
+
     // 后台任务不能假设 AI 已配置：未选服务商、服务商被禁用或未配置 API Key 时
     // 直接跳过本轮，不推进 lastDreamingAt，配置好后下次自然重跑。
     if (!await _isAiAvailable()) {
@@ -241,14 +253,22 @@ class DreamingService {
       return DreamingOutcome.skipped;
     }
 
-    final wrote = await _write(parsed, samples, now);
-    if (!wrote) {
+    final writeResult = await _write(parsed, samples, now, basis: basis);
+    if (!writeResult.wrote && !writeResult.preservedExisting) {
       return DreamingOutcome.failed;
     }
 
-    // 只有真的写进去了才推进时间戳，失败不占用最小间隔的额度。
+    // 只有模型产出了有效结论（实际写入了新记忆，或因已有人工/显式画像及内容未变而保留现状）
+    // 才推进时间戳；失败不占用最小间隔的额度。
+    await _memory.recordDreamingRun(
+      runAt: now,
+      basisWatermark: basis?.watermark,
+      basisNoteCount: basis?.noteCount,
+    );
     await _settings.setLastDreamingAt(now);
-    return DreamingOutcome.updated;
+    return writeResult.wrote
+        ? DreamingOutcome.updated
+        : DreamingOutcome.skipped;
   }
 
   /// 检查当前是否满足 Dreaming 的调度与执行门槛。
@@ -451,17 +471,26 @@ class DreamingService {
     return result.isEmpty ? null : result;
   }
 
+  static bool _isDreamingProfileSource(String? rawSource) {
+    if (rawSource == null) return false;
+    return rawSource.trim().startsWith('dreaming');
+  }
+
   /// 写入。同 kind **原位更新，绝不追加**。
   ///
   /// 追加会在画像层里堆出一串互相矛盾的文风描述，并挤掉其它条目——画像预算
-  /// 是零和的。所以先找到同 kind 的 active 条目，用 `replacesId` 顶掉它。
-  Future<bool> _write(
+  /// 是零和的。所以先找到同 kind 的 active 条目，用 `replacesId` 顶掉它；
+  /// 但若当前活跃条目来自用户手动编辑或对话显式设定（非 `dreaming*` 来源），
+  /// 优先级高于后台自动归纳，予以原样保留。
+  Future<({bool wrote, bool preservedExisting})> _write(
     _DreamingResult result,
     _DreamingSamples samples,
-    DateTime now,
-  ) async {
+    DateTime now, {
+    ({String? watermark, int noteCount})? basis,
+  }) async {
     final existing = await _memory.activeProfile();
     var wrote = false;
+    var preservedExisting = false;
 
     Future<void> upsert(
       AgentMemoryKind kind,
@@ -471,9 +500,14 @@ class DreamingService {
       if (directive == null) return;
       final previous =
           existing.where((entry) => entry.kind == kind).firstOrNull;
+      if (previous != null && !_isDreamingProfileSource(previous.source)) {
+        preservedExisting = true;
+        return;
+      }
       // 内容没变就不写：每周把同一句话重写一遍，只会让它的观察时间一直
       // 刷新到"刚刚"，在画像排序里永远压着真正新鲜的条目。
       if (previous != null && previous.directive == directive) {
+        preservedExisting = true;
         return;
       }
       await _memory.rememberProfile(
@@ -483,6 +517,8 @@ class DreamingService {
         source: 'dreaming',
         observedAt: now,
         sourceNoteIds: sourceIds,
+        basisWatermark: basis?.watermark,
+        basisNoteCount: basis?.noteCount,
       );
       wrote = true;
     }
@@ -535,6 +571,9 @@ class DreamingService {
             cleanAlias,
             source: 'dreaming_ai',
             unconfirmed: true,
+            observedAt: now,
+            basisWatermark: basis?.watermark,
+            basisNoteCount: basis?.noteCount,
           );
           if (registered) wrote = true;
         } catch (e) {
@@ -552,6 +591,9 @@ class DreamingService {
           alias,
           source: 'dreaming',
           unconfirmed: false,
+          observedAt: now,
+          basisWatermark: basis?.watermark,
+          basisNoteCount: basis?.noteCount,
         );
         if (registered) wrote = true;
       } catch (e) {
@@ -568,6 +610,9 @@ class DreamingService {
           alias,
           source: 'dreaming_statistical_moderate',
           unconfirmed: true,
+          observedAt: now,
+          basisWatermark: basis?.watermark,
+          basisNoteCount: basis?.noteCount,
         );
         if (registered) wrote = true;
       } catch (e) {
@@ -578,7 +623,7 @@ class DreamingService {
       }
     }
 
-    return wrote;
+    return (wrote: wrote, preservedExisting: preservedExisting);
   }
 
   /// 从笔记样本集合中统计推断用户的自签名笔名/别名，按置信度返回。

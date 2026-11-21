@@ -1176,9 +1176,9 @@ class SettingsService extends ChangeNotifier {
   /// **只在键还空着时写。** 主题层因为某些路径先跑了一步就可能已经有取值，
   /// 覆盖掉就是替用户改外观。
   ///
-  /// 注意备份**目前不含**主题风格（[getAllSettingsForBackup] 只带 app_settings /
-  /// theme_mode 等几项），所以「换机恢复后风格回到自己选的那套」这件事这里兜不住，
-  /// 那是备份契约的既有缺口，要补也是补在备份那一侧。
+  /// 备份与覆盖恢复已包含 `theme_style` 及各风格配色（见 [getAllSettingsForBackup]
+  /// 与 [restoreAllSettingsFromBackup]），换机覆盖恢复后会写入存储并调用
+  /// [AppTheme.reloadFromStorage] 即时刷新内存态外观。
   ///
   /// 写失败只记日志：拿不到品牌默认外观是可以接受的降级，让整个设置加载失败不是。
   Future<void> _seedFreshInstallThemeStyle() async {

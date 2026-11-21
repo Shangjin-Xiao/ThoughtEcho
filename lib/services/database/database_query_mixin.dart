@@ -534,6 +534,103 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     return _safeParseInt(result.firstOrNull?['count']);
   }
 
+  DateTime? _parseEffectiveNoteUtcTime(String? lastModified, String? date) {
+    final lm = lastModified?.trim();
+    if (lm != null && lm.isNotEmpty) {
+      final parsed = DateTime.tryParse(lm);
+      if (parsed != null) {
+        return parsed.toUtc();
+      }
+    }
+    final fallback = date?.trim();
+    if (fallback != null && fallback.isNotEmpty) {
+      final parsed = DateTime.tryParse(fallback);
+      if (parsed != null) {
+        return parsed.toUtc();
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<({String? watermark, int noteCount})> getActiveNotesBasis() async {
+    final db = await safeDatabase;
+    final rows = await db.rawQuery(
+      'SELECT last_modified, date FROM quotes '
+      'WHERE (is_deleted IS NULL OR is_deleted = 0) AND deleted_at IS NULL',
+    );
+    DateTime? maxUtc;
+    for (final row in rows) {
+      final ts = _parseEffectiveNoteUtcTime(
+        row['last_modified'] as String?,
+        row['date'] as String?,
+      );
+      if (ts != null && (maxUtc == null || ts.isAfter(maxUtc))) {
+        maxUtc = ts;
+      }
+    }
+    return (watermark: maxUtc?.toIso8601String(), noteCount: rows.length);
+  }
+
+  @override
+  Future<int> countActiveNotesUpToWatermark(String watermark) async {
+    final trimmed = watermark.trim();
+    if (trimmed.isEmpty) {
+      return 0;
+    }
+    final counts = await countActiveNotesUpToWatermarks(<String>[trimmed]);
+    return counts[trimmed] ?? 0;
+  }
+
+  @override
+  Future<Map<String, int>> countActiveNotesUpToWatermarks(
+    Iterable<String> watermarks,
+  ) async {
+    final parsedWatermarks = <String, DateTime>{};
+    for (final raw in watermarks) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty || parsedWatermarks.containsKey(trimmed)) {
+        continue;
+      }
+      final watermarkUtc = DateTime.tryParse(trimmed)?.toUtc();
+      if (watermarkUtc != null) {
+        parsedWatermarks[trimmed] = watermarkUtc;
+      }
+    }
+    if (parsedWatermarks.isEmpty) {
+      return const <String, int>{};
+    }
+
+    final db = await safeDatabase;
+    final rows = await db.rawQuery(
+      'SELECT last_modified, date FROM quotes '
+      'WHERE (is_deleted IS NULL OR is_deleted = 0) AND deleted_at IS NULL',
+    );
+    final activeTimestamps = <DateTime>[];
+    for (final row in rows) {
+      final ts = _parseEffectiveNoteUtcTime(
+        row['last_modified'] as String?,
+        row['date'] as String?,
+      );
+      if (ts != null) {
+        activeTimestamps.add(ts);
+      }
+    }
+
+    final counts = <String, int>{};
+    for (final entry in parsedWatermarks.entries) {
+      var count = 0;
+      final limitUtc = entry.value;
+      for (final ts in activeTimestamps) {
+        if (!ts.isAfter(limitUtc)) {
+          count++;
+        }
+      }
+      counts[entry.key] = count;
+    }
+    return counts;
+  }
+
   /// 修复：更新查询性能统计
   void _updateQueryStats(String queryType, int timeMs) {
     _healthService.recordQueryStats(queryType, timeMs);

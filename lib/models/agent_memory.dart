@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../utils/lww_utils.dart';
+
 /// 画像层条目的类别。
 ///
 /// 准入标准是三条同时满足：**归纳成本高、结论稳定、复用频率高**。
@@ -79,20 +81,30 @@ class AgentMemoryProfileEntry {
     required this.kind,
     required this.directive,
     required this.observedAt,
+    this.updatedAt,
     this.status = AgentMemoryStatus.active,
     this.supersededBy,
+    this.replacesId,
     this.source,
     this.sourceNoteIds = const <String>[],
+    this.basisWatermark,
+    this.basisNoteCount,
   });
 
   final String id;
   final AgentMemoryKind kind;
   final String directive;
   final DateTime observedAt;
+
+  /// 条目版本时间（UTC），插入、编辑、原位 supersede 时刷新。
+  final DateTime? updatedAt;
   final AgentMemoryStatus status;
 
   /// 取代本条的新条目 id；仅当 [status] 为 superseded 时有值。
   final String? supersededBy;
+
+  /// 本条取代的旧条目 id；用于多端离线同时替换同一条画像时的分叉收敛。
+  final String? replacesId;
 
   /// 记录来源，例如 `thoughter` / `user_edit`。仅用于排查，不注入模型。
   final String? source;
@@ -106,6 +118,12 @@ class AgentMemoryProfileEntry {
   /// 同样不注入模型：它是给用户看的证据，不是给模型的上下文。
   final List<String> sourceNoteIds;
 
+  /// Dreaming 写入画像时采集的本地未删除笔记最大修改时间水位（UTC ISO-8601）。
+  final String? basisWatermark;
+
+  /// Dreaming 写入画像时采集的本地未删除笔记总数。
+  final int? basisNoteCount;
+
   bool get isActive => status == AgentMemoryStatus.active;
 
   AgentMemoryProfileEntry copyWith({
@@ -113,20 +131,28 @@ class AgentMemoryProfileEntry {
     AgentMemoryKind? kind,
     String? directive,
     DateTime? observedAt,
+    DateTime? updatedAt,
     AgentMemoryStatus? status,
     String? supersededBy,
+    String? replacesId,
     String? source,
     List<String>? sourceNoteIds,
+    String? basisWatermark,
+    int? basisNoteCount,
   }) {
     return AgentMemoryProfileEntry(
       id: id ?? this.id,
       kind: kind ?? this.kind,
       directive: directive ?? this.directive,
       observedAt: observedAt ?? this.observedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       status: status ?? this.status,
       supersededBy: supersededBy ?? this.supersededBy,
+      replacesId: replacesId ?? this.replacesId,
       source: source ?? this.source,
       sourceNoteIds: sourceNoteIds ?? this.sourceNoteIds,
+      basisWatermark: basisWatermark ?? this.basisWatermark,
+      basisNoteCount: basisNoteCount ?? this.basisNoteCount,
     );
   }
 
@@ -135,32 +161,59 @@ class AgentMemoryProfileEntry {
       'id': id,
       'kind': kind.storageValue,
       'directive': directive,
-      'observed_at': observedAt.toIso8601String(),
+      'observed_at': LWWUtils.formatFixedUtcIso(observedAt),
+      'updated_at': LWWUtils.formatFixedUtcIso(updatedAt ?? observedAt),
       'status': status.storageValue,
       'superseded_by': supersededBy,
+      'replaces_id': replacesId,
       'source': source,
       // 空列表存 NULL 而不是 '[]'：一期的旧行、以及 remember 手动写入的条目
       // 都是 NULL，两者语义同为"无来源"，别让存储层出现两种空。
       'source_note_ids':
           sourceNoteIds.isEmpty ? null : jsonEncode(sourceNoteIds),
+      'basis_watermark': basisWatermark,
+      'basis_note_count': basisNoteCount,
     };
   }
 
   static AgentMemoryProfileEntry fromMap(Map<String, Object?> map) {
+    // 时间戳解析不出来就回退到最早：既然只能猜，宁可让坏行排在最后被淘汰，
+    // 也不要让它伪装成"刚刚观察到"、抢占每轮注入的名额。
+    final observed = DateTime.tryParse((map['observed_at'] as String?) ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final rawReplacesId = map['replaces_id'] as String?;
+    final rawBasisWatermark = map['basis_watermark'] as String?;
     return AgentMemoryProfileEntry(
       id: map['id'] as String,
       kind: AgentMemoryKindStorage.fromStorage(map['kind'] as String?),
       directive: (map['directive'] as String?) ?? '',
-      // 时间戳解析不出来就回退到最早：既然只能猜，宁可让坏行排在最后被淘汰，
-      // 也不要让它伪装成"刚刚观察到"、抢占每轮注入的名额。
-      observedAt: DateTime.tryParse((map['observed_at'] as String?) ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0),
+      observedAt: observed,
+      updatedAt:
+          DateTime.tryParse((map['updated_at'] as String?) ?? '') ?? observed,
       status: AgentMemoryStatusStorage.fromStorage(map['status'] as String?),
       supersededBy: map['superseded_by'] as String?,
+      replacesId: (rawReplacesId != null && rawReplacesId.isNotEmpty)
+          ? rawReplacesId
+          : null,
       source: map['source'] as String?,
       sourceNoteIds: _decodeNoteIds(map['source_note_ids']),
+      basisWatermark:
+          (rawBasisWatermark != null && rawBasisWatermark.isNotEmpty)
+              ? rawBasisWatermark
+              : null,
+      basisNoteCount: _parseOptionalInt(map['basis_note_count']),
     );
   }
+}
+
+int? _parseOptionalInt(Object? raw) {
+  if (raw == null) return null;
+  if (raw is int) return raw;
+  if (raw is num) return raw.toInt();
+  if (raw is String && raw.trim().isNotEmpty) {
+    return int.tryParse(raw.trim());
+  }
+  return null;
 }
 
 /// 解析 `source_note_ids` 列。
@@ -190,6 +243,7 @@ class AgentMemoryFact {
     required this.id,
     required this.content,
     required this.createdAt,
+    this.updatedAt,
     this.category,
     this.importance = 5,
     this.triggerPhrases = const <String>[],
@@ -204,6 +258,9 @@ class AgentMemoryFact {
   final String id;
   final String content;
   final DateTime createdAt;
+
+  /// 事实版本时间（UTC），仅在新增或原位内容替换时刷新，召回计数递增不刷新。
+  final DateTime? updatedAt;
   final String? category;
 
   /// 1-10，写入时由模型标注，参与检索排序。
@@ -220,6 +277,7 @@ class AgentMemoryFact {
     String? id,
     String? content,
     DateTime? createdAt,
+    DateTime? updatedAt,
     String? category,
     int? importance,
     List<String>? triggerPhrases,
@@ -231,6 +289,7 @@ class AgentMemoryFact {
       id: id ?? this.id,
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       category: category ?? this.category,
       importance: importance ?? this.importance,
       triggerPhrases: triggerPhrases ?? this.triggerPhrases,
@@ -248,8 +307,11 @@ class AgentMemoryFact {
       'importance': importance,
       'trigger_phrases':
           triggerPhrases.isEmpty ? null : triggerPhrases.join('\n'),
-      'created_at': createdAt.toIso8601String(),
-      'last_recalled_at': lastRecalledAt?.toIso8601String(),
+      'created_at': LWWUtils.formatFixedUtcIso(createdAt),
+      'updated_at': LWWUtils.formatFixedUtcIso(updatedAt ?? createdAt),
+      'last_recalled_at': lastRecalledAt != null
+          ? LWWUtils.formatFixedUtcIso(lastRecalledAt!)
+          : null,
       'recall_count': recallCount,
       'source_ref': sourceRef,
     };
@@ -257,14 +319,17 @@ class AgentMemoryFact {
 
   static AgentMemoryFact fromMap(Map<String, Object?> map) {
     final rawPhrases = (map['trigger_phrases'] as String?) ?? '';
+    // 同 [AgentMemoryProfileEntry.fromMap]：坏时间戳排最后，不排最前。
+    final created = DateTime.tryParse((map['created_at'] as String?) ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
     return AgentMemoryFact(
       id: map['id'] as String,
       content: (map['content'] as String?) ?? '',
-      // 同 [AgentMemoryProfileEntry.fromMap]：坏时间戳排最后，不排最前。
-      createdAt: DateTime.tryParse((map['created_at'] as String?) ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0),
+      createdAt: created,
+      updatedAt:
+          DateTime.tryParse((map['updated_at'] as String?) ?? '') ?? created,
       category: map['category'] as String?,
-      importance: (map['importance'] as int?) ?? 5,
+      importance: _parseOptionalInt(map['importance']) ?? 5,
       triggerPhrases: rawPhrases.isEmpty
           ? const <String>[]
           : rawPhrases
@@ -275,7 +340,7 @@ class AgentMemoryFact {
       lastRecalledAt: DateTime.tryParse(
         (map['last_recalled_at'] as String?) ?? '',
       ),
-      recallCount: (map['recall_count'] as int?) ?? 0,
+      recallCount: _parseOptionalInt(map['recall_count']) ?? 0,
       sourceRef: map['source_ref'] as String?,
     );
   }
@@ -360,8 +425,8 @@ class AgentMemoryRecentSlice {
     return <String, Object?>{
       'id': id,
       'content': content,
-      'observed_at': observedAt.toIso8601String(),
-      'expires_at': expiresAt.toIso8601String(),
+      'observed_at': LWWUtils.formatFixedUtcIso(observedAt),
+      'expires_at': LWWUtils.formatFixedUtcIso(expiresAt),
       'source_note_ids':
           sourceNoteIds.isEmpty ? null : jsonEncode(sourceNoteIds),
     };
