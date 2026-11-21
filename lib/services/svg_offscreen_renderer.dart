@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'svg_to_image_service.dart';
 import '../utils/bounded_svg_loader.dart';
@@ -13,6 +14,8 @@ import '../utils/bounded_svg_loader.dart';
 class SvgOffscreenRenderer {
   SvgOffscreenRenderer._();
   static final SvgOffscreenRenderer instance = SvgOffscreenRenderer._();
+
+  static const int _maxReadyFrames = 12;
 
   Future<Uint8List> renderSvgString(
     String svgContent, {
@@ -24,9 +27,13 @@ class SvgOffscreenRenderer {
     ExportRenderMode mode = ExportRenderMode.contain,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
     Duration timeout = const Duration(seconds: 10),
-    bool devicePixelRatioAware = true,
+    bool devicePixelRatioAware = false,
     double borderRadius = 0,
   }) async {
+    if (width <= 0 || height <= 0) {
+      throw ArgumentError('图片尺寸必须大于0');
+    }
+
     // 检查context是否有效
     if (context is Element) {
       if (!context.mounted) {
@@ -39,7 +46,7 @@ class SvgOffscreenRenderer {
     }
 
     // 使用rootOverlay=false，尝试获取最近的Overlay
-    var overlayState = Overlay.maybeOf(context, rootOverlay: false) ??
+    final overlayState = Overlay.maybeOf(context, rootOverlay: false) ??
         Overlay.maybeOf(context, rootOverlay: true);
 
     if (overlayState == null) {
@@ -64,13 +71,16 @@ class SvgOffscreenRenderer {
         : 1.0;
 
     final boundaryKey = GlobalKey();
+    final placeholderKey = GlobalKey();
+    Object? svgLoadError;
+    StackTrace? svgLoadStackTrace;
 
     AppLogger.d('SVG渲染目标尺寸: ${width}x$height', source: 'SvgOffscreenRenderer');
 
     final boxFit = _mapFit(mode);
 
     // 创建SVG widget，使用与预览完全一致的配置
-    // 直接设置width和height，让SvgPicture处理缩放，与SvgCardWidget保持一致
+    // 为占位子树挂载 placeholderKey 并配置 errorBuilder，用于检测解码与绘制就绪态
     final svgWidget = SvgPicture(
       BoundedSvgLoader(svgContent),
       width: width.toDouble(),
@@ -78,10 +88,22 @@ class SvgOffscreenRenderer {
       fit: boxFit,
       allowDrawingOutsideViewBox: false,
       placeholderBuilder: (context) => Container(
+        key: placeholderKey,
         color: background,
         width: width.toDouble(),
         height: height.toDouble(),
       ),
+      errorBuilder: (context, error, stackTrace) {
+        svgLoadError = error;
+        svgLoadStackTrace = stackTrace;
+        AppLogger.w(
+          'SVG矢量图解码失败: $error',
+          error: error,
+          stackTrace: stackTrace,
+          source: 'SvgOffscreenRenderer',
+        );
+        return const SizedBox.shrink();
+      },
     );
 
     // 简化布局结构，移除复杂的FittedBox嵌套，直接使用Container包裹
@@ -163,37 +185,82 @@ class SvgOffscreenRenderer {
 
     overlayState.insert(entry);
 
+    var cleanedUp = false;
     void cleanup() {
+      if (cleanedUp) return;
+      cleanedUp = true;
       try {
         entry.remove();
         entry.dispose();
+        final binding = WidgetsBinding.instance;
+        if (binding.platformDispatcher.onDrawFrame == null &&
+            binding.schedulerPhase == SchedulerPhase.idle &&
+            binding.hasScheduledFrame) {
+          binding.handleBeginFrame(null);
+          binding.handleDrawFrame();
+        }
       } catch (e) {
         AppLogger.w('清理OverlayEntry失败: $e', source: 'SvgOffscreenRenderer');
       }
     }
 
     try {
-      // 等待多帧，确保SVG完全解析和渲染
-      // SVG解析通常需要2-3帧：布局 -> 解析 -> 绘制
-      // 增加到8帧，并添加额外延迟确保复杂SVG完全渲染
-      await _pumpFrames(count: 8);
+      final stopwatch = Stopwatch()..start();
+      RenderRepaintBoundary? readyBoundary;
 
-      // 额外延迟确保渲染管线完成
-      await Future.delayed(const Duration(milliseconds: 300));
+      for (var frame = 0; frame < _maxReadyFrames; frame++) {
+        final remaining = timeout - stopwatch.elapsed;
+        if (remaining <= Duration.zero) {
+          throw TimeoutException('SVG离屏渲染等待帧就绪超时', timeout);
+        }
 
-      final boundary = boundaryKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-      if (boundary == null) {
-        throw StateError('未获取到 RenderRepaintBoundary，SVG可能未完成渲染');
+        await _waitForNextFrame(remaining);
+
+        if (svgLoadError != null) {
+          Error.throwWithStackTrace(
+            svgLoadError!,
+            svgLoadStackTrace ?? StackTrace.current,
+          );
+        }
+
+        final candidate = boundaryKey.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
+        final isBoundaryReady = candidate != null &&
+            candidate.attached &&
+            candidate.hasSize &&
+            !candidate.size.isEmpty &&
+            placeholderKey.currentContext == null &&
+            !candidate.debugNeedsLayout &&
+            !candidate.debugNeedsPaint;
+
+        if (isBoundaryReady) {
+          readyBoundary = candidate;
+          break;
+        }
+
+        // 若矢量字节仍在异步解码，让出事件循环以便解码完成并触发 setState
+        await Future<void>.delayed(Duration.zero);
       }
 
-      // 验证boundary已经完成布局
-      if (!boundary.hasSize || boundary.size.isEmpty) {
+      if (svgLoadError != null) {
+        Error.throwWithStackTrace(
+          svgLoadError!,
+          svgLoadStackTrace ?? StackTrace.current,
+        );
+      }
+
+      final boundary = readyBoundary;
+      if (boundary == null) {
+        final lastCandidate = boundaryKey.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
         AppLogger.w(
-          'RenderRepaintBoundary尺寸异常: ${boundary.hasSize ? boundary.size : "无尺寸"}',
+          'SVG离屏渲染在 $_maxReadyFrames 帧内未就绪: '
+          'boundary=${lastCandidate != null}, '
+          'hasSize=${lastCandidate?.hasSize ?? false}, '
+          'placeholderMounted=${placeholderKey.currentContext != null}',
           source: 'SvgOffscreenRenderer',
         );
-        throw StateError('RenderRepaintBoundary尺寸异常，SVG可能未完成布局');
+        throw StateError('SVG离屏子树在最大等待帧数内未完成解码与绘制');
       }
 
       AppLogger.d(
@@ -201,28 +268,27 @@ class SvgOffscreenRenderer {
         source: 'SvgOffscreenRenderer',
       );
 
-      // 根据设备像素比提升导出清晰度，同时限制最大像素比，防止内存暴涨
-      double effectivePixelRatio = scaleFactor * preComputedDevicePixelRatio;
-      // 限制最大像素比（4.0 已足够大部分需求，避免OOM）
-      if (effectivePixelRatio > 4.0) {
-        AppLogger.w(
-          '像素比过高(${effectivePixelRatio.toStringAsFixed(1)})，限制为4.0',
-          source: 'SvgOffscreenRenderer',
-        );
-        effectivePixelRatio = 4.0;
+      final effectivePixelRatio = SvgToImageService.resolveEffectivePixelRatio(
+        width: width,
+        height: height,
+        scaleFactor: scaleFactor,
+        devicePixelRatio: preComputedDevicePixelRatio,
+        logSource: 'SvgOffscreenRenderer',
+      );
+
+      final remainingForCapture = timeout - stopwatch.elapsed;
+      if (remainingForCapture <= Duration.zero) {
+        throw TimeoutException('SVG离屏渲染截图超时', timeout);
       }
 
-      final image = await boundary.toImage(pixelRatio: effectivePixelRatio);
-      final byteData = await image.toByteData(format: format);
-      if (byteData == null) {
-        throw StateError('无法获取图片字节数据');
-      }
-
-      final bytes = byteData.buffer.asUint8List();
-
-      // 清理资源
-      image.dispose();
-      cleanup();
+      final image = await boundary
+          .toImage(pixelRatio: effectivePixelRatio)
+          .timeout(remainingForCapture);
+      final bytes = await SvgToImageService.exportUiImageBytes(
+        image,
+        format: format,
+        onImageRead: cleanup,
+      );
 
       AppLogger.d(
         'SVG离屏渲染成功: ${width}x$height, 像素比: ${effectivePixelRatio.toStringAsFixed(1)}, 大小: ${bytes.length} bytes',
@@ -231,7 +297,6 @@ class SvgOffscreenRenderer {
 
       return bytes;
     } catch (e, st) {
-      cleanup();
       AppLogger.e(
         '离屏渲染失败: $e',
         error: e,
@@ -239,16 +304,21 @@ class SvgOffscreenRenderer {
         source: 'SvgOffscreenRenderer',
       );
       rethrow;
+    } finally {
+      cleanup();
     }
   }
 
-  Future<void> _pumpFrames({int count = 1}) async {
-    for (var i = 0; i < count; i++) {
-      final c = Completer<void>();
-      WidgetsBinding.instance.addPostFrameCallback((_) => c.complete());
-      await Future.delayed(Duration.zero);
-      await c.future;
+  Future<void> _waitForNextFrame(Duration timeout) async {
+    final binding = WidgetsBinding.instance;
+    binding.ensureVisualUpdate();
+    final frameFuture = binding.endOfFrame;
+    if (binding.platformDispatcher.onDrawFrame == null &&
+        binding.schedulerPhase == SchedulerPhase.idle) {
+      binding.handleBeginFrame(null);
+      binding.handleDrawFrame();
     }
+    await frameFuture.timeout(timeout);
   }
 
   BoxFit _mapFit(ExportRenderMode mode) {
