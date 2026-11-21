@@ -4948,5 +4948,13 @@
   "@mmkvDiagnosticSpCoverage": {
     "description": "Label for SharedPreferences migration coverage"
   },
+  "smartPushBackgroundBatteryGuideTitle": "Paramètres de batterie en arrière-plan",
+  "@smartPushBackgroundBatteryGuideTitle": {
+    "description": "Title for manual background battery settings guide in Play Store flavor"
+  },
+  "smartPushBackgroundBatteryGuideDesc": "Si les rappels sont retardés par l'économie d'énergie du système, vous pouvez ajuster manuellement l'utilisation de la batterie en arrière-plan dans les informations de l'application",
+  "@smartPushBackgroundBatteryGuideDesc": {
+    "description": "Subtitle for manual background battery settings guide in Play Store flavor"
+  },
   "aiUnsupportedAnthropicMessagesProtocol": "Le protocole natif Anthropic Messages (/v1/messages) n'est pas encore pris en charge. Utilisez une URL de base compatible OpenAI (/v1 ou /chat/completions) ou OpenRouter."
 }

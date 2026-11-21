@@ -4955,5 +4955,13 @@
   "@mmkvDiagnosticSpCoverage": {
     "description": "Label for SharedPreferences migration coverage"
   },
+  "smartPushBackgroundBatteryGuideTitle": "バックグラウンドのバッテリー設定",
+  "@smartPushBackgroundBatteryGuideTitle": {
+    "description": "Title for manual background battery settings guide in Play Store flavor"
+  },
+  "smartPushBackgroundBatteryGuideDesc": "システムの省電力制御により通知が遅れる場合は、アプリ情報からバックグラウンドでのバッテリー使用設定を手動で調整できます",
+  "@smartPushBackgroundBatteryGuideDesc": {
+    "description": "Subtitle for manual background battery settings guide in Play Store flavor"
+  },
   "aiUnsupportedAnthropicMessagesProtocol": "ネイティブ Anthropic Messages (/v1/messages) はまだサポートされていません。OpenAI 互換のベース URL (/v1 または /chat/completions) または OpenRouter をご利用ください。"
 }

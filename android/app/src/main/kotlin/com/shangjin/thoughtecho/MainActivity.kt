@@ -9,7 +9,6 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 
 import io.flutter.plugin.common.MethodChannel
-import java.util.TimeZone
 
 class MainActivity : FlutterFragmentActivity() {
 
@@ -23,9 +22,10 @@ class MainActivity : FlutterFragmentActivity() {
         flutterEngine.plugins.add(MemoryInfoPlugin())
         flutterEngine.plugins.add(StreamFileSelector())
 
+        ThoughtEchoApplication.syncDeviceTimeZone(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, timezoneChannel).setMethodCallHandler { call, result ->
             if (call.method == "getTimeZone") {
-                result.success(TimeZone.getDefault().id)
+                result.success(ThoughtEchoApplication.syncDeviceTimeZone(this))
             } else {
                 result.notImplemented()
             }

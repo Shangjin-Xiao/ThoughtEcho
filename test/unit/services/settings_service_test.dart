@@ -1490,6 +1490,98 @@ void main() {
       },
     );
 
+    test(
+      'getAllSettingsForBackup and restoreAllSettingsFromBackup preserve smart_push_delivery_history_v1 and clear stale local history',
+      () async {
+        final prefs = AppPreferencesService();
+        addTearDown(() async {
+          await prefs.remove('smart_push_settings_v2');
+          await prefs.remove('smart_push_delivery_history_v1');
+        });
+
+        await prefs.setString(
+          'smart_push_settings_v2',
+          jsonEncode(<String, dynamic>{
+            'enabled': true,
+            'pushMode': 'smart',
+            'lastPushTime': '2026-05-09T08:00:00.000',
+            'recentlyPushedNoteIds': <String>['note-old'],
+          }),
+        );
+        await prefs.setString(
+          'smart_push_delivery_history_v1',
+          jsonEncode(<String, dynamic>{
+            'lastPushTime': '2026-05-10T09:30:00.000',
+            'recentlyPushedNoteIds': <String>['note-old', 'note-new'],
+          }),
+        );
+
+        final exported = settingsService.getAllSettingsForBackup();
+        expect(exported['smart_push_delivery_history_v1'], isA<Map>());
+        final exportedHistory = Map<String, dynamic>.from(
+          exported['smart_push_delivery_history_v1'] as Map,
+        );
+        expect(
+          exportedHistory['lastPushTime'],
+          equals('2026-05-10T09:30:00.000'),
+        );
+        expect(
+          exportedHistory['recentlyPushedNoteIds'],
+          equals(<String>['note-old', 'note-new']),
+        );
+        expect(exported['smart_push_settings_v2'], isA<Map>());
+        final exportedSettings = Map<String, dynamic>.from(
+          exported['smart_push_settings_v2'] as Map,
+        );
+        expect(
+          exportedSettings['lastPushTime'],
+          equals('2026-05-10T09:30:00.000'),
+        );
+        expect(
+          exportedSettings['recentlyPushedNoteIds'],
+          equals(<String>['note-old', 'note-new']),
+        );
+
+        // Simulate restoring onto a device that has stale local delivery history
+        await prefs.setString(
+          'smart_push_delivery_history_v1',
+          jsonEncode(<String, dynamic>{
+            'lastPushTime': '2026-05-12T22:00:00.000',
+            'recentlyPushedNoteIds': <String>['stale-local-note'],
+          }),
+        );
+        await settingsService.restoreAllSettingsFromBackup(exported);
+        final restoredHistory = jsonDecode(
+          prefs.getString('smart_push_delivery_history_v1')!,
+        ) as Map<String, dynamic>;
+        expect(
+          restoredHistory['lastPushTime'],
+          equals('2026-05-10T09:30:00.000'),
+        );
+        expect(
+          restoredHistory['recentlyPushedNoteIds'],
+          equals(<String>['note-old', 'note-new']),
+        );
+
+        // Restoring an older/clean backup without smart_push_delivery_history_v1
+        // must not leak stale device-local delivery history.
+        await prefs.setString(
+          'smart_push_delivery_history_v1',
+          jsonEncode(<String, dynamic>{
+            'lastPushTime': '2026-05-15T20:00:00.000',
+            'recentlyPushedNoteIds': <String>['stale-device-note'],
+          }),
+        );
+        await settingsService.restoreAllSettingsFromBackup(<String, dynamic>{
+          'smart_push_settings_v2': jsonEncode(<String, dynamic>{
+            'enabled': true,
+            'pushMode': 'smart',
+          }),
+        });
+        expect(prefs.getString('smart_push_delivery_history_v1'), isNull);
+      },
+    );
+
     group('Error Handling & Resilience Tests', () {
       test('recentCities handles invalid JSON string gracefully', () async {
         final mmkv = AppPreferencesService();

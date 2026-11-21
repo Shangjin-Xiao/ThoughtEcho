@@ -543,8 +543,8 @@ class DatabaseHealthService {
         // 修复：兼容用户自己创建的“每日一言”标签（ID 可能不是 default_hitokoto）
         // 先收集所有名字为“每日一言”或固定 ID 的分类
         final tagIdRows = await db.rawQuery(
-          "SELECT id FROM categories WHERE name = '每日一言' OR id = ?",
-          [dailyQuoteTagId],
+          'SELECT id FROM categories WHERE name = ? OR id = ?',
+          ['每日一言', dailyQuoteTagId],
         );
         final tagIds = tagIdRows.map((r) => r['id'] as String).toList();
         if (tagIds.isEmpty) {
@@ -571,13 +571,13 @@ class DatabaseHealthService {
           '''
           SELECT q.* FROM quotes q
           WHERE length(q.content) <= ?
-            AND q.content NOT LIKE '%\n%'
+            AND q.content NOT LIKE ?
             $hiddenFilter
             $deletedFilter
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          [_maxOfflineQuoteLength, _hiddenTagId],
+          [_maxOfflineQuoteLength, '%\n%', _hiddenTagId],
         );
       }
 
@@ -589,6 +589,7 @@ class DatabaseHealthService {
           'author': quote['source_author'] ?? '',
           'type': 'local',
           'local_quote_id': quote['id'],
+          'offline_quote_source': offlineQuoteSource,
           'from_who': quote['source_author'] ?? '',
           'from': quote['source_work'] ?? '',
         };
@@ -597,6 +598,85 @@ class DatabaseHealthService {
       return null;
     } catch (e) {
       logDebug('获取本地每日一言失败: $e');
+      return null;
+    }
+  }
+
+  /// 按指定笔记 ID 校验并读取当前仍符合每日一言条件（可见、未删除、长度及标签规则）的本地笔记。
+  Future<Map<String, dynamic>?> getLocalDailyQuoteById(
+    Database db,
+    String quoteId, {
+    String offlineQuoteSource = 'tagOnly',
+  }) async {
+    if (quoteId.isEmpty) return null;
+    try {
+      final hasDeletedColumn =
+          await checkColumnExists(db, 'quotes', 'is_deleted');
+      final deletedFilter = hasDeletedColumn
+          ? 'AND (q.is_deleted = 0 OR q.is_deleted IS NULL)'
+          : '';
+      const hiddenFilter = '''
+        AND NOT EXISTS (
+          SELECT 1 FROM quote_tags qt_hidden
+          WHERE qt_hidden.quote_id = q.id AND qt_hidden.tag_id = ?
+        )
+      ''';
+
+      List<Map<String, dynamic>> results;
+      if (offlineQuoteSource == 'tagOnly') {
+        final tagIdRows = await db.rawQuery(
+          'SELECT id FROM categories WHERE name = ? OR id = ?',
+          ['每日一言', dailyQuoteTagId],
+        );
+        final tagIds = tagIdRows.map((r) => r['id'] as String).toList();
+        if (tagIds.isEmpty) {
+          tagIds.add(dailyQuoteTagId);
+        }
+        final placeholders = tagIds.map((_) => '?').join(',');
+        results = await db.rawQuery(
+          '''
+          SELECT DISTINCT q.* FROM quotes q
+          INNER JOIN quote_tags qt ON q.id = qt.quote_id
+          WHERE q.id = ?
+            AND qt.tag_id IN ($placeholders)
+            AND length(q.content) <= ?
+            $hiddenFilter
+            $deletedFilter
+          LIMIT 1
+        ''',
+          [quoteId, ...tagIds, _maxOfflineQuoteLength, _hiddenTagId],
+        );
+      } else {
+        results = await db.rawQuery(
+          '''
+          SELECT q.* FROM quotes q
+          WHERE q.id = ?
+            AND length(q.content) <= ?
+            AND q.content NOT LIKE ?
+            $hiddenFilter
+            $deletedFilter
+          LIMIT 1
+        ''',
+          [quoteId, _maxOfflineQuoteLength, '%\n%', _hiddenTagId],
+        );
+      }
+
+      if (results.isEmpty) {
+        return null;
+      }
+      final quote = results.first;
+      return {
+        'content': quote['content'],
+        'source': quote['source_work'] ?? '',
+        'author': quote['source_author'] ?? '',
+        'type': 'local',
+        'local_quote_id': quote['id'],
+        'offline_quote_source': offlineQuoteSource,
+        'from_who': quote['source_author'] ?? '',
+        'from': quote['source_work'] ?? '',
+      };
+    } catch (e) {
+      logDebug('按 ID 校验本地每日一言失败: $e');
       return null;
     }
   }

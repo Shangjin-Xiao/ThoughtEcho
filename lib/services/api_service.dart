@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../gen_l10n/app_localizations.dart';
 import '../services/api_key_manager.dart';
 import '../services/connectivity_service.dart';
@@ -167,6 +169,18 @@ class ApiService {
   // 添加一个常量定义请求超时时间
   static const int _timeoutSeconds = 10;
 
+  @visibleForTesting
+  static DailyQuoteHttpGet? debugHttpGetOverride;
+
+  @visibleForTesting
+  static bool? debugIsConnectedOverride;
+
+  @visibleForTesting
+  static void resetDebugOverrides() {
+    debugHttpGetOverride = null;
+    debugIsConnectedOverride = null;
+  }
+
   // 获取一言API数据，支持本地笔记回退
   static Future<Map<String, dynamic>> getDailyQuote(
     AppLocalizations l10n,
@@ -190,8 +204,8 @@ class ApiService {
       }
 
       // 检查网络连接状态
-      final connectivityService = ConnectivityService();
-      final isConnected = await connectivityService.checkConnectionNow();
+      final isConnected = debugIsConnectedOverride ??
+          await ConnectivityService().checkConnectionNow();
 
       if (!isConnected) {
         logDebug('网络未连接，使用本地笔记');
@@ -206,7 +220,8 @@ class ApiService {
       final normalizedProvider = supportedDailyQuoteProviders.contains(provider)
           ? provider
           : hitokotoProvider;
-      final fetch = httpGet ?? NetworkService.instance.get;
+      final fetch =
+          httpGet ?? debugHttpGetOverride ?? NetworkService.instance.get;
       final remoteQuote = await _fetchRemoteQuote(
         type,
         provider: normalizedProvider,

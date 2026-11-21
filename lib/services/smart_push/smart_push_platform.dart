@@ -2,29 +2,9 @@ part of '../smart_push_service.dart';
 
 /// 平台相关 — 时区、AlarmManager、WorkManager、本地通知调度
 extension SmartPushPlatform on SmartPushService {
-  /// 注册 WorkManager 周期性备用任务
-  ///
-  /// 当 Android 12+ 精确闹钟权限被拒绝或系统限制后台执行时，
-  /// 这个周期性任务（每15分钟）会检查是否有遗漏的推送
-  Future<void> _registerPeriodicFallbackTask() async {
-    if (!PlatformHelper.isAndroid && !PlatformHelper.isIOS) return;
-
-    try {
-      // 注册周期性任务（最小间隔15分钟）
-      await Workmanager().registerPeriodicTask(
-        'smart_push_periodic_check',
-        kPeriodicCheckTask,
-        frequency: const Duration(minutes: 15),
-      );
-      AppLogger.i('已注册 WorkManager 周期性备用任务（15分钟间隔）');
-    } catch (e) {
-      AppLogger.w('注册周期性备用任务失败', error: e);
-    }
-  }
-
   /// 取消周期性备用任务
   Future<void> _cancelPeriodicFallbackTask() async {
-    if (!PlatformHelper.isAndroid && !PlatformHelper.isIOS) return;
+    if (!_isAndroid && !_isIOS) return;
 
     try {
       await Workmanager().cancelByUniqueName('smart_push_periodic_check');
@@ -38,7 +18,11 @@ extension SmartPushPlatform on SmartPushService {
   ///
   /// Android 12+ 需要 SCHEDULE_EXACT_ALARM 权限，Android 14+ 默认不授予
   Future<bool> _canScheduleExactAlarms() async {
-    if (!PlatformHelper.isAndroid) return true;
+    final override = _canScheduleExactAlarmsOverride;
+    if (override != null) {
+      return override();
+    }
+    if (!_isAndroid) return true;
 
     try {
       final androidPlugin =
@@ -56,42 +40,282 @@ extension SmartPushPlatform on SmartPushService {
     }
   }
 
-  /// WorkManager 降级方案
-  ///
-  /// 当精确闹钟不可用时，使用 WorkManager 一次性任务作为备用
-  Future<void> _scheduleWorkManagerFallback(
-    int idIndex,
-    tz.TZDateTime scheduledDate,
-    PushTimeSlot slot,
-  ) async {
-    try {
-      final now = DateTime.now();
-      final delay = scheduledDate.difference(now);
+  /// 判断 Android 是否应使用系统本地通知预调度队列（无需后台冷启动 Dart Isolate）
+  Future<bool> shouldUseAndroidPreScheduledNotifications() {
+    return _shouldUseAndroidPreScheduledNotifications();
+  }
 
-      // 使用 WorkManager 一次性任务
-      await Workmanager().registerOneOffTask(
-        'android_push_fallback_$idIndex',
-        kBackgroundPushTask,
-        initialDelay: delay > Duration.zero ? delay : Duration.zero,
-        inputData: {'triggerKind': 'smartPush'},
-        existingWorkPolicy: ExistingWorkPolicy.replace,
-      );
-      AppLogger.i('已使用 WorkManager 降级方案调度推送: 延迟 ${delay.inMinutes} 分钟');
-    } catch (e) {
-      AppLogger.e('WorkManager 降级方案也失败', error: e);
-      // 最后的降级：仅本地通知
-      await _scheduleLocalNotification(idIndex, scheduledDate, slot);
+  Future<bool> _shouldUseAndroidPreScheduledNotifications({
+    bool? canScheduleExact,
+  }) async {
+    if (!_isAndroid) return false;
+    if (DistributionConfig.isPlayStore) return true;
+    final exactGranted = canScheduleExact ?? await _canScheduleExactAlarms();
+    return !exactGranted;
+  }
+
+  /// 注册低频周期性预调度续期任务（每 24 小时由系统 JobScheduler 滚动续期未来 3 天本地通知队列，不使用前台服务）
+  Future<void> _registerPreScheduleRenewalTask() async {
+    final override = _registerPreScheduleRenewalOverride;
+    if (override != null) {
+      await override();
+      return;
     }
+    if (!_isAndroid) return;
+
+    try {
+      await Workmanager().registerPeriodicTask(
+        SmartPushService._preScheduleRenewalUniqueName,
+        kPreScheduleRenewTask,
+        frequency: SmartPushService._preScheduleRenewalFrequency,
+        initialDelay: SmartPushService._preScheduleRenewalFrequency,
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      );
+      AppLogger.d('已注册预调度通知队列后台续期任务 (24h)');
+    } catch (e) {
+      AppLogger.w('注册预调度通知队列后台续期任务失败', error: e);
+    }
+  }
+
+  /// 取消预调度续期后台任务
+  Future<void> _cancelPreScheduleRenewalTask() async {
+    final override = _cancelPreScheduleRenewalOverride;
+    if (override != null) {
+      await override();
+      return;
+    }
+    if (!_isAndroid) return;
+
+    try {
+      await Workmanager().cancelByUniqueName(
+        SmartPushService._preScheduleRenewalUniqueName,
+      );
+      AppLogger.d('已取消预调度通知队列后台续期任务');
+    } catch (e) {
+      AppLogger.w('取消预调度通知队列后台续期任务失败', error: e);
+    }
+  }
+
+  /// 取消旧版 Android AlarmManager 与一次性/高频 WorkManager 后台推送任务（保留预调度续期任务，避免后台续期执行时自取消）
+  Future<void> _cancelLegacyAndroidPushTasks({bool force = false}) async {
+    if (!_isAndroid) return;
+    if (_legacyAndroidTasksCleared && !force) return;
+
+    for (int i = 0; i < 10; i++) {
+      try {
+        await AndroidAlarmManager.cancel(SmartPushService._androidAlarmId + i);
+      } catch (_) {}
+      try {
+        await Workmanager().cancelByUniqueName('android_push_fallback_$i');
+      } catch (_) {}
+    }
+    try {
+      await AndroidAlarmManager.cancel(SmartPushService._dailyQuoteAlarmId);
+    } catch (_) {}
+    try {
+      await Workmanager().cancelByUniqueName('daily_quote_fallback');
+    } catch (_) {}
+    await _cancelPeriodicFallbackTask();
+    _legacyAndroidTasksCleared = true;
+  }
+
+  /// 取消所有 Android AlarmManager 与 WorkManager 后台调度任务
+  Future<void> _cancelAndroidBackgroundTasks() async {
+    if (!_isAndroid) return;
+    await _cancelLegacyAndroidPushTasks(force: true);
+    await _cancelPreScheduleRenewalTask();
+  }
+
+  List<_PreScheduledEntry> _loadTrackedPreScheduledEntries() {
+    try {
+      final raw = _mmkv.getString(SmartPushService._preScheduledEntriesKey);
+      if (raw == null || raw.isEmpty) return const [];
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => _PreScheduledEntry.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .where((entry) => entry.id >= 0)
+          .toList();
+    } catch (e) {
+      AppLogger.w('读取已追踪预调度通知列表失败', error: e);
+      return const [];
+    }
+  }
+
+  Future<void> _saveTrackedPreScheduledEntries(
+    List<_PreScheduledEntry> entries, {
+    int? expectedGeneration,
+    int? expectedSettingsGeneration,
+    int? expectedEpoch,
+    int? expectedScheduleEpoch,
+    int? expectedCommitSeq,
+    bool fromBackground = false,
+  }) async {
+    try {
+      if (expectedGeneration != null &&
+          !_isScheduleGenerationCurrent(expectedGeneration)) {
+        return;
+      }
+      if (expectedSettingsGeneration != null &&
+          !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
+        return;
+      }
+      if (expectedEpoch != null ||
+          expectedScheduleEpoch != null ||
+          expectedCommitSeq != null) {
+        await _reloadSharedStorageIfSupported();
+        if (expectedGeneration != null &&
+            !_isScheduleGenerationCurrent(expectedGeneration)) {
+          return;
+        }
+        if (expectedSettingsGeneration != null &&
+            !_isSettingsMutationGenerationCurrent(expectedSettingsGeneration)) {
+          return;
+        }
+        if ((expectedEpoch != null &&
+                _readStoredSettingsEpoch() != expectedEpoch) ||
+            (expectedScheduleEpoch != null &&
+                _readStoredScheduleEpoch() != expectedScheduleEpoch) ||
+            (expectedCommitSeq != null &&
+                _readStoredNotificationCommitSeq() != expectedCommitSeq) ||
+            (fromBackground && _areStoredSettingsAllDisabled())) {
+          return;
+        }
+      }
+      if (entries.isEmpty) {
+        await _mmkv.remove(SmartPushService._preScheduledEntriesKey);
+        return;
+      }
+      final encoded = jsonEncode(entries.map((e) => e.toJson()).toList());
+      await _mmkv.setString(SmartPushService._preScheduledEntriesKey, encoded);
+    } catch (e) {
+      AppLogger.w('保存预调度通知追踪列表失败', error: e);
+    }
+  }
+
+  /// 查询系统本地通知队列中仍处于待触发状态（尚未由 ScheduledNotificationReceiver 送达）的通知 ID 集合。
+  ///
+  /// 在无精确闹钟权限（inexactAllowWhileIdle）场景下，即使当前时间已过计划时间点（epochMs <= nowMs），
+  /// 只要系统尚未送达该通知，其 ID 仍会保留在 pendingNotificationRequests 中。
+  Future<Set<int>?> _queryPendingLocalNotificationIds() async {
+    try {
+      final pending = await _notificationsPlugin.pendingNotificationRequests();
+      return pending.map((request) => request.id).toSet();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 查询系统通知栏中当前仍可见（尚未被用户划掉或点击清除）的本地通知 ID 集合。
+  Future<Set<int>?> _queryActiveLocalNotificationIds() async {
+    if (!_isAndroid) return null;
+    try {
+      final active = await _notificationsPlugin.getActiveNotifications();
+      return active.map((item) => item.id).whereType<int>().toSet();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _isEntryDisabledByCurrentSettings(_PreScheduledEntry entry) {
+    if (entry.isDailyQuote) {
+      return !_settings.dailyQuotePushEnabled;
+    }
+    if (!_settings.enabled) {
+      return true;
+    }
+    if (_settings.pushMode != PushMode.smart) {
+      if (!_settings.pushTimeSlots.any((s) => s.enabled)) {
+        return true;
+      }
+      if (entry.slotHour != null && entry.slotMinute != null) {
+        return !_settings.pushTimeSlots.any(
+          (s) =>
+              s.enabled &&
+              s.hour == entry.slotHour &&
+              s.minute == entry.slotMinute,
+        );
+      }
+    }
+    return false;
+  }
+
+  /// 对账并取消不再处于当前有效计划内、或关联笔记已被隐藏/删除的预调度通知。
+  ///
+  /// 返回实际被取消的通知 ID 集合与因关联笔记被隐藏/删除而失效的通知 ID 集合。
+  Future<({Set<int> cancelledIds, Set<int> invalidatedIds})>
+      _reconcileTrackedPreScheduledNotifications({
+    required Set<int> activeIds,
+    required bool futureOnly,
+    Set<String>? visibleNoteIds,
+    List<_PreScheduledEntry>? entriesOverride,
+    Set<int>? pendingRequestIds,
+    bool alreadyQueriedPendingIds = false,
+    bool canScheduleExact = true,
+    Set<int> retainedOverduePendingIds = const <int>{},
+  }) async {
+    final previousEntries =
+        entriesOverride ?? _loadTrackedPreScheduledEntries();
+    if (previousEntries.isEmpty) {
+      return (cancelledIds: const <int>{}, invalidatedIds: const <int>{});
+    }
+
+    final effectivePendingIds = alreadyQueriedPendingIds
+        ? pendingRequestIds
+        : (pendingRequestIds ?? await _queryPendingLocalNotificationIds());
+
+    final cancelledIds = <int>{};
+    final invalidatedIds = <int>{};
+    final nowMs = _now().millisecondsSinceEpoch;
+    for (final entry in previousEntries) {
+      final hasInvalidatedNote = visibleNoteIds != null &&
+          entry.noteId != null &&
+          !visibleNoteIds.contains(entry.noteId);
+      if (hasInvalidatedNote) {
+        invalidatedIds.add(entry.id);
+      } else {
+        if (activeIds.contains(entry.id)) continue;
+        if (entry.epochMs <= nowMs) {
+          final isStillPending = effectivePendingIds != null
+              ? effectivePendingIds.contains(entry.id)
+              : (!canScheduleExact && !entry.accounted);
+          if (isStillPending) {
+            if (futureOnly || retainedOverduePendingIds.contains(entry.id)) {
+              continue;
+            }
+          } else {
+            if (futureOnly || !_isEntryDisabledByCurrentSettings(entry)) {
+              continue;
+            }
+          }
+        }
+      }
+      cancelledIds.add(entry.id);
+      try {
+        await _notificationsPlugin.cancel(entry.id);
+      } catch (e) {
+        AppLogger.w('取消过期预调度通知失败 (ID: ${entry.id})', error: e);
+      }
+    }
+    return (cancelledIds: cancelledIds, invalidatedIds: invalidatedIds);
   }
 
   /// 初始化时区 - 正确设置设备本地时区
   Future<void> _initializeTimezone() async {
-    tz_data.initializeTimeZones();
+    if (!tz.timeZoneDatabase.isInitialized) {
+      tz_data.initializeTimeZones();
+    }
 
     // 获取设备时区并设置为本地时区
     try {
       final String timeZoneName = await _getDeviceTimeZone();
-      final location = tz.getLocation(timeZoneName);
+      final location =
+          _tryGetTzLocation(timeZoneName) ?? tz.getLocation(timeZoneName);
       tz.setLocalLocation(location);
       AppLogger.d('时区设置为: $timeZoneName');
     } catch (e) {
@@ -126,55 +350,207 @@ extension SmartPushPlatform on SmartPushService {
     }
   }
 
-  /// 获取设备时区名称
+  static const List<String> _canonicalIanaZones = <String>[
+    'UTC',
+    'Asia/Shanghai',
+    'Asia/Tokyo',
+    'Asia/Seoul',
+    'Asia/Hong_Kong',
+    'Asia/Taipei',
+    'Asia/Singapore',
+    'Asia/Kolkata',
+    'Asia/Dubai',
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Berlin',
+    'Europe/Moscow',
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Phoenix',
+    'America/Toronto',
+    'America/Vancouver',
+    'America/Sao_Paulo',
+    'Australia/Sydney',
+    'Pacific/Auckland',
+  ];
+
+  static final RegExp _posixEtcGmtPattern = RegExp(
+    r'^Etc/GMT(?:([+-]?\d{1,2}))?$',
+  );
+
+  tz.Location? _tryGetTzLocation(String? zoneName) {
+    if (zoneName == null || zoneName.trim().isEmpty) return null;
+    final trimmed = zoneName.trim();
+    try {
+      return tz.getLocation(trimmed);
+    } catch (_) {
+      final match = _posixEtcGmtPattern.firstMatch(trimmed);
+      if (match == null) return null;
+      final rawOffset = match.group(1);
+      final posixHours = (rawOffset == null || rawOffset.isEmpty)
+          ? 0
+          : int.tryParse(rawOffset);
+      if (posixHours == null) return null;
+      // POSIX Etc/GMT 符号与 ISO 偏移相反：Etc/GMT-8 表示 UTC+8，Etc/GMT+5 表示 UTC-5。
+      final utcOffsetHours = -posixHours;
+      if (utcOffsetHours < -14 || utcOffsetHours > 14) return null;
+      final abbreviation = utcOffsetHours == 0
+          ? 'GMT'
+          : '${utcOffsetHours > 0 ? '+' : '-'}${utcOffsetHours.abs().toString().padLeft(2, '0')}';
+      final location = tz.Location(
+        trimmed,
+        [tz.minTime],
+        [0],
+        [
+          tz.TimeZone(
+            utcOffsetHours * Duration.millisecondsPerHour,
+            isDst: false,
+            abbreviation: abbreviation,
+          ),
+        ],
+      );
+      if (tz.timeZoneDatabase.isInitialized) {
+        tz.timeZoneDatabase.add(location);
+      }
+      return location;
+    }
+  }
+
+  /// 获取设备时区名称（兼顾前台 Activity 与无界面 WorkManager Isolate）
   Future<String> _getDeviceTimeZone() async {
+    final override = _timeZoneOverride;
+    if (override != null && override.isNotEmpty) {
+      return override;
+    }
     if (kIsWeb) {
       return 'UTC';
     }
 
     try {
-      // Android: 通过 MethodChannel 获取系统时区
-      if (PlatformHelper.isAndroid) {
-        const channel = MethodChannel('com.shangjin.thoughtecho/timezone');
-        try {
-          final String? timeZone = await channel.invokeMethod('getTimeZone');
-          if (timeZone != null && timeZone.isNotEmpty) {
-            return timeZone;
+      final probeInstant = DateTime.fromMillisecondsSinceEpoch(
+        _now().millisecondsSinceEpoch,
+      );
+      final probe = _localTimeZoneProbeOverride?.call() ??
+          (
+            name: probeInstant.timeZoneName.trim(),
+            offset: probeInstant.timeZoneOffset,
+          );
+
+      // 1. Android: 优先通过 MethodChannel、Application 预同步的 SharedPreferences 或系统属性解析精确 IANA ID
+      if (_isAndroid) {
+        if (PlatformHelper.isAndroid) {
+          const channel = MethodChannel('com.shangjin.thoughtecho/timezone');
+          try {
+            final String? timeZone = await channel.invokeMethod('getTimeZone');
+            if (_tryGetTzLocation(timeZone) != null) {
+              final resolved = timeZone!.trim();
+              await _mmkv.setString(
+                SmartPushService._deviceTimeZoneKey,
+                resolved,
+              );
+              return resolved;
+            }
+          } catch (_) {
+            // 无界面后台 Isolate 中 MainActivity 通道不可用，继续走持久化/系统属性/时区库匹配
           }
-        } catch (_) {
-          // MethodChannel 不可用，使用 DateTime 估算
+        }
+
+        await _reloadSharedStorageIfSupported();
+        final persistedZone =
+            _mmkv.getString(SmartPushService._deviceTimeZoneKey);
+        final persistedLoc = _tryGetTzLocation(persistedZone);
+        if (persistedLoc != null) {
+          final persistedOffset =
+              tz.TZDateTime.from(probeInstant, persistedLoc).timeZoneOffset;
+          if (_localTimeZoneProbeOverride == null ||
+              persistedOffset == probe.offset) {
+            return persistedZone!.trim();
+          }
+        }
+
+        final sysZone = await PlatformHelper.readAndroidSystemTimeZone();
+        if (_tryGetTzLocation(sysZone) != null) {
+          final resolved = sysZone!.trim();
+          await _mmkv.setString(SmartPushService._deviceTimeZoneKey, resolved);
+          return resolved;
         }
       }
 
-      // iOS/降级: 使用 DateTime.now().timeZoneName
-      final timeZoneName = DateTime.now().timeZoneName;
-
-      // 处理常见缩写
-      final zoneMapping = {
-        'CST': 'Asia/Shanghai',
-        'EST': 'America/New_York',
-        'PST': 'America/Los_Angeles',
-        'GMT': 'Europe/London',
-        'UTC': 'UTC',
-        'JST': 'Asia/Tokyo',
-        'KST': 'Asia/Seoul',
-      };
-
-      if (zoneMapping.containsKey(timeZoneName)) {
-        return zoneMapping[timeZoneName]!;
-      }
-
-      // 尝试直接使用时区名称
-      try {
-        tz.getLocation(timeZoneName);
-        return timeZoneName;
-      } catch (_) {
-        return 'Asia/Shanghai'; // 默认
-      }
+      return _resolveIanaZoneFromLocalProbe(
+        probeInstant: probeInstant,
+        timeZoneName: probe.name,
+        timeZoneOffset: probe.offset,
+      );
     } catch (e) {
       AppLogger.w('获取设备时区失败: $e');
-      return 'Asia/Shanghai';
+      return 'UTC';
     }
+  }
+
+  String _resolveIanaZoneFromLocalProbe({
+    required DateTime probeInstant,
+    required String timeZoneName,
+    required Duration timeZoneOffset,
+  }) {
+    final persistedZone = _mmkv.getString(SmartPushService._deviceTimeZoneKey);
+    final persistedLoc = _tryGetTzLocation(persistedZone);
+    if (persistedLoc != null &&
+        tz.TZDateTime.from(probeInstant, persistedLoc).timeZoneOffset ==
+            timeZoneOffset) {
+      return persistedZone!.trim();
+    }
+
+    if (timeZoneName.contains('/') && !timeZoneName.startsWith('Etc/')) {
+      final directLoc = _tryGetTzLocation(timeZoneName);
+      if (directLoc != null &&
+          tz.TZDateTime.from(probeInstant, directLoc).timeZoneOffset ==
+              timeZoneOffset) {
+        return timeZoneName;
+      }
+    }
+
+    final orderedCandidates = <String>[
+      ..._canonicalIanaZones,
+      for (final key in tz.timeZoneDatabase.locations.keys)
+        if (key.contains('/') &&
+            !key.startsWith('Etc/') &&
+            !_canonicalIanaZones.contains(key))
+          key,
+      for (final key in tz.timeZoneDatabase.locations.keys)
+        if (!key.contains('/') && !_canonicalIanaZones.contains(key)) key,
+    ];
+
+    if (timeZoneName.isNotEmpty) {
+      for (final zoneId in orderedCandidates) {
+        final loc = _tryGetTzLocation(zoneId);
+        if (loc == null) continue;
+        final candidateTz = tz.TZDateTime.from(probeInstant, loc);
+        if (candidateTz.timeZoneOffset == timeZoneOffset &&
+            candidateTz.timeZoneName == timeZoneName) {
+          return zoneId;
+        }
+      }
+
+      final directLoc = _tryGetTzLocation(timeZoneName);
+      if (directLoc != null &&
+          tz.TZDateTime.from(probeInstant, directLoc).timeZoneOffset ==
+              timeZoneOffset) {
+        return timeZoneName;
+      }
+    }
+
+    for (final zoneId in orderedCandidates) {
+      final loc = _tryGetTzLocation(zoneId);
+      if (loc == null) continue;
+      final candidateTz = tz.TZDateTime.from(probeInstant, loc);
+      if (candidateTz.timeZoneOffset == timeZoneOffset) {
+        return zoneId;
+      }
+    }
+
+    return 'UTC';
   }
 
   /// 调度单个 Alarm
@@ -184,12 +560,13 @@ extension SmartPushPlatform on SmartPushService {
     PushTimeSlot slot,
   ) async {
     // 1. Android: 优先使用 AlarmManager 实现精确定时
-    if (PlatformHelper.isAndroid) {
+    if (_isAndroid) {
       // 先检查精确闹钟权限
       final canScheduleExact = await _canScheduleExactAlarms();
 
-      if (canScheduleExact) {
+      if (canScheduleExact && !DistributionConfig.isPlayStore) {
         try {
+          _legacyAndroidTasksCleared = false;
           await AndroidAlarmManager.oneShotAt(
             scheduledDate,
             SmartPushService._androidAlarmId + idIndex,
@@ -205,17 +582,24 @@ extension SmartPushPlatform on SmartPushService {
           return; // 成功，直接返回
         } catch (e) {
           AppLogger.e('设定常规 Alarm 失败', error: e);
-          // 继续降级处理
+          // 继续降级到本地通知
         }
-      } else {
-        AppLogger.w('精确闹钟权限被拒绝，使用 WorkManager 降级方案');
       }
 
-      // Android 降级方案: 使用 WorkManager 一次性任务
-      await _scheduleWorkManagerFallback(idIndex, scheduledDate, slot);
+      final notificationId =
+          SmartPushService.deterministicPreScheduledNotificationId(
+        scheduledDate,
+        slotIndex: idIndex,
+      );
+      await _scheduleLocalNotification(
+        notificationId,
+        scheduledDate,
+        slot,
+        canScheduleExactOverride: canScheduleExact,
+      );
     }
     // 2. iOS: 使用 WorkManager 注册后台任务
-    else if (PlatformHelper.isIOS) {
+    else if (_isIOS) {
       // iOS 使用本地通知作为用户可见的提醒
       await _scheduleLocalNotification(idIndex, scheduledDate, slot);
 
@@ -253,27 +637,46 @@ extension SmartPushPlatform on SmartPushService {
   ///
   /// Android 12+ 需要精确闹钟权限才能使用 exactAllowWhileIdle 模式。
   /// 当权限不可用时，自动降级到 inexactAllowWhileIdle 模式（时间可能有 15 分钟误差）。
-  Future<void> _scheduleLocalNotification(
+  Future<bool> _scheduleLocalNotification(
     int id,
     tz.TZDateTime scheduledDate,
     PushTimeSlot slot, {
     bool isDailyQuote = false,
+    _PushContent? precomputedContent,
+    bool allowContentLookup = true,
+    bool? canScheduleExactOverride,
+    bool persistSingleTrackedEntry = true,
   }) async {
     try {
       await _ensureNotificationReady();
-      // 尝试预计算要推送的内容
-      _PushContent? content;
-      if (isDailyQuote) {
-        final quote = await _fetchDailyQuote();
-        if (quote != null) {
-          content = _PushContent(
-            title: '📖 每日一言',
-            body: quote.content,
-            noteId: null,
-          );
+      // Android 批量预调度优先复用本地预计算内容，绝不在调度阶段请求外网；
+      // iOS/非 Android 单条独立每日一言恢复提供商感知解析，保证无本地笔记时仍能展示在线一言
+      _PushContent? content = precomputedContent;
+      if (content == null && allowContentLookup) {
+        if (isDailyQuote) {
+          final nowLocal = tz.TZDateTime.from(_now(), tz.local);
+          final isFutureCalendarDay = scheduledDate.year != nowLocal.year ||
+              scheduledDate.month != nowLocal.month ||
+              scheduledDate.day != nowLocal.day;
+          final resolved = _isAndroid
+              ? await _resolvePreScheduleDailyQuote()
+              : await _resolveStandaloneDailyQuote(
+                  updateTodayCache: !isFutureCalendarDay,
+                );
+          if (resolved != null) {
+            content = _PushContent(
+              title: '📖 每日一言',
+              body: _buildNotificationBody(resolved.quote),
+              noteId: null,
+              sourceNoteId: resolved.sourceNoteId,
+              contentType: 'dailyQuote',
+              dailyQuoteData: resolved.quoteData,
+              quoteSourceFingerprint: resolved.quoteSourceFingerprint,
+            );
+          }
+        } else {
+          content = await _getPrecomputedContent(referenceTime: scheduledDate);
         }
-      } else {
-        content = await _getPrecomputedContent();
       }
 
       final androidDetails = AndroidNotificationDetails(
@@ -299,7 +702,8 @@ extension SmartPushPlatform on SmartPushService {
       );
 
       // 检查精确闹钟权限，决定使用哪种调度模式
-      final canScheduleExact = await _canScheduleExactAlarms();
+      final canScheduleExact =
+          canScheduleExactOverride ?? await _canScheduleExactAlarms();
       final scheduleMode = canScheduleExact
           ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle;
@@ -308,49 +712,160 @@ extension SmartPushPlatform on SmartPushService {
         AppLogger.w('精确闹钟权限不可用，使用 inexact 模式调度本地通知（时间可能有 15 分钟误差）');
       }
 
-      // 构建 payload，确保通知点击时能正确路由
+      final isDailyQuoteContent = isDailyQuote ||
+          (content?.contentType == 'dailyQuote' && content?.noteId == null);
+
+      // 构建 payload，确保通知点击时能正确路由并定位到该通知对应的展示内容、通知 ID 与计划触发时间戳（仅跨天复用固定 ID 时附加）
+      final scheduledEpochMs =
+          id < SmartPushService._preScheduledNotificationBaseId
+              ? scheduledDate.millisecondsSinceEpoch
+              : null;
       String? payload;
-      if (isDailyQuote) {
+      if (isDailyQuoteContent) {
         payload = SmartPushService.buildNotificationPayload(
           contentType: 'dailyQuote',
+          notificationId: id,
+          scheduledEpochMs: scheduledEpochMs,
         );
       } else if (content?.noteId != null) {
         payload = SmartPushService.buildNotificationPayload(
           noteId: content!.noteId,
           contentType: content.contentType ?? 'dailyQuote',
           routeTarget: 'noteList',
+          notificationId: id,
+          scheduledEpochMs: scheduledEpochMs,
+        );
+      } else {
+        payload = SmartPushService.buildNotificationPayload(
+          contentType: content?.contentType ?? 'pastNote',
+          notificationId: id,
+          scheduledEpochMs: scheduledEpochMs,
         );
       }
 
-      await _notificationsPlugin.zonedSchedule(
-        id,
-        content?.title ?? (isDailyQuote ? '📖 每日一言' : '💡 回忆时刻'),
-        content?.body ?? '点击查看今天的灵感',
-        scheduledDate,
-        details,
-        androidScheduleMode: scheduleMode,
-        payload: payload,
-      );
+      var usedExactMode = canScheduleExact;
+      final notifTitle =
+          content?.title ?? (isDailyQuoteContent ? '📖 每日一言' : '💡 回忆时刻');
+      final notifBody = content?.body ?? '点击查看今天的灵感';
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          notifTitle,
+          notifBody,
+          scheduledDate,
+          details,
+          androidScheduleMode: scheduleMode,
+          payload: payload,
+        );
+      } on PlatformException catch (e) {
+        final codeLower = e.code.toLowerCase();
+        final msgLower = (e.message ?? '').toLowerCase();
+        final isExactPermError =
+            scheduleMode == AndroidScheduleMode.exactAllowWhileIdle &&
+                (codeLower.contains('exact_alarm') ||
+                    msgLower.contains('exact_alarm') ||
+                    msgLower.contains('schedule_exact_alarm'));
+        if (!isExactPermError) rethrow;
+        usedExactMode = false;
+        AppLogger.w('精确闹钟调度在写入时被系统拒绝，回退至 inexact 模式重试', error: e);
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          notifTitle,
+          notifBody,
+          scheduledDate,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+        );
+      }
+
+      if (persistSingleTrackedEntry &&
+          (isDailyQuoteContent ||
+              content?.dailyQuoteData != null ||
+              content?.sourceNoteId != null ||
+              !isDailyQuote)) {
+        await _withScheduleCommitLock(() async {
+          final commitSeq = await _nextNotificationCommitSeq();
+          final nowMs = _now().millisecondsSinceEpoch;
+          final maxRetentionMs =
+              SmartPushService._deliveredEntryRetention.inMilliseconds;
+          final newEpochMs = scheduledDate.millisecondsSinceEpoch;
+          final existing = _loadTrackedPreScheduledEntries().where((e) {
+            if (e.id != id) return true;
+            return e.epochMs > 0 &&
+                e.epochMs <= nowMs &&
+                e.epochMs != newEpochMs &&
+                nowMs - e.epochMs <= maxRetentionMs;
+          }).toList();
+          existing.add(
+            _PreScheduledEntry(
+              id: id,
+              epochMs: newEpochMs,
+              noteId: content?.sourceNoteId ?? content?.noteId,
+              isDailyQuote: isDailyQuote,
+              contentType:
+                  content?.contentType ?? (isDailyQuote ? 'dailyQuote' : null),
+              slotHour: slot.hour,
+              slotMinute: slot.minute,
+              dailyQuoteData: content?.dailyQuoteData,
+              quoteSourceFingerprint:
+                  isDailyQuoteContent ? content?.quoteSourceFingerprint : null,
+              commitSeq: commitSeq,
+            ),
+          );
+          await _saveTrackedPreScheduledEntries(
+            existing,
+            expectedCommitSeq: commitSeq,
+          );
+        });
+      }
 
       AppLogger.i(
-        '已设定本地通知: $scheduledDate (模式: ${canScheduleExact ? "精确" : "非精确"})',
+        '已设定本地通知: $scheduledDate (ID: $id, 模式: ${usedExactMode ? "精确" : "非精确"})',
       );
+      return true;
     } catch (e) {
       AppLogger.e('设定本地通知失败', error: e);
+      return false;
     }
   }
 
-  Future<void> _cancelAllSchedules() async {
-    await _notificationsPlugin.cancelAll();
-    if (PlatformHelper.isAndroid) {
-      // 取消常规推送
-      for (int i = 0; i < 10; i++) {
-        await AndroidAlarmManager.cancel(SmartPushService._androidAlarmId + i);
+  Future<void> _cancelAllSchedules() {
+    final bumpFuture = _bumpScheduleEpoch();
+    return _enqueueScheduleOperation(
+      (_) => _cancelAllSchedulesInternal(),
+      prerequisite: bumpFuture,
+    );
+  }
+
+  Future<void> _cancelAllSchedulesInternal({
+    int? expectedSettingsEpoch,
+    bool requireDisabledInStorage = false,
+  }) {
+    return _withScheduleCommitLock(() async {
+      await _reloadSharedStorageIfSupported();
+      if (expectedSettingsEpoch != null &&
+          _readStoredSettingsEpoch() != expectedSettingsEpoch) {
+        return;
       }
-      // 取消每日一言
-      await AndroidAlarmManager.cancel(SmartPushService._dailyQuoteAlarmId);
-    }
-    // 取消 WorkManager 周期性任务
-    await _cancelPeriodicFallbackTask();
+      if (requireDisabledInStorage && _hasActiveReminderInStoredSettings()) {
+        return;
+      }
+      final commitSeq = await _nextNotificationCommitSeq();
+      await _reconcileTrackedPreScheduledNotifications(
+        activeIds: const {},
+        futureOnly: false,
+      );
+      await _saveTrackedPreScheduledEntries(
+        const [],
+        expectedCommitSeq: commitSeq,
+      );
+      await _notificationsPlugin.cancelAll();
+      if (_isAndroid) {
+        await _cancelAndroidBackgroundTasks();
+      } else {
+        await _cancelPeriodicFallbackTask();
+      }
+    });
   }
 }

@@ -3763,6 +3763,8 @@
   "smartPushPermissionWarningDesc": "部分許可權未授予，可能影響準時提醒。點選下方專案前往開啟。",
   "smartPushNotificationPermission": "通知許可權",
   "smartPushBatteryOptimization": "關閉電池最佳化",
+  "smartPushBackgroundBatteryGuideTitle": "背景電池設定",
+  "smartPushBackgroundBatteryGuideDesc": "若提醒出現延遲，可開啟系統應用資訊頁面，手動調整背景電池使用策略",
   "smartPushAutoStartPermission": "自啟動許可權",
   "smartPushAutoStartHint": "部分 Android 裝置需要開啟自啟動許可權以保證後臺準時推送",
   "smartPushAutoStartTitle": "自啟動設定指引",

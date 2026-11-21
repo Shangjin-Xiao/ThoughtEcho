@@ -21,12 +21,72 @@ void main() {
   });
 
   group('DistributionConfig', () {
+    tearDown(DistributionConfig.resetDebugOverrides);
+
     test('defaults to standard distribution channel', () {
       expect(DistributionConfig.channel, equals(DistributionChannel.standard));
       expect(DistributionConfig.isStandard, isTrue);
       expect(DistributionConfig.isPlayStore, isFalse);
       expect(DistributionConfig.supportsApkSelfUpdate, isTrue);
       expect(DistributionConfig.supportsBatteryOptimizationExemption, isTrue);
+    });
+
+    test('resolveChannel prefers explicit dart-define over appFlavor', () {
+      expect(
+        DistributionConfig.resolveChannel(rawChannel: 'play', flavor: null),
+        equals(DistributionChannel.play),
+      );
+      expect(
+        DistributionConfig.resolveChannel(
+          rawChannel: 'play',
+          flavor: 'standard',
+        ),
+        equals(DistributionChannel.play),
+      );
+      expect(
+        DistributionConfig.resolveChannel(
+          rawChannel: 'standard',
+          flavor: 'play',
+        ),
+        equals(DistributionChannel.standard),
+      );
+    });
+
+    test(
+      'resolveChannel falls back to Flutter appFlavor == play when define is omitted',
+      () {
+        expect(
+          DistributionConfig.resolveChannel(rawChannel: '', flavor: 'play'),
+          equals(DistributionChannel.play),
+        );
+      },
+    );
+
+    test('resolveChannel safely defaults to standard when flavor is null', () {
+      expect(
+        DistributionConfig.resolveChannel(rawChannel: '', flavor: null),
+        equals(DistributionChannel.standard),
+      );
+      expect(
+        DistributionConfig.resolveChannel(rawChannel: 'standard', flavor: null),
+        equals(DistributionChannel.standard),
+      );
+      expect(
+        DistributionConfig.resolveChannel(
+          rawChannel: 'standard',
+          flavor: 'standard',
+        ),
+        equals(DistributionChannel.standard),
+      );
+    });
+
+    test('debugAppFlavorOverride activates Play Store capabilities', () {
+      DistributionConfig.debugAppFlavorOverride = 'play';
+      expect(DistributionConfig.channel, equals(DistributionChannel.play));
+      expect(DistributionConfig.isPlayStore, isTrue);
+      expect(DistributionConfig.isStandard, isFalse);
+      expect(DistributionConfig.supportsApkSelfUpdate, isFalse);
+      expect(DistributionConfig.supportsBatteryOptimizationExemption, isFalse);
     });
   });
 }

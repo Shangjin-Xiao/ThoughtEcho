@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/services.dart' show appFlavor;
+
 /// Represents the distribution channel / flavor of the app.
 enum DistributionChannel {
   standard,
@@ -14,13 +17,51 @@ enum DistributionChannel {
 abstract final class DistributionConfig {
   static const String _rawChannel = String.fromEnvironment(
     'DISTRIBUTION_CHANNEL',
-    defaultValue: 'standard',
   );
 
+  @visibleForTesting
+  static DistributionChannel? debugChannelOverride;
+
+  @visibleForTesting
+  static String? debugAppFlavorOverride;
+
+  @visibleForTesting
+  static void resetDebugOverrides() {
+    debugChannelOverride = null;
+    debugAppFlavorOverride = null;
+  }
+
+  /// Resolves the effective [DistributionChannel] from compile-time defines
+  /// and Flutter's runtime [appFlavor].
+  ///
+  /// Explicit `--dart-define=DISTRIBUTION_CHANNEL=play|standard` takes
+  /// precedence over [flavor]; when omitted (`rawChannel` is empty), falls back
+  /// to `flavor == 'play'`.
+  @visibleForTesting
+  static DistributionChannel resolveChannel({
+    String rawChannel = _rawChannel,
+    String? flavor,
+  }) {
+    final normalizedRaw = rawChannel.trim().toLowerCase();
+    if (normalizedRaw == 'play') {
+      return DistributionChannel.play;
+    }
+    if (normalizedRaw == 'standard') {
+      return DistributionChannel.standard;
+    }
+    if (flavor?.trim().toLowerCase() == 'play') {
+      return DistributionChannel.play;
+    }
+    return DistributionChannel.standard;
+  }
+
   /// Current active distribution channel.
-  static DistributionChannel get channel => _rawChannel == 'play'
-      ? DistributionChannel.play
-      : DistributionChannel.standard;
+  static DistributionChannel get channel =>
+      debugChannelOverride ??
+      resolveChannel(
+        rawChannel: _rawChannel,
+        flavor: debugAppFlavorOverride ?? appFlavor,
+      );
 
   /// Whether this build targets the Google Play Store.
   static bool get isPlayStore => channel.isPlayStore;

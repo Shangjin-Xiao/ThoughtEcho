@@ -3772,6 +3772,8 @@
   "smartPushPermissionWarningDesc": "Some permissions are missing, which may affect timely reminders. Tap below to configure.",
   "smartPushNotificationPermission": "Notification Permission",
   "smartPushBatteryOptimization": "Disable Battery Optimization",
+  "smartPushBackgroundBatteryGuideTitle": "Background Battery Settings",
+  "smartPushBackgroundBatteryGuideDesc": "If reminders are delayed, open system App Info to review background battery usage settings",
   "smartPushAutoStartPermission": "Auto-Start Permission",
   "smartPushAutoStartHint": "Some Android devices require auto-start permission for timely background notifications",
   "smartPushAutoStartTitle": "Auto-Start Setup Guide",

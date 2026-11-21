@@ -27,13 +27,16 @@ extension SmartPushContentSelection on SmartPushService {
     if (allNotes.isEmpty) {
       // 没有任何笔记时，回退到每日一言
       AppLogger.w('智能选择：数据库中无笔记，回退到每日一言');
-      final dailyQuote = await _fetchDailyQuote();
-      if (dailyQuote != null) {
+      final resolvedDaily = await _fetchDailyQuoteResolved();
+      if (resolvedDaily != null) {
         return _SmartSelectResult(
-          note: dailyQuote,
+          note: resolvedDaily.quote,
           title: '📖 每日一言',
           isDailyQuote: true,
           contentType: 'dailyQuote',
+          dailyQuoteData: resolvedDaily.quoteData,
+          sourceNoteId: resolvedDaily.sourceNoteId,
+          quoteSourceFingerprint: resolvedDaily.quoteSourceFingerprint,
         );
       }
       return _SmartSelectResult.empty();
@@ -178,13 +181,16 @@ extension SmartPushContentSelection on SmartPushService {
     // 6. 每日一言（低优先级可选推送，每天最多1条）
     // 只有今日尚未在智能推送中推送过每日一言时才加入候选
     if (!_hasDailyQuotePushedTodayInSmartPush()) {
-      final dailyQuote = await _fetchDailyQuote();
-      if (dailyQuote != null) {
+      final resolvedDaily = await _fetchDailyQuoteResolved();
+      if (resolvedDaily != null) {
         availableContent['dailyQuote'] = _ContentCandidate(
-          note: dailyQuote,
+          note: resolvedDaily.quote,
           title: '📖 每日一言',
           priority: 30, // 低于所有用户笔记类型
           isDailyQuote: true,
+          dailyQuoteData: resolvedDaily.quoteData,
+          sourceNoteId: resolvedDaily.sourceNoteId,
+          quoteSourceFingerprint: resolvedDaily.quoteSourceFingerprint,
         );
       }
     }
@@ -241,6 +247,9 @@ extension SmartPushContentSelection on SmartPushService {
         isDailyQuote: bestCandidate.isDailyQuote,
         contentType: bestType,
         priority: bestCandidate.priority.toDouble(),
+        dailyQuoteData: bestCandidate.dailyQuoteData,
+        sourceNoteId: bestCandidate.sourceNoteId,
+        quoteSourceFingerprint: bestCandidate.quoteSourceFingerprint,
       );
     }
 
@@ -280,13 +289,16 @@ extension SmartPushContentSelection on SmartPushService {
       '智能选择：所有筛选器均未命中 '
       '(总笔记数: ${allNotes.length})，回退到每日一言',
     );
-    final dailyQuote = await _fetchDailyQuote();
-    if (dailyQuote != null) {
+    final resolvedDaily = await _fetchDailyQuoteResolved();
+    if (resolvedDaily != null) {
       return _SmartSelectResult(
-        note: dailyQuote,
+        note: resolvedDaily.quote,
         title: '📖 每日一言',
         isDailyQuote: true,
         contentType: 'dailyQuote',
+        dailyQuoteData: resolvedDaily.quoteData,
+        sourceNoteId: resolvedDaily.sourceNoteId,
+        quoteSourceFingerprint: resolvedDaily.quoteSourceFingerprint,
       );
     }
 
@@ -350,16 +362,14 @@ extension SmartPushContentSelection on SmartPushService {
     return '💭 心迹';
   }
 
-  /// 截断内容
-  String _truncateContent(String content) {
-    if (content.length <= 100) return content;
-    return '${content.substring(0, 100)}...';
-  }
-
-  /// 获取每日一言
-  ///
-  /// 优先使用缓存，但如果缓存内容已推送过，则请求新内容。
-  Future<Quote?> _fetchDailyQuote() async {
+  /// 获取每日一言及其用于通知点击还原的原始快照元数据
+  Future<
+      ({
+        Quote quote,
+        Map<String, dynamic> quoteData,
+        String? sourceNoteId,
+        String? quoteSourceFingerprint,
+      })?> _fetchDailyQuoteResolved() async {
     try {
       // 先尝试缓存
       var data = await _loadDailyQuoteData();
@@ -376,16 +386,33 @@ extension SmartPushContentSelection on SmartPushService {
 
       final fromWho = data['from_who'] as String? ?? '';
       final from = data['from'] as String? ?? '';
-      return Quote(
-        content: data['hitokoto'] as String,
-        date: DateTime.now().toIso8601String(),
-        sourceAuthor: fromWho,
-        source: from.isNotEmpty ? from : null,
+      final rawLocalId = data['local_quote_id'];
+      final sourceNoteId =
+          (rawLocalId is String && rawLocalId.isNotEmpty) ? rawLocalId : null;
+      final rawFp = (data['quote_source_fingerprint'] as String?)?.trim() ?? '';
+      return (
+        quote: Quote(
+          content: data['hitokoto'] as String,
+          date: _now().toIso8601String(),
+          sourceAuthor: fromWho,
+          source: from.isNotEmpty ? from : null,
+        ),
+        quoteData: Map<String, dynamic>.from(data),
+        sourceNoteId: sourceNoteId,
+        quoteSourceFingerprint: rawFp.isNotEmpty ? rawFp : null,
       );
     } catch (e) {
       AppLogger.w('获取每日一言失败', error: e);
       return null;
     }
+  }
+
+  /// 获取每日一言
+  ///
+  /// 优先使用缓存，但如果缓存内容已推送过，则请求新内容。
+  Future<Quote?> _fetchDailyQuote() async {
+    final resolved = await _fetchDailyQuoteResolved();
+    return resolved?.quote;
   }
 
   /// 获取候选推送笔记
@@ -394,11 +421,13 @@ extension SmartPushContentSelection on SmartPushService {
     return typedCandidates.map((candidate) => candidate.note).toList();
   }
 
-  Future<List<TypedSmartPushCandidate>> getTypedCandidateNotes() async {
+  Future<List<TypedSmartPushCandidate>> getTypedCandidateNotes({
+    DateTime? nowOverride,
+  }) async {
     final allNotes = await _databaseService.getQuotesForSmartPush(limit: 5000);
     if (allNotes.isEmpty) return [];
 
-    final now = DateTime.now();
+    final now = nowOverride ?? _now();
     final currentLocation = await _loadCurrentLocationForMatching();
     final currentWeather = _loadCurrentWeatherForMatching();
 
@@ -438,12 +467,17 @@ extension SmartPushContentSelection on SmartPushService {
   }
 
   Future<String?> _loadCurrentLocationForMatching() async {
-    final currentLocation = _locationService.getFormattedLocation();
-    if (currentLocation.isNotEmpty) return currentLocation;
+    try {
+      final currentLocation = _locationService.getFormattedLocation();
+      if (currentLocation.isNotEmpty) return currentLocation;
 
-    await _locationService.init();
-    final resolvedLocation = _locationService.getFormattedLocation();
-    return resolvedLocation.isEmpty ? null : resolvedLocation;
+      await _locationService.init();
+      final resolvedLocation = _locationService.getFormattedLocation();
+      return resolvedLocation.isEmpty ? null : resolvedLocation;
+    } catch (e) {
+      AppLogger.w('加载当前位置用于智能推送匹配失败: $e');
+      return null;
+    }
   }
 
   String? _loadCurrentWeatherForMatching() {
