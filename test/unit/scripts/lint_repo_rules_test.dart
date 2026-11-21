@@ -232,6 +232,44 @@ Widget buildSample() => Container(color: Colors.blue);
         );
       },
     );
+
+    test(
+      'handles paths containing spaces and " b/" segments in --staged and --base modes without git show failure',
+      () async {
+        await initGitRepo();
+
+        const trickyPath = 'lib/pages/a b/spaced_page.dart';
+        await _writeFile(
+          tempDir,
+          trickyPath,
+          '''
+import 'package:flutter/material.dart';
+
+Widget buildSpaced() => Container(color: Colors.green);
+''',
+        );
+
+        await _git(tempDir.path, ['add', trickyPath]);
+        final stagedResult = await runLint(['--staged']);
+        expect(stagedResult.exitCode, equals(1));
+        expect(
+          stagedResult.stderr as String,
+          contains('$trickyPath:3 [no-material-named-colors]'),
+        );
+        expect(
+          stagedResult.stderr as String,
+          isNot(contains('Git command failed')),
+        );
+
+        await _git(tempDir.path, ['commit', '-m', 'feat: add spaced path']);
+        final baseResult = await runLint(['--base', 'HEAD~1']);
+        expect(baseResult.exitCode, equals(1));
+        expect(
+          baseResult.stderr as String,
+          contains('$trickyPath:3 [no-material-named-colors]'),
+        );
+      },
+    );
   });
 
   group('Multiline lexical windows & showSnackBar / comment / string stripping',
@@ -394,6 +432,76 @@ Widget buildLegacyPage(BuildContext context) {
         );
         expect(err, isNot(contains('[no-material-named-colors]')));
         expect(err, isNot(contains('[no-hardcoded-typography]')));
+      },
+    );
+
+    test(
+      'does not treat ignore_for_file or ignore directives inside string literals as real lint exemptions',
+      () async {
+        await initGitRepo();
+
+        await _writeFile(
+          tempDir,
+          'lib/pages/sneaky_page_v2.dart',
+          '''
+import 'package:flutter/material.dart';
+
+const fakeFileDirective = '// ignore_for_file: repo_lint';
+const fakeRawDirective = r'// ignore_for_file: repo_lint';
+
+Widget buildSneaky() {
+  return Container(
+    color: Colors.purple, // ignore: repo_lint
+  );
+}
+
+Widget buildWithFakePrecedingLineString() {
+  const fakeAbove = '// ignore: repo_lint';
+  return Container(color: Colors.teal, key: const ValueKey(fakeAbove));
+}
+
+Widget buildWithFakeInlineString() {
+  return Container(color: Colors.orange, key: const ValueKey('// ignore: repo_lint'));
+}
+''',
+        );
+
+        await _writeFile(
+          tempDir,
+          'lib/pages/exempted_legacy_v2.dart',
+          '''
+// ignore_for_file: repo_lint
+import 'package:flutter/material.dart';
+
+Widget buildExempted() => Container(color: Colors.purple);
+''',
+        );
+
+        final result = await runLint([
+          '--files',
+          './lib/pages/sneaky_page_v2.dart',
+          './lib/pages/exempted_legacy_v2.dart',
+        ]);
+        expect(result.exitCode, equals(1));
+        final err = result.stderr as String;
+        expect(
+          err,
+          contains('lib/pages/sneaky_page_v2.dart:1 [no-banned-file-suffix]'),
+        );
+        expect(
+          err,
+          contains(
+            'lib/pages/sneaky_page_v2.dart:14 [no-material-named-colors]',
+          ),
+        );
+        expect(
+          err,
+          contains(
+            'lib/pages/sneaky_page_v2.dart:18 [no-material-named-colors]',
+          ),
+        );
+        expect(err, isNot(contains('sneaky_page_v2.dart:8')));
+        expect(err, isNot(contains('exempted_legacy_v2.dart')));
       },
     );
   });
@@ -670,6 +778,62 @@ void main() {
         expect(err, isNot(contains('sample_location_test.dart:2')));
         expect(err, isNot(contains('sample_location_test.dart:3')));
         expect(err, isNot(contains('sample_location_test.dart:4')));
+      },
+    );
+
+    test(
+      'blocks deleted API calls both with and without receiver qualifiers while allowing replacement APIs',
+      () async {
+        await initGitRepo();
+
+        await _writeFile(
+          tempDir,
+          'lib/services/prompt_caller.dart',
+          '''
+class AIService {
+  static Future<String> generateDailyPrompt() async => '';
+  Future<String> streamGenerateDailyPrompt() async => '';
+}
+
+class SyncService {
+  Future<void> receiveAndMerge() async {}
+}
+
+class TimeUtils {
+  static String formatTime(DateTime dt) => '';
+  static String formatRelativeDateTime(DateTime dt) => '';
+}
+
+Future<void> runCalls(AIService ai, SyncService sync, DateTime now) async {
+  await AIService.generateDailyPrompt();
+  await ai.streamGenerateDailyPrompt();
+  await sync.receiveAndMerge();
+  TimeUtils.formatTime(now);
+  TimeUtils.formatRelativeDateTime(now);
+}
+''',
+        );
+
+        final result = await runLint([
+          '--files',
+          './lib/services/prompt_caller.dart',
+        ]);
+        expect(result.exitCode, equals(1));
+        final err = result.stderr as String;
+        expect(
+          err,
+          contains('lib/services/prompt_caller.dart:16 [no-deleted-api]'),
+        );
+        expect(
+          err,
+          contains('lib/services/prompt_caller.dart:18 [no-deleted-api]'),
+        );
+        expect(
+          err,
+          contains('lib/services/prompt_caller.dart:19 [no-deleted-api]'),
+        );
+        expect(err, isNot(contains('prompt_caller.dart:17')));
+        expect(err, isNot(contains('prompt_caller.dart:20')));
       },
     );
   });

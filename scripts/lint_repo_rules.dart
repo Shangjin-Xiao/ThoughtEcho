@@ -276,12 +276,7 @@ Future<_ScanPlan> _buildScanPlan(_ScanMode mode) async {
           (await _runGitOrFail(['rev-parse', '--show-toplevel'])).trim();
       final targets = await _collectGitDiffTargets(
         repoRoot: repoRoot,
-        diffArgs: const [
-          'diff',
-          '--cached',
-          '--diff-filter=ACMR',
-          '--unified=0'
-        ],
+        diffBaseArgs: const ['diff', '--cached', '--diff-filter=ACMR'],
       );
       return _ScanPlan(
         repoRoot: repoRoot,
@@ -309,7 +304,7 @@ Future<_ScanPlan> _buildScanPlan(_ScanMode mode) async {
       }
       final targets = await _collectGitDiffTargets(
         repoRoot: repoRoot,
-        diffArgs: ['diff', diffRange, '--diff-filter=ACMR', '--unified=0'],
+        diffBaseArgs: ['diff', diffRange, '--diff-filter=ACMR'],
       );
       return _ScanPlan(
         repoRoot: repoRoot,
@@ -323,7 +318,7 @@ Future<_ScanPlan> _buildScanPlan(_ScanMode mode) async {
           (await _runGitOrFail(['rev-parse', '--show-toplevel'])).trim();
       final targets = await _collectGitDiffTargets(
         repoRoot: repoRoot,
-        diffArgs: const ['diff', 'HEAD', '--diff-filter=ACMR', '--unified=0'],
+        diffBaseArgs: const ['diff', 'HEAD', '--diff-filter=ACMR'],
       );
       return _ScanPlan(
         repoRoot: repoRoot,
@@ -424,13 +419,29 @@ String _cleanSlashes(String path) {
 
 Future<List<_FileScanTarget>> _collectGitDiffTargets({
   required String repoRoot,
-  required List<String> diffArgs,
+  required List<String> diffBaseArgs,
 }) async {
-  final output = await _runGitOrFail(diffArgs, workingDirectory: repoRoot);
-  final addedLinesByFile = <String, Set<int>>{};
+  // 1. Obtain the unambiguous NUL-delimited list of added/copied/modified/renamed
+  //    paths so paths containing spaces or ` b/` never produce bogus targets.
+  final nameOnlyOutput = await _runGitOrFail(
+    [...diffBaseArgs, '--name-only', '-z'],
+    workingDirectory: repoRoot,
+  );
+  final addedLinesByFile = <String, Set<int>>{
+    for (final rawName in nameOnlyOutput.split('\x00'))
+      if (rawName.isNotEmpty) _cleanSlashes(rawName): <int>{},
+  };
+  if (addedLinesByFile.isEmpty) {
+    return const <_FileScanTarget>[];
+  }
+
+  // 2. Collect 1-indexed added/modified line numbers from `--unified=0` hunks.
+  final output = await _runGitOrFail(
+    [...diffBaseArgs, '--unified=0'],
+    workingDirectory: repoRoot,
+  );
 
   String? currentFile;
-  String? headerCandidateFile;
   var currentNewLine = 0;
 
   final hunkHeader = RegExp(r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@');
@@ -440,26 +451,22 @@ Future<List<_FileScanTarget>> _collectGitDiffTargets({
 
     if (line.startsWith('diff --git ')) {
       currentFile = null;
-      headerCandidateFile = _parseDiffGitRhsPath(line);
-      continue;
-    }
-    if (line.startsWith('rename to ')) {
-      final renamed = _cleanGitDiffPath(line.substring('rename to '.length));
-      headerCandidateFile = renamed;
-      addedLinesByFile.putIfAbsent(renamed, () => <int>{});
-      continue;
-    }
-    if (line.startsWith('new file mode ') && headerCandidateFile != null) {
-      addedLinesByFile.putIfAbsent(headerCandidateFile, () => <int>{});
       continue;
     }
     if (line.startsWith('+++ ')) {
-      final rhs = line.substring(4).trim();
-      if (rhs == '/dev/null') {
+      final rhs = line.substring(4);
+      if (rhs.trim() == '/dev/null') {
         currentFile = null;
       } else {
-        currentFile = _cleanGitDiffPath(rhs);
-        addedLinesByFile.putIfAbsent(currentFile, () => <int>{});
+        final candidate = _cleanGitDiffPath(rhs);
+        if (addedLinesByFile.containsKey(candidate)) {
+          currentFile = candidate;
+        } else {
+          final trimmedCandidate = _cleanGitDiffPath(rhs.trim());
+          currentFile = addedLinesByFile.containsKey(trimmedCandidate)
+              ? trimmedCandidate
+              : null;
+        }
       }
       continue;
     }
@@ -486,24 +493,9 @@ Future<List<_FileScanTarget>> _collectGitDiffTargets({
   ];
 }
 
-String? _parseDiffGitRhsPath(String line) {
-  // Format for standard unquoted paths: `diff --git a/<path> b/<path>`
-  final rest = line.substring('diff --git '.length);
-  if (rest.startsWith('a/')) {
-    final mid = rest.indexOf(' b/');
-    if (mid != -1) {
-      final left = rest.substring(2, mid);
-      final right = rest.substring(mid + 3);
-      if (left == right || right.isNotEmpty) {
-        return _cleanGitDiffPath('b/$right');
-      }
-    }
-  }
-  return null;
-}
-
 String _cleanGitDiffPath(String raw) {
-  var value = raw.trim();
+  // Git appends a trailing `\t` on `+++ b/<path>` headers when the path contains spaces.
+  var value = raw.endsWith('\t') ? raw.substring(0, raw.length - 1) : raw;
   if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
     value = _unescapeGitQuotedString(value.substring(1, value.length - 1));
   }
@@ -627,7 +619,7 @@ final _rawSentryCalleeRegex = RegExp(
 );
 
 final _deletedApiCalleeRegex = RegExp(
-  r'(?:^|[^\w.$])(?:generateDailyPrompt|receiveAndMerge)$|(?:^|[^\w.$])TimeUtils\s*\.\s*formatTime$',
+  r'(?:^|[^\w$])(?:generateDailyPrompt|receiveAndMerge)$|(?:^|[^\w$])TimeUtils\s*\.\s*formatTime$',
 );
 
 final _borderRadiusCircularCalleeRegex = RegExp(
@@ -762,17 +754,26 @@ Future<void> _scanFileTarget(
 ) async {
   final path = target.repoPath;
   final isDart = path.endsWith('.dart');
+  final hasBannedSuffix = _bannedFileSuffixRegex.hasMatch(path);
 
-  String content = '';
-  if (isDart || _bannedFileSuffixRegex.hasMatch(path)) {
-    content = await _readTargetContent(target, plan);
-  }
-
-  if (content.contains('ignore_for_file: repo_lint')) {
+  if (!hasBannedSuffix && (!isDart || target.addedLines.isEmpty)) {
     return;
   }
 
-  if (_bannedFileSuffixRegex.hasMatch(path)) {
+  String content = '';
+  List<int> lineStarts = const <int>[0];
+  _DartLexicalAnalysis? lex;
+
+  if (isDart) {
+    content = await _readTargetContent(target, plan);
+    lineStarts = _computeLineStarts(content);
+    lex = _analyzeDartSourceLexically(content, lineStarts);
+    if (lex.hasFileIgnore) {
+      return;
+    }
+  }
+
+  if (hasBannedSuffix) {
     _recordViolation(
       violations: violations,
       seenKeys: seenViolationKeys,
@@ -784,19 +785,18 @@ Future<void> _scanFileTarget(
     );
   }
 
-  if (!isDart || target.addedLines.isEmpty || content.isEmpty) {
+  if (!isDart || target.addedLines.isEmpty || content.isEmpty || lex == null) {
     return;
   }
 
   final rawLines = content.split('\n');
-  final lineStarts = _computeLineStarts(content);
-  final sanitized = _sanitizeDartSource(content);
+  final sanitized = lex.sanitizedCode;
 
   if (path.startsWith('test/')) {
     _scanTestPlaceNames(
       filePath: path,
       rawLines: rawLines,
-      sanitized: sanitized,
+      lex: lex,
       lineStarts: lineStarts,
       addedLines: target.addedLines,
       violations: violations,
@@ -820,8 +820,7 @@ Future<void> _scanFileTarget(
     message:
         'Do not use Tailwind palette literals; derive colors from ColorScheme or AppSemanticColors.',
     filePath: path,
-    sanitized: sanitized,
-    rawLines: rawLines,
+    lex: lex,
     lineStarts: lineStarts,
     addedLines: target.addedLines,
     violations: violations,
@@ -835,8 +834,7 @@ Future<void> _scanFileTarget(
       message:
           'Use AptabaseHelper.trackEvent / trackPageView instead of calling Aptabase SDK directly.',
       filePath: path,
-      sanitized: sanitized,
-      rawLines: rawLines,
+      lex: lex,
       lineStarts: lineStarts,
       addedLines: target.addedLines,
       violations: violations,
@@ -851,8 +849,7 @@ Future<void> _scanFileTarget(
       message:
           'Use ColorScheme (onSurfaceVariant, surfaceContainerHighest, error) or AppSemanticColors instead of Colors.* in UI layer.',
       filePath: path,
-      sanitized: sanitized,
-      rawLines: rawLines,
+      lex: lex,
       lineStarts: lineStarts,
       addedLines: target.addedLines,
       violations: violations,
@@ -867,8 +864,7 @@ Future<void> _scanFileTarget(
         message:
             'Do not branch on ThemeStyle in widgets; read shape/rule tokens from AppShapeTokens.of(context).',
         filePath: path,
-        sanitized: sanitized,
-        rawLines: rawLines,
+        lex: lex,
         lineStarts: lineStarts,
         addedLines: target.addedLines,
         violations: violations,
@@ -883,8 +879,7 @@ Future<void> _scanFileTarget(
         message:
             'Use AppShapeTokens.of(context).cardRadius/buttonRadius/inputRadius/dialogRadius/fabRadius instead of static AppTheme.*Radius.',
         filePath: path,
-        sanitized: sanitized,
-        rawLines: rawLines,
+        lex: lex,
         lineStarts: lineStarts,
         addedLines: target.addedLines,
         violations: violations,
@@ -915,8 +910,8 @@ Future<void> _scanFileTarget(
     final clauseStartLine = _lineAtOffset(lineStarts, enclosingClause.$1);
     final clauseEndLine = _lineAtOffset(lineStarts, enclosingClause.$2);
 
-    if (_isWindowIgnored(rawLines, windowStartLine, windowEndLine) ||
-        _isWindowIgnored(rawLines, clauseStartLine, clauseEndLine)) {
+    if (_isWindowIgnored(lex, windowStartLine, windowEndLine) ||
+        _isWindowIgnored(lex, clauseStartLine, clauseEndLine)) {
       continue;
     }
 
@@ -1085,13 +1080,13 @@ void _scanRegexWithClauseWindows({
   required String ruleId,
   required String message,
   required String filePath,
-  required String sanitized,
-  required List<String> rawLines,
+  required _DartLexicalAnalysis lex,
   required List<int> lineStarts,
   required Set<int> addedLines,
   required List<String> violations,
   required Set<String> seenViolationKeys,
 }) {
+  final sanitized = lex.sanitizedCode;
   for (final match in regex.allMatches(sanitized)) {
     final clauseRange = _findEnclosingClauseOffsets(
       sanitized,
@@ -1109,7 +1104,7 @@ void _scanRegexWithClauseWindows({
       continue;
     }
 
-    if (_isWindowIgnored(rawLines, windowStartLine, windowEndLine)) {
+    if (_isWindowIgnored(lex, windowStartLine, windowEndLine)) {
       continue;
     }
 
@@ -1128,12 +1123,13 @@ void _scanRegexWithClauseWindows({
 void _scanTestPlaceNames({
   required String filePath,
   required List<String> rawLines,
-  required String sanitized,
+  required _DartLexicalAnalysis lex,
   required List<int> lineStarts,
   required Set<int> addedLines,
   required List<String> violations,
   required Set<String> seenViolationKeys,
 }) {
+  final sanitized = lex.sanitizedCode;
   final sortedLines = addedLines.toList()..sort();
   for (final lineNum in sortedLines) {
     if (lineNum < 1 || lineNum > rawLines.length) continue;
@@ -1148,8 +1144,8 @@ void _scanTestPlaceNames({
     final clauseStartLine = _lineAtOffset(lineStarts, clauseOffsets.$1);
     final clauseEndLine = _lineAtOffset(lineStarts, clauseOffsets.$2);
 
-    if (_isWindowIgnored(rawLines, lineNum, lineNum) ||
-        _isWindowIgnored(rawLines, clauseStartLine, clauseEndLine)) {
+    if (_isWindowIgnored(lex, lineNum, lineNum) ||
+        _isWindowIgnored(lex, clauseStartLine, clauseEndLine)) {
       continue;
     }
 
@@ -1196,22 +1192,20 @@ bool _rangeIntersectsAddedLines(
   return false;
 }
 
-bool _isWindowIgnored(List<String> rawLines, int startLine, int endLine) {
-  final clampedStart = startLine < 1 ? 1 : startLine;
-  final clampedEnd = endLine > rawLines.length ? rawLines.length : endLine;
-
-  for (var line = clampedStart; line <= clampedEnd; line++) {
-    if (rawLines[line - 1].contains('ignore: repo_lint')) {
+bool _isWindowIgnored(
+  _DartLexicalAnalysis lex,
+  int startLine,
+  int endLine,
+) {
+  for (var line = startLine; line <= endLine; line++) {
+    if (lex.inlineIgnoredLines.contains(line)) {
       return true;
     }
   }
 
-  if (clampedStart > 1) {
-    final prevTrimmed = rawLines[clampedStart - 2].trimLeft();
-    if ((prevTrimmed.startsWith('//') || prevTrimmed.startsWith('/*')) &&
-        prevTrimmed.contains('ignore: repo_lint')) {
-      return true;
-    }
+  if (startLine > 1 &&
+      lex.standaloneIgnoreCommentLines.contains(startLine - 1)) {
+    return true;
   }
 
   return false;
@@ -1220,6 +1214,28 @@ bool _isWindowIgnored(List<String> rawLines, int startLine, int endLine) {
 // ---------------------------------------------------------------------------
 // Pure-Stdlib Dart Lexical Sanitizer & Balanced Delimiter Parser
 // ---------------------------------------------------------------------------
+
+final _fileIgnoreCommentRegex = RegExp(
+  r'\bignore_for_file\s*:\s*[^\n]*\brepo_lint\b',
+);
+
+final _lineIgnoreCommentRegex = RegExp(
+  r'\bignore\s*:\s*[^\n]*\brepo_lint\b',
+);
+
+class _DartLexicalAnalysis {
+  final String sanitizedCode;
+  final bool hasFileIgnore;
+  final Set<int> inlineIgnoredLines;
+  final Set<int> standaloneIgnoreCommentLines;
+
+  const _DartLexicalAnalysis({
+    required this.sanitizedCode,
+    required this.hasFileIgnore,
+    required this.inlineIgnoredLines,
+    required this.standaloneIgnoreCommentLines,
+  });
+}
 
 class _ActiveStringState {
   final int quoteChar;
@@ -1236,13 +1252,21 @@ class _InterpFrame {
 }
 
 /// Replaces comments and string literal contents with spaces (`0x20`) while
-/// preserving every `\n` (`0x0A`) at its exact character index and preserving
-/// `${...}` string interpolations as balanced `(...)` code expressions.
-String _sanitizeDartSource(String source) {
+/// preserving every `\n` (`0x0A`) at its exact character index, preserving
+/// `${...}` string interpolations as balanced `(...)` code expressions, and
+/// extracting `ignore_for_file: repo_lint` / `ignore: repo_lint` exclusively
+/// from genuine Dart comments (never from string literals).
+_DartLexicalAnalysis _analyzeDartSourceLexically(
+  String source,
+  List<int> lineStarts,
+) {
   final len = source.length;
   final out = List<int>.filled(len, 0x20);
   final interpStack = <_InterpFrame>[];
   _ActiveStringState? activeString;
+  var hasFileIgnore = false;
+  final inlineIgnoredLines = <int>{};
+  final standaloneIgnoreCommentLines = <int>{};
 
   var i = 0;
   while (i < len) {
@@ -1309,9 +1333,26 @@ String _sanitizeDartSource(String source) {
     if (cu == 0x2F /* / */ &&
         i + 1 < len &&
         source.codeUnitAt(i + 1) == 0x2F /* / */) {
+      final commentStart = i;
       i += 2;
       while (i < len && source.codeUnitAt(i) != 0x0A) {
         i++;
+      }
+      final commentBody = source.substring(commentStart + 2, i);
+      if (_fileIgnoreCommentRegex.hasMatch(commentBody)) {
+        hasFileIgnore = true;
+      }
+      if (_lineIgnoreCommentRegex.hasMatch(commentBody)) {
+        final lineNum = _lineAtOffset(lineStarts, commentStart);
+        inlineIgnoredLines.add(lineNum);
+        final lineStartOffset = lineStarts[lineNum - 1];
+        if (_isHorizontalWhitespaceSlice(
+          source,
+          lineStartOffset,
+          commentStart,
+        )) {
+          standaloneIgnoreCommentLines.add(lineNum);
+        }
       }
       continue;
     }
@@ -1320,6 +1361,7 @@ String _sanitizeDartSource(String source) {
     if (cu == 0x2F /* / */ &&
         i + 1 < len &&
         source.codeUnitAt(i + 1) == 0x2A /* * */) {
+      final commentStart = i;
       var depth = 1;
       i += 2;
       while (i < len && depth > 0) {
@@ -1339,6 +1381,31 @@ String _sanitizeDartSource(String source) {
           i += 2;
         } else {
           i++;
+        }
+      }
+      final bodyEnd = i >= commentStart + 4 ? i - 2 : i;
+      final commentBody = source.substring(commentStart + 2, bodyEnd);
+      if (_fileIgnoreCommentRegex.hasMatch(commentBody)) {
+        hasFileIgnore = true;
+      }
+      if (_lineIgnoreCommentRegex.hasMatch(commentBody)) {
+        final startLine = _lineAtOffset(lineStarts, commentStart);
+        final endLine = _lineAtOffset(lineStarts, i > 0 ? i - 1 : 0);
+        for (var l = startLine; l <= endLine; l++) {
+          inlineIgnoredLines.add(l);
+        }
+        final startLineOffset = lineStarts[startLine - 1];
+        var endOfEndLine = i;
+        while (endOfEndLine < len && source.codeUnitAt(endOfEndLine) != 0x0A) {
+          endOfEndLine++;
+        }
+        if (_isHorizontalWhitespaceSlice(
+              source,
+              startLineOffset,
+              commentStart,
+            ) &&
+            _isHorizontalWhitespaceSlice(source, i, endOfEndLine)) {
+          standaloneIgnoreCommentLines.add(endLine);
         }
       }
       continue;
@@ -1414,7 +1481,22 @@ String _sanitizeDartSource(String source) {
     i++;
   }
 
-  return String.fromCharCodes(out);
+  return _DartLexicalAnalysis(
+    sanitizedCode: String.fromCharCodes(out),
+    hasFileIgnore: hasFileIgnore,
+    inlineIgnoredLines: inlineIgnoredLines,
+    standaloneIgnoreCommentLines: standaloneIgnoreCommentLines,
+  );
+}
+
+bool _isHorizontalWhitespaceSlice(String s, int start, int end) {
+  for (var idx = start; idx < end; idx++) {
+    final cu = s.codeUnitAt(idx);
+    if (cu != 0x20 && cu != 0x09 && cu != 0x0D) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool _isIdentChar(int cu) =>
