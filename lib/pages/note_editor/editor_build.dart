@@ -285,6 +285,11 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                   enableInteractiveSelection: true,
                                   enableSelectionToolbar: true,
                                   showCursor: true,
+                                  customShortcuts: const <ShortcutActivator,
+                                      Intent>{
+                                    _EditorEscapePassThroughActivator():
+                                        _EditorPassThroughIntent(),
+                                  },
                                 ),
                               ),
                             ),
@@ -400,4 +405,30 @@ class _EditorSaveOverlay extends StatelessWidget {
       ),
     );
   }
+}
+
+class _EditorPassThroughIntent extends Intent {
+  const _EditorPassThroughIntent();
+}
+
+/// Precedes `flutter_quill`'s default `SingleActivator(escape)` ->
+/// `HideSelectionToolbarIntent` entry in `QuillEditor` so `Shortcuts` returns
+/// `KeyEventResult.ignored` and `Escape` propagates to the outer
+/// `CallbackShortcuts` even while `QuillEditor` holds focus.
+class _EditorEscapePassThroughActivator extends ShortcutActivator {
+  const _EditorEscapePassThroughActivator();
+
+  static const SingleActivator _delegate = SingleActivator(
+    LogicalKeyboardKey.escape,
+  );
+
+  @override
+  Iterable<LogicalKeyboardKey> get triggers => _delegate.triggers;
+
+  @override
+  bool accepts(KeyEvent event, HardwareKeyboard state) =>
+      _delegate.accepts(event, state);
+
+  @override
+  String debugDescribeKeys() => _delegate.debugDescribeKeys();
 }

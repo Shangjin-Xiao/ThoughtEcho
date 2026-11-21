@@ -334,7 +334,7 @@ extension _ThoughterAgent on _ThoughterPageState {
                 content: widget.quote!.content,
                 documentKind: ProposeNoteEditTool.kindForQuote(widget.quote!),
                 documentRevision:
-                    ProposeNoteEditTool.revisionForQuote(widget.quote!),
+                    ProposeNoteEditTool.tryRevisionForQuote(widget.quote!),
               )
             : null,
       );

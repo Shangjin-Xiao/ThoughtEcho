@@ -78,7 +78,8 @@ class NoteProposalApplier {
       }
     }
     if (note == null ||
-        ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
+        ProposeNoteEditTool.tryRevisionForQuote(note) !=
+            artifact.baseRevision) {
       return const NoteProposalApplyResult(NoteProposalApplyStatus.conflict);
     }
     final result =

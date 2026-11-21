@@ -1078,4 +1078,92 @@ void main() {
       expect(databaseService.updatedQuotes.single.temperature, isNull);
     },
   );
+
+  testWidgets(
+    'Ctrl+S, Cmd+S, and Escape propagate through actively focused QuillEditor without interception',
+    (tester) async {
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        if (details.exceptionAsString().contains('A RenderFlex overflowed')) {
+          return;
+        }
+        originalOnError?.call(details);
+      };
+      addTearDown(() => FlutterError.onError = originalOnError);
+
+      bool? routeResult;
+      await tester.pumpWidget(
+        _buildTestApp(
+          databaseService: databaseService,
+          onEditorResult: (result) => routeResult = result,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _openEditor(tester);
+
+      final editorFinder = find.byType(QuillEditor);
+      expect(editorFinder, findsOneWidget);
+
+      // Explicitly focus QuillEditor and place a valid caret selection inside it
+      await tester.tap(editorFinder);
+      await tester.pumpAndSettle();
+      final quillWidget = tester.widget<QuillEditor>(editorFinder);
+      expect(quillWidget.focusNode.hasFocus, isTrue);
+
+      quillWidget.controller.replaceText(
+        0,
+        0,
+        'Focused editor paragraph',
+        const TextSelection.collapsed(offset: 24),
+      );
+      await tester.pump();
+      expect(quillWidget.focusNode.hasFocus, isTrue);
+
+      // Press Escape while focused with unsaved edits -> must NOT be swallowed by
+      // QuillEditor's HideSelectionToolbarIntent, must open unsaved-changes dialog
+      await _pressEscape(tester);
+      expect(find.byType(AlertDialog), findsOneWidget);
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.tap(find.text(l10n.continueEditing));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+
+      // Re-confirm QuillEditor holds focus, then save via Ctrl+S
+      quillWidget.focusNode.requestFocus();
+      await tester.pump();
+      expect(quillWidget.focusNode.hasFocus, isTrue);
+
+      await _saveViaShortcut(tester);
+      expect(databaseService.addedQuotes, hasLength(1));
+      expect(
+        databaseService.addedQuotes.single.content,
+        'Focused editor paragraph',
+      );
+      expect(quillWidget.focusNode.hasFocus, isTrue);
+
+      // Append text while still focused and save via Cmd+S
+      quillWidget.controller.replaceText(
+        24,
+        0,
+        ' + meta save',
+        const TextSelection.collapsed(offset: 36),
+      );
+      await tester.pump();
+      expect(quillWidget.focusNode.hasFocus, isTrue);
+
+      await _saveViaShortcut(tester, meta: true);
+      expect(databaseService.updatedQuotes, hasLength(1));
+      expect(
+        databaseService.updatedQuotes.single.content,
+        'Focused editor paragraph + meta save',
+      );
+      expect(quillWidget.focusNode.hasFocus, isTrue);
+
+      // Press Escape while QuillEditor is still focused and clean -> exits with true
+      await _pressEscape(tester);
+      expect(find.byType(NoteFullEditorPage), findsNothing);
+      expect(routeResult, isTrue);
+    },
+  );
 }

@@ -1395,7 +1395,8 @@ extension _ThoughterUI on _ThoughterPageState {
     if (!mounted) return null;
     if (note != null && !await _authorizeProposalNote(note)) return null;
     if (note == null ||
-        ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
+        ProposeNoteEditTool.tryRevisionForQuote(note) !=
+            artifact.baseRevision) {
       _showRichEditConflict();
       return null;
     }

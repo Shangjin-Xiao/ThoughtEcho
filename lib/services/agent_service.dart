@@ -118,7 +118,7 @@ class AgentNoteContext {
   final String? noteId;
   final String content;
   final NoteDocumentKind documentKind;
-  final String documentRevision;
+  final String? documentRevision;
 }
 
 /// Agent 运行时服务 — 基于 OpenAI 原生 tool calling 的 Agent Loop。
@@ -1403,15 +1403,23 @@ class AgentService extends ChangeNotifier {
     // 绑定笔记作为独立数据消息，避免把私人正文嵌入系统提示词。
     if (noteContext != null) {
       final noteId = noteContext.noteId;
+      final revision = noteContext.documentRevision;
       // 草稿（还没入库）不能伪造一个 note_id 塞给模型——它既没法拿去调编辑工具，
       // 又会被当成事实汇报给用户（「这条笔记未保存」）。直接说清楚状态即可。
+      // 已入库笔记若富文本 Delta 损坏导致无法计算 revision，仅提供只读纯文本上下文，
+      // 不伪造替代 revision，避免模型发起注定失败或冲突的编辑提案。
       final identityLines = noteId == null
           ? '状态: 这是尚未保存到数据库的草稿，没有 note_id。\n'
               '不要声称笔记「未保存」或据此拒绝工作；要落库请用 propose_note_create，'
               '不要调用需要 note_id 的编辑工具。\n'
-          : 'note_id: ${escapeUntrustedText(noteId)}\n'
-              'document_kind: ${noteContext.documentKind.name}\n'
-              'document_revision: ${noteContext.documentRevision}\n';
+          : revision == null
+              ? 'note_id: ${escapeUntrustedText(noteId)}\n'
+                  'document_kind: ${noteContext.documentKind.name}\n'
+                  '状态: 该笔记存储的富文本格式无法解析，当前仅提供只读纯文本正文，没有可用的 document_revision；'
+                  '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n'
+              : 'note_id: ${escapeUntrustedText(noteId)}\n'
+                  'document_kind: ${noteContext.documentKind.name}\n'
+                  'document_revision: $revision\n';
       messages.add(openai.ChatMessage.user(
         '[当前绑定笔记 - 应用提供的引用信息]\n'
         '$identityLines'

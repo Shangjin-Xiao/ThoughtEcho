@@ -384,6 +384,50 @@ void main() {
       expect(contextMessage, contains('[SYS_TEM]'));
     });
 
+    test(
+        'injects read-only bound note context without substitute document_revision when revision is null',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      late List<openai.ChatMessage> capturedMessages;
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          capturedMessages = messages;
+          return _textCompletion('Here is your itinerary summary.');
+        },
+      );
+
+      await service.runAgent(
+        userMessage: '总结这篇行程',
+        noteContext: const AgentNoteContext(
+          noteId: 'note-corrupt-1',
+          content: 'Trip itinerary',
+          documentKind: NoteDocumentKind.rich,
+          documentRevision: null,
+        ),
+      );
+
+      final contextMessage = _chatMessageText(capturedMessages[1]);
+      expect(contextMessage, contains('note_id: note-corrupt-1'));
+      expect(contextMessage, contains('document_kind: rich'));
+      expect(contextMessage, isNot(contains('document_revision:')));
+      expect(contextMessage, contains('没有可用的 document_revision'));
+      expect(contextMessage, contains('Trip itinerary'));
+    });
+
     test('preserves one typed proposal artifact in the final response',
         () async {
       final provider = const AIProviderSettings(

@@ -134,6 +134,16 @@ class ProposeNoteEditTool extends AgentTool {
   static String revisionForQuote(Quote quote) =>
       AgentNoteDocumentCodec.revisionOf(opsForQuote(quote));
 
+  static String? tryRevisionForQuote(Quote quote) {
+    try {
+      return revisionForQuote(quote);
+    } on AgentNoteDocumentException {
+      return null;
+    } on FormatException {
+      return null;
+    }
+  }
+
   @override
   Future<ToolResult> execute(ToolCall call) async {
     final validationError = validateToolArguments(
