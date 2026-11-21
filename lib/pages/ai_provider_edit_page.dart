@@ -52,6 +52,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
   final _hostOverrideController = TextEditingController();
 
   AIProviderPreset? _preset;
+  bool _userSelectedPreset = false;
 
   /// 进入页面时安全存储里已有的 Key，用来判断保存时到底动没动过密钥。
   String _storedApiKey = '';
@@ -249,28 +250,15 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       );
     }
 
-    final isUnchangedOpenAICompatibleEndpoint = existing != null &&
-        _baselineProtocol(existing) == AIProtocolType.openAICompatible &&
-        _normalizeEffectiveEndpointUrl(
-              trimmedUrl,
-              protocol: AIProtocolType.openAICompatible,
-            ) ==
-            _normalizeEffectiveEndpointUrl(
-              existing.apiUrl,
-              protocol: AIProtocolType.openAICompatible,
-            );
-
-    final hasExplicitCustomNativeEndpoint =
-        !isUnchangedOpenAICompatibleEndpoint &&
-            urlMatched == null &&
-            !lowerUrl.contains('/chat/completions') &&
-            AIProviderSettings.hasAnthropicMessagesEndpoint(trimmedUrl);
-
-    if (existing != null) {
+    if (existing != null && !_userSelectedPreset) {
       final baselineProtocol = _baselineProtocol(existing);
+      final droppedExplicitMessagesPath =
+          AIProviderSettings.hasAnthropicMessagesEndpoint(existing.apiUrl) &&
+              !AIProviderSettings.hasAnthropicMessagesEndpoint(trimmedUrl);
       final canPreserveExistingProtocol =
           !(baselineProtocol == AIProtocolType.anthropicMessages &&
-              lowerUrl.contains('/chat/completions'));
+              (lowerUrl.contains('/chat/completions') ||
+                  droppedExplicitMessagesPath));
       if (canPreserveExistingProtocol) {
         final sameEndpointAsExisting = _normalizeEffectiveEndpointUrl(
               trimmedUrl,
@@ -280,17 +268,44 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
               existing.apiUrl,
               protocol: baselineProtocol,
             );
-        if (sameEndpointAsExisting && activePreset == null) {
+        if (sameEndpointAsExisting) {
+          final baselineSlug = _baselineProviderSlug(existing);
+          final baselinePreset = urlMatched ??
+              (baselineSlug != null
+                  ? AIProviderPresets.bySlugOrId(baselineSlug)
+                  : null);
           return (
-            matchedPreset: null,
-            providerSlug: _baselineProviderSlug(existing),
+            matchedPreset: baselinePreset != null &&
+                    baselinePreset.kind != AIPresetKind.custom
+                ? baselinePreset
+                : null,
+            providerSlug: baselineSlug,
             protocol: baselineProtocol,
           );
         }
       }
     }
 
-    if (activePreset != null && !hasExplicitCustomNativeEndpoint) {
+    final hasExplicitNativeEndpoint = !lowerUrl.contains('/chat/completions') &&
+        AIProviderSettings.hasAnthropicMessagesEndpoint(trimmedUrl);
+    if (hasExplicitNativeEndpoint) {
+      final nativePreset =
+          urlMatched != null && urlMatched.kind != AIPresetKind.custom
+              ? urlMatched
+              : (activePreset != null &&
+                      activePreset.protocol == AIProtocolType.anthropicMessages
+                  ? activePreset
+                  : null);
+      return (
+        matchedPreset: nativePreset,
+        providerSlug: nativePreset != null
+            ? (nativePreset.modelsDevProviderId ?? nativePreset.id)
+            : null,
+        protocol: AIProtocolType.anthropicMessages,
+      );
+    }
+
+    if (activePreset != null) {
       return (
         matchedPreset: activePreset,
         providerSlug: activePreset.modelsDevProviderId ?? activePreset.id,
@@ -301,9 +316,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     return (
       matchedPreset: null,
       providerSlug: null,
-      protocol: hasExplicitCustomNativeEndpoint
-          ? AIProtocolType.anthropicMessages
-          : AIProtocolType.openAICompatible,
+      protocol: AIProtocolType.openAICompatible,
     );
   }
 
@@ -465,8 +478,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       final trimmedUrl = _apiUrlController.text.trim();
       final trimmedModel = _modelController.text.trim();
       final resolved = _resolveEndpointMetadata(trimmedUrl, existing);
-      final requiresApiKey =
-          (resolved.matchedPreset ?? _preset)?.requiresApiKey ?? true;
+      final requiresApiKey = resolved.matchedPreset?.requiresApiKey ?? true;
       final saved = AIProviderSettings(
         id: providerId,
         name: _nameController.text.trim(),
@@ -556,6 +568,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       builder: (_) => _PresetPickerSheet(selectedId: _preset?.id),
     );
     if (selected != null && mounted) {
+      _userSelectedPreset = true;
       _applyPreset(selected);
     }
   }

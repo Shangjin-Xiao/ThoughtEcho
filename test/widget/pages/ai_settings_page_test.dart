@@ -1235,5 +1235,152 @@ void main() {
       expect(savedRestored.isAnthropicMessagesApi, isTrue);
       expect(savedRestored.modelMetadata?.contextWindow, 200000);
     });
+
+    testWidgets(
+        'editor preserves native /v1/messages protocol and metadata on preset-host rename, and detects changed /v1/messages URLs on preset hosts',
+        (tester) async {
+      AIConnectionTester.testOverrideForTesting = null;
+      await APIKeyManager()
+          .saveProviderApiKey('p_or_native', 'sk-or-native-1234');
+      await APIKeyManager()
+          .saveProviderApiKey('p_or_openai', 'sk-or-openai-1234');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_or_native',
+              name: 'OpenRouter 原生 Messages',
+              apiUrl: 'https://openrouter.ai/api/v1/messages',
+              model: 'anthropic/claude-sonnet-4.5',
+              providerSlug: 'openrouter',
+              protocol: AIProtocolType.anthropicMessages,
+              modelMetadata: AIModelMetadata(
+                contextWindow: 200000,
+                reasoning: true,
+              ),
+            ),
+            AIProviderSettings(
+              id: 'p_or_openai',
+              name: 'OpenRouter 标准配置',
+              apiUrl: 'https://openrouter.ai/api/v1',
+              model: 'anthropic/claude-sonnet-4.5',
+              providerSlug: 'openrouter',
+              protocol: AIProtocolType.openAICompatible,
+              modelMetadata: AIModelMetadata(
+                contextWindow: 128000,
+                reasoning: false,
+              ),
+            ),
+          ],
+          currentProviderId: 'p_or_native',
+        ),
+      );
+
+      addTearDown(() => AIConnectionTester.testOverrideForTesting = null);
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      final expectedUnsupportedMsg = l10n.connectionTestFailed(
+        l10n.aiUnsupportedAnthropicMessagesProtocol,
+      );
+
+      // 1. Rename restored OpenRouter /v1/messages provider -> Test Connection shows guidance, Save preserves protocol & metadata
+      await tester.tap(find.text('OpenRouter 原生 Messages'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.configNameField),
+        'OpenRouter 原生 Messages（已重命名）',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(find.text(expectedUnsupportedMsg), findsOneWidget);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      final renamedNative = settingsService.multiAISettings.providers
+          .firstWhere((p) => p.id == 'p_or_native');
+      expect(renamedNative.name, 'OpenRouter 原生 Messages（已重命名）');
+      expect(renamedNative.providerSlug, 'openrouter');
+      expect(renamedNative.protocol, AIProtocolType.anthropicMessages);
+      expect(renamedNative.isAnthropicMessagesApi, isTrue);
+      expect(renamedNative.modelMetadata?.contextWindow, 200000);
+      expect(renamedNative.modelMetadata?.reasoning, isTrue);
+
+      // 2. Change OpenRouter OpenAI provider URL to /v1/messages -> classified as native Messages, clears stale metadata
+      ScaffoldMessenger.of(
+        tester.element(find.byType(AISettingsPage)),
+      ).clearSnackBars();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip(l10n.moreOptions).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.edit));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.apiUrlField),
+        'https://openrouter.ai/api/v1/messages',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(find.text(expectedUnsupportedMsg), findsOneWidget);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      final switchedToNative = settingsService.multiAISettings.providers
+          .firstWhere((p) => p.id == 'p_or_openai');
+      expect(switchedToNative.providerSlug, 'openrouter');
+      expect(switchedToNative.protocol, AIProtocolType.anthropicMessages);
+      expect(switchedToNative.isAnthropicMessagesApi, isTrue);
+      expect(switchedToNative.modelMetadata, isNull);
+
+      // 3. Follow guidance and switch /v1/messages back to /api/v1 -> transitions cleanly to OpenAI-compatible
+      final testedDrafts = <AIProviderSettings>[];
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async {
+        final config = OpenAIStreamService.buildOpenAIConfig(provider);
+        expect(config.baseUrl, 'https://openrouter.ai/api/v1');
+        testedDrafts.add(provider);
+        return 'pong';
+      };
+
+      await tester.tap(find.text('OpenRouter 标准配置'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.apiUrlField),
+        'https://openrouter.ai/api/v1',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts, hasLength(1));
+      expect(testedDrafts.single.protocol, AIProtocolType.openAICompatible);
+      expect(testedDrafts.single.providerSlug, 'openrouter');
+      expect(find.text(l10n.connectionTestSuccess), findsOneWidget);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      final switchedBackToOpenAI = settingsService.multiAISettings.providers
+          .firstWhere((p) => p.id == 'p_or_openai');
+      expect(switchedBackToOpenAI.protocol, AIProtocolType.openAICompatible);
+      expect(switchedBackToOpenAI.providerSlug, 'openrouter');
+      expect(switchedBackToOpenAI.isAnthropicMessagesApi, isFalse);
+    });
   });
 }
