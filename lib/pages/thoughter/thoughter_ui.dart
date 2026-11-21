@@ -287,7 +287,7 @@ extension _ThoughterUI on _ThoughterPageState {
                                   padding: _kMessageInsets,
                                   child: _BlinkingCursor(
                                     key: const ValueKey('ai_assistant_waiting'),
-                                    color: theme.colorScheme.onSurfaceVariant,
+                                    style: _waitingCursorStyle(theme),
                                   ),
                                 );
                               }
@@ -781,6 +781,13 @@ extension _ThoughterUI on _ThoughterPageState {
     );
   }
 
+  /// 复用 Markdown 回复段落的排版度量（字号与行高），仅替换为弱化前景色，
+  /// 确保等待光标与后续流式正文首段行高同源，修改任一处都不会恢复跳动。
+  TextStyle? _waitingCursorStyle(ThemeData theme) =>
+      _getMarkdownStyleSheet(theme, theme.colorScheme.onSurface)
+          .p
+          ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+
   /// AI 回复：不套气泡，正文直接铺在页面背景上占满可读宽度。
   /// markdown 里的标题、列表、代码块套气泡会被挤窄，长文阅读体验差。
   Widget _buildAgentMessage(
@@ -818,7 +825,7 @@ extension _ThoughterUI on _ThoughterPageState {
             ),
           // 还没有首个 token：正文是空的，光标先自己闪着占住位置
           if (!hasContent && isStreaming)
-            _BlinkingCursor(color: theme.colorScheme.onSurfaceVariant)
+            _BlinkingCursor(style: _waitingCursorStyle(theme))
           else if (hasContent)
             MarkdownBody(
               data: isStreaming
@@ -2074,9 +2081,9 @@ class _MessageAction extends StatelessWidget {
 /// 还没有正文可接的那段时间——刚发出提问、正在调工具——由它顶上，用的是同一个
 /// 字形，于是从"等着"到"开始说"是同一个光标在延续，而不是换了个动画。
 class _BlinkingCursor extends StatefulWidget {
-  final Color color;
+  final TextStyle? style;
 
-  const _BlinkingCursor({super.key, required this.color});
+  const _BlinkingCursor({super.key, this.style});
 
   @override
   State<_BlinkingCursor> createState() => _BlinkingCursorState();
@@ -2117,17 +2124,12 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return RepaintBoundary(
       child: FadeTransition(
         opacity: _opacity,
         child: Text(
           _kStreamingCursor,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: widget.color,
-            // 与 Thoughter Markdown 回复段落行高保持一致，避免等待光标切换到流式正文时跳动
-            height: 1.65, // ignore: repo_lint
-          ),
+          style: widget.style,
         ),
       ),
     );
