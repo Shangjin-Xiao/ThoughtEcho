@@ -442,13 +442,13 @@ void main() {
     });
 
     test(
-        'distinguishes native anthropic.com /v1 endpoint from OpenAI-compatible /v1/chat/completions endpoint',
+        'distinguishes literal /v1/messages endpoint from shared OpenAI-compatible /v1 base URL and /v1/chat/completions',
         () {
       const nativeAnthropic = AIProviderSettings(
         id: 'provider_custom_ant',
         name: 'Anthropic Native',
         apiKey: 'sk-ant-native',
-        apiUrl: 'https://api.anthropic.com/v1',
+        apiUrl: 'https://api.anthropic.com/v1/messages',
         model: 'claude-sonnet-4-5',
       );
       expect(nativeAnthropic.isAnthropicMessagesApi, isTrue);
@@ -457,6 +457,24 @@ void main() {
         'https://api.anthropic.com/v1/messages',
       );
       expect(nativeAnthropic.buildHeaders()['x-api-key'], 'sk-ant-native');
+
+      const sharedBaseAnthropic = AIProviderSettings(
+        id: 'provider_shared_ant',
+        name: 'Anthropic Shared Base',
+        apiKey: 'sk-ant-shared',
+        apiUrl: 'https://api.anthropic.com/v1',
+        model: 'claude-sonnet-4-5',
+        providerSlug: 'anthropic',
+      );
+      expect(sharedBaseAnthropic.isAnthropicMessagesApi, isFalse);
+      expect(
+        sharedBaseAnthropic.resolveRequestUrl(sharedBaseAnthropic.apiUrl),
+        'https://api.anthropic.com/v1/chat/completions',
+      );
+      expect(
+        sharedBaseAnthropic.buildHeaders()['Authorization'],
+        'Bearer sk-ant-shared',
+      );
 
       const compatAnthropic = AIProviderSettings(
         id: 'provider_compat_ant',
@@ -474,6 +492,32 @@ void main() {
         compatAnthropic.buildHeaders()['Authorization'],
         'Bearer sk-ant-compat',
       );
+    });
+
+    test(
+        'fromJson migrates host-inferred anthropic.com /v1 records to openAICompatible while keeping /v1/messages native',
+        () {
+      final migrated = AIProviderSettings.fromJson({
+        'id': 'provider_legacy_ant',
+        'name': 'Anthropic Compat Base',
+        'apiUrl': 'https://api.anthropic.com/v1',
+        'model': 'claude-sonnet-4-5',
+        'providerSlug': 'anthropic',
+        'protocol': 'anthropic_messages',
+      });
+      expect(migrated.protocol, AIProtocolType.openAICompatible);
+      expect(migrated.isAnthropicMessagesApi, isFalse);
+
+      final explicitNative = AIProviderSettings.fromJson({
+        'id': 'provider_native_ant',
+        'name': 'Anthropic Messages',
+        'apiUrl': 'https://api.anthropic.com/v1/messages',
+        'model': 'claude-sonnet-4-5',
+        'providerSlug': 'anthropic',
+        'protocol': 'anthropic_messages',
+      });
+      expect(explicitNative.protocol, AIProtocolType.anthropicMessages);
+      expect(explicitNative.isAnthropicMessagesApi, isTrue);
     });
   });
 }

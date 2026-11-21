@@ -162,18 +162,21 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     return trimmed.toLowerCase();
   }
 
-  static bool _isNativeAnthropicUrl(String lowerUrl) {
-    if (lowerUrl.contains('/chat/completions')) return false;
-    return lowerUrl.contains('/v1/messages') ||
-        lowerUrl.contains('anthropic.com');
+  static bool _isNativeAnthropicUrl(String rawUrl) {
+    return AIProviderSettings.hasAnthropicMessagesEndpoint(rawUrl);
   }
 
   static AIProtocolType _baselineProtocol(AIProviderSettings existing) {
+    if (AIProviderSettings.isSharedAnthropicOpenAIBaseUrl(existing.apiUrl)) {
+      return AIProtocolType.openAICompatible;
+    }
+    if (_isNativeAnthropicUrl(existing.apiUrl)) {
+      return AIProtocolType.anthropicMessages;
+    }
     if (existing.protocol != null) {
       return existing.protocol!;
     }
-    final lowerUrl = existing.apiUrl.trim().toLowerCase();
-    if (existing.isAnthropicMessagesApi || _isNativeAnthropicUrl(lowerUrl)) {
+    if (existing.isAnthropicMessagesApi) {
       return AIProtocolType.anthropicMessages;
     }
     final preset = AIProviderPresets.bySlugOrId(existing.providerSlug) ??
@@ -228,20 +231,31 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     AIProtocolType protocol,
   }) _resolveEndpointMetadata(String apiUrl, AIProviderSettings? existing) {
     final trimmedUrl = apiUrl.trim();
-    final lowerUrl = trimmedUrl.toLowerCase();
     final urlMatched = AIProviderPresets.matchApiUrl(trimmedUrl);
     final activePreset = urlMatched ??
         (_preset != null && _preset!.kind != AIPresetKind.custom
             ? _preset
             : null);
 
-    if (_isNativeAnthropicUrl(lowerUrl)) {
+    if (_isNativeAnthropicUrl(trimmedUrl)) {
+      return (
+        matchedPreset: activePreset,
+        providerSlug: activePreset != null
+            ? (activePreset.modelsDevProviderId ?? activePreset.id)
+            : (AIProviderSettings.isAnthropicOfficialHost(trimmedUrl)
+                ? 'anthropic'
+                : _canonicalProviderSlug(existing?.providerSlug)),
+        protocol: AIProtocolType.anthropicMessages,
+      );
+    }
+
+    if (AIProviderSettings.isSharedAnthropicOpenAIBaseUrl(trimmedUrl)) {
       return (
         matchedPreset: activePreset,
         providerSlug: activePreset != null
             ? (activePreset.modelsDevProviderId ?? activePreset.id)
             : 'anthropic',
-        protocol: AIProtocolType.anthropicMessages,
+        protocol: AIProtocolType.openAICompatible,
       );
     }
 
@@ -283,13 +297,13 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     }
 
     final trimmedUrl = existing.apiUrl.trim();
-    final lowerUrl = trimmedUrl.toLowerCase();
     final matched = AIProviderPresets.matchApiUrl(trimmedUrl) ??
         AIProviderPresets.bySlugOrId(existing.id);
     final nonCustomPreset =
         matched != null && matched.kind != AIPresetKind.custom ? matched : null;
 
-    if (_isNativeAnthropicUrl(lowerUrl)) {
+    if (_isNativeAnthropicUrl(trimmedUrl) ||
+        AIProviderSettings.isAnthropicOfficialHost(trimmedUrl)) {
       return nonCustomPreset != null
           ? (nonCustomPreset.modelsDevProviderId ?? nonCustomPreset.id)
           : 'anthropic';
@@ -389,7 +403,10 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       AppSnackBar.success(context, l10n.connectionTestSuccess);
     } catch (e) {
       if (!mounted) return;
-      AppSnackBar.error(context, l10n.connectionTestFailed(e.toString()));
+      AppSnackBar.error(
+        context,
+        l10n.connectionTestFailed(AIConnectionTester.formatError(e, l10n)),
+      );
     } finally {
       if (mounted) setState(() => _isTesting = false);
     }

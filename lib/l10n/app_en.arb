@@ -5061,5 +5061,6 @@
   "thoughterModelUnconfigured": "No model configured",
   "thoughterModelSheetTitle": "Switch Thoughter Model",
   "thoughterModelSheetSubtitle": "Only changes the model for Thoughter without affecting your default service or other tasks",
-  "thoughterManageAiServices": "Manage AI Services"
+  "thoughterManageAiServices": "Manage AI Services",
+  "aiUnsupportedAnthropicMessagesProtocol": "Native Anthropic Messages (/v1/messages) is not supported yet. Please use an OpenAI-compatible base URL (/v1 or /chat/completions) or OpenRouter instead."
 }

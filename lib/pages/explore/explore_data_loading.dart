@@ -137,7 +137,6 @@ extension _ExploreDataLoading on _ExplorePageState {
     final rangeEnd = range?.end.toIso8601String().substring(0, 10);
     final rangeKey = range == null ? 'all' : '$rangeStart~$rangeEnd';
     final settingsService = context.read<SettingsService>();
-    _pendingPeriodicInsightRefresh = false;
     _lastPeriodicInsightConfigKey =
         _buildPeriodicInsightConfigKey(settingsService);
     final providerSignature =
@@ -249,11 +248,16 @@ extension _ExploreDataLoading on _ExplorePageState {
       _mostTopTagIcon = topTagIcon;
     });
 
+    if (!_computeIsPageVisible()) {
+      _pendingPeriodicInsightRefresh = true;
+      return;
+    }
+    _pendingPeriodicInsightRefresh = false;
     _maybeStartInsight(dataSignature, token);
   }
 
-  void _maybeStartInsight(String dataSignature, int token) async {
-    if (!mounted || token != _loadToken) return;
+  void _maybeStartInsight(String dataSignature, int loadToken) async {
+    if (!mounted || loadToken != _loadToken) return;
 
     final l10n = AppLocalizations.of(context);
     final settings = context.read<SettingsService>();
@@ -262,12 +266,13 @@ extension _ExploreDataLoading on _ExplorePageState {
 
     // 同一份数据与模式不要重复生成：否则数据库每通知一次，洞察就清空重来，
     // 文字先消失再重新流出来，看上去就是页面在闪。
+    // 注意：这里不修改 _insightToken，让同签名的在途流继续消费并正常收敛。
     if (reuseKey == _insightSignature &&
         (_insightLoading || _insightText.isNotEmpty)) {
       return;
     }
     _insightSignature = reuseKey;
-    _activeInsightToken = token;
+    final insightToken = ++_insightToken;
 
     // 用户翻到上周就说「上周」，翻到更早就报日期范围。原来是
     // thisPeriod(周) —— 永远的「本周」，和实际查询的日期范围对不上。
@@ -291,7 +296,7 @@ extension _ExploreDataLoading on _ExplorePageState {
     if (useAI) {
       final cachedInsight = insightService.getInsightBySignature(dataSignature);
       if (cachedInsight != null) {
-        if (mounted && token == _loadToken && token == _activeInsightToken) {
+        if (mounted && insightToken == _insightToken) {
           _updateState(() {
             _insightText = cachedInsight.insight;
             _insightLoading = false;
@@ -311,7 +316,7 @@ extension _ExploreDataLoading on _ExplorePageState {
     if (noteCount == 0) {
       await _generateEmptyPeriodInsight(
         l10n,
-        token: token,
+        insightToken: insightToken,
         periodLabel: periodLabel,
         useAI: useAI,
       );
@@ -402,18 +407,18 @@ extension _ExploreDataLoading on _ExplorePageState {
       )
           .listen(
         (chunk) {
-          if (!mounted || token != _loadToken || token != _activeInsightToken) {
+          if (!mounted || insightToken != _insightToken) {
             return;
           }
           // 按帧率量级节流：逐 chunk setState 会让整页反复重排抖动
           _insightPending += chunk;
           _insightFlushTimer ??= Timer(
             _ExplorePageState._insightFlushInterval,
-            () => _flushInsight(token),
+            () => _flushInsight(insightToken),
           );
         },
         onError: (_) {
-          if (!mounted || token != _loadToken || token != _activeInsightToken) {
+          if (!mounted || insightToken != _insightToken) {
             return;
           }
           _insightFlushTimer?.cancel();
@@ -444,7 +449,7 @@ extension _ExploreDataLoading on _ExplorePageState {
           _insightSignature = null;
         },
         onDone: () {
-          if (!mounted || token != _loadToken || token != _activeInsightToken) {
+          if (!mounted || insightToken != _insightToken) {
             return;
           }
           _insightFlushTimer?.cancel();
@@ -498,7 +503,7 @@ extension _ExploreDataLoading on _ExplorePageState {
   /// 因为网络抖一下就退回沉默。
   Future<void> _generateEmptyPeriodInsight(
     AppLocalizations l10n, {
-    required int token,
+    required int insightToken,
     required String periodLabel,
     required bool useAI,
   }) async {
@@ -520,7 +525,7 @@ extension _ExploreDataLoading on _ExplorePageState {
     } catch (e) {
       AppLogger.d('Failed to look up last note for empty insight: $e');
     }
-    if (!mounted || token != _loadToken || token != _activeInsightToken) return;
+    if (!mounted || insightToken != _insightToken) return;
 
     final daysSinceLastNote = emptyPeriodGapDays(
       lastNoteDate: lastNoteDate,
@@ -567,17 +572,17 @@ extension _ExploreDataLoading on _ExplorePageState {
         )
         .listen(
       (chunk) {
-        if (!mounted || token != _loadToken || token != _activeInsightToken) {
+        if (!mounted || insightToken != _insightToken) {
           return;
         }
         _insightPending += chunk;
         _insightFlushTimer ??= Timer(
           _ExplorePageState._insightFlushInterval,
-          () => _flushInsight(token),
+          () => _flushInsight(insightToken),
         );
       },
       onError: (_) {
-        if (!mounted || token != _loadToken || token != _activeInsightToken) {
+        if (!mounted || insightToken != _insightToken) {
           return;
         }
         _insightFlushTimer?.cancel();
@@ -591,7 +596,7 @@ extension _ExploreDataLoading on _ExplorePageState {
         _insightSignature = null;
       },
       onDone: () {
-        if (!mounted || token != _loadToken || token != _activeInsightToken) {
+        if (!mounted || insightToken != _insightToken) {
           return;
         }
         _insightFlushTimer?.cancel();
@@ -614,12 +619,9 @@ extension _ExploreDataLoading on _ExplorePageState {
   }
 
   /// 把节流缓冲里的流式文本刷进 UI
-  void _flushInsight(int token) {
+  void _flushInsight(int insightToken) {
     _insightFlushTimer = null;
-    if (!mounted ||
-        token != _loadToken ||
-        token != _activeInsightToken ||
-        _insightPending.isEmpty) {
+    if (!mounted || insightToken != _insightToken || _insightPending.isEmpty) {
       return;
     }
     final pending = _insightPending;

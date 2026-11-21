@@ -268,7 +268,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
       AppSnackBar.success(context, l10n.connectionTestSuccess);
     } catch (e) {
       if (!mounted) return;
-      AppSnackBar.error(context, l10n.connectionTestFailed(e.toString()));
+      AppSnackBar.error(
+        context,
+        l10n.connectionTestFailed(AIConnectionTester.formatError(e, l10n)),
+      );
     } finally {
       if (mounted) setState(() => _testing.remove(provider.id));
     }

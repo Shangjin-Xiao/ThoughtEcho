@@ -4954,5 +4954,6 @@
   "mmkvDiagnosticSpCoverage": "SharedPreferences 移行カバレッジ",
   "@mmkvDiagnosticSpCoverage": {
     "description": "Label for SharedPreferences migration coverage"
-  }
+  },
+  "aiUnsupportedAnthropicMessagesProtocol": "ネイティブ Anthropic Messages (/v1/messages) はまだサポートされていません。OpenAI 互換のベース URL (/v1 または /chat/completions) または OpenRouter をご利用ください。"
 }

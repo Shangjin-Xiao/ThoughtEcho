@@ -5043,5 +5043,6 @@
   "thoughterModelUnconfigured": "未配置模型",
   "thoughterModelSheetTitle": "切换 Thoughter 模型",
   "thoughterModelSheetSubtitle": "仅调整 Thoughter 对话与工具使用的模型，不影响默认服务与其他任务",
-  "thoughterManageAiServices": "管理 AI 服务配置"
+  "thoughterManageAiServices": "管理 AI 服务配置",
+  "aiUnsupportedAnthropicMessagesProtocol": "原生 Anthropic Messages (/v1/messages) 协议暂未接入运行链路，请改用 OpenAI 兼容基地址 (/v1 或 /chat/completions) 或 OpenRouter"
 }

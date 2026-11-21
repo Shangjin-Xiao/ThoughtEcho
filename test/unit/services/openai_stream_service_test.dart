@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
+import 'package:thoughtecho/models/ai_model_metadata.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/services/openai_stream_service.dart';
 
@@ -170,7 +171,7 @@ void main() {
       });
 
       test(
-          'throws UnsupportedError for native Anthropic Messages endpoints instead of appending /v1',
+          'throws UnsupportedAIProtocolError for native /v1/messages while allowing shared api.anthropic.com/v1 OpenAI base URL',
           () {
         const nativeByUrl = AIProviderSettings(
           id: 'provider_ant_1',
@@ -179,22 +180,35 @@ void main() {
           apiUrl: 'https://api.anthropic.com/v1/messages',
           model: 'claude-sonnet-4-5',
         );
-        const nativeByHost = AIProviderSettings(
-          id: 'provider_ant_2',
-          name: 'Anthropic Host',
+        const nativeGateway = AIProviderSettings(
+          id: 'provider_ant_gw',
+          name: 'Anthropic Custom Gateway',
           apiKey: 'sk-ant-test',
-          apiUrl: 'https://api.anthropic.com/v1',
+          apiUrl: 'https://gateway.example.com/v1',
           model: 'claude-sonnet-4-5',
+          protocol: AIProtocolType.anthropicMessages,
         );
 
         expect(
           () => OpenAIStreamService.buildOpenAIConfig(nativeByUrl),
-          throwsA(isA<UnsupportedError>()),
+          throwsA(isA<UnsupportedAIProtocolError>()),
         );
         expect(
-          () => OpenAIStreamService.buildOpenAIConfig(nativeByHost),
-          throwsA(isA<UnsupportedError>()),
+          () => OpenAIStreamService.buildOpenAIConfig(nativeGateway),
+          throwsA(isA<UnsupportedAIProtocolError>()),
         );
+
+        const sharedBaseOnAnthropic = AIProviderSettings(
+          id: 'provider_ant_shared',
+          name: 'Anthropic Shared Base',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://api.anthropic.com/v1',
+          model: 'claude-sonnet-4-5',
+          providerSlug: 'anthropic',
+        );
+        final sharedConfig =
+            OpenAIStreamService.buildOpenAIConfig(sharedBaseOnAnthropic);
+        expect(sharedConfig.baseUrl, 'https://api.anthropic.com/v1');
 
         const openAiCompatOnAnthropic = AIProviderSettings(
           id: 'provider_ant_compat',

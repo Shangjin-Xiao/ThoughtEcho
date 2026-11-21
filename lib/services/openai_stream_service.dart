@@ -9,6 +9,14 @@ import '../models/ai_provider_settings.dart';
 import '../utils/ai_endpoint_security.dart';
 import '../utils/app_logger.dart';
 
+/// 当服务商配置使用了运行链路尚未支持的协议（例如原生 Anthropic `/v1/messages`）时抛出。
+class UnsupportedAIProtocolError extends UnsupportedError {
+  UnsupportedAIProtocolError([
+    super.message =
+        'Native Anthropic Messages (/v1/messages) is not supported yet. Use an OpenAI-compatible base URL (/v1 or /chat/completions) or OpenRouter instead.',
+  ]);
+}
+
 /// 从正文里剥掉行内的 `<think>…</think>` 思考块。
 ///
 /// 结构化的 `reasoning` / `reasoning_content` 字段已经由
@@ -209,9 +217,7 @@ class OpenAIStreamService extends ChangeNotifier {
     Duration timeout = const Duration(minutes: 3),
   }) {
     if (provider.isAnthropicMessagesApi) {
-      throw UnsupportedError(
-        '原生 Anthropic Messages (/v1/messages) 协议暂未接入运行链路，请改用 OpenRouter 或 OpenAI 兼容端点 (/chat/completions)',
-      );
+      throw UnsupportedAIProtocolError();
     }
     final normalizedUrl = normalizeOpenAIBaseUrl(provider.apiUrl);
     // Restored settings bypass the editor's endpoint validation.

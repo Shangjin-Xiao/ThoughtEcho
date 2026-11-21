@@ -13,6 +13,7 @@ import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
+import 'package:thoughtecho/services/openai_stream_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/ai_connection_tester.dart';
 import 'package:thoughtecho/utils/aptabase_helper.dart';
@@ -57,15 +58,16 @@ void _installSecureStorageFake() {
 
 Widget _wrap(
   SettingsService settingsService,
-  AgentMemoryService memoryService,
-) {
+  AgentMemoryService memoryService, {
+  Locale locale = const Locale('zh'),
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<SettingsService>.value(value: settingsService),
       ChangeNotifierProvider<AgentMemoryService>.value(value: memoryService),
     ],
     child: MaterialApp(
-      locale: const Locale('zh'),
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const AISettingsPage(),
@@ -1028,6 +1030,115 @@ void main() {
       expect(saved.protocol, AIProtocolType.anthropicMessages);
       expect(saved.modelMetadata?.contextWindow, 200000);
       expect(saved.modelMetadata?.reasoning, isTrue);
+    });
+
+    testWidgets(
+        'editor treats shared https://api.anthropic.com/v1 as OpenAI-compatible and migrates host-inferred records',
+        (tester) async {
+      await APIKeyManager()
+          .saveProviderApiKey('p_ant_shared', 'sk-ant-shared-1234');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_ant_shared',
+              name: 'Anthropic 兼容配置',
+              apiUrl: 'https://api.anthropic.com/v1',
+              model: 'claude-sonnet-4-5',
+              providerSlug: 'anthropic',
+              protocol: AIProtocolType.anthropicMessages,
+              modelMetadata: AIModelMetadata(
+                contextWindow: 200000,
+                reasoning: true,
+              ),
+            ),
+          ],
+          currentProviderId: 'p_ant_shared',
+        ),
+      );
+
+      final testedDrafts = <AIProviderSettings>[];
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async {
+        // Also verify real runtime config construction succeeds without throwing
+        final config = OpenAIStreamService.buildOpenAIConfig(provider);
+        expect(config.baseUrl, 'https://api.anthropic.com/v1');
+        testedDrafts.add(provider);
+        return 'pong';
+      };
+      addTearDown(() => AIConnectionTester.testOverrideForTesting = null);
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      await tester.tap(find.text('Anthropic 兼容配置'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts, hasLength(1));
+      expect(testedDrafts.single.providerSlug, 'anthropic');
+      expect(testedDrafts.single.protocol, AIProtocolType.openAICompatible);
+      expect(testedDrafts.single.isAnthropicMessagesApi, isFalse);
+      expect(find.text(l10n.connectionTestSuccess), findsOneWidget);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      final saved = settingsService.multiAISettings.providers.single;
+      expect(saved.providerSlug, 'anthropic');
+      expect(saved.protocol, AIProtocolType.openAICompatible);
+      expect(saved.isAnthropicMessagesApi, isFalse);
+      expect(saved.modelMetadata?.contextWindow, 200000);
+    });
+
+    testWidgets(
+        'testing literal /v1/messages endpoint shows localized English guidance without Chinese text',
+        (tester) async {
+      AIConnectionTester.testOverrideForTesting = null;
+      await APIKeyManager()
+          .saveProviderApiKey('p_ant_native', 'sk-ant-native-1234');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_ant_native',
+              name: 'Anthropic Native Messages',
+              apiUrl: 'https://api.anthropic.com/v1/messages',
+              model: 'claude-sonnet-4-5',
+            ),
+          ],
+          currentProviderId: 'p_ant_native',
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          settingsService,
+          memoryService,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      await tester.tap(find.text('Anthropic Native Messages'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+
+      final expectedMessage = l10n.connectionTestFailed(
+        l10n.aiUnsupportedAnthropicMessagesProtocol,
+      );
+      expect(find.text(expectedMessage), findsOneWidget);
+      expect(expectedMessage, contains('Native Anthropic Messages'));
+      expect(RegExp(r'[\u4e00-\u9fff]').hasMatch(expectedMessage), isFalse);
     });
   });
 }

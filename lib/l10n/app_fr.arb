@@ -4947,5 +4947,6 @@
   "mmkvDiagnosticSpCoverage": "Couverture de migration SharedPreferences",
   "@mmkvDiagnosticSpCoverage": {
     "description": "Label for SharedPreferences migration coverage"
-  }
+  },
+  "aiUnsupportedAnthropicMessagesProtocol": "Le protocole natif Anthropic Messages (/v1/messages) n'est pas encore pris en charge. Utilisez une URL de base compatible OpenAI (/v1 ou /chat/completions) ou OpenRouter."
 }

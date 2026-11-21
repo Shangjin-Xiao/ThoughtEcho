@@ -107,7 +107,7 @@ class _ExplorePageState extends State<ExplorePage> {
   // 并发/重复加载防护：数据库在启动与同步期间会连续 notifyListeners 多次，
   // 若每次都重新拉数据并把整页切回 loading，页面就会来回闪。
   int _loadToken = 0;
-  int _activeInsightToken = 0;
+  int _insightToken = 0;
   bool _hasLoadedOnce = false;
   bool _isFetchingQuotes = false;
   bool _isPageVisible = true;
@@ -167,7 +167,7 @@ class _ExplorePageState extends State<ExplorePage> {
     }
     if (nextKey == _lastPeriodicInsightConfigKey) return;
     _lastPeriodicInsightConfigKey = nextKey;
-    if (!_isPageVisible) {
+    if (!_computeIsPageVisible()) {
       _pendingPeriodicInsightRefresh = true;
       return;
     }
@@ -183,8 +183,8 @@ class _ExplorePageState extends State<ExplorePage> {
     final becameVisible = !_isPageVisible && isVisible;
     _isPageVisible = isVisible;
     if (becameVisible && _pendingPeriodicInsightRefresh) {
-      _pendingPeriodicInsightRefresh = false;
       if (_hasLoadedOnce && !_isFetchingQuotes) {
+        _pendingPeriodicInsightRefresh = false;
         _computeExtrasAndInsight(++_loadToken);
       }
     }
@@ -230,6 +230,7 @@ class _ExplorePageState extends State<ExplorePage> {
     _reloadDebounce?.cancel();
     _insightFlushTimer?.cancel();
     _insightSub?.cancel();
+    ++_insightToken;
     super.dispose();
   }
 

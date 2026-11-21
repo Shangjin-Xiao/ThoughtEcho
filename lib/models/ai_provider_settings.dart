@@ -153,20 +153,53 @@ class AIProviderSettings implements AIConfig {
     this.modelMetadata,
   });
 
+  /// 判断给定 URL 是否显式指向原生 Anthropic Messages 端点（如 `/v1/messages` 或 `/messages`）。
+  static bool hasAnthropicMessagesEndpoint(String rawUrl) {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) return false;
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null) {
+      var path = uri.path.trim();
+      while (path.length > 1 && path.endsWith('/')) {
+        path = path.substring(0, path.length - 1);
+      }
+      final lowerPath = path.toLowerCase();
+      if (lowerPath.endsWith('/chat/completions')) return false;
+      return lowerPath.endsWith('/messages');
+    }
+    final lower = trimmed.toLowerCase();
+    if (lower.contains('/chat/completions')) return false;
+    return lower.contains('/v1/messages') || lower.endsWith('/messages');
+  }
+
+  /// 判断给定 URL 的主机名是否属于 Anthropic 官方域名（`anthropic.com` 及其子域名）。
+  static bool isAnthropicOfficialHost(String rawUrl) {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) return false;
+    final host = Uri.tryParse(trimmed)?.host.toLowerCase() ?? '';
+    if (host.isEmpty) return false;
+    return host == 'anthropic.com' || host.endsWith('.anthropic.com');
+  }
+
+  /// 判断给定 URL 是否为 Anthropic 官方共享的 OpenAI 兼容地址（如 `https://api.anthropic.com/v1`，且非 `/messages`）。
+  static bool isSharedAnthropicOpenAIBaseUrl(String rawUrl) {
+    return isAnthropicOfficialHost(rawUrl) &&
+        !hasAnthropicMessagesEndpoint(rawUrl);
+  }
+
   @override
   bool get isAnthropicMessagesApi {
-    if (protocol != null) {
-      return protocol == AIProtocolType.anthropicMessages;
-    }
     final lowerUrl = apiUrl.toLowerCase();
     if (lowerUrl.contains('/chat/completions')) {
       return false;
     }
-    if (_normalizedSlug == 'anthropic' || id == 'anthropic') {
+    if (hasAnthropicMessagesEndpoint(apiUrl)) {
       return true;
     }
-    return lowerUrl.contains('/v1/messages') ||
-        lowerUrl.contains('anthropic.com');
+    if (protocol != null) {
+      return protocol == AIProtocolType.anthropicMessages;
+    }
+    return false;
   }
 
   /// 是否为 OpenRouter 服务商（优先识别 [providerSlug]，兼容旧 `id` 与域名判断）。
@@ -221,12 +254,10 @@ class AIProviderSettings implements AIConfig {
       path = path.substring(0, path.length - 1);
     }
 
-    // Anthropic 原生 Messages 端点（显式 /chat/completions 兼容层走下方 OpenAI 分支）
+    // Anthropic 原生 Messages 端点（显式 /chat/completions 与共享 /v1 兼容层走下方 OpenAI 分支）
     final lowerPath = path.toLowerCase();
     if (!lowerPath.endsWith('/chat/completions') &&
-        (isAnthropicMessagesApi ||
-            (protocol == null &&
-                uri.host.toLowerCase().contains('anthropic.com')))) {
+        (isAnthropicMessagesApi || hasAnthropicMessagesEndpoint(trimmed))) {
       if (path.isEmpty) {
         return uri.replace(path: '/v1/messages').toString();
       } else if (path.endsWith('/v1')) {
@@ -290,12 +321,22 @@ class AIProviderSettings implements AIConfig {
         rawSlug is String && rawSlug.trim().isNotEmpty ? rawSlug.trim() : null;
     final rawProtocol = map['protocol'];
     final rawMetadata = map['modelMetadata'];
+    final apiUrl = (map['apiUrl'] ?? '') as String;
+    final parsedProtocol = rawProtocol is String
+        ? AIProtocolType.fromStorageKey(rawProtocol)
+        : null;
+    // 迁移曾仅凭 anthropic.com 主机名将共享 `/v1` 基地址误判为原生 Messages 协议的已保存记录
+    final effectiveProtocol =
+        parsedProtocol == AIProtocolType.anthropicMessages &&
+                isSharedAnthropicOpenAIBaseUrl(apiUrl)
+            ? AIProtocolType.openAICompatible
+            : parsedProtocol;
 
     return AIProviderSettings(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       // apiKey: map['apiKey'] ?? '', // 不从配置文件读取，而是从加密存储读取
-      apiUrl: map['apiUrl'] ?? '',
+      apiUrl: apiUrl,
       model: map['model'] ?? '',
       temperature: map['temperature'] != null
           ? (map['temperature'] as num).toDouble()
@@ -306,9 +347,7 @@ class AIProviderSettings implements AIConfig {
       isEnabled: map['isEnabled'] ?? true,
       enableThinking: map['enableThinking'] as bool?,
       providerSlug: normalizedSlug,
-      protocol: rawProtocol is String
-          ? AIProtocolType.fromStorageKey(rawProtocol)
-          : null,
+      protocol: effectiveProtocol,
       modelMetadata: rawMetadata is Map
           ? AIModelMetadata.fromJson(Map<String, dynamic>.from(rawMetadata))
           : null,
@@ -417,8 +456,8 @@ class AIProviderSettings implements AIConfig {
           adjustedData['stream'] == true || adjustedData['stream'] == 'true';
     }
 
-    // Anthropic特殊处理
-    if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
+    // Anthropic 原生协议特殊处理
+    if (isAnthropicMessagesApi) {
       // Anthropic API需要确保stream参数正确
       if (adjustedData.containsKey('stream') &&
           adjustedData['stream'] == true) {
