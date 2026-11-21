@@ -225,28 +225,6 @@ extension SmartPushPlatform on SmartPushService {
     return false;
   }
 
-  bool _hasEntryScheduleChangedUnderCurrentSettings(_PreScheduledEntry entry) {
-    if (_isEntryDisabledByCurrentSettings(entry)) {
-      return true;
-    }
-    if (entry.isDailyQuote) {
-      final slot = _settings.dailyQuotePushTime;
-      return entry.slotHour != null &&
-          entry.slotMinute != null &&
-          (entry.slotHour != slot.hour || entry.slotMinute != slot.minute);
-    }
-    if (entry.epochMs > 0) {
-      final scheduledLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
-        tz.local,
-        entry.epochMs,
-      );
-      if (!_settings.shouldPushOnDate(scheduledLocal)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   /// 对账并取消不再处于当前有效计划内、或关联笔记已被隐藏/删除的预调度通知。
   ///
   /// 返回实际被取消的通知 ID 集合与因关联笔记被隐藏/删除而失效的通知 ID 集合。
@@ -259,6 +237,7 @@ extension SmartPushPlatform on SmartPushService {
     Set<int>? pendingRequestIds,
     bool alreadyQueriedPendingIds = false,
     bool canScheduleExact = true,
+    Set<int> retainedOverduePendingIds = const <int>{},
   }) async {
     final previousEntries =
         entriesOverride ?? _loadTrackedPreScheduledEntries();
@@ -284,13 +263,15 @@ extension SmartPushPlatform on SmartPushService {
         if (entry.epochMs <= nowMs) {
           final isStillPending = effectivePendingIds != null
               ? effectivePendingIds.contains(entry.id)
-              : (!canScheduleExact &&
-                  _hasEntryScheduleChangedUnderCurrentSettings(entry));
-          if (futureOnly) {
-            continue;
-          }
-          if (!isStillPending && !_isEntryDisabledByCurrentSettings(entry)) {
-            continue;
+              : (!canScheduleExact && !entry.accounted);
+          if (isStillPending) {
+            if (futureOnly || retainedOverduePendingIds.contains(entry.id)) {
+              continue;
+            }
+          } else {
+            if (futureOnly || !_isEntryDisabledByCurrentSettings(entry)) {
+              continue;
+            }
           }
         }
       }

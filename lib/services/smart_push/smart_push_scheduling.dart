@@ -594,6 +594,23 @@ extension SmartPushScheduling on SmartPushService {
             memoizedDailyQuoteFuture ??= _resolvePreScheduleDailyQuote();
 
     final plannedItems = <_PlannedLocalNotification>[];
+    final retainedOverduePendingIds = <int>{};
+    final useLocalQuotesOnly = _loadStoredAppSettings().useLocalQuotesOnly;
+    final trackedNoteIds = previousEntries
+        .map((e) => e.noteId)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final trackedVisibleNoteIds = trackedNoteIds.isNotEmpty
+        ? await _resolveVisibleTrackedNoteIds(trackedNoteIds)
+        : null;
+    if (!await _isScheduleContextStillValid(
+      generation: generation,
+      expectedEpoch: expectedEpoch,
+      fromBackground: fromBackground,
+    )) {
+      return;
+    }
     Set<String>? loadedVisibleNoteIds;
     var regularPrecomputationFailed = false;
 
@@ -634,11 +651,15 @@ extension SmartPushScheduling on SmartPushService {
       rawRegularSlots.sort((a, b) => a.date.compareTo(b.date));
 
       final plannedRegular = await _planRegularPreScheduledNotifications(
+        slotsToSchedule: slotsToSchedule,
         rawRegularSlots: rawRegularSlots,
         resolveDailyQuoteOnce: resolveDailyQuoteOnce,
         previousEntries: previousEntries,
         pendingRequestIds: pendingRequestIds,
+        trackedVisibleNoteIds: trackedVisibleNoteIds,
+        canScheduleExact: canScheduleExact,
         futureOnly: futureOnly,
+        useLocalQuotesOnly: useLocalQuotesOnly,
       );
       if (!await _isScheduleContextStillValid(
         generation: generation,
@@ -649,6 +670,9 @@ extension SmartPushScheduling on SmartPushService {
       }
       loadedVisibleNoteIds = plannedRegular.visibleNoteIds;
       regularPrecomputationFailed = plannedRegular.precomputationFailed;
+      retainedOverduePendingIds.addAll(
+        plannedRegular.retainedOverduePendingIds,
+      );
       plannedItems.addAll(plannedRegular.items);
     } else {
       await _persistScheduledTimes(const []);
@@ -664,6 +688,32 @@ extension SmartPushScheduling on SmartPushService {
     // 2. 每日一言独立槽位（未来 3 天，不受常规 frequency 限制）
     if (_settings.dailyQuotePushEnabled) {
       final dailySlot = _settings.dailyQuotePushTime;
+      final nowMsForDaily = _now().millisecondsSinceEpoch;
+      for (final prev in previousEntries) {
+        if (!prev.isDailyQuote ||
+            prev.epochMs <= 0 ||
+            prev.epochMs > nowMsForDaily) {
+          continue;
+        }
+        final isStillPending = pendingRequestIds != null
+            ? pendingRequestIds.contains(prev.id)
+            : (!canScheduleExact && !prev.accounted);
+        if (!isStillPending) continue;
+        if (useLocalQuotesOnly &&
+            (prev.noteId == null || prev.noteId!.isEmpty)) {
+          continue;
+        }
+        final prevLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
+          tz.local,
+          prev.epochMs,
+        );
+        final effHour = prev.slotHour ?? prevLocal.hour;
+        final effMinute = prev.slotMinute ?? prevLocal.minute;
+        if (effHour == dailySlot.hour && effMinute == dailySlot.minute) {
+          retainedOverduePendingIds.add(prev.id);
+        }
+      }
+
       final dailyDates = _upcomingScheduledDates(
         dailySlot.hour,
         dailySlot.minute,
@@ -713,28 +763,12 @@ extension SmartPushScheduling on SmartPushService {
     }
 
     // 3. 对账并清理已移除/禁用或关联笔记（含本地每日一言来源笔记）已被隐藏/删除的预调度通知
-    final trackedNoteIds = previousEntries
-        .map((e) => e.noteId)
-        .whereType<String>()
-        .where((id) => id.isNotEmpty)
-        .toSet();
     final visibleNoteIds = trackedNoteIds.isNotEmpty
-        ? await _resolveVisibleTrackedNoteIds(
-            trackedNoteIds,
-            fallbackVisibleIds: loadedVisibleNoteIds,
-          )
+        ? (trackedVisibleNoteIds ?? loadedVisibleNoteIds)
         : loadedVisibleNoteIds;
-    if (!await _isScheduleContextStillValid(
-      generation: generation,
-      expectedEpoch: expectedEpoch,
-      fromBackground: fromBackground,
-    )) {
-      return;
-    }
 
     final isNoteOnlyMode = _settings.pushMode == PushMode.custom ||
         _settings.pushMode == PushMode.pastNotes;
-    final useLocalQuotesOnly = _loadStoredAppSettings().useLocalQuotesOnly;
     final invalidatedIds = <int>{
       if (visibleNoteIds != null)
         for (final prev in previousEntries)
@@ -771,6 +805,7 @@ extension SmartPushScheduling on SmartPushService {
       pendingRequestIds: pendingRequestIds,
       alreadyQueriedPendingIds: true,
       canScheduleExact: canScheduleExact,
+      retainedOverduePendingIds: retainedOverduePendingIds,
     );
     final remainingPreviousEntries = previousEntries
         .where((e) => !reconcileResult.cancelledIds.contains(e.id))
@@ -1249,7 +1284,9 @@ extension SmartPushScheduling on SmartPushService {
         Set<String>? visibleNoteIds,
         bool? hasAnyVisibleNotes,
         bool precomputationFailed,
+        Set<int> retainedOverduePendingIds,
       })> _planRegularPreScheduledNotifications({
+    required List<PushTimeSlot> slotsToSchedule,
     required List<({int slotIndex, PushTimeSlot slot, tz.TZDateTime date})>
         rawRegularSlots,
     required Future<
@@ -1262,8 +1299,48 @@ extension SmartPushScheduling on SmartPushService {
         resolveDailyQuoteOnce,
     List<_PreScheduledEntry> previousEntries = const [],
     Set<int>? pendingRequestIds,
+    Set<String>? trackedVisibleNoteIds,
+    bool canScheduleExact = true,
     bool futureOnly = false,
+    bool useLocalQuotesOnly = false,
   }) async {
+    final isSmartMode = _settings.pushMode == PushMode.smart;
+    final allowsDailyQuoteFallback = _settings.pushMode != PushMode.custom &&
+        _settings.pushMode != PushMode.pastNotes;
+
+    bool matchesBasicRegularSettings(
+      _PreScheduledEntry prev,
+      tz.TZDateTime prevLocal,
+    ) {
+      if (!_settings.enabled) return false;
+      if (!_settings.shouldPushOnDate(prevLocal)) return false;
+      final effHour = prev.slotHour ?? prevLocal.hour;
+      final effMinute = prev.slotMinute ?? prevLocal.minute;
+      final matchesSlot = isSmartMode
+          ? slotsToSchedule.any((s) => s.hour == effHour)
+          : slotsToSchedule.any(
+              (s) => s.hour == effHour && s.minute == effMinute,
+            );
+      if (!matchesSlot) return false;
+      final prevNoteId = prev.noteId;
+      if (useLocalQuotesOnly &&
+          prev.contentType == 'dailyQuote' &&
+          (prevNoteId == null || prevNoteId.isEmpty)) {
+        return false;
+      }
+      if (_settings.pushMode == PushMode.dailyQuote) {
+        return prev.contentType == null || prev.contentType == 'dailyQuote';
+      }
+      if (!allowsDailyQuoteFallback) {
+        if (prev.contentType == 'dailyQuote' ||
+            prevNoteId == null ||
+            prevNoteId.isEmpty) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     if (rawRegularSlots.isEmpty) {
       final visibleIds = await _loadVisibleNoteIdsForReconciliation();
       return (
@@ -1271,6 +1348,7 @@ extension SmartPushScheduling on SmartPushService {
         visibleNoteIds: visibleIds,
         hasAnyVisibleNotes: visibleIds?.isNotEmpty,
         precomputationFailed: false,
+        retainedOverduePendingIds: const <int>{},
       );
     }
 
@@ -1278,16 +1356,12 @@ extension SmartPushScheduling on SmartPushService {
       final allNotes = await _databaseService.getQuotesForSmartPush(
         limit: 5000,
       );
-      final visibleNoteIds = allNotes
-          .map((n) => n.id)
-          .whereType<String>()
-          .where((id) => id.isNotEmpty)
-          .toSet();
+      final notesById = <String, Quote>{
+        for (final n in allNotes)
+          if (n.id != null && n.id!.isNotEmpty) n.id!: n,
+      };
+      final visibleNoteIds = notesById.keys.toSet();
       final hasAnyVisibleNotes = allNotes.isNotEmpty;
-
-      final isSmartMode = _settings.pushMode == PushMode.smart;
-      final allowsDailyQuoteFallback = _settings.pushMode != PushMode.custom &&
-          _settings.pushMode != PushMode.pastNotes;
 
       final currentLocation =
           allNotes.isNotEmpty ? await _loadCurrentLocationForMatching() : null;
@@ -1328,43 +1402,180 @@ extension SmartPushScheduling on SmartPushService {
 
       // 按日维护已分配的笔记 ID（严格排除集合），确保同一自然日多个槽位或刷新后绝不重复推送同一条笔记
       final sameDayAssignedIds = <String, Set<String>>{};
+      final retainedOverduePendingIds = <int>{};
+      final retainedPendingNoteIds = <String>{};
       final todayPushedIds = _getTodayPushedNoteIds(now: currentNow);
       if (todayPushedIds.isNotEmpty) {
         sameDayAssignedIds
             .putIfAbsent(todayKey, () => <String>{})
             .addAll(todayPushedIds);
       }
-      for (final prev in previousEntries) {
-        final prevNoteId = prev.noteId;
-        final isStillPending = pendingRequestIds?.contains(prev.id) ?? false;
-        if (!futureOnly && isStillPending) {
+
+      final sortedPrevious = List<_PreScheduledEntry>.from(previousEntries)
+        ..sort((a, b) => a.epochMs.compareTo(b.epochMs));
+      for (final prev in sortedPrevious) {
+        if (prev.isDailyQuote || prev.epochMs <= 0 || prev.epochMs > nowMs) {
           continue;
         }
-        if (!prev.isDailyQuote &&
-            prev.contentType != 'dailyQuote' &&
-            prev.epochMs > 0 &&
-            prev.epochMs <= nowMs &&
-            (prevNoteId == null ||
-                prevNoteId.isEmpty ||
-                visibleNoteIds.contains(prevNoteId))) {
-          final deliveredTime = tz.TZDateTime.fromMillisecondsSinceEpoch(
-            tz.local,
-            prev.epochMs,
-          );
-          final deliveredDayKey =
-              deliveredTime.toIso8601String().substring(0, 10);
-          if (prevNoteId != null && prevNoteId.isNotEmpty) {
+        final prevNoteId = prev.noteId;
+        final isPrevNoteVisible = prevNoteId == null ||
+            prevNoteId.isEmpty ||
+            (trackedVisibleNoteIds != null
+                ? trackedVisibleNoteIds.contains(prevNoteId)
+                : visibleNoteIds.contains(prevNoteId));
+        if (!isPrevNoteVisible) {
+          continue;
+        }
+        final isStillPending = pendingRequestIds != null
+            ? pendingRequestIds.contains(prev.id)
+            : (!canScheduleExact && !prev.accounted);
+        final deliveredTime = tz.TZDateTime.fromMillisecondsSinceEpoch(
+          tz.local,
+          prev.epochMs,
+        );
+        final deliveredDayKey =
+            deliveredTime.toIso8601String().substring(0, 10);
+
+        if (!isStillPending) {
+          if (prev.contentType != 'dailyQuote' &&
+              prevNoteId != null &&
+              prevNoteId.isNotEmpty) {
             sameDayAssignedIds
                 .putIfAbsent(deliveredDayKey, () => <String>{})
                 .add(prevNoteId);
           }
-          if (isSmartMode && futureOnly && !prev.accounted && isStillPending) {
+          if (isSmartMode && !prev.accounted) {
             perDayCount[deliveredDayKey] =
                 (perDayCount[deliveredDayKey] ?? 0) + 1;
             if (simulatedLastPushTime == null ||
                 deliveredTime.isAfter(simulatedLastPushTime)) {
               simulatedLastPushTime = deliveredTime;
             }
+          }
+          continue;
+        }
+
+        bool shouldRetain = futureOnly;
+        if (!futureOnly) {
+          shouldRetain = matchesBasicRegularSettings(prev, deliveredTime);
+          if (shouldRetain &&
+              !isSmartMode &&
+              _settings.pushMode != PushMode.dailyQuote &&
+              prev.contentType != 'dailyQuote') {
+            final note = prevNoteId != null ? notesById[prevNoteId] : null;
+            if (prev.contentType == 'sameTimeOfDay') {
+              shouldRetain = false;
+            } else if (prev.contentType != null &&
+                prev.contentType!.isNotEmpty) {
+              PastNoteType? matchedType;
+              for (final t in PastNoteType.values) {
+                if (t.name == prev.contentType) {
+                  matchedType = t;
+                  break;
+                }
+              }
+              if (matchedType != null && !enabledTypes.contains(matchedType)) {
+                shouldRetain = false;
+              } else if (matchedType == PastNoteType.sameWeather &&
+                  (note == null ||
+                      filterSameWeatherNotes(
+                        <Quote>[note],
+                        deliveredTime,
+                        currentWeather: currentWeather,
+                        weatherFilters: weatherFilters,
+                      ).isEmpty)) {
+                shouldRetain = false;
+              }
+            }
+            if (shouldRetain &&
+                requiredTagIds.isNotEmpty &&
+                (note == null || !note.tagIds.any(requiredTagIds.contains))) {
+              shouldRetain = false;
+            }
+          }
+          if (shouldRetain &&
+              isSmartMode &&
+              smartProfile != null &&
+              !prev.accounted) {
+            final dayCount = perDayCount[deliveredDayKey] ?? 0;
+            final gapSinceLast = simulatedLastPushTime != null
+                ? deliveredTime.difference(simulatedLastPushTime).abs()
+                : null;
+            if (dayCount >= smartProfile.dailyCap) {
+              shouldRetain = false;
+            } else if (smartProfile.minGapDays > 0 &&
+                gapSinceLast != null &&
+                gapSinceLast.inDays < smartProfile.minGapDays) {
+              shouldRetain = false;
+            } else if (habituationCooldown > Duration.zero &&
+                gapSinceLast != null &&
+                gapSinceLast < habituationCooldown) {
+              shouldRetain = false;
+            } else if (lastOpen != null &&
+                !deliveredTime.isBefore(lastOpen) &&
+                deliveredTime.difference(lastOpen) <
+                    const Duration(
+                      hours: SmartPushAnalytics.recentOpenSuppressHours,
+                    )) {
+              shouldRetain = false;
+            } else if (dismissalCooldownEnd != null &&
+                deliveredTime.isBefore(dismissalCooldownEnd)) {
+              shouldRetain = false;
+            } else if (dayCount > 0 && smartProfile.extraQualityFloor > 0) {
+              double prevPriority = 0;
+              if (prev.contentType != 'dailyQuote' && prevNoteId != null) {
+                final note = notesById[prevNoteId];
+                if (note != null) {
+                  final typeKey = prev.contentType ?? 'randomMemory';
+                  final basePriority = switch (typeKey) {
+                    'yearAgoToday' => 100,
+                    'monthAgoToday' => 70,
+                    'weekAgoToday' => 55,
+                    'sameLocation' => calcLocationPriority(
+                        filterSameLocationNotes(
+                          allNotes,
+                          deliveredTime,
+                          currentLocation,
+                        ).length,
+                        allNotes.length,
+                      ),
+                    'sameWeather' => 40,
+                    'sameTimeOfDay' => 20,
+                    _ => 40,
+                  };
+                  prevPriority = scoreSmartPushCandidate(
+                    basePriority: basePriority,
+                    note: note,
+                    contentTypeScore: contentTypeScores[typeKey] ?? 0.5,
+                  );
+                }
+              }
+              if (prevPriority < smartProfile.extraQualityFloor) {
+                shouldRetain = false;
+              }
+            }
+          }
+        }
+
+        if (!shouldRetain) {
+          continue;
+        }
+
+        retainedOverduePendingIds.add(prev.id);
+        if (prev.contentType != 'dailyQuote' &&
+            prevNoteId != null &&
+            prevNoteId.isNotEmpty) {
+          sameDayAssignedIds
+              .putIfAbsent(deliveredDayKey, () => <String>{})
+              .add(prevNoteId);
+          retainedPendingNoteIds.add(prevNoteId);
+        }
+        if (isSmartMode && !prev.accounted) {
+          perDayCount[deliveredDayKey] =
+              (perDayCount[deliveredDayKey] ?? 0) + 1;
+          if (simulatedLastPushTime == null ||
+              deliveredTime.isAfter(simulatedLastPushTime)) {
+            simulatedLastPushTime = deliveredTime;
           }
         }
       }
@@ -1513,7 +1724,10 @@ extension SmartPushScheduling on SmartPushService {
         return null;
       }
 
-      final assignedIds = <String>{..._settings.recentlyPushedNoteIds};
+      final assignedIds = <String>{
+        ..._settings.recentlyPushedNoteIds,
+        ...retainedPendingNoteIds,
+      };
       final items = <_PlannedLocalNotification>[];
 
       for (final rawSlot in rawRegularSlots) {
@@ -1604,9 +1818,29 @@ extension SmartPushScheduling on SmartPushService {
         visibleNoteIds: visibleNoteIds,
         hasAnyVisibleNotes: hasAnyVisibleNotes,
         precomputationFailed: false,
+        retainedOverduePendingIds: retainedOverduePendingIds,
       );
     } catch (e) {
       AppLogger.w('批量预计算推送内容失败', error: e);
+      final fallbackNowMs = _now().millisecondsSinceEpoch;
+      final fallbackRetainedIds = <int>{
+        for (final prev in previousEntries)
+          if (!prev.isDailyQuote &&
+              prev.epochMs > 0 &&
+              prev.epochMs <= fallbackNowMs &&
+              (pendingRequestIds != null
+                  ? pendingRequestIds.contains(prev.id)
+                  : (!canScheduleExact && !prev.accounted)) &&
+              (futureOnly ||
+                  matchesBasicRegularSettings(
+                    prev,
+                    tz.TZDateTime.fromMillisecondsSinceEpoch(
+                      tz.local,
+                      prev.epochMs,
+                    ),
+                  )))
+            prev.id,
+      };
       return (
         items: rawRegularSlots
             .map(
@@ -1626,6 +1860,7 @@ extension SmartPushScheduling on SmartPushService {
         visibleNoteIds: null,
         hasAnyVisibleNotes: null,
         precomputationFailed: true,
+        retainedOverduePendingIds: fallbackRetainedIds,
       );
     }
   }

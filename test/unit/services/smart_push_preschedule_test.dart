@@ -2006,7 +2006,30 @@ void main() {
           equals(0),
         );
 
-        // 用户将提醒时间改到 07:00 / 07:15（新计划从次日开始，不再包含今日旧 ID）
+        // 用户直接点击保存但未改变提醒时间（futureOnly: false）时，仍有效的等待中通知不应被取消而漏发
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(todayDailyCall.id)),
+        );
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(todayRegularCall.id)),
+        );
+
+        // 用户将提醒时间改到 07:00 / 07:15（新计划从次日开始，旧提醒已不符合新设置）
         await service.saveSettings(
           const SmartPushSettings(
             enabled: true,
@@ -2037,6 +2060,64 @@ void main() {
           await service.analytics.getTodayPushCount(now: currentNow),
           equals(0),
         );
+      },
+    );
+
+    test(
+      'overdue pending regular dailyQuote fallback reserves smart quota and prevents duplicate evening or gap-violating push',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        exactAlarmPermitted = false;
+        databaseService.notes.clear();
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.rare,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // 07:30 仅应调度今日 08:00 一条回退通知（20:00 受 dailyCap=1 抑制，后续窗口受 minGapDays 抑制）
+        final initialTodayCalls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(initialTodayCalls, hasLength(1));
+        final morningFallbackCall = initialTodayCalls.single;
+        expect(morningFallbackCall.scheduledDate.hour, equals(8));
+        expect(morningFallbackCall.scheduledDate.minute, equals(0));
+
+        // 推进到 08:40，早间回退通知仍等待系统送达
+        currentNow = localTime(2026, 5, 10, 8, 40);
+        notificationsPlugin.delayedPendingIds.add(morningFallbackCall.id);
+        notificationsPlugin.scheduledCalls.clear();
+        notificationsPlugin.cancelledIds.clear();
+
+        // 前台刷新与原设置保存均应保留早间待送达回退通知并为其预留配额，绝不额外安排今日 20:00 或后续窗口通知
+        await service.handleAppResumed();
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(morningFallbackCall.id)),
+        );
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+
+        notificationsPlugin.scheduledCalls.clear();
+        await service.saveSettings(service.settings);
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(morningFallbackCall.id)),
+        );
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
       },
     );
   });
