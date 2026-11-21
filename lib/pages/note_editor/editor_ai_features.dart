@@ -47,6 +47,12 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
   /// 统一入口：保存未提交更改后跳转 Thoughter，并关闭编辑器。
   Future<void> _openAiAssistant(String? initialQuestion) async {
+    if (_mediaState.isSaving) return;
+    if (_editorState.isLoadingFullQuote && widget.initialQuote?.id != null) {
+      await _fetchFullQuote();
+      if (!mounted) return;
+    }
+
     final plainText = StringUtils.removeObjectReplacementChar(
       _editorState.controller.document.toPlainText(),
     ).trim();
@@ -89,19 +95,24 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       if (!saveSucceeded || !mounted) return;
     }
 
-    // 创建包含元数据的临时 Quote，为 Agent 提供更丰富的上下文
-    final tempQuote = Quote(
-      id: widget.initialQuote?.id,
-      content: plainText,
-      date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
-      dayPeriod: widget.initialQuote?.dayPeriod,
-      sourceAuthor: _metadataState.authorController.text.trim().isNotEmpty
-          ? _metadataState.authorController.text.trim()
-          : null,
-      sourceWork: _metadataState.workController.text.trim().isNotEmpty
-          ? _metadataState.workController.text.trim()
-          : null,
-    );
+    // 基于已持久化的完整笔记（保留 editSource、deltaContent 等全部文档字段）构建上下文，
+    // 确保 ThoughterPage 计算的富文本文档类型及基线版本号与数据库记录一致。
+    final baseQuote = _editorState.fullInitialQuote ?? widget.initialQuote;
+    final authorText = _metadataState.authorController.text.trim();
+    final workText = _metadataState.workController.text.trim();
+    final tempQuote = baseQuote != null
+        ? baseQuote.copyWith(
+            content:
+                baseQuote.content.isNotEmpty ? baseQuote.content : plainText,
+            sourceAuthor: authorText.isNotEmpty ? authorText : null,
+            sourceWork: workText.isNotEmpty ? workText : null,
+          )
+        : Quote(
+            content: plainText,
+            date: DateTime.now().toIso8601String(),
+            sourceAuthor: authorText.isNotEmpty ? authorText : null,
+            sourceWork: workText.isNotEmpty ? workText : null,
+          );
 
     // 用 pushReplacement 替换编辑器，进入 Agent 后编辑器关闭
     if (!mounted) return;
@@ -113,6 +124,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
           initialQuestion: initialQuestion,
         ),
       ),
+      result: _mediaState.didSaveSuccessfully ? true : null,
     );
   }
 }

@@ -1402,12 +1402,15 @@ extension _ThoughterUI on _ThoughterPageState {
     final note = await db.getQuoteById(artifact.noteId!);
     if (!mounted) return null;
     if (note != null && !await _authorizeProposalNote(note)) return null;
-    if (note == null ||
-        ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
+    final currentRevision =
+        note == null ? null : ProposeNoteEditTool.tryRevisionForQuote(note);
+    if (currentRevision == null ||
+        artifact.baseRevision == null ||
+        currentRevision != artifact.baseRevision) {
       _showRichEditConflict();
       return null;
     }
-    final proposed = _quoteFromArtifact(note, artifact);
+    final proposed = _quoteFromArtifact(note!, artifact);
     final tags = await db.getTags();
     if (!mounted) return null;
     String? savedId;
@@ -2115,13 +2118,16 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return FadeTransition(
-      opacity: _opacity,
-      child: Text(
-        _kStreamingCursor,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          color: widget.color,
-          height: 1.65,
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: _opacity,
+        child: Text(
+          _kStreamingCursor,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: widget.color,
+            // 与 Thoughter Markdown 回复段落行高保持一致，避免等待光标切换到流式正文时跳动
+            height: 1.65, // ignore: repo_lint
+          ),
         ),
       ),
     );

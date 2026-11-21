@@ -134,6 +134,20 @@ class ProposeNoteEditTool extends AgentTool {
   static String revisionForQuote(Quote quote) =>
       AgentNoteDocumentCodec.revisionOf(opsForQuote(quote));
 
+  static ({String? revision, String? unavailableReason})
+      inspectRevisionForQuote(Quote quote) {
+    try {
+      return (revision: revisionForQuote(quote), unavailableReason: null);
+    } on AgentNoteDocumentException catch (e) {
+      return (revision: null, unavailableReason: e.code);
+    } on FormatException {
+      return (revision: null, unavailableReason: 'invalid_stored_delta');
+    }
+  }
+
+  static String? tryRevisionForQuote(Quote quote) =>
+      inspectRevisionForQuote(quote).revision;
+
   @override
   Future<ToolResult> execute(ToolCall call) async {
     final validationError = validateToolArguments(

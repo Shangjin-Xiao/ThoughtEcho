@@ -116,7 +116,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     final key = _editorState.draftStorageKey;
     if (key.isEmpty) return;
 
-    final plainText = _editorState.controller.document.toPlainText().trim();
+    final docSnapshot = _editorState.captureDocumentSnapshot();
+    final plainText = docSnapshot.plainText;
 
     // 只有用户实际编写了正文内容才保存草稿
     // 自动添加的天气、位置、标签等不应该触发草稿保存
@@ -136,7 +137,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       final hasUserContent = _hasActualUserContent();
 
       final baseQuote = _editorState.fullInitialQuote ?? widget.initialQuote;
-      final deltaJson = await _getDocumentContentSafely();
+      final deltaJson = await _getDocumentContentSafely(docSnapshot);
 
       if (!_isDraftSaveValid(snapshotGen)) return;
 
@@ -190,8 +191,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     // 检查正文内容是否有变化
     final currentPlainText =
         _editorState.controller.document.toPlainText().trim();
-    if (currentPlainText != _editorState.initialPlainText.trim() &&
-        currentPlainText.isNotEmpty) {
+    if (currentPlainText.isNotEmpty &&
+        (currentPlainText != _editorState.initialPlainText.trim() ||
+            _editorState.isDirty)) {
       return true;
     }
 
@@ -242,8 +244,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
+    final baseQuote = _editorState.fullInitialQuote ?? widget.initialQuote;
     if (_metadataState.hasChanges(
-      isExistingNote: widget.initialQuote != null,
+      isExistingNote: baseQuote != null,
     )) {
       return true;
     }
@@ -254,7 +257,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   Future<bool> _saveContent({bool popOnSuccess = true}) async {
     // Set the guard before the first await so every save entry point, including
     // the app-bar action, is protected from rapid repeated taps.
-    if (_mediaState.isSaving) return false;
+    if (_mediaState.isSaving || _editorState.isLoadingFullQuote) return false;
 
     _editorState.cancelDraftSave();
     _editorState.draftLoaded = false;
@@ -298,7 +301,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       }
     }
 
-    // 获取纯文本内容
+    // 获取纯文本内容与提交时的原子快照
+    late final NoteEditorDocumentSnapshot submittedDocSnapshot;
     String plainTextContent = '';
     String deltaJson = '';
     final baseQuote = _editorState.fullInitialQuote ?? widget.initialQuote;
@@ -315,11 +319,12 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     }
 
     try {
-      plainTextContent = _editorState.controller.document.toPlainText().trim();
+      submittedDocSnapshot = _editorState.captureDocumentSnapshot();
+      plainTextContent = submittedDocSnapshot.plainText;
       logDebug('获取到纯文本内容: ${plainTextContent.length} 字符');
 
       // 使用内存安全的方法获取富文本内容
-      deltaJson = await _getDocumentContentSafely();
+      deltaJson = await _getDocumentContentSafely(submittedDocSnapshot);
 
       logDebug('富文本JSON长度: ${deltaJson.length}');
       logDebug(
@@ -345,6 +350,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return false;
     }
 
+    final submittedImportedMedia = _mediaState.sessionImportedMedia.toSet();
+    final submittedMetadataSnapshot = _metadataState.captureSnapshotToken();
     final now = DateTime.now().toIso8601String();
 
     // 获取当前时间段
@@ -389,7 +396,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     );
 
     try {
-      logDebug('保存笔记: ID=${quote.id}, 是否为更新模式=${widget.initialQuote != null}');
+      logDebug('保存笔记: ID=${quote.id}, 是否为更新模式=${baseQuote?.id != null}');
       logDebug(
         '笔记内容长度: ${quote.content.length}, 富文本长度: ${quote.deltaContent?.length ?? 0}',
       );
@@ -401,8 +408,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         );
       }
 
-      if (widget.initialQuote != null && widget.initialQuote?.id != null) {
-        // 只有当initialQuote存在且有ID时，才更新现有笔记
+      if (baseQuote?.id != null) {
+        // 只有当baseQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
         final updateResult = await db.updateQuote(quote);
         if (updateResult != QuoteUpdateResult.updated) {
@@ -416,10 +423,21 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           }
           return false;
         }
+        _editorState.setFullInitialQuote(quote);
         _editorState.cancelDraftSave();
         await _clearDraft();
-        _mediaState.markSavedSuccessfully();
-        _editorState.markDraftSaved();
+        _mediaState.markSavedSuccessfully(submittedImportedMedia);
+        _editorState.markNotePersisted(
+          submittedDocSnapshot,
+          savedNoteId: quote.id,
+        );
+        _metadataState.commitSnapshotToken(submittedMetadataSnapshot);
+        if (!popOnSuccess && mounted && !_editorState.isDisposed) {
+          _editorState.draftLoaded = true;
+          if (_hasUnsavedChanges()) {
+            _onDraftChanged();
+          }
+        }
         saveSucceeded = true;
         widget.onSaved?.call(quote);
         if (mounted) {
@@ -436,10 +454,21 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       } else {
         logDebug('添加新笔记');
         await db.addQuote(quote);
+        _editorState.setFullInitialQuote(quote);
         _editorState.cancelDraftSave();
         await _clearDraft();
-        _mediaState.markSavedSuccessfully();
-        _editorState.markDraftSaved();
+        _mediaState.markSavedSuccessfully(submittedImportedMedia);
+        _editorState.markNotePersisted(
+          submittedDocSnapshot,
+          savedNoteId: quote.id,
+        );
+        _metadataState.commitSnapshotToken(submittedMetadataSnapshot);
+        if (!popOnSuccess && mounted && !_editorState.isDisposed) {
+          _editorState.draftLoaded = true;
+          if (_hasUnsavedChanges()) {
+            _onDraftChanged();
+          }
+        }
         saveSucceeded = true;
         widget.onSaved?.call(quote);
         if (mounted) {
@@ -456,11 +485,13 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       }
     } catch (e) {
       await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
+      _editorState.draftLoaded = true;
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         AppSnackBar.error(context, l10n.saveFailed(e.toString()));
       }
     } finally {
+      _mediaState.endPersistence();
       if (mounted) {
         if (saveSucceeded) {
           _mediaState.updateSaveProgress(1.0, status: l10n.saveComplete);

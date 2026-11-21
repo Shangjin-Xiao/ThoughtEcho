@@ -116,6 +116,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   final GlobalKey _metadataButtonKey = GlobalKey();
   // 新增：工具栏气泡引导 Key
   final GlobalKey _toolbarGuideKey = GlobalKey();
+  // Quill 底层编辑器 Key，用于在 Escape 触发退出前优先检查并收起浮动选区菜单
+  final GlobalKey<quill.EditorState> _quillRawEditorKey =
+      GlobalKey<quill.EditorState>();
 
   bool _isOpeningLocationPicker = false;
 

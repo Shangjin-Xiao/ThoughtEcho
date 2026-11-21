@@ -173,6 +173,37 @@ void main() {
     expect((await database.getQuoteById('note-stale'))!.content, '原始正文。');
   });
 
+  test('原笔记无法计算版本且提案缺失 baseRevision 时仍按冲突拒绝落库', () async {
+    await seed(Quote(
+      id: 'note-unreadable-null-rev',
+      content: '原始行程正文。',
+      deltaContent: '[{"insert":"原始行程正文。',
+      editSource: 'fullscreen',
+      date: DateTime.now().toIso8601String(),
+    ));
+    final artifact = NoteProposalArtifact(
+      action: NoteProposalAction.edit,
+      proposalTitle: '缺失基线版本的提案',
+      reason: '旧会话或外部反序列化缺失 baseRevision',
+      noteId: 'note-unreadable-null-rev',
+      originalKind: NoteDocumentKind.plain,
+      resultKind: NoteDocumentKind.plain,
+      content: '不应被覆盖的正文。',
+      documentOps: null,
+      metadata: const <String, dynamic>{},
+      changes: const <NoteProposalChange>[],
+      baseRevision: null,
+    );
+
+    final result = await NoteProposalApplier(database).applyEdit(artifact);
+
+    expect(result.status, NoteProposalApplyStatus.conflict);
+    expect(
+      (await database.getQuoteById('note-unreadable-null-rev'))!.content,
+      '原始行程正文。',
+    );
+  });
+
   test('提案增删媒体时校验直接拒绝', () async {
     final ops = <Map<String, dynamic>>[
       {'insert': '图注。\n'},

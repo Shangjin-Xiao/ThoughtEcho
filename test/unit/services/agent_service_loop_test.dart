@@ -384,6 +384,110 @@ void main() {
       expect(contextMessage, contains('[SYS_TEM]'));
     });
 
+    test(
+        'injects read-only bound note context without substitute document_revision when revision is null',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      late List<openai.ChatMessage> capturedMessages;
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          capturedMessages = messages;
+          return _textCompletion('Here is your itinerary summary.');
+        },
+      );
+
+      await service.runAgent(
+        userMessage: '总结这篇行程',
+        noteContext: const AgentNoteContext(
+          noteId: 'note-corrupt-1',
+          content: 'Trip itinerary',
+          documentKind: NoteDocumentKind.rich,
+          documentRevision: null,
+          documentRevisionUnavailableReason: 'invalid_stored_delta',
+        ),
+      );
+
+      final corruptContextMessage = _chatMessageText(capturedMessages[1]);
+      expect(corruptContextMessage, contains('note_id: note-corrupt-1'));
+      expect(corruptContextMessage, contains('document_kind: rich'));
+      expect(corruptContextMessage, isNot(contains('document_revision:')));
+      expect(corruptContextMessage, contains('无法解析为编辑基线'));
+      expect(corruptContextMessage, contains('没有可用的 document_revision'));
+      expect(corruptContextMessage, contains('Trip itinerary'));
+
+      await service.runAgent(
+        userMessage: '总结这条电话备忘',
+        noteContext: const AgentNoteContext(
+          noteId: 'note-tel-link-1',
+          content: 'Hotline: 400-000-0000',
+          documentKind: NoteDocumentKind.rich,
+          documentRevision: null,
+          documentRevisionUnavailableReason: 'unsafe_link',
+        ),
+      );
+
+      final telLinkContextMessage = _chatMessageText(capturedMessages[1]);
+      expect(telLinkContextMessage, contains('note_id: note-tel-link-1'));
+      expect(telLinkContextMessage, isNot(contains('document_revision:')));
+      expect(telLinkContextMessage, contains('内容正常可读'));
+      expect(telLinkContextMessage, contains('不要声称笔记损坏'));
+      expect(telLinkContextMessage, contains('Hotline: 400-000-0000'));
+
+      await service.runAgent(
+        userMessage: '帮我看下这条空笔记',
+        noteContext: const AgentNoteContext(
+          noteId: 'note-empty-1',
+          content: '',
+          documentKind: NoteDocumentKind.plain,
+          documentRevision: null,
+          documentRevisionUnavailableReason: 'empty_document',
+        ),
+      );
+
+      final emptyContextMessage = _chatMessageText(capturedMessages[1]);
+      expect(emptyContextMessage, contains('note_id: note-empty-1'));
+      expect(emptyContextMessage, contains('该笔记当前正文为空'));
+      expect(
+        emptyContextMessage,
+        isNot(contains('包含暂不支持代理直接编辑的格式')),
+      );
+
+      await service.runAgent(
+        userMessage: '解释这条富文本回退笔记',
+        noteContext: const AgentNoteContext(
+          noteId: 'note-empty-ops-with-body-1',
+          content: 'Fallback plain body',
+          documentKind: NoteDocumentKind.rich,
+          documentRevision: null,
+          documentRevisionUnavailableReason: 'empty_document',
+        ),
+      );
+
+      final emptyOpsFallbackMessage = _chatMessageText(capturedMessages[1]);
+      expect(
+        emptyOpsFallbackMessage,
+        contains('存储的富文本插入内容为空且无法生成编辑基线'),
+      );
+      expect(
+        emptyOpsFallbackMessage,
+        isNot(contains('包含暂不支持代理直接编辑的格式')),
+      );
+    });
+
     test('preserves one typed proposal artifact in the final response',
         () async {
       final provider = const AIProviderSettings(

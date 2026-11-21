@@ -693,43 +693,39 @@ extension _NoteListItemsExtension on NoteListViewState {
         }
         return false;
       },
-      // 性能优化：BackdropGroup 让多个 BackdropFilter.grouped 共享采样
-      // 减少 GPU 重复帧缓冲读回，显著降低多模糊 item 同屏时的光栅开销
-      child: BackdropGroup(
-        child: _wrapWithDesktopScrollbar(
-          context,
-          child: ValueListenableBuilder<double>(
-            valueListenable: _idleCacheExtentBoostNotifier,
-            builder: (context, idleCacheExtentBoostPx, _) {
-              return ListView.custom(
-                controller: _scrollController, // 添加滚动控制器
-                // 必须显式给 padding。padding 为 null 时 BoxScrollView 会把
-                // MediaQuery.padding 的主轴部分包成 SliverPadding "帮忙"避开系统栏——
-                // 记录页没有 AppBar，状态栏高度不会被 Scaffold 消费，于是整条状态栏
-                // 高度又被加在了列表顶部。搜索框上方已经自己让开了 topPadding，这里
-                // 再让一次就是白送几十 dp 的空档：先前两次收紧首条卡片上边距
-                // （6 → 4 → 2.67）动的只是那几个像素，看上去当然"没变化"。
-                // 底部同理交回自己控制：Scaffold 有 bottomNavigationBar，body 的
-                // padding.bottom 已被置零，这里取到的就是 0。
-                // 负值仍然不可行——会命中 RenderSliverPadding 的
-                // assert(padding.isNonNegative)，首条间距只能靠卡片自身的上边距收。
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.paddingOf(context).bottom,
-                ),
-                physics: const AlwaysScrollableScrollPhysics(),
-                // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
-                // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿。
-                // 静止期还会在这个基础上一级一级往上撑，把下一屏卡片的挂载挪进空闲帧，
-                // 见 `_growIdleCacheExtent`。
-                scrollCacheExtent: ScrollCacheExtent.pixels(
-                  MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble() +
-                      idleCacheExtentBoostPx,
-                ),
-                semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
-                childrenDelegate: childrenDelegate,
-              );
-            },
-          ),
+      child: _wrapWithDesktopScrollbar(
+        context,
+        child: ValueListenableBuilder<double>(
+          valueListenable: _idleCacheExtentBoostNotifier,
+          builder: (context, idleCacheExtentBoostPx, _) {
+            return ListView.custom(
+              controller: _scrollController, // 添加滚动控制器
+              // 必须显式给 padding。padding 为 null 时 BoxScrollView 会把
+              // MediaQuery.padding 的主轴部分包成 SliverPadding "帮忙"避开系统栏——
+              // 记录页没有 AppBar，状态栏高度不会被 Scaffold 消费，于是整条状态栏
+              // 高度又被加在了列表顶部。搜索框上方已经自己让开了 topPadding，这里
+              // 再让一次就是白送几十 dp 的空档：先前两次收紧首条卡片上边距
+              // （6 → 4 → 2.67）动的只是那几个像素，看上去当然"没变化"。
+              // 底部同理交回自己控制：Scaffold 有 bottomNavigationBar，body 的
+              // padding.bottom 已被置零，这里取到的就是 0。
+              // 负值仍然不可行——会命中 RenderSliverPadding 的
+              // assert(padding.isNonNegative)，首条间距只能靠卡片自身的上边距收。
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom,
+              ),
+              physics: const AlwaysScrollableScrollPhysics(),
+              // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
+              // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿。
+              // 静止期还会在这个基础上一级一级往上撑，把下一屏卡片的挂载挪进空闲帧，
+              // 见 `_growIdleCacheExtent`。
+              scrollCacheExtent: ScrollCacheExtent.pixels(
+                MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble() +
+                    idleCacheExtentBoostPx,
+              ),
+              semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
+              childrenDelegate: childrenDelegate,
+            );
+          },
         ),
       ),
     );
