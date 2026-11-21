@@ -84,6 +84,30 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     },
   );
+
+  testWidgets(
+    'does not render orphaned BackdropGroup wrapper',
+    (tester) async {
+      final databaseService = _FakeDatabaseService();
+      final settingsService = _FakeSettingsService();
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.byType(ListView), findsAtLeastNWidgets(1));
+      expect(find.byType(BackdropGroup), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    },
+  );
 }
 
 class _TestApp extends StatefulWidget {
