@@ -1731,12 +1731,21 @@ void main() {
               'updated_at': null,
             });
             await db.insert('chat_messages', <String, Object?>{
-              'id': 'm_paired_utc',
+              'id': 'm_explicit_offset',
               'session_id': 's_pure_local',
               'role': 'user',
-              'content': '带同事件 UTC updated_at 的历史消息',
+              'content': '自身携带显式 +08:00 偏移的历史消息',
+              'created_at': '2026-10-01T09:00:00.123+08:00',
+              'updated_at': '2026-10-01T09:00:00.123+08:00',
+            });
+            await db.insert('chat_messages', <String, Object?>{
+              'id': 'm_edited_later_utc',
+              'session_id': 's_pure_local',
+              'role': 'user',
+              'content':
+                  '东八区 09:00 创建、5 分钟后即 01:05Z 编辑的消息（绝不能把 created_at 误改成 01:05Z）',
               'created_at': '2026-10-01T09:00:00.123',
-              'updated_at': '2026-10-01T01:00:00.123Z',
+              'updated_at': '2026-10-01T01:05:00.123Z',
             });
             await db.insert('chat_messages', <String, Object?>{
               'id': 'm_pure_offsetless',
@@ -1767,14 +1776,31 @@ void main() {
           final byMsgId = <String, Map<String, Object?>>{
             for (final r in mRows) r['id'] as String: r,
           };
-          // 有同事件显式 UTC updated_at 对照的行精确换算为 UTC 并备份原值
+          // 自身带显式 +08:00 偏移的列精确换算为 UTC 并备份原值
           expect(
-            byMsgId['m_paired_utc']!['created_at'],
+            byMsgId['m_explicit_offset']!['created_at'],
             '2026-10-01T01:00:00.123000Z',
           );
           expect(
-            byMsgId['m_paired_utc']!['created_at_backup'],
+            byMsgId['m_explicit_offset']!['created_at_backup'],
+            '2026-10-01T09:00:00.123+08:00',
+          );
+          // Greptile #76：无偏移 created_at 与后续编辑产生的 UTC updated_at 绝不跨列配对，保留各自语义
+          expect(
+            byMsgId['m_edited_later_utc']!['created_at'],
+            '2026-10-01T09:00:00.123000',
+          );
+          expect(
+            byMsgId['m_edited_later_utc']!['created_at_backup'],
             '2026-10-01T09:00:00.123',
+          );
+          expect(
+            byMsgId['m_edited_later_utc']!['updated_at'],
+            '2026-10-01T01:05:00.123000Z',
+          );
+          expect(
+            byMsgId['m_edited_later_utc']!['updated_at_backup'],
+            '2026-10-01T01:05:00.123Z',
           );
           // 纯无时区无对照的行保留无 Z 定宽字符串，绝不臆测当前时区盖上伪造 Z
           expect(
@@ -1792,6 +1818,358 @@ void main() {
       } finally {
         await svcSubMs.close();
         svcSubMs.dispose();
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test('Devin 审查回归 #72：无时区旧版聊天在 02:00Z 删除或重命名后，跨时区合入 09:00 无偏移云端旧快照绝不复活或回退',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('legacy_del_sync_');
+      final pathA = p.join(dir.path, 'dev_a.db');
+      final pathB = p.join(dir.path, 'dev_b.db');
+      final devA = ChatSessionService(databasePath: pathA);
+      final devB = ChatSessionService(databasePath: pathB);
+      try {
+        await devA.init();
+        await devB.init();
+
+        // 模拟从 UTC+8 导出的旧版无偏移快照（本地墙钟 09:00，对应真实 01:00Z）
+        final staleLegacySnapshot = <String, dynamic>{
+          'format': 1,
+          'sessions': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 's_legacy_deleted',
+              'session_type': 'agent',
+              'title': '待删除历史会话',
+              'created_at': '2026-11-21T09:00:00.000',
+              'last_active_at': '2026-11-21T09:00:00.000',
+            },
+            <String, Object?>{
+              'id': 's_legacy_renamed',
+              'session_type': 'agent',
+              'title': '旧标题',
+              'created_at': '2026-11-21T09:00:00.000',
+              'last_active_at': '2026-11-21T09:00:00.000',
+            },
+            <String, Object?>{
+              'id': 's_legacy_replied',
+              'session_type': 'agent',
+              'title': '删后重聊会话',
+              'created_at': '2026-11-21T09:00:00.000',
+              'last_active_at': '2026-11-21T09:00:00.000',
+            },
+          ],
+          'messages': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'm_legacy_deleted',
+              'session_id': 's_legacy_deleted',
+              'role': 'user',
+              'content': '已删除旧消息',
+              'created_at': '2026-11-21T09:00:00.000',
+            },
+            <String, Object?>{
+              'id': 'm_legacy_renamed',
+              'session_id': 's_legacy_renamed',
+              'role': 'user',
+              'content': '保留会话消息',
+              'created_at': '2026-11-21T09:00:00.000',
+            },
+            <String, Object?>{
+              'id': 'm_legacy_pre_cutoff',
+              'session_id': 's_legacy_replied',
+              'role': 'user',
+              'content': '截止线前的 09:00 无偏移旧消息',
+              'created_at': '2026-11-21T09:00:00.000',
+            },
+          ],
+          'tombstones': <Object?>[],
+        };
+
+        await devA.mergeChatSection(staleLegacySnapshot);
+        await devB.mergeChatSection(staleLegacySnapshot);
+
+        final rawA = await openDatabase(pathA, singleInstance: true);
+        // 在 02:00Z（早于字面 09:00Z！）删除 s_legacy_deleted 与 s_legacy_replied，并重命名 s_legacy_renamed
+        await rawA.delete(
+          'chat_messages',
+          where: 'session_id IN (?, ?)',
+          whereArgs: <Object?>['s_legacy_deleted', 's_legacy_replied'],
+        );
+        await rawA.delete(
+          'chat_sessions',
+          where: 'id IN (?, ?)',
+          whereArgs: <Object?>['s_legacy_deleted', 's_legacy_replied'],
+        );
+        for (final tomb in <Map<String, Object?>>[
+          <String, Object?>{
+            'entity_type': 'session',
+            'entity_id': 's_legacy_deleted',
+            'deleted_at': '2026-11-21T02:00:00.000000Z',
+          },
+          <String, Object?>{
+            'entity_type': 'message',
+            'entity_id': 'm_legacy_deleted',
+            'deleted_at': '2026-11-21T02:00:00.000000Z',
+          },
+          <String, Object?>{
+            'entity_type': 'session',
+            'entity_id': 's_legacy_replied',
+            'deleted_at': '2026-11-21T02:00:00.000000Z',
+          },
+        ]) {
+          await rawA.insert(
+            'chat_tombstones',
+            tomb,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        await rawA.update(
+          'chat_sessions',
+          <String, Object?>{
+            'title': '02:00Z 新标题',
+            'last_active_at': '2026-11-21T02:00:00.000000Z',
+            'updated_at': '2026-11-21T02:00:00.000000Z',
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>['s_legacy_renamed'],
+        );
+
+        // B 在 02:05Z 向 s_legacy_replied 追加一条新消息（其本地仍残留 09:00 无偏移旧消息且无单消息墓碑）
+        final rawB = await openDatabase(pathB, singleInstance: true);
+        await rawB.insert('chat_messages', <String, Object?>{
+          'id': 'm_post_0205z',
+          'session_id': 's_legacy_replied',
+          'role': 'assistant',
+          'content': '02:05Z 新回复',
+          'created_at': '2026-11-21T02:05:00.000000Z',
+          'updated_at': '2026-11-21T02:05:00.000000Z',
+          'included_in_context': 1,
+        });
+
+        // 1. A 再次合入云端未变的 09:00 无偏移旧快照：已删会话绝不复活，02:00Z 新标题绝不回退
+        await devA.mergeChatSection(staleLegacySnapshot);
+        final afterStaleOnA = await devA.getAllSessions();
+        expect(
+          afterStaleOnA.map((s) => s.id).toList(),
+          <String>['s_legacy_renamed'],
+        );
+        expect(afterStaleOnA.single.title, '02:00Z 新标题');
+
+        // 2. A 与 B 双向同步：s_legacy_deleted 在 B 上也被删除；s_legacy_replied 仅保留 02:05Z 新回复，09:00 旧消息被截止线拦截清除
+        await devA.mergeChatSection(await devB.exportChatSectionForTesting());
+        await devB.mergeChatSection(await devA.exportChatSectionForTesting());
+
+        expect(
+          (await devB.getAllSessions()).map((s) => s.id).toSet(),
+          <String>{'s_legacy_renamed', 's_legacy_replied'},
+        );
+        expect(
+          (await devA.getMessages('s_legacy_replied'))
+              .map((m) => m.id)
+              .toList(),
+          <String>['m_post_0205z'],
+        );
+        expect(
+          (await devB.getMessages('s_legacy_replied'))
+              .map((m) => m.id)
+              .toList(),
+          <String>['m_post_0205z'],
+        );
+      } finally {
+        await devA.close();
+        devA.dispose();
+        await devB.close();
+        devB.dispose();
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        'Devin 审查回归 #73 & #75：混合非规范/跨偏移时间戳下 getSessionOverviews 与 searchSessions 严格按真实时刻返回，且 addMessage 复用 ID 保留 *_backup',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('preview_backup_test_');
+      final dbPath = p.join(dir.path, 'mixed_chat.db');
+
+      final rawSeed = await openDatabase(
+        dbPath,
+        version: 3,
+        singleInstance: false,
+        onCreate: (db, _) async {
+          await db.execute('''
+            CREATE TABLE chat_sessions (
+              id TEXT PRIMARY KEY,
+              session_type TEXT NOT NULL,
+              note_id TEXT,
+              title TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              last_active_at TEXT NOT NULL,
+              updated_at TEXT,
+              is_pinned INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE chat_messages (
+              id TEXT PRIMARY KEY,
+              session_id TEXT NOT NULL,
+              role TEXT NOT NULL,
+              content TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT,
+              included_in_context INTEGER NOT NULL DEFAULT 1,
+              meta_json TEXT,
+              content_format TEXT,
+              delta_json TEXT
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE chat_tombstones (
+              entity_type TEXT NOT NULL,
+              entity_id TEXT NOT NULL,
+              deleted_at TEXT NOT NULL,
+              PRIMARY KEY (entity_type, entity_id)
+            )
+          ''');
+          await db.insert('chat_sessions', <String, Object?>{
+            'id': 's_mig_backup',
+            'session_type': 'agent',
+            'title': '备份列保留测试会话',
+            'created_at': '2026-10-01T09:00:00.5',
+            'last_active_at': '2026-10-01T09:00:00.5',
+          });
+          await db.insert('chat_messages', <String, Object?>{
+            'id': 'm_mig_reuse',
+            'session_id': 's_mig_backup',
+            'role': 'user',
+            'content': '初始迁移正文',
+            'created_at': '2026-10-01T09:00:00.5',
+            'updated_at': '2026-10-01T09:00:00.5',
+          });
+        },
+      );
+      await rawSeed.close();
+
+      final svc = ChatSessionService(databasePath: dbPath);
+      try {
+        await svc.init();
+        final rawDb = await openDatabase(dbPath, singleInstance: true);
+
+        // 注入混合格式时间串验证 SQL 文本序倒置场景（与运行机器本地时区无关）：
+        // 1) '2026-11-21T11:30:00.000000+08:00' (= 03:30Z) 文本序排在 '2026-11-21T04:00:00.000000Z' (= 04:00Z) 之后，但真实时刻更早！
+        await rawDb.insert('chat_sessions', <String, Object?>{
+          'id': 's_older_plus08',
+          'session_type': 'agent',
+          'title': '检索词旧会话',
+          'created_at': '2026-11-21T11:30:00.000000+08:00',
+          'last_active_at': '2026-11-21T11:30:00.000000+08:00',
+          'updated_at': '2026-11-21T03:30:00.000000Z',
+          'is_pinned': 0,
+        });
+        await rawDb.insert('chat_messages', <String, Object?>{
+          'id': 'm_older_1130_plus08',
+          'session_id': 's_older_plus08',
+          'role': 'user',
+          'content': '检索词：03:30Z 首条旧消息（11:30+08:00）',
+          'created_at': '2026-11-21T11:30:00.000000+08:00',
+          'updated_at': '2026-11-21T03:30:00.000000Z',
+          'included_in_context': 1,
+        });
+        await rawDb.insert('chat_messages', <String, Object?>{
+          'id': 'm_newer_0400_utc',
+          'session_id': 's_older_plus08',
+          'role': 'assistant',
+          'content': '检索词：04:00Z 最新回复消息',
+          'created_at': '2026-11-21T04:00:00.000000Z',
+          'updated_at': '2026-11-21T04:00:00.000000Z',
+          'included_in_context': 1,
+        });
+
+        await rawDb.insert('chat_sessions', <String, Object?>{
+          'id': 's_newer_utc',
+          'session_type': 'agent',
+          'title': '检索词新会话',
+          'created_at': '2026-11-21T04:00:00.000000Z',
+          'last_active_at': '2026-11-21T04:00:00.000000Z',
+          'updated_at': '2026-11-21T04:00:00.000000Z',
+          'is_pinned': 0,
+        });
+        await rawDb.insert('chat_messages', <String, Object?>{
+          'id': 'm_s_newer_only',
+          'session_id': 's_newer_utc',
+          'role': 'user',
+          'content': '检索词：04:00Z 新会话消息',
+          'created_at': '2026-11-21T04:00:00.000000Z',
+          'updated_at': '2026-11-21T04:00:00.000000Z',
+          'included_in_context': 1,
+        });
+
+        // 验证 #73(a)：getSessionOverviews 预览必须展示 04:00Z 最新消息，而非字面更大的 11:30+08:00 旧消息
+        final overviews = await svc.getSessionOverviews(
+          <String>['s_older_plus08', 's_newer_utc'],
+        );
+        expect(overviews['s_older_plus08']!.messageCount, 2);
+        expect(overviews['s_older_plus08']!.snippet, '检索词：04:00Z 最新回复消息');
+
+        // 验证 #73(b)：searchSessions 会话排序将 04:00Z 新会话排在 03:30Z(11:30+08:00) 之前，
+        // 且 s_older_plus08 的命中摘要取真实时间最早的 03:30Z 消息而非字面更小的 04:00Z 消息
+        final searchResults = await svc.searchSessions('检索词', limit: 2);
+        expect(
+          searchResults.map((r) => r.session.id).toList(),
+          <String>['s_newer_utc', 's_older_plus08'],
+        );
+        expect(searchResults[1].snippet, contains('03:30Z 首条旧消息'));
+
+        // 验证 #75：复用迁移消息 ID 调用 addMessage 及 mergeChatSection 更新正文后，created_at_backup 与 updated_at_backup 完好保留
+        await svc.addMessage(
+          's_mig_backup',
+          ChatMessage(
+            id: 'm_mig_reuse',
+            isUser: true,
+            role: 'user',
+            content: '二次编辑后正文',
+            timestamp: DateTime.utc(2026, 11, 21, 5, 0),
+          ),
+        );
+        final afterEditRow = (await rawDb.query(
+          'chat_messages',
+          where: 'id = ?',
+          whereArgs: <Object?>['m_mig_reuse'],
+        ))
+            .single;
+        expect(afterEditRow['content'], '二次编辑后正文');
+        expect(afterEditRow['created_at_backup'], '2026-10-01T09:00:00.5');
+        expect(afterEditRow['updated_at_backup'], '2026-10-01T09:00:00.5');
+
+        await svc.mergeChatSection(<String, dynamic>{
+          'format': 1,
+          'sessions': <Object?>[],
+          'messages': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'm_mig_reuse',
+              'session_id': 's_mig_backup',
+              'role': 'user',
+              'content': '远端同步三次修订正文',
+              'created_at': '2026-11-21T05:00:00.000000Z',
+              'updated_at': '2026-11-22T06:00:00.000000Z',
+            },
+          ],
+          'tombstones': <Object?>[],
+        });
+        final afterSyncRow = (await rawDb.query(
+          'chat_messages',
+          where: 'id = ?',
+          whereArgs: <Object?>['m_mig_reuse'],
+        ))
+            .single;
+        expect(afterSyncRow['content'], '远端同步三次修订正文');
+        expect(afterSyncRow['created_at_backup'], '2026-10-01T09:00:00.5');
+        expect(afterSyncRow['updated_at_backup'], '2026-10-01T09:00:00.5');
+      } finally {
+        await svc.close();
+        svc.dispose();
         if (await dir.exists()) {
           await dir.delete(recursive: true);
         }

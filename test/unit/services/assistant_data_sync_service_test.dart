@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
@@ -1285,13 +1286,26 @@ void main() {
         observedAt: DateTime.utc(2026, 11, 20, 8, 10),
       );
 
-      final appDocDir =
-          await Directory(p.join(tempDir.path, 'app_docs')).create();
+      // 必须落在 BackupService 解压媒体的真实 getApplicationDocumentsDirectory()/media/images 下
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final mediaRootDir = Directory(p.join(appDocDir.path, 'media'));
+      addTearDown(() async {
+        if (await mediaRootDir.exists()) {
+          await mediaRootDir.delete(recursive: true);
+        }
+      });
       final mediaSubDir =
-          await Directory(p.join(appDocDir.path, 'media', 'images'))
-              .create(recursive: true);
+          await Directory(p.join(mediaRootDir.path, 'images')).create(
+        recursive: true,
+      );
       final existingMediaFile = File(p.join(mediaSubDir.path, 'keep.png'));
+      final injectedMediaFile = File(
+        p.join(mediaSubDir.path, 'injected_bad.png'),
+      );
       await existingMediaFile.writeAsBytes(const <int>[1, 2, 3, 4]);
+      if (await injectedMediaFile.exists()) {
+        await injectedMediaFile.delete();
+      }
 
       Future<void> verifyAllLocalStateIntact() async {
         final notes = await rawNotesDb.query('quotes');
@@ -1373,21 +1387,29 @@ void main() {
         await verifyAllLocalStateIntact();
       }
 
-      // 3. 验证带媒体条目的 .zip 覆盖恢复在媒体解压前即前置拒绝
+      // 3. 验证带媒体条目的 .zip 覆盖恢复在媒体解压前即前置拒绝（既不覆盖同名旧文件，也不落盘新注入文件）
       for (final badChat in <bool>[false, true]) {
         final payloadBytes = utf8.encode(
           jsonEncode(buildBadPayload(badChat: badChat)),
         );
-        final mediaBytes = const <int>[9, 9, 9, 9];
+        const overwriteBytes = <int>[9, 9, 9, 9];
+        const injectedBytes = <int>[8, 8, 8, 8];
         final archive = Archive()
           ..addFile(
             ArchiveFile('backup_data.json', payloadBytes.length, payloadBytes),
           )
           ..addFile(
             ArchiveFile(
+              'media/images/keep.png',
+              overwriteBytes.length,
+              overwriteBytes,
+            ),
+          )
+          ..addFile(
+            ArchiveFile(
               'media/images/injected_bad.png',
-              mediaBytes.length,
-              mediaBytes,
+              injectedBytes.length,
+              injectedBytes,
             ),
           );
         final badZipFile = File(
@@ -1404,6 +1426,7 @@ void main() {
         );
         await verifyAllLocalStateIntact();
         expect(await existingMediaFile.readAsBytes(), <int>[1, 2, 3, 4]);
+        expect(await injectedMediaFile.exists(), isFalse);
       }
     });
   });

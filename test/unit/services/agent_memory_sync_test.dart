@@ -1845,6 +1845,14 @@ void main() {
             'updated_at': null,
             'status': 'active',
           });
+          await db.insert('agent_memory_profile', <String, Object?>{
+            'id': 'p_edited_later_utc',
+            'kind': 'preference',
+            'directive': '09:00 创建、5 分钟后即 01:05Z 编辑的历史画像',
+            'observed_at': '2026-10-05T09:00:00.25',
+            'updated_at': '2026-10-05T01:05:00.25Z',
+            'status': 'active',
+          });
         },
       );
       await rawLegacy.close();
@@ -1880,6 +1888,282 @@ void main() {
           byId['p_pure_offsetless']!['observed_at_backup'],
           '2026-10-05T09:30:00.25',
         );
+        // Greptile #76：后续编辑产生的 UTC updated_at 绝不反向篡改无偏移 observed_at
+        expect(
+          byId['p_edited_later_utc']!['observed_at'],
+          '2026-10-05T09:00:00.250000',
+        );
+        expect(
+          byId['p_edited_later_utc']!['observed_at_backup'],
+          '2026-10-05T09:00:00.25',
+        );
+        expect(
+          byId['p_edited_later_utc']!['updated_at'],
+          '2026-10-05T01:05:00.250000Z',
+        );
+      } finally {
+        svc.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        'Greptile 审查回归 #77：画像在同步期间被去重标为 superseded 后或离线对旧 ID 执行 editProfileDirective，本地与双向同步均保留最新人工修订并退休旧条目',
+        () async {
+      // 子场景 A：UI 编辑弹窗打开期间后台同步将 P1 去重为 superseded -> P2，随后用户保存 P1 编辑
+      final dirA = await Directory.systemTemp.createTemp('sup_edit_ui_race_');
+      final devA = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirA.path, 'a.db'),
+      );
+      final devB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirA.path, 'b.db'),
+      );
+      try {
+        final p1 = await devA.rememberProfile(
+          kind: AgentMemoryKind.preference,
+          directive: '偏爱深色极简排版',
+          observedAt: DateTime.utc(2026, 11, 15, 9, 0),
+        );
+        final p2 = await devB.rememberProfile(
+          kind: AgentMemoryKind.preference,
+          directive: '偏爱深色极简排版',
+          observedAt: DateTime.utc(2026, 11, 15, 10, 0),
+        );
+
+        // 后台同步完成：P1 在 A/B 上均被去重标为 superseded -> P2
+        await devA.mergeMemorySection(
+          (await devB.exportMemorySectionForTesting())!,
+        );
+        await devB.mergeMemorySection(
+          (await devA.exportMemorySectionForTesting())!,
+        );
+        expect((await devA.activeProfile()).map((e) => e.id).toList(), [p2.id]);
+
+        // 用户在仍持有 p1.id 的编辑框中点击保存，修改为新指令
+        final edited = await devA.editProfileDirective(
+          id: p1.id,
+          directive: '偏爱高对比暖色排版',
+        );
+        expect(edited, isTrue);
+        expect(
+          (await devA.activeProfile())
+              .map((e) => '${e.id}:${e.directive}')
+              .toList(),
+          <String>['${p1.id}:偏爱高对比暖色排版'],
+        );
+
+        // A 与 B 再次双向同步：B 上旧 P2 也被退休，双端严格收敛到编辑后的 P1
+        await devB.mergeMemorySection(
+          (await devA.exportMemorySectionForTesting())!,
+        );
+        await devA.mergeMemorySection(
+          (await devB.exportMemorySectionForTesting())!,
+        );
+        expect(
+          (await devA.activeProfile()).map((e) => e.directive).toList(),
+          <String>['偏爱高对比暖色排版'],
+        );
+        expect(
+          (await devB.activeProfile()).map((e) => e.directive).toList(),
+          <String>['偏爱高对比暖色排版'],
+        );
+      } finally {
+        devA.dispose();
+        devB.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dirA.exists()) {
+          await dirA.delete(recursive: true);
+        }
+      }
+
+      // 子场景 B：离线并发编辑——B 已将 P1 去重指向 P2，而 A 离线不知晓 P2 并直接 editProfileDirective(P1)；无论合并顺序如何均收敛到新 P1
+      for (final mergeAFirst in <bool>[true, false]) {
+        final dirOffline =
+            await Directory.systemTemp.createTemp('sup_edit_offline_');
+        final peerA = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dirOffline.path, 'peer_a.db'),
+        );
+        final peerB = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dirOffline.path, 'peer_b.db'),
+        );
+        try {
+          final p1 = await peerA.rememberProfile(
+            kind: AgentMemoryKind.preference,
+            directive: '回答优先给出代码示例',
+            observedAt: DateTime.utc(2026, 11, 16, 9, 0),
+          );
+          await peerB.mergeMemorySection(
+            (await peerA.exportMemorySectionForTesting())!,
+          );
+          final p2 = await peerB.rememberProfile(
+            kind: AgentMemoryKind.preference,
+            directive: '回答优先给出代码示例',
+            observedAt: DateTime.utc(2026, 11, 16, 10, 0),
+          );
+          // 触发 B 本地收敛使 B 上 P1 成为 superseded -> P2
+          await peerB.mergeMemorySection(
+            <String, dynamic>{'format': 1, 'profile': <Object?>[]},
+          );
+          expect(
+            (await peerB.activeProfile()).map((e) => e.id).toList(),
+            <String>[p2.id],
+          );
+
+          // A 在离线状态下原位编辑仍是 active 的 P1（此时 P1.updated_at > P2.updated_at）
+          await peerA.editProfileDirective(
+            id: p1.id,
+            directive: '回答先给出架构权衡再附代码',
+          );
+
+          if (mergeAFirst) {
+            await peerA.mergeMemorySection(
+              (await peerB.exportMemorySectionForTesting())!,
+            );
+            await peerB.mergeMemorySection(
+              (await peerA.exportMemorySectionForTesting())!,
+            );
+          } else {
+            await peerB.mergeMemorySection(
+              (await peerA.exportMemorySectionForTesting())!,
+            );
+            await peerA.mergeMemorySection(
+              (await peerB.exportMemorySectionForTesting())!,
+            );
+          }
+
+          expect(
+            (await peerA.activeProfile()).map((e) => e.directive).toList(),
+            <String>['回答先给出架构权衡再附代码'],
+          );
+          expect(
+            (await peerB.activeProfile()).map((e) => e.directive).toList(),
+            <String>['回答先给出架构权衡再附代码'],
+          );
+        } finally {
+          peerA.dispose();
+          peerB.dispose();
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          if (await dirOffline.exists()) {
+            await dirOffline.delete(recursive: true);
+          }
+        }
+      }
+
+      // 子场景 C：远端直接传入 status='superseded' 但带更新 user_edit updated_at 的 P1 快照时，收敛器同样将其恢复为 active 并淘汰旧终点 P2
+      final dirPayload =
+          await Directory.systemTemp.createTemp('sup_edit_payload_');
+      final receiver = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirPayload.path, 'receiver.db'),
+      );
+      try {
+        await receiver.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'p1_sup_edited',
+              'kind': 'preference',
+              'directive': '最新人工纠正指令',
+              'observed_at': '2026-11-21T11:00:00.000000Z',
+              'updated_at': '2026-11-21T11:00:00.000000Z',
+              'status': 'superseded',
+              'superseded_by': 'p2_old_term',
+              'replaces_id': null,
+              'source': 'user_edit',
+            },
+            <String, Object?>{
+              'id': 'p2_old_term',
+              'kind': 'preference',
+              'directive': '旧去重终点指令',
+              'observed_at': '2026-11-21T10:00:00.000000Z',
+              'updated_at': '2026-11-21T10:00:00.000000Z',
+              'status': 'active',
+              'superseded_by': null,
+              'replaces_id': null,
+              'source': 'thoughter',
+            },
+          ],
+        });
+        expect(
+          (await receiver.activeProfile())
+              .map((e) => '${e.id}:${e.directive}')
+              .toList(),
+          <String>['p1_sup_edited:最新人工纠正指令'],
+        );
+      } finally {
+        receiver.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dirPayload.exists()) {
+          await dirPayload.delete(recursive: true);
+        }
+      }
+    });
+
+    test('Devin 审查回归 #72（记忆对偶）：09:00 无偏移旧版记忆在 02:00Z 墓碑删除或清空后，跨时区合入旧快照绝不复活',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('mem_legacy_del_');
+      final svc = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'mem.db'),
+      );
+      try {
+        final staleLegacyMemory = <String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'prof_legacy_0900',
+              'kind': 'preference',
+              'directive': '东八区 09:00 无偏移旧画像',
+              'observed_at': '2026-11-21T09:00:00.000',
+            },
+          ],
+          'facts': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'fact_legacy_0900',
+              'content': '东八区 09:00 无偏移旧事实',
+              'importance': 6,
+              'created_at': '2026-11-21T09:00:00.000',
+            },
+          ],
+          'recent_slices': <Object?>[],
+          'tombstones': <Object?>[],
+        };
+
+        await svc.mergeMemorySection(staleLegacyMemory);
+        expect((await svc.activeProfile()).length, 1);
+        expect((await svc.allFacts()).length, 1);
+
+        // 模拟在 02:00Z 删除该画像与事实（早于字面 09:00Z）后再次重合并 09:00 无偏移旧快照
+        await svc.mergeMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Object?>[],
+          'facts': <Object?>[],
+          'tombstones': <Map<String, Object?>>[
+            <String, Object?>{
+              'entity_type': 'profile',
+              'entity_id': 'prof_legacy_0900',
+              'deleted_at': '2026-11-21T02:00:00.000000Z',
+            },
+            <String, Object?>{
+              'entity_type': 'fact',
+              'entity_id': 'fact_legacy_0900',
+              'deleted_at': '2026-11-21T02:00:00.000000Z',
+            },
+          ],
+        });
+        expect(await svc.activeProfile(), isEmpty);
+        expect(await svc.allFacts(), isEmpty);
+
+        await svc.mergeMemorySection(staleLegacyMemory);
+        expect(await svc.activeProfile(), isEmpty);
+        expect(await svc.allFacts(), isEmpty);
       } finally {
         svc.dispose();
         await Future<void>.delayed(const Duration(milliseconds: 20));

@@ -451,22 +451,12 @@ class AgentMemoryService extends ChangeNotifier {
         final row = nonCanonicalProfiles[j];
         final id = row['id'] as String?;
         if (id == null || id.isEmpty) continue;
-        final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
-          row['observed_at'],
-          row['updated_at'],
-        );
         final observedAt = _normalizeMemoryTimestampToUtcOrKeep(
           row['observed_at'],
-          sameEventCounterpart: row['updated_at'],
-          knownSameRowOffset: knownOffset,
         );
         final updatedRaw = row['updated_at'];
         final updatedAt = (updatedRaw is String && updatedRaw.trim().isNotEmpty)
-            ? _normalizeMemoryTimestampToUtcOrKeep(
-                updatedRaw,
-                sameEventCounterpart: row['observed_at'],
-                knownSameRowOffset: knownOffset,
-              )
+            ? _normalizeMemoryTimestampToUtcOrKeep(updatedRaw)
             : observedAt;
         if (observedAt != row['observed_at'] ||
             updatedAt != row['updated_at']) {
@@ -518,22 +508,12 @@ class AgentMemoryService extends ChangeNotifier {
         final row = nonCanonicalFacts[j];
         final id = row['id'] as String?;
         if (id == null || id.isEmpty) continue;
-        final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
-          row['created_at'],
-          row['updated_at'],
-        );
         final createdAt = _normalizeMemoryTimestampToUtcOrKeep(
           row['created_at'],
-          sameEventCounterpart: row['updated_at'],
-          knownSameRowOffset: knownOffset,
         );
         final updatedRaw = row['updated_at'];
         final updatedAt = (updatedRaw is String && updatedRaw.trim().isNotEmpty)
-            ? _normalizeMemoryTimestampToUtcOrKeep(
-                updatedRaw,
-                sameEventCounterpart: row['created_at'],
-                knownSameRowOffset: knownOffset,
-              )
+            ? _normalizeMemoryTimestampToUtcOrKeep(updatedRaw)
             : createdAt;
         final recalledRaw = row['last_recalled_at'];
         final lastRecalledAt =
@@ -1193,20 +1173,97 @@ class AgentMemoryService extends ChangeNotifier {
     try {
       final db = await _db;
       final nowUtcIso = LWWUtils.formatFixedUtcIso(DateTime.now());
-      final updated = await db.update(
-        profileTable,
-        <String, Object?>{
-          'directive': normalized,
-          'observed_at': nowUtcIso,
-          'updated_at': nowUtcIso,
-          'source': 'user_edit',
-          'basis_watermark': null,
-          'basis_note_count': null,
-          if (kind != null) 'kind': kind.storageValue,
-        },
-        where: 'id = ?',
-        whereArgs: <Object?>[id],
-      );
+      final updated = await db.transaction<int>((txn) async {
+        final existingRows = await txn.query(
+          profileTable,
+          columns: const <String>['status', 'superseded_by', 'replaces_id'],
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+          limit: 1,
+        );
+        if (existingRows.isEmpty) {
+          return 0;
+        }
+        final existing = existingRows.first;
+        final prevStatus = (existing['status'] as String?)?.trim() ?? '';
+        final prevSupBy = (existing['superseded_by'] as String?)?.trim() ?? '';
+        final prevReplacesId =
+            (existing['replaces_id'] as String?)?.trim() ?? '';
+
+        // 若用户在打开编辑弹窗期间后台同步恰好将该条目去重标为 `superseded -> P2`（或多跳终点 T），
+        // 保存人工修订时必须原位恢复为 `active`，同时将此前接管它的活跃终点 T 退休指向当前条目并补记
+        // `replaces_id = T`，确保本次人工纠正在本机立即生效且后续多端同步确定性胜出。
+        String? terminalSuccessorId;
+        if (prevStatus == AgentMemoryStatus.superseded.storageValue &&
+            prevSupBy.isNotEmpty) {
+          var currId = prevSupBy;
+          final visited = <String>{id};
+          while (currId.isNotEmpty && visited.add(currId)) {
+            final nextRows = await txn.query(
+              profileTable,
+              columns: const <String>['id', 'status', 'superseded_by'],
+              where: 'id = ?',
+              whereArgs: <Object?>[currId],
+              limit: 1,
+            );
+            if (nextRows.isEmpty) {
+              break;
+            }
+            final nextRow = nextRows.first;
+            final nextStatus = (nextRow['status'] as String?)?.trim() ??
+                AgentMemoryStatus.active.storageValue;
+            if (nextStatus == AgentMemoryStatus.active.storageValue) {
+              terminalSuccessorId = currId;
+              break;
+            }
+            if (nextStatus != AgentMemoryStatus.superseded.storageValue) {
+              break;
+            }
+            currId = (nextRow['superseded_by'] as String?)?.trim() ?? '';
+          }
+        }
+
+        final count = await txn.update(
+          profileTable,
+          <String, Object?>{
+            'directive': normalized,
+            'observed_at': nowUtcIso,
+            'updated_at': nowUtcIso,
+            'status': AgentMemoryStatus.active.storageValue,
+            'superseded_by': null,
+            'source': 'user_edit',
+            'basis_watermark': null,
+            'basis_note_count': null,
+            if (terminalSuccessorId != null &&
+                terminalSuccessorId != id &&
+                prevReplacesId.isEmpty)
+              'replaces_id': terminalSuccessorId,
+            if (kind != null) 'kind': kind.storageValue,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+        );
+
+        if (count > 0) {
+          if (terminalSuccessorId != null && terminalSuccessorId != id) {
+            await txn.update(
+              profileTable,
+              <String, Object?>{
+                'status': AgentMemoryStatus.superseded.storageValue,
+                'superseded_by': id,
+              },
+              where: 'id = ?',
+              whereArgs: <Object?>[terminalSuccessorId],
+            );
+          }
+          await txn.delete(
+            tombstonesTable,
+            where: 'entity_type = ? AND entity_id = ?',
+            whereArgs: <Object?>['profile', id],
+          );
+        }
+        return count;
+      });
       if (updated > 0) {
         _invalidateProfile();
         await activeIdentityAliases();

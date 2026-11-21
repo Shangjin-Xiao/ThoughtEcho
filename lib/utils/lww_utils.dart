@@ -272,36 +272,68 @@ class LWWUtils {
     return DateTime.tryParse('${normalizedSep}Z');
   }
 
-  /// 当无时区时间串 [offsetlessRaw] 与显式时区时间串 [explicitCounterpartRaw] 代表同一事件时，
-  /// 通过两者墙钟刻度与真实 UTC 时刻的整分钟时区差（`[-14h, +14h]` 且秒与微秒完全一致）
-  /// 提取精确历史时区偏移；不满足同一事件条件时返回 `null`。
-  static Duration? inferOffsetFromSameEventPair(
-    Object? offsetlessRaw,
-    Object? explicitCounterpartRaw,
+  /// 当无时区墙钟时间串需要用于跨端确定性平局比较时，直接将其字面刻度按 UTC 刻度解析（绝不混入接收端本地时区）。
+  static DateTime? parseOffsetlessWallClockDeterministicUtc(Object? raw) {
+    if (raw is! String) return null;
+    return _parseOffsetlessWallClockAsNaiveUtc(raw);
+  }
+
+  /// 判断 [raw] 是否为合法但缺失显式时区偏移的历史本地时间串。
+  static bool isAmbiguousOffsetlessTimestamp(Object? raw) {
+    if (raw is! String) return false;
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || hasExplicitTimezoneOffset(trimmed)) return false;
+    return _parseOffsetlessWallClockAsNaiveUtc(trimmed) != null;
+  }
+
+  /// 将同步版本时间串解析为与接收端本地时区完全无关的确定性结构：
+  /// - 携带显式时区（`Z` 或 `±HH:MM`）时，`hasExplicitZone == true` 且返回精确 UTC 时刻；
+  /// - 缺失时区的历史墙钟时间串，`hasExplicitZone == false` 且返回字面刻度固定映射值，
+  ///   确保处于任意时区的设备得出完全一致的比较结果。
+  static ({DateTime utc, bool hasExplicitZone})? tryParseSyncVersion(
+    Object? raw,
   ) {
-    if (offsetlessRaw is! String) return null;
-    final naiveUtc = _parseOffsetlessWallClockAsNaiveUtc(offsetlessRaw);
-    final counterpartUtc = tryParseExplicitZoneUtc(explicitCounterpartRaw);
-    if (naiveUtc == null || counterpartUtc == null) return null;
-    final diff = naiveUtc.difference(counterpartUtc);
-    if (diff.abs() > const Duration(hours: 14)) return null;
-    if (diff.inMicroseconds % Duration.microsecondsPerMinute != 0) {
-      return null;
+    if (raw is! String) return null;
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    if (hasExplicitTimezoneOffset(trimmed)) {
+      final explicitUtc = DateTime.tryParse(trimmed)?.toUtc();
+      if (explicitUtc == null) return null;
+      return (utc: explicitUtc, hasExplicitZone: true);
     }
-    return diff;
+    final naiveUtc = _parseOffsetlessWallClockAsNaiveUtc(trimmed);
+    if (naiveUtc == null) return null;
+    return (utc: naiveUtc, hasExplicitZone: false);
+  }
+
+  /// 跨时区确定性比较两个同步版本时间：
+  /// 1. 任何携带显式时区偏移的 v3+ 写入版本因果上均晚于从未在 v3+ 编辑过的历史无偏移旧版本；
+  /// 2. 同为显式时区或同为历史无偏移时，按设备无关的 `utc` 刻度比较。
+  static int compareSyncVersions(
+    ({DateTime utc, bool hasExplicitZone}) left,
+    ({DateTime utc, bool hasExplicitZone}) right,
+  ) {
+    if (left.hasExplicitZone != right.hasExplicitZone) {
+      return left.hasExplicitZone ? 1 : -1;
+    }
+    return left.utc.compareTo(right.utc);
+  }
+
+  /// 判定某个实体版本是否严格晚于显式删除时间（墓碑 / 截止线 / 清空屏障）：
+  /// 缺失时区的旧版历史遗留时间戳（未在 v3+ 发生过任何新编辑）绝不允许凭接收端时区解释压倒显式删除标记。
+  static bool syncVersionBeatsDeletion(
+    ({DateTime utc, bool hasExplicitZone}) version,
+    DateTime explicitDeletedAtUtc,
+  ) {
+    if (!version.hasExplicitZone) return false;
+    return version.utc.isAfter(explicitDeletedAtUtc);
   }
 
   /// 安全归一化时间字符串：
   /// 1. 显式偏移（`Z` 或 `±HH:MM`）直接精确换算为固定 6 位小数位 UTC（`...ffffffZ`）；
-  /// 2. 无偏移本地时间若提供同一事件的显式时区对应值 [sameEventCounterpart]（或已知同事件偏移
-  ///    [knownSameRowOffset]），则据此精确换算为固定 6 位小数位 UTC；
-  /// 3. 无可靠时区依据的无偏移历史本地时间仅补齐固定 6 位小数位（不附加伪造 `Z`），
-  ///    避免设备跨时区旅行升级时将当前时区误固化为权威 UTC 历史。
-  static String normalizeTimestampPreservingOffsetless(
-    Object? raw, {
-    Object? sameEventCounterpart,
-    Duration? knownSameRowOffset,
-  }) {
+  /// 2. 无可靠时区依据的无偏移历史本地时间仅补齐固定 6 位小数位（不附加伪造 `Z`，也不跨列猜测时区），
+  ///    避免将后续编辑时间误判为同事件时区差或因跨时区旅行升级篡改历史墙钟时刻。
+  static String normalizeTimestampPreservingOffsetless(Object? raw) {
     if (raw is! String) return '';
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return '';
@@ -312,16 +344,8 @@ class LWWUtils {
       return utc != null ? formatFixedUtcIso(utc) : trimmed;
     }
 
-    final inferredOffset = inferOffsetFromSameEventPair(
-          trimmed,
-          sameEventCounterpart,
-        ) ??
-        knownSameRowOffset;
     final naiveUtc = _parseOffsetlessWallClockAsNaiveUtc(trimmed);
     if (naiveUtc == null) return trimmed;
-    if (inferredOffset != null) {
-      return formatFixedUtcIso(naiveUtc.subtract(inferredOffset));
-    }
     return _formatFixedIsoCore(naiveUtc);
   }
 }

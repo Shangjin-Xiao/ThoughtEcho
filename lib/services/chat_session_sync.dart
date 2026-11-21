@@ -69,6 +69,19 @@ class _ParsedChatTombstone {
   final DateTime deletedAtUtc;
 }
 
+typedef _ChatSyncVersion = ({DateTime utc, bool hasExplicitZone});
+
+final _ChatSyncVersion _epochChatSyncVersion = (
+  utc: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+  hasExplicitZone: false,
+);
+
+_ChatSyncVersion _parseChatSyncVersion(Object? primary, [Object? fallback]) {
+  return LWWUtils.tryParseSyncVersion(primary) ??
+      (fallback != null ? LWWUtils.tryParseSyncVersion(fallback) : null) ??
+      _epochChatSyncVersion;
+}
+
 DateTime? _tryParseChatUtc(Object? raw) {
   if (raw is! String) return null;
   final trimmed = raw.trim();
@@ -77,16 +90,8 @@ DateTime? _tryParseChatUtc(Object? raw) {
   return parsed?.toUtc();
 }
 
-String _normalizeChatTimestampToUtcOrKeep(
-  Object? raw, {
-  Object? sameEventCounterpart,
-  Duration? knownSameRowOffset,
-}) {
-  return LWWUtils.normalizeTimestampPreservingOffsetless(
-    raw,
-    sameEventCounterpart: sameEventCounterpart,
-    knownSameRowOffset: knownSameRowOffset,
-  );
+String _normalizeChatTimestampToUtcOrKeep(Object? raw) {
+  return LWWUtils.normalizeTimestampPreservingOffsetless(raw);
 }
 
 bool _isValidPositiveFormatVersion(Object? rawFormat) {
@@ -195,22 +200,9 @@ Map<String, Object?>? _sanitizeSessionRow(Object? item) {
     return null;
   }
 
-  final rowOffset = LWWUtils.inferOffsetFromSameEventPair(
-        lastActiveRaw,
-        updatedRaw,
-      ) ??
-      LWWUtils.inferOffsetFromSameEventPair(createdAtRaw, updatedRaw);
-  final createdAtStr = _normalizeChatTimestampToUtcOrKeep(
-    createdAtRaw,
-    sameEventCounterpart: updatedRaw,
-    knownSameRowOffset: createdAtRaw == lastActiveRaw ? rowOffset : null,
-  );
+  final createdAtStr = _normalizeChatTimestampToUtcOrKeep(createdAtRaw);
   final lastActiveStr = lastActiveUtc != null
-      ? _normalizeChatTimestampToUtcOrKeep(
-          lastActiveRaw,
-          sameEventCounterpart: updatedRaw,
-          knownSameRowOffset: rowOffset,
-        )
+      ? _normalizeChatTimestampToUtcOrKeep(lastActiveRaw)
       : createdAtStr;
   final updatedStr = updatedUtc != null
       ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
@@ -276,10 +268,7 @@ Map<String, Object?>? _sanitizeMessageRow(Object? item) {
     return null;
   }
 
-  final createdAtStr = _normalizeChatTimestampToUtcOrKeep(
-    createdAtRaw,
-    sameEventCounterpart: updatedRaw,
-  );
+  final createdAtStr = _normalizeChatTimestampToUtcOrKeep(createdAtRaw);
   final updatedStr = updatedUtc != null
       ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
       : createdAtStr;
@@ -374,23 +363,9 @@ Map<String, Object?> _exportWhitelistedSession(Map<String, Object?> raw) {
     for (final col in _chatSessionColumnWhitelist) col: raw[col],
   };
   final rawUpdated = row['updated_at'];
-  final rowOffset = LWWUtils.inferOffsetFromSameEventPair(
-        row['last_active_at'],
-        rawUpdated,
-      ) ??
-      LWWUtils.inferOffsetFromSameEventPair(row['created_at'], rawUpdated);
-  final created = _normalizeChatTimestampToUtcOrKeep(
-    row['created_at'],
-    sameEventCounterpart: rawUpdated,
-    knownSameRowOffset:
-        row['created_at'] == row['last_active_at'] ? rowOffset : null,
-  );
+  final created = _normalizeChatTimestampToUtcOrKeep(row['created_at']);
   row['created_at'] = created;
-  final lastActive = _normalizeChatTimestampToUtcOrKeep(
-    row['last_active_at'],
-    sameEventCounterpart: rawUpdated,
-    knownSameRowOffset: rowOffset,
-  );
+  final lastActive = _normalizeChatTimestampToUtcOrKeep(row['last_active_at']);
   row['last_active_at'] = lastActive.isNotEmpty ? lastActive : created;
   final updated = _normalizeChatTimestampToUtcOrKeep(rawUpdated);
   row['updated_at'] = updated.isNotEmpty
@@ -404,10 +379,7 @@ Map<String, Object?> _exportWhitelistedMessage(Map<String, Object?> raw) {
     for (final col in _chatMessageColumnWhitelist) col: raw[col],
   };
   final rawUpdated = row['updated_at'];
-  final created = _normalizeChatTimestampToUtcOrKeep(
-    row['created_at'],
-    sameEventCounterpart: rawUpdated,
-  );
+  final created = _normalizeChatTimestampToUtcOrKeep(row['created_at']);
   row['created_at'] = created;
   final updated = _normalizeChatTimestampToUtcOrKeep(rawUpdated);
   row['updated_at'] = updated.isNotEmpty ? updated : created;
@@ -549,46 +521,44 @@ extension ChatSessionSyncExtension on ChatSessionService {
           remoteSessionsById[id] = sanitized;
           continue;
         }
-        final candUpdated =
-            LWWUtils.parseTimestamp(sanitized['updated_at'] as String);
-        final existUpdated =
-            LWWUtils.parseTimestamp(existing['updated_at'] as String);
-        if (candUpdated.isAfter(existUpdated) ||
-            (candUpdated.isAtSameMomentAs(existUpdated) &&
+        final candUpdated = _parseChatSyncVersion(sanitized['updated_at']);
+        final existUpdated = _parseChatSyncVersion(existing['updated_at']);
+        final cmpUpdated = LWWUtils.compareSyncVersions(
+          candUpdated,
+          existUpdated,
+        );
+        final existCreatedStr = existing['created_at'] as String;
+        final candCreatedStr = sanitized['created_at'] as String;
+        final mergedCreatedStr = LWWUtils.compareSyncVersions(
+                  _parseChatSyncVersion(candCreatedStr),
+                  _parseChatSyncVersion(existCreatedStr),
+                ) <
+                0
+            ? candCreatedStr
+            : existCreatedStr;
+        final existLastActiveStr = existing['last_active_at'] as String;
+        final candLastActiveStr = sanitized['last_active_at'] as String;
+        final mergedLastActiveStr = LWWUtils.compareSyncVersions(
+                  _parseChatSyncVersion(candLastActiveStr),
+                  _parseChatSyncVersion(existLastActiveStr),
+                ) >
+                0
+            ? candLastActiveStr
+            : existLastActiveStr;
+        if (cmpUpdated > 0 ||
+            (cmpUpdated == 0 &&
                 _compareChatCanonicalFields(
                       sanitized,
                       existing,
                       _chatSessionTieBreakKeys,
                     ) >
                     0)) {
-          final existCreatedStr = existing['created_at'] as String;
-          final candCreatedStr = sanitized['created_at'] as String;
-          final mergedCreatedStr = LWWUtils.parseTimestamp(candCreatedStr)
-                  .isBefore(LWWUtils.parseTimestamp(existCreatedStr))
-              ? candCreatedStr
-              : existCreatedStr;
-          final existLastActiveStr = existing['last_active_at'] as String;
-          final candLastActiveStr = sanitized['last_active_at'] as String;
-          final mergedLastActiveStr = LWWUtils.parseTimestamp(candLastActiveStr)
-                  .isAfter(LWWUtils.parseTimestamp(existLastActiveStr))
-              ? candLastActiveStr
-              : existLastActiveStr;
           sanitized['created_at'] = mergedCreatedStr;
           sanitized['last_active_at'] = mergedLastActiveStr;
           remoteSessionsById[id] = sanitized;
         } else {
-          final existCreatedStr = existing['created_at'] as String;
-          final candCreatedStr = sanitized['created_at'] as String;
-          if (LWWUtils.parseTimestamp(candCreatedStr)
-              .isBefore(LWWUtils.parseTimestamp(existCreatedStr))) {
-            existing['created_at'] = candCreatedStr;
-          }
-          final existLastActiveStr = existing['last_active_at'] as String;
-          final candLastActiveStr = sanitized['last_active_at'] as String;
-          if (LWWUtils.parseTimestamp(candLastActiveStr)
-              .isAfter(LWWUtils.parseTimestamp(existLastActiveStr))) {
-            existing['last_active_at'] = candLastActiveStr;
-          }
+          existing['created_at'] = mergedCreatedStr;
+          existing['last_active_at'] = mergedLastActiveStr;
           sessionsSkipped++;
         }
       }
@@ -608,12 +578,14 @@ extension ChatSessionSyncExtension on ChatSessionService {
           remoteMessagesById[id] = sanitized;
           continue;
         }
-        final candUpdated =
-            LWWUtils.parseTimestamp(sanitized['updated_at'] as String);
-        final existUpdated =
-            LWWUtils.parseTimestamp(existing['updated_at'] as String);
-        if (candUpdated.isAfter(existUpdated) ||
-            (candUpdated.isAtSameMomentAs(existUpdated) &&
+        final candUpdated = _parseChatSyncVersion(sanitized['updated_at']);
+        final existUpdated = _parseChatSyncVersion(existing['updated_at']);
+        final cmpUpdated = LWWUtils.compareSyncVersions(
+          candUpdated,
+          existUpdated,
+        );
+        if (cmpUpdated > 0 ||
+            (cmpUpdated == 0 &&
                 _compareChatCanonicalFields(
                       sanitized,
                       existing,
@@ -733,9 +705,9 @@ extension ChatSessionSyncExtension on ChatSessionService {
             sId,
       ];
 
-      final maxSurvivingMsgUpdatedBySession = <String, DateTime>{};
+      final maxSurvivingMsgUpdatedBySession = <String, _ChatSyncVersion>{};
       final localMsgsInTombstonedSessions =
-          <String, ({String sessionId, DateTime updatedUtc})>{};
+          <String, ({String sessionId, _ChatSyncVersion updatedVer})>{};
       if (tombstonedCandidateSessionIds.isNotEmpty) {
         final candidateSessionSet = tombstonedCandidateSessionIds.toSet();
         for (var i = 0;
@@ -763,23 +735,29 @@ extension ChatSessionSyncExtension on ChatSessionService {
             if (mId.isEmpty || sId.isEmpty || !localSessions.containsKey(sId)) {
               continue;
             }
-            final updatedRaw = r['updated_at']?.toString() ?? '';
-            final effectiveStr = updatedRaw.isNotEmpty
-                ? updatedRaw
-                : (r['created_at']?.toString() ?? '');
-            final msgUpdated = LWWUtils.parseTimestamp(effectiveStr);
+            final msgUpdated = _parseChatSyncVersion(
+              r['updated_at'],
+              r['created_at'],
+            );
             localMsgsInTombstonedSessions[mId] = (
               sessionId: sId,
-              updatedUtc: msgUpdated,
+              updatedVer: msgUpdated,
             );
             final effMsgTomb = effectiveMessageTombstoneFor(mId);
             final effSessCutoff = effectiveSessionCutoffFor(sId);
             if ((effMsgTomb == null ||
-                    msgUpdated.isAfter(effMsgTomb.deletedAtUtc)) &&
+                    LWWUtils.syncVersionBeatsDeletion(
+                      msgUpdated,
+                      effMsgTomb.deletedAtUtc,
+                    )) &&
                 (effSessCutoff == null ||
-                    msgUpdated.isAfter(effSessCutoff.deletedAtUtc))) {
+                    LWWUtils.syncVersionBeatsDeletion(
+                      msgUpdated,
+                      effSessCutoff.deletedAtUtc,
+                    ))) {
               final prev = maxSurvivingMsgUpdatedBySession[sId];
-              if (prev == null || msgUpdated.isAfter(prev)) {
+              if (prev == null ||
+                  LWWUtils.compareSyncVersions(msgUpdated, prev) > 0) {
                 maxSurvivingMsgUpdatedBySession[sId] = msgUpdated;
               }
             }
@@ -793,16 +771,25 @@ extension ChatSessionSyncExtension on ChatSessionService {
               !remoteSessionsById.containsKey(sId)) {
             continue;
           }
-          final msgUpdated =
-              LWWUtils.parseTimestamp(remoteMsg['updated_at'] as String?);
+          final msgUpdated = _parseChatSyncVersion(
+            remoteMsg['updated_at'],
+            remoteMsg['created_at'],
+          );
           final effMsgTomb = effectiveMessageTombstoneFor(mId);
           final effSessCutoff = effectiveSessionCutoffFor(sId);
           if ((effMsgTomb == null ||
-                  msgUpdated.isAfter(effMsgTomb.deletedAtUtc)) &&
+                  LWWUtils.syncVersionBeatsDeletion(
+                    msgUpdated,
+                    effMsgTomb.deletedAtUtc,
+                  )) &&
               (effSessCutoff == null ||
-                  msgUpdated.isAfter(effSessCutoff.deletedAtUtc))) {
+                  LWWUtils.syncVersionBeatsDeletion(
+                    msgUpdated,
+                    effSessCutoff.deletedAtUtc,
+                  ))) {
             final prev = maxSurvivingMsgUpdatedBySession[sId];
-            if (prev == null || msgUpdated.isAfter(prev)) {
+            if (prev == null ||
+                LWWUtils.compareSyncVersions(msgUpdated, prev) > 0) {
               maxSurvivingMsgUpdatedBySession[sId] = msgUpdated;
             }
           }
@@ -822,17 +809,24 @@ extension ChatSessionSyncExtension on ChatSessionService {
         final effectiveCutoff = effectiveSessionCutoffFor(sessionId);
 
         final localUpdated = localRow != null
-            ? LWWUtils.parseTimestamp(localRow['updated_at'] as String?)
+            ? _parseChatSyncVersion(
+                localRow['updated_at'],
+                localRow['last_active_at'],
+              )
             : null;
         final remoteUpdated = remoteRow != null
-            ? LWWUtils.parseTimestamp(remoteRow['updated_at'] as String?)
+            ? _parseChatSyncVersion(
+                remoteRow['updated_at'],
+                remoteRow['last_active_at'],
+              )
             : null;
 
-        DateTime? maxLiveUpdated;
+        _ChatSyncVersion? maxLiveUpdated;
         if (localUpdated != null && remoteUpdated != null) {
-          maxLiveUpdated = remoteUpdated.isAfter(localUpdated)
-              ? remoteUpdated
-              : localUpdated;
+          maxLiveUpdated =
+              LWWUtils.compareSyncVersions(remoteUpdated, localUpdated) > 0
+                  ? remoteUpdated
+                  : localUpdated;
         } else {
           maxLiveUpdated = remoteUpdated ?? localUpdated;
         }
@@ -841,17 +835,24 @@ extension ChatSessionSyncExtension on ChatSessionService {
         final maxSurvivingMsgUpdated = (localRow != null || remoteRow != null)
             ? maxSurvivingMsgUpdatedBySession[sessionId]
             : null;
-        DateTime? maxLiveActivityUpdated = maxLiveUpdated;
+        _ChatSyncVersion? maxLiveActivityUpdated = maxLiveUpdated;
         if (maxSurvivingMsgUpdated != null &&
             (maxLiveActivityUpdated == null ||
-                maxSurvivingMsgUpdated.isAfter(maxLiveActivityUpdated))) {
+                LWWUtils.compareSyncVersions(
+                      maxSurvivingMsgUpdated,
+                      maxLiveActivityUpdated,
+                    ) >
+                    0)) {
           maxLiveActivityUpdated = maxSurvivingMsgUpdated;
         }
 
-        // 墓碑胜出条件：显式会话删除墓碑 deleted_at >= 最新活跃版本时间（或无数据行）
+        // 墓碑胜出条件：显式会话删除墓碑 deleted_at >= 最新活跃版本时间（无偏移历史旧版本绝不跨时区压倒墓碑）
         if (effectiveTomb != null &&
             (maxLiveActivityUpdated == null ||
-                !maxLiveActivityUpdated.isAfter(effectiveTomb.deletedAtUtc))) {
+                !LWWUtils.syncVersionBeatsDeletion(
+                  maxLiveActivityUpdated,
+                  effectiveTomb.deletedAtUtc,
+                ))) {
           if (localRow != null) {
             await txn.delete(
               'chat_messages',
@@ -952,21 +953,30 @@ extension ChatSessionSyncExtension on ChatSessionService {
         } else if (localRow != null && remoteRow != null) {
           final localCreatedStr = localRow['created_at'] as String;
           final remoteCreatedStr = remoteRow['created_at'] as String;
-          final mergedCreatedAt = LWWUtils.parseTimestamp(remoteCreatedStr)
-                  .isBefore(LWWUtils.parseTimestamp(localCreatedStr))
+          final mergedCreatedAt = LWWUtils.compareSyncVersions(
+                    _parseChatSyncVersion(remoteCreatedStr),
+                    _parseChatSyncVersion(localCreatedStr),
+                  ) <
+                  0
               ? remoteCreatedStr
               : localCreatedStr;
 
           final localLastActiveStr = localRow['last_active_at'] as String;
           final remoteLastActiveStr = remoteRow['last_active_at'] as String;
-          final mergedLastActiveAt =
-              LWWUtils.parseTimestamp(remoteLastActiveStr)
-                      .isAfter(LWWUtils.parseTimestamp(localLastActiveStr))
-                  ? remoteLastActiveStr
-                  : localLastActiveStr;
+          final mergedLastActiveAt = LWWUtils.compareSyncVersions(
+                    _parseChatSyncVersion(remoteLastActiveStr),
+                    _parseChatSyncVersion(localLastActiveStr),
+                  ) >
+                  0
+              ? remoteLastActiveStr
+              : localLastActiveStr;
 
-          final remoteWinsMetadata = remoteUpdated!.isAfter(localUpdated!) ||
-              (remoteUpdated.isAtSameMomentAs(localUpdated) &&
+          final cmpMeta = LWWUtils.compareSyncVersions(
+            remoteUpdated!,
+            localUpdated!,
+          );
+          final remoteWinsMetadata = cmpMeta > 0 ||
+              (cmpMeta == 0 &&
                   _compareChatCanonicalFields(
                         remoteRow,
                         localRow,
@@ -1023,11 +1033,11 @@ extension ChatSessionSyncExtension on ChatSessionService {
         ...localMsgsInTombstonedSessions.keys,
       }.toList(growable: false);
 
-      final localMsgUpdatedById = <String, DateTime>{};
+      final localMsgUpdatedById = <String, _ChatSyncVersion>{};
       final localMsgSessionById = <String, String>{};
       for (final entry in localMsgsInTombstonedSessions.entries) {
         if (survivingSessionIds.contains(entry.value.sessionId)) {
-          localMsgUpdatedById[entry.key] = entry.value.updatedUtc;
+          localMsgUpdatedById[entry.key] = entry.value.updatedVer;
           localMsgSessionById[entry.key] = entry.value.sessionId;
         }
       }
@@ -1059,24 +1069,30 @@ extension ChatSessionSyncExtension on ChatSessionService {
           if (sId.isNotEmpty) {
             localMsgSessionById[id] = sId;
           }
-          final updatedRaw = r['updated_at']?.toString() ?? '';
-          final effectiveStr = updatedRaw.isNotEmpty
-              ? updatedRaw
-              : (r['created_at']?.toString() ?? '');
-          localMsgUpdatedById[id] = LWWUtils.parseTimestamp(effectiveStr);
+          localMsgUpdatedById[id] = _parseChatSyncVersion(
+            r['updated_at'],
+            r['created_at'],
+          );
         }
       }
 
       bool isKilledByMsgOrSessionCutoff(
-        DateTime msgUpdated,
+        _ChatSyncVersion msgUpdated,
         _ParsedChatTombstone? msgTomb,
         _ParsedChatTombstone? sessionCutoff,
       ) {
-        if (msgTomb != null && !msgUpdated.isAfter(msgTomb.deletedAtUtc)) {
+        if (msgTomb != null &&
+            !LWWUtils.syncVersionBeatsDeletion(
+              msgUpdated,
+              msgTomb.deletedAtUtc,
+            )) {
           return true;
         }
         if (sessionCutoff != null &&
-            !msgUpdated.isAfter(sessionCutoff.deletedAtUtc)) {
+            !LWWUtils.syncVersionBeatsDeletion(
+              msgUpdated,
+              sessionCutoff.deletedAtUtc,
+            )) {
           return true;
         }
         return false;
@@ -1091,9 +1107,11 @@ extension ChatSessionSyncExtension on ChatSessionService {
         if (localUpd == null || remoteRow == null) continue;
         final remoteSessionId = remoteRow['session_id'] as String?;
         if (!survivingSessionIds.contains(remoteSessionId)) continue;
-        final remoteUpd =
-            LWWUtils.parseTimestamp(remoteRow['updated_at'] as String?);
-        if (!remoteUpd.isAtSameMomentAs(localUpd)) continue;
+        final remoteUpd = _parseChatSyncVersion(
+          remoteRow['updated_at'],
+          remoteRow['created_at'],
+        );
+        if (LWWUtils.compareSyncVersions(remoteUpd, localUpd) != 0) continue;
         final effTomb = effectiveMessageTombstoneFor(msgId);
         final localSessionId = localMsgSessionById[msgId];
         if (isKilledByMsgOrSessionCutoff(
@@ -1169,14 +1187,18 @@ extension ChatSessionSyncExtension on ChatSessionService {
             : null;
 
         final remoteUpdated = validRemoteRow != null
-            ? LWWUtils.parseTimestamp(validRemoteRow['updated_at'] as String?)
+            ? _parseChatSyncVersion(
+                validRemoteRow['updated_at'],
+                validRemoteRow['created_at'],
+              )
             : null;
 
-        DateTime? maxLiveUpdated;
+        _ChatSyncVersion? maxLiveUpdated;
         if (localUpdated != null && remoteUpdated != null) {
-          maxLiveUpdated = remoteUpdated.isAfter(localUpdated)
-              ? remoteUpdated
-              : localUpdated;
+          maxLiveUpdated =
+              LWWUtils.compareSyncVersions(remoteUpdated, localUpdated) > 0
+                  ? remoteUpdated
+                  : localUpdated;
         } else {
           maxLiveUpdated = remoteUpdated ?? localUpdated;
         }
@@ -1213,7 +1235,10 @@ extension ChatSessionSyncExtension on ChatSessionService {
           }
           if (effectiveTomb != null &&
               (maxLiveUpdated == null ||
-                  !maxLiveUpdated.isAfter(effectiveTomb.deletedAtUtc))) {
+                  !LWWUtils.syncVersionBeatsDeletion(
+                    maxLiveUpdated,
+                    effectiveTomb.deletedAtUtc,
+                  ))) {
             if (localTomb == null ||
                 effectiveTomb.deletedAtUtc.isAfter(localTomb.deletedAtUtc)) {
               await txn.insert(
@@ -1253,14 +1278,20 @@ extension ChatSessionSyncExtension on ChatSessionService {
         }
 
         if (!localAlive && remoteAlive) {
-          await txn.insert(
-            'chat_messages',
-            validRemoteRow,
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
           if (localUpdated == null) {
+            await txn.insert(
+              'chat_messages',
+              validRemoteRow,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
             messagesAdded++;
           } else {
+            await txn.update(
+              'chat_messages',
+              validRemoteRow,
+              where: 'id = ?',
+              whereArgs: <Object?>[msgId],
+            );
             messagesUpdated++;
           }
           if (remoteSessionId != null) {
@@ -1271,15 +1302,18 @@ extension ChatSessionSyncExtension on ChatSessionService {
             messagesSkipped++;
           }
         } else if (localAlive && remoteAlive) {
-          final remoteWinsOnTie = remoteUpdated.isAtSameMomentAs(
-                localUpdated,
-              ) &&
-              remoteWinsOnTieMsgIds.contains(msgId);
-          if (remoteUpdated.isAfter(localUpdated) || remoteWinsOnTie) {
-            await txn.insert(
+          final cmpMsg = LWWUtils.compareSyncVersions(
+            remoteUpdated,
+            localUpdated,
+          );
+          final remoteWinsOnTie =
+              cmpMsg == 0 && remoteWinsOnTieMsgIds.contains(msgId);
+          if (cmpMsg > 0 || remoteWinsOnTie) {
+            await txn.update(
               'chat_messages',
               validRemoteRow,
-              conflictAlgorithm: ConflictAlgorithm.replace,
+              where: 'id = ?',
+              whereArgs: <Object?>[msgId],
             );
             messagesUpdated++;
             if (remoteSessionId != null) {
@@ -1316,23 +1350,34 @@ extension ChatSessionSyncExtension on ChatSessionService {
             where: 'session_id IN ($placeholders)',
             whereArgs: chunk,
           );
-          final maxMsgUtcBySession = <String, DateTime>{};
+          final maxMsgVerBySession =
+              <String, ({_ChatSyncVersion ver, String iso})>{};
           for (final r in msgTimeRows) {
             final sId = r['session_id']?.toString() ?? '';
             if (sId.isEmpty) continue;
-            final createdUtc = _tryParseChatUtc(r['created_at']);
-            final updatedUtc = _tryParseChatUtc(r['updated_at']);
-            DateTime? rowMaxUtc;
-            if (createdUtc != null && updatedUtc != null) {
-              rowMaxUtc =
-                  updatedUtc.isAfter(createdUtc) ? updatedUtc : createdUtc;
-            } else {
-              rowMaxUtc = updatedUtc ?? createdUtc;
+            final createdNorm = _normalizeChatTimestampToUtcOrKeep(
+              r['created_at'],
+            );
+            final updatedNorm = _normalizeChatTimestampToUtcOrKeep(
+              r['updated_at'],
+            );
+            final createdVer = LWWUtils.tryParseSyncVersion(createdNorm);
+            final updatedVer = LWWUtils.tryParseSyncVersion(updatedNorm);
+            ({_ChatSyncVersion ver, String iso})? rowMax;
+            if (createdVer != null && updatedVer != null) {
+              rowMax = LWWUtils.compareSyncVersions(updatedVer, createdVer) >= 0
+                  ? (ver: updatedVer, iso: updatedNorm)
+                  : (ver: createdVer, iso: createdNorm);
+            } else if (updatedVer != null) {
+              rowMax = (ver: updatedVer, iso: updatedNorm);
+            } else if (createdVer != null) {
+              rowMax = (ver: createdVer, iso: createdNorm);
             }
-            if (rowMaxUtc != null) {
-              final prev = maxMsgUtcBySession[sId];
-              if (prev == null || rowMaxUtc.isAfter(prev)) {
-                maxMsgUtcBySession[sId] = rowMaxUtc;
+            if (rowMax != null) {
+              final prev = maxMsgVerBySession[sId];
+              if (prev == null ||
+                  LWWUtils.compareSyncVersions(rowMax.ver, prev.ver) > 0) {
+                maxMsgVerBySession[sId] = rowMax;
               }
             }
           }
@@ -1342,30 +1387,43 @@ extension ChatSessionSyncExtension on ChatSessionService {
           for (final sRow in sessionRows) {
             final sId = sRow['id']?.toString() ?? '';
             if (sId.isEmpty) continue;
-            final createdStr = sRow['created_at']?.toString() ?? '';
-            final currentLastActiveStr =
+            final createdStr = _normalizeChatTimestampToUtcOrKeep(
+              sRow['created_at'],
+            );
+            final currentLastActiveRaw =
                 sRow['last_active_at']?.toString() ?? '';
-            final createdUtc = LWWUtils.parseTimestamp(createdStr);
-            final currentLastActiveUtc =
-                LWWUtils.parseTimestamp(currentLastActiveStr);
-            final maxMsgUtc = maxMsgUtcBySession[sId];
+            final currentLastActiveNorm = _normalizeChatTimestampToUtcOrKeep(
+              currentLastActiveRaw,
+            );
+            final createdVer = _parseChatSyncVersion(createdStr);
+            final currentLastActiveVer = _parseChatSyncVersion(
+              currentLastActiveNorm,
+              createdStr,
+            );
+            final maxMsg = maxMsgVerBySession[sId];
 
-            final DateTime targetUtc;
+            final String targetIso;
             if (sessionsWithDeletedMessages.contains(sId)) {
               // 若删除了本地消息（如删除了最新一条消息），则回退至剩余消息最新时间或会话创建时间。
-              targetUtc = (maxMsgUtc != null && maxMsgUtc.isAfter(createdUtc))
-                  ? maxMsgUtc
-                  : createdUtc;
+              targetIso = (maxMsg != null &&
+                      LWWUtils.compareSyncVersions(maxMsg.ver, createdVer) > 0)
+                  ? maxMsg.iso
+                  : createdStr;
             } else {
               // 仅新增或更新消息时，确保会话活跃时间不早于最新消息时间。
-              targetUtc =
-                  (maxMsgUtc != null && maxMsgUtc.isAfter(currentLastActiveUtc))
-                      ? maxMsgUtc
-                      : currentLastActiveUtc;
+              targetIso = (maxMsg != null &&
+                      LWWUtils.compareSyncVersions(
+                            maxMsg.ver,
+                            currentLastActiveVer,
+                          ) >
+                          0)
+                  ? maxMsg.iso
+                  : (currentLastActiveNorm.isNotEmpty
+                      ? currentLastActiveNorm
+                      : createdStr);
             }
 
-            final targetIso = LWWUtils.formatFixedUtcIso(targetUtc);
-            if (targetIso != currentLastActiveStr) {
+            if (targetIso.isNotEmpty && targetIso != currentLastActiveRaw) {
               batch.update(
                 'chat_sessions',
                 <String, Object?>{'last_active_at': targetIso},
@@ -1419,12 +1477,11 @@ extension ChatSessionSyncExtension on ChatSessionService {
           if (existing == null) {
             sessionsToInsert[id] = sanitized;
           } else {
-            final candUpd =
-                LWWUtils.parseTimestamp(sanitized['updated_at'] as String);
-            final existUpd =
-                LWWUtils.parseTimestamp(existing['updated_at'] as String);
-            if (candUpd.isAfter(existUpd) ||
-                (candUpd.isAtSameMomentAs(existUpd) &&
+            final candUpd = _parseChatSyncVersion(sanitized['updated_at']);
+            final existUpd = _parseChatSyncVersion(existing['updated_at']);
+            final cmpUpd = LWWUtils.compareSyncVersions(candUpd, existUpd);
+            if (cmpUpd > 0 ||
+                (cmpUpd == 0 &&
                     _compareChatCanonicalFields(
                           sanitized,
                           existing,
@@ -1449,12 +1506,11 @@ extension ChatSessionSyncExtension on ChatSessionService {
           if (existing == null) {
             messagesToInsertById[id] = sanitized;
           } else {
-            final candUpd =
-                LWWUtils.parseTimestamp(sanitized['updated_at'] as String);
-            final existUpd =
-                LWWUtils.parseTimestamp(existing['updated_at'] as String);
-            if (candUpd.isAfter(existUpd) ||
-                (candUpd.isAtSameMomentAs(existUpd) &&
+            final candUpd = _parseChatSyncVersion(sanitized['updated_at']);
+            final existUpd = _parseChatSyncVersion(existing['updated_at']);
+            final cmpUpd = LWWUtils.compareSyncVersions(candUpd, existUpd);
+            if (cmpUpd > 0 ||
+                (cmpUpd == 0 &&
                     _compareChatCanonicalFields(
                           sanitized,
                           existing,

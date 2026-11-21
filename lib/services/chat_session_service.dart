@@ -39,6 +39,8 @@ class ChatSessionService extends ChangeNotifier {
   final Completer<void> _databaseReady = Completer<void>();
   DateTime? _lastEmptySessionCleanupAt;
   bool _hasOffsetlessTimestamps = false;
+  bool _hasOffsetlessMessageTimestamps = false;
+  bool _offsetlessFlagInitialized = false;
 
   static const int _schemaVersion = 3;
   static const int schemaVersion = _schemaVersion;
@@ -69,6 +71,7 @@ class ChatSessionService extends ChangeNotifier {
   void setDatabase(Database? db) {
     _database = db;
     _ownsDatabase = false;
+    _offsetlessFlagInitialized = false;
     if (db != null && !_databaseReady.isCompleted) {
       _databaseReady.complete();
     }
@@ -211,27 +214,12 @@ class ChatSessionService extends ChangeNotifier {
                 if (raw.containsKey(col)) col: raw[col],
             };
             final rawUpdated = row['updated_at'];
-            final rowOffset = LWWUtils.inferOffsetFromSameEventPair(
-                  row['last_active_at'],
-                  rawUpdated,
-                ) ??
-                LWWUtils.inferOffsetFromSameEventPair(
-                  row['created_at'],
-                  rawUpdated,
-                );
             final createdNorm = _normalizeChatTimestampToUtcOrKeep(
               row['created_at'],
-              sameEventCounterpart: rawUpdated,
-              knownSameRowOffset:
-                  row['created_at'] == row['last_active_at'] ? rowOffset : null,
             );
             final rawLastActiveStr = row['last_active_at']?.toString() ?? '';
             final lastActiveNorm = rawLastActiveStr.trim().isNotEmpty
-                ? _normalizeChatTimestampToUtcOrKeep(
-                    rawLastActiveStr,
-                    sameEventCounterpart: rawUpdated,
-                    knownSameRowOffset: rowOffset,
-                  )
+                ? _normalizeChatTimestampToUtcOrKeep(rawLastActiveStr)
                 : createdNorm;
             final existingUpdated = rawUpdated?.toString() ?? '';
             final updatedNorm = existingUpdated.trim().isNotEmpty
@@ -263,7 +251,6 @@ class ChatSessionService extends ChangeNotifier {
             final rawUpdated = row['updated_at'];
             final createdNorm = _normalizeChatTimestampToUtcOrKeep(
               row['created_at'],
-              sameEventCounterpart: rawUpdated,
             );
             final existingUpdated = rawUpdated?.toString() ?? '';
             final updatedNorm = existingUpdated.trim().isNotEmpty
@@ -290,6 +277,7 @@ class ChatSessionService extends ChangeNotifier {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
         await metaBatch.commit(noResult: true);
+        await _refreshOffsetlessTimestampFlag(txn);
       });
       logInfo(
         '已迁移 ${legacySessions.length} 个旧聊天会话到独立聊天数据库',
@@ -530,8 +518,7 @@ class ChatSessionService extends ChangeNotifier {
       definition: 'TEXT',
     );
 
-    // 先在空列回填之前执行时间戳归一化：若同行 updated_at 原本已存有显式 UTC 对应值，
-    // 可据此精确还原无偏移 created_at / last_active_at，随后再对仍为空的派生时间列回填。
+    // 先对每列各自按显式时区/定宽规则归一化，随后再对仍为空的派生时间列执行回填。
     await _normalizeLegacyChatTimestamps(db);
 
     await db.execute('''
@@ -570,12 +557,36 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<void> _refreshOffsetlessTimestampFlag(DatabaseExecutor db) async {
-    final rows = await db.rawQuery(
-      "SELECT 1 FROM chat_sessions "
-      "WHERE created_at NOT LIKE '%Z' OR last_active_at NOT LIKE '%Z' "
-      "LIMIT 1",
+    final sessionRows = await db.query(
+      'chat_sessions',
+      columns: const <String>['created_at', 'last_active_at'],
+      where: "created_at NOT GLOB '${LWWUtils.canonicalFixedUtcGlob}' "
+          "OR last_active_at NOT GLOB '${LWWUtils.canonicalFixedUtcGlob}'",
+      limit: 1,
     );
-    _hasOffsetlessTimestamps = rows.isNotEmpty;
+    _hasOffsetlessTimestamps = sessionRows.any(
+      (row) =>
+          !LWWUtils.isCanonicalFixedUtcIso(row['created_at']) ||
+          !LWWUtils.isCanonicalFixedUtcIso(row['last_active_at']),
+    );
+
+    final messageRows = await db.query(
+      'chat_messages',
+      columns: const <String>['created_at'],
+      where: "created_at NOT GLOB '${LWWUtils.canonicalFixedUtcGlob}'",
+      limit: 1,
+    );
+    _hasOffsetlessMessageTimestamps = messageRows.any(
+      (row) => !LWWUtils.isCanonicalFixedUtcIso(row['created_at']),
+    );
+    _offsetlessFlagInitialized = true;
+  }
+
+  Future<void> _ensureOffsetlessTimestampFlagsLoaded(
+    DatabaseExecutor db,
+  ) async {
+    if (_offsetlessFlagInitialized) return;
+    await _refreshOffsetlessTimestampFlag(db);
   }
 
   static String _nonCanonicalTimeClause(String col) {
@@ -598,9 +609,7 @@ class ChatSessionService extends ChangeNotifier {
           "last_active_at IS NULL OR last_active_at = '' OR "
           "${_nonCanonicalTimeClause('last_active_at')} OR "
           "updated_at IS NULL OR updated_at = '' OR "
-          "${_nonCanonicalTimeClause('updated_at')} OR "
-          "((created_at NOT LIKE '%Z' OR last_active_at NOT LIKE '%Z') AND "
-          "updated_at IS NOT NULL AND updated_at LIKE '%Z')",
+          "${_nonCanonicalTimeClause('updated_at')}",
     );
     if (candidateSessions.isNotEmpty) {
       var sessionBackupColsEnsured = false;
@@ -638,28 +647,13 @@ class ChatSessionService extends ChangeNotifier {
           final id = row['id'] as String?;
           if (id == null || id.isEmpty) continue;
           final updatedRaw = row['updated_at'];
-          final rowOffset = LWWUtils.inferOffsetFromSameEventPair(
-                row['last_active_at'],
-                updatedRaw,
-              ) ??
-              LWWUtils.inferOffsetFromSameEventPair(
-                row['created_at'],
-                updatedRaw,
-              );
           final createdAt = _normalizeChatTimestampToUtcOrKeep(
             row['created_at'],
-            sameEventCounterpart: updatedRaw,
-            knownSameRowOffset:
-                row['created_at'] == row['last_active_at'] ? rowOffset : null,
           );
           final lastActiveRaw = row['last_active_at'];
           final lastActiveAt =
               (lastActiveRaw is String && lastActiveRaw.trim().isNotEmpty)
-                  ? _normalizeChatTimestampToUtcOrKeep(
-                      lastActiveRaw,
-                      sameEventCounterpart: updatedRaw,
-                      knownSameRowOffset: rowOffset,
-                    )
+                  ? _normalizeChatTimestampToUtcOrKeep(lastActiveRaw)
                   : createdAt;
           final updatedAt =
               (updatedRaw is String && updatedRaw.trim().isNotEmpty)
@@ -692,8 +686,7 @@ class ChatSessionService extends ChangeNotifier {
       columns: const <String>['id', 'created_at', 'updated_at'],
       where: "${_nonCanonicalTimeClause('created_at')} OR "
           "updated_at IS NULL OR updated_at = '' OR "
-          "${_nonCanonicalTimeClause('updated_at')} OR "
-          "(created_at NOT LIKE '%Z' AND updated_at IS NOT NULL AND updated_at LIKE '%Z')",
+          "${_nonCanonicalTimeClause('updated_at')}",
     );
     if (candidateMessages.isNotEmpty) {
       var messageBackupColsEnsured = false;
@@ -727,7 +720,6 @@ class ChatSessionService extends ChangeNotifier {
           final updatedRaw = row['updated_at'];
           final createdAt = _normalizeChatTimestampToUtcOrKeep(
             row['created_at'],
-            sameEventCounterpart: updatedRaw,
           );
           final updatedAt =
               (updatedRaw is String && updatedRaw.trim().isNotEmpty)
@@ -898,13 +890,16 @@ class ChatSessionService extends ChangeNotifier {
     final db = await _getDatabaseForRead();
     if (db == null) return null;
     try {
+      await _ensureOffsetlessTimestampFlagsLoaded(db);
       if (_hasOffsetlessTimestamps) {
         final rows = await db.query(
           'chat_sessions',
           where: 'note_id = ?',
           whereArgs: [noteId],
         );
-        final sessions = _parseSessionsFromRows(rows);
+        final sessions = _parseSessionsFromRows(
+          rows,
+        ).where((s) => s.noteId == noteId).toList();
         _sortSessionsByActivityDesc(sessions, includePinOrder: false);
         return sessions.firstOrNull;
       }
@@ -970,6 +965,7 @@ class ChatSessionService extends ChangeNotifier {
     final db = await _getDatabaseForRead();
     if (db == null) return [];
     try {
+      await _ensureOffsetlessTimestampFlagsLoaded(db);
       final rows = await db.query(
         'chat_sessions',
         where: 'note_id = ?',
@@ -995,6 +991,7 @@ class ChatSessionService extends ChangeNotifier {
     final db = await _getDatabaseForRead();
     if (db == null) return [];
     try {
+      await _ensureOffsetlessTimestampFlagsLoaded(db);
       final rows = await db.query(
         'chat_sessions',
         where: 'session_type = ?',
@@ -1035,6 +1032,7 @@ class ChatSessionService extends ChangeNotifier {
         }
       }
 
+      await _ensureOffsetlessTimestampFlagsLoaded(db);
       if (_hasOffsetlessTimestamps) {
         final rows = await db.query('chat_sessions');
         final sessions = _parseSessionsFromRows(rows);
@@ -1072,6 +1070,16 @@ class ChatSessionService extends ChangeNotifier {
     if (db == null) return const {};
     const chunkSize = 500;
     final result = <String, ChatSessionOverview>{};
+    final mixedTimeSessionIds = <String>[];
+
+    void collectOverviewRow(Map<dynamic, dynamic> row) {
+      final id = row['id'] as String?;
+      if (id == null) return;
+      result[id] = _parseOverviewRow(row);
+      if (safeParseInt(row['has_non_canonical_time']) != 0) {
+        mixedTimeSessionIds.add(id);
+      }
+    }
 
     // 如果只需要查询一个批次，直接使用 db.rawQuery 以避免创建 batch 的开销
     if (sessionIds.length <= chunkSize) {
@@ -1080,41 +1088,92 @@ class ChatSessionService extends ChangeNotifier {
         sessionIds,
       );
       for (final row in rows) {
-        final id = row['id'] as String?;
-        if (id != null) {
-          result[id] = _parseOverviewRow(row);
-        }
+        collectOverviewRow(row);
       }
-      return result;
-    }
+    } else {
+      // 超过一个批次时，使用 batch 一次性提交所有查询，降低 IPC/方法通道的往返开销
+      final batch = db.batch();
+      for (var i = 0; i < sessionIds.length; i += chunkSize) {
+        final end = (i + chunkSize < sessionIds.length)
+            ? i + chunkSize
+            : sessionIds.length;
+        final chunk = sessionIds.sublist(i, end);
+        batch.rawQuery(
+          _buildSessionOverviewsSql(chunk.length),
+          chunk,
+        );
+      }
 
-    // 超过一个批次时，使用 batch 一次性提交所有查询，降低 IPC/方法通道的往返开销
-    final batch = db.batch();
-    for (var i = 0; i < sessionIds.length; i += chunkSize) {
-      final end = (i + chunkSize < sessionIds.length)
-          ? i + chunkSize
-          : sessionIds.length;
-      final chunk = sessionIds.sublist(i, end);
-      batch.rawQuery(
-        _buildSessionOverviewsSql(chunk.length),
-        chunk,
-      );
-    }
-
-    final batchResults = await batch.commit(noResult: false);
-    for (final rowsObj in batchResults) {
-      if (rowsObj is List) {
-        for (final rowObj in rowsObj) {
-          if (rowObj is Map) {
-            final id = rowObj['id'] as String?;
-            if (id != null) {
-              result[id] = _parseOverviewRow(rowObj);
+      final batchResults = await batch.commit(noResult: false);
+      for (final rowsObj in batchResults) {
+        if (rowsObj is List) {
+          for (final rowObj in rowsObj) {
+            if (rowObj is Map) {
+              collectOverviewRow(rowObj);
             }
           }
         }
       }
     }
+
+    if (mixedTimeSessionIds.isNotEmpty) {
+      _hasOffsetlessMessageTimestamps = true;
+      await _overrideOverviewsWithUtcLatestMessage(
+        db,
+        mixedTimeSessionIds,
+        result,
+      );
+    }
     return result;
+  }
+
+  Future<void> _overrideOverviewsWithUtcLatestMessage(
+    Database db,
+    List<String> sessionIds,
+    Map<String, ChatSessionOverview> result,
+  ) async {
+    const chunkSize = 500;
+    for (var i = 0; i < sessionIds.length; i += chunkSize) {
+      final end = (i + chunkSize < sessionIds.length)
+          ? i + chunkSize
+          : sessionIds.length;
+      final chunk = sessionIds.sublist(i, end);
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      final rows = await db.rawQuery(
+        '''
+        SELECT session_id, content, created_at
+        FROM chat_messages
+        WHERE session_id IN ($placeholders)
+        ORDER BY created_at ASC
+        ''',
+        chunk,
+      );
+      final latestBySession = <String, ({DateTime tsUtc, String? content})>{};
+      for (final row in rows) {
+        final sId = row['session_id'] as String?;
+        if (sId == null) continue;
+        final createdStr = row['created_at'] as String? ?? '';
+        final tsUtc = DateTime.tryParse(createdStr)?.toUtc();
+        if (tsUtc == null) continue;
+        final prev = latestBySession[sId];
+        // 与 getMessages 升序稳定排序的末尾元素一致：时间严格更新或时间相同时保留后者。
+        if (prev == null || !tsUtc.isBefore(prev.tsUtc)) {
+          latestBySession[sId] = (
+            tsUtc: tsUtc,
+            content: row['content'] as String?,
+          );
+        }
+      }
+      for (final entry in latestBySession.entries) {
+        final existing = result[entry.key];
+        if (existing != null) {
+          result[entry.key] = ChatSessionOverview(
+            messageCount: existing.messageCount,
+            snippet: _truncatePreview(entry.value.content),
+          );
+        }
+      }
+    }
   }
 
   static String _buildSessionOverviewsSql(int count) {
@@ -1125,7 +1184,12 @@ SELECT s.id,
     AS message_count,
   (SELECT m.content FROM chat_messages m
     WHERE m.session_id = s.id
-    ORDER BY m.created_at DESC LIMIT 1) AS last_content
+    ORDER BY m.created_at DESC LIMIT 1) AS last_content,
+  EXISTS (
+    SELECT 1 FROM chat_messages m2
+    WHERE m2.session_id = s.id
+      AND m2.created_at NOT GLOB '${LWWUtils.canonicalFixedUtcGlob}'
+  ) AS has_non_canonical_time
 FROM chat_sessions s
 WHERE s.id IN ($placeholders)
 ''';
@@ -1152,13 +1216,23 @@ WHERE s.id IN ($placeholders)
     int limit = 20,
   }) async {
     final normalizedQuery = query.trim();
-    if (normalizedQuery.isEmpty) return const [];
+    if (normalizedQuery.isEmpty || limit <= 0) return const [];
 
     final db = await _getDatabaseForRead();
     if (db == null) return const [];
 
     try {
+      await _ensureOffsetlessTimestampFlagsLoaded(db);
       final like = '%$normalizedQuery%';
+      if (_hasOffsetlessTimestamps || _hasOffsetlessMessageTimestamps) {
+        return await _searchSessionsWithMixedTimestamps(
+          db,
+          normalizedQuery,
+          like,
+          limit,
+        );
+      }
+
       final rows = await db.rawQuery(
         '''
         SELECT
@@ -1176,7 +1250,14 @@ WHERE s.id IN ($placeholders)
               AND m.content LIKE ?
             ORDER BY m.created_at ASC
             LIMIT 1
-          ) AS matched_content
+          ) AS matched_content,
+          EXISTS (
+            SELECT 1
+            FROM chat_messages m2
+            WHERE m2.session_id = s.id
+              AND m2.content LIKE ?
+              AND m2.created_at NOT GLOB '${LWWUtils.canonicalFixedUtcGlob}'
+          ) AS has_non_canonical_match
         FROM chat_sessions s
         WHERE s.title LIKE ?
           OR EXISTS (
@@ -1188,8 +1269,23 @@ WHERE s.id IN ($placeholders)
         ORDER BY s.last_active_at DESC
         LIMIT ?
         ''',
-        [like, like, like, limit],
+        [like, like, like, like, limit],
       );
+
+      final detectedNonCanonicalInRows = rows.any(
+        (r) =>
+            !LWWUtils.isCanonicalFixedUtcIso(r['last_active_at']) ||
+            safeParseInt(r['has_non_canonical_match']) != 0,
+      );
+      if (detectedNonCanonicalInRows) {
+        await _refreshOffsetlessTimestampFlag(db);
+        return await _searchSessionsWithMixedTimestamps(
+          db,
+          normalizedQuery,
+          like,
+          limit,
+        );
+      }
 
       final seen = <String>{};
       final results = <ChatSessionSearchResult>[];
@@ -1220,6 +1316,106 @@ WHERE s.id IN ($placeholders)
       );
       return const [];
     }
+  }
+
+  Future<List<ChatSessionSearchResult>> _searchSessionsWithMixedTimestamps(
+    Database db,
+    String normalizedQuery,
+    String like,
+    int limit,
+  ) async {
+    final sessionRows = await db.rawQuery(
+      '''
+      SELECT
+        s.id,
+        s.session_type,
+        s.note_id,
+        s.title,
+        s.created_at,
+        s.last_active_at,
+        s.updated_at,
+        s.is_pinned
+      FROM chat_sessions s
+      WHERE s.title LIKE ?
+        OR EXISTS (
+          SELECT 1
+          FROM chat_messages m
+          WHERE m.session_id = s.id
+            AND m.content LIKE ?
+        )
+      ''',
+      [like, like],
+    );
+    if (sessionRows.isEmpty) return const [];
+
+    final sessions = _parseSessionsFromRows(sessionRows);
+    _sortSessionsByActivityDesc(sessions, includePinOrder: false);
+
+    final topSessions = <ChatSession>[];
+    final seen = <String>{};
+    for (final s in sessions) {
+      if (seen.add(s.id)) {
+        topSessions.add(s);
+        if (topSessions.length >= limit) break;
+      }
+    }
+    if (topSessions.isEmpty) return const [];
+
+    final matchedContentBySession = <String, String>{};
+    const chunkSize = 500;
+    for (var i = 0; i < topSessions.length; i += chunkSize) {
+      final end = (i + chunkSize < topSessions.length)
+          ? i + chunkSize
+          : topSessions.length;
+      final chunkIds =
+          topSessions.sublist(i, end).map((s) => s.id).toList(growable: false);
+      final placeholders = List.filled(chunkIds.length, '?').join(',');
+      final msgRows = await db.rawQuery(
+        '''
+        SELECT session_id, content, created_at
+        FROM chat_messages
+        WHERE session_id IN ($placeholders)
+          AND content LIKE ?
+        ORDER BY created_at ASC
+        ''',
+        <Object?>[...chunkIds, like],
+      );
+      final earliestBySession = <String, ({DateTime tsUtc, String content})>{};
+      for (final mRow in msgRows) {
+        final sId = mRow['session_id'] as String?;
+        final content = mRow['content'] as String?;
+        if (sId == null || content == null) continue;
+        final createdStr = mRow['created_at'] as String? ?? '';
+        final tsUtc = DateTime.tryParse(createdStr)?.toUtc();
+        if (tsUtc == null) continue;
+        final prev = earliestBySession[sId];
+        if (prev == null || tsUtc.isBefore(prev.tsUtc)) {
+          earliestBySession[sId] = (tsUtc: tsUtc, content: content);
+        }
+      }
+      for (final entry in earliestBySession.entries) {
+        matchedContentBySession[entry.key] = entry.value.content;
+      }
+    }
+
+    final results = <ChatSessionSearchResult>[];
+    for (final session in topSessions) {
+      final matchedContent = matchedContentBySession[session.id];
+      final sourceText = (matchedContent?.isNotEmpty ?? false)
+          ? matchedContent!
+          : session.title;
+      final snippet = _buildSnippet(sourceText, normalizedQuery);
+      results.add(
+        ChatSessionSearchResult(
+          session: session,
+          snippet: snippet.text,
+          isTruncated: snippet.isTruncated,
+          matchStart: snippet.matchStart,
+          matchEnd: snippet.matchEnd,
+        ),
+      );
+    }
+    return results;
   }
 
   /// 清理没有消息的会话（修复之前保存失败残留的脏数据，排除最近5分钟内新创建的）
@@ -1487,11 +1683,50 @@ WHERE s.id IN ($placeholders)
           final row = message.toMap(sessionId);
           row['created_at'] = messageCreatedUtcIso;
           row['updated_at'] = nowUtcIso;
-          await txn.insert(
+          final existingRows = await txn.query(
             'chat_messages',
-            row,
-            conflictAlgorithm: ConflictAlgorithm.replace,
+            columns: const <String>['created_at', 'updated_at'],
+            where: 'id = ?',
+            whereArgs: <Object?>[message.id],
+            limit: 1,
           );
+          if (existingRows.isEmpty) {
+            await txn.insert('chat_messages', row);
+          } else {
+            final existing = existingRows.first;
+            final existingCreated = existing['created_at'];
+            final existingUpdated = existing['updated_at'];
+            if (!LWWUtils.isCanonicalFixedUtcIso(existingCreated) ||
+                !LWWUtils.isCanonicalFixedUtcIso(existingUpdated)) {
+              await addColumnIfMissing(
+                txn,
+                tableName: 'chat_messages',
+                columnName: 'created_at_backup',
+                definition: 'TEXT',
+              );
+              await addColumnIfMissing(
+                txn,
+                tableName: 'chat_messages',
+                columnName: 'updated_at_backup',
+                definition: 'TEXT',
+              );
+              await txn.rawUpdate(
+                'UPDATE chat_messages SET '
+                'created_at_backup = COALESCE(created_at_backup, created_at), '
+                'updated_at_backup = COALESCE(updated_at_backup, updated_at) '
+                'WHERE id = ?',
+                <Object?>[message.id],
+              );
+            }
+            // 使用原地 UPDATE 而非 ConflictAlgorithm.replace（DELETE + INSERT），
+            // 确保复用已有消息 ID 编辑时保留迁移生成的 *_backup 快照列。
+            await txn.update(
+              'chat_messages',
+              row,
+              where: 'id = ?',
+              whereArgs: <Object?>[message.id],
+            );
+          }
           // 仅刷新会话活跃时间，不刷新会话元数据 updated_at，避免覆盖对端标题/置顶修改。
           await txn.update(
             'chat_sessions',

@@ -124,6 +124,22 @@ class _ParsedMemoryTombstone {
   final DateTime deletedAtUtc;
 }
 
+typedef _MemorySyncVersion = ({DateTime utc, bool hasExplicitZone});
+
+final _MemorySyncVersion _epochMemorySyncVersion = (
+  utc: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+  hasExplicitZone: false,
+);
+
+_MemorySyncVersion _parseMemoryRowSyncVersion(
+  Object? primary,
+  Object? fallback,
+) {
+  return LWWUtils.tryParseSyncVersion(primary) ??
+      (fallback != null ? LWWUtils.tryParseSyncVersion(fallback) : null) ??
+      _epochMemorySyncVersion;
+}
+
 DateTime? _tryParseMemoryUtc(Object? raw) {
   if (raw is! String) return null;
   final trimmed = raw.trim();
@@ -131,16 +147,14 @@ DateTime? _tryParseMemoryUtc(Object? raw) {
   return DateTime.tryParse(trimmed)?.toUtc();
 }
 
-String _normalizeMemoryTimestampToUtcOrKeep(
-  Object? raw, {
-  Object? sameEventCounterpart,
-  Duration? knownSameRowOffset,
-}) {
-  return LWWUtils.normalizeTimestampPreservingOffsetless(
-    raw,
-    sameEventCounterpart: sameEventCounterpart,
-    knownSameRowOffset: knownSameRowOffset,
-  );
+DateTime _parseMemoryRowVersionUtc(Object? primary, Object? fallback) {
+  return _tryParseMemoryUtc(primary) ??
+      (fallback != null ? _tryParseMemoryUtc(fallback) : null) ??
+      DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+}
+
+String _normalizeMemoryTimestampToUtcOrKeep(Object? raw) {
+  return LWWUtils.normalizeTimestampPreservingOffsetless(raw);
 }
 
 bool _isValidMemoryFormatVersion(Object? rawFormat) {
@@ -238,12 +252,6 @@ bool _isDreamingMemorySource(Object? rawSource) {
   return rawSource.trim().startsWith('dreaming');
 }
 
-DateTime _parseMemoryRowVersionUtc(Object? primary, Object? fallback) {
-  return _tryParseMemoryUtc(primary) ??
-      _tryParseMemoryUtc(fallback) ??
-      DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
-}
-
 String? _sanitizeEncodedNoteIds(
   Object? raw, {
   required bool rejectInvalidType,
@@ -306,23 +314,11 @@ Map<String, Object?>? _sanitizeMemoryProfileRow(Object? item) {
       updatedUtc == null) {
     return null;
   }
-  final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
-    observedRaw,
-    updatedRaw,
-  );
-  final observedStr = _normalizeMemoryTimestampToUtcOrKeep(
-    observedRaw,
-    sameEventCounterpart: updatedRaw,
-    knownSameRowOffset: knownOffset,
-  );
+  final observedStr = _normalizeMemoryTimestampToUtcOrKeep(observedRaw);
   final updatedStr = (updatedRaw is String &&
           updatedRaw.trim().isNotEmpty &&
           updatedUtc != null)
-      ? _normalizeMemoryTimestampToUtcOrKeep(
-          updatedRaw,
-          sameEventCounterpart: observedRaw,
-          knownSameRowOffset: knownOffset,
-        )
+      ? _normalizeMemoryTimestampToUtcOrKeep(updatedRaw)
       : observedStr;
 
   final statusObj = item['status'];
@@ -422,23 +418,11 @@ Map<String, Object?>? _sanitizeMemoryFactRow(Object? item) {
       updatedUtc == null) {
     return null;
   }
-  final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
-    createdRaw,
-    updatedRaw,
-  );
-  final createdStr = _normalizeMemoryTimestampToUtcOrKeep(
-    createdRaw,
-    sameEventCounterpart: updatedRaw,
-    knownSameRowOffset: knownOffset,
-  );
+  final createdStr = _normalizeMemoryTimestampToUtcOrKeep(createdRaw);
   final updatedStr = (updatedRaw is String &&
           updatedRaw.trim().isNotEmpty &&
           updatedUtc != null)
-      ? _normalizeMemoryTimestampToUtcOrKeep(
-          updatedRaw,
-          sameEventCounterpart: createdRaw,
-          knownSameRowOffset: knownOffset,
-        )
+      ? _normalizeMemoryTimestampToUtcOrKeep(updatedRaw)
       : createdStr;
 
   final categoryObj = item['category'];
@@ -583,21 +567,9 @@ Map<String, Object?> _exportWhitelistedProfile(Map<String, Object?> raw) {
   final row = <String, Object?>{
     for (final col in _memoryProfileColumnWhitelist) col: raw[col],
   };
-  final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
-    row['observed_at'],
-    row['updated_at'],
-  );
-  final observed = _normalizeMemoryTimestampToUtcOrKeep(
-    row['observed_at'],
-    sameEventCounterpart: row['updated_at'],
-    knownSameRowOffset: knownOffset,
-  );
+  final observed = _normalizeMemoryTimestampToUtcOrKeep(row['observed_at']);
   row['observed_at'] = observed;
-  final updated = _normalizeMemoryTimestampToUtcOrKeep(
-    row['updated_at'],
-    sameEventCounterpart: row['observed_at'],
-    knownSameRowOffset: knownOffset,
-  );
+  final updated = _normalizeMemoryTimestampToUtcOrKeep(row['updated_at']);
   row['updated_at'] = updated.isNotEmpty ? updated : observed;
   return row;
 }
@@ -606,21 +578,9 @@ Map<String, Object?> _exportWhitelistedFact(Map<String, Object?> raw) {
   final row = <String, Object?>{
     for (final col in _memoryFactColumnWhitelist) col: raw[col],
   };
-  final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
-    row['created_at'],
-    row['updated_at'],
-  );
-  final created = _normalizeMemoryTimestampToUtcOrKeep(
-    row['created_at'],
-    sameEventCounterpart: row['updated_at'],
-    knownSameRowOffset: knownOffset,
-  );
+  final created = _normalizeMemoryTimestampToUtcOrKeep(row['created_at']);
   row['created_at'] = created;
-  final updated = _normalizeMemoryTimestampToUtcOrKeep(
-    row['updated_at'],
-    sameEventCounterpart: row['created_at'],
-    knownSameRowOffset: knownOffset,
-  );
+  final updated = _normalizeMemoryTimestampToUtcOrKeep(row['updated_at']);
   row['updated_at'] = updated.isNotEmpty ? updated : created;
   final recalledRaw = row['last_recalled_at'];
   if (recalledRaw is String && recalledRaw.trim().isNotEmpty) {
@@ -639,12 +599,12 @@ Map<String, Object?> _exportWhitelistedSlice(Map<String, Object?> raw) {
 }
 
 String? _pickLatestTimestampStr(Object? leftRaw, Object? rightRaw) {
-  final leftUtc = _tryParseMemoryUtc(leftRaw);
-  final rightUtc = _tryParseMemoryUtc(rightRaw);
-  if (leftUtc == null && rightUtc == null) return null;
-  if (leftUtc == null) return _normalizeMemoryTimestampToUtcOrKeep(rightRaw);
-  if (rightUtc == null) return _normalizeMemoryTimestampToUtcOrKeep(leftRaw);
-  return rightUtc.isAfter(leftUtc)
+  final leftVer = LWWUtils.tryParseSyncVersion(leftRaw);
+  final rightVer = LWWUtils.tryParseSyncVersion(rightRaw);
+  if (leftVer == null && rightVer == null) return null;
+  if (leftVer == null) return _normalizeMemoryTimestampToUtcOrKeep(rightRaw);
+  if (rightVer == null) return _normalizeMemoryTimestampToUtcOrKeep(leftRaw);
+  return LWWUtils.compareSyncVersions(rightVer, leftVer) > 0
       ? _normalizeMemoryTimestampToUtcOrKeep(rightRaw)
       : _normalizeMemoryTimestampToUtcOrKeep(leftRaw);
 }
@@ -675,15 +635,15 @@ int _compareProfileRowsByWinnerRule(
     }
   }
 
-  final leftTime = _parseMemoryRowVersionUtc(
+  final leftTime = _parseMemoryRowSyncVersion(
     left['updated_at'],
     left['observed_at'],
   );
-  final rightTime = _parseMemoryRowVersionUtc(
+  final rightTime = _parseMemoryRowSyncVersion(
     right['updated_at'],
     right['observed_at'],
   );
-  final timeCmp = rightTime.compareTo(leftTime);
+  final timeCmp = LWWUtils.compareSyncVersions(rightTime, leftTime);
   if (timeCmp != 0) {
     return timeCmp;
   }
@@ -726,26 +686,29 @@ bool _predecessorWinsReplacementEdge(
       return xCovered;
     }
   }
-  final xTime = _parseMemoryRowVersionUtc(
+  final xTime = _parseMemoryRowSyncVersion(
     xRow['updated_at'],
     xRow['observed_at'],
   );
-  final yTime = _parseMemoryRowVersionUtc(
+  final yTime = _parseMemoryRowSyncVersion(
     yRow['updated_at'],
     yRow['observed_at'],
   );
-  return xTime.isAfter(yTime);
+  return LWWUtils.compareSyncVersions(xTime, yTime) > 0;
 }
 
 /// 判定一条处于 `superseded` 状态的条目在沿 `superseded_by` 链到达某条 `active` 终点条目时，
 /// 二者是否仍然处于同一个有效竞争槽位（从而允许纳入同步重算）。
 ///
 /// 若某条重复画像 `P1` 曾因“同 `kind + directive` 去重”指向 `P2`，随后用户通过
-/// `editProfileDirective(P2)` 将 `P2` 原位改成新指令，此时 `P1` 与 `P2` 既无 `replaces_id`
-/// 血缘、又非单例类别、正文也不再重复——`P1` 必须保持 `superseded` 退休状态，绝不能借重算复活。
+/// `editProfileDirective(P2)` 将 `P2` 原位改成新指令，此时 `P2` 胜过旧 `P1` 且二者既无 `replaces_id`
+/// 血缘、又非单例类别、正文也不再重复——`P1` 必须保持 `superseded` 退休状态，绝不能借重算复活；
+/// 反之，若同步并发期间用户恰恰编辑了刚被去重退休的 `P1`（使 `P1` 按赢家规则严格胜过 `P2`），
+/// 则必须将 `P1` 纳入重算以恢复人工纠正并淘汰旧终点 `P2`。
 bool _doSupersededChainAndActiveTerminalStillCompete(
-  List<Map<String, Object?>> chainToActiveTerminal,
-) {
+  List<Map<String, Object?>> chainToActiveTerminal, {
+  bool Function(String? watermark, int? noteCount)? isBasisCovered,
+}) {
   if (chainToActiveTerminal.length < 2) {
     return true;
   }
@@ -809,6 +772,18 @@ bool _doSupersededChainAndActiveTerminalStillCompete(
         return true;
       }
     }
+  }
+
+  // (e) 起点条目在被去重退休后又发生了更新的人工修正或具备严格更高的赢家优先级，
+  //     必须允许纳入收敛重算以反超取代旧活跃终点；若编辑发生在赢家终点上（terminal 胜过 start），
+  //     此处比较 >= 0，旧起点维持退休不复活。
+  if (_compareProfileRowsByWinnerRule(
+        startRow,
+        terminalRow,
+        isBasisCovered: isBasisCovered,
+      ) <
+      0) {
+    return true;
   }
 
   return false;
@@ -885,10 +860,13 @@ Future<
           final tombUtc = profileTombstones[currId];
           if (tombUtc != null) {
             final aliveAfterTomb = nextRow != null &&
-                _parseMemoryRowVersionUtc(
-                  nextRow['updated_at'],
-                  nextRow['observed_at'],
-                ).isAfter(tombUtc);
+                LWWUtils.syncVersionBeatsDeletion(
+                  _parseMemoryRowSyncVersion(
+                    nextRow['updated_at'],
+                    nextRow['observed_at'],
+                  ),
+                  tombUtc,
+                );
             if (!aliveAfterTomb) {
               return tombUtc;
             }
@@ -919,11 +897,11 @@ Future<
           if (xStatus != AgentMemoryStatus.active.storageValue) continue;
           final tombUtc = resolveChainTombstoneUtc(yRow);
           if (tombUtc == null) continue;
-          final xTime = _parseMemoryRowVersionUtc(
+          final xVer = _parseMemoryRowSyncVersion(
             xRow['updated_at'],
             xRow['observed_at'],
           );
-          if (tombUtc.isBefore(xTime)) continue;
+          if (LWWUtils.syncVersionBeatsDeletion(xVer, tombUtc)) continue;
           if (_predecessorWinsReplacementEdge(
             xRow,
             yRow,
@@ -1004,7 +982,10 @@ Future<
       final status = (row['status'] as String?)?.trim() ??
           AgentMemoryStatus.active.storageValue;
       if (status == AgentMemoryStatus.active.storageValue) {
-        return _doSupersededChainAndActiveTerminalStillCompete(chain);
+        return _doSupersededChainAndActiveTerminalStillCompete(
+          chain,
+          isBasisCovered: isBasisCovered,
+        );
       }
       if (status != AgentMemoryStatus.superseded.storageValue) {
         return false;
@@ -1118,6 +1099,44 @@ Future<
       recordSupersede(yId, xRow);
     } else {
       recordSupersede(xId, yRow);
+    }
+  }
+
+  // 0b. 去重退休条目后续被人工编辑反超收敛：
+  //     若候选条目 X 当前处于 `superseded` 且沿 `superseded_by` 链指向候选终点 T（即便 X 未写 `replaces_id`），
+  //     当 X 按赢家规则严格胜过 T（例如同步并发期间用户编辑了 X）时，由 X 反超淘汰 T 并恢复 active。
+  for (final xRow in sorted) {
+    final xId = xRow['id'] as String;
+    final xStatus = (xRow['status'] as String?)?.trim() ?? '';
+    var currId = (xRow['superseded_by'] as String?)?.trim() ?? '';
+    if (xStatus != AgentMemoryStatus.superseded.storageValue ||
+        currId.isEmpty) {
+      continue;
+    }
+    final visited = <String>{xId};
+    Map<String, Object?>? terminalRow;
+    while (currId.isNotEmpty && visited.add(currId)) {
+      final nextRow = allRowsById[currId];
+      if (nextRow == null) break;
+      final nextStatus = (nextRow['status'] as String?)?.trim() ??
+          AgentMemoryStatus.active.storageValue;
+      if (nextStatus == AgentMemoryStatus.active.storageValue) {
+        terminalRow = eligibleById[currId];
+        break;
+      }
+      if (nextStatus != AgentMemoryStatus.superseded.storageValue) break;
+      currId = (nextRow['superseded_by'] as String?)?.trim() ?? '';
+    }
+    if (terminalRow == null) continue;
+    final tId = terminalRow['id'] as String;
+    if (tId == xId) continue;
+    if (_compareProfileRowsByWinnerRule(
+          xRow,
+          terminalRow,
+          isBasisCovered: isBasisCovered,
+        ) <
+        0) {
+      recordSupersede(tId, xRow);
     }
   }
 
@@ -1366,9 +1385,9 @@ Future<int> _dedupAndTrimFactsInTxn(DatabaseExecutor txn) async {
     for (final group in byNormalizedContent.values) {
       if (group.length <= 1) continue;
       group.sort((a, b) {
-        final aCreated = LWWUtils.parseTimestamp(a['created_at'] as String?);
-        final bCreated = LWWUtils.parseTimestamp(b['created_at'] as String?);
-        final cmp = aCreated.compareTo(bCreated);
+        final aCreated = _parseMemoryRowSyncVersion(a['created_at'], null);
+        final bCreated = _parseMemoryRowSyncVersion(b['created_at'], null);
+        final cmp = LWWUtils.compareSyncVersions(aCreated, bCreated);
         if (cmp != 0) return cmp;
         final aId = (a['id'] as String?) ?? '';
         final bId = (b['id'] as String?) ?? '';
@@ -1640,16 +1659,17 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           remoteProfilesById[id] = sanitized;
           continue;
         }
-        final candUtc = _parseMemoryRowVersionUtc(
+        final candVer = _parseMemoryRowSyncVersion(
           sanitized['updated_at'],
           sanitized['observed_at'],
         );
-        final existUtc = _parseMemoryRowVersionUtc(
+        final existVer = _parseMemoryRowSyncVersion(
           existing['updated_at'],
           existing['observed_at'],
         );
-        if (candUtc.isAfter(existUtc) ||
-            (candUtc.isAtSameMomentAs(existUtc) &&
+        final cmp = LWWUtils.compareSyncVersions(candVer, existVer);
+        if (cmp > 0 ||
+            (cmp == 0 &&
                 _compareMemoryCanonicalFields(
                       sanitized,
                       existing,
@@ -1679,11 +1699,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           remoteFactsById[id] = sanitized;
           continue;
         }
-        final candUtc = _parseMemoryRowVersionUtc(
+        final candVer = _parseMemoryRowSyncVersion(
           sanitized['updated_at'],
           sanitized['created_at'],
         );
-        final existUtc = _parseMemoryRowVersionUtc(
+        final existVer = _parseMemoryRowSyncVersion(
           existing['updated_at'],
           existing['created_at'],
         );
@@ -1695,8 +1715,9 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           existing['last_recalled_at'],
           sanitized['last_recalled_at'],
         );
-        if (candUtc.isAfter(existUtc) ||
-            (candUtc.isAtSameMomentAs(existUtc) &&
+        final cmp = LWWUtils.compareSyncVersions(candVer, existVer);
+        if (cmp > 0 ||
+            (cmp == 0 &&
                 _compareMemoryCanonicalFields(
                       sanitized,
                       existing,
@@ -1730,16 +1751,17 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           remoteSlicesById[id] = sanitized;
           continue;
         }
-        final candUtc = _parseMemoryRowVersionUtc(
+        final candVer = _parseMemoryRowSyncVersion(
           sanitized['observed_at'],
           null,
         );
-        final existUtc = _parseMemoryRowVersionUtc(
+        final existVer = _parseMemoryRowSyncVersion(
           existing['observed_at'],
           null,
         );
-        if (candUtc.isAfter(existUtc) ||
-            (candUtc.isAtSameMomentAs(existUtc) &&
+        final cmp = LWWUtils.compareSyncVersions(candVer, existVer);
+        if (cmp > 0 ||
+            (cmp == 0 &&
                 _compareMemorySliceOnSameObservedAt(sanitized, existing) > 0)) {
           remoteSlicesById[id] = sanitized;
         } else {
@@ -1898,11 +1920,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             final localProfRows =
                 await txn.query(AgentMemoryService.profileTable);
             for (final row in localProfRows) {
-              final rowUtc = _parseMemoryRowVersionUtc(
+              final rowVer = _parseMemoryRowSyncVersion(
                 row['updated_at'],
                 row['observed_at'],
               );
-              if (!rowUtc.isAfter(remoteCleared)) {
+              if (!LWWUtils.syncVersionBeatsDeletion(rowVer, remoteCleared)) {
                 await txn.delete(
                   AgentMemoryService.profileTable,
                   where: 'id = ?',
@@ -1915,11 +1937,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             final localFactRows =
                 await txn.query(AgentMemoryService.factsTable);
             for (final row in localFactRows) {
-              final rowUtc = _parseMemoryRowVersionUtc(
+              final rowVer = _parseMemoryRowSyncVersion(
                 row['updated_at'],
                 row['created_at'],
               );
-              if (!rowUtc.isAfter(remoteCleared)) {
+              if (!LWWUtils.syncVersionBeatsDeletion(rowVer, remoteCleared)) {
                 await txn.delete(
                   AgentMemoryService.factsTable,
                   where: 'id = ?',
@@ -1932,9 +1954,9 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             final localSliceRows =
                 await txn.query(AgentMemoryService.recentSliceTable);
             for (final row in localSliceRows) {
-              final rowUtc =
-                  _parseMemoryRowVersionUtc(row['observed_at'], null);
-              if (!rowUtc.isAfter(remoteCleared)) {
+              final rowVer =
+                  _parseMemoryRowSyncVersion(row['observed_at'], null);
+              if (!LWWUtils.syncVersionBeatsDeletion(rowVer, remoteCleared)) {
                 await txn.delete(
                   AgentMemoryService.recentSliceTable,
                   where: 'id = ?',
@@ -1947,8 +1969,9 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             final localTombRows =
                 await txn.query(AgentMemoryService.tombstonesTable);
             for (final row in localTombRows) {
-              final delUtc = _parseMemoryRowVersionUtc(row['deleted_at'], null);
-              if (!delUtc.isAfter(remoteCleared)) {
+              final delVer =
+                  _parseMemoryRowSyncVersion(row['deleted_at'], null);
+              if (!LWWUtils.syncVersionBeatsDeletion(delVer, remoteCleared)) {
                 await txn.delete(
                   AgentMemoryService.tombstonesTable,
                   where: 'entity_type = ? AND entity_id = ?',
@@ -1958,9 +1981,13 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             }
           }
 
-          bool isBlockedByClearedAt(DateTime tsUtc) =>
+          bool isTombstoneBlockedByClearedAt(DateTime tsUtc) =>
               effectiveClearedAtUtc != null &&
               !tsUtc.isAfter(effectiveClearedAtUtc!);
+
+          bool isVersionBlockedByClearedAt(_MemorySyncVersion ver) =>
+              effectiveClearedAtUtc != null &&
+              !LWWUtils.syncVersionBeatsDeletion(ver, effectiveClearedAtUtc!);
 
           // 2. 加载当前本地快照
           final localProfilesById = <String, Map<String, Object?>>{
@@ -2014,7 +2041,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
 
           // 3. 应用远端墓碑
           for (final tomb in remoteTombstones) {
-            if (isBlockedByClearedAt(tomb.deletedAtUtc)) {
+            if (isTombstoneBlockedByClearedAt(tomb.deletedAtUtc)) {
               localSkippedCount++;
               continue;
             }
@@ -2022,11 +2049,14 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             if (tomb.entityType == 'profile') {
               final localRow = localProfilesById[tomb.entityId];
               if (localRow != null) {
-                final localUtc = _parseMemoryRowVersionUtc(
+                final localVer = _parseMemoryRowSyncVersion(
                   localRow['updated_at'],
                   localRow['observed_at'],
                 );
-                if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+                if (!LWWUtils.syncVersionBeatsDeletion(
+                  localVer,
+                  tomb.deletedAtUtc,
+                )) {
                   await txn.delete(
                     AgentMemoryService.profileTable,
                     where: 'id = ?',
@@ -2062,11 +2092,14 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             } else if (tomb.entityType == 'fact') {
               final localRow = localFactsById[tomb.entityId];
               if (localRow != null) {
-                final localUtc = _parseMemoryRowVersionUtc(
+                final localVer = _parseMemoryRowSyncVersion(
                   localRow['updated_at'],
                   localRow['created_at'],
                 );
-                if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+                if (!LWWUtils.syncVersionBeatsDeletion(
+                  localVer,
+                  tomb.deletedAtUtc,
+                )) {
                   await txn.delete(
                     AgentMemoryService.factsTable,
                     where: 'id = ?',
@@ -2102,9 +2135,12 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             } else if (tomb.entityType == 'slice') {
               final localRow = localSlicesById[tomb.entityId];
               if (localRow != null) {
-                final localUtc =
-                    _parseMemoryRowVersionUtc(localRow['observed_at'], null);
-                if (!tomb.deletedAtUtc.isBefore(localUtc)) {
+                final localVer =
+                    _parseMemoryRowSyncVersion(localRow['observed_at'], null);
+                if (!LWWUtils.syncVersionBeatsDeletion(
+                  localVer,
+                  tomb.deletedAtUtc,
+                )) {
                   await txn.delete(
                     AgentMemoryService.recentSliceTable,
                     where: 'id = ?',
@@ -2157,32 +2193,39 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               final lNext = localProfilesById[currId];
               if (tombUtc != null) {
                 final rAliveAfterTomb = rNext != null &&
-                    _parseMemoryRowVersionUtc(
-                      rNext['updated_at'],
-                      rNext['observed_at'],
-                    ).isAfter(tombUtc);
+                    LWWUtils.syncVersionBeatsDeletion(
+                      _parseMemoryRowSyncVersion(
+                        rNext['updated_at'],
+                        rNext['observed_at'],
+                      ),
+                      tombUtc,
+                    );
                 final lAliveAfterTomb = lNext != null &&
-                    _parseMemoryRowVersionUtc(
-                      lNext['updated_at'],
-                      lNext['observed_at'],
-                    ).isAfter(tombUtc);
+                    LWWUtils.syncVersionBeatsDeletion(
+                      _parseMemoryRowSyncVersion(
+                        lNext['updated_at'],
+                        lNext['observed_at'],
+                      ),
+                      tombUtc,
+                    );
                 if (!rAliveAfterTomb && !lAliveAfterTomb) {
                   return tombUtc;
                 }
               }
               Map<String, Object?>? nextRow;
               if (rNext != null && lNext != null) {
-                final rTime = _parseMemoryRowVersionUtc(
+                final rVer = _parseMemoryRowSyncVersion(
                   rNext['updated_at'],
                   rNext['observed_at'],
                 );
-                final lTime = _parseMemoryRowVersionUtc(
+                final lVer = _parseMemoryRowSyncVersion(
                   lNext['updated_at'],
                   lNext['observed_at'],
                 );
-                if (rTime.isAfter(lTime)) {
+                final cmpNext = LWWUtils.compareSyncVersions(rVer, lVer);
+                if (cmpNext > 0) {
                   nextRow = rNext;
-                } else if (lTime.isAfter(rTime)) {
+                } else if (cmpNext < 0) {
                   nextRow = lNext;
                 } else {
                   final rSup = (rNext['status'] as String?)?.trim() ==
@@ -2208,10 +2251,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
 
           bool hasTombstonedProfileSuccessor(
             Map<String, Object?> row,
-            DateTime rowVersionUtc,
+            _MemorySyncVersion rowVersion,
           ) {
             final tombUtc = findTombstonedProfileChainTime(row);
-            return tombUtc != null && !tombUtc.isBefore(rowVersionUtc);
+            return tombUtc != null &&
+                !LWWUtils.syncVersionBeatsDeletion(rowVersion, tombUtc);
           }
 
           bool hasKnownLiveProfileSuccessor(Map<String, Object?> row) {
@@ -2225,21 +2269,80 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                 localProfilesById.containsKey(supBy);
           }
 
+          String? resolveOlderSupersededTerminalToRetire({
+            required String selfId,
+            required Map<String, Object?> winnerRow,
+            required Map<String, Object?> olderRow,
+          }) {
+            final winnerStatus = (winnerRow['status'] as String?)?.trim() ??
+                AgentMemoryStatus.active.storageValue;
+            final winnerReplaces =
+                (winnerRow['replaces_id'] as String?)?.trim() ?? '';
+            final olderStatus = (olderRow['status'] as String?)?.trim() ?? '';
+            var currId = (olderRow['superseded_by'] as String?)?.trim() ?? '';
+            if (winnerStatus != AgentMemoryStatus.active.storageValue ||
+                winnerReplaces.isNotEmpty ||
+                olderStatus != AgentMemoryStatus.superseded.storageValue ||
+                currId.isEmpty) {
+              return null;
+            }
+            final visited = <String>{selfId};
+            while (currId.isNotEmpty && visited.add(currId)) {
+              final rCand = remoteProfilesById[currId];
+              final lCand = localProfilesById[currId];
+              Map<String, Object?>? cand;
+              if (rCand != null && lCand != null) {
+                final cmpCand = LWWUtils.compareSyncVersions(
+                  _parseMemoryRowSyncVersion(
+                    rCand['updated_at'],
+                    rCand['observed_at'],
+                  ),
+                  _parseMemoryRowSyncVersion(
+                    lCand['updated_at'],
+                    lCand['observed_at'],
+                  ),
+                );
+                cand = cmpCand > 0 ? rCand : lCand;
+              } else {
+                cand = rCand ?? lCand;
+              }
+              if (cand == null) return null;
+              final candStatus = (cand['status'] as String?)?.trim() ??
+                  AgentMemoryStatus.active.storageValue;
+              if (candStatus == AgentMemoryStatus.active.storageValue) {
+                final tId = (cand['id'] as String?)?.trim() ?? '';
+                if (tId.isEmpty || tId == selfId) return null;
+                final beatsTerminal = _compareProfileRowsByWinnerRule(
+                      winnerRow,
+                      cand,
+                      isBasisCovered: hasBasisChecker ? syncCheckCovered : null,
+                    ) <
+                    0;
+                return beatsTerminal ? tId : null;
+              }
+              if (candStatus != AgentMemoryStatus.superseded.storageValue) {
+                return null;
+              }
+              currId = (cand['superseded_by'] as String?)?.trim() ?? '';
+            }
+            return null;
+          }
+
           // 4. 合并 profile 行
           for (final remoteRow in remoteProfiles) {
             final id = remoteRow['id'] as String;
-            final remoteUtc = _parseMemoryRowVersionUtc(
+            final remoteVer = _parseMemoryRowSyncVersion(
               remoteRow['updated_at'],
               remoteRow['observed_at'],
             );
-            if (isBlockedByClearedAt(remoteUtc)) {
+            if (isVersionBlockedByClearedAt(remoteVer)) {
               localSkippedCount++;
               continue;
             }
             final tombKey = 'profile:$id';
             final localTombUtc = localTombstones[tombKey];
             if (localTombUtc != null) {
-              if (!remoteUtc.isAfter(localTombUtc)) {
+              if (!LWWUtils.syncVersionBeatsDeletion(remoteVer, localTombUtc)) {
                 localSkippedCount++;
                 continue;
               }
@@ -2263,24 +2366,58 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               profilesAdded++;
               changed = true;
             } else {
-              final localUtc = _parseMemoryRowVersionUtc(
+              final localVer = _parseMemoryRowSyncVersion(
                 localRow['updated_at'],
                 localRow['observed_at'],
               );
-              if (remoteUtc.isAfter(localUtc)) {
-                await txn.insert(
-                  AgentMemoryService.profileTable,
-                  remoteRow,
-                  conflictAlgorithm: ConflictAlgorithm.replace,
+              final cmpProf = LWWUtils.compareSyncVersions(remoteVer, localVer);
+              if (cmpProf > 0) {
+                final retiredSuccId = resolveOlderSupersededTerminalToRetire(
+                  selfId: id,
+                  winnerRow: remoteRow,
+                  olderRow: localRow,
                 );
-                localProfilesById[id] = remoteRow;
+                final effectiveRemoteRow = retiredSuccId != null
+                    ? <String, Object?>{
+                        ...remoteRow,
+                        'replaces_id': retiredSuccId,
+                      }
+                    : remoteRow;
+                await txn.update(
+                  AgentMemoryService.profileTable,
+                  effectiveRemoteRow,
+                  where: 'id = ?',
+                  whereArgs: <Object?>[id],
+                );
+                localProfilesById[id] = effectiveRemoteRow;
                 profilesUpdated++;
                 changed = true;
-              } else if (remoteUtc.isAtSameMomentAs(localUtc)) {
+              } else if (cmpProf < 0) {
+                final retiredSuccId = resolveOlderSupersededTerminalToRetire(
+                  selfId: id,
+                  winnerRow: localRow,
+                  olderRow: remoteRow,
+                );
+                if (retiredSuccId != null) {
+                  final updatedLocalRow = <String, Object?>{
+                    ...localRow,
+                    'replaces_id': retiredSuccId,
+                  };
+                  await txn.update(
+                    AgentMemoryService.profileTable,
+                    <String, Object?>{'replaces_id': retiredSuccId},
+                    where: 'id = ?',
+                    whereArgs: <Object?>[id],
+                  );
+                  localProfilesById[id] = updatedLocalRow;
+                  profilesUpdated++;
+                  changed = true;
+                }
+              } else {
                 final remoteTombSucc =
-                    hasTombstonedProfileSuccessor(remoteRow, remoteUtc);
+                    hasTombstonedProfileSuccessor(remoteRow, remoteVer);
                 final localTombSucc =
-                    hasTombstonedProfileSuccessor(localRow, localUtc);
+                    hasTombstonedProfileSuccessor(localRow, localVer);
                 final remoteLiveSucc = hasKnownLiveProfileSuccessor(remoteRow);
                 final localLiveSucc = hasKnownLiveProfileSuccessor(localRow);
                 final contentTieCmp = _compareMemoryCanonicalFields(
@@ -2329,10 +2466,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                   (col) => localRow[col] != mergedRow[col],
                 );
                 if (hasDiff) {
-                  await txn.insert(
+                  await txn.update(
                     AgentMemoryService.profileTable,
                     mergedRow,
-                    conflictAlgorithm: ConflictAlgorithm.replace,
+                    where: 'id = ?',
+                    whereArgs: <Object?>[id],
                   );
                   localProfilesById[id] = mergedRow;
                   profilesUpdated++;
@@ -2345,18 +2483,18 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           // 5. 合并 facts 行（同一 id 始终合并保留最大 recall_count 与最晚 last_recalled_at）
           for (final remoteRow in remoteFacts) {
             final id = remoteRow['id'] as String;
-            final remoteUtc = _parseMemoryRowVersionUtc(
+            final remoteVer = _parseMemoryRowSyncVersion(
               remoteRow['updated_at'],
               remoteRow['created_at'],
             );
-            if (isBlockedByClearedAt(remoteUtc)) {
+            if (isVersionBlockedByClearedAt(remoteVer)) {
               localSkippedCount++;
               continue;
             }
             final tombKey = 'fact:$id';
             final localTombUtc = localTombstones[tombKey];
             if (localTombUtc != null) {
-              if (!remoteUtc.isAfter(localTombUtc)) {
+              if (!LWWUtils.syncVersionBeatsDeletion(remoteVer, localTombUtc)) {
                 localSkippedCount++;
                 continue;
               }
@@ -2380,7 +2518,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               factsAdded++;
               changed = true;
             } else {
-              final localUtc = _parseMemoryRowVersionUtc(
+              final localVer = _parseMemoryRowSyncVersion(
                 localRow['updated_at'],
                 localRow['created_at'],
               );
@@ -2394,8 +2532,9 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                 remoteRow['last_recalled_at'],
               );
 
-              final remoteWinsContent = remoteUtc.isAfter(localUtc) ||
-                  (remoteUtc.isAtSameMomentAs(localUtc) &&
+              final cmpFact = LWWUtils.compareSyncVersions(remoteVer, localVer);
+              final remoteWinsContent = cmpFact > 0 ||
+                  (cmpFact == 0 &&
                       _compareMemoryCanonicalFields(
                             remoteRow,
                             localRow,
@@ -2413,10 +2552,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                   (col) => localRow[col] != mergedRow[col],
                 );
                 if (hasDiff) {
-                  await txn.insert(
+                  await txn.update(
                     AgentMemoryService.factsTable,
                     mergedRow,
-                    conflictAlgorithm: ConflictAlgorithm.replace,
+                    where: 'id = ?',
+                    whereArgs: <Object?>[id],
                   );
                   localFactsById[id] = mergedRow;
                   factsUpdated++;
@@ -2447,16 +2587,16 @@ extension AgentMemorySyncExtension on AgentMemoryService {
           // 6. 合并 recent_slices 行
           for (final remoteRow in remoteSlices) {
             final id = remoteRow['id'] as String;
-            final remoteUtc =
-                _parseMemoryRowVersionUtc(remoteRow['observed_at'], null);
-            if (isBlockedByClearedAt(remoteUtc)) {
+            final remoteVer =
+                _parseMemoryRowSyncVersion(remoteRow['observed_at'], null);
+            if (isVersionBlockedByClearedAt(remoteVer)) {
               localSkippedCount++;
               continue;
             }
             final tombKey = 'slice:$id';
             final localTombUtc = localTombstones[tombKey];
             if (localTombUtc != null) {
-              if (!remoteUtc.isAfter(localTombUtc)) {
+              if (!LWWUtils.syncVersionBeatsDeletion(remoteVer, localTombUtc)) {
                 localSkippedCount++;
                 continue;
               }
@@ -2480,10 +2620,14 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               slicesAdded++;
               changed = true;
             } else {
-              final localUtc =
-                  _parseMemoryRowVersionUtc(localRow['observed_at'], null);
-              final remoteWins = remoteUtc.isAfter(localUtc) ||
-                  (remoteUtc.isAtSameMomentAs(localUtc) &&
+              final localVer =
+                  _parseMemoryRowSyncVersion(localRow['observed_at'], null);
+              final cmpSlice = LWWUtils.compareSyncVersions(
+                remoteVer,
+                localVer,
+              );
+              final remoteWins = cmpSlice > 0 ||
+                  (cmpSlice == 0 &&
                       _compareMemorySliceOnSameObservedAt(remoteRow, localRow) >
                           0);
               if (remoteWins) {
@@ -2491,10 +2635,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                   (col) => localRow[col] != remoteRow[col],
                 );
                 if (hasDiff) {
-                  await txn.insert(
+                  await txn.update(
                     AgentMemoryService.recentSliceTable,
                     remoteRow,
-                    conflictAlgorithm: ConflictAlgorithm.replace,
+                    where: 'id = ?',
+                    whereArgs: <Object?>[id],
                   );
                   localSlicesById[id] = remoteRow;
                   slicesUpdated++;
@@ -2615,16 +2760,17 @@ extension AgentMemorySyncExtension on AgentMemoryService {
         if (existing == null) {
           profilesById[id] = sanitized;
         } else {
-          final candUtc = _parseMemoryRowVersionUtc(
+          final candVer = _parseMemoryRowSyncVersion(
             sanitized['updated_at'],
             sanitized['observed_at'],
           );
-          final existUtc = _parseMemoryRowVersionUtc(
+          final existVer = _parseMemoryRowSyncVersion(
             existing['updated_at'],
             existing['observed_at'],
           );
-          if (candUtc.isAfter(existUtc) ||
-              (candUtc.isAtSameMomentAs(existUtc) &&
+          final cmp = LWWUtils.compareSyncVersions(candVer, existVer);
+          if (cmp > 0 ||
+              (cmp == 0 &&
                   _compareMemoryCanonicalFields(
                         sanitized,
                         existing,
@@ -2649,16 +2795,17 @@ extension AgentMemorySyncExtension on AgentMemoryService {
         if (existing == null) {
           factsById[id] = sanitized;
         } else {
-          final candUtc = _parseMemoryRowVersionUtc(
+          final candVer = _parseMemoryRowSyncVersion(
             sanitized['updated_at'],
             sanitized['created_at'],
           );
-          final existUtc = _parseMemoryRowVersionUtc(
+          final existVer = _parseMemoryRowSyncVersion(
             existing['updated_at'],
             existing['created_at'],
           );
-          if (candUtc.isAfter(existUtc) ||
-              (candUtc.isAtSameMomentAs(existUtc) &&
+          final cmp = LWWUtils.compareSyncVersions(candVer, existVer);
+          if (cmp > 0 ||
+              (cmp == 0 &&
                   _compareMemoryCanonicalFields(
                         sanitized,
                         existing,
@@ -2683,16 +2830,17 @@ extension AgentMemorySyncExtension on AgentMemoryService {
         if (existing == null) {
           slicesById[id] = sanitized;
         } else {
-          final candUtc = _parseMemoryRowVersionUtc(
+          final candVer = _parseMemoryRowSyncVersion(
             sanitized['observed_at'],
             null,
           );
-          final existUtc = _parseMemoryRowVersionUtc(
+          final existVer = _parseMemoryRowSyncVersion(
             existing['observed_at'],
             null,
           );
-          if (candUtc.isAfter(existUtc) ||
-              (candUtc.isAtSameMomentAs(existUtc) &&
+          final cmp = LWWUtils.compareSyncVersions(candVer, existVer);
+          if (cmp > 0 ||
+              (cmp == 0 &&
                   _compareMemorySliceOnSameObservedAt(sanitized, existing) >
                       0)) {
             slicesById[id] = sanitized;
