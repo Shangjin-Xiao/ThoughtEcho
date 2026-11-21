@@ -376,6 +376,88 @@ void main() {
             ),
             isNull,
           );
+
+          // Length filter: <= 100 chars passes, > 100 chars is rejected in both tagOnly and allNotes
+          final exact100 = 'x' * 100;
+          final over100 = 'x' * 101;
+          await db.insert('quotes', {
+            'id': 'q_exact_100',
+            'content': exact100,
+            'source_work': 'Work C',
+            'source_author': 'Author C',
+            'is_deleted': 0,
+          });
+          await db.insert('quote_tags', {
+            'quote_id': 'q_exact_100',
+            'tag_id': 'user_daily_tag',
+          });
+          await db.insert('quotes', {
+            'id': 'q_over_100',
+            'content': over100,
+            'source_work': 'Work D',
+            'source_author': 'Author D',
+            'is_deleted': 0,
+          });
+          await db.insert('quote_tags', {
+            'quote_id': 'q_over_100',
+            'tag_id': 'user_daily_tag',
+          });
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_exact_100',
+              offlineQuoteSource: 'tagOnly',
+            ),
+            containsPair('content', exact100),
+          );
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_exact_100',
+              offlineQuoteSource: 'allNotes',
+            ),
+            containsPair('content', exact100),
+          );
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_over_100',
+              offlineQuoteSource: 'tagOnly',
+            ),
+            isNull,
+          );
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_over_100',
+              offlineQuoteSource: 'allNotes',
+            ),
+            isNull,
+          );
+
+          // Soft-delete filter (is_deleted = 1) excludes otherwise valid quotes in both tagOnly and allNotes
+          await db.update(
+            'quotes',
+            {'is_deleted': 1},
+            where: 'id = ?',
+            whereArgs: ['q_exact_100'],
+          );
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_exact_100',
+              offlineQuoteSource: 'tagOnly',
+            ),
+            isNull,
+          );
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_exact_100',
+              offlineQuoteSource: 'allNotes',
+            ),
+            isNull,
+          );
         },
       );
     });

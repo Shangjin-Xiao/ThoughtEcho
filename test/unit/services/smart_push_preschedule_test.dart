@@ -5592,5 +5592,232 @@ void main() {
         expect(upgradedScheduled.body, contains('用户新写下的第一条真实本地短句。'));
       },
     );
+
+    test(
+      'tapping an iOS Daily Quote test notification before today standalone slot displays the test quote without moving ID=100 to tomorrow',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 30);
+        const quoteId = '66554433-2211-0099-8877-665544332211';
+        databaseService.notes = <Quote>[
+          Quote(
+            id: quoteId,
+            content: '清晨试推与九点正式一言共用的本地佳句。',
+            sourceAuthor: '示例作者戊',
+            sourceWork: '示例文选',
+            date: localTime(2026, 5, 1, 9, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '清晨试推与九点正式一言共用的本地佳句。',
+          'author': '示例作者戊',
+          'source': '示例文选',
+          'type': 'local',
+          'local_quote_id': quoteId,
+        };
+
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'tagOnly',
+              localeCode: 'zh',
+            ).toJson(),
+          ),
+        );
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.dailyQuote,
+            pushTimeSlots: <PushTimeSlot>[PushTimeSlot(hour: 20, minute: 0)],
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 9, minute: 0),
+          ),
+        );
+
+        final initialStandalone =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(initialStandalone.scheduledDate.year, equals(2026));
+        expect(initialStandalone.scheduledDate.month, equals(5));
+        expect(initialStandalone.scheduledDate.day, equals(10));
+        expect(initialStandalone.scheduledDate.hour, equals(9));
+        expect(initialStandalone.scheduledDate.minute, equals(0));
+        final scheduleCountBeforeTestTap =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).length;
+
+        // 08:30 在设置页点击「测试推送」（PushMode.dailyQuote），发出非 ID=100 的即时通知
+        notificationsPlugin.shownCalls.clear();
+        await iosService.triggerPush();
+        expect(notificationsPlugin.shownCalls, hasLength(1));
+        final testShown = notificationsPlugin.shownCalls.single;
+        expect(testShown.id, isNot(equals(100)));
+
+        // 08:31 点击该测试通知：首页应展示测试通知快照，但今日 09:00 待触发的 ID=100 绝不能被跳到明天
+        currentNow = localTime(2026, 5, 10, 8, 31);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: testShown.id,
+            payload: testShown.payload,
+          ),
+        );
+        await iosService.waitForPendingScheduleForTest();
+
+        final displayed =
+            await iosService.consumePendingDailyQuoteForHomeDisplay();
+        expect(displayed, isNotNull);
+        expect(displayed!['hitokoto'], equals('清晨试推与九点正式一言共用的本地佳句。'));
+
+        final activeStandaloneAfterTestTap =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          notificationsPlugin.scheduledCalls.where((c) => c.id == 100).length,
+          equals(scheduleCountBeforeTestTap),
+          reason: '点击测试通知不应触发 iOS 独立每日一言槽位重装',
+        );
+        expect(
+          activeStandaloneAfterTestTap.scheduledDate.day,
+          equals(10),
+          reason: '今日 09:00 的独立每日一言提醒必须保留在今天，不得被提前推移至次日',
+        );
+      },
+    );
+
+    test(
+      'persisting an immediate Daily Quote snapshot retains >7-day-old notifications still visible in the Android shade so hiding their note cancels them',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 1, 8, 0);
+
+        const oldShadeNoteId = '11223344-5566-7788-99aa-bbccddeeff00';
+        const freshQuoteNoteId = 'ffeeddcc-bbaa-9988-7766-554433221100';
+        databaseService.notes = <Quote>[
+          Quote(
+            id: oldShadeNoteId,
+            content: '通知栏里保留了十天的历史回顾笔记。',
+            date: localTime(2025, 5, 1, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: freshQuoteNoteId,
+            content: '十天后新送达的即时每日一言短句。',
+            date: localTime(2026, 5, 10, 8, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '十天后新送达的即时每日一言短句。',
+          'author': '示例作者己',
+          'source': '示例札记',
+          'type': 'local',
+          'local_quote_id': freshQuoteNoteId,
+        };
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'tagOnly',
+              localeCode: 'zh',
+            ).toJson(),
+          ),
+        );
+
+        // 5/1 生成预排期回顾通知并使其送达后一直保留在系统通知栏中
+        exactAlarmPermitted = true;
+        final androidService = createService();
+        addTearDown(androidService.dispose);
+        await androidService.initialize();
+        await androidService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            enabledPastNoteTypes: <PastNoteType>{PastNoteType.yearAgoToday},
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 8, minute: 0),
+          ),
+        );
+
+        final may1Call = notificationsPlugin.scheduledCalls.firstWhere(
+          (c) =>
+              c.scheduledDate.year == 2026 &&
+              c.scheduledDate.month == 5 &&
+              c.scheduledDate.day == 1 &&
+              (c.body?.contains('通知栏里保留了十天的历史回顾笔记。') ?? false),
+        );
+        notificationsPlugin.activeShadeIds.add(may1Call.id);
+
+        // 推进 10 天（超出 7 天保留期），换上全新一言后触发一次即时每日一言推送写入快照（不经过全量重排）
+        currentNow = localTime(2026, 5, 11, 8, 0);
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '五月十一日清晨全新送达的即时每日一言。',
+          'author': '示例作者己',
+          'source': '示例札记',
+          'type': 'local',
+          'local_quote_id': freshQuoteNoteId,
+        };
+        databaseService.notes = <Quote>[
+          Quote(
+            id: oldShadeNoteId,
+            content: '通知栏里保留了十天的历史回顾笔记。',
+            date: localTime(2025, 5, 1, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: freshQuoteNoteId,
+            content: '五月十一日清晨全新送达的即时每日一言。',
+            date: localTime(2026, 5, 10, 8, 0).toIso8601String(),
+          ),
+        ];
+        notificationsPlugin.shownCalls.clear();
+        await androidService.triggerPush();
+        expect(notificationsPlugin.shownCalls, hasLength(1));
+        expect(
+          notificationsPlugin.shownCalls.single.body,
+          contains('五月十一日清晨全新送达的即时每日一言。'),
+        );
+
+        // 断言在 _persistDeliveredDailyQuoteSnapshot 执行后，超 7 天但仍在通知栏中的 may1Call 仍留在追踪存储里
+        final trackedAfterSnapshot = (jsonDecode(
+          storage.getString('smart_push_prescheduled_entries_v1') ?? '[]',
+        ) as List<dynamic>)
+            .whereType<Map<String, dynamic>>()
+            .map((e) => e['id'])
+            .toSet();
+        expect(trackedAfterSnapshot, contains(may1Call.id));
+
+        // 随后隐藏 10 天前的源笔记：仍在通知栏中的旧通知应被精准撤回
+        notificationsPlugin.cancelledIds.clear();
+        databaseService.notes = <Quote>[
+          Quote(
+            id: freshQuoteNoteId,
+            content: '五月十一日清晨全新送达的即时每日一言。',
+            date: localTime(2026, 5, 10, 8, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.notifyChanged();
+        await androidService.waitForPendingScheduleForTest();
+
+        expect(
+          notificationsPlugin.cancelledIds,
+          contains(may1Call.id),
+          reason: '仍在通知栏可见的超 7 天通知在即时一言快照写入后仍应保留追踪并在隐藏笔记时撤回',
+        );
+      },
+    );
   });
 }

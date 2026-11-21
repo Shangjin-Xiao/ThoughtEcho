@@ -2818,7 +2818,9 @@ extension SmartPushScheduling on SmartPushService {
           if (nowAvailableLocal != null) {
             return null;
           }
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.w('检查待发默认每日一言是否可升级为本地笔记失败', error: e);
+        }
       }
     }
 

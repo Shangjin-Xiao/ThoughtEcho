@@ -687,11 +687,16 @@ void main() {
         });
         final lockPath = '${tempDir.path}/live_holder.lock';
 
+        final holderAcquiredPort = ReceivePort();
+        addTearDown(holderAcquiredPort.close);
+        final holderAcquiredSendPort = holderAcquiredPort.sendPort;
+
         final holderFuture = Isolate.run(() async {
           return PlatformHelper.withCrossIsolateLock<(int, int)>(
             'smart_push_live_holder_test',
             () async {
               final entered = DateTime.now().millisecondsSinceEpoch;
+              holderAcquiredSendPort.send(entered);
               await Future<void>.delayed(const Duration(milliseconds: 220));
               final exited = DateTime.now().millisecondsSinceEpoch;
               return (entered, exited);
@@ -702,7 +707,7 @@ void main() {
           );
         });
 
-        await Future<void>.delayed(const Duration(milliseconds: 25));
+        await holderAcquiredPort.first;
 
         final contenderFuture = Isolate.run(() async {
           return PlatformHelper.withCrossIsolateLock<(int, int)>(

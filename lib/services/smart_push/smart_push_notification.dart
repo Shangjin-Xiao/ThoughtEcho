@@ -78,15 +78,17 @@ extension SmartPushNotification on SmartPushService {
         _isIOS &&
         _settings.dailyQuotePushEnabled &&
         (parsed.notificationId == 100 ||
-            (parsed.contentType == 'dailyQuote' && parsed.noteId == null));
+            (parsed.notificationId == null &&
+                parsed.contentType == 'dailyQuote' &&
+                parsed.noteId == null));
     int? tappedIosDailyQuoteEpochMs = parsed.scheduledEpochMs;
     String? tappedIosDailyQuoteContent;
     if (shouldRearmIosDailyQuote) {
-      final targetId = parsed.notificationId ?? 100;
+      const targetId = 100;
       final nowMs = _now().millisecondsSinceEpoch;
       _PreScheduledEntry? matchedDailyEntry;
       for (final entry in _loadTrackedPreScheduledEntries()) {
-        if (entry.id != targetId) continue;
+        if (entry.id != targetId || !entry.isDailyQuote) continue;
         final matchesTappedDelivery = parsed.scheduledEpochMs != null
             ? entry.epochMs == parsed.scheduledEpochMs
             : entry.epochMs <= nowMs;
@@ -490,15 +492,33 @@ extension SmartPushNotification on SmartPushService {
         : ((rawLocalId is String && rawLocalId.isNotEmpty) ? rawLocalId : null);
     return _withScheduleCommitLock(() async {
       final commitSeq = await _nextNotificationCommitSeq();
+      final previousEntries = _loadTrackedPreScheduledEntries();
+      final activeNotificationIds = previousEntries.isNotEmpty
+          ? await _queryActiveLocalNotificationIds()
+          : const <int>{};
       final nowMs = _now().millisecondsSinceEpoch;
       final deliveredEpochMs = (deliveredAt ?? _now()).millisecondsSinceEpoch;
       final maxRetentionMs =
           SmartPushService._deliveredEntryRetention.inMilliseconds;
-      final existing = _loadTrackedPreScheduledEntries().where((e) {
-        if (e.id == notificationId) return false;
-        if (e.epochMs > nowMs) return true;
-        return e.epochMs > 0 && nowMs - e.epochMs <= maxRetentionMs;
-      }).toList();
+      final existing = <_PreScheduledEntry>[];
+      for (final e in _loadTrackedPreScheduledEntries()) {
+        if (e.id == notificationId || e.epochMs <= 0) continue;
+        if (e.epochMs > nowMs || nowMs - e.epochMs <= maxRetentionMs) {
+          existing.add(e);
+          continue;
+        }
+        if (activeNotificationIds != null) {
+          if (activeNotificationIds.contains(e.id)) {
+            existing.add(e);
+          }
+        } else {
+          try {
+            await _notificationsPlugin.cancel(e.id);
+          } catch (err) {
+            AppLogger.w('清理超期追踪通知失败 (ID: ${e.id})', error: err);
+          }
+        }
+      }
       existing.add(
         _PreScheduledEntry(
           id: notificationId,
@@ -768,7 +788,9 @@ extension SmartPushNotification on SmartPushService {
         if (nowAvailableLocal != null) {
           return await clearTodayCache();
         }
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.w('校验默认每日一言缓存是否可升级为本地笔记失败', error: e);
+      }
     }
 
     if (data['type'] != 'local') return data;
