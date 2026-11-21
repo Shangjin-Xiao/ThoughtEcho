@@ -124,7 +124,21 @@ void main() {
 
   setUpAll(() {
     tz_data.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
+    tz.timeZoneDatabase.add(
+      tz.Location(
+        'Etc/GMT-8',
+        [tz.minTime],
+        [0],
+        const [
+          tz.TimeZone(
+            8 * Duration.millisecondsPerHour,
+            isDst: false,
+            abbreviation: '+08',
+          ),
+        ],
+      ),
+    );
+    tz.setLocalLocation(tz.getLocation('Etc/GMT-8'));
   });
 
   setUp(() async {

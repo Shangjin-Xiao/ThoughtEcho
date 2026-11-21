@@ -1054,6 +1054,11 @@ extension SmartPushScheduling on SmartPushService {
         if (scheduledIds.contains(prev.id) || prev.epochMs <= 0) {
           continue;
         }
+        if (prev.epochMs > nowMs &&
+            pendingRequestIds != null &&
+            !pendingRequestIds.contains(prev.id)) {
+          continue;
+        }
         final withinRetention =
             prev.epochMs > nowMs || nowMs - prev.epochMs <= maxRetentionMs;
         if (withinRetention) {
@@ -1112,11 +1117,8 @@ extension SmartPushScheduling on SmartPushService {
         final isNewNotificationInstance = previousEntries
             .where((e) => e.id == item.id)
             .every((e) => e.epochMs != newEpochMs);
-        if (isNewNotificationInstance) {
-          await _analytics.resetTrackedNotificationState(item.id);
-        }
 
-        await _scheduleLocalNotification(
+        final scheduled = await _scheduleLocalNotification(
           item.id,
           item.scheduledDate,
           item.slot,
@@ -1126,6 +1128,12 @@ extension SmartPushScheduling on SmartPushService {
           canScheduleExactOverride: canScheduleExact,
           persistSingleTrackedEntry: false,
         );
+        if (!scheduled) {
+          continue;
+        }
+        if (isNewNotificationInstance) {
+          await _analytics.resetTrackedNotificationState(item.id);
+        }
         scheduledEntries.add(
           _PreScheduledEntry(
             id: item.id,
@@ -1840,6 +1848,12 @@ extension SmartPushScheduling on SmartPushService {
               deliveredTime.isAfter(simulatedLastPushTime)) {
             simulatedLastPushTime = deliveredTime;
           }
+          projectedUnengagedStreak = _analytics.hasClickedNotification(prev.id)
+              ? 0
+              : projectedUnengagedStreak + 1;
+          habituationCooldown = SmartPushAnalytics.cooldownForStreak(
+            projectedUnengagedStreak,
+          );
         }
       }
 
@@ -2089,6 +2103,10 @@ extension SmartPushScheduling on SmartPushService {
         if (isSmartMode) {
           perDayCount[dayKey] = dayCount + 1;
           simulatedLastPushTime = slotTime;
+          projectedUnengagedStreak += 1;
+          habituationCooldown = SmartPushAnalytics.cooldownForStreak(
+            projectedUnengagedStreak,
+          );
         }
 
         final id = SmartPushService.deterministicPreScheduledNotificationId(

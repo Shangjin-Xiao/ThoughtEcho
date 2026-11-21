@@ -189,6 +189,7 @@ class SmartPushService extends ChangeNotifier {
   bool _legacyAndroidTasksCleared = false;
   int _scheduleGeneration = 0;
   int _settingsMutationGeneration = 0;
+  String? _latestAuthoritativeSettingsJson;
   final Set<int> _inFlightImmediateSmartNotificationIds = <int>{};
   Future<void> _pendingScheduleOp = Future<void>.value();
   Future<void> _pendingAccountingOp = Future<void>.value();
@@ -929,21 +930,32 @@ class SmartPushService extends ChangeNotifier {
 
   /// 保存设置并更新推送计划
   Future<void> saveSettings(SmartPushSettings newSettings) async {
+    final mutationGen = ++_settingsMutationGeneration;
+    _scheduleGeneration++;
     try {
       final mergedInitial = _mergeStoredDeliveryHistoryInto(newSettings);
       _settings = mergedInitial;
-      _scheduleGeneration++;
-      _settingsMutationGeneration++;
       final jsonStr = jsonEncode(mergedInitial.toJson());
+      _latestAuthoritativeSettingsJson = jsonStr;
       await _mmkv.setString(_settingsKey, jsonStr);
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) {
+        final authoritative = _latestAuthoritativeSettingsJson;
+        if (authoritative != null) {
+          await _mmkv.setString(_settingsKey, authoritative);
+        }
+        return;
+      }
       if (mergedInitial.lastPushTime != null ||
           mergedInitial.recentlyPushedNoteIds.isNotEmpty) {
         await _persistDeliveryHistory(
           lastPushTime: mergedInitial.lastPushTime,
           pushedNoteIds: mergedInitial.recentlyPushedNoteIds,
+          expectedSettingsGeneration: mutationGen,
         );
+        if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
       }
       await _bumpSettingsEpoch();
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
       _settings = _mergeStoredDeliveryHistoryInto(newSettings);
       notifyListeners();
       AppLogger.i('智能推送设置已保存');
@@ -962,12 +974,17 @@ class SmartPushService extends ChangeNotifier {
 
   /// 从持久化存储重新加载设置并重新计算调度任务（用于备份恢复或跨 Isolate 数据同步）
   Future<void> reloadFromStorage() async {
+    final mutationGen = ++_settingsMutationGeneration;
+    _scheduleGeneration++;
+    _latestAuthoritativeSettingsJson = null;
     try {
       await _reloadSharedStorageIfSupported();
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
       await _loadSettings();
-      _scheduleGeneration++;
-      _settingsMutationGeneration++;
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
+      _latestAuthoritativeSettingsJson = _mmkv.getString(_settingsKey);
       await _bumpSettingsEpoch();
+      if (!_isSettingsMutationGenerationCurrent(mutationGen)) return;
       notifyListeners();
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush(preserveDeliveredNotifications: true);

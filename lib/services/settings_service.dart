@@ -1776,10 +1776,81 @@ class SettingsService extends ChangeNotifier {
       'use_custom_color': _mmkv.getBool('use_custom_color'),
       'use_dynamic_color': _mmkv.getBool('use_dynamic_color'),
     };
+    final deliveryHistoryRaw =
+        _mmkv.getString('smart_push_delivery_history_v1');
+    Map<String, dynamic>? parsedDeliveryHistory;
+    if (deliveryHistoryRaw != null && deliveryHistoryRaw.isNotEmpty) {
+      try {
+        final decodedHistory = json.decode(deliveryHistoryRaw);
+        if (decodedHistory is Map) {
+          parsedDeliveryHistory = Map<String, dynamic>.from(decodedHistory);
+          backup['smart_push_delivery_history_v1'] = parsedDeliveryHistory;
+        } else {
+          backup['smart_push_delivery_history_v1'] = deliveryHistoryRaw;
+        }
+      } catch (_) {
+        backup['smart_push_delivery_history_v1'] = deliveryHistoryRaw;
+      }
+    }
+
     final smartPushRaw = _mmkv.getString('smart_push_settings_v2');
     if (smartPushRaw != null && smartPushRaw.isNotEmpty) {
       try {
-        backup['smart_push_settings_v2'] = json.decode(smartPushRaw);
+        final decodedPush = json.decode(smartPushRaw);
+        if (decodedPush is Map) {
+          final mergedPush = Map<String, dynamic>.from(decodedPush);
+          if (parsedDeliveryHistory != null) {
+            final baseTimeRaw = mergedPush['lastPushTime'];
+            final histTimeRaw = parsedDeliveryHistory['lastPushTime'];
+            final baseTime =
+                baseTimeRaw is String ? DateTime.tryParse(baseTimeRaw) : null;
+            final histTime =
+                histTimeRaw is String ? DateTime.tryParse(histTimeRaw) : null;
+            final historyIsNewer = histTime != null &&
+                (baseTime == null || histTime.isAfter(baseTime));
+            if (historyIsNewer) {
+              mergedPush['lastPushTime'] = histTimeRaw;
+            }
+            final baseIds = mergedPush['recentlyPushedNoteIds'] is List
+                ? (mergedPush['recentlyPushedNoteIds'] as List)
+                    .map((e) => e.toString())
+                    .where((id) => id.isNotEmpty)
+                    .toList()
+                : const <String>[];
+            final histIds =
+                parsedDeliveryHistory['recentlyPushedNoteIds'] is List
+                    ? (parsedDeliveryHistory['recentlyPushedNoteIds'] as List)
+                        .map((e) => e.toString())
+                        .where((id) => id.isNotEmpty)
+                        .toList()
+                    : const <String>[];
+            if (baseIds.isNotEmpty || histIds.isNotEmpty) {
+              final mergedIds = <String>[];
+              void appendUnique(Iterable<String> ids) {
+                for (final id in ids) {
+                  if (id.isEmpty) continue;
+                  mergedIds.remove(id);
+                  mergedIds.add(id);
+                }
+              }
+
+              if (historyIsNewer) {
+                appendUnique(baseIds);
+                appendUnique(histIds);
+              } else {
+                appendUnique(histIds);
+                appendUnique(baseIds);
+              }
+              while (mergedIds.length > 50) {
+                mergedIds.removeAt(0);
+              }
+              mergedPush['recentlyPushedNoteIds'] = mergedIds;
+            }
+          }
+          backup['smart_push_settings_v2'] = mergedPush;
+        } else {
+          backup['smart_push_settings_v2'] = decodedPush;
+        }
       } catch (_) {
         backup['smart_push_settings_v2'] = smartPushRaw;
       }
@@ -2025,24 +2096,69 @@ class SettingsService extends ChangeNotifier {
         }
       }
 
-      // 恢复智能推送设置
-      if (backupData.containsKey('smart_push_settings_v2')) {
-        final rawSmartPush = backupData['smart_push_settings_v2'];
-        if (rawSmartPush is Map) {
-          await _mmkv.setString(
-            'smart_push_settings_v2',
-            json.encode(rawSmartPush),
-          );
-        } else if (rawSmartPush is String && rawSmartPush.trim().isNotEmpty) {
+      // 恢复智能推送设置与独立投递历史
+      Map<String, dynamic>? decodeJsonObject(Object? rawValue) {
+        if (rawValue is Map) {
+          return Map<String, dynamic>.from(rawValue);
+        }
+        if (rawValue is String && rawValue.trim().isNotEmpty) {
           try {
-            final decoded = json.decode(rawSmartPush);
+            final decoded = json.decode(rawValue);
             if (decoded is Map) {
-              await _mmkv.setString(
-                'smart_push_settings_v2',
-                json.encode(decoded),
-              );
+              return Map<String, dynamic>.from(decoded);
             }
           } catch (_) {}
+        }
+        return null;
+      }
+
+      Map<String, dynamic>? restoredSmartPushMap;
+      if (backupData.containsKey('smart_push_settings_v2')) {
+        restoredSmartPushMap =
+            decodeJsonObject(backupData['smart_push_settings_v2']);
+        if (restoredSmartPushMap != null) {
+          await _mmkv.setString(
+            'smart_push_settings_v2',
+            json.encode(restoredSmartPushMap),
+          );
+        }
+      }
+
+      if (backupData.containsKey('smart_push_delivery_history_v1')) {
+        final rawHistory = backupData['smart_push_delivery_history_v1'];
+        if (rawHistory == null) {
+          await _mmkv.remove('smart_push_delivery_history_v1');
+        } else {
+          final historyMap = decodeJsonObject(rawHistory);
+          if (historyMap != null) {
+            await _mmkv.setString(
+              'smart_push_delivery_history_v1',
+              json.encode(historyMap),
+            );
+          }
+        }
+      } else if (restoredSmartPushMap != null) {
+        final rawTime = restoredSmartPushMap['lastPushTime'];
+        final validTime =
+            rawTime is String && DateTime.tryParse(rawTime) != null
+                ? rawTime
+                : null;
+        final validIds = restoredSmartPushMap['recentlyPushedNoteIds'] is List
+            ? (restoredSmartPushMap['recentlyPushedNoteIds'] as List)
+                .map((e) => e.toString())
+                .where((id) => id.isNotEmpty)
+                .toList()
+            : const <String>[];
+        if (validTime == null && validIds.isEmpty) {
+          await _mmkv.remove('smart_push_delivery_history_v1');
+        } else {
+          await _mmkv.setString(
+            'smart_push_delivery_history_v1',
+            json.encode(<String, dynamic>{
+              'lastPushTime': validTime,
+              'recentlyPushedNoteIds': validIds,
+            }),
+          );
         }
       }
 

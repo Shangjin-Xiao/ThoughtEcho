@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/core/config/distribution_config.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/note_tag.dart';
@@ -65,6 +66,7 @@ class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
   final List<_ShownCall> shownCalls = [];
   final List<int> cancelledIds = [];
   int cancelAllCount = 0;
+  Object? Function(_ScheduledCall call)? scheduleErrorBuilder;
   Future<void> Function(_ScheduledCall call)? onScheduleHook;
 
   _RecordingNotificationsPlugin({this.nowProvider});
@@ -104,6 +106,10 @@ class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
       androidScheduleMode: androidScheduleMode,
       payload: payload,
     );
+    final error = scheduleErrorBuilder?.call(call);
+    if (error != null) {
+      throw error;
+    }
     scheduledCalls.add(call);
     _activeScheduledById[id] = call;
     if (onScheduleHook != null) {
@@ -304,13 +310,27 @@ void main() {
   setUpAll(() async {
     await TestHarness.initialize();
     tz_data.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
+    tz.timeZoneDatabase.add(
+      tz.Location(
+        'Etc/GMT-8',
+        [tz.minTime],
+        [0],
+        const [
+          tz.TimeZone(
+            8 * Duration.millisecondsPerHour,
+            isDst: false,
+            abbreviation: '+08',
+          ),
+        ],
+      ),
+    );
+    tz.setLocalLocation(tz.getLocation('Etc/GMT-8'));
   });
 
   tearDown(() {
     DistributionConfig.resetDebugOverrides();
     ApiService.resetDebugOverrides();
-    tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
+    tz.setLocalLocation(tz.getLocation('Etc/GMT-8'));
   });
 
   group('Android smart push 3-day local notification pre-scheduling', () {
@@ -339,7 +359,7 @@ void main() {
         notificationsPlugin: notificationsPlugin,
         isAndroidOverride: true,
         isIOSOverride: false,
-        timeZoneOverride: 'Asia/Shanghai',
+        timeZoneOverride: 'Etc/GMT-8',
         canScheduleExactAlarmsOverride: () async => exactAlarmPermitted,
         registerPreScheduleRenewalOverride: () async {
           renewalRegisterCount++;
@@ -352,7 +372,7 @@ void main() {
     }
 
     setUp(() {
-      tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
+      tz.setLocalLocation(tz.getLocation('Etc/GMT-8'));
       currentNow = localTime(2026, 5, 10, 7, 30);
       exactAlarmPermitted = true;
       renewalRegisterCount = 0;
@@ -1096,7 +1116,7 @@ void main() {
     );
 
     test(
-      'XML-parsed merged Play manifest preserves ScheduledNotificationReceiver and strips prohibited permissions/services',
+      'XML-parsed merged Play manifest preserves ScheduledNotificationReceiver and strips transitive permissions/services',
       () {
         const androidNs = 'http://schemas.android.com/apk/res/android';
         const toolsNs = 'http://schemas.android.com/tools';
@@ -1108,49 +1128,153 @@ void main() {
           File('android/app/src/play/AndroidManifest.xml').readAsStringSync(),
         );
 
+        // Load real Android plugin manifests from .flutter-plugins-dependencies when present,
+        // plus transitive AAR manifests contributed by Gradle dependencies (e.g. WorkManager & Geolocator).
+        final dependencyDocs = <XmlDocument>[];
+        final pluginDepsFile = File('.flutter-plugins-dependencies');
+        if (pluginDepsFile.existsSync()) {
+          final parsed = jsonDecode(pluginDepsFile.readAsStringSync());
+          final androidPlugins = ((parsed as Map<String, dynamic>)['plugins']
+              as Map<String, dynamic>?)?['android'];
+          if (androidPlugins is List) {
+            for (final plugin in androidPlugins) {
+              if (plugin is! Map<String, dynamic>) continue;
+              final pluginPath = plugin['path'] as String?;
+              if (pluginPath == null || pluginPath.isEmpty) continue;
+              final manifestFile = File(
+                '$pluginPath/android/src/main/AndroidManifest.xml',
+              );
+              if (manifestFile.existsSync()) {
+                dependencyDocs.add(
+                  XmlDocument.parse(manifestFile.readAsStringSync()),
+                );
+              }
+            }
+          }
+        }
+        // Represent transitive Maven/Gradle AAR manifests (androidx.work:work-runtime, geolocator, record)
+        // so the merger test exercises real transitive service/permission removal even in offline CI.
+        dependencyDocs.add(
+          XmlDocument.parse('''
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <application>
+    <service
+      android:name="com.baseflow.geolocator.GeolocatorLocationService"
+      android:enabled="true"
+      android:exported="false"
+      android:foregroundServiceType="location" />
+    <service
+      android:name="androidx.work.impl.foreground.SystemForegroundService"
+      android:exported="false" />
+  </application>
+</manifest>
+'''),
+        );
+
         String? attrName(XmlElement el) =>
             el.getAttribute('name', namespace: androidNs);
         String? toolsNode(XmlElement el) =>
             el.getAttribute('node', namespace: toolsNs);
 
-        // Simulate Android Manifest Merger on <uses-permission> and <application> child components
-        final mergedPermissions = <String, XmlElement>{
-          for (final perm
-              in mainDoc.rootElement.findElements('uses-permission'))
-            if (attrName(perm) != null) attrName(perm)!: perm,
-        };
-        for (final overlayPerm
-            in playDoc.rootElement.findElements('uses-permission')) {
-          final name = attrName(overlayPerm);
-          if (name == null) continue;
-          if (toolsNode(overlayPerm) == 'remove') {
-            mergedPermissions.remove(name);
-          } else {
-            mergedPermissions[name] = overlayPerm;
+        Map<String, XmlElement> mergePermissions(
+          List<XmlDocument> baseDocs, [
+          XmlDocument? overlayDoc,
+        ]) {
+          final merged = <String, XmlElement>{};
+          for (final doc in baseDocs) {
+            for (final perm
+                in doc.rootElement.findElements('uses-permission')) {
+              final name = attrName(perm);
+              if (name != null) merged[name] = perm;
+            }
           }
+          if (overlayDoc != null) {
+            for (final overlayPerm
+                in overlayDoc.rootElement.findElements('uses-permission')) {
+              final name = attrName(overlayPerm);
+              if (name == null) continue;
+              if (toolsNode(overlayPerm) == 'remove') {
+                merged.remove(name);
+              } else {
+                merged[name] = overlayPerm;
+              }
+            }
+          }
+          return merged;
         }
 
-        final mainApp = mainDoc.rootElement.getElement('application')!;
-        final playApp = playDoc.rootElement.getElement('application')!;
-        Map<String, XmlElement> mergeAppComponents(String tag) {
-          final map = <String, XmlElement>{
-            for (final el in mainApp.findElements(tag))
-              if (attrName(el) != null) attrName(el)!: el,
-          };
-          for (final overlayEl in playApp.findElements(tag)) {
-            final name = attrName(overlayEl);
-            if (name == null) continue;
-            if (toolsNode(overlayEl) == 'remove') {
-              map.remove(name);
-            } else {
-              map[name] = overlayEl;
+        Map<String, XmlElement> mergeAppComponents(
+          String tag,
+          List<XmlDocument> baseDocs, [
+          XmlDocument? overlayDoc,
+        ]) {
+          final map = <String, XmlElement>{};
+          for (final doc in baseDocs) {
+            final app = doc.rootElement.getElement('application');
+            if (app == null) continue;
+            for (final el in app.findElements(tag)) {
+              final name = attrName(el);
+              if (name != null) map[name] = el;
+            }
+          }
+          final overlayApp = overlayDoc?.rootElement.getElement('application');
+          if (overlayApp != null) {
+            for (final overlayEl in overlayApp.findElements(tag)) {
+              final name = attrName(overlayEl);
+              if (name == null) continue;
+              if (toolsNode(overlayEl) == 'remove') {
+                map.remove(name);
+              } else {
+                map[name] = overlayEl;
+              }
             }
           }
           return map;
         }
 
-        final mergedReceivers = mergeAppComponents('receiver');
-        final mergedServices = mergeAppComponents('service');
+        final baseDocs = <XmlDocument>[...dependencyDocs, mainDoc];
+        const removedPermissions = <String>[
+          'android.permission.REQUEST_INSTALL_PACKAGES',
+          'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+          'android.permission.RECORD_AUDIO',
+          'android.permission.READ_MEDIA_IMAGES',
+          'android.permission.READ_MEDIA_VIDEO',
+          'android.permission.READ_MEDIA_AUDIO',
+          'android.permission.READ_EXTERNAL_STORAGE',
+          'android.permission.FOREGROUND_SERVICE',
+          'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
+        ];
+        const removedServices = <String>[
+          'com.baseflow.geolocator.GeolocatorLocationService',
+          'androidx.work.impl.foreground.SystemForegroundService',
+        ];
+
+        // 1. Pre-overlay baseline: confirm transitive services and permissions ARE present before Play overlay
+        final prePlayPermissions = mergePermissions(baseDocs);
+        final prePlayServices = mergeAppComponents('service', baseDocs);
+        for (final svc in removedServices) {
+          expect(
+            prePlayServices.containsKey(svc),
+            isTrue,
+            reason: 'Expected $svc in pre-Play merged manifest baseline',
+          );
+        }
+        for (final perm in removedPermissions) {
+          expect(
+            prePlayPermissions.containsKey(perm),
+            isTrue,
+            reason: 'Expected $perm in pre-Play merged manifest baseline',
+          );
+        }
+
+        // 2. Post-Play overlay: confirm Play manifest strips all prohibited services and permissions
+        final mergedPermissions = mergePermissions(baseDocs, playDoc);
+        final mergedReceivers =
+            mergeAppComponents('receiver', baseDocs, playDoc);
+        final mergedServices = mergeAppComponents('service', baseDocs, playDoc);
 
         final scheduledReceiver = mergedReceivers[
             'com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver'];
@@ -1172,29 +1296,10 @@ void main() {
           equals('false'),
         );
 
-        expect(
-          mergedServices.containsKey(
-            'com.baseflow.geolocator.GeolocatorLocationService',
-          ),
-          isFalse,
-        );
-        expect(
-          mergedServices.containsKey(
-            'androidx.work.impl.foreground.SystemForegroundService',
-          ),
-          isFalse,
-        );
-        for (final removedPerm in const <String>[
-          'android.permission.REQUEST_INSTALL_PACKAGES',
-          'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-          'android.permission.RECORD_AUDIO',
-          'android.permission.READ_MEDIA_IMAGES',
-          'android.permission.READ_MEDIA_VIDEO',
-          'android.permission.READ_MEDIA_AUDIO',
-          'android.permission.READ_EXTERNAL_STORAGE',
-          'android.permission.FOREGROUND_SERVICE',
-          'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
-        ]) {
+        for (final svc in removedServices) {
+          expect(mergedServices.containsKey(svc), isFalse);
+        }
+        for (final removedPerm in removedPermissions) {
           expect(mergedPermissions.containsKey(removedPerm), isFalse);
         }
         expect(
@@ -1208,6 +1313,23 @@ void main() {
           ),
           isTrue,
         );
+
+        // 3. Negative mutation check: stripping tools:node="remove" from Play overlay causes leak detection
+        final mutatedPlayDoc = XmlDocument.parse(playDoc.toXmlString());
+        for (final el in mutatedPlayDoc.descendants.whereType<XmlElement>()) {
+          if (toolsNode(el) == 'remove') {
+            el.removeAttribute('node', namespace: toolsNs);
+          }
+        }
+        final leakedServices =
+            mergeAppComponents('service', baseDocs, mutatedPlayDoc);
+        final leakedPermissions = mergePermissions(baseDocs, mutatedPlayDoc);
+        for (final svc in removedServices) {
+          expect(leakedServices.containsKey(svc), isTrue);
+        }
+        for (final perm in removedPermissions) {
+          expect(leakedPermissions.containsKey(perm), isTrue);
+        }
       },
     );
 
@@ -2256,7 +2378,7 @@ void main() {
     );
 
     test(
-      'headless background renewal resolves EDT daylight-saving zone instead of falling back to Shanghai',
+      'headless background renewal resolves EDT daylight-saving zone instead of falling back to fixed UTC+8',
       () async {
         DistributionConfig.debugChannelOverride = DistributionChannel.play;
         final nyLocation = tz.getLocation('America/New_York');
@@ -2341,7 +2463,7 @@ void main() {
           notificationsPlugin: notificationsPlugin,
           isAndroidOverride: true,
           isIOSOverride: false,
-          timeZoneOverride: 'Asia/Shanghai',
+          timeZoneOverride: 'Etc/GMT-8',
           canScheduleExactAlarmsOverride: () async => true,
           registerPreScheduleRenewalOverride: () async {},
           cancelPreScheduleRenewalOverride: () async {},
@@ -2368,7 +2490,7 @@ void main() {
           notificationsPlugin: notificationsPlugin,
           isAndroidOverride: true,
           isIOSOverride: false,
-          timeZoneOverride: 'Asia/Shanghai',
+          timeZoneOverride: 'Etc/GMT-8',
           canScheduleExactAlarmsOverride: () async => true,
           registerPreScheduleRenewalOverride: () async {},
           cancelPreScheduleRenewalOverride: () async {},
@@ -2424,7 +2546,7 @@ void main() {
           notificationsPlugin: notificationsPlugin,
           isAndroidOverride: true,
           isIOSOverride: false,
-          timeZoneOverride: 'Asia/Shanghai',
+          timeZoneOverride: 'Etc/GMT-8',
           canScheduleExactAlarmsOverride: () async => true,
           registerPreScheduleRenewalOverride: () async {},
           cancelPreScheduleRenewalOverride: () async {},
@@ -2483,7 +2605,7 @@ void main() {
           notificationsPlugin: notificationsPlugin,
           isAndroidOverride: false,
           isIOSOverride: true,
-          timeZoneOverride: 'Asia/Shanghai',
+          timeZoneOverride: 'Etc/GMT-8',
           canScheduleExactAlarmsOverride: () async => true,
           registerPreScheduleRenewalOverride: () async {},
           cancelPreScheduleRenewalOverride: () async {},
@@ -2544,7 +2666,7 @@ void main() {
           notificationsPlugin: notificationsPlugin,
           isAndroidOverride: true,
           isIOSOverride: false,
-          timeZoneOverride: 'Asia/Shanghai',
+          timeZoneOverride: 'Etc/GMT-8',
           canScheduleExactAlarmsOverride: () async => true,
           registerPreScheduleRenewalOverride: () async {},
           cancelPreScheduleRenewalOverride: () async {},
@@ -2572,7 +2694,7 @@ void main() {
           notificationsPlugin: notificationsPlugin,
           isAndroidOverride: true,
           isIOSOverride: false,
-          timeZoneOverride: 'Asia/Shanghai',
+          timeZoneOverride: 'Etc/GMT-8',
           canScheduleExactAlarmsOverride: () async => true,
           registerPreScheduleRenewalOverride: () async {},
           cancelPreScheduleRenewalOverride: () async {},
@@ -3015,6 +3137,424 @@ void main() {
         expect(
           customMay10Call.payload,
           contains('noteId:70707070-1111-2222-3333-444444444444'),
+        );
+      },
+    );
+
+    test(
+      'concurrent saveSettings never lets slower earlier enable overwrite newer disable or reschedule reminders',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        final pauseFirstSave = Completer<void>();
+        final firstSaveIntercepted = Completer<void>();
+        var hookedOnce = false;
+        storage.onSetStringHook = (key, value) async {
+          if (!hookedOnce &&
+              key == 'smart_push_settings_v2' &&
+              value.contains('"enabled":true')) {
+            hookedOnce = true;
+            firstSaveIntercepted.complete();
+            await pauseFirstSave.future;
+          }
+        };
+
+        final firstSaveFuture = service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+          ),
+        );
+
+        await firstSaveIntercepted.future;
+        storage.onSetStringHook = null;
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            pushMode: PushMode.smart,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        pauseFirstSave.complete();
+        await firstSaveFuture;
+
+        expect(service.settings.enabled, isFalse);
+        expect(service.settings.dailyQuotePushEnabled, isFalse);
+        final persisted = jsonDecode(
+          storage.getString('smart_push_settings_v2')!,
+        ) as Map<String, dynamic>;
+        expect(persisted['enabled'], isFalse);
+        expect(persisted['dailyQuotePushEnabled'], isFalse);
+        expect(
+            await notificationsPlugin.pendingNotificationRequests(), isEmpty);
+        expect(renewalCancelCount, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'real SQLite DatabaseService.getQuotesForSmartPush loads quote_tags so tagOnly secondary quote schedules without duplication',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        final db = await databaseFactoryFfi.openDatabase(
+          inMemoryDatabasePath,
+          options: OpenDatabaseOptions(singleInstance: false),
+        );
+        await db.execute('''
+          CREATE TABLE categories (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            is_default INTEGER DEFAULT 0,
+            icon_name TEXT,
+            last_modified TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE quotes (
+            id TEXT PRIMARY KEY,
+            content TEXT,
+            date TEXT,
+            source TEXT,
+            source_author TEXT,
+            source_work TEXT,
+            category_id TEXT,
+            color_hex TEXT,
+            location TEXT,
+            poi_name TEXT,
+            latitude REAL,
+            longitude REAL,
+            weather TEXT,
+            temperature REAL,
+            edit_source TEXT,
+            day_period TEXT,
+            last_modified TEXT,
+            favorite_count INTEGER,
+            is_deleted INTEGER DEFAULT 0,
+            deleted_at TEXT,
+            delta_content TEXT,
+            ai_analysis TEXT,
+            summary TEXT,
+            keywords TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE quote_tags (
+            quote_id TEXT NOT NULL,
+            tag_id TEXT NOT NULL,
+            PRIMARY KEY (quote_id, tag_id)
+          )
+        ''');
+        DatabaseService.setTestDatabase(db);
+        final realDbService = DatabaseService.forTesting();
+        await realDbService.init();
+        addTearDown(() async {
+          realDbService.dispose();
+          if (db.isOpen) {
+            await db.close();
+          }
+          DatabaseService.clearTestDatabase();
+        });
+
+        await db.insert('categories', <String, Object?>{
+          'id': 'tag-daily-quote',
+          'name': '每日一言',
+          'is_default': 0,
+        });
+        await db.insert('quotes', <String, Object?>{
+          'id': 'tagged-quote-1',
+          'content': '带每日一言标签的第一条本地语录。',
+          'date': localTime(2026, 5, 10, 6, 0).toIso8601String(),
+          'is_deleted': 0,
+        });
+        await db.insert('quotes', <String, Object?>{
+          'id': 'tagged-quote-2',
+          'content': '带每日一言标签的第二条备选本地语录。',
+          'date': localTime(2026, 5, 10, 6, 10).toIso8601String(),
+          'is_deleted': 0,
+        });
+        await db.insert('quotes', <String, Object?>{
+          'id': 'untagged-quote-3',
+          'content': '未打标签的普通今日短句不应在tagOnly模式被选中。',
+          'date': localTime(2026, 5, 10, 6, 20).toIso8601String(),
+          'is_deleted': 0,
+        });
+        await db.insert('quote_tags', <String, Object?>{
+          'quote_id': 'tagged-quote-1',
+          'tag_id': 'tag-daily-quote',
+        });
+        await db.insert('quote_tags', <String, Object?>{
+          'quote_id': 'tagged-quote-2',
+          'tag_id': 'tag-daily-quote',
+        });
+
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'tagOnly',
+            ).toJson(),
+          ),
+        );
+
+        final loadedQuotes = await realDbService.getQuotesForSmartPush();
+        final byId = <String, Quote>{
+          for (final q in loadedQuotes)
+            if (q.id != null) q.id!: q,
+        };
+        expect(byId['tagged-quote-1']?.tagIds, contains('tag-daily-quote'));
+        expect(byId['tagged-quote-2']?.tagIds, contains('tag-daily-quote'));
+        expect(byId['untagged-quote-3']?.tagIds, isEmpty);
+
+        final service = SmartPushService(
+          databaseService: realDbService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          registerPreScheduleRenewalOverride: () async {},
+          cancelPreScheduleRenewalOverride: () async {},
+          nowProvider: () => currentNow,
+        );
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final may10Calls = notificationsPlugin.scheduledCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(may10Calls, hasLength(2));
+        expect(may10Calls.map((c) => c.body).toSet(), hasLength(2));
+        for (final call in may10Calls) {
+          expect(call.body, isNot(contains('未打标签的普通今日短句')));
+        }
+      },
+    );
+
+    test(
+      'failed zonedSchedule does not record phantom tracked entries or consume quota and falls back from exact alarm exception',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        notificationsPlugin.scheduleErrorBuilder = (_) => PlatformException(
+              code: 'NOTIFICATION_BLOCKED',
+              message: 'OS rejected schedule request',
+            );
+
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        expect(notificationsPlugin.scheduledCalls, isEmpty);
+        final rawEntriesAfterFailure =
+            storage.getString('smart_push_prescheduled_entries_v1');
+        expect(
+          rawEntriesAfterFailure == null
+              ? const <Object?>[]
+              : (jsonDecode(rawEntriesAfterFailure) as List<Object?>),
+          isEmpty,
+        );
+
+        // Advance past morning slot time, restore OS scheduling, and verify zero phantom quota/cooldown was consumed
+        currentNow = localTime(2026, 5, 10, 10, 0);
+        notificationsPlugin.scheduleErrorBuilder = null;
+        await service.scheduleNextPush();
+
+        expect(service.settings.lastPushTime, isNull);
+        expect(service.settings.recentlyPushedNoteIds, isEmpty);
+        expect(storage.getString('smart_push_today_count'), isNull);
+        expect(await service.analytics.getUnengagedStreak(), equals(0));
+        expect(
+          notificationsPlugin.scheduledCalls.any(
+            (c) =>
+                c.scheduledDate.year == 2026 &&
+                c.scheduledDate.month == 5 &&
+                c.scheduledDate.day == 10,
+          ),
+          isTrue,
+        );
+
+        // Exact alarm race: canScheduleExactAlarmsOverride returned true, but zonedSchedule throws exact_alarms_not_permitted
+        notificationsPlugin.scheduledCalls.clear();
+        await notificationsPlugin.cancelAll();
+        exactAlarmPermitted = true;
+        notificationsPlugin.scheduleErrorBuilder = (call) {
+          if (call.androidScheduleMode ==
+              AndroidScheduleMode.exactAllowWhileIdle) {
+            return PlatformException(
+              code: 'exact_alarms_not_permitted',
+              message: 'Exact alarms revoked concurrently',
+            );
+          }
+          return null;
+        };
+
+        await service.scheduleNextPush();
+        expect(notificationsPlugin.scheduledCalls, isNotEmpty);
+        expect(
+          notificationsPlugin.scheduledCalls.every(
+            (c) =>
+                c.androidScheduleMode ==
+                AndroidScheduleMode.inexactAllowWhileIdle,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'smart 3-day planner advances projected habituation cooldown across future unclicked slots and unlocks after interaction',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        // Active engagement tier (>= 4 open days in past week, all > 4h ago) with morning & evening habits
+        storage.values['smart_push_app_open_times'] = <String>[
+          localTime(2026, 5, 5, 8, 30).toIso8601String(),
+          localTime(2026, 5, 5, 20, 0).toIso8601String(),
+          localTime(2026, 5, 6, 8, 30).toIso8601String(),
+          localTime(2026, 5, 6, 20, 0).toIso8601String(),
+          localTime(2026, 5, 7, 8, 30).toIso8601String(),
+          localTime(2026, 5, 7, 20, 0).toIso8601String(),
+          localTime(2026, 5, 8, 8, 30).toIso8601String(),
+          localTime(2026, 5, 8, 20, 0).toIso8601String(),
+        ].join(',');
+        storage.values['smart_push_unengaged_streak'] = '2';
+
+        databaseService.notes = <Quote>[
+          Quote(
+            id: '91000000-1111-2222-3333-444444444444',
+            content: '五月十日第一条高分历史回顾笔记。',
+            date: localTime(2025, 5, 10, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+          Quote(
+            id: '92000000-1111-2222-3333-444444444444',
+            content: '五月十日第二条高分月度回顾笔记。',
+            date: localTime(2026, 4, 10, 20, 0).toIso8601String(),
+            favoriteCount: 15,
+          ),
+          Quote(
+            id: '93000000-1111-2222-3333-444444444444',
+            content: '五月十一日第一条高分历史回顾笔记。',
+            date: localTime(2025, 5, 11, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+          Quote(
+            id: '94000000-1111-2222-3333-444444444444',
+            content: '五月十一日第二条高分月度回顾笔记。',
+            date: localTime(2026, 4, 11, 20, 0).toIso8601String(),
+            favoriteCount: 15,
+          ),
+          Quote(
+            id: '95000000-1111-2222-3333-444444444444',
+            content: '五月十二日第一条高分历史回顾笔记。',
+            date: localTime(2025, 5, 12, 9, 0).toIso8601String(),
+            favoriteCount: 12,
+          ),
+        ];
+
+        final prevDelivery = localTime(2026, 5, 9, 20, 0);
+        final service = createService();
+        addTearDown(service.dispose);
+        await service.initialize();
+
+        await service.saveSettings(
+          SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            dailyQuotePushEnabled: false,
+            lastPushTime: prevDelivery,
+          ),
+        );
+
+        final initialCalls = List<_ScheduledCall>.from(
+          notificationsPlugin.scheduledCalls,
+        )..sort((a, b) => a.scheduledDate.compareTo(b.scheduledDate));
+
+        // 1. Streak=2 (8h cooldown): May 10 morning (>8h after May 9 20:00) is accepted -> projected streak becomes 3 (24h cooldown)
+        // 2. May 10 evening (~11.5h after May 10 morning < 24h) MUST be skipped!
+        final may10Calls = initialCalls
+            .where(
+              (c) =>
+                  c.scheduledDate.year == 2026 &&
+                  c.scheduledDate.month == 5 &&
+                  c.scheduledDate.day == 10,
+            )
+            .toList();
+        expect(may10Calls, hasLength(1));
+
+        // 3. If a second slot is scheduled in the 3-day window, it must respect >= 24h after May 10 morning,
+        //    and any third slot would require >= 72h (projected streak=4), so at most 2 slots fit in 3 days!
+        expect(initialCalls.length, inInclusiveRange(1, 2));
+        if (initialCalls.length == 2) {
+          expect(
+            initialCalls[1]
+                .scheduledDate
+                .difference(initialCalls[0].scheduledDate),
+            greaterThanOrEqualTo(const Duration(hours: 24)),
+          );
+        }
+
+        // Simulate May 10 morning firing and user clicking it -> streak resets to 0 so May 10 evening is unlocked!
+        currentNow = may10Calls.single.scheduledDate.add(
+          const Duration(minutes: 15),
+        );
+        await service.analytics.recordInteraction(
+          'yearAgoToday',
+          notificationId: may10Calls.single.id,
+        );
+        notificationsPlugin.scheduledCalls.clear();
+        await service.scheduleNextPush(preserveDeliveredNotifications: true);
+
+        expect(
+          notificationsPlugin.scheduledCalls.any(
+            (c) =>
+                c.scheduledDate.year == 2026 &&
+                c.scheduledDate.month == 5 &&
+                c.scheduledDate.day == 10 &&
+                c.scheduledDate.isAfter(currentNow),
+          ),
+          isTrue,
         );
       },
     );

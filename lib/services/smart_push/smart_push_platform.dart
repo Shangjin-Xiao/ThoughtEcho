@@ -298,12 +298,15 @@ extension SmartPushPlatform on SmartPushService {
 
   /// 初始化时区 - 正确设置设备本地时区
   Future<void> _initializeTimezone() async {
-    tz_data.initializeTimeZones();
+    if (!tz.timeZoneDatabase.isInitialized) {
+      tz_data.initializeTimeZones();
+    }
 
     // 获取设备时区并设置为本地时区
     try {
       final String timeZoneName = await _getDeviceTimeZone();
-      final location = tz.getLocation(timeZoneName);
+      final location =
+          _tryGetTzLocation(timeZoneName) ?? tz.getLocation(timeZoneName);
       tz.setLocalLocation(location);
       AppLogger.d('时区设置为: $timeZoneName');
     } catch (e) {
@@ -364,12 +367,45 @@ extension SmartPushPlatform on SmartPushService {
     'Pacific/Auckland',
   ];
 
+  static final RegExp _posixEtcGmtPattern = RegExp(
+    r'^Etc/GMT(?:([+-]?\d{1,2}))?$',
+  );
+
   tz.Location? _tryGetTzLocation(String? zoneName) {
     if (zoneName == null || zoneName.trim().isEmpty) return null;
+    final trimmed = zoneName.trim();
     try {
-      return tz.getLocation(zoneName.trim());
+      return tz.getLocation(trimmed);
     } catch (_) {
-      return null;
+      final match = _posixEtcGmtPattern.firstMatch(trimmed);
+      if (match == null) return null;
+      final rawOffset = match.group(1);
+      final posixHours = (rawOffset == null || rawOffset.isEmpty)
+          ? 0
+          : int.tryParse(rawOffset);
+      if (posixHours == null) return null;
+      // POSIX Etc/GMT 符号与 ISO 偏移相反：Etc/GMT-8 表示 UTC+8，Etc/GMT+5 表示 UTC-5。
+      final utcOffsetHours = -posixHours;
+      if (utcOffsetHours < -14 || utcOffsetHours > 14) return null;
+      final abbreviation = utcOffsetHours == 0
+          ? 'GMT'
+          : '${utcOffsetHours > 0 ? '+' : '-'}${utcOffsetHours.abs().toString().padLeft(2, '0')}';
+      final location = tz.Location(
+        trimmed,
+        [tz.minTime],
+        [0],
+        [
+          tz.TimeZone(
+            utcOffsetHours * Duration.millisecondsPerHour,
+            isDst: false,
+            abbreviation: abbreviation,
+          ),
+        ],
+      );
+      if (tz.timeZoneDatabase.isInitialized) {
+        tz.timeZoneDatabase.add(location);
+      }
+      return location;
     }
   }
 
@@ -592,7 +628,7 @@ extension SmartPushPlatform on SmartPushService {
   ///
   /// Android 12+ 需要精确闹钟权限才能使用 exactAllowWhileIdle 模式。
   /// 当权限不可用时，自动降级到 inexactAllowWhileIdle 模式（时间可能有 15 分钟误差）。
-  Future<void> _scheduleLocalNotification(
+  Future<bool> _scheduleLocalNotification(
     int id,
     tz.TZDateTime scheduledDate,
     PushTimeSlot slot, {
@@ -684,15 +720,41 @@ extension SmartPushPlatform on SmartPushService {
         );
       }
 
-      await _notificationsPlugin.zonedSchedule(
-        id,
-        content?.title ?? (isDailyQuoteContent ? '📖 每日一言' : '💡 回忆时刻'),
-        content?.body ?? '点击查看今天的灵感',
-        scheduledDate,
-        details,
-        androidScheduleMode: scheduleMode,
-        payload: payload,
-      );
+      var usedExactMode = canScheduleExact;
+      final notifTitle =
+          content?.title ?? (isDailyQuoteContent ? '📖 每日一言' : '💡 回忆时刻');
+      final notifBody = content?.body ?? '点击查看今天的灵感';
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          notifTitle,
+          notifBody,
+          scheduledDate,
+          details,
+          androidScheduleMode: scheduleMode,
+          payload: payload,
+        );
+      } on PlatformException catch (e) {
+        final codeLower = e.code.toLowerCase();
+        final msgLower = (e.message ?? '').toLowerCase();
+        final isExactPermError =
+            scheduleMode == AndroidScheduleMode.exactAllowWhileIdle &&
+                (codeLower.contains('exact_alarm') ||
+                    msgLower.contains('exact_alarm') ||
+                    msgLower.contains('schedule_exact_alarm'));
+        if (!isExactPermError) rethrow;
+        usedExactMode = false;
+        AppLogger.w('精确闹钟调度在写入时被系统拒绝，回退至 inexact 模式重试', error: e);
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          notifTitle,
+          notifBody,
+          scheduledDate,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+        );
+      }
 
       if (persistSingleTrackedEntry &&
           (content?.dailyQuoteData != null || content?.sourceNoteId != null)) {
@@ -715,10 +777,12 @@ extension SmartPushPlatform on SmartPushService {
       }
 
       AppLogger.i(
-        '已设定本地通知: $scheduledDate (ID: $id, 模式: ${canScheduleExact ? "精确" : "非精确"})',
+        '已设定本地通知: $scheduledDate (ID: $id, 模式: ${usedExactMode ? "精确" : "非精确"})',
       );
+      return true;
     } catch (e) {
       AppLogger.e('设定本地通知失败', error: e);
+      return false;
     }
   }
 
