@@ -153,10 +153,16 @@ class AIProviderSettings implements AIConfig {
     this.modelMetadata,
   });
 
-  /// 判断给定 URL 是否显式指向原生 Anthropic Messages 端点（如 `/v1/messages` 或 `/messages`）。
+  /// 判断给定 URL 是否显式指向原生 Anthropic Messages 端点。
+  ///
+  /// - Anthropic 官方域名下匹配 `/messages` 或 `/v1/messages`（排除 `/chat/completions`）；
+  /// - 非官方自定义域名下仅匹配精确的 `/v1/messages` 结尾，避免将
+  ///   `https://gateway.example/v1/inbox/messages` 等带 `/messages` 前缀段的
+  ///   OpenAI 兼容反代基地址误判为原生 Anthropic 端点。
   static bool hasAnthropicMessagesEndpoint(String rawUrl) {
     final trimmed = rawUrl.trim();
     if (trimmed.isEmpty) return false;
+    final officialHost = isAnthropicOfficialHost(trimmed);
     final uri = Uri.tryParse(trimmed);
     if (uri != null) {
       var path = uri.path.trim();
@@ -165,11 +171,14 @@ class AIProviderSettings implements AIConfig {
       }
       final lowerPath = path.toLowerCase();
       if (lowerPath.endsWith('/chat/completions')) return false;
-      return lowerPath.endsWith('/messages');
+      if (officialHost) {
+        return lowerPath == '/messages' || lowerPath.endsWith('/v1/messages');
+      }
+      return lowerPath.endsWith('/v1/messages');
     }
     final lower = trimmed.toLowerCase();
     if (lower.contains('/chat/completions')) return false;
-    return lower.contains('/v1/messages') || lower.endsWith('/messages');
+    return lower.endsWith('/v1/messages') || lower.endsWith('/v1/messages/');
   }
 
   /// 判断给定 URL 的主机名是否属于 Anthropic 官方域名（`anthropic.com` 及其子域名）。
@@ -193,13 +202,20 @@ class AIProviderSettings implements AIConfig {
     if (lowerUrl.contains('/chat/completions')) {
       return false;
     }
-    if (hasAnthropicMessagesEndpoint(apiUrl)) {
+    if (isSharedAnthropicOpenAIBaseUrl(apiUrl)) {
+      return false;
+    }
+    if (isAnthropicOfficialHost(apiUrl) &&
+        hasAnthropicMessagesEndpoint(apiUrl)) {
       return true;
     }
     if (protocol != null) {
       return protocol == AIProtocolType.anthropicMessages;
     }
-    return false;
+    if (hasAnthropicMessagesEndpoint(apiUrl)) {
+      return true;
+    }
+    return _normalizedSlug == 'anthropic' || id == 'anthropic';
   }
 
   /// 是否为 OpenRouter 服务商（优先识别 [providerSlug]，兼容旧 `id` 与域名判断）。
@@ -256,8 +272,13 @@ class AIProviderSettings implements AIConfig {
 
     // Anthropic 原生 Messages 端点（显式 /chat/completions 与共享 /v1 兼容层走下方 OpenAI 分支）
     final lowerPath = path.toLowerCase();
-    if (!lowerPath.endsWith('/chat/completions') &&
-        (isAnthropicMessagesApi || hasAnthropicMessagesEndpoint(trimmed))) {
+    final isNativeMessagesTarget = !lowerPath.endsWith('/chat/completions') &&
+        !isSharedAnthropicOpenAIBaseUrl(trimmed) &&
+        ((isAnthropicOfficialHost(trimmed) &&
+                hasAnthropicMessagesEndpoint(trimmed)) ||
+            (protocol == null && hasAnthropicMessagesEndpoint(trimmed)) ||
+            isAnthropicMessagesApi);
+    if (isNativeMessagesTarget) {
       if (path.isEmpty) {
         return uri.replace(path: '/v1/messages').toString();
       } else if (path.endsWith('/v1')) {

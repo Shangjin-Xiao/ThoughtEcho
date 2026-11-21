@@ -8,6 +8,13 @@ extension _ExploreDataLoading on _ExplorePageState {
   Future<void> _loadPeriodData({bool showLoading = true}) async {
     final token = ++_loadToken;
     _isFetchingQuotes = true;
+    final requestedScope = _ExplorePageState._periodScopeKey(
+      _selectedPeriod,
+      _selectedDate,
+    );
+    if (_activeInsightScope != null && _activeInsightScope != requestedScope) {
+      _invalidateActiveInsight(resetDisplay: true);
+    }
     // 首次加载还没有任何内容可保留，必须显示 loading
     final shouldShowLoading = showLoading || !_hasLoadedOnce;
     if (shouldShowLoading && !_isLoadingData) {
@@ -264,25 +271,43 @@ extension _ExploreDataLoading on _ExplorePageState {
     final useAI = settings.reportInsightsUseAI;
     final reuseKey = '${useAI ? 'ai' : 'local'}_$dataSignature';
 
+    final capturedPeriodType = _selectedPeriod;
+    final capturedDate = _selectedDate;
+    final currentScope = _ExplorePageState._periodScopeKey(
+      capturedPeriodType,
+      capturedDate,
+    );
+
     // 同一份数据与模式不要重复生成：否则数据库每通知一次，洞察就清空重来，
     // 文字先消失再重新流出来，看上去就是页面在闪。
     // 注意：这里不修改 _insightToken，让同签名的在途流继续消费并正常收敛。
     if (reuseKey == _insightSignature &&
+        currentScope == _activeInsightScope &&
         (_insightLoading || _insightText.isNotEmpty)) {
       return;
     }
     _insightSignature = reuseKey;
+    _activeInsightScope = currentScope;
     final insightToken = ++_insightToken;
 
     // 用户翻到上周就说「上周」，翻到更早就报日期范围。原来是
     // thisPeriod(周) —— 永远的「本周」，和实际查询的日期范围对不上。
     final periodLabel = ReportPeriodLabels.label(
       l10n,
-      _selectedPeriod,
-      _selectedDate,
+      capturedPeriodType,
+      capturedDate,
     );
-    final periodRange =
-        ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
+    final rangeText = ReportPeriodLabels.rangeText(
+      l10n,
+      capturedPeriodType,
+      capturedDate,
+    );
+    final historyPeriodLabel =
+        rangeText.isNotEmpty ? rangeText : capturedPeriodType;
+    final periodRange = ReportPeriodUtils.dateRange(
+      capturedPeriodType,
+      capturedDate,
+    );
     final activeDays = _getActiveDays();
     final noteCount = _periodQuotes.length;
 
@@ -317,6 +342,8 @@ extension _ExploreDataLoading on _ExplorePageState {
       await _generateEmptyPeriodInsight(
         l10n,
         insightToken: insightToken,
+        periodType: capturedPeriodType,
+        selectedDate: capturedDate,
         periodLabel: periodLabel,
         useAI: useAI,
       );
@@ -456,14 +483,21 @@ extension _ExploreDataLoading on _ExplorePageState {
           _insightFlushTimer = null;
           final tail = _insightPending;
           _insightPending = '';
+          final completedInsight =
+              tail.isNotEmpty ? '$_insightText$tail' : _insightText;
           _updateState(() {
-            if (tail.isNotEmpty) _insightText += tail;
+            _insightText = completedInsight;
             _insightLoading = false;
           });
 
-          // 保存洞察到历史记录
-          if (_insightText.isNotEmpty) {
-            _saveInsightToHistory(l10n, dataSignature: dataSignature);
+          // 使用生成启动时的周期快照保存历史记录，避免切换周期后把旧回答写进新周期
+          if (completedInsight.isNotEmpty) {
+            _saveInsightToHistory(
+              insightText: completedInsight,
+              periodType: capturedPeriodType,
+              periodLabel: historyPeriodLabel,
+              dataSignature: dataSignature,
+            );
           }
         },
       );
@@ -504,11 +538,13 @@ extension _ExploreDataLoading on _ExplorePageState {
   Future<void> _generateEmptyPeriodInsight(
     AppLocalizations l10n, {
     required int insightToken,
+    required String periodType,
+    required DateTime selectedDate,
     required String periodLabel,
     required bool useAI,
   }) async {
     final now = DateTime.now();
-    final range = ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
+    final range = ReportPeriodUtils.dateRange(periodType, selectedDate);
 
     // "上一次落笔是多久前"——只有当最近那条确实早于本周期时才提。用户翻到
     // 一个更早的空周期时，最近那条可能在它之后，那时说"距上次 N 天"是错的。
@@ -530,8 +566,8 @@ extension _ExploreDataLoading on _ExplorePageState {
     final daysSinceLastNote = emptyPeriodGapDays(
       lastNoteDate: lastNoteDate,
       range: range,
-      period: _selectedPeriod,
-      date: _selectedDate,
+      period: periodType,
+      date: selectedDate,
     );
 
     String localFallback({bool isFallback = false}) =>
@@ -653,30 +689,28 @@ extension _ExploreDataLoading on _ExplorePageState {
   }
 
   /// 保存洞察到历史记录
-  Future<void> _saveInsightToHistory(
-    AppLocalizations l10n, {
+  Future<void> _saveInsightToHistory({
+    required String insightText,
+    required String periodType,
+    required String periodLabel,
     String? dataSignature,
   }) async {
     try {
       final insightService = context.read<InsightHistoryService>();
 
-      // 存具体的日期范围，不存「本周」。这个标签只有一个消费者——
-      // getPreviousInsightsContext 把它拼成「- [标签] 洞察」喂回给模型做
-      // 历史参考。每一周都存成「本周」的话，模型看到的是一串一模一样的
-      // 标签，既分不清先后也看不出跨度，等于白给。
-      final rangeText = _getDateRangeText(l10n);
-      final periodLabel = rangeText.isNotEmpty ? rangeText : _selectedPeriod;
-
+      // 存生成启动时捕获的具体日期范围，不读取可变组件状态：
+      // 1) getPreviousInsightsContext 需要具体范围而非一串重复的「本周」；
+      // 2) 即便极端并发下发生延迟回调，也不会用切换后的新周期标签标注旧洞察。
       await insightService.addInsight(
-        insight: _insightText,
-        periodType: _selectedPeriod,
+        insight: insightText,
+        periodType: periodType,
         periodLabel: periodLabel,
         isAiGenerated: true,
         dataSignature: dataSignature, // 传递签名
       );
 
       logDebug(
-        'Saved insight to history: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
+        'Saved insight to history: ${insightText.substring(0, insightText.length > 50 ? 50 : insightText.length)}...',
         source: 'ExplorePage',
       );
     } catch (e) {

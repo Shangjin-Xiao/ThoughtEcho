@@ -162,15 +162,14 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     return trimmed.toLowerCase();
   }
 
-  static bool _isNativeAnthropicUrl(String rawUrl) {
-    return AIProviderSettings.hasAnthropicMessagesEndpoint(rawUrl);
-  }
-
   static AIProtocolType _baselineProtocol(AIProviderSettings existing) {
-    if (AIProviderSettings.isSharedAnthropicOpenAIBaseUrl(existing.apiUrl)) {
+    final lowerUrl = existing.apiUrl.trim().toLowerCase();
+    if (lowerUrl.contains('/chat/completions') ||
+        AIProviderSettings.isSharedAnthropicOpenAIBaseUrl(existing.apiUrl)) {
       return AIProtocolType.openAICompatible;
     }
-    if (_isNativeAnthropicUrl(existing.apiUrl)) {
+    if (AIProviderSettings.isAnthropicOfficialHost(existing.apiUrl) &&
+        AIProviderSettings.hasAnthropicMessagesEndpoint(existing.apiUrl)) {
       return AIProtocolType.anthropicMessages;
     }
     if (existing.protocol != null) {
@@ -231,47 +230,49 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     AIProtocolType protocol,
   }) _resolveEndpointMetadata(String apiUrl, AIProviderSettings? existing) {
     final trimmedUrl = apiUrl.trim();
+    final lowerUrl = trimmedUrl.toLowerCase();
     final urlMatched = AIProviderPresets.matchApiUrl(trimmedUrl);
     final activePreset = urlMatched ??
         (_preset != null && _preset!.kind != AIPresetKind.custom
             ? _preset
             : null);
 
-    if (_isNativeAnthropicUrl(trimmedUrl)) {
+    if (AIProviderSettings.isAnthropicOfficialHost(trimmedUrl)) {
+      final isNativeMessages = !lowerUrl.contains('/chat/completions') &&
+          AIProviderSettings.hasAnthropicMessagesEndpoint(trimmedUrl);
       return (
-        matchedPreset: activePreset,
-        providerSlug: activePreset != null
-            ? (activePreset.modelsDevProviderId ?? activePreset.id)
-            : (AIProviderSettings.isAnthropicOfficialHost(trimmedUrl)
-                ? 'anthropic'
-                : _canonicalProviderSlug(existing?.providerSlug)),
-        protocol: AIProtocolType.anthropicMessages,
+        matchedPreset: urlMatched,
+        providerSlug: 'anthropic',
+        protocol: isNativeMessages
+            ? AIProtocolType.anthropicMessages
+            : AIProtocolType.openAICompatible,
       );
     }
 
-    if (AIProviderSettings.isSharedAnthropicOpenAIBaseUrl(trimmedUrl)) {
-      return (
-        matchedPreset: activePreset,
-        providerSlug: activePreset != null
-            ? (activePreset.modelsDevProviderId ?? activePreset.id)
-            : 'anthropic',
-        protocol: AIProtocolType.openAICompatible,
-      );
-    }
-
-    if (activePreset != null) {
-      return (
-        matchedPreset: activePreset,
-        providerSlug: activePreset.modelsDevProviderId ?? activePreset.id,
-        protocol: activePreset.protocol,
-      );
-    }
-
-    final baselineProtocol = existing == null
-        ? AIProtocolType.openAICompatible
-        : _baselineProtocol(existing);
-    final sameEndpointAsExisting = existing != null &&
+    final isUnchangedOpenAICompatibleEndpoint = existing != null &&
+        _baselineProtocol(existing) == AIProtocolType.openAICompatible &&
         _normalizeEffectiveEndpointUrl(
+              trimmedUrl,
+              protocol: AIProtocolType.openAICompatible,
+            ) ==
+            _normalizeEffectiveEndpointUrl(
+              existing.apiUrl,
+              protocol: AIProtocolType.openAICompatible,
+            );
+
+    final hasExplicitCustomNativeEndpoint =
+        !isUnchangedOpenAICompatibleEndpoint &&
+            urlMatched == null &&
+            !lowerUrl.contains('/chat/completions') &&
+            AIProviderSettings.hasAnthropicMessagesEndpoint(trimmedUrl);
+
+    if (existing != null) {
+      final baselineProtocol = _baselineProtocol(existing);
+      final canPreserveExistingProtocol =
+          !(baselineProtocol == AIProtocolType.anthropicMessages &&
+              lowerUrl.contains('/chat/completions'));
+      if (canPreserveExistingProtocol) {
+        final sameEndpointAsExisting = _normalizeEffectiveEndpointUrl(
               trimmedUrl,
               protocol: baselineProtocol,
             ) ==
@@ -279,13 +280,29 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
               existing.apiUrl,
               protocol: baselineProtocol,
             );
+        if (sameEndpointAsExisting && activePreset == null) {
+          return (
+            matchedPreset: null,
+            providerSlug: _baselineProviderSlug(existing),
+            protocol: baselineProtocol,
+          );
+        }
+      }
+    }
+
+    if (activePreset != null && !hasExplicitCustomNativeEndpoint) {
+      return (
+        matchedPreset: activePreset,
+        providerSlug: activePreset.modelsDevProviderId ?? activePreset.id,
+        protocol: activePreset.protocol,
+      );
+    }
+
     return (
       matchedPreset: null,
-      providerSlug: sameEndpointAsExisting
-          ? _canonicalProviderSlug(existing.providerSlug)
-          : null,
-      protocol: sameEndpointAsExisting
-          ? baselineProtocol
+      providerSlug: null,
+      protocol: hasExplicitCustomNativeEndpoint
+          ? AIProtocolType.anthropicMessages
           : AIProtocolType.openAICompatible,
     );
   }
@@ -296,14 +313,17 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       return canonicalExplicit;
     }
 
+    if (existing.id.trim().toLowerCase() == 'anthropic') {
+      return 'anthropic';
+    }
+
     final trimmedUrl = existing.apiUrl.trim();
     final matched = AIProviderPresets.matchApiUrl(trimmedUrl) ??
         AIProviderPresets.bySlugOrId(existing.id);
     final nonCustomPreset =
         matched != null && matched.kind != AIPresetKind.custom ? matched : null;
 
-    if (_isNativeAnthropicUrl(trimmedUrl) ||
-        AIProviderSettings.isAnthropicOfficialHost(trimmedUrl)) {
+    if (AIProviderSettings.isAnthropicOfficialHost(trimmedUrl)) {
       return nonCustomPreset != null
           ? (nonCustomPreset.modelsDevProviderId ?? nonCustomPreset.id)
           : 'anthropic';

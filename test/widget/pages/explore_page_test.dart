@@ -191,6 +191,7 @@ class _RecordingInsightHistoryService extends InsightHistoryService {
 
   final Map<String, PeriodicInsight> bySignature = <String, PeriodicInsight>{};
   final List<String?> recordedSignatures = <String?>[];
+  final List<PeriodicInsight> recordedInsights = <PeriodicInsight>[];
 
   @override
   Future<void> ensureLoaded() async {}
@@ -209,15 +210,17 @@ class _RecordingInsightHistoryService extends InsightHistoryService {
   }) async {
     if (!isAiGenerated) return;
     recordedSignatures.add(dataSignature);
+    final entry = PeriodicInsight(
+      insight: insight,
+      periodType: periodType,
+      periodLabel: periodLabel,
+      createdAt: DateTime.now(),
+      isAiGenerated: isAiGenerated,
+      dataSignature: dataSignature,
+    );
+    recordedInsights.add(entry);
     if (dataSignature != null) {
-      bySignature[dataSignature] = PeriodicInsight(
-        insight: insight,
-        periodType: periodType,
-        periodLabel: periodLabel,
-        createdAt: DateTime.now(),
-        isAiGenerated: isAiGenerated,
-        dataSignature: dataSignature,
-      );
+      bySignature[dataSignature] = entry;
     }
   }
 }
@@ -272,6 +275,32 @@ class _ControllableEmptyPeriodAIService extends AIService {
       controllersByProviderId[active.id] = controller;
     }
     return controller.stream;
+  }
+}
+
+class _DelayedSwitchPeriodDatabaseService extends DatabaseService {
+  _DelayedSwitchPeriodDatabaseService() : super.forTesting();
+
+  int queryCount = 0;
+  Completer<List<Quote>>? secondQueryCompleter;
+
+  @override
+  Future<List<Quote>> getQuotesForPeriod(
+    DateTime start,
+    DateTime end, {
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
+    queryCount++;
+    final note = Quote(
+      id: 'q_period_$queryCount',
+      content: '第 $queryCount 次周期查询笔记',
+      date: DateTime.now().toIso8601String(),
+    );
+    if (queryCount == 2 && secondQueryCompleter != null) {
+      return secondQueryCompleter!.future;
+    }
+    return [note];
   }
 }
 
@@ -1323,5 +1352,99 @@ void main() {
     await tester.pumpAndSettle();
     expect(aiService.reportInsightCalls, 2);
     expect(find.textContaining('来自 网关B 的周期洞察 #2'), findsOneWidget);
+  });
+
+  testWidgets(
+      'switching period cancels in-flight stream immediately so finishing during pending DB read does not save under new period',
+      (tester) async {
+    const gatewayA = AIProviderSettings(
+      id: 'p_gateway_a',
+      name: '网关A',
+      apiUrl: 'https://gateway-a.example/v1',
+      model: 'gpt-4o-mini',
+    );
+    final settings = _AiSignatureSettingsService(
+      const MultiAISettings(
+        providers: [gatewayA],
+        currentProviderId: 'p_gateway_a',
+      ),
+    );
+    final monthlyQueryCompleter = Completer<List<Quote>>();
+    final database = _DelayedSwitchPeriodDatabaseService()
+      ..secondQueryCompleter = monthlyQueryCompleter;
+    final insights = _RecordingInsightHistoryService(settingsService: settings);
+    final aiService = _ControllableReportInsightAIService(
+      settingsService: settings,
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>.value(value: aiService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExplorePage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    final context = tester.element(find.byType(ExplorePage));
+    final l10n = AppLocalizations.of(context);
+
+    // Weekly insight stream is active
+    expect(aiService.reportInsightCalls, 1);
+    final weeklyController = aiService.controllers.single;
+    weeklyController.add('旧的周度洞察内容');
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text('旧的周度洞察内容'), findsOneWidget);
+
+    // Open period picker and switch from This Week to This Month; monthly DB read stays pending
+    await tester.tap(find.text(l10n.thisWeek));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.thisMonth).last);
+    await tester.pump();
+
+    expect(database.queryCount, 2);
+    expect(weeklyController.hasListener, isFalse);
+
+    // Complete the old weekly stream while the monthly DB read is still pending
+    weeklyController.add('不应写入月度历史的尾部');
+    unawaited(weeklyController.close());
+    await tester.pump(const Duration(milliseconds: 150));
+
+    // Old weekly insight must NOT be persisted under either week or month
+    expect(insights.recordedInsights, isEmpty);
+
+    // Now release the monthly DB read and complete the new monthly insight stream
+    monthlyQueryCompleter.complete([
+      Quote(
+        id: 'q_month_1',
+        content: '本月新增笔记内容',
+        date: DateTime.now().toIso8601String(),
+      ),
+    ]);
+    await tester.pump();
+    await tester.pump();
+
+    expect(aiService.reportInsightCalls, 2);
+    final monthlyController = aiService.controllers.last;
+    monthlyController.add('新的月度洞察全文');
+    unawaited(monthlyController.close());
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pumpAndSettle();
+
+    expect(find.text('新的月度洞察全文'), findsOneWidget);
+    expect(find.textContaining('旧的周度洞察内容'), findsNothing);
+    expect(insights.recordedInsights, hasLength(1));
+    expect(insights.recordedInsights.single.insight, '新的月度洞察全文');
+    expect(insights.recordedInsights.single.periodType, 'month');
   });
 }

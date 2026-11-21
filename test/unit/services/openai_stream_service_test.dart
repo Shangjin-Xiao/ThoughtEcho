@@ -220,6 +220,32 @@ void main() {
         final compatConfig =
             OpenAIStreamService.buildOpenAIConfig(openAiCompatOnAnthropic);
         expect(compatConfig.baseUrl, 'https://api.anthropic.com/v1');
+
+        const compatMessagesPrefixGateway = AIProviderSettings(
+          id: 'provider_gw_inbox',
+          name: 'Gateway Inbox Messages Prefix',
+          apiKey: 'sk-gw-test',
+          apiUrl: 'https://gateway.example/v1/inbox/messages',
+          model: 'gpt-4o-mini',
+          protocol: AIProtocolType.openAICompatible,
+        );
+        final gwConfig =
+            OpenAIStreamService.buildOpenAIConfig(compatMessagesPrefixGateway);
+        expect(gwConfig.baseUrl, 'https://gateway.example/v1/inbox/messages');
+
+        const restoredSlugAnthropicGateway = AIProviderSettings(
+          id: 'provider_ant_restored',
+          name: 'Restored Anthropic Gateway',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://gateway.example/v1',
+          model: 'claude-sonnet-4-5',
+          providerSlug: 'anthropic',
+        );
+        expect(
+          () => OpenAIStreamService.buildOpenAIConfig(
+              restoredSlugAnthropicGateway),
+          throwsA(isA<UnsupportedAIProtocolError>()),
+        );
       });
     });
 

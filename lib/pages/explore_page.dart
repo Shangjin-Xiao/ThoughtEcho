@@ -108,12 +108,40 @@ class _ExplorePageState extends State<ExplorePage> {
   // 若每次都重新拉数据并把整页切回 loading，页面就会来回闪。
   int _loadToken = 0;
   int _insightToken = 0;
+  String? _activeInsightScope;
   bool _hasLoadedOnce = false;
   bool _isFetchingQuotes = false;
   bool _isPageVisible = true;
   bool _pendingPeriodicInsightRefresh = false;
   Timer? _reloadDebounce;
   static const Duration _reloadDebounceInterval = Duration(milliseconds: 300);
+
+  static String _periodScopeKey(String period, DateTime date) {
+    final range = ReportPeriodUtils.dateRange(period, date);
+    if (range == null) return '$period:all';
+    final start = range.start.toIso8601String().substring(0, 10);
+    final end = range.end.toIso8601String().substring(0, 10);
+    return '$period:$start~$end';
+  }
+
+  void _invalidateActiveInsight({bool resetDisplay = false}) {
+    ++_insightToken;
+    _insightSub?.cancel();
+    _insightSub = null;
+    _insightFlushTimer?.cancel();
+    _insightFlushTimer = null;
+    _insightPending = '';
+    _insightSignature = null;
+    _activeInsightScope = null;
+    if (resetDisplay && mounted) {
+      setState(() {
+        _insightText = '';
+        _insightLoading = false;
+      });
+    } else {
+      _insightLoading = false;
+    }
+  }
 
   static String _normalizePeriodicInsightEndpoint(AIProviderSettings provider) {
     final trimmed = provider.apiUrl.trim();
@@ -167,6 +195,7 @@ class _ExplorePageState extends State<ExplorePage> {
     }
     if (nextKey == _lastPeriodicInsightConfigKey) return;
     _lastPeriodicInsightConfigKey = nextKey;
+    _invalidateActiveInsight();
     if (!_computeIsPageVisible()) {
       _pendingPeriodicInsightRefresh = true;
       return;

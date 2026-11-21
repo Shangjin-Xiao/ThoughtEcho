@@ -1140,5 +1140,100 @@ void main() {
       expect(expectedMessage, contains('Native Anthropic Messages'));
       expect(RegExp(r'[\u4e00-\u9fff]').hasMatch(expectedMessage), isFalse);
     });
+
+    testWidgets(
+        'editor preserves OpenAI-compatible protocol on custom gateway base ending in /messages and restored Anthropic slug gateway',
+        (tester) async {
+      await APIKeyManager()
+          .saveProviderApiKey('p_inbox_gw', 'sk-inbox-gw-1234');
+      await APIKeyManager()
+          .saveProviderApiKey('p_restored_ant', 'sk-restored-ant-1234');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_inbox_gw',
+              name: '消息路由网关',
+              apiUrl: 'https://gateway.example/v1/inbox/messages',
+              model: 'gpt-4o-mini',
+              protocol: AIProtocolType.openAICompatible,
+            ),
+            AIProviderSettings(
+              id: 'p_restored_ant',
+              name: '恢复的 Claude 网关',
+              apiUrl: 'https://gateway.example/v1',
+              model: 'claude-sonnet-4-5',
+              providerSlug: 'anthropic',
+              modelMetadata: AIModelMetadata(
+                contextWindow: 200000,
+                reasoning: true,
+              ),
+            ),
+          ],
+          currentProviderId: 'p_inbox_gw',
+        ),
+      );
+
+      final testedDrafts = <AIProviderSettings>[];
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async {
+        final config = OpenAIStreamService.buildOpenAIConfig(provider);
+        expect(config.baseUrl, 'https://gateway.example/v1/inbox/messages');
+        testedDrafts.add(provider);
+        return 'pong';
+      };
+      addTearDown(() => AIConnectionTester.testOverrideForTesting = null);
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+
+      // 1. Test connection & save on custom OpenAI-compatible gateway ending in /messages
+      await tester.tap(find.text('消息路由网关'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts, hasLength(1));
+      expect(testedDrafts.single.protocol, AIProtocolType.openAICompatible);
+      expect(testedDrafts.single.isAnthropicMessagesApi, isFalse);
+      expect(find.text(l10n.connectionTestSuccess), findsOneWidget);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      final savedInbox = settingsService.multiAISettings.providers
+          .firstWhere((p) => p.id == 'p_inbox_gw');
+      expect(savedInbox.protocol, AIProtocolType.openAICompatible);
+      expect(savedInbox.isAnthropicMessagesApi, isFalse);
+
+      // 2. Edit restored Anthropic slug gateway (protocol: null) via moreOptions -> preserves slug, native protocol, and metadata
+      await tester.tap(find.byTooltip(l10n.moreOptions).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.edit));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.configNameField),
+        '恢复的 Claude 网关（已重命名）',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      final savedRestored = settingsService.multiAISettings.providers
+          .firstWhere((p) => p.id == 'p_restored_ant');
+      expect(savedRestored.name, '恢复的 Claude 网关（已重命名）');
+      expect(savedRestored.providerSlug, 'anthropic');
+      expect(savedRestored.protocol, AIProtocolType.anthropicMessages);
+      expect(savedRestored.isAnthropicMessagesApi, isTrue);
+      expect(savedRestored.modelMetadata?.contextWindow, 200000);
+    });
   });
 }

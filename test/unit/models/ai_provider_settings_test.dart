@@ -519,5 +519,91 @@ void main() {
       expect(explicitNative.protocol, AIProtocolType.anthropicMessages);
       expect(explicitNative.isAnthropicMessagesApi, isTrue);
     });
+
+    test(
+        'preserves OpenAI-compatible protocol on custom gateway bases ending in /messages while keeping literal /v1/messages native when unset',
+        () {
+      const compatGatewayPrefix = AIProviderSettings(
+        id: 'provider_inbox_gw',
+        name: 'Inbox Gateway',
+        apiKey: 'sk-gw-inbox',
+        apiUrl: 'https://gateway.example/v1/inbox/messages',
+        model: 'gpt-4o-mini',
+        protocol: AIProtocolType.openAICompatible,
+      );
+      expect(compatGatewayPrefix.isAnthropicMessagesApi, isFalse);
+      expect(
+        compatGatewayPrefix.resolveRequestUrl(compatGatewayPrefix.apiUrl),
+        'https://gateway.example/v1/inbox/messages',
+      );
+      expect(
+        compatGatewayPrefix.buildHeaders()['Authorization'],
+        'Bearer sk-gw-inbox',
+      );
+
+      const unsetInboxGateway = AIProviderSettings(
+        id: 'provider_inbox_unset',
+        name: 'Inbox Unset',
+        apiKey: 'sk-gw-unset',
+        apiUrl: 'https://gateway.example/v1/inbox/messages',
+        model: 'gpt-4o-mini',
+      );
+      expect(unsetInboxGateway.isAnthropicMessagesApi, isFalse);
+
+      const explicitCompatOnV1MessagesPrefix = AIProviderSettings(
+        id: 'provider_v1_msg_compat',
+        name: 'Explicit Compat Prefix',
+        apiKey: 'sk-gw-compat',
+        apiUrl: 'https://gateway.example/v1/messages',
+        model: 'gpt-4o-mini',
+        protocol: AIProtocolType.openAICompatible,
+      );
+      expect(explicitCompatOnV1MessagesPrefix.isAnthropicMessagesApi, isFalse);
+
+      const unsetLiteralV1Messages = AIProviderSettings(
+        id: 'provider_v1_msg_native',
+        name: 'Custom Native Anthropic',
+        apiKey: 'sk-ant-proxy',
+        apiUrl: 'https://gateway.example/v1/messages',
+        model: 'claude-sonnet-4-5',
+      );
+      expect(unsetLiteralV1Messages.isAnthropicMessagesApi, isTrue);
+      expect(
+        unsetLiteralV1Messages.resolveRequestUrl(unsetLiteralV1Messages.apiUrl),
+        'https://gateway.example/v1/messages',
+      );
+    });
+
+    test(
+        'identifies restored non-official Anthropic gateways via providerSlug or legacy id when protocol is null',
+        () {
+      const restoredBySlug = AIProviderSettings(
+        id: 'provider_1712399999',
+        name: 'Restored Anthropic Proxy',
+        apiKey: 'sk-ant-restored',
+        apiUrl: 'https://gateway.example/v1',
+        model: 'claude-sonnet-4-5',
+        providerSlug: 'anthropic',
+      );
+      expect(restoredBySlug.isAnthropicMessagesApi, isTrue);
+      expect(
+        restoredBySlug.resolveRequestUrl(restoredBySlug.apiUrl),
+        'https://gateway.example/v1/messages',
+      );
+      expect(restoredBySlug.buildHeaders()['x-api-key'], 'sk-ant-restored');
+
+      const legacyById = AIProviderSettings(
+        id: 'anthropic',
+        name: 'Legacy Anthropic Gateway',
+        apiKey: 'sk-ant-legacy',
+        apiUrl: 'https://gateway.example/v1',
+        model: 'claude-sonnet-4-5',
+      );
+      expect(legacyById.isAnthropicMessagesApi, isTrue);
+      expect(
+        legacyById.resolveRequestUrl(legacyById.apiUrl),
+        'https://gateway.example/v1/messages',
+      );
+    });
   });
 }
