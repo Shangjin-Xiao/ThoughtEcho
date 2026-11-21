@@ -1237,6 +1237,37 @@ void main() {
       state.dispose();
     });
 
+    test(
+        'markNotePersisted compares Delta and keeps isDirty true on same-length edit before stream drains',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: false,
+      );
+
+      state.controller.replaceText(0, 0, 'Committed', null);
+      await Future<void>.delayed(Duration.zero);
+      final snapshot = state.captureDocumentSnapshot();
+
+      // Same-length replacement keeps document.length equal to _savedDocumentLength,
+      // exercising the Delta comparison inside markNotePersisted before stream drains
+      state.controller.replaceText(0, 1, 'K', null);
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-3');
+
+      expect(state.isDirty, isTrue);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // Restoring the original character brings Delta back to the persisted baseline
+      state.controller.replaceText(0, 1, 'C', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
     test('metadata snapshot token commits only the persisted baseline', () {
       final metadata = NoteEditorMetadataState();
       metadata.setAuthor('Author A');
