@@ -2002,7 +2002,7 @@ $memoryGuidance## 应用特性（避免重复劳动）
     return !provider.isAnthropicMessagesApi;
   }
 
-  @visibleForTesting
+  /// 规范化 AgentService 使用的 OpenAI 兼容 Base URL（保留非 `/chat/completions` 自定义网关前缀）。
   static String normalizeOpenAIBaseUrl(String apiUrl) {
     final trimmed = apiUrl.trim();
     final Uri uri;

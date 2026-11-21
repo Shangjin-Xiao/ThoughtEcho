@@ -440,5 +440,40 @@ void main() {
         'https://llm-gateway.corp.example.com/anthropic/v1/messages',
       );
     });
+
+    test(
+        'distinguishes native anthropic.com /v1 endpoint from OpenAI-compatible /v1/chat/completions endpoint',
+        () {
+      const nativeAnthropic = AIProviderSettings(
+        id: 'provider_custom_ant',
+        name: 'Anthropic Native',
+        apiKey: 'sk-ant-native',
+        apiUrl: 'https://api.anthropic.com/v1',
+        model: 'claude-sonnet-4-5',
+      );
+      expect(nativeAnthropic.isAnthropicMessagesApi, isTrue);
+      expect(
+        nativeAnthropic.resolveRequestUrl(nativeAnthropic.apiUrl),
+        'https://api.anthropic.com/v1/messages',
+      );
+      expect(nativeAnthropic.buildHeaders()['x-api-key'], 'sk-ant-native');
+
+      const compatAnthropic = AIProviderSettings(
+        id: 'provider_compat_ant',
+        name: 'Anthropic OpenAI Compat',
+        apiKey: 'sk-ant-compat',
+        apiUrl: 'https://api.anthropic.com/v1/chat/completions',
+        model: 'claude-sonnet-4-5',
+      );
+      expect(compatAnthropic.isAnthropicMessagesApi, isFalse);
+      expect(
+        compatAnthropic.resolveRequestUrl(compatAnthropic.apiUrl),
+        'https://api.anthropic.com/v1/chat/completions',
+      );
+      expect(
+        compatAnthropic.buildHeaders()['Authorization'],
+        'Bearer sk-ant-compat',
+      );
+    });
   });
 }

@@ -7,6 +7,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/ai_model_metadata.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/ai_settings.dart';
+import '../services/agent_service.dart';
 import '../services/api_key_manager.dart';
 import '../services/openai_stream_service.dart';
 import '../services/settings_service.dart';
@@ -161,12 +162,18 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     return trimmed.toLowerCase();
   }
 
+  static bool _isNativeAnthropicUrl(String lowerUrl) {
+    if (lowerUrl.contains('/chat/completions')) return false;
+    return lowerUrl.contains('/v1/messages') ||
+        lowerUrl.contains('anthropic.com');
+  }
+
   static AIProtocolType _baselineProtocol(AIProviderSettings existing) {
     if (existing.protocol != null) {
       return existing.protocol!;
     }
-    if (existing.isAnthropicMessagesApi ||
-        existing.apiUrl.toLowerCase().contains('anthropic.com')) {
+    final lowerUrl = existing.apiUrl.trim().toLowerCase();
+    if (existing.isAnthropicMessagesApi || _isNativeAnthropicUrl(lowerUrl)) {
       return AIProtocolType.anthropicMessages;
     }
     final preset = AIProviderPresets.bySlugOrId(existing.providerSlug) ??
@@ -200,11 +207,19 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
       final port = uri.hasPort && uri.port != 0 ? ':${uri.port}' : '';
       return '${uri.scheme}://${uri.host}$port${uri.path}';
     }
+    String streamNormalized;
     try {
-      return OpenAIStreamService.normalizeOpenAIBaseUrl(trimmed);
+      streamNormalized = OpenAIStreamService.normalizeOpenAIBaseUrl(trimmed);
     } on FormatException {
-      return trimmed;
+      streamNormalized = trimmed;
     }
+    String agentNormalized;
+    try {
+      agentNormalized = AgentService.normalizeOpenAIBaseUrl(trimmed);
+    } on FormatException {
+      agentNormalized = trimmed;
+    }
+    return '$streamNormalized|$agentNormalized';
   }
 
   ({
@@ -220,8 +235,7 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
             ? _preset
             : null);
 
-    if (lowerUrl.contains('anthropic.com') ||
-        lowerUrl.contains('/v1/messages')) {
+    if (_isNativeAnthropicUrl(lowerUrl)) {
       return (
         matchedPreset: activePreset,
         providerSlug: activePreset != null
@@ -263,36 +277,25 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
   }
 
   String? _baselineProviderSlug(AIProviderSettings existing) {
-    final rawSlug = existing.providerSlug?.trim();
-    if (rawSlug != null && rawSlug.isNotEmpty) {
-      final slugPreset = AIProviderPresets.bySlugOrId(rawSlug);
-      if (slugPreset != null && slugPreset.kind != AIPresetKind.custom) {
-        return slugPreset.modelsDevProviderId ?? slugPreset.id;
-      }
+    final canonicalExplicit = _canonicalProviderSlug(existing.providerSlug);
+    if (canonicalExplicit != null) {
+      return canonicalExplicit;
     }
 
     final trimmedUrl = existing.apiUrl.trim();
     final lowerUrl = trimmedUrl.toLowerCase();
-    final matched = AIProviderPresets.matchApiUrl(trimmedUrl);
-    if (lowerUrl.contains('anthropic.com') ||
-        lowerUrl.contains('/v1/messages') ||
-        existing.protocol == AIProtocolType.anthropicMessages) {
-      if (matched != null) {
-        return matched.modelsDevProviderId ?? matched.id;
-      }
-      return (rawSlug != null && rawSlug.isNotEmpty)
-          ? rawSlug.toLowerCase()
+    final matched = AIProviderPresets.matchApiUrl(trimmedUrl) ??
+        AIProviderPresets.bySlugOrId(existing.id);
+    final nonCustomPreset =
+        matched != null && matched.kind != AIPresetKind.custom ? matched : null;
+
+    if (_isNativeAnthropicUrl(lowerUrl)) {
+      return nonCustomPreset != null
+          ? (nonCustomPreset.modelsDevProviderId ?? nonCustomPreset.id)
           : 'anthropic';
     }
-    if (matched != null) {
-      return matched.modelsDevProviderId ?? matched.id;
-    }
-    if (rawSlug != null && rawSlug.isNotEmpty) {
-      return rawSlug.toLowerCase();
-    }
-    final idPreset = AIProviderPresets.bySlugOrId(existing.id);
-    if (idPreset != null && idPreset.kind != AIPresetKind.custom) {
-      return idPreset.modelsDevProviderId ?? idPreset.id;
+    if (nonCustomPreset != null) {
+      return nonCustomPreset.modelsDevProviderId ?? nonCustomPreset.id;
     }
     return null;
   }

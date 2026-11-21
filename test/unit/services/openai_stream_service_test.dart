@@ -168,6 +168,45 @@ void main() {
         // DeepSeek URLs may not have /v1 — should add it
         expect(config.baseUrl, 'https://api.deepseek.com/v1');
       });
+
+      test(
+          'throws UnsupportedError for native Anthropic Messages endpoints instead of appending /v1',
+          () {
+        const nativeByUrl = AIProviderSettings(
+          id: 'provider_ant_1',
+          name: 'Anthropic Native',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://api.anthropic.com/v1/messages',
+          model: 'claude-sonnet-4-5',
+        );
+        const nativeByHost = AIProviderSettings(
+          id: 'provider_ant_2',
+          name: 'Anthropic Host',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://api.anthropic.com/v1',
+          model: 'claude-sonnet-4-5',
+        );
+
+        expect(
+          () => OpenAIStreamService.buildOpenAIConfig(nativeByUrl),
+          throwsA(isA<UnsupportedError>()),
+        );
+        expect(
+          () => OpenAIStreamService.buildOpenAIConfig(nativeByHost),
+          throwsA(isA<UnsupportedError>()),
+        );
+
+        const openAiCompatOnAnthropic = AIProviderSettings(
+          id: 'provider_ant_compat',
+          name: 'Anthropic Compat',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://api.anthropic.com/v1/chat/completions',
+          model: 'claude-sonnet-4-5',
+        );
+        final compatConfig =
+            OpenAIStreamService.buildOpenAIConfig(openAiCompatOnAnthropic);
+        expect(compatConfig.baseUrl, 'https://api.anthropic.com/v1');
+      });
     });
 
     group('buildChatRequest', () {

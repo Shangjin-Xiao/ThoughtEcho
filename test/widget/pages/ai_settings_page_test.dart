@@ -921,5 +921,113 @@ void main() {
         isFalse,
       );
     });
+
+    testWidgets(
+        'editing custom gateway from /gateway to /gateway/v1 clears stale modelMetadata because AgentService base URL changes',
+        (tester) async {
+      await APIKeyManager().saveProviderApiKey('p_gw', 'sk-gw-test-1234');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_gw',
+              name: '内部网关',
+              apiUrl: 'https://corp.example/gateway',
+              model: 'gateway-model',
+              modelMetadata: AIModelMetadata(
+                contextWindow: 131072,
+                reasoning: true,
+              ),
+            ),
+          ],
+          currentProviderId: 'p_gw',
+        ),
+      );
+
+      final testedDrafts = <AIProviderSettings>[];
+      AIConnectionTester.testOverrideForTesting = ({
+        required AIProviderSettings provider,
+        required String systemPrompt,
+        required String userMessage,
+        Duration timeout = const Duration(seconds: 30),
+      }) async {
+        testedDrafts.add(provider);
+        return 'pong';
+      };
+      addTearDown(() => AIConnectionTester.testOverrideForTesting = null);
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      await tester.tap(find.text('内部网关'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.apiUrlField),
+        'https://corp.example/gateway/v1',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.testConnectionButton));
+      await tester.pumpAndSettle();
+      expect(testedDrafts.last.modelMetadata, isNull);
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      expect(
+        settingsService.multiAISettings.providers.single.modelMetadata,
+        isNull,
+      );
+    });
+
+    testWidgets(
+        'renaming a slugless Anthropic gateway preserves modelMetadata and null providerSlug',
+        (tester) async {
+      await APIKeyManager()
+          .saveProviderApiKey('p_ant_gw', 'sk-ant-gw-test-1234');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_ant_gw',
+              name: 'Claude 网关',
+              apiUrl: 'https://gateway.example/v1',
+              model: 'claude-sonnet-4-5',
+              protocol: AIProtocolType.anthropicMessages,
+              modelMetadata: AIModelMetadata(
+                contextWindow: 200000,
+                reasoning: true,
+              ),
+            ),
+          ],
+          currentProviderId: 'p_ant_gw',
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      await tester.tap(find.text('Claude 网关'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.configNameField),
+        '主力 Claude 网关',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      final saved = settingsService.multiAISettings.providers.single;
+      expect(saved.name, '主力 Claude 网关');
+      expect(saved.providerSlug, isNull);
+      expect(saved.protocol, AIProtocolType.anthropicMessages);
+      expect(saved.modelMetadata?.contextWindow, 200000);
+      expect(saved.modelMetadata?.reasoning, isTrue);
+    });
   });
 }

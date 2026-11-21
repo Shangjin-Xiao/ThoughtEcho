@@ -158,10 +158,15 @@ class AIProviderSettings implements AIConfig {
     if (protocol != null) {
       return protocol == AIProtocolType.anthropicMessages;
     }
+    final lowerUrl = apiUrl.toLowerCase();
+    if (lowerUrl.contains('/chat/completions')) {
+      return false;
+    }
     if (_normalizedSlug == 'anthropic' || id == 'anthropic') {
       return true;
     }
-    return apiUrl.toLowerCase().contains('/v1/messages');
+    return lowerUrl.contains('/v1/messages') ||
+        lowerUrl.contains('anthropic.com');
   }
 
   /// 是否为 OpenRouter 服务商（优先识别 [providerSlug]，兼容旧 `id` 与域名判断）。
@@ -216,10 +221,12 @@ class AIProviderSettings implements AIConfig {
       path = path.substring(0, path.length - 1);
     }
 
-    // Anthropic
-    if (isAnthropicMessagesApi ||
-        (protocol == null &&
-            uri.host.toLowerCase().contains('anthropic.com'))) {
+    // Anthropic 原生 Messages 端点（显式 /chat/completions 兼容层走下方 OpenAI 分支）
+    final lowerPath = path.toLowerCase();
+    if (!lowerPath.endsWith('/chat/completions') &&
+        (isAnthropicMessagesApi ||
+            (protocol == null &&
+                uri.host.toLowerCase().contains('anthropic.com')))) {
       if (path.isEmpty) {
         return uri.replace(path: '/v1/messages').toString();
       } else if (path.endsWith('/v1')) {
@@ -365,11 +372,8 @@ class AIProviderSettings implements AIConfig {
   @override
   Map<String, String> buildHeaders() {
     final headers = <String, String>{'Content-Type': 'application/json'};
-    final lowerUrl = apiUrl.toLowerCase();
 
-    if (protocol == AIProtocolType.anthropicMessages ||
-        (protocol == null &&
-            (isAnthropicMessagesApi || lowerUrl.contains('anthropic.com')))) {
+    if (isAnthropicMessagesApi) {
       headers['x-api-key'] = apiKey;
       headers['anthropic-version'] = '2023-06-01';
       return headers;

@@ -208,6 +208,11 @@ class OpenAIStreamService extends ChangeNotifier {
     AIProviderSettings provider, {
     Duration timeout = const Duration(minutes: 3),
   }) {
+    if (provider.isAnthropicMessagesApi) {
+      throw UnsupportedError(
+        '原生 Anthropic Messages (/v1/messages) 协议暂未接入运行链路，请改用 OpenRouter 或 OpenAI 兼容端点 (/chat/completions)',
+      );
+    }
     final normalizedUrl = normalizeOpenAIBaseUrl(provider.apiUrl);
     // Restored settings bypass the editor's endpoint validation.
     if (!isSecureAiEndpoint(Uri.parse(normalizedUrl))) {
