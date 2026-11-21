@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
@@ -1258,6 +1259,68 @@ void main() {
       );
       final savedKey = await APIKeyManager().getProviderApiKey('provider_safe');
       expect(savedKey, equals('sk-safe-key'));
+    });
+
+    test(
+        'restoreAllSettingsFromBackup preserves valid taskProviderIds and sanitizes invalid keys or dangling providerIds',
+        () async {
+      addTearDown(() async {
+        await AppPreferencesService().remove('multi_ai_settings');
+        await AppPreferencesService().remove('ai_settings');
+        await AppPreferencesService().remove('ai_auto_enable_pending_v1');
+        await APIKeyManager().removeProviderApiKey('provider_fast');
+        await APIKeyManager().removeProviderApiKey('provider_reason');
+      });
+
+      final Map<String, dynamic> backupPayload = {
+        'multi_ai_settings': <String, dynamic>{
+          'currentProviderId': 'provider_fast',
+          'providers': <dynamic>[
+            <String, dynamic>{
+              'id': 'provider_fast',
+              'name': 'Fast Model',
+              'apiUrl': 'https://open.bigmodel.cn/api/paas/v4',
+              'model': 'glm-4-flash',
+              'providerSlug': 'zhipuai',
+            },
+            <String, dynamic>{
+              'id': 'provider_reason',
+              'name': 'Reason Model',
+              'apiUrl': 'https://api.deepseek.com/v1',
+              'model': 'deepseek-reasoner',
+              'providerSlug': 'deepseek',
+            },
+          ],
+          'taskProviderIds': <dynamic, dynamic>{
+            'dailyInsight': 'provider_fast',
+            'dreaming': 'provider_reason',
+            'periodicInsight': 'non_existent_provider',
+            'agent': 42,
+            'unknownTaskSlot': 'provider_fast',
+          },
+        },
+      };
+
+      await settingsService.restoreAllSettingsFromBackup(backupPayload);
+
+      final restored = settingsService.multiAISettings;
+      expect(restored.currentProviderId, 'provider_fast');
+      expect(restored.taskProviderIds.length, 2);
+      expect(
+        restored.resolveProviderForTask(AITask.dailyInsight)?.id,
+        'provider_fast',
+      );
+      expect(
+        restored.resolveProviderForTask(AITask.dreaming)?.id,
+        'provider_reason',
+      );
+      // Dangling periodicInsight & non-string agent were stripped and fall back to currentProvider
+      expect(restored.explicitProviderForTask(AITask.periodicInsight), isNull);
+      expect(restored.explicitProviderForTask(AITask.agent), isNull);
+      expect(
+        restored.resolveProviderForTask(AITask.periodicInsight)?.id,
+        'provider_fast',
+      );
     });
 
     test('新用户配置有效 AI 服务时应自动开启相关 AI 功能', () async {

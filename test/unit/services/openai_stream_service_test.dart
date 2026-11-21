@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
+import 'package:thoughtecho/models/ai_model_metadata.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/services/openai_stream_service.dart';
 
@@ -167,6 +168,84 @@ void main() {
 
         // DeepSeek URLs may not have /v1 — should add it
         expect(config.baseUrl, 'https://api.deepseek.com/v1');
+      });
+
+      test(
+          'throws UnsupportedAIProtocolError for native /v1/messages while allowing shared api.anthropic.com/v1 OpenAI base URL',
+          () {
+        const nativeByUrl = AIProviderSettings(
+          id: 'provider_ant_1',
+          name: 'Anthropic Native',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://api.anthropic.com/v1/messages',
+          model: 'claude-sonnet-4-5',
+        );
+        const nativeGateway = AIProviderSettings(
+          id: 'provider_ant_gw',
+          name: 'Anthropic Custom Gateway',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://gateway.example.com/v1',
+          model: 'claude-sonnet-4-5',
+          protocol: AIProtocolType.anthropicMessages,
+        );
+
+        expect(
+          () => OpenAIStreamService.buildOpenAIConfig(nativeByUrl),
+          throwsA(isA<UnsupportedAIProtocolError>()),
+        );
+        expect(
+          () => OpenAIStreamService.buildOpenAIConfig(nativeGateway),
+          throwsA(isA<UnsupportedAIProtocolError>()),
+        );
+
+        const sharedBaseOnAnthropic = AIProviderSettings(
+          id: 'provider_ant_shared',
+          name: 'Anthropic Shared Base',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://api.anthropic.com/v1',
+          model: 'claude-sonnet-4-5',
+          providerSlug: 'anthropic',
+        );
+        final sharedConfig =
+            OpenAIStreamService.buildOpenAIConfig(sharedBaseOnAnthropic);
+        expect(sharedConfig.baseUrl, 'https://api.anthropic.com/v1');
+
+        const openAiCompatOnAnthropic = AIProviderSettings(
+          id: 'provider_ant_compat',
+          name: 'Anthropic Compat',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://api.anthropic.com/v1/chat/completions',
+          model: 'claude-sonnet-4-5',
+        );
+        final compatConfig =
+            OpenAIStreamService.buildOpenAIConfig(openAiCompatOnAnthropic);
+        expect(compatConfig.baseUrl, 'https://api.anthropic.com/v1');
+
+        const compatMessagesPrefixGateway = AIProviderSettings(
+          id: 'provider_gw_inbox',
+          name: 'Gateway Inbox Messages Prefix',
+          apiKey: 'sk-gw-test',
+          apiUrl: 'https://gateway.example/v1/inbox/messages',
+          model: 'gpt-4o-mini',
+          protocol: AIProtocolType.openAICompatible,
+        );
+        final gwConfig =
+            OpenAIStreamService.buildOpenAIConfig(compatMessagesPrefixGateway);
+        expect(gwConfig.baseUrl, 'https://gateway.example/v1/inbox/messages');
+
+        const restoredSlugAnthropicGateway = AIProviderSettings(
+          id: 'provider_ant_restored',
+          name: 'Restored Anthropic Gateway',
+          apiKey: 'sk-ant-test',
+          apiUrl: 'https://gateway.example/v1',
+          model: 'claude-sonnet-4-5',
+          providerSlug: 'anthropic',
+        );
+        expect(
+          () => OpenAIStreamService.buildOpenAIConfig(
+              restoredSlugAnthropicGateway),
+          throwsA(isA<UnsupportedAIProtocolError>()),
+        );
       });
     });
 

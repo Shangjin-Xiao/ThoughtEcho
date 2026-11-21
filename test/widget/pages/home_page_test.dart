@@ -18,6 +18,7 @@ import 'package:thoughtecho/pages/explore_page.dart';
 import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
 import 'package:thoughtecho/pages/home_page.dart';
 import 'package:thoughtecho/pages/settings_page.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
@@ -212,7 +213,7 @@ class MockConnectivityService extends ChangeNotifier
 
 class MockAIService extends ChangeNotifier implements AIService {
   @override
-  bool hasValidApiKey() => false;
+  bool hasValidApiKey({AITask? task}) => false;
 
   // 探索页在所选周期一条笔记都没有时也要说一句话，没开 AI 就走这条本地模板。
   // 首页把探索页挂在一个标签页里，测试数据里又没有笔记，所以这条必然被走到。

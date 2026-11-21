@@ -1041,7 +1041,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               },
             ),
             // 探索页
-            const ExplorePage(),
+            TickerMode(
+              enabled: _pageController.currentIndex == 2,
+              child: const ExplorePage(),
+            ),
             // 设置页
             SettingsPage(key: _settingsPageKey),
           ],
