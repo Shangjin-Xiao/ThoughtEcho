@@ -1957,13 +1957,15 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return FadeTransition(
-      opacity: _opacity,
-      child: Text(
-        _kStreamingCursor,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          color: widget.color,
-          height: 1.65,
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: _opacity,
+        child: Text(
+          _kStreamingCursor,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: widget.color,
+            height: 1.65,
+          ),
         ),
       ),
     );
