@@ -965,7 +965,7 @@ void main() {
           ))
               .single;
           expect(pRowOnA['status'], 'superseded');
-          expect(pRowOnA['updated_at'], '2026-11-01T01:00:00.000Z');
+          expect(pRowOnA['updated_at'], '2026-11-01T01:00:00.000000Z');
 
           // 5. B 在 T7 合入 Q（B 上 P 为 T5 > Q(T4)，P(v5) 保持 active，Q 被标 superseded 且保留 T4）
           await devB.mergeMemorySection(qPayload);
@@ -1544,6 +1544,349 @@ void main() {
             .id,
         'manual_taste_legacy',
       );
+    });
+
+    test(
+        'Devin 审查回归 #21：X -> Y -> Z 多跳替换后调用 forgetProfile(Z.id)（含 X 已被发送端裁剪的场景），双向同步均彻底退休 X/Y，仅当对端晚于墓碑真实编辑 X 时才保留',
+        () async {
+      // 场景 A：A 上完整保留 X、Y 历史行与 Z 的删除墓碑；B 仍持有原始 active 的 X
+      for (final mergeAFirst in <bool>[false, true]) {
+        final dir = await Directory.systemTemp.createTemp('multihop_tomb_');
+        final pathA = p.join(dir.path, 'a.db');
+        final pathB = p.join(dir.path, 'b.db');
+        final devA = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: pathA,
+        );
+        final devB = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: pathB,
+        );
+        try {
+          final x = await devA.rememberProfile(
+            kind: AgentMemoryKind.preference,
+            directive: '第一代偏好指令 X',
+            observedAt: DateTime.utc(2026, 11, 1, 10, 0),
+          );
+          await devB.mergeMemorySection(
+            (await devA.exportMemorySectionForTesting())!,
+          );
+          expect((await devB.activeProfile()).single.id, x.id);
+
+          // A 离线执行两跳替换 X -> Y -> Z，随后忘掉 Z
+          final y = await devA.rememberProfile(
+            kind: AgentMemoryKind.preference,
+            directive: '第二代偏好指令 Y',
+            replacesId: x.id,
+            observedAt: DateTime.utc(2026, 11, 2, 10, 0),
+          );
+          final z = await devA.rememberProfile(
+            kind: AgentMemoryKind.preference,
+            directive: '第三代偏好指令 Z',
+            replacesId: y.id,
+            observedAt: DateTime.utc(2026, 11, 3, 10, 0),
+          );
+          await devA.forgetProfile(z.id);
+          expect(await devA.activeProfile(), isEmpty);
+
+          if (mergeAFirst) {
+            await devA.mergeMemorySection(
+              (await devB.exportMemorySectionForTesting())!,
+            );
+            await devB.mergeMemorySection(
+              (await devA.exportMemorySectionForTesting())!,
+            );
+          } else {
+            await devB.mergeMemorySection(
+              (await devA.exportMemorySectionForTesting())!,
+            );
+            await devA.mergeMemorySection(
+              (await devB.exportMemorySectionForTesting())!,
+            );
+          }
+
+          expect(await devA.activeProfile(), isEmpty);
+          expect(await devB.activeProfile(), isEmpty);
+        } finally {
+          devA.dispose();
+          devB.dispose();
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        }
+      }
+
+      // 场景 B：发送端 A 早已压缩裁剪掉旧 X，仅剩 Y(replaces_id: X, superseded_by: Z) 与 Z 的墓碑；B 上仍有 active 的 X
+      final dirPruned =
+          await Directory.systemTemp.createTemp('multihop_pruned_');
+      final devAPruned = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirPruned.path, 'a.db'),
+      );
+      final devBPruned = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dirPruned.path, 'b.db'),
+      );
+      try {
+        final x = await devBPruned.rememberProfile(
+          kind: AgentMemoryKind.preference,
+          directive: '仅存于 B 的初代偏好 X',
+          observedAt: DateTime.utc(2026, 11, 1, 10, 0),
+        );
+        await devAPruned.restoreMemorySection(<String, dynamic>{
+          'format': 1,
+          'profile': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'mid_y_id',
+              'kind': 'preference',
+              'directive': '中继替换偏好 Y',
+              'observed_at': '2026-11-02T10:00:00.000000Z',
+              'updated_at': '2026-11-02T10:00:00.000000Z',
+              'status': 'superseded',
+              'replaces_id': x.id,
+              'superseded_by': 'deleted_z_id',
+              'source': 'thoughter',
+            },
+          ],
+          'tombstones': <Map<String, Object?>>[
+            <String, Object?>{
+              'entity_type': 'profile',
+              'entity_id': 'deleted_z_id',
+              'deleted_at': '2026-11-04T10:00:00.000000Z',
+            },
+          ],
+        });
+        await devBPruned.mergeMemorySection(
+          (await devAPruned.exportMemorySectionForTesting())!,
+        );
+        expect(await devBPruned.activeProfile(), isEmpty);
+      } finally {
+        devAPruned.dispose();
+        devBPruned.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dirPruned.exists()) {
+          await dirPruned.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        'Devin 审查回归 #23：多端同正文去重淘汰 P1 -> P2 后调用 editProfileDirective(P2) 修改指令，后续与原端及第三端同步均绝不复活旧重复项 P1',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('dedup_edit_revive_');
+      final devA = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'a.db'),
+      );
+      final devB = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'b.db'),
+      );
+      final devC = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: p.join(dir.path, 'c.db'),
+      );
+      try {
+        // 1. A 与 B 各自独立记下相同偏好指令，且 C 先从 A 同步拿到 P1(active)
+        final p1 = await devA.rememberProfile(
+          kind: AgentMemoryKind.preference,
+          directive: '回复保持简短精炼',
+          observedAt: DateTime.utc(2026, 11, 10, 9, 0),
+        );
+        await devC.mergeMemorySection(
+          (await devA.exportMemorySectionForTesting())!,
+        );
+        expect((await devC.activeProfile()).map((e) => e.id).toList(), [p1.id]);
+        final p2 = await devB.rememberProfile(
+          kind: AgentMemoryKind.preference,
+          directive: '回复保持简短精炼',
+          observedAt: DateTime.utc(2026, 11, 10, 10, 0),
+        );
+
+        // 2. A 与 B 互相同步：P2 时间更新胜出，P1 被去重标为 superseded -> P2.id
+        await devA.mergeMemorySection(
+          (await devB.exportMemorySectionForTesting())!,
+        );
+        await devB.mergeMemorySection(
+          (await devA.exportMemorySectionForTesting())!,
+        );
+        expect((await devA.activeProfile()).map((e) => e.id).toList(), [p2.id]);
+        expect((await devB.activeProfile()).map((e) => e.id).toList(), [p2.id]);
+
+        // 3. 用户在 A 上原位修改生效条目 P2 的内容为相反偏好
+        await devA.editProfileDirective(
+          id: p2.id,
+          directive: '回复提供详尽推导过程',
+        );
+        expect(
+          (await devA.activeProfile()).map((e) => e.directive).toList(),
+          <String>['回复提供详尽推导过程'],
+        );
+
+        // 4. A 与 B 再次双向同步：曾被去重淘汰的旧 P1（“回复保持简短精炼”）绝不能借重算复活！
+        await devB.mergeMemorySection(
+          (await devA.exportMemorySectionForTesting())!,
+        );
+        await devA.mergeMemorySection(
+          (await devB.exportMemorySectionForTesting())!,
+        );
+        expect(
+          (await devA.activeProfile()).map((e) => e.directive).toList(),
+          <String>['回复提供详尽推导过程'],
+        );
+        expect(
+          (await devB.activeProfile()).map((e) => e.directive).toList(),
+          <String>['回复提供详尽推导过程'],
+        );
+
+        // 5. 与仍持有旧 P1(active) 的第三端 C 双向同步：A 与 C 也严格收敛为仅保留编辑后的 P2！
+        await devC.mergeMemorySection(
+          (await devA.exportMemorySectionForTesting())!,
+        );
+        await devA.mergeMemorySection(
+          (await devC.exportMemorySectionForTesting())!,
+        );
+        expect(
+          (await devC.activeProfile()).map((e) => e.directive).toList(),
+          <String>['回复提供详尽推导过程'],
+        );
+        expect(
+          (await devA.activeProfile()).map((e) => e.directive).toList(),
+          <String>['回复提供详尽推导过程'],
+        );
+      } finally {
+        devA.dispose();
+        devB.dispose();
+        devC.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test(
+        'Devin 审查回归 #25：agent_memory.db 旧时间归一化为显式偏移转 6 位 UTC、纯无时区保留原语义不加伪造 Z，并完整写入 *_backup 列',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('mem_tz_backup_');
+      final legacyMemPath = p.join(dir.path, 'legacy_mem.db');
+      final rawLegacy = await openDatabase(
+        legacyMemPath,
+        version: 3,
+        singleInstance: false,
+        onCreate: (db, _) async {
+          await db.execute('''
+            CREATE TABLE agent_memory_profile (
+              id TEXT PRIMARY KEY,
+              kind TEXT NOT NULL,
+              directive TEXT NOT NULL,
+              observed_at TEXT NOT NULL,
+              updated_at TEXT,
+              status TEXT NOT NULL DEFAULT 'active',
+              superseded_by TEXT,
+              replaces_id TEXT,
+              source TEXT,
+              source_note_ids TEXT,
+              basis_watermark TEXT,
+              basis_note_count INTEGER
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE agent_memory_facts (
+              id TEXT PRIMARY KEY,
+              category TEXT,
+              content TEXT NOT NULL,
+              importance INTEGER NOT NULL DEFAULT 5,
+              trigger_phrases TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT,
+              last_recalled_at TEXT,
+              recall_count INTEGER NOT NULL DEFAULT 0,
+              source_ref TEXT
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE agent_memory_recent_slice (
+              id TEXT PRIMARY KEY,
+              content TEXT NOT NULL,
+              observed_at TEXT NOT NULL,
+              expires_at TEXT NOT NULL,
+              source_note_ids TEXT
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE agent_memory_tombstones (
+              entity_type TEXT NOT NULL,
+              entity_id TEXT NOT NULL,
+              deleted_at TEXT NOT NULL,
+              PRIMARY KEY (entity_type, entity_id)
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE agent_memory_meta (
+              key TEXT PRIMARY KEY,
+              value TEXT NOT NULL
+            )
+          ''');
+          await db.insert('agent_memory_profile', <String, Object?>{
+            'id': 'p_explicit_tz',
+            'kind': 'preference',
+            'directive': '带显式东八区偏移的画像',
+            'observed_at': '2026-10-05T09:00:00+08:00',
+            'updated_at': '2026-10-05T09:00:00+08:00',
+            'status': 'active',
+          });
+          await db.insert('agent_memory_profile', <String, Object?>{
+            'id': 'p_pure_offsetless',
+            'kind': 'feedback',
+            'directive': '纯无时区历史画像',
+            'observed_at': '2026-10-05T09:30:00.25',
+            'updated_at': null,
+            'status': 'active',
+          });
+        },
+      );
+      await rawLegacy.close();
+
+      final svc = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: legacyMemPath,
+      );
+      try {
+        await svc.activeProfile();
+        final inspectDb =
+            await openDatabase(legacyMemPath, singleInstance: true);
+        final rows = await inspectDb.query(
+          AgentMemoryService.profileTable,
+          orderBy: 'id ASC',
+        );
+        final byId = <String, Map<String, Object?>>{
+          for (final r in rows) r['id'] as String: r,
+        };
+        expect(
+          byId['p_explicit_tz']!['observed_at'],
+          '2026-10-05T01:00:00.000000Z',
+        );
+        expect(
+          byId['p_explicit_tz']!['observed_at_backup'],
+          '2026-10-05T09:00:00+08:00',
+        );
+        expect(
+          byId['p_pure_offsetless']!['observed_at'],
+          '2026-10-05T09:30:00.250000',
+        );
+        expect(
+          byId['p_pure_offsetless']!['observed_at_backup'],
+          '2026-10-05T09:30:00.25',
+        );
+      } finally {
+        svc.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
     });
   });
 }

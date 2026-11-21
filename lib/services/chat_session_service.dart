@@ -38,12 +38,25 @@ class ChatSessionService extends ChangeNotifier {
   final List<Future<void> Function(Database db)> _pendingWrites = [];
   final Completer<void> _databaseReady = Completer<void>();
   DateTime? _lastEmptySessionCleanupAt;
+  bool _hasOffsetlessTimestamps = false;
 
   static const int _schemaVersion = 3;
   static const int schemaVersion = _schemaVersion;
   static const String _legacyMainDbMigrationKey =
       'legacy_main_db_chat_migration_complete';
   static const Duration _emptySessionCleanupInterval = Duration(minutes: 1);
+
+  /// 校验 `chat` 段顶层及内部容器结构；非法时立即抛 [FormatException]。
+  static void validateChatSectionPayload(Object? rawSection) {
+    if (rawSection == null) return;
+    if (rawSection is! Map) {
+      throw const FormatException('chat 备份段格式无效');
+    }
+    final chatMap = rawSection is Map<String, dynamic>
+        ? rawSection
+        : rawSection.map((k, v) => MapEntry(k.toString(), v));
+    _validateChatSectionContainers(chatMap);
+  }
 
   ChatSessionService({
     String? databasePath,
@@ -197,22 +210,36 @@ class ChatSessionService extends ChangeNotifier {
               for (final col in _chatSessionColumnWhitelist)
                 if (raw.containsKey(col)) col: raw[col],
             };
-            final existingUpdated = row['updated_at']?.toString() ?? '';
-            if (existingUpdated.isEmpty) {
-              final lastActive = row['last_active_at']?.toString() ?? '';
-              row['updated_at'] = lastActive.isNotEmpty
-                  ? lastActive
-                  : (row['created_at']?.toString() ?? '');
-            }
-            for (final timeCol in const <String>[
-              'created_at',
-              'last_active_at',
-              'updated_at',
-            ]) {
-              if (row[timeCol] is String) {
-                row[timeCol] = _normalizeChatTimestampToUtcOrKeep(row[timeCol]);
-              }
-            }
+            final rawUpdated = row['updated_at'];
+            final rowOffset = LWWUtils.inferOffsetFromSameEventPair(
+                  row['last_active_at'],
+                  rawUpdated,
+                ) ??
+                LWWUtils.inferOffsetFromSameEventPair(
+                  row['created_at'],
+                  rawUpdated,
+                );
+            final createdNorm = _normalizeChatTimestampToUtcOrKeep(
+              row['created_at'],
+              sameEventCounterpart: rawUpdated,
+              knownSameRowOffset:
+                  row['created_at'] == row['last_active_at'] ? rowOffset : null,
+            );
+            final rawLastActiveStr = row['last_active_at']?.toString() ?? '';
+            final lastActiveNorm = rawLastActiveStr.trim().isNotEmpty
+                ? _normalizeChatTimestampToUtcOrKeep(
+                    rawLastActiveStr,
+                    sameEventCounterpart: rawUpdated,
+                    knownSameRowOffset: rowOffset,
+                  )
+                : createdNorm;
+            final existingUpdated = rawUpdated?.toString() ?? '';
+            final updatedNorm = existingUpdated.trim().isNotEmpty
+                ? _normalizeChatTimestampToUtcOrKeep(existingUpdated)
+                : (lastActiveNorm.isNotEmpty ? lastActiveNorm : createdNorm);
+            row['created_at'] = createdNorm;
+            row['last_active_at'] = lastActiveNorm;
+            row['updated_at'] = updatedNorm;
             batch.insert(
               'chat_sessions',
               row,
@@ -233,15 +260,17 @@ class ChatSessionService extends ChangeNotifier {
               for (final col in _chatMessageColumnWhitelist)
                 if (raw.containsKey(col)) col: raw[col],
             };
-            final existingUpdated = row['updated_at']?.toString() ?? '';
-            if (existingUpdated.isEmpty) {
-              row['updated_at'] = row['created_at']?.toString() ?? '';
-            }
-            for (final timeCol in const <String>['created_at', 'updated_at']) {
-              if (row[timeCol] is String) {
-                row[timeCol] = _normalizeChatTimestampToUtcOrKeep(row[timeCol]);
-              }
-            }
+            final rawUpdated = row['updated_at'];
+            final createdNorm = _normalizeChatTimestampToUtcOrKeep(
+              row['created_at'],
+              sameEventCounterpart: rawUpdated,
+            );
+            final existingUpdated = rawUpdated?.toString() ?? '';
+            final updatedNorm = existingUpdated.trim().isNotEmpty
+                ? _normalizeChatTimestampToUtcOrKeep(existingUpdated)
+                : createdNorm;
+            row['created_at'] = createdNorm;
+            row['updated_at'] = updatedNorm;
             batch.insert(
               'chat_messages',
               row,
@@ -458,22 +487,12 @@ class ChatSessionService extends ChangeNotifier {
       columnName: 'last_active_at',
       definition: 'TEXT',
     );
-    await db.execute('''
-      UPDATE chat_sessions
-      SET last_active_at = COALESCE(NULLIF(last_active_at, ''), created_at)
-      WHERE last_active_at IS NULL OR last_active_at = ''
-    ''');
     await addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
       columnName: 'updated_at',
       definition: 'TEXT',
     );
-    await db.execute('''
-      UPDATE chat_sessions
-      SET updated_at = COALESCE(NULLIF(last_active_at, ''), created_at)
-      WHERE updated_at IS NULL OR updated_at = ''
-    ''');
     await addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
@@ -486,11 +505,6 @@ class ChatSessionService extends ChangeNotifier {
       columnName: 'updated_at',
       definition: 'TEXT',
     );
-    await db.execute('''
-      UPDATE chat_messages
-      SET updated_at = created_at
-      WHERE updated_at IS NULL OR updated_at = ''
-    ''');
     await addColumnIfMissing(
       db,
       tableName: 'chat_messages',
@@ -516,6 +530,26 @@ class ChatSessionService extends ChangeNotifier {
       definition: 'TEXT',
     );
 
+    // 先在空列回填之前执行时间戳归一化：若同行 updated_at 原本已存有显式 UTC 对应值，
+    // 可据此精确还原无偏移 created_at / last_active_at，随后再对仍为空的派生时间列回填。
+    await _normalizeLegacyChatTimestamps(db);
+
+    await db.execute('''
+      UPDATE chat_sessions
+      SET last_active_at = COALESCE(NULLIF(last_active_at, ''), created_at)
+      WHERE last_active_at IS NULL OR last_active_at = ''
+    ''');
+    await db.execute('''
+      UPDATE chat_sessions
+      SET updated_at = COALESCE(NULLIF(last_active_at, ''), created_at)
+      WHERE updated_at IS NULL OR updated_at = ''
+    ''');
+    await db.execute('''
+      UPDATE chat_messages
+      SET updated_at = created_at
+      WHERE updated_at IS NULL OR updated_at = ''
+    ''');
+
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_chat_sessions_note_id ON chat_sessions(note_id)',
     );
@@ -532,13 +566,27 @@ class ChatSessionService extends ChangeNotifier {
       'CREATE INDEX IF NOT EXISTS idx_chat_messages_content ON chat_messages(content)',
     );
 
-    await _normalizeLegacyChatTimestamps(db);
+    await _refreshOffsetlessTimestampFlag(db);
+  }
+
+  Future<void> _refreshOffsetlessTimestampFlag(DatabaseExecutor db) async {
+    final rows = await db.rawQuery(
+      "SELECT 1 FROM chat_sessions "
+      "WHERE created_at NOT LIKE '%Z' OR last_active_at NOT LIKE '%Z' "
+      "LIMIT 1",
+    );
+    _hasOffsetlessTimestamps = rows.isNotEmpty;
+  }
+
+  static String _nonCanonicalTimeClause(String col) {
+    return "($col NOT GLOB '${LWWUtils.canonicalFixedUtcGlob}' AND "
+        "$col NOT GLOB '${LWWUtils.canonicalFixedOffsetlessGlob}')";
   }
 
   Future<void> _normalizeLegacyChatTimestamps(DatabaseExecutor db) async {
     const chunkSize = 500;
 
-    final nonUtcSessions = await db.query(
+    final candidateSessions = await db.query(
       'chat_sessions',
       columns: const <String>[
         'id',
@@ -546,116 +594,212 @@ class ChatSessionService extends ChangeNotifier {
         'last_active_at',
         'updated_at',
       ],
-      where: "created_at NOT LIKE '%Z' OR "
-          "last_active_at NOT LIKE '%Z' OR "
-          "(updated_at IS NOT NULL AND updated_at != '' AND updated_at NOT LIKE '%Z')",
+      where: "${_nonCanonicalTimeClause('created_at')} OR "
+          "last_active_at IS NULL OR last_active_at = '' OR "
+          "${_nonCanonicalTimeClause('last_active_at')} OR "
+          "updated_at IS NULL OR updated_at = '' OR "
+          "${_nonCanonicalTimeClause('updated_at')} OR "
+          "((created_at NOT LIKE '%Z' OR last_active_at NOT LIKE '%Z') AND "
+          "updated_at IS NOT NULL AND updated_at LIKE '%Z')",
     );
-    for (var i = 0; i < nonUtcSessions.length; i += chunkSize) {
-      final end = (i + chunkSize < nonUtcSessions.length)
-          ? i + chunkSize
-          : nonUtcSessions.length;
-      final batch = db.batch();
-      var hasUpdates = false;
-      for (var j = i; j < end; j++) {
-        final row = nonUtcSessions[j];
-        final id = row['id'] as String?;
-        if (id == null || id.isEmpty) continue;
-        final createdAt = _normalizeChatTimestampToUtcOrKeep(row['created_at']);
-        final lastActiveAt =
-            _normalizeChatTimestampToUtcOrKeep(row['last_active_at']);
-        final updatedRaw = row['updated_at'];
-        final updatedAt = (updatedRaw is String && updatedRaw.trim().isNotEmpty)
-            ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
-            : (lastActiveAt.isNotEmpty ? lastActiveAt : createdAt);
-        if (createdAt != row['created_at'] ||
-            lastActiveAt != row['last_active_at'] ||
-            updatedAt != row['updated_at']) {
-          batch.update(
-            'chat_sessions',
-            <String, Object?>{
-              'created_at': createdAt,
-              'last_active_at': lastActiveAt,
-              'updated_at': updatedAt,
-            },
-            where: 'id = ?',
-            whereArgs: <Object?>[id],
-          );
-          hasUpdates = true;
-        }
+    if (candidateSessions.isNotEmpty) {
+      var sessionBackupColsEnsured = false;
+      Future<void> ensureSessionBackupCols() async {
+        if (sessionBackupColsEnsured) return;
+        await addColumnIfMissing(
+          db,
+          tableName: 'chat_sessions',
+          columnName: 'created_at_backup',
+          definition: 'TEXT',
+        );
+        await addColumnIfMissing(
+          db,
+          tableName: 'chat_sessions',
+          columnName: 'last_active_at_backup',
+          definition: 'TEXT',
+        );
+        await addColumnIfMissing(
+          db,
+          tableName: 'chat_sessions',
+          columnName: 'updated_at_backup',
+          definition: 'TEXT',
+        );
+        sessionBackupColsEnsured = true;
       }
-      if (hasUpdates) {
-        await batch.commit(noResult: true);
+
+      for (var i = 0; i < candidateSessions.length; i += chunkSize) {
+        final end = (i + chunkSize < candidateSessions.length)
+            ? i + chunkSize
+            : candidateSessions.length;
+        final batch = db.batch();
+        var hasUpdates = false;
+        for (var j = i; j < end; j++) {
+          final row = candidateSessions[j];
+          final id = row['id'] as String?;
+          if (id == null || id.isEmpty) continue;
+          final updatedRaw = row['updated_at'];
+          final rowOffset = LWWUtils.inferOffsetFromSameEventPair(
+                row['last_active_at'],
+                updatedRaw,
+              ) ??
+              LWWUtils.inferOffsetFromSameEventPair(
+                row['created_at'],
+                updatedRaw,
+              );
+          final createdAt = _normalizeChatTimestampToUtcOrKeep(
+            row['created_at'],
+            sameEventCounterpart: updatedRaw,
+            knownSameRowOffset:
+                row['created_at'] == row['last_active_at'] ? rowOffset : null,
+          );
+          final lastActiveRaw = row['last_active_at'];
+          final lastActiveAt =
+              (lastActiveRaw is String && lastActiveRaw.trim().isNotEmpty)
+                  ? _normalizeChatTimestampToUtcOrKeep(
+                      lastActiveRaw,
+                      sameEventCounterpart: updatedRaw,
+                      knownSameRowOffset: rowOffset,
+                    )
+                  : createdAt;
+          final updatedAt =
+              (updatedRaw is String && updatedRaw.trim().isNotEmpty)
+                  ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
+                  : (lastActiveAt.isNotEmpty ? lastActiveAt : createdAt);
+          if (createdAt != row['created_at'] ||
+              lastActiveAt != row['last_active_at'] ||
+              updatedAt != row['updated_at']) {
+            await ensureSessionBackupCols();
+            batch.rawUpdate(
+              'UPDATE chat_sessions SET '
+              'created_at_backup = COALESCE(created_at_backup, created_at), '
+              'last_active_at_backup = COALESCE(last_active_at_backup, last_active_at), '
+              'updated_at_backup = COALESCE(updated_at_backup, updated_at), '
+              'created_at = ?, last_active_at = ?, updated_at = ? '
+              'WHERE id = ?',
+              <Object?>[createdAt, lastActiveAt, updatedAt, id],
+            );
+            hasUpdates = true;
+          }
+        }
+        if (hasUpdates) {
+          await batch.commit(noResult: true);
+        }
       }
     }
 
-    final nonUtcMessages = await db.query(
+    final candidateMessages = await db.query(
       'chat_messages',
       columns: const <String>['id', 'created_at', 'updated_at'],
-      where: "created_at NOT LIKE '%Z' OR "
-          "(updated_at IS NOT NULL AND updated_at != '' AND updated_at NOT LIKE '%Z')",
+      where: "${_nonCanonicalTimeClause('created_at')} OR "
+          "updated_at IS NULL OR updated_at = '' OR "
+          "${_nonCanonicalTimeClause('updated_at')} OR "
+          "(created_at NOT LIKE '%Z' AND updated_at IS NOT NULL AND updated_at LIKE '%Z')",
     );
-    for (var i = 0; i < nonUtcMessages.length; i += chunkSize) {
-      final end = (i + chunkSize < nonUtcMessages.length)
-          ? i + chunkSize
-          : nonUtcMessages.length;
-      final batch = db.batch();
-      var hasUpdates = false;
-      for (var j = i; j < end; j++) {
-        final row = nonUtcMessages[j];
-        final id = row['id'] as String?;
-        if (id == null || id.isEmpty) continue;
-        final createdAt = _normalizeChatTimestampToUtcOrKeep(row['created_at']);
-        final updatedRaw = row['updated_at'];
-        final updatedAt = (updatedRaw is String && updatedRaw.trim().isNotEmpty)
-            ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
-            : createdAt;
-        if (createdAt != row['created_at'] || updatedAt != row['updated_at']) {
-          batch.update(
-            'chat_messages',
-            <String, Object?>{
-              'created_at': createdAt,
-              'updated_at': updatedAt,
-            },
-            where: 'id = ?',
-            whereArgs: <Object?>[id],
-          );
-          hasUpdates = true;
-        }
+    if (candidateMessages.isNotEmpty) {
+      var messageBackupColsEnsured = false;
+      Future<void> ensureMessageBackupCols() async {
+        if (messageBackupColsEnsured) return;
+        await addColumnIfMissing(
+          db,
+          tableName: 'chat_messages',
+          columnName: 'created_at_backup',
+          definition: 'TEXT',
+        );
+        await addColumnIfMissing(
+          db,
+          tableName: 'chat_messages',
+          columnName: 'updated_at_backup',
+          definition: 'TEXT',
+        );
+        messageBackupColsEnsured = true;
       }
-      if (hasUpdates) {
-        await batch.commit(noResult: true);
+
+      for (var i = 0; i < candidateMessages.length; i += chunkSize) {
+        final end = (i + chunkSize < candidateMessages.length)
+            ? i + chunkSize
+            : candidateMessages.length;
+        final batch = db.batch();
+        var hasUpdates = false;
+        for (var j = i; j < end; j++) {
+          final row = candidateMessages[j];
+          final id = row['id'] as String?;
+          if (id == null || id.isEmpty) continue;
+          final updatedRaw = row['updated_at'];
+          final createdAt = _normalizeChatTimestampToUtcOrKeep(
+            row['created_at'],
+            sameEventCounterpart: updatedRaw,
+          );
+          final updatedAt =
+              (updatedRaw is String && updatedRaw.trim().isNotEmpty)
+                  ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
+                  : createdAt;
+          if (createdAt != row['created_at'] ||
+              updatedAt != row['updated_at']) {
+            await ensureMessageBackupCols();
+            batch.rawUpdate(
+              'UPDATE chat_messages SET '
+              'created_at_backup = COALESCE(created_at_backup, created_at), '
+              'updated_at_backup = COALESCE(updated_at_backup, updated_at), '
+              'created_at = ?, updated_at = ? '
+              'WHERE id = ?',
+              <Object?>[createdAt, updatedAt, id],
+            );
+            hasUpdates = true;
+          }
+        }
+        if (hasUpdates) {
+          await batch.commit(noResult: true);
+        }
       }
     }
 
-    final nonUtcTombstones = await db.query(
+    final candidateTombstones = await db.query(
       'chat_tombstones',
       columns: const <String>['entity_type', 'entity_id', 'deleted_at'],
-      where: "deleted_at NOT LIKE '%Z'",
+      where: _nonCanonicalTimeClause('deleted_at'),
     );
-    for (var i = 0; i < nonUtcTombstones.length; i += chunkSize) {
-      final end = (i + chunkSize < nonUtcTombstones.length)
-          ? i + chunkSize
-          : nonUtcTombstones.length;
-      final batch = db.batch();
-      var hasUpdates = false;
-      for (var j = i; j < end; j++) {
-        final row = nonUtcTombstones[j];
-        final type = row['entity_type'] as String?;
-        final id = row['entity_id'] as String?;
-        if (type == null || id == null) continue;
-        final deletedAt = _normalizeChatTimestampToUtcOrKeep(row['deleted_at']);
-        if (deletedAt != row['deleted_at']) {
-          batch.update(
-            'chat_tombstones',
-            <String, Object?>{'deleted_at': deletedAt},
-            where: 'entity_type = ? AND entity_id = ?',
-            whereArgs: <Object?>[type, id],
-          );
-          hasUpdates = true;
-        }
+    if (candidateTombstones.isNotEmpty) {
+      var tombstoneBackupColEnsured = false;
+      Future<void> ensureTombstoneBackupCol() async {
+        if (tombstoneBackupColEnsured) return;
+        await addColumnIfMissing(
+          db,
+          tableName: 'chat_tombstones',
+          columnName: 'deleted_at_backup',
+          definition: 'TEXT',
+        );
+        tombstoneBackupColEnsured = true;
       }
-      if (hasUpdates) {
-        await batch.commit(noResult: true);
+
+      for (var i = 0; i < candidateTombstones.length; i += chunkSize) {
+        final end = (i + chunkSize < candidateTombstones.length)
+            ? i + chunkSize
+            : candidateTombstones.length;
+        final batch = db.batch();
+        var hasUpdates = false;
+        for (var j = i; j < end; j++) {
+          final row = candidateTombstones[j];
+          final type = row['entity_type'] as String?;
+          final id = row['entity_id'] as String?;
+          if (type == null || id == null) continue;
+          final deletedAt = _normalizeChatTimestampToUtcOrKeep(
+            row['deleted_at'],
+          );
+          if (deletedAt != row['deleted_at']) {
+            await ensureTombstoneBackupCol();
+            batch.rawUpdate(
+              'UPDATE chat_tombstones SET '
+              'deleted_at_backup = COALESCE(deleted_at_backup, deleted_at), '
+              'deleted_at = ? '
+              'WHERE entity_type = ? AND entity_id = ?',
+              <Object?>[deletedAt, type, id],
+            );
+            hasUpdates = true;
+          }
+        }
+        if (hasUpdates) {
+          await batch.commit(noResult: true);
+        }
       }
     }
   }
@@ -731,11 +875,12 @@ class ChatSessionService extends ChangeNotifier {
     try {
       await _persistOrQueueWrite((db) async {
         final row = session.toMap();
-        row['created_at'] = session.createdAt.toUtc().toIso8601String();
-        row['last_active_at'] = session.lastActiveAt.toUtc().toIso8601String();
-        row['updated_at'] = (session.updatedAt ?? session.lastActiveAt)
-            .toUtc()
-            .toIso8601String();
+        row['created_at'] = LWWUtils.formatFixedUtcIso(session.createdAt);
+        row['last_active_at'] =
+            LWWUtils.formatFixedUtcIso(session.lastActiveAt);
+        row['updated_at'] = LWWUtils.formatFixedUtcIso(
+          session.updatedAt ?? session.lastActiveAt,
+        );
         await db.insert('chat_sessions', row);
       }, operationName: 'ChatSessionService.createSession');
     } catch (e) {
@@ -753,6 +898,16 @@ class ChatSessionService extends ChangeNotifier {
     final db = await _getDatabaseForRead();
     if (db == null) return null;
     try {
+      if (_hasOffsetlessTimestamps) {
+        final rows = await db.query(
+          'chat_sessions',
+          where: 'note_id = ?',
+          whereArgs: [noteId],
+        );
+        final sessions = _parseSessionsFromRows(rows);
+        _sortSessionsByActivityDesc(sessions, includePinOrder: false);
+        return sessions.firstOrNull;
+      }
       final rows = await db.query(
         'chat_sessions',
         where: 'note_id = ?',
@@ -796,6 +951,21 @@ class ChatSessionService extends ChangeNotifier {
     return sessions;
   }
 
+  static void _sortSessionsByActivityDesc(
+    List<ChatSession> sessions, {
+    required bool includePinOrder,
+  }) {
+    if (sessions.length <= 1) return;
+    sessions.sort((a, b) {
+      if (includePinOrder && a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1;
+      }
+      final cmp = b.lastActiveAt.toUtc().compareTo(a.lastActiveAt.toUtc());
+      if (cmp != 0) return cmp;
+      return a.id.compareTo(b.id);
+    });
+  }
+
   Future<List<ChatSession>> getSessionsForNote(String noteId) async {
     final db = await _getDatabaseForRead();
     if (db == null) return [];
@@ -806,7 +976,11 @@ class ChatSessionService extends ChangeNotifier {
         whereArgs: [noteId],
         orderBy: 'last_active_at DESC',
       );
-      return _parseSessionsFromRows(rows);
+      final sessions = _parseSessionsFromRows(rows);
+      if (_hasOffsetlessTimestamps) {
+        _sortSessionsByActivityDesc(sessions, includePinOrder: false);
+      }
+      return sessions;
     } catch (e) {
       logError(
         'ChatSessionService.getSessionsForNote 失败',
@@ -827,7 +1001,11 @@ class ChatSessionService extends ChangeNotifier {
         whereArgs: ['agent'],
         orderBy: 'last_active_at DESC',
       );
-      return _parseSessionsFromRows(rows);
+      final sessions = _parseSessionsFromRows(rows);
+      if (_hasOffsetlessTimestamps) {
+        _sortSessionsByActivityDesc(sessions, includePinOrder: false);
+      }
+      return sessions;
     } catch (e) {
       logError(
         'ChatSessionService.getAgentSessions 失败',
@@ -855,6 +1033,17 @@ class ChatSessionService extends ChangeNotifier {
         if (cleanupSucceeded) {
           _lastEmptySessionCleanupAt = now;
         }
+      }
+
+      if (_hasOffsetlessTimestamps) {
+        final rows = await db.query('chat_sessions');
+        final sessions = _parseSessionsFromRows(rows);
+        _sortSessionsByActivityDesc(sessions, includePinOrder: true);
+        if (offset >= sessions.length) return const [];
+        final end = (offset + limit < sessions.length)
+            ? offset + limit
+            : sessions.length;
+        return sessions.sublist(offset, end);
       }
 
       final rows = await db.query(
@@ -1172,7 +1361,7 @@ WHERE s.id IN ($placeholders)
     if (targetIds.isEmpty) return;
     try {
       await _persistOrQueueWrite((db) async {
-        final deletedAt = DateTime.now().toUtc().toIso8601String();
+        final deletedAt = LWWUtils.formatFixedUtcIso(DateTime.now());
         await db.transaction((txn) async {
           const chunkSize = 500;
           for (var i = 0; i < targetIds.length; i += chunkSize) {
@@ -1202,6 +1391,12 @@ WHERE s.id IN ($placeholders)
               deletedAtUtcIso: deletedAt,
             );
             await txn.delete(
+              'chat_tombstones',
+              where:
+                  "entity_type = 'session_cutoff' AND entity_id IN ($placeholders)",
+              whereArgs: chunk,
+            );
+            await txn.delete(
               'chat_messages',
               where: 'session_id IN ($placeholders)',
               whereArgs: chunk,
@@ -1226,7 +1421,7 @@ WHERE s.id IN ($placeholders)
 
   Future<void> updateSessionTitle(String sessionId, String title) async {
     try {
-      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
+      final nowUtcIso = LWWUtils.formatFixedUtcIso(DateTime.now());
       await _persistOrQueueWrite((db) async {
         await db.update(
           'chat_sessions',
@@ -1251,7 +1446,7 @@ WHERE s.id IN ($placeholders)
 
   Future<void> togglePin(String sessionId) async {
     try {
-      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
+      final nowUtcIso = LWWUtils.formatFixedUtcIso(DateTime.now());
       await _persistOrQueueWrite((db) async {
         final rows = await db.query(
           'chat_sessions',
@@ -1284,8 +1479,9 @@ WHERE s.id IN ($placeholders)
 
   Future<void> addMessage(String sessionId, ChatMessage message) async {
     try {
-      final nowUtcIso = DateTime.now().toUtc().toIso8601String();
-      final messageCreatedUtcIso = message.timestamp.toUtc().toIso8601String();
+      final nowUtcIso = LWWUtils.formatFixedUtcIso(DateTime.now());
+      final messageCreatedUtcIso =
+          LWWUtils.formatFixedUtcIso(message.timestamp);
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
           final row = message.toMap(sessionId);
@@ -1350,7 +1546,18 @@ WHERE s.id IN ($placeholders)
         whereArgs: [sessionId],
         orderBy: 'created_at ASC',
       );
-      return _parseMessagesFromRows(rows);
+      final parsed = _parseMessagesFromRows(rows);
+      if (parsed.length > 1) {
+        final indexById = <String, int>{
+          for (var i = 0; i < parsed.length; i++) parsed[i].id: i,
+        };
+        parsed.sort((a, b) {
+          final cmp = a.timestamp.toUtc().compareTo(b.timestamp.toUtc());
+          if (cmp != 0) return cmp;
+          return (indexById[a.id] ?? 0).compareTo(indexById[b.id] ?? 0);
+        });
+      }
+      return parsed;
     } catch (e) {
       logError(
         'ChatSessionService.getMessages 失败',
@@ -1413,7 +1620,7 @@ WHERE s.id IN ($placeholders)
   Future<void> deleteMessage(String messageId) async {
     if (messageId.isEmpty) return;
     try {
-      final deletedAt = DateTime.now().toUtc().toIso8601String();
+      final deletedAt = LWWUtils.formatFixedUtcIso(DateTime.now());
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
           await _upsertTombstonesInTxn(
@@ -1442,7 +1649,7 @@ WHERE s.id IN ($placeholders)
   Future<void> clearMessages(String sessionId) async {
     if (sessionId.isEmpty) return;
     try {
-      final deletedAt = DateTime.now().toUtc().toIso8601String();
+      final deletedAt = LWWUtils.formatFixedUtcIso(DateTime.now());
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
           final rows = await txn.query(
@@ -1456,6 +1663,12 @@ WHERE s.id IN ($placeholders)
             txn,
             entityType: 'message',
             entityIds: msgIds,
+            deletedAtUtcIso: deletedAt,
+          );
+          await _upsertTombstonesInTxn(
+            txn,
+            entityType: 'session_cutoff',
+            entityIds: [sessionId],
             deletedAtUtcIso: deletedAt,
           );
           await txn.delete(
@@ -1478,7 +1691,7 @@ WHERE s.id IN ($placeholders)
   Future<void> deleteSessionsForNote(String noteId) async {
     if (noteId.isEmpty) return;
     try {
-      final deletedAt = DateTime.now().toUtc().toIso8601String();
+      final deletedAt = LWWUtils.formatFixedUtcIso(DateTime.now());
       await _persistOrQueueWrite((db) async {
         await db.transaction((txn) async {
           // 首先通过 note_id 找到所有相关的会话 ID
@@ -1520,6 +1733,12 @@ WHERE s.id IN ($placeholders)
                 entityType: 'session',
                 entityIds: chunk,
                 deletedAtUtcIso: deletedAt,
+              );
+              await txn.delete(
+                'chat_tombstones',
+                where:
+                    "entity_type = 'session_cutoff' AND entity_id IN ($placeholders)",
+                whereArgs: chunk,
               );
               await txn.delete(
                 'chat_messages',

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../utils/lww_utils.dart';
+
 /// 画像层条目的类别。
 ///
 /// 准入标准是三条同时满足：**归纳成本高、结论稳定、复用频率高**。
@@ -159,8 +161,8 @@ class AgentMemoryProfileEntry {
       'id': id,
       'kind': kind.storageValue,
       'directive': directive,
-      'observed_at': observedAt.toUtc().toIso8601String(),
-      'updated_at': (updatedAt ?? observedAt).toUtc().toIso8601String(),
+      'observed_at': LWWUtils.formatFixedUtcIso(observedAt),
+      'updated_at': LWWUtils.formatFixedUtcIso(updatedAt ?? observedAt),
       'status': status.storageValue,
       'superseded_by': supersededBy,
       'replaces_id': replacesId,
@@ -305,9 +307,11 @@ class AgentMemoryFact {
       'importance': importance,
       'trigger_phrases':
           triggerPhrases.isEmpty ? null : triggerPhrases.join('\n'),
-      'created_at': createdAt.toUtc().toIso8601String(),
-      'updated_at': (updatedAt ?? createdAt).toUtc().toIso8601String(),
-      'last_recalled_at': lastRecalledAt?.toUtc().toIso8601String(),
+      'created_at': LWWUtils.formatFixedUtcIso(createdAt),
+      'updated_at': LWWUtils.formatFixedUtcIso(updatedAt ?? createdAt),
+      'last_recalled_at': lastRecalledAt != null
+          ? LWWUtils.formatFixedUtcIso(lastRecalledAt!)
+          : null,
       'recall_count': recallCount,
       'source_ref': sourceRef,
     };
@@ -421,8 +425,8 @@ class AgentMemoryRecentSlice {
     return <String, Object?>{
       'id': id,
       'content': content,
-      'observed_at': observedAt.toUtc().toIso8601String(),
-      'expires_at': expiresAt.toUtc().toIso8601String(),
+      'observed_at': LWWUtils.formatFixedUtcIso(observedAt),
+      'expires_at': LWWUtils.formatFixedUtcIso(expiresAt),
       'source_note_ids':
           sourceNoteIds.isEmpty ? null : jsonEncode(sourceNoteIds),
     };

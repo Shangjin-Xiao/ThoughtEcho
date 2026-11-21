@@ -17,7 +17,6 @@ import 'package:thoughtecho/utils/localization_resolver.dart';
 import 'package:thoughtecho/models/import_cleanup_stats.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'package:thoughtecho/services/media_sync_manifest.dart';
-import 'package:thoughtecho/theme/app_theme.dart';
 import 'streaming_backup_processor.dart';
 import 'package:meta/meta.dart';
 
@@ -552,6 +551,7 @@ class BackupService {
           onProgress?.call(5 + (current / safeTotal * 50).round(), 100);
         },
         shouldCancel: () => cancelToken?.isCancelled == true,
+        validateRestoreSections: clearExisting,
       );
     } else {
       throw Exception('不支持的备份文件格式: ${backupInfo['type']}');
@@ -578,6 +578,12 @@ class BackupService {
 
     try {
       cancelToken?.throwIfCancelled();
+
+      // 覆盖恢复前置非破坏性结构预检：在清空/改写任何笔记、设置、AI分析与媒体路径前，
+      // 提前验证 chat 与 agent_memory 容器结构，防止后置校验抛错导致本机原数据被半途抹除。
+      if (clearExisting) {
+        AssistantDataSyncService.validateRestorePayload(backupData);
+      }
 
       // 恢复笔记数据
       Map<String, dynamic>? notesData;
@@ -625,9 +631,6 @@ class BackupService {
               ? rawSettings
               : rawSettings.map((k, v) => MapEntry(k.toString(), v));
           await _settingsService.restoreAllSettingsFromBackup(settingsMap);
-          try {
-            await AppTheme.reloadCurrentInstance();
-          } catch (_) {}
         } else if (rawSettings != null) {
           logWarning(
             '跳过非 Map 格式的 settings 备份节点 (${rawSettings.runtimeType})',

@@ -188,7 +188,7 @@ void main() {
       final exported = await memoryService.exportMemorySectionForTesting();
       expect(exported, isNotNull);
       final exportedDreaming = exported!['dreaming'] as Map<String, dynamic>;
-      expect(exportedDreaming['last_run_at'], '2026-11-10T09:00:00.000Z');
+      expect(exportedDreaming['last_run_at'], '2026-11-10T09:00:00.000000Z');
       expect(
         exportedDreaming['basis_watermark'],
         '2026-11-10T08:00:00.000Z',
@@ -748,6 +748,126 @@ void main() {
       final activeTaste = (await memoryService.activeProfile())
           .singleWhere((e) => e.kind == AgentMemoryKind.taste);
       expect(activeTaste.id, 'taste_active_covered');
+    });
+
+    test(
+        'Devin 审查回归 #22：Stage 0 显式 replaces_id 链遇到非单例 Dreaming 画像（如 identity）时同样遵守看全依据优先，漏看新 Q(replaces_id: P) 绝不淘汰看全旧 P',
+        () async {
+      // 合并后的主库共有 4 条笔记：前 3 条 <= 10:00，第 4 条为离线设备在 10:30 补入的笔记（<= 11:30）
+      await insertNote(
+        id: 'n_cov_1',
+        content: '早期笔记1',
+        lastModifiedIso: '2026-11-10T08:00:00.000Z',
+      );
+      await insertNote(
+        id: 'n_cov_2',
+        content: '早期笔记2',
+        lastModifiedIso: '2026-11-10T09:00:00.000Z',
+      );
+      await insertNote(
+        id: 'n_cov_3',
+        content: '早期笔记3',
+        lastModifiedIso: '2026-11-10T10:00:00.000Z',
+      );
+      await insertNote(
+        id: 'n_offline_1030',
+        content: 'B 端 10:30 离线关键笔记（A 端 12:00 归纳时未同步到此条）',
+        lastModifiedIso: '2026-11-10T10:30:00.000Z',
+      );
+
+      for (final mergeAFirst in <bool>[false, true]) {
+        final dir = await Directory.systemTemp.createTemp('stage0_basis_');
+        final devA = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dir.path, 'a.db'),
+        );
+        final devB = AgentMemoryService(
+          settingsService: settingsService,
+          databasePath: p.join(dir.path, 'b.db'),
+        );
+        devA.setBasisChecker((basisPairs) async {
+          final watermarks = basisPairs.map((e) => e.$1).toSet();
+          final counts =
+              await databaseService.countActiveNotesUpToWatermarks(watermarks);
+          return <(String, int), bool>{
+            for (final pair in basisPairs)
+              pair: (counts[pair.$1] ?? 0) <= pair.$2,
+          };
+        });
+        devB.setBasisChecker((basisPairs) async {
+          final watermarks = basisPairs.map((e) => e.$1).toSet();
+          final counts =
+              await databaseService.countActiveNotesUpToWatermarks(watermarks);
+          return <(String, int), bool>{
+            for (final pair in basisPairs)
+              pair: (counts[pair.$1] ?? 0) <= pair.$2,
+          };
+        });
+
+        try {
+          // B 端持有较早但看全当时全部 3 条笔记（<=10:00 共 3 条）的非单例 Dreaming identity 画像 P
+          final coveredP = await devB.rememberProfile(
+            kind: AgentMemoryKind.identity,
+            directive: '称呼用户为「林澈」',
+            source: 'dreaming',
+            observedAt: DateTime.utc(2026, 11, 10, 10, 5),
+            basisWatermark: '2026-11-10T10:00:00.000Z',
+            basisNoteCount: 3,
+          );
+
+          // A 端在未同步到 n_offline_1030 时于 12:00 运行了新一轮归纳，产生了声明 replaces_id = P.id 的漏看 Q
+          // （水位 11:30 下主库实际有 4 条笔记，而 Q 的 basis_note_count 仅为 3），且 A 已裁剪掉历史 P
+          await devA.restoreMemorySection(<String, dynamic>{
+            'format': 1,
+            'profile': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'uncovered_q_id',
+                'kind': 'identity',
+                'directive': '待确认笔名：木子（存疑，待确认）',
+                'observed_at': '2026-11-10T12:00:00.000000Z',
+                'updated_at': '2026-11-10T12:00:00.000000Z',
+                'status': 'active',
+                'replaces_id': coveredP.id,
+                'source': 'dreaming',
+                'basis_watermark': '2026-11-10T11:30:00.000Z',
+                'basis_note_count': 3,
+              },
+            ],
+          });
+
+          if (mergeAFirst) {
+            await devA.mergeMemorySection(
+              (await devB.exportMemorySectionForTesting())!,
+            );
+            await devB.mergeMemorySection(
+              (await devA.exportMemorySectionForTesting())!,
+            );
+          } else {
+            await devB.mergeMemorySection(
+              (await devA.exportMemorySectionForTesting())!,
+            );
+            await devA.mergeMemorySection(
+              (await devB.exportMemorySectionForTesting())!,
+            );
+          }
+
+          expect(
+            (await devA.activeProfile()).map((e) => e.id).toList(),
+            <String>[coveredP.id],
+          );
+          expect(
+            (await devB.activeProfile()).map((e) => e.id).toList(),
+            <String>[coveredP.id],
+          );
+        } finally {
+          devA.dispose();
+          devB.dispose();
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        }
+      }
     });
   });
 }

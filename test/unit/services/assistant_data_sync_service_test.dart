@@ -1252,5 +1252,159 @@ void main() {
       );
       expect(activeTheme.themeStyle, ThemeStyle.plain);
     });
+
+    test(
+        'Devin 审查回归 #19：覆盖恢复（JSON 与带媒体 ZIP）遇到损坏的 chat 或 agent_memory 段时前置拒绝，本机原有笔记、偏好、媒体、会话与记忆毫发无损',
+        () async {
+      // 1. 预置本机原有笔记、偏好设置、对话会话与长期记忆
+      await rawNotesDb.insert('quotes', <String, Object?>{
+        'id': 'local_protected_note',
+        'content': '本机受保护笔记正文',
+        'date': '2026-11-20T08:00:00.000Z',
+        'last_modified': '2026-11-20T08:00:00.000Z',
+        'is_deleted': 0,
+      });
+      await settingsService.setUserNickname('受保护原昵称');
+      final protectedSession = await chatService.createSession(
+        sessionType: 'agent',
+        title: '受保护本机会话',
+      );
+      await chatService.addMessage(
+        protectedSession.id,
+        ChatMessage(
+          id: 'protected_msg_1',
+          isUser: true,
+          role: 'user',
+          content: '受保护本机消息',
+          timestamp: DateTime.utc(2026, 11, 20, 8, 5),
+        ),
+      );
+      final protectedProfile = await memoryService.rememberProfile(
+        kind: AgentMemoryKind.preference,
+        directive: '受保护本机画像指令',
+        observedAt: DateTime.utc(2026, 11, 20, 8, 10),
+      );
+
+      final appDocDir =
+          await Directory(p.join(tempDir.path, 'app_docs')).create();
+      final mediaSubDir =
+          await Directory(p.join(appDocDir.path, 'media', 'images'))
+              .create(recursive: true);
+      final existingMediaFile = File(p.join(mediaSubDir.path, 'keep.png'));
+      await existingMediaFile.writeAsBytes(const <int>[1, 2, 3, 4]);
+
+      Future<void> verifyAllLocalStateIntact() async {
+        final notes = await rawNotesDb.query('quotes');
+        expect(
+          notes.map((n) => n['id']).toList(),
+          <String>['local_protected_note'],
+        );
+        expect(settingsService.userNickname, '受保护原昵称');
+        final sessions = await chatService.getAllSessions();
+        expect(sessions.map((s) => s.id).toList(), <String>[
+          protectedSession.id,
+        ]);
+        final msgs = await chatService.getMessages(protectedSession.id);
+        expect(msgs.map((m) => m.id).toList(), <String>['protected_msg_1']);
+        final profiles = await memoryService.activeProfile();
+        expect(profiles.map((e) => e.id).toList(), <String>[
+          protectedProfile.id,
+        ]);
+      }
+
+      // 构造前半段（notes / settings / chat）完全合法，但后半段 agent_memory 损坏的备份包
+      Map<String, dynamic> buildBadPayload({required bool badChat}) {
+        return <String, dynamic>{
+          'version': '2.0.0',
+          'notes': <String, dynamic>{
+            'categories': <Object?>[],
+            'quotes': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'incoming_wiper_note',
+                'content': '不应落盘的覆盖笔记',
+                'date': '2026-11-21T00:00:00.000Z',
+                'last_modified': '2026-11-21T00:00:00.000Z',
+                'is_deleted': 0,
+              },
+            ],
+          },
+          'settings': <String, Object?>{
+            'user_nickname': '不应覆盖的新昵称',
+          },
+          'chat': badChat
+              ? <String, Object?>{'format': 1, 'sessions': <String, Object?>{}}
+              : <String, Object?>{
+                  'format': 1,
+                  'sessions': <Map<String, Object?>>[
+                    <String, Object?>{
+                      'id': 'incoming_wiper_session',
+                      'session_type': 'agent',
+                      'title': '不应落盘的覆盖会话',
+                      'created_at': '2026-11-21T00:00:00.000000Z',
+                      'last_active_at': '2026-11-21T00:00:00.000000Z',
+                      'updated_at': '2026-11-21T00:00:00.000000Z',
+                    },
+                  ],
+                  'messages': <Object?>[],
+                  'tombstones': <Object?>[],
+                },
+          'agent_memory': badChat
+              ? <String, Object?>{'format': 1, 'profile': <Object?>[]}
+              : <String, Object?>{'format': 1, 'profile': <String, Object?>{}},
+        };
+      }
+
+      // 2. 验证 .json 覆盖恢复前置拒绝（损坏 agent_memory 与损坏 chat）
+      for (final badChat in <bool>[false, true]) {
+        final badJsonFile = File(
+          p.join(tempDir.path, 'bad_restore_${badChat ? 'chat' : 'mem'}.json'),
+        );
+        await badJsonFile.writeAsString(
+          jsonEncode(buildBadPayload(badChat: badChat)),
+        );
+        await expectLater(
+          () => backupService.importData(
+            badJsonFile.path,
+            clearExisting: true,
+            merge: false,
+          ),
+          throwsA(anything),
+        );
+        await verifyAllLocalStateIntact();
+      }
+
+      // 3. 验证带媒体条目的 .zip 覆盖恢复在媒体解压前即前置拒绝
+      for (final badChat in <bool>[false, true]) {
+        final payloadBytes = utf8.encode(
+          jsonEncode(buildBadPayload(badChat: badChat)),
+        );
+        final mediaBytes = const <int>[9, 9, 9, 9];
+        final archive = Archive()
+          ..addFile(
+            ArchiveFile('backup_data.json', payloadBytes.length, payloadBytes),
+          )
+          ..addFile(
+            ArchiveFile(
+              'media/images/injected_bad.png',
+              mediaBytes.length,
+              mediaBytes,
+            ),
+          );
+        final badZipFile = File(
+          p.join(tempDir.path, 'bad_restore_${badChat ? 'chat' : 'mem'}.zip'),
+        );
+        await badZipFile.writeAsBytes(ZipEncoder().encode(archive));
+        await expectLater(
+          () => backupService.importData(
+            badZipFile.path,
+            clearExisting: true,
+            merge: false,
+          ),
+          throwsA(anything),
+        );
+        await verifyAllLocalStateIntact();
+        expect(await existingMediaFile.readAsBytes(), <int>[1, 2, 3, 4]);
+      }
+    });
   });
 }

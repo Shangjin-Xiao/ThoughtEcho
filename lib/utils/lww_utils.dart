@@ -196,6 +196,134 @@ class LWWUtils {
 
     return time2.difference(time1).inSeconds;
   }
+
+  static final RegExp _canonicalFixedUtcIsoRegex = RegExp(
+    r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$',
+  );
+  static final RegExp _canonicalFixedLocalIsoRegex = RegExp(
+    r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}$',
+  );
+  static final RegExp _explicitTzSuffixRegex = RegExp(
+    r'[Tt ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:[Zz]|[+-]\d{2}(?::?\d{2})?)$',
+  );
+
+  /// SQLite `GLOB` 模式：匹配已标准化的 6 位小数位 UTC 时间串（`YYYY-MM-DDTHH:mm:ss.ffffffZ`）。
+  static const String canonicalFixedUtcGlob =
+      '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T'
+      '[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]Z';
+
+  /// SQLite `GLOB` 模式：匹配已定宽保留的无时区本地时间串（`YYYY-MM-DDTHH:mm:ss.ffffff`）。
+  static const String canonicalFixedOffsetlessGlob =
+      '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T'
+      '[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]';
+
+  /// 将 [dt] 格式化为固定 6 位小数位的 UTC ISO-8601 字符串（`YYYY-MM-DDTHH:mm:ss.ffffffZ`），
+  /// 避免 Dart `toIso8601String()` 在零微秒（`.123Z`）与非零微秒（`.123001Z`）之间变长，
+  /// 导致 SQLite 文本排序将 `.123001Z` 排在 `.123Z` 之前。
+  static String formatFixedUtcIso(DateTime dt) {
+    final u = dt.toUtc();
+    return '${_formatFixedIsoCore(u)}Z';
+  }
+
+  static String _formatFixedIsoCore(DateTime dt) {
+    final y = dt.year >= 0
+        ? dt.year.toString().padLeft(4, '0')
+        : '-${(-dt.year).toString().padLeft(4, '0')}';
+    final mo = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    final h = dt.hour.toString().padLeft(2, '0');
+    final mi = dt.minute.toString().padLeft(2, '0');
+    final s = dt.second.toString().padLeft(2, '0');
+    final micros =
+        (dt.millisecond * 1000 + dt.microsecond).toString().padLeft(6, '0');
+    return '$y-$mo-${d}T$h:$mi:$s.$micros';
+  }
+
+  static bool isCanonicalFixedUtcIso(Object? raw) {
+    return raw is String && _canonicalFixedUtcIsoRegex.hasMatch(raw);
+  }
+
+  static bool isCanonicalFixedOffsetlessIso(Object? raw) {
+    return raw is String && _canonicalFixedLocalIsoRegex.hasMatch(raw);
+  }
+
+  /// 判断时间字符串是否显式携带时区信息（末尾 `Z`/`z` 或 `±HH[:MM]`）。
+  static bool hasExplicitTimezoneOffset(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return false;
+    return _explicitTzSuffixRegex.hasMatch(trimmed);
+  }
+
+  /// 仅当 [raw] 显式携带 `Z` 或数值时区偏移时解析并返回其精确 UTC `DateTime`；
+  /// 对无时区（offsetless）墙钟字符串返回 `null`，绝不依赖当前设备时区猜测。
+  static DateTime? tryParseExplicitZoneUtc(Object? raw) {
+    if (raw is! String) return null;
+    final trimmed = raw.trim();
+    if (!hasExplicitTimezoneOffset(trimmed)) return null;
+    return DateTime.tryParse(trimmed)?.toUtc();
+  }
+
+  static DateTime? _parseOffsetlessWallClockAsNaiveUtc(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || hasExplicitTimezoneOffset(trimmed)) return null;
+    final normalizedSep = trimmed.contains(' ') && !trimmed.contains('T')
+        ? trimmed.replaceFirst(' ', 'T')
+        : trimmed;
+    return DateTime.tryParse('${normalizedSep}Z');
+  }
+
+  /// 当无时区时间串 [offsetlessRaw] 与显式时区时间串 [explicitCounterpartRaw] 代表同一事件时，
+  /// 通过两者墙钟刻度与真实 UTC 时刻的整分钟时区差（`[-14h, +14h]` 且秒与微秒完全一致）
+  /// 提取精确历史时区偏移；不满足同一事件条件时返回 `null`。
+  static Duration? inferOffsetFromSameEventPair(
+    Object? offsetlessRaw,
+    Object? explicitCounterpartRaw,
+  ) {
+    if (offsetlessRaw is! String) return null;
+    final naiveUtc = _parseOffsetlessWallClockAsNaiveUtc(offsetlessRaw);
+    final counterpartUtc = tryParseExplicitZoneUtc(explicitCounterpartRaw);
+    if (naiveUtc == null || counterpartUtc == null) return null;
+    final diff = naiveUtc.difference(counterpartUtc);
+    if (diff.abs() > const Duration(hours: 14)) return null;
+    if (diff.inMicroseconds % Duration.microsecondsPerMinute != 0) {
+      return null;
+    }
+    return diff;
+  }
+
+  /// 安全归一化时间字符串：
+  /// 1. 显式偏移（`Z` 或 `±HH:MM`）直接精确换算为固定 6 位小数位 UTC（`...ffffffZ`）；
+  /// 2. 无偏移本地时间若提供同一事件的显式时区对应值 [sameEventCounterpart]（或已知同事件偏移
+  ///    [knownSameRowOffset]），则据此精确换算为固定 6 位小数位 UTC；
+  /// 3. 无可靠时区依据的无偏移历史本地时间仅补齐固定 6 位小数位（不附加伪造 `Z`），
+  ///    避免设备跨时区旅行升级时将当前时区误固化为权威 UTC 历史。
+  static String normalizeTimestampPreservingOffsetless(
+    Object? raw, {
+    Object? sameEventCounterpart,
+    Duration? knownSameRowOffset,
+  }) {
+    if (raw is! String) return '';
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+    if (isCanonicalFixedUtcIso(trimmed)) return trimmed;
+
+    if (hasExplicitTimezoneOffset(trimmed)) {
+      final utc = DateTime.tryParse(trimmed)?.toUtc();
+      return utc != null ? formatFixedUtcIso(utc) : trimmed;
+    }
+
+    final inferredOffset = inferOffsetFromSameEventPair(
+          trimmed,
+          sameEventCounterpart,
+        ) ??
+        knownSameRowOffset;
+    final naiveUtc = _parseOffsetlessWallClockAsNaiveUtc(trimmed);
+    if (naiveUtc == null) return trimmed;
+    if (inferredOffset != null) {
+      return formatFixedUtcIso(naiveUtc.subtract(inferredOffset));
+    }
+    return _formatFixedIsoCore(naiveUtc);
+  }
 }
 
 /// LWW 合并决策枚举

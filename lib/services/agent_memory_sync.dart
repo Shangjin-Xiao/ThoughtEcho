@@ -131,12 +131,16 @@ DateTime? _tryParseMemoryUtc(Object? raw) {
   return DateTime.tryParse(trimmed)?.toUtc();
 }
 
-String _normalizeMemoryTimestampToUtcOrKeep(Object? raw) {
-  if (raw is! String) return '';
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty) return '';
-  final parsed = DateTime.tryParse(trimmed);
-  return parsed != null ? parsed.toUtc().toIso8601String() : trimmed;
+String _normalizeMemoryTimestampToUtcOrKeep(
+  Object? raw, {
+  Object? sameEventCounterpart,
+  Duration? knownSameRowOffset,
+}) {
+  return LWWUtils.normalizeTimestampPreservingOffsetless(
+    raw,
+    sameEventCounterpart: sameEventCounterpart,
+    knownSameRowOffset: knownSameRowOffset,
+  );
 }
 
 bool _isValidMemoryFormatVersion(Object? rawFormat) {
@@ -294,7 +298,6 @@ Map<String, Object?>? _sanitizeMemoryProfileRow(Object? item) {
   final observedRaw = item['observed_at'];
   final observedUtc = _tryParseMemoryUtc(observedRaw);
   if (observedUtc == null) return null;
-  final observedStr = observedUtc.toIso8601String();
 
   final updatedRaw = item['updated_at'];
   final updatedUtc = _tryParseMemoryUtc(updatedRaw);
@@ -303,7 +306,24 @@ Map<String, Object?>? _sanitizeMemoryProfileRow(Object? item) {
       updatedUtc == null) {
     return null;
   }
-  final updatedStr = (updatedUtc ?? observedUtc).toIso8601String();
+  final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
+    observedRaw,
+    updatedRaw,
+  );
+  final observedStr = _normalizeMemoryTimestampToUtcOrKeep(
+    observedRaw,
+    sameEventCounterpart: updatedRaw,
+    knownSameRowOffset: knownOffset,
+  );
+  final updatedStr = (updatedRaw is String &&
+          updatedRaw.trim().isNotEmpty &&
+          updatedUtc != null)
+      ? _normalizeMemoryTimestampToUtcOrKeep(
+          updatedRaw,
+          sameEventCounterpart: observedRaw,
+          knownSameRowOffset: knownOffset,
+        )
+      : observedStr;
 
   final statusObj = item['status'];
   var status = AgentMemoryStatus.active.storageValue;
@@ -394,7 +414,6 @@ Map<String, Object?>? _sanitizeMemoryFactRow(Object? item) {
   final createdRaw = item['created_at'];
   final createdUtc = _tryParseMemoryUtc(createdRaw);
   if (createdUtc == null) return null;
-  final createdStr = createdUtc.toIso8601String();
 
   final updatedRaw = item['updated_at'];
   final updatedUtc = _tryParseMemoryUtc(updatedRaw);
@@ -403,7 +422,24 @@ Map<String, Object?>? _sanitizeMemoryFactRow(Object? item) {
       updatedUtc == null) {
     return null;
   }
-  final updatedStr = (updatedUtc ?? createdUtc).toIso8601String();
+  final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
+    createdRaw,
+    updatedRaw,
+  );
+  final createdStr = _normalizeMemoryTimestampToUtcOrKeep(
+    createdRaw,
+    sameEventCounterpart: updatedRaw,
+    knownSameRowOffset: knownOffset,
+  );
+  final updatedStr = (updatedRaw is String &&
+          updatedRaw.trim().isNotEmpty &&
+          updatedUtc != null)
+      ? _normalizeMemoryTimestampToUtcOrKeep(
+          updatedRaw,
+          sameEventCounterpart: createdRaw,
+          knownSameRowOffset: knownOffset,
+        )
+      : createdStr;
 
   final categoryObj = item['category'];
   if (categoryObj != null && categoryObj is! String) return null;
@@ -451,7 +487,7 @@ Map<String, Object?>? _sanitizeMemoryFactRow(Object? item) {
     if (trimmedRecalled.isNotEmpty) {
       final parsedRecalled = _tryParseMemoryUtc(trimmedRecalled);
       if (parsedRecalled == null) return null;
-      lastRecalledAt = parsedRecalled.toIso8601String();
+      lastRecalledAt = _normalizeMemoryTimestampToUtcOrKeep(trimmedRecalled);
     }
   }
 
@@ -499,12 +535,12 @@ Map<String, Object?>? _sanitizeMemorySliceRow(Object? item) {
   final observedRaw = item['observed_at'];
   final observedUtc = _tryParseMemoryUtc(observedRaw);
   if (observedUtc == null) return null;
-  final observedStr = observedUtc.toIso8601String();
+  final observedStr = _normalizeMemoryTimestampToUtcOrKeep(observedRaw);
 
   final expiresRaw = item['expires_at'];
   final expiresUtc = _tryParseMemoryUtc(expiresRaw);
   if (expiresUtc == null) return null;
-  final expiresStr = expiresUtc.toIso8601String();
+  final expiresStr = _normalizeMemoryTimestampToUtcOrKeep(expiresRaw);
 
   final encodedNoteIds =
       _sanitizeEncodedNoteIds(item['source_note_ids'], rejectInvalidType: true);
@@ -538,7 +574,7 @@ _ParsedMemoryTombstone? _sanitizeMemoryTombstone(Object? item) {
   return _ParsedMemoryTombstone(
     entityType: type,
     entityId: id,
-    deletedAtRaw: deletedUtc.toIso8601String(),
+    deletedAtRaw: _normalizeMemoryTimestampToUtcOrKeep(deletedStr),
     deletedAtUtc: deletedUtc,
   );
 }
@@ -547,9 +583,21 @@ Map<String, Object?> _exportWhitelistedProfile(Map<String, Object?> raw) {
   final row = <String, Object?>{
     for (final col in _memoryProfileColumnWhitelist) col: raw[col],
   };
-  final observed = _normalizeMemoryTimestampToUtcOrKeep(row['observed_at']);
+  final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
+    row['observed_at'],
+    row['updated_at'],
+  );
+  final observed = _normalizeMemoryTimestampToUtcOrKeep(
+    row['observed_at'],
+    sameEventCounterpart: row['updated_at'],
+    knownSameRowOffset: knownOffset,
+  );
   row['observed_at'] = observed;
-  final updated = _normalizeMemoryTimestampToUtcOrKeep(row['updated_at']);
+  final updated = _normalizeMemoryTimestampToUtcOrKeep(
+    row['updated_at'],
+    sameEventCounterpart: row['observed_at'],
+    knownSameRowOffset: knownOffset,
+  );
   row['updated_at'] = updated.isNotEmpty ? updated : observed;
   return row;
 }
@@ -558,9 +606,21 @@ Map<String, Object?> _exportWhitelistedFact(Map<String, Object?> raw) {
   final row = <String, Object?>{
     for (final col in _memoryFactColumnWhitelist) col: raw[col],
   };
-  final created = _normalizeMemoryTimestampToUtcOrKeep(row['created_at']);
+  final knownOffset = LWWUtils.inferOffsetFromSameEventPair(
+    row['created_at'],
+    row['updated_at'],
+  );
+  final created = _normalizeMemoryTimestampToUtcOrKeep(
+    row['created_at'],
+    sameEventCounterpart: row['updated_at'],
+    knownSameRowOffset: knownOffset,
+  );
   row['created_at'] = created;
-  final updated = _normalizeMemoryTimestampToUtcOrKeep(row['updated_at']);
+  final updated = _normalizeMemoryTimestampToUtcOrKeep(
+    row['updated_at'],
+    sameEventCounterpart: row['created_at'],
+    knownSameRowOffset: knownOffset,
+  );
   row['updated_at'] = updated.isNotEmpty ? updated : created;
   final recalledRaw = row['last_recalled_at'];
   if (recalledRaw is String && recalledRaw.trim().isNotEmpty) {
@@ -582,11 +642,11 @@ String? _pickLatestTimestampStr(Object? leftRaw, Object? rightRaw) {
   final leftUtc = _tryParseMemoryUtc(leftRaw);
   final rightUtc = _tryParseMemoryUtc(rightRaw);
   if (leftUtc == null && rightUtc == null) return null;
-  if (leftUtc == null) return rightUtc!.toIso8601String();
-  if (rightUtc == null) return leftUtc.toIso8601String();
+  if (leftUtc == null) return _normalizeMemoryTimestampToUtcOrKeep(rightRaw);
+  if (rightUtc == null) return _normalizeMemoryTimestampToUtcOrKeep(leftRaw);
   return rightUtc.isAfter(leftUtc)
-      ? rightUtc.toIso8601String()
-      : leftUtc.toIso8601String();
+      ? _normalizeMemoryTimestampToUtcOrKeep(rightRaw)
+      : _normalizeMemoryTimestampToUtcOrKeep(leftRaw);
 }
 
 int _compareProfileRowsByWinnerRule(
@@ -633,13 +693,134 @@ int _compareProfileRowsByWinnerRule(
   return leftId.compareTo(rightId);
 }
 
+final Set<String> _singletonMemoryKinds = <String>{
+  AgentMemoryKind.taste.storageValue,
+  AgentMemoryKind.voice.storageValue,
+  AgentMemoryKind.style.storageValue,
+};
+
+/// 判定在 `Y.replaces_id == X.id` 的显式替换边中，前驱 `X` 是否反而应当胜出并淘汰 `Y`：
+/// 1. 非 `dreaming*` 显式/人工画像绝不被后台 `dreaming*` 取代；
+/// 2. 同为 `dreaming*` 且挂载了依据判定器时，看全全部笔记依据的前驱 `X` 优先于漏看离线笔记的 `Y`；
+/// 3. 其余情况下，仅当 `X` 在 `Y` 创建后又发生了原位编辑（`X` 版本时间严格晚于 `Y`）时 `X` 胜出。
+bool _predecessorWinsReplacementEdge(
+  Map<String, Object?> xRow,
+  Map<String, Object?> yRow, {
+  bool Function(String? watermark, int? noteCount)? isBasisCovered,
+}) {
+  final xDream = _isDreamingMemorySource(xRow['source']);
+  final yDream = _isDreamingMemorySource(yRow['source']);
+  if (!xDream && yDream) {
+    return true;
+  }
+  if (xDream && yDream && isBasisCovered != null) {
+    final xCovered = isBasisCovered(
+      xRow['basis_watermark'] as String?,
+      _parseMemoryOptionalInt(xRow['basis_note_count']),
+    );
+    final yCovered = isBasisCovered(
+      yRow['basis_watermark'] as String?,
+      _parseMemoryOptionalInt(yRow['basis_note_count']),
+    );
+    if (xCovered != yCovered) {
+      return xCovered;
+    }
+  }
+  final xTime = _parseMemoryRowVersionUtc(
+    xRow['updated_at'],
+    xRow['observed_at'],
+  );
+  final yTime = _parseMemoryRowVersionUtc(
+    yRow['updated_at'],
+    yRow['observed_at'],
+  );
+  return xTime.isAfter(yTime);
+}
+
+/// 判定一条处于 `superseded` 状态的条目在沿 `superseded_by` 链到达某条 `active` 终点条目时，
+/// 二者是否仍然处于同一个有效竞争槽位（从而允许纳入同步重算）。
+///
+/// 若某条重复画像 `P1` 曾因“同 `kind + directive` 去重”指向 `P2`，随后用户通过
+/// `editProfileDirective(P2)` 将 `P2` 原位改成新指令，此时 `P1` 与 `P2` 既无 `replaces_id`
+/// 血缘、又非单例类别、正文也不再重复——`P1` 必须保持 `superseded` 退休状态，绝不能借重算复活。
+bool _doSupersededChainAndActiveTerminalStillCompete(
+  List<Map<String, Object?>> chainToActiveTerminal,
+) {
+  if (chainToActiveTerminal.length < 2) {
+    return true;
+  }
+  final startRow = chainToActiveTerminal.first;
+  final terminalRow = chainToActiveTerminal.last;
+  final startId = (startRow['id'] as String?)?.trim() ?? '';
+  final terminalId = (terminalRow['id'] as String?)?.trim() ?? '';
+
+  // (a) 链上任意相邻跳或首尾之间存在显式 replaces_id 替换关系
+  for (var i = 0; i < chainToActiveTerminal.length - 1; i++) {
+    final prev = chainToActiveTerminal[i];
+    final next = chainToActiveTerminal[i + 1];
+    final prevId = (prev['id'] as String?)?.trim() ?? '';
+    final nextId = (next['id'] as String?)?.trim() ?? '';
+    final prevRep = (prev['replaces_id'] as String?)?.trim() ?? '';
+    final nextRep = (next['replaces_id'] as String?)?.trim() ?? '';
+    if ((nextRep.isNotEmpty && nextRep == prevId) ||
+        (prevRep.isNotEmpty && prevRep == nextId)) {
+      return true;
+    }
+  }
+  final startRep = (startRow['replaces_id'] as String?)?.trim() ?? '';
+  final terminalRep = (terminalRow['replaces_id'] as String?)?.trim() ?? '';
+  if ((terminalRep.isNotEmpty && terminalRep == startId) ||
+      (startRep.isNotEmpty && startRep == terminalId)) {
+    return true;
+  }
+
+  // (b) 共享非空 replaces_id 分叉祖先
+  if (startRep.isNotEmpty && startRep == terminalRep) {
+    return true;
+  }
+
+  // (c) 同属单活跃类别（taste / voice / style）
+  final startKind = (startRow['kind'] as String?)?.trim() ?? '';
+  final terminalKind = (terminalRow['kind'] as String?)?.trim() ?? '';
+  if (_singletonMemoryKinds.contains(startKind) && startKind == terminalKind) {
+    return true;
+  }
+
+  // (d) 仍为同 kind + directive 重复项，或同为 identity 且别名集合重叠
+  final startDirective = (startRow['directive'] as String?)?.trim() ?? '';
+  final terminalDirective = (terminalRow['directive'] as String?)?.trim() ?? '';
+  if (startKind == terminalKind &&
+      startDirective.isNotEmpty &&
+      startDirective == terminalDirective) {
+    return true;
+  }
+  if (startKind == AgentMemoryKind.identity.storageValue &&
+      terminalKind == AgentMemoryKind.identity.storageValue) {
+    final startAliases = AgentMemoryService.extractAliasesFromDirective(
+      startDirective,
+      includeUnconfirmed: true,
+    ).map((a) => a.toLowerCase()).toSet();
+    if (startAliases.isNotEmpty) {
+      final terminalAliases = AgentMemoryService.extractAliasesFromDirective(
+        terminalDirective,
+        includeUnconfirmed: true,
+      ).map((a) => a.toLowerCase());
+      if (terminalAliases.any(startAliases.contains)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /// 基于全量有效候选集执行确定性画像收敛重算。
 ///
 /// 关键不变量：
 /// 1. 收敛仅修改 `status` 与 `superseded_by` 派生状态，绝不改写任何条目的 `updated_at`；
 /// 2. 凡 `status == 'active'`，或 `status == 'superseded'` 且沿 `superseded_by` 链仍指向当前
-///    `profileTable` 中存在条目（含互指环）的条目均纳入重算；若后继已被 `forgetProfile` 墓碑删除
-///    或已超期物理清理（不在 `profileTable` 中），绝不纳入重算、绝不复活；
+///    `profileTable` 中处于同一有效竞争槽位的条目（含互指环）均纳入重算；若后继已被 `forgetProfile`
+///    墓碑删除、已超期物理清理、或原位编辑后已脱离原去重槽位，绝不纳入重算、绝不复活；
 /// 3. 显式 `replaces_id` 链、同 `replaces_id` 分叉、单例类别与身份别名/重复指令统一确定性选出唯一赢家，
 ///    若最终赢家此前处于 `superseded` 则原位恢复为 `active`。
 Future<
@@ -666,6 +847,108 @@ Future<
       if (row['id'] is String && (row['id'] as String).isNotEmpty)
         row['id'] as String: Map<String, Object?>.of(row),
   };
+
+  var preRetiredCount = 0;
+  var preMutated = false;
+
+  // 若某条后继 Y（声明了 replaces_id = X）自身的后继链终点已被墓碑删除（如 X -> Y -> Z 且 Z 被 forgetProfile），
+  // 即便发送端早已压缩裁剪掉旧 X、而接收端本地 X 仍标为 active，只要 Z 的墓碑不早于 X 且 X 未胜过 Y，
+  // 必须先将 X 退休指向 Y，防止多跳替换后删除最新条目时旧祖先在另一端残留 active。
+  if (includeSupersededCandidates) {
+    final profileTombRows = await txn.query(
+      AgentMemoryService.tombstonesTable,
+      columns: const <String>['entity_id', 'deleted_at'],
+      where: 'entity_type = ?',
+      whereArgs: const <Object?>['profile'],
+    );
+    final profileTombstones = <String, DateTime>{};
+    for (final r in profileTombRows) {
+      final id = r['entity_id'] as String?;
+      final delUtc = _tryParseMemoryUtc(r['deleted_at']);
+      if (id != null && id.isNotEmpty && delUtc != null) {
+        profileTombstones[id] = delUtc;
+      }
+    }
+
+    if (profileTombstones.isNotEmpty) {
+      DateTime? resolveChainTombstoneUtc(Map<String, Object?> row) {
+        final status = (row['status'] as String?)?.trim();
+        var currId = (row['superseded_by'] as String?)?.trim() ?? '';
+        if (status != AgentMemoryStatus.superseded.storageValue ||
+            currId.isEmpty) {
+          return null;
+        }
+        final startId = (row['id'] as String?)?.trim() ?? '';
+        final visited = <String>{if (startId.isNotEmpty) startId};
+        while (currId.isNotEmpty && visited.add(currId)) {
+          final nextRow = allRowsById[currId];
+          final tombUtc = profileTombstones[currId];
+          if (tombUtc != null) {
+            final aliveAfterTomb = nextRow != null &&
+                _parseMemoryRowVersionUtc(
+                  nextRow['updated_at'],
+                  nextRow['observed_at'],
+                ).isAfter(tombUtc);
+            if (!aliveAfterTomb) {
+              return tombUtc;
+            }
+          }
+          if (nextRow == null) {
+            return null;
+          }
+          final nextStatus = (nextRow['status'] as String?)?.trim();
+          if (nextStatus != AgentMemoryStatus.superseded.storageValue) {
+            return null;
+          }
+          currId = (nextRow['superseded_by'] as String?)?.trim() ?? '';
+        }
+        return null;
+      }
+
+      var progressed = true;
+      while (progressed) {
+        progressed = false;
+        for (final yRow in allRowsById.values) {
+          final yId = yRow['id'] as String;
+          final xId = (yRow['replaces_id'] as String?)?.trim() ?? '';
+          if (xId.isEmpty || xId == yId) continue;
+          final xRow = allRowsById[xId];
+          if (xRow == null) continue;
+          final xStatus = (xRow['status'] as String?)?.trim() ??
+              AgentMemoryStatus.active.storageValue;
+          if (xStatus != AgentMemoryStatus.active.storageValue) continue;
+          final tombUtc = resolveChainTombstoneUtc(yRow);
+          if (tombUtc == null) continue;
+          final xTime = _parseMemoryRowVersionUtc(
+            xRow['updated_at'],
+            xRow['observed_at'],
+          );
+          if (tombUtc.isBefore(xTime)) continue;
+          if (_predecessorWinsReplacementEdge(
+            xRow,
+            yRow,
+            isBasisCovered: isBasisCovered,
+          )) {
+            continue;
+          }
+          await txn.update(
+            AgentMemoryService.profileTable,
+            <String, Object?>{
+              'status': AgentMemoryStatus.superseded.storageValue,
+              'superseded_by': yId,
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[xId],
+          );
+          xRow['status'] = AgentMemoryStatus.superseded.storageValue;
+          xRow['superseded_by'] = yId;
+          preRetiredCount++;
+          preMutated = true;
+          progressed = true;
+        }
+      }
+    }
+  }
 
   bool isEligibleCandidate(String startId) {
     if (!includeSupersededCandidates) {
@@ -711,15 +994,17 @@ Future<
     }
     var currId = startId;
     final visited = <String>{};
+    final chain = <Map<String, Object?>>[];
     for (;;) {
       final row = allRowsById[currId];
       if (row == null) {
         return false;
       }
+      chain.add(row);
       final status = (row['status'] as String?)?.trim() ??
           AgentMemoryStatus.active.storageValue;
       if (status == AgentMemoryStatus.active.storageValue) {
-        return true;
+        return _doSupersededChainAndActiveTerminalStillCompete(chain);
       }
       if (status != AgentMemoryStatus.superseded.storageValue) {
         return false;
@@ -742,8 +1027,8 @@ Future<
   ];
   if (eligibleRows.isEmpty) {
     return (
-      supersededCount: 0,
-      didMutate: false,
+      supersededCount: preRetiredCount,
+      didMutate: preMutated,
       bothUncoveredDreamingConflict: false,
     );
   }
@@ -816,8 +1101,8 @@ Future<
 
   // 0. 显式 replaces_id 关系收敛：
   //    若 Y 声明 replaces_id == X.id 且 X、Y 均在候选集：
-  //    当 X 在 Y 创建之后又被原位编辑（X 版本时间严格晚于 Y），或 X 为非 dreaming* 显式/人工画像而 Y 为后台 Dreaming 时，
-  //    X 胜出并将 Y 淘汰指向 X；否则 Y 取代 X。
+  //    当 X 为非 dreaming* 而 Y 为后台 Dreaming、或同为 Dreaming 且 X 看全依据而 Y 漏看离线笔记、
+  //    或 X 在 Y 创建后又发生原位编辑（X 版本时间严格晚于 Y）时，X 胜出并将 Y 淘汰指向 X；否则 Y 取代 X。
   for (final yRow in sorted) {
     final yId = yRow['id'] as String;
     final xId = (yRow['replaces_id'] as String?)?.trim() ?? '';
@@ -825,18 +1110,11 @@ Future<
     final xRow = eligibleById[xId];
     if (xRow == null) continue;
 
-    final xTime = _parseMemoryRowVersionUtc(
-      xRow['updated_at'],
-      xRow['observed_at'],
-    );
-    final yTime = _parseMemoryRowVersionUtc(
-      yRow['updated_at'],
-      yRow['observed_at'],
-    );
-    final xIsExplicitVsDreaming = !_isDreamingMemorySource(xRow['source']) &&
-        _isDreamingMemorySource(yRow['source']);
-
-    if (xTime.isAfter(yTime) || xIsExplicitVsDreaming) {
+    if (_predecessorWinsReplacementEdge(
+      xRow,
+      yRow,
+      isBasisCovered: isBasisCovered,
+    )) {
       recordSupersede(yId, xRow);
     } else {
       recordSupersede(xId, yRow);
@@ -859,17 +1137,12 @@ Future<
   }
 
   // 2. 单活跃类别收敛（taste / voice / style）。
-  final singletonKinds = <String>{
-    AgentMemoryKind.taste.storageValue,
-    AgentMemoryKind.voice.storageValue,
-    AgentMemoryKind.style.storageValue,
-  };
   final seenSingletonKind = <String, Map<String, Object?>>{};
   for (final row in sorted) {
     final id = row['id'] as String;
     if (supersededToWinner.containsKey(id)) continue;
     final rawKind = (row['kind'] as String? ?? '').trim();
-    if (!singletonKinds.contains(rawKind)) continue;
+    if (!_singletonMemoryKinds.contains(rawKind)) continue;
     final existingWinner = seenSingletonKind[rawKind];
     if (existingWinner != null) {
       recordSupersede(id, existingWinner);
@@ -964,8 +1237,8 @@ Future<
     }
   }
 
-  var newlySupersededCount = 0;
-  var didMutate = false;
+  var newlySupersededCount = preRetiredCount;
+  var didMutate = preMutated;
   var bothUncoveredDreamingConflict = false;
 
   for (final row in sorted) {
@@ -1246,10 +1519,11 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             row['key'] as String: row['value'] as String,
       };
 
-      final clearedAtUtc = _tryParseMemoryUtc(
-        metaMap[AgentMemoryService.metaClearedAtKey],
-      );
-      final clearedAt = clearedAtUtc?.toIso8601String();
+      final clearedRaw = metaMap[AgentMemoryService.metaClearedAtKey];
+      final clearedAtUtc = _tryParseMemoryUtc(clearedRaw);
+      final clearedAt = clearedAtUtc != null
+          ? _normalizeMemoryTimestampToUtcOrKeep(clearedRaw)
+          : null;
 
       final settingsLastRunUtc = _settingsService.lastDreamingAt?.toUtc();
       final isDreamingAfterClear = settingsLastRunUtc != null &&
@@ -1270,7 +1544,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                     ? rawWatermark.trim()
                     : null);
         dreamingPayload = <String, Object?>{
-          'last_run_at': settingsLastRunUtc.toIso8601String(),
+          'last_run_at': LWWUtils.formatFixedUtcIso(settingsLastRunUtc),
           'basis_watermark': normalizedWatermark,
           'basis_note_count': matchesMeta
               ? _parseMemoryOptionalInt(
@@ -1615,7 +1889,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               AgentMemoryService.metaTable,
               <String, Object?>{
                 'key': AgentMemoryService.metaClearedAtKey,
-                'value': remoteCleared.toIso8601String(),
+                'value': LWWUtils.formatFixedUtcIso(remoteCleared),
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
@@ -1730,7 +2004,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               <String, Object?>{
                 'entity_type': type,
                 'entity_id': id,
-                'deleted_at': effective.toIso8601String(),
+                'deleted_at': LWWUtils.formatFixedUtcIso(effective),
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
@@ -1866,19 +2140,89 @@ extension AgentMemorySyncExtension on AgentMemoryService {
             }
           }
 
+          DateTime? findTombstonedProfileChainTime(
+            Map<String, Object?> startRow,
+          ) {
+            final startStatus = (startRow['status'] as String?)?.trim();
+            var currId = (startRow['superseded_by'] as String?)?.trim() ?? '';
+            if (startStatus != AgentMemoryStatus.superseded.storageValue ||
+                currId.isEmpty) {
+              return null;
+            }
+            final startId = (startRow['id'] as String?)?.trim() ?? '';
+            final visited = <String>{if (startId.isNotEmpty) startId};
+            while (currId.isNotEmpty && visited.add(currId)) {
+              final tombUtc = localTombstones['profile:$currId'];
+              final rNext = remoteProfilesById[currId];
+              final lNext = localProfilesById[currId];
+              if (tombUtc != null) {
+                final rAliveAfterTomb = rNext != null &&
+                    _parseMemoryRowVersionUtc(
+                      rNext['updated_at'],
+                      rNext['observed_at'],
+                    ).isAfter(tombUtc);
+                final lAliveAfterTomb = lNext != null &&
+                    _parseMemoryRowVersionUtc(
+                      lNext['updated_at'],
+                      lNext['observed_at'],
+                    ).isAfter(tombUtc);
+                if (!rAliveAfterTomb && !lAliveAfterTomb) {
+                  return tombUtc;
+                }
+              }
+              Map<String, Object?>? nextRow;
+              if (rNext != null && lNext != null) {
+                final rTime = _parseMemoryRowVersionUtc(
+                  rNext['updated_at'],
+                  rNext['observed_at'],
+                );
+                final lTime = _parseMemoryRowVersionUtc(
+                  lNext['updated_at'],
+                  lNext['observed_at'],
+                );
+                if (rTime.isAfter(lTime)) {
+                  nextRow = rNext;
+                } else if (lTime.isAfter(rTime)) {
+                  nextRow = lNext;
+                } else {
+                  final rSup = (rNext['status'] as String?)?.trim() ==
+                          AgentMemoryStatus.superseded.storageValue &&
+                      ((rNext['superseded_by'] as String?)?.trim().isNotEmpty ??
+                          false);
+                  nextRow = rSup ? rNext : lNext;
+                }
+              } else {
+                nextRow = rNext ?? lNext;
+              }
+              if (nextRow == null) {
+                return null;
+              }
+              final nextStatus = (nextRow['status'] as String?)?.trim();
+              if (nextStatus != AgentMemoryStatus.superseded.storageValue) {
+                return null;
+              }
+              currId = (nextRow['superseded_by'] as String?)?.trim() ?? '';
+            }
+            return null;
+          }
+
           bool hasTombstonedProfileSuccessor(
             Map<String, Object?> row,
             DateTime rowVersionUtc,
           ) {
+            final tombUtc = findTombstonedProfileChainTime(row);
+            return tombUtc != null && !tombUtc.isBefore(rowVersionUtc);
+          }
+
+          bool hasKnownLiveProfileSuccessor(Map<String, Object?> row) {
             final status = (row['status'] as String?)?.trim();
-            final supBy = (row['superseded_by'] as String?)?.trim();
+            final supBy = (row['superseded_by'] as String?)?.trim() ?? '';
             if (status != AgentMemoryStatus.superseded.storageValue ||
-                supBy == null ||
                 supBy.isEmpty) {
               return false;
             }
-            final tombUtc = localTombstones['profile:$supBy'];
-            return tombUtc != null && !tombUtc.isBefore(rowVersionUtc);
+            return remoteProfilesById.containsKey(supBy) ||
+                localProfilesById.containsKey(supBy);
           }
 
           // 4. 合并 profile 行
@@ -1937,6 +2281,8 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                     hasTombstonedProfileSuccessor(remoteRow, remoteUtc);
                 final localTombSucc =
                     hasTombstonedProfileSuccessor(localRow, localUtc);
+                final remoteLiveSucc = hasKnownLiveProfileSuccessor(remoteRow);
+                final localLiveSucc = hasKnownLiveProfileSuccessor(localRow);
                 final contentTieCmp = _compareMemoryCanonicalFields(
                   remoteRow,
                   localRow,
@@ -1947,10 +2293,33 @@ extension AgentMemorySyncExtension on AgentMemoryService {
                   contentTieCmp > 0 ? remoteRow : localRow,
                 );
                 if (remoteTombSucc || localTombSucc) {
-                  final tombSource = remoteTombSucc ? remoteRow : localRow;
                   mergedRow['status'] =
                       AgentMemoryStatus.superseded.storageValue;
-                  mergedRow['superseded_by'] = tombSource['superseded_by'];
+                  if (remoteTombSucc && localTombSucc) {
+                    final rSup =
+                        (remoteRow['superseded_by'] as String?)?.trim() ?? '';
+                    final lSup =
+                        (localRow['superseded_by'] as String?)?.trim() ?? '';
+                    mergedRow['superseded_by'] =
+                        rSup.compareTo(lSup) >= 0 ? rSup : lSup;
+                  } else {
+                    final tombSource = remoteTombSucc ? remoteRow : localRow;
+                    mergedRow['superseded_by'] = tombSource['superseded_by'];
+                  }
+                } else if (remoteLiveSucc || localLiveSucc) {
+                  mergedRow['status'] =
+                      AgentMemoryStatus.superseded.storageValue;
+                  if (remoteLiveSucc && localLiveSucc) {
+                    final rSup =
+                        (remoteRow['superseded_by'] as String?)?.trim() ?? '';
+                    final lSup =
+                        (localRow['superseded_by'] as String?)?.trim() ?? '';
+                    mergedRow['superseded_by'] =
+                        rSup.compareTo(lSup) >= 0 ? rSup : lSup;
+                  } else {
+                    final succSource = remoteLiveSucc ? remoteRow : localRow;
+                    mergedRow['superseded_by'] = succSource['superseded_by'];
+                  }
                 } else {
                   mergedRow['status'] = localRow['status'];
                   mergedRow['superseded_by'] = localRow['superseded_by'];
@@ -2418,7 +2787,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               AgentMemoryService.metaTable,
               <String, Object?>{
                 'key': AgentMemoryService.metaClearedAtKey,
-                'value': clearedAtUtc.toIso8601String(),
+                'value': LWWUtils.formatFixedUtcIso(clearedAtUtc),
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
@@ -2429,7 +2798,7 @@ extension AgentMemorySyncExtension on AgentMemoryService {
               AgentMemoryService.metaTable,
               <String, Object?>{
                 'key': AgentMemoryService.metaDreamingLastRunAtKey,
-                'value': dreamingLastRunUtc.toIso8601String(),
+                'value': LWWUtils.formatFixedUtcIso(dreamingLastRunUtc),
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );

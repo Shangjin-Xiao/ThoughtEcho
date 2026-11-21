@@ -77,12 +77,16 @@ DateTime? _tryParseChatUtc(Object? raw) {
   return parsed?.toUtc();
 }
 
-String _normalizeChatTimestampToUtcOrKeep(Object? raw) {
-  if (raw is! String) return '';
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty) return '';
-  final parsed = DateTime.tryParse(trimmed);
-  return parsed != null ? parsed.toUtc().toIso8601String() : trimmed;
+String _normalizeChatTimestampToUtcOrKeep(
+  Object? raw, {
+  Object? sameEventCounterpart,
+  Duration? knownSameRowOffset,
+}) {
+  return LWWUtils.normalizeTimestampPreservingOffsetless(
+    raw,
+    sameEventCounterpart: sameEventCounterpart,
+    knownSameRowOffset: knownSameRowOffset,
+  );
 }
 
 bool _isValidPositiveFormatVersion(Object? rawFormat) {
@@ -174,7 +178,6 @@ Map<String, Object?>? _sanitizeSessionRow(Object? item) {
   final createdAtRaw = item['created_at'] ?? item['createdAt'];
   final createdAtUtc = _tryParseChatUtc(createdAtRaw);
   if (createdAtUtc == null) return null;
-  final createdAtStr = createdAtUtc.toIso8601String();
 
   final lastActiveRaw = item['last_active_at'] ?? item['lastActiveAt'];
   final lastActiveUtc = _tryParseChatUtc(lastActiveRaw);
@@ -183,8 +186,6 @@ Map<String, Object?>? _sanitizeSessionRow(Object? item) {
       lastActiveUtc == null) {
     return null;
   }
-  final lastActiveStr =
-      lastActiveUtc != null ? lastActiveUtc.toIso8601String() : createdAtStr;
 
   final updatedRaw = item['updated_at'] ?? item['updatedAt'];
   final updatedUtc = _tryParseChatUtc(updatedRaw);
@@ -193,8 +194,27 @@ Map<String, Object?>? _sanitizeSessionRow(Object? item) {
       updatedUtc == null) {
     return null;
   }
-  final updatedStr =
-      updatedUtc != null ? updatedUtc.toIso8601String() : lastActiveStr;
+
+  final rowOffset = LWWUtils.inferOffsetFromSameEventPair(
+        lastActiveRaw,
+        updatedRaw,
+      ) ??
+      LWWUtils.inferOffsetFromSameEventPair(createdAtRaw, updatedRaw);
+  final createdAtStr = _normalizeChatTimestampToUtcOrKeep(
+    createdAtRaw,
+    sameEventCounterpart: updatedRaw,
+    knownSameRowOffset: createdAtRaw == lastActiveRaw ? rowOffset : null,
+  );
+  final lastActiveStr = lastActiveUtc != null
+      ? _normalizeChatTimestampToUtcOrKeep(
+          lastActiveRaw,
+          sameEventCounterpart: updatedRaw,
+          knownSameRowOffset: rowOffset,
+        )
+      : createdAtStr;
+  final updatedStr = updatedUtc != null
+      ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
+      : lastActiveStr;
 
   final sessionTypeObj = item['session_type'] ?? item['sessionType'];
   String sessionType = 'note';
@@ -247,7 +267,6 @@ Map<String, Object?>? _sanitizeMessageRow(Object? item) {
   final createdAtRaw = item['created_at'] ?? item['timestamp'];
   final createdAtUtc = _tryParseChatUtc(createdAtRaw);
   if (createdAtUtc == null) return null;
-  final createdAtStr = createdAtUtc.toIso8601String();
 
   final updatedRaw = item['updated_at'] ?? item['updatedAt'];
   final updatedUtc = _tryParseChatUtc(updatedRaw);
@@ -256,8 +275,14 @@ Map<String, Object?>? _sanitizeMessageRow(Object? item) {
       updatedUtc == null) {
     return null;
   }
-  final updatedStr =
-      updatedUtc != null ? updatedUtc.toIso8601String() : createdAtStr;
+
+  final createdAtStr = _normalizeChatTimestampToUtcOrKeep(
+    createdAtRaw,
+    sameEventCounterpart: updatedRaw,
+  );
+  final updatedStr = updatedUtc != null
+      ? _normalizeChatTimestampToUtcOrKeep(updatedRaw)
+      : createdAtStr;
 
   final roleObj = item['role'];
   if (roleObj != null && (roleObj is! String || roleObj.trim().isEmpty)) {
@@ -330,7 +355,8 @@ _ParsedChatTombstone? _sanitizeChatTombstone(Object? item) {
   final type = typeObj.trim();
   final id = idObj.trim();
   final deletedStr = deletedRaw.trim();
-  if ((type != 'session' && type != 'message') || id.isEmpty) {
+  if ((type != 'session' && type != 'message' && type != 'session_cutoff') ||
+      id.isEmpty) {
     return null;
   }
   final deletedUtc = _tryParseChatUtc(deletedStr);
@@ -338,7 +364,7 @@ _ParsedChatTombstone? _sanitizeChatTombstone(Object? item) {
   return _ParsedChatTombstone(
     entityType: type,
     entityId: id,
-    deletedAtRaw: deletedUtc.toIso8601String(),
+    deletedAtRaw: _normalizeChatTimestampToUtcOrKeep(deletedStr),
     deletedAtUtc: deletedUtc,
   );
 }
@@ -347,11 +373,26 @@ Map<String, Object?> _exportWhitelistedSession(Map<String, Object?> raw) {
   final row = <String, Object?>{
     for (final col in _chatSessionColumnWhitelist) col: raw[col],
   };
-  final created = _normalizeChatTimestampToUtcOrKeep(row['created_at']);
+  final rawUpdated = row['updated_at'];
+  final rowOffset = LWWUtils.inferOffsetFromSameEventPair(
+        row['last_active_at'],
+        rawUpdated,
+      ) ??
+      LWWUtils.inferOffsetFromSameEventPair(row['created_at'], rawUpdated);
+  final created = _normalizeChatTimestampToUtcOrKeep(
+    row['created_at'],
+    sameEventCounterpart: rawUpdated,
+    knownSameRowOffset:
+        row['created_at'] == row['last_active_at'] ? rowOffset : null,
+  );
   row['created_at'] = created;
-  final lastActive = _normalizeChatTimestampToUtcOrKeep(row['last_active_at']);
+  final lastActive = _normalizeChatTimestampToUtcOrKeep(
+    row['last_active_at'],
+    sameEventCounterpart: rawUpdated,
+    knownSameRowOffset: rowOffset,
+  );
   row['last_active_at'] = lastActive.isNotEmpty ? lastActive : created;
-  final updated = _normalizeChatTimestampToUtcOrKeep(row['updated_at']);
+  final updated = _normalizeChatTimestampToUtcOrKeep(rawUpdated);
   row['updated_at'] = updated.isNotEmpty
       ? updated
       : (row['last_active_at'] as String? ?? created);
@@ -362,9 +403,13 @@ Map<String, Object?> _exportWhitelistedMessage(Map<String, Object?> raw) {
   final row = <String, Object?>{
     for (final col in _chatMessageColumnWhitelist) col: raw[col],
   };
-  final created = _normalizeChatTimestampToUtcOrKeep(row['created_at']);
+  final rawUpdated = row['updated_at'];
+  final created = _normalizeChatTimestampToUtcOrKeep(
+    row['created_at'],
+    sameEventCounterpart: rawUpdated,
+  );
   row['created_at'] = created;
-  final updated = _normalizeChatTimestampToUtcOrKeep(row['updated_at']);
+  final updated = _normalizeChatTimestampToUtcOrKeep(rawUpdated);
   row['updated_at'] = updated.isNotEmpty ? updated : created;
   return row;
 }
@@ -583,6 +628,7 @@ extension ChatSessionSyncExtension on ChatSessionService {
     }
 
     final remoteSessionTombstones = <String, _ParsedChatTombstone>{};
+    final remoteSessionCutoffs = <String, _ParsedChatTombstone>{};
     final remoteMessageTombstones = <String, _ParsedChatTombstone>{};
     if (rawTombstones is List) {
       for (final item in rawTombstones) {
@@ -595,9 +641,14 @@ extension ChatSessionSyncExtension on ChatSessionService {
           }
           continue;
         }
-        final target = parsed.entityType == 'session'
-            ? remoteSessionTombstones
-            : remoteMessageTombstones;
+        final Map<String, _ParsedChatTombstone> target;
+        if (parsed.entityType == 'session') {
+          target = remoteSessionTombstones;
+        } else if (parsed.entityType == 'session_cutoff') {
+          target = remoteSessionCutoffs;
+        } else {
+          target = remoteMessageTombstones;
+        }
         final existing = target[parsed.entityId];
         if (existing == null ||
             parsed.deletedAtUtc.isAfter(existing.deletedAtUtc)) {
@@ -620,46 +671,71 @@ extension ChatSessionSyncExtension on ChatSessionService {
 
       final localTombstoneRows = await txn.query('chat_tombstones');
       final localSessionTombstones = <String, _ParsedChatTombstone>{};
+      final localSessionCutoffs = <String, _ParsedChatTombstone>{};
       final localMessageTombstones = <String, _ParsedChatTombstone>{};
       for (final row in localTombstoneRows) {
         final parsed = _sanitizeChatTombstone(row);
         if (parsed == null) continue;
         if (parsed.entityType == 'session') {
           localSessionTombstones[parsed.entityId] = parsed;
+        } else if (parsed.entityType == 'session_cutoff') {
+          localSessionCutoffs[parsed.entityId] = parsed;
         } else {
           localMessageTombstones[parsed.entityId] = parsed;
         }
       }
 
-      _ParsedChatTombstone? effectiveMessageTombstoneFor(String msgId) {
-        final localTomb = localMessageTombstones[msgId];
-        final remoteTomb = remoteMessageTombstones[msgId];
-        if (localTomb != null && remoteTomb != null) {
-          return remoteTomb.deletedAtUtc.isAfter(localTomb.deletedAtUtc)
-              ? remoteTomb
-              : localTomb;
+      _ParsedChatTombstone? pickLatestTomb(
+        _ParsedChatTombstone? a,
+        _ParsedChatTombstone? b,
+      ) {
+        if (a != null && b != null) {
+          return b.deletedAtUtc.isAfter(a.deletedAtUtc) ? b : a;
         }
-        return remoteTomb ?? localTomb;
+        return b ?? a;
       }
 
-      // 1b. 对同时存在会话元数据行与会话墓碑的候选会话，预先计算其名下仍能通过消息墓碑判定的
-      //     最新存活消息 updated_at：由于 addMessage 不推进 chat_sessions.updated_at，
-      //     若离线设备在会话墓碑之后新增/修订了存活消息，必须保护该会话不被会话墓碑误杀。
+      _ParsedChatTombstone? effectiveSessionTombstoneFor(String sId) =>
+          pickLatestTomb(
+            localSessionTombstones[sId],
+            remoteSessionTombstones[sId],
+          );
+
+      _ParsedChatTombstone? effectiveSessionCutoffFor(String sId) =>
+          pickLatestTomb(
+            pickLatestTomb(localSessionCutoffs[sId], remoteSessionCutoffs[sId]),
+            effectiveSessionTombstoneFor(sId),
+          );
+
+      _ParsedChatTombstone? effectiveMessageTombstoneFor(String msgId) =>
+          pickLatestTomb(
+            localMessageTombstones[msgId],
+            remoteMessageTombstones[msgId],
+          );
+
+      // 1b. 对同时存在会话元数据行与会话墓碑/历史删除截止线的候选会话，预先计算其名下仍能通过
+      //     消息墓碑与会话截止线双重判定的最新存活消息 updated_at，并缓存本机该会话内的既有消息，
+      //     以便在会话因更新回复存活时，同步清除本机与远端所有 <= 会话删除时间的漏网旧消息。
       final allSessionIds = <String>{
         ...localSessions.keys,
         ...remoteSessionsById.keys,
         ...remoteSessionTombstones.keys,
+        ...remoteSessionCutoffs.keys,
       };
       final tombstonedCandidateSessionIds = <String>[
         for (final sId in allSessionIds)
           if ((localSessions.containsKey(sId) ||
                   remoteSessionsById.containsKey(sId)) &&
               (localSessionTombstones.containsKey(sId) ||
-                  remoteSessionTombstones.containsKey(sId)))
+                  remoteSessionTombstones.containsKey(sId) ||
+                  localSessionCutoffs.containsKey(sId) ||
+                  remoteSessionCutoffs.containsKey(sId)))
             sId,
       ];
 
       final maxSurvivingMsgUpdatedBySession = <String, DateTime>{};
+      final localMsgsInTombstonedSessions =
+          <String, ({String sessionId, DateTime updatedUtc})>{};
       if (tombstonedCandidateSessionIds.isNotEmpty) {
         final candidateSessionSet = tombstonedCandidateSessionIds.toSet();
         for (var i = 0;
@@ -692,9 +768,16 @@ extension ChatSessionSyncExtension on ChatSessionService {
                 ? updatedRaw
                 : (r['created_at']?.toString() ?? '');
             final msgUpdated = LWWUtils.parseTimestamp(effectiveStr);
+            localMsgsInTombstonedSessions[mId] = (
+              sessionId: sId,
+              updatedUtc: msgUpdated,
+            );
             final effMsgTomb = effectiveMessageTombstoneFor(mId);
-            if (effMsgTomb == null ||
-                msgUpdated.isAfter(effMsgTomb.deletedAtUtc)) {
+            final effSessCutoff = effectiveSessionCutoffFor(sId);
+            if ((effMsgTomb == null ||
+                    msgUpdated.isAfter(effMsgTomb.deletedAtUtc)) &&
+                (effSessCutoff == null ||
+                    msgUpdated.isAfter(effSessCutoff.deletedAtUtc))) {
               final prev = maxSurvivingMsgUpdatedBySession[sId];
               if (prev == null || msgUpdated.isAfter(prev)) {
                 maxSurvivingMsgUpdatedBySession[sId] = msgUpdated;
@@ -713,8 +796,11 @@ extension ChatSessionSyncExtension on ChatSessionService {
           final msgUpdated =
               LWWUtils.parseTimestamp(remoteMsg['updated_at'] as String?);
           final effMsgTomb = effectiveMessageTombstoneFor(mId);
-          if (effMsgTomb == null ||
-              msgUpdated.isAfter(effMsgTomb.deletedAtUtc)) {
+          final effSessCutoff = effectiveSessionCutoffFor(sId);
+          if ((effMsgTomb == null ||
+                  msgUpdated.isAfter(effMsgTomb.deletedAtUtc)) &&
+              (effSessCutoff == null ||
+                  msgUpdated.isAfter(effSessCutoff.deletedAtUtc))) {
             final prev = maxSurvivingMsgUpdatedBySession[sId];
             if (prev == null || msgUpdated.isAfter(prev)) {
               maxSurvivingMsgUpdatedBySession[sId] = msgUpdated;
@@ -725,22 +811,15 @@ extension ChatSessionSyncExtension on ChatSessionService {
 
       // 2. 先合并会话墓碑与会话数据
       final survivingSessionIds = <String>{...localSessions.keys};
+      final effectiveSessionCutoffs = <String, _ParsedChatTombstone>{};
 
       for (final sessionId in allSessionIds) {
         final localRow = localSessions[sessionId];
         final remoteRow = remoteSessionsById[sessionId];
         final localTomb = localSessionTombstones[sessionId];
-        final remoteTomb = remoteSessionTombstones[sessionId];
-
-        _ParsedChatTombstone? effectiveTomb;
-        if (localTomb != null && remoteTomb != null) {
-          effectiveTomb =
-              remoteTomb.deletedAtUtc.isAfter(localTomb.deletedAtUtc)
-                  ? remoteTomb
-                  : localTomb;
-        } else {
-          effectiveTomb = remoteTomb ?? localTomb;
-        }
+        final localCutoff = localSessionCutoffs[sessionId];
+        final effectiveTomb = effectiveSessionTombstoneFor(sessionId);
+        final effectiveCutoff = effectiveSessionCutoffFor(sessionId);
 
         final localUpdated = localRow != null
             ? LWWUtils.parseTimestamp(localRow['updated_at'] as String?)
@@ -769,7 +848,7 @@ extension ChatSessionSyncExtension on ChatSessionService {
           maxLiveActivityUpdated = maxSurvivingMsgUpdated;
         }
 
-        // 墓碑胜出条件：墓碑 deleted_at >= 最新活跃版本时间（或无数据行）
+        // 墓碑胜出条件：显式会话删除墓碑 deleted_at >= 最新活跃版本时间（或无数据行）
         if (effectiveTomb != null &&
             (maxLiveActivityUpdated == null ||
                 !maxLiveActivityUpdated.isAfter(effectiveTomb.deletedAtUtc))) {
@@ -803,10 +882,40 @@ extension ChatSessionSyncExtension on ChatSessionService {
             );
             tombstoneMutated = true;
           }
+          if (localCutoff != null &&
+              !localCutoff.deletedAtUtc.isAfter(effectiveTomb.deletedAtUtc)) {
+            await txn.delete(
+              'chat_tombstones',
+              where: 'entity_type = ? AND entity_id = ?',
+              whereArgs: ['session_cutoff', sessionId],
+            );
+            tombstoneMutated = true;
+          }
           continue;
         }
 
-        // 数据行胜出：若存在本地旧墓碑，予以清理（允许复活或保留本地新行）
+        if (localRow == null && remoteRow == null) {
+          if (effectiveCutoff != null &&
+              (localCutoff == null ||
+                  effectiveCutoff.deletedAtUtc
+                      .isAfter(localCutoff.deletedAtUtc))) {
+            await txn.insert(
+              'chat_tombstones',
+              {
+                'entity_type': 'session_cutoff',
+                'entity_id': sessionId,
+                'deleted_at': effectiveCutoff.deletedAtRaw,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            tombstoneMutated = true;
+          }
+          continue;
+        }
+
+        // 数据行（或更新的后续消息）胜出：移除整会话删除墓碑以免后续误杀会话，
+        // 同时将会话删除时间持久化为 `session_cutoff` 历史消息截止线，确保本端、对端
+        // 以及后续同步的三方设备均不会把 <= deleted_at 的漏网旧消息复活。
         if (localTomb != null) {
           await txn.delete(
             'chat_tombstones',
@@ -814,6 +923,22 @@ extension ChatSessionSyncExtension on ChatSessionService {
             whereArgs: ['session', sessionId],
           );
           tombstoneMutated = true;
+        }
+        if (effectiveCutoff != null) {
+          effectiveSessionCutoffs[sessionId] = effectiveCutoff;
+          if (localCutoff == null ||
+              effectiveCutoff.deletedAtUtc.isAfter(localCutoff.deletedAtUtc)) {
+            await txn.insert(
+              'chat_tombstones',
+              {
+                'entity_type': 'session_cutoff',
+                'entity_id': sessionId,
+                'deleted_at': effectiveCutoff.deletedAtRaw,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            tombstoneMutated = true;
+          }
         }
 
         if (localRow == null && remoteRow != null) {
@@ -891,19 +1016,30 @@ extension ChatSessionSyncExtension on ChatSessionService {
         }
       }
 
-      // 3. 合并消息墓碑与消息数据（仅查询相关消息元数据，避免将大对话正文全量载入内存）
+      // 3. 合并消息墓碑与消息数据（包含复活会话内的本机既有消息，确保清理删除截止线前的旧消息）
       final candidateMsgIds = <String>{
         ...remoteMessagesById.keys,
         ...remoteMessageTombstones.keys,
+        ...localMsgsInTombstonedSessions.keys,
       }.toList(growable: false);
 
       final localMsgUpdatedById = <String, DateTime>{};
       final localMsgSessionById = <String, String>{};
-      for (var i = 0; i < candidateMsgIds.length; i += chunkSize) {
-        final end = (i + chunkSize < candidateMsgIds.length)
+      for (final entry in localMsgsInTombstonedSessions.entries) {
+        if (survivingSessionIds.contains(entry.value.sessionId)) {
+          localMsgUpdatedById[entry.key] = entry.value.updatedUtc;
+          localMsgSessionById[entry.key] = entry.value.sessionId;
+        }
+      }
+      final unqueriedMsgIds = <String>[
+        for (final id in candidateMsgIds)
+          if (!localMsgUpdatedById.containsKey(id)) id,
+      ];
+      for (var i = 0; i < unqueriedMsgIds.length; i += chunkSize) {
+        final end = (i + chunkSize < unqueriedMsgIds.length)
             ? i + chunkSize
-            : candidateMsgIds.length;
-        final chunk = candidateMsgIds.sublist(i, end);
+            : unqueriedMsgIds.length;
+        final chunk = unqueriedMsgIds.sublist(i, end);
         final placeholders = List.filled(chunk.length, '?').join(',');
         final rows = await txn.query(
           'chat_messages',
@@ -931,6 +1067,21 @@ extension ChatSessionSyncExtension on ChatSessionService {
         }
       }
 
+      bool isKilledByMsgOrSessionCutoff(
+        DateTime msgUpdated,
+        _ParsedChatTombstone? msgTomb,
+        _ParsedChatTombstone? sessionCutoff,
+      ) {
+        if (msgTomb != null && !msgUpdated.isAfter(msgTomb.deletedAtUtc)) {
+          return true;
+        }
+        if (sessionCutoff != null &&
+            !msgUpdated.isAfter(sessionCutoff.deletedAtUtc)) {
+          return true;
+        }
+        return false;
+      }
+
       // 仅对存活且 updated_at 完全相等的同 ID 消息分小批流式拉取完整行做确定性决胜，
       // 每批比较后立即释放本地消息正文，仅保留远端决胜赢家的 ID 集合，防止重复同步时内存累积。
       final exactTieMsgIds = <String>[];
@@ -944,7 +1095,21 @@ extension ChatSessionSyncExtension on ChatSessionService {
             LWWUtils.parseTimestamp(remoteRow['updated_at'] as String?);
         if (!remoteUpd.isAtSameMomentAs(localUpd)) continue;
         final effTomb = effectiveMessageTombstoneFor(msgId);
-        if (effTomb != null && !localUpd.isAfter(effTomb.deletedAtUtc)) {
+        final localSessionId = localMsgSessionById[msgId];
+        if (isKilledByMsgOrSessionCutoff(
+              localUpd,
+              effTomb,
+              localSessionId != null
+                  ? effectiveSessionCutoffs[localSessionId]
+                  : null,
+            ) ||
+            isKilledByMsgOrSessionCutoff(
+              remoteUpd,
+              effTomb,
+              remoteSessionId != null
+                  ? effectiveSessionCutoffs[remoteSessionId]
+                  : null,
+            )) {
           continue;
         }
         exactTieMsgIds.add(msgId);
@@ -983,6 +1148,7 @@ extension ChatSessionSyncExtension on ChatSessionService {
 
       for (final msgId in candidateMsgIds) {
         final localUpdated = localMsgUpdatedById[msgId];
+        final localSessionId = localMsgSessionById[msgId];
         final remoteRow = remoteMessagesById[msgId];
         final localTomb = localMessageTombstones[msgId];
 
@@ -995,6 +1161,12 @@ extension ChatSessionSyncExtension on ChatSessionService {
             remoteRow != null && validRemoteRow == null;
 
         final effectiveTomb = effectiveMessageTombstoneFor(msgId);
+        final localSessCutoff = localSessionId != null
+            ? effectiveSessionCutoffs[localSessionId]
+            : null;
+        final remoteSessCutoff = remoteSessionId != null
+            ? effectiveSessionCutoffs[remoteSessionId]
+            : null;
 
         final remoteUpdated = validRemoteRow != null
             ? LWWUtils.parseTimestamp(validRemoteRow['updated_at'] as String?)
@@ -1009,9 +1181,21 @@ extension ChatSessionSyncExtension on ChatSessionService {
           maxLiveUpdated = remoteUpdated ?? localUpdated;
         }
 
-        if (effectiveTomb != null &&
-            (maxLiveUpdated == null ||
-                !maxLiveUpdated.isAfter(effectiveTomb.deletedAtUtc))) {
+        final localAlive = localUpdated != null &&
+            !isKilledByMsgOrSessionCutoff(
+              localUpdated,
+              effectiveTomb,
+              localSessCutoff,
+            );
+        final remoteAlive = validRemoteRow != null &&
+            remoteUpdated != null &&
+            !isKilledByMsgOrSessionCutoff(
+              remoteUpdated,
+              effectiveTomb,
+              remoteSessCutoff,
+            );
+
+        if (!localAlive && !remoteAlive) {
           if (localUpdated != null) {
             await txn.delete(
               'chat_messages',
@@ -1019,7 +1203,6 @@ extension ChatSessionSyncExtension on ChatSessionService {
               whereArgs: [msgId],
             );
             messagesDeleted++;
-            final localSessionId = localMsgSessionById[msgId];
             if (localSessionId != null &&
                 survivingSessionIds.contains(localSessionId)) {
               sessionsWithDeletedMessages.add(localSessionId);
@@ -1028,23 +1211,34 @@ extension ChatSessionSyncExtension on ChatSessionService {
           if (remoteRow != null) {
             messagesSkipped++;
           }
-          if (localTomb == null ||
-              effectiveTomb.deletedAtUtc.isAfter(localTomb.deletedAtUtc)) {
-            await txn.insert(
+          if (effectiveTomb != null &&
+              (maxLiveUpdated == null ||
+                  !maxLiveUpdated.isAfter(effectiveTomb.deletedAtUtc))) {
+            if (localTomb == null ||
+                effectiveTomb.deletedAtUtc.isAfter(localTomb.deletedAtUtc)) {
+              await txn.insert(
+                'chat_tombstones',
+                {
+                  'entity_type': 'message',
+                  'entity_id': msgId,
+                  'deleted_at': effectiveTomb.deletedAtRaw,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+              tombstoneMutated = true;
+            }
+          } else if (localTomb != null) {
+            await txn.delete(
               'chat_tombstones',
-              {
-                'entity_type': 'message',
-                'entity_id': msgId,
-                'deleted_at': effectiveTomb.deletedAtRaw,
-              },
-              conflictAlgorithm: ConflictAlgorithm.replace,
+              where: 'entity_type = ? AND entity_id = ?',
+              whereArgs: ['message', msgId],
             );
             tombstoneMutated = true;
           }
           continue;
         }
 
-        if (localTomb != null && maxLiveUpdated != null) {
+        if (localTomb != null) {
           await txn.delete(
             'chat_tombstones',
             where: 'entity_type = ? AND entity_id = ?',
@@ -1053,23 +1247,31 @@ extension ChatSessionSyncExtension on ChatSessionService {
           tombstoneMutated = true;
         }
 
-        if (missingParentForRemote) {
+        if (missingParentForRemote && localAlive) {
           messagesSkipped++;
           continue;
         }
 
-        if (localUpdated == null && validRemoteRow != null) {
+        if (!localAlive && remoteAlive) {
           await txn.insert(
             'chat_messages',
             validRemoteRow,
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
-          messagesAdded++;
+          if (localUpdated == null) {
+            messagesAdded++;
+          } else {
+            messagesUpdated++;
+          }
           if (remoteSessionId != null) {
             sessionsWithAddedOrUpdatedMessages.add(remoteSessionId);
           }
-        } else if (localUpdated != null && validRemoteRow != null) {
-          final remoteWinsOnTie = remoteUpdated!.isAtSameMomentAs(
+        } else if (localAlive && !remoteAlive) {
+          if (remoteRow != null) {
+            messagesSkipped++;
+          }
+        } else if (localAlive && remoteAlive) {
+          final remoteWinsOnTie = remoteUpdated.isAtSameMomentAs(
                 localUpdated,
               ) &&
               remoteWinsOnTieMsgIds.contains(msgId);
@@ -1108,28 +1310,30 @@ extension ChatSessionSyncExtension on ChatSessionService {
             where: 'id IN ($placeholders)',
             whereArgs: chunk,
           );
-          final maxMsgRows = await txn.rawQuery(
-            'SELECT session_id, MAX(created_at) AS max_created, '
-            'MAX(updated_at) AS max_updated '
-            'FROM chat_messages '
-            'WHERE session_id IN ($placeholders) '
-            'GROUP BY session_id',
-            chunk,
+          final msgTimeRows = await txn.query(
+            'chat_messages',
+            columns: const <String>['session_id', 'created_at', 'updated_at'],
+            where: 'session_id IN ($placeholders)',
+            whereArgs: chunk,
           );
           final maxMsgUtcBySession = <String, DateTime>{};
-          for (final r in maxMsgRows) {
+          for (final r in msgTimeRows) {
             final sId = r['session_id']?.toString() ?? '';
             if (sId.isEmpty) continue;
-            final maxCreated = _tryParseChatUtc(r['max_created']);
-            final maxUpdated = _tryParseChatUtc(r['max_updated']);
-            DateTime? maxUtc;
-            if (maxCreated != null && maxUpdated != null) {
-              maxUtc = maxUpdated.isAfter(maxCreated) ? maxUpdated : maxCreated;
+            final createdUtc = _tryParseChatUtc(r['created_at']);
+            final updatedUtc = _tryParseChatUtc(r['updated_at']);
+            DateTime? rowMaxUtc;
+            if (createdUtc != null && updatedUtc != null) {
+              rowMaxUtc =
+                  updatedUtc.isAfter(createdUtc) ? updatedUtc : createdUtc;
             } else {
-              maxUtc = maxUpdated ?? maxCreated;
+              rowMaxUtc = updatedUtc ?? createdUtc;
             }
-            if (maxUtc != null) {
-              maxMsgUtcBySession[sId] = maxUtc;
+            if (rowMaxUtc != null) {
+              final prev = maxMsgUtcBySession[sId];
+              if (prev == null || rowMaxUtc.isAfter(prev)) {
+                maxMsgUtcBySession[sId] = rowMaxUtc;
+              }
             }
           }
 
@@ -1160,7 +1364,7 @@ extension ChatSessionSyncExtension on ChatSessionService {
                       : currentLastActiveUtc;
             }
 
-            final targetIso = targetUtc.toIso8601String();
+            final targetIso = LWWUtils.formatFixedUtcIso(targetUtc);
             if (targetIso != currentLastActiveStr) {
               batch.update(
                 'chat_sessions',
@@ -1176,6 +1380,7 @@ extension ChatSessionSyncExtension on ChatSessionService {
           }
         }
       }
+      await _refreshOffsetlessTimestampFlag(txn);
     });
 
     final stats = ChatMergeStats(
@@ -1338,6 +1543,7 @@ extension ChatSessionSyncExtension on ChatSessionService {
         }
         await batch.commit(noResult: true);
       }
+      await _refreshOffsetlessTimestampFlag(txn);
     });
 
     _notifySyncListeners();

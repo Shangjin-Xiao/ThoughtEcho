@@ -184,15 +184,28 @@ class AssistantDataSyncService {
     );
   }
 
+  /// 非破坏性前置结构预检：在执行任何覆盖恢复或解压媒体写入前校验 `chat` 与 `agent_memory` 段容器结构。
+  ///
+  /// 兼容旧备份包（缺省或为 `null` 时放行）；任一段容器结构非法时立即抛出 [FormatException]。
+  static void validateRestorePayload(Map<String, dynamic> payload) {
+    if (payload.containsKey('chat') && payload['chat'] != null) {
+      ChatSessionService.validateChatSectionPayload(payload['chat']);
+    }
+    if (payload.containsKey('agent_memory') &&
+        payload['agent_memory'] != null) {
+      AgentMemoryService.validateMemorySectionPayload(payload['agent_memory']);
+    }
+  }
+
   /// 覆盖恢复载荷中的 `chat` 与 `agent_memory` 段。
   ///
   /// 旧备份包不包含对应顶层键时，保持本地原有对话或记忆不动。
+  /// 恢复前先一次性校验两段结构，防止 `chat` 已覆盖而 `agent_memory` 抛错导致半恢复损毁。
   Future<void> restoreSections(Map<String, dynamic> payload) async {
+    validateRestorePayload(payload);
+
     if (payload.containsKey('chat') && payload['chat'] != null) {
-      final rawChat = payload['chat'];
-      if (rawChat is! Map) {
-        throw const FormatException('chat 备份段格式无效');
-      }
+      final rawChat = payload['chat'] as Map;
       final chatMap = rawChat is Map<String, dynamic>
           ? rawChat
           : rawChat.map((k, v) => MapEntry(k.toString(), v));
