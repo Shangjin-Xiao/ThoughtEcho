@@ -79,16 +79,52 @@ extension SmartPushNotification on SmartPushService {
         _settings.dailyQuotePushEnabled &&
         (parsed.notificationId == 100 ||
             (parsed.contentType == 'dailyQuote' && parsed.noteId == null));
-    int? tappedIosDailyQuoteEpochMs;
+    int? tappedIosDailyQuoteEpochMs = parsed.scheduledEpochMs;
     String? tappedIosDailyQuoteContent;
     if (shouldRearmIosDailyQuote) {
       final targetId = parsed.notificationId ?? 100;
+      final nowMs = _now().millisecondsSinceEpoch;
       for (final entry in _loadTrackedPreScheduledEntries()) {
         if (entry.id == targetId) {
-          tappedIosDailyQuoteEpochMs = entry.epochMs;
-          tappedIosDailyQuoteContent =
-              (entry.dailyQuoteData?['hitokoto'] as String?)?.trim();
+          final matchesTappedDelivery = parsed.scheduledEpochMs != null
+              ? entry.epochMs == parsed.scheduledEpochMs
+              : entry.epochMs <= nowMs;
+          if (matchesTappedDelivery) {
+            tappedIosDailyQuoteEpochMs ??= entry.epochMs;
+            tappedIosDailyQuoteContent =
+                (entry.dailyQuoteData?['hitokoto'] as String?)?.trim();
+          }
           break;
+        }
+      }
+
+      if (tappedIosDailyQuoteEpochMs != null &&
+          tappedIosDailyQuoteEpochMs > 0) {
+        try {
+          tz.local;
+        } catch (_) {
+          await _initializeTimezone();
+        }
+        final nowLocal = tz.TZDateTime.from(_now(), tz.local);
+        final tappedLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
+          tz.local,
+          tappedIosDailyQuoteEpochMs,
+        );
+        final isSameCalendarDay = tappedLocal.year == nowLocal.year &&
+            tappedLocal.month == nowLocal.month &&
+            tappedLocal.day == nowLocal.day;
+        if (isSameCalendarDay) {
+          var pushedContent = tappedIosDailyQuoteContent;
+          if (pushedContent == null || pushedContent.isEmpty) {
+            final cachedToday = await getCachedDailyQuoteForToday();
+            pushedContent = (cachedToday?['hitokoto'] as String?)?.trim();
+          }
+          if (pushedContent != null && pushedContent.isNotEmpty) {
+            tappedIosDailyQuoteContent = pushedContent;
+            if (!_hasDailyQuoteContentPushed(pushedContent)) {
+              _markDailyQuoteContentPushed(pushedContent);
+            }
+          }
         }
       }
     }
@@ -129,6 +165,7 @@ extension SmartPushNotification on SmartPushService {
         String? contentType,
         String? routeTarget,
         int? notificationId,
+        int? scheduledEpochMs,
       })> _recordNotificationTapState(
     NotificationResponse response,
   ) async {
@@ -138,13 +175,14 @@ extension SmartPushNotification on SmartPushService {
     String? contentType;
     String? routeTarget;
     int? notificationId = response.id;
+    int? scheduledEpochMs;
     // SOTA: 记录用户点击交互（正向反馈）
-    // payload 格式: "contentType:xxx|noteId:yyy|notificationId:zzz" 或 "dailyQuote"
+    // payload 格式: "contentType:xxx|noteId:yyy|notificationId:zzz|scheduledEpochMs:ttt" 或 "dailyQuote"
     try {
       final payload = response.payload;
       if (payload != null && payload.isNotEmpty) {
         if (payload.contains('contentType:')) {
-          // 解析 contentType、noteId 与 notificationId
+          // 解析 contentType、noteId、notificationId 与 scheduledEpochMs
           final parts = payload.split('|');
           for (final part in parts) {
             if (part.startsWith('contentType:')) {
@@ -164,6 +202,13 @@ extension SmartPushNotification on SmartPushService {
               if (parsedId != null) {
                 notificationId = parsedId;
               }
+            } else if (part.startsWith('scheduledEpochMs:')) {
+              final parsedEpochMs = int.tryParse(
+                part.substring('scheduledEpochMs:'.length),
+              );
+              if (parsedEpochMs != null && parsedEpochMs > 0) {
+                scheduledEpochMs = parsedEpochMs;
+              }
             }
           }
         } else if (payload == 'dailyQuote') {
@@ -181,13 +226,45 @@ extension SmartPushNotification on SmartPushService {
         final trackedEntries = notificationId != null
             ? _loadTrackedPreScheduledEntries()
             : const <_PreScheduledEntry>[];
+        final nowMs = _now().millisecondsSinceEpoch;
         _PreScheduledEntry? matchedEntry;
         if (notificationId != null) {
           for (final entry in trackedEntries) {
             if (entry.id == notificationId) {
-              matchedEntry = entry;
+              final matchesTappedDelivery = scheduledEpochMs != null
+                  ? entry.epochMs == scheduledEpochMs
+                  : (entry.epochMs <= nowMs ||
+                      notificationId >=
+                          SmartPushService._preScheduledNotificationBaseId);
+              if (matchesTappedDelivery) {
+                matchedEntry = entry;
+              }
               break;
             }
+          }
+        }
+
+        if (matchedEntry != null &&
+            matchedEntry.isDailyQuote &&
+            matchedEntry.dailyQuoteData != null) {
+          final matchedQuoteText =
+              (matchedEntry.dailyQuoteData!['hitokoto'] as String?)?.trim() ??
+                  '';
+          if (matchedQuoteText.isNotEmpty) {
+            try {
+              tz.local;
+              final nowLocal = tz.TZDateTime.from(_now(), tz.local);
+              final entryLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
+                tz.local,
+                matchedEntry.epochMs,
+              );
+              if (entryLocal.year == nowLocal.year &&
+                  entryLocal.month == nowLocal.month &&
+                  entryLocal.day == nowLocal.day &&
+                  !_hasDailyQuoteContentPushed(matchedQuoteText)) {
+                _markDailyQuoteContentPushed(matchedQuoteText);
+              }
+            } catch (_) {}
           }
         }
 
@@ -226,6 +303,7 @@ extension SmartPushNotification on SmartPushService {
       contentType: contentType,
       routeTarget: routeTarget,
       notificationId: notificationId,
+      scheduledEpochMs: scheduledEpochMs,
     );
   }
 
@@ -235,6 +313,7 @@ extension SmartPushNotification on SmartPushService {
       String? contentType,
       String? routeTarget,
       int? notificationId,
+      int? scheduledEpochMs,
     }) parsed,
   ) async {
     final noteId = parsed.noteId;
@@ -253,7 +332,10 @@ extension SmartPushNotification on SmartPushService {
     } else if (contentType == 'dailyQuote') {
       // 每日一言：仅标记首页展示，不直接弹出添加弹窗
       try {
-        await _navigateToDailyQuote(notificationId: notificationId);
+        await _navigateToDailyQuote(
+          notificationId: notificationId,
+          scheduledEpochMs: parsed.scheduledEpochMs,
+        );
       } catch (e) {
         AppLogger.e('每日一言导航失败', error: e);
       }
@@ -306,14 +388,26 @@ extension SmartPushNotification on SmartPushService {
   }
 
   /// 标记每日一言通知点击后的首页展示内容（一次性消费）。
-  Future<void> _navigateToDailyQuote({int? notificationId}) async {
+  Future<void> _navigateToDailyQuote({
+    int? notificationId,
+    int? scheduledEpochMs,
+  }) async {
     try {
       Map<String, dynamic>? hitokotoData;
 
       if (notificationId != null) {
+        final nowMs = _now().millisecondsSinceEpoch;
         final trackedEntries = _loadTrackedPreScheduledEntries();
         for (final entry in trackedEntries) {
           if (entry.id == notificationId && entry.dailyQuoteData != null) {
+            final matchesTappedDelivery = scheduledEpochMs != null
+                ? entry.epochMs == scheduledEpochMs
+                : (entry.epochMs <= nowMs ||
+                    notificationId >=
+                        SmartPushService._preScheduledNotificationBaseId);
+            if (!matchesTappedDelivery) {
+              break;
+            }
             hitokotoData =
                 await _validateCachedDailyQuote(entry.dailyQuoteData!);
             if (hitokotoData == null) {

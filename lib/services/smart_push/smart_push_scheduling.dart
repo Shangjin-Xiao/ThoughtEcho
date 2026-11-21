@@ -191,9 +191,23 @@ extension SmartPushScheduling on SmartPushService {
         return;
       }
 
+      final preservedDailyQuoteEntry =
+          await _findPreservableStandaloneDailyQuoteEntry();
+      if (!await _isScheduleContextStillValid(
+        generation: generation,
+        expectedEpoch: expectedEpoch,
+        expectedScheduleEpoch: expectedScheduleEpoch,
+        fromBackground: fromBackground,
+      )) {
+        return;
+      }
+
+      final keepPendingDailyQuoteInQueue = preservedDailyQuoteEntry != null &&
+          (fromBackground || preserveDeliveredNotifications);
+
       final commitSeq = await _nextNotificationCommitSeq();
       await _reconcileTrackedPreScheduledNotifications(
-        activeIds: const {},
+        activeIds: keepPendingDailyQuoteInQueue ? const <int>{100} : const {},
         futureOnly: fromBackground || preserveDeliveredNotifications,
       );
       if (!await _isScheduleContextStillValid(
@@ -206,7 +220,11 @@ extension SmartPushScheduling on SmartPushService {
         return;
       }
       await _saveTrackedPreScheduledEntries(
-        const [],
+        keepPendingDailyQuoteInQueue
+            ? <_PreScheduledEntry>[
+                preservedDailyQuoteEntry.copyWith(commitSeq: commitSeq),
+              ]
+            : const [],
         expectedCommitSeq: commitSeq,
       );
 
@@ -299,12 +317,43 @@ extension SmartPushScheduling on SmartPushService {
               canScheduleExactOverride: canScheduleExact,
             );
           }
-        } else {
+        } else if (!keepPendingDailyQuoteInQueue) {
+          _PushContent? preservedPrecomputed;
+          if (preservedDailyQuoteEntry?.dailyQuoteData != null) {
+            final data = preservedDailyQuoteEntry!.dailyQuoteData!;
+            final text = (data['hitokoto'] as String?)?.trim() ?? '';
+            if (text.isNotEmpty) {
+              final fromWho = (data['from_who'] as String?)?.trim() ?? '';
+              final from = (data['from'] as String?)?.trim() ?? '';
+              final rawLocalId = data['local_quote_id'];
+              final sourceNoteId =
+                  (rawLocalId is String && rawLocalId.isNotEmpty)
+                      ? rawLocalId
+                      : preservedDailyQuoteEntry.noteId;
+              final quote = Quote(
+                id: sourceNoteId,
+                content: text,
+                date: _now().toIso8601String(),
+                sourceAuthor: fromWho.isNotEmpty ? fromWho : null,
+                source: from.isNotEmpty ? from : null,
+              );
+              preservedPrecomputed = _PushContent(
+                title: '📖 每日一言',
+                body: _buildNotificationBody(quote),
+                noteId: null,
+                sourceNoteId: sourceNoteId,
+                contentType: 'dailyQuote',
+                dailyQuoteData: Map<String, dynamic>.from(data),
+              );
+            }
+          }
           await _scheduleLocalNotification(
             100,
             scheduledDate,
             slot,
             isDailyQuote: true,
+            precomputedContent: preservedPrecomputed,
+            allowContentLookup: preservedPrecomputed == null,
           );
         }
       }
@@ -576,6 +625,26 @@ extension SmartPushScheduling on SmartPushService {
     final hasAnyUnaccountedDue = entries.any(isEntryDue);
     if (!hasAnyUnaccountedDue) {
       return entries;
+    }
+
+    for (final entry in entries) {
+      if (!isEntryDue(entry) || entry.dailyQuoteData == null) continue;
+      final quoteText =
+          (entry.dailyQuoteData!['hitokoto'] as String?)?.trim() ?? '';
+      if (quoteText.isEmpty) continue;
+      try {
+        final nowLocal = tz.TZDateTime.from(_now(), tz.local);
+        final entryLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
+          tz.local,
+          entry.epochMs,
+        );
+        if (entryLocal.year == nowLocal.year &&
+            entryLocal.month == nowLocal.month &&
+            entryLocal.day == nowLocal.day &&
+            !_hasDailyQuoteContentPushed(quoteText)) {
+          _markDailyQuoteContentPushed(quoteText);
+        }
+      } catch (_) {}
     }
 
     if (dueRegularEntries.isNotEmpty) {
@@ -2556,134 +2625,256 @@ extension SmartPushScheduling on SmartPushService {
     }
   }
 
+  /// 检查非 Android 独立每日一言（ID=100）是否已存在与当前时间、一言源配置及本地笔记可见性完全匹配的未来待触发项。
+  Future<_PreScheduledEntry?>
+      _findPreservableStandaloneDailyQuoteEntry() async {
+    if (_isAndroid || !_settings.dailyQuotePushEnabled) {
+      return null;
+    }
+    final tracked = _loadTrackedPreScheduledEntries();
+    _PreScheduledEntry? existing;
+    for (final entry in tracked) {
+      if (entry.id == 100 && entry.isDailyQuote) {
+        existing = entry;
+        break;
+      }
+    }
+    if (existing == null || existing.dailyQuoteData == null) {
+      return null;
+    }
+
+    final nowMs = _now().millisecondsSinceEpoch;
+    if (existing.epochMs <= nowMs) {
+      return null;
+    }
+
+    final slot = _settings.dailyQuotePushTime;
+    final targetDate = _nextInstanceOfTime(
+      slot.hour,
+      slot.minute,
+      respectsFrequency: false,
+    );
+    if (existing.epochMs != targetDate.millisecondsSinceEpoch ||
+        existing.slotHour != slot.hour ||
+        existing.slotMinute != slot.minute) {
+      return null;
+    }
+
+    if (existing.quoteSourceFingerprint == null ||
+        existing.quoteSourceFingerprint !=
+            _currentDailyQuoteSourceFingerprint()) {
+      return null;
+    }
+
+    final quoteText =
+        (existing.dailyQuoteData!['hitokoto'] as String?)?.trim() ?? '';
+    if (quoteText.isEmpty) {
+      return null;
+    }
+
+    final pendingIds = await _queryPendingLocalNotificationIds();
+    if (pendingIds == null || !pendingIds.contains(100)) {
+      return null;
+    }
+
+    final rawLocalId = existing.dailyQuoteData!['local_quote_id'];
+    final sourceNoteId = (rawLocalId is String && rawLocalId.isNotEmpty)
+        ? rawLocalId
+        : existing.noteId;
+    if (sourceNoteId != null && sourceNoteId.isNotEmpty) {
+      final visibleIds = await _resolveVisibleTrackedNoteIds({sourceNoteId});
+      if (visibleIds != null && !visibleIds.contains(sourceNoteId)) {
+        return null;
+      }
+    }
+
+    return existing;
+  }
+
   /// iOS 单次每日一言（ID=100）在暖启动点击后单独续订下一次触发，
-  /// 不受 `handleAppResumed` 同日 6 小时节流限制，也不改动常规提醒计划。
+  /// 不受 `handleAppResumed` 同日 6 小时节流限制，也不递增 `_scheduleGeneration` 打断并发常规提醒重排。
   Future<void> _rearmIosDailyQuoteAfterTap({
     int? tappedEpochMs,
     String? previousQuoteContent,
   }) {
-    return _enqueueScheduleOperation((generation) async {
-      try {
-        tz.local;
-      } catch (_) {
-        await _initializeTimezone();
-      }
-      if (!_isScheduleGenerationCurrent(generation)) return;
+    return _enqueueNonInvalidatingScheduleOperation(
+      (observedGeneration, observedSettingsGeneration) async {
+        try {
+          tz.local;
+        } catch (_) {
+          await _initializeTimezone();
+        }
+        if (!_isScheduleGenerationCurrent(observedGeneration) ||
+            !_isSettingsMutationGenerationCurrent(observedSettingsGeneration)) {
+          return;
+        }
 
-      await _reloadSharedStorageIfSupported();
-      if (!_isScheduleGenerationCurrent(generation)) return;
-      if (!_isIOS ||
-          !_settings.dailyQuotePushEnabled ||
-          _areStoredSettingsAllDisabled()) {
-        return;
-      }
+        await _reloadSharedStorageIfSupported();
+        if (!_isScheduleGenerationCurrent(observedGeneration) ||
+            !_isSettingsMutationGenerationCurrent(observedSettingsGeneration)) {
+          return;
+        }
+        if (!_isIOS ||
+            !_settings.dailyQuotePushEnabled ||
+            _areStoredSettingsAllDisabled()) {
+          return;
+        }
 
-      final expectedEpoch = _readStoredSettingsEpoch();
-      final expectedScheduleEpoch = _readStoredScheduleEpoch();
+        final expectedEpoch = _readStoredSettingsEpoch();
+        final expectedScheduleEpoch = _readStoredScheduleEpoch();
 
-      tz.TZDateTime computeNextIosDailyQuoteDate(PushTimeSlot slot) {
-        var candidate = _nextInstanceOfTime(
-          slot.hour,
-          slot.minute,
-          respectsFrequency: false,
-        );
-        final nowLocal = tz.TZDateTime.from(_now(), tz.local);
-        final tappedTodaySlot = tappedEpochMs != null &&
-            tappedEpochMs > 0 &&
-            (() {
-              final tappedLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
-                tz.local,
-                tappedEpochMs,
-              );
-              return tappedLocal.year == nowLocal.year &&
-                  tappedLocal.month == nowLocal.month &&
-                  tappedLocal.day == nowLocal.day;
-            })();
-        final isSameDayAsNow = candidate.year == nowLocal.year &&
-            candidate.month == nowLocal.month &&
-            candidate.day == nowLocal.day;
-        if (isSameDayAsNow &&
-            (tappedTodaySlot || !nowLocal.isBefore(candidate))) {
-          candidate = tz.TZDateTime(
-            tz.local,
-            nowLocal.year,
-            nowLocal.month,
-            nowLocal.day + 1,
+        tz.TZDateTime computeNextIosDailyQuoteDate(PushTimeSlot slot) {
+          var candidate = _nextInstanceOfTime(
             slot.hour,
             slot.minute,
+            respectsFrequency: false,
           );
+          final nowLocal = tz.TZDateTime.from(_now(), tz.local);
+          final tappedTodaySlot = tappedEpochMs != null &&
+              tappedEpochMs > 0 &&
+              (() {
+                final tappedLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
+                  tz.local,
+                  tappedEpochMs,
+                );
+                return tappedLocal.year == nowLocal.year &&
+                    tappedLocal.month == nowLocal.month &&
+                    tappedLocal.day == nowLocal.day;
+              })();
+          final isSameDayAsNow = candidate.year == nowLocal.year &&
+              candidate.month == nowLocal.month &&
+              candidate.day == nowLocal.day;
+          if (isSameDayAsNow &&
+              (tappedTodaySlot || !nowLocal.isBefore(candidate))) {
+            candidate = tz.TZDateTime(
+              tz.local,
+              nowLocal.year,
+              nowLocal.month,
+              nowLocal.day + 1,
+              slot.hour,
+              slot.minute,
+            );
+          }
+          return candidate;
         }
-        return candidate;
-      }
 
-      final initialSlot = _settings.dailyQuotePushTime;
-      final previewDate = computeNextIosDailyQuoteDate(initialSlot);
-      final nowLocalForCache = tz.TZDateTime.from(_now(), tz.local);
-      final isFutureCalendarDay = previewDate.year != nowLocalForCache.year ||
-          previewDate.month != nowLocalForCache.month ||
-          previewDate.day != nowLocalForCache.day;
+        final excludedTrimmed = previousQuoteContent?.trim() ?? '';
+        bool hasValidPendingTarget(
+          Set<int>? pendingIds,
+          tz.TZDateTime targetDate, {
+          required bool isFutureDay,
+        }) {
+          if (pendingIds == null || !pendingIds.contains(100)) {
+            return false;
+          }
+          final expectedFingerprint = _currentDailyQuoteSourceFingerprint();
+          for (final entry in _loadTrackedPreScheduledEntries()) {
+            if (entry.id != 100 ||
+                entry.epochMs < targetDate.millisecondsSinceEpoch) {
+              continue;
+            }
+            if (!isFutureDay) {
+              return true;
+            }
+            final existingQuote =
+                (entry.dailyQuoteData?['hitokoto'] as String?)?.trim() ?? '';
+            final repeatsTapped =
+                excludedTrimmed.isNotEmpty && existingQuote == excludedTrimmed;
+            final matchesFingerprint = entry.quoteSourceFingerprint == null ||
+                entry.quoteSourceFingerprint == expectedFingerprint;
+            if (!repeatsTapped && matchesFingerprint) {
+              return true;
+            }
+          }
+          return false;
+        }
 
-      final resolved = await _resolveStandaloneDailyQuote(
-        excludeQuoteContent: previousQuoteContent,
-        updateTodayCache: !isFutureCalendarDay,
-      );
-      if (!await _isScheduleContextStillValid(
-        generation: generation,
-        expectedEpoch: expectedEpoch,
-        expectedScheduleEpoch: expectedScheduleEpoch,
-        fromBackground: false,
-      )) {
-        return;
-      }
-      final precomputedContent = resolved != null
-          ? _PushContent(
-              title: '📖 每日一言',
-              body: _buildNotificationBody(resolved.quote),
-              noteId: null,
-              sourceNoteId: resolved.sourceNoteId,
-              contentType: 'dailyQuote',
-              dailyQuoteData: resolved.quoteData,
-            )
-          : null;
+        final initialSlot = _settings.dailyQuotePushTime;
+        final previewDate = computeNextIosDailyQuoteDate(initialSlot);
+        final nowLocalForCache = tz.TZDateTime.from(_now(), tz.local);
+        final isFutureCalendarDay = previewDate.year != nowLocalForCache.year ||
+            previewDate.month != nowLocalForCache.month ||
+            previewDate.day != nowLocalForCache.day;
 
-      await _withScheduleCommitLock(() async {
-        if (!await _isScheduleContextStillValid(
-          generation: generation,
-          expectedEpoch: expectedEpoch,
-          expectedScheduleEpoch: expectedScheduleEpoch,
-          fromBackground: false,
-          reloadStorage: true,
+        final initialPendingIds = await _queryPendingLocalNotificationIds();
+        if (!_isSettingsMutationGenerationCurrent(observedSettingsGeneration)) {
+          return;
+        }
+        if (hasValidPendingTarget(
+          initialPendingIds,
+          previewDate,
+          isFutureDay: isFutureCalendarDay,
         )) {
           return;
         }
-        if (!_settings.dailyQuotePushEnabled) {
+
+        final resolved = await _resolveStandaloneDailyQuote(
+          excludeQuoteContent: previousQuoteContent,
+          updateTodayCache: !isFutureCalendarDay,
+        );
+        if (!_isSettingsMutationGenerationCurrent(observedSettingsGeneration) ||
+            !await _isScheduleContextStillValid(
+              generation: observedGeneration,
+              expectedEpoch: expectedEpoch,
+              expectedScheduleEpoch: expectedScheduleEpoch,
+              fromBackground: false,
+            )) {
           return;
         }
+        final precomputedContent = resolved != null
+            ? _PushContent(
+                title: '📖 每日一言',
+                body: _buildNotificationBody(resolved.quote),
+                noteId: null,
+                sourceNoteId: resolved.sourceNoteId,
+                contentType: 'dailyQuote',
+                dailyQuoteData: resolved.quoteData,
+              )
+            : null;
 
-        final slot = _settings.dailyQuotePushTime;
-        final scheduledDate = computeNextIosDailyQuoteDate(slot);
-        final pendingIds = await _queryPendingLocalNotificationIds();
-        if (pendingIds != null && pendingIds.contains(100)) {
-          final alreadyScheduledFuture = _loadTrackedPreScheduledEntries().any(
-            (e) =>
-                e.id == 100 &&
-                e.epochMs >= scheduledDate.millisecondsSinceEpoch,
-          );
-          if (alreadyScheduledFuture) {
+        await _withScheduleCommitLock(() async {
+          if (!_isSettingsMutationGenerationCurrent(
+                observedSettingsGeneration,
+              ) ||
+              !await _isScheduleContextStillValid(
+                generation: observedGeneration,
+                expectedEpoch: expectedEpoch,
+                expectedScheduleEpoch: expectedScheduleEpoch,
+                fromBackground: false,
+                reloadStorage: true,
+              )) {
             return;
           }
-        }
+          if (!_settings.dailyQuotePushEnabled) {
+            return;
+          }
 
-        await _scheduleLocalNotification(
-          100,
-          scheduledDate,
-          slot,
-          isDailyQuote: true,
-          precomputedContent: precomputedContent,
-          allowContentLookup: false,
-        );
-      });
-    });
+          final slot = _settings.dailyQuotePushTime;
+          final scheduledDate = computeNextIosDailyQuoteDate(slot);
+          final nowInLock = tz.TZDateTime.from(_now(), tz.local);
+          final futureDayInLock = scheduledDate.year != nowInLock.year ||
+              scheduledDate.month != nowInLock.month ||
+              scheduledDate.day != nowInLock.day;
+          final pendingIds = await _queryPendingLocalNotificationIds();
+          if (hasValidPendingTarget(
+            pendingIds,
+            scheduledDate,
+            isFutureDay: futureDayInLock,
+          )) {
+            return;
+          }
+
+          await _scheduleLocalNotification(
+            100,
+            scheduledDate,
+            slot,
+            isDailyQuote: true,
+            precomputedContent: precomputedContent,
+            allowContentLookup: false,
+          );
+        });
+      },
+    );
   }
 
   /// 非 Android 单条独立每日一言调度解析：优先使用有效缓存/本地库，无本地内容时请求用户配置的在线一言源

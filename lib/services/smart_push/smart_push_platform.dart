@@ -139,7 +139,7 @@ extension SmartPushPlatform on SmartPushService {
               Map<String, dynamic>.from(item),
             ),
           )
-          .where((entry) => entry.id > 0)
+          .where((entry) => entry.id >= 0)
           .toList();
     } catch (e) {
       AppLogger.w('读取已追踪预调度通知列表失败', error: e);
@@ -654,9 +654,15 @@ extension SmartPushPlatform on SmartPushService {
       _PushContent? content = precomputedContent;
       if (content == null && allowContentLookup) {
         if (isDailyQuote) {
+          final nowLocal = tz.TZDateTime.from(_now(), tz.local);
+          final isFutureCalendarDay = scheduledDate.year != nowLocal.year ||
+              scheduledDate.month != nowLocal.month ||
+              scheduledDate.day != nowLocal.day;
           final resolved = _isAndroid
               ? await _resolvePreScheduleDailyQuote()
-              : await _resolveStandaloneDailyQuote();
+              : await _resolveStandaloneDailyQuote(
+                  updateTodayCache: !isFutureCalendarDay,
+                );
           if (resolved != null) {
             content = _PushContent(
               title: '📖 每日一言',
@@ -708,12 +714,17 @@ extension SmartPushPlatform on SmartPushService {
       final isDailyQuoteContent = isDailyQuote ||
           (content?.contentType == 'dailyQuote' && content?.noteId == null);
 
-      // 构建 payload，确保通知点击时能正确路由并定位到该通知对应的展示内容与通知 ID
+      // 构建 payload，确保通知点击时能正确路由并定位到该通知对应的展示内容、通知 ID 与计划触发时间戳（仅跨天复用固定 ID 时附加）
+      final scheduledEpochMs =
+          id < SmartPushService._preScheduledNotificationBaseId
+              ? scheduledDate.millisecondsSinceEpoch
+              : null;
       String? payload;
       if (isDailyQuoteContent) {
         payload = SmartPushService.buildNotificationPayload(
           contentType: 'dailyQuote',
           notificationId: id,
+          scheduledEpochMs: scheduledEpochMs,
         );
       } else if (content?.noteId != null) {
         payload = SmartPushService.buildNotificationPayload(
@@ -721,11 +732,13 @@ extension SmartPushPlatform on SmartPushService {
           contentType: content.contentType ?? 'dailyQuote',
           routeTarget: 'noteList',
           notificationId: id,
+          scheduledEpochMs: scheduledEpochMs,
         );
       } else {
         payload = SmartPushService.buildNotificationPayload(
           contentType: content?.contentType ?? 'pastNote',
           notificationId: id,
+          scheduledEpochMs: scheduledEpochMs,
         );
       }
 
@@ -785,6 +798,9 @@ extension SmartPushPlatform on SmartPushService {
               slotHour: slot.hour,
               slotMinute: slot.minute,
               dailyQuoteData: content?.dailyQuoteData,
+              quoteSourceFingerprint: isDailyQuoteContent
+                  ? _currentDailyQuoteSourceFingerprint()
+                  : null,
               commitSeq: commitSeq,
             ),
           );

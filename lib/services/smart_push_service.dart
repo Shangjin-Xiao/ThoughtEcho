@@ -346,6 +346,41 @@ class SmartPushService extends ChangeNotifier {
     return next;
   }
 
+  /// 将单条增量调度（如 iOS 每日一言点击后续订下一日通知）串行排入 [_pendingScheduleOp]，
+  /// 但不递增 [_scheduleGeneration]，避免取消正在并发规划常规提醒槽位的全量刷新（如 `handleAppResumed`）。
+  Future<void> _enqueueNonInvalidatingScheduleOperation(
+    Future<void> Function(
+      int observedGeneration,
+      int observedSettingsGeneration,
+    ) action,
+  ) {
+    final observedGeneration = _scheduleGeneration;
+    final observedSettingsGeneration = _settingsMutationGeneration;
+    final next = _pendingScheduleOp.then((_) async {
+      await _pendingAccountingOp;
+      if (!_isScheduleGenerationCurrent(observedGeneration) ||
+          !_isSettingsMutationGenerationCurrent(observedSettingsGeneration)) {
+        return;
+      }
+      await action(observedGeneration, observedSettingsGeneration);
+    });
+    _pendingScheduleOp = next.catchError((Object e, StackTrace stack) {
+      AppLogger.w('推送增量调度队列执行异常', error: e, stackTrace: stack);
+    });
+    return next;
+  }
+
+  String _currentDailyQuoteSourceFingerprint([AppSettings? appSettings]) {
+    final settings = appSettings ?? _loadStoredAppSettings();
+    final categories = List<String>.from(settings.apiNinjasCategories)..sort();
+    return '${settings.useLocalQuotesOnly}|'
+        '${settings.offlineQuoteSource}|'
+        '${settings.dailyQuoteProvider}|'
+        '${settings.hitokotoType}|'
+        '${categories.join(",")}|'
+        '${settings.localeCode ?? ""}';
+  }
+
   SmartPushService({
     required DatabaseService databaseService,
     required LocationService locationService,
@@ -614,6 +649,7 @@ class SmartPushService extends ChangeNotifier {
     required String contentType,
     String? routeTarget,
     int? notificationId,
+    int? scheduledEpochMs,
   }) {
     if (contentType.isEmpty) return null;
     final parts = <String>['contentType:$contentType'];
@@ -625,6 +661,9 @@ class SmartPushService extends ChangeNotifier {
     }
     if (notificationId != null) {
       parts.add('notificationId:$notificationId');
+    }
+    if (scheduledEpochMs != null && scheduledEpochMs > 0) {
+      parts.add('scheduledEpochMs:$scheduledEpochMs');
     }
     return parts.join('|');
   }
@@ -1154,6 +1193,7 @@ class _PreScheduledEntry {
   final int? slotHour;
   final int? slotMinute;
   final Map<String, dynamic>? dailyQuoteData;
+  final String? quoteSourceFingerprint;
   final int commitSeq;
 
   const _PreScheduledEntry({
@@ -1166,6 +1206,7 @@ class _PreScheduledEntry {
     this.slotHour,
     this.slotMinute,
     this.dailyQuoteData,
+    this.quoteSourceFingerprint,
     this.commitSeq = 0,
   });
 
@@ -1177,6 +1218,7 @@ class _PreScheduledEntry {
     int? slotHour,
     int? slotMinute,
     Map<String, dynamic>? dailyQuoteData,
+    String? quoteSourceFingerprint,
     int? commitSeq,
   }) {
     return _PreScheduledEntry(
@@ -1189,6 +1231,8 @@ class _PreScheduledEntry {
       slotHour: slotHour ?? this.slotHour,
       slotMinute: slotMinute ?? this.slotMinute,
       dailyQuoteData: dailyQuoteData ?? this.dailyQuoteData,
+      quoteSourceFingerprint:
+          quoteSourceFingerprint ?? this.quoteSourceFingerprint,
       commitSeq: commitSeq ?? this.commitSeq,
     );
   }
@@ -1205,6 +1249,9 @@ class _PreScheduledEntry {
         if (slotMinute != null) 'slotMinute': slotMinute,
         if (dailyQuoteData != null && dailyQuoteData!.isNotEmpty)
           'dailyQuoteData': dailyQuoteData,
+        if (quoteSourceFingerprint != null &&
+            quoteSourceFingerprint!.isNotEmpty)
+          'quoteSourceFingerprint': quoteSourceFingerprint,
         if (commitSeq > 0) 'commitSeq': commitSeq,
       };
 
@@ -1212,6 +1259,7 @@ class _PreScheduledEntry {
     final rawNoteId = json['noteId'] as String?;
     final rawContentType = json['contentType'] as String?;
     final rawQuoteData = json['dailyQuoteData'];
+    final rawQuoteSourceFingerprint = json['quoteSourceFingerprint'] as String?;
     return _PreScheduledEntry(
       id: (json['id'] as num?)?.toInt() ?? 0,
       epochMs: (json['epochMs'] as num?)?.toInt() ?? 0,
@@ -1227,6 +1275,10 @@ class _PreScheduledEntry {
           ? SmartPushService.normalizeDailyQuoteData(
               Map<String, dynamic>.from(rawQuoteData),
             )
+          : null,
+      quoteSourceFingerprint: (rawQuoteSourceFingerprint != null &&
+              rawQuoteSourceFingerprint.isNotEmpty)
+          ? rawQuoteSourceFingerprint
           : null,
       commitSeq: (json['commitSeq'] as num?)?.toInt() ?? 0,
     );

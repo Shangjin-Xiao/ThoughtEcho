@@ -547,7 +547,7 @@ void main() {
       final traceFile = File('${tempDir.path}/trace.txt')
         ..writeAsStringSync('');
 
-      // 1. 模拟崩溃遗留陈旧锁：必须在驱逐旧锁并重新独占创建锁文件后才允许进入临界区
+      // 1. 模拟磁盘上残留旧锁文件（无活跃进程持有内核锁）：应无需删除共享锁路径即可立即获锁，且退出后其他 Isolate 可立即接续获锁
       File(lockPath).writeAsStringSync('crashed');
       var heldLockFileInsideAction = false;
       await PlatformHelper.withCrossIsolateLock(
@@ -560,7 +560,15 @@ void main() {
         acquireTimeout: const Duration(seconds: 2),
       );
       expect(heldLockFileInsideAction, isTrue);
-      expect(File(lockPath).existsSync(), isFalse);
+      final reacquiredByWorker = await Isolate.run(() async {
+        return PlatformHelper.withCrossIsolateLock<bool>(
+          'stale_eviction_test',
+          () async => true,
+          customLockFilePath: lockPath,
+          acquireTimeout: const Duration(seconds: 2),
+        );
+      });
+      expect(reacquiredByWorker, isTrue);
 
       // 2. 模拟另一真实 Isolate 持锁超过 140ms（高于旧版 FLUTTER_TEST 50 次重试窗口），等待方绝不能提前无锁闯入
       final workerEntered = File('${tempDir.path}/worker_entered.flag');
