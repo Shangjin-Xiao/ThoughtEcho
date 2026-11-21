@@ -284,9 +284,19 @@ extension SmartPushNotification on SmartPushService {
               _settings.pushMode == PushMode.smart;
           final isInFlightImmediateSmartNotification = notificationId != null &&
               _inFlightImmediateSmartNotificationIds.contains(notificationId);
+          final effectiveEpochMs =
+              (matchedEntry != null && matchedEntry.epochMs > 0)
+                  ? matchedEntry.epochMs
+                  : ((scheduledEpochMs != null && scheduledEpochMs > 0)
+                      ? scheduledEpochMs
+                      : null);
+          final interactionSentAt = effectiveEpochMs != null
+              ? DateTime.fromMillisecondsSinceEpoch(effectiveEpochMs)
+              : null;
           await _analytics.recordInteraction(
             contentType,
             notificationId: notificationId,
+            sentAt: interactionSentAt,
             deferScoreUntilAccounted: isUnaccountedSmartRegularEntry ||
                 isInFlightImmediateSmartNotification,
           );
@@ -463,6 +473,67 @@ extension SmartPushNotification on SmartPushService {
     }
   }
 
+  /// 为立即发送的每日一言通知持久化专属内容快照（即使离线回退本地一言未写入共享日缓存，点击时也能展示与通知正文一致的一言，且在源笔记被隐藏/删除时联动撤回）。
+  Future<void> _persistDeliveredDailyQuoteSnapshot({
+    required int notificationId,
+    required Map<String, dynamic> dailyQuoteData,
+    String? sourceNoteId,
+    String? quoteSourceFingerprint,
+    DateTime? deliveredAt,
+    bool isStandaloneDailyQuote = false,
+  }) {
+    final normalized = SmartPushService.normalizeDailyQuoteData(dailyQuoteData);
+    if (normalized == null) return Future<void>.value();
+    final rawLocalId = normalized['local_quote_id'];
+    final effectiveNoteId = (sourceNoteId != null && sourceNoteId.isNotEmpty)
+        ? sourceNoteId
+        : ((rawLocalId is String && rawLocalId.isNotEmpty) ? rawLocalId : null);
+    return _withScheduleCommitLock(() async {
+      final commitSeq = await _nextNotificationCommitSeq();
+      final nowMs = _now().millisecondsSinceEpoch;
+      final deliveredEpochMs = (deliveredAt ?? _now()).millisecondsSinceEpoch;
+      final maxRetentionMs =
+          SmartPushService._deliveredEntryRetention.inMilliseconds;
+      final existing = _loadTrackedPreScheduledEntries().where((e) {
+        if (e.id == notificationId) return false;
+        if (e.epochMs > nowMs) return true;
+        return e.epochMs > 0 && nowMs - e.epochMs <= maxRetentionMs;
+      }).toList();
+      existing.add(
+        _PreScheduledEntry(
+          id: notificationId,
+          epochMs: deliveredEpochMs,
+          noteId: effectiveNoteId,
+          isDailyQuote: isStandaloneDailyQuote,
+          contentType: 'dailyQuote',
+          accounted: true,
+          dailyQuoteData: normalized,
+          quoteSourceFingerprint: quoteSourceFingerprint,
+          commitSeq: commitSeq,
+        ),
+      );
+      await _saveTrackedPreScheduledEntries(
+        existing,
+        expectedCommitSeq: commitSeq,
+      );
+    });
+  }
+
+  /// 判断某条一言数据在 `useLocalQuotesOnly` 模式下是否合法：
+  /// 允许真实本地笔记（`type == 'local'`），以及在非 `tagOnly` 模式下无可用本地笔记时的内置默认语录（`provider == 'default'`）。
+  bool _isPermittedDailyQuoteForLocalOnlyMode(
+    Map<String, dynamic> data,
+    AppSettings appSettings,
+  ) {
+    final type = (data['type'] as String?)?.trim() ?? '';
+    if (type == 'local') return true;
+    final provider = (data['provider'] as String?)?.trim() ?? '';
+    return appSettings.offlineQuoteSource != 'tagOnly' &&
+        provider == 'default' &&
+        type != 'offline' &&
+        type != 'local-empty';
+  }
+
   /// 缓存每日一言到 MMKV（供通知点击时读取）
   ///
   /// [hitokotoData] 为一言 API 的原始响应，包含 type 等标签分类信息
@@ -478,7 +549,10 @@ extension SmartPushNotification on SmartPushService {
         final normalizedType =
             (normalizedData['type'] as String?)?.trim() ?? '';
         final canStampCurrentFp = appSettings.useLocalQuotesOnly
-            ? normalizedType == 'local'
+            ? _isPermittedDailyQuoteForLocalOnlyMode(
+                normalizedData,
+                appSettings,
+              )
             : (normalizedType != 'offline' && normalizedType != 'local-empty');
         if (canStampCurrentFp) {
           normalizedData['quote_source_fingerprint'] =
@@ -558,7 +632,8 @@ extension SmartPushNotification on SmartPushService {
     AppSettings appSettings,
   ) {
     final type = (data['type'] as String?)?.trim() ?? '';
-    if (appSettings.useLocalQuotesOnly && type != 'local') {
+    if (appSettings.useLocalQuotesOnly &&
+        !_isPermittedDailyQuoteForLocalOnlyMode(data, appSettings)) {
       return false;
     }
 
@@ -682,6 +757,20 @@ extension SmartPushNotification on SmartPushService {
       return clearTodayCache();
     }
 
+    if (verifySourceAndContentFreshness &&
+        appSettings != null &&
+        appSettings.useLocalQuotesOnly &&
+        (data['provider'] as String?)?.trim() == 'default') {
+      try {
+        final nowAvailableLocal = await _databaseService.getLocalDailyQuote(
+          offlineQuoteSource: appSettings.offlineQuoteSource,
+        );
+        if (nowAvailableLocal != null) {
+          return await clearTodayCache();
+        }
+      } catch (_) {}
+    }
+
     if (data['type'] != 'local') return data;
 
     // 旧缓存未保存笔记 ID，无法安全验证，交由调用方重新获取。
@@ -740,7 +829,7 @@ extension SmartPushNotification on SmartPushService {
     final normalizedProvider =
         (normalizedData['provider'] as String?)?.trim() ?? '';
     final matchesConfiguredMode = appSettings.useLocalQuotesOnly
-        ? normalizedType == 'local'
+        ? _isPermittedDailyQuoteForLocalOnlyMode(normalizedData, appSettings)
         : (normalizedType != 'local' &&
             normalizedType != 'offline' &&
             normalizedType != 'local-empty' &&
@@ -752,7 +841,12 @@ extension SmartPushNotification on SmartPushService {
     if (updateTodayCache &&
         normalizedType != 'offline' &&
         normalizedType != 'local-empty' &&
-        (appSettings.useLocalQuotesOnly || normalizedType != 'local')) {
+        (appSettings.useLocalQuotesOnly
+            ? _isPermittedDailyQuoteForLocalOnlyMode(
+                normalizedData,
+                appSettings,
+              )
+            : normalizedType != 'local')) {
       _saveDailyQuoteToCache(normalizedData);
     }
     return normalizedData;

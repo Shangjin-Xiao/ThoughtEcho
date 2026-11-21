@@ -293,6 +293,91 @@ void main() {
         expect(result, isNotNull);
         expect(result!['content'], equals('Short single line quote'));
       });
+
+      test(
+        'getLocalDailyQuoteById enforces parameterized tagOnly, newline, length, hidden, and soft-delete filters',
+        () async {
+          await db.insert('categories', {
+            'id': 'user_daily_tag',
+            'name': '每日一言',
+          });
+          await db.insert('quotes', {
+            'id': 'q_tagged',
+            'content': 'Tagged single-line quote',
+            'source_work': 'Work A',
+            'source_author': 'Author A',
+            'is_deleted': 0,
+          });
+          await db.insert('quote_tags', {
+            'quote_id': 'q_tagged',
+            'tag_id': 'user_daily_tag',
+          });
+          await db.insert('quotes', {
+            'id': 'q_untagged_multiline',
+            'content': 'First line\nSecond line',
+            'source_work': 'Work B',
+            'source_author': 'Author B',
+            'is_deleted': 0,
+          });
+
+          final taggedMatch = await healthService.getLocalDailyQuoteById(
+            db,
+            'q_tagged',
+            offlineQuoteSource: 'tagOnly',
+          );
+          expect(
+            taggedMatch,
+            containsPair('content', 'Tagged single-line quote'),
+          );
+
+          // Removing the 每日一言 tag invalidates tagOnly lookup while allNotes still matches
+          await db.delete(
+            'quote_tags',
+            where: 'quote_id = ?',
+            whereArgs: ['q_tagged'],
+          );
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_tagged',
+              offlineQuoteSource: 'tagOnly',
+            ),
+            isNull,
+          );
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_tagged',
+              offlineQuoteSource: 'allNotes',
+            ),
+            containsPair('content', 'Tagged single-line quote'),
+          );
+
+          // Multiline quote is rejected in allNotes mode via parameterized NOT LIKE '%\n%'
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_untagged_multiline',
+              offlineQuoteSource: 'allNotes',
+            ),
+            isNull,
+          );
+
+          // Hiding the quote excludes it immediately
+          await db.insert('quote_tags', {
+            'quote_id': 'q_tagged',
+            'tag_id': 'system_hidden_tag',
+          });
+          expect(
+            await healthService.getLocalDailyQuoteById(
+              db,
+              'q_tagged',
+              offlineQuoteSource: 'allNotes',
+            ),
+            isNull,
+          );
+        },
+      );
     });
   });
 }

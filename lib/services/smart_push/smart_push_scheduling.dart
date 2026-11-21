@@ -902,6 +902,8 @@ extension SmartPushScheduling on SmartPushService {
     final appSettingsForQuotes = _loadStoredAppSettings();
     final useLocalQuotesOnly = appSettingsForQuotes.useLocalQuotesOnly;
     final offlineQuoteSource = appSettingsForQuotes.offlineQuoteSource;
+    final allowDefaultQuoteInLocalOnly =
+        useLocalQuotesOnly && offlineQuoteSource != 'tagOnly';
     final todayKeyForQuotes =
         tz.TZDateTime.from(_now(), tz.local).toIso8601String().substring(0, 10);
     final reservedQuoteHashesByDay = <String, Set<String>>{
@@ -1068,8 +1070,11 @@ extension SmartPushScheduling on SmartPushService {
             ? pendingRequestIds.contains(prev.id)
             : (!canScheduleExact && !prev.accounted);
         if (!isStillPending) continue;
+        final prevProvider =
+            (prev.dailyQuoteData?['provider'] as String?)?.trim() ?? '';
         if (useLocalQuotesOnly &&
-            (prev.noteId == null || prev.noteId!.isEmpty)) {
+            (prev.noteId == null || prev.noteId!.isEmpty) &&
+            !(allowDefaultQuoteInLocalOnly && prevProvider == 'default')) {
           continue;
         }
         final prevLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
@@ -1198,6 +1203,7 @@ extension SmartPushScheduling on SmartPushService {
         canScheduleExact: canScheduleExact,
         futureOnly: futureOnly,
         useLocalQuotesOnly: useLocalQuotesOnly,
+        allowDefaultQuoteInLocalOnly: allowDefaultQuoteInLocalOnly,
       );
       if (!await _isScheduleContextStillValid(
         generation: generation,
@@ -1972,6 +1978,7 @@ extension SmartPushScheduling on SmartPushService {
     bool canScheduleExact = true,
     bool futureOnly = false,
     bool useLocalQuotesOnly = false,
+    bool allowDefaultQuoteInLocalOnly = false,
   }) async {
     final isSmartMode = _settings.pushMode == PushMode.smart;
     final allowsDailyQuoteFallback = _settings.pushMode != PushMode.custom &&
@@ -1992,9 +1999,12 @@ extension SmartPushScheduling on SmartPushService {
             );
       if (!matchesSlot) return false;
       final prevNoteId = prev.noteId;
+      final prevProvider =
+          (prev.dailyQuoteData?['provider'] as String?)?.trim() ?? '';
       if (useLocalQuotesOnly &&
           prev.contentType == 'dailyQuote' &&
-          (prevNoteId == null || prevNoteId.isEmpty)) {
+          (prevNoteId == null || prevNoteId.isEmpty) &&
+          !(allowDefaultQuoteInLocalOnly && prevProvider == 'default')) {
         return false;
       }
       if (_settings.pushMode == PushMode.dailyQuote) {
@@ -2130,10 +2140,12 @@ extension SmartPushScheduling on SmartPushService {
               prev.id,
               sentAt: deliveredTime,
             )) {
-              projectedUnengagedStreak =
-                  _analytics.hasClickedNotification(prev.id)
-                      ? 0
-                      : projectedUnengagedStreak + 1;
+              projectedUnengagedStreak = _analytics.hasClickedNotification(
+                prev.id,
+                sentAt: deliveredTime,
+              )
+                  ? 0
+                  : projectedUnengagedStreak + 1;
               habituationCooldown = SmartPushAnalytics.cooldownForStreak(
                 projectedUnengagedStreak,
               );
@@ -2264,7 +2276,10 @@ extension SmartPushScheduling on SmartPushService {
               deliveredTime.isAfter(simulatedLastPushTime)) {
             simulatedLastPushTime = deliveredTime;
           }
-          projectedUnengagedStreak = _analytics.hasClickedNotification(prev.id)
+          projectedUnengagedStreak = _analytics.hasClickedNotification(
+            prev.id,
+            sentAt: deliveredTime,
+          )
               ? 0
               : projectedUnengagedStreak + 1;
           habituationCooldown = SmartPushAnalytics.cooldownForStreak(
@@ -2673,6 +2688,18 @@ extension SmartPushScheduling on SmartPushService {
           }
         } catch (_) {}
       }
+      if (data == null &&
+          appSettings.useLocalQuotesOnly &&
+          appSettings.offlineQuoteSource != 'tagOnly') {
+        final fallbackData = await _loadDailyQuoteData(
+          preferCache: false,
+          updateTodayCache: false,
+        );
+        if (fallbackData != null &&
+            _isPermittedDailyQuoteForLocalOnlyMode(fallbackData, appSettings)) {
+          data = fallbackData;
+        }
+      }
       if (data == null) return null;
 
       final content = data['hitokoto'] as String? ?? '';
@@ -2774,6 +2801,24 @@ extension SmartPushScheduling on SmartPushService {
       );
       if (!isSnapshotCurrent) {
         return null;
+      }
+    } else if (appSettings.useLocalQuotesOnly) {
+      if (!_isPermittedDailyQuoteForLocalOnlyMode(
+        existing.dailyQuoteData!,
+        appSettings,
+      )) {
+        return null;
+      }
+      if ((existing.dailyQuoteData!['provider'] as String?)?.trim() ==
+          'default') {
+        try {
+          final nowAvailableLocal = await _databaseService.getLocalDailyQuote(
+            offlineQuoteSource: appSettings.offlineQuoteSource,
+          );
+          if (nowAvailableLocal != null) {
+            return null;
+          }
+        } catch (_) {}
       }
     }
 
@@ -2886,6 +2931,22 @@ extension SmartPushScheduling on SmartPushService {
                     enforceConfiguredOfflineSource: true,
                   )) {
                 continue;
+              }
+            } else if (appSettings.useLocalQuotesOnly) {
+              if (data == null ||
+                  !_isPermittedDailyQuoteForLocalOnlyMode(data, appSettings)) {
+                continue;
+              }
+              if ((data['provider'] as String?)?.trim() == 'default') {
+                try {
+                  final nowAvailableLocal =
+                      await _databaseService.getLocalDailyQuote(
+                    offlineQuoteSource: appSettings.offlineQuoteSource,
+                  );
+                  if (nowAvailableLocal != null) {
+                    continue;
+                  }
+                } catch (_) {}
               }
             }
             if (!isFutureDay) {
@@ -3060,15 +3121,13 @@ extension SmartPushScheduling on SmartPushService {
           preferCache: false,
           updateTodayCache: updateTodayCache,
         );
-        if (retryLocal != null) {
-          final retryType = (retryLocal['type'] as String?)?.trim() ?? '';
-          if (retryType == 'local') {
-            final built = buildResolvedFromMap(
-              retryLocal,
-              verifiedForCurrentSettings: true,
-            );
-            if (built != null) return built;
-          }
+        if (retryLocal != null &&
+            _isPermittedDailyQuoteForLocalOnlyMode(retryLocal, appSettings)) {
+          final built = buildResolvedFromMap(
+            retryLocal,
+            verifiedForCurrentSettings: true,
+          );
+          if (built != null) return built;
         }
         if (localPrimary != null && updateTodayCache) {
           _saveDailyQuoteToCache(localPrimary.quoteData);

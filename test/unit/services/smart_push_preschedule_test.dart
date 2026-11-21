@@ -5233,5 +5233,364 @@ void main() {
         expect(stats['totalEngagements'], equals(1));
       },
     );
+
+    test(
+      'reusing iOS slot id 0 across consecutive days credits Day 2 tap after Day 1 tap and does not misattribute click to unengaged prior day',
+      () async {
+        currentNow = localTime(2026, 5, 10, 7, 50);
+        databaseService.notes = <Quote>[
+          Quote(
+            id: '11112222-3333-4444-5555-666677778801',
+            content: '第一天的去年今日晨光随笔，记录微风与鸟鸣。',
+            date: localTime(2025, 5, 10, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: '11112222-3333-4444-5555-666677778802',
+            content: '第二天的去年今日晨光随笔，记录露珠与远山。',
+            date: localTime(2025, 5, 11, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: '11112222-3333-4444-5555-666677778803',
+            content: '第三天的往月今日笔记，记录静谧街角的灯火。',
+            date: localTime(2026, 4, 12, 8, 0).toIso8601String(),
+          ),
+          Quote(
+            id: '11112222-3333-4444-5555-666677778804',
+            content: '第四天的去年今日晨光随笔，记录雨后初晴的蓝天。',
+            date: localTime(2025, 5, 13, 8, 0).toIso8601String(),
+          ),
+        ];
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.frequent,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 8, minute: 0, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: false,
+          ),
+        );
+
+        // Day 1 (5/10): 点击 id=0 并推进到次日重排
+        final day1Call =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        currentNow = localTime(2026, 5, 10, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 0,
+            payload: day1Call.payload,
+          ),
+        );
+        await iosService.scheduleNextPush(preserveDeliveredNotifications: true);
+
+        // Day 2 (5/11): 再次点击复用 id=0 的新通知，不应被 Day 1 的已结算标记吞掉
+        final day2Call =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        expect(
+          day2Call.scheduledDate,
+          equals(localTime(2026, 5, 11, 8, 0)),
+        );
+        currentNow = localTime(2026, 5, 11, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 0,
+            payload: day2Call.payload,
+          ),
+        );
+
+        final analytics = SmartPushAnalytics(mmkvService: storage);
+        await analytics.settlePendingSend();
+        expect(await analytics.getUnengagedStreak(), equals(0));
+        var stats = await analytics.getAnalyticsStats();
+        // 智能模式每日规划早晚 2 个窗口（id=0 08:00 与 id=1 20:00）：
+        // 截至 5/11 08:05 共送达 3 条（5/10 08:00、5/10 20:00、5/11 08:00），其中两次 id=0 点击均被准确计为正向互动
+        expect(stats['totalNotificationsSent'], equals(3));
+        expect(stats['totalEngagements'], equals(2));
+
+        // 排入 Day 3 (5/12)；Day 3 08:00 (id=0, monthAgoToday) 送达后用户未点击，
+        // 5/12 19:00 前台恢复触发重排（preserveDeliveredNotifications: true）自然保留未结算的 Day 3 id=0 并追加待发 Day 4 (5/13 08:00) id=0
+        await iosService.scheduleNextPush(preserveDeliveredNotifications: true);
+        final day3Call =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        expect(
+          day3Call.scheduledDate,
+          equals(localTime(2026, 5, 12, 8, 0)),
+        );
+
+        currentNow = localTime(2026, 5, 12, 19, 0);
+        await iosService.scheduleNextPush(preserveDeliveredNotifications: true);
+        final day4Call =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 0).last;
+        expect(
+          day4Call.scheduledDate,
+          equals(localTime(2026, 5, 13, 8, 0)),
+        );
+
+        final coexistingSlotZeroEntries = (jsonDecode(
+          storage.getString('smart_push_prescheduled_entries_v1')!,
+        ) as List<dynamic>)
+            .whereType<Map<String, dynamic>>()
+            .where((e) => e['id'] == 0 && e['accounted'] != true)
+            .toList();
+        expect(
+          coexistingSlotZeroEntries,
+          hasLength(2),
+          reason: '重排保留已送达快照时，未补记的 Day 3 id=0 与待发的 Day 4 id=0 在真实存储中共存',
+        );
+
+        currentNow = localTime(2026, 5, 13, 8, 5);
+        await iosService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: 0,
+            payload: day4Call.payload,
+          ),
+        );
+        await analytics.settlePendingSend();
+
+        expect(await analytics.getUnengagedStreak(), equals(0));
+        final scores = await analytics.getContentTypeScores();
+        expect(
+          scores['monthAgoToday']!,
+          lessThan(0.5),
+          reason: 'Day 3 未点击的同槽位通知不得挪用 Day 4 的点击记录',
+        );
+        // 截至 5/13 08:05 已到达触发时间的通知共 6 条（5/10 早晚、5/11 早晚、5/12 早、5/13 早；5/13 晚间槽位尚在未来），其中 3 次点击均精准归因
+        stats = await analytics.getAnalyticsStats();
+        expect(stats['totalNotificationsSent'], equals(6));
+        expect(stats['totalEngagements'], equals(3));
+      },
+    );
+
+    test(
+      'immediate Daily Quote push delivered offline with local fallback opens exact delivered quote after reconnecting online and respects note hiding',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.standard;
+        addTearDown(() {
+          ApiService.debugIsConnectedOverride = null;
+          ApiService.debugHttpGetOverride = null;
+        });
+
+        currentNow = localTime(2026, 5, 10, 8, 0);
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: false,
+              dailyQuoteProvider: ApiService.hitokotoProvider,
+              offlineQuoteSource: 'tagOnly',
+            ).toJson(),
+          ),
+        );
+
+        const localFallbackId = '99887766-5544-3322-1100-aabbccddeeff';
+        databaseService.notes = <Quote>[
+          Quote(
+            id: localFallbackId,
+            content: '断网时推送到通知栏的本地收藏短句。',
+            sourceAuthor: '本地作者',
+            sourceWork: '离线手札',
+            date: localTime(2026, 4, 1, 9, 0).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '断网时推送到通知栏的本地收藏短句。',
+          'author': '本地作者',
+          'source': '离线手札',
+          'type': 'local',
+          'local_quote_id': localFallbackId,
+        };
+
+        // 1. 断网状态下触发即时每日一言推送：展示本地回退语录，且不污染今日在线一言缓存
+        ApiService.debugIsConnectedOverride = true;
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          throw const SocketException('Network unreachable');
+        };
+
+        final androidService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: true,
+          isIOSOverride: false,
+          timeZoneOverride: 'Etc/GMT-8',
+          canScheduleExactAlarmsOverride: () async => true,
+          nowProvider: () => currentNow,
+        );
+        addTearDown(androidService.dispose);
+        await androidService.initialize();
+        await androidService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 8, minute: 0),
+          ),
+        );
+        notificationsPlugin.shownCalls.clear();
+
+        await androidService.checkAndPush(
+          isBackground: true,
+          triggerKind: 'dailyQuote',
+        );
+        expect(notificationsPlugin.shownCalls, hasLength(1));
+        final shown = notificationsPlugin.shownCalls.single;
+        expect(shown.body, contains('断网时推送到通知栏的本地收藏短句。'));
+        expect(await androidService.getCachedDailyQuoteForToday(), isNull);
+
+        // 2. 恢复联网且在线接口返回全新一言后点击刚才的即时通知：首页必须展示通知上实际看到的本地短句
+        ApiService.debugHttpGetOverride = (
+          url, {
+          headers,
+          timeoutSeconds,
+        }) async {
+          return HttpResponse(
+            jsonEncode(<String, dynamic>{
+              'hitokoto': '联网后新拉取的在线一言：长风破浪会有时。',
+              'from_who': '示例作者丁',
+              'from': '示例诗集',
+              'type': 'i',
+            }),
+            200,
+          );
+        };
+
+        currentNow = localTime(2026, 5, 10, 8, 10);
+        await androidService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: shown.id,
+            payload: shown.payload,
+          ),
+        );
+
+        final displayed =
+            await androidService.consumePendingDailyQuoteForHomeDisplay();
+        expect(displayed, isNotNull);
+        expect(
+          displayed!['hitokoto'],
+          equals('断网时推送到通知栏的本地收藏短句。'),
+          reason: '离线送达后恢复联网再点击通知，应展示通知实际送达的本地快照而非重新拉取新在线一言',
+        );
+
+        // 3. 若用户随后将该源笔记隐藏，再点击该通知必须拒绝展示并联动清理
+        databaseService.notes = <Quote>[];
+        databaseService.localDailyQuoteResult = null;
+        await androidService.handleNotificationTapForTest(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            id: shown.id,
+            payload: shown.payload,
+          ),
+        );
+        expect(
+          await androidService.consumePendingDailyQuoteForHomeDisplay(),
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'iOS standalone Daily Quote with useLocalQuotesOnly uses built-in default quote when offlineQuoteSource is all and upgrades once a local note is added',
+      () async {
+        currentNow = localTime(2026, 5, 10, 8, 30);
+        databaseService.notes = <Quote>[];
+        databaseService.localDailyQuoteResult = null;
+
+        await storage.remove('smart_push_last_daily_quote');
+        await storage.remove('smart_push_last_daily_quote_date');
+        await storage.setString(
+          'app_settings',
+          jsonEncode(
+            AppSettings(
+              useLocalQuotesOnly: true,
+              offlineQuoteSource: 'all',
+              localeCode: 'zh',
+            ).toJson(),
+          ),
+        );
+
+        final iosService = SmartPushService(
+          databaseService: databaseService,
+          locationService: LocationService(),
+          mmkvService: storage,
+          notificationsPlugin: notificationsPlugin,
+          isAndroidOverride: false,
+          isIOSOverride: true,
+          timeZoneOverride: 'Etc/GMT-8',
+          nowProvider: () => currentNow,
+        );
+        addTearDown(iosService.dispose);
+        await iosService.initialize();
+
+        await iosService.saveSettings(
+          const SmartPushSettings(
+            enabled: false,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(hour: 9, minute: 0),
+          ),
+        );
+
+        final defaultScheduled =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(
+          defaultScheduled.body,
+          isNot(equals('点击查看今天的灵感')),
+          reason: '仅本地 + 全部笔记模式下空库应回退内置默认语录，而非退化为无内容通用提示',
+        );
+        final cachedDefault = await iosService.getCachedDailyQuoteForToday();
+        expect(cachedDefault, isNotNull);
+        expect(cachedDefault!['provider'], equals('default'));
+
+        // 用户新增第一条符合条件的本地笔记后，待触发 ID=100 与当日缓存应自动升级为真实本地笔记
+        const addedLocalId = '77776666-5555-4444-3333-222211110000';
+        databaseService.notes = <Quote>[
+          Quote(
+            id: addedLocalId,
+            content: '用户新写下的第一条真实本地短句。',
+            date: localTime(2026, 5, 10, 8, 35).toIso8601String(),
+          ),
+        ];
+        databaseService.localDailyQuoteResult = <String, dynamic>{
+          'content': '用户新写下的第一条真实本地短句。',
+          'type': 'local',
+          'local_quote_id': addedLocalId,
+        };
+        databaseService.notifyChanged();
+        await iosService.waitForPendingScheduleForTest();
+
+        final upgradedScheduled =
+            notificationsPlugin.scheduledCalls.where((c) => c.id == 100).last;
+        expect(upgradedScheduled.body, contains('用户新写下的第一条真实本地短句。'));
+      },
+    );
   });
 }

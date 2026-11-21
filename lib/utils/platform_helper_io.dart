@@ -326,6 +326,7 @@ class PlatformHelper {
         : acquireTimeout;
     final waitWatch = Stopwatch()..start();
     var attempt = 0;
+    var nextFinalizerNudgeMs = 150;
     _PosixLockedFileHandle? lockedPosixHandle;
     RandomAccessFile? lockedWindowsHandle;
 
@@ -429,15 +430,15 @@ class PlatformHelper {
         final delayMs =
             attempt == 0 ? 1 : (attempt < 4 ? 5 : (attempt < 8 ? 10 : 20));
         if (!Platform.isWindows &&
-            attempt >= 3 &&
-            (attempt == 3 || attempt % 4 == 0)) {
+            waitWatch.elapsedMilliseconds >= nextFinalizerNudgeMs) {
           // If a sibling Isolate in the same IsolateGroup was killed via
           // Isolate.kill(priority: Isolate.immediate) without running finally,
-          // nudging young-space allocation under contention prompts Dart GC to
-          // run _PosixLockedFileHandle's NativeFinalizer promptly. Separate
-          // FlutterEngine / IsolateGroup teardown runs NativeFinalizer directly.
+          // a throttled young-space nudge prompts Dart GC to run
+          // _PosixLockedFileHandle's NativeFinalizer without churning heap
+          // during ordinary short-lived lock contention.
+          nextFinalizerNudgeMs = waitWatch.elapsedMilliseconds + 1000;
           for (var i = 0; i < 8; i++) {
-            Uint8List(512 * 1024);
+            Uint8List(256 * 1024);
           }
         }
         attempt++;

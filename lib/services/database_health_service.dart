@@ -543,8 +543,8 @@ class DatabaseHealthService {
         // 修复：兼容用户自己创建的“每日一言”标签（ID 可能不是 default_hitokoto）
         // 先收集所有名字为“每日一言”或固定 ID 的分类
         final tagIdRows = await db.rawQuery(
-          "SELECT id FROM categories WHERE name = '每日一言' OR id = ?",
-          [dailyQuoteTagId],
+          'SELECT id FROM categories WHERE name = ? OR id = ?',
+          ['每日一言', dailyQuoteTagId],
         );
         final tagIds = tagIdRows.map((r) => r['id'] as String).toList();
         if (tagIds.isEmpty) {
@@ -571,13 +571,13 @@ class DatabaseHealthService {
           '''
           SELECT q.* FROM quotes q
           WHERE length(q.content) <= ?
-            AND q.content NOT LIKE '%\n%'
+            AND q.content NOT LIKE ?
             $hiddenFilter
             $deletedFilter
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          [_maxOfflineQuoteLength, _hiddenTagId],
+          [_maxOfflineQuoteLength, '%\n%', _hiddenTagId],
         );
       }
 
@@ -607,23 +607,9 @@ class DatabaseHealthService {
     Database db,
     String quoteId, {
     String offlineQuoteSource = 'tagOnly',
-    List<Quote>? memoryStore,
-    List<NoteTag>? categoryStore,
   }) async {
     if (quoteId.isEmpty) return null;
     try {
-      if (kIsWeb) {
-        if (memoryStore == null || categoryStore == null) {
-          return null;
-        }
-        return _getLocalQuoteFromMemory(
-          memoryStore,
-          categoryStore,
-          offlineQuoteSource,
-          targetQuoteId: quoteId,
-        );
-      }
-
       final hasDeletedColumn =
           await checkColumnExists(db, 'quotes', 'is_deleted');
       final deletedFilter = hasDeletedColumn
@@ -639,8 +625,8 @@ class DatabaseHealthService {
       List<Map<String, dynamic>> results;
       if (offlineQuoteSource == 'tagOnly') {
         final tagIdRows = await db.rawQuery(
-          "SELECT id FROM categories WHERE name = '每日一言' OR id = ?",
-          [dailyQuoteTagId],
+          'SELECT id FROM categories WHERE name = ? OR id = ?',
+          ['每日一言', dailyQuoteTagId],
         );
         final tagIds = tagIdRows.map((r) => r['id'] as String).toList();
         if (tagIds.isEmpty) {
@@ -666,12 +652,12 @@ class DatabaseHealthService {
           SELECT q.* FROM quotes q
           WHERE q.id = ?
             AND length(q.content) <= ?
-            AND q.content NOT LIKE '%\n%'
+            AND q.content NOT LIKE ?
             $hiddenFilter
             $deletedFilter
           LIMIT 1
         ''',
-          [quoteId, _maxOfflineQuoteLength, _hiddenTagId],
+          [quoteId, _maxOfflineQuoteLength, '%\n%', _hiddenTagId],
         );
       }
 
@@ -859,13 +845,9 @@ class DatabaseHealthService {
   Map<String, dynamic>? _getLocalQuoteFromMemory(
     List<Quote> memoryStore,
     List<NoteTag> categoryStore,
-    String offlineQuoteSource, {
-    String? targetQuoteId,
-  }) {
+    String offlineQuoteSource,
+  ) {
     try {
-      final scopedStore = targetQuoteId != null
-          ? memoryStore.where((q) => q.id == targetQuoteId)
-          : memoryStore;
       List<Quote> candidates = [];
 
       if (offlineQuoteSource == 'tagOnly') {
@@ -873,9 +855,8 @@ class DatabaseHealthService {
         final hitokotoTagIds = categoryStore
             .where((c) => c.name == '每日一言' || c.id == dailyQuoteTagId)
             .map((c) => c.id)
-            .toSet()
-          ..add(dailyQuoteTagId);
-        candidates = scopedStore
+            .toSet();
+        candidates = memoryStore
             .where(
               (quote) =>
                   isEligibleOfflineQuoteContent(
@@ -889,7 +870,7 @@ class DatabaseHealthService {
             )
             .toList();
       } else {
-        candidates = scopedStore
+        candidates = memoryStore
             .where(
               (quote) =>
                   isEligibleOfflineQuoteContent(
@@ -903,9 +884,7 @@ class DatabaseHealthService {
       }
 
       if (candidates.isNotEmpty) {
-        if (targetQuoteId == null) {
-          candidates.shuffle();
-        }
+        candidates.shuffle();
         final quote = candidates.first;
         return {
           'content': quote.content,
@@ -913,7 +892,6 @@ class DatabaseHealthService {
           'author': quote.sourceAuthor ?? '',
           'type': 'local',
           'local_quote_id': quote.id,
-          'offline_quote_source': offlineQuoteSource,
           'from_who': quote.sourceAuthor ?? '',
           'from': quote.sourceWork ?? '',
         };

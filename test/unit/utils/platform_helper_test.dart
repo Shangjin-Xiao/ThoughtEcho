@@ -342,5 +342,105 @@ void main() {
         expect(reacquiredInSameProcess, isTrue);
       },
     );
+
+    test(
+      'releases OS file lock immediately when a separate Dart VM process holding the lock is killed with SIGKILL',
+      () async {
+        if (Platform.isWindows) {
+          return;
+        }
+
+        String? dartExecutable;
+        final sdkDart = File(
+          '${File(Platform.resolvedExecutable).parent.parent.parent.path}/dart-sdk/bin/dart',
+        );
+        if (sdkDart.existsSync()) {
+          dartExecutable = sdkDart.path;
+        } else {
+          final whichRes = await Process.run('which', const <String>['dart']);
+          if (whichRes.exitCode == 0) {
+            final resolved = (whichRes.stdout as String).trim();
+            if (resolved.isNotEmpty) {
+              dartExecutable = resolved;
+            }
+          }
+        }
+        expect(dartExecutable, isNotNull);
+
+        final lockPath = '${tempDir.path}/subprocess_holder.lock';
+        final readyPath = '${tempDir.path}/subprocess_ready.txt';
+        final helperScript = File('${tempDir.path}/hold_posix_flock.dart');
+        await helperScript.writeAsString('''
+import 'dart:convert';
+import 'dart:ffi' as ffi;
+import 'dart:io';
+
+typedef _OpenNative = ffi.Int32 Function(ffi.Pointer<ffi.Uint8>, ffi.Int32, ffi.Int32);
+typedef _OpenDart = int Function(ffi.Pointer<ffi.Uint8>, int, int);
+typedef _FlockNative = ffi.Int32 Function(ffi.Int32, ffi.Int32);
+typedef _FlockDart = int Function(int, int);
+typedef _MallocNative = ffi.Pointer<ffi.Uint8> Function(ffi.IntPtr);
+typedef _MallocDart = ffi.Pointer<ffi.Uint8> Function(int);
+
+Future<void> main(List<String> args) async {
+  final lockPath = args[0];
+  final readyPath = args[1];
+  File(lockPath).createSync(recursive: true);
+  final lib = ffi.DynamicLibrary.process();
+  final malloc = lib.lookupFunction<_MallocNative, _MallocDart>('malloc');
+  final openFn = lib.lookupFunction<_OpenNative, _OpenDart>('open');
+  final flockFn = lib.lookupFunction<_FlockNative, _FlockDart>('flock');
+  final bytes = utf8.encode(lockPath);
+  final ptr = malloc(bytes.length + 1);
+  for (var i = 0; i < bytes.length; i++) {
+    ptr[i] = bytes[i];
+  }
+  ptr[bytes.length] = 0;
+  final fd = openFn(ptr, 2, 438);
+  if (fd < 0) exit(2);
+  if (flockFn(fd, 2 | 4) != 0) exit(3);
+  File(readyPath).writeAsStringSync('\$pid', flush: true);
+  await Future<void>.delayed(const Duration(seconds: 30));
+}
+''');
+
+        final child = await Process.start(
+          dartExecutable!,
+          <String>[helperScript.path, lockPath, readyPath],
+        );
+        addTearDown(() => child.kill(ProcessSignal.sigkill));
+
+        final readyWatch = Stopwatch()..start();
+        while (!File(readyPath).existsSync() &&
+            readyWatch.elapsed < const Duration(seconds: 5)) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+        expect(File(readyPath).existsSync(), isTrue);
+
+        await expectLater(
+          PlatformHelper.withCrossIsolateLock<void>(
+            'subprocess_holder_lock',
+            () async {},
+            customLockFilePath: lockPath,
+            acquireTimeout: const Duration(milliseconds: 30),
+          ),
+          throwsA(isA<FileSystemException>()),
+        );
+
+        child.kill(ProcessSignal.sigkill);
+        await child.exitCode.timeout(const Duration(seconds: 5));
+
+        var reacquiredAfterSigkill = false;
+        await PlatformHelper.withCrossIsolateLock<void>(
+          'subprocess_holder_lock',
+          () async {
+            reacquiredAfterSigkill = true;
+          },
+          customLockFilePath: lockPath,
+          acquireTimeout: const Duration(seconds: 1),
+        );
+        expect(reacquiredAfterSigkill, isTrue);
+      },
+    );
   });
 }

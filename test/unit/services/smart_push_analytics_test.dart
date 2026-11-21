@@ -747,5 +747,82 @@ void main() {
         );
       },
     );
+
+    test('跨日复用同一通知 ID（如 iOS id = 0）时，次日预点击与多日交错补记均精准归属各自发送实例', () async {
+      final day1 = DateTime(2026, 5, 10, 8, 0);
+      final day2 = DateTime(2026, 5, 11, 8, 0);
+      final day3 = DateTime(2026, 5, 12, 8, 0);
+      final day4 = DateTime(2026, 5, 13, 8, 0);
+
+      // 场景 A（Greptile P1）：Day 1 点击 id = 0 并完成补记结算后，Day 2 用户再次点击 id = 0（先于补记）
+      await analytics.recordInteraction(
+        'yearAgoToday',
+        notificationId: 0,
+        sentAt: day1,
+        deferScoreUntilAccounted: true,
+      );
+      await analytics.recordDeliveredNotification(
+        'yearAgoToday',
+        notificationId: 0,
+        sentAt: day1,
+      );
+
+      await analytics.recordInteraction(
+        'yearAgoToday',
+        notificationId: 0,
+        sentAt: day2,
+        deferScoreUntilAccounted: true,
+      );
+      expect(analytics.hasClickedNotification(0, sentAt: day2), isTrue);
+      await analytics.recordDeliveredNotification(
+        'yearAgoToday',
+        notificationId: 0,
+        sentAt: day2,
+      );
+      await analytics.settlePendingSend();
+
+      expect(await analytics.getUnengagedStreak(), equals(0));
+      var stats = await analytics.getAnalyticsStats();
+      expect(stats['totalNotificationsSent'], equals(2));
+      expect(stats['totalEngagements'], equals(2));
+
+      // 场景 B（Devin BUG）：Day 3 未点击且尚未补记，Day 4 到达并被用户点击后按时间顺序一并补记 Day 3 -> Day 4
+      await analytics.recordInteraction(
+        'monthAgoToday',
+        notificationId: 0,
+        sentAt: day4,
+        deferScoreUntilAccounted: true,
+      );
+      expect(analytics.hasClickedNotification(0, sentAt: day3), isFalse);
+      expect(analytics.hasClickedNotification(0, sentAt: day4), isTrue);
+
+      await analytics.recordDeliveredNotification(
+        'pastNote',
+        notificationId: 0,
+        sentAt: day3,
+      );
+      await analytics.recordDeliveredNotification(
+        'monthAgoToday',
+        notificationId: 0,
+        sentAt: day4,
+      );
+      await analytics.settlePendingSend();
+
+      expect(await analytics.getUnengagedStreak(), equals(0));
+      final scores = await analytics.getContentTypeScores();
+      expect(
+        scores['pastNote']!,
+        lessThan(0.5),
+        reason: 'Day 3 未点击的通知不得误消费 Day 4 的点击记录',
+      );
+      expect(
+        scores['monthAgoToday']!,
+        greaterThan(0.5),
+        reason: 'Day 4 被真实点击的通知必须记为正向互动',
+      );
+      stats = await analytics.getAnalyticsStats();
+      expect(stats['totalNotificationsSent'], equals(4));
+      expect(stats['totalEngagements'], equals(3));
+    });
   });
 }

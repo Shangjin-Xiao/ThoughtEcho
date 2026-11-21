@@ -128,11 +128,12 @@ extension SmartPushExecution on SmartPushService {
       final startEpoch = _readStoredSettingsEpoch();
       // 每日一言是用户期望的每日固定内容，不受 SOTA 疲劳预防系统限制。
       // 允许一天多次推送，但使用内容哈希去重避免推送相同一言。
-      final dailyQuote = await _fetchDailyQuote();
-      if (dailyQuote == null) {
+      final resolvedDailyQuote = await _fetchDailyQuoteResolved();
+      if (resolvedDailyQuote == null) {
         AppLogger.w('每日一言推送：获取内容失败');
         return;
       }
+      final dailyQuote = resolvedDailyQuote.quote;
 
       // 检查是否已推送过相同内容
       if (_hasDailyQuoteContentPushed(dailyQuote.content)) {
@@ -141,10 +142,22 @@ extension SmartPushExecution on SmartPushService {
         return;
       }
 
-      await _showNotification(
+      final deliveredAt = _now();
+      final shownNotificationId = await _showNotification(
         dailyQuote,
         title: '📖 每日一言',
         contentType: 'dailyQuote',
+      );
+      if (shownNotificationId == null) {
+        return;
+      }
+      await _persistDeliveredDailyQuoteSnapshot(
+        notificationId: shownNotificationId,
+        dailyQuoteData: resolvedDailyQuote.quoteData,
+        sourceNoteId: resolvedDailyQuote.sourceNoteId,
+        quoteSourceFingerprint: resolvedDailyQuote.quoteSourceFingerprint,
+        deliveredAt: deliveredAt,
+        isStandaloneDailyQuote: true,
       );
 
       // 记录已推送的内容哈希，防止重复
@@ -152,7 +165,7 @@ extension SmartPushExecution on SmartPushService {
 
       // 更新独立投递历史中的 lastPushTime，让防重复机制对后续推送生效且不触碰用户配置
       await _persistDeliveryHistory(
-        lastPushTime: _now(),
+        lastPushTime: deliveredAt,
         expectedSettingsGeneration: startSettingsGeneration,
         expectedEpoch: startEpoch,
       );
@@ -164,7 +177,7 @@ extension SmartPushExecution on SmartPushService {
 
       // 重新调度
       if (!isBackground) {
-        await scheduleNextPush();
+        await scheduleNextPush(preserveDeliveredNotifications: true);
       }
     } catch (e, stack) {
       AppLogger.e('每日一言推送失败', error: e, stackTrace: stack);
@@ -227,6 +240,9 @@ extension SmartPushExecution on SmartPushService {
       bool isDailyQuote = false;
       String contentType = 'dailyQuote';
       double candidatePriority = 0;
+      Map<String, dynamic>? dailyQuoteData;
+      String? dailyQuoteSourceNoteId;
+      String? dailyQuoteSourceFingerprint;
 
       AppLogger.w('执行智能推送，模式: ${_settings.pushMode.name}');
 
@@ -239,17 +255,24 @@ extension SmartPushExecution on SmartPushService {
           isDailyQuote = result.isDailyQuote;
           contentType = result.contentType;
           candidatePriority = result.priority;
+          dailyQuoteData = result.dailyQuoteData;
+          dailyQuoteSourceNoteId = result.sourceNoteId;
+          dailyQuoteSourceFingerprint = result.quoteSourceFingerprint;
           break;
 
         case PushMode.dailyQuote:
           // 推送模式选了"仅每日一言" — 与独立每日一言推送是两条通道
-          final dailyQuote = await _fetchDailyQuote();
-          if (dailyQuote != null) {
-            if (!_hasDailyQuoteContentPushed(dailyQuote.content)) {
-              noteToShow = dailyQuote;
+          final resolvedDaily = await _fetchDailyQuoteResolved();
+          if (resolvedDaily != null) {
+            if (!_hasDailyQuoteContentPushed(resolvedDaily.quote.content)) {
+              noteToShow = resolvedDaily.quote;
               title = '📖 每日一言';
               isDailyQuote = true;
               contentType = 'dailyQuote';
+              dailyQuoteData = resolvedDaily.quoteData;
+              dailyQuoteSourceNoteId = resolvedDaily.sourceNoteId;
+              dailyQuoteSourceFingerprint =
+                  resolvedDaily.quoteSourceFingerprint;
             } else {
               AppLogger.i('PushMode.dailyQuote：该内容已推送过，跳过');
             }
@@ -280,13 +303,17 @@ extension SmartPushExecution on SmartPushService {
             }
           }
           if (noteToShow == null) {
-            final dailyQuote = await _fetchDailyQuote();
-            if (dailyQuote != null &&
-                !_hasDailyQuoteContentPushed(dailyQuote.content)) {
-              noteToShow = dailyQuote;
+            final resolvedDaily = await _fetchDailyQuoteResolved();
+            if (resolvedDaily != null &&
+                !_hasDailyQuoteContentPushed(resolvedDaily.quote.content)) {
+              noteToShow = resolvedDaily.quote;
               title = '📖 每日一言';
               isDailyQuote = true;
               contentType = 'dailyQuote';
+              dailyQuoteData = resolvedDaily.quoteData;
+              dailyQuoteSourceNoteId = resolvedDaily.sourceNoteId;
+              dailyQuoteSourceFingerprint =
+                  resolvedDaily.quoteSourceFingerprint;
             }
           }
           break;
@@ -331,6 +358,7 @@ extension SmartPushExecution on SmartPushService {
           _inFlightImmediateSmartNotificationIds.add(plannedNotificationId);
         }
         int? shownNotificationId;
+        final deliveredAt = _now();
         try {
           shownNotificationId = await _showNotification(
             noteToShow,
@@ -338,6 +366,17 @@ extension SmartPushExecution on SmartPushService {
             contentType: contentType,
             notificationIdOverride: plannedNotificationId,
           );
+          if (shownNotificationId != null &&
+              isDailyQuote &&
+              dailyQuoteData != null) {
+            await _persistDeliveredDailyQuoteSnapshot(
+              notificationId: shownNotificationId,
+              dailyQuoteData: dailyQuoteData,
+              sourceNoteId: dailyQuoteSourceNoteId,
+              quoteSourceFingerprint: dailyQuoteSourceFingerprint,
+              deliveredAt: deliveredAt,
+            );
+          }
 
           // ==== 向树莓派 Pico 发送蓝牙广播（默认关闭）====
           // 这条链路只服务于外接墨水屏硬件，绝大多数用户用不到。
@@ -403,6 +442,7 @@ extension SmartPushExecution on SmartPushService {
             await _analytics.recordDeliveredNotification(
               contentType,
               notificationId: shownNotificationId,
+              sentAt: deliveredAt,
             );
           }
         } finally {
@@ -422,7 +462,7 @@ extension SmartPushExecution on SmartPushService {
 
       // 重新调度下一次推送
       if (!isBackground && !isTest) {
-        await scheduleNextPush();
+        await scheduleNextPush(preserveDeliveredNotifications: true);
       }
     } catch (e, stack) {
       AppLogger.e('智能推送失败', error: e, stackTrace: stack);

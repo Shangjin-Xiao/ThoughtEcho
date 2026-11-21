@@ -1370,6 +1370,9 @@ class _SmartSelectResult {
   ///
   /// 每日一言等非笔记内容为 0 —— 它们永远过不了门槛，只能当天第一条推。
   final double priority;
+  final Map<String, dynamic>? dailyQuoteData;
+  final String? sourceNoteId;
+  final String? quoteSourceFingerprint;
 
   _SmartSelectResult({
     required this.note,
@@ -1377,6 +1380,9 @@ class _SmartSelectResult {
     required this.isDailyQuote,
     this.contentType = 'dailyQuote',
     this.priority = 0,
+    this.dailyQuoteData,
+    this.sourceNoteId,
+    this.quoteSourceFingerprint,
   });
 
   factory _SmartSelectResult.empty() => _SmartSelectResult(
@@ -1413,12 +1419,18 @@ class _ContentCandidate {
   final String title;
   final int priority;
   final bool isDailyQuote;
+  final Map<String, dynamic>? dailyQuoteData;
+  final String? sourceNoteId;
+  final String? quoteSourceFingerprint;
 
   _ContentCandidate({
     required this.note,
     required this.title,
     required this.priority,
     this.isDailyQuote = false,
+    this.dailyQuoteData,
+    this.sourceNoteId,
+    this.quoteSourceFingerprint,
   });
 }
 

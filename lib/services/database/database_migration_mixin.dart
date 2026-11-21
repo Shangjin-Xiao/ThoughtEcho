@@ -121,15 +121,10 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
     String quoteId, {
     String offlineQuoteSource = 'tagOnly',
   }) async {
-    if (!_isInitialized) {
-      await init();
-    }
     return _healthService.getLocalDailyQuoteById(
-      database,
+      await safeDatabase,
       quoteId,
       offlineQuoteSource: offlineQuoteSource,
-      memoryStore: _memoryStore,
-      categoryStore: _tagStore,
     );
   }
 
