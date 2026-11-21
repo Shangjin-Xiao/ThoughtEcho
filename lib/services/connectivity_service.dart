@@ -42,6 +42,15 @@ class ConnectivityService extends ChangeNotifier {
   @visibleForTesting
   static Duration? probeTimeoutOverrideForTesting;
 
+  /// 用于单元测试中覆盖当前是否为 Windows 平台
+  @visibleForTesting
+  static bool? isWindowsOverrideForTesting;
+
+  /// 用于单元测试中注入本地网卡地址列表（验证 Windows NCSI 返回 none 时的降级逻辑）
+  @visibleForTesting
+  static Future<List<InternetAddress>> Function()?
+      localInterfaceAddressesForTesting;
+
   bool get isConnected => isConnectedOverrideForTesting ?? _isConnected;
 
   /// 供测试检查是否有活动监听器
@@ -136,7 +145,23 @@ class ConnectivityService extends ChangeNotifier {
       final results = await _connectivity.checkConnectivity();
       if (results.isNotEmpty &&
           results.every((result) => result == ConnectivityResult.none)) {
-        return false;
+        final isWindows = isWindowsOverrideForTesting ?? Platform.isWindows;
+        if (!isWindows) {
+          return false;
+        }
+        // Windows 端 connectivity_plus 依赖系统 NCSI (get_IsConnectedToInternet)，
+        // 当微软探测受阻但网卡实际已连接时会返回 none；仅在无非回环/非链路本地活动网卡时才直接短路离线。
+        final Iterable<InternetAddress> addresses =
+            localInterfaceAddressesForTesting != null
+                ? await localInterfaceAddressesForTesting!()
+                : (await NetworkInterface.list())
+                    .expand<InternetAddress>((iface) => iface.addresses);
+        final hasActiveInterface = addresses.any(
+          (addr) => !addr.isLoopback && !addr.isLinkLocal,
+        );
+        if (!hasActiveInterface) {
+          return false;
+        }
       }
     } catch (_) {
       // 平台通道不可用（如未挂载 Mock 的单测环境或桌面插件异常）时安全降级至 DNS 探测

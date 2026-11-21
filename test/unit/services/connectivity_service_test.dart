@@ -28,6 +28,8 @@ void main() {
     ConnectivityService.isConnectedOverrideForTesting = null;
     ConnectivityService.dnsLookupForTesting = null;
     ConnectivityService.probeTimeoutOverrideForTesting = null;
+    ConnectivityService.isWindowsOverrideForTesting = false;
+    ConnectivityService.localInterfaceAddressesForTesting = null;
     mockConnectivityResults = ['wifi'];
     shouldThrowPlatformException = false;
 
@@ -52,6 +54,8 @@ void main() {
     ConnectivityService.isConnectedOverrideForTesting = null;
     ConnectivityService.dnsLookupForTesting = null;
     ConnectivityService.probeTimeoutOverrideForTesting = null;
+    ConnectivityService.isWindowsOverrideForTesting = null;
+    ConnectivityService.localInterfaceAddressesForTesting = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(connectivityChannel, null);
   });
@@ -183,6 +187,39 @@ void main() {
         final emptyChannelResult = await service.checkConnectionNow();
         expect(emptyChannelResult, isTrue);
         expect(dnsLookupCalls, greaterThan(0));
+      },
+    );
+
+    test(
+      'on Windows falls back to DNS when plugin reports none with active adapter, and short-circuits when no active adapter exists',
+      () async {
+        final service = ConnectivityService();
+        ConnectivityService.isWindowsOverrideForTesting = true;
+        mockConnectivityResults = ['none'];
+
+        var dnsLookupCalls = 0;
+        ConnectivityService.dnsLookupForTesting = (host) async {
+          dnsLookupCalls += 1;
+          return [InternetAddress.loopbackIPv4];
+        };
+
+        // Active routable/LAN adapter present while Windows NCSI reported none: must probe DNS.
+        ConnectivityService.localInterfaceAddressesForTesting = () async => [
+              InternetAddress('192.0.2.1'),
+            ];
+        expect(await service.checkConnectionNow(), isTrue);
+        expect(service.isConnected, isTrue);
+        expect(dnsLookupCalls, greaterThan(0));
+
+        // Only loopback / link-local (APIPA) or no adapters: must short-circuit with 0 DNS lookups.
+        dnsLookupCalls = 0;
+        ConnectivityService.localInterfaceAddressesForTesting = () async => [
+              InternetAddress.loopbackIPv4,
+              InternetAddress('169.254.10.20'),
+            ];
+        expect(await service.checkConnectionNow(), isFalse);
+        expect(service.isConnected, isFalse);
+        expect(dnsLookupCalls, 0);
       },
     );
 
