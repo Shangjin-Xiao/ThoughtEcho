@@ -374,11 +374,38 @@ extension SmartPushScheduling on SmartPushService {
     if (entries.isEmpty) return entries;
 
     final nowMs = _now().millisecondsSinceEpoch;
-    bool isEntryDue(_PreScheduledEntry e) =>
-        !e.accounted &&
-        (e.epochMs <= nowMs ||
-            (forceAccountNotificationId != null &&
-                e.id == forceAccountNotificationId));
+    final hasCandidateElapsedEntries = entries.any(
+      (e) =>
+          !e.accounted &&
+          e.epochMs <= nowMs &&
+          (forceAccountNotificationId == null ||
+              e.id != forceAccountNotificationId),
+    );
+    Set<int>? pendingRequestIds;
+    if (hasCandidateElapsedEntries) {
+      pendingRequestIds = await _queryPendingLocalNotificationIds();
+      if (!await _isAccountingContextStillValid(
+        settingsGeneration: settingsGeneration,
+        expectedEpoch: expectedEpoch,
+        fromBackground: fromBackground,
+        reloadStorage: fromBackground,
+      )) {
+        return _loadTrackedPreScheduledEntries();
+      }
+    }
+
+    bool isEntryDue(_PreScheduledEntry e) {
+      if (e.accounted) return false;
+      if (forceAccountNotificationId != null &&
+          e.id == forceAccountNotificationId) {
+        return true;
+      }
+      if (e.epochMs > nowMs) return false;
+      if (pendingRequestIds != null && pendingRequestIds.contains(e.id)) {
+        return false;
+      }
+      return true;
+    }
 
     final dueRegularEntries = entries
         .where((e) => isEntryDue(e) && !e.isDailyQuote)
@@ -538,6 +565,10 @@ extension SmartPushScheduling on SmartPushService {
       expectedEpoch: expectedEpoch,
       fromBackground: fromBackground,
     );
+    final futureOnly = fromBackground || preserveDeliveredNotifications;
+    final pendingRequestIds = previousEntries.isNotEmpty
+        ? await _queryPendingLocalNotificationIds()
+        : const <int>{};
     if (!await _isScheduleContextStillValid(
       generation: generation,
       expectedEpoch: expectedEpoch,
@@ -606,6 +637,8 @@ extension SmartPushScheduling on SmartPushService {
         rawRegularSlots: rawRegularSlots,
         resolveDailyQuoteOnce: resolveDailyQuoteOnce,
         previousEntries: previousEntries,
+        pendingRequestIds: pendingRequestIds,
+        futureOnly: futureOnly,
       );
       if (!await _isScheduleContextStillValid(
         generation: generation,
@@ -699,7 +732,6 @@ extension SmartPushScheduling on SmartPushService {
       return;
     }
 
-    final futureOnly = fromBackground || preserveDeliveredNotifications;
     final isNoteOnlyMode = _settings.pushMode == PushMode.custom ||
         _settings.pushMode == PushMode.pastNotes;
     final useLocalQuotesOnly = _loadStoredAppSettings().useLocalQuotesOnly;
@@ -736,6 +768,9 @@ extension SmartPushScheduling on SmartPushService {
       futureOnly: futureOnly,
       visibleNoteIds: visibleNoteIds,
       entriesOverride: previousEntries,
+      pendingRequestIds: pendingRequestIds,
+      alreadyQueriedPendingIds: true,
+      canScheduleExact: canScheduleExact,
     );
     final remainingPreviousEntries = previousEntries
         .where((e) => !reconcileResult.cancelledIds.contains(e.id))
@@ -1226,6 +1261,8 @@ extension SmartPushScheduling on SmartPushService {
             Function()
         resolveDailyQuoteOnce,
     List<_PreScheduledEntry> previousEntries = const [],
+    Set<int>? pendingRequestIds,
+    bool futureOnly = false,
   }) async {
     if (rawRegularSlots.isEmpty) {
       final visibleIds = await _loadVisibleNoteIdsForReconciliation();
@@ -1299,20 +1336,36 @@ extension SmartPushScheduling on SmartPushService {
       }
       for (final prev in previousEntries) {
         final prevNoteId = prev.noteId;
+        final isStillPending = pendingRequestIds?.contains(prev.id) ?? false;
+        if (!futureOnly && isStillPending) {
+          continue;
+        }
         if (!prev.isDailyQuote &&
             prev.contentType != 'dailyQuote' &&
             prev.epochMs > 0 &&
             prev.epochMs <= nowMs &&
-            prevNoteId != null &&
-            prevNoteId.isNotEmpty &&
-            visibleNoteIds.contains(prevNoteId)) {
-          final deliveredDayKey = tz.TZDateTime.fromMillisecondsSinceEpoch(
+            (prevNoteId == null ||
+                prevNoteId.isEmpty ||
+                visibleNoteIds.contains(prevNoteId))) {
+          final deliveredTime = tz.TZDateTime.fromMillisecondsSinceEpoch(
             tz.local,
             prev.epochMs,
-          ).toIso8601String().substring(0, 10);
-          sameDayAssignedIds
-              .putIfAbsent(deliveredDayKey, () => <String>{})
-              .add(prevNoteId);
+          );
+          final deliveredDayKey =
+              deliveredTime.toIso8601String().substring(0, 10);
+          if (prevNoteId != null && prevNoteId.isNotEmpty) {
+            sameDayAssignedIds
+                .putIfAbsent(deliveredDayKey, () => <String>{})
+                .add(prevNoteId);
+          }
+          if (isSmartMode && futureOnly && !prev.accounted && isStillPending) {
+            perDayCount[deliveredDayKey] =
+                (perDayCount[deliveredDayKey] ?? 0) + 1;
+            if (simulatedLastPushTime == null ||
+                deliveredTime.isAfter(simulatedLastPushTime)) {
+              simulatedLastPushTime = deliveredTime;
+            }
+          }
         }
       }
 

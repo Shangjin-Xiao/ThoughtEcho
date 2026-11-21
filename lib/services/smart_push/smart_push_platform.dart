@@ -189,6 +189,19 @@ extension SmartPushPlatform on SmartPushService {
     }
   }
 
+  /// 查询系统本地通知队列中仍处于待触发状态（尚未由 ScheduledNotificationReceiver 送达）的通知 ID 集合。
+  ///
+  /// 在无精确闹钟权限（inexactAllowWhileIdle）场景下，即使当前时间已过计划时间点（epochMs <= nowMs），
+  /// 只要系统尚未送达该通知，其 ID 仍会保留在 pendingNotificationRequests 中。
+  Future<Set<int>?> _queryPendingLocalNotificationIds() async {
+    try {
+      final pending = await _notificationsPlugin.pendingNotificationRequests();
+      return pending.map((request) => request.id).toSet();
+    } catch (_) {
+      return null;
+    }
+  }
+
   bool _isEntryDisabledByCurrentSettings(_PreScheduledEntry entry) {
     if (entry.isDailyQuote) {
       return !_settings.dailyQuotePushEnabled;
@@ -212,6 +225,28 @@ extension SmartPushPlatform on SmartPushService {
     return false;
   }
 
+  bool _hasEntryScheduleChangedUnderCurrentSettings(_PreScheduledEntry entry) {
+    if (_isEntryDisabledByCurrentSettings(entry)) {
+      return true;
+    }
+    if (entry.isDailyQuote) {
+      final slot = _settings.dailyQuotePushTime;
+      return entry.slotHour != null &&
+          entry.slotMinute != null &&
+          (entry.slotHour != slot.hour || entry.slotMinute != slot.minute);
+    }
+    if (entry.epochMs > 0) {
+      final scheduledLocal = tz.TZDateTime.fromMillisecondsSinceEpoch(
+        tz.local,
+        entry.epochMs,
+      );
+      if (!_settings.shouldPushOnDate(scheduledLocal)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// 对账并取消不再处于当前有效计划内、或关联笔记已被隐藏/删除的预调度通知。
   ///
   /// 返回实际被取消的通知 ID 集合与因关联笔记被隐藏/删除而失效的通知 ID 集合。
@@ -221,12 +256,19 @@ extension SmartPushPlatform on SmartPushService {
     required bool futureOnly,
     Set<String>? visibleNoteIds,
     List<_PreScheduledEntry>? entriesOverride,
+    Set<int>? pendingRequestIds,
+    bool alreadyQueriedPendingIds = false,
+    bool canScheduleExact = true,
   }) async {
     final previousEntries =
         entriesOverride ?? _loadTrackedPreScheduledEntries();
     if (previousEntries.isEmpty) {
       return (cancelledIds: const <int>{}, invalidatedIds: const <int>{});
     }
+
+    final effectivePendingIds = alreadyQueriedPendingIds
+        ? pendingRequestIds
+        : (pendingRequestIds ?? await _queryPendingLocalNotificationIds());
 
     final cancelledIds = <int>{};
     final invalidatedIds = <int>{};
@@ -239,9 +281,17 @@ extension SmartPushPlatform on SmartPushService {
         invalidatedIds.add(entry.id);
       } else {
         if (activeIds.contains(entry.id)) continue;
-        if (entry.epochMs <= nowMs &&
-            (futureOnly || !_isEntryDisabledByCurrentSettings(entry))) {
-          continue;
+        if (entry.epochMs <= nowMs) {
+          final isStillPending = effectivePendingIds != null
+              ? effectivePendingIds.contains(entry.id)
+              : (!canScheduleExact &&
+                  _hasEntryScheduleChangedUnderCurrentSettings(entry));
+          if (futureOnly) {
+            continue;
+          }
+          if (!isStillPending && !_isEntryDisabledByCurrentSettings(entry)) {
+            continue;
+          }
         }
       }
       cancelledIds.add(entry.id);

@@ -51,11 +51,16 @@ class _ShownCall {
 }
 
 class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
+  final DateTime Function()? nowProvider;
   final List<_ScheduledCall> scheduledCalls = [];
+  final Map<int, _ScheduledCall> _activeScheduledById = <int, _ScheduledCall>{};
+  final Set<int> delayedPendingIds = <int>{};
   final List<_ShownCall> shownCalls = [];
   final List<int> cancelledIds = [];
   int cancelAllCount = 0;
   Future<void> Function(_ScheduledCall call)? onScheduleHook;
+
+  _RecordingNotificationsPlugin({this.nowProvider});
 
   @override
   Future<bool?> initialize(
@@ -93,6 +98,7 @@ class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
       payload: payload,
     );
     scheduledCalls.add(call);
+    _activeScheduledById[id] = call;
     if (onScheduleHook != null) {
       await onScheduleHook!(call);
     }
@@ -119,11 +125,32 @@ class _RecordingNotificationsPlugin implements FlutterLocalNotificationsPlugin {
   @override
   Future<void> cancel(int id, {String? tag}) async {
     cancelledIds.add(id);
+    _activeScheduledById.remove(id);
+    delayedPendingIds.remove(id);
   }
 
   @override
   Future<void> cancelAll() async {
     cancelAllCount++;
+    _activeScheduledById.clear();
+    delayedPendingIds.clear();
+  }
+
+  @override
+  Future<List<PendingNotificationRequest>> pendingNotificationRequests() async {
+    final nowMs = nowProvider?.call().millisecondsSinceEpoch;
+    return <PendingNotificationRequest>[
+      for (final call in _activeScheduledById.values)
+        if (delayedPendingIds.contains(call.id) ||
+            (nowMs != null &&
+                call.scheduledDate.millisecondsSinceEpoch > nowMs))
+          PendingNotificationRequest(
+            call.id,
+            call.title,
+            call.body,
+            call.payload,
+          ),
+    ];
   }
 
   @override
@@ -331,7 +358,9 @@ void main() {
         'from': '演讲',
       });
       storage.values['smart_push_last_daily_quote_date'] = '2026-05-10';
-      notificationsPlugin = _RecordingNotificationsPlugin();
+      notificationsPlugin = _RecordingNotificationsPlugin(
+        nowProvider: () => currentNow,
+      );
     });
 
     test(
@@ -1913,6 +1942,101 @@ void main() {
         expect(firstId, greaterThanOrEqualTo(300000000));
         expect(firstId, lessThanOrEqualTo(1999999999));
         expect(secondId, equals(firstId + 1));
+      },
+    );
+
+    test(
+      'changing reminder times after scheduled minute passes cancels delayed inexact pending notifications without false quota accounting',
+      () async {
+        DistributionConfig.debugChannelOverride = DistributionChannel.play;
+        exactAlarmPermitted = false;
+        currentNow = localTime(2026, 5, 10, 7, 30);
+
+        final service = createService();
+        addTearDown(service.dispose);
+
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.smart,
+            pushIntensity: PushIntensity.balanced,
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 8,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        final todayDailyCall = notificationsPlugin.scheduledCalls.firstWhere(
+          (call) =>
+              call.scheduledDate.year == 2026 &&
+              call.scheduledDate.month == 5 &&
+              call.scheduledDate.day == 10 &&
+              call.title == '📖 每日一言',
+        );
+        final todayRegularCall = notificationsPlugin.scheduledCalls.firstWhere(
+          (call) =>
+              call.scheduledDate.year == 2026 &&
+              call.scheduledDate.month == 5 &&
+              call.scheduledDate.day == 10 &&
+              call.title != '📖 每日一言',
+        );
+
+        // 模拟无精确闹钟下已过计划时间（08:35 > 08:00 / 08:30），但系统尚未送达这两条通知
+        currentNow = localTime(2026, 5, 10, 8, 35);
+        notificationsPlugin.delayedPendingIds
+          ..add(todayDailyCall.id)
+          ..add(todayRegularCall.id);
+        notificationsPlugin.cancelledIds.clear();
+
+        // 仅回到前台（futureOnly: true）时应保留待系统送达的延迟通知，且不提前误计入今日已送达配额
+        await service.handleAppResumed();
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(todayDailyCall.id)),
+        );
+        expect(
+          notificationsPlugin.cancelledIds,
+          isNot(contains(todayRegularCall.id)),
+        );
+        expect(
+          await service.analytics.getTodayPushCount(now: currentNow),
+          equals(0),
+        );
+
+        // 用户将提醒时间改到 07:00 / 07:15（新计划从次日开始，不再包含今日旧 ID）
+        await service.saveSettings(
+          const SmartPushSettings(
+            enabled: true,
+            pushMode: PushMode.custom,
+            pushTimeSlots: [
+              PushTimeSlot(hour: 7, minute: 15, label: '晨间回顾'),
+            ],
+            dailyQuotePushEnabled: true,
+            dailyQuotePushTime: PushTimeSlot(
+              hour: 7,
+              minute: 0,
+              label: '每日一言',
+            ),
+          ),
+        );
+
+        expect(
+          notificationsPlugin.cancelledIds,
+          containsAll(<int>[todayDailyCall.id, todayRegularCall.id]),
+        );
+        final remainingPendingIds =
+            (await notificationsPlugin.pendingNotificationRequests())
+                .map((r) => r.id)
+                .toSet();
+        expect(remainingPendingIds, isNot(contains(todayDailyCall.id)));
+        expect(remainingPendingIds, isNot(contains(todayRegularCall.id)));
+        expect(
+          await service.analytics.getTodayPushCount(now: currentNow),
+          equals(0),
+        );
       },
     );
   });
