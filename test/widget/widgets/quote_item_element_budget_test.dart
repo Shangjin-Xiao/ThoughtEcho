@@ -124,7 +124,7 @@ void main() {
   });
 
   testWidgets('可展开卡片的 element 数不超预算', (tester) async {
-    // 改造前 164。可展开卡片多出折叠遮罩和两层切换动画，这是它们该有的代价。
+    // 改造前 164。按需挂载 AnimatedSize 后静态卡片直出 RepaintBoundary，Element 预算进一步收紧至 110。
     expect(
       await _pumpAndCount(
         tester,
@@ -133,7 +133,7 @@ void main() {
           content: List.filled(8, _longChunk).join('\n'),
         ),
       ),
-      lessThanOrEqualTo(130),
+      lessThanOrEqualTo(110),
     );
   });
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/note_editor_states.dart';
 import 'package:thoughtecho/models/quote_model.dart';
@@ -105,8 +106,9 @@ void main() {
       state.dispose();
     });
 
-    test('dirty state tracking and document versioning on edit is synchronous',
-        () {
+    test(
+        'dirty state tracking and document versioning on edit via document changes stream',
+        () async {
       final state = NoteEditorState(
         initialPlainText: 'test',
         initialDeltaContent: null,
@@ -117,10 +119,11 @@ void main() {
       expect(state.isDirty, isFalse);
       final initialVersion = state.documentVersion;
 
-      // Edit happens synchronously
+      // Edit happens and is processed via document.changes stream
       state.controller.replaceText(0, 0, 'new content ', null);
+      await Future<void>.delayed(Duration.zero);
 
-      // Must be dirty immediately with no async microtask/delay
+      // Must be dirty after document changes stream emits
       expect(state.isDirty, isTrue);
       expect(state.documentVersion, greaterThan(initialVersion));
 
@@ -619,6 +622,61 @@ void main() {
       state.dispose();
     });
 
+    test(
+        'continuous selection movement under long document does not trigger Delta serialization',
+        () async {
+      final longText =
+          'A long line of test text for quill editor performance. ' * 200;
+      final spyDoc = _SpyQuillDocument()..insert(0, '$longText\n');
+      final state = NoteEditorState(
+        initialPlainText: longText,
+        initialDeltaContent: null,
+        draftStorageKey: 'test_selection_perf_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: spyDoc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+      final countAfterSetup = spyDoc.toDeltaCallCount;
+
+      // Continuous selection movements while clean must not trigger toDelta()
+      for (var offset = 0; offset <= 300; offset += 15) {
+        state.controller.updateSelection(
+          TextSelection.collapsed(offset: offset),
+          quill.ChangeSource.local,
+        );
+      }
+      await Future<void>.delayed(Duration.zero);
+      expect(spyDoc.toDeltaCallCount, countAfterSetup);
+      expect(state.isDirty, isFalse);
+
+      // Typing triggers a document change event
+      state.controller.replaceText(0, 0, 'NewPrefix ', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      final countAfterEdit = spyDoc.toDeltaCallCount;
+
+      // Continuous selection movements while dirty must also not trigger toDelta()
+      for (var offset = 0; offset <= 300; offset += 15) {
+        state.controller.updateSelection(
+          TextSelection.collapsed(offset: offset),
+          quill.ChangeSource.local,
+        );
+      }
+      await Future<void>.delayed(Duration.zero);
+      expect(spyDoc.toDeltaCallCount, countAfterEdit);
+      expect(state.isDirty, isTrue);
+
+      state.dispose();
+    });
+
     test('equal-length character replacement correctly marks state as dirty',
         () async {
       final doc = quill.Document()..insert(0, 'abc\n');
@@ -644,6 +702,99 @@ void main() {
 
       expect(state.isDirty, isTrue);
 
+      state.dispose();
+    });
+
+    test(
+        'restoring text back to saved baseline in the same synchronous turn leaves state clean',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_restore_sync_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // Modify and immediately restore within the same synchronous turn
+      state.controller.replaceText(0, 1, 'z', null);
+      state.controller.replaceText(0, 1, 'a', null);
+
+      // Drain queued stream change events
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isFalse);
+      expect(state.controller.document.toPlainText(), 'abc\n');
+      state.dispose();
+    });
+
+    test(
+        'restoring text back to saved baseline across separate turns restores clean state',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_restore_async_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      state.controller.replaceText(0, 1, 'z', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      state.controller.replaceText(0, 1, 'a', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'calling markClean synchronously right after text edit does not get overridden by stream event',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_mark_clean_sync_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      state.controller.replaceText(0, 1, 'z', null);
+      state.markClean();
+
+      // Drain stream events
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isFalse);
       state.dispose();
     });
 
@@ -1143,4 +1294,14 @@ void main() {
       metadata.dispose();
     });
   });
+}
+
+class _SpyQuillDocument extends quill.Document {
+  int toDeltaCallCount = 0;
+
+  @override
+  Delta toDelta() {
+    toDeltaCallCount++;
+    return super.toDelta();
+  }
 }
