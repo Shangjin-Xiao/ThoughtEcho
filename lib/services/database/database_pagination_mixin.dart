@@ -38,6 +38,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     return _coalesceInFlightQuoteQuery(
       signature: signature,
       isCancelled: isCancelled,
+      isPaginationFlight: true,
       runFlight: (flight) => runZoned(
         () => getUserQuotes(
           tagIds: tagIds,
@@ -151,7 +152,10 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
           );
         _watchOffset = _currentQuotes.length;
         _watchHasMore = previousHasMore;
-        _pendingRefillTarget = 0;
+        _pendingRefillTarget =
+            suspendedInBackground && targetCount > _currentQuotes.length
+                ? targetCount
+                : 0;
         return;
       }
 
@@ -161,7 +165,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       _currentQuoteIds.clear();
       _watchOffset = 0;
       _watchHasMore = previousHasMore;
-      _pendingRefillTarget = 0;
+      _pendingRefillTarget = suspendedInBackground ? targetCount : 0;
       if (_quotesController != null && !_quotesController!.isClosed) {
         _quotesController!.addError(error, stackTrace);
       }
@@ -169,7 +173,12 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     }
 
     _pendingRefillTarget = 0;
-    _coordinatorState.markDelivered(_quotesController);
+    _coordinatorState.markDelivered(
+      _quotesController,
+      quotes: _currentQuotes,
+      hasMore: _watchHasMore,
+      clearDeferredRefresh: true,
+    );
 
     if (_quoteListsEquivalent(previousQuotes, _currentQuotes)) {
       logDebug('刷新后可见列表无变化，跳过整表推送');
@@ -188,7 +197,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     if (_isDisposed) return;
 
     if (_quotesController != null && !_quotesController!.isClosed) {
-      _coordinatorState.markDelivered(_quotesController);
+      _coordinatorState.markDelivered(
+        _quotesController,
+        quotes: _currentQuotes,
+        hasMore: _watchHasMore,
+      );
       // 直接发送当前列表的副本，已保证唯一性
       _quotesController!.add(List.from(_currentQuotes));
     }
@@ -211,22 +224,31 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       // 所以刷新必须一次把原有页数全部取回，列表长度保持不变。
       //
       // 上一次刷新可能还在回填途中（那时 _currentQuotes 已被清空），
-      // 此时按当时的长度 0 算目标会退化成只取一页，等于把这个 bug 放回来。
-      // 沿用在途目标即可。
-      final int loadedCount = _currentQuotes.isNotEmpty
-          ? _currentQuotes.length
-          : _pendingRefillTarget;
+      // 此时必须从协调器保存的最近一次已投递快照恢复基线列表、分页游标与回填深度，
+      // 避免连续两次后台同步刷新（如导入入库后紧跟同步状态刷新）把回滚基线冲成空列表。
+      final bool hasCommittedSnapshot =
+          _coordinatorState.hasDeliveredForController(_quotesController);
+      final List<Quote> previousQuotes = _currentQuotes.isNotEmpty
+          ? List<Quote>.from(_currentQuotes)
+          : (hasCommittedSnapshot
+              ? List<Quote>.from(_coordinatorState.lastDeliveredQuotes)
+              : <Quote>[]);
+      final bool previousHasMore = _currentQuotes.isNotEmpty
+          ? _watchHasMore
+          : (hasCommittedSnapshot
+              ? _coordinatorState.lastDeliveredHasMore
+              : _watchHasMore);
+      int loadedCount = _currentQuotes.length;
+      if (_pendingRefillTarget > loadedCount) {
+        loadedCount = _pendingRefillTarget;
+      }
+      if (previousQuotes.length > loadedCount) {
+        loadedCount = previousQuotes.length;
+      }
       // 列表本来不足一页（如首屏前或总笔记数少于一页时新增/同步合入）：至少取满一页容量。
       final int reloadCount =
           loadedCount > _watchLimit ? loadedCount : _watchLimit;
       _pendingRefillTarget = reloadCount;
-      // 回填结果和刷新前一模一样时不再向 UI 推送：整表推送会让列表页
-      // 重建全部已加载 item（上百次 build + 首次布局），发生在滚动帧里
-      // 就是一次明显的卡顿。回收站过期清理、同步后的例行刷新等场景，
-      // 可见列表其实一条都没变。
-      final List<Quote> previousQuotes = List<Quote>.from(_currentQuotes);
-      // 回填失败要整体回滚时，分页游标也得跟着回到刷新前的样子。
-      final bool previousHasMore = _watchHasMore;
       logDebug('刷新笔记流数据，需回填 $reloadCount 条');
       // 优化：清除所有缓存，确保获取最新数据
       clearAllCacheForParts();
@@ -656,6 +678,18 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     } finally {
       if (loadGeneration == _quotesLoadGeneration) {
         _isLoading = false;
+        if (!suppressNotify &&
+            !_isDisposed &&
+            _isAppLifecycleActive() &&
+            _coordinatorState.consumeDeferredRefresh(_quotesController)) {
+          Future.microtask(() {
+            if (!_isDisposed &&
+                loadGeneration == _quotesLoadGeneration &&
+                _isAppLifecycleActive()) {
+              _refreshQuotesStream();
+            }
+          });
+        }
       }
     }
   }

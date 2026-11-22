@@ -399,7 +399,7 @@ void main() {
         tester.binding.handleAppLifecycleStateChanged(lifecycle);
 
         final databaseService = _LifecycleAwareRealPaginationDbService(
-          initialQuotes: _makeQuotes(2),
+          initialQuotes: _makeQuotes(150),
           readLifecycle: () => lifecycle,
         );
         DatabaseService.setDebugLifecycleStateProvider(
@@ -435,7 +435,7 @@ void main() {
             content: '后台同步合入的新笔记',
             date: DateTime(2026, 8, 18, 9).toIso8601String(),
           ),
-          ..._makeQuotes(2),
+          ..._makeQuotes(150),
         ];
         databaseService.refreshQuotes();
         await tester.pump();
@@ -457,6 +457,54 @@ void main() {
 
         expect(find.text('后台同步合入的新笔记'), findsOneWidget);
         expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+
+        // 继续验证：当恢复到前台瞬间仍有在途分页查询时，不会误清空延迟刷新标记，待在途查询结束后自动补跑刷新。
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.paused;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+
+        databaseService.quotes = [
+          Quote(
+            id: 'synced-quote-2',
+            content: '在途查询收尾后补刷新的笔记',
+            date: DateTime(2026, 8, 19, 9).toIso8601String(),
+          ),
+          ...databaseService.quotes,
+        ];
+        // 连续两次后台 refreshQuotes（模拟导入合并 + 同步收尾）不会丢失已加载列表或延迟标记。
+        databaseService.refreshQuotes();
+        databaseService.refreshQuotes();
+        await tester.pump();
+
+        final inFlightGate = Completer<void>();
+        databaseService.queryGate = inFlightGate;
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.resumed;
+        final manualLoadMore = databaseService.loadMoreQuotes();
+        await tester.pump();
+        expect(
+          DatabaseService.isPaginationQueryInFlight(databaseService),
+          isTrue,
+        );
+
+        // 此时触发 resumed：由于 isPaginationQueryInFlight 为 true，延迟刷新标记被保留而非丢失。
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+
+        databaseService.queryGate = null;
+        inFlightGate.complete();
+        await manualLoadMore;
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('在途查询收尾后补刷新的笔记'), findsOneWidget);
 
         DatabaseService.setDebugLifecycleStateProvider(databaseService, null);
         await tester.pumpWidget(const SizedBox.shrink());
@@ -843,6 +891,7 @@ class _LifecycleAwareRealPaginationDbService extends DatabaseService {
 
   List<Quote> quotes;
   final AppLifecycleState Function() readLifecycle;
+  Completer<void>? queryGate;
 
   @override
   bool get isInitialized => true;
@@ -865,6 +914,10 @@ class _LifecycleAwareRealPaginationDbService extends DatabaseService {
     String? dateEnd,
     bool includeDeleted = false,
   }) async {
+    final gate = queryGate;
+    if (gate != null) {
+      await gate.future;
+    }
     if (readLifecycle() != AppLifecycleState.resumed) {
       Error.throwWithStackTrace(
         TimeoutException('数据库查询在后台态已暂停'),
