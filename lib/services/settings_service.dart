@@ -2042,6 +2042,9 @@ class SettingsService extends ChangeNotifier {
             AIRoutingMode.tryParse(rawRoutingMode) == null) {
           multiAiSettingsJson.remove('routingMode');
         }
+        if (multiAiSettingsJson['customRoutingInitialized'] is! bool) {
+          multiAiSettingsJson.remove('customRoutingInitialized');
+        }
 
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
 

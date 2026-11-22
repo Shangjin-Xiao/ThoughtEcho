@@ -553,6 +553,32 @@ void main() {
         'currentProviderId': 'default_p',
       });
       expect(legacyTiered.routingMode, AIRoutingMode.tiered);
+
+      // Legacy JSON with dedicated agent provider migrates sessionTitle to preserve privacy
+      final legacyAgentOnly = MultiAISettings.fromJson({
+        'providers': [defaultProvider.toJson(), reasoningProvider.toJson()],
+        'currentProviderId': 'default_p',
+        'taskProviderIds': {'agent': 'reason_p'},
+      });
+      expect(legacyAgentOnly.routingMode, AIRoutingMode.custom);
+      expect(
+        legacyAgentOnly.resolveProviderForTask(AITask.sessionTitle)?.id,
+        'reason_p',
+      );
+
+      // Clearing all custom assignments to Follow Default persists across tiered -> custom switches and JSON reloads
+      final clearedCustom = switchedCustom
+          .withTaskProvider(AITask.dailyInsight, null)
+          .withTaskProvider(AITask.sessionTitle, null)
+          .withTaskProvider(AITask.dreaming, null);
+      expect(clearedCustom.taskProviderIds, isEmpty);
+      expect(clearedCustom.customRoutingInitialized, isTrue);
+
+      final reloadedCleared = MultiAISettings.fromJson(clearedCustom.toJson());
+      final backToTiered =
+          reloadedCleared.withRoutingMode(AIRoutingMode.tiered);
+      final backToCustom = backToTiered.withRoutingMode(AIRoutingMode.custom);
+      expect(backToCustom.taskProviderIds, isEmpty);
     });
   });
 }

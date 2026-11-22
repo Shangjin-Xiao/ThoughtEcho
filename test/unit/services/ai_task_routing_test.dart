@@ -556,5 +556,71 @@ void main() {
         'p_daily', // completeForBackgroundSummary (dreaming -> light)
       ]);
     });
+
+    test(
+        'keyless local Ollama preset runs light-tier tasks without stored API key, and custom agent-only config keeps sessionTitle on agent provider',
+        () async {
+      const localOllama = AIProviderSettings(
+        id: 'p_ollama_local',
+        name: 'Ollama (Local)',
+        apiUrl: 'http://localhost:11434/v1',
+        model: 'qwen3:8b',
+        providerSlug: 'ollama',
+      );
+      await harness.settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [agentProProvider, localOllama],
+          currentProviderId: 'p_agent',
+          routingMode: AIRoutingMode.tiered,
+          lightProviderId: 'p_ollama_local',
+        ),
+      );
+
+      final keyManager = _InMemoryApiKeyManager({
+        'p_agent': 'sk-primary-key-1234',
+      });
+      final streamService = _CapturingOpenAIStreamService()
+        ..completionReply = '本地免密模型标题';
+      final aiService = AIService(
+        settingsService: harness.settingsService,
+        memoryService: harness.memory,
+        apiKeyManager: keyManager,
+        openAIStreamService: streamService,
+      );
+
+      expect(
+        await aiService.hasValidApiKeyAsync(task: AITask.sessionTitle),
+        isTrue,
+      );
+      await aiService.streamGenerateDailyPrompt(l10n).join();
+      final title = await aiService.generateSessionTitle('测试本地免密轻量模型标题');
+      expect(title, '本地免密模型标题');
+      streamService.completionReply = '{"taste":"简洁"}';
+      await aiService.completeForBackgroundSummary(
+        systemPrompt: 'sys',
+        userMessage: 'usr',
+      );
+
+      expect(streamService.calls.map((c) => c.provider.id).toList(), [
+        'p_ollama_local',
+        'p_ollama_local',
+        'p_ollama_local',
+      ]);
+
+      // Custom mode with dedicated agent provider and unset sessionTitle -> stays on agent provider
+      streamService.calls.clear();
+      streamService.completionReply = '私密专属标题';
+      await harness.settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [defaultProvider, localOllama],
+          currentProviderId: 'p_default',
+          routingMode: AIRoutingMode.custom,
+          taskProviderIds: {AITask.agent: 'p_ollama_local'},
+        ),
+      );
+      final privateTitle = await aiService.generateSessionTitle('私密对话首句内容');
+      expect(privateTitle, '私密专属标题');
+      expect(streamService.calls.single.provider.id, 'p_ollama_local');
+    });
   });
 }

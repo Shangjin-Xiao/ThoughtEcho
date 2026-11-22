@@ -1,3 +1,4 @@
+import '../constants/ai_provider_presets.dart';
 import 'ai_provider_settings.dart';
 import 'ai_task.dart';
 
@@ -40,6 +41,12 @@ class MultiAISettings {
   /// [currentProvider] 全局默认配置。
   final Map<AITask, String> taskProviderIds;
 
+  /// 标记用户是否已经初始化过「按功能自选」模式。
+  ///
+  /// 一旦进入过自选模式（无论后续是否将全部槽位手动清空回「跟随默认」），再次从
+  /// 基础模式切回自选模式时不再自动用轻量模型覆盖用户的「跟随默认」选择。
+  final bool? _customRoutingInitialized;
+
   const MultiAISettings({
     this.providers = const [],
     this.currentProviderId,
@@ -47,7 +54,20 @@ class MultiAISettings {
     AIRoutingMode? routingMode,
     this.lightProviderId,
     this.taskProviderIds = const <AITask, String>{},
-  }) : _routingMode = routingMode;
+    bool? customRoutingInitialized,
+  })  : _routingMode = routingMode,
+        _customRoutingInitialized = customRoutingInitialized;
+
+  bool get customRoutingInitialized =>
+      _customRoutingInitialized ??
+      (_routingMode == AIRoutingMode.custom || taskProviderIds.isNotEmpty);
+
+  /// 判断指定服务商配置是否需要非空 API Key（本地 Ollama / LM Studio 等免密预设为 `false`）。
+  static bool providerRequiresApiKey(AIProviderSettings provider) {
+    final preset = AIProviderPresets.bySlugOrId(provider.providerSlug) ??
+        AIProviderPresets.matchApiUrl(provider.apiUrl);
+    return preset?.requiresApiKey ?? true;
+  }
 
   /// 当前生效的模型分配模式。
   ///
@@ -149,17 +169,24 @@ class MultiAISettings {
     if (mode == routingMode && _routingMode == mode) {
       return this;
     }
-    if (mode == AIRoutingMode.custom && taskProviderIds.isEmpty) {
-      final activeLight = lightProvider;
-      if (activeLight != null && activeLight.id != currentProvider?.id) {
-        final prefilled = <AITask, String>{
-          for (final task in AITask.tieredLightTasks) task: activeLight.id,
-        };
-        return copyWith(
-          routingMode: mode,
-          taskProviderIds: Map<AITask, String>.unmodifiable(prefilled),
-        );
+    if (mode == AIRoutingMode.custom) {
+      if (!customRoutingInitialized && taskProviderIds.isEmpty) {
+        final activeLight = lightProvider;
+        if (activeLight != null && activeLight.id != currentProvider?.id) {
+          final prefilled = <AITask, String>{
+            for (final task in AITask.tieredLightTasks) task: activeLight.id,
+          };
+          return copyWith(
+            routingMode: mode,
+            taskProviderIds: Map<AITask, String>.unmodifiable(prefilled),
+            customRoutingInitialized: true,
+          );
+        }
       }
+      return copyWith(
+        routingMode: mode,
+        customRoutingInitialized: true,
+      );
     }
     return copyWith(routingMode: mode);
   }
@@ -188,6 +215,7 @@ class MultiAISettings {
     }
     return copyWith(
       taskProviderIds: Map<AITask, String>.unmodifiable(nextMap),
+      customRoutingInitialized: true,
     );
   }
 
@@ -234,8 +262,21 @@ class MultiAISettings {
   List<AIProviderSettings> get availableProviders => providers;
 
   factory MultiAISettings.fromJson(Map<String, dynamic> json) {
-    final parsedTaskIds = _parseTaskProviderIds(json['taskProviderIds']);
+    final rawTaskIds = _parseTaskProviderIds(json['taskProviderIds']);
     final parsedMode = AIRoutingMode.tryParse(json['routingMode'] as String?);
+    // 旧版本尚无 sessionTitle 独立槽位，Thoughter 标题跟随 AITask.agent；
+    // 升级旧配置时同步继承已显式指定的 agent 服务，避免首条对话消息外发给默认服务。
+    final Map<AITask, String> parsedTaskIds;
+    if (parsedMode == null &&
+        rawTaskIds.containsKey(AITask.agent) &&
+        !rawTaskIds.containsKey(AITask.sessionTitle)) {
+      parsedTaskIds = Map<AITask, String>.unmodifiable({
+        ...rawTaskIds,
+        AITask.sessionTitle: rawTaskIds[AITask.agent]!,
+      });
+    } else {
+      parsedTaskIds = rawTaskIds;
+    }
     final effectiveMode = parsedMode ??
         (parsedTaskIds.isNotEmpty
             ? AIRoutingMode.custom
@@ -245,6 +286,10 @@ class MultiAISettings {
         rawLightId is String && rawLightId.trim().isNotEmpty
             ? rawLightId.trim()
             : null;
+    final rawCustomInit = json['customRoutingInitialized'];
+    final customInitialized = rawCustomInit is bool
+        ? rawCustomInit
+        : (effectiveMode == AIRoutingMode.custom || parsedTaskIds.isNotEmpty);
 
     return MultiAISettings(
       providers: _parseProviders(json),
@@ -254,6 +299,7 @@ class MultiAISettings {
       routingMode: effectiveMode,
       lightProviderId: normalizedLightId,
       taskProviderIds: parsedTaskIds,
+      customRoutingInitialized: customInitialized,
     );
   }
 
@@ -306,6 +352,7 @@ class MultiAISettings {
       'enableFailover': enableFailover,
       'routingMode': routingMode.storageKey,
       'lightProviderId': lightProviderId,
+      'customRoutingInitialized': customRoutingInitialized,
       'taskProviderIds': <String, String>{
         for (final entry in taskProviderIds.entries)
           entry.key.storageKey: entry.value,
@@ -322,6 +369,7 @@ class MultiAISettings {
     Object? routingMode = _sentinel,
     Object? lightProviderId = _sentinel,
     Map<AITask, String>? taskProviderIds,
+    bool? customRoutingInitialized,
   }) {
     return MultiAISettings(
       providers: providers ?? this.providers,
@@ -338,6 +386,8 @@ class MultiAISettings {
       taskProviderIds: taskProviderIds != null
           ? Map<AITask, String>.unmodifiable(taskProviderIds)
           : this.taskProviderIds,
+      customRoutingInitialized:
+          customRoutingInitialized ?? _customRoutingInitialized,
     );
   }
 
@@ -353,6 +403,7 @@ class MultiAISettings {
       routingMode: AIRoutingMode.tiered,
       lightProviderId: null,
       taskProviderIds: <AITask, String>{},
+      customRoutingInitialized: false,
     );
   }
 }

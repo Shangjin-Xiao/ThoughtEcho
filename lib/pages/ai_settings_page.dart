@@ -13,6 +13,7 @@ import '../widgets/app_snackbar.dart';
 import 'agent_memory/agent_memory_page.dart';
 import 'ai_provider_edit_page.dart';
 import 'ai_service_config_page.dart';
+import 'user_guide_page.dart';
 
 /// AI 设置主页：聚焦于「AI 服务与模型摘要入口」「AI 功能开关」与「Thoughter 记忆」。
 ///
@@ -47,6 +48,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => const AIServiceConfigPage(),
+      ),
+    );
+  }
+
+  void _openUserGuide() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => const UserGuidePage(),
       ),
     );
   }
@@ -130,13 +139,22 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: FilledButton.icon(
-                  onPressed: _openFirstProviderEditor,
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.addAiService),
-                ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _openFirstProviderEditor,
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addAiService),
+                  ),
+                  TextButton.icon(
+                    onPressed: _openUserGuide,
+                    icon: const Icon(Icons.menu_book_outlined, size: 18),
+                    label: Text(l10n.aiConfigHelpLink),
+                  ),
+                ],
               ),
             ],
           ),

@@ -207,8 +207,9 @@ void main() {
           _buildOpeningMessage(),
         ];
         for (var i = 0; i < 30; i++) {
-          list.add(_buildTurnMessage('user', '第 $i 轮提问'));
-          list.add(_buildTurnMessage('assistant', '第 $i 轮回答'));
+          final filler = '围绕阶段性随笔复盘思考节奏与行动线索记录补充说明。' * 12;
+          list.add(_buildTurnMessage('user', '第 $i 轮提问：$filler'));
+          list.add(_buildTurnMessage('assistant', '第 $i 轮回答：$filler'));
         }
         return list;
       })(),
@@ -253,6 +254,14 @@ void main() {
     expect(response.modelLabel, startsWith('Gemini Service · gemini-'));
     expect(agent.lastUsedModelLabel, response.modelLabel);
     expect(emittedModels.first, 'Gemini Service · gemini-2.5-pro');
+    expect(
+      capturedMessages!.any((m) => m.toJson().toString().contains('第 0 轮提问：')),
+      isFalse,
+    );
+    expect(
+      capturedMessages!.any((m) => m.toJson().toString().contains('第 29 轮提问：')),
+      isTrue,
+    );
     expect(emittedModels.last, response.modelLabel);
 
     expect(capturedMessages, isNotNull);

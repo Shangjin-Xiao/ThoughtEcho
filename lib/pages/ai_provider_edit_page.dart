@@ -508,22 +508,26 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
           : multiSettings.providers
               .map((p) => p.id == saved.id ? saved : p)
               .toList(growable: false);
-
-      await settingsService.saveMultiAISettings(
-        multiSettings.copyWith(
-          providers: providers,
-          currentProviderId: saved.id,
-        ),
+      final nextCurrentProviderId =
+          existing == null || multiSettings.currentProvider == null
+              ? saved.id
+              : multiSettings.currentProviderId;
+      final nextMultiSettings = multiSettings.copyWith(
+        providers: providers,
+        currentProviderId: nextCurrentProviderId,
       );
 
-      // 旧版单配置字段仍被部分调用方读取，保持同步。
+      await settingsService.saveMultiAISettings(nextMultiSettings);
+
+      // 旧版单配置字段仍被部分调用方读取，始终与生效主力配置保持同步。
+      final legacySyncTarget = nextMultiSettings.currentProvider ?? saved;
       await settingsService.updateAISettings(
         AISettings(
-          model: saved.model,
-          apiUrl: saved.apiUrl,
+          model: legacySyncTarget.model,
+          apiUrl: legacySyncTarget.apiUrl,
           apiKey: '',
-          maxTokens: saved.maxTokens,
-          hostOverride: saved.hostOverride,
+          maxTokens: legacySyncTarget.maxTokens,
+          hostOverride: legacySyncTarget.hostOverride,
         ),
       );
 

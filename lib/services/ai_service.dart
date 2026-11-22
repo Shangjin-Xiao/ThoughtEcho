@@ -4,6 +4,7 @@ import '../models/quote_model.dart';
 import '../models/chat_message.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/ai_task.dart';
+import '../models/multi_ai_settings.dart';
 import '../models/weather_data.dart' show WeatherCodeMapper;
 import '../services/agent_memory_service.dart';
 import '../services/settings_service.dart' show SettingsService;
@@ -139,12 +140,16 @@ class AIService extends ChangeNotifier {
         throw Exception('AI模型名称不能为空');
       }
 
-      // 4. 验证API密钥（统一检查）
-      final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
-        resolvedProvider.id,
-      );
-      if (!hasApiKey) {
-        throw Exception('请先为 ${resolvedProvider.name} 配置有效的API密钥');
+      // 4. 验证API密钥（本地 Ollama / LM Studio 等免密预设允许空密钥）
+      final requiresApiKey =
+          MultiAISettings.providerRequiresApiKey(resolvedProvider);
+      if (requiresApiKey && resolvedProvider.apiKey.trim().isEmpty) {
+        final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
+          resolvedProvider.id,
+        );
+        if (!hasApiKey) {
+          throw Exception('请先为 ${resolvedProvider.name} 配置有效的API密钥');
+        }
       }
 
       logDebug('验证设置成功 - Provider: ${resolvedProvider.name}');
@@ -218,9 +223,18 @@ class AIService extends ChangeNotifier {
       final resolvedProvider = multiSettings.resolveProviderForTask(task);
 
       if (resolvedProvider != null) {
-        // 检查provider是否启用
-        if (!resolvedProvider.isEnabled) {
+        // 检查provider是否启用且基础端点与模型非空
+        if (!resolvedProvider.isEnabled ||
+            resolvedProvider.apiUrl.trim().isEmpty ||
+            resolvedProvider.model.trim().isEmpty) {
           return false;
+        }
+
+        if (!MultiAISettings.providerRequiresApiKey(resolvedProvider)) {
+          return true;
+        }
+        if (resolvedProvider.apiKey.trim().isNotEmpty) {
+          return true;
         }
 
         // 从安全存储验证API密钥
@@ -1647,8 +1661,19 @@ class AIService extends ChangeNotifier {
     try {
       if (firstUserMessage.isEmpty) return 'Chat';
 
+      // 在「按功能自选」模式下，若用户为 Thoughter 单独指定了专属服务但未单独指定标题模型，
+      // 标题生成继续沿用该专属服务，避免将首条消息前 100 字发送给全局默认服务。
+      final multiSettings = _settingsService.multiAISettings;
+      final effectiveTask = task == AITask.sessionTitle &&
+              multiSettings.routingMode == AIRoutingMode.custom &&
+              multiSettings.explicitProviderForTask(AITask.sessionTitle) ==
+                  null &&
+              multiSettings.explicitProviderForTask(AITask.agent) != null
+          ? AITask.agent
+          : task;
+
       // 优先尝试用 AI 生成标题
-      if (await hasValidApiKeyAsync(task: task)) {
+      if (await hasValidApiKeyAsync(task: effectiveTask)) {
         try {
           // 限制消息长度为100字以内
           final truncated = firstUserMessage.length > 100
@@ -1656,7 +1681,7 @@ class AIService extends ChangeNotifier {
               : firstUserMessage;
 
           final title = await _chatCompletionViaOpenAI(
-            task: task,
+            task: effectiveTask,
             systemPrompt:
                 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
             userMessage: truncated,

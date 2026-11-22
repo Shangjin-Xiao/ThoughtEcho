@@ -180,6 +180,7 @@ void main() {
 
       final l10n = _l10n(tester);
       expect(find.text(l10n.aiServiceEmptyTitle), findsOneWidget);
+      expect(find.text(l10n.aiConfigHelpLink), findsOneWidget);
       expect(find.byKey(const ValueKey('ai_task_routing_card')), findsNothing);
       expect(find.text(l10n.ollamaCloudTipTitle), findsNothing);
       expect(find.text(l10n.ollamaCloudTipAction), findsNothing);
@@ -1384,6 +1385,10 @@ void main() {
       expect(switchedToNative.protocol, AIProtocolType.anthropicMessages);
       expect(switchedToNative.isAnthropicMessagesApi, isTrue);
       expect(switchedToNative.modelMetadata, isNull);
+      expect(
+        settingsService.multiAISettings.currentProviderId,
+        'p_or_native',
+      );
 
       // 3. Follow guidance and switch /v1/messages back to /api/v1 -> transitions cleanly to OpenAI-compatible
       final testedDrafts = <AIProviderSettings>[];
@@ -1399,7 +1404,14 @@ void main() {
         return 'pong';
       };
 
-      await tester.tap(find.text('OpenRouter 标准配置'));
+      ScaffoldMessenger.of(
+        tester.element(find.byType(AIServiceConfigPage)),
+      ).clearSnackBars();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip(l10n.moreOptions).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.edit));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -1423,6 +1435,63 @@ void main() {
       expect(switchedBackToOpenAI.protocol, AIProtocolType.openAICompatible);
       expect(switchedBackToOpenAI.providerSlug, 'openrouter');
       expect(switchedBackToOpenAI.isAnthropicMessagesApi, isFalse);
+      expect(
+        settingsService.multiAISettings.currentProviderId,
+        'p_or_native',
+      );
+    });
+
+    testWidgets(
+        'editing the light provider preserves both currentProviderId and lightProviderId',
+        (tester) async {
+      await APIKeyManager().saveProviderApiKey('p_primary', 'sk-primary-1234');
+      await APIKeyManager().saveProviderApiKey('p_light', 'sk-light-123456');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_primary',
+              name: '主力旗舰服务',
+              apiUrl: 'https://api.deepseek.com/v1',
+              model: 'deepseek-reasoner',
+            ),
+            AIProviderSettings(
+              id: 'p_light',
+              name: '轻量快速服务',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+            ),
+          ],
+          currentProviderId: 'p_primary',
+          routingMode: AIRoutingMode.tiered,
+          lightProviderId: 'p_light',
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
+
+      final l10n = _l10n(tester);
+      await tester.tap(find.byTooltip(l10n.moreOptions).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.edit));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, l10n.modelNameField),
+        'glm-4.5-flash',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.save));
+      await tester.pumpAndSettle();
+
+      expect(settingsService.multiAISettings.currentProviderId, 'p_primary');
+      expect(settingsService.multiAISettings.lightProviderId, 'p_light');
+      expect(
+        settingsService.multiAISettings.lightProvider?.model,
+        'glm-4.5-flash',
+      );
     });
 
     testWidgets(
