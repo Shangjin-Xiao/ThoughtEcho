@@ -2028,6 +2028,21 @@ class SettingsService extends ChangeNotifier {
           multiAiSettingsJson.remove('taskProviderIds');
         }
 
+        // 同步清洗校验 lightProviderId 与 routingMode
+        final rawLightProviderId = multiAiSettingsJson['lightProviderId'];
+        if (rawLightProviderId is String &&
+            rawLightProviderId.trim().isNotEmpty &&
+            restoredProviderIdSet.contains(rawLightProviderId.trim())) {
+          multiAiSettingsJson['lightProviderId'] = rawLightProviderId.trim();
+        } else {
+          multiAiSettingsJson.remove('lightProviderId');
+        }
+        final rawRoutingMode = multiAiSettingsJson['routingMode'];
+        if (rawRoutingMode is! String ||
+            AIRoutingMode.tryParse(rawRoutingMode) == null) {
+          multiAiSettingsJson.remove('routingMode');
+        }
+
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
 
         // A backup controls provider IDs and URLs, but does not authorize sending

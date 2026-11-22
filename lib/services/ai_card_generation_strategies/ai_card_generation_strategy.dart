@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../models/ai_task.dart';
 import '../../models/generated_card.dart';
 import '../../models/quote_model.dart';
 import '../../utils/app_logger.dart';
@@ -152,22 +153,26 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
   }
 
   Future<String> _generateSVGContent(String prompt) async {
-    // 检查AI服务是否可用
-    if (!await _aiService.hasValidApiKeyAsync()) {
+    // 检查卡片生成任务对应的 AI 服务是否可用
+    if (!await _aiService.hasValidApiKeyAsync(task: AITask.cardGeneration)) {
       throw const AICardGenerationException('请先在设置中配置 API Key');
     }
 
     try {
-      // 获取当前provider
+      // 获取卡片生成任务生效的 provider
       final multiSettings = _settingsService.multiAISettings;
-      final currentProvider = multiSettings.currentProvider;
+      final currentProvider =
+          multiSettings.resolveProviderForTask(AITask.cardGeneration);
 
-      if (currentProvider == null) {
+      if (currentProvider == null || !currentProvider.isEnabled) {
         throw const AICardGenerationException('未找到可用的AI提供商配置');
       }
 
       // 使用专门的SVG生成方法
-      final svgContent = await _aiService.generateSVG(prompt);
+      final svgContent = await _aiService.generateSVG(
+        prompt,
+        task: AITask.cardGeneration,
+      );
 
       // 验证生成的SVG是否有效
       if (svgContent.trim().isEmpty) {

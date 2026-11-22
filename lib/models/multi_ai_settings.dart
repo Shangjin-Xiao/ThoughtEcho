@@ -1,10 +1,38 @@
 import 'ai_provider_settings.dart';
 import 'ai_task.dart';
 
+/// 模型分配模式。
+enum AIRoutingMode {
+  /// 基础分配（大小模型自动分流）：主力模型负责深度创作，轻量模型负责快速与后台任务。
+  tiered,
+
+  /// 按功能自选（全部自定义）：6 项功能各自独立选择服务或跟随默认。
+  custom;
+
+  String get storageKey => name;
+
+  static AIRoutingMode? tryParse(String? raw) {
+    final key = raw?.trim();
+    if (key == null || key.isEmpty) return null;
+    for (final mode in AIRoutingMode.values) {
+      if (mode.name == key) {
+        return mode;
+      }
+    }
+    return null;
+  }
+}
+
 class MultiAISettings {
   final List<AIProviderSettings> providers;
   final String? currentProviderId;
   final bool enableFailover;
+  final AIRoutingMode? _routingMode;
+
+  /// 基础分配（[AIRoutingMode.tiered]）下指定的轻量服务商配置 ID。
+  ///
+  /// 为 `null`、目标配置已删除或处于禁用状态时自动跟随 [currentProvider]。
+  final String? lightProviderId;
 
   /// 按具体任务场景显式绑定的服务商配置 ID 映射。
   ///
@@ -16,10 +44,22 @@ class MultiAISettings {
     this.providers = const [],
     this.currentProviderId,
     this.enableFailover = true,
+    AIRoutingMode? routingMode,
+    this.lightProviderId,
     this.taskProviderIds = const <AITask, String>{},
-  });
+  }) : _routingMode = routingMode;
 
-  // 便捷的getter，用于获取当前全局默认 provider
+  /// 当前生效的模型分配模式。
+  ///
+  /// 未显式指定时：若已存在非空 [taskProviderIds] 则归入 [AIRoutingMode.custom]
+  /// （保障旧存档与按任务构造实例平滑兼容），否则默认 [AIRoutingMode.tiered]。
+  AIRoutingMode get routingMode =>
+      _routingMode ??
+      (taskProviderIds.isNotEmpty
+          ? AIRoutingMode.custom
+          : AIRoutingMode.tiered);
+
+  // 便捷的getter，用于获取当前全局默认（主力）provider
   AIProviderSettings? get currentProvider {
     if (currentProviderId == null) return null;
     for (final provider in providers) {
@@ -30,18 +70,46 @@ class MultiAISettings {
     return null;
   }
 
-  /// 无状态按任务解析生效的 [AIProviderSettings]。
+  /// 查询基础模式下显式指定且当前可用（存在且 `isEnabled == true`）的轻量服务商配置。
   ///
-  /// 若 [task] 非空，且 [taskProviderIds] 中绑定的配置在 [providers] 中存在并处于启用状态
-  /// （`isEnabled == true`），则返回该配置；否则回退到 [currentProvider]。
-  AIProviderSettings? resolveProviderForTask(AITask? task) {
-    if (task != null) {
-      final explicit = explicitProviderForTask(task);
-      if (explicit != null) {
-        return explicit;
+  /// 若未单独指定、目标不存在或已禁用，则返回 `null`（调用侧回退到 [currentProvider]）。
+  AIProviderSettings? get lightProvider {
+    final assignedId = lightProviderId;
+    if (assignedId == null || assignedId.isEmpty) {
+      return null;
+    }
+    for (final provider in providers) {
+      if (provider.id == assignedId && provider.isEnabled) {
+        return provider;
       }
     }
-    return currentProvider;
+    return null;
+  }
+
+  /// 基础模式下轻量任务实际生效的服务商配置（未指定轻量服务或不可用时跟随主力）。
+  AIProviderSettings? get effectiveLightProvider =>
+      lightProvider ?? currentProvider;
+
+  /// 无状态按任务解析生效的 [AIProviderSettings]。
+  ///
+  /// - `task == null`：直接返回 [currentProvider]。
+  /// - [AIRoutingMode.tiered]：轻量任务（每日提示、对话标题、记忆整理）优先使用
+  ///   [lightProvider]，其余深度任务及回退均走 [currentProvider]。
+  /// - [AIRoutingMode.custom]：优先使用 [explicitProviderForTask]，未指定或不可用时
+  ///   回退到 [currentProvider]。
+  AIProviderSettings? resolveProviderForTask(AITask? task) {
+    if (task == null) {
+      return currentProvider;
+    }
+    switch (routingMode) {
+      case AIRoutingMode.tiered:
+        if (task.usesLightTier) {
+          return lightProvider ?? currentProvider;
+        }
+        return currentProvider;
+      case AIRoutingMode.custom:
+        return explicitProviderForTask(task) ?? currentProvider;
+    }
   }
 
   /// 查询某个任务显式绑定且当前可用（存在且 `isEnabled == true`）的服务商配置。
@@ -67,9 +135,44 @@ class MultiAISettings {
   /// 返回当前显式绑定到指定 [providerId]（且该配置存在并启用）的所有任务槽位。
   List<AITask> tasksAssignedTo(String providerId) {
     if (providerId.isEmpty) return const <AITask>[];
-    return AITask.values
+    return AITask.customDisplayOrder
         .where((task) => explicitProviderForTask(task)?.id == providerId)
         .toList(growable: false);
+  }
+
+  /// 切换模型分配模式。
+  ///
+  /// 当用户首次从 [AIRoutingMode.tiered] 切到 [AIRoutingMode.custom]，且
+  /// [taskProviderIds] 为空但曾选定有效的轻量服务（[lightProvider] 非空）时，
+  /// 将 3 项轻量任务平滑预填为该轻量服务，方便用户在此基础上单独微调。
+  MultiAISettings withRoutingMode(AIRoutingMode mode) {
+    if (mode == routingMode && _routingMode == mode) {
+      return this;
+    }
+    if (mode == AIRoutingMode.custom && taskProviderIds.isEmpty) {
+      final activeLight = lightProvider;
+      if (activeLight != null && activeLight.id != currentProvider?.id) {
+        final prefilled = <AITask, String>{
+          for (final task in AITask.tieredLightTasks) task: activeLight.id,
+        };
+        return copyWith(
+          routingMode: mode,
+          taskProviderIds: Map<AITask, String>.unmodifiable(prefilled),
+        );
+      }
+    }
+    return copyWith(routingMode: mode);
+  }
+
+  /// 更新基础模式下的轻量服务商配置 ID（传入 `null` 或空串表示跟随主力服务）。
+  MultiAISettings withLightProvider(String? providerId) {
+    final normalized = providerId?.trim();
+    if (normalized == null ||
+        normalized.isEmpty ||
+        normalized == currentProviderId) {
+      return copyWith(lightProviderId: null);
+    }
+    return copyWith(lightProviderId: normalized);
   }
 
   /// 返回更新单个任务绑定后的新 [MultiAISettings]（不改动 [currentProviderId]）。
@@ -88,7 +191,7 @@ class MultiAISettings {
     );
   }
 
-  /// 移除指定 [providerId] 的配置，并同步清理 [currentProviderId] 与 [taskProviderIds]。
+  /// 移除指定 [providerId] 的配置，并同步清理 [currentProviderId]、[lightProviderId] 与 [taskProviderIds]。
   MultiAISettings withoutProvider(String providerId) {
     final remaining =
         providers.where((p) => p.id != providerId).toList(growable: false);
@@ -104,6 +207,15 @@ class MultiAISettings {
       nextDefaultId = currentProviderId;
     }
 
+    final String? nextLightId;
+    if (lightProviderId == null ||
+        lightProviderId == providerId ||
+        !remainingIds.contains(lightProviderId)) {
+      nextLightId = null;
+    } else {
+      nextLightId = lightProviderId;
+    }
+
     final cleanedTaskIds = <AITask, String>{
       for (final entry in taskProviderIds.entries)
         if (entry.value != providerId && remainingIds.contains(entry.value))
@@ -113,6 +225,7 @@ class MultiAISettings {
     return copyWith(
       providers: remaining,
       currentProviderId: nextDefaultId,
+      lightProviderId: nextLightId,
       taskProviderIds: Map<AITask, String>.unmodifiable(cleanedTaskIds),
     );
   }
@@ -121,12 +234,26 @@ class MultiAISettings {
   List<AIProviderSettings> get availableProviders => providers;
 
   factory MultiAISettings.fromJson(Map<String, dynamic> json) {
+    final parsedTaskIds = _parseTaskProviderIds(json['taskProviderIds']);
+    final parsedMode = AIRoutingMode.tryParse(json['routingMode'] as String?);
+    final effectiveMode = parsedMode ??
+        (parsedTaskIds.isNotEmpty
+            ? AIRoutingMode.custom
+            : AIRoutingMode.tiered);
+    final rawLightId = json['lightProviderId'];
+    final normalizedLightId =
+        rawLightId is String && rawLightId.trim().isNotEmpty
+            ? rawLightId.trim()
+            : null;
+
     return MultiAISettings(
       providers: _parseProviders(json),
       currentProviderId: json['currentProviderId'] as String? ??
           _extractCurrentProviderIdFromLegacy(json),
       enableFailover: json['enableFailover'] ?? true,
-      taskProviderIds: _parseTaskProviderIds(json['taskProviderIds']),
+      routingMode: effectiveMode,
+      lightProviderId: normalizedLightId,
+      taskProviderIds: parsedTaskIds,
     );
   }
 
@@ -177,6 +304,8 @@ class MultiAISettings {
       'currentProviderId': currentProviderId,
       'currentProvider': currentProvider?.toJson(), // 为了向后兼容
       'enableFailover': enableFailover,
+      'routingMode': routingMode.storageKey,
+      'lightProviderId': lightProviderId,
       'taskProviderIds': <String, String>{
         for (final entry in taskProviderIds.entries)
           entry.key.storageKey: entry.value,
@@ -190,6 +319,8 @@ class MultiAISettings {
     List<AIProviderSettings>? providers,
     Object? currentProviderId = _sentinel,
     bool? enableFailover,
+    Object? routingMode = _sentinel,
+    Object? lightProviderId = _sentinel,
     Map<AITask, String>? taskProviderIds,
   }) {
     return MultiAISettings(
@@ -198,6 +329,12 @@ class MultiAISettings {
           ? this.currentProviderId
           : currentProviderId as String?,
       enableFailover: enableFailover ?? this.enableFailover,
+      routingMode: identical(routingMode, _sentinel)
+          ? _routingMode
+          : routingMode as AIRoutingMode?,
+      lightProviderId: identical(lightProviderId, _sentinel)
+          ? this.lightProviderId
+          : lightProviderId as String?,
       taskProviderIds: taskProviderIds != null
           ? Map<AITask, String>.unmodifiable(taskProviderIds)
           : this.taskProviderIds,
@@ -213,6 +350,8 @@ class MultiAISettings {
       providers: [],
       currentProviderId: null,
       enableFailover: true,
+      routingMode: AIRoutingMode.tiered,
+      lightProviderId: null,
       taskProviderIds: <AITask, String>{},
     );
   }

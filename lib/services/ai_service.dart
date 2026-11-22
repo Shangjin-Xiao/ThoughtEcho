@@ -1331,15 +1331,19 @@ class AIService extends ChangeNotifier {
 
   /// 生成SVG卡片内容
   /// 专门用于AI卡片生成服务的SVG生成方法
-  Future<String> generateSVG(String prompt) async {
+  Future<String> generateSVG(
+    String prompt, {
+    AITask task = AITask.cardGeneration,
+  }) async {
     // 使用异步验证确保API Key有效性
-    if (!await hasValidApiKeyAsync()) {
+    if (!await hasValidApiKeyAsync(task: task)) {
       throw Exception('请先在设置中配置 API Key');
     }
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         return await _chatCompletionViaOpenAI(
+          task: task,
           systemPrompt:
               'You are an expert SVG designer. Generate clean, valid SVG code based on the user\'s requirements. Only return the SVG code without any explanations or markdown formatting.',
           userMessage: prompt,
@@ -1638,7 +1642,7 @@ class AIService extends ChangeNotifier {
   /// 避免 405 错误（openai_dart 正确构造 URL）。
   Future<String> generateSessionTitle(
     String firstUserMessage, {
-    AITask task = AITask.agent,
+    AITask task = AITask.sessionTitle,
   }) async {
     try {
       if (firstUserMessage.isEmpty) return 'Chat';

@@ -13,7 +13,43 @@ enum AITask {
   dreaming,
 
   /// Thoughter 对话与 Agent 工具调用
-  agent;
+  agent,
+
+  /// 笔记分享卡片排版生成（`AICardGenerationService` -> `AIService.generateSVG`）
+  cardGeneration,
+
+  /// 对话会话标题生成（`AIService.generateSessionTitle`）
+  sessionTitle;
+
+  /// 基础模式（大小模型分流）下归属主力模型的深度理解与创作任务。
+  static const List<AITask> tieredPrimaryTasks = <AITask>[
+    AITask.agent,
+    AITask.periodicInsight,
+    AITask.cardGeneration,
+  ];
+
+  /// 基础模式（大小模型分流）下归属轻量模型的快速响应或后台静默任务。
+  static const List<AITask> tieredLightTasks = <AITask>[
+    AITask.dailyInsight,
+    AITask.sessionTitle,
+    AITask.dreaming,
+  ];
+
+  /// 全部自定义模式下展示给用户的 6 项功能顺序。
+  static const List<AITask> customDisplayOrder = <AITask>[
+    AITask.agent,
+    AITask.dailyInsight,
+    AITask.periodicInsight,
+    AITask.cardGeneration,
+    AITask.sessionTitle,
+    AITask.dreaming,
+  ];
+
+  /// 判断当前任务在基础模式下是否归属轻量模型。
+  bool get usesLightTier =>
+      this == AITask.dailyInsight ||
+      this == AITask.sessionTitle ||
+      this == AITask.dreaming;
 
   /// 持久化与备份 JSON 中使用的稳定键名。
   String get storageKey => name;

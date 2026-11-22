@@ -10,6 +10,7 @@ import 'package:thoughtecho/models/ai_model_metadata.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
+import 'package:thoughtecho/pages/ai_service_config_page.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
@@ -76,7 +77,7 @@ Widget _wrap(
 }
 
 AppLocalizations _l10n(WidgetTester tester) =>
-    AppLocalizations.of(tester.element(find.byType(AISettingsPage)));
+    AppLocalizations.of(tester.element(find.byType(Scaffold).last));
 
 /// 滚到目标为止，滚的是页面本身那个列表。
 ///
@@ -109,16 +110,25 @@ Future<void> _waitFor(
 }
 
 Future<void> _scrollTo(WidgetTester tester, Finder target) async {
+  final configFinder = find.byType(AIServiceConfigPage);
+  final pageFinder = configFinder.evaluate().isNotEmpty
+      ? configFinder
+      : find.byType(AISettingsPage);
   await tester.scrollUntilVisible(
     target,
     200,
     scrollable: find
         .descendant(
-          of: find.byType(AISettingsPage),
+          of: pageFinder,
           matching: find.byType(Scrollable),
         )
         .first,
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openServiceConfig(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('ai_service_entry_card')));
   await tester.pumpAndSettle();
 }
 
@@ -203,6 +213,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
       final l10n = _l10n(tester);
       await tester.tap(find.byTooltip(l10n.moreOptions));
       await tester.pumpAndSettle();
@@ -233,6 +244,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
       expect(settingsService.multiAISettings.providers, hasLength(1));
@@ -307,6 +319,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
 
@@ -421,6 +434,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
       await tester.tap(find.text('本机主力模型'));
@@ -483,6 +497,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
       await tester.tap(find.text('Gemini 服务'));
@@ -598,6 +613,9 @@ void main() {
 
     testWidgets('tracks telemetry for connection test and provider save',
         (tester) async {
+      await settingsService.saveMultiAISettings(
+        MultiAISettings.defaultSettings(),
+      );
       final events = <Map<String, dynamic>>[];
       AptabaseHelper.onTrackEventForTesting = (event, props) {
         events.add({'event': event, 'props': props});
@@ -669,7 +687,17 @@ void main() {
           isTrue,
         );
 
-        // 3. Edit existing provider and save
+        // 3. Open service config page and edit existing provider
+        await _openServiceConfig(tester);
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        expect(
+          events.any((e) =>
+              e['event'] == 'page_view' &&
+              e['props']?['page'] == 'ai_service_config'),
+          isTrue,
+        );
         await tester.tap(find.text(_presetName));
         await tester.pumpAndSettle();
 
@@ -736,15 +764,20 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
+      await _scrollTo(tester, find.text(l10n.aiRoutingModeCustom));
+      await tester.tap(find.text(l10n.aiRoutingModeCustom));
+      await tester.pumpAndSettle();
+
       expect(
         find.byKey(const ValueKey('ai_task_routing_card')),
         findsOneWidget,
       );
       expect(
         find.text(l10n.aiTaskFollowingDefault('默认轻量服务')),
-        findsNWidgets(4),
+        findsNWidgets(6),
       );
 
       // Assign Dreaming to p_dream via ModalBottomSheet
@@ -779,7 +812,7 @@ void main() {
         -200,
         scrollable: find
             .descendant(
-              of: find.byType(AISettingsPage),
+              of: find.byType(AIServiceConfigPage),
               matching: find.byType(Scrollable),
             )
             .first,
@@ -837,6 +870,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final dailyTile = find.byKey(const ValueKey('ai_task_tile_dailyInsight'));
       await _scrollTo(tester, dailyTile);
@@ -880,6 +914,7 @@ void main() {
             ),
           ],
           currentProviderId: 'p_default',
+          routingMode: AIRoutingMode.custom,
         ),
       );
 
@@ -891,6 +926,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(failingSettings, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
       final l10n = _l10n(tester);
 
       failingSettings.saveMultiError = StateError('模拟存储写入失败');
@@ -960,6 +996,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
       await tester.tap(find.text('内部网关'));
@@ -1010,6 +1047,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
       await tester.tap(find.text('Claude 网关'));
@@ -1074,6 +1112,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
       await tester.tap(find.text('Anthropic 兼容配置'));
@@ -1125,6 +1164,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
       await tester.tap(find.text('Anthropic Native Messages'));
@@ -1190,6 +1230,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
 
@@ -1280,6 +1321,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
 
       final l10n = _l10n(tester);
       final expectedUnsupportedMsg = l10n.connectionTestFailed(
@@ -1314,7 +1356,7 @@ void main() {
 
       // 2. Change OpenRouter OpenAI provider URL to /v1/messages -> classified as native Messages, clears stale metadata
       ScaffoldMessenger.of(
-        tester.element(find.byType(AISettingsPage)),
+        tester.element(find.byType(AIServiceConfigPage)),
       ).clearSnackBars();
       await tester.pumpAndSettle();
 
@@ -1381,6 +1423,242 @@ void main() {
       expect(switchedBackToOpenAI.protocol, AIProtocolType.openAICompatible);
       expect(switchedBackToOpenAI.providerSlug, 'openrouter');
       expect(switchedBackToOpenAI.isAnthropicMessagesApi, isFalse);
+    });
+
+    testWidgets(
+        'AISettingsPage orders feature switches and memory options per hierarchy spec',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await settingsService.setAgentMemoryEnabled(true);
+      await settingsService.setDreamingEnabled(true);
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+
+      final entrySectionY =
+          tester.getTopLeft(find.text(l10n.aiServiceEntrySectionTitle)).dy;
+      final featuresSectionY =
+          tester.getTopLeft(find.text(l10n.aiFeaturesSectionTitle)).dy;
+      final memorySectionY =
+          tester.getTopLeft(find.text(l10n.agentMemorySectionTitle)).dy;
+      expect(entrySectionY, lessThan(featuresSectionY));
+      expect(featuresSectionY, lessThan(memorySectionY));
+
+      // AI feature switches: 今日思考使用 AI -> 周期报告洞察使用 AI -> AI 卡片生成
+      final dailySwitchY =
+          tester.getTopLeft(find.text(l10n.todayThoughtsUseAi)).dy;
+      final reportSwitchY =
+          tester.getTopLeft(find.text(l10n.reportInsightsUseAi)).dy;
+      final cardSwitchY =
+          tester.getTopLeft(find.text(l10n.aiCardGeneration)).dy;
+      expect(dailySwitchY, lessThan(reportSwitchY));
+      expect(reportSwitchY, lessThan(cardSwitchY));
+
+      // Thoughter memory options: 长期记忆 -> 称呼 -> 查看与管理记忆 -> 自动整理记忆 (+子开关) -> 清空记忆
+      final memEnableY =
+          tester.getTopLeft(find.text(l10n.agentMemoryEnableTitle)).dy;
+      final nicknameY =
+          tester.getTopLeft(find.text(l10n.agentMemoryNicknameTitle)).dy;
+      final manageY =
+          tester.getTopLeft(find.text(l10n.agentMemoryManageTitle)).dy;
+      final dreamEnableY =
+          tester.getTopLeft(find.text(l10n.dreamingEnableTitle)).dy;
+      final dreamIdleY =
+          tester.getTopLeft(find.text(l10n.dreamingOnIdleTitle)).dy;
+      final dreamAfterInsightY =
+          tester.getTopLeft(find.text(l10n.dreamingAfterInsightTitle)).dy;
+      final clearY =
+          tester.getTopLeft(find.text(l10n.agentMemoryClearTitle)).dy;
+
+      expect(memEnableY, lessThan(nicknameY));
+      expect(nicknameY, lessThan(manageY));
+      expect(manageY, lessThan(dreamEnableY));
+      expect(dreamEnableY, lessThan(dreamIdleY));
+      expect(dreamIdleY, lessThan(dreamAfterInsightY));
+      expect(dreamAfterInsightY, lessThan(clearY));
+    });
+
+    testWidgets(
+        'AISettingsPage entry card reflects default, tiered light, and custom routing summaries',
+        (tester) async {
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_main',
+              name: '主力服务',
+              apiUrl: 'https://api.openai.com/v1',
+              model: 'gpt-4o',
+            ),
+            AIProviderSettings(
+              id: 'p_light',
+              name: '轻量服务',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+            ),
+          ],
+          currentProviderId: 'p_main',
+          routingMode: AIRoutingMode.tiered,
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
+
+      expect(find.text('主力服务 · gpt-4o'), findsOneWidget);
+      expect(find.text(l10n.aiServiceEntrySummaryDefault), findsOneWidget);
+
+      await settingsService.saveMultiAISettings(
+        settingsService.multiAISettings.copyWith(lightProviderId: 'p_light'),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.aiServiceEntrySummaryTieredLight('轻量服务')),
+        findsOneWidget,
+      );
+
+      await settingsService.saveMultiAISettings(
+        settingsService.multiAISettings.copyWith(
+          routingMode: AIRoutingMode.custom,
+          taskProviderIds: const {
+            AITask.dailyInsight: 'p_light',
+            AITask.sessionTitle: 'p_light',
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.aiServiceEntrySummaryCustom(2)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+        'AIServiceConfigPage tiered mode binds light model, shows single light badge, pre-fills custom mode on first switch, and cleans up on delete',
+        (tester) async {
+      await APIKeyManager().saveProviderApiKey('p_main', 'sk-main-123456');
+      await APIKeyManager().saveProviderApiKey('p_light', 'sk-light-123456');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_main',
+              name: '主力服务',
+              apiUrl: 'https://api.openai.com/v1',
+              model: 'gpt-4o',
+            ),
+            AIProviderSettings(
+              id: 'p_light',
+              name: '轻量服务',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+            ),
+          ],
+          currentProviderId: 'p_main',
+          routingMode: AIRoutingMode.tiered,
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
+      final l10n = _l10n(tester);
+
+      expect(
+        find.byKey(const ValueKey('ai_tiered_routing_card')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('ai_task_routing_card')),
+        findsNothing,
+      );
+
+      // Select p_light for the light tier
+      final lightTile = find.byKey(const ValueKey('ai_tier_light_tile'));
+      await _scrollTo(tester, lightTile);
+      await tester.tap(lightTile);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('ai_light_option_p_light')));
+      await tester.pumpAndSettle();
+
+      expect(settingsService.multiAISettings.lightProviderId, 'p_light');
+
+      // Scroll up to check single light badge on p_light without 6 task badges
+      await tester.scrollUntilVisible(
+        find.text('轻量服务'),
+        -200,
+        scrollable: find
+            .descendant(
+              of: find.byType(AIServiceConfigPage),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('provider_light_badge_p_light')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('provider_task_badge_p_light_dailyInsight')),
+        findsNothing,
+      );
+
+      // Switch to custom mode -> pre-fills the 3 light tasks
+      await _scrollTo(tester, find.text(l10n.aiRoutingModeCustom));
+      await tester.tap(find.text(l10n.aiRoutingModeCustom));
+      await tester.pumpAndSettle();
+
+      final customSettings = settingsService.multiAISettings;
+      expect(customSettings.routingMode, AIRoutingMode.custom);
+      expect(customSettings.taskProviderIds[AITask.dailyInsight], 'p_light');
+      expect(customSettings.taskProviderIds[AITask.sessionTitle], 'p_light');
+      expect(customSettings.taskProviderIds[AITask.dreaming], 'p_light');
+      expect(customSettings.taskProviderIds.containsKey(AITask.agent), isFalse);
+      expect(
+        customSettings.taskProviderIds.containsKey(AITask.periodicInsight),
+        isFalse,
+      );
+      expect(
+        customSettings.taskProviderIds.containsKey(AITask.cardGeneration),
+        isFalse,
+      );
+
+      // Switch back to tiered mode and delete p_light -> cleans up lightProviderId & taskProviderIds
+      await _scrollTo(tester, find.text(l10n.aiRoutingModeTiered));
+      await tester.tap(find.text(l10n.aiRoutingModeTiered));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('轻量服务'),
+        -200,
+        scrollable: find
+            .descendant(
+              of: find.byType(AIServiceConfigPage),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip(l10n.moreOptions).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.delete));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, l10n.delete));
+      await tester.pumpAndSettle();
+
+      expect(settingsService.multiAISettings.lightProviderId, isNull);
+      expect(settingsService.multiAISettings.taskProviderIds, isEmpty);
     });
   });
 }

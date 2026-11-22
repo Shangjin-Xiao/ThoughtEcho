@@ -434,18 +434,23 @@ void main() {
     });
 
     test(
-        'generateSessionTitle routes via AITask.agent instead of leaking first message to default provider',
+        'generateSessionTitle routes via AITask.sessionTitle instead of leaking first message to default provider',
         () async {
       await harness.settingsService.saveMultiAISettings(
         const MultiAISettings(
-          providers: [defaultProvider, agentProProvider],
+          providers: [defaultProvider, dailyFastProvider, agentProProvider],
           currentProviderId: 'p_default',
-          taskProviderIds: {AITask.agent: 'p_agent'},
+          routingMode: AIRoutingMode.custom,
+          taskProviderIds: {
+            AITask.agent: 'p_agent',
+            AITask.sessionTitle: 'p_daily',
+          },
         ),
       );
 
       final keyManager = _InMemoryApiKeyManager({
         'p_default': 'sk-default-key-1234',
+        'p_daily': 'sk-title-fast-key-1234',
         'p_agent': 'sk-agent-private-key-1234',
       });
       final streamService = _CapturingOpenAIStreamService()
@@ -458,16 +463,16 @@ void main() {
       );
 
       final title = await aiService.generateSessionTitle(
-        '这是一条只应发往 Thoughter 专属渠道的首条消息内容',
+        '这是一条用于测试会话标题专属模型路由的首条消息',
       );
 
       expect(title, '私密灵感对话标题');
       expect(streamService.calls, hasLength(1));
       expect(streamService.calls.single.method, 'chatCompletion');
-      expect(streamService.calls.single.provider.id, 'p_agent');
+      expect(streamService.calls.single.provider.id, 'p_daily');
       expect(
         streamService.calls.single.provider.apiKey,
-        'sk-agent-private-key-1234',
+        'sk-title-fast-key-1234',
       );
       expect(streamService.calls.single.enableThinking, isFalse);
       expect(
@@ -475,23 +480,81 @@ void main() {
         'p_default',
       );
 
-      // Even when p_default has no API key, generateSessionTitle still succeeds via AITask.agent.
-      final agentOnlyKeyManager = _InMemoryApiKeyManager({
-        'p_agent': 'sk-agent-private-key-1234',
+      // Even when p_default has no API key, generateSessionTitle still succeeds via AITask.sessionTitle.
+      final titleOnlyKeyManager = _InMemoryApiKeyManager({
+        'p_daily': 'sk-title-fast-key-1234',
       });
-      final agentOnlyAiService = AIService(
+      final titleOnlyAiService = AIService(
         settingsService: harness.settingsService,
         memoryService: harness.memory,
-        apiKeyManager: agentOnlyKeyManager,
+        apiKeyManager: titleOnlyKeyManager,
         openAIStreamService: streamService,
       );
       streamService.calls.clear();
-      final secondTitle = await agentOnlyAiService.generateSessionTitle(
-        '默认服务无密钥时依然通过专属服务生成标题',
+      final secondTitle = await titleOnlyAiService.generateSessionTitle(
+        '默认服务无密钥时依然通过标题专属服务生成标题',
       );
       expect(secondTitle, '私密灵感对话标题');
       expect(streamService.calls, hasLength(1));
-      expect(streamService.calls.single.provider.id, 'p_agent');
+      expect(streamService.calls.single.provider.id, 'p_daily');
+    });
+
+    test(
+        'tiered mode routes cardGeneration/periodicInsight to primary and dailyInsight/sessionTitle/dreaming to lightProvider',
+        () async {
+      await harness.settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [agentProProvider, dailyFastProvider],
+          currentProviderId: 'p_agent',
+          routingMode: AIRoutingMode.tiered,
+          lightProviderId: 'p_daily',
+        ),
+      );
+
+      final keyManager = _InMemoryApiKeyManager({
+        'p_agent': 'sk-primary-key-1234',
+        'p_daily': 'sk-light-key-1234',
+      });
+      final streamService = _CapturingOpenAIStreamService()
+        ..completionReply =
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600"><text>卡片测试</text></svg>';
+      final aiService = AIService(
+        settingsService: harness.settingsService,
+        memoryService: harness.memory,
+        apiKeyManager: keyManager,
+        openAIStreamService: streamService,
+      );
+
+      // Primary tier: cardGeneration + periodicInsight
+      final svg = await aiService.generateSVG('测试生成分享卡片');
+      expect(svg, contains('<svg'));
+      await aiService
+          .streamReportInsight(
+            periodLabel: '本周',
+            activeDays: 2,
+            noteCount: 2,
+            totalWordCount: 80,
+            fullNotesContent: '随笔内容',
+          )
+          .join();
+
+      // Light tier: dailyInsight + sessionTitle + dreaming
+      await aiService.streamGenerateDailyPrompt(l10n).join();
+      streamService.completionReply = '轻量标题';
+      await aiService.generateSessionTitle('测试轻量模型标题生成');
+      streamService.completionReply = '{"taste":"凝练"}';
+      await aiService.completeForBackgroundSummary(
+        systemPrompt: 'sys',
+        userMessage: 'usr',
+      );
+
+      expect(streamService.calls.map((c) => c.provider.id).toList(), [
+        'p_agent', // generateSVG (cardGeneration -> primary)
+        'p_agent', // streamReportInsight (periodicInsight -> primary)
+        'p_daily', // streamGenerateDailyPrompt (dailyInsight -> light)
+        'p_daily', // generateSessionTitle (sessionTitle -> light)
+        'p_daily', // completeForBackgroundSummary (dreaming -> light)
+      ]);
     });
   });
 }
