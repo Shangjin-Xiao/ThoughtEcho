@@ -38,6 +38,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     return _coalesceInFlightQuoteQuery(
       signature: signature,
       isCancelled: isCancelled,
+      isPaginationFlight: true,
       runFlight: (flight) => runZoned(
         () => getUserQuotes(
           tagIds: tagIds,
@@ -105,6 +106,9 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
           logFailureAtBoundary: false,
         );
       } on _QueryCancelledException {
+        if (generation == _quotesLoadGeneration) {
+          _coordinatorState.endRefill();
+        }
         return;
       } catch (e, stackTrace) {
         failed = true;
@@ -151,7 +155,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
           );
         _watchOffset = _currentQuotes.length;
         _watchHasMore = previousHasMore;
-        _pendingRefillTarget = 0;
+        _pendingRefillTarget =
+            suspendedInBackground && targetCount > _currentQuotes.length
+                ? targetCount
+                : 0;
+        _coordinatorState.endRefill();
         return;
       }
 
@@ -161,18 +169,34 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       _currentQuoteIds.clear();
       _watchOffset = 0;
       _watchHasMore = previousHasMore;
-      _pendingRefillTarget = 0;
+      _pendingRefillTarget = suspendedInBackground ? targetCount : 0;
+      _coordinatorState.endRefill();
       if (_quotesController != null && !_quotesController!.isClosed) {
         _quotesController!.addError(error, stackTrace);
       }
       return;
     }
 
-    _pendingRefillTarget = 0;
-    _coordinatorState.markDelivered(_quotesController);
+    final bool hadDeliveredSnapshot =
+        _coordinatorState.hasDeliveredForController(_quotesController);
+    final bool lastEmittedHasMore = hadDeliveredSnapshot
+        ? _coordinatorState.lastDeliveredHasMore
+        : previousHasMore;
+    final bool skipStreamEmit =
+        _quoteListsEquivalent(previousQuotes, _currentQuotes) &&
+            _watchHasMore == previousHasMore &&
+            _watchHasMore == lastEmittedHasMore;
 
-    if (_quoteListsEquivalent(previousQuotes, _currentQuotes)) {
-      logDebug('刷新后可见列表无变化，跳过整表推送');
+    _pendingRefillTarget = 0;
+    _coordinatorState.markDelivered(
+      _quotesController,
+      quotes: _currentQuotes,
+      hasMore: _watchHasMore,
+      clearDeferredRefresh: true,
+    );
+
+    if (skipStreamEmit) {
+      logDebug('刷新后可见列表与分页状态均无变化，跳过整表推送');
       return;
     }
 
@@ -188,7 +212,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     if (_isDisposed) return;
 
     if (_quotesController != null && !_quotesController!.isClosed) {
-      _coordinatorState.markDelivered(_quotesController);
+      _coordinatorState.markDelivered(
+        _quotesController,
+        quotes: _currentQuotes,
+        hasMore: _watchHasMore,
+      );
       // 直接发送当前列表的副本，已保证唯一性
       _quotesController!.add(List.from(_currentQuotes));
     }
@@ -210,23 +238,53 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       // 滚动位置被夹紧 —— 表现就是「列表突然飞走/弹回顶部 + 底部转圈 + 大片空白」。
       // 所以刷新必须一次把原有页数全部取回，列表长度保持不变。
       //
-      // 上一次刷新可能还在回填途中（那时 _currentQuotes 已被清空），
-      // 此时按当时的长度 0 算目标会退化成只取一页，等于把这个 bug 放回来。
-      // 沿用在途目标即可。
-      final int loadedCount = _currentQuotes.isNotEmpty
-          ? _currentQuotes.length
-          : _pendingRefillTarget;
+      // 上一次刷新可能还在分块回填途中（那时 _currentQuotes 要么已被清空，要么仅装有尚未投递的部分分块），
+      // 此时必须始终以本轮连续刷新开始前已投递的完整基线为准，绝不能拿未投递的半程分块覆盖回滚基线。
+      final bool hasCommittedSnapshot =
+          _coordinatorState.hasDeliveredForController(_quotesController);
+      final bool wasRefillInProgress = _coordinatorState.isRefillInProgress;
+      late final List<Quote> previousQuotes;
+      late final bool previousHasMore;
+      if (wasRefillInProgress) {
+        previousQuotes = List<Quote>.from(
+          _coordinatorState.refillBaselineQuotes,
+        );
+        previousHasMore = _coordinatorState.refillBaselineHasMore;
+      } else if (_currentQuotes.isNotEmpty) {
+        previousQuotes = List<Quote>.from(_currentQuotes);
+        previousHasMore = _watchHasMore;
+        _coordinatorState.beginRefill(
+          quotes: previousQuotes,
+          hasMore: previousHasMore,
+        );
+      } else if (hasCommittedSnapshot) {
+        previousQuotes = List<Quote>.from(
+          _coordinatorState.lastDeliveredQuotes,
+        );
+        previousHasMore = _coordinatorState.lastDeliveredHasMore;
+        _coordinatorState.beginRefill(
+          quotes: previousQuotes,
+          hasMore: previousHasMore,
+        );
+      } else {
+        previousQuotes = <Quote>[];
+        previousHasMore = _watchHasMore;
+        _coordinatorState.beginRefill(
+          quotes: const <Quote>[],
+          hasMore: previousHasMore,
+        );
+      }
+      int loadedCount = wasRefillInProgress ? 0 : _currentQuotes.length;
+      if (_pendingRefillTarget > loadedCount) {
+        loadedCount = _pendingRefillTarget;
+      }
+      if (previousQuotes.length > loadedCount) {
+        loadedCount = previousQuotes.length;
+      }
       // 列表本来不足一页（如首屏前或总笔记数少于一页时新增/同步合入）：至少取满一页容量。
       final int reloadCount =
           loadedCount > _watchLimit ? loadedCount : _watchLimit;
       _pendingRefillTarget = reloadCount;
-      // 回填结果和刷新前一模一样时不再向 UI 推送：整表推送会让列表页
-      // 重建全部已加载 item（上百次 build + 首次布局），发生在滚动帧里
-      // 就是一次明显的卡顿。回收站过期清理、同步后的例行刷新等场景，
-      // 可见列表其实一条都没变。
-      final List<Quote> previousQuotes = List<Quote>.from(_currentQuotes);
-      // 回填失败要整体回滚时，分页游标也得跟着回到刷新前的样子。
-      final bool previousHasMore = _watchHasMore;
       logDebug('刷新笔记流数据，需回填 $reloadCount 条');
       // 优化：清除所有缓存，确保获取最新数据
       clearAllCacheForParts();
@@ -656,6 +714,18 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     } finally {
       if (loadGeneration == _quotesLoadGeneration) {
         _isLoading = false;
+        if (!suppressNotify &&
+            !_isDisposed &&
+            _isAppLifecycleActive() &&
+            _coordinatorState.consumeDeferredRefresh(_quotesController)) {
+          Future.microtask(() {
+            if (!_isDisposed &&
+                loadGeneration == _quotesLoadGeneration &&
+                _isAppLifecycleActive()) {
+              _refreshQuotesStream();
+            }
+          });
+        }
       }
     }
   }

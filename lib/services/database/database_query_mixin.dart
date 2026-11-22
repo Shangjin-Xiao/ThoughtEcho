@@ -58,18 +58,28 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     required String signature,
     required bool Function() isCancelled,
     required Future<List<Quote>> Function(_InFlightQuoteQuery flight) runFlight,
+    bool isPaginationFlight = false,
   }) async {
     final inFlightMap = _coordinatorState.inFlightQuoteQueries;
     final existing = inFlightMap[signature];
     if (existing != null && !existing.completer.isCompleted) {
       logDebug('命中在途单航班查询合并: $signature');
       existing.addWaiter(isCancelled);
-      final sharedResult = await existing.completer.future;
-      return List<Quote>.of(sharedResult);
+      try {
+        final sharedResult = await existing.completer.future;
+        return List<Quote>.of(sharedResult);
+      } on _QueryCancelledException {
+        if (_isDisposed || isCancelled()) {
+          rethrow;
+        }
+        // 前序等待者刚触发取消的微任务竞态窗口：当前等待者仍有效，起飞新航班。
+      }
     }
 
-    final flight = _InFlightQuoteQuery(signature: signature)
-      ..addWaiter(isCancelled);
+    final flight = _InFlightQuoteQuery(
+      signature: signature,
+      isPaginationFlight: isPaginationFlight,
+    )..addWaiter(isCancelled);
     inFlightMap[signature] = flight;
 
     runFlight(flight).then(

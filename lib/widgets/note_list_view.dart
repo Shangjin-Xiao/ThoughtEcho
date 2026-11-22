@@ -960,30 +960,34 @@ class NoteListViewState extends State<NoteListView>
     _isLifecycleActive = true;
     final db = _databaseService;
     if (!_initialDataLoaded && _initialLoadSuspendedByLifecycle) {
-      _initialLoadSuspendedByLifecycle = false;
       if (!_waitingForServices && db != null && db.isInitialized) {
+        _initialLoadSuspendedByLifecycle = false;
         if (_initialLoadErrorMessage != null || !_isLoading) {
           _updateState(() {
             _initialLoadErrorMessage = null;
             _isLoading = true;
           });
         }
-        DatabaseService.consumeDeferredPaginationRefresh(db);
-        if (!DatabaseService.isPaginationQueryInFlight(db)) {
-          logDebug(
-            '应用回到前台 resumed 且首屏尚未就绪，触发单次干净恢复拉取',
-            source: 'NoteListView',
-          );
-          db.refreshQuotes();
+        if (_quotesSub == null) {
+          _initializeDataStream();
+        } else {
+          if (!DatabaseService.isPaginationQueryInFlight(db)) {
+            DatabaseService.consumeDeferredPaginationRefresh(db);
+            logDebug(
+              '应用回到前台 resumed 且首屏尚未就绪，触发单次干净恢复拉取',
+              source: 'NoteListView',
+            );
+            db.refreshQuotes();
+          }
+          _scheduleInitialLoadSafetyTimer();
         }
-        _scheduleInitialLoadSafetyTimer();
       }
     } else if (_initialDataLoaded &&
         !_waitingForServices &&
         db != null &&
         db.isInitialized &&
-        DatabaseService.consumeDeferredPaginationRefresh(db) &&
-        !DatabaseService.isPaginationQueryInFlight(db)) {
+        !DatabaseService.isPaginationQueryInFlight(db) &&
+        DatabaseService.consumeDeferredPaginationRefresh(db)) {
       logDebug(
         '应用回到前台 resumed，补跑后台挂起的列表刷新',
         source: 'NoteListView',
