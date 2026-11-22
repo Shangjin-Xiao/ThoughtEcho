@@ -1837,6 +1837,27 @@ void main() {
       expect(capturedProviders.single.id, 'p_ollama_local');
       expect(capturedProviders.single.apiKey, isEmpty);
       customAgentService.dispose();
+
+      // 3. Client configuration omits Authorization header when key is empty
+      //    and preserves authentication when key is non-empty.
+      final keylessConfig = AgentService.buildOpenAIConfig(
+        capturedProviders.single,
+      );
+      expect(keylessConfig.authProvider, isNull);
+      expect(
+        keylessConfig.defaultHeaders.keys
+            .any((k) => k.toLowerCase() == 'authorization'),
+        isFalse,
+      );
+
+      final authedConfig = AgentService.buildOpenAIConfig(
+        cloudDefault.copyWith(apiKey: 'sk-openai-key-1234'),
+      );
+      expect(authedConfig.authProvider, isNotNull);
+      expect(
+        authedConfig.defaultHeaders['Authorization'],
+        'Bearer sk-openai-key-1234',
+      );
     });
   });
 }

@@ -100,7 +100,7 @@ Ollama 官方提供了云端接口服务，支持直接调用多种主流开源�
 7. 点「保存」
 
 - 新添加的服务会出现在「我的 AI 服务」列表中并自动设为当前主力服务；修改已有服务不会改变当前的主力选择。
-- 在「AI 服务与模型」页点击列表中的其他服务，或在下方「模型分配」中点击「主力模型」，即可切换当前使用的主力服务；点击当前主力服务或点右侧「⋮」可编辑、测试连接、重命名或删除。
+- 在「AI 服务与模型」页点击列表中的其他服务，或在「基础分配」模式下点击「主力模型」，即可切换当前使用的主力服务；点击当前主力服务可直接进入编辑，点右侧「⋮」菜单可编辑、测试连接、重命名或删除。
 
 > 💡 **接口地址怎么填**：填服务商文档给的 base URL（例如 `https://ollama.com/v1`）
 > 就行，心迹会自动补成 `/chat/completions`；填完整地址也可以。
@@ -132,7 +132,7 @@ Ollama 官方提供了云端接口服务，支持直接调用多种主流开源�
 
 进入「设置」→「AI 设置」→「AI 服务与模型」，您可以同时管理多个 AI 服务，并按习惯分配模型：
 
-- **切换主力服务**：在「我的 AI 服务」列表中点击其他服务即可切换为主力服务，也可在下方「模型分配」中点击「主力模型」选择；当前服务暂时不可用时会自动尝试其他已启用的服务。
+- **切换主力服务**：在「我的 AI 服务」列表中点击其他服务即可切换为主力服务，也可在「基础分配」模式下点击「主力模型」选择；当前服务暂时不可用时会自动尝试其他已启用的服务。
 - **基础分配（默认）**：「主力模型」负责 Thoughter 对话、周期回顾洞察与 AI 卡片生成；您还可以单独指定一个响应更快、更省额度的「轻量模型」负责每日心迹提示、对话标题生成与长期记忆整理（未指定时自动跟随主力服务）。
 - **按功能自选**：支持为 Thoughter 对话、每日心迹提示、周期回顾洞察、AI 卡片生成、对话标题生成、长期记忆整理 6 项功能逐一指定专属服务，也可随时恢复「跟随默认服务」。
 
@@ -963,7 +963,7 @@ templates are built in:
 7. Tap "Save"
 
 - Newly added services appear in "My AI Services" and become your primary service; editing an existing service keeps your current primary choice unchanged.
-- To switch your primary service on the "AI Services & Models" page, tap another service in "My AI Services" or select one under "Model Assignment" → "Primary Model"; tap the current primary service or the "⋮" menu to edit, test connection, rename, or delete.
+- To switch your primary service on the "AI Services & Models" page, tap another service in "My AI Services" or select one under "Primary Model" in "Basic Split" mode; tap the current primary service to edit it directly, or open the "⋮" menu to edit, test connection, rename, or delete.
 
 > 💡 **What to put in the URL field**: the base URL from the provider's docs
 > (e.g. `https://ollama.com/v1`) is enough — `/chat/completions` is appended
@@ -996,7 +996,7 @@ Local AI runs on your own computer, free and offline.
 
 Open "Settings" → "AI Settings" → "AI Services & Models" to manage multiple AI services and assign models to fit your workflow:
 
-- **Switching Primary Service**: Tap another service in "My AI Services" or choose one under "Model Assignment" → "Primary Model" at any time. Other enabled services are tried automatically if the active one is unavailable.
+- **Switching Primary Service**: Tap another service in "My AI Services", or choose one under "Primary Model" in "Basic Split" mode. Other enabled services are tried automatically if the active one is unavailable.
 - **Basic Split (Default)**: Your **Primary Model** handles Thoughter chat, periodic insights, and AI card design, while an optional **Light Model** takes care of daily prompts, chat titles, and memory organization (follows your primary service when unset).
 - **Per Feature**: Assign dedicated services individually across all 6 features (Thoughter chat, daily prompts, periodic insights, AI card design, chat titles, and memory organization), or switch any feature back to "Follow Default Service".
 

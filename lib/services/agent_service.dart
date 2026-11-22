@@ -857,10 +857,8 @@ class AgentService extends ChangeNotifier {
         AIProviderPresets.matchApiUrl(provider.apiUrl);
     final requiresApiKey = preset?.requiresApiKey ?? true;
 
-    final apiKey = provider.apiKey.trim().isNotEmpty
-        ? provider.apiKey
-        : await (_apiKeyResolver?.call(provider.id) ??
-            _apiKeyManager.getProviderApiKey(provider.id));
+    final apiKey = await (_apiKeyResolver?.call(provider.id) ??
+        _apiKeyManager.getProviderApiKey(provider.id));
     if (requiresApiKey && apiKey.trim().isEmpty) {
       throw AgentRequestException(
         AgentFailureType.missingApiKey,
@@ -868,7 +866,7 @@ class AgentService extends ChangeNotifier {
       );
     }
 
-    return provider.copyWith(apiKey: apiKey);
+    return provider.copyWith(apiKey: apiKey.trim().isEmpty ? '' : apiKey);
   }
 
   Future<openai.ChatCompletion> _requestCompletion({
@@ -1194,15 +1192,21 @@ class AgentService extends ChangeNotifier {
     return candidates.where(seen.add).toList();
   }
 
-  openai.OpenAIConfig _buildOpenAIConfig(AIProviderSettings provider) {
+  @visibleForTesting
+  static openai.OpenAIConfig buildOpenAIConfig(AIProviderSettings provider) {
     final normalizedUrl = normalizeOpenAIBaseUrl(provider.apiUrl);
     // Apply the same transport policy as the other AI request paths.
     if (!isSecureAiEndpoint(Uri.parse(normalizedUrl))) {
       throw const FormatException('非安全URL: 公网请求必须使用 HTTPS');
     }
 
+    final hasApiKey = provider.apiKey.trim().isNotEmpty;
     final headers = Map<String, String>.from(provider.buildHeaders())
-      ..removeWhere((key, _) => key.toLowerCase() == 'content-type');
+      ..removeWhere(
+        (key, _) =>
+            key.toLowerCase() == 'content-type' ||
+            (!hasApiKey && key.toLowerCase() == 'authorization'),
+      );
 
     if (provider.isOpenRouter) {
       headers['HTTP-Referer'] ??= 'https://thoughtecho.app';
@@ -1211,14 +1215,15 @@ class AgentService extends ChangeNotifier {
 
     return openai.OpenAIConfig(
       baseUrl: normalizedUrl,
-      authProvider: provider.apiKey.isNotEmpty
-          ? openai.ApiKeyProvider(provider.apiKey)
-          : null,
+      authProvider: hasApiKey ? openai.ApiKeyProvider(provider.apiKey) : null,
       defaultHeaders: headers,
       timeout: const Duration(minutes: 3),
       retryPolicy: const openai.RetryPolicy(maxRetries: 2),
     );
   }
+
+  openai.OpenAIConfig _buildOpenAIConfig(AIProviderSettings provider) =>
+      buildOpenAIConfig(provider);
 
   Future<String> _requestFinalSummary({
     required AIProviderSettings provider,

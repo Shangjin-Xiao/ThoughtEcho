@@ -134,8 +134,13 @@ void main() {
         final config = OpenAIStreamService.buildOpenAIConfig(provider);
 
         expect(config.baseUrl, 'http://localhost:11434/v1');
-        // No auth provider for empty API key
+        // No auth provider or empty Authorization header for empty API key
         expect(config.authProvider, isNull);
+        expect(
+          config.defaultHeaders.keys
+              .any((k) => k.toLowerCase() == 'authorization'),
+          isFalse,
+        );
       });
 
       test('creates config for OpenRouter with custom headers', () {
