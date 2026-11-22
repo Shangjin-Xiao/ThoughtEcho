@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
@@ -466,6 +467,100 @@ void main() {
     );
 
     testWidgets(
+      '已加载列表在后台挂起刷新后切回 resumed，同时存在未完成的公开 getUserQuotes(offset: 0, limit: 50) 时仍补跑刷新展示新笔记',
+      (tester) async {
+        var lifecycle = AppLifecycleState.resumed;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+
+        final fakeSqlDb = _InMemoryInterceptingSqfliteDb(
+          quotes: _makeQuotes(2),
+        );
+        DatabaseService.setTestDatabase(fakeSqlDb);
+        final databaseService = _FullQueryPipelineTestDbService();
+        DatabaseService.setDebugLifecycleStateProvider(
+          databaseService,
+          () => lifecycle,
+        );
+        addTearDown(() {
+          DatabaseService.setDebugLifecycleStateProvider(databaseService, null);
+          DatabaseService.clearTestDatabase();
+        });
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+        expect(find.text('并发巡检期间合入的新笔记'), findsNothing);
+
+        // 切入后台后合入新笔记并连续触发两次 refreshQuotes()，使刷新挂起并记录延迟刷新标记。
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.paused;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+
+        fakeSqlDb.quotes = [
+          Quote(
+            id: 'synced-while-public-query-inflight',
+            content: '并发巡检期间合入的新笔记',
+            date: DateTime(2026, 8, 19, 9).toIso8601String(),
+          ),
+          ..._makeQuotes(2),
+        ];
+        databaseService.refreshQuotes();
+        databaseService.refreshQuotes();
+        await tester.pump();
+
+        // 发起一笔挂起未完成的公开 getUserQuotes(offset: 0, limit: 50)（模拟后台备份/媒体扫描）。
+        final publicReadGate = Completer<void>();
+        fakeSqlDb.holdLimit50QueryUntil = publicReadGate.future;
+        final publicReadFuture = databaseService.getUserQuotes(
+          offset: 0,
+          limit: 50,
+        );
+        await tester.pump();
+
+        expect(
+          DatabaseService.isPaginationQueryInFlight(databaseService),
+          isFalse,
+          reason: '公开非门控 getUserQuotes 在途查询不应阻塞 UI 分页恢复判断',
+        );
+
+        // 切回 resumed（公开 getUserQuotes 仍处于未完成在途状态）：延迟刷新不被吞没，新笔记正常渲染。
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.resumed;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('并发巡检期间合入的新笔记'), findsOneWidget);
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+
+        // 放行公开 getUserQuotes，确认其同样完整返回 3 条记录。
+        publicReadGate.complete();
+        await tester.pump();
+        final exportedQuotes = await publicReadFuture;
+        expect(exportedQuotes, hasLength(3));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        databaseService.dispose();
+      },
+    );
+
+    testWidgets(
       '前台连续超时自动恢复最多 2 次后收敛到 AppErrorView，点击重试恢复加载',
       (tester) async {
         tester.binding.handleAppLifecycleStateChanged(
@@ -875,6 +970,128 @@ class _LifecycleAwareRealPaginationDbService extends DatabaseService {
     final end = (offset + limit).clamp(0, quotes.length);
     return List<Quote>.from(quotes.sublist(offset, end));
   }
+}
+
+/// 走完整 [_DatabaseQueryMixin] 与 [_DatabasePaginationMixin] 单航班管线的测试服务。
+class _FullQueryPipelineTestDbService extends DatabaseService {
+  _FullQueryPipelineTestDbService() : super.forTesting();
+
+  @override
+  bool get isInitialized => true;
+
+  @override
+  Future<List<NoteTag>> getTags() async => const [];
+}
+
+class _InMemoryInterceptingSqfliteDb implements Database {
+  _InMemoryInterceptingSqfliteDb({required List<Quote> quotes})
+      : quotes = List<Quote>.from(quotes);
+
+  List<Quote> quotes;
+  Future<void>? holdLimit50QueryUntil;
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get path => ':memory:';
+
+  @override
+  Database get database => this;
+
+  @override
+  Future<List<Map<String, Object?>>> query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
+    if (table == 'quotes' || table.startsWith('quotes ')) {
+      if (limit == 50 && holdLimit50QueryUntil != null) {
+        final gate = holdLimit50QueryUntil!;
+        holdLimit50QueryUntil = null;
+        await gate;
+      }
+      final start = (offset ?? 0).clamp(0, quotes.length);
+      final end = limit == null
+          ? quotes.length
+          : (start + limit).clamp(0, quotes.length);
+      return [
+        for (final q in quotes.sublist(start, end))
+          <String, Object?>{
+            'id': q.id,
+            'content': q.content,
+            'date': q.date,
+            'source': q.source,
+            'source_author': q.sourceAuthor,
+            'source_work': q.sourceWork,
+            'category_id': q.categoryId,
+            'color_hex': q.colorHex,
+            'location': q.location,
+            'poi_name': q.poiName,
+            'latitude': q.latitude,
+            'longitude': q.longitude,
+            'weather': q.weather,
+            'temperature': q.temperature,
+            'edit_source': q.editSource,
+            'delta_content': q.deltaContent,
+            'day_period': q.dayPeriod,
+            'last_modified': q.lastModified,
+            'favorite_count': q.favoriteCount,
+            'is_deleted': q.isDeleted ? 1 : 0,
+            'deleted_at': q.deletedAt,
+          },
+      ];
+    }
+    return const <Map<String, Object?>>[];
+  }
+
+  @override
+  Batch batch() => _EmptyTagSqfliteBatch();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _EmptyTagSqfliteBatch implements Batch {
+  int _count = 0;
+
+  @override
+  int get length => _count;
+
+  @override
+  void query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) {
+    _count++;
+  }
+
+  @override
+  Future<List<Object?>> commit({
+    bool? exclusive,
+    bool? noResult,
+    bool? continueOnError,
+  }) async {
+    return List<Object?>.filled(_count, const <Map<String, Object?>>[]);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _WidgetRecordingLogService implements UnifiedLogService {

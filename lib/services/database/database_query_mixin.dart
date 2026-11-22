@@ -56,6 +56,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
 
   Future<List<Quote>> _coalesceInFlightQuoteQuery({
     required String signature,
+    required bool enforceForegroundLifecycle,
     required bool Function() isCancelled,
     required Future<List<Quote>> Function(_InFlightQuoteQuery flight) runFlight,
   }) async {
@@ -68,8 +69,10 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       return List<Quote>.of(sharedResult);
     }
 
-    final flight = _InFlightQuoteQuery(signature: signature)
-      ..addWaiter(isCancelled);
+    final flight = _InFlightQuoteQuery(
+      signature: signature,
+      enforceForegroundLifecycle: enforceForegroundLifecycle,
+    )..addWaiter(isCancelled);
     inFlightMap[signature] = flight;
 
     runFlight(flight).then(
@@ -333,6 +336,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     try {
       return await _coalesceInFlightQuoteQuery(
         signature: signature,
+        enforceForegroundLifecycle: false,
         isCancelled: () => _isDisposed,
         runFlight: (flight) => _executeRawUserQuotes(
           tagIds: tagIds,

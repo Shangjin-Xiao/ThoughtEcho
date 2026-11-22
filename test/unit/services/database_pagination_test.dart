@@ -668,10 +668,13 @@ void main() {
         );
         expect(
           _ids(staleQuotes),
-          isNot(contains('fresh-quote')),
-          reason: '写前已读出的在途快照不应混入写后新记录',
+          equals(['seed-0', 'seed-1', 'seed-2']),
+          reason: '写前已读出的在途快照应精确保持原始笔记列表（而非退化为空列表）且不混入写后新记录',
         );
-        expect(_ids(freshQuotes), contains('fresh-quote'));
+        expect(
+          _ids(freshQuotes),
+          equals(['fresh-quote', 'seed-0', 'seed-1', 'seed-2']),
+        );
       },
     );
 
@@ -821,6 +824,222 @@ void main() {
           reason: '筛选切换已重建流并启动新查询，旧控制器的延迟刷新标记必须自动作废',
         );
         await _waitForEvent(filteredEvents, _ids, equals(['webdav-merged']));
+      },
+    );
+
+    test(
+      '已加载多页笔记后进入后台连续触发两次 refreshQuotes：后台期间快照与游标不塌缩，回到 resumed 后完整回填原有 3 页深度',
+      () async {
+        await seedQuotes(6);
+        var lifecycle = AppLifecycleState.resumed;
+        DatabaseService.setDebugLifecycleStateProvider(
+          service,
+          () => lifecycle,
+        );
+
+        final events = <List<Quote>>[];
+        final errors = <Object>[];
+        final sub = service.watchQuotes(limit: 2).listen(
+              events.add,
+              onError: (Object e, StackTrace _) => errors.add(e),
+            );
+        addTearDown(sub.cancel);
+
+        // 依次加载满 3 页（共 6 条），并再试探一次确认已到底（hasMoreQuotes == false）。
+        await _waitForEvent(events, _ids, equals(['seed-0', 'seed-1']));
+        await service.loadMoreQuotes();
+        await _waitForEvent(
+          events,
+          _ids,
+          equals(['seed-0', 'seed-1', 'seed-2', 'seed-3']),
+        );
+        await service.loadMoreQuotes();
+        await _waitForEvent(
+          events,
+          _ids,
+          equals([
+            'seed-0',
+            'seed-1',
+            'seed-2',
+            'seed-3',
+            'seed-4',
+            'seed-5',
+          ]),
+        );
+        await service.loadMoreQuotes();
+        await _drainEventLoop();
+        expect(service.hasMoreQuotes, isFalse);
+
+        final eventCountBeforeBg = events.length;
+
+        // 切入后台 paused，模拟后台同步连续两次合入数据并连续调用两次 refreshQuotes()。
+        lifecycle = AppLifecycleState.paused;
+        await rawDb.insert('quotes', {
+          'id': 'bg-merge-1',
+          'content': '后台第一次同步合入笔记',
+          'date': DateTime(2026, 8, 3, 10).toIso8601String(),
+          'weather': 'sunny',
+          'day_period': 'morning',
+          'last_modified': '2026-08-03T10:00:00.000Z',
+        });
+        await rawDb.insert('quotes', {
+          'id': 'bg-merge-2',
+          'content': '后台第二次同步合入笔记',
+          'date': DateTime(2026, 8, 3, 11).toIso8601String(),
+          'weather': 'sunny',
+          'day_period': 'morning',
+          'last_modified': '2026-08-03T11:00:00.000Z',
+        });
+
+        service.refreshQuotes();
+        service.refreshQuotes();
+        await _drainEventLoop();
+
+        expect(errors, isEmpty);
+        expect(events.length, eventCountBeforeBg);
+        expect(
+          service.hasMoreQuotes,
+          isFalse,
+          reason: '后台连续刷新挂起回滚后，已到底的分页游标不应被重置为 true',
+        );
+
+        // 后台期间同筛选条件复用流订阅时，内存快照仍保持完整的 6 条而非塌缩为空列表。
+        final snapshotProbeEvents = <List<Quote>>[];
+        final probeSub =
+            service.watchQuotes(limit: 2).listen(snapshotProbeEvents.add);
+        addTearDown(probeSub.cancel);
+        await _waitForEvent(
+          snapshotProbeEvents,
+          _ids,
+          equals([
+            'seed-0',
+            'seed-1',
+            'seed-2',
+            'seed-3',
+            'seed-4',
+            'seed-5',
+          ]),
+        );
+
+        // 切回 resumed 后消费延迟刷新标记并触发恢复刷新：必须按原有 3 页深度（6 条）一次性回填。
+        final eventCountBeforeResumeRefresh = events.length;
+        lifecycle = AppLifecycleState.resumed;
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isTrue,
+        );
+        service.refreshQuotes();
+
+        await _waitForEvent(
+          events,
+          _ids,
+          equals([
+            'bg-merge-2',
+            'bg-merge-1',
+            'seed-0',
+            'seed-1',
+            'seed-2',
+            'seed-3',
+          ]),
+          startIndex: eventCountBeforeResumeRefresh,
+        );
+        expect(
+          events.last,
+          hasLength(6),
+          reason: '恢复刷新应完整回填 3 页共 6 条，绝不能退化为仅加载第 1 页（2 条）',
+        );
+        expect(service.hasMoreQuotes, isTrue);
+
+        // 后续继续上拉翻页应从 offset=6 正常续取剩余 2 条。
+        await service.loadMoreQuotes();
+        await _waitForEvent(
+          events,
+          _ids,
+          equals([
+            'bg-merge-2',
+            'bg-merge-1',
+            'seed-0',
+            'seed-1',
+            'seed-2',
+            'seed-3',
+            'seed-4',
+            'seed-5',
+          ]),
+        );
+      },
+    );
+
+    test(
+      '后台挂起刷新回到 resumed 时存在未完成的公开 getUserQuotes(offset: 0, limit: 50)：不计入分页在途且不吞没刷新',
+      () async {
+        await seedQuotes(3);
+        var lifecycle = AppLifecycleState.resumed;
+        DatabaseService.setDebugLifecycleStateProvider(
+          service,
+          () => lifecycle,
+        );
+
+        final events = <List<Quote>>[];
+        final sub = service.watchQuotes(limit: 2).listen(events.add);
+        addTearDown(sub.cancel);
+        await _waitForEvent(events, _ids, equals(['seed-0', 'seed-1']));
+
+        // 后台触发同步刷新并挂起，记录延迟刷新标记。
+        lifecycle = AppLifecycleState.inactive;
+        await rawDb.insert('quotes', {
+          'id': 'bg-synced-note',
+          'content': '后台合入待展示的新笔记',
+          'date': DateTime(2026, 8, 4, 9).toIso8601String(),
+          'weather': 'sunny',
+          'day_period': 'morning',
+          'last_modified': '2026-08-04T09:00:00.000Z',
+        });
+        service.refreshQuotes();
+        await _drainEventLoop();
+
+        // 模拟后台备份/媒体巡检发起一笔未完成的公开 getUserQuotes(offset: 0, limit: 50)。
+        final publicQueryGate = Completer<void>();
+        final publicQueryStarted = Completer<void>();
+        proxyDb.onQueryQuotes = (proceed) async {
+          if (!publicQueryStarted.isCompleted) {
+            publicQueryStarted.complete();
+            await publicQueryGate.future;
+          }
+          return proceed();
+        };
+
+        final publicReadFuture = service.getUserQuotes(offset: 0, limit: 50);
+        await publicQueryStarted.future;
+
+        expect(
+          DatabaseService.isPaginationQueryInFlight(service),
+          isFalse,
+          reason: '公开非门控 getUserQuotes 在途请求不得计入 UI 分页在途状态',
+        );
+
+        // 切回 resumed：消费延迟刷新并立即补跑列表刷新，不受未完成的公开 getUserQuotes 阻塞。
+        lifecycle = AppLifecycleState.resumed;
+        final eventsBeforeResume = events.length;
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isTrue,
+        );
+        service.refreshQuotes();
+
+        await _waitForEvent(
+          events,
+          _ids,
+          equals(['bg-synced-note', 'seed-0']),
+          startIndex: eventsBeforeResume,
+        );
+
+        publicQueryGate.complete();
+        final publicReadQuotes = await publicReadFuture;
+        proxyDb.onQueryQuotes = null;
+        expect(
+          _ids(publicReadQuotes),
+          equals(['bg-synced-note', 'seed-0', 'seed-1', 'seed-2']),
+        );
       },
     );
 

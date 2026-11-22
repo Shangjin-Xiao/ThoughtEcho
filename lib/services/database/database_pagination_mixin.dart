@@ -37,6 +37,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
 
     return _coalesceInFlightQuoteQuery(
       signature: signature,
+      enforceForegroundLifecycle: true,
       isCancelled: isCancelled,
       runFlight: (flight) => runZoned(
         () => getUserQuotes(
@@ -133,24 +134,41 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
         );
       } else {
         logDebug('后台生命周期下刷新回填已挂起: $error');
-        _coordinatorState.markDeferredRefresh(_quotesController);
+        _coordinatorState.markDeferredRefresh(
+          _quotesController,
+          refillTarget: targetCount,
+        );
       }
 
-      if (previousQuotes.isNotEmpty ||
-          (suspendedInBackground &&
-              _coordinatorState.hasDeliveredForController(_quotesController))) {
+      final bool hasDeliveredSnapshot =
+          _coordinatorState.hasDeliveredForController(_quotesController);
+      final bool restoreFromDeliveredSnapshot = suspendedInBackground &&
+          previousQuotes.isEmpty &&
+          hasDeliveredSnapshot;
+      final List<Quote> rollbackQuotes = restoreFromDeliveredSnapshot
+          ? _coordinatorState.deliveredQuotesFor(_quotesController)
+          : previousQuotes;
+      final bool rollbackHasMore = restoreFromDeliveredSnapshot
+          ? _coordinatorState.deliveredHasMoreFor(
+              _quotesController,
+              fallback: previousHasMore,
+            )
+          : previousHasMore;
+
+      if (rollbackQuotes.isNotEmpty ||
+          (suspendedInBackground && hasDeliveredSnapshot)) {
         logDebug(
-          '刷新回填未取满（${_currentQuotes.length}/${previousQuotes.length}），'
+          '刷新回填未取满（${_currentQuotes.length}/${rollbackQuotes.length}），'
           '回滚到刷新前的状态以免列表塌缩',
         );
-        _currentQuotes = List<Quote>.from(previousQuotes);
+        _currentQuotes = List<Quote>.from(rollbackQuotes);
         _currentQuoteIds
           ..clear()
           ..addAll(
-            previousQuotes.map((quote) => quote.id).whereType<String>(),
+            rollbackQuotes.map((quote) => quote.id).whereType<String>(),
           );
         _watchOffset = _currentQuotes.length;
-        _watchHasMore = previousHasMore;
+        _watchHasMore = rollbackHasMore;
         _pendingRefillTarget = 0;
         return;
       }
@@ -169,14 +187,19 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     }
 
     _pendingRefillTarget = 0;
-    _coordinatorState.markDelivered(_quotesController);
 
     if (_quoteListsEquivalent(previousQuotes, _currentQuotes)) {
+      _coordinatorState.markDelivered(
+        _quotesController,
+        quotes: _currentQuotes,
+        hasMore: _watchHasMore,
+        clearDeferredRefresh: true,
+      );
       logDebug('刷新后可见列表无变化，跳过整表推送');
       return;
     }
 
-    _safeNotifyQuotesStream();
+    _notifyQuotesStreamWithDeliveryState(clearDeferredRefresh: true);
   }
 
   /// 修复：安全地通知笔记流订阅者
@@ -184,11 +207,22 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
   /// 此处直接发送，无需再次遍历去重
   @override
   void _safeNotifyQuotesStream() {
+    _notifyQuotesStreamWithDeliveryState(clearDeferredRefresh: false);
+  }
+
+  void _notifyQuotesStreamWithDeliveryState({
+    required bool clearDeferredRefresh,
+  }) {
     // 修复：检查服务是否已销毁
     if (_isDisposed) return;
 
     if (_quotesController != null && !_quotesController!.isClosed) {
-      _coordinatorState.markDelivered(_quotesController);
+      _coordinatorState.markDelivered(
+        _quotesController,
+        quotes: _currentQuotes,
+        hasMore: _watchHasMore,
+        clearDeferredRefresh: clearDeferredRefresh,
+      );
       // 直接发送当前列表的副本，已保证唯一性
       _quotesController!.add(List.from(_currentQuotes));
     }
@@ -213,9 +247,14 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       // 上一次刷新可能还在回填途中（那时 _currentQuotes 已被清空），
       // 此时按当时的长度 0 算目标会退化成只取一页，等于把这个 bug 放回来。
       // 沿用在途目标即可。
-      final int loadedCount = _currentQuotes.isNotEmpty
+      final int deferredTarget =
+          _coordinatorState.deferredRefillTargetFor(_quotesController);
+      int loadedCount = _currentQuotes.isNotEmpty
           ? _currentQuotes.length
           : _pendingRefillTarget;
+      if (deferredTarget > loadedCount) {
+        loadedCount = deferredTarget;
+      }
       // 列表本来不足一页（如首屏前或总笔记数少于一页时新增/同步合入）：至少取满一页容量。
       final int reloadCount =
           loadedCount > _watchLimit ? loadedCount : _watchLimit;
@@ -490,7 +529,10 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
             );
           } else {
             logDebug('后台生命周期下首屏/筛选查询已挂起: $e');
-            _coordinatorState.markDeferredRefresh(_quotesController);
+            _coordinatorState.markDeferredRefresh(
+              _quotesController,
+              refillTarget: limit,
+            );
           }
           if (_quotesController != null && !_quotesController!.isClosed) {
             _quotesController!.addError(e, stackTrace);
@@ -627,7 +669,9 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
 
       if (suppressNotify) return;
 
-      _safeNotifyQuotesStream();
+      _notifyQuotesStreamWithDeliveryState(
+        clearDeferredRefresh: requestOffset == 0,
+      );
     } on _QueryCancelledException catch (e) {
       logDebug('忽略已取消的分页加载请求: $e');
       if (!logFailureAtBoundary) {

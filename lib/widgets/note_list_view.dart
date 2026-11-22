@@ -968,8 +968,10 @@ class NoteListViewState extends State<NoteListView>
             _isLoading = true;
           });
         }
-        DatabaseService.consumeDeferredPaginationRefresh(db);
-        if (!DatabaseService.isPaginationQueryInFlight(db)) {
+        final hasDeferredRefresh =
+            DatabaseService.consumeDeferredPaginationRefresh(db);
+        if (hasDeferredRefresh ||
+            !DatabaseService.isPaginationQueryInFlight(db)) {
           logDebug(
             '应用回到前台 resumed 且首屏尚未就绪，触发单次干净恢复拉取',
             source: 'NoteListView',
@@ -982,8 +984,7 @@ class NoteListViewState extends State<NoteListView>
         !_waitingForServices &&
         db != null &&
         db.isInitialized &&
-        DatabaseService.consumeDeferredPaginationRefresh(db) &&
-        !DatabaseService.isPaginationQueryInFlight(db)) {
+        DatabaseService.consumeDeferredPaginationRefresh(db)) {
       logDebug(
         '应用回到前台 resumed，补跑后台挂起的列表刷新',
         source: 'NoteListView',

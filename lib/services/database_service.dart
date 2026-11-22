@@ -55,9 +55,13 @@ part 'database/database_migration_mixin.dart';
 enum QuoteUpdateResult { updated, skippedDeleted, notFound }
 
 class _InFlightQuoteQuery {
-  _InFlightQuoteQuery({required this.signature});
+  _InFlightQuoteQuery({
+    required this.signature,
+    required this.enforceForegroundLifecycle,
+  });
 
   final String signature;
+  final bool enforceForegroundLifecycle;
   final Completer<List<Quote>> completer = Completer<List<Quote>>();
   final List<bool Function()> _waiterCancelChecks = <bool Function()>[];
 
@@ -94,27 +98,78 @@ class _PaginationCoordinatorState {
       <String, _InFlightQuoteQuery>{};
   int dataMutationEpoch = 0;
   StreamController<List<Quote>>? deliveredQuotesController;
+  List<Quote> lastDeliveredQuotes = const <Quote>[];
+  bool lastDeliveredHasMore = true;
   StreamController<List<Quote>>? deferredRefreshController;
+  StreamController<List<Quote>>? deferredRefillController;
+  int deferredRefillTarget = 0;
   AppLifecycleState? Function()? debugLifecycleStateProvider;
   void Function(String stage)? debugQueryStageObserver;
+
+  bool get hasPaginationInFlightQuery => inFlightQuoteQueries.values.any(
+        (flight) =>
+            flight.enforceForegroundLifecycle &&
+            !flight.completer.isCompleted &&
+            !flight.areAllWaitersCancelled,
+      );
 
   bool hasDeliveredForController(StreamController<List<Quote>>? controller) =>
       controller != null &&
       !controller.isClosed &&
       identical(deliveredQuotesController, controller);
 
-  void markDelivered(StreamController<List<Quote>>? controller) {
+  List<Quote> deliveredQuotesFor(StreamController<List<Quote>>? controller) =>
+      hasDeliveredForController(controller)
+          ? lastDeliveredQuotes
+          : const <Quote>[];
+
+  bool deliveredHasMoreFor(
+    StreamController<List<Quote>>? controller, {
+    required bool fallback,
+  }) =>
+      hasDeliveredForController(controller) ? lastDeliveredHasMore : fallback;
+
+  int deferredRefillTargetFor(StreamController<List<Quote>>? controller) =>
+      controller != null &&
+              !controller.isClosed &&
+              identical(deferredRefillController, controller)
+          ? deferredRefillTarget
+          : 0;
+
+  void markDelivered(
+    StreamController<List<Quote>>? controller, {
+    required List<Quote> quotes,
+    required bool hasMore,
+    bool clearDeferredRefresh = false,
+  }) {
     if (controller != null && !controller.isClosed) {
       deliveredQuotesController = controller;
+      lastDeliveredQuotes = List<Quote>.unmodifiable(quotes);
+      lastDeliveredHasMore = hasMore;
     }
-    if (identical(deferredRefreshController, controller)) {
-      deferredRefreshController = null;
+    if (clearDeferredRefresh) {
+      if (identical(deferredRefreshController, controller)) {
+        deferredRefreshController = null;
+      }
+      if (identical(deferredRefillController, controller)) {
+        deferredRefillController = null;
+        deferredRefillTarget = 0;
+      }
     }
   }
 
-  void markDeferredRefresh(StreamController<List<Quote>>? controller) {
+  void markDeferredRefresh(
+    StreamController<List<Quote>>? controller, {
+    int refillTarget = 0,
+  }) {
     if (controller != null && !controller.isClosed) {
       deferredRefreshController = controller;
+      if (!identical(deferredRefillController, controller)) {
+        deferredRefillController = controller;
+        deferredRefillTarget = refillTarget;
+      } else if (refillTarget > deferredRefillTarget) {
+        deferredRefillTarget = refillTarget;
+      }
     }
   }
 
@@ -131,13 +186,21 @@ class _PaginationCoordinatorState {
 
   void resetForNewWatchController() {
     deliveredQuotesController = null;
+    lastDeliveredQuotes = const <Quote>[];
+    lastDeliveredHasMore = true;
     deferredRefreshController = null;
+    deferredRefillController = null;
+    deferredRefillTarget = 0;
   }
 
   void reset() {
     inFlightQuoteQueries.clear();
     deliveredQuotesController = null;
+    lastDeliveredQuotes = const <Quote>[];
+    lastDeliveredHasMore = true;
     deferredRefreshController = null;
+    deferredRefillController = null;
+    deferredRefillTarget = 0;
     dataMutationEpoch++;
   }
 }
@@ -1249,6 +1312,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _startupBackgroundMaintenanceTimer = null;
     _clearAllCache();
     _coordinatorState.reset();
+    _currentQuotes = [];
+    _currentQuoteIds.clear();
+    _pendingRefillTarget = 0;
     _watchOffset = 0;
     _watchHasMore = true;
     _watchIncludeDeleted = false;
@@ -1450,14 +1516,15 @@ class DatabaseService extends _DatabaseServiceBase
     }
   }
 
-  /// 判断指定数据库服务实例是否仍有在途的分页/列表查询。
+  /// 判断指定数据库服务实例是否仍有在途的 UI 分页/列表查询。
+  /// 仅统计分页加载态或启用前台生命周期门控的单航班请求，排除备份导出、媒体扫描等公开 `getUserQuotes` 请求。
   /// 使用 Expando 读取协调器状态，对测试中的 `implements DatabaseService` 替身安全返回 false。
   static bool isPaginationQueryInFlight(DatabaseService service) {
     final coordinator = _paginationCoordinatorExpando[service];
     if (coordinator == null) {
       return false;
     }
-    return service._isLoading || coordinator.inFlightQuoteQueries.isNotEmpty;
+    return service._isLoading || coordinator.hasPaginationInFlightQuery;
   }
 
   /// 消费挂起于当前活跃监听流上的后台延迟刷新标记。
