@@ -561,6 +561,99 @@ void main() {
     );
 
     testWidgets(
+      '已加载列表在后台挂起刷新后切回 resumed，即使此刻存在真实的 UI 分页查询在途仍不吞没延迟刷新标记',
+      (tester) async {
+        var lifecycle = AppLifecycleState.resumed;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+
+        final fakeSqlDb = _InMemoryInterceptingSqfliteDb(
+          quotes: _makeQuotes(55),
+        );
+        DatabaseService.setTestDatabase(fakeSqlDb);
+        final databaseService = _FullQueryPipelineTestDbService();
+        DatabaseService.setDebugLifecycleStateProvider(
+          databaseService,
+          () => lifecycle,
+        );
+        addTearDown(() {
+          DatabaseService.setDebugLifecycleStateProvider(databaseService, null);
+          DatabaseService.clearTestDatabase();
+        });
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+        expect(find.text('翻页在途时后台合入的新笔记'), findsNothing);
+        expect(databaseService.hasMoreQuotes, isTrue);
+
+        // 切入后台后合入新顶部笔记并触发 refreshQuotes()，使其挂起并记录延迟刷新标记。
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.paused;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+
+        fakeSqlDb.quotes = [
+          Quote(
+            id: 'synced-while-pagination-inflight',
+            content: '翻页在途时后台合入的新笔记',
+            date: DateTime(2026, 8, 20, 9).toIso8601String(),
+          ),
+          ..._makeQuotes(55),
+        ];
+        databaseService.refreshQuotes();
+        await tester.pump();
+
+        // 模拟应用即将恢复前台时已有一笔真实的第二页 UI 分页查询（offset > 0）在途：
+        // 此时 isPaginationQueryInFlight 为 true，但 NoteListView 收到 resumed 时仍不能吞掉延迟整表刷新。
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding
+            .handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+        lifecycle = AppLifecycleState.resumed;
+
+        final pageReadGate = Completer<void>();
+        fakeSqlDb.holdPositiveOffsetQueryUntil = pageReadGate.future;
+        final inFlightLoadMore = databaseService.loadMoreQuotes();
+        await tester.pump();
+
+        expect(
+          DatabaseService.isPaginationQueryInFlight(databaseService),
+          isTrue,
+          reason:
+              '真实 UI 翻页请求在途时 isPaginationQueryInFlight 必须为 true，以覆盖恢复分支守卫逻辑',
+        );
+
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(
+          find.text('翻页在途时后台合入的新笔记'),
+          findsOneWidget,
+          reason: '即使切回 resumed 时有 UI 翻页在途，已记录的延迟刷新也必须触发整表刷新以展示顶部新笔记',
+        );
+
+        pageReadGate.complete();
+        await tester.pump();
+        await inFlightLoadMore;
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        databaseService.dispose();
+      },
+    );
+
+    testWidgets(
       '前台连续超时自动恢复最多 2 次后收敛到 AppErrorView，点击重试恢复加载',
       (tester) async {
         tester.binding.handleAppLifecycleStateChanged(
@@ -989,6 +1082,7 @@ class _InMemoryInterceptingSqfliteDb implements Database {
 
   List<Quote> quotes;
   Future<void>? holdLimit50QueryUntil;
+  Future<void>? holdPositiveOffsetQueryUntil;
 
   @override
   bool get isOpen => true;
@@ -1016,6 +1110,11 @@ class _InMemoryInterceptingSqfliteDb implements Database {
       if (limit == 50 && holdLimit50QueryUntil != null) {
         final gate = holdLimit50QueryUntil!;
         holdLimit50QueryUntil = null;
+        await gate;
+      }
+      if ((offset ?? 0) > 0 && holdPositiveOffsetQueryUntil != null) {
+        final gate = holdPositiveOffsetQueryUntil!;
+        holdPositiveOffsetQueryUntil = null;
         await gate;
       }
       final start = (offset ?? 0).clamp(0, quotes.length);

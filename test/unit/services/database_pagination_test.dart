@@ -396,6 +396,93 @@ void main() {
         );
       },
     );
+
+    test(
+      '分块回填半程（第 1 块 500 条完成后）转入后台重入刷新并挂起时，不丢失原始 520 条深度与到底游标',
+      () async {
+        final chunkedService = _PagedDatabaseService(totalQuotes: 520);
+        await chunkedService.init();
+        var lifecycle = AppLifecycleState.resumed;
+        DatabaseService.setDebugLifecycleStateProvider(
+          chunkedService,
+          () => lifecycle,
+        );
+        addTearDown(() {
+          DatabaseService.setDebugLifecycleStateProvider(chunkedService, null);
+          chunkedService.dispose();
+        });
+
+        final events = <List<Quote>>[];
+        final sub = chunkedService.watchQuotes(limit: 260).listen(events.add);
+        addTearDown(sub.cancel);
+
+        await _waitForEvent(events, (quotes) => quotes.length, equals(260));
+        await chunkedService.loadMoreQuotes();
+        await _waitForEvent(events, (quotes) => quotes.length, equals(520));
+        await chunkedService.loadMoreQuotes();
+        await _drainEventLoop();
+        expect(chunkedService.hasMoreQuotes, isFalse);
+
+        // 发起首次刷新：让第 1 块 (0, 500) 正常完成装入 _currentQuotes，
+        // 在进入第 2 块 (500, 20) 时切入后台并重入第 2 次 refreshQuotes() 挂起。
+        var triggeredMidChunkRefresh = false;
+        chunkedService.onBeforeQuery = (offset, limit) async {
+          if (offset == 500 && !triggeredMidChunkRefresh) {
+            triggeredMidChunkRefresh = true;
+            lifecycle = AppLifecycleState.paused;
+            chunkedService.failQueriesWith = TimeoutException('后台分块回填挂起');
+            chunkedService.refreshQuotes();
+          }
+        };
+
+        final eventsBeforeInterruptedRefresh = events.length;
+        chunkedService.contentRevision++;
+        chunkedService.refreshQuotes();
+        await _drainEventLoop();
+
+        expect(triggeredMidChunkRefresh, isTrue);
+        expect(events.length, eventsBeforeInterruptedRefresh);
+        expect(
+          chunkedService.hasMoreQuotes,
+          isFalse,
+          reason: '半程分块重入刷新挂起回滚后，应恢复完整投递时的 hasMore=false 而非半程状态',
+        );
+
+        // 复用订阅校验回滚后的内存快照仍是完整 520 条而非半程 500 条。
+        final probeEvents = <List<Quote>>[];
+        final probeSub =
+            chunkedService.watchQuotes(limit: 260).listen(probeEvents.add);
+        addTearDown(probeSub.cancel);
+        await _waitForEvent(
+          probeEvents,
+          (quotes) => quotes.length,
+          equals(520),
+        );
+
+        // 切回前台恢复刷新：必须完整回填 520 条（500 + 20），绝不能退化为 500 条。
+        chunkedService.onBeforeQuery = null;
+        chunkedService.failQueriesWith = null;
+        chunkedService.requestedPages.clear();
+        lifecycle = AppLifecycleState.resumed;
+        final eventsBeforeResume = events.length;
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(chunkedService),
+          isTrue,
+        );
+        chunkedService.refreshQuotes();
+
+        await _waitForEvent(
+          events,
+          (quotes) => quotes.length,
+          equals(520),
+          startIndex: eventsBeforeResume,
+        );
+        expect(
+          chunkedService.requestedPages.map((p) => (p.offset, p.limit)),
+          containsAllInOrder([(0, 500), (500, 20)]),
+        );
+      },
+    );
   });
 
   group('Database pagination single-flight, timeout & error contracts', () {
@@ -1009,7 +1096,10 @@ void main() {
         };
 
         final publicReadFuture = service.getUserQuotes(offset: 0, limit: 50);
-        await publicQueryStarted.future;
+        await publicQueryStarted.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => fail('公开 getUserQuotes 未进入底层 SQL 查询，无法验证在途状态'),
+        );
 
         expect(
           DatabaseService.isPaginationQueryInFlight(service),
@@ -1613,6 +1703,7 @@ class _PagedDatabaseService extends DatabaseService {
   /// 令查询在返回前抛出异常，用于验证回填失败时的保护。
   /// 一经设置，**此后所有**查询都会失败，直到调用方把它置回 null。
   Object? failQueriesWith;
+  Future<void> Function(int offset, int limit)? onBeforeQuery;
 
   @override
   Future<List<Quote>> getUserQuotes({
@@ -1630,6 +1721,9 @@ class _PagedDatabaseService extends DatabaseService {
     bool includeDeleted = false,
   }) async {
     requestedPages.add((offset: offset, limit: limit));
+    if (onBeforeQuery != null) {
+      await onBeforeQuery!(offset, limit);
+    }
     final failure = failQueriesWith;
     if (failure != null) {
       completedQueries++;

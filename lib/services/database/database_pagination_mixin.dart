@@ -244,14 +244,26 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       // 滚动位置被夹紧 —— 表现就是「列表突然飞走/弹回顶部 + 底部转圈 + 大片空白」。
       // 所以刷新必须一次把原有页数全部取回，列表长度保持不变。
       //
-      // 上一次刷新可能还在回填途中（那时 _currentQuotes 已被清空），
-      // 此时按当时的长度 0 算目标会退化成只取一页，等于把这个 bug 放回来。
-      // 沿用在途目标即可。
+      // 上一次刷新可能还在分块回填途中（_currentQuotes 已被清空或仅装入部分分块），
+      // 此时直接取 _currentQuotes.length 会把目标条数和回滚基线截短成半程分块大小。
+      // 统一取当前内存条数、在途回填目标与后台挂起回填目标的最大值，并在半程重入时
+      // 沿用最近一次完整投递给当前流控制器的快照与游标作为对比/回滚基线。
+      final bool isMidRefill = _pendingRefillTarget > 0;
+      if (!isMidRefill &&
+          _coordinatorState.hasDeliveredForController(_quotesController)) {
+        _coordinatorState.markDelivered(
+          _quotesController,
+          quotes: _currentQuotes,
+          hasMore: _watchHasMore,
+          clearDeferredRefresh: false,
+        );
+      }
       final int deferredTarget =
           _coordinatorState.deferredRefillTargetFor(_quotesController);
-      int loadedCount = _currentQuotes.isNotEmpty
-          ? _currentQuotes.length
-          : _pendingRefillTarget;
+      int loadedCount = _currentQuotes.length;
+      if (_pendingRefillTarget > loadedCount) {
+        loadedCount = _pendingRefillTarget;
+      }
       if (deferredTarget > loadedCount) {
         loadedCount = deferredTarget;
       }
@@ -263,9 +275,20 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       // 重建全部已加载 item（上百次 build + 首次布局），发生在滚动帧里
       // 就是一次明显的卡顿。回收站过期清理、同步后的例行刷新等场景，
       // 可见列表其实一条都没变。
-      final List<Quote> previousQuotes = List<Quote>.from(_currentQuotes);
+      final bool restoreBaselineFromDelivered = isMidRefill &&
+          _coordinatorState.hasDeliveredForController(_quotesController);
+      final List<Quote> previousQuotes = restoreBaselineFromDelivered
+          ? List<Quote>.from(
+              _coordinatorState.deliveredQuotesFor(_quotesController),
+            )
+          : List<Quote>.from(_currentQuotes);
       // 回填失败要整体回滚时，分页游标也得跟着回到刷新前的样子。
-      final bool previousHasMore = _watchHasMore;
+      final bool previousHasMore = restoreBaselineFromDelivered
+          ? _coordinatorState.deliveredHasMoreFor(
+              _quotesController,
+              fallback: _watchHasMore,
+            )
+          : _watchHasMore;
       logDebug('刷新笔记流数据，需回填 $reloadCount 条');
       // 优化：清除所有缓存，确保获取最新数据
       clearAllCacheForParts();
