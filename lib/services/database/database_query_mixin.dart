@@ -2,7 +2,281 @@ part of '../database_service.dart';
 
 /// Mixin providing core query operations for DatabaseService.
 mixin _DatabaseQueryMixin on _DatabaseServiceBase {
-  /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选
+  String _buildQuoteQuerySignature({
+    required List<String>? tagIds,
+    required String? categoryId,
+    required int offset,
+    required int limit,
+    required String orderBy,
+    required String? searchQuery,
+    required List<String>? selectedWeathers,
+    required List<String>? selectedDayPeriods,
+    required bool excludeHiddenNotes,
+    required String? dateStart,
+    required String? dateEnd,
+    required bool includeDeleted,
+    required bool enforceForegroundLifecycle,
+  }) {
+    final normalizedTags = tagIds == null || tagIds.isEmpty
+        ? const <String>[]
+        : (tagIds.toSet().toList()..sort());
+    final isQueryingHiddenTag =
+        normalizedTags.contains(_DatabaseServiceBase.hiddenTagId);
+    final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
+    final normalizedCategory =
+        (categoryId == null || categoryId.isEmpty) ? '' : categoryId;
+    final normalizedSearch =
+        (searchQuery == null || searchQuery.isEmpty) ? '' : searchQuery;
+    final normalizedWeathers =
+        selectedWeathers == null || selectedWeathers.isEmpty
+            ? const <String>[]
+            : (selectedWeathers.toSet().toList()..sort());
+    final normalizedDayPeriods =
+        selectedDayPeriods == null || selectedDayPeriods.isEmpty
+            ? const <String>[]
+            : (selectedDayPeriods.toSet().toList()..sort());
+    final normalizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
+    final normalizedDateStart =
+        (dateStart == null || dateStart.isEmpty) ? '' : dateStart;
+    final normalizedDateEnd =
+        (dateEnd == null || dateEnd.isEmpty) ? '' : dateEnd;
+
+    return '${_coordinatorState.dataMutationEpoch}'
+        '|tags:${normalizedTags.join(",")}'
+        '|cat:$normalizedCategory'
+        '|off:$offset|lim:$limit|ord:$normalizedOrderBy'
+        '|q:$normalizedSearch'
+        '|w:${normalizedWeathers.join(",")}'
+        '|dp:${normalizedDayPeriods.join(",")}'
+        '|hide:$shouldExcludeHidden'
+        '|ds:$normalizedDateStart|de:$normalizedDateEnd'
+        '|del:$includeDeleted'
+        '|fg:$enforceForegroundLifecycle';
+  }
+
+  Future<List<Quote>> _coalesceInFlightQuoteQuery({
+    required String signature,
+    required bool Function() isCancelled,
+    required Future<List<Quote>> Function(_InFlightQuoteQuery flight) runFlight,
+  }) async {
+    final inFlightMap = _coordinatorState.inFlightQuoteQueries;
+    final existing = inFlightMap[signature];
+    if (existing != null && !existing.completer.isCompleted) {
+      logDebug('命中在途单航班查询合并: $signature');
+      existing.addWaiter(isCancelled);
+      final sharedResult = await existing.completer.future;
+      return List<Quote>.of(sharedResult);
+    }
+
+    final flight = _InFlightQuoteQuery(signature: signature)
+      ..addWaiter(isCancelled);
+    inFlightMap[signature] = flight;
+
+    runFlight(flight).then(
+      (result) {
+        if (identical(inFlightMap[signature], flight)) {
+          inFlightMap.remove(signature);
+        }
+        if (!flight.completer.isCompleted) {
+          flight.completer.complete(result);
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (identical(inFlightMap[signature], flight)) {
+          inFlightMap.remove(signature);
+        }
+        if (!flight.completer.isCompleted) {
+          flight.completer.completeError(error, stackTrace);
+        }
+      },
+    );
+
+    final result = await flight.completer.future;
+    return List<Quote>.of(result);
+  }
+
+  Future<List<Quote>> _executeRawUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 10,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
+    bool includeDeleted = false,
+    bool Function()? isCancelled,
+    bool enforceForegroundLifecycle = false,
+  }) async {
+    // 修复：确保数据库已完全初始化
+    if (!_isInitialized) {
+      logDebug('数据库尚未初始化，等待初始化完成...');
+      if (_isInitializing && _initCompleter != null) {
+        await _initCompleter!.future;
+      } else {
+        await init();
+      }
+    }
+
+    // 优化：定期清理缓存而不是每次查询都清理
+    scheduleCacheCleanupForParts();
+
+    // 判断是否正在查询隐藏标签
+    final isQueryingHiddenTag =
+        tagIds != null && tagIds.contains(_DatabaseServiceBase.hiddenTagId);
+    // 如果正在查询隐藏标签，则不排除隐藏笔记
+    final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
+
+    if (kIsWeb) {
+      // Web平台的完整筛选逻辑
+      var filtered = _memoryStore;
+
+      // 排除隐藏笔记（除非正在查询隐藏标签）
+      if (shouldExcludeHidden) {
+        filtered = filtered
+            .where(
+              (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
+            )
+            .toList();
+      }
+
+      if (!includeDeleted) {
+        filtered = filtered.where((q) => !q.isDeleted).toList();
+      }
+
+      if (tagIds != null && tagIds.isNotEmpty) {
+        final tagIdSet = tagIds.toSet();
+        filtered = filtered
+            .where((q) => q.tagIds.any((tag) => tagIdSet.contains(tag)))
+            .toList();
+      }
+      if (categoryId != null && categoryId.isNotEmpty) {
+        filtered = filtered.where((q) => q.categoryId == categoryId).toList();
+      }
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        final query = searchQuery.toLowerCase();
+        filtered = filtered
+            .where(
+              (q) =>
+                  q.content.toLowerCase().contains(query) ||
+                  (q.source?.toLowerCase().contains(query) ?? false) ||
+                  (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
+                  (q.sourceWork?.toLowerCase().contains(query) ?? false),
+            )
+            .toList();
+      }
+      if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
+        filtered = filtered
+            .where(
+              (q) => q.weather != null && selectedWeathers.contains(q.weather),
+            )
+            .toList();
+      }
+      if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
+        filtered = filtered
+            .where(
+              (q) =>
+                  q.dayPeriod != null &&
+                  selectedDayPeriods.contains(q.dayPeriod),
+            )
+            .toList();
+      }
+
+      // 日期范围过滤
+      if (dateStart != null && dateStart.isNotEmpty) {
+        final startVal = DateTime.tryParse(dateStart);
+        if (startVal != null) {
+          filtered = filtered.where((q) {
+            final qDate = DateTime.tryParse(q.date);
+            return qDate != null &&
+                (qDate.isAfter(startVal) || qDate.isAtSameMomentAs(startVal));
+          }).toList();
+        }
+      }
+      if (dateEnd != null && dateEnd.isNotEmpty) {
+        final endVal = DateTime.tryParse(dateEnd);
+        if (endVal != null) {
+          final nextDay = endVal.add(const Duration(days: 1));
+          filtered = filtered.where((q) {
+            final qDate = DateTime.tryParse(q.date);
+            return qDate != null && qDate.isBefore(nextDay);
+          }).toList();
+        }
+      }
+
+      // 排序（支持日期、喜爱度、名称）
+      filtered.sort((a, b) {
+        if (orderBy.startsWith('date')) {
+          final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
+          final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
+          return orderBy.contains('ASC')
+              ? dateA.compareTo(dateB)
+              : dateB.compareTo(dateA);
+        } else if (orderBy.startsWith('favorite_count')) {
+          return orderBy.contains('ASC')
+              ? a.favoriteCount.compareTo(b.favoriteCount)
+              : b.favoriteCount.compareTo(a.favoriteCount);
+        } else {
+          return orderBy.contains('ASC')
+              ? a.content.compareTo(b.content)
+              : b.content.compareTo(a.content);
+        }
+      });
+
+      // 分页 - 修复：确保正确处理边界情况
+      final start = offset.clamp(0, filtered.length);
+      final end = (offset + limit).clamp(0, filtered.length);
+
+      logDebug(
+        'Web分页：总数据${filtered.length}条，offset=$offset，limit=$limit，start=$start，end=$end',
+      );
+
+      // 如果起始位置已经超出数据范围，直接返回空列表
+      if (start >= filtered.length) {
+        logDebug('起始位置超出范围，返回空列表');
+        return [];
+      }
+
+      final result = filtered.sublist(start, end);
+      logDebug('Web分页返回${result.length}条数据');
+      return result;
+    }
+
+    // 统一查询超时唯一权威与协作式取消重试机制
+    return _executeQueryWithRetry(
+      (shouldAbortAttempt) async {
+        final db = await safeDatabase; // 使用安全的数据库访问
+        return _performDatabaseQuery(
+          db: db,
+          tagIds: tagIds,
+          categoryId: categoryId,
+          searchQuery: searchQuery,
+          selectedWeathers: selectedWeathers,
+          selectedDayPeriods: selectedDayPeriods,
+          orderBy: orderBy,
+          limit: limit,
+          offset: offset,
+          excludeHiddenNotes: shouldExcludeHidden,
+          dateStart: dateStart,
+          dateEnd: dateEnd,
+          includeDeleted: includeDeleted,
+          shouldAbortAttempt: shouldAbortAttempt,
+          enforceForegroundLifecycle: enforceForegroundLifecycle,
+        );
+      },
+      isCancelled: isCancelled,
+      enforceForegroundLifecycle: enforceForegroundLifecycle,
+    );
+  }
+
+  /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选。
+  ///
+  /// - 外部公开调用方（备份、媒体引用扫描、统计、AI 工具等）不启用前台生命周期门控，
+  ///   即使导出/巡检期间应用切换焦点也能完整读取 SQLite，仅在真实底层异常时记录单次错误日志并降级返回 `[]`；
+  /// - 分页/回填内部通道通过 [_paginationThrowingQueryZoneKey] 调用时启用前台生命周期门控并向上透传原始 `(error, stackTrace)`。
   @override
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
@@ -18,249 +292,176 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     String? dateEnd,
     bool includeDeleted = false,
   }) async {
+    final paginationContext = Zone.current[_paginationThrowingQueryZoneKey]
+        as _PaginationQueryZoneContext?;
+    if (paginationContext != null) {
+      return _executeRawUserQuotes(
+        tagIds: tagIds,
+        categoryId: categoryId,
+        offset: offset,
+        limit: limit,
+        orderBy: orderBy,
+        searchQuery: searchQuery,
+        selectedWeathers: selectedWeathers,
+        selectedDayPeriods: selectedDayPeriods,
+        excludeHiddenNotes: excludeHiddenNotes,
+        dateStart: dateStart,
+        dateEnd: dateEnd,
+        includeDeleted: includeDeleted,
+        isCancelled: paginationContext.isCancelled,
+        enforceForegroundLifecycle:
+            paginationContext.enforceForegroundLifecycle,
+      );
+    }
+
+    final signature = _buildQuoteQuerySignature(
+      tagIds: tagIds,
+      categoryId: categoryId,
+      offset: offset,
+      limit: limit,
+      orderBy: orderBy,
+      searchQuery: searchQuery,
+      selectedWeathers: selectedWeathers,
+      selectedDayPeriods: selectedDayPeriods,
+      excludeHiddenNotes: excludeHiddenNotes,
+      dateStart: dateStart,
+      dateEnd: dateEnd,
+      includeDeleted: includeDeleted,
+      enforceForegroundLifecycle: false,
+    );
+
     try {
-      // 修复：确保数据库已完全初始化
-      if (!_isInitialized) {
-        logDebug('数据库尚未初始化，等待初始化完成...');
-        if (_isInitializing && _initCompleter != null) {
-          await _initCompleter!.future;
-        } else {
-          await init();
-        }
-      }
-
-      // 优化：定期清理缓存而不是每次查询都清理
-      scheduleCacheCleanupForParts();
-
-      // 判断是否正在查询隐藏标签
-      final isQueryingHiddenTag =
-          tagIds != null && tagIds.contains(_DatabaseServiceBase.hiddenTagId);
-      // 如果正在查询隐藏标签，则不排除隐藏笔记
-      final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
-
-      if (kIsWeb) {
-        // Web平台的完整筛选逻辑
-        var filtered = _memoryStore;
-
-        // 排除隐藏笔记（除非正在查询隐藏标签）
-        if (shouldExcludeHidden) {
-          filtered = filtered
-              .where(
-                (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
-              )
-              .toList();
-        }
-
-        if (!includeDeleted) {
-          filtered = filtered.where((q) => !q.isDeleted).toList();
-        }
-
-        if (tagIds != null && tagIds.isNotEmpty) {
-          final tagIdSet = tagIds.toSet();
-          filtered = filtered
-              .where((q) => q.tagIds.any((tag) => tagIdSet.contains(tag)))
-              .toList();
-        }
-        if (categoryId != null && categoryId.isNotEmpty) {
-          filtered = filtered.where((q) => q.categoryId == categoryId).toList();
-        }
-        if (searchQuery != null && searchQuery.isNotEmpty) {
-          final query = searchQuery.toLowerCase();
-          filtered = filtered
-              .where(
-                (q) =>
-                    q.content.toLowerCase().contains(query) ||
-                    (q.source?.toLowerCase().contains(query) ?? false) ||
-                    (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
-                    (q.sourceWork?.toLowerCase().contains(query) ?? false),
-              )
-              .toList();
-        }
-        if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-          filtered = filtered
-              .where(
-                (q) =>
-                    q.weather != null && selectedWeathers.contains(q.weather),
-              )
-              .toList();
-        }
-        if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-          filtered = filtered
-              .where(
-                (q) =>
-                    q.dayPeriod != null &&
-                    selectedDayPeriods.contains(q.dayPeriod),
-              )
-              .toList();
-        }
-
-        // 日期范围过滤
-        if (dateStart != null && dateStart.isNotEmpty) {
-          final startVal = DateTime.tryParse(dateStart);
-          if (startVal != null) {
-            filtered = filtered.where((q) {
-              final qDate = DateTime.tryParse(q.date);
-              return qDate != null &&
-                  (qDate.isAfter(startVal) || qDate.isAtSameMomentAs(startVal));
-            }).toList();
-          }
-        }
-        if (dateEnd != null && dateEnd.isNotEmpty) {
-          final endVal = DateTime.tryParse(dateEnd);
-          if (endVal != null) {
-            final nextDay = endVal.add(const Duration(days: 1));
-            filtered = filtered.where((q) {
-              final qDate = DateTime.tryParse(q.date);
-              return qDate != null && qDate.isBefore(nextDay);
-            }).toList();
-          }
-        }
-
-        // 排序（支持日期、喜爱度、名称）
-        filtered.sort((a, b) {
-          if (orderBy.startsWith('date')) {
-            final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
-            final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
-            return orderBy.contains('ASC')
-                ? dateA.compareTo(dateB)
-                : dateB.compareTo(dateA);
-          } else if (orderBy.startsWith('favorite_count')) {
-            return orderBy.contains('ASC')
-                ? a.favoriteCount.compareTo(b.favoriteCount)
-                : b.favoriteCount.compareTo(a.favoriteCount);
-          } else {
-            return orderBy.contains('ASC')
-                ? a.content.compareTo(b.content)
-                : b.content.compareTo(a.content);
-          }
-        });
-
-        // 分页 - 修复：确保正确处理边界情况
-        final start = offset.clamp(0, filtered.length);
-        final end = (offset + limit).clamp(0, filtered.length);
-
-        logDebug(
-          'Web分页：总数据${filtered.length}条，offset=$offset，limit=$limit，start=$start，end=$end',
-        );
-
-        // 如果起始位置已经超出数据范围，直接返回空列表
-        if (start >= filtered.length) {
-          logDebug('起始位置超出范围，返回空列表');
-          return [];
-        }
-
-        final result = filtered.sublist(start, end);
-        logDebug('Web分页返回${result.length}条数据');
-        return result;
-      }
-
-      // 修复：统一查询超时时间和重试机制
-      return await _executeQueryWithRetry(() async {
-        final db = await safeDatabase; // 使用安全的数据库访问
-        return await _performDatabaseQuery(
-          db: db,
+      return await _coalesceInFlightQuoteQuery(
+        signature: signature,
+        isCancelled: () => _isDisposed,
+        runFlight: (flight) => _executeRawUserQuotes(
           tagIds: tagIds,
           categoryId: categoryId,
+          offset: offset,
+          limit: limit,
+          orderBy: orderBy,
           searchQuery: searchQuery,
           selectedWeathers: selectedWeathers,
           selectedDayPeriods: selectedDayPeriods,
-          orderBy: orderBy,
-          limit: limit,
-          offset: offset,
-          excludeHiddenNotes: shouldExcludeHidden,
+          excludeHiddenNotes: excludeHiddenNotes,
           dateStart: dateStart,
           dateEnd: dateEnd,
           includeDeleted: includeDeleted,
-        );
-      });
-    } catch (e) {
-      logError('获取笔记失败: $e', error: e, source: 'DatabaseService');
+          isCancelled: () => _isDisposed || flight.areAllWaitersCancelled,
+          enforceForegroundLifecycle: false,
+        ),
+      );
+    } on _QueryCancelledException {
+      return [];
+    } catch (e, stackTrace) {
+      logErrorOnce(
+        '获取笔记失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
       return [];
     }
   }
 
-  /// 修复：带重试机制的查询执行
+  /// 带协作式取消与全链路堆栈保留的查询重试执行器（中间层仅抛错不写错误日志）。
   Future<T> _executeQueryWithRetry<T>(
-    Future<T> Function() query, {
+    Future<T> Function(bool Function() shouldAbortAttempt) query, {
     int maxRetries = 2,
     Duration? timeout,
+    bool Function()? isCancelled,
+    bool enforceForegroundLifecycle = false,
   }) async {
-    // 修复：根据平台调整超时时间
-    timeout ??= _getOptimalTimeout();
-    final actualTimeout = timeout; // 确保非空
+    final actualTimeout = timeout ?? _getOptimalTimeout();
 
     for (int attempt = 0; attempt < maxRetries; attempt++) {
+      if (_isDisposed || (isCancelled?.call() ?? false)) {
+        throw const _QueryCancelledException('cancelled_before_attempt');
+      }
+      if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
+        Error.throwWithStackTrace(
+          TimeoutException('数据库查询在后台态已暂停', actualTimeout),
+          StackTrace.current,
+        );
+      }
+
+      var attemptAborted = false;
+      bool shouldAbortAttempt() =>
+          attemptAborted ||
+          _isDisposed ||
+          (isCancelled?.call() ?? false) ||
+          (enforceForegroundLifecycle && !_isAppLifecycleActive());
+
       try {
         final completer = Completer<T>();
+        final callerStackTrace = StackTrace.current;
         Timer? timeoutTimer;
 
         timeoutTimer = Timer(actualTimeout, () {
+          attemptAborted = true;
           if (!completer.isCompleted) {
-            logError(
-              '数据库查询超时（${actualTimeout.inSeconds}秒）',
-              source: 'DatabaseService',
+            completer.completeError(
+              TimeoutException('数据库查询超时', actualTimeout),
+              callerStackTrace,
             );
-            completer.completeError(TimeoutException('数据库查询超时', actualTimeout));
           }
         });
 
-        // 异步执行查询
-        query().then((result) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(result);
-          }
-        }).catchError((error) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            logError(
-              '数据库查询失败: $error',
-              error: error,
-              source: 'DatabaseService',
-            );
-            completer.completeError(error);
-          }
-        });
+        query(shouldAbortAttempt).then(
+          (result) {
+            timeoutTimer?.cancel();
+            if (!completer.isCompleted) {
+              completer.complete(result);
+            }
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            timeoutTimer?.cancel();
+            if (!completer.isCompleted) {
+              completer.completeError(error, stackTrace);
+            }
+          },
+        );
 
         final result = await completer.future;
         timeoutTimer.cancel();
         return result;
+      } on _QueryCancelledException {
+        rethrow;
       } catch (e) {
-        if (attempt == maxRetries - 1) {
-          // 最后一次尝试失败
-          if (e is TimeoutException) {
-            rethrow;
-          }
+        if (_isDisposed || (isCancelled?.call() ?? false)) {
+          throw const _QueryCancelledException('cancelled_after_error');
+        }
+
+        if (attempt == maxRetries - 1 || e is! TimeoutException) {
           rethrow;
         }
 
-        // 如果是超时异常，等待后重试
-        if (e is TimeoutException) {
-          logDebug('查询超时，准备重试 (${attempt + 1}/$maxRetries)');
-          await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
-          continue;
-        } else {
-          // 其他异常直接抛出
+        if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
+          logDebug('应用处于非活跃生命周期状态，中止数据库超时重试');
+          rethrow;
+        }
+
+        _coordinatorState.debugQueryStageObserver?.call('retry_wait');
+        logDebug('查询超时，准备重试 (${attempt + 1}/$maxRetries)');
+        await Future<void>.delayed(
+          Duration(milliseconds: 500 * (attempt + 1)),
+        );
+
+        if (_isDisposed || (isCancelled?.call() ?? false)) {
+          throw const _QueryCancelledException('cancelled_after_backoff');
+        }
+        if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
+          logDebug('重试等待期间应用进入非活跃生命周期状态，中止重试');
           rethrow;
         }
       }
     }
 
-    throw Exception('查询重试失败');
+    throw StateError('查询重试失败');
   }
 
-  /// 修复：根据平台和设备性能获取最优超时时间
-  Duration _getOptimalTimeout() {
-    if (kIsWeb) {
-      return const Duration(seconds: 8); // Web平台网络延迟较高
-    } else if (Platform.isAndroid) {
-      return const Duration(seconds: 10); // Android设备性能差异较大
-    } else if (Platform.isIOS) {
-      return const Duration(seconds: 6); // iOS设备性能相对稳定
-    } else {
-      return const Duration(seconds: 8); // 桌面平台
-    }
-  }
+  /// 根据平台和设备性能获取最优超时时间
+  Duration _getOptimalTimeout() => DatabaseService.optimalQueryTimeout();
 
   /// 执行实际的数据库查询（修复版本）
   Future<List<Quote>> _performDatabaseQuery({
@@ -277,7 +478,19 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     String? dateStart,
     String? dateEnd,
     bool includeDeleted = false,
+    bool Function()? shouldAbortAttempt,
+    bool enforceForegroundLifecycle = false,
   }) async {
+    if (shouldAbortAttempt != null && shouldAbortAttempt()) {
+      if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
+        Error.throwWithStackTrace(
+          TimeoutException('数据库查询在后台态已中止'),
+          StackTrace.current,
+        );
+      }
+      throw const _QueryCancelledException('aborted_before_sql_query');
+    }
+
     // 修复：添加数据库连接状态检查
     if (!db.isOpen) {
       throw Exception('数据库连接已关闭');
@@ -387,6 +600,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
     // 注意：delta_content 必须保留！列表卡片通过 QuoteContent 组件渲染富文本（加粗、图片等）
     // 安全：避免使用 db.rawQuery 拼接 orderBy 引发潜在 SQL 注入
+    _coordinatorState.debugQueryStageObserver?.call('sql_query');
     final stopwatch = Stopwatch()..start();
     final maps = await db.query(
       'quotes q',
@@ -448,6 +662,16 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 更新性能统计
     _updateQueryStats('getUserQuotes', queryTime);
 
+    if (shouldAbortAttempt != null && shouldAbortAttempt()) {
+      if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
+        Error.throwWithStackTrace(
+          TimeoutException('数据库标签批查在后台态已中止'),
+          StackTrace.current,
+        );
+      }
+      throw const _QueryCancelledException('aborted_before_tags_batch');
+    }
+
     if (maps.isEmpty) {
       NoteListLoadMoreProfile.recordQuery(
         sqlMicros: sqlMicros,
@@ -481,7 +705,18 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       );
     }
 
+    _coordinatorState.debugQueryStageObserver?.call('tags_batch');
     final allTagMaps = await batch.commit();
+
+    if (shouldAbortAttempt != null && shouldAbortAttempt()) {
+      if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
+        Error.throwWithStackTrace(
+          TimeoutException('数据库反序列化在后台态已中止'),
+          StackTrace.current,
+        );
+      }
+      throw const _QueryCancelledException('aborted_before_parse');
+    }
 
     for (final result in allTagMaps) {
       if (result is! List) continue;

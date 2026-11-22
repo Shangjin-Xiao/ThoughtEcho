@@ -369,6 +369,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 搜索栏下方闪一下——这正是历次修复都没根治的闪烁来源。
     // 结果集切换的视觉反馈由外层 AnimatedOpacity（_isSearchUpdating）承担。
     const loadingKey = ValueKey('note_list_loading');
+    const errorKey = ValueKey('note_list_error');
     const emptyKey = ValueKey('note_list_empty');
     const noResultsKey = ValueKey('note_list_no_results');
     const resultsKey = ValueKey('note_list_results');
@@ -378,6 +379,13 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 旧结果保持可见直到新结果到达，由 AnimatedSwitcher 淡入淡出切换。
     if (_waitingForServices || (_isLoading && _quotes.isEmpty)) {
       return AppLoadingView(key: loadingKey);
+    }
+    if (_quotes.isEmpty && _initialLoadErrorMessage != null) {
+      return AppErrorView(
+        key: errorKey,
+        text: _initialLoadErrorMessage!,
+        onRetry: _retryNoteListLoad,
+      );
     }
     if (_quotes.isEmpty && !hasEffectiveSearchQuery) {
       return AppEmptyView(

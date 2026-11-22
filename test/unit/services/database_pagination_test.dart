@@ -1,9 +1,13 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 import '../../test_harness.dart';
 
@@ -393,6 +397,551 @@ void main() {
       },
     );
   });
+
+  group('Database pagination single-flight, timeout & error contracts', () {
+    late Database rawDb;
+    late _InterceptingDatabase proxyDb;
+    late _RealTestDatabaseService service;
+    late _RecordingLogService logService;
+
+    setUp(() async {
+      await TestHarness.initialize();
+      DatabaseService.clearTestDatabase();
+      logService = _RecordingLogService();
+      AppLogger.serviceForTesting = logService;
+
+      rawDb = await databaseFactory.openDatabase(inMemoryDatabasePath);
+      await _createQuoteTables(rawDb);
+      proxyDb = _InterceptingDatabase(rawDb);
+      DatabaseService.setTestDatabase(proxyDb);
+
+      service = _RealTestDatabaseService();
+      await service.init();
+    });
+
+    tearDown(() async {
+      DatabaseService.setDebugLifecycleStateProvider(service, null);
+      DatabaseService.setDebugQueryStageObserver(service, null);
+      AppLogger.serviceForTesting = UnifiedLogService.instance;
+      DatabaseService.clearTestDatabase();
+      service.dispose();
+      await rawDb.close();
+    });
+
+    Future<void> seedQuotes(int count, {List<String> tagIds = const []}) async {
+      for (var i = 0; i < count; i++) {
+        final id = 'seed-$i';
+        await rawDb.insert('quotes', {
+          'id': id,
+          'content': '合成测试笔记 $i',
+          'date': DateTime(2026, 7, 10, 9)
+              .subtract(Duration(minutes: i))
+              .toIso8601String(),
+          'weather': i.isEven ? 'sunny' : 'rainy',
+          'day_period': 'morning',
+          'last_modified': '2026-07-10T09:00:00.000Z',
+        });
+        for (final tagId in tagIds) {
+          await rawDb.insert('quote_tags', {
+            'quote_id': id,
+            'tag_id': tagId,
+          });
+        }
+      }
+    }
+
+    test(
+      '单层超时权威：5.5 秒慢查询在单层超时窗口内正常完成，不再被 5 秒外层超时腰斩',
+      () async {
+        await seedQuotes(3);
+        final preloadedRows = await rawDb.query(
+          'quotes',
+          orderBy: 'date DESC',
+          limit: 2,
+        );
+
+        proxyDb.onQueryQuotes = (_) async {
+          await Future<void>.delayed(const Duration(milliseconds: 5500));
+          return preloadedRows;
+        };
+        proxyDb.onCommitBatch = (_) async =>
+            <Object?>[<Map<String, Object?>>[], <Map<String, Object?>>[]];
+
+        fakeAsync((async) {
+          final events = <List<Quote>>[];
+          final errors = <Object>[];
+          final sub = service.watchQuotes(limit: 2).listen(
+                events.add,
+                onError: (Object e, StackTrace _) => errors.add(e),
+              );
+
+          async.flushMicrotasks();
+          expect(DatabaseService.isPaginationQueryInFlight(service), isTrue);
+
+          // 跨越原先 loadMoreQuotes 硬编码的 5 秒边界。
+          async.elapse(const Duration(milliseconds: 5200));
+          expect(errors, isEmpty);
+          expect(events, isEmpty);
+
+          // 5.5 秒完成查询后正常返回首屏结果。
+          async.elapse(const Duration(milliseconds: 500));
+          async.flushMicrotasks();
+
+          expect(errors, isEmpty);
+          expect(events, hasLength(1));
+          expect(_ids(events.single), equals(['seed-0', 'seed-1']));
+          expect(DatabaseService.isPaginationQueryInFlight(service), isFalse);
+
+          sub.cancel();
+        });
+      },
+    );
+
+    test(
+      '生命周期感知与协作式取消：超时或转入后台后立即中止重试及孤儿标签查询',
+      () async {
+        await seedQuotes(2, tagIds: const ['tag-alpha']);
+        final stages = <String>[];
+        var lifecycle = AppLifecycleState.resumed;
+        DatabaseService.setDebugLifecycleStateProvider(
+          service,
+          () => lifecycle,
+        );
+        DatabaseService.setDebugQueryStageObserver(service, stages.add);
+
+        final delayedRows = await rawDb.query('quotes', orderBy: 'date DESC');
+        final queryCompleter = Completer<List<Map<String, Object?>>>();
+        proxyDb.onQueryQuotes = (_) => queryCompleter.future;
+
+        fakeAsync((async) {
+          final errors = <Object>[];
+          final sub = service.watchQuotes(limit: 2).listen(
+                (_) {},
+                onError: (Object e, StackTrace _) => errors.add(e),
+              );
+
+          async.flushMicrotasks();
+          expect(stages, equals(['sql_query']));
+
+          // 转入后台并跨越单次查询超时阈值：不进入 retry_wait、不发起第 2 次 sql_query。
+          lifecycle = AppLifecycleState.paused;
+          async.elapse(
+            DatabaseService.optimalQueryTimeout() + const Duration(seconds: 5),
+          );
+          expect(stages, equals(['sql_query']));
+
+          // 即便底层慢查询随后迟到完成，由于该轮 attempt 已超时作废，
+          // 也不会继续提交孤儿 quote_tags 批量查询。
+          queryCompleter.complete(delayedRows);
+          async.flushMicrotasks();
+          expect(stages, isNot(contains('tags_batch')));
+          expect(proxyDb.batchCommitCount, 0);
+
+          sub.cancel();
+        });
+      },
+    );
+
+    test(
+      '筛选代数切换取消：旧筛选查询失败或超时后不继续重试污染新流',
+      () async {
+        await seedQuotes(2);
+        final stages = <String>[];
+        DatabaseService.setDebugQueryStageObserver(service, stages.add);
+
+        final firstQueryCompleter = Completer<List<Map<String, Object?>>>();
+        var interceptFirst = true;
+        proxyDb.onQueryQuotes = (proceed) {
+          if (interceptFirst) {
+            interceptFirst = false;
+            return firstQueryCompleter.future;
+          }
+          return proceed();
+        };
+
+        final firstErrors = <Object>[];
+        final firstSub = service
+            .watchQuotes(limit: 2, searchQuery: '旧筛选')
+            .listen((_) {}, onError: (Object e, StackTrace _) {
+          firstErrors.add(e);
+        });
+        addTearDown(firstSub.cancel);
+        await _drainEventLoop();
+        expect(stages, equals(['sql_query']));
+
+        // 用户立即切换到新筛选条件，代数递增并取消旧查询等待者。
+        final secondEvents = <List<Quote>>[];
+        final secondSub = service
+            .watchQuotes(limit: 2, searchQuery: '合成测试')
+            .listen(secondEvents.add);
+        addTearDown(secondSub.cancel);
+
+        await _waitForEvent(secondEvents, (q) => q.length, equals(2));
+
+        // 让旧查询以异常结束：因为等待者已被取消，不应触发 retry_wait，也不向旧流补发错误。
+        firstQueryCompleter.completeError(StateError('旧查询过期失败'));
+        await _drainEventLoop();
+
+        expect(stages, isNot(contains('retry_wait')));
+        expect(firstErrors, isEmpty);
+      },
+    );
+
+    test(
+      '单航班合并与写入纪元隔离：同签名并发查询只执行一次 SQL，真实写入后不复用旧快照',
+      () async {
+        await seedQuotes(3, tagIds: const ['t1', 't2']);
+
+        final gate = Completer<void>();
+        proxyDb.onQueryQuotes = (proceed) async {
+          await gate.future;
+          return proceed();
+        };
+
+        // 归一化后等价的两组参数（标签顺序/重复项不同）并发请求。
+        final futureA = service.getUserQuotes(
+          tagIds: const ['t2', 't1', 't2'],
+          selectedWeathers: const ['sunny', 'sunny'],
+          offset: 0,
+          limit: 20,
+        );
+        final futureB = service.getUserQuotes(
+          tagIds: const ['t1', 't2'],
+          selectedWeathers: const ['sunny'],
+          offset: 0,
+          limit: 20,
+        );
+
+        await _drainEventLoop();
+        expect(proxyDb.quotesQueryCount, 1);
+
+        gate.complete();
+        final results = await Future.wait([futureA, futureB]);
+        expect(proxyDb.quotesQueryCount, 1);
+        expect(_ids(results[0]), _ids(results[1]));
+        expect(results[0], isNotEmpty);
+
+        // 真实数据写入推进 mutationEpoch：让写前读请求先读出旧 SQL 行并卡在标签批查阶段，
+        // 随后执行真实写入并发起新读请求，验证旧快照不包含新写入数据而新读请求包含新数据。
+        final preWriteTagGate = Completer<void>();
+        final sqlReadDone = Completer<void>();
+        var interceptOnce = true;
+        proxyDb.onQueryQuotes = (proceed) async {
+          final rows = await proceed();
+          if (interceptOnce && !sqlReadDone.isCompleted) {
+            sqlReadDone.complete();
+          }
+          return rows;
+        };
+        proxyDb.onCommitBatch = (proceed) async {
+          if (interceptOnce) {
+            interceptOnce = false;
+            await preWriteTagGate.future;
+          }
+          return proceed();
+        };
+        proxyDb.quotesQueryCount = 0;
+
+        final staleReadFuture = service.getUserQuotes(offset: 0, limit: 20);
+        await sqlReadDone.future;
+        expect(proxyDb.quotesQueryCount, 1);
+
+        await service.addQuote(
+          Quote(
+            id: 'fresh-quote',
+            content: '写入后的新笔记',
+            date: DateTime(2026, 8, 1).toIso8601String(),
+          ),
+        );
+
+        final freshReadFuture = service.getUserQuotes(offset: 0, limit: 20);
+        preWriteTagGate.complete();
+
+        final staleQuotes = await staleReadFuture;
+        final freshQuotes = await freshReadFuture;
+        proxyDb.onQueryQuotes = null;
+        proxyDb.onCommitBatch = null;
+        expect(
+          proxyDb.quotesQueryCount,
+          2,
+          reason: '写入推进纪元后，新的分页读取不得复用写前已发出的在飞查询',
+        );
+        expect(
+          _ids(staleQuotes),
+          isNot(contains('fresh-quote')),
+          reason: '写前已读出的在途快照不应混入写后新记录',
+        );
+        expect(_ids(freshQuotes), contains('fresh-quote'));
+      },
+    );
+
+    test(
+      '公开 getUserQuotes 在非活跃生命周期下不截断数据，且与分页生命周期门控航班隔离',
+      () async {
+        await seedQuotes(5, tagIds: const ['t1']);
+        var lifecycle = AppLifecycleState.resumed;
+        DatabaseService.setDebugLifecycleStateProvider(
+          service,
+          () => lifecycle,
+        );
+
+        // 模拟导出备份或媒体孤儿清理期间用户切换应用（进入 inactive / paused）。
+        lifecycle = AppLifecycleState.inactive;
+        final pageWhileInactive = await service.getUserQuotes(
+          offset: 0,
+          limit: 50,
+          excludeHiddenNotes: false,
+          includeDeleted: true,
+        );
+        expect(_ids(pageWhileInactive), hasLength(5));
+
+        lifecycle = AppLifecycleState.paused;
+        final secondPageCheck = await service.getUserQuotes(
+          offset: 0,
+          limit: 3,
+        );
+        expect(
+          _ids(secondPageCheck),
+          equals(['seed-0', 'seed-1', 'seed-2']),
+          reason:
+              '非分页公开 getUserQuotes 在后台生命周期下必须完整读取 SQLite，绝不能返回伪空列表截断备份或误删附件',
+        );
+
+        // 进一步验证：UI 分页查询（前台门控）与公开 getUserQuotes（非门控）同参数并发时不共享在途航班。
+        lifecycle = AppLifecycleState.resumed;
+        final gate = Completer<void>();
+        proxyDb.quotesQueryCount = 0;
+        proxyDb.onQueryQuotes = (proceed) async {
+          await gate.future;
+          return proceed();
+        };
+
+        final watchErrors = <Object>[];
+        final sub = service.watchQuotes(limit: 3).listen(
+              (_) {},
+              onError: (Object e, StackTrace _) => watchErrors.add(e),
+            );
+        addTearDown(sub.cancel);
+        final exportFuture = service.getUserQuotes(offset: 0, limit: 3);
+
+        await _drainEventLoop();
+        expect(
+          proxyDb.quotesQueryCount,
+          2,
+          reason: '带生命周期门控的 UI 分页航班与无门控的公开查询航班必须隔离',
+        );
+
+        // 切入后台后放行 SQL：UI 分页在标签批查前中止，而公开 getUserQuotes 仍完整返回 3 条数据。
+        lifecycle = AppLifecycleState.paused;
+        gate.complete();
+
+        final exportedQuotes = await exportFuture;
+        await _drainEventLoop();
+        expect(_ids(exportedQuotes), equals(['seed-0', 'seed-1', 'seed-2']));
+        expect(watchErrors, isNotEmpty);
+        proxyDb.onQueryQuotes = null;
+      },
+    );
+
+    test(
+      '已加载列表在后台同步触发 refreshQuotes 时保留可见旧列表并标记待刷新，回到前台后补跑且筛选切换可作废旧标记',
+      () async {
+        await seedQuotes(2);
+        var lifecycle = AppLifecycleState.resumed;
+        DatabaseService.setDebugLifecycleStateProvider(
+          service,
+          () => lifecycle,
+        );
+
+        final events = <List<Quote>>[];
+        final errors = <Object>[];
+        final sub = service.watchQuotes(limit: 2).listen(
+              events.add,
+              onError: (Object e, StackTrace _) => errors.add(e),
+            );
+        addTearDown(sub.cancel);
+
+        await _waitForEvent(events, _ids, equals(['seed-0', 'seed-1']));
+        final eventCountBeforeBgSync = events.length;
+
+        // 模拟应用处于 inactive 时 WebDAV 合并入库新笔记并调用 refreshQuotes()。
+        lifecycle = AppLifecycleState.inactive;
+        await rawDb.insert('quotes', {
+          'id': 'webdav-merged',
+          'content': '后台 WebDAV 合并的新笔记',
+          'date': DateTime(2026, 8, 2, 10).toIso8601String(),
+          'weather': 'sunny',
+          'day_period': 'morning',
+          'last_modified': '2026-08-02T10:00:00.000Z',
+        });
+        service.refreshQuotes();
+        await _drainEventLoop();
+
+        // 后台期间回填被生命周期门控挂起：旧列表不塌缩、不报 error 日志，但记录了待刷新标记。
+        expect(events.length, eventCountBeforeBgSync);
+        expect(errors, isEmpty);
+        expect(
+          logService.records.where((r) => r['level'] == UnifiedLogLevel.error),
+          isEmpty,
+        );
+
+        // 回到前台 resumed 后消费待刷新标记并补跑 refreshQuotes，新合并的笔记立即可见。
+        lifecycle = AppLifecycleState.resumed;
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isTrue,
+        );
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isFalse,
+          reason: '待刷新标记消费一次后即清零，避免重复刷新',
+        );
+        service.refreshQuotes();
+        await _waitForEvent(
+          events,
+          _ids,
+          equals(['webdav-merged', 'seed-0']),
+        );
+
+        // 若后台再次挂起刷新，但在消费前切换了筛选条件（新建流控制器），旧控制器的挂起标记自动失效。
+        lifecycle = AppLifecycleState.paused;
+        service.refreshQuotes();
+        await _drainEventLoop();
+
+        lifecycle = AppLifecycleState.resumed;
+        final filteredEvents = <List<Quote>>[];
+        final filteredSub = service
+            .watchQuotes(limit: 10, searchQuery: '后台 WebDAV')
+            .listen(filteredEvents.add);
+        addTearDown(filteredSub.cancel);
+
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isFalse,
+          reason: '筛选切换已重建流并启动新查询，旧控制器的延迟刷新标记必须自动作废',
+        );
+        await _waitForEvent(filteredEvents, _ids, equals(['webdav-merged']));
+      },
+    );
+
+    test(
+      '显式错误传播与外部调用兜底：首屏/空列表失败下发 addError 不推假空列表，外部 getUserQuotes 仍兜底返回空数组',
+      () async {
+        proxyDb.onQueryQuotes = (_) async {
+          throw StateError('模拟存储读取损坏');
+        };
+
+        final events = <List<Quote>>[];
+        final errors = <(Object, StackTrace)>[];
+        final sub = service.watchQuotes(limit: 20).listen(
+              events.add,
+              onError: (Object e, StackTrace st) => errors.add((e, st)),
+            );
+        addTearDown(sub.cancel);
+
+        await _waitUntil(() => errors.isNotEmpty);
+        await _drainEventLoop();
+
+        // 首屏失败严禁推送伪装成“无笔记”的空数组。
+        expect(events, isEmpty);
+        expect(errors, hasLength(1));
+
+        // 首屏为空时触发 refreshQuotes 同样向流下发错误而非空数组。
+        service.refreshQuotes();
+        await _waitUntil(() => errors.length >= 2);
+        expect(events, isEmpty);
+
+        // 非分页外部调用方直接调 getUserQuotes 时保持兼容契约，返回 [] 不抛未捕获异常。
+        final fallbackResult = await service.getUserQuotes(limit: 10);
+        expect(fallbackResult, isEmpty);
+      },
+    );
+
+    test(
+      '非空列表上拉分页失败保留原列表与游标，并向调用方抛出异常以供 UI 提示',
+      () async {
+        await seedQuotes(4);
+
+        final events = <List<Quote>>[];
+        final sub = service.watchQuotes(limit: 2).listen(events.add);
+        addTearDown(sub.cancel);
+
+        await _waitForEvent(events, _ids, equals(['seed-0', 'seed-1']));
+        final eventsAfterFirstPage = events.length;
+
+        proxyDb.onQueryQuotes = (_) async {
+          throw StateError('翻页时磁盘瞬时繁忙');
+        };
+
+        await expectLater(
+          service.loadMoreQuotes(),
+          throwsA(isA<StateError>()),
+        );
+        await _drainEventLoop();
+
+        expect(events.length, eventsAfterFirstPage);
+        expect(_ids(events.last), equals(['seed-0', 'seed-1']));
+        expect(service.hasMoreQuotes, isTrue);
+
+        // 恢复正常后从原游标 offset=2 继续拉取下一页。
+        proxyDb.onQueryQuotes = null;
+        await service.loadMoreQuotes();
+        await _waitForEvent(
+          events,
+          _ids,
+          equals(['seed-0', 'seed-1', 'seed-2', 'seed-3']),
+        );
+      },
+    );
+
+    test(
+      '单点错误日志与非空堆栈：单次超时或 SQLite 异常全链路仅产生 1 条 error 日志且携带非空 StackTrace',
+      () async {
+        proxyDb.onQueryQuotes = (_) =>
+            Completer<List<Map<String, Object?>>>().future; // 永不返回，触发单层超时
+
+        fakeAsync((async) {
+          final errors = <(Object, StackTrace)>[];
+          final sub = service.watchQuotes(limit: 20).listen(
+            (_) {},
+            onError: (Object error, StackTrace stackTrace) {
+              logErrorOnce(
+                'UI 订阅侧收到错误: $error',
+                error: error,
+                stackTrace: stackTrace,
+                source: 'NoteListViewTest',
+              );
+              errors.add((error, stackTrace));
+            },
+          );
+
+          async.flushMicrotasks();
+          // 推进经过第 1 次单层超时 + 300ms 重试等待 + 第 2 次单层超时。
+          final totalTimeoutWindow = DatabaseService.optimalQueryTimeout() * 2 +
+              const Duration(seconds: 2);
+          async.elapse(totalTimeoutWindow);
+          async.flushMicrotasks();
+
+          expect(errors, hasLength(1));
+          expect(errors.single.$1, isA<TimeoutException>());
+          expect(errors.single.$2.toString(), isNotEmpty);
+
+          final errorLogs = logService.records
+              .where((record) => record['level'] == UnifiedLogLevel.error)
+              .toList();
+          expect(
+            errorLogs,
+            hasLength(1),
+            reason: '同一条超时异常跨越重试/查询/分页/UI 边界只能上报一次 error 日志',
+          );
+          expect(errorLogs.single['stackTrace'], isNotNull);
+          expect(errorLogs.single['stackTrace'].toString(), isNotEmpty);
+
+          sub.cancel();
+        });
+      },
+    );
+  });
 }
 
 /// 排空事件循环：用于"某件事不应该发生"的负向断言。
@@ -451,6 +1000,381 @@ Future<void> _createQuoteTables(Database db) async {
         PRIMARY KEY (quote_id, tag_id)
       )
     ''');
+  await db.execute('''
+      CREATE TABLE categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        is_default BOOLEAN DEFAULT 0,
+        icon_name TEXT,
+        last_modified TEXT
+      )
+    ''');
+  await db.execute('''
+      CREATE TABLE media_references (
+        id TEXT PRIMARY KEY,
+        file_path TEXT NOT NULL,
+        quote_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(file_path, quote_id)
+      )
+    ''');
+  await db.execute('''
+      CREATE TABLE quote_tombstones (
+        quote_id TEXT PRIMARY KEY,
+        deleted_at TEXT NOT NULL,
+        device_id TEXT
+      )
+    ''');
+}
+
+class _RealTestDatabaseService extends DatabaseService {
+  _RealTestDatabaseService() : super.forTesting();
+}
+
+class _RecordingLogService implements UnifiedLogService {
+  final List<Map<String, dynamic>> records = [];
+
+  @override
+  void verbose(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.verbose,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void debug(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.debug,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void info(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.info,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void warning(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.warning,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void error(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.error,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void log(
+    UnifiedLogLevel level,
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    records.add({
+      'level': level,
+      'message': message,
+      'source': source,
+      'error': error,
+      'stackTrace': stackTrace,
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _InterceptingDatabase implements Database {
+  _InterceptingDatabase(this._delegate);
+
+  final Database _delegate;
+  Future<List<Map<String, Object?>>> Function(
+    Future<List<Map<String, Object?>>> Function() proceed,
+  )? onQueryQuotes;
+  Future<List<Object?>> Function(
+    Future<List<Object?>> Function() proceed,
+  )? onCommitBatch;
+
+  int quotesQueryCount = 0;
+  int batchCommitCount = 0;
+
+  @override
+  String get path => _delegate.path;
+
+  @override
+  bool get isOpen => _delegate.isOpen;
+
+  @override
+  Database get database => this;
+
+  @override
+  Future<void> close() => _delegate.close();
+
+  @override
+  Future<void> execute(String sql, [List<Object?>? arguments]) =>
+      _delegate.execute(sql, arguments);
+
+  @override
+  Future<int> rawInsert(String sql, [List<Object?>? arguments]) =>
+      _delegate.rawInsert(sql, arguments);
+
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) =>
+      _delegate.rawQuery(sql, arguments);
+
+  @override
+  Future<int> rawUpdate(String sql, [List<Object?>? arguments]) =>
+      _delegate.rawUpdate(sql, arguments);
+
+  @override
+  Future<int> rawDelete(String sql, [List<Object?>? arguments]) =>
+      _delegate.rawDelete(sql, arguments);
+
+  @override
+  Future<int> insert(
+    String table,
+    Map<String, Object?> values, {
+    String? nullColumnHack,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) =>
+      _delegate.insert(
+        table,
+        values,
+        nullColumnHack: nullColumnHack,
+        conflictAlgorithm: conflictAlgorithm,
+      );
+
+  @override
+  Future<List<Map<String, Object?>>> query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) {
+    Future<List<Map<String, Object?>>> proceed() => _delegate.query(
+          table,
+          distinct: distinct,
+          columns: columns,
+          where: where,
+          whereArgs: whereArgs,
+          groupBy: groupBy,
+          having: having,
+          orderBy: orderBy,
+          limit: limit,
+          offset: offset,
+        );
+    if (table == 'quotes' || table.startsWith('quotes ')) {
+      quotesQueryCount++;
+      final interceptor = onQueryQuotes;
+      if (interceptor != null) {
+        return interceptor(proceed);
+      }
+    }
+    return proceed();
+  }
+
+  @override
+  Future<int> update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) =>
+      _delegate.update(
+        table,
+        values,
+        where: where,
+        whereArgs: whereArgs,
+        conflictAlgorithm: conflictAlgorithm,
+      );
+
+  @override
+  Future<int> delete(
+    String table, {
+    String? where,
+    List<Object?>? whereArgs,
+  }) =>
+      _delegate.delete(table, where: where, whereArgs: whereArgs);
+
+  @override
+  Batch batch() => _InterceptingBatch(_delegate.batch(), this);
+
+  @override
+  Future<T> transaction<T>(
+    Future<T> Function(Transaction txn) action, {
+    bool? exclusive,
+  }) =>
+      _delegate.transaction(action, exclusive: exclusive);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _InterceptingBatch implements Batch {
+  _InterceptingBatch(this._delegate, this._owner);
+
+  final Batch _delegate;
+  final _InterceptingDatabase _owner;
+
+  @override
+  int get length => _delegate.length;
+
+  @override
+  void query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) {
+    _delegate.query(
+      table,
+      distinct: distinct,
+      columns: columns,
+      where: where,
+      whereArgs: whereArgs,
+      groupBy: groupBy,
+      having: having,
+      orderBy: orderBy,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  void rawQuery(String sql, [List<Object?>? arguments]) {
+    _delegate.rawQuery(sql, arguments);
+  }
+
+  @override
+  void insert(
+    String table,
+    Map<String, Object?> values, {
+    String? nullColumnHack,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) {
+    _delegate.insert(
+      table,
+      values,
+      nullColumnHack: nullColumnHack,
+      conflictAlgorithm: conflictAlgorithm,
+    );
+  }
+
+  @override
+  void update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) {
+    _delegate.update(
+      table,
+      values,
+      where: where,
+      whereArgs: whereArgs,
+      conflictAlgorithm: conflictAlgorithm,
+    );
+  }
+
+  @override
+  void delete(String table, {String? where, List<Object?>? whereArgs}) {
+    _delegate.delete(table, where: where, whereArgs: whereArgs);
+  }
+
+  @override
+  void execute(String sql, [List<Object?>? arguments]) {
+    _delegate.execute(sql, arguments);
+  }
+
+  @override
+  Future<List<Object?>> commit({
+    bool? exclusive,
+    bool? noResult,
+    bool? continueOnError,
+  }) {
+    _owner.batchCommitCount++;
+    Future<List<Object?>> proceed() => _delegate.commit(
+          exclusive: exclusive,
+          noResult: noResult,
+          continueOnError: continueOnError,
+        );
+    final interceptor = _owner.onCommitBatch;
+    if (interceptor != null) {
+      return interceptor(proceed);
+    }
+    return proceed();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// 按 offset/limit 老实分页的假数据源，用于观察真实的取页请求。

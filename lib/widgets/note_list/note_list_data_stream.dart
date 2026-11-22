@@ -117,6 +117,80 @@ extension _NoteListDataStreamExtension on NoteListViewState {
     });
   }
 
+  Duration _initialLoadSafetyBackoffDuration() {
+    final baseTimeout = DatabaseService.optimalQueryTimeout();
+    final extraSeconds = 2 * (_initialLoadTimeoutRecoveries + 1);
+    return baseTimeout + Duration(seconds: extraSeconds);
+  }
+
+  String _resolveInitialLoadErrorMessage(
+    AppLocalizations l10n,
+    Object error,
+  ) {
+    final isTimeout = error is TimeoutException ||
+        error.toString().contains('TimeoutException');
+    return isTimeout
+        ? l10n.noteListLoadTimeoutHint
+        : l10n.noteListLoadFailedHint;
+  }
+
+  String _resolvePaginationSnackBarErrorMessage(
+    AppLocalizations l10n,
+    Object error,
+  ) {
+    if (error is TimeoutException ||
+        error.toString().contains('TimeoutException')) {
+      return l10n.queryTimeoutRetry;
+    }
+    if (error.toString().contains('DatabaseException')) {
+      return l10n.databaseQueryError;
+    }
+    return l10n.loadNoteFailed;
+  }
+
+  void _retryNoteListLoad() {
+    if (!mounted) return;
+    _initialLoadSafetyTimer?.cancel();
+    _initialLoadSafetyTimer = null;
+    _initialLoadTimeoutRecoveries = 0;
+    _initialLoadSuspendedByLifecycle = false;
+    if (_quotes.isEmpty) {
+      _updateState(() {
+        _initialLoadErrorMessage = null;
+        _isLoading = true;
+        _hasMore = true;
+      });
+      if (!_initialDataLoaded) {
+        _initializeDataStream();
+        return;
+      }
+    }
+    _updateStreamSubscription();
+  }
+
+  void _completeInitialLoadIfNeeded() {
+    if (_initialDataLoaded) return;
+    _initialDataLoaded = true;
+    _initialLoadTimeoutRecoveries = 0;
+    _initialLoadSuspendedByLifecycle = false;
+    _initialLoadSafetyTimer?.cancel();
+    _initialLoadSafetyTimer = null;
+    if (_initialDataCompleter != null && !_initialDataCompleter!.isCompleted) {
+      _initialDataCompleter!.complete();
+    }
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        _isInitializing = false;
+        logDebug('首次加载完成，结束滚动保护期', source: 'NoteListView');
+      }
+    });
+    logDebug('首次数据加载完成', source: 'NoteListView');
+    _scheduleIdlePrefetch(
+      delay: const Duration(milliseconds: 400),
+    );
+    _scheduleIdleLayoutWarmup();
+  }
+
   /// 修复：将数据流初始化分离到独立方法
   void _initializeDataStream() {
     if (!mounted) return;
@@ -169,16 +243,6 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             rawList,
             recordProfile: profilesLoadMore,
           );
-          final isPlaceholderInitialEmission =
-              isFirstLoad && list.isEmpty && db.hasMoreQuotes;
-
-          if (isPlaceholderInitialEmission) {
-            logDebug(
-              '忽略首个占位空列表，继续等待真实首批数据',
-              source: 'NoteListView',
-            );
-            return;
-          }
 
           // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
           double? savedScrollOffset;
@@ -205,7 +269,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           // 不需要整列表重建。两个前提都要：
           // - 空列表时 _isLoading 决定的是加载态还是空状态，会真的改变树形；
           // - _hasMore 参与 itemCount，翻转必须走 setState。
-          final bool quotesUnchanged = list.isNotEmpty &&
+          final bool quotesUnchanged = _initialLoadErrorMessage == null &&
+              list.isNotEmpty &&
               _hasMore == dbHasMore &&
               _isSameQuoteInstances(list);
 
@@ -218,6 +283,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
                 _isAppendedQuoteList(list);
             final applyStopwatch = Stopwatch()..start();
             _updateState(() {
+              _initialLoadErrorMessage = null;
               _quotes
                 ..clear()
                 ..addAll(list);
@@ -284,29 +350,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           }
 
           if (isFirstLoad) {
-            _initialDataLoaded = true;
-            _initialLoadTimeoutRecoveries = 0;
-            _initialLoadSafetyTimer?.cancel();
-            // 通知 Completer：首批数据已就绪（scrollToQuoteById 事件驱动等待）
-            if (_initialDataCompleter != null &&
-                !_initialDataCompleter!.isCompleted) {
-              _initialDataCompleter!.complete();
-            }
-            // 冷启动完成后允许正常记录用户滚动。
-            Future.delayed(const Duration(milliseconds: 1500), () {
-              if (mounted) {
-                _isInitializing = false;
-                logDebug('首次加载完成，结束滚动保护期', source: 'NoteListView');
-              }
-            });
-            logDebug('首次数据加载完成', source: 'NoteListView');
-            // 首屏就绪后尽快启动空闲预取：用户常在冷启动后 1~2 秒内就开始快滑，
-            // 预取必须抢在前面；tick 自带滚动/加载让路，起步早不会挤占滚动帧。
-            _scheduleIdlePrefetch(
-              delay: const Duration(milliseconds: 400),
-            );
-            // 同理，首屏卡片一建出来就开始预热后面那些卡片的测量。
-            _scheduleIdleLayoutWarmup();
+            _completeInitialLoadIfNeeded();
+            isFirstLoad = false;
           }
 
           // 重置滚动范围检查计数器
@@ -324,22 +369,26 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           }
           // 保险清除搜索过渡状态（首次加载期间用户可能已输入搜索）
           _setSearchUpdating(false);
-
-          if (isFirstLoad) {
-            isFirstLoad = false;
-          }
         }
       },
-      onError: (error) {
+      onError: (Object error, StackTrace stackTrace) {
         if (mounted) {
+          _initialLoadSafetyTimer?.cancel();
+          _initialLoadSafetyTimer = null;
+
+          if (!_isLifecycleActive && error is TimeoutException) {
+            if (!_initialDataLoaded) {
+              _initialLoadSuspendedByLifecycle = true;
+            }
+            _setSearchUpdating(false);
+            return;
+          }
+
           // 出错时也需要 complete completer，避免 scrollToQuoteById 挂起直到超时
           if (_initialDataCompleter != null &&
               !_initialDataCompleter!.isCompleted) {
             _initialDataCompleter!.complete();
           }
-          _updateState(() {
-            _isLoading = false;
-          });
           _setSearchUpdating(false); // 出错时清除搜索过渡状态
 
           // 重置搜索控制器状态
@@ -353,35 +402,50 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             logDebug('重置搜索控制器状态失败: $e');
           }
 
-          logError('加载笔记失败: $error', error: error, source: 'NoteListView');
-
-          // 显示错误提示
-          final l10n = AppLocalizations.of(context);
-          AppSnackBar.error(
-            context,
-            error.toString().contains('TimeoutException')
-                ? l10n.queryTimeoutShort
-                : (kDebugMode ? error.toString() : l10n.loadFailedSimple),
-            action: SnackBarAction(
-              label: l10n.retry,
-              textColor: Theme.of(context).colorScheme.onErrorContainer,
-              onPressed: () => _updateStreamSubscription(),
-            ),
+          logErrorOnce(
+            '加载笔记失败: $error',
+            error: error,
+            stackTrace: stackTrace,
+            source: 'NoteListView',
           );
+
+          final l10n = AppLocalizations.of(context);
+          if (_quotes.isEmpty) {
+            _updateState(() {
+              _isLoading = false;
+              _initialLoadErrorMessage = _resolveInitialLoadErrorMessage(
+                l10n,
+                error,
+              );
+            });
+          } else {
+            _updateState(() {
+              _isLoading = false;
+            });
+            _showErrorSnackBar(
+              _resolvePaginationSnackBarErrorMessage(l10n, error),
+            );
+          }
         }
       },
     );
-    // 安全超时：首次加载若 8 秒仍未收到数据，先区分“确认空数据”
-    // 和“分页仍未决”。后者恢复数据流并继续等待，避免把慢查询误判成无笔记。
+    // 安全超时：仅在前台活跃态下启动有界退避恢复；若挂载即处于非活跃态则挂起待恢复。
     if (isFirstLoad) {
-      _scheduleInitialLoadSafetyTimer();
+      if (_isLifecycleActive) {
+        _scheduleInitialLoadSafetyTimer();
+      } else {
+        _initialLoadSuspendedByLifecycle = true;
+      }
     }
   }
 
   void _scheduleInitialLoadSafetyTimer() {
     _initialLoadSafetyTimer?.cancel();
+    if (!_isLifecycleActive || _initialDataLoaded) {
+      return;
+    }
     _initialLoadSafetyTimer = Timer(
-      const Duration(seconds: 8),
+      _initialLoadSafetyBackoffDuration(),
       _handleInitialLoadSafetyTimeout,
     );
   }
@@ -390,28 +454,57 @@ extension _NoteListDataStreamExtension on NoteListViewState {
     if (!mounted || _initialDataLoaded || !_isLoading || _quotes.isNotEmpty) {
       return;
     }
+    if (!_isLifecycleActive) {
+      _initialLoadSuspendedByLifecycle = true;
+      return;
+    }
 
     final db = _databaseService;
     if (db != null && db.hasMoreQuotes) {
-      _initialLoadTimeoutRecoveries++;
-      logDebug(
-        '首次数据加载安全超时（8s），数据库仍有未决分页，尝试恢复数据流: $_initialLoadTimeoutRecoveries',
+      if (_initialLoadTimeoutRecoveries <
+          NoteListViewState.maxInitialLoadAutoRecoveries) {
+        _initialLoadTimeoutRecoveries++;
+        logDebug(
+          '首次数据加载安全超时，尝试受控自动恢复 '
+          '($_initialLoadTimeoutRecoveries/${NoteListViewState.maxInitialLoadAutoRecoveries})',
+          source: 'NoteListView',
+        );
+        if (!DatabaseService.isPaginationQueryInFlight(db)) {
+          db.refreshQuotes();
+        }
+        _scheduleInitialLoadSafetyTimer();
+        return;
+      }
+
+      final timeoutError = TimeoutException(
+        '首次数据加载自动恢复已达上限 (${NoteListViewState.maxInitialLoadAutoRecoveries})',
+        _initialLoadSafetyBackoffDuration(),
+      );
+      logErrorOnce(
+        '首次数据加载超时且自动恢复已达上限',
+        error: timeoutError,
+        stackTrace: StackTrace.current,
         source: 'NoteListView',
       );
-      db.refreshQuotes();
-      _scheduleInitialLoadSafetyTimer();
+      final l10n = AppLocalizations.of(context);
+      _updateState(() {
+        _isLoading = false;
+        _initialLoadErrorMessage = l10n.noteListLoadTimeoutHint;
+      });
+      if (_initialDataCompleter != null &&
+          !_initialDataCompleter!.isCompleted) {
+        _initialDataCompleter!.complete();
+      }
       return;
     }
 
     logDebug(
-      '首次数据加载安全超时（8s），结束加载状态',
+      '首次数据加载安全超时，数据库确认无更多数据，结束加载状态',
       source: 'NoteListView',
     );
     _updateState(() {
       _isLoading = false;
     });
-    // 只有在数据库也确认没有更多数据时才释放等待定位的 completer；
-    // 否则通知定位会在数据仍未决时快速耗尽重试。
     if (_initialDataCompleter != null && !_initialDataCompleter!.isCompleted) {
       _initialDataCompleter!.complete();
     }
@@ -476,9 +569,20 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       logDebug('筛选条件变化，不保存滚动位置，将重置到顶部', source: 'NoteListView');
     }
 
-    // 搜索/筛选更新时不设 _isLoading：旧内容保持显示直到新结果淡入替换，
-    // 避免底部临时闪现加载动画。仅排序等其余变化设 _isLoading = true。
-    if (_initialDataLoaded && !isSearchUpdate && !resetScrollToTop) {
+    _initialLoadSafetyTimer?.cancel();
+    _initialLoadSafetyTimer = null;
+    _initialLoadTimeoutRecoveries = 0;
+    _initialLoadSuspendedByLifecycle = false;
+
+    // 从空列表错误态切换筛选/搜索或重试时立即清除旧错误并恢复加载态；
+    // 已加载数据的搜索/筛选切换保持旧内容可见以避免视觉闪烁。
+    if (_initialLoadErrorMessage != null ||
+        (!_initialDataLoaded && _quotes.isEmpty)) {
+      _updateState(() {
+        _initialLoadErrorMessage = null;
+        _isLoading = true;
+      });
+    } else if (_initialDataLoaded && !isSearchUpdate && !resetScrollToTop) {
       _updateState(() {
         _isLoading = true;
       });
@@ -529,6 +633,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           // 同 _initializeDataStream：什么都没变的事件不重建整列表。
           // 还等着归零时不能跳过——那一步要靠这次事件把新结果落地后再 jumpTo(0)。
           final bool quotesUnchanged = !pendingScrollToTop &&
+              _initialLoadErrorMessage == null &&
               list.isNotEmpty &&
               _hasMore == dbHasMore &&
               _isSameQuoteInstances(list);
@@ -542,6 +647,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
                 _isAppendedQuoteList(list);
             final applyStopwatch = Stopwatch()..start();
             _updateState(() {
+              _initialLoadErrorMessage = null;
               _quotes
                 ..clear()
                 ..addAll(list);
@@ -646,6 +752,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             logDebug('更新搜索控制器状态失败: $e');
           }
 
+          if (!_initialDataLoaded) {
+            _completeInitialLoadIfNeeded();
+          }
+
           // 清除搜索过渡动画状态，让列表从"更新中"淡入恢复到正常透明度
           _setSearchUpdating(false);
 
@@ -655,11 +765,24 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           );
         }
       },
-      onError: (error) {
+      onError: (Object error, StackTrace stackTrace) {
         if (mounted) {
-          _updateState(() {
-            _isLoading = false; // 出错时停止加载
-          });
+          _initialLoadSafetyTimer?.cancel();
+          _initialLoadSafetyTimer = null;
+
+          if (!_isLifecycleActive && error is TimeoutException) {
+            if (!_initialDataLoaded) {
+              _initialLoadSuspendedByLifecycle = true;
+            }
+            _setSearchUpdating(false);
+            return;
+          }
+
+          if (_initialDataCompleter != null &&
+              !_initialDataCompleter!.isCompleted) {
+            _initialDataCompleter!.complete();
+          }
+
           _setSearchUpdating(false); // 出错时也清除搜索过渡状态
 
           // 重置搜索控制器状态
@@ -673,19 +796,40 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             logDebug('重置搜索控制器状态失败: $e');
           }
 
-          logError('数据流加载失败: $error', error: error, source: 'NoteListView');
+          logErrorOnce(
+            '数据流加载失败: $error',
+            error: error,
+            stackTrace: stackTrace,
+            source: 'NoteListView',
+          );
 
-          // 优化：更友好的错误提示
           final l10n = AppLocalizations.of(context);
-          String errorMessage = l10n.loadNoteFailed;
-          if (error.toString().contains('TimeoutException')) {
-            errorMessage = l10n.queryTimeoutRetry;
-          } else if (error.toString().contains('DatabaseException')) {
-            errorMessage = l10n.databaseQueryError;
+          if (_quotes.isEmpty) {
+            _updateState(() {
+              _isLoading = false;
+              _initialLoadErrorMessage = _resolveInitialLoadErrorMessage(
+                l10n,
+                error,
+              );
+            });
+          } else {
+            _updateState(() {
+              _isLoading = false;
+            });
+            _showErrorSnackBar(
+              _resolvePaginationSnackBarErrorMessage(l10n, error),
+            );
           }
-          _showErrorSnackBar(errorMessage);
         }
       },
     );
+
+    if (!_initialDataLoaded) {
+      if (_isLifecycleActive) {
+        _scheduleInitialLoadSafetyTimer();
+      } else {
+        _initialLoadSuspendedByLifecycle = true;
+      }
+    }
   }
 }

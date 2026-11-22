@@ -11,8 +11,15 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/pages/webdav_sync_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/unified_log_service.dart';
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
+import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/widgets/app_error_view.dart';
+import 'package:thoughtecho/widgets/app_loading_view.dart';
 import 'package:thoughtecho/widgets/note_list/note_item_motion.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
@@ -318,16 +325,398 @@ void main() {
       },
     );
   });
+
+  group('NoteListView 生命周期门控与错误恢复闭环', () {
+    late _WidgetRecordingLogService logService;
+
+    setUp(() {
+      logService = _WidgetRecordingLogService();
+      AppLogger.serviceForTesting = logService;
+    });
+
+    tearDown(() {
+      AppLogger.serviceForTesting = UnifiedLogService.instance;
+    });
+
+    testWidgets(
+      '后台/隐藏生命周期立即取消安全定时器（0 次无效刷新），回到前台仅单次干净恢复',
+      (tester) async {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        final databaseService = _StreamingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(AppLoadingView), findsOneWidget);
+
+        // 首屏尚未返回时按真实系统状态机转入后台：安全定时器立即取消，60 秒后台停留零刷新。
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump(const Duration(seconds: 60));
+
+        expect(databaseService.refreshQuotesCallCount, 0);
+        expect(find.byType(AppLoadingView), findsOneWidget);
+        expect(find.byType(AppErrorView), findsNothing);
+
+        // 按真实系统状态机回到前台 resumed：仅触发 1 次恢复刷新，数据到达后正常渲染列表。
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(databaseService.refreshQuotesCallCount, 1);
+
+        databaseService.emit(_makeQuotes(3), hasMore: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+        expect(find.byType(AppLoadingView), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      '首屏已加载后在非活跃态触发同步刷新：后台保持旧列表，切回 resumed 自动补跑刷新展示新内容',
+      (tester) async {
+        var lifecycle = AppLifecycleState.resumed;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+
+        final databaseService = _LifecycleAwareRealPaginationDbService(
+          initialQuotes: _makeQuotes(2),
+          readLifecycle: () => lifecycle,
+        );
+        DatabaseService.setDebugLifecycleStateProvider(
+          databaseService,
+          () => lifecycle,
+        );
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+        expect(find.text('后台同步合入的新笔记'), findsNothing);
+
+        // 应用切入 inactive / paused 后，模拟 WebDAV 同步合并完成并调用 refreshQuotes()。
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.paused;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+
+        databaseService.quotes = [
+          Quote(
+            id: 'synced-quote',
+            content: '后台同步合入的新笔记',
+            date: DateTime(2026, 8, 18, 9).toIso8601String(),
+          ),
+          ..._makeQuotes(2),
+        ];
+        databaseService.refreshQuotes();
+        await tester.pump();
+
+        // 后台期间旧列表保持可见且不闪现错误视图。
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+        expect(find.text('后台同步合入的新笔记'), findsNothing);
+        expect(find.byType(AppErrorView), findsNothing);
+
+        // 回到前台 resumed：NoteListView 自动消费挂起的延迟刷新并渲染同步后的新笔记。
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.resumed;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('后台同步合入的新笔记'), findsOneWidget);
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+
+        DatabaseService.setDebugLifecycleStateProvider(databaseService, null);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        databaseService.dispose();
+      },
+    );
+
+    testWidgets(
+      '前台连续超时自动恢复最多 2 次后收敛到 AppErrorView，点击重试恢复加载',
+      (tester) async {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        final databaseService = _StreamingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+        final baseTimeout = DatabaseService.optimalQueryTimeout();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(AppLoadingView), findsOneWidget);
+
+        // 第 1 次安全退避到期（base + 2s）-> 自动触发第 1 次恢复刷新。
+        await tester.pump(baseTimeout + const Duration(seconds: 2));
+        expect(databaseService.refreshQuotesCallCount, 1);
+        expect(find.byType(AppLoadingView), findsOneWidget);
+
+        // 第 2 次安全退避到期（base + 4s）-> 自动触发第 2 次恢复刷新。
+        await tester.pump(baseTimeout + const Duration(seconds: 4));
+        expect(databaseService.refreshQuotesCallCount, 2);
+        expect(find.byType(AppLoadingView), findsOneWidget);
+
+        // 第 3 次安全退避到期（base + 6s）-> 达到上限（<= 2 次），退出转圈展示 AppErrorView。
+        await tester.pump(baseTimeout + const Duration(seconds: 6));
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(databaseService.refreshQuotesCallCount, 2);
+        expect(find.byType(AppLoadingView), findsNothing);
+        expect(find.byType(AppErrorView), findsOneWidget);
+        expect(find.text('重试'), findsOneWidget);
+
+        // 进入错误态后不再有任何后台/前台残余定时器空转。
+        await tester.pump(const Duration(seconds: 60));
+        expect(databaseService.refreshQuotesCallCount, 2);
+
+        // 用户点击“重试”按钮重新订阅并恢复。
+        final watchCountBeforeRetry = databaseService.watchCallCount;
+        await tester.tap(find.text('重试'));
+        await tester.pump();
+        expect(databaseService.watchCallCount, watchCountBeforeRetry + 1);
+
+        databaseService.emit(_makeQuotes(2), hasMore: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.byType(AppErrorView), findsNothing);
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      '首屏流式错误立即进入 AppErrorView（仅记录 1 条带堆栈错误日志），修改搜索词或筛选可直接解锁恢复',
+      (tester) async {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        final databaseService = _StreamingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            searchQuery: '',
+          ),
+        );
+        await tester.pump();
+
+        final injectedError = StateError('SQLite 首屏查询异常');
+        final injectedStack = StackTrace.current;
+        databaseService.emitError(injectedError, injectedStack);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.byType(AppErrorView), findsOneWidget);
+        expect(find.text('暂时无法读取笔记，请点击重试'), findsOneWidget);
+        expect(find.text('还没有笔记，开始记录吧！'), findsNothing);
+
+        final errorLogs = logService.records
+            .where((r) => r['level'] == UnifiedLogLevel.error)
+            .toList();
+        expect(errorLogs, hasLength(1));
+        expect(errorLogs.single['stackTrace'], isNotNull);
+
+        // 首屏失败后无需先重启页面，直接修改搜索词即可重建流并恢复。
+        final watchBeforeSearch = databaseService.watchCallCount;
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            searchQuery: '恢复关键词',
+          ),
+        );
+        await tester.pump();
+        expect(databaseService.watchCallCount, watchBeforeSearch + 1);
+        expect(databaseService.lastSearchQuery, '恢复关键词');
+
+        databaseService.emit(_makeQuotes(1), hasMore: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.byType(AppErrorView), findsNothing);
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      '上拉分页加载失败保留已有列表、收起加载态并通过 AppSnackBar.error 提供重试闭环',
+      (tester) async {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        final databaseService = _StreamingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+
+        // 先发出首屏短笔记，使列表填满并允许滚动触发下一页。
+        databaseService.emit(_makeQuotes(15), hasMore: true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+
+        // 注入翻页超时异常并向下滚动到底部触发 _loadMore。
+        databaseService.loadMoreError = TimeoutException('翻页读取超时');
+        await tester.drag(find.byType(ListView), const Offset(0, -2400));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        // 已有笔记保持不丢，且弹出带“重试”动作的错误 SnackBar。
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text('查询超时，请重试'), findsOneWidget);
+        expect(find.text('重试'), findsOneWidget);
+
+        // 恢复正常后点击 SnackBar 上的“重试”拉取下一页。
+        databaseService.loadMoreError = null;
+        databaseService.onLoadMoreSuccess = () {
+          databaseService.emit(_makeQuotes(17), hasMore: false);
+        };
+        final retryAction = tester.widget<SnackBarAction>(
+          find.byType(SnackBarAction),
+        );
+        retryAction.onPressed();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(_listItemCount(tester), 17);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 4));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      'QuoteListViewByConflict 遇到流错误时展示 AppErrorView 而非假“无冲突”，点击重试可恢复',
+      (tester) async {
+        final databaseService = _StreamingFakeDatabaseService();
+
+        await tester.pumpWidget(
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: databaseService,
+            child: MaterialApp(
+              theme: ThemeData(
+                useMaterial3: true,
+                extensions: [
+                  AppShapeTokens.fromForm(
+                    ThemeStyleForm.material,
+                    Brightness.light,
+                  ),
+                  AppSemanticColors.light,
+                ],
+              ),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: const Locale('zh'),
+              home: const Scaffold(body: QuoteListViewByConflict()),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(AppLoadingView), findsOneWidget);
+
+        databaseService.emitError(
+          TimeoutException('冲突列表查询超时'),
+          StackTrace.current,
+        );
+        await tester.pump();
+
+        expect(find.byType(AppErrorView), findsOneWidget);
+        expect(find.text('读取笔记响应较慢，请点击重试'), findsOneWidget);
+        expect(find.text('重试'), findsOneWidget);
+
+        // 点击重试后重新订阅冲突流并回到加载态，发射冲突笔记后恢复正常渲染。
+        await tester.tap(find.text('重试'));
+        await tester.pump();
+        expect(databaseService.watchCallCount, 2);
+        expect(find.byType(AppLoadingView), findsOneWidget);
+
+        databaseService.emit(
+          [
+            Quote(
+              id: 'conflict-1',
+              content: '待处理的同步冲突笔记',
+              date: DateTime(2026, 8, 20).toIso8601String(),
+              lastModified: '2026-08-20T10:00:00.000Z',
+            ),
+          ],
+          hasMore: false,
+        );
+        await tester.pump();
+
+        expect(find.byType(AppErrorView), findsNothing);
+        expect(find.text('待处理的同步冲突笔记'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await databaseService.disposeStream();
+      },
+    );
+  });
 }
 
 class _TestApp extends StatelessWidget {
   const _TestApp({
     required this.databaseService,
     required this.settingsService,
+    this.searchQuery = '',
   });
 
   final DatabaseService databaseService;
   final SettingsService settingsService;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -338,15 +727,22 @@ class _TestApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NoteSearchController()),
       ],
       child: MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          extensions: [
+            AppShapeTokens.fromForm(ThemeStyleForm.material, Brightness.light),
+            AppSemanticColors.light,
+          ],
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('zh'),
-        home: Material(
-          child: NoteListView(
+        home: Scaffold(
+          body: NoteListView(
             tags: const <NoteTag>[],
             selectedTagIds: const [],
             onTagSelectionChanged: (_) {},
-            searchQuery: '',
+            searchQuery: searchQuery,
             sortType: 'time',
             sortAscending: false,
             onSortChanged: (_, __) {},
@@ -370,12 +766,22 @@ class _StreamingFakeDatabaseService extends DatabaseService {
   final StreamController<List<Quote>> _controller =
       StreamController<List<Quote>>.broadcast();
   bool _hasMoreQuotes = true;
+  int refreshQuotesCallCount = 0;
+  int watchCallCount = 0;
+  String? lastSearchQuery;
+  Object? loadMoreError;
+  VoidCallback? onLoadMoreSuccess;
 
   @override
   bool get isInitialized => true;
 
   @override
   bool get hasMoreQuotes => _hasMoreQuotes;
+
+  @override
+  void refreshQuotes() {
+    refreshQuotesCallCount++;
+  }
 
   @override
   Stream<List<Quote>> watchQuotes({
@@ -388,6 +794,8 @@ class _StreamingFakeDatabaseService extends DatabaseService {
     List<String>? selectedDayPeriods,
     bool includeDeleted = false,
   }) {
+    watchCallCount++;
+    lastSearchQuery = searchQuery;
     return _controller.stream;
   }
 
@@ -401,7 +809,13 @@ class _StreamingFakeDatabaseService extends DatabaseService {
     bool? includeDeleted,
     int? refillCount,
     bool suppressNotify = false,
-  }) async {}
+  }) async {
+    final error = loadMoreError;
+    if (error != null) {
+      throw error;
+    }
+    onLoadMoreSuccess?.call();
+  }
 
   @override
   Future<List<NoteTag>> getTags() async => const [];
@@ -412,7 +826,159 @@ class _StreamingFakeDatabaseService extends DatabaseService {
     _controller.add(List<Quote>.from(quotes));
   }
 
+  void emitError(Object error, [StackTrace? stackTrace]) {
+    _controller.addError(error, stackTrace ?? StackTrace.current);
+  }
+
   Future<void> disposeStream() => _controller.close();
+}
+
+/// 复用真实 [_DatabasePaginationMixin] 分页与延迟刷新状态机的轻量测试服务。
+class _LifecycleAwareRealPaginationDbService extends DatabaseService {
+  _LifecycleAwareRealPaginationDbService({
+    required List<Quote> initialQuotes,
+    required this.readLifecycle,
+  })  : quotes = List<Quote>.from(initialQuotes),
+        super.forTesting();
+
+  List<Quote> quotes;
+  final AppLifecycleState Function() readLifecycle;
+
+  @override
+  bool get isInitialized => true;
+
+  @override
+  Future<List<NoteTag>> getTags() async => const [];
+
+  @override
+  Future<List<Quote>> getUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 10,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
+    bool includeDeleted = false,
+  }) async {
+    if (readLifecycle() != AppLifecycleState.resumed) {
+      Error.throwWithStackTrace(
+        TimeoutException('数据库查询在后台态已暂停'),
+        StackTrace.current,
+      );
+    }
+    if (offset >= quotes.length) return const [];
+    final end = (offset + limit).clamp(0, quotes.length);
+    return List<Quote>.from(quotes.sublist(offset, end));
+  }
+}
+
+class _WidgetRecordingLogService implements UnifiedLogService {
+  final List<Map<String, dynamic>> records = [];
+
+  @override
+  void verbose(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.verbose,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void debug(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.debug,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void info(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.info,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void warning(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.warning,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void error(
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    log(
+      UnifiedLogLevel.error,
+      message,
+      source: source,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  @override
+  void log(
+    UnifiedLogLevel level,
+    String message, {
+    String? source,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    records.add({
+      'level': level,
+      'message': message,
+      'source': source,
+      'error': error,
+      'stackTrace': stackTrace,
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {

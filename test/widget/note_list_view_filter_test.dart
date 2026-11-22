@@ -234,7 +234,7 @@ void main() {
     });
 
     testWidgets(
-      'scrollToQuoteById waits for real first batch after placeholder empty list',
+      'scrollToQuoteById waits for real first batch while initial query is pending',
       (tester) async {
         final databaseService = _DelayedFakeDatabaseService();
         final settingsService = _FakeSettingsService();
@@ -249,8 +249,6 @@ void main() {
           ),
         );
 
-        await tester.pump();
-        databaseService.emitPlaceholder();
         await tester.pump();
 
         final scrollFuture = noteListKey.currentState!.scrollToQuoteById(
@@ -279,7 +277,7 @@ void main() {
     );
 
     testWidgets(
-      'does not show an empty note list while initial placeholder data is unresolved',
+      'does not show an empty note list while initial query is unresolved, and shows empty hint immediately when real empty list arrives',
       (tester) async {
         final databaseService = _DelayedFakeDatabaseService();
         final settingsService = _FakeSettingsService();
@@ -293,15 +291,21 @@ void main() {
         );
 
         await tester.pump();
-        databaseService.emitPlaceholder();
-        await tester.pump();
 
         expect(find.text('还没有笔记，开始记录吧！'), findsNothing);
+        expect(find.byType(AppLoadingView), findsOneWidget);
 
         await tester.pump(const Duration(seconds: 9));
 
         expect(find.text('还没有笔记，开始记录吧！'), findsNothing);
         expect(find.byType(AppLoadingView), findsOneWidget);
+
+        databaseService.emitQuotes(const []);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('还没有笔记，开始记录吧！'), findsOneWidget);
+        expect(find.byType(AppLoadingView), findsNothing);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
@@ -325,8 +329,6 @@ void main() {
           ),
         );
 
-        await tester.pump();
-        databaseService.emitPlaceholder();
         await tester.pump();
 
         final firstAttempt = noteListKey.currentState!.scrollToQuoteById(
@@ -1444,11 +1446,6 @@ class _DelayedFakeDatabaseService extends _FakeDatabaseService {
       ),
     );
     return _controller.stream;
-  }
-
-  void emitPlaceholder() {
-    _hasMoreQuotes = true;
-    _controller.add(const []);
   }
 
   void emitQuotes(List<Quote> quotes) {

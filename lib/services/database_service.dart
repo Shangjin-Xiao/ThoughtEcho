@@ -54,11 +54,108 @@ part 'database/database_migration_mixin.dart';
 
 enum QuoteUpdateResult { updated, skippedDeleted, notFound }
 
+class _InFlightQuoteQuery {
+  _InFlightQuoteQuery({required this.signature});
+
+  final String signature;
+  final Completer<List<Quote>> completer = Completer<List<Quote>>();
+  final List<bool Function()> _waiterCancelChecks = <bool Function()>[];
+
+  void addWaiter(bool Function()? isCancelled) {
+    _waiterCancelChecks.add(isCancelled ?? () => false);
+  }
+
+  bool get areAllWaitersCancelled =>
+      _waiterCancelChecks.isNotEmpty &&
+      _waiterCancelChecks.every((check) => check());
+}
+
+class _PaginationQueryZoneContext {
+  const _PaginationQueryZoneContext({
+    required this.isCancelled,
+    this.enforceForegroundLifecycle = true,
+  });
+
+  final bool Function() isCancelled;
+  final bool enforceForegroundLifecycle;
+}
+
+class _QueryCancelledException implements Exception {
+  const _QueryCancelledException(this.reason);
+
+  final String reason;
+
+  @override
+  String toString() => 'QueryCancelledException($reason)';
+}
+
+class _PaginationCoordinatorState {
+  final Map<String, _InFlightQuoteQuery> inFlightQuoteQueries =
+      <String, _InFlightQuoteQuery>{};
+  int dataMutationEpoch = 0;
+  StreamController<List<Quote>>? deliveredQuotesController;
+  StreamController<List<Quote>>? deferredRefreshController;
+  AppLifecycleState? Function()? debugLifecycleStateProvider;
+  void Function(String stage)? debugQueryStageObserver;
+
+  bool hasDeliveredForController(StreamController<List<Quote>>? controller) =>
+      controller != null &&
+      !controller.isClosed &&
+      identical(deliveredQuotesController, controller);
+
+  void markDelivered(StreamController<List<Quote>>? controller) {
+    if (controller != null && !controller.isClosed) {
+      deliveredQuotesController = controller;
+    }
+    if (identical(deferredRefreshController, controller)) {
+      deferredRefreshController = null;
+    }
+  }
+
+  void markDeferredRefresh(StreamController<List<Quote>>? controller) {
+    if (controller != null && !controller.isClosed) {
+      deferredRefreshController = controller;
+    }
+  }
+
+  bool consumeDeferredRefresh(StreamController<List<Quote>>? controller) {
+    if (controller != null &&
+        !controller.isClosed &&
+        identical(deferredRefreshController, controller)) {
+      deferredRefreshController = null;
+      return true;
+    }
+    deferredRefreshController = null;
+    return false;
+  }
+
+  void resetForNewWatchController() {
+    deliveredQuotesController = null;
+    deferredRefreshController = null;
+  }
+
+  void reset() {
+    inFlightQuoteQueries.clear();
+    deliveredQuotesController = null;
+    deferredRefreshController = null;
+    dataMutationEpoch++;
+  }
+}
+
+final Expando<_PaginationCoordinatorState> _paginationCoordinatorExpando =
+    Expando<_PaginationCoordinatorState>('paginationCoordinator');
+
+const Object _paginationThrowingQueryZoneKey = Object();
+
 abstract class _DatabaseServiceBase extends ChangeNotifier {
-  _DatabaseServiceBase._internal();
+  _DatabaseServiceBase._internal() {
+    _paginationCoordinatorExpando[this] = _PaginationCoordinatorState();
+  }
 
   @visibleForTesting
-  _DatabaseServiceBase.forTesting();
+  _DatabaseServiceBase.forTesting() {
+    _paginationCoordinatorExpando[this] = _PaginationCoordinatorState();
+  }
 
   final DatabaseSchemaManager _schemaLifecycle = DatabaseSchemaManager();
   final DatabaseBackupService _backupService = DatabaseBackupService();
@@ -517,11 +614,27 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     seconds: 12,
   );
 
+  _PaginationCoordinatorState get _coordinatorState =>
+      _paginationCoordinatorExpando[this] ??= _PaginationCoordinatorState();
+
+  bool _isAppLifecycleActive() {
+    final overrideState = _coordinatorState.debugLifecycleStateProvider?.call();
+    final state = overrideState ?? SchedulerBinding.instance.lifecycleState;
+    return state == null || state == AppLifecycleState.resumed;
+  }
+
+  void _bumpDataMutationEpoch() {
+    _coordinatorState.dataMutationEpoch++;
+  }
+
   @protected
   void clearAllCacheForParts() => _clearAllCache();
 
   @protected
-  void refreshQuotesStreamForParts() => _refreshQuotesStream();
+  void refreshQuotesStreamForParts() {
+    _bumpDataMutationEpoch();
+    _refreshQuotesStream();
+  }
 
   @protected
   void scheduleCacheCleanupForParts() => _scheduleCacheCleanup();
@@ -1064,6 +1177,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   /// 外部调用的统一刷新入口（同步/恢复后使用）
   void refreshAllData() {
+    _bumpDataMutationEpoch();
     _clearAllCache();
     notifyListeners();
     _refreshQuotesStream();
@@ -1077,6 +1191,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     if (_isDisposed) return;
 
     _isDisposed = true;
+    _coordinatorState.reset();
 
     // 关闭所有StreamController
     if (!_tagsController.isClosed) {
@@ -1133,6 +1248,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _startupBackgroundMaintenanceTimer?.cancel();
     _startupBackgroundMaintenanceTimer = null;
     _clearAllCache();
+    _coordinatorState.reset();
     _watchOffset = 0;
     _watchHasMore = true;
     _watchIncludeDeleted = false;
@@ -1319,6 +1435,57 @@ class DatabaseService extends _DatabaseServiceBase
 
   static Future<void> closeDatabase({bool forMigration = false}) async {
     await _DatabaseServiceBase.closeDatabase(forMigration: forMigration);
+  }
+
+  /// 返回当前平台下数据库查询的单次最优超时预算。
+  static Duration optimalQueryTimeout() {
+    if (kIsWeb) {
+      return const Duration(seconds: 8);
+    } else if (Platform.isAndroid) {
+      return const Duration(seconds: 10);
+    } else if (Platform.isIOS) {
+      return const Duration(seconds: 6);
+    } else {
+      return const Duration(seconds: 8);
+    }
+  }
+
+  /// 判断指定数据库服务实例是否仍有在途的分页/列表查询。
+  /// 使用 Expando 读取协调器状态，对测试中的 `implements DatabaseService` 替身安全返回 false。
+  static bool isPaginationQueryInFlight(DatabaseService service) {
+    final coordinator = _paginationCoordinatorExpando[service];
+    if (coordinator == null) {
+      return false;
+    }
+    return service._isLoading || coordinator.inFlightQuoteQueries.isNotEmpty;
+  }
+
+  /// 消费挂起于当前活跃监听流上的后台延迟刷新标记。
+  /// 若恢复前筛选条件已切换（控制器已更替或关闭），旧标记会自动失效并返回 false。
+  static bool consumeDeferredPaginationRefresh(DatabaseService service) {
+    final coordinator = _paginationCoordinatorExpando[service];
+    if (coordinator == null) {
+      return false;
+    }
+    return coordinator.consumeDeferredRefresh(service._quotesController);
+  }
+
+  @visibleForTesting
+  static void setDebugLifecycleStateProvider(
+    DatabaseService service,
+    AppLifecycleState? Function()? provider,
+  ) {
+    (_paginationCoordinatorExpando[service] ??= _PaginationCoordinatorState())
+        .debugLifecycleStateProvider = provider;
+  }
+
+  @visibleForTesting
+  static void setDebugQueryStageObserver(
+    DatabaseService service,
+    void Function(String stage)? observer,
+  ) {
+    (_paginationCoordinatorExpando[service] ??= _PaginationCoordinatorState())
+        .debugQueryStageObserver = observer;
   }
 
   DatabaseService._internal() : super._internal();
