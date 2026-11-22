@@ -837,11 +837,12 @@ extension _NoteListScrollExtension on NoteListViewState {
       return;
     }
     unawaited(
-      _loadMore().catchError((Object e) {
-        // _loadMore 已记录错误日志；预取失败静默放弃本轮，下轮定时器再试。
+      _loadMore(showErrorFeedback: false).then((succeeded) {
+        if (succeeded && mounted) {
+          _scheduleIdlePrefetch();
+        }
       }),
     );
-    _scheduleIdlePrefetch();
   }
 
   /// 修复：检测并修复滚动范围异常
@@ -912,12 +913,24 @@ extension _NoteListScrollExtension on NoteListViewState {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      logError('强制加载更多数据失败: $e', error: e, source: 'NoteListView');
+    } catch (e, stackTrace) {
+      logErrorOnce(
+        '强制加载更多数据失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'NoteListView',
+      );
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         _updateState(() {
           _isLoading = false;
         });
+        _showErrorSnackBar(
+          _resolvePaginationSnackBarErrorMessage(l10n, e),
+          onRetry: () {
+            unawaited(_loadMore());
+          },
+        );
       }
     }
   }
@@ -1123,7 +1136,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
   }
 
-  Future<void> _loadMore() async {
+  Future<bool> _loadMore({bool showErrorFeedback = true}) async {
     _loadMoreAttemptCount++;
     // 防止重复加载
     if (!_hasMore || _isLoading) {
@@ -1132,7 +1145,7 @@ extension _NoteListScrollExtension on NoteListViewState {
         '跳过加载更多：_hasMore=$_hasMore, _isLoading=$_isLoading',
         source: 'NoteListView',
       );
-      return;
+      return true;
     }
 
     // 修复：在加载前先同步一次状态，确保 _hasMore 是最新的
@@ -1144,7 +1157,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       _updateState(() {
         _hasMore = false;
       });
-      return;
+      return true;
     }
 
     // 仅作为并发保护；非首屏加载时 _isLoading 不改变可见 UI，避免多一次列表重建。
@@ -1169,17 +1182,32 @@ extension _NoteListScrollExtension on NoteListViewState {
       // 成功路径由 watchQuotes 的流回调统一更新 _quotes/_hasMore/_isLoading，
       // 避免在流事件送达前把 _isLoading 提前置回 false，导致滚动惯性期间
       // 再次触发 loadMore，一次追加两页数据。
-    } catch (e) {
+      return true;
+    } catch (e, stackTrace) {
       _cancelLoadMorePerfCapture('加载失败: $e');
       _resetLoadMoreGate();
-      // 修复：出错时也要重置加载状态
+      _idlePrefetchTimer?.cancel();
+      logErrorOnce(
+        '加载更多数据失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'NoteListView',
+      );
       if (mounted) {
         _updateState(() {
           _isLoading = false;
         });
+        if (showErrorFeedback) {
+          final l10n = AppLocalizations.of(context);
+          _showErrorSnackBar(
+            _resolvePaginationSnackBarErrorMessage(l10n, e),
+            onRetry: () {
+              unawaited(_loadMore());
+            },
+          );
+        }
       }
-      logError('加载更多数据失败: $e', error: e, source: 'NoteListView');
-      rethrow;
+      return false;
     }
   }
 }

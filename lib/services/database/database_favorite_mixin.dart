@@ -34,6 +34,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
             _quotesController!.add(List.from(_currentQuotes));
           }
         }
+        _bumpDataMutationEpoch();
         notifyListeners();
         notifyLocalDataChangedForParts();
         AptabaseHelper.trackEvent(
@@ -119,14 +120,16 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add(List.from(_currentQuotes));
         }
+        _bumpDataMutationEpoch();
         notifyListeners();
         notifyLocalDataChangedForParts();
         AptabaseHelper.trackEvent(
             'feature_used', {'action': 'toggle_favorite'});
-      } catch (e) {
-        logError(
+      } catch (e, stackTrace) {
+        logErrorOnce(
           '增加心形点击次数时出错: quoteId=$quoteId, error=$e',
           error: e,
+          stackTrace: stackTrace,
           source: 'IncrementFavorite',
         );
         rethrow;
@@ -161,6 +164,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
       if (_quotesController != null && !_quotesController!.isClosed) {
         _quotesController!.add(List.from(_currentQuotes));
       }
+      _bumpDataMutationEpoch();
       notifyListeners();
       notifyLocalDataChangedForParts();
       AptabaseHelper.trackEvent('feature_used', {'action': 'toggle_favorite'});
@@ -227,14 +231,16 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add(List.from(_currentQuotes));
         }
+        _bumpDataMutationEpoch();
         notifyListeners();
         notifyLocalDataChangedForParts();
         AptabaseHelper.trackEvent(
             'feature_used', {'action': 'toggle_favorite'});
-      } catch (e) {
-        logError(
+      } catch (e, stackTrace) {
+        logErrorOnce(
           '清除收藏时出错: quoteId=$quoteId, error=$e',
           error: e,
+          stackTrace: stackTrace,
           source: 'ResetFavorite',
         );
         rethrow;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +13,8 @@ import '../utils/lww_utils.dart';
 import '../utils/app_logger.dart';
 import '../utils/aptabase_helper.dart';
 import '../theme/app_semantic_colors.dart';
+import '../widgets/app_error_view.dart';
+import '../widgets/app_loading_view.dart';
 import '../widgets/app_snackbar.dart';
 import '../theme/theme_style.dart';
 
@@ -905,22 +909,85 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 }
 
 /// 冲突笔记专属查看过滤列表 (以系统特定分类 ID 过滤)
-class QuoteListViewByConflict extends StatelessWidget {
+class QuoteListViewByConflict extends StatefulWidget {
   const QuoteListViewByConflict({super.key});
 
   @override
+  State<QuoteListViewByConflict> createState() =>
+      _QuoteListViewByConflictState();
+}
+
+class _QuoteListViewByConflictState extends State<QuoteListViewByConflict> {
+  late DatabaseService _dbService;
+  Stream<List<Quote>>? _conflictQuotesStream;
+  int _retryGeneration = 0;
+
+  DatabaseService _resolveDatabaseService(BuildContext context) {
+    try {
+      return Provider.of<DatabaseService>(context, listen: false);
+    } on ProviderNotFoundException {
+      return DatabaseService();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final resolved = _resolveDatabaseService(context);
+    if (_conflictQuotesStream == null || !identical(_dbService, resolved)) {
+      _dbService = resolved;
+      _conflictQuotesStream = _createConflictStream();
+    }
+  }
+
+  Stream<List<Quote>> _createConflictStream() {
+    return _dbService.watchQuotes(
+      categoryId: WebDAVSyncService.conflictCategoryId,
+      includeDeleted: false,
+    );
+  }
+
+  void _retryLoadConflictQuotes() {
+    final previousStream = _conflictQuotesStream;
+    final nextStream = _createConflictStream();
+    setState(() {
+      _retryGeneration++;
+      _conflictQuotesStream = nextStream;
+    });
+    if (identical(previousStream, nextStream)) {
+      _dbService.refreshQuotes();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final dbService = DatabaseService();
+    final dbService = _dbService;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return StreamBuilder<List<Quote>>(
-      stream: dbService.watchQuotes(
-        categoryId: WebDAVSyncService.conflictCategoryId,
-        includeDeleted: false,
-      ),
+      key: ValueKey<int>(_retryGeneration),
+      stream: _conflictQuotesStream,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          logErrorOnce(
+            '加载同步冲突笔记失败: ${snapshot.error}',
+            error: snapshot.error,
+            stackTrace: snapshot.stackTrace,
+            source: 'QuoteListViewByConflict',
+          );
+          final isTimeout = snapshot.error is TimeoutException ||
+              snapshot.error.toString().contains('TimeoutException');
+          return AppErrorView(
+            text: isTimeout
+                ? l10n.noteListLoadTimeoutHint
+                : l10n.noteListLoadFailedHint,
+            onRetry: _retryLoadConflictQuotes,
+          );
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const AppLoadingView();
         }
 
         final quotes = snapshot.data ?? [];
