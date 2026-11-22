@@ -4,6 +4,7 @@ import '../models/quote_model.dart';
 import '../models/chat_message.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/ai_task.dart';
+import '../models/multi_ai_settings.dart';
 import '../models/weather_data.dart' show WeatherCodeMapper;
 import '../services/agent_memory_service.dart';
 import '../services/settings_service.dart' show SettingsService;
@@ -139,12 +140,16 @@ class AIService extends ChangeNotifier {
         throw Exception('AI模型名称不能为空');
       }
 
-      // 4. 验证API密钥（统一检查）
-      final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
-        resolvedProvider.id,
-      );
-      if (!hasApiKey) {
-        throw Exception('请先为 ${resolvedProvider.name} 配置有效的API密钥');
+      // 4. 验证API密钥（本地 Ollama / LM Studio 等免密预设允许空密钥）
+      final requiresApiKey =
+          MultiAISettings.providerRequiresApiKey(resolvedProvider);
+      if (requiresApiKey && resolvedProvider.apiKey.trim().isEmpty) {
+        final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
+          resolvedProvider.id,
+        );
+        if (!hasApiKey) {
+          throw Exception('请先为 ${resolvedProvider.name} 配置有效的API密钥');
+        }
       }
 
       logDebug('验证设置成功 - Provider: ${resolvedProvider.name}');
@@ -218,9 +223,18 @@ class AIService extends ChangeNotifier {
       final resolvedProvider = multiSettings.resolveProviderForTask(task);
 
       if (resolvedProvider != null) {
-        // 检查provider是否启用
-        if (!resolvedProvider.isEnabled) {
+        // 检查provider是否启用且基础端点与模型非空
+        if (!resolvedProvider.isEnabled ||
+            resolvedProvider.apiUrl.trim().isEmpty ||
+            resolvedProvider.model.trim().isEmpty) {
           return false;
+        }
+
+        if (!MultiAISettings.providerRequiresApiKey(resolvedProvider)) {
+          return true;
+        }
+        if (resolvedProvider.apiKey.trim().isNotEmpty) {
+          return true;
         }
 
         // 从安全存储验证API密钥
@@ -1331,15 +1345,19 @@ class AIService extends ChangeNotifier {
 
   /// 生成SVG卡片内容
   /// 专门用于AI卡片生成服务的SVG生成方法
-  Future<String> generateSVG(String prompt) async {
+  Future<String> generateSVG(
+    String prompt, {
+    AITask task = AITask.cardGeneration,
+  }) async {
     // 使用异步验证确保API Key有效性
-    if (!await hasValidApiKeyAsync()) {
+    if (!await hasValidApiKeyAsync(task: task)) {
       throw Exception('请先在设置中配置 API Key');
     }
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         return await _chatCompletionViaOpenAI(
+          task: task,
           systemPrompt:
               'You are an expert SVG designer. Generate clean, valid SVG code based on the user\'s requirements. Only return the SVG code without any explanations or markdown formatting.',
           userMessage: prompt,
@@ -1638,7 +1656,7 @@ class AIService extends ChangeNotifier {
   /// 避免 405 错误（openai_dart 正确构造 URL）。
   Future<String> generateSessionTitle(
     String firstUserMessage, {
-    AITask task = AITask.agent,
+    AITask task = AITask.sessionTitle,
   }) async {
     try {
       if (firstUserMessage.isEmpty) return 'Chat';

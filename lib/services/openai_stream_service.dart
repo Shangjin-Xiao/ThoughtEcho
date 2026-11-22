@@ -225,9 +225,14 @@ class OpenAIStreamService extends ChangeNotifier {
       throw const FormatException('非安全URL: 公网请求必须使用 HTTPS');
     }
 
-    // 构建请求头（排除 Content-Type，由 http 包自动处理）
+    // 构建请求头（排除 Content-Type，由 http 包自动处理；空密钥时不附带空 Authorization 头）
+    final hasApiKey = provider.apiKey.trim().isNotEmpty;
     final headers = Map<String, String>.from(provider.buildHeaders())
-      ..removeWhere((key, _) => key.toLowerCase() == 'content-type');
+      ..removeWhere(
+        (key, _) =>
+            key.toLowerCase() == 'content-type' ||
+            (!hasApiKey && key.toLowerCase() == 'authorization'),
+      );
 
     // OpenRouter 需要额外的头
     if (provider.isOpenRouter) {
@@ -237,9 +242,7 @@ class OpenAIStreamService extends ChangeNotifier {
 
     return openai.OpenAIConfig(
       baseUrl: normalizedUrl,
-      authProvider: provider.apiKey.isNotEmpty
-          ? openai.ApiKeyProvider(provider.apiKey)
-          : null,
+      authProvider: hasApiKey ? openai.ApiKeyProvider(provider.apiKey) : null,
       defaultHeaders: headers,
       timeout: timeout,
       retryPolicy: const openai.RetryPolicy(maxRetries: 2),

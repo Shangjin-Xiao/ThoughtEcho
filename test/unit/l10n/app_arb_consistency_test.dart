@@ -78,5 +78,65 @@ void main() {
       expect(zhHant['languageChinese'], '簡體中文');
       expect(zhHant['languageTraditionalChinese'], '繁體中文');
     });
+
+    test(
+        'AI settings, dual-mode routing, and model attribution keys exist across locales without technical jargon',
+        () {
+      final zh = jsonDecode(File('lib/l10n/app_zh.arb').readAsStringSync())
+          as Map<String, dynamic>;
+      final en = jsonDecode(File('lib/l10n/app_en.arb').readAsStringSync())
+          as Map<String, dynamic>;
+      final zhHant =
+          jsonDecode(File('lib/l10n/app_zh_Hant.arb').readAsStringSync())
+              as Map<String, dynamic>;
+
+      const requiredKeys = [
+        'aiServiceEntrySectionTitle',
+        'aiServiceEntrySummaryDefault',
+        'aiServiceEntrySummaryTieredLight',
+        'aiServiceEntrySummaryCustom',
+        'aiFeaturesSectionTitle',
+        'aiServiceConfigTitle',
+        'aiModelAllocationSectionTitle',
+        'aiRoutingModeTiered',
+        'aiRoutingModeCustom',
+        'aiRoutingTieredDesc',
+        'aiTierPrimaryTitle',
+        'aiTierPrimaryTasksHint',
+        'aiTierLightTitle',
+        'aiTierLightTasksHint',
+        'lightModelBadge',
+        'aiTaskCardGenerationTitle',
+        'aiTaskSessionTitleTitle',
+        'aiTaskBadgeCardGeneration',
+        'aiTaskBadgeSessionTitle',
+        'aiTaskCardGenerationHint',
+        'aiTaskSessionTitleHint',
+        'toolProgressModelUsed',
+      ];
+
+      for (final key in requiredKeys) {
+        expect(zh[key], isA<String>(), reason: 'Missing $key in app_zh.arb');
+        expect((zh[key] as String).trim(), isNotEmpty);
+        expect(en[key], isA<String>(), reason: 'Missing $key in app_en.arb');
+        expect((en[key] as String).trim(), isNotEmpty);
+        expect(zhHant[key], isA<String>(),
+            reason: 'Missing $key in app_zh_Hant.arb');
+        expect((zhHant[key] as String).trim(), isNotEmpty);
+
+        // UX writing gate: user-facing copy must not leak internal jargon
+        for (final value in [zh[key] as String, zhHant[key] as String]) {
+          expect(value, isNot(contains('Dreaming')));
+          expect(value, isNot(contains('SVG')));
+          expect(value, isNot(contains('Token')));
+          expect(value, isNot(contains('无状态回退')));
+          expect(value, isNot(contains('路由槽位')));
+        }
+      }
+
+      expect(zh['agentMemoryManageTitle'], '查看与管理记忆');
+      expect(zh['dreamingEnableTitle'], '自动整理记忆');
+      expect(zh['dreamingEnableTitle'], isNot(contains('Dreaming')));
+    });
   });
 }

@@ -267,6 +267,9 @@ extension _ExploreThoughterEntry on _ExplorePageState {
           session: session,
           initialQuestion: initialQuestion,
           openingMessage: session == null ? openingMessage : null,
+          openingSource: session == null && openingMessage != null
+              ? ThoughterOpeningSource.periodicInsight
+              : null,
           // 用户在这一页翻到哪个周期，助手页的洞察就总结哪个周期。不传的话
           // 助手页一律按「本周 + 今天」跑，chip 上写着「总结上周」、进去
           // 读到的却是本周。

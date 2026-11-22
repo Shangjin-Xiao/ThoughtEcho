@@ -434,18 +434,23 @@ void main() {
     });
 
     test(
-        'generateSessionTitle routes via AITask.agent instead of leaking first message to default provider',
+        'generateSessionTitle routes via AITask.sessionTitle instead of leaking first message to default provider',
         () async {
       await harness.settingsService.saveMultiAISettings(
         const MultiAISettings(
-          providers: [defaultProvider, agentProProvider],
+          providers: [defaultProvider, dailyFastProvider, agentProProvider],
           currentProviderId: 'p_default',
-          taskProviderIds: {AITask.agent: 'p_agent'},
+          routingMode: AIRoutingMode.custom,
+          taskProviderIds: {
+            AITask.agent: 'p_agent',
+            AITask.sessionTitle: 'p_daily',
+          },
         ),
       );
 
       final keyManager = _InMemoryApiKeyManager({
         'p_default': 'sk-default-key-1234',
+        'p_daily': 'sk-title-fast-key-1234',
         'p_agent': 'sk-agent-private-key-1234',
       });
       final streamService = _CapturingOpenAIStreamService()
@@ -458,16 +463,16 @@ void main() {
       );
 
       final title = await aiService.generateSessionTitle(
-        '这是一条只应发往 Thoughter 专属渠道的首条消息内容',
+        '这是一条用于测试会话标题专属模型路由的首条消息',
       );
 
       expect(title, '私密灵感对话标题');
       expect(streamService.calls, hasLength(1));
       expect(streamService.calls.single.method, 'chatCompletion');
-      expect(streamService.calls.single.provider.id, 'p_agent');
+      expect(streamService.calls.single.provider.id, 'p_daily');
       expect(
         streamService.calls.single.provider.apiKey,
-        'sk-agent-private-key-1234',
+        'sk-title-fast-key-1234',
       );
       expect(streamService.calls.single.enableThinking, isFalse);
       expect(
@@ -475,23 +480,218 @@ void main() {
         'p_default',
       );
 
-      // Even when p_default has no API key, generateSessionTitle still succeeds via AITask.agent.
-      final agentOnlyKeyManager = _InMemoryApiKeyManager({
-        'p_agent': 'sk-agent-private-key-1234',
+      // Even when p_default has no API key, generateSessionTitle still succeeds via AITask.sessionTitle.
+      final titleOnlyKeyManager = _InMemoryApiKeyManager({
+        'p_daily': 'sk-title-fast-key-1234',
       });
-      final agentOnlyAiService = AIService(
+      final titleOnlyAiService = AIService(
         settingsService: harness.settingsService,
         memoryService: harness.memory,
-        apiKeyManager: agentOnlyKeyManager,
+        apiKeyManager: titleOnlyKeyManager,
         openAIStreamService: streamService,
       );
       streamService.calls.clear();
-      final secondTitle = await agentOnlyAiService.generateSessionTitle(
-        '默认服务无密钥时依然通过专属服务生成标题',
+      final secondTitle = await titleOnlyAiService.generateSessionTitle(
+        '默认服务无密钥时依然通过标题专属服务生成标题',
       );
       expect(secondTitle, '私密灵感对话标题');
       expect(streamService.calls, hasLength(1));
+      expect(streamService.calls.single.provider.id, 'p_daily');
+    });
+
+    test(
+        'tiered mode routes cardGeneration/periodicInsight to primary and dailyInsight/sessionTitle/dreaming to lightProvider',
+        () async {
+      await harness.settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [agentProProvider, dailyFastProvider],
+          currentProviderId: 'p_agent',
+          routingMode: AIRoutingMode.tiered,
+          lightProviderId: 'p_daily',
+        ),
+      );
+
+      final keyManager = _InMemoryApiKeyManager({
+        'p_agent': 'sk-primary-key-1234',
+        'p_daily': 'sk-light-key-1234',
+      });
+      final streamService = _CapturingOpenAIStreamService()
+        ..completionReply =
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600"><text>卡片测试</text></svg>';
+      final aiService = AIService(
+        settingsService: harness.settingsService,
+        memoryService: harness.memory,
+        apiKeyManager: keyManager,
+        openAIStreamService: streamService,
+      );
+
+      // Primary tier: cardGeneration + periodicInsight
+      final svg = await aiService.generateSVG('测试生成分享卡片');
+      expect(svg, contains('<svg'));
+      await aiService
+          .streamReportInsight(
+            periodLabel: '本周',
+            activeDays: 2,
+            noteCount: 2,
+            totalWordCount: 80,
+            fullNotesContent: '随笔内容',
+          )
+          .join();
+
+      // Light tier: dailyInsight + sessionTitle + dreaming
+      await aiService.streamGenerateDailyPrompt(l10n).join();
+      streamService.completionReply = '轻量标题';
+      await aiService.generateSessionTitle('测试轻量模型标题生成');
+      streamService.completionReply = '{"taste":"凝练"}';
+      await aiService.completeForBackgroundSummary(
+        systemPrompt: 'sys',
+        userMessage: 'usr',
+      );
+
+      expect(streamService.calls.map((c) => c.provider.id).toList(), [
+        'p_agent', // generateSVG (cardGeneration -> primary)
+        'p_agent', // streamReportInsight (periodicInsight -> primary)
+        'p_daily', // streamGenerateDailyPrompt (dailyInsight -> light)
+        'p_daily', // generateSessionTitle (sessionTitle -> light)
+        'p_daily', // completeForBackgroundSummary (dreaming -> light)
+      ]);
+    });
+
+    test(
+        'keyless local Ollama preset runs light-tier tasks without stored API key',
+        () async {
+      const localOllama = AIProviderSettings(
+        id: 'p_ollama_local',
+        name: 'Ollama (Local)',
+        apiUrl: 'http://localhost:11434/v1',
+        model: 'qwen3:8b',
+        providerSlug: 'ollama',
+      );
+      await harness.settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [agentProProvider, localOllama],
+          currentProviderId: 'p_agent',
+          routingMode: AIRoutingMode.tiered,
+          lightProviderId: 'p_ollama_local',
+        ),
+      );
+
+      final keyManager = _InMemoryApiKeyManager({
+        'p_agent': 'sk-primary-key-1234',
+      });
+      final streamService = _CapturingOpenAIStreamService()
+        ..completionReply = '本地免密模型标题';
+      final aiService = AIService(
+        settingsService: harness.settingsService,
+        memoryService: harness.memory,
+        apiKeyManager: keyManager,
+        openAIStreamService: streamService,
+      );
+
+      expect(
+        await aiService.hasValidApiKeyAsync(task: AITask.sessionTitle),
+        isTrue,
+      );
+      await aiService.streamGenerateDailyPrompt(l10n).join();
+      final title = await aiService.generateSessionTitle('测试本地免密轻量模型标题');
+      expect(title, '本地免密模型标题');
+      streamService.completionReply = '{"taste":"简洁"}';
+      await aiService.completeForBackgroundSummary(
+        systemPrompt: 'sys',
+        userMessage: 'usr',
+      );
+
+      expect(streamService.calls.map((c) => c.provider.id).toList(), [
+        'p_ollama_local',
+        'p_ollama_local',
+        'p_ollama_local',
+      ]);
+    });
+
+    test(
+        'legacy JSON without routingMode migrates agent binding to sessionTitle, while clearing sessionTitle in custom mode routes to default provider',
+        () async {
+      final keyManager = _InMemoryApiKeyManager({
+        'p_default': 'sk-default-key-1234',
+        'p_agent': 'sk-agent-private-key-1234',
+        'p_daily': 'sk-title-fast-key-1234',
+      });
+      final streamService = _CapturingOpenAIStreamService()
+        ..completionReply = '旧版升级专属标题';
+      final aiService = AIService(
+        settingsService: harness.settingsService,
+        memoryService: harness.memory,
+        apiKeyManager: keyManager,
+        openAIStreamService: streamService,
+      );
+
+      // 1. 旧版无 routingMode 的 JSON 配置反序列化升级后，generateSessionTitle 继续走原 agent 专属服务
+      final migratedLegacy = MultiAISettings.fromJson({
+        'providers': [
+          defaultProvider.toJson(),
+          agentProProvider.toJson(),
+          dailyFastProvider.toJson(),
+        ],
+        'currentProviderId': 'p_default',
+        'taskProviderIds': {
+          'agent': 'p_agent',
+        },
+      });
+      await harness.settingsService.saveMultiAISettings(migratedLegacy);
+
+      final legacyTitle = await aiService.generateSessionTitle('旧版升级后的首条消息');
+      expect(legacyTitle, '旧版升级专属标题');
       expect(streamService.calls.single.provider.id, 'p_agent');
+
+      // 2a. 在 custom 模式下（默认 A、agent 绑定 B、sessionTitle 曾绑定 C），切回「跟随默认服务」后发往默认服务 A
+      streamService.calls.clear();
+      await harness.settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [defaultProvider, agentProProvider, dailyFastProvider],
+          currentProviderId: 'p_default',
+          routingMode: AIRoutingMode.custom,
+          taskProviderIds: {
+            AITask.agent: 'p_agent',
+            AITask.sessionTitle: 'p_daily',
+          },
+        ),
+      );
+      streamService.completionReply = '专属快速标题';
+      expect(
+        await aiService.generateSessionTitle('切回默认前的首条消息'),
+        '专属快速标题',
+      );
+      expect(streamService.calls.single.provider.id, 'p_daily');
+
+      streamService.calls.clear();
+      final clearedFromC = harness.settingsService.multiAISettings
+          .withTaskProvider(AITask.sessionTitle, null);
+      // 经过 JSON 持久化往返后依然发往默认服务 A
+      await harness.settingsService.saveMultiAISettings(
+        MultiAISettings.fromJson(clearedFromC.toJson()),
+      );
+      streamService.completionReply = '跟随默认服务标题A';
+      expect(
+        await aiService.generateSessionTitle('从服务C切回跟随默认后的首条消息'),
+        '跟随默认服务标题A',
+      );
+      expect(streamService.calls.single.provider.id, 'p_default');
+
+      // 2b. 若 sessionTitle 原本绑定为 B（如旧版升级后），用户切回「跟随默认服务」后同样发往默认服务 A
+      streamService.calls.clear();
+      final clearedFromB = migratedLegacy.withTaskProvider(
+        AITask.sessionTitle,
+        null,
+      );
+      await harness.settingsService.saveMultiAISettings(
+        MultiAISettings.fromJson(clearedFromB.toJson()),
+      );
+      streamService.completionReply = '从服务B切回默认标题A';
+      expect(
+        await aiService.generateSessionTitle('从服务B切回跟随默认后的首条消息'),
+        '从服务B切回默认标题A',
+      );
+      expect(streamService.calls.single.provider.id, 'p_default');
     });
   });
 }

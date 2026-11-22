@@ -436,6 +436,68 @@ void main() {
       // 运行结束不该把用户正在看的抽屉关掉。
       expect(find.text('test_description'), findsOneWidget);
     });
+
+    testWidgets(
+        'renders model attribution footer only inside the detail sheet when modelLabel is provided',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ToolProgressPanel(
+            title: '测试标题',
+            items: [
+              ToolProgressItem(
+                toolName: 'explore_notes',
+                status: ToolProgressStatus.completed,
+              ),
+            ],
+            inProgress: false,
+            modelLabel: 'OpenAI · gpt-4o',
+          ),
+        ),
+      );
+
+      // 对话流折叠行不展示模型名，保持阅读安静
+      expect(
+        find.byKey(const ValueKey('tool_progress_model_footer')),
+        findsNothing,
+      );
+      expect(find.text('由 OpenAI · gpt-4o 生成'), findsNothing);
+
+      await tester.tap(collapsedRow());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('tool_progress_model_footer')),
+        findsOneWidget,
+      );
+      expect(find.text('由 OpenAI · gpt-4o 生成'), findsOneWidget);
+
+      Navigator.of(tester.element(find.text('由 OpenAI · gpt-4o 生成'))).pop();
+      await tester.pumpAndSettle();
+
+      // 未提供 modelLabel 时抽屉底部不显示落款
+      await tester.pumpWidget(
+        buildTestApp(
+          const ToolProgressPanel(
+            title: '测试标题',
+            items: [
+              ToolProgressItem(
+                toolName: 'explore_notes',
+                status: ToolProgressStatus.completed,
+              ),
+            ],
+            inProgress: false,
+          ),
+        ),
+      );
+
+      await tester.tap(collapsedRow());
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('tool_progress_model_footer')),
+        findsNothing,
+      );
+    });
   });
 
   group('ToolProgressItem', () {

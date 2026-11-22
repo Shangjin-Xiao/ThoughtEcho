@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/note_proposal_artifact.dart';
 import 'package:thoughtecho/services/agent_service.dart';
@@ -13,16 +14,23 @@ import 'package:thoughtecho/services/settings_service.dart';
 import '../../test_harness.dart';
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
-  _FakeSettingsService(this._provider, {this.appLocaleCode});
+  _FakeSettingsService(
+    this._provider, {
+    this.appLocaleCode,
+    MultiAISettings? multiSettings,
+  }) : _multiSettings = multiSettings;
 
   final AIProviderSettings? _provider;
   final String? appLocaleCode;
+  final MultiAISettings? _multiSettings;
 
   @override
   String? get localeCode => appLocaleCode;
 
   @override
-  MultiAISettings get multiAISettings => MultiAISettings(
+  MultiAISettings get multiAISettings =>
+      _multiSettings ??
+      MultiAISettings(
         providers: [if (_provider case final provider?) provider],
         currentProviderId: _provider?.id,
       );
@@ -1748,6 +1756,108 @@ void main() {
       expect(service.isRunning, isFalse);
       expect(service.currentStatusKey, isEmpty);
       service.dispose();
+    });
+
+    test(
+        'allows keyless local Ollama preset as primary or AITask.agent provider without stored API key',
+        () async {
+      const localOllama = AIProviderSettings(
+        id: 'p_ollama_local',
+        name: 'Ollama (Local)',
+        apiUrl: 'http://localhost:11434/v1',
+        model: 'qwen3:8b',
+        providerSlug: 'ollama',
+      );
+      const cloudDefault = AIProviderSettings(
+        id: 'p_openai_default',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4.1',
+        providerSlug: 'openai',
+      );
+
+      final capturedProviders = <AIProviderSettings>[];
+
+      // 1. Keyless local Ollama as primary provider
+      final primaryService = AgentService(
+        settingsService: _FakeSettingsService(localOllama),
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async => '',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          capturedProviders.add(provider);
+          return _textCompletion('来自本地主力 Ollama 的回复');
+        },
+      );
+
+      final primaryReply = await primaryService.runAgent(
+        userMessage: '帮我梳理一下今天的想法',
+      );
+      expect(primaryReply.content, '来自本地主力 Ollama 的回复');
+      expect(capturedProviders.single.id, 'p_ollama_local');
+      expect(capturedProviders.single.apiKey, isEmpty);
+      primaryService.dispose();
+
+      // 2. Keyless local Ollama bound to AITask.agent in custom mode
+      capturedProviders.clear();
+      final customAgentService = AgentService(
+        settingsService: _FakeSettingsService(
+          cloudDefault,
+          multiSettings: const MultiAISettings(
+            providers: [cloudDefault, localOllama],
+            currentProviderId: 'p_openai_default',
+            routingMode: AIRoutingMode.custom,
+            taskProviderIds: {AITask.agent: 'p_ollama_local'},
+          ),
+        ),
+        tools: const <AgentTool>[],
+        apiKeyResolver: (providerId) async =>
+            providerId == 'p_openai_default' ? 'sk-openai-key-1234' : '',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          capturedProviders.add(provider);
+          return _textCompletion('来自专属本地 Ollama 的回复');
+        },
+      );
+
+      final customReply = await customAgentService.runAgent(
+        userMessage: '这段随笔还能怎么展开？',
+      );
+      expect(customReply.content, '来自专属本地 Ollama 的回复');
+      expect(capturedProviders.single.id, 'p_ollama_local');
+      expect(capturedProviders.single.apiKey, isEmpty);
+      customAgentService.dispose();
+
+      // 3. Client configuration omits Authorization header when key is empty
+      //    and preserves authentication when key is non-empty.
+      final keylessConfig = AgentService.buildOpenAIConfig(
+        capturedProviders.single,
+      );
+      expect(keylessConfig.authProvider, isNull);
+      expect(
+        keylessConfig.defaultHeaders.keys
+            .any((k) => k.toLowerCase() == 'authorization'),
+        isFalse,
+      );
+
+      final authedConfig = AgentService.buildOpenAIConfig(
+        cloudDefault.copyWith(apiKey: 'sk-openai-key-1234'),
+      );
+      expect(authedConfig.authProvider, isNotNull);
+      expect(
+        authedConfig.defaultHeaders['Authorization'],
+        'Bearer sk-openai-key-1234',
+      );
     });
   });
 }

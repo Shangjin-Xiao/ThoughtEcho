@@ -1481,7 +1481,7 @@
   "noPresetsSaved": "還沒有儲存的預設。配置完API資訊後點選\"儲存設定\"來建立第一個預設。",
   "rename": "重新命名",
   "testConnectionButton": "測試連線",
-  "reportInsightsUseAi": "週期報告洞察使用AI",
+  "reportInsightsUseAi": "週期報告洞察使用 AI",
   "reportInsightsUseAiDesc": "開啟後進入報告頁自動生成“詩意洞察”，關閉則使用本地生成",
   "aiSettingsTitle": "AI 設定",
   "quickPresets": "快速預設",
@@ -1514,8 +1514,8 @@
   "aiCardGenerationTip": "提示：建議選用綜合理解與生成能力較強的模型（如 GPT-4o、Claude 3.5、DeepSeek-V3 等），卡片排版效果更佳。",
   "aiEnhancedGeneration": "AI 增強生成",
   "aiEnhancedGenerationDesc": "關閉後改用本地模板，不再呼叫模型",
-  "todayThoughtsUseAi": "今日思考使用AI",
-  "todayThoughtsUseAiDesc": "開啟後將使用AI生成今日思考提示，關閉則使用本地生成",
+  "todayThoughtsUseAi": "今日思考使用 AI",
+  "todayThoughtsUseAiDesc": "開啟後使用 AI 生成今日思考提示，關閉則使用本地生成",
   "apiUrlRequired": "API URL不能為空",
   "invalidUrl": "請填寫 HTTPS 地址；本機或區域網路的 HTTP 地址也可以",
   "fieldRequired": "此欄位不能為空",
@@ -4723,13 +4723,13 @@
   "agentMemoryNoticeDisable": "先不要記",
   "agentMemorySwitchFailed": "記憶開關沒能儲存，請重試",
   "agentMemoryCountsUnavailable": "讀取記憶數量失敗，仍可嘗試清空",
-  "dreamingEnableTitle": "後臺整理畫像",
+  "dreamingEnableTitle": "自動整理記憶",
   "dreamingEnableDesc": "讓 Thoughter 在合適的時候整理你的長期畫像",
-  "dreamingOnIdleTitle": "應用空閒時整理",
-  "dreamingOnIdleDesc": "開啟應用後空閒下來時，自動整理一次畫像",
-  "dreamingAfterInsightTitle": "週期洞察後繼續整理",
+  "dreamingOnIdleTitle": "應用閒置時整理",
+  "dreamingOnIdleDesc": "開啟應用後閒置下來時，自動整理一次畫像",
+  "dreamingAfterInsightTitle": "生成洞察後整理",
   "dreamingAfterInsightDesc": "週期洞察完成後，再從近期筆記中更新畫像",
-  "dreamingSwitchFailed": "Dreaming 設定沒能儲存，請重試",
+  "dreamingSwitchFailed": "自動整理設定沒能儲存，請重試",
   "releaseNotesTitle": "更新內容",
   "releaseNotesUpgradeLede": "以下是你上次使用之後新增的功能。",
   "releaseNotesCurrentLede": "以下是本版本新增的功能。",
@@ -4806,7 +4806,7 @@
       }
     }
   },
-  "agentMemoryManageTitle": "管理記憶",
+  "agentMemoryManageTitle": "檢視與管理記憶",
   "agentMemoryManageSubtitle": "檢視、糾偏與管理 Thoughter 記下的特質與依據",
   "agentMemoryPageTitle": "Thoughter 記憶",
   "agentMemoryResonanceSummary": "共 {profileCount} 條畫像 · {sliceCount} 條近況 · {factCount} 條細節",
@@ -4967,20 +4967,88 @@
   "mmkvDiagnosticConsistencySummaryTitle": "儲存一致性比對總覽",
   "mmkvDiagnosticKeyCountBinarySp": "儲存源鍵總數 (Binary / SP)",
   "mmkvDiagnosticSpCoverage": "SharedPreferences 遷移覆蓋率",
-  "aiTaskRoutingSectionTitle": "按任務分配模型",
-  "aiTaskRoutingSectionDesc": "未單獨指定的任務將自動跟隨上方「正在使用」的預設服務，互不搶佔。",
+  "aiServiceEntrySectionTitle": "AI 服務與模型",
+  "aiServiceEntrySummaryDefault": "所有功能使用目前主力模型",
+  "aiServiceEntrySummaryTieredLight": "輕量功能使用 {provider}",
+  "@aiServiceEntrySummaryTieredLight": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "aiServiceEntrySummaryCustom": "已為 {count} 項功能單獨指定模型",
+  "@aiServiceEntrySummaryCustom": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiFeaturesSectionTitle": "AI 功能開關",
+  "aiServiceConfigTitle": "AI 服務與模型",
+  "aiModelAllocationSectionTitle": "模型分配",
+  "aiRoutingModeTiered": "基礎分配",
+  "aiRoutingModeCustom": "按功能自選",
+  "aiRoutingTieredDesc": "主力模型負責深度思考與排版；可另外指定一個更快、更省額度的輕量模型處理日常短句與整理。",
+  "aiTierPrimaryTitle": "主力模型",
+  "aiTierPrimaryTasksHint": "負責 Thoughter 對話、週期回顧洞察、AI 卡片生成",
+  "aiTierPrimarySelectSheetTitle": "選擇主力模型",
+  "aiTierLightTitle": "輕量模型",
+  "aiTierLightTasksHint": "負責每日心跡提示、對話標題生成、長期記憶整理",
+  "aiTierFollowingPrimary": "跟隨主力（{provider}）",
+  "@aiTierFollowingPrimary": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTierFollowingPrimaryUnset": "跟隨主力（未配置）",
+  "aiTierLightSelectSheetTitle": "選擇輕量模型",
+  "aiTierFollowPrimaryOption": "跟隨主力服務",
+  "aiTierFollowPrimarySubtitle": "目前主力：{provider}（{model}）",
+  "@aiTierFollowPrimarySubtitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTierFollowPrimaryUnsetSubtitle": "目前未設定主力服務",
+  "aiTierLightSwitchedToPrimary": "輕量模型已恢復跟隨主力服務",
+  "aiTierLightSwitchedToProvider": "輕量模型已指定為 {provider}",
+  "@aiTierLightSwitchedToProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "lightModelBadge": "輕量",
+  "aiTaskRoutingSectionTitle": "按功能自選模型",
+  "aiTaskRoutingSectionDesc": "未單獨指定的功能會自動跟隨上方「使用中」的主力服務，互不影響。",
   "aiTaskDailyInsightTitle": "每日心跡提示",
-  "aiTaskPeriodicInsightTitle": "週期洞察（週/月/年報）",
-  "aiTaskDreamingTitle": "記憶整理（Dreaming）",
-  "aiTaskAgentTitle": "Thoughter 對話與工具",
+  "aiTaskPeriodicInsightTitle": "週期回顧洞察",
+  "aiTaskDreamingTitle": "長期記憶整理",
+  "aiTaskAgentTitle": "Thoughter 對話",
+  "aiTaskCardGenerationTitle": "AI 卡片生成",
+  "aiTaskSessionTitleTitle": "對話標題生成",
   "aiTaskBadgeDailyInsight": "每日提示",
   "aiTaskBadgePeriodicInsight": "週期洞察",
   "aiTaskBadgeDreaming": "記憶整理",
   "aiTaskBadgeAgent": "Thoughter",
-  "aiTaskDailyInsightHint": "高頻短句產生，適合回應快、低成本的輕量模型",
-  "aiTaskPeriodicInsightHint": "彙總近期筆記脈絡，適合表達流暢的均衡模型",
-  "aiTaskDreamingHint": "週期洞察落庫或閒置時獨立在背景提煉記憶，適合高推理能力模型",
-  "aiTaskAgentHint": "多輪對話與工具呼叫，建議支援工具呼叫與長上下文的模型",
+  "aiTaskBadgeCardGeneration": "卡片生成",
+  "aiTaskBadgeSessionTitle": "對話標題",
+  "aiTaskDailyInsightHint": "高頻短句提示，適合回應快、省額度的輕量模型",
+  "aiTaskPeriodicInsightHint": "梳理近期筆記脈絡，適合文筆自然的主力模型",
+  "aiTaskDreamingHint": "閒置或生成洞察後在背景提煉長期偏好，適合輕量或均衡模型",
+  "aiTaskAgentHint": "多輪對話與筆記查找修改，建議選用支援工具與長上下文的主力模型",
+  "aiTaskCardGenerationHint": "智慧設計分享卡片版式，適合綜合理解與排版能力較強的模型",
+  "aiTaskSessionTitleHint": "為新對話概括簡短標題，適合回應迅速的輕量模型",
   "aiTaskFollowingDefault": "跟隨預設（{provider}）",
   "@aiTaskFollowingDefault": {
     "placeholders": {
@@ -5041,10 +5109,13 @@
       }
     }
   },
-  "thoughterModelSwitcherTooltip": "切換 Thoughter 對話模型",
-  "thoughterModelUnconfigured": "未配置模型",
-  "thoughterModelSheetTitle": "切換 Thoughter 模型",
-  "thoughterModelSheetSubtitle": "僅調整 Thoughter 對話與工具使用的模型，不影響預設服務與其他任務",
-  "thoughterManageAiServices": "管理 AI 服務配置",
+  "toolProgressModelUsed": "由 {model} 產生",
+  "@toolProgressModelUsed": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
   "aiUnsupportedAnthropicMessagesProtocol": "原生 Anthropic Messages (/v1/messages) 協定暫未接入執行鏈路，請改用 OpenAI 相容基位址 (/v1 或 /chat/completions) 或 OpenRouter"
 }

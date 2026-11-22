@@ -1,28 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../constants/ai_provider_presets.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/ai_task.dart';
 import '../models/multi_ai_settings.dart';
 import '../services/agent_memory_service.dart';
-import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
-import '../theme/app_semantic_colors.dart';
-import '../utils/ai_connection_tester.dart';
 import '../utils/app_logger.dart';
 import '../utils/aptabase_helper.dart';
 import '../widgets/app_snackbar.dart';
 import 'agent_memory/agent_memory_page.dart';
 import 'ai_provider_edit_page.dart';
+import 'ai_service_config_page.dart';
 import 'user_guide_page.dart';
-import '../theme/theme_style.dart';
 
-/// AI 设置主页：一个「我的 AI 服务」列表 + 功能开关。
+/// AI 设置主页：聚焦于「AI 服务与模型摘要入口」「AI 功能开关」与「Thoughter 记忆」。
 ///
-/// 这里只负责挑选、排序和管理已保存的配置；新建和编辑都交给
-/// [AIProviderEditPage]，所以「保存」到底是新增还是覆盖永远是明确的。
+/// 服务列表增删改与模型分配细节统一收纳进 [AIServiceConfigPage]，让日常偏好开关
+/// 保持清晰呼吸感。
 class AISettingsPage extends StatefulWidget {
   const AISettingsPage({super.key});
 
@@ -31,324 +27,64 @@ class AISettingsPage extends StatefulWidget {
 }
 
 class _AISettingsPageState extends State<AISettingsPage> {
-  late MultiAISettings _multiSettings;
-
-  /// providerId -> 安全存储里是否已有可用的 Key。
-  final Map<String, bool> _hasApiKey = {};
-  final Set<String> _testing = {};
-
   @override
   void initState() {
     super.initState();
     AptabaseHelper.trackPageView('ai_settings');
-    _reload();
   }
 
-  void _reload() {
-    _multiSettings = context.read<SettingsService>().multiAISettings;
-    _refreshApiKeyStatus();
-  }
-
-  Future<void> _refreshApiKeyStatus() async {
-    final apiKeyManager = APIKeyManager();
-    final results = <String, bool>{};
-    for (final provider in _multiSettings.providers) {
-      results[provider.id] =
-          await apiKeyManager.hasValidProviderApiKey(provider.id);
-    }
-    if (!mounted) return;
-    setState(() {
-      _hasApiKey
-        ..clear()
-        ..addAll(results);
-    });
-  }
-
-  AIProviderSettings? get _currentProvider => _multiSettings.currentProvider;
-
-  // --- 动作 ---
-
-  Future<void> _openEditor({
-    AIProviderSettings? provider,
-    AIProviderPreset? initialPreset,
-  }) async {
+  Future<void> _openFirstProviderEditor() async {
     final l10n = AppLocalizations.of(context);
     final saved = await Navigator.of(context).push<AIProviderSettings>(
       MaterialPageRoute(
-        builder: (_) => AIProviderEditPage(
-          provider: provider,
-          initialPreset: initialPreset,
-        ),
+        builder: (_) => const AIProviderEditPage(),
       ),
     );
-
-    if (!mounted) return;
-    setState(_reload);
-    if (saved != null) {
-      AppSnackBar.success(context, l10n.aiServiceSaved(saved.name));
-    }
+    if (!mounted || saved == null) return;
+    AppSnackBar.success(context, l10n.aiServiceSaved(saved.name));
   }
 
-  Future<void> _setCurrent(AIProviderSettings provider) async {
-    final l10n = AppLocalizations.of(context);
-    final settingsService = context.read<SettingsService>();
-    await settingsService.saveMultiAISettings(
-      _multiSettings.copyWith(currentProviderId: provider.id),
-    );
-    if (!mounted) return;
-    setState(_reload);
-    AppSnackBar.info(context, l10n.switchedTo(provider.name));
-  }
-
-  Future<void> _rename(AIProviderSettings provider) async {
-    final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController(text: provider.name);
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.renamePreset),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: l10n.presetName,
-            border: OutlineInputBorder(
-              borderRadius:
-                  BorderRadius.circular(AppShapeTokens.of(context).inputRadius),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: Text(l10n.confirm),
-          ),
-        ],
+  Future<void> _openServiceConfigPage() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => const AIServiceConfigPage(),
       ),
     );
-    controller.dispose();
-
-    if (newName == null || newName.isEmpty || newName == provider.name) return;
-    if (!mounted) return;
-
-    await context.read<SettingsService>().saveMultiAISettings(
-          _multiSettings.copyWith(
-            providers: _multiSettings.providers
-                .map(
-                  (p) => p.id == provider.id ? p.copyWith(name: newName) : p,
-                )
-                .toList(growable: false),
-          ),
-        );
-    if (!mounted) return;
-    setState(_reload);
-    AppSnackBar.success(context, l10n.presetRenamed(newName));
-  }
-
-  Future<void> _delete(AIProviderSettings provider) async {
-    final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.deletePreset),
-        content: Text(l10n.deletePresetConfirm(provider.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    await APIKeyManager().removeProviderApiKey(provider.id);
-
-    if (!mounted) return;
-    await context.read<SettingsService>().saveMultiAISettings(
-          _multiSettings.withoutProvider(provider.id),
-        );
-
-    if (!mounted) return;
-    setState(_reload);
-    AppSnackBar.info(context, l10n.presetDeleted(provider.name));
-  }
-
-  Future<void> _selectProviderForTask(AITask task) async {
-    final l10n = AppLocalizations.of(context);
-    final currentExplicitId = _multiSettings.explicitProviderIdForTask(task);
-    final selected = await showModalBottomSheet<_TaskProviderSelection>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => _TaskProviderPickerSheet(
-        taskTitle: _taskTitle(l10n, task),
-        multiSettings: _multiSettings,
-        hasApiKey: _hasApiKey,
-        selectedExplicitId: currentExplicitId,
-      ),
-    );
-    if (selected == null || !mounted) return;
-
-    final nextProviderId = selected.useDefault ? null : selected.providerId;
-    final persistedProviderId = _multiSettings.taskProviderIds[task];
-    if (nextProviderId == persistedProviderId) return;
-
-    try {
-      await context.read<SettingsService>().saveMultiAISettings(
-            _multiSettings.withTaskProvider(task, nextProviderId),
-          );
-    } catch (e, stack) {
-      logError(
-        '保存任务模型配置失败: $e',
-        error: e,
-        stackTrace: stack,
-        source: 'AISettingsPage._selectProviderForTask',
-      );
-      if (!mounted) return;
-      AppSnackBar.error(context, l10n.saveSettingsError(e.toString()));
-      return;
-    }
-
-    AptabaseHelper.trackEvent('feature_used', {
-      'action': 'ai_task_provider_select',
-      'task': task.name,
-      'uses_default': nextProviderId == null,
-    });
-
-    if (!mounted) return;
-    setState(_reload);
-    final taskLabel = _taskTitle(l10n, task);
-    if (nextProviderId == null) {
-      AppSnackBar.info(context, l10n.aiTaskSwitchedToDefault(taskLabel));
-    } else {
-      final assigned = _multiSettings.explicitProviderForTask(task);
-      if (assigned != null) {
-        AppSnackBar.info(
-          context,
-          l10n.aiTaskSwitchedToProvider(taskLabel, assigned.name),
-        );
-      }
-    }
-  }
-
-  Future<void> _test(AIProviderSettings provider) async {
-    final l10n = AppLocalizations.of(context);
-    setState(() => _testing.add(provider.id));
-    try {
-      // 只为列表中的已保存配置取密钥，并保留它的已保存地址；tester 不替草稿取密钥。
-      final resolved = provider.apiKey.isNotEmpty
-          ? provider
-          : provider.copyWith(
-              apiKey: await APIKeyManager().getProviderApiKey(provider.id),
-            );
-      await AIConnectionTester.test(
-        provider: resolved,
-        systemPrompt: l10n.connectionTestSystemMessage,
-        userMessage: l10n.connectionTestUserMessage,
-      );
-      AptabaseHelper.trackEvent('feature_used', {
-        'action': 'ai_test_connection',
-        'provider_preset':
-            AIProviderPresets.matchApiUrl(provider.apiUrl)?.id ?? 'custom',
-      });
-
-      if (!mounted) return;
-      AppSnackBar.success(context, l10n.connectionTestSuccess);
-    } catch (e) {
-      if (!mounted) return;
-      AppSnackBar.error(
-        context,
-        l10n.connectionTestFailed(AIConnectionTester.formatError(e, l10n)),
-      );
-    } finally {
-      if (mounted) setState(() => _testing.remove(provider.id));
-    }
   }
 
   void _openUserGuide() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const UserGuidePage()),
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => const UserGuidePage(),
+      ),
     );
   }
-
-  // --- UI ---
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final hasProviders = _multiSettings.providers.isNotEmpty;
+    final settingsService = context.watch<SettingsService>();
+    final multiSettings = settingsService.multiAISettings;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.aiSettingsTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          if (!hasProviders) ...[
-            _buildEmptyState(context),
-          ] else ...[
-            _buildSectionTitle(context, l10n.aiServicesSectionTitle),
-            const SizedBox(height: 8),
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  for (var i = 0; i < _multiSettings.providers.length; i++) ...[
-                    if (i > 0) const Divider(height: 1),
-                    _buildProviderTile(context, _multiSettings.providers[i]),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: FilledButton.tonalIcon(
-                onPressed: () => _openEditor(),
-                icon: const Icon(Icons.add),
-                label: Text(l10n.addAiService),
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildSectionTitle(context, l10n.aiTaskRoutingSectionTitle),
-            const SizedBox(height: 4),
-            Text(
-              l10n.aiTaskRoutingSectionDesc,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            _buildTaskRoutingCard(context),
-          ],
-          const SizedBox(height: 24),
-          _buildSectionTitle(context, l10n.aiEnhancedGeneration),
+          _buildSectionTitle(context, l10n.aiServiceEntrySectionTitle),
           const SizedBox(height: 8),
-          _buildFeatureToggles(context),
+          if (multiSettings.providers.isEmpty)
+            _buildEmptyServiceEntryCard(context, l10n)
+          else
+            _buildActiveServiceEntryCard(context, l10n, multiSettings),
+          const SizedBox(height: 24),
+          _buildSectionTitle(context, l10n.aiFeaturesSectionTitle),
+          const SizedBox(height: 8),
+          _buildFeatureToggles(context, l10n, settingsService),
           const SizedBox(height: 24),
           _buildSectionTitle(context, l10n.agentMemorySectionTitle),
           const SizedBox(height: 8),
           const _AgentMemorySection(),
-          const SizedBox(height: 16),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton.icon(
-              onPressed: _openUserGuide,
-              icon: const Icon(Icons.menu_book_outlined, size: 18),
-              label: Text(l10n.aiConfigHelpLink),
-            ),
-          ),
         ],
       ),
     );
@@ -360,280 +96,152 @@ class _AISettingsPageState extends State<AISettingsPage> {
       title,
       style: theme.textTheme.titleMedium?.copyWith(
         color: theme.colorScheme.primary,
-        fontWeight: FontWeight.bold,
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+  Widget _buildEmptyServiceEntryCard(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
     final theme = Theme.of(context);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.auto_awesome_outlined,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    l10n.aiServiceEmptyTitle,
-                    style: theme.textTheme.titleMedium,
+      key: const ValueKey('ai_service_entry_card'),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _openFirstProviderEditor,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome_outlined,
+                    color: theme.colorScheme.primary,
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l10n.aiServiceEmptyTitle,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.aiServiceEmptyBody,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.aiServiceEmptyBody,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
               ),
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: FilledButton.icon(
-                onPressed: () => _openEditor(),
-                icon: const Icon(Icons.add),
-                label: Text(l10n.addAiService),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _openFirstProviderEditor,
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addAiService),
+                  ),
+                  TextButton.icon(
+                    onPressed: _openUserGuide,
+                    icon: const Icon(Icons.menu_book_outlined, size: 18),
+                    label: Text(l10n.aiConfigHelpLink),
+                  ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProviderTile(
+  Widget _buildActiveServiceEntryCard(
     BuildContext context,
-    AIProviderSettings provider,
+    AppLocalizations l10n,
+    MultiAISettings multiSettings,
   ) {
-    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final semantic = AppSemanticColors.of(context);
-    final isCurrent = provider.id == _currentProvider?.id;
-    final isTesting = _testing.contains(provider.id);
-    final preset = AIProviderPresets.bySlugOrId(provider.providerSlug) ??
-        AIProviderPresets.matchApiUrl(provider.apiUrl);
-    final needsKey = preset?.requiresApiKey ?? true;
-    final keyOk = (_hasApiKey[provider.id] ?? false) || !needsKey;
-    final assignedTasks = _multiSettings.tasksAssignedTo(provider.id);
+    final primary = multiSettings.currentProvider;
+    final headline = primary != null
+        ? l10n.aiTaskExplicitSummary(
+            primary.name,
+            primary.model.isEmpty ? l10n.noProvider : primary.model,
+          )
+        : l10n.noProvider;
+    final routingSummary = _buildRoutingSummary(l10n, multiSettings);
 
-    return ListTile(
-      leading: Icon(
-        isCurrent ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        color: isCurrent ? theme.colorScheme.primary : null,
-      ),
-      title: Row(
-        children: [
-          Flexible(
-            child: Text(provider.name, overflow: TextOverflow.ellipsis),
-          ),
-          if (isCurrent) ...[
-            const SizedBox(width: 8),
-            _Badge(
-              label: l10n.inUseBadge,
-              background: theme.colorScheme.primaryContainer,
-              foreground: theme.colorScheme.onPrimaryContainer,
-            ),
-          ],
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            provider.model.isEmpty ? l10n.noProvider : provider.model,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (assignedTasks.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                for (final task in assignedTasks)
-                  _Badge(
-                    key: ValueKey(
-                      'provider_task_badge_${provider.id}_${task.name}',
-                    ),
-                    label: _taskBadgeLabel(l10n, task),
-                    background: theme.colorScheme.secondaryContainer,
-                    foreground: theme.colorScheme.onSecondaryContainer,
-                  ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(
-                keyOk ? Icons.verified_user_outlined : Icons.error_outline,
-                size: 14,
-                color: keyOk ? semantic.success : theme.colorScheme.error,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                keyOk ? l10n.statusKeyConfigured : l10n.statusKeyMissing,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: keyOk ? semantic.success : theme.colorScheme.error,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      isThreeLine: true,
-      trailing: isTesting
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : MenuAnchor(
-              builder: (context, controller, child) {
-                return IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  tooltip: l10n.moreOptions,
-                  onPressed: () {
-                    if (controller.isOpen) {
-                      controller.close();
-                    } else {
-                      controller.open();
-                    }
-                  },
-                );
-              },
-              menuChildren: [
-                MenuItemButton(
-                  leadingIcon: const Icon(Icons.edit_outlined),
-                  onPressed: () => _openEditor(provider: provider),
-                  child: Text(l10n.edit),
-                ),
-                MenuItemButton(
-                  leadingIcon: const Icon(Icons.network_check),
-                  onPressed: () => _test(provider),
-                  child: Text(l10n.testConnectionButton),
-                ),
-                MenuItemButton(
-                  leadingIcon: const Icon(Icons.drive_file_rename_outline),
-                  onPressed: () => _rename(provider),
-                  child: Text(l10n.rename),
-                ),
-                MenuItemButton(
-                  leadingIcon: Icon(
-                    Icons.delete_outline,
-                    color: theme.colorScheme.error,
-                  ),
-                  onPressed: () => _delete(provider),
-                  child: Text(
-                    l10n.delete,
-                    style: TextStyle(color: theme.colorScheme.error),
-                  ),
-                ),
-              ],
-            ),
-      onTap: isCurrent
-          ? () => _openEditor(provider: provider)
-          : () => _setCurrent(provider),
-    );
-  }
-
-  Widget _buildTaskRoutingCard(BuildContext context) {
     return Card(
-      key: const ValueKey('ai_task_routing_card'),
+      key: const ValueKey('ai_service_entry_card'),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (var i = 0; i < AITask.values.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            _buildTaskRoutingTile(context, AITask.values[i]),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTaskRoutingTile(BuildContext context, AITask task) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final explicitProvider = _multiSettings.explicitProviderForTask(task);
-    final defaultProvider = _currentProvider;
-
-    final String statusText;
-    if (explicitProvider != null) {
-      final modelLabel = explicitProvider.model.isEmpty
-          ? l10n.noProvider
-          : explicitProvider.model;
-      statusText = l10n.aiTaskExplicitSummary(
-        explicitProvider.name,
-        modelLabel,
-      );
-    } else if (defaultProvider != null) {
-      statusText = l10n.aiTaskFollowingDefault(defaultProvider.name);
-    } else {
-      statusText = l10n.aiTaskFollowingDefaultUnset;
-    }
-
-    return ListTile(
-      key: ValueKey('ai_task_tile_${task.name}'),
-      leading: Icon(
-        _iconForTask(task),
-        color: explicitProvider != null
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurfaceVariant,
-      ),
-      title: Text(_taskTitle(l10n, task)),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 4),
-          Text(
-            statusText,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: explicitProvider != null
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _taskHint(l10n, task),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: Icon(
+          Icons.auto_awesome_outlined,
+          color: theme.colorScheme.primary,
+        ),
+        title: Text(
+          headline,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            routingSummary,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-        ],
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _openServiceConfigPage,
       ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => _selectProviderForTask(task),
     );
   }
 
-  Widget _buildFeatureToggles(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final settingsService = context.watch<SettingsService>();
+  String _buildRoutingSummary(
+    AppLocalizations l10n,
+    MultiAISettings multiSettings,
+  ) {
+    final primary = multiSettings.currentProvider;
+    switch (multiSettings.routingMode) {
+      case AIRoutingMode.tiered:
+        final light = multiSettings.lightProvider;
+        if (light != null && light.id != primary?.id) {
+          return l10n.aiServiceEntrySummaryTieredLight(light.name);
+        }
+        return l10n.aiServiceEntrySummaryDefault;
+      case AIRoutingMode.custom:
+        final customCount = AITask.customDisplayOrder
+            .where(
+                (task) => multiSettings.explicitProviderForTask(task) != null)
+            .length;
+        if (customCount > 0) {
+          return l10n.aiServiceEntrySummaryCustom(customCount);
+        }
+        return l10n.aiServiceEntrySummaryDefault;
+    }
+  }
 
+  /// 功能开关按日常感知与使用频率从高到低排列：
+  /// 1. 今日思考使用 AI → 2. 周期报告洞察使用 AI → 3. AI 卡片生成。
+  Widget _buildFeatureToggles(
+    BuildContext context,
+    AppLocalizations l10n,
+    SettingsService settingsService,
+  ) {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          SwitchListTile(
-            title: Text(l10n.aiCardGeneration),
-            subtitle: Text(l10n.aiEnhancedGenerationDesc),
-            value: settingsService.aiCardGenerationEnabled,
-            onChanged: settingsService.setAICardGenerationEnabled,
-            secondary: const Icon(Icons.image_outlined),
-          ),
-          const Divider(height: 1),
           SwitchListTile(
             title: Text(l10n.todayThoughtsUseAi),
             subtitle: Text(l10n.todayThoughtsUseAiDesc),
@@ -649,19 +257,24 @@ class _AISettingsPageState extends State<AISettingsPage> {
             onChanged: settingsService.setReportInsightsUseAI,
             secondary: const Icon(Icons.lightbulb_outline),
           ),
+          const Divider(height: 1),
+          SwitchListTile(
+            title: Text(l10n.aiCardGeneration),
+            subtitle: Text(l10n.aiEnhancedGenerationDesc),
+            value: settingsService.aiCardGenerationEnabled,
+            onChanged: settingsService.setAICardGenerationEnabled,
+            secondary: const Icon(Icons.image_outlined),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Thoughter 记忆的开关与清空入口。
+/// Thoughter 记忆的开关、称呼、查看入口、自动整理与清空入口。
 ///
-/// 开关和清空刻意是两件事：关开关只是暂时不再读写，随时能开回来；删数据不可逆，
-/// 必须显式确认。
-///
-/// 单独拆成 StatefulWidget 是为了把计数的 Future 存住——放在页面的 build 里，
-/// 任何一次重建都会重新发起查询，副标题会闪一下空状态。
+/// 排序遵循用户直觉：先改个人相关设置（总开关 → 称呼 → 查看记忆），再设后台自动整理，
+/// 最后放置低频不可逆的清空操作。
 class _AgentMemorySection extends StatefulWidget {
   const _AgentMemorySection();
 
@@ -704,11 +317,7 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
 
   /// 串行保存称呼：击键连续触发，写入期间只保留最新值——较早输入不得在
   /// 较新输入之后落盘把它盖回去；只有最后一次写入失败才提示一次。
-  ///
-  /// 循环不看 `mounted`：写入途中用户返回上一页时，排队中的最新称呼仍然要落盘，
-  /// 否则用户看到的最后一次输入会被之前那次写入盖掉。`mounted` 只用来挡 UI 反馈。
   Future<void> _saveNickname(String value) async {
-    // 先取出 service：await 之后再摸 context 可能页面已经销毁。
     final settingsService = context.read<SettingsService>();
     _pendingNickname = value;
     if (_nicknameSaving) {
@@ -761,47 +370,13 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             subtitle: Text(l10n.agentMemoryEnableDesc),
             value: settingsService.agentMemoryEnabled,
             onChanged: _setMemoryEnabled,
-            // 与首次进入的记忆提示弹窗共用同一个图标，见 agent_memory_notice.dart。
             secondary: const Icon(Icons.history_edu_outlined),
           ),
-          const Divider(height: 1),
-          SwitchListTile(
-            title: Text(l10n.dreamingEnableTitle),
-            subtitle: Text(l10n.dreamingEnableDesc),
-            value: settingsService.dreamingEnabled,
-            onChanged:
-                settingsService.agentMemoryEnabled ? _setDreamingEnabled : null,
-            secondary: const Icon(Icons.auto_awesome_outlined),
-          ),
-          SwitchListTile(
-            title: Text(l10n.dreamingOnIdleTitle),
-            subtitle: Text(l10n.dreamingOnIdleDesc),
-            value: settingsService.dreamingOnIdleEnabled,
-            onChanged: settingsService.agentMemoryEnabled &&
-                    settingsService.dreamingEnabled
-                ? _setDreamingOnIdleEnabled
-                : null,
-            secondary: const Icon(Icons.hourglass_empty_outlined),
-          ),
-          SwitchListTile(
-            title: Text(l10n.dreamingAfterInsightTitle),
-            subtitle: Text(l10n.dreamingAfterInsightDesc),
-            value: settingsService.dreamingAfterInsightEnabled,
-            onChanged: settingsService.agentMemoryEnabled &&
-                    settingsService.dreamingEnabled
-                ? _setDreamingAfterInsightEnabled
-                : null,
-            secondary: const Icon(Icons.insights_outlined),
-          ),
-          const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             child: TextField(
               controller: _nicknameController,
-              // 称呼走的是画像块，记忆关掉就整块不注入。让输入框跟着禁用，
-              // 否则用户填了称呼、对话里却一直不用，看上去像坏了。
               enabled: settingsService.agentMemoryEnabled,
-              // 与注入侧的上限对齐，避免超长称呼在画像块里被静默截断。
               maxLength: AgentMemoryService.nicknameMaxChars,
               decoration: InputDecoration(
                 icon: const Icon(Icons.badge_outlined),
@@ -840,19 +415,44 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             },
           ),
           const Divider(height: 1),
+          SwitchListTile(
+            title: Text(l10n.dreamingEnableTitle),
+            subtitle: Text(l10n.dreamingEnableDesc),
+            value: settingsService.dreamingEnabled,
+            onChanged:
+                settingsService.agentMemoryEnabled ? _setDreamingEnabled : null,
+            secondary: const Icon(Icons.auto_awesome_outlined),
+          ),
+          SwitchListTile(
+            title: Text(l10n.dreamingOnIdleTitle),
+            subtitle: Text(l10n.dreamingOnIdleDesc),
+            value: settingsService.dreamingOnIdleEnabled,
+            onChanged: settingsService.agentMemoryEnabled &&
+                    settingsService.dreamingEnabled
+                ? _setDreamingOnIdleEnabled
+                : null,
+            secondary: const Icon(Icons.hourglass_empty_outlined),
+          ),
+          SwitchListTile(
+            title: Text(l10n.dreamingAfterInsightTitle),
+            subtitle: Text(l10n.dreamingAfterInsightDesc),
+            value: settingsService.dreamingAfterInsightEnabled,
+            onChanged: settingsService.agentMemoryEnabled &&
+                    settingsService.dreamingEnabled
+                ? _setDreamingAfterInsightEnabled
+                : null,
+            secondary: const Icon(Icons.insights_outlined),
+          ),
+          const Divider(height: 1),
           FutureBuilder<({int profileCount, int factCount})>(
             future: _countsFuture,
             builder: (context, snapshot) {
-              // 读计数失败不能当成「没有记忆」：那会把清空入口禁用掉，
-              // 而库里可能正躺着一堆条目。失败时保持可点，让用户还能清。
               final failed = snapshot.hasError;
               final counts = snapshot.data;
               final total =
                   (counts?.profileCount ?? 0) + (counts?.factCount ?? 0);
               final enabled = failed || total > 0;
               final subtitle = failed
-                  // 这里失败的是"读数量"，不是"清空"——复用清空失败的文案会让
-                  // 用户以为自己刚删了什么。
                   ? l10n.agentMemoryCountsUnavailable
                   : (counts != null && total > 0
                       ? l10n.agentMemoryClearSummary(
@@ -977,221 +577,5 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
       if (!mounted) return;
       AppSnackBar.error(context, l10n.agentMemoryClearFailed);
     }
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({
-    super.key,
-    required this.label,
-    required this.background,
-    required this.foreground,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
-      ),
-      child: Text(
-        label,
-        style:
-            Theme.of(context).textTheme.labelSmall?.copyWith(color: foreground),
-      ),
-    );
-  }
-}
-
-String _taskTitle(AppLocalizations l10n, AITask task) {
-  return switch (task) {
-    AITask.dailyInsight => l10n.aiTaskDailyInsightTitle,
-    AITask.periodicInsight => l10n.aiTaskPeriodicInsightTitle,
-    AITask.dreaming => l10n.aiTaskDreamingTitle,
-    AITask.agent => l10n.aiTaskAgentTitle,
-  };
-}
-
-String _taskBadgeLabel(AppLocalizations l10n, AITask task) {
-  return switch (task) {
-    AITask.dailyInsight => l10n.aiTaskBadgeDailyInsight,
-    AITask.periodicInsight => l10n.aiTaskBadgePeriodicInsight,
-    AITask.dreaming => l10n.aiTaskBadgeDreaming,
-    AITask.agent => l10n.aiTaskBadgeAgent,
-  };
-}
-
-String _taskHint(AppLocalizations l10n, AITask task) {
-  return switch (task) {
-    AITask.dailyInsight => l10n.aiTaskDailyInsightHint,
-    AITask.periodicInsight => l10n.aiTaskPeriodicInsightHint,
-    AITask.dreaming => l10n.aiTaskDreamingHint,
-    AITask.agent => l10n.aiTaskAgentHint,
-  };
-}
-
-IconData _iconForTask(AITask task) {
-  return switch (task) {
-    AITask.dailyInsight => Icons.wb_sunny_outlined,
-    AITask.periodicInsight => Icons.insights_outlined,
-    AITask.dreaming => Icons.bedtime_outlined,
-    AITask.agent => Icons.chat_bubble_outline,
-  };
-}
-
-class _TaskProviderSelection {
-  const _TaskProviderSelection.followDefault()
-      : useDefault = true,
-        providerId = null;
-
-  const _TaskProviderSelection.explicit(this.providerId) : useDefault = false;
-
-  final bool useDefault;
-  final String? providerId;
-}
-
-class _TaskProviderPickerSheet extends StatelessWidget {
-  const _TaskProviderPickerSheet({
-    required this.taskTitle,
-    required this.multiSettings,
-    required this.hasApiKey,
-    required this.selectedExplicitId,
-  });
-
-  final String taskTitle;
-  final MultiAISettings multiSettings;
-  final Map<String, bool> hasApiKey;
-  final String? selectedExplicitId;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final semantic = AppSemanticColors.of(context);
-    final defaultProvider = multiSettings.currentProvider;
-    final defaultSubtitle = defaultProvider != null
-        ? l10n.aiTaskFollowDefaultSubtitle(
-            defaultProvider.name,
-            defaultProvider.model.isEmpty
-                ? l10n.noProvider
-                : defaultProvider.model,
-          )
-        : l10n.aiTaskFollowDefaultUnsetSubtitle;
-    final isFollowingDefault = selectedExplicitId == null;
-
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.76,
-        ),
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: 16),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Text(
-                l10n.aiTaskSelectSheetTitle(taskTitle),
-                style: theme.textTheme.titleLarge,
-              ),
-            ),
-            ListTile(
-              key: const ValueKey('ai_task_option_default'),
-              leading: Icon(
-                Icons.sync_alt,
-                color: isFollowingDefault ? theme.colorScheme.primary : null,
-              ),
-              title: Text(l10n.aiTaskFollowDefaultOption),
-              subtitle: Text(defaultSubtitle),
-              trailing: isFollowingDefault
-                  ? Icon(Icons.check, color: theme.colorScheme.primary)
-                  : null,
-              onTap: () => Navigator.pop(
-                context,
-                const _TaskProviderSelection.followDefault(),
-              ),
-            ),
-            const Divider(height: 1),
-            for (final provider in multiSettings.providers) ...[
-              Builder(
-                builder: (context) {
-                  final preset =
-                      AIProviderPresets.bySlugOrId(provider.providerSlug) ??
-                          AIProviderPresets.matchApiUrl(provider.apiUrl);
-                  final needsKey = preset?.requiresApiKey ?? true;
-                  final keyOk = (hasApiKey[provider.id] ?? false) || !needsKey;
-                  final isSelected = selectedExplicitId == provider.id;
-
-                  return ListTile(
-                    key: ValueKey('ai_task_option_${provider.id}'),
-                    leading: Icon(
-                      Icons.dns_outlined,
-                      color: isSelected ? theme.colorScheme.primary : null,
-                    ),
-                    title: Text(
-                      provider.name,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          provider.model.isEmpty
-                              ? l10n.noProvider
-                              : provider.model,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              keyOk
-                                  ? Icons.verified_user_outlined
-                                  : Icons.error_outline,
-                              size: 14,
-                              color: keyOk
-                                  ? semantic.success
-                                  : theme.colorScheme.error,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              keyOk
-                                  ? l10n.statusKeyConfigured
-                                  : l10n.statusKeyMissing,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: keyOk
-                                    ? semantic.success
-                                    : theme.colorScheme.error,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    trailing: isSelected
-                        ? Icon(Icons.check, color: theme.colorScheme.primary)
-                        : null,
-                    enabled: provider.isEnabled,
-                    onTap: provider.isEnabled
-                        ? () => Navigator.pop(
-                              context,
-                              _TaskProviderSelection.explicit(provider.id),
-                            )
-                        : null,
-                  );
-                },
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }

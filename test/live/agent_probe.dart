@@ -636,6 +636,8 @@ class AgentProbe {
     final turn = _currentTurn;
     if (turn == null) return;
     switch (event) {
+      case AgentModelSelectedEvent(:final modelLabel):
+        turn.events.add('model_selected($modelLabel)');
       case AgentThinkingEvent():
         turn.events.add('thinking');
       case AgentReasoningDeltaEvent(:final delta):
