@@ -585,6 +585,7 @@ class _AIServiceConfigPageState extends State<AIServiceConfigPage> {
         : _multiSettings.tasksAssignedTo(provider.id);
 
     return ListTile(
+      key: ValueKey('ai_provider_tile_${provider.id}'),
       leading: Icon(
         isCurrent ? Icons.radio_button_checked : Icons.radio_button_unchecked,
         color: isCurrent ? theme.colorScheme.primary : null,

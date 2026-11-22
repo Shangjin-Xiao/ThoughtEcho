@@ -12,6 +12,7 @@ import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/pages/ai_service_config_page.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
+import 'package:thoughtecho/pages/user_guide_page.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/services/openai_stream_service.dart';
@@ -1728,6 +1729,75 @@ void main() {
 
       expect(settingsService.multiAISettings.lightProviderId, isNull);
       expect(settingsService.multiAISettings.taskProviderIds, isEmpty);
+    });
+
+    testWidgets(
+        'AIServiceConfigPage switches primary service on provider tile tap and via primary model picker, and opens UserGuidePage',
+        (tester) async {
+      await APIKeyManager().saveProviderApiKey('p_main', 'sk-main-123456');
+      await APIKeyManager().saveProviderApiKey('p_second', 'sk-second-123456');
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_main',
+              name: '服务甲',
+              apiUrl: 'https://api.openai.com/v1',
+              model: 'gpt-4o',
+            ),
+            AIProviderSettings(
+              id: 'p_second',
+              name: '服务乙',
+              apiUrl: 'https://api.deepseek.com/v1',
+              model: 'deepseek-chat',
+            ),
+          ],
+          currentProviderId: 'p_main',
+          routingMode: AIRoutingMode.tiered,
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+      await _openServiceConfig(tester);
+      final l10n = _l10n(tester);
+
+      // 1. Tap non-current provider tile -> directly switches primary service
+      await tester.tap(find.byKey(const ValueKey('ai_provider_tile_p_second')));
+      await tester.pumpAndSettle();
+
+      expect(settingsService.multiAISettings.currentProviderId, 'p_second');
+      expect(find.text(l10n.switchedTo('服务乙')), findsOneWidget);
+
+      ScaffoldMessenger.of(
+        tester.element(find.byType(AIServiceConfigPage)),
+      ).clearSnackBars();
+      await tester.pumpAndSettle();
+
+      // 2. Tap primary model tile in Model Assignment -> switches back to p_main
+      final primaryTile = find.byKey(const ValueKey('ai_tier_primary_tile'));
+      await _scrollTo(tester, primaryTile);
+      await tester.tap(primaryTile);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('ai_primary_option_p_main')));
+      await tester.pumpAndSettle();
+
+      expect(settingsService.multiAISettings.currentProviderId, 'p_main');
+      expect(find.text(l10n.switchedTo('服务甲')), findsOneWidget);
+
+      ScaffoldMessenger.of(
+        tester.element(find.byType(AIServiceConfigPage)),
+      ).clearSnackBars();
+      await tester.pumpAndSettle();
+
+      // 3. Tap setup guide link -> navigates to UserGuidePage
+      final helpBtn = find.text(l10n.aiConfigHelpLink);
+      await _scrollTo(tester, helpBtn);
+      await tester.tap(helpBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(UserGuidePage), findsOneWidget);
     });
   });
 }

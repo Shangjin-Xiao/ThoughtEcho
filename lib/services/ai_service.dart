@@ -1661,19 +1661,8 @@ class AIService extends ChangeNotifier {
     try {
       if (firstUserMessage.isEmpty) return 'Chat';
 
-      // 在「按功能自选」模式下，若用户为 Thoughter 单独指定了专属服务但未单独指定标题模型，
-      // 标题生成继续沿用该专属服务，避免将首条消息前 100 字发送给全局默认服务。
-      final multiSettings = _settingsService.multiAISettings;
-      final effectiveTask = task == AITask.sessionTitle &&
-              multiSettings.routingMode == AIRoutingMode.custom &&
-              multiSettings.explicitProviderForTask(AITask.sessionTitle) ==
-                  null &&
-              multiSettings.explicitProviderForTask(AITask.agent) != null
-          ? AITask.agent
-          : task;
-
       // 优先尝试用 AI 生成标题
-      if (await hasValidApiKeyAsync(task: effectiveTask)) {
+      if (await hasValidApiKeyAsync(task: task)) {
         try {
           // 限制消息长度为100字以内
           final truncated = firstUserMessage.length > 100
@@ -1681,7 +1670,7 @@ class AIService extends ChangeNotifier {
               : firstUserMessage;
 
           final title = await _chatCompletionViaOpenAI(
-            task: effectiveTask,
+            task: task,
             systemPrompt:
                 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
             userMessage: truncated,

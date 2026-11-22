@@ -853,9 +853,15 @@ class AgentService extends ChangeNotifier {
       );
     }
 
-    final apiKey = await (_apiKeyResolver?.call(provider.id) ??
-        _apiKeyManager.getProviderApiKey(provider.id));
-    if (apiKey.trim().isEmpty) {
+    final preset = AIProviderPresets.bySlugOrId(provider.providerSlug) ??
+        AIProviderPresets.matchApiUrl(provider.apiUrl);
+    final requiresApiKey = preset?.requiresApiKey ?? true;
+
+    final apiKey = provider.apiKey.trim().isNotEmpty
+        ? provider.apiKey
+        : await (_apiKeyResolver?.call(provider.id) ??
+            _apiKeyManager.getProviderApiKey(provider.id));
+    if (requiresApiKey && apiKey.trim().isEmpty) {
       throw AgentRequestException(
         AgentFailureType.missingApiKey,
         providerName: provider.name,

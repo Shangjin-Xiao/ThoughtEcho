@@ -49,17 +49,17 @@
 
 > ⚠️ **重要**：AI 功能需要先配置一个 AI 服务才能使用
 
-**访问路径**：设置 → AI 设置
+**访问路径**：设置 → AI 设置 → AI 服务与模型
 
-- 💡 **自动开启**：如果您是新用户，首次成功配置并保存任意 AI 服务后，应用会自动为您开启「每日提示」、「今日思考」与「AI 生成卡片」功能。
+- 💡 **自动开启**：如果您是新用户，首次成功配置并保存任意 AI 服务后，应用会自动为您开启「今日思考使用 AI」、「周期报告洞察使用 AI」与「AI 卡片生成」。
 
 ### Ollama 云端
 
-Ollama 官方提供了云端 API 服务，支持直接调用多种主流开源模型。
+Ollama 官方提供了云端接口服务，支持直接调用多种主流开源模型。
 
 1. 打开 [ollama.com](https://ollama.com) 注册账号
 2. 进入 [API Keys 页面](https://ollama.com/settings/keys) 创建一个密钥并复制
-3. 回到心迹：「设置」→「AI 设置」→ 点右上角「+」或「添加服务商」并选择「Ollama 云端」
+3. 回到心迹：「设置」→「AI 设置」（已有服务时点顶部「AI 服务与模型」）→ 点「添加 AI 服务」并选择「Ollama 云端」
 4. 把密钥粘进 API Key 输入框
 5. 点「测试连接」，成功后点「保存」
 
@@ -91,16 +91,16 @@ Ollama 官方提供了云端 API 服务，支持直接调用多种主流开源�
 
 ### 配置步骤
 
-1. 打开「设置」→「AI 设置」
+1. 打开「设置」→「AI 设置」（若已添加过服务，点击顶部的「AI 服务与模型」进入管理页）
 2. 点「添加 AI 服务」
-3. 在「选择服务商」里挑一个模板，接口地址和模型会自动填好
-4. 填入 API Key（模板下方有「获取 API Key」直达链接）
+3. 在「选择服务商」里挑一个模板，接口地址和默认模型会自动填好
+4. 填入 API Key（模板下方有「获取 API Key」直达链接；本地 Ollama 与 LM Studio 无需填写密钥）
 5. 需要的话改一下模型名，常用模型可以直接点选
 6. 点「测试连接」验证——**不需要先保存也能测**
 7. 点「保存」
 
-保存后这条配置会出现在「我的 AI 服务」列表里并自动设为当前使用。点击列表中的
-其他配置即可切换，点右侧「⋮」可以编辑、测试、重命名或删除。
+- 新添加的服务会出现在「我的 AI 服务」列表中并自动设为当前主力服务；修改已有服务不会改变当前的主力选择。
+- 在「AI 服务与模型」页点击列表中的其他服务，或在下方「模型分配」中点击「主力模型」，即可切换当前使用的主力服务；点击当前主力服务或点右侧「⋮」可编辑、测试连接、重命名或删除。
 
 > 💡 **接口地址怎么填**：填服务商文档给的 base URL（例如 `https://ollama.com/v1`）
 > 就行，心迹会自动补成 `/chat/completions`；填完整地址也可以。
@@ -128,28 +128,24 @@ Ollama 官方提供了云端 API 服务，支持直接调用多种主流开源�
 > - 密钥不会被包含在备份文件里
 > - 删除一条配置时，对应的密钥会一起删除
 
-### 多服务商支持
+### 多服务商与模型分配
 
-心迹支持同时保存多个 AI 服务配置：
+进入「设置」→「AI 设置」→「AI 服务与模型」，您可以同时管理多个 AI 服务，并按习惯分配模型：
 
-- 随时在列表里一键切换当前使用的服务
-- 当前服务不可用时会自动尝试其他已配置的服务
+- **切换主力服务**：在「我的 AI 服务」列表中点击其他服务即可切换为主力服务，也可在下方「模型分配」中点击「主力模型」选择；当前服务暂时不可用时会自动尝试其他已启用的服务。
+- **基础分配（默认）**：「主力模型」负责 Thoughter 对话、周期回顾洞察与 AI 卡片生成；您还可以单独指定一个响应更快、更省额度的「轻量模型」负责每日心迹提示、对话标题生成与长期记忆整理（未指定时自动跟随主力服务）。
+- **按功能自选**：支持为 Thoughter 对话、每日心迹提示、周期回顾洞察、AI 卡片生成、对话标题生成、长期记忆整理 6 项功能逐一指定专属服务，也可随时恢复「跟随默认服务」。
 
-### 长期记忆与梦境整理配置
+### AI 功能开关与 Thoughter 记忆
 
-**访问路径**：
-- **梦境整理与记忆开关**：`设置 → AI 设置 →「长期记忆」卡片`
-- **记忆条目追溯与管理**：`设置 → AI 设置 → 管理长期记忆`
+在「设置」→「AI 设置」主页，您可以直观管理各项 AI 能力与个人记忆偏好：
 
-- **长期记忆总开关**：开启后允许 Thoughter 记住您的沟通习惯与表达偏好。若关闭此开关，所有长期记忆提取与使用完全停用。
-- **梦境整理开关 (Dreaming)**：控制后台梦境整理机制的启用状态。
-  - **空闲时整理**：控制应用处于空闲状态时是否自动触发后台梦境整理。
-  - **周期洞察后整理**：控制在成功生成并保存新的 AI 周期洞察后，是否在后台异步触发梦境整理。
-- **即时隐私生效保障**：在整理过程中，若您在任意时刻关闭长期记忆或梦境整理开关，**后台整理任务会立即静默终止，正在生成的结果会被即刻丢弃**，绝对不向数据库写入任何新画像条目。
-- **记忆管理与自主控制**（入口：`设置 → AI 设置 → 管理长期记忆`）：
-  - **追溯来源笔记**：在长期记忆列表中，每条由梦境整理归纳出的画像均带有“由笔记提炼”标识，点击可展开并追溯归纳所依据的来源笔记。
-  - **编辑与修正**：支持对任何一条记忆条目进行手动调整或独立删除。
-  - **一键彻底清空**：点击「清空记忆」可彻底销毁本地保存的所有长期记忆画像与近况切片，重置 AI 记忆。
+- **AI 功能开关**：按需独立开启或关闭「今日思考使用 AI」、「周期报告洞察使用 AI」与「AI 卡片生成」。
+- **长期记忆**：开启后允许 Thoughter 跨对话记住您的表达习惯与偏好；关闭后立即停用记忆读取与记录。
+- **称呼**：设置您希望 Thoughter 对您的称呼，留空则不特别称呼。
+- **查看与管理记忆**：随时查看、编辑或删除已记住的画像条目；带有「由笔记提炼」标识的条目可点击展开查看来源笔记。
+- **自动整理记忆**：控制后台自动梳理近期笔记偏好的总开关，支持分别设置「应用闲置时整理」与「生成洞察后整理」。若在整理过程中关闭长期记忆或自动整理开关，后台整理会立即停止并丢弃未完成结果，不会写入任何新内容。
+- **清空记忆**：一键清空本机保存的所有 Thoughter 记忆条目，不会影响您的笔记内容。
 
 ---
 
@@ -387,7 +383,7 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 - **长期记忆**：Thoughter 支持跨会话记住您的写作偏好、表达习惯与个人背景，并在对话中自动保持一致。
 - **隐私与本地独立数据库隔离**：长期记忆存储于本地独立数据库，绝不上传云端，不进入多端同步与数据备份，保障您的绝对隐私。
 - **用户称呼**：支持在 Thoughter 中设置自定义昵称，让 AI 按照您喜欢的方式称呼您。
-- **记忆管理**：可在「设置」→「AI 设置」→「管理长期记忆」中随时查看当前已记录的画像条目，或通过「清空记忆」一键重置。
+- **记忆管理**：可在「设置」→「AI 设置」→「查看与管理记忆」中随时查看当前已记录的画像条目，或通过「清空记忆」一键重置。
 
 **思考过程与快捷操作**：
 
@@ -678,7 +674,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ### AI 设置与长期记忆
 
-关于 AI 服务商配置、长期记忆总开关、梦境整理与记忆管理的完整说明，请参阅 [2. AI 服务配置](#2-ai-服务配置) 与 [5. AI 功能 - Thoughter 梦境整理 (Dreaming) 与长期记忆提炼](#5-ai-功能)。
+关于 AI 服务与模型分配、AI 功能开关及 Thoughter 记忆管理的完整说明，请参阅 [2. AI 服务配置](#2-ai-服务配置) 与 [5. AI 功能](#5-ai-功能)。
 
 ### 每日一言设置
 
@@ -914,17 +910,17 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 
 > ⚠️ **Important**: AI features need a configured AI service first
 
-**Access Path**: Settings → AI Settings
+**Access Path**: Settings → AI Settings → AI Services & Models
 
-- 💡 **Auto-Enable**: For new users, successfully configuring and saving any AI service for the first time will automatically enable "Daily Prompt", "Today's Thoughts", and "AI Card Generation" features.
+- 💡 **Auto-Enable**: For new users, saving your first AI service automatically turns on "Use AI for Today's Thoughts", "Use AI for Report Insights", and "AI Card Generation".
 
 ### Ollama Cloud
 
-Ollama provides an official cloud API service that hosts various open-source models.
+Ollama provides an official cloud service that hosts popular open-source models.
 
 1. Sign up at [ollama.com](https://ollama.com)
 2. Create and copy a key on the [API Keys page](https://ollama.com/settings/keys)
-3. In ThoughtEcho: Settings → AI Settings → tap "Add Provider" and select "Ollama Cloud"
+3. In ThoughtEcho: Settings → AI Settings (tap "AI Services & Models" at the top if you already have a service) → tap "Add AI service" and select "Ollama Cloud"
 4. Paste the key into the API Key field
 5. Tap "Test connection", then "Save"
 
@@ -958,16 +954,16 @@ templates are built in:
 
 ### Configuration Steps
 
-1. Open "Settings" → "AI Settings"
+1. Open "Settings" → "AI Settings" (if you already have a service configured, tap the "AI Services & Models" card at the top)
 2. Tap "Add AI service"
-3. Pick a template under "Choose a provider" — URL and model are filled in for you
-4. Enter your API Key ("Get an API key" links straight to the provider's console)
+3. Pick a template under "Choose a provider" — URL and default model are filled in for you
+4. Enter your API Key ("Get an API key" links straight to the provider's console; local Ollama and LM Studio do not need a key)
 5. Adjust the model if needed; common models can be tapped to fill in
 6. Tap "Test connection" — **you do not have to save first**
 7. Tap "Save"
 
-The saved configuration appears in "My AI services" and becomes the active one.
-Tap another entry to switch; the "⋮" menu offers edit, test, rename and delete.
+- Newly added services appear in "My AI Services" and become your primary service; editing an existing service keeps your current primary choice unchanged.
+- To switch your primary service on the "AI Services & Models" page, tap another service in "My AI Services" or select one under "Model Assignment" → "Primary Model"; tap the current primary service or the "⋮" menu to edit, test connection, rename, or delete.
 
 > 💡 **What to put in the URL field**: the base URL from the provider's docs
 > (e.g. `https://ollama.com/v1`) is enough — `/chat/completions` is appended
@@ -996,28 +992,24 @@ Local AI runs on your own computer, free and offline.
 > - Keys are not included in backup files
 > - Deleting a configuration also deletes its key
 
-### Multi-Provider Support
+### Multi-Provider & Model Assignment
 
-ThoughtEcho can keep several AI configurations at once:
+Open "Settings" → "AI Settings" → "AI Services & Models" to manage multiple AI services and assign models to fit your workflow:
 
-- Switch the active service from the list at any time
-- Other configured services are tried automatically if the active one fails
+- **Switching Primary Service**: Tap another service in "My AI Services" or choose one under "Model Assignment" → "Primary Model" at any time. Other enabled services are tried automatically if the active one is unavailable.
+- **Basic Split (Default)**: Your **Primary Model** handles Thoughter chat, periodic insights, and AI card design, while an optional **Light Model** takes care of daily prompts, chat titles, and memory organization (follows your primary service when unset).
+- **Per Feature**: Assign dedicated services individually across all 6 features (Thoughter chat, daily prompts, periodic insights, AI card design, chat titles, and memory organization), or switch any feature back to "Follow Default Service".
 
-### Long-Term Memory & Dreaming Controls
+### AI Features & Thoughter Memory
 
-**Access Paths**:
-- **Dreaming & Memory Toggles**: `Settings → AI Settings → "Long-Term Memory" Card`
-- **Memory Item Attribution & Management**: `Settings → AI Settings → Manage Long-Term Memory`
+On the main "Settings" → "AI Settings" page, you can manage feature switches and Thoughter memory preferences:
 
-- **Master Memory Toggle**: Master switch allowing Thoughter to remember your phrasing preferences and voice. Disabling this turns off all long-term memory operations.
-- **Dreaming Master Toggle**: Enables or disables background Dreaming distillation tasks.
-  - **Idle Reflection**: Toggles background dreaming execution during application idle time.
-  - **Post-Insight Reflection**: Toggles background dreaming execution following the creation and saving of a new AI periodic report.
-- **Immediate Privacy Enforcement**: If you turn off Long-Term Memory or Dreaming switches while a distillation task is in progress, **the background task is immediately aborted and generated results are silently discarded**, ensuring zero unauthorized memory writes.
-- **User Control & Transparency** (Path: `Settings → AI Settings → Manage Long-Term Memory`):
-  - **Source Attribution**: Distilled memory profile cards are tagged with "Synthesized from Notes". Tapping an item opens a breakdown view allowing you to trace the exact source notes used for that synthesis.
-  - **Inline Editing & Deletion**: Individual memory profile items can be edited or removed at any time.
-  - **One-Tap Reset / Wipe**: Tapping "Clear Memory" permanently wipes all stored profile facts and recent slices from local storage.
+- **AI Features**: Independently toggle "Use AI for Today's Thoughts", "Use AI for Report Insights", and "AI Card Generation".
+- **Long-Term Memory**: Master switch allowing Thoughter to remember your phrasing preferences and writing habits across conversations. Turning it off immediately stops memory reading and recording.
+- **Nickname**: Set how you would like Thoughter to address you, or leave blank.
+- **View & Manage Memory**: Inspect, edit, or remove stored traits at any time. Items labeled "Synthesized from Notes" can be expanded to trace their source notes.
+- **Organize Memory Automatically**: Controls background organization of recent note preferences, with separate switches for "Organize when app is idle" and "Organize after insights". Turning off Long-Term Memory or automatic organization while a run is in progress stops the background run immediately without saving new entries.
+- **Clear Memory**: Permanently clears all locally stored Thoughter memory entries on your device without affecting your notes.
 
 ---
 
@@ -1253,7 +1245,7 @@ When Thoughter proposes creating or editing a note, it displays the result as a 
 - **Long-Term Memory**: Thoughter remembers your writing style, preferences, and personal background across sessions, keeping its tone and assistance consistent over time.
 - **Privacy & Local Isolated Database**: Long-term memory is stored locally in a separate database, never uploaded to any cloud server, and excluded from multi-device sync and data backups for complete privacy.
 - **Custom Nickname**: Set your preferred name or nickname in Thoughter settings for a more natural conversation experience.
-- **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings" → "Manage Long-Term Memory".
+- **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings" → "View & Manage Memory".
 
 **Deep Thinking & Action Bar**:
 
@@ -1540,7 +1532,7 @@ ThoughtEcho embeds elegant serif typography directly into the app:
 
 ### AI Settings & Long-Term Memory Controls
 
-For full details on AI provider configuration, master memory toggles, dreaming options, and memory management, please refer to [2. AI Service Configuration](#2-ai-service-configuration) and [5. AI Features - Thoughter Dreaming & Long-Term Memory Distillation](#5-ai-features).
+For full details on AI service setup, model assignment, feature switches, and Thoughter memory management, please refer to [2. AI Service Configuration](#2-ai-service-configuration) and [5. AI Features](#5-ai-features).
 
 ### Daily Quote Settings
 
